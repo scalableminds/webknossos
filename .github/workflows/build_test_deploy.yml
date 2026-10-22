@@ -268,9 +268,9 @@ jobs:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
 
       # The frontend build is only needed by `stage`, not by `compile`, so both run concurrently to save time.
-      - name: Build frontend (vite, docs) and compile webknossos, datastore and tracingstore (sbt)
+      - name: Build frontend (vite) and compile webknossos, datastore and tracingstore (sbt)
         run: |
-          (yarn build && yarn run docs --project-version "$WK_VERSION") > "$RUNNER_TEMP/frontend-build.log" 2>&1 &
+          yarn build > "$RUNNER_TEMP/frontend-build.log" 2>&1 &
           frontend_pid=$!
           sbt --client compile
           frontend_status=0
@@ -279,8 +279,6 @@ jobs:
           cat "$RUNNER_TEMP/frontend-build.log"
           echo "::endgroup::"
           exit $frontend_status
-        env:
-          WK_VERSION: ${{ github.run_id }}
 
       - name: Stage webknossos, datastore and tracingstore (sbt)
         run: |

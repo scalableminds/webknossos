@@ -79,7 +79,11 @@ function ScriptListView() {
         }
         <br />
         {"See the "}
-        <a href="https://docs.webknossos.org/frontend-api/index.html" target="_blank" rel="noopener noreferrer">
+        <a
+          href="https://docs.webknossos.org/frontend-api/index.html"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           Frontend API Documentation
         </a>
         {" for more information."}

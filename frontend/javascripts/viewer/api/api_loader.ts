@@ -25,7 +25,7 @@ class ApiLoader {
   }
 
   /**
-   * API initializer. Will be called as soon as the WEBKNOSSOS API is ready.
+   * Waits for the WEBKNOSSOS API to become ready and returns the API object.
    * @param version - The requested API version. Only the latest version (3) is supported.
    *
    * @example

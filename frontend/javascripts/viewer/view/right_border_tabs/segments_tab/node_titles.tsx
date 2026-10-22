@@ -1,13 +1,13 @@
 import { FolderOutlined } from "@ant-design/icons";
-import { Flex, Typography } from "antd";
+import { Flex } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { memo } from "react";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { api } from "viewer/singletons";
+import { InlineEditableName } from "../shared/inline_editable_name";
+import { LIST_ROW_GAP, LIST_ROW_HEIGHT, RowItemCount } from "../shared/list_row";
 import { MISSING_GROUP_ID } from "../shared/tree_hierarchy_view_helpers";
 import type { SegmentGroupUiNode } from "./hierarchy";
-import { InlineEditableName } from "./inline_editable_name";
-import { SEGMENT_ROW_HEIGHT } from "./segment_row";
 import { mayEditVisibleSegmentation } from "./segments_view_helper";
 
 type Props = {
@@ -35,8 +35,8 @@ export const GroupNodeTitle = memo(
     return (
       <Flex
         align="center"
-        gap={8}
-        style={{ flex: "auto", minWidth: 0, height: SEGMENT_ROW_HEIGHT, cursor: "pointer" }}
+        gap={LIST_ROW_GAP}
+        style={{ flex: "auto", minWidth: 0, height: LIST_ROW_HEIGHT, cursor: "pointer" }}
         onContextMenu={(event) => onContextMenu(node, event)}
       >
         <FolderOutlined style={{ flex: "none" }} />
@@ -59,12 +59,7 @@ export const GroupNodeTitle = memo(
           }}
           onFinishEditing={onFinishRenaming}
         />
-        <Typography.Text
-          type="secondary"
-          style={{ flex: "none", fontSize: 11, fontVariantNumeric: "tabular-nums" }}
-        >
-          {node.segmentCount}
-        </Typography.Text>
+        <RowItemCount count={node.segmentCount} title={`${node.segmentCount} segments`} />
       </Flex>
     );
   },

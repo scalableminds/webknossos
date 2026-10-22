@@ -50,7 +50,7 @@ type TestContext = {
 
 // Helper functions
 function getEmptyVoxelMap() {
-  return new Uint8Array(Constants.BUCKET_WIDTH ** 2).fill(0);
+  return new Uint8Array(Constants.BUCKET_SIZE_2D).fill(0);
 }
 
 function labelVoxelInVoxelMap(firstDim: number, secondDim: number, voxelMap: Uint8Array) {

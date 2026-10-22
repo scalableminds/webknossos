@@ -95,7 +95,6 @@ errorShots/
 # Testing
 .nyc_output
 coverage
-coverage-ts
 .vitest
 *.vscode
 .bsp
@@ -131,3 +130,6 @@ tsconfig.tsbuildinfo
 diffy-report.html
 
 local.sbt
+
+# Generated documentation screenshot review
+.docs-screenshots/

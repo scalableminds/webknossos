@@ -1,12 +1,57 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="100%" height="100%" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.4;">
-    <g transform="matrix(1,0,0,1,-3850,-3795)">
-        <g id="icon-read-only" transform="matrix(1,0,0,1,3850,3795)">
-            <rect x="0" y="0" width="1024" height="1024" style="fill:none;"/>
-            <g transform="matrix(43.7617,0,0,43.7617,-13.1189,-13.1407)">
-                <path d="M3.98,8.223C3.044,9.327 2.348,10.613 1.934,12C3.226,16.338 7.244,19.5 12,19.5C12.993,19.5 13.953,19.362 14.863,19.105M6.228,6.228C7.94,5.098 9.948,4.497 12,4.5C16.756,4.5 20.773,7.662 22.065,11.998C21.357,14.367 19.837,16.412 17.772,17.772M6.228,6.228L3,3M6.228,6.228L9.878,9.878M17.772,17.772L21,21M17.772,17.772L14.122,14.122M14.122,14.122C14.684,13.56 15.001,12.796 15.001,12C15.001,10.355 13.646,9 12,9C11.205,9 10.441,9.317 9.879,9.879M14.121,14.121L9.88,9.88" style="fill:none;fill-rule:nonzero;stroke:black;stroke-width:1.65px;"/>
-            </g>
-        </g>
-    </g>
+<svg
+   viewBox="64 64 896 896"
+   focusable="false"
+   data-icon="read-only"
+   width="1em"
+   height="1em"
+   fill="currentColor"
+   aria-hidden="true"
+   version="1.1"
+   id="svg13"
+   sodipodi:docname="icon-read-only.svg"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview15"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     inkscape:snap-global="false"
+     inkscape:zoom="0.73549108"
+     inkscape:cx="597.55993"
+     inkscape:cy="475.87253"
+     inkscape:window-width="1920"
+     inkscape:window-height="1061"
+     inkscape:window-x="0"
+     inkscape:window-y="30"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg13" />
+  <defs
+     id="defs7">
+    <!-- Cuts a gap into the pencil around the strike-through line, so that it stays legible at small sizes. -->
+  </defs>
+  <path
+     id="path9"
+     mask="none"
+     d="m 680.61047,172.0045 c -2.80518,0 -5.40217,1.03733 -7.37619,3.01135 l -181.39548,181.3975 55.66945,55.66945 133.10222,-133.06569 76.15639,76.15437 -133.10424,133.06569 55.60247,55.60248 181.39751,-181.39547 c 4.05116,-4.04286 4.05116,-10.60603 0,-14.64889 L 687.98869,175.01585 c -1.97402,-1.97402 -4.57303,-3.01135 -7.37822,-3.01135 z M 344.90749,503.34467 211.10643,636.459 c -1.55844,1.55844 -2.49228,3.42937 -2.90787,5.50728 l -30.64924,174.75183 c -2.05191,11.29951 1.60262,22.8847 9.7666,30.96175 6.85712,6.64932 15.47925,10.28608 24.72597,10.28608 2.07792,0 4.15583,-0.20779 6.23375,-0.51948 l 174.75385,-30.64924 c 2.07792,-0.41559 4.05072,-1.35146 5.50526,-2.90989 L 532.33379,690.77096 476.71304,635.15022 358.22442,752.92572 265.8607,769.23857 282.06803,676.77136 400.55665,558.99383 Z"
+     sodipodi:nodetypes="sccccccccccscccccscccccccccc"
+     style="stroke-width:1.03896" />
+  <rect
+     style="fill:currentColor;fill-opacity:1;stroke-width:9.12852"
+     id="rect873"
+     width="82.864159"
+     height="1047.1232"
+     x="-50.030605"
+     y="215.03456"
+     transform="rotate(-45)"
+     rx="10.457945"
+     ry="10.457945" />
 </svg>

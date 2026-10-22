@@ -586,7 +586,10 @@ export function getReadableAnnotations(
 
 export async function getAnnotationCountForDataset(datasetId: string): Promise<number> {
   const { headers } = await Request.receiveJSONWithHeaders(
-    `/api/annotations/readable?limit=1&includeTotalCount=true&datasetId=${datasetId}`,
+    // Only count non-archived annotations to match the default annotation list.
+    `/api/annotations/readable?isFinished=false&limit=1&includeTotalCount=true&datasetId=${datasetId}`,
+    // Callers treat the count as optional, e.g. when viewing public data without being authorized to list annotations.
+    { showErrorToast: false, doNotInvestigate: true },
   );
   const totalCount = headers.get("X-Total-Count");
   return totalCount != null ? Number.parseInt(totalCount, 10) : 0;
@@ -1333,6 +1336,7 @@ export async function getDatasets(
   searchQuery: string | null = null,
   includeSubfolders: boolean | null = null,
   limit: number | null = null,
+  includeAnnotationCount: boolean = false,
 ): Promise<Array<APIDatasetCompact>> {
   const params = new URLSearchParams();
   if (isUnreported != null) {
@@ -1349,6 +1353,9 @@ export async function getDatasets(
   }
   if (includeSubfolders != null) {
     params.set("includeSubfolders", includeSubfolders ? "true" : "false");
+  }
+  if (includeAnnotationCount) {
+    params.set("includeAnnotationCount", "true");
   }
 
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);
@@ -1902,43 +1909,69 @@ export async function getMappingsForDatasetLayer(
   datastoreUrl: string,
   dataset: APIDataset,
   layerName: string,
-): Promise<Array<string>> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/mappings?token=${token}`,
-    ),
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<string>>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken((token) =>
+        Request.receiveJSON(
+          `${datastoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/mappings?token=${token}`,
+          adaptedOptions,
+        ),
+      ),
+    options,
+    retryOptions,
   );
 }
 
-export function fetchMapping(
+export async function fetchMapping(
   datastoreUrl: string,
   dataset: APIDataset,
   layerName: string,
   mappingName: string,
-): Promise<APIMapping> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/mappings/${mappingName}?token=${token}`,
-    ),
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<APIMapping>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken((token) =>
+        Request.receiveJSON(
+          `${datastoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/mappings/${mappingName}?token=${token}`,
+          adaptedOptions,
+        ),
+      ),
+    options,
+    retryOptions,
   );
 }
 
-export function getEditableMappingInfo(
+export async function getEditableMappingInfo(
   tracingStoreUrl: string,
   tracingId: string,
   annotationId: string,
   version: number | undefined | null,
-): Promise<ServerEditableMapping> {
-  return doWithToken((token) => {
-    const params = new URLSearchParams({
-      token,
-      annotationId: `${annotationId}`,
-    });
-    if (version != null) {
-      params.set("version", version.toString());
-    }
-    return Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?${params}`);
-  });
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<ServerEditableMapping>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken((token) => {
+        const params = new URLSearchParams({
+          token,
+          annotationId: `${annotationId}`,
+        });
+        if (version != null) {
+          params.set("version", version.toString());
+        }
+        return Request.receiveJSON(
+          `${tracingStoreUrl}/tracings/mapping/${tracingId}/info?${params}`,
+          adaptedOptions,
+        );
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function getPositionForSegmentInAgglomerate(
@@ -1964,11 +1997,19 @@ export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
   dataset: APIDataset,
   layerName: string,
-): Promise<Array<string>> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates?token=${token}`,
-    ),
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<string>>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken((token) =>
+        Request.receiveJSON(
+          `${datastoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates?token=${token}`,
+          adaptedOptions,
+        ),
+      ),
+    options,
+    retryOptions,
   );
 }
 
@@ -2196,10 +2237,14 @@ type MeshRequest = {
 export function computeAdHocMesh(
   layerSourceInfo: LayerSourceInfo,
   meshRequest: MeshRequest,
-): Promise<{
-  buffer: ArrayBuffer;
-  neighbors: Array<number>;
-}> {
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<
+  ApiResult<{
+    buffer: ArrayBuffer;
+    neighbors: Array<number>;
+  }>
+> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   const {
     positionWithPadding,
@@ -2211,34 +2256,40 @@ export function computeAdHocMesh(
     ...rest
   } = meshRequest;
 
-  return doWithToken(async (token) => {
-    const params = new URLSearchParams();
-    params.set("token", token);
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken(async (token) => {
+        const params = new URLSearchParams();
+        params.set("token", token);
 
-    const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
-      `${requestUrl}/adHocMesh?${params}`,
-      {
-        data: {
-          // The back-end needs a small padding at the border of the
-          // bounding box to calculate the mesh. This padding
-          // is added here to the position and bbox size.
-          position: positionWithPadding, // position is in mag1
-          additionalCoordinates,
-          cubeSize, // cubeSize is in target mag
-          // Name and type of mapping to apply before building mesh (optional)
-          mapping: mappingName,
-          voxelSizeFactorInUnit: scaleFactor,
-          mag,
-          ...rest,
-        },
-      },
-    );
-    const neighbors = (parseMaybe(headers.neighbors) as number[] | null) || [];
-    return {
-      buffer,
-      neighbors,
-    };
-  });
+        const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
+          `${requestUrl}/adHocMesh?${params}`,
+          {
+            ...adaptedOptions,
+            data: {
+              // The back-end needs a small padding at the border of the
+              // bounding box to calculate the mesh. This padding
+              // is added here to the position and bbox size.
+              position: positionWithPadding, // position is in mag1
+              additionalCoordinates,
+              cubeSize, // cubeSize is in target mag
+              // Name and type of mapping to apply before building mesh (optional)
+              mapping: mappingName,
+              voxelSizeFactorInUnit: scaleFactor,
+              mag,
+              ...rest,
+            },
+          },
+        );
+        const neighbors = (parseMaybe(headers.neighbors) as number[] | null) || [];
+        return {
+          buffer,
+          neighbors,
+        };
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function getBucketPositionsForAdHocMesh(
@@ -2249,26 +2300,34 @@ export function getBucketPositionsForAdHocMesh(
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
   annotationVersion: number,
-): Promise<Vector3[]> {
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Vector3[]>> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
-  return doWithToken(async (token) => {
-    const params = new URLSearchParams();
-    params.set("token", token);
-    const positions = await Request.sendJSONReceiveJSON(
-      `${requestUrl}/segmentIndex/${segmentId}?${params}`,
-      {
-        data: {
-          cubeSize,
-          mag,
-          additionalCoordinates,
-          mappingName,
-          annotationVersion,
-        },
-        method: "POST",
-      },
-    );
-    return positions;
-  });
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken(async (token) => {
+        const params = new URLSearchParams();
+        params.set("token", token);
+        const positions: Vector3[] = await Request.sendJSONReceiveJSON(
+          `${requestUrl}/segmentIndex/${segmentId}?${params}`,
+          {
+            ...adaptedOptions,
+            data: {
+              cubeSize,
+              mag,
+              additionalCoordinates,
+              mappingName,
+              annotationVersion,
+            },
+            method: "POST",
+          },
+        );
+        return positions;
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function getAgglomerateTreeAsSkeletonTracing(
@@ -2389,20 +2448,29 @@ export async function getMeshFilesForDatasetLayer(
   dataStoreUrl: string,
   dataset: APIDataset,
   layerName: string,
-): Promise<Array<APIMeshFileInfo>> {
-  const meshFiles: Array<APIMeshFileInfo> = await doWithToken((token) =>
-    Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/meshes?token=${token}`,
-    ),
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<APIMeshFileInfo>>> {
+  return requestResult(
+    async (adaptedOptions) => {
+      const meshFiles: Array<APIMeshFileInfo> = await doWithToken((token) =>
+        Request.receiveJSON(
+          `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/meshes?token=${token}`,
+          adaptedOptions,
+        ),
+      );
+
+      for (const file of meshFiles) {
+        if (file.mappingName === "") {
+          file.mappingName = undefined;
+        }
+      }
+
+      return meshFiles;
+    },
+    options,
+    retryOptions,
   );
-
-  for (const file of meshFiles) {
-    if (file.mappingName === "") {
-      file.mappingName = undefined;
-    }
-  }
-
-  return meshFiles;
 }
 
 // ### Connectomes

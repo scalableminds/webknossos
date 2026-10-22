@@ -21,6 +21,7 @@ export function DatasetAnnotationCountLink({
     queryFn: () => getAnnotationCountForDataset(dataset.id),
     staleTime: ANNOTATION_COUNT_STALE_TIME,
     refetchOnWindowFocus: false,
+    retry: false,
   });
 
   if (!annotationCount) return null;

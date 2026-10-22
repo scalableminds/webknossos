@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(184);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(186);
 COMMIT TRANSACTION;
 
 
@@ -221,7 +221,8 @@ CREATE TABLE webknossos.dataset_mags(
 CREATE TABLE webknossos.dataset_lastUsedTimes(
   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
-  lastUsedTime TIMESTAMPTZ NOT NULL
+  lastUsedTime TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (_dataset, _user)
 );
 
 CREATE TABLE webknossos.dataset_thumbnails(
@@ -249,7 +250,6 @@ CREATE TABLE webknossos.dataStores(
   url TEXT UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
   publicUrl TEXT UNIQUE NOT NULL CHECK (publicUrl ~* '^https?://[a-z0-9\.]+.*$'),
   key TEXT NOT NULL,
-  isScratch BOOLEAN NOT NULL DEFAULT FALSE,
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   allowsUpload BOOLEAN NOT NULL DEFAULT TRUE,
   allowsUploadToPaths BOOLEAN NOT NULL DEFAULT TRUE,

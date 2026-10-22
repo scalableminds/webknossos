@@ -30,7 +30,11 @@ const mockedCube = {
     [1, 1, 1],
     [2, 2, 2],
   ]),
-  triggerRenderedBucketDataChanged: () => {},
+  triggerNeededBucketDataChanged: () => {},
+  currentBucketPickerTick: 0,
+  previousBucketPickerTick: 0,
+  onBucketMarkedAsNeeded: () => {},
+  getEffectiveBucketVoxelCount: () => Constants.BUCKET_SIZE,
 } as any as DataCube;
 
 vi.mock("viewer/store", () => ({

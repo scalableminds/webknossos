@@ -1,13 +1,8 @@
 import {
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  CloseCircleOutlined,
+  ApartmentOutlined,
   DownOutlined,
-  ExclamationCircleOutlined,
-  ExportOutlined,
   FieldTimeOutlined,
   LeftOutlined,
-  MinusCircleOutlined,
   SyncOutlined,
 } from "@ant-design/icons";
 import { deleteWorkflow, getVoxelyticsLogs } from "admin/rest_api";
@@ -19,27 +14,22 @@ import {
   type CollapseProps,
   Dropdown,
   Flex,
+  Grid,
   Input,
   type MenuProps,
   Row,
   Select,
   Space,
-  Tag,
   Tooltip,
   Typography,
 } from "antd";
 import dayjs from "dayjs";
-import {
-  formatDateMedium,
-  formatDurationStrict,
-  formatTimeInterval,
-  formatTimeIntervalStrict,
-} from "libs/format_utils";
-import { useUpdateEvery, useWkSelector } from "libs/react_hooks";
+import { formatDateMedium, formatDurationStrict } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import { notEmpty } from "libs/utils";
 import MiniSearch from "minisearch";
-import React, { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router";
+import React, { useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router";
 import { ModalWidth } from "theme";
 import {
   VoxelyticsRunState,
@@ -52,8 +42,12 @@ import {
 import type { ArrayElement } from "types/type_utils";
 import { LOG_LEVELS } from "viewer/constants";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
-import DAGView, { colorHasher } from "./dag_view";
+import DAGView from "./dag_view";
 import { formatLog } from "./log_tab";
+import { getTaskInfosWithHierarchy } from "./task_hierarchy";
+import { getTaskPanelId, useTaskFocus, useTaskPanelExpansion } from "./task_hierarchy_hooks";
+import { MetaTaskPanelLabel, TaskPanelLabel } from "./task_panel_labels";
+import { getTaskExecutions } from "./task_runs_tab";
 import TaskView from "./task_view";
 import { addAfterPadding, addBeforePadding } from "./utils";
 
@@ -100,168 +94,48 @@ function removeUrlParam(location: ReturnType<typeof useLocation>, key: string) {
   return `${location.pathname}?${search.toString()}`;
 }
 
-function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
-  // Re-render every 10s so that the durations that are relative to the current time
-  // are updated regularly.
-  useUpdateEvery(10000);
-  switch (taskInfo.state) {
-    case VoxelyticsRunState.PENDING:
-      return (
-        <Tag icon={<ClockCircleOutlined />} color="default">
-          pending
-        </Tag>
-      );
-    case VoxelyticsRunState.SKIPPED:
-      return (
-        <Tag icon={<MinusCircleOutlined />} color="default">
-          skipped
-        </Tag>
-      );
-    case VoxelyticsRunState.RUNNING: {
-      const currentDuration = Date.now() - taskInfo.beginTime.getTime();
-      if (taskInfo.chunkCounts.complete > 0) {
-        const estimatedRemainingDuration =
-          (currentDuration /
-            (taskInfo.chunkCounts.complete +
-              taskInfo.chunkCounts.failed +
-              taskInfo.chunkCounts.cancelled)) *
-            (taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped) -
-          currentDuration;
-        const estimatedEndTime = new Date(Date.now() + estimatedRemainingDuration);
-        return (
-          <Tooltip
-            title={
-              <>
-                Begin Time: {formatDateMedium(taskInfo.beginTime)}
-                <br />
-                Current Duration: {formatDurationStrict(dayjs.duration(currentDuration))}
-                <br />
-                Estimated Remaining Duration:{" "}
-                {formatDurationStrict(dayjs.duration(estimatedRemainingDuration))}
-                <br />
-                Estimated End Time: {formatDateMedium(estimatedEndTime)}
-              </>
-            }
-          >
-            <Tag icon={<SyncOutlined spin />} color="processing">
-              running
-            </Tag>
-            started {dayjs(taskInfo.beginTime).fromNow()}, probably finishes{" "}
-            {dayjs(estimatedEndTime).fromNow()}
-          </Tooltip>
-        );
-      } else {
-        return (
-          <Tooltip
-            title={
-              <>
-                Begin Time: {formatDateMedium(taskInfo.beginTime)}
-                <br />
-                Current Duration: {formatDurationStrict(dayjs.duration(currentDuration))}
-              </>
-            }
-          >
-            <Tag icon={<SyncOutlined spin />} color="processing">
-              running
-            </Tag>
-            started {dayjs(taskInfo.beginTime).fromNow()}
-          </Tooltip>
-        );
+type ItemType = ArrayElement<CollapseProps["items"]>;
+
+// A (possibly nested) collapse of the task list. All collapses share the expanded keys.
+function TaskCollapse({
+  items,
+  expandedKeys,
+  onChange,
+}: {
+  items: Array<ItemType>;
+  expandedKeys: Array<string>;
+  onChange: (collapseKeys: Array<string>, activeKeys: string | Array<string>) => void;
+}) {
+  return (
+    <Collapse
+      onChange={(activeKeys) =>
+        onChange(
+          items.map((item) => String(item.key)),
+          activeKeys,
+        )
       }
-    }
-    case VoxelyticsRunState.STALE:
-      return (
-        <Tooltip
-          title={
-            <>
-              Begin Time: {formatDateMedium(taskInfo.beginTime)}
-              <br />
-              Last Heartbeat: {formatDateMedium(taskInfo.endTime)}
-            </>
-          }
-        >
-          <Tag icon={<CloseCircleOutlined />} color="error">
-            timed out
-          </Tag>{" "}
-          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
-        </Tooltip>
-      );
-    case VoxelyticsRunState.CANCELLED:
-      return (
-        <Tooltip
-          title={
-            <>
-              End Time: {formatDateMedium(taskInfo.endTime)}
-              <br />
-              Duration: {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
-            </>
-          }
-        >
-          <Tag icon={<ExclamationCircleOutlined />} color="error">
-            cancelled
-          </Tag>{" "}
-          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
-        </Tooltip>
-      );
-    case VoxelyticsRunState.FAILED:
-      return (
-        <Tooltip
-          title={
-            <>
-              End Time: {formatDateMedium(taskInfo.endTime)}
-              <br />
-              Duration: {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
-            </>
-          }
-        >
-          <Tag icon={<CloseCircleOutlined />} color="error">
-            failed
-          </Tag>{" "}
-          {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
-        </Tooltip>
-      );
-    case VoxelyticsRunState.COMPLETE:
-      return (
-        <Tooltip
-          title={
-            <>
-              End Time: {formatDateMedium(taskInfo.endTime)}
-              <br />
-              Duration: {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
-            </>
-          }
-        >
-          <Tag icon={<CheckCircleOutlined />} color="success">
-            completed
-          </Tag>{" "}
-          {dayjs(taskInfo.endTime).fromNow()},{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
-        </Tooltip>
-      );
-    default:
-      return null;
-  }
+      activeKey={expandedKeys}
+      items={items}
+    />
+  );
 }
 
 export default function TaskListView({
   report,
   tasksWithHierarchy,
-  expandedMetaTaskKeys,
+  isMetaTaskExpandedInDag,
   openMetatask,
   isLoading,
-  onToggleExpandedMetaTaskKey,
+  onToggleMetaTaskInDag,
   onReload,
   runId,
 }: {
   report: VoxelyticsWorkflowReport;
   tasksWithHierarchy: Array<VoxelyticsTaskConfigWithHierarchy>;
-  expandedMetaTaskKeys: Record<string, boolean>;
+  isMetaTaskExpandedInDag: (metaTaskKey: string) => boolean;
   openMetatask: string | null;
   isLoading: boolean;
-  onToggleExpandedMetaTaskKey: (v: string) => void;
+  onToggleMetaTaskInDag: (metaTaskKey: string) => void;
   onReload: () => void;
   runId: string | null;
 }) {
@@ -269,29 +143,36 @@ export default function TaskListView({
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
 
-  // expandedTask = state of the collapsible list
-  const [expandedTasks, setExpandedTasks] = useState<Array<string>>([]);
-  const params = useParams<{ highlightedTask?: string }>();
-  const highlightedTask = params.highlightedTask || "";
   const location = useLocation();
+  const { expandedKeys, setActiveKeysOfCollapse, expandTask, collapseAll } =
+    useTaskPanelExpansion();
+  const focusTask = useTaskFocus((taskName) => {
+    setSearchQuery("");
+    expandTask(taskName);
+  });
+
+  // Derived from the report's tasks and runs, which are replaced (not mutated) whenever the
+  // report is refetched, so this is recomputed for every new report.
+  const taskExecutionsByTask = useMemo(() => {
+    const runsById = new Map(report.runs.map((run) => [run.id, run]));
+    return new Map(report.tasks.map((t) => [t.taskName, getTaskExecutions(t.runs, runsById)]));
+  }, [report.tasks, report.runs]);
+
+  const taskInfos = useMemo(
+    () => getTaskInfosWithHierarchy(tasksWithHierarchy, report.tasks, runId),
+    [tasksWithHierarchy, report.tasks, runId],
+  );
 
   const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
+  // On small screens (e.g., phones), the DAG takes up too much space. Hide it by default
+  // and stack it above the task list once the user chooses to show it.
+  const screens = Grid.useBreakpoint();
+  const isCompact = !screens.md;
+  const [isDagVisibleOnCompact, setIsDagVisibleOnCompact] = useState(false);
+  const isDagVisible = !isCompact || isDagVisibleOnCompact;
+
   const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
-
-  useEffect(() => {
-    setExpandedTasks([highlightedTask]);
-    handleFocusTask(highlightedTask);
-  }, [highlightedTask]);
-
-  function handleFocusTask(focusedTask: string | null) {
-    if (focusedTask == null) return;
-    const elementId = `task-panel-${focusedTask}`;
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.scrollIntoView({ block: "start", behavior: "smooth" });
-    }
-  }
 
   const miniSearch = useMemo(() => {
     const miniSearch: MiniSearch<VoxelyticsTaskConfig> = new MiniSearch({
@@ -322,22 +203,8 @@ export default function TaskListView({
     [miniSearch, report, searchQuery],
   );
 
-  function handleOnCollapseChange(newExpandedTasks: string | Array<string>) {
-    setExpandedTasks(Array.isArray(newExpandedTasks) ? newExpandedTasks : [newExpandedTasks]);
-  }
-
   function handleOnSearch(textValue: string) {
     setSearchQuery(textValue);
-  }
-
-  function handleSelectTask(taskName: string) {
-    handleFocusTask(taskName);
-    setSearchQuery("");
-
-    if (!expandedTasks.includes(taskName)) {
-      const expandedTasksCopy = [...expandedTasks, taskName];
-      setExpandedTasks(expandedTasksCopy);
-    }
   }
 
   function copyAllArtifactPaths() {
@@ -392,20 +259,20 @@ export default function TaskListView({
   }
 
   async function downloadLog() {
+    if (singleRunId == null) {
+      message.error("Please select a specific run for log download.");
+      return;
+    }
+    const singleRun = report.runs.find((r) => r.id === singleRunId);
+    const beginTime = singleRun?.beginTime;
+    const endTime = singleRun?.endTime ?? new Date();
+
+    if (beginTime == null) {
+      message.error("Run hasn't started yet.");
+      return;
+    }
+
     try {
-      if (singleRunId == null) {
-        message.error("Please select a specific run for log download.");
-        return;
-      }
-      const singleRun = report.runs.find((r) => r.id === singleRunId);
-      const beginTime = singleRun?.beginTime;
-      const endTime = singleRun?.endTime ?? new Date();
-
-      if (beginTime == null) {
-        message.error("Run hasn't started yet.");
-        return;
-      }
-
       const logText = (
         await getVoxelyticsLogs(
           singleRunId,
@@ -475,45 +342,22 @@ export default function TaskListView({
       label: "Delete Workflow Report",
     });
 
-  type ItemType = ArrayElement<CollapseProps["items"]>;
-
+  // Returns undefined for tasks which are filtered away by the search query and for meta tasks
+  // without any remaining subtasks.
   const getTaskGroupOrTaskItem = (
     taskGroup: VoxelyticsTaskConfigWithHierarchy,
   ): ItemType | undefined => {
-    const taskInfo = aggregateTaskInfos(taskGroup, report.tasks, runId);
-
     if (taskGroup.isMetaTask) {
-      // If tasks are filtered away by the search query, it can happen that a meta task
-      // has "no children", anymore. In that case, don't render the entire meta task.
-      const subtasks = taskGroup.subtasks;
-      const collapseItems = subtasks.map(getTaskGroupOrTaskItem).filter(notEmpty);
+      const collapseItems = taskGroup.subtasks.map(getTaskGroupOrTaskItem).filter(notEmpty);
       if (collapseItems.length === 0) {
         return undefined;
       }
+      const metaTaskInfo = taskInfos.get(taskGroup.key) as VoxelyticsTaskInfo;
 
       return {
         key: taskGroup.key,
-        id: `task-panel-${taskGroup.key}`,
-        label: (
-          <div className="task-panel-header">
-            <div
-              style={{
-                width: 10,
-                height: 10,
-                display: "inline-block",
-                marginRight: 20,
-                borderRadius: "50%",
-                backgroundColor: "gray",
-                boxShadow: "5px 0px 0 0px #478d98, 10px 0px 0 0px #73e471",
-              }}
-            />
-            {taskGroup.key}
-            <wbr />
-            <span className="task-panel-state">
-              <TaskStateTag taskInfo={taskInfo} />
-            </span>
-          </div>
-        ),
+        id: getTaskPanelId(taskGroup.key),
+        label: <MetaTaskPanelLabel metaTaskKey={taskGroup.key} taskInfo={metaTaskInfo} />,
         children: (
           <React.Fragment>
             {openMetatask !== taskGroup.key && (
@@ -523,68 +367,41 @@ export default function TaskListView({
                   style={{ marginRight: 16 }}
                   onClick={(ev) => {
                     ev.preventDefault();
-                    onToggleExpandedMetaTaskKey(taskGroup.key);
+                    onToggleMetaTaskInDag(taskGroup.key);
                   }}
                 >
-                  {expandedMetaTaskKeys[taskGroup.key] ? "Collapse in DAG" : "Expand in DAG"}
+                  {isMetaTaskExpandedInDag(taskGroup.key) ? "Collapse in DAG" : "Expand in DAG"}
                 </a>
                 <Link to={addUrlParam(location, "metatask", taskGroup.key)}>
                   Open in extra View
                 </Link>
               </div>
             )}
-            <Collapse items={collapseItems} />
+            <TaskCollapse
+              items={collapseItems}
+              expandedKeys={expandedKeys}
+              onChange={setActiveKeysOfCollapse}
+            />
           </React.Fragment>
         ),
       };
     }
-    const task = taskGroup;
 
-    const isInFilteredTasks = filteredTasks.find((t) => t.taskName === task.taskName);
-    if (!isInFilteredTasks) {
+    const task = taskGroup;
+    if (!filteredTasks.some((t) => t.taskName === task.taskName)) {
       return undefined;
     }
-
+    const taskInfo = taskInfos.get(task.taskName) as VoxelyticsTaskInfo;
     const taskArtifacts = report.artifacts[task.taskName] || {};
-    let foreignWorkflow: null | [string, string] = null;
-    if (taskInfo.state === VoxelyticsRunState.SKIPPED) {
-      foreignWorkflow = Object.values(taskArtifacts)[0]?.foreignWorkflow ?? null;
-    }
+    const foreignWorkflow =
+      taskInfo.state === VoxelyticsRunState.SKIPPED
+        ? (Object.values(taskArtifacts)[0]?.foreignWorkflow ?? null)
+        : null;
 
     return {
       key: task.taskName,
-      id: `task-panel-${task.taskName}`,
-      label: (
-        <div className="task-panel-header">
-          <div
-            style={{
-              borderRadius: "50%",
-              height: 10,
-              width: 10,
-              display: "inline-block",
-              marginRight: 10,
-              backgroundColor: colorHasher.hex(task.task),
-            }}
-          />
-          {foreignWorkflow != null ? (
-            <Link
-              to={`/workflows/${foreignWorkflow[0]}/run/${encodeURIComponent(foreignWorkflow[1])}`}
-            >
-              {task.taskName}
-              &nbsp;
-              <ExportOutlined />
-            </Link>
-          ) : (
-            task.taskName
-          )}
-          <wbr />
-          {task.config.name != null && <span className="task-panel-name">{task.config.name}</span>}
-          <wbr />
-          <span className="task-panel-state">
-            <TaskStateTag taskInfo={taskInfo} />
-          </span>
-        </div>
-      ),
+      id: getTaskPanelId(task.taskName),
+      label: <TaskPanelLabel task={task} taskInfo={taskInfo} foreignWorkflow={foreignWorkflow} />,
       children: (
         <TaskView
           taskName={task.taskName}
@@ -594,11 +411,14 @@ export default function TaskListView({
           artifacts={taskArtifacts}
           dag={report.dag}
           taskInfo={taskInfo}
-          onSelectTask={handleSelectTask}
+          taskExecutions={taskExecutionsByTask.get(task.taskName) ?? []}
+          onSelectTask={focusTask}
         />
       ),
     };
   };
+
+  const topLevelCollapseItems = tasksWithHierarchy.map(getTaskGroupOrTaskItem).filter(notEmpty);
 
   const totalRuntime = report.tasks.reduce((sum, t) => {
     if (t.state === VoxelyticsRunState.RUNNING) {
@@ -625,7 +445,7 @@ export default function TaskListView({
         minHeight: "calc(100vh - 100px)",
       }}
     >
-      <Col xs={10}>
+      <Col xs={24} md={10}>
         <Flex vertical style={{ height: "100%" }}>
           <Typography.Title
             level={3}
@@ -650,17 +470,29 @@ export default function TaskListView({
               {totalRuntime.humanize()}
             </Tooltip>
           </Typography.Title>
-          <div style={{ flex: 1, position: "relative" }}>
-            <DAGView
-              key={filteredTasks.map((t) => t.taskName).join("_")}
-              dag={report.dag}
-              filteredTasks={filteredTasks}
-              onClickHandler={handleSelectTask}
-            />
-          </div>
+          {isCompact && (
+            <Button
+              icon={<ApartmentOutlined />}
+              onClick={() => setIsDagVisibleOnCompact(!isDagVisibleOnCompact)}
+              style={{ alignSelf: "flex-start", marginBottom: 10 }}
+            >
+              {isDagVisibleOnCompact ? "Hide Workflow Graph" : "Show Workflow Graph"}
+            </Button>
+          )}
+          {isDagVisible && (
+            <div
+              style={
+                isCompact
+                  ? { height: "60vh", position: "relative", marginBottom: 10 }
+                  : { flex: 1, position: "relative" }
+              }
+            >
+              <DAGView dag={report.dag} filteredTasks={filteredTasks} onClickHandler={focusTask} />
+            </div>
+          )}
         </Flex>
       </Col>
-      <Col xs={14} className="task-panel">
+      <Col xs={24} md={14} className="task-panel">
         {openMetatask != null && (
           <div style={{ marginBottom: 8 }}>
             <Link to={removeUrlParam(location, "metatask")}>
@@ -675,14 +507,14 @@ export default function TaskListView({
             zIndex: 1,
           }}
         >
-          <Flex gap={"small"}>
+          <Flex gap={"small"} wrap>
             <Search
               placeholder="Filter tasks"
               onSearch={handleOnSearch}
-              style={{ minWidth: 150 }}
+              style={{ flex: "1 1 150px" }}
               allowClear
             />
-            <Space>
+            <Space wrap>
               <Button onClick={() => onReload()} icon={<SyncOutlined spin={isLoading} />}>
                 Refresh
               </Button>
@@ -711,7 +543,7 @@ export default function TaskListView({
                 ]}
               />
               <Space.Compact>
-                <Button onClick={() => setExpandedTasks([])}>Collapse All</Button>
+                <Button onClick={collapseAll}>Collapse All</Button>
                 <Dropdown menu={overflowMenu}>
                   <Button icon={<DownOutlined />} />
                 </Dropdown>
@@ -721,140 +553,13 @@ export default function TaskListView({
         </div>
 
         <div style={{ overflowY: "auto", flex: 1 }}>
-          <Collapse
-            onChange={handleOnCollapseChange}
-            activeKey={expandedTasks}
-            items={tasksWithHierarchy.map(getTaskGroupOrTaskItem).filter(notEmpty)}
+          <TaskCollapse
+            items={topLevelCollapseItems}
+            expandedKeys={expandedKeys}
+            onChange={setActiveKeysOfCollapse}
           />
         </div>
       </Col>
     </Row>
   );
-}
-
-function aggregateTimes(taskInfos: Array<VoxelyticsTaskInfo>): [Date, Date] {
-  return [
-    new Date(
-      taskInfos.reduce(
-        (r, a) => Math.min(r, a.beginTime?.getTime() ?? Number.POSITIVE_INFINITY),
-        Number.POSITIVE_INFINITY,
-      ),
-    ),
-    new Date(
-      taskInfos.reduce(
-        (r, a) => Math.max(r, a.endTime?.getTime() ?? Number.NEGATIVE_INFINITY),
-        Number.NEGATIVE_INFINITY,
-      ),
-    ),
-  ];
-}
-
-function aggregateTaskInfos(
-  task: VoxelyticsTaskConfigWithHierarchy,
-  allTaskInfos: Array<VoxelyticsTaskInfo>,
-  runId: string | null,
-): VoxelyticsTaskInfo {
-  if (task.isMetaTask) {
-    const taskInfos = task.subtasks.map((subTask) =>
-      aggregateTaskInfos(subTask, allTaskInfos, runId),
-    );
-
-    if (taskInfos.length === 0) {
-      return {
-        taskName: task.key,
-        state: VoxelyticsRunState.SKIPPED,
-        currentExecutionId: null,
-        chunkCounts: {
-          total: 0,
-          failed: 0,
-          skipped: 0,
-          complete: 0,
-          cancelled: 0,
-        },
-        beginTime: null,
-        endTime: null,
-        runs: [],
-      };
-    }
-
-    let state = VoxelyticsRunState.PENDING;
-    let beginTime = null;
-    let endTime = null;
-
-    if (taskInfos.every((t) => t.state === VoxelyticsRunState.SKIPPED)) {
-      state = VoxelyticsRunState.SKIPPED;
-    } else if (
-      taskInfos.every(
-        (t) => t.state === VoxelyticsRunState.PENDING || t.state === VoxelyticsRunState.SKIPPED,
-      )
-    ) {
-      state = VoxelyticsRunState.PENDING;
-    } else if (
-      taskInfos.every(
-        (t) => t.state === VoxelyticsRunState.COMPLETE || t.state === VoxelyticsRunState.SKIPPED,
-      )
-    ) {
-      state = VoxelyticsRunState.COMPLETE;
-      [beginTime, endTime] = aggregateTimes(taskInfos);
-    } else if (taskInfos.some((t) => t.state === VoxelyticsRunState.RUNNING)) {
-      state = VoxelyticsRunState.RUNNING;
-      const runningOrCompletedTasks = taskInfos
-        .slice(0, taskInfos.findIndex((t) => t.state === VoxelyticsRunState.RUNNING) + 1)
-        .filter((t) => [VoxelyticsRunState.COMPLETE, VoxelyticsRunState.RUNNING].includes(t.state));
-      [beginTime, endTime] = aggregateTimes(runningOrCompletedTasks);
-    } else {
-      if (taskInfos.some((t) => t.state === VoxelyticsRunState.STALE)) {
-        state = VoxelyticsRunState.STALE;
-      } else if (taskInfos.some((t) => t.state === VoxelyticsRunState.CANCELLED)) {
-        state = VoxelyticsRunState.CANCELLED;
-      } else {
-        state = VoxelyticsRunState.FAILED;
-      }
-      const finishedTasks = taskInfos.filter((t) =>
-        [
-          VoxelyticsRunState.COMPLETE,
-          VoxelyticsRunState.CANCELLED,
-          VoxelyticsRunState.FAILED,
-        ].includes(t.state),
-      );
-      [beginTime, endTime] = aggregateTimes(finishedTasks);
-    }
-
-    return {
-      taskName: task.key,
-      state,
-      beginTime,
-      endTime,
-      currentExecutionId: null,
-      chunkCounts: {
-        total: taskInfos.reduce((r, a) => r + a.chunkCounts.total, 0),
-        failed: taskInfos.reduce((r, a) => r + a.chunkCounts.failed, 0),
-        skipped: taskInfos.reduce((r, a) => r + a.chunkCounts.skipped, 0),
-        complete: taskInfos.reduce((r, a) => r + a.chunkCounts.complete, 0),
-        cancelled: taskInfos.reduce((r, a) => r + a.chunkCounts.cancelled, 0),
-      },
-      runs: [],
-    } as VoxelyticsTaskInfo;
-  }
-
-  const taskInfo = allTaskInfos.find((t) => t.taskName === task.taskName) as VoxelyticsTaskInfo;
-  if (taskInfo === undefined) {
-    throw new Error(`Task info not found for task ${task.taskName}.`);
-  }
-
-  if (runId != null) {
-    const taskRun = taskInfo.runs.find((tr) => tr.runId === runId);
-    if (taskRun === undefined) {
-      throw new Error(
-        `Task run ${runId} not found for task ${task.taskName}. Task might be from a different VX report.`,
-      );
-    }
-
-    return {
-      ...taskRun,
-      taskName: taskInfo.taskName,
-      runs: [],
-    } as VoxelyticsTaskInfo;
-  }
-  return taskInfo;
 }

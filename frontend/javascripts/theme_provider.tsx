@@ -3,7 +3,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { ToastContextMountRoot } from "libs/toast";
 import type React from "react";
 import { useEffect } from "react";
-import { ColorBlack, ColorWhite, getAntdTheme, getThemeFromUser } from "theme";
+import { getActiveTheme, getAntdTheme, getLayoutBackgroundColor } from "theme";
 
 export default function GlobalThemeProvider({
   children,
@@ -12,27 +12,25 @@ export default function GlobalThemeProvider({
   children?: React.ReactNode;
   isMainProvider?: boolean;
 }) {
-  const activeUser = useWkSelector((state) => state.activeUser);
-  const userTheme = getThemeFromUser(activeUser);
+  const userTheme = useWkSelector(getActiveTheme);
   const antdTheme = getAntdTheme(userTheme);
   const isDarkMode = userTheme === "dark";
 
   useEffect(() => {
     // body is outside of the ReactDOM, so we have to manually update it
-    if (isDarkMode) {
-      document.body.style.backgroundColor = ColorBlack;
-    } else {
-      document.body.style.backgroundColor = ColorWhite;
-    }
-  }, [isDarkMode]);
+    document.body.style.backgroundColor = getLayoutBackgroundColor(userTheme);
+  }, [userTheme]);
 
   return (
-    <ConfigProvider theme={{ ...antdTheme, cssVar: { key: "antd-app-theme" } }}>
+    <ConfigProvider
+      theme={{ ...antdTheme, cssVar: { key: "antd-app-theme" } }}
+      wave={{ disabled: true }}
+    >
       <App>
         <div
           className={isDarkMode ? "dark-theme" : undefined}
           style={{
-            background: "var(--ant-color-bg-base)",
+            background: "var(--ant-color-bg-layout)",
             height: isMainProvider ? "calc(100vh - var(--navbar-height))" : "auto",
           }}
         >
@@ -42,4 +40,14 @@ export default function GlobalThemeProvider({
       </App>
     </ConfigProvider>
   );
+}
+
+/**
+ * Restores the user's regular antd theme for its children. Use this for modals that are
+ * rendered within a differently themed subtree (e.g., the dark navbar/toolbar), since
+ * modals would otherwise inherit that theme.
+ */
+export function UserThemeConfigProvider({ children }: { children: React.ReactNode }) {
+  const userTheme = useWkSelector(getActiveTheme);
+  return <ConfigProvider theme={getAntdTheme(userTheme)}>{children}</ConfigProvider>;
 }

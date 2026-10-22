@@ -241,7 +241,7 @@ class DataSourceController @Inject() (
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
             before <- Instant.nowFox
-            pathStorageReports <- storageUsageService.measureStorageForPaths(request.body.paths, organizationId)
+            pathStorageReports <- storageUsageService.measureStorageForPaths(request.body.paths)
             _ = if (Instant.since(before) > (10 seconds)) {
               Instant.logSince(
                 before,
@@ -283,6 +283,7 @@ class DataSourceController @Inject() (
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDatasets(organizationId)) {
         for {
           dataSource <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
+          _ <- Fox.fromBool(dataSource.id.organizationId == organizationId) ?~> Msg.notAllowed ~> FORBIDDEN
           _ = clearCachesOfDataSource(datasetId, dataSource, layerName)
           reloadedDataSource <- refreshDataSource(datasetId)
         } yield Ok(Json.toJson(reloadedDataSource))
@@ -299,7 +300,6 @@ class DataSourceController @Inject() (
             .moveToTrash(
               datasetId,
               Path.of(rootPath),
-              dataSourceId.organizationId,
               dataSourceId.directoryName,
               reason = Some("the user wants to delete the dataset")
             )

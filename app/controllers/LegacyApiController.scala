@@ -140,9 +140,7 @@ class LegacyApiController @Inject() (
     sil.SecuredAction.fox(validateJson[DatasetUpdatePartialParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
-        _ <- Fox.assertTrue(
-          datasetService.isEditableBy(dataset, Some(request.identity))
-        ) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetService.assertEditableBy(dataset, request.identity)
         _ <- Fox.runOptional(request.body.metadata)(assertNoDuplicateMetadataKeys)
         _ <- datasetDAO.updatePartial(dataset._id, request.body)
         _ <- Fox.runOptional(request.body.dataSource) { dataSourceUpdates =>
@@ -207,7 +205,8 @@ class LegacyApiController @Inject() (
           folderId,
           includeSubfolders,
           searchQuery,
-          limit
+          limit,
+          includeAnnotationCount = None
         )(request)
       )
     else

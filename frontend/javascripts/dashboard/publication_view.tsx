@@ -81,11 +81,13 @@ function PublicationView(props: Props) {
   }
 
   return (
-    <Flex orientation="vertical" gap="medium">
-      {filteredPublications.map((publication) => (
-        <PublicationCard key={publication.id} publication={publication} showDetailedLink />
-      ))}
-    </Flex>
+    <div className="publication-list">
+      <div className="publication-list-grid">
+        {filteredPublications.map((publication) => (
+          <PublicationCard key={publication.id} publication={publication} showDetailedLink />
+        ))}
+      </div>
+    </div>
   );
 }
 

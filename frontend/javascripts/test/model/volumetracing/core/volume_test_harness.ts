@@ -47,6 +47,7 @@ export function editContext(overrides: Partial<EditContext> = {}): EditContext {
     sourceMagIndex: 0,
     activeSegmentId: 7n,
     overwriteMode: "overwrite-all",
+    overwritableValue: 0n,
     editableBoundingBox: null,
     additionalCoordinates: null,
     ...overrides,

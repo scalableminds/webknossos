@@ -9,7 +9,13 @@
  * existing push queue (design doc §12.2).
  */
 
-import type { EditContext, OverwriteMode, Vector3 } from "../core/volume_annotation_types";
+import type {
+  EditContext,
+  OverwriteMode,
+  SegmentId,
+  Vector3,
+} from "../core/volume_annotation_types";
+import type { MaskShape } from "../core/volume_edit_intents";
 import { VolumeTransaction } from "../core/volume_transaction";
 import { rasterize } from "../core/voxel_rasterizer";
 import type { DriverOptions, DriverResult } from "./tool_driver_types";
@@ -17,6 +23,8 @@ import { magListFromDenseMags, WkDataCubeAdapter } from "./wk_data_cube_adapter"
 
 export interface BrushDriverOptions extends DriverOptions {
   overwriteMode: OverwriteMode;
+  /** See EditContext.overwritableValue. */
+  overwritableValue: SegmentId;
   /**
    * Per-axis brush radius in source-mag voxels. Callers fold both the voxel
    * size and the mag into this, so the rasterizer needs neither.
@@ -43,6 +51,7 @@ export class BrushDriver {
       sourceMagIndex: options.magIndex,
       activeSegmentId: options.segmentId,
       overwriteMode: options.overwriteMode,
+      overwritableValue: options.overwritableValue,
       editableBoundingBox: null,
       additionalCoordinates: options.additionalCoordinates,
     };
@@ -76,6 +85,15 @@ export class BrushDriver {
     // Write through so the stroke is visible while the pointer is still down.
     this.transaction.flushToCube();
     this.adapter.flush();
+  }
+
+  /**
+   * Add the auto-fill of a closed stroke to the stroke's transaction, so that
+   * stroke and fill are propagated, diffed and undone as one. Call it before
+   * `finish`, which writes the fill to the cube along with everything else.
+   */
+  fill(mask: MaskShape): void {
+    rasterize(mask, this.ctx, this.transaction);
   }
 
   /**

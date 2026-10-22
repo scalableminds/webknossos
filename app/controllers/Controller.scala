@@ -8,10 +8,10 @@ import security.{UserAwareRequestLogging, WkEnv}
 
 trait Controller extends InjectedController with ExtendedController with UserAwareRequestLogging {
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, ?]): DBAccessContext =
+  implicit protected def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, ?]): DBAccessContext =
     DBAccessContext(request.identity)
 
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, ?]): DBAccessContext =
+  implicit protected def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, ?]): DBAccessContext =
     DBAccessContext(Some(request.identity))
 
 }

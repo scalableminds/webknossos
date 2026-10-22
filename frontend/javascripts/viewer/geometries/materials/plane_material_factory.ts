@@ -54,14 +54,16 @@ import {
   isRotated,
 } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, isBrushTool } from "viewer/model/accessors/tool_accessor";
-import { calculateGlobalPos, getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
+import { getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
   getActiveUnmappedSegmentId,
+  getBrushCenterPosition,
   getBucketRetrievalSourceFn,
   getHideUnregisteredSegmentsForLayer,
   getProofreadingMarkerPosition,
+  getRenderableMagForActiveSegmentationTracing,
   isZoomThresholdExceededForAgglomerateMapping,
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
@@ -205,6 +207,11 @@ class PlaneMaterialFactory {
       viewportExtent: {
         value: [0, 0],
       },
+      // The flycam's current "t" (time) additional coordinate, kept in sync by
+      // startListeningForUniforms. Only meaningful for layers with usesTRecyclingPerLayer set.
+      currentTCoordinate: {
+        value: 0,
+      },
       shouldApplyMappingOnGPU: {
         value: false,
       },
@@ -214,7 +221,7 @@ class PlaneMaterialFactory {
       hideUnmappedIds: {
         value: false,
       },
-      globalMousePosition: {
+      brushCenterPosition: {
         value: new ThreeVector3(0, 0, 0),
       },
       proofreadingMarkerPosition: {
@@ -222,6 +229,9 @@ class PlaneMaterialFactory {
       },
       brushSizeInPixel: {
         value: 0,
+      },
+      brushMag: {
+        value: new ThreeVector3(1, 1, 1),
       },
       segmentationPatternOpacity: {
         value: 40,
@@ -345,6 +355,14 @@ class PlaneMaterialFactory {
   attachTextures(): void {
     let sharedLookUpTexture;
     let sharedLookUpCuckooTable;
+    // Same ordering as activeMagIndices (both iterate Model.getAllLayers()), matching
+    // globalLayerIndex. Built here, not in setupUniforms, because textureBucketManager only
+    // exists once getDataTextures() below has triggered its lazy setup.
+    const usesTRecyclingPerLayer: number[] = [];
+    // Voxels per bucket in each layer's data texture. Read off the TextureBucketManager, not
+    // the DataCube: the two disagree for t-recycling layers, and the shader derives its row and
+    // texture indices from this, so it must match the upload side exactly.
+    const bucketVoxelCountPerLayer: number[] = [];
     // Add data and look up textures for each layer
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
@@ -358,7 +376,16 @@ class PlaneMaterialFactory {
       this.uniforms[`${layerName}_data_texture_width`] = {
         value: dataLayer.layerRenderingManager.textureWidth,
       };
+      const { textureBucketManager } = dataLayer.layerRenderingManager;
+      usesTRecyclingPerLayer.push(textureBucketManager.usesTRecycling ? 1 : 0);
+      bucketVoxelCountPerLayer.push(textureBucketManager.bucketVoxelCount);
     }
+    this.uniforms.usesTRecyclingPerLayer = {
+      value: usesTRecyclingPerLayer,
+    };
+    this.uniforms.bucketVoxelCountPerLayer = {
+      value: bucketVoxelCountPerLayer,
+    };
 
     if (!sharedLookUpCuckooTable) {
       throw new Error("Empty layer list at unexpected point.");
@@ -513,6 +540,14 @@ class PlaneMaterialFactory {
         (storeState) => getViewportExtents(storeState),
         (extents) => {
           this.uniforms.viewportExtent.value = extents[this.planeID];
+        },
+        true,
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.flycam.additionalCoordinates,
+        (additionalCoordinates) => {
+          this.uniforms.currentTCoordinate.value =
+            additionalCoordinates?.find((coord) => coord.name === "t")?.value ?? 0;
         },
         true,
       ),
@@ -705,8 +740,8 @@ class PlaneMaterialFactory {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.mousePosition,
-          (globalMousePosition) => {
-            if (!globalMousePosition) {
+          (mousePosition) => {
+            if (!mousePosition) {
               this.uniforms.isMouseInCanvas.value = false;
               return;
             }
@@ -717,12 +752,16 @@ class PlaneMaterialFactory {
               return;
             }
 
-            const [x, y, z] = calculateGlobalPos(state, {
-              x: globalMousePosition[0],
-              y: globalMousePosition[1],
-            }).rounded;
-            this.uniforms.globalMousePosition.value.set(x, y, z);
             this.uniforms.isMouseInCanvas.value = true;
+          },
+          true,
+        ),
+        listenToStoreProperty(
+          (storeState) => getBrushCenterPosition(storeState),
+          (brushCenterPosition) => {
+            if (brushCenterPosition != null) {
+              this.uniforms.brushCenterPosition.value.set(...brushCenterPosition);
+            }
           },
           true,
         ),
@@ -742,6 +781,16 @@ class PlaneMaterialFactory {
           (storeState) => storeState.userConfiguration.brushSize,
           (brushSize) => {
             this.uniforms.brushSizeInPixel.value = brushSize;
+          },
+          true,
+        ),
+        listenToStoreProperty(
+          (storeState) => getRenderableMagForActiveSegmentationTracing(storeState)?.mag,
+          (mag) => {
+            // The brush preview should snap to the voxel grid of the mag in which
+            // the brush is actually applied.
+            const [x, y, z] = mag ?? [1, 1, 1];
+            this.uniforms.brushMag.value.set(x, y, z);
           },
           true,
         ),

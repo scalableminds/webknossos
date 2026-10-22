@@ -1,6 +1,7 @@
 import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import { computeBvhAsync } from "libs/compute_bvh_async";
+import { createTween } from "libs/tween_group";
 import forEach from "lodash-es/forEach";
 import get from "lodash-es/get";
 import isEqual from "lodash-es/isEqual";
@@ -19,7 +20,6 @@ import {
   Vector3 as ThreeVector3,
 } from "three";
 import { acceleratedRaycast } from "three-mesh-bvh";
-import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BigIntAsKey, LayerNameAsKey } from "types/type_utils";
 import type { Vector2, Vector3 } from "viewer/constants";
@@ -114,6 +114,15 @@ export default class SegmentMeshController {
     >
   > = {};
 
+  // The segment whose meshes are highlighted because it is hovered (in a 2D viewport,
+  // the segments list or the 3D viewport). Only the key is stored (instead of the meshes)
+  // so that removed meshes are neither updated nor kept alive.
+  private hoveredSegmentToHighlight: {
+    segmentId: bigint;
+    layerName: string;
+    additionalCoordKey: string;
+  } | null = null;
+
   constructor() {
     this.lightsGroup = new Group();
     this.meshesLayerLODRootGroup = new Group();
@@ -191,7 +200,7 @@ export default class SegmentMeshController {
     const mesh = new Mesh(geometry, meshMaterial) as any as MeshSceneNode;
     mesh.isMerged = isMerged;
 
-    const tweenAnimation = new TWEEN.Tween({
+    const tweenAnimation = createTween({
       opacity: 0,
     });
     tweenAnimation
@@ -201,8 +210,8 @@ export default class SegmentMeshController {
         },
         100,
       )
-      .onUpdate(function onUpdate(this: { opacity: number }) {
-        meshMaterial.opacity = this.opacity;
+      .onUpdate((tweenState: { opacity: number }) => {
+        meshMaterial.opacity = tweenState.opacity;
         app.vent.emit("rerender");
       })
       .start();
@@ -264,6 +273,17 @@ export default class SegmentMeshController {
 
     group.segmentId = segmentId;
     this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentId, lod, group);
+
+    // Mesh chunks can stream in while their segment is hovered. Highlight them, too.
+    const hoveredSegment = this.hoveredSegmentToHighlight;
+    if (
+      hoveredSegment != null &&
+      hoveredSegment.segmentId === segmentId &&
+      hoveredSegment.layerName === layerName &&
+      hoveredSegment.additionalCoordKey === additionalCoordinatesString
+    ) {
+      this.updateMeshAppearance(meshChunk, true, undefined, undefined, "full");
+    }
 
     const state = Store.getState();
     if (isNewlyAddedMesh) {
@@ -740,6 +760,42 @@ export default class SegmentMeshController {
         // The mesh has an activeState, but that id is no longer
         // active. Therefore, clear it.
         this.updateMeshAppearance(obj, undefined, undefined, false, null);
+      }
+    });
+  };
+
+  updateHoveredSegmentIdHighlighting = (
+    hoveredSegmentId: bigint | null,
+    layerName: string | null,
+    additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  ) => {
+    const previous = this.hoveredSegmentToHighlight;
+    if (previous != null) {
+      // Meshes that were removed in the meantime are no longer part of meshesGroupsPerSegmentId
+      // and are therefore skipped.
+      forEach(
+        this.getMeshGroups(previous.additionalCoordKey, previous.layerName, previous.segmentId),
+        (lodGroup) => {
+          lodGroup.traverse((obj) => {
+            if (obj instanceof Mesh && (obj as MeshSceneNode).hoveredState != null) {
+              this.updateMeshAppearance(obj as MeshSceneNode, false, undefined, undefined, null);
+            }
+          });
+        },
+      );
+    }
+    this.hoveredSegmentToHighlight = null;
+
+    if (!hoveredSegmentId || layerName == null) {
+      return;
+    }
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+    this.hoveredSegmentToHighlight = { segmentId: hoveredSegmentId, layerName, additionalCoordKey };
+    forEach(this.getMeshGroups(additionalCoordKey, layerName, hoveredSegmentId), (lodGroup) => {
+      // Highlighting one mesh with "full" recolors all meshes of its LOD group.
+      const mesh = lodGroup.children[0]?.children[0] as MeshSceneNode | undefined;
+      if (mesh != null) {
+        this.updateMeshAppearance(mesh, true, undefined, undefined, "full");
       }
     });
   };

@@ -224,7 +224,7 @@ export function* labelWithVoxelBuffer2D(
       throw new Error("When iterating over the buckets, we shouldn't visit the same bucket twice");
     }
 
-    const labelMapOfBucket = new Uint8Array(Constants.BUCKET_WIDTH ** 2);
+    const labelMapOfBucket = new Uint8Array(Constants.BUCKET_SIZE_2D);
     currentLabeledVoxelMap.set(bucketZoomedAddress, labelMapOfBucket);
 
     // globalA (first dim) and globalB (second dim) are global coordinates in layer-space.

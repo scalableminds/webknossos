@@ -459,8 +459,8 @@ class SectionLabeler {
     return [transposed[0], transposed[1]];
   }
 
-  getUnzoomedCentroid(): Vector3 {
-    /* Returns the centroid (in layer space).
+  getUnzoomedCentroid(): Vector3 | null {
+    /* Returns the centroid (in layer space), or null for an empty contour.
      *
      * Formula:
      * https://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon
@@ -470,6 +470,9 @@ class SectionLabeler {
     let sumCx = 0;
     let sumCy = 0;
     const contourList = this.getContourList();
+    if (contourList.length === 0) {
+      return null;
+    }
 
     for (let i = 0; i < contourList.length - 1; i++) {
       const [x, y] = this.get2DCoordinate(contourList[i]);
@@ -651,9 +654,9 @@ export class TransformedSectionLabeler {
     return this.base.getCircleVoxelBuffer2D(position, scale);
   }
 
-  getUnzoomedCentroid(): Vector3 {
+  getUnzoomedCentroid(): Vector3 | null {
     const centroid = this.base.getUnzoomedCentroid();
-    return this.applyInverseTransform(centroid);
+    return centroid == null ? null : this.applyInverseTransform(centroid);
   }
 
   getPlane(): OrthoView {

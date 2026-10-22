@@ -180,7 +180,7 @@ class BinaryDataController @Inject() (
           DataServiceRequestSettings(appliedAgglomerate = mappingName)
         )
         (data, _, _) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
-        intensityRange: Option[(Double, Double)] = intensityMin.flatMap(min => intensityMax.map(max => (min, max)))
+        intensityRange <- resolveIntensityRange(datasetId, dataSource.id, dataLayer, intensityMin, intensityMax)
         thumbnailBufferedImage <- thumbnailService.renderLayerThumbnail(
           data,
           dataLayer.elementClass,
@@ -195,6 +195,26 @@ class BinaryDataController @Inject() (
       } yield Ok(thumbnailJpegBytes).as(jpegMimeType)
     }
   }
+
+  private def resolveIntensityRange(
+      datasetId: ObjectId,
+      dataSourceId: DataSourceId,
+      dataLayer: DataLayer,
+      intensityMin: Option[Double],
+      intensityMax: Option[Double]
+  )(using tc: TokenContext): Fox[Option[(Double, Double)]] =
+    (intensityMin, intensityMax) match {
+      case (Some(min), Some(max))                                => Fox.successful(Some((min, max)))
+      case _ if dataLayer.category == LayerCategory.segmentation => Fox.successful(None)
+      case _                                                     =>
+        for {
+          histogramsBox <- findDataService.createHistogram(datasetId, dataSourceId, dataLayer).shiftBox
+        } yield histogramsBox.toOption.filter(_.nonEmpty).flatMap { histograms =>
+          val min = histograms.map(_.min).min
+          val max = histograms.map(_.max).max
+          if (min < max) Some((min, max)) else None
+        }
+    }
 
   private def datasetThumbnailLayerImage(
       datasetId: ObjectId,
@@ -216,8 +236,12 @@ class BinaryDataController @Inject() (
         DataServiceRequestSettings(appliedAgglomerate = layerParams.mappingName)
       )
       (data, _, _) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
-      intensityRange: Option[(Double, Double)] = layerParams.intensityMin.flatMap(min =>
-        layerParams.intensityMax.map(max => (min, max))
+      intensityRange <- resolveIntensityRange(
+        datasetId,
+        dataSource.id,
+        dataLayer,
+        layerParams.intensityMin,
+        layerParams.intensityMax
       )
       isSegmentation = dataLayer.category == LayerCategory.segmentation
       image <- thumbnailService.renderLayerThumbnail(

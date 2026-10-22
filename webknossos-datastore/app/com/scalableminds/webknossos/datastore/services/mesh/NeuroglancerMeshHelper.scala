@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.google.common.io.LittleEndianDataInputStream
-import com.scalableminds.util.box.Box
+import com.scalableminds.util.box.{Box, Empty}
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.tools.JsonAutoFormat
 import Box.tryo
@@ -111,7 +111,7 @@ object WebknossosSegmentInfo {
       meshFormat: String,
       chunkScale: Array[Double] = Array(1.0, 1.0, 1.0)
   ): Box[WebknossosSegmentInfo] =
-    Box.fromOption(chunkInfos.headOption).flatMap { firstChunkInfo =>
+    if (chunkInfos.nonEmpty) {
       tryo {
         WebknossosSegmentInfo(
           meshFormat = meshFormat,
@@ -119,7 +119,7 @@ object WebknossosSegmentInfo {
           chunkScale = chunkScale
         )
       }
-    }
+    } else Empty
 
   private def mergeLod(thisLodFromAllChunks: List[MeshLodInfo]): MeshLodInfo = {
     val first = thisLodFromAllChunks.head

@@ -191,6 +191,47 @@ JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nati
         return 0;
     }
 }
+JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_findSegmentIdPosition
+    (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jint bucketLength, jlong segmentId) {
+
+    jsize inputLengthBytes = env->GetArrayLength(bucketBytesJavaArray);
+    jbyte * bucketBytes = env->GetByteArrayElements(bucketBytesJavaArray, nullptr);
+    try {
+
+        const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
+        const size_t bucketLengthAsSize = static_cast<size_t>(bucketLength);
+        if (elementCount != bucketLengthAsSize * bucketLengthAsSize * bucketLengthAsSize) {
+            throw std::invalid_argument("elementCount must match exactly one bucket.");
+        }
+
+        for (size_t index = 0; index < elementCount; ++index) {
+            int64_t currentValue = segmentIdAtIndex(bucketBytes, index, bytesPerElement, isSigned);
+            if (currentValue == segmentId) {
+                // The bucket is in fortran order, so the index decomposes with x fastest and z slowest.
+                std::array<int, 3> position = {
+                    static_cast<int>(index % bucketLengthAsSize),
+                    static_cast<int>((index / bucketLengthAsSize) % bucketLengthAsSize),
+                    static_cast<int>(index / (bucketLengthAsSize * bucketLengthAsSize))
+                };
+                env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+                jintArray resultAsJIntArray = env->NewIntArray(position.size());
+                env->SetIntArrayRegion(resultAsJIntArray, 0, position.size(), reinterpret_cast < const jint * > (position.data()));
+                return resultAsJIntArray;
+            }
+        }
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        return env->NewIntArray(0);
+
+    } catch (const std::exception &e) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        throwRuntimeException(env, "Native Exception in BucketScanner findSegmentIdPosition: " + std::string(e.what()));
+        return nullptr;
+    } catch (...) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        throwRuntimeException(env, "Native Exception in BucketScanner findSegmentIdPosition");
+        return nullptr;
+    }
+}
 
 JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_extendSegmentBoundingBox
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jint bucketLength, jlong segmentId,

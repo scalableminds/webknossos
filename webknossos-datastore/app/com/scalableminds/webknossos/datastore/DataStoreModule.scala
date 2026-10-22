@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.services.mapping.{
   AgglomerateService,
   Hdf5AgglomerateService,
   MappingService,
+  PcgAgglomerateService,
   ZarrAgglomerateService
 }
 import com.scalableminds.webknossos.datastore.services.mesh.{
@@ -52,6 +53,7 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[AgglomerateService]).asEagerSingleton()
     bind(classOf[ZarrAgglomerateService]).asEagerSingleton()
     bind(classOf[Hdf5AgglomerateService]).asEagerSingleton()
+    bind(classOf[PcgAgglomerateService]).asEagerSingleton()
     bind(classOf[SegmentIndexFileService]).asEagerSingleton()
     bind(classOf[SegmentStatisticsFileService]).asEagerSingleton()
     bind(classOf[ZarrSegmentIndexFileService]).asEagerSingleton()

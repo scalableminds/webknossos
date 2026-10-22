@@ -8,6 +8,12 @@ import { HelpEmail } from "./help_email";
 
 type HelpMode = "ai" | "email";
 
+const PANEL_GAP = 8;
+// Vertical space of the panel around its content area: modal padding, title row and the
+// mode switch, plus a gap towards the bottom of the viewport.
+const PANEL_CHROME_HEIGHT = 140;
+const MIN_CONTENT_HEIGHT = 200;
+
 type HelpModalProps = {
   isModalOpen: boolean;
   onCancel: () => void;
@@ -20,7 +26,12 @@ export function HelpModal(props: HelpModalProps) {
   const [chatResetKey, setChatResetKey] = useState(0);
   const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
   // Dock the panel to the top right, right below the navbar's help button.
-  const positionStyle: CSSProperties = { right: 10, top: navbarHeight + 8, position: "fixed" };
+  const positionStyle: CSSProperties = {
+    right: 10,
+    top: navbarHeight + PANEL_GAP,
+    position: "fixed",
+  };
+  const availableContentHeight = `calc(100vh - ${navbarHeight + PANEL_GAP + PANEL_CHROME_HEIGHT}px)`;
 
   const modalTitle = (
     <Flex align="center" gap={4} style={{ paddingRight: 8 }}>
@@ -80,7 +91,11 @@ export function HelpModal(props: HelpModalProps) {
       {/* Both tabs fill the same fixed height so switching between them doesn't resize the
       panel. Portrait proportions like a chat window, but never taller than the viewport
       below the navbar allows. */}
-      <div style={{ height: `min(${isExpanded ? 600 : 440}px, calc(100vh - 200px))` }}>
+      <div
+        style={{
+          height: `min(${isExpanded ? 600 : 440}px, max(${MIN_CONTENT_HEIGHT}px, ${availableContentHeight}))`,
+        }}
+      >
         {mode === "ai" ? <HelpChat key={chatResetKey} /> : <HelpEmail onCancel={props.onCancel} />}
       </div>
     </Modal>

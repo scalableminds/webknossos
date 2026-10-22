@@ -603,11 +603,9 @@ function OrganizationFilterInput({
 function LoggedInAvatar({
   activeUser,
   handleLogout,
-  navbarHeight,
 }: {
   activeUser: APIUser;
   handleLogout: (event: React.SyntheticEvent) => void;
-  navbarHeight: number;
 } & SubMenuProps) {
   const { firstName, lastName, organization: organizationId } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
@@ -652,7 +650,6 @@ function LoggedInAvatar({
       selectedKeys={["prevent highlighting of this menu"]}
       mode="horizontal"
       style={{
-        paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
         marginInlineStart: "10px",
       }}
@@ -885,6 +882,8 @@ function Navbar() {
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
   const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
+  // Pushes the navbar items below the maintenance/upgrade banner when one is shown.
+  const bannerOffset = navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0;
   const historyLocation = useLocation();
 
   const handleLogout = async (event: React.SyntheticEvent) => {
@@ -968,10 +967,7 @@ function Navbar() {
         color="default"
         variant="filled"
         icon={<MessageOutlined />}
-        onClick={() => setIsHelpModalOpen(true)}
-        style={{
-          marginTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
-        }}
+        onClick={() => setIsHelpModalOpen((isOpen) => !isOpen)}
       >
         Ask
       </Button>,
@@ -982,7 +978,6 @@ function Navbar() {
         key="logged-in-avatar"
         activeUser={loggedInUser}
         handleLogout={handleLogout}
-        navbarHeight={navbarHeight}
       />,
     );
   }
@@ -1022,7 +1017,7 @@ function Navbar() {
         selectedKeys={selectedKeys}
         onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
         style={{
-          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
+          paddingTop: bannerOffset,
           lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
         }}
         theme="dark"
@@ -1040,11 +1035,11 @@ function Navbar() {
         style={{
           flex: 1,
           display: "flex",
-          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
+          paddingTop: bannerOffset,
         }}
       />
       <ConfigProvider theme={getAntdTheme("dark")}>
-        <Flex align="center" justify="flex-end" gap="small">
+        <Flex align="center" justify="flex-end" gap="small" style={{ paddingTop: bannerOffset }}>
           {trailingNavItems}
         </Flex>
       </ConfigProvider>

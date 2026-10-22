@@ -2,7 +2,7 @@ import { CloseOutlined, ExpandAltOutlined, FormOutlined, ShrinkOutlined } from "
 import { Button, Flex, Modal, Segmented, Tooltip, theme } from "antd";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
-import { type CSSProperties, useState } from "react";
+import { type CSSProperties, useRef, useState } from "react";
 import { ModalWidth } from "theme";
 import { HelpChat, useHelpChatSession } from "./help_chat";
 import { HelpEmail } from "./help_email";
@@ -64,13 +64,24 @@ function HelpPanelTitle({
 }
 
 export function HelpModal(props: HelpModalProps) {
+  // The navbar always renders the help modal. Mount the panel (and its chat session) only once
+  // it is opened for the first time.
+  const [hasBeenOpened, setHasBeenOpened] = useState(props.isModalOpen);
+  if (props.isModalOpen && !hasBeenOpened) setHasBeenOpened(true);
+
+  return hasBeenOpened ? <HelpPanel {...props} /> : null;
+}
+
+function HelpPanel(props: HelpModalProps) {
   const aiAgentEnabled = Boolean(features().supportAiAgentUrl);
-  const [mode, setMode] = useState<HelpMode>(aiAgentEnabled ? "ai" : "email");
+  const defaultMode: HelpMode = aiAgentEnabled ? "ai" : "email";
+  const [mode, setMode] = useState<HelpMode>(defaultMode);
   const [isExpanded, setIsExpanded] = useState(false);
   // Whether the email attaches the assistant conversation. Preset when the user hands the
   // conversation over to the team from the chat.
   const [includeConversation, setIncludeConversation] = useState(false);
   const chat = useHelpChatSession();
+  const contentRef = useRef<HTMLDivElement>(null);
   const { cssVar } = theme.useToken();
   const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
 
@@ -122,7 +133,10 @@ export function HelpModal(props: HelpModalProps) {
         transcript={aiAgentEnabled ? chat.messages : []}
         includeConversation={includeConversation}
         onToggleInclude={setIncludeConversation}
-        onSent={props.onCancel}
+        onSent={() => {
+          switchMode(defaultMode);
+          props.onCancel();
+        }}
         onClose={props.onCancel}
       />
     );
@@ -135,6 +149,11 @@ export function HelpModal(props: HelpModalProps) {
       open={props.isModalOpen}
       mask={false}
       onCancel={props.onCancel}
+      // The panel stays mounted while hidden, so the inputs' autoFocus only applies to the first
+      // opening. Focus the input of the current screen whenever the panel opens again.
+      afterOpenChange={(open) => {
+        if (open) contentRef.current?.querySelector("textarea")?.focus();
+      }}
       // Docked to the top right, the panel toggles between antd's default width and a larger one.
       width={isExpanded ? ModalWidth.Large : undefined}
       footer={null}
@@ -153,6 +172,7 @@ export function HelpModal(props: HelpModalProps) {
       panel. Portrait proportions like a chat window, but never taller than the viewport
       below the navbar allows. */}
       <div
+        ref={contentRef}
         style={{
           height: `min(${isExpanded ? 720 : 560}px, max(${MIN_CONTENT_HEIGHT}px, ${availableContentHeight}))`,
         }}

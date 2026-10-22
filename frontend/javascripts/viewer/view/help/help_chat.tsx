@@ -45,13 +45,9 @@ function loadMessages(): ChatMessage[] {
   }
 }
 
-function loadSessionId(): string {
-  const stored = sessionStorage.getItem(STORAGE_SESSION_KEY);
-  if (stored) return stored;
-
+function createSessionId(): string {
   const id = getUid();
   sessionStorage.setItem(STORAGE_SESSION_KEY, id);
-
   return id;
 }
 
@@ -96,11 +92,13 @@ export type HelpChatSession = {
 export function useHelpChatSession(): HelpChatSession {
   const [messages, setMessages] = useState<ChatMessage[]>(loadMessages);
   const [isLoading, setIsLoading] = useState(false);
-  const sessionId = useRef(loadSessionId());
+  // Created lazily with the first message, so that merely showing the panel stores nothing.
+  const sessionId = useRef(sessionStorage.getItem(STORAGE_SESSION_KEY));
   const activeUser = useWkSelector((state) => state.activeUser);
 
   useEffect(() => {
-    sessionStorage.setItem(STORAGE_MESSAGES_KEY, JSON.stringify(messages));
+    if (messages.length > 0) sessionStorage.setItem(STORAGE_MESSAGES_KEY, JSON.stringify(messages));
+    else sessionStorage.removeItem(STORAGE_MESSAGES_KEY);
   }, [messages]);
 
   const send = async (input: string) => {
@@ -108,12 +106,13 @@ export function useHelpChatSession(): HelpChatSession {
     if (!text || isLoading) return;
 
     // `reset` starts a new session. A reply that belongs to the discarded one is dropped.
+    sessionId.current ??= createSessionId();
     const requestSessionId = sessionId.current;
     setMessages((prev) => [...prev, { role: "user", content: text }]);
     setIsLoading(true);
 
     try {
-      const reply = await askChatbot(text, sessionId.current, activeUser);
+      const reply = await askChatbot(text, requestSessionId, activeUser);
       if (sessionId.current !== requestSessionId) return;
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch {
@@ -126,7 +125,7 @@ export function useHelpChatSession(): HelpChatSession {
 
   const reset = () => {
     clearHelpChatSession();
-    sessionId.current = loadSessionId();
+    sessionId.current = null;
     setMessages([]);
     setIsLoading(false);
   };
@@ -248,8 +247,10 @@ function ChatComposer({
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     // Enter sends, Shift+Enter inserts a line break. Enter also confirms an IME composition,
-    // which must not send the message.
-    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+    // which must not send the message. Safari reports that Enter with isComposing === false,
+    // but with keyCode 229.
+    const isComposing = event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229;
+    if (event.key !== "Enter" || event.shiftKey || isComposing) return;
     event.preventDefault();
     send();
   };

@@ -1,3 +1,4 @@
+import type { ApiResult } from "admin/api/api_result";
 import type { MeshSegmentInfo } from "admin/api/mesh";
 import type { MeshChunkDataRequestList } from "admin/api/mesh.ts";
 import {
@@ -245,9 +246,10 @@ vi.mock("admin/rest_api.ts", async () => {
     },
   );
 
-  const getMeshFilesForDatasetLayer = vi.fn(async () => {
-    return [dummyMeshFile];
-  });
+  const getMeshFilesForDatasetLayer = vi.fn(async () => ({
+    ok: true as const,
+    value: [dummyMeshFile],
+  }));
 
   return {
     ...actual,
@@ -340,29 +342,32 @@ vi.mock("admin/api/mesh", async () => {
       segmentId: bigint,
       _targetMappingName: string | null | undefined,
       _editableMappingTracingId: string | null | undefined,
-    ): Promise<MeshSegmentInfo> => {
+    ): Promise<ApiResult<MeshSegmentInfo>> => {
       console.log("Requesting default mesh segment info in mocked test.");
       await sleep(100);
       return {
-        meshFormat: "draco",
-        lods: [
-          {
-            chunks: [
-              {
-                position: [0, 0, 0],
-                byteOffset: 0,
-                byteSize: 666,
-                unmappedSegmentId: segmentId,
-              },
-            ],
-            transform: [
-              [1, 0, 0, 0],
-              [0, 1, 0, 0],
-              [0, 0, 1, 0],
-            ], // 4x3 matrix
-          },
-        ],
-        chunkScale: [1, 1, 1],
+        ok: true,
+        value: {
+          meshFormat: "draco",
+          lods: [
+            {
+              chunks: [
+                {
+                  position: [0, 0, 0],
+                  byteOffset: 0,
+                  byteSize: 666,
+                  unmappedSegmentId: segmentId,
+                },
+              ],
+              transform: [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, 1, 0],
+              ], // 4x3 matrix
+            },
+          ],
+          chunkScale: [1, 1, 1],
+        },
       };
     },
   );
@@ -373,10 +378,13 @@ vi.mock("admin/api/mesh", async () => {
       _datasetId: string,
       _layerName: string,
       batchDescription: MeshChunkDataRequestList,
-    ): Promise<ArrayBuffer[]> => {
+    ): Promise<ApiResult<ArrayBuffer[]>> => {
       // Return ArrayBuffers for each chunk in the batch
       // The size doesn't matter for the test since decodeDracoFileAsync is mocked
-      return batchDescription.requests.map((request) => new ArrayBuffer(request.byteSize));
+      return {
+        ok: true,
+        value: batchDescription.requests.map((request) => new ArrayBuffer(request.byteSize)),
+      };
     },
   );
 

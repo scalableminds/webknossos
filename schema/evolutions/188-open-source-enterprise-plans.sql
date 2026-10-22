@@ -1,12 +1,25 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 186 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 187 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 -- Drop dependent views
 DROP VIEW webknossos.userInfos;
 DROP VIEW webknossos.organizations_;
 
--- Restore handing out credits to all organizations, as the function refers to the Open_Source plan
+-- Add the Open_Source and Enterprise plans and replace Custom by Enterprise.
+-- Recreates the enum type, since Postgres cannot drop a value from an enum, by temporarily casting to text.
+ALTER TABLE webknossos.organizations ALTER COLUMN pricingPlan DROP DEFAULT;
+ALTER TABLE webknossos.organizations ALTER COLUMN pricingPlan TYPE VARCHAR(255);
+ALTER TABLE webknossos.organization_plan_updates ALTER COLUMN pricingPlan TYPE VARCHAR(255);
+UPDATE webknossos.organizations SET pricingPlan = 'Enterprise' WHERE pricingPlan = 'Custom';
+UPDATE webknossos.organization_plan_updates SET pricingPlan = 'Enterprise' WHERE pricingPlan = 'Custom';
+DROP TYPE webknossos.PRICING_PLANS;
+CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Personal', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Open_Source', 'Enterprise');
+ALTER TABLE webknossos.organizations ALTER COLUMN pricingPlan TYPE webknossos.PRICING_PLANS USING pricingPlan::webknossos.PRICING_PLANS;
+ALTER TABLE webknossos.organizations ALTER COLUMN pricingPlan SET DEFAULT 'Open_Source'::webknossos.PRICING_PLANS;
+ALTER TABLE webknossos.organization_plan_updates ALTER COLUMN pricingPlan TYPE webknossos.PRICING_PLANS USING pricingPlan::webknossos.PRICING_PLANS;
+
+-- Open_Source organizations get no AI credits
 CREATE OR REPLACE FUNCTION webknossos.hand_out_monthly_free_credits(free_milli_credits_amount INT) RETURNS VOID AS $$
 DECLARE
     organization_id TEXT;
@@ -16,8 +29,8 @@ BEGIN
     -- Calculate the first day of the next month
     next_month_first_day := DATE_TRUNC('MONTH', NOW()) + INTERVAL '1 MONTH';
 
-    -- Loop through all organizations
-    FOR organization_id IN (SELECT _id FROM webknossos.organizations) LOOP
+    -- Loop through all organizations, except for Open_Source ones, which have no access to AI credits
+    FOR organization_id IN (SELECT _id FROM webknossos.organizations WHERE pricingPlan <> 'Open_Source') LOOP
         -- Check if there is already a free credit transaction for this organization in the current month
         SELECT COUNT(*) INTO existing_transaction_count
         FROM webknossos.credit_transactions
@@ -36,21 +49,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Recreate the enum type without the new values by temporarily casting to text.
--- Open_Source falls back to Personal (same features), Enterprise to Custom (unlimited users and storage).
-ALTER TABLE webknossos.organizations ALTER COLUMN pricingPlan DROP DEFAULT;
-ALTER TABLE webknossos.organizations ALTER COLUMN pricingPlan TYPE VARCHAR(255);
-ALTER TABLE webknossos.organization_plan_updates ALTER COLUMN pricingPlan TYPE VARCHAR(255);
-UPDATE webknossos.organizations SET pricingPlan = 'Personal' WHERE pricingPlan = 'Open_Source';
-UPDATE webknossos.organizations SET pricingPlan = 'Custom' WHERE pricingPlan = 'Enterprise';
-UPDATE webknossos.organization_plan_updates SET pricingPlan = 'Personal' WHERE pricingPlan = 'Open_Source';
-UPDATE webknossos.organization_plan_updates SET pricingPlan = 'Custom' WHERE pricingPlan = 'Enterprise';
-DROP TYPE webknossos.PRICING_PLANS;
-CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Personal', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Custom');
-ALTER TABLE webknossos.organizations ALTER COLUMN pricingPlan TYPE webknossos.PRICING_PLANS USING pricingPlan::webknossos.PRICING_PLANS;
-ALTER TABLE webknossos.organizations ALTER COLUMN pricingPlan SET DEFAULT 'Custom'::webknossos.PRICING_PLANS;
-ALTER TABLE webknossos.organization_plan_updates ALTER COLUMN pricingPlan TYPE webknossos.PRICING_PLANS USING pricingPlan::webknossos.PRICING_PLANS;
-
 -- Recreate views
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 CREATE VIEW webknossos.userInfos AS
@@ -63,6 +61,6 @@ FROM webknossos.users_ u
 JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 185;
+UPDATE webknossos.releaseInformation SET schemaVersion = 188;
 
 COMMIT TRANSACTION;

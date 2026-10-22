@@ -13,25 +13,10 @@ import { usePolling } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
 import { useState } from "react";
 import type { VoxelyticsChunkStatistics } from "types/api_types";
+import { parseStatistics } from "./parse_api_data";
 import type { Result } from "./utils";
 
 type StatisticsResult = Result<Array<VoxelyticsChunkStatistics>>;
-
-function parseStatistics(row: VoxelyticsChunkStatistics): VoxelyticsChunkStatistics {
-  return Object.fromEntries(
-    Object.entries(row).map(([key, value]) => {
-      if (key === "executionId") {
-        return [key, value];
-      } else if (value == null) {
-        return [key, null];
-      } else if (key === "beginTime" || key === "endTime") {
-        return [key, new Date(value as string)];
-      } else {
-        return [key, value];
-      }
-    }),
-  ) as VoxelyticsChunkStatistics;
-}
 
 export default function StatisticsTab({
   workflowHash,

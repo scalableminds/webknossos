@@ -1,3 +1,4 @@
+import type { ApiResult, RetryOptions } from "admin/api/api_result";
 import { getUpdateActionLog } from "admin/rest_api";
 import Toast from "libs/toast";
 import { call, put } from "typed-redux-saga";
@@ -44,7 +45,21 @@ export type RebasingSuccessInfo =
 
 export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
-  const missingUpdateActions = yield* call(fetchNewestMissingUpdateActions);
+  const missingUpdateActionsResult = yield* call(fetchNewestMissingUpdateActions);
+  if (!missingUpdateActionsResult.ok) {
+    // Only errors that are not retried (e.g., 4xx) end up here. The user was already
+    // notified by the api function.
+    const { error } = missingUpdateActionsResult;
+    return {
+      successful: false,
+      failure: {
+        reason: "Fetching the missing update actions failed",
+        error: error.cause,
+        details: { errorKind: error.kind, status: error.status },
+      },
+    };
+  }
+  const missingUpdateActions = missingUpdateActionsResult.value;
   const hasRemoteUnseenChanges = missingUpdateActions.length > 0;
 
   if (!hasRemoteUnseenChanges) {
@@ -151,7 +166,17 @@ function withPhase(failure: RebasingFailure, phase: string): RebasingFailure {
   return { ...failure, details: { ...failure.details, phase } };
 }
 
-function* fetchNewestMissingUpdateActions(): Saga<APIUpdateActionBatch[]> {
+// Without the missing update actions, rebasing (and thus saving) cannot continue. Therefore, the
+// request is retried until the server is reachable again (with an exponential backoff of at most
+// one minute).
+const FETCH_MISSING_UPDATE_ACTIONS_RETRY_OPTIONS: RetryOptions = {
+  retries: Number.POSITIVE_INFINITY,
+  initialDelayMs: 1000,
+  backoffFactor: 2,
+  maxDelayMs: 60 * 1000,
+};
+
+function* fetchNewestMissingUpdateActions(): Saga<ApiResult<APIUpdateActionBatch[]>> {
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   const annotationId = yield* select((state) => state.annotation.annotationId);
   const versionOnClient = yield* select((state) => {
@@ -169,6 +194,8 @@ function* fetchNewestMissingUpdateActions(): Saga<APIUpdateActionBatch[]> {
     undefined,
     false,
     true,
+    {},
+    FETCH_MISSING_UPDATE_ACTIONS_RETRY_OPTIONS,
   );
   return newerActions;
 }

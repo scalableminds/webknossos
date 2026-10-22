@@ -1,3 +1,4 @@
+import type { ApiResult } from "admin/api/api_result";
 import type { MinCutTargetEdge, NeighborInfo } from "admin/rest_api";
 import { toBigInt } from "libs/bigint_helpers";
 import type { RequestOptionsWithData } from "libs/request";
@@ -304,17 +305,17 @@ export class BackendMock {
     _newestVersion?: number,
     _truncateActionLog: boolean = false,
     sortAscending: boolean = false,
-  ): Promise<Array<APIUpdateActionBatch>> => {
+  ): Promise<ApiResult<Array<APIUpdateActionBatch>>> => {
     const firstUnseenVersionIndex = this.updateActionLog.findIndex(
       (item) => item.version === oldestVersion,
     );
     if (firstUnseenVersionIndex === -1) {
-      return [];
+      return { ok: true, value: [] };
     }
     if (!sortAscending) {
       throw new Error("Unexpected request");
     }
-    return this.updateActionLog.slice(firstUnseenVersionIndex);
+    return { ok: true, value: this.updateActionLog.slice(firstUnseenVersionIndex) };
   };
 
   getPositionForSegmentInAgglomerate = async (

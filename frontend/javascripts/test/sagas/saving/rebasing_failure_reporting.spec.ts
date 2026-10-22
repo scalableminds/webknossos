@@ -13,14 +13,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type ServerUpdateAction = APIUpdateActionBatch["value"][number];
 
-function getNewerVersionWithAction(action: ServerUpdateAction): APIUpdateActionBatch[] {
-  return [{ version: Store.getState().annotation.version + 1, value: [action] }];
+function getNewerVersionWithAction(action: ServerUpdateAction) {
+  const batches: APIUpdateActionBatch[] = [
+    { version: Store.getState().annotation.version + 1, value: [action] },
+  ];
+  return { ok: true as const, value: batches };
 }
 
 describe("Reporting of failed rebasing", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
     vi.mocked(ErrorHandling.notify).mockClear();
+    vi.mocked(ErrorHandling.notifyWithPrefix).mockClear();
   });
 
   afterEach<WebknossosTestContext>((context) => {
@@ -71,5 +75,43 @@ describe("Reporting of failed rebasing", () => {
     );
     expect(params).toMatchObject({ reason: "Annotation was reverted by another user" });
     expect(severity).toBe("warning");
+  });
+
+  it("should retry fetching the missing update actions until the server is back", async (context: WebknossosTestContext) => {
+    void dispatchEnsureHasNewestVersionAsync(Store.dispatch);
+    await sleep(200);
+
+    expect(context.mocks.getUpdateActionLog).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      undefined,
+      false,
+      true,
+      {},
+      expect.objectContaining({ retries: Number.POSITIVE_INFINITY, maxDelayMs: 60 * 1000 }),
+    );
+  });
+
+  it("should report (and not crash) if fetching the missing update actions fails without retry", async (context: WebknossosTestContext) => {
+    const cause = { status: 403, messages: [{ error: "Forbidden" }] };
+    context.mocks.getUpdateActionLog.mockResolvedValueOnce({
+      ok: false,
+      error: { kind: "http", status: 403, message: "Forbidden", cause },
+    });
+
+    void dispatchEnsureHasNewestVersionAsync(Store.dispatch);
+    await sleep(500);
+
+    expect(hasRootSagaCrashed()).toBe(false);
+    expect(ErrorHandling.notifyWithPrefix).toHaveBeenCalledTimes(1);
+    const [error, prefix, params] = vi.mocked(ErrorHandling.notifyWithPrefix).mock.calls[0];
+    expect(error).toBe(cause);
+    expect(prefix).toBe("Rebasing failed: ");
+    expect(params).toMatchObject({
+      reason: "Fetching the missing update actions failed",
+      errorKind: "http",
+      status: 403,
+    });
   });
 });

@@ -4,7 +4,6 @@ import {
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import ErrorHandling from "libs/error_handling";
-import { sleep } from "libs/utils";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
@@ -37,10 +36,11 @@ describe("Reporting of failed rebasing", () => {
       } as unknown as ServerUpdateAction),
     );
 
-    void dispatchEnsureHasNewestVersionAsync(Store.dispatch);
-    await sleep(500);
-
-    expect(ErrorHandling.notify).toHaveBeenCalledTimes(1);
+    // Not awaited on purpose: if rebasing fails, the promise is never resolved.
+    dispatchEnsureHasNewestVersionAsync(Store.dispatch);
+    await vi.waitFor(() => expect(ErrorHandling.notify).toHaveBeenCalledTimes(1), {
+      timeout: 5000,
+    });
     const [error, params, severity] = vi.mocked(ErrorHandling.notify).mock.calls[0];
     expect((error as Error).message).toBe("Rebasing failed: Cannot apply legacy action");
     expect(params).toMatchObject({
@@ -61,10 +61,11 @@ describe("Reporting of failed rebasing", () => {
       } as unknown as ServerUpdateAction),
     );
 
-    void dispatchEnsureHasNewestVersionAsync(Store.dispatch);
-    await sleep(500);
-
-    expect(ErrorHandling.notify).toHaveBeenCalledTimes(1);
+    // Not awaited on purpose: if rebasing fails, the promise is never resolved.
+    dispatchEnsureHasNewestVersionAsync(Store.dispatch);
+    await vi.waitFor(() => expect(ErrorHandling.notify).toHaveBeenCalledTimes(1), {
+      timeout: 5000,
+    });
     const [error, params, severity] = vi.mocked(ErrorHandling.notify).mock.calls[0];
     expect((error as Error).message).toBe(
       "Rebasing failed: Annotation was reverted by another user",

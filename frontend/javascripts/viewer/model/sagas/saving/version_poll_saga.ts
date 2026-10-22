@@ -103,15 +103,12 @@ function* reportRebasingFailure(failure: RebasingFailure, isCallerWaiting: boole
     activeOperations,
   };
   console.error(`Rebasing failed: ${failure.reason}`, params, failure.error);
-  if (failure.error != null) {
-    ErrorHandling.notifyWithPrefix(failure.error, "Rebasing failed: ", params);
-  } else {
-    ErrorHandling.notify(
+  ErrorHandling.notify(
+    (failure.error as Error | Record<string, unknown> | undefined) ??
       new Error(`Rebasing failed: ${failure.reason}`),
-      params,
-      failure.isExpected ? "warning" : "error",
-    );
-  }
+    params,
+    failure.isExpected ? "warning" : "error",
+  );
 }
 
 function* getPollInterval(): Saga<number> {

@@ -114,7 +114,8 @@ case class AnnotationCompactInfo(
     tracingIds: Seq[String],
     annotationLayerNames: Seq[String],
     annotationLayerTypes: Seq[String],
-    annotationLayerStatistics: Seq[JsObject]
+    annotationLayerStatistics: Seq[JsObject],
+    layerRegistration: Option[AnnotationLayerRegistration]
 )
 
 class AnnotationLayerDAO @Inject() (SQLClient: SqlClient)(implicit ec: ExecutionContext)
@@ -203,9 +204,47 @@ class AnnotationLayerDAO @Inject() (SQLClient: SqlClient)(implicit ec: Execution
     } yield ()
 }
 
-class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: AnnotationLayerDAO, datasetDAO: DatasetDAO)(
-    implicit ec: ExecutionContext
-) extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
+// Marks an annotation whose landmarks register the other layers of its dataset to the fixed layer.
+case class AnnotationLayerRegistration(fixedLayerName: String) {
+  // E.g. "l4_sample_with_… Layer registration to color_1"
+  def defaultAnnotationName(datasetName: String): String = {
+    val maxDatasetNameLength = 15
+    val shortDatasetName =
+      if (datasetName.length > maxDatasetNameLength) s"${datasetName.take(maxDatasetNameLength)}…"
+      else datasetName
+    s"$shortDatasetName Layer registration to $fixedLayerName"
+  }
+}
+
+object AnnotationLayerRegistration {
+  implicit val jsonFormat: OFormat[AnnotationLayerRegistration] = Json.format[AnnotationLayerRegistration]
+}
+
+class AnnotationLayerRegistrationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
+    extends SimpleSQLDAO(sqlClient) {
+
+  def findOneForAnnotation(annotationId: ObjectId): Fox[Option[AnnotationLayerRegistration]] =
+    for {
+      rows <- run(q"""SELECT fixedLayerName
+                      FROM webknossos.annotation_layerRegistrations
+                      WHERE _annotation = $annotationId""".as[String])
+    } yield rows.headOption.map(AnnotationLayerRegistration(_))
+
+  def insertOneQuery(
+      annotationId: ObjectId,
+      layerRegistration: AnnotationLayerRegistration
+  ): SqlAction[Int, NoStream, Effect] =
+    q"""INSERT INTO webknossos.annotation_layerRegistrations(_annotation, fixedLayerName)
+        VALUES($annotationId, ${layerRegistration.fixedLayerName})""".asUpdate
+}
+
+class AnnotationDAO @Inject() (
+    sqlClient: SqlClient,
+    annotationLayerDAO: AnnotationLayerDAO,
+    annotationLayerRegistrationDAO: AnnotationLayerRegistrationDAO,
+    datasetDAO: DatasetDAO
+)(implicit ec: ExecutionContext)
+    extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
   protected val collection = Annotations
   protected def resultConverter = GetResultAnnotationsRow
 
@@ -366,6 +405,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       val annotationLayerTypes = parseArrayLiteral(<<[String])
       val annotationLayerStatistics =
         parseArrayLiteral(<<[String]).map(layerStats => JsonHelper.parseAs[JsObject](layerStats).getOrElse(Json.obj()))
+      val layerRegistration = <<?[String].map(AnnotationLayerRegistration(_))
 
       AnnotationCompactInfo(
         id,
@@ -392,7 +432,8 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
         tracingIds,
         annotationLayerNames,
         annotationLayerTypes,
-        annotationLayerStatistics
+        annotationLayerStatistics,
+        layerRegistration
       )
     }
 
@@ -406,6 +447,8 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
     * @param filterOwnedOrShared
     *   If `true`, the function lists only annotations owned by the user or explicitly shared with them (used for the
     *   user's own dashboard). If `false`, it lists all annotations the viewer is allowed to see.
+    * @param onlyLayerRegistrations
+    *   If `true`, only annotations that are layer registrations are returned.
     * @param limit
     *   The maximum number of annotations to return.
     * @param pageNumber
@@ -417,7 +460,8 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       filterOwnedOrShared: Boolean,
       datasetId: Option[ObjectId],
       limit: Int,
-      pageNumber: Int = 0
+      pageNumber: Int = 0,
+      onlyLayerRegistrations: Boolean = false
   )(using ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
     for {
       accessQuery <-
@@ -427,6 +471,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"TRUE")
       datasetQuery = datasetId.map(d => q"a._dataset = $d").getOrElse(q"TRUE")
       typQuery = q"a.typ = ${AnnotationType.Explorational}"
+      layerRegistrationQuery = if (onlyLayerRegistrations) q"lr._annotation IS NOT NULL" else q"TRUE"
       query = q"""
           -- We need to separate the querying of the annotation with all its inner joins from the 1:n join to collect the shared teams
           -- This is to prevent left-join fanout.
@@ -455,19 +500,22 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
               ARRAY_REMOVE(ARRAY_AGG(al.tracingid), null) AS tracing_ids,
               ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
               ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs,
-              ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics
+              ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics,
+              lr.fixedLayerName
             FROM webknossos.annotations_ AS a
             JOIN webknossos.users_ u ON u._id = a._user
             JOIN webknossos.datasets_ d ON d._id = a._dataset
             JOIN webknossos.organizations_ AS o ON o._id = d._organization
             JOIN webknossos.annotation_layers AS al ON al._annotation = a._id
             JOIN webknossos.multiusers_ mu ON u._multiUser = mu._id
-            WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery AND $datasetQuery
+            LEFT JOIN webknossos.annotation_layerRegistrations lr ON lr._annotation = a._id
+            WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery AND $datasetQuery AND $layerRegistrationQuery
             GROUP BY
               a._id, a.name, a.description, a._user, a.collaborationMode, a.modified, a.created,
               a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
               mu.firstname, mu.lastname,
-              d.name, d._id, o._id
+              d.name, d._id, o._id,
+              lr.fixedLayerName
             ORDER BY a._id DESC
             LIMIT $limit
             OFFSET ${pageNumber * limit}
@@ -497,7 +545,8 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             an.tracing_ids,
             an.tracing_names,
             an.tracing_typs,
-            an.annotation_layer_statistics
+            an.annotation_layer_statistics,
+            an.fixedLayerName
           FROM an
           LEFT JOIN webknossos.annotation_sharedteams ast ON ast._annotation = an._id
           LEFT JOIN webknossos.teams_ t ON ast._team = t._id
@@ -524,7 +573,8 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             an.tracing_ids,
             an.tracing_names,
             an.tracing_typs,
-            an.annotation_layer_statistics
+            an.annotation_layer_statistics,
+            an.fixedLayerName
           ORDER BY an._id DESC
          """
       rows <- run(query.as[AnnotationCompactInfo])
@@ -704,7 +754,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
 
   // update operations
 
-  def insertOne(a: Annotation): Fox[Unit] = {
+  def insertOne(a: Annotation, layerRegistration: Option[AnnotationLayerRegistration] = None): Fox[Unit] = {
     val insertAnnotationQuery = q"""
         INSERT INTO webknossos.annotations(_id, _dataset, _task, _user, description, visibility,
                                            name, state, tags, tracingTime, typ, collaborationMode, created, modified, isDeleted)
@@ -716,8 +766,11 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
          ${a.created}, ${a.modified}, ${a.isDeleted})
          """.asUpdate
     val insertLayerQueries = annotationLayerDAO.insertLayerQueries(a._id, a.annotationLayers)
+    val insertLayerRegistrationQuery = layerRegistration.map(annotationLayerRegistrationDAO.insertOneQuery(a._id, _))
     for {
-      _ <- run(DBIO.sequence(insertAnnotationQuery +: insertLayerQueries).transactionally)
+      _ <- run(
+        DBIO.sequence((insertAnnotationQuery +: insertLayerQueries) ++ insertLayerRegistrationQuery).transactionally
+      )
     } yield ()
   }
 

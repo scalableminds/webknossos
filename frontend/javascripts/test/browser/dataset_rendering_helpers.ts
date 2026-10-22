@@ -2,7 +2,7 @@
 
 import type { RequestOptions } from "libs/request";
 import { sleep } from "libs/utils";
-import mergeImg from "merge-img";
+import { PNG } from "pngjs";
 import type { Browser, Page } from "puppeteer-core";
 import puppeteer from "puppeteer-core";
 import type { APIAnnotation } from "types/api_types";
@@ -371,17 +371,29 @@ export async function screenshotTracingView(
 
   await revertOpacityIfNecessary();
   // Concatenate all screenshots
-  const img = await mergeImg(screenshots as Array<Buffer>);
+  const img = mergeImagesHorizontally(screenshots as Array<Buffer>);
 
-  return new Promise((resolve) => {
-    img.getBuffer("image/png", (_, buffer) =>
-      resolve({
-        screenshot: buffer,
-        width: img.bitmap.width,
-        height: img.bitmap.height,
-      }),
-    );
+  return {
+    screenshot: PNG.sync.write(img),
+    width: img.width,
+    height: img.height,
+  };
+}
+
+function mergeImagesHorizontally(buffers: Array<Buffer>): PNG {
+  const images = buffers.map((buffer) => PNG.sync.read(buffer));
+  const merged = new PNG({
+    width: images.reduce((sum, image) => sum + image.width, 0),
+    height: Math.max(...images.map((image) => image.height)),
+    // Initialize with transparent pixels, in case the images have different heights.
+    fill: true,
   });
+  let offsetX = 0;
+  for (const image of images) {
+    PNG.bitblt(image, merged, 0, 0, image.width, image.height, offsetX, 0);
+    offsetX += image.width;
+  }
+  return merged;
 }
 
 export async function getNewPage(browser: Browser) {

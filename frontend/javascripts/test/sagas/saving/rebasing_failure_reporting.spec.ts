@@ -107,13 +107,15 @@ describe("Reporting of failed rebasing", () => {
 
     // Not awaited on purpose: if rebasing fails, the promise is never resolved.
     dispatchEnsureHasNewestVersionAsync(Store.dispatch);
-    await vi.waitFor(() => expect(ErrorHandling.notify).toHaveBeenCalledTimes(1), {
+    await vi.waitFor(() => expect(ErrorHandling.notifyWithPrefix).toHaveBeenCalledTimes(1), {
       timeout: 5000,
     });
 
     expect(hasRootSagaCrashed()).toBe(false);
-    const [error, params, severity] = vi.mocked(ErrorHandling.notify).mock.calls[0];
+    const [error, prefix, params, severity] = vi.mocked(ErrorHandling.notifyWithPrefix).mock
+      .calls[0];
     expect(error).toBe(cause);
+    expect(prefix).toBe("Rebasing failed: ");
     expect(severity).toBe("error");
     expect(params).toMatchObject({
       reason: "Fetching the missing update actions failed",

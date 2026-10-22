@@ -4,6 +4,7 @@ import {
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import ErrorHandling from "libs/error_handling";
+import Request from "libs/request";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
@@ -80,22 +81,35 @@ describe("Reporting of failed rebasing", () => {
   });
 
   it("should retry fetching the missing update actions until the server is back", async (context: WebknossosTestContext) => {
-    dispatchEnsureHasNewestVersionAsync(Store.dispatch);
+    // Use the real getUpdateActionLog (including its retries) and let the underlying
+    // request fail 10 times before it succeeds.
+    const { getUpdateActionLog } =
+      await vi.importActual<typeof import("admin/rest_api")>("admin/rest_api");
+    context.mocks.getUpdateActionLog.mockImplementation(getUpdateActionLog);
 
-    await vi.waitFor(
-      () =>
-        expect(context.mocks.getUpdateActionLog).toHaveBeenLastCalledWith(
-          expect.anything(),
-          expect.anything(),
-          expect.anything(),
-          undefined,
-          false,
-          true,
-          {},
-          expect.objectContaining({ retries: Number.POSITIVE_INFINITY, maxDelayMs: 60 * 1000 }),
-        ),
-      { timeout: 5000 },
-    );
+    const receiveJSON = vi.mocked(Request.receiveJSON);
+    const previousImplementation = receiveJSON.getMockImplementation();
+    let updateActionLogRequestCount = 0;
+    receiveJSON.mockImplementation(async (url, options) => {
+      if (url.includes("/updateActionLog")) {
+        updateActionLogRequestCount++;
+        if (updateActionLogRequestCount <= 10) {
+          throw new TypeError("Failed to fetch");
+        }
+        return [];
+      }
+      return previousImplementation?.(url, options);
+    });
+
+    let isRequestResolved = false;
+    dispatchEnsureHasNewestVersionAsync(Store.dispatch).then(() => {
+      isRequestResolved = true;
+    });
+    await vi.waitFor(() => expect(isRequestResolved).toBe(true), { timeout: 5000 });
+
+    expect(updateActionLogRequestCount).toBe(11);
+    expect(hasRootSagaCrashed()).toBe(false);
+    expect(ErrorHandling.notifyWithPrefix).not.toHaveBeenCalled();
   });
 
   it("should report (and not crash) if fetching the missing update actions fails without retry", async (context: WebknossosTestContext) => {

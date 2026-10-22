@@ -168,12 +168,12 @@ function withPhase(failure: RebasingFailure, phase: string): RebasingFailure {
 
 // Without the missing update actions, rebasing (and thus saving) cannot continue. Therefore, the
 // request is retried until the server is reachable again (with an exponential backoff of at most
-// one minute).
+// one minute). In tests, the delays are much shorter.
 const FETCH_MISSING_UPDATE_ACTIONS_RETRY_OPTIONS: RetryOptions = {
   retries: Number.POSITIVE_INFINITY,
-  initialDelayMs: 1000,
+  initialDelayMs: process.env.IS_TESTING ? 1 : 1000,
   backoffFactor: 2,
-  maxDelayMs: 60 * 1000,
+  maxDelayMs: process.env.IS_TESTING ? 10 : 60 * 1000,
 };
 
 function* fetchNewestMissingUpdateActions(): Saga<ApiResult<APIUpdateActionBatch[]>> {

@@ -935,7 +935,6 @@ export async function getTracingForAnnotationType(
   return tracing;
 }
 
-// Same retry timing as before the migration to ApiResult (2s, 4s, 8s).
 const UPDATE_ACTION_LOG_RETRY_OPTIONS: RetryOptions = {
   retries: 3,
   initialDelayMs: 2000,

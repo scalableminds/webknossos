@@ -1,0 +1,194 @@
+_id,_organization,_user,name,username,hostname,voxelyticsversion,workflow_hash,workflow_yamlcontent,workflow_config,begintime,endtime,state
+6ad1043ef78084a048e5510f,Organization_X,570b9f4d2a7c0e4d008da6ef,6ad10432f78084a048e55106_infer_with_neuron_model__6ad10432f78084a048e55106_infer_with_neuron_modelmultiprocessing.2026-10-15_18-50-04,user_a,worker-host,2b89884ccde800aa9f3e71385648888acaddcfa5,979252d3f3,'schema_version: 112
+global_parameters:
+  artifacts_path: artifacts/6ad10432f78084a048e55106
+  artifacts_storage_path: null
+  distribution:
+    default:
+      strategy: multiprocessing
+      processes: 6
+tasks:
+  import_model:
+    task: ImportModelTask
+    config:
+      model_id: ''576500000000000000000001''
+  predict:
+    task: PredictTask
+    inputs:
+      model: import_model:model
+    config:
+      name: neuron_predict_6ad10432f78084a048e55106
+      allow_context_to_exceed_input_bounding_box: true
+      datasource_config:
+        name: Sample_e2006_wkw_with_reconstructed_neurons2
+        type: wkw
+        scale:
+        - 16.5
+        - 16.5
+        - 25.0
+        dataset_id: 6ace4ef41dce5a2b1d8af4a7
+        color_name: color
+        wkw_resolution:
+        - 1
+        - 1
+        - 1
+        bounding_box:
+          topleft:
+          - 4558
+          - 4814
+          - 1938
+          size:
+          - 356
+          - 356
+          - 476
+      invert_color_layer: false
+      model_checkpoint: -1
+      training_task_outputs:
+        affinity:
+          endpoint_name: logits
+          endpoint_range:
+          - -3.5
+          - 3
+          dtype: uint8
+      normalization:
+        type: sample
+        remove_black: true
+      chunk_size:
+      - 128
+      - 128
+      - 128
+      min_job_chunk_size: 512
+      checkpoint_metric: adapted_rand_error
+    distribution:
+      step:
+        strategy: sequential
+        num_io_threads: 5
+  segment:
+    task: SegmentTask
+    inputs:
+      prediction: predict:prediction
+    config:
+      output_segmentation_layer_name: segmentation_1
+      segmenter:
+        type: optimized_affinity_watershed
+        size_threshold: 100
+        seed_generator:
+          type: affinity_distance_transform
+          h_maxima_threshold: 0.05
+          modality_threshold:
+            threshold: 0.5
+            modality: probability
+  globalize_segment_ids:
+    task: GlobalizeSegmentIdsTask
+    inputs:
+      prediction: predict:prediction
+      segmentation: segment:segmentation
+      max_ids: segment:max_ids
+  build_rag:
+    task: BuildRagTask
+    inputs:
+      segmentation: globalize_segment_ids:segmentation
+      prediction: predict:prediction
+  agglomerate:
+    task: AgglomerateTask
+    inputs:
+      rag: build_rag:rag
+  merge_mappings:
+    task: MergeMappingsTask
+    inputs:
+      mapping: agglomerate:mapping
+      cumsum: globalize_segment_ids:cumsum
+  compute_segment_stats:
+    task: ComputeSegmentStatsTask
+    inputs:
+      segmentation: globalize_segment_ids:segmentation
+      cumsum: globalize_segment_ids:cumsum
+  create_agglomerate_view:
+    task: CreateAgglomerateViewTask
+    inputs:
+      mapping: merge_mappings:mapping
+      segment_stats: compute_segment_stats:segment_stats
+      cumsum: globalize_segment_ids:cumsum
+      merged_edge_list: merge_mappings:edge_list
+      segmentation: compute_segment_stats:dataset_with_segment_stats
+  downsample:
+    task: DownsampleConnectSegmentationTask
+    inputs:
+      segmentation: create_agglomerate_view:wkw_with_agglomerate_views
+    config:
+      max_mag:
+      - 64
+      - 64
+      - 64
+      layer: segmentation_1
+  compute_segment_index:
+    task: ComputeSegmentIndexTask
+    inputs:
+      segmentation: downsample:segmentation
+  compute_meshes:
+    task: ComputeMeshesTask
+    config:
+      mag: ''2''
+      chunk_size_in_mag: 1024
+      max_simplification_error: 300000.0
+    inputs:
+      segmentation: compute_segment_index:segmentation_with_segment_index
+  compute_segment_surfaces:
+    task: ComputeSegmentSurfacesTask
+    inputs:
+      segment_stats: compute_segment_stats:segment_stats
+      meshfile: compute_meshes:meshfile
+      dataset_with_segment_stats: compute_meshes:dataset_with_meshfile
+  publish_dataset_meshes:
+    task: NewPublishDatasetTask
+    inputs:
+      dataset: compute_segment_surfaces:dataset_with_segment_stats
+    config:
+      dataset_name: Sample_e2006_wkw_with_reconstructed_neurons2_Neuron_Segmentation
+      exclude_layers:
+      - affinity$prediction
+      webknossos_layers_configuration:
+        segmentation_1:
+          mapping:
+            name: agglomerate_view_70
+            type: HDF5
+  evaluate_split_merger:
+    task: EvaluateSplitMergerTask
+    inputs:
+      agglomerate_view: create_agglomerate_view:agglomerate_view
+      segmentation: downsample:segmentation
+    config:
+      annotation_id: POTENTIALLY_SET_BY_WORKER
+      min_mapping: 0
+      max_mapping: 95
+      mode: sparse
+      max_edge_length: null
+      sparse_tube_threshold_nm: 1000
+      min_merger_path_length_nm: 800
+  upload_evaluation_errors:
+    task: UploadNMLsTask
+    inputs:
+      nmls: evaluate_split_merger:errors
+      dataset_name: publish_dataset_meshes:dataset_name
+    config:
+      filename_regex: .*segmentation_errors_(0|5|10|15|20|25|30|35|40|45|50|55|60|65|70|75|80)\.nml
+paths:
+- /srv/voxelytics/6ad10432f78084a048e55106_infer_with_neuron_model.yaml
+- /srv/voxelytics/6ad10432f78084a048e55106_infer_with_neuron_modelmultiprocessing.yaml
+','{"paths": ["/srv/voxelytics/6ad10432f78084a048e55106_infer_with_neuron_model.yaml", "/srv/voxelytics/6ad10432f78084a048e55106_infer_with_neuron_modelmultiprocessing.yaml"], "schema_version": 137, "global_parameters": {"env_vars": {}, "distribution": {"main": {"strategy": null, "processes": null, "resources": {}}, "default": {"strategy": "multiprocessing", "processes": 6, "resources": {}}}, "artifacts_path": "artifacts/6ad10432f78084a048e55106", "compute_checksums": null, "artifacts_storage_path": null}}',2026-10-15 16:50:06.365+00,2026-10-15 16:51:09.17+00,CANCELLED
+6ad1d0e6f78084a048e55150,Organization_X,570b9f4d2a7c0e4d008da6ef,initial-1792135398,synthetic-user,synthetic-host,0.0.0-synthetic,synthruns01,'# synthetic workflow for testing
+','{"paths": [], "schema_version": 1, "global_parameters": {}}',2026-10-12 07:23:18.156+00,2026-10-12 09:24:18.156+00,COMPLETE
+6ad1d0e6f78084a048e5515e,Organization_X,570b9f4d2a7c0e4d008da6ef,rerun-failed-1792135398,synthetic-user,synthetic-host,0.0.0-synthetic,synthruns01,'# synthetic workflow for testing
+','{"paths": [], "schema_version": 1, "global_parameters": {}}',2026-10-13 07:23:18.156+00,2026-10-13 08:24:18.156+00,FAILED
+6ad1d0e6f78084a048e55169,Organization_X,570b9f4d2a7c0e4d008da6ef,rerun-cancelled-1792135398,synthetic-user,synthetic-host,0.0.0-synthetic,synthruns01,'# synthetic workflow for testing
+','{"paths": [], "schema_version": 1, "global_parameters": {}}',2026-10-14 07:23:18.156+00,2026-10-14 07:54:18.156+00,CANCELLED
+6ad1d0e6f78084a048e55173,Organization_X,570b9f4d2a7c0e4d008da6ef,rerun-stale-1792135398,synthetic-user,synthetic-host,0.0.0-synthetic,synthruns01,'# synthetic workflow for testing
+','{"paths": [], "schema_version": 1, "global_parameters": {}}',2026-10-15 07:23:18.156+00,,RUNNING
+6ad1d0e6f78084a048e5517e,Organization_X,570b9f4d2a7c0e4d008da6ef,rerun-running-1792135398,synthetic-user,synthetic-host,0.0.0-synthetic,synthruns01,'# synthetic workflow for testing
+','{"paths": [], "schema_version": 1, "global_parameters": {}}',2026-10-16 07:13:18.156+00,,RUNNING
+6ad20000000000005e7a0000,Organization_X,570b9f4d2a7c0e4d008da6ef,meta-initial,synthetic-user,synthetic-host,0.0.0-synthetic,synthmeta01,'# synthetic workflow with nested meta tasks
+','{"paths": [], "schema_version": 1, "global_parameters": {}}',2026-10-13 09:00:00+00,2026-10-13 11:31:00+00,COMPLETE
+6ad20000000000005e7a000b,Organization_X,570b9f4d2a7c0e4d008da6ef,meta-rerun-failed,synthetic-user,synthetic-host,0.0.0-synthetic,synthmeta01,'# synthetic workflow with nested meta tasks
+','{"paths": [], "schema_version": 1, "global_parameters": {}}',2026-10-14 09:00:00+00,2026-10-14 10:01:00+00,FAILED
+6ad20000000000005e7a0011,Organization_X,570b9f4d2a7c0e4d008da6ef,meta-rerun-fixed,synthetic-user,synthetic-host,0.0.0-synthetic,synthmeta01,'# synthetic workflow with nested meta tasks
+','{"paths": [], "schema_version": 1, "global_parameters": {}}',2026-10-15 09:00:00+00,2026-10-15 10:01:00+00,COMPLETE

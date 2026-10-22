@@ -85,6 +85,7 @@ class DSFullMeshService @Inject() (
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Float] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
+      _ <- Fox.fromBool(fullMeshRequest.segmentId.toLong != 0L) ?~> Msg.Mesh.segmentIdZeroForAdHoc
       segmentationLayer <- tryo(
         dataLayer.asInstanceOf[SegmentationLayer]
       ).toFox ?~> Msg.Dataset.Layer.mustBeSegmentation
@@ -126,6 +127,7 @@ class DSFullMeshService @Inject() (
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
+      _ <- Fox.fromBool(fullMeshRequest.segmentId.toLong != 0L) ?~> Msg.Mesh.segmentIdZeroForAdHoc
       segmentationLayer <- tryo(
         dataLayer.asInstanceOf[SegmentationLayer]
       ).toFox ?~> Msg.Dataset.Layer.mustBeSegmentation
@@ -177,6 +179,9 @@ class DSFullMeshService @Inject() (
       )
       topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
       targetMagPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(topLefts, mag)
+      _ <- Fox.fromBool(targetMagPositions.length <= maxAdHocFullMeshChunks) ?~> Msg.Mesh.tooManyAdHocMeshRequests(
+        maxAdHocFullMeshChunks
+      )
       // Dispatch chunks to the actor pool keeping actorPoolSize requests in flight at a time.
       vertexChunksWithNeighbors: List[(Array[Float], List[Int])] <- Fox.batchCombined(
         targetMagPositions.toIndexedSeq,
@@ -224,12 +229,14 @@ class DSFullMeshService @Inject() (
     // visited is marked before dispatch so parallel wave members don't queue the same position.
     // visited does not need to be thread-safe: it is mutated only at the start of each
     // processFrontier call (before any concurrent work begins); Fox.combined only reads it
-    // (via generateNextTopLeftsFromNeighbors.filterNot), and waves execute sequentially
+    // (via generateNextTopLeftsFromNeighbors), and waves execute sequentially
     // via Fox.serialCombined, so no two writes ever race.
     val visited = collection.mutable.Set[VoxelPosition]()
 
     def processFrontier(frontier: List[VoxelPosition], acc: List[Array[Float]]): Fox[List[Array[Float]]] =
       if (frontier.isEmpty) Fox.successful(acc)
+      else if (visited.size + frontier.size > maxAdHocFullMeshChunks)
+        Fox.failure(Msg.Mesh.tooManyAdHocMeshRequests(maxAdHocFullMeshChunks))
       else {
         visited ++= frontier
         val batches = frontier.grouped(config.Datastore.AdHocMesh.actorPoolSize).toList
@@ -250,7 +257,16 @@ class DSFullMeshService @Inject() (
                 fullMeshRequest.annotationVersion
               )
               adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest).map { case (vertices, neighborIds) =>
-                (vertices, generateNextTopLeftsFromNeighbors(position, neighborIds, chunkSize, visited))
+                (
+                  vertices,
+                  generateNextTopLeftsFromNeighbors(
+                    position,
+                    neighborIds,
+                    chunkSize,
+                    visited,
+                    segmentationLayer.boundingBox
+                  )
+                )
               }
             })
           }

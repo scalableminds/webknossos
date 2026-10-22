@@ -1,0 +1,3602 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Voxelytics API (E2E) > getVoxelyticsChunkStatistics() 1`] = `
+[
+  {
+    "beginTime": 1792083020460,
+    "chunkCounts": {
+      "cancelled": 0,
+      "complete": 0,
+      "failed": 0,
+      "skipped": 0,
+      "total": 1,
+    },
+    "cpuSystem": {
+      "max": 0.9056455261,
+      "median": 0.8873311319,
+      "stddev": 0.2087905721,
+    },
+    "cpuUser": {
+      "max": 1.062956321,
+      "median": 0.9314626862,
+      "stddev": 0.3709039991,
+    },
+    "duration": {
+      "max": 0,
+      "median": 0,
+      "stddev": 0,
+      "sum": 0,
+    },
+    "executionId": "main",
+    "memory": {
+      "max": 4051.140625,
+      "median": 1410.796875,
+      "stddev": 1525.306085,
+    },
+    "wallTime": 0,
+  },
+  {
+    "beginTime": 1792083023398,
+    "chunkCounts": {
+      "cancelled": 0,
+      "complete": 1,
+      "failed": 0,
+      "skipped": 0,
+      "total": 1,
+    },
+    "cpuSystem": {
+      "max": 0.8349385408,
+      "median": 0.8047827966,
+      "stddev": 0.4492506463,
+    },
+    "cpuUser": {
+      "max": 1.079529612,
+      "median": 1.075754818,
+      "stddev": 0.4575326597,
+    },
+    "duration": {
+      "max": 2.367,
+      "median": 2.367,
+      "stddev": 0,
+      "sum": 2.367,
+    },
+    "endTime": 1792083025765,
+    "executionId": "main/setup",
+    "memory": {
+      "max": 1036.296875,
+      "median": 1026.78125,
+      "stddev": 5.893276923,
+    },
+    "wallTime": 2.367,
+  },
+  {
+    "beginTime": 1792083028065,
+    "chunkCounts": {
+      "cancelled": 0,
+      "complete": 0,
+      "failed": 0,
+      "skipped": 0,
+      "total": 1,
+    },
+    "cpuSystem": {
+      "max": 0,
+      "median": 0,
+      "stddev": 0,
+    },
+    "cpuUser": {
+      "max": 0,
+      "median": 0,
+      "stddev": 0,
+    },
+    "duration": {
+      "max": 0,
+      "median": 0,
+      "stddev": 0,
+      "sum": 0,
+    },
+    "executionId": "main/step",
+    "memory": {
+      "max": 0,
+      "median": 0,
+      "stddev": 0,
+    },
+    "wallTime": 0,
+  },
+  {
+    "beginTime": 1792083028126,
+    "chunkCounts": {
+      "cancelled": 0,
+      "complete": 0,
+      "failed": 0,
+      "skipped": 0,
+      "total": 8,
+    },
+    "cpuSystem": {
+      "max": 0,
+      "median": 0,
+      "stddev": 0,
+    },
+    "cpuUser": {
+      "max": 0,
+      "median": 0,
+      "stddev": 0,
+    },
+    "duration": {
+      "max": 0,
+      "median": 0,
+      "stddev": 0,
+      "sum": 0,
+    },
+    "executionId": "main/chunked_step",
+    "memory": {
+      "max": 0,
+      "median": 0,
+      "stddev": 0,
+    },
+    "wallTime": 0,
+  },
+]
+`;
+
+exports[`Voxelytics API (E2E) > getVoxelyticsWorkflow() for a specific run 1`] = `
+{
+  "artifacts": {
+    "download": {
+      "dataset": {
+        "artifactId": "6ad1d0e6f78084a048e55156",
+        "fileSize": 1048576,
+        "inodeCount": 3,
+        "metadata": {
+          "attributes": {},
+          "iframes": {},
+          "links": {},
+        },
+        "name": "dataset",
+        "path": "/synthetic/synthruns01/download",
+        "taskId": "6ad1d0e6f78084a048e55155",
+        "taskName": "download",
+        "version": "1",
+      },
+    },
+    "export": {
+      "export": {
+        "artifactId": "6ad1d0e6f78084a048e55158",
+        "fileSize": 1048576,
+        "inodeCount": 3,
+        "metadata": {
+          "attributes": {},
+          "iframes": {},
+          "links": {},
+        },
+        "name": "export",
+        "path": "/synthetic/synthruns01/export",
+        "taskId": "6ad1d0e6f78084a048e55152",
+        "taskName": "export",
+        "version": "1",
+      },
+    },
+    "segment@agglomerate": {
+      "segmentation": {
+        "artifactId": "6ad1d0e6f78084a048e5517c",
+        "fileSize": 1048576,
+        "inodeCount": 3,
+        "metadata": {
+          "attributes": {},
+          "iframes": {},
+          "links": {},
+        },
+        "name": "segmentation",
+        "path": "/synthetic/synthruns01/segment@agglomerate",
+        "taskId": "6ad1d0e6f78084a048e55177",
+        "taskName": "segment@agglomerate",
+        "version": "1",
+      },
+    },
+    "segment@predict": {
+      "probabilities": {
+        "artifactId": "6ad1d0e6f78084a048e55164",
+        "fileSize": 1048576,
+        "inodeCount": 3,
+        "metadata": {
+          "attributes": {},
+          "iframes": {},
+          "links": {},
+        },
+        "name": "probabilities",
+        "path": "/synthetic/synthruns01/segment@predict",
+        "taskId": "6ad1d0e6f78084a048e5515f",
+        "taskName": "segment@predict",
+        "version": "1",
+      },
+    },
+  },
+  "config": {
+    "global_parameters": {},
+    "paths": [],
+    "schema_version": 1,
+    "tasks": {
+      "download": {
+        "config": {
+          "name": "download",
+        },
+        "description": "Synthetic \`Download\` task.",
+        "distribution": {},
+        "inputs": {},
+        "output_paths": {},
+        "task": "Download",
+      },
+      "export": {
+        "config": {
+          "name": "export",
+        },
+        "description": "Synthetic \`Export\` task.",
+        "distribution": {},
+        "inputs": {
+          "segmentation": "segment@agglomerate:segmentation",
+        },
+        "output_paths": {},
+        "task": "Export",
+      },
+      "never_executed": {
+        "config": {
+          "name": "never_executed",
+        },
+        "description": "Synthetic \`Noop\` task.",
+        "distribution": {},
+        "inputs": {
+          "data": "download:dataset",
+        },
+        "output_paths": {},
+        "task": "Noop",
+      },
+      "segment@agglomerate": {
+        "config": {
+          "name": "agglomerate",
+        },
+        "description": "Synthetic \`Agglomerate\` task.",
+        "distribution": {},
+        "inputs": {
+          "probs": "segment@predict:probabilities",
+        },
+        "output_paths": {},
+        "task": "Agglomerate",
+      },
+      "segment@predict": {
+        "config": {
+          "name": "predict",
+        },
+        "description": "Synthetic \`Predict\` task.",
+        "distribution": {},
+        "inputs": {
+          "data": "download:dataset",
+        },
+        "output_paths": {},
+        "task": "Predict",
+      },
+    },
+  },
+  "runs": [
+    {
+      "beginTime": 1792134798156,
+      "endTime": 1792135398156,
+      "hostName": "synthetic-host",
+      "hostUserName": "synthetic-user",
+      "id": "6ad1d0e6f78084a048e5517e",
+      "name": "rerun-running-1792135398",
+      "state": "STALE",
+      "voxelyticsVersion": "0.0.0-synthetic",
+      "workflowConfig": {
+        "global_parameters": {},
+        "paths": [],
+        "schema_version": 1,
+      },
+      "workflowHash": "synthruns01",
+      "workflowYamlContent": "# synthetic workflow for testing
+",
+    },
+    {
+      "beginTime": 1792048998156,
+      "endTime": 1792052598156,
+      "hostName": "synthetic-host",
+      "hostUserName": "synthetic-user",
+      "id": "6ad1d0e6f78084a048e55173",
+      "name": "rerun-stale-1792135398",
+      "state": "STALE",
+      "voxelyticsVersion": "0.0.0-synthetic",
+      "workflowConfig": {
+        "global_parameters": {},
+        "paths": [],
+        "schema_version": 1,
+      },
+      "workflowHash": "synthruns01",
+      "workflowYamlContent": "# synthetic workflow for testing
+",
+    },
+    {
+      "beginTime": 1791962598156,
+      "endTime": 1791964458156,
+      "hostName": "synthetic-host",
+      "hostUserName": "synthetic-user",
+      "id": "6ad1d0e6f78084a048e55169",
+      "name": "rerun-cancelled-1792135398",
+      "state": "CANCELLED",
+      "voxelyticsVersion": "0.0.0-synthetic",
+      "workflowConfig": {
+        "global_parameters": {},
+        "paths": [],
+        "schema_version": 1,
+      },
+      "workflowHash": "synthruns01",
+      "workflowYamlContent": "# synthetic workflow for testing
+",
+    },
+    {
+      "beginTime": 1791876198156,
+      "endTime": 1791879858156,
+      "hostName": "synthetic-host",
+      "hostUserName": "synthetic-user",
+      "id": "6ad1d0e6f78084a048e5515e",
+      "name": "rerun-failed-1792135398",
+      "state": "FAILED",
+      "voxelyticsVersion": "0.0.0-synthetic",
+      "workflowConfig": {
+        "global_parameters": {},
+        "paths": [],
+        "schema_version": 1,
+      },
+      "workflowHash": "synthruns01",
+      "workflowYamlContent": "# synthetic workflow for testing
+",
+    },
+    {
+      "beginTime": 1791789798156,
+      "endTime": 1791797058156,
+      "hostName": "synthetic-host",
+      "hostUserName": "synthetic-user",
+      "id": "6ad1d0e6f78084a048e55150",
+      "name": "initial-1792135398",
+      "state": "COMPLETE",
+      "voxelyticsVersion": "0.0.0-synthetic",
+      "workflowConfig": {
+        "global_parameters": {},
+        "paths": [],
+        "schema_version": 1,
+      },
+      "workflowHash": "synthruns01",
+      "workflowYamlContent": "# synthetic workflow for testing
+",
+    },
+  ],
+  "tasks": [
+    {
+      "beginTime": 1791791898156,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": 1791877998156,
+      "runs": [
+        {
+          "beginTime": 1791876498156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791877998156,
+          "runId": "6ad1d0e6f78084a048e5515e",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": 1791791898156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791793398156,
+          "runId": "6ad1d0e6f78084a048e55150",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55169",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55173",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e5517e",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "COMPLETE",
+      "taskName": "segment@predict",
+    },
+    {
+      "beginTime": 1791795498156,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": 1792135398156,
+      "runs": [
+        {
+          "beginTime": 1792135098156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1792135398156,
+          "runId": "6ad1d0e6f78084a048e5517e",
+          "state": "STALE",
+        },
+        {
+          "beginTime": 1792051098156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1792052598156,
+          "runId": "6ad1d0e6f78084a048e55173",
+          "state": "STALE",
+        },
+        {
+          "beginTime": 1791795498156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791796998156,
+          "runId": "6ad1d0e6f78084a048e55150",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e5515e",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55169",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "STALE",
+      "taskName": "export",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55150",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e5515e",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55169",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55173",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e5517e",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "SKIPPED",
+      "taskName": "never_executed",
+    },
+    {
+      "beginTime": 1791793698156,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": 1792050798156,
+      "runs": [
+        {
+          "beginTime": 1792049298156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1792050798156,
+          "runId": "6ad1d0e6f78084a048e55173",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": 1791962898156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791964398156,
+          "runId": "6ad1d0e6f78084a048e55169",
+          "state": "CANCELLED",
+        },
+        {
+          "beginTime": 1791878298156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791879798156,
+          "runId": "6ad1d0e6f78084a048e5515e",
+          "state": "FAILED",
+        },
+        {
+          "beginTime": 1791793698156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791795198156,
+          "runId": "6ad1d0e6f78084a048e55150",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e5517e",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "COMPLETE",
+      "taskName": "segment@agglomerate",
+    },
+    {
+      "beginTime": 1791790098156,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": 1791791598156,
+      "runs": [
+        {
+          "beginTime": 1791790098156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791791598156,
+          "runId": "6ad1d0e6f78084a048e55150",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e5515e",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55169",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55173",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e5517e",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "COMPLETE",
+      "taskName": "download",
+    },
+  ],
+  "workflow": {
+    "hash": "synthruns01",
+    "name": "synthetic_task_runs_test",
+    "yamlContent": "# synthetic workflow for testing
+",
+  },
+}
+`;
+
+exports[`Voxelytics API (E2E) > getVoxelyticsWorkflow() for the latest run 1`] = `
+{
+  "artifacts": {
+    "download": {
+      "dataset": {
+        "artifactId": "6ad1d0e6f78084a048e55156",
+        "fileSize": 1048576,
+        "inodeCount": 3,
+        "metadata": {
+          "attributes": {},
+          "iframes": {},
+          "links": {},
+        },
+        "name": "dataset",
+        "path": "/synthetic/synthruns01/download",
+        "taskId": "6ad1d0e6f78084a048e55155",
+        "taskName": "download",
+        "version": "1",
+      },
+    },
+    "export": {
+      "export": {
+        "artifactId": "6ad1d0e6f78084a048e55158",
+        "fileSize": 1048576,
+        "inodeCount": 3,
+        "metadata": {
+          "attributes": {},
+          "iframes": {},
+          "links": {},
+        },
+        "name": "export",
+        "path": "/synthetic/synthruns01/export",
+        "taskId": "6ad1d0e6f78084a048e55152",
+        "taskName": "export",
+        "version": "1",
+      },
+    },
+    "segment@agglomerate": {
+      "segmentation": {
+        "artifactId": "6ad1d0e6f78084a048e5517c",
+        "fileSize": 1048576,
+        "inodeCount": 3,
+        "metadata": {
+          "attributes": {},
+          "iframes": {},
+          "links": {},
+        },
+        "name": "segmentation",
+        "path": "/synthetic/synthruns01/segment@agglomerate",
+        "taskId": "6ad1d0e6f78084a048e55177",
+        "taskName": "segment@agglomerate",
+        "version": "1",
+      },
+    },
+    "segment@predict": {
+      "probabilities": {
+        "artifactId": "6ad1d0e6f78084a048e55164",
+        "fileSize": 1048576,
+        "inodeCount": 3,
+        "metadata": {
+          "attributes": {},
+          "iframes": {},
+          "links": {},
+        },
+        "name": "probabilities",
+        "path": "/synthetic/synthruns01/segment@predict",
+        "taskId": "6ad1d0e6f78084a048e5515f",
+        "taskName": "segment@predict",
+        "version": "1",
+      },
+    },
+  },
+  "config": {
+    "global_parameters": {},
+    "paths": [],
+    "schema_version": 1,
+    "tasks": {
+      "download": {
+        "config": {
+          "name": "download",
+        },
+        "description": "Synthetic \`Download\` task.",
+        "distribution": {},
+        "inputs": {},
+        "output_paths": {},
+        "task": "Download",
+      },
+      "export": {
+        "config": {
+          "name": "export",
+        },
+        "description": "Synthetic \`Export\` task.",
+        "distribution": {},
+        "inputs": {
+          "segmentation": "segment@agglomerate:segmentation",
+        },
+        "output_paths": {},
+        "task": "Export",
+      },
+      "never_executed": {
+        "config": {
+          "name": "never_executed",
+        },
+        "description": "Synthetic \`Noop\` task.",
+        "distribution": {},
+        "inputs": {
+          "data": "download:dataset",
+        },
+        "output_paths": {},
+        "task": "Noop",
+      },
+      "segment@agglomerate": {
+        "config": {
+          "name": "agglomerate",
+        },
+        "description": "Synthetic \`Agglomerate\` task.",
+        "distribution": {},
+        "inputs": {
+          "probs": "segment@predict:probabilities",
+        },
+        "output_paths": {},
+        "task": "Agglomerate",
+      },
+      "segment@predict": {
+        "config": {
+          "name": "predict",
+        },
+        "description": "Synthetic \`Predict\` task.",
+        "distribution": {},
+        "inputs": {
+          "data": "download:dataset",
+        },
+        "output_paths": {},
+        "task": "Predict",
+      },
+    },
+  },
+  "runs": [
+    {
+      "beginTime": 1792134798156,
+      "endTime": 1792135398156,
+      "hostName": "synthetic-host",
+      "hostUserName": "synthetic-user",
+      "id": "6ad1d0e6f78084a048e5517e",
+      "name": "rerun-running-1792135398",
+      "state": "STALE",
+      "voxelyticsVersion": "0.0.0-synthetic",
+      "workflowConfig": {
+        "global_parameters": {},
+        "paths": [],
+        "schema_version": 1,
+      },
+      "workflowHash": "synthruns01",
+      "workflowYamlContent": "# synthetic workflow for testing
+",
+    },
+    {
+      "beginTime": 1792048998156,
+      "endTime": 1792052598156,
+      "hostName": "synthetic-host",
+      "hostUserName": "synthetic-user",
+      "id": "6ad1d0e6f78084a048e55173",
+      "name": "rerun-stale-1792135398",
+      "state": "STALE",
+      "voxelyticsVersion": "0.0.0-synthetic",
+      "workflowConfig": {
+        "global_parameters": {},
+        "paths": [],
+        "schema_version": 1,
+      },
+      "workflowHash": "synthruns01",
+      "workflowYamlContent": "# synthetic workflow for testing
+",
+    },
+    {
+      "beginTime": 1791962598156,
+      "endTime": 1791964458156,
+      "hostName": "synthetic-host",
+      "hostUserName": "synthetic-user",
+      "id": "6ad1d0e6f78084a048e55169",
+      "name": "rerun-cancelled-1792135398",
+      "state": "CANCELLED",
+      "voxelyticsVersion": "0.0.0-synthetic",
+      "workflowConfig": {
+        "global_parameters": {},
+        "paths": [],
+        "schema_version": 1,
+      },
+      "workflowHash": "synthruns01",
+      "workflowYamlContent": "# synthetic workflow for testing
+",
+    },
+    {
+      "beginTime": 1791876198156,
+      "endTime": 1791879858156,
+      "hostName": "synthetic-host",
+      "hostUserName": "synthetic-user",
+      "id": "6ad1d0e6f78084a048e5515e",
+      "name": "rerun-failed-1792135398",
+      "state": "FAILED",
+      "voxelyticsVersion": "0.0.0-synthetic",
+      "workflowConfig": {
+        "global_parameters": {},
+        "paths": [],
+        "schema_version": 1,
+      },
+      "workflowHash": "synthruns01",
+      "workflowYamlContent": "# synthetic workflow for testing
+",
+    },
+    {
+      "beginTime": 1791789798156,
+      "endTime": 1791797058156,
+      "hostName": "synthetic-host",
+      "hostUserName": "synthetic-user",
+      "id": "6ad1d0e6f78084a048e55150",
+      "name": "initial-1792135398",
+      "state": "COMPLETE",
+      "voxelyticsVersion": "0.0.0-synthetic",
+      "workflowConfig": {
+        "global_parameters": {},
+        "paths": [],
+        "schema_version": 1,
+      },
+      "workflowHash": "synthruns01",
+      "workflowYamlContent": "# synthetic workflow for testing
+",
+    },
+  ],
+  "tasks": [
+    {
+      "beginTime": 1791791898156,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": 1791877998156,
+      "runs": [
+        {
+          "beginTime": 1791876498156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791877998156,
+          "runId": "6ad1d0e6f78084a048e5515e",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": 1791791898156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791793398156,
+          "runId": "6ad1d0e6f78084a048e55150",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55169",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55173",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e5517e",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "COMPLETE",
+      "taskName": "segment@predict",
+    },
+    {
+      "beginTime": 1791795498156,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": 1792135398156,
+      "runs": [
+        {
+          "beginTime": 1792135098156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1792135398156,
+          "runId": "6ad1d0e6f78084a048e5517e",
+          "state": "STALE",
+        },
+        {
+          "beginTime": 1792051098156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1792052598156,
+          "runId": "6ad1d0e6f78084a048e55173",
+          "state": "STALE",
+        },
+        {
+          "beginTime": 1791795498156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791796998156,
+          "runId": "6ad1d0e6f78084a048e55150",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e5515e",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55169",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "STALE",
+      "taskName": "export",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55150",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e5515e",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55169",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55173",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e5517e",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "SKIPPED",
+      "taskName": "never_executed",
+    },
+    {
+      "beginTime": 1791793698156,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": 1792050798156,
+      "runs": [
+        {
+          "beginTime": 1792049298156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1792050798156,
+          "runId": "6ad1d0e6f78084a048e55173",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": 1791962898156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791964398156,
+          "runId": "6ad1d0e6f78084a048e55169",
+          "state": "CANCELLED",
+        },
+        {
+          "beginTime": 1791878298156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791879798156,
+          "runId": "6ad1d0e6f78084a048e5515e",
+          "state": "FAILED",
+        },
+        {
+          "beginTime": 1791793698156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791795198156,
+          "runId": "6ad1d0e6f78084a048e55150",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e5517e",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "COMPLETE",
+      "taskName": "segment@agglomerate",
+    },
+    {
+      "beginTime": 1791790098156,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": 1791791598156,
+      "runs": [
+        {
+          "beginTime": 1791790098156,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791791598156,
+          "runId": "6ad1d0e6f78084a048e55150",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e5515e",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55169",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e55173",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1d0e6f78084a048e5517e",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "COMPLETE",
+      "taskName": "download",
+    },
+  ],
+  "workflow": {
+    "hash": "synthruns01",
+    "name": "synthetic_task_runs_test",
+    "yamlContent": "# synthetic workflow for testing
+",
+  },
+}
+`;
+
+exports[`Voxelytics API (E2E) > getVoxelyticsWorkflow() with artifacts 1`] = `
+{
+  "artifacts": {
+    "import_model": {
+      "model": {
+        "artifactId": "6ad1044cf78084a048e55135",
+        "fileSize": 49901738,
+        "inodeCount": 9,
+        "metadata": {
+          "attributes": {
+            "Best valid_loss": "0.3305382979543586",
+            "Epoch of best valid_loss": "110",
+            "Trained Epochs": "110",
+          },
+          "iframes": {},
+          "links": {},
+        },
+        "name": "model",
+        "path": "/srv/voxelytics/artifacts/6ad10432f78084a048e55106/import_model/imported_model-v1/model",
+        "taskId": "6ad1043ef78084a048e55110",
+        "taskName": "import_model",
+        "version": "17",
+      },
+    },
+  },
+  "config": {
+    "global_parameters": {
+      "artifacts_path": "artifacts/6ad10432f78084a048e55106",
+      "artifacts_storage_path": null,
+      "compute_checksums": null,
+      "distribution": {
+        "default": {
+          "processes": 6,
+          "resources": {},
+          "strategy": "multiprocessing",
+        },
+        "main": {
+          "processes": null,
+          "resources": {},
+          "strategy": null,
+        },
+      },
+      "env_vars": {},
+    },
+    "paths": [
+      "/srv/voxelytics/6ad10432f78084a048e55106_infer_with_neuron_model.yaml",
+      "/srv/voxelytics/6ad10432f78084a048e55106_infer_with_neuron_modelmultiprocessing.yaml",
+    ],
+    "schema_version": 137,
+    "tasks": {
+      "agglomerate": {
+        "config": {
+          "affinity_percentile": 50,
+          "blacklists": [],
+          "chunk_size": [
+            2048,
+            2048,
+            2048,
+          ],
+          "chunks_per_job": null,
+          "mask_filter_mag": null,
+          "min_job_chunk_size": null,
+          "mode": "hierarchical",
+          "skip_masked_out_chunks": false,
+          "sub_volume": null,
+        },
+        "description": null,
+        "distribution": null,
+        "inputs": {
+          "rag": "build_rag:rag",
+        },
+        "output_paths": null,
+        "task": "AgglomerateTask",
+      },
+      "build_rag": {
+        "config": {
+          "chunk_size": [
+            512,
+            512,
+            512,
+          ],
+          "chunks_per_job": null,
+          "compute_contact_positions": false,
+          "fill_borders": false,
+          "mask_filter_mag": null,
+          "min_job_chunk_size": null,
+          "precompute_features": false,
+          "prediction_layer_name": null,
+          "skip_masked_out_chunks": false,
+          "sub_volume": null,
+          "training_task_name": null,
+          "use_model": false,
+          "use_rank_based_features": true,
+          "volumes": [],
+        },
+        "description": null,
+        "distribution": null,
+        "inputs": {
+          "prediction": "predict:prediction",
+          "segmentation": "globalize_segment_ids:segmentation",
+        },
+        "output_paths": null,
+        "task": "BuildRagTask",
+      },
+      "compute_meshes": {
+        "config": {
+          "chunk_size_in_mag": 1024,
+          "chunks_per_job": null,
+          "compression_level": 1,
+          "dust_threshold": null,
+          "finalize_mesh_chunk_size_GB": 10,
+          "load_factor": 0.75,
+          "mag": 2,
+          "mapping_id": null,
+          "mask_filter_mag": null,
+          "max_simplification_error": 300000,
+          "min_job_chunk_size": null,
+          "n_quantization_bits": 16,
+          "padding": 1,
+          "segment_ids": null,
+          "simplification_factor": 100,
+          "skip_masked_out_chunks": false,
+          "sub_chunk_size_in_mag": 256,
+          "sub_volume": null,
+        },
+        "description": null,
+        "distribution": null,
+        "inputs": {
+          "segmentation": "compute_segment_index:segmentation_with_segment_index",
+        },
+        "output_paths": null,
+        "task": "ComputeMeshesTask",
+      },
+      "compute_segment_index": {
+        "config": {
+          "chunk_size_in_mag": [
+            1024,
+            1024,
+            1024,
+          ],
+          "chunks_per_job": null,
+          "dtype_toplefts": "uint16",
+          "load_factor": 0.75,
+          "mag": null,
+          "mapping_id": null,
+          "mask_filter_mag": null,
+          "min_job_chunk_size": null,
+          "segmentation_bucket_size": [
+            32,
+            32,
+            32,
+          ],
+          "skip_masked_out_chunks": false,
+          "sub_volume": null,
+        },
+        "description": null,
+        "distribution": null,
+        "inputs": {
+          "segmentation": "downsample:segmentation",
+        },
+        "output_paths": null,
+        "task": "ComputeSegmentIndexTask",
+      },
+      "compute_segment_stats": {
+        "config": {
+          "chunks_per_job": null,
+          "margins": [
+            0,
+            0,
+            0,
+          ],
+          "mask_filter_mag": null,
+          "min_job_chunk_size": null,
+          "overwrite_chunk_size": null,
+          "skip_masked_out_chunks": false,
+          "sub_volume": null,
+        },
+        "description": null,
+        "distribution": null,
+        "inputs": {
+          "cumsum": "globalize_segment_ids:cumsum",
+          "segmentation": "globalize_segment_ids:segmentation",
+        },
+        "output_paths": null,
+        "task": "ComputeSegmentStatsTask",
+      },
+      "compute_segment_surfaces": {
+        "config": {
+          "chunks_per_job": null,
+          "mask_filter_mag": null,
+          "max_volume": null,
+          "min_job_chunk_size": null,
+          "num_segments_per_batch": 32768,
+          "skip_masked_out_chunks": false,
+          "sub_volume": null,
+        },
+        "description": null,
+        "distribution": null,
+        "inputs": {
+          "dataset_with_segment_stats": "compute_meshes:dataset_with_meshfile",
+          "meshfile": "compute_meshes:meshfile",
+          "segment_stats": "compute_segment_stats:segment_stats",
+        },
+        "output_paths": null,
+        "task": "ComputeSegmentSurfacesTask",
+      },
+      "create_agglomerate_view": {
+        "config": {
+          "mappings": null,
+        },
+        "description": null,
+        "distribution": null,
+        "inputs": {
+          "cumsum": "globalize_segment_ids:cumsum",
+          "mapping": "merge_mappings:mapping",
+          "merged_edge_list": "merge_mappings:edge_list",
+          "segment_stats": "compute_segment_stats:segment_stats",
+          "segmentation": "compute_segment_stats:dataset_with_segment_stats",
+        },
+        "output_paths": null,
+        "task": "CreateAgglomerateViewTask",
+      },
+      "downsample": {
+        "config": {
+          "downsample_z": true,
+          "layer": "segmentation_1",
+          "max_mag": [
+            64,
+            64,
+            64,
+          ],
+        },
+        "description": null,
+        "distribution": null,
+        "inputs": {
+          "segmentation": "create_agglomerate_view:wkw_with_agglomerate_views",
+        },
+        "output_paths": null,
+        "task": "DownsampleConnectSegmentationTask",
+      },
+      "evaluate_split_merger": {
+        "config": {
+          "annotation_id": "POTENTIALLY_SET_BY_WORKER",
+          "comparison_csv": null,
+          "max_edge_length": null,
+          "max_mapping": 95,
+          "min_mapping": 0,
+          "min_merger_path_length_nm": 800,
+          "mode": "sparse",
+          "nml_path": null,
+          "nuclei": [],
+          "nuclei_threshold_nm": 11000,
+          "sparse_tube_threshold_nm": 1000,
+        },
+        "description": null,
+        "distribution": null,
+        "inputs": {
+          "agglomerate_view": "create_agglomerate_view:agglomerate_view",
+          "segmentation": "downsample:segmentation",
+        },
+        "output_paths": null,
+        "task": "EvaluateSplitMergerTask",
+      },
+      "globalize_segment_ids": {
+        "config": {
+          "chunks_per_job": null,
+          "dtype": "uint32",
+          "mask_filter_mag": null,
+          "min_job_chunk_size": null,
+          "skip_masked_out_chunks": false,
+          "sub_volume": null,
+        },
+        "description": null,
+        "distribution": null,
+        "inputs": {
+          "cumsum": "segment:cumsum",
+          "prediction": "predict:prediction",
+          "segmentation": "segment:segmentation",
+        },
+        "output_paths": null,
+        "task": "GlobalizeSegmentIdsTask",
+      },
+      "import_model": {
+        "config": {
+          "model_id": "576500000000000000000001",
+          "model_path": null,
+          "webknossos_url": "http://localhost:9000",
+        },
+        "description": null,
+        "distribution": null,
+        "inputs": {},
+        "output_paths": null,
+        "task": "ImportModelTask",
+      },
+      "merge_mappings": {
+        "config": {
+          "border_affinities": null,
+          "percentiles": [
+            5,
+            10,
+            15,
+            20,
+            25,
+            30,
+            35,
+            40,
+            45,
+            50,
+            55,
+            60,
+            65,
+            70,
+            75,
+            80,
+            85,
+            90,
+            95,
+            100,
+          ],
+          "sub_volume": null,
+        },
+        "description": null,
+        "distribution": null,
+        "inputs": {
+          "cumsum": "globalize_segment_ids:cumsum",
+          "mapping": "agglomerate:mapping",
+        },
+        "output_paths": null,
+        "task": "MergeMappingsTask",
+      },
+      "predict": {
+        "config": {
+          "allow_context_to_exceed_input_bounding_box": true,
+          "checkpoint_metric": "adapted_rand_error",
+          "chunk_size": [
+            128,
+            128,
+            128,
+          ],
+          "chunks_per_job": null,
+          "compile_model": false,
+          "datasource_config": {
+            "annotation_id": null,
+            "bounding_box": {
+              "size": [
+                356,
+                356,
+                476,
+              ],
+              "topleft": [
+                4558,
+                4814,
+                1938,
+              ],
+            },
+            "color_name": "color",
+            "data_dir": "data",
+            "dataset_id": "6ace4ef41dce5a2b1d8af4a7",
+            "mask": null,
+            "name": "Sample_e2006_wkw_with_reconstructed_neurons2",
+            "path": null,
+            "scale": [
+              16.5,
+              16.5,
+              25,
+            ],
+            "segmentation_name": "segmentation",
+            "type": "wkw",
+            "type_annotation_nml": null,
+            "type_mapping": null,
+            "unit": "nanometer",
+            "wkw_resolution": [
+              1,
+              1,
+              1,
+            ],
+          },
+          "invert_color_layer": false,
+          "invert_mask": false,
+          "legacy_fields": null,
+          "mask_filter_mag": null,
+          "min_job_chunk_size": 512,
+          "model_checkpoint": -1,
+          "normalization": {
+            "remove_black": true,
+            "type": "sample",
+          },
+          "skip_masked_out_chunks": false,
+          "sub_volume": null,
+          "target_scale": null,
+          "training_task_outputs": {
+            "affinity": {
+              "dtype": "uint8",
+              "endpoint_name": "logits",
+              "endpoint_range": [
+                -3.5,
+                3,
+              ],
+            },
+          },
+        },
+        "description": null,
+        "distribution": {
+          "step": {
+            "num_io_threads": 5,
+            "strategy": "sequential",
+          },
+        },
+        "inputs": {
+          "model": "import_model:model",
+        },
+        "output_paths": null,
+        "task": "PredictTask",
+      },
+      "publish_dataset_meshes": {
+        "config": {
+          "common_storage_path_prefix": null,
+          "dataset_id_of_input_dataset": null,
+          "dataset_name": "Sample_e2006_wkw_with_reconstructed_neurons2_Neuron_Segmentation",
+          "exclude_layers": [
+            "affinity$prediction",
+          ],
+          "folder_id": null,
+          "folder_path": null,
+          "require_unique_name": false,
+          "transfer_mode": "copy",
+          "webknossos_layers_configuration": {
+            "segmentation_1": {
+              "alpha": null,
+              "color": null,
+              "intensity_range": null,
+              "is_disabled": null,
+              "is_in_edit_mode": null,
+              "is_inverted": null,
+              "mapping": {
+                "name": "agglomerate_view_70",
+                "type": "HDF5",
+              },
+              "max": null,
+              "min": null,
+            },
+          },
+          "webknossos_url": null,
+        },
+        "description": null,
+        "distribution": null,
+        "inputs": {
+          "dataset": "compute_segment_surfaces:dataset_with_segment_stats",
+        },
+        "output_paths": null,
+        "task": "PublishDatasetTask",
+      },
+      "segment": {
+        "config": {
+          "chunk_padding": [
+            128,
+            128,
+            128,
+          ],
+          "chunk_size": [
+            512,
+            512,
+            512,
+          ],
+          "chunks_per_job": null,
+          "invert_mask": false,
+          "layer_names": null,
+          "layer_names_seeding": null,
+          "mask_filter_mag": null,
+          "min_job_chunk_size": null,
+          "output_segmentation_layer_name": "segmentation_1",
+          "segmenter": {
+            "absolute_affinity_threshold": -16,
+            "seed_generator": {
+              "additional_seed_grid_length_in_voxel": null,
+              "erosion_size": [
+                1,
+                1,
+                1,
+              ],
+              "fill_holes": false,
+              "h_maxima_threshold": 0.05,
+              "is_upper_threshold": false,
+              "modality_threshold": {
+                "modality": "probability",
+                "threshold": 0.5,
+              },
+              "size_threshold": 0,
+              "threshold_percentile": null,
+              "type": "affinity_distance_transform",
+            },
+            "size_threshold": 100,
+            "type": "optimized_affinity_watershed",
+          },
+          "skip_masked_out_chunks": false,
+          "sub_volume": null,
+          "training_task_name": null,
+          "training_task_name_seeding": null,
+        },
+        "description": null,
+        "distribution": null,
+        "inputs": {
+          "prediction": "predict:prediction",
+        },
+        "output_paths": null,
+        "task": "SegmentTask",
+      },
+      "upload_evaluation_errors": {
+        "config": {
+          "dataset_id": null,
+          "dataset_name": null,
+          "filename_regex": ".*segmentation_errors_(0|5|10|15|20|25|30|35|40|45|50|55|60|65|70|75|80)\\.nml",
+          "webknossos_url": "http://localhost:9000",
+        },
+        "description": null,
+        "distribution": null,
+        "inputs": {
+          "dataset_name": "publish_dataset_meshes:dataset_name",
+          "nmls": "evaluate_split_merger:errors",
+        },
+        "output_paths": null,
+        "task": "UploadNMLsTask",
+      },
+    },
+  },
+  "runs": [
+    {
+      "beginTime": 1792083006365,
+      "endTime": 1792083069170,
+      "hostName": "worker-host",
+      "hostUserName": "user_a",
+      "id": "6ad1043ef78084a048e5510f",
+      "name": "6ad10432f78084a048e55106_infer_with_neuron_model__6ad10432f78084a048e55106_infer_with_neuron_modelmultiprocessing.2026-10-15_18-50-04",
+      "state": "CANCELLED",
+      "voxelyticsVersion": "2b89884ccde800aa9f3e71385648888acaddcfa5",
+      "workflowConfig": {
+        "global_parameters": {
+          "artifacts_path": "artifacts/6ad10432f78084a048e55106",
+          "artifacts_storage_path": null,
+          "compute_checksums": null,
+          "distribution": {
+            "default": {
+              "processes": 6,
+              "resources": {},
+              "strategy": "multiprocessing",
+            },
+            "main": {
+              "processes": null,
+              "resources": {},
+              "strategy": null,
+            },
+          },
+          "env_vars": {},
+        },
+        "paths": [
+          "/srv/voxelytics/6ad10432f78084a048e55106_infer_with_neuron_model.yaml",
+          "/srv/voxelytics/6ad10432f78084a048e55106_infer_with_neuron_modelmultiprocessing.yaml",
+        ],
+        "schema_version": 137,
+      },
+      "workflowHash": "979252d3f3",
+      "workflowYamlContent": "schema_version: 112
+global_parameters:
+  artifacts_path: artifacts/6ad10432f78084a048e55106
+  artifacts_storage_path: null
+  distribution:
+    default:
+      strategy: multiprocessing
+      processes: 6
+tasks:
+  import_model:
+    task: ImportModelTask
+    config:
+      model_id: '576500000000000000000001'
+  predict:
+    task: PredictTask
+    inputs:
+      model: import_model:model
+    config:
+      name: neuron_predict_6ad10432f78084a048e55106
+      allow_context_to_exceed_input_bounding_box: true
+      datasource_config:
+        name: Sample_e2006_wkw_with_reconstructed_neurons2
+        type: wkw
+        scale:
+        - 16.5
+        - 16.5
+        - 25.0
+        dataset_id: 6ace4ef41dce5a2b1d8af4a7
+        color_name: color
+        wkw_resolution:
+        - 1
+        - 1
+        - 1
+        bounding_box:
+          topleft:
+          - 4558
+          - 4814
+          - 1938
+          size:
+          - 356
+          - 356
+          - 476
+      invert_color_layer: false
+      model_checkpoint: -1
+      training_task_outputs:
+        affinity:
+          endpoint_name: logits
+          endpoint_range:
+          - -3.5
+          - 3
+          dtype: uint8
+      normalization:
+        type: sample
+        remove_black: true
+      chunk_size:
+      - 128
+      - 128
+      - 128
+      min_job_chunk_size: 512
+      checkpoint_metric: adapted_rand_error
+    distribution:
+      step:
+        strategy: sequential
+        num_io_threads: 5
+  segment:
+    task: SegmentTask
+    inputs:
+      prediction: predict:prediction
+    config:
+      output_segmentation_layer_name: segmentation_1
+      segmenter:
+        type: optimized_affinity_watershed
+        size_threshold: 100
+        seed_generator:
+          type: affinity_distance_transform
+          h_maxima_threshold: 0.05
+          modality_threshold:
+            threshold: 0.5
+            modality: probability
+  globalize_segment_ids:
+    task: GlobalizeSegmentIdsTask
+    inputs:
+      prediction: predict:prediction
+      segmentation: segment:segmentation
+      max_ids: segment:max_ids
+  build_rag:
+    task: BuildRagTask
+    inputs:
+      segmentation: globalize_segment_ids:segmentation
+      prediction: predict:prediction
+  agglomerate:
+    task: AgglomerateTask
+    inputs:
+      rag: build_rag:rag
+  merge_mappings:
+    task: MergeMappingsTask
+    inputs:
+      mapping: agglomerate:mapping
+      cumsum: globalize_segment_ids:cumsum
+  compute_segment_stats:
+    task: ComputeSegmentStatsTask
+    inputs:
+      segmentation: globalize_segment_ids:segmentation
+      cumsum: globalize_segment_ids:cumsum
+  create_agglomerate_view:
+    task: CreateAgglomerateViewTask
+    inputs:
+      mapping: merge_mappings:mapping
+      segment_stats: compute_segment_stats:segment_stats
+      cumsum: globalize_segment_ids:cumsum
+      merged_edge_list: merge_mappings:edge_list
+      segmentation: compute_segment_stats:dataset_with_segment_stats
+  downsample:
+    task: DownsampleConnectSegmentationTask
+    inputs:
+      segmentation: create_agglomerate_view:wkw_with_agglomerate_views
+    config:
+      max_mag:
+      - 64
+      - 64
+      - 64
+      layer: segmentation_1
+  compute_segment_index:
+    task: ComputeSegmentIndexTask
+    inputs:
+      segmentation: downsample:segmentation
+  compute_meshes:
+    task: ComputeMeshesTask
+    config:
+      mag: '2'
+      chunk_size_in_mag: 1024
+      max_simplification_error: 300000.0
+    inputs:
+      segmentation: compute_segment_index:segmentation_with_segment_index
+  compute_segment_surfaces:
+    task: ComputeSegmentSurfacesTask
+    inputs:
+      segment_stats: compute_segment_stats:segment_stats
+      meshfile: compute_meshes:meshfile
+      dataset_with_segment_stats: compute_meshes:dataset_with_meshfile
+  publish_dataset_meshes:
+    task: NewPublishDatasetTask
+    inputs:
+      dataset: compute_segment_surfaces:dataset_with_segment_stats
+    config:
+      dataset_name: Sample_e2006_wkw_with_reconstructed_neurons2_Neuron_Segmentation
+      exclude_layers:
+      - affinity$prediction
+      webknossos_layers_configuration:
+        segmentation_1:
+          mapping:
+            name: agglomerate_view_70
+            type: HDF5
+  evaluate_split_merger:
+    task: EvaluateSplitMergerTask
+    inputs:
+      agglomerate_view: create_agglomerate_view:agglomerate_view
+      segmentation: downsample:segmentation
+    config:
+      annotation_id: POTENTIALLY_SET_BY_WORKER
+      min_mapping: 0
+      max_mapping: 95
+      mode: sparse
+      max_edge_length: null
+      sparse_tube_threshold_nm: 1000
+      min_merger_path_length_nm: 800
+  upload_evaluation_errors:
+    task: UploadNMLsTask
+    inputs:
+      nmls: evaluate_split_merger:errors
+      dataset_name: publish_dataset_meshes:dataset_name
+    config:
+      filename_regex: .*segmentation_errors_(0|5|10|15|20|25|30|35|40|45|50|55|60|65|70|75|80)\\.nml
+paths:
+- /srv/voxelytics/6ad10432f78084a048e55106_infer_with_neuron_model.yaml
+- /srv/voxelytics/6ad10432f78084a048e55106_infer_with_neuron_modelmultiprocessing.yaml
+",
+    },
+  ],
+  "tasks": [
+    {
+      "beginTime": 1792083006403,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 4,
+        "failed": 0,
+        "skipped": 0,
+        "total": 4,
+      },
+      "currentExecutionId": null,
+      "endTime": 1792083020333,
+      "runs": [
+        {
+          "beginTime": 1792083006403,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 4,
+            "failed": 0,
+            "skipped": 0,
+            "total": 4,
+          },
+          "currentExecutionId": null,
+          "endTime": 1792083020333,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "COMPLETE",
+        },
+      ],
+      "state": "COMPLETE",
+      "taskName": "import_model",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "PENDING",
+        },
+      ],
+      "state": "PENDING",
+      "taskName": "downsample",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "PENDING",
+        },
+      ],
+      "state": "PENDING",
+      "taskName": "build_rag",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "SKIPPED",
+      "taskName": "evaluate_split_merger",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "PENDING",
+        },
+      ],
+      "state": "PENDING",
+      "taskName": "segment",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "PENDING",
+        },
+      ],
+      "state": "PENDING",
+      "taskName": "globalize_segment_ids",
+    },
+    {
+      "beginTime": 1792083020414,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 1,
+        "failed": 0,
+        "skipped": 0,
+        "total": 11,
+      },
+      "currentExecutionId": "main/chunked_step",
+      "endTime": 1792083069078,
+      "runs": [
+        {
+          "beginTime": 1792083020414,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 1,
+            "failed": 0,
+            "skipped": 0,
+            "total": 11,
+          },
+          "currentExecutionId": "main/chunked_step",
+          "endTime": 1792083069078,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "CANCELLED",
+        },
+      ],
+      "state": "CANCELLED",
+      "taskName": "predict",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "PENDING",
+        },
+      ],
+      "state": "PENDING",
+      "taskName": "merge_mappings",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "PENDING",
+        },
+      ],
+      "state": "PENDING",
+      "taskName": "compute_meshes",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "PENDING",
+        },
+      ],
+      "state": "PENDING",
+      "taskName": "compute_segment_index",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "PENDING",
+        },
+      ],
+      "state": "PENDING",
+      "taskName": "create_agglomerate_view",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "PENDING",
+        },
+      ],
+      "state": "PENDING",
+      "taskName": "compute_segment_stats",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "SKIPPED",
+      "taskName": "upload_evaluation_errors",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "PENDING",
+        },
+      ],
+      "state": "PENDING",
+      "taskName": "publish_dataset_meshes",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "PENDING",
+        },
+      ],
+      "state": "PENDING",
+      "taskName": "agglomerate",
+    },
+    {
+      "beginTime": null,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": null,
+      "runs": [
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad1043ef78084a048e5510f",
+          "state": "PENDING",
+        },
+      ],
+      "state": "PENDING",
+      "taskName": "compute_segment_surfaces",
+    },
+  ],
+  "workflow": {
+    "hash": "979252d3f3",
+    "name": "6ad10432f78084a048e55106_infer_with_neuron_model",
+    "yamlContent": "schema_version: 112
+global_parameters:
+  artifacts_path: artifacts/6ad10432f78084a048e55106
+  artifacts_storage_path: null
+  distribution:
+    default:
+      strategy: multiprocessing
+      processes: 6
+tasks:
+  import_model:
+    task: ImportModelTask
+    config:
+      model_id: '576500000000000000000001'
+  predict:
+    task: PredictTask
+    inputs:
+      model: import_model:model
+    config:
+      name: neuron_predict_6ad10432f78084a048e55106
+      allow_context_to_exceed_input_bounding_box: true
+      datasource_config:
+        name: Sample_e2006_wkw_with_reconstructed_neurons2
+        type: wkw
+        scale:
+        - 16.5
+        - 16.5
+        - 25.0
+        dataset_id: 6ace4ef41dce5a2b1d8af4a7
+        color_name: color
+        wkw_resolution:
+        - 1
+        - 1
+        - 1
+        bounding_box:
+          topleft:
+          - 4558
+          - 4814
+          - 1938
+          size:
+          - 356
+          - 356
+          - 476
+      invert_color_layer: false
+      model_checkpoint: -1
+      training_task_outputs:
+        affinity:
+          endpoint_name: logits
+          endpoint_range:
+          - -3.5
+          - 3
+          dtype: uint8
+      normalization:
+        type: sample
+        remove_black: true
+      chunk_size:
+      - 128
+      - 128
+      - 128
+      min_job_chunk_size: 512
+      checkpoint_metric: adapted_rand_error
+    distribution:
+      step:
+        strategy: sequential
+        num_io_threads: 5
+  segment:
+    task: SegmentTask
+    inputs:
+      prediction: predict:prediction
+    config:
+      output_segmentation_layer_name: segmentation_1
+      segmenter:
+        type: optimized_affinity_watershed
+        size_threshold: 100
+        seed_generator:
+          type: affinity_distance_transform
+          h_maxima_threshold: 0.05
+          modality_threshold:
+            threshold: 0.5
+            modality: probability
+  globalize_segment_ids:
+    task: GlobalizeSegmentIdsTask
+    inputs:
+      prediction: predict:prediction
+      segmentation: segment:segmentation
+      max_ids: segment:max_ids
+  build_rag:
+    task: BuildRagTask
+    inputs:
+      segmentation: globalize_segment_ids:segmentation
+      prediction: predict:prediction
+  agglomerate:
+    task: AgglomerateTask
+    inputs:
+      rag: build_rag:rag
+  merge_mappings:
+    task: MergeMappingsTask
+    inputs:
+      mapping: agglomerate:mapping
+      cumsum: globalize_segment_ids:cumsum
+  compute_segment_stats:
+    task: ComputeSegmentStatsTask
+    inputs:
+      segmentation: globalize_segment_ids:segmentation
+      cumsum: globalize_segment_ids:cumsum
+  create_agglomerate_view:
+    task: CreateAgglomerateViewTask
+    inputs:
+      mapping: merge_mappings:mapping
+      segment_stats: compute_segment_stats:segment_stats
+      cumsum: globalize_segment_ids:cumsum
+      merged_edge_list: merge_mappings:edge_list
+      segmentation: compute_segment_stats:dataset_with_segment_stats
+  downsample:
+    task: DownsampleConnectSegmentationTask
+    inputs:
+      segmentation: create_agglomerate_view:wkw_with_agglomerate_views
+    config:
+      max_mag:
+      - 64
+      - 64
+      - 64
+      layer: segmentation_1
+  compute_segment_index:
+    task: ComputeSegmentIndexTask
+    inputs:
+      segmentation: downsample:segmentation
+  compute_meshes:
+    task: ComputeMeshesTask
+    config:
+      mag: '2'
+      chunk_size_in_mag: 1024
+      max_simplification_error: 300000.0
+    inputs:
+      segmentation: compute_segment_index:segmentation_with_segment_index
+  compute_segment_surfaces:
+    task: ComputeSegmentSurfacesTask
+    inputs:
+      segment_stats: compute_segment_stats:segment_stats
+      meshfile: compute_meshes:meshfile
+      dataset_with_segment_stats: compute_meshes:dataset_with_meshfile
+  publish_dataset_meshes:
+    task: NewPublishDatasetTask
+    inputs:
+      dataset: compute_segment_surfaces:dataset_with_segment_stats
+    config:
+      dataset_name: Sample_e2006_wkw_with_reconstructed_neurons2_Neuron_Segmentation
+      exclude_layers:
+      - affinity$prediction
+      webknossos_layers_configuration:
+        segmentation_1:
+          mapping:
+            name: agglomerate_view_70
+            type: HDF5
+  evaluate_split_merger:
+    task: EvaluateSplitMergerTask
+    inputs:
+      agglomerate_view: create_agglomerate_view:agglomerate_view
+      segmentation: downsample:segmentation
+    config:
+      annotation_id: POTENTIALLY_SET_BY_WORKER
+      min_mapping: 0
+      max_mapping: 95
+      mode: sparse
+      max_edge_length: null
+      sparse_tube_threshold_nm: 1000
+      min_merger_path_length_nm: 800
+  upload_evaluation_errors:
+    task: UploadNMLsTask
+    inputs:
+      nmls: evaluate_split_merger:errors
+      dataset_name: publish_dataset_meshes:dataset_name
+    config:
+      filename_regex: .*segmentation_errors_(0|5|10|15|20|25|30|35|40|45|50|55|60|65|70|75|80)\\.nml
+paths:
+- /srv/voxelytics/6ad10432f78084a048e55106_infer_with_neuron_model.yaml
+- /srv/voxelytics/6ad10432f78084a048e55106_infer_with_neuron_modelmultiprocessing.yaml
+",
+  },
+}
+`;
+
+exports[`Voxelytics API (E2E) > getVoxelyticsWorkflow() with nested meta tasks 1`] = `
+{
+  "artifacts": {
+    "download": {
+      "dataset": {
+        "artifactId": "6ad20000000000005e7a0002",
+        "fileSize": 1048576,
+        "inodeCount": 3,
+        "metadata": {
+          "attributes": {},
+          "iframes": {},
+          "links": {},
+        },
+        "name": "dataset",
+        "path": "/synthetic/synthmeta01/download",
+        "taskId": "6ad20000000000005e7a0001",
+        "taskName": "download",
+        "version": "1",
+      },
+    },
+    "segment@predict": {
+      "probabilities": {
+        "artifactId": "6ad20000000000005e7a0004",
+        "fileSize": 1048576,
+        "inodeCount": 3,
+        "metadata": {
+          "attributes": {},
+          "iframes": {},
+          "links": {},
+        },
+        "name": "probabilities",
+        "path": "/synthetic/synthmeta01/segment@predict",
+        "taskId": "6ad20000000000005e7a0003",
+        "taskName": "segment@predict",
+        "version": "1",
+      },
+    },
+  },
+  "config": {
+    "global_parameters": {},
+    "paths": [],
+    "schema_version": 1,
+    "tasks": {
+      "download": {
+        "config": {
+          "name": "download",
+        },
+        "description": "Synthetic \`Download\` task.",
+        "distribution": {},
+        "inputs": {},
+        "output_paths": {},
+        "task": "Download",
+      },
+      "export": {
+        "config": {
+          "name": "export",
+        },
+        "description": "Synthetic \`Export\` task.",
+        "distribution": {},
+        "inputs": {
+          "segmentation": "segment@postprocess@agglomerate:segmentation",
+        },
+        "output_paths": {},
+        "task": "Export",
+      },
+      "segment@postprocess@agglomerate": {
+        "config": {
+          "name": "agglomerate",
+        },
+        "description": "Synthetic \`Agglomerate\` task.",
+        "distribution": {},
+        "inputs": {
+          "probs": "segment@predict:probabilities",
+        },
+        "output_paths": {},
+        "task": "Agglomerate",
+      },
+      "segment@postprocess@mesh": {
+        "config": {
+          "name": "mesh",
+        },
+        "description": "Synthetic \`Mesh\` task.",
+        "distribution": {},
+        "inputs": {
+          "seg": "segment@postprocess@agglomerate:segmentation",
+        },
+        "output_paths": {},
+        "task": "Mesh",
+      },
+      "segment@predict": {
+        "config": {
+          "name": "predict",
+        },
+        "description": "Synthetic \`Predict\` task.",
+        "distribution": {},
+        "inputs": {
+          "data": "download:dataset",
+        },
+        "output_paths": {},
+        "task": "Predict",
+      },
+    },
+  },
+  "runs": [
+    {
+      "beginTime": 1792054800000,
+      "endTime": 1792058460000,
+      "hostName": "synthetic-host",
+      "hostUserName": "synthetic-user",
+      "id": "6ad20000000000005e7a0011",
+      "name": "meta-rerun-fixed",
+      "state": "COMPLETE",
+      "voxelyticsVersion": "0.0.0-synthetic",
+      "workflowConfig": {
+        "global_parameters": {},
+        "paths": [],
+        "schema_version": 1,
+      },
+      "workflowHash": "synthmeta01",
+      "workflowYamlContent": "# synthetic workflow with nested meta tasks
+",
+    },
+    {
+      "beginTime": 1791968400000,
+      "endTime": 1791972060000,
+      "hostName": "synthetic-host",
+      "hostUserName": "synthetic-user",
+      "id": "6ad20000000000005e7a000b",
+      "name": "meta-rerun-failed",
+      "state": "FAILED",
+      "voxelyticsVersion": "0.0.0-synthetic",
+      "workflowConfig": {
+        "global_parameters": {},
+        "paths": [],
+        "schema_version": 1,
+      },
+      "workflowHash": "synthmeta01",
+      "workflowYamlContent": "# synthetic workflow with nested meta tasks
+",
+    },
+    {
+      "beginTime": 1791882000000,
+      "endTime": 1791891060000,
+      "hostName": "synthetic-host",
+      "hostUserName": "synthetic-user",
+      "id": "6ad20000000000005e7a0000",
+      "name": "meta-initial",
+      "state": "COMPLETE",
+      "voxelyticsVersion": "0.0.0-synthetic",
+      "workflowConfig": {
+        "global_parameters": {},
+        "paths": [],
+        "schema_version": 1,
+      },
+      "workflowHash": "synthmeta01",
+      "workflowYamlContent": "# synthetic workflow with nested meta tasks
+",
+    },
+  ],
+  "tasks": [
+    {
+      "beginTime": 1791884100000,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": 1791885600000,
+      "runs": [
+        {
+          "beginTime": 1791884100000,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791885600000,
+          "runId": "6ad20000000000005e7a0000",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad20000000000005e7a000b",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad20000000000005e7a0011",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "COMPLETE",
+      "taskName": "segment@predict",
+    },
+    {
+      "beginTime": 1791889500000,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": 1792058400000,
+      "runs": [
+        {
+          "beginTime": 1792056900000,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1792058400000,
+          "runId": "6ad20000000000005e7a0011",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": 1791889500000,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791891000000,
+          "runId": "6ad20000000000005e7a0000",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad20000000000005e7a000b",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "COMPLETE",
+      "taskName": "export",
+    },
+    {
+      "beginTime": 1791885900000,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": 1791970200000,
+      "runs": [
+        {
+          "beginTime": 1791968700000,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791970200000,
+          "runId": "6ad20000000000005e7a000b",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": 1791885900000,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791887400000,
+          "runId": "6ad20000000000005e7a0000",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad20000000000005e7a0011",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "COMPLETE",
+      "taskName": "segment@postprocess@agglomerate",
+    },
+    {
+      "beginTime": 1791887700000,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": 1792056600000,
+      "runs": [
+        {
+          "beginTime": 1792055100000,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1792056600000,
+          "runId": "6ad20000000000005e7a0011",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": 1791970500000,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791972000000,
+          "runId": "6ad20000000000005e7a000b",
+          "state": "FAILED",
+        },
+        {
+          "beginTime": 1791887700000,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791889200000,
+          "runId": "6ad20000000000005e7a0000",
+          "state": "COMPLETE",
+        },
+      ],
+      "state": "COMPLETE",
+      "taskName": "segment@postprocess@mesh",
+    },
+    {
+      "beginTime": 1791882300000,
+      "chunkCounts": {
+        "cancelled": 0,
+        "complete": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total": 0,
+      },
+      "currentExecutionId": null,
+      "endTime": 1791883800000,
+      "runs": [
+        {
+          "beginTime": 1791882300000,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": 1791883800000,
+          "runId": "6ad20000000000005e7a0000",
+          "state": "COMPLETE",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad20000000000005e7a000b",
+          "state": "SKIPPED",
+        },
+        {
+          "beginTime": null,
+          "chunkCounts": {
+            "cancelled": 0,
+            "complete": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+          },
+          "currentExecutionId": null,
+          "endTime": null,
+          "runId": "6ad20000000000005e7a0011",
+          "state": "SKIPPED",
+        },
+      ],
+      "state": "COMPLETE",
+      "taskName": "download",
+    },
+  ],
+  "workflow": {
+    "hash": "synthmeta01",
+    "name": "synthetic_nested_meta_tasks",
+    "yamlContent": "# synthetic workflow with nested meta tasks
+",
+  },
+}
+`;
+
+exports[`Voxelytics API (E2E) > getVoxelyticsWorkflows() 1`] = `
+[
+  {
+    "beginTime": 1792083006365,
+    "endTime": 1792083069170,
+    "hash": "979252d3f3",
+    "name": "6ad10432f78084a048e55106_infer_with_neuron_model",
+    "runs": [
+      {
+        "beginTime": 1792083006365,
+        "endTime": 1792083069170,
+        "hostName": "worker-host",
+        "hostUserName": "user_a",
+        "id": "6ad1043ef78084a048e5510f",
+        "name": "6ad10432f78084a048e55106_infer_with_neuron_model__6ad10432f78084a048e55106_infer_with_neuron_modelmultiprocessing.2026-10-15_18-50-04",
+        "state": "CANCELLED",
+        "taskCounts": {
+          "cancelled": 1,
+          "complete": 1,
+          "failed": 0,
+          "fileSize": 49901738,
+          "inodeCount": 9,
+          "skipped": 2,
+          "total": 16,
+        },
+        "userFirstName": "user_A",
+        "userLastName": "last_A",
+        "voxelyticsVersion": "2b89884ccde800aa9f3e71385648888acaddcfa5",
+        "workflowHash": "979252d3f3",
+      },
+    ],
+    "state": "CANCELLED",
+    "taskCounts": {
+      "cancelled": 1,
+      "complete": 1,
+      "failed": 0,
+      "fileSize": 49901738,
+      "inodeCount": 9,
+      "skipped": 2,
+      "total": 16,
+    },
+  },
+  {
+    "beginTime": 1791882000000,
+    "endTime": 1792058460000,
+    "hash": "synthmeta01",
+    "name": "synthetic_nested_meta_tasks",
+    "runs": [
+      {
+        "beginTime": 1791882000000,
+        "endTime": 1791891060000,
+        "hostName": "synthetic-host",
+        "hostUserName": "synthetic-user",
+        "id": "6ad20000000000005e7a0000",
+        "name": "meta-initial",
+        "state": "COMPLETE",
+        "taskCounts": {
+          "cancelled": 0,
+          "complete": 5,
+          "failed": 0,
+          "fileSize": 5242880,
+          "inodeCount": 15,
+          "skipped": 0,
+          "total": 5,
+        },
+        "userFirstName": "user_A",
+        "userLastName": "last_A",
+        "voxelyticsVersion": "0.0.0-synthetic",
+        "workflowHash": "synthmeta01",
+      },
+      {
+        "beginTime": 1791968400000,
+        "endTime": 1791972060000,
+        "hostName": "synthetic-host",
+        "hostUserName": "synthetic-user",
+        "id": "6ad20000000000005e7a000b",
+        "name": "meta-rerun-failed",
+        "state": "FAILED",
+        "taskCounts": {
+          "cancelled": 0,
+          "complete": 1,
+          "failed": 1,
+          "fileSize": 0,
+          "inodeCount": 0,
+          "skipped": 3,
+          "total": 5,
+        },
+        "userFirstName": "user_A",
+        "userLastName": "last_A",
+        "voxelyticsVersion": "0.0.0-synthetic",
+        "workflowHash": "synthmeta01",
+      },
+      {
+        "beginTime": 1792054800000,
+        "endTime": 1792058460000,
+        "hostName": "synthetic-host",
+        "hostUserName": "synthetic-user",
+        "id": "6ad20000000000005e7a0011",
+        "name": "meta-rerun-fixed",
+        "state": "COMPLETE",
+        "taskCounts": {
+          "cancelled": 0,
+          "complete": 2,
+          "failed": 0,
+          "fileSize": 0,
+          "inodeCount": 0,
+          "skipped": 3,
+          "total": 5,
+        },
+        "userFirstName": "user_A",
+        "userLastName": "last_A",
+        "voxelyticsVersion": "0.0.0-synthetic",
+        "workflowHash": "synthmeta01",
+      },
+    ],
+    "state": "COMPLETE",
+    "taskCounts": {
+      "cancelled": 0,
+      "complete": 5,
+      "failed": 0,
+      "fileSize": 2097152,
+      "inodeCount": 6,
+      "skipped": 0,
+      "total": 5,
+    },
+  },
+  {
+    "beginTime": 1791789798156,
+    "endTime": 1792135398156,
+    "hash": "synthruns01",
+    "name": "synthetic_task_runs_test",
+    "runs": [
+      {
+        "beginTime": 1791789798156,
+        "endTime": 1791797058156,
+        "hostName": "synthetic-host",
+        "hostUserName": "synthetic-user",
+        "id": "6ad1d0e6f78084a048e55150",
+        "name": "initial-1792135398",
+        "state": "COMPLETE",
+        "taskCounts": {
+          "cancelled": 0,
+          "complete": 4,
+          "failed": 0,
+          "fileSize": 4194304,
+          "inodeCount": 12,
+          "skipped": 1,
+          "total": 5,
+        },
+        "userFirstName": "user_A",
+        "userLastName": "last_A",
+        "voxelyticsVersion": "0.0.0-synthetic",
+        "workflowHash": "synthruns01",
+      },
+      {
+        "beginTime": 1791876198156,
+        "endTime": 1791879858156,
+        "hostName": "synthetic-host",
+        "hostUserName": "synthetic-user",
+        "id": "6ad1d0e6f78084a048e5515e",
+        "name": "rerun-failed-1792135398",
+        "state": "FAILED",
+        "taskCounts": {
+          "cancelled": 0,
+          "complete": 1,
+          "failed": 1,
+          "fileSize": 4194304,
+          "inodeCount": 12,
+          "skipped": 3,
+          "total": 5,
+        },
+        "userFirstName": "user_A",
+        "userLastName": "last_A",
+        "voxelyticsVersion": "0.0.0-synthetic",
+        "workflowHash": "synthruns01",
+      },
+      {
+        "beginTime": 1791962598156,
+        "endTime": 1791964458156,
+        "hostName": "synthetic-host",
+        "hostUserName": "synthetic-user",
+        "id": "6ad1d0e6f78084a048e55169",
+        "name": "rerun-cancelled-1792135398",
+        "state": "CANCELLED",
+        "taskCounts": {
+          "cancelled": 1,
+          "complete": 0,
+          "failed": 0,
+          "fileSize": 4194304,
+          "inodeCount": 12,
+          "skipped": 4,
+          "total": 5,
+        },
+        "userFirstName": "user_A",
+        "userLastName": "last_A",
+        "voxelyticsVersion": "0.0.0-synthetic",
+        "workflowHash": "synthruns01",
+      },
+      {
+        "beginTime": 1792048998156,
+        "endTime": 1792052598156,
+        "hostName": "synthetic-host",
+        "hostUserName": "synthetic-user",
+        "id": "6ad1d0e6f78084a048e55173",
+        "name": "rerun-stale-1792135398",
+        "state": "STALE",
+        "taskCounts": {
+          "cancelled": 0,
+          "complete": 1,
+          "failed": 1,
+          "fileSize": 4194304,
+          "inodeCount": 12,
+          "skipped": 3,
+          "total": 5,
+        },
+        "userFirstName": "user_A",
+        "userLastName": "last_A",
+        "voxelyticsVersion": "0.0.0-synthetic",
+        "workflowHash": "synthruns01",
+      },
+      {
+        "beginTime": 1792134798156,
+        "endTime": 1792135398156,
+        "hostName": "synthetic-host",
+        "hostUserName": "synthetic-user",
+        "id": "6ad1d0e6f78084a048e5517e",
+        "name": "rerun-running-1792135398",
+        "state": "STALE",
+        "taskCounts": {
+          "cancelled": 0,
+          "complete": 0,
+          "failed": 1,
+          "fileSize": 4194304,
+          "inodeCount": 12,
+          "skipped": 4,
+          "total": 5,
+        },
+        "userFirstName": "user_A",
+        "userLastName": "last_A",
+        "voxelyticsVersion": "0.0.0-synthetic",
+        "workflowHash": "synthruns01",
+      },
+    ],
+    "state": "STALE",
+    "taskCounts": {
+      "cancelled": 0,
+      "complete": 3,
+      "failed": 1,
+      "fileSize": 4194304,
+      "inodeCount": 12,
+      "skipped": 1,
+      "total": 5,
+    },
+  },
+]
+`;

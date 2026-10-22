@@ -411,7 +411,7 @@ function getHelpSubMenu(
     {
       key: "frontend-api",
       label: (
-        <a target="_blank" href="/assets/docs/frontend-api/index.html" rel="noopener noreferrer">
+        <a target="_blank" href="https://docs.webknossos.org/frontend-api/index.html" rel="noopener noreferrer">
           Frontend API Documentation
         </a>
       ),

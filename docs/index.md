@@ -27,7 +27,7 @@ WEBKNOSSOS is also a platform for [showcasing datasets](https://webknossos.org) 
 - [3D Mesh Visualization](./meshes/index.md)
 - [Integrated Synapse and Connectome Viewer](./connectome_viewer.md)
 - [Python library with documentation for API access and integration in custom analysis workflows](https://docs.webknossos.org/webknossos-py/)
-- [Frontend API for user scripting](https://webknossos.org/assets/docs/frontend-api/index.html)
+- [Frontend API for user scripting](../frontend-api/index.md)
 - Developed as an open-source project with [automated testing](https://circleci.com/gh/scalableminds/webknossos)
 - [Deployable with Docker for production and development](https://hub.docker.com/r/scalableminds/webknossos/)
 

@@ -252,8 +252,6 @@ function assertVolume(state: WebknossosState): VolumeTracing {
 }
 /**
  * All tracing related API methods. This is the newest version of the API (version 3).
- * @version 3
- * @class
  * @example
  * window.webknossos.apiReady(3).then(api => {
  *   api.tracing.getActiveNodeId();
@@ -266,12 +264,12 @@ class TracingApi {
   model: WebKnossosModel;
 
   /**
-   * @private
+   * @internal
    */
   isFinishing: boolean = false;
 
   /**
-   * @private
+   * @internal
    */
   constructor(model: WebKnossosModel) {
     this.model = model;
@@ -1677,7 +1675,7 @@ class DataApi {
     );
   }
 
-  /*
+  /**
    * Returns the name of the visible segmentation layer (if it exists). Note that
    * if the visible layer is a volume tracing layer, the name will be an ID
    * (and not the name which the user can specify in the UI).
@@ -1692,7 +1690,7 @@ class DataApi {
     return null;
   }
 
-  /*
+  /**
    * Returns the ids of the existing volume tracing layers.
    */
   getVolumeTracingLayerIds(): Array<string> {
@@ -2089,8 +2087,8 @@ class DataApi {
     return bucket;
   }
 
-  /*
-   * Deprecated! Use getDataForBoundingBox instead whose name describes its interface correctly.
+  /**
+   * @deprecated Use {@link DataApi.getDataForBoundingBox} instead, whose name describes its interface correctly.
    */
   async getDataFor2DBoundingBox(
     layerName: string,
@@ -2100,7 +2098,7 @@ class DataApi {
     return this.getDataForBoundingBox(layerName, bbox, _zoomStep);
   }
 
-  /*
+  /**
    * For the provided layer name and bounding box, an array is constructed with the actual data.
    * By default, the finest existent quality is chosen, but the quality can be adapted via the
    * zoomStep parameter.
@@ -2342,7 +2340,7 @@ class DataApi {
   /**
    * Helper method to build the download URL for a raw data cuboid.
    *
-   * @ignore
+   * @internal
    */
   _getDownloadUrlForRawDataCuboid(
     layerName: string,
@@ -3162,12 +3160,12 @@ class UtilsApi {
   /**
    * Show a toast to the user. Returns a function which can be used to remove the toast again.
    *
-   * @param {string} type - Can be one of the following: "info", "warning", "success" or "error"
-   * @param {string} message - The message string you want to show
-   * @param {number} timeout - Time period in milliseconds after which the toast will be hidden. Time is measured as soon as the user moves the mouse. A value of 0 means that the toast will only hide by clicking on it's X button.
+   * @param type - Can be one of the following: "info", "warning", "success" or "error"
+   * @param message - The message string you want to show
+   * @param timeout - Time period in milliseconds after which the toast will be hidden. Time is measured as soon as the user moves the mouse. A value of 0 means that the toast will only hide by clicking on it's X button.
    * @example
    * // Show a toast for 5 seconds
-   * const removeToast = api.utils.showToast("info", "You just got toasted", false, 5000);
+   * const removeToast = api.utils.showToast("info", "You just got toasted", 5000);
    * // ... optionally:
    * // removeToast();
    */
@@ -3185,8 +3183,8 @@ class UtilsApi {
 
   /**
    * Overwrite existing wK actions. wK uses [Redux](http://redux.js.org/) actions to trigger any changes to the application state.
-   * @param {function(store, next, originalAction)} overwriteFunction - Your new implementation for the method in question. Receives the central wK store, a callback to fire the next/original action and the original action.
-   * @param {string} actionName - The name of the action you wish to override:
+   * @param overwriteFunction - Your new implementation for the method in question. Receives the central wK store, a callback to fire the next/original action and the original action.
+   * @param actionName - The name of the action you wish to override:
    *   - CREATE_NODE
    *   - DELETE_NODE
    *   - SET_ACTIVE_NODE
@@ -3204,7 +3202,7 @@ class UtilsApi {
    *   - SHUFFLE_ALL_TREE_COLORS
    *   - CREATE_COMMENT
    *   - DELETE_COMMENT
-   * @returns {function()} - A function used to unregister the overwriteFunction
+   * @returns A function used to unregister the overwriteFunction
    *
    *
    * @example

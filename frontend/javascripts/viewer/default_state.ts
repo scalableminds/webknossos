@@ -298,7 +298,7 @@ const defaultState: WebknossosState = {
       right: false,
       left: false,
     },
-    theme: getSystemColorTheme(),
+    systemTheme: getSystemColorTheme(),
     isWkInitialized: false,
     isUiReady: false,
     quickSelectState: "inactive",

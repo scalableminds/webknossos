@@ -20,5 +20,5 @@ object NativeCompressoCompressor {
 
 class NativeCompressoCompressor {
   NativeCompressoCompressor.load // triggers companion object initialization and library load
-  @native def decompress(bytes: Array[Byte]): Array[Byte]
+  @native def decompress(bytes: Array[Byte], maxOutputLength: Int): Array[Byte]
 }

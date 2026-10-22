@@ -252,7 +252,7 @@ function UploadProgressContent({
 
         {hasUploadPipeline[datasetAddType] ? (
           <StageBar
-            statuses={getStageStatuses(phase, status.needsConversion)}
+            statuses={getStageStatuses(phase)}
             uploadPercent={uploadPercent}
             needsConversion={status.needsConversion}
           />

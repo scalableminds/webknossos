@@ -3,7 +3,7 @@ import type { UploadStatus } from "./use_resumable_dataset_upload";
 
 export const STAGES = ["upload", "finalize", "convert", "ready"] as const;
 export type Stage = (typeof STAGES)[number];
-export type StageStatus = "todo" | "active" | "done" | "skipped" | "error";
+export type StageStatus = "todo" | "active" | "done" | "error";
 
 // What the dialog shows. Unlike UploadStatus, this includes the server-side conversion.
 export type UploadPhase =
@@ -49,21 +49,21 @@ export function getUploadPhase(
   }
 }
 
-export function getStageStatuses(
-  phase: UploadPhase,
-  needsConversion: boolean,
-): Record<Stage, StageStatus> {
+/** The stages to show. Datasets that don't need a conversion skip the convert stage. */
+export function getStages(needsConversion: boolean): readonly Stage[] {
+  return needsConversion ? STAGES : STAGES.filter((stage) => stage !== "convert");
+}
+
+export function getStageStatuses(phase: UploadPhase): Record<Stage, StageStatus> {
   const currentStage = phase.kind === "failed" ? phase.stage : PHASE_STAGES[phase.kind];
   const currentIndex = STAGES.indexOf(currentStage);
-  const getStatus = (stage: Stage, index: number): StageStatus => {
-    if (stage === "convert" && !needsConversion) {
-      return index < currentIndex ? "skipped" : "todo";
-    }
+  const getStatus = (index: number): StageStatus => {
     if (index < currentIndex || phase.kind === "ready") return "done";
     if (index === currentIndex) return phase.kind === "failed" ? "error" : "active";
     return "todo";
   };
-  return Object.fromEntries(
-    STAGES.map((stage, index) => [stage, getStatus(stage, index)]),
-  ) as Record<Stage, StageStatus>;
+  return Object.fromEntries(STAGES.map((stage, index) => [stage, getStatus(index)])) as Record<
+    Stage,
+    StageStatus
+  >;
 }

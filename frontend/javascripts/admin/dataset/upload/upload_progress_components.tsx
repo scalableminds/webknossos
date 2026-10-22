@@ -17,7 +17,7 @@ import { formatBytes } from "libs/format_utils";
 import type React from "react";
 import { useState } from "react";
 import { getAntdTheme } from "theme";
-import { STAGES, type Stage, type StageStatus } from "./upload_progress_stages";
+import { getStages, type Stage, type StageStatus } from "./upload_progress_stages";
 import type { TransferRate } from "./use_transfer_rate";
 
 const GRID_SIZE = 6;
@@ -216,15 +216,12 @@ function StageBarItem({
   stage,
   status,
   percent,
-  subLabel,
 }: {
   stage: Stage;
   status: StageStatus;
   // Only known while uploading. All other stages run on the server without progress reports.
   percent: number | null;
-  subLabel: string | null;
 }) {
-  const { token } = theme.useToken();
   const progressProps: React.ComponentProps<typeof Progress> =
     status === "active"
       ? { percent: percent ?? 100, status: "active" }
@@ -237,11 +234,6 @@ function StageBarItem({
     <Flex vertical gap={6}>
       <Progress {...progressProps} size={BAR_SIZE} showInfo={false} />
       <StageLabel stage={stage} status={status} />
-      {subLabel != null ? (
-        <Typography.Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-          {subLabel}
-        </Typography.Text>
-      ) : null}
     </Flex>
   );
 }
@@ -255,19 +247,15 @@ export function StageBar({
   uploadPercent: number;
   needsConversion: boolean;
 }) {
-  const getSubLabel = (stage: Stage) => {
-    if (stage !== "convert" || needsConversion) return null;
-    return statuses.convert === "skipped" ? "skipped" : "not needed";
-  };
+  const stages = getStages(needsConversion);
   return (
     <Row gutter={6}>
-      {STAGES.map((stage) => (
-        <Col key={stage} span={24 / STAGES.length}>
+      {stages.map((stage) => (
+        <Col key={stage} span={24 / stages.length}>
           <StageBarItem
             stage={stage}
             status={statuses[stage]}
             percent={stage === "upload" ? uploadPercent : null}
-            subLabel={getSubLabel(stage)}
           />
         </Col>
       ))}

@@ -1,5 +1,9 @@
 import { getLayerProgress, groupFilesByLayer } from "admin/dataset/upload/upload_layers";
-import { getStageStatuses, getUploadPhase } from "admin/dataset/upload/upload_progress_stages";
+import {
+  getStageStatuses,
+  getStages,
+  getUploadPhase,
+} from "admin/dataset/upload/upload_progress_stages";
 import type { UploadStatus } from "admin/dataset/upload/use_resumable_dataset_upload";
 import type { FileWithPath } from "react-dropzone";
 import type { APIJob } from "types/api_types";
@@ -68,13 +72,8 @@ describe("upload stages", () => {
   it("skips the conversion of native datasets", () => {
     const phase = getUploadPhase(finished(false), null);
     expect(phase).toEqual({ kind: "ready" });
-    expect(getStageStatuses(phase, false)).toEqual({
-      upload: "done",
-      finalize: "done",
-      convert: "skipped",
-      ready: "done",
-    });
-    expect(getStageStatuses({ kind: "uploading" }, false).convert).toBe("todo");
+    expect(getStages(false)).toEqual(["upload", "finalize", "ready"]);
+    expect(getStages(true)).toEqual(["upload", "finalize", "convert", "ready"]);
   });
 
   it("follows the conversion job", () => {
@@ -83,7 +82,7 @@ describe("upload stages", () => {
     expect(getUploadPhase(finished(true), job("SUCCESS"))).toEqual({ kind: "ready" });
     const failedPhase = getUploadPhase(finished(true), job("FAILURE"));
     expect(failedPhase.kind).toBe("failed");
-    expect(getStageStatuses(failedPhase, true)).toEqual({
+    expect(getStageStatuses(failedPhase)).toEqual({
       upload: "done",
       finalize: "done",
       convert: "error",
@@ -92,7 +91,7 @@ describe("upload stages", () => {
   });
 
   it("marks the current stage as active", () => {
-    expect(getStageStatuses({ kind: "finalizing" }, true)).toEqual({
+    expect(getStageStatuses({ kind: "finalizing" })).toEqual({
       upload: "done",
       finalize: "active",
       convert: "todo",

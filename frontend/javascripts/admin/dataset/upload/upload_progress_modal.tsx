@@ -54,6 +54,7 @@ export function getAddedDatasetStatus(datasetId: string, datasetName: string): U
   return {
     kind: "finished",
     datasetId,
+    conversionJobId: null,
     datasetName,
     needsConversion: false,
     formatName: null,
@@ -138,7 +139,9 @@ function UploadProgressContent({
   const { token } = theme.useToken();
   const navigate = useNavigate();
   const datasetId = status.kind === "finished" ? status.datasetId : null;
-  const conversionJob = useConversionJob(status.needsConversion ? datasetId : null);
+  const conversionJob = useConversionJob(
+    status.kind === "finished" ? status.conversionJobId : null,
+  );
   const phase = getUploadPhase(status, conversionJob);
   const isReady = phase.kind === "ready";
   const { data: dataset = null } = useQueryWithErrorHandling({
@@ -146,7 +149,11 @@ function UploadProgressContent({
     queryFn: () => getDataset(datasetId as string),
     enabled: isReady && datasetId != null,
   });
-  const transferRate = useTransferRate(getBytesSent(status), status.bytesTotal);
+  const transferRate = useTransferRate(
+    getBytesSent(status),
+    status.bytesTotal,
+    status.kind === "uploading",
+  );
 
   const uploadPercent = getUploadPercent(status);
   const datasetUrlPart = { name: status.datasetName, id: datasetId ?? "" };

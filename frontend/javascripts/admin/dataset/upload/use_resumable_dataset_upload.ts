@@ -21,7 +21,7 @@ import type { APITeam } from "types/api_types";
 import type { UnitLong, Vector3 } from "viewer/constants";
 import { getTotalFileSize } from "./detect_dataset_format";
 import {
-  getLayerProgress,
+  getUploadProgress,
   groupFilesByLayer,
   markLayersAsSent,
   type UploadLayerProgress,
@@ -49,7 +49,7 @@ export type UploadStatus =
   | { kind: "idle" }
   | ({ kind: "uploading"; bytesSent: number; isRetrying: boolean } & UploadInfo)
   | ({ kind: "finishing" } & UploadInfo)
-  | ({ kind: "finished"; datasetId: string } & UploadInfo)
+  | ({ kind: "finished"; datasetId: string; conversionJobId: string | null } & UploadInfo)
   | ({
       kind: "failed";
       failedStage: "upload" | "finalize";
@@ -170,13 +170,15 @@ export function useResumableDatasetUpload({
     const sentUploadInfo = { ...uploadInfo, layers: markLayersAsSent(uploadInfo.layers) };
     // Progress events fire for every chunk, so computing the progress per layer is throttled.
     const updateProgress = throttle(() => {
+      const { bytesSent, layers } = getUploadProgress(layerGroups, resumableUpload.files);
       setStatus((previous) =>
         previous.kind === "uploading"
           ? {
               ...previous,
               isRetrying: false,
-              bytesSent: resumableUpload.progress() * uploadInfo.bytesTotal,
-              layers: getLayerProgress(layerGroups, resumableUpload.files),
+              // Don't let the progress go back, e.g. when a chunk is retried.
+              bytesSent: Math.max(previous.bytesSent, bytesSent),
+              layers,
             }
           : previous,
       );
@@ -201,9 +203,14 @@ export function useResumableDatasetUpload({
       updateProgress.cancel();
       setStatus({ kind: "finishing", ...sentUploadInfo });
       finishDatasetUpload(datastoreUrl, uploadId).then(
-        ({ datasetId }) => {
+        ({ datasetId, conversionJobId }) => {
           activeUploadRef.current = null;
-          setStatus({ kind: "finished", ...sentUploadInfo, datasetId });
+          setStatus({
+            kind: "finished",
+            ...sentUploadInfo,
+            datasetId,
+            conversionJobId: conversionJobId ?? null,
+          });
           onUploaded(datasetId, datasetName, needsConversion);
         },
         (error) => {
@@ -233,6 +240,11 @@ export function useResumableDatasetUpload({
         return;
       }
       updateProgress.cancel();
+      // Stop the upload locally. The files already sent are kept on the server, so that the
+      // upload can still be continued via the list of unfinished uploads. Note that cancel()
+      // would emit a successful "complete" event once all files are removed.
+      resumableUpload.pause();
+      activeUploadRef.current = null;
       const { message } = event.detail;
       setStatus((previous) =>
         previous.kind === "uploading"

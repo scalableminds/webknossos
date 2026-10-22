@@ -49,16 +49,26 @@ export function groupFilesByLayer(files: FileWithPath[]): UploadLayerGroups {
   return { layers, layerIndexByFile };
 }
 
-export function getLayerProgress(
+/**
+ * Sums the bytes sent per layer and in total in a single pass over all files, since this runs
+ * repeatedly during the upload and there can be many files.
+ */
+export function getUploadProgress(
   { layers, layerIndexByFile }: UploadLayerGroups,
   fileProgresses: FileUploadProgress[],
-): UploadLayerProgress[] {
-  const sentBytes = layers.map(() => 0);
+): { bytesSent: number; layers: UploadLayerProgress[] } {
+  let bytesSent = 0;
+  const sentBytesPerLayer = layers.map(() => 0);
   for (const fileProgress of fileProgresses) {
+    const fileBytesSent = fileProgress.progress() * fileProgress.size;
+    bytesSent += fileBytesSent;
     const layerIndex = layerIndexByFile.get(fileProgress.file);
-    if (layerIndex != null) sentBytes[layerIndex] += fileProgress.progress() * fileProgress.size;
+    if (layerIndex != null) sentBytesPerLayer[layerIndex] += fileBytesSent;
   }
-  return layers.map((layer, index) => ({ ...layer, sentBytes: sentBytes[index] }));
+  return {
+    bytesSent,
+    layers: layers.map((layer, index) => ({ ...layer, sentBytes: sentBytesPerLayer[index] })),
+  };
 }
 
 export function markLayersAsSent(layers: UploadLayerProgress[]): UploadLayerProgress[] {

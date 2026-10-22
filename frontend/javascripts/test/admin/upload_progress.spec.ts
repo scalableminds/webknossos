@@ -1,4 +1,4 @@
-import { getLayerProgress, groupFilesByLayer } from "admin/dataset/upload/upload_layers";
+import { getUploadProgress, groupFilesByLayer } from "admin/dataset/upload/upload_layers";
 import {
   getStageStatuses,
   getStages,
@@ -38,7 +38,7 @@ describe("groupFilesByLayer", () => {
     expect(groupFilesByLayer(files).layers).toEqual([{ name: "stack/", bytes: 100, sentBytes: 0 }]);
   });
 
-  it("sums the progress of the files per layer", () => {
+  it("sums the progress of the files per layer and in total", () => {
     const files = [
       createFile("/ds/color/1/a.wkw", 100),
       createFile("/ds/color/1/b.wkw", 100),
@@ -50,7 +50,9 @@ describe("groupFilesByLayer", () => {
       size: files[index].size,
       progress: () => progress,
     }));
-    expect(getLayerProgress(groups, progresses).map((layer) => layer.sentBytes)).toEqual([150, 0]);
+    const { bytesSent, layers } = getUploadProgress(groups, progresses);
+    expect(layers.map((layer) => layer.sentBytes)).toEqual([150, 0]);
+    expect(bytesSent).toBe(150);
   });
 });
 
@@ -64,6 +66,7 @@ describe("upload stages", () => {
   const finished = (needsConversion: boolean): UploadStatus & { kind: "finished" } => ({
     kind: "finished",
     datasetId: "id",
+    conversionJobId: needsConversion ? "jobId" : null,
     needsConversion,
     ...uploadInfo,
   });

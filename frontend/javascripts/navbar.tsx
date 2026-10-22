@@ -965,13 +965,15 @@ function Navbar() {
       <Button
         key="help-chat-button"
         shape="round"
+        color="default"
+        variant="filled"
         icon={<MessageOutlined />}
         onClick={() => setIsHelpModalOpen(true)}
         style={{
           marginTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         }}
       >
-        Help
+        Ask
       </Button>,
     );
 

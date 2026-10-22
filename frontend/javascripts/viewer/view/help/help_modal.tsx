@@ -60,7 +60,7 @@ export function HelpModal(props: HelpModalProps) {
       // This renders as a panel docked to the top right rather than a centered dialog, and
       // toggles between a compact and an expanded size.
       // biome-ignore lint/plugin: deliberately off the ModalWidth scale, see above
-      width={isExpanded ? 720 : 540}
+      width={isExpanded ? 600 : 400}
       footer={null}
       closable={false}
     >
@@ -77,11 +77,12 @@ export function HelpModal(props: HelpModalProps) {
         />
       )}
 
-      {mode === "ai" ? (
-        <HelpChat key={chatResetKey} isExpanded={isExpanded} />
-      ) : (
-        <HelpEmail onCancel={props.onCancel} />
-      )}
+      {/* Both tabs fill the same fixed height so switching between them doesn't resize the
+      panel. Portrait proportions like a chat window, but never taller than the viewport
+      below the navbar allows. */}
+      <div style={{ height: `min(${isExpanded ? 600 : 440}px, calc(100vh - 200px))` }}>
+        {mode === "ai" ? <HelpChat key={chatResetKey} /> : <HelpEmail onCancel={props.onCancel} />}
+      </div>
     </Modal>
   );
 }

@@ -37,7 +37,6 @@ import { RouterProvider } from "react-router/dom";
 import router from "router/router";
 import { listenToSystemColorThemeChanges } from "theme";
 import GlobalThemeProvider from "theme_provider";
-import HelpButton from "viewer/view/help/help_button";
 
 // Suppress warning emitted by Olvy because it tries to eagerly initialize
 window.OlvyConfig = null;
@@ -173,7 +172,6 @@ async function initApp() {
                 <DisableGenericDnd />
                 <CheckCertificateModal />
                 <CheckTermsOfServices />
-                <HelpButton />
                 <RouterProvider router={router} />
               </GlobalThemeProvider>
             </DndProvider>

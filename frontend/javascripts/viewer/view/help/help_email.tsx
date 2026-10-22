@@ -1,5 +1,5 @@
 import { sendHelpEmail } from "admin/rest_api";
-import { Button, Flex, Input, Space, Typography } from "antd";
+import { Button, Flex, Input, Typography } from "antd";
 import Toast from "libs/toast";
 import type React from "react";
 import { useState } from "react";
@@ -25,12 +25,12 @@ export function HelpEmail({ onCancel }: { onCancel: () => void }) {
   };
 
   return (
-    <Space orientation="vertical" style={{ width: "100%" }}>
+    <Flex vertical gap="small" style={{ height: "100%" }}>
       <Typography.Text>
         We are happy to help as soon as possible and will get back to you via email.
       </Typography.Text>
       <Input.TextArea
-        rows={6}
+        style={{ flex: 1, resize: "none" }}
         value={helpText}
         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setHelpText(e.target.value)}
       />
@@ -40,6 +40,6 @@ export function HelpEmail({ onCancel }: { onCancel: () => void }) {
           Send
         </Button>
       </Flex>
-    </Space>
+    </Flex>
   );
 }

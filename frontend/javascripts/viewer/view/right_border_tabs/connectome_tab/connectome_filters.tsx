@@ -201,7 +201,7 @@ function ConnectomeFilters({
               style={
                 isAnyFilterActive
                   ? {
-                      color: "red",
+                      color: "var(--ant-color-error)",
                     }
                   : {}
               }

@@ -773,6 +773,9 @@ object Msg {
     val loadFullFailed: String = "Could not load full segment mesh."
     val magNeededForAdHoc: String = "A mag needs to be provided for ad-hoc mesh computation."
     val seedPosNeededForAdHoc: String = "A seed position needs to be provided for ad-hoc mesh computation."
+    val segmentIdZeroForAdHoc: String = "Cannot compute an ad-hoc mesh for segment id 0."
+    def tooManyAdHocMeshRequests(max: Int): String =
+      s"Segment is too large for ad-hoc full mesh computation (more than $max meshing requests). Consider computing a mesh file."
     object File {
       val meshFileNameRequired: String =
         "Trying to load mesh from mesh file, but no mesh file name was supplied."

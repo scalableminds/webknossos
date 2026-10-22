@@ -919,14 +919,22 @@ function Navbar() {
       label: (
         <Link
           to="/dashboard"
+          aria-label="WEBKNOSSOS"
           style={{
             verticalAlign: "middle",
           }}
         >
-          {getCollapsibleMenuTitle(
-            "WEBKNOSSOS",
-            <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
-            collapseAllNavItems,
+          {collapseAllNavItems ? (
+            getCollapsibleMenuTitle(
+              "WEBKNOSSOS",
+              <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+              true,
+            )
+          ) : (
+            <>
+              <Icon component={WkLogoIcon} className="logo" />
+              <span className="logo-wordmark">WEBKNOSSOS</span>
+            </>
           )}
         </Link>
       ),

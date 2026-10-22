@@ -432,9 +432,9 @@ class DatasetArray(
 }
 
 object DatasetArray {
-  private val chunkSizeLimitBytes: Int = 300 * 1024 * 1024
+  private val chunkSizeLimitBytes: Int = Compressor.maxDecompressedBytes
 
-  def assertChunkSizeLimit(bytesPerChunk: Int)(implicit ec: ExecutionContext): Fox[Unit] =
+  def assertChunkSizeLimit(bytesPerChunk: Long)(implicit ec: ExecutionContext): Fox[Unit] =
     Fox.fromBool(
       bytesPerChunk <= chunkSizeLimitBytes
     ) ?~> f"Array chunk size exceeds limit of $chunkSizeLimitBytes, got $bytesPerChunk"

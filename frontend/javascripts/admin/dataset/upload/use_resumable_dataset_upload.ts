@@ -20,6 +20,12 @@ import { useBlocker } from "react-router";
 import type { APITeam } from "types/api_types";
 import type { UnitLong, Vector3 } from "viewer/constants";
 import { getTotalFileSize } from "./detect_dataset_format";
+import {
+  getLayerProgress,
+  groupFilesByLayer,
+  markLayersAsSent,
+  type UploadLayerProgress,
+} from "./upload_layers";
 
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
 
@@ -27,10 +33,29 @@ const logRetryToAnalytics = throttle((datasetName: string) => {
   ErrorHandling.notify(new Error(`Warning: Upload of dataset ${datasetName} was retried.`));
 }, REPORT_THROTTLE_THRESHOLD);
 
+const PROGRESS_THROTTLE_INTERVAL = 200; // ms
+
+// What is known about an upload from the moment it starts.
+export type UploadInfo = {
+  datasetName: string;
+  needsConversion: boolean;
+  // The name of the source format if it needs to be converted, e.g. "TIFF".
+  formatName: string | null;
+  bytesTotal: number;
+  layers: UploadLayerProgress[];
+};
+
 export type UploadStatus =
   | { kind: "idle" }
-  | { kind: "uploading"; datasetName: string; progress: number; isRetrying: boolean }
-  | { kind: "finishing"; datasetName: string };
+  | ({ kind: "uploading"; bytesSent: number; isRetrying: boolean } & UploadInfo)
+  | ({ kind: "finishing" } & UploadInfo)
+  | ({ kind: "finished"; datasetId: string } & UploadInfo)
+  | ({
+      kind: "failed";
+      failedStage: "upload" | "finalize";
+      message: string;
+      bytesSent: number;
+    } & UploadInfo);
 
 type DatasetUploadRequest = {
   name: string;
@@ -40,6 +65,7 @@ type DatasetUploadRequest = {
   targetFolderId: string;
   datastoreUrl: string;
   needsConversion: boolean;
+  formatName: string | null;
   voxelSizeFactor?: Vector3;
   voxelSizeUnit?: UnitLong;
   unfinishedUploadToContinue: UnfinishedUpload | null;
@@ -94,12 +120,20 @@ export function useResumableDatasetUpload({
   // to prevent the `complete` event from triggering finishDatasetUpload in the meantime.
   const isCancellingRef = useRef(false);
 
-  useBlockNavigationWhile(status.kind !== "idle");
+  useBlockNavigationWhile(status.kind === "uploading" || status.kind === "finishing");
 
   const startUpload = async (request: DatasetUploadRequest) => {
     const { name: datasetName, files, datastoreUrl, needsConversion } = request;
     isCancellingRef.current = false;
-    setStatus({ kind: "uploading", datasetName, progress: 0, isRetrying: false });
+    const layerGroups = groupFilesByLayer(files);
+    const uploadInfo: UploadInfo = {
+      datasetName,
+      needsConversion,
+      formatName: request.formatName,
+      bytesTotal: getTotalFileSize(files),
+      layers: layerGroups.layers,
+    };
+    setStatus({ kind: "uploading", ...uploadInfo, bytesSent: 0, isRetrying: false });
 
     const uploadId =
       request.unfinishedUploadToContinue?.uploadId ??
@@ -109,7 +143,7 @@ export function useResumableDatasetUpload({
         uploadId,
         totalFileCount: files.length,
         filePaths: files.map((file) => file.path || ""),
-        totalFileSizeInBytes: getTotalFileSize(files),
+        totalFileSizeInBytes: uploadInfo.bytesTotal,
       },
       datasetName,
       organizationId: request.organizationId,
@@ -133,6 +167,20 @@ export function useResumableDatasetUpload({
       return;
     }
     activeUploadRef.current = { uploadId, datastoreUrl, resumableUpload };
+    const sentUploadInfo = { ...uploadInfo, layers: markLayersAsSent(uploadInfo.layers) };
+    // Progress events fire for every chunk, so computing the progress per layer is throttled.
+    const updateProgress = throttle(() => {
+      setStatus((previous) =>
+        previous.kind === "uploading"
+          ? {
+              ...previous,
+              isRetrying: false,
+              bytesSent: resumableUpload.progress() * uploadInfo.bytesTotal,
+              layers: getLayerProgress(layerGroups, resumableUpload.files),
+            }
+          : previous,
+      );
+    }, PROGRESS_THROTTLE_INTERVAL);
 
     let finishUploadCalled = false;
     resumableUpload.addEventListener("complete", (event: ResumableUploadEvent) => {
@@ -150,20 +198,26 @@ export function useResumableDatasetUpload({
       }
       finishUploadCalled = true;
       resumableUpload.pause();
-      setStatus({ kind: "finishing", datasetName });
+      updateProgress.cancel();
+      setStatus({ kind: "finishing", ...sentUploadInfo });
       finishDatasetUpload(datastoreUrl, uploadId).then(
         ({ datasetId }) => {
           activeUploadRef.current = null;
-          setStatus({ kind: "idle" });
+          setStatus({ kind: "finished", ...sentUploadInfo, datasetId });
           onUploaded(datasetId, datasetName, needsConversion);
         },
         (error) => {
           sendFailedRequestAnalyticsEvent("finish_dataset_upload", error, {
             dataset_name: datasetName,
           });
-          Toast.error(messages["dataset.upload_failed"]);
           activeUploadRef.current = null;
-          setStatus({ kind: "idle" });
+          setStatus({
+            kind: "failed",
+            ...sentUploadInfo,
+            bytesSent: sentUploadInfo.bytesTotal,
+            failedStage: "finalize",
+            message: messages["dataset.upload_failed"],
+          });
           onUploadAborted();
         },
       );
@@ -178,16 +232,15 @@ export function useResumableDatasetUpload({
         // Satisfy TS.
         return;
       }
-      Toast.error(event.detail.message);
-      setStatus({ kind: "idle" });
-    });
-    resumableUpload.addEventListener("progress", () => {
+      updateProgress.cancel();
+      const { message } = event.detail;
       setStatus((previous) =>
         previous.kind === "uploading"
-          ? { ...previous, isRetrying: false, progress: resumableUpload.progress() }
+          ? { ...previous, kind: "failed", failedStage: "upload", message }
           : previous,
       );
     });
+    resumableUpload.addEventListener("progress", updateProgress);
     resumableUpload.addEventListener("fileRetry", () => {
       logRetryToAnalytics(datasetName);
       setStatus((previous) =>
@@ -229,5 +282,8 @@ export function useResumableDatasetUpload({
     }
   };
 
-  return { status, startUpload, cancelUpload };
+  // Closes the dialog of a finished or failed upload.
+  const reset = () => setStatus({ kind: "idle" });
+
+  return { status, startUpload, cancelUpload, reset };
 }

@@ -39,15 +39,16 @@
 }
 
 // Not scoped under .statusbar: antd's Popover renders its content into a portal
-// (typically appended to document.body).
+// (typically appended to document.body). Inherit the color so the link matches the
+// surrounding (muted) text in both the statusbar and the popover.
 .statusbar-doc-link,
 .statusbar-doc-link:visited {
-  color: rgba(255, 255, 255, 0.67);
+  color: inherit;
   text-decoration: none;
 
   &:hover,
   &:focus {
-    color: rgba(255, 255, 255, 0.67);
+    color: inherit;
     text-decoration: underline;
   }
 }

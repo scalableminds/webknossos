@@ -37,7 +37,14 @@ export function CardContainer({
             >
               {title}
             </Typography.Title>
-            <span style={{ fontSize: 12, marginTop: 0, marginLeft: 1, color: "grey" }}>
+            <span
+              style={{
+                fontSize: 12,
+                marginTop: 0,
+                marginLeft: 1,
+                color: "var(--ant-color-text-description)",
+              }}
+            >
               {subtitle}
             </span>
           </>

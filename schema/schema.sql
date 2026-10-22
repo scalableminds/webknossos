@@ -940,6 +940,8 @@ CREATE INDEX ON webknossos.tokens(value);
 CREATE INDEX ON webknossos.tokens(_user, tokenType);
 CREATE INDEX ON webknossos.tokens(expirationDateTime);
 CREATE INDEX ON webknossos.dataset_layer_attachments(path);
+CREATE INDEX ON webknossos.dataset_layer_coordinateTransformations(_dataset, layerName);
+CREATE INDEX ON webknossos.dataset_layer_additionalAxes(_dataset, layerName);
 CREATE INDEX ON webknossos.organization_usedStorage_mags(_organization);
 CREATE INDEX ON webknossos.organization_usedStorage_attachments(_organization);
 CREATE INDEX ON webknossos.user_team_roles(_team);

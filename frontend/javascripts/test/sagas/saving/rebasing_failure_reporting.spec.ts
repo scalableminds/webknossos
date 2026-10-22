@@ -22,7 +22,7 @@ function getNewerVersionWithAction(action: ServerUpdateAction) {
 describe("Reporting of failed rebasing", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
-    vi.mocked(ErrorHandling.notify).mockClear();
+    vi.mocked(ErrorHandling.notifyWithPrefix).mockClear();
   });
 
   afterEach<WebknossosTestContext>((context) => {
@@ -41,11 +41,13 @@ describe("Reporting of failed rebasing", () => {
 
     // Not awaited on purpose: if rebasing fails, the promise is never resolved.
     dispatchEnsureHasNewestVersionAsync(Store.dispatch);
-    await vi.waitFor(() => expect(ErrorHandling.notify).toHaveBeenCalledTimes(1), {
+    await vi.waitFor(() => expect(ErrorHandling.notifyWithPrefix).toHaveBeenCalledTimes(1), {
       timeout: 5000,
     });
-    const [error, params, severity] = vi.mocked(ErrorHandling.notify).mock.calls[0];
-    expect((error as Error).message).toBe("Rebasing failed: Cannot apply legacy action");
+    const [error, prefix, params, severity] = vi.mocked(ErrorHandling.notifyWithPrefix).mock
+      .calls[0];
+    expect(prefix).toBe("Rebasing failed: ");
+    expect((error as Error).message).toBe("Cannot apply legacy action");
     expect(params).toMatchObject({
       reason: "Cannot apply legacy action",
       actionName: "updateSegmentGroups",
@@ -66,13 +68,13 @@ describe("Reporting of failed rebasing", () => {
 
     // Not awaited on purpose: if rebasing fails, the promise is never resolved.
     dispatchEnsureHasNewestVersionAsync(Store.dispatch);
-    await vi.waitFor(() => expect(ErrorHandling.notify).toHaveBeenCalledTimes(1), {
+    await vi.waitFor(() => expect(ErrorHandling.notifyWithPrefix).toHaveBeenCalledTimes(1), {
       timeout: 5000,
     });
-    const [error, params, severity] = vi.mocked(ErrorHandling.notify).mock.calls[0];
-    expect((error as Error).message).toBe(
-      "Rebasing failed: Annotation was reverted by another user",
-    );
+    const [error, prefix, params, severity] = vi.mocked(ErrorHandling.notifyWithPrefix).mock
+      .calls[0];
+    expect(prefix).toBe("Rebasing failed: ");
+    expect((error as Error).message).toBe("Annotation was reverted by another user");
     expect(params).toMatchObject({ reason: "Annotation was reverted by another user" });
     expect(severity).toBe("warning");
   });

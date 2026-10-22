@@ -103,9 +103,9 @@ function* reportRebasingFailure(failure: RebasingFailure, isCallerWaiting: boole
     activeOperations,
   };
   console.error(`Rebasing failed: ${failure.reason}`, params, failure.error);
-  ErrorHandling.notify(
-    (failure.error as Error | Record<string, unknown> | undefined) ??
-      new Error(`Rebasing failed: ${failure.reason}`),
+  ErrorHandling.notifyWithPrefix(
+    failure.error ?? new Error(failure.reason),
+    "Rebasing failed: ",
     params,
     failure.isExpected ? "warning" : "error",
   );

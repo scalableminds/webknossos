@@ -12,21 +12,15 @@
   ],
   [
     {
-      "name": "createSegment",
+      "name": "updateSegmentPartial",
       "value": {
         "actionTracingId": "volumeTracingId",
-        "additionalCoordinates": undefined,
         "anchorPosition": [
-          101,
-          101,
-          101,
+          100,
+          100,
+          100,
         ],
-        "color": null,
-        "creationTime": 1494695001688,
-        "groupId": null,
-        "id": 1340n,
-        "metadata": [],
-        "name": null,
+        "id": 1339n,
       },
     },
   ],
@@ -81,15 +75,21 @@
   ],
   [
     {
-      "name": "updateSegmentPartial",
+      "name": "createSegment",
       "value": {
         "actionTracingId": "volumeTracingId",
+        "additionalCoordinates": undefined,
         "anchorPosition": [
-          100,
-          100,
-          100,
+          101,
+          101,
+          101,
         ],
-        "id": 1339n,
+        "color": null,
+        "creationTime": 1494695001688,
+        "groupId": null,
+        "id": 1340n,
+        "metadata": [],
+        "name": null,
       },
     },
   ],

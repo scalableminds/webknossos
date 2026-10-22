@@ -34,61 +34,65 @@ class Hdf5MeshFileService @Inject() extends NeuroglancerMeshHelper with MeshFile
       (cachedMeshFile.meshFormat, lodScaleMultiplier, transform)
     }
 
-  private def listMeshChunksForSegmentsNested(
+  // Leaves out the segments whose lookup failed, e.g. because of a read error.
+  private def lookUpSegmentsSkippingFailed(
       meshFileKey: MeshFileKey,
       segmentIds: Seq[Long],
       lodScaleMultiplier: Double,
       transform: Array[Array[Double]]
-  ): List[List[MeshLodInfo]] =
+  ): List[SegmentMeshLookup] =
     fileHandleCache
       .withCachedHdf5(meshFileKey) { (cachedMeshFile: CachedHdf5File) =>
-        segmentIds.toList
-          .flatMap(segmentId => listMeshChunksForSegment(cachedMeshFile, segmentId, lodScaleMultiplier, transform))
+        segmentIds.toList.flatMap(segmentId =>
+          listMeshChunksForSegment(cachedMeshFile, segmentId, lodScaleMultiplier, transform)
+            .map(lods => SegmentMeshLookup(segmentId, lods))
+        )
       }
       .toOption
       .getOrElse(List.empty)
 
+  // Full(None) if the mesh file has no entry for the segment.
   private def listMeshChunksForSegment(
       cachedMeshFile: CachedHdf5File,
       segmentId: Long,
       lodScaleMultiplier: Double,
       transform: Array[Array[Double]]
-  ): Box[List[MeshLodInfo]] =
+  ): Box[Option[List[MeshLodInfo]]] =
     tryo {
-      val (neuroglancerSegmentManifestStart, neuroglancerSegmentManifestEnd) =
-        getNeuroglancerSegmentManifestOffsets(segmentId, cachedMeshFile)
-
-      val manifestBytes = cachedMeshFile.uint8Reader.readArrayBlockWithOffset(
-        "/neuroglancer",
-        (neuroglancerSegmentManifestEnd - neuroglancerSegmentManifestStart).toInt,
-        neuroglancerSegmentManifestStart
-      )
-      val segmentManifest = NeuroglancerSegmentManifest.fromBytes(manifestBytes)
-      enrichSegmentInfo(segmentManifest, lodScaleMultiplier, transform, neuroglancerSegmentManifestStart, segmentId)
+      getNeuroglancerSegmentManifestOffsets(segmentId, cachedMeshFile).map {
+        (neuroglancerSegmentManifestStart, neuroglancerSegmentManifestEnd) =>
+          val manifestBytes = cachedMeshFile.uint8Reader.readArrayBlockWithOffset(
+            "/neuroglancer",
+            (neuroglancerSegmentManifestEnd - neuroglancerSegmentManifestStart).toInt,
+            neuroglancerSegmentManifestStart
+          )
+          val segmentManifest = NeuroglancerSegmentManifest.fromBytes(manifestBytes)
+          enrichSegmentInfo(segmentManifest, lodScaleMultiplier, transform, neuroglancerSegmentManifestStart, segmentId)
+      }
     }
 
-  private def getNeuroglancerSegmentManifestOffsets(segmentId: Long, cachedMeshFile: CachedHdf5File): (Long, Long) = {
+  // None if the mesh file has no entry for the segment.
+  private def getNeuroglancerSegmentManifestOffsets(
+      segmentId: Long,
+      cachedMeshFile: CachedHdf5File
+  ): Option[(Long, Long)] = {
     val bucketIndex = java.lang.Long.remainderUnsigned(cachedMeshFile.hashFunction(segmentId), cachedMeshFile.nBuckets)
     val bucketOffsets = cachedMeshFile.uint64Reader.readArrayBlockWithOffset(keyBucketOffsets, 2, bucketIndex)
     val bucketStart = bucketOffsets(0)
     val bucketEnd = bucketOffsets(1)
 
-    if (bucketEnd - bucketStart == 0) throw new Exception(s"No entry for segment $segmentId")
-
-    val buckets = cachedMeshFile.uint64Reader.readMatrixBlockWithOffset(
-      keyBuckets,
-      (bucketEnd - bucketStart + 1).toInt,
-      3,
-      bucketStart,
-      0
-    )
-
-    val bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
-    if (bucketLocalOffset < 0) throw new Exception(s"SegmentId $segmentId not in bucket list")
-    val neuroglancerStart = buckets(bucketLocalOffset)(1)
-    val neuroglancerEnd = buckets(bucketLocalOffset)(2)
-
-    (neuroglancerStart, neuroglancerEnd)
+    if (bucketEnd - bucketStart == 0) None
+    else {
+      val buckets = cachedMeshFile.uint64Reader.readMatrixBlockWithOffset(
+        keyBuckets,
+        (bucketEnd - bucketStart + 1).toInt,
+        3,
+        bucketStart,
+        0
+      )
+      val bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
+      if (bucketLocalOffset >= 0) Some(buckets(bucketLocalOffset)(1), buckets(bucketLocalOffset)(2)) else None
+    }
   }
 
   override def computeGlobalPosition(
@@ -148,20 +152,15 @@ class Hdf5MeshFileService @Inject() extends NeuroglancerMeshHelper with MeshFile
     Full((dataSorted.flatMap(d => d._1).toArray, meshFormat))
   }
 
-  def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(implicit
-      ec: ExecutionContext
+  def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long], failOnZeroChunks: Boolean)(
+      implicit ec: ExecutionContext
   ): Fox[WebknossosSegmentInfo] =
     for {
       (meshFormat, lodScaleMultiplier, transform) <- readMeshFileMetadata(meshFileKey).toFox
-      meshChunksForUnmappedSegments: List[List[MeshLodInfo]] = listMeshChunksForSegmentsNested(
-        meshFileKey,
-        segmentIds,
-        lodScaleMultiplier,
-        transform
-      )
-      _ <- Fox.fromBool(meshChunksForUnmappedSegments.nonEmpty) ?~> Msg.Mesh.File
+      lookups = lookUpSegmentsSkippingFailed(meshFileKey, segmentIds, lodScaleMultiplier, transform)
+      _ <- Fox.fromBool(lookups.exists(_.hasEntry) || !failOnZeroChunks) ?~> Msg.Mesh.File
         .zeroChunks(segmentIds.mkString(","), meshFileKey.attachment.name)
-      wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(meshChunksForUnmappedSegments, meshFormat).toFox
+      wkChunkInfos <- WebknossosSegmentInfo.fromSegmentLookups(lookups, meshFormat).toFox
     } yield wkChunkInfos
 
   def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int =

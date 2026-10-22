@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.services.*
 import com.scalableminds.webknossos.datastore.services.mesh.{
   DSFullMeshService,
@@ -70,6 +71,30 @@ class DSMeshController @Inject() (
             omitMissing = false
           )
           chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(meshFileKey, segmentIds)
+        } yield Ok(Json.toJson(chunkInfos))
+      }
+    }
+
+  /** Lists the mesh chunks of several unmapped segment ids at once. Unlike listMeshChunksForSegment, segments without a
+    * mesh don't make the request fail. They are listed in segmentIdsWithoutMesh instead. Segments whose lookup failed,
+    * e.g. because of a read error, are neither listed with chunks nor in segmentIdsWithoutMesh.
+    */
+  def listMeshChunksForSegments(
+      datasetId: ObjectId,
+      dataLayerName: String,
+      meshFileName: String
+  ): Action[ListOfLong] =
+    Action.fox(validateProto[ListOfLong]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+        for {
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
+          meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, meshFileName)
+          segmentIds = request.body.items
+          chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(
+            meshFileKey,
+            segmentIds,
+            failOnZeroChunks = false
+          )
         } yield Ok(Json.toJson(chunkInfos))
       }
     }

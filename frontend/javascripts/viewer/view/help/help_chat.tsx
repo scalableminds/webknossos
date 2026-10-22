@@ -21,8 +21,8 @@ const STORAGE_SESSION_KEY = "wk_help_chat_session_id";
 
 // Offered on the welcome screen. Kept in one place so that they can depend on the context later.
 const SUGGESTED_QUESTIONS = [
-  "How do I merge two segments while proofreading?",
   "How do I upload a dataset?",
+  "How do I download my annotation?",
   "How do I share an annotation with a colleague?",
 ];
 
@@ -97,8 +97,6 @@ export function useHelpChatSession(): HelpChatSession {
   const [messages, setMessages] = useState<ChatMessage[]>(loadMessages);
   const [isLoading, setIsLoading] = useState(false);
   const sessionId = useRef(loadSessionId());
-  // Bumped by `reset`, so that a reply to a discarded conversation is dropped.
-  const generation = useRef(0);
   const activeUser = useWkSelector((state) => state.activeUser);
 
   useEffect(() => {
@@ -109,24 +107,24 @@ export function useHelpChatSession(): HelpChatSession {
     const text = input.trim();
     if (!text || isLoading) return;
 
-    const sentInGeneration = generation.current;
+    // `reset` starts a new session. A reply that belongs to the discarded one is dropped.
+    const requestSessionId = sessionId.current;
     setMessages((prev) => [...prev, { role: "user", content: text }]);
     setIsLoading(true);
 
     try {
       const reply = await askChatbot(text, sessionId.current, activeUser);
-      if (generation.current !== sentInGeneration) return;
+      if (sessionId.current !== requestSessionId) return;
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch {
-      if (generation.current !== sentInGeneration) return;
+      if (sessionId.current !== requestSessionId) return;
       Toast.error("Could not reach the assistant. Please try again.");
     } finally {
-      if (generation.current === sentInGeneration) setIsLoading(false);
+      if (sessionId.current === requestSessionId) setIsLoading(false);
     }
   };
 
   const reset = () => {
-    generation.current++;
     clearHelpChatSession();
     sessionId.current = loadSessionId();
     setMessages([]);

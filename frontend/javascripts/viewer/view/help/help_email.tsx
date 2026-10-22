@@ -1,8 +1,9 @@
-import { ArrowRightOutlined, CheckOutlined } from "@ant-design/icons";
+import { ArrowRightOutlined } from "@ant-design/icons";
 import { sendHelpEmail } from "admin/rest_api";
-import { Avatar, Button, Checkbox, Flex, Input, Typography, theme } from "antd";
+import { Button, Checkbox, Flex, Input, Typography, theme } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import { pluralize } from "libs/utils";
 import { type ReactNode, useState } from "react";
 import type { ChatMessage } from "./help_chat";
 import { greetingTitle, InputFrame, PanelGreeting } from "./help_panel_parts";
@@ -58,7 +59,7 @@ function IncludeConversationCheckbox({
       <Checkbox checked={checked} onChange={(event) => onChange(event.target.checked)}>
         Include my assistant conversation{" "}
         <Typography.Text type="secondary">
-          · {messageCount} {messageCount === 1 ? "message" : "messages"}
+          · {messageCount} {pluralize("message", messageCount)}
         </Typography.Text>
       </Checkbox>
     </div>
@@ -113,6 +114,7 @@ export function HelpEmail({
         attachesConversation ? helpText + formatTranscript(transcript) : helpText,
       );
       setHelpText("");
+      Toast.success("Message has been sent. We'll reply via email shortly.");
       onSent();
     } catch {
       Toast.error("Sorry, we could not send the help message. Please try again later.");
@@ -191,43 +193,6 @@ export function HelpEmail({
           </Button>
         </Flex>
       </PanelFooter>
-    </Flex>
-  );
-}
-
-export function HelpEmailSent({
-  onBackToAssistant,
-  onClose,
-}: {
-  onBackToAssistant?: () => void;
-  onClose: () => void;
-}) {
-  const { cssVar } = theme.useToken();
-  const firstName = useWkSelector((state) => state.activeUser?.firstName);
-
-  return (
-    <Flex
-      vertical
-      gap="large"
-      style={{ padding: `${cssVar.paddingXXS} ${cssVar.paddingXL} ${cssVar.paddingXL}` }}
-    >
-      <Avatar
-        size={44}
-        icon={<CheckOutlined />}
-        style={{ background: cssVar.colorSuccessBg, color: cssVar.colorSuccess }}
-      />
-      <PanelGreeting title="Message sent.">
-        Thanks{firstName ? `, ${firstName}` : ""}. The team will reply to <ActiveUserEmail />. You
-        can close this panel and keep working.
-      </PanelGreeting>
-      <Flex gap="small">
-        {onBackToAssistant && (
-          <Button type="primary" onClick={onBackToAssistant}>
-            Back to the assistant
-          </Button>
-        )}
-        <Button onClick={onClose}>Close</Button>
-      </Flex>
     </Flex>
   );
 }

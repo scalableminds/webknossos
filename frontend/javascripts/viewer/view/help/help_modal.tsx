@@ -3,8 +3,9 @@ import { Button, Flex, Modal, Segmented, Tooltip, theme } from "antd";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
 import { type CSSProperties, useState } from "react";
+import { ModalWidth } from "theme";
 import { HelpChat, useHelpChatSession } from "./help_chat";
-import { HelpEmail, HelpEmailSent } from "./help_email";
+import { HelpEmail } from "./help_email";
 import { AssistantAvatar, Eyebrow } from "./help_panel_parts";
 
 type HelpMode = "ai" | "email";
@@ -19,10 +20,6 @@ type HelpModalProps = {
   isModalOpen: boolean;
   onCancel: () => void;
 };
-
-function CloseButton({ onClick }: { onClick: () => void }) {
-  return <Button icon={<CloseOutlined />} type="text" aria-label="Close" onClick={onClick} />;
-}
 
 function HelpPanelTitle({
   mode,
@@ -60,7 +57,7 @@ function HelpPanelTitle({
             onClick={onToggleExpanded}
           />
         </Tooltip>
-        <CloseButton onClick={onClose} />
+        <Button icon={<CloseOutlined />} type="text" aria-label="Close" onClick={onClose} />
       </Flex>
     </Flex>
   );
@@ -73,7 +70,6 @@ export function HelpModal(props: HelpModalProps) {
   // Whether the email attaches the assistant conversation. Preset when the user hands the
   // conversation over to the team from the chat.
   const [includeConversation, setIncludeConversation] = useState(false);
-  const [isEmailSent, setIsEmailSent] = useState(false);
   const chat = useHelpChatSession();
   const { cssVar } = theme.useToken();
   const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
@@ -89,14 +85,9 @@ export function HelpModal(props: HelpModalProps) {
   const switchMode = (nextMode: HelpMode, attachConversation = false) => {
     setMode(nextMode);
     setIncludeConversation(attachConversation);
-    setIsEmailSent(false);
   };
 
-  const title = isEmailSent ? (
-    <Flex justify="end">
-      <CloseButton onClick={props.onCancel} />
-    </Flex>
-  ) : (
+  const title = (
     <Flex vertical gap="small">
       <HelpPanelTitle
         mode={mode}
@@ -122,14 +113,7 @@ export function HelpModal(props: HelpModalProps) {
   );
 
   let content;
-  if (isEmailSent) {
-    content = (
-      <HelpEmailSent
-        onBackToAssistant={aiAgentEnabled ? () => switchMode("ai") : undefined}
-        onClose={props.onCancel}
-      />
-    );
-  } else if (mode === "ai") {
+  if (mode === "ai") {
     content = <HelpChat chat={chat} onEmailTeam={() => switchMode("email", true)} />;
   } else {
     content = (
@@ -138,7 +122,7 @@ export function HelpModal(props: HelpModalProps) {
         transcript={aiAgentEnabled ? chat.messages : []}
         includeConversation={includeConversation}
         onToggleInclude={setIncludeConversation}
-        onSent={() => setIsEmailSent(true)}
+        onSent={props.onCancel}
         onClose={props.onCancel}
       />
     );
@@ -151,14 +135,8 @@ export function HelpModal(props: HelpModalProps) {
       open={props.isModalOpen}
       mask={false}
       onCancel={props.onCancel}
-      // Re-opening the panel after sending an email shows a fresh form.
-      afterOpenChange={(open) => {
-        if (!open) setIsEmailSent(false);
-      }}
-      // This renders as a panel docked to the top right rather than a centered dialog, and
-      // toggles between a compact and an expanded size.
-      // biome-ignore lint/plugin: deliberately off the ModalWidth scale, see above
-      width={isExpanded ? 720 : 540}
+      // Docked to the top right, the panel toggles between antd's default width and a larger one.
+      width={isExpanded ? ModalWidth.Large : undefined}
       footer={null}
       closable={false}
       styles={{
@@ -166,19 +144,17 @@ export function HelpModal(props: HelpModalProps) {
         header: {
           margin: 0,
           padding: `${cssVar.paddingSM} ${cssVar.paddingSM} ${cssVar.paddingSM} ${cssVar.paddingMD}`,
-          borderBottom: isEmailSent ? undefined : `1px solid ${cssVar.colorSplit}`,
+          borderBottom: `1px solid ${cssVar.colorSplit}`,
         },
         body: { padding: 0 },
       }}
     >
       {/* All screens fill the same fixed height so switching between them doesn't resize the
       panel. Portrait proportions like a chat window, but never taller than the viewport
-      below the navbar allows. The sent confirmation only takes the space it needs. */}
+      below the navbar allows. */}
       <div
         style={{
-          height: isEmailSent
-            ? undefined
-            : `min(${isExpanded ? 720 : 560}px, max(${MIN_CONTENT_HEIGHT}px, ${availableContentHeight}))`,
+          height: `min(${isExpanded ? 720 : 560}px, max(${MIN_CONTENT_HEIGHT}px, ${availableContentHeight}))`,
         }}
       >
         {content}

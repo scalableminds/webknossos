@@ -78,9 +78,8 @@ function ProgressGrid({
   const isCurrentBlock = (index: number) =>
     index === filledBlockCount && percent > 0 && percent < 100;
   const getColor = (index: number) => {
-    if (index < filledBlockCount || isCurrentBlock(index)) {
-      return isSuccess ? token.colorSuccess : token.colorPrimary;
-    }
+    if (index < filledBlockCount) return isSuccess ? token.colorSuccess : token.colorPrimary;
+    if (isCurrentBlock(index)) return token.colorPrimaryText;
     return token.colorFillSecondary;
   };
   const isBreathing = (index: number) => (isProcessing ? !isSuccess : isCurrentBlock(index));

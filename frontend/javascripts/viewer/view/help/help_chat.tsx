@@ -106,7 +106,7 @@ function ChatMessageBubble({
   );
 }
 
-export function HelpChat({ isExpanded = false }: { isExpanded?: boolean }) {
+export function HelpChat() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(loadMessages);
   const [chatInput, setChatInput] = useState("");
   const [isLoadingChat, setIsLoadingChat] = useState(false);
@@ -142,16 +142,8 @@ export function HelpChat({ isExpanded = false }: { isExpanded?: boolean }) {
   };
 
   return (
-    <>
-      <Flex
-        vertical
-        gap={6}
-        style={{
-          height: isExpanded ? 440 : 220,
-          overflowY: "auto",
-          marginBottom: 8,
-        }}
-      >
+    <Flex vertical gap={8} style={{ height: "100%" }}>
+      <Flex vertical gap={6} style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
         {chatMessages.length === 0 && !isLoadingChat && (
           <Typography.Text type="secondary" style={{ textAlign: "center", margin: "auto" }}>
             Ask me anything about WEBKNOSSOS!
@@ -173,6 +165,6 @@ export function HelpChat({ isExpanded = false }: { isExpanded?: boolean }) {
         enterButton="Send"
         loading={isLoadingChat}
       />
-    </>
+    </Flex>
   );
 }

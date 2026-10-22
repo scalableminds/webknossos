@@ -73,8 +73,9 @@ export default function VersionPowerTools({
   // Moves the bisection forward with the given (narrowed) range.
   const continueBisect = async (good: number, bad: number) => {
     if (bad - good <= 1) {
-      setBisectState({ type: "finished", firstBad: bad });
-      await onNavigateToVersion(bad);
+      if (await onNavigateToVersion(bad)) {
+        setBisectState({ type: "finished", firstBad: bad });
+      }
       return;
     }
     const current = getMiddleVersion(good, bad);

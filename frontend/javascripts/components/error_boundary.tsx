@@ -1,7 +1,7 @@
 import { Alert, ConfigProvider, Typography } from "antd";
 import ErrorHandling from "libs/error_handling";
 import React, { type ErrorInfo } from "react";
-import { getAntdTheme, getThemeFromUser } from "theme";
+import { getActiveTheme, getAntdTheme } from "theme";
 import type { ArbitraryObject } from "types/type_utils";
 import { Store } from "viewer/singletons";
 
@@ -32,7 +32,7 @@ export default class ErrorBoundary extends React.Component<
       const componentStack = info?.componentStack;
       const errorMessage = (error || "").toString();
       const errorDescription = componentStack;
-      const userTheme = getThemeFromUser(Store.getState().activeUser);
+      const userTheme = getActiveTheme(Store.getState());
 
       return (
         <ConfigProvider theme={getAntdTheme(userTheme)}>

@@ -23,6 +23,7 @@ const VERSION_POLL_INTERVAL_READ_ONLY = process.env.IS_TESTING ? 250 : 5 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = process.env.IS_TESTING ? 1 * 1000 : 30 * 1000;
 
 const REBASING_BUSY_BLOCK_REASON = "Syncing Annotation";
+const RETRY_DELAY_WHILE_OTHER_OPERATION_IS_RUNNING = process.env.IS_TESTING ? 100 : 1000;
 
 export function* watchForNewerAnnotationVersion(): Saga<void> {
   yield* call(ensureWkInitialized);
@@ -66,7 +67,15 @@ export function* watchForNewerAnnotationVersion(): Saga<void> {
       ensureHasNewestVersion?.operationContext ?? null,
     );
     if (ctx == null) {
+      // Another operation is running that doesn't allow rebasing in parallel. Requeue the
+      // request and try again after a short delay. Without the delay, the requeued request
+      // would be taken again immediately (needsPollAnnotationUpdates is already "yes"), which
+      // results in an endless loop that never yields to the event loop.
+      // Waiting until the other operation is finished (e.g., with behaviorWhenDisallowed: "wait")
+      // could deadlock instead, because that operation might itself wait for an
+      // ENSURE_HAS_NEWEST_VERSION request that is queued in the channel behind this one.
       yield* maybeRequeuePollAndWait(ensureHasNewestVersion);
+      yield* delay(RETRY_DELAY_WHILE_OTHER_OPERATION_IS_RUNNING);
       continue;
     }
     const { successful } = yield* ctx.execute(function* () {

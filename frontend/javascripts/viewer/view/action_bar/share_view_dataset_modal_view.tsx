@@ -71,6 +71,7 @@ function ShareViewDatasetModalViewInner(props: Props) {
               }}
             >
               {messages["tracing.sharing_modal_zarr_information"]}{" "}
+              {messages["tracing.zarr_link_compatibility_hint"]}
             </div>
           </Col>
         </Row>

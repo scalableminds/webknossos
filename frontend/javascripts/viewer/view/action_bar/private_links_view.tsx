@@ -46,6 +46,7 @@ import { copyToClipboard } from "libs/clipboard";
 import { makeComponentLazy } from "libs/react_helpers";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import messages from "messages";
 import { useState } from "react";
 import { ModalWidth } from "theme";
 import type { ZarrPrivateLink } from "types/api_types";
@@ -147,17 +148,14 @@ function useDeleteLinkMutation(annotationId: string) {
   });
 }
 
-export type ZarrLinkRow = {
+type ZarrLinkRow = {
   key: string;
   label: string;
   url: string;
   isWkOnly: boolean;
 };
 
-export const ZARR_LINK_COMPATIBILITY_HINT =
-  'Layer links work with any Zarr-compatible tool. The "All layers" link only works in WEBKNOSSOS.';
-
-export function useZarrLinks(maybeAccessToken: string | null) {
+function useZarrLinks(maybeAccessToken: string | null) {
   const dataset = useWkSelector((state) => state.dataset);
   const annotation = useWkSelector((state) => state.annotation);
   const dataStoreURL = dataset.dataStore.url;
@@ -224,7 +222,7 @@ function ZarrLinkUrlRow({
   const isDisabled = isLoading || isUnavailable;
 
   return (
-    <Flex vertical gap={4}>
+    <Flex vertical gap={token.marginXXS}>
       <Space size="small">
         <Typography.Text strong>{row.label}</Typography.Text>
         {row.isWkOnly && <Tag>WEBKNOSSOS only</Tag>}
@@ -232,13 +230,12 @@ function ZarrLinkUrlRow({
       <Space.Compact block>
         <Input
           value={isLoading ? "Loading…" : isUnavailable ? "Unavailable" : row.url}
-          style={{ fontFamily: token.fontFamilyCode, fontSize: 13 }}
+          style={{ fontFamily: token.fontFamilyCode, fontSize: token.fontSizeSM }}
           onFocus={(event) => event.target.select()}
           readOnly
         />
         <Button
           icon={<CopyOutlined />}
-          style={{ width: 96 }}
           disabled={isDisabled}
           onClick={() => {
             // Focusing the input selects its URL, which copyToClipboard would otherwise treat as
@@ -255,10 +252,11 @@ function ZarrLinkUrlRow({
 }
 
 export function ZarrLinkUrlRows({ maybeAccessToken }: { maybeAccessToken: string | null }) {
+  const { token } = theme.useToken();
   const { rows, isLoading, isUnavailable } = useZarrLinks(maybeAccessToken);
 
   return (
-    <Flex vertical gap={12}>
+    <Flex vertical gap={token.marginSM}>
       {rows.map((row) => (
         <ZarrLinkUrlRow
           key={row.key}
@@ -359,13 +357,8 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
       <FormattedDate timestamp={linkItem.expirationDateTime} />
       <Popover
         content={
-          <Space.Compact style={{ width: 240 }}>
-            <DatePicker
-              onChange={onChange}
-              defaultValue={expirationDate}
-              allowClear={false}
-              style={{ flex: 1 }}
-            />
+          <Space.Compact>
+            <DatePicker onChange={onChange} defaultValue={expirationDate} allowClear={false} />
             <Tooltip title="Remove expiration date">
               <Button
                 icon={<DeleteOutlined />}
@@ -434,18 +427,18 @@ function EmptyLinkList({ onCreate }: { onCreate: () => Promise<void> }) {
     <Flex
       align="center"
       justify="space-between"
-      gap={16}
+      gap="middle"
       style={{
         border: `${token.lineWidth}px ${token.lineType} ${token.colorBorder}`,
         borderRadius: token.borderRadiusLG,
         background: token.colorFillAlter,
-        padding: "16px 24px",
+        padding: `${token.padding}px ${token.paddingLG}px`,
       }}
     >
       <div>
-        <Typography.Text strong style={{ display: "block" }}>
+        <Typography.Paragraph strong style={{ marginBottom: 0 }}>
           No Zarr links yet
-        </Typography.Text>
+        </Typography.Paragraph>
         <Typography.Text type="secondary">
           A link gives access to every layer of this annotation. It expires after 1 month by
           default.
@@ -459,6 +452,7 @@ function EmptyLinkList({ onCreate }: { onCreate: () => Promise<void> }) {
 }
 
 function PrivateLinksView({ annotationId }: { annotationId: string }) {
+  const { token } = theme.useToken();
   const { error, data: links, isPending } = useLinksQuery(annotationId);
   const createLinkMutation = useCreateLinkMutation(annotationId);
   // undefined: the user did not pick a link yet, so the newest one is expanded.
@@ -520,13 +514,16 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
             activeKey={activeLinkId === undefined ? (links.at(-1)?.id ?? []) : (activeLinkId ?? [])}
             onChange={(keys) => setActiveLinkId(keys[0] ?? null)}
           />
-          <Typography.Text
+          <Typography.Paragraph
             type="secondary"
-            style={{ display: "block", fontSize: 12, marginTop: 8 }}
+            style={{
+              fontSize: token.fontSizeSM,
+              margin: `${token.marginXS}px 0 ${token.margin}px`,
+            }}
           >
-            {ZARR_LINK_COMPATIBILITY_HINT}
-          </Typography.Text>
-          <AsyncButton icon={<PlusOutlined />} onClick={createLink} style={{ marginTop: 16 }}>
+            {messages["tracing.zarr_link_compatibility_hint"]}
+          </Typography.Paragraph>
+          <AsyncButton icon={<PlusOutlined />} onClick={createLink}>
             Create Another Zarr Link
           </AsyncButton>
         </>

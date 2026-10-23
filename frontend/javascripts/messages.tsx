@@ -172,10 +172,11 @@ instead. Only enable this option if you understand its effect. All layers will n
       <a href="https://zarr.dev" target="_blank" rel="noreferrer">
         Zarr
       </a>{" "}
-      links may be used by other tools to load the dataset&apos;s data in a streaming manner. The
-      &quot;All layers&quot; link only works in WEBKNOSSOS.
+      links may be used by other tools to load the dataset&apos;s data in a streaming manner.
     </span>
   ),
+  "tracing.zarr_link_compatibility_hint":
+    'Layer links work with any Zarr-compatible tool. The "All layers" link only works in WEBKNOSSOS.',
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
   "tracing.segment_id_out_of_bounds": (
     requestedId: bigint,

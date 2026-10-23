@@ -168,6 +168,7 @@ export const useTracingViewMenuItems = (
 
   return useMemo(() => {
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
+    const isLoggedOut = activeUser == null;
     const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
     const menuItems: ItemType[] = [];
@@ -190,7 +191,6 @@ export const useTracingViewMenuItems = (
       });
     }
 
-    const isLoggedOut = activeUser == null;
     menuItems.push({
       key: "share-button",
       onClick: handleShareOpen,
@@ -208,7 +208,7 @@ export const useTracingViewMenuItems = (
       ),
     });
 
-    if (activeUser != null) {
+    if (!isLoggedOut) {
       menuItems.push({
         key: "duplicate-button",
         onClick: handleDuplicateOpen,
@@ -227,7 +227,7 @@ export const useTracingViewMenuItems = (
       label: "Add Script",
     });
 
-    if (restrictions.allowSave && isSkeletonMode && activeUser != null) {
+    if (restrictions.allowSave && isSkeletonMode && !isLoggedOut) {
       menuItems.push({
         key: "merge-button",
         onClick: handleMergeOpen,

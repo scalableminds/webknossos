@@ -70,9 +70,9 @@ import {
 // Keep an eye on the *combined* effect where two lights' regions overlap - stacking
 // can blow that area out toward white/desaturated if the intensities are pushed up
 // too far.
-const KEY_LIGHT_INTENSITY = 8;
-const FILL_LIGHT_INTENSITY = 4;
-const UNDER_LIGHT_INTENSITY = 3;
+const KEY_LIGHT_INTENSITY = 6;
+const FILL_LIGHT_INTENSITY = 2.5;
+const UNDER_LIGHT_INTENSITY = 2;
 const RIM_LIGHT_INTENSITY = 4;
 
 type RaycasterHit = {

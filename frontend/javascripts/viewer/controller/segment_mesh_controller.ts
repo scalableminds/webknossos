@@ -555,7 +555,7 @@ export default class SegmentMeshController {
     // Unlike a flat ambient light, the hemisphere light still has a (soft) top-to-bottom
     // gradient, so it can be bright enough to lift the shadows without making the meshes
     // look flat. "Up" is -z, which matches the up vector of the default TD camera.
-    const hemisphereLight = new HemisphereLight("white", 0x808080, 0.6);
+    const hemisphereLight = new HemisphereLight("white", 0x808080, 0.4);
     hemisphereLight.position.set(0, 0, -1);
     this.lightsGroup.add(hemisphereLight);
 

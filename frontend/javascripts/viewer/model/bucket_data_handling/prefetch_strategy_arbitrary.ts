@@ -43,12 +43,12 @@ export class PrefetchStrategyFlight extends AbstractPrefetchStrategy {
     };
   }
 
-  // Converts the translation of the matrix to bucket coordinates. The bucket extent can differ
-  // per axis for anisotropic mags.
+  // Converts the translation of the matrix to (fractional) bucket coordinates, so that the
+  // frustum starts at the camera. The bucket extent can differ per axis for anisotropic mags.
   modifyMatrixForPoly(matrix: Matrix4x4, bucketExtent: Vector3) {
-    matrix[12] = Math.floor(matrix[12] / bucketExtent[0]) + 1;
-    matrix[13] = Math.floor(matrix[13] / bucketExtent[1]) + 1;
-    matrix[14] = Math.floor(matrix[14] / bucketExtent[2]) + 1;
+    matrix[12] /= bucketExtent[0];
+    matrix[13] /= bucketExtent[1];
+    matrix[14] /= bucketExtent[2];
   }
 
   prefetch(

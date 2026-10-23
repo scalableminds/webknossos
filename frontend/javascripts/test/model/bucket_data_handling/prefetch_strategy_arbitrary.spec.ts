@@ -72,14 +72,14 @@ describe("PrefetchStrategyFlight", () => {
       const strategy = new PrefetchStrategyFlight();
       const items = strategy.prefetch(matrix, magIndex, position, mags, new MagInfo(mags), null);
 
-      // The frustum is placed at the bucket of the camera (plus the historical offset of one
-      // bucket per axis), where the bucket extent differs per axis for anisotropic mags.
+      // The frustum starts at the camera, whose bucket coordinates are fractional. The bucket
+      // extent differs per axis for anisotropic mags.
       const bucketExtent = getBucketExtent(mags[magIndex]);
       const cameraBucket = position.map((value, d) => Math.floor(value / bucketExtent[d]));
       const bucketMatrix = M4x4.clone(matrix);
-      bucketMatrix[12] = cameraBucket[0] + 1;
-      bucketMatrix[13] = cameraBucket[1] + 1;
-      bucketMatrix[14] = cameraBucket[2] + 1;
+      bucketMatrix[12] = position[0] / bucketExtent[0];
+      bucketMatrix[13] = position[1] / bucketExtent[1];
+      bucketMatrix[14] = position[2] / bucketExtent[2];
       const vertices = M4x4.transformPointsAffine(bucketMatrix, strategy.prefetchFrustum.vertices);
       const overlaps = buildOverlapTest(vertices, strategy.prefetchFrustum.edgeIndices);
       const expected: string[] = [];

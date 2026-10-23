@@ -1,5 +1,5 @@
 import { type DurationPrecision, formatDuration } from "libs/format_utils";
-import { millisecondsToHours } from "libs/utils";
+import { millisecondsToHours, pluralize } from "libs/utils";
 import FastTooltip from "./fast_tooltip";
 
 /**
@@ -14,10 +14,9 @@ export default function FormattedDuration({
   durationMs: number;
   precision?: DurationPrecision;
 }) {
-  const decimalHours = millisecondsToHours(durationMs).toLocaleString(undefined, {
-    maximumFractionDigits: 2,
-  });
-  const tooltipText = `${formatDuration(durationMs, "seconds")} (${decimalHours} hours)`;
+  // Round before pluralizing so that, e.g., 1.001 hours reads as "1 hour".
+  const decimalHours = Math.round(millisecondsToHours(durationMs) * 100) / 100;
+  const tooltipText = `${formatDuration(durationMs, "seconds")} (${decimalHours.toLocaleString()} ${pluralize("hour", decimalHours)})`;
 
   return <FastTooltip title={tooltipText}>{formatDuration(durationMs, precision)}</FastTooltip>;
 }

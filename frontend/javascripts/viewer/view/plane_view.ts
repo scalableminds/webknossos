@@ -56,36 +56,24 @@ import {
   setupRenderArea,
 } from "viewer/view/rendering_utils";
 
-// Three lights, offset to different sides/elevations (see their positions below), so
-// meshes pick up a visible light-to-dark gradient as they're rotated, on every side -
-// not just the one facing the key light. The original setup used two equally-bright
-// lights that were both close to the viewing axis, which behaves like an on-camera
-// flash: shading gets flattened out because neither light differs much from the viewing
-// angle, regardless of their intensities. Since these sit on genuinely different sides
-// of the object instead, closer intensities don't reproduce that flatness - each side
-// gets lit (and shaded) mainly by whichever light is on its side.
+// The lights below are attached to the TD camera, so their positions are in camera
+// space: the camera looks along -z, i.e. a positive z means "in front of the object,
+// on the viewer's side". All lights point at the origin, so a light's position is also
+// the direction it comes from.
 //
-// Fill alone (opposite side from key, but a similar elevation) turned out not to be
-// enough: it kept the underside of round/convex shapes (e.g. a soma) from going dark,
-// but didn't give that surface its own highlight/falloff, since key/fill together still
-// leave the geometric underside - facing away from both - relying mostly on flat
-// ambient. UNDER_LIGHT is specifically angled from below to close that gap. It's weaker
-// than key since it's a secondary/supporting light, not meant to compete with it for
-// which side reads as "the" lit side.
+// Key, fill and under light all come from the front, from different sides/elevations,
+// so the surfaces facing the viewer are lit (key) while curved surfaces still show a
+// clear light-to-dark gradient towards their sides and undersides (fill/under). The
+// rim light comes from behind and only catches silhouette edges, which keeps
+// overlapping branches visually separated.
 //
-// Keep an eye on the *combined* effect where two lights' regions overlap (e.g. where
-// fill and under both reach a lower side-ish patch of surface) - stacking can blow that
-// area out toward white/desaturated if the total intensities are pushed up too far.
-//
-// SIDE_LIGHT mirrors key horizontally (upper-left instead of upper-right) at a similar
-// elevation/depth, rather than covering a new axis like under does - key/fill/under
-// between them vary mostly in elevation (up/down) and depth (front/back), so surfaces
-// facing left specifically (the far side of vertical/diagonal branches, as seen from
-// the key light) were still comparatively flat.
-const KEY_LIGHT_INTENSITY = 10;
-const FILL_LIGHT_INTENSITY = 7;
-const UNDER_LIGHT_INTENSITY = 6;
-const SIDE_LIGHT_INTENSITY = 5;
+// Keep an eye on the *combined* effect where two lights' regions overlap - stacking
+// can blow that area out toward white/desaturated if the intensities are pushed up
+// too far.
+const KEY_LIGHT_INTENSITY = 8;
+const FILL_LIGHT_INTENSITY = 4;
+const UNDER_LIGHT_INTENSITY = 3;
+const RIM_LIGHT_INTENSITY = 4;
 
 type RaycasterHit = {
   node: MeshSceneNode;
@@ -97,17 +85,11 @@ type RaycasterHit = {
   isHighlightedByHitTest: boolean;
 } | null;
 
-const createDirLight = (
-  position: Vector3,
-  target: Vector3,
-  intensity: number,
-  camera: OrthographicCamera,
-) => {
+const createDirLight = (position: Vector3, intensity: number, camera: OrthographicCamera) => {
   const dirLight = new DirectionalLight(0x888888, intensity);
   dirLight.position.set(...position);
   camera.add(dirLight);
   camera.add(dirLight.target);
-  dirLight.target.position.set(...target);
 
   return dirLight;
 };
@@ -169,18 +151,16 @@ class PlaneView {
 
     this.cameras = { ...this.nonTdCameras, [OrthoViews.TDView]: this.tdCameras.ORTHOGRAPHIC };
 
-    // Key light: raking in from up/right so curved surfaces show a clear gradient.
-    createDirLight([18, 22, 8], [0, 0, 10], KEY_LIGHT_INTENSITY, tdOrthographicCamera);
-    // Fill light: from the opposite side (but a similar elevation), so shadow-facing
-    // surfaces don't go black.
-    createDirLight([-10, 3, -12], [0, 0, 10], FILL_LIGHT_INTENSITY, tdOrthographicCamera);
-    // Under light: angled up from below, so the geometric underside of round/convex
-    // shapes - facing away from both key and fill above - gets its own visible
-    // highlight/falloff too, instead of just flat ambient.
-    createDirLight([2, -20, -4], [0, 0, 10], UNDER_LIGHT_INTENSITY, tdOrthographicCamera);
-    // Side light: mirrors key on the left instead of the right, at a similar
-    // elevation/depth, so left-facing surfaces get their own highlight/falloff too.
-    createDirLight([-18, 14, 9], [0, 0, 10], SIDE_LIGHT_INTENSITY, tdOrthographicCamera);
+    // Key light: from the front upper right.
+    createDirLight([10, 12, 14], KEY_LIGHT_INTENSITY, tdOrthographicCamera);
+    // Fill light: from the front left, slightly below, so the side facing away from
+    // the key light doesn't go dark.
+    createDirLight([-14, -2, 10], FILL_LIGHT_INTENSITY, tdOrthographicCamera);
+    // Under light: from the front below, so the undersides of round shapes (e.g. a
+    // soma) get their own falloff instead of just flat ambient light.
+    createDirLight([3, -14, 6], UNDER_LIGHT_INTENSITY, tdOrthographicCamera);
+    // Rim light: from behind upper left, only catching silhouette edges.
+    createDirLight([-8, 10, -14], RIM_LIGHT_INTENSITY, tdOrthographicCamera);
 
     this.nonTdCameras[OrthoViews.PLANE_XY].position.z = -1;
     this.nonTdCameras[OrthoViews.PLANE_YZ].position.x = 1;

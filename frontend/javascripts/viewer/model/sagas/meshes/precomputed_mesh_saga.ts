@@ -26,6 +26,7 @@ import {
   type BufferGeometryWithInfo,
   sortByDistanceTo,
   type UnmergedBufferGeometryWithInfo,
+  unifyNormalsAtChunkBorders,
   VertexSegmentMapping,
 } from "viewer/controller/mesh_helpers";
 import getSceneController from "viewer/controller/scene_controller_provider";
@@ -517,6 +518,7 @@ function* loadPrecomputedMeshesInChunksForLod(
     ) as BufferGeometryWithInfo | null;
     if (mergedGeometry != null) {
       mergedGeometry.vertexSegmentMapping = new VertexSegmentMapping(sortedBufferGeometries);
+      unifyNormalsAtChunkBorders(mergedGeometry, sortedBufferGeometries);
       mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
     }
   } catch (exception) {

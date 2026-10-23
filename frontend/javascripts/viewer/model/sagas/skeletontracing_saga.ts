@@ -125,7 +125,11 @@ function* centerActiveNode(action: Action): Saga<void> {
   if ("suppressCentering" in action && action.suppressCentering) {
     return;
   }
-  if (["DELETE_NODE", "DELETE_BRANCHPOINT"].includes(action.type)) {
+  if (
+    ["DELETE_NODE", "DELETE_NODE_AND_RECONNECT_NEIGHBORS", "DELETE_BRANCHPOINT"].includes(
+      action.type,
+    )
+  ) {
     const centerNewNode = yield* select(
       (state: WebknossosState) => state.userConfiguration.centerNewNode,
     );
@@ -565,6 +569,7 @@ function* watchSkeletonTracingAsync(): Saga<void> {
       "SET_ACTIVE_TREE_BY_NAME",
       "SET_ACTIVE_NODE",
       "DELETE_NODE",
+      "DELETE_NODE_AND_RECONNECT_NEIGHBORS",
       "DELETE_BRANCHPOINT",
       "SELECT_NEXT_TREE",
       "DELETE_TREE",

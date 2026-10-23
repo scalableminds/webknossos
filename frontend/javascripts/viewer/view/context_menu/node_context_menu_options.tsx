@@ -2,9 +2,12 @@ import type { ItemType } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { shallowEqual, useDispatch } from "react-redux";
-import { AltOrOptionKey, CtrlOrCmdKey } from "viewer/constants";
+import { AltOrOptionKey, CtrlOrCmdKey, TreeTypeEnum } from "viewer/constants";
 import { mayEditSkeletonTree } from "viewer/model/accessors/annotation_accessor";
-import { getTreeAndNodeOrNull } from "viewer/model/accessors/skeletontracing_accessor";
+import {
+  getEdgeForReconnectingNeighbors,
+  getTreeAndNodeOrNull,
+} from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   cutAgglomerateFromNeighborsAction,
@@ -83,6 +86,8 @@ export function useNodeContextMenuOptions(
       (edge) => edge.source === clickedNodeId || edge.target === clickedNodeId,
     );
   }
+
+  const canReconnectNeighbors = getEdgeForReconnectingNeighbors(clickedTree, clickedNodeId) != null;
 
   const menuItems: ItemType[] = [
     {
@@ -174,6 +179,25 @@ export function useNodeContextMenuOptions(
               </>
             ),
           },
+          clickedTree.type === TreeTypeEnum.DEFAULT
+            ? {
+                key: "delete-node-and-reconnect-neighbors",
+                disabled: !canReconnectNeighbors,
+                onClick: () =>
+                  actions.deleteNodeAndReconnectNeighbors(clickedNodeId, clickedTree.treeId),
+                label: (
+                  <FastTooltip
+                    title={
+                      canReconnectNeighbors
+                        ? "Deletes this node and connects its two neighbors with a new edge, so that the tree is not split."
+                        : "Only possible for nodes with exactly two neighbors."
+                    }
+                  >
+                    Delete this Node & Reconnect Neighbors
+                  </FastTooltip>
+                ),
+              }
+            : null,
           isBranchpoint
             ? {
                 key: "branchpoint-node",

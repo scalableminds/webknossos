@@ -42,7 +42,7 @@ function showWelcomeToast(notification: NotificationInstance) {
     placement: "bottomRight",
     title: (
       <Flex justify="space-between" align="flex-start" gap="middle">
-        <Typography.Title level={4}>Welcome to WEBKNOSSOS</Typography.Title>
+        <Typography.Title level={3}>Welcome to WEBKNOSSOS</Typography.Title>
         <WKLogoIcon
           width={64}
           height={64}

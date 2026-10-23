@@ -235,11 +235,15 @@ export function* getOrCreateOperationContext(
   options: OperationOptions,
   existing?: OperationContext | null,
 ): Generator<any, OperationContext | null, any> {
-  // Only borrow from a context that is still active. A finished context can still be passed
-  // around by requests that were dispatched earlier (e.g., a SAVE_NOW of an operation that
-  // was cancelled by a saga restart). Borrowing from it would register a child operation
-  // under a parent that doesn't exist anymore.
-  if (existing?.isActive()) {
+  if (existing != null) {
+    if (!existing.isActive()) {
+      // Borrowing from a finished context would register a child operation under a parent
+      // that doesn't exist anymore. This indicates a bug, e.g., a request that carries the
+      // context of an operation that was already cancelled.
+      throw new Error(
+        `Cannot run "${options.id}" within the operation context "${existing.id}", because that operation is already finished.`,
+      );
+    }
     return borrowedContext(existing, options.id);
   }
   // Cast is safe: if options is NonNullableOptions, the result is non-null (handled by overloads).

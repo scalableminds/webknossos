@@ -508,29 +508,27 @@ describe("operation_context_saga", () => {
       expect(child!.isActive()).toBe(false);
     });
 
-    it("getOrCreateOperationContext does not borrow from a finished context", async () => {
-      const { store, sagaMiddleware } = makeTestStore();
-      let finishedCtx: OperationContext | null = null;
-      const registeredOperations: string[] = [];
-      const registeredChildOperations: string[] = [];
+    it("getOrCreateOperationContext throws for a finished context", async () => {
+      const { sagaMiddleware } = makeTestStore();
+      let error: unknown = null;
 
       function* op() {
-        finishedCtx = yield* createOperationContext({ id: "PROOFREADING" });
+        const finishedCtx = yield* createOperationContext({ id: "PROOFREADING" });
         yield* finishedCtx.execute(function* () {
           yield* call(noop);
         });
 
-        const ctx = yield* getOrCreateOperationContext({ id: "SAVE" }, finishedCtx);
-        yield* ctx.execute(function* () {
-          const { activeOperations, childOperations } = store.getState().operationContext;
-          registeredOperations.push(...activeOperations.map((o) => o.id));
-          registeredChildOperations.push(...childOperations.map((c) => `${c.id}/${c.parentId}`));
-        });
+        try {
+          yield* getOrCreateOperationContext({ id: "SAVE" }, finishedCtx);
+        } catch (e) {
+          error = e;
+        }
       }
 
       await sagaMiddleware.run(op).toPromise();
-      expect(registeredOperations).toEqual(["SAVE"]);
-      expect(registeredChildOperations).toEqual([]);
+      expect((error as Error).message).toBe(
+        'Cannot run "SAVE" within the operation context "PROOFREADING", because that operation is already finished.',
+      );
     });
   });
 });

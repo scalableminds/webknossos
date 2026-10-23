@@ -1,6 +1,6 @@
 import drawingWavingPerson from "@images/backgrounds/waving-person.svg";
 import WKLogoIcon from "@images/wk-logo.svg?react";
-import { Button, ConfigProvider, Flex, notification, Space, Typography } from "antd";
+import { Button, ConfigProvider, Flex, notification, Space, Typography, theme } from "antd";
 import type { NotificationInstance } from "antd/es/notification/interface";
 import features from "features";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
@@ -8,11 +8,22 @@ import UserLocalStorage from "libs/user_local_storage";
 import defaultsDeep from "lodash-es/defaultsDeep";
 import { ColorWhite, ColorWKBlue, getAntdTheme } from "theme";
 
-// White buttons with blue text/border to stand out against the wk-blue background.
+// antd's token for text on a solid primary-colored background.
+const { colorTextLightSolid } = theme.getDesignToken();
+
+// The dark theme's grey body text and icons barely contrast with the wk-blue background, so all
+// text and the close icon use colorTextLightSolid instead.
+// The buttons are white with blue text/border to stand out against the wk-blue background.
 // The toast background is always wk-blue, so these three shades are deliberately literal and must
 // NOT be replaced by theme tokens – they have to stay white/near-white in both themes.
 const darkThemeWithWhiteButtons = defaultsDeep(
   {
+    token: {
+      colorText: colorTextLightSolid,
+      colorTextHeading: colorTextLightSolid,
+      colorIcon: colorTextLightSolid,
+      colorIconHover: colorTextLightSolid,
+    },
     components: {
       Button: {
         colorPrimary: ColorWhite,
@@ -97,7 +108,6 @@ function showWelcomeToast(notification: NotificationInstance) {
       },
       title: {
         marginBottom: 20,
-        color: ColorWhite,
       },
     },
   });

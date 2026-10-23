@@ -3,6 +3,7 @@ import { requestResult } from "admin/api/api_result";
 import dayjs from "dayjs";
 import update from "immutability-helper";
 import { toBigInt } from "libs/bigint_helpers";
+import { fetchAndSaveFile } from "libs/download";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import ResumableUpload from "libs/resumable_upload/resumable_upload";
@@ -1272,7 +1273,9 @@ export async function downloadAnnotation(
   }
 
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${params}`;
-  await downloadWithFilename(downloadUrl);
+  // Fetch the file instead of navigating to it, so that the returned promise only resolves
+  // once the (potentially slow) download has finished and callers can show a loading state.
+  await fetchAndSaveFile(downloadUrl);
 }
 
 export async function getIdReservationsForAnnotation(

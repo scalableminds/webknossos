@@ -1,5 +1,6 @@
 import { downloadAnnotation } from "admin/rest_api";
 import { Alert, Button, Col, Divider, Flex, Radio, Row, Space, Tooltip, Typography } from "antd";
+import { AsyncButton } from "components/async_clickables";
 import { useWkSelector } from "libs/react_hooks";
 import messages from "messages";
 import { useState } from "react";
@@ -24,14 +25,20 @@ export function DownloadAnnotationTab({ onClose }: { onClose: () => void }) {
   const handleDownload = async function () {
     await Model.ensureSavedState();
     const includeVolumeData = fileFormatToDownload === "wkw" || fileFormatToDownload === "zarr3";
-    downloadAnnotation(
-      annotation.annotationId,
-      annotation.annotationType,
-      hasVolumeFallback,
-      undefined,
-      fileFormatToDownload,
-      includeVolumeData,
-    );
+    try {
+      // Keep the modal open (with a loading button) until the download has finished.
+      await downloadAnnotation(
+        annotation.annotationId,
+        annotation.annotationType,
+        hasVolumeFallback,
+        undefined,
+        fileFormatToDownload,
+        includeVolumeData,
+      );
+    } catch {
+      // The error was already shown as a toast. Keep the modal open so that the user can retry.
+      return;
+    }
     onClose();
   };
 
@@ -113,9 +120,9 @@ export function DownloadAnnotationTab({ onClose }: { onClose: () => void }) {
         >
           Learn More
         </Button>
-        <Button type="primary" onClick={handleDownload}>
+        <AsyncButton type="primary" onClick={handleDownload}>
           Download
-        </Button>
+        </AsyncButton>
       </Flex>
     </Flex>
   );

@@ -187,7 +187,7 @@ function useZarrLinks(maybeAccessToken: string | null) {
         ? getReadableNameByVolumeTracingId(annotation, layer.tracingId)
         : layer.name;
     return {
-      key: readableLayerName,
+      key: layer.name,
       label: readableLayerName,
       url: baseUrl == null ? "" : `${baseUrl}/${readableLayerName}`,
       isWkOnly: false,
@@ -237,12 +237,7 @@ function ZarrLinkUrlRow({
         <Button
           icon={<CopyOutlined />}
           disabled={isDisabled}
-          onClick={() => {
-            // Focusing the input selects its URL, which copyToClipboard would otherwise treat as
-            // an ongoing text selection and skip copying.
-            window.getSelection()?.removeAllRanges();
-            copyToClipboard(row.url, "URL");
-          }}
+          onClick={() => copyToClipboard(row.url, "URL")}
         >
           Copy
         </Button>

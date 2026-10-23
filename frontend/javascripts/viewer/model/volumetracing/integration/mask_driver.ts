@@ -13,7 +13,7 @@ import type { MaskShape } from "../core/volume_edit_intents";
 import { VolumeTransaction } from "../core/volume_transaction";
 import { rasterize } from "../core/voxel_rasterizer";
 import type { DriverOptions, DriverResult } from "./tool_driver_types";
-import { magListFromDenseMags, WkDataCubeAdapter } from "./wk_data_cube_adapter";
+import { magListForCube, WkDataCubeAdapter } from "./wk_data_cube_adapter";
 
 export interface MaskDriverOptions extends DriverOptions {
   overwriteMode: OverwriteMode;
@@ -40,7 +40,7 @@ export function runMaskEdit(
     `${toolName}-${Date.now()}`,
     ctx,
     adapter,
-    magListFromDenseMags(options.denseMags, options.cube.magInfo.getFinestMagIndex()),
+    magListForCube(options.cube),
   );
 
   rasterize(mask, ctx, transaction);

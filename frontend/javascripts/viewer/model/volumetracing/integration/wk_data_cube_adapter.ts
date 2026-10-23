@@ -26,7 +26,6 @@ import {
   MagList,
   type SegmentBucketData,
   type SegmentId,
-  type Vector3,
 } from "../core/volume_annotation_types";
 import type { LoadingVoxelCube, TransactionCube } from "../core/voxel_cube_interfaces";
 import type { SaveMode } from "./tool_driver_types";
@@ -145,12 +144,12 @@ export class WkLoadingCubeAdapter extends WkDataCubeAdapter implements LoadingVo
 }
 
 /**
- * Build the core's MagList from a layer's MagInfo-derived dense mags, propagating
- * no finer than the layer's finest mag.
+ * Build the core's MagList from the cube's dense mags, propagating no finer than
+ * the layer's finest mag.
  */
-export function magListFromDenseMags(denseMags: Vector3[], finestMagIndex: number): MagList {
+export function magListForCube(cube: DataCube): MagList {
   return new MagList(
-    denseMags.map((mag) => [mag[0], mag[1], mag[2]] as Mag),
-    finestMagIndex,
+    cube.magInfo.getDenseMags().map((mag) => [mag[0], mag[1], mag[2]] as Mag),
+    cube.magInfo.getFinestMagIndex(),
   );
 }

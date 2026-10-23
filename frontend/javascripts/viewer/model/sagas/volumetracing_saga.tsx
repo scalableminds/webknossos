@@ -308,7 +308,6 @@ export function* editVolumeLayerAsync(): Saga<never> {
       const driver = new BrushDriver(
         {
           cube: segmentationLayer.cube,
-          denseMags: segmentationLayer.cube.magInfo.getDenseMags(),
           magIndex: labeledZoomStep,
           segmentId: contourTracingMode === ContourModeEnum.DELETE ? 0n : activeCellId,
           overwriteMode:

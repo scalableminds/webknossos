@@ -292,7 +292,6 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     ];
     const stats = yield* call(runFloodFill, {
       cube,
-      denseMags: magInfo.getDenseMags(),
       magIndex: labeledZoomStep,
       segmentId: activeCellId,
       additionalCoordinates: additionalCoordinates ?? null,

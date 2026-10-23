@@ -7,7 +7,7 @@
 import type { AdditionalCoordinate } from "viewer/constants";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import type { BucketDiff } from "../core/bucket_diff";
-import type { MagIndex, SegmentId, Vector3 } from "../core/volume_annotation_types";
+import type { MagIndex, SegmentId } from "../core/volume_annotation_types";
 
 /**
  * How an edit is saved, which depends on the collaboration mode:
@@ -22,7 +22,6 @@ export type SaveMode = "fullBuckets" | "partialUpdates";
 /** What every driver needs in order to address the layer it writes into. */
 export interface DriverOptions {
   cube: DataCube;
-  denseMags: Vector3[];
   magIndex: MagIndex;
   segmentId: SegmentId;
   additionalCoordinates: AdditionalCoordinate[] | null;

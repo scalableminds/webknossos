@@ -449,7 +449,6 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const { bucketDiffs } = runMaskEdit(
     {
       cube,
-      denseMags: cube.magInfo.getDenseMags(),
       magIndex: labeledZoomStep,
       segmentId: activeCellId,
       additionalCoordinates: additionalCoordinates ?? null,

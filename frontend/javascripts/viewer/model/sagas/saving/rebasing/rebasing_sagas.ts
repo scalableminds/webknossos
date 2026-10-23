@@ -183,21 +183,29 @@ function* fetchNewestMissingUpdateActions(): Saga<ApiResult<APIUpdateActionBatch
     return state.annotation.version;
   });
 
-  // Fetch all update actions that belong to a version that is newer than
-  // versionOnClient. If there are none, the array will be empty.
-  // The order is ascending in the version number ([v_n, v_(n+1), ...]).
-  const newerActions = yield* call(
-    getUpdateActionLog,
-    tracingStoreUrl,
-    annotationId,
-    versionOnClient + 1,
-    undefined,
-    false,
-    true,
-    {},
-    FETCH_MISSING_UPDATE_ACTIONS_RETRY_OPTIONS,
-  );
-  return newerActions;
+  // The request is retried without limit. Abort it when this saga is cancelled (e.g., because
+  // the annotation view is left). Otherwise, the retries would continue in the background.
+  // Aborted requests are not retried.
+  const abortController = new AbortController();
+  try {
+    // Fetch all update actions that belong to a version that is newer than
+    // versionOnClient. If there are none, the array will be empty.
+    // The order is ascending in the version number ([v_n, v_(n+1), ...]).
+    const newerActions = yield* call(
+      getUpdateActionLog,
+      tracingStoreUrl,
+      annotationId,
+      versionOnClient + 1,
+      undefined,
+      false,
+      true,
+      { signal: abortController.signal },
+      FETCH_MISSING_UPDATE_ACTIONS_RETRY_OPTIONS,
+    );
+    return newerActions;
+  } finally {
+    abortController.abort();
+  }
 }
 
 function* applyNewestMissingUpdateActions(

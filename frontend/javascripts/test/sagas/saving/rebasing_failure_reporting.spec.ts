@@ -5,7 +5,9 @@ import {
 } from "test/helpers/apiHelpers";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
+import { sleep } from "libs/utils";
 import type { APIUpdateActionBatch } from "types/api_types";
+import { restartSagaAction } from "viewer/model/actions/actions";
 import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
@@ -136,5 +138,41 @@ describe("Reporting of failed rebasing", () => {
       errorKind: "http",
       status: 403,
     });
+  });
+
+  it("should stop retrying when the sagas are cancelled", async (context: WebknossosTestContext) => {
+    const { getUpdateActionLog } =
+      await vi.importActual<typeof import("admin/rest_api")>("admin/rest_api");
+    context.mocks.getUpdateActionLog.mockImplementation(getUpdateActionLog);
+
+    // The server stays unreachable. Like fetch, the mock rejects with an AbortError if the
+    // request was aborted.
+    const receiveJSON = vi.mocked(Request.receiveJSON);
+    const previousImplementation = receiveJSON.getMockImplementation();
+    const signals: Array<AbortSignal | undefined> = [];
+    receiveJSON.mockImplementation(async (url, options) => {
+      if (url.includes("/updateActionLog")) {
+        signals.push(options?.signal);
+        if (options?.signal?.aborted) {
+          throw new DOMException("Aborted", "AbortError");
+        }
+        throw new TypeError("Failed to fetch");
+      }
+      return previousImplementation?.(url, options);
+    });
+
+    // Not awaited on purpose: the request is never resolved because the sagas are restarted.
+    dispatchEnsureHasNewestVersionAsync(Store.dispatch);
+    await vi.waitFor(() => expect(signals.length).toBeGreaterThanOrEqual(3), { timeout: 5000 });
+    const signal = signals[0];
+    expect(signal?.aborted).toBe(false);
+
+    Store.dispatch(restartSagaAction());
+
+    expect(signal?.aborted).toBe(true);
+    // At most one more (immediately aborted) attempt is made after the restart.
+    const requestCountAfterRestart = signals.length;
+    await sleep(200);
+    expect(signals.length).toBeLessThanOrEqual(requestCountAfterRestart + 1);
   });
 });

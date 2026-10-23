@@ -235,8 +235,8 @@ export default class SegmentMeshController {
       // curved/cylindrical surfaces like dendrites as three-dimensional. Lower than
       // 0.5 starts looking noticeably glossy/plastic; higher spreads the highlight so
       // thin it barely reads, which was contributing to the overall dark/flat look.
-      roughness: 0.45,
-      metalness: 0,
+      roughness: 0.4,
+      metalness: 0.05,
       // Sheen adds a rim-light glint at grazing angles, e.g. along silhouette edges
       // where branches overlap. A moderate/broad sheen visibly washes the segment's own
       // color out (it layers a white lobe over it), so this is intentionally low, and
@@ -555,7 +555,7 @@ export default class SegmentMeshController {
     // Unlike a flat ambient light, the hemisphere light still has a (soft) top-to-bottom
     // gradient, so it can be bright enough to lift the shadows without making the meshes
     // look flat. "Up" is -z, which matches the up vector of the default TD camera.
-    const hemisphereLight = new HemisphereLight("white", 0x808080, 0.4);
+    const hemisphereLight = new HemisphereLight("white", 0x808080, 0.25);
     hemisphereLight.position.set(0, 0, -1);
     this.lightsGroup.add(hemisphereLight);
 

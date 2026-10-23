@@ -61,18 +61,19 @@ import {
 // on the viewer's side". All lights point at the origin, so a light's position is also
 // the direction it comes from.
 //
-// Key, fill and under light all come from the front, from different sides/elevations,
-// so the surfaces facing the viewer are lit (key) while curved surfaces still show a
-// clear light-to-dark gradient towards their sides and undersides (fill/under). The
-// rim light comes from behind and only catches silhouette edges, which keeps
-// overlapping branches visually separated.
+// Key, fill and under light all come from the front, from different sides/elevations.
+// The key light rakes in from the upper right, so curved surfaces show a clear
+// light-to-dark gradient. Fill and under light are kept much weaker than the key light:
+// they only keep the shadowed sides from going black, and raising them washes out the
+// shadows that make the shape readable. The rim light comes from behind and only
+// catches silhouette edges, which keeps overlapping branches visually separated.
 //
 // Keep an eye on the *combined* effect where two lights' regions overlap - stacking
 // can blow that area out toward white/desaturated if the intensities are pushed up
 // too far.
-const KEY_LIGHT_INTENSITY = 6;
-const FILL_LIGHT_INTENSITY = 2.5;
-const UNDER_LIGHT_INTENSITY = 2;
+const KEY_LIGHT_INTENSITY = 7;
+const FILL_LIGHT_INTENSITY = 1.5;
+const UNDER_LIGHT_INTENSITY = 1;
 const RIM_LIGHT_INTENSITY = 4;
 
 type RaycasterHit = {
@@ -151,8 +152,8 @@ class PlaneView {
 
     this.cameras = { ...this.nonTdCameras, [OrthoViews.TDView]: this.tdCameras.ORTHOGRAPHIC };
 
-    // Key light: from the front upper right.
-    createDirLight([10, 12, 14], KEY_LIGHT_INTENSITY, tdOrthographicCamera);
+    // Key light: from the upper right, raking in from the front.
+    createDirLight([14, 12, 8], KEY_LIGHT_INTENSITY, tdOrthographicCamera);
     // Fill light: from the front left, slightly below, so the side facing away from
     // the key light doesn't go dark.
     createDirLight([-14, -2, 10], FILL_LIGHT_INTENSITY, tdOrthographicCamera);

@@ -9,7 +9,7 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import com.scalableminds.util.box.Box.tryo
 import ucar.ma2.Array as MultiArray
 
@@ -78,7 +78,7 @@ class DatasetArray(
       (offsetArray, shapeArray) <- tryo(
         constructOffsetAndShapeArrays(offsetXYZ, shapeXYZ, additionalCoordinatesOpt, shouldReadUint24)
       ).toFox ?~> "failed to construct shape and offset array for requested coordinates"
-      bytes <- readBytes(offsetArray, shapeArray)
+      bytes <- readBytes(offsetArray, shapeArray, additionalCoordinatesOpt)
     } yield bytes
 
   private def constructOffsetAndShapeArrays(
@@ -87,6 +87,12 @@ class DatasetArray(
       additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
       shouldReadUint24: Boolean
   ): (Array[Int], Array[Int]) = {
+    val batchedAdditionalCoordinate = additionalCoordinatesOpt.getOrElse(Seq.empty).filter(_.length.exists(_ > 1))
+    require(
+      batchedAdditionalCoordinate.size <= 1,
+      "Reading more than one batched additional axis at once is not supported"
+    )
+
     val offsetArray: Array[Int] = Array.fill(rank)(0)
     offsetArray(rank - 3) = offsetXYZ.x
     offsetArray(rank - 2) = offsetXYZ.y
@@ -113,20 +119,57 @@ class DatasetArray(
       for (additionalCoordinate <- additionalCoordinates) {
         val wkSlot = fullAxisOrder.wkSlotOfPhysicalIndex(additionalAxesMap(additionalCoordinate.name).index)
         offsetArray(wkSlot) = additionalCoordinate.value
-        // shapeArray at positions of additional coordinates is always 1
+        // shapeArray for additional coordinates must be either 1 (default) or 32 (for batched additionalAxis requests).
+        // Note that we don’t clamp the 32 to the additionalAxis range in the dataset, same as for xyz.
+        val requestedLength = additionalCoordinate.length.getOrElse(1)
+        require(
+          requestedLength == 1 || requestedLength == DataLayer.bucketLength,
+          s"Additional-coordinate batch length for “${additionalCoordinate.name}” must be 1 or ${DataLayer.bucketLength}, got $requestedLength."
+        )
+        shapeArray(wkSlot) = requestedLength
       }
+    }
+
+    if (batchedAdditionalCoordinate.nonEmpty) {
+      // If an additionalAxis is batched, z axis must have shape 1 to preserve total 32³ shape.
+      shapeArray(rank - 1) = 1
     }
     (offsetArray, shapeArray)
   }
 
+  private def batchedAxisOf(
+      additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]
+  ): Option[AdditionalCoordinate] =
+    additionalCoordinatesOpt.flatMap(_.find(_.length.exists(_ > 1)))
+
+  private def repackBatchedAxisIntoZSlot(
+      multiArray: MultiArray,
+      additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]
+  ): MultiArray =
+    batchedAxisOf(additionalCoordinatesOpt) match {
+      case Some(batched) =>
+        val batchedAxisWkSlot = fullAxisOrder.wkSlotOfPhysicalIndex(additionalAxesMap(batched.name).index)
+        // readAsFortranOrder builds its target array with shape.reverse, so wk slot `s` lives at
+        // dimension `rank - 1 - s`. Z's wk slot is always rank - 1, i.e. dimension 0.
+        val batchedAxisDimension = rank - 1 - batchedAxisWkSlot
+        multiArray.transpose(batchedAxisDimension, 0).copy()
+      case None => multiArray
+    }
+
   // returns byte array in fortran-order with little-endian values
-  private def readBytes(offset: Array[Int], shape: Array[Int])(using
-      ec: ExecutionContext,
-      tc: TokenContext
-  ): Fox[Array[Byte]] =
+  private def readBytes(
+      offset: Array[Int],
+      shape: Array[Int],
+      additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      typedMultiArray <- readAsFortranOrder(offset, shape)
-      asBytes <- BytesConverter.toByteArray(typedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN).toFox
+      typedMultiArray <- readAsFortranOrder(
+        offset,
+        shape,
+        isBatchedRead = batchedAxisOf(additionalCoordinatesOpt).isDefined
+      )
+      repackedMultiArray = repackBatchedAxisIntoZSlot(typedMultiArray, additionalCoordinatesOpt)
+      asBytes <- BytesConverter.toByteArray(repackedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN).toFox
     } yield asBytes
 
   private def printAsPhysical(values: Array[Int], flip: Boolean = false): String = {
@@ -156,7 +199,7 @@ class DatasetArray(
   // The local variables like chunkIndices are also in this order unless explicitly named.
   // Loading data adapts to the array's axis order so that …CXYZ data in fortran-order is
   // returned, regardless of the array’s internal storage.
-  private def readAsFortranOrder(offset: Array[Int], shape: Array[Int])(using
+  private def readAsFortranOrder(offset: Array[Int], shape: Array[Int], isBatchedRead: Boolean)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[MultiArray] = {
@@ -167,34 +210,46 @@ class DatasetArray(
       shape,
       totalOffset.map(_.toLong)
     )
-    if (partialCopyingIsNotNeededForWkOrder(shape, totalOffset, chunkIndices)) {
+    if (!isBatchedRead && partialCopyIsNotNeededForWkOrder(shape, totalOffset, chunkIndices)) {
       for {
         chunkIndex <- chunkIndices.headOption.toFox
         sourceChunk: MultiArray <- getSourceChunkDataWithCache(
           fullAxisOrder.permuteIndicesWkToPhysicalLong(chunkIndex),
           useSkipTypingShortcut = true
         )
-      } yield sourceChunk
-    } else {
-      val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
-      val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse)
-      val copiedFox = Fox.combined(chunkIndices.map { (chunkIndex: Array[Long]) =>
-        for {
-          sourceChunk: MultiArray <- getSourceChunkDataWithCache(
-            fullAxisOrder.permuteIndicesWkToPhysicalLong(chunkIndex)
-          )
-          sourceChunkInWkFOrder: MultiArray = MultiArrayUtils
-            .axisOrderXYZViewF(sourceChunk, fullAxisOrder, sourceIsF = header.order == ArrayOrder.F)
-          offsetInChunkFOrder = computeOffsetInChunk(chunkIndex, totalOffset).reverse
-          _ <- tryo(
-            MultiArrayUtils.copyRange(offsetInChunkFOrder, sourceChunkInWkFOrder, targetMultiArray)
-          ).toFox ?~> formatCopyRangeError(offsetInChunkFOrder, sourceChunkInWkFOrder, targetMultiArray)
-        } yield ()
-      })
+        result <-
+          if (hasExpectedByteCount(sourceChunk, shape)) Fox.successful(sourceChunk)
+          else readAsFortranOrderWithPartialCopy(shape, totalOffset, chunkIndices)
+      } yield result
+    } else readAsFortranOrderWithPartialCopy(shape, totalOffset, chunkIndices)
+  }
+
+  private def readAsFortranOrderWithPartialCopy(
+      shape: Array[Int],
+      totalOffset: Array[Int],
+      chunkIndices: Seq[Array[Long]]
+  )(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[MultiArray] = {
+    val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
+    val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse)
+    val copiedFox = Fox.combined(chunkIndices.map { (chunkIndex: Array[Long]) =>
       for {
-        _ <- copiedFox
-      } yield targetMultiArray
-    }
+        sourceChunk: MultiArray <- getSourceChunkDataWithCache(
+          fullAxisOrder.permuteIndicesWkToPhysicalLong(chunkIndex)
+        )
+        sourceChunkInWkFOrder: MultiArray = MultiArrayUtils
+          .axisOrderXYZViewF(sourceChunk, fullAxisOrder, sourceIsF = header.order == ArrayOrder.F)
+        offsetInChunkFOrder = computeOffsetInChunk(chunkIndex, totalOffset).reverse
+        _ <- tryo(
+          MultiArrayUtils.copyRange(offsetInChunkFOrder, sourceChunkInWkFOrder, targetMultiArray)
+        ).toFox ?~> formatCopyRangeError(offsetInChunkFOrder, sourceChunkInWkFOrder, targetMultiArray)
+      } yield ()
+    })
+    for {
+      _ <- copiedFox
+    } yield targetMultiArray
   }
 
   def readAsMultiArray(offset: Long, shape: Int)(using ec: ExecutionContext, tc: TokenContext): Fox[MultiArray] =
@@ -211,28 +266,48 @@ class DatasetArray(
     } else {
       val totalOffset: Array[Long] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
       val chunkIndices = ChunkUtils.computeChunkIndices(datasetShape, chunkShape, shape, totalOffset)
-      if (partialCopyingIsNotNeededForMultiArray(shape, totalOffset, chunkIndices)) {
+      if (partialCopyIsNotNeededForMultiArray(shape, totalOffset, chunkIndices)) {
         for {
           chunkIndex <- chunkIndices.headOption.toFox
           sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex, useSkipTypingShortcut = true)
-        } yield sourceChunk
-      } else {
-        val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
-        val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape)
-        val copiedFuture = Fox.combined(chunkIndices.map { (chunkIndex: Array[Long]) =>
-          for {
-            sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex)
-            offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, totalOffset)
-            _ <- tryo(
-              MultiArrayUtils.copyRange(offsetInChunk, sourceChunk, targetMultiArray)
-            ).toFox ?~> formatCopyRangeErrorWithoutAxisOrder(offsetInChunk, sourceChunk, targetMultiArray)
-          } yield ()
-        })
-        for {
-          _ <- copiedFuture
-        } yield targetMultiArray
-      }
+          result <-
+            if (hasExpectedByteCount(sourceChunk, shape)) Fox.successful(sourceChunk)
+            else readAsMultiArrayWithPartialCopy(shape, totalOffset, chunkIndices)
+        } yield result
+      } else readAsMultiArrayWithPartialCopy(shape, totalOffset, chunkIndices)
     }
+
+  private def readAsMultiArrayWithPartialCopy(
+      shape: Array[Int],
+      totalOffset: Array[Long],
+      chunkIndices: Seq[Array[Long]]
+  )(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[MultiArray] = {
+    val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
+    val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape)
+    val copiedFuture = Fox.combined(chunkIndices.map { (chunkIndex: Array[Long]) =>
+      for {
+        sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex)
+        offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, totalOffset)
+        _ <- tryo(
+          MultiArrayUtils.copyRange(offsetInChunk, sourceChunk, targetMultiArray)
+        ).toFox ?~> formatCopyRangeErrorWithoutAxisOrder(offsetInChunk, sourceChunk, targetMultiArray)
+      } yield ()
+    })
+    for {
+      _ <- copiedFuture
+    } yield targetMultiArray
+  }
+
+  // Formats with per-chunk shapes (N5) may store edge chunks clipped, which only shows after reading the chunk
+  private def hasExpectedByteCount(shortcutChunk: MultiArray, shape: Array[Int]): Boolean =
+    shortcutChunk.getSize == shape.map(_.toLong).product * header.bytesPerElement
+
+  // The shortcut passes stored bytes through unchanged, but callers expect little-endian values
+  private lazy val shortcutPreservesByteOrder: Boolean =
+    header.byteOrder == ByteOrder.LITTLE_ENDIAN || header.bytesPerElement == 1
 
   private def formatCopyRangeError(offsetInChunk: Array[Int], sourceChunk: MultiArray, target: MultiArray): String =
     s"Copying data from dataset chunk failed. Chunk shape (F): ${printAsWkF(sourceChunk.getShape)}, target shape (F): ${printAsWkF(target.getShape)}, offsetInChunk: ${printAsWkF(offsetInChunk)}. Axis order (C): $fullAxisOrder (wk: ${fullAxisOrder.toStringWk})"
@@ -252,9 +327,11 @@ class DatasetArray(
 
   private val chunkContentsCacheKeyPrefix: String = s"${dataSourceId}__${layerName}__${vaultPath}__chunk_"
 
-  private def chunkContentsCacheKey(chunkIndex: Array[Long]): String = {
-    val builder = new java.lang.StringBuilder(chunkContentsCacheKeyPrefix.length + chunkIndex.length * 4)
+  private def chunkContentsCacheKey(chunkIndex: Array[Long], useSkipTypingShortcut: Boolean): String = {
+    val builder = new java.lang.StringBuilder(chunkContentsCacheKeyPrefix.length + chunkIndex.length * 4 + 1)
     builder.append(chunkContentsCacheKeyPrefix)
+    // Shortcut-typed chunks are flat byte arrays, so they must not be served to reads that expect typed chunks (and vice versa)
+    if (useSkipTypingShortcut) builder.append('s')
     // Builder + while loop is faster than mkString, and this is a very hot code path.
     var i = 0
     while (i < chunkIndex.length) {
@@ -271,7 +348,7 @@ class DatasetArray(
   ): Fox[MultiArray] =
     // Note: we omit the tokenContext from the cacheKey because (a) Failures aren’t cached anyway and (b) the dataset access is checked again in the controllers. Omitting it here prevents wasteful data duplicates in the cache.
     sharedChunkContentsCache.getOrLoad(
-      chunkContentsCacheKey(chunkIndex),
+      chunkContentsCacheKey(chunkIndex, useSkipTypingShortcut),
       _ => readSourceChunkData(chunkIndex, useSkipTypingShortcut)
     )
 
@@ -303,7 +380,7 @@ class DatasetArray(
       chunkIndex.drop(1).mkString(header.dimension_separator.toString) // (c),x,y,z -> z is dropped in 2d case
     }
 
-  private def partialCopyingIsNotNeededForMultiArray(
+  private def partialCopyIsNotNeededForMultiArray(
       bufferShape: Array[Int],
       globalOffset: Array[Long],
       chunkIndices: Seq[Array[Long]]
@@ -311,12 +388,13 @@ class DatasetArray(
     chunkIndices match {
       case chunkIndex :: Nil =>
         val offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, globalOffset)
+        shortcutPreservesByteOrder &&
         isZeroOffset(offsetInChunk) &&
-        isBufferShapeEqualChunkShape(bufferShape)
+        util.Arrays.equals(bufferShape, chunkShapeAtIndex(chunkIndex))
       case _ => false
     }
 
-  private def partialCopyingIsNotNeededForWkOrder(
+  private def partialCopyIsNotNeededForWkOrder(
       bufferShape: Array[Int],
       globalOffset: Array[Int],
       chunkIndices: Seq[Array[Long]]
@@ -324,15 +402,14 @@ class DatasetArray(
     chunkIndices.headOption match {
       case Some(chunkIndex) =>
         val offsetInChunk = computeOffsetInChunk(chunkIndex, globalOffset)
+        shortcutPreservesByteOrder &&
         header.order == ArrayOrder.F &&
         isZeroOffset(offsetInChunk) &&
-        isBufferShapeEqualChunkShape(bufferShape) &&
-        axisOrder == AxisOrder.asCxyzFromRank(rank)
+        axisOrder == AxisOrder.asCxyzFromRank(rank) &&
+        // Must come after the axis order check: wk and physical order coincide only for cxyz
+        util.Arrays.equals(bufferShape, chunkShapeAtIndex(chunkIndex))
       case _ => false
     }
-
-  private def isBufferShapeEqualChunkShape(bufferShape: Array[Int]): Boolean =
-    util.Arrays.equals(bufferShape, chunkShape)
 
   private def isZeroOffset(offset: Array[Int]): Boolean =
     offset.forall(_ == 0)
@@ -355,9 +432,9 @@ class DatasetArray(
 }
 
 object DatasetArray {
-  private val chunkSizeLimitBytes: Int = 300 * 1024 * 1024
+  private val chunkSizeLimitBytes: Int = Compressor.maxDecompressedBytes
 
-  def assertChunkSizeLimit(bytesPerChunk: Int)(implicit ec: ExecutionContext): Fox[Unit] =
+  def assertChunkSizeLimit(bytesPerChunk: Long)(implicit ec: ExecutionContext): Fox[Unit] =
     Fox.fromBool(
       bytesPerChunk <= chunkSizeLimitBytes
     ) ?~> f"Array chunk size exceeds limit of $chunkSizeLimitBytes, got $bytesPerChunk"

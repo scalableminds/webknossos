@@ -1,3 +1,4 @@
+import ErrorHandling from "libs/error_handling";
 import { noop } from "lodash-es";
 import { applyMiddleware, createStore } from "redux";
 import createSagaMiddleware from "redux-saga";
@@ -10,9 +11,10 @@ import {
   borrowedContext,
   createOperationContext,
   getOrCreateOperationContext,
+  watchForLongRunningOperations,
 } from "viewer/model/sagas/operation_context_saga";
 import { combinedReducer, type OperationContextState, type WebknossosState } from "viewer/store";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Minimal store for operation context tests — only handles the four operation context
 // action types. Predicates in these tests don't access other WK state slices.
@@ -348,5 +350,104 @@ describe("operation_context_saga", () => {
 
     await sagaMiddleware.run(op).toPromise();
     expect(log).toEqual(["id: FLOODFILL", "ran"]);
+  });
+
+  describe("watchForLongRunningOperations", () => {
+    const THRESHOLD_MS = 30;
+
+    beforeEach(() => {
+      vi.mocked(ErrorHandling.notify).mockClear();
+    });
+
+    it("reports an operation that runs longer than the threshold (once)", async () => {
+      const { sagaMiddleware } = makeTestStore();
+      sagaMiddleware.run(watchForLongRunningOperations, THRESHOLD_MS);
+
+      function* op() {
+        const ctx = yield* createOperationContext({
+          id: "PROOFREADING",
+          description: "Proofreading in progress",
+        });
+        yield* ctx.execute(function* () {
+          yield delay(3 * THRESHOLD_MS);
+        });
+      }
+
+      await sagaMiddleware.run(op).toPromise();
+
+      expect(ErrorHandling.notify).toHaveBeenCalledTimes(1);
+      const [error, params, severity] = vi.mocked(ErrorHandling.notify).mock.calls[0];
+      expect((error as Error).message).toBe(
+        `Operation "PROOFREADING" has been running for more than ${THRESHOLD_MS / 1000} seconds.`,
+      );
+      expect(params).toMatchObject({
+        operationId: "PROOFREADING",
+        description: "Proofreading in progress",
+        activeOperations: [{ id: "PROOFREADING", description: "Proofreading in progress" }],
+      });
+      expect(severity).toBe("warning");
+    });
+
+    it("reports an operation that blocks the thread longer than the threshold", async () => {
+      const { sagaMiddleware } = makeTestStore();
+      sagaMiddleware.run(watchForLongRunningOperations, THRESHOLD_MS);
+
+      // Simulate a blocked thread: the clock advances while the operation runs, but the
+      // timeout of the watchdog cannot fire before the operation is unregistered.
+      let now = 1_000_000;
+      const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => now);
+
+      function* op() {
+        const ctx = yield* createOperationContext({ id: "PROOFREADING" });
+        yield* ctx.execute(function* () {
+          now += 2 * THRESHOLD_MS;
+          yield* call(noop);
+        });
+      }
+
+      try {
+        await sagaMiddleware.run(op).toPromise();
+      } finally {
+        dateNowSpy.mockRestore();
+      }
+
+      expect(ErrorHandling.notify).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not report operations that finish in time", async () => {
+      const { sagaMiddleware } = makeTestStore();
+      sagaMiddleware.run(watchForLongRunningOperations, THRESHOLD_MS);
+
+      function* op() {
+        const ctx = yield* createOperationContext({ id: "FLOODFILL" });
+        yield* ctx.execute(function* () {
+          yield delay(5);
+        });
+      }
+
+      await sagaMiddleware.run(op).toPromise();
+      // Wait longer than the threshold to ensure that no (late) report is made.
+      await new Promise((resolve) => setTimeout(resolve, 2 * THRESHOLD_MS));
+
+      expect(ErrorHandling.notify).not.toHaveBeenCalled();
+    });
+
+    it("tracks each registration of an operation separately", async () => {
+      const { sagaMiddleware } = makeTestStore();
+      sagaMiddleware.run(watchForLongRunningOperations, THRESHOLD_MS);
+
+      function* op(durationMs: number) {
+        const ctx = yield* createOperationContext({ id: "FLOODFILL" });
+        yield* ctx.execute(function* () {
+          yield delay(durationMs);
+        });
+      }
+
+      // The first run finishes in time, the second one is too slow.
+      await sagaMiddleware.run(op, 5).toPromise();
+      await sagaMiddleware.run(op, 3 * THRESHOLD_MS).toPromise();
+
+      expect(ErrorHandling.notify).toHaveBeenCalledTimes(1);
+    });
   });
 });

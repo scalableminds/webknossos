@@ -156,6 +156,7 @@ const defaultState: WebknossosState = {
     folderId: "dummy-folder-id",
     isUnreported: false,
     created: 123,
+    thumbnailCacheVersion: 0,
     dataSource: {
       dataLayers: [],
       scale: { factor: [5, 5, 5], unit: UnitLong.nm },
@@ -297,7 +298,7 @@ const defaultState: WebknossosState = {
       right: false,
       left: false,
     },
-    theme: getSystemColorTheme(),
+    systemTheme: getSystemColorTheme(),
     isWkInitialized: false,
     isUiReady: false,
     quickSelectState: "inactive",

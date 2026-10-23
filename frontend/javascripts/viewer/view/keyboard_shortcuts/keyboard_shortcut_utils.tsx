@@ -12,7 +12,7 @@ import { flatten, uniq } from "lodash-es";
 import { isMac } from "viewer/constants";
 import type { AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Store } from "viewer/singletons";
-import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
+import { Keycap } from "../components/keycap";
 import { displayKeyName, isKeyboardLayoutApiAvailable } from "./keyboard_layout_utils";
 import {
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
@@ -119,40 +119,41 @@ export function comparableKeySequenceToKeystrokesComboStr(
 
 export function keySequenceToUiElements(
   keySequence: KeySequence,
-  // Renders a "fancier" version of the combo chain. Currently only used in the info tab.
-  useHighlightedIcon: boolean,
+  // Renders the combo chain as keycaps with muted separators. Currently only used in the info tab.
+  useKeycaps: boolean,
   keyPrefix: string = "",
   unmodifiedLayoutMap: UnmodifiedLayoutMap,
 ): React.ReactNode[] {
   const uiElements: React.ReactNode[] = [];
+  const renderSeparator = (key: string, separator: string) =>
+    useKeycaps ? (
+      <span key={key} className="info-tab-shortcut-connector">
+        {separator}
+      </span>
+    ) : (
+      <Text key={key}>{separator}</Text>
+    );
+
   keySequence.forEach((keyCombination, outerIndex) => {
     sortKeyCombination(keyCombination).forEach((key, innerIndex) => {
-      if (useHighlightedIcon) {
+      const elementKey = `${keyPrefix}${outerIndex}-${innerIndex}`;
+      if (useKeycaps) {
         uiElements.push(
-          <KeyboardKeyIcon
-            key={`${keyPrefix}${outerIndex}-${innerIndex}`}
-            className="keyboard-key-icon"
-          >
-            {keyToUiElement(key, unmodifiedLayoutMap)}
-          </KeyboardKeyIcon>,
+          <Keycap key={elementKey}>{keyToUiElement(key, unmodifiedLayoutMap)}</Keycap>,
         );
       } else {
         uiElements.push(
-          <Text
-            key={`${keyPrefix}${outerIndex}-${innerIndex}`}
-            keyboard
-            style={{ whiteSpace: "nowrap" }}
-          >
+          <Text key={elementKey} keyboard style={{ whiteSpace: "nowrap" }}>
             {keyToUiElement(key, unmodifiedLayoutMap)}
           </Text>,
         );
       }
       if (innerIndex < keyCombination.length - 1) {
-        uiElements.push(<Text key={`${keyPrefix}${outerIndex}-sep${innerIndex}`}>+</Text>);
+        uiElements.push(renderSeparator(`${keyPrefix}${outerIndex}-sep${innerIndex}`, "+"));
       }
     });
     if (outerIndex < keySequence.length - 1) {
-      uiElements.push(<Text key={`${keyPrefix}${outerIndex}-chain`}>&gt;</Text>);
+      uiElements.push(renderSeparator(`${keyPrefix}${outerIndex}-chain`, ">"));
     }
   });
   return uiElements;

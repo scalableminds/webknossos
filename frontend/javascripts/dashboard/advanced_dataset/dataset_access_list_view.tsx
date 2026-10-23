@@ -5,23 +5,23 @@ import { handleGenericError } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";
 import type React from "react";
 import { useState } from "react";
-import type { APIDataset, APIUser } from "types/api_types";
+import type { APIMaybeUnimportedDataset, APIUser } from "types/api_types";
 
 type Props = {
-  dataset: APIDataset;
+  dataset: APIMaybeUnimportedDataset;
 };
 
 const DatasetAccessListView = ({ dataset }: Props) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const datasetUsers = useFetch(
-    () => {
+    async () => {
       try {
         setIsLoading(true);
-        return getDatasetAccessList(dataset);
+        return await getDatasetAccessList(dataset);
       } catch (error) {
         handleGenericError(error as Error);
-        return Promise.resolve([]);
+        return [];
       } finally {
         setIsLoading(false);
       }

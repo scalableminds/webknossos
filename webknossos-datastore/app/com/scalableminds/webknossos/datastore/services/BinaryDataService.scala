@@ -11,7 +11,7 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, LayerCategory}
-import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
+import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataReadInstruction, DataServiceDataRequest}
 import com.typesafe.scalalogging.LazyLogging
 import ucar.ma2.Array as MultiArray
 import Box.tryo
@@ -36,10 +36,13 @@ class BinaryDataService(
     AlfuCache(maxCapacity = 5000)
 
   def handleDataRequest(request: DataServiceDataRequest)(using tc: TokenContext): Fox[Array[Byte]] = {
-    val bucketQueue = request.cuboid.allBucketsInCuboid
+    // Only enumerate buckets after validation, as invalid dimensions could produce a huge bucket list
+    lazy val bucketQueue = request.cuboid.allBucketsInCuboid
 
     if (!request.cuboid.hasValidDimensions) {
-      Fox.failure("Invalid cuboid dimensions (must be > 0 and <= 512).")
+      Fox.failure(
+        s"Invalid cuboid dimensions (each must be > 0 and <= ${Cuboid.maxAxisLength}, volume must be <= 512³)."
+      )
     } else if (request.cuboid.isSingleBucket(DataLayer.bucketLength)) {
       bucketQueue.headOption.toFox.flatMap { bucket =>
         handleBucketRequest(request, bucket.copy(additionalCoordinates = request.settings.additionalCoordinates))
@@ -132,9 +135,18 @@ class BinaryDataService(
   private def clipToLayerBoundingBox(request: DataServiceDataRequest)(inputArray: Array[Byte]): Box[Array[Byte]] = {
     val bytesPerElement = request.dataLayer.bytesPerElement
     val requestBboxInMag = request.cuboid.toBoundingBoxInMag
-    val layerBboxInMag =
-      request.dataLayer.boundingBox / request.mag // Note that this div is implemented to round to the bigger bbox so we don’t lose voxels inside.
-    val intersectionOpt = requestBboxInMag.intersection(layerBboxInMag).map(_.move(-requestBboxInMag.topLeft))
+    // Note that this div is implemented to round to the bigger bbox so we don’t lose voxels inside.
+    val layerBboxInMag = request.dataLayer.boundingBox / request.mag
+    val bboxToClipToInMag =
+      if (request.isBatchedAdditionalCoordinateRequest)
+        // The request uses the output z axis for the batched additional axis.
+        // Skip clipping for the dataset’s real z axis.
+        layerBboxInMag.copy(
+          topLeft = layerBboxInMag.topLeft.copy(z = requestBboxInMag.topLeft.z),
+          depth = requestBboxInMag.depth
+        )
+      else layerBboxInMag
+    val intersectionOpt = requestBboxInMag.intersection(bboxToClipToInMag).map(_.move(-requestBboxInMag.topLeft))
     val outputArray = new Array[Byte](inputArray.length)
     intersectionOpt.foreach { intersection =>
       for {
@@ -231,7 +243,7 @@ class BinaryDataService(
     val cuboid = request.cuboid
 
     val resultShape = Vec3Int(cuboid.width, cuboid.height, cuboid.depth)
-    val result = new Array[Byte](cuboid.volume * bytesPerElement)
+    val result = new Array[Byte](Math.toIntExact(cuboid.volume * bytesPerElement))
     val bucketLength = DataLayer.bucketLength
 
     rs.reverse.foreach { case (bucket, data) =>

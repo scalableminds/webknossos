@@ -22,6 +22,7 @@ import {
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
+import features from "features";
 import Markdown from "libs/markdown_adapter";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -184,7 +185,7 @@ const renderActionsForModel = (
   return (
     <Col>
       {trainingJobState === "SUCCESS" ? <Row>{organizationSharingButton}</Row> : null}
-      {voxelyticsWorkflowHash != null ? (
+      {voxelyticsWorkflowHash != null && features().voxelyticsEnabled ? (
         <Row>
           <Link to={`/workflows/${voxelyticsWorkflowHash}`}>
             <LinkButton icon={<FileTextOutlined />}>Voxelytics Report</LinkButton>
@@ -268,11 +269,12 @@ function EditModelSharedOrganizationsModal({
           placeholder="Please select"
           onChange={handleChange}
           options={options}
-          filterOption={(input, option) =>
-            option != null &&
-            (option.label.toLowerCase().includes(input.toLowerCase()) ||
-              option.value.toLowerCase().includes(input.toLowerCase()))
-          }
+          showSearch={{
+            filterOption: (input, option) =>
+              option != null &&
+              (option.label.toLowerCase().includes(input.toLowerCase()) ||
+                option.value.toLowerCase().includes(input.toLowerCase())),
+          }}
           value={selectedOrganizationIds}
         />
       </Flex>

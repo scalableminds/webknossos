@@ -1,4 +1,10 @@
 import { Notifier } from "@airbrake/browser";
+import {
+  getPrefixedErrorMessage,
+  moveOriginalErrorToNoticeErrors,
+  ORIGINAL_ERROR_PARAM,
+} from "libs/airbrake_notice_helpers";
+import { setAssertionReporter } from "libs/assertion";
 import Toast from "libs/toast";
 import window, { document, location } from "libs/window";
 import pick from "lodash-es/pick";
@@ -94,17 +100,6 @@ function anyToError(maybeError: any): Error {
   return maybeError instanceof Error ? maybeError : new Error(maybeError);
 }
 
-function getPrefixedErrorMessage(
-  prefix: string,
-  maybeError: unknown,
-): { prefixedMessage: string; fullMessage: string } {
-  const fullMessage =
-    maybeError instanceof Error ? maybeError.toString() : JSON.stringify(maybeError);
-  const prefixedMessage = prefix + fullMessage.slice(0, 80);
-
-  return { prefixedMessage, fullMessage };
-}
-
 class ErrorHandling {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'throwAssertions' has no initializer and ... Remove this comment to see the full error message
   throwAssertions: boolean;
@@ -151,6 +146,7 @@ class ErrorHandling {
 
       return notice;
     });
+    this.airbrake.addFilter(moveOriginalErrorToNoticeErrors);
     // Do not report more than MAX_NUM_ERRORS to airbrake
     this.airbrake.addFilter((notice) => {
       this.numberOfErrors++;
@@ -251,14 +247,23 @@ class ErrorHandling {
     });
   }
 
-  notifyWithPrefix(error: unknown, prefix: string, optParams: Record<string, any> = {}) {
+  notifyWithPrefix(
+    error: unknown,
+    prefix: string,
+    optParams: Record<string, any> = {},
+    severity: "error" | "warning" = "error",
+  ) {
     const wrappedError = anyToError(error);
     const { prefixedMessage, fullMessage } = getPrefixedErrorMessage(prefix, error);
     mutateErrorMessage(wrappedError, prefixedMessage);
-    this.notify(wrappedError, {
-      originalError: fullMessage,
-      ...optParams,
-    });
+    this.notify(
+      wrappedError,
+      {
+        [ORIGINAL_ERROR_PARAM]: fullMessage,
+        ...optParams,
+      },
+      severity,
+    );
   }
 
   assertExtendContext(additionalContext: Record<string, any>) {
@@ -344,5 +349,11 @@ class ErrorHandling {
 }
 
 const errorHandling: ErrorHandling = new ErrorHandling();
+
+// Let worker-safe modules (which cannot import this one, see libs/assertion) report assertion
+// violations through the full main-thread path: toast, Airbrake and throwAssertions.
+setAssertionReporter((message, assertionContext) =>
+  errorHandling.assert(false, message, assertionContext),
+);
 
 export default errorHandling;

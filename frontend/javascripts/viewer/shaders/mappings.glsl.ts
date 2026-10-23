@@ -24,7 +24,8 @@ export const attemptMappingLookUp: ShaderModule = {
     ivec2 attemptMappingLookUp64(uint high, uint low, uint seed) {
       highp uint h0 = hashCombine(seed, high);
       h0 = hashCombine(h0, low);
-      h0 = h0 % MAPPING_CUCKOO_ENTRY_CAPACITY;
+      // See getDiminishedEntryCapacity() for an explanation about the -1
+      h0 = h0 % (MAPPING_CUCKOO_ENTRY_CAPACITY - 1u);
       h0 = uint(h0 * MAPPING_CUCKOO_ELEMENTS_PER_ENTRY / MAPPING_CUCKOO_ELEMENTS_PER_TEXEL);
       highp uint x = h0 % MAPPING_CUCKOO_TWIDTH;
       highp uint y = h0 / MAPPING_CUCKOO_TWIDTH;

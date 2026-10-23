@@ -6,12 +6,12 @@ import {
   ShareAltOutlined,
   VideoCameraOutlined,
 } from "@ant-design/icons";
-import { ConfigProvider, Dropdown, type MenuProps } from "antd";
+import { Dropdown, type MenuProps } from "antd";
 import type { MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { useWkSelector } from "libs/react_hooks";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
-import { getAntdTheme, getThemeFromUser } from "theme";
+import { UserThemeConfigProvider } from "theme_provider";
 import {
   setKeyboardShortcutConfigModalVisibilityAction,
   setPythonClientModalVisibilityAction,
@@ -77,7 +77,6 @@ export const viewDatasetMenu = [
 
 export default function ViewDatasetActionsView(props: Props) {
   const dispatch = useDispatch();
-  const activeUser = useWkSelector((state) => state.activeUser);
   const isShareModalOpen = useWkSelector((state) => state.uiInformation.showShareModal);
   const showKeyboardShortcutConfigModal = useWkSelector(
     (state) => state.uiInformation.showKeyboardShortcutConfigModal,
@@ -127,16 +126,14 @@ export default function ViewDatasetActionsView(props: Props) {
     />
   );
 
-  const userTheme = getThemeFromUser(activeUser);
-
   return (
     <div>
-      <ConfigProvider theme={getAntdTheme(userTheme)}>
+      <UserThemeConfigProvider>
         {shareDatasetModal}
         {renderAnimationModal}
         {keyboardShortcutsConfigModal}
         {pythonClientModal}
-      </ConfigProvider>
+      </UserThemeConfigProvider>
       <Dropdown menu={overlayMenu} trigger={["click"]}>
         <ButtonComponent
           style={{

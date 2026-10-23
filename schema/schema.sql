@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(183);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(187);
 COMMIT TRANSACTION;
 
 
@@ -133,6 +133,7 @@ CREATE TABLE webknossos.datasets(
   rootPath TEXT,
   rootRealPath TEXT,
   mirrorPath TEXT,
+  thumbnailCacheVersion INT NOT NULL DEFAULT 0,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (directoryName, _organization),
@@ -220,7 +221,8 @@ CREATE TABLE webknossos.dataset_mags(
 CREATE TABLE webknossos.dataset_lastUsedTimes(
   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
-  lastUsedTime TIMESTAMPTZ NOT NULL
+  lastUsedTime TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (_dataset, _user)
 );
 
 CREATE TABLE webknossos.dataset_thumbnails(
@@ -248,7 +250,6 @@ CREATE TABLE webknossos.dataStores(
   url TEXT UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
   publicUrl TEXT UNIQUE NOT NULL CHECK (publicUrl ~* '^https?://[a-z0-9\.]+.*$'),
   key TEXT NOT NULL,
-  isScratch BOOLEAN NOT NULL DEFAULT FALSE,
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   allowsUpload BOOLEAN NOT NULL DEFAULT TRUE,
   allowsUploadToPaths BOOLEAN NOT NULL DEFAULT TRUE,
@@ -938,6 +939,8 @@ CREATE INDEX ON webknossos.tokens(value);
 CREATE INDEX ON webknossos.tokens(_user, tokenType);
 CREATE INDEX ON webknossos.tokens(expirationDateTime);
 CREATE INDEX ON webknossos.dataset_layer_attachments(path);
+CREATE INDEX ON webknossos.dataset_layer_coordinateTransformations(_dataset, layerName);
+CREATE INDEX ON webknossos.dataset_layer_additionalAxes(_dataset, layerName);
 CREATE INDEX ON webknossos.organization_usedStorage_mags(_organization);
 CREATE INDEX ON webknossos.organization_usedStorage_attachments(_organization);
 CREATE INDEX ON webknossos.user_team_roles(_team);

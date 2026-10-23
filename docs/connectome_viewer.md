@@ -20,22 +20,24 @@ The Synapse and Connectome viewer displays the incoming and outgoing synaptic co
 
 The viewer is available from the `Connectome` tab in the right-hand side panel. If your dataset is prepared with a matching connectome file (see below), you can look up the synapses for any segment.
 
-Use the input field at the top of the Connectome Viewer to enter one or several segment IDs. Alternatively, right-click on any segment in the XYZ viewports and select 'Import Agglomerate and Synapses'.
+Use the input field at the top of the Connectome Viewer to enter one or several segment IDs. Alternatively, right-click on any segment in the XYZ viewports and select 'Import Synapses'.
 
 Several segments/cells can be loaded at the same time to highlight their matching synaptic partners.
 
 In addition to loading the synapse locations and visualizing them as nodes, WEBKNOSSOS will also load the agglomerate tree representation of the selected segment(s) for context.
 
 ## Configuration
-For WEBKNOSSOS to detect and load your Connectome file, you need to place it into a `connectome` subdirectory for a respective segmentation layer, e.g.:
+For WEBKNOSSOS to detect and load your HDF5 connectome file, you need to place it into a `connectomes` subdirectory for a respective segmentation layer, e.g.:
 
 ```
 my_dataset                          # Dataset root
 ├─ segmentation                     # Dataset layer name (e.g., color, segmentation)
-│  ├─ connectome                    # Parent directory for connectome files
+│  ├─ connectomes                   # Parent directory for connectome files
 │  │  ├─ my_connectome.hdf5         # one or more connectome files
 │  │  ├─ different_connectome.hdf5  # one agglomerate file per mapping
 ```
+
+Connectome files in the zarr3-based format or on remote object storage are not detected automatically. List them in the `attachments` of the segmentation layer in `datasource-properties.json` instead.
 
 
 ## Connectome File Format

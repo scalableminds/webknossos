@@ -1,0 +1,44 @@
+/**
+ * The simplest thing that satisfies `BackendLike` (core/voxel_cube_interfaces.ts): an in-memory
+ * store of seeded buckets. Everything not explicitly seeded reads as empty.
+ */
+
+import {
+  BUCKET_VOXEL_COUNT,
+  type BucketAddress,
+  type BucketKey,
+  bucketKey,
+  type SegmentBucketData,
+  type SegmentId,
+  type Vector3,
+  voxelIndexOf,
+} from "viewer/model/volumetracing/core/volume_annotation_types";
+import type { BackendLike } from "viewer/model/volumetracing/core/voxel_cube_interfaces";
+
+export class FakeBackend implements BackendLike {
+  private readonly seeded = new Map<BucketKey, SegmentBucketData>();
+  version = 0;
+  readonly fetched: BucketAddress[] = [];
+
+  /** Pre-populate a bucket with data the frontend will later fetch. */
+  seed(address: BucketAddress, data: SegmentBucketData): void {
+    this.seeded.set(bucketKey(address), data);
+  }
+
+  seedVoxel(address: BucketAddress, offset: Vector3, value: SegmentId): void {
+    const key = bucketKey(address);
+    let data = this.seeded.get(key);
+    if (data == null) {
+      data = new BigUint64Array(BUCKET_VOXEL_COUNT);
+      this.seeded.set(key, data);
+    }
+    data[voxelIndexOf(offset[0], offset[1], offset[2])] = value;
+  }
+
+  async fetchBucket(address: BucketAddress): Promise<{ data: SegmentBucketData; version: number }> {
+    this.fetched.push(address);
+    const seeded = this.seeded.get(bucketKey(address));
+    const data = seeded != null ? seeded.slice() : new BigUint64Array(BUCKET_VOXEL_COUNT);
+    return { data, version: this.version };
+  }
+}

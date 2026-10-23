@@ -26,12 +26,7 @@ import {
   throttle,
 } from "typed-redux-saga";
 import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
-import {
-  NumberToOrthoView,
-  OrthoBaseRotations,
-  TreeTypeEnum,
-  type Vector3,
-} from "viewer/constants";
+import { NumberToOrthoView, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import {
   isConcurrentCollaborationMode,
@@ -92,6 +87,7 @@ import {
   updateTreeGroupsExpandedState,
   updateTreeVisibility,
 } from "viewer/model/sagas/volume/update_actions";
+import { OrthoBaseRotations } from "viewer/ortho_base_rotations";
 import { api, Model } from "viewer/singletons";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
@@ -265,7 +261,7 @@ function* watchTreeNames(): Saga<void> {
   // rename trees with an empty/default tree name
   for (const tree of enforceSkeletonTracing(state.annotation).trees.values()) {
     if (tree.name === "") {
-      const newName = generateTreeName(state, tree.timestamp, tree.treeId);
+      const newName = generateTreeName(tree.treeId);
       yield* put(setTreeNameAction(newName, tree.treeId));
     }
   }

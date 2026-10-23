@@ -65,7 +65,8 @@ export class CuckooTableUint64 extends AbstractCuckooTable<Key, Value, Entry> {
     let state = this._hashCombine(seed, key[0]);
     state = this._hashCombine(state, key[1]);
 
-    return state % this.entryCapacity;
+    // See getDiminishedEntryCapacity() for why we don't use this.entryCapacity here.
+    return state % this.getDiminishedEntryCapacity();
   }
 
   setNumberLike(key: NumberLike, value: NumberLike) {

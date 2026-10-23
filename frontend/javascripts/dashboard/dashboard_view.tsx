@@ -4,12 +4,13 @@ import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/or
 import { getUser, updateNovelUserExperienceInfos } from "admin/rest_api";
 import { WhatsNextHeader } from "admin/welcome_ui";
 import { Spin, Tabs, Typography } from "antd";
+import AnnotationsView from "dashboard/annotations_view";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
-import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import { PublicationViewWithHeader } from "dashboard/publication_view";
 import features from "features";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
+import { getUrlParamsObjectFromString } from "libs/utils";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import invert from "lodash-es/invert";
 import type React from "react";
@@ -53,7 +54,7 @@ export const urlTokenToTabKeyMap = {
   publications: "publications",
   datasets: "datasets",
   tasks: "tasks",
-  annotations: "explorativeAnnotations",
+  annotations: "annotations",
 };
 
 function TabBarExtraContent() {
@@ -83,7 +84,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     let defaultTabKey = "datasets";
 
     if (this.props.isAdminView) {
-      defaultTabKey = "explorativeAnnotations";
+      defaultTabKey = "annotations";
     } else if (features().isWkorgInstance) {
       defaultTabKey = "publications";
     }
@@ -143,13 +144,19 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     this.props.navigate(`/annotations/${response.annotation.id}`);
   };
 
+  clearDatasetNameFilterFromUrl = () => {
+    const tabKeyToURLMap = invert(urlTokenToTabKeyMap);
+    const url = tabKeyToURLMap.annotations;
+    this.props.navigate(`/dashboard/${url}`, { replace: false });
+  };
+
   getValidTabKeys() {
     const { isAdminView } = this.props;
     return {
       publications: features().isWkorgInstance,
       datasets: !isAdminView,
       tasks: true,
-      explorativeAnnotations: true,
+      annotations: true,
     } as { [key: string]: boolean };
   }
 
@@ -157,17 +164,6 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     if (this.props.activeUser) {
       const validTabKeys = this.getValidTabKeys();
       const tabs = [
-        validTabKeys.publications
-          ? {
-              label: "Featured Publications",
-              key: "publications",
-              children: (
-                <RenderingTabContext.Provider value="publications">
-                  <PublicationViewWithHeader />
-                </RenderingTabContext.Provider>
-              ),
-            }
-          : null,
         validTabKeys.datasets
           ? {
               label: <span>Datasets</span>,
@@ -181,13 +177,17 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
           : null,
         {
           label: "Annotations",
-          key: "explorativeAnnotations",
+          key: "annotations",
           children: (
-            <RenderingTabContext.Provider value="explorativeAnnotations">
-              <ExplorativeAnnotationsView
+            <RenderingTabContext.Provider value="annotations">
+              <AnnotationsView
                 isAdminView={this.props.isAdminView}
                 userId={this.props.userId}
                 activeUser={this.props.activeUser}
+                datasetNameFilter={
+                  getUrlParamsObjectFromString(this.props.location.search).dataset || null
+                }
+                onDatasetNameFilterCleared={this.clearDatasetNameFilterFromUrl}
               />
             </RenderingTabContext.Provider>
           ),
@@ -204,6 +204,17 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
             </RenderingTabContext.Provider>
           ),
         },
+        validTabKeys.publications
+          ? {
+              label: "Featured Publications",
+              key: "publications",
+              children: (
+                <RenderingTabContext.Provider value="publications">
+                  <PublicationViewWithHeader />
+                </RenderingTabContext.Provider>
+              ),
+            }
+          : null,
       ];
 
       return tabs.filter((el) => el != null) as Tab[];

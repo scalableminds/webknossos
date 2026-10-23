@@ -90,12 +90,16 @@ describe("Annotation Tool Saga", () => {
     cycleTool();
     expect(SkeletonToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
+    // Brush
     expect(DrawToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
-    expect(EraseToolController.onToolDeselected).toHaveBeenCalledTimes(1);
-    cycleTool();
+    // Trace
     expect(DrawToolController.onToolDeselected).toHaveBeenCalledTimes(2);
     cycleTool();
+    // Erase Brush
+    expect(EraseToolController.onToolDeselected).toHaveBeenCalledTimes(1);
+    cycleTool();
+    // Erase Trace
     expect(EraseToolController.onToolDeselected).toHaveBeenCalledTimes(2);
     cycleTool();
     expect(FillCellToolController.onToolDeselected).toHaveBeenCalledTimes(1);

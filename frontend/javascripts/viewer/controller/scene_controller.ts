@@ -26,7 +26,6 @@ import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { OrthoView, OrthoViewMap, OrthoViewWithoutTDMap, Vector3 } from "viewer/constants";
 import constants, {
-  OrthoBaseRotations,
   OrthoViews,
   OrthoViewValuesWithoutTDView,
   TDViewDisplayModeEnum,
@@ -86,6 +85,7 @@ import {
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
+import { OrthoBaseRotations } from "viewer/ortho_base_rotations";
 import { Model } from "viewer/singletons";
 import type {
   MipLayerConfig,
@@ -929,6 +929,15 @@ class SceneController {
   }
 
   async destroy(): Promise<void> {
+    // Stop listening to the store synchronously, before the await below. The caller resets the
+    // store right after calling destroy(). Listeners that are still active would then rebuild
+    // the scene objects from the empty default state.
+    for (const fn of this.storePropertyUnsubscribers) {
+      fn();
+    }
+    this.storePropertyUnsubscribers = [];
+    this.debouncedUpdateMipVolumes.cancel();
+
     // See waitForPendingCompiles(); must happen before any disposal below, including
     // skeleton removal.
     await this.waitForPendingCompiles();
@@ -948,12 +957,6 @@ class SceneController {
       this.removeSkeleton(Number.parseInt(skeletonId, 10));
     }
 
-    for (const fn of this.storePropertyUnsubscribers) {
-      fn();
-    }
-    this.storePropertyUnsubscribers = [];
-
-    this.debouncedUpdateMipVolumes.cancel();
     for (const { volume } of this.mipVolumes.values()) {
       this.rootNode.remove(volume.mesh);
       volume.dispose();

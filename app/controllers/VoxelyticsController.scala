@@ -132,47 +132,47 @@ class VoxelyticsController @Inject() (
           workflowHash
         ) ?~> Msg.Voxelytics.workflowNotFound ~> NOT_FOUND
 
-        // Fetching all runs for this workflow or specified run
-        // If all runs are fetched, a combined version of the workflow report
-        // will be returned that contains the information of the most recent task runs
-        runs <- runIdOpt
-          .map(runId =>
-            voxelyticsDAO.findRuns(
-              request.identity,
-              Some(List(runId)),
-              Some(workflowHash),
-              conf.staleTimeout,
-              allowUnlisted = true
-            )
-          )
-          .getOrElse(
-            voxelyticsDAO.findRuns(request.identity, None, Some(workflowHash), conf.staleTimeout, allowUnlisted = true)
-          )
+        // Fetching all runs for this workflow. The full list is always returned (e.g. for the
+        // run selector), while the config/yaml below are scoped to the requested run (or, if
+        // none was requested, to the most recent run, yielding a combined report).
+        runs <- voxelyticsDAO.findRuns(
+          request.identity,
+          None,
+          Some(workflowHash),
+          conf.staleTimeout,
+          allowUnlisted = true
+        )
         _ <- Fox.fromBool(runs.nonEmpty) ?~> Msg.Voxelytics.runNotFound ~> NOT_FOUND
         sortedRuns = runs.sortBy(_.beginTime).reverse
         // All workflows have at least one run, because they are created at the same time
-        mostRecentRun <- sortedRuns.headOption.toFox ?~> Msg.Voxelytics.zeroRunWorkflow
+        selectedRun <- runIdOpt
+          .map(runId => sortedRuns.find(_.id == runId).toFox ?~> Msg.Voxelytics.runNotFound ~> NOT_FOUND)
+          .getOrElse(sortedRuns.headOption.toFox ?~> Msg.Voxelytics.zeroRunWorkflow)
 
-        // Fetch task runs for all runs
-        allTaskRuns <- voxelyticsDAO.findTaskRuns(sortedRuns.map(_.id), conf.staleTimeout)
-        combinedTaskRuns <- voxelyticsDAO.findCombinedTaskRuns(sortedRuns.map(_.id), conf.staleTimeout)
-
-        // Fetch artifact data for task runs
-        artifacts <- voxelyticsDAO.findArtifacts(request.identity, sortedRuns.map(_.id), conf.staleTimeout)
-
-        // Fetch task configs
-        tasks <- voxelyticsDAO.findTasks(mostRecentRun.id)
+        runIds = sortedRuns.map(_.id)
+        // These queries are independent of each other. Start them all before awaiting any, so that they run in parallel.
+        // Task runs for all runs
+        allTaskRunsFox = voxelyticsDAO.findTaskRuns(runIds, conf.staleTimeout)
+        combinedTaskRunsFox = voxelyticsDAO.findCombinedTaskRuns(runIds, conf.staleTimeout)
+        // Artifact data for task runs
+        artifactsFox = voxelyticsDAO.findArtifacts(request.identity, runIds, conf.staleTimeout)
+        // Task configs for the selected run
+        tasksFox = voxelyticsDAO.findTasks(selectedRun.id)
+        allTaskRuns <- allTaskRunsFox
+        combinedTaskRuns <- combinedTaskRunsFox
+        artifacts <- artifactsFox
+        tasks <- tasksFox
 
         // Assemble workflow report JSON
         result = Json.obj(
-          "config" -> voxelyticsService.workflowConfigPublicWrites(mostRecentRun.workflowConfig, tasks),
+          "config" -> voxelyticsService.workflowConfigPublicWrites(selectedRun.workflowConfig, tasks),
           "artifacts" -> voxelyticsService.artifactsPublicWrites(artifacts),
           "runs" -> sortedRuns,
           "tasks" -> voxelyticsService.taskRunsPublicWrites(combinedTaskRuns, allTaskRuns),
           "workflow" -> Json.obj(
             "name" -> workflow.name,
             "hash" -> workflowHash,
-            "yamlContent" -> mostRecentRun.workflowYamlContent
+            "yamlContent" -> selectedRun.workflowYamlContent
           )
         )
       } yield JsonOk(result)
@@ -306,8 +306,11 @@ class VoxelyticsController @Inject() (
     sil.SecuredAction.fox { implicit request =>
       for {
         _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
-        runName <- voxelyticsDAO.getRunNameById(runId, request.identity._organization)
-        _ <- voxelyticsService.checkAuth(runId, request.identity) ~> UNAUTHORIZED
+        // Same visibility as the other workflow read endpoints (allowUnlisted): all runs of the user's organization
+        runName <- voxelyticsDAO.getRunNameById(
+          runId,
+          request.identity._organization
+        ) ?~> Msg.Voxelytics.runNotFound ~> NOT_FOUND
         organization <- organizationDAO.findOne(request.identity._organization)
         logEntries <- lokiClient.queryLogsBatched(
           runName,

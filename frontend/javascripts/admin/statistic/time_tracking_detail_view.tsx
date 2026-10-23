@@ -8,7 +8,7 @@ import type { ReactElement } from "react";
 import { Fragment } from "react";
 import type { APITimeTrackingPerAnnotation } from "types/api_types";
 import type { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "viewer/constants";
-import { AnnotationStats } from "viewer/view/right_border_tabs/dataset_info_tab_view";
+import { AnnotationStats } from "viewer/view/right_border_tabs/info_tab/annotation_stats_section";
 
 type TimeTrackingDetailViewProps = {
   userId: string;
@@ -34,18 +34,14 @@ const renderRow = (
 
   for (const [project, loggedTimes] of Object.entries(groupedByProject)) {
     if (project === "null") {
-      // explorative annotations
+      // annotations (as opposed to tasks)
       const tableRows = loggedTimes.map((timeEntry, i) => (
         <Row key={`time_row_${i}`}>
           <Col span={ANNOTATION_OR_TASK_NAME_SPAN}>
             <a href={`annotations/${timeEntry.annotation}`}>Annotation: {timeEntry.annotation} </a>
           </Col>
           <Col span={STATISTICS_SPAN}>
-            <AnnotationStats
-              stats={timeEntry.annotationLayerStats}
-              asInfoBlock={false}
-              withMargin={false}
-            />
+            <AnnotationStats stats={timeEntry.annotationLayerStats} />
           </Col>
           <Col span={TIMESPAN_SPAN}>{formatMilliseconds(timeEntry.timeMillis)}</Col>
         </Row>
@@ -64,11 +60,7 @@ const renderRow = (
             <a href={`annotations/${timeEntry.annotation}`}>Task: {timeEntry.task}</a>
           </Col>
           <Col span={STATISTICS_SPAN}>
-            <AnnotationStats
-              stats={timeEntry.annotationLayerStats}
-              asInfoBlock={false}
-              withMargin={false}
-            />
+            <AnnotationStats stats={timeEntry.annotationLayerStats} />
           </Col>
           <Col span={TIMESPAN_SPAN}>{formatMilliseconds(timeEntry.timeMillis)}</Col>
         </Row>

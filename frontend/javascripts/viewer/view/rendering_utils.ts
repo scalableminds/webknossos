@@ -2,6 +2,7 @@ import logoScreenshot from "@images/logo-screenshot.svg";
 import { saveAs } from "file-saver";
 import importDynamic from "libs/import_dynamic";
 import { convertBufferToImage } from "libs/utils";
+import { getActiveTheme } from "theme";
 import {
   type OrthographicCamera,
   type PerspectiveCamera,
@@ -24,7 +25,7 @@ import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import Store from "viewer/store";
 
 const getBackgroundColor = (): number =>
-  Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;
+  getActiveTheme(Store.getState()) === "dark" ? 0x000000 : 0xffffff;
 
 // Shared with PlaneView.getActiveTDViewCamera so both places agree on which
 // camera is actually active for the TD viewport.
@@ -137,7 +138,10 @@ function getScreenshotLogoImage(): Promise<HTMLImageElement> {
 
 export type ScreenshotBlob = { name: string; blob: Blob };
 
-export async function captureScreenshots(prefix?: string): Promise<ScreenshotBlob[]> {
+export async function captureScreenshots(
+  prefix?: string,
+  onScreenshot?: (screenshot: ScreenshotBlob) => void,
+): Promise<ScreenshotBlob[]> {
   const { dataset, flycam, temporaryConfiguration, userConfiguration } = Store.getState();
   const { renderWatermark } = userConfiguration;
   const { viewMode } = temporaryConfiguration;
@@ -207,7 +211,9 @@ export async function captureScreenshots(prefix?: string): Promise<ScreenshotBlo
     );
     if (blob != null) {
       const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;
-      results.push({ name: `${baseName}__${planeDescriptor}.png`, blob });
+      const screenshot = { name: `${baseName}__${planeDescriptor}.png`, blob };
+      results.push(screenshot);
+      onScreenshot?.(screenshot);
     }
   }
 
@@ -219,10 +225,8 @@ export async function captureScreenshots(prefix?: string): Promise<ScreenshotBlo
 }
 
 export async function downloadScreenshot() {
-  const screenshots = await captureScreenshots();
-  for (const { name, blob } of screenshots) {
-    saveAs(blob, name);
-  }
+  // Save each screenshot after another with a delay as else Safari only downloads the last one. (See #10018)
+  await captureScreenshots(undefined, ({ name, blob }) => saveAs(blob, name));
 }
 
 export async function downloadScreenshotsAsZip(

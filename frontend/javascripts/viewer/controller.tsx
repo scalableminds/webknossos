@@ -180,8 +180,24 @@ class Controller extends PureComponent<PropsWithRouter, State> {
         }, 500);
 
         // The native event requires a truthy return value to show a generic message
+        if ("preventDefault" in args) {
+          return true;
+        }
         // The React Router blocker accepts a boolean
-        return "preventDefault" in args ? true : !confirm(messages["save.leave_page_unfinished"]);
+        const shouldLeave = confirm(messages["save.leave_page_unfinished"]);
+        if (shouldLeave) {
+          // See below for why the URL updater is stopped.
+          UrlManager.stopUrlUpdater();
+        }
+        return !shouldLeave;
+      }
+
+      if (!("preventDefault" in args)) {
+        // When navigating back or forward, React Router calls this function after the
+        // browser already switched to the target history entry. Stop updating the URL
+        // so that this entry isn't overwritten with the annotation URL by the following
+        // dispatch or any other store change before the view unmounts.
+        UrlManager.stopUrlUpdater();
       }
 
       // Only when the state is left with a clean state, we dispatched the

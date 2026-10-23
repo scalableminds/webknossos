@@ -4,7 +4,7 @@ import { IdentityTransform, type OrthoView } from "viewer/constants";
 import { combineCoordinateTransformations } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
-import { mapTransformedPlane as originalMapTransformedPlane } from "viewer/model/volumetracing/section_labeling";
+import { mapTransformedPlane as originalMapTransformedPlane } from "viewer/model/volumetracing/legacy/section_labeling";
 import { describe, expect, it } from "vitest";
 
 const mapTransformedPlane = (plane: OrthoView, transform: Transform) => {

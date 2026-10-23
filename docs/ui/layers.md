@@ -54,9 +54,11 @@ The live transform editor lets you interactively adjust the spatial alignment of
 
 The editor exposes three groups of controls, each with a slider, a numeric input, and a per-axis reset button:
 
-- **Translation** – shifts the layer along X, Y, or Z. The slider range is bounded by the dataset extent for each axis.
+- **Translation** – shifts the layer along X, Y, or Z. The slider is relative: its handle rests in the center, and dragging it changes the translation by up to about one viewport extent in either direction. On release, the handle snaps back to the center, so you can keep dragging to move further. Type a value into the numeric input to set an exact translation.
 - **Rotation** – rotates the layer around each axis independently (0 – 359.9°). Each rotation row also has a **flip** button that mirrors the layer along that axis. An axis that is currently flipped is highlighted by the flip button being shown in the primary color.
-- **Scaling** – uniform or non-uniform scale per axis. The displayed value is always positive; flip state (sign) is controlled via the rotation-row flip buttons.
+- **Scaling** – scales the layer per axis. The slider is relative as well and reaches from a tenth of the current size up to ten times it. A **lock** button next to each axis makes all locked axes scale together and keep their proportions. All axes are locked by default, so scaling is uniform unless you unlock an axis. The displayed value is always positive; flip state (sign) is controlled via the rotation-row flip buttons.
+
+Rotation and scaling are applied around the center of the layer, so a layer rotates and scales in place.
 
 Every per-axis reset button restores that single value to the **stored default** — the transform that is saved on the server for this layer.
 

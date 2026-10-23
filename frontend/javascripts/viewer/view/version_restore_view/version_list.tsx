@@ -1,0 +1,567 @@
+import VirtualList, { type ListRef } from "@rc-component/virtual-list";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  downloadAnnotation,
+  getAnnotationProto,
+  getNewestVersionForAnnotation,
+  getUpdateActionLog,
+} from "admin/rest_api";
+import { Button, List, Spin } from "antd";
+import dayjs from "dayjs";
+import { handleGenericError } from "libs/error_handling";
+import { useFetch } from "libs/react_helpers";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
+import { chunkIntoTimeWindows } from "libs/utils";
+import flattenDepth from "lodash-es/flattenDepth";
+import groupBy from "lodash-es/groupBy";
+import isEqual from "lodash-es/isEqual";
+import isString from "lodash-es/isString";
+import mapValues from "lodash-es/mapValues";
+import max from "lodash-es/max";
+import min from "lodash-es/min";
+import { useEffect, useMemo, useRef, useState } from "react";
+import AutoSizer from "react-virtualized-auto-sizer";
+import type { APIUpdateActionBatch } from "types/api_types";
+import {
+  getCreationTimestamp,
+  isConcurrentCollaborationMode,
+} from "viewer/model/accessors/annotation_accessor";
+import { setIsUpdatingAnnotationCurrentlyAllowedAction } from "viewer/model/actions/annotation_actions";
+import {
+  pushSaveQueueTransactionIsolated,
+  setVersionNumberAction,
+} from "viewer/model/actions/save_actions";
+import {
+  setIsRestoringVersionAction,
+  setVersionRestoreVisibilityAction,
+} from "viewer/model/actions/ui_actions";
+import {
+  revertToVersion,
+  type ServerUpdateAction,
+  serverCreateTracing,
+} from "viewer/model/sagas/volume/update_actions";
+import { api, Model } from "viewer/singletons";
+import type { StoreAnnotation } from "viewer/store";
+import Store from "viewer/store";
+import VersionEntryGroup, {
+  isActiveVersionInGroup,
+} from "viewer/view/version_restore_view/version_entry_group";
+import VersionPowerTools, {
+  VersionPowerToolsToggle,
+} from "viewer/view/version_restore_view/version_power_tools";
+
+// This used to be 5000 but we had logs where lots of UPDATE_BUCKET
+// update actions existed in one batch. The JSON payload exceeded a length
+// of 2**29 which led to an empty JSON string because of maximum string length
+// limits by the node engine.
+// Therefore, the value was halved for now.
+const ENTRIES_PER_PAGE = 2500;
+
+type Props = {
+  initialAllowUpdate: boolean;
+};
+
+// The string key is a date string
+// The value is an array of chunked APIUpdateActionBatches
+type GroupedAndChunkedVersions = Record<string, Array<Array<APIUpdateActionBatch>>>;
+
+const VERSION_LIST_PLACEHOLDER = {
+  emptyText: "No versions created yet.",
+};
+
+async function previewVersion(version?: number) {
+  const state = Store.getState();
+  const { controlMode } = state.temporaryConfiguration;
+  const { annotationId, tracingStore, annotationLayers } = state.annotation;
+
+  const annotationProto = await getAnnotationProto(tracingStore.url, annotationId, version);
+
+  if (
+    !isEqual(
+      annotationProto.annotationLayers.map((l) => l.tracingId),
+      annotationLayers.map((l) => l.tracingId),
+    )
+  ) {
+    const params = new URLSearchParams();
+    if (version != null) {
+      params.append("showVersionRestore", "true");
+      params.append("version", `${version}`);
+    }
+    location.href = `${location.origin}/annotations/${annotationId}?${params}${location.hash}`;
+    return;
+  }
+
+  await api.tracing.restart(null, annotationId, controlMode, version, false, false);
+  Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
+  const segmentationLayersToReload = [];
+
+  segmentationLayersToReload.push(...Model.getSegmentationTracingLayers());
+
+  for (const segmentationLayer of segmentationLayersToReload) {
+    segmentationLayer.cube.removeAllBuckets();
+    segmentationLayer.layerRenderingManager.refresh();
+  }
+}
+
+async function handleRestoreVersion(
+  props: Props,
+  versions: APIUpdateActionBatch[],
+  version: number,
+) {
+  if (props.initialAllowUpdate) {
+    const newestVersion = max(versions.map((batch) => batch.version)) || 0;
+    Store.dispatch(setVersionNumberAction(newestVersion));
+    Store.dispatch(pushSaveQueueTransactionIsolated(revertToVersion(version)));
+    Store.dispatch(setIsRestoringVersionAction(true));
+    try {
+      await Model.ensureSavedState();
+    } finally {
+      Store.dispatch(setIsRestoringVersionAction(false));
+    }
+    if (isConcurrentCollaborationMode(Store.getState())) {
+      // Safety measure in live collab mode: Enforce everything is in sync with the backend via hard reload.
+      // The saving above might have caused a local rebasing which might have lead to an unexpected state.
+      window.location.reload();
+      return;
+    }
+    Store.dispatch(setVersionRestoreVisibilityAction(false));
+    const initialAllowUpdate = Store.getState().annotation.restrictions.allowUpdate;
+    Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(initialAllowUpdate));
+  } else {
+    const { annotationType, annotationId, volumes } = Store.getState().annotation;
+    const includesVolumeFallbackData = volumes.some((volume) => volume.fallbackLayer != null);
+    downloadAnnotation(annotationId, annotationType, includesVolumeFallbackData, version);
+  }
+}
+
+export const handleCloseRestoreView = async () => {
+  // This will load the newest version of both skeleton and volume tracings
+  await previewVersion();
+  Store.dispatch(setVersionRestoreVisibilityAction(false));
+  const initialAllowUpdate = Store.getState().annotation.restrictions.allowUpdate;
+  Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(initialAllowUpdate));
+};
+
+function getGroupedAndChunkedVersions(
+  versions: Array<APIUpdateActionBatch>,
+): GroupedAndChunkedVersions {
+  // This function first groups the versions by day, where the key is the output of the moment calendar function.
+  // Then, the versions for each day are chunked into x-minute intervals,
+  // so that the actions of one chunk are all from within one x-minute interval.
+  const groupedVersions = groupBy(versions, (batch) =>
+    dayjs.utc(max(batch.value.map((action) => action.value.actionTimestamp))).calendar(null),
+  );
+
+  const getBatchTime = (batch: APIUpdateActionBatch): number =>
+    max(batch.value.map((action: ServerUpdateAction) => action.value.actionTimestamp)) || 0;
+
+  return mapValues(groupedVersions, (versionsOfOneDay) =>
+    chunkIntoTimeWindows(versionsOfOneDay, getBatchTime, 5),
+  );
+}
+
+async function getUpdateActionLogPage(
+  annotation: StoreAnnotation,
+  tracingStoreUrl: string,
+  annotationId: string,
+  earliestAccessibleVersion: number,
+  newestVersion: number,
+  // 0 is the "newest" page (i.e., the page in which the newest version is)
+  relativePageNumber: number,
+) {
+  if (ENTRIES_PER_PAGE % 10 !== 0) {
+    // Otherwise, the oldestVersion === 1 condition at the end of this
+    // function would not work correctly.
+    throw new Error("ENTRIES_PER_PAGE should be divisible by 10.");
+  }
+
+  // For example, the following parameters would be a valid variable set
+  // (assuming ENTRIES_PER_PAGE = 2):
+  // newestVersion = 23
+  // relativePageNumber = 1 (0 is the newest, 1 is the second newest)
+  // absolutePageNumber = ⌊23/2⌋ - 1 = 10
+  // newestVersionInPage = 22
+  // oldestVersionInPage = 21
+  // Thus, versions 21 and 22 will be fetched for the second newest page
+  const absolutePageNumber = Math.floor(newestVersion / ENTRIES_PER_PAGE) - relativePageNumber;
+  if (absolutePageNumber < 0) {
+    throw new Error("Negative absolute page number received.");
+  }
+  const newestVersionInPage = (1 + absolutePageNumber) * ENTRIES_PER_PAGE;
+  const oldestVersionInPage = Math.max(
+    absolutePageNumber * ENTRIES_PER_PAGE + 1,
+    earliestAccessibleVersion,
+  );
+
+  const updateActionLog = await getUpdateActionLog(
+    tracingStoreUrl,
+    annotationId,
+    oldestVersionInPage,
+    newestVersionInPage,
+    true,
+  );
+
+  // The backend won't send the version 0 as that does not exist. The frontend however
+  // shows that as the initial version. Thus, insert version 0.
+  if (oldestVersionInPage === 1) {
+    updateActionLog.push({
+      version: 0,
+      value: [serverCreateTracing(getCreationTimestamp(annotation))],
+    });
+  }
+
+  // nextPage will contain older versions
+  const nextPage =
+    oldestVersionInPage > Math.max(earliestAccessibleVersion, 1)
+      ? relativePageNumber + 1
+      : undefined;
+  // previousPage will contain newer versions
+  const previousPage = newestVersion > newestVersionInPage ? relativePageNumber - 1 : undefined;
+
+  return { data: updateActionLog, nextPage, previousPage };
+}
+
+function VersionList() {
+  const tracingStoreUrl = useWkSelector((state) => state.annotation.tracingStore.url);
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const initialAllowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const newestVersion = useFetch(
+    async () => {
+      if (annotationId === "") {
+        return null;
+      }
+      return getNewestVersionForAnnotation(tracingStoreUrl, annotationId);
+    },
+    null,
+    [annotationId],
+  );
+
+  if (newestVersion == null) {
+    return (
+      <div className="flex-center-child">
+        <Spin spinning />
+      </div>
+    );
+  }
+
+  return <InnerVersionList newestVersion={newestVersion} initialAllowUpdate={initialAllowUpdate} />;
+}
+
+function InnerVersionList(props: Props & { newestVersion: number; initialAllowUpdate: boolean }) {
+  // Select only the needed fields (instead of the whole annotation) to avoid
+  // re-rendering the version list on unrelated annotation mutations.
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const activeVersion = useWkSelector((state) => state.annotation.version);
+  const earliestAccessibleVersion = useWkSelector(
+    (state) => state.annotation.earliestAccessibleVersion,
+  );
+  const queryClient = useQueryClient();
+  // Remember the version with which the version view was opened (
+  // the active version could change by the actions of the user).
+  // Based on this version, the page numbers are calculated.
+  const { newestVersion } = props;
+  const [initialVersion] = useState(activeVersion);
+
+  // true if another version is being restored or previewed
+  const [isChangingVersion, setIsChangingVersion] = useState(false);
+
+  const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
+  const [isPowerToolsOpen, setIsPowerToolsOpen] = useState(false);
+  const listRef = useRef<ListRef>(null);
+  // A version which should be revealed (group expanded and scrolled into view)
+  // as soon as the page containing it is rendered.
+  const [versionToReveal, setVersionToReveal] = useState<number | null>(null);
+  // The group which should be scrolled to after it was expanded. Wrapped in an
+  // object so that revealing the same group again triggers the effect again.
+  const [groupToScrollTo, setGroupToScrollTo] = useState<{ key: number } | null>(null);
+
+  function fetchPaginatedVersions({ pageParam }: { pageParam?: number }) {
+    if (pageParam == null) {
+      pageParam = Math.floor((newestVersion - initialVersion) / ENTRIES_PER_PAGE);
+    }
+    const { annotation } = Store.getState();
+
+    return getUpdateActionLogPage(
+      annotation,
+      annotation.tracingStore.url,
+      annotation.annotationId,
+      annotation.earliestAccessibleVersion,
+      newestVersion,
+      pageParam,
+    );
+  }
+
+  const queryKey = ["versions", annotationId];
+
+  useEffectOnlyOnce(() => {
+    // Remove all previous existent queries so that the content of this view
+    // is loaded from scratch. This is important since the loaded page numbers
+    // are relative to the base version. If the version of the tracing changed,
+    // old pages are not valid anymore.
+    queryClient.removeQueries({
+      queryKey: queryKey,
+    });
+    // Will be set back by handleRestoreVersion or handleCloseRestoreView
+    Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
+  });
+
+  const {
+    data: versions,
+    error,
+    isFetching,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+    hasPreviousPage,
+    fetchPreviousPage,
+    isFetchingPreviousPage,
+  } = useInfiniteQuery({
+    queryKey,
+    queryFn: fetchPaginatedVersions,
+    refetchOnWindowFocus: false,
+    staleTime: Number.POSITIVE_INFINITY,
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextPage,
+    getPreviousPageParam: (lastPage) => lastPage.previousPage,
+  });
+  // The useInfiniteQuery result is stable per fetch, so these memos only
+  // recompute when new pages arrive (grouping thousands of versions is
+  // not cheap).
+  const flattenedVersions = useMemo(
+    () => versions?.pages.flatMap((page) => page.data) || [],
+    [versions],
+  );
+  const batchesAndDateStrings: Array<string | APIUpdateActionBatch[]> = useMemo(() => {
+    const groupedAndChunkedVersions = getGroupedAndChunkedVersions(flattenedVersions);
+    return flattenDepth(Object.entries(groupedAndChunkedVersions) as any, 2);
+  }, [flattenedVersions]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether fetchNextPage should be added to the dependencies.
+  useEffect(() => {
+    // The initially loaded page could be quite short (e.g., if
+    // ENTRIES_PER_PAGE is 100 and the current version is 105, the first
+    // page will only contain 5 items). In that case, also load the next
+    // page.
+    if (
+      flattenedVersions.length === 0 ||
+      flattenedVersions.length > ENTRIES_PER_PAGE ||
+      newestVersion < ENTRIES_PER_PAGE
+    ) {
+      // No need to pre-fetch the next page.
+      return;
+    }
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [flattenedVersions, hasNextPage, isFetchingNextPage, newestVersion]);
+
+  useEffect(() => {
+    if (error) {
+      handleGenericError(error as Error);
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (versionToReveal == null) {
+      return;
+    }
+    const group = batchesAndDateStrings.find(
+      (entry): entry is APIUpdateActionBatch[] =>
+        !isString(entry) && entry.some((batch) => batch.version === versionToReveal),
+    );
+    if (group == null) {
+      return;
+    }
+    const groupKey = group[0].version;
+    setExpandedGroups((prev) => ({ ...prev, [groupKey]: true }));
+    setGroupToScrollTo({ key: groupKey });
+    setVersionToReveal(null);
+  }, [versionToReveal, batchesAndDateStrings]);
+
+  useEffect(() => {
+    if (groupToScrollTo == null) {
+      return;
+    }
+    // Scroll in the next frame so that the list has measured the expanded group.
+    const handle = requestAnimationFrame(() => {
+      listRef.current?.scrollTo({ key: groupToScrollTo.key, align: "top" });
+    });
+    return () => cancelAnimationFrame(handle);
+  }, [groupToScrollTo]);
+
+  const executeUnlessSwitchingVersions = async (fn: () => Promise<void>) => {
+    if (isChangingVersion) {
+      return;
+    }
+    setIsChangingVersion(true);
+    try {
+      await fn();
+    } finally {
+      setIsChangingVersion(false);
+    }
+  };
+
+  // Loads pages until the given version is part of the list. Returns false if
+  // the version cannot be found.
+  const ensureVersionIsLoaded = async (version: number): Promise<boolean> => {
+    let pages = versions?.pages ?? [];
+    while (true) {
+      const loadedVersions = pages.flatMap((page) => page.data.map((batch) => batch.version));
+      if (loadedVersions.includes(version)) {
+        return true;
+      }
+      const newestLoaded = max(loadedVersions);
+      const oldestLoaded = min(loadedVersions);
+      if (newestLoaded == null || oldestLoaded == null) {
+        return false;
+      }
+      let result: typeof versions;
+      // If a fetch fails, the result still contains the old pages. Stop in that case,
+      // because the same page would be requested again and again otherwise.
+      if (version > newestLoaded && pages[0].previousPage != null) {
+        const fetchResult = await fetchPreviousPage();
+        if (fetchResult.isError) return false;
+        result = fetchResult.data;
+      } else if (version < oldestLoaded && pages[pages.length - 1].nextPage != null) {
+        const fetchResult = await fetchNextPage();
+        if (fetchResult.isError) return false;
+        result = fetchResult.data;
+      } else {
+        return false;
+      }
+      if (result == null) {
+        return false;
+      }
+      pages = result.pages;
+    }
+  };
+
+  // Activates the given version, expands its group and scrolls to it.
+  const navigateToVersion = async (version: number): Promise<boolean> => {
+    if (isChangingVersion) {
+      return false;
+    }
+    let success = false;
+    await executeUnlessSwitchingVersions(async () => {
+      try {
+        if (!(await ensureVersionIsLoaded(version))) {
+          Toast.warning(`Version ${version} could not be found.`);
+          return;
+        }
+        await previewVersion(version);
+        setVersionToReveal(version);
+        success = true;
+      } catch (exception) {
+        handleGenericError(exception as Error);
+      }
+    });
+    return success;
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {hasPreviousPage && (
+        <div className="flex-center-child">
+          <Button
+            onClick={() => fetchPreviousPage()}
+            disabled={!hasPreviousPage || isFetchingPreviousPage}
+          >
+            {isFetchingPreviousPage ? "Loading more..." : "Load More"}
+          </Button>
+        </div>
+      )}
+      <div style={{ textAlign: "right", padding: "0 4px" }}>
+        <VersionPowerToolsToggle
+          isOpen={isPowerToolsOpen}
+          onToggle={() => setIsPowerToolsOpen((isOpen) => !isOpen)}
+        />
+      </div>
+      {isPowerToolsOpen && (
+        <VersionPowerTools
+          minVersion={Math.max(earliestAccessibleVersion, 0)}
+          newestVersion={newestVersion}
+          disabled={isChangingVersion}
+          onNavigateToVersion={navigateToVersion}
+        />
+      )}
+      <div style={{ flex: "1 1 auto", minHeight: 0 }}>
+        <AutoSizer disableWidth>
+          {({ height }) => (
+            <List loading={isFetching || isChangingVersion} locale={VERSION_LIST_PLACEHOLDER}>
+              {batchesAndDateStrings.length > 0 ? (
+                // Virtualize the version entries so that long histories don't
+                // render thousands of DOM nodes at once. The item heights vary
+                // (date sections, collapsible groups); VirtualList measures the
+                // actual heights, itemHeight is only an initial estimate.
+                <VirtualList
+                  ref={listRef}
+                  data={batchesAndDateStrings}
+                  height={height}
+                  itemHeight={40}
+                  itemKey={(batchesOrDateString) =>
+                    isString(batchesOrDateString)
+                      ? batchesOrDateString
+                      : batchesOrDateString[0].version
+                  }
+                >
+                  {(batchesOrDateString) => (
+                    <div>
+                      {isString(batchesOrDateString) ? (
+                        <List.Item className="version-section">
+                          <div
+                            style={{
+                              margin: "auto",
+                            }}
+                          >
+                            {batchesOrDateString}
+                          </div>
+                        </List.Item>
+                      ) : (
+                        <VersionEntryGroup
+                          batches={batchesOrDateString}
+                          initialAllowUpdate={props.initialAllowUpdate}
+                          newestVersion={flattenedVersions[0].version}
+                          activeVersion={activeVersion}
+                          expanded={
+                            expandedGroups[batchesOrDateString[0].version] ??
+                            isActiveVersionInGroup(batchesOrDateString, activeVersion)
+                          }
+                          onSetExpanded={(expanded) => {
+                            const groupKey = batchesOrDateString[0].version;
+                            setExpandedGroups((prev) => ({ ...prev, [groupKey]: expanded }));
+                          }}
+                          onRestoreVersion={async (version) => {
+                            executeUnlessSwitchingVersions(() =>
+                              handleRestoreVersion(props, flattenedVersions, version),
+                            );
+                          }}
+                          onPreviewVersion={async (version) => {
+                            executeUnlessSwitchingVersions(() => previewVersion(version));
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
+                </VirtualList>
+              ) : null}
+            </List>
+          )}
+        </AutoSizer>
+      </div>
+      {hasNextPage ? (
+        <div style={{ display: "flex", justifyContent: "center", margin: 12 }}>
+          <Button onClick={() => fetchNextPage()} disabled={!hasNextPage || isFetchingNextPage}>
+            {isFetchingNextPage ? "Loading more..." : "Load More"}
+          </Button>
+        </div>
+      ) : earliestAccessibleVersion > 0 ? (
+        <div style={{ textAlign: "center", marginTop: 8, marginBottom: 4 }}>
+          Cannot show versions earlier than {earliestAccessibleVersion}.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export default VersionList;

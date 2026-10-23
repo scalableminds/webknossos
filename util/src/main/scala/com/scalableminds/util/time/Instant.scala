@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.{LazyLogging, Logger}
 import com.scalableminds.util.box.Box.tryo
 import play.api.libs.json.*
 
-import java.time.{ZoneId, ZonedDateTime}
+import java.time.{LocalDateTime, ZoneId, ZonedDateTime}
 import java.time.format.DateTimeFormatter
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DurationInt, DurationLong, FiniteDuration}
@@ -63,9 +63,7 @@ object Instant extends LazyLogging with Formatter {
   def fromSql(sqlTime: java.sql.Timestamp): Instant = Instant(sqlTime.getTime)
 
   def fromLocalTimeString(localTimeLiteral: String)(implicit ec: ExecutionContext): Fox[Instant] =
-    tryo(new java.text.SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss.SSS").parse(localTimeLiteral))
-      .map(date => Instant(date.getTime))
-      .toFox
+    tryo(LocalDateTime.parse(localTimeLiteral).atZone(ZoneId.systemDefault())).map(fromZonedDateTime).toFox
 
   def fromNanosecondsString(nanosecondsString: String): Instant =
     Instant(nanosecondsString.substring(0, nanosecondsString.length - 6).toLong)

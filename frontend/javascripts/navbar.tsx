@@ -3,6 +3,7 @@ import Icon, {
   ExperimentOutlined,
   HomeOutlined,
   LoadingOutlined,
+  MessageOutlined,
   QuestionCircleOutlined,
   ScheduleOutlined,
   SwapOutlined,
@@ -24,6 +25,7 @@ import type { MenuProps } from "antd";
 import {
   Avatar,
   Badge,
+  Button,
   ConfigProvider,
   Flex,
   Input,
@@ -51,7 +53,7 @@ import {
   isUserAdminOrManager,
   isUserAdminOrTeamManager,
 } from "libs/utils";
-import window, { location } from "libs/window";
+import window, { document, location } from "libs/window";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
@@ -85,32 +87,69 @@ const ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT = 10;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
 
+const OLVY_SCRIPT_URL = "https://app.olvy.co/script.js";
+
+const OLVY_CONFIG = {
+  organisation: "webknossos",
+  // This target needs to be an empty string as else olvy will eagerly init the modal and thus fetch all its contents.
+  target: "",
+  type: "modal",
+  view: {
+    showSearch: false,
+    compact: false,
+    showHeader: true,
+    // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
+    showUnreadIndicator: false,
+    // Kept as a literal: this is configuration handed to the third-party Olvy widget, which
+    // renders in its own iframe and cannot resolve our CSS variables.
+    unreadIndicatorColor: "#cc1919",
+    unreadIndicatorPosition: "top-right",
+  },
+};
+
+function loadOlvyScript(onLoad: () => void): () => void {
+  const script = document.createElement("script");
+  script.src = OLVY_SCRIPT_URL;
+  script.async = true;
+  script.onload = onLoad;
+  document.head.appendChild(script);
+  return () => {
+    script.onload = null;
+  };
+}
+
 function useOlvy() {
   const [isInitialized, setIsInitialized] = useState(false);
-  // Initialize Olvy after mounting
+  // The third-party script is only needed for the "what's new" badge. Load it once the browser is
+  // idle, so that it does not compete with the app's own startup requests.
   useEffect(() => {
-    const OlvyConfig = {
-      organisation: "webknossos",
-      // This target needs to be an empty string as else olvy will eagerly init the modal and thus fetch all its contents.
-      target: "",
-      type: "modal",
-      view: {
-        showSearch: false,
-        compact: false,
-        showHeader: true,
-        // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
-        showUnreadIndicator: false,
-        // Kept as a literal: this is configuration handed to the third-party Olvy widget, which
-        // renders in its own iframe and cannot resolve our CSS variables.
-        unreadIndicatorColor: "#cc1919",
-        unreadIndicatorPosition: "top-right",
-      },
-    };
-
-    if (window.Olvy != null) {
-      window.Olvy.init(OlvyConfig);
+    let cancelLoad: (() => void) | undefined;
+    const initOlvy = () => {
+      if (window.Olvy == null) {
+        return;
+      }
+      window.Olvy.init(OLVY_CONFIG);
       setIsInitialized(true);
+    };
+    const startLoading = () => {
+      if (window.Olvy != null) {
+        initOlvy();
+      } else {
+        cancelLoad = loadOlvyScript(initOlvy);
+      }
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      const handle = window.requestIdleCallback(startLoading, { timeout: 5000 });
+      return () => {
+        window.cancelIdleCallback(handle);
+        cancelLoad?.();
+      };
     }
+    const timeoutId = setTimeout(startLoading, 2000);
+    return () => {
+      clearTimeout(timeoutId);
+      cancelLoad?.();
+    };
   }, []);
   return isInitialized;
 }
@@ -515,7 +554,7 @@ export const switchTo = async (org: APIOrganizationCompact) => {
   // current datasets path before reloading the page (which is done in
   // switchToOrganization).
   if (window.location.pathname.startsWith("/dashboard/datasets/")) {
-    window.history.replaceState({}, "", "/dashboard/datasets/");
+    window.history.replaceState(window.history.state, "", "/dashboard/datasets/");
   }
 
   await switchToOrganization(org.id);
@@ -532,15 +571,14 @@ function OrganizationFilterInput({
 }) {
   const ref = useRef<InputRef>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesn't understand that ref.current is accessed?
   useEffect(() => {
-    if (ref?.current && isVisible) {
+    if (ref.current && isVisible) {
       setTimeout(() => {
         // Without the timeout, the focus doesn't work unfortunately.
         ref.current?.input?.focus();
       }, 100);
     }
-  }, [ref.current, isVisible]);
+  }, [isVisible]);
   const onChangeImpl = (evt: React.ChangeEvent<HTMLInputElement>) => {
     onChange(evt.target.value);
   };
@@ -565,11 +603,9 @@ function OrganizationFilterInput({
 function LoggedInAvatar({
   activeUser,
   handleLogout,
-  navbarHeight,
 }: {
   activeUser: APIUser;
   handleLogout: (event: React.SyntheticEvent) => void;
-  navbarHeight: number;
 } & SubMenuProps) {
   const { firstName, lastName, organization: organizationId } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
@@ -614,7 +650,6 @@ function LoggedInAvatar({
       selectedKeys={["prevent highlighting of this menu"]}
       mode="horizontal"
       style={{
-        paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
         marginInlineStart: "10px",
       }}
@@ -847,6 +882,8 @@ function Navbar() {
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
   const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
+  // Pushes the navbar items below the maintenance/upgrade banner when one is shown.
+  const bannerOffset = navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0;
   const historyLocation = useLocation();
 
   const handleLogout = async (event: React.SyntheticEvent) => {
@@ -883,14 +920,22 @@ function Navbar() {
       label: (
         <Link
           to="/dashboard"
+          aria-label="WEBKNOSSOS"
           style={{
             verticalAlign: "middle",
           }}
         >
-          {getCollapsibleMenuTitle(
-            "WEBKNOSSOS",
-            <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
-            collapseAllNavItems,
+          {collapseAllNavItems ? (
+            getCollapsibleMenuTitle(
+              "WEBKNOSSOS",
+              <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+              true,
+            )
+          ) : (
+            <>
+              <Icon component={WkLogoIcon} className="logo" />
+              <span className="logo-wordmark">WEBKNOSSOS</span>
+            </>
           )}
         </Link>
       ),
@@ -916,11 +961,23 @@ function Navbar() {
     trailingNavItems.push(<AnnotationLockedTag key="annotation-locked-tag" />);
 
     trailingNavItems.push(
+      <Button
+        key="help-chat-button"
+        shape="round"
+        color="default"
+        variant="filled"
+        icon={<MessageOutlined />}
+        onClick={() => setIsHelpModalOpen((isOpen) => !isOpen)}
+      >
+        Ask
+      </Button>,
+    );
+
+    trailingNavItems.push(
       <LoggedInAvatar
         key="logged-in-avatar"
         activeUser={loggedInUser}
         handleLogout={handleLogout}
-        navbarHeight={navbarHeight}
       />,
     );
   }
@@ -960,7 +1017,7 @@ function Navbar() {
         selectedKeys={selectedKeys}
         onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
         style={{
-          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
+          paddingTop: bannerOffset,
           lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
         }}
         theme="dark"
@@ -972,21 +1029,17 @@ function Navbar() {
         items={menuItems}
       />
       {isInAnnotationView ? separator : null}
-      <HelpModal
-        isModalOpen={isHelpModalOpen}
-        onCancel={() => setIsHelpModalOpen(false)}
-        centeredLayout
-      />
+      <HelpModal isModalOpen={isHelpModalOpen} onCancel={() => setIsHelpModalOpen(false)} />
       <PortalTarget
         portalId="navbarTracingSlot"
         style={{
           flex: 1,
           display: "flex",
-          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
+          paddingTop: bannerOffset,
         }}
       />
       <ConfigProvider theme={getAntdTheme("dark")}>
-        <Flex align="center" justify="flex-end" gap="small">
+        <Flex align="center" justify="flex-end" gap="small" style={{ paddingTop: bannerOffset }}>
           {trailingNavItems}
         </Flex>
       </ConfigProvider>

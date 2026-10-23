@@ -58,9 +58,8 @@ const SelectExperienceDomain: React.FC<Props> = ({
       title="Select an existing experience domain or create a new one by typing its name in this input field."
     >
       <Select
-        showSearch
+        showSearch={{ optionFilterProp: "label", onSearch }}
         value={value}
-        optionFilterProp="label"
         notFoundContent={notFoundContent}
         style={{
           width: `${width}%`,
@@ -69,7 +68,6 @@ const SelectExperienceDomain: React.FC<Props> = ({
         placeholder={placeholder}
         onSelect={onSelect}
         onChange={onChange}
-        onSearch={onSearch}
         options={selectableDomains.map((domain) => ({ value: domain, label: domain }))}
       />
     </Tooltip>

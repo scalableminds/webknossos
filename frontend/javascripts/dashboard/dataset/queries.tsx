@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFolder,
   deleteFolder,
@@ -15,8 +15,8 @@ import isEqualWith from "lodash-es/isEqualWith";
 import keyBy from "lodash-es/keyBy";
 import { useEffect, useRef } from "react";
 import {
-  type APIDataset,
   type APIDatasetCompact,
+  type APIMaybeUnimportedDataset,
   convertDatasetToCompact,
   type FlatFolderTreeItem,
   type Folder,
@@ -27,6 +27,9 @@ import {
 export const SEARCH_RESULTS_LIMIT = 100;
 export const MINIMUM_SEARCH_QUERY_LENGTH = 3;
 const FOLDER_TREE_REFETCH_INTERVAL = 30000;
+// Keeps a folder tree that was prefetched during app startup (see main.tsx) from being fetched
+// again right away when the dashboard mounts.
+const FOLDER_TREE_STALE_TIME = 10000;
 
 export function useFolderQuery(folderId: string | null) {
   const queryKey = ["folders", folderId];
@@ -73,7 +76,14 @@ export function useDatasetSearchQuery(
       if (query == null || query.length < MINIMUM_SEARCH_QUERY_LENGTH) {
         return [];
       }
-      return await getDatasets(null, folderId, query, searchRecursively, SEARCH_RESULTS_LIMIT);
+      return await getDatasets(
+        null,
+        folderId,
+        query,
+        searchRecursively,
+        SEARCH_RESULTS_LIMIT,
+        true,
+      );
     },
     refetchOnWindowFocus: false,
     enabled: query != null,
@@ -85,10 +95,15 @@ async function fetchTreeHierarchy() {
   return getFolderHierarchy(flatTreeItems);
 }
 
+export const folderHierarchyQueryOptions = queryOptions({
+  queryKey: ["folders"],
+  queryFn: fetchTreeHierarchy,
+  staleTime: FOLDER_TREE_STALE_TIME,
+});
+
 export function useFolderHierarchyQuery() {
   return useQuery({
-    queryKey: ["folders"],
-    queryFn: fetchTreeHierarchy,
+    ...folderHierarchyQueryOptions,
     refetchOnWindowFocus: false,
     refetchInterval: FOLDER_TREE_REFETCH_INTERVAL,
   });
@@ -142,7 +157,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
         return datasets;
       }
 
-      return getDatasets(null, folderId);
+      return getDatasets(null, folderId, null, null, null, true);
     },
     refetchOnWindowFocus: false,
     enabled: false,
@@ -159,7 +174,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
 
     let effectWasCancelled = false;
     const startTime = performance.now();
-    getDatasets(null, folderId)
+    getDatasets(null, folderId, null, null, null, true)
       .then((newDatasets) => {
         if (effectWasCancelled) {
           return;
@@ -228,7 +243,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
             if (timeoutId == null) {
               return;
             }
-            const newDatasets = await getDatasets(null, folderId);
+            const newDatasets = await getDatasets(null, folderId, null, null, null, true);
             const oldDatasets = (queryClient.getQueryData(queryKey) || []) as APIDatasetCompact[];
             queryClient.setQueryData(
               queryKey,
@@ -396,13 +411,21 @@ export function useUpdateDatasetMutation(folderId: string | null) {
       return getDataset(datasetId);
     },
     mutationKey,
-    onSuccess: (updatedDataset: APIDataset) => {
+    onSuccess: (updatedDataset: APIMaybeUnimportedDataset) => {
+      // The full dataset doesn't contain the annotation count, so carry it over from the list.
+      const previousAnnotationCount = (
+        queryClient.getQueryData(mutationKey) as APIDatasetCompact[] | undefined
+      )?.find((ds) => ds.id === updatedDataset.id)?.annotationCount;
+      const toCompact = (dataset: APIMaybeUnimportedDataset): APIDatasetCompact => ({
+        ...convertDatasetToCompact(dataset),
+        annotationCount: previousAnnotationCount,
+      });
       queryClient.setQueryData(mutationKey, (oldItems: APIDatasetCompact[] | undefined) =>
         (oldItems || [])
           .map((oldDataset: APIDatasetCompact) => {
             return oldDataset.id === updatedDataset.id
               ? // Don't update lastUsedByUser, since this can lead to annoying reorderings in the table.
-                convertDatasetToCompact({
+                toCompact({
                   ...updatedDataset,
                   lastUsedByUser: oldDataset.lastUsedByUser,
                 })
@@ -432,7 +455,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
                 // for some reason (e.g., a bug), we filter it away to avoid
                 // duplicates.
                 .filter((el) => el.id !== updatedDataset.id)
-                .concat([convertDatasetToCompact(updatedDataset)])
+                .concat([toCompact(updatedDataset)])
             );
           },
         );

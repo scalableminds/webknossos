@@ -8,13 +8,13 @@ import isEqual from "lodash-es/isEqual";
 import setWith from "lodash-es/setWith";
 import throttle from "lodash-es/throttle";
 import {
-  AmbientLight,
   BufferAttribute,
   BufferGeometry,
   Color,
   DirectionalLight,
   FrontSide,
   Group,
+  HemisphereLight,
   Mesh,
   MeshPhysicalMaterial,
   Vector3 as ThreeVector3,
@@ -235,7 +235,7 @@ export default class SegmentMeshController {
       // curved/cylindrical surfaces like dendrites as three-dimensional. Lower than
       // 0.5 starts looking noticeably glossy/plastic; higher spreads the highlight so
       // thin it barely reads, which was contributing to the overall dark/flat look.
-      roughness: 0.45,
+      roughness: 0.4,
       metalness: 0.05,
       // Sheen adds a rim-light glint at grazing angles, e.g. along silhouette edges
       // where branches overlap. A moderate/broad sheen visibly washes the segment's own
@@ -544,21 +544,20 @@ export default class SegmentMeshController {
   }
 
   addLights(): void {
-    // Note that the PlaneView also attaches a key/fill light pair directly to the TD
-    // camera, so that light always moves along with the current viewing angle. The
-    // lights added here stay fixed in world space and are only meant to keep the
-    // mesh from ever going fully unlit/black, not to provide the main shading —
-    // having many lights of similar intensity coming from (almost) every direction
-    // (the previous approach) cancels out the shading gradients that make a surface
-    // read as three-dimensional, so we deliberately keep this to a low-intensity
-    // ambient plus two faint, distinctly-colored world-space lights instead. Kept
-    // deliberately low: unlike the key/fill pair, ambient has no direction, so raising
-    // it lifts the darkest areas without adding any shading gradient of their own — it
-    // was raised once already to fix a too-dark far side, but that just made things
-    // look flat/featureless instead, so PlaneView's fill light intensity is what
-    // actually carries that job now.
-    const ambientLight = new AmbientLight("white", 0.2);
-    this.lightsGroup.add(ambientLight);
+    // Note that the PlaneView also attaches key/fill/under/rim lights directly to the
+    // TD camera, so that light always moves along with the current viewing angle and
+    // provides the main shading. The lights added here stay fixed in world space and
+    // are only meant to keep the mesh from ever going fully unlit/black. Having many
+    // lights of similar intensity coming from (almost) every direction (the previous
+    // approach) cancels out the shading gradients that make a surface read as
+    // three-dimensional, so this is deliberately kept to a hemisphere light plus two
+    // faint, distinctly-colored directional lights.
+    // Unlike a flat ambient light, the hemisphere light still has a (soft) top-to-bottom
+    // gradient, so it can be bright enough to lift the shadows without making the meshes
+    // look flat. "Up" is -z, which matches the up vector of the default TD camera.
+    const hemisphereLight = new HemisphereLight("white", 0x808080, 0.25);
+    hemisphereLight.position.set(0, 0, -1);
+    this.lightsGroup.add(hemisphereLight);
 
     // Subtle, cool-toned rim/back light so overlapping branches keep an edge of
     // separation even when the camera-attached key light above is grazing or

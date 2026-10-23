@@ -173,6 +173,15 @@ function* warnAboutInvalidSegmentId(): Saga<void> {
   }
 }
 
+// A brush stroke in progress: its driver, plus what is needed to save it.
+type BrushStroke = {
+  driver: BrushDriver;
+  cube: DataCube;
+  // Run order of the wire encoding, in which this viewport's strokes are contiguous.
+  runAxis: RunAxis;
+  saveMode: SaveMode;
+};
+
 export function* editVolumeLayerAsync(): Saga<never> {
   // Waiting for the initialization is important. Otherwise, allowUpdate would be
   // false and the saga would terminate.
@@ -270,13 +279,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
     // Only the brush is driven from viewer/model/volumetracing; the trace
     // tool below still builds up a section labeler.
-    let brushStroke: {
-      driver: BrushDriver;
-      cube: DataCube;
-      // Run order of the wire encoding, in which this viewport's strokes are contiguous.
-      runAxis: RunAxis;
-      saveMode: SaveMode;
-    } | null = null;
+    let brushStroke: BrushStroke | null = null;
     // Maps a floating mag-1 position to the brush center in source-mag voxels.
     let getBrushCenter: ((position: Vector3) => Vector3) | null = null;
     let lastBrushCenter: Vector3 | null = null;

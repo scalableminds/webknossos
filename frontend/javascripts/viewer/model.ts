@@ -318,6 +318,12 @@ export class WebKnossosModel {
     }
 
     while (true) {
+      if (operationContext != null && !operationContext.isActive()) {
+        // The operation that requested saving is finished (or was cancelled, e.g., because
+        // the sagas were restarted). Nobody waits for this anymore, so stop requesting saves
+        // on its behalf.
+        return;
+      }
       // If saving or rebasing is in progress, we always need to keep waiting.
       if (!isSavingOrRebasing(Store.getState())) {
         // Only when neither is in progress, we enforce the diffed state to the

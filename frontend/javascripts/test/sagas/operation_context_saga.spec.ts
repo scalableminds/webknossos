@@ -11,6 +11,7 @@ import {
   borrowedContext,
   createOperationContext,
   getOrCreateOperationContext,
+  type OperationContext,
   watchForLongRunningOperations,
 } from "viewer/model/sagas/operation_context_saga";
 import { combinedReducer, type OperationContextState, type WebknossosState } from "viewer/store";
@@ -448,6 +449,88 @@ describe("operation_context_saga", () => {
       await sagaMiddleware.run(op, 3 * THRESHOLD_MS).toPromise();
 
       expect(ErrorHandling.notify).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("isActive", () => {
+    it("is true until execute() finished", async () => {
+      const { sagaMiddleware } = makeTestStore();
+      const log: boolean[] = [];
+
+      function* op() {
+        const ctx = yield* createOperationContext({ id: "FLOODFILL" });
+        log.push(ctx.isActive());
+        yield* ctx.execute(function* () {
+          log.push(ctx.isActive());
+          yield delay(5);
+        });
+        log.push(ctx.isActive());
+      }
+
+      await sagaMiddleware.run(op).toPromise();
+      expect(log).toEqual([true, true, false]);
+    });
+
+    it("is false after the operation was cancelled", async () => {
+      const { sagaMiddleware } = makeTestStore();
+      let ctx: OperationContext | null = null;
+
+      function* op() {
+        ctx = yield* createOperationContext({ id: "PROOFREADING" });
+        yield* ctx.execute(function* () {
+          yield delay(1000);
+        });
+      }
+
+      const task = sagaMiddleware.run(op);
+      // Creating the context is asynchronous (critical section mutex).
+      await vi.waitFor(() => expect(ctx).not.toBeNull());
+      expect(ctx!.isActive()).toBe(true);
+      task.cancel();
+      await task.toPromise();
+      expect(ctx!.isActive()).toBe(false);
+    });
+
+    it("is false for a borrowed context once its parent finished", async () => {
+      const { sagaMiddleware } = makeTestStore();
+      let child: OperationContext | null = null;
+
+      function* op() {
+        const parent = yield* createOperationContext({ id: "PROOFREADING" });
+        yield* parent.execute(function* () {
+          child = borrowedContext(parent, "SAVE");
+          expect(child.isActive()).toBe(true);
+          yield* call(noop);
+        });
+      }
+
+      await sagaMiddleware.run(op).toPromise();
+      expect(child!.isActive()).toBe(false);
+    });
+
+    it("getOrCreateOperationContext does not borrow from a finished context", async () => {
+      const { store, sagaMiddleware } = makeTestStore();
+      let finishedCtx: OperationContext | null = null;
+      const registeredOperations: string[] = [];
+      const registeredChildOperations: string[] = [];
+
+      function* op() {
+        finishedCtx = yield* createOperationContext({ id: "PROOFREADING" });
+        yield* finishedCtx.execute(function* () {
+          yield* call(noop);
+        });
+
+        const ctx = yield* getOrCreateOperationContext({ id: "SAVE" }, finishedCtx);
+        yield* ctx.execute(function* () {
+          const { activeOperations, childOperations } = store.getState().operationContext;
+          registeredOperations.push(...activeOperations.map((o) => o.id));
+          registeredChildOperations.push(...childOperations.map((c) => `${c.id}/${c.parentId}`));
+        });
+      }
+
+      await sagaMiddleware.run(op).toPromise();
+      expect(registeredOperations).toEqual(["SAVE"]);
+      expect(registeredChildOperations).toEqual([]);
     });
   });
 });

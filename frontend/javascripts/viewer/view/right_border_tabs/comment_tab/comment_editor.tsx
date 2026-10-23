@@ -63,7 +63,14 @@ export function CommentEditor({
         <InputWithUpdateOnBlur
           value={inputValue}
           disabled={isDisabled}
-          onChange={(newValue) => handleSave(decodeLineBreaks(newValue))}
+          onChange={(newValue) => {
+            // Compare before decoding: a literal "\n" in the stored comment would otherwise
+            // be decoded into a real line break and saved although nothing was edited.
+            if (newValue === inputValue) {
+              return;
+            }
+            handleSave(decodeLineBreaks(newValue));
+          }}
           placeholder="Add comment"
           size="small"
         />

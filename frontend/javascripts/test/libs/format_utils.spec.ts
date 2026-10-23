@@ -1,4 +1,10 @@
-import { formatNumberToArea, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
+import {
+  formatDuration,
+  formatNumberToArea,
+  formatNumberToLength,
+  formatNumberToVolume,
+  formatTimeInterval,
+} from "libs/format_utils";
 import { Unicode, UnitShort } from "viewer/constants";
 import { describe, expect, it } from "vitest";
 
@@ -109,5 +115,36 @@ describe("Format Utils", () => {
     expect(`10.0${ThinSpace}cm`).toBe(formatNumberToLength(0.1, UnitShort.m, 3));
     expect(`12.0${ThinSpace}cm`).toBe(formatNumberToLength(0.12, UnitShort.m, 3));
     expect(`0.001${ThinSpace}km`).toBe(formatNumberToLength(1, UnitShort.m, 3, true));
+  });
+
+  it("Format durations", () => {
+    const s = 1000;
+    const m = 60 * s;
+    const h = 60 * m;
+    expect(formatDuration(0)).toBe(`0${ThinSpace}s`);
+    expect(formatDuration(400)).toBe(`<1${ThinSpace}s`);
+    expect(formatDuration(5 * s)).toBe(`5${ThinSpace}s`);
+    expect(formatDuration(2 * m + 5 * s)).toBe(`2${ThinSpace}m 5${ThinSpace}s`);
+    expect(formatDuration(1 * h + 45 * m)).toBe(`1${ThinSpace}h 45${ThinSpace}m`);
+    expect(formatDuration(1 * h + 5 * s)).toBe(`1${ThinSpace}h 5${ThinSpace}s`);
+    // Hours are the largest unit
+    expect(formatDuration(1234 * h)).toBe(`1,234${ThinSpace}h`);
+    expect(formatDuration(-5 * s)).toBe(`0${ThinSpace}s`);
+  });
+
+  it("Format durations with minute precision", () => {
+    const s = 1000;
+    const m = 60 * s;
+    expect(formatDuration(0, "minutes")).toBe(`0${ThinSpace}m`);
+    expect(formatDuration(20 * s, "minutes")).toBe(`<1${ThinSpace}m`);
+    expect(formatDuration(105 * m + 10 * s, "minutes")).toBe(`1${ThinSpace}h 45${ThinSpace}m`);
+    // Rounds to the nearest minute, carrying over into hours
+    expect(formatDuration(59 * m + 40 * s, "minutes")).toBe(`1${ThinSpace}h`);
+  });
+
+  it("Format time intervals", () => {
+    expect(formatTimeInterval(new Date(0), new Date(90 * 1000))).toBe(
+      `1${ThinSpace}m 30${ThinSpace}s`,
+    );
   });
 });

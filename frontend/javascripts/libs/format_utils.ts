@@ -1,7 +1,6 @@
 import dayjs from "dayjs";
 import calendar from "dayjs/plugin/calendar";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import type { Duration } from "dayjs/plugin/duration";
 import duration from "dayjs/plugin/duration";
 import localeData from "dayjs/plugin/localeData";
 import localizedFormat from "dayjs/plugin/localizedFormat";
@@ -422,52 +421,52 @@ export function formatExtentInUnitWithLength(
     formattingFunction(extent.depth),
   ].join(`${ThinSpace}×${ThinSpace}`);
 }
-export function formatMilliseconds(durationMilliSeconds: number): string {
-  return formatSeconds(durationMilliSeconds / 1000);
-}
-export function formatSeconds(durationSeconds: number): string {
-  const t = dayjs.duration(durationSeconds, "seconds");
-  const [days, hours, minutes, seconds] = [t.days(), t.hours(), t.minutes(), t.seconds()];
-  let timeString;
-
-  if (days === 0 && hours === 0 && minutes === 0) {
-    timeString = `${seconds}s`;
-  } else if (days === 0 && hours === 0) {
-    timeString = `${minutes}m ${seconds}s`;
-  } else if (days === 0) {
-    timeString = `${hours}h ${minutes}m ${seconds}s`;
-  } else {
-    timeString = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-  }
-
-  return timeString;
-}
-
 export function formatDateMedium(date: Date | number): string {
   return dayjs(date).format("lll");
 }
-export function formatTimeIntervalStrict(start: Date | number, end: Date | number): string {
-  const duration = dayjs.duration(dayjs(start).diff(dayjs(end)));
-  return formatDurationStrict(duration);
-}
-export function formatDurationStrict(duration: Duration): string {
+export type DurationPrecision = "seconds" | "minutes";
+
+const DURATION_UNITS = [
+  ["h", 60 * 60 * 1000],
+  ["m", 60 * 1000],
+  ["s", 1000],
+] as const;
+
+/**
+ * Formats a duration in a uniform way, e.g. "1 h 45 m" or "2 m 5 s". Zero-valued
+ * parts are omitted. Hours are the largest unit, since most durations are working
+ * times for which days would be ambiguous. Please prefer the <FormattedDuration />
+ * component when rendering React elements.
+ */
+export function formatDuration(
+  durationMs: number,
+  precision: DurationPrecision = "seconds",
+): string {
+  const smallestUnit = precision === "seconds" ? "s" : "m";
+  const smallestUnitMs = precision === "seconds" ? 1000 : 60 * 1000;
+  const roundedDurationMs = Math.round(Math.max(durationMs, 0) / smallestUnitMs) * smallestUnitMs;
+  if (roundedDurationMs === 0) {
+    return durationMs > 0 ? `<1${ThinSpace}${smallestUnit}` : `0${ThinSpace}${smallestUnit}`;
+  }
+
   const parts: Array<string> = [];
-  if (Math.floor(duration.asDays()) > 0) {
-    parts.push(`${formatNumber(Math.floor(duration.asDays()))}d`);
-  }
-  if (duration.hours() > 0) {
-    parts.push(`${duration.hours()}h`);
-  }
-  if (duration.minutes() > 0) {
-    parts.push(`${duration.minutes()}m`);
-  }
-  if (duration.seconds() > 0) {
-    parts.push(`${duration.seconds()}s`);
-  }
-  if (duration.asSeconds() < 1) {
-    parts.push("0s");
+  let remainingMs = roundedDurationMs;
+  for (const [unit, unitMs] of DURATION_UNITS) {
+    if (unitMs < smallestUnitMs) break;
+    const value = Math.floor(remainingMs / unitMs);
+    remainingMs -= value * unitMs;
+    if (value > 0) {
+      parts.push(`${formatNumber(value)}${ThinSpace}${unit}`);
+    }
   }
   return parts.join(" ");
+}
+export function formatTimeInterval(
+  begin: Date | number,
+  end: Date | number,
+  precision: DurationPrecision = "seconds",
+): string {
+  return formatDuration(dayjs(end).diff(dayjs(begin)), precision);
 }
 
 export function formatCPU(cpuShare: number) {

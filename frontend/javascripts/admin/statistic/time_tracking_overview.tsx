@@ -13,9 +13,9 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import FixedExpandableTable from "components/fixed_expandable_table";
+import FormattedDuration from "components/formatted_duration";
 import LinkButton from "components/link_button";
 import dayjs, { type Dayjs } from "dayjs";
-import { formatMilliseconds } from "libs/format_utils";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { compareBy, isUserAdminOrTeamManager, localeCompareBy } from "libs/utils";
@@ -171,8 +171,9 @@ function TimeTrackingOverview() {
       title: "Avg. time per task / annotation",
       key: "avgTime",
       align: "right",
-      render: (item: APITimeTrackingPerUser) =>
-        formatMilliseconds(item.timeMillis / item.annotationCount),
+      render: (item: APITimeTrackingPerUser) => (
+        <FormattedDuration durationMs={item.timeMillis / item.annotationCount} />
+      ),
       sorter: compareBy<APITimeTrackingPerUser>(
         (timeEntry) => timeEntry.timeMillis / timeEntry.annotationCount,
       ),
@@ -182,8 +183,9 @@ function TimeTrackingOverview() {
       dataIndex: "timeMillis",
       key: "tracingTimes",
       align: "right",
-      render: (tracingTimeInMs: APITimeTrackingPerUser["timeMillis"]) =>
-        formatMilliseconds(tracingTimeInMs),
+      render: (tracingTimeInMs: APITimeTrackingPerUser["timeMillis"]) => (
+        <FormattedDuration durationMs={tracingTimeInMs} />
+      ),
       sorter: compareBy<APITimeTrackingPerUser>((timeEntry) => timeEntry.timeMillis),
     },
     {
@@ -233,10 +235,10 @@ function TimeTrackingOverview() {
           {totalNumberOfTasksAndAnnotations}
         </Table.Summary.Cell>
         <Table.Summary.Cell index={3} align="right">
-          {formatMilliseconds(totalTimeMs / totalNumberOfTasksAndAnnotations)}
+          <FormattedDuration durationMs={totalTimeMs / totalNumberOfTasksAndAnnotations} />
         </Table.Summary.Cell>
         <Table.Summary.Cell index={4} align="right">
-          {formatMilliseconds(totalTimeMs)}
+          <FormattedDuration durationMs={totalTimeMs} />
         </Table.Summary.Cell>
         <Table.Summary.Cell index={5} />
       </Table.Summary.Row>

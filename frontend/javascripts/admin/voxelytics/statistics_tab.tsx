@@ -9,9 +9,8 @@ import {
   formatNumber,
   formatTimeIntervalStrict,
 } from "libs/format_utils";
-import { usePolling } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { VoxelyticsChunkStatistics } from "types/api_types";
 import { parseStatistics } from "./parse_api_data";
 import type { Result } from "./utils";
@@ -26,7 +25,6 @@ export default function StatisticsTab({
   workflowHash: string;
   runId: string | null;
   taskName: string;
-  isRunning: boolean;
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [statisticsResult, setStatisticsResult] = useState<StatisticsResult>({ type: "LOADING" });
@@ -48,7 +46,10 @@ export default function StatisticsTab({
     }
   }
 
-  usePolling(loadStatistics, null, [runId, taskName]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only reload when the selected task changes; the Refresh button covers manual reloads
+  useEffect(() => {
+    loadStatistics();
+  }, [runId, taskName]);
 
   function renderContent() {
     if (statisticsResult.type === "LOADING") {

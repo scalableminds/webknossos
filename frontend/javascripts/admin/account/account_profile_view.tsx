@@ -18,10 +18,8 @@ import { isUserAdmin, isUserTeamManager } from "libs/utils";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { Link } from "react-router";
-import { getSystemColorTheme } from "theme";
 import type { APIUserTheme } from "types/api_types";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
-import { setThemeAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
@@ -46,8 +44,6 @@ function AccountProfileView() {
     if (selectedTheme !== newTheme) {
       const newUser = await updateSelectedThemeOfUser(activeUser.id, newTheme);
       dispatch(setActiveUserAction(newUser));
-
-      dispatch(setThemeAction(newTheme === "auto" ? getSystemColorTheme() : newTheme));
     }
   };
 

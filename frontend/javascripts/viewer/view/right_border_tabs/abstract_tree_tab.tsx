@@ -1,4 +1,4 @@
-import { Button } from "antd";
+import { Button, Typography, theme } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
 import throttle from "lodash-es/throttle";
@@ -16,6 +16,11 @@ const AbstractTreeTab: React.FC<EmptyObject> = () => {
   const [isVisible, setIsVisible] = useState(false);
   const nodeListRef = useRef<Array<NodeListItem>>([]);
   const dispatch = useDispatch();
+  // The canvas cannot resolve CSS variables, so the resolved token values are passed instead.
+  // Since they are part of drawTreeImpl's dependencies, a theme switch triggers a redraw.
+  const { token } = theme.useToken();
+  const foregroundColor = token.colorText;
+  const commentColor = token.colorError;
 
   const drawTreeImpl = useCallback(() => {
     if (!skeletonTracing || !isVisible) {
@@ -30,10 +35,11 @@ const AbstractTreeTab: React.FC<EmptyObject> = () => {
         canvas,
         activeTreeId != null ? trees.getNullable(activeTreeId) : null,
         activeNodeId,
+        { foreground: foregroundColor, comment: commentColor },
         [canvas.offsetWidth, canvas.offsetHeight],
       );
     }
-  }, [skeletonTracing, isVisible, activeTreeId]);
+  }, [skeletonTracing, isVisible, activeTreeId, foregroundColor, commentColor]);
 
   // The throttled function is created only once and delegates to the latest
   // drawTreeImpl via an effect event. Otherwise, the throttling would not take
@@ -81,14 +87,9 @@ const AbstractTreeTab: React.FC<EmptyObject> = () => {
           <Button type="primary" onClick={onClickShow}>
             Show Abstract Tree
           </Button>
-          <span
-            style={{
-              color: "gray",
-              marginTop: 6,
-            }}
-          >
+          <Typography.Text type="secondary" style={{ marginTop: 6 }}>
             This may be slow for very large tracings.
-          </span>
+          </Typography.Text>
         </React.Fragment>
       )}
     </div>

@@ -463,14 +463,16 @@ case class LegacyUpdateSegmentVolumeAction(
   }
 }
 
+// The Some(None) defaults are needed so that the tristate json parsing reads null as Some(None) (= unset the
+// property) instead of None (= keep the property unchanged), see TristateOptionJsonHelper.
 case class UpdateSegmentPartialVolumeAction(
     id: UnsignedLong,
-    anchorPosition: Option[Option[Vec3Int]],
-    name: Option[Option[String]],
-    color: Option[Option[com.scalableminds.util.image.Color]],
-    creationTime: Option[Option[Long]],
-    groupId: Option[Option[Int]],
-    additionalCoordinates: Option[Option[Seq[AdditionalCoordinate]]] = None,
+    anchorPosition: Option[Option[Vec3Int]] = Some(None),
+    name: Option[Option[String]] = Some(None),
+    color: Option[Option[com.scalableminds.util.image.Color]] = Some(None),
+    creationTime: Option[Option[Long]] = Some(None),
+    groupId: Option[Option[Int]] = Some(None),
+    additionalCoordinates: Option[Option[Seq[AdditionalCoordinate]]] = Some(None),
     actionTracingId: String,
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,

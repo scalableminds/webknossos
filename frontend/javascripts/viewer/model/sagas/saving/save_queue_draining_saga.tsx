@@ -404,14 +404,14 @@ export function toggleErrorHighlighting(state: boolean, permanentError: boolean 
     document.body.classList.toggle("save-error", state);
   }
 
-  const message = permanentError ? messages["save.failed.permanent"] : messages["save.failed"];
-
   if (state) {
+    const message = permanentError ? messages["save.failed.permanent"] : messages["save.failed"];
     Toast.error(message, {
       sticky: true,
     });
   } else {
-    Toast.close(message);
+    Toast.close(messages["save.failed.permanent"]);
+    Toast.close(messages["save.failed"]);
   }
 }
 

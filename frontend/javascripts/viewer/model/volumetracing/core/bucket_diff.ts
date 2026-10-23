@@ -225,13 +225,13 @@ export function decodeBucketDiff(bytes: Uint8Array): VoxelRun[] {
 
 /** Maps a linear index of the run order starting at `runAxis` to a flat bucket index. */
 function flatIndexOf(linear: number, runAxis: RunAxis): VoxelIndex {
+  // The flat index is x + 32y + 1024z, i.e. the linear index of the x order.
+  if (runAxis === 0) return linear;
   // The coordinates in the run order, from the one that changes fastest along
-  // `linear` to the slowest: (x, y, z), (y, z, x) or (z, x, y).
+  // `linear` to the slowest: (y, z, x) or (z, x, y).
   const first = linear & 31;
   const second = (linear >>> 5) & 31;
   const third = linear >>> 10;
-  // The flat index is x + 32y + 1024z.
-  if (runAxis === 0) return linear; // todop: cant we move this to the top of the function?
   if (runAxis === 1) return third + first * 32 + second * 1024;
   return second + third * 32 + first * 1024;
 }

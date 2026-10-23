@@ -8,6 +8,7 @@ import {
 import type { ElementClass } from "types/api_types";
 import { type OrthoView, OrthoViews, type Vector3 } from "viewer/constants";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { dispatchUndoAsync } from "viewer/model/actions/save_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
@@ -87,6 +88,27 @@ function brushActiveCellAt(position: Vector3, plane: OrthoView = OrthoViews.PLAN
   Store.dispatch(resetContourAction());
 }
 
+function prepareBrushingInViewport(plane: OrthoView, activeCellId: number) {
+  // The interpolation only covers what the viewport shows, so the viewports
+  // need a size: 64 px at zoom 1 are 64 voxels in each direction. Setting
+  // the rects clamps the zoom, hence setting it afterwards.
+  const rect = { top: 0, left: 0, width: 64, height: 64 };
+  Store.dispatch(
+    setInputCatcherRects({
+      PLANE_XY: rect,
+      PLANE_YZ: rect,
+      PLANE_XZ: rect,
+      TDView: rect,
+      flightViewport: rect,
+    }),
+  );
+  Store.dispatch(setZoomStepAction(1));
+  Store.dispatch(setViewportAction(plane));
+  Store.dispatch(updateUserSettingAction("brushSize", 10));
+  Store.dispatch(setToolAction(AnnotationTool.BRUSH));
+  Store.dispatch(setActiveCellAction(BigInt(activeCellId)));
+}
+
 async function runInterpolationTest(context: WebknossosTestContext, elementClass: ElementClass) {
   await setupInterpolationTest(context, elementClass);
   const { api } = context;
@@ -153,24 +175,7 @@ describe("Volume Interpolation", () => {
           .getDataForBoundingBox(layerName, { min: at(-10, -10, c), max: at(11, 11, c + 1) }, 0)
           .then((data) => Array.from(data, Number));
 
-      // The interpolation only covers what the viewport shows, so the viewports
-      // need a size: 64 px at zoom 1 are 64 voxels in each direction. Setting
-      // the rects clamps the zoom, hence setting it afterwards.
-      const rect = { top: 0, left: 0, width: 64, height: 64 };
-      Store.dispatch(
-        setInputCatcherRects({
-          PLANE_XY: rect,
-          PLANE_YZ: rect,
-          PLANE_XZ: rect,
-          TDView: rect,
-          flightViewport: rect,
-        }),
-      );
-      Store.dispatch(setZoomStepAction(1));
-      Store.dispatch(setViewportAction(plane));
-      Store.dispatch(updateUserSettingAction("brushSize", 10));
-      Store.dispatch(setToolAction(AnnotationTool.BRUSH));
-      Store.dispatch(setActiveCellAction(BigInt(activeCellId)));
+      prepareBrushingInViewport(plane, activeCellId);
       brushActiveCellAt(at(0, 0, 0), plane);
       brushActiveCellAt(at(0, 0, interpolationDepth), plane);
       const labeledSlice = await slice(0);
@@ -200,4 +205,31 @@ describe("Volume Interpolation", () => {
       expect(await slice(interpolationDepth)).toEqual(labeledSlice);
     },
   );
+  it("should save interpolations as partial updates in live collaboration", async (context: TestContext) => {
+    const testContext = context as WebknossosTestContext;
+    await setupInterpolationTest(testContext, "uint32");
+    const { api } = testContext;
+    const layerName = api.data.getVolumeTracingLayerIds()[0];
+    const activeCellId = 5;
+    prepareBrushingInViewport(OrthoViews.PLANE_XY, activeCellId);
+    brushActiveCellAt([40, 40, 40]);
+    brushActiveCellAt([40, 40, 45]);
+    // Switching saves the strokes' pending whole buckets first.
+    Store.dispatch(setCollaborationModeAction("Concurrent"));
+    await waitUntilNotBusy();
+    const requestsBeforeInterpolation = testContext.receivedDataPerSaveRequest.length;
+
+    Store.dispatch(interpolateSegmentationLayerAction());
+    await waitUntilNotBusy();
+    await api.tracing.save();
+
+    expect(await api.data.getDataValue(layerName, [40, 40, 42])).toBe(activeCellId);
+    const bucketActionNames = testContext.receivedDataPerSaveRequest
+      .slice(requestsBeforeInterpolation)
+      .flatMap((entries) => entries.flatMap((entry) => entry.actions))
+      .map((action) => action.name)
+      .filter((name) => name === "updateBucket" || name === "updateBucketPartial");
+    expect(bucketActionNames).toContain("updateBucketPartial");
+    expect(bucketActionNames).not.toContain("updateBucket");
+  });
 });

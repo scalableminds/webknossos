@@ -12,7 +12,10 @@ import {
   getVolumeTracings,
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
-import type { UserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
+import type {
+  SetCollaborationModeAction,
+  UserBoundingBoxAction,
+} from "viewer/model/actions/annotation_actions";
 import {
   AllUserBoundingBoxActions,
   setUserBoundingBoxesAction,
@@ -72,6 +75,7 @@ type WarnUndoState = {
 };
 type UndoState = SkeletonUndoState | VolumeUndoState | BoundingBoxUndoState | WarnUndoState;
 type RelevantActionsForUndoRedo = {
+  setCollaborationModeAction?: SetCollaborationModeAction;
   skeletonUserAction?: SkeletonTracingAction;
   addBucketToUndoAction?: AddBucketToUndoAction;
   finishAnnotationStrokeAction?: FinishAnnotationStrokeAction;
@@ -86,7 +90,11 @@ type RelevantActionsForUndoRedo = {
 };
 
 function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo {
-  if (action.type === "ADD_BUCKET_TO_UNDO") {
+  if (action.type === "SET_COLLABORATION_MODE") {
+    return {
+      setCollaborationModeAction: action,
+    };
+  } else if (action.type === "ADD_BUCKET_TO_UNDO") {
     return {
       addBucketToUndoAction: action,
     };
@@ -213,7 +221,12 @@ function* manageUndoStates(): Saga<never> {
     "UNDO",
     "REDO",
     "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
+    "SET_COLLABORATION_MODE",
   ]);
+  // Volume edits are saved differently in live collaboration, where undo/redo is
+  // unavailable (see getVolumeSaveMode). Switching between the two discards the
+  // undo history.
+  let wasLiveCollaboration = yield* select(isConcurrentCollaborationMode);
   let loopCounter = 0;
 
   while (true) {
@@ -238,9 +251,21 @@ function* manageUndoStates(): Saga<never> {
       removeSegment,
       setSegmentGroups,
       batchUpdateGroupsAndSegments,
+      setCollaborationModeAction,
     } = unpackRelevantActionForUndo(currentAction);
 
-    if (importVolumeTracingAction) {
+    if (setCollaborationModeAction) {
+      const isLiveCollaboration = yield* select(isConcurrentCollaborationMode);
+      if (isLiveCollaboration !== wasLiveCollaboration) {
+        wasLiveCollaboration = isLiveCollaboration;
+        redoStack.splice(0);
+        undoStack.splice(0);
+        undoStack.push({
+          type: "warning",
+          reason: messages["undo.collaboration_mode_changed"],
+        } as WarnUndoState);
+      }
+    } else if (importVolumeTracingAction) {
       redoStack.splice(0);
       undoStack.splice(0);
       undoStack.push({

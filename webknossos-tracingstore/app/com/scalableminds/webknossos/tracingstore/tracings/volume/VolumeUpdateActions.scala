@@ -13,6 +13,8 @@ import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, 
 import com.scalableminds.webknossos.tracingstore.tracings.{GroupUtils, MetadataEntry, NamedBoundingBox}
 import play.api.libs.json.*
 
+import java.util.Base64
+
 trait VolumeUpdateActionHelper {
 
   protected def mapSegments(
@@ -40,12 +42,7 @@ trait ApplyableVolumeUpdateAction extends VolumeUpdateAction {
   def applyOn(tracing: VolumeTracing): VolumeTracing
 }
 
-trait BucketMutatingVolumeUpdateAction extends ApplyableVolumeUpdateAction {
-  // Upon the first Bucket-mutating action the volumeBucketDataHasChanged flag of the
-  // volume tracing proto should be set to true. This is done by the  action
-  // UpdateVolumeBucketDataHasChangedVolumeAction which needs to be sent by the frontend.
-  override def applyOn(tracing: VolumeTracing): VolumeTracing = tracing
-}
+trait LazyBucketMutatingVolumeUpdateAction extends VolumeUpdateAction
 
 trait UserStateVolumeUpdateAction extends ApplyableVolumeUpdateAction with UserStateUpdateAction {
   def actionAuthorId: Option[ObjectId]
@@ -71,7 +68,7 @@ trait UserStateVolumeUpdateAction extends ApplyableVolumeUpdateAction with UserS
   }
 }
 
-case class UpdateBucketVolumeAction(
+case class EagerUpdateBucketVolumeAction(
     position: Vec3Int,
     cubeSize: Int,
     mag: Vec3Int,
@@ -81,16 +78,16 @@ case class UpdateBucketVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends BucketMutatingVolumeUpdateAction derives JsonAutoFormat {
+) extends ApplyableVolumeUpdateAction derives JsonAutoFormat {
 
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
-  def withoutBase64Data: UpdateBucketVolumeAction =
+  def withoutBase64Data: EagerUpdateBucketVolumeAction =
     this.copy(base64Data = None)
 
   def bucketPosition: BucketPosition = BucketPosition(
@@ -100,6 +97,8 @@ case class UpdateBucketVolumeAction(
     mag,
     additionalCoordinates
   )
+
+  override def applyOn(tracing: VolumeTracing): VolumeTracing = tracing
 }
 
 case class UpdateTracingVolumeAction(
@@ -116,10 +115,10 @@ case class UpdateTracingVolumeAction(
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction
     with ProtoGeometryConversions derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -143,10 +142,10 @@ case class UpdateActiveSegmentIdVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends UserStateVolumeUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -169,10 +168,10 @@ case class UpdateLargestSegmentIdVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -187,10 +186,10 @@ case class UpdateVolumeBucketDataHasChangedVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -205,11 +204,11 @@ case class UpdateUserBoundingBoxesVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -227,10 +226,10 @@ case class AddUserBoundingBoxVolumeAction(
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withUserBoundingBoxes(tracing.userBoundingBoxes :+ boundingBox.toProto)
 
-  override def addTimestamp(timestamp: Long): UpdateAction =
+  override def withTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
@@ -246,10 +245,10 @@ case class DeleteUserBoundingBoxVolumeAction(
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withUserBoundingBoxes(tracing.userBoundingBoxes.filter(_.id != boundingBoxId))
 
-  override def addTimestamp(timestamp: Long): UpdateAction =
+  override def withTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
@@ -284,10 +283,10 @@ case class UpdateUserBoundingBoxVolumeAction(
     tracing.withUserBoundingBoxes(updateUserBoundingBoxes())
   }
 
-  override def addTimestamp(timestamp: Long): UpdateAction =
+  override def withTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
@@ -301,10 +300,10 @@ case class UpdateUserBoundingBoxVisibilityVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends UserStateVolumeUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -336,10 +335,10 @@ case class RemoveFallbackLayerVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -354,10 +353,10 @@ case class ImportVolumeDataVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -372,10 +371,10 @@ case class AddSegmentIndexVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -400,11 +399,11 @@ case class CreateSegmentVolumeAction(
 ) extends ApplyableVolumeUpdateAction
     with ProtoGeometryConversions derives JsonAutoFormat {
 
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -441,11 +440,11 @@ case class LegacyUpdateSegmentVolumeAction(
     with ProtoGeometryConversions
     with VolumeUpdateActionHelper derives JsonAutoFormat {
 
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -482,11 +481,11 @@ case class UpdateSegmentPartialVolumeAction(
     with ProtoGeometryConversions
     with VolumeUpdateActionHelper {
 
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -518,11 +517,11 @@ case class UpdateMetadataOfSegmentVolumeAction(
 ) extends ApplyableVolumeUpdateAction
     with VolumeUpdateActionHelper derives JsonAutoFormat {
 
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -552,11 +551,11 @@ case class DeleteSegmentVolumeAction(
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction derives JsonAutoFormat {
 
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -571,11 +570,11 @@ case class DeleteSegmentDataVolumeAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends BucketMutatingVolumeUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+) extends LazyBucketMutatingVolumeUpdateAction derives JsonAutoFormat {
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 }
@@ -589,10 +588,10 @@ case class UpdateMappingNameVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends ApplyableVolumeUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -617,10 +616,10 @@ case class LegacyUpdateSegmentGroupsVolumeAction(
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withSegmentGroups(segmentGroups.map(convertSegmentGroup))
 
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 }
@@ -702,10 +701,10 @@ case class MergeSegmentItemsVolumeAction(
     }.distinctBy(_.key)
   }
 
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 }
@@ -798,10 +797,10 @@ case class UpsertSegmentGroupVolumeAction(
         (acc :+ g.withChildren(children), inserted)
     }
 
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 }
@@ -825,10 +824,10 @@ case class DeleteSegmentGroupVolumeAction(
     tracing.withSegmentGroups(removeFromGroupHierarchy(tracing.segmentGroups))
   }
 
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 }
@@ -841,10 +840,10 @@ case class UpdateSegmentGroupsExpandedStateVolumeAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends UserStateVolumeUpdateAction derives JsonAutoFormat {
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -895,10 +894,10 @@ case class UpdateSegmentVisibilityVolumeAction(
         )
     )
 
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 }
@@ -942,12 +941,37 @@ case class UpdateSegmentGroupVisibilityVolumeAction(
     )
   }
 
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
+}
+
+case class UpdateBucketPartialVolumeAction(
+    actionTracingId: String,
+    position: Vec3Int,
+    mag: Vec3Int,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+    voxelRunsBase64: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends LazyBucketMutatingVolumeUpdateAction derives JsonAutoFormat {
+
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def withInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+  override def truncated: UpdateAction = this.copy(voxelRunsBase64 = "", info = None)
+
+  lazy val bucketPosition =
+    BucketPosition(position.x, position.y, position.z, mag, additionalCoordinates)
+
+  def voxelRunsBinary: Array[Byte] = Base64.getDecoder.decode(voxelRunsBase64)
 }
 
 // Only used to represent legacy update actions from the db where not all fields are set
@@ -960,10 +984,10 @@ case class CompactVolumeUpdateAction(
     actionAuthorId: Option[ObjectId] = None,
     value: JsObject
 ) extends VolumeUpdateAction {
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+  override def withTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def withAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this
+  override def withInfo(info: Option[String]): UpdateAction = this
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 }

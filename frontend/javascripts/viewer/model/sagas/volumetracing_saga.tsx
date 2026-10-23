@@ -59,9 +59,9 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
+import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import Dimensions from "viewer/model/dimensions";
-import type { MagInfo } from "viewer/model/helpers/mag_info";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import {
@@ -272,7 +272,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
     // tool below still builds up a section labeler.
     let brushStroke: {
       driver: BrushDriver;
-      magInfo: MagInfo;
+      cube: DataCube;
       // Run order of the wire encoding, in which this viewport's strokes are contiguous.
       runAxis: RunAxis;
       saveMode: SaveMode;
@@ -324,7 +324,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       );
       brushStroke = {
         driver,
-        magInfo: segmentationLayer.cube.magInfo,
+        cube: segmentationLayer.cube,
         runAxis: runAxisForPlane(startEditingAction.planeId),
         saveMode,
       };
@@ -404,7 +404,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
         pushPartialBucketUpdates,
         brushStroke.saveMode,
         bucketDiffs,
-        brushStroke.magInfo,
+        brushStroke.cube,
         volumeTracing.tracingId,
         brushStroke.runAxis,
       );

@@ -312,7 +312,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
       pushPartialBucketUpdates,
       saveMode,
       stats.bucketDiffs,
-      magInfo,
+      cube,
       volumeTracing.tracingId,
       runAxis,
     );

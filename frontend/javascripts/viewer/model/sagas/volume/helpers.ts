@@ -72,18 +72,27 @@ export function* getVolumeSaveMode(): Saga<SaveMode> {
 export function* pushPartialBucketUpdates(
   saveMode: SaveMode,
   bucketDiffs: BucketDiff[],
-  magInfo: MagInfo,
+  cube: DataCube,
   tracingId: string,
   runAxis: RunAxis,
 ): Saga<void> {
-  if (saveMode !== "partialUpdates" || bucketDiffs.length === 0) return;
+  if (saveMode !== "partialUpdates") return;
+  // todop: if mag 1 does not exist, wouldn't it make sense to stop mag propagation early?
+  // if mag 1 and mag 4 exist, and mag 2 is still processed, I find this ok. but going until the
+  // outer edge of the mag lists without it being existent sounds weird + unnecessary?
+
+  // Mag propagation runs over the dense mags, so diffs can address mags the layer
+  // doesn't have (e.g., mag 1 when the layer starts at mag 2), as well as buckets
+  // outside of its bounding box. Their writes were skipped, so they are not sent.
+  const diffsToSend = bucketDiffs.filter((diff) => cube.isBucketWithinLayer(diff.address));
+  if (diffsToSend.length === 0) return;
   // The core's BucketAddress is structurally the viewer's, additional
   // coordinates included, so it goes into createSendBucketInfo as-is.
   yield* put(
     pushSaveQueueTransaction(
-      bucketDiffs.map((diff) =>
+      diffsToSend.map((diff) =>
         updateBucketPartial(
-          createSendBucketInfo(diff.address, magInfo),
+          createSendBucketInfo(diff.address, cube.magInfo),
           encodeBucketDiffBase64(diff, runAxis),
           tracingId,
         ),

@@ -469,7 +469,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     pushPartialBucketUpdates,
     saveMode,
     bucketDiffs,
-    cube.magInfo,
+    cube,
     volumeTracing.tracingId,
     runAxisForPlane(activeViewport),
   );

@@ -1,6 +1,7 @@
 import { sleep } from "libs/utils";
 import {
   createBucketResponseFunction,
+  setupWebknossosForTesting,
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
@@ -32,8 +33,29 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const VOLUME_TRACING_ID = "volumeTracingId";
 const position: Vector3 = [40, 40, 43];
 
-async function setup(context: WebknossosTestContext, mode: AnnotationCollaborationMode) {
-  await setupWebknossosForTestingWithRestrictions(context, mode, true, false, "hybrid");
+async function setup(
+  context: WebknossosTestContext,
+  mode: AnnotationCollaborationMode,
+  { withoutMag1 = false } = {},
+) {
+  if (withoutMag1) {
+    // As setupWebknossosForTestingWithRestrictions, but the volume layer starts at mag 2.
+    await setupWebknossosForTesting(context, "hybrid", (data) => ({
+      ...data,
+      annotation: {
+        ...data.annotation,
+        restrictions: { ...data.annotation.restrictions, allowUpdate: true, allowSave: true },
+        collaborationMode: mode,
+      },
+      tracings: data.tracings.map((tracing) =>
+        tracing.typ === "Volume"
+          ? { ...tracing, mags: tracing.mags?.filter((mag) => mag.x !== 1) }
+          : tracing,
+      ),
+    }));
+  } else {
+    await setupWebknossosForTestingWithRestrictions(context, mode, true, false, "hybrid");
+  }
   vi.mocked(context.mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
     createBucketResponseFunction({ [VOLUME_TRACING_ID]: "uint16", color: "uint8" }, 0, 0),
   );
@@ -59,6 +81,16 @@ function sentBucketActionNames(context: WebknossosTestContext, fromRequest = 0):
     .flatMap((entries) => entries.flatMap((entry) => entry.actions))
     .map((action) => action.name)
     .filter((name) => name === "updateBucket" || name === "updateBucketPartial");
+}
+
+// The updateBucketPartial actions in all save requests.
+function sentPartialBucketUpdates(
+  context: WebknossosTestContext,
+): Array<{ position: Vector3; mag: Vector3 }> {
+  return context.receivedDataPerSaveRequest
+    .flatMap((entries) => entries.flatMap((entry) => entry.actions))
+    .filter((action) => action.name === "updateBucketPartial")
+    .map((action) => action.value as { position: Vector3; mag: Vector3 });
 }
 
 async function waitUntilNoOperationIsRunning() {
@@ -113,6 +145,32 @@ describe("Volume save mode", () => {
     // Undo is unavailable: the stroke stays.
     await dispatchUndoAsync(Store.dispatch);
     expect(await getValue(context)).toBe(5);
+  });
+
+  it<WebknossosTestContext>("doesn't send partial updates for mags the layer doesn't have", async (context) => {
+    // Mag propagation runs over the dense mags, which include mag 1 here.
+    await setup(context, "Concurrent", { withoutMag1: true });
+    brushAt(position);
+    await context.api.tracing.save();
+
+    const sent = sentPartialBucketUpdates(context);
+    expect(sent.length).toBeGreaterThan(0);
+    for (const { mag } of sent) expect(mag).not.toEqual([1, 1, 1]);
+  });
+
+  it<WebknossosTestContext>("doesn't send partial updates for buckets outside of the layer", async (context) => {
+    await setup(context, "Concurrent");
+    // The layer starts at the origin, so the brush reaches beyond it.
+    // can we do 0, 0, 0 and explain that this would cover negative coords when
+    // the code wouldnt exclude out-of-layer-bounds buckets?
+    brushAt([2, 2, 43]);
+    await context.api.tracing.save();
+
+    const sent = sentPartialBucketUpdates(context);
+    expect(sent.length).toBeGreaterThan(0);
+    for (const { position: bucketPosition } of sent) {
+      expect(Math.min(...bucketPosition)).toBeGreaterThanOrEqual(0);
+    }
   });
 
   it<WebknossosTestContext>("saves flood fills as partial updates in live collaboration", async (context) => {

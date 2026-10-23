@@ -404,25 +404,15 @@ export function toggleErrorHighlighting(state: boolean, permanentError: boolean 
     document.body.classList.toggle("save-error", state);
   }
 
-  const message = permanentError ? messages["save.failed.permanent"] : messages["save.failed"];
-
   if (state) {
+    const message = permanentError ? messages["save.failed.permanent"] : messages["save.failed"];
     Toast.error(message, {
       sticky: true,
     });
   } else {
-    Toast.close(message);
+    Toast.close(messages["save.failed.permanent"]);
+    Toast.close(messages["save.failed"]);
   }
-}
-
-// The error highlighting lives on document.body and in sticky toasts, which both
-// survive leaving the annotation view if no page reload happens.
-export function clearErrorHighlighting(): void {
-  if (document.body != null) {
-    document.body.classList.remove("save-error");
-  }
-  Toast.close(messages["save.failed"]);
-  Toast.close(messages["save.failed.permanent"]);
 }
 
 // This function returns the first n batches of the provided array, so that the count of

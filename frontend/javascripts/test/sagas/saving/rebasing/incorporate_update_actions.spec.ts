@@ -511,11 +511,13 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
   });
 
   describe("Bucket-special-cased actions", () => {
+    const previousRefetchFlag = WkDevFlags.liveCollaboration.refetchBucketsForRemotePartialUpdates;
     beforeEach<WebknossosTestContext>(async (context) => {
       await setupWebknossosForTesting(context, "volume");
     });
 
     afterEach<WebknossosTestContext>(async (context) => {
+      WkDevFlags.liveCollaboration.refetchBucketsForRemotePartialUpdates = previousRefetchFlag;
       expect(hasRootSagaCrashed()).toBe(false);
       await context.api.tracing.save();
       expect(hasRootSagaCrashed()).toBe(false);
@@ -622,14 +624,10 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           1,
         );
       });
-      const previousFlag = WkDevFlags.liveCollaboration.refetchBucketsForRemotePartialUpdates;
+      // Reset in afterEach.
       WkDevFlags.liveCollaboration.refetchBucketsForRemotePartialUpdates =
         refetchBucketsForRemotePartialUpdates;
-      try {
-        await task.toPromise();
-      } finally {
-        WkDevFlags.liveCollaboration.refetchBucketsForRemotePartialUpdates = previousFlag;
-      }
+      await task.toPromise();
       return {
         changedVoxel: await api.data.getDataValue(volumeTracingLayerName, [2, 0, 0]),
         unchangedVoxel: await api.data.getDataValue(volumeTracingLayerName, [3, 0, 0]),

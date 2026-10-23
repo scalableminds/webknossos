@@ -22,8 +22,8 @@ import DeactivatedUserTag from "admin/user/deactivated_user_tag";
 import { App, Dropdown, type MenuProps, Tooltip } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
+import FormattedDuration from "components/formatted_duration";
 import TransferTaskModal from "dashboard/transfer_task_modal";
-import { formatSeconds } from "libs/format_utils";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -200,9 +200,7 @@ function TaskAnnotationView({ task }: Props) {
                   <br />
                   <span>
                     <ClockCircleOutlined className="icon-margin-right" />
-                    {annotation.tracingTime != null
-                      ? formatSeconds(annotation.tracingTime / 1000)
-                      : 0}
+                    <FormattedDuration durationMs={annotation.tracingTime ?? 0} />
                   </span>
                 </td>
                 <td className="nowrap">

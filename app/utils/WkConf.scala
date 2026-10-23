@@ -118,6 +118,10 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
 
     val operatorData: String = get[String]("webKnossos.operatorData")
 
+    object TokenScopes {
+      val enforced: Boolean = get[Boolean]("webKnossos.tokenScopes.enforced")
+    }
+
     object Datasets {
       object UploadToPaths {
         val prefixes: Option[Seq[String]] =
@@ -137,6 +141,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
         SampleOrganization,
         FetchUsedStorage,
         TermsOfService,
+        TokenScopes,
         Datasets
       )
   }
@@ -229,6 +234,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val resetPasswordExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.resetPasswordExpiry")
       val dataStoreExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.dataStoreExpiry")
       val jobExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.jobExpiry")
+      val shortLivedExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.shortLivedExpiry")
       val authenticatorExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorExpiry")
       val authenticatorIdleTimeout: FiniteDuration =
         get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorIdleTimeout")

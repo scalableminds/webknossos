@@ -119,7 +119,13 @@ object AssetCompilation {
       // The generator reads the live DB; We check a stamp file written bei dbtool.js to decide whether to re-generate.
       // This only gates whether we connect to the DB at all, the generator itself rewrites only the table files
       // whose content actually changed.
-      val shouldUpdate = !slickTablesOutPath.exists || !codeGenStampFile.exists || codeGenStampFile.lastModified < schemaRefreshedStampFile.lastModified
+      // The codegen stamp also records a hash of schema.sql. The refresh stamp alone is not enough: it is gitignored,
+      // so it is missing in CI, where target/ is restored from another branch's cache (e.g. master's) whose generated
+      // tables may not match this branch's schema.
+      val schemaHash = Hash.toHex(Hash(baseDirectoryValue / "schema" / "schema.sql"))
+      val shouldUpdate = !slickTablesOutPath.exists || !codeGenStampFile.exists ||
+        codeGenStampFile.lastModified < schemaRefreshedStampFile.lastModified ||
+        IO.read(codeGenStampFile).trim != schemaHash
 
       if (shouldUpdate) {
         streamsValue.log.info(
@@ -151,7 +157,7 @@ object AssetCompilation {
         runResult.get
 
         // Mark this schema.sql state as generated so we do not re-run until the schema changes again.
-        IO.touch(codeGenStampFile)
+        IO.write(codeGenStampFile, schemaHash)
 
       } else {
         streamsValue.log.info("Slick SQL schema already up to date.")

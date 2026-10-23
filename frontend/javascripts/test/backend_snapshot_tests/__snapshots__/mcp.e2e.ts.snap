@@ -1,0 +1,3 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Short-lived tokens via MCP (E2E) > are handed out by the MCP server and authenticate as their user 1`] = `"dataset:write,annotation:write,task:write,project:write,team:write,user:write,organization:read,job:write,script:write,voxelytics:write,aiModel:write,meta:read,dataset:administrate"`;

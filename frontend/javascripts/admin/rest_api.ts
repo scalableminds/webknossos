@@ -352,6 +352,26 @@ export async function revokeAuthToken(): Promise<void> {
   });
 }
 
+// The permissions granted to AI agents connecting via the MCP server, as a scope expression.
+export async function getMcpAgentPermissions(): Promise<string> {
+  const { scopes } = await Request.receiveJSON("/api/mcp/permissions");
+  return scopes;
+}
+
+export async function updateMcpAgentPermissions(scopes: string): Promise<void> {
+  await Request.sendJSONReceiveJSON("/api/mcp/permissions", {
+    method: "PUT",
+    data: { scopes },
+  });
+}
+
+// Invalidates the short-lived tokens the MCP server has handed out to agents.
+export async function revokeAgentTokens(): Promise<void> {
+  await Request.receiveJSON("/api/mcp/tokens", {
+    method: "DELETE",
+  });
+}
+
 export async function changePassword(data: Record<string, string>): Promise<void> {
   await Request.sendJSONReceiveJSON("/api/auth/changePassword", {
     data: data,

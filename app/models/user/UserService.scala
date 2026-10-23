@@ -256,6 +256,12 @@ class UserService @Inject() (
   private def getOpenIdConnectPasswordInfo: PasswordInfo =
     PasswordInfo("Empty", "")
 
+  def updateMcpAgentScopes(user: User, mcpAgentScopes: String)(using ctx: DBAccessContext): Fox[Unit] =
+    userDAO.updateMcpAgentScopes(user._id, mcpAgentScopes).map { result =>
+      removeUserFromCache(user._id)
+      result
+    }
+
   def updateUserConfiguration(user: User, configuration: JsObject)(using ctx: DBAccessContext): Fox[Unit] =
     userDAO.updateUserConfiguration(user._id, configuration).map { result =>
       removeUserFromCache(user._id)

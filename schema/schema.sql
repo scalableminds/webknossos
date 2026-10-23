@@ -477,6 +477,7 @@ CREATE TABLE webknossos.users(
   lastTaskTypeId TEXT CONSTRAINT lastTaskTypeId_objectId CHECK (lastTaskTypeId ~ '^[0-9a-f]{24}$') DEFAULT NULL,
   isUnlisted BOOLEAN NOT NULL DEFAULT FALSE,
   loggedOutEverywhereTime TIMESTAMPTZ,
+  mcpAgentScopes TEXT NOT NULL DEFAULT 'write',
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (_multiUser, _organization),
   CONSTRAINT userConfigurationIsJsonObject CHECK(jsonb_typeof(userConfiguration) = 'object')
@@ -570,7 +571,7 @@ CREATE TABLE webknossos.webauthnCredentials(
 );
 
 
-CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword', 'Job');
+CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword', 'Job', 'ShortLived');
 CREATE TABLE webknossos.tokens(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   value TEXT NOT NULL,

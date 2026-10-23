@@ -5,7 +5,7 @@ import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.sv
 import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
 import { type MenuProps, notification } from "antd";
 import type { MenuItemGroupType, MenuItemType } from "antd/es/menu/interface";
-import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
+import { formatLengthAsVx } from "libs/format_utils";
 import { roundTo } from "libs/utils";
 import messages from "messages";
 import React from "react";
@@ -16,6 +16,7 @@ import { extractPathAsNewTree } from "viewer/model/reducers/skeletontracing_redu
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
+import { CopyableLength } from "viewer/view/components/copyable_length";
 
 export const getNoActionsAvailableMenu = (hideContextMenu: () => void): MenuProps => ({
   onClick: hideContextMenu,
@@ -42,10 +43,13 @@ export function measureAndShowLengthBetweenNodes(
     targetNodeId,
   );
   notification.open({
-    title: `The shortest path length between the nodes is ${formatNumberToLength(
-      lengthInUnit,
-      LongUnitToShortUnitMap[voxelSizeUnit],
-    )} (${formatLengthAsVx(lengthInVx)}).`,
+    title: (
+      <>
+        The shortest path length between the nodes is{" "}
+        <CopyableLength length={lengthInUnit} unit={LongUnitToShortUnitMap[voxelSizeUnit]} /> (
+        {formatLengthAsVx(lengthInVx)}).
+      </>
+    ),
     icon: <Icon component={RulerIcon} />,
   });
 }
@@ -72,7 +76,7 @@ export function measureAndShowFullTreeLength(
   notification.open({
     title: messages["tracing.tree_length_notification"](
       treeName,
-      formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[voxelSizeUnit]),
+      <CopyableLength length={lengthInUnit} unit={LongUnitToShortUnitMap[voxelSizeUnit]} />,
       formatLengthAsVx(lengthInVx),
     ),
     icon: <Icon component={RulerIcon} />,

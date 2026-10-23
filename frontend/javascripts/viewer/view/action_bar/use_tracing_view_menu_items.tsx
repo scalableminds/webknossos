@@ -13,7 +13,7 @@ import {
   UnlockOutlined,
 } from "@ant-design/icons";
 import { editLockedState, finishAnnotation } from "admin/rest_api";
-import { App } from "antd";
+import { App, Tooltip } from "antd";
 import type { useAppProps } from "antd/es/app/context";
 import type { ItemType, SubMenuType } from "antd/es/menu/interface";
 import { useWkSelector } from "libs/react_hooks";
@@ -42,6 +42,22 @@ import {
   renderAnimationMenuItem,
   screenshotMenuItem,
 } from "viewer/view/action_bar/view_dataset_actions_view";
+
+// These actions require authentication. Instead of opening a dialog that fails for logged-out
+// users, disable the menu item and explain why.
+function getLoginRequiredProps(isLoggedOut: boolean, label: string, loggedOutReason: string) {
+  if (!isLoggedOut) {
+    return { label };
+  }
+  return {
+    disabled: true,
+    label: (
+      <Tooltip title={loggedOutReason} placement="right">
+        <span>{label}</span>
+      </Tooltip>
+    ),
+  };
+}
 
 const handleRestore = async () => {
   await Model.ensureSavedState();
@@ -174,17 +190,22 @@ export const useTracingViewMenuItems = (
       });
     }
 
+    const isLoggedOut = activeUser == null;
     menuItems.push({
       key: "share-button",
       onClick: handleShareOpen,
       icon: <ShareAltOutlined />,
-      label: "Share",
+      ...getLoginRequiredProps(isLoggedOut, "Share", "Log in to share this annotation."),
     });
     menuItems.push({
       key: "zarr-links-button",
       onClick: handleZarrLinksOpen,
       icon: <LinkOutlined />,
-      label: "Zarr Links",
+      ...getLoginRequiredProps(
+        isLoggedOut,
+        "Zarr Links",
+        "Log in to create Zarr links for this annotation.",
+      ),
     });
 
     if (activeUser != null) {
@@ -219,7 +240,11 @@ export const useTracingViewMenuItems = (
         key: "restore-button",
         onClick: handleRestore,
         icon: <HistoryOutlined />,
-        label: "Restore Older Version",
+        ...getLoginRequiredProps(
+          isLoggedOut,
+          "Restore Older Version",
+          "Log in to restore older versions of this annotation.",
+        ),
       });
     }
 

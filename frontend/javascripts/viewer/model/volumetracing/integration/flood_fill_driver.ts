@@ -103,7 +103,7 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
     `floodfill-${Date.now()}`,
     ctx,
     adapter,
-    magListFromDenseMags(options.denseMags),
+    magListFromDenseMags(options.denseMags, options.cube.magInfo.getFinestMagIndex()),
   );
   transaction.recordAll(bucketWrites);
   transaction.flushToCube();

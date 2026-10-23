@@ -60,7 +60,7 @@ export class BrushDriver {
       `brush-${Date.now()}`,
       this.ctx,
       this.adapter,
-      magListFromDenseMags(options.denseMags),
+      magListFromDenseMags(options.denseMags, options.cube.magInfo.getFinestMagIndex()),
     );
     this.last = start;
     this.paint(start, start);

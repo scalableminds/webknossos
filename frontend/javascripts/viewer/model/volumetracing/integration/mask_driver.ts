@@ -40,7 +40,7 @@ export function runMaskEdit(
     `${toolName}-${Date.now()}`,
     ctx,
     adapter,
-    magListFromDenseMags(options.denseMags),
+    magListFromDenseMags(options.denseMags, options.cube.magInfo.getFinestMagIndex()),
   );
 
   rasterize(mask, ctx, transaction);

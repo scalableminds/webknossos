@@ -144,7 +144,13 @@ export class WkLoadingCubeAdapter extends WkDataCubeAdapter implements LoadingVo
   }
 }
 
-/** Build the core's MagList from a layer's MagInfo-derived dense mags. */
-export function magListFromDenseMags(denseMags: Vector3[]): MagList {
-  return new MagList(denseMags.map((mag) => [mag[0], mag[1], mag[2]] as Mag));
+/**
+ * Build the core's MagList from a layer's MagInfo-derived dense mags, propagating
+ * no finer than the layer's finest mag.
+ */
+export function magListFromDenseMags(denseMags: Vector3[], finestMagIndex: number): MagList {
+  return new MagList(
+    denseMags.map((mag) => [mag[0], mag[1], mag[2]] as Mag),
+    finestMagIndex,
+  );
 }

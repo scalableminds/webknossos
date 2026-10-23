@@ -40,7 +40,7 @@ import {
   theme,
 } from "antd";
 import { AsyncButton } from "components/async_clickables";
-import FormattedDate from "components/formatted_date";
+import FormattedDate, { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
 import { copyToClipboard } from "libs/clipboard";
 import { makeComponentLazy } from "libs/react_helpers";
@@ -271,10 +271,10 @@ export function ZarrLinkUrlRows({ maybeAccessToken }: { maybeAccessToken: string
   );
 }
 
-function getTokenExcerpt(accessToken: string) {
-  return accessToken.length > 8
-    ? `${accessToken.slice(0, 4)}…${accessToken.slice(-4)}`
-    : accessToken;
+// Private links don't store a creation date, but their id is an ObjectId whose first
+// 4 bytes encode the creation time in seconds since the epoch.
+function getCreationTimestamp(linkItem: ZarrPrivateLink) {
+  return Number.parseInt(linkItem.id.slice(0, 8), 16) * 1000;
 }
 
 function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
@@ -461,7 +461,6 @@ function EmptyLinkList({ onCreate }: { onCreate: () => Promise<void> }) {
 function PrivateLinksView({ annotationId }: { annotationId: string }) {
   const { error, data: links, isPending } = useLinksQuery(annotationId);
   const createLinkMutation = useCreateLinkMutation(annotationId);
-  const { token } = theme.useToken();
   // undefined: the user did not pick a link yet, so the newest one is expanded.
   // null: the user collapsed all links.
   const [activeLinkId, setActiveLinkId] = useState<string | null | undefined>(undefined);
@@ -480,8 +479,8 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
     label: (
       <Space size="small">
         <Typography.Text strong>Zarr Link</Typography.Text>
-        <Typography.Text type="secondary" style={{ fontFamily: token.fontFamilyCode }}>
-          {getTokenExcerpt(linkItem.accessToken)}
+        <Typography.Text type="secondary">
+          created {formatDateInLocalTimeZone(getCreationTimestamp(linkItem), "D MMMM YYYY HH:mm")}
         </Typography.Text>
       </Space>
     ),

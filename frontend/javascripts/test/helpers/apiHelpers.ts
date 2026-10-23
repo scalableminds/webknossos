@@ -283,7 +283,7 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
-    getUpdateActionLog: vi.fn(() => Promise.resolve([])),
+    getUpdateActionLog: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
     getPositionForSegmentInAgglomerate: vi.fn(
       (
         _datastoreUrl: string,

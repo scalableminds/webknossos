@@ -22,12 +22,11 @@ import {
   isLayerVisible,
 } from "viewer/model/accessors/dataset_accessor";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
-import determineBucketsForPlaneWithScanLines from "viewer/model/bucket_data_handling/bucket_picker_strategies/legacy/oblique_bucket_picker_scan_lines";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import TextureBucketManager from "viewer/model/bucket_data_handling/texture_bucket_manager";
 import shaderEditor from "viewer/model/helpers/shader_editor";
-import Store, { type LoadingStrategy, type PlaneRects, type SegmentMap } from "viewer/store";
+import Store, { type PlaneRects, type SegmentMap } from "viewer/store";
 import { createWorker } from "viewer/workers/comlink_wrapper";
 import type AsyncBucketPicker from "../../workers/async_bucket_picker.worker";
 import {
@@ -163,8 +162,6 @@ export default class LayerRenderingManager {
   latestTaskExecutor: LatestTaskExecutor<ArrayBuffer> = new LatestTaskExecutor();
   additionalCoordinates: AdditionalCoordinate[] | null = null;
   maximumZoomForAllMags: number[] | null = null;
-  // TEMPORARY (revert before merging), see WkDevFlags.bucketDebugging.visualizeBucketsNotPickedByMaster.
-  bucketsNotPickedByMaster: DataBucket[] = [];
 
   private colorCuckooTable: CuckooTableVec3 | undefined;
   private storePropertyUnsubscribers: Array<() => void> = [];
@@ -186,50 +183,6 @@ export default class LayerRenderingManager {
   refresh() {
     this.needsRefresh = true;
     app.vent.emit("rerender");
-  }
-
-  // TEMPORARY (revert before merging): outlines the buckets that are passed to the GPU but
-  // that master's scan-line picker wouldn't have picked for the same view. Only buckets of the
-  // rendered mag are outlined (see DataBucket.visualize).
-  updateBucketsNotPickedByMaster(
-    buckets: DataBucket[],
-    mags: Vector3[],
-    position: Vector3,
-    matrix: Matrix4x4,
-    logZoomStep: number,
-    loadingStrategy: LoadingStrategy,
-    rects: PlaneRects,
-  ) {
-    for (const bucket of this.bucketsNotPickedByMaster) {
-      bucket.unvisualize();
-    }
-    this.bucketsNotPickedByMaster = [];
-    if (!WkDevFlags.bucketDebugging.visualizeBucketsNotPickedByMaster || buckets.length === 0) {
-      return;
-    }
-    const pickedByMaster = new Set<string>();
-    determineBucketsForPlaneWithScanLines(
-      loadingStrategy,
-      mags,
-      position,
-      (address) => pickedByMaster.add(`${address[0]},${address[1]},${address[2]},${address[3]}`),
-      matrix,
-      logZoomStep,
-      rects,
-    );
-    const key = (bucket: DataBucket) => bucket.zoomedAddress.slice(0, 4).join(",");
-    this.bucketsNotPickedByMaster = buckets.filter((bucket) => !pickedByMaster.has(key(bucket)));
-    for (const bucket of this.bucketsNotPickedByMaster) {
-      bucket.visualize();
-      bucket.setVisualizationColor("#ff00ff");
-    }
-    const ofRenderedMag = (list: DataBucket[]) =>
-      list.filter((bucket) => bucket.zoomedAddress[3] === logZoomStep).length;
-    console.log(
-      `[bucketPick] ${this.name}: ${this.bucketsNotPickedByMaster.length} of ${buckets.length} buckets ` +
-        `are not picked by master (rendered mag: ${ofRenderedMag(this.bucketsNotPickedByMaster)} ` +
-        `of ${ofRenderedMag(buckets)}, outlined in magenta)`,
-    );
   }
 
   setupDataTextures(): void {
@@ -361,15 +314,6 @@ export default class LayerRenderingManager {
           );
           const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
           this.textureBucketManager.setActiveBuckets(buckets);
-          this.updateBucketsNotPickedByMaster(
-            isVisible && viewMode !== constants.MODE_FLIGHT ? buckets : [],
-            mags,
-            position,
-            matrix,
-            logZoomStep,
-            datasetConfiguration.loadingStrategy,
-            rects,
-          );
           // In general, pull buckets which are not available but should be sent to the GPU
           const missingBuckets = bucketsWithPriorities
             .filter(({ bucket }) => !bucket.hasData())

@@ -44,10 +44,6 @@ export const WkDevFlags = {
     // the consoles of the bucket picker worker (every 100 picks) and of the
     // getMaximumZoomForAllMags worker (every call).
     compareObliquePickers: true,
-    // TEMPORARY (revert before merging): if true, the buckets of the rendered mag that are passed
-    // to the GPU but that master's scan-line picker wouldn't have picked are outlined in the 3D
-    // view (magenta). Their number is logged to the console after each pick.
-    visualizeBucketsNotPickedByMaster: false,
     // For enforcing fallback rendering. enforcedZoomDiff == 2, means
     // that buckets of currentZoomStep + 2 are rendered.
     enforcedZoomDiff: undefined,

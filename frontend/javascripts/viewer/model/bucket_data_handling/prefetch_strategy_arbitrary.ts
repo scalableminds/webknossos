@@ -9,7 +9,10 @@ import {
 } from "viewer/model/bucket_data_handling/convex_polyhedron_buckets";
 import { AbstractPrefetchStrategy } from "viewer/model/bucket_data_handling/prefetch_strategy_plane";
 import type { PullQueueItem } from "viewer/model/bucket_data_handling/pullqueue";
-import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
+import {
+  getBucketExtent,
+  globalPositionToBucketPosition,
+} from "viewer/model/helpers/position_converter";
 import type { MagInfo } from "../helpers/mag_info";
 
 export class PrefetchStrategyFlight extends AbstractPrefetchStrategy {
@@ -40,13 +43,12 @@ export class PrefetchStrategyFlight extends AbstractPrefetchStrategy {
     };
   }
 
-  modifyMatrixForPoly(matrix: Matrix4x4, zoomStep: number) {
-    matrix[12] >>= 5 + zoomStep;
-    matrix[13] >>= 5 + zoomStep;
-    matrix[14] >>= 5 + zoomStep;
-    matrix[12] += 1;
-    matrix[13] += 1;
-    matrix[14] += 1;
+  // Converts the translation of the matrix to bucket coordinates. The bucket extent can differ
+  // per axis for anisotropic mags.
+  modifyMatrixForPoly(matrix: Matrix4x4, bucketExtent: Vector3) {
+    matrix[12] = Math.floor(matrix[12] / bucketExtent[0]) + 1;
+    matrix[13] = Math.floor(matrix[13] / bucketExtent[1]) + 1;
+    matrix[14] = Math.floor(matrix[14] / bucketExtent[2]) + 1;
   }
 
   prefetch(
@@ -67,7 +69,7 @@ export class PrefetchStrategyFlight extends AbstractPrefetchStrategy {
     }
 
     const matrix0 = M4x4.clone(matrix);
-    this.modifyMatrixForPoly(matrix0, zoomStep);
+    this.modifyMatrixForPoly(matrix0, getBucketExtent(mags[zoomStep]));
     const testAddresses = collectBucketsInConvexPolyhedron(
       M4x4.transformPointsAffine(matrix0, this.prefetchFrustum.vertices),
       this.prefetchFrustum.edgeIndices,

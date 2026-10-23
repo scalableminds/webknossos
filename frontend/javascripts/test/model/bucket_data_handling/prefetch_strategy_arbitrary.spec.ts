@@ -8,6 +8,7 @@ import {
 } from "viewer/model/bucket_data_handling/convex_polyhedron_buckets";
 import { PrefetchStrategyFlight } from "viewer/model/bucket_data_handling/prefetch_strategy_arbitrary";
 import { MagInfo } from "viewer/model/helpers/mag_info";
+import { getBucketExtent } from "viewer/model/helpers/position_converter";
 import { describe, expect, it } from "vitest";
 
 const MAGS: Vector3[] = [
@@ -42,48 +43,69 @@ describe("getSquareFrustum", () => {
   });
 });
 
+const ANISOTROPIC_MAGS: Vector3[] = [
+  [1, 1, 1],
+  [2, 2, 1],
+  [4, 4, 2],
+];
+
 describe("PrefetchStrategyFlight", () => {
-  it("prefetches exactly the buckets overlapping the frustum, prioritized by distance", () => {
-    let matrix = [
-      ..._getDummyFlycamMatrix({ factor: [11, 11, 24], unit: UnitLong.nm }),
-    ] as Matrix4x4;
-    matrix = M4x4.rotate(Math.PI / 6, [1, 0, 0], matrix, []) as Matrix4x4;
-    matrix = M4x4.rotate(Math.PI / 9, [0, 1, 0], matrix, []) as Matrix4x4;
-    const position: Vector3 = [5000, 4000, 3000];
-    matrix[12] = position[0];
-    matrix[13] = position[1];
-    matrix[14] = position[2];
+  const cases: Array<{ name: string; mags: Vector3[]; magIndex: number }> = [
+    { name: "isotropic mags, mag index 0", mags: MAGS, magIndex: 0 },
+    { name: "isotropic mags, mag index 1", mags: MAGS, magIndex: 1 },
+    { name: "anisotropic mags, mag index 1 ([2, 2, 1])", mags: ANISOTROPIC_MAGS, magIndex: 1 },
+    { name: "anisotropic mags, mag index 2 ([4, 4, 2])", mags: ANISOTROPIC_MAGS, magIndex: 2 },
+  ];
 
-    const strategy = new PrefetchStrategyFlight();
-    const items = strategy.prefetch(matrix, 0, position, MAGS, new MagInfo(MAGS), null);
+  for (const { name, mags, magIndex } of cases) {
+    it(`prefetches exactly the buckets overlapping the frustum, prioritized by distance (${name})`, () => {
+      let matrix = [
+        ..._getDummyFlycamMatrix({ factor: [11, 11, 24], unit: UnitLong.nm }),
+      ] as Matrix4x4;
+      matrix = M4x4.rotate(Math.PI / 6, [1, 0, 0], matrix, []) as Matrix4x4;
+      matrix = M4x4.rotate(Math.PI / 9, [0, 1, 0], matrix, []) as Matrix4x4;
+      const position: Vector3 = [5000, 4000, 3000];
+      matrix[12] = position[0];
+      matrix[13] = position[1];
+      matrix[14] = position[2];
 
-    // Same frustum transformation as the strategy: translation converted to bucket coordinates.
-    const bucketMatrix = M4x4.clone(matrix);
-    strategy.modifyMatrixForPoly(bucketMatrix, 0);
-    const vertices = M4x4.transformPointsAffine(bucketMatrix, strategy.prefetchFrustum.vertices);
-    const overlaps = buildOverlapTest(vertices, strategy.prefetchFrustum.edgeIndices);
-    const expected: string[] = [];
-    const min = [0, 1, 2].map((d) =>
-      Math.floor(Math.min(...vertices.filter((_, i) => i % 3 === d))),
-    );
-    const max = [0, 1, 2].map((d) =>
-      Math.floor(Math.max(...vertices.filter((_, i) => i % 3 === d))),
-    );
-    for (let x = min[0]; x <= max[0]; x++) {
-      for (let y = min[1]; y <= max[1]; y++) {
-        for (let z = min[2]; z <= max[2]; z++) {
-          if (overlaps(x, y, z)) expected.push(`${x},${y},${z}`);
+      const strategy = new PrefetchStrategyFlight();
+      const items = strategy.prefetch(matrix, magIndex, position, mags, new MagInfo(mags), null);
+
+      // The frustum is placed at the bucket of the camera (plus the historical offset of one
+      // bucket per axis), where the bucket extent differs per axis for anisotropic mags.
+      const bucketExtent = getBucketExtent(mags[magIndex]);
+      const cameraBucket = position.map((value, d) => Math.floor(value / bucketExtent[d]));
+      const bucketMatrix = M4x4.clone(matrix);
+      bucketMatrix[12] = cameraBucket[0] + 1;
+      bucketMatrix[13] = cameraBucket[1] + 1;
+      bucketMatrix[14] = cameraBucket[2] + 1;
+      const vertices = M4x4.transformPointsAffine(bucketMatrix, strategy.prefetchFrustum.vertices);
+      const overlaps = buildOverlapTest(vertices, strategy.prefetchFrustum.edgeIndices);
+      const expected: string[] = [];
+      const min = [0, 1, 2].map((d) =>
+        Math.floor(Math.min(...vertices.filter((_, i) => i % 3 === d))),
+      );
+      const max = [0, 1, 2].map((d) =>
+        Math.floor(Math.max(...vertices.filter((_, i) => i % 3 === d))),
+      );
+      for (let x = min[0]; x <= max[0]; x++) {
+        for (let y = min[1]; y <= max[1]; y++) {
+          for (let z = min[2]; z <= max[2]; z++) {
+            if (overlaps(x, y, z)) expected.push(`${x},${y},${z}`);
+          }
         }
       }
-    }
 
-    expect(items.map((item) => item.bucket.slice(0, 3).join(",")).sort()).toEqual(expected.sort());
-    const positionBucket = position.map((value) => Math.floor(value / 32)) as Vector3;
-    for (const { bucket, priority } of items) {
-      expect(bucket[3]).toBe(0);
-      expect(priority).toBeCloseTo(
-        1 + V3.length(V3.sub([bucket[0], bucket[1], bucket[2]], positionBucket)),
+      expect(items.map((item) => item.bucket.slice(0, 3).join(",")).sort()).toEqual(
+        expected.sort(),
       );
-    }
-  });
+      for (const { bucket, priority } of items) {
+        expect(bucket[3]).toBe(magIndex);
+        expect(priority).toBeCloseTo(
+          1 + V3.length(V3.sub([bucket[0], bucket[1], bucket[2]], cameraBucket as Vector3)),
+        );
+      }
+    });
+  }
 });

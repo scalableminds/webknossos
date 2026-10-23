@@ -4,6 +4,7 @@ import {
   DatasetNameFormItem,
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
+import { useIsJobAvailable } from "admin/job/job_hooks";
 import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
 import { sendAnalyticsEvent, type UnfinishedUpload } from "admin/rest_api";
 import {
@@ -102,9 +103,10 @@ function useUploadableDatastores(
     uploadableDatastores.length <= 1
       ? uploadableDatastores[0]
       : uploadableDatastores.find((datastore) => datastore.url === selectedDatastoreUrl);
-  const isDatasetConversionEnabled =
-    selectedDatastore?.jobsSupportedByAvailableWorkers.includes(APIJobCommand.CONVERT_TO_WKW) ??
-    false;
+  const isDatasetConversionEnabled = useIsJobAvailable(
+    selectedDatastore,
+    APIJobCommand.CONVERT_TO_WKW,
+  );
 
   return { uploadableDatastores, selectedDatastoreUrl, isDatasetConversionEnabled };
 }

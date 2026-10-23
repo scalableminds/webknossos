@@ -143,6 +143,7 @@ class JobController @Inject() (
       job <- jobDAO.findOne(id) ?~> Msg.Job.notFound
       multiUser <- multiUserDAO.findOne(request.identity._multiUser)
       _ <- Fox.fromBool(multiUser.isSuperUser || job.lastRetry.isEmpty) ?~> Msg.Job.alreadyRetried ~> FORBIDDEN
+      _ <- jobService.assertJobCanBeRetriedByPricingPlan(job)
       _ <- creditTransactionService.reserveCreditsForRetry(job._id)
       _ <- jobDAO.retryOne(id, retriedBySuperUser = multiUser.isSuperUser)
       js <- jobService.publicWrites(job)

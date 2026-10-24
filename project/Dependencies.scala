@@ -12,7 +12,7 @@ object Dependencies {
     )
 
   private val silhouetteVersion = "10.0.4"
-  private val brotliVersion = "1.23.0"
+  private val brotliVersion = "1.24.0"
   private val slickVersion = "3.6.1"
   private val awsVersion = "2.55.16"
   private val postgresVersion = "42.7.14"

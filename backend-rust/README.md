@@ -4,7 +4,7 @@ An incremental port of the Play application backend, built in its own directory.
 
 ## Run
 
-Install Rust 1.88 or newer and use a database initialized and maintained by the existing WEBKNOSSOS tooling at schema version **185**. Prefer a development database or a copy while evaluating the migration.
+Install Rust 1.88 or newer and use a database initialized and maintained by the existing WEBKNOSSOS tooling at schema version **186**. Prefer a development database or a copy while evaluating the migration.
 
 From this directory:
 
@@ -53,8 +53,8 @@ Register the standalone datastore and tracingstore (names and keys must match th
 
 ```sql
 -- 1. Datastore
-INSERT INTO webknossos.dataStores (name, url, publicUrl, key, allowsUpload, allowsUploadToPaths, isScratch, reportUsedStorageEnabled)
-VALUES ('standalone-9090', 'http://localhost:9090', 'http://localhost:9090', 'something-secur3', true, true, false, false)
+INSERT INTO webknossos.dataStores (name, url, publicUrl, key, allowsUpload, allowsUploadToPaths, reportUsedStorageEnabled)
+VALUES ('standalone-9090', 'http://localhost:9090', 'http://localhost:9090', 'something-secur3', true, true, false)
 ON CONFLICT (name) DO UPDATE SET
   url = 'http://localhost:9090',
   publicUrl = 'http://localhost:9090',

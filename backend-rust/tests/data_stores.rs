@@ -66,8 +66,8 @@ async fn request(
 async fn seed_store(database: &TestDb, name: &str, only_organization: Option<&str>) {
     sqlx::query(
         "INSERT INTO webknossos.dataStores (name, url, publicUrl, key, \
-            onlyAllowedOrganization, isScratch, allowsUploadToPaths, reportUsedStorageEnabled) \
-            VALUES ($1, $2, $3, 'private-datastore-key', $4, TRUE, FALSE, TRUE)",
+            onlyAllowedOrganization, allowsUploadToPaths, reportUsedStorageEnabled) \
+            VALUES ($1, $2, $3, 'private-datastore-key', $4, FALSE, TRUE)",
     )
     .bind(name)
     .bind(format!("http://{name}.internal.test"))
@@ -189,7 +189,6 @@ async fn public_registry_reuses_worker_job_semantics_and_never_returns_keys_or_i
     for private in [
         "private-datastore-key",
         "internal.test",
-        "isScratch",
         "onlyAllowedOrganization",
         "allowsUploadToPaths",
         "reportUsedStorageEnabled",
@@ -257,14 +256,14 @@ async fn datastore_creation_requires_superuser_and_preserves_dto_defaults_and_pu
     assert_eq!(body, public_store("new-store"));
     assert!(!body.to_string().contains("creation-secret"));
     assert!(!body.to_string().contains("internal.test"));
-    let flags: (bool, bool, bool, bool, Option<String>) = sqlx::query_as(
-        "SELECT isScratch, allowsUpload, allowsUploadToPaths, reportUsedStorageEnabled, \
+    let flags: (bool, bool, bool, Option<String>) = sqlx::query_as(
+        "SELECT allowsUpload, allowsUploadToPaths, reportUsedStorageEnabled, \
             onlyAllowedOrganization FROM webknossos.dataStores WHERE name = 'new-store'",
     )
     .fetch_one(&database.pool)
     .await
     .unwrap();
-    assert_eq!(flags, (false, true, true, false, None));
+    assert_eq!(flags, (true, true, false, None));
     assert_eq!(
         request(
             &app,
@@ -291,14 +290,15 @@ async fn datastore_creation_requires_superuser_and_preserves_dto_defaults_and_pu
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["allowsUpload"], false);
-    let flags: (bool, bool, bool) = sqlx::query_as(
-        "SELECT isScratch, allowsUpload, allowsUploadToPaths FROM webknossos.dataStores \
+    // isScratch was removed from the DTO; like any unknown field it is ignored.
+    let flags: (bool, bool) = sqlx::query_as(
+        "SELECT allowsUpload, allowsUploadToPaths FROM webknossos.dataStores \
             WHERE name = 'explicit-store'",
     )
     .fetch_one(&database.pool)
     .await
     .unwrap();
-    assert_eq!(flags, (true, false, false));
+    assert_eq!(flags, (false, false));
     database.cleanup().await;
 }
 

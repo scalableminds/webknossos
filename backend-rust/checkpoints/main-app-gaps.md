@@ -162,7 +162,7 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
   sync with config + pretrained AI models (+ sample org if enabled and DB empty). Rust only via
   `POST /triggers/initialData` (initial_data.rs:52); a Rust-only deployment must trigger it externally.
 - `Startup.scala:99-102` `checkSchemaOnStartup`: `dbtool.js ensure-db` + full `check-db-schema` diff, Slack on
-  mismatch. Rust checks only `releaseInformation.schemaVersion = 185` (db.rs:8) — deliberate, keep.
+  mismatch. Rust checks only `releaseInformation.schemaVersion = 186` (db.rs:8) — deliberate, keep.
 - Slack startup notice (G4). Temp-file cleanup stop hook not needed (Rust buffers in memory).
 - Agent: parent-owned main.rs change (~20 min): optional `WK_INITIAL_DATA_ON_STARTUP` calling the existing
   insert function (sample org stays default OFF).

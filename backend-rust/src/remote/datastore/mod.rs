@@ -85,7 +85,6 @@ pub fn router() -> Router<AppState> {
 #[derive(Clone, Debug, sqlx::FromRow)]
 pub(crate) struct DataStoreRecord {
     pub name: String,
-    pub is_scratch: bool,
     pub only_allowed_organization: Option<String>,
 }
 
@@ -128,7 +127,7 @@ pub(crate) async fn validate_access(
     key: &str,
 ) -> ApiResult<Option<DataStoreRecord>> {
     Ok(sqlx::query_as(
-        r#"SELECT name, isScratch AS is_scratch, onlyAllowedOrganization AS only_allowed_organization
+        r#"SELECT name, onlyAllowedOrganization AS only_allowed_organization
            FROM webknossos.dataStores_ WHERE name = $1 AND key = $2"#,
     )
     .bind(name)
@@ -337,14 +336,10 @@ async fn apply_report(
             .iter()
             .map(|e| e.data_source.id().directory_name.as_str())
             .collect();
-        let found: Vec<FoundDataset> = sqlx::query_as(
-            r#"SELECT _id AS id, directoryName AS directory_name, _dataStore AS data_store,
-                 isVirtual AS is_virtual, inboxSourceHash AS inbox_source_hash, rootPath AS root_path,
-                 rootRealPath AS root_real_path, status
-               FROM webknossos.datasets_
-               WHERE directoryName = ANY($1) AND _organization = $2
-               ORDER BY created, _id"#,
-        )
+        let found: Vec<FoundDataset> = sqlx::query_as(&format!(
+            "SELECT {FOUND_DATASET_COLUMNS} FROM webknossos.datasets_ \
+             WHERE directoryName = ANY($1) AND _organization = $2 ORDER BY created, _id"
+        ))
         .bind(&names)
         .bind(&organization)
         .fetch_all(&mut *tx)
@@ -357,52 +352,33 @@ async fn apply_report(
         }
         for entry in &entries {
             let hash = crate::dataset::source::inbox_source_hash(&entry.data_source);
-            match by_name.get(entry.data_source.id().directory_name.as_str()) {
-                // Virtual datasets are not expected on the datastore's disk.
-                Some(found) if found.is_virtual => existing_ids.push(found.id.clone()),
-                Some(found) if found.data_store == store.name => {
-                    let unchanged = found.inbox_source_hash == Some(hash)
-                        && found.root_path == entry.root_path
-                        && found.root_real_path == entry.root_real_path;
-                    if !unchanged {
-                        replace_data_source(&mut tx, &found.id, store, hash, entry).await?;
-                        updated_ids.push(found.id.clone());
-                    }
-                    existing_ids.push(found.id.clone());
-                }
+            let existing = match by_name.get(entry.data_source.id().directory_name.as_str()) {
                 Some(found) => {
-                    let original_is_scratch: Option<bool> = sqlx::query_scalar(
-                        "SELECT isScratch FROM webknossos.dataStores_ WHERE name = $1",
-                    )
-                    .bind(&found.data_store)
-                    .fetch_optional(&mut *tx)
-                    .await?;
-                    let original_is_scratch = original_is_scratch
-                        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
-                    if (original_is_scratch && !store.is_scratch) || found.status == UNREPORTED {
+                    update_existing(&mut tx, store, found, hash, entry, &mut updated_ids).await?
+                }
+                None => match create_disk_scan_dataset(&mut tx, store, hash, entry).await? {
+                    Some(id) => Some(id),
+                    None => {
+                        // Concurrent disk scans (or duplicate entries in one
+                        // report) may report the same new dataset.
+                        let id = entry.data_source.id();
                         tracing::info!(
-                            dataset = %found.id,
-                            datastore = %store.name,
-                            "Replacing dataset from datastore {} by the one reported from this datastore",
-                            found.data_store
+                            "Dataset {}/{} already exists, using existing one instead.",
+                            id.organization_id,
+                            id.directory_name
                         );
-                        replace_data_source(&mut tx, &found.id, store, hash, entry).await?;
-                        updated_ids.push(found.id.clone());
-                        existing_ids.push(found.id.clone());
-                    } else {
-                        tracing::info!(
-                            dataset = %found.id,
-                            datastore = %store.name,
-                            "Reported dataset is already present from datastore {} and will not be replaced",
-                            found.data_store
-                        );
+                        let found = find_by_directory_name(
+                            &mut tx,
+                            &id.directory_name,
+                            &id.organization_id,
+                        )
+                        .await?;
+                        update_existing(&mut tx, store, &found, hash, entry, &mut updated_ids)
+                            .await?
                     }
-                }
-                None => {
-                    let id = create_disk_scan_dataset(&mut tx, store, hash, entry).await?;
-                    existing_ids.push(id);
-                }
-            }
+                },
+            };
+            existing_ids.extend(existing);
         }
     }
     if let Some(organization) = deactivate_unreported {
@@ -423,6 +399,72 @@ async fn apply_report(
         }
     }
     first_error.map_or(Ok(()), Err)
+}
+
+const FOUND_DATASET_COLUMNS: &str = "_id AS id, directoryName AS directory_name, \
+    _dataStore AS data_store, isVirtual AS is_virtual, inboxSourceHash AS inbox_source_hash, \
+    rootPath AS root_path, rootRealPath AS root_real_path, status";
+
+/// DatasetDAO.findOneByDataSourceId.
+async fn find_by_directory_name(
+    connection: &mut sqlx::PgConnection,
+    directory_name: &str,
+    organization: &str,
+) -> ApiResult<FoundDataset> {
+    let found: Option<FoundDataset> = sqlx::query_as(&format!(
+        "SELECT {FOUND_DATASET_COLUMNS} FROM webknossos.datasets_ \
+         WHERE directoryName = $1 AND _organization = $2"
+    ))
+    .bind(directory_name)
+    .bind(organization)
+    .fetch_optional(&mut *connection)
+    .await?;
+    found.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))
+}
+
+/// DatasetService.updateExistingDataset: returns the id to keep active, or
+/// None if the dataset is still reported by its original datastore.
+async fn update_existing(
+    connection: &mut sqlx::PgConnection,
+    store: &DataStoreRecord,
+    found: &FoundDataset,
+    hash: i32,
+    entry: &DataSourceWithRootPathInfo,
+    updated_ids: &mut Vec<String>,
+) -> ApiResult<Option<String>> {
+    if found.is_virtual {
+        // Virtual datasets are not expected on the datastore's disk.
+        return Ok(Some(found.id.clone()));
+    }
+    if found.data_store == store.name {
+        let unchanged = found.inbox_source_hash == Some(hash)
+            && found.root_path == entry.root_path
+            && found.root_real_path == entry.root_real_path;
+        if !unchanged {
+            replace_data_source(connection, &found.id, store, hash, entry).await?;
+            updated_ids.push(found.id.clone());
+        }
+        return Ok(Some(found.id.clone()));
+    }
+    if found.status == UNREPORTED {
+        tracing::info!(
+            dataset = %found.id,
+            datastore = %store.name,
+            "Replacing dataset from datastore {} by the one reported from this datastore",
+            found.data_store
+        );
+        replace_data_source(connection, &found.id, store, hash, entry).await?;
+        updated_ids.push(found.id.clone());
+        Ok(Some(found.id.clone()))
+    } else {
+        tracing::info!(
+            dataset = %found.id,
+            datastore = %store.name,
+            "Reported dataset is already present from datastore {} and will not be replaced",
+            found.data_store
+        );
+        Ok(None)
+    }
 }
 
 /// updateKnownDataSource / updateDataSourceDifferentDataStore (database part):
@@ -505,17 +547,19 @@ pub(crate) async fn write_data_source(
     crate::dataset::source::write_layers(connection, id, source.all_layers()).await
 }
 
-/// DatasetService.createDataset for a newly discovered inbox data source.
+/// DatasetService.createDataset for a newly discovered inbox data source with
+/// reuseExistingOnDirectoryNameConflict: None if a dataset with this directory
+/// name already exists (nothing is written then).
 async fn create_disk_scan_dataset(
     connection: &mut sqlx::PgConnection,
     store: &DataStoreRecord,
     hash: i32,
     entry: &DataSourceWithRootPathInfo,
-) -> ApiResult<String> {
+) -> ApiResult<Option<String>> {
     let id = ObjectId::new().to_string();
     let source = &entry.data_source;
     let shape = crate::dataset::source::as_usable_shape(source);
-    crate::dataset::create::insert_dataset(
+    let inserted = crate::dataset::create::insert_dataset_unless_directory_name_taken(
         connection,
         crate::dataset::create::NewDataset {
             id: &id,
@@ -533,6 +577,9 @@ async fn create_disk_scan_dataset(
         },
     )
     .await?;
+    if !inserted {
+        return Ok(None);
+    }
     // createDataset stores the hash only for usable data sources.
     sqlx::query(
         "UPDATE webknossos.datasets SET inboxSourceHash = $2, rootPath = $3, rootRealPath = $4 WHERE _id = $1",
@@ -543,7 +590,7 @@ async fn create_disk_scan_dataset(
     .bind(&entry.root_real_path)
     .execute(&mut *connection)
     .await?;
-    Ok(id)
+    Ok(Some(id))
 }
 
 /// DatasetDAO.deactivateUnreported.

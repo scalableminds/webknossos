@@ -102,12 +102,11 @@ async fn disabled_sample_organization_only_syncs_stores_and_pretrained_models() 
             (400, error(NOT_ENABLED))
         );
     }
-    let stores: Vec<(String, String, String, String, bool, bool)> = sqlx::query_as(
-        "SELECT name, url, publicUrl, key, allowsUpload, isScratch FROM webknossos.dataStores",
-    )
-    .fetch_all(&db.pool)
-    .await
-    .unwrap();
+    let stores: Vec<(String, String, String, String, bool)> =
+        sqlx::query_as("SELECT name, url, publicUrl, key, allowsUpload FROM webknossos.dataStores")
+            .fetch_all(&db.pool)
+            .await
+            .unwrap();
     assert_eq!(
         stores,
         vec![(
@@ -115,8 +114,7 @@ async fn disabled_sample_organization_only_syncs_stores_and_pretrained_models() 
             "http://127.0.0.1:9".into(),
             "http://public.example".into(),
             "store-key".into(),
-            true,
-            false
+            true
         )]
     );
     assert_eq!(

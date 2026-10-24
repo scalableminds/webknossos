@@ -120,6 +120,24 @@ pub(crate) async fn insert_dataset(
     connection: &mut sqlx::PgConnection,
     new: NewDataset<'_>,
 ) -> ApiResult<()> {
+    insert(connection, new, false).await.map(|_| ())
+}
+
+/// DatasetDAO.insertOne with skipOnDirectoryNameConflict: returns false (and
+/// writes nothing) if the organization already has a dataset with this
+/// directory name, e.g. inserted by a concurrent disk scan.
+pub(crate) async fn insert_dataset_unless_directory_name_taken(
+    connection: &mut sqlx::PgConnection,
+    new: NewDataset<'_>,
+) -> ApiResult<bool> {
+    insert(connection, new, true).await
+}
+
+async fn insert(
+    connection: &mut sqlx::PgConnection,
+    new: NewDataset<'_>,
+    skip_on_directory_name_conflict: bool,
+) -> ApiResult<bool> {
     let root: Option<String> = sqlx::query_scalar(
         "SELECT _rootFolder FROM webknossos.organizations_ WHERE _id = $1 FOR SHARE",
     )
@@ -132,36 +150,50 @@ pub(crate) async fn insert_dataset(
         ))
     })?;
     let status: String = new.status.chars().take(1024).collect();
-    sqlx::query(
-        r#"INSERT INTO webknossos.datasets (_id, _dataStore, _organization, _folder, inboxSourceHash,
+    let statement = r#"INSERT INTO webknossos.datasets (_id, _dataStore, _organization, _folder, inboxSourceHash,
              defaultViewConfiguration, description, directoryName, isPublic, isUsable, isVirtual, name,
              voxelSizeFactor, voxelSizeUnit, status, sortingKey, metadata, tags, creationType, importURL, created)
            VALUES ($1, $2, $3, $4, NULL, $5, $6, $7, false, $8, $9, $10,
              CASE WHEN $11::float8 IS NULL THEN NULL ELSE ROW($11, $12, $13)::webknossos.VECTOR3 END,
              $14::webknossos.LENGTH_UNIT, $15, NOW(), $16, '{}',
-             $17::webknossos.DATASET_CREATION_TYPE, $18, NOW())"#,
-    )
-    .bind(new.id)
-    .bind(new.store_name)
-    .bind(&new.source.id.organization_id)
-    .bind(&root)
-    .bind(new.source.default_view_configuration.clone().map(Value::Object))
-    .bind(new.description)
-    .bind(&new.source.id.directory_name)
-    .bind(new.is_usable)
-    .bind(new.is_virtual)
-    .bind(new.name)
-    .bind(new.voxel_size.map(|v| v.factor.x))
-    .bind(new.voxel_size.map(|v| v.factor.y))
-    .bind(new.voxel_size.map(|v| v.factor.z))
-    .bind(new.voxel_size.map(|v| v.unit.as_str()))
-    .bind(status)
-    .bind(new.metadata)
-    .bind(new.creation_type)
-    .bind(new.import_url)
-    .execute(&mut *connection)
-    .await?;
-    crate::dataset::source::write_layers(connection, new.id, &new.source.data_layers).await
+             $17::webknossos.DATASET_CREATION_TYPE, $18, NOW())"#;
+    let on_conflict = if skip_on_directory_name_conflict {
+        " ON CONFLICT (directoryName, _organization) DO NOTHING"
+    } else {
+        ""
+    };
+    let inserted = sqlx::query(&format!("{statement}{on_conflict}"))
+        .bind(new.id)
+        .bind(new.store_name)
+        .bind(&new.source.id.organization_id)
+        .bind(&root)
+        .bind(
+            new.source
+                .default_view_configuration
+                .clone()
+                .map(Value::Object),
+        )
+        .bind(new.description)
+        .bind(&new.source.id.directory_name)
+        .bind(new.is_usable)
+        .bind(new.is_virtual)
+        .bind(new.name)
+        .bind(new.voxel_size.map(|v| v.factor.x))
+        .bind(new.voxel_size.map(|v| v.factor.y))
+        .bind(new.voxel_size.map(|v| v.factor.z))
+        .bind(new.voxel_size.map(|v| v.unit.as_str()))
+        .bind(status)
+        .bind(new.metadata)
+        .bind(new.creation_type)
+        .bind(new.import_url)
+        .execute(&mut *connection)
+        .await?
+        .rows_affected()
+        > 0;
+    if inserted {
+        crate::dataset::source::write_layers(connection, new.id, &new.source.data_layers).await?;
+    }
+    Ok(inserted)
 }
 
 /// DatasetService.createAndSetUpDataset (database part, in the caller's

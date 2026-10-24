@@ -124,7 +124,7 @@ async fn sync_local_store(
         None => {
             tracing::info!(table, "Inserting local store");
             let columns = if table == "dataStores" {
-                "name, url, publicUrl, key, isScratch, isDeleted, allowsUpload, allowsUploadToPaths, reportUsedStorageEnabled) VALUES ($1, $2, $3, $4, FALSE, FALSE, TRUE, TRUE, FALSE)"
+                "name, url, publicUrl, key, isDeleted, allowsUpload, allowsUploadToPaths, reportUsedStorageEnabled) VALUES ($1, $2, $3, $4, FALSE, TRUE, TRUE, FALSE)"
             } else {
                 "name, url, publicUrl, key, isDeleted) VALUES ($1, $2, $3, $4, FALSE)"
             };

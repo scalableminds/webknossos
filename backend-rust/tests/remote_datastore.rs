@@ -56,20 +56,18 @@ async fn setup() -> Setup {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
     let server = tokio::spawn(async move { axum::serve(listener, mock).await.unwrap() });
-    for (name, url, key, scratch) in [
-        ("store", base.as_str(), "k", false),
-        ("scratch", "http://scratch.invalid", "s", true),
-        ("other", "http://other.invalid", "o", false),
+    for (name, url, key) in [
+        ("store", base.as_str(), "k"),
+        ("second", "http://second.invalid", "s"),
+        ("other", "http://other.invalid", "o"),
     ] {
         sqlx::query(
-            "INSERT INTO webknossos.dataStores (name,url,publicUrl,key,isScratch) VALUES \
-                ($1,$2,$3,$4,$5)",
+            "INSERT INTO webknossos.dataStores (name,url,publicUrl,key) VALUES ($1,$2,$3,$4)",
         )
         .bind(name)
         .bind(url)
         .bind(format!("http://public-{name}.invalid"))
         .bind(key)
-        .bind(scratch)
         .execute(&db.pool)
         .await
         .unwrap();
@@ -304,7 +302,7 @@ async fn access_status_and_per_dataset_rpcs() {
     let (status, body) = call(
         &app,
         "GET",
-        &format!("/datastores/scratch/datasources/{id}?key=s"),
+        &format!("/datastores/second/datasources/{id}?key=s"),
         None,
     )
     .await;
@@ -355,7 +353,7 @@ async fn access_status_and_per_dataset_rpcs() {
     );
 
     // PUT data source: replaces layers + voxel size, keeps root path, no RPC.
-    let uri = format!("/datastores/scratch/datasources/{id}?key=s");
+    let uri = format!("/datastores/second/datasources/{id}?key=s");
     assert_eq!(
         call(&app, "PUT", &uri, Some(json!({"id": {"name": "plain"}})))
             .await
@@ -370,7 +368,7 @@ async fn access_status_and_per_dataset_rpcs() {
     assert_eq!(
         updated,
         Row {
-            data_store: "scratch".into(),
+            data_store: "second".into(),
             is_usable: true,
             status: String::new(),
             has_hash: true,
@@ -499,14 +497,23 @@ async fn inbox_reports_update_create_skip_and_deactivate() {
     let b = db.fixture().await.organization_id;
     let known = seed(&db, &a, "known", "store", false).await;
     let virtual_id = seed(&db, &a, "virt", "store", true).await;
-    let from_scratch = seed(&db, &a, "fromScratch", "scratch", false).await;
+    // Datasets of another datastore are only taken over once unreported there.
+    let from_unreported = seed(&db, &a, "fromUnreported", "second", false).await;
+    sqlx::query("UPDATE webknossos.datasets SET status = $2 WHERE _id = $1")
+        .bind(&from_unreported)
+        .bind(UNREPORTED)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    let from_second = seed(&db, &a, "secondStore", "second", false).await;
     let from_other = seed(&db, &a, "otherStore", "other", false).await;
     let gone = seed(&db, &a, "gone", "store", false).await;
     let gone_b = seed(&db, &b, "bgone", "store", false).await;
     let report = json!([
         {"dataSource": source("known", &a, "seg", 1.0), "rootPath": "/new/root", "rootRealPath": null},
         {"dataSource": source("virt", &a, "seg", 1.0)},
-        {"dataSource": source("fromScratch", &a, "seg", 1.0), "rootPath": "/old/root"},
+        {"dataSource": source("fromUnreported", &a, "seg", 1.0), "rootPath": "/old/root"},
+        {"dataSource": source("secondStore", &a, "seg", 1.0)},
         {"dataSource": source("otherStore", &a, "seg", 1.0)},
         {"dataSource": source("fresh", &a, "seg", 3.0), "rootPath": "/fresh"},
         {"dataSource": {"id": {"name": "freshBroken", "team": &a}, "status": "No datasource-properties.json"}},
@@ -535,22 +542,24 @@ async fn inbox_reports_update_create_skip_and_deactivate() {
     let thumbnails: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM webknossos.dataset_thumbnails WHERE _dataset = ANY($1)",
     )
-    .bind(vec![known.clone(), from_scratch.clone()])
+    .bind(vec![known.clone(), from_unreported.clone()])
     .fetch_one(&db.pool)
     .await
     .unwrap();
     assert_eq!(thumbnails, 0);
     assert_eq!(row(&db, &virtual_id).await.layers, vec!["color".to_owned()]);
-    let replaced = row(&db, &from_scratch).await;
+    let replaced = row(&db, &from_unreported).await;
     assert_eq!(
         (replaced.data_store.as_str(), replaced.layers),
         ("store", vec!["seg".to_owned()])
     );
-    let kept = row(&db, &from_other).await;
-    assert_eq!(
-        (kept.data_store.as_str(), kept.status.as_str(), kept.layers),
-        ("other", "", vec!["color".to_owned()])
-    );
+    for (id, data_store) in [(&from_other, "other"), (&from_second, "second")] {
+        let kept = row(&db, id).await;
+        assert_eq!(
+            (kept.data_store.as_str(), kept.status.as_str(), kept.layers),
+            (data_store, "", vec!["color".to_owned()])
+        );
+    }
     let deactivated = row(&db, &gone).await;
     assert_eq!(
         deactivated,
@@ -600,7 +609,7 @@ async fn inbox_reports_update_create_skip_and_deactivate() {
     );
     assert_eq!(calls.take(), {
         let mut expected = vec![
-            format!("DELETE /data/datasets/{from_scratch}"),
+            format!("DELETE /data/datasets/{from_unreported}"),
             format!("DELETE /data/datasets/{known}"),
         ];
         expected.sort();
@@ -663,7 +672,8 @@ async fn inbox_reports_update_create_skip_and_deactivate() {
     assert_eq!(single.root_path.as_deref(), Some("/new/root"));
     assert_eq!(calls.take(), vec![format!("DELETE /data/datasets/{known}")]);
 
-    // Atomic: a failing creation (directory name held by a deleted row) rolls back everything.
+    // Atomic: a failing creation (directory name held by a deleted row, so the
+    // conflicting dataset cannot be found) rolls back everything.
     sqlx::query("UPDATE webknossos.datasets SET isDeleted = true WHERE _id = $1")
         .bind(&from_other)
         .execute(&db.pool)
@@ -680,9 +690,11 @@ async fn inbox_reports_update_create_skip_and_deactivate() {
             "/datastores/store/datasources?key=k",
             Some(failing)
         )
-        .await
-        .0,
-        StatusCode::CONFLICT
+        .await,
+        (
+            StatusCode::NOT_FOUND,
+            json!({"messages": [{"error": "Could not find or access the requested resource."}]})
+        )
     );
     assert_eq!(row(&db, &known).await.layers, vec!["other".to_owned()]);
     assert!(row(&db, &gone_b).await.is_usable);
@@ -712,6 +724,98 @@ async fn inbox_reports_update_create_skip_and_deactivate() {
     assert_eq!(row(&db, &known).await.status, UNREPORTED);
     assert!(row(&db, &virtual_id).await.is_usable);
     assert_eq!(calls.take(), Vec::<String>::new());
+
+    server.abort();
+    db.cleanup().await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL database with CREATEDB"]
+async fn inbox_reports_reuse_datasets_created_concurrently() {
+    let Setup {
+        db,
+        app,
+        calls,
+        server,
+    } = setup().await;
+    let a = db.fixture().await.organization_id;
+    let uri = format!("/datastores/store/datasources?key=k&organizationId={a}");
+    let ids = |directory: &'static str| {
+        let pool = db.pool.clone();
+        async move {
+            sqlx::query_scalar::<_, String>(
+                "SELECT _id FROM webknossos.datasets WHERE directoryName = $1",
+            )
+            .bind(directory)
+            .fetch_all(&pool)
+            .await
+            .unwrap()
+        }
+    };
+
+    // Duplicate entries in one report create a single dataset.
+    let duplicate = json!([
+        {"dataSource": source("dup", &a, "seg", 1.0), "rootPath": "/dup"},
+        {"dataSource": source("dup", &a, "seg", 1.0), "rootPath": "/dup"}
+    ]);
+    assert_eq!(
+        call(&app, "PUT", &uri, Some(duplicate)).await,
+        (StatusCode::OK, Value::Null)
+    );
+    let dup = ids("dup").await;
+    assert_eq!(dup.len(), 1);
+    let created = row(&db, &dup[0]).await;
+    assert_eq!(
+        (
+            created.is_usable,
+            created.root_path.as_deref(),
+            created.layers
+        ),
+        (true, Some("/dup"), vec!["seg".to_owned()])
+    );
+    assert_eq!(calls.take(), Vec::<String>::new());
+
+    // A concurrent scan inserts the same new dataset while this report runs:
+    // the insert waits for it, skips the conflict and updates the winner.
+    let mut other_scan = db.pool.begin().await.unwrap();
+    let winner = object_id();
+    sqlx::query("INSERT INTO webknossos.datasets (_id,_dataStore,_organization,_folder,name,directoryName,isUsable,sortingKey) SELECT $1,'store',_id,_rootFolder,'raced','raced',false,NOW() FROM webknossos.organizations WHERE _id=$2")
+        .bind(&winner).bind(&a).execute(&mut *other_scan).await.unwrap();
+    let raced = json!([{"dataSource": source("raced", &a, "seg", 2.0), "rootPath": "/raced"}]);
+    let report = tokio::spawn({
+        let app = app.clone();
+        let uri = uri.clone();
+        async move { call(&app, "PUT", &uri, Some(raced)).await }
+    });
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    other_scan.commit().await.unwrap();
+    assert_eq!(report.await.unwrap(), (StatusCode::OK, Value::Null));
+    assert_eq!(ids("raced").await, vec![winner.clone()]);
+    let updated = row(&db, &winner).await;
+    assert_eq!(
+        (
+            updated.is_usable,
+            updated.has_hash,
+            updated.root_path.as_deref(),
+            updated.layers
+        ),
+        (true, true, Some("/raced"), vec!["seg".to_owned()])
+    );
+    assert_eq!(
+        calls.take(),
+        vec![format!("DELETE /data/datasets/{winner}")]
+    );
+
+    // Simultaneous identical reports both succeed and create one dataset.
+    let both = json!([{"dataSource": source("both", &a, "seg", 1.0)}]);
+    let (first, second) = tokio::join!(
+        call(&app, "PUT", &uri, Some(both.clone())),
+        call(&app, "PUT", &uri, Some(both))
+    );
+    assert_eq!(first, (StatusCode::OK, Value::Null));
+    assert_eq!(second, (StatusCode::OK, Value::Null));
+    assert_eq!(ids("both").await.len(), 1);
+    assert!(ids("dup").await.len() == 1 && ids("raced").await.len() == 1);
 
     server.abort();
     db.cleanup().await;

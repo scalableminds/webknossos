@@ -84,9 +84,8 @@ async fn expired_tokens_are_soft_deleted_inclusive_of_now() {
     let boundary = seed_token(&db, &f, now, false).await;
     let already = seed_token(&db, &f, now - TimeDelta::days(30), true).await;
     let valid = seed_token(&db, &f, now + TimeDelta::microseconds(1), false).await;
-    // Scala's UPDATE does not exclude already-deleted rows, so they are counted again; the
-    // fixture's own authentication token expires in one hour and stays.
-    assert_eq!(execute(&db, HousekeepingJob::ExpiredTokens, now).await, 3);
+    // Already-deleted rows are skipped (and not counted); the fixture's own authentication token expires in one hour and stays.
+    assert_eq!(execute(&db, HousekeepingJob::ExpiredTokens, now).await, 2);
     assert_eq!(token_state(&db, &expired).await, Some(true));
     assert_eq!(token_state(&db, &boundary).await, Some(true));
     assert_eq!(token_state(&db, &already).await, Some(true));
@@ -131,6 +130,7 @@ async fn expired_invites_are_soft_deleted() {
         (now, false),
         (now + TimeDelta::microseconds(1), false),
         (now + TimeDelta::days(1), false),
+        (now - TimeDelta::days(1), true),
     ] {
         let id = object_id();
         sqlx::query("INSERT INTO webknossos.invites (_id, tokenValue, _organization, autoActivate, expirationDateTime, isDeleted) VALUES ($1, $1, $2, TRUE, $3, $4)")
@@ -149,7 +149,7 @@ async fn expired_invites_are_soft_deleted() {
                 .unwrap();
         states.push(deleted);
     }
-    assert_eq!(states, [true, true, false, false]);
+    assert_eq!(states, [true, true, false, false, true]);
     db.cleanup().await;
 }
 

@@ -315,7 +315,7 @@ async fn logout_everywhere(
     .execute(&mut *tx)
     .await?;
     sqlx::query(
-        "UPDATE webknossos.tokens SET isDeleted = TRUE WHERE tokenType = 'DataStore' AND _user IN (SELECT _id FROM webknossos.users WHERE _multiUser = $1)",
+        "UPDATE webknossos.tokens SET isDeleted = TRUE WHERE tokenType = 'DataStore' AND NOT isDeleted AND _user IN (SELECT _id FROM webknossos.users WHERE _multiUser = $1)",
     )
     .bind(&multi_user)
     .execute(&mut *tx)

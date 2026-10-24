@@ -3,9 +3,9 @@
 //!
 //! | job | Scala source | statement |
 //! |---|---|---|
-//! | `expired-tokens` | `TokenDAO.deleteAllExpired` | `UPDATE tokens SET isDeleted = TRUE WHERE expirationDateTime <= now` |
+//! | `expired-tokens` | `TokenDAO.deleteAllExpired` | `UPDATE tokens SET isDeleted = TRUE WHERE NOT isDeleted AND expirationDateTime <= now` |
 //! | `old-tokens` | `TokenDAO.hardDeleteOldTokens` | `DELETE FROM tokens WHERE isDeleted AND expirationDateTime <= now - 7 days` |
-//! | `expired-invites` | `InviteDAO.deleteAllExpired` | `UPDATE invites SET isDeleted = TRUE WHERE expirationDateTime <= now` |
+//! | `expired-invites` | `InviteDAO.deleteAllExpired` | `UPDATE invites SET isDeleted = TRUE WHERE NOT isDeleted AND expirationDateTime <= now` |
 //! | `initializing-annotations` | `AnnotationDAO.deleteOldInitializingAnnotations` | `DELETE FROM annotations WHERE state = 'Initializing' AND created < NOW() - INTERVAL '1 hour'` |
 //! | `expired-thumbnails` | `ThumbnailDAO.removeAllExpired(10 days)` | `DELETE FROM dataset_thumbnails WHERE created < now - 10 days` |
 //! | `expired-annotation-mutexes` | `AnnotationMutexDAO.deleteExpired` | `DELETE FROM annotation_mutexes WHERE expiry < NOW()` |
@@ -121,7 +121,7 @@ impl HousekeepingJob {
     ) -> Result<u64, sqlx::Error> {
         let query = match self {
             Self::ExpiredTokens => sqlx::query(
-                "UPDATE webknossos.tokens SET isDeleted = TRUE WHERE expirationDateTime <= $1",
+                "UPDATE webknossos.tokens SET isDeleted = TRUE WHERE NOT isDeleted AND expirationDateTime <= $1",
             )
             .bind(now),
             Self::OldTokens => sqlx::query(
@@ -129,7 +129,7 @@ impl HousekeepingJob {
             )
             .bind(now - TOKEN_HARD_DELETE_GRACE_PERIOD),
             Self::ExpiredInvites => sqlx::query(
-                "UPDATE webknossos.invites SET isDeleted = TRUE WHERE expirationDateTime <= $1",
+                "UPDATE webknossos.invites SET isDeleted = TRUE WHERE NOT isDeleted AND expirationDateTime <= $1",
             )
             .bind(now),
             Self::InitializingAnnotations => sqlx::query(

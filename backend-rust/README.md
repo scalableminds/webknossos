@@ -4,7 +4,7 @@ An incremental port of the Play application backend, built in its own directory.
 
 ## Run
 
-Install Rust 1.88 or newer and use a database initialized and maintained by the existing WEBKNOSSOS tooling at schema version **186**. Prefer a development database or a copy while evaluating the migration.
+Install Rust 1.88 or newer and use a database initialized and maintained by the existing WEBKNOSSOS tooling at schema version **187**. Prefer a development database or a copy while evaluating the migration.
 
 From this directory:
 

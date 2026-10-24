@@ -33,6 +33,11 @@ pub fn router() -> Router<AppState> {
 fn validate_link(base: &Url, value: &str) -> ApiResult<()> {
     let link = Url::parse(value)
         .map_err(|_| ApiError::bad_request(crate::msg::short_link::INVALID_URL))?;
+    // Like Play: the raw link must start with the configured URI plus exactly one trailing slash.
+    let required_prefix = format!("{}/", base.as_str().trim_end_matches('/'));
+    if !value.starts_with(&required_prefix) {
+        return Err(ApiError::bad_request(crate::msg::short_link::URI_MISMATCH));
+    }
     let base_path = base.path().trim_end_matches('/');
     // A string prefix check would accept https://webknossos.org.attacker.example.
     if link.origin() != base.origin()

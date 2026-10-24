@@ -170,6 +170,7 @@ async fn short_link_roundtrip_and_origin_validation() {
     );
     for invalid in [
         "http://localhost:9000.attacker.example/a",
+        "http://localhost:9000",
         "https://localhost:9000/a",
         "http://localhost:9001/a",
         "javascript:alert(1)",

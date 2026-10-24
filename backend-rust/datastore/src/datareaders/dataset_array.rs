@@ -1,9 +1,10 @@
 //! Scala `DatasetArray`: reads arbitrary boxes from a chunked n-d array through a data vault.
 //!
 //! `read_bytes_with_additional_coordinates` returns the bytes Scala returns: wk axis order
-//! (additional axes + (c)xyz) in Fortran order with little-endian values, except for the Scala
-//! "skip typing" shortcut (one whole F-order chunk in cxyz order), which returns the decompressed
-//! chunk bytes unchanged (including their on-disk byte order).
+//! (additional axes + (c)xyz) in Fortran order with little-endian values. The Scala "skip typing"
+//! shortcut (one whole, possibly clipped, F-order chunk in cxyz order) returns the decompressed
+//! chunk bytes unchanged, so it is only taken when that preserves little-endian values and the
+//! chunk holds exactly the requested number of bytes.
 
 use std::{
     fmt,
@@ -17,7 +18,7 @@ use super::axis_order::FullAxisOrder;
 use super::cache::ChunkContentsCache;
 use super::chunk::{ArrayFormat, ChunkContents, read_chunk};
 use super::chunk_utils::compute_chunk_indices;
-use super::data_type::ArrayOrder;
+use super::data_type::{ArrayOrder, ByteOrder};
 use super::header::DatasetHeader;
 use super::nd_array::{
     MaDataType, NdArray, axis_order_xyz_view_f, copy_range, create_empty, to_byte_array,
@@ -587,21 +588,20 @@ impl DatasetArray {
         let is_f = self.header.order() == ArrayOrder::F;
         if !is_batched_read && let Some(first) = chunk_indices.first() {
             let offset_in_chunk = self.offset_in_chunk(first, &total_offset, &wk_chunk_shape);
-            let shortcut = is_f
+            let shortcut = self.shortcut_preserves_byte_order()
+                && is_f
                 && offset_in_chunk.iter().all(|&o| o == 0)
-                && shape == self.chunk_shape.as_slice()
-                && self.axis_order == AxisOrder::as_cxyz_from_rank(self.rank as i32);
+                && self.axis_order == AxisOrder::as_cxyz_from_rank(self.rank as i32)
+                // Must come after the axis order check: wk and physical order coincide only for cxyz
+                && shape == self.chunk_shape_at_index(first).as_slice();
             if shortcut {
                 let physical = full.permute_indices_wk_to_physical(first);
                 let chunk = self.source_chunk_with_cache(&physical, user_token).await?;
-                let actual_shape = match chunk.as_ref() {
-                    ChunkContents::Bytes { shape, .. } | ChunkContents::Fill { shape } => shape,
-                };
-                if actual_shape == &self.chunk_shape {
-                    return chunk.shortcut_view(self.header.as_ref());
+                let shortcut_chunk = chunk.shortcut_view(self.header.as_ref())?;
+                if self.has_expected_byte_count(&shortcut_chunk, shape) {
+                    return Ok(shortcut_chunk);
                 }
-                // N5/precomputed boundary chunks can be smaller than the nominal grid cell.
-                // Assemble those into a full requested bucket instead of returning a short buffer.
+                // Clipped edge chunk (N5): fall back to the copy path, which pads to the bucket.
             }
         }
         let target_shape: Vec<usize> = to_usize_shape(shape)?.into_iter().rev().collect();
@@ -639,6 +639,23 @@ impl DatasetArray {
             Some(e) => Err(e),
             None => Ok(target),
         }
+    }
+
+    /// Scala `hasExpectedByteCount`: formats with per-chunk shapes (N5) may store edge chunks
+    /// clipped, which only shows after reading the chunk.
+    fn has_expected_byte_count(&self, shortcut_chunk: &NdArray, shape: &[i32]) -> bool {
+        let expected = shape
+            .iter()
+            .try_fold(self.header.bytes_per_element(), |p, &d| {
+                usize::try_from(d).ok().and_then(|d| p.checked_mul(d))
+            });
+        expected == Some(shortcut_chunk.size())
+    }
+
+    /// Scala `shortcutPreservesByteOrder`: the shortcut passes stored bytes through unchanged,
+    /// but callers expect little-endian values.
+    fn shortcut_preserves_byte_order(&self) -> bool {
+        self.header.byte_order() == ByteOrder::LittleEndian || self.header.bytes_per_element() == 1
     }
 
     /// Scala `readAsMultiArray(offset, shape)`: physical order, C layout, typed values. Scala's

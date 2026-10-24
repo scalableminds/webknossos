@@ -7,7 +7,7 @@
 //! Morton order within a file; voxels within a block are `c, x, y, z` (Fortran order).
 
 use super::super::data_type::{
-    ArrayDataType, ArrayOrder, DimensionSeparator, FillValue, JavaNumber,
+    ArrayDataType, ArrayOrder, ByteOrder, DimensionSeparator, FillValue, JavaNumber,
 };
 use super::super::header::DatasetHeader;
 use crate::compression::Compressor;
@@ -401,9 +401,9 @@ impl DatasetHeader for WkwHeader {
         &VOXEL_OFFSET
     }
 
-    // `byte_order` is NOT overridden: Scala's WKWHeader keeps the DatasetHeader default
-    // (BIG_ENDIAN) although WKW files are little endian. This only matters for non-shortcut
-    // (unaligned) typed reads of multi-byte types; kept for parity.
+    fn byte_order(&self) -> ByteOrder {
+        ByteOrder::LittleEndian
+    }
 
     fn is_sharded(&self) -> bool {
         true

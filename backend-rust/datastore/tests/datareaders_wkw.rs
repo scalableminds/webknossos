@@ -196,7 +196,7 @@ async fn malformed_table_is_failure_and_failed_load_is_retryable() {
     );
 }
 #[tokio::test]
-async fn multibyte_preserves_scala_shortcut_and_typed_byte_order() {
+async fn multibyte_shortcut_and_typed_reads_are_little_endian() {
     let p = temp();
     let h = WkwHeader::new(1, 2, ChunkType::Raw, ArrayDataType::U2, 1);
     std::fs::write(p.join("header.wkw"), h.write_to(true)).unwrap();
@@ -209,10 +209,10 @@ async fn multibyte_preserves_scala_shortcut_and_typed_byte_order() {
         read(&a, Vec3Int::new(0, 0, 0), Vec3Int::new(2, 2, 2), false).await,
         (1u16..=8).flat_map(u16::to_le_bytes).collect::<Vec<_>>()
     );
-    // WKWHeader inherits DatasetHeader's big endian default in Scala's typed path.
+    // WKWHeader reports little endian, so the typed (unaligned) path does not swap bytes.
     assert_eq!(
         read(&a, Vec3Int::new(1, 0, 0), Vec3Int::new(1, 1, 1), false).await,
-        vec![0, 2]
+        2u16.to_le_bytes().to_vec()
     );
 }
 

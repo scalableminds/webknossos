@@ -550,3 +550,247 @@ async fn multichannel_raw_rgb_channel_selection_and_segment_channels() {
     let golden = std::fs::read(fixtures().join("multichannel.decoded")).unwrap();
     assert_eq!(bytes, golden[480..]);
 }
+
+// Scala `PrecomputedArrayTestSuite`: the volume size is deliberately not a multiple of the chunk
+// size, so the edge chunks are clipped in every axis.
+const UNALIGNED_VOLUME: [i32; 3] = [40, 40, 40];
+const UNALIGNED_CHUNK: i32 = 32;
+const SEGMENTATION_BLOCK: i32 = 8;
+
+fn unaligned_voxel_value(x: i32, y: i32, z: i32) -> u64 {
+    (x + UNALIGNED_VOLUME[0] * (y + UNALIGNED_VOLUME[1] * z)) as u64 + 1
+}
+
+fn is_in_unaligned_volume(x: i32, y: i32, z: i32) -> bool {
+    x < UNALIGNED_VOLUME[0] && y < UNALIGNED_VOLUME[1] && z < UNALIGNED_VOLUME[2]
+}
+
+fn encode_raw_chunk(top_left: [i32; 3], bottom_right: [i32; 3]) -> Vec<u8> {
+    let mut out = Vec::new();
+    for z in top_left[2]..bottom_right[2] {
+        for y in top_left[1]..bottom_right[1] {
+            for x in top_left[0]..bottom_right[0] {
+                out.extend(unaligned_voxel_value(x, y, z).to_le_bytes());
+            }
+        }
+    }
+    out
+}
+
+/// Minimal single-channel encoder for
+/// https://github.com/google/neuroglancer/tree/master/src/neuroglancer/sliceview/compressed_segmentation
+fn encode_compressed_segmentation_chunk(top_left: [i32; 3], bottom_right: [i32; 3]) -> Vec<u8> {
+    let bs = SEGMENTATION_BLOCK;
+    let grid: Vec<i32> = (0..3)
+        .map(|d| (bottom_right[d] - top_left[d] + bs - 1) / bs)
+        .collect();
+    let block_count = (grid[0] * grid[1] * grid[2]) as usize;
+    let mut headers = vec![0u32; block_count * 2];
+    let mut body: Vec<u32> = Vec::new();
+    let mut body_offset = block_count * 2;
+    for block_z in 0..grid[2] {
+        for block_y in 0..grid[1] {
+            for block_x in 0..grid[0] {
+                let mut values = Vec::new();
+                for z in 0..bs {
+                    for y in 0..bs {
+                        for x in 0..bs {
+                            let (gx, gy, gz) = (
+                                top_left[0] + block_x * bs + x,
+                                top_left[1] + block_y * bs + y,
+                                top_left[2] + block_z * bs + z,
+                            );
+                            values.push(if is_in_unaligned_volume(gx, gy, gz) {
+                                unaligned_voxel_value(gx, gy, gz)
+                            } else {
+                                0
+                            });
+                        }
+                    }
+                }
+                let mut table: Vec<u64> = Vec::new();
+                for v in &values {
+                    if !table.contains(v) {
+                        table.push(*v);
+                    }
+                }
+                let encoded_bits = if table.len() == 1 {
+                    0
+                } else {
+                    [1usize, 2, 4, 8, 16, 32]
+                        .into_iter()
+                        .find(|b| (1u64 << b) >= table.len() as u64)
+                        .unwrap()
+                };
+                let mut encoded = vec![0u32; ((bs * bs * bs) as usize * encoded_bits).div_ceil(32)];
+                for (i, value) in values.iter().enumerate() {
+                    let bit = i * encoded_bits;
+                    let index = table.iter().position(|t| t == value).unwrap() as u32;
+                    if encoded_bits > 0 {
+                        encoded[bit / 32] |= index << (bit % 32);
+                    }
+                }
+                let block_index = (block_x + grid[0] * (block_y + grid[1] * block_z)) as usize;
+                let table_offset = body_offset + encoded.len();
+                headers[block_index * 2] = table_offset as u32 | ((encoded_bits as u32) << 24);
+                headers[block_index * 2 + 1] = body_offset as u32;
+                body.extend(&encoded);
+                body.extend(table.iter().flat_map(|v| [*v as u32, (v >> 32) as u32]));
+                body_offset = table_offset + table.len() * 2;
+            }
+        }
+    }
+    std::iter::once(1u32)
+        .chain(headers)
+        .chain(body)
+        .flat_map(u32::to_le_bytes)
+        .collect()
+}
+
+/// Returns the scale directory (the mag path); `info` lives in its parent.
+fn write_unaligned_precomputed(encoding: &str) -> PathBuf {
+    let root_dir = temp();
+    let mut scale = serde_json::json!({
+        "key": "1_1_1",
+        "size": UNALIGNED_VOLUME,
+        "resolution": [1, 1, 1],
+        "chunk_sizes": [[UNALIGNED_CHUNK, UNALIGNED_CHUNK, UNALIGNED_CHUNK]],
+        "encoding": encoding,
+        "voxel_offset": [0, 0, 0]
+    });
+    if encoding == "compressed_segmentation" {
+        scale["compressed_segmentation_block_size"] = serde_json::json!([8, 8, 8]);
+    }
+    let info = serde_json::json!({
+        "type": "segmentation", "data_type": "uint64", "num_channels": 1, "scales": [scale]
+    });
+    std::fs::write(root_dir.join("info"), serde_json::to_vec(&info).unwrap()).unwrap();
+    let scale_dir = root_dir.join("1_1_1");
+    std::fs::create_dir_all(&scale_dir).unwrap();
+    for cx in 0..2 {
+        for cy in 0..2 {
+            for cz in 0..2 {
+                let top_left = [cx, cy, cz].map(|c| c * UNALIGNED_CHUNK);
+                let bottom_right: [i32; 3] = std::array::from_fn(|d| {
+                    (top_left[d] + UNALIGNED_CHUNK).min(UNALIGNED_VOLUME[d])
+                });
+                let bytes = if encoding == "raw" {
+                    encode_raw_chunk(top_left, bottom_right)
+                } else {
+                    encode_compressed_segmentation_chunk(top_left, bottom_right)
+                };
+                let name = format!(
+                    "{}-{}_{}-{}_{}-{}",
+                    top_left[0],
+                    bottom_right[0],
+                    top_left[1],
+                    bottom_right[1],
+                    top_left[2],
+                    bottom_right[2]
+                );
+                std::fs::write(scale_dir.join(name), bytes).unwrap();
+            }
+        }
+    }
+    scale_dir
+}
+
+async fn open_unaligned(
+    scale_dir: &Path,
+    cache: Arc<ChunkContentsCache>,
+) -> webknossos_datastore::datareaders::DatasetArray {
+    open_precomputed_array(
+        ArraySource {
+            path: &root(scale_dir),
+            data_source_id: DataSourceId::new("ds", "org"),
+            layer_name: "segmentation",
+            cache,
+        },
+        ArrayAxes {
+            axis_order: Some(AxisOrder::XYZ),
+            channel_index: None,
+            additional_axes: None,
+        },
+        None,
+    )
+    .await
+    .unwrap()
+}
+
+async fn assert_unaligned_reads(
+    array: &webknossos_datastore::datareaders::DatasetArray,
+    offset: Vec3Int,
+    shape: Vec3Int,
+) {
+    let bytes = array
+        .read_bytes_with_additional_coordinates(offset, shape, None, false, None)
+        .await
+        .unwrap_or_else(|e| panic!("read {offset:?}/{shape:?} failed: {}", e.message));
+    let actual: Vec<u64> = bytes
+        .as_chunks::<8>()
+        .0
+        .iter()
+        .map(|v| u64::from_le_bytes(*v))
+        .collect();
+    let mut expected = Vec::new();
+    for z in offset.z..offset.z + shape.z {
+        for y in offset.y..offset.y + shape.y {
+            for x in offset.x..offset.x + shape.x {
+                expected.push(if is_in_unaligned_volume(x, y, z) {
+                    unaligned_voxel_value(x, y, z)
+                } else {
+                    0
+                });
+            }
+        }
+    }
+    assert_eq!(
+        actual.len(),
+        expected.len(),
+        "read {offset:?}/{shape:?} returned {} voxels",
+        actual.len()
+    );
+    assert!(
+        actual == expected,
+        "read {offset:?}/{shape:?} returned wrong values"
+    );
+}
+
+#[tokio::test]
+async fn clipped_edge_chunks_read_correctly_for_raw_and_compressed_segmentation() {
+    let full = Vec3Int::full(UNALIGNED_CHUNK);
+    let volume = Vec3Int::new(
+        UNALIGNED_VOLUME[0],
+        UNALIGNED_VOLUME[1],
+        UNALIGNED_VOLUME[2],
+    );
+    for encoding in ["raw", "compressed_segmentation"] {
+        let scale_dir = write_unaligned_precomputed(encoding);
+        // Each read gets a fresh cache, so results don't depend on which reads ran before
+        for (offset, shape) in [
+            (Vec3Int::new(0, 0, 0), full),                     // interior chunk
+            (Vec3Int::new(32, 0, 0), full), // full bucket on a chunk clipped in x
+            (Vec3Int::new(0, 32, 0), full), // ... clipped in y
+            (Vec3Int::new(0, 0, 32), full), // ... clipped in z
+            (Vec3Int::new(32, 32, 32), full), // ... clipped in all axes
+            (Vec3Int::new(32, 0, 0), Vec3Int::new(8, 32, 32)), // exactly the stored extent
+            (Vec3Int::new(33, 1, 0), Vec3Int::new(7, 7, 32)), // offset into a clipped chunk
+            (Vec3Int::new(0, 0, 0), volume), // the whole volume
+        ] {
+            let array = open_unaligned(&scale_dir, cache()).await;
+            assert_unaligned_reads(&array, offset, shape).await;
+        }
+
+        // a chunk cached by a full-chunk read first
+        let array = open_unaligned(&scale_dir, cache()).await;
+        assert_unaligned_reads(&array, Vec3Int::new(0, 0, 0), full).await;
+        assert_unaligned_reads(&array, Vec3Int::new(32, 0, 0), Vec3Int::new(8, 32, 32)).await;
+        assert_unaligned_reads(&array, Vec3Int::new(1, 1, 1), Vec3Int::full(16)).await;
+        assert_unaligned_reads(&array, Vec3Int::new(0, 0, 0), volume).await;
+
+        // a chunk cached by a partial read first
+        let array = open_unaligned(&scale_dir, cache()).await;
+        assert_unaligned_reads(&array, Vec3Int::new(1, 1, 1), Vec3Int::full(16)).await;
+        assert_unaligned_reads(&array, Vec3Int::new(0, 0, 0), full).await;
+    }
+}

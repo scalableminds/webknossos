@@ -1,6 +1,7 @@
 //! DS2-core: Zarr v2 arrays written by the test (raw and compressed) read back through the local
 //! file vault with `DatasetArray`, checked against the byte layout Scala returns (wk axis order,
-//! Fortran order, little endian; raw chunk bytes for the single-chunk shortcut).
+//! Fortran order, little endian; raw chunk bytes for the single-chunk shortcut, which is only
+//! taken for little-endian or single-byte data).
 
 use std::{
     path::{Path, PathBuf},
@@ -258,7 +259,7 @@ async fn c_order_zyx_u2_raw_with_border_and_missing_chunks() {
 }
 
 #[tokio::test]
-async fn f_order_cxyz_shortcut_returns_raw_chunk_bytes() {
+async fn f_order_cxyz_shortcut_returns_raw_chunk_bytes_only_for_little_endian() {
     for (compressor, dtype) in [
         (
             Some(json!({"id": "blosc", "cname": "lz4", "clevel": 5, "shuffle": 1})),
@@ -302,10 +303,14 @@ async fn f_order_cxyz_shortcut_returns_raw_chunk_bytes() {
             )
             .await
             .unwrap();
-        // Scala skip-typing shortcut: the decompressed chunk as stored (byte order unchanged)
-        let expected = expected_bucket((32, 0, 32), (32, 32, 32), |x, y, z| element(&[0, x, y, z]));
+        // Little endian: Scala skip-typing shortcut, the decompressed chunk as stored. Big endian:
+        // the shortcut would return swapped bytes, so the typed path converts to little endian.
+        let expected = expected_bucket((32, 0, 32), (32, 32, 32), |x, y, z| {
+            value_u16(x, y, z).to_le_bytes().to_vec()
+        });
         assert_eq!(bytes, expected, "{compressor:?}");
-        // missing chunk in the shortcut: every byte is fill_value.byteValue (258 -> 2)
+        // missing chunk: in the shortcut every byte is fill_value.byteValue (258 -> 2), the typed
+        // path fills little-endian 258 values
         let bytes = array
             .read_bytes_with_additional_coordinates(
                 Vec3Int::new(32, 32, 32),
@@ -316,7 +321,18 @@ async fn f_order_cxyz_shortcut_returns_raw_chunk_bytes() {
             )
             .await
             .unwrap();
-        assert!(bytes.len() == 65536 && bytes.iter().all(|&b| b == 2));
+        assert_eq!(bytes.len(), 65536);
+        if big {
+            assert!(
+                bytes
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .all(|v| *v == 258u16.to_le_bytes())
+            );
+        } else {
+            assert!(bytes.iter().all(|&b| b == 2));
+        }
         // unaligned read uses the typed path: little-endian values
         let bytes = array
             .read_bytes_with_additional_coordinates(

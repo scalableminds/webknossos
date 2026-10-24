@@ -506,11 +506,15 @@ async fn check_certificate(Extension(misc): Extension<MiscState>) -> Response {
     } else {
         StatusCode::BAD_REQUEST
     };
-    (
-        status,
-        axum::Json(json!({"isValid": valid, "expiresAt": expires_at})),
+    // Both outcomes wrap their result in addRemoteOriginHeaders.
+    crate::util::cors::remote_origin_headers(
+        (
+            status,
+            axum::Json(json!({"isValid": valid, "expiresAt": expires_at})),
+        )
+            .into_response(),
     )
-        .into_response()
+    .await
 }
 
 #[derive(Deserialize)]

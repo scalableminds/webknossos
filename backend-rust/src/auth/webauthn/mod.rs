@@ -82,11 +82,25 @@ pub(crate) struct ChallengeStore(Arc<Mutex<ChallengeMap>>);
 /// session id -> (challenge, expiry).
 type ChallengeMap = HashMap<String, (Vec<u8>, Instant)>;
 
+const MAX_PENDING_CHALLENGES: usize = 10_000;
+
 impl ChallengeStore {
     pub(crate) fn insert(&self, session_id: String, challenge: Vec<u8>, ttl: Duration) {
         let now = Instant::now();
         let mut map = self.0.lock().unwrap_or_else(|e| e.into_inner());
-        map.retain(|_, (_, expiry)| *expiry > now);
+        // Unauthenticated callers can start ceremonies, so the store is bounded: expired entries
+        // are only swept once it grows, and at capacity the entry closest to expiry is evicted.
+        if map.len() >= MAX_PENDING_CHALLENGES / 8 {
+            map.retain(|_, (_, expiry)| *expiry > now);
+        }
+        if map.len() >= MAX_PENDING_CHALLENGES
+            && let Some(oldest) = map
+                .iter()
+                .min_by_key(|(_, (_, expiry))| *expiry)
+                .map(|(key, _)| key.clone())
+        {
+            map.remove(&oldest);
+        }
         map.insert(session_id, (challenge, now + ttl));
     }
 

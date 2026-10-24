@@ -917,8 +917,24 @@ pub async fn hash_password(password: String) -> ApiResult<String> {
 }
 
 /// Only the "SCrypt" hasher can verify; "Empty" (SSO-only) accounts never match.
+/// Runs one bcrypt verification against a throwaway hash.
+pub async fn dummy_password_check(password: String) {
+    static DUMMY_HASH: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    let _ = tokio::task::spawn_blocking(move || {
+        let hash = DUMMY_HASH
+            .get_or_init(|| bcrypt::hash("dummy", bcrypt::DEFAULT_COST).unwrap_or_default());
+        let _ = bcrypt::verify(password.as_bytes(), hash);
+    })
+    .await;
+}
+
 pub async fn verify_password(password: String, hasher: &str, hash: String) -> bool {
-    if hasher != "SCrypt" || hash.is_empty() || password.len() > BCRYPT_MAX_BYTES {
+    if password.len() > BCRYPT_MAX_BYTES {
+        return false;
+    }
+    if hasher != "SCrypt" || hash.is_empty() {
+        // Spend the same time as a real check, so latency does not reveal the account state.
+        dummy_password_check(password).await;
         return false;
     }
     tokio::task::spawn_blocking(move || bcrypt::verify(password.as_bytes(), &hash).unwrap_or(false))
@@ -1041,6 +1057,7 @@ async fn login(
         password_hash,
     }) = candidate
     else {
+        dummy_password_check(password).await;
         return Err(invalid());
     };
     if !verify_password(password, &hasher, password_hash).await {

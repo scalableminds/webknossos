@@ -735,6 +735,12 @@ impl UploadService {
             .find_data_source_id(upload_id)
             .await?
             .ok_or_else(DsError::empty)?;
+        if chunk_number < 1 || chunk_number > total_chunk_count {
+            return Err(DsError::failure(format!(
+                "Chunk number {chunk_number} is outside 1..={total_chunk_count} for {}",
+                upload_full_name(domain, upload_id, &dataset_id, &source)
+            )));
+        }
         let (file_path, upload_dir) = self.file_path_and_dir(file_id, domain).await?;
         store.refresh_expiry(upload_id).await?;
         if !store.is_file_known(upload_id, &file_path).await? {

@@ -618,7 +618,12 @@ async fn cancel(
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // JobDAO.updateManualState: update access equals read access, checked by find_job.
-    sqlx::query("UPDATE webknossos.jobs SET manualState = 'CANCELLED' WHERE _id = $1")
+    // Finished jobs stay as they are; cancelling them would hide their result and make the
+    // worker see them as to-cancel on every poll.
+    sqlx::query(
+        "UPDATE webknossos.jobs SET manualState = 'CANCELLED'
+         WHERE _id = $1 AND state NOT IN ('SUCCESS', 'FAILURE')",
+    )
         .bind(&job.id)
         .execute(&mut *transaction)
         .await?;
@@ -729,17 +734,23 @@ async fn retry(
         return Err(ApiError::forbidden(ALREADY_RETRIED));
     }
     let mut transaction = serializable(&state.pool).await?;
-    reserve_credits_for_retry(&mut transaction, &user.id, &job.id).await?;
-    // JobDAO.retryOne: only failed or cancelled jobs are reset (otherwise a no-op).
-    sqlx::query(
+    // JobDAO.retryOne: only failed or cancelled jobs are reset (otherwise a no-op). The retry
+    // limit is re-checked here so that concurrent retries cannot both pass it.
+    let reset = sqlx::query(
         r#"UPDATE webknossos.jobs
           SET state = 'PENDING', manualState = NULL, retriedBySuperUser = $2, lastRetry = NOW()
-          WHERE _id = $1 AND (state IN ('FAILURE', 'CANCELLED') OR manualState = 'CANCELLED')"#,
+          WHERE _id = $1 AND ($2 OR lastRetry IS NULL)
+            AND (state IN ('FAILURE', 'CANCELLED') OR manualState = 'CANCELLED')"#,
     )
     .bind(&job.id)
     .bind(user.is_superuser)
     .execute(&mut *transaction)
-    .await?;
+    .await?
+    .rows_affected();
+    // Credits are only reserved for jobs that actually rerun; a failure rolls the reset back.
+    if reset == 1 {
+        reserve_credits_for_retry(&mut transaction, &user.id, &job.id).await?;
+    }
     transaction.commit().await?;
     // Like Scala, the response shows the job as read before retrying.
     Ok(Json(public_writes(&mut connection, &user.id, &job).await?))

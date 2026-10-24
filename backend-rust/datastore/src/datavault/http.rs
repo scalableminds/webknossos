@@ -166,6 +166,21 @@ pub fn build_http_client() -> Client {
         .no_deflate()
         .no_zstd()
         .connect_timeout(Duration::from_secs(120))
+        .redirect(reqwest::redirect::Policy::custom(|attempt| {
+            // Deviation from Play WS: reqwest only strips standard auth headers on cross-host
+            // redirects, so refuse to replay `X-Auth-Token` to another host.
+            let cross_host = attempt
+                .previous()
+                .last()
+                .is_some_and(|previous| previous.host_str() != attempt.url().host_str());
+            if cross_host {
+                attempt.stop()
+            } else if attempt.previous().len() >= 10 {
+                attempt.error("too many redirects")
+            } else {
+                attempt.follow()
+            }
+        }))
         .build()
         .unwrap_or_else(|_| Client::new())
 }

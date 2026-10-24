@@ -298,8 +298,8 @@ async fn worker_jobs(
     Ok(jobs)
 }
 
-/// JobService.parameterWrites: the job as the worker sees it, with a fresh Job
-/// token of the owner (createAndInitJobTokenForUser, old tokens are kept).
+/// JobService.parameterWrites: the job as the worker sees it, with a Job
+/// token of the owner (createAndInitJobTokenForUser; reused for up to an hour).
 async fn parameter_writes(pool: &PgPool, routes: &WorkerRoutes, job: &Job) -> ApiResult<Value> {
     // UserDAO.findOne with global access: an empty Fox when the owner is gone.
     let owner: Option<String> =
@@ -329,6 +329,20 @@ async fn insert_job_token(
         i64::try_from(routes.token_idle_timeout.as_millis()).map_err(|_| ApiError::internal())?;
     if expiry_ms <= 0 || idle_ms <= 0 {
         return Err(ApiError::internal());
+    }
+    // Workers poll every few seconds; reuse a recent token instead of minting one per poll.
+    let recent: Option<String> = sqlx::query_scalar(
+        r#"SELECT value FROM webknossos.tokens
+          WHERE _user = $1 AND tokenType = 'Job'
+            AND created > statement_timestamp() - INTERVAL '1 hour'
+            AND expirationDateTime > statement_timestamp() + INTERVAL '1 hour'
+          ORDER BY created DESC LIMIT 1"#,
+    )
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await?;
+    if let Some(value) = recent {
+        return Ok(value);
     }
     let mut random = [0_u8; 16];
     getrandom::fill(&mut random).map_err(|_| ApiError::internal())?;

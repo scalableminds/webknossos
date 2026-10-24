@@ -103,7 +103,7 @@ impl ChunkContentsCache {
         self.cache
             .get_or_load_by_ref(key, || async {
                 let contents = load().await?;
-                let weight_kb = u32::try_from(weigh(&contents) / 1000).unwrap_or(u32::MAX);
+                let weight_kb = u32::try_from((weigh(&contents) / 1000).max(1)).unwrap_or(u32::MAX);
                 Ok(WeighedChunk {
                     contents: Arc::new(contents),
                     weight_kb,

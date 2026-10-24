@@ -539,10 +539,12 @@ pub(crate) async fn insert_organization(
 ) -> ApiResult<(String, String)> {
     let normalized_name =
         normalize_strong(name).ok_or_else(|| ApiError::bad_request(org_msg::ID_INVALID))?;
-    let id = requested_id
-        .and_then(normalize_strong)
-        .unwrap_or(normalized_name)
-        .replace(' ', "_");
+    let id = match requested_id {
+        Some(requested) => normalize_strong(requested)
+            .ok_or_else(|| ApiError::bad_request(org_msg::ID_INVALID))?,
+        None => normalized_name,
+    }
+    .replace(' ', "_");
     // Ids of deleted organizations stay reserved (primary key).
     let exists: bool =
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.organizations WHERE _id = $1)")
@@ -1123,6 +1125,10 @@ async fn send_invites(
     user: AuthUser,
     Json(body): Json<InviteParameters>,
 ) -> ApiResult<Response> {
+    // Deviation from Scala: plain members may not invite at all.
+    if !user.is_team_manager_or_admin(&state.pool).await? {
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
+    }
     for membership in &body.team_memberships {
         if !user
             .can_manage_team(&state.pool, membership.id.as_str())
@@ -1223,6 +1229,16 @@ async fn add_user(
         .ok_or_else(|| {
             ApiError::not_found(crate::msg::organization::not_found(&organization_id))
         })?;
+    let already: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM webknossos.users_ WHERE _multiUser = $1 AND _organization = $2)",
+    )
+    .bind(&multi_user_id)
+    .bind(&organization.id)
+    .fetch_one(&mut *tx)
+    .await?;
+    if already {
+        return Err(ApiError::bad_request(org_msg::ALREADY_JOINED));
+    }
     let original: String = sqlx::query_scalar(
         "SELECT _id FROM webknossos.users_ WHERE _multiUser = $1 AND NOT isDeactivated ORDER BY created, _id LIMIT 1",
     )

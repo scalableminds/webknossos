@@ -33,7 +33,7 @@ use crate::{
     auth::OptionalAuthUser,
     auth::browser::onboarding::{
         NewAccount, ORGANIZATION_COLUMNS, OrganizationRow, admin_notifier_mail,
-        initial_team_memberships, insert_account, organization_messages,
+        assert_users_can_be_added, initial_team_memberships, insert_account, organization_messages,
     },
     auth::browser::{BrowserAuthConfig, login_user},
     config::{ConfigError, Env},
@@ -331,11 +331,13 @@ struct JsonWebKey {
     alg: String,
     #[serde(rename = "use")]
     usage: String,
+    kid: Option<String>,
     n: Option<String>,
     e: Option<String>,
 }
 
 struct RsaKey {
+    kid: Option<String>,
     n: Vec<u8>,
     e: Vec<u8>,
 }
@@ -392,15 +394,9 @@ impl Oidc {
         Ok(format!("{}?{query}", info.authorization_endpoint))
     }
 
-    async fn first_rsa_key(&self, info: &ProviderInfo) -> Result<RsaKey, ClientError> {
+    /// All RSA signing keys of the provider, in JWKS order.
+    async fn rsa_keys(&self, info: &ProviderInfo) -> Result<Vec<RsaKey>, ClientError> {
         let set: JsonWebKeySet = self.get_json(&info.jwks_uri).await?;
-        let key = set
-            .keys
-            .into_iter()
-            .find(|key| key.kty == "RSA" && key.usage == "sig")
-            .ok_or_else(|| {
-                ClientError("No server RSA Public Key found in server key set".into())
-            })?;
         let decode = |value: Option<String>, name: &str| -> Result<Vec<u8>, ClientError> {
             let bytes = URL_SAFE_INDIFFERENT
                 .decode(value.ok_or_else(|| ClientError(format!("JWK {name} missing")))?)?;
@@ -411,10 +407,24 @@ impl Oidc {
                 .unwrap_or(bytes.len());
             Ok(bytes[start..].to_vec())
         };
-        Ok(RsaKey {
-            n: decode(key.n, "n")?,
-            e: decode(key.e, "e")?,
-        })
+        let keys = set
+            .keys
+            .into_iter()
+            .filter(|key| key.kty == "RSA" && key.usage == "sig")
+            .map(|key| {
+                Ok(RsaKey {
+                    kid: key.kid,
+                    n: decode(key.n, "n")?,
+                    e: decode(key.e, "e")?,
+                })
+            })
+            .collect::<Result<Vec<_>, ClientError>>()?;
+        if keys.is_empty() {
+            return Err(ClientError(
+                "No server RSA Public Key found in server key set".into(),
+            ));
+        }
+        Ok(keys)
     }
 
     /// getAndValidateTokens: (access token claims, optional id token claims).
@@ -448,12 +458,12 @@ impl Oidc {
             "Fetched oidc token for scope '{}', response scope: {:?}. Decoding...",
             self.config.scope, tokens.scope
         ));
-        let key = self.first_rsa_key(&info).await?;
+        let keys = self.rsa_keys(&info).await?;
         let now_ms = chrono::Utc::now().timestamp_millis();
-        let access = decode_jwt(&tokens.access_token, &key, now_ms)?;
+        let access = decode_jwt(&tokens.access_token, &keys, now_ms)?;
         let id = match &tokens.id_token {
             Some(token) => {
-                let claims = decode_jwt(token, &key, now_ms)?;
+                let claims = decode_jwt(token, &keys, now_ms)?;
                 if !audience_contains(&claims, &self.config.client_id) {
                     return Err(ClientError("id token audience mismatch".into()));
                 }
@@ -472,7 +482,7 @@ const URL_SAFE_INDIFFERENT: GeneralPurpose = GeneralPurpose::new(
 );
 
 /// jwt-scala `decodeJson(token, publicKey)` with default JwtOptions.
-fn decode_jwt(token: &str, key: &RsaKey, now_ms: i64) -> Result<Map<String, Value>, ClientError> {
+fn decode_jwt(token: &str, keys: &[RsaKey], now_ms: i64) -> Result<Map<String, Value>, ClientError> {
     let parts: Vec<&str> = token.split('.').collect();
     let [header64, claim64, signature64] = parts.as_slice() else {
         return Err(ClientError("JWT must have three parts".into()));
@@ -489,6 +499,13 @@ fn decode_jwt(token: &str, key: &RsaKey, now_ms: i64) -> Result<Map<String, Valu
             Some("RS512") => &signature::RSA_PKCS1_2048_8192_SHA512,
             _ => return Err(ClientError("unsupported JWT algorithm".into())),
         };
+    // Pick the key named by the header's `kid`; without a match, the first key is used.
+    let key = header
+        .get("kid")
+        .and_then(Value::as_str)
+        .and_then(|kid| keys.iter().find(|key| key.kid.as_deref() == Some(kid)))
+        .or_else(|| keys.first())
+        .ok_or_else(|| ClientError("No server RSA Public Key found in server key set".into()))?;
     let signature_bytes = URL_SAFE_INDIFFERENT.decode(signature64)?;
     let message = format!("{header64}.{claim64}");
     signature::RsaPublicKeyComponents {
@@ -554,11 +571,15 @@ struct UserInfo {
 }
 
 fn user_info(claims: &Map<String, Value>) -> Option<UserInfo> {
+    // An explicitly unverified address must not be matched to (or create) an account.
+    if claims.get("email_verified").and_then(Value::as_bool) == Some(false) {
+        return None;
+    }
     let field = |name: &str| claims.get(name).and_then(Value::as_str).map(str::to_owned);
     Some(UserInfo {
         given_name: field("given_name")?,
         family_name: field("family_name")?,
-        email: field("email")?,
+        email: field("email")?.to_lowercase(),
     })
 }
 
@@ -655,6 +676,7 @@ async fn create_user(
         [organization] => organization,
         _ => return Err(ApiError::bad_request(organization_messages::AMBIGUOUS)),
     };
+    assert_users_can_be_added(&mut tx, &organization.id).await?;
     let team_memberships = initial_team_memberships(&mut tx, &organization.id, None).await?;
     let created = insert_account(
         &mut tx,

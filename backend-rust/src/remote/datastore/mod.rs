@@ -56,11 +56,12 @@ const PLAY_MAX_MEMORY_BUFFER: usize = 250 * 1024 * 1024;
 /// DataSourceStatus.unreported.
 pub(crate) const UNREPORTED: &str = "No longer available on datastore.";
 /// DataSourceStatus.inactiveStatusList.
-const INACTIVE_STATUSES: [&str; 4] = [
+const INACTIVE_STATUSES: [&str; 5] = [
     UNREPORTED,
     "Not yet fully uploaded.",
     "Not yet marked as fully uploaded to paths.",
     "Deleted by user.",
+    crate::dataset::lifecycle::CONVERSION_FAILED,
 ];
 
 pub fn router() -> Router<AppState> {

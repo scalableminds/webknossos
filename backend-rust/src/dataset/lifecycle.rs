@@ -22,6 +22,7 @@ use crate::{
 
 pub(crate) const NOT_YET_UPLOADED: &str = "Not yet fully uploaded.";
 pub(crate) const NOT_YET_UPLOADED_TO_PATHS: &str = "Not yet marked as fully uploaded to paths.";
+pub(crate) const CONVERSION_FAILED: &str = "Conversion failed.";
 const DELETED_BY_USER: &str = "Deleted by user.";
 
 #[derive(Clone, Copy)]

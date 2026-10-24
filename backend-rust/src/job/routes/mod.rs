@@ -59,8 +59,11 @@ pub(crate) const JOB_COMMANDS: [&str; 17] = [
 pub(crate) const JOB_STATES: [&str; 5] = ["PENDING", "STARTED", "SUCCESS", "FAILURE", "CANCELLED"];
 
 /// DataSourceStatus.unreportedStatusList.
-const UNREPORTED_DATASET_STATUSES: [&str; 2] =
-    ["No longer available on datastore.", "Deleted by user."];
+const UNREPORTED_DATASET_STATUSES: [&str; 3] = [
+    "No longer available on datastore.",
+    "Deleted by user.",
+    crate::dataset::lifecycle::CONVERSION_FAILED,
+];
 
 pub(crate) fn is_job_command(command: &str) -> bool {
     JOB_COMMANDS.contains(&command)
@@ -457,7 +460,7 @@ async fn list(
           WHERE ($2::text IS NULL OR j.command = $2)
             AND {JOB_LIST_ACCESS}
             AND (NOT $3 OR (j.commandArgs->>'dataset_id')::text IN
-              (SELECT _id FROM webknossos.datasets WHERE status NOT IN ($4, $5)))
+              (SELECT _id FROM webknossos.datasets WHERE status NOT IN ($4, $5, $6)))
           ORDER BY j.created DESC, j._id DESC"#
     );
     let rows: Vec<CompactRow> = sqlx::query_as(&sql)
@@ -466,6 +469,7 @@ async fn list(
         .bind(query.skip_for_deleted_datasets.unwrap_or(false))
         .bind(UNREPORTED_DATASET_STATUSES[0])
         .bind(UNREPORTED_DATASET_STATUSES[1])
+        .bind(UNREPORTED_DATASET_STATUSES[2])
         .fetch_all(&state.pool)
         .await?;
     let mut result = Vec::with_capacity(rows.len());

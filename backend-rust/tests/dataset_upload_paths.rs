@@ -398,13 +398,25 @@ async fn preliminary_mag_and_attachment_reservations_enforce_pending_rules() {
         .execute(&db.pool)
         .await
         .unwrap();
-    let (status, response) = post(&app, &preliminary, &fixture.token, body).await;
+    let (status, response) = post(&app, &preliminary, &fixture.token, body.clone()).await;
     assert_eq!(
         (status, error(&response)),
         (
             StatusCode::BAD_REQUEST,
             "Dataset is not in uploading status, got ."
         )
+    );
+    // A dataset whose conversion failed can be reserved again (retrying the job).
+    sqlx::query("UPDATE webknossos.datasets SET status='Conversion failed.' WHERE _id=$1")
+        .bind(&uploading)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    let (status, response) = post(&app, &preliminary, &fixture.token, body).await;
+    assert_eq!(status, StatusCode::OK, "{response}");
+    assert_eq!(
+        response["dataSource"]["statusOpt"],
+        "Not yet fully uploaded."
     );
 
     // Mags: only for virtual datasets, conflicts unless overwritePending.

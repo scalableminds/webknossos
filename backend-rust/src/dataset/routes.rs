@@ -978,7 +978,7 @@ pub(crate) async fn list_values(
       floor(extract(epoch from d.created)*1000)::bigint AS created,
       COALESCE({edit}, false) AS is_editable,
       COALESCE(floor(extract(epoch from lu.lastUsedTime)*1000)::bigint, 0) AS last_used_by_user,
-      d.status, d.tags, d.status IN ($8, $9) AS is_unreported,
+      d.status, d.tags, d.status IN ($8, $9, $16) AS is_unreported,
       COALESCE(cl.names, '{{}}') AS color_layer_names,
       COALESCE(sl.names, '{{}}') AS segmentation_layer_names,
       (CASE WHEN d._organization = $13 THEN COALESCE(ms.storage, 0) + COALESCE(ats.storage, 0) ELSE 0 END)::bigint
@@ -993,7 +993,7 @@ pub(crate) async fn list_values(
         AS annotation_count
       FROM (SELECT d.* FROM webknossos.datasets_ d JOIN webknossos.organizations o ON o._id = d._organization
         WHERE {read} AND ($3::boolean IS NULL OR d.isUsable = $3)
-        AND ($4::boolean IS NULL OR (d.status IN ($8, $9)) = $4)
+        AND ($4::boolean IS NULL OR (d.status IN ($8, $9, $16)) = $4)
         AND ($5::text IS NULL OR d._organization = $5)
         AND ($6::text IS NULL OR d._uploader = $6)
         AND ($7::text IS NULL OR CASE WHEN $10 THEN EXISTS (SELECT 1 FROM webknossos.folder_paths fp
@@ -1024,6 +1024,7 @@ pub(crate) async fn list_values(
         .bind(user.as_ref().map(|u| u.organization_id.as_str()))
         .bind(query.include_annotation_count.unwrap_or(false))
         .bind(query.limit)
+        .bind(crate::dataset::lifecycle::CONVERSION_FAILED)
         .fetch_all(pool)
         .await?;
     rows.into_iter()

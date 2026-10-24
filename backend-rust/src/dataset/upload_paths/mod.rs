@@ -455,7 +455,7 @@ async fn reserve_for_preliminary(
     .bind(id.as_str())
     .fetch_one(&mut *transaction)
     .await?;
-    if status != NOT_YET_UPLOADED {
+    if status != NOT_YET_UPLOADED && status != crate::dataset::lifecycle::CONVERSION_FAILED {
         return Err(ApiError::bad_request(format!(
             "Dataset is not in uploading status, got {status}."
         )));

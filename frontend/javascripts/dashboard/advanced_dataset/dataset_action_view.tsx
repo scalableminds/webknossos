@@ -120,7 +120,7 @@ function DatasetActionView(props: Props) {
         }
       >
         <WarningOutlined className="icon-margin-right" />
-        Show Error
+        Show Status
       </a>
     </div>
   );

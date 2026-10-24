@@ -499,8 +499,8 @@ fn failure_as(error: sqlx::Error, message: &str) -> ApiError {
     error.into()
 }
 
-/// JobService.cleanUpIfFailed: a failed WKW conversion removes its dataset from the
-/// database (DatasetDAO.deleteDataset), freeing the directory name.
+/// JobService.cleanUpIfFailed: a failed WKW conversion marks its dataset as conversion
+/// failed (unusable, directory name stays reserved) so the conversion can be retried.
 async fn clean_up_if_failed(connection: &mut PgConnection, job: &Job) -> ApiResult<()> {
     if job.state != "FAILURE" || job.command != "convert_to_wkw" {
         return Ok(());
@@ -514,7 +514,7 @@ async fn clean_up_if_failed(connection: &mut PgConnection, job: &Job) -> ApiResu
     };
     tracing::info!(
         job = %job.id,
-        "WKW conversion job failed. Deleting dataset from the database, freeing the directoryName..."
+        "WKW conversion job failed. Marking dataset as conversion failed..."
     );
     let dataset: Option<String> = sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.datasets_ WHERE directoryName = $1 AND _organization = $2
@@ -525,20 +525,13 @@ async fn clean_up_if_failed(connection: &mut PgConnection, job: &Job) -> ApiResu
     .fetch_optional(&mut *connection)
     .await?;
     let dataset = dataset.ok_or_else(|| ApiError::bad_request(CLEANUP_FAILED))?;
-    for statement in [
-        "DELETE FROM webknossos.dataset_mags WHERE _dataset = $1",
-        "DELETE FROM webknossos.dataset_layer_additionalAxes WHERE _dataset = $1",
-        "DELETE FROM webknossos.dataset_layers WHERE _dataset = $1",
-        "DELETE FROM webknossos.dataset_allowedTeams WHERE _dataset = $1",
-        "DELETE FROM webknossos.dataset_layer_coordinateTransformations WHERE _dataset = $1",
-        "DELETE FROM webknossos.datasets WHERE _id = $1",
-    ] {
-        sqlx::query(statement)
-            .bind(&dataset)
-            .execute(&mut *connection)
-            .await
-            .map_err(|error| failure_as(error, CLEANUP_FAILED))?;
-    }
+    // DatasetDAO.updateDatasetStatusByDatasetId(isUsable = false).
+    sqlx::query("UPDATE webknossos.datasets SET isUsable = false, status = $2 WHERE _id = $1")
+        .bind(&dataset)
+        .bind(crate::dataset::lifecycle::CONVERSION_FAILED)
+        .execute(&mut *connection)
+        .await
+        .map_err(|error| failure_as(error, CLEANUP_FAILED))?;
     Ok(())
 }
 

@@ -24,7 +24,6 @@ use webknossos_backend::{
 const NOT_FOUND: &str = "Could not find or access the requested resource.";
 const WORKER_NOT_FOUND: &str = "Could not find this worker in the database.";
 const JOB_NOT_FOUND: &str = "Job could not be found or accessed.";
-const CLEANUP_FAILED: &str = "Could not clean up failed job.";
 const VOXELYTICS_NOT_ENABLED: &str =
     "Voxelytics workflow reporting and logging are not enabled for this WEBKNOSSOS instance.";
 const AI_INFERENCE_NOT_FOUND: &str = "Could not find requested AI inference.";
@@ -697,7 +696,7 @@ async fn status_updates_complete_and_refund_credits() {
         .unwrap();
     assert!(failed.body_html.contains("out of memory"));
 
-    // Failed conversion: the dataset is removed and the datastore cleans up uploads.
+    // Failed conversion: the dataset is marked as conversion failed and the datastore cleans up uploads.
     let dataset = seed_dataset(&db, org, "upload-dir").await;
     let conversion = seed_job(
         &db,
@@ -722,13 +721,14 @@ async fn status_updates_complete_and_refund_credits() {
         .0,
         200
     );
-    let remaining: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM webknossos.datasets WHERE _id=$1")
+    let (usable, status): (bool, String) =
+        sqlx::query_as("SELECT isUsable, status FROM webknossos.datasets WHERE _id=$1")
             .bind(&dataset)
             .fetch_one(&db.pool)
             .await
             .unwrap();
-    assert_eq!(remaining, 0);
+    assert!(!usable);
+    assert_eq!(status, "Conversion failed.");
     for _ in 0..50 {
         if !calls.lock().unwrap().is_empty() {
             break;
@@ -740,7 +740,7 @@ async fn status_updates_complete_and_refund_credits() {
     assert!(recorded[0].starts_with("DELETE /data/datasets/upload/dataset/cleanUpUploadFiles?"));
     assert!(recorded[0].contains(&format!("jobId={conversion}")));
     assert!(recorded[0].contains("directoryName=upload-dir"));
-    // Reporting the failure again finds no dataset to clean up.
+    // Reporting the failure again just marks the dataset as failed once more.
     assert_eq!(
         call(
             &app,
@@ -748,8 +748,9 @@ async fn status_updates_complete_and_refund_credits() {
             &conversion_uri,
             Some(json!({"state": "FAILURE"}))
         )
-        .await,
-        (400, error(CLEANUP_FAILED))
+        .await
+        .0,
+        200
     );
     for _ in 0..50 {
         if !mailer.messages().is_empty() {

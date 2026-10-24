@@ -22,6 +22,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json, Path},
+    users::notification_emails::{NotificationEmailService, SharedResource},
     util::id::ObjectId,
 };
 
@@ -319,6 +320,7 @@ async fn shared_teams(
 async fn update_shared_teams(
     State(state): State<AppState>,
     Extension(provider): Extension<AnnotationProvider>,
+    Extension(notification_emails): Extension<NotificationEmailService>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,
     Json(body): Json<Vec<String>>,
@@ -368,6 +370,30 @@ async fn update_shared_teams(
             crate::msg::annotation::NO_UPDATE_ACCESS,
         ));
     }
+    // teamDAO.findSharedTeamsForAnnotation under the requester's access
+    // context: the previously shared teams the requester can read.
+    let old_team_ids: Vec<String> = sqlx::query_scalar(&format!(
+        "SELECT team._id FROM webknossos.teams_ team
+         WHERE team._id IN (SELECT shared._team FROM webknossos.annotation_sharedTeams shared WHERE shared._annotation=$4)
+         AND {READABLE_TEAM}"
+    ))
+    .bind(&user.id)
+    .bind(&user.organization_id)
+    .bind(user.is_admin)
+    .bind(provided.id())
+    .fetch_all(&mut *transaction)
+    .await?;
+    let pending_emails = notification_emails
+        .prepare_share_emails(
+            &mut transaction,
+            SharedResource::Annotation {
+                id: provided.id().to_owned(),
+            },
+            &old_team_ids,
+            &team_ids,
+            &[user.id.as_str(), provided.owner_id()],
+        )
+        .await;
     sqlx::query("DELETE FROM webknossos.annotation_sharedTeams WHERE _annotation=$1")
         .bind(provided.id())
         .execute(&mut *transaction)
@@ -388,5 +414,6 @@ async fn update_shared_teams(
         _ => error.into(),
     })?;
     transaction.commit().await?;
+    notification_emails.send_share_emails(&state.pool, pending_emails, &user.id);
     Ok(ResponseJson(team_ids))
 }

@@ -76,7 +76,9 @@ const COMPACT_USER: &str = r#"SELECT jsonb_build_object('id',u._id,'email',m.ema
     'teams',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',team._id,'name',team.name,'isTeamManager',role.isTeamManager) ORDER BY team._id)
       FROM webknossos.user_team_roles role JOIN webknossos.teams_ team ON team._id=role._team WHERE role._user=u._id AND team._organization=u._organization),'[]'::jsonb))
     FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON m._id=u._multiUser WHERE u._id=$1"#;
-fn list_grant(shared: bool) -> String {
+/// Annotation list access (AnnotationDAO.listAccessQ when `shared`); binds
+/// $1 requester id and $2 requester organization.
+pub(crate) fn list_grant(shared: bool) -> String {
     if !shared {
         return crate::annotation::access::READ_PREDICATE.to_owned();
     }

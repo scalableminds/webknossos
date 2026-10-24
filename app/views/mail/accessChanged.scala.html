@@ -1,0 +1,19 @@
+@(name: String, issuerName: String, organizationName: String, changes: List[String], dashboardUrl: String, additionalFooter: String)
+
+@emailBaseTemplate(additionalFooter) {
+<p>Hi @{name},</p>
+
+<p>@{issuerName} changed your access in the WEBKNOSSOS organization <i>@{organizationName}</i>:</p>
+
+<ul>
+  @for(change <- changes) {
+  <li>@{change}</li>
+  }
+</ul>
+
+@emailButton("Open WEBKNOSSOS", dashboardUrl)
+
+<p>If you did not expect this change, please contact an admin of your organization.</p>
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

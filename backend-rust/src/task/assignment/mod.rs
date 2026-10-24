@@ -49,6 +49,7 @@ use crate::{
     error::{ApiError, ApiResult},
     extract::{Path, Query},
     stores::tracing_client::{DuplicateAnnotationRequest, TracingStoreClient},
+    users::notification_emails::NotificationEmailService,
     util::id::ObjectId,
     util::instant::now_millis,
 };
@@ -416,6 +417,7 @@ async fn manages_user(
 async fn assign_one(
     State(state): State<AppState>,
     Extension(tracing_store): Extension<TracingStoreClient>,
+    Extension(notification_emails): Extension<NotificationEmailService>,
     user: AuthUser,
     Path(id): Path<String>,
     Query(query): Query<AssignQuery>,
@@ -428,8 +430,8 @@ async fn assign_one(
     let pool = &state.pool;
 
     // userService.findOneCached(userId): UserDAO.readAccessQ, Empty → 404.
-    let assignee_organization: String = sqlx::query_scalar(&format!(
-        "SELECT usr._organization FROM webknossos.users_ usr WHERE usr._id=$2 AND {}",
+    let (assignee_organization, assignee_is_deactivated): (String, bool) = sqlx::query_as(&format!(
+        "SELECT usr._organization, usr.isDeactivated FROM webknossos.users_ usr WHERE usr._id=$2 AND {}",
         crate::users::READ_ACCESS_PREDICATE
     ))
     .bind(&user.id)
@@ -491,6 +493,14 @@ async fn assign_one(
         &annotation_id,
     )
     .await?;
+    notification_emails.send_task_assigned_email(
+        pool,
+        task_id.as_str(),
+        annotation_id.as_str(),
+        assignee_id.as_str(),
+        assignee_is_deactivated,
+        &user.id,
+    );
 
     // taskService.publicWrites(taskUpdated)(GlobalAccessContext); plain `Ok`.
     let mut connection = pool.acquire().await?;

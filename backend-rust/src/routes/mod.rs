@@ -224,6 +224,10 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
             public_url.as_str(),
         ),
     );
+    let notification_emails = crate::users::notification_emails::NotificationEmailService::new(
+        mailer.clone(),
+        &browser_auth.public_uri,
+    );
     let clients = crate::stores::client::ServiceClients::new(service_client)
         .expect("validated service client configuration");
     let datastore_tokens = crate::dataset::explore::DatastoreTokenConfig {
@@ -302,6 +306,7 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         .layer(middleware::from_fn(crate::auth::browser::cookie_middleware))
         .layer(axum::Extension(browser_auth))
         .layer(axum::Extension(mailer))
+        .layer(axum::Extension(notification_emails))
         .layer(axum::Extension(time_interaction_writer))
         .layer(axum::Extension(time_tracking))
         .layer(axum::Extension(

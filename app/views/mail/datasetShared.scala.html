@@ -1,0 +1,15 @@
+@(name: String, sharerName: String, datasetName: String, teamNames: List[String], datasetUrl: String, additionalFooter: String)
+
+@emailBaseTemplate(additionalFooter) {
+<p>Hi @{name},</p>
+
+<p>
+  @{sharerName} gave
+  @if(teamNames.length == 1) {your team <i>@{teamNames.head}</i>} else {your teams <i>@{teamNames.mkString(", ")}</i>}
+  access to the dataset <i>@{datasetName}</i>.
+</p>
+
+@emailButton("View Dataset", datasetUrl)
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

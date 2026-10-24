@@ -585,3 +585,31 @@ pub mod time_tracking {
     pub const UNSUPPORTED_ANNOTATION_TYPE: &str =
         "One of the selected annotation types is not supported for time tracking.";
 }
+
+/// Play: `NotificationEmailService` (not in `Msg`): the descriptions listed in
+/// the access-changed email.
+pub mod notification_email {
+    use std::fmt::Display;
+
+    /// `Annotation.nameOpt.getOrElse(...)` for annotations without a name.
+    pub const UNNAMED_ANNOTATION: &str = "Unnamed annotation";
+    pub const NOW_ADMIN: &str = "You are now an admin of the organization.";
+    pub const NO_LONGER_ADMIN: &str = "You are no longer an admin of the organization.";
+    pub const NOW_DATASET_MANAGER: &str = "You are now a dataset manager.";
+    pub const NO_LONGER_DATASET_MANAGER: &str = "You are no longer a dataset manager.";
+    pub fn added_to_team_as_manager(team: impl Display) -> String {
+        format!("You were added to the team {team} as team manager.")
+    }
+    pub fn added_to_team(team: impl Display) -> String {
+        format!("You were added to the team {team}.")
+    }
+    pub fn now_team_manager(team: impl Display) -> String {
+        format!("You are now a team manager of the team {team}.")
+    }
+    pub fn no_longer_team_manager(team: impl Display) -> String {
+        format!("You are no longer a team manager of the team {team}.")
+    }
+    pub fn removed_from_team(team: impl Display) -> String {
+        format!("You were removed from the team {team}.")
+    }
+}

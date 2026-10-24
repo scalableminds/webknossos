@@ -24,6 +24,12 @@ fn app(db: &TestDb) -> Router {
         .merge(webknossos_backend::dataset::routes::metadata_router(true))
         .merge(webknossos_backend::dataset::routes::lookup_router(true))
         .layer(axum::Extension(offline_misc()))
+        .layer(axum::Extension(
+            webknossos_backend::users::notification_emails::NotificationEmailService::new(
+                webknossos_backend::mail::MailSender::default(),
+                "http://localhost:9000",
+            ),
+        ))
         .with_state(AppState {
             pool: db.pool.clone(),
         })

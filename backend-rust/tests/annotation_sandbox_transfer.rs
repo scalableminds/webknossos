@@ -101,6 +101,12 @@ fn app(db: &TestDb) -> Router {
                 .merge(webknossos_backend::annotation::transfer::router(false)),
         )
         .layer(Extension(provider))
+        .layer(Extension(
+            webknossos_backend::users::notification_emails::NotificationEmailService::new(
+                webknossos_backend::mail::MailSender::default(),
+                "http://localhost:9000",
+            ),
+        ))
         .with_state(AppState {
             pool: db.pool.clone(),
         })

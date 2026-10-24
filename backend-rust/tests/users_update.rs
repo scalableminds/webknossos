@@ -12,7 +12,7 @@ use webknossos_backend::{
     AppState,
     auth::browser::BrowserAuthConfig,
     mail::{MailSender, RecordingMailer},
-    users,
+    users::{self, notification_emails::NotificationEmailService},
 };
 
 const NOT_ALLOWED: &str = "You are not authorized to view or edit this resource.";
@@ -24,6 +24,11 @@ fn app(database: &TestDb, mailer: &RecordingMailer, wkorg: bool) -> Router {
     };
     users::router(true)
         .layer(Extension(MailSender::new(mailer.clone())))
+        // Notification emails are covered by tests/notification_emails.rs.
+        .layer(Extension(NotificationEmailService::new(
+            MailSender::default(),
+            "http://localhost:9000",
+        )))
         .layer(Extension(config))
         .with_state(AppState {
             pool: database.pool.clone(),

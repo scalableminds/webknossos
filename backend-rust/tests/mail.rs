@@ -10,8 +10,8 @@ use tokio::{
     sync::mpsc,
 };
 use webknossos_backend::mail::{
-    DEFAULT_SENDER, Mail, MailConfig, MailSender, MailSettings, RecordingMailer, SmtpConfig,
-    SmtpTlsMode, config_from_values, templates,
+    DEFAULT_SENDER, Mail, MailConfig, MailSender, MailSettings, NotificationEmailSettings,
+    RecordingMailer, SmtpConfig, SmtpTlsMode, config_from_values, templates,
 };
 
 const NAME: &str = "Jane <O'Brien> & \"Co\"";
@@ -25,6 +25,7 @@ fn settings() -> MailSettings {
     MailSettings {
         default_sender: DEFAULT_SENDER.into(),
         additional_footer: FOOTER.into(),
+        ..MailSettings::default()
     }
 }
 
@@ -301,6 +302,130 @@ fn templates_changed_after_the_scala_build_follow_twirl_rules() {
     assert_eq!(request(None), wrap(&format!("{head}{tail}"), "\n"));
 }
 
+/// `emailButton.scala.html` as Twirl renders it.
+fn twirl_button(label: &str, url: &str) -> String {
+    format!(
+        "\n<div style=\"text-align: center;\">\n  <a href=\"{url}\" style=\"\n      color: #fff;\n      padding: 4px 15px;\n      margin: 10px;\n      height: 32px;\n      background: #5660ff;\n      border: 1px solid #808cff;\n      text-align: center;\n      font-weight: 400;\n      font-size: 14px;\n      line-height: 2.1;\n      text-decoration: none;\n      border-radius: 4px;\n      display: inline-block;\n    \">\n    {label}\n  </a>\n</div>\n"
+    )
+}
+
+/// The notification templates of NotificationEmailService (added after the
+/// last local Scala compile), derived by hand from the Twirl sources: `@if`
+/// and `@for` blocks emit exactly the text between their braces.
+#[test]
+fn notification_templates_follow_twirl_rules() {
+    let name = "Jane &lt;O&#x27;Brien&gt; &amp; &quot;Co&quot;";
+    let ds = "dataset &lt;1&gt; &amp; &#x27;two&#x27;";
+    let link = "https://wk.example/datasets/abc/view?token=x&amp;y=1";
+    let tail = "\n<p>With best regards,<br />the WEBKNOSSOS team</p>\n";
+    let one_team = ["Team <A>".to_owned()];
+    let two_teams = ["Team <A>".to_owned(), "B & C".to_owned()];
+    let open_annotation = twirl_button("Open Annotation", link);
+
+    let shared = |teams: &[String]| {
+        html(templates::annotation_shared(
+            NAME,
+            R,
+            "Sharer <b>",
+            "Ann 'x'",
+            DS,
+            teams,
+            LINK,
+        ))
+    };
+    let shared_expected = |teams: &str| {
+        wrap(
+            &format!(
+                "\n<p>Hi {name},</p>\n\n<p>\n  Sharer &lt;b&gt; shared the annotation <i>Ann &#x27;x&#x27;</i> of the dataset <i>{ds}</i> with\n  {teams}\n</p>\n\n{open_annotation}\n{tail}"
+            ),
+            "\n",
+        )
+    };
+    assert_eq!(
+        shared(&one_team),
+        shared_expected("your team <i>Team &lt;A&gt;</i>.")
+    );
+    assert_eq!(
+        shared(&two_teams),
+        shared_expected("your teams <i>Team &lt;A&gt;, B &amp; C</i>.")
+    );
+
+    assert_eq!(
+        html(templates::annotation_transferred(
+            NAME,
+            R,
+            "Issuer <i>",
+            "Ann",
+            DS,
+            LINK
+        )),
+        wrap(
+            &format!(
+                "\n<p>Hi {name},</p>\n\n<p>\n  Issuer &lt;i&gt; transferred the annotation <i>Ann</i> of the dataset <i>{ds}</i> to you.\n  You are now its owner and can find it in your dashboard.\n</p>\n\n{open_annotation}\n{tail}"
+            ),
+            "\n"
+        )
+    );
+
+    let view_dataset = twirl_button("View Dataset", link);
+    let dataset_shared = |teams: &[String]| {
+        html(templates::dataset_shared(
+            NAME, R, "Sharer", DS, teams, LINK,
+        ))
+    };
+    let dataset_expected = |teams: &str| {
+        wrap(
+            &format!(
+                "\n<p>Hi {name},</p>\n\n<p>\n  Sharer gave\n  {teams}\n  access to the dataset <i>{ds}</i>.\n</p>\n\n{view_dataset}\n{tail}"
+            ),
+            "\n",
+        )
+    };
+    assert_eq!(
+        dataset_shared(&one_team),
+        dataset_expected("your team <i>Team &lt;A&gt;</i>")
+    );
+    assert_eq!(
+        dataset_shared(&two_teams),
+        dataset_expected("your teams <i>Team &lt;A&gt;, B &amp; C</i>")
+    );
+
+    let changes = [
+        "You are now a dataset manager.".to_owned(),
+        "You were added to the team <T>.".to_owned(),
+    ];
+    let open = twirl_button("Open WEBKNOSSOS", link);
+    assert_eq!(
+        html(templates::access_changed(
+            NAME, R, "Admin", "Org & Co", &changes, LINK
+        )),
+        wrap(
+            &format!(
+                "\n<p>Hi {name},</p>\n\n<p>Admin changed your access in the WEBKNOSSOS organization <i>Org &amp; Co</i>:</p>\n\n<ul>\n  \n  <li>You are now a dataset manager.</li>\n  \n  <li>You were added to the team &lt;T&gt;.</li>\n  \n</ul>\n\n{open}\n\n<p>If you did not expect this change, please contact an admin of your organization.</p>\n{tail}"
+            ),
+            "\n"
+        )
+    );
+
+    let start = twirl_button("Start Task", link);
+    assert_eq!(
+        html(templates::task_assigned(
+            NAME,
+            R,
+            "Manager",
+            "Project <1>",
+            "Tracing & more",
+            LINK
+        )),
+        wrap(
+            &format!(
+                "\n<p>Hi {name},</p>\n\n<p>\n  Manager assigned a <i>Tracing &amp; more</i> task of the project <i>Project &lt;1&gt;</i> to you.\n  You can also find it in the task list of your dashboard.\n</p>\n\n{start}\n{tail}"
+            ),
+            "\n"
+        )
+    );
+}
+
 #[test]
 fn subjects_senders_and_recipients_match_default_mails() {
     let cases: Vec<(Mail, &str, Vec<&str>, Vec<&str>)> = vec![
@@ -476,6 +601,7 @@ fn mail_sender_applies_settings_and_skips_blank_recipients() {
         MailSettings {
             default_sender: "Ops <ops@example.test>".into(),
             additional_footer: "<b>Imprint</b>".into(),
+            ..MailSettings::default()
         },
     );
     sender.send(templates::new_user("Ann", " ", true));
@@ -528,6 +654,13 @@ fn mail_config_defaults_follow_application_conf() {
         "WEBKNOSSOS <no-reply@webknossos.org>"
     );
     assert_eq!(config.settings.additional_footer, "");
+    assert_eq!(
+        config.settings.notification_emails,
+        NotificationEmailSettings {
+            access_changes: true,
+            manual_task_assignments: true,
+        }
+    );
 }
 
 #[test]
@@ -545,6 +678,11 @@ fn mail_config_parses_values_validates_and_redacts_secrets() {
             "WK_MAIL_ADDITIONAL_FOOTER",
             "<a href=\"/imprint\">Imprint</a>",
         ),
+        ("WK_MAIL_NOTIFICATION_EMAILS_ACCESS_CHANGES", "false"),
+        (
+            "WK_MAIL_NOTIFICATION_EMAILS_MANUAL_TASK_ASSIGNMENTS",
+            "false",
+        ),
     ]))
     .unwrap();
     assert!(config.log_to_stdout && config.smtp_enabled());
@@ -558,6 +696,13 @@ fn mail_config_parses_values_validates_and_redacts_secrets() {
         config.settings.additional_footer,
         "<a href=\"/imprint\">Imprint</a>"
     );
+    assert_eq!(
+        config.settings.notification_emails,
+        NotificationEmailSettings {
+            access_changes: false,
+            manual_task_assignments: false,
+        }
+    );
     let debug = format!("{config:?}");
     assert!(!debug.contains("hunter2-secret") && !debug.contains("mailer-user"));
     assert!(debug.contains("password_configured: true"));
@@ -569,6 +714,8 @@ fn mail_config_parses_values_validates_and_redacts_secrets() {
         ("WK_MAIL_SMTP_TLS", "yes"),
         ("WK_MAIL_SMTP_AUTH", "1"),
         ("WK_MAIL_LOG_TO_STDOUT", "on"),
+        ("WK_MAIL_NOTIFICATION_EMAILS_ACCESS_CHANGES", "no"),
+        ("WK_MAIL_NOTIFICATION_EMAILS_MANUAL_TASK_ASSIGNMENTS", "0"),
         ("WK_MAIL_SMTP_HOST", "smtp example"),
     ] {
         let error = config_from_values(&values(&[(key, value)])).unwrap_err();

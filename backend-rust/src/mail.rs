@@ -71,6 +71,8 @@ pub struct MailSettings {
     pub default_sender: String,
     /// `mail.additionalFooter`: inserted into the HTML footer unescaped.
     pub additional_footer: String,
+    /// `mail.notificationEmails.*`.
+    pub notification_emails: NotificationEmailSettings,
 }
 
 impl Default for MailSettings {
@@ -78,6 +80,28 @@ impl Default for MailSettings {
         Self {
             default_sender: DEFAULT_SENDER.into(),
             additional_footer: String::new(),
+            notification_emails: NotificationEmailSettings::default(),
+        }
+    }
+}
+
+/// `mail.notificationEmails`: which notification emails
+/// (crate::users::notification_emails) are sent. Both default to enabled.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct NotificationEmailSettings {
+    /// `accessChanges`: someone else shares an annotation or dataset with the
+    /// user's teams, transfers an annotation to them, or changes their team
+    /// memberships or roles.
+    pub access_changes: bool,
+    /// `manualTaskAssignments`: a team manager or admin assigns a task to them.
+    pub manual_task_assignments: bool,
+}
+
+impl Default for NotificationEmailSettings {
+    fn default() -> Self {
+        Self {
+            access_changes: true,
+            manual_task_assignments: true,
         }
     }
 }
@@ -188,6 +212,8 @@ impl MailConfig {
 /// | `WK_MAIL_SMTP_PASS` | `mail.smtp.pass` | empty |
 /// | `WK_MAIL_DEFAULT_SENDER` | `mail.defaultSender` | `WEBKNOSSOS <no-reply@webknossos.org>` |
 /// | `WK_MAIL_ADDITIONAL_FOOTER` | `mail.additionalFooter` | empty |
+/// | `WK_MAIL_NOTIFICATION_EMAILS_ACCESS_CHANGES` | `mail.notificationEmails.accessChanges` | `true` |
+/// | `WK_MAIL_NOTIFICATION_EMAILS_MANUAL_TASK_ASSIGNMENTS` | `mail.notificationEmails.manualTaskAssignments` | `true` |
 pub fn config_from_values(values: &HashMap<String, String>) -> Result<MailConfig, ConfigError> {
     let env = Env::new(values);
     let port = match env.unsigned("WK_MAIL_SMTP_PORT") {
@@ -218,6 +244,11 @@ pub fn config_from_values(values: &HashMap<String, String>) -> Result<MailConfig
         settings: MailSettings {
             default_sender: env.text("WK_MAIL_DEFAULT_SENDER", DEFAULT_SENDER),
             additional_footer: env.text("WK_MAIL_ADDITIONAL_FOOTER", ""),
+            notification_emails: NotificationEmailSettings {
+                access_changes: env.bool_or("WK_MAIL_NOTIFICATION_EMAILS_ACCESS_CHANGES", true)?,
+                manual_task_assignments: env
+                    .bool_or("WK_MAIL_NOTIFICATION_EMAILS_MANUAL_TASK_ASSIGNMENTS", true)?,
+            },
         },
     };
     if config.smtp_enabled() {
@@ -1371,6 +1402,188 @@ If you require additional ground truth annotations to further improve model perf
             "Oops. Your dataset upload & conversion failed".into(),
             page(&content, "\n"),
         )
+    }
+
+    /// `your team <i>A</i>` or `your teams <i>A, B</i>` (annotationShared and
+    /// datasetShared: `@if(teamNames.length == 1) {...} else {...}`).
+    fn your_teams(team_names: &[String]) -> String {
+        match team_names {
+            [team_name] => format!("your team <i>{}</i>", e(team_name)),
+            _ => format!("your teams <i>{}</i>", e(&team_names.join(", "))),
+        }
+    }
+
+    /// DefaultMails.annotationSharedMail (`annotationShared`).
+    pub fn annotation_shared(
+        full_name: &str,
+        recipient: &str,
+        sharer_name: &str,
+        annotation_name: &str,
+        dataset_name: &str,
+        team_names: &[String],
+        annotation_url: &str,
+    ) -> Mail {
+        let subject = format!("WEBKNOSSOS | {sharer_name} shared an annotation with you");
+        let open = button("Open Annotation", annotation_url);
+        let teams = your_teams(team_names);
+        let (name, sharer_name, annotation_name, dataset_name) = (
+            e(full_name),
+            e(sharer_name),
+            e(annotation_name),
+            e(dataset_name),
+        );
+        let content = format!(
+            r##"
+<p>Hi {name},</p>
+
+<p>
+  {sharer_name} shared the annotation <i>{annotation_name}</i> of the dataset <i>{dataset_name}</i> with
+  {teams}.
+</p>
+
+{open}
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+"##
+        );
+        html_mail(recipient, subject, page(&content, "\n"))
+    }
+
+    /// DefaultMails.annotationTransferredMail (`annotationTransferred`).
+    pub fn annotation_transferred(
+        full_name: &str,
+        recipient: &str,
+        issuer_name: &str,
+        annotation_name: &str,
+        dataset_name: &str,
+        annotation_url: &str,
+    ) -> Mail {
+        let subject = format!("WEBKNOSSOS | {issuer_name} transferred an annotation to you");
+        let open = button("Open Annotation", annotation_url);
+        let (name, issuer_name, annotation_name, dataset_name) = (
+            e(full_name),
+            e(issuer_name),
+            e(annotation_name),
+            e(dataset_name),
+        );
+        let content = format!(
+            r##"
+<p>Hi {name},</p>
+
+<p>
+  {issuer_name} transferred the annotation <i>{annotation_name}</i> of the dataset <i>{dataset_name}</i> to you.
+  You are now its owner and can find it in your dashboard.
+</p>
+
+{open}
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+"##
+        );
+        html_mail(recipient, subject, page(&content, "\n"))
+    }
+
+    /// DefaultMails.datasetSharedMail (`datasetShared`).
+    pub fn dataset_shared(
+        full_name: &str,
+        recipient: &str,
+        sharer_name: &str,
+        dataset_name: &str,
+        team_names: &[String],
+        dataset_url: &str,
+    ) -> Mail {
+        let subject =
+            format!("WEBKNOSSOS | {sharer_name} shared the dataset {dataset_name} with you");
+        let open = button("View Dataset", dataset_url);
+        let teams = your_teams(team_names);
+        let (name, sharer_name, dataset_name) = (e(full_name), e(sharer_name), e(dataset_name));
+        let content = format!(
+            r##"
+<p>Hi {name},</p>
+
+<p>
+  {sharer_name} gave
+  {teams}
+  access to the dataset <i>{dataset_name}</i>.
+</p>
+
+{open}
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+"##
+        );
+        html_mail(recipient, subject, page(&content, "\n"))
+    }
+
+    /// DefaultMails.accessChangedMail (`accessChanged`).
+    pub fn access_changed(
+        full_name: &str,
+        recipient: &str,
+        issuer_name: &str,
+        organization_name: &str,
+        changes: &[String],
+        dashboard_url: &str,
+    ) -> Mail {
+        let subject = format!("WEBKNOSSOS | Your access in {organization_name} has changed");
+        let open = button("Open WEBKNOSSOS", dashboard_url);
+        let (name, issuer_name, organization_name) =
+            (e(full_name), e(issuer_name), e(organization_name));
+        let changes: String = changes
+            .iter()
+            .map(|change| format!("\n  <li>{}</li>\n  ", e(change)))
+            .collect();
+        let content = format!(
+            r##"
+<p>Hi {name},</p>
+
+<p>{issuer_name} changed your access in the WEBKNOSSOS organization <i>{organization_name}</i>:</p>
+
+<ul>
+  {changes}
+</ul>
+
+{open}
+
+<p>If you did not expect this change, please contact an admin of your organization.</p>
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+"##
+        );
+        html_mail(recipient, subject, page(&content, "\n"))
+    }
+
+    /// DefaultMails.taskAssignedMail (`taskAssigned`).
+    pub fn task_assigned(
+        full_name: &str,
+        recipient: &str,
+        issuer_name: &str,
+        project_name: &str,
+        task_type_name: &str,
+        annotation_url: &str,
+    ) -> Mail {
+        let subject = format!("WEBKNOSSOS | {issuer_name} assigned a task to you");
+        let start = button("Start Task", annotation_url);
+        let (name, issuer_name, project_name, task_type_name) = (
+            e(full_name),
+            e(issuer_name),
+            e(project_name),
+            e(task_type_name),
+        );
+        let content = format!(
+            r##"
+<p>Hi {name},</p>
+
+<p>
+  {issuer_name} assigned a <i>{task_type_name}</i> task of the project <i>{project_name}</i> to you.
+  You can also find it in the task list of your dashboard.
+</p>
+
+{start}
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+"##
+        );
+        html_mail(recipient, subject, page(&content, "\n"))
     }
 
     /// DefaultMails.emailVerificationMail (`verifyEmail`); `link_expiry` is

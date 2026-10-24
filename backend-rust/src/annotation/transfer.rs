@@ -12,7 +12,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json as JsonBody, Path},
-    users,
+    users::{self, notification_emails::NotificationEmailService},
     util::id::ObjectId,
 };
 
@@ -53,6 +53,7 @@ async fn transfer(
     State(state): State<AppState>,
     Extension(provider): Extension<AnnotationProvider>,
     Extension(JobsEnabled(jobs)): Extension<JobsEnabled>,
+    Extension(notification_emails): Extension<NotificationEmailService>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,
     JsonBody(body): JsonBody<TransferParameters>,
@@ -133,6 +134,14 @@ async fn transfer(
     // under the requester's read access and can fail afterwards (e.g. a
     // non-admin handing over a Private annotation); the transfer still stands.
     transaction.commit().await?;
+    notification_emails.send_annotation_transferred_email(
+        &state.pool,
+        &annotation.id,
+        &annotation.name,
+        &annotation.dataset_id,
+        target,
+        &user.id,
+    );
 
     let reloaded = provider
         .provide(context, &typ, &id)

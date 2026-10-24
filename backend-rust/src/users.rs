@@ -1,3 +1,5 @@
+pub mod notification_emails;
+
 use crate::auth::browser::onboarding::assert_users_can_be_added;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -17,6 +19,7 @@ use crate::error::{ApiError, ApiResult};
 use crate::extract::{Json as RequestJson, Path, Query};
 use crate::mail::{MailSender, templates};
 use crate::util::id::{ObjectId, PathObjectId};
+use notification_emails::{NotificationEmailService, TeamMembership, UserAccess};
 
 pub fn router(email_verification_enabled: bool) -> Router<AppState> {
     Router::new()
@@ -377,12 +380,14 @@ struct OldMembership {
 /// organization (UserService.isTeamManagerOrAdminOf(user, team)).
 const TEAM_MANAGEABLE: &str = "(EXISTS (SELECT 1 FROM webknossos.user_team_roles AS r WHERE r._team = team._id AND r._user = $2 AND r.isTeamManager) OR ($3 AND team._organization = $4))";
 
+#[allow(clippy::too_many_arguments)]
 async fn update(
     State(state): State<AppState>,
     requester: AuthUser,
     Path(id): Path<PathObjectId>,
     Extension(verification): Extension<EmailVerification>,
     Extension(mailer): Extension<MailSender>,
+    Extension(notification_emails): Extension<NotificationEmailService>,
     Extension(auth_config): Extension<BrowserAuthConfig>,
     RequestJson(body): RequestJson<UserUpdate>,
 ) -> ApiResult<Json<Value>> {
@@ -673,6 +678,29 @@ async fn update(
             &auth_config.public_uri,
         ));
     }
+    notification_emails.send_access_changed_email(
+        &state.pool,
+        id,
+        UserAccess {
+            is_admin: target.is_admin,
+            is_dataset_manager: target.is_dataset_manager,
+            is_deactivated: target.is_deactivated,
+        },
+        old_memberships
+            .iter()
+            .map(|m| TeamMembership::new(m.team.clone(), m.is_team_manager))
+            .collect(),
+        UserAccess {
+            is_admin,
+            is_dataset_manager,
+            is_deactivated: !is_active,
+        },
+        updated_teams
+            .into_iter()
+            .map(|(team, is_team_manager)| TeamMembership::new(team, is_team_manager))
+            .collect(),
+        &requester.id,
+    );
     Ok(Json(document(&state, &requester, id, &verification).await?))
 }
 

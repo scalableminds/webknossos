@@ -12,6 +12,7 @@ use crate::{
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path, Query},
     system::application_info::MiscState,
+    users::notification_emails::{NotificationEmailService, SharedResource},
     util::id::{ObjectId, PathObjectId},
 };
 
@@ -1120,6 +1121,7 @@ async fn delete_sharing_token(
 
 async fn update_teams(
     State(state): State<AppState>,
+    Extension(notification_emails): Extension<NotificationEmailService>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
     RequestJson(requested): RequestJson<Vec<ObjectId>>,
@@ -1150,9 +1152,20 @@ async fn update_teams(
         .map(String::from)
         .filter(|t| managed.contains(t))
         .collect();
-    updated.extend(current.into_iter().filter(|t| !managed.contains(t)));
+    updated.extend(current.iter().filter(|t| !managed.contains(t)).cloned());
     let mut seen = std::collections::HashSet::new();
     updated.retain(|t| seen.insert(t.clone()));
+    let pending_emails = notification_emails
+        .prepare_share_emails(
+            &mut transaction,
+            SharedResource::Dataset {
+                id: id.as_str().to_owned(),
+            },
+            &current,
+            &updated,
+            &[user.id.as_str()],
+        )
+        .await;
     sqlx::query("DELETE FROM webknossos.dataset_allowedTeams WHERE _dataset = $1")
         .bind(id.as_str())
         .execute(&mut *transaction)
@@ -1160,6 +1173,7 @@ async fn update_teams(
     sqlx::query("INSERT INTO webknossos.dataset_allowedTeams (_dataset, _team) SELECT $1, unnest($2::text[])")
         .bind(id.as_str()).bind(&updated).execute(&mut *transaction).await?;
     transaction.commit().await?;
+    notification_emails.send_share_emails(&state.pool, pending_emails, &user.id);
     Ok(Json(updated))
 }
 

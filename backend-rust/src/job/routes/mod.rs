@@ -370,7 +370,6 @@ pub(crate) fn result_link(
         return None;
     }
     let string_arg = |key: &str| args.get(key).and_then(Value::as_str);
-    let bool_arg = |key: &str| args.get(key).and_then(Value::as_bool).unwrap_or(false);
     match command {
         "convert_to_wkw" | "compute_mesh_file" => match string_arg("dataset_id") {
             Some(id) => {
@@ -383,24 +382,33 @@ pub(crate) fn result_link(
                 .map(|name| format!("/datasets/{organization}/{name}/view")),
         },
         "export_tiff" | "render_animation" => Some(format!("/api/jobs/{job_id}/export")),
-        "infer_neurons" if bool_arg("do_split_merger_evaluation") || bool_arg("do_evaluation") => {
-            return_value.map(str::to_owned)
-        }
         "infer_nuclei"
         | "infer_neurons"
         | "materialize_volume_annotation"
         | "infer_with_model"
         | "infer_mitochondria"
         | "align_sections"
-        | "infer_instances" => return_value.map(|identifier| {
-            // ObjectId.fromStringSync accepts 24 hex digits in either case.
-            if identifier.len() == 24 && identifier.bytes().all(|b| b.is_ascii_hexdigit()) {
-                format!("/datasets/{}/view", identifier.to_ascii_lowercase())
-            } else {
-                format!("/datasets/{organization}/{identifier}/view")
-            }
+        | "infer_instances" => return_value.map(|return_value| {
+            link_from_dataset_or_annotation_return_value(return_value, organization)
         }),
         _ => None,
+    }
+}
+
+/// JobResultLinks.linkFromDatasetOrAnnotationReturnValue. Newer jobs return the path (or url) of
+/// the annotation containing their result, which already is a link. Older jobs returned a dataset
+/// name, a directoryName or a datasetId.
+fn link_from_dataset_or_annotation_return_value(return_value: &str, organization: &str) -> String {
+    if return_value.starts_with('/')
+        || return_value.starts_with("http://")
+        || return_value.starts_with("https://")
+    {
+        return_value.to_owned()
+    // ObjectId.fromStringSync accepts 24 hex digits in either case.
+    } else if return_value.len() == 24 && return_value.bytes().all(|b| b.is_ascii_hexdigit()) {
+        format!("/datasets/{}/view", return_value.to_ascii_lowercase())
+    } else {
+        format!("/datasets/{organization}/{return_value}/view")
     }
 }
 

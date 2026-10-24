@@ -125,3 +125,72 @@ fn result_links() {
         None
     );
 }
+
+#[test]
+fn inference_result_links_follow_the_return_value() {
+    const COMMANDS: [&str; 7] = [
+        "infer_nuclei",
+        "infer_neurons",
+        "materialize_volume_annotation",
+        "infer_with_model",
+        "infer_mitochondria",
+        "align_sections",
+        "infer_instances",
+    ];
+    let link = |command: &str, args: &serde_json::Value, return_value: Option<&str>| {
+        result_link(command, "SUCCESS", args, return_value, "j", "org")
+    };
+    for command in COMMANDS {
+        let plain = json!({});
+        // Annotation path or url: used unchanged.
+        assert_eq!(
+            link(command, &plain, Some("/annotations/abc")).as_deref(),
+            Some("/annotations/abc")
+        );
+        assert_eq!(
+            link(command, &plain, Some("https://wk.example/annotations/abc")).as_deref(),
+            Some("https://wk.example/annotations/abc")
+        );
+        assert_eq!(
+            link(command, &plain, Some("http://wk.example/annotations/abc")).as_deref(),
+            Some("http://wk.example/annotations/abc")
+        );
+        // Legacy dataset id, directory name or name.
+        assert_eq!(
+            link(command, &plain, Some("0123456789ABCDEF01234567")).as_deref(),
+            Some("/datasets/0123456789abcdef01234567/view")
+        );
+        assert_eq!(
+            link(command, &plain, Some("my_dir")).as_deref(),
+            Some("/datasets/org/my_dir/view")
+        );
+        assert_eq!(link(command, &plain, None), None);
+        assert_eq!(
+            result_link(
+                command,
+                "FAILURE",
+                &plain,
+                Some("/annotations/abc"),
+                "j",
+                "org"
+            ),
+            None
+        );
+    }
+    // Evaluation flags no longer influence the link.
+    for flag in ["do_evaluation", "do_split_merger_evaluation"] {
+        let args = json!({ flag: true });
+        assert_eq!(
+            link("infer_neurons", &args, Some("/annotations/abc")).as_deref(),
+            Some("/annotations/abc")
+        );
+        assert_eq!(
+            link("infer_neurons", &args, Some("0123456789abcdef01234567")).as_deref(),
+            Some("/datasets/0123456789abcdef01234567/view")
+        );
+        assert_eq!(
+            link("infer_neurons", &args, Some("my_dir")).as_deref(),
+            Some("/datasets/org/my_dir/view")
+        );
+    }
+}

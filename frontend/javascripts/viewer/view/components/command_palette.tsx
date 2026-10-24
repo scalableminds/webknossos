@@ -20,14 +20,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
-import { ColorWKBlue, getSystemColorTheme, getThemeFromUser } from "theme";
+import { ColorWKBlue, getActiveTheme } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { ViewModeValues } from "viewer/constants";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool, Toolkits } from "viewer/model/accessors/tool_accessor";
 import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
-import { setThemeAction, setToolAction } from "viewer/model/actions/ui_actions";
+import { setToolAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import type { UserConfiguration } from "viewer/store";
 import {
@@ -159,7 +159,7 @@ export const CommandPalette = () => {
     annotationOwner,
   };
 
-  const theme = getThemeFromUser(activeUser);
+  const theme = useWkSelector(getActiveTheme);
 
   const getTabsAndSettingsMenuItems = () => {
     if (!isInAnnotationView) return [];
@@ -177,57 +177,6 @@ export const CommandPalette = () => {
     });
     return commands;
   };
-
-  // type annotation due to the library
-  const handleSelect = useCallback(async (command: Record<string, unknown>) => {
-    if (command.name == null) {
-      return;
-    }
-
-    if (command.name === DynamicCommands.viewDataset) {
-      try {
-        const items = await getDatasetItems();
-        if (items.length > 0) {
-          setCommands(items);
-        } else {
-          Toast.info("No datasets available.");
-        }
-      } catch (_e) {
-        Toast.error("Failed to load datasets.");
-      }
-      return;
-    }
-
-    if (command.name === DynamicCommands.viewAnnotation) {
-      try {
-        const items = await getAnnotationItems();
-        if (items.length > 0) {
-          setCommands(items);
-        } else {
-          Toast.info("No annotations available.");
-        }
-      } catch (_e) {
-        Toast.error("Failed to load annotations.");
-      }
-      return;
-    }
-
-    if (command.name === DynamicCommands.switchOrganization) {
-      try {
-        const organizations = await getOrganizationItems();
-        if (organizations.length > 0) {
-          setCommands(organizations);
-        } else {
-          Toast.info("No other organizations available.");
-        }
-      } catch (_e) {
-        Toast.error("Failed to load organizations.");
-      }
-      return;
-    }
-
-    closePalette();
-  }, []);
 
   const getDatasetItems = useCallback(async () => {
     const datasets = await getDatasets();
@@ -400,14 +349,11 @@ export const CommandPalette = () => {
       ["dark", "Dark"],
     ] as const;
 
-    for (let [theme, name] of themesWithNames) {
+    for (const [selectableTheme, name] of themesWithNames) {
       commands.push({
         name: `Switch to “${name}” color theme`,
         command: async () => {
-          if (theme === "auto") theme = getSystemColorTheme();
-
-          const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);
-          dispatch(setThemeAction(theme));
+          const newUser = await updateSelectedThemeOfUser(activeUser.id, selectableTheme);
           dispatch(setActiveUserAction(newUser));
         },
         color: commandEntryColor,
@@ -489,6 +435,57 @@ export const CommandPalette = () => {
   const closePalette = () => {
     setIsOpenRequested(false);
     setPaletteKey((prevKey) => prevKey + 1);
+  };
+
+  // type annotation due to the library
+  const handleSelect = async (command: Record<string, unknown>) => {
+    if (command.name == null) {
+      return;
+    }
+
+    if (command.name === DynamicCommands.viewDataset) {
+      try {
+        const items = await getDatasetItems();
+        if (items.length > 0) {
+          setCommands(items);
+        } else {
+          Toast.info("No datasets available.");
+        }
+      } catch (_e) {
+        Toast.error("Failed to load datasets.");
+      }
+      return;
+    }
+
+    if (command.name === DynamicCommands.viewAnnotation) {
+      try {
+        const items = await getAnnotationItems();
+        if (items.length > 0) {
+          setCommands(items);
+        } else {
+          Toast.info("No annotations available.");
+        }
+      } catch (_e) {
+        Toast.error("Failed to load annotations.");
+      }
+      return;
+    }
+
+    if (command.name === DynamicCommands.switchOrganization) {
+      try {
+        const organizations = await getOrganizationItems();
+        if (organizations.length > 0) {
+          setCommands(organizations);
+        } else {
+          Toast.info("No other organizations available.");
+        }
+      } catch (_e) {
+        Toast.error("Failed to load organizations.");
+      }
+      return;
+    }
+
+    closePalette();
   };
 
   const commandsWithIds = useMemo(() => {

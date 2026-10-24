@@ -62,14 +62,25 @@ export default class LatestTaskExecutor<T> {
     });
     // @ts-expect-error ts-migrate(2322) FIXME: Type '{ task: Task<T>; deferred: Deferred<T, Error... Remove this comment to see the full error message
     this.taskQueue = [latestTask];
-    // Start the latest task
-    const promise = task();
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'result' implicitly has an 'any' type.
-    promise.then((result) => {
-      this.taskQueue.shift();
-      deferred.resolve(result);
-
-      this.__executeLatestPromise();
-    });
+    // Start the latest task. A synchronous exception of task() is treated
+    // like a rejection so that the queue always advances.
+    let promise: Promise<T>;
+    try {
+      promise = task();
+    } catch (error) {
+      promise = Promise.reject(error);
+    }
+    promise
+      .then(
+        (result) => {
+          this.taskQueue.shift();
+          deferred.resolve(result);
+        },
+        (error) => {
+          this.taskQueue.shift();
+          deferred.reject(error);
+        },
+      )
+      .then(() => this.__executeLatestPromise());
   }
 }

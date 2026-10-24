@@ -414,10 +414,11 @@ async fn data_source_json(
     exposure: CredentialIdExposure,
     use_real_paths: bool,
 ) -> ApiResult<Value> {
-    let (usable, mut source): (bool, Value) = sqlx::query_as(
+    type Row = (bool, Value, Option<Value>);
+    let (usable, mut source, default_view_configuration): Row = sqlx::query_as(
         r#"SELECT isUsable,jsonb_build_object('id',jsonb_build_object('name',directoryName,'team',_organization),
       'status',status,'scale',CASE WHEN voxelSizeFactor IS NOT NULL THEN jsonb_build_object('factor',jsonb_build_array((voxelSizeFactor).x,(voxelSizeFactor).y,(voxelSizeFactor).z),
-        'unit',COALESCE(voxelSizeUnit::text,'nanometer')) ELSE NULL END) FROM webknossos.datasets_ WHERE _id=$1"#,
+        'unit',COALESCE(voxelSizeUnit::text,'nanometer')) ELSE NULL END),defaultViewConfiguration FROM webknossos.datasets_ WHERE _id=$1"#,
     )
     .bind(id)
     .fetch_one(pool)
@@ -427,6 +428,11 @@ async fn data_source_json(
             return Err(ApiError::internal());
         }
         source.as_object_mut().unwrap().remove("status");
+        if let Some(default_view_configuration) =
+            default_view_configuration.filter(|v| !v.is_null())
+        {
+            source["defaultViewConfiguration"] = default_view_configuration;
+        }
         source["dataLayers"] =
             json!(full_layers_with_exposure(pool, id, exposure, use_real_paths).await?);
     } else {

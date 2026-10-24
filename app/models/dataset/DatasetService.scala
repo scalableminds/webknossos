@@ -592,7 +592,7 @@ class DatasetService @Inject() (
       for {
         voxelSize <- dataset.voxelSize.toFox ?~> Msg.Dataset.DataSource.usableButNoVoxelSize
         dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id, useRealPaths)
-      } yield UsableDataSource(dataSourceId, dataLayers, voxelSize)
+      } yield UsableDataSource(dataSourceId, dataLayers, voxelSize, dataset.defaultViewConfiguration)
     else
       Fox.successful(UnusableDataSource(dataSourceId, None, dataset.status, dataset.voxelSize))
   }

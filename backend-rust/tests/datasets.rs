@@ -942,6 +942,19 @@ async fn metadata_settings_access_lists_and_raw_superuser_sources_preserve_permi
         "attachment-credential-reference"
     );
     assert!(raw["dataLayers"][0]["mags"][0].get("credentials").is_none());
+    assert!(raw.get("defaultViewConfiguration").is_none());
+    sqlx::query("UPDATE webknossos.datasets SET defaultViewConfiguration=$2 WHERE _id=$1")
+        .bind(&id)
+        .bind(json!({"position":[1,2,3],"zoom":0.5}))
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    let (status, raw) = request(&application, "GET", &raw_path, Some(&foreign.token), None).await;
+    assert_eq!(status, StatusCode::OK, "{raw}");
+    assert_eq!(
+        raw["defaultViewConfiguration"],
+        json!({"position":[1,2,3],"zoom":0.5})
+    );
     let (_, public) = request(&application, "GET", &format!("/datasets/{id}"), None, None).await;
     assert!(!public.to_string().contains("credential-reference"));
     db.cleanup().await;

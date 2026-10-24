@@ -28,6 +28,30 @@ fn instants_and_timestamps_follow_scala() {
 }
 
 #[test]
+fn local_log_timestamps_use_the_24_hour_clock_in_the_system_zone() {
+    let expected = |hour, nanos| {
+        Local
+            .with_ymd_and_hms(2024, 2, 8, hour, 50, 59)
+            .earliest()
+            .map(|t| t.timestamp_millis() + i64::from(nanos / 1_000_000))
+    };
+    for (literal, hour, nanos) in [
+        ("2024-02-08T00:50:59.123", 0, 123_000_000),
+        ("2024-02-08T10:50:59.123", 10, 123_000_000),
+        ("2024-02-08T12:50:59.123", 12, 123_000_000),
+        ("2024-02-08T13:50:59.123", 13, 123_000_000),
+        ("2024-02-08T12:50:59.123456", 12, 123_000_000),
+        ("2024-02-08T12:50:59", 12, 0),
+    ] {
+        assert_eq!(
+            log_timestamp(literal),
+            expected(hour, nanos),
+            "for {literal}"
+        );
+    }
+}
+
+#[test]
 fn query_responses_merge_labels_and_sort() {
     let body = json!({"data": {"result": [
         {"stream": {"vx_run_name": "r"}, "values": [

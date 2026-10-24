@@ -34,8 +34,9 @@ use webknossos_datastore::{
     datavault::{
         AwsCredentials, ByteRange, CredentialLookup, CredentializedUPath, DataVault,
         DataVaultCredential, DataVaultService, DataVaultServiceOptions, Encoding, GcsOptions,
-        GoogleCloudDataVault, MSG_MAG_PATH_NOT_ABSOLUTE, MSG_SETUP_FAILED, RetryPolicy,
-        S3DataVault, S3Options, ServiceAccountTokenSource, UPath, VaultError, VaultPath,
+        GoogleCloudDataVault, HttpsDataVault, MSG_MAG_PATH_NOT_ABSOLUTE, MSG_SETUP_FAILED,
+        RetryPolicy, S3DataVault, S3Options, ServiceAccountTokenSource, UPath, VaultError,
+        VaultPath,
         sigv4::{self, EMPTY_PAYLOAD_SHA256, SigningRequest},
     },
     error::{DsError, DsResult},
@@ -404,6 +405,51 @@ async fn s3_signed_range_suffix_and_complete_reads() {
     );
     assert_eq!(requests[1].header("range"), Some("bytes=-3"));
     assert_eq!(requests[2].header("range"), None);
+}
+
+#[tokio::test]
+async fn http_range_requests_keep_the_credential_headers() {
+    let mock = Mock::start(|req| match req.method.as_str() {
+        "HEAD" => Resp::new(200, "")
+            .with("accept-ranges", "bytes")
+            .with("content-length", "10"),
+        _ => Resp::new(206, "2345").with("content-range", "bytes 2-5/10"),
+    })
+    .await;
+    let url = format!("{}/data.bin", mock.base());
+    let path = upath(&url);
+    for (credential, header, expected) in [
+        (
+            DataVaultCredential::XAuthToken {
+                name: "x".into(),
+                token_value: "secret".into(),
+                user: None,
+                organization: None,
+            },
+            "x-auth-token",
+            "secret",
+        ),
+        (basic_credential(), "authorization", "Basic YWxpY2U6cHc="),
+    ] {
+        let vault = HttpsDataVault::new(
+            Some(credential),
+            reqwest::Client::new(),
+            "http://datastore.invalid",
+        );
+        let read = vault
+            .read_bytes_encoding_and_range_header(&path, ByteRange::start_end_exclusive(2, 6), None)
+            .await
+            .unwrap_or_else(|e| panic!("{e:?}"));
+        assert_eq!(read.bytes.as_ref(), b"2345");
+        let requests = mock.requests();
+        let ranged = requests
+            .iter()
+            .rev()
+            .find(|r| r.method == "GET")
+            .expect("range request");
+        assert_eq!(ranged.header("range"), Some("bytes=2-5"));
+        assert_eq!(ranged.header(header), Some(expected));
+    }
 }
 
 #[tokio::test]

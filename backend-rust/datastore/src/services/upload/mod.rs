@@ -336,26 +336,30 @@ impl UploadMetadataStore {
         self.store.find(&self.key(upload_id, suffix)).await
     }
 
-    /// Dataset domain: Scala `insertUploadIdByDataSourceId` (the value is JSON-encoded).
+    /// Dataset domain: Scala `insertUploadIdByDataSourceId` (plain `insert`: the value is the raw
+    /// upload id, not JSON-encoded).
     pub async fn insert_upload_id_by_data_source_id(
         &self,
         id: &DataSourceId,
         upload_id: &str,
     ) -> DsResult<()> {
-        self.insert_serialized(&self.upload_id_by_data_source_key(id), &upload_id)
+        self.store
+            .insert(
+                &self.upload_id_by_data_source_key(id),
+                upload_id,
+                Some(UPLOAD_IDLE_EXPIRY),
+            )
             .await
     }
 
-    /// Dataset domain: Scala `findUploadIdByDataSourceId` (`findParsed[String]`); the value is stored
-    /// JSON-encoded by `insertSerialized`.
+    /// Dataset domain: Scala `findUploadIdByDataSourceId` (raw `find`, matching the plain insert).
     pub async fn find_upload_id_by_data_source_id(
         &self,
         id: &DataSourceId,
     ) -> DsResult<Option<String>> {
-        self.find_json(&self.upload_id_by_data_source_key(id))
-            .await?
-            .map(|v| serde_json::from_value(v).map_err(parse_failure))
-            .transpose()
+        self.store
+            .find(&self.upload_id_by_data_source_key(id))
+            .await
     }
 
     /// Single-value keys of the domain subclass (removed/expired with the upload).

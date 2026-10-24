@@ -251,7 +251,7 @@ async fn reserves_dataset_uploads_in_scala_redis_format() {
         f.redis
             .text(r#"upload___dataset______{"name":"my_ds","team":"org"}___datasourceId"#)
             .as_deref(),
-        Some("\"up1\"")
+        Some("up1")
     );
     assert_eq!(
         f.redis.data.lock().unwrap().ttls[&format!("{p}fileCount")],
@@ -468,7 +468,7 @@ async fn cancels_uploads_and_lists_unfinished() {
     upload_chunk(&f.app, "dataset", "up1/a/b.bin", 1, 4, b"1234").await;
 
     // The reserved upload is enriched with its upload id and file paths (the reverse lookup value
-    // is JSON-encoded and parsed); WK entries without Redis metadata ("gone") are dropped. Fields
+    // is the plain upload id); WK entries without Redis metadata ("gone") are dropped. Fields
     // and order of Scala `UnfinishedUploadWithoutDataSourceId`.
     for path in [
         "/data/datasets/upload/dataset/unfinishedUploads?organizationName=org",

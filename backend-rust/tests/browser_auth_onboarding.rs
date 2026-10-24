@@ -289,6 +289,32 @@ async fn invites_are_permission_checked_mailed_and_consumed_once() {
         })
     };
 
+    // Deviation from Scala: plain members may not invite at all.
+    let response = send(
+        &app,
+        Method::POST,
+        "/api/auth/sendInvites",
+        None,
+        Some(&member.token),
+        Some(invite_body(false)),
+    )
+    .await;
+    assert_eq!(
+        (response.status, &response.body),
+        (
+            StatusCode::FORBIDDEN,
+            &error("You are not authorized to view or edit this resource.")
+        )
+    );
+    // A team manager of another team may invite, but only with roles for teams they manage.
+    sqlx::query(
+        "INSERT INTO webknossos.user_team_roles (_user, _team, isTeamManager) VALUES ($1, $2, TRUE)",
+    )
+    .bind(&member.user_id)
+    .bind(&org_team)
+    .execute(&database.pool)
+    .await
+    .unwrap();
     let response = send(
         &app,
         Method::POST,

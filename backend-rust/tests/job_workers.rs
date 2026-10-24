@@ -376,11 +376,11 @@ async fn request_jobs_reserves_by_priority_and_hands_out_tokens() {
     assert_eq!(worker_of(&elsewhere), None);
     assert_eq!(worker_of(&taken).as_deref(), Some(other_worker.as_str()));
 
-    // Polling again hands out the same jobs (fresh tokens) and keeps the version.
+    // Polling again hands out the same jobs, reuses the recent Job token and keeps the version.
     let (status, again) = call(&app, "GET", "/api/jobs/request?key=worker-key", None).await;
     assert_eq!(status, 200);
     assert_eq!(ids(&again["to_run"]), ids(&body["to_run"]));
-    assert_ne!(
+    assert_eq!(
         again["to_run"][0]["job_kwargs"]["user_auth_token"],
         json!(token)
     );

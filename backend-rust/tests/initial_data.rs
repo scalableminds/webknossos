@@ -248,20 +248,37 @@ async fn sample_organization_is_inserted_once() {
     .fetch_all(&db.pool)
     .await
     .unwrap();
-    assert_eq!(datasets.len(), 6);
+    assert_eq!(datasets.len(), 7);
     assert_eq!(datasets[0].1, "tubhiswt-4D OME-Zarr");
     assert!(datasets[0].2 && datasets[0].3.is_none());
     assert_eq!(datasets[1].0, "68b80290d4000090f8f4aa62");
     assert_eq!(datasets[1].4.as_array().unwrap().len(), 2);
     assert_eq!(datasets[2].4[2]["value"], "Cortex L4");
+    assert_eq!(datasets[1].3, None);
+    assert_eq!(datasets[2].3.as_deref(), Some("6ac000000000000000000001"));
     assert_eq!(datasets[5].3.as_deref(), Some("6ac000000000000000000001"));
+    assert_eq!(datasets[6].0, "6ac000000000000000000006");
+    assert_eq!(datasets[6].1, "L4 Dense Connectome (Motta et al. 2019)");
+    assert_eq!(datasets[6].3.as_deref(), Some("5c766bec6c01006c018c7459"));
+    assert_eq!(
+        count(&db, "SELECT COUNT(*) FROM webknossos.publications WHERE _id = '6ac000000000000000000001' AND title = 'Dummy publication with several datasets' AND publicationDate = to_timestamp(1514764800)").await,
+        1
+    );
+    assert_eq!(
+        count(&db, "SELECT COUNT(*) FROM webknossos.dataset_layers WHERE _dataset = '6ac000000000000000000006'").await,
+        3
+    );
+    assert_eq!(
+        count(&db, "SELECT COUNT(*) FROM webknossos.dataset_layer_attachments WHERE _dataset = '6ac000000000000000000006' AND layerName = 'segmentation'").await,
+        23
+    );
     assert_eq!(
         count(&db, "SELECT COUNT(*) FROM webknossos.dataset_layers").await,
-        12
+        15
     );
     assert_eq!(
         count(&db, "SELECT COUNT(*) FROM webknossos.dataset_mags").await,
-        52
+        85
     );
     assert_eq!(
         count(
@@ -287,7 +304,7 @@ async fn sample_organization_is_inserted_once() {
     let (status, datasets) =
         send(&app, "GET", "/api/datasets", Some("secretSampleUserToken")).await;
     assert_eq!(status, 200);
-    assert_eq!(datasets.as_array().unwrap().len(), 6);
+    assert_eq!(datasets.as_array().unwrap().len(), 7);
 
     assert_eq!(
         trigger(&db, misc).await,

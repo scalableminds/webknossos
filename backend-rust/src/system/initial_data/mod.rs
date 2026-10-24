@@ -36,8 +36,9 @@ const SAMPLE_ORGANIZATION_INFORMATION: &str =
 const ROOT_FOLDER_NAME: &str = "Datasets";
 const SAMPLE_TASK_TYPE_ID: &str = "63721e2cef0100470266c485";
 const DEFAULT_PUBLICATION_ID: &str = "5c766bec6c01006c018c7459";
-const SINGLE_DATASET_PUBLICATION_ID: &str = "6ac000000000000000000001";
+const DUMMY_PUBLICATION_ID: &str = "6ac000000000000000000001";
 const DEFAULT_DATASET_ID: &str = "68b80290d4000090f8f4aa62";
+const L4_DENSE_DATASET_ID: &str = "6ac000000000000000000006";
 const REMOTE_ND_DATASET_ID: &str = "05c85a876c4c979ef53752b4";
 const CUSTOM_AI_MODEL_ID: &str = "66544a56d20000af0e42ba0f";
 /// AiModelService.pretrained*ModelId
@@ -47,6 +48,7 @@ pub const PRETRAINED_AI_MODEL_IDS: [&str; 4] = [
     "576500000000000000000003",
     "576500000000000000000004",
 ];
+const L4_DENSE_DESCRIPTION: &str = "Dense connectomic reconstruction in layer 4 of mouse somatosensory cortex.\n\nA Motta, M Berning, KM Boergens, B Staffler, M Beining, S Loomba, P Hennig, H Wissler, M Helmstaedter\\\nScience. 24 October 2019. [10.1126/science.aay3134](https://doi.org/10.1126/science.aay3134)\n\nSegmentation by [scalable minds](https://home.webknossos.org/services/automated-segmentation).";
 const L4_VOXEL_SIZE: f64 = 11.239999771118164;
 
 pub fn router() -> Router<AppState> {
@@ -525,15 +527,15 @@ Data available at [https://l4dense2019.brain.mpg.de/](https://l4dense2019.brain.
     sqlx::query(
         r#"INSERT INTO webknossos.publications(_id, publicationDate, imageUrl, title, description, created, isDeleted)
            VALUES ($1, to_timestamp(1571875200), NULL, $2, $3, NOW(), FALSE),
-                  ($4, NOW(), $5, $6, $7, NOW(), FALSE)"#,
+                  ($4, to_timestamp(1514764800), $5, $6, $7, NOW(), FALSE)"#,
     )
     .bind(DEFAULT_PUBLICATION_ID)
     .bind("Dense connectomic reconstruction in layer 4 of the somatosensory cortex")
     .bind(DEFAULT_DESCRIPTION)
-    .bind(SINGLE_DATASET_PUBLICATION_ID)
+    .bind(DUMMY_PUBLICATION_ID)
     .bind("https://static.webknossos.org/images/icon-only.svg")
-    .bind("Dummy publication with a single dataset")
-    .bind("Doe, J., Roe, R. · *Nature Methods* 2025 · [DOI](https://github.com/scalableminds/webknossos)")
+    .bind("Dummy publication with several datasets")
+    .bind("Doe, J., Roe, R. · *Nature Methods* 2018 · [DOI](https://github.com/scalableminds/webknossos)")
     .execute(&mut **tx)
     .await?;
     Ok(())
@@ -580,6 +582,72 @@ fn l4_layers() -> Value {
     ])
 }
 
+/// Full remote l4dense dataset (Motta et al. 2019) with predictions and the
+/// segmentation attachments.
+fn l4_dense_dataset(metadata: Value) -> SampleDataset {
+    const BASE_URL: &str = "https://static.webknossos.org/data/l4dense_motta_et_al_demo";
+    let mags = |layer: &str| {
+        let mut mag_list = vec![[1, 1, 1], [2, 2, 1]];
+        mag_list.extend((2..=10).map(|i| [1 << i, 1 << i, 1 << (i - 1)]));
+        mag_list
+            .into_iter()
+            .map(|mag| {
+                let path = if mag == [1, 1, 1] {
+                    "1".to_owned()
+                } else {
+                    format!("{}-{}-{}", mag[0], mag[1], mag[2])
+                };
+                json!({
+                    "mag": mag,
+                    "path": format!("{BASE_URL}/{layer}/{path}"),
+                    "axisOrder": {"x": 1, "y": 2, "z": 3, "c": 0},
+                })
+            })
+            .collect::<Vec<_>>()
+    };
+    let attachment = |name: &str, sub_path: &str| {
+        json!({
+            "name": name,
+            "path": format!("{BASE_URL}/segmentation/{sub_path}/{name}"),
+            "dataFormat": "zarr3",
+        })
+    };
+    let agglomerates: Vec<Value> = (5..=100)
+        .step_by(5)
+        .map(|i| attachment(&format!("agglomerate_view_{i}"), "agglomerates"))
+        .collect();
+    let bounding_box =
+        json!({"topLeft": [128, 128, 128], "width": 5445, "height": 8380, "depth": 3285});
+    SampleDataset {
+        id: L4_DENSE_DATASET_ID,
+        publication: Some(DEFAULT_PUBLICATION_ID),
+        description: Some(L4_DENSE_DESCRIPTION),
+        is_public: false,
+        name: "L4 Dense Connectome (Motta et al. 2019)".into(),
+        metadata,
+        source: json!({
+            "id": {"name": "l4dense_motta_et_al_demo", "team": SAMPLE_ORGANIZATION_ID},
+            "dataLayers": [
+                {"name": "color", "category": "color", "dataFormat": "zarr3",
+                 "boundingBox": bounding_box, "elementClass": "uint8", "mags": mags("color")},
+                {"name": "predictions", "category": "color", "dataFormat": "zarr3",
+                 "boundingBox": {"topLeft": [0, 0, 0], "width": 5632, "height": 8704, "depth": 3584},
+                 "elementClass": "uint24", "mags": mags("predictions")},
+                {"name": "segmentation", "category": "segmentation", "dataFormat": "zarr3",
+                 "boundingBox": bounding_box, "elementClass": "uint32", "mags": mags("segmentation"),
+                 "attachments": {
+                     "meshes": [attachment("meshfile_4-4-2", "meshes")],
+                     "agglomerates": agglomerates,
+                     "segmentIndex": attachment("segmentIndex", "segmentIndex"),
+                     "connectomes": [attachment("paper_l4_full_connectome", "connectomes")],
+                 },
+                 "largestSegmentId": 2504697},
+            ],
+            "scale": {"factor": [11.24, 11.24, 28.0], "unit": "nanometer"},
+        }),
+    }
+}
+
 fn sample_datasets() -> Vec<SampleDataset> {
     let l4_metadata = json!([
         {"key": "species", "type": "string", "value": "mouse"},
@@ -592,7 +660,7 @@ fn sample_datasets() -> Vec<SampleDataset> {
         }
         SampleDataset {
             id,
-            publication: Some(publication),
+            publication,
             description: None,
             is_public: false,
             name: directory.to_owned(),
@@ -619,36 +687,32 @@ fn sample_datasets() -> Vec<SampleDataset> {
         })
     };
     vec![
-        l4(
-            DEFAULT_DATASET_ID,
-            "l4_sample_remote",
-            DEFAULT_PUBLICATION_ID,
-            None,
-        ),
+        l4(DEFAULT_DATASET_ID, "l4_sample_remote", None, None),
         l4(
             "6ac000000000000000000002",
             "l4_sample_remote_2",
-            DEFAULT_PUBLICATION_ID,
+            Some(DUMMY_PUBLICATION_ID),
             Some("Cortex L4"),
         ),
         l4(
             "6ac000000000000000000003",
             "l4_sample_remote_3",
-            DEFAULT_PUBLICATION_ID,
+            Some(DUMMY_PUBLICATION_ID),
             Some("Cortex L2/3"),
         ),
         l4(
             "6ac000000000000000000004",
             "l4_sample_remote_4",
-            DEFAULT_PUBLICATION_ID,
+            Some(DUMMY_PUBLICATION_ID),
             Some("Cortex L5"),
         ),
         l4(
             "6ac000000000000000000005",
             "l4_sample_remote_5",
-            SINGLE_DATASET_PUBLICATION_ID,
+            Some(DUMMY_PUBLICATION_ID),
             Some("Cortex L4"),
         ),
+        l4_dense_dataset(l4_metadata),
         SampleDataset {
             id: REMOTE_ND_DATASET_ID,
             publication: None,

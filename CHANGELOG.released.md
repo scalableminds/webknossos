@@ -30,7 +30,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Upgraded react-router from v6 to v7. The deprecated `react-router-dom` package was replaced by `react-router`. [#9988](https://github.com/scalableminds/webknossos/pull/9988)
 
 ### Fixed
-- Fixed screenshot downloading for Safari which could not handle multi files bulk downloads. Now each download has a little delay inbetween. [#10018](https://github.com/scalableminds/webknossos/pull/10018)
+- Fixed screenshot downloading for Safari which could not handle multi files bulk downloads. Now each download has a little delay in between. [#10018](https://github.com/scalableminds/webknossos/pull/10018)
 - Fixed that mappings for uint64 segmentation layers could fail with "Cannot rehash, since 20 attempts were exceeded", because 64-bit segment ids were hashed with a poorly distributed hash function. [#10020](https://github.com/scalableminds/webknossos/pull/10020)
 - Fixed that the proofreading multi cut tool highlighting was not properly preserved in live collaboration mode when another user does interfering proofreading actions. [#9855](https://github.com/scalableminds/webknossos/pull/9855)
 - Fixed rare crash when opening an annotation (mostly when loaded in a background tab). [#9869](https://github.com/scalableminds/webknossos/pull/9869)

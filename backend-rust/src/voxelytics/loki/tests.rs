@@ -4,11 +4,16 @@ use super::*;
 fn log_ql_escapes_values_and_lists_levels_from_the_minimum() {
     assert_eq!(
         log_ql("http://wk", "run", "org", None, "WARNING"),
-        r#"{vx_run_name="run",wk_org=~"org",wk_url="http://wk"} | json vx_task_name,level | level=~"(WARNING|ERROR|CRITICAL)""#
+        r#"{vx_run_name="run",wk_org="org",wk_url="http://wk"} | json vx_task_name,level | level=~"(WARNING|ERROR|CRITICAL)""#
     );
+    // The organization is matched exactly, not as a regular expression.
     assert_eq!(
         log_ql("http://wk", "r\"}", "a.b", Some("t"), "unknown"),
-        r#"{vx_run_name="r\"}",wk_org=~"a\\.b",wk_url="http://wk"} | json vx_task_name,level | vx_task_name="t" | level=~"(INFO|NOTICE|WARNING|ERROR|CRITICAL)""#
+        r#"{vx_run_name="r\"}",wk_org="a.b",wk_url="http://wk"} | json vx_task_name,level | vx_task_name="t" | level=~"(INFO|NOTICE|WARNING|ERROR|CRITICAL)""#
+    );
+    assert_eq!(
+        log_ql("http://\"wk", "r", "o", Some("t\"}\n\\"), "INFO"),
+        r#"{vx_run_name="r",wk_org="o",wk_url="http://\"wk"} | json vx_task_name,level | vx_task_name="t\"}\n\\" | level=~"(INFO|NOTICE|WARNING|ERROR|CRITICAL)""#
     );
 }
 

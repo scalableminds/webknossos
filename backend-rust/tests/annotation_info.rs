@@ -834,14 +834,14 @@ async fn compound_task_info_merges_once_and_applies_compound_restrictions() {
     );
     assert_eq!(body["created"], body["modified"]);
 
-    // A non-manager team member reads the cached compound but the compound
-    // restrictions deny access (fail-closed 403).
+    // A non-manager team member is denied before the cached compound is
+    // returned: the provider's access check fails, the route maps it to 404.
     let (status, body) = get(&app, Some(&w.member.token), &path).await;
     assert_eq!(
         (status, body),
         (
-            StatusCode::FORBIDDEN,
-            error(webknossos_backend::msg::NOT_ALLOWED)
+            StatusCode::NOT_FOUND,
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
         )
     );
     // Cache hit: no re-merge, owner stays the first requester.

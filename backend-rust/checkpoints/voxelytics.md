@@ -45,10 +45,9 @@ env parsing + 3 invalid cases in the config unit test), `tests/server_boundary.r
 - storeWorkflow runs in one transaction (Play: parallel, no transaction).
 
 ## Deviations / gaps (for review)
-- storeWorkflow: Play's `checkAuthForWorkflowCreation` result is discarded (Scala value discard), so any org member
-  could take over another user's run. Rust ENFORCES the intended check: 401 "Voxelytics workflow run already exists
-  by another user." unless admin or the run is new/own. getLogs keeps Play's effective behavior (any run of the org,
-  consistent with allowUnlisted report access) — its discarded ownership check is NOT enforced.
+- storeWorkflow: `checkAuthForWorkflowCreation` (enforced in Play since #10161): 401 "Voxelytics workflow run already
+  exists by another user." unless admin or the run is new/own. getLogs: any run of the org (allowUnlisted report
+  access), unknown runs 404 "Voxelytics workflow runs not found."; the LogQL organization matcher is exact (`wk_org="…"`).
 - artifactChecksums without artifactName: Play generated invalid SQL (`WHERE ORDER BY`) and failed; Rust returns all
   artifacts of the task (frontend always passes artifactName).
 - Loki: LogQL values are quoted/escaped (Play interpolated raw run/task names) and the org id is regex-escaped in

@@ -1,5 +1,5 @@
-//! AnnotationController.reopen, including the owner's strict minimum wait
-//! (the Scala error text calls it a maximum, but the implemented gate is >).
+//! AnnotationController.reopen, including the owner's reopen window: owners may
+//! only reopen within the configured time (plus 10 s) after the last change.
 use axum::{Extension, Json, Router, extract::State, routing::patch};
 use chrono::Utc;
 use serde_json::Value;
@@ -29,14 +29,14 @@ pub fn router(jobs_enabled: bool) -> Router<AppState> {
         .layer(Extension(JobsEnabled(jobs_enabled)))
 }
 
-/// Owner-only gate: `(modified + configured + 10 s).isPast`. Instant.isPast
-/// compares millisecond instants strictly, so equality fails. Managers and
-/// owner-organization administrators bypass it.
-pub fn owner_wait_elapsed(now_ms: i64, modified_ms: i64, configured_seconds: i32) -> bool {
+/// Owner-only gate: `!(modified + configured + 10 s).isPast`. Instant.isPast
+/// compares millisecond instants strictly, so the deadline itself is still
+/// inside the window. Managers and owner-organization administrators bypass it.
+pub fn owner_reopen_window_open(now_ms: i64, modified_ms: i64, configured_seconds: i32) -> bool {
     let wait_ms = (i64::from(configured_seconds) + 10) * 1000;
     modified_ms
         .checked_add(wait_ms)
-        .is_some_and(|deadline| now_ms > deadline)
+        .is_none_or(|deadline| now_ms <= deadline)
 }
 
 fn guard_error(error: ApiError) -> ApiError {
@@ -64,7 +64,7 @@ async fn require_reopen(
     if state != "Finished"
         || (!manager && owner != user.id)
         || (!manager
-            && !owner_wait_elapsed(
+            && !owner_reopen_window_open(
                 Utc::now().timestamp_millis(),
                 modified_ms,
                 configured_seconds,

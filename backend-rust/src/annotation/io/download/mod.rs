@@ -663,9 +663,7 @@ async fn download_saved(
     let layers = annotation_layers(context.pool(), &annotation.id).await?;
     let skeleton_only = layers.iter().any(|layer| layer.typ == "Skeleton")
         && !layers.iter().any(|layer| layer.typ == "Volume");
-    // Deliberately fail closed: Scala's `_ <- restrictions.allowDownload(user)
-    // ?~> notAllowed ~> FORBIDDEN` binds a Fox[Boolean] and would not stop on
-    // `false`; the crate-wide decision is to enforce the intended gate.
+    // Fox.assertTrue(restrictions.allowDownload(user)) ?~> notAllowed ~> FORBIDDEN.
     if !restrictions.allow_download {
         return Err(Failure::with_status(DOWNLOAD_NOT_ALLOWED, StatusCode::FORBIDDEN).into());
     }

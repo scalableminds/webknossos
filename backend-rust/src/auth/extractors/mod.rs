@@ -163,15 +163,16 @@ pub async fn user_for_service_token(
     token: &str,
 ) -> ApiResult<Option<AuthUser>> {
     // WebknossosBearerTokenAuthenticatorService.userForToken is a read-only
-    // lookup accepting any valid token type, including ResetPassword and Job.
-    // This is an explicit query-userToken-only exception to AuthUser extraction,
-    // which admits Authentication/DataStore/Job. It does not touch lastUsedDateTime.
-    // Account-revocation checks match the Rust authentication boundary.
+    // lookup accepting every token type usable for authentication
+    // (findOneUsableForAuthentication), i.e. all but ResetPassword. It does not
+    // touch lastUsedDateTime. Account-revocation checks match the Rust
+    // authentication boundary (deactivated users are rejected).
     let user = sqlx::query_as(
         r#"SELECT u._id AS id,u._organization AS organization_id,u.isAdmin AS is_admin,u.isDatasetManager AS is_dataset_manager,m.isSuperUser AS is_superuser
         FROM webknossos.tokens_ token JOIN webknossos.users_ u ON u._id=token._user
         JOIN webknossos.multiUsers_ m ON m._id=u._multiUser JOIN webknossos.organizations_ organization ON organization._id=u._organization
-        WHERE token.value=$1 AND token.expirationDateTime>statement_timestamp() AND NOT u.isDeactivated
+        WHERE token.value=$1 AND token.tokenType<>'ResetPassword'
+        AND token.expirationDateTime>statement_timestamp() AND NOT u.isDeactivated
         AND (token.idleTimeout IS NULL OR (token.idleTimeout>0 AND extract(epoch FROM (statement_timestamp()-token.lastUsedDateTime))*1000<token.idleTimeout))
         AND (u.loggedOutEverywhereTime IS NULL OR token.created>u.loggedOutEverywhereTime)
         AND (SELECT count(*) FROM webknossos.tokens_ duplicate WHERE duplicate.value=$1)=1"#,

@@ -358,6 +358,33 @@ async fn self_and_team_manager_rules() {
     add_role(&database, &outsider.user_id, &unmanaged, false).await;
     let (status, _) = patch(&app, &outsider.user_id, &manager.token, json!({})).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
+
+    // Users without teams are editable, but team-manager-only changes still
+    // need a team manager or admin of the organization, also for themselves.
+    let teamless = member(&database, organization).await;
+    for change in [
+        json!({"experiences": {"skill": 1}}),
+        json!({"teams": [{"id": admin.team_id, "isTeamManager": false}]}),
+    ] {
+        let (status, body) = patch(&app, &teamless.user_id, &teamless.token, change).await;
+        assert_eq!((status, body), (StatusCode::FORBIDDEN, error(NOT_ALLOWED)));
+    }
+    let (status, body) = patch(
+        &app,
+        &teamless.user_id,
+        &teamless.token,
+        json!({"firstName": "Still", "lastName": "Editable"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, body) = patch(
+        &app,
+        &teamless.user_id,
+        &admin.token,
+        json!({"teams": [{"id": admin.team_id, "isTeamManager": false}]}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
     database.cleanup().await;
 }
 

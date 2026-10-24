@@ -1,31 +1,64 @@
 use super::*;
 
+fn bbox(width: i32, height: i32, depth: i32) -> BoundingBox {
+    BoundingBox::new(
+        webknossos_common::geometry::Vec3Int::new(0, 0, 0),
+        width,
+        height,
+        depth,
+    )
+}
+
 #[test]
 fn job_costs() {
     let features = crate::system::application_info::default_features();
     assert_eq!(
-        job_cost_in_milli_credits(&features, "infer_neurons", 1_000_000_000),
+        job_cost_in_milli_credits(&features, "infer_neurons", &bbox(1000, 1000, 1000)),
         Ok(1000)
     );
     assert_eq!(
-        job_cost_in_milli_credits(&features, "align_sections", 1),
+        job_cost_in_milli_credits(&features, "align_sections", &bbox(1, 1, 1)),
         Ok(1)
     );
     assert_eq!(
-        job_cost_in_milli_credits(&features, "align_sections", 0),
+        job_cost_in_milli_credits(&features, "align_sections", &bbox(0, 1, 1)),
         Ok(0)
     );
     assert_eq!(
-        job_cost_in_milli_credits(&features, "train_neuron_model", 1 << 40),
+        job_cost_in_milli_credits(&features, "train_neuron_model", &bbox(1 << 20, 1 << 20, 1)),
         Ok(0)
     );
     assert_eq!(
-        job_cost_in_milli_credits(&features, "export_tiff", 1),
+        job_cost_in_milli_credits(&features, "export_tiff", &bbox(1, 1, 1)),
         Err("Unsupported job command export_tiff".into())
     );
+}
+
+#[test]
+fn job_costs_of_huge_bounding_boxes_saturate_instead_of_overflowing() {
+    let features = crate::system::application_info::default_features();
     assert_eq!(
-        job_cost_in_milli_credits(&features, "infer_neurons", i64::MAX),
+        job_cost_in_milli_credits(
+            &features,
+            "infer_neurons",
+            &bbox(i32::MAX, i32::MAX, i32::MAX)
+        ),
         Ok(i32::MAX)
+    );
+    // 2^66 voxels: a wrapping i64 volume would be 0.
+    assert_eq!(
+        job_cost_in_milli_credits(&features, "infer_neurons", &bbox(1 << 22, 1 << 22, 1 << 22)),
+        Ok(i32::MAX)
+    );
+}
+
+#[test]
+fn job_costs_of_empty_bounding_boxes_are_zero() {
+    let features = crate::system::application_info::default_features();
+    // Two negative extents would have a positive volume.
+    assert_eq!(
+        job_cost_in_milli_credits(&features, "infer_neurons", &bbox(-1000, -1000, 1000)),
+        Ok(0)
     );
 }
 

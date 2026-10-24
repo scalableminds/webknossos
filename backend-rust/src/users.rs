@@ -452,7 +452,8 @@ async fn update(
     .bind(&requester.id)
     .fetch_one(&mut *tx)
     .await?;
-    let is_editable = shares_managed_team || admin_of_target || old_memberships.is_empty();
+    let team_manager_or_admin_of_target = shares_managed_team || admin_of_target;
+    let is_editable = team_manager_or_admin_of_target || old_memberships.is_empty();
 
     let first_name = body.first_name.unwrap_or_else(|| target.first_name.clone());
     let last_name = body.last_name.unwrap_or_else(|| target.last_name.clone());
@@ -469,10 +470,10 @@ async fn update(
     if !is_self && !is_editable {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    // checkTeamManagerOnlyUpdates. Play discards this check's Boolean result
-    // (only a failed Fox would abort), so it never rejects there. Enforced here
-    // as intended; team lists are compared as sets because Play's comparison
-    // depended on unordered database results.
+    // checkTeamManagerOnlyUpdates: team lists are compared as sets. Changes need
+    // a team manager (of a shared team) or admin of the user; users without
+    // teams may be edited by any team manager or admin of their organization,
+    // e.g. to add them to a team. This also applies to the user's own changes.
     let teams_changed = requested_teams.as_ref().is_some_and(|teams| {
         let requested: HashSet<(&str, bool)> = teams
             .iter()
@@ -484,8 +485,23 @@ async fn update(
             .collect();
         requested != old
     });
-    if (experiences != old_experiences || teams_changed) && !is_editable {
-        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
+    if experiences != old_experiences || teams_changed {
+        let team_manager_or_admin_of_org = requester.organization_id == target.organization
+            && (requester.is_admin
+                || sqlx::query_scalar::<_, bool>(
+                    r#"SELECT EXISTS (SELECT 1 FROM webknossos.user_team_roles AS role
+                         JOIN webknossos.teams_ AS team ON team._id = role._team
+                         WHERE role._user = $1 AND role.isTeamManager AND team._organization = $2)"#,
+                )
+                .bind(&requester.id)
+                .bind(&requester.organization_id)
+                .fetch_one(&mut *tx)
+                .await?);
+        if !(team_manager_or_admin_of_target
+            || (old_memberships.is_empty() && team_manager_or_admin_of_org))
+        {
+            return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
+        }
     }
     // checkAdminOnlyUpdates
     if !(is_active

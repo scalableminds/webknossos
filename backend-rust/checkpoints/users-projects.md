@@ -21,7 +21,7 @@
 
 ## Known gaps / deliberate deviations
 - Both routes run in one transaction (Play wrote step by step): failures leave nothing changed. For PATCH, the organization row is locked first (serializes admin/owner/user-limit invariants with onboarding), then the user and multiuser rows.
-- `checkTeamManagerOnlyUpdates`: Play discards the Boolean result, so it never rejects; here it is enforced (changing experiences or the team set requires being a team manager/admin of the user, or the user having no teams). Team lists are compared as sets, so a resent unchanged object in another order still passes.
+- `checkTeamManagerOnlyUpdates` (asserted in Play since #10161): changing experiences or the team set requires being a team manager (of a shared team) or admin of the user, or, for users without teams, a team manager or admin of their organization; this also applies to the user's own changes. Team lists are compared as sets.
 - A team manager who removes the user from all teams they manage: Play fails in the experiences update with 400 `No update access.` after partially writing; here the same 400 rolls everything back.
 - Old memberships of deleted teams make Play's filter fail with 400 `You do not have permission to administrate this team.`; mirrored (team deletion removes memberships, so this should not occur).
 - Duplicate team ids in the request hit the primary key (409 here, Play 400 SQL failure). Email taken by a deleted multiuser hits the UNIQUE constraint (409 here).

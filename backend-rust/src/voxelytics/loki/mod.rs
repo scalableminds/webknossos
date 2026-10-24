@@ -335,8 +335,8 @@ impl LokiClient {
     }
 }
 
-/// LogQL string literal (Go syntax) for an interpolated value. Play
-/// interpolated raw values; escaping keeps run/task names from altering the query.
+/// LokiClient.logQLString: LogQL string literal (Go syntax) for an interpolated
+/// value, so that run/task names cannot alter the query.
 fn quote(value: &str) -> String {
     let mut quoted = String::with_capacity(value.len() + 2);
     quoted.push('"');
@@ -352,18 +352,6 @@ fn quote(value: &str) -> String {
     }
     quoted.push('"');
     quoted
-}
-
-/// Escape regular-expression metacharacters for a `=~` matcher.
-fn regex_literal(value: &str) -> String {
-    let mut escaped = String::with_capacity(value.len());
-    for c in value.chars() {
-        if "\\.+*?()|[]{}^$".contains(c) {
-            escaped.push('\\');
-        }
-        escaped.push(c);
-    }
-    escaped
 }
 
 pub(crate) fn log_ql(
@@ -384,9 +372,9 @@ pub(crate) fn log_ql(
     }
     filters.push(format!("level=~{}", quote(&format!("({levels})"))));
     format!(
-        "{{vx_run_name={},wk_org=~{},wk_url={}}} | json vx_task_name,level | {}",
+        "{{vx_run_name={},wk_org={},wk_url={}}} | json vx_task_name,level | {}",
         quote(run_name),
-        quote(&regex_literal(organization_id)),
+        quote(organization_id),
         quote(public_uri),
         filters.join(" | ")
     )

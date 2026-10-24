@@ -19,6 +19,9 @@ use axum::{
 };
 use serde_json::Value;
 
+/// Scala `Msg.notAllowed`.
+const NOT_ALLOWED: &str = "You are not authorized to view or edit this resource.";
+
 pub fn router() -> Router<AppState> {
     controller(
         Router::new()
@@ -218,7 +221,12 @@ async fn reload(
         .get_data_source(&id)
         .await
         .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?;
-    check_organization(&source.id().organization_id, &organization)?;
+    // The administrate access above was granted for the path's organization only.
+    if source.id().organization_id != organization {
+        return Err(DsError::failure(NOT_ALLOWED)
+            .with_param_status(StatusCode::FORBIDDEN)
+            .into());
+    }
     clear_source_caches(&state, &source, layer).await;
     Ok(Json(refresh_source(&state, &id, &organization, &tc).await?))
 }

@@ -8,8 +8,8 @@ use crate::{
 
 /// SQL predicate for a `datasets_` row aliased `d`. Bind $1 user id and $2
 /// optional sharing token. Both grants are additive, as in URLSharing's fallback
-/// context. A private-link expiration is deliberately not tested here: Scala's
-/// dataset predicate uses annotation_privateLinks_ without an expiration filter.
+/// context. A private-link token only grants access until the link expires
+/// (DatasetDAO.anonymousReadAccessQ).
 ///
 /// Team grants only count for live teams of the requesting (live) user's own organization,
 /// which must also own the dataset. Every subquery is uncorrelated (`IN (…)` over sets that
@@ -36,17 +36,18 @@ pub const READ_PREDICATE: &str = r#"(
   OR ($2::text IS NOT NULL AND (d.sharingToken = $2 OR d._id IN (
     SELECT a._dataset FROM webknossos.annotation_privateLinks_ link
     JOIN webknossos.annotations_ a ON a._id = link._annotation
-    WHERE link.accessToken = $2)))
+    WHERE link.accessToken = $2
+    AND (link.expirationDateTime IS NULL OR link.expirationDateTime > statement_timestamp()))))
 )"#;
 
 /// SQL predicate for DatasetService.isEditableBy. Bind $1 user id. Being an
-/// uploader or superuser alone does not grant editing. Dataset managers are
-/// allowed by the service independently of organization; callers needing read
-/// access must check it separately, just like the Scala controllers.
-/// Uncorrelated like [`READ_PREDICATE`].
+/// uploader or superuser alone does not grant editing. Admins and dataset
+/// managers may only edit datasets of their own organization (isAdminOf,
+/// isDatasetManagerOf); callers needing read access must check it separately,
+/// just like the Scala controllers. Uncorrelated like [`READ_PREDICATE`].
 pub const EDIT_PREDICATE: &str = r#"(
-  EXISTS (SELECT 1 FROM webknossos.users_ u WHERE u._id = $1 AND u.isDatasetManager)
-  OR d._organization IN (SELECT u._organization FROM webknossos.users_ u WHERE u._id = $1 AND u.isAdmin)
+  d._organization IN (SELECT u._organization FROM webknossos.users_ u
+    WHERE u._id = $1 AND (u.isAdmin OR u.isDatasetManager))
   OR (d._organization IN (SELECT u._organization FROM webknossos.users_ u WHERE u._id = $1)
     AND (
       d._id IN (SELECT dt._dataset FROM webknossos.dataset_allowedTeams dt
@@ -60,27 +61,6 @@ pub const EDIT_PREDICATE: &str = r#"(
         JOIN webknossos.teams_ t ON t._id = r._team
         JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
         WHERE r._user = $1 AND r.isTeamManager)))
-)"#;
-
-/// `isEditable` of the compact dataset list (DatasetDAO.findAllCompactWithSearch): like
-/// [`EDIT_PREDICATE`], but any member (not only managers) of a team with access to the
-/// dataset's folder or an ancestor counts. Informational only; mutations use can_edit.
-pub const COMPACT_EDIT_PREDICATE: &str = r#"(
-  EXISTS (SELECT 1 FROM webknossos.users_ u WHERE u._id = $1 AND u.isDatasetManager)
-  OR d._organization IN (SELECT u._organization FROM webknossos.users_ u WHERE u._id = $1 AND u.isAdmin)
-  OR (d._organization IN (SELECT u._organization FROM webknossos.users_ u WHERE u._id = $1)
-    AND (
-      d._id IN (SELECT dt._dataset FROM webknossos.dataset_allowedTeams dt
-        JOIN webknossos.user_team_roles r ON r._team = dt._team
-        JOIN webknossos.teams_ t ON t._id = r._team
-        JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
-        WHERE r._user = $1 AND r.isTeamManager)
-      OR d._folder IN (SELECT fp._descendant FROM webknossos.folder_paths fp
-        JOIN webknossos.folder_allowedTeams ft ON ft._folder = fp._ancestor
-        JOIN webknossos.user_team_roles r ON r._team = ft._team
-        JOIN webknossos.teams_ t ON t._id = r._team
-        JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
-        WHERE r._user = $1)))
 )"#;
 
 pub async fn can_read(
@@ -149,7 +129,7 @@ pub async fn lock_edit(
         return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }
     if !edit {
-        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     Ok(())
 }

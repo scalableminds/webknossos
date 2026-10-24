@@ -28,7 +28,7 @@
 //! 5xx (crate convention for service-auth infrastructure errors) instead of
 //! being swallowed by `shiftBox`. Invalid JSON uses the crate's
 //! `Invalid JSON request body.` 400 rather than Play's JsError document.
-//! Token resolution reuses `auth::user_for_service_token` (any token type,
+//! Token resolution reuses `auth::user_for_service_token` (all but reset-password tokens,
 //! deactivated users rejected, as the other service callbacks).
 use axum::{Extension, Router, extract::State, http::StatusCode, routing::post};
 use serde::{Deserialize, Deserializer};

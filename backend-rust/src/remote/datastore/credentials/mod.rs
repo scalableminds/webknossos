@@ -162,17 +162,19 @@ struct CredentialQuery {
 // Datastore keys are the service credential for this RPC. It is intentionally
 // independent of bearer-user authentication, matching DataStoreService's global
 // datastore validation: an authorized datastore can load credentials needed for
-// datasets from any organization. Never log the key or raw query URI.
+// datasets from any organization, unless it is restricted to one organization
+// (onlyAllowedOrganization, else 403 Msg.notAllowed). Never log the key or raw
+// query URI.
 async fn find_credential(
     State(state): State<AppState>,
     Path(name): Path<String>,
     Query(query): Query<CredentialQuery>,
 ) -> ApiResult<Response> {
     let mut tx = state.pool.begin().await?;
-    let allowed: Option<String> = sqlx::query_scalar(
-        "SELECT name FROM webknossos.dataStores WHERE name = $1 AND key = $2 AND NOT isDeleted FOR SHARE",
+    let allowed: Option<Option<String>> = sqlx::query_scalar(
+        "SELECT onlyAllowedOrganization FROM webknossos.dataStores WHERE name = $1 AND key = $2 AND NOT isDeleted FOR SHARE",
     ).bind(&name).bind(&query.key).fetch_optional(&mut *tx).await?;
-    if allowed.is_none() {
+    let Some(only_allowed_organization) = allowed else {
         return Ok((
             StatusCode::FORBIDDEN,
             Json(json!({
@@ -181,11 +183,15 @@ async fn find_credential(
             })),
         )
             .into_response());
-    }
+    };
     let row = sqlx::query_as::<_, StoredCredential>(
         "SELECT type::text AS kind, name, identifier, secret, _user AS user_id, _organization AS organization FROM webknossos.credentials WHERE _id = $1 AND NOT isDeleted",
     ).bind(query.credential_id.as_str()).fetch_optional(&mut *tx).await?;
     let credential = row.ok_or_else(|| ApiError::not_found(crate::msg::credential::MISSING))?;
+    if only_allowed_organization.is_some_and(|organization| organization != credential.organization)
+    {
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
+    }
     let response = credential.datastore_json()?;
     tx.commit().await?;
     Ok(Json(response).into_response())

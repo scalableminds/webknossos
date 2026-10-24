@@ -832,20 +832,18 @@ async fn compound_task_duplicates_merged_annotation() {
         )
     );
 
-    // Scala has no restrictions gate on duplicate: a non-manager member who
-    // can provide the (cached) compound may duplicate it; the response
-    // carries the compound restrictions (allowAccess false).
+    // A non-manager member may not duplicate the compound, even when it is
+    // cached: provideAnnotation checks compound access on every request
+    // (the route's `~> NOT_FOUND` applies), before any tracing-store call.
     let (status, body) = post(&app, Some(&w.member.token), &uri).await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    assert_eq!(body["owner"]["id"], w.member.user_id.as_str());
-    assert_eq!(body["restrictions"]["allowAccess"], false);
-    let call = mock.duplicate_calls().pop().unwrap();
-    // The cached compound keeps its first requester as owner.
-    assert_eq!(call.param("ownerId"), Some(w.f.user_id.as_str()));
     assert_eq!(
-        call.param("requestingUserId"),
-        Some(w.member.user_id.as_str())
+        (status, body),
+        (
+            StatusCode::NOT_FOUND,
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
+        )
     );
+    assert_eq!(mock.duplicate_calls().len(), 1);
 
     // CompoundProject with an unknown project: provider failure, 404.
     let (status, body) = post(
@@ -861,6 +859,6 @@ async fn compound_task_duplicates_merged_annotation() {
             error(webknossos_backend::msg::annotation::NOT_FOUND)
         )
     );
-    assert_eq!(mock.duplicate_calls().len(), 2);
+    assert_eq!(mock.duplicate_calls().len(), 1);
     db.cleanup().await;
 }

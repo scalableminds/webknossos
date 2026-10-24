@@ -975,7 +975,7 @@ pub(crate) async fn list_values(
         r#"SELECT d._id AS id, d.name, d._organization AS owning_organization, d._folder AS folder_id,
       d.isUsable AS is_active, d.directoryName AS directory_name,
       floor(extract(epoch from d.created)*1000)::bigint AS created,
-      COALESCE({compact_edit}, false) AS is_editable,
+      COALESCE({edit}, false) AS is_editable,
       COALESCE(floor(extract(epoch from lu.lastUsedTime)*1000)::bigint, 0) AS last_used_by_user,
       d.status, d.tags, d.status IN ($8, $9) AS is_unreported,
       COALESCE(cl.names, '{{}}') AS color_layer_names,
@@ -1002,7 +1002,7 @@ pub(crate) async fn list_values(
             AND position(t IN lower(d.directoryName)) = 0) END) LIMIT $15) d
       LEFT JOIN webknossos.dataset_lastUsedTimes lu ON lu._dataset = d._id AND lu._user = $1
       {joins}"#,
-        compact_edit = crate::dataset::access::COMPACT_EDIT_PREDICATE,
+        edit = crate::dataset::access::EDIT_PREDICATE,
         read = crate::dataset::access::READ_PREDICATE
     );
     // Keep the cached prepared statement: planning takes ~14 ms (permission predicates) and
@@ -1064,7 +1064,7 @@ async fn require_read(state: &AppState, user: &AuthUser, id: &ObjectId) -> ApiRe
 async fn require_edit(state: &AppState, user: &AuthUser, id: &ObjectId) -> ApiResult<()> {
     require_read(state, user, id).await?;
     if !crate::dataset::access::can_edit(&state.pool, user, id.as_str()).await? {
-        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     Ok(())
 }
@@ -1113,7 +1113,7 @@ async fn delete_sharing_token(
     .execute(&state.pool)
     .await?;
     if result.rows_affected() != 1 {
-        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     Ok(())
 }

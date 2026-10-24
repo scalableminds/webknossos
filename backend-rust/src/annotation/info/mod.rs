@@ -184,10 +184,9 @@ async fn info_for(
                 .wrap(RESTRICTIONS_NOT_FOUND)
                 .into_api_error(StatusCode::NOT_FOUND)
         })?;
-    // Deliberately fail closed: in Scala `_ <- allowAccess(..) ?~> ~> FORBIDDEN`
-    // binds a Fox[Boolean], so a `false` would not short-circuit. The message
-    // and status show the intended gate; it only matters for compounds (saved
-    // DAO read access is already at least as strict).
+    // Fox.assertTrue(allowAccess(..)) ?~> notAllowed ~> FORBIDDEN. Compounds
+    // are already checked by the provider; saved DAO read access is at least
+    // as strict.
     if !restrictions.allow_access {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }

@@ -765,8 +765,7 @@ async fn permissions_fail_closed_and_untyped_route_resolves_the_stored_type() {
     }
 
     // Readable but allowDownload = false (private task annotation whose
-    // task was deleted): Scala binds the Fox[Boolean] without asserting,
-    // Rust fails closed with Msg.Annotation.Download.notAllowed / 403.
+    // task was deleted): Msg.Annotation.Download.notAllowed / 403.
     let orphaned = annotation(
         &db,
         &w,

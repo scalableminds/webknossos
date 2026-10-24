@@ -239,9 +239,10 @@ async fn dataset(
                 return Ok(Answer::denied("Invalid access token"));
             };
             let organization = id.unwrap_or(&user.organization_id);
-            let allowed = user.is_dataset_manager
-                || (organization == user.organization_id
-                    && user.is_team_manager_or_admin(&state.pool).await?);
+            // isTeamManagerOrAdminOfOrg || isDatasetManagerOf: both are scoped to the
+            // requested organization.
+            let allowed = organization == user.organization_id
+                && (user.is_dataset_manager || user.is_team_manager_or_admin(&state.pool).await?);
             Ok(Answer {
                 granted: allowed,
                 msg: None,
@@ -263,16 +264,17 @@ async fn annotation(
     let id = required_id(id)?;
     let id = id.as_str();
     let metadata = crate::annotation::access::find(&state.pool, user, id, true).await?;
-    // Preserve the existing private-link grant used by datastore requests;
-    // the dedicated source endpoint separately enforces link expiration.
-    let allowed_by_link: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM webknossos.annotation_privateLinks_ WHERE \
-            _annotation=$1 AND accessToken=$2)",
-    )
-    .bind(id)
-    .bind(token)
-    .fetch_one(&state.pool)
-    .await?;
+    // Private links only grant read access, and only until they expire.
+    let allowed_by_link = mode == Mode::Read
+        && sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS (SELECT 1 FROM webknossos.annotation_privateLinks_ WHERE \
+                _annotation=$1 AND accessToken=$2 AND (expirationDateTime IS NULL OR \
+                expirationDateTime > statement_timestamp()))",
+        )
+        .bind(id)
+        .bind(token)
+        .fetch_one(&state.pool)
+        .await?;
     let restrictions = crate::annotation::access::restrictions(&metadata, user);
     let allowed = allowed_by_link
         || match mode {

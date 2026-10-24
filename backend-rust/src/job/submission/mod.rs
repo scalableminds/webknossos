@@ -840,7 +840,7 @@ async fn submit_paid_job(
     let cost = crate::job::routes::job_cost_in_milli_credits(
         &misc.config().features,
         submission.command,
-        bounding_box_in_target_mag.volume(),
+        &bounding_box_in_target_mag,
     )
     .map_err(Failure::new)?;
     let balance =

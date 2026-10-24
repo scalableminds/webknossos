@@ -5,6 +5,7 @@
 //! owned by the requester is inserted (AnnotationService.createFrom +
 //! AnnotationDAO.insertOne), then serialized with the ORIGINAL annotation's
 //! restrictions (Scala passes `restrictionsFor(typ, id)` to publicWrites).
+//! The requester needs `allowAccess` on the original.
 //!
 //! The tracing-store step is shared with task assignment
 //! (AnnotationService.createAnnotationFor), see [`duplicate_in_tracing_store`].
@@ -310,6 +311,22 @@ async fn duplicate(
         .provide(access, &typ, &id)
         .await
         .map_err(|error| error.into_api_error(StatusCode::NOT_FOUND))?;
+    // restrictionsFor(typ, id) of the ORIGINAL annotation ?~> notFound ~> 404,
+    // then allowAccess ?~> Msg.notAllowed ~> 403, both before duplicating.
+    let identifier = AnnotationIdentifier::parse(&typ, &id)
+        .map_err(|error| error.into_api_error(StatusCode::NOT_FOUND))?;
+    let restrictions = services
+        .provider
+        .restrictions_for(access, &identifier)
+        .await
+        .map_err(|error| {
+            error
+                .wrap(RESTRICTIONS_NOT_FOUND)
+                .into_api_error(StatusCode::NOT_FOUND)
+        })?;
+    if !restrictions.allow_access {
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
+    }
     let source = DuplicateSource::from_provided(&annotation);
     let requester_id = ObjectId::parse(&user.id)?;
     let new_id = ObjectId::new();
@@ -346,18 +363,6 @@ async fn duplicate(
         &layers,
     )
     .await?;
-    // restrictionsFor(typ, id) of the ORIGINAL annotation ?~> notFound ~> 404.
-    let identifier = AnnotationIdentifier::parse(&typ, &id)
-        .map_err(|error| error.into_api_error(StatusCode::NOT_FOUND))?;
-    let restrictions = services
-        .provider
-        .restrictions_for(access, &identifier)
-        .await
-        .map_err(|error| {
-            error
-                .wrap(RESTRICTIONS_NOT_FOUND)
-                .into_api_error(StatusCode::NOT_FOUND)
-        })?;
     // publicWrites(new, user, original restrictions) ?~> publicWritesFailed,
     // before commit so a failure leaves no row behind.
     let mut json = crate::annotation::lists::full_json(

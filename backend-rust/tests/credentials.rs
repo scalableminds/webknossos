@@ -154,7 +154,7 @@ async fn every_credential_variant_round_trips_with_exact_datastore_wire_format()
 
 #[tokio::test]
 #[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
-async fn datastore_rpc_uses_service_key_not_user_bearer_and_is_global_like_scala() {
+async fn datastore_rpc_uses_service_key_not_user_bearer_and_respects_only_allowed_organization() {
     let database = TestDb::new().await;
     let fixture = database.fixture().await;
     let unrelated = database
@@ -192,12 +192,42 @@ async fn datastore_rpc_uses_service_key_not_user_bearer_and_is_global_like_scala
             denied
         );
     }
+    // A datastore restricted to one organization only gets that organization's credentials.
+    assert_eq!(
+        get(
+            &app,
+            &path("restricted-store", "correct-key", id.as_str()),
+            None,
+        )
+        .await,
+        (
+            StatusCode::FORBIDDEN,
+            json!({"messages":[{"error":"You are not authorized to view or edit this resource."}]})
+        )
+    );
+    let user = authenticate(&database.pool, &fixture.token).await.unwrap();
+    let own = store_credential(
+        &database.pool,
+        &user,
+        &CredentialInput::HttpToken {
+            name: "https://own.test".into(),
+            token_value: "own-secret".into(),
+        },
+    )
+    .await
+    .unwrap();
     let (status, body) = get(
         &app,
-        &path("restricted-store", "correct-key", id.as_str()),
+        &path("restricted-store", "correct-key", own.as_str()),
         None,
     )
     .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["organization"], fixture.organization_id);
+    assert_eq!(body["tokenValue"], "own-secret");
+    // Unrestricted datastores can load credentials of any organization.
+    seed_store(&database, "open-store", "open-key", None).await;
+    let (status, body) = get(&app, &path("open-store", "open-key", id.as_str()), None).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["organization"], unrelated.organization_id);
     assert_eq!(body["tokenValue"], "foreign-secret");
@@ -210,7 +240,7 @@ async fn datastore_rpc_uses_service_key_not_user_bearer_and_is_global_like_scala
     assert_eq!(
         get(
             &app,
-            &path("restricted-store", "correct-key", id.as_str()),
+            &path("restricted-store", "correct-key", own.as_str()),
             None
         )
         .await,

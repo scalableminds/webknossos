@@ -415,8 +415,8 @@ async fn store_workflow(
     let description: WorkflowDescription = parse_body(&body)?;
     ensure_enabled(&misc)?;
     let mut tx = state.pool.begin().await?;
-    // Deviation: Play discarded this check's result (any member of the
-    // organization could take over a run); the intended check is enforced.
+    // checkAuthForWorkflowCreation: an existing run of the organization may
+    // only be continued by its creator or an admin.
     let owner =
         dao::user_id_for_run_name(&mut tx, &description.run.name, &user.organization_id).await?;
     if !(user.is_admin || owner.is_none_or(|owner| owner == user.id)) {
@@ -1093,11 +1093,11 @@ async fn get_logs(
         })
         .transpose()?;
     ensure_enabled(&misc)?;
-    // As in Play (whose ownership check had no effect), any run of the user's
-    // organization is readable, matching the report's allowUnlisted access.
+    // Same visibility as the other workflow read endpoints (allowUnlisted): all
+    // runs of the user's organization (?~> runNotFound ~> 404).
     let run_name = dao::run_name_by_id(&state.pool, run_id.as_str(), &user.organization_id)
         .await?
-        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+        .ok_or_else(|| ApiError::not_found(RUN_NOT_FOUND))?;
     let min_level = query
         .min_level
         .as_deref()

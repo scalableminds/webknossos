@@ -20,8 +20,9 @@ impl BaseDirService {
         local: bool,
         s3: bool,
     ) -> DsResult<UPath> {
-        if org.is_empty() || matches!(org, "." | "..") || org.contains(['/', '\\']) {
-            return Err(DsError::failure("Invalid organization directory name."));
+        // Scala `assertSafePathSegment`: the organization id becomes a path segment.
+        if org.is_empty() || org == "." || org.contains("..") || org.contains(['/', '\\']) {
+            return Err(DsError::failure(format!("Invalid organization id: {org}")));
         }
         let eligible = |d: &&BaseDirectory| {
             (!upload || d.allows_upload)

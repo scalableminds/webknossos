@@ -57,19 +57,52 @@ fn raw_tail(uri: &Uri, fixed_segments: usize) -> String {
         .to_owned()
 }
 
-/// Scala `validatePath` (checks the raw, still percent-encoded value like Play does).
+/// Java's `URLDecoder.decode(path.replace("+", "%2B"), UTF_8)`: every `%` must start a two-digit hex
+/// escape; `+` stays literal; malformed UTF-8 is replaced. `None` when not validly encoded.
+fn url_decode(path: &str) -> Option<String> {
+    let bytes = path.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' {
+            let escape = bytes.get(i + 1..i + 3)?;
+            if !escape.iter().all(u8::is_ascii_hexdigit) {
+                return None;
+            }
+            i += 3;
+        } else {
+            i += 1;
+        }
+    }
+    Some(
+        percent_encoding::percent_decode_str(path)
+            .decode_utf8_lossy()
+            .into_owned(),
+    )
+}
+
+/// Scala `validatePath`. Wildcard route params are not url-decoded by Play, so the decoded form is
+/// validated. Other escapes may be part of real object keys, but encoded “.”, “/” or “\” could form
+/// a traversal if decoded again.
 fn validate_path(path: &str) -> DsResult<()> {
-    if path.contains("..") {
+    let decoded =
+        url_decode(path).ok_or_else(|| DsError::failure("path is not validly encoded"))?;
+    let lower = decoded.to_ascii_lowercase();
+    if ["%2e", "%2f", "%5c"]
+        .iter()
+        .any(|escape| lower.contains(escape))
+    {
+        return Err(DsError::failure(
+            "path must not contain encoded “.”, “/” or “\\”",
+        ));
+    }
+    if decoded.contains("..") {
         return Err(DsError::failure("path must not contain “..”"));
     }
-    if path.starts_with('/') {
+    if decoded.contains('\\') {
+        return Err(DsError::failure("path must not contain “\\”"));
+    }
+    if decoded.starts_with('/') {
         return Err(DsError::failure("path must not start with “/”"));
-    }
-    if path.contains("%2e%2e") {
-        return Err(DsError::failure("path must not contain “%2e%2e”"));
-    }
-    if path.starts_with("%2f") {
-        return Err(DsError::failure("path must not start with “%2f”"));
     }
     Ok(())
 }

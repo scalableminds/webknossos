@@ -402,7 +402,8 @@ async fn annotation_source_uses_private_link_or_query_user_token_and_real_metada
         .0,
         StatusCode::NOT_FOUND
     );
-    // The Scala userForToken helper accepts valid bearer records regardless of token type.
+    // The Scala userForToken helper accepts every token type usable for
+    // authentication; reset-password tokens fall back to anonymous access.
     let job = db.seed_token(&f.user_id, "Job").await;
     assert_eq!(
         request(&app, None, "GET", &format!("{path}?userToken={job}"), None)
@@ -421,7 +422,7 @@ async fn annotation_source_uses_private_link_or_query_user_token_and_real_metada
         )
         .await
         .0,
-        StatusCode::OK
+        StatusCode::NOT_FOUND
     );
     let last_used: chrono::DateTime<chrono::Utc> =
         sqlx::query_scalar("SELECT lastUsedDateTime FROM webknossos.tokens WHERE value=$1")

@@ -693,6 +693,19 @@ impl AnnotationProvider {
         identifier: &AnnotationIdentifier,
     ) -> Result<ProvidedAnnotation, ProviderError> {
         if identifier.annotation_type.is_compound() {
+            // Compounds are cached independently of the requester, so access is
+            // checked on every request, before the potentially expensive merge:
+            // Fox.assertTrue(restrictionsFor(..).allowAccess) ?~> notAllowed ~> 403.
+            let not_allowed = |error: ProviderError| {
+                error
+                    .wrap(crate::msg::NOT_ALLOWED)
+                    .with_status(StatusCode::FORBIDDEN)
+            };
+            match self.compound_restrictions(context, identifier).await {
+                Ok(restrictions) if restrictions.allow_access => {}
+                Ok(_) => return Err(not_allowed(ProviderError::Empty)),
+                Err(error) => return Err(not_allowed(error)),
+            }
             self.provide_compound(context, identifier)
                 .await
                 .map(ProvidedAnnotation::Compound)

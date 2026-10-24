@@ -111,7 +111,7 @@ async fn assert_used_storage_not_exceeded(
 
 /// LayerToLinkService.validateLayerToLink: the linked dataset must be readable
 /// by the user (else 404, status kept through `?~>`), and the user must be
-/// admin/team manager of its organization, a dataset manager, or the dataset
+/// admin/team manager or dataset manager of its organization, or the dataset
 /// public (else 400). Both failures carry Msg.Dataset.Upload.invalidLinkedLayers.
 async fn validate_layer_to_link(
     pool: &sqlx::PgPool,
@@ -124,7 +124,7 @@ async fn validate_layer_to_link(
         return Err(not_found());
     }
     let allowed: Option<bool> = sqlx::query_scalar(
-        r#"SELECT d.isPublic OR $3 OR ($4 AND d._organization = $5) OR EXISTS (
+        r#"SELECT d.isPublic OR (($3 OR $4) AND d._organization = $5) OR EXISTS (
              SELECT 1 FROM webknossos.user_team_roles r JOIN webknossos.teams_ t ON t._id = r._team
              WHERE r._user = $2 AND r.isTeamManager AND t._organization = d._organization)
            FROM webknossos.datasets_ d WHERE d._id = $1"#,

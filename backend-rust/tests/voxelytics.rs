@@ -836,7 +836,7 @@ async fn logs_are_forwarded_to_and_queried_from_loki() {
         assert_eq!(
             get("query"),
             format!(
-                r#"{{vx_run_name="run-l",wk_org=~"{}",wk_url="http://localhost:9000"}} | json vx_task_name,level | vx_task_name="t" | level=~"(WARNING|ERROR|CRITICAL)""#,
+                r#"{{vx_run_name="run-l",wk_org="{}",wk_url="http://localhost:9000"}} | json vx_task_name,level | vx_task_name="t" | level=~"(WARNING|ERROR|CRITICAL)""#,
                 admin.organization_id
             )
         );
@@ -852,8 +852,12 @@ async fn logs_are_forwarded_to_and_queried_from_loki() {
     assert_eq!(loki.queries.lock().unwrap().len(), 3);
 
     // Runs are looked up within the user's organization only.
-    let (status, _) = call(&app, Method::GET, &logs, Some(&foreign.token), None).await;
+    let (status, body) = call(&app, Method::GET, &logs, Some(&foreign.token), None).await;
     assert_eq!(status, 404);
+    assert_eq!(
+        body,
+        json!({"messages":[{"error":"Voxelytics workflow runs not found."}]})
+    );
     let (status, _) = call(
         &app,
         Method::GET,

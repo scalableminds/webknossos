@@ -252,9 +252,9 @@ async fn update_admin(
     Path(id): Path<PathObjectId>,
     RequestJson(mut config): RequestJson<Map<String, Value>>,
 ) -> ApiResult<Json<Messages>> {
-    if !crate::dataset::access::can_edit(&state.pool, &user, id.as_str()).await? {
-        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT));
-    }
+    // DatasetDAO.findOne under the requester's access (?~> notFound ~> 404),
+    // then DatasetService.assertEditableBy (403 Msg.notAllowed).
+    crate::dataset::lifecycle::require_editable(&state, &user, &id).await?;
     let mut transaction = state.pool.begin().await?;
     crate::dataset::access::lock_edit(&mut transaction, &user, id.as_str(), true).await?;
     sqlx::query(

@@ -111,13 +111,35 @@ async fn password_reset_and_change_follow_play_semantics() {
         reset("unknown", "new-password", "new-password").await.body,
         error(TOKEN_INVALID)
     );
-    // Only reset-password tokens may reset passwords (stricter than Play).
+    // Only reset-password tokens may reset passwords (userForResetPasswordToken).
     assert_eq!(
         reset(&fixture.token, "new-password", "new-password")
             .await
             .body,
         error(TOKEN_INVALID)
     );
+    // Deactivated users cannot reset their password; the token stays usable.
+    sqlx::query("UPDATE webknossos.users SET isDeactivated = TRUE WHERE _id = $1")
+        .bind(&fixture.user_id)
+        .execute(&database.pool)
+        .await
+        .unwrap();
+    let response = reset(&token, "new-password", "new-password").await;
+    assert_eq!(
+        (response.status, response.body),
+        (
+            StatusCode::BAD_REQUEST,
+            error(
+                "Your account has not been activated by an admin yet. Please contact your organization’s admin for help."
+            )
+        )
+    );
+    assert!(!is_deleted(&database, &token).await);
+    sqlx::query("UPDATE webknossos.users SET isDeactivated = FALSE WHERE _id = $1")
+        .bind(&fixture.user_id)
+        .execute(&database.pool)
+        .await
+        .unwrap();
     assert_eq!(
         reset(&token, "new-password", "other-password").await.status,
         StatusCode::BAD_REQUEST

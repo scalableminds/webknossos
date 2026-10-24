@@ -230,8 +230,27 @@ async fn dataset_access_covers_public_tokens_inheritance_and_rejects_stale_forei
     .execute(&db.pool)
     .await
     .unwrap();
-    // DatasetDAO intentionally treats a private-link token as a dataset grant
-    // without expiration filtering; annotation-link routes own that check.
+    // A private-link token grants dataset read access only until it expires.
+    assert!(
+        !webknossos_backend::dataset::access::can_read(&db.pool, None, &id, Some("private-link"))
+            .await
+            .unwrap()
+    );
+    sqlx::query(
+        "UPDATE webknossos.annotation_privateLinks SET expirationDateTime=NOW()+INTERVAL '1 day'",
+    )
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    assert!(
+        webknossos_backend::dataset::access::can_read(&db.pool, None, &id, Some("private-link"))
+            .await
+            .unwrap()
+    );
+    sqlx::query("UPDATE webknossos.annotation_privateLinks SET expirationDateTime=NULL")
+        .execute(&db.pool)
+        .await
+        .unwrap();
     assert!(
         webknossos_backend::dataset::access::can_read(&db.pool, None, &id, Some("private-link"))
             .await
@@ -254,6 +273,29 @@ async fn dataset_access_covers_public_tokens_inheritance_and_rejects_stale_forei
         .unwrap();
     assert!(
         webknossos_backend::dataset::access::can_read(&db.pool, None, &id, None)
+            .await
+            .unwrap()
+    );
+    // Dataset managers may only edit datasets of their own organization.
+    sqlx::query("UPDATE webknossos.users SET isAdmin=false,isDatasetManager=true WHERE _id=$1")
+        .bind(&foreign.user_id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    let foreign_manager = auth::authenticate(&db.pool, &foreign.token).await.unwrap();
+    assert!(
+        !webknossos_backend::dataset::access::can_edit(&db.pool, &foreign_manager, &id)
+            .await
+            .unwrap()
+    );
+    sqlx::query("UPDATE webknossos.users SET isDatasetManager=true WHERE _id=$1")
+        .bind(&member.user_id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    let manager = auth::authenticate(&db.pool, &member.token).await.unwrap();
+    assert!(
+        webknossos_backend::dataset::access::can_edit(&db.pool, &manager, &id)
             .await
             .unwrap()
     );

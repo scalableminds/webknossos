@@ -23,7 +23,6 @@ use webknossos_backend::{
         AnnotationLayerType, AnnotationProvider, AnnotationType, CompoundAnnotation, FoxFailure,
         MERGE_FAILED_COMPOUND, MERGE_FAILED_IN_TRACINGSTORE, MULTIPLE_DATASETS, NO_ANNOTATIONS,
         PROJECT_NO_ANNOTATIONS, ProvidedAnnotation, ProviderError, TASK_NO_ANNOTATIONS,
-        TASK_TYPE_NO_FINISHED_ANNOTATIONS,
     },
     auth::AuthUser,
     error::ApiError,
@@ -444,7 +443,10 @@ async fn saved_types_resolve_the_live_annotation_regardless_of_requested_type() 
         );
         assert_eq!(
             error.chain(),
-            [webknossos_backend::msg::task::not_found(id)]
+            [
+                webknossos_backend::msg::NOT_ALLOWED.to_owned(),
+                webknossos_backend::msg::task::not_found(id)
+            ]
         );
     }
     db.cleanup().await;
@@ -1014,6 +1016,14 @@ fn assert_failure(error: &ProviderError, chain: &[&str], status: StatusCode) {
     assert_eq!(api.message, webknossos_backend::msg::annotation::NOT_FOUND);
 }
 
+/// Compound access is asserted before the merge: `restrictionsFor(..).allowAccess`
+/// `?~> Msg.notAllowed ~> FORBIDDEN`, below provideAnnotation's notFound.
+fn assert_forbidden(error: &ProviderError, below: &[&str]) {
+    let mut chain = vec![webknossos_backend::msg::NOT_ALLOWED];
+    chain.extend_from_slice(below);
+    assert_failure(error, &chain, StatusCode::FORBIDDEN);
+}
+
 fn expected_layers() -> Vec<AnnotationLayer> {
     vec![
         AnnotationLayer {
@@ -1106,7 +1116,7 @@ async fn compound_task_merges_readable_finished_annotations_and_caches_the_resul
     assert!(clone.find_cached_by_tracing_id("unknown").is_none());
 
     // The key includes the type: CompoundProject with a task ID is a miss
-    // (and fails: no such project).
+    // (and fails the access check: no such project).
     let error = provider
         .provide(
             AccessContext::requester(Some(&admin)),
@@ -1115,11 +1125,7 @@ async fn compound_task_merges_readable_finished_annotations_and_caches_the_resul
         )
         .await
         .unwrap_err();
-    assert_failure(
-        &error,
-        &[webknossos_backend::msg::project::not_found(&w.task_a).as_str()],
-        StatusCode::BAD_REQUEST,
-    );
+    assert_forbidden(&error, &[]);
 
     // removeFromCache forces a fresh merge with the new requester as owner;
     // an admin reads the private instance too.
@@ -1173,7 +1179,8 @@ async fn compound_task_failures_carry_exact_scala_messages_and_are_not_cached() 
         }
     };
 
-    // Task read access: no team role, foreign organization, unknown id.
+    // Task read access (in the access check's restrictions): no team role,
+    // foreign organization, unknown id.
     let missing = ObjectId::new().to_string();
     for (context, id) in [
         (AccessContext::requester(Some(&outsider)), &w.task_a),
@@ -1182,10 +1189,9 @@ async fn compound_task_failures_carry_exact_scala_messages_and_are_not_cached() 
         (as_manager, &missing),
     ] {
         let error = provide(context, id).await;
-        assert_failure(
+        assert_forbidden(
             &error,
             &[webknossos_backend::msg::task::not_found(id).as_str()],
-            StatusCode::BAD_REQUEST,
         );
     }
     // Only active instances.
@@ -1198,13 +1204,9 @@ async fn compound_task_failures_carry_exact_scala_messages_and_are_not_cached() 
     // Finished instances on two datasets.
     let error = provide(as_manager, &w.task_multi).await;
     assert_failure(&error, &[MULTIPLE_DATASETS], StatusCode::BAD_REQUEST);
-    // Requester required (after the annotation checks), even with global access.
+    // A requester with access is required, even with global access.
     let error = provide(AccessContext::global(None), &w.task_a).await;
-    assert_failure(
-        &error,
-        &[webknossos_backend::msg::user::NOT_AUTHENTICATED],
-        StatusCode::BAD_REQUEST,
-    );
+    assert_forbidden(&error, &[]);
     // Dataset must be usable.
     let error = provide(as_manager, &w.task_unusable).await;
     assert_failure(
@@ -1315,43 +1317,20 @@ async fn compound_project_requires_team_management_and_merges_all_finished_annot
     let member = user(&w.member, &w.organization, false);
     let outsider = user(&w.outsider, &w.organization, false);
 
-    // Project readable via team role, but not a team manager: assertTrue → Empty.
-    let error = provider
-        .provide(
-            AccessContext::requester(Some(&member)),
-            "CompoundProject",
-            &oid(&w.project),
-        )
-        .await
-        .unwrap_err();
-    assert_failure(&error, &[], StatusCode::BAD_REQUEST);
+    // Project readable via team role, but not a team manager: no access.
+    // Unreadable projects fail the restrictions' plain projectDAO.findOne.
     for context in [
+        AccessContext::requester(Some(&member)),
         AccessContext::requester(Some(&outsider)),
         AccessContext::requester(None),
+        AccessContext::global(None),
     ] {
         let error = provider
             .provide(context, "CompoundProject", &oid(&w.project))
             .await
             .unwrap_err();
-        assert_failure(
-            &error,
-            &[webknossos_backend::msg::project::not_found(&w.project).as_str()],
-            StatusCode::BAD_REQUEST,
-        );
+        assert_forbidden(&error, &[]);
     }
-    let error = provider
-        .provide(
-            AccessContext::global(None),
-            "CompoundProject",
-            &oid(&w.project),
-        )
-        .await
-        .unwrap_err();
-    assert_failure(
-        &error,
-        &[webknossos_backend::msg::user::NOT_AUTHENTICATED],
-        StatusCode::BAD_REQUEST,
-    );
     let error = provider
         .provide(
             AccessContext::requester(Some(&manager)),
@@ -1446,12 +1425,11 @@ async fn compound_task_type_merges_tasks_listed_under_the_manager_grant() {
         )
         .await
         .unwrap_err();
-    assert_failure(
+    assert_forbidden(
         &error,
         &[webknossos_backend::msg::task_type::not_found(&w.task_type).as_str()],
-        StatusCode::BAD_REQUEST,
     );
-    // A member reads the task type, but listing tasks needs team management.
+    // A member reads the task type, but access needs team management.
     let error = provider
         .provide(
             AccessContext::requester(Some(&member)),
@@ -1460,11 +1438,7 @@ async fn compound_task_type_merges_tasks_listed_under_the_manager_grant() {
         )
         .await
         .unwrap_err();
-    assert_failure(
-        &error,
-        &[TASK_TYPE_NO_FINISHED_ANNOTATIONS, NO_ANNOTATIONS],
-        StatusCode::BAD_REQUEST,
-    );
+    assert_forbidden(&error, &[]);
     assert!(mock.requests().is_empty());
 
     let provided = provider

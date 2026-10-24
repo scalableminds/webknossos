@@ -181,9 +181,9 @@ async fn compose(
     Ok(Json(json!({ "newDatasetId": id })))
 }
 
-/// Shared start of the in-place compose routes: the target must be a usable
-/// virtual dataset. Scala only requires read access here; editing a dataset
-/// in place additionally requires edit access in this port.
+/// Shared start of the in-place compose routes: the target must be readable
+/// and editable (DatasetService.assertEditableBy, 403 kept through the route's
+/// `?~> failure`) and a usable virtual dataset.
 async fn target_and_source(
     state: &AppState,
     user: &AuthUser,
@@ -196,7 +196,7 @@ async fn target_and_source(
         .await
         .map_err(|_| failed())?;
     if !crate::dataset::access::can_edit(&state.pool, user, target_id.as_str()).await? {
-        return Err(crate::dataset::lifecycle::not_allowed());
+        return Err(ApiError::forbidden(failure));
     }
     if !target.is_virtual || !target.is_usable {
         return Err(failed());

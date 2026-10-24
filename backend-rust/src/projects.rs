@@ -379,9 +379,10 @@ async fn increment_instances(
     }
     let mut tx = state.pool.begin().await?;
     lock_project(&mut tx, &id, &user.organization_id).await?;
-    let mut project = project_json(&mut *tx, &user, &id).await?;
-    // Scala permits project readers to increase instances, but the task DAO
-    // restricts affected tasks to team members and organization administrators.
+    // Only team managers of the project's team and organization admins
+    // (isTeamManagerOrAdminOf, else 403 Msg.notAllowed). The task DAO
+    // additionally restricts affected tasks to team members and admins.
+    let mut project = managed_project(&mut tx, &user, &id).await?;
     sqlx::query("UPDATE webknossos.tasks t SET totalinstances=totalinstances+$2 FROM webknossos.projects_ p WHERE t._project=p._id AND p._id=$1 AND NOT t.isdeleted AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE _user=$4 AND _team=p._team))")
         .bind(&id).bind(delta).bind(user.is_admin).bind(&user.id).execute(&mut *tx).await?;
     add_status(&mut *tx, &mut project).await?;

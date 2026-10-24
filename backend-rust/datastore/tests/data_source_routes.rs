@@ -324,10 +324,11 @@ async fn denied_mutations_and_cross_organization_reload_preserve_files_and_cache
             None,
         )
         .await;
-    assert_eq!(status, StatusCode::NOT_FOUND);
+    // Administrate access was granted for `other` only: 403 Msg.notAllowed.
+    assert_eq!(status, StatusCode::FORBIDDEN);
     assert_eq!(
         body_json(&body)["messages"][0]["error"],
-        "Dataset does not belong to the requested organization."
+        "You are not authorized to view or edit this resource."
     );
     assert_eq!(f.state.binary_data.cached_provider_count(), 1);
     assert_eq!(

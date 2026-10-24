@@ -697,6 +697,21 @@ async fn team_member_manager_owner_and_organization_permissions() {
         .0,
         StatusCode::FORBIDDEN
     );
+    // Increasing task instances needs a team manager or admin, not only read access.
+    let increment_path = format!("{project_path}/incrementEachTasksInstances");
+    assert_eq!(
+        request(&app, &member.token, "PATCH", &increment_path, None).await,
+        (
+            StatusCode::FORBIDDEN,
+            json!({"messages":[{"error":"You are not authorized to view or edit this resource."}]})
+        )
+    );
+    assert_eq!(
+        request(&app, &manager.token, "PATCH", &increment_path, None)
+            .await
+            .0,
+        StatusCode::OK
+    );
     assert_eq!(
         request(&app, &member.token, "GET", &tt_path, None).await.0,
         StatusCode::FORBIDDEN

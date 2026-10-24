@@ -17,7 +17,7 @@ use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
     annotation::provider::{AccessContext, AnnotationIdentifier, AnnotationProvider},
-    annotation::reopen::{REOPEN_FAILED, REOPEN_SUCCESS, owner_wait_elapsed},
+    annotation::reopen::{REOPEN_FAILED, REOPEN_SUCCESS, owner_reopen_window_open},
     auth::AuthUser,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
     stores::client::ServiceClientConfig,
@@ -215,19 +215,19 @@ async fn pending(db: &TestDb, w: &World) -> i64 {
 }
 
 #[test]
-fn pure_owner_gate_is_strictly_after_configured_plus_ten_seconds() {
+fn pure_owner_window_closes_strictly_after_configured_plus_ten_seconds() {
     let modified = 1_700_000_000_000;
-    assert!(!owner_wait_elapsed(modified, modified, 30));
-    assert!(!owner_wait_elapsed(modified + 39_999, modified, 30));
-    // Equality with modified + 40 s is not yet past.
-    assert!(!owner_wait_elapsed(modified + 40_000, modified, 30));
-    assert!(owner_wait_elapsed(modified + 40_001, modified, 30));
-    assert!(!owner_wait_elapsed(modified + 10_000, modified, 0));
-    assert!(owner_wait_elapsed(modified + 10_001, modified, 0));
-    // Negative configuration shortens the wait; overflow never passes.
-    assert!(!owner_wait_elapsed(modified, modified, -10));
-    assert!(owner_wait_elapsed(modified + 1, modified, -10));
-    assert!(!owner_wait_elapsed(i64::MAX, i64::MAX - 1, 30));
+    assert!(owner_reopen_window_open(modified, modified, 30));
+    assert!(owner_reopen_window_open(modified + 39_999, modified, 30));
+    // Equality with modified + 40 s is not yet past, so still open.
+    assert!(owner_reopen_window_open(modified + 40_000, modified, 30));
+    assert!(!owner_reopen_window_open(modified + 40_001, modified, 30));
+    assert!(owner_reopen_window_open(modified + 10_000, modified, 0));
+    assert!(!owner_reopen_window_open(modified + 10_001, modified, 0));
+    // Negative configuration shortens the window; a future modification is inside it.
+    assert!(owner_reopen_window_open(modified, modified, -10));
+    assert!(!owner_reopen_window_open(modified + 1, modified, -10));
+    assert!(owner_reopen_window_open(modified - 1, modified, -10));
 }
 
 #[tokio::test]
@@ -243,9 +243,10 @@ async fn owner_time_gate_and_success_response_shape() {
         reopen(&app, "", "Explorational", &fresh).await.0,
         StatusCode::UNAUTHORIZED
     );
-    // Default 30 s + 10 s: 20 s and 35 s after modification are too early.
-    let early = annotation(&db, &w, "Explorational", "Finished", -35).await;
-    for id in [&fresh, &early] {
+    // Default 30 s + 10 s: a minute and an hour after modification are too late.
+    let late = annotation(&db, &w, "Explorational", "Finished", -60).await;
+    let later = annotation(&db, &w, "Explorational", "Finished", -3600).await;
+    for id in [&late, &later] {
         let before = row(&db, id).await;
         assert_eq!(
             reopen(&app, &w.owner.token, "Explorational", id).await,
@@ -254,7 +255,8 @@ async fn owner_time_gate_and_success_response_shape() {
         assert_eq!(row(&db, id).await, before);
     }
 
-    let id = annotation(&db, &w, "Explorational", "Finished", -60).await;
+    // 20 s after modification is inside the window.
+    let id = fresh;
     let before = row(&db, &id).await;
     let (status, body) = reopen(&app, &w.owner.token, "Explorational", &id).await;
     assert_eq!(status, StatusCode::OK, "{body}");
@@ -316,21 +318,23 @@ async fn owner_time_gate_and_success_response_shape() {
     let five = annotation(&db, &w, "Explorational", "Finished", -5).await;
     let fifteen = annotation(&db, &w, "Explorational", "Finished", -15).await;
     assert_eq!(
-        reopen(&short, &w.owner.token, "Explorational", &five).await,
+        reopen(&short, &w.owner.token, "Explorational", &fifteen).await,
         reopen_failed()
     );
     assert_eq!(
-        reopen(&short, &w.owner.token, "Explorational", &fifteen)
+        reopen(&short, &w.owner.token, "Explorational", &five)
             .await
             .0,
         StatusCode::OK
     );
-    // A modification timestamp in the future never passes the owner gate.
+    // A modification timestamp in the future is always inside the window.
     let (zero_wait, _) = app_with(&db, Some(-10));
     let future = annotation(&db, &w, "Explorational", "Finished", 3600).await;
     assert_eq!(
-        reopen(&zero_wait, &w.owner.token, "Explorational", &future).await,
-        reopen_failed()
+        reopen(&zero_wait, &w.owner.token, "Explorational", &future)
+            .await
+            .0,
+        StatusCode::OK
     );
     // Missing annotations fail in the provider before the reopen gate, with
     // the DAO failure's default 400 status (no explicit status on the first
@@ -359,23 +363,33 @@ async fn managers_and_admins_bypass_time_gate_and_others_fail() {
     // Inserting task annotations moves pendingInstances (database trigger);
     // reopening Finished -> Active must not.
     let pending_before = pending(&db, &w).await;
-    // Ownership alone does not bypass; plain team members and foreign
-    // administrators are not allowed even though the annotation is readable.
-    for token in [&w.owner.token, &w.outsider.token, &w.foreign.token] {
+    // Plain team members and foreign administrators are not allowed even
+    // though the annotation is readable.
+    for token in [&w.outsider.token, &w.foreign.token] {
         assert_eq!(reopen(&app, token, "Task", &id).await, reopen_failed());
         assert_eq!(row(&db, &id).await.0, "Finished");
     }
-    // Also for the outsider long after the owner's wait.
-    assert_eq!(
-        reopen(&app, &w.outsider.token, "Task", &old).await,
-        reopen_failed()
-    );
+    // After the owner's window, neither the owner nor the outsider may reopen.
+    for token in [&w.owner.token, &w.outsider.token] {
+        assert_eq!(reopen(&app, token, "Task", &old).await, reopen_failed());
+        assert_eq!(row(&db, &old).await.0, "Finished");
+    }
     let (status, body) = reopen(&app, &w.manager.token, "Task", &id).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["state"], "Active");
     assert_eq!(body["messages"], json!([{"success": REOPEN_SUCCESS}]));
     assert_eq!(row(&db, &id).await.0, "Active");
     assert_eq!(pending(&db, &w).await, pending_before);
+
+    // Managers bypass the window, too.
+    let (status, body) = reopen(&app, &w.manager.token, "Task", &old).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(row(&db, &old).await.0, "Active");
+    // The owner may reopen inside the window without being a manager.
+    let owned = annotation(&db, &w, "Task", "Finished", 0).await;
+    let (status, body) = reopen(&app, &w.owner.token, "Task", &owned).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(row(&db, &owned).await.0, "Active");
 
     // Owner-organization administrator bypasses the gate for fresh
     // explorationals (no task) and task annotations alike.
@@ -447,8 +461,8 @@ async fn successful_task_reopen_invalidates_three_compounds_and_compounds_fail()
     let finished = annotation(&db, &w, "Task", "Finished", 0).await;
     let base = annotation(&db, &w, "TracingBase", "Finished", 0).await;
     // Keeps the compounds mergeable after `finished` is reopened.
-    annotation(&db, &w, "Task", "Finished", -3600).await;
-    let explorational = annotation(&db, &w, "Explorational", "Finished", -3600).await;
+    let stale = annotation(&db, &w, "Task", "Finished", -3600).await;
+    let explorational = annotation(&db, &w, "Explorational", "Finished", 0).await;
     let (app, provider) = app(&db);
     let admin = AuthUser {
         id: w.f.user_id.clone(),
@@ -493,7 +507,7 @@ async fn successful_task_reopen_invalidates_three_compounds_and_compounds_fail()
     assert_eq!(*observations.0.lock().unwrap(), 3);
     // Failed gate and non-task reopen keep the caches.
     assert_eq!(
-        reopen(&app, &w.owner.token, "Task", &finished).await,
+        reopen(&app, &w.owner.token, "Task", &stale).await,
         reopen_failed()
     );
     assert_eq!(

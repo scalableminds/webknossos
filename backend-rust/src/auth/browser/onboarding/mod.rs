@@ -447,7 +447,7 @@ struct InviteRow {
 }
 
 /// inviteDAO.findOneByTokenValue, locked for single use. Expired invites are
-/// excluded (Play soft-deletes them with a periodic job that is not ported).
+/// excluded, as in the DAO query.
 async fn find_invite(
     tx: &mut Transaction<'_, Postgres>,
     token: &str,

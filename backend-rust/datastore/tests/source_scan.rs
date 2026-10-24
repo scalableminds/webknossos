@@ -126,11 +126,16 @@ fn base_directory_preference_filters_and_local_creation_checks() {
             );
         }
     }
-    assert!(
-        bases
-            .get_one_for_org("../escape", false, true, false)
-            .is_err()
-    );
+    for org in ["../escape", "..", ".", "", "a..b", "a/b", "a\\b"] {
+        assert_eq!(
+            bases
+                .get_one_for_org(org, false, false, false)
+                .unwrap_err()
+                .message,
+            format!("Invalid organization id: {org}")
+        );
+    }
+    assert!(bases.get_one_for_org("a.b", false, false, false).is_ok());
     let file = root.join("file");
     std::fs::write(&file, []).unwrap();
     let invalid = BaseDirService::new(vec![entry(&file, Some("org"), true, true)]);

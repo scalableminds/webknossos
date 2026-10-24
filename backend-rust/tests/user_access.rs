@@ -338,24 +338,49 @@ async fn callbacks_preserve_annotation_mutex_private_link_and_job_export_contrac
         .1["granted"],
         false
     );
-    sqlx::query("INSERT INTO webknossos.annotation_privateLinks(_id,_annotation,accessToken,expirationDateTime) VALUES($1,$2,'private-link',now()-INTERVAL '1 day')")
-        .bind(object_id()).bind(&annotation).execute(&db.pool).await.unwrap();
-    // The trusted callback preserves Scala's grant, including expiration/mode
-    // behavior. The dedicated source endpoint has a stricter expiration check.
-    assert_eq!(
-        request(
-            &application,
-            "tracingstores/tracing",
-            "tracing-secret",
-            Some("private-link"),
-            "annotation",
-            Some(&annotation),
-            "write"
-        )
-        .await
-        .1,
-        json!({"granted":true})
-    );
+    // Private links only grant read access, and only until they expire.
+    sqlx::query("INSERT INTO webknossos.annotation_privateLinks(_id,_annotation,accessToken,expirationDateTime) VALUES($1,$2,'expired-link',now()-INTERVAL '1 day'),($3,$2,'private-link',now()+INTERVAL '1 day')")
+        .bind(object_id()).bind(&annotation).bind(object_id()).execute(&db.pool).await.unwrap();
+    for (token, mode, granted) in [
+        ("expired-link", "read", false),
+        ("expired-link", "write", false),
+        ("private-link", "read", true),
+        ("private-link", "write", false),
+    ] {
+        assert_eq!(
+            request(
+                &application,
+                "tracingstores/tracing",
+                "tracing-secret",
+                Some(token),
+                "annotation",
+                Some(&annotation),
+                mode
+            )
+            .await
+            .1["granted"],
+            granted,
+            "{token} {mode}"
+        );
+    }
+    // The same applies to the dataset of the annotation.
+    for (token, granted) in [("expired-link", false), ("private-link", true)] {
+        assert_eq!(
+            request(
+                &application,
+                "datastores/rpc",
+                "store-secret",
+                Some(token),
+                "dataset",
+                Some(&dataset),
+                "read"
+            )
+            .await
+            .1["granted"],
+            granted,
+            "{token}"
+        );
+    }
     for (resource, id) in [
         ("annotation", "000000000000000000000000"),
         ("tracing", "dummyTracingId"),
@@ -432,5 +457,70 @@ async fn callbacks_preserve_annotation_mutex_private_link_and_job_export_contrac
         timestamp < chrono::Utc::now() - chrono::Duration::seconds(30),
         "service token checks must not touch usage"
     );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
+async fn dataset_managers_are_scoped_to_their_organization_and_reset_tokens_are_rejected() {
+    let db = TestDb::new().await;
+    let f = db.fixture().await;
+    let dataset = seed(&db, &f).await;
+    let other = db.fixture().await;
+    let foreign_manager = db
+        .seed_user(&object_id(), &other.organization_id, false)
+        .await;
+    sqlx::query("UPDATE webknossos.users SET isDatasetManager=true WHERE _id=$1")
+        .bind(&foreign_manager.user_id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    let app = app(&db, true);
+    let access = async |token: &str, id: Option<&str>, mode: &str| {
+        request(
+            &app,
+            "datastores/rpc",
+            "store-secret",
+            Some(token),
+            "dataset",
+            id,
+            mode,
+        )
+        .await
+        .1["granted"]
+            .clone()
+    };
+    // isDatasetManagerOf: administrate only the own organization.
+    assert_eq!(
+        access(
+            &foreign_manager.token,
+            Some(&f.organization_id),
+            "administrate"
+        )
+        .await,
+        false
+    );
+    assert_eq!(
+        access(
+            &foreign_manager.token,
+            Some(&other.organization_id),
+            "administrate"
+        )
+        .await,
+        true
+    );
+    assert_eq!(
+        access(&foreign_manager.token, None, "administrate").await,
+        true
+    );
+    // isEditableBy: no write access on datasets of other organizations.
+    assert_eq!(
+        access(&foreign_manager.token, Some(&dataset), "write").await,
+        false
+    );
+    // Reset-password tokens are not usable for authentication.
+    let reset = db.seed_token(&f.user_id, "ResetPassword").await;
+    assert_eq!(access(&reset, Some(&dataset), "write").await, false);
+    assert_eq!(access(&f.token, Some(&dataset), "write").await, true);
     db.cleanup().await;
 }

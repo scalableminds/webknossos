@@ -199,9 +199,8 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
   verification (required-verification accounts past grace period cannot log in) unusable.
 - D3 Sample organization and local datastore/tracingstore modules default OFF (Play dev default ON);
   buildinfo `localDataStoreEnabled:false` (misc-controllers.md:16).
-- D4 Fail-closed on Scala's discarded `Fox[Boolean]` permission checks (allowDownload, restrictions, team-manager
-  updates, Voxelytics workflow ownership) — 403/401 where Play allowed (coordinator.md CRATE-WIDE DECISION,
-  annotation-download.md, users-projects.md, voxelytics.md:48).
+- D4 Resolved by #10161: Play now asserts the formerly discarded `Fox[Boolean]` permission checks (allowDownload,
+  restrictions, team-manager updates, Voxelytics workflow ownership), matching Rust's fail-closed behavior.
 - D5 Error responses: no Play `chain` entries, crate-wide wording ("Invalid JSON request body.", "Invalid query
   parameters."), auth checked before body (401 vs 400), DB serialization conflicts -> 409, DB faults 5xx instead of
   400 "SQL Failure" (annotations.md:43, credits-publications.md:42-48, organization-pricing.md, time-reports.md).

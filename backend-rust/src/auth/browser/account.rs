@@ -162,10 +162,10 @@ async fn reset_password(
     form.finish()?;
     let token = token.trim();
     let mut tx = state.pool.begin().await?;
-    // Deliberately stricter than Play's userForToken, which accepts any token
-    // type: only reset-password tokens may set a password without the old one.
-    let target: Option<(String, String)> = sqlx::query_as(
-        r#"SELECT u._id, u._multiUser FROM webknossos.tokens t
+    // userForResetPasswordToken: only reset-password tokens may set a password
+    // without the old one, and not for deactivated users.
+    let target: Option<(String, String, bool)> = sqlx::query_as(
+        r#"SELECT u._id, u._multiUser, u.isDeactivated FROM webknossos.tokens t
            JOIN webknossos.users_ u ON u._id = t._user
            JOIN webknossos.multiUsers_ m ON m._id = u._multiUser
            WHERE t.value = $1 AND t.tokenType = 'ResetPassword' AND NOT t.isDeleted
@@ -179,8 +179,11 @@ async fn reset_password(
     .bind(token)
     .fetch_optional(&mut *tx)
     .await?;
-    let (_, multi_user_id) =
+    let (_, multi_user_id, deactivated) =
         target.ok_or_else(|| ApiError::bad_request(crate::msg::user::token::INVALID))?;
+    if deactivated {
+        return Err(ApiError::bad_request(messages::IS_DEACTIVATED));
+    }
     let hash = hash_password(password).await?;
     sqlx::query(
         "UPDATE webknossos.multiUsers SET passwordInfo_hasher = 'SCrypt', passwordInfo_password = $2 WHERE _id = $1",

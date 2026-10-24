@@ -24,7 +24,6 @@ use webknossos_backend::{
         ACCESSING_TEAM_FAILED, EDIT_FAILED, EDIT_NOT_ALLOWED, EDIT_SUCCESS,
         LOCK_EXPLORATIONALS_ONLY, LOCK_NOT_ALLOWED, LOCK_SUCCESS, SHARED_TEAMS_UPDATE_FAILED,
     },
-    annotation::provider::RESTRICTIONS_NOT_FOUND,
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
     router,
 };
@@ -1161,14 +1160,17 @@ async fn compound_types_resolve_through_the_merge_cache_and_never_write() {
     );
     assert_eq!(merges(), 1);
 
-    // Restriction failures map to 404 with the restrictions message: an
-    // unrelated member can read the cached compound but the CompoundTask
-    // restriction handler cannot read the task.
+    // An unrelated member cannot get the cached compound: the provider's
+    // access check (whose restriction handler cannot read the task) fails,
+    // and edit maps the provider failure to 404.
     let outsider = db.seed_user(&object_id(), &w.organization, false).await;
     let (status, body) = patch(&app, &outsider.token, &path("edit"), json!({})).await;
     assert_eq!(
         (status, body),
-        (StatusCode::NOT_FOUND, error(RESTRICTIONS_NOT_FOUND))
+        (
+            StatusCode::NOT_FOUND,
+            error(webknossos_backend::msg::annotation::NOT_FOUND)
+        )
     );
 
     // Upstream merge failures: edit maps them to 404, the other routes keep

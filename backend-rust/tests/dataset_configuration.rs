@@ -315,9 +315,11 @@ async fn inaccessible_missing_and_unusable_datasets_follow_configuration_fallbac
             Some(&foreign.token),
             Some(json!({"foreignWrite":true}))
         )
-        .await
-        .0,
-        StatusCode::NOT_FOUND
+        .await,
+        (
+            StatusCode::NOT_FOUND,
+            json!({"messages":[{"error":format!("Dataset “{id}” could not be found or accessed.")}]})
+        )
     );
     // allLayersFor parses the complete usable data source even for config
     // reads. User reads soften an invalid source to {}, admin reads fail.
@@ -326,6 +328,21 @@ async fn inaccessible_missing_and_unusable_datasets_follow_configuration_fallbac
         .execute(&db.pool)
         .await
         .unwrap();
+    // Readable now, but dataset managers may only edit their own organization's datasets.
+    assert_eq!(
+        request(
+            &application,
+            "PUT",
+            &format!("/datasetConfigurations/default/{id}"),
+            Some(&foreign.token),
+            Some(json!({"foreignWrite":true}))
+        )
+        .await,
+        (
+            StatusCode::FORBIDDEN,
+            json!({"messages":[{"error":"You are not authorized to view or edit this resource."}]})
+        )
+    );
     assert_eq!(
         request(&application, "POST", &path, None, Some(json!([]))).await,
         (StatusCode::OK, json!({}))

@@ -264,10 +264,9 @@ async fn merge_typed(
         .execute(&mut *transaction)
         .await?;
     }
-    // restrictions = defaultsFor(merged). Deliberately fail closed: in Scala
-    // `_ <- allowAccess(..) ?~> noAccessOnMerged ~> FORBIDDEN` binds a
-    // Fox[Boolean], so `false` would not short-circuit. For an Internal
-    // annotation owned by the requester allowAccess is always true. The check
+    // restrictions = defaultsFor(merged); Fox.assertTrue(allowAccess(..))
+    // ?~> noAccessOnMerged ~> FORBIDDEN. For an Internal annotation owned by
+    // the requester allowAccess is always true. The check
     // runs on the inserted row inside the transaction (rolled back on denial).
     let metadata =
         crate::annotation::access::find(&mut *transaction, Some(user), new_id.as_str(), true)

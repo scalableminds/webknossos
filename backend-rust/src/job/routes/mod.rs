@@ -938,7 +938,7 @@ fn cost_feature(command: &str) -> Option<(&'static str, i64)> {
 pub(crate) fn job_cost_in_milli_credits(
     features: &Map<String, Value>,
     command: &str,
-    volume: i64,
+    bounding_box_in_target_mag: &BoundingBox,
 ) -> Result<i32, String> {
     let (key, default) =
         cost_feature(command).ok_or_else(|| format!("Unsupported job command {command}"))?;
@@ -951,8 +951,15 @@ pub(crate) fn job_cost_in_milli_credits(
             .and_then(|value| i32::try_from(value).ok())
             .map_or(default, i64::from)
     };
-    // Scala: math.ceil(volume / 1e9 * costPerGVx).toInt (saturating), at least 0.
-    let cost = ((volume as f64 / 1e9) * per_gvx as f64).ceil() as i32;
+    // Scala: the volume is computed as Double so that huge bounding boxes cannot
+    // overflow (empty boxes cost nothing); math.ceil(..).toInt saturates, at least 0.
+    let bbox = bounding_box_in_target_mag;
+    let volume_in_gvx = if bbox.is_empty() {
+        0.0
+    } else {
+        f64::from(bbox.width) * f64::from(bbox.height) * f64::from(bbox.depth) / 1e9
+    };
+    let cost = (volume_in_gvx * per_gvx as f64).ceil() as i32;
     Ok(cost.max(0))
 }
 
@@ -968,12 +975,8 @@ async fn credit_cost(
     if !is_job_command(&query.command) {
         return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
-    let cost = job_cost_in_milli_credits(
-        &misc.config().features,
-        &query.command,
-        bounding_box.volume(),
-    )
-    .map_err(ApiError::bad_request)?;
+    let cost = job_cost_in_milli_credits(&misc.config().features, &query.command, &bounding_box)
+        .map_err(ApiError::bad_request)?;
     let mut connection = state.pool.acquire().await?;
     let balance = milli_credit_balance(&mut connection, &user.id, &user.organization_id).await?;
     Ok(Json(json!({

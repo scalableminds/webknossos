@@ -237,8 +237,16 @@ async fn rejects_bad_paths_mags_and_missing_files() {
 
     for (path, message) in [
         ("1-1-1/a/../b", "path must not contain “..”"),
-        ("1-1-1/%2e%2e/info", "path must not contain “%2e%2e”"),
-        ("1-1-1/%2finfo", "path must not start with “%2f”"),
+        // The wildcard is validated in its url-decoded form.
+        ("1-1-1/%2e%2e/info", "path must not contain “..”"),
+        ("1-1-1/%2E%2E/info", "path must not contain “..”"),
+        ("1-1-1/%2finfo", "path must not start with “/”"),
+        ("1-1-1/a%5cb", "path must not contain “\\”"),
+        (
+            "1-1-1/%252e%252e/info",
+            "path must not contain encoded “.”, “/” or “\\”",
+        ),
+        ("1-1-1/a%zz", "path is not validly encoded"),
     ] {
         let (status, _, body) = get(&app, &format!("{base}/{path}"), "good", None).await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "{path}");

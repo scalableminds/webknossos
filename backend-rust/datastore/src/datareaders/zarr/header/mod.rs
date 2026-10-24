@@ -14,6 +14,17 @@ use crate::models::{AdditionalAxis, BUCKET_LENGTH, BoundingBox, ElementClass, Ve
 
 pub const FILENAME_DOT_ZARRAY: &str = ".zarray";
 
+/// Scala `Zarr3OutputHelper.reorderAdditionalAxes`: sorted by index, re-indexed from 1 (channel
+/// comes first). This is the axis order of served zarr arrays and of their chunk keys.
+pub fn reorder_additional_axes(axes: &[AdditionalAxis]) -> Vec<AdditionalAxis> {
+    let mut sorted = axes.to_vec();
+    sorted.sort_by_key(|a| a.index);
+    for (i, axis) in sorted.iter_mut().enumerate() {
+        axis.index = i as i32 + 1;
+    }
+    sorted
+}
+
 /// Scala `ZarrHeader`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ZarrHeader {
@@ -182,15 +193,17 @@ impl ZarrHeader {
         })
     }
 
-    /// Scala `ZarrHeader.fromLayer`: the header under which a wk layer is exposed as zarr v2.
-    pub fn from_layer(
+    /// Scala `ZarrHeader.forArray` (also behind `fromLayer`): the header under which a wk layer or
+    /// volume tracing is exposed as zarr v2.
+    pub fn for_array(
         element_class: ElementClass,
-        additional_axes: Option<&[AdditionalAxis]>,
         bounding_box: &BoundingBox,
+        additional_axes: &[AdditionalAxis],
         mag: Vec3Int,
     ) -> Self {
         let (channels, dtype) = element_class.to_channel_and_zarr_string();
-        let axes = additional_axes.unwrap_or_default();
+        // Same order as expected by `parse_dot_coordinates` for chunk keys
+        let axes = reorder_additional_axes(additional_axes);
         let mut shape: Vec<i64> = vec![i64::from(channels)];
         shape.extend(axes.iter().map(|a| i64::from(a.upper_bound().unwrap_or(0))));
         shape.push(i64::from(

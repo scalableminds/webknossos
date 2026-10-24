@@ -254,6 +254,51 @@ async fn serves_zarr3_metadata() {
     assert_eq!(body["dataLayers"][0]["dataFormat"], "zarr3");
 }
 
+/// Scala `ZarrStreamingAdditionalAxesTestSuite` through the routes: additional axes appear sorted
+/// by index in `.zarray`/`zarr.json` (exclusive upper bound as size) and in the NGFF metadata.
+#[tokio::test]
+async fn serves_metadata_with_additional_axes() {
+    let mut source = source();
+    source["dataLayers"][0]["additionalAxes"] = json!([
+        {"name":"t","bounds":[0,5],"index":2},
+        {"name":"angle","bounds":[0,1],"index":1}]);
+    let (_wk, app) = app_with_source(source).await;
+
+    let (status, body) = get_json(&app, &format!("/data/zarr/{ID}/color/1/.zarray")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["shape"], json!([1, 1, 5, 64, 32, 32]));
+    assert_eq!(body["chunks"], json!([1, 1, 1, 32, 32, 32]));
+
+    let (status, body) = get_json(&app, &format!("/data/zarr3/{ID}/color/1/zarr.json")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["shape"], json!([1, 1, 5, 64, 32, 32]));
+    assert_eq!(
+        body["dimension_names"],
+        json!(["c", "angle", "t", "x", "y", "z"])
+    );
+
+    let ngff_axes = json!([
+        {"name":"c","type":"channel"},
+        {"name":"angle","type":"custom"},
+        {"name":"t","type":"custom"},
+        {"name":"x","type":"space","unit":"nanometer"},
+        {"name":"y","type":"space","unit":"nanometer"},
+        {"name":"z","type":"space","unit":"nanometer"}]);
+    let (status, body) = get_json(&app, &format!("/data/zarr/{ID}/color/.zattrs")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["multiscales"][0]["axes"], ngff_axes);
+    assert_eq!(
+        body["multiscales"][0]["datasets"][0]["coordinateTransformations"][0]["scale"],
+        json!([1, 1, 1, 11, 11, 24.5])
+    );
+    let (status, body) = get_json(&app, &format!("/data/zarr3/{ID}/color/zarr.json")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        body["attributes"]["ome"]["multiscales"][0]["axes"],
+        ngff_axes
+    );
+}
+
 #[tokio::test]
 async fn streams_raw_cubes() {
     let (_wk, app) = app().await;

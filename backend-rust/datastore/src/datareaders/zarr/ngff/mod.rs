@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::{DsError, DsResult};
-use crate::models::{LengthUnit, Vec3Double, Vec3Int, VoxelSize};
+use crate::models::{AdditionalAxis, LengthUnit, Vec3Double, Vec3Int, VoxelSize};
 
 pub const FILENAME_DOT_ZGROUP: &str = ".zgroup";
 pub const FILENAME_DOT_ZATTRS: &str = ".zattrs";
@@ -64,7 +64,22 @@ impl NgffAxis {
             Some(unit) => LengthUnit::from_name(unit),
         })
     }
+
+    /// Scala `NgffAxis.forAdditionalAxes`: additional axes sit between the channel and the xyz
+    /// axes of streamed arrays. They keep their real names (matching the zarr `dimension_names`)
+    /// and get a custom type, since NGFF allows at most three space axes and requires time axes
+    /// to come before the channel axis.
+    pub fn for_additional_axes(additional_axes: Option<&[AdditionalAxis]>) -> Vec<Self> {
+        let mut sorted = additional_axes.unwrap_or_default().to_vec();
+        sorted.sort_by_key(|axis| axis.index);
+        sorted
+            .into_iter()
+            .map(|axis| Self::new(axis.name, ADDITIONAL_AXIS_TYPE, None))
+            .collect()
+    }
 }
+
+const ADDITIONAL_AXIS_TYPE: &str = "custom";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NgffChannelWindow {
@@ -147,7 +162,11 @@ pub struct NgffLabelsGroup {
     pub labels: Vec<String>,
 }
 
-fn datasets_for_mags(voxel_size: &VoxelSize, mags: &[Vec3Int]) -> Vec<NgffDataset> {
+fn datasets_for_mags(
+    voxel_size: &VoxelSize,
+    mags: &[Vec3Int],
+    additional_axes_count: usize,
+) -> Vec<NgffDataset> {
     mags.iter()
         .map(|mag| {
             let scaled = Vec3Double::new(
@@ -155,11 +174,14 @@ fn datasets_for_mags(voxel_size: &VoxelSize, mags: &[Vec3Int]) -> Vec<NgffDatase
                 voxel_size.factor.y * f64::from(mag.y),
                 voxel_size.factor.z * f64::from(mag.z),
             );
+            // channel, additional axes, xyz
+            let mut scale = vec![1.0; 1 + additional_axes_count];
+            scale.extend([scaled.x, scaled.y, scaled.z]);
             NgffDataset {
                 path: mag.to_mag_literal(true),
                 coordinate_transformations: vec![NgffCoordinateTransformation {
                     kind: "scale".into(),
-                    scale: Some(vec![1.0, scaled.x, scaled.y, scaled.z]),
+                    scale: Some(scale),
                     translation: None,
                 }],
             }
@@ -171,25 +193,33 @@ fn space_axis(name: &str, unit: &str) -> NgffAxis {
     NgffAxis::new(name, "space", Some(unit.to_string()))
 }
 
+fn axes_for(voxel_size: &VoxelSize, additional_axes: Option<&[AdditionalAxis]>) -> Vec<NgffAxis> {
+    let unit = voxel_size.unit.as_str();
+    let mut axes = vec![NgffAxis::new("c", "channel", None)];
+    axes.extend(NgffAxis::for_additional_axes(additional_axes));
+    axes.extend([
+        space_axis("x", unit),
+        space_axis("y", unit),
+        space_axis("z", unit),
+    ]);
+    axes
+}
+
 impl NgffMetadata {
     /// Scala `NgffMetadata.fromNameVoxelSizeAndMags`.
     pub fn from_name_voxel_size_and_mags(
         data_layer_name: &str,
         voxel_size: &VoxelSize,
         mags: &[Vec3Int],
+        additional_axes: Option<&[AdditionalAxis]>,
     ) -> Self {
-        let unit = voxel_size.unit.as_str();
+        let additional_axes_count = additional_axes.map_or(0, <[_]>::len);
         Self {
             multiscales: vec![NgffMultiscalesItem {
                 version: "0.4".into(),
                 name: Some(data_layer_name.to_string()),
-                axes: vec![
-                    NgffAxis::new("c", "channel", None),
-                    space_axis("x", unit),
-                    space_axis("y", unit),
-                    space_axis("z", unit),
-                ],
-                datasets: datasets_for_mags(voxel_size, mags),
+                axes: axes_for(voxel_size, additional_axes),
+                datasets: datasets_for_mags(voxel_size, mags, additional_axes_count),
             }],
             omero: None,
         }
@@ -197,29 +227,21 @@ impl NgffMetadata {
 }
 
 impl NgffMetadataV0_5 {
-    /// Scala `NgffMetadataV0_5.fromNameVoxelSizeAndMags` (additional axes become `t0`, `t1`, …
-    /// space axes, as in Scala).
+    /// Scala `NgffMetadataV0_5.fromNameVoxelSizeAndMags`.
     pub fn from_name_voxel_size_and_mags(
         data_layer_name: &str,
         voxel_size: &VoxelSize,
         mags: &[Vec3Int],
-        additional_axes_count: usize,
+        additional_axes: Option<&[AdditionalAxis]>,
         version: &str,
     ) -> Self {
-        let unit = voxel_size.unit.as_str();
-        let mut axes = vec![NgffAxis::new("c", "channel", None)];
-        axes.extend((0..additional_axes_count).map(|i| space_axis(&format!("t{i}"), unit)));
-        axes.extend([
-            space_axis("x", unit),
-            space_axis("y", unit),
-            space_axis("z", unit),
-        ]);
+        let additional_axes_count = additional_axes.map_or(0, <[_]>::len);
         Self {
             version: version.to_string(),
             multiscales: vec![NgffMultiscalesItemV0_5 {
                 name: Some(data_layer_name.to_string()),
-                axes,
-                datasets: datasets_for_mags(voxel_size, mags),
+                axes: axes_for(voxel_size, additional_axes),
+                datasets: datasets_for_mags(voxel_size, mags, additional_axes_count),
             }],
             omero: None,
         }

@@ -74,10 +74,10 @@ fn json_errors_and_lazy_compressor_errors() {
 
 #[test]
 fn writes_like_scala() {
-    let header = ZarrHeader::from_layer(
+    let header = ZarrHeader::for_array(
         ElementClass::Uint24,
-        None,
         &BoundingBox::new(Vec3Int::new(10, 0, 0), 100, 64, 32),
+        &[],
         Vec3Int::new(2, 2, 1),
     );
     assert_eq!(

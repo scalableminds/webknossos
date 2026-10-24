@@ -3,12 +3,13 @@
 //! `convertLayerToZarrLayer`) and the `datastoreZarrDatasourceDir` directory listing.
 use serde_json::{Map, Value, json};
 
+pub use crate::datareaders::zarr::reorder_additional_axes;
 use crate::{
     datareaders::RequestedAdditionalCoordinate,
     error::{DsError, DsResult},
     models::{
-        AdditionalAxis, AxisOrder, BUCKET_LENGTH, DataFormat, MagLocator, StaticLayer, UPath,
-        Vec3Int,
+        AdditionalAxis, AxisOrder, BUCKET_LENGTH, BoundingBox, DataFormat, ElementClass,
+        MagLocator, StaticLayer, UPath, Vec3Int,
     },
 };
 use webknossos_common::text::escape_html;
@@ -19,16 +20,6 @@ const INVALID_FIRST_CHUNK_COORD: &str = "First channel must be 0.";
 const NOT_ENOUGH_COORDINATES: &str =
     "Invalid number of chunk coordinates. Expected to get at least 3 dimensions and channel 0.";
 const INVALID_ADDITIONAL_COORDINATES: &str = "Invalid additional coordinates for this data layer.";
-
-/// Scala `reorderAdditionalAxes`: sorted by index, re-indexed from 1 (channel comes first).
-pub fn reorder_additional_axes(axes: &[AdditionalAxis]) -> Vec<AdditionalAxis> {
-    let mut sorted = axes.to_vec();
-    sorted.sort_by_key(|a| a.index);
-    for (i, axis) in sorted.iter_mut().enumerate() {
-        axis.index = i as i32 + 1;
-    }
-    sorted
-}
 
 /// Java `String.split(regex)` for a single literal character: trailing empty strings are removed,
 /// but a string without any separator yields itself.
@@ -83,16 +74,19 @@ pub fn parse_dot_coordinates(
     Ok((ints[n - 3], ints[n - 2], ints[n - 1], additional))
 }
 
-/// Scala `Zarr3ArrayHeader.fromDataLayer(layer, mag)` rendered by `Zarr3ArrayHeaderFormat.writes`.
-pub fn zarr3_array_header_json(layer: &StaticLayer, mag: Vec3Int) -> Value {
-    let axes = reorder_additional_axes(layer.additional_axes.as_deref().unwrap_or_default());
-    let (channels, dtype) = layer.element_class.to_channel_and_zarr3_string();
-    let bbox = &layer.bounding_box;
+/// Scala `Zarr3ArrayHeader.forArray` (also behind `fromDataLayer`) rendered by
+/// `Zarr3ArrayHeaderFormat.writes`: a wk layer or volume tracing exposed as a zarr v3 array.
+pub fn zarr3_array_header_json(
+    element_class: ElementClass,
+    bbox: &BoundingBox,
+    additional_axes: &[AdditionalAxis],
+    mag: Vec3Int,
+) -> Value {
+    // Same order as expected by `parse_dot_coordinates` for chunk keys
+    let axes = reorder_additional_axes(additional_axes);
+    let (channels, dtype) = element_class.to_channel_and_zarr3_string();
     let mut shape: Vec<i64> = vec![i64::from(channels)];
-    shape.extend(
-        axes.iter()
-            .map(|a| i64::from(a.highest_value().unwrap_or(0))),
-    );
+    shape.extend(axes.iter().map(|a| i64::from(a.upper_bound().unwrap_or(0))));
     shape.extend([
         i64::from(bbox.width.wrapping_add(bbox.top_left.x) / mag.x),
         i64::from(bbox.height.wrapping_add(bbox.top_left.y) / mag.y),

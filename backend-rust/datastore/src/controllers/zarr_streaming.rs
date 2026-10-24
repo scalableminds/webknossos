@@ -403,6 +403,7 @@ async fn z_attrs_inner(state: &AppState, id: &str, layer_name: &str) -> DsResult
         layer_name,
         &source.scale,
         &layer.sorted_mags(),
+        layer.additional_axes.as_deref(),
     );
     Ok(play_json(&to_value(&header)?))
 }
@@ -422,7 +423,7 @@ async fn zarr_json_layer_inner(state: &AppState, id: &str, layer_name: &str) -> 
         layer_name,
         &source.scale,
         &layer.sorted_mags(),
-        layer.additional_axes.as_ref().map_or(0, Vec::len),
+        layer.additional_axes.as_deref(),
         "0.5",
     );
     // Scala `NgffZarr3GroupHeader` writes.
@@ -482,10 +483,10 @@ async fn z_array_inner(
 ) -> DsResult<Response> {
     let (_, layer) = layer_or_not_found(state, id, layer_name).await?;
     let mag = existing_mag(&layer, layer_name, mag)?;
-    let header = ZarrHeader::from_layer(
+    let header = ZarrHeader::for_array(
         layer.element_class,
-        layer.additional_axes.as_deref(),
         &layer.bounding_box,
+        layer.additional_axes.as_deref().unwrap_or_default(),
         mag,
     );
     Ok(play_json(&header.to_json()))
@@ -508,7 +509,12 @@ async fn zarr_json_mag_inner(
 ) -> DsResult<Response> {
     let (_, layer) = layer_or_not_found(state, id, layer_name).await?;
     let mag = existing_mag(&layer, layer_name, mag)?;
-    Ok(play_json(&zarr3_array_header_json(&layer, mag)))
+    Ok(play_json(&zarr3_array_header_json(
+        layer.element_class,
+        &layer.bounding_box,
+        layer.additional_axes.as_deref().unwrap_or_default(),
+        mag,
+    )))
 }
 
 async fn raw_cube(

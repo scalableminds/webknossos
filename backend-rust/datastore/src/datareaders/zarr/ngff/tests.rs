@@ -34,6 +34,7 @@ fn generated_metadata_matches_scala_shape() {
         "color",
         &voxel_size,
         &[Vec3Int::new(1, 1, 1), Vec3Int::new(2, 2, 1)],
+        None,
     );
     assert_eq!(
         serde_json::to_value(&metadata).unwrap(),
@@ -46,11 +47,27 @@ fn generated_metadata_matches_scala_shape() {
                 {"path": "1", "coordinateTransformations": [{"type": "scale", "scale": [1.0, 11.0, 11.0, 24.0]}]},
                 {"path": "2-2-1", "coordinateTransformations": [{"type": "scale", "scale": [1.0, 22.0, 22.0, 24.0]}]}]}]})
     );
-    let v05 = NgffMetadataV0_5::from_name_voxel_size_and_mags("seg", &voxel_size, &[], 1, "0.5");
+    let axes = [AdditionalAxis {
+        name: "time".into(),
+        bounds: vec![0, 3],
+        index: 0,
+    }];
+    let v05 = NgffMetadataV0_5::from_name_voxel_size_and_mags(
+        "seg",
+        &voxel_size,
+        &[],
+        Some(&axes),
+        "0.5",
+    );
     let names: Vec<&str> = v05.multiscales[0]
         .axes
         .iter()
         .map(|a| a.name.as_str())
         .collect();
-    assert_eq!(names, ["c", "t0", "x", "y", "z"]);
+    // Additional axes keep their names and get the custom type (no longer `t0` space axes).
+    assert_eq!(names, ["c", "time", "x", "y", "z"]);
+    assert_eq!(
+        serde_json::to_value(&v05.multiscales[0].axes[1]).unwrap(),
+        json!({"name": "time", "type": "custom"})
+    );
 }

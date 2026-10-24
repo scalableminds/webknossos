@@ -540,8 +540,9 @@ pub(crate) async fn insert_organization(
     let normalized_name =
         normalize_strong(name).ok_or_else(|| ApiError::bad_request(org_msg::ID_INVALID))?;
     let id = match requested_id {
-        Some(requested) => normalize_strong(requested)
-            .ok_or_else(|| ApiError::bad_request(org_msg::ID_INVALID))?,
+        Some(requested) => {
+            normalize_strong(requested).ok_or_else(|| ApiError::bad_request(org_msg::ID_INVALID))?
+        }
         None => normalized_name,
     }
     .replace(' ', "_");

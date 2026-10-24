@@ -153,7 +153,8 @@ async fn onboarding_routes_track_signup_invites_and_joins() {
             Some(invites(true))
         )
         .await,
-        StatusCode::BAD_REQUEST
+        // Deviation from Scala (400): plain members may not invite at all.
+        StatusCode::FORBIDDEN
     );
     assert_eq!(
         post(

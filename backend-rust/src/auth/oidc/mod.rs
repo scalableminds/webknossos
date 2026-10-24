@@ -482,7 +482,11 @@ const URL_SAFE_INDIFFERENT: GeneralPurpose = GeneralPurpose::new(
 );
 
 /// jwt-scala `decodeJson(token, publicKey)` with default JwtOptions.
-fn decode_jwt(token: &str, keys: &[RsaKey], now_ms: i64) -> Result<Map<String, Value>, ClientError> {
+fn decode_jwt(
+    token: &str,
+    keys: &[RsaKey],
+    now_ms: i64,
+) -> Result<Map<String, Value>, ClientError> {
     let parts: Vec<&str> = token.split('.').collect();
     let [header64, claim64, signature64] = parts.as_slice() else {
         return Err(ClientError("JWT must have three parts".into()));

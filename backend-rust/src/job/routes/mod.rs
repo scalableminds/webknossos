@@ -636,9 +636,9 @@ async fn cancel(
         "UPDATE webknossos.jobs SET manualState = 'CANCELLED'
          WHERE _id = $1 AND state NOT IN ('SUCCESS', 'FAILURE')",
     )
-        .bind(&job.id)
-        .execute(&mut *transaction)
-        .await?;
+    .bind(&job.id)
+    .execute(&mut *transaction)
+    .await?;
     if job.state == "PENDING" || job.state == "STARTED" {
         refund_transaction_for_job(&mut transaction, &job.id, true)
             .await

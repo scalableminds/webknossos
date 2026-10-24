@@ -10,7 +10,10 @@
 
 use std::io::Write;
 
-use super::{blosclz, lz4, zlib_decompress_into, zstd_decompress};
+use super::{
+    DEFAULT_MAX_DECOMPRESSED_BYTES, blosclz, lz4, size_limit_message, zlib_decompress_into,
+    zstd_decompress,
+};
 
 const HEADER_LEN: usize = 16;
 const VERSION_FORMAT: u8 = 2;
@@ -171,28 +174,52 @@ fn read_len(bytes: &[u8], pos: usize) -> Option<usize> {
 
 /// Blosc1 decompression bounded by `limit` output bytes.
 pub(crate) fn decompress(input: &[u8], limit: usize) -> Result<Vec<u8>, String> {
+    // Scala `BloscCompressor.decompress` checks the header before handing it to c-blosc.
     if input.len() < HEADER_LEN {
         return Err(format!(
-            "blosc: input of {} bytes is shorter than the 16-byte header",
+            "blosc: input of {} bytes is too short for the header",
             input.len()
         ));
     }
     let version = input[0];
     let flags = input[2];
     let typesize = usize::from(input[3]);
-    let header_int = |pos: usize, name: &str| {
-        read_len(input, pos).ok_or_else(|| format!("blosc: invalid {name} in header"))
+    // nbytes, blocksize and cbytes are read as unsigned 32-bit integers.
+    let header_u32 = |pos: usize| {
+        u64::from(u32::from_le_bytes([
+            input[pos],
+            input[pos + 1],
+            input[pos + 2],
+            input[pos + 3],
+        ]))
     };
-    let nbytes = header_int(4, "nbytes")?;
-    let blocksize = header_int(8, "blocksize")?;
-    let cbytes = header_int(12, "cbytes")?;
+    let (nbytes, blocksize, cbytes) = (header_u32(4), header_u32(8), header_u32(12));
+    if nbytes > DEFAULT_MAX_DECOMPRESSED_BYTES as u64 {
+        return Err(size_limit_message(
+            "blosc",
+            Some(nbytes),
+            DEFAULT_MAX_DECOMPRESSED_BYTES,
+        ));
+    }
+    // c-blosc trusts cbytes, so a larger value than the actual input would read past the buffer.
+    if cbytes > input.len() as u64 {
+        return Err(format!(
+            "blosc: header claims {cbytes} compressed bytes, but input has {}",
+            input.len()
+        ));
+    }
+    // Both are bounded by the checks above.
+    let (nbytes, cbytes) = (nbytes as usize, cbytes as usize);
+    let blocksize = usize::try_from(blocksize)
+        .ok()
+        .filter(|&b| i32::try_from(b).is_ok())
+        .ok_or_else(|| "blosc: invalid blocksize in header".to_owned())?;
     if version == 0 || version > VERSION_FORMAT {
         return Err(format!("blosc: unsupported format version {version}"));
     }
-    if cbytes < HEADER_LEN || cbytes > input.len() {
+    if cbytes < HEADER_LEN {
         return Err(format!(
-            "blosc: header announces {cbytes} compressed bytes but {} are available",
-            input.len()
+            "blosc: header announces {cbytes} compressed bytes, fewer than the 16-byte header"
         ));
     }
     if nbytes > limit {

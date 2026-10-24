@@ -19,9 +19,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::error::{DsError, DsResult};
+use crate::{
+    compression::DEFAULT_MAX_DECOMPRESSED_BYTES,
+    error::{DsError, DsResult},
+};
 const HEADER_SIZE: usize = 36;
-pub const MAX_OUTPUT_BYTES: usize = 300 * 1024 * 1024;
+/// Scala `CompressoCompressor` passes `Compressor.maxDecompressedBytes` to the native decoder.
+pub const MAX_OUTPUT_BYTES: usize = DEFAULT_MAX_DECOMPRESSED_BYTES;
+/// Native `compresso::decompress` return codes for crafted headers.
+const ERROR_ZERO_STEP: u8 = 14;
+const ERROR_WINDOW_TOO_LARGE: u8 = 15;
+const ERROR_SECTION_SIZES: u8 = 16;
 const MAX_WORKING_BYTES: usize = 512 * 1024 * 1024;
 fn error(message: impl std::fmt::Display) -> DsError {
     DsError::failure(format!(
@@ -55,15 +63,20 @@ impl CompressoHeader {
         let version = input[4];
         let label_width = usize::from(input[5]);
         let connectivity = input[35];
-        // JNI checks the raw output length before validating magic/type/version.
-        if label_width == 0
-            || input[6..12]
-                .as_chunks::<2>()
-                .0
-                .iter()
-                .any(|v| u16::from_le_bytes(*v) == 0)
-        {
-            return Err(error("output length as read from header must be >0, got 0"));
+        // JNI checks the raw output length (at most 255 * 65535³, no overflow) before validating
+        // magic/type/version.
+        let output_length = input[6..12]
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .fold(label_width as u64, |n, v| {
+                n * u64::from(u16::from_le_bytes(*v))
+            });
+        if output_length == 0 || output_length > MAX_OUTPUT_BYTES as u64 {
+            return Err(error(format!(
+                "output length as read from header must be >0 and at most {MAX_OUTPUT_BYTES}, \
+                 got {output_length}"
+            )));
         }
 
         if &input[..4] != b"cpso"
@@ -82,11 +95,12 @@ impl CompressoHeader {
             .map(|v| usize::from(*v))
             .collect::<Vec<_>>();
         let steps: [usize; 3] = steps.try_into().expect("three step bytes");
-        if shape.contains(&0) {
-            return Err(error("output length as read from header must be >0, got 0"));
+        // Zero steps would divide by zero, windows above 64 bits overflow the bit shifts.
+        if steps.contains(&0) {
+            return Err(error(ERROR_ZERO_STEP));
         }
-        if steps.contains(&0) || steps.iter().product::<usize>() > 64 {
-            return Err(error("invalid boundary grid steps"));
+        if steps.iter().product::<usize>() > 64 {
+            return Err(error(ERROR_WINDOW_TOO_LARGE));
         }
         Ok(Self {
             version,
@@ -180,10 +194,10 @@ pub fn decode(input: &[u8], output_limit: usize) -> DsResult<Vec<u8>> {
         let end = count
             .checked_mul(width)
             .and_then(|n| n.checked_add(offset))
-            .ok_or_else(|| error("table length overflow"))?;
+            .ok_or_else(|| error(ERROR_SECTION_SIZES))?;
         let bytes = input
             .get(offset..end)
-            .ok_or_else(|| error("truncated tables"))?;
+            .ok_or_else(|| error(ERROR_SECTION_SIZES))?;
         offset = end;
         Ok(Table { bytes, width })
     };
@@ -199,7 +213,7 @@ pub fn decode(input: &[u8], output_limit: usize) -> DsResult<Vec<u8>> {
         .len()
         .checked_sub(index_bytes)
         .filter(|e| *e >= offset)
-        .ok_or_else(|| error("truncated z index"))?;
+        .ok_or_else(|| error(ERROR_SECTION_SIZES))?;
     let windows = Table {
         bytes: &input[offset..end],
         width,

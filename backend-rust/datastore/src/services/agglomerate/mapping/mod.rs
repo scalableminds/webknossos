@@ -20,18 +20,18 @@ fn java_file_error(path: &Path, error: &std::io::Error) -> String {
     format!("{} ({reason})", path.display())
 }
 
-/// Scala `loadMappingBytes`. Mapping names with path separators are refused (Play decodes `%2F`
-/// in path parameters; Scala would resolve such names outside the mappings directory).
+/// Scala `loadMappingBytes`: the mapping file must lie directly in the mappings directory. Names
+/// with path separators (Play decodes `%2F` in path parameters) or NUL bytes (Java
+/// `InvalidPathException`) are refused. Backslashes are refused as well, as they separate paths
+/// on Windows.
 pub fn load_mapping_bytes(
     base_dirs: &BaseDirService,
     data_source_id: &DataSourceId,
     layer_name: &str,
     mapping: &str,
 ) -> DsResult<Vec<u8>> {
-    if mapping.contains(['/', '\\']) || layer_name.contains(['/', '\\']) {
-        return Err(DsError::failure(format!(
-            "Invalid mapping name “{mapping}”."
-        )));
+    if mapping.contains(['/', '\\', '\0']) || layer_name.contains(['/', '\\', '\0']) {
+        return Err(DsError::failure(format!("Invalid mapping name: {mapping}")));
     }
     let orga_dir =
         base_dirs.get_one_local_for_org(&data_source_id.organization_id, false, false, false)?;

@@ -190,12 +190,19 @@ fn request_geometry_preserves_floor_alignment_order_and_overflow_limits() {
         Vec3Int::full(65536),
     );
     assert!(huge.volume().is_err());
-    let skinny = Cuboid::new(
+    // Elongated cuboids are bounded per axis (Scala `Cuboid.maxAxisLength`).
+    let elongated = Cuboid::new(
         VoxelPosition::new(Vec3Int::zeros(), Vec3Int::ones()).unwrap(),
         Vec3Int::new(134217728, 1, 1),
     );
+    assert!(elongated.volume().is_err());
+    assert!(elongated.buckets().is_err());
+    let skinny = Cuboid::new(
+        VoxelPosition::new(Vec3Int::zeros(), Vec3Int::ones()).unwrap(),
+        Vec3Int::new(Cuboid::MAX_AXIS_LENGTH, 1, 1),
+    );
     assert!(skinny.volume().is_ok());
-    assert_eq!(skinny.buckets().unwrap().take(2).count(), 2);
+    assert_eq!(skinny.buckets().unwrap().count(), 938);
     assert_eq!(
         convert_to_half_byte(&[0x9f, 0x70, 0x55, 0xaf, 0xff]),
         vec![0x97, 0x5a, 0]

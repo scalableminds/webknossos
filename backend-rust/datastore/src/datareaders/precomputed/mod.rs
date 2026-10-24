@@ -73,7 +73,7 @@ impl ArrayFormat for PrecomputedFormat {
             };
             let data = if let Some(shards) = &self.shards {
                 Compressor::from_precomputed_sharding_encoding(&shards.spec.data_encoding)?
-                    .decompress(&bytes, Some(300 * 1024 * 1024))?
+                    .decompress(&bytes, None)?
             } else {
                 bytes.to_vec()
             };

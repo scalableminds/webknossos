@@ -297,6 +297,20 @@ fn malformed_compressed_segmentation_and_indexes_fail() {
     assert!(parse_minishard_index(&[0; 23]).is_err());
     assert!(jpeg::decode(b"invalid jpeg").is_err());
 }
+#[test]
+fn jpeg_headers_announcing_more_than_the_decompression_limit_are_rejected() {
+    let mut bytes = std::fs::read(fixtures().join("gray_baseline.jpeg")).unwrap();
+    let sof = bytes
+        .windows(2)
+        .position(|w| w == [0xff, 0xc0])
+        .expect("baseline SOF0 marker");
+    // SOF0: marker, length (2), precision (1), height (2), width (2), all big-endian.
+    bytes[sof + 5..sof + 9].copy_from_slice(&[0xff, 0xff, 0xff, 0xff]);
+    assert_eq!(
+        jpeg::decode(&bytes).unwrap_err().message,
+        "jpeg: decompressed size 17179344900 exceeds limit of 1073741824 bytes"
+    );
+}
 
 #[tokio::test]
 async fn default_zyx_axes_and_jpeg_array_reads() {

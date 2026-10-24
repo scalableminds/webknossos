@@ -82,6 +82,13 @@ fn validation_messages_match_scala() {
             .message,
         "Error reading WKW header: Specified fileSideLength not supported [expected: 1024, actual: [0, 1024)]."
     );
+    // 2^10 voxels per block side: the per-block voxel count would not fit in an i32.
+    assert_eq!(
+        WkwHeader::parse(&header_bytes(0x5a, 1, 1, 1), false)
+            .unwrap_err()
+            .message,
+        "Error reading WKW header: Specified blockSideLength not supported [expected: 1024, actual: [0, 1024)]."
+    );
     let err = WkwHeader::parse(&header_bytes(0x55, 4, 1, 1), false).unwrap_err();
     assert_eq!(
         err.message,

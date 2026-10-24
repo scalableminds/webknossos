@@ -702,7 +702,7 @@ async fn errors_cache_and_header_failures() {
     .unwrap_err();
     assert_eq!(
         error.message,
-        "Array chunk size exceeds limit of 314572800, got 8589934592"
+        "Array chunk size exceeds limit of 1073741824, got 8589934592"
     );
 }
 

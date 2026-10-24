@@ -240,7 +240,7 @@ impl ShardReader {
                 let bytes = path.read_bytes(range, token).await?;
                 let decoded = if self.spec.minishard_index_encoding == "gzip" && !bytes.is_empty() {
                     Compressor::from_precomputed_sharding_encoding("gzip")
-                        .and_then(|c| c.decompress(&bytes, Some(300 * 1024 * 1024)))
+                        .and_then(|c| c.decompress(&bytes, None))
                         .map_err(VaultError::from)?
                 } else {
                     bytes.to_vec()

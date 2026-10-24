@@ -32,8 +32,17 @@ pub use blosc::{BloscCname, BloscConfig, BloscShuffle};
 
 use crate::error::{DsError, DsResult};
 
-/// Upper bound for decompressed chunks when the caller does not know the expected size.
+/// Scala `Compressor.maxDecompressedBytes`: upper bound for decompressed chunks when the caller
+/// does not know the expected size. Guards against decompression bombs.
 pub const DEFAULT_MAX_DECOMPRESSED_BYTES: usize = 1 << 30;
+
+/// Scala `Compressor.passThrough`/`assertDecompressedSizeWithinLimit` failure message.
+pub(crate) fn size_limit_message(id: &str, size: Option<u64>, limit: usize) -> String {
+    match size {
+        Some(size) => format!("{id}: decompressed size {size} exceeds limit of {limit} bytes"),
+        None => format!("{id}: decompressed size exceeds limit of {limit} bytes"),
+    }
+}
 
 /// Scala `CompressionSetting`: a compressor property from JSON metadata. Play reads a string
 /// first, then an `Int` (any JSON number with an exact 32-bit integer value), then a boolean.
@@ -384,7 +393,10 @@ impl Compressor {
             Self::Null => Ok(input.to_vec()),
             Self::Lz4 => lz4::decode_block(input, limit, lz4::Lz4End::InputExhausted)
                 .map(|(out, _)| out)
-                .map_err(|e| fail(e.to_string())),
+                .map_err(|e| match e {
+                    lz4::Lz4Error::TooLarge => fail(size_limit_message(self.id(), None, limit)),
+                    e => fail(e.to_string()),
+                }),
             Self::Zlib { .. } => {
                 let mut out = Vec::new();
                 zlib_decompress_into(input, limit, &mut out).map_err(fail)?;
@@ -511,9 +523,7 @@ pub(crate) fn zlib_decompress_into(
             )
             .map_err(|e| format!("zlib: {e}"))?;
         if out.len() - start > limit {
-            return Err(format!(
-                "zlib: decompressed data exceeds the allowed {limit} bytes"
-            ));
+            return Err(size_limit_message("zlib", None, limit));
         }
         match status {
             flate2::Status::StreamEnd => return Ok(()),
@@ -541,9 +551,7 @@ fn gzip_decompress(input: &[u8], limit: usize) -> Result<Vec<u8>, String> {
             .read_to_end(&mut out)
             .map_err(|e| format!("gzip: {e}"))?;
         if out.len() > limit {
-            return Err(format!(
-                "gzip: decompressed data exceeds the allowed {limit} bytes"
-            ));
+            return Err(size_limit_message("gzip", None, limit));
         }
         rest = decoder.into_inner();
         if !rest.starts_with(&[0x1f, 0x8b]) {
@@ -584,9 +592,7 @@ fn zstd_decompress_streaming(input: &[u8], limit: usize) -> Result<Vec<u8>, Stri
         .read_to_end(&mut out)
         .map_err(zstd_error)?;
     if out.len() > limit {
-        return Err(format!(
-            "zstd: decompressed data exceeds the allowed {limit} bytes"
-        ));
+        return Err(size_limit_message("zstd", None, limit));
     }
     Ok(out)
 }

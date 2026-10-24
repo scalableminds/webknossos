@@ -1,5 +1,6 @@
 //! Pure Rust JPEG decoder with Java ImageIO raster layout (gray or BGR).
 use crate::{
+    compression::{DEFAULT_MAX_DECOMPRESSED_BYTES, size_limit_message},
     datareaders::assert_chunk_size_limit,
     error::{DsError, DsResult},
 };
@@ -7,6 +8,8 @@ use zune_jpeg::{
     JpegDecoder,
     zune_core::{bytestream::ZCursor, colorspace::ColorSpace, options::DecoderOptions},
 };
+/// Upper bound for the number of bytes per pixel of a decoded JPEG (CMYK).
+const MAX_BYTES_PER_PIXEL: u64 = 4;
 pub fn decode(input: &[u8]) -> DsResult<Vec<u8>> {
     let error = |e: zune_jpeg::errors::DecodeErrors| {
         DsError::failure(format!("Could not decode JPEG chunk: {e}"))
@@ -23,6 +26,16 @@ pub fn decode(input: &[u8]) -> DsResult<Vec<u8>> {
     let info = decoder
         .info()
         .ok_or_else(|| DsError::failure("Missing JPEG image header"))?;
+    // Scala `JpegCompressor`: bound the decoded size by width * height * 4 (CMYK, the most
+    // bytes per pixel) before decoding.
+    let decoded_bound = u64::from(info.width) * u64::from(info.height) * MAX_BYTES_PER_PIXEL;
+    if decoded_bound > DEFAULT_MAX_DECOMPRESSED_BYTES as u64 {
+        return Err(DsError::failure(size_limit_message(
+            "jpeg",
+            Some(decoded_bound),
+            DEFAULT_MAX_DECOMPRESSED_BYTES,
+        )));
+    }
     let colorspace = if info.components == 1 {
         ColorSpace::Luma
     } else {

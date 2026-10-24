@@ -10,3 +10,17 @@ fn explores_json_files_only() {
     assert_eq!(explore_mappings(&dir), ["a", "b", "e.v2"]);
     assert!(explore_mappings(&dir.join("missing")).is_empty());
 }
+
+#[test]
+fn refuses_mapping_names_outside_the_mappings_directory() {
+    let base_dirs = BaseDirService::new(Vec::new());
+    let id = DataSourceId::new("ds", "org");
+    for name in ["../escape", "sub/name", "..\\escape", "nul\0byte"] {
+        assert_eq!(
+            load_mapping_bytes(&base_dirs, &id, "segmentation", name)
+                .unwrap_err()
+                .message,
+            format!("Invalid mapping name: {name}")
+        );
+    }
+}

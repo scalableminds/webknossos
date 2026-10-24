@@ -244,9 +244,9 @@ impl WkwHeader {
                 "[0, 1024)",
             )));
         }
-        // Scala checks numChunksPerShardDimension again here (copy-paste), so the blockSideLength
-        // check can never fail; kept for parity.
-        if num_chunks_per_shard_dimension >= 1024 {
+        // We only support blockSideLengths < 1024, so that the number of voxels per block fits
+        // in an i32.
+        if num_voxels_per_chunk_dimension >= 1024 {
             return Err(DsError::failure(header_error(
                 "Specified blockSideLength not supported",
                 num_voxels_per_chunk_dimension,

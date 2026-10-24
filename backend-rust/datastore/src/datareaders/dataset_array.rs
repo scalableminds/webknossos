@@ -29,8 +29,8 @@ use crate::models::{
     AdditionalAxis, AdditionalCoordinate, AxisOrder, BUCKET_LENGTH, DataSourceId, Vec3Int,
 };
 
-/// Scala `DatasetArray.chunkSizeLimitBytes` (300 MiB).
-pub const CHUNK_SIZE_LIMIT_BYTES: i64 = 300 * 1024 * 1024;
+/// Scala `DatasetArray.chunkSizeLimitBytes` (`Compressor.maxDecompressedBytes`, 1 GiB).
+pub const CHUNK_SIZE_LIMIT_BYTES: i64 = crate::compression::DEFAULT_MAX_DECOMPRESSED_BYTES as i64;
 
 /// Scala `DatasetArray.assertChunkSizeLimit`.
 pub fn assert_chunk_size_limit(bytes_per_chunk: i64) -> DsResult<()> {

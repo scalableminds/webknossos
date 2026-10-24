@@ -313,3 +313,52 @@ async fn compresso_remote_shard_cache_uses_each_current_token_for_fragment_reads
     assert_eq!(log.last().unwrap().0, "1/0.shard");
     task.abort();
 }
+
+/// Scala `CompressorTestSuite.compressoHeader`: a 64-byte buffer holding a version 0, 8-bit,
+/// 4-connected header and zeros.
+fn compresso_header(size: [u16; 3], step: u8, id_size: u64) -> Vec<u8> {
+    let mut bytes = b"cpso".to_vec();
+    bytes.extend([0, 1]);
+    for s in size {
+        bytes.extend(s.to_le_bytes());
+    }
+    bytes.extend([step; 3]);
+    bytes.extend(id_size.to_le_bytes());
+    bytes.extend(0u32.to_le_bytes()); // value size
+    bytes.extend(0u64.to_le_bytes()); // location size
+    bytes.push(4); // connectivity
+    bytes.resize(64, 0);
+    bytes
+}
+#[test]
+fn crafted_headers_fail_with_the_native_error_codes() {
+    let message = |code: u8| {
+        format!("An error occurred in native code: Error while decoding with compresso: {code}")
+    };
+    // Zero steps would divide by zero.
+    let zero_steps = compresso_header([2, 2, 2], 0, 0);
+    assert_eq!(
+        CompressoHeader::parse(&zero_steps).unwrap_err().message,
+        message(14)
+    );
+    assert_eq!(decode(&zero_steps, 1024).unwrap_err().message, message(14));
+    // Windows wider than 64 bits.
+    let mut wide = compresso_header([2, 2, 2], 4, 0);
+    wide[14] = 5;
+    assert_eq!(decode(&wide, 1024).unwrap_err().message, message(15));
+    // Section sizes exceeding the input.
+    for id_size in [i64::MAX as u64, u64::MAX, 29] {
+        let bytes = compresso_header([2, 2, 2], 4, id_size);
+        assert_eq!(decode(&bytes, 1024).unwrap_err().message, message(16));
+    }
+}
+#[test]
+fn output_length_is_bounded_by_the_decompression_limit() {
+    let mut bytes = compresso_header([2048, 2048, 2048], 4, 0);
+    bytes[5] = 8;
+    assert_eq!(
+        decode(&bytes, usize::MAX).unwrap_err().message,
+        "An error occurred in native code: Error while decoding with compresso: output length as \
+         read from header must be >0 and at most 1073741824, got 68719476736"
+    );
+}

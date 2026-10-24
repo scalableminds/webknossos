@@ -9,7 +9,7 @@ use common::send;
 use mock_wk::{MockWk, Reply};
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
-use webknossos_datastore::{AppState, router};
+use webknossos_datastore::{AppState, router, services::mesh::full::MAX_AD_HOC_FULL_MESH_CHUNKS};
 const ID: &str = "0123456789abcdef01234567";
 fn fixtures() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
@@ -75,18 +75,30 @@ fn index(dir: &Path) {
         &dir.join("hash_bucket_offsets"),
         &[2],
         "uint64",
-        [0u64, 1].into_iter().flat_map(u64::to_le_bytes).collect(),
+        [0u64, 2].into_iter().flat_map(u64::to_le_bytes).collect(),
     );
+    // Segment 23 spans one bucket more than an ad-hoc full mesh may request.
+    let huge = MAX_AD_HOC_FULL_MESH_CHUNKS as u64 + 1;
     array(
         &dir.join("hash_buckets"),
-        &[2, 3],
+        &[3, 3],
         "uint64",
-        [17u64, 0, 1, 0, 0, 0]
+        [17u64, 0, 1, 23, 1, 1 + huge, 0, 0, 0]
             .into_iter()
             .flat_map(u64::to_le_bytes)
             .collect(),
     );
-    array(&dir.join("top_lefts"), &[1, 3], "uint16", vec![0; 6]);
+    let top_lefts = std::iter::once([0u16; 3])
+        .chain((0..huge as u16).map(|i| [i % 256, i / 256, 0]))
+        .flatten()
+        .flat_map(u16::to_le_bytes)
+        .collect();
+    array(
+        &dir.join("top_lefts"),
+        &[1 + huge as usize, 3],
+        "uint16",
+        top_lefts,
+    );
 }
 fn segmentation(dir: &Path, width: usize, points: &[(usize, usize, usize, u64)], xsize: usize) {
     std::fs::create_dir_all(dir).unwrap();
@@ -592,27 +604,55 @@ async fn malformed_file_payloads_and_gzip_encoding_fail_explicitly() {
     assert!(String::from_utf8_lossy(&bytes).contains("only draco is supported"));
 }
 #[tokio::test]
-async fn background_neighbor_search_is_finite() {
+async fn background_segment_id_zero_is_rejected() {
     let (_wk, app, _, _root) = start().await;
-    let (status, _, bytes) = tokio::time::timeout(
-        std::time::Duration::from_secs(10),
-        call(
-            &app,
+    for (layer, route, body) in [
+        (
             "uint8",
             "meshes/fullMesh.stl",
             json!({"segmentId":0,"mag":[1,1,1],"seedPosition":[0,0,0]}),
-            "t",
         ),
+        (
+            "idx",
+            "meshes/fullMesh.stl",
+            json!({"segmentId":0,"mag":[1,1,1]}),
+        ),
+        (
+            "uint8",
+            "segmentStatistics/surfaceArea",
+            json!({"segmentIds":[0],"mag":[1,1,1]}),
+        ),
+    ] {
+        let (status, _, bytes) = call(&app, layer, route, body, "t").await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{layer} {route}");
+        assert!(
+            String::from_utf8_lossy(&bytes)
+                .contains("Cannot compute an ad-hoc mesh for segment id 0."),
+            "{}",
+            String::from_utf8_lossy(&bytes)
+        );
+    }
+}
+#[tokio::test]
+async fn segments_spanning_too_many_chunks_are_rejected_before_meshing() {
+    let (_wk, app, _, _root) = start().await;
+    let (status, _, bytes) = call(
+        &app,
+        "idx",
+        "meshes/fullMesh.stl",
+        json!({"segmentId":23,"mag":[1,1,1]}),
+        "t",
     )
-    .await
-    .unwrap();
-    assert_eq!(
-        status,
-        StatusCode::OK,
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(
+        String::from_utf8_lossy(&bytes).contains(
+            "Segment is too large for ad-hoc full mesh computation (more than 25000 meshing \
+             requests). Consider computing a mesh file."
+        ),
         "{}",
         String::from_utf8_lossy(&bytes)
     );
-    assert_eq!(u32::from_le_bytes(bytes[80..84].try_into().unwrap()), 8);
 }
 #[tokio::test]
 async fn full_remote_mesh_uses_each_current_token_after_metadata_cache_hits() {

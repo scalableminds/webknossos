@@ -96,6 +96,9 @@ pub struct Cuboid {
 }
 impl Cuboid {
     pub const MAX_VOLUME: i64 = 512 * 512 * 512;
+    /// Scala `Cuboid.maxAxisLength`: bounds elongated cuboids, whose volume is small but which
+    /// would still span a huge number of buckets.
+    pub const MAX_AXIS_LENGTH: i32 = 30000;
     pub fn new(top_left: VoxelPosition, shape: Vec3Int) -> Self {
         Self {
             top_left,
@@ -107,20 +110,35 @@ impl Cuboid {
     pub fn mag(&self) -> Vec3Int {
         self.top_left.mag()
     }
+    /// Scala `hasValidDimensions`: positive extents of at most [`Self::MAX_AXIS_LENGTH`], a
+    /// volume of at most 512³ and a bottom right corner that fits in `i32` on every axis.
+    pub fn has_valid_dimensions(&self) -> bool {
+        let fits = |start: i32, length: i32, mag: i32| {
+            let extent = i64::from(length) * i64::from(mag);
+            extent <= i64::from(i32::MAX) && i64::from(start) + extent <= i64::from(i32::MAX)
+        };
+        let m = self.mag();
+        // Evaluated after the axis check, so the product cannot overflow.
+        let volume = || i64::from(self.width) * i64::from(self.height) * i64::from(self.depth);
+        [self.width, self.height, self.depth]
+            .iter()
+            .all(|d| (1..=Self::MAX_AXIS_LENGTH).contains(d))
+            && volume() <= Self::MAX_VOLUME
+            && fits(self.top_left.mag1.x, self.width, m.x)
+            && fits(self.top_left.mag1.y, self.height, m.y)
+            && fits(self.top_left.mag1.z, self.depth, m.z)
+    }
+    /// The number of voxels; fails with Scala `BinaryDataService`'s message unless
+    /// [`Self::has_valid_dimensions`].
     pub fn volume(&self) -> DsResult<usize> {
-        let v = i64::from(self.width)
-            .checked_mul(i64::from(self.height))
-            .and_then(|v| v.checked_mul(i64::from(self.depth)));
-        if self.width <= 0
-            || self.height <= 0
-            || self.depth <= 0
-            || v.is_none_or(|v| v > Self::MAX_VOLUME)
-        {
-            return Err(DsError::failure(
-                "Invalid cuboid dimensions (must be > 0 and <= 512).",
-            ));
+        if !self.has_valid_dimensions() {
+            return Err(DsError::failure(format!(
+                "Invalid cuboid dimensions (each must be > 0 and <= {}, volume must be <= 512³).",
+                Self::MAX_AXIS_LENGTH
+            )));
         }
-        Ok(v.expect("validated volume") as usize)
+        // Each factor is in 1..=30000 and the product at most 512³.
+        Ok(self.width as usize * self.height as usize * self.depth as usize)
     }
     pub fn bottom_right(&self) -> DsResult<VoxelPosition> {
         let m = self.mag();
@@ -397,3 +415,5 @@ impl RawCuboidRequest {
     }
 }
 super::json::deserialize_via_from_json!(RawCuboidRequest);
+#[cfg(test)]
+mod tests;

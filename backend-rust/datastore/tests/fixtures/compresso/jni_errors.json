@@ -81,12 +81,12 @@
   },
   {
     "name": "error_width_zero",
-    "error": "An error occurred in native code: Error while decoding with compresso: output length as read from header must be >0, got 0",
+    "error": "An error occurred in native code: Error while decoding with compresso: output length as read from header must be >0 and at most 1073741824, got 0",
     "success": false
   },
   {
     "name": "error_shape_zero",
-    "error": "An error occurred in native code: Error while decoding with compresso: output length as read from header must be >0, got 0",
+    "error": "An error occurred in native code: Error while decoding with compresso: output length as read from header must be >0 and at most 1073741824, got 0",
     "success": false
   }
 ]

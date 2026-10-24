@@ -25,6 +25,17 @@ use futures::{StreamExt, TryStreamExt, stream};
 use serde::Serialize;
 use serde_json::Value;
 use std::{collections::HashSet, sync::Arc, time::Duration};
+/// Scala `FullMeshHelper.maxAdHocFullMeshChunks`: upper bound for ad-hoc meshing requests per
+/// full mesh, so that huge segments cannot occupy the meshing workers indefinitely.
+pub const MAX_AD_HOC_FULL_MESH_CHUNKS: usize = 25000;
+/// Scala `FullMeshHelper.adHocChunkSize` (per axis, in the target mag).
+const AD_HOC_CHUNK_SIZE: i32 = 128;
+fn too_many_ad_hoc_mesh_requests() -> DsError {
+    DsError::failure(format!(
+        "Segment is too large for ad-hoc full mesh computation (more than \
+         {MAX_AD_HOC_FULL_MESH_CHUNKS} meshing requests). Consider computing a mesh file."
+    ))
+}
 #[derive(Debug, Clone, Serialize)]
 pub struct FullMeshRequest {
     pub mesh_file_name: Option<String>,
@@ -197,6 +208,11 @@ async fn raw_chunks(
     let mag = request.mag.ok_or_else(|| {
         DsError::failure("A mag needs to be provided for ad-hoc mesh computation.")
     })?;
+    if request.segment_id == 0 {
+        return Err(DsError::failure(
+            "Cannot compute an ad-hoc mesh for segment id 0.",
+        ));
+    }
     VoxelPosition::new(Vec3Int::zeros(), mag)?;
     if !layer.is_segmentation() {
         return Err(DsError::failure("Data layer must be a segmentation layer."));
@@ -233,6 +249,9 @@ async fn raw_chunks(
             );
         }
         let buckets = top_lefts_to_target_mag_buckets(&top_lefts, mag);
+        if buckets.len() > MAX_AD_HOC_FULL_MESH_CHUNKS {
+            return Err(too_many_ad_hoc_mesh_requests());
+        }
         let positions = buckets
             .into_iter()
             .map(|p| {
@@ -270,6 +289,9 @@ async fn raw_chunks(
             [1, 0, 0],
         ];
         while !frontier.is_empty() {
+            if visited.len() + frontier.len() > MAX_AD_HOC_FULL_MESH_CHUNKS {
+                return Err(too_many_ad_hoc_mesh_requests());
+            }
             visited.extend(frontier.iter().copied());
             let results = batch(
                 state,
@@ -278,7 +300,7 @@ async fn raw_chunks(
                 &layer,
                 request,
                 frontier.clone(),
-                129,
+                AD_HOC_CHUNK_SIZE + 1,
                 true,
                 tc,
             )
@@ -291,7 +313,7 @@ async fn raw_chunks(
                 for neighbor in neighbors {
                     let delta = NEIGHBORS[neighbor as usize];
                     let axis = |p: i32, m: i32, d: i32| {
-                        d.checked_mul(128)
+                        d.checked_mul(AD_HOC_CHUNK_SIZE)
                             .and_then(|d| d.checked_mul(m))
                             .and_then(|d| p.checked_add(d))
                             .ok_or_else(|| DsError::failure("Mesh neighbor coordinate overflow."))
@@ -304,14 +326,13 @@ async fn raw_chunks(
                         ),
                         mag,
                     )?;
-                    // BinaryDataService clips to the layer bounds. Outside cuboids cannot
-                    // contribute segment geometry; bounding traversal also makes background
-                    // meshing finite (Scala otherwise follows zero-filled space forever).
-                    let bounds = Cuboid::new(p, Vec3Int::full(129)).mag1_bounding_box()?;
-                    if bounds.intersects(&layer.bounding_box)
-                        && !visited.contains(&p)
-                        && seen.insert(p)
-                    {
+                    // Scala `FullMeshHelper.chunkIntersects`: only chunks intersecting the layer
+                    // bounding box are meshed. A chunk whose end overflows i32 lies beyond any
+                    // layer bounding box.
+                    let intersects = Cuboid::new(p, Vec3Int::full(AD_HOC_CHUNK_SIZE))
+                        .mag1_bounding_box()
+                        .is_ok_and(|bounds| bounds.intersects(&layer.bounding_box));
+                    if intersects && !visited.contains(&p) && seen.insert(p) {
                         next.push(p);
                     }
                 }

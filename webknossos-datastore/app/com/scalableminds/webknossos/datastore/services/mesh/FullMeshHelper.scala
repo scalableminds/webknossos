@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.box.Box
-import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Float, Vec3Int}
 import com.scalableminds.util.time.Instant
 import Box.tryo
 import com.scalableminds.webknossos.datastore.draco.NativeDracoToStlConverter
@@ -16,11 +16,15 @@ trait FullMeshHelper extends LazyLogging {
   // 128 = 4 × 32 (storage bucket length), so each axis maps to exactly 4 buckets (as typically produced by WK upload/worker)
   protected lazy val adHocChunkSize: Vec3Int = Vec3Int(128, 128, 128)
 
+  // Upper bound for ad-hoc meshing requests per full mesh, so that huge segments cannot occupy the meshing workers indefinitely
+  protected lazy val maxAdHocFullMeshChunks: Int = 25000
+
   protected def generateNextTopLeftsFromNeighbors(
       oldTopLeft: VoxelPosition,
       neighborIds: List[Int],
       chunkSize: Vec3Int,
-      visited: collection.mutable.Set[VoxelPosition]
+      visited: collection.mutable.Set[VoxelPosition],
+      layerBoundingBox: BoundingBox
   ): List[VoxelPosition] = {
     // front_xy, front_xz, front_yz, back_xy, back_xz, back_yz
     val neighborLookup = Seq(
@@ -39,8 +43,16 @@ trait FullMeshHelper extends LazyLogging {
         neighborMultiplier.z * chunkSize.z * oldTopLeft.mag.z
       )
     }
-    neighborPositions.filterNot(visited.contains)
+    neighborPositions.filter(p => !visited.contains(p) && chunkIntersects(p, chunkSize, layerBoundingBox))
   }
+
+  private def chunkIntersects(topLeft: VoxelPosition, chunkSize: Vec3Int, layerBoundingBox: BoundingBox): Boolean =
+    BoundingBox(
+      Vec3Int(topLeft.mag1X, topLeft.mag1Y, topLeft.mag1Z),
+      chunkSize.x * topLeft.mag.x,
+      chunkSize.y * topLeft.mag.y,
+      chunkSize.z * topLeft.mag.z
+    ).intersects(layerBoundingBox)
 
   protected def adHocMeshToStl(vertexBuffer: Array[Float]): Array[Byte] = {
     val numFaces = vertexBuffer.length / (3 * 3) // a face has three vertices, a vertex has three floats.

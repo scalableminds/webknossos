@@ -1853,10 +1853,18 @@ fn decompression_output_is_bounded() {
         let bomb = compressor.compress(&zeros).unwrap();
         assert!(bomb.len() < 20_000, "{compressor}: {}", bomb.len());
         let err = compressor.decompress(&bomb, Some(1000)).unwrap_err();
-        assert!(
-            err.message.contains("allowed") || err.message.contains("more bytes than allowed"),
-            "{compressor}: {err}"
-        );
+        let expected = match compressor {
+            // Rejected from the header before decoding.
+            Compressor::Blosc(_) => {
+                "blosc: header announces 1048576 decompressed bytes, more than the allowed 1000"
+                    .to_owned()
+            }
+            _ => format!(
+                "{}: decompressed size exceeds limit of 1000 bytes",
+                compressor.id()
+            ),
+        };
+        assert_eq!(err.message, expected, "{compressor}");
         assert_eq!(
             compressor
                 .decompress_with_limit(&bomb, 1 << 20)
@@ -1865,16 +1873,59 @@ fn decompression_output_is_bounded() {
             1 << 20
         );
     }
-    // A Blosc header announcing 2 GiB is rejected before any allocation.
-    let mut header = vec![2u8, 1, 0x21, 1];
-    header.extend(i32::MAX.to_le_bytes());
-    header.extend(65536i32.to_le_bytes());
-    header.extend(16i32.to_le_bytes());
-    let err = Compressor::blosc(&CompressionSettings::new())
-        .unwrap()
-        .decompress(&header, None)
-        .unwrap_err();
-    assert!(err.message.contains("more than the allowed"), "{err}");
+    // A Blosc header announcing more than 1 GiB (Scala `Compressor.maxDecompressedBytes`) is
+    // rejected before any allocation; nbytes is unsigned like in Scala.
+    for (nbytes, expected) in [
+        (i32::MAX, "2147483647"),
+        (-1, "4294967295"),
+        ((1 << 30) + 1, "1073741825"),
+    ] {
+        let mut header = vec![2u8, 1, 0x21, 1];
+        header.extend(nbytes.to_le_bytes());
+        header.extend(65536i32.to_le_bytes());
+        header.extend(16i32.to_le_bytes());
+        let err = Compressor::blosc(&CompressionSettings::new())
+            .unwrap()
+            .decompress(&header, None)
+            .unwrap_err();
+        assert_eq!(
+            err.message,
+            format!("blosc: decompressed size {expected} exceeds limit of 1073741824 bytes")
+        );
+    }
+}
+
+/// Scala `CompressorTestSuite` "Blosc compressor": a header claiming more compressed bytes than
+/// the input has fails instead of reading past the buffer.
+#[test]
+fn blosc_header_claiming_more_compressed_bytes_than_the_input_fails() {
+    let blosc = Compressor::blosc(&CompressionSettings::new()).unwrap();
+    let mut compressed = blosc.compress(&[0u8; 1024]).unwrap();
+    let claimed = compressed.len() as i32 + 1024;
+    compressed[12..16].copy_from_slice(&claimed.to_le_bytes());
+    assert_eq!(
+        blosc.decompress(&compressed, None).unwrap_err().message,
+        format!(
+            "blosc: header claims {claimed} compressed bytes, but input has {}",
+            compressed.len()
+        )
+    );
+    // Unsigned like Scala's `Integer.toUnsignedLong`.
+    compressed[12..16].copy_from_slice(&(-1i32).to_le_bytes());
+    assert_eq!(
+        blosc.decompress(&compressed, None).unwrap_err().message,
+        format!(
+            "blosc: header claims 4294967295 compressed bytes, but input has {}",
+            compressed.len()
+        )
+    );
+    assert_eq!(
+        blosc
+            .decompress(&compressed[..15], None)
+            .unwrap_err()
+            .message,
+        "blosc: input of 15 bytes is too short for the header"
+    );
 }
 
 #[test]

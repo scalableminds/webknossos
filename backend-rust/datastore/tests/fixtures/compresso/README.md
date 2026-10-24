@@ -11,8 +11,11 @@ cases. `cases.json` selects **324** cases for normal tests: label widths
 ragged dimensions, all-zero/max/random labels and component-index thresholds.
 The 18 entries in `jni_errors.json` were run through the actual repository JNI
 wrapper, including boundary instruction errors, literal instructions and error
-precedence. Corrupt tables are tested only in Rust; the native decoder has
-unchecked accesses for those inputs.
+precedence. The two output-length messages were updated by hand for the
+`maxOutputLength` bound of #10223. Corrupt tables are tested only in Rust; since
+#10223 the native decoder rejects zero steps (14), windows above 64 bits (15)
+and section sizes exceeding the input (16), which the Rust decoder reports with
+the same codes.
 
 `volumes/` contains 12 independent precomputed datasets (four label widths ×
 plain/raw-sharded/gzip-sharded storage). Each has an offset, ragged edge chunks

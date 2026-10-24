@@ -590,6 +590,261 @@ async fn workflows_events_reports_and_statistics() {
     db.cleanup().await;
 }
 
+/// Seeds a workflow whose `export` task completed in a first run (part-2
+/// without times) and was skipped in a rerun, like the e2e fixtures of
+/// test/db/voxelytics_chunks.csv.
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
+async fn reruns_report_the_computing_chunk_and_scoped_aggregates() {
+    let db = TestDb::new().await;
+    let admin = db.fixture().await;
+    let foreign = db
+        .seed_user(&object_id(), &format!("rust-other-{}", object_id()), true)
+        .await;
+    let app = app(&db, enabled_misc(), VoxelyticsConfig::default());
+    let ms = |s: &str| {
+        chrono::DateTime::parse_from_rfc3339(s)
+            .unwrap()
+            .timestamp_millis()
+    };
+    sqlx::query(
+        "INSERT INTO webknossos.voxelytics_workflows (_organization, hash, name) VALUES ($1, 'wfr', 'Reruns'), ($2, 'wff', 'Foreign')",
+    )
+    .bind(&admin.organization_id)
+    .bind(&foreign.organization_id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    let (run1, run2, foreign_run) = (object_id(), object_id(), object_id());
+    for (run, organization, user, name, hash, begin, end) in [
+        (
+            &run1,
+            &admin.organization_id,
+            &admin.user_id,
+            "run-1",
+            "wfr",
+            "2026-10-12T08:00:00Z",
+            "2026-10-12T10:00:00Z",
+        ),
+        (
+            &run2,
+            &admin.organization_id,
+            &admin.user_id,
+            "run-2",
+            "wfr",
+            "2026-10-13T08:00:00Z",
+            "2026-10-13T09:00:00Z",
+        ),
+        (
+            &foreign_run,
+            &foreign.organization_id,
+            &foreign.user_id,
+            "run-f",
+            "wff",
+            "2026-10-13T08:00:00Z",
+            "2026-10-13T09:00:00Z",
+        ),
+    ] {
+        sqlx::query(
+            "INSERT INTO webknossos.voxelytics_runs (_id, _organization, _user, name, username, hostname, voxelyticsVersion, workflow_hash, workflow_config, beginTime, endTime, state) VALUES ($1, $2, $3, $4, 'u', 'h', '1.0', $5, '{}', $6::TIMESTAMPTZ, $7::TIMESTAMPTZ, 'COMPLETE')",
+        )
+        .bind(run).bind(organization).bind(user).bind(name).bind(hash).bind(begin).bind(end)
+        .execute(&db.pool).await.unwrap();
+    }
+    let (task1, task2, foreign_task) = (object_id(), object_id(), object_id());
+    for (task, run, begin, state) in [
+        (&task1, &run1, Some("2026-10-12T08:58:00Z"), "COMPLETE"),
+        (&task2, &run2, None, "SKIPPED"),
+        (
+            &foreign_task,
+            &foreign_run,
+            Some("2026-10-13T08:00:00Z"),
+            "COMPLETE",
+        ),
+    ] {
+        sqlx::query(
+            "INSERT INTO webknossos.voxelytics_tasks (_id, _run, name, task, config, beginTime, state) VALUES ($1, $2, 'export', 'Export', '{}', $3::TIMESTAMPTZ, $4::webknossos.voxelytics_run_state)",
+        )
+        .bind(task).bind(run).bind(begin).bind(state)
+        .execute(&db.pool).await.unwrap();
+    }
+    for (task, chunk, begin, end, state) in [
+        (
+            &task1,
+            "part-1",
+            Some("2026-10-12T09:00:00Z"),
+            Some("2026-10-12T09:10:00Z"),
+            "COMPLETE",
+        ),
+        (&task1, "part-2", None, None, "COMPLETE"),
+        (
+            &task2,
+            "part-1",
+            Some("2026-10-13T08:00:00Z"),
+            Some("2026-10-13T08:00:01Z"),
+            "SKIPPED",
+        ),
+        (
+            &task2,
+            "part-2",
+            Some("2026-10-13T08:00:00Z"),
+            Some("2026-10-13T08:00:02Z"),
+            "SKIPPED",
+        ),
+    ] {
+        sqlx::query(
+            "INSERT INTO webknossos.voxelytics_chunks (_id, _task, executionId, chunkName, beginTime, endTime, state) VALUES ($1, $2, 'main', $3, $4::TIMESTAMPTZ, $5::TIMESTAMPTZ, $6::webknossos.voxelytics_run_state)",
+        )
+        .bind(object_id()).bind(task).bind(chunk).bind(begin).bind(end).bind(state)
+        .execute(&db.pool).await.unwrap();
+    }
+    // Artifacts whose name order differs from their file path order.
+    let (artifact_b, artifact_a, foreign_artifact) = (object_id(), object_id(), object_id());
+    for (artifact, task, name, path, size) in [
+        (&artifact_b, &task1, "b-art", "/data/b", 10_i64),
+        (&artifact_a, &task1, "a-art", "/data/a", 20),
+        (&foreign_artifact, &foreign_task, "a-art", "/data/f", 1000),
+    ] {
+        sqlx::query(
+            "INSERT INTO webknossos.voxelytics_artifacts (_id, _task, name, path, fileSize, inodeCount, metadata) VALUES ($1, $2, $3, $4, $5, 1, '{}')",
+        )
+        .bind(artifact).bind(task).bind(name).bind(path).bind(size)
+        .execute(&db.pool).await.unwrap();
+    }
+    for (artifact, path, checksum, timestamp) in [
+        (&artifact_b, "a.txt", "b1", "2026-10-12T10:00:00Z"),
+        (&artifact_b, "a.txt", "b1-later", "2026-10-12T11:00:00Z"),
+        (&artifact_a, "z.txt", "a1", "2026-10-12T10:00:00Z"),
+        (&foreign_artifact, "f.txt", "f1", "2026-10-12T10:00:00Z"),
+    ] {
+        sqlx::query(
+            "INSERT INTO webknossos.voxelytics_artifactFileChecksumEvents (_artifact, path, resolvedPath, checksumMethod, checksum, fileSize, lastModified, timestamp) VALUES ($1, $2, $2, 'md5', $3, 1, $4::TIMESTAMPTZ, $4::TIMESTAMPTZ)",
+        )
+        .bind(artifact).bind(path).bind(checksum).bind(timestamp)
+        .execute(&db.pool).await.unwrap();
+    }
+
+    // Chunk statistics take the completed chunks of run-1, including part-2's
+    // NULL times; the skipped rerun's times are no fallback.
+    let (status, body) = call(
+        &app,
+        Method::GET,
+        "/api/voxelytics/workflows/wfr/chunkStatistics?taskName=export",
+        Some(&admin.token),
+        None,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body.as_array().unwrap().len(), 1);
+    assert_eq!(body[0]["executionId"], "main");
+    assert_eq!(
+        body[0]["chunkCounts"],
+        json!({"total": 2, "failed": 0, "skipped": 0, "complete": 2, "cancelled": 0})
+    );
+    assert_eq!(
+        body[0]["duration"],
+        json!({"max": 600.0, "median": 600.0, "stddev": 0.0, "sum": 600.0})
+    );
+    assert_eq!(body[0]["beginTime"], ms("2026-10-12T09:00:00Z"));
+    assert_eq!(body[0]["endTime"], ms("2026-10-13T08:00:02Z"));
+    assert_eq!(body[0]["wallTime"], 602.0);
+
+    // Workflow report: combined counts prefer the computing run, per-run counts
+    // are each run's own.
+    let (status, body) = call(
+        &app,
+        Method::GET,
+        "/api/voxelytics/workflows/wfr",
+        Some(&admin.token),
+        None,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    let export = &body["tasks"][0];
+    assert_eq!(export["taskName"], "export");
+    assert_eq!(
+        export["chunkCounts"],
+        json!({"total": 2, "failed": 0, "skipped": 0, "complete": 2, "cancelled": 0})
+    );
+    let runs = export["runs"].as_array().unwrap();
+    let run_counts = |run: &str| {
+        runs.iter()
+            .find(|r| r["runId"] == run)
+            .map(|r| r["chunkCounts"].clone())
+            .unwrap()
+    };
+    assert_eq!(
+        run_counts(&run1),
+        json!({"total": 2, "failed": 0, "skipped": 0, "complete": 2, "cancelled": 0})
+    );
+    assert_eq!(
+        run_counts(&run2),
+        json!({"total": 2, "failed": 0, "skipped": 2, "complete": 0, "cancelled": 0})
+    );
+
+    // Artifact checksums without artifactName: the first event per file of
+    // every artifact, ordered by artifact name, then path.
+    let (status, body) = call(
+        &app,
+        Method::GET,
+        "/api/voxelytics/workflows/wfr/artifactChecksums?taskName=export",
+        Some(&admin.token),
+        None,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    let checksums: Vec<(&str, &str, &str)> = body
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| {
+            (
+                c["artifactName"].as_str().unwrap(),
+                c["path"].as_str().unwrap(),
+                c["checksum"].as_str().unwrap(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        checksums,
+        [("a-art", "z.txt", "a1"), ("b-art", "a.txt", "b1")]
+    );
+    let (_, body) = call(
+        &app,
+        Method::GET,
+        &format!("/api/voxelytics/workflows/wfr/artifactChecksums?taskName=export&artifactName=b-art&runId={run1}"),
+        Some(&admin.token),
+        None,
+    )
+    .await;
+    assert_eq!(body.as_array().unwrap().len(), 1);
+    assert_eq!(body[0]["checksum"], "b1");
+
+    // Listing: task and artifact aggregates only count the visible runs.
+    let (status, body) = call(
+        &app,
+        Method::GET,
+        "/api/voxelytics/workflows",
+        Some(&admin.token),
+        None,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    let workflows = body.as_array().unwrap();
+    assert_eq!(workflows.len(), 1);
+    let run = workflows[0]["runs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["id"] == run1.as_str())
+        .unwrap();
+    assert_eq!(
+        run["taskCounts"],
+        json!({"total": 1, "failed": 0, "skipped": 0, "complete": 1, "cancelled": 0, "fileSize": 30, "inodeCount": 2})
+    );
+    db.cleanup().await;
+}
+
 type QueryParams = Vec<(String, String)>;
 
 #[derive(Clone, Default)]

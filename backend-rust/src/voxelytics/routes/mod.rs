@@ -689,10 +689,16 @@ async fn get_workflow(
         None => &runs[0],
     };
     let run_ids: Vec<String> = runs.iter().map(|run| run.id.clone()).collect();
-    let task_runs = dao::find_task_runs(pool, &run_ids, vx.stale_timeout).await?;
-    let combined = dao::find_combined_task_runs(pool, &run_ids, vx.stale_timeout).await?;
-    let artifacts = dao::find_artifacts(pool, &user, &run_ids, vx.stale_timeout).await?;
-    let tasks = dao::find_tasks(pool, &selected.id).await?;
+    // These queries are independent of each other, so they run concurrently.
+    let (task_runs, combined, artifacts, tasks) = tokio::try_join!(
+        // Task runs for all runs
+        dao::find_task_runs(pool, &run_ids, vx.stale_timeout),
+        dao::find_combined_task_runs(pool, &run_ids, vx.stale_timeout),
+        // Artifact data for task runs
+        dao::find_artifacts(pool, &user, &run_ids, vx.stale_timeout),
+        // Task configs for the selected run
+        dao::find_tasks(pool, &selected.id),
+    )?;
 
     // workflowConfigPublicWrites: the run's config plus each task's config and name.
     let mut config = match selected.workflow_config.clone() {

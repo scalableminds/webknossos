@@ -44,17 +44,31 @@ fn tasks_with_state() -> String {
     )
 }
 
-fn chunks_with_state() -> String {
+/// chunksWithStateQ for the runs in `run_ids` (a TEXT[] placeholder), with an
+/// optional task-name placeholder. Postgres can't estimate the row count of the
+/// derived state column and tends to choose nested-loop plans that are very
+/// slow for large workflows. Use this as a MATERIALIZED CTE and don't re-join
+/// voxelytics_chunks: it carries every column the callers need.
+fn chunks_with_state(run_ids: &str, task_name: Option<&str>) -> String {
+    let task_filter = task_name
+        .map(|t| format!("AND t.name = {t}"))
+        .unwrap_or_default();
     format!(
         r#"SELECT
           c._id,
+          c._task,
+          t.name AS taskName,
+          c.executionId,
+          c.chunkName,
           CASE WHEN c.state = 'RUNNING' AND r.state = 'STALE' THEN 'STALE' ELSE c.state END AS state,
           c.beginTime AS beginTime,
           CASE WHEN c.state = 'RUNNING' AND r.state = 'STALE' THEN r.endTime ELSE c.endTime END AS endTime
         FROM webknossos.voxelytics_chunks c
         JOIN webknossos.voxelytics_tasks t ON t._id = c._task
-        JOIN ({}) r ON r._id = t._run"#,
-        runs_with_state()
+        JOIN ({runs}) r ON r._id = t._run
+        WHERE t._run = ANY({run_ids})
+          {task_filter}"#,
+        runs = runs_with_state()
     )
 }
 
@@ -68,62 +82,37 @@ fn visible_runs(access: &str, user: &str, organization: &str) -> String {
     )
 }
 
-/// latestChunkStatesQ for the runs in `run_ids` (a TEXT[] placeholder), with
-/// an optional task-name placeholder.
-fn latest_chunk_states(run_ids: &str, task_name: Option<&str>) -> String {
-    let chunks = chunks_with_state();
-    let task_filter = task_name
-        .map(|t| format!("AND tc.name = {t}"))
-        .unwrap_or_default();
+/// latestChunkStatesCtesQ: defines the CTEs `chunk_states` and
+/// `latest_chunk_states` for the runs in `run_ids` (a TEXT[] placeholder), with
+/// an optional task-name placeholder. `latest_chunk_states` holds the latest
+/// state of each chunk (by task name, executionId and chunkName) across the
+/// runs. States other than skipped or pending take precedence, so that e.g. a
+/// chunk that was skipped in a later run reports the state of the run that
+/// actually computed it. beginTime and endTime are taken from that same row,
+/// even if they are NULL: there is no fallback to the times of a later skipped
+/// or pending row.
+fn latest_chunk_states_ctes(run_ids: &str, task_name: Option<&str>) -> String {
     format!(
-        r#"SELECT
-          tc.name taskName,
-          tc.executionId executionId,
-          tc.chunkName chunkName,
-          COALESCE(running_chunks._chunk, any_chunks._chunk) _chunk,
-          COALESCE(running_chunks.state, any_chunks.state) state,
-          COALESCE(running_chunks.beginTime, any_chunks.beginTime) beginTime,
-          COALESCE(running_chunks.endTime, any_chunks.endTime) endTime
-        FROM (
-          SELECT DISTINCT t.name, c.executionId, c.chunkName
-          FROM webknossos.voxelytics_chunks c
-          JOIN webknossos.voxelytics_tasks t ON t._id = c._task
-          WHERE t._run = ANY({run_ids})
-        ) tc
-        JOIN ( -- Latest chunk states (including skipped or pending)
+        r#"chunk_states AS MATERIALIZED ({chunks}),
+        latest_chunk_states AS (
           SELECT
-            DISTINCT ON (t.name, c.executionId, c.chunkName)
-            t.name,
-            c.executionId,
-            c.chunkName,
-            c._id _chunk,
-            cs.state state,
-            cs.beginTime beginTime,
-            cs.endTime endTime
-          FROM ({chunks}) cs
-          JOIN webknossos.voxelytics_chunks c ON c._id = cs._id
-          JOIN webknossos.voxelytics_tasks t ON t._id = c._task
-          WHERE t._run = ANY({run_ids})
-          ORDER BY t.name, c.executionId, c.chunkName, cs.beginTime DESC NULLS LAST
-        ) any_chunks ON any_chunks.name = tc.name AND any_chunks.executionId = tc.executionId AND any_chunks.chunkName = tc.chunkName
-        LEFT JOIN ( -- Latest chunk states (excluding skipped or pending)
-          SELECT
-            DISTINCT ON (t.name, c.executionId, c.chunkName)
-            t.name,
-            c.executionId,
-            c.chunkName,
-            c._id _chunk,
-            cs.state state,
-            cs.beginTime beginTime,
-            cs.endTime endTime
-          FROM ({chunks}) cs
-          JOIN webknossos.voxelytics_chunks c ON c._id = cs._id
-          JOIN webknossos.voxelytics_tasks t ON t._id = c._task
-          WHERE cs.state NOT IN ('SKIPPED', 'PENDING')
-            AND t._run = ANY({run_ids})
-          ORDER BY t.name, c.executionId, c.chunkName, cs.beginTime DESC NULLS LAST
-        ) running_chunks ON running_chunks.name = tc.name AND running_chunks.executionId = tc.executionId AND running_chunks.chunkName = tc.chunkName
-        WHERE TRUE {task_filter}"#
+            DISTINCT ON (cs.taskName, cs.executionId, cs.chunkName)
+            cs.taskName,
+            cs.executionId,
+            cs.chunkName,
+            cs._id _chunk,
+            cs.state,
+            cs.beginTime,
+            cs.endTime
+          FROM chunk_states cs
+          ORDER BY
+            cs.taskName,
+            cs.executionId,
+            cs.chunkName,
+            cs.state NOT IN ('SKIPPED', 'PENDING') DESC,
+            cs.beginTime DESC NULLS LAST
+        )"#,
+        chunks = chunks_with_state(run_ids, task_name)
     )
 }
 
@@ -384,6 +373,10 @@ pub(crate) async fn find_runs_for_workflow_listing(
     user: &AuthUser,
     stale_timeout: std::time::Duration,
 ) -> ApiResult<Vec<WorkflowListingRunEntry>> {
+    // Inlined instead of a CTE: a CTE that is referenced multiple times is
+    // materialized, which prevents parallel plans and made this query several
+    // times slower on production data.
+    let visible = visible_runs("$2", "$3", "$4");
     let sql = format!(
         r#"SELECT
           r._id,
@@ -421,14 +414,16 @@ pub(crate) async fn find_runs_for_workflow_listing(
           LEFT JOIN (
             SELECT a._task _task, SUM(a.fileSize) fileSize, SUM(a.inodeCount) inodeCount
             FROM webknossos.voxelytics_artifacts a
+            JOIN webknossos.voxelytics_tasks artifactTask ON artifactTask._id = a._task
+            WHERE artifactTask._run IN (SELECT vr._id FROM ({visible}) vr)
             GROUP BY a._task
           ) ta ON ta._task = t._id
+          WHERE t._run IN (SELECT vr._id FROM ({visible}) vr)
           GROUP BY t._run
         ) tasks ON tasks._run = r._id
         LEFT JOIN webknossos.users_ u ON r._user = u._id
         LEFT JOIN webknossos.multiUsers_ mu ON u._multiUser = mu._id
         WHERE r._organization = $4"#,
-        visible = visible_runs("$2", "$3", "$4"),
         runs = runs_with_state(),
         tasks = tasks_with_state(),
     );
@@ -591,10 +586,7 @@ pub(crate) async fn find_task_runs(
           {tasks}
           WHERE t._run = ANY($2) -- Filter here, because CTEs are materialized
         ),
-        chunk_states AS (
-          {chunks}
-          WHERE t._run = ANY($2) -- Filter here, because CTEs are materialized
-        )
+        chunk_states AS MATERIALIZED ({chunks})
         SELECT
           r._id AS runId,
           r.name AS runName,
@@ -613,28 +605,26 @@ pub(crate) async fn find_task_runs(
         JOIN webknossos.voxelytics_tasks t ON t._run = r._id
         JOIN task_states ts ON ts._id = t._id
         LEFT JOIN (
-          SELECT DISTINCT ON (c._task) c._task, c.executionId
+          SELECT DISTINCT ON (cs._task) cs._task, cs.executionId
           FROM chunk_states cs
-          JOIN webknossos.voxelytics_chunks c ON c._id = cs._id
           WHERE cs.state = 'RUNNING'
-          ORDER BY c._task, cs.beginTime DESC NULLS LAST
+          ORDER BY cs._task, cs.beginTime DESC NULLS LAST
         ) exec ON exec._task = t._id
         LEFT JOIN (
           SELECT
-            c._task AS _task,
-            COUNT(c._id) AS total,
+            cs._task AS _task,
+            COUNT(cs._id) AS total,
             SUM(CASE WHEN cs.state = 'FAILED' THEN 1 ELSE 0 END) AS failed,
             SUM(CASE WHEN cs.state = 'SKIPPED' THEN 1 ELSE 0 END) AS skipped,
             SUM(CASE WHEN cs.state = 'COMPLETE' THEN 1 ELSE 0 END) AS complete,
             SUM(CASE WHEN cs.state = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled
           FROM chunk_states cs
-          JOIN webknossos.voxelytics_chunks c ON c._id = cs._id
-          GROUP BY c._task
+          GROUP BY cs._task
         ) chunks ON chunks._task = t._id
         WHERE
           r._id = ANY($2)"#,
         tasks = tasks_with_state(),
-        chunks = chunks_with_state(),
+        chunks = chunks_with_state("$2", None),
     );
     let rows = sqlx::query(&sql)
         .bind(stale_millis(stale_timeout))
@@ -663,7 +653,7 @@ pub(crate) async fn find_combined_task_runs(
     stale_timeout: std::time::Duration,
 ) -> ApiResult<Vec<CombinedTaskRunEntry>> {
     let sql = format!(
-        r#"WITH latest_chunk_states AS ({latest})
+        r#"WITH {latest}
         SELECT
           l.taskName AS taskName,
           exec.executionId AS currentExecutionId,
@@ -690,7 +680,7 @@ pub(crate) async fn find_combined_task_runs(
           FROM latest_chunk_states l
           GROUP BY l.taskName
         ) chunks ON chunks.taskName = l.taskName"#,
-        latest = latest_chunk_states("$2", None),
+        latest = latest_chunk_states_ctes("$2", None),
     );
     let rows = sqlx::query(&sql)
         .bind(stale_millis(stale_timeout))
@@ -850,7 +840,7 @@ pub(crate) async fn chunk_statistics(
     stale_timeout: std::time::Duration,
 ) -> ApiResult<Vec<ChunkStatisticsEntry>> {
     let sql = format!(
-        r#"WITH latest_chunk_states AS ({latest})
+        r#"WITH {latest}
         SELECT
           exec.executionId AS executionId,
           exec.countTotal::BIGINT AS countTotal,
@@ -893,15 +883,12 @@ pub(crate) async fn chunk_statistics(
             SUM(c.wallTime) wallTime
           FROM (
             SELECT
-              c.executionId,
+              cs.executionId,
               MIN(cs.beginTime) AS beginTime,
               MAX(cs.endTime) AS endTime,
               EXTRACT(epoch FROM MAX(cs.endTime) - MIN(cs.beginTime)) wallTime
-            FROM webknossos.voxelytics_chunks c
-            JOIN webknossos.voxelytics_tasks t ON t._id = c._task
-            JOIN ({chunks}) cs ON cs._id = c._id
-            WHERE t._run = ANY($2) AND t.name = $3
-            GROUP BY c.executionId, t._id
+            FROM chunk_states cs
+            GROUP BY cs.executionId, cs._task
           ) c
           GROUP BY c.executionId
         ) times ON times.executionId = exec.executionId
@@ -933,8 +920,7 @@ pub(crate) async fn chunk_statistics(
           GROUP BY c.executionId
         ) durations ON durations.executionId = exec.executionId
         ORDER BY times.beginTime ASC NULLS LAST"#,
-        latest = latest_chunk_states("$2", Some("$3")),
-        chunks = chunks_with_state(),
+        latest = latest_chunk_states_ctes("$2", Some("$3")),
     );
     let rows = sqlx::query(&sql)
         .bind(stale_millis(stale_timeout))
@@ -993,16 +979,16 @@ pub(crate) async fn artifact_checksums(
           af.checksum,
           af.fileSize,
           af.lastModified
-        FROM
-          (
-          SELECT DISTINCT ON(_artifact, path) *
-            FROM webknossos.voxelytics_artifactFileChecksumEvents
-          ORDER BY _artifact, path, timestamp
-        ) af
-        JOIN webknossos.voxelytics_artifacts a ON a._id = af._artifact
-        JOIN latest_complete_tasks t ON t._id = a._task
+        FROM latest_complete_tasks t
+        JOIN webknossos.voxelytics_artifacts a ON a._task = t._id
+        JOIN LATERAL ( -- First checksum event per file of this artifact; uses the (_artifact, path, timestamp) primary key
+          SELECT DISTINCT ON (e.path) e.*
+          FROM webknossos.voxelytics_artifactFileChecksumEvents e
+          WHERE e._artifact = a._id
+          ORDER BY e.path, e.timestamp
+        ) af ON TRUE
         WHERE ($4::TEXT IS NULL OR a.name = $4)
-        ORDER BY af.path"#,
+        ORDER BY a.name, af.path"#,
         latest = latest_complete_or_skipped_task("$2", Some("$3")),
     );
     let rows = sqlx::query(&sql)

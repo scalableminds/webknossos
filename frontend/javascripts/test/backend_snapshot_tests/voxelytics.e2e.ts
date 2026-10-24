@@ -117,6 +117,20 @@ describe("Voxelytics API (E2E)", () => {
     expect(withRoundedFloats(statistics)).toMatchSnapshot();
   });
 
+  it("getVoxelyticsChunkStatistics() takes chunk times only from the run that computed the chunk", async ({
+    expect,
+  }) => {
+    // Both chunks of the export task completed in the initial run and were skipped in a rerun. part-2 completed
+    // without times. The skipped rerun's times are not used as a fallback, so part-2 has no duration and only
+    // part-1 (10 minutes) counts towards the duration statistics.
+    const statistics = await getVoxelyticsChunkStatistics(multiRunWorkflowHash, null, "export");
+
+    expect(statistics).toHaveLength(1);
+    expect(statistics[0].executionId).toBe("main");
+    expect(statistics[0].chunkCounts).toMatchObject({ total: 2, complete: 2, skipped: 0 });
+    expect(statistics[0].duration).toMatchObject({ max: 600, median: 600, sum: 600 });
+  });
+
   it("getVoxelyticsArtifactChecksums()", async ({ expect }) => {
     const checksums = await getVoxelyticsArtifactChecksums(
       inferenceWorkflowHash,

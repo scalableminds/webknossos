@@ -78,3 +78,11 @@ fn l4_dense_layers_and_attachments() {
         "https://static.webknossos.org/data/l4dense_motta_et_al_demo/segmentation/meshes/meshfile_4-4-2"
     );
 }
+
+#[test]
+fn default_worker_commands_are_known_job_commands() {
+    for command in DEFAULT_WORKER_COMMANDS {
+        assert!(crate::job::routes::is_job_command(command), "{command}");
+    }
+    assert_eq!(DEFAULT_WORKER_ID.len(), 24);
+}

@@ -348,3 +348,65 @@ async fn sample_organization_without_local_datastore_skips_datasets() {
     );
     db.cleanup().await;
 }
+
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
+async fn default_worker_is_upserted_only_if_jobs_and_datastore_enabled() {
+    let db = TestDb::new().await;
+    let workers = "SELECT COUNT(*) FROM webknossos.workers";
+    let mut misc = local_config("http://public.example");
+    misc.sample_organization.enabled = true;
+
+    // Jobs disabled: no worker.
+    assert_eq!(trigger(&db, misc.clone()).await, (200, Value::Null));
+    assert_eq!(count(&db, workers).await, 0);
+
+    // Jobs enabled: the worker is upserted, also if the organization check then fails.
+    misc.jobs_enabled = true;
+    assert_eq!(trigger(&db, misc.clone()).await.0, 400);
+    let worker: (String, String, String, String, i32, i32, Vec<String>) = sqlx::query_as(
+        "SELECT _id, _dataStore, name, key, maxParallelHighPriorityJobs, maxParallelLowPriorityJobs, supportedJobCommands FROM webknossos.workers",
+    )
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        (&worker.0[..], &worker.1[..], &worker.2[..], &worker.3[..]),
+        (
+            "6194dc03040200b0027f28a1",
+            "localhost",
+            "Dev Worker",
+            "secretWorkerKey"
+        )
+    );
+    assert_eq!((worker.4, worker.5), (1, 1));
+    assert_eq!(worker.6.len(), 13);
+    assert!(worker.6.contains(&"align_sections".to_string()));
+
+    // A rerun only resets the supported commands.
+    sqlx::query(
+        "UPDATE webknossos.workers SET supportedJobCommands = '{export_tiff}', name = 'Renamed'",
+    )
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    trigger(&db, misc.clone()).await;
+    let (name, commands): (String, Vec<String>) =
+        sqlx::query_as("SELECT name, supportedJobCommands FROM webknossos.workers")
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
+    assert_eq!((name.as_str(), commands.len()), ("Renamed", 13));
+    assert_eq!(count(&db, workers).await, 1);
+    db.cleanup().await;
+
+    // No local datastore: no worker.
+    let db = TestDb::new().await;
+    let mut misc = MiscConfig::default();
+    misc.analytics.uri = String::new();
+    misc.sample_organization.enabled = true;
+    misc.jobs_enabled = true;
+    assert_eq!(trigger(&db, misc).await, (200, Value::Null));
+    assert_eq!(count(&db, workers).await, 0);
+    db.cleanup().await;
+}

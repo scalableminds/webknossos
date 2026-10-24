@@ -77,6 +77,11 @@ async fn trigger_insert(
     if !config.sample_organization.enabled {
         return Err(ApiError::bad_request(INITIAL_DATA_NOT_ENABLED));
     }
+    if config.jobs_enabled
+        && let Some(store) = &config.local_datastore
+    {
+        upsert_default_worker(pool, &store.name).await?;
+    }
     insert_sample_organization(&state, config).await?;
     if let Some(Extension(clients)) = clients {
         create_organization_directory(pool, Some(&clients), SAMPLE_ORGANIZATION_ID).await;
@@ -132,6 +137,47 @@ async fn sync_local_store(
                 .await?;
         }
     }
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Dev worker
+
+const DEFAULT_WORKER_ID: &str = "6194dc03040200b0027f28a1";
+const DEFAULT_WORKER_NAME: &str = "Dev Worker";
+const DEFAULT_WORKER_KEY: &str = "secretWorkerKey";
+/// Same as the dbtool.js command enable-jobs.
+const DEFAULT_WORKER_COMMANDS: [&str; 13] = [
+    "compute_mesh_file",
+    "compute_segment_index_file",
+    "convert_to_wkw",
+    "export_tiff",
+    "find_largest_segment_id",
+    "materialize_volume_annotation",
+    "render_animation",
+    "align_sections",
+    "infer_neurons",
+    "infer_instances",
+    "infer_mitochondria",
+    "train_neuron_model",
+    "train_instance_model",
+];
+
+/// WorkerDAO.insertOrUpdateSupportedJobCommands for the default dev worker.
+async fn upsert_default_worker(pool: &sqlx::PgPool, data_store: &str) -> ApiResult<()> {
+    sqlx::query(
+        r#"INSERT INTO webknossos.workers(_id, _dataStore, name, key, maxParallelHighPriorityJobs,
+             maxParallelLowPriorityJobs, supportedJobCommands)
+           VALUES ($1, $2, $3, $4, 1, 1, $5)
+           ON CONFLICT (_id) DO UPDATE SET supportedJobCommands = EXCLUDED.supportedJobCommands"#,
+    )
+    .bind(DEFAULT_WORKER_ID)
+    .bind(data_store)
+    .bind(DEFAULT_WORKER_NAME)
+    .bind(DEFAULT_WORKER_KEY)
+    .bind(DEFAULT_WORKER_COMMANDS.map(String::from).to_vec())
+    .execute(pool)
+    .await?;
     Ok(())
 }
 

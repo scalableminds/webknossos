@@ -414,7 +414,7 @@ async fn organization_exists(pool: &PgPool, organization_id: &str) -> ApiResult<
 }
 
 /// UserService.findOneCached under GlobalAccessContext: the owner's MultiUser id.
-async fn find_user_multi_user(pool: &PgPool, user_id: &str) -> ApiResult<Option<String>> {
+async fn find_user_multi_user(pool: &PgPool, user_id: &ObjectId) -> ApiResult<Option<ObjectId>> {
     Ok(
         sqlx::query_scalar("SELECT _multiUser FROM webknossos.users_ WHERE _id=$1")
             .bind(user_id)
@@ -427,7 +427,7 @@ async fn find_user_multi_user(pool: &PgPool, user_id: &str) -> ApiResult<Option<
 /// default access predicates: global/authenticated TRUE, anonymous FALSE.
 async fn find_multi_user(
     pool: &PgPool,
-    multi_user_id: &str,
+    multi_user_id: &ObjectId,
     readable: bool,
 ) -> ApiResult<Option<(String, String)>> {
     if !readable {
@@ -537,7 +537,7 @@ async fn name_for_annotation(
 #[derive(Clone, Copy)]
 struct AnnotationNameParts<'a> {
     id: &'a str,
-    owner_id: &'a str,
+    owner_id: &'a ObjectId,
     dataset_id: &'a ObjectId,
     task_id: Option<&'a str>,
 }
@@ -734,7 +734,7 @@ async fn fetch_skeleton_layers(
 }
 
 /// The owner's MultiUser fullName (global lookups); `None` is Fox.empty.
-async fn owner_full_name(pool: &PgPool, owner_id: &str) -> RunResult<Option<String>> {
+async fn owner_full_name(pool: &PgPool, owner_id: &ObjectId) -> RunResult<Option<String>> {
     let Some(multi_user) = find_user_multi_user(pool, owner_id).await? else {
         return Ok(None);
     };
@@ -759,7 +759,7 @@ fn nml_input<'a>(
     NmlWriteInput {
         layers,
         annotation_user_states: nml.user_states,
-        requesting_user_id: context.user.map(|user| user.id.as_str()),
+        requesting_user_id: context.user.map(|user| &user.id),
         annotation_owner_id: &download.annotation.owner_id,
         annotation_owner_name: nml.owner_name,
         annotation: Some(NmlAnnotation {
@@ -1036,7 +1036,7 @@ struct CompoundRow {
     id: String,
     dataset_id: ObjectId,
     task_id: Option<String>,
-    owner_id: String,
+    owner_id: ObjectId,
     description: String,
 }
 
@@ -1247,7 +1247,7 @@ async fn find_readable_dataset(
          FROM webknossos.datasets_ d WHERE d._id=",
     );
     q.push_bind(dataset_id).push(" AND ");
-    crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+    crate::dataset::access::push_read_predicate(&mut q, (&user.id).into(), None);
     Ok(q.build_query_as().fetch_optional(pool).await?)
 }
 
@@ -1389,9 +1389,9 @@ async fn single_download_annotation<'a>(
     let pool = context.pool();
     // userService.findOneCached under UserDAO read access ?~> Msg.User.notFound
     let mut q = Sql::new("SELECT usr._multiUser FROM webknossos.users_ usr WHERE usr._id=");
-    q.push_bind(row.owner_id.as_str()).push(" AND ");
-    users::push_read_access(&mut q, user.id.as_str().into());
-    let multi_user: Option<String> = q.build_query_scalar().fetch_optional(pool).await?;
+    q.push_bind(&row.owner_id).push(" AND ");
+    users::push_read_access(&mut q, (&user.id).into());
+    let multi_user: Option<ObjectId> = q.build_query_scalar().fetch_optional(pool).await?;
     let multi_user = multi_user.ok_or_else(|| fail(crate::msg::user::NOT_FOUND_NO_ID))?;
     let owner_name = find_multi_user(pool, &multi_user, true)
         .await?

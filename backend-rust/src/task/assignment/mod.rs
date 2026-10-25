@@ -94,7 +94,7 @@ pub(crate) async fn lock_task_with_pending_instances(
 pub(crate) async fn insert_initializing_annotation(
     connection: &mut PgConnection,
     task_id: &str,
-    user_id: &str,
+    user_id: &ObjectId,
 ) -> ApiResult<Option<ObjectId>> {
     let annotation_id = ObjectId::new();
     let inserted = sqlx::query(
@@ -120,7 +120,7 @@ pub(crate) async fn insert_initializing_annotation(
 pub(crate) async fn assign_one_to(
     pool: &PgPool,
     task_id: &str,
-    user_id: &str,
+    user_id: &ObjectId,
 ) -> ApiResult<Option<ObjectId>> {
     let mut tx = pool.begin().await?;
     if !lock_task_with_pending_instances(&mut tx, task_id).await? {
@@ -143,7 +143,7 @@ pub(crate) async fn assign_one_to(
 struct AnnotationBase {
     id: String,
     dataset_id: ObjectId,
-    owner_id: String,
+    owner_id: ObjectId,
     description: String,
     visibility: String,
     name: String,
@@ -171,7 +171,7 @@ pub(crate) async fn create_annotation_for(
     pool: &PgPool,
     tracing_store: &TracingStoreClient,
     context_user: &AuthUser,
-    assignee_id: &str,
+    assignee_id: &ObjectId,
     task_id: &str,
     initializing_annotation_id: &ObjectId,
 ) -> Result<(), ProviderError> {
@@ -191,7 +191,7 @@ pub(crate) async fn create_annotation_for(
 
     let mut q = Sql::new("SELECT d.isUsable FROM webknossos.datasets_ d WHERE d._id=");
     q.push_bind(&base.dataset_id).push(" AND ");
-    crate::dataset::access::push_read_predicate(&mut q, context_user.id.as_str().into(), None);
+    crate::dataset::access::push_read_predicate(&mut q, (&context_user.id).into(), None);
     let is_usable: Option<bool> = q.build_query_scalar().fetch_optional(pool).await?;
     match is_usable {
         None => {
@@ -216,8 +216,8 @@ pub(crate) async fn create_annotation_for(
     let request = DuplicateAnnotationRequest {
         source_annotation_id: ObjectId::parse(&base.id)?,
         new_annotation_id: initializing_annotation_id.clone(),
-        owner_id: ObjectId::parse(&base.owner_id)?,
-        requesting_user_id: ObjectId::parse(assignee_id)?,
+        owner_id: base.owner_id.clone(),
+        requesting_user_id: assignee_id.clone(),
         version: None,
         // isFromTask is for duplicating a task annotation, not for assignment.
         is_from_task: false,
@@ -242,7 +242,7 @@ pub(crate) async fn create_annotation_for(
 async fn update_initialized(
     pool: &PgPool,
     annotation_id: &ObjectId,
-    assignee_id: &str,
+    assignee_id: &ObjectId,
     base: &AnnotationBase,
     layers: &[AnnotationLayer],
 ) -> Result<(), ProviderError> {
@@ -330,7 +330,7 @@ pub(crate) async fn initialize_task_annotation(
     pool: &PgPool,
     tracing_store: &TracingStoreClient,
     context_user: &AuthUser,
-    assignee_id: &str,
+    assignee_id: &ObjectId,
     task_id: &str,
     initializing_annotation_id: &ObjectId,
 ) -> ApiResult<()> {
@@ -427,7 +427,7 @@ async fn assign_one(
         "SELECT usr._organization, usr.isDeactivated FROM webknossos.users_ usr WHERE usr._id=",
     );
     q.push_bind(&assignee_id).push(" AND ");
-    crate::users::push_read_access(&mut q, user.id.as_str().into());
+    crate::users::push_read_access(&mut q, (&user.id).into());
     let (assignee_organization, assignee_is_deactivated): (String, bool) = q
         .build_query_as()
         .fetch_optional(pool)
@@ -475,14 +475,14 @@ async fn assign_one(
         ));
     }
 
-    let annotation_id = assign_one_to(pool, task_id.as_str(), assignee_id.as_str())
+    let annotation_id = assign_one_to(pool, task_id.as_str(), &assignee_id)
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::task::UNAVAILABLE))?;
     initialize_task_annotation(
         pool,
         &tracing_store,
         &user,
-        assignee_id.as_str(),
+        &assignee_id,
         task_id.as_str(),
         &annotation_id,
     )
@@ -491,7 +491,7 @@ async fn assign_one(
         pool,
         task_id.as_str(),
         annotation_id.as_str(),
-        assignee_id.as_str(),
+        &assignee_id,
         assignee_is_deactivated,
         &user.id,
     );

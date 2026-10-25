@@ -1,7 +1,7 @@
 use crate::common;
 
 use axum::{body::Bytes, http::StatusCode};
-use common::{TestDb, object_id};
+use common::TestDb;
 use webknossos_backend::{
     annotation::io::upload_service::{
         ExtractionLimits, MSG_DIFFERENT_DATASETS, PgDatasetLookup, extract_from_files,
@@ -46,8 +46,9 @@ async fn dataset_lookups_follow_scala_semantics_and_read_access() {
     let db = TestDb::new().await;
     let admin = db.fixture().await;
     let org = admin.organization_id.clone();
-    let viewer = object_id();
-    db.seed_user(&viewer, &org, false).await;
+    let admin_id = ObjectId::parse(&admin.user_id).unwrap();
+    let viewer = ObjectId::new();
+    db.seed_user(viewer.as_str(), &org, false).await;
     sqlx::query("INSERT INTO webknossos.dataStores (name, url, publicUrl, key) VALUES ('store', 'https://data.example.test', 'https://data.example.test', 'k')")
         .execute(&db.pool)
         .await
@@ -57,10 +58,10 @@ async fn dataset_lookups_follow_scala_semantics_and_read_access() {
     seed_dataset(&db, &org, "Twin", "dir_c").await;
     seed_dataset(&db, &org, "Twin", "dir_d").await;
     let pool = &db.pool;
-    let find = |user: &str, id: Option<&ObjectId>, name: &str| {
+    let find = |user: &ObjectId, id: Option<&ObjectId>, name: &str| {
         let (pool, user, id, name, org) = (
             pool.clone(),
-            user.to_owned(),
+            user.clone(),
             id.cloned(),
             name.to_owned(),
             org.clone(),
@@ -74,26 +75,20 @@ async fn dataset_lookups_follow_scala_semantics_and_read_access() {
     };
 
     assert_eq!(
-        find(&admin.user_id, Some(&unique), "ignored").await,
+        find(&admin_id, Some(&unique), "ignored").await,
         Ok(unique.clone())
     );
     let missing = ObjectId::new();
     assert_eq!(
-        find(&admin.user_id, Some(&missing), "x").await,
+        find(&admin_id, Some(&missing), "x").await,
         Err(format!(
             "Dataset “{missing}” could not be found or accessed."
         ))
     );
+    assert_eq!(find(&admin_id, None, "dir_a").await, Ok(by_dir.clone()));
+    assert_eq!(find(&admin_id, None, "Unique").await, Ok(unique.clone()));
     assert_eq!(
-        find(&admin.user_id, None, "dir_a").await,
-        Ok(by_dir.clone())
-    );
-    assert_eq!(
-        find(&admin.user_id, None, "Unique").await,
-        Ok(unique.clone())
-    );
-    assert_eq!(
-        find(&admin.user_id, None, "Twin").await,
+        find(&admin_id, None, "Twin").await,
         Err("Dataset with name “Twin” could not be found or accessed. <~ Multiple datasets with this name exist in this organization. Specify dataset id to select correct one.".to_owned())
     );
     // A non-admin without team access cannot read private datasets.
@@ -111,24 +106,17 @@ async fn dataset_lookups_follow_scala_semantics_and_read_access() {
     // findDatasetForUploadedAnnotations
     let host = "http://localhost:9000";
     let own = skeleton(&org);
-    let found = find_dataset_for_uploaded_annotations(
-        pool,
-        &admin.user_id,
-        host,
-        &[&own],
-        &[],
-        &[&unique],
-        "",
-    )
-    .await
-    .unwrap();
+    let found =
+        find_dataset_for_uploaded_annotations(pool, &admin_id, host, &[&own], &[], &[&unique], "")
+            .await
+            .unwrap();
     assert_eq!(
         (found.id.as_str(), found.name.as_str()),
         (unique.as_str(), "Unique")
     );
     let error = find_dataset_for_uploaded_annotations(
         pool,
-        &admin.user_id,
+        &admin_id,
         host,
         &[&own],
         &[],
@@ -144,7 +132,7 @@ async fn dataset_lookups_follow_scala_semantics_and_read_access() {
     let foreign = skeleton("no-such-org");
     let error = find_dataset_for_uploaded_annotations(
         pool,
-        &admin.user_id,
+        &admin_id,
         host,
         &[&foreign],
         &[],
@@ -173,7 +161,7 @@ async fn dataset_lookups_follow_scala_semantics_and_read_access() {
     let other_org = skeleton(&other.organization_id);
     let error = find_dataset_for_uploaded_annotations(
         pool,
-        &admin.user_id,
+        &admin_id,
         host,
         &[&other_org],
         &[],
@@ -186,7 +174,7 @@ async fn dataset_lookups_follow_scala_semantics_and_read_access() {
     let no_org = SkeletonTracing::default();
     let found = find_dataset_for_uploaded_annotations(
         pool,
-        &admin.user_id,
+        &admin_id,
         host,
         &[&no_org],
         &[],
@@ -205,7 +193,7 @@ async fn dataset_lookups_follow_scala_semantics_and_read_access() {
     };
     let lookup = PgDatasetLookup {
         pool: pool.clone(),
-        user_id: admin.user_id.clone(),
+        user_id: admin_id,
     };
     let result = extract_from_files(
         vec![

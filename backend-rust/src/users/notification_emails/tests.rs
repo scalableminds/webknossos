@@ -246,24 +246,26 @@ fn links_use_the_public_uri() {
 
 #[test]
 fn transfers_are_announced_only_to_other_users() {
-    assert!(enabled().wants_transfer_email("owner", "issuer"));
-    assert!(!enabled().wants_transfer_email("issuer", "issuer"));
-    assert!(!disabled().wants_transfer_email("owner", "issuer"));
+    let (owner, issuer) = (ObjectId::new(), ObjectId::new());
+    assert!(enabled().wants_transfer_email(&owner, &issuer));
+    assert!(!enabled().wants_transfer_email(&issuer, &issuer));
+    assert!(!disabled().wants_transfer_email(&owner, &issuer));
 }
 
 #[test]
 fn task_assignments_are_announced_only_to_other_active_users() {
-    assert!(enabled().wants_task_assigned_email("assignee", false, "issuer"));
-    assert!(!enabled().wants_task_assigned_email("issuer", false, "issuer"));
-    assert!(!enabled().wants_task_assigned_email("assignee", true, "issuer"));
-    assert!(!disabled().wants_task_assigned_email("assignee", false, "issuer"));
+    let (assignee, issuer) = (ObjectId::new(), ObjectId::new());
+    assert!(enabled().wants_task_assigned_email(&assignee, false, &issuer));
+    assert!(!enabled().wants_task_assigned_email(&issuer, false, &issuer));
+    assert!(!enabled().wants_task_assigned_email(&assignee, true, &issuer));
+    assert!(!disabled().wants_task_assigned_email(&assignee, false, &issuer));
     // The flags are independent.
     let only_tasks = service(NotificationEmailSettings {
         access_changes: false,
         manual_task_assignments: true,
     });
-    assert!(only_tasks.wants_task_assigned_email("assignee", false, "issuer"));
-    assert!(!only_tasks.wants_transfer_email("owner", "issuer"));
+    assert!(only_tasks.wants_task_assigned_email(&assignee, false, &issuer));
+    assert!(!only_tasks.wants_transfer_email(&assignee, &issuer));
 }
 
 #[test]
@@ -273,12 +275,13 @@ fn access_changes_are_announced_only_for_other_users_that_stay_active() {
         is_deactivated: true,
         ..user()
     };
+    let [u1, u2, u3, issuer] = [(); 4].map(|()| ObjectId::new());
     let service = enabled();
-    assert!(service.wants_access_changed_email("u1", active, active, "issuer"));
-    assert!(!service.wants_access_changed_email("issuer", active, active, "issuer"));
-    assert!(!service.wants_access_changed_email("u2", active, deactivated, "issuer"));
-    assert!(!service.wants_access_changed_email("u3", deactivated, deactivated, "issuer"));
-    assert!(!disabled().wants_access_changed_email("u1", active, active, "issuer"));
+    assert!(service.wants_access_changed_email(&u1, active, active, &issuer));
+    assert!(!service.wants_access_changed_email(&issuer, active, active, &issuer));
+    assert!(!service.wants_access_changed_email(&u2, active, deactivated, &issuer));
+    assert!(!service.wants_access_changed_email(&u3, deactivated, deactivated, &issuer));
+    assert!(!disabled().wants_access_changed_email(&u1, active, active, &issuer));
 }
 
 #[test]
@@ -288,26 +291,27 @@ fn changes_shortly_after_an_activation_are_not_announced() {
         is_deactivated: true,
         ..user()
     };
+    let [new, other, issuer] = [(); 3].map(|()| ObjectId::new());
     let service = enabled();
     // The activation itself is covered by the activation email.
-    assert!(!service.wants_access_changed_email("new", deactivated, active, "issuer"));
+    assert!(!service.wants_access_changed_email(&new, deactivated, active, &issuer));
     // Follow-up changes (e.g. teams configured in the user list) neither.
-    assert!(!service.wants_access_changed_email("new", active, active, "issuer"));
+    assert!(!service.wants_access_changed_email(&new, active, active, &issuer));
     // Other users are unaffected, also through clones of the service.
     assert!(
         service
             .clone()
-            .wants_access_changed_email("other", active, active, "issuer")
+            .wants_access_changed_email(&other, active, active, &issuer)
     );
     // Activations are recorded even while the emails are disabled.
     let disabled = disabled();
-    disabled.wants_access_changed_email("new", deactivated, active, "issuer");
+    disabled.wants_access_changed_email(&new, deactivated, active, &issuer);
     assert!(
         disabled
             .recently_activated
             .lock()
             .unwrap()
-            .contains_key("new")
+            .contains_key(&new)
     );
 }
 
@@ -323,18 +327,19 @@ fn only_added_teams_are_announced() {
 
 #[test]
 fn only_members_who_gain_access_are_notified() {
-    let candidate = |id: &str| Candidate {
-        user_id: id.to_owned(),
+    let [before, gained, never] = [(); 3].map(|()| ObjectId::new());
+    let candidate = |id: &ObjectId| Candidate {
+        user_id: id.clone(),
         team_ids: vec![TEAM_A.to_owned()],
     };
-    let candidates = [candidate("before"), candidate("gained"), candidate("never")];
-    let had: HashSet<String> = HashSet::from(["before".to_owned()]);
-    let has: HashSet<String> = HashSet::from(["before".to_owned(), "gained".to_owned()]);
-    let recipients: Vec<&str> = newly_allowed(&candidates, &had, &has)
+    let candidates = [candidate(&before), candidate(&gained), candidate(&never)];
+    let had: HashSet<ObjectId> = HashSet::from([before.clone()]);
+    let has: HashSet<ObjectId> = HashSet::from([before, gained.clone()]);
+    let recipients: Vec<&ObjectId> = newly_allowed(&candidates, &had, &has)
         .into_iter()
-        .map(|c| c.user_id.as_str())
+        .map(|c| &c.user_id)
         .collect();
-    assert_eq!(recipients, ["gained"]);
+    assert_eq!(recipients, [&gained]);
 }
 
 #[test]
@@ -364,7 +369,8 @@ fn unnamed_annotations_get_a_placeholder_name() {
 
 #[test]
 fn access_queries_evaluate_the_grants_per_candidate() {
-    let user_ids = ["u"];
+    let user = ObjectId::new();
+    let user_ids = [&user];
     for resource in [
         SharedResource::Annotation { id: "a".into() },
         SharedResource::Dataset {

@@ -76,7 +76,7 @@ async fn accepts_existing_credentials_via_all_transports_and_touches_activity() 
     authenticate(&database.pool, &fixture.token).await.unwrap();
     assert!(last_used(&database, &fixture.token).await > before);
     let user = authenticate(&database.pool, &fixture.token).await.unwrap();
-    assert_eq!(user.id, fixture.user_id);
+    assert_eq!(user.id.as_str(), fixture.user_id);
     assert_eq!(user.organization_id, fixture.organization_id);
     assert!(user.is_admin);
     let datastore_token = database.seed_token(&fixture.user_id, "DataStore").await;

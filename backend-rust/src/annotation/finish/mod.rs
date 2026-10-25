@@ -309,16 +309,14 @@ async fn finish_annotation(
         .provide(context, typ, id)
         .await
         .map_err(FinishFailure::Reload)?;
-    let user_id = ObjectId::parse(&user.id).map_err(FinishFailure::TimeLog)?;
-    let owner_id = ObjectId::parse(&owner).map_err(FinishFailure::TimeLog)?;
     let annotation_id = ObjectId::parse(&annotation_id).map_err(FinishFailure::TimeLog)?;
     writer
         .log_user_interaction_if_potential_contributor(
             &state.pool,
             context,
-            &user_id,
+            &user.id,
             &annotation_id,
-            &owner_id,
+            &owner,
             &collaboration_mode,
             timestamp,
         )

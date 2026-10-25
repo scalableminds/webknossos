@@ -40,6 +40,7 @@ use crate::{
     error::{ApiError, ApiResult},
     mail::{MailSender, templates},
     system::application_info::MiscState,
+    util::id::ObjectId,
 };
 
 pub(crate) mod messages {
@@ -273,7 +274,7 @@ async fn single_sign_on(
     let return_payload = format!(
         "nonce={nonce}&email={}&external_id={}&username={}&name={}",
         java_url_encode(&email),
-        java_url_encode(&user.id),
+        java_url_encode(user.id.as_str()),
         java_url_encode(&abbreviated_name),
         java_url_encode(&format!("{first_name} {last_name}")),
     );
@@ -615,8 +616,8 @@ async fn open_id_callback(
 }
 
 /// userService.userFromMultiUserEmail (exact email match, like Play here).
-async fn user_for_email(state: &AppState, email: &str) -> ApiResult<Option<String>> {
-    let user_id: Option<Option<String>> = sqlx::query_scalar(
+async fn user_for_email(state: &AppState, email: &str) -> ApiResult<Option<ObjectId>> {
+    let user_id: Option<Option<ObjectId>> = sqlx::query_scalar(
         r#"SELECT COALESCE(
              (SELECT u._id FROM webknossos.users_ u JOIN webknossos.organizations_ o ON o._id = u._organization
                WHERE u._id = m._lastLoggedInIdentity AND u._multiUser = m._id AND NOT u.isDeactivated),
@@ -669,7 +670,7 @@ async fn create_user(
     browser: &BrowserAuthConfig,
     mailer: &MailSender,
     info: &UserInfo,
-) -> ApiResult<String> {
+) -> ApiResult<ObjectId> {
     let mut tx = state.pool.begin().await?;
     let organizations: Vec<OrganizationRow> = sqlx::query_as(&format!(
         "SELECT {ORGANIZATION_COLUMNS} FROM webknossos.organizations_ ORDER BY _id LIMIT 2"

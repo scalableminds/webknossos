@@ -182,14 +182,11 @@ async fn merge_two(
             .ok_or_else(|| ProviderError::failure(crate::msg::tracing_store::NOT_FOUND))?;
         let request = MergeRequest {
             annotation_ids: vec![ObjectId::parse(a.id())?, ObjectId::parse(b.id())?],
-            owner_ids: vec![
-                ObjectId::parse(a.owner_id())?,
-                ObjectId::parse(b.owner_id())?,
-            ],
+            owner_ids: vec![a.owner_id().clone(), b.owner_id().clone()],
             additional_bounding_boxes: Vec::new(),
             new_annotation_id: new_id.clone(),
             to_temporary_store: false,
-            requesting_user_id: ObjectId::parse(&user.id)?,
+            requesting_user_id: user.id.clone(),
             remap_segment_ids,
         };
         tracing_store

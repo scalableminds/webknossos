@@ -104,7 +104,7 @@ pub async fn can_read(
 ) -> ApiResult<bool> {
     let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = ");
     q.push_bind(dataset_id).push(" AND ");
-    push_read_predicate(&mut q, user.map(|u| u.id.as_str()).into(), sharing_token);
+    push_read_predicate(&mut q, user.map(|u| &u.id).into(), sharing_token);
     q.push(")");
     Ok(q.build_query_scalar().fetch_one(pool).await?)
 }
@@ -112,7 +112,7 @@ pub async fn can_read(
 pub async fn can_edit(pool: &PgPool, user: &AuthUser, dataset_id: &ObjectId) -> ApiResult<bool> {
     let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = ");
     q.push_bind(dataset_id).push(" AND ");
-    push_edit_predicate(&mut q, user.id.as_str().into());
+    push_edit_predicate(&mut q, (&user.id).into());
     q.push(")");
     Ok(q.build_query_scalar().fetch_one(pool).await?)
 }
@@ -146,9 +146,9 @@ pub async fn lock_edit(
     sqlx::query("SELECT ft._folder FROM webknossos.folder_allowedTeams ft JOIN webknossos.folder_paths fp ON fp._ancestor = ft._folder JOIN webknossos.datasets_ d ON d._folder = fp._descendant WHERE d._id = $1 ORDER BY ft._folder, ft._team FOR SHARE OF ft, fp")
         .bind(dataset_id).fetch_all(&mut **transaction).await?;
     let mut q = Sql::new("SELECT ");
-    push_read_predicate(&mut q, user.id.as_str().into(), None);
+    push_read_predicate(&mut q, (&user.id).into(), None);
     q.push(", ");
-    push_edit_predicate(&mut q, user.id.as_str().into());
+    push_edit_predicate(&mut q, (&user.id).into());
     q.push(" FROM webknossos.datasets_ d WHERE d._id = ")
         .push_bind(dataset_id);
     let (read, edit): (bool, bool) = q.build_query_as().fetch_one(&mut **transaction).await?;

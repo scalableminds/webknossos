@@ -92,7 +92,7 @@ pub(crate) const PRETRAINED_VOXEL_SIZES: [(&str, [f64; 3]); 4] = [
 /// AiModelDAO.readAccessQ for alias `m`: models shared with or owned by the
 /// user's organization, or pretrained; superuser-only models only for
 /// superusers. AiModelDAO has no deleteAccessQ, so this is also delete access.
-pub(crate) fn push_model_read_access<'a>(q: &mut Sql<'a>, user_id: &'a str) {
+pub(crate) fn push_model_read_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
     q.push(
         r#"((m._id IN (
       SELECT a._aiModel FROM webknossos.aiModel_organizations AS a
@@ -116,7 +116,7 @@ pub(crate) fn push_model_read_access<'a>(q: &mut Sql<'a>, user_id: &'a str) {
 }
 
 /// AiInferenceDAO.readAccessQ for alias `i`.
-fn push_inference_read_access<'a>(q: &mut Sql<'a>, user_id: &'a str) {
+fn push_inference_read_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
     q.push("i._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = ")
         .push_bind(user_id)
         .push(")");
@@ -202,7 +202,7 @@ pub(crate) struct AiModel {
     pub id: String,
     pub organization: Option<String>,
     pub data_store: String,
-    pub user_id: Option<String>,
+    pub user_id: Option<ObjectId>,
     pub training_job: Option<String>,
     /// Normalized UPath literal.
     pub path: Option<String>,
@@ -237,7 +237,7 @@ impl AiModel {
 /// empty Fox; an unparsable row is the DAO's "Parsing failed" failure (400).
 pub(crate) async fn find_model(
     connection: &mut PgConnection,
-    user_id: &str,
+    user_id: &ObjectId,
     model_id: &str,
 ) -> ApiResult<Option<AiModel>> {
     let mut q = Sql::new("SELECT ");
@@ -258,7 +258,10 @@ pub(crate) async fn find_model(
 }
 
 /// AiModelDAO.findAll. Scala has no ORDER BY; creation order is used for stability.
-async fn list_all_models(connection: &mut PgConnection, user_id: &str) -> ApiResult<Vec<AiModel>> {
+async fn list_all_models(
+    connection: &mut PgConnection,
+    user_id: &ObjectId,
+) -> ApiResult<Vec<AiModel>> {
     let mut q = Sql::new("SELECT ");
     q.push(MODEL_COLUMNS)
         .push(" FROM webknossos.aiModels_ m WHERE ");
@@ -279,7 +282,7 @@ async fn list_all_models(connection: &mut PgConnection, user_id: &str) -> ApiRes
 /// DataStoreDAO.findOneByName with the user's access (onlyAllowedOrganization); returns the internal URL.
 async fn find_data_store_url(
     connection: &mut PgConnection,
-    user_id: &str,
+    user_id: &ObjectId,
     name: &str,
 ) -> ApiResult<Option<String>> {
     Ok(sqlx::query_scalar(
@@ -295,7 +298,7 @@ async fn find_data_store_url(
 /// OrganizationDAO.findAll ids (organizations of the user's account, or all for superusers).
 async fn accessible_organization_ids(
     connection: &mut PgConnection,
-    user_id: &str,
+    user_id: &ObjectId,
 ) -> ApiResult<HashSet<String>> {
     let ids: Vec<String> = sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.organizations_ WHERE
@@ -313,13 +316,13 @@ async fn accessible_organization_ids(
 /// UserDAO.findOne with the requesting user's read access, then UserService.compactWrites.
 async fn readable_compact_user(
     connection: &mut PgConnection,
-    requesting_user_id: &str,
-    user_id: &str,
+    requesting_user_id: &ObjectId,
+    user_id: &ObjectId,
 ) -> ApiResult<Option<Value>> {
     let mut q = Sql::new("SELECT usr._id FROM webknossos.users_ usr WHERE usr._id = ");
     q.push_bind(user_id).push(" AND ");
     users::push_read_access(&mut q, requesting_user_id.into());
-    let readable: Option<String> = q
+    let readable: Option<ObjectId> = q
         .build_query_scalar()
         .fetch_optional(&mut *connection)
         .await?;
@@ -439,7 +442,7 @@ pub(crate) async fn model_public_writes(
 /// database errors stay errors.
 async fn find_model_or_404(
     connection: &mut PgConnection,
-    user_id: &str,
+    user_id: &ObjectId,
     model_id: &str,
 ) -> ApiResult<AiModel> {
     match find_model(connection, user_id, model_id).await {
@@ -1460,7 +1463,7 @@ pub(crate) async fn inference_public_writes(
             let mut q =
                 Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = ");
             q.push_bind(dataset_id).push(" AND ");
-            crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+            crate::dataset::access::push_read_predicate(&mut q, (&user.id).into(), None);
             q.push(")");
             let readable: bool = q.build_query_scalar().fetch_one(&mut *connection).await?;
             if !readable {

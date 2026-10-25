@@ -532,7 +532,7 @@ pub(crate) async fn find_readable_dataset(
           FROM webknossos.datasets_ d WHERE d._id = "#,
     );
     q.push_bind(id).push(" AND ");
-    push_read_predicate(&mut q, user.id.as_str().into(), None);
+    push_read_predicate(&mut q, (&user.id).into(), None);
     Ok(q.build_query_as().fetch_optional(&state.pool).await?)
 }
 

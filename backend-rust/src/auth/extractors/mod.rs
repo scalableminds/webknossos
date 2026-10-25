@@ -4,10 +4,11 @@ use sqlx::PgPool;
 
 use crate::AppState;
 use crate::error::{ApiError, ApiResult};
+use crate::util::id::ObjectId;
 
 #[derive(Clone, sqlx::FromRow)]
 pub struct AuthUser {
-    pub id: String,
+    pub id: ObjectId,
     pub organization_id: String,
     pub is_admin: bool,
     pub is_dataset_manager: bool,

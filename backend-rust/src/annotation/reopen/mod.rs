@@ -50,7 +50,7 @@ fn guard_error(error: ApiError) -> ApiError {
 async fn require_reopen(
     connection: &mut PgConnection,
     user: &AuthUser,
-    owner: &str,
+    owner: &ObjectId,
     task: Option<&str>,
     state: &str,
     modified_ms: i64,
@@ -62,7 +62,7 @@ async fn require_reopen(
         .await
         .map_err(guard_error)?;
     if state != "Finished"
-        || (!manager && owner != user.id)
+        || (!manager && *owner != user.id)
         || (!manager
             && !owner_reopen_window_open(
                 Utc::now().timestamp_millis(),
@@ -108,7 +108,7 @@ async fn reopen(
             require_reopen(
                 &mut transaction,
                 &user,
-                compound.owner_id.as_str(),
+                &compound.owner_id,
                 None,
                 "Active",
                 compound.created.timestamp_millis(),

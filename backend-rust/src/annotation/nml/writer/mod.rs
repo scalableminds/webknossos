@@ -115,8 +115,8 @@ pub struct NmlWriteInput<'a> {
     /// `AnnotationProto.userStates`; compound downloads pass an empty list.
     pub annotation_user_states: &'a [AnnotationUserStateProto],
     /// `requestingUser.map(_._id)`; `None` for compound downloads.
-    pub requesting_user_id: Option<&'a str>,
-    pub annotation_owner_id: &'a str,
+    pub requesting_user_id: Option<&'a ObjectId>,
+    pub annotation_owner_id: &'a ObjectId,
     /// Owner's `MultiUser.fullName` for the `username` meta tag.
     pub annotation_owner_name: &'a str,
     pub annotation: Option<NmlAnnotation<'a>>,
@@ -238,8 +238,8 @@ pub fn write_nml(input: &NmlWriteInput<'_>) -> Result<String, NmlWriteError> {
 
 struct UserStateContext<'a> {
     annotation_state: Option<&'a AnnotationUserStateProto>,
-    requesting_user_id: Option<&'a str>,
-    owner_id: &'a str,
+    requesting_user_id: Option<&'a ObjectId>,
+    owner_id: &'a ObjectId,
 }
 
 impl<'a> UserStateContext<'a> {
@@ -248,11 +248,14 @@ impl<'a> UserStateContext<'a> {
             .requesting_user_id
             .unwrap_or(input.annotation_owner_id);
         let states = input.annotation_user_states;
-        let annotation_state = states.iter().find(|s| s.user_id == wanted).or_else(|| {
-            states
-                .iter()
-                .find(|s| s.user_id == input.annotation_owner_id)
-        });
+        let annotation_state = states
+            .iter()
+            .find(|s| s.user_id == wanted.as_str())
+            .or_else(|| {
+                states
+                    .iter()
+                    .find(|s| s.user_id == input.annotation_owner_id.as_str())
+            });
         Self {
             annotation_state,
             requesting_user_id: input.requesting_user_id,
@@ -263,8 +266,11 @@ impl<'a> UserStateContext<'a> {
     fn skeleton(&self, s: &'a SkeletonTracing) -> SkeletonView {
         let requesting = self
             .requesting_user_id
-            .and_then(|u| s.user_states.iter().find(|st| st.user_id == u));
-        let owner = s.user_states.iter().find(|st| st.user_id == self.owner_id);
+            .and_then(|u| s.user_states.iter().find(|st| st.user_id == u.as_str()));
+        let owner = s
+            .user_states
+            .iter()
+            .find(|st| st.user_id == self.owner_id.as_str());
         let map32 = |st: Option<&SkeletonUserStateProto>,
                      f: fn(&SkeletonUserStateProto) -> &[crate::proto::datastore::Id32WithBool]| {
             st.map(|st| f(st).iter().map(|e| (e.id, e.value)).collect())
@@ -293,8 +299,11 @@ impl<'a> UserStateContext<'a> {
     fn volume(&self, v: &'a VolumeTracing) -> VolumeView {
         let requesting = self
             .requesting_user_id
-            .and_then(|u| v.user_states.iter().find(|st| st.user_id == u));
-        let owner = v.user_states.iter().find(|st| st.user_id == self.owner_id);
+            .and_then(|u| v.user_states.iter().find(|st| st.user_id == u.as_str()));
+        let owner = v
+            .user_states
+            .iter()
+            .find(|st| st.user_id == self.owner_id.as_str());
         let bbox = |st: Option<&VolumeUserStateProto>| -> HashMap<i32, bool> {
             st.map(|st| {
                 st.bounding_box_visibilities

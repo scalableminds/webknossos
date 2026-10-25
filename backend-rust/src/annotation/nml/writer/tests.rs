@@ -13,6 +13,10 @@ use crate::proto::datastore::{
 
 static BASE_DATASET_ID: LazyLock<ObjectId> =
     LazyLock::new(|| ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9e0").unwrap());
+static OWNER: LazyLock<ObjectId> =
+    LazyLock::new(|| ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9e1").unwrap());
+static VIEWER: LazyLock<ObjectId> =
+    LazyLock::new(|| ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9e2").unwrap());
 
 fn v3(x: i32, y: i32, z: i32) -> Vec3IntProto {
     Vec3IntProto { x, y, z }
@@ -59,7 +63,7 @@ fn base_input<'a>(layers: Vec<NmlLayer<'a>>) -> NmlWriteInput<'a> {
         layers,
         annotation_user_states: &[],
         requesting_user_id: None,
-        annotation_owner_id: "owner",
+        annotation_owner_id: &OWNER,
         annotation_owner_name: "",
         annotation: None,
         task_id: None,
@@ -310,14 +314,14 @@ fn rich_skeleton() -> SkeletonTracing {
         }],
         user_states: vec![
             SkeletonUserStateProto {
-                user_id: "viewer".to_owned(),
+                user_id: VIEWER.to_string(),
                 active_node_id: Some(7),
                 tree_group_expanded_states: vec![id32(10, false)],
                 bounding_box_visibilities: vec![id32(1, false)],
                 tree_visibilities: vec![id32(2, false)],
             },
             SkeletonUserStateProto {
-                user_id: "owner".to_owned(),
+                user_id: OWNER.to_string(),
                 active_node_id: Some(8),
                 // Nested groups are not rewritten by renderUserState.
                 tree_group_expanded_states: vec![id32(11, false)],
@@ -334,7 +338,7 @@ fn skeleton_document_matches_golden() {
     let skeleton = rich_skeleton();
     // The viewer has no annotation user state: the owner's one applies.
     let annotation_states = vec![AnnotationUserStateProto {
-        user_id: "owner".to_owned(),
+        user_id: OWNER.to_string(),
         edit_position: v3(1, 2, 3),
         edit_rotation: d3(90.0, -0.0, 1e-4),
         zoom_level: 2.0,
@@ -347,7 +351,7 @@ fn skeleton_document_matches_golden() {
     let dataset_id = ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9d2").unwrap();
     let input = NmlWriteInput {
         annotation_user_states: &annotation_states,
-        requesting_user_id: Some("viewer"),
+        requesting_user_id: Some(&VIEWER),
         annotation_owner_name: "Ada Lovelace",
         annotation: Some(NmlAnnotation {
             id: "66f0a1b2c3d4e5f6a7b8c9d0",
@@ -469,7 +473,7 @@ fn volume_document_matches_golden() {
             }],
         }],
         user_states: vec![VolumeUserStateProto {
-            user_id: "owner".to_owned(),
+            user_id: OWNER.to_string(),
             bounding_box_visibilities: vec![id32(3, false)],
             segment_visibilities: vec![
                 Id64WithBool {
@@ -617,7 +621,7 @@ fn requesting_user_annotation_state_wins_over_owner() {
     let skeleton = SkeletonTracing {
         active_node_id: Some(5),
         user_states: vec![SkeletonUserStateProto {
-            user_id: "owner".to_owned(),
+            user_id: OWNER.to_string(),
             active_node_id: None,
             ..Default::default()
         }],
@@ -625,13 +629,13 @@ fn requesting_user_annotation_state_wins_over_owner() {
     };
     let states = vec![
         AnnotationUserStateProto {
-            user_id: "owner".to_owned(),
+            user_id: OWNER.to_string(),
             edit_position: v3(1, 1, 1),
             zoom_level: 3.0,
             ..Default::default()
         },
         AnnotationUserStateProto {
-            user_id: "viewer".to_owned(),
+            user_id: VIEWER.to_string(),
             edit_position: v3(2, 2, 2),
             zoom_level: 4.0,
             ..Default::default()
@@ -639,7 +643,7 @@ fn requesting_user_annotation_state_wins_over_owner() {
     ];
     let mut input = NmlWriteInput {
         annotation_user_states: &states,
-        requesting_user_id: Some("viewer"),
+        requesting_user_id: Some(&VIEWER),
         ..base_input(vec![skeleton_layer("s", &skeleton)])
     };
     let nml = write_nml(&input).unwrap();

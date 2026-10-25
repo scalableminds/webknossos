@@ -92,7 +92,7 @@ async fn annotation(
 
 fn auth(user: &UserFixture) -> AuthUser {
     AuthUser {
-        id: user.user_id.clone(),
+        id: oid(&user.user_id),
         organization_id: user.organization_id.clone(),
         is_admin: false,
         is_dataset_manager: false,

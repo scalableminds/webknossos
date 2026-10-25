@@ -4,7 +4,7 @@
 //! literal `$n` into a builder: `push_bind` numbers the parameters itself.
 use sqlx::{Postgres, QueryBuilder};
 
-use crate::auth::AuthUser;
+use crate::{auth::AuthUser, util::id::ObjectId};
 
 pub type Sql<'a> = QueryBuilder<'a, Postgres>;
 
@@ -27,6 +27,18 @@ impl<'a> From<&'a str> for Arg<'a> {
 impl<'a> From<Option<&'a str>> for Arg<'a> {
     fn from(value: Option<&'a str>) -> Self {
         Self::Bind(value)
+    }
+}
+
+impl<'a> From<&'a ObjectId> for Arg<'a> {
+    fn from(value: &'a ObjectId) -> Self {
+        Self::Bind(Some(value.as_str()))
+    }
+}
+
+impl<'a> From<Option<&'a ObjectId>> for Arg<'a> {
+    fn from(value: Option<&'a ObjectId>) -> Self {
+        Self::Bind(value.map(ObjectId::as_str))
     }
 }
 
@@ -62,7 +74,7 @@ impl<'a> From<&'a AuthUser> for Requester<'a> {
 impl<'a> From<Option<&'a AuthUser>> for Requester<'a> {
     fn from(user: Option<&'a AuthUser>) -> Self {
         Self {
-            id: user.map(|u| u.id.as_str()).into(),
+            id: user.map(|u| &u.id).into(),
             organization: user.map(|u| u.organization_id.as_str()).into(),
             is_admin: user.is_some_and(|u| u.is_admin),
         }

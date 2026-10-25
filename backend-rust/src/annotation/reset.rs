@@ -87,7 +87,7 @@ async fn reset(
     // Fox.empty, rendered as 404 Msg.notFound. A compound has no task.
     let (owner, task) = match &annotation {
         ProvidedAnnotation::Saved(saved) => (saved.owner_id.clone(), saved.task_id.clone()),
-        ProvidedAnnotation::Compound(compound) => (compound.owner_id.to_string(), None),
+        ProvidedAnnotation::Compound(compound) => (compound.owner_id.clone(), None),
     };
     let mut connection = state.pool.acquire().await?;
     let allowed = crate::annotation::lifecycle::is_manager_or_admin(

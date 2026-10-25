@@ -110,7 +110,7 @@ async fn available_tasks(
     require_readable_team(&state, &user, &id).await?;
     // UserDAO.findAllByTeams (listable, active members of the team), minus
     // unlisted users and users who manage the team or administer its organization.
-    let users: Vec<(String, String)> = sqlx::query_as(
+    let users: Vec<(ObjectId, String)> = sqlx::query_as(
         r#"SELECT u._id, m.firstName || ' ' || m.lastName
            FROM webknossos.users_ u
            JOIN webknossos.multiUsers_ m ON m._id = u._multiUser

@@ -515,7 +515,7 @@ pub(crate) fn random_hex(bytes: usize) -> ApiResult<String> {
 pub(crate) fn issue_cookie(
     config: &BrowserAuthConfig,
     headers: &HeaderMap,
-    user_id: &str,
+    user_id: &ObjectId,
 ) -> ApiResult<HeaderValue> {
     let secret = signer_secret(config)?;
     let now = Utc
@@ -527,7 +527,7 @@ pub(crate) fn issue_cookie(
     let cookie = CookieAuthenticator {
         id: random_base64url(16)?,
         provider_id: CREDENTIALS_PROVIDER.into(),
-        user_id: user_id.to_owned(),
+        user_id: user_id.to_string(),
         last_used: now,
         expiration: now + expiry,
         idle_timeout: None,
@@ -561,7 +561,7 @@ pub(crate) struct DiscardCookie(Arc<AtomicBool>);
 
 #[derive(sqlx::FromRow)]
 struct CookieUserRow {
-    id: String,
+    id: ObjectId,
     organization_id: String,
     is_admin: bool,
     is_dataset_manager: bool,
@@ -638,7 +638,7 @@ pub(crate) async fn authenticate_cookie(parts: &Parts, pool: &PgPool) -> ApiResu
 /// (used to serialize against logout-everywhere).
 pub(crate) async fn cookie_still_valid(
     tx: &mut Transaction<'_, Postgres>,
-    user_id: &str,
+    user_id: &ObjectId,
     cookie: &CookieAuthenticator,
 ) -> ApiResult<bool> {
     let row: Option<(Option<DateTime<Utc>>,)> = sqlx::query_as(
@@ -654,7 +654,7 @@ pub(crate) async fn cookie_still_valid(
     Ok(match row {
         None => false,
         Some((cutoff,)) => {
-            cookie.user_id == user_id
+            cookie.user_id == user_id.as_str()
                 && cookie.is_valid(Utc::now())
                 && cutoff.is_none_or(|cutoff| {
                     cookie.last_used.timestamp_millis() > cutoff.timestamp_millis()
@@ -969,7 +969,7 @@ pub(crate) fn duration_text(duration: Duration) -> String {
 pub(crate) async fn create_email_verification(
     tx: &mut Transaction<'_, Postgres>,
     config: &BrowserAuthConfig,
-    multi_user_id: &str,
+    multi_user_id: &ObjectId,
 ) -> ApiResult<Mail> {
     let (email, first_name, last_name): (String, String, String) = sqlx::query_as(
         "SELECT email, firstName, lastName FROM webknossos.multiUsers_ WHERE _id = $1",
@@ -1017,7 +1017,7 @@ pub fn router() -> Router<AppState> {
 
 #[derive(sqlx::FromRow)]
 struct LoginCandidate {
-    user_id: Option<String>,
+    user_id: Option<ObjectId>,
     hasher: String,
     password_hash: String,
 }
@@ -1075,11 +1075,11 @@ pub(crate) async fn login_user(
     config: &BrowserAuthConfig,
     mailer: &MailSender,
     headers: &HeaderMap,
-    user_id: &str,
+    user_id: &ObjectId,
     skip_email_verification: bool,
 ) -> ApiResult<HeaderValue> {
     let mut tx = pool.begin().await?;
-    let row: Option<(String, bool, bool, bool)> = sqlx::query_as(
+    let row: Option<(ObjectId, bool, bool, bool)> = sqlx::query_as(
         r#"SELECT m._id, u.isDeactivated, m.isEmailVerified,
              m.emailChangeDate + $2::bigint * INTERVAL '1 millisecond' > statement_timestamp()
            FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON m._id = u._multiUser

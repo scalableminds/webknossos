@@ -25,7 +25,7 @@ use sqlx::{Acquire, PgConnection, PgPool, Postgres, Transaction};
 use webknossos_common::java_format::java_double;
 
 /// CreditTransactionDAO.listAccessQ for the requesting `user`.
-fn push_list_access<'a>(q: &mut Sql<'a>, user: &'a str) {
+fn push_list_access<'a>(q: &mut Sql<'a>, user: &'a ObjectId) {
     q.push(
         "(_organization IN (SELECT _organization FROM webknossos.users_ \
          WHERE (isAdmin OR isDatasetManager) AND _id = ",

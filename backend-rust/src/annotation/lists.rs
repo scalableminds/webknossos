@@ -61,7 +61,7 @@ fn state_filter(is_finished: Option<bool>) -> &'static str {
     }
 }
 /// State, owner and dataset filters.
-fn push_optional_filters<'a>(q: &mut Sql<'a>, owner: Option<&'a str>, filters: &'a Filters) {
+fn push_optional_filters<'a>(q: &mut Sql<'a>, owner: Option<&'a ObjectId>, filters: &'a Filters) {
     q.push(" AND ").push(state_filter(filters.is_finished));
     if let Some(owner) = owner {
         q.push(" AND a._user=").push_bind(owner);
@@ -100,7 +100,7 @@ fn headers(count: Option<i64>) -> ApiResult<HeaderMap> {
 async fn count(
     connection: &mut PgConnection,
     user: &AuthUser,
-    owner: Option<&str>,
+    owner: Option<&ObjectId>,
     typ: &str,
     filters: &Filters,
     shared: bool,
@@ -114,7 +114,7 @@ async fn count(
 async fn compact_list(
     connection: &mut PgConnection,
     user: &AuthUser,
-    owner: Option<&str>,
+    owner: Option<&ObjectId>,
     filters: &Filters,
     shared: bool,
 ) -> ApiResult<Value> {
@@ -170,7 +170,7 @@ const GENERIC_PLANS: &str = "BEGIN READ ONLY; SET LOCAL plan_cache_mode = force_
 async fn compact_response(
     pool: &PgPool,
     user: &AuthUser,
-    owner: Option<&str>,
+    owner: Option<&ObjectId>,
     filters: &Filters,
     shared: bool,
     own_count: bool,
@@ -259,7 +259,7 @@ async fn user_annotations(
         dataset_id: None,
         ..filters
     };
-    compact_response(&state.pool, &user, Some(id.as_str()), &filters, false, true).await
+    compact_response(&state.pool, &user, Some(&id), &filters, false, true).await
 }
 
 /// AnnotationService.publicWrites is database-only; callers apply route-specific
@@ -282,7 +282,7 @@ pub(crate) async fn full_json_for(
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
     let metadata = crate::annotation::access::find(&mut *connection, user, id, true).await?;
-    let viewer = user.map(|user| user.id.as_str());
+    let viewer = user.map(|user| &user.id);
     let mut q = Sql::new(
         r#"SELECT jsonb_build_object('modified',floor(extract(epoch FROM a.modified)*1000)::bigint,'created',floor(extract(epoch FROM a.created)*1000)::bigint,
         'state',a.state,'isLockedByOwner',a.isLockedByOwner,'id',a._id,'name',a.name,'description',a.description,
@@ -318,14 +318,14 @@ pub(crate) async fn full_json_for(
     if value["tracingStore"].is_null() {
         return Err(ApiError::not_found(crate::msg::tracing_store::MISSING));
     }
-    let owner = if metadata.owner_id == "000000000000000000000000" {
+    let owner = if metadata.owner_id == ObjectId::dummy() {
         Value::Null
     } else {
         compact_user(connection, &metadata.owner_id).await?
     };
     value["owner"] = owner.clone();
     value["user"] = owner;
-    let contributor_ids: Vec<String> = sqlx::query_scalar(
+    let contributor_ids: Vec<ObjectId> = sqlx::query_scalar(
         "SELECT u._id FROM webknossos.annotation_contributors contributor JOIN \
             webknossos.users_ u ON u._id=contributor._user WHERE contributor._annotation=$1 AND \
             NOT u.isUnlisted ORDER BY u._id",
@@ -373,7 +373,7 @@ pub(crate) async fn full_json_for(
 pub(crate) fn default_settings(skeleton: bool) -> Value {
     json!({"allowedModes":if skeleton{json!(["orthogonal","flight"])}else{json!(["orthogonal"])},"branchPointsAllowed":true,"somaClickingAllowed":true,"volumeInterpolationAllowed":true,"mergerMode":false,"magRestrictions":{}})
 }
-pub(crate) async fn compact_user(connection: &mut PgConnection, id: &str) -> ApiResult<Value> {
+pub(crate) async fn compact_user(connection: &mut PgConnection, id: &ObjectId) -> ApiResult<Value> {
     sqlx::query_scalar(COMPACT_USER)
         .bind(id)
         .fetch_optional(connection)
@@ -383,7 +383,7 @@ pub(crate) async fn compact_user(connection: &mut PgConnection, id: &str) -> Api
 async fn task_list(
     pool: &PgPool,
     user: &AuthUser,
-    owner: &str,
+    owner: &ObjectId,
     filters: &Filters,
     jobs_enabled: bool,
 ) -> ApiResult<(HeaderMap, Json<Value>)> {
@@ -447,7 +447,7 @@ async fn user_tasks(
 ) -> ApiResult<(HeaderMap, Json<Value>)> {
     let id = ObjectId::parse_path(&id)?;
     assert_editable_user(&state.pool, &user, &id).await?;
-    task_list(&state.pool, &user, id.as_str(), &filters, jobs).await
+    task_list(&state.pool, &user, &id, &filters, jobs).await
 }
 async fn task_annotations(
     State(state): State<AppState>,

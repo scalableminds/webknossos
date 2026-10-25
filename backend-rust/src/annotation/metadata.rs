@@ -233,7 +233,7 @@ async fn edit_locked_state(
     let id = path_id(&id)?;
     let context = AccessContext::requester(Some(&user));
     let provided = provider.provide(context, &typ, &id).await?;
-    if provided.owner_id() != user.id {
+    if *provided.owner_id() != user.id {
         return Err(ApiError::bad_request(LOCK_NOT_ALLOWED));
     }
     // The ACTUAL type: a `View` path may resolve an Explorational row, a
@@ -310,7 +310,7 @@ async fn shared_teams(
     let provided = provider
         .provide(AccessContext::requester(Some(&user)), &typ, &id)
         .await?;
-    if provided.owner_id() != user.id {
+    if *provided.owner_id() != user.id {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let mut q = Sql::new(
@@ -339,7 +339,7 @@ async fn update_shared_teams(
     let provided = provider
         .provide(AccessContext::requester(Some(&user)), &typ, &id)
         .await?;
-    if provided.owner_id() != user.id || provided.visibility() == "Private" {
+    if *provided.owner_id() != user.id || provided.visibility() == "Private" {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     // ObjectId.fromString: exactly 24 hex characters, no path prefixes.
@@ -395,7 +395,7 @@ async fn update_shared_teams(
             },
             &old_team_ids,
             &team_ids,
-            &[user.id.as_str(), provided.owner_id()],
+            &[&user.id, provided.owner_id()],
         )
         .await;
     sqlx::query("DELETE FROM webknossos.annotation_sharedTeams WHERE _annotation=$1")

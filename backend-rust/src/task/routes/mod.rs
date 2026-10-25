@@ -244,7 +244,7 @@ async fn task_ids(
           SELECT 1 FROM webknossos.annotations_ a JOIN webknossos.users_ u ON u._id=a._user
           WHERE a._task=t._id AND a.typ='Task' AND a.state<>'Cancelled' AND u._id=",
         )
-        .push_bind(owner.as_str())
+        .push_bind(owner)
         .push(")");
     }
     q.push(order).push(" LIMIT 1000");

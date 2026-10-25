@@ -655,7 +655,7 @@ async fn task_finish_invalidates_compound_caches_and_compounds_fail() {
     let explorational = annotation(&db, &w, Seed::new(owner, "Explorational", "Active")).await;
     let (app, provider) = app(&db);
     let admin = AuthUser {
-        id: w.f.user_id.clone(),
+        id: ObjectId::parse(&w.f.user_id).unwrap(),
         organization_id: w.f.organization_id.clone(),
         is_admin: true,
         is_dataset_manager: false,

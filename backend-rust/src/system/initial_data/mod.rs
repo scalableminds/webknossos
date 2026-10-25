@@ -202,7 +202,7 @@ struct AiModel {
     id: &'static str,
     organization: Option<String>,
     data_store: String,
-    user: Option<String>,
+    user: Option<ObjectId>,
     name: &'static str,
     comment: &'static str,
     category: &'static str,
@@ -361,7 +361,7 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
 
     let users = [
         (
-            user_id.as_str().to_owned(),
+            user_id.clone(),
             SampleUser {
                 email: &sample.email,
                 first_name: "Sample",
@@ -373,7 +373,7 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
             },
         ),
         (
-            ObjectId::new().as_str().to_owned(),
+            ObjectId::new(),
             SampleUser {
                 email: &sample.email2,
                 first_name: "Non-Admin",
@@ -393,7 +393,7 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
     let token_present: bool = sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM webknossos.tokens_ WHERE _user = $1 AND tokenType = 'Authentication')",
     )
-    .bind(user_id.as_str())
+    .bind(&user_id)
     .fetch_one(&mut *tx)
     .await?;
     if !token_present {
@@ -407,7 +407,7 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
         )
         .bind(ObjectId::new().as_str())
         .bind(&sample.token)
-        .bind(user_id.as_str())
+        .bind(&user_id)
         .bind(expiry_millis)
         .execute(&mut *tx)
         .await?;
@@ -471,7 +471,7 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
                 &mut tx,
                 &dataset,
                 &store.name,
-                user_id.as_str(),
+                &user_id,
                 root_folder.as_str(),
             )
             .await?;
@@ -482,7 +482,7 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
                 id: CUSTOM_AI_MODEL_ID,
                 organization: Some(organization.to_owned()),
                 data_store: store.name.clone(),
-                user: Some(user_id.as_str().to_owned()),
+                user: Some(user_id.clone()),
                 name: "sample_ai_model",
                 comment: "Works if model files are manually placed at binaryData/sample_organization/66544a56d20000af0e42ba0f/",
                 category: "em_neurons",
@@ -514,7 +514,7 @@ async fn user_for_email(
 
 async fn insert_default_user(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    user_id: &str,
+    user_id: &ObjectId,
     user: &SampleUser<'_>,
     team: &str,
 ) -> ApiResult<()> {
@@ -528,7 +528,7 @@ async fn insert_default_user(
              isEmailVerified, isDeleted)
            VALUES ($1, $2, 'SCrypt', $3, $4, $5, $6, '{}', 'auto', NOW(), TRUE, FALSE)"#,
     )
-    .bind(multi_user.as_str())
+    .bind(&multi_user)
     .bind(user.email)
     .bind(&user.password_hash)
     .bind(user.first_name)
@@ -543,7 +543,7 @@ async fn insert_default_user(
            VALUES ($1, $2, $3, NOW(), '{}', FALSE, $4, $4, $4, FALSE, NULL, NOW(), FALSE)"#,
     )
     .bind(user_id)
-    .bind(multi_user.as_str())
+    .bind(&multi_user)
     .bind(SAMPLE_ORGANIZATION_ID)
     .bind(user.is_admin)
     .execute(&mut **tx)
@@ -796,7 +796,7 @@ async fn insert_dataset_if_absent(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     dataset: &SampleDataset,
     data_store: &str,
-    uploader: &str,
+    uploader: &ObjectId,
     folder: &str,
 ) -> ApiResult<()> {
     let present: bool =

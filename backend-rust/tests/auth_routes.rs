@@ -206,7 +206,11 @@ async fn datastore_generation_handles_anonymous_and_authenticated_users_with_con
     assert_eq!(URL_SAFE_NO_PAD.decode(first).unwrap().len(), 16);
     assert_eq!(token_type(&database, first).await, "DataStore");
     assert_eq!(
-        authenticate(&database.pool, first).await.unwrap().id,
+        authenticate(&database.pool, first)
+            .await
+            .unwrap()
+            .id
+            .as_str(),
         fixture.user_id
     );
     assert!(!is_deleted(&database, first).await);

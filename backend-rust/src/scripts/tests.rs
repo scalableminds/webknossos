@@ -21,7 +21,7 @@ fn gist_accepts_existing_http_contract_without_fetching() {
             validate(&ScriptParameters {
                 name: "ab".into(),
                 gist: gist.into(),
-                owner: String::new()
+                owner: ObjectId::new()
             })
             .is_ok()
         );
@@ -31,7 +31,7 @@ fn gist_accepts_existing_http_contract_without_fetching() {
             validate(&ScriptParameters {
                 name: "ab".into(),
                 gist: gist.into(),
-                owner: String::new()
+                owner: ObjectId::new()
             })
             .is_err()
         );

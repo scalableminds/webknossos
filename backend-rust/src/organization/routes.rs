@@ -17,6 +17,7 @@ use crate::{
     extract::{Json, Path, Query},
     sql::Sql,
     system::application_info::MiscState,
+    util::id::ObjectId,
 };
 
 pub fn router() -> Router<AppState> {
@@ -280,7 +281,7 @@ async fn create(
     // Play runs these steps without a transaction; a late failure here
     // leaves no half-created organization behind.
     let mut tx = state.pool.begin().await?;
-    let owner: String =
+    let owner: ObjectId =
         sqlx::query_scalar("SELECT _id FROM webknossos.multiUsers_ WHERE email = $1 FOR UPDATE")
             .bind(&parameters.owner_email)
             .fetch_optional(&mut *tx)
@@ -294,7 +295,7 @@ async fn create(
     )
     .await?;
     // userDAO.findFirstByMultiUser
-    let original: String = sqlx::query_scalar(
+    let original: ObjectId = sqlx::query_scalar(
         "SELECT _id FROM webknossos.users_ WHERE _multiUser = $1 AND NOT isDeactivated ORDER BY created, _id LIMIT 1",
     )
     .bind(&owner)

@@ -302,7 +302,7 @@ async fn worker_jobs(
 /// token of the owner (createAndInitJobTokenForUser; reused for up to an hour).
 async fn parameter_writes(pool: &PgPool, routes: &WorkerRoutes, job: &Job) -> ApiResult<Value> {
     // UserDAO.findOne with global access: an empty Fox when the owner is gone.
-    let owner: Option<String> =
+    let owner: Option<ObjectId> =
         sqlx::query_scalar("SELECT _id FROM webknossos.users_ WHERE _id = $1")
             .bind(&job.owner)
             .fetch_optional(pool)
@@ -320,7 +320,7 @@ async fn parameter_writes(pool: &PgPool, routes: &WorkerRoutes, job: &Job) -> Ap
 
 async fn insert_job_token(
     pool: &PgPool,
-    user_id: &str,
+    user_id: &ObjectId,
     routes: &WorkerRoutes,
 ) -> ApiResult<String> {
     let expiry_ms =
@@ -565,7 +565,7 @@ async fn complete_transaction_of_job(connection: &mut PgConnection, job_id: &str
 
 #[derive(sqlx::FromRow)]
 struct Owner {
-    id: String,
+    id: ObjectId,
     organization: String,
     organization_name: String,
     is_admin: bool,

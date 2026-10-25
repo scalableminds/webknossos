@@ -609,7 +609,7 @@ pub trait DatasetLookup: Sync {
 #[derive(Debug, Clone)]
 pub struct PgDatasetLookup {
     pub pool: PgPool,
-    pub user_id: String,
+    pub user_id: ObjectId,
 }
 
 impl DatasetLookup for PgDatasetLookup {
@@ -643,7 +643,7 @@ fn dataset_ref((id, name, organization_id): DatasetRow) -> DatasetRef {
 /// deleted).
 pub async fn find_readable_dataset(
     pool: &PgPool,
-    user_id: &str,
+    user_id: &ObjectId,
     dataset_id: &ObjectId,
 ) -> ApiResult<Option<DatasetRef>> {
     let mut q = Sql::new(
@@ -664,7 +664,7 @@ pub async fn find_readable_dataset(
 /// organization itself is not access-checked, as in Scala.
 pub async fn find_one_by_id_or_name_and_organization(
     pool: &PgPool,
-    user_id: &str,
+    user_id: &ObjectId,
     dataset_id: Option<&ObjectId>,
     dataset_name: &str,
     organization_id: &str,
@@ -980,7 +980,7 @@ pub fn uploaded_annotations_dataset_and_organization(
 /// organization → 403 `Dataset “id” could not be found or accessed.`
 pub async fn find_dataset_for_uploaded_annotations(
     pool: &PgPool,
-    user_id: &str,
+    user_id: &ObjectId,
     this_host: &str,
     skeletons: &[&SkeletonTracing],
     volumes: &[&UploadedVolumeLayer],

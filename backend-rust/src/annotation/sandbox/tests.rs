@@ -18,7 +18,7 @@ fn tracing_type_is_case_sensitive_and_skeleton_only() {
 #[test]
 fn dummy_owner_yields_no_restrictions_even_for_admins() {
     let user = AuthUser {
-        id: "5f0000000000000000000001".to_owned(),
+        id: ObjectId::parse("5f0000000000000000000001").unwrap(),
         organization_id: "org".to_owned(),
         is_admin: true,
         is_dataset_manager: true,

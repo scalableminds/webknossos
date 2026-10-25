@@ -72,7 +72,7 @@ pub(crate) fn is_job_command(command: &str) -> bool {
 
 /// JobDAO.readAccessQ for alias `j`: own jobs, jobs of members of teams the
 /// user manages, jobs of the admin's organization, or superuser.
-fn push_job_read_access<'a>(q: &mut Sql<'a>, user_id: &'a str) {
+fn push_job_read_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
     q.push("(j._owner = ")
         .push_bind(user_id)
         .push(
@@ -95,7 +95,7 @@ fn push_job_read_access<'a>(q: &mut Sql<'a>, user_id: &'a str) {
 }
 
 /// JobDAO.listAccessQ for alias `j`: own jobs or jobs of the admin's organization.
-fn push_job_list_access<'a>(q: &mut Sql<'a>, user_id: &'a str) {
+fn push_job_list_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
     q.push("(j._owner = ")
         .push_bind(user_id)
         .push(
@@ -108,7 +108,7 @@ fn push_job_list_access<'a>(q: &mut Sql<'a>, user_id: &'a str) {
 }
 
 /// CreditTransactionDAO.readAccessQ (unaliased credit_transactions_).
-fn push_credit_read_access<'a>(q: &mut Sql<'a>, user_id: &'a str) {
+fn push_credit_read_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
     q.push(
         "(_organization IN (SELECT _organization FROM webknossos.users_ WHERE (isAdmin OR isDatasetManager) AND _id = ",
     )
@@ -185,7 +185,7 @@ fn require_enabled(routes: &JobRoutes) -> ApiResult<()> {
 #[derive(sqlx::FromRow, Clone, Debug)]
 pub(crate) struct Job {
     pub id: String,
-    pub owner: String,
+    pub owner: ObjectId,
     pub data_store: String,
     pub command: String,
     pub args: Value,
@@ -225,7 +225,7 @@ impl Job {
 /// empty Fox; an unparsable row is the DAO's "Parsing failed" failure.
 pub(crate) async fn find_job(
     connection: &mut PgConnection,
-    user_id: &str,
+    user_id: &ObjectId,
     job_id: &str,
 ) -> ApiResult<Option<Job>> {
     let mut q = Sql::new("SELECT ");
@@ -319,11 +319,11 @@ impl JobCompactInfo {
 /// JobService.publicWrites with the requesting user's access context.
 pub(crate) async fn public_writes(
     connection: &mut PgConnection,
-    user_id: &str,
+    user_id: &ObjectId,
     job: &Job,
 ) -> ApiResult<Value> {
     // UserDAO.findOne (read access: managed team member, own organization as admin, self).
-    let owner: (String, String) = sqlx::query_as(
+    let owner: (String, ObjectId) = sqlx::query_as(
         r#"SELECT u._organization, u._multiUser FROM webknossos.users_ u
           WHERE u._id = $2 AND (
             u._id IN (SELECT _user FROM webknossos.user_team_roles WHERE _team IN
@@ -813,7 +813,7 @@ async fn retry(
 /// job has a (visible) credit transaction, reserve the same amount again.
 async fn reserve_credits_for_retry(
     connection: &mut PgConnection,
-    user_id: &str,
+    user_id: &ObjectId,
     job_id: &str,
 ) -> ApiResult<()> {
     let mut q = Sql::new(
@@ -853,7 +853,7 @@ async fn reserve_credits_for_retry(
 /// (users without credit access see a balance of 0).
 pub(crate) async fn milli_credit_balance(
     connection: &mut PgConnection,
-    user_id: &str,
+    user_id: &ObjectId,
     organization: &str,
 ) -> ApiResult<i64> {
     let mut q = Sql::new(
@@ -902,7 +902,7 @@ async fn redirect_to_export(
 /// Authentication token, otherwise retire the old ones and create a new one.
 async fn find_or_create_token(
     pool: &PgPool,
-    user_id: &str,
+    user_id: &ObjectId,
     config: &AuthRouteConfig,
 ) -> ApiResult<String> {
     let mut transaction = pool.begin().await?;

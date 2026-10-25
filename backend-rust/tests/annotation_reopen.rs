@@ -465,7 +465,7 @@ async fn successful_task_reopen_invalidates_three_compounds_and_compounds_fail()
     let explorational = annotation(&db, &w, "Explorational", "Finished", 0).await;
     let (app, provider) = app(&db);
     let admin = AuthUser {
-        id: w.f.user_id.clone(),
+        id: ObjectId::parse(&w.f.user_id).unwrap(),
         organization_id: w.f.organization_id.clone(),
         is_admin: true,
         is_dataset_manager: false,

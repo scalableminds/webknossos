@@ -439,10 +439,10 @@ impl ProvidedAnnotation {
             Self::Compound(compound) => compound.id.as_str(),
         }
     }
-    pub fn owner_id(&self) -> &str {
+    pub fn owner_id(&self) -> &ObjectId {
         match self {
             Self::Saved(saved) => &saved.owner_id,
-            Self::Compound(compound) => compound.owner_id.as_str(),
+            Self::Compound(compound) => &compound.owner_id,
         }
     }
     pub fn dataset_id(&self) -> &ObjectId {
@@ -580,7 +580,7 @@ impl AnnotationDataSourceStore {
 struct TaskAnnotation {
     id: String,
     dataset_id: ObjectId,
-    owner_id: String,
+    owner_id: ObjectId,
     state: String,
 }
 
@@ -1171,7 +1171,7 @@ impl AnnotationProvider {
         if annotations.is_empty() {
             return Err(ProviderError::Empty);
         }
-        let requesting_user_id = ObjectId::parse(&user.id)?;
+        let requesting_user_id = user.id.clone();
         let merged = self
             .merge_in_tracing_store(
                 context,
@@ -1207,7 +1207,7 @@ impl AnnotationProvider {
             q.push(" AND ");
             crate::dataset::access::push_read_predicate(
                 &mut q,
-                context.requester.map(|user| user.id.as_str()).into(),
+                context.requester.map(|user| &user.id).into(),
                 None,
             );
         }
@@ -1223,7 +1223,7 @@ impl AnnotationProvider {
         let mut owner_ids = Vec::with_capacity(annotations.len());
         for annotation in annotations {
             annotation_ids.push(ObjectId::parse(&annotation.id)?);
-            owner_ids.push(ObjectId::parse(&annotation.owner_id)?);
+            owner_ids.push(annotation.owner_id.clone());
         }
         let request = MergeRequest {
             annotation_ids,

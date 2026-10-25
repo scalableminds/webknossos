@@ -27,6 +27,7 @@ use crate::{
     error::{ApiError, ApiResult},
     extract::Json,
     mail::{MailSender, templates},
+    util::id::ObjectId,
 };
 
 pub const CURRENT_API_VERSION: i32 = 16;
@@ -397,7 +398,7 @@ pub struct MiscState(pub Arc<MiscRuntime>);
 pub struct MiscRuntime {
     pub config: MiscConfig,
     /// AnalyticsSessionService: multiUser -> (last refresh, session id).
-    pub analytics_sessions: Mutex<HashMap<String, (DateTime<Utc>, i64)>>,
+    pub analytics_sessions: Mutex<HashMap<ObjectId, (DateTime<Utc>, i64)>>,
     pub http: reqwest::Client,
 }
 

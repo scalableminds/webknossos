@@ -87,8 +87,8 @@ async fn discard_bearer_token(
 async fn identity_for_email(
     tx: &mut Transaction<'_, Postgres>,
     email: &str,
-) -> ApiResult<Option<(String, String, String)>> {
-    let row: Option<(Option<String>, String, String)> = sqlx::query_as(
+) -> ApiResult<Option<(ObjectId, String, String)>> {
+    let row: Option<(Option<ObjectId>, String, String)> = sqlx::query_as(
         r#"SELECT COALESCE(
              (SELECT u._id FROM webknossos.users_ u JOIN webknossos.organizations_ o ON o._id = u._organization
                WHERE u._id = m._lastLoggedInIdentity AND u._multiUser = m._id AND NOT u.isDeactivated),
@@ -164,7 +164,7 @@ async fn reset_password(
     let mut tx = state.pool.begin().await?;
     // userForResetPasswordToken: only reset-password tokens may set a password
     // without the old one, and not for deactivated users.
-    let target: Option<(String, String, bool)> = sqlx::query_as(
+    let target: Option<(ObjectId, ObjectId, bool)> = sqlx::query_as(
         r#"SELECT u._id, u._multiUser, u.isDeactivated FROM webknossos.tokens t
            JOIN webknossos.users_ u ON u._id = t._user
            JOIN webknossos.multiUsers_ m ON m._id = u._multiUser
@@ -214,7 +214,7 @@ async fn change_password(
     form.finish()?;
     let mut tx = state.pool.begin().await?;
     let (multi_user_id, hasher, current_hash, email, name): (
-        String,
+        ObjectId,
         String,
         String,
         String,
@@ -294,7 +294,7 @@ async fn switch_organization(
 ) -> ApiResult<Response> {
     signer_secret(&config)?;
     let mut tx = state.pool.begin().await?;
-    let multi_user_id: String = sqlx::query_scalar(
+    let multi_user_id: ObjectId = sqlx::query_scalar(
         "SELECT m._id FROM webknossos.multiUsers_ m JOIN webknossos.users_ u ON u._multiUser = m._id WHERE u._id = $1 FOR UPDATE OF m",
     )
     .bind(&secured.user.id)
@@ -316,7 +316,7 @@ async fn switch_organization(
             &organization_id,
         )));
     }
-    let existing: Option<(String, bool)> = sqlx::query_as(
+    let existing: Option<(ObjectId, bool)> = sqlx::query_as(
         "SELECT _id, isDeactivated FROM webknossos.users_ WHERE _multiUser = $1 AND _organization = $2",
     )
     .bind(&multi_user_id)
@@ -488,7 +488,7 @@ async fn verify_email(
 ) -> ApiResult<StatusCode> {
     use verification_messages as msg;
     let mut tx = state.pool.begin().await?;
-    let key_row: Option<(String, String, String, bool, bool)> = sqlx::query_as(
+    let key_row: Option<(String, String, ObjectId, bool, bool)> = sqlx::query_as(
         r#"SELECT _id, email, _multiUser, isUsed,
              validUntil IS NOT NULL AND validUntil <= statement_timestamp()
            FROM webknossos.emailVerificationKeys WHERE key = $1 ORDER BY _id LIMIT 1 FOR UPDATE"#,
@@ -536,7 +536,7 @@ async fn request_verification_mail(
     user: AuthUser,
 ) -> ApiResult<StatusCode> {
     let mut tx = state.pool.begin().await?;
-    let multi_user_id: String =
+    let multi_user_id: ObjectId =
         sqlx::query_scalar("SELECT _multiUser FROM webknossos.users_ WHERE _id = $1")
             .bind(&user.id)
             .fetch_one(&mut *tx)

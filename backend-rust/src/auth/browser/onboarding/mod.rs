@@ -248,7 +248,7 @@ pub(crate) async fn initial_team_memberships(
 
 async fn insert_team_memberships(
     tx: &mut Transaction<'_, Postgres>,
-    user_id: &str,
+    user_id: &ObjectId,
     memberships: &[(String, bool)],
 ) -> ApiResult<()> {
     sqlx::query("DELETE FROM webknossos.user_team_roles WHERE _user = $1")
@@ -284,7 +284,7 @@ pub(crate) struct NewAccount<'a> {
 }
 
 pub(crate) struct CreatedAccount {
-    pub user_id: String,
+    pub user_id: ObjectId,
     pub mails: Vec<Mail>,
 }
 
@@ -312,7 +312,7 @@ pub(crate) async fn insert_account(
              firstName, lastName, isSuperUser, isEmailVerified)
            VALUES($1, $2, $3::webknossos.USER_PASSWORDINFO_HASHERS, $4, $5, $6, FALSE, $7)"#,
     )
-    .bind(multi_user_id.as_str())
+    .bind(&multi_user_id)
     .bind(account.email)
     .bind(hasher)
     .bind(&hash)
@@ -323,7 +323,7 @@ pub(crate) async fn insert_account(
     .await?;
     let mut mails = Vec::new();
     if !account.is_email_verified {
-        mails.push(create_email_verification(tx, config, multi_user_id.as_str()).await?);
+        mails.push(create_email_verification(tx, config, &multi_user_id).await?);
     }
     let user_id = ObjectId::new();
     sqlx::query(
@@ -331,8 +331,8 @@ pub(crate) async fn insert_account(
              isDeactivated, isAdmin, isOrganizationOwner, isDatasetManager, isUnlisted, created)
            VALUES($1, $2, $3, statement_timestamp(), '{}'::jsonb, $4, $5, $6, $7, FALSE, statement_timestamp())"#,
     )
-    .bind(user_id.as_str())
-    .bind(multi_user_id.as_str())
+    .bind(&user_id)
+    .bind(&multi_user_id)
     .bind(account.organization_id)
     .bind(!account.is_active)
     .bind(account.is_admin)
@@ -340,11 +340,8 @@ pub(crate) async fn insert_account(
     .bind(account.is_dataset_manager)
     .execute(&mut **tx)
     .await?;
-    insert_team_memberships(tx, user_id.as_str(), &account.team_memberships).await?;
-    Ok(CreatedAccount {
-        user_id: user_id.into(),
-        mails,
-    })
+    insert_team_memberships(tx, &user_id, &account.team_memberships).await?;
+    Ok(CreatedAccount { user_id, mails })
 }
 
 /// userService.joinOrganization: a new identity copying the original's
@@ -352,7 +349,7 @@ pub(crate) async fn insert_account(
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn join_organization_as(
     tx: &mut Transaction<'_, Postgres>,
-    original_user_id: &str,
+    original_user_id: &ObjectId,
     organization_id: &str,
     auto_activate: bool,
     is_admin: bool,
@@ -360,7 +357,7 @@ pub(crate) async fn join_organization_as(
     is_unlisted: bool,
     is_organization_owner: bool,
     team_memberships: &[(String, bool)],
-) -> ApiResult<String> {
+) -> ApiResult<ObjectId> {
     let new_user_id = ObjectId::new();
     let inserted = sqlx::query(
         r#"INSERT INTO webknossos.users(_id, _multiUser, _organization, lastActivity, userConfiguration,
@@ -370,7 +367,7 @@ pub(crate) async fn join_organization_as(
              loggedOutEverywhereTime, statement_timestamp(), NULL, FALSE
            FROM webknossos.users_ WHERE _id = $2"#,
     )
-    .bind(new_user_id.as_str())
+    .bind(&new_user_id)
     .bind(original_user_id)
     .bind(organization_id)
     .bind(!auto_activate)
@@ -384,13 +381,13 @@ pub(crate) async fn join_organization_as(
     if inserted == 0 {
         return Err(ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID));
     }
-    insert_team_memberships(tx, new_user_id.as_str(), team_memberships).await?;
+    insert_team_memberships(tx, &new_user_id, team_memberships).await?;
     tracing::info!(
         organization = %organization_id,
         user = %new_user_id,
         "Multiuser joined organization with new user id."
     );
-    Ok(new_user_id.into())
+    Ok(new_user_id)
 }
 
 /// organizationService.newUserMailRecipient: mailing list, else the owner.
@@ -907,7 +904,7 @@ async fn create_organization_with_existing_user(
     let mut tx = state.pool.begin().await?;
     let exists: bool =
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.users_ WHERE _id = $1)")
-            .bind(body.user_id.as_str())
+            .bind(&body.user_id)
             .fetch_one(&mut *tx)
             .await?;
     if !exists {
@@ -924,7 +921,7 @@ async fn create_organization_with_existing_user(
     let team_memberships = initial_team_memberships(&mut tx, &organization.id, None).await?;
     join_organization_as(
         &mut tx,
-        body.user_id.as_str(),
+        &body.user_id,
         &organization.id,
         true,
         true,
@@ -939,7 +936,7 @@ async fn create_organization_with_existing_user(
     track_for_user(
         &state,
         &misc,
-        body.user_id.as_str(),
+        &body.user_id,
         "join_organization",
         properties("joined_organization_id", organization.id.as_str()),
     );
@@ -1005,14 +1002,14 @@ async fn create_user_in_organization(
     for mail in created.mails {
         mailer.send(mail);
     }
-    Ok(ok_text(created.user_id))
+    Ok(ok_text(created.user_id.into()))
 }
 
 /// Serialize joins of one account (assertNotInOrgaYet + insert).
 async fn lock_multi_user(
     tx: &mut Transaction<'_, Postgres>,
-    user_id: &str,
-) -> ApiResult<(String, String, String, String, bool)> {
+    user_id: &ObjectId,
+) -> ApiResult<(ObjectId, String, String, String, bool)> {
     sqlx::query_as(
         r#"SELECT m._id, m.email, m.firstName, m.lastName, m.isSuperUser
            FROM webknossos.multiUsers_ m JOIN webknossos.users_ u ON u._multiUser = m._id
@@ -1220,7 +1217,7 @@ async fn add_user(
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let mut tx = state.pool.begin().await?;
-    let multi_user_id: String =
+    let multi_user_id: ObjectId =
         sqlx::query_scalar("SELECT _id FROM webknossos.multiUsers_ WHERE email = $1 FOR UPDATE")
             .bind(&email)
             .fetch_optional(&mut *tx)
@@ -1241,7 +1238,7 @@ async fn add_user(
     if already {
         return Err(ApiError::bad_request(org_msg::ALREADY_JOINED));
     }
-    let original: String = sqlx::query_scalar(
+    let original: ObjectId = sqlx::query_scalar(
         "SELECT _id FROM webknossos.users_ WHERE _multiUser = $1 AND NOT isDeactivated ORDER BY created, _id LIMIT 1",
     )
     .bind(&multi_user_id)
@@ -1262,5 +1259,5 @@ async fn add_user(
     )
     .await?;
     tx.commit().await?;
-    Ok(ok_text(user_id))
+    Ok(ok_text(user_id.into()))
 }

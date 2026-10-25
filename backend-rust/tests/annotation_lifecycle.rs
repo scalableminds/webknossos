@@ -592,7 +592,7 @@ async fn finished_cancellation_invalidates_three_compounds_and_compound_routes_k
         provider
             .provide(
                 AccessContext::requester(Some(&webknossos_backend::auth::AuthUser {
-                    id: w.f.user_id.clone(),
+                    id: ObjectId::parse(&w.f.user_id).unwrap(),
                     organization_id: w.f.organization_id.clone(),
                     is_admin: true,
                     is_dataset_manager: false,

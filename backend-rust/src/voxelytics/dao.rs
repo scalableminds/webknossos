@@ -106,7 +106,7 @@ fn push_visible_runs<'a>(q: &mut Sql<'a>, sees_all: Option<bool>, user: &'a Auth
         None => q.push("TRUE"),
     };
     q.push(" OR __r._user = ")
-        .push_bind(user.id.as_str())
+        .push_bind(&user.id)
         .push(") AND __r._organization = ")
         .push_bind(user.organization_id.as_str());
 }
@@ -879,7 +879,7 @@ pub(crate) async fn user_id_for_run_name(
     conn: &mut PgConnection,
     run_name: &str,
     organization_id: &str,
-) -> ApiResult<Option<String>> {
+) -> ApiResult<Option<ObjectId>> {
     Ok(sqlx::query_scalar(
         "SELECT _user FROM webknossos.voxelytics_runs WHERE name = $1 AND _organization = $2",
     )
@@ -1101,7 +1101,7 @@ pub(crate) async fn upsert_workflow(
 
 pub(crate) struct NewRun<'a> {
     pub organization_id: &'a str,
-    pub user_id: &'a str,
+    pub user_id: &'a ObjectId,
     pub name: &'a str,
     pub username: &'a str,
     pub hostname: &'a str,

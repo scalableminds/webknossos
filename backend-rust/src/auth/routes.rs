@@ -92,8 +92,8 @@ impl FromRequestParts<AppState> for OptionalLifecycleAuth {
 async fn lock_account(
     tx: &mut Transaction<'_, Postgres>,
     auth: &LifecycleAuth,
-) -> ApiResult<String> {
-    let multi_user: String = sqlx::query_scalar(
+) -> ApiResult<ObjectId> {
+    let multi_user: ObjectId = sqlx::query_scalar(
         "SELECT multi._id FROM webknossos.multiUsers AS multi JOIN webknossos.users AS usr ON usr._multiUser = multi._id WHERE usr._id = $1 AND NOT usr.isDeleted AND NOT usr.isDeactivated AND NOT multi.isDeleted FOR UPDATE OF multi",
     )
     .bind(&auth.user.id)
@@ -141,7 +141,7 @@ async fn lock_account(
 
 async fn insert_token(
     tx: &mut Transaction<'_, Postgres>,
-    user_id: &str,
+    user_id: &ObjectId,
     token_type: &str,
     expiry: Duration,
     idle_timeout: Option<Duration>,

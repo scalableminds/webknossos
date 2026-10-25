@@ -40,7 +40,7 @@ pub fn router() -> Router<AppState> {
 async fn assert_manager(
     connection: &mut PgConnection,
     user: &AuthUser,
-    owner: &str,
+    owner: &ObjectId,
     task: Option<&str>,
 ) -> ApiResult<()> {
     if is_manager_or_admin(connection, user, owner, task).await? {
@@ -55,7 +55,7 @@ async fn assert_manager(
 pub(crate) async fn is_manager_or_admin(
     connection: &mut PgConnection,
     user: &AuthUser,
-    owner: &str,
+    owner: &ObjectId,
     task: Option<&str>,
 ) -> ApiResult<bool> {
     let organization: Option<String> =
@@ -144,9 +144,7 @@ async fn cancel_typed(
     } else {
         None
     };
-    let owner = saved
-        .as_ref()
-        .map_or(provided.owner_id(), |a| a.owner_id.as_str());
+    let owner = saved.as_ref().map_or(provided.owner_id(), |a| &a.owner_id);
     let task = saved.as_ref().and_then(|a| a.task_id.as_deref());
     assert_manager(&mut transaction, user, owner, task).await?;
     let mut invalidate = None;
@@ -236,7 +234,7 @@ async fn collaboration_mode(
     ) {
         return Err(ApiError::bad_request(COLLABORATION_TYPES_ONLY));
     }
-    if provided.owner_id() != user.id {
+    if *provided.owner_id() != user.id {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     if !matches!(mode.as_str(), "OwnerOnly" | "Exclusive" | "Concurrent") {

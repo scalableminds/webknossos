@@ -59,7 +59,7 @@ fn select(user: &AuthUser) -> Sql<'_> {
     let mut q = Sql::new(
         "SELECT link._id AS id,link._annotation AS annotation,link.accessToken AS access_token,link.expirationDateTime AS expiration FROM webknossos.annotation_privateLinks link JOIN webknossos.annotations a ON a._id=link._annotation WHERE NOT link.isDeleted AND NOT a.isDeleted AND a._user=",
     );
-    q.push_bind(user.id.as_str());
+    q.push_bind(&user.id);
     q
 }
 async fn owned_link<'e, E: Executor<'e, Database = Postgres>>(

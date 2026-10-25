@@ -17,8 +17,7 @@ use crate::{
 struct ScriptParameters {
     name: String,
     gist: String,
-    #[serde(deserialize_with = "crate::util::id::deserialize_string")]
-    owner: String,
+    owner: ObjectId,
 }
 
 /// ScriptService.publicWrites (the owner as UserService.compactWrites).
@@ -102,7 +101,6 @@ async fn create(
     user: AuthUser,
     RequestJson(body): RequestJson<ScriptParameters>,
 ) -> ApiResult<Json<Script>> {
-    ObjectId::parse(&body.owner)?;
     if !user.is_team_manager_or_admin(&state.pool).await? || body.owner != user.id {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
@@ -128,10 +126,9 @@ async fn update(
     RequestJson(body): RequestJson<ScriptParameters>,
 ) -> ApiResult<Json<Script>> {
     let id = ObjectId::parse_path(&id)?;
-    ObjectId::parse(&body.owner)?;
     let mut transaction = state.pool.begin().await?;
     let old = find(&mut transaction, &user.organization_id, &id, true).await?;
-    if old.owner_id.as_str() != user.id {
+    if old.owner_id != user.id {
         return Err(ApiError::forbidden(crate::msg::script::UPDATE_ONLY_OWNER));
     }
     validate(&body)?;
@@ -167,7 +164,7 @@ async fn remove(
     let id = ObjectId::parse_path(&id)?;
     let mut transaction = state.pool.begin().await?;
     let old = find(&mut transaction, &user.organization_id, &id, true).await?;
-    if old.owner_id.as_str() != user.id {
+    if old.owner_id != user.id {
         return Err(ApiError::forbidden(crate::msg::script::DELETE_ONLY_OWNER));
     }
     sqlx::query("UPDATE webknossos.scripts SET isDeleted = TRUE WHERE _id = $1")

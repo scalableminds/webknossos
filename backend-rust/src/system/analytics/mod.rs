@@ -56,7 +56,7 @@ pub(crate) struct UserProperties {
 pub(crate) struct AnalyticsEvent {
     pub event_type: String,
     /// The multi-user id.
-    pub user_id: String,
+    pub user_id: ObjectId,
     pub time: DateTime<Utc>,
     pub user_properties: UserProperties,
     pub event_properties: Map<String, Value>,
@@ -139,9 +139,7 @@ fn read_user_properties(value: &Value) -> ReadResult<UserProperties> {
 
 fn read_event(value: &Value) -> ReadResult<AnalyticsEvent> {
     let user_id = read_string(value, "user_id", "userId")?;
-    let user_id = ObjectId::parse(&user_id)
-        .map_err(|_| "userId".to_owned())?
-        .to_string();
+    let user_id = ObjectId::parse(&user_id).map_err(|_| "userId".to_owned())?;
     Ok(AnalyticsEvent {
         event_type: read_string(value, "event_type", "eventType")?,
         user_id,
@@ -206,7 +204,11 @@ async fn insert_many(pool: &sqlx::PgPool, events: &[AnalyticsEvent]) -> ApiResul
 }
 
 /// AnalyticsSessionService.refreshAndGetSessionId
-pub(crate) fn refresh_session_id(misc: &MiscState, multi_user_id: &str, now: DateTime<Utc>) -> i64 {
+pub(crate) fn refresh_session_id(
+    misc: &MiscState,
+    multi_user_id: &ObjectId,
+    now: DateTime<Utc>,
+) -> i64 {
     let pause = chrono::Duration::from_std(misc.config().analytics.session_pause)
         .unwrap_or(chrono::Duration::MAX);
     let mut sessions = match misc.0.analytics_sessions.lock() {
@@ -218,14 +220,14 @@ pub(crate) fn refresh_session_id(misc: &MiscState, multi_user_id: &str, now: Dat
         Some((last, id)) if last.checked_add_signed(pause).is_none_or(|end| end >= now) => id,
         _ => now.timestamp_millis(),
     };
-    sessions.insert(multi_user_id.to_owned(), (now, session_id));
+    sessions.insert(multi_user_id.clone(), (now, session_id));
     session_id
 }
 
 /// Identity fields of an event's user (Play's `AnalyticsEvent.user` plus
 /// `AnalyticsLookUpService.isSuperUser`).
 struct Actor {
-    multi_user_id: String,
+    multi_user_id: ObjectId,
     organization_id: String,
     is_admin: bool,
     is_super_user: bool,
@@ -260,7 +262,7 @@ pub(crate) fn track(
 /// Identity fields of the requesting user: organization and admin flag of the
 /// request identity, superuser flag of its account.
 async fn actor_for_auth_user(pool: &sqlx::PgPool, user: &AuthUser) -> ApiResult<Actor> {
-    let (multi_user_id, is_super_user): (String, bool) = sqlx::query_as(
+    let (multi_user_id, is_super_user): (ObjectId, bool) = sqlx::query_as(
         "SELECT m._id, m.isSuperUser FROM webknossos.users u JOIN webknossos.multiUsers_ m ON m._id = u._multiUser WHERE u._id = $1",
     )
     .bind(&user.id)
@@ -275,8 +277,8 @@ async fn actor_for_auth_user(pool: &sqlx::PgPool, user: &AuthUser) -> ApiResult<
 }
 
 /// Loads the event user's identity fields by user id.
-async fn actor_for(pool: &sqlx::PgPool, user_id: &str) -> ApiResult<Actor> {
-    let (multi_user_id, organization_id, is_admin, is_super_user): (String, String, bool, bool) =
+async fn actor_for(pool: &sqlx::PgPool, user_id: &ObjectId) -> ApiResult<Actor> {
+    let (multi_user_id, organization_id, is_admin, is_super_user): (ObjectId, String, bool, bool) =
         sqlx::query_as(
             "SELECT m._id, u._organization, u.isAdmin, m.isSuperUser FROM webknossos.users u JOIN webknossos.multiUsers_ m ON m._id = u._multiUser WHERE u._id = $1",
         )
@@ -298,12 +300,12 @@ async fn actor_for(pool: &sqlx::PgPool, user_id: &str) -> ApiResult<Actor> {
 pub(crate) fn track_for_user(
     state: &AppState,
     misc: &MiscState,
-    user_id: &str,
+    user_id: &ObjectId,
     event_type: &str,
     event_properties: Map<String, Value>,
 ) {
     let (pool, misc) = (state.pool.clone(), misc.clone());
-    let (user_id, event_type) = (user_id.to_owned(), event_type.to_owned());
+    let (user_id, event_type) = (user_id.clone(), event_type.to_owned());
     spawn_tracking(async move {
         let actor = actor_for(&pool, &user_id).await?;
         emit(&pool, &misc, actor, event_type, event_properties).await
@@ -316,7 +318,7 @@ async fn open_dataset_properties(
     pool: &sqlx::PgPool,
     dataset_id: &ObjectId,
 ) -> ApiResult<Map<String, Value>> {
-    let (name, organization, uploader): (String, String, Option<String>) = sqlx::query_as(
+    let (name, organization, uploader): (String, String, Option<ObjectId>) = sqlx::query_as(
         "SELECT name, _organization, _uploader FROM webknossos.datasets WHERE _id = $1",
     )
     .bind(dataset_id)
@@ -324,7 +326,7 @@ async fn open_dataset_properties(
     .await?;
     let uploader_multi_user_id = match uploader {
         Some(uploader) => Some(
-            sqlx::query_scalar::<_, String>(
+            sqlx::query_scalar::<_, ObjectId>(
                 "SELECT _multiUser FROM webknossos.users_ WHERE _id = $1",
             )
             .bind(uploader)
@@ -468,7 +470,7 @@ pub async fn run_heartbeat(pool: &sqlx::PgPool, misc: &MiscState) -> Result<JobO
         lock.rollback().await?;
         return Ok(JobOutcome::SkippedLocked);
     }
-    let oldest: Option<String> = sqlx::query_scalar(
+    let oldest: Option<ObjectId> = sqlx::query_scalar(
         "SELECT _id FROM webknossos.users_ WHERE NOT isDeactivated ORDER BY created LIMIT 1",
     )
     .fetch_optional(&mut *lock)

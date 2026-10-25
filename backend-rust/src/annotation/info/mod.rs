@@ -232,9 +232,9 @@ async fn info_for(
             .log_user_interaction_if_potential_contributor(
                 &context.state.pool,
                 AccessContext::requester(Some(user)),
-                &ObjectId::parse(&user.id)?,
+                &user.id,
                 &ObjectId::parse(&saved.id)?,
-                &ObjectId::parse(&saved.owner_id)?,
+                &saved.owner_id,
                 &saved.collaboration_mode,
                 timestamp,
             )
@@ -248,7 +248,7 @@ async fn info_for(
             &context.services.misc,
             user,
             annotation.id().to_owned(),
-            annotation.owner_id().to_owned(),
+            annotation.owner_id().clone(),
             annotation.dataset_id().to_owned(),
         );
     }
@@ -286,8 +286,7 @@ async fn compound_json(
     .fetch_optional(&mut *connection)
     .await?
     .ok_or_else(|| ApiError::not_found(crate::msg::annotation::DATASET_MISSING))?;
-    let owner =
-        crate::annotation::lists::compact_user(connection, compound.owner_id.as_str()).await?;
+    let owner = crate::annotation::lists::compact_user(connection, &compound.owner_id).await?;
     let data_store = crate::dataset::routes::public_datastore_json_on_connection(
         connection,
         &datastore,
@@ -370,12 +369,12 @@ fn track_open_annotation(
     misc: &MiscState,
     user: &AuthUser,
     annotation_id: String,
-    owner_id: String,
+    owner_id: ObjectId,
     dataset_id: ObjectId,
 ) {
     let (state, misc, user) = (state.clone(), misc.clone(), user.clone());
     tokio::spawn(async move {
-        let owner_multi_user: Option<String> =
+        let owner_multi_user: Option<ObjectId> =
             match sqlx::query_scalar("SELECT _multiUser FROM webknossos.users_ WHERE _id=$1")
                 .bind(&owner_id)
                 .fetch_optional(&state.pool)
@@ -394,7 +393,7 @@ fn track_open_annotation(
         properties.insert("annotation_id".into(), annotation_id.into());
         properties.insert(
             "annotation_owner_multiuser_id".into(),
-            owner_multi_user.into(),
+            json!(owner_multi_user),
         );
         properties.insert("annotation_dataset_id".into(), json!(dataset_id));
         crate::system::analytics::track(&state, &misc, &user, "open_annotation".into(), properties);

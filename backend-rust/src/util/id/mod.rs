@@ -70,6 +70,10 @@ impl ObjectId {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+    /// ObjectId.dummyId.
+    pub fn dummy() -> Self {
+        Self("0".repeat(24))
+    }
 }
 impl Default for ObjectId {
     fn default() -> Self {

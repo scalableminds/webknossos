@@ -123,7 +123,6 @@ async fn handle_report(
     let Some(user) = user else {
         return Ok(StatusCode::OK);
     };
-    let user_id = ObjectId::parse(&user.id)?;
     if should_track_time(
         report.significant_changes_count,
         time_tracking.only_with_significant_changes,
@@ -132,7 +131,7 @@ async fn handle_report(
             .log_user_interaction(
                 pool,
                 AccessContext::global(None),
-                &user_id,
+                &user.id,
                 &report.annotation_id,
                 &report.timestamps,
             )
@@ -151,10 +150,10 @@ async fn handle_report(
 }
 
 /// Steps 3–5 in one transaction. Returns the annotation owner (`_user`).
-async fn touch_annotation(pool: &PgPool, report: &AnnotationUpdatesReport) -> ApiResult<String> {
+async fn touch_annotation(pool: &PgPool, report: &AnnotationUpdatesReport) -> ApiResult<ObjectId> {
     let id = report.annotation_id.as_str();
     let mut transaction = pool.begin().await?;
-    let row: Option<(String, String)> = sqlx::query_as(
+    let row: Option<(ObjectId, String)> = sqlx::query_as(
         "SELECT _user, state::text FROM webknossos.annotations WHERE _id=$1 AND NOT isDeleted FOR NO KEY UPDATE",
     )
     .bind(id)

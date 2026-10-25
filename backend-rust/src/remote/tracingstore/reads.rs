@@ -189,7 +189,6 @@ async fn annotation_id_for_tracing(
     if let Some(id) = saved_id
         && let Ok(Some(annotation)) =
             crate::annotation::access::find_optional(&state.pool, None, &id, true).await
-        && ObjectId::parse(&annotation.owner_id).is_ok()
         && annotation.annotation_type.parse::<AnnotationType>().is_ok()
         && annotation.task_id.as_deref().is_none_or(|id| ObjectId::parse(id).is_ok())
         && matches!(annotation.state.as_str(), "Active" | "Finished" | "Cancelled" | "Initializing")

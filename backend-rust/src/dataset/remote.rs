@@ -106,7 +106,7 @@ async fn clear_thumbnail_cache(
         .fetch_one(&mut *transaction)
         .await?;
     let mut q = Sql::new("SELECT ");
-    crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+    crate::dataset::access::push_read_predicate(&mut q, (&user.id).into(), None);
     q.push(" FROM webknossos.datasets_ d WHERE d._id=")
         .push_bind(id.as_str());
     let readable: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;

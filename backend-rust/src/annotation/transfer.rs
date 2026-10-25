@@ -38,11 +38,11 @@ struct TransferParameters {
 async fn readable_user<'e, E: sqlx::Executor<'e, Database = sqlx::Postgres>>(
     executor: E,
     requester: &AuthUser,
-    target: &str,
+    target: &ObjectId,
 ) -> ApiResult<bool> {
     let mut q = Sql::new("SELECT EXISTS(SELECT 1 FROM webknossos.users_ AS usr WHERE usr._id=");
     q.push_bind(target).push(" AND ");
-    users::push_read_access(&mut q, requester.id.as_str().into());
+    users::push_read_access(&mut q, (&requester.id).into());
     q.push(")");
     Ok(q.build_query_scalar().fetch_one(executor).await?)
 }
@@ -57,7 +57,7 @@ async fn transfer(
     JsonBody(body): JsonBody<TransferParameters>,
 ) -> ApiResult<Json<Value>> {
     let id = ObjectId::parse_path(&id)?;
-    let target = body.user_id.as_str();
+    let target = &body.user_id;
     let context = AccessContext::requester(Some(&user));
     // provider.restrictionsFor ?~> Restrictions.notFound ~> NOT_FOUND; an
     // unknown type fails inside restrictionsFor and is wrapped the same way.

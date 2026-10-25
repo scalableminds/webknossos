@@ -70,7 +70,7 @@ struct JobsEnabled(bool);
 // ---------------------------------------------------------------------------
 
 /// `userService.teamIdsFor` / `teamManagerTeamIdsFor` (raw memberships).
-async fn team_ids(pool: &PgPool, user_id: &str, managed_only: bool) -> ApiResult<Vec<String>> {
+async fn team_ids(pool: &PgPool, user_id: &ObjectId, managed_only: bool) -> ApiResult<Vec<String>> {
     Ok(sqlx::query_scalar(
         "SELECT _team FROM webknossos.user_team_roles WHERE _user=$1 AND (NOT $2 OR isTeamManager)",
     )
@@ -93,7 +93,7 @@ async fn count_open_non_admin_tasks(
          JOIN webknossos.projects_ p ON t._project=p._id
          WHERE a._user=",
     );
-    q.push_bind(user.id.as_str())
+    q.push_bind(&user.id)
         .push(" AND a.typ='Task' AND a.state='Active' AND ");
     crate::annotation::access::push_read_predicate(&mut q, user.into());
     q.push(" AND NOT (p._team = ANY(")
@@ -154,7 +154,7 @@ async fn is_team_manager_or_admin(pool: &PgPool, user: &AuthUser) -> ApiResult<b
 /// the user's previous Task annotations is written as NOT EXISTS.
 fn push_next_task_from_where<'a>(
     q: &mut Sql<'a>,
-    user_id: &'a str,
+    user_id: &'a ObjectId,
     team_ids: &'a [String],
     is_team_manager_or_admin: bool,
 ) {
@@ -189,7 +189,7 @@ fn push_next_task_from_where<'a>(
 /// `Ok(Some(Some(..)))`: committed Initializing annotation.
 async fn try_assign_next(
     pool: &PgPool,
-    user_id: &str,
+    user_id: &ObjectId,
     team_ids: &[String],
     is_team_manager_or_admin: bool,
 ) -> ApiResult<Option<Option<(String, ObjectId)>>> {
@@ -226,7 +226,7 @@ async fn try_assign_next(
 /// lock was awaited, e.g. a concurrent request of the same user).
 async fn still_qualifies(
     connection: &mut PgConnection,
-    user_id: &str,
+    user_id: &ObjectId,
     team_ids: &[String],
     is_team_manager_or_admin: bool,
     task_id: &str,
@@ -241,7 +241,7 @@ async fn still_qualifies(
 /// (→ `task.unavailable`).
 pub(crate) async fn assign_next(
     pool: &PgPool,
-    user_id: &str,
+    user_id: &ObjectId,
     team_ids: &[String],
     is_team_manager_or_admin: bool,
 ) -> ApiResult<Option<(String, ObjectId)>> {
@@ -252,13 +252,13 @@ pub(crate) async fn assign_next(
             Some(None) => {
                 tracing::debug!(
                     attempt,
-                    user = user_id,
+                    user = %user_id,
                     "task request: candidate taken, retrying"
                 );
             }
         }
     }
-    tracing::warn!(user = user_id, "task request: retries exhausted");
+    tracing::warn!(user = %user_id, "task request: retries exhausted");
     Ok(None)
 }
 

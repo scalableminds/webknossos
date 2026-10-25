@@ -425,8 +425,8 @@ struct DuplicateTracing<'a> {
     source_tracing_id: &'a str,
     new_annotation_id: &'a ObjectId,
     new_tracing_id: &'a str,
-    owner_id: &'a str,
-    requesting_user_id: &'a str,
+    owner_id: &'a ObjectId,
+    requesting_user_id: &'a ObjectId,
     edit_position: [i32; 3],
     edit_rotation: [f64; 3],
 }
@@ -436,8 +436,8 @@ impl DuplicateTracing<'_> {
         vec![
             ("newAnnotationId", self.new_annotation_id.to_string()),
             ("newTracingId", self.new_tracing_id.to_owned()),
-            ("ownerId", self.owner_id.to_owned()),
-            ("requestingUserId", self.requesting_user_id.to_owned()),
+            ("ownerId", self.owner_id.to_string()),
+            ("requestingUserId", self.requesting_user_id.to_string()),
             (
                 "editPosition",
                 Vec3Int::from(self.edit_position).to_uri_literal(),
@@ -612,7 +612,7 @@ async fn save_skeleton_tracings(
 // ---------------------------------------------------------------------------
 
 struct ResolvedBase {
-    owner_id: String,
+    owner_id: ObjectId,
     skeleton_ids: Vec<String>,
     volume_ids: Vec<String>,
 }
@@ -630,7 +630,7 @@ fn single_layer(ids: &[String], message: &str) -> Result<Option<String>, Provide
 async fn base_from_annotation_row(
     pool: &PgPool,
     annotation_id: &str,
-    owner_id: String,
+    owner_id: ObjectId,
 ) -> Result<ResolvedBase, ProviderError> {
     let layers: Vec<(String, String)> = sqlx::query_as(
         "SELECT tracingId, typ::text FROM webknossos.annotation_layers WHERE _annotation=$1 ORDER BY tracingId",
@@ -665,7 +665,7 @@ async fn resolve_base(
     let mut q = Sql::new("SELECT a._user FROM webknossos.annotations_ a WHERE a._id=");
     q.push_bind(id.as_str()).push(" AND ");
     crate::annotation::access::push_read_predicate(&mut q, user.into());
-    let annotation: Option<String> = q.build_query_scalar().fetch_optional(pool).await?;
+    let annotation: Option<ObjectId> = q.build_query_scalar().fetch_optional(pool).await?;
     if let Some(owner) = annotation {
         return base_from_annotation_row(pool, id.as_str(), owner).await;
     }
@@ -691,7 +691,7 @@ async fn resolve_base(
         .push(" AND a.typ='Task' AND a.state<>'Cancelled' AND ");
     crate::annotation::access::push_read_predicate(&mut q, user.into());
     q.push(" ORDER BY a.created, a._id");
-    let annotations: Vec<(String, String, String)> = q.build_query_as().fetch_all(pool).await?;
+    let annotations: Vec<(String, ObjectId, String)> = q.build_query_as().fetch_all(pool).await?;
     match annotations.first() {
         Some((annotation_id, owner, state))
             if total == 1 && pending == 0 && state == "Finished" =>

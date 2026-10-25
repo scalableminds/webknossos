@@ -587,7 +587,7 @@ async fn genuine_compound_merge_cache_saved_precedence_and_invalidation() {
     .unwrap();
     layer(&db, &finished, "finished-tracing").await;
     let user = AuthUser {
-        id: owner.user_id.clone(),
+        id: ObjectId::parse(&owner.user_id).unwrap(),
         organization_id: owner.organization_id.clone(),
         is_admin: true,
         is_dataset_manager: false,

@@ -312,7 +312,7 @@ async fn job_export(
         WHERE requester._user=$2 AND requester.isTeamManager AND owner._id=j._owner)))"#,
     )
     .bind(id)
-    .bind(user.map(|u| u.id.as_str()))
+    .bind(user.map(|u| &u.id))
     .bind(user.is_some_and(|u| u.is_superuser))
     .bind(user.is_some_and(|u| u.is_admin))
     .bind(user.map(|u| u.organization_id.as_str()))

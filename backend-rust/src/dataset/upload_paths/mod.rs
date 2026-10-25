@@ -281,7 +281,7 @@ pub(crate) async fn add_initial_teams(
         ));
     }
     let mut q = Sql::new("SELECT ");
-    crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+    crate::dataset::access::push_read_predicate(&mut q, (&user.id).into(), None);
     q.push(" FROM webknossos.datasets_ d WHERE d._id = ")
         .push_bind(dataset);
     let readable: bool = q.build_query_scalar().fetch_one(&mut *connection).await?;
@@ -442,7 +442,7 @@ async fn reserve_for_preliminary(
     let path_prefix = parse_prefix(body.path_prefix.as_deref())?;
     crate::dataset::lifecycle::require_readable(&state, &user, &id).await?;
     let mut transaction = state.pool.begin().await?;
-    let (status, uploader, directory): (String, Option<String>, String) = sqlx::query_as(
+    let (status, uploader, directory): (String, Option<ObjectId>, String) = sqlx::query_as(
         "SELECT status, _uploader, directoryName FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE",
     )
     .bind(id.as_str())
@@ -453,7 +453,7 @@ async fn reserve_for_preliminary(
             "Dataset is not in uploading status, got {status}."
         )));
     }
-    if uploader.as_deref() != Some(user.id.as_str()) {
+    if uploader.as_ref() != Some(&user.id) {
         return Err(ApiError::bad_request(
             crate::msg::dataset::upload::to_paths::OTHER_UPLOADER,
         ));

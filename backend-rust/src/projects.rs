@@ -48,8 +48,7 @@ struct ProjectParameters {
     priority: i32,
     paused: Option<bool>,
     expected_time: Option<i64>,
-    #[serde(deserialize_with = "crate::util::id::deserialize_string")]
-    owner: String,
+    owner: ObjectId,
     is_blacklisted_from_report: bool,
 }
 
@@ -86,7 +85,7 @@ fn public_projects(user: &AuthUser) -> Sql<'_> {
     );
     q.push_bind(user.organization_id.as_str())
         .push(" AND (u._id=")
-        .push_bind(user.id.as_str())
+        .push_bind(&user.id)
         .push(" OR ")
         .push_bind(user.is_admin)
         .push(
@@ -96,7 +95,7 @@ fn public_projects(user: &AuthUser) -> Sql<'_> {
       JOIN webknossos.teams_ shared_team ON shared_team._id=owner_role._team
       WHERE owner_role._user=u._id AND reader_role._user="#,
         )
-        .push_bind(user.id.as_str())
+        .push_bind(&user.id)
         .push(" AND reader_role.isTeamManager AND shared_team._organization=")
         .push_bind(user.organization_id.as_str())
         .push(
@@ -229,11 +228,10 @@ async fn check_references(
     parameters: &ProjectParameters,
 ) -> ApiResult<()> {
     ObjectId::parse(&parameters.team)?;
-    ObjectId::parse(&parameters.owner)?;
     if !can_manage_team_in_tx(tx, user, &parameters.team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let owner: Option<String> = sqlx::query_scalar(
+    let owner: Option<ObjectId> = sqlx::query_scalar(
         "SELECT _id FROM webknossos.users WHERE _id=$1 AND _organization=$2 AND NOT isDeleted FOR SHARE",
     )
     .bind(&parameters.owner)
@@ -455,7 +453,7 @@ async fn delete(
     lock_project(&mut tx, &id, &user.organization_id).await?;
     project_json(&mut *tx, &user, &id).await?;
     // Authorization uses the stored owner, independently of response privacy.
-    let owner: String = sqlx::query_scalar("SELECT _owner FROM webknossos.projects WHERE _id=$1")
+    let owner: ObjectId = sqlx::query_scalar("SELECT _owner FROM webknossos.projects WHERE _id=$1")
         .bind(&id)
         .fetch_one(&mut *tx)
         .await?;
@@ -565,7 +563,7 @@ async fn transfer_active_tasks(
     Json(parameters): Json<TransferParameters>,
 ) -> ApiResult<StatusCode> {
     let id = ObjectId::parse_path(&id)?;
-    let new_user = parameters.user_id.as_str();
+    let new_user = &parameters.user_id;
     let mut tx = state.pool.begin().await?;
     // ProjectDAO.findOne with the requester's read access.
     let mut q = Sql::new("SELECT p._team FROM webknossos.projects_ p WHERE ");
@@ -582,9 +580,9 @@ async fn transfer_active_tasks(
     // UserDAO.findOne with the requester's read access; Play answers 400 here.
     let mut q = Sql::new("SELECT usr._id FROM webknossos.users_ AS usr WHERE usr._id = ");
     q.push_bind(new_user).push(" AND ");
-    users::push_read_access(&mut q, user.id.as_str().into());
+    users::push_read_access(&mut q, (&user.id).into());
     q.push(" FOR SHARE OF usr");
-    let transferee: Option<String> = q.build_query_scalar().fetch_optional(&mut *tx).await?;
+    let transferee: Option<ObjectId> = q.build_query_scalar().fetch_optional(&mut *tx).await?;
     if transferee.is_none() {
         return Err(ApiError::bad_request(crate::msg::user::not_found(new_user)));
     }

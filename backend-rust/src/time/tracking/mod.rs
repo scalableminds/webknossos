@@ -77,7 +77,7 @@ async fn require_user(pool: &PgPool, requester: &AuthUser, id: &ObjectId) -> Api
     .push(" AND u._organization = ")
     .push_bind(requester.organization_id.as_str())
     .push(" AND (u._id = ")
-    .push_bind(requester.id.as_str())
+    .push_bind(&requester.id)
     .push(" OR ");
     push_manageable(&mut q, requester.into());
     q.push(")");
@@ -213,7 +213,7 @@ async fn user_time_filters(
         "Invalid annotation state.",
     )?;
     let user = require_user(pool, requester, id).await?;
-    if !(user.manageable || user.id.as_str() == requester.id) {
+    if !(user.manageable || user.id == requester.id) {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     Ok((
@@ -276,7 +276,7 @@ async fn spans(
            LEFT JOIN webknossos.taskTypes_ tt ON t._taskType = tt._id
            WHERE ts._user = "#,
     );
-    q.push_bind(user.id.as_str()).push(" AND ");
+    q.push_bind(&user.id).push(" AND ");
     push_span_filter(&mut q, &filters);
     q.push(" ORDER BY ts.created, ts._id");
     let rows: Vec<Value> = q.build_query_scalar().fetch_all(&state.pool).await?;
@@ -302,7 +302,7 @@ async fn summed_by_annotation(
              LEFT JOIN webknossos.projects_ p ON t._project = p._id
              WHERE ts._user = ",
     );
-    q.push_bind(user.id.as_str()).push(" AND ");
+    q.push_bind(&user.id).push(" AND ");
     push_span_filter(&mut q, &filters);
     q.push(
         r#" GROUP BY a._id, t._id, p.name
@@ -368,7 +368,7 @@ async fn overview(
     );
     q.push_bind(requester.organization_id.as_str())
         .push(" AND (u._id = ")
-        .push_bind(requester.id.as_str())
+        .push_bind(&requester.id)
         .push(" OR ");
     push_manageable(&mut q, (&requester).into());
     q.push(") AND (NOT u.isUnlisted OR ")
@@ -386,7 +386,7 @@ async fn overview(
         .push("::text[]) AND NOT l.isDeactivated");
     }
     q.push(" UNION SELECT _id FROM listable WHERE isAdmin AND NOT isDeactivated");
-    let users: Vec<String> = q.build_query_scalar().fetch_all(&state.pool).await?;
+    let users: Vec<ObjectId> = q.build_query_scalar().fetch_all(&state.pool).await?;
     if users.is_empty() {
         return Ok(ResponseJson(json!([])));
     }

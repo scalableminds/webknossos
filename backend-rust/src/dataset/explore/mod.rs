@@ -249,7 +249,7 @@ fn split_path(literal: &str) -> Vec<&str> {
 /// Folders (alias `f`) visible to `user`: below the root of an organization
 /// they administer or manage datasets of, below or above a folder shared with
 /// one of their teams, or above a public dataset or one shared with their teams.
-fn push_visible_folder<'a>(q: &mut Sql<'a>, user: &'a str) {
+fn push_visible_folder<'a>(q: &mut Sql<'a>, user: &'a ObjectId) {
     q.push(
         r#"(
         f._id IN (SELECT fp._descendant FROM webknossos.folder_paths fp WHERE fp._ancestor IN (

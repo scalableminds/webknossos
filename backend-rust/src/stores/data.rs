@@ -16,6 +16,7 @@ use crate::{
     dataset::routes::public_datastore_json_on_connection,
     error::{ApiError, ApiResult},
     extract::{Json, Path},
+    util::id::ObjectId,
 };
 
 #[derive(Clone, Copy)]
@@ -128,7 +129,7 @@ async fn lock_superuser(
     user: &AuthUser,
     message: &str,
 ) -> ApiResult<()> {
-    let live: Option<String> = sqlx::query_scalar(
+    let live: Option<ObjectId> = sqlx::query_scalar(
         r#"SELECT usr._id FROM webknossos.users AS usr
           JOIN webknossos.multiUsers AS multi ON multi._id = usr._multiUser
           JOIN webknossos.organizations AS org ON org._id = usr._organization

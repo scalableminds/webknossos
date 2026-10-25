@@ -427,7 +427,7 @@ pub(crate) fn none_attestation_statement_json() -> JsonValue {
 /// Scala DAO; any malformed row fails the whole lookup.
 pub(crate) async fn credentials_for_multi_user<'e>(
     executor: impl PgExecutor<'e>,
-    multi_user: &str,
+    multi_user: &ObjectId,
 ) -> ApiResult<Result<Vec<(String, AttestedCredential)>, &'static str>> {
     let rows: Vec<(String, Vec<u8>)> = sqlx::query_as(
         "SELECT _id, serializedAttestedCredential FROM webknossos.webauthnCredentials_ WHERE _multiUser = $1 ORDER BY _id",
@@ -441,7 +441,7 @@ pub(crate) async fn credentials_for_multi_user<'e>(
         .collect())
 }
 
-async fn multi_user_of(state: &AppState, user: &AuthUser) -> ApiResult<(String, String, String)> {
+async fn multi_user_of(state: &AppState, user: &AuthUser) -> ApiResult<(ObjectId, String, String)> {
     sqlx::query_as(
         "SELECT m._id, m.email, m.firstName || ' ' || m.lastName FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON m._id = u._multiUser WHERE u._id = $1",
     )
@@ -479,9 +479,13 @@ async fn register_start(
     // The crate's options are not used: Scala's are returned instead. Excluded
     // credentials are only listed there; re-registering one fails at the
     // (_multiUser, credentialId) unique index like in Scala.
-    let (options, ceremony) =
-        registration_ceremony(&rp.verifier(), multi_user.as_bytes(), &email, &full_name)
-            .map_err(|_| ApiError::internal())?;
+    let (options, ceremony) = registration_ceremony(
+        &rp.verifier(),
+        multi_user.as_str().as_bytes(),
+        &email,
+        &full_name,
+    )
+    .map_err(|_| ApiError::internal())?;
     let encoded_challenge = URL_SAFE_NO_PAD.encode(options.public_key.challenge.as_ref());
     let session_id = new_session_id();
     stores
@@ -505,7 +509,7 @@ async fn register_start(
         "rp": {"id": rp.rp_id, "name": rp.rp_id},
         "user": {
             "displayName": full_name,
-            "id": URL_SAFE_NO_PAD.encode(multi_user.as_bytes()),
+            "id": URL_SAFE_NO_PAD.encode(multi_user.as_str().as_bytes()),
             "name": email,
         },
     });
@@ -757,10 +761,10 @@ async fn auth_finalize(
         .user_handle()
         .and_then(|handle| ObjectId::parse(&String::from_utf8_lossy(handle)).ok())
         .ok_or_else(unauthorized)?;
-    let multi_user: Option<(String, Option<String>)> = sqlx::query_as(
+    let multi_user: Option<(ObjectId, Option<ObjectId>)> = sqlx::query_as(
         "SELECT _id, _lastLoggedInIdentity FROM webknossos.multiUsers_ WHERE _id = $1",
     )
-    .bind(multi_user_id.as_str())
+    .bind(&multi_user_id)
     .fetch_optional(&state.pool)
     .await?;
     let (multi_user_id, last_identity) = multi_user.ok_or_else(unauthorized)?;

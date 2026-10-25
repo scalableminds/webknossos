@@ -60,7 +60,7 @@ fn sandbox_metadata(
         id: DUMMY_ID.to_owned(),
         dataset_id: dataset_id.to_owned(),
         task_id: None,
-        owner_id: DUMMY_ID.to_owned(),
+        owner_id: ObjectId::dummy(),
         // userService.findOneCached(dummyId) fails, so every restriction
         // that needs the owner's organization falls back to false.
         owner_organization: None,

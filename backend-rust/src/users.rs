@@ -150,7 +150,7 @@ ORDER BY LOWER(multi.lastName), usr._id
 async fn document(
     state: &AppState,
     requester: &AuthUser,
-    id: &str,
+    id: &ObjectId,
     verification: &EmailVerification,
 ) -> ApiResult<Value> {
     let mut value: Value = sqlx::query_scalar(USER_DOCUMENT)
@@ -203,7 +203,7 @@ async fn read(
     Path(id): Path<PathObjectId>,
     Extension(verification): Extension<EmailVerification>,
 ) -> ApiResult<Json<Value>> {
-    let result = document(&state, &user, id.as_str(), &verification).await?;
+    let result = document(&state, &user, &id, &verification).await?;
     if result["isEditable"] != true {
         return Err(ApiError::forbidden(crate::msg::user::NOT_EDITABLE));
     }
@@ -223,8 +223,8 @@ async fn update_task_type(
     Extension(verification): Extension<EmailVerification>,
     RequestJson(body): RequestJson<LastTaskType>,
 ) -> ApiResult<Json<Value>> {
-    let original = document(&state, &user, id.as_str(), &verification).await?;
-    if original["isEditable"] != true && user.id != id.as_str() {
+    let original = document(&state, &user, &id, &verification).await?;
+    if original["isEditable"] != true && user.id != *id {
         return Err(ApiError::forbidden(crate::msg::user::NOT_EDITABLE));
     }
     let result = sqlx::query(r#"
@@ -241,14 +241,12 @@ async fn update_task_type(
             WHERE target_role._user = target._id AND requester_role._user = $3 AND requester_role.isTeamManager
           ))
         "#)
-        .bind(id.as_str()).bind(body.last_task_type_id.as_ref().map(ObjectId::as_str))
+        .bind(&*id).bind(body.last_task_type_id.as_ref().map(ObjectId::as_str))
         .bind(&user.id).bind(&user.organization_id).bind(user.is_admin).execute(&state.pool).await?;
     if result.rows_affected() != 1 {
         return Err(ApiError::forbidden(crate::msg::user::NO_LONGER_EDITABLE));
     }
-    Ok(Json(
-        document(&state, &user, id.as_str(), &verification).await?,
-    ))
+    Ok(Json(document(&state, &user, &id, &verification).await?))
 }
 
 async fn update_experience(
@@ -258,14 +256,12 @@ async fn update_experience(
     Extension(verification): Extension<EmailVerification>,
     RequestJson(body): RequestJson<Map<String, Value>>,
 ) -> ApiResult<Json<Value>> {
-    if user.id != id.as_str() {
+    if user.id != *id {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     sqlx::query("UPDATE webknossos.multiUsers AS multi SET novelUserExperienceInfos = $2 FROM webknossos.users_ AS usr WHERE usr._id = $1 AND usr._multiUser = multi._id AND NOT multi.isDeleted")
         .bind(&user.id).bind(Value::Object(body)).execute(&state.pool).await?;
-    Ok(Json(
-        document(&state, &user, id.as_str(), &verification).await?,
-    ))
+    Ok(Json(document(&state, &user, &id, &verification).await?))
 }
 
 #[derive(Deserialize)]
@@ -293,14 +289,12 @@ async fn update_theme(
     Extension(verification): Extension<EmailVerification>,
     RequestJson(theme): RequestJson<Theme>,
 ) -> ApiResult<Json<Value>> {
-    if user.id != id.as_str() {
+    if user.id != *id {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     sqlx::query("UPDATE webknossos.multiUsers AS multi SET selectedTheme = $2::webknossos.THEME FROM webknossos.users_ AS usr WHERE usr._id = $1 AND usr._multiUser = multi._id AND NOT multi.isDeleted")
         .bind(&user.id).bind(theme.as_str()).execute(&state.pool).await?;
-    Ok(Json(
-        document(&state, &user, id.as_str(), &verification).await?,
-    ))
+    Ok(Json(document(&state, &user, &id, &verification).await?))
 }
 
 // ---------------------------------------------------------------------------
@@ -368,7 +362,7 @@ struct Membership {
 #[derive(sqlx::FromRow)]
 struct Target {
     organization: String,
-    multi_user: String,
+    multi_user: ObjectId,
     is_admin: bool,
     is_dataset_manager: bool,
     is_deactivated: bool,
@@ -412,12 +406,12 @@ async fn update(
     Extension(auth_config): Extension<BrowserAuthConfig>,
     RequestJson(body): RequestJson<UserUpdate>,
 ) -> ApiResult<Json<Value>> {
-    let id = id.as_str();
+    let id: &ObjectId = &id;
     let not_found = || ApiError::not_found(crate::msg::user::not_found(id));
     let mut tx = state.pool.begin().await?;
     let mut q = Sql::new("SELECT usr._organization FROM webknossos.users_ AS usr WHERE usr._id = ");
     q.push_bind(id).push(" AND ");
-    push_read_access(&mut q, requester.id.as_str().into());
+    push_read_access(&mut q, (&requester.id).into());
     let organization: String = q
         .build_query_scalar()
         .fetch_optional(&mut *tx)
@@ -466,7 +460,7 @@ async fn update(
     .into_iter()
     .collect();
 
-    let is_self = requester.id == id;
+    let is_self = requester.id == *id;
     let admin_of_target = requester.is_admin && requester.organization_id == target.organization;
     // UserService.isEditableBy: team manager of a shared team, organization
     // admin, or the user has no team memberships.
@@ -660,7 +654,7 @@ async fn update(
     // change, so a team manager cannot remove the user from their last shared team.
     let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.users_ AS usr WHERE usr._id = ");
     q.push_bind(id).push(" AND ");
-    push_read_access(&mut q, requester.id.as_str().into());
+    push_read_access(&mut q, (&requester.id).into());
     q.push(")");
     let still_accessible: bool = q.build_query_scalar().fetch_one(&mut *tx).await?;
     if !still_accessible {

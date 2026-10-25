@@ -89,7 +89,7 @@ pub struct AnnotationMetadata {
     pub id: String,
     pub dataset_id: ObjectId,
     pub task_id: Option<String>,
-    pub owner_id: String,
+    pub owner_id: ObjectId,
     pub owner_organization: Option<String>,
     pub name: String,
     pub description: String,

@@ -122,7 +122,7 @@ async fn acquire(
         .await?
         .ok_or_else(|| ProviderError::NotFound.into_api_error(StatusCode::NOT_FOUND))?;
     acquisition_gate(&live, &user)?;
-    let acquired: Option<(String, String)> = sqlx::query_as(
+    let acquired: Option<(ObjectId, String)> = sqlx::query_as(
         "INSERT INTO webknossos.annotation_mutexes(_annotation,_user,sessionId,expiry)
          VALUES($1,$2,$3,statement_timestamp()+($4::bigint * interval '1 microsecond'))
          ON CONFLICT (_annotation) DO UPDATE SET _user=EXCLUDED._user,

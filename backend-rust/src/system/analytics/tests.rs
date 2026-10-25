@@ -80,14 +80,15 @@ async fn disabled_heartbeat_spawns_no_job() {
 #[test]
 fn sessions_expire_after_pause() {
     let misc = MiscState::default();
+    let multi_user = ObjectId::new();
     let start = DateTime::from_timestamp_millis(10_000_000).unwrap();
-    let first = refresh_session_id(&misc, "m", start);
+    let first = refresh_session_id(&misc, &multi_user, start);
     assert_eq!(first, start.timestamp_millis());
     let later = start + chrono::Duration::minutes(29);
-    assert_eq!(refresh_session_id(&misc, "m", later), first);
+    assert_eq!(refresh_session_id(&misc, &multi_user, later), first);
     let much_later = later + chrono::Duration::minutes(31);
     assert_eq!(
-        refresh_session_id(&misc, "m", much_later),
+        refresh_session_id(&misc, &multi_user, much_later),
         much_later.timestamp_millis()
     );
 }

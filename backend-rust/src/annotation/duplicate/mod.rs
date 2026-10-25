@@ -104,7 +104,7 @@ pub(crate) struct NewAnnotation<'a> {
     pub id: &'a ObjectId,
     pub dataset_id: &'a ObjectId,
     pub task_id: Option<&'a str>,
-    pub owner_id: &'a str,
+    pub owner_id: &'a ObjectId,
     pub description: &'a str,
     pub name: &'a str,
     /// `Explorational`, `Task`, `TracingBase` or `Orphan`.
@@ -161,7 +161,7 @@ pub(crate) async fn insert_annotation(
 pub(crate) struct DuplicateSource<'a> {
     pub id: &'a str,
     pub dataset_id: &'a ObjectId,
-    pub owner_id: &'a str,
+    pub owner_id: &'a ObjectId,
     pub task_id: Option<&'a str>,
     pub description: &'a str,
 }
@@ -181,7 +181,7 @@ impl<'a> DuplicateSource<'a> {
             ProvidedAnnotation::Compound(compound) => Self {
                 id: compound.id.as_str(),
                 dataset_id: &compound.dataset_id,
-                owner_id: compound.owner_id.as_str(),
+                owner_id: &compound.owner_id,
                 task_id: None,
                 description: "",
             },
@@ -283,7 +283,7 @@ pub(crate) async fn duplicate_source_in_tracing_store(
     let request = DuplicateAnnotationRequest {
         source_annotation_id: ObjectId::parse(source.id)?,
         new_annotation_id: new_annotation_id.clone(),
-        owner_id: ObjectId::parse(source.owner_id)?,
+        owner_id: source.owner_id.clone(),
         requesting_user_id: requesting_user_id.clone(),
         version: None,
         is_from_task,
@@ -328,7 +328,6 @@ async fn duplicate(
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let source = DuplicateSource::from_provided(&annotation);
-    let requester_id = ObjectId::parse(&user.id)?;
     let new_id = ObjectId::new();
     // duplicateAnnotation(..) ?~> Msg.Annotation.duplicateFailed: failures
     // keep a ParamFailure status (404 dataset/data source, upstream RPC
@@ -338,7 +337,7 @@ async fn duplicate(
         &services.tracing_store,
         &source,
         &new_id,
-        &requester_id,
+        &user.id,
     )
     .await
     .map_err(|error| ApiError::from(error.wrap(DUPLICATE_FAILED)))?;

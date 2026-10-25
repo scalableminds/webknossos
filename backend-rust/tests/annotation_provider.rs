@@ -61,7 +61,7 @@ fn unreachable_pool() -> PgPool {
 
 fn user(id: &str, organization: &str, is_admin: bool) -> AuthUser {
     AuthUser {
-        id: id.to_owned(),
+        id: oid(id),
         organization_id: organization.to_owned(),
         is_admin,
         is_dataset_manager: false,
@@ -170,7 +170,7 @@ fn compound_annotations_are_built_from_the_merge_result() {
         ]
     );
     let provided = ProvidedAnnotation::Compound(compound);
-    assert_eq!(provided.owner_id(), owner.as_str());
+    assert_eq!(provided.owner_id(), &owner);
     assert_eq!(provided.dataset_id(), &dataset);
     assert_eq!(provided.visibility(), "Internal");
     assert_eq!(
@@ -422,7 +422,7 @@ async fn saved_types_resolve_the_live_annotation_regardless_of_requested_type() 
                 .await
                 .unwrap();
             assert_eq!(provided.id(), annotation.as_str());
-            assert_eq!(provided.owner_id(), s.owner);
+            assert_eq!(provided.owner_id().as_str(), s.owner);
             assert_eq!(provided.annotation_type(), Some(actual), "{typ}");
             assert!(matches!(provided, ProvidedAnnotation::Saved(_)));
         }
@@ -1104,7 +1104,7 @@ async fn compound_task_merges_readable_finished_annotations_and_caches_the_resul
         .await
         .unwrap();
     assert_eq!(cached.compound(), Some(&compound));
-    assert_eq!(cached.owner_id(), w.manager);
+    assert_eq!(cached.owner_id().as_str(), w.manager);
     assert_eq!(mock.requests().len(), 1);
     // A clone shares the cache (Extension clones per request).
     let clone = provider.clone();
@@ -1139,7 +1139,7 @@ async fn compound_task_merges_readable_finished_annotations_and_caches_the_resul
         )
         .await
         .unwrap();
-    assert_eq!(fresh.owner_id(), w.admin);
+    assert_eq!(fresh.owner_id().as_str(), w.admin);
     let requests = mock.requests();
     assert_eq!(requests.len(), 2);
     assert_merge_request(
@@ -1356,7 +1356,7 @@ async fn compound_project_requires_team_management_and_merges_all_finished_annot
         provided.annotation_type(),
         Some(AnnotationType::CompoundProject)
     );
-    assert_eq!(provided.owner_id(), w.manager);
+    assert_eq!(provided.owner_id().as_str(), w.manager);
     let requests = mock.requests();
     assert_eq!(requests.len(), 1);
     assert_merge_request(
@@ -1508,7 +1508,7 @@ async fn compound_cache_expires_and_the_next_requester_becomes_owner() {
         )
         .await
         .unwrap();
-    assert_eq!(hit.owner_id(), w.manager);
+    assert_eq!(hit.owner_id().as_str(), w.manager);
     assert_eq!(hit.compound(), first.compound());
     assert_eq!(mock.requests().len(), 1);
     tokio::time::sleep(Duration::from_millis(500)).await;
@@ -1521,7 +1521,7 @@ async fn compound_cache_expires_and_the_next_requester_becomes_owner() {
         )
         .await
         .unwrap();
-    assert_eq!(fresh.owner_id(), w.admin);
+    assert_eq!(fresh.owner_id().as_str(), w.admin);
     assert_eq!(mock.requests().len(), 2);
     assert_eq!(
         query(&mock.requests()[1], "requestingUserId"),

@@ -160,7 +160,7 @@ impl SharedResource {
     /// requester-based access predicates are evaluated per candidate: the
     /// requester becomes `candidate._id`, the organization scope the
     /// candidate's organization.
-    fn access_query<'a>(&'a self, user_ids: &'a [&'a str]) -> Sql<'a> {
+    fn access_query<'a>(&'a self, user_ids: &'a [&'a ObjectId]) -> Sql<'a> {
         let candidate = Requester {
             id: Arg::Sql("candidate._id"),
             organization: Arg::Sql("candidate._organization"),
@@ -190,7 +190,7 @@ impl SharedResource {
 /// A team member who might gain access through the update.
 #[derive(Clone, Debug, FromRow, PartialEq, Eq)]
 pub struct Candidate {
-    pub user_id: String,
+    pub user_id: ObjectId,
     /// The added teams the user is a member of.
     pub team_ids: Vec<String>,
 }
@@ -201,14 +201,14 @@ pub struct PendingShareEmails {
     resource: SharedResource,
     added_team_ids: Vec<String>,
     candidates: Vec<Candidate>,
-    had_access: HashSet<String>,
+    had_access: HashSet<ObjectId>,
 }
 
 /// Candidates that have access after the update but did not before.
 pub fn newly_allowed<'a>(
     candidates: &'a [Candidate],
-    had_access: &HashSet<String>,
-    has_access: &HashSet<String>,
+    had_access: &HashSet<ObjectId>,
+    has_access: &HashSet<ObjectId>,
 ) -> Vec<&'a Candidate> {
     candidates
         .iter()
@@ -234,7 +234,7 @@ pub fn recipient_team_names(
 
 #[derive(FromRow)]
 struct Person {
-    user_id: String,
+    user_id: ObjectId,
     email: String,
     first_name: String,
     last_name: String,
@@ -257,7 +257,7 @@ pub struct NotificationEmailService {
     /// part of the onboarding, which the activation email already covers.
     /// Kept in memory only, as losing it on a restart merely causes one extra
     /// email.
-    recently_activated: Arc<Mutex<HashMap<String, Instant>>>,
+    recently_activated: Arc<Mutex<HashMap<ObjectId, Instant>>>,
 }
 
 impl std::fmt::Debug for NotificationEmailService {
@@ -286,16 +286,16 @@ impl NotificationEmailService {
 
     /// Whether an annotation transferred by `issuer_id` to `new_owner_id` is
     /// announced (the new owner's activation is checked when sending).
-    pub fn wants_transfer_email(&self, new_owner_id: &str, issuer_id: &str) -> bool {
+    pub fn wants_transfer_email(&self, new_owner_id: &ObjectId, issuer_id: &ObjectId) -> bool {
         self.settings().access_changes && new_owner_id != issuer_id
     }
 
     /// Whether a task manually assigned by `issuer_id` is announced.
     pub fn wants_task_assigned_email(
         &self,
-        assignee_id: &str,
+        assignee_id: &ObjectId,
         assignee_is_deactivated: bool,
-        issuer_id: &str,
+        issuer_id: &ObjectId,
     ) -> bool {
         self.settings().manual_task_assignments
             && assignee_id != issuer_id
@@ -309,10 +309,10 @@ impl NotificationEmailService {
     /// separately.
     pub fn wants_access_changed_email(
         &self,
-        user_id: &str,
+        user_id: &ObjectId,
         before: UserAccess,
         after: UserAccess,
-        issuer_id: &str,
+        issuer_id: &ObjectId,
     ) -> bool {
         let recently_activated = {
             let mut activated = self
@@ -322,7 +322,7 @@ impl NotificationEmailService {
             activated.retain(|_, at| at.elapsed() < RECENT_ACTIVATION);
             if before.is_deactivated && !after.is_deactivated {
                 activated
-                    .entry(user_id.to_owned())
+                    .entry(user_id.clone())
                     .or_insert_with(Instant::now);
             }
             activated.contains_key(user_id)
@@ -354,13 +354,13 @@ impl NotificationEmailService {
         resource: SharedResource,
         old_team_ids: &[String],
         new_team_ids: &[String],
-        exclude: &[&str],
+        exclude: &[&ObjectId],
     ) -> Option<PendingShareEmails> {
         let added_team_ids = added_team_ids(old_team_ids, new_team_ids);
         if !self.settings().access_changes || added_team_ids.is_empty() {
             return None;
         }
-        let exclude: Vec<&str> = exclude.to_vec();
+        let exclude: Vec<&ObjectId> = exclude.to_vec();
         let prepared = async {
             let mut savepoint = transaction.begin().await?;
             let candidates: Vec<Candidate> = sqlx::query_as(
@@ -374,8 +374,8 @@ impl NotificationEmailService {
             .bind(&exclude)
             .fetch_all(&mut *savepoint)
             .await?;
-            let user_ids: Vec<&str> = candidates.iter().map(|c| c.user_id.as_str()).collect();
-            let had_access: Vec<String> = if user_ids.is_empty() {
+            let user_ids: Vec<&ObjectId> = candidates.iter().map(|c| &c.user_id).collect();
+            let had_access: Vec<ObjectId> = if user_ids.is_empty() {
                 Vec::new()
             } else {
                 resource
@@ -413,7 +413,7 @@ impl NotificationEmailService {
         &self,
         pool: &PgPool,
         pending: Option<PendingShareEmails>,
-        sharer_id: &str,
+        sharer_id: &ObjectId,
     ) {
         let Some(pending) = pending else {
             return;
@@ -421,7 +421,7 @@ impl NotificationEmailService {
         if pending.candidates.is_empty() {
             return;
         }
-        let (service, pool, sharer_id) = (self.clone(), pool.clone(), sharer_id.to_owned());
+        let (service, pool, sharer_id) = (self.clone(), pool.clone(), sharer_id.clone());
         tokio::spawn(async move {
             let description = pending.resource.description();
             if let Err(error) = service.share_emails(&pool, pending, &sharer_id).await {
@@ -434,7 +434,7 @@ impl NotificationEmailService {
         &self,
         pool: &PgPool,
         pending: PendingShareEmails,
-        sharer_id: &str,
+        sharer_id: &ObjectId,
     ) -> Result<(), sqlx::Error> {
         let PendingShareEmails {
             resource,
@@ -442,10 +442,10 @@ impl NotificationEmailService {
             candidates,
             had_access,
         } = pending;
-        let user_ids: Vec<&str> = candidates.iter().map(|c| c.user_id.as_str()).collect();
-        let has_access: HashSet<String> = resource
+        let user_ids: Vec<&ObjectId> = candidates.iter().map(|c| &c.user_id).collect();
+        let has_access: HashSet<ObjectId> = resource
             .access_query(&user_ids)
-            .build_query_scalar::<String>()
+            .build_query_scalar::<ObjectId>()
             .fetch_all(pool)
             .await?
             .into_iter()
@@ -456,8 +456,8 @@ impl NotificationEmailService {
         }
         let team_names = team_names(pool, &added_team_ids).await?;
         let sharer_name = person(pool, sharer_id).await?.full_name();
-        let recipient_ids: Vec<&str> = recipients.iter().map(|r| r.user_id.as_str()).collect();
-        let people: HashMap<String, Person> = people(pool, &recipient_ids)
+        let recipient_ids: Vec<&ObjectId> = recipients.iter().map(|r| &r.user_id).collect();
+        let people: HashMap<ObjectId, Person> = people(pool, &recipient_ids)
             .await?
             .into_iter()
             .map(|person| (person.user_id.clone(), person))
@@ -544,17 +544,17 @@ impl NotificationEmailService {
         annotation_id: &str,
         annotation_name: &str,
         dataset_id: &ObjectId,
-        new_owner_id: &str,
-        issuer_id: &str,
+        new_owner_id: &ObjectId,
+        issuer_id: &ObjectId,
     ) {
         if !self.wants_transfer_email(new_owner_id, issuer_id) {
             return;
         }
         let service = self.clone();
         let pool = pool.clone();
-        let [annotation_id, annotation_name, new_owner_id, issuer_id] =
-            [annotation_id, annotation_name, new_owner_id, issuer_id].map(str::to_owned);
-        let dataset_id = dataset_id.clone();
+        let [annotation_id, annotation_name] = [annotation_id, annotation_name].map(str::to_owned);
+        let [dataset_id, new_owner_id, issuer_id] =
+            [dataset_id, new_owner_id, issuer_id].map(ObjectId::clone);
         tokio::spawn(async move {
             let result = async {
                 let is_deactivated: bool = sqlx::query_scalar(
@@ -602,19 +602,19 @@ impl NotificationEmailService {
     pub fn send_access_changed_email(
         &self,
         pool: &PgPool,
-        user_id: &str,
+        user_id: &ObjectId,
         before: UserAccess,
         old_memberships: Vec<TeamMembership>,
         after: UserAccess,
         new_memberships: Vec<TeamMembership>,
-        issuer_id: &str,
+        issuer_id: &ObjectId,
     ) {
         if !self.wants_access_changed_email(user_id, before, after, issuer_id) {
             return;
         }
         let service = self.clone();
         let pool = pool.clone();
-        let (user_id, issuer_id) = (user_id.to_owned(), issuer_id.to_owned());
+        let (user_id, issuer_id) = (user_id.clone(), issuer_id.clone());
         tokio::spawn(async move {
             let result = async {
                 let mut team_ids: Vec<String> = old_memberships
@@ -675,17 +675,17 @@ impl NotificationEmailService {
         pool: &PgPool,
         task_id: &str,
         annotation_id: &str,
-        assignee_id: &str,
+        assignee_id: &ObjectId,
         assignee_is_deactivated: bool,
-        issuer_id: &str,
+        issuer_id: &ObjectId,
     ) {
         if !self.wants_task_assigned_email(assignee_id, assignee_is_deactivated, issuer_id) {
             return;
         }
         let service = self.clone();
         let pool = pool.clone();
-        let [task_id, annotation_id, assignee_id, issuer_id] =
-            [task_id, annotation_id, assignee_id, issuer_id].map(str::to_owned);
+        let [task_id, annotation_id] = [task_id, annotation_id].map(str::to_owned);
+        let [assignee_id, issuer_id] = [assignee_id, issuer_id].map(ObjectId::clone);
         tokio::spawn(async move {
             let result = async {
                 let recipient = person(&pool, &assignee_id).await?;
@@ -740,7 +740,7 @@ const PERSON: &str =
     FROM webknossos.users u JOIN webknossos.multiUsers_ m ON m._id = u._multiUser";
 
 /// The multi user (name and email) of a user.
-async fn person(pool: &PgPool, user_id: &str) -> Result<Person, sqlx::Error> {
+async fn person(pool: &PgPool, user_id: &ObjectId) -> Result<Person, sqlx::Error> {
     Sql::new(PERSON)
         .push(" WHERE u._id = ")
         .push_bind(user_id)
@@ -749,7 +749,7 @@ async fn person(pool: &PgPool, user_id: &str) -> Result<Person, sqlx::Error> {
         .await
 }
 
-async fn people(pool: &PgPool, user_ids: &[&str]) -> Result<Vec<Person>, sqlx::Error> {
+async fn people(pool: &PgPool, user_ids: &[&ObjectId]) -> Result<Vec<Person>, sqlx::Error> {
     Sql::new(PERSON)
         .push(" WHERE u._id = ANY(")
         .push_bind(user_ids)

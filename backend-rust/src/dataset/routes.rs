@@ -93,7 +93,7 @@ async fn find_by_import_url(
     Extension(features): Extension<DatasetFeatures>,
 ) -> ApiResult<Json<Value>> {
     let mut q = Sql::new("SELECT d._id FROM webknossos.datasets_ d WHERE ");
-    crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+    crate::dataset::access::push_read_predicate(&mut q, (&user.id).into(), None);
     q.push(" AND d._organization=")
         .push_bind(&user.organization_id)
         .push(" AND d.importURL=")
@@ -115,7 +115,7 @@ async fn organization_for_name(
     let mut q = Sql::new("SELECT d._organization FROM webknossos.datasets_ d WHERE ");
     crate::dataset::access::push_read_predicate(
         &mut q,
-        user.as_ref().map(|u| u.id.as_str()).into(),
+        user.as_ref().map(|u| &u.id).into(),
         query.sharing_token.as_deref(),
     );
     q.push(" AND d.name=")
@@ -289,7 +289,7 @@ async fn update_metadata(
     .execute(&mut *transaction)
     .await?;
     let mut q = Sql::new("SELECT ");
-    crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+    crate::dataset::access::push_read_predicate(&mut q, (&user.id).into(), None);
     q.push(" FROM webknossos.datasets_ d WHERE d._id=")
         .push_bind(id.as_str());
     let readable: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;
@@ -485,7 +485,7 @@ pub(crate) async fn full_json_on_connection(
     dataset_id: &ObjectId,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
-    let user_id = user.map(|u| u.id.as_str());
+    let user_id = user.map(|u| &u.id);
     let organization = user.map(|u| u.organization_id.as_str());
     let mut q = Sql::new(
         r#"SELECT jsonb_build_object(
@@ -586,7 +586,7 @@ pub(crate) async fn full_json_on_connection(
 /// of or administer.
 fn push_visible_teams<'a>(
     q: &mut Sql<'a>,
-    user_id: Option<&'a str>,
+    user_id: Option<&'a ObjectId>,
     organization: Option<&'a str>,
     team_ids: &'static str,
 ) {
@@ -1006,7 +1006,7 @@ pub(crate) async fn list_values(
       LEFT JOIN (SELECT _dataset, sum(usedStorageBytes) AS storage FROM webknossos.organization_usedStorage_attachments
         GROUP BY _dataset) ats ON ats._dataset = d._id"#
     };
-    let user_id = user.map(|u| u.id.as_str());
+    let user_id = user.map(|u| &u.id);
     let uploader = query.uploader_id.as_ref().map(ObjectId::as_str);
     let folder = query.folder_id.as_ref().map(ObjectId::as_str);
     let mut q = Sql::new(
@@ -1177,7 +1177,7 @@ async fn sharing_token(
         .push(" AND d._organization = ")
         .push_bind(&user.organization_id)
         .push(" AND NOT d.isDeleted AND ");
-    crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+    crate::dataset::access::push_read_predicate(&mut q, (&user.id).into(), None);
     q.push(" RETURNING sharingToken");
     let result: Option<String> = q.build_query_scalar().fetch_optional(&state.pool).await?;
     Ok(Json(
@@ -1196,9 +1196,9 @@ async fn delete_sharing_token(
         .push(" AND d._organization = ")
         .push_bind(&user.organization_id)
         .push(" AND NOT d.isDeleted AND ");
-    crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+    crate::dataset::access::push_read_predicate(&mut q, (&user.id).into(), None);
     q.push(" AND ");
-    crate::dataset::access::push_edit_predicate(&mut q, user.id.as_str().into());
+    crate::dataset::access::push_edit_predicate(&mut q, (&user.id).into());
     let result = q.build().execute(&state.pool).await?;
     if result.rows_affected() != 1 {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
@@ -1248,7 +1248,7 @@ async fn update_teams(
             SharedResource::Dataset { id: (*id).clone() },
             &current,
             &updated,
-            &[user.id.as_str()],
+            &[&user.id],
         )
         .await;
     sqlx::query("DELETE FROM webknossos.dataset_allowedTeams WHERE _dataset = $1")

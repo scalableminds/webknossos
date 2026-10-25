@@ -63,6 +63,7 @@ Reports redact fields whose names contain token/password/secret/key/cookie. The 
 - `admin_crud.json`: teams, users, scripts, task types, projects, folders, datasets, configurations, maintenances, short links, organization; negative cases; a second user via cookie login.
 - `annotations_tasks.json`: explorational and task annotation lifecycle through the real tracingstores (create, info, edit, sharing, mutex, duplicate, NML download, merge, private links, transfer, finish/reopen, task create/request/finish/assign/delete).
 
+- `annotation_flows.json`: NML/zip upload through the real tracingstores (groups, prefixes, fallbacks, overwritten dataset, invalid input), merge without type, id reservation per domain, annotation sources for the datastore (by id and private link), finish-all, reset of task annotations.
 - `auth.json`: login/logout/tokens/registration/invites/password change and reset, logout everywhere (runs last).
 - `jobs_ai.json`: worker protocol (request/status/cancel/retry/voxelytics attach), job submissions and lists, AI model upload-to-path/update/delete, trainings, inferences with Play's pretrained models.
 - `oidc.json`: OIDC login redirect and callback against `oidc_mock.py` (existing/new users, access-token-only claims, bad signature, expired token, missing claim, non-JWT, provider error).

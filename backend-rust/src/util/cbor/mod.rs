@@ -1,5 +1,7 @@
 //! Minimal, strict CBOR (RFC 8949) decoder/encoder and COSE_Key model for
-//! WebAuthn attestation objects, authenticator data and credential storage.
+//! storing WebAuthn credentials in webauthn4j's format. Ceremonies and
+//! signatures are verified by `webauthn-rs-core`; this codec additionally
+//! enforces webauthn4j's layout rules on the same bytes.
 //!
 //! Accepted: definite-length unsigned/negative integers (64-bit), byte and
 //! text strings, arrays, maps and the simple values false/true/null/undefined.
@@ -12,7 +14,6 @@ use std::fmt;
 use webknossos_common::bytes::{u16_be, u32_be, u64_be};
 
 use base64::{Engine, engine::general_purpose::STANDARD};
-use ring::signature;
 use serde_json::{Map, Value as Json};
 
 /// Nesting limit; WebAuthn structures need at most four levels.
@@ -367,14 +368,6 @@ impl CoseKey {
         }
     }
 
-    pub fn algorithm(&self) -> i64 {
-        match self {
-            CoseKey::Okp { .. } => ALG_EDDSA,
-            CoseKey::Ec2 { .. } => ALG_ES256,
-            CoseKey::Rsa { .. } => ALG_RS256,
-        }
-    }
-
     /// The CBOR webauthn4j (Jackson) writes for this key; label order
     /// verified against webauthn4j 0.31.9: EC2 1,2,3,-1,-2,-3; OKP 1,2,3,-1,-2;
     /// RSA -2,1,-1,2,3.
@@ -408,31 +401,6 @@ impl CoseKey {
             }
         }
         encode(&Value::Map(entries))
-    }
-
-    /// Verify a WebAuthn assertion signature (ES256 signatures are ASN.1 DER).
-    pub fn verify(&self, message: &[u8], signature_bytes: &[u8]) -> bool {
-        match self {
-            CoseKey::Okp { x, .. } => signature::UnparsedPublicKey::new(&signature::ED25519, x)
-                .verify(message, signature_bytes)
-                .is_ok(),
-            CoseKey::Ec2 { x, y, .. } => {
-                let mut point = Vec::with_capacity(65);
-                point.push(0x04);
-                point.extend(x);
-                point.extend(y);
-                signature::UnparsedPublicKey::new(&signature::ECDSA_P256_SHA256_ASN1, point)
-                    .verify(message, signature_bytes)
-                    .is_ok()
-            }
-            CoseKey::Rsa { n, e, .. } => signature::RsaPublicKeyComponents { n, e }
-                .verify(
-                    &signature::RSA_PKCS1_2048_8192_SHA256,
-                    message,
-                    signature_bytes,
-                )
-                .is_ok(),
-        }
     }
 }
 

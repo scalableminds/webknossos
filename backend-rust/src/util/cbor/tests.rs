@@ -255,40 +255,6 @@ fn rejects_unsupported_cose_keys() {
 }
 
 #[test]
-fn verifies_signatures_with_ring() {
-    let rng = ring::rand::SystemRandom::new();
-    let pkcs8 =
-        signature::EcdsaKeyPair::generate_pkcs8(&signature::ECDSA_P256_SHA256_ASN1_SIGNING, &rng)
-            .unwrap();
-    let pair = signature::EcdsaKeyPair::from_pkcs8(
-        &signature::ECDSA_P256_SHA256_ASN1_SIGNING,
-        pkcs8.as_ref(),
-        &rng,
-    )
-    .unwrap();
-    use signature::KeyPair;
-    let point = pair.public_key().as_ref();
-    let key = CoseKey::Ec2 {
-        kid: None,
-        x: point[1..33].to_vec(),
-        y: point[33..].to_vec(),
-    };
-    let sig = pair.sign(&rng, b"message").unwrap();
-    assert!(key.verify(b"message", sig.as_ref()));
-    assert!(!key.verify(b"other", sig.as_ref()));
-
-    let pkcs8 = signature::Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
-    let pair = signature::Ed25519KeyPair::from_pkcs8(pkcs8.as_ref()).unwrap();
-    let key = CoseKey::Okp {
-        kid: None,
-        x: pair.public_key().as_ref().to_vec(),
-    };
-    let sig = pair.sign(b"message");
-    assert!(key.verify(b"message", sig.as_ref()));
-    assert!(!key.verify(b"other", sig.as_ref()));
-}
-
-#[test]
 fn json_view_matches_jackson() {
     let value = decode(&hex("a263666f6f440102030463626172820161 78"
         .replace(' ', "")

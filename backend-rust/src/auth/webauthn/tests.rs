@@ -7,9 +7,14 @@ fn rp() -> RelyingParty {
     }
 }
 
+/// The crate's origin rule with the options `RelyingParty::verifier` passes
+/// (no subdomains, exact port). Unparsable origins fail clientDataJSON parsing.
 #[test]
 fn origins_compare_like_webauthn4j() {
     let rp = rp();
+    let matches = |origin: &str| {
+        WebauthnCore::origins_match(false, false, &url::Url::parse(origin).unwrap(), &rp.origin)
+    };
     for ok in [
         "https://example.com",
         "https://example.com/",
@@ -17,46 +22,31 @@ fn origins_compare_like_webauthn4j() {
         "HTTPS://EXAMPLE.COM",
         "https://example.com/foo",
     ] {
-        assert!(rp.origin_matches(ok), "{ok}");
+        assert!(matches(ok), "{ok}");
     }
     for bad in [
         "http://example.com",
         "https://example.com:8443",
         "https://evil.com",
         "https://sub.example.com",
-        "null",
-        "",
     ] {
-        assert!(!rp.origin_matches(bad), "{bad}");
+        assert!(!matches(bad), "{bad}");
     }
 }
 
 #[test]
-fn sign_count_rule_matches_webauthn4j_and_scala() {
-    // (old, new, accepted): webauthn4j rejects unless both are 0 or new > old.
-    for (old, new, ok) in [
-        (0, 0, true),
-        (0, 1, true),
-        (3, 4, true),
-        (3, 3, false),
-        (3, 2, false),
-        (3, 0, false),
-        // Stored after Scala's `toInt` wrap.
-        (-5, 0, true),
-        (-5, 1, true),
-    ] {
-        assert_eq!(sign_count_acceptable(old, new), ok, "{old} -> {new}");
-    }
+fn stored_counters_map_to_the_webauthn4j_rule() {
+    assert_eq!(verifier_counter(0), 0);
+    assert_eq!(verifier_counter(7), 7);
+    // Stored after Scala's `toInt` wrap: webauthn4j accepts any new counter.
+    assert_eq!(verifier_counter(-5), 0);
 }
 
 #[test]
-fn token_binding_follows_webauthn4j() {
-    let rp = rp();
-    let challenge = [7u8; 32];
-    let encoded = URL_SAFE_NO_PAD.encode(challenge);
+fn token_binding_and_cross_origin_follow_webauthn4j() {
     let check = |binding: JsonValue| {
-        let data = json!({"type": "webauthn.get", "challenge": encoded, "origin": "https://example.com", "tokenBinding": binding});
-        verify_client_data(data.to_string().as_bytes(), "webauthn.get", &challenge, &rp)
+        let data = json!({"type": "webauthn.get", "origin": "https://example.com", "tokenBinding": binding});
+        verify_client_data_bindings(data.to_string().as_bytes())
     };
     assert!(check(JsonValue::Null).is_ok());
     assert!(check(json!({"status": "supported"})).is_ok());
@@ -65,6 +55,21 @@ fn token_binding_follows_webauthn4j() {
     assert!(check(json!({"status": "present", "id": "AAAA"})).is_err());
     assert!(check(json!({"status": "bogus"})).is_err());
     assert!(check(json!({})).is_err());
+    let cross_origin = |value: JsonValue| {
+        verify_client_data_bindings(json!({"crossOrigin": value}).to_string().as_bytes())
+    };
+    assert!(cross_origin(json!(false)).is_ok());
+    assert!(cross_origin(json!(true)).is_err());
+    assert!(verify_client_data_bindings(b"not json").is_err());
+}
+
+/// A registration ceremony whose challenge is `challenge` (the crate draws
+/// its own; its state is serde-serializable).
+fn registration_state(challenge: &[u8]) -> RegistrationState {
+    let (_, state) = registration_ceremony(&rp().verifier(), b"user", "user", "User").unwrap();
+    let mut state = serde_json::to_value(state).unwrap();
+    state["challenge"] = json!(URL_SAFE_NO_PAD.encode(challenge));
+    serde_json::from_value(state).unwrap()
 }
 
 #[test]
@@ -122,9 +127,15 @@ fn replays_webauthn4j_registrations() {
         ),
     ];
     for (attestation, (uv, be, bs), extensions) in cases {
-        let key = json!({"response": {"clientDataJSON": cdj, "attestationObject": attestation}});
+        let id = URL_SAFE_NO_PAD.encode((1u8..=16).collect::<Vec<u8>>());
+        let key = json!({
+            "id": id,
+            "rawId": id,
+            "type": "public-key",
+            "response": {"clientDataJSON": cdj, "attestationObject": attestation},
+        });
         let registration = parse_registration(&key).unwrap();
-        verify_registration(&registration, &[7; 32], &rp).unwrap();
+        verify_registration(&registration, &registration_state(&[7; 32]), &rp).unwrap();
         let bytes = registration.credential.to_webauthn4j_bytes();
         let hex: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
         assert_eq!(hex, attested);
@@ -141,12 +152,13 @@ fn replays_webauthn4j_registrations() {
             registration.auth_data.extensions_json().unwrap(),
             extensions
         );
-        assert!(verify_registration(&registration, &[8; 32], &rp).is_err());
+        assert!(verify_registration(&registration, &registration_state(&[8; 32]), &rp).is_err());
     }
 }
 
 #[test]
 fn authenticator_data_layout_rules() {
+    const FLAG_UP: u8 = 0x01;
     let mut base = vec![0u8; 32];
     base.push(FLAG_UP | FLAG_ED);
     base.extend([0, 0, 0, 5]);

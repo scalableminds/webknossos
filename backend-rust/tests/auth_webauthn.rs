@@ -570,6 +570,7 @@ struct AssertTweak {
     origin: Option<&'static str>,
     challenge: Option<String>,
     client_type: Option<&'static str>,
+    cross_origin: bool,
     flags: Option<u8>,
     count: u32,
     credential_id: Option<Vec<u8>>,
@@ -591,7 +592,7 @@ impl Authenticator {
             "type": tweak.client_type.unwrap_or("webauthn.get"),
             "challenge": challenge,
             "origin": tweak.origin.unwrap_or(PUBLIC_URI),
-            "crossOrigin": false,
+            "crossOrigin": tweak.cross_origin,
         })
         .to_string();
         let mut message = auth_data.clone();
@@ -807,6 +808,18 @@ async fn auth_finalize_logs_in_and_rejects_bad_assertions() {
             ..Default::default()
         },
         AssertTweak {
+            cross_origin: true,
+            count: 10,
+            ..Default::default()
+        },
+        // No user presence: webauthn4j would accept it (up=false), webauthn-rs-core
+        // always requires UP (deviation, see CUTOVER.md).
+        AssertTweak {
+            flags: Some(0x04),
+            count: 10,
+            ..Default::default()
+        },
+        AssertTweak {
             credential_id: Some(vec![1; 16]),
             count: 10,
             ..Default::default()
@@ -906,8 +919,9 @@ async fn auth_finalize_logs_in_and_rejects_bad_assertions() {
         (StatusCode::UNAUTHORIZED, timeout.clone())
     );
 
-    // A valid assertion (UP only, UV not required) for an account without
-    // _lastLoggedInIdentity: counter updated first, then Empty -> 404.
+    // A valid assertion (UP only: UV is not required, although the credential was
+    // registered with UV) for an account without _lastLoggedInIdentity: counter
+    // updated first, then Empty -> 404.
     sqlx::query("UPDATE webknossos.multiUsers SET _lastLoggedInIdentity = NULL WHERE _id = $1")
         .bind(&multi_user)
         .execute(&database.pool)

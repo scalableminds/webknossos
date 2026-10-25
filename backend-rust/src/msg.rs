@@ -207,8 +207,6 @@ pub mod tracing_store {
     pub const NOT_FOUND: &str = "Tracing store could not be found or accessed.";
     /// Rust-only wording.
     pub const MISSING: &str = "Tracing store not found.";
-    /// Rust-only wording.
-    pub const NAME_IMMUTABLE: &str = "Tracing store name cannot be changed.";
 }
 
 pub mod user {
@@ -526,11 +524,6 @@ pub mod analytics {
     pub const WRONG_API_KEY: &str = "Provided API key is not correct for provided webknossosUri";
     /// Rust-only wording.
     pub const NO_EVENTS: &str = "No analytics events provided.";
-}
-
-pub mod credential {
-    /// Rust-only wording.
-    pub const MISSING: &str = "Credential not found.";
 }
 
 pub mod credit_transaction {

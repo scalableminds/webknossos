@@ -69,7 +69,8 @@ async fn tracing_store_registry_exposes_only_public_fields_and_requires_admin_up
         json!({"name":"tracing","url":"http://private:9002","publicUrl":"https://updated.example"});
     for (token, status) in [
         (None, StatusCode::UNAUTHORIZED),
-        (Some(member.token.as_str()), StatusCode::FORBIDDEN),
+        // Play's bare `Fox.fromBool(isAdmin)` fails as an empty Fox: 404.
+        (Some(member.token.as_str()), StatusCode::NOT_FOUND),
     ] {
         assert_eq!(
             request(
@@ -116,7 +117,7 @@ async fn tracing_store_registry_exposes_only_public_fields_and_requires_admin_up
         )
         .await
         .0,
-        StatusCode::BAD_REQUEST
+        StatusCode::NOT_FOUND
     );
     let mut invalid = body.clone();
     invalid["url"] = json!("file:///private");

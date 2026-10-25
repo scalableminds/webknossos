@@ -190,7 +190,8 @@ async fn validate(
             .bind(id)
             .fetch_optional(&state.pool)
             .await?
-            .ok_or_else(|| ApiError::not_found(crate::msg::annotation::MISSING))?;
+            // Play: `annotationForTracing(…) ?~> annotation.notFound` on an empty result (400).
+            .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?;
             annotation(state, user.as_ref(), Some(&annotation_id), body.mode, token).await
         }
         Resource::JobExport => job_export(state, user.as_ref(), id, body.mode).await,
@@ -263,7 +264,10 @@ async fn annotation(
     }
     let id = required_id(id)?;
     let id = id.as_str();
-    let metadata = crate::annotation::access::find(&state.pool, user, id, true).await?;
+    // Play falls back to the (empty) annotation cache, whose empty Fox answers the generic 404.
+    let metadata = crate::annotation::access::find_optional(&state.pool, user, id, true)
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // Private links only grant read access, and only until they expire.
     let allowed_by_link = mode == Mode::Read
         && sqlx::query_scalar::<_, bool>(

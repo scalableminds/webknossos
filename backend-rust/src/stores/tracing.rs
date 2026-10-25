@@ -48,18 +48,26 @@ async fn update(
     Path(name): Path<String>,
     Json(body): Json<StoreUpdate>,
 ) -> ApiResult<ResponseJson<Value>> {
+    // Play's bare `Fox.fromBool` checks fail as empty Foxes: the generic 404.
     if !user.is_admin {
-        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT));
+        return Err(ApiError::not_found(crate::msg::NOT_FOUND));
+    }
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM webknossos.tracingStores_ WHERE name = $1)",
+    )
+    .bind(&name)
+    .fetch_one(&state.pool)
+    .await?;
+    if !exists {
+        return Err(ApiError::not_found(crate::msg::tracing_store::NOT_FOUND));
     }
     if body.name != name {
-        return Err(ApiError::bad_request(
-            crate::msg::tracing_store::NAME_IMMUTABLE,
-        ));
+        return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
     // The existing API permits an organization admin to update this shared
     // registry. Preserve the private URL/key and soft-delete boundaries.
     let value = sqlx::query_scalar("UPDATE webknossos.tracingStores SET url=$2, publicUrl=$3 WHERE name=$1 AND NOT isDeleted RETURNING jsonb_build_object('name',name,'url',publicUrl)")
         .bind(name).bind(body.url).bind(body.public_url).fetch_optional(&state.pool).await?
-        .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
+        .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::NOT_FOUND))?;
     Ok(ResponseJson(value))
 }

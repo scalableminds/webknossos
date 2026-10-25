@@ -96,7 +96,7 @@
   {
    "name": "user2-update",
    "method": "PATCH",
-   "path": "/api/users/6ad299887e8ea1667bf4110b",
+   "path": "/api/users/{seedUser2Id}",
    "as": "admin",
    "json": {
     "firstName": "Changed",
@@ -107,7 +107,7 @@
     "isDatasetManager": true,
     "teams": [
      {
-      "id": "6ad299887e8ea1667bf41107",
+      "id": "{seedTeamId}",
       "name": "Default",
       "isTeamManager": false
      },
@@ -125,13 +125,13 @@
   {
    "name": "user2-read",
    "method": "GET",
-   "path": "/api/users/6ad299887e8ea1667bf4110b",
+   "path": "/api/users/{seedUser2Id}",
    "as": "admin"
   },
   {
    "name": "user2-theme",
    "method": "PUT",
-   "path": "/api/users/6ad299887e8ea1667bf4110b/selectedTheme",
+   "path": "/api/users/{seedUser2Id}/selectedTheme",
    "as": "admin",
    "raw": "\"dark\"",
    "headers": {
@@ -141,7 +141,7 @@
   {
    "name": "self-theme",
    "method": "PUT",
-   "path": "/api/users/6ad299887e8ea1667bf41109/selectedTheme",
+   "path": "/api/users/{seedAdminId}/selectedTheme",
    "as": "admin",
    "raw": "\"dark\"",
    "headers": {
@@ -151,7 +151,7 @@
   {
    "name": "self-novel-ux",
    "method": "PUT",
-   "path": "/api/users/6ad299887e8ea1667bf41109/novelUserExperienceInfos",
+   "path": "/api/users/{seedAdminId}/novelUserExperienceInfos",
    "as": "admin",
    "json": {
     "hasSeenDashboardWelcomeBanner": true
@@ -160,7 +160,7 @@
   {
    "name": "self-task-type-id",
    "method": "PUT",
-   "path": "/api/users/6ad299887e8ea1667bf41109/taskTypeId",
+   "path": "/api/users/{seedAdminId}/taskTypeId",
    "as": "admin",
    "json": {
     "lastTaskTypeId": "63721e2cef0100470266c485"
@@ -215,7 +215,7 @@
    "json": {
     "name": "diff-script",
     "gist": "https://gist.github.com/x/1",
-    "owner": "6ad299887e8ea1667bf41109"
+    "owner": "{seedAdminId}"
    },
    "capture": {
     "scriptId": "$.id"
@@ -229,7 +229,7 @@
    "json": {
     "name": "diff-script-2",
     "gist": "https://gist.github.com/x/2",
-    "owner": "6ad299887e8ea1667bf4110b"
+    "owner": "{seedUser2Id}"
    }
   },
   {
@@ -240,7 +240,7 @@
    "json": {
     "name": "diff-script-renamed",
     "gist": "https://gist.github.com/x/3",
-    "owner": "6ad299887e8ea1667bf41109"
+    "owner": "{seedAdminId}"
    }
   },
   {
@@ -411,7 +411,7 @@
     "priority": 10,
     "paused": false,
     "expectedTime": 90000,
-    "owner": "6ad299887e8ea1667bf41109",
+    "owner": "{seedAdminId}",
     "isBlacklistedFromReport": false
    },
    "capture": {
@@ -429,7 +429,7 @@
     "priority": 10,
     "paused": false,
     "expectedTime": 90000,
-    "owner": "6ad299887e8ea1667bf41109",
+    "owner": "{seedAdminId}",
     "isBlacklistedFromReport": false
    }
   },
@@ -444,7 +444,7 @@
     "priority": 10,
     "paused": false,
     "expectedTime": 90000,
-    "owner": "6ad299887e8ea1667bf41109",
+    "owner": "{seedAdminId}",
     "isBlacklistedFromReport": false
    }
   },
@@ -459,7 +459,7 @@
     "priority": 10,
     "paused": false,
     "expectedTime": 90000,
-    "owner": "6ad299887e8ea1667bf41109",
+    "owner": "{seedAdminId}",
     "isBlacklistedFromReport": false
    }
   },
@@ -511,7 +511,7 @@
     "priority": 20,
     "paused": true,
     "expectedTime": 120000,
-    "owner": "6ad299887e8ea1667bf41109",
+    "owner": "{seedAdminId}",
     "isBlacklistedFromReport": true
    }
   },
@@ -542,7 +542,7 @@
    "path": "/api/folders/create",
    "as": "admin",
    "query": {
-    "parentId": "6ad299887e8ea1667bf41108",
+    "parentId": "{seedRootFolderId}",
     "name": "diff-folder"
    },
    "capture": {
@@ -587,7 +587,7 @@
    "path": "/api/folders/{childFolderId}/move",
    "as": "admin",
    "query": {
-    "newParentId": "6ad299887e8ea1667bf41108"
+    "newParentId": "{seedRootFolderId}"
    }
   },
   {

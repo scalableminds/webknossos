@@ -18,11 +18,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+from replay import PG, seed_variables  # next to this script, which is on sys.path[0]
+
 OHA = os.environ.get("WK_DIFF_OHA", "/tmp/wk-diff/tools/bin/oha")
 TOKEN = "secretSampleUserToken"  # Play's public dev sample token
-T = "6ad299887e8ea1667bf41107"
+SEED = seed_variables(PG, "wk_diff_seed")  # generated per `stack.py seed`
+T = SEED["seedTeamId"]
 DS = "68b80290d4000090f8f4aa62"
-U = "6ad299887e8ea1667bf41109"
+U = SEED["seedAdminId"]
 TIME = "start=1600000000000&end=1900000000000&annotationTypes=Explorational,Task&annotationStates=Active,Finished"
 
 ENDPOINTS = [

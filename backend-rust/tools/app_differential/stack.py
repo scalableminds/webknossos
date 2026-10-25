@@ -176,7 +176,7 @@ def standalone_classpath(kind: str) -> str:
     return ":".join(str(p) for p in jars)
 
 
-def rust_env(database: str, features: dict) -> dict:
+def rust_env(database: str, features: dict, build: dict) -> dict:
     """Mirror Play's dev configuration (conf/application.conf) so behavior is comparable."""
     return {
         "PATH": os.environ.get("PATH", ""),
@@ -218,14 +218,11 @@ def rust_env(database: str, features: dict) -> dict:
         "WK_METRICS_BIND": f"127.0.0.1:{PORTS['metrics']}",
         "WK_MAIL_SMTP_HOST": "",
         "RUST_LOG": "webknossos_backend=info,tower_http=info",
-        # Play bakes these into BuildInfo at compile time; give Rust the same values.
-        "WK_BUILD_COMMIT_HASH": git("rev-parse", "HEAD"),
-        "WK_BUILD_COMMIT_DATE": git("log", "-1", "--format=%cd"),
+        # Play bakes these into BuildInfo at `sbt stage` time (NML writerGitCommit, /api/buildinfo); give Rust
+        # the values of the running Play, not the worktree's current HEAD, which moves with every commit.
+        "WK_BUILD_COMMIT_HASH": build["commitHash"],
+        "WK_BUILD_COMMIT_DATE": build["commitDate"],
     }
-
-
-def git(*args: str) -> str:
-    return subprocess.run(["git", "-C", str(WORKTREE), *args], capture_output=True, text=True).stdout.strip()
 
 
 def spawn(name: str, argv: list[str], env: dict | None = None, cwd: Path | None = None) -> int:
@@ -393,12 +390,20 @@ def cmd_start(_args) -> None:
     print(json.dumps({"started": state, "play": PLAY_URI, "rust": RUST_URI, "public_uri": PUBLIC_URI}))
 
 
-def start_rust(state: dict) -> None:
+def play_runtime() -> tuple[dict, dict]:
+    """Features JSON and build info of the running Play, which Rust mirrors."""
     with urllib.request.urlopen(f"{PLAY_URI}/api/features", timeout=10) as response:
         features = json.load(response)
+    with urllib.request.urlopen(f"{PLAY_URI}/api/buildinfo", timeout=10) as response:
+        build = json.load(response)["webknossos"]
+    return features, build
+
+
+def start_rust(state: dict) -> None:
+    features, build = play_runtime()
     if not RUST_BINARY.exists():
         raise SystemExit(f"missing Rust binary {RUST_BINARY}; cargo build --release --locked")
-    state["rust"] = spawn("rust", [str(RUST_BINARY)], env=rust_env("wk_diff_rust", features), cwd=BACKEND_RUST)
+    state["rust"] = spawn("rust", [str(RUST_BINARY)], env=rust_env("wk_diff_rust", features, build), cwd=BACKEND_RUST)
     save_state(state)
     wait_http(f"{RUST_URI}/health/ready", 60, "rust")
 

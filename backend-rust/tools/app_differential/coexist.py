@@ -86,9 +86,7 @@ def same_json(a: object, b: object) -> list:
 
 
 def start_shared_rust() -> subprocess.Popen:
-    with urllib.request.urlopen(f"{PLAY}/api/features", timeout=10) as response:
-        features = json.load(response)
-    env = stack.rust_env("wk_diff_play", features)
+    env = stack.rust_env("wk_diff_play", *stack.play_runtime())
     env.update({
         "WK_BIND": f"127.0.0.1:{SHARED_PORT}",
         "WK_METRICS_BIND": "",

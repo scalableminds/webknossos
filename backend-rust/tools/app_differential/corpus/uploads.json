@@ -65,9 +65,9 @@
      "totalFileCount": 1,
      "uploadId": "diff-upload-x"
     },
-    "folderId": "6ad299887e8ea1667bf41108",
+    "folderId": "{seedRootFolderId}",
     "initialTeamIds": [
-     "6ad299887e8ea1667bf41107"
+     "{seedTeamId}"
     ],
     "layersToLink": [],
     "datasetName": "diff-x",
@@ -90,9 +90,9 @@
      "totalFileCount": 1,
      "uploadId": "diff-upload-y"
     },
-    "folderId": "6ad299887e8ea1667bf41108",
+    "folderId": "{seedRootFolderId}",
     "initialTeamIds": [
-     "6ad299887e8ea1667bf41107"
+     "{seedTeamId}"
     ],
     "layersToLink": [],
     "datasetName": "bad/name",
@@ -115,9 +115,9 @@
      "totalFileCount": 1,
      "uploadId": "diff-upload-z"
     },
-    "folderId": "6ad299887e8ea1667bf41108",
+    "folderId": "{seedRootFolderId}",
     "initialTeamIds": [
-     "6ad299887e8ea1667bf41107"
+     "{seedTeamId}"
     ],
     "layersToLink": [],
     "datasetName": "l4_sample_remote",
@@ -143,7 +143,7 @@
     },
     "folderId": "0123456789abcdef01234567",
     "initialTeamIds": [
-     "6ad299887e8ea1667bf41107"
+     "{seedTeamId}"
     ],
     "layersToLink": [],
     "datasetName": "diff-f",
@@ -163,9 +163,9 @@
      "totalFileCount": 1,
      "uploadId": "diff-upload-a"
     },
-    "folderId": "6ad299887e8ea1667bf41108",
+    "folderId": "{seedRootFolderId}",
     "initialTeamIds": [
-     "6ad299887e8ea1667bf41107"
+     "{seedTeamId}"
     ],
     "layersToLink": [],
     "datasetName": "diff-a",
@@ -188,9 +188,9 @@
      "totalFileCount": 1,
      "uploadId": "diff-upload-1"
     },
-    "folderId": "6ad299887e8ea1667bf41108",
+    "folderId": "{seedRootFolderId}",
     "initialTeamIds": [
-     "6ad299887e8ea1667bf41107"
+     "{seedTeamId}"
     ],
     "layersToLink": [],
     "datasetName": "diff-upload",
@@ -213,9 +213,9 @@
      "totalFileCount": 1,
      "uploadId": "diff-upload-1"
     },
-    "folderId": "6ad299887e8ea1667bf41108",
+    "folderId": "{seedRootFolderId}",
     "initialTeamIds": [
-     "6ad299887e8ea1667bf41107"
+     "{seedTeamId}"
     ],
     "layersToLink": [],
     "datasetName": "diff-upload",
@@ -382,9 +382,9 @@
      "totalFileCount": 1,
      "uploadId": "diff-upload-2"
     },
-    "folderId": "6ad299887e8ea1667bf41108",
+    "folderId": "{seedRootFolderId}",
     "initialTeamIds": [
-     "6ad299887e8ea1667bf41107"
+     "{seedTeamId}"
     ],
     "layersToLink": [],
     "datasetName": "diff-upload",
@@ -432,7 +432,7 @@
    "json": {
     "datasetName": "diff-paths",
     "layersToLink": [],
-    "folderId": "6ad299887e8ea1667bf41108",
+    "folderId": "{seedRootFolderId}",
     "initialTeamIds": [],
     "dataSource": {
      "id": {
@@ -479,7 +479,7 @@
      "totalFileCount": 1,
      "uploadId": "diff-upload-t"
     },
-    "folderId": "6ad299887e8ea1667bf41108",
+    "folderId": "{seedRootFolderId}",
     "initialTeamIds": [
      "0123456789abcdef01234567"
     ],

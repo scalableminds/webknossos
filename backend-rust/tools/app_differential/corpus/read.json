@@ -184,12 +184,12 @@
   {
    "name": "users-id",
    "as": "admin",
-   "path": "/api/users/6ad299887e8ea1667bf41109"
+   "path": "/api/users/{seedAdminId}"
   },
   {
    "name": "users-id2",
    "as": "admin",
-   "path": "/api/users/6ad299887e8ea1667bf4110b"
+   "path": "/api/users/{seedUser2Id}"
   },
   {
    "name": "users-missing",
@@ -211,17 +211,17 @@
   {
    "name": "users-id-tasks",
    "as": "admin",
-   "path": "/api/users/6ad299887e8ea1667bf41109/tasks"
+   "path": "/api/users/{seedAdminId}/tasks"
   },
   {
    "name": "users-id-annotations",
    "as": "admin",
-   "path": "/api/users/6ad299887e8ea1667bf41109/annotations"
+   "path": "/api/users/{seedAdminId}/annotations"
   },
   {
    "name": "users-id-logged-time",
    "as": "admin",
-   "path": "/api/users/6ad299887e8ea1667bf41109/loggedTime"
+   "path": "/api/users/{seedAdminId}/loggedTime"
   },
   {
    "name": "teams",
@@ -239,12 +239,12 @@
   {
    "name": "team-available-tasks",
    "as": "admin",
-   "path": "/api/teams/6ad299887e8ea1667bf41107/availableTasksReport"
+   "path": "/api/teams/{seedTeamId}/availableTasksReport"
   },
   {
    "name": "team-project-progress",
    "as": "admin",
-   "path": "/api/teams/6ad299887e8ea1667bf41107/projectProgressReport"
+   "path": "/api/teams/{seedTeamId}/projectProgressReport"
   },
   {
    "name": "datasets",
@@ -285,7 +285,7 @@
    "as": "admin",
    "path": "/api/datasets",
    "query": {
-    "folderId": "6ad299887e8ea1667bf41108",
+    "folderId": "{seedRootFolderId}",
     "includeSubfolders": "true"
    },
    "unordered": [
@@ -439,7 +439,7 @@
   {
    "name": "folders-id",
    "as": "admin",
-   "path": "/api/folders/6ad299887e8ea1667bf41108"
+   "path": "/api/folders/{seedRootFolderId}"
   },
   {
    "name": "folders-missing",
@@ -534,17 +534,17 @@
   {
    "name": "project",
    "as": "admin",
-   "path": "/api/projects/6ad299897e8ea1667bf4110e"
+   "path": "/api/projects/{seedProjectId}"
   },
   {
    "name": "project-tasks",
    "as": "admin",
-   "path": "/api/projects/6ad299897e8ea1667bf4110e/tasks"
+   "path": "/api/projects/{seedProjectId}/tasks"
   },
   {
    "name": "project-tasks-paged",
    "as": "admin",
-   "path": "/api/projects/6ad299897e8ea1667bf4110e/tasks",
+   "path": "/api/projects/{seedProjectId}/tasks",
    "query": {
     "limit": "5",
     "pageNumber": "0",
@@ -554,7 +554,7 @@
   {
    "name": "project-users-with-active-tasks",
    "as": "admin",
-   "path": "/api/projects/6ad299897e8ea1667bf4110e/usersWithActiveTasks"
+   "path": "/api/projects/{seedProjectId}/usersWithActiveTasks"
   },
   {
    "name": "organizations",
@@ -609,7 +609,7 @@
   {
    "name": "time-spans",
    "as": "admin",
-   "path": "/api/time/user/6ad299887e8ea1667bf41109/spans",
+   "path": "/api/time/user/{seedAdminId}/spans",
    "query": {
     "start": "1600000000000",
     "end": "1900000000000",
@@ -620,7 +620,7 @@
   {
    "name": "time-summed",
    "as": "admin",
-   "path": "/api/time/user/6ad299887e8ea1667bf41109/summedByAnnotation",
+   "path": "/api/time/user/{seedAdminId}/summedByAnnotation",
    "query": {
     "start": "1600000000000",
     "end": "1900000000000",

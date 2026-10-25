@@ -364,8 +364,9 @@ def multipart(spec: dict) -> tuple[bytes, str]:
     return b"".join(parts), f"multipart/form-data; boundary={boundary}"
 
 
-def run_corpus(corpus: dict, origins: dict, norm: Normalizer, timeout: float, only: str | None) -> list[dict]:
-    variables = {side: dict(corpus.get("variables", {})) for side in SIDES}
+def run_corpus(corpus: dict, origins: dict, norm: Normalizer, timeout: float, only: str | None,
+               seed_vars: dict | None = None) -> list[dict]:
+    variables = {side: {**(seed_vars or {}), **corpus.get("variables", {})} for side in SIDES}
     rewrites = {side: corpus.get("side_rewrites", {}).get(side, {}) for side in SIDES}
     # corpus-wide declared header divergences: {"cache-control": "reason"}
     header_divergences = corpus.get("header_divergences", {})
@@ -546,6 +547,23 @@ def normalize_row(row: Any, norm: Normalizer, side: str, seed_ids: set[str], rew
 PG = {"host": "127.0.0.1", "port": "5432", "user": "postgres", "password": "postgres"}
 
 
+# Play's initial data generates the sample team, root folder, users and project ids (ObjectId.generate), so they
+# change with every `stack.py seed`. Corpora refer to them as {seed…} variables, resolved here from the seed.
+SEED_VARIABLES = {
+    "seedTeamId": "SELECT _id FROM webknossos.teams WHERE _organization = 'sample_organization' AND isOrganizationTeam",
+    "seedRootFolderId": "SELECT _rootFolder FROM webknossos.organizations WHERE _id = 'sample_organization'",
+    "seedAdminId": "SELECT u._id FROM webknossos.users u JOIN webknossos.multiUsers m ON m._id = u._multiUser "
+                   "WHERE m.email = 'sample@scm.io'",
+    "seedUser2Id": "SELECT u._id FROM webknossos.users u JOIN webknossos.multiUsers m ON m._id = u._multiUser "
+                   "WHERE m.email = 'sample2@scm.io'",
+    "seedProjectId": "SELECT _id FROM webknossos.projects WHERE name = 'sampleProject'",
+}
+
+
+def seed_variables(pg: dict, seed_db: str) -> dict[str, str]:
+    return {name: run_psql(seed_db, pg, sql) for name, sql in SEED_VARIABLES.items()}
+
+
 def seed_object_ids(pg: dict, seed_db: str) -> set[str]:
     seed = dump_tables(seed_db, pg)
     return {v for rows in seed.values() for row in rows for v in row.values()
@@ -625,6 +643,7 @@ def main() -> int:
     run_start = int(reset_marker.read_text()) if reset_marker.exists() else int(time.time() * 1000)
     norm = Normalizer(run_start_ms=run_start, tolerance_ms=int(args.time_tolerance * 1000))
     norm.seed_ids = seed_object_ids(PG, "wk_diff_seed")
+    seed_vars = seed_variables(PG, "wk_diff_seed")
     origins = {"play": args.play, "rust": args.rust, "play:datastore": args.play, "play:tracingstore": args.play,
                "rust:datastore": args.rust_datastore, "rust:tracingstore": args.rust_tracingstore}
     all_results = []
@@ -663,7 +682,7 @@ def main() -> int:
         if len(names) != len(set(names)):
             print(f"duplicate step names in {path}", file=sys.stderr)
             return 2
-        for result in run_corpus(corpus, origins, norm, args.timeout, args.only):
+        for result in run_corpus(corpus, origins, norm, args.timeout, args.only, seed_vars):
             result["corpus"] = path.name
             all_results.append(result)
     report: dict[str, Any] = {"results": all_results, "normalizations": norm.counts}

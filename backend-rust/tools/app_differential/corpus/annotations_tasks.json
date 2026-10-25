@@ -45,7 +45,7 @@
   {
    "name": "user2-experience",
    "method": "PATCH",
-   "path": "/api/users/6ad299887e8ea1667bf4110b",
+   "path": "/api/users/{seedUser2Id}",
    "as": "admin",
    "json": {
     "firstName": "Non-Admin",
@@ -56,7 +56,7 @@
     "isDatasetManager": false,
     "teams": [
      {
-      "id": "6ad299887e8ea1667bf41107",
+      "id": "{seedTeamId}",
       "name": "Default",
       "isTeamManager": false
      }
@@ -172,7 +172,7 @@
    "path": "/api/annotations/Explorational/{annId}/sharedTeams",
    "as": "admin",
    "json": [
-    "6ad299887e8ea1667bf41107"
+    "{seedTeamId}"
    ]
   },
   {
@@ -443,7 +443,7 @@
    "path": "/api/annotations/Explorational/{dupId}/transfer",
    "as": "admin",
    "json": {
-    "userId": "6ad299887e8ea1667bf4110b"
+    "userId": "{seedUser2Id}"
    }
   },
   {
@@ -495,7 +495,7 @@
    "path": "/api/datasets/68b80290d4000090f8f4aa62/teams",
    "as": "admin",
    "json": [
-    "6ad299887e8ea1667bf41107"
+    "{seedTeamId}"
    ]
   },
   {
@@ -602,7 +602,7 @@
    "path": "/api/tasks/list",
    "as": "admin",
    "json": {
-    "project": "6ad299897e8ea1667bf4110e"
+    "project": "{seedProjectId}"
    },
    "unordered": [
     "$"
@@ -611,7 +611,7 @@
   {
    "name": "project-tasks",
    "method": "GET",
-   "path": "/api/projects/6ad299897e8ea1667bf4110e/tasks",
+   "path": "/api/projects/{seedProjectId}/tasks",
    "as": "admin"
   },
   {
@@ -677,7 +677,7 @@
    "path": "/api/tasks/{taskId}/assign",
    "as": "admin",
    "query": {
-    "userId": "6ad299887e8ea1667bf41109"
+    "userId": "{seedAdminId}"
    },
    "capture": {
     "assignedAnnId": "$.id"
@@ -686,13 +686,13 @@
   {
    "name": "project-progress",
    "method": "GET",
-   "path": "/api/teams/6ad299887e8ea1667bf41107/projectProgressReport",
+   "path": "/api/teams/{seedTeamId}/projectProgressReport",
    "as": "admin"
   },
   {
    "name": "available-tasks",
    "method": "GET",
-   "path": "/api/teams/6ad299887e8ea1667bf41107/availableTasksReport",
+   "path": "/api/teams/{seedTeamId}/availableTasksReport",
    "as": "admin"
   },
   {

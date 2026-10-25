@@ -405,7 +405,7 @@ async fn create_explorational(
         sqlx::query(
             "UPDATE webknossos.annotation_layers SET statistics=$3 WHERE _annotation=$1 AND tracingId=$2",
         )
-        .bind(annotation_id.as_str())
+        .bind(&annotation_id)
         .bind(&layer.tracing_id)
         .bind(zeroed_statistics(layer.typ))
         .execute(&mut *transaction)
@@ -414,7 +414,7 @@ async fn create_explorational(
     let json = crate::annotation::lists::full_json(
         &mut transaction,
         &user,
-        annotation_id.as_str(),
+        &annotation_id,
         services.jobs_enabled,
     )
     .await

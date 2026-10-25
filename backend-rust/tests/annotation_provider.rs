@@ -421,7 +421,7 @@ async fn saved_types_resolve_the_live_annotation_regardless_of_requested_type() 
                 .provide(context, typ, &oid(annotation))
                 .await
                 .unwrap();
-            assert_eq!(provided.id(), annotation.as_str());
+            assert_eq!(provided.id().as_str(), annotation);
             assert_eq!(provided.owner_id().as_str(), s.owner);
             assert_eq!(provided.annotation_type(), Some(actual), "{typ}");
             assert!(matches!(provided, ProvidedAnnotation::Saved(_)));
@@ -562,10 +562,14 @@ async fn saved_restrictions_require_read_access_and_use_runtime_defaults() {
             .restrictions_for(owner_context, &identifier)
             .await
             .unwrap();
-        let metadata =
-            webknossos_backend::annotation::access::find(&db.pool, Some(&owner), annotation, false)
-                .await
-                .unwrap();
+        let metadata = webknossos_backend::annotation::access::find(
+            &db.pool,
+            Some(&owner),
+            &oid(annotation),
+            false,
+        )
+        .await
+        .unwrap();
         assert_eq!(
             restrictions,
             webknossos_backend::annotation::access::restrictions(&metadata, Some(&owner))

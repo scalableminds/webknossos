@@ -98,7 +98,7 @@ pub struct NmlLayer<'a> {
 /// The parts of the `Annotation` row the writer reads.
 #[derive(Clone, Copy, Debug)]
 pub struct NmlAnnotation<'a> {
-    pub id: &'a str,
+    pub id: &'a ObjectId,
     /// Always written as the `description` attribute (also when empty).
     pub description: &'a str,
     /// `annotation._task.isDefined`: enables `taskBoundingBox` for volume-only
@@ -389,7 +389,7 @@ fn write_meta(w: &mut XmlWriter, input: &NmlWriteInput<'_>) -> Result<(), NmlWri
     meta(w, "writerGitCommit", input.writer_git_commit)?;
     meta(w, "timestamp", &input.timestamp_millis.to_string())?;
     if let Some(annotation) = &input.annotation {
-        meta(w, "annotationId", annotation.id)?;
+        meta(w, "annotationId", annotation.id.as_str())?;
     }
     meta(w, "username", input.annotation_owner_name)?;
     if let Some(task_id) = input.task_id {

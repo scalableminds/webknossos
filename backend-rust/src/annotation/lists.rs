@@ -267,7 +267,7 @@ async fn user_annotations(
 pub(crate) async fn full_json(
     connection: &mut PgConnection,
     user: &AuthUser,
-    id: &str,
+    id: &ObjectId,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
     full_json_for(connection, Some(user), id, jobs_enabled).await
@@ -278,7 +278,7 @@ pub(crate) async fn full_json(
 pub(crate) async fn full_json_for(
     connection: &mut PgConnection,
     user: Option<&AuthUser>,
-    id: &str,
+    id: &ObjectId,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
     let metadata = crate::annotation::access::find(&mut *connection, user, id, true).await?;
@@ -405,7 +405,7 @@ async fn task_list(
         .push_bind(limit)
         .push(" OFFSET ")
         .push_bind(offset);
-    let ids: Vec<String> = q.build_query_scalar().fetch_all(pool).await?;
+    let ids: Vec<ObjectId> = q.build_query_scalar().fetch_all(pool).await?;
     let total = if filters.include_total_count == Some(true) {
         Some(
             count(
@@ -477,7 +477,7 @@ async fn task_annotations(
     q.push_bind(id.as_str())
         .push(" AND a.typ='Task' AND a.state<>'Cancelled' AND ");
     crate::annotation::access::push_read_predicate(&mut q, (&user).into());
-    let ids: Vec<String> = q.build_query_scalar().fetch_all(&state.pool).await?;
+    let ids: Vec<ObjectId> = q.build_query_scalar().fetch_all(&state.pool).await?;
     let mut connection = state.pool.acquire().await?;
     let mut values = Vec::new();
     for id in ids {

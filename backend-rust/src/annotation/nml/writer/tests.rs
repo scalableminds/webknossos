@@ -348,13 +348,14 @@ fn skeleton_document_matches_golden() {
         factor: [11.24, 11.24, 28.0],
         unit: "nanometer".to_owned(),
     };
+    let annotation_id = ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9d0").unwrap();
     let dataset_id = ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9d2").unwrap();
     let input = NmlWriteInput {
         annotation_user_states: &annotation_states,
         requesting_user_id: Some(&VIEWER),
         annotation_owner_name: "Ada Lovelace",
         annotation: Some(NmlAnnotation {
-            id: "66f0a1b2c3d4e5f6a7b8c9d0",
+            id: &annotation_id,
             description: "Ada's tracing",
             has_task: true,
         }),
@@ -376,7 +377,7 @@ const GOLDEN_VOLUMES: &str = r#"<things>
   <meta name="writer" content="NmlWriter.scala"/>
   <meta name="writerGitCommit" content="abc123"/>
   <meta name="timestamp" content="42"/>
-  <meta name="annotationId" content="a1"/>
+  <meta name="annotationId" content="66f0a1b2c3d4e5f6a7b8c9e3"/>
   <meta name="username" content="Owner"/>
   <meta name="taskId" content="t1"/>
   <parameters>
@@ -493,6 +494,7 @@ fn volume_document_matches_golden() {
         factor: [4.0, 4.0, 40.0],
         unit: "nanometer".to_owned(),
     };
+    let annotation_id = ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9e3").unwrap();
     let dataset_id = ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9e1").unwrap();
     let mut editable_layer = volume_layer("t-2", "Volume", &editable);
     editable_layer.has_edited_mapping_edges = true;
@@ -500,7 +502,7 @@ fn volume_document_matches_golden() {
     let input = NmlWriteInput {
         annotation_owner_name: "Owner",
         annotation: Some(NmlAnnotation {
-            id: "a1",
+            id: &annotation_id,
             description: "",
             has_task: true,
         }),
@@ -566,7 +568,7 @@ const GOLDEN_SKIPPED_VOLUME: &str = r#"<things>
   <meta name="writer" content="NmlWriter.scala"/>
   <meta name="writerGitCommit" content=""/>
   <meta name="timestamp" content="0"/>
-  <meta name="annotationId" content="a"/>
+  <meta name="annotationId" content="66f0a1b2c3d4e5f6a7b8c9e4"/>
   <meta name="username" content=""/>
   <parameters>
     <experiment name="ds" organization="org" datasetId="66f0a1b2c3d4e5f6a7b8c9e0" description="" wkUrl="http://x"/>
@@ -591,9 +593,10 @@ fn skipped_volume_data_writes_comment_and_no_location() {
         mapping_is_locked: Some(false),
         ..minimal_volume()
     };
+    let annotation_id = ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9e4").unwrap();
     let input = NmlWriteInput {
         annotation: Some(NmlAnnotation {
-            id: "a",
+            id: &annotation_id,
             description: "",
             has_task: false,
         }),

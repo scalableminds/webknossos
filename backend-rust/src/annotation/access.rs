@@ -86,7 +86,7 @@ pub fn push_owned_or_shared_predicate<'a>(q: &mut Sql<'a>, requester: Requester<
 
 #[derive(Debug, FromRow)]
 pub struct AnnotationMetadata {
-    pub id: String,
+    pub id: ObjectId,
     pub dataset_id: ObjectId,
     pub task_id: Option<String>,
     pub owner_id: ObjectId,
@@ -109,7 +109,7 @@ pub struct AnnotationMetadata {
 
 /// The live annotation `id` as [`AnnotationMetadata`] for `requester`;
 /// callers append further conditions.
-fn select<'a>(requester: Requester<'a>, id: &'a str) -> Sql<'a> {
+fn select<'a>(requester: Requester<'a>, id: &'a ObjectId) -> Sql<'a> {
     let mut q = Sql::new(
         r#"SELECT a._id AS id,a._dataset AS dataset_id,a._task AS task_id,a._user AS owner_id,
     (SELECT _organization FROM webknossos.users_ WHERE _id=a._user) AS owner_organization,
@@ -136,7 +136,7 @@ fn select<'a>(requester: Requester<'a>, id: &'a str) -> Sql<'a> {
 pub async fn find<'e, E: Executor<'e, Database = Postgres>>(
     executor: E,
     user: Option<&AuthUser>,
-    id: &str,
+    id: &ObjectId,
     global: bool,
 ) -> ApiResult<AnnotationMetadata> {
     find_optional(executor, user, id, global)
@@ -150,10 +150,9 @@ pub async fn find<'e, E: Executor<'e, Database = Postgres>>(
 pub async fn find_optional<'e, E: Executor<'e, Database = Postgres>>(
     executor: E,
     user: Option<&AuthUser>,
-    id: &str,
+    id: &ObjectId,
     global: bool,
 ) -> ApiResult<Option<AnnotationMetadata>> {
-    ObjectId::parse(id)?;
     let requester = Requester::from(user);
     let mut q = select(requester, id);
     if !global {
@@ -168,9 +167,8 @@ pub async fn find_optional<'e, E: Executor<'e, Database = Postgres>>(
 pub async fn lock_for_mutation(
     transaction: &mut Transaction<'_, Postgres>,
     user: &AuthUser,
-    id: &str,
+    id: &ObjectId,
 ) -> ApiResult<AnnotationMetadata> {
-    ObjectId::parse(id)?;
     let mut q = select(user.into(), id);
     q.push(" AND ");
     push_mutate_predicate(&mut q, user.into());
@@ -188,9 +186,8 @@ pub async fn lock_for_mutation(
 pub async fn lock_readable(
     transaction: &mut Transaction<'_, Postgres>,
     user: &AuthUser,
-    id: &str,
+    id: &ObjectId,
 ) -> ApiResult<Option<AnnotationMetadata>> {
-    ObjectId::parse(id)?;
     let mut q = select(user.into(), id);
     q.push(" AND ");
     push_read_predicate(&mut q, user.into());
@@ -206,15 +203,14 @@ pub async fn lock_readable(
 pub async fn lock_update_access(
     transaction: &mut Transaction<'_, Postgres>,
     user: &AuthUser,
-    id: &str,
+    id: &ObjectId,
 ) -> ApiResult<bool> {
-    ObjectId::parse(id)?;
     let mut q =
         Sql::new("SELECT a._id FROM webknossos.annotations a WHERE NOT a.isDeleted AND a._id=");
     q.push_bind(id).push(" AND ");
     push_mutate_predicate(&mut q, user.into());
     q.push(" FOR NO KEY UPDATE OF a");
-    let found: Option<String> = q
+    let found: Option<ObjectId> = q
         .build_query_scalar()
         .fetch_optional(&mut **transaction)
         .await?;

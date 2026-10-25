@@ -3,6 +3,7 @@ use axum::http::StatusCode;
 
 #[test]
 fn over_limit_mail_matches_scala_subject_recipient_and_link() {
+    let annotation_id = ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9d0").unwrap();
     let notifier = OverLimitNotifier::new(MailSender::default(), "https://wk.example/");
     assert_eq!(notifier.public_uri, "https://wk.example");
     let mail = over_limit_mail(
@@ -10,7 +11,7 @@ fn over_limit_mail_matches_scala_subject_recipient_and_link() {
         "Van Doe",
         "Proj",
         "t1",
-        "a1",
+        &annotation_id,
         "owner@example.test",
         &notifier.public_uri,
     );
@@ -23,11 +24,11 @@ fn over_limit_mail_matches_scala_subject_recipient_and_link() {
     assert!(mail.body_html.contains("Task: t1"));
     assert!(
         mail.body_html
-            .contains("https://wk.example/annotations/Task/a1")
+            .contains("https://wk.example/annotations/Task/66f0a1b2c3d4e5f6a7b8c9d0")
     );
     // Empty first name: take(1) of "" is "".
     assert!(
-        over_limit_mail("", "X", "P", "t", "a", "o", "u")
+        over_limit_mail("", "X", "P", "t", &annotation_id, "o", "u")
             .subject
             .ends_with(". x in P")
     );

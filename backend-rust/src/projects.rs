@@ -586,7 +586,7 @@ async fn transfer_active_tasks(
     if transferee.is_none() {
         return Err(ApiError::bad_request(crate::msg::user::not_found(new_user)));
     }
-    let annotations: Vec<String> = sqlx::query_scalar(
+    let annotations: Vec<ObjectId> = sqlx::query_scalar(
         "SELECT a._id FROM webknossos.annotations_ a JOIN webknossos.tasks_ t ON \
             a._task=t._id JOIN webknossos.projects_ p ON t._project=p._id JOIN \
             webknossos.users_ u ON a._user=u._id WHERE p._id=$1 AND a.state='Active' AND \

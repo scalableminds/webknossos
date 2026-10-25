@@ -126,7 +126,7 @@ pub(crate) async fn insert_annotation(
         "INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,description,visibility,name,state,tags,tracingTime,typ,collaborationMode,created,modified,isDeleted)
          VALUES($1,$2,$3,$4,$5,$6::webknossos.ANNOTATION_VISIBILITY,$7,'Active','{}',NULL,$8::webknossos.ANNOTATION_TYPE,$9::webknossos.ANNOTATION_COLLABORATION_MODE,$10,$10,false)",
     )
-    .bind(annotation.id.as_str())
+    .bind(annotation.id)
     .bind(annotation.dataset_id)
     .bind(annotation.task_id)
     .bind(annotation.owner_id)
@@ -143,7 +143,7 @@ pub(crate) async fn insert_annotation(
             "INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics)
              VALUES($1,$2,$3::webknossos.ANNOTATION_LAYER_TYPE,$4,'{}'::jsonb)",
         )
-        .bind(annotation.id.as_str())
+        .bind(annotation.id)
         .bind(&layer.tracing_id)
         .bind(layer.typ.as_str())
         .bind(&layer.name)
@@ -159,7 +159,7 @@ pub(crate) async fn insert_annotation(
 
 /// The fields of the provided annotation that duplicateAnnotation reads.
 pub(crate) struct DuplicateSource<'a> {
-    pub id: &'a str,
+    pub id: &'a ObjectId,
     pub dataset_id: &'a ObjectId,
     pub owner_id: &'a ObjectId,
     pub task_id: Option<&'a str>,
@@ -179,7 +179,7 @@ impl<'a> DuplicateSource<'a> {
                 description: &saved.description,
             },
             ProvidedAnnotation::Compound(compound) => Self {
-                id: compound.id.as_str(),
+                id: &compound.id,
                 dataset_id: &compound.dataset_id,
                 owner_id: &compound.owner_id,
                 task_id: None,
@@ -281,7 +281,7 @@ pub(crate) async fn duplicate_source_in_tracing_store(
         None
     };
     let request = DuplicateAnnotationRequest {
-        source_annotation_id: ObjectId::parse(source.id)?,
+        source_annotation_id: source.id.clone(),
         new_annotation_id: new_annotation_id.clone(),
         owner_id: source.owner_id.clone(),
         requesting_user_id: requesting_user_id.clone(),
@@ -367,7 +367,7 @@ async fn duplicate(
     let mut json = crate::annotation::lists::full_json(
         &mut transaction,
         &user,
-        new_id.as_str(),
+        &new_id,
         services.jobs_enabled,
     )
     .await

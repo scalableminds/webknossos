@@ -51,7 +51,7 @@ async fn find_annotation(
 ) -> ApiResult<Option<(ObjectId, Vec<AnnotationLayer>)>> {
     let dataset: Option<ObjectId> =
         sqlx::query_scalar("SELECT _dataset FROM webknossos.annotations_ WHERE _id=$1")
-            .bind(id.as_str())
+            .bind(id)
             .fetch_optional(pool)
             .await?;
     let Some(dataset) = dataset else {
@@ -60,7 +60,7 @@ async fn find_annotation(
     let rows: Vec<(String, String, String)> = sqlx::query_as(
         "SELECT tracingId,typ::text,name FROM webknossos.annotation_layers WHERE _annotation=$1 ORDER BY tracingId",
     )
-    .bind(id.as_str())
+    .bind(id)
     .fetch_all(pool)
     .await?;
     let layers = rows

@@ -135,7 +135,7 @@ pub fn annotation_name(name: &str) -> &str {
 pub enum SharedResource {
     /// Recipients must see the annotation in their annotation list
     /// (AnnotationDAO.findUserIdsWithListAccess).
-    Annotation { id: String },
+    Annotation { id: ObjectId },
     /// Recipients must be able to read the dataset
     /// (DatasetDAO.findUserIdsWithReadAccess).
     Dataset { id: ObjectId },
@@ -149,10 +149,9 @@ impl SharedResource {
         }
     }
 
-    fn id(&self) -> &str {
+    fn id(&self) -> &ObjectId {
         match self {
-            Self::Annotation { id } => id,
-            Self::Dataset { id } => id.as_str(),
+            Self::Annotation { id } | Self::Dataset { id } => id,
         }
     }
 
@@ -280,7 +279,7 @@ impl NotificationEmailService {
         self.mailer.settings().notification_emails
     }
 
-    fn annotation_url(&self, annotation_id: &str) -> String {
+    fn annotation_url(&self, annotation_id: &ObjectId) -> String {
         format!("{}/annotations/{annotation_id}", self.uri)
     }
 
@@ -541,7 +540,7 @@ impl NotificationEmailService {
     pub fn send_annotation_transferred_email(
         &self,
         pool: &PgPool,
-        annotation_id: &str,
+        annotation_id: &ObjectId,
         annotation_name: &str,
         dataset_id: &ObjectId,
         new_owner_id: &ObjectId,
@@ -552,9 +551,9 @@ impl NotificationEmailService {
         }
         let service = self.clone();
         let pool = pool.clone();
-        let [annotation_id, annotation_name] = [annotation_id, annotation_name].map(str::to_owned);
-        let [dataset_id, new_owner_id, issuer_id] =
-            [dataset_id, new_owner_id, issuer_id].map(ObjectId::clone);
+        let annotation_name = annotation_name.to_owned();
+        let [annotation_id, dataset_id, new_owner_id, issuer_id] =
+            [annotation_id, dataset_id, new_owner_id, issuer_id].map(ObjectId::clone);
         tokio::spawn(async move {
             let result = async {
                 let is_deactivated: bool = sqlx::query_scalar(
@@ -674,7 +673,7 @@ impl NotificationEmailService {
         &self,
         pool: &PgPool,
         task_id: &str,
-        annotation_id: &str,
+        annotation_id: &ObjectId,
         assignee_id: &ObjectId,
         assignee_is_deactivated: bool,
         issuer_id: &ObjectId,
@@ -684,8 +683,9 @@ impl NotificationEmailService {
         }
         let service = self.clone();
         let pool = pool.clone();
-        let [task_id, annotation_id] = [task_id, annotation_id].map(str::to_owned);
-        let [assignee_id, issuer_id] = [assignee_id, issuer_id].map(ObjectId::clone);
+        let task_id = task_id.to_owned();
+        let [annotation_id, assignee_id, issuer_id] =
+            [annotation_id, assignee_id, issuer_id].map(ObjectId::clone);
         tokio::spawn(async move {
             let result = async {
                 let recipient = person(&pool, &assignee_id).await?;

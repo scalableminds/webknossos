@@ -125,10 +125,7 @@ async fn annotation_dataset(
             .await?;
     if !exists {
         return Err(ApiError::bad_request(
-            crate::msg::dataset::not_found_for_annotation(
-                &annotation.dataset_id,
-                annotation_id.as_str(),
-            ),
+            crate::msg::dataset::not_found_for_annotation(&annotation.dataset_id, annotation_id),
         ));
     }
     Ok(annotation.dataset_id)
@@ -172,13 +169,13 @@ async fn annotation_id_for_tracing(
     Query(query): Query<TracingQuery>,
     _store: ValidatedTracingStore,
     Extension(provider): Extension<AnnotationProvider>,
-) -> ApiResult<Json<String>> {
+) -> ApiResult<Json<ObjectId>> {
     if query.tracing_id == "dummyTracingId" {
-        return Ok(Json("000000000000000000000000".to_owned()));
+        return Ok(Json(ObjectId::dummy()));
     }
     // AnnotationInformationProvider shifts the saved lookup's Box and falls
     // back to the existing compound cache on Empty or Failure. Never merge.
-    let saved_id: Option<String> = sqlx::query_scalar(
+    let saved_id: Option<ObjectId> = sqlx::query_scalar(
         "SELECT _annotation FROM webknossos.annotation_layers WHERE tracingId=$1",
     )
     .bind(&query.tracing_id)
@@ -201,7 +198,7 @@ async fn annotation_id_for_tracing(
         return Ok(Json(annotation.id));
     }
     if let Some(compound) = provider.find_cached_by_tracing_id(&query.tracing_id) {
-        return Ok(Json(compound.id.to_string()));
+        return Ok(Json(compound.id));
     }
     Err(ApiError::bad_request(format!(
         "No annotation for tracing {}",

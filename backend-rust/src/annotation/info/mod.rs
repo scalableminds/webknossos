@@ -233,7 +233,7 @@ async fn info_for(
                 &context.state.pool,
                 AccessContext::requester(Some(user)),
                 &user.id,
-                &ObjectId::parse(&saved.id)?,
+                &saved.id,
                 &saved.owner_id,
                 &saved.collaboration_mode,
                 timestamp,
@@ -247,7 +247,7 @@ async fn info_for(
             context.state,
             &context.services.misc,
             user,
-            annotation.id().to_owned(),
+            annotation.id().clone(),
             annotation.owner_id().clone(),
             annotation.dataset_id().to_owned(),
         );
@@ -260,7 +260,7 @@ async fn info_for(
 async fn saved_json(
     connection: &mut PgConnection,
     user: Option<&AuthUser>,
-    id: &str,
+    id: &ObjectId,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
     crate::annotation::lists::full_json_for(connection, user, id, jobs_enabled).await
@@ -321,7 +321,7 @@ async fn compound_json(
         "created": timestamp,
         "state": "Active",
         "isLockedByOwner": false,
-        "id": compound.id.as_str(),
+        "id": compound.id,
         "name": "",
         "description": "",
         "viewConfiguration": Value::Null,
@@ -368,7 +368,7 @@ fn track_open_annotation(
     state: &AppState,
     misc: &MiscState,
     user: &AuthUser,
-    annotation_id: String,
+    annotation_id: ObjectId,
     owner_id: ObjectId,
     dataset_id: ObjectId,
 ) {
@@ -390,7 +390,7 @@ fn track_open_annotation(
             return;
         };
         let mut properties = Map::new();
-        properties.insert("annotation_id".into(), annotation_id.into());
+        properties.insert("annotation_id".into(), json!(annotation_id));
         properties.insert(
             "annotation_owner_multiuser_id".into(),
             json!(owner_multi_user),

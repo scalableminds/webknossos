@@ -12,7 +12,9 @@ fn play_booleans() {
 #[test]
 fn object_ids_accept_either_case_and_prefixes_are_split() {
     assert_eq!(
-        parse_object_id("0123456789ABCDEF01234567").as_deref(),
+        parse_object_id("0123456789ABCDEF01234567")
+            .as_ref()
+            .map(ObjectId::as_str),
         Some("0123456789abcdef01234567")
     );
     assert_eq!(parse_object_id("0123"), None);

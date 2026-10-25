@@ -177,7 +177,7 @@ async fn reserved_ids(
            AND domain=$4::webknossos.ANNOTATION_ID_DOMAIN
          ORDER BY id",
     )
-    .bind(id.as_str())
+    .bind(&id)
     .bind(&tracing_id)
     .bind(&user.id)
     .bind(domain.as_str())
@@ -208,14 +208,9 @@ async fn reserve_ids(
     // Re-check under the shared key: a concurrent switch away from Concurrent
     // mode (which deletes all reservations) must not be followed by stale
     // reservations authorized against the old mode.
-    let live = crate::annotation::access::find_optional(
-        &mut *transaction,
-        Some(&user),
-        id.as_str(),
-        false,
-    )
-    .await?
-    .ok_or_else(|| ProviderError::NotFound.into_api_error(StatusCode::NOT_FOUND))?;
+    let live = crate::annotation::access::find_optional(&mut *transaction, Some(&user), &id, false)
+        .await?
+        .ok_or_else(|| ProviderError::NotFound.into_api_error(StatusCode::NOT_FOUND))?;
     if !crate::annotation::access::restrictions(&live, Some(&user)).allow_update {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
@@ -223,7 +218,7 @@ async fn reserve_ids(
         "SELECT MAX(id) FROM webknossos.annotation_reserved_ids
          WHERE _annotation=$1 AND tracingId=$2 AND domain=$3::webknossos.ANNOTATION_ID_DOMAIN",
     )
-    .bind(id.as_str())
+    .bind(&id)
     .bind(&body.tracing_id)
     .bind(domain)
     .fetch_one(&mut *transaction)
@@ -248,7 +243,7 @@ async fn reserve_ids(
             "INSERT INTO webknossos.annotation_reserved_ids(_annotation,tracingId,domain,_user,id)
              SELECT $1,$2,$3::webknossos.ANNOTATION_ID_DOMAIN,$4,UNNEST($5::bigint[])",
         )
-        .bind(id.as_str())
+        .bind(&id)
         .bind(&body.tracing_id)
         .bind(domain)
         .bind(&user.id)
@@ -262,7 +257,7 @@ async fn reserve_ids(
              WHERE _annotation=$1 AND tracingId=$2 AND domain=$3::webknossos.ANNOTATION_ID_DOMAIN
                AND _user=$4 AND id=ANY($5::bigint[])",
         )
-        .bind(id.as_str())
+        .bind(&id)
         .bind(&body.tracing_id)
         .bind(domain)
         .bind(&user.id)

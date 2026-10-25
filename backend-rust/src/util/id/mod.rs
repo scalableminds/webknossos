@@ -13,7 +13,9 @@ use webknossos_common::bytes::array;
 ///
 /// Binds and decodes as the database's `TEXT` id columns; decoding trusts the columns'
 /// `_objectId` check constraints instead of re-validating.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
+#[derive(
+    Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, sqlx::Type,
+)]
 #[serde(try_from = "String", into = "String")]
 #[sqlx(transparent)]
 pub struct ObjectId(String);

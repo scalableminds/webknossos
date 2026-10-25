@@ -177,13 +177,18 @@ impl TracingStoreClient {
     pub async fn reset_to_base(
         &self,
         tracing_store_url: &str,
-        annotation_id: &str,
+        annotation_id: &ObjectId,
     ) -> Result<(), ServiceError> {
         self.long_clients
             .request(
                 Method::POST,
                 tracing_store_url,
-                &["tracings", "annotation", annotation_id, "resetToBase"],
+                &[
+                    "tracings",
+                    "annotation",
+                    annotation_id.as_str(),
+                    "resetToBase",
+                ],
                 &[],
                 None,
             )

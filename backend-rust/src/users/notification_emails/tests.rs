@@ -239,8 +239,8 @@ fn notification_emails_are_enabled_by_default() {
 #[test]
 fn links_use_the_public_uri() {
     assert_eq!(
-        enabled().annotation_url("abc"),
-        "https://wk.example/annotations/abc"
+        enabled().annotation_url(&ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9d0").unwrap()),
+        "https://wk.example/annotations/66f0a1b2c3d4e5f6a7b8c9d0"
     );
 }
 
@@ -372,7 +372,9 @@ fn access_queries_evaluate_the_grants_per_candidate() {
     let user = ObjectId::new();
     let user_ids = [&user];
     for resource in [
-        SharedResource::Annotation { id: "a".into() },
+        SharedResource::Annotation {
+            id: ObjectId::new(),
+        },
         SharedResource::Dataset {
             id: ObjectId::new(),
         },
@@ -385,7 +387,9 @@ fn access_queries_evaluate_the_grants_per_candidate() {
         assert!(!predicate.contains('$'), "{predicate}");
         assert!(predicate.contains("candidate._id"));
     }
-    let annotation = SharedResource::Annotation { id: "a".into() };
+    let annotation = SharedResource::Annotation {
+        id: ObjectId::new(),
+    };
     let annotation = annotation.access_query(&user_ids);
     // Shared annotations also require read access to their dataset.
     assert!(

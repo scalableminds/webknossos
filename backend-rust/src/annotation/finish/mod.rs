@@ -178,7 +178,7 @@ async fn finish_saved(
     state: &AppState,
     provider: &AnnotationProvider,
     user: &AuthUser,
-    id: &str,
+    id: &ObjectId,
 ) -> Result<&'static str, FinishFailure> {
     let mut transaction = state
         .pool
@@ -300,7 +300,7 @@ async fn finish_annotation(
                     Ok(e) => FinishFailure::Restrictions(e),
                     Err(e) => FinishFailure::Finish(e),
                 })?;
-            tracing::info!(annotation = %compound.id.as_str(), "Not finishing compound annotation due to missing permissions");
+            tracing::info!(annotation = %compound.id, "Not finishing compound annotation due to missing permissions");
             return Err(FinishFailure::Finish(ApiError::bad_request(FINISH_FAILED)));
         }
     };
@@ -309,7 +309,6 @@ async fn finish_annotation(
         .provide(context, typ, id)
         .await
         .map_err(FinishFailure::Reload)?;
-    let annotation_id = ObjectId::parse(&annotation_id).map_err(FinishFailure::TimeLog)?;
     writer
         .log_user_interaction_if_potential_contributor(
             &state.pool,
@@ -346,8 +345,7 @@ async fn finish(
         .await
         .map_err(ApiError::from)?;
     let mut connection = state.pool.acquire().await?;
-    let mut json =
-        crate::annotation::lists::full_json(&mut connection, &user, id.as_str(), jobs).await?;
+    let mut json = crate::annotation::lists::full_json(&mut connection, &user, &id, jobs).await?;
     json["messages"] = json!([{ "success": message }]);
     Ok(Json(json))
 }

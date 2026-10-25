@@ -175,14 +175,16 @@ async fn validate(
     let id = body.resource_id.as_deref();
     match body.resource_type {
         Resource::Dataset => dataset(state, features, user.as_ref(), id, body.mode, token).await,
-        Resource::Annotation => annotation(state, user.as_ref(), id, body.mode, token).await,
+        Resource::Annotation => {
+            annotation(state, user.as_ref(), &required_id(id)?, body.mode, token).await
+        }
         Resource::Tracing => {
             if id == Some("dummyTracingId") {
                 return Ok(Answer::granted());
             }
             let id =
                 id.ok_or_else(|| ApiError::bad_request(crate::msg::request::TRACING_ID_REQUIRED))?;
-            let annotation_id: String = sqlx::query_scalar(
+            let annotation_id: ObjectId = sqlx::query_scalar(
                 "SELECT a._id FROM webknossos.annotations_ a JOIN \
                     webknossos.annotation_layers layer ON layer._annotation=a._id WHERE \
                     layer.tracingId=$1 LIMIT 1",
@@ -192,7 +194,7 @@ async fn validate(
             .await?
             // Play: `annotationForTracing(…) ?~> annotation.notFound` on an empty result (400).
             .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?;
-            annotation(state, user.as_ref(), Some(&annotation_id), body.mode, token).await
+            annotation(state, user.as_ref(), &annotation_id, body.mode, token).await
         }
         Resource::JobExport => job_export(state, user.as_ref(), id, body.mode).await,
         Resource::Webknossos => Ok(Answer::denied("Invalid access token.")),
@@ -253,15 +255,13 @@ async fn dataset(
 async fn annotation(
     state: &AppState,
     user: Option<&AuthUser>,
-    id: Option<&str>,
+    id: &ObjectId,
     mode: Mode,
     token: Option<&str>,
 ) -> ApiResult<Answer> {
-    if id == Some("000000000000000000000000") {
+    if *id == ObjectId::dummy() {
         return Ok(Answer::granted());
     }
-    let id = required_id(id)?;
-    let id = id.as_str();
     // Play falls back to the (empty) annotation cache, whose empty Fox answers the generic 404.
     let metadata = crate::annotation::access::find_optional(&state.pool, user, id, true)
         .await?

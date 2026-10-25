@@ -629,7 +629,7 @@ fn single_layer(ids: &[String], message: &str) -> Result<Option<String>, Provide
 
 async fn base_from_annotation_row(
     pool: &PgPool,
-    annotation_id: &str,
+    annotation_id: &ObjectId,
     owner_id: ObjectId,
 ) -> Result<ResolvedBase, ProviderError> {
     let layers: Vec<(String, String)> = sqlx::query_as(
@@ -663,11 +663,11 @@ async fn resolve_base(
     id: &ObjectId,
 ) -> Result<ResolvedBase, ProviderError> {
     let mut q = Sql::new("SELECT a._user FROM webknossos.annotations_ a WHERE a._id=");
-    q.push_bind(id.as_str()).push(" AND ");
+    q.push_bind(id).push(" AND ");
     crate::annotation::access::push_read_predicate(&mut q, user.into());
     let annotation: Option<ObjectId> = q.build_query_scalar().fetch_optional(pool).await?;
     if let Some(owner) = annotation {
-        return base_from_annotation_row(pool, id.as_str(), owner).await;
+        return base_from_annotation_row(pool, id, owner).await;
     }
     let task: Option<(i64, i64)> = sqlx::query_as(
         "SELECT t.totalInstances, t.pendingInstances FROM webknossos.tasks_ t
@@ -691,7 +691,7 @@ async fn resolve_base(
         .push(" AND a.typ='Task' AND a.state<>'Cancelled' AND ");
     crate::annotation::access::push_read_predicate(&mut q, user.into());
     q.push(" ORDER BY a.created, a._id");
-    let annotations: Vec<(String, ObjectId, String)> = q.build_query_as().fetch_all(pool).await?;
+    let annotations: Vec<(ObjectId, ObjectId, String)> = q.build_query_as().fetch_all(pool).await?;
     match annotations.first() {
         Some((annotation_id, owner, state))
             if total == 1 && pending == 0 && state == "Finished" =>

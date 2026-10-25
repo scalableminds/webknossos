@@ -102,7 +102,7 @@ pub(crate) async fn insert_initializing_annotation(
          INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,description,visibility,name,state,tags,tracingTime,typ,created,modified,isDeleted)
          SELECT $1,dataset._id,$2,$3,'','Internal','','Initializing','{}',0,'Task',$4,$4,FALSE FROM dataset",
     )
-    .bind(annotation_id.as_str())
+    .bind(&annotation_id)
     .bind(task_id)
     .bind(user_id)
     .bind(now_millis())
@@ -141,7 +141,7 @@ pub(crate) async fn assign_one_to(
 /// The TracingBase fields copied into the new Task annotation.
 #[derive(Debug, FromRow)]
 struct AnnotationBase {
-    id: String,
+    id: ObjectId,
     dataset_id: ObjectId,
     owner_id: ObjectId,
     description: String,
@@ -214,7 +214,7 @@ pub(crate) async fn create_annotation_for(
         "task assignment: creating annotation from base"
     );
     let request = DuplicateAnnotationRequest {
-        source_annotation_id: ObjectId::parse(&base.id)?,
+        source_annotation_id: base.id.clone(),
         new_annotation_id: initializing_annotation_id.clone(),
         owner_id: base.owner_id.clone(),
         requesting_user_id: assignee_id.clone(),
@@ -256,7 +256,7 @@ async fn update_initialized(
            created=$10,modified=$10,isDeleted=FALSE
          WHERE _id=$1 AND state='Initializing' AND NOT isDeleted",
     )
-    .bind(annotation_id.as_str())
+    .bind(annotation_id)
     .bind(&base.dataset_id)
     .bind(assignee_id)
     .bind(&base.description)
@@ -274,7 +274,7 @@ async fn update_initialized(
         return Err(ProviderError::failure(crate::msg::NOT_FOUND));
     }
     sqlx::query("DELETE FROM webknossos.annotation_layers WHERE _annotation=$1")
-        .bind(annotation_id.as_str())
+        .bind(annotation_id)
         .execute(&mut *tx)
         .await?;
     for layer in layers {
@@ -282,7 +282,7 @@ async fn update_initialized(
             "INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics)
              VALUES($1,$2,$3::webknossos.ANNOTATION_LAYER_TYPE,$4,'{}'::jsonb)",
         )
-        .bind(annotation_id.as_str())
+        .bind(annotation_id)
         .bind(&layer.tracing_id)
         .bind(layer.typ.as_str())
         .bind(&layer.name)
@@ -307,11 +307,11 @@ pub(crate) async fn abort_initializing_annotation(
 ) -> ApiResult<()> {
     let mut tx = pool.begin().await?;
     sqlx::query("DELETE FROM webknossos.annotation_layers WHERE _annotation=$1 AND EXISTS (SELECT 1 FROM webknossos.annotations WHERE _id=$1 AND state='Initializing')")
-        .bind(annotation_id.as_str())
+        .bind(annotation_id)
         .execute(&mut *tx)
         .await?;
     sqlx::query("DELETE FROM webknossos.annotations WHERE _id=$1 AND state='Initializing'")
-        .bind(annotation_id.as_str())
+        .bind(annotation_id)
         .execute(&mut *tx)
         .await?;
     tx.commit().await?;
@@ -490,7 +490,7 @@ async fn assign_one(
     notification_emails.send_task_assigned_email(
         pool,
         task_id.as_str(),
-        annotation_id.as_str(),
+        &annotation_id,
         &assignee_id,
         assignee_is_deactivated,
         &user.id,

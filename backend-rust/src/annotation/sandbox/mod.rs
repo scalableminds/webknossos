@@ -57,7 +57,7 @@ fn sandbox_metadata(
     now: DateTime<Utc>,
 ) -> crate::annotation::access::AnnotationMetadata {
     crate::annotation::access::AnnotationMetadata {
-        id: DUMMY_ID.to_owned(),
+        id: ObjectId::dummy(),
         dataset_id: dataset_id.to_owned(),
         task_id: None,
         owner_id: ObjectId::dummy(),

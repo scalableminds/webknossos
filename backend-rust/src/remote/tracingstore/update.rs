@@ -57,13 +57,13 @@ async fn persist_update(pool: &PgPool, id: &ObjectId, update: AnnotationProto) -
     // Global Scala update access deliberately does not require a live row:
     // an empty update for a nonexistent annotation is a successful no-op.
     sqlx::query("SELECT _id FROM webknossos.annotations WHERE _id=$1 FOR UPDATE")
-        .bind(id.as_str())
+        .bind(id)
         .fetch_optional(&mut *transaction)
         .await?;
     let previous: HashSet<String> = sqlx::query_scalar(
         "SELECT tracingId FROM webknossos.annotation_layers WHERE _annotation=$1",
     )
-    .bind(id.as_str())
+    .bind(id)
     .fetch_all(&mut *transaction)
     .await?
     .into_iter()
@@ -76,7 +76,7 @@ async fn persist_update(pool: &PgPool, id: &ObjectId, update: AnnotationProto) -
     sqlx::query(
         "DELETE FROM webknossos.annotation_layers WHERE _annotation=$1 AND NOT (tracingId=ANY($2::text[]))",
     )
-    .bind(id.as_str())
+    .bind(id)
     .bind(&incoming)
     .execute(&mut *transaction)
     .await?;
@@ -85,7 +85,7 @@ async fn persist_update(pool: &PgPool, id: &ObjectId, update: AnnotationProto) -
             // Existing layer type and statistics stay unchanged. Statistics
             // arrive separately in handleTracingUpdateReport, not this RPC.
             sqlx::query("UPDATE webknossos.annotation_layers SET name=$3 WHERE _annotation=$1 AND tracingId=$2")
-                .bind(id.as_str()).bind(&layer.tracing_id).bind(&layer.name)
+                .bind(id).bind(&layer.tracing_id).bind(&layer.name)
                 .execute(&mut *transaction).await?;
         } else {
             let typ = AnnotationLayerType::from(
@@ -96,12 +96,12 @@ async fn persist_update(pool: &PgPool, id: &ObjectId, update: AnnotationProto) -
             // Do not use UPSERT: duplicate new tracing IDs must fail rather
             // than silently becoming repeated updates to the inserted row.
             sqlx::query("INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics) VALUES($1,$2,$3::webknossos.ANNOTATION_LAYER_TYPE,$4,'{}'::jsonb)")
-                .bind(id.as_str()).bind(&layer.tracing_id).bind(typ).bind(&layer.name)
+                .bind(id).bind(&layer.tracing_id).bind(typ).bind(&layer.name)
                 .execute(&mut *transaction).await?;
         }
     }
     sqlx::query("UPDATE webknossos.annotations SET description=$2 WHERE _id=$1")
-        .bind(id.as_str())
+        .bind(id)
         .bind(update.description)
         .execute(&mut *transaction)
         .await?;

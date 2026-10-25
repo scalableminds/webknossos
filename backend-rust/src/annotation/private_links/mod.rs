@@ -46,7 +46,7 @@ struct Parameters {
 #[serde(rename_all = "camelCase")]
 struct PrivateLink {
     id: ObjectId,
-    annotation: String,
+    annotation: ObjectId,
     access_token: String,
     #[serde(
         rename = "expirationDateTime",
@@ -70,7 +70,7 @@ async fn owned_link<'e, E: Executor<'e, Database = Postgres>>(
 ) -> ApiResult<PrivateLink> {
     let suffix = if lock { " FOR UPDATE OF link" } else { "" };
     let mut q = select(user);
-    q.push(" AND link._id=").push_bind(id.as_str()).push(suffix);
+    q.push(" AND link._id=").push_bind(id).push(suffix);
     q.build_query_as()
         .fetch_optional(executor)
         .await?
@@ -94,7 +94,7 @@ async fn by_annotation(
 ) -> ApiResult<ResponseJson<Vec<PrivateLink>>> {
     let id = ObjectId::parse_path(&id)?;
     let mut q = select(&user);
-    q.push(" AND link._annotation=").push_bind(id.as_str());
+    q.push(" AND link._annotation=").push_bind(&id);
     let links: Vec<PrivateLink> = q.build_query_as().fetch_all(&state.pool).await?;
     Ok(ResponseJson(links))
 }
@@ -132,12 +132,9 @@ async fn create(
     Json(parameters): Json<Parameters>,
 ) -> ApiResult<ResponseJson<PrivateLink>> {
     let mut tx = state.pool.begin().await?;
-    let annotation = crate::annotation::access::lock_for_mutation(
-        &mut tx,
-        &user,
-        parameters.annotation.as_str(),
-    )
-    .await?;
+    let annotation =
+        crate::annotation::access::lock_for_mutation(&mut tx, &user, &parameters.annotation)
+            .await?;
     // The subsequent Scala link DAO lookup is owner-only. Keep insertion and
     // lookup atomic so a rejected request cannot leave an inaccessible link.
     if annotation.owner_id != user.id {
@@ -152,7 +149,7 @@ async fn create(
             VALUES($1,$2,$3,$4)",
     )
     .bind(&id)
-    .bind(parameters.annotation.as_str())
+    .bind(&parameters.annotation)
     .bind(token()?)
     .bind(parameters.expiration)
     .execute(&mut *tx)
@@ -171,7 +168,7 @@ async fn update(
     let mut tx = state.pool.begin().await?;
     let link = owned_link(&mut *tx, &user, &id, true).await?;
     // Lock annotation references in id order to avoid rebind deadlocks.
-    let mut annotation_ids = vec![link.annotation.as_str(), parameters.annotation.as_str()];
+    let mut annotation_ids = vec![&link.annotation, &parameters.annotation];
     annotation_ids.sort_unstable();
     annotation_ids.dedup();
     for annotation_id in annotation_ids {
@@ -188,7 +185,7 @@ async fn update(
             _annotation=$2,expirationDateTime=$3 WHERE _id=$1 AND NOT isDeleted",
     )
     .bind(&id)
-    .bind(parameters.annotation.as_str())
+    .bind(&parameters.annotation)
     .bind(parameters.expiration)
     .execute(&mut *tx)
     .await?;
@@ -225,7 +222,7 @@ async fn source(
     Path(token_or_id): Path<String>,
     Query(query): Query<SourceQuery>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let linked: Option<String> = sqlx::query_scalar(
+    let linked: Option<ObjectId> = sqlx::query_scalar(
         "SELECT link._annotation FROM webknossos.annotation_privateLinks_ link JOIN \
             webknossos.annotations_ a ON a._id=link._annotation WHERE link.accessToken=$1 AND \
             (link.expirationDateTime IS NULL OR link.expirationDateTime>statement_timestamp())",
@@ -246,14 +243,9 @@ async fn source(
             None => None,
         };
         // Play: `annotationDAO.findOne(…) ?~> annotation.notFound` on an empty result (400).
-        crate::annotation::access::find_optional(
-            &state.pool,
-            user.as_ref(),
-            token_or_id.as_str(),
-            false,
-        )
-        .await?
-        .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?
+        crate::annotation::access::find_optional(&state.pool, user.as_ref(), &token_or_id, false)
+            .await?
+            .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?
     };
     let value: Value = sqlx::query_scalar(
         r#"SELECT jsonb_build_object('id',a._id,

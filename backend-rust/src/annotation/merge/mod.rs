@@ -181,7 +181,7 @@ async fn merge_two(
             .await?
             .ok_or_else(|| ProviderError::failure(crate::msg::tracing_store::NOT_FOUND))?;
         let request = MergeRequest {
-            annotation_ids: vec![ObjectId::parse(a.id())?, ObjectId::parse(b.id())?],
+            annotation_ids: vec![a.id().clone(), b.id().clone()],
             owner_ids: vec![a.owner_id().clone(), b.owner_id().clone()],
             additional_bounding_boxes: Vec::new(),
             new_annotation_id: new_id.clone(),
@@ -243,7 +243,7 @@ async fn merge_typed(
         "INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,description,visibility,name,state,tags,tracingTime,typ,collaborationMode,created,modified,isDeleted)
          VALUES($1,$2,NULL,$3,'','Internal','','Active','{}',NULL,'Explorational','OwnerOnly',$4,$4,false)",
     )
-    .bind(new_id.as_str())
+    .bind(&new_id)
     .bind(annotation_b.dataset_id())
     .bind(&user.id)
     .bind(now)
@@ -254,7 +254,7 @@ async fn merge_typed(
             "INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics)
              VALUES($1,$2,$3::webknossos.ANNOTATION_LAYER_TYPE,$4,'{}'::jsonb)",
         )
-        .bind(new_id.as_str())
+        .bind(&new_id)
         .bind(&layer.tracing_id)
         .bind(AnnotationLayerType::from(layer.typ()).as_str())
         .bind(&layer.name)
@@ -266,27 +266,22 @@ async fn merge_typed(
     // the requester allowAccess is always true. The check
     // runs on the inserted row inside the transaction (rolled back on denial).
     let metadata =
-        crate::annotation::access::find(&mut *transaction, Some(user), new_id.as_str(), true)
-            .await?;
+        crate::annotation::access::find(&mut *transaction, Some(user), &new_id, true).await?;
     if !crate::annotation::access::restrictions(&metadata, Some(user)).allow_access {
         return Err(ApiError::forbidden(NO_ACCESS_ON_MERGED));
     }
     // publicWrites(merged, user, restrictions) ?~> publicWritesFailed. It runs
     // before commit so a serializer failure leaves no row behind.
-    let mut json = crate::annotation::lists::full_json(
-        &mut transaction,
-        user,
-        new_id.as_str(),
-        services.jobs_enabled,
-    )
-    .await
-    .map_err(|error| {
-        if error.status.is_server_error() {
-            error
-        } else {
-            ApiError::bad_request(PUBLIC_WRITES_FAILED)
-        }
-    })?;
+    let mut json =
+        crate::annotation::lists::full_json(&mut transaction, user, &new_id, services.jobs_enabled)
+            .await
+            .map_err(|error| {
+                if error.status.is_server_error() {
+                    error
+                } else {
+                    ApiError::bad_request(PUBLIC_WRITES_FAILED)
+                }
+            })?;
     transaction.commit().await?;
     json["messages"] = json!([{ "success": MERGE_SUCCESS }]);
     Ok(json)

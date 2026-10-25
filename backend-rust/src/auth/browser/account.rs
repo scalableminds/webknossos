@@ -391,7 +391,7 @@ async fn identity_can_access(
             crate::dataset::access::can_read(pool, Some(identity), id, None).await?
         }
         Target::Annotation(id) => {
-            match crate::annotation::access::find(pool, Some(identity), id.as_str(), true).await {
+            match crate::annotation::access::find(pool, Some(identity), id, true).await {
                 Ok(annotation) => {
                     annotation.state != "Cancelled"
                         && crate::annotation::access::restrictions(&annotation, Some(identity))

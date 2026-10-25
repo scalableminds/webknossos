@@ -9,7 +9,7 @@ use common::{Fixture, TestDb, object_id};
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
-use webknossos_backend::{AppState, router};
+use webknossos_backend::{AppState, router, util::id::ObjectId};
 
 async fn request(
     app: &Router,
@@ -529,6 +529,7 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
     let db = TestDb::new().await;
     let f = db.fixture().await;
     let a = seed(&db, &f).await;
+    let annotation = ObjectId::parse(&a.annotation).unwrap();
     let owner = webknossos_backend::auth::authenticate(&db.pool, &f.token)
         .await
         .unwrap();
@@ -537,12 +538,12 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
         .await
         .unwrap();
     assert!(
-        webknossos_backend::annotation::access::find(&db.pool, Some(&peer), &a.annotation, false)
+        webknossos_backend::annotation::access::find(&db.pool, Some(&peer), &annotation, false)
             .await
             .is_err()
     );
     let metadata =
-        webknossos_backend::annotation::access::find(&db.pool, Some(&owner), &a.annotation, false)
+        webknossos_backend::annotation::access::find(&db.pool, Some(&owner), &annotation, false)
             .await
             .unwrap();
     let restricted = webknossos_backend::annotation::access::restrictions(&metadata, Some(&owner));
@@ -562,7 +563,7 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
     .await
     .unwrap();
     let metadata =
-        webknossos_backend::annotation::access::find(&db.pool, Some(&peer), &a.annotation, false)
+        webknossos_backend::annotation::access::find(&db.pool, Some(&peer), &annotation, false)
             .await
             .unwrap();
     let restricted = webknossos_backend::annotation::access::restrictions(&metadata, Some(&peer));
@@ -579,7 +580,7 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
     .await
     .unwrap();
     let metadata =
-        webknossos_backend::annotation::access::find(&db.pool, Some(&peer), &a.annotation, false)
+        webknossos_backend::annotation::access::find(&db.pool, Some(&peer), &annotation, false)
             .await
             .unwrap();
     assert!(
@@ -592,7 +593,7 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
         .await
         .unwrap();
     let metadata =
-        webknossos_backend::annotation::access::find(&db.pool, Some(&owner), &a.annotation, false)
+        webknossos_backend::annotation::access::find(&db.pool, Some(&owner), &annotation, false)
             .await
             .unwrap();
     let restricted = webknossos_backend::annotation::access::restrictions(&metadata, Some(&owner));
@@ -604,7 +605,7 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
         .await
         .unwrap();
     let metadata =
-        webknossos_backend::annotation::access::find(&db.pool, Some(&owner), &a.annotation, false)
+        webknossos_backend::annotation::access::find(&db.pool, Some(&owner), &annotation, false)
             .await
             .unwrap();
     assert!(
@@ -616,10 +617,9 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
         .execute(&db.pool)
         .await
         .unwrap();
-    let metadata =
-        webknossos_backend::annotation::access::find(&db.pool, None, &a.annotation, false)
-            .await
-            .unwrap();
+    let metadata = webknossos_backend::annotation::access::find(&db.pool, None, &annotation, false)
+        .await
+        .unwrap();
     let restricted = webknossos_backend::annotation::access::restrictions(&metadata, None);
     assert!(restricted.allow_access && restricted.allow_download);
     assert!(!restricted.allow_update && !restricted.allow_finish);
@@ -627,7 +627,7 @@ async fn annotation_dao_access_and_runtime_restrictions_remain_distinct() {
     let project = object_id();
     let task_type = object_id();
     let task = object_id();
-    let task_annotation = object_id();
+    let task_annotation = ObjectId::new();
     sqlx::query(
         "INSERT INTO webknossos.user_team_roles(_user,_team,isTeamManager) VALUES($1,$2,true)",
     )

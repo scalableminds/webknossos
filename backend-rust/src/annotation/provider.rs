@@ -433,10 +433,10 @@ pub enum ProvidedAnnotation {
 }
 
 impl ProvidedAnnotation {
-    pub fn id(&self) -> &str {
+    pub fn id(&self) -> &ObjectId {
         match self {
             Self::Saved(saved) => &saved.id,
-            Self::Compound(compound) => compound.id.as_str(),
+            Self::Compound(compound) => &compound.id,
         }
     }
     pub fn owner_id(&self) -> &ObjectId {
@@ -578,7 +578,7 @@ impl AnnotationDataSourceStore {
 /// Live Task annotation as needed by the compound handlers.
 #[derive(Debug, Clone, FromRow)]
 struct TaskAnnotation {
-    id: String,
+    id: ObjectId,
     dataset_id: ObjectId,
     owner_id: ObjectId,
     state: String,
@@ -752,7 +752,7 @@ impl AnnotationProvider {
         crate::annotation::access::find_optional(
             &self.pool,
             context.requester,
-            annotation_id.as_str(),
+            annotation_id,
             context.global,
         )
         .await?
@@ -1076,7 +1076,7 @@ impl AnnotationProvider {
         let (usable, has_voxel_size) = dataset.ok_or_else(|| {
             ProviderError::failure(crate::msg::dataset::not_found_for_annotation(
                 dataset_id,
-                temporary_annotation_id.as_str(),
+                temporary_annotation_id,
             ))
         })?;
         if !usable {
@@ -1104,7 +1104,7 @@ impl AnnotationProvider {
     /// TaskDAO.findTaskBoundingBoxesByAnnotationIds (no access predicate).
     async fn task_bounding_boxes(
         &self,
-        annotation_ids: &[String],
+        annotation_ids: &[ObjectId],
     ) -> Result<Vec<NamedBoundingBox>, ProviderError> {
         type Row = (
             Option<f64>,
@@ -1114,7 +1114,7 @@ impl AnnotationProvider {
             Option<f64>,
             Option<f64>,
             String,
-            String,
+            ObjectId,
         );
         let rows: Vec<Row> = sqlx::query_as(
             "SELECT (t.boundingBox).x,(t.boundingBox).y,(t.boundingBox).z,
@@ -1222,7 +1222,7 @@ impl AnnotationProvider {
         let mut annotation_ids = Vec::with_capacity(annotations.len());
         let mut owner_ids = Vec::with_capacity(annotations.len());
         for annotation in annotations {
-            annotation_ids.push(ObjectId::parse(&annotation.id)?);
+            annotation_ids.push(annotation.id.clone());
             owner_ids.push(annotation.owner_id.clone());
         }
         let request = MergeRequest {
@@ -1248,7 +1248,7 @@ fn finished(annotations: &[TaskAnnotation]) -> Vec<&TaskAnnotation> {
         .collect()
 }
 
-fn ids(annotations: &[TaskAnnotation]) -> Vec<String> {
+fn ids(annotations: &[TaskAnnotation]) -> Vec<ObjectId> {
     annotations
         .iter()
         .map(|annotation| annotation.id.clone())

@@ -981,7 +981,7 @@ async fn run_model_training(
     let annotation = crate::annotation::access::find_optional(
         &state.pool,
         Some(user),
-        first.annotation_id.as_str(),
+        &first.annotation_id,
         false,
     )
     .await?
@@ -1007,7 +1007,7 @@ async fn run_model_training(
         crate::annotation::access::find_optional(
             &state.pool,
             Some(user),
-            specification.annotation_id.as_str(),
+            &specification.annotation_id,
             false,
         )
         .await?
@@ -1030,7 +1030,7 @@ async fn run_model_training(
         .iter()
         .map(|specification| {
             json!({
-                "annotationId": specification.annotation_id.as_str(),
+                "annotationId": specification.annotation_id,
                 "colorLayerName": specification.color_layer_name,
                 "segmentationLayerName": specification.segmentation_layer_name,
                 "mag": specification.mag,
@@ -1099,7 +1099,7 @@ async fn run_model_training(
             "INSERT INTO webknossos.aiModel_trainingAnnotations (_aiModel, _annotation) VALUES ($1, $2)",
         )
         .bind(&model_id)
-        .bind(specification.annotation_id.as_str())
+        .bind(&specification.annotation_id)
         .execute(pending.connection())
         .await?;
     }
@@ -1312,10 +1312,7 @@ async fn run_model_inference(
     args.insert("model_id".into(), json!(model_id));
     args.insert("model_organization_id".into(), json!(model_organization_id));
     if kind == InferenceKind::Neuron {
-        args.insert(
-            "annotation_id".into(),
-            json!(body.annotation_id.as_ref().map(ObjectId::as_str)),
-        );
+        args.insert("annotation_id".into(), json!(body.annotation_id));
     }
     args.insert(
         "dataset_directory_name".into(),
@@ -1383,7 +1380,6 @@ async fn run_model_inference(
     // Instant.now has millisecond precision.
     let now = Utc::now();
     let created = DateTime::from_timestamp_millis(now.timestamp_millis()).unwrap_or(now);
-    let annotation_id = body.annotation_id.as_ref().map(ObjectId::as_str);
     // An unknown annotation id violates the foreign key; everything rolls back
     // (Scala fails after the job was already created).
     sqlx::query(
@@ -1394,7 +1390,7 @@ async fn run_model_inference(
     .bind(&inference_id)
     .bind(&user.organization_id)
     .bind(&model.id)
-    .bind(annotation_id)
+    .bind(&body.annotation_id)
     .bind(&job_id)
     .bind(mag1_bounding_box.to_literal())
     .bind(&body.mask_annotation_layer_name)

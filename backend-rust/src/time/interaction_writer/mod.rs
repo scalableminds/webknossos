@@ -107,7 +107,7 @@ pub fn over_limit_mail(
     owner_last_name: &str,
     project_name: &str,
     task_id: &str,
-    annotation_id: &str,
+    annotation_id: &ObjectId,
     project_owner_email: &str,
     public_uri: &str,
 ) -> Mail {
@@ -128,7 +128,7 @@ pub fn over_limit_mail(
         &abbreviated,
         project_name,
         task_id,
-        annotation_id,
+        annotation_id.as_str(),
         public_uri,
         project_owner_email,
     )
@@ -138,7 +138,7 @@ pub fn over_limit_mail(
 /// after commit against the in-transaction (row-locked) total.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct OverLimitCandidate {
-    annotation_id: String,
+    annotation_id: ObjectId,
     owner_id: ObjectId,
     task_id: String,
     tracing_time_after: i64,
@@ -272,10 +272,10 @@ async fn lock_accounting_rows(
     transaction: &mut Transaction<'_, Postgres>,
     plan: &InteractionPlan,
 ) -> ApiResult<()> {
-    let mut annotations: Vec<&str> = plan
+    let mut annotations: Vec<&ObjectId> = plan
         .closes
         .iter()
-        .filter_map(|close| close.after.annotation_id.as_ref().map(ObjectId::as_str))
+        .filter_map(|close| close.after.annotation_id.as_ref())
         .collect();
     annotations.sort_unstable();
     annotations.dedup();
@@ -321,7 +321,7 @@ async fn execute_plan(
         )
         .bind(id.as_str())
         .bind(user_id)
-        .bind(insert.state.annotation_id.as_ref().map(ObjectId::as_str))
+        .bind(&insert.state.annotation_id)
         .bind(insert.state.time_millis)
         .bind(timestamp(insert.state.last_update_millis)?)
         .bind(insert.state.number_of_updates)
@@ -339,7 +339,7 @@ async fn execute_plan(
         )
         .bind(span_id.as_str())
         .bind(user_id)
-        .bind(close.after.annotation_id.as_ref().map(ObjectId::as_str))
+        .bind(&close.after.annotation_id)
         .bind(close.after.time_millis)
         .bind(timestamp(close.after.last_update_millis)?)
         .bind(close.after.number_of_updates)
@@ -353,14 +353,14 @@ async fn execute_plan(
         sqlx::query(
             "UPDATE webknossos.annotations SET tracingTime=COALESCE(tracingTime,0)+$2 WHERE _id=$1",
         )
-        .bind(annotation_id.as_str())
+        .bind(annotation_id)
         .bind(close.delta_millis)
         .execute(&mut **transaction)
         .await?;
         let annotation = crate::annotation::access::find_optional(
             &mut **transaction,
             access.requester,
-            annotation_id.as_str(),
+            annotation_id,
             access.global,
         )
         .await?

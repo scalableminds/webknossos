@@ -118,7 +118,7 @@ async fn acquire(
         .map_err(acquisition_error)?;
     // Protect state, visibility, collaboration mode and owner while checking
     // runtime restrictions; collaborators do not need a DAO write grant.
-    let live = crate::annotation::access::lock_readable(&mut transaction, &user, id.as_str())
+    let live = crate::annotation::access::lock_readable(&mut transaction, &user, &id)
         .await?
         .ok_or_else(|| ProviderError::NotFound.into_api_error(StatusCode::NOT_FOUND))?;
     acquisition_gate(&live, &user)?;
@@ -132,7 +132,7 @@ async fn acquire(
             OR webknossos.annotation_mutexes.expiry<statement_timestamp()
          RETURNING _user,sessionId",
     )
-    .bind(id.as_str())
+    .bind(&id)
     .bind(&user.id)
     .bind(&session)
     .bind(micros)
@@ -148,7 +148,7 @@ async fn acquire(
             "SELECT _user,sessionId FROM webknossos.annotation_mutexes WHERE \
                 _annotation=$1 FOR UPDATE",
         )
-        .bind(id.as_str())
+        .bind(&id)
         .fetch_one(&mut *transaction)
         .await
         .map_err(ApiError::from)
@@ -201,7 +201,7 @@ async fn release(
             "DELETE FROM webknossos.annotation_mutexes WHERE _annotation=$1 AND _user=$2 \
                 AND sessionId=$3",
         )
-        .bind(id.as_str())
+        .bind(&id)
         .bind(&user.id)
         .bind(session)
         .execute(&mut *transaction)

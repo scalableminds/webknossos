@@ -681,7 +681,7 @@ async fn upload(
         properties,
     );
     Ok(Json(json!({
-        "annotation": {"typ": "Explorational", "id": annotation_id.as_str()},
+        "annotation": {"typ": "Explorational", "id": annotation_id},
         "messages": [{"success": MSG_UPLOAD_SUCCESS}],
     }))
     .into_response())

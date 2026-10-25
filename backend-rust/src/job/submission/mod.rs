@@ -253,9 +253,8 @@ impl IntoResponse for RunError {
 // ---------------------------------------------------------------------------
 
 /// ObjectId.fromStringSync: 24 hex digits in either case, normalized to lowercase.
-fn parse_object_id(literal: &str) -> Option<String> {
-    (literal.len() == 24 && literal.bytes().all(|b| b.is_ascii_hexdigit()))
-        .then(|| literal.to_ascii_lowercase())
+fn parse_object_id(literal: &str) -> Option<ObjectId> {
+    ObjectId::parse(literal).ok()
 }
 
 /// ObjectId.pathBinder (fromStringWithPrefixSync): `anything-<ObjectId>` is accepted.
@@ -303,12 +302,12 @@ impl Params {
             .ok_or_else(|| Failure::new(crate::msg::request::invalid_boolean(key)).into())
     }
 
-    fn object_id(&self, key: &str) -> RunResult<String> {
+    fn object_id(&self, key: &str) -> RunResult<ObjectId> {
         let value = self.required(key)?;
         parse_object_id(&value).ok_or_else(|| invalid_query_object_id(key, &value))
     }
 
-    fn optional_object_id(&self, key: &str) -> RunResult<Option<String>> {
+    fn optional_object_id(&self, key: &str) -> RunResult<Option<ObjectId>> {
         self.optional(key)
             .map(|value| {
                 parse_object_id(&value).ok_or_else(|| invalid_query_object_id(key, &value))
@@ -421,7 +420,7 @@ fn read_enum(body: &Map<String, Value>, key: &str, values: &[&str]) -> RunResult
     }
 }
 
-fn json_object_id(value: &Value) -> Option<String> {
+fn json_object_id(value: &Value) -> Option<ObjectId> {
     value.as_str().and_then(parse_object_id)
 }
 
@@ -1477,7 +1476,7 @@ struct AnimationOptions {
     movie_duration: String,
     camera_position: String,
     mag_for_textures: Vec3Int,
-    annotation_id: Option<String>,
+    annotation_id: Option<ObjectId>,
     include_skeletons: bool,
     hide_image_data: bool,
     save_blender_file: bool,
@@ -1583,7 +1582,7 @@ async fn render_animation(
         "movie_duration": options.movie_duration,
         "camera_position": options.camera_position,
         "mag_for_textures": options.mag_for_textures,
-        "annotation_id": optional_json(options.annotation_id),
+        "annotation_id": options.annotation_id,
         "include_skeletons": options.include_skeletons,
         "hide_image_data": options.hide_image_data,
         "save_blender_file": options.save_blender_file,

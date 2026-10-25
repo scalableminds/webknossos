@@ -291,13 +291,9 @@ async fn request(
     )
     .await?;
     let mut connection = pool.acquire().await?;
-    let mut json = crate::annotation::lists::full_json(
-        &mut connection,
-        &user,
-        annotation_id.as_str(),
-        jobs_enabled,
-    )
-    .await?;
+    let mut json =
+        crate::annotation::lists::full_json(&mut connection, &user, &annotation_id, jobs_enabled)
+            .await?;
     json["messages"] = json!([{ "success": TASK_ASSIGNED }]);
     Ok(ResponseJson(json))
 }

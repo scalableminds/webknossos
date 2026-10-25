@@ -124,7 +124,7 @@ async fn edit(
     let Some(saved) = provided.saved().filter(|_| restrictions.allow_update) else {
         return Err(ApiError::forbidden(EDIT_NOT_ALLOWED));
     };
-    let annotation_id = saved.id.as_str();
+    let annotation_id = &saved.id;
 
     let mut transaction = state.pool.begin().await?;
     // Re-check the runtime gate on the locked live row (no TOCTOU between the
@@ -391,7 +391,7 @@ async fn update_shared_teams(
         .prepare_share_emails(
             &mut transaction,
             SharedResource::Annotation {
-                id: provided.id().to_owned(),
+                id: provided.id().clone(),
             },
             &old_team_ids,
             &team_ids,

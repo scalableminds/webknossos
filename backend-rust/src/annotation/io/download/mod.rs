@@ -356,7 +356,7 @@ struct LayerRow {
     name: String,
 }
 
-async fn annotation_layers(pool: &PgPool, annotation_id: &str) -> ApiResult<Vec<LayerRow>> {
+async fn annotation_layers(pool: &PgPool, annotation_id: &ObjectId) -> ApiResult<Vec<LayerRow>> {
     Ok(sqlx::query_as(
         "SELECT tracingId AS tracing_id,typ::text AS typ,name FROM webknossos.annotation_layers
          WHERE _annotation=$1 ORDER BY tracingId",
@@ -526,7 +526,7 @@ async fn name_for_annotation(
         return Ok(None);
     };
     let task = annotation.task_id.unwrap_or("explorational");
-    let id = annotation.id;
+    let id = annotation.id.as_str();
     let hash = &id[id.len().saturating_sub(6)..];
     Ok(Some(normalize(&format!(
         "{}__{task}__{user_name}__{hash}",
@@ -536,7 +536,7 @@ async fn name_for_annotation(
 
 #[derive(Clone, Copy)]
 struct AnnotationNameParts<'a> {
-    id: &'a str,
+    id: &'a ObjectId,
     owner_id: &'a ObjectId,
     dataset_id: &'a ObjectId,
     task_id: Option<&'a str>,
@@ -723,7 +723,7 @@ async fn fetch_skeleton_layers(
             .get_skeleton_tracing(
                 &download.tracing_store_url,
                 &layer.tracing_id,
-                &ObjectId::parse(&download.annotation.id)?,
+                &download.annotation.id,
                 download.params.version,
             )
             .await
@@ -786,14 +786,13 @@ async fn skeleton_to_file(
     context: &Context<'_>,
     download: &SavedDownload<'_>,
 ) -> RunResult<Vec<u8>> {
-    let annotation_id = ObjectId::parse(&download.annotation.id)?;
     let skeletons = fetch_skeleton_layers(context, download).await?;
     let proto = context
         .services
         .tracing_store
         .get_annotation_proto(
             &download.tracing_store_url,
-            &annotation_id,
+            &download.annotation.id,
             download.params.version,
         )
         .await
@@ -838,7 +837,7 @@ async fn volume_or_hybrid_to_file(
     context: &Context<'_>,
     download: &SavedDownload<'_>,
 ) -> RunResult<Vec<u8>> {
-    let annotation_id = ObjectId::parse(&download.annotation.id)?;
+    let annotation_id = &download.annotation.id;
     let tracing_store = &context.services.tracing_store;
     let mut volumes: Vec<(LayerRow, FetchedVolumeLayer)> = Vec::new();
     let fetched_volumes: RunResult<()> = async {
@@ -848,7 +847,7 @@ async fn volume_or_hybrid_to_file(
                     &download.tracing_store_url,
                     VolumeLayerFetch {
                         tracing_id: &layer.tracing_id,
-                        annotation_id: &annotation_id,
+                        annotation_id,
                         version: download.params.version,
                         skip_volume_and_edges_data: download.params.skip_volume_data,
                         volume_data_zip_format: download.params.volume_data_zip_format,
@@ -885,7 +884,7 @@ async fn volume_or_hybrid_to_file(
     let proto = tracing_store
         .get_annotation_proto(
             &download.tracing_store_url,
-            &annotation_id,
+            annotation_id,
             download.params.version,
         )
         .await
@@ -1033,7 +1032,7 @@ pub fn play_header_parameter(name: &str, value: &str) -> String {
 /// A finished Task annotation of a compound download.
 #[derive(Debug, Clone, sqlx::FromRow)]
 struct CompoundRow {
-    id: String,
+    id: ObjectId,
     dataset_id: ObjectId,
     task_id: Option<String>,
     owner_id: ObjectId,

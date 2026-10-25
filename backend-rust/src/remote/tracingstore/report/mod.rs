@@ -139,7 +139,7 @@ async fn handle_report(
     }
     if user.id != owner {
         sqlx::query("INSERT INTO webknossos.annotation_contributors(_annotation,_user) VALUES($1,$2) ON CONFLICT DO NOTHING")
-            .bind(report.annotation_id.as_str())
+            .bind(&report.annotation_id)
             .bind(&user.id)
             .execute(pool)
             .await
@@ -151,7 +151,7 @@ async fn handle_report(
 
 /// Steps 3–5 in one transaction. Returns the annotation owner (`_user`).
 async fn touch_annotation(pool: &PgPool, report: &AnnotationUpdatesReport) -> ApiResult<ObjectId> {
-    let id = report.annotation_id.as_str();
+    let id = &report.annotation_id;
     let mut transaction = pool.begin().await?;
     let row: Option<(ObjectId, String)> = sqlx::query_as(
         "SELECT _user, state::text FROM webknossos.annotations WHERE _id=$1 AND NOT isDeleted FOR NO KEY UPDATE",
@@ -211,7 +211,7 @@ async fn after_user_resolved(
     ] {
         if count > 0 {
             let mut properties = Map::new();
-            properties.insert("annotation_id".into(), json!(report.annotation_id.as_str()));
+            properties.insert("annotation_id".into(), json!(report.annotation_id));
             properties.insert("changes_count".into(), json!(count));
             crate::system::analytics::track(state, misc, user, event_type.into(), properties);
         }

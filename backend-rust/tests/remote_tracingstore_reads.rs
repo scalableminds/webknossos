@@ -600,7 +600,7 @@ async fn genuine_compound_merge_cache_saved_precedence_and_invalidation() {
         .provide_identifier(AccessContext::requester(Some(&user)), &identifier)
         .await
         .unwrap();
-    assert_eq!(compound.id(), project);
+    assert_eq!(compound.id().as_str(), project);
     let uri = query("annotationId", "tracingId", "merged-tracing");
     assert_eq!(answer(&app, &uri).await, (StatusCode::OK, json!(project)));
     assert_eq!(

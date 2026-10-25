@@ -41,7 +41,7 @@ async fn assert_manager(
     connection: &mut PgConnection,
     user: &AuthUser,
     owner: &ObjectId,
-    task: Option<&str>,
+    task: Option<&ObjectId>,
 ) -> ApiResult<()> {
     if is_manager_or_admin(connection, user, owner, task).await? {
         Ok(())
@@ -56,7 +56,7 @@ pub(crate) async fn is_manager_or_admin(
     connection: &mut PgConnection,
     user: &AuthUser,
     owner: &ObjectId,
-    task: Option<&str>,
+    task: Option<&ObjectId>,
 ) -> ApiResult<bool> {
     let organization: Option<String> =
         sqlx::query_scalar("SELECT _organization FROM webknossos.users_ WHERE _id=$1 FOR SHARE")
@@ -67,7 +67,7 @@ pub(crate) async fn is_manager_or_admin(
     let admin = user.is_admin && user.organization_id == organization;
     let manager = if let Some(task) = task {
         // Scala globally resolves a live task and project even for admins.
-        let context: Option<(String, String)> = sqlx::query_as(
+        let context: Option<(ObjectId, String)> = sqlx::query_as(
             "SELECT p._team,p._organization FROM webknossos.tasks_ t
              JOIN webknossos.projects_ p ON p._id=t._project WHERE t._id=$1 FOR NO KEY UPDATE OF t FOR SHARE OF p",
         )
@@ -145,7 +145,7 @@ async fn cancel_typed(
         None
     };
     let owner = saved.as_ref().map_or(provided.owner_id(), |a| &a.owner_id);
-    let task = saved.as_ref().and_then(|a| a.task_id.as_deref());
+    let task = saved.as_ref().and_then(|a| a.task_id.as_ref());
     assert_manager(&mut transaction, user, owner, task).await?;
     let mut invalidate = None;
     let task_annotation = saved
@@ -158,7 +158,7 @@ async fn cancel_typed(
             invalidate = Some(
                 task_cache_keys(
                     &mut transaction,
-                    annotation.task_id.as_deref().expect("checked task"),
+                    annotation.task_id.as_ref().expect("checked task"),
                 )
                 .await?,
             );
@@ -189,21 +189,27 @@ async fn cancel_typed(
 
 pub(crate) async fn task_cache_keys(
     transaction: &mut Transaction<'_, Postgres>,
-    task: &str,
+    task: &ObjectId,
 ) -> ApiResult<[AnnotationIdentifier; 3]> {
-    let context: Option<(String, String)> =
+    let context: Option<(ObjectId, ObjectId)> =
         sqlx::query_as("SELECT _project,_tasktype FROM webknossos.tasks_ WHERE _id=$1 FOR SHARE")
             .bind(task)
             .fetch_optional(&mut **transaction)
             .await?;
     let (project, task_type) = context.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     Ok([
-        AnnotationIdentifier::parse("CompoundTask", &ObjectId::parse(task)?)
-            .map_err(ApiError::from)?,
-        AnnotationIdentifier::parse("CompoundProject", &ObjectId::parse(&project)?)
-            .map_err(ApiError::from)?,
-        AnnotationIdentifier::parse("CompoundTaskType", &ObjectId::parse(&task_type)?)
-            .map_err(ApiError::from)?,
+        AnnotationIdentifier {
+            annotation_type: AnnotationType::CompoundTask,
+            identifier: task.clone(),
+        },
+        AnnotationIdentifier {
+            annotation_type: AnnotationType::CompoundProject,
+            identifier: project,
+        },
+        AnnotationIdentifier {
+            annotation_type: AnnotationType::CompoundTaskType,
+            identifier: task_type,
+        },
     ])
 }
 

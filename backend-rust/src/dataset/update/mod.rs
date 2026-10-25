@@ -305,7 +305,7 @@ async fn update_partial(
                 fp._descendant=f._id JOIN webknossos.organizations_ o ON \
                 o._rootFolder=fp._ancestor WHERE f._id=$1 AND o._id=$2 FOR SHARE OF f, fp",
         )
-        .bind(folder.as_str())
+        .bind(folder)
         .bind(&record.organization)
         .fetch_optional(&mut *transaction)
         .await?
@@ -330,7 +330,7 @@ async fn update_partial(
     .bind(body.sorting_key)
     .bind(body.is_public)
     .bind(&body.tags)
-    .bind(body.folder_id.as_ref().map(ObjectId::as_str))
+    .bind(&body.folder_id)
     .bind(body.metadata.as_ref().map(|m| json!(m)))
     .execute(&mut *transaction)
     .await?;

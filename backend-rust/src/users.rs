@@ -241,7 +241,7 @@ async fn update_task_type(
             WHERE target_role._user = target._id AND requester_role._user = $3 AND requester_role.isTeamManager
           ))
         "#)
-        .bind(&*id).bind(body.last_task_type_id.as_ref().map(ObjectId::as_str))
+        .bind(&*id).bind(&body.last_task_type_id)
         .bind(&user.id).bind(&user.organization_id).bind(user.is_admin).execute(&state.pool).await?;
     if result.rows_affected() != 1 {
         return Err(ApiError::forbidden(crate::msg::user::NO_LONGER_EDITABLE));
@@ -375,7 +375,7 @@ struct Target {
 
 #[derive(sqlx::FromRow)]
 struct OldMembership {
-    team: String,
+    team: ObjectId,
     is_team_manager: bool,
     team_exists: bool,
     manageable: bool,
@@ -496,13 +496,11 @@ async fn update(
     // teams may be edited by any team manager or admin of their organization,
     // e.g. to add them to a team. This also applies to the user's own changes.
     let teams_changed = requested_teams.as_ref().is_some_and(|teams| {
-        let requested: HashSet<(&str, bool)> = teams
+        let requested: HashSet<(&ObjectId, bool)> =
+            teams.iter().map(|m| (&m.id, m.is_team_manager)).collect();
+        let old: HashSet<(&ObjectId, bool)> = old_memberships
             .iter()
-            .map(|m| (m.id.as_str(), m.is_team_manager))
-            .collect();
-        let old: HashSet<(&str, bool)> = old_memberships
-            .iter()
-            .map(|m| (m.team.as_str(), m.is_team_manager))
+            .map(|m| (&m.team, m.is_team_manager))
             .collect();
         requested != old
     });
@@ -726,29 +724,27 @@ async fn membership_updates(
     target: &Target,
     requested: &[Membership],
     old: &[OldMembership],
-) -> ApiResult<Vec<(String, bool)>> {
-    let mut teams: HashMap<&str, (String, String, bool)> = HashMap::new();
+) -> ApiResult<Vec<(ObjectId, bool)>> {
+    let mut teams: HashMap<&ObjectId, (String, String, bool)> = HashMap::new();
     for membership in requested {
         let mut q = Sql::new("SELECT team.name, team._organization, ");
         push_team_manageable(&mut q, requester.into());
         q.push(" FROM webknossos.teams_ AS team WHERE team._id = ")
-            .push_bind(membership.id.as_str())
+            .push_bind(&membership.id)
             .push(" FOR SHARE OF team");
         let team: (String, String, bool) = q
             .build_query_as()
             .fetch_optional(&mut **tx)
             .await?
-            .ok_or_else(|| {
-                ApiError::not_found(crate::msg::team::not_found(membership.id.as_str()))
-            })?;
-        teams.insert(membership.id.as_str(), team);
+            .ok_or_else(|| ApiError::not_found(crate::msg::team::not_found(&membership.id)))?;
+        teams.insert(&membership.id, team);
     }
     if old.iter().any(|m| !m.team_exists) {
         return Err(ApiError::bad_request(crate::msg::team::ADMIN_NOT_ALLOWED));
     }
     let mut updated = Vec::new();
     for membership in requested {
-        let (name, organization, manageable) = &teams[membership.id.as_str()];
+        let (name, organization, manageable) = &teams[&membership.id];
         if !manageable {
             continue;
         }
@@ -758,10 +754,7 @@ async fn membership_updates(
                 &format!("{} {}", target.first_name, target.last_name),
             )));
         }
-        updated.push((
-            membership.id.as_str().to_owned(),
-            membership.is_team_manager,
-        ));
+        updated.push((membership.id.clone(), membership.is_team_manager));
     }
     updated.extend(
         old.iter()

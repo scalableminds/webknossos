@@ -187,7 +187,6 @@ async fn annotation_id_for_tracing(
         && let Ok(Some(annotation)) =
             crate::annotation::access::find_optional(&state.pool, None, &id, true).await
         && annotation.annotation_type.parse::<AnnotationType>().is_ok()
-        && annotation.task_id.as_deref().is_none_or(|id| ObjectId::parse(id).is_ok())
         && matches!(annotation.state.as_str(), "Active" | "Finished" | "Cancelled" | "Initializing")
         && matches!(annotation.visibility.as_str(), "Private" | "Internal" | "Public")
         && matches!(annotation.collaboration_mode.as_str(), "OwnerOnly" | "Exclusive" | "Concurrent")

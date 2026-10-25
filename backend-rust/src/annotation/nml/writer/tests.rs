@@ -350,6 +350,7 @@ fn skeleton_document_matches_golden() {
     };
     let annotation_id = ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9d0").unwrap();
     let dataset_id = ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9d2").unwrap();
+    let task_id = ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9d1").unwrap();
     let input = NmlWriteInput {
         annotation_user_states: &annotation_states,
         requesting_user_id: Some(&VIEWER),
@@ -359,7 +360,7 @@ fn skeleton_document_matches_golden() {
             description: "Ada's tracing",
             has_task: true,
         }),
-        task_id: Some("66f0a1b2c3d4e5f6a7b8c9d1"),
+        task_id: Some(&task_id),
         voxel_size: Some(&voxel_size),
         wk_url: "http://localhost:9000",
         dataset_id: &dataset_id,
@@ -379,7 +380,7 @@ const GOLDEN_VOLUMES: &str = r#"<things>
   <meta name="timestamp" content="42"/>
   <meta name="annotationId" content="66f0a1b2c3d4e5f6a7b8c9e3"/>
   <meta name="username" content="Owner"/>
-  <meta name="taskId" content="t1"/>
+  <meta name="taskId" content="66f0a1b2c3d4e5f6a7b8c9e5"/>
   <parameters>
     <experiment name="ds" organization="org" datasetId="66f0a1b2c3d4e5f6a7b8c9e1" description="" wkUrl="https://wk.example"/>
     <scale x="4.0" y="4.0" z="40.0" unit="nanometer"/>
@@ -496,6 +497,7 @@ fn volume_document_matches_golden() {
     };
     let annotation_id = ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9e3").unwrap();
     let dataset_id = ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9e1").unwrap();
+    let task_id = ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9e5").unwrap();
     let mut editable_layer = volume_layer("t-2", "Volume", &editable);
     editable_layer.has_edited_mapping_edges = true;
     editable_layer.base_mapping_name = Some("agglomerate_view_70");
@@ -506,7 +508,7 @@ fn volume_document_matches_golden() {
             description: "",
             has_task: true,
         }),
-        task_id: Some("t1"),
+        task_id: Some(&task_id),
         voxel_size: Some(&voxel_size),
         wk_url: "https://wk.example",
         dataset_id: &dataset_id,

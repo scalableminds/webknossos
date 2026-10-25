@@ -132,7 +132,7 @@ pub(crate) async fn public_json(
     id: &ObjectId,
     global: bool,
 ) -> ApiResult<Value> {
-    public_json_for(connection, Some(user), id.as_str(), global).await
+    public_json_for(connection, Some(user), id, global).await
 }
 
 /// Global annotation serialization can have no authenticated requester.
@@ -140,7 +140,7 @@ pub(crate) async fn public_json(
 pub(crate) async fn public_json_for(
     connection: &mut PgConnection,
     user: Option<&AuthUser>,
-    id: &str,
+    id: &ObjectId,
     global: bool,
 ) -> ApiResult<Value> {
     let requester = Requester::from(user);
@@ -229,13 +229,12 @@ async fn task_ids(
     );
     push_task_access(&mut q, user.into(), true);
     if let Some(project) = &parameters.project {
-        q.push(" AND t._project=").push_bind(project.as_str());
+        q.push(" AND t._project=").push_bind(project);
     }
     if let Some(task_type) = &parameters.task_type {
-        q.push(" AND t._tasktype=").push_bind(task_type.as_str());
+        q.push(" AND t._tasktype=").push_bind(task_type);
     }
     if let Some(ids) = &parameters.ids {
-        let ids: Vec<&str> = ids.iter().map(ObjectId::as_str).collect();
         q.push(" AND t._id=ANY(").push_bind(ids).push(")");
     }
     if let Some(owner) = &parameters.user {
@@ -304,7 +303,7 @@ async fn for_project(
         ));
     }
     let mut connection = state.pool.acquire().await?;
-    let team: String = sqlx::query_scalar(
+    let team: ObjectId = sqlx::query_scalar(
         "SELECT p._team FROM webknossos.projects_ p WHERE p._id=$4 AND \
             p._organization=$2 AND (p._owner=$1 OR $3 OR EXISTS(SELECT 1 FROM \
             webknossos.user_team_roles WHERE _user=$1 AND _team=p._team))",
@@ -366,7 +365,7 @@ async fn lock_managed_task(
 ) -> ApiResult<(i64, i64)> {
     // Lock the project before the task, in the same order as project mutations.
     // This keeps concurrent changes to project team/visibility from invalidating authorization.
-    let project: String = sqlx::query_scalar(
+    let project: ObjectId = sqlx::query_scalar(
         "SELECT t._project FROM webknossos.tasks_ t JOIN webknossos.projects_ p ON \
             p._id=t._project WHERE t._id=$4 AND p._organization=$2 AND ($3 OR EXISTS(SELECT 1 \
             FROM webknossos.user_team_roles WHERE _user=$1 AND _team=p._team))",
@@ -378,7 +377,7 @@ async fn lock_managed_task(
     .fetch_optional(&mut **tx)
     .await?
     .ok_or_else(|| ApiError::not_found(crate::msg::task::not_found(id)))?;
-    let team: String = sqlx::query_scalar(
+    let team: ObjectId = sqlx::query_scalar(
         "SELECT _team FROM webknossos.projects WHERE _id=$1 AND _organization=$2 AND NOT \
             isdeleted FOR SHARE",
     )

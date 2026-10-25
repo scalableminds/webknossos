@@ -351,7 +351,7 @@ pub(crate) async fn full_json_for(
         jobs_enabled,
     )
     .await?;
-    let task = if let Some(task) = metadata.task_id.as_deref() {
+    let task = if let Some(task) = &metadata.task_id {
         Some(crate::task::routes::public_json_for(connection, user, task, true).await?)
     } else {
         None
@@ -456,7 +456,7 @@ async fn task_annotations(
     Extension(JobsEnabled(jobs)): Extension<JobsEnabled>,
 ) -> ApiResult<Json<Value>> {
     let id = ObjectId::parse_path(&id)?;
-    let team: String = sqlx::query_scalar(
+    let team: ObjectId = sqlx::query_scalar(
         "SELECT p._team FROM webknossos.tasks_ task JOIN webknossos.projects_ p ON \
             p._id=task._project JOIN webknossos.teams_ team ON team._id=p._team AND \
             team._organization=$2 WHERE task._id=$4 AND p._organization=$2 AND ($3 OR \
@@ -474,7 +474,7 @@ async fn task_annotations(
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let mut q = Sql::new("SELECT a._id FROM webknossos.annotations_ a WHERE a._task=");
-    q.push_bind(id.as_str())
+    q.push_bind(&id)
         .push(" AND a.typ='Task' AND a.state<>'Cancelled' AND ");
     crate::annotation::access::push_read_predicate(&mut q, (&user).into());
     let ids: Vec<ObjectId> = q.build_query_scalar().fetch_all(&state.pool).await?;

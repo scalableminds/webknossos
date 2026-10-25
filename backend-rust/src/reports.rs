@@ -23,7 +23,7 @@ async fn require_readable_team(state: &AppState, user: &AuthUser, id: &ObjectId)
         r#"SELECT EXISTS(SELECT 1 FROM webknossos.teams_ t WHERE t._id = $1 AND t._organization = $3
              AND ($4 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles r WHERE r._team = t._id AND r._user = $2)))"#,
     )
-    .bind(id.as_str())
+    .bind(id)
     .bind(&user.id)
     .bind(&user.organization_id)
     .bind(user.is_admin)
@@ -96,7 +96,7 @@ async fn project_progress(
                OR pmt.modified > NOW() - INTERVAL '30 days')
            ORDER BY s1._id"#,
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .fetch_all(&state.pool)
     .await?;
     Ok(ResponseJson(Value::Array(rows)))
@@ -126,7 +126,7 @@ async fn available_tasks(
              AND NOT (u.isAdmin AND u._organization = team._organization)
            ORDER BY u._id"#,
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .bind(&user.id)
     .bind(&user.organization_id)
     .bind(user.is_admin)

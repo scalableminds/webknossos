@@ -202,7 +202,7 @@ impl AuthUser {
         .await?)
     }
 
-    pub async fn can_manage_team(&self, pool: &PgPool, team_id: &str) -> ApiResult<bool> {
+    pub async fn can_manage_team(&self, pool: &PgPool, team_id: &ObjectId) -> ApiResult<bool> {
         Ok(sqlx::query_scalar(
             r#"SELECT EXISTS (
               SELECT 1 FROM webknossos.teams_ AS team

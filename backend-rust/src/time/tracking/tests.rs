@@ -9,7 +9,7 @@ fn comma_separated_lists_follow_scala_split() {
     assert!(parse_enum_list("Task,Foo", &ANNOTATION_TYPES, "x").is_err());
     assert_eq!(
         parse_object_ids(Some("ABCDEFABCDEFABCDEFABCDEF"), None).unwrap(),
-        vec!["abcdefabcdefabcdefabcdef"]
+        vec![ObjectId::parse("abcdefabcdefabcdefabcdef").unwrap()]
     );
     assert!(parse_object_ids(Some("xyz"), Some("Invalid team ids.")).is_err());
 }

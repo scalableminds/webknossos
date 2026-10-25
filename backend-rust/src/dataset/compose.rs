@@ -163,7 +163,7 @@ async fn compose(
             name: &body.new_dataset_name,
             store_name: &store,
             source: &source,
-            folder: Some(body.target_folder_id.as_str()),
+            folder: Some(&body.target_folder_id),
             creation_type: "Compose",
             import_url: None,
         },

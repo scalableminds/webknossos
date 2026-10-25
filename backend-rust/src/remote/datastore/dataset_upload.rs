@@ -245,15 +245,15 @@ async fn create_and_set_up_dataset(
 ) -> ApiResult<(ObjectId, String)> {
     let failed = || ApiError::bad_request(CREATE_FAILED);
     crate::dataset::create::validate_dataset_name(name).map_err(|_| failed())?;
-    let root: String = sqlx::query_scalar(
+    let root: ObjectId = sqlx::query_scalar(
         "SELECT _rootFolder FROM webknossos.organizations_ WHERE _id = $1 FOR SHARE",
     )
     .bind(&user.organization_id)
     .fetch_optional(&mut *connection)
     .await?
     .ok_or_else(failed)?;
-    let folder = folder.map_or(root, |f| f.as_str().to_owned());
-    if !crate::dataset::create::folder_writable(connection, user, &folder).await? {
+    let folder = folder.unwrap_or(&root);
+    if !crate::dataset::create::folder_writable(connection, user, folder).await? {
         return Err(failed());
     }
     let id = ObjectId::new();
@@ -296,7 +296,7 @@ async fn create_and_set_up_dataset(
     // DatasetDAO.updateFolder + DatasetService.addUploader (fresh dataset).
     sqlx::query("UPDATE webknossos.datasets SET _folder = $2, _uploader = $3 WHERE _id = $1")
         .bind(&id)
-        .bind(&folder)
+        .bind(folder)
         .bind(&user.id)
         .execute(&mut *connection)
         .await?;
@@ -320,9 +320,9 @@ struct UnfinishedRow {
     directory_name: String,
     organization: String,
     name: String,
-    folder: String,
+    folder: ObjectId,
     created: i64,
-    teams: Vec<String>,
+    teams: Vec<ObjectId>,
 }
 
 async fn unfinished_uploads(

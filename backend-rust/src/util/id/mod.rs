@@ -20,20 +20,6 @@ use webknossos_common::bytes::array;
 #[sqlx(transparent)]
 pub struct ObjectId(String);
 
-/// Normalize IDs in existing DTOs whose fields are stored as strings.
-pub(crate) fn deserialize_string<'de, D: serde::Deserializer<'de>>(
-    deserializer: D,
-) -> Result<String, D::Error> {
-    ObjectId::deserialize(deserializer).map(String::from)
-}
-
-pub(crate) fn deserialize_strings<'de, D: serde::Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Vec<String>, D::Error> {
-    Vec::<ObjectId>::deserialize(deserializer)
-        .map(|ids| ids.into_iter().map(String::from).collect())
-}
-
 impl ObjectId {
     pub fn new() -> Self {
         static SEED: OnceLock<[u8; 8]> = OnceLock::new();

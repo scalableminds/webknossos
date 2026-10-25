@@ -113,9 +113,7 @@ async fn create_from_files(
     let task_type = find_task_type(pool, &user, &params.task_type_id)
         .await?
         .ok_or_else(|| {
-            ApiError::not_found(crate::msg::task_type::not_found(
-                params.task_type_id.as_str(),
-            ))
+            ApiError::not_found(crate::msg::task_type::not_found(&params.task_type_id))
         })?;
     assert_batch_limit(input_files.len(), &task_type)?;
     let project = find_project(pool, &user, &params.project_name)
@@ -165,7 +163,7 @@ async fn create_from_files(
 async fn assert_team_manager_or_admin_of(
     pool: &PgPool,
     user: &AuthUser,
-    team_id: &str,
+    team_id: &ObjectId,
 ) -> ApiResult<()> {
     let team: Option<(String, bool)> = sqlx::query_as(
         "SELECT t._organization, EXISTS (SELECT 1 FROM webknossos.user_team_roles r

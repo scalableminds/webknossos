@@ -286,9 +286,9 @@ async fn get_or_create_folder(
     connection: &mut sqlx::PgConnection,
     user: &AuthUser,
     literal: &str,
-) -> ApiResult<String> {
+) -> ApiResult<ObjectId> {
     let failed = || ApiError::bad_request(crate::msg::dataset::explore::AUTO_ADD_GET_FOLDER_FAILED);
-    let root: String =
+    let root: ObjectId =
         sqlx::query_scalar("SELECT _rootFolder FROM webknossos.organizations_ WHERE _id = $1")
             .bind(&user.organization_id)
             .fetch_one(&mut *connection)
@@ -303,7 +303,7 @@ async fn get_or_create_folder(
         .push_bind(&root)
         .push(" AND ");
     push_visible_folder(&mut q, &user.id);
-    let folders: Vec<(String, String, Option<String>)> =
+    let folders: Vec<(ObjectId, String, Option<ObjectId>)> =
         q.build_query_as().fetch_all(&mut *connection).await?;
     let root_folder = folders.iter().find(|f| f.2.is_none()).ok_or_else(failed)?;
     let rest = literal.strip_prefix('/').ok_or_else(failed)?;
@@ -316,7 +316,7 @@ async fn get_or_create_folder(
     while let Some(next) = remaining.first().and_then(|name| {
         folders
             .iter()
-            .find(|f| f.2.as_deref() == Some(current.as_str()) && f.1 == *name)
+            .find(|f| f.2.as_ref() == Some(&current) && f.1 == *name)
     }) {
         current = next.0.clone();
         remaining = &remaining[1..];
@@ -325,7 +325,7 @@ async fn get_or_create_folder(
         if !crate::dataset::create::folder_writable(connection, user, &current).await? {
             return Err(failed());
         }
-        let id = ObjectId::new().to_string();
+        let id = ObjectId::new();
         sqlx::query("INSERT INTO webknossos.folders (_id, name, created) VALUES ($1, $2, NOW())")
             .bind(&id)
             .bind(name)
@@ -401,7 +401,7 @@ async fn explore_and_add_remote(
     validate_paths(&clients, &store_url, &source).await?;
     let mut transaction = state.pool.begin().await?;
     let folder = match (&body.folder_id, &body.folder_path) {
-        (Some(folder), _) => Some(folder.to_string()),
+        (Some(folder), _) => Some(folder.clone()),
         (None, Some(path)) => Some(get_or_create_folder(&mut transaction, &user, path).await?),
         (None, None) => None,
     };
@@ -416,7 +416,7 @@ async fn explore_and_add_remote(
             name: &body.dataset_name,
             store_name: &store_name,
             source: &source,
-            folder: folder.as_deref(),
+            folder: folder.as_ref(),
             creation_type: "ExploreAndAdd",
             import_url: None,
         },
@@ -484,7 +484,7 @@ async fn add_virtual_dataset(
             name: &name,
             store_name: &store_name,
             source: &source,
-            folder: body.folder_id.as_ref().map(ObjectId::as_str),
+            folder: body.folder_id.as_ref(),
             creation_type: "ExploreAndAdd",
             import_url: body.import_url.as_deref(),
         },

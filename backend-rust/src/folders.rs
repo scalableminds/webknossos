@@ -36,8 +36,7 @@ struct MoveQuery {
 #[serde(rename_all = "camelCase")]
 struct FolderParameters {
     name: String,
-    #[serde(deserialize_with = "crate::util::id::deserialize_strings")]
-    allowed_teams: Vec<String>,
+    allowed_teams: Vec<ObjectId>,
     metadata: Vec<Value>,
 }
 #[derive(FromRow, Serialize)]
@@ -319,12 +318,9 @@ async fn update(
     assert_editable(&mut transaction, &user, &id).await?;
     validate_name(&body.name)?;
     validate_metadata(&body.metadata)?;
-    for team in &body.allowed_teams {
-        ObjectId::parse(team)?;
-    }
     // Preserve grants to teams this user cannot manage. Dataset managers can manage
     // their memberships; admins can manage all teams in their organization.
-    let editable_teams: Vec<String> = sqlx::query_scalar(
+    let editable_teams: Vec<ObjectId> = sqlx::query_scalar(
         "SELECT t._id FROM webknossos.teams_ t
         WHERE t._organization = $1 AND ($2 OR EXISTS (
             SELECT 1 FROM webknossos.user_team_roles r WHERE r._team = t._id

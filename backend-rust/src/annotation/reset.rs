@@ -86,17 +86,13 @@ async fn reset(
     // Owner (global) + Fox.assertTrue(isTeamManagerOrAdminOf(..)): false is
     // Fox.empty, rendered as 404 Msg.notFound. A compound has no task.
     let (owner, task) = match &annotation {
-        ProvidedAnnotation::Saved(saved) => (saved.owner_id.clone(), saved.task_id.clone()),
-        ProvidedAnnotation::Compound(compound) => (compound.owner_id.clone(), None),
+        ProvidedAnnotation::Saved(saved) => (&saved.owner_id, saved.task_id.as_ref()),
+        ProvidedAnnotation::Compound(compound) => (&compound.owner_id, None),
     };
     let mut connection = state.pool.acquire().await?;
-    let allowed = crate::annotation::lifecycle::is_manager_or_admin(
-        &mut connection,
-        &user,
-        &owner,
-        task.as_deref(),
-    )
-    .await?;
+    let allowed =
+        crate::annotation::lifecycle::is_manager_or_admin(&mut connection, &user, owner, task)
+            .await?;
     drop(connection);
     if !allowed {
         return Err(ApiError::not_found(crate::msg::NOT_FOUND));

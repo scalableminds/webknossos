@@ -88,7 +88,7 @@ pub fn push_owned_or_shared_predicate<'a>(q: &mut Sql<'a>, requester: Requester<
 pub struct AnnotationMetadata {
     pub id: ObjectId,
     pub dataset_id: ObjectId,
-    pub task_id: Option<String>,
+    pub task_id: Option<ObjectId>,
     pub owner_id: ObjectId,
     pub owner_organization: Option<String>,
     pub name: String,

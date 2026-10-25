@@ -322,14 +322,14 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
     let user_id = ObjectId::new();
 
     sqlx::query("INSERT INTO webknossos.folders(_id, name, created) VALUES ($1, $2, NOW())")
-        .bind(root_folder.as_str())
+        .bind(&root_folder)
         .bind(ROOT_FOLDER_NAME)
         .execute(&mut *tx)
         .await?;
     sqlx::query(
         "INSERT INTO webknossos.folder_paths(_ancestor, _descendant, depth) VALUES ($1, $1, 0)",
     )
-    .bind(root_folder.as_str())
+    .bind(&root_folder)
     .execute(&mut *tx)
     .await?;
     sqlx::query(
@@ -343,7 +343,7 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
     .bind(organization)
     .bind(SAMPLE_ORGANIZATION_INFORMATION)
     .bind(SAMPLE_ORGANIZATION_NAME)
-    .bind(root_folder.as_str())
+    .bind(&root_folder)
     .execute(&mut *tx)
     .await?;
     let teams_present: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.teams_)")
@@ -353,7 +353,7 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
         sqlx::query(
             "INSERT INTO webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted) VALUES ($1, $2, 'Default', NOW(), TRUE, FALSE)",
         )
-        .bind(team.as_str())
+        .bind(&team)
         .bind(organization)
         .execute(&mut *tx)
         .await?;
@@ -386,7 +386,7 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
         ),
     ];
     for (id, user) in &users {
-        insert_default_user(&mut tx, id, user, team.as_str()).await?;
+        insert_default_user(&mut tx, id, user, &team).await?;
     }
 
     // insertToken: one Authentication token for the default user.
@@ -431,7 +431,7 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
         )
         .bind(SAMPLE_TASK_TYPE_ID)
         .bind(organization)
-        .bind(team.as_str())
+        .bind(&team)
         .execute(&mut *tx)
         .await?;
     }
@@ -449,9 +449,9 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
                  paused, expectedTime, isBlacklistedFromReport, created, isDeleted)
                VALUES ($1, $2, $3, $4, 'sampleProject', 100, FALSE, 5400000, FALSE, NOW(), FALSE)"#,
         )
-        .bind(ObjectId::new().as_str())
+        .bind(ObjectId::new())
         .bind(organization)
-        .bind(team.as_str())
+        .bind(&team)
         .bind(owner)
         .execute(&mut *tx)
         .await?;
@@ -467,14 +467,8 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
 
     if let Some(store) = &config.local_datastore {
         for dataset in sample_datasets() {
-            insert_dataset_if_absent(
-                &mut tx,
-                &dataset,
-                &store.name,
-                &user_id,
-                root_folder.as_str(),
-            )
-            .await?;
+            insert_dataset_if_absent(&mut tx, &dataset, &store.name, &user_id, &root_folder)
+                .await?;
         }
         insert_ai_model_if_absent(
             &mut *tx,
@@ -516,7 +510,7 @@ async fn insert_default_user(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user_id: &ObjectId,
     user: &SampleUser<'_>,
-    team: &str,
+    team: &ObjectId,
 ) -> ApiResult<()> {
     if user_for_email(tx, user.email).await?.is_some() {
         return Ok(());
@@ -797,7 +791,7 @@ async fn insert_dataset_if_absent(
     dataset: &SampleDataset,
     data_store: &str,
     uploader: &ObjectId,
-    folder: &str,
+    folder: &ObjectId,
 ) -> ApiResult<()> {
     let present: bool =
         sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE _id = $1)")

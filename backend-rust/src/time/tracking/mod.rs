@@ -156,18 +156,15 @@ fn parse_enum_list(value: &str, allowed: &[&str], message: &str) -> ApiResult<Ve
 }
 
 /// ObjectId.fromCommaSeparated (accepts upper-case hex, normalizes to lower).
-fn parse_object_ids(value: Option<&str>, message: Option<&str>) -> ApiResult<Vec<String>> {
+fn parse_object_ids(value: Option<&str>, message: Option<&str>) -> ApiResult<Vec<ObjectId>> {
     split_comma_separated(value)
         .into_iter()
         .map(|entry| {
-            if entry.len() == 24 && entry.bytes().all(|b| b.is_ascii_hexdigit()) {
-                Ok(entry.to_ascii_lowercase())
-            } else {
-                Err(ApiError::bad_request(message.map_or_else(
-                    || crate::msg::object_id::invalid(entry),
-                    str::to_owned,
-                )))
-            }
+            ObjectId::parse(entry).map_err(|_| {
+                ApiError::bad_request(
+                    message.map_or_else(|| crate::msg::object_id::invalid(entry), str::to_owned),
+                )
+            })
         })
         .collect()
 }
@@ -192,7 +189,7 @@ struct Filters {
     end: DateTime<Utc>,
     types: Vec<String>,
     states: Vec<String>,
-    projects: Vec<String>,
+    projects: Vec<ObjectId>,
 }
 
 async fn user_time_filters(

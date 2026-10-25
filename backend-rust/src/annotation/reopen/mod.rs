@@ -51,7 +51,7 @@ async fn require_reopen(
     connection: &mut PgConnection,
     user: &AuthUser,
     owner: &ObjectId,
-    task: Option<&str>,
+    task: Option<&ObjectId>,
     state: &str,
     modified_ms: i64,
     configured_seconds: i32,
@@ -122,7 +122,7 @@ async fn reopen(
         &mut transaction,
         &user,
         &annotation.owner_id,
-        annotation.task_id.as_deref(),
+        annotation.task_id.as_ref(),
         &annotation.state,
         annotation.modified.timestamp_millis(),
         configured_seconds,
@@ -133,7 +133,7 @@ async fn reopen(
     {
         return Err(ApiError::bad_request(UPDATE_STATE_FAILED));
     }
-    let cache_keys = if let Some(task) = annotation.task_id.as_deref() {
+    let cache_keys = if let Some(task) = &annotation.task_id {
         Some(crate::annotation::lifecycle::task_cache_keys(&mut transaction, task).await?)
     } else {
         None

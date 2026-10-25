@@ -334,7 +334,7 @@ async fn update_shared_teams(
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,
     Json(body): Json<Vec<String>>,
-) -> ApiResult<ResponseJson<Vec<String>>> {
+) -> ApiResult<ResponseJson<Vec<ObjectId>>> {
     let id = path_id(&id)?;
     let provided = provider
         .provide(AccessContext::requester(Some(&user)), &typ, &id)
@@ -347,15 +347,14 @@ async fn update_shared_teams(
         .iter()
         .map(|literal| {
             ObjectId::parse(literal)
-                .map(String::from)
                 .map_err(|_| ApiError::bad_request(crate::msg::object_id::invalid(literal)))
         })
-        .collect::<ApiResult<Vec<String>>>()?;
+        .collect::<ApiResult<Vec<ObjectId>>>()?;
 
     let mut transaction = state.pool.begin().await?;
     // teamDAO.findOne for every team before any mutation; FOR SHARE keeps the
     // validated teams live (soft deletion is an UPDATE) until commit.
-    let mut unique: Vec<&String> = team_ids.iter().collect();
+    let mut unique: Vec<&ObjectId> = team_ids.iter().collect();
     unique.sort();
     unique.dedup();
     let mut q = Sql::new(
@@ -386,7 +385,7 @@ async fn update_shared_teams(
     );
     q.push_bind(provided.id()).push(") AND ");
     push_readable_team(&mut q, (&user).into());
-    let old_team_ids: Vec<String> = q.build_query_scalar().fetch_all(&mut *transaction).await?;
+    let old_team_ids: Vec<ObjectId> = q.build_query_scalar().fetch_all(&mut *transaction).await?;
     let pending_emails = notification_emails
         .prepare_share_emails(
             &mut transaction,

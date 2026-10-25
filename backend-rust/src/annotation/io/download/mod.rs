@@ -453,7 +453,7 @@ fn abbreviated_name(first_name: &str, last_name: &str) -> String {
 /// read access (`Some(user_opt)`).
 async fn task_exists(
     pool: &PgPool,
-    task_id: &str,
+    task_id: &ObjectId,
     requester: Option<Option<&AuthUser>>,
 ) -> ApiResult<bool> {
     let mut q = Sql::new("SELECT EXISTS(SELECT 1 FROM webknossos.tasks_ t WHERE t._id=");
@@ -525,7 +525,7 @@ async fn name_for_annotation(
     let Some(dataset) = find_dataset(pool, annotation.dataset_id).await? else {
         return Ok(None);
     };
-    let task = annotation.task_id.unwrap_or("explorational");
+    let task = annotation.task_id.map_or("explorational", ObjectId::as_str);
     let id = annotation.id.as_str();
     let hash = &id[id.len().saturating_sub(6)..];
     Ok(Some(normalize(&format!(
@@ -539,7 +539,7 @@ struct AnnotationNameParts<'a> {
     id: &'a ObjectId,
     owner_id: &'a ObjectId,
     dataset_id: &'a ObjectId,
-    task_id: Option<&'a str>,
+    task_id: Option<&'a ObjectId>,
 }
 
 /// AnnotationInformationProvider.nameFor.
@@ -551,7 +551,7 @@ async fn name_for(context: &Context<'_>, annotation: &AnnotationMetadata) -> Run
         id: &annotation.id,
         owner_id: &annotation.owner_id,
         dataset_id: &annotation.dataset_id,
-        task_id: annotation.task_id.as_deref(),
+        task_id: annotation.task_id.as_ref(),
     };
     name_for_annotation(context.pool(), parts, context.user.is_some())
         .await
@@ -746,7 +746,7 @@ async fn owner_full_name(pool: &PgPool, owner_id: &ObjectId) -> RunResult<Option
 struct NmlContext<'a> {
     user_states: &'a [AnnotationUserStateProto],
     owner_name: &'a str,
-    task_id: Option<&'a str>,
+    task_id: Option<&'a ObjectId>,
 }
 
 fn nml_input<'a>(
@@ -802,7 +802,7 @@ async fn skeleton_to_file(
         .ok_or_else(|| fail(crate::msg::user::NOT_FOUND_NO_ID))?;
     // Fox.runOptional(annotation._task)(taskDAO.findOne) under the requester's
     // access context; an unreadable task is Fox.empty.
-    let task_id = match download.annotation.task_id.as_deref() {
+    let task_id = match &download.annotation.task_id {
         Some(task_id) => {
             if !task_exists(context.pool(), task_id, Some(context.user)).await? {
                 return Err(fail(TASK_NOT_FOUND));
@@ -872,7 +872,7 @@ async fn volume_or_hybrid_to_file(
         .await?
         .map(|(first, last)| format!("{first} {last}"))
         .ok_or_else(|| fail(crate::msg::user::NOT_FOUND_NO_ID))?;
-    let task_id = match download.annotation.task_id.as_deref() {
+    let task_id = match &download.annotation.task_id {
         Some(task_id) => {
             if !task_exists(context.pool(), task_id, None).await? {
                 return Err(fail(TASK_NOT_FOUND));
@@ -1034,7 +1034,7 @@ pub fn play_header_parameter(name: &str, value: &str) -> String {
 struct CompoundRow {
     id: ObjectId,
     dataset_id: ObjectId,
-    task_id: Option<String>,
+    task_id: Option<ObjectId>,
     owner_id: ObjectId,
     description: String,
 }
@@ -1053,7 +1053,6 @@ async fn download_compound(
 ) -> RunResult<Response> {
     let user = context.user.ok_or_else(not_allowed)?;
     let pool = context.pool();
-    let id = id.as_str();
     let (annotations, zip_name) = match typ {
         AnnotationType::CompoundProject => {
             let (team, name) = find_project(pool, user, id).await?.ok_or_else(|| {
@@ -1080,8 +1079,8 @@ async fn download_compound(
             })?;
             assert_team_manager_or_admin(pool, user, &team).await?;
             (
-                finished_task_annotations(pool, user, &[id.to_owned()]).await?,
-                id.to_owned(),
+                finished_task_annotations(pool, user, std::slice::from_ref(id)).await?,
+                id.to_string(),
             )
         }
         AnnotationType::CompoundTaskType => {
@@ -1116,8 +1115,8 @@ async fn download_compound(
 async fn find_project(
     pool: &PgPool,
     user: &AuthUser,
-    project_id: &str,
-) -> ApiResult<Option<(String, String)>> {
+    project_id: &ObjectId,
+) -> ApiResult<Option<(ObjectId, String)>> {
     let mut q = Sql::new("SELECT p._team,p.name FROM webknossos.projects_ p WHERE p._id=");
     q.push_bind(project_id).push(" AND ");
     crate::projects::push_read_access(&mut q, user.into());
@@ -1128,8 +1127,8 @@ async fn find_project(
 async fn find_task_project(
     pool: &PgPool,
     user: &AuthUser,
-    task_id: &str,
-) -> ApiResult<Option<String>> {
+    task_id: &ObjectId,
+) -> ApiResult<Option<ObjectId>> {
     let mut q = Sql::new("SELECT t._project FROM webknossos.tasks_ t WHERE t._id=");
     q.push_bind(task_id).push(" AND ");
     push_task_read(&mut q, user.into());
@@ -1140,8 +1139,8 @@ async fn find_task_project(
 async fn find_task_type(
     pool: &PgPool,
     user: &AuthUser,
-    task_type_id: &str,
-) -> ApiResult<Option<(String, String)>> {
+    task_type_id: &ObjectId,
+) -> ApiResult<Option<(ObjectId, String)>> {
     let mut q = Sql::new("SELECT tt._team,tt.summary FROM webknossos.taskTypes_ tt WHERE tt._id=");
     q.push_bind(task_type_id).push(" AND ");
     push_task_type_read(&mut q, user.into());
@@ -1155,7 +1154,7 @@ async fn find_task_type(
 async fn assert_team_manager_or_admin(
     pool: &PgPool,
     user: &AuthUser,
-    team_id: &str,
+    team_id: &ObjectId,
 ) -> RunResult<()> {
     let team: Option<(String, bool)> = sqlx::query_as(
         "SELECT team._organization,EXISTS(SELECT 1 FROM webknossos.user_team_roles role
@@ -1184,7 +1183,7 @@ async fn assert_team_manager_or_admin(
 /// Scala has no ORDER BY, ordered by creation for determinism).
 async fn finished_project_annotations(
     pool: &PgPool,
-    project_id: &str,
+    project_id: &ObjectId,
 ) -> ApiResult<Vec<CompoundRow>> {
     let mut q = Sql::new("SELECT ");
     q.push(COMPOUND_COLUMNS)
@@ -1202,8 +1201,8 @@ async fn finished_project_annotations(
 async fn task_type_tasks(
     pool: &PgPool,
     user: &AuthUser,
-    task_type_id: &str,
-) -> ApiResult<Vec<String>> {
+    task_type_id: &ObjectId,
+) -> ApiResult<Vec<ObjectId>> {
     let mut q = Sql::new("SELECT t._id FROM webknossos.tasks_ t WHERE t._taskType=");
     q.push_bind(task_type_id).push(" AND ");
     push_task_list(&mut q, user.into());
@@ -1216,7 +1215,7 @@ async fn task_type_tasks(
 async fn finished_task_annotations(
     pool: &PgPool,
     user: &AuthUser,
-    task_ids: &[String],
+    task_ids: &[ObjectId],
 ) -> ApiResult<Vec<CompoundRow>> {
     let mut q = Sql::new("SELECT ");
     q.push(COMPOUND_COLUMNS)
@@ -1272,7 +1271,7 @@ struct DownloadAnnotation<'a> {
     name: String,
     voxel_size: Option<NmlVoxelSize>,
     owner_name: String,
-    task_id: Option<String>,
+    task_id: Option<&'a ObjectId>,
     organization_id: String,
     dataset_name: String,
     dataset_id: ObjectId,
@@ -1396,12 +1395,12 @@ async fn single_download_annotation<'a>(
         .await?
         .map(|(first, last)| format!("{first} {last}"))
         .ok_or_else(empty)?;
-    let task_id = match row.task_id.as_deref() {
+    let task_id = match &row.task_id {
         Some(task_id) => {
             if !task_exists(pool, task_id, Some(Some(user))).await? {
                 return Err(fail(TASK_NOT_FOUND));
             }
-            Some(task_id.to_owned())
+            Some(task_id)
         }
         None => None,
     };
@@ -1409,7 +1408,7 @@ async fn single_download_annotation<'a>(
         id: &row.id,
         owner_id: &row.owner_id,
         dataset_id: &row.dataset_id,
-        task_id: row.task_id.as_deref(),
+        task_id: row.task_id.as_ref(),
     };
     let name = name_for_annotation(pool, parts, true)
         .await?
@@ -1515,7 +1514,7 @@ async fn zip_annotations(
                 description: &download.row.description,
                 has_task: download.row.task_id.is_some(),
             }),
-            task_id: download.task_id.as_deref(),
+            task_id: download.task_id,
             voxel_size: download.voxel_size.as_ref(),
             volume_filename: Some(&volume_filename),
             organization_id: &download.organization_id,

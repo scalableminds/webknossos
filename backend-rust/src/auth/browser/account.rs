@@ -327,13 +327,13 @@ async fn switch_organization(
         Some(existing) => existing,
         None if secured.user.is_superuser => {
             // fillSuperUserIdentity: an unlisted admin identity.
-            let team: Option<String> = sqlx::query_scalar(
+            let team: Option<ObjectId> = sqlx::query_scalar(
                 "SELECT _id FROM webknossos.organizationTeams WHERE _organization = $1 LIMIT 1",
             )
             .bind(&organization_id)
             .fetch_optional(&mut *tx)
             .await?;
-            let teams: Vec<(String, bool)> = team.into_iter().map(|team| (team, false)).collect();
+            let teams: Vec<(ObjectId, bool)> = team.into_iter().map(|team| (team, false)).collect();
             let id = join_organization_as(
                 &mut tx,
                 &secured.user.id,

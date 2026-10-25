@@ -80,8 +80,7 @@ struct AnnotationSettings {
 struct TaskTypeParameters {
     summary: String,
     description: String,
-    #[serde(deserialize_with = "crate::util::id::deserialize_string")]
-    team_id: String,
+    team_id: ObjectId,
     settings: AnnotationSettings,
     recommended_configuration: Option<Value>,
     tracing_type: TracingType,
@@ -99,7 +98,6 @@ fn validate(parameters: &TaskTypeParameters) -> ApiResult<()> {
             crate::msg::task_type::SUMMARY_TOO_LONG,
         ));
     }
-    ObjectId::parse(&parameters.team_id)?;
     // The database requires JSON objects even though the controller accepts JsValue.
     if parameters
         .recommended_configuration
@@ -147,7 +145,7 @@ async fn public_json<'e, E: sqlx::Executor<'e, Database = sqlx::Postgres>>(
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::task_type::not_found(id)))
 }
-async fn check_manage(pool: &PgPool, user: &AuthUser, team: &str) -> ApiResult<()> {
+async fn check_manage(pool: &PgPool, user: &AuthUser, team: &ObjectId) -> ApiResult<()> {
     if !user.can_manage_team(pool, team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
@@ -168,12 +166,8 @@ async fn read(
 ) -> ApiResult<ResponseJson<Value>> {
     let id = ObjectId::parse_path(&id)?;
     let value = public_json(&state.pool, &user, &id).await?;
-    check_manage(
-        &state.pool,
-        &user,
-        value["teamId"].as_str().ok_or_else(ApiError::internal)?,
-    )
-    .await?;
+    let team = ObjectId::parse(value["teamId"].as_str().ok_or_else(ApiError::internal)?)?;
+    check_manage(&state.pool, &user, &team).await?;
     Ok(ResponseJson(value))
 }
 
@@ -260,14 +254,9 @@ async fn update(
     let id = ObjectId::parse_path(&id)?;
     validate(&parameters)?;
     let mut tx = state.pool.begin().await?;
-    lock_task_type(&mut tx, &id, &user.organization_id).await?;
+    let team = lock_task_type(&mut tx, &id, &user.organization_id).await?;
     let existing = public_json(&mut *tx, &user, &id).await?;
-    if !crate::projects::can_manage_team_in_tx(
-        &mut tx,
-        &user,
-        existing["teamId"].as_str().ok_or_else(ApiError::internal)?,
-    )
-    .await?
+    if !crate::projects::can_manage_team_in_tx(&mut tx, &user, &team).await?
         || !crate::projects::can_manage_team_in_tx(&mut tx, &user, &parameters.team_id).await?
     {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
@@ -343,15 +332,9 @@ async fn delete(
 ) -> ApiResult<ResponseJson<Messages>> {
     let id = ObjectId::parse_path(&id)?;
     let mut tx = state.pool.begin().await?;
-    lock_task_type(&mut tx, &id, &user.organization_id).await?;
+    let team = lock_task_type(&mut tx, &id, &user.organization_id).await?;
     let existing = public_json(&mut *tx, &user, &id).await?;
-    if !crate::projects::can_manage_team_in_tx(
-        &mut tx,
-        &user,
-        existing["teamId"].as_str().ok_or_else(ApiError::internal)?,
-    )
-    .await?
-    {
+    if !crate::projects::can_manage_team_in_tx(&mut tx, &user, &team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     sqlx::query("UPDATE webknossos.tasktypes SET isdeleted=true,summary=summary || '.deleted.at.' || floor(extract(epoch FROM clock_timestamp())*1000)::bigint::text WHERE _id=$1 AND NOT isdeleted")
@@ -367,17 +350,16 @@ async fn lock_task_type(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     id: &ObjectId,
     organization: &str,
-) -> ApiResult<()> {
-    sqlx::query_scalar::<_, String>(
-        "SELECT _id FROM webknossos.tasktypes WHERE _id=$1 AND _organization=$2 AND NOT \
+) -> ApiResult<ObjectId> {
+    sqlx::query_scalar(
+        "SELECT _team FROM webknossos.tasktypes WHERE _id=$1 AND _organization=$2 AND NOT \
             isdeleted FOR UPDATE",
     )
     .bind(id)
     .bind(organization)
     .fetch_optional(&mut **tx)
     .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::task_type::not_found(id)))?;
-    Ok(())
+    .ok_or_else(|| ApiError::not_found(crate::msg::task_type::not_found(id)))
 }
 
 #[cfg(test)]

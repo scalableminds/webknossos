@@ -8,7 +8,7 @@ use chrono::{DateTime, Utc};
 use common::{TestDb, object_id};
 use tower::ServiceExt;
 use webknossos_backend::auth::{AuthUser, OptionalAuthUser, authenticate};
-use webknossos_backend::{AppState, db};
+use webknossos_backend::{AppState, db, util::id::ObjectId};
 
 fn auth_router(database: &TestDb) -> Router {
     Router::new()
@@ -343,10 +343,11 @@ async fn team_management_requires_same_organization_and_live_team() {
         .seed_user(&member_id, &fixture.organization_id, false)
         .await;
     let user = authenticate(&database.pool, &member.token).await.unwrap();
+    let team_id = ObjectId::parse(&fixture.team_id).unwrap();
     assert!(!user.is_team_manager_or_admin(&database.pool).await.unwrap());
     assert!(
         !user
-            .can_manage_team(&database.pool, &fixture.team_id)
+            .can_manage_team(&database.pool, &team_id)
             .await
             .unwrap()
     );
@@ -354,7 +355,7 @@ async fn team_management_requires_same_organization_and_live_team() {
         .bind(&member_id).bind(&fixture.team_id).execute(&database.pool).await.unwrap();
     assert!(user.is_team_manager_or_admin(&database.pool).await.unwrap());
     assert!(
-        user.can_manage_team(&database.pool, &fixture.team_id)
+        user.can_manage_team(&database.pool, &team_id)
             .await
             .unwrap()
     );
@@ -364,7 +365,7 @@ async fn team_management_requires_same_organization_and_live_team() {
     let other_user = authenticate(&database.pool, &other.token).await.unwrap();
     assert!(
         !other_user
-            .can_manage_team(&database.pool, &fixture.team_id)
+            .can_manage_team(&database.pool, &team_id)
             .await
             .unwrap()
     );
@@ -375,7 +376,7 @@ async fn team_management_requires_same_organization_and_live_team() {
         .unwrap();
     assert!(
         !user
-            .can_manage_team(&database.pool, &fixture.team_id)
+            .can_manage_team(&database.pool, &team_id)
             .await
             .unwrap()
     );
@@ -383,7 +384,7 @@ async fn team_management_requires_same_organization_and_live_team() {
     let admin = authenticate(&database.pool, &fixture.token).await.unwrap();
     assert!(
         !admin
-            .can_manage_team(&database.pool, &fixture.team_id)
+            .can_manage_team(&database.pool, &team_id)
             .await
             .unwrap()
     );

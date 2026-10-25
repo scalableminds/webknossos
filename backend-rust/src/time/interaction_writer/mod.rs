@@ -106,7 +106,7 @@ pub fn over_limit_mail(
     owner_first_name: &str,
     owner_last_name: &str,
     project_name: &str,
-    task_id: &str,
+    task_id: &ObjectId,
     annotation_id: &ObjectId,
     project_owner_email: &str,
     public_uri: &str,
@@ -127,7 +127,7 @@ pub fn over_limit_mail(
         &full_name,
         &abbreviated,
         project_name,
-        task_id,
+        task_id.as_str(),
         annotation_id.as_str(),
         public_uri,
         project_owner_email,
@@ -140,7 +140,7 @@ pub fn over_limit_mail(
 struct OverLimitCandidate {
     annotation_id: ObjectId,
     owner_id: ObjectId,
-    task_id: String,
+    task_id: ObjectId,
     tracing_time_after: i64,
     delta_millis: i64,
 }
@@ -283,13 +283,13 @@ async fn lock_accounting_rows(
         return Ok(());
     }
     // Global like Scala's logTime UPDATE (deleted rows included).
-    let tasks: Vec<Option<String>> = sqlx::query_scalar(
+    let tasks: Vec<Option<ObjectId>> = sqlx::query_scalar(
         "SELECT _task FROM webknossos.annotations WHERE _id=ANY($1) ORDER BY _id FOR NO KEY UPDATE",
     )
     .bind(&annotations)
     .fetch_all(&mut **transaction)
     .await?;
-    let mut tasks: Vec<String> = tasks.into_iter().flatten().collect();
+    let mut tasks: Vec<ObjectId> = tasks.into_iter().flatten().collect();
     tasks.sort_unstable();
     tasks.dedup();
     if !tasks.is_empty() {

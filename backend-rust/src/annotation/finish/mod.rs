@@ -202,7 +202,7 @@ async fn finish_saved(
         &mut transaction,
         user,
         &annotation.owner_id,
-        annotation.task_id.as_deref(),
+        annotation.task_id.as_ref(),
     )
     .await
     {
@@ -241,7 +241,7 @@ async fn finish_saved(
         .await
         .map_err(|e| finish_error(e.into()))?;
     // TaskService.clearCompoundCache: a missing live task fails the finish.
-    let cache_keys: Option<[AnnotationIdentifier; 3]> = match annotation.task_id.as_deref() {
+    let cache_keys: Option<[AnnotationIdentifier; 3]> = match &annotation.task_id {
         Some(task) => Some(
             crate::annotation::lifecycle::task_cache_keys(&mut transaction, task)
                 .await

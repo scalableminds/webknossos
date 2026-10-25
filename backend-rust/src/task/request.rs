@@ -70,7 +70,11 @@ struct JobsEnabled(bool);
 // ---------------------------------------------------------------------------
 
 /// `userService.teamIdsFor` / `teamManagerTeamIdsFor` (raw memberships).
-async fn team_ids(pool: &PgPool, user_id: &ObjectId, managed_only: bool) -> ApiResult<Vec<String>> {
+async fn team_ids(
+    pool: &PgPool,
+    user_id: &ObjectId,
+    managed_only: bool,
+) -> ApiResult<Vec<ObjectId>> {
     Ok(sqlx::query_scalar(
         "SELECT _team FROM webknossos.user_team_roles WHERE _user=$1 AND (NOT $2 OR isTeamManager)",
     )
@@ -85,7 +89,7 @@ async fn team_ids(pool: &PgPool, user_id: &ObjectId, managed_only: bool) -> ApiR
 async fn count_open_non_admin_tasks(
     pool: &PgPool,
     user: &AuthUser,
-    managed_team_ids: &[String],
+    managed_team_ids: &[ObjectId],
 ) -> ApiResult<i64> {
     let mut q = Sql::new(
         "SELECT COUNT(*) FROM webknossos.annotations_ a
@@ -107,7 +111,7 @@ pub(crate) async fn allowed_teams_for_next_task(
     pool: &PgPool,
     user: &AuthUser,
     max_open_tasks_per_user: i64,
-) -> ApiResult<Vec<String>> {
+) -> ApiResult<Vec<ObjectId>> {
     if user.is_admin {
         // teamDAO.findAllIdsByOrganization: an admin reads every live team of
         // the own organization.
@@ -155,7 +159,7 @@ async fn is_team_manager_or_admin(pool: &PgPool, user: &AuthUser) -> ApiResult<b
 fn push_next_task_from_where<'a>(
     q: &mut Sql<'a>,
     user_id: &'a ObjectId,
-    team_ids: &'a [String],
+    team_ids: &'a [ObjectId],
     is_team_manager_or_admin: bool,
 ) {
     q.push(
@@ -190,14 +194,14 @@ fn push_next_task_from_where<'a>(
 async fn try_assign_next(
     pool: &PgPool,
     user_id: &ObjectId,
-    team_ids: &[String],
+    team_ids: &[ObjectId],
     is_team_manager_or_admin: bool,
-) -> ApiResult<Option<Option<(String, ObjectId)>>> {
+) -> ApiResult<Option<Option<(ObjectId, ObjectId)>>> {
     let mut tx = pool.begin().await?;
     let mut q = Sql::new("SELECT t._id ");
     push_next_task_from_where(&mut q, user_id, team_ids, is_team_manager_or_admin);
     q.push(" ORDER BY p.priority DESC LIMIT 1 FOR UPDATE OF t");
-    let candidate: Option<String> = q.build_query_scalar().fetch_optional(&mut *tx).await?;
+    let candidate: Option<ObjectId> = q.build_query_scalar().fetch_optional(&mut *tx).await?;
     let Some(task_id) = candidate else {
         return Ok(None);
     };
@@ -227,9 +231,9 @@ async fn try_assign_next(
 async fn still_qualifies(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-    team_ids: &[String],
+    team_ids: &[ObjectId],
     is_team_manager_or_admin: bool,
-    task_id: &str,
+    task_id: &ObjectId,
 ) -> ApiResult<bool> {
     let mut q = Sql::new("SELECT EXISTS (SELECT 1 ");
     push_next_task_from_where(&mut q, user_id, team_ids, is_team_manager_or_admin);
@@ -242,9 +246,9 @@ async fn still_qualifies(
 pub(crate) async fn assign_next(
     pool: &PgPool,
     user_id: &ObjectId,
-    team_ids: &[String],
+    team_ids: &[ObjectId],
     is_team_manager_or_admin: bool,
-) -> ApiResult<Option<(String, ObjectId)>> {
+) -> ApiResult<Option<(ObjectId, ObjectId)>> {
     for attempt in 1..=MAX_ATTEMPTS {
         match try_assign_next(pool, user_id, team_ids, is_team_manager_or_admin).await? {
             None => return Ok(None),

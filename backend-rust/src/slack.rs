@@ -241,7 +241,11 @@ impl SlackNotificationService {
     }
 
     /// noticeBaseAnnotationTaskCreation.
-    pub fn notice_base_annotation_task_creation(&self, task_type_id: &str, number_of_tasks: usize) {
+    pub fn notice_base_annotation_task_creation(
+        &self,
+        task_type_id: &ObjectId,
+        number_of_tasks: usize,
+    ) {
         self.info(
             "Task creation with base",
             &format!(

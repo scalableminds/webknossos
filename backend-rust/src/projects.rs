@@ -43,8 +43,7 @@ pub fn router() -> Router<AppState> {
 #[serde(rename_all = "camelCase")]
 struct ProjectParameters {
     name: String,
-    #[serde(deserialize_with = "crate::util::id::deserialize_string")]
-    team: String,
+    team: ObjectId,
     priority: i32,
     paused: Option<bool>,
     expected_time: Option<i64>,
@@ -227,7 +226,6 @@ async fn check_references(
     user: &AuthUser,
     parameters: &ProjectParameters,
 ) -> ApiResult<()> {
-    ObjectId::parse(&parameters.team)?;
     if !can_manage_team_in_tx(tx, user, &parameters.team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
@@ -301,15 +299,10 @@ async fn managed_project(
     tx: &mut Transaction<'_, Postgres>,
     user: &AuthUser,
     id: &ObjectId,
+    team: &ObjectId,
 ) -> ApiResult<Value> {
     let project = project_json(&mut **tx, user, id).await?;
-    if !can_manage_team_in_tx(
-        tx,
-        user,
-        project["team"].as_str().ok_or_else(ApiError::internal)?,
-    )
-    .await?
-    {
+    if !can_manage_team_in_tx(tx, user, team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     Ok(project)
@@ -323,8 +316,8 @@ async fn update(
 ) -> ApiResult<ResponseJson<Value>> {
     let id = ObjectId::parse_path(&id)?;
     let mut tx = state.pool.begin().await?;
-    lock_project(&mut tx, &id, &user.organization_id).await?;
-    managed_project(&mut tx, &user, &id).await?;
+    let team = lock_project(&mut tx, &id, &user.organization_id).await?;
+    managed_project(&mut tx, &user, &id, &team).await?;
     check_references(&mut tx, &user, &parameters).await?;
     // Project names and paused state are immutable through PUT in Scala.
     sqlx::query(
@@ -352,8 +345,8 @@ async fn set_paused(
     paused: bool,
 ) -> ApiResult<Value> {
     let mut tx = pool.begin().await?;
-    lock_project(&mut tx, id, &user.organization_id).await?;
-    managed_project(&mut tx, user, id).await?;
+    let team = lock_project(&mut tx, id, &user.organization_id).await?;
+    managed_project(&mut tx, user, id, &team).await?;
     sqlx::query("UPDATE webknossos.projects SET paused=$2 WHERE _id=$1 AND NOT isdeleted")
         .bind(id)
         .bind(paused)
@@ -402,11 +395,11 @@ async fn increment_instances(
         ));
     }
     let mut tx = state.pool.begin().await?;
-    lock_project(&mut tx, &id, &user.organization_id).await?;
+    let team = lock_project(&mut tx, &id, &user.organization_id).await?;
     // Only team managers of the project's team and organization admins
     // (isTeamManagerOrAdminOf, else 403 Msg.notAllowed). The task DAO
     // additionally restricts affected tasks to team members and admins.
-    let mut project = managed_project(&mut tx, &user, &id).await?;
+    let mut project = managed_project(&mut tx, &user, &id, &team).await?;
     sqlx::query("UPDATE webknossos.tasks t SET totalinstances=totalinstances+$2 FROM webknossos.projects_ p WHERE t._project=p._id AND p._id=$1 AND NOT t.isdeleted AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE _user=$4 AND _team=p._team))")
         .bind(&id).bind(delta).bind(user.is_admin).bind(&user.id).execute(&mut *tx).await?;
     add_status(&mut *tx, &mut project).await?;
@@ -471,27 +464,26 @@ async fn lock_project(
     tx: &mut Transaction<'_, Postgres>,
     id: &ObjectId,
     organization: &str,
-) -> ApiResult<()> {
-    sqlx::query_scalar::<_, String>(
-        "SELECT _id FROM webknossos.projects WHERE _id=$1 AND _organization=$2 AND NOT \
+) -> ApiResult<ObjectId> {
+    sqlx::query_scalar(
+        "SELECT _team FROM webknossos.projects WHERE _id=$1 AND _organization=$2 AND NOT \
             isdeleted FOR UPDATE",
     )
     .bind(id)
     .bind(organization)
     .fetch_optional(&mut **tx)
     .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found(id)))?;
-    Ok(())
+    .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found(id)))
 }
 
 pub(crate) async fn can_manage_team_in_tx(
     tx: &mut Transaction<'_, Postgres>,
     user: &AuthUser,
-    team: &str,
+    team: &ObjectId,
 ) -> ApiResult<bool> {
     // SHARE conflicts with soft deletion (KEY SHARE would not). Hold the live
     // referenced team until the project/task type mutation commits.
-    let team: Option<String> = sqlx::query_scalar(
+    let team: Option<ObjectId> = sqlx::query_scalar(
         "SELECT t._id FROM webknossos.teams t WHERE t._id=$1 AND t._organization=$2 AND \
             NOT t.isDeleted AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE \
             _team=t._id AND _user=$4 AND isteammanager)) FOR SHARE OF t",
@@ -569,7 +561,7 @@ async fn transfer_active_tasks(
     let mut q = Sql::new("SELECT p._team FROM webknossos.projects_ p WHERE ");
     push_read_access(&mut q, (&user).into());
     q.push(" AND p._id=").push_bind(&id);
-    let team: String = q
+    let team: ObjectId = q
         .build_query_scalar()
         .fetch_optional(&mut *tx)
         .await?

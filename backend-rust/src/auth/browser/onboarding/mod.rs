@@ -226,8 +226,8 @@ pub(crate) async fn assert_users_can_be_added(
 pub(crate) async fn initial_team_memberships(
     tx: &mut Transaction<'_, Postgres>,
     organization_id: &str,
-    invite_id: Option<&str>,
-) -> ApiResult<Vec<(String, bool)>> {
+    invite_id: Option<&ObjectId>,
+) -> ApiResult<Vec<(ObjectId, bool)>> {
     if let Some(invite_id) = invite_id {
         return Ok(sqlx::query_as(
             "SELECT _team, isTeamManager FROM webknossos.invite_team_roles WHERE _invite = $1 ORDER BY _team",
@@ -236,7 +236,7 @@ pub(crate) async fn initial_team_memberships(
         .fetch_all(&mut **tx)
         .await?);
     }
-    let team: String = sqlx::query_scalar(
+    let team: ObjectId = sqlx::query_scalar(
         "SELECT _id FROM webknossos.organizationTeams WHERE _organization = $1 LIMIT 1",
     )
     .bind(organization_id)
@@ -249,7 +249,7 @@ pub(crate) async fn initial_team_memberships(
 async fn insert_team_memberships(
     tx: &mut Transaction<'_, Postgres>,
     user_id: &ObjectId,
-    memberships: &[(String, bool)],
+    memberships: &[(ObjectId, bool)],
 ) -> ApiResult<()> {
     sqlx::query("DELETE FROM webknossos.user_team_roles WHERE _user = $1")
         .bind(user_id)
@@ -280,7 +280,7 @@ pub(crate) struct NewAccount<'a> {
     pub is_dataset_manager: bool,
     pub is_organization_owner: bool,
     pub is_email_verified: bool,
-    pub team_memberships: Vec<(String, bool)>,
+    pub team_memberships: Vec<(ObjectId, bool)>,
 }
 
 pub(crate) struct CreatedAccount {
@@ -356,7 +356,7 @@ pub(crate) async fn join_organization_as(
     is_dataset_manager: bool,
     is_unlisted: bool,
     is_organization_owner: bool,
-    team_memberships: &[(String, bool)],
+    team_memberships: &[(ObjectId, bool)],
 ) -> ApiResult<ObjectId> {
     let new_user_id = ObjectId::new();
     let inserted = sqlx::query(
@@ -436,7 +436,7 @@ pub(crate) async fn admin_notifier_mail(
 
 #[derive(sqlx::FromRow)]
 struct InviteRow {
-    id: String,
+    id: ObjectId,
     organization_id: String,
     auto_activate: bool,
     is_admin: bool,
@@ -460,7 +460,10 @@ async fn find_invite(
     .await?)
 }
 
-async fn deactivate_invite(tx: &mut Transaction<'_, Postgres>, invite_id: &str) -> ApiResult<()> {
+async fn deactivate_invite(
+    tx: &mut Transaction<'_, Postgres>,
+    invite_id: &ObjectId,
+) -> ApiResult<()> {
     sqlx::query("UPDATE webknossos.invites SET isDeleted = TRUE WHERE _id = $1")
         .bind(invite_id)
         .execute(&mut **tx)
@@ -482,7 +485,7 @@ async fn create_user(
     invite: Option<&InviteRow>,
 ) -> ApiResult<CreatedAccount> {
     let team_memberships =
-        initial_team_memberships(tx, &organization.id, invite.map(|i| i.id.as_str())).await?;
+        initial_team_memberships(tx, &organization.id, invite.map(|i| &i.id)).await?;
     let mut created = insert_account(
         tx,
         config,
@@ -533,7 +536,7 @@ pub(crate) async fn insert_organization(
     is_wkorg_instance: bool,
     requested_id: Option<&str>,
     name: &str,
-) -> ApiResult<(String, String)> {
+) -> ApiResult<(String, ObjectId)> {
     let normalized_name =
         normalize_strong(name).ok_or_else(|| ApiError::bad_request(org_msg::ID_INVALID))?;
     let id = match requested_id {
@@ -562,13 +565,13 @@ pub(crate) async fn insert_organization(
     sqlx::query(
         "INSERT INTO webknossos.folders(_id, name, metadata) VALUES($1, 'Datasets', '[]'::jsonb)",
     )
-    .bind(root_folder.as_str())
+    .bind(&root_folder)
     .execute(&mut **tx)
     .await?;
     sqlx::query(
         "INSERT INTO webknossos.folder_paths(_ancestor, _descendant, depth) VALUES($1, $1, 0)",
     )
-    .bind(root_folder.as_str())
+    .bind(&root_folder)
     .execute(&mut **tx)
     .await?;
     sqlx::query(
@@ -581,7 +584,7 @@ pub(crate) async fn insert_organization(
     )
     .bind(&id)
     .bind(name)
-    .bind(root_folder.as_str())
+    .bind(&root_folder)
     .bind(plan)
     .bind(included_users)
     .bind(included_storage)
@@ -591,11 +594,11 @@ pub(crate) async fn insert_organization(
     sqlx::query(
         "INSERT INTO webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted) VALUES($1, $2, 'Default', statement_timestamp(), TRUE, FALSE)",
     )
-    .bind(team.as_str())
+    .bind(&team)
     .bind(&id)
     .execute(&mut **tx)
     .await?;
-    Ok((id, team.into()))
+    Ok((id, team))
 }
 
 /// organizationService.createOrganization
@@ -1129,10 +1132,7 @@ async fn send_invites(
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     for membership in &body.team_memberships {
-        if !user
-            .can_manage_team(&state.pool, membership.id.as_str())
-            .await?
-        {
+        if !user.can_manage_team(&state.pool, &membership.id).await? {
             return Err(ApiError::bad_request(
                 crate::msg::user::invite::TEAMS_NOT_MANAGED,
             ));
@@ -1164,7 +1164,7 @@ async fn send_invites(
                VALUES($1, $2, $3, $4, $5, $6,
                  statement_timestamp() + $7::bigint * INTERVAL '1 millisecond', statement_timestamp(), FALSE)"#,
         )
-        .bind(invite_id.as_str())
+        .bind(&invite_id)
         .bind(&token)
         .bind(&user.organization_id)
         .bind(body.auto_activate)
@@ -1177,8 +1177,8 @@ async fn send_invites(
             sqlx::query(
                 "INSERT INTO webknossos.invite_team_roles(_invite, _team, isTeamManager) VALUES($1, $2, $3)",
             )
-            .bind(invite_id.as_str())
-            .bind(membership.id.as_str())
+            .bind(&invite_id)
+            .bind(&membership.id)
             .bind(membership.is_team_manager)
             .execute(&mut *tx)
             .await?;

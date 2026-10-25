@@ -8,15 +8,19 @@ use crate::mail::{MailSettings, RecordingMailer};
 const TEAM_A: &str = "5c0b3e8a1d00000000000001";
 const TEAM_B: &str = "5c0b3e8a1d00000000000002";
 
-fn team_names() -> HashMap<String, String> {
+fn team_id(id: &str) -> ObjectId {
+    ObjectId::parse(id).unwrap()
+}
+
+fn team_names() -> HashMap<ObjectId, String> {
     HashMap::from([
-        (TEAM_A.to_owned(), "Team A".to_owned()),
-        (TEAM_B.to_owned(), "Team B".to_owned()),
+        (team_id(TEAM_A), "Team A".to_owned()),
+        (team_id(TEAM_B), "Team B".to_owned()),
     ])
 }
 
 fn membership(team: &str, is_team_manager: bool) -> TeamMembership {
-    TeamMembership::new(team, is_team_manager)
+    TeamMembership::new(team_id(team), is_team_manager)
 }
 
 fn user() -> UserAccess {
@@ -317,7 +321,7 @@ fn changes_shortly_after_an_activation_are_not_announced() {
 
 #[test]
 fn only_added_teams_are_announced() {
-    let ids = |ids: &[&str]| ids.iter().map(|id| (*id).to_owned()).collect::<Vec<_>>();
+    let ids = |ids: &[&str]| ids.iter().map(|id| team_id(id)).collect::<Vec<_>>();
     assert_eq!(
         added_team_ids(&ids(&[TEAM_A]), &ids(&[TEAM_A, TEAM_B])),
         ids(&[TEAM_B])
@@ -330,7 +334,7 @@ fn only_members_who_gain_access_are_notified() {
     let [before, gained, never] = [(); 3].map(|()| ObjectId::new());
     let candidate = |id: &ObjectId| Candidate {
         user_id: id.clone(),
-        team_ids: vec![TEAM_A.to_owned()],
+        team_ids: vec![team_id(TEAM_A)],
     };
     let candidates = [candidate(&before), candidate(&gained), candidate(&never)];
     let had: HashSet<ObjectId> = HashSet::from([before.clone()]);
@@ -344,21 +348,17 @@ fn only_members_who_gain_access_are_notified() {
 
 #[test]
 fn recipients_see_only_the_added_teams_they_are_members_of() {
-    let added = [TEAM_B.to_owned(), TEAM_A.to_owned()];
+    let added = [team_id(TEAM_B), team_id(TEAM_A)];
     assert_eq!(
-        recipient_team_names(&added, &[TEAM_A.to_owned()], &team_names()),
+        recipient_team_names(&added, &[team_id(TEAM_A)], &team_names()),
         ["Team A"]
     );
     assert_eq!(
-        recipient_team_names(
-            &added,
-            &[TEAM_A.to_owned(), TEAM_B.to_owned()],
-            &team_names()
-        ),
+        recipient_team_names(&added, &[team_id(TEAM_A), team_id(TEAM_B)], &team_names()),
         ["Team B", "Team A"]
     );
     // Teams deleted in the meantime are left out.
-    assert!(recipient_team_names(&added, &[TEAM_A.to_owned()], &HashMap::new()).is_empty());
+    assert!(recipient_team_names(&added, &[team_id(TEAM_A)], &HashMap::new()).is_empty());
 }
 
 #[test]

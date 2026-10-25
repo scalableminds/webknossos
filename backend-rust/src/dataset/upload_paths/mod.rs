@@ -261,18 +261,17 @@ pub(crate) async fn add_initial_teams(
     dataset: &ObjectId,
     teams: &[ObjectId],
 ) -> ApiResult<()> {
-    let team_ids: Vec<&str> = teams.iter().map(ObjectId::as_str).collect();
     let allowed: i64 = sqlx::query_scalar(
         r#"SELECT count(*) FROM webknossos.teams_ t WHERE t._id = ANY($1) AND (
              t._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $2 AND isAdmin)
              OR t._id IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $2 AND ($3 OR isTeamManager)))"#,
     )
-    .bind(&team_ids)
+    .bind(teams)
     .bind(&user.id)
     .bind(user.is_dataset_manager)
     .fetch_one(&mut *connection)
     .await?;
-    let mut distinct = team_ids.clone();
+    let mut distinct: Vec<&ObjectId> = teams.iter().collect();
     distinct.sort_unstable();
     distinct.dedup();
     if allowed != distinct.len() as i64 {
@@ -307,7 +306,7 @@ async fn reserve_upload_to_paths(
     let mut source = UsableDataSource::from_json(&body.data_source)
         .map_err(crate::dataset::source::invalid_body)?;
     let path_prefix = parse_prefix(body.path_prefix.as_deref())?;
-    let (root_folder, included): (String, Option<i64>) = sqlx::query_as(
+    let (root_folder, included): (ObjectId, Option<i64>) = sqlx::query_as(
         "SELECT _rootFolder, includedStorage FROM webknossos.organizations_ WHERE _id = $1",
     )
     .bind(&user.organization_id)
@@ -383,13 +382,9 @@ async fn reserve_upload_to_paths(
         ));
     }
     crate::dataset::create::assert_valid_data_source(&with_linked)?;
-    let folder = body
-        .folder_id
-        .as_ref()
-        .map(|f| f.as_str().to_owned())
-        .unwrap_or(root_folder);
+    let folder = body.folder_id.as_ref().unwrap_or(&root_folder);
     let mut transaction = state.pool.begin().await?;
-    if !crate::dataset::create::folder_writable(&mut transaction, &user, &folder).await? {
+    if !crate::dataset::create::folder_writable(&mut transaction, &user, folder).await? {
         return Err(ApiError::bad_request(crate::msg::folder::NO_WRITE_ACCESS));
     }
     let store = referenced_data_store(&mut transaction, &user, &body.layers_to_link).await?;
@@ -413,7 +408,7 @@ async fn reserve_upload_to_paths(
     .await?;
     sqlx::query("UPDATE webknossos.datasets SET _folder = $2, _uploader = $3 WHERE _id = $1")
         .bind(&id)
-        .bind(&folder)
+        .bind(folder)
         .bind(&user.id)
         .execute(&mut *transaction)
         .await?;

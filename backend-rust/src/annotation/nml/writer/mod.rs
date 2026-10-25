@@ -121,7 +121,7 @@ pub struct NmlWriteInput<'a> {
     pub annotation_owner_name: &'a str,
     pub annotation: Option<NmlAnnotation<'a>>,
     /// Id of the fetched task (`taskOpt`) for the `taskId` meta tag.
-    pub task_id: Option<&'a str>,
+    pub task_id: Option<&'a ObjectId>,
     pub voxel_size: Option<&'a NmlVoxelSize>,
     /// Overrides every volume `location` (compound downloads pass
     /// `<name>_data.zip`); only allowed with at most one volume layer.
@@ -393,7 +393,7 @@ fn write_meta(w: &mut XmlWriter, input: &NmlWriteInput<'_>) -> Result<(), NmlWri
     }
     meta(w, "username", input.annotation_owner_name)?;
     if let Some(task_id) = input.task_id {
-        meta(w, "taskId", task_id)?;
+        meta(w, "taskId", task_id.as_str())?;
     }
     Ok(())
 }

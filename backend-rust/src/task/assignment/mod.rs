@@ -72,9 +72,9 @@ pub fn router(_jobs_enabled: bool) -> Router<AppState> {
 /// [`insert_initializing_annotation`].
 pub(crate) async fn lock_task_with_pending_instances(
     connection: &mut PgConnection,
-    task_id: &str,
+    task_id: &ObjectId,
 ) -> ApiResult<bool> {
-    let locked: Option<String> = sqlx::query_scalar(
+    let locked: Option<ObjectId> = sqlx::query_scalar(
         "SELECT _id FROM webknossos.tasks WHERE _id=$1 AND NOT isDeleted AND pendingInstances > 0 FOR UPDATE",
     )
     .bind(task_id)
@@ -93,7 +93,7 @@ pub(crate) async fn lock_task_with_pending_instances(
 /// dataset exists at all, as Scala's `FROM task, dataset` yields no row.
 pub(crate) async fn insert_initializing_annotation(
     connection: &mut PgConnection,
-    task_id: &str,
+    task_id: &ObjectId,
     user_id: &ObjectId,
 ) -> ApiResult<Option<ObjectId>> {
     let annotation_id = ObjectId::new();
@@ -119,7 +119,7 @@ pub(crate) async fn insert_initializing_annotation(
 /// of the same task to the same user, like Scala).
 pub(crate) async fn assign_one_to(
     pool: &PgPool,
-    task_id: &str,
+    task_id: &ObjectId,
     user_id: &ObjectId,
 ) -> ApiResult<Option<ObjectId>> {
     let mut tx = pool.begin().await?;
@@ -172,7 +172,7 @@ pub(crate) async fn create_annotation_for(
     tracing_store: &TracingStoreClient,
     context_user: &AuthUser,
     assignee_id: &ObjectId,
-    task_id: &str,
+    task_id: &ObjectId,
     initializing_annotation_id: &ObjectId,
 ) -> Result<(), ProviderError> {
     let mut q = Sql::new(
@@ -210,7 +210,7 @@ pub(crate) async fn create_annotation_for(
     tracing::info!(
         annotation = %initializing_annotation_id,
         base = %base.id,
-        task = task_id,
+        task = %task_id,
         "task assignment: creating annotation from base"
     );
     let request = DuplicateAnnotationRequest {
@@ -331,7 +331,7 @@ pub(crate) async fn initialize_task_annotation(
     tracing_store: &TracingStoreClient,
     context_user: &AuthUser,
     assignee_id: &ObjectId,
-    task_id: &str,
+    task_id: &ObjectId,
     initializing_annotation_id: &ObjectId,
 ) -> ApiResult<()> {
     match create_annotation_for(
@@ -370,7 +370,7 @@ fn not_found() -> ApiError {
 /// is read globally (missing → adminNotAllowed, replaced by the route's
 /// `?~> notAllowed`); allowed for its team managers and admins of its
 /// organization.
-async fn manages_team(pool: &PgPool, requester: &AuthUser, team_id: &str) -> ApiResult<bool> {
+async fn manages_team(pool: &PgPool, requester: &AuthUser, team_id: &ObjectId) -> ApiResult<bool> {
     Ok(sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM webknossos.teams_ t WHERE t._id=$1 AND (
            ($3 AND t._organization=$4)
@@ -435,7 +435,7 @@ async fn assign_one(
         .ok_or_else(not_found)?;
 
     // taskDAO.findOne(id): TaskDAO.readAccessQ, Empty → 404.
-    let project_id: String = sqlx::query_scalar(
+    let project_id: ObjectId = sqlx::query_scalar(
         "SELECT t._project FROM webknossos.tasks_ t WHERE t._id=$1 AND (
            (SELECT p._team FROM webknossos.projects p WHERE p._id=t._project)
              IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$2)
@@ -449,7 +449,7 @@ async fn assign_one(
     .ok_or_else(not_found)?;
 
     // projectDAO.findOne(task._project): ProjectDAO.readAccessQ, Empty → 404.
-    let team_id: String = sqlx::query_scalar(
+    let team_id: ObjectId = sqlx::query_scalar(
         "SELECT p._team FROM webknossos.projects_ p WHERE p._id=$1 AND (
            p._team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$2)
            OR p._owner=$2
@@ -475,7 +475,7 @@ async fn assign_one(
         ));
     }
 
-    let annotation_id = assign_one_to(pool, task_id.as_str(), &assignee_id)
+    let annotation_id = assign_one_to(pool, &task_id, &assignee_id)
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::task::UNAVAILABLE))?;
     initialize_task_annotation(
@@ -483,13 +483,13 @@ async fn assign_one(
         &tracing_store,
         &user,
         &assignee_id,
-        task_id.as_str(),
+        &task_id,
         &annotation_id,
     )
     .await?;
     notification_emails.send_task_assigned_email(
         pool,
-        task_id.as_str(),
+        &task_id,
         &annotation_id,
         &assignee_id,
         assignee_is_deactivated,

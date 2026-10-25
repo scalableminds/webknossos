@@ -81,7 +81,7 @@ pub(crate) fn assert_valid_data_source(source: &UsableDataSource) -> ApiResult<(
 pub(crate) async fn folder_writable(
     connection: &mut sqlx::PgConnection,
     user: &AuthUser,
-    folder: &str,
+    folder: &ObjectId,
 ) -> ApiResult<bool> {
     Ok(sqlx::query_scalar(
         r#"SELECT EXISTS (SELECT 1 FROM webknossos.folders_ f WHERE f._id = $1 AND (
@@ -203,7 +203,7 @@ pub(crate) struct SetUp<'a> {
     pub name: &'a str,
     pub store_name: &'a str,
     pub source: &'a UsableDataSource,
-    pub folder: Option<&'a str>,
+    pub folder: Option<&'a ObjectId>,
     pub creation_type: &'a str,
     pub import_url: Option<&'a str>,
 }
@@ -214,7 +214,7 @@ pub(crate) async fn set_up_dataset(
     setup: SetUp<'_>,
 ) -> ApiResult<ObjectId> {
     validate_dataset_name(setup.name)?;
-    let root: String = sqlx::query_scalar(
+    let root: ObjectId = sqlx::query_scalar(
         "SELECT _rootFolder FROM webknossos.organizations_ WHERE _id = $1 FOR SHARE",
     )
     .bind(&user.organization_id)
@@ -223,8 +223,8 @@ pub(crate) async fn set_up_dataset(
     .ok_or_else(|| {
         ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
     })?;
-    let folder = setup.folder.map(str::to_owned).unwrap_or(root);
-    if !folder_writable(connection, user, &folder).await? {
+    let folder = setup.folder.unwrap_or(&root);
+    if !folder_writable(connection, user, folder).await? {
         return Err(ApiError::bad_request(crate::msg::folder::NO_WRITE_ACCESS));
     }
     let id = ObjectId::new();
@@ -253,7 +253,7 @@ pub(crate) async fn set_up_dataset(
     .await?;
     sqlx::query("UPDATE webknossos.datasets SET _folder = $2, _uploader = $3 WHERE _id = $1")
         .bind(&id)
-        .bind(&folder)
+        .bind(folder)
         .bind(&user.id)
         .execute(&mut *connection)
         .await?;

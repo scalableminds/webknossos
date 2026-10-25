@@ -103,7 +103,7 @@ pub(crate) async fn duplicate_in_tracing_store(
 pub(crate) struct NewAnnotation<'a> {
     pub id: &'a ObjectId,
     pub dataset_id: &'a ObjectId,
-    pub task_id: Option<&'a str>,
+    pub task_id: Option<&'a ObjectId>,
     pub owner_id: &'a ObjectId,
     pub description: &'a str,
     pub name: &'a str,
@@ -162,7 +162,7 @@ pub(crate) struct DuplicateSource<'a> {
     pub id: &'a ObjectId,
     pub dataset_id: &'a ObjectId,
     pub owner_id: &'a ObjectId,
-    pub task_id: Option<&'a str>,
+    pub task_id: Option<&'a ObjectId>,
     pub description: &'a str,
 }
 
@@ -175,7 +175,7 @@ impl<'a> DuplicateSource<'a> {
                 id: &saved.id,
                 dataset_id: &saved.dataset_id,
                 owner_id: &saved.owner_id,
-                task_id: saved.task_id.as_deref(),
+                task_id: saved.task_id.as_ref(),
                 description: &saved.description,
             },
             ProvidedAnnotation::Compound(compound) => Self {

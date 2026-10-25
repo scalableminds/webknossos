@@ -806,13 +806,13 @@ impl AnnotationProvider {
         context: AccessContext<'_>,
         identifier: &AnnotationIdentifier,
     ) -> Result<CompoundAnnotation, ProviderError> {
-        let task_id = identifier.identifier.as_str();
+        let task_id = &identifier.identifier;
         let project_id = self
             .find_task_project(context, task_id)
             .await?
             .ok_or_else(|| ProviderError::failure(crate::msg::task::not_found(task_id)))?;
         let annotations = self
-            .task_annotations(context, &[task_id.to_owned()])
+            .task_annotations(context, std::slice::from_ref(task_id))
             .await?;
         let finished = finished(&annotations);
         assert_all_on_same_dataset(&finished)?;
@@ -839,7 +839,7 @@ impl AnnotationProvider {
         context: AccessContext<'_>,
         identifier: &AnnotationIdentifier,
     ) -> Result<CompoundAnnotation, ProviderError> {
-        let project_id = identifier.identifier.as_str();
+        let project_id = &identifier.identifier;
         let team = self
             .find_project_team(context, project_id)
             .await?
@@ -884,7 +884,7 @@ impl AnnotationProvider {
         context: AccessContext<'_>,
         identifier: &AnnotationIdentifier,
     ) -> Result<CompoundAnnotation, ProviderError> {
-        let task_type_id = identifier.identifier.as_str();
+        let task_type_id = &identifier.identifier;
         self.find_task_type_team(context, task_type_id)
             .await?
             .ok_or_else(|| {
@@ -898,7 +898,7 @@ impl AnnotationProvider {
         }
         q.push(" ORDER BY t._id LIMIT ")
             .push_bind(TASK_TYPE_TASK_LIMIT);
-        let tasks: Vec<String> = q.build_query_scalar().fetch_all(&self.pool).await?;
+        let tasks: Vec<ObjectId> = q.build_query_scalar().fetch_all(&self.pool).await?;
         let annotations = self.task_annotations(context, &tasks).await?;
         let finished = finished(&annotations);
         assert_all_on_same_dataset(&finished)?;
@@ -924,7 +924,7 @@ impl AnnotationProvider {
         context: AccessContext<'_>,
         identifier: &AnnotationIdentifier,
     ) -> Result<Restrictions, ProviderError> {
-        let id = identifier.identifier.as_str();
+        let id = &identifier.identifier;
         let team = match identifier.annotation_type {
             AnnotationType::CompoundTask => {
                 let project = self
@@ -972,8 +972,8 @@ impl AnnotationProvider {
     async fn find_task_project(
         &self,
         context: AccessContext<'_>,
-        task_id: &str,
-    ) -> Result<Option<String>, ProviderError> {
+        task_id: &ObjectId,
+    ) -> Result<Option<ObjectId>, ProviderError> {
         let mut q = Sql::new("SELECT t._project FROM webknossos.tasks_ t WHERE t._id=");
         q.push_bind(task_id);
         if !context.global {
@@ -987,8 +987,8 @@ impl AnnotationProvider {
     async fn find_project_team(
         &self,
         context: AccessContext<'_>,
-        project_id: &str,
-    ) -> Result<Option<String>, ProviderError> {
+        project_id: &ObjectId,
+    ) -> Result<Option<ObjectId>, ProviderError> {
         let mut q = Sql::new("SELECT p._team FROM webknossos.projects_ p WHERE p._id=");
         q.push_bind(project_id);
         if !context.global {
@@ -1002,8 +1002,8 @@ impl AnnotationProvider {
     async fn find_task_type_team(
         &self,
         context: AccessContext<'_>,
-        task_type_id: &str,
-    ) -> Result<Option<String>, ProviderError> {
+        task_type_id: &ObjectId,
+    ) -> Result<Option<ObjectId>, ProviderError> {
         let mut q = Sql::new("SELECT tt._team FROM webknossos.taskTypes_ tt WHERE tt._id=");
         q.push_bind(task_type_id);
         if !context.global {
@@ -1018,7 +1018,7 @@ impl AnnotationProvider {
     async fn task_annotations(
         &self,
         context: AccessContext<'_>,
-        task_ids: &[String],
+        task_ids: &[ObjectId],
     ) -> Result<Vec<TaskAnnotation>, ProviderError> {
         let mut q = Sql::new("SELECT ");
         q.push(TASK_ANNOTATION_COLUMNS)
@@ -1043,7 +1043,7 @@ impl AnnotationProvider {
     async fn is_team_manager_or_admin_of(
         &self,
         user: &AuthUser,
-        team_id: &str,
+        team_id: &ObjectId,
     ) -> Result<bool, ProviderError> {
         let team: Option<(String, bool)> = sqlx::query_as(
             "SELECT team._organization,EXISTS(SELECT 1 FROM webknossos.user_team_roles role
@@ -1113,7 +1113,7 @@ impl AnnotationProvider {
             Option<f64>,
             Option<f64>,
             Option<f64>,
-            String,
+            ObjectId,
             ObjectId,
         );
         let rows: Vec<Row> = sqlx::query_as(

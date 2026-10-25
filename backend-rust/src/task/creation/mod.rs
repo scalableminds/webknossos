@@ -172,7 +172,7 @@ pub(crate) async fn find_task_type(
          WHERE tt._id=$1 AND (tt._team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$2)
            OR tt._organization=(SELECT _organization FROM webknossos.users_ WHERE _id=$2 AND isAdmin))",
     )
-    .bind(id.as_str())
+    .bind(id)
     .bind(&user.id)
     .fetch_optional(pool)
     .await?;
@@ -676,7 +676,7 @@ async fn resolve_base(
            OR (SELECT team._organization FROM webknossos.teams team WHERE team._id=(SELECT p._team FROM webknossos.projects p WHERE p._id=t._project))
              IN (SELECT _organization FROM webknossos.users_ WHERE _id=$2 AND isAdmin))",
     )
-    .bind(id.as_str())
+    .bind(id)
     .bind(&user.id)
     .fetch_optional(pool)
     .await?;
@@ -687,7 +687,7 @@ async fn resolve_base(
         "SELECT a._id, a._user, a.state::text FROM webknossos.annotations_ a
          WHERE a._task=",
     );
-    q.push_bind(id.as_str())
+    q.push_bind(id)
         .push(" AND a.typ='Task' AND a.state<>'Cancelled' AND ");
     crate::annotation::access::push_read_predicate(&mut q, user.into());
     q.push(" ORDER BY a.created, a._id");
@@ -851,8 +851,8 @@ fn unique<T: PartialEq + Clone>(mut items: impl Iterator<Item = T>) -> Option<T>
 }
 
 pub(crate) struct ProjectFacts {
-    pub id: String,
-    pub team: String,
+    pub id: ObjectId,
+    pub team: ObjectId,
 }
 
 /// ProjectDAO.findOneByNameAndOrganization under the requester's access
@@ -862,7 +862,7 @@ pub(crate) async fn find_project(
     user: &AuthUser,
     name: &str,
 ) -> ApiResult<Option<ProjectFacts>> {
-    let row: Option<(String, String)> = sqlx::query_as(
+    let row: Option<(ObjectId, ObjectId)> = sqlx::query_as(
         "SELECT p._id, p._team FROM webknossos.projects_ p
          WHERE p.name=$1 AND p._organization=$2
            AND (p._team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$3)
@@ -924,13 +924,13 @@ async fn create_one(
                    JOIN webknossos.users_ owner ON owner._id=s._owner
                    WHERE s._id=$1 AND owner._organization=$2)",
             )
-            .bind(script.as_str())
+            .bind(script)
             .bind(&user.organization_id)
             .fetch_one(pool)
             .await?;
             if !readable {
                 return Err(ProviderError::failure(crate::msg::script::not_found(
-                    script.as_str(),
+                    script,
                 )));
             }
         }
@@ -1002,10 +1002,10 @@ async fn create_one(
                CASE WHEN $8::float8 IS NULL THEN NULL ELSE ROW($8,$9,$10,$11,$12,$13)::webknossos.BOUNDING_BOX END,
                ROW($14,$15,$16)::webknossos.VECTOR3,ROW($17,$18,$19)::webknossos.VECTOR3,$20,$21,false)",
         )
-        .bind(task_id.as_str())
+        .bind(&task_id)
         .bind(&project.id)
-        .bind(params.script_id.as_ref().map(ObjectId::as_str))
-        .bind(task_type.id.as_str())
+        .bind(&params.script_id)
+        .bind(&task_type.id)
         .bind(domain)
         .bind(params.needed_experience.value)
         .bind(i64::from(params.pending_instances))
@@ -1037,7 +1037,7 @@ async fn create_one(
             &NewAnnotation {
                 id: &base_annotation_id,
                 dataset_id: &dataset.id,
-                task_id: Some(task_id.as_str()),
+                task_id: Some(&task_id),
                 owner_id: &user.id,
                 description: params.description.as_deref().unwrap_or(""),
                 name: "",
@@ -1083,7 +1083,7 @@ async fn warnings(
             .ok_or_else(|| ProviderError::failure(crate::msg::project::not_found_by_name(name)))?;
         project_teams.push(project.team);
     }
-    let dataset_teams: Vec<String> = sqlx::query_scalar(
+    let dataset_teams: Vec<ObjectId> = sqlx::query_scalar(
         "SELECT _team FROM webknossos.dataset_allowedTeams WHERE _dataset=$1
          UNION
          SELECT DISTINCT at._team FROM webknossos.folder_allowedTeams at
@@ -1188,7 +1188,7 @@ pub(crate) async fn create_tasks(
     if with_base > 0 {
         services
             .slack
-            .notice_base_annotation_task_creation(task_type.id.as_str(), with_base);
+            .notice_base_annotation_task_creation(&task_type.id, with_base);
     }
     let url = crate::annotation::create::tracing_store_url(pool).await?;
     let skeleton_saves = save_skeleton_tracings(&services.tracing_store, &url, &requested).await?;
@@ -1275,9 +1275,7 @@ async fn create(
         .ok_or_else(|| ApiError::bad_request(NOT_ON_SAME_TASK_TYPE))?;
     let task_type = find_task_type(pool, &user, &task_type_id)
         .await?
-        .ok_or_else(|| {
-            ApiError::bad_request(crate::msg::task_type::not_found(task_type_id.as_str()))
-        })?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::task_type::not_found(&task_type_id)))?;
     let dataset_id = unique(body.iter().map(|p| p.dataset_id.clone()))
         .ok_or_else(|| ApiError::bad_request(NOT_ON_SAME_DATASET))?;
     let dataset = find_readable_dataset(pool, &user, &dataset_id)

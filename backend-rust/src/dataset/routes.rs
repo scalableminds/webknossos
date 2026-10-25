@@ -253,7 +253,7 @@ async fn update_metadata(
     crate::dataset::access::lock_edit(&mut transaction, &user, &id, true).await?;
     let (existing_metadata, existing_folder, organization, created): (
         Value,
-        String,
+        ObjectId,
         String,
         chrono::DateTime<chrono::Utc>,
     ) = sqlx::query_as(
@@ -266,7 +266,7 @@ async fn update_metadata(
         .metadata
         .unwrap_or_else(|| existing_metadata.as_array().cloned().unwrap_or_default());
     validate_metadata(&metadata)?;
-    let folder = body.folder_id.map(String::from).unwrap_or(existing_folder);
+    let folder = body.folder_id.unwrap_or(existing_folder);
     // Keep folder references live and within the dataset's organization. A
     // settings editor can move a dataset without managing the target folder.
     sqlx::query("SELECT f._id FROM webknossos.folders_ f JOIN webknossos.folder_paths fp ON fp._descendant=f._id JOIN webknossos.organizations_ o ON o._rootFolder=fp._ancestor WHERE f._id=$1 AND o._id=$2 FOR SHARE OF f, fp")
@@ -1008,7 +1008,7 @@ pub(crate) async fn list_values(
     };
     let user_id = user.map(|u| &u.id);
     let uploader = query.uploader_id.as_ref().map(ObjectId::as_str);
-    let folder = query.folder_id.as_ref().map(ObjectId::as_str);
+    let folder = query.folder_id.as_ref();
     let mut q = Sql::new(
         r#"SELECT d._id AS id, d.name, d._organization AS owning_organization, d._folder AS folder_id,
       d.isUsable AS is_active, d.directoryName AS directory_name,
@@ -1212,13 +1212,13 @@ async fn update_teams(
     user: AuthUser,
     Path(id): Path<PathObjectId>,
     RequestJson(requested): RequestJson<Vec<ObjectId>>,
-) -> ApiResult<Json<Vec<String>>> {
+) -> ApiResult<Json<Vec<ObjectId>>> {
     require_edit(&state, &user, &id).await?;
     let mut transaction = state.pool.begin().await?;
     crate::dataset::access::lock_edit(&mut transaction, &user, &id, true).await?;
     // Dataset managers can update teams they can read; other users only teams
     // they manage. Unmanageable current grants must survive the replacement.
-    let managed: Vec<String> = sqlx::query_scalar(
+    let managed: Vec<ObjectId> = sqlx::query_scalar(
         r#"SELECT t._id FROM webknossos.teams_ t WHERE t._organization = $2 AND
       ($3 OR EXISTS (SELECT 1 FROM webknossos.user_team_roles r
         WHERE r._team = t._id AND r._user = $1 AND ($4 OR r.isTeamManager)))"#,
@@ -1229,14 +1229,13 @@ async fn update_teams(
     .bind(user.is_dataset_manager)
     .fetch_all(&mut *transaction)
     .await?;
-    let current: Vec<String> =
+    let current: Vec<ObjectId> =
         sqlx::query_scalar("SELECT _team FROM webknossos.dataset_allowedTeams WHERE _dataset = $1")
             .bind(id.as_str())
             .fetch_all(&mut *transaction)
             .await?;
-    let mut updated: Vec<String> = requested
+    let mut updated: Vec<ObjectId> = requested
         .into_iter()
-        .map(String::from)
         .filter(|t| managed.contains(t))
         .collect();
     updated.extend(current.iter().filter(|t| !managed.contains(t)).cloned());

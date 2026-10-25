@@ -28,14 +28,14 @@ const RECENT_ACTIVATION: Duration = Duration::from_secs(60 * 60);
 /// One team membership (`TeamMembership`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TeamMembership {
-    pub team_id: String,
+    pub team_id: ObjectId,
     pub is_team_manager: bool,
 }
 
 impl TeamMembership {
-    pub fn new(team_id: impl Into<String>, is_team_manager: bool) -> Self {
+    pub fn new(team_id: ObjectId, is_team_manager: bool) -> Self {
         Self {
-            team_id: team_id.into(),
+            team_id,
             is_team_manager,
         }
     }
@@ -57,21 +57,21 @@ pub fn access_changes(
     new_memberships: &[TeamMembership],
     before: UserAccess,
     after: UserAccess,
-    team_names: &HashMap<String, String>,
+    team_names: &HashMap<ObjectId, String>,
 ) -> Vec<String> {
-    let team_name = |team_id: &str| {
+    let team_name = |team_id: &ObjectId| {
         team_names
             .get(team_id)
             .cloned()
-            .unwrap_or_else(|| team_id.to_owned())
+            .unwrap_or_else(|| team_id.to_string())
     };
-    let old_by_id: HashMap<&str, &TeamMembership> = old_memberships
+    let old_by_id: HashMap<&ObjectId, &TeamMembership> = old_memberships
         .iter()
-        .map(|membership| (membership.team_id.as_str(), membership))
+        .map(|membership| (&membership.team_id, membership))
         .collect();
-    let new_ids: HashSet<&str> = new_memberships
+    let new_ids: HashSet<&ObjectId> = new_memberships
         .iter()
-        .map(|membership| membership.team_id.as_str())
+        .map(|membership| &membership.team_id)
         .collect();
 
     let mut changes = Vec::new();
@@ -89,7 +89,7 @@ pub fn access_changes(
     }
     for membership in new_memberships {
         let name = || team_name(&membership.team_id);
-        match old_by_id.get(membership.team_id.as_str()) {
+        match old_by_id.get(&membership.team_id) {
             None if membership.is_team_manager => {
                 changes.push(msg::added_to_team_as_manager(name()));
             }
@@ -106,14 +106,14 @@ pub fn access_changes(
     changes.extend(
         old_memberships
             .iter()
-            .filter(|membership| !new_ids.contains(membership.team_id.as_str()))
+            .filter(|membership| !new_ids.contains(&membership.team_id))
             .map(|membership| msg::removed_from_team(team_name(&membership.team_id))),
     );
     changes
 }
 
 /// `newTeamIds.filterNot(oldTeamIds.contains)`.
-pub fn added_team_ids(old_team_ids: &[String], new_team_ids: &[String]) -> Vec<String> {
+pub fn added_team_ids(old_team_ids: &[ObjectId], new_team_ids: &[ObjectId]) -> Vec<ObjectId> {
     new_team_ids
         .iter()
         .filter(|team| !old_team_ids.contains(team))
@@ -191,14 +191,14 @@ impl SharedResource {
 pub struct Candidate {
     pub user_id: ObjectId,
     /// The added teams the user is a member of.
-    pub team_ids: Vec<String>,
+    pub team_ids: Vec<ObjectId>,
 }
 
 /// Who might be notified about a team share, captured before the update.
 #[derive(Debug)]
 pub struct PendingShareEmails {
     resource: SharedResource,
-    added_team_ids: Vec<String>,
+    added_team_ids: Vec<ObjectId>,
     candidates: Vec<Candidate>,
     had_access: HashSet<ObjectId>,
 }
@@ -220,9 +220,9 @@ pub fn newly_allowed<'a>(
 /// The names of the added teams the recipient is a member of, in the order
 /// the teams were added. Teams deleted in the meantime are left out.
 pub fn recipient_team_names(
-    added_team_ids: &[String],
-    recipient_team_ids: &[String],
-    team_names: &HashMap<String, String>,
+    added_team_ids: &[ObjectId],
+    recipient_team_ids: &[ObjectId],
+    team_names: &HashMap<ObjectId, String>,
 ) -> Vec<String> {
     added_team_ids
         .iter()
@@ -351,8 +351,8 @@ impl NotificationEmailService {
         &self,
         transaction: &mut Transaction<'_, Postgres>,
         resource: SharedResource,
-        old_team_ids: &[String],
-        new_team_ids: &[String],
+        old_team_ids: &[ObjectId],
+        new_team_ids: &[ObjectId],
         exclude: &[&ObjectId],
     ) -> Option<PendingShareEmails> {
         let added_team_ids = added_team_ids(old_team_ids, new_team_ids);
@@ -616,7 +616,7 @@ impl NotificationEmailService {
         let (user_id, issuer_id) = (user_id.clone(), issuer_id.clone());
         tokio::spawn(async move {
             let result = async {
-                let mut team_ids: Vec<String> = old_memberships
+                let mut team_ids: Vec<ObjectId> = old_memberships
                     .iter()
                     .chain(&new_memberships)
                     .map(|membership| membership.team_id.clone())
@@ -672,7 +672,7 @@ impl NotificationEmailService {
     pub fn send_task_assigned_email(
         &self,
         pool: &PgPool,
-        task_id: &str,
+        task_id: &ObjectId,
         annotation_id: &ObjectId,
         assignee_id: &ObjectId,
         assignee_is_deactivated: bool,
@@ -683,9 +683,8 @@ impl NotificationEmailService {
         }
         let service = self.clone();
         let pool = pool.clone();
-        let task_id = task_id.to_owned();
-        let [annotation_id, assignee_id, issuer_id] =
-            [annotation_id, assignee_id, issuer_id].map(ObjectId::clone);
+        let [task_id, annotation_id, assignee_id, issuer_id] =
+            [task_id, annotation_id, assignee_id, issuer_id].map(ObjectId::clone);
         tokio::spawn(async move {
             let result = async {
                 let recipient = person(&pool, &assignee_id).await?;
@@ -723,9 +722,9 @@ impl NotificationEmailService {
 /// TeamDAO.findAllByIds (global): names of the live teams among `team_ids`.
 async fn team_names(
     pool: &PgPool,
-    team_ids: &[String],
-) -> Result<HashMap<String, String>, sqlx::Error> {
-    Ok(sqlx::query_as::<_, (String, String)>(
+    team_ids: &[ObjectId],
+) -> Result<HashMap<ObjectId, String>, sqlx::Error> {
+    Ok(sqlx::query_as::<_, (ObjectId, String)>(
         "SELECT _id, name FROM webknossos.teams_ WHERE _id = ANY($1)",
     )
     .bind(team_ids)

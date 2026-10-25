@@ -152,7 +152,9 @@ async fn service_posts_scala_payloads_and_rate_limits() {
             "#333ccc"
         )]
     );
-    service.notice_base_annotation_task_creation("0123456789abcdef01234567", 3);
+    let task_type_id =
+        webknossos_backend::util::id::ObjectId::parse("0123456789abcdef01234567").unwrap();
+    service.notice_base_annotation_task_creation(&task_type_id, 3);
     service.warn("W", "w");
     service.success("S", "s");
     service.error("E", "e");

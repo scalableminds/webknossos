@@ -6,23 +6,33 @@ Evidence and the running log of findings: [checkpoints/cutover.md](checkpoints/c
 
 ## 1. Verification status
 
-**Differential tests against Play.** Eight corpora (read, admin CRUD, annotation/task lifecycle through real tracingstores, authentication/sessions, jobs with the worker protocol and AI models, dataset uploads through real datastores, OIDC single sign-on against a mock provider, passkeys with a virtual authenticator) are replayed against Play and Rust on identical database clones; responses and the full resulting database state are compared. All mismatches found were either fixed in Rust or declared with a reason in the corpus. Current result: see the checkpoint (all steps match except declared divergences and one open policy decision, below). Corpus coverage is a subset of the 287 routes; uncovered routes keep the risk profile of their unit/DB tests.
+**Differential tests against Play.** Fifteen corpora (read, admin CRUD, annotation/task lifecycle and annotation flows through real tracingstores, store callbacks, voxelytics, tasks from files, onboarding/organizations, virtual/composed datasets, uploads through real datastores, credits/analytics/emails/maintenance, authentication/sessions, jobs with the worker protocol and AI models, OIDC single sign-on against a mock provider, passkeys with a virtual authenticator) are replayed against Play and Rust on identical database clones; responses and the full resulting database state are compared. All mismatches found were either fixed in Rust or declared with a reason in the corpus. Current result: see the checkpoint (all steps match except declared divergences and one open policy decision, below). **Route coverage: 287 of 287 routes** (`tools/app_differential/coverage.py`, enforced in CI with `--min 287`); four of them only through negative or no-op steps (SSO not configured, analytics ingestion disabled, the initial-data trigger, segment-anything checks before the SAM server call).
 
 **Declared divergences** (behavior intentionally not copied from Play):
 
 | Area | Play | Rust | Why |
 | --- | --- | --- | --- |
 | `Cache-Control` | `no-cache` (none on 401) | `no-store` | API responses must not be stored; no validators exist either way |
-| Router-level errors (unknown route, unparsable path id, wrong method) | HTML error page; 404 also for a wrong method | JSON `{"messages":[…]}`; 405 for a wrong method | API clients only; same status otherwise |
+| Router-level errors (unknown route, unparsable path id or query parameter, missing query parameter, wrong method) | HTML error page; 404 also for a wrong method | JSON `{"messages":[…]}`; 405 for a wrong method | API clients only; same status otherwise |
 | Invalid JSON/form body | `JsError` structure / `Form.toString` (echoes submitted values incl. passwords) | JSON message naming fields | same status; Play leaks input back |
 | `{"chain": …}` debug message | appended on failed Fox chains | omitted | debug-only |
-| Repeated `finish` of an annotation | 400 (bug: `allowFinishSoft(User)` delegates to `allowFinish`) | 200, as documented in `AnnotationService.finish` | follows Scala's intent |
 | `incrementEachTasksInstances` on a project without tasks | 404 (bug: empty aggregate) | 200 with the project | bug fix |
 | Order of lists Play leaves unordered (no `ORDER BY`) or builds from Scala `Set`s | physical row / hash order | Rust's order | not a contract |
 | Failed store RPC (e.g. AI model voxel size) | message embeds the internal RPC URL, a per-process counter and the store's response body | generic "Service returned an unsuccessful status." with the store's status | Rust never forwards upstream bytes or URLs; the user loses the store's reason (e.g. "Could not read model statistics.json"), a candidate for forwarding only the store's `messages[].error` texts |
 | Passkey login with an authenticator that increments its signature counter (e.g. hardware security keys) | 401 after storing the new counter (bug: `oldSignCount` is read after webauthn4j's `verify` updated the record, so `old < new` never holds) | logs in | bug fix; authenticators reporting 0 (synced passkeys) behave the same on both |
 | Passkey registration with a wrong challenge | 400 with webauthn4j's text, which includes the expected challenge | 400, generic message | no internals in responses |
 | Upload reservation with an unknown initial team | 400, but the pending dataset row stays (created before the team check, no transaction) | 400, nothing created | bug fix |
+| Constraint violations (duplicate mag/attachment, unknown layer, layer name check, user already in organization) | 400 with the raw `SQL Failure: … Detail: Key (…)=(…)` text | 400 with a generic text | no database internals in responses |
+| `sendInvites` by a plain member | 400 with team roles; without team roles the invite is stored and mailed (200) | 403 | only admins and team managers invite (hardening 46552fe734) |
+| Worker Job tokens | a new token per handed-out job | a token from the last hour is reused | workers poll every few seconds |
+| `POST /organizations` (super user) with an owner from another organization | 404 after the organization was inserted (owner lookup uses the super user's access context); organization stays without users | 200, owner added, monthly credits granted | bug fix |
+| Session of a user deleted with their organization | stays authenticated until Play's user cache expires (GET /api/user then 404) | 401 | no user cache |
+| `POST /annotations/upload` without the `createGroupForEachFile` field | 500 (`Map.apply` throws) | treated as false | bug fix; the frontend always sends it |
+| Voxelytics events with an unknown `type` | 500 (reads throw) | 400 JSON validation error | bug fix |
+| Voxelytics events of several types in one request | processed in `groupBy(_.getClass)` hash order (per JVM); checksums/profiling for artifacts/chunks created in the same request may be dropped | processed in dependency order | bug fix (not in a corpus: Play's outcome varies per JVM) |
+| NML syntax errors | Xerces' message and position | the Rust XML reader's message | same prefix and status |
+| `addVirtualDataset` by a member without rights | 403 with an empty error text | 403 with the generic not-allowed text | bug fix |
+| `datasets.inboxSourceHash` | Scala case-class `hashCode` | canonical-JSON hash or NULL | not reproducible; one rewrite per dataset on the next datastore report |
 
 **Open policy decision.** An invalid, expired or revoked credential on a *user-aware* route (public dataset/annotation reads, publications, …): Play ignores it and answers as anonymous (200); Rust rejects the request (401). Under Rust, a stale token in `?token=` links or API clients breaks public reads. Decide before stage 2: keep fail-closed (document for API users) or adopt Play's semantics for user-aware routes only.
 

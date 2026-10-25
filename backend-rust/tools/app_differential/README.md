@@ -67,6 +67,7 @@ Reports redact fields whose names contain token/password/secret/key/cookie. The 
 - `jobs_ai.json`: worker protocol (request/status/cancel/retry/voxelytics attach), job submissions and lists, AI model upload-to-path/update/delete, trainings, inferences with Play's pretrained models.
 - `oidc.json`: OIDC login redirect and callback against `oidc_mock.py` (existing/new users, access-token-only claims, bad signature, expired token, missing claim, non-JWT, provider error).
 - `webauthn.json`: passkey registration/authentication with the virtual ES256 authenticator in `webauthn_client.py` (request bodies are built per side from its captured challenge via `"hook"` steps); needs a stack started with `WK_DIFF_PUBLIC_URI=https://localhost:19590` (passkeys refuse http) and is skipped otherwise, see below.
+- `stores.json`: store callbacks called the way the stores call them (`?key=`, user `token`): datastore status, data source reports (`datasource`, `datasources`, `realpaths`, per-dataset get/put), upload reservations and reports for datasets/mags/attachments, deletion, job export properties, credentials, `validateUserAccess` for both stores; tracingstore annotation/dataset/data source lookups, update reports (time tracking, contributors), `updateAnnotation` (protobuf), `createTracing`; datastore/tracingstore administration.
 - `uploads.json`: dataset upload through the datastores (reserve, chunk, finish, cancel, unfinished uploads) with `test/dataset/test-dataset.zip`, upload-to-paths, delete.
 
 ## Route coverage (`coverage.py`)

@@ -64,13 +64,14 @@ fn job_costs_of_empty_bounding_boxes_are_zero() {
 
 #[test]
 fn result_links() {
+    let job = ObjectId::dummy();
     let args = json!({"dataset_name": "ds", "dataset_id": "0123456789abcdef01234567"});
     assert_eq!(
-        result_link("convert_to_wkw", "SUCCESS", &args, None, "j", "org").as_deref(),
+        result_link("convert_to_wkw", "SUCCESS", &args, None, &job, "org").as_deref(),
         Some("/datasets/ds-0123456789abcdef01234567/view")
     );
     assert_eq!(
-        result_link("convert_to_wkw", "FAILURE", &args, None, "j", "org"),
+        result_link("convert_to_wkw", "FAILURE", &args, None, &job, "org"),
         None
     );
     assert_eq!(
@@ -79,7 +80,7 @@ fn result_links() {
             "SUCCESS",
             &json!({"dataset_name": "ds"}),
             None,
-            "j",
+            &job,
             "org"
         )
         .as_deref(),
@@ -91,7 +92,7 @@ fn result_links() {
             "SUCCESS",
             &json!({}),
             Some("name"),
-            "j",
+            &job,
             "org"
         )
         .as_deref(),
@@ -103,15 +104,15 @@ fn result_links() {
             "SUCCESS",
             &json!({"do_evaluation": true}),
             Some("http://link"),
-            "j",
+            &job,
             "org"
         )
         .as_deref(),
         Some("http://link")
     );
     assert_eq!(
-        result_link("export_tiff", "SUCCESS", &json!({}), None, "j1", "org").as_deref(),
-        Some("/api/jobs/j1/export")
+        result_link("export_tiff", "SUCCESS", &json!({}), None, &job, "org").as_deref(),
+        Some("/api/jobs/000000000000000000000000/export")
     );
     assert_eq!(
         result_link(
@@ -119,7 +120,7 @@ fn result_links() {
             "SUCCESS",
             &json!({}),
             Some("5"),
-            "j",
+            &job,
             "org"
         ),
         None
@@ -128,6 +129,7 @@ fn result_links() {
 
 #[test]
 fn inference_result_links_follow_the_return_value() {
+    let job = ObjectId::dummy();
     const COMMANDS: [&str; 7] = [
         "infer_nuclei",
         "infer_neurons",
@@ -138,7 +140,7 @@ fn inference_result_links_follow_the_return_value() {
         "infer_instances",
     ];
     let link = |command: &str, args: &serde_json::Value, return_value: Option<&str>| {
-        result_link(command, "SUCCESS", args, return_value, "j", "org")
+        result_link(command, "SUCCESS", args, return_value, &job, "org")
     };
     for command in COMMANDS {
         let plain = json!({});
@@ -171,7 +173,7 @@ fn inference_result_links_follow_the_return_value() {
                 "FAILURE",
                 &plain,
                 Some("/annotations/abc"),
-                "j",
+                &job,
                 "org"
             ),
             None

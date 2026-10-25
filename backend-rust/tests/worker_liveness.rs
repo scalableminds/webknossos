@@ -8,12 +8,13 @@ use std::{
 
 use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 use chrono::{DateTime, Utc};
-use common::{TestDb, object_id};
+use common::TestDb;
 use serde_json::{Value, json};
 use webknossos_backend::{
     background::scheduler::{JobOutcome, JobSchedule, advisory_lock_key, try_advisory_xact_lock},
     background::worker_liveness::{JOB_NAME, WorkerLivenessConfig, WorkerLivenessMonitor},
     slack::{COLOR_SUCCESS, COLOR_WARN, SlackConfig, SlackNotificationService, format_heartbeat},
+    util::id::ObjectId,
 };
 
 const PUBLIC_URI: &str = "http://wk.example";
@@ -65,7 +66,7 @@ fn attachment(title: &str, text: &str, color: &str) -> Value {
     }]})
 }
 
-fn missing(name: &str, id: &str, heartbeat: DateTime<Utc>, now: DateTime<Utc>) -> Value {
+fn missing(name: &str, id: &ObjectId, heartbeat: DateTime<Utc>, now: DateTime<Utc>) -> Value {
     attachment(
         "Worker missing",
         &format!(
@@ -76,7 +77,7 @@ fn missing(name: &str, id: &str, heartbeat: DateTime<Utc>, now: DateTime<Utc>) -
     )
 }
 
-fn returned(name: &str, id: &str, heartbeat: DateTime<Utc>, now: DateTime<Utc>) -> Value {
+fn returned(name: &str, id: &ObjectId, heartbeat: DateTime<Utc>, now: DateTime<Utc>) -> Value {
     attachment(
         "Worker return",
         &format!(
@@ -97,7 +98,7 @@ async fn seed_worker(
     name: &str,
     last_heart_beat: DateTime<Utc>,
     deleted: bool,
-) -> String {
+) -> ObjectId {
     sqlx::query(
         "INSERT INTO webknossos.dataStores (name,url,publicUrl,key) \
          VALUES ('test-store','http://127.0.0.1:9','http://127.0.0.1:9','key') ON CONFLICT DO NOTHING",
@@ -105,7 +106,7 @@ async fn seed_worker(
     .execute(&db.pool)
     .await
     .unwrap();
-    let id = object_id();
+    let id = ObjectId::new();
     sqlx::query(
         "INSERT INTO webknossos.workers (_id,_dataStore,name,key,lastHeartBeat,isDeleted) \
          VALUES ($1,'test-store',$2,$3,$4,$5)",
@@ -121,7 +122,7 @@ async fn seed_worker(
     id
 }
 
-async fn set_heart_beat(db: &TestDb, id: &str, last_heart_beat: DateTime<Utc>) {
+async fn set_heart_beat(db: &TestDb, id: &ObjectId, last_heart_beat: DateTime<Utc>) {
     sqlx::query("UPDATE webknossos.workers SET lastHeartBeat = $2 WHERE _id = $1")
         .bind(id)
         .bind(last_heart_beat)

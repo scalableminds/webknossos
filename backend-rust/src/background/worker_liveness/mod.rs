@@ -44,6 +44,7 @@ use crate::{
     },
     config::{ConfigError, Env},
     slack::{self, SlackNotificationService},
+    util::id::ObjectId,
 };
 
 /// Job name: log field and advisory lock identity.
@@ -103,7 +104,7 @@ pub fn config_from_values(
 /// One worker row as the tick needs it.
 #[derive(Clone, Debug, PartialEq, Eq, sqlx::FromRow)]
 pub struct WorkerHeartbeat {
-    pub id: String,
+    pub id: ObjectId,
     pub name: String,
     pub last_heart_beat: DateTime<Utc>,
 }
@@ -124,7 +125,7 @@ pub struct WorkerLivenessMonitor {
     liveness_timeout: Duration,
     re_report_interval: Duration,
     slack: SlackNotificationService,
-    reported_as_dead: Arc<Mutex<HashMap<String, DateTime<Utc>>>>,
+    reported_as_dead: Arc<Mutex<HashMap<ObjectId, DateTime<Utc>>>>,
 }
 
 impl WorkerLivenessMonitor {
@@ -142,12 +143,12 @@ impl WorkerLivenessMonitor {
     }
 
     /// Ids currently in the "reported as dead" store (unexpired at `now`), sorted.
-    pub fn reported_as_dead(&self, now: DateTime<Utc>) -> Vec<String> {
+    pub fn reported_as_dead(&self, now: DateTime<Utc>) -> Vec<ObjectId> {
         let store = self
             .reported_as_dead
             .lock()
             .unwrap_or_else(|e| e.into_inner());
-        let mut ids: Vec<String> = store
+        let mut ids: Vec<ObjectId> = store
             .iter()
             .filter(|(_, expiry)| **expiry > now)
             .map(|(id, _)| id.clone())

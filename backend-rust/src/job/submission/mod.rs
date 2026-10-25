@@ -770,7 +770,7 @@ pub(crate) async fn submit_job(
     enabled: bool,
     user: &AuthUser,
     submission: &Submission<'_>,
-) -> RunResult<String> {
+) -> RunResult<ObjectId> {
     if !enabled {
         return Err(Failure::new(crate::msg::job::NOT_ENABLED).into());
     }
@@ -795,7 +795,7 @@ pub(crate) async fn submit_job(
         return Err(Failure::new(NO_WORKER).into());
     }
     assert_storage_not_exceeded(connection, submission.command, &user.organization_id).await?;
-    let job_id = ObjectId::new().as_str().to_owned();
+    let job_id = ObjectId::new();
     sqlx::query(
         r#"INSERT INTO webknossos.jobs (_id, _owner, _dataStore, command, commandArgs, state, created, isDeleted)
           VALUES ($1, $2, $3, $4, $5, 'PENDING', NOW(), FALSE)"#,
@@ -811,7 +811,7 @@ pub(crate) async fn submit_job(
 }
 
 enum PaidSubmission {
-    Submitted(String),
+    Submitted(ObjectId),
     /// Expected submission failures retain Scala's reservation/refund audit pair.
     Refunded(Failure),
 }
@@ -846,7 +846,7 @@ async fn submit_paid_job(
     if balance < i64::from(cost) {
         return Err(Failure::new(NOT_ENOUGH_CREDITS).into());
     }
-    let transaction_id = ObjectId::new().as_str().to_owned();
+    let transaction_id = ObjectId::new();
     sqlx::query(
         r#"INSERT INTO webknossos.credit_transactions
           (_id, _organization, milli_credit_delta, comment, _paid_job,
@@ -869,7 +869,7 @@ async fn submit_paid_job(
                    transaction_state, credit_state)
                   VALUES ($1, $2, $3, $4, $5, 'Complete', 'Refunding')"#,
             )
-            .bind(ObjectId::new().as_str())
+            .bind(ObjectId::new())
             .bind(&user.organization_id)
             .bind(&transaction_id)
             .bind(cost)
@@ -905,12 +905,12 @@ async fn submit_paid_job(
 /// [`PendingPaidJob::commit`]. Dropping it rolls everything back.
 pub(crate) struct PendingPaidJob {
     transaction: sqlx::Transaction<'static, sqlx::Postgres>,
-    job_id: String,
+    job_id: ObjectId,
     command: &'static str,
 }
 
 impl PendingPaidJob {
-    pub(crate) fn job_id(&self) -> &str {
+    pub(crate) fn job_id(&self) -> &ObjectId {
         &self.job_id
     }
 
@@ -924,7 +924,7 @@ impl PendingPaidJob {
         state: &AppState,
         misc: &MiscState,
         user: &AuthUser,
-    ) -> RunResult<String> {
+    ) -> RunResult<ObjectId> {
         self.transaction.commit().await?;
         let mut properties = Map::new();
         properties.insert("command".into(), json!(self.command));

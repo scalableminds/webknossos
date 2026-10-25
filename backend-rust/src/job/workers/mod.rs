@@ -84,7 +84,7 @@ struct RequestQuery {
 
 #[derive(sqlx::FromRow)]
 struct Worker {
-    id: String,
+    id: ObjectId,
     data_store: String,
     max_high: i32,
     max_low: i32,
@@ -241,7 +241,7 @@ async fn reserve_next_jobs(connection: &mut PgConnection, worker: &Worker) -> Ap
 /// JobDAO.countUnfinishedByWorker.
 async fn count_unfinished(
     connection: &mut PgConnection,
-    worker_id: &str,
+    worker_id: &ObjectId,
     commands: &[String],
 ) -> ApiResult<i64> {
     if commands.is_empty() {
@@ -281,7 +281,7 @@ async fn count_pending(
 /// JobDAO.findAllUnfinishedByWorker / findAllCancellingByWorker (parseAll).
 async fn worker_jobs(
     connection: &mut PgConnection,
-    worker_id: &str,
+    worker_id: &ObjectId,
     condition: &str,
 ) -> ApiResult<Vec<Job>> {
     let mut q = Sql::new("SELECT ");
@@ -354,7 +354,7 @@ async fn insert_job_token(
             statement_timestamp() + $4::bigint * INTERVAL '1 millisecond', $5,
             'Job', statement_timestamp())"#,
     )
-    .bind(ObjectId::new().as_str())
+    .bind(ObjectId::new())
     .bind(&value)
     .bind(user_id)
     .bind(expiry_ms)
@@ -413,7 +413,7 @@ async fn update_status(
     let mut transaction = state.pool.begin().await?;
     find_worker(&mut transaction, &query.key, false).await?;
     // JobDAO.findOne with global access.
-    let before = find_job_global(&mut transaction, id.as_str(), true)
+    let before = find_job_global(&mut transaction, &id, true)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // JobDAO.updateStatus: absent optional fields are written as NULL.
@@ -461,7 +461,7 @@ async fn update_status(
 
 async fn find_job_global(
     connection: &mut PgConnection,
-    job_id: &str,
+    job_id: &ObjectId,
     for_update: bool,
 ) -> ApiResult<Option<Job>> {
     let lock = if for_update { " FOR UPDATE" } else { "" };
@@ -538,8 +538,11 @@ async fn clean_up_if_failed(connection: &mut PgConnection, job: &Job) -> ApiResu
 
 /// CreditTransactionService.completeTransactionOfJob (global access): the pending
 /// reservation of the job, if any, becomes spent.
-async fn complete_transaction_of_job(connection: &mut PgConnection, job_id: &str) -> ApiResult<()> {
-    let pending: Option<String> = sqlx::query_scalar(
+async fn complete_transaction_of_job(
+    connection: &mut PgConnection,
+    job_id: &ObjectId,
+) -> ApiResult<()> {
+    let pending: Option<ObjectId> = sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.credit_transactions_
           WHERE _paid_job = $1 AND transaction_state = 'Pending'
           ORDER BY created_at, _id LIMIT 1 FOR UPDATE"#,
@@ -806,7 +809,7 @@ fn clean_up_upload_files_if_needed(
                 &[
                     ("organizationId", organization),
                     ("directoryName", directory_name),
-                    ("jobId", job_id.clone()),
+                    ("jobId", job_id.to_string()),
                 ],
                 None,
             )
@@ -818,7 +821,10 @@ fn clean_up_upload_files_if_needed(
 }
 
 /// JobDAO.organizationIdForJobId (base tables, `?~> Msg.Job.notFound`).
-async fn organization_for_job(connection: &mut PgConnection, job_id: &str) -> ApiResult<String> {
+async fn organization_for_job(
+    connection: &mut PgConnection,
+    job_id: &ObjectId,
+) -> ApiResult<String> {
     let organization: Option<String> = sqlx::query_scalar(
         r#"SELECT u._organization FROM webknossos.users u
           JOIN webknossos.jobs j ON j._owner = u._id WHERE j._id = $1"#,
@@ -847,7 +853,7 @@ async fn attach_voxelytics_workflow(
     if !voxelytics_enabled {
         return Err(ApiError::bad_request(crate::msg::voxelytics::NOT_ENABLED));
     }
-    let organization = organization_for_job(&mut transaction, id.as_str()).await?;
+    let organization = organization_for_job(&mut transaction, &id).await?;
     // findWorkflowByHashAndOrganization, else upsertWorkflow with a placeholder name.
     // DO NOTHING keeps a concurrently created workflow's real name.
     sqlx::query(
@@ -860,7 +866,7 @@ async fn attach_voxelytics_workflow(
     .execute(&mut *transaction)
     .await?;
     sqlx::query("UPDATE webknossos.jobs SET _voxelytics_workflowHash = $2 WHERE _id = $1")
-        .bind(id.as_str())
+        .bind(&*id)
         .bind(&workflow_hash)
         .execute(&mut *transaction)
         .await?;
@@ -876,7 +882,7 @@ async fn attach_dataset_to_inference(
 ) -> ApiResult<Response> {
     let mut transaction = state.pool.begin().await?;
     find_worker(&mut transaction, &query.key, false).await?;
-    let organization = organization_for_job(&mut transaction, id.as_str()).await?;
+    let organization = organization_for_job(&mut transaction, &id).await?;
     // DatasetDAO.findOneByDirectoryNameAndOrganization with global access (empty Fox).
     let dataset: Option<ObjectId> = sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.datasets_ WHERE directoryName = $1 AND _organization = $2
@@ -888,11 +894,11 @@ async fn attach_dataset_to_inference(
     .await?;
     let dataset = dataset.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // AiInferenceDAO.findOneByJobId (`?~> Msg.AiInference.notFound`).
-    let inference: Option<String> = sqlx::query_scalar(
+    let inference: Option<ObjectId> = sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.aiInferences_ WHERE _inferenceJob = $1
           ORDER BY created, _id LIMIT 1 FOR UPDATE"#,
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .fetch_optional(&mut *transaction)
     .await?;
     let inference =

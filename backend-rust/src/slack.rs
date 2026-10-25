@@ -319,7 +319,7 @@ impl SlackNotificationService {
     pub fn notice_worker_missing(
         &self,
         name: &str,
-        id: &str,
+        id: &ObjectId,
         last_heartbeat: DateTime<Utc>,
         now: DateTime<Utc>,
     ) {
@@ -335,7 +335,7 @@ impl SlackNotificationService {
     pub fn notice_worker_return(
         &self,
         name: &str,
-        id: &str,
+        id: &ObjectId,
         last_heartbeat: DateTime<Utc>,
         now: DateTime<Utc>,
     ) {

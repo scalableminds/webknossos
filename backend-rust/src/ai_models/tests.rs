@@ -2,7 +2,7 @@ use super::*;
 
 fn model(path: Option<&str>, organization: Option<&str>, shared: &[&str]) -> AiModel {
     AiModel {
-        id: "576500000000000000000001".into(),
+        id: ObjectId::parse("576500000000000000000001").unwrap(),
         organization: organization.map(str::to_owned),
         data_store: "store".into(),
         user_id: None,

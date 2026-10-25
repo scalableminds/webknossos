@@ -184,7 +184,7 @@ fn require_enabled(routes: &JobRoutes) -> ApiResult<()> {
 /// A row of webknossos.jobs (JobDAO's Job), with enum columns as text.
 #[derive(sqlx::FromRow, Clone, Debug)]
 pub(crate) struct Job {
-    pub id: String,
+    pub id: ObjectId,
     pub owner: ObjectId,
     pub data_store: String,
     pub command: String,
@@ -192,7 +192,7 @@ pub(crate) struct Job {
     pub state: String,
     pub manual_state: Option<String>,
     #[expect(dead_code, reason = "selected with the job row, not rendered")]
-    pub worker: Option<String>,
+    pub worker: Option<ObjectId>,
     pub workflow_hash: Option<String>,
     pub latest_run_id: Option<String>,
     pub error_details: Option<Value>,
@@ -226,7 +226,7 @@ impl Job {
 pub(crate) async fn find_job(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-    job_id: &str,
+    job_id: &ObjectId,
 ) -> ApiResult<Option<Job>> {
     let mut q = Sql::new("SELECT ");
     q.push(JOB_COLUMNS)
@@ -245,7 +245,7 @@ pub(crate) async fn find_job(
 
 /// JobCompactInfo (JsonAutoFormat: absent optional fields are omitted).
 pub(crate) struct JobCompactInfo {
-    pub id: String,
+    pub id: ObjectId,
     pub command: String,
     pub organization_id: String,
     pub owner_first_name: String,
@@ -399,7 +399,7 @@ pub(crate) fn result_link(
     state: &str,
     args: &Value,
     return_value: Option<&str>,
-    job_id: &str,
+    job_id: &ObjectId,
     organization: &str,
 ) -> Option<String> {
     if state != "SUCCESS" {
@@ -457,7 +457,7 @@ struct ListQuery {
 
 #[derive(sqlx::FromRow)]
 struct CompactRow {
-    id: String,
+    id: ObjectId,
     command: String,
     organization: String,
     first_name: String,
@@ -557,7 +557,7 @@ async fn list(
 
 #[derive(sqlx::FromRow)]
 struct WorkerRow {
-    id: String,
+    id: ObjectId,
     name: String,
     max_high: i32,
     max_low: i32,
@@ -633,7 +633,7 @@ async fn read(
 ) -> ApiResult<Json<Value>> {
     require_enabled(&routes)?;
     let mut connection = state.pool.acquire().await?;
-    let job = find_job(&mut connection, &user.id, id.as_str())
+    let job = find_job(&mut connection, &user.id, &id)
         .await
         .map_err(job_not_found)?
         .ok_or_else(|| ApiError::bad_request(crate::msg::job::NOT_FOUND))?;
@@ -667,7 +667,7 @@ async fn cancel(
 ) -> ApiResult<Json<Value>> {
     require_enabled(&routes)?;
     let mut transaction = serializable(&state.pool).await?;
-    let job = find_job(&mut transaction, &user.id, id.as_str())
+    let job = find_job(&mut transaction, &user.id, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // JobDAO.updateManualState: update access equals read access, checked by find_job.
@@ -701,10 +701,10 @@ async fn cancel(
 /// job's pending reservation, if any. Run inside a SERIALIZABLE transaction.
 pub(crate) async fn refund_transaction_for_job(
     connection: &mut PgConnection,
-    job_id: &str,
+    job_id: &ObjectId,
     is_cancelled: bool,
 ) -> ApiResult<()> {
-    let pending: Option<String> = sqlx::query_scalar(
+    let pending: Option<ObjectId> = sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.credit_transactions_
           WHERE _paid_job = $1 AND transaction_state = 'Pending'
           ORDER BY created_at, _id LIMIT 1 FOR UPDATE"#,
@@ -733,7 +733,7 @@ pub(crate) async fn refund_transaction_for_job(
             $3, 'Complete', 'Refunding'
           FROM webknossos.credit_transactions WHERE _id = $2"#,
     )
-    .bind(ObjectId::new().as_str())
+    .bind(ObjectId::new())
     .bind(&transaction_id)
     .bind(&comment)
     .execute(&mut *connection)
@@ -779,7 +779,7 @@ async fn retry(
 ) -> ApiResult<Json<Value>> {
     require_enabled(&routes)?;
     let mut connection = state.pool.acquire().await?;
-    let job = find_job(&mut connection, &user.id, id.as_str())
+    let job = find_job(&mut connection, &user.id, &id)
         .await
         .map_err(job_not_found)?
         .ok_or_else(|| ApiError::bad_request(crate::msg::job::NOT_FOUND))?;
@@ -814,7 +814,7 @@ async fn retry(
 async fn reserve_credits_for_retry(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-    job_id: &str,
+    job_id: &ObjectId,
 ) -> ApiResult<()> {
     let mut q = Sql::new(
         "SELECT _organization, milli_credit_delta, comment FROM webknossos.credit_transactions_ WHERE _paid_job = ",
@@ -838,7 +838,7 @@ async fn reserve_credits_for_retry(
            transaction_state, credit_state, expiration_date, created_at, updated_at, is_deleted)
           VALUES ($1, $2, $3, $4, $5, 'Pending', 'Pending', NULL, NOW(), NOW(), FALSE)"#,
     )
-    .bind(ObjectId::new().as_str())
+    .bind(ObjectId::new())
     .bind(&organization)
     .bind(delta)
     .bind(&comment)
@@ -873,7 +873,7 @@ async fn redirect_to_export(
     user: AuthUser,
 ) -> ApiResult<Response> {
     let mut connection = state.pool.acquire().await?;
-    let job = find_job(&mut connection, &user.id, id.as_str())
+    let job = find_job(&mut connection, &user.id, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // DataStoreDAO.findOneByName (read access: unrestricted or the user's organization).
@@ -952,7 +952,7 @@ async fn find_or_create_token(
             statement_timestamp() + $4::bigint * INTERVAL '1 millisecond', $5,
             'Authentication', statement_timestamp())"#,
     )
-    .bind(ObjectId::new().as_str())
+    .bind(ObjectId::new())
     .bind(&value)
     .bind(user_id)
     .bind(expiry_ms)

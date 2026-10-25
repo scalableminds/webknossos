@@ -199,11 +199,11 @@ pub fn upload_router(jobs_enabled: bool, upload_to_paths: UploadToPathsConfig) -
 /// are not needed by any serializer and therefore not loaded).
 #[derive(sqlx::FromRow, Clone, Debug)]
 pub(crate) struct AiModel {
-    pub id: String,
+    pub id: ObjectId,
     pub organization: Option<String>,
     pub data_store: String,
     pub user_id: Option<ObjectId>,
-    pub training_job: Option<String>,
+    pub training_job: Option<ObjectId>,
     /// Normalized UPath literal.
     pub path: Option<String>,
     pub upload_to_path_is_pending: bool,
@@ -238,7 +238,7 @@ impl AiModel {
 pub(crate) async fn find_model(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-    model_id: &str,
+    model_id: &ObjectId,
 ) -> ApiResult<Option<AiModel>> {
     let mut q = Sql::new("SELECT ");
     q.push(MODEL_COLUMNS)
@@ -363,7 +363,7 @@ async fn path_with_fallback(
         )
         .await?;
     let base = UPath::parse(&base).map_err(|_| ApiError::from(ServiceError::InvalidJson))?;
-    Ok(base.join(".aiModels").join(&model.id).to_string())
+    Ok(base.join(".aiModels").join(model.id.as_str()).to_string())
 }
 
 /// AiModelService.publicWrites with the requesting user's access context.
@@ -443,7 +443,7 @@ pub(crate) async fn model_public_writes(
 async fn find_model_or_404(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-    model_id: &str,
+    model_id: &ObjectId,
 ) -> ApiResult<AiModel> {
     match find_model(connection, user_id, model_id).await {
         Ok(Some(model)) => Ok(model),
@@ -480,7 +480,7 @@ async fn read_model(
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Value>> {
     let mut connection = state.pool.acquire().await?;
-    let model = find_model_or_404(&mut connection, &user.id, id.as_str()).await?;
+    let model = find_model_or_404(&mut connection, &user.id, &id).await?;
     Ok(ResponseJson(
         model_public_writes(&mut connection, &clients, &user, jobs_enabled, &model).await?,
     ))
@@ -495,7 +495,7 @@ async fn model_voxel_size(
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Value>> {
     let mut connection = state.pool.acquire().await?;
-    let model = find_model_or_404(&mut connection, &user.id, id.as_str()).await?;
+    let model = find_model_or_404(&mut connection, &user.id, &id).await?;
     let store_url = find_data_store_url(&mut connection, &user.id, &model.data_store)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
@@ -516,7 +516,7 @@ async fn find_model_voxel_size(
     if model.is_pretrained {
         let factor = PRETRAINED_VOXEL_SIZES
             .iter()
-            .find(|(pretrained_id, _)| *pretrained_id == model.id)
+            .find(|(pretrained_id, _)| *pretrained_id == model.id.as_str())
             .map(|(_, factor)| *factor)
             .ok_or_else(|| {
                 ApiError::bad_request(format!(
@@ -576,10 +576,10 @@ async fn update_model(
     // fails afterwards; here both happen in one transaction.
     let mut tx = state.pool.begin().await?;
     sqlx::query("SELECT _id FROM webknossos.aiModels WHERE _id = $1 FOR UPDATE")
-        .bind(id.as_str())
+        .bind(&*id)
         .fetch_optional(&mut *tx)
         .await?;
-    let model = find_model_or_404(&mut tx, &user.id, id.as_str()).await?;
+    let model = find_model_or_404(&mut tx, &user.id, &id).await?;
     if model.organization.as_deref() != Some(user.organization_id.as_str()) {
         return Err(ApiError::bad_request(NOT_OWNED));
     }
@@ -628,7 +628,7 @@ async fn update_model(
     }
     tx.commit().await?;
     let mut connection = state.pool.acquire().await?;
-    let updated = find_model_or_404(&mut connection, &user.id, id.as_str()).await?;
+    let updated = find_model_or_404(&mut connection, &user.id, &id).await?;
     Ok(ResponseJson(
         model_public_writes(&mut connection, &clients, &user, jobs_enabled, &updated).await?,
     ))
@@ -645,20 +645,20 @@ async fn delete_model(
     // FOR UPDATE conflicts with the KEY SHARE lock of a concurrent inference
     // insert (foreign key), so the reference count below cannot go stale.
     sqlx::query("SELECT _id FROM webknossos.aiModels WHERE _id = $1 FOR UPDATE")
-        .bind(id.as_str())
+        .bind(&*id)
         .fetch_optional(&mut *tx)
         .await?;
     let references: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM webknossos.aiInferences_ WHERE _aiModel = $1")
-            .bind(id.as_str())
+            .bind(&*id)
             .fetch_one(&mut *tx)
             .await?;
     if references != 0 {
         return Err(ApiError::bad_request(REFERENCED_BY_INFERENCES));
     }
-    find_model_or_404(&mut tx, &user.id, id.as_str()).await?;
+    find_model_or_404(&mut tx, &user.id, &id).await?;
     sqlx::query("UPDATE webknossos.aiModels SET isDeleted = TRUE WHERE _id = $1")
-        .bind(id.as_str())
+        .bind(&*id)
         .execute(&mut *tx)
         .await?;
     tx.commit().await?;
@@ -692,7 +692,7 @@ fn name_write_failed(name: &str) -> impl Fn(sqlx::Error) -> ApiError + '_ {
 /// (no organization-directory/infix settings, unlike dataset paths).
 fn generate_model_path(
     config: &UploadToPathsConfig,
-    id: &str,
+    id: &ObjectId,
     organization: &str,
     requested_prefix: Option<&str>,
 ) -> ApiResult<String> {
@@ -703,7 +703,7 @@ fn generate_model_path(
     Ok(prefix
         .join(organization)
         .join(".aiModels")
-        .join(id)
+        .join(id.as_str())
         .to_string())
 }
 
@@ -735,10 +735,10 @@ async fn reserve_upload_to_path(
     let model_id = match &body.existing_ai_model_id {
         Some(existing_id) => {
             sqlx::query("SELECT _id FROM webknossos.aiModels WHERE _id = $1 FOR UPDATE")
-                .bind(existing_id.as_str())
+                .bind(existing_id)
                 .fetch_optional(&mut *tx)
                 .await?;
-            let existing = find_model(&mut tx, &user.id, existing_id.as_str())
+            let existing = find_model(&mut tx, &user.id, existing_id)
                 .await?
                 .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
             if existing.organization.as_deref() != Some(user.organization_id.as_str()) {
@@ -779,7 +779,7 @@ async fn reserve_upload_to_path(
             if taken {
                 return Err(ApiError::bad_request(name_taken(&body.name)));
             }
-            let id = ObjectId::new().as_str().to_owned();
+            let id = ObjectId::new();
             let path =
                 generate_model_path(&config, &id, &user.organization_id, path_prefix.as_deref())?;
             // AiModelDAO.insertOne writes no shared organizations; the owning
@@ -822,10 +822,10 @@ async fn finish_upload_to_path(
 ) -> ApiResult<StatusCode> {
     let mut tx = state.pool.begin().await?;
     sqlx::query("SELECT _id FROM webknossos.aiModels WHERE _id = $1 FOR UPDATE")
-        .bind(id.as_str())
+        .bind(&*id)
         .fetch_optional(&mut *tx)
         .await?;
-    let model = find_model(&mut tx, &user.id, id.as_str())
+    let model = find_model(&mut tx, &user.id, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if !model.upload_to_path_is_pending {
@@ -1025,7 +1025,7 @@ async fn run_model_training(
         return Err(Failure::new(name_taken(&body.name)).into());
     }
 
-    let model_id = ObjectId::new().as_str().to_owned();
+    let model_id = ObjectId::new();
     let training_annotations: Vec<Value> = annotations
         .iter()
         .map(|specification| {
@@ -1071,7 +1071,7 @@ async fn run_model_training(
         TRAIN_SUBMIT_FAILED,
     )
     .await?;
-    let job_id = pending.job_id().to_owned();
+    let job_id = pending.job_id().clone();
     // Instant.now has millisecond precision.
     let now = Utc::now();
     let created = DateTime::from_timestamp_millis(now.timestamp_millis()).unwrap_or(now);
@@ -1252,7 +1252,7 @@ async fn run_model_inference(
     let model = match &body.ai_model_id {
         Some(model_id) => {
             let mut connection = state.pool.acquire().await?;
-            match find_model(&mut connection, &user.id, model_id.as_str()).await {
+            match find_model(&mut connection, &user.id, model_id).await {
                 Ok(Some(model)) => Some(model),
                 Ok(None) => return Err(Failure::new(MODEL_NOT_FOUND).into()),
                 Err(error) => {
@@ -1293,7 +1293,7 @@ async fn run_model_inference(
         .checked_div_mag(target_mag.into())
         .ok_or_else(|| crate::job::submission::RunError::Api(ApiError::internal()))?;
 
-    let model_id = body.ai_model_id.as_ref().map(ObjectId::as_str);
+    let model_id = body.ai_model_id.as_ref();
     let model_organization_id = if model.is_pretrained {
         None
     } else {
@@ -1375,8 +1375,8 @@ async fn run_model_inference(
         crate::job::submission::INFERENCE_SUBMIT_FAILED,
     )
     .await?;
-    let inference_id = ObjectId::new().as_str().to_owned();
-    let job_id = pending.job_id().to_owned();
+    let inference_id = ObjectId::new();
+    let job_id = pending.job_id().clone();
     // Instant.now has millisecond precision.
     let now = Utc::now();
     let created = DateTime::from_timestamp_millis(now.timestamp_millis()).unwrap_or(now);
@@ -1417,10 +1417,10 @@ async fn run_model_inference(
 /// A row of webknossos.aiInferences_ (fields needed by the serializer).
 #[derive(sqlx::FromRow, Clone, Debug)]
 pub(crate) struct AiInference {
-    pub id: String,
-    pub ai_model: Option<String>,
+    pub id: ObjectId,
+    pub ai_model: Option<ObjectId>,
     pub new_dataset: Option<ObjectId>,
-    pub inference_job: String,
+    pub inference_job: ObjectId,
     pub new_segmentation_layer_name: String,
     pub mask_annotation_layer_name: Option<String>,
     pub created: DateTime<Utc>,
@@ -1520,7 +1520,7 @@ async fn read_inference(
     let mut q = Sql::new("SELECT ");
     q.push(INFERENCE_COLUMNS)
         .push(" FROM webknossos.aiInferences_ i WHERE i._id = ");
-    q.push_bind(id.as_str()).push(" AND ");
+    q.push_bind(&*id).push(" AND ");
     push_inference_read_access(&mut q, &user.id);
     let inference: AiInference = q
         .build_query_as()

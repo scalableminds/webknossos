@@ -7,9 +7,12 @@ fn values(pairs: &[(&str, &str)]) -> HashMap<String, String> {
         .collect()
 }
 
+const A: &str = "0000000000000000000000aa";
+const B: &str = "0000000000000000000000bb";
+
 fn worker(id: &str, last_heart_beat: DateTime<Utc>) -> WorkerHeartbeat {
     WorkerHeartbeat {
-        id: id.into(),
+        id: ObjectId::parse(id).unwrap(),
         name: format!("worker {id}"),
         last_heart_beat,
     }
@@ -100,14 +103,17 @@ fn evaluate_reports_missing_once_re_reports_after_expiry_and_returns() {
         SlackNotificationService::default(),
     );
     let t0 = Utc::now();
-    let dead = worker("a", t0 - chrono::Duration::minutes(5));
-    let alive = worker("b", t0);
+    let dead = worker(A, t0 - chrono::Duration::minutes(5));
+    let alive = worker(B, t0);
     let changes = monitor.evaluate(&[dead.clone(), alive], t0);
     assert_eq!(changes, vec![LivenessChange::Missing(dead.clone())]);
-    assert_eq!(monitor.reported_as_dead(t0), vec!["a".to_owned()]);
+    assert_eq!(
+        monitor.reported_as_dead(t0),
+        vec![ObjectId::parse(A).unwrap()]
+    );
     // Still missing within the re-report interval: nothing.
     let t1 = t0 + chrono::Duration::minutes(59);
-    let alive = worker("b", t1);
+    let alive = worker(B, t1);
     assert!(monitor.evaluate(&[dead.clone(), alive], t1).is_empty());
     // Entry expired: reported again.
     let t2 = t0 + chrono::Duration::minutes(60);
@@ -116,7 +122,7 @@ fn evaluate_reports_missing_once_re_reports_after_expiry_and_returns() {
         vec![LivenessChange::Missing(dead.clone())]
     );
     // Heartbeat again: return reported once, store emptied.
-    let back = worker("a", t2);
+    let back = worker(A, t2);
     assert_eq!(
         monitor.evaluate(std::slice::from_ref(&back), t2),
         vec![LivenessChange::Returned(back.clone())]
@@ -134,9 +140,9 @@ fn return_after_expiry_is_not_reported() {
         SlackNotificationService::default(),
     );
     let t0 = Utc::now();
-    monitor.evaluate(&[worker("a", t0 - chrono::Duration::minutes(5))], t0);
+    monitor.evaluate(&[worker(A, t0 - chrono::Duration::minutes(5))], t0);
     let t1 = t0 + chrono::Duration::minutes(11);
-    assert!(monitor.evaluate(&[worker("a", t1)], t1).is_empty());
+    assert!(monitor.evaluate(&[worker(A, t1)], t1).is_empty());
 }
 
 #[tokio::test]

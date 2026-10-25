@@ -120,7 +120,7 @@ async fn job_export_properties(
     let mut q = Sql::new("SELECT ");
     q.push(JOB_COLUMNS)
         .push(" FROM webknossos.jobs_ j WHERE j._id=")
-        .push_bind(query.job_id.as_str());
+        .push_bind(&query.job_id);
     let job: Job = q
         .build_query_as()
         .fetch_optional(&state.pool)

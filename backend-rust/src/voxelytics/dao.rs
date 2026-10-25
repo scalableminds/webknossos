@@ -63,7 +63,7 @@ fn push_tasks_with_state(q: &mut Sql<'_>, stale_millis: i64) {
 fn push_chunks_with_state<'a>(
     q: &mut Sql<'a>,
     stale_millis: i64,
-    run_ids: &'a [String],
+    run_ids: &'a [ObjectId],
     task_name: Option<&'a str>,
 ) {
     q.push(
@@ -123,7 +123,7 @@ fn push_visible_runs<'a>(q: &mut Sql<'a>, sees_all: Option<bool>, user: &'a Auth
 fn push_latest_chunk_states_ctes<'a>(
     q: &mut Sql<'a>,
     stale_millis: i64,
-    run_ids: &'a [String],
+    run_ids: &'a [ObjectId],
     task_name: Option<&'a str>,
 ) {
     q.push("chunk_states AS MATERIALIZED (");
@@ -155,7 +155,7 @@ fn push_latest_chunk_states_ctes<'a>(
 fn push_latest_complete_or_skipped_task<'a>(
     q: &mut Sql<'a>,
     stale_millis: i64,
-    run_ids: &'a [String],
+    run_ids: &'a [ObjectId],
     task_name: Option<&'a str>,
 ) {
     q.push(
@@ -240,7 +240,7 @@ impl TaskCounts {
 
 #[derive(Clone, Debug)]
 pub(crate) struct RunEntry {
-    pub id: String,
+    pub id: ObjectId,
     pub name: String,
     pub host_user_name: String,
     pub host_name: String,
@@ -255,7 +255,7 @@ pub(crate) struct RunEntry {
 
 #[derive(Clone, Debug)]
 pub(crate) struct WorkflowListingRunEntry {
-    pub id: String,
+    pub id: ObjectId,
     pub name: String,
     pub host_user_name: String,
     pub host_name: String,
@@ -271,7 +271,7 @@ pub(crate) struct WorkflowListingRunEntry {
 
 #[derive(Clone, Debug)]
 pub(crate) struct TaskRunEntry {
-    pub run_id: String,
+    pub run_id: ObjectId,
     pub task_name: String,
     pub state: String,
     pub begin_time: Timestamp,
@@ -289,8 +289,8 @@ pub(crate) struct CombinedTaskRunEntry {
 
 #[derive(Clone, Debug)]
 pub(crate) struct ArtifactEntry {
-    pub artifact_id: String,
-    pub task_id: String,
+    pub artifact_id: ObjectId,
+    pub task_id: ObjectId,
     pub name: String,
     pub path: String,
     pub file_size: i64,
@@ -298,7 +298,7 @@ pub(crate) struct ArtifactEntry {
     pub version: String,
     pub metadata: Value,
     pub task_name: String,
-    pub foreign_workflow: Option<(String, String)>,
+    pub foreign_workflow: Option<(String, ObjectId)>,
 }
 
 #[derive(Clone, Debug)]
@@ -356,7 +356,7 @@ fn double(row: &sqlx::postgres::PgRow, index: usize) -> sqlx::Result<f64> {
 pub(crate) async fn find_runs(
     pool: &PgPool,
     user: &AuthUser,
-    run_ids: Option<&[String]>,
+    run_ids: Option<&[ObjectId]>,
     workflow_hash: Option<&str>,
     stale_timeout: std::time::Duration,
     allow_unlisted: bool,
@@ -637,7 +637,7 @@ pub(crate) async fn workflow_hash_exists(pool: &PgPool, workflow_hash: &str) -> 
 
 pub(crate) async fn find_task_runs(
     pool: &PgPool,
-    run_ids: &[String],
+    run_ids: &[ObjectId],
     stale_timeout: std::time::Duration,
 ) -> ApiResult<Vec<TaskRunEntry>> {
     let stale_millis = stale_millis(stale_timeout);
@@ -709,7 +709,7 @@ pub(crate) async fn find_task_runs(
 
 pub(crate) async fn find_combined_task_runs(
     pool: &PgPool,
-    run_ids: &[String],
+    run_ids: &[ObjectId],
     stale_timeout: std::time::Duration,
 ) -> ApiResult<Vec<CombinedTaskRunEntry>> {
     let mut q = Sql::new("WITH ");
@@ -762,7 +762,7 @@ pub(crate) async fn find_combined_task_runs(
 pub(crate) async fn find_artifacts(
     pool: &PgPool,
     user: &AuthUser,
-    run_ids: &[String],
+    run_ids: &[ObjectId],
     stale_timeout: std::time::Duration,
 ) -> ApiResult<Vec<ArtifactEntry>> {
     let stale_millis = stale_millis(stale_timeout);
@@ -806,7 +806,7 @@ pub(crate) async fn find_artifacts(
     rows.iter()
         .map(|row| {
             let other_hash: Option<String> = row.try_get(9)?;
-            let other_run: Option<String> = row.try_get(10)?;
+            let other_run: Option<ObjectId> = row.try_get(10)?;
             Ok(ArtifactEntry {
                 artifact_id: row.try_get(0)?,
                 task_id: row.try_get(1)?,
@@ -826,7 +826,7 @@ pub(crate) async fn find_artifacts(
         .map_err(Into::into)
 }
 
-pub(crate) async fn find_tasks(pool: &PgPool, run_id: &str) -> ApiResult<Vec<TaskEntry>> {
+pub(crate) async fn find_tasks(pool: &PgPool, run_id: &ObjectId) -> ApiResult<Vec<TaskEntry>> {
     let rows: Vec<(String, String, Value)> = sqlx::query_as(
         "SELECT t.name, t.task, t.config FROM webknossos.voxelytics_tasks t WHERE _run = $1",
     )
@@ -846,7 +846,7 @@ pub(crate) async fn run_id_by_name_and_workflow_hash(
     run_name: &str,
     workflow_hash: &str,
     user: &AuthUser,
-) -> ApiResult<Option<String>> {
+) -> ApiResult<Option<ObjectId>> {
     Ok(sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.voxelytics_runs
         WHERE name = $1 AND workflow_hash = $2 AND _organization = $3 AND ($4 OR _user = $5)
@@ -863,7 +863,7 @@ pub(crate) async fn run_id_by_name_and_workflow_hash(
 
 pub(crate) async fn run_name_by_id(
     pool: &PgPool,
-    run_id: &str,
+    run_id: &ObjectId,
     organization_id: &str,
 ) -> ApiResult<Option<String>> {
     Ok(sqlx::query_scalar(
@@ -891,7 +891,7 @@ pub(crate) async fn user_id_for_run_name(
 
 pub(crate) async fn chunk_statistics(
     pool: &PgPool,
-    run_ids: &[String],
+    run_ids: &[ObjectId],
     task_name: &str,
     stale_timeout: std::time::Duration,
 ) -> ApiResult<Vec<ChunkStatisticsEntry>> {
@@ -1019,7 +1019,7 @@ pub(crate) async fn chunk_statistics(
 /// of the latest complete-or-skipped run of the task.
 pub(crate) async fn artifact_checksums(
     pool: &PgPool,
-    run_ids: &[String],
+    run_ids: &[ObjectId],
     task_name: &str,
     artifact_name: Option<&str>,
     stale_timeout: std::time::Duration,
@@ -1112,7 +1112,7 @@ pub(crate) struct NewRun<'a> {
 }
 
 /// upsertRun: one run per (organization, name); returns its id.
-pub(crate) async fn upsert_run(conn: &mut PgConnection, run: NewRun<'_>) -> ApiResult<String> {
+pub(crate) async fn upsert_run(conn: &mut PgConnection, run: NewRun<'_>) -> ApiResult<ObjectId> {
     Ok(sqlx::query_scalar(
         r#"INSERT INTO webknossos.voxelytics_runs (_id, _organization, _user, name, username, hostname, voxelyticsVersion, workflow_hash, workflow_yamlContent, workflow_config)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -1127,7 +1127,7 @@ pub(crate) async fn upsert_run(conn: &mut PgConnection, run: NewRun<'_>) -> ApiR
             workflow_config = EXCLUDED.workflow_config
         RETURNING _id"#,
     )
-    .bind(ObjectId::new().as_str())
+    .bind(ObjectId::new())
     .bind(run.organization_id)
     .bind(run.user_id)
     .bind(run.name)
@@ -1143,11 +1143,11 @@ pub(crate) async fn upsert_run(conn: &mut PgConnection, run: NewRun<'_>) -> ApiR
 
 pub(crate) async fn upsert_task(
     conn: &mut PgConnection,
-    run_id: &str,
+    run_id: &ObjectId,
     name: &str,
     task: &str,
     config: &Value,
-) -> ApiResult<String> {
+) -> ApiResult<ObjectId> {
     Ok(sqlx::query_scalar(
         r#"INSERT INTO webknossos.voxelytics_tasks (_id, _run, name, task, config)
         VALUES ($1, $2, $3, $4, $5)
@@ -1157,7 +1157,7 @@ pub(crate) async fn upsert_task(
             config = EXCLUDED.config
         RETURNING _id"#,
     )
-    .bind(ObjectId::new().as_str())
+    .bind(ObjectId::new())
     .bind(run_id)
     .bind(name)
     .bind(task)
@@ -1176,7 +1176,7 @@ pub(crate) struct ArtifactValues<'a> {
 
 pub(crate) async fn upsert_artifact(
     conn: &mut PgConnection,
-    task_id: &str,
+    task_id: &ObjectId,
     name: &str,
     artifact: &ArtifactValues<'_>,
 ) -> ApiResult<()> {
@@ -1191,7 +1191,7 @@ pub(crate) async fn upsert_artifact(
             version = EXCLUDED.version,
             metadata = EXCLUDED.metadata"#,
     )
-    .bind(ObjectId::new().as_str())
+    .bind(ObjectId::new())
     .bind(task_id)
     .bind(name)
     .bind(artifact.path)
@@ -1208,14 +1208,14 @@ pub(crate) async fn upsert_artifact(
 /// task_name, artifact_name, path, file_size, inode_count, version, metadata.
 pub(crate) async fn upsert_artifacts(
     conn: &mut PgConnection,
-    run_id: &str,
+    run_id: &ObjectId,
     rows: &[Value],
 ) -> ApiResult<()> {
     let rows: Vec<Value> = rows
         .iter()
         .map(|row| {
             let mut row = row.clone();
-            row["id"] = json!(ObjectId::new().as_str());
+            row["id"] = json!(ObjectId::new());
             row
         })
         .collect();
@@ -1242,7 +1242,7 @@ pub(crate) async fn upsert_artifacts(
 /// updateRunStates: rows have begin_time, end_time (ISO or null) and state.
 pub(crate) async fn update_run_states(
     conn: &mut PgConnection,
-    run_id: &str,
+    run_id: &ObjectId,
     rows: &[Value],
 ) -> ApiResult<()> {
     sqlx::query(
@@ -1264,7 +1264,7 @@ pub(crate) async fn update_run_states(
 /// updateTaskStates: rows have task_name, begin_time, end_time and state.
 pub(crate) async fn update_task_states(
     conn: &mut PgConnection,
-    run_id: &str,
+    run_id: &ObjectId,
     rows: &[Value],
 ) -> ApiResult<()> {
     sqlx::query(
@@ -1291,14 +1291,14 @@ pub(crate) async fn update_task_states(
 /// begin_time, end_time and state.
 pub(crate) async fn upsert_chunk_states(
     conn: &mut PgConnection,
-    run_id: &str,
+    run_id: &ObjectId,
     rows: &[Value],
 ) -> ApiResult<()> {
     let rows: Vec<Value> = rows
         .iter()
         .map(|row| {
             let mut row = row.clone();
-            row["id"] = json!(ObjectId::new().as_str());
+            row["id"] = json!(ObjectId::new());
             row
         })
         .collect();
@@ -1330,7 +1330,7 @@ pub(crate) async fn upsert_chunk_states(
 /// upsertRunHeartbeatEvents: rows have a timestamp.
 pub(crate) async fn upsert_run_heartbeats(
     conn: &mut PgConnection,
-    run_id: &str,
+    run_id: &ObjectId,
     rows: &[Value],
 ) -> ApiResult<()> {
     sqlx::query(
@@ -1351,7 +1351,7 @@ pub(crate) async fn upsert_run_heartbeats(
 /// hostname, pid, memory, cpu_user, cpu_system and timestamp.
 pub(crate) async fn upsert_chunk_profiling(
     conn: &mut PgConnection,
-    run_id: &str,
+    run_id: &ObjectId,
     rows: &[Value],
 ) -> ApiResult<()> {
     sqlx::query(
@@ -1386,7 +1386,7 @@ pub(crate) async fn upsert_chunk_profiling(
 /// resolved_path, checksum_method, checksum, file_size, last_modified, timestamp.
 pub(crate) async fn upsert_artifact_checksums(
     conn: &mut PgConnection,
-    run_id: &str,
+    run_id: &ObjectId,
     rows: &[Value],
 ) -> ApiResult<()> {
     sqlx::query(

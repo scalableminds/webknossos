@@ -146,7 +146,7 @@ async fn add_credits(
            transaction_state, credit_state, expiration_date, created_at, updated_at, is_deleted)
           VALUES ($1, $2, $3, NULL, $4, NULL, 'Complete', 'AddCredits', $5, NOW(), NOW(), FALSE)"#,
     )
-    .bind(ObjectId::new().as_str())
+    .bind(ObjectId::new())
     .bind(&query.organization_id)
     .bind(milli_credits)
     .bind(comment)
@@ -281,9 +281,9 @@ async fn refund(
     user: AuthUser,
 ) -> ApiResult<StatusCode> {
     require_superuser(&user, "Only super users can manually refund credits")?;
-    let id = transaction_id.as_str();
+    let id = &*transaction_id;
     let mut transaction = serializable(&state.pool).await?;
-    let row: Option<(String, Option<String>, String, String, i32)> = sqlx::query_as(
+    let row: Option<(String, Option<ObjectId>, String, String, i32)> = sqlx::query_as(
         r#"SELECT _organization, _paid_job, transaction_state::text, credit_state::text, milli_credit_delta
           FROM webknossos.credit_transactions WHERE _id = $1 AND NOT is_deleted FOR UPDATE"#,
     )
@@ -317,7 +317,7 @@ async fn refund(
           (_id, _organization, _related_transaction, milli_credit_delta, comment, transaction_state, credit_state)
           VALUES ($1, $2, $3, $4, $5, 'Complete', 'Refunding')"#,
     )
-    .bind(ObjectId::new().as_str())
+    .bind(ObjectId::new())
     .bind(&organization)
     .bind(id)
     .bind(-delta)
@@ -350,7 +350,7 @@ async fn revoke_expired(State(state): State<AppState>, user: AuthUser) -> ApiRes
 /// An expired grant whose revocation failed (rolled back to its savepoint).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct FailedRevocation {
-    pub transaction_id: String,
+    pub transaction_id: ObjectId,
     pub organization_id: String,
 }
 
@@ -370,7 +370,7 @@ pub(crate) async fn revoke_expired_credits(
     let mut failed = Vec::new();
     for organization in organizations {
         let mut transaction = serializable_transaction(pool).await?;
-        let grants: Vec<(String, DateTime<Utc>, i32)> = sqlx::query_as(
+        let grants: Vec<(ObjectId, DateTime<Utc>, i32)> = sqlx::query_as(
             r#"SELECT _id, created_at, milli_credit_delta FROM webknossos.credit_transactions
               WHERE NOT is_deleted AND _organization = $1 AND expiration_date <= NOW()
                 AND credit_state = 'Pending' AND milli_credit_delta > 0
@@ -434,7 +434,7 @@ pub(crate) fn failed_revocations_slack_body(failed: &[FailedRevocation]) -> Stri
 async fn revoke_grant(
     connection: &mut PgConnection,
     organization: &str,
-    grant_id: &str,
+    grant_id: &ObjectId,
     created_at: DateTime<Utc>,
     delta: i32,
 ) -> Result<(), sqlx::Error> {
@@ -481,7 +481,7 @@ async fn revoke_grant(
            transaction_state, credit_state, expiration_date, created_at, updated_at, is_deleted)
           VALUES ($1, $2, $3, $4, $5, NULL, 'Complete', 'Revoking', NULL, NOW(), NOW(), FALSE)"#,
     )
-    .bind(ObjectId::new().as_str())
+    .bind(ObjectId::new())
     .bind(organization)
     .bind(grant_id)
     .bind(-available)
@@ -495,8 +495,8 @@ async fn revoke_grant(
 struct CreditTransaction {
     id: ObjectId,
     organization: String,
-    related_transaction: Option<String>,
-    paid_job: Option<String>,
+    related_transaction: Option<ObjectId>,
+    paid_job: Option<ObjectId>,
     milli_credit_delta: i32,
     comment: String,
     transaction_state: String,
@@ -528,7 +528,7 @@ async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<V
         .into_iter()
         .filter(|transaction| transaction.milli_credit_delta != 0)
     {
-        let paid_job = match transaction.paid_job.as_deref() {
+        let paid_job = match &transaction.paid_job {
             Some(job) => paid_job_json(&mut connection, &user, job).await?,
             None => Value::Null,
         };
@@ -555,7 +555,7 @@ fn compact_free_credits_for_display(
     transactions: Vec<CreditTransaction>,
 ) -> Vec<CreditTransaction> {
     use std::collections::HashMap;
-    let revocation_by_grant: HashMap<String, CreditTransaction> = transactions
+    let revocation_by_grant: HashMap<ObjectId, CreditTransaction> = transactions
         .iter()
         .filter(|t| t.credit_state == "Revoking")
         .filter_map(|t| {
@@ -564,14 +564,12 @@ fn compact_free_credits_for_display(
                 .map(|grant| (grant, t.clone()))
         })
         .collect();
-    let revocation_ids: std::collections::HashSet<&str> = revocation_by_grant
-        .values()
-        .map(|t| t.id.as_str())
-        .collect();
+    let revocation_ids: std::collections::HashSet<&ObjectId> =
+        revocation_by_grant.values().map(|t| &t.id).collect();
     transactions
         .iter()
-        .filter(|t| !revocation_ids.contains(t.id.as_str()))
-        .map(|t| match revocation_by_grant.get(t.id.as_str()) {
+        .filter(|t| !revocation_ids.contains(&t.id))
+        .map(|t| match revocation_by_grant.get(&t.id) {
             Some(revocation) => {
                 let net = t.milli_credit_delta + revocation.milli_credit_delta;
                 CreditTransaction {
@@ -593,7 +591,7 @@ fn compact_free_credits_for_display(
 async fn paid_job_json(
     connection: &mut PgConnection,
     user: &AuthUser,
-    job_id: &str,
+    job_id: &ObjectId,
 ) -> ApiResult<Value> {
     let job = crate::job::routes::find_job(connection, &user.id, job_id)
         .await?

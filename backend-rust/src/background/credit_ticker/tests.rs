@@ -68,14 +68,18 @@ fn failed_revocation_slack_body_matches_scala() {
     use crate::organization::credit_transactions::{
         FailedRevocation, failed_revocations_slack_body,
     };
+    use crate::util::id::ObjectId;
     let failure = |transaction: &str, organization: &str| FailedRevocation {
-        transaction_id: transaction.into(),
+        transaction_id: ObjectId::parse(transaction).unwrap(),
         organization_id: organization.into(),
     };
     assert_eq!(
-        failed_revocations_slack_body(&[failure("t1", "orgA"), failure("t2", "orgB")]),
-        "Failed to revoke credits for transaction t1 for organization orgA.\n\
-             Failed to revoke credits for transaction t2 for organization orgB."
+        failed_revocations_slack_body(&[
+            failure("0123456789abcdef01234567", "orgA"),
+            failure("76543210fedcba9876543210", "orgB")
+        ]),
+        "Failed to revoke credits for transaction 0123456789abcdef01234567 for organization orgA.\n\
+             Failed to revoke credits for transaction 76543210fedcba9876543210 for organization orgB."
     );
 }
 

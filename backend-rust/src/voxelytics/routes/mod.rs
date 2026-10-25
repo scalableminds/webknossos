@@ -645,10 +645,8 @@ struct RunQuery {
     run_id: Option<String>,
 }
 
-fn optional_run_id(run_id: Option<&str>) -> ApiResult<Option<String>> {
-    run_id
-        .map(|id| ObjectId::parse(id).map(String::from))
-        .transpose()
+fn optional_run_id(run_id: Option<&str>) -> ApiResult<Option<ObjectId>> {
+    run_id.map(ObjectId::parse).transpose()
 }
 
 /// GET /voxelytics/workflows/:workflowHash?runId=: the workflow report.
@@ -688,7 +686,7 @@ async fn get_workflow(
             .ok_or_else(|| ApiError::not_found(RUN_NOT_FOUND))?,
         None => &runs[0],
     };
-    let run_ids: Vec<String> = runs.iter().map(|run| run.id.clone()).collect();
+    let run_ids: Vec<ObjectId> = runs.iter().map(|run| run.id.clone()).collect();
     // These queries are independent of each other, so they run concurrently.
     let (task_runs, combined, artifacts, tasks) = tokio::try_join!(
         // Task runs for all runs
@@ -801,7 +799,11 @@ async fn store_workflow_events(
 }
 
 /// All event groups are stored in one transaction, in batches of 500 per type.
-async fn store_events(pool: &sqlx::PgPool, run_id: &str, events: GroupedEvents) -> ApiResult<()> {
+async fn store_events(
+    pool: &sqlx::PgPool,
+    run_id: &ObjectId,
+    events: GroupedEvents,
+) -> ApiResult<()> {
     let mut tx = pool.begin().await?;
     let batch = WORKFLOW_EVENT_INSERT_BATCH_SIZE;
     for chunk in events.run_states.chunks(batch) {
@@ -923,9 +925,9 @@ async fn statistics_runs(
     pool: &sqlx::PgPool,
     user: &AuthUser,
     workflow_hash: &str,
-    run_id: Option<String>,
+    run_id: Option<ObjectId>,
     stale_timeout: Duration,
-) -> ApiResult<Vec<String>> {
+) -> ApiResult<Vec<ObjectId>> {
     let run_ids = run_id.map(|id| vec![id]);
     let runs = dao::find_runs(
         pool,
@@ -1110,7 +1112,7 @@ async fn get_logs(
     ensure_enabled(&misc)?;
     // Same visibility as the other workflow read endpoints (allowUnlisted): all
     // runs of the user's organization (?~> runNotFound ~> 404).
-    let run_name = dao::run_name_by_id(&state.pool, run_id.as_str(), &user.organization_id)
+    let run_name = dao::run_name_by_id(&state.pool, &run_id, &user.organization_id)
         .await?
         .ok_or_else(|| ApiError::not_found(RUN_NOT_FOUND))?;
     let min_level = query

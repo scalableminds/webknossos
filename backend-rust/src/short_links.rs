@@ -19,7 +19,7 @@ pub struct PublicUrl(pub Url);
 #[serde(rename_all = "camelCase")]
 struct ShortLink {
     #[serde(rename = "_id")]
-    _id: String,
+    _id: ObjectId,
     key: String,
     long_link: String,
 }
@@ -60,7 +60,7 @@ async fn create(
     let bytes = *uuid::Uuid::new_v4().as_bytes();
     let key: String = bytes[7..16].iter().map(|b| format!("{b:02x}")).collect();
     let result = sqlx::query_as("INSERT INTO webknossos.shortLinks (_id,key,longLink) VALUES ($1,$2,$3) RETURNING _id,key,longLink AS long_link")
-        .bind(ObjectId::new().as_str()).bind(key).bind(link).fetch_one(&state.pool).await?;
+        .bind(ObjectId::new()).bind(key).bind(link).fetch_one(&state.pool).await?;
     Ok(ResponseJson(result))
 }
 async fn read(

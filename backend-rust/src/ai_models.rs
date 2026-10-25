@@ -26,6 +26,7 @@ use crate::{
     extract::{Json, Path},
     job::routes::Job,
     job::submission::{Failure, RunResult, Submission},
+    sql::Sql,
     stores::client::{ServiceClients, ServiceError},
     system::application_info::MiscState,
     users,
@@ -88,21 +89,38 @@ pub(crate) const PRETRAINED_VOXEL_SIZES: [(&str, [f64; 3]); 4] = [
     ("576500000000000000000004", [179.84, 179.84, 224.0]),
 ];
 
-/// AiModelDAO.readAccessQ for alias `m` ($1 = requesting user): models shared with
-/// or owned by the user's organization, or pretrained; superuser-only models only
-/// for superusers. AiModelDAO has no deleteAccessQ, so this is also delete access.
-pub(crate) const MODEL_READ_ACCESS: &str = r#"((m._id IN (
+/// AiModelDAO.readAccessQ for alias `m`: models shared with or owned by the
+/// user's organization, or pretrained; superuser-only models only for
+/// superusers. AiModelDAO has no deleteAccessQ, so this is also delete access.
+pub(crate) fn push_model_read_access<'a>(q: &mut Sql<'a>, user_id: &'a str) {
+    q.push(
+        r#"((m._id IN (
       SELECT a._aiModel FROM webknossos.aiModel_organizations AS a
       INNER JOIN webknossos.organizations AS o ON a._organization = o._id
-      WHERE o._id IN (SELECT _organization FROM webknossos.users_ WHERE _id = $1))
-    OR m._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $1)
+      WHERE o._id IN (SELECT _organization FROM webknossos.users_ WHERE _id = "#,
+    )
+    .push_bind(user_id)
+    .push(
+        r#"))
+    OR m._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = "#,
+    )
+    .push_bind(user_id)
+    .push(
+        r#")
     OR m.isPretrained)
   AND (NOT m.isSuperUserOnly OR TRUE IN (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN
-    (SELECT _multiUser FROM webknossos.users_ WHERE _id = $1))))"#;
+    (SELECT _multiUser FROM webknossos.users_ WHERE _id = "#,
+    )
+    .push_bind(user_id)
+    .push("))))");
+}
 
-/// AiInferenceDAO.readAccessQ for alias `i` ($1 = requesting user).
-const INFERENCE_READ_ACCESS: &str =
-    "i._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $1)";
+/// AiInferenceDAO.readAccessQ for alias `i`.
+fn push_inference_read_access<'a>(q: &mut Sql<'a>, user_id: &'a str) {
+    q.push("i._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = ")
+        .push_bind(user_id)
+        .push(")");
+}
 
 /// Column list for [`AiModel`] (alias `m`, `_dataStore` trimmed as in AiModelDAO.parse;
 /// shared organizations ordered as in findSharedOrganizationsFor).
@@ -222,14 +240,12 @@ pub(crate) async fn find_model(
     user_id: &str,
     model_id: &str,
 ) -> ApiResult<Option<AiModel>> {
-    let query = format!(
-        "SELECT {MODEL_COLUMNS} FROM webknossos.aiModels_ m WHERE m._id = $2 AND {MODEL_READ_ACCESS}"
-    );
-    let model: Option<AiModel> = sqlx::query_as(&query)
-        .bind(user_id)
-        .bind(model_id)
-        .fetch_optional(&mut *connection)
-        .await?;
+    let mut q = Sql::new("SELECT ");
+    q.push(MODEL_COLUMNS)
+        .push(" FROM webknossos.aiModels_ m WHERE m._id = ");
+    q.push_bind(model_id).push(" AND ");
+    push_model_read_access(&mut q, user_id);
+    let model: Option<AiModel> = q.build_query_as().fetch_optional(&mut *connection).await?;
     model
         .map(|model| {
             model.parse().map_err(|_| {
@@ -243,13 +259,12 @@ pub(crate) async fn find_model(
 
 /// AiModelDAO.findAll. Scala has no ORDER BY; creation order is used for stability.
 async fn list_all_models(connection: &mut PgConnection, user_id: &str) -> ApiResult<Vec<AiModel>> {
-    let query = format!(
-        "SELECT {MODEL_COLUMNS} FROM webknossos.aiModels_ m WHERE {MODEL_READ_ACCESS} ORDER BY m.created, m._id"
-    );
-    let models: Vec<AiModel> = sqlx::query_as(&query)
-        .bind(user_id)
-        .fetch_all(&mut *connection)
-        .await?;
+    let mut q = Sql::new("SELECT ");
+    q.push(MODEL_COLUMNS)
+        .push(" FROM webknossos.aiModels_ m WHERE ");
+    push_model_read_access(&mut q, user_id);
+    q.push(" ORDER BY m.created, m._id");
+    let models: Vec<AiModel> = q.build_query_as().fetch_all(&mut *connection).await?;
     models
         .into_iter()
         .map(AiModel::parse)
@@ -301,13 +316,11 @@ async fn readable_compact_user(
     requesting_user_id: &str,
     user_id: &str,
 ) -> ApiResult<Option<Value>> {
-    let query = format!(
-        "SELECT usr._id FROM webknossos.users_ usr WHERE usr._id = $2 AND {}",
-        users::READ_ACCESS_PREDICATE
-    );
-    let readable: Option<String> = sqlx::query_scalar(&query)
-        .bind(requesting_user_id)
-        .bind(user_id)
+    let mut q = Sql::new("SELECT usr._id FROM webknossos.users_ usr WHERE usr._id = ");
+    q.push_bind(user_id).push(" AND ");
+    users::push_read_access(&mut q, requesting_user_id.into());
+    let readable: Option<String> = q
+        .build_query_scalar()
         .fetch_optional(&mut *connection)
         .await?;
     if readable.is_none() {
@@ -754,14 +767,12 @@ async fn reserve_upload_to_path(
         None => {
             // AiModelDAO.findOneByName(name).reverse: any model readable by the
             // user (also of other organizations or pretrained) blocks the name.
-            let query = format!(
-                "SELECT EXISTS (SELECT 1 FROM webknossos.aiModels_ m WHERE m.name = $2 AND {MODEL_READ_ACCESS})"
-            );
-            let taken: bool = sqlx::query_scalar(&query)
-                .bind(&user.id)
-                .bind(&body.name)
-                .fetch_one(&mut *tx)
-                .await?;
+            let mut q =
+                Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.aiModels_ m WHERE m.name = ");
+            q.push_bind(&body.name).push(" AND ");
+            push_model_read_access(&mut q, &user.id);
+            q.push(")");
+            let taken: bool = q.build_query_scalar().fetch_one(&mut *tx).await?;
             if taken {
                 return Err(ApiError::bad_request(name_taken(&body.name)));
             }
@@ -1447,15 +1458,12 @@ pub(crate) async fn inference_public_writes(
     };
     let dataset_json = match &inference.new_dataset {
         Some(dataset_id) => {
-            let readable: bool = sqlx::query_scalar(&format!(
-                "SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = $3 AND {})",
-                crate::dataset::access::READ_PREDICATE
-            ))
-            .bind(&user.id)
-            .bind(None::<String>)
-            .bind(dataset_id)
-            .fetch_one(&mut *connection)
-            .await?;
+            let mut q =
+                Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = ");
+            q.push_bind(dataset_id).push(" AND ");
+            crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+            q.push(")");
+            let readable: bool = q.build_query_scalar().fetch_one(&mut *connection).await?;
             if !readable {
                 return Err(empty());
             }
@@ -1487,13 +1495,12 @@ async fn list_inferences(
 ) -> ApiResult<ResponseJson<Vec<Value>>> {
     let mut connection = state.pool.acquire().await?;
     // AiInferenceDAO.findAll has no ORDER BY; creation order is used for stability.
-    let query = format!(
-        "SELECT {INFERENCE_COLUMNS} FROM webknossos.aiInferences_ i WHERE {INFERENCE_READ_ACCESS} ORDER BY i.created, i._id"
-    );
-    let inferences: Vec<AiInference> = sqlx::query_as(&query)
-        .bind(&user.id)
-        .fetch_all(&mut *connection)
-        .await?;
+    let mut q = Sql::new("SELECT ");
+    q.push(INFERENCE_COLUMNS)
+        .push(" FROM webknossos.aiInferences_ i WHERE ");
+    push_inference_read_access(&mut q, &user.id);
+    q.push(" ORDER BY i.created, i._id");
+    let inferences: Vec<AiInference> = q.build_query_as().fetch_all(&mut *connection).await?;
     let mut values = Vec::with_capacity(inferences.len());
     for inference in &inferences {
         values.push(
@@ -1512,12 +1519,13 @@ async fn read_inference(
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Value>> {
     let mut connection = state.pool.acquire().await?;
-    let query = format!(
-        "SELECT {INFERENCE_COLUMNS} FROM webknossos.aiInferences_ i WHERE i._id = $2 AND {INFERENCE_READ_ACCESS}"
-    );
-    let inference: AiInference = sqlx::query_as(&query)
-        .bind(&user.id)
-        .bind(id.as_str())
+    let mut q = Sql::new("SELECT ");
+    q.push(INFERENCE_COLUMNS)
+        .push(" FROM webknossos.aiInferences_ i WHERE i._id = ");
+    q.push_bind(id.as_str()).push(" AND ");
+    push_inference_read_access(&mut q, &user.id);
+    let inference: AiInference = q
+        .build_query_as()
         .fetch_optional(&mut *connection)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::ai_inference::NOT_FOUND))?;

@@ -9,6 +9,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path},
+    sql::Sql,
     util::id::ObjectId,
 };
 
@@ -31,8 +32,10 @@ struct Script {
     owner: Value,
 }
 
-// Compact owner JSON is the UserService.compactWrites contract, including memberships.
-pub(crate) const SELECT_SCRIPT: &str = "SELECT s._id AS id, s._owner AS owner_id, s.name, s.gist,
+/// Live scripts; callers append further conditions. Compact owner JSON is the
+/// UserService.compactWrites contract, including memberships.
+pub(crate) const SELECT_LIVE_SCRIPTS: &str =
+    "SELECT s._id AS id, s._owner AS owner_id, s.name, s.gist,
     jsonb_build_object('id', u._id, 'email', m.email, 'firstName', m.firstName,
       'lastName', m.lastName, 'isAdmin', u.isAdmin, 'isDatasetManager', u.isDatasetManager,
       'isActive', NOT u.isDeactivated, 'isAnonymous', false,
@@ -43,7 +46,14 @@ pub(crate) const SELECT_SCRIPT: &str = "SELECT s._id AS id, s._owner AS owner_id
     FROM webknossos.scripts s
     JOIN webknossos.users_ u ON u._id = s._owner
     JOIN webknossos.multiUsers_ m ON m._id = u._multiUser
-    WHERE NOT s.isDeleted AND u._organization = $1";
+    WHERE NOT s.isDeleted";
+
+/// The live scripts of `organization`.
+fn select_scripts(organization: &str) -> Sql<'_> {
+    let mut q = Sql::new(SELECT_LIVE_SCRIPTS);
+    q.push(" AND u._organization = ").push_bind(organization);
+    q
+}
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -52,10 +62,9 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<Vec<Script>>> {
-    let scripts = sqlx::query_as::<_, Script>(&format!("{SELECT_SCRIPT} ORDER BY s._id"))
-        .bind(&user.organization_id)
-        .fetch_all(&state.pool)
-        .await?;
+    let mut q = select_scripts(&user.organization_id);
+    q.push(" ORDER BY s._id");
+    let scripts = q.build_query_as::<Script>().fetch_all(&state.pool).await?;
     Ok(Json(scripts))
 }
 
@@ -65,14 +74,12 @@ async fn find(
     id: &ObjectId,
     lock: bool,
 ) -> ApiResult<Script> {
-    let suffix = if lock {
-        " AND s._id = $2 FOR UPDATE OF s"
-    } else {
-        " AND s._id = $2"
-    };
-    sqlx::query_as::<_, Script>(&format!("{SELECT_SCRIPT}{suffix}"))
-        .bind(organization_id)
-        .bind(id)
+    let mut q = select_scripts(organization_id);
+    q.push(" AND s._id = ").push_bind(id);
+    if lock {
+        q.push(" FOR UPDATE OF s");
+    }
+    q.build_query_as::<Script>()
         .fetch_optional(connection)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::script::not_found(id)))

@@ -4,6 +4,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Path, Query},
+    sql::{PushArg, Requester, Sql},
     util::id::ObjectId,
 };
 use axum::{
@@ -59,16 +60,15 @@ fn state_filter(is_finished: Option<bool>) -> &'static str {
         Some(false) => "a.state='Active'",
     }
 }
-/// Owner ($4) and dataset ($6) filters; the parameters stay bound when unused.
-fn optional_filters(owner: Option<&str>, filters: &Filters) -> String {
-    let mut sql = format!(" AND {}", state_filter(filters.is_finished));
-    if owner.is_some() {
-        sql.push_str(" AND a._user=$4");
+/// State, owner and dataset filters.
+fn push_optional_filters<'a>(q: &mut Sql<'a>, owner: Option<&'a str>, filters: &'a Filters) {
+    q.push(" AND ").push(state_filter(filters.is_finished));
+    if let Some(owner) = owner {
+        q.push(" AND a._user=").push_bind(owner);
     }
-    if filters.dataset_id.is_some() {
-        sql.push_str(" AND a._dataset=$6");
+    if let Some(dataset_id) = &filters.dataset_id {
+        q.push(" AND a._dataset=").push_bind(dataset_id.as_str());
     }
-    sql
 }
 const LAYERS: &str = "SELECT jsonb_agg(jsonb_build_object('tracingId',layer.tracingId,'typ',layer.typ,'name',layer.name,'stats',layer.statistics) ORDER BY layer.tracingId) FROM webknossos.annotation_layers layer WHERE layer._annotation=a._id";
 const COMPACT_USER: &str = r#"SELECT jsonb_build_object('id',u._id,'email',m.email,'firstName',m.firstName,'lastName',m.lastName,
@@ -76,17 +76,16 @@ const COMPACT_USER: &str = r#"SELECT jsonb_build_object('id',u._id,'email',m.ema
     'teams',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',team._id,'name',team.name,'isTeamManager',role.isTeamManager) ORDER BY team._id)
       FROM webknossos.user_team_roles role JOIN webknossos.teams_ team ON team._id=role._team WHERE role._user=u._id AND team._organization=u._organization),'[]'::jsonb))
     FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON m._id=u._multiUser WHERE u._id=$1"#;
-/// Annotation list access (AnnotationDAO.listAccessQ when `shared`); binds
-/// $1 requester id and $2 requester organization.
-pub(crate) fn list_grant(shared: bool) -> String {
+/// Annotation list access (AnnotationDAO.listAccessQ when `shared`).
+pub(crate) fn push_list_grant<'a>(q: &mut Sql<'a>, requester: Requester<'a>, shared: bool) {
     if !shared {
-        return crate::annotation::access::READ_PREDICATE.to_owned();
+        return crate::annotation::access::push_read_predicate(q, requester);
     }
-    let dataset_read = crate::dataset::access::READ_PREDICATE.replace("$2", "NULL::text");
-    format!(
-        "(a._user=$1 OR ({} AND EXISTS(SELECT 1 FROM webknossos.datasets_ d WHERE d._id=a._dataset AND {dataset_read})))",
-        crate::annotation::access::OWNED_OR_SHARED_PREDICATE
-    )
+    q.push("(a._user=").push_arg(requester.id).push(" OR (");
+    crate::annotation::access::push_owned_or_shared_predicate(q, requester);
+    q.push(" AND EXISTS(SELECT 1 FROM webknossos.datasets_ d WHERE d._id=a._dataset AND ");
+    crate::dataset::access::push_read_predicate(q, requester.id, None);
+    q.push(")))");
 }
 fn headers(count: Option<i64>) -> ApiResult<HeaderMap> {
     let mut headers = HeaderMap::new();
@@ -106,21 +105,11 @@ async fn count(
     filters: &Filters,
     shared: bool,
 ) -> ApiResult<i64> {
-    let grant = list_grant(shared);
-    let optional = optional_filters(owner, filters);
-    let query = format!(
-        "SELECT count(*) FROM webknossos.annotations_ a WHERE {grant}{optional} AND a.typ::text=$7"
-    );
-    Ok(sqlx::query_scalar(&query)
-        .bind(&user.id)
-        .bind(&user.organization_id)
-        .bind(user.is_admin)
-        .bind(owner)
-        .bind(filters.is_finished)
-        .bind(filters.dataset_id.as_ref().map(ObjectId::as_str))
-        .bind(typ)
-        .fetch_one(connection)
-        .await?)
+    let mut q = Sql::new("SELECT count(*) FROM webknossos.annotations_ a WHERE ");
+    push_list_grant(&mut q, user.into(), shared);
+    push_optional_filters(&mut q, owner, filters);
+    q.push(" AND a.typ::text=").push_bind(typ);
+    Ok(q.build_query_scalar().fetch_one(connection).await?)
 }
 async fn compact_list(
     connection: &mut PgConnection,
@@ -130,20 +119,33 @@ async fn compact_list(
     shared: bool,
 ) -> ApiResult<Value> {
     let (limit, offset) = filters.pagination()?;
-    let grant = list_grant(shared);
-    let optional = optional_filters(owner, filters);
     // Two steps: select the page of ids over narrow rows first, then build the JSON (layers,
     // tags, shared teams) only for that page instead of for every row up to the offset.
-    let query = format!(
+    let mut q = Sql::new(
         r#"WITH page AS MATERIALIZED (SELECT a._id
         FROM webknossos.annotations_ a JOIN webknossos.users_ u ON u._id=a._user JOIN webknossos.multiUsers_ m ON m._id=u._multiUser
         JOIN webknossos.datasets_ d ON d._id=a._dataset JOIN webknossos.organizations_ organization ON organization._id=d._organization
-        WHERE a.typ='Explorational' AND {grant}{optional}
+        WHERE a.typ='Explorational' AND "#,
+    );
+    push_list_grant(&mut q, user.into(), shared);
+    push_optional_filters(&mut q, owner, filters);
+    q.push(
+        r#"
         AND EXISTS(SELECT 1 FROM webknossos.annotation_layers layer WHERE layer._annotation=a._id)
-        ORDER BY a._id DESC LIMIT $7 OFFSET $8)
+        ORDER BY a._id DESC LIMIT "#,
+    )
+    .push_bind(limit)
+    .push(" OFFSET ")
+    .push_bind(offset)
+    .push(
+        r#")
         SELECT jsonb_build_object('modified',floor(extract(epoch FROM a.modified)*1000)::bigint,'created',floor(extract(epoch FROM a.created)*1000)::bigint,
-        'state',a.state,'id',a._id,'name',a.name,'description',a.description,'typ',a.typ,'stats','{{}}'::jsonb,
-        'isLockedByOwner',a.isLockedByOwner,'annotationLayers',({LAYERS}),'dataSetName',d.name,'datasetId',d._id,'organization',organization._id,
+        'state',a.state,'id',a._id,'name',a.name,'description',a.description,'typ',a.typ,'stats','{}'::jsonb,
+        'isLockedByOwner',a.isLockedByOwner,'annotationLayers',("#,
+    )
+    .push(LAYERS)
+    .push(
+        r#"),'dataSetName',d.name,'datasetId',d._id,'organization',organization._id,
         'visibility',a.visibility,'tracingTime',COALESCE(a.tracingTime,0),'collaborationMode',a.collaborationMode,
         -- annotation.tags ++ Set(dataset.name): Scala's small immutable sets keep insertion order.
         'tags',ARRAY(SELECT tag FROM (SELECT DISTINCT ON (tag) tag,ord FROM unnest(a.tags||ARRAY[d.name]) WITH ORDINALITY t(tag,ord) ORDER BY tag,ord) first ORDER BY ord),
@@ -154,20 +156,10 @@ async fn compact_list(
         FROM page JOIN webknossos.annotations_ a ON a._id=page._id JOIN webknossos.users_ u ON u._id=a._user
         JOIN webknossos.multiUsers_ m ON m._id=u._multiUser JOIN webknossos.datasets_ d ON d._id=a._dataset
         JOIN webknossos.organizations_ organization ON organization._id=d._organization
-        ORDER BY a._id DESC"#
+        ORDER BY a._id DESC"#,
     );
     // Run inside `GENERIC_PLANS` (see there).
-    let values: Vec<Value> = sqlx::query_scalar(&query)
-        .bind(&user.id)
-        .bind(&user.organization_id)
-        .bind(user.is_admin)
-        .bind(owner)
-        .bind(filters.is_finished)
-        .bind(filters.dataset_id.as_ref().map(ObjectId::as_str))
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(connection)
-        .await?;
+    let values: Vec<Value> = q.build_query_scalar().fetch_all(connection).await?;
     Ok(Value::Array(values))
 }
 /// Planning the list statements (permission predicates) takes 5-8 ms, several times their
@@ -290,21 +282,36 @@ pub(crate) async fn full_json_for(
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
     let metadata = crate::annotation::access::find(&mut *connection, user, id, true).await?;
-    let query = format!(
+    let viewer = user.map(|user| user.id.as_str());
+    let mut q = Sql::new(
         r#"SELECT jsonb_build_object('modified',floor(extract(epoch FROM a.modified)*1000)::bigint,'created',floor(extract(epoch FROM a.created)*1000)::bigint,
         'state',a.state,'isLockedByOwner',a.isLockedByOwner,'id',a._id,'name',a.name,'description',a.description,
-        'viewConfiguration',CASE WHEN $2::text IS NULL THEN NULL ELSE (SELECT viewConfiguration FROM webknossos.user_annotationViewConfigurations config WHERE config._annotation=a._id AND config._user IN ($2,a._user) ORDER BY (config._user=$2) DESC LIMIT 1) END,
-        'typ',a.typ,'stats','{{}}'::jsonb,'annotationLayers',COALESCE(({LAYERS}),'[]'::jsonb),'datasetId',d._id,'dataSetName',d.name,'organization',organization._id,
+        'viewConfiguration',CASE WHEN "#,
+    );
+    q.push_bind(viewer)
+        .push(
+            "::text IS NULL THEN NULL ELSE (SELECT viewConfiguration FROM webknossos.user_annotationViewConfigurations config WHERE config._annotation=a._id AND config._user IN (",
+        )
+        .push_bind(viewer)
+        .push(",a._user) ORDER BY (config._user=")
+        .push_bind(viewer)
+        .push(
+            r#") DESC LIMIT 1) END,
+        'typ',a.typ,'stats','{}'::jsonb,'annotationLayers',COALESCE(("#,
+        )
+        .push(LAYERS)
+        .push(
+            r#"),'[]'::jsonb),'datasetId',d._id,'dataSetName',d.name,'organization',organization._id,
         'visibility',a.visibility,'tracingTime',a.tracingTime,'collaborationMode',a.collaborationMode,
         'tags',ARRAY(SELECT tag FROM (SELECT DISTINCT ON (tag) tag,ord FROM unnest(a.tags||ARRAY[d.name]) WITH ORDINALITY t(tag,ord) ORDER BY tag,ord) first ORDER BY ord),
         'teams',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',team._id,'name',team.name,'organization',team._organization,'isOrganizationTeam',team.isOrganizationTeam) ORDER BY team._id)
           FROM webknossos.annotation_sharedTeams shared JOIN webknossos.teams_ team ON team._id=shared._team JOIN webknossos.organizations_ team_org ON team_org._id=team._organization WHERE shared._annotation=a._id),'[]'::jsonb),
         'tracingStore',(SELECT jsonb_build_object('name',store.name,'url',store.publicUrl) FROM webknossos.tracingStores_ store LIMIT 1))
-        FROM webknossos.annotations_ a JOIN webknossos.datasets_ d ON d._id=a._dataset JOIN webknossos.organizations_ organization ON organization._id=d._organization WHERE a._id=$1"#
-    );
-    let mut value: Value = sqlx::query_scalar(&query)
-        .bind(id)
-        .bind(user.map(|user| user.id.as_str()))
+        FROM webknossos.annotations_ a JOIN webknossos.datasets_ d ON d._id=a._dataset JOIN webknossos.organizations_ organization ON organization._id=d._organization WHERE a._id="#,
+        )
+        .push_bind(id);
+    let mut value: Value = q
+        .build_query_scalar()
         .fetch_optional(&mut *connection)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::annotation::DATASET_MISSING))?;
@@ -388,21 +395,17 @@ async fn task_list(
         include_total_count: filters.include_total_count,
     };
     let (limit, offset) = filters.pagination()?;
-    let query = format!(
-        "SELECT a._id FROM webknossos.annotations_ a WHERE {} AND a._user=$4 AND {} AND a.typ='Task' ORDER BY a._id DESC LIMIT $6 OFFSET $7",
-        crate::annotation::access::READ_PREDICATE,
-        state_filter(filters.is_finished)
-    );
-    let ids: Vec<String> = sqlx::query_scalar(&query)
-        .bind(&user.id)
-        .bind(&user.organization_id)
-        .bind(user.is_admin)
-        .bind(owner)
-        .bind(filters.is_finished)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
+    let mut q = Sql::new("SELECT a._id FROM webknossos.annotations_ a WHERE ");
+    crate::annotation::access::push_read_predicate(&mut q, user.into());
+    q.push(" AND a._user=")
+        .push_bind(owner)
+        .push(" AND ")
+        .push(state_filter(filters.is_finished))
+        .push(" AND a.typ='Task' ORDER BY a._id DESC LIMIT ")
+        .push_bind(limit)
+        .push(" OFFSET ")
+        .push_bind(offset);
+    let ids: Vec<String> = q.build_query_scalar().fetch_all(pool).await?;
     let total = if filters.include_total_count == Some(true) {
         Some(
             count(
@@ -470,17 +473,11 @@ async fn task_annotations(
     if !user.can_manage_team(&state.pool, &team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let query = format!(
-        "SELECT a._id FROM webknossos.annotations_ a WHERE a._task=$4 AND a.typ='Task' AND a.state<>'Cancelled' AND {}",
-        crate::annotation::access::READ_PREDICATE
-    );
-    let ids: Vec<String> = sqlx::query_scalar(&query)
-        .bind(&user.id)
-        .bind(&user.organization_id)
-        .bind(user.is_admin)
-        .bind(&id)
-        .fetch_all(&state.pool)
-        .await?;
+    let mut q = Sql::new("SELECT a._id FROM webknossos.annotations_ a WHERE a._task=");
+    q.push_bind(id.as_str())
+        .push(" AND a.typ='Task' AND a.state<>'Cancelled' AND ");
+    crate::annotation::access::push_read_predicate(&mut q, (&user).into());
+    let ids: Vec<String> = q.build_query_scalar().fetch_all(&state.pool).await?;
     let mut connection = state.pool.acquire().await?;
     let mut values = Vec::new();
     for id in ids {

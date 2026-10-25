@@ -11,6 +11,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Path, Query},
+    sql::{PushArg, Requester, Sql},
     util::id::{ObjectId, PathObjectId},
 };
 
@@ -26,14 +27,27 @@ pub fn router() -> Router<AppState> {
 }
 
 /// UserService.isTeamManagerOrAdminOf(requester, target) as SQL over
-/// `users_ u`, with `$1` requester id, `$2` requester organization and `$3`
-/// requester isAdmin. Team deletion removes memberships, so joining `teams_`
-/// only adds organization scoping.
-const MANAGEABLE: &str = r#"(($3 AND u._organization = $2) OR EXISTS(
+/// `users_ u`. Team deletion removes memberships, so joining `teams_` only
+/// adds organization scoping.
+fn push_manageable<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+    q.push("((")
+        .push_bind(requester.is_admin)
+        .push(" AND u._organization = ")
+        .push_arg(requester.organization)
+        .push(
+            ") OR EXISTS(
     SELECT 1 FROM webknossos.user_team_roles target_role
-    JOIN webknossos.teams_ team ON team._id = target_role._team AND team._organization = $2
+    JOIN webknossos.teams_ team ON team._id = target_role._team AND team._organization = ",
+        )
+        .push_arg(requester.organization)
+        .push(
+            "
     JOIN webknossos.user_team_roles manager_role ON manager_role._team = team._id
-    WHERE target_role._user = u._id AND manager_role._user = $1 AND manager_role.isTeamManager))"#;
+    WHERE target_role._user = u._id AND manager_role._user = ",
+        )
+        .push_arg(requester.id)
+        .push(" AND manager_role.isTeamManager))");
+}
 
 /// A user visible through UserDAO.readAccessQ (self or manageable), with the
 /// facts UserService.isEditableBy / isTeamManagerOrAdminOf derive from it.
@@ -51,19 +65,26 @@ impl TargetUser {
 }
 
 async fn require_user(pool: &PgPool, requester: &AuthUser, id: &ObjectId) -> ApiResult<TargetUser> {
-    sqlx::query_as::<_, TargetUser>(&format!(
-        r#"SELECT u._id AS id, {MANAGEABLE} AS manageable,
+    let mut q = Sql::new("SELECT u._id AS id, ");
+    push_manageable(&mut q, requester.into());
+    q.push(
+        " AS manageable,
              EXISTS(SELECT 1 FROM webknossos.user_team_roles r WHERE r._user = u._id) AS has_teams
            FROM webknossos.users_ u
-           WHERE u._id = $4 AND u._organization = $2 AND (u._id = $1 OR {MANAGEABLE})"#
-    ))
-    .bind(&requester.id)
-    .bind(&requester.organization_id)
-    .bind(requester.is_admin)
-    .bind(id.as_str())
-    .fetch_optional(pool)
-    .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::user::not_found(id.as_str())))
+           WHERE u._id = ",
+    )
+    .push_bind(id.as_str())
+    .push(" AND u._organization = ")
+    .push_bind(requester.organization_id.as_str())
+    .push(" AND (u._id = ")
+    .push_bind(requester.id.as_str())
+    .push(" OR ");
+    push_manageable(&mut q, requester.into());
+    q.push(")");
+    q.build_query_as::<TargetUser>()
+        .fetch_optional(pool)
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::user::not_found(id.as_str())))
 }
 
 async fn logged_time(
@@ -207,10 +228,24 @@ async fn user_time_filters(
     ))
 }
 
-// $1 user/users, $2 start, $3 end, $4 types, $5 states, $6 projects.
-const SPAN_FILTER: &str = r#"ts.time > 0 AND ts.created >= $2 AND ts.created < $3
-    AND (cardinality($6::text[]) = 0 OR p._id = ANY($6::text[]))
-    AND a.typ::text = ANY($4::text[]) AND a.state::text = ANY($5::text[])"#;
+/// Time spans (alias `ts`, annotation `a`, project `p`) within the filters'
+/// period, annotation types and states, and projects (all if empty).
+fn push_span_filter<'a>(q: &mut Sql<'a>, filters: &'a Filters) {
+    q.push("ts.time > 0 AND ts.created >= ")
+        .push_bind(filters.start)
+        .push(" AND ts.created < ")
+        .push_bind(filters.end);
+    if !filters.projects.is_empty() {
+        q.push(" AND p._id = ANY(")
+            .push_bind(&filters.projects)
+            .push("::text[])");
+    }
+    q.push(" AND a.typ::text = ANY(")
+        .push_bind(&filters.types)
+        .push("::text[]) AND a.state::text = ANY(")
+        .push_bind(&filters.states)
+        .push("::text[])");
+}
 
 async fn spans(
     State(state): State<AppState>,
@@ -222,7 +257,7 @@ async fn spans(
     if filters.types.is_empty() {
         return Ok(ResponseJson(json!([])));
     }
-    let sql = format!(
+    let mut q = Sql::new(
         r#"SELECT jsonb_build_object(
              'userId', ts._user, 'userEmail', mu.email, 'datasetOrganization', o._id,
              'datasetName', d.name, 'annotationId', a._id, 'annotationState', a.state,
@@ -239,18 +274,12 @@ async fn spans(
            LEFT JOIN webknossos.tasks_ t ON a._task = t._id
            LEFT JOIN webknossos.projects_ p ON t._project = p._id
            LEFT JOIN webknossos.taskTypes_ tt ON t._taskType = tt._id
-           WHERE ts._user = $1 AND {SPAN_FILTER}
-           ORDER BY ts.created, ts._id"#
+           WHERE ts._user = "#,
     );
-    let rows: Vec<Value> = sqlx::query_scalar(&sql)
-        .bind(&user.id)
-        .bind(filters.start)
-        .bind(filters.end)
-        .bind(&filters.types)
-        .bind(&filters.states)
-        .bind(&filters.projects)
-        .fetch_all(&state.pool)
-        .await?;
+    q.push_bind(user.id.as_str()).push(" AND ");
+    push_span_filter(&mut q, &filters);
+    q.push(" ORDER BY ts.created, ts._id");
+    let rows: Vec<Value> = q.build_query_scalar().fetch_all(&state.pool).await?;
     Ok(ResponseJson(Value::Array(rows)))
 }
 
@@ -264,15 +293,19 @@ async fn summed_by_annotation(
     if filters.types.is_empty() {
         return Ok(ResponseJson(json!([])));
     }
-    let sql = format!(
-        r#"WITH timeSummedPerAnnotation AS (
+    let mut q = Sql::new(
+        "WITH timeSummedPerAnnotation AS (
              SELECT a._id AS _annotation, t._id AS _task, p.name AS projectName, SUM(ts.time) AS timeSummed
              FROM webknossos.timespans_ ts
              JOIN webknossos.annotations_ a ON ts._annotation = a._id
              LEFT JOIN webknossos.tasks_ t ON a._task = t._id
              LEFT JOIN webknossos.projects_ p ON t._project = p._id
-             WHERE ts._user = $1 AND {SPAN_FILTER}
-             GROUP BY a._id, t._id, p.name
+             WHERE ts._user = ",
+    );
+    q.push_bind(user.id.as_str()).push(" AND ");
+    push_span_filter(&mut q, &filters);
+    q.push(
+        r#" GROUP BY a._id, t._id, p.name
            )
            SELECT jsonb_build_object('annotation', ti._annotation, 'task', ti._task,
              'projectName', ti.projectName, 'timeMillis', ti.timeSummed::bigint,
@@ -280,17 +313,9 @@ async fn summed_by_annotation(
            FROM timeSummedPerAnnotation ti
            JOIN webknossos.annotation_layers al ON al._annotation = ti._annotation
            GROUP BY ti._annotation, ti._task, ti.projectName, ti.timeSummed
-           ORDER BY ti._annotation"#
+           ORDER BY ti._annotation"#,
     );
-    let rows: Vec<Value> = sqlx::query_scalar(&sql)
-        .bind(&user.id)
-        .bind(filters.start)
-        .bind(filters.end)
-        .bind(&filters.types)
-        .bind(&filters.states)
-        .bind(&filters.projects)
-        .fetch_all(&state.pool)
-        .await?;
+    let rows: Vec<Value> = q.build_query_scalar().fetch_all(&state.pool).await?;
     Ok(ResponseJson(Value::Array(rows)))
 }
 
@@ -336,29 +361,44 @@ async fn overview(
     let (start, end) = (instant(query.start)?, instant(query.end)?);
     // UserDAO.findAll (or findAllByTeams: active members of the given teams)
     // plus findAdminsByOrg, all under UserDAO.listAccessQ.
-    let users: Vec<String> = sqlx::query_scalar(&format!(
-        r#"WITH listable AS (
+    let mut q = Sql::new(
+        "WITH listable AS (
              SELECT u._id, u.isAdmin, u.isDeactivated FROM webknossos.users_ u
-             WHERE u._organization = $2 AND (u._id = $1 OR {MANAGEABLE})
-               AND (NOT u.isUnlisted OR $4)
-           )
-           SELECT _id FROM listable WHERE cardinality($5::text[]) = 0
-           UNION SELECT l._id FROM listable l JOIN webknossos.user_team_roles r ON r._user = l._id
-             WHERE r._team = ANY($5::text[]) AND NOT l.isDeactivated
-           UNION SELECT _id FROM listable WHERE isAdmin AND NOT isDeactivated"#
-    ))
-    .bind(&requester.id)
-    .bind(&requester.organization_id)
-    .bind(requester.is_admin)
-    .bind(requester.is_superuser)
-    .bind(&teams)
-    .fetch_all(&state.pool)
-    .await?;
+             WHERE u._organization = ",
+    );
+    q.push_bind(requester.organization_id.as_str())
+        .push(" AND (u._id = ")
+        .push_bind(requester.id.as_str())
+        .push(" OR ");
+    push_manageable(&mut q, (&requester).into());
+    q.push(") AND (NOT u.isUnlisted OR ")
+        .push_bind(requester.is_superuser)
+        .push("))");
+    // All listable users, or the active members of the given teams.
+    if teams.is_empty() {
+        q.push(" SELECT _id FROM listable");
+    } else {
+        q.push(
+            " SELECT l._id FROM listable l JOIN webknossos.user_team_roles r ON r._user = l._id
+             WHERE r._team = ANY(",
+        )
+        .push_bind(&teams)
+        .push("::text[]) AND NOT l.isDeactivated");
+    }
+    q.push(" UNION SELECT _id FROM listable WHERE isAdmin AND NOT isDeactivated");
+    let users: Vec<String> = q.build_query_scalar().fetch_all(&state.pool).await?;
     if users.is_empty() {
         return Ok(ResponseJson(json!([])));
     }
-    let rows: Vec<Value> = sqlx::query_scalar(&format!(
-        r#"SELECT jsonb_build_object(
+    let filters = Filters {
+        start,
+        end,
+        types,
+        states,
+        projects,
+    };
+    let mut q = Sql::new(
+        "SELECT jsonb_build_object(
              'user', jsonb_build_object('id', u._id, 'firstName', mu.firstName,
                'lastName', mu.lastName, 'email', mu.email),
              'timeMillis', SUM(ts.time)::bigint, 'annotationCount', COUNT(DISTINCT a._id))
@@ -368,18 +408,15 @@ async fn overview(
            JOIN webknossos.multiUsers_ mu ON u._multiUser = mu._id
            LEFT JOIN webknossos.tasks_ t ON a._task = t._id
            LEFT JOIN webknossos.projects_ p ON t._project = p._id
-           WHERE u._id = ANY($1::text[]) AND {SPAN_FILTER}
-           GROUP BY u._id, mu.firstName, mu.lastName, mu.email
-           ORDER BY u._id"#
-    ))
-    .bind(&users)
-    .bind(start)
-    .bind(end)
-    .bind(&types)
-    .bind(&states)
-    .bind(&projects)
-    .fetch_all(&state.pool)
-    .await?;
+           WHERE u._id = ANY(",
+    );
+    q.push_bind(&users).push("::text[]) AND ");
+    push_span_filter(&mut q, &filters);
+    q.push(
+        " GROUP BY u._id, mu.firstName, mu.lastName, mu.email
+           ORDER BY u._id",
+    );
+    let rows: Vec<Value> = q.build_query_scalar().fetch_all(&state.pool).await?;
     Ok(ResponseJson(Value::Array(rows)))
 }
 

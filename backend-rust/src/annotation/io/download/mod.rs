@@ -32,7 +32,7 @@ use crate::{
     },
     annotation::provider::{
         AccessContext, AnnotationIdentifier, AnnotationProvider, AnnotationType, ProviderError,
-        RESTRICTIONS_NOT_FOUND,
+        RESTRICTIONS_NOT_FOUND, push_task_list, push_task_read, push_task_type_read,
     },
     auth::{AuthUser, OptionalAuthUser},
     error::{ApiError, ApiResult},
@@ -40,6 +40,7 @@ use crate::{
     extract::extension,
     job::submission::{Failure, RunError, RunResult},
     proto::{AnnotationUserStateProto, SkeletonTracing, VolumeTracing},
+    sql::Sql,
     stores::client::ServiceError,
     stores::tracing_client::{
         FetchedVolumeLayer, TracingStoreClient, TracingStoreError, VolumeLayerFetch,
@@ -448,37 +449,6 @@ fn abbreviated_name(first_name: &str, last_name: &str) -> String {
         .replace(' ', "_")
 }
 
-/// TaskDAO.readAccessQ, alias `t` (same text as the annotation provider's):
-/// a role in the project's team, or administrator ($3) of the team's
-/// organization ($2). Anonymous requesters never match.
-const TASK_READ: &str = r#"EXISTS(SELECT 1 FROM webknossos.projects access_project
-    JOIN webknossos.teams access_team ON access_team._id=access_project._team
-    WHERE access_project._id=t._project AND access_team._organization=$2 AND ($3 OR EXISTS(
-      SELECT 1 FROM webknossos.user_team_roles role WHERE role._user=$1 AND role._team=access_project._team)))"#;
-
-/// TaskDAO.listAccessQ: team manager of the project's team or administrator.
-const TASK_LIST: &str = r#"EXISTS(SELECT 1 FROM webknossos.projects access_project
-    JOIN webknossos.teams access_team ON access_team._id=access_project._team
-    WHERE access_project._id=t._project AND access_team._organization=$2 AND ($3 OR EXISTS(
-      SELECT 1 FROM webknossos.user_team_roles role WHERE role._user=$1 AND role._team=access_project._team AND role.isTeamManager)))"#;
-
-/// ProjectDAO.readAccessQ, alias `p`.
-const PROJECT_READ: &str = r#"(p._organization=$2 AND (p._owner=$1 OR $3 OR EXISTS(
-    SELECT 1 FROM webknossos.user_team_roles role WHERE role._user=$1 AND role._team=p._team)))"#;
-
-/// TaskTypeDAO.readAccessQ, alias `tt`.
-const TASK_TYPE_READ: &str = r#"(tt._organization=$2 AND ($3 OR EXISTS(
-    SELECT 1 FROM webknossos.user_team_roles role WHERE role._user=$1 AND role._team=tt._team)))"#;
-
-/// `$1` requester id, `$2` requester organization, `$3` requester is admin.
-fn requester_binds(user: Option<&AuthUser>) -> (Option<&str>, Option<&str>, bool) {
-    (
-        user.map(|u| u.id.as_str()),
-        user.map(|u| u.organization_id.as_str()),
-        user.is_some_and(|u| u.is_admin),
-    )
-}
-
 /// TaskDAO.findOne: globally (`requester = None`) or under the requester's
 /// read access (`Some(user_opt)`).
 async fn task_exists(
@@ -486,17 +456,14 @@ async fn task_exists(
     task_id: &str,
     requester: Option<Option<&AuthUser>>,
 ) -> ApiResult<bool> {
-    let (user_id, organization, is_admin) = requester_binds(requester.flatten());
-    Ok(sqlx::query_scalar(&format!(
-        "SELECT EXISTS(SELECT 1 FROM webknossos.tasks_ t WHERE t._id=$4 AND ($5 OR {TASK_READ}))"
-    ))
-    .bind(user_id)
-    .bind(organization)
-    .bind(is_admin)
-    .bind(task_id)
-    .bind(requester.is_none())
-    .fetch_one(pool)
-    .await?)
+    let mut q = Sql::new("SELECT EXISTS(SELECT 1 FROM webknossos.tasks_ t WHERE t._id=");
+    q.push_bind(task_id);
+    if let Some(user) = requester {
+        q.push(" AND ");
+        push_task_read(&mut q, user.into());
+    }
+    q.push(")");
+    Ok(q.build_query_scalar().fetch_one(pool).await?)
 }
 
 /// TextUtils.normalize (umlaut and accent replacement map).
@@ -1152,16 +1119,10 @@ async fn find_project(
     user: &AuthUser,
     project_id: &str,
 ) -> ApiResult<Option<(String, String)>> {
-    let (user_id, organization, is_admin) = requester_binds(Some(user));
-    Ok(sqlx::query_as(&format!(
-        "SELECT p._team,p.name FROM webknossos.projects_ p WHERE p._id=$4 AND {PROJECT_READ}"
-    ))
-    .bind(user_id)
-    .bind(organization)
-    .bind(is_admin)
-    .bind(project_id)
-    .fetch_optional(pool)
-    .await?)
+    let mut q = Sql::new("SELECT p._team,p.name FROM webknossos.projects_ p WHERE p._id=");
+    q.push_bind(project_id).push(" AND ");
+    crate::projects::push_read_access(&mut q, user.into());
+    Ok(q.build_query_as().fetch_optional(pool).await?)
 }
 
 /// TaskDAO.findOne under the requester: the task's project.
@@ -1170,16 +1131,10 @@ async fn find_task_project(
     user: &AuthUser,
     task_id: &str,
 ) -> ApiResult<Option<String>> {
-    let (user_id, organization, is_admin) = requester_binds(Some(user));
-    Ok(sqlx::query_scalar(&format!(
-        "SELECT t._project FROM webknossos.tasks_ t WHERE t._id=$4 AND {TASK_READ}"
-    ))
-    .bind(user_id)
-    .bind(organization)
-    .bind(is_admin)
-    .bind(task_id)
-    .fetch_optional(pool)
-    .await?)
+    let mut q = Sql::new("SELECT t._project FROM webknossos.tasks_ t WHERE t._id=");
+    q.push_bind(task_id).push(" AND ");
+    push_task_read(&mut q, user.into());
+    Ok(q.build_query_scalar().fetch_optional(pool).await?)
 }
 
 /// TaskTypeDAO.findOne under the requester: (team, summary).
@@ -1188,16 +1143,10 @@ async fn find_task_type(
     user: &AuthUser,
     task_type_id: &str,
 ) -> ApiResult<Option<(String, String)>> {
-    let (user_id, organization, is_admin) = requester_binds(Some(user));
-    Ok(sqlx::query_as(&format!(
-        "SELECT tt._team,tt.summary FROM webknossos.taskTypes_ tt WHERE tt._id=$4 AND {TASK_TYPE_READ}"
-    ))
-    .bind(user_id)
-    .bind(organization)
-    .bind(is_admin)
-    .bind(task_type_id)
-    .fetch_optional(pool)
-    .await?)
+    let mut q = Sql::new("SELECT tt._team,tt.summary FROM webknossos.taskTypes_ tt WHERE tt._id=");
+    q.push_bind(task_type_id).push(" AND ");
+    push_task_type_read(&mut q, user.into());
+    Ok(q.build_query_as().fetch_optional(pool).await?)
 }
 
 /// `Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, team)) ?~>
@@ -1238,15 +1187,16 @@ async fn finished_project_annotations(
     pool: &PgPool,
     project_id: &str,
 ) -> ApiResult<Vec<CompoundRow>> {
-    Ok(sqlx::query_as(&format!(
-        "SELECT {COMPOUND_COLUMNS} FROM webknossos.annotations_ a
+    let mut q = Sql::new("SELECT ");
+    q.push(COMPOUND_COLUMNS)
+        .push(
+            " FROM webknossos.annotations_ a
          JOIN webknossos.tasks_ t ON a._task=t._id
-         WHERE t._project=$1 AND a.typ='Task' AND a.state='Finished'
-         ORDER BY a.created,a._id"
-    ))
-    .bind(project_id)
-    .fetch_all(pool)
-    .await?)
+         WHERE t._project=",
+        )
+        .push_bind(project_id)
+        .push(" AND a.typ='Task' AND a.state='Finished' ORDER BY a.created,a._id");
+    Ok(q.build_query_as().fetch_all(pool).await?)
 }
 
 /// TaskDAO.findAllByTaskType: list access, at most 1000 tasks.
@@ -1255,17 +1205,11 @@ async fn task_type_tasks(
     user: &AuthUser,
     task_type_id: &str,
 ) -> ApiResult<Vec<String>> {
-    let (user_id, organization, is_admin) = requester_binds(Some(user));
-    Ok(sqlx::query_scalar(&format!(
-        "SELECT t._id FROM webknossos.tasks_ t WHERE t._taskType=$4 AND {TASK_LIST}
-         ORDER BY t._id LIMIT 1000"
-    ))
-    .bind(user_id)
-    .bind(organization)
-    .bind(is_admin)
-    .bind(task_type_id)
-    .fetch_all(pool)
-    .await?)
+    let mut q = Sql::new("SELECT t._id FROM webknossos.tasks_ t WHERE t._taskType=");
+    q.push_bind(task_type_id).push(" AND ");
+    push_task_list(&mut q, user.into());
+    q.push(" ORDER BY t._id LIMIT 1000");
+    Ok(q.build_query_scalar().fetch_all(pool).await?)
 }
 
 /// `annotationService.annotationsFor(task)` (readable, non-cancelled Task
@@ -1275,20 +1219,17 @@ async fn finished_task_annotations(
     user: &AuthUser,
     task_ids: &[String],
 ) -> ApiResult<Vec<CompoundRow>> {
-    let (user_id, organization, is_admin) = requester_binds(Some(user));
-    Ok(sqlx::query_as(&format!(
-        "SELECT {COMPOUND_COLUMNS} FROM webknossos.annotations_ a
-         JOIN unnest($4::text[]) WITH ORDINALITY AS requested(task, position) ON requested.task=a._task
-         WHERE a.typ='Task' AND a.state='Finished' AND {}
-         ORDER BY requested.position,a.created,a._id",
-        crate::annotation::access::READ_PREDICATE
-    ))
-    .bind(user_id)
-    .bind(organization)
-    .bind(is_admin)
-    .bind(task_ids)
-    .fetch_all(pool)
-    .await?)
+    let mut q = Sql::new("SELECT ");
+    q.push(COMPOUND_COLUMNS)
+        .push(" FROM webknossos.annotations_ a JOIN unnest(")
+        .push_bind(task_ids)
+        .push(
+            "::text[]) WITH ORDINALITY AS requested(task, position) ON requested.task=a._task
+         WHERE a.typ='Task' AND a.state='Finished' AND ",
+        );
+    crate::annotation::access::push_read_predicate(&mut q, user.into());
+    q.push(" ORDER BY requested.position,a.created,a._id");
+    Ok(q.build_query_as().fetch_all(pool).await?)
 }
 
 /// DatasetDAO.findOne under the requester (AuthorizedAccessContext, no
@@ -1298,19 +1239,16 @@ async fn find_readable_dataset(
     user: &AuthUser,
     dataset_id: &str,
 ) -> ApiResult<Option<DatasetRow>> {
-    Ok(sqlx::query_as(&format!(
+    let mut q = Sql::new(
         "SELECT d._id AS id,d.name,d._organization AS organization,
            CASE WHEN d.voxelSizeFactor IS NULL THEN NULL
              ELSE ARRAY[(d.voxelSizeFactor).x,(d.voxelSizeFactor).y,(d.voxelSizeFactor).z] END AS factor,
            d.voxelSizeUnit::text AS unit
-         FROM webknossos.datasets_ d WHERE d._id=$3 AND {}",
-        crate::dataset::access::READ_PREDICATE
-    ))
-    .bind(&user.id)
-    .bind(None::<&str>)
-    .bind(dataset_id)
-    .fetch_optional(pool)
-    .await?)
+         FROM webknossos.datasets_ d WHERE d._id=",
+    );
+    q.push_bind(dataset_id).push(" AND ");
+    crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+    Ok(q.build_query_as().fetch_optional(pool).await?)
 }
 
 /// Annotation.skeletonTracingId / volumeTracingId: at most one layer of the
@@ -1450,14 +1388,10 @@ async fn single_download_annotation<'a>(
 ) -> RunResult<DownloadAnnotation<'a>> {
     let pool = context.pool();
     // userService.findOneCached under UserDAO read access ?~> Msg.User.notFound
-    let multi_user: Option<String> = sqlx::query_scalar(&format!(
-        "SELECT usr._multiUser FROM webknossos.users_ usr WHERE usr._id=$2 AND {}",
-        users::READ_ACCESS_PREDICATE
-    ))
-    .bind(&user.id)
-    .bind(&row.owner_id)
-    .fetch_optional(pool)
-    .await?;
+    let mut q = Sql::new("SELECT usr._multiUser FROM webknossos.users_ usr WHERE usr._id=");
+    q.push_bind(row.owner_id.as_str()).push(" AND ");
+    users::push_read_access(&mut q, user.id.as_str().into());
+    let multi_user: Option<String> = q.build_query_scalar().fetch_optional(pool).await?;
     let multi_user = multi_user.ok_or_else(|| fail(crate::msg::user::NOT_FOUND_NO_ID))?;
     let owner_name = find_multi_user(pool, &multi_user, true)
         .await?

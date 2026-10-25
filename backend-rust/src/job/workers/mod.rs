@@ -27,6 +27,7 @@ use crate::{
     job::routes::{JOB_COLUMNS, JOB_COMMANDS, JOB_STATES, Job, JobsConfig},
     mail::{Mail, MailSender, templates},
     slack::{self, SlackNotificationService},
+    sql::Sql,
     stores::client::ServiceClients,
     system::application_info::{MiscState, ok_empty},
     util::id::{ObjectId, PathObjectId},
@@ -105,16 +106,14 @@ async fn find_worker(
     for_update: bool,
 ) -> ApiResult<Worker> {
     let lock = if for_update { " FOR UPDATE" } else { "" };
-    let query = format!(
+    let mut q = Sql::new(
         r#"SELECT _id AS id, _dataStore AS data_store, maxParallelHighPriorityJobs AS max_high,
             maxParallelLowPriorityJobs AS max_low, supportedJobCommands AS commands,
             lastReportedVersion AS last_reported_version
-          FROM webknossos.workers_ WHERE key = $1{lock}"#
+          FROM webknossos.workers_ WHERE key = "#,
     );
-    let worker: Option<Worker> = sqlx::query_as(&query)
-        .bind(key)
-        .fetch_optional(&mut *connection)
-        .await?;
+    q.push_bind(key).push(lock);
+    let worker: Option<Worker> = q.build_query_as().fetch_optional(&mut *connection).await?;
     match worker {
         Some(worker)
             if worker
@@ -285,13 +284,14 @@ async fn worker_jobs(
     worker_id: &str,
     condition: &str,
 ) -> ApiResult<Vec<Job>> {
-    let query = format!(
-        "SELECT {JOB_COLUMNS} FROM webknossos.jobs_ j WHERE j._worker = $1 AND {condition} ORDER BY j.created, j._id"
-    );
-    let jobs: Vec<Job> = sqlx::query_as(&query)
-        .bind(worker_id)
-        .fetch_all(&mut *connection)
-        .await?;
+    let mut q = Sql::new("SELECT ");
+    q.push(JOB_COLUMNS)
+        .push(" FROM webknossos.jobs_ j WHERE j._worker = ")
+        .push_bind(worker_id)
+        .push(" AND ")
+        .push(condition)
+        .push(" ORDER BY j.created, j._id");
+    let jobs: Vec<Job> = q.build_query_as().fetch_all(&mut *connection).await?;
     if jobs.iter().any(|job| !job.is_valid()) {
         return Err(ApiError::bad_request(JOBS_PARSING_FAILED));
     }
@@ -465,11 +465,12 @@ async fn find_job_global(
     for_update: bool,
 ) -> ApiResult<Option<Job>> {
     let lock = if for_update { " FOR UPDATE" } else { "" };
-    let query = format!("SELECT {JOB_COLUMNS} FROM webknossos.jobs_ j WHERE j._id = $1{lock}");
-    let job: Option<Job> = sqlx::query_as(&query)
-        .bind(job_id)
-        .fetch_optional(&mut *connection)
-        .await?;
+    let mut q = Sql::new("SELECT ");
+    q.push(JOB_COLUMNS)
+        .push(" FROM webknossos.jobs_ j WHERE j._id = ")
+        .push_bind(job_id)
+        .push(lock);
+    let job: Option<Job> = q.build_query_as().fetch_optional(&mut *connection).await?;
     match job {
         Some(job) if !job.is_valid() => Err(ApiError::bad_request(format!(
             "Parsing failed for row in webknossos.jobs queried by {job_id}"

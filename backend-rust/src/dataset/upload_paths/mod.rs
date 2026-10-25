@@ -14,6 +14,8 @@ use crate::{
     dataset::source::{StaticLayer, UsableDataSource},
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path},
+    remote::datastore::{attachment_upload::push_attachment_key, mag_upload::push_mag_predicate},
+    sql::Sql,
     stores::client::ServiceClients,
     util::id::{ObjectId, PathObjectId},
 };
@@ -283,15 +285,11 @@ pub(crate) async fn add_initial_teams(
             crate::msg::dataset::initial_teams::INVALID_TEAMS,
         ));
     }
-    let readable: bool = sqlx::query_scalar(&format!(
-        "SELECT {} FROM webknossos.datasets_ d WHERE d._id = $3",
-        crate::dataset::access::READ_PREDICATE
-    ))
-    .bind(&user.id)
-    .bind(Option::<&str>::None)
-    .bind(dataset)
-    .fetch_one(&mut *connection)
-    .await?;
+    let mut q = Sql::new("SELECT ");
+    crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+    q.push(" FROM webknossos.datasets_ d WHERE d._id = ")
+        .push_bind(dataset);
+    let readable: bool = q.build_query_scalar().fetch_one(&mut *connection).await?;
     if !readable {
         return Err(ApiError::bad_request(
             crate::msg::dataset::initial_teams::FORBIDDEN,
@@ -532,18 +530,10 @@ async fn reserve_mag_upload_to_path(
         return Err(not_usable(&id));
     }
     let [x, y, z] = body.mag.map(f64::from);
-    let mag_predicate =
-        "_dataset = $1 AND dataLayerName = $2 AND mag = ROW($3, $4, $5)::webknossos.VECTOR3";
-    let pending: Vec<(Option<String>, bool)> = sqlx::query_as(&format!(
-        "SELECT path, uploadToPathIsPending FROM webknossos.dataset_mags WHERE {mag_predicate} AND (uploadToPathIsPending OR uploadIsPending)"
-    ))
-    .bind(id.as_str())
-    .bind(&body.layer_name)
-    .bind(x)
-    .bind(y)
-    .bind(z)
-    .fetch_all(&state.pool)
-    .await?;
+    let mut q = Sql::new("SELECT path, uploadToPathIsPending FROM webknossos.dataset_mags WHERE ");
+    push_mag_predicate(&mut q, id.as_str(), &body.layer_name, [x, y, z]);
+    q.push(" AND (uploadToPathIsPending OR uploadIsPending)");
+    let pending: Vec<(Option<String>, bool)> = q.build_query_as().fetch_all(&state.pool).await?;
     if !pending.is_empty() {
         if !body.overwrite_pending {
             return Err(ApiError::bad_request(
@@ -581,16 +571,10 @@ async fn reserve_mag_upload_to_path(
         .to_string();
     let mut transaction = state.pool.begin().await?;
     if body.overwrite_pending {
-        sqlx::query(&format!(
-            "DELETE FROM webknossos.dataset_mags WHERE {mag_predicate} AND (uploadToPathIsPending OR uploadIsPending)"
-        ))
-        .bind(id.as_str())
-        .bind(&body.layer_name)
-        .bind(x)
-        .bind(y)
-        .bind(z)
-        .execute(&mut *transaction)
-        .await?;
+        let mut q = Sql::new("DELETE FROM webknossos.dataset_mags WHERE ");
+        push_mag_predicate(&mut q, id.as_str(), &body.layer_name, [x, y, z]);
+        q.push(" AND (uploadToPathIsPending OR uploadIsPending)");
+        q.build().execute(&mut *transaction).await?;
     }
     sqlx::query(r#"INSERT INTO webknossos.dataset_mags (_dataset, dataLayerName, mag, path, axisOrder, channelIndex, uploadToPathIsPending, uploadIsPending)
         VALUES ($1, $2, ROW($3, $4, $5)::webknossos.VECTOR3, $6, $7, $8, true, false)"#)
@@ -620,27 +604,29 @@ async fn reserve_attachment_upload_to_path(
         .bind(id.as_str())
         .fetch_one(&mut *transaction)
         .await?;
-    let identity = "_dataset = $1 AND layerName = $2 AND type = $3::webknossos.LAYER_ATTACHMENT_TYPE AND name = $4 AND (uploadIsPending OR uploadToPathIsPending)";
     if body.overwrite_pending.unwrap_or(false) {
-        sqlx::query(&format!(
-            "DELETE FROM webknossos.dataset_layer_attachments WHERE {identity}"
-        ))
-        .bind(id.as_str())
-        .bind(&body.layer_name)
-        .bind(typ)
-        .bind(&body.attachment_name)
-        .execute(&mut *transaction)
-        .await?;
+        let mut q = Sql::new("DELETE FROM webknossos.dataset_layer_attachments WHERE ");
+        push_attachment_key(
+            &mut q,
+            id.as_str(),
+            &body.layer_name,
+            typ,
+            &body.attachment_name,
+        );
+        q.push(" AND (uploadIsPending OR uploadToPathIsPending)");
+        q.build().execute(&mut *transaction).await?;
     } else {
-        let pending: bool = sqlx::query_scalar(&format!(
-            "SELECT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments WHERE {identity})"
-        ))
-        .bind(id.as_str())
-        .bind(&body.layer_name)
-        .bind(typ)
-        .bind(&body.attachment_name)
-        .fetch_one(&mut *transaction)
-        .await?;
+        let mut q =
+            Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments WHERE ");
+        push_attachment_key(
+            &mut q,
+            id.as_str(),
+            &body.layer_name,
+            typ,
+            &body.attachment_name,
+        );
+        q.push(" AND (uploadIsPending OR uploadToPathIsPending))");
+        let pending: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;
         if pending {
             return Err(ApiError::bad_request(
                 crate::msg::dataset::layer::ATTACHMENT_ALREADY_PENDING,

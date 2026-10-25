@@ -48,6 +48,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Path, Query},
+    sql::Sql,
     stores::tracing_client::{DuplicateAnnotationRequest, TracingStoreClient},
     users::notification_emails::NotificationEmailService,
     util::id::ObjectId,
@@ -174,32 +175,24 @@ pub(crate) async fn create_annotation_for(
     task_id: &str,
     initializing_annotation_id: &ObjectId,
 ) -> Result<(), ProviderError> {
-    let base: Option<AnnotationBase> = sqlx::query_as(&format!(
+    let mut q = Sql::new(
         "SELECT a._id AS id,a._dataset AS dataset_id,a._user AS owner_id,a.description,
            a.visibility::text AS visibility,a.name,a.tags,a.tracingTime AS tracing_time,
            a.collaborationMode::text AS collaboration_mode
          FROM webknossos.annotations_ a
-         WHERE a._task=$4 AND a.typ='TracingBase' AND a.state<>'Cancelled' AND {}
-         LIMIT 1",
-        crate::annotation::access::READ_PREDICATE
-    ))
-    .bind(&context_user.id)
-    .bind(&context_user.organization_id)
-    .bind(context_user.is_admin)
-    .bind(task_id)
-    .fetch_optional(pool)
-    .await?;
+         WHERE a._task=",
+    );
+    q.push_bind(task_id)
+        .push(" AND a.typ='TracingBase' AND a.state<>'Cancelled' AND ");
+    crate::annotation::access::push_read_predicate(&mut q, context_user.into());
+    q.push(" LIMIT 1");
+    let base: Option<AnnotationBase> = q.build_query_as().fetch_optional(pool).await?;
     let base = base.ok_or_else(|| ProviderError::failure(BASE_ID_FAILED))?;
 
-    let is_usable: Option<bool> = sqlx::query_scalar(&format!(
-        "SELECT d.isUsable FROM webknossos.datasets_ d WHERE d._id=$3 AND {}",
-        crate::dataset::access::READ_PREDICATE
-    ))
-    .bind(&context_user.id)
-    .bind(None::<&str>)
-    .bind(&base.dataset_id)
-    .fetch_optional(pool)
-    .await?;
+    let mut q = Sql::new("SELECT d.isUsable FROM webknossos.datasets_ d WHERE d._id=");
+    q.push_bind(&base.dataset_id).push(" AND ");
+    crate::dataset::access::push_read_predicate(&mut q, context_user.id.as_str().into(), None);
+    let is_usable: Option<bool> = q.build_query_scalar().fetch_optional(pool).await?;
     match is_usable {
         None => {
             return Err(ProviderError::failure(
@@ -430,15 +423,16 @@ async fn assign_one(
     let pool = &state.pool;
 
     // userService.findOneCached(userId): UserDAO.readAccessQ, Empty → 404.
-    let (assignee_organization, assignee_is_deactivated): (String, bool) = sqlx::query_as(&format!(
-        "SELECT usr._organization, usr.isDeactivated FROM webknossos.users_ usr WHERE usr._id=$2 AND {}",
-        crate::users::READ_ACCESS_PREDICATE
-    ))
-    .bind(&user.id)
-    .bind(&assignee_id)
-    .fetch_optional(pool)
-    .await?
-    .ok_or_else(not_found)?;
+    let mut q = Sql::new(
+        "SELECT usr._organization, usr.isDeactivated FROM webknossos.users_ usr WHERE usr._id=",
+    );
+    q.push_bind(&assignee_id).push(" AND ");
+    crate::users::push_read_access(&mut q, user.id.as_str().into());
+    let (assignee_organization, assignee_is_deactivated): (String, bool) = q
+        .build_query_as()
+        .fetch_optional(pool)
+        .await?
+        .ok_or_else(not_found)?;
 
     // taskDAO.findOne(id): TaskDAO.readAccessQ, Empty → 404.
     let project_id: String = sqlx::query_scalar(

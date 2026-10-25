@@ -23,6 +23,7 @@ use crate::{
     error::{ApiError, ApiResult},
     extract::{Json, Query},
     remote::datastore::ValidatedDataStore,
+    sql::Sql,
     stores::client::ServiceClients,
     util::id::ObjectId,
 };
@@ -36,8 +37,26 @@ const MAG_NOT_PENDING: &str = "This mag is not marked as pending.";
 const MAG_PATH_NOT_SET: &str = "Mag path is required in upload.";
 const DIFFERENT_DATASTORE: &str = "Cannot upload mag to existing dataset via different datastore.";
 
-const MAG_PREDICATE: &str =
-    "_dataset = $1 AND dataLayerName = $2 AND mag = ROW($3, $4, $5)::webknossos.VECTOR3";
+/// The `dataset_mags` row of `dataset`'s layer `layer` at `mag`.
+pub(crate) fn push_mag_predicate<'a>(
+    q: &mut Sql<'a>,
+    dataset: &'a str,
+    layer: &'a str,
+    mag: [f64; 3],
+) {
+    let [x, y, z] = mag;
+    q.push("_dataset = ")
+        .push_bind(dataset)
+        .push(" AND dataLayerName = ")
+        .push_bind(layer)
+        .push(" AND mag = ROW(")
+        .push_bind(x)
+        .push(", ")
+        .push_bind(y)
+        .push(", ")
+        .push_bind(z)
+        .push(")::webknossos.VECTOR3");
+}
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -271,17 +290,12 @@ async fn reserve_mag_upload(
     require_same_datastore(&target, &store.name, DIFFERENT_DATASTORE)?;
     // UploadToPathsService.handleExistingPendingMag (shared with uploadToPaths).
     // findOneWithPendingUploadToPath reads paths with real-path fallback.
-    let pending: Vec<(Option<String>, bool)> = sqlx::query_as(&format!(
-        "SELECT COALESCE(realPath, path), uploadToPathIsPending FROM webknossos.dataset_mags
-         WHERE {MAG_PREDICATE} AND (uploadToPathIsPending OR uploadIsPending)"
-    ))
-    .bind(&target.id)
-    .bind(&body.layer_name)
-    .bind(x)
-    .bind(y)
-    .bind(z)
-    .fetch_all(pool)
-    .await?;
+    let mut q = Sql::new(
+        "SELECT COALESCE(realPath, path), uploadToPathIsPending FROM webknossos.dataset_mags WHERE ",
+    );
+    push_mag_predicate(&mut q, &target.id, &body.layer_name, [x, y, z]);
+    q.push(" AND (uploadToPathIsPending OR uploadIsPending)");
+    let pending: Vec<(Option<String>, bool)> = q.build_query_as().fetch_all(pool).await?;
     if !pending.is_empty() && !body.overwrite_pending {
         return Err(ApiError::bad_request(
             crate::msg::dataset::upload::to_paths::MAG_ALREADY_PENDING,
@@ -312,27 +326,15 @@ async fn reserve_mag_upload(
         .execute(&mut *transaction)
         .await?;
     if body.overwrite_pending {
-        sqlx::query(&format!(
-            "DELETE FROM webknossos.dataset_mags WHERE {MAG_PREDICATE} AND (uploadToPathIsPending OR uploadIsPending)"
-        ))
-        .bind(&target.id)
-        .bind(&body.layer_name)
-        .bind(x)
-        .bind(y)
-        .bind(z)
-        .execute(&mut *transaction)
-        .await?;
+        let mut q = Sql::new("DELETE FROM webknossos.dataset_mags WHERE ");
+        push_mag_predicate(&mut q, &target.id, &body.layer_name, [x, y, z]);
+        q.push(" AND (uploadToPathIsPending OR uploadIsPending)");
+        q.build().execute(&mut *transaction).await?;
     } else {
-        let raced: bool = sqlx::query_scalar(&format!(
-            "SELECT EXISTS (SELECT 1 FROM webknossos.dataset_mags WHERE {MAG_PREDICATE} AND (uploadToPathIsPending OR uploadIsPending))"
-        ))
-        .bind(&target.id)
-        .bind(&body.layer_name)
-        .bind(x)
-        .bind(y)
-        .bind(z)
-        .fetch_one(&mut *transaction)
-        .await?;
+        let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.dataset_mags WHERE ");
+        push_mag_predicate(&mut q, &target.id, &body.layer_name, [x, y, z]);
+        q.push(" AND (uploadToPathIsPending OR uploadIsPending))");
+        let raced: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;
         if raced {
             return Err(ApiError::bad_request(
                 crate::msg::dataset::upload::to_paths::MAG_ALREADY_PENDING,
@@ -397,32 +399,19 @@ async fn report_mag_upload(
         // DatasetMagDAO.finishUpload, guarded by findOneWithPendingUpload in
         // the same statement.
         Some(path) => {
-            sqlx::query(&format!(
-                "UPDATE webknossos.dataset_mags SET uploadToPathIsPending = false, uploadIsPending = false, path = $6
-                 WHERE {MAG_PREDICATE} AND uploadIsPending"
-            ))
-            .bind(id)
-            .bind(&body.layer_name)
-            .bind(x)
-            .bind(y)
-            .bind(z)
-            .bind(&path)
-            .execute(pool)
-            .await?
-            .rows_affected()
-                > 0
+            let mut q = Sql::new(
+                "UPDATE webknossos.dataset_mags SET uploadToPathIsPending = false, uploadIsPending = false, path = ",
+            );
+            q.push_bind(&path).push(" WHERE ");
+            push_mag_predicate(&mut q, id, &body.layer_name, [x, y, z]);
+            q.push(" AND uploadIsPending");
+            q.build().execute(pool).await?.rows_affected() > 0
         }
         None => {
-            let pending: bool = sqlx::query_scalar(&format!(
-                "SELECT EXISTS (SELECT 1 FROM webknossos.dataset_mags WHERE {MAG_PREDICATE} AND uploadIsPending)"
-            ))
-            .bind(id)
-            .bind(&body.layer_name)
-            .bind(x)
-            .bind(y)
-            .bind(z)
-            .fetch_one(pool)
-            .await?;
+            let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.dataset_mags WHERE ");
+            push_mag_predicate(&mut q, id, &body.layer_name, [x, y, z]);
+            q.push(" AND uploadIsPending)");
+            let pending: bool = q.build_query_scalar().fetch_one(pool).await?;
             if pending {
                 return Err(ApiError::bad_request(MAG_PATH_NOT_SET));
             }

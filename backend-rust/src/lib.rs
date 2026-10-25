@@ -22,6 +22,7 @@ pub mod routes;
 pub mod scripts;
 pub mod short_links;
 pub mod slack;
+pub mod sql;
 pub mod state;
 pub mod stores;
 pub mod system;

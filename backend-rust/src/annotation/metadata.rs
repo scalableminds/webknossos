@@ -22,6 +22,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json, Path},
+    sql::{PushArg, Requester, Sql},
     users::notification_emails::{NotificationEmailService, SharedResource},
     util::id::ObjectId,
 };
@@ -283,8 +284,20 @@ fn public_writes_error(error: ApiError) -> ApiError {
 /// TeamDAO read access (member, or admin of the team's organization),
 /// scoped to live teams of the requester's organization like the rest of
 /// the crate; TeamService.publicWrites also needs the live organization.
-const READABLE_TEAM: &str = "team._organization=$2 AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles role WHERE role._team=team._id AND role._user=$1))
-    AND EXISTS(SELECT 1 FROM webknossos.organizations_ organization WHERE organization._id=team._organization)";
+fn push_readable_team<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+    q.push("team._organization=")
+        .push_arg(requester.organization)
+        .push(" AND (")
+        .push_bind(requester.is_admin)
+        .push(
+            " OR EXISTS(SELECT 1 FROM webknossos.user_team_roles role WHERE role._team=team._id AND role._user=",
+        )
+        .push_arg(requester.id)
+        .push(
+            "))
+    AND EXISTS(SELECT 1 FROM webknossos.organizations_ organization WHERE organization._id=team._organization)",
+        );
+}
 
 /// GET /annotations/:typ/:id/sharedTeams (AnnotationController.getSharedTeams).
 async fn shared_teams(
@@ -300,18 +313,15 @@ async fn shared_teams(
     if provided.owner_id() != user.id {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let teams: Vec<Value> = sqlx::query_scalar(&format!(
+    let mut q = Sql::new(
         "SELECT jsonb_build_object('id',team._id,'name',team.name,'organization',team._organization,'isOrganizationTeam',team.isOrganizationTeam)
          FROM webknossos.teams_ team
-         WHERE team._id IN (SELECT shared._team FROM webknossos.annotation_sharedTeams shared WHERE shared._annotation=$4)
-         AND {READABLE_TEAM} ORDER BY team._id"
-    ))
-    .bind(&user.id)
-    .bind(&user.organization_id)
-    .bind(user.is_admin)
-    .bind(provided.id())
-    .fetch_all(&state.pool)
-    .await?;
+         WHERE team._id IN (SELECT shared._team FROM webknossos.annotation_sharedTeams shared WHERE shared._annotation=",
+    );
+    q.push_bind(provided.id()).push(") AND ");
+    push_readable_team(&mut q, (&user).into());
+    q.push(" ORDER BY team._id");
+    let teams: Vec<Value> = q.build_query_scalar().fetch_all(&state.pool).await?;
     Ok(ResponseJson(teams))
 }
 
@@ -348,16 +358,14 @@ async fn update_shared_teams(
     let mut unique: Vec<&String> = team_ids.iter().collect();
     unique.sort();
     unique.dedup();
-    let readable: i64 = sqlx::query_scalar(&format!(
+    let mut q = Sql::new(
         "SELECT count(*) FROM (SELECT team._id FROM webknossos.teams team
-         WHERE NOT team.isDeleted AND team._id=ANY($4) AND {READABLE_TEAM} ORDER BY team._id FOR SHARE OF team) locked"
-    ))
-    .bind(&user.id)
-    .bind(&user.organization_id)
-    .bind(user.is_admin)
-    .bind(&unique)
-    .fetch_one(&mut *transaction)
-    .await?;
+         WHERE NOT team.isDeleted AND team._id=ANY(",
+    );
+    q.push_bind(&unique).push(") AND ");
+    push_readable_team(&mut q, (&user).into());
+    q.push(" ORDER BY team._id FOR SHARE OF team) locked");
+    let readable: i64 = q.build_query_scalar().fetch_one(&mut *transaction).await?;
     if usize::try_from(readable).ok() != Some(unique.len()) {
         return Err(ApiError::bad_request(ACCESSING_TEAM_FAILED));
     }
@@ -372,17 +380,13 @@ async fn update_shared_teams(
     }
     // teamDAO.findSharedTeamsForAnnotation under the requester's access
     // context: the previously shared teams the requester can read.
-    let old_team_ids: Vec<String> = sqlx::query_scalar(&format!(
+    let mut q = Sql::new(
         "SELECT team._id FROM webknossos.teams_ team
-         WHERE team._id IN (SELECT shared._team FROM webknossos.annotation_sharedTeams shared WHERE shared._annotation=$4)
-         AND {READABLE_TEAM}"
-    ))
-    .bind(&user.id)
-    .bind(&user.organization_id)
-    .bind(user.is_admin)
-    .bind(provided.id())
-    .fetch_all(&mut *transaction)
-    .await?;
+         WHERE team._id IN (SELECT shared._team FROM webknossos.annotation_sharedTeams shared WHERE shared._annotation=",
+    );
+    q.push_bind(provided.id()).push(") AND ");
+    push_readable_team(&mut q, (&user).into());
+    let old_team_ids: Vec<String> = q.build_query_scalar().fetch_all(&mut *transaction).await?;
     let pending_emails = notification_emails
         .prepare_share_emails(
             &mut transaction,

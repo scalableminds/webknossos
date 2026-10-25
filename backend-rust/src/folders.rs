@@ -17,6 +17,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path, Query},
+    sql::Sql,
     util::id::ObjectId,
 };
 
@@ -84,14 +85,15 @@ async fn organization_root(
     lock: bool,
 ) -> ApiResult<ObjectId> {
     let suffix = if lock { " FOR UPDATE OF f" } else { "" };
-    sqlx::query_scalar(&format!(
+    let mut q = Sql::new(
         "SELECT o._rootFolder FROM webknossos.organizations_ o
-        JOIN webknossos.folders_ f ON f._id = o._rootFolder WHERE o._id = $1{suffix}"
-    ))
-    .bind(&user.organization_id)
-    .fetch_optional(connection)
-    .await?
-    .ok_or_else(|| ApiError::bad_request(FOLDER_NOT_FOUND))
+        JOIN webknossos.folders_ f ON f._id = o._rootFolder WHERE o._id = ",
+    );
+    q.push_bind(&user.organization_id).push(suffix);
+    q.build_query_scalar()
+        .fetch_optional(connection)
+        .await?
+        .ok_or_else(|| ApiError::bad_request(FOLDER_NOT_FOUND))
 }
 
 async fn access(

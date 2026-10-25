@@ -12,6 +12,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json as JsonBody, Path},
+    sql::Sql,
     users::{self, notification_emails::NotificationEmailService},
     util::id::ObjectId,
 };
@@ -39,14 +40,11 @@ async fn readable_user<'e, E: sqlx::Executor<'e, Database = sqlx::Postgres>>(
     requester: &AuthUser,
     target: &str,
 ) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(&format!(
-        "SELECT EXISTS(SELECT 1 FROM webknossos.users_ AS usr WHERE usr._id=$2 AND {})",
-        users::READ_ACCESS_PREDICATE
-    ))
-    .bind(&requester.id)
-    .bind(target)
-    .fetch_one(executor)
-    .await?)
+    let mut q = Sql::new("SELECT EXISTS(SELECT 1 FROM webknossos.users_ AS usr WHERE usr._id=");
+    q.push_bind(target).push(" AND ");
+    users::push_read_access(&mut q, requester.id.as_str().into());
+    q.push(")");
+    Ok(q.build_query_scalar().fetch_one(executor).await?)
 }
 
 async fn transfer(
@@ -103,15 +101,11 @@ async fn transfer(
         return Err(ApiError::bad_request(crate::msg::user::not_found(target)));
     }
     // datasetDAO.findOne under AuthorizedAccessContext(newUser): no sharing token.
-    let transferee_can_read: bool = sqlx::query_scalar(&format!(
-        "SELECT EXISTS(SELECT 1 FROM webknossos.datasets_ d WHERE d._id=$3 AND {})",
-        crate::dataset::access::READ_PREDICATE
-    ))
-    .bind(target)
-    .bind(Option::<&str>::None)
-    .bind(&annotation.dataset_id)
-    .fetch_one(&mut *transaction)
-    .await?;
+    let mut q = Sql::new("SELECT EXISTS(SELECT 1 FROM webknossos.datasets_ d WHERE d._id=");
+    q.push_bind(annotation.dataset_id.as_str()).push(" AND ");
+    crate::dataset::access::push_read_predicate(&mut q, target.into(), None);
+    q.push(")");
+    let transferee_can_read: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;
     if !transferee_can_read {
         return Err(ApiError::bad_request(
             crate::msg::annotation::TRANSFEREE_NO_DATASET_ACCESS,

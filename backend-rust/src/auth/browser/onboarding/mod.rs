@@ -28,6 +28,7 @@ use crate::{
     extract::{Json, Path},
     mail::{Mail, MailSender, templates},
     slack::SlackNotificationService,
+    sql::Sql,
     stores::client::ServiceClients,
     system::analytics::{properties, track, track_for_user},
     system::application_info::MiscState,
@@ -178,12 +179,11 @@ async fn find_organization(
     tx: &mut Transaction<'_, Postgres>,
     id: &str,
 ) -> ApiResult<Option<OrganizationRow>> {
-    Ok(sqlx::query_as(&format!(
-        "SELECT {ORGANIZATION_COLUMNS} FROM webknossos.organizations_ WHERE _id = $1"
-    ))
-    .bind(id)
-    .fetch_optional(&mut **tx)
-    .await?)
+    let mut q = Sql::new("SELECT ");
+    q.push(ORGANIZATION_COLUMNS)
+        .push(" FROM webknossos.organizations_ WHERE _id = ")
+        .push_bind(id);
+    Ok(q.build_query_as().fetch_optional(&mut **tx).await?)
 }
 
 /// organizationService.assertUsersCanBeAdded. Locks the organization row so

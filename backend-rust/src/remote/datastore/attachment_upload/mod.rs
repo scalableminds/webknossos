@@ -25,6 +25,7 @@ use crate::{
         ResumableUploadInfo, TokenQuery, after_upload_reported, load_virtual_upload_target,
         require_same_datastore, require_usable_layer, user_for_callback_token,
     },
+    sql::Sql,
     stores::client::ServiceClients,
     util::id::ObjectId,
 };
@@ -41,7 +42,24 @@ const DIFFERENT_DATASTORE: &str =
 const PENDING_UPLOAD_PATH: &str = "./<pending upload>";
 
 /// One attachment row (the table's primary key).
-const ATTACHMENT_KEY: &str = "_dataset = $1 AND layerName = $2 AND type = $3::webknossos.LAYER_ATTACHMENT_TYPE AND name = $4";
+/// The `dataset_layer_attachments` row of `dataset`'s layer `layer` with
+/// type `typ` and name `name` (the primary key).
+pub(crate) fn push_attachment_key<'a>(
+    q: &mut Sql<'a>,
+    dataset: &'a str,
+    layer: &'a str,
+    typ: &'a str,
+    name: &'a str,
+) {
+    q.push("_dataset = ")
+        .push_bind(dataset)
+        .push(" AND layerName = ")
+        .push_bind(layer)
+        .push(" AND type = ")
+        .push_bind(typ)
+        .push("::webknossos.LAYER_ATTACHMENT_TYPE AND name = ")
+        .push_bind(name);
+}
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -156,28 +174,17 @@ async fn reserve_attachment_upload(
     if existing_attachment(&mut *transaction, &target.id, &body.layer_name, typ, name).await? {
         return Err(exists_error(typ));
     }
-    let pending_predicate =
-        format!("{ATTACHMENT_KEY} AND (uploadIsPending OR uploadToPathIsPending)");
     if body.overwrite_pending {
-        sqlx::query(&format!(
-            "DELETE FROM webknossos.dataset_layer_attachments WHERE {pending_predicate}"
-        ))
-        .bind(&target.id)
-        .bind(&body.layer_name)
-        .bind(typ.as_str())
-        .bind(name)
-        .execute(&mut *transaction)
-        .await?;
+        let mut q = Sql::new("DELETE FROM webknossos.dataset_layer_attachments WHERE ");
+        push_attachment_key(&mut q, &target.id, &body.layer_name, typ.as_str(), name);
+        q.push(" AND (uploadIsPending OR uploadToPathIsPending)");
+        q.build().execute(&mut *transaction).await?;
     } else {
-        let pending: bool = sqlx::query_scalar(&format!(
-            "SELECT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments WHERE {pending_predicate})"
-        ))
-        .bind(&target.id)
-        .bind(&body.layer_name)
-        .bind(typ.as_str())
-        .bind(name)
-        .fetch_one(&mut *transaction)
-        .await?;
+        let mut q =
+            Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments WHERE ");
+        push_attachment_key(&mut q, &target.id, &body.layer_name, typ.as_str(), name);
+        q.push(" AND (uploadIsPending OR uploadToPathIsPending))");
+        let pending: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;
         if pending {
             return Err(ApiError::bad_request(
                 crate::msg::dataset::layer::ATTACHMENT_ALREADY_PENDING,
@@ -240,19 +247,20 @@ async fn report_attachment_upload(
     // findOneWithPendingUpload + finishUpload: the key is the primary key, so
     // the guarded update touches exactly the row Scala finds and updates.
     // Only the path changes (dataFormat/credentialId are kept, as in Scala).
-    let finished = sqlx::query(&format!(
-        "UPDATE webknossos.dataset_layer_attachments SET uploadToPathIsPending = false, uploadIsPending = false, path = $5
-         WHERE {ATTACHMENT_KEY} AND uploadIsPending"
-    ))
-    .bind(id)
-    .bind(&body.layer_name)
-    .bind(body.attachment_type.as_str())
-    .bind(&body.attachment.name)
-    .bind(&path)
-    .execute(pool)
-    .await?
-    .rows_affected()
-        > 0;
+    let mut q = Sql::new(
+        "UPDATE webknossos.dataset_layer_attachments \
+         SET uploadToPathIsPending = false, uploadIsPending = false, path = ",
+    );
+    q.push_bind(&path).push(" WHERE ");
+    push_attachment_key(
+        &mut q,
+        id,
+        &body.layer_name,
+        body.attachment_type.as_str(),
+        &body.attachment.name,
+    );
+    q.push(" AND uploadIsPending");
+    let finished = q.build().execute(pool).await?.rows_affected() > 0;
     if !finished {
         return Err(ApiError::bad_request(ATTACHMENT_NOT_PENDING));
     }

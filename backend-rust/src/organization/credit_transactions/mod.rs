@@ -9,6 +9,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Path, Query},
+    sql::Sql,
     util::id::{ObjectId, PathObjectId},
 };
 use axum::{
@@ -23,9 +24,21 @@ use serde_json::{Value, json};
 use sqlx::{Acquire, PgConnection, PgPool, Postgres, Transaction};
 use webknossos_common::java_format::java_double;
 
-/// CreditTransactionDAO.listAccessQ ($1 = requesting user).
-const LIST_ACCESS: &str = r#"(_organization IN (SELECT _organization FROM webknossos.users_ WHERE (isAdmin OR isDatasetManager) AND _id = $1)
-  OR _organization IN (SELECT _organization FROM webknossos.teams_ WHERE _id IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = $1)))"#;
+/// CreditTransactionDAO.listAccessQ for the requesting `user`.
+fn push_list_access<'a>(q: &mut Sql<'a>, user: &'a str) {
+    q.push(
+        "(_organization IN (SELECT _organization FROM webknossos.users_ \
+         WHERE (isAdmin OR isDatasetManager) AND _id = ",
+    )
+    .push_bind(user)
+    .push(
+        ")
+  OR _organization IN (SELECT _organization FROM webknossos.teams_ WHERE _id IN \
+         (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = ",
+    )
+    .push_bind(user)
+    .push(")))");
+}
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -500,16 +513,15 @@ async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<V
         ));
     }
     // Scala has no ORDER BY; creation order is the deterministic equivalent.
-    let query = format!(
+    let mut q = Sql::new(
         r#"SELECT _id AS id, _organization AS organization, _related_transaction AS related_transaction,
           _paid_job AS paid_job, milli_credit_delta, comment, transaction_state::text AS transaction_state,
           credit_state::text AS credit_state, expiration_date, created_at, updated_at
-          FROM webknossos.credit_transactions_ WHERE {LIST_ACCESS} ORDER BY created_at, _id"#
+          FROM webknossos.credit_transactions_ WHERE "#,
     );
-    let transactions: Vec<CreditTransaction> = sqlx::query_as(&query)
-        .bind(&user.id)
-        .fetch_all(&state.pool)
-        .await?;
+    push_list_access(&mut q, &user.id);
+    q.push(" ORDER BY created_at, _id");
+    let transactions: Vec<CreditTransaction> = q.build_query_as().fetch_all(&state.pool).await?;
     let mut connection = state.pool.acquire().await?;
     let mut result = Vec::new();
     for transaction in compact_free_credits_for_display(transactions)

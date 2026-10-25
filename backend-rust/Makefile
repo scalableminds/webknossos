@@ -8,6 +8,7 @@ check: fmt-check
 	cargo clippy --locked --workspace --all-targets -- -D warnings
 	python3 tools/route_inventory.py --check
 	python3 tools/datastore_route_inventory.py --check
+	python3 tools/check_sql_placeholders.py
 
 # `cargo fmt --check` passes over statements rustfmt could not fit into the line width and
 # left untouched, so also reject the overlong code lines that indicate them.

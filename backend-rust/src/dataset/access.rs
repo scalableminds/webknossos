@@ -4,64 +4,96 @@ use sqlx::{PgPool, Postgres, Transaction};
 use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
+    sql::{Arg, PushArg, Sql},
 };
 
-/// SQL predicate for a `datasets_` row aliased `d`. Bind $1 user id and $2
-/// optional sharing token. Both grants are additive, as in URLSharing's fallback
-/// context. A private-link token only grants access until the link expires
+/// Datasets (alias `d`) of the requester's organization reachable through a
+/// live team of it, directly or via a folder grant. Uncorrelated: depends only on `user`.
+fn push_team_grant<'a>(q: &mut Sql<'a>, user: Arg<'a>, managers_only: bool) {
+    let manager = if managers_only {
+        " AND r.isTeamManager"
+    } else {
+        ""
+    };
+    q.push(
+        "(d._organization IN (SELECT u._organization FROM webknossos.users_ u WHERE u._id = ",
+    )
+    .push_arg(user)
+    .push(
+        ") AND (
+      d._id IN (SELECT dt._dataset FROM webknossos.dataset_allowedTeams dt
+        JOIN webknossos.user_team_roles r ON r._team = dt._team
+        JOIN webknossos.teams_ t ON t._id = r._team
+        JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
+        WHERE r._user = ",
+    )
+    .push_arg(user)
+    .push(manager)
+    .push(
+        ")
+      OR d._folder IN (SELECT fp._descendant FROM webknossos.folder_paths fp
+        JOIN webknossos.folder_allowedTeams ft ON ft._folder = fp._ancestor
+        JOIN webknossos.user_team_roles r ON r._team = ft._team
+        JOIN webknossos.teams_ t ON t._id = r._team
+        JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
+        WHERE r._user = ",
+    )
+    .push_arg(user)
+    .push(manager)
+    .push(")))");
+}
+
+/// Datasets (alias `d`) of an organization the user administers or manages datasets of.
+fn push_manager_grant<'a>(q: &mut Sql<'a>, user: Arg<'a>) {
+    q.push("d._organization IN (SELECT u._organization FROM webknossos.users_ u WHERE u._id = ")
+        .push_arg(user)
+        .push(" AND (u.isAdmin OR u.isDatasetManager))");
+}
+
+/// DatasetDAO read access for a `datasets_` row aliased `d`. The user and
+/// sharing-token grants are additive, as in URLSharing's fallback context. A
+/// private-link token only grants access until the link expires
 /// (DatasetDAO.anonymousReadAccessQ).
 ///
 /// Team grants only count for live teams of the requesting (live) user's own organization,
 /// which must also own the dataset. Every subquery is uncorrelated (`IN (…)` over sets that
-/// depend only on $1/$2), so PostgreSQL evaluates each once per statement as a hashed
-/// subplan instead of once per dataset row; list queries over thousands of datasets depend
-/// on this (DatasetDAO.readAccessQ uses the same shape).
-pub const READ_PREDICATE: &str = r#"(
-  d.isPublic
-  OR d._organization IN (SELECT u._organization FROM webknossos.users_ u
-    WHERE u._id = $1 AND (u.isAdmin OR u.isDatasetManager))
-  OR (d._organization IN (SELECT u._organization FROM webknossos.users_ u WHERE u._id = $1)
-    AND (
-      d._id IN (SELECT dt._dataset FROM webknossos.dataset_allowedTeams dt
-        JOIN webknossos.user_team_roles r ON r._team = dt._team
-        JOIN webknossos.teams_ t ON t._id = r._team
-        JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
-        WHERE r._user = $1)
-      OR d._folder IN (SELECT fp._descendant FROM webknossos.folder_paths fp
-        JOIN webknossos.folder_allowedTeams ft ON ft._folder = fp._ancestor
-        JOIN webknossos.user_team_roles r ON r._team = ft._team
-        JOIN webknossos.teams_ t ON t._id = r._team
-        JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
-        WHERE r._user = $1)))
-  OR ($2::text IS NOT NULL AND (d.sharingToken = $2 OR d._id IN (
+/// depend only on the user and token), so PostgreSQL evaluates each once per statement as a
+/// hashed subplan instead of once per dataset row; list queries over thousands of datasets
+/// depend on this (DatasetDAO.readAccessQ uses the same shape).
+pub fn push_read_predicate<'a>(q: &mut Sql<'a>, user: Arg<'a>, sharing_token: Option<&'a str>) {
+    q.push("(d.isPublic OR ");
+    push_manager_grant(q, user);
+    q.push(" OR ");
+    push_team_grant(q, user, false);
+    if let Some(token) = sharing_token {
+        q.push(" OR d.sharingToken = ")
+            .push_bind(token)
+            .push(
+                " OR d._id IN (
     SELECT a._dataset FROM webknossos.annotation_privateLinks_ link
     JOIN webknossos.annotations_ a ON a._id = link._annotation
-    WHERE link.accessToken = $2
-    AND (link.expirationDateTime IS NULL OR link.expirationDateTime > statement_timestamp()))))
-)"#;
+    WHERE link.accessToken = ",
+            )
+            .push_bind(token)
+            .push(
+                " AND (link.expirationDateTime IS NULL OR link.expirationDateTime > statement_timestamp()))",
+            );
+    }
+    q.push(")");
+}
 
-/// SQL predicate for DatasetService.isEditableBy. Bind $1 user id. Being an
-/// uploader or superuser alone does not grant editing. Admins and dataset
-/// managers may only edit datasets of their own organization (isAdminOf,
-/// isDatasetManagerOf); callers needing read access must check it separately,
-/// just like the Scala controllers. Uncorrelated like [`READ_PREDICATE`].
-pub const EDIT_PREDICATE: &str = r#"(
-  d._organization IN (SELECT u._organization FROM webknossos.users_ u
-    WHERE u._id = $1 AND (u.isAdmin OR u.isDatasetManager))
-  OR (d._organization IN (SELECT u._organization FROM webknossos.users_ u WHERE u._id = $1)
-    AND (
-      d._id IN (SELECT dt._dataset FROM webknossos.dataset_allowedTeams dt
-        JOIN webknossos.user_team_roles r ON r._team = dt._team
-        JOIN webknossos.teams_ t ON t._id = r._team
-        JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
-        WHERE r._user = $1 AND r.isTeamManager)
-      OR d._folder IN (SELECT fp._descendant FROM webknossos.folder_paths fp
-        JOIN webknossos.folder_allowedTeams ft ON ft._folder = fp._ancestor
-        JOIN webknossos.user_team_roles r ON r._team = ft._team
-        JOIN webknossos.teams_ t ON t._id = r._team
-        JOIN webknossos.users_ member ON member._id = r._user AND member._organization = t._organization
-        WHERE r._user = $1 AND r.isTeamManager)))
-)"#;
+/// DatasetService.isEditableBy for alias `d`. Being an uploader or superuser
+/// alone does not grant editing. Admins and dataset managers may only edit
+/// datasets of their own organization (isAdminOf, isDatasetManagerOf); callers
+/// needing read access must check it separately, just like the Scala
+/// controllers. Uncorrelated like [`push_read_predicate`].
+pub fn push_edit_predicate<'a>(q: &mut Sql<'a>, user: Arg<'a>) {
+    q.push("(");
+    push_manager_grant(q, user);
+    q.push(" OR ");
+    push_team_grant(q, user, true);
+    q.push(")");
+}
 
 pub async fn can_read(
     pool: &PgPool,
@@ -69,24 +101,19 @@ pub async fn can_read(
     dataset_id: &str,
     sharing_token: Option<&str>,
 ) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(&format!(
-        "SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = $3 AND {READ_PREDICATE})"
-    ))
-    .bind(user.map(|u| u.id.as_str()))
-    .bind(sharing_token)
-    .bind(dataset_id)
-    .fetch_one(pool)
-    .await?)
+    let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = ");
+    q.push_bind(dataset_id).push(" AND ");
+    push_read_predicate(&mut q, user.map(|u| u.id.as_str()).into(), sharing_token);
+    q.push(")");
+    Ok(q.build_query_scalar().fetch_one(pool).await?)
 }
 
 pub async fn can_edit(pool: &PgPool, user: &AuthUser, dataset_id: &str) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(&format!(
-        "SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = $2 AND {EDIT_PREDICATE})"
-    ))
-    .bind(&user.id)
-    .bind(dataset_id)
-    .fetch_one(pool)
-    .await?)
+    let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = ");
+    q.push_bind(dataset_id).push(" AND ");
+    push_edit_predicate(&mut q, user.id.as_str().into());
+    q.push(")");
+    Ok(q.build_query_scalar().fetch_one(pool).await?)
 }
 
 /// Serialize dataset permission changes, and retain live teams/memberships
@@ -117,14 +144,13 @@ pub async fn lock_edit(
     // Prevent an inherited folder grant changing while this write is in flight.
     sqlx::query("SELECT ft._folder FROM webknossos.folder_allowedTeams ft JOIN webknossos.folder_paths fp ON fp._ancestor = ft._folder JOIN webknossos.datasets_ d ON d._folder = fp._descendant WHERE d._id = $1 ORDER BY ft._folder, ft._team FOR SHARE OF ft, fp")
         .bind(dataset_id).fetch_all(&mut **transaction).await?;
-    let (read, edit): (bool, bool) = sqlx::query_as(&format!(
-        "SELECT {READ_PREDICATE}, {EDIT_PREDICATE} FROM webknossos.datasets_ d WHERE d._id = $3"
-    ))
-    .bind(&user.id)
-    .bind(Option::<&str>::None)
-    .bind(dataset_id)
-    .fetch_one(&mut **transaction)
-    .await?;
+    let mut q = Sql::new("SELECT ");
+    push_read_predicate(&mut q, user.id.as_str().into(), None);
+    q.push(", ");
+    push_edit_predicate(&mut q, user.id.as_str().into());
+    q.push(" FROM webknossos.datasets_ d WHERE d._id = ")
+        .push_bind(dataset_id);
+    let (read, edit): (bool, bool) = q.build_query_as().fetch_one(&mut **transaction).await?;
     if require_read && !read {
         return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }

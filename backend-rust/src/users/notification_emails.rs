@@ -18,6 +18,7 @@ use sqlx::{Acquire, FromRow, PgPool, Postgres, Transaction};
 use crate::{
     mail::{Mail, MailSender, NotificationEmailSettings, templates},
     msg::notification_email as msg,
+    sql::{Arg, Requester, Sql},
 };
 
 /// How long changes after an activation still count as onboarding.
@@ -153,28 +154,34 @@ impl SharedResource {
         }
     }
 
-    /// Those of the candidate users (`$2`) with access to the resource (`$1`).
-    /// The requester-based access predicates are evaluated per candidate:
-    /// `$1` (user) becomes `candidate._id`, the organization scope `$2`
-    /// becomes the candidate's organization.
-    fn access_query(&self) -> String {
-        let (join, predicate) = match self {
-            Self::Annotation { .. } => (
-                "webknossos.annotations_ a ON a._id = $1",
-                crate::annotation::lists::list_grant(true),
-            ),
-            Self::Dataset { .. } => (
-                "webknossos.datasets_ d ON d._id = $1",
-                crate::dataset::access::READ_PREDICATE.replace("$2", "NULL::text"),
-            ),
+    /// Those of the candidate users with access to the resource. The
+    /// requester-based access predicates are evaluated per candidate: the
+    /// requester becomes `candidate._id`, the organization scope the
+    /// candidate's organization.
+    fn access_query<'a>(&'a self, user_ids: &'a [&'a str]) -> Sql<'a> {
+        let candidate = Requester {
+            id: Arg::Sql("candidate._id"),
+            organization: Arg::Sql("candidate._organization"),
+            is_admin: false,
         };
-        let predicate = predicate
-            .replace("$1", "candidate._id")
-            .replace("$2", "candidate._organization");
-        format!(
-            "SELECT candidate._id FROM webknossos.users_ candidate JOIN {join} \
-             WHERE candidate._id = ANY($2) AND {predicate}"
-        )
+        let mut q = Sql::new("SELECT candidate._id FROM webknossos.users_ candidate JOIN ");
+        match self {
+            Self::Annotation { .. } => q.push("webknossos.annotations_ a ON a._id = "),
+            Self::Dataset { .. } => q.push("webknossos.datasets_ d ON d._id = "),
+        }
+        .push_bind(self.id())
+        .push(" WHERE candidate._id = ANY(")
+        .push_bind(user_ids)
+        .push(") AND ");
+        match self {
+            Self::Annotation { .. } => {
+                crate::annotation::lists::push_list_grant(&mut q, candidate, true);
+            }
+            Self::Dataset { .. } => {
+                crate::dataset::access::push_read_predicate(&mut q, candidate.id, None);
+            }
+        }
+        q
     }
 }
 
@@ -369,9 +376,9 @@ impl NotificationEmailService {
             let had_access: Vec<String> = if user_ids.is_empty() {
                 Vec::new()
             } else {
-                sqlx::query_scalar(&resource.access_query())
-                    .bind(resource.id())
-                    .bind(&user_ids)
+                resource
+                    .access_query(&user_ids)
+                    .build_query_scalar()
                     .fetch_all(&mut *savepoint)
                     .await?
             };
@@ -434,9 +441,9 @@ impl NotificationEmailService {
             had_access,
         } = pending;
         let user_ids: Vec<&str> = candidates.iter().map(|c| c.user_id.as_str()).collect();
-        let has_access: HashSet<String> = sqlx::query_scalar::<_, String>(&resource.access_query())
-            .bind(resource.id())
-            .bind(&user_ids)
+        let has_access: HashSet<String> = resource
+            .access_query(&user_ids)
+            .build_query_scalar::<String>()
             .fetch_all(pool)
             .await?
             .into_iter()
@@ -743,15 +750,20 @@ const PERSON: &str =
 
 /// The multi user (name and email) of a user.
 async fn person(pool: &PgPool, user_id: &str) -> Result<Person, sqlx::Error> {
-    sqlx::query_as(&format!("{PERSON} WHERE u._id = $1"))
-        .bind(user_id)
+    Sql::new(PERSON)
+        .push(" WHERE u._id = ")
+        .push_bind(user_id)
+        .build_query_as()
         .fetch_one(pool)
         .await
 }
 
 async fn people(pool: &PgPool, user_ids: &[&str]) -> Result<Vec<Person>, sqlx::Error> {
-    sqlx::query_as(&format!("{PERSON} WHERE u._id = ANY($1)"))
-        .bind(user_ids)
+    Sql::new(PERSON)
+        .push(" WHERE u._id = ANY(")
+        .push_bind(user_ids)
+        .push(")")
+        .build_query_as()
         .fetch_all(pool)
         .await
 }

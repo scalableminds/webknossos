@@ -364,19 +364,26 @@ fn unnamed_annotations_get_a_placeholder_name() {
 
 #[test]
 fn access_queries_evaluate_the_grants_per_candidate() {
+    let user_ids = ["u"];
     for resource in [
         SharedResource::Annotation { id: "a".into() },
         SharedResource::Dataset { id: "d".into() },
     ] {
-        let query = resource.access_query();
-        let (head, predicate) = query.split_once(" AND ").unwrap();
+        let query = resource.access_query(&user_ids);
+        let sql = query.sql();
+        let (head, predicate) = sql.split_once(" AND ").unwrap();
         assert!(head.contains("$1") && head.contains("$2"), "{head}");
         // Only the resource ($1) and candidate ids ($2) are bound.
         assert!(!predicate.contains('$'), "{predicate}");
         assert!(predicate.contains("candidate._id"));
     }
-    let annotation = SharedResource::Annotation { id: "a".into() }.access_query();
+    let annotation = SharedResource::Annotation { id: "a".into() };
+    let annotation = annotation.access_query(&user_ids);
     // Shared annotations also require read access to their dataset.
-    assert!(annotation.contains("webknossos.datasets_ d WHERE d._id=a._dataset"));
-    assert!(annotation.contains("candidate._organization"));
+    assert!(
+        annotation
+            .sql()
+            .contains("webknossos.datasets_ d WHERE d._id=a._dataset")
+    );
+    assert!(annotation.sql().contains("candidate._organization"));
 }

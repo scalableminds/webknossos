@@ -65,6 +65,7 @@ use crate::{
             StringOpt, Tree, VolumeTracing,
         },
     },
+    sql::Sql,
     stores::tracing_client::{SaveMultipleResult, TracingStoreClient, VolumeSaveDataSource},
     util::id::ObjectId,
     util::instant::now_millis,
@@ -661,16 +662,10 @@ async fn resolve_base(
     user: &AuthUser,
     id: &ObjectId,
 ) -> Result<ResolvedBase, ProviderError> {
-    let read = crate::annotation::access::READ_PREDICATE;
-    let annotation: Option<String> = sqlx::query_scalar(&format!(
-        "SELECT a._user FROM webknossos.annotations_ a WHERE a._id=$4 AND {read}"
-    ))
-    .bind(&user.id)
-    .bind(&user.organization_id)
-    .bind(user.is_admin)
-    .bind(id.as_str())
-    .fetch_optional(pool)
-    .await?;
+    let mut q = Sql::new("SELECT a._user FROM webknossos.annotations_ a WHERE a._id=");
+    q.push_bind(id.as_str()).push(" AND ");
+    crate::annotation::access::push_read_predicate(&mut q, user.into());
+    let annotation: Option<String> = q.build_query_scalar().fetch_optional(pool).await?;
     if let Some(owner) = annotation {
         return base_from_annotation_row(pool, id.as_str(), owner).await;
     }
@@ -688,17 +683,15 @@ async fn resolve_base(
     let Some((total, pending)) = task else {
         return Err(ProviderError::Empty);
     };
-    let annotations: Vec<(String, String, String)> = sqlx::query_as(&format!(
+    let mut q = Sql::new(
         "SELECT a._id, a._user, a.state::text FROM webknossos.annotations_ a
-         WHERE a._task=$4 AND a.typ='Task' AND a.state<>'Cancelled' AND {read}
-         ORDER BY a.created, a._id"
-    ))
-    .bind(&user.id)
-    .bind(&user.organization_id)
-    .bind(user.is_admin)
-    .bind(id.as_str())
-    .fetch_all(pool)
-    .await?;
+         WHERE a._task=",
+    );
+    q.push_bind(id.as_str())
+        .push(" AND a.typ='Task' AND a.state<>'Cancelled' AND ");
+    crate::annotation::access::push_read_predicate(&mut q, user.into());
+    q.push(" ORDER BY a.created, a._id");
+    let annotations: Vec<(String, String, String)> = q.build_query_as().fetch_all(pool).await?;
     match annotations.first() {
         Some((annotation_id, owner, state))
             if total == 1 && pending == 0 && state == "Finished" =>

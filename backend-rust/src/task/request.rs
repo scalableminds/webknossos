@@ -42,6 +42,7 @@ use crate::{
     AppState,
     auth::AuthUser,
     error::{ApiError, ApiResult},
+    sql::Sql,
     stores::tracing_client::TracingStoreClient,
     system::application_info::MiscState,
     task::assignment::{initialize_task_annotation, insert_initializing_annotation},
@@ -86,20 +87,19 @@ async fn count_open_non_admin_tasks(
     user: &AuthUser,
     managed_team_ids: &[String],
 ) -> ApiResult<i64> {
-    Ok(sqlx::query_scalar(&format!(
+    let mut q = Sql::new(
         "SELECT COUNT(*) FROM webknossos.annotations_ a
          JOIN webknossos.tasks_ t ON a._task=t._id
          JOIN webknossos.projects_ p ON t._project=p._id
-         WHERE a._user=$1 AND a.typ='Task' AND a.state='Active' AND {}
-           AND NOT (p._team = ANY($4::text[]))",
-        crate::annotation::access::READ_PREDICATE
-    ))
-    .bind(&user.id)
-    .bind(&user.organization_id)
-    .bind(user.is_admin)
-    .bind(managed_team_ids)
-    .fetch_one(pool)
-    .await?)
+         WHERE a._user=",
+    );
+    q.push_bind(user.id.as_str())
+        .push(" AND a.typ='Task' AND a.state='Active' AND ");
+    crate::annotation::access::push_read_predicate(&mut q, user.into());
+    q.push(" AND NOT (p._team = ANY(")
+        .push_bind(managed_team_ids)
+        .push("::text[]))");
+    Ok(q.build_query_scalar().fetch_one(pool).await?)
 }
 
 /// TaskService.getAllowedTeamsForNextTask.
@@ -148,22 +148,41 @@ async fn is_team_manager_or_admin(pool: &PgPool, user: &AuthUser) -> ApiResult<b
 // TaskDAO.assignNext
 // ---------------------------------------------------------------------------
 
-/// TaskDAO.findNextTaskQ predicate. Binds: $1 user, $2 allowed team ids,
-/// $3 isTeamManagerOrAdmin. The experience join yields at most one row per
+/// TaskDAO.findNextTaskQ `FROM … WHERE` for the user, the allowed team ids
+/// and isTeamManagerOrAdmin. The experience join yields at most one row per
 /// task (user_experiences PK is (_user, domain)); the LEFT JOIN … IS NULL of
 /// the user's previous Task annotations is written as NOT EXISTS.
-const NEXT_TASK_FROM_WHERE: &str = "FROM webknossos.tasks t
+fn push_next_task_from_where<'a>(
+    q: &mut Sql<'a>,
+    user_id: &'a str,
+    team_ids: &'a [String],
+    is_team_manager_or_admin: bool,
+) {
+    q.push(
+        "FROM webknossos.tasks t
      JOIN webknossos.user_experiences ux
-       ON ux._user=$1 AND t.neededExperience_domain=ux.domain AND t.neededExperience_value<=ux.value
+       ON ux._user=",
+    )
+    .push_bind(user_id)
+    .push(
+        " AND t.neededExperience_domain=ux.domain AND t.neededExperience_value<=ux.value
      JOIN webknossos.projects p ON t._project=p._id AND NOT p.isDeleted
      WHERE NOT t.isDeleted
        AND t.pendingInstances > 0
-       AND p._team = ANY($2::text[])
+       AND p._team = ANY(",
+    )
+    .push_bind(team_ids)
+    .push(
+        "::text[])
        AND NOT EXISTS (
          SELECT 1 FROM webknossos.annotations_ a
-         WHERE a._task=t._id AND a._user=$1 AND a.typ='Task'
-           AND NOT ($3 AND a.state='Cancelled'))
-       AND NOT p.paused";
+         WHERE a._task=t._id AND a._user=",
+    )
+    .push_bind(user_id)
+    .push(" AND a.typ='Task' AND NOT (")
+    .push_bind(is_team_manager_or_admin)
+    .push(" AND a.state='Cancelled')) AND NOT p.paused");
+}
 
 /// One allocation attempt in its own transaction. `Ok(None)`: no task;
 /// `Ok(Some(None))`: the locked candidate no longer qualifies (retry);
@@ -175,14 +194,10 @@ async fn try_assign_next(
     is_team_manager_or_admin: bool,
 ) -> ApiResult<Option<Option<(String, ObjectId)>>> {
     let mut tx = pool.begin().await?;
-    let candidate: Option<String> = sqlx::query_scalar(&format!(
-        "SELECT t._id {NEXT_TASK_FROM_WHERE} ORDER BY p.priority DESC LIMIT 1 FOR UPDATE OF t"
-    ))
-    .bind(user_id)
-    .bind(team_ids)
-    .bind(is_team_manager_or_admin)
-    .fetch_optional(&mut *tx)
-    .await?;
+    let mut q = Sql::new("SELECT t._id ");
+    push_next_task_from_where(&mut q, user_id, team_ids, is_team_manager_or_admin);
+    q.push(" ORDER BY p.priority DESC LIMIT 1 FOR UPDATE OF t");
+    let candidate: Option<String> = q.build_query_scalar().fetch_optional(&mut *tx).await?;
     let Some(task_id) = candidate else {
         return Ok(None);
     };
@@ -216,15 +231,10 @@ async fn still_qualifies(
     is_team_manager_or_admin: bool,
     task_id: &str,
 ) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(&format!(
-        "SELECT EXISTS (SELECT 1 {NEXT_TASK_FROM_WHERE} AND t._id=$4)"
-    ))
-    .bind(user_id)
-    .bind(team_ids)
-    .bind(is_team_manager_or_admin)
-    .bind(task_id)
-    .fetch_one(&mut *connection)
-    .await?)
+    let mut q = Sql::new("SELECT EXISTS (SELECT 1 ");
+    push_next_task_from_where(&mut q, user_id, team_ids, is_team_manager_or_admin);
+    q.push(" AND t._id=").push_bind(task_id).push(")");
+    Ok(q.build_query_scalar().fetch_one(&mut *connection).await?)
 }
 
 /// TaskDAO.assignNext: `(taskId, initializingAnnotationId)` or `None`

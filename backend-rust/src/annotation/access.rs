@@ -6,31 +6,83 @@ use sqlx::{Executor, FromRow, Postgres, Transaction};
 use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
+    sql::{PushArg, Requester, Sql},
     util::id::ObjectId,
 };
 
-/// AnnotationDAO.readAccessQ: alias `a`, $1 requester id, $2 organization,
-/// $3 organization administrator. Dataset access is not part of this grant.
-pub const READ_PREDICATE: &str = r#"(a.visibility='Public' OR
-    (a.visibility='Internal' AND EXISTS(SELECT 1 FROM webknossos.users_ owner WHERE owner._id=a._user AND owner._organization=$2)) OR
-    (a.visibility='Private' AND (a._user=$1 OR ($3 AND EXISTS(SELECT 1 FROM webknossos.users_ owner WHERE owner._id=a._user AND owner._organization=$2)))))"#;
+/// The annotation owner (alias `a`) belongs to the requester's organization.
+fn push_owner_in_organization<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+    q.push(
+        "EXISTS(SELECT 1 FROM webknossos.users_ owner WHERE owner._id=a._user AND owner._organization=",
+    )
+    .push_arg(requester.organization)
+    .push(")");
+}
 
-/// AnnotationDAO update/delete grants ignore state, collaboration mode and
-/// owner lock. Runtime editing/finishing restrictions below additionally check these.
-pub const MUTATE_PREDICATE: &str = r#"(a._user=$1 OR
-    ($3 AND EXISTS(SELECT 1 FROM webknossos.users_ owner WHERE owner._id=a._user AND owner._organization=$2)) OR
-    EXISTS(SELECT 1 FROM webknossos.tasks_ task JOIN webknossos.projects_ project ON project._id=task._project
-      JOIN webknossos.teams_ team ON team._id=project._team AND team._organization=$2
-      JOIN webknossos.user_team_roles role ON role._team=team._id AND role._user=$1 AND role.isteammanager
-      WHERE task._id=a._task AND project._organization=$2))"#;
+/// The requester manages the team of the annotation's (alias `a`) task project.
+fn push_manages_task_team<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+    q.push(
+        "EXISTS(SELECT 1 FROM webknossos.tasks_ task JOIN webknossos.projects_ project ON project._id=task._project
+      JOIN webknossos.teams_ team ON team._id=project._team AND team._organization=",
+    )
+    .push_arg(requester.organization)
+    .push(" JOIN webknossos.user_team_roles role ON role._team=team._id AND role._user=")
+    .push_arg(requester.id)
+    .push(" AND role.isteammanager WHERE task._id=a._task AND project._organization=")
+    .push_arg(requester.organization)
+    .push(")");
+}
 
-/// Annotation list ownership/sharing grant. Shared annotations also require
-/// dataset read access; callers must add that predicate themselves. Bind $1
-/// requester id and $2 requester organization for live team grant scoping.
-pub const OWNED_OR_SHARED_PREDICATE: &str = r#"(a._user=$1 OR
-    (a.visibility IN ('Public','Internal') AND (
-      EXISTS(SELECT 1 FROM webknossos.annotation_sharedTeams shared JOIN webknossos.teams_ team ON team._id=shared._team AND team._organization=$2 JOIN webknossos.user_team_roles role ON role._team=team._id WHERE shared._annotation=a._id AND role._user=$1) OR
-      EXISTS(SELECT 1 FROM webknossos.annotation_contributors contributor WHERE contributor._annotation=a._id AND contributor._user=$1))))"#;
+/// AnnotationDAO.readAccessQ for alias `a`. Dataset access is not part of this grant.
+pub fn push_read_predicate<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+    q.push("(a.visibility='Public' OR (a.visibility='Internal' AND ");
+    push_owner_in_organization(q, requester);
+    q.push(") OR (a.visibility='Private' AND (a._user=")
+        .push_arg(requester.id)
+        .push(" OR (")
+        .push_bind(requester.is_admin)
+        .push(" AND ");
+    push_owner_in_organization(q, requester);
+    q.push("))))");
+}
+
+/// AnnotationDAO update/delete grants (alias `a`) ignore state, collaboration
+/// mode and owner lock. Runtime editing/finishing restrictions below
+/// additionally check these.
+pub fn push_mutate_predicate<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+    q.push("(a._user=")
+        .push_arg(requester.id)
+        .push(" OR (")
+        .push_bind(requester.is_admin)
+        .push(" AND ");
+    push_owner_in_organization(q, requester);
+    q.push(") OR ");
+    push_manages_task_team(q, requester);
+    q.push(")");
+}
+
+/// Annotation list ownership/sharing grant (alias `a`). Shared annotations
+/// also require dataset read access; callers must add that predicate
+/// themselves. Team grants are scoped to live teams of the requester's organization.
+pub fn push_owned_or_shared_predicate<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+    q.push("(a._user=")
+        .push_arg(requester.id)
+        .push(
+            " OR (a.visibility IN ('Public','Internal') AND (
+      EXISTS(SELECT 1 FROM webknossos.annotation_sharedTeams shared JOIN webknossos.teams_ team ON team._id=shared._team AND team._organization=",
+        )
+        .push_arg(requester.organization)
+        .push(
+            " JOIN webknossos.user_team_roles role ON role._team=team._id WHERE shared._annotation=a._id AND role._user=",
+        )
+        .push_arg(requester.id)
+        .push(
+            ") OR
+      EXISTS(SELECT 1 FROM webknossos.annotation_contributors contributor WHERE contributor._annotation=a._id AND contributor._user=",
+        )
+        .push_arg(requester.id)
+        .push("))))");
+}
 
 #[derive(Debug, FromRow)]
 pub struct AnnotationMetadata {
@@ -55,18 +107,31 @@ pub struct AnnotationMetadata {
     pub requester_has_mutex: bool,
 }
 
-const SELECT: &str = r#"SELECT a._id AS id,a._dataset AS dataset_id,a._task AS task_id,a._user AS owner_id,
+/// The live annotation `id` as [`AnnotationMetadata`] for `requester`;
+/// callers append further conditions.
+fn select<'a>(requester: Requester<'a>, id: &'a str) -> Sql<'a> {
+    let mut q = Sql::new(
+        r#"SELECT a._id AS id,a._dataset AS dataset_id,a._task AS task_id,a._user AS owner_id,
     (SELECT _organization FROM webknossos.users_ WHERE _id=a._user) AS owner_organization,
     a.name,a.description,a.visibility::text,a.state::text,a.typ::text AS annotation_type,
     a.collaborationMode::text AS collaboration_mode,a.isLockedByOwner AS is_locked_by_owner,
     a.tags,a.tracingTime AS tracing_time,a.created,a.modified,
-    EXISTS(SELECT 1 FROM webknossos.tasks_ task JOIN webknossos.projects_ project ON project._id=task._project
-      JOIN webknossos.teams_ team ON team._id=project._team AND team._organization=$2
-      JOIN webknossos.user_team_roles role ON role._team=team._id AND role._user=$1 AND role.isteammanager
-      WHERE task._id=a._task AND project._organization=$2) AS requester_manages_task_team,
+    "#,
+    );
+    push_manages_task_team(&mut q, requester);
+    q.push(
+        r#" AS requester_manages_task_team,
     (a._task IS NULL OR EXISTS(SELECT 1 FROM webknossos.tasks_ task JOIN webknossos.projects_ project ON project._id=task._project WHERE task._id=a._task)) AS task_context_available,
-    EXISTS(SELECT 1 FROM webknossos.annotation_mutexes mutex WHERE mutex._annotation=a._id AND mutex._user=$1 AND mutex.expiry>statement_timestamp()) AS requester_has_mutex
-    FROM webknossos.annotations a WHERE NOT a.isDeleted AND a._id=$4 "#;
+    EXISTS(SELECT 1 FROM webknossos.annotation_mutexes mutex WHERE mutex._annotation=a._id AND mutex._user="#,
+    )
+    .push_arg(requester.id)
+    .push(
+        " AND mutex.expiry>statement_timestamp()) AS requester_has_mutex
+    FROM webknossos.annotations a WHERE NOT a.isDeleted AND a._id=",
+    )
+    .push_bind(id);
+    q
+}
 
 pub async fn find<'e, E: Executor<'e, Database = Postgres>>(
     executor: E,
@@ -89,16 +154,13 @@ pub async fn find_optional<'e, E: Executor<'e, Database = Postgres>>(
     global: bool,
 ) -> ApiResult<Option<AnnotationMetadata>> {
     ObjectId::parse(id)?;
-    Ok(
-        sqlx::query_as(&format!("{SELECT} AND ($5 OR {READ_PREDICATE})"))
-            .bind(user.map(|u| u.id.as_str()))
-            .bind(user.map(|u| u.organization_id.as_str()))
-            .bind(user.is_some_and(|u| u.is_admin))
-            .bind(id)
-            .bind(global)
-            .fetch_optional(executor)
-            .await?,
-    )
+    let requester = Requester::from(user);
+    let mut q = select(requester, id);
+    if !global {
+        q.push(" AND ");
+        push_read_predicate(&mut q, requester);
+    }
+    Ok(q.build_query_as().fetch_optional(executor).await?)
 }
 
 /// Hold live annotation metadata through a mutation. FOR SHARE conflicts with
@@ -109,11 +171,11 @@ pub async fn lock_for_mutation(
     id: &str,
 ) -> ApiResult<AnnotationMetadata> {
     ObjectId::parse(id)?;
-    sqlx::query_as(&format!("{SELECT} AND {MUTATE_PREDICATE} FOR SHARE OF a"))
-        .bind(&user.id)
-        .bind(&user.organization_id)
-        .bind(user.is_admin)
-        .bind(id)
+    let mut q = select(user.into(), id);
+    q.push(" AND ");
+    push_mutate_predicate(&mut q, user.into());
+    q.push(" FOR SHARE OF a");
+    q.build_query_as()
         .fetch_optional(&mut **transaction)
         .await?
         .ok_or_else(|| ApiError::forbidden(crate::msg::annotation::EDIT_NOT_ALLOWED))
@@ -129,15 +191,13 @@ pub async fn lock_readable(
     id: &str,
 ) -> ApiResult<Option<AnnotationMetadata>> {
     ObjectId::parse(id)?;
-    Ok(sqlx::query_as(&format!(
-        "{SELECT} AND {READ_PREDICATE} FOR NO KEY UPDATE OF a"
-    ))
-    .bind(&user.id)
-    .bind(&user.organization_id)
-    .bind(user.is_admin)
-    .bind(id)
-    .fetch_optional(&mut **transaction)
-    .await?)
+    let mut q = select(user.into(), id);
+    q.push(" AND ");
+    push_read_predicate(&mut q, user.into());
+    q.push(" FOR NO KEY UPDATE OF a");
+    Ok(q.build_query_as()
+        .fetch_optional(&mut **transaction)
+        .await?)
 }
 
 /// AnnotationDAO.assertUpdateAccess on the live row (owner, owner-organization
@@ -149,15 +209,15 @@ pub async fn lock_update_access(
     id: &str,
 ) -> ApiResult<bool> {
     ObjectId::parse(id)?;
-    let found: Option<String> = sqlx::query_scalar(&format!(
-        "SELECT a._id FROM webknossos.annotations a WHERE NOT a.isDeleted AND a._id=$4 AND {MUTATE_PREDICATE} FOR NO KEY UPDATE OF a"
-    ))
-    .bind(&user.id)
-    .bind(&user.organization_id)
-    .bind(user.is_admin)
-    .bind(id)
-    .fetch_optional(&mut **transaction)
-    .await?;
+    let mut q =
+        Sql::new("SELECT a._id FROM webknossos.annotations a WHERE NOT a.isDeleted AND a._id=");
+    q.push_bind(id).push(" AND ");
+    push_mutate_predicate(&mut q, user.into());
+    q.push(" FOR NO KEY UPDATE OF a");
+    let found: Option<String> = q
+        .build_query_scalar()
+        .fetch_optional(&mut **transaction)
+        .await?;
     Ok(found.is_some())
 }
 

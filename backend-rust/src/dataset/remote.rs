@@ -11,6 +11,7 @@ use crate::{
     auth::{AuthUser, OptionalAuthUser},
     error::{ApiError, ApiResult},
     extract::{Path, Query},
+    sql::Sql,
     stores::client::ServiceClients,
     util::id::{ObjectId, PathObjectId},
 };
@@ -104,15 +105,11 @@ async fn clear_thumbnail_cache(
         .bind(id.as_str())
         .fetch_one(&mut *transaction)
         .await?;
-    let readable: bool = sqlx::query_scalar(&format!(
-        "SELECT {} FROM webknossos.datasets_ d WHERE d._id=$3",
-        crate::dataset::access::READ_PREDICATE
-    ))
-    .bind(&user.id)
-    .bind(Option::<&str>::None)
-    .bind(id.as_str())
-    .fetch_one(&mut *transaction)
-    .await?;
+    let mut q = Sql::new("SELECT ");
+    crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+    q.push(" FROM webknossos.datasets_ d WHERE d._id=")
+        .push_bind(id.as_str());
+    let readable: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;
     if !readable {
         return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }

@@ -15,6 +15,7 @@ use crate::{
     auth::{AuthCredential, AuthUser, OptionalAuthUser, authenticate_request},
     error::{ApiError, ApiResult},
     extract::{Json, Path, Query},
+    sql::Sql,
     system::application_info::MiscState,
 };
 
@@ -30,10 +31,18 @@ pub fn router() -> Router<AppState> {
         .route("/organizationsIsEmpty", get(is_empty))
 }
 
-// Parameters: requesting organization, requesting admin, credit-read access.
-// publicWrites includes milliCreditBalance for members of the current identity's
-// organization; the credit DAO returns zero to members lacking billing access.
-const PUBLIC_ORGANIZATION: &str = r#"SELECT jsonb_build_object(
+/// OrganizationService.publicWrites for alias `o`; callers append the
+/// `WHERE` clause. It includes milliCreditBalance for members of the
+/// requesting identity's organization, and the credit DAO returns zero to
+/// members lacking billing (credit-read) access. Administrator fields only
+/// for administrators of the requesting organization.
+fn select_public<'a>(
+    requesting_organization: Option<&'a str>,
+    is_admin: bool,
+    credit_access: bool,
+) -> Sql<'a> {
+    let mut q = Sql::new(
+        r#"SELECT jsonb_build_object(
  'id',o._id,'name',o.name,'additionalInformation',o.additionalinformation,'enableAutoVerify',o.enableautoverify,
  'pricingPlan',o.pricingplan,'aiPlan',o.aiplan,'paidUntil',floor(extract(epoch FROM o.paiduntil)*1000)::bigint,
  'includedUsers',o.includedusers,'includedStorageBytes',o.includedstorage,
@@ -43,13 +52,27 @@ const PUBLIC_ORGANIZATION: &str = r#"SELECT jsonb_build_object(
  ) storage),
  'ownerName',(SELECT m.firstname || ' ' || m.lastname FROM webknossos.users_ u
     JOIN webknossos.multiusers_ m ON m._id=u._multiuser WHERE u._organization=o._id AND u.isorganizationowner AND NOT u.isdeactivated LIMIT 1),
- 'milliCreditBalance',CASE WHEN o._id=$1 THEN (SELECT COALESCE(sum(milli_credit_delta),0)::bigint
-    FROM webknossos.credit_transactions_ WHERE _organization=o._id AND $3) ELSE NULL END
-) || CASE WHEN o._id=$1 AND $2 THEN jsonb_build_object(
+ 'milliCreditBalance',CASE WHEN o._id="#,
+    );
+    q.push_bind(requesting_organization)
+        .push(
+            r#" THEN (SELECT COALESCE(sum(milli_credit_delta),0)::bigint
+    FROM webknossos.credit_transactions_ WHERE _organization=o._id AND "#,
+        )
+        .push_bind(credit_access)
+        .push(") ELSE NULL END\n) || CASE WHEN o._id=")
+        .push_bind(requesting_organization)
+        .push(" AND ")
+        .push_bind(is_admin)
+        .push(
+            r#" THEN jsonb_build_object(
  'newUserMailingList',o.newusermailinglist,
  'lastTermsOfServiceAcceptanceTime',floor(extract(epoch FROM o.lasttermsofserviceacceptancetime)*1000)::bigint,
  'lastTermsOfServiceAcceptanceVersion',o.lasttermsofserviceacceptanceversion
-) ELSE '{}'::jsonb END FROM webknossos.organizations_ o "#;
+) ELSE '{}'::jsonb END FROM webknossos.organizations_ o "#,
+        );
+    q
+}
 
 async fn credit_read_access(pool: &PgPool, user: &AuthUser) -> ApiResult<bool> {
     if user.is_admin || user.is_dataset_manager || user.is_superuser {
@@ -65,12 +88,9 @@ pub(crate) async fn public_json<'e, E: sqlx::Executor<'e, Database = Postgres>>(
     is_admin: bool,
     credit_access: bool,
 ) -> ApiResult<Value> {
-    let query = format!("{PUBLIC_ORGANIZATION} WHERE o._id=$4");
-    sqlx::query_scalar(&query)
-        .bind(requesting_organization)
-        .bind(is_admin)
-        .bind(credit_access)
-        .bind(id)
+    let mut q = select_public(requesting_organization, is_admin, credit_access);
+    q.push("WHERE o._id=").push_bind(id);
+    q.build_query_scalar()
         .fetch_optional(executor)
         .await?
         // OrganizationController.get has no explicit message: Fox falls back to Msg.notFound.
@@ -110,7 +130,6 @@ async fn list(
 ) -> ApiResult<ResponseJson<Value>> {
     // Organization membership belongs to the account, not only the current
     // identity. Superusers can list every organization.
-    let access = "WHERE ($5 OR o._id IN (SELECT _organization FROM webknossos.users_ WHERE _multiuser=(SELECT _multiuser FROM webknossos.users_ WHERE _id=$4)))";
     let values: Vec<Value> = if parameters.compact.unwrap_or(false) {
         sqlx::query_scalar("SELECT jsonb_build_object('id',o._id,'name',o.name) FROM webknossos.organizations_ o WHERE ($2 OR o._id IN (SELECT _organization FROM webknossos.users_ WHERE _multiuser=(SELECT _multiuser FROM webknossos.users_ WHERE _id=$1))) ORDER BY o._id")
             .bind(&user.id)
@@ -120,15 +139,16 @@ async fn list(
     } else {
         // Scala deliberately calls publicWrites without requestingUser here,
         // so list responses never include administrator fields or balances.
-        let query = format!("{PUBLIC_ORGANIZATION} {access} ORDER BY o._id");
-        sqlx::query_scalar(&query)
-            .bind(Option::<&str>::None)
-            .bind(false)
-            .bind(false)
-            .bind(&user.id)
-            .bind(user.is_superuser)
-            .fetch_all(&state.pool)
-            .await?
+        let mut q = select_public(None, false, false);
+        q.push(" WHERE (")
+            .push_bind(user.is_superuser)
+            .push(
+                " OR o._id IN (SELECT _organization FROM webknossos.users_ WHERE _multiuser=\
+                 (SELECT _multiuser FROM webknossos.users_ WHERE _id=",
+            )
+            .push_bind(&user.id)
+            .push("))) ORDER BY o._id");
+        q.build_query_scalar().fetch_all(&state.pool).await?
     };
     Ok(ResponseJson(Value::Array(values)))
 }

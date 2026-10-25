@@ -36,9 +36,10 @@ use crate::annotation::nml::parser::{
     DatasetRef, NmlParseContext, NmlParseOutcome, NmlParseResult, SharedParsingParameters,
     UploadedVolumeLayer, file_name_without_extension, parse_nml,
 };
-use crate::dataset::access::READ_PREDICATE;
+use crate::dataset::access::push_read_predicate;
 use crate::error::{ApiError, ApiResult};
 use crate::proto::datastore::{SegmentGroup, SkeletonTracing, TreeGroup, VolumeTracing};
+use crate::sql::Sql;
 
 // ---------------------------------------------------------------------------
 // Messages (util/Msg.scala)
@@ -644,15 +645,13 @@ pub async fn find_readable_dataset(
     user_id: &str,
     dataset_id: &str,
 ) -> ApiResult<Option<DatasetRef>> {
-    let row: Option<DatasetRow> = sqlx::query_as(&format!(
+    let mut q = Sql::new(
         "SELECT d._id, d.name, d._organization FROM webknossos.datasets_ d
-         WHERE d._id = $3 AND {READ_PREDICATE}"
-    ))
-    .bind(user_id)
-    .bind(None::<&str>)
-    .bind(dataset_id)
-    .fetch_optional(pool)
-    .await?;
+         WHERE d._id = ",
+    );
+    q.push_bind(dataset_id).push(" AND ");
+    push_read_predicate(&mut q, user_id.into(), None);
+    let row: Option<DatasetRow> = q.build_query_as().fetch_optional(pool).await?;
     Ok(row.map(dataset_ref))
 }
 
@@ -674,31 +673,31 @@ pub async fn find_one_by_id_or_name_and_organization(
             .await?
             .ok_or_else(|| crate::msg::dataset::not_found(dataset_id)));
     }
-    let by_directory_name: Option<DatasetRow> = sqlx::query_as(&format!(
+    let mut q = Sql::new(
         "SELECT d._id, d.name, d._organization FROM webknossos.datasets_ d
-         WHERE d.directoryName = $3 AND d._organization = $4 AND {READ_PREDICATE}
-         ORDER BY d.created ASC LIMIT 1"
-    ))
-    .bind(user_id)
-    .bind(None::<&str>)
-    .bind(dataset_name)
-    .bind(organization_id)
-    .fetch_optional(pool)
-    .await?;
+         WHERE d.directoryName = ",
+    );
+    q.push_bind(dataset_name)
+        .push(" AND d._organization = ")
+        .push_bind(organization_id)
+        .push(" AND ");
+    push_read_predicate(&mut q, user_id.into(), None);
+    q.push(" ORDER BY d.created ASC LIMIT 1");
+    let by_directory_name: Option<DatasetRow> = q.build_query_as().fetch_optional(pool).await?;
     if let Some(row) = by_directory_name {
         return Ok(Ok(dataset_ref(row)));
     }
-    let mut by_name: Vec<DatasetRow> = sqlx::query_as(&format!(
+    let mut q = Sql::new(
         "SELECT d._id, d.name, d._organization FROM webknossos.datasets_ d
-         WHERE d.name = $3 AND d._organization = $4 AND {READ_PREDICATE}
-         LIMIT 2"
-    ))
-    .bind(user_id)
-    .bind(None::<&str>)
-    .bind(dataset_name)
-    .bind(organization_id)
-    .fetch_all(pool)
-    .await?;
+         WHERE d.name = ",
+    );
+    q.push_bind(dataset_name)
+        .push(" AND d._organization = ")
+        .push_bind(organization_id)
+        .push(" AND ");
+    push_read_predicate(&mut q, user_id.into(), None);
+    q.push(" LIMIT 2");
+    let mut by_name: Vec<DatasetRow> = q.build_query_as().fetch_all(pool).await?;
     Ok(match by_name.len() {
         0 => Err(crate::msg::dataset::not_found_by_name(dataset_name)),
         1 => Ok(dataset_ref(by_name.remove(0))),

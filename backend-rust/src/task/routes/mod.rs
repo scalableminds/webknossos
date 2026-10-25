@@ -16,6 +16,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json, Path, Query},
+    sql::{PushArg, Requester, Sql},
     util::id::ObjectId,
 };
 
@@ -98,14 +99,32 @@ struct ProjectQuery {
     include_total_count: Option<bool>,
 }
 
-const TASK_READ: &str = r#"p._organization=$2 AND EXISTS (SELECT 1 FROM webknossos.teams_ access_team WHERE access_team._id=p._team AND access_team._organization=$2) AND ($3 OR EXISTS (
-    SELECT 1 FROM webknossos.user_team_roles WHERE _user=$1 AND _team=p._team))"#;
-const TASK_LIST: &str = r#"p._organization=$2 AND EXISTS (SELECT 1 FROM webknossos.teams_ access_team WHERE access_team._id=p._team AND access_team._organization=$2) AND ($3 OR EXISTS (
-    SELECT 1 FROM webknossos.user_team_roles WHERE _user=$1 AND _team=p._team AND isteammanager))"#;
-// The alias a is deliberately reused for the base annotation and active count.
-const ANNOTATION_READ: &str = r#"($5 OR a.visibility='Public' OR
-    (a.visibility='Internal' AND EXISTS (SELECT 1 FROM webknossos.users_ au WHERE au._id=a._user AND au._organization=$2)) OR
-    (a.visibility='Private' AND (a._user=$1 OR ($3 AND EXISTS (SELECT 1 FROM webknossos.users_ au WHERE au._id=a._user AND au._organization=$2)))))"#;
+/// TaskDAO access through the task's project (alias `p`), whose team must be a
+/// live team of the requester's organization: admins, plus team members
+/// (readAccessQ) or only team managers (`managers_only`, listAccessQ).
+fn push_task_access<'a>(q: &mut Sql<'a>, requester: Requester<'a>, managers_only: bool) {
+    q.push("p._organization=")
+        .push_arg(requester.organization)
+        .push(
+            " AND EXISTS (SELECT 1 FROM webknossos.teams_ access_team WHERE access_team._id=p._team AND access_team._organization=",
+        )
+        .push_arg(requester.organization)
+        .push(") AND (")
+        .push_bind(requester.is_admin)
+        .push(" OR EXISTS (SELECT 1 FROM webknossos.user_team_roles WHERE _user=")
+        .push_arg(requester.id)
+        .push(" AND _team=p._team")
+        .push(if managers_only { " AND isteammanager))" } else { "))" });
+}
+
+/// Annotation read access (alias `a`), unless `global`.
+fn push_annotation_read<'a>(q: &mut Sql<'a>, requester: Requester<'a>, global: bool) {
+    if global {
+        q.push("TRUE");
+    } else {
+        crate::annotation::access::push_read_predicate(q, requester);
+    }
+}
 
 pub(crate) async fn public_json(
     connection: &mut PgConnection,
@@ -124,38 +143,56 @@ pub(crate) async fn public_json_for(
     id: &str,
     global: bool,
 ) -> ApiResult<Value> {
-    let task_type = crate::task::types::PUBLIC_TASK_TYPE;
-    // Script lookup is request-scoped; ScriptService.compactWrites uses global
-    // access for its owner. A missing/deleted script is serialized as null.
-    let script = crate::scripts::SELECT_SCRIPT
-        .replace("u._organization = $1", "($5 OR u._organization = $2)");
-    let dataset_read = crate::dataset::access::READ_PREDICATE.replace("$2", "NULL::text");
-    let query = format!(
+    let requester = Requester::from(user);
+    let mut q = Sql::new(
         r#"SELECT jsonb_build_object(
       'id',t._id,'projectId',p._id,'projectName',p.name,'team',team.name,
-      'type',({task_type} WHERE tt._id=t._tasktype),
+      'type',("#,
+    );
+    q.push(crate::task::types::PUBLIC_TASK_TYPE).push(
+        r#" WHERE tt._id=t._tasktype),
       'datasetName',d.name,'datasetId',d._id,
       'neededExperience',jsonb_build_object('domain',t.neededexperience_domain,'value',t.neededexperience_value),
       'created',floor(extract(epoch FROM t.created)*1000)::bigint,
       'status',jsonb_build_object('pending',t.pendinginstances,'active',active.count,'finished',t.totalinstances-t.pendinginstances-active.count),
-      'script',(SELECT jsonb_build_object('id',s.id,'name',s.name,'gist',s.gist,'owner',s.owner) FROM ({script} AND s._id=t._script) s),
+      'script',(SELECT jsonb_build_object('id',s.id,'name',s.name,'gist',s.gist,'owner',s.owner) FROM ("#,
+    );
+    // Script lookup is request-scoped; ScriptService.compactWrites uses global
+    // access for its owner. A missing/deleted script is serialized as null.
+    q.push(crate::scripts::SELECT_LIVE_SCRIPTS);
+    if !global {
+        q.push(" AND u._organization = ")
+            .push_arg(requester.organization);
+    }
+    q.push(
+        r#" AND s._id=t._script) s),
       'tracingTime',t.tracingtime,'creationInfo',t.creationinfo,
       'boundingBox',CASE WHEN t.boundingbox IS NULL THEN NULL ELSE jsonb_build_object('topLeft',jsonb_build_array((t.boundingbox).x::int,(t.boundingbox).y::int,(t.boundingbox).z::int),'width',(t.boundingbox).width::int,'height',(t.boundingbox).height::int,'depth',(t.boundingbox).depth::int) END,
       'editPosition',jsonb_build_array((t.editposition).x::int,(t.editposition).y::int,(t.editposition).z::int),
       'editRotation',jsonb_build_array((t.editrotation).x,(t.editrotation).y,(t.editrotation).z))
       FROM webknossos.tasks_ t JOIN webknossos.projects_ p ON p._id=t._project
       JOIN webknossos.teams_ team ON team._id=p._team
-      JOIN LATERAL (SELECT a._dataset FROM webknossos.annotations_ a WHERE a._task=t._id AND a.typ='TracingBase' AND a.state<>'Cancelled' AND {ANNOTATION_READ} LIMIT 1) base ON true
-      JOIN webknossos.datasets_ d ON d._id=base._dataset AND ($5 OR {dataset_read})
-      CROSS JOIN LATERAL (SELECT count(*) AS count FROM webknossos.annotations_ a WHERE a._task=t._id AND a.typ='Task' AND a.state='Active' AND {ANNOTATION_READ}) active
-      WHERE t._id=$4 AND ($5 OR ({TASK_READ}))"#
+      JOIN LATERAL (SELECT a._dataset FROM webknossos.annotations_ a WHERE a._task=t._id AND a.typ='TracingBase' AND a.state<>'Cancelled' AND "#,
     );
-    let value: Value = sqlx::query_scalar(&query)
-        .bind(user.map(|user| user.id.as_str()))
-        .bind(user.map(|user| user.organization_id.as_str()))
-        .bind(user.is_some_and(|user| user.is_admin))
-        .bind(id)
-        .bind(global)
+    // The alias a is deliberately reused for the base annotation and active count.
+    push_annotation_read(&mut q, requester, global);
+    q.push(" LIMIT 1) base ON true JOIN webknossos.datasets_ d ON d._id=base._dataset");
+    if !global {
+        q.push(" AND ");
+        crate::dataset::access::push_read_predicate(&mut q, requester.id, None);
+    }
+    q.push(
+        " CROSS JOIN LATERAL (SELECT count(*) AS count FROM webknossos.annotations_ a WHERE a._task=t._id AND a.typ='Task' AND a.state='Active' AND ",
+    );
+    push_annotation_read(&mut q, requester, global);
+    q.push(") active WHERE t._id=").push_bind(id);
+    if !global {
+        q.push(" AND (");
+        push_task_access(&mut q, requester, false);
+        q.push(")");
+    }
+    let value: Value = q
+        .build_query_scalar()
         .fetch_optional(connection)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::task::not_found(id)))?;
@@ -187,27 +224,31 @@ async fn task_ids(
     } else {
         ""
     };
-    let query = format!(
-        r#"SELECT t._id FROM webknossos.tasks_ t JOIN webknossos.projects_ p ON p._id=t._project
-        WHERE {TASK_LIST} AND ($4::text IS NULL OR t._project=$4) AND ($5::text IS NULL OR t._tasktype=$5)
-        AND ($6::text[] IS NULL OR t._id=ANY($6)) AND ($7::text IS NULL OR EXISTS (
-          SELECT 1 FROM webknossos.annotations_ a JOIN webknossos.users_ u ON u._id=a._user
-          WHERE a._task=t._id AND a.typ='Task' AND a.state<>'Cancelled' AND u._id=$7)){order} LIMIT 1000"#
+    let mut q = Sql::new(
+        "SELECT t._id FROM webknossos.tasks_ t JOIN webknossos.projects_ p ON p._id=t._project WHERE ",
     );
-    let ids = parameters
-        .ids
-        .as_ref()
-        .map(|ids| ids.iter().map(ObjectId::as_str).collect::<Vec<_>>());
-    Ok(sqlx::query_scalar(&query)
-        .bind(&user.id)
-        .bind(&user.organization_id)
-        .bind(user.is_admin)
-        .bind(parameters.project.as_ref().map(ObjectId::as_str))
-        .bind(parameters.task_type.as_ref().map(ObjectId::as_str))
-        .bind(ids)
-        .bind(parameters.user.as_ref().map(ObjectId::as_str))
-        .fetch_all(connection)
-        .await?)
+    push_task_access(&mut q, user.into(), true);
+    if let Some(project) = &parameters.project {
+        q.push(" AND t._project=").push_bind(project.as_str());
+    }
+    if let Some(task_type) = &parameters.task_type {
+        q.push(" AND t._tasktype=").push_bind(task_type.as_str());
+    }
+    if let Some(ids) = &parameters.ids {
+        let ids: Vec<&str> = ids.iter().map(ObjectId::as_str).collect();
+        q.push(" AND t._id=ANY(").push_bind(ids).push(")");
+    }
+    if let Some(owner) = &parameters.user {
+        q.push(
+            " AND EXISTS (
+          SELECT 1 FROM webknossos.annotations_ a JOIN webknossos.users_ u ON u._id=a._user
+          WHERE a._task=t._id AND a.typ='Task' AND a.state<>'Cancelled' AND u._id=",
+        )
+        .push_bind(owner.as_str())
+        .push(")");
+    }
+    q.push(order).push(" LIMIT 1000");
+    Ok(q.build_query_scalar().fetch_all(connection).await?)
 }
 async fn serialize_all(
     connection: &mut PgConnection,
@@ -289,18 +330,17 @@ async fn for_project(
     if !can_manage {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let query = format!(
-        "SELECT t._id FROM webknossos.tasks_ t JOIN webknossos.projects_ p ON p._id=t._project WHERE {TASK_LIST} AND p._id=$4 ORDER BY t._id DESC LIMIT $5 OFFSET $6"
+    let mut q = Sql::new(
+        "SELECT t._id FROM webknossos.tasks_ t JOIN webknossos.projects_ p ON p._id=t._project WHERE ",
     );
-    let ids = sqlx::query_scalar(&query)
-        .bind(&user.id)
-        .bind(&user.organization_id)
-        .bind(user.is_admin)
-        .bind(&id)
-        .bind(i64::from(limit))
-        .bind(i64::from(page) * i64::from(limit))
-        .fetch_all(&mut *connection)
-        .await?;
+    push_task_access(&mut q, (&user).into(), true);
+    q.push(" AND p._id=")
+        .push_bind(&id)
+        .push(" ORDER BY t._id DESC LIMIT ")
+        .push_bind(i64::from(limit))
+        .push(" OFFSET ")
+        .push_bind(i64::from(page) * i64::from(limit));
+    let ids = q.build_query_scalar().fetch_all(&mut *connection).await?;
     let mut headers = HeaderMap::new();
     if parameters.include_total_count == Some(true) {
         let count: i64 =

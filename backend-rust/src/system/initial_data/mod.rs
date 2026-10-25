@@ -20,6 +20,7 @@ use crate::{
     auth::browser::onboarding::create_organization_directory,
     dataset::source::UsableDataSource,
     error::{ApiError, ApiResult},
+    sql::Sql,
     stores::client::ServiceClients,
     system::application_info::{LocalStoreConfig, MiscConfig, MiscState, ok_empty},
     util::id::ObjectId,
@@ -102,39 +103,52 @@ async fn sync_local_store(
 ) -> ApiResult<()> {
     // `table` is one of two fixed identifiers.
     debug_assert!(matches!(table, "dataStores" | "tracingStores"));
-    let existing: Option<(String, String)> = sqlx::query_as(&format!(
-        "SELECT name, publicUrl FROM webknossos.{table}_ WHERE url = $1 LIMIT 1"
-    ))
-    .bind(url)
-    .fetch_optional(pool)
-    .await?;
+    let mut q = Sql::new("SELECT name, publicUrl FROM webknossos.");
+    q.push(table)
+        .push("_ WHERE url = ")
+        .push_bind(url)
+        .push(" LIMIT 1");
+    let existing: Option<(String, String)> = q.build_query_as().fetch_optional(pool).await?;
     match existing {
         Some((name, public_url)) => {
             if public_url != store.public_uri {
-                sqlx::query(&format!(
-                    "UPDATE webknossos.{table} SET url = $2, publicUrl = $3 WHERE name = $1"
-                ))
-                .bind(name)
-                .bind(url)
-                .bind(&store.public_uri)
-                .execute(pool)
-                .await?;
+                let mut q = Sql::new("UPDATE webknossos.");
+                q.push(table)
+                    .push(" SET url = ")
+                    .push_bind(url)
+                    .push(", publicUrl = ")
+                    .push_bind(&store.public_uri)
+                    .push(" WHERE name = ")
+                    .push_bind(name);
+                q.build().execute(pool).await?;
             }
         }
         None => {
             tracing::info!(table, "Inserting local store");
-            let columns = if table == "dataStores" {
-                "name, url, publicUrl, key, isDeleted, allowsUpload, allowsUploadToPaths, reportUsedStorageEnabled) VALUES ($1, $2, $3, $4, FALSE, TRUE, TRUE, FALSE)"
+            let (columns, defaults) = if table == "dataStores" {
+                (
+                    ", allowsUpload, allowsUploadToPaths, reportUsedStorageEnabled",
+                    ", TRUE, TRUE, FALSE",
+                )
             } else {
-                "name, url, publicUrl, key, isDeleted) VALUES ($1, $2, $3, $4, FALSE)"
+                ("", "")
             };
-            sqlx::query(&format!("INSERT INTO webknossos.{table}({columns}"))
-                .bind(&store.name)
-                .bind(url)
-                .bind(&store.public_uri)
-                .bind(&store.key)
-                .execute(pool)
-                .await?;
+            let mut q = Sql::new("INSERT INTO webknossos.");
+            q.push(table)
+                .push("(name, url, publicUrl, key, isDeleted")
+                .push(columns)
+                .push(") VALUES (")
+                .push_bind(&store.name)
+                .push(", ")
+                .push_bind(url)
+                .push(", ")
+                .push_bind(&store.public_uri)
+                .push(", ")
+                .push_bind(&store.key)
+                .push(", FALSE")
+                .push(defaults)
+                .push(")");
+            q.build().execute(pool).await?;
         }
     }
     Ok(())

@@ -9,6 +9,7 @@ use crate::{
     AppState,
     error::{ApiError, ApiResult},
     extract::Path,
+    sql::Sql,
     util::id::PathObjectId,
 };
 use axum::{Extension, Json, Router, extract::State, middleware, routing::get};
@@ -46,9 +47,11 @@ async fn read(
     Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<Json<Value>> {
-    let query = format!("SELECT {COLUMNS} FROM webknossos.publications_ WHERE _id = $1");
-    let publication: Publication = sqlx::query_as(&query)
-        .bind(id.as_str())
+    let publication: Publication = Sql::new("SELECT ")
+        .push(COLUMNS)
+        .push(" FROM webknossos.publications_ WHERE _id = ")
+        .push_bind(id.as_str())
+        .build_query_as()
         .fetch_optional(&state.pool)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::PUBLICATION_NOT_FOUND))?;
@@ -63,8 +66,12 @@ async fn list(
     Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
 ) -> ApiResult<Json<Vec<Value>>> {
     // Scala has no ORDER BY; creation order is the deterministic equivalent.
-    let query = format!("SELECT {COLUMNS} FROM webknossos.publications_ ORDER BY created, _id");
-    let publications: Vec<Publication> = sqlx::query_as(&query).fetch_all(&state.pool).await?;
+    let publications: Vec<Publication> = Sql::new("SELECT ")
+        .push(COLUMNS)
+        .push(" FROM webknossos.publications_ ORDER BY created, _id")
+        .build_query_as()
+        .fetch_all(&state.pool)
+        .await?;
     let mut connection = state.pool.acquire().await?;
     let mut result = Vec::with_capacity(publications.len());
     for publication in publications {

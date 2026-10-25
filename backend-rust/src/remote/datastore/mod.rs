@@ -47,6 +47,7 @@ use crate::{
     dataset::source::DataSource,
     error::{ApiError, ApiResult},
     extract::{Json, Path, Query},
+    sql::Sql,
     stores::client::ServiceClients,
     util::id::{ObjectId, PathObjectId},
 };
@@ -337,14 +338,14 @@ async fn apply_report(
             .iter()
             .map(|e| e.data_source.id().directory_name.as_str())
             .collect();
-        let found: Vec<FoundDataset> = sqlx::query_as(&format!(
-            "SELECT {FOUND_DATASET_COLUMNS} FROM webknossos.datasets_ \
-             WHERE directoryName = ANY($1) AND _organization = $2 ORDER BY created, _id"
-        ))
-        .bind(&names)
-        .bind(&organization)
-        .fetch_all(&mut *tx)
-        .await?;
+        let mut q = Sql::new("SELECT ");
+        q.push(FOUND_DATASET_COLUMNS)
+            .push(" FROM webknossos.datasets_ WHERE directoryName = ANY(")
+            .push_bind(&names)
+            .push(") AND _organization = ")
+            .push_bind(&organization)
+            .push(" ORDER BY created, _id");
+        let found: Vec<FoundDataset> = q.build_query_as().fetch_all(&mut *tx).await?;
         let mut by_name: HashMap<&str, &FoundDataset> = HashMap::new();
         for dataset in &found {
             by_name
@@ -412,14 +413,13 @@ async fn find_by_directory_name(
     directory_name: &str,
     organization: &str,
 ) -> ApiResult<FoundDataset> {
-    let found: Option<FoundDataset> = sqlx::query_as(&format!(
-        "SELECT {FOUND_DATASET_COLUMNS} FROM webknossos.datasets_ \
-         WHERE directoryName = $1 AND _organization = $2"
-    ))
-    .bind(directory_name)
-    .bind(organization)
-    .fetch_optional(&mut *connection)
-    .await?;
+    let mut q = Sql::new("SELECT ");
+    q.push(FOUND_DATASET_COLUMNS)
+        .push(" FROM webknossos.datasets_ WHERE directoryName = ")
+        .push_bind(directory_name)
+        .push(" AND _organization = ")
+        .push_bind(organization);
+    let found: Option<FoundDataset> = q.build_query_as().fetch_optional(&mut *connection).await?;
     found.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))
 }
 
@@ -601,17 +601,19 @@ async fn deactivate(
     store_name: &str,
     organization: Option<&str>,
 ) -> ApiResult<()> {
-    const TARGETS: &str = "SELECT _id FROM webknossos.datasets WHERE _dataStore = $1 AND NOT (_id = ANY($2)) AND NOT isVirtual AND ($3::text IS NULL OR _organization = $3)";
-    for statement in [
-        format!("DELETE FROM webknossos.dataset_mags WHERE _dataset IN ({TARGETS})"),
-        format!("DELETE FROM webknossos.dataset_layers WHERE _dataset IN ({TARGETS})"),
-    ] {
-        sqlx::query(&statement)
-            .bind(store_name)
-            .bind(existing_ids)
-            .bind(organization)
-            .execute(&mut *connection)
-            .await?;
+    for table in ["dataset_mags", "dataset_layers"] {
+        let mut q = Sql::new("DELETE FROM webknossos.");
+        q.push(table)
+            .push(" WHERE _dataset IN (SELECT _id FROM webknossos.datasets WHERE _dataStore = ")
+            .push_bind(store_name)
+            .push(" AND NOT (_id = ANY(")
+            .push_bind(existing_ids)
+            .push(")) AND NOT isVirtual");
+        if let Some(organization) = organization {
+            q.push(" AND _organization = ").push_bind(organization);
+        }
+        q.push(")");
+        q.build().execute(&mut *connection).await?;
     }
     sqlx::query(
         r#"UPDATE webknossos.datasets
@@ -677,18 +679,23 @@ async fn update_real_paths(
             ("dataset_mags", &mags),
             ("dataset_layer_attachments", &attachments),
         ] {
-            let statement = format!(
-                "UPDATE webknossos.{table} SET realPath = $3, hasLocalData = $4
-                 WHERE _dataset = $1 AND path = $2 AND (realPath IS DISTINCT FROM $3 OR hasLocalData <> $4)"
-            );
             for (path, real_path, has_local_data) in infos {
-                sqlx::query(&statement)
-                    .bind(&dataset)
-                    .bind(path)
-                    .bind(real_path)
-                    .bind(has_local_data)
-                    .execute(&mut *tx)
-                    .await?;
+                let mut q = Sql::new("UPDATE webknossos.");
+                q.push(table)
+                    .push(" SET realPath = ")
+                    .push_bind(real_path)
+                    .push(", hasLocalData = ")
+                    .push_bind(has_local_data)
+                    .push(" WHERE _dataset = ")
+                    .push_bind(&dataset)
+                    .push(" AND path = ")
+                    .push_bind(path)
+                    .push(" AND (realPath IS DISTINCT FROM ")
+                    .push_bind(real_path)
+                    .push(" OR hasLocalData <> ")
+                    .push_bind(has_local_data)
+                    .push(")");
+                q.build().execute(&mut *tx).await?;
             }
         }
     }

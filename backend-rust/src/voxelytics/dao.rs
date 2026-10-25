@@ -1,59 +1,72 @@
 //! VoxelyticsDAO: the voxelytics_* queries of the Scala backend.
 //!
-//! Every query binds its values. `$1` is always the stale timeout in
-//! milliseconds where a query derives run/task/chunk states (runsWithStateQ),
-//! state literals are SQL constants, and multi-row upserts pass one JSONB
-//! array expanded with `jsonb_to_recordset` (the VALUES lists of Scala).
+//! Every query binds its values. Queries deriving run/task/chunk states
+//! (runsWithStateQ) bind the stale timeout in milliseconds, state literals are
+//! SQL constants, and multi-row upserts pass one JSONB array expanded with
+//! `jsonb_to_recordset` (the VALUES lists of Scala).
 use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 use sqlx::{PgConnection, PgPool, Row};
 
-use crate::{auth::AuthUser, error::ApiResult, util::id::ObjectId};
+use crate::{auth::AuthUser, error::ApiResult, sql::Sql, util::id::ObjectId};
 
 pub(crate) type Timestamp = Option<DateTime<Utc>>;
 
 /// runsWithStateQ: a RUNNING run whose heartbeat is older than the stale
-/// timeout ($1, milliseconds) is reported as STALE, ending at its heartbeat.
-fn runs_with_state() -> &'static str {
-    r#"SELECT
+/// timeout (`stale_millis`) is reported as STALE, ending at its heartbeat.
+fn push_runs_with_state(q: &mut Sql<'_>, stale_millis: i64) {
+    q.push(
+        r#"SELECT
           r._id,
           CASE
-            WHEN r.state = 'RUNNING' AND run_heartbeat.timestamp IS NOT NULL AND run_heartbeat.timestamp < NOW() - ($1::BIGINT * INTERVAL '1 millisecond')
+            WHEN r.state = 'RUNNING' AND run_heartbeat.timestamp IS NOT NULL AND run_heartbeat.timestamp < NOW() - ("#,
+    )
+    .push_bind(stale_millis)
+    .push(
+        r#"::BIGINT * INTERVAL '1 millisecond')
             THEN 'STALE' ELSE r.state END AS state,
           r.beginTime AS beginTime,
           CASE
-            WHEN r.state = 'RUNNING' AND run_heartbeat.timestamp IS NOT NULL AND run_heartbeat.timestamp < NOW() - ($1::BIGINT * INTERVAL '1 millisecond')
+            WHEN r.state = 'RUNNING' AND run_heartbeat.timestamp IS NOT NULL AND run_heartbeat.timestamp < NOW() - ("#,
+    )
+    .push_bind(stale_millis)
+    .push(
+        r#"::BIGINT * INTERVAL '1 millisecond')
             THEN run_heartbeat.timestamp ELSE r.endTime END AS endTime
         FROM webknossos.voxelytics_runs r
         LEFT JOIN (
           SELECT _run, timestamp
           FROM webknossos.voxelytics_runHeartbeatEvents
-        ) run_heartbeat ON r._id = run_heartbeat._run"#
+        ) run_heartbeat ON r._id = run_heartbeat._run"#,
+    );
 }
 
-fn tasks_with_state() -> String {
-    format!(
+fn push_tasks_with_state(q: &mut Sql<'_>, stale_millis: i64) {
+    q.push(
         r#"SELECT
           t._id,
           CASE WHEN t.state = 'RUNNING' AND r.state = 'STALE' THEN 'STALE' ELSE t.state END AS state,
           t.beginTime AS beginTime,
           CASE WHEN t.state = 'RUNNING' AND r.state = 'STALE' THEN r.endTime ELSE t.endTime END AS endTime
         FROM webknossos.voxelytics_tasks t
-        JOIN ({}) r ON r._id = t._run"#,
-        runs_with_state()
-    )
+        JOIN ("#,
+    );
+    push_runs_with_state(q, stale_millis);
+    q.push(") r ON r._id = t._run");
 }
 
-/// chunksWithStateQ for the runs in `run_ids` (a TEXT[] placeholder), with an
-/// optional task-name placeholder. Postgres can't estimate the row count of the
-/// derived state column and tends to choose nested-loop plans that are very
-/// slow for large workflows. Use this as a MATERIALIZED CTE and don't re-join
-/// voxelytics_chunks: it carries every column the callers need.
-fn chunks_with_state(run_ids: &str, task_name: Option<&str>) -> String {
-    let task_filter = task_name
-        .map(|t| format!("AND t.name = {t}"))
-        .unwrap_or_default();
-    format!(
+/// chunksWithStateQ for the runs in `run_ids`, optionally of one task name.
+/// Postgres can't estimate the row count of the derived state column and
+/// tends to choose nested-loop plans that are very slow for large workflows.
+/// Use this as a MATERIALIZED CTE and don't re-join voxelytics_chunks: it
+/// carries every column the callers need.
+fn push_chunks_with_state<'a>(
+    q: &mut Sql<'a>,
+    stale_millis: i64,
+    run_ids: &'a [String],
+    task_name: Option<&'a str>,
+) {
+    q.push(
         r#"SELECT
           c._id,
           c._task,
@@ -65,35 +78,58 @@ fn chunks_with_state(run_ids: &str, task_name: Option<&str>) -> String {
           CASE WHEN c.state = 'RUNNING' AND r.state = 'STALE' THEN r.endTime ELSE c.endTime END AS endTime
         FROM webknossos.voxelytics_chunks c
         JOIN webknossos.voxelytics_tasks t ON t._id = c._task
-        JOIN ({runs}) r ON r._id = t._run
-        WHERE t._run = ANY({run_ids})
-          {task_filter}"#,
-        runs = runs_with_state()
+        JOIN ("#,
+    );
+    push_runs_with_state(q, stale_millis);
+    q.push(
+        r#") r ON r._id = t._run
+        WHERE t._run = ANY("#,
     )
+    .push_bind(run_ids)
+    .push(")");
+    if let Some(task_name) = task_name {
+        q.push(" AND t.name = ").push_bind(task_name);
+    }
 }
 
-/// visibleRunsQ: runs of the user's organization; unless `access` (a boolean
-/// placeholder: admin, dataset manager or allowUnlisted) only the user's own.
-fn visible_runs(access: &str, user: &str, organization: &str) -> String {
-    format!(
+/// visibleRunsQ: runs of the user's organization; unless `sees_all` (admin,
+/// dataset manager or allowUnlisted) only the user's own. `None` spells the
+/// unrestricted case as a literal `TRUE`.
+fn push_visible_runs<'a>(q: &mut Sql<'a>, sees_all: Option<bool>, user: &'a AuthUser) {
+    q.push(
         r#"SELECT __r.*
         FROM webknossos.voxelytics_runs __r
-        WHERE ({access} OR __r._user = {user}) AND __r._organization = {organization}"#
-    )
+        WHERE ("#,
+    );
+    match sees_all {
+        Some(sees_all) => q.push_bind(sees_all),
+        None => q.push("TRUE"),
+    };
+    q.push(" OR __r._user = ")
+        .push_bind(user.id.as_str())
+        .push(") AND __r._organization = ")
+        .push_bind(user.organization_id.as_str());
 }
 
 /// latestChunkStatesCtesQ: defines the CTEs `chunk_states` and
-/// `latest_chunk_states` for the runs in `run_ids` (a TEXT[] placeholder), with
-/// an optional task-name placeholder. `latest_chunk_states` holds the latest
+/// `latest_chunk_states` for the runs in `run_ids`, optionally of one task
+/// name. `latest_chunk_states` holds the latest
 /// state of each chunk (by task name, executionId and chunkName) across the
 /// runs. States other than skipped or pending take precedence, so that e.g. a
 /// chunk that was skipped in a later run reports the state of the run that
 /// actually computed it. beginTime and endTime are taken from that same row,
 /// even if they are NULL: there is no fallback to the times of a later skipped
 /// or pending row.
-fn latest_chunk_states_ctes(run_ids: &str, task_name: Option<&str>) -> String {
-    format!(
-        r#"chunk_states AS MATERIALIZED ({chunks}),
+fn push_latest_chunk_states_ctes<'a>(
+    q: &mut Sql<'a>,
+    stale_millis: i64,
+    run_ids: &'a [String],
+    task_name: Option<&'a str>,
+) {
+    q.push("chunk_states AS MATERIALIZED (");
+    push_chunks_with_state(q, stale_millis, run_ids, task_name);
+    q.push(
+        r#"),
         latest_chunk_states AS (
           SELECT
             DISTINCT ON (cs.taskName, cs.executionId, cs.chunkName)
@@ -112,30 +148,38 @@ fn latest_chunk_states_ctes(run_ids: &str, task_name: Option<&str>) -> String {
             cs.state NOT IN ('SKIPPED', 'PENDING') DESC,
             cs.beginTime DESC NULLS LAST
         )"#,
-        chunks = chunks_with_state(run_ids, task_name)
-    )
+    );
 }
 
 /// latestCompleteOrSkippedTaskQ.
-fn latest_complete_or_skipped_task(run_ids: &str, task_name: Option<&str>) -> String {
-    let task_filter = task_name
-        .map(|t| format!("AND t.name = {t}"))
-        .unwrap_or_default();
-    format!(
+fn push_latest_complete_or_skipped_task<'a>(
+    q: &mut Sql<'a>,
+    stale_millis: i64,
+    run_ids: &'a [String],
+    task_name: Option<&'a str>,
+) {
+    q.push(
         r#"SELECT
           DISTINCT ON (t.name)
           t.name,
           t._id,
           ts.state
-        FROM ({}) ts
+        FROM ("#,
+    );
+    push_tasks_with_state(q, stale_millis);
+    q.push(
+        r#") ts
         JOIN webknossos.voxelytics_tasks t ON t._id = ts._id
         WHERE
           ts.state IN ('COMPLETE', 'SKIPPED')
-          AND t._run = ANY({run_ids})
-          {task_filter}
-        ORDER BY t.name, ts.beginTime DESC NULLS LAST"#,
-        tasks_with_state()
+          AND t._run = ANY("#,
     )
+    .push_bind(run_ids)
+    .push(")");
+    if let Some(task_name) = task_name {
+        q.push(" AND t.name = ").push_bind(task_name);
+    }
+    q.push(" ORDER BY t.name, ts.beginTime DESC NULLS LAST");
 }
 
 fn stale_millis(stale_timeout: std::time::Duration) -> i64 {
@@ -317,7 +361,7 @@ pub(crate) async fn find_runs(
     stale_timeout: std::time::Duration,
     allow_unlisted: bool,
 ) -> ApiResult<Vec<RunEntry>> {
-    let sql = format!(
+    let mut q = Sql::new(
         r#"SELECT
           r._id,
           r.name,
@@ -330,22 +374,21 @@ pub(crate) async fn find_runs(
           rs.state::TEXT AS state,
           rs.beginTime AS beginTime,
           rs.endTime AS endTime
-        FROM ({}) r
-        JOIN ({}) rs ON rs._id = r._id
-        WHERE ($5::TEXT[] IS NULL OR r._id = ANY($5))
-          AND ($6::TEXT IS NULL OR r.workflow_hash = $6)"#,
-        visible_runs("$2", "$3", "$4"),
-        runs_with_state()
+        FROM ("#,
     );
-    let rows = sqlx::query(&sql)
-        .bind(stale_millis(stale_timeout))
-        .bind(sees_all_runs(user) || allow_unlisted)
-        .bind(&user.id)
-        .bind(&user.organization_id)
-        .bind(run_ids)
-        .bind(workflow_hash)
-        .fetch_all(pool)
-        .await?;
+    push_visible_runs(&mut q, Some(sees_all_runs(user) || allow_unlisted), user);
+    q.push(") r JOIN (");
+    push_runs_with_state(&mut q, stale_millis(stale_timeout));
+    q.push(") rs ON rs._id = r._id WHERE (")
+        .push_bind(run_ids)
+        .push("::TEXT[] IS NULL OR r._id = ANY(")
+        .push_bind(run_ids)
+        .push(")) AND (")
+        .push_bind(workflow_hash)
+        .push("::TEXT IS NULL OR r.workflow_hash = ")
+        .push_bind(workflow_hash)
+        .push(")");
+    let rows = q.build().fetch_all(pool).await?;
     rows.iter()
         .map(|row| {
             Ok(RunEntry {
@@ -376,8 +419,9 @@ pub(crate) async fn find_runs_for_workflow_listing(
     // Inlined instead of a CTE: a CTE that is referenced multiple times is
     // materialized, which prevents parallel plans and made this query several
     // times slower on production data.
-    let visible = visible_runs("$2", "$3", "$4");
-    let sql = format!(
+    let stale_millis = stale_millis(stale_timeout);
+    let sees_all = Some(sees_all_runs(user));
+    let mut q = Sql::new(
         r#"SELECT
           r._id,
           r.name,
@@ -397,8 +441,13 @@ pub(crate) async fn find_runs_for_workflow_listing(
           COALESCE(tasks.inodeCount, 0)::BIGINT AS inodeCount,
           mu.firstName,
           mu.lastName
-        FROM ({visible}) r
-        JOIN ({runs}) rs ON rs._id = r._id
+        FROM ("#,
+    );
+    push_visible_runs(&mut q, sees_all, user);
+    q.push(") r JOIN (");
+    push_runs_with_state(&mut q, stale_millis);
+    q.push(
+        r#") rs ON rs._id = r._id
         LEFT JOIN (
           SELECT
             t._run AS _run,
@@ -410,30 +459,35 @@ pub(crate) async fn find_runs_for_workflow_listing(
             SUM(COALESCE(ta.fileSize, 0)) AS fileSize,
             SUM(COALESCE(ta.inodeCount, 0)) AS inodeCount
           FROM webknossos.voxelytics_tasks AS t
-          JOIN ({tasks}) ts ON ts._id = t._id
+          JOIN ("#,
+    );
+    push_tasks_with_state(&mut q, stale_millis);
+    q.push(
+        r#") ts ON ts._id = t._id
           LEFT JOIN (
             SELECT a._task _task, SUM(a.fileSize) fileSize, SUM(a.inodeCount) inodeCount
             FROM webknossos.voxelytics_artifacts a
             JOIN webknossos.voxelytics_tasks artifactTask ON artifactTask._id = a._task
-            WHERE artifactTask._run IN (SELECT vr._id FROM ({visible}) vr)
+            WHERE artifactTask._run IN (SELECT vr._id FROM ("#,
+    );
+    push_visible_runs(&mut q, sees_all, user);
+    q.push(
+        r#") vr)
             GROUP BY a._task
           ) ta ON ta._task = t._id
-          WHERE t._run IN (SELECT vr._id FROM ({visible}) vr)
+          WHERE t._run IN (SELECT vr._id FROM ("#,
+    );
+    push_visible_runs(&mut q, sees_all, user);
+    q.push(
+        r#") vr)
           GROUP BY t._run
         ) tasks ON tasks._run = r._id
         LEFT JOIN webknossos.users_ u ON r._user = u._id
         LEFT JOIN webknossos.multiUsers_ mu ON u._multiUser = mu._id
-        WHERE r._organization = $4"#,
-        runs = runs_with_state(),
-        tasks = tasks_with_state(),
-    );
-    let rows = sqlx::query(&sql)
-        .bind(stale_millis(stale_timeout))
-        .bind(sees_all_runs(user))
-        .bind(&user.id)
-        .bind(&user.organization_id)
-        .fetch_all(pool)
-        .await?;
+        WHERE r._organization = "#,
+    )
+    .push_bind(user.organization_id.as_str());
+    let rows = q.build().fetch_all(pool).await?;
     rows.iter()
         .map(|row| {
             Ok(WorkflowListingRunEntry {
@@ -467,9 +521,11 @@ pub(crate) async fn find_workflow_task_counts(
     workflow_hashes: &[String],
     stale_timeout: std::time::Duration,
 ) -> ApiResult<Vec<(String, TaskCounts)>> {
-    let visible = visible_runs("$2", "$3", "$4");
-    let sql = format!(
-        r#"WITH task_states AS ({tasks})
+    let sees_all = Some(sees_all_runs(user));
+    let mut q = Sql::new("WITH task_states AS (");
+    push_tasks_with_state(&mut q, stale_millis(stale_timeout));
+    q.push(
+        r#")
         SELECT
           w.hash,
           COUNT(any_tasks.state)::BIGINT AS total,
@@ -483,7 +539,11 @@ pub(crate) async fn find_workflow_task_counts(
         JOIN ( -- Aggregating the task states of workflow runs (including skipped and pending)
           SELECT DISTINCT ON (workflow_hash, taskName) r.workflow_hash workflow_hash, t.name taskName, ts.state state
           FROM webknossos.voxelytics_tasks t
-          JOIN ({visible}) r ON t._run = r._id
+          JOIN ("#,
+    );
+    push_visible_runs(&mut q, sees_all, user);
+    q.push(
+        r#") r ON t._run = r._id
           JOIN task_states ts ON ts._id = t._id
           ORDER BY workflow_hash, taskName, ts.beginTime DESC NULLS LAST
         ) any_tasks ON any_tasks.workflow_hash = w.hash
@@ -496,7 +556,11 @@ pub(crate) async fn find_workflow_task_counts(
             COALESCE(ta.fileSize, 0) fileSize,
             COALESCE(ta.inodeCount, 0) inodeCount
           FROM webknossos.voxelytics_tasks t
-          JOIN ({visible}) r ON t._run = r._id
+          JOIN ("#,
+    );
+    push_visible_runs(&mut q, sees_all, user);
+    q.push(
+        r#") r ON t._run = r._id
           JOIN task_states ts ON ts._id = t._id
           LEFT JOIN (
             SELECT a._task _task, SUM(a.fileSize) fileSize, SUM(a.inodeCount) inodeCount
@@ -506,18 +570,13 @@ pub(crate) async fn find_workflow_task_counts(
           WHERE ts.state NOT IN ('SKIPPED', 'PENDING')
           ORDER BY workflow_hash, taskName, ts.beginTime DESC NULLS LAST
         ) running_tasks ON running_tasks.workflow_hash = w.hash AND running_tasks.taskName = any_tasks.taskName
-        WHERE w.hash = ANY($5) AND w._organization = $4
-        GROUP BY w.hash"#,
-        tasks = tasks_with_state(),
-    );
-    let rows = sqlx::query(&sql)
-        .bind(stale_millis(stale_timeout))
-        .bind(sees_all_runs(user))
-        .bind(&user.id)
-        .bind(&user.organization_id)
-        .bind(workflow_hashes)
-        .fetch_all(pool)
-        .await?;
+        WHERE w.hash = ANY("#,
+    )
+    .push_bind(workflow_hashes)
+    .push(") AND w._organization = ")
+    .push_bind(user.organization_id.as_str())
+    .push(" GROUP BY w.hash");
+    let rows = q.build().fetch_all(pool).await?;
     rows.iter()
         .map(|row| {
             Ok((
@@ -581,12 +640,17 @@ pub(crate) async fn find_task_runs(
     run_ids: &[String],
     stale_timeout: std::time::Duration,
 ) -> ApiResult<Vec<TaskRunEntry>> {
-    let sql = format!(
-        r#"WITH task_states AS (
-          {tasks}
-          WHERE t._run = ANY($2) -- Filter here, because CTEs are materialized
+    let stale_millis = stale_millis(stale_timeout);
+    let mut q = Sql::new("WITH task_states AS (");
+    push_tasks_with_state(&mut q, stale_millis);
+    q.push(" WHERE t._run = ANY(").push_bind(run_ids).push(
+        r#") -- Filter here, because CTEs are materialized
         ),
-        chunk_states AS MATERIALIZED ({chunks})
+        chunk_states AS MATERIALIZED ("#,
+    );
+    push_chunks_with_state(&mut q, stale_millis, run_ids, None);
+    q.push(
+        r#")
         SELECT
           r._id AS runId,
           r.name AS runName,
@@ -622,15 +686,11 @@ pub(crate) async fn find_task_runs(
           GROUP BY cs._task
         ) chunks ON chunks._task = t._id
         WHERE
-          r._id = ANY($2)"#,
-        tasks = tasks_with_state(),
-        chunks = chunks_with_state("$2", None),
-    );
-    let rows = sqlx::query(&sql)
-        .bind(stale_millis(stale_timeout))
-        .bind(run_ids)
-        .fetch_all(pool)
-        .await?;
+          r._id = ANY("#,
+    )
+    .push_bind(run_ids)
+    .push(")");
+    let rows = q.build().fetch_all(pool).await?;
     rows.iter()
         .map(|row| {
             Ok(TaskRunEntry {
@@ -652,8 +712,10 @@ pub(crate) async fn find_combined_task_runs(
     run_ids: &[String],
     stale_timeout: std::time::Duration,
 ) -> ApiResult<Vec<CombinedTaskRunEntry>> {
-    let sql = format!(
-        r#"WITH {latest}
+    let mut q = Sql::new("WITH ");
+    push_latest_chunk_states_ctes(&mut q, stale_millis(stale_timeout), run_ids, None);
+    q.push(
+        r#"
         SELECT
           l.taskName AS taskName,
           exec.executionId AS currentExecutionId,
@@ -680,13 +742,8 @@ pub(crate) async fn find_combined_task_runs(
           FROM latest_chunk_states l
           GROUP BY l.taskName
         ) chunks ON chunks.taskName = l.taskName"#,
-        latest = latest_chunk_states_ctes("$2", None),
     );
-    let rows = sqlx::query(&sql)
-        .bind(stale_millis(stale_timeout))
-        .bind(run_ids)
-        .fetch_all(pool)
-        .await?;
+    let rows = q.build().fetch_all(pool).await?;
     rows.iter()
         .map(|row| {
             Ok(CombinedTaskRunEntry {
@@ -708,8 +765,11 @@ pub(crate) async fn find_artifacts(
     run_ids: &[String],
     stale_timeout: std::time::Duration,
 ) -> ApiResult<Vec<ArtifactEntry>> {
-    let sql = format!(
-        r#"WITH latest_complete_tasks AS ({latest})
+    let stale_millis = stale_millis(stale_timeout);
+    let mut q = Sql::new("WITH latest_complete_tasks AS (");
+    push_latest_complete_or_skipped_task(&mut q, stale_millis, run_ids, None);
+    q.push(
+        r#")
         SELECT
           a._id,
           a._task,
@@ -732,21 +792,17 @@ pub(crate) async fn find_artifacts(
             r._id _run
           FROM webknossos.voxelytics_artifacts a
           JOIN webknossos.voxelytics_tasks t ON a._task = t._id
-          JOIN ({tasks}) ts ON ts._id = t._id AND ts.state = 'COMPLETE'
-          JOIN ({visible}) r ON r._id = t._run
+          JOIN ("#,
+    );
+    push_tasks_with_state(&mut q, stale_millis);
+    q.push(") ts ON ts._id = t._id AND ts.state = 'COMPLETE' JOIN (");
+    push_visible_runs(&mut q, None, user);
+    q.push(
+        r#") r ON r._id = t._run
           ORDER BY a.path, ts.beginTime DESC NULLS LAST
         ) o ON o.path = a.path AND t.state = 'SKIPPED'"#,
-        latest = latest_complete_or_skipped_task("$2", None),
-        tasks = tasks_with_state(),
-        visible = visible_runs("TRUE", "$3", "$4"),
     );
-    let rows = sqlx::query(&sql)
-        .bind(stale_millis(stale_timeout))
-        .bind(run_ids)
-        .bind(&user.id)
-        .bind(&user.organization_id)
-        .fetch_all(pool)
-        .await?;
+    let rows = q.build().fetch_all(pool).await?;
     rows.iter()
         .map(|row| {
             let other_hash: Option<String> = row.try_get(9)?;
@@ -839,8 +895,15 @@ pub(crate) async fn chunk_statistics(
     task_name: &str,
     stale_timeout: std::time::Duration,
 ) -> ApiResult<Vec<ChunkStatisticsEntry>> {
-    let sql = format!(
-        r#"WITH {latest}
+    let mut q = Sql::new("WITH ");
+    push_latest_chunk_states_ctes(
+        &mut q,
+        stale_millis(stale_timeout),
+        run_ids,
+        Some(task_name),
+    );
+    q.push(
+        r#"
         SELECT
           exec.executionId AS executionId,
           exec.countTotal::BIGINT AS countTotal,
@@ -920,14 +983,8 @@ pub(crate) async fn chunk_statistics(
           GROUP BY c.executionId
         ) durations ON durations.executionId = exec.executionId
         ORDER BY times.beginTime ASC NULLS LAST"#,
-        latest = latest_chunk_states_ctes("$2", Some("$3")),
     );
-    let rows = sqlx::query(&sql)
-        .bind(stale_millis(stale_timeout))
-        .bind(run_ids)
-        .bind(task_name)
-        .fetch_all(pool)
-        .await?;
+    let rows = q.build().fetch_all(pool).await?;
     rows.iter()
         .map(|row| {
             let stats = |offset: usize, with_sum: bool| -> sqlx::Result<StatisticsEntry> {
@@ -967,8 +1024,15 @@ pub(crate) async fn artifact_checksums(
     artifact_name: Option<&str>,
     stale_timeout: std::time::Duration,
 ) -> ApiResult<Vec<ArtifactChecksumEntry>> {
-    let sql = format!(
-        r#"WITH latest_complete_tasks AS ({latest})
+    let mut q = Sql::new("WITH latest_complete_tasks AS (");
+    push_latest_complete_or_skipped_task(
+        &mut q,
+        stale_millis(stale_timeout),
+        run_ids,
+        Some(task_name),
+    );
+    q.push(
+        r#")
         SELECT
           t.name,
           a.name,
@@ -987,17 +1051,13 @@ pub(crate) async fn artifact_checksums(
           WHERE e._artifact = a._id
           ORDER BY e.path, e.timestamp
         ) af ON TRUE
-        WHERE ($4::TEXT IS NULL OR a.name = $4)
-        ORDER BY a.name, af.path"#,
-        latest = latest_complete_or_skipped_task("$2", Some("$3")),
-    );
-    let rows = sqlx::query(&sql)
-        .bind(stale_millis(stale_timeout))
-        .bind(run_ids)
-        .bind(task_name)
-        .bind(artifact_name)
-        .fetch_all(pool)
-        .await?;
+        WHERE ("#,
+    )
+    .push_bind(artifact_name)
+    .push("::TEXT IS NULL OR a.name = ")
+    .push_bind(artifact_name)
+    .push(") ORDER BY a.name, af.path");
+    let rows = q.build().fetch_all(pool).await?;
     rows.iter()
         .map(|row| {
             Ok(ArtifactChecksumEntry {

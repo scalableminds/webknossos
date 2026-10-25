@@ -12,6 +12,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json, Path, Query},
+    sql::Sql,
     util::id::ObjectId,
 };
 
@@ -53,7 +54,14 @@ struct PrivateLink {
     )]
     expiration: Option<DateTime<Utc>>,
 }
-const SELECT: &str = "SELECT link._id AS id,link._annotation AS annotation,link.accessToken AS access_token,link.expirationDateTime AS expiration FROM webknossos.annotation_privateLinks link JOIN webknossos.annotations a ON a._id=link._annotation WHERE NOT link.isDeleted AND NOT a.isDeleted AND a._user=$1";
+/// Live private links of the user's live annotations; callers append further conditions.
+fn select(user: &AuthUser) -> Sql<'_> {
+    let mut q = Sql::new(
+        "SELECT link._id AS id,link._annotation AS annotation,link.accessToken AS access_token,link.expirationDateTime AS expiration FROM webknossos.annotation_privateLinks link JOIN webknossos.annotations a ON a._id=link._annotation WHERE NOT link.isDeleted AND NOT a.isDeleted AND a._user=",
+    );
+    q.push_bind(user.id.as_str());
+    q
+}
 async fn owned_link<'e, E: Executor<'e, Database = Postgres>>(
     executor: E,
     user: &AuthUser,
@@ -61,9 +69,9 @@ async fn owned_link<'e, E: Executor<'e, Database = Postgres>>(
     lock: bool,
 ) -> ApiResult<PrivateLink> {
     let suffix = if lock { " FOR UPDATE OF link" } else { "" };
-    sqlx::query_as(&format!("{SELECT} AND link._id=$2{suffix}"))
-        .bind(&user.id)
-        .bind(id)
+    let mut q = select(user);
+    q.push(" AND link._id=").push_bind(id.as_str()).push(suffix);
+    q.build_query_as()
         .fetch_optional(executor)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::annotation::private_link::MISSING))
@@ -73,8 +81,8 @@ async fn list(
     State(state): State<AppState>,
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Vec<PrivateLink>>> {
-    let links: Vec<PrivateLink> = sqlx::query_as(SELECT)
-        .bind(&user.id)
+    let links: Vec<PrivateLink> = select(&user)
+        .build_query_as()
         .fetch_all(&state.pool)
         .await?;
     Ok(ResponseJson(links))
@@ -85,11 +93,9 @@ async fn by_annotation(
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Vec<PrivateLink>>> {
     let id = ObjectId::parse_path(&id)?;
-    let links: Vec<PrivateLink> = sqlx::query_as(&format!("{SELECT} AND link._annotation=$2"))
-        .bind(&user.id)
-        .bind(id)
-        .fetch_all(&state.pool)
-        .await?;
+    let mut q = select(&user);
+    q.push(" AND link._annotation=").push_bind(id.as_str());
+    let links: Vec<PrivateLink> = q.build_query_as().fetch_all(&state.pool).await?;
     Ok(ResponseJson(links))
 }
 async fn read(

@@ -13,6 +13,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path, Query},
+    sql::Sql,
     util::id::ObjectId,
 };
 
@@ -163,8 +164,11 @@ async fn remove(
         "dataset_allowedTeams",
         "folder_allowedTeams",
     ] {
-        sqlx::query(&format!("DELETE FROM webknossos.{table} WHERE _team = $1"))
-            .bind(&id)
+        Sql::new("DELETE FROM webknossos.")
+            .push(table)
+            .push(" WHERE _team = ")
+            .push_bind(&id)
+            .build()
             .execute(&mut *transaction)
             .await?;
     }

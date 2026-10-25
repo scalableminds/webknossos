@@ -25,6 +25,7 @@ use crate::{
     auth::routes::AuthRouteConfig,
     error::{ApiError, ApiResult},
     extract::{Path, Query},
+    sql::Sql,
     system::application_info::MiscState,
     util::id::{ObjectId, PathObjectId},
 };
@@ -69,24 +70,59 @@ pub(crate) fn is_job_command(command: &str) -> bool {
     JOB_COMMANDS.contains(&command)
 }
 
-/// JobDAO.readAccessQ for alias `j` ($1 = requesting user): own jobs, jobs of
-/// members of teams the user manages, jobs of the admin's organization, or superuser.
-pub(crate) const JOB_READ_ACCESS: &str = r#"(j._owner = $1
+/// JobDAO.readAccessQ for alias `j`: own jobs, jobs of members of teams the
+/// user manages, jobs of the admin's organization, or superuser.
+fn push_job_read_access<'a>(q: &mut Sql<'a>, user_id: &'a str) {
+    q.push("(j._owner = ")
+        .push_bind(user_id)
+        .push(
+            r#"
   OR j._owner IN (SELECT _user FROM webknossos.user_team_roles WHERE _team IN
-    (SELECT _team FROM webknossos.user_team_roles WHERE _user = $1 AND isTeamManager))
+    (SELECT _team FROM webknossos.user_team_roles WHERE _user = "#,
+        )
+        .push_bind(user_id)
+        .push(
+            r#" AND isTeamManager))
   OR (SELECT ou._organization FROM webknossos.users_ ou WHERE ou._id = j._owner) IN
-    (SELECT _organization FROM webknossos.users_ WHERE _id = $1 AND isAdmin)
-  OR $1 IN (SELECT su._id FROM webknossos.users_ su JOIN webknossos.multiUsers_ sm ON su._multiUser = sm._id WHERE sm.isSuperUser))"#;
+    (SELECT _organization FROM webknossos.users_ WHERE _id = "#,
+        )
+        .push_bind(user_id)
+        .push(" AND isAdmin)\n  OR ")
+        .push_bind(user_id)
+        .push(
+            " IN (SELECT su._id FROM webknossos.users_ su JOIN webknossos.multiUsers_ sm ON su._multiUser = sm._id WHERE sm.isSuperUser))",
+        );
+}
 
-/// JobDAO.listAccessQ for alias `j` ($1 = requesting user): own jobs or jobs of the admin's organization.
-const JOB_LIST_ACCESS: &str = r#"(j._owner = $1
+/// JobDAO.listAccessQ for alias `j`: own jobs or jobs of the admin's organization.
+fn push_job_list_access<'a>(q: &mut Sql<'a>, user_id: &'a str) {
+    q.push("(j._owner = ")
+        .push_bind(user_id)
+        .push(
+            r#"
   OR (SELECT ou._organization FROM webknossos.users_ ou WHERE ou._id = j._owner) IN
-    (SELECT _organization FROM webknossos.users_ WHERE _id = $1 AND isAdmin))"#;
+    (SELECT _organization FROM webknossos.users_ WHERE _id = "#,
+        )
+        .push_bind(user_id)
+        .push(" AND isAdmin))");
+}
 
-/// CreditTransactionDAO.readAccessQ ($1 = requesting user, unaliased credit_transactions_).
-pub(crate) const CREDIT_READ_ACCESS: &str = r#"(_organization IN (SELECT _organization FROM webknossos.users_ WHERE (isAdmin OR isDatasetManager) AND _id = $1)
-  OR _organization IN (SELECT _organization FROM webknossos.teams_ WHERE _id IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = $1))
-  OR TRUE IN (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN (SELECT _multiUser FROM webknossos.users_ WHERE _id = $1)))"#;
+/// CreditTransactionDAO.readAccessQ (unaliased credit_transactions_).
+fn push_credit_read_access<'a>(q: &mut Sql<'a>, user_id: &'a str) {
+    q.push(
+        "(_organization IN (SELECT _organization FROM webknossos.users_ WHERE (isAdmin OR isDatasetManager) AND _id = ",
+    )
+    .push_bind(user_id)
+    .push(
+        ")\n  OR _organization IN (SELECT _organization FROM webknossos.teams_ WHERE _id IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = ",
+    )
+    .push_bind(user_id)
+    .push(
+        "))\n  OR TRUE IN (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN (SELECT _multiUser FROM webknossos.users_ WHERE _id = ",
+    )
+    .push_bind(user_id)
+    .push(")))");
+}
 
 /// Column list for [`Job`] (alias `j`, `_dataStore` trimmed as in JobDAO.parse).
 pub(crate) const JOB_COLUMNS: &str = r#"j._id AS id, j._owner AS owner, TRIM(j._dataStore) AS data_store,
@@ -192,14 +228,13 @@ pub(crate) async fn find_job(
     user_id: &str,
     job_id: &str,
 ) -> ApiResult<Option<Job>> {
-    let query = format!(
-        "SELECT {JOB_COLUMNS} FROM webknossos.jobs_ j WHERE j._id = $2 AND {JOB_READ_ACCESS}"
-    );
-    let job: Option<Job> = sqlx::query_as(&query)
-        .bind(user_id)
-        .bind(job_id)
-        .fetch_optional(&mut *connection)
-        .await?;
+    let mut q = Sql::new("SELECT ");
+    q.push(JOB_COLUMNS)
+        .push(" FROM webknossos.jobs_ j WHERE j._id = ")
+        .push_bind(job_id)
+        .push(" AND ");
+    push_job_read_access(&mut q, user_id);
+    let job: Option<Job> = q.build_query_as().fetch_optional(&mut *connection).await?;
     match job {
         Some(job) if !job.is_valid() => Err(ApiError::bad_request(format!(
             "Parsing failed for row in webknossos.jobs queried by {job_id}"
@@ -326,13 +361,14 @@ pub(crate) async fn public_writes(
         ApiError::bad_request(crate::msg::organization::not_found(&owner_organization))
     })?;
     // CreditTransactionService.findTransactionOfJob; any failure means "no cost".
-    let cost_query = format!(
-        r#"SELECT milli_credit_delta FROM webknossos.credit_transactions_
-          WHERE _paid_job = $2 AND {CREDIT_READ_ACCESS} ORDER BY created_at, _id LIMIT 1"#
+    let mut q = Sql::new(
+        "SELECT milli_credit_delta FROM webknossos.credit_transactions_ WHERE _paid_job = ",
     );
-    let delta: Option<i32> = sqlx::query_scalar(&cost_query)
-        .bind(user_id)
-        .bind(&job.id)
+    q.push_bind(&job.id).push(" AND ");
+    push_credit_read_access(&mut q, user_id);
+    q.push(" ORDER BY created_at, _id LIMIT 1");
+    let delta: Option<i32> = q
+        .build_query_scalar()
         .fetch_optional(&mut *connection)
         .await?;
     Ok(JobCompactInfo {
@@ -454,7 +490,8 @@ async fn list(
     }
     // JobDAO.findAllCompact. The credit lateral join has no access check (as in Scala);
     // retries can attach several transactions with the same delta, so one suffices.
-    let sql = format!(
+    let skip_for_deleted_datasets = query.skip_for_deleted_datasets.unwrap_or(false);
+    let mut q = Sql::new(
         r#"SELECT j._id AS id, j.command, u._organization AS organization, mu.firstName AS first_name,
             mu.lastName AS last_name, mu.email, j.commandArgs AS args,
             COALESCE(j.manualState, j.state)::text AS state, j.returnValue AS return_value,
@@ -465,21 +502,25 @@ async fn list(
           JOIN webknossos.multiUsers_ mu ON u._multiUser = mu._id
           LEFT JOIN LATERAL (SELECT milli_credit_delta FROM webknossos.credit_transactions_
             WHERE _paid_job = j._id LIMIT 1) ct ON TRUE
-          WHERE ($2::text IS NULL OR j.command = $2)
-            AND {JOB_LIST_ACCESS}
-            AND (NOT $3 OR (j.commandArgs->>'dataset_id')::text IN
-              (SELECT _id FROM webknossos.datasets WHERE status NOT IN ($4, $5, $6)))
-          ORDER BY j.created DESC, j._id DESC"#
+          WHERE ("#,
     );
-    let rows: Vec<CompactRow> = sqlx::query_as(&sql)
-        .bind(&user.id)
-        .bind(&query.command)
-        .bind(query.skip_for_deleted_datasets.unwrap_or(false))
-        .bind(UNREPORTED_DATASET_STATUSES[0])
-        .bind(UNREPORTED_DATASET_STATUSES[1])
-        .bind(UNREPORTED_DATASET_STATUSES[2])
-        .fetch_all(&state.pool)
-        .await?;
+    q.push_bind(&query.command)
+        .push("::text IS NULL OR j.command = ")
+        .push_bind(&query.command)
+        .push(") AND ");
+    push_job_list_access(&mut q, &user.id);
+    q.push(" AND (NOT ")
+        .push_bind(skip_for_deleted_datasets)
+        .push(
+            " OR (j.commandArgs->>'dataset_id')::text IN
+              (SELECT _id FROM webknossos.datasets WHERE status NOT IN (",
+        );
+    let mut statuses = q.separated(", ");
+    for status in UNREPORTED_DATASET_STATUSES {
+        statuses.push_bind(status);
+    }
+    q.push("))) ORDER BY j.created DESC, j._id DESC");
+    let rows: Vec<CompactRow> = q.build_query_as().fetch_all(&state.pool).await?;
     let mut result = Vec::with_capacity(rows.len());
     for row in rows {
         // JobCommand/JobState/JsObject parsing without message: an empty Fox.
@@ -775,15 +816,14 @@ async fn reserve_credits_for_retry(
     user_id: &str,
     job_id: &str,
 ) -> ApiResult<()> {
-    let existing_query = format!(
-        r#"SELECT _organization, milli_credit_delta, comment FROM webknossos.credit_transactions_
-          WHERE _paid_job = $2 AND {CREDIT_READ_ACCESS} ORDER BY created_at, _id LIMIT 1"#
+    let mut q = Sql::new(
+        "SELECT _organization, milli_credit_delta, comment FROM webknossos.credit_transactions_ WHERE _paid_job = ",
     );
-    let existing: Option<(String, i32, String)> = sqlx::query_as(&existing_query)
-        .bind(user_id)
-        .bind(job_id)
-        .fetch_optional(&mut *connection)
-        .await?;
+    q.push_bind(job_id).push(" AND ");
+    push_credit_read_access(&mut q, user_id);
+    q.push(" ORDER BY created_at, _id LIMIT 1");
+    let existing: Option<(String, i32, String)> =
+        q.build_query_as().fetch_optional(&mut *connection).await?;
     let Some((organization, delta, comment)) = existing else {
         // Assume a transaction-less (unpaid) job.
         return Ok(());
@@ -816,15 +856,12 @@ pub(crate) async fn milli_credit_balance(
     user_id: &str,
     organization: &str,
 ) -> ApiResult<i64> {
-    let query = format!(
-        r#"SELECT COALESCE(SUM(milli_credit_delta), 0)::bigint FROM webknossos.credit_transactions_
-          WHERE _organization = $2 AND {CREDIT_READ_ACCESS}"#
+    let mut q = Sql::new(
+        "SELECT COALESCE(SUM(milli_credit_delta), 0)::bigint FROM webknossos.credit_transactions_ WHERE _organization = ",
     );
-    Ok(sqlx::query_scalar(&query)
-        .bind(user_id)
-        .bind(organization)
-        .fetch_one(&mut *connection)
-        .await?)
+    q.push_bind(organization).push(" AND ");
+    push_credit_read_access(&mut q, user_id);
+    Ok(q.build_query_scalar().fetch_one(&mut *connection).await?)
 }
 
 /// Redirect to the datastore's export download, authenticated with the user's

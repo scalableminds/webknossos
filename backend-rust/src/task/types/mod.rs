@@ -9,6 +9,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json, Path},
+    sql::{PushArg, Requester, Sql},
     util::id::ObjectId,
 };
 
@@ -121,19 +122,27 @@ pub(crate) const PUBLIC_TASK_TYPE: &str = r#"SELECT jsonb_build_object(
     'magRestrictions',jsonb_build_object('min',tt.settings_magrestrictions_min,'max',tt.settings_magrestrictions_max))),
  'recommendedConfiguration',tt.recommendedconfiguration,'tracingType',tt.tracingtype
 ) FROM webknossos.tasktypes_ tt JOIN webknossos.teams_ team ON team._id=tt._team "#;
-const ACCESS: &str = " tt._organization=$2 AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE _user=$1 AND _team=tt._team)) ";
+/// TaskTypeDAO.readAccessQ for alias `tt`.
+fn push_read_access<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+    q.push("(tt._organization=")
+        .push_arg(requester.organization)
+        .push(" AND (")
+        .push_bind(requester.is_admin)
+        .push(" OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE _user=")
+        .push_arg(requester.id)
+        .push(" AND _team=tt._team)))");
+}
 
 async fn public_json<'e, E: sqlx::Executor<'e, Database = sqlx::Postgres>>(
     executor: E,
     user: &AuthUser,
     id: &ObjectId,
 ) -> ApiResult<Value> {
-    let query = format!("{PUBLIC_TASK_TYPE} WHERE {ACCESS} AND tt._id=$4");
-    sqlx::query_scalar(&query)
-        .bind(&user.id)
-        .bind(&user.organization_id)
-        .bind(user.is_admin)
-        .bind(id)
+    let mut q = Sql::new(PUBLIC_TASK_TYPE);
+    q.push(" WHERE ");
+    push_read_access(&mut q, user.into());
+    q.push(" AND tt._id=").push_bind(id);
+    q.build_query_scalar()
         .fetch_optional(executor)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::task_type::not_found(id)))
@@ -146,13 +155,10 @@ async fn check_manage(pool: &PgPool, user: &AuthUser, team: &str) -> ApiResult<(
 }
 
 async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<ResponseJson<Value>> {
-    let query = format!("{PUBLIC_TASK_TYPE} WHERE {ACCESS}");
-    let values: Vec<Value> = sqlx::query_scalar(&query)
-        .bind(&user.id)
-        .bind(&user.organization_id)
-        .bind(user.is_admin)
-        .fetch_all(&state.pool)
-        .await?;
+    let mut q = Sql::new(PUBLIC_TASK_TYPE);
+    q.push(" WHERE ");
+    push_read_access(&mut q, (&user).into());
+    let values: Vec<Value> = q.build_query_scalar().fetch_all(&state.pool).await?;
     Ok(ResponseJson(Value::Array(values)))
 }
 async fn read(

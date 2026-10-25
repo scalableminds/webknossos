@@ -18,6 +18,7 @@ use crate::{
     extract::{Json as RequestJson, Path, Query},
     remote::datastore::credentials::CredentialInput,
     slack::SlackNotificationService,
+    sql::Sql,
     stores::client::{ServiceClients, ServiceError},
     util::id::{ObjectId, PathObjectId},
 };
@@ -238,6 +239,41 @@ fn split_path(literal: &str) -> Vec<&str> {
     parts
 }
 
+/// Folders (alias `f`) visible to `user`: below the root of an organization
+/// they administer or manage datasets of, below or above a folder shared with
+/// one of their teams, or above a public dataset or one shared with their teams.
+fn push_visible_folder<'a>(q: &mut Sql<'a>, user: &'a str) {
+    q.push(
+        r#"(
+        f._id IN (SELECT fp._descendant FROM webknossos.folder_paths fp WHERE fp._ancestor IN (
+          SELECT o._rootFolder FROM webknossos.organizations_ o JOIN webknossos.users_ u ON u._organization = o._id
+          WHERE u._id = "#,
+    )
+    .push_bind(user)
+    .push(
+        r#" AND (u.isAdmin OR u.isDatasetManager)))
+        OR f._id IN (SELECT fp._descendant FROM webknossos.folder_paths fp WHERE fp._ancestor IN (
+          SELECT at._folder FROM webknossos.folder_allowedTeams at
+          JOIN webknossos.user_team_roles tr ON at._team = tr._team WHERE tr._user = "#,
+    )
+    .push_bind(user)
+    .push(
+        r#"))
+        OR f._id IN (SELECT fp._ancestor FROM webknossos.folder_paths fp WHERE fp._descendant IN (
+          SELECT at._folder FROM webknossos.folder_allowedTeams at
+          JOIN webknossos.user_team_roles utr ON at._team = utr._team WHERE utr._user = "#,
+    )
+    .push_bind(user)
+    .push(
+        r#"))
+        OR f._id IN (SELECT fp._ancestor FROM webknossos.folder_paths fp WHERE fp._descendant IN (
+          SELECT d._folder FROM webknossos.datasets_ d LEFT JOIN webknossos.dataset_allowedTeams dt ON dt._dataset = d._id
+          LEFT JOIN webknossos.user_team_roles utr ON dt._team = utr._team WHERE utr._user = "#,
+    )
+    .push_bind(user)
+    .push(" OR d.isPublic)))");
+}
+
 /// FolderService.getOrCreateFromPathLiteral with the user's folder visibility.
 async fn get_or_create_folder(
     connection: &mut sqlx::PgConnection,
@@ -250,26 +286,18 @@ async fn get_or_create_folder(
             .bind(&user.organization_id)
             .fetch_one(&mut *connection)
             .await?;
-    let visible = r#"(
-        f._id IN (SELECT fp._descendant FROM webknossos.folder_paths fp WHERE fp._ancestor IN (
-          SELECT o._rootFolder FROM webknossos.organizations_ o JOIN webknossos.users_ u ON u._organization = o._id
-          WHERE u._id = $2 AND (u.isAdmin OR u.isDatasetManager)))
-        OR f._id IN (SELECT fp._descendant FROM webknossos.folder_paths fp WHERE fp._ancestor IN (
-          SELECT at._folder FROM webknossos.folder_allowedTeams at JOIN webknossos.user_team_roles tr ON at._team = tr._team WHERE tr._user = $2))
-        OR f._id IN (SELECT fp._ancestor FROM webknossos.folder_paths fp WHERE fp._descendant IN (
-          SELECT at._folder FROM webknossos.folder_allowedTeams at JOIN webknossos.user_team_roles utr ON at._team = utr._team WHERE utr._user = $2))
-        OR f._id IN (SELECT fp._ancestor FROM webknossos.folder_paths fp WHERE fp._descendant IN (
-          SELECT d._folder FROM webknossos.datasets_ d LEFT JOIN webknossos.dataset_allowedTeams dt ON dt._dataset = d._id
-          LEFT JOIN webknossos.user_team_roles utr ON dt._team = utr._team WHERE utr._user = $2 OR d.isPublic)))"#;
-    let folders: Vec<(String, String, Option<String>)> = sqlx::query_as(&format!(
+    let mut q = Sql::new(
         r#"SELECT f._id, f.name, fp._ancestor FROM webknossos.folders_ f JOIN webknossos.folder_paths fp ON f._id = fp._descendant
-           WHERE fp.depth = 1 AND f._id IN (SELECT _descendant FROM webknossos.folder_paths WHERE _ancestor = $1) AND {visible}
-           UNION ALL SELECT f._id, f.name, NULL FROM webknossos.folders_ f WHERE f._id = $1 AND {visible}"#
-    ))
-    .bind(&root)
-    .bind(&user.id)
-    .fetch_all(&mut *connection)
-    .await?;
+           WHERE fp.depth = 1 AND f._id IN (SELECT _descendant FROM webknossos.folder_paths WHERE _ancestor = "#,
+    );
+    q.push_bind(&root).push(") AND ");
+    push_visible_folder(&mut q, &user.id);
+    q.push(" UNION ALL SELECT f._id, f.name, NULL FROM webknossos.folders_ f WHERE f._id = ")
+        .push_bind(&root)
+        .push(" AND ");
+    push_visible_folder(&mut q, &user.id);
+    let folders: Vec<(String, String, Option<String>)> =
+        q.build_query_as().fetch_all(&mut *connection).await?;
     let root_folder = folders.iter().find(|f| f.2.is_none()).ok_or_else(failed)?;
     let rest = literal.strip_prefix('/').ok_or_else(failed)?;
     let names = split_path(rest);

@@ -16,6 +16,7 @@ use crate::{
     extract::{Json, Query},
     job::routes::{JOB_COLUMNS, Job},
     remote::datastore::ValidatedDataStore,
+    sql::Sql,
     util::id::ObjectId,
 };
 
@@ -116,9 +117,12 @@ async fn job_export_properties(
     Query(query): Query<JobIdQuery>,
     ValidatedDataStore(_store): ValidatedDataStore,
 ) -> ApiResult<ResponseJson<Value>> {
-    let statement = format!("SELECT {JOB_COLUMNS} FROM webknossos.jobs_ j WHERE j._id=$1");
-    let job: Job = sqlx::query_as(&statement)
-        .bind(query.job_id.as_str())
+    let mut q = Sql::new("SELECT ");
+    q.push(JOB_COLUMNS)
+        .push(" FROM webknossos.jobs_ j WHERE j._id=")
+        .push_bind(query.job_id.as_str());
+    let job: Job = q
+        .build_query_as()
         .fetch_optional(&state.pool)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;

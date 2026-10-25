@@ -3,6 +3,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json, Path},
+    sql::Sql,
     util::id::{ObjectId, PathObjectId},
 };
 use axum::{
@@ -99,10 +100,12 @@ async fn read(
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<ResponseJson<Maintenance>> {
     require_superuser(&user)?;
-    let query = format!("SELECT {COLUMNS} FROM webknossos.maintenances_ WHERE _id=$1");
+    let mut q = Sql::new("SELECT ");
+    q.push(COLUMNS)
+        .push(" FROM webknossos.maintenances_ WHERE _id=")
+        .push_bind(id.as_str());
     Ok(ResponseJson(
-        sqlx::query_as(&query)
-            .bind(id.as_str())
+        q.build_query_as()
             .fetch_optional(&state.pool)
             .await?
             .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?,
@@ -110,17 +113,18 @@ async fn read(
 }
 async fn insert(pool: &sqlx::PgPool, user: &AuthUser, body: Parameters) -> ApiResult<Maintenance> {
     require_superuser(user)?;
-    let query = format!(
-        "INSERT INTO webknossos.maintenances (_id, _user, startTime, endTime, message) VALUES ($1,$2,$3,$4,$5) RETURNING {COLUMNS}"
+    let mut q = Sql::new(
+        "INSERT INTO webknossos.maintenances (_id, _user, startTime, endTime, message) VALUES (",
     );
-    Ok(sqlx::query_as(&query)
-        .bind(ObjectId::new().as_str())
-        .bind(&user.id)
-        .bind(body.start_time)
-        .bind(body.end_time)
-        .bind(body.message)
-        .fetch_one(pool)
-        .await?)
+    let mut values = q.separated(",");
+    values
+        .push_bind(ObjectId::new().as_str().to_owned())
+        .push_bind(&user.id)
+        .push_bind(body.start_time)
+        .push_bind(body.end_time)
+        .push_bind(body.message);
+    q.push(") RETURNING ").push(COLUMNS);
+    Ok(q.build_query_as().fetch_one(pool).await?)
 }
 async fn create(
     State(state): State<AppState>,
@@ -148,15 +152,18 @@ async fn update(
     Json(body): Json<Parameters>,
 ) -> ApiResult<ResponseJson<Maintenance>> {
     require_superuser(&user)?;
-    let query = format!(
-        "UPDATE webknossos.maintenances SET startTime=$2, endTime=$3, message=$4 WHERE _id=$1 AND NOT isDeleted RETURNING {COLUMNS}"
-    );
+    let mut q = Sql::new("UPDATE webknossos.maintenances SET startTime=");
+    q.push_bind(body.start_time)
+        .push(", endTime=")
+        .push_bind(body.end_time)
+        .push(", message=")
+        .push_bind(body.message)
+        .push(" WHERE _id=")
+        .push_bind(id.as_str())
+        .push(" AND NOT isDeleted RETURNING ")
+        .push(COLUMNS);
     Ok(ResponseJson(
-        sqlx::query_as(&query)
-            .bind(id.as_str())
-            .bind(body.start_time)
-            .bind(body.end_time)
-            .bind(body.message)
+        q.build_query_as()
             .fetch_optional(&state.pool)
             .await?
             .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?,

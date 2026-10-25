@@ -18,6 +18,7 @@ use crate::auth::browser::{BrowserAuthConfig, verify_password};
 use crate::error::{ApiError, ApiResult};
 use crate::extract::{Json as RequestJson, Path, Query};
 use crate::mail::{MailSender, templates};
+use crate::sql::{Arg, PushArg, Requester, Sql};
 use crate::util::id::{ObjectId, PathObjectId};
 use notification_emails::{NotificationEmailService, TeamMembership, UserAccess};
 
@@ -323,13 +324,23 @@ pub(crate) mod msg {
 }
 
 /// UserDAO.readAccessQ (also its update access) for a `users_` row aliased
-/// `usr`; bind $1 to the requesting user id.
-pub(crate) const READ_ACCESS_PREDICATE: &str = r#"(
-  usr._id IN (SELECT _user FROM webknossos.user_team_roles WHERE _team IN (
-    SELECT _team FROM webknossos.user_team_roles WHERE _user = $1 AND isTeamManager))
-  OR usr._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $1 AND isAdmin)
-  OR usr._id = $1
-)"#;
+/// `usr`: members of teams the requester manages, users of the organization
+/// the requester administers, and the requester themself.
+pub(crate) fn push_read_access<'a>(q: &mut Sql<'a>, requester: Arg<'a>) {
+    q.push(
+        "(usr._id IN (SELECT _user FROM webknossos.user_team_roles WHERE _team IN (
+    SELECT _team FROM webknossos.user_team_roles WHERE _user = ",
+    )
+    .push_arg(requester)
+    .push(
+        " AND isTeamManager))
+  OR usr._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = ",
+    )
+    .push_arg(requester)
+    .push(" AND isAdmin) OR usr._id = ")
+    .push_arg(requester)
+    .push(")");
+}
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -376,9 +387,19 @@ struct OldMembership {
     manageable: bool,
 }
 
-/// Whether the requester manages the team: team manager of it, or admin of its
-/// organization (UserService.isTeamManagerOrAdminOf(user, team)).
-const TEAM_MANAGEABLE: &str = "(EXISTS (SELECT 1 FROM webknossos.user_team_roles AS r WHERE r._team = team._id AND r._user = $2 AND r.isTeamManager) OR ($3 AND team._organization = $4))";
+/// Whether the requester manages the team (alias `team`): team manager of it,
+/// or admin of its organization (UserService.isTeamManagerOrAdminOf(user, team)).
+fn push_team_manageable<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+    q.push(
+        "(EXISTS (SELECT 1 FROM webknossos.user_team_roles AS r WHERE r._team = team._id AND r._user = ",
+    )
+    .push_arg(requester.id)
+    .push(" AND r.isTeamManager) OR (")
+    .push_bind(requester.is_admin)
+    .push(" AND team._organization = ")
+    .push_arg(requester.organization)
+    .push("))");
+}
 
 #[allow(clippy::too_many_arguments)]
 async fn update(
@@ -394,14 +415,14 @@ async fn update(
     let id = id.as_str();
     let not_found = || ApiError::not_found(crate::msg::user::not_found(id));
     let mut tx = state.pool.begin().await?;
-    let organization: String = sqlx::query_scalar(&format!(
-        "SELECT usr._organization FROM webknossos.users_ AS usr WHERE usr._id = $2 AND {READ_ACCESS_PREDICATE}"
-    ))
-    .bind(&requester.id)
-    .bind(id)
-    .fetch_optional(&mut *tx)
-    .await?
-    .ok_or_else(not_found)?;
+    let mut q = Sql::new("SELECT usr._organization FROM webknossos.users_ AS usr WHERE usr._id = ");
+    q.push_bind(id).push(" AND ");
+    push_read_access(&mut q, requester.id.as_str().into());
+    let organization: String = q
+        .build_query_scalar()
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or_else(not_found)?;
     // Admin/owner counts and the user limit are organization-wide invariants.
     // Lock the organization first, like onboarding does before adding users.
     sqlx::query("SELECT _id FROM webknossos.organizations WHERE _id = $1 FOR UPDATE")
@@ -422,19 +443,20 @@ async fn update(
     .fetch_optional(&mut *tx)
     .await?
     .ok_or_else(not_found)?;
-    let old_memberships: Vec<OldMembership> = sqlx::query_as(&format!(
-        r#"SELECT role._team AS team, role.isTeamManager AS is_team_manager,
-             team._id IS NOT NULL AS team_exists, COALESCE({TEAM_MANAGEABLE}, FALSE) AS manageable
+    let mut q = Sql::new(
+        "SELECT role._team AS team, role.isTeamManager AS is_team_manager,
+             team._id IS NOT NULL AS team_exists, COALESCE(",
+    );
+    push_team_manageable(&mut q, (&requester).into());
+    q.push(
+        ", FALSE) AS manageable
            FROM webknossos.user_team_roles AS role
            LEFT JOIN webknossos.teams_ AS team ON team._id = role._team
-           WHERE role._user = $1 ORDER BY role._team"#
-    ))
-    .bind(id)
-    .bind(&requester.id)
-    .bind(requester.is_admin)
-    .bind(&requester.organization_id)
-    .fetch_all(&mut *tx)
-    .await?;
+           WHERE role._user = ",
+    )
+    .push_bind(id)
+    .push(" ORDER BY role._team");
+    let old_memberships: Vec<OldMembership> = q.build_query_as().fetch_all(&mut *tx).await?;
     let old_experiences: BTreeMap<String, i32> = sqlx::query_as::<_, (String, i32)>(
         "SELECT domain, value FROM webknossos.user_experiences WHERE _user = $1",
     )
@@ -636,13 +658,11 @@ async fn update(
     }
     // Play's experience update re-checks update access after the membership
     // change, so a team manager cannot remove the user from their last shared team.
-    let still_accessible: bool = sqlx::query_scalar(&format!(
-        "SELECT EXISTS (SELECT 1 FROM webknossos.users_ AS usr WHERE usr._id = $2 AND {READ_ACCESS_PREDICATE})"
-    ))
-    .bind(&requester.id)
-    .bind(id)
-    .fetch_one(&mut *tx)
-    .await?;
+    let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.users_ AS usr WHERE usr._id = ");
+    q.push_bind(id).push(" AND ");
+    push_read_access(&mut q, requester.id.as_str().into());
+    q.push(")");
+    let still_accessible: bool = q.build_query_scalar().fetch_one(&mut *tx).await?;
     if !still_accessible {
         return Err(ApiError::bad_request(
             crate::msg::annotation::NO_UPDATE_ACCESS,
@@ -715,16 +735,18 @@ async fn membership_updates(
 ) -> ApiResult<Vec<(String, bool)>> {
     let mut teams: HashMap<&str, (String, String, bool)> = HashMap::new();
     for membership in requested {
-        let team: (String, String, bool) = sqlx::query_as(&format!(
-            "SELECT team.name, team._organization, {TEAM_MANAGEABLE} FROM webknossos.teams_ AS team WHERE team._id = $1 FOR SHARE OF team"
-        ))
-        .bind(membership.id.as_str())
-        .bind(&requester.id)
-        .bind(requester.is_admin)
-        .bind(&requester.organization_id)
-        .fetch_optional(&mut **tx)
-        .await?
-        .ok_or_else(|| ApiError::not_found(crate::msg::team::not_found(membership.id.as_str())))?;
+        let mut q = Sql::new("SELECT team.name, team._organization, ");
+        push_team_manageable(&mut q, requester.into());
+        q.push(" FROM webknossos.teams_ AS team WHERE team._id = ")
+            .push_bind(membership.id.as_str())
+            .push(" FOR SHARE OF team");
+        let team: (String, String, bool) = q
+            .build_query_as()
+            .fetch_optional(&mut **tx)
+            .await?
+            .ok_or_else(|| {
+                ApiError::not_found(crate::msg::team::not_found(membership.id.as_str()))
+            })?;
         teams.insert(membership.id.as_str(), team);
     }
     if old.iter().any(|m| !m.team_exists) {

@@ -24,11 +24,12 @@ use sqlx::PgConnection;
 use crate::{
     AppState,
     auth::{AuthUser, authenticate_request},
-    dataset::access::READ_PREDICATE,
+    dataset::access::push_read_predicate,
     dataset::create::{validate_dataset_name, validate_layer_name_lax},
     error::ApiError,
     extract::extension,
     job::routes::NOT_ENOUGH_CREDITS,
+    sql::Sql,
     stores::client::ServiceClients,
     system::application_info::MiscState,
     util::id::ObjectId,
@@ -523,19 +524,16 @@ pub(crate) async fn find_readable_dataset(
     user: &AuthUser,
     id: &str,
 ) -> RunResult<Option<Dataset>> {
-    let query = format!(
+    let mut q = Sql::new(
         r#"SELECT d._id AS id, d.name, d.directoryName AS directory_name, d._organization AS organization,
             d._dataStore AS data_store, d.isUsable AS is_usable, d.voxelSizeFactor IS NOT NULL AS has_voxel_size,
             CASE WHEN d.voxelSizeFactor IS NULL THEN NULL ELSE ARRAY[(d.voxelSizeFactor).x, (d.voxelSizeFactor).y,
               (d.voxelSizeFactor).z]::float8[] END AS voxel_size_factor, d.voxelSizeUnit::text AS voxel_size_unit
-          FROM webknossos.datasets_ d WHERE d._id = $3 AND {READ_PREDICATE}"#
+          FROM webknossos.datasets_ d WHERE d._id = "#,
     );
-    Ok(sqlx::query_as(&query)
-        .bind(&user.id)
-        .bind(Option::<&str>::None)
-        .bind(id)
-        .fetch_optional(&state.pool)
-        .await?)
+    q.push_bind(id).push(" AND ");
+    push_read_predicate(&mut q, user.id.as_str().into(), None);
+    Ok(q.build_query_as().fetch_optional(&state.pool).await?)
 }
 
 /// DatasetDAO.findOne with the user's access `?~> Msg.Dataset.notFound(id) ~> NOT_FOUND`.

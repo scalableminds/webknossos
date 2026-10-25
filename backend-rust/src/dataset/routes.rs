@@ -11,6 +11,7 @@ use crate::{
     auth::{AuthUser, OptionalAuthUser},
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path, Query},
+    sql::Sql,
     system::application_info::MiscState,
     users::notification_emails::{NotificationEmailService, SharedResource},
     util::id::{ObjectId, PathObjectId},
@@ -91,17 +92,14 @@ async fn find_by_import_url(
     Query(query): Query<ImportQuery>,
     Extension(features): Extension<DatasetFeatures>,
 ) -> ApiResult<Json<Value>> {
-    let id: Option<String> = sqlx::query_scalar(&format!(
-        "SELECT d._id FROM webknossos.datasets_ d WHERE {} AND d._organization=$3 AND \
-            d.importURL=$4 ORDER BY d.created,d._id LIMIT 1",
-        crate::dataset::access::READ_PREDICATE
-    ))
-    .bind(&user.id)
-    .bind(Option::<&str>::None)
-    .bind(&user.organization_id)
-    .bind(query.import_url)
-    .fetch_optional(&state.pool)
-    .await?;
+    let mut q = Sql::new("SELECT d._id FROM webknossos.datasets_ d WHERE ");
+    crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+    q.push(" AND d._organization=")
+        .push_bind(&user.organization_id)
+        .push(" AND d.importURL=")
+        .push_bind(&query.import_url)
+        .push(" ORDER BY d.created,d._id LIMIT 1");
+    let id: Option<String> = q.build_query_scalar().fetch_optional(&state.pool).await?;
     Ok(Json(match id {
         Some(id) => full_json(&state.pool, Some(&user), &id, features.jobs_enabled).await?,
         None => Value::Null,
@@ -114,16 +112,16 @@ async fn organization_for_name(
     Path(name): Path<String>,
     Query(query): Query<ReadQuery>,
 ) -> ApiResult<Json<Value>> {
-    let organization: Option<String> = sqlx::query_scalar(&format!(
-        "SELECT d._organization FROM webknossos.datasets_ d WHERE {} AND d.name=$3 ORDER \
-            BY d.created LIMIT 1",
-        crate::dataset::access::READ_PREDICATE
-    ))
-    .bind(user.as_ref().map(|u| u.id.as_str()))
-    .bind(query.sharing_token)
-    .bind(name)
-    .fetch_optional(&state.pool)
-    .await?;
+    let mut q = Sql::new("SELECT d._organization FROM webknossos.datasets_ d WHERE ");
+    crate::dataset::access::push_read_predicate(
+        &mut q,
+        user.as_ref().map(|u| u.id.as_str()).into(),
+        query.sharing_token.as_deref(),
+    );
+    q.push(" AND d.name=")
+        .push_bind(&name)
+        .push(" ORDER BY d.created LIMIT 1");
+    let organization: Option<String> = q.build_query_scalar().fetch_optional(&state.pool).await?;
     Ok(Json(
         json!({"organization":organization.ok_or_else(||ApiError::not_found(crate::msg::NOT_FOUND))?}),
     ))
@@ -290,15 +288,11 @@ async fn update_metadata(
     .bind(folder)
     .execute(&mut *transaction)
     .await?;
-    let readable: bool = sqlx::query_scalar(&format!(
-        "SELECT {} FROM webknossos.datasets_ d WHERE d._id=$3",
-        crate::dataset::access::READ_PREDICATE
-    ))
-    .bind(&user.id)
-    .bind(Option::<&str>::None)
-    .bind(id.as_str())
-    .fetch_one(&mut *transaction)
-    .await?;
+    let mut q = Sql::new("SELECT ");
+    crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+    q.push(" FROM webknossos.datasets_ d WHERE d._id=")
+        .push_bind(id.as_str());
+    let readable: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;
     if !readable {
         return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }
@@ -508,31 +502,56 @@ pub(crate) async fn full_json_on_connection(
     dataset_id: &str,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
-    let sql = format!(
+    let user_id = user.map(|u| u.id.as_str());
+    let organization = user.map(|u| u.organization_id.as_str());
+    let mut q = Sql::new(
         r#"SELECT jsonb_build_object(
       'id',d._id,'name',d.name,'owningOrganization',o._id,'directoryName',d.directoryName,
       'isActive',d.isUsable,'isPublic',d.isPublic,'description',d.description,
       'created',floor(extract(epoch from d.created)*1000)::bigint,
-      'thumbnailCacheVersion',d.thumbnailCacheVersion,'isEditable',{edit},
-      'lastUsedByUser',COALESCE((SELECT floor(extract(epoch from lastUsedTime)*1000)::bigint FROM webknossos.dataset_lastUsedTimes l WHERE l._dataset=d._id AND l._user=$1),0),
+      'thumbnailCacheVersion',d.thumbnailCacheVersion,'isEditable',"#,
+    );
+    crate::dataset::access::push_edit_predicate(&mut q, user_id.into());
+    q.push(
+        r#",
+      'lastUsedByUser',COALESCE((SELECT floor(extract(epoch from lastUsedTime)*1000)::bigint
+        FROM webknossos.dataset_lastUsedTimes l WHERE l._dataset=d._id AND l._user="#,
+    )
+    .push_bind(user_id)
+    .push(
+        r#"),0),
       'logoUrl',COALESCE(d.logoUrl,o.logoUrl),'sortingKey',floor(extract(epoch from d.sortingKey)*1000)::bigint,
-      'metadata',d.metadata,'isUnreported',d.status=$4,'tags',ARRAY(SELECT unnest(d.tags) ORDER BY 1),
+      'metadata',d.metadata,'isUnreported',d.status="#,
+    )
+    .push_bind(UNREPORTED)
+    .push(
+        r#",'tags',ARRAY(SELECT unnest(d.tags) ORDER BY 1),
       'folderId',d._folder,'isVirtual',d.isVirtual,'creationType',d.creationType,
       'rootPath',d.rootPath,'rootRealPath',d.rootRealPath,'mirrorPath',d.mirrorPath,
       'uploaderFullName',(SELECT concat(m.firstName,' ',m.lastName) FROM webknossos.users_ up
-        JOIN webknossos.multiUsers_ m ON m._id=up._multiUser WHERE up._id=d._uploader AND up._organization=$3),
-      'allowedTeams',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',t._id,'name',t.name,
-        'organization',o._id,'isOrganizationTeam',t.isOrganizationTeam)) FROM webknossos.teams_ t
-        WHERE t._organization=$3 AND t._id IN (SELECT _team FROM webknossos.dataset_allowedTeams WHERE _dataset=d._id)
-        AND (EXISTS (SELECT 1 FROM webknossos.user_team_roles r WHERE r._team=t._id AND r._user=$1)
-          OR EXISTS (SELECT 1 FROM webknossos.users_ u WHERE u._id=$1 AND u.isAdmin AND u._organization=t._organization))), '[]'::jsonb),
-      'allowedTeamsCumulative',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',t._id,'name',t.name,
-        'organization',o._id,'isOrganizationTeam',t.isOrganizationTeam)) FROM webknossos.teams_ t
-        WHERE t._organization=$3 AND t._id IN (SELECT _team FROM webknossos.dataset_allowedTeams WHERE _dataset=d._id
-          UNION SELECT ft._team FROM webknossos.folder_allowedTeams ft JOIN webknossos.folder_paths fp ON fp._ancestor=ft._folder WHERE fp._descendant=d._folder)
-        AND (EXISTS (SELECT 1 FROM webknossos.user_team_roles r WHERE r._team=t._id AND r._user=$1)
-          OR EXISTS (SELECT 1 FROM webknossos.users_ u WHERE u._id=$1 AND u.isAdmin AND u._organization=t._organization))), '[]'::jsonb),
-      'usedStorageBytes',CASE WHEN d._organization=$3 THEN
+        JOIN webknossos.multiUsers_ m ON m._id=up._multiUser WHERE up._id=d._uploader AND up._organization="#,
+    )
+    .push_bind(organization)
+    .push("),\n      'allowedTeams',");
+    push_visible_teams(
+        &mut q,
+        user_id,
+        organization,
+        "SELECT _team FROM webknossos.dataset_allowedTeams WHERE _dataset=d._id",
+    );
+    q.push(",\n      'allowedTeamsCumulative',");
+    push_visible_teams(
+        &mut q,
+        user_id,
+        organization,
+        "SELECT _team FROM webknossos.dataset_allowedTeams WHERE _dataset=d._id
+          UNION SELECT ft._team FROM webknossos.folder_allowedTeams ft
+          JOIN webknossos.folder_paths fp ON fp._ancestor=ft._folder WHERE fp._descendant=d._folder",
+    );
+    q.push(",\n      'usedStorageBytes',CASE WHEN d._organization=")
+        .push_bind(organization)
+        .push(
+            r#" THEN
         COALESCE((SELECT sum(usedStorageBytes) FROM webknossos.organization_usedStorage_mags WHERE _dataset=d._id),0)
         + COALESCE((SELECT sum(usedStorageBytes) FROM webknossos.organization_usedStorage_attachments WHERE _dataset=d._id),0) ELSE 0 END,
       'dataSource',jsonb_build_object('id',jsonb_build_object('name',d.directoryName,'team',d._organization),
@@ -540,16 +559,10 @@ pub(crate) async fn full_json_on_connection(
           'unit',COALESCE(d.voxelSizeUnit::text,'nanometer')) ELSE NULL END,'status',d.status),
       'dataStore',jsonb_build_object('name',store.name))
       FROM webknossos.datasets_ d JOIN webknossos.organizations_ o ON o._id=d._organization
-      JOIN webknossos.dataStores_ store ON store.name=trim(d._dataStore) WHERE d._id=$2"#,
-        edit = crate::dataset::access::EDIT_PREDICATE
-    );
-    let mut result: Value = sqlx::query_scalar(&sql)
-        .bind(user.map(|u| u.id.as_str()))
-        .bind(dataset_id)
-        .bind(user.map(|u| u.organization_id.as_str()))
-        .bind(UNREPORTED)
-        .fetch_one(&mut *connection)
-        .await?;
+      JOIN webknossos.dataStores_ store ON store.name=trim(d._dataStore) WHERE d._id="#,
+        )
+        .push_bind(dataset_id);
+    let mut result: Value = q.build_query_scalar().fetch_one(&mut *connection).await?;
     let datastore_name = result["dataStore"]["name"]
         .as_str()
         .ok_or_else(ApiError::internal)?
@@ -583,6 +596,33 @@ pub(crate) async fn full_json_on_connection(
     }
     scrub_credentials(&mut result["dataSource"]);
     Ok(result)
+}
+
+/// The teams (alias `t`) among `team_ids` that are visible to the requester
+/// as a JSON array: teams of the requester's organization they are a member
+/// of or administer.
+fn push_visible_teams<'a>(
+    q: &mut Sql<'a>,
+    user_id: Option<&'a str>,
+    organization: Option<&'a str>,
+    team_ids: &'static str,
+) {
+    q.push(
+        "COALESCE((SELECT jsonb_agg(jsonb_build_object('id',t._id,'name',t.name,
+        'organization',o._id,'isOrganizationTeam',t.isOrganizationTeam)) FROM webknossos.teams_ t
+        WHERE t._organization=",
+    )
+    .push_bind(organization)
+    .push(" AND t._id IN (")
+    .push(team_ids)
+    .push(
+        ")
+        AND (EXISTS (SELECT 1 FROM webknossos.user_team_roles r WHERE r._team=t._id AND r._user=",
+    )
+    .push_bind(user_id)
+    .push(")\n          OR EXISTS (SELECT 1 FROM webknossos.users_ u WHERE u._id=")
+    .push_bind(user_id)
+    .push(" AND u.isAdmin AND u._organization=t._organization))), '[]'::jsonb)");
 }
 
 /// DataStoreService.publicWrites, including WorkerDAO's command validation.
@@ -978,64 +1018,122 @@ pub(crate) async fn list_values(
       LEFT JOIN (SELECT _dataset, sum(usedStorageBytes) AS storage FROM webknossos.organization_usedStorage_attachments
         GROUP BY _dataset) ats ON ats._dataset = d._id"#
     };
-    let sql = format!(
+    let user_id = user.map(|u| u.id.as_str());
+    let uploader = query.uploader_id.as_ref().map(ObjectId::as_str);
+    let folder = query.folder_id.as_ref().map(ObjectId::as_str);
+    let mut q = Sql::new(
         r#"SELECT d._id AS id, d.name, d._organization AS owning_organization, d._folder AS folder_id,
       d.isUsable AS is_active, d.directoryName AS directory_name,
       floor(extract(epoch from d.created)*1000)::bigint AS created,
-      COALESCE({edit}, false) AS is_editable,
+      COALESCE("#,
+    );
+    crate::dataset::access::push_edit_predicate(&mut q, user_id.into());
+    q.push(
+        r#", false) AS is_editable,
       COALESCE(floor(extract(epoch from lu.lastUsedTime)*1000)::bigint, 0) AS last_used_by_user,
-      d.status, d.tags, d.status IN ($8, $9, $16) AS is_unreported,
-      COALESCE(cl.names, '{{}}') AS color_layer_names,
-      COALESCE(sl.names, '{{}}') AS segmentation_layer_names,
-      (CASE WHEN d._organization = $13 THEN COALESCE(ms.storage, 0) + COALESCE(ats.storage, 0) ELSE 0 END)::bigint
+      d.status, d.tags, "#,
+    );
+    push_is_unreported(&mut q);
+    q.push(
+        r#" AS is_unreported,
+      COALESCE(cl.names, '{}') AS color_layer_names,
+      COALESCE(sl.names, '{}') AS segmentation_layer_names,
+      (CASE WHEN d._organization = "#,
+    )
+    .push_bind(user.map(|u| u.organization_id.as_str()))
+    .push(
+        r#" THEN COALESCE(ms.storage, 0) + COALESCE(ats.storage, 0) ELSE 0 END)::bigint
         AS used_storage_bytes,
       d.thumbnailCacheVersion AS thumbnail_cache_version,
-      CASE WHEN $14 AND $1::text IS NOT NULL THEN (SELECT count(*)
+      CASE WHEN "#,
+    )
+    .push_bind(query.include_annotation_count.unwrap_or(false))
+    .push(" AND ")
+    .push_bind(user_id)
+    .push(
+        r#"::text IS NOT NULL THEN (SELECT count(*)
          FROM webknossos.annotations_ a WHERE a._dataset = d._id AND a.typ = 'Explorational' AND a.state = 'Active'
-         AND (a._user = $1 OR (a.visibility IN ('Public', 'Internal') AND (
+         AND (a._user = "#,
+    )
+    .push_bind(user_id)
+    .push(
+        r#" OR (a.visibility IN ('Public', 'Internal') AND (
            EXISTS (SELECT 1 FROM webknossos.annotation_sharedTeams st JOIN webknossos.user_team_roles r ON r._team = st._team
-             WHERE st._annotation = a._id AND r._user = $1)
-           OR EXISTS (SELECT 1 FROM webknossos.annotation_contributors c WHERE c._annotation = a._id AND c._user = $1))))) ELSE NULL END
+             WHERE st._annotation = a._id AND r._user = "#,
+    )
+    .push_bind(user_id)
+    .push(
+        r#")
+           OR EXISTS (SELECT 1 FROM webknossos.annotation_contributors c WHERE c._annotation = a._id AND c._user = "#,
+    )
+    .push_bind(user_id)
+    .push(
+        r#"))))) ELSE NULL END
         AS annotation_count
       FROM (SELECT d.* FROM webknossos.datasets_ d JOIN webknossos.organizations o ON o._id = d._organization
-        WHERE {read} AND ($3::boolean IS NULL OR d.isUsable = $3)
-        AND ($4::boolean IS NULL OR (d.status IN ($8, $9, $16)) = $4)
-        AND ($5::text IS NULL OR d._organization = $5)
-        AND ($6::text IS NULL OR d._uploader = $6)
-        AND ($7::text IS NULL OR CASE WHEN $10 THEN EXISTS (SELECT 1 FROM webknossos.folder_paths fp
-            WHERE fp._ancestor = $7 AND fp._descendant = d._folder) ELSE d._folder = $7 END)
-        AND (CASE WHEN $11::text IS NOT NULL THEN d._id = $11 ELSE NOT EXISTS (
-          SELECT 1 FROM unnest($12::text[]) t WHERE position(t IN lower(d.name)) = 0
-            AND position(t IN lower(d.directoryName)) = 0) END) LIMIT $15) d
-      LEFT JOIN webknossos.dataset_lastUsedTimes lu ON lu._dataset = d._id AND lu._user = $1
-      {joins}"#,
-        edit = crate::dataset::access::EDIT_PREDICATE,
-        read = crate::dataset::access::READ_PREDICATE
+        WHERE "#,
     );
-    // Keep the cached prepared statement: planning takes ~14 ms (permission predicates) and
-    // the generic plan executes faster than a per-request custom plan here.
-    let rows = sqlx::query_as::<_, CompactDataset>(&sql)
-        .bind(user.as_ref().map(|u| u.id.as_str()))
-        .bind(Option::<&str>::None)
-        .bind(query.is_active)
-        .bind(query.is_unreported)
-        .bind(organization)
-        .bind(query.uploader_id.as_ref().map(ObjectId::as_str))
-        .bind(query.folder_id.as_ref().map(ObjectId::as_str))
-        .bind(UNREPORTED)
-        .bind(DELETED_BY_USER)
-        .bind(query.include_subfolders.unwrap_or(false))
-        .bind(searched_id)
-        .bind(&tokens)
-        .bind(user.as_ref().map(|u| u.organization_id.as_str()))
-        .bind(query.include_annotation_count.unwrap_or(false))
-        .bind(query.limit)
-        .bind(crate::dataset::lifecycle::CONVERSION_FAILED)
-        .fetch_all(pool)
-        .await?;
+    crate::dataset::access::push_read_predicate(&mut q, user_id.into(), None);
+    // Catch-all filters (`value IS NULL OR ...`) keep one statement for every combination.
+    q.push(" AND (")
+        .push_bind(query.is_active)
+        .push("::boolean IS NULL OR d.isUsable = ")
+        .push_bind(query.is_active)
+        .push(")");
+    q.push(" AND (")
+        .push_bind(query.is_unreported)
+        .push("::boolean IS NULL OR ");
+    push_is_unreported(&mut q);
+    q.push(" = ").push_bind(query.is_unreported).push(")");
+    q.push(" AND (")
+        .push_bind(organization)
+        .push("::text IS NULL OR d._organization = ")
+        .push_bind(organization)
+        .push(")");
+    q.push(" AND (")
+        .push_bind(uploader)
+        .push("::text IS NULL OR d._uploader = ")
+        .push_bind(uploader)
+        .push(")");
+    q.push(" AND (")
+        .push_bind(folder)
+        .push("::text IS NULL OR CASE WHEN ")
+        .push_bind(query.include_subfolders.unwrap_or(false))
+        .push(" THEN EXISTS (SELECT 1 FROM webknossos.folder_paths fp WHERE fp._ancestor = ")
+        .push_bind(folder)
+        .push(" AND fp._descendant = d._folder) ELSE d._folder = ")
+        .push_bind(folder)
+        .push(" END)");
+    q.push(" AND (CASE WHEN ")
+        .push_bind(searched_id)
+        .push("::text IS NOT NULL THEN d._id = ")
+        .push_bind(searched_id)
+        .push(" ELSE NOT EXISTS (SELECT 1 FROM unnest(")
+        .push_bind(&tokens)
+        .push(
+            "::text[]) t WHERE position(t IN lower(d.name)) = 0 \
+             AND position(t IN lower(d.directoryName)) = 0) END)",
+        );
+    q.push(" LIMIT ").push_bind(query.limit).push(
+        ") d
+      LEFT JOIN webknossos.dataset_lastUsedTimes lu ON lu._dataset = d._id AND lu._user = ",
+    );
+    q.push_bind(user_id).push("\n      ").push(joins);
+    let rows = q.build_query_as::<CompactDataset>().fetch_all(pool).await?;
     rows.into_iter()
         .map(|row| serde_json::to_value(row).map_err(|_| ApiError::internal()))
         .collect()
+}
+
+/// `(d.status IN (...))`: the dataset is no longer reported by its datastore.
+fn push_is_unreported(q: &mut Sql<'_>) {
+    q.push("(d.status IN (")
+        .push_bind(UNREPORTED)
+        .push(", ")
+        .push_bind(DELETED_BY_USER)
+        .push(", ")
+        .push_bind(crate::dataset::lifecycle::CONVERSION_FAILED)
+        .push("))");
 }
 
 /// DatasetCompactInfo as serialized by DatasetController.list (compact).
@@ -1083,20 +1181,17 @@ async fn sharing_token(
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<Json<Value>> {
     require_read(&state, &user, &id).await?;
-    let result: Option<String> = sqlx::query_scalar(&format!(
-        "UPDATE webknossos.datasets d SET sharingToken = COALESCE(sharingToken, $5) \
-            WHERE d._id = $3 AND d._organization = $4 AND NOT d.isDeleted AND {} RETURNING \
-            sharingToken",
-        crate::dataset::access::READ_PREDICATE
-    ))
-    .bind(user.id)
-    .bind(Option::<&str>::None)
-    .bind(id.as_str())
-    .bind(user.organization_id)
+    let mut q = Sql::new("UPDATE webknossos.datasets d SET sharingToken = COALESCE(sharingToken, ");
     // RandomIDGenerator.generateBlocking(): 16 random bytes, unpadded base64url (22 characters).
-    .bind(crate::auth::browser::random_base64url(16)?)
-    .fetch_optional(&state.pool)
-    .await?;
+    q.push_bind(crate::auth::browser::random_base64url(16)?)
+        .push(") WHERE d._id = ")
+        .push_bind(id.as_str())
+        .push(" AND d._organization = ")
+        .push_bind(&user.organization_id)
+        .push(" AND NOT d.isDeleted AND ");
+    crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+    q.push(" RETURNING sharingToken");
+    let result: Option<String> = q.build_query_scalar().fetch_optional(&state.pool).await?;
     Ok(Json(
         json!({"sharingToken": result.ok_or_else(|| ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT))?.trim()}),
     ))
@@ -1108,18 +1203,15 @@ async fn delete_sharing_token(
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<()> {
     require_edit(&state, &user, &id).await?;
-    let result = sqlx::query(&format!(
-        "UPDATE webknossos.datasets d SET sharingToken = NULL WHERE d._id = $3 AND \
-            d._organization = $4 AND NOT d.isDeleted AND {} AND {}",
-        crate::dataset::access::READ_PREDICATE,
-        crate::dataset::access::EDIT_PREDICATE
-    ))
-    .bind(user.id)
-    .bind(Option::<&str>::None)
-    .bind(id.as_str())
-    .bind(user.organization_id)
-    .execute(&state.pool)
-    .await?;
+    let mut q = Sql::new("UPDATE webknossos.datasets d SET sharingToken = NULL WHERE d._id = ");
+    q.push_bind(id.as_str())
+        .push(" AND d._organization = ")
+        .push_bind(&user.organization_id)
+        .push(" AND NOT d.isDeleted AND ");
+    crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
+    q.push(" AND ");
+    crate::dataset::access::push_edit_predicate(&mut q, user.id.as_str().into());
+    let result = q.build().execute(&state.pool).await?;
     if result.rows_affected() != 1 {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }

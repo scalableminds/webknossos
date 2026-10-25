@@ -695,7 +695,10 @@
   {
    "name": "credit-transactions",
    "as": "admin",
-   "path": "/api/creditTransactions"
+   "path": "/api/creditTransactions",
+   "unordered": [
+    "$"
+   ]
   },
   {
    "name": "publications",

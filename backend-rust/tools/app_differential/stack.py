@@ -86,6 +86,8 @@ FIXTURE_USER = "570b9f4d2a7c0e4d008da6ef"  # test/db/users.csv
 CREDENTIAL_ID = "6a1c0000000000000000c001"
 INVITE_ID = "6a1c0000000000000000c002"
 INVITE_TOKEN = "diffInviteToken"
+VERIFICATION_KEY_ID = "6a1c0000000000000000c003"
+VERIFICATION_KEY = "diffVerificationKey"
 
 STATE = WORK / "state.json"
 LOGS = WORK / "logs"
@@ -216,6 +218,7 @@ def rust_env(database: str, features: dict, build: dict) -> dict:
         "WK_OIDC_CLIENT_SECRET": "diff-secret",
         "WK_OIDC_SCOPE": "openid profile email",
         "WK_UPLOAD_TO_PATHS_PREFIXES": f"{WORK}/rust-data/binaryData",
+        "WK_EXTERNAL_PATH_DELETION_KEY": STORE_KEY,  # Play: externalPathDeletionService.key (same dev default)
         "WK_DATASTORE_NAME": "localhost",
         "WK_DATASTORE_KEY": STORE_KEY,
         "WK_TRACINGSTORE_NAME": "localhost",
@@ -366,6 +369,10 @@ def load_seed_fixtures() -> None:
         "INSERT INTO webknossos.invites(_id, tokenValue, _organization, autoActivate, isAdmin, isDatasetManager, "
         f"expirationDateTime) VALUES ('{INVITE_ID}', '{INVITE_TOKEN}', 'sample_organization', true, false, false, "
         "'2100-01-01T00:00:00Z');",
+        # Verification keys only travel by email too; corpus/misc.json verifies sample2's address with this one.
+        "INSERT INTO webknossos.emailVerificationKeys(_id, key, email, _multiUser, validUntil, isUsed) "
+        f"SELECT '{VERIFICATION_KEY_ID}', '{VERIFICATION_KEY}', email, _id, '2100-01-01T00:00:00Z', false "
+        "FROM webknossos.multiUsers WHERE email = 'sample2@scm.io';",
         "COMMIT;",
     ]
     env = {**os.environ, "PGPASSWORD": PG["password"]}

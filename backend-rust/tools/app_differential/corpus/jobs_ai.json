@@ -18,6 +18,16 @@
    "/tmp/wk-diff/rust-data/": "/tmp/wk-diff/play-data/"
   }
  },
+ "db_divergences": {
+  "tokens": {
+   "reason": "Play mints a new Job token for the job's user every time /jobs/request hands out jobs (one per job); Rust reuses a Job token created within the last hour that stays valid for at least another hour (hardening 46552fe734: workers poll every few seconds). Workers only receive the token in job_kwargs.user_auth_token, which is ignored per step.",
+   "rows": [
+    {
+     "tokentype": "Job"
+    }
+   ]
+  }
+ },
  "identities": {
   "admin": {
    "token": "secretSampleUserToken"

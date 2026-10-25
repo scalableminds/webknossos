@@ -81,7 +81,7 @@ Reports redact fields whose names contain token/password/secret/key/cookie. The 
 
 ```sh
 python3 tools/app_differential/coverage.py            # covered/total, per controller, uncovered routes
-python3 tools/app_differential/coverage.py --min 250  # exit 1 below 250 covered routes (CI: .github/workflows/rust.yml)
+python3 tools/app_differential/coverage.py --min 287  # exit 1 below 287 covered routes (CI: .github/workflows/rust.yml)
 ```
 
 Maps every main-application step to a route of `conf/webknossos.latest.routes` (strips `/api` and `/api/vN`; `{variables}` are one segment, `:param` one segment, `*param` several; first matching route in file order wins, as in Play). Steps hitting a dedicated route in `conf/webknossos.versioned.routes` are listed as legacy and don't count. Store steps (`"service"`) are not main-application routes. Steps matching no route are listed (the deliberate unknown-route/wrong-method negatives). Raise the `--min` value in CI when adding coverage; it must never drop.

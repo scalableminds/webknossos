@@ -178,10 +178,17 @@ async fn explore(
             Some(&json!({"layerParameters": layer_parameters, "organizationId": user.organization_id})),
         )
         .await?;
-    let result: Value = serde_json::from_slice(&response.bytes)
+    let mut result: Value = serde_json::from_slice(&response.bytes)
         .map_err(|_| ApiError::from(ServiceError::InvalidJson))?;
     if !result["report"].is_string() {
         return Err(ServiceError::InvalidJson.into());
+    }
+    // Play reads the response into its data source model and writes it back, which normalizes the data source
+    // (e.g. drops empty layer view configurations); do the same.
+    if result["dataSource"].is_object() {
+        let source = UsableDataSource::from_json(&result["dataSource"])
+            .map_err(|_| ApiError::from(ServiceError::InvalidJson))?;
+        result["dataSource"] = serde_json::to_value(&source).map_err(|_| ApiError::internal())?;
     }
     Ok(result)
 }

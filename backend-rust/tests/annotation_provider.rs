@@ -171,7 +171,7 @@ fn compound_annotations_are_built_from_the_merge_result() {
     );
     let provided = ProvidedAnnotation::Compound(compound);
     assert_eq!(provided.owner_id(), owner.as_str());
-    assert_eq!(provided.dataset_id(), dataset.as_str());
+    assert_eq!(provided.dataset_id(), &dataset);
     assert_eq!(provided.visibility(), "Internal");
     assert_eq!(
         provided.annotation_type(),

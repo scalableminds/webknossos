@@ -28,6 +28,7 @@ use crate::proto::datastore::{
     Comment, Edge, MetadataEntryProto, NamedBoundingBoxProto, Node, Segment, SegmentGroup,
     SkeletonTracing, Tree, TreeGroup, Vec2IntProto, Vec3DoubleProto, Vec3IntProto, VolumeTracing,
 };
+use crate::util::id::ObjectId;
 
 // ---------------------------------------------------------------------------
 // Messages (util/src/main/scala/com/scalableminds/util/Msg.scala, object Nml)
@@ -184,7 +185,7 @@ pub struct NmlParsedParameters {
 /// Dataset found by the caller's lookup (`Dataset._id`, `name`, `_organization`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DatasetRef {
-    pub id: String,
+    pub id: ObjectId,
     pub name: String,
     pub organization_id: String,
 }
@@ -205,7 +206,7 @@ pub struct UploadedVolumeLayer {
 pub struct NmlParseSuccessWithoutFile {
     pub skeleton_tracing: SkeletonTracing,
     pub volume_layers: Vec<UploadedVolumeLayer>,
-    pub dataset_id: String,
+    pub dataset_id: ObjectId,
     pub description: String,
     pub wk_url: Option<String>,
 }
@@ -296,17 +297,13 @@ pub fn file_name_without_extension(file_name: &str) -> &str {
 impl NmlParsedParameters {
     /// `Fox.runOptional(datasetIdOpt)(ObjectId.fromString)`: validates the raw
     /// dataset id (lower-cased like `ObjectId`), or fails with Scala's message.
-    pub fn validated_dataset_id(&self) -> Result<Option<String>, String> {
-        match &self.dataset_id_opt {
-            None => Ok(None),
-            Some(literal) => {
-                if literal.len() == 24 && literal.bytes().all(|b| b.is_ascii_hexdigit()) {
-                    Ok(Some(literal.to_ascii_lowercase()))
-                } else {
-                    Err(crate::msg::object_id::invalid(literal))
-                }
-            }
-        }
+    pub fn validated_dataset_id(&self) -> Result<Option<ObjectId>, String> {
+        self.dataset_id_opt
+            .as_deref()
+            .map(|literal| {
+                ObjectId::parse(literal).map_err(|_| crate::msg::object_id::invalid(literal))
+            })
+            .transpose()
     }
 
     /// `nmlParametersToResult` after the dataset lookup. `base_path` is the
@@ -876,7 +873,7 @@ pub fn finish_parse_result(
     file_name: &str,
     outcome: NmlParseOutcome,
     base_path: Option<&str>,
-    lookup: impl FnOnce(Option<&str>, &str, &str) -> Result<DatasetRef, String>,
+    lookup: impl FnOnce(Option<&ObjectId>, &str, &str) -> Result<DatasetRef, String>,
 ) -> NmlParseResult {
     let parsed = match outcome {
         NmlParseOutcome::Parsed(parsed) => parsed,
@@ -894,7 +891,7 @@ pub fn finish_parse_result(
     };
     let dataset = parsed.validated_dataset_id().and_then(|dataset_id| {
         lookup(
-            dataset_id.as_deref(),
+            dataset_id.as_ref(),
             &parsed.dataset_name,
             &parsed.organization_id,
         )

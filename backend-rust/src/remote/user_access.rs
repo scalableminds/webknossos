@@ -208,8 +208,7 @@ async fn dataset(
 ) -> ApiResult<Answer> {
     match mode {
         Mode::Read => Ok(Answer::condition(
-            crate::dataset::access::can_read(&state.pool, user, required_id(id)?.as_str(), token)
-                .await?,
+            crate::dataset::access::can_read(&state.pool, user, &required_id(id)?, token).await?,
             "No read access on dataset",
         )),
         Mode::Write | Mode::Delete => {
@@ -218,8 +217,7 @@ async fn dataset(
                     crate::msg::dataset::delete::NOT_ENABLED_FOR_DATA_STORE,
                 ));
             }
-            let id = required_id(id)?;
-            let id = id.as_str();
+            let id = &required_id(id)?;
             let organization: String =
                 sqlx::query_scalar("SELECT _organization FROM webknossos.datasets_ WHERE _id=$1")
                     .bind(id)

@@ -606,7 +606,7 @@ async fn transfer_active_tasks(
             .push(" AND NOT a.isDeleted AND ");
         crate::annotation::access::push_read_predicate(&mut q, (&user).into());
         q.push(" FOR UPDATE OF a");
-        let (dataset, mutable): (String, bool) = q
+        let (dataset, mutable): (ObjectId, bool) = q
             .build_query_as()
             .fetch_optional(&mut *tx)
             .await?

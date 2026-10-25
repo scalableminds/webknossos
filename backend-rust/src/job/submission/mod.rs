@@ -259,12 +259,12 @@ fn parse_object_id(literal: &str) -> Option<String> {
 }
 
 /// ObjectId.pathBinder (fromStringWithPrefixSync): `anything-<ObjectId>` is accepted.
-async fn dataset_id(parts: &mut Parts, state: &AppState) -> RunResult<String> {
+async fn dataset_id(parts: &mut Parts, state: &AppState) -> RunResult<ObjectId> {
     let raw: axum::extract::Path<String> = axum::extract::Path::from_request_parts(parts, state)
         .await
         .map_err(|_: PathRejection| Failure::new(crate::msg::request::INVALID_PATH))?;
     let candidate = raw.rsplit_once('-').map_or(raw.as_str(), |(_, id)| id);
-    parse_object_id(candidate).ok_or_else(|| {
+    ObjectId::parse(candidate).map_err(|_| {
         Failure::new(format!(
             "Cannot parse URI path parameter datasetId with value “{}” as ObjectId.",
             raw.0
@@ -522,7 +522,7 @@ impl Dataset {
 pub(crate) async fn find_readable_dataset(
     state: &AppState,
     user: &AuthUser,
-    id: &str,
+    id: &ObjectId,
 ) -> RunResult<Option<Dataset>> {
     let mut q = Sql::new(
         r#"SELECT d._id AS id, d.name, d.directoryName AS directory_name, d._organization AS organization,
@@ -537,7 +537,7 @@ pub(crate) async fn find_readable_dataset(
 }
 
 /// DatasetDAO.findOne with the user's access `?~> Msg.Dataset.notFound(id) ~> NOT_FOUND`.
-async fn find_dataset(state: &AppState, user: &AuthUser, id: &str) -> RunResult<Dataset> {
+async fn find_dataset(state: &AppState, user: &AuthUser, id: &ObjectId) -> RunResult<Dataset> {
     find_readable_dataset(state, user, id)
         .await?
         .ok_or_else(|| {

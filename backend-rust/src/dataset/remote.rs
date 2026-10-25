@@ -41,7 +41,7 @@ async fn require_read(
     id: &ObjectId,
     sharing_token: Option<&str>,
 ) -> ApiResult<()> {
-    if !crate::dataset::access::can_read(&state.pool, user, id.as_str(), sharing_token).await? {
+    if !crate::dataset::access::can_read(&state.pool, user, id, sharing_token).await? {
         return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }
     Ok(())
@@ -74,7 +74,7 @@ async fn health(
     if !has_voxel {
         return Err(ApiError::internal());
     }
-    let layers = crate::dataset::routes::full_layers(&state.pool, id.as_str()).await?;
+    let layers = crate::dataset::routes::full_layers(&state.pool, &id).await?;
     let name = layers
         .first()
         .and_then(|layer| layer["name"].as_str())
@@ -131,7 +131,7 @@ async fn used_storage_details(
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<Json<Vec<Value>>> {
     require_read(&state, Some(&user), &id, None).await?;
-    if !crate::dataset::access::can_edit(&state.pool, &user, id.as_str()).await? {
+    if !crate::dataset::access::can_edit(&state.pool, &user, &id).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let usable: bool = sqlx::query_scalar("SELECT isUsable FROM webknossos.datasets_ WHERE _id=$1")

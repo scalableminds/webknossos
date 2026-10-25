@@ -46,7 +46,7 @@ async fn readable_source(
     if !record.is_usable {
         return Err(());
     }
-    let source = crate::dataset::source::load(&state.pool, id.as_str())
+    let source = crate::dataset::source::load(&state.pool, id)
         .await
         .map_err(|_| ())?;
     Ok((record, source))
@@ -195,13 +195,13 @@ async fn target_and_source(
     let target = crate::dataset::lifecycle::require_readable(state, user, target_id)
         .await
         .map_err(|_| failed())?;
-    if !crate::dataset::access::can_edit(&state.pool, user, target_id.as_str()).await? {
+    if !crate::dataset::access::can_edit(&state.pool, user, target_id).await? {
         return Err(ApiError::forbidden(failure));
     }
     if !target.is_virtual || !target.is_usable {
         return Err(failed());
     }
-    let target_source = crate::dataset::source::load(&state.pool, target_id.as_str()).await?;
+    let target_source = crate::dataset::source::load(&state.pool, target_id).await?;
     let (source, source_data) = readable_source(state, user, source_id)
         .await
         .map_err(|_| failed())?;

@@ -118,7 +118,7 @@ async fn validate_layer_to_link(
     user: &AuthUser,
     link: &LinkedLayer,
 ) -> ApiResult<()> {
-    let id = link.dataset_id.as_str();
+    let id = &link.dataset_id;
     let not_found = || ApiError::not_found(INVALID_LINKED_LAYERS);
     if !crate::dataset::access::can_read(pool, Some(user), id, None).await? {
         return Err(not_found());
@@ -242,7 +242,7 @@ async fn create_and_set_up_dataset(
     name: &str,
     folder: Option<&ObjectId>,
     is_virtual: bool,
-) -> ApiResult<(String, String)> {
+) -> ApiResult<(ObjectId, String)> {
     let failed = || ApiError::bad_request(CREATE_FAILED);
     crate::dataset::create::validate_dataset_name(name).map_err(|_| failed())?;
     let root: String = sqlx::query_scalar(
@@ -256,11 +256,11 @@ async fn create_and_set_up_dataset(
     if !crate::dataset::create::folder_writable(connection, user, &folder).await? {
         return Err(failed());
     }
-    let id = ObjectId::new().to_string();
+    let id = ObjectId::new();
     // The voxel size stays unset (`voxel_size: None` below).
     let source = UsableDataSource {
         id: DataSourceId::new(
-            crate::dataset::create::generate_directory_name(name, &id),
+            crate::dataset::create::generate_directory_name(name, id.as_str()),
             &user.organization_id,
         ),
         data_layers: Vec::new(),

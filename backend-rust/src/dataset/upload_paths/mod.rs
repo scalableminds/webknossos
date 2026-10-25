@@ -191,13 +191,8 @@ pub(crate) async fn resolve_linked_layers(
     let failed = || ApiError::bad_request(crate::msg::dataset::layer_to_link::FAILED);
     let mut layers = Vec::new();
     for link in linked {
-        if !crate::dataset::access::can_read(
-            &state.pool,
-            Some(user),
-            link.dataset_id.as_str(),
-            None,
-        )
-        .await?
+        if !crate::dataset::access::can_read(&state.pool, Some(user), &link.dataset_id, None)
+            .await?
         {
             return Err(failed());
         }
@@ -209,7 +204,7 @@ pub(crate) async fn resolve_linked_layers(
         if !usable {
             return Err(failed());
         }
-        let source = crate::dataset::source::load(&state.pool, link.dataset_id.as_str()).await?;
+        let source = crate::dataset::source::load(&state.pool, &link.dataset_id).await?;
         let mut layer = source
             .data_layers
             .into_iter()
@@ -229,7 +224,7 @@ async fn referenced_data_store(
     user: &AuthUser,
     linked: &[LinkedLayer],
 ) -> ApiResult<String> {
-    let ids: Vec<&str> = linked.iter().map(|l| l.dataset_id.as_str()).collect();
+    let ids: Vec<&ObjectId> = linked.iter().map(|l| &l.dataset_id).collect();
     let names: Vec<String> = sqlx::query_scalar(
         "SELECT DISTINCT trim(_dataStore) FROM webknossos.datasets_ WHERE _id = ANY($1) AND NOT isVirtual ORDER BY 1",
     )
@@ -263,7 +258,7 @@ async fn referenced_data_store(
 pub(crate) async fn add_initial_teams(
     connection: &mut sqlx::PgConnection,
     user: &AuthUser,
-    dataset: &str,
+    dataset: &ObjectId,
     teams: &[ObjectId],
 ) -> ApiResult<()> {
     let team_ids: Vec<&str> = teams.iter().map(ObjectId::as_str).collect();
@@ -361,9 +356,9 @@ async fn reserve_upload_to_paths(
     {
         crate::dataset::create::validate_layer_name_lax(name)?;
     }
-    let id = ObjectId::new().to_string();
+    let id = ObjectId::new();
     source.id = DataSourceId::new(
-        crate::dataset::create::generate_directory_name(&body.dataset_name, &id),
+        crate::dataset::create::generate_directory_name(&body.dataset_name, id.as_str()),
         &user.organization_id,
     );
     if source.data_layers.is_empty() {
@@ -484,8 +479,7 @@ async fn reserve_for_preliminary(
     .bind(NOT_YET_UPLOADED)
     .execute(&mut *transaction)
     .await?;
-    crate::dataset::source::write_layers(&mut transaction, id.as_str(), &source.data_layers)
-        .await?;
+    crate::dataset::source::write_layers(&mut transaction, &id, &source.data_layers).await?;
     transaction.commit().await?;
     Ok(Json(json!({"dataSource": source})))
 }
@@ -523,7 +517,7 @@ async fn reserve_mag_upload_to_path(
             crate::msg::dataset::upload::MAG_UPLOAD_ONLY_VIRTUAL,
         ));
     }
-    if !crate::dataset::access::can_edit(&state.pool, &user, id.as_str()).await? {
+    if !crate::dataset::access::can_edit(&state.pool, &user, &id).await? {
         return Err(crate::dataset::lifecycle::not_allowed());
     }
     if !record.is_usable {
@@ -531,7 +525,7 @@ async fn reserve_mag_upload_to_path(
     }
     let [x, y, z] = body.mag.map(f64::from);
     let mut q = Sql::new("SELECT path, uploadToPathIsPending FROM webknossos.dataset_mags WHERE ");
-    push_mag_predicate(&mut q, id.as_str(), &body.layer_name, [x, y, z]);
+    push_mag_predicate(&mut q, &id, &body.layer_name, [x, y, z]);
     q.push(" AND (uploadToPathIsPending OR uploadIsPending)");
     let pending: Vec<(Option<String>, bool)> = q.build_query_as().fetch_all(&state.pool).await?;
     if !pending.is_empty() {
@@ -572,7 +566,7 @@ async fn reserve_mag_upload_to_path(
     let mut transaction = state.pool.begin().await?;
     if body.overwrite_pending {
         let mut q = Sql::new("DELETE FROM webknossos.dataset_mags WHERE ");
-        push_mag_predicate(&mut q, id.as_str(), &body.layer_name, [x, y, z]);
+        push_mag_predicate(&mut q, &id, &body.layer_name, [x, y, z]);
         q.push(" AND (uploadToPathIsPending OR uploadIsPending)");
         q.build().execute(&mut *transaction).await?;
     }
@@ -606,25 +600,13 @@ async fn reserve_attachment_upload_to_path(
         .await?;
     if body.overwrite_pending.unwrap_or(false) {
         let mut q = Sql::new("DELETE FROM webknossos.dataset_layer_attachments WHERE ");
-        push_attachment_key(
-            &mut q,
-            id.as_str(),
-            &body.layer_name,
-            typ,
-            &body.attachment_name,
-        );
+        push_attachment_key(&mut q, &id, &body.layer_name, typ, &body.attachment_name);
         q.push(" AND (uploadIsPending OR uploadToPathIsPending)");
         q.build().execute(&mut *transaction).await?;
     } else {
         let mut q =
             Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments WHERE ");
-        push_attachment_key(
-            &mut q,
-            id.as_str(),
-            &body.layer_name,
-            typ,
-            &body.attachment_name,
-        );
+        push_attachment_key(&mut q, &id, &body.layer_name, typ, &body.attachment_name);
         q.push(" AND (uploadIsPending OR uploadToPathIsPending))");
         let pending: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;
         if pending {

@@ -294,13 +294,13 @@ fn parses_full_document() {
 fn into_success_builds_tracings() {
     let p = parsed(FULL);
     let dataset = DatasetRef {
-        id: "5f0000000000000000000abc".to_owned(),
+        id: ObjectId::parse("5f0000000000000000000abc").unwrap(),
         name: "renamed".to_owned(),
         organization_id: "sample_org".to_owned(),
     };
     assert_eq!(
         p.validated_dataset_id(),
-        Ok(Some("5f0000000000000000000abc".to_owned()))
+        Ok(Some(ObjectId::parse("5f0000000000000000000abc").unwrap()))
     );
     let success = p.into_success(&dataset, Some("/tmp/upload.zip"));
     let skeleton = &success.skeleton_tracing;
@@ -311,7 +311,7 @@ fn into_success_builds_tracings() {
     assert_eq!(skeleton.bounding_box, None);
     assert_eq!(skeleton.trees.len(), 2);
     assert_eq!(skeleton.user_bounding_boxes.len(), 3);
-    assert_eq!(success.dataset_id, "5f0000000000000000000abc");
+    assert_eq!(success.dataset_id.as_str(), "5f0000000000000000000abc");
     assert_eq!(success.description, "A & B");
     let layer = &success.volume_layers[0];
     assert_eq!(layer.data_zip_location, "/tmp/upload.zipdata_Volume.zip");
@@ -371,7 +371,7 @@ fn task_upload_keeps_task_bounding_box_and_uses_fallbacks() {
     );
     let success = p.into_success(
         &DatasetRef {
-            id: "x".to_owned(),
+            id: ObjectId::new(),
             name: "d".to_owned(),
             organization_id: "o".to_owned(),
         },
@@ -679,11 +679,11 @@ fn finish_parse_result_mirrors_upload_service() {
     let outcome = parse_with(FULL, &params());
     let result = finish_parse_result("a.nml", outcome, None, |id, name, organization| {
         assert_eq!(
-            (id, name, organization),
+            (id.map(ObjectId::as_str), name, organization),
             (Some("5f0000000000000000000abc"), "my_dataset", "sample_org")
         );
         Ok(DatasetRef {
-            id: id.unwrap_or_default().to_owned(),
+            id: id.cloned().unwrap_or_default(),
             name: name.to_owned(),
             organization_id: organization.to_owned(),
         })

@@ -40,7 +40,7 @@ const DIFFERENT_DATASTORE: &str = "Cannot upload mag to existing dataset via dif
 /// The `dataset_mags` row of `dataset`'s layer `layer` at `mag`.
 pub(crate) fn push_mag_predicate<'a>(
     q: &mut Sql<'a>,
-    dataset: &'a str,
+    dataset: &'a ObjectId,
     layer: &'a str,
     mag: [f64; 3],
 ) {
@@ -122,7 +122,7 @@ pub(crate) struct ResumableUploadInfo {
 /// The dataset an upload callback targets, loaded under the user's read access.
 #[derive(sqlx::FromRow, Debug, Clone)]
 pub(crate) struct UploadTarget {
-    pub id: String,
+    pub id: ObjectId,
     pub organization: String,
     pub directory_name: String,
     /// Raw `_dataStore` column (compared untrimmed, as Scala does).
@@ -150,7 +150,7 @@ pub(crate) async fn load_virtual_upload_target(
     not_virtual_message: &str,
 ) -> ApiResult<UploadTarget> {
     let not_found = || ApiError::not_found(crate::msg::NOT_FOUND);
-    if !crate::dataset::access::can_read(pool, Some(user), dataset_id.as_str(), None).await? {
+    if !crate::dataset::access::can_read(pool, Some(user), dataset_id, None).await? {
         return Err(not_found());
     }
     let target: UploadTarget = sqlx::query_as(
@@ -223,7 +223,7 @@ pub(crate) fn require_same_datastore(
 pub(crate) async fn after_upload_reported(
     pool: &sqlx::PgPool,
     clients: &ServiceClients,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
 ) -> ApiResult<()> {
     let record = crate::dataset::lifecycle::load_record(pool, dataset_id)
         .await?
@@ -383,7 +383,7 @@ async fn report_mag_upload(
 ) -> ApiResult<StatusCode> {
     let mag = mag_locator(&body.mag)?;
     let pool = &state.pool;
-    let id = body.dataset_id.as_str();
+    let id = &body.dataset_id;
     // DatasetDAO.findOne under GlobalAccessContext; the reporting store need
     // not be the dataset's store (Scala does not check it either).
     let exists: bool =

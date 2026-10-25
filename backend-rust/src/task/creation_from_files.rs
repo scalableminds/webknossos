@@ -65,7 +65,6 @@ const PLAY_MAX_DISK_BUFFER: usize = 1024 * 1024 * 1024;
 const MULTIPART_PAYLOAD_INVALID: &str = "Could not parse task creation multipart request.";
 const FORM_JSON_MISSING: &str = "Could not parse task creation multipart request: no form data.";
 const CREATE_FAILED: &str = "Could not create task.";
-const NO_DATASET: &str = "Could not find dataset for task creation.";
 
 /// `NmlTaskParameters` (Play Json format: Option fields missing/null → None).
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -203,8 +202,7 @@ async fn add_volume_fallback_bounding_boxes(
         if bbox.width > 0 && bbox.height > 0 && bbox.depth > 0 {
             continue;
         }
-        let id = ObjectId::parse(dataset_id)?;
-        let dataset = crate::annotation::create::find_dataset(pool, &id)
+        let dataset = crate::annotation::create::find_dataset(pool, dataset_id)
             .await?
             .ok_or(ProviderError::Empty)?;
         let source = crate::annotation::create::usable_data_source(pool, &dataset).await?;
@@ -223,8 +221,7 @@ fn build_full_params(
     container: &TracingBoxContainer,
 ) -> Result<TaskParameters, TaskFailure> {
     let skeleton = container.skeleton.as_ref().map_err(TaskFailure::new)?;
-    let dataset_id = container.dataset_id.as_ref().map_err(TaskFailure::new)?;
-    let dataset_id = ObjectId::parse(dataset_id).map_err(|_| TaskFailure::new(NO_DATASET))?;
+    let dataset_id = container.dataset_id.clone().map_err(TaskFailure::new)?;
     let parsed_box = skeleton.bounding_box.map(BoundingBox::from);
     let position = &skeleton.edit_position;
     let rotation = &skeleton.edit_rotation;

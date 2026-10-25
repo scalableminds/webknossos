@@ -388,7 +388,7 @@ async fn identity_can_access(
 ) -> ApiResult<bool> {
     Ok(match target {
         Target::Dataset(id) => {
-            crate::dataset::access::can_read(pool, Some(identity), id.as_str(), None).await?
+            crate::dataset::access::can_read(pool, Some(identity), id, None).await?
         }
         Target::Annotation(id) => {
             match crate::annotation::access::find(pool, Some(identity), id.as_str(), true).await {

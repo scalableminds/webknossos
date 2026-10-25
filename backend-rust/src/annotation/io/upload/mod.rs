@@ -587,9 +587,9 @@ async fn upload(
         .map(|success| success.volume_layers.clone())
         .filter(|layers| !layers.is_empty())
         .collect();
-    let dataset_ids: Vec<&str> = parse_successes
+    let dataset_ids: Vec<&ObjectId> = parse_successes
         .iter()
-        .map(|success| success.dataset_id.as_str())
+        .map(|success| &success.dataset_id)
         .collect();
     let volumes_flat: Vec<&UploadedVolumeLayer> = volume_groups_raw.iter().flatten().collect();
     let dataset_ref = find_dataset_for_uploaded_annotations(
@@ -602,8 +602,7 @@ async fn upload(
         &wk_url,
     )
     .await?;
-    let dataset_id = ObjectId::parse(&dataset_ref.id)?;
-    let dataset = crate::annotation::create::find_dataset(pool, &dataset_id)
+    let dataset = crate::annotation::create::find_dataset(pool, &dataset_ref.id)
         .await?
         .ok_or_else(ApiError::internal)?;
 
@@ -656,7 +655,7 @@ async fn upload(
         &mut transaction,
         &NewAnnotation {
             id: &annotation_id,
-            dataset_id: dataset.id.as_str(),
+            dataset_id: &dataset.id,
             task_id: None,
             owner_id: &user.id,
             description: &description,

@@ -314,7 +314,7 @@ pub(crate) fn track_for_user(
 /// (`userDAO.findOne`), an uploader that no longer exists fails the event.
 async fn open_dataset_properties(
     pool: &sqlx::PgPool,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
 ) -> ApiResult<Map<String, Value>> {
     let (name, organization, uploader): (String, String, Option<String>) = sqlx::query_as(
         "SELECT name, _organization, _uploader FROM webknossos.datasets WHERE _id = $1",
@@ -349,7 +349,7 @@ pub(crate) fn track_open_dataset(
     state: &AppState,
     misc: &MiscState,
     user: &AuthUser,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
 ) {
     let (state, misc, user) = (state.clone(), misc.clone(), user.clone());
     let dataset_id = dataset_id.to_owned();

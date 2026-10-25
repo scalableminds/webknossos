@@ -20,6 +20,7 @@ use std::{
 };
 
 use crate::config::{ConfigError, Env};
+use crate::util::id::ObjectId;
 use axum::{extract::FromRequestParts, http::request::Parts};
 use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
@@ -263,7 +264,7 @@ impl SlackNotificationService {
         pool: &sqlx::PgPool,
         organization_id: &str,
         is_superuser: bool,
-        dataset_id: &str,
+        dataset_id: &ObjectId,
         add_variant_label: &str,
     ) {
         if !self.is_enabled() && !self.inner.verbose {

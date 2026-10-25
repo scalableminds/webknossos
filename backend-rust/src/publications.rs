@@ -86,7 +86,7 @@ async fn publication_json(
     publication: Publication,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
-    let dataset_ids: Vec<String> = sqlx::query_scalar(
+    let dataset_ids: Vec<ObjectId> = sqlx::query_scalar(
         "SELECT _id FROM webknossos.datasets_ WHERE _publication = $1 ORDER BY created, _id",
     )
     .bind(&publication.id)
@@ -99,7 +99,7 @@ async fn publication_json(
                 .await?,
         );
     }
-    let annotations: Vec<(String, String, String, String, String)> = sqlx::query_as(
+    let annotations: Vec<(String, String, String, String, ObjectId)> = sqlx::query_as(
         r#"SELECT _id, name, description, typ::text, _dataset FROM webknossos.annotations_
           WHERE _publication = $1 ORDER BY created, _id"#,
     )
@@ -140,7 +140,7 @@ async fn annotation_json(
     name: String,
     description: String,
     typ: String,
-    dataset: &str,
+    dataset: &ObjectId,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
     let dataset_exists: bool =

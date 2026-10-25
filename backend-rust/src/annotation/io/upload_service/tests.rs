@@ -60,13 +60,13 @@ struct TestLookup;
 impl DatasetLookup for TestLookup {
     fn find_dataset(
         &self,
-        dataset_id: Option<&str>,
+        dataset_id: Option<&ObjectId>,
         dataset_name: &str,
         organization_id: &str,
     ) -> impl Future<Output = ApiResult<Result<DatasetRef, String>>> + Send {
         let result = if dataset_name == "ds" && dataset_id.is_none() {
             Ok(DatasetRef {
-                id: DATASET_ID.to_owned(),
+                id: ObjectId::parse(DATASET_ID).unwrap(),
                 name: "ds".to_owned(),
                 organization_id: organization_id.to_owned(),
             })
@@ -190,7 +190,10 @@ fn zip_entries_are_parsed_reversed_renamed_and_keyed_by_path() {
     let (layer, data) = boxes[1].volume.clone().unwrap().unwrap();
     assert_eq!(layer.name.as_deref(), Some("v"));
     assert_eq!(data.as_deref(), Some(&b"VOLUME"[..]));
-    assert_eq!(boxes[1].dataset_id.as_deref(), Ok(DATASET_ID));
+    assert_eq!(
+        boxes[1].dataset_id.as_ref().map(ObjectId::as_str),
+        Ok(DATASET_ID)
+    );
 }
 
 #[test]
@@ -337,7 +340,7 @@ fn success_result(file_name: &str, trees: Vec<Tree>, groups: Vec<TreeGroup>) -> 
                 edited_mapping_edges_location: None,
                 edited_mapping_base_mapping_name: None,
             }],
-            dataset_id: DATASET_ID.to_owned(),
+            dataset_id: ObjectId::parse(DATASET_ID).unwrap(),
             description: String::new(),
             wk_url: None,
         }),
@@ -487,15 +490,16 @@ fn error_aggregation_and_consistency_checks() {
         ..Default::default()
     };
     let (a, b, none) = (with_org(Some("a")), with_org(Some("b")), with_org(None));
+    let (x, y) = (ObjectId::new(), ObjectId::new());
     assert_eq!(
-        uploaded_annotations_dataset_and_organization(&[&a, &none, &a], &[], &["x", "x"]).unwrap(),
-        ("x".to_owned(), Some("a".to_owned()))
+        uploaded_annotations_dataset_and_organization(&[&a, &none, &a], &[], &[&x, &x]).unwrap(),
+        (x.clone(), Some("a".to_owned()))
     );
     assert_eq!(
-        uploaded_annotations_dataset_and_organization(&[&none], &[], &["x"]).unwrap(),
-        ("x".to_owned(), None)
+        uploaded_annotations_dataset_and_organization(&[&none], &[], &[&x]).unwrap(),
+        (x.clone(), None)
     );
-    for (skeletons, ids) in [(vec![&a, &b], vec!["x"]), (vec![&a], vec!["x", "y"])] {
+    for (skeletons, ids) in [(vec![&a, &b], vec![&x]), (vec![&a], vec![&x, &y])] {
         let error =
             uploaded_annotations_dataset_and_organization(&skeletons, &[], &ids).unwrap_err();
         assert_eq!(

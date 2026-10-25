@@ -99,7 +99,7 @@ pub(crate) async fn folder_writable(
 }
 
 pub(crate) struct NewDataset<'a> {
-    pub id: &'a str,
+    pub id: &'a ObjectId,
     pub store_name: &'a str,
     pub name: &'a str,
     pub source: &'a UsableDataSource,
@@ -212,7 +212,7 @@ pub(crate) async fn set_up_dataset(
     connection: &mut sqlx::PgConnection,
     user: &AuthUser,
     setup: SetUp<'_>,
-) -> ApiResult<String> {
+) -> ApiResult<ObjectId> {
     validate_dataset_name(setup.name)?;
     let root: String = sqlx::query_scalar(
         "SELECT _rootFolder FROM webknossos.organizations_ WHERE _id = $1 FOR SHARE",
@@ -227,10 +227,10 @@ pub(crate) async fn set_up_dataset(
     if !folder_writable(connection, user, &folder).await? {
         return Err(ApiError::bad_request(crate::msg::folder::NO_WRITE_ACCESS));
     }
-    let id = ObjectId::new().to_string();
+    let id = ObjectId::new();
     let mut source = setup.source.clone();
     source.id = DataSourceId::new(
-        generate_directory_name(setup.name, &id),
+        generate_directory_name(setup.name, id.as_str()),
         &user.organization_id,
     );
     insert_dataset(
@@ -264,7 +264,7 @@ pub(crate) async fn set_up_dataset(
 pub(crate) async fn after_create(
     pool: &sqlx::PgPool,
     clients: &ServiceClients,
-    id: &str,
+    id: &ObjectId,
 ) -> ApiResult<()> {
     let record = crate::dataset::lifecycle::load_record(pool, id)
         .await?

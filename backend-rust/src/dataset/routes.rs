@@ -99,7 +99,7 @@ async fn find_by_import_url(
         .push(" AND d.importURL=")
         .push_bind(&query.import_url)
         .push(" ORDER BY d.created,d._id LIMIT 1");
-    let id: Option<String> = q.build_query_scalar().fetch_optional(&state.pool).await?;
+    let id: Option<ObjectId> = q.build_query_scalar().fetch_optional(&state.pool).await?;
     Ok(Json(match id {
         Some(id) => full_json(&state.pool, Some(&user), &id, features.jobs_enabled).await?,
         None => Value::Null,
@@ -133,7 +133,7 @@ async fn id_for_directory_name(
     Path((organization, name)): Path<(String, String)>,
     Query(query): Query<ReadQuery>,
 ) -> ApiResult<Json<Value>> {
-    let selected: Option<(String, Value)> = sqlx::query_as(
+    let selected: Option<(ObjectId, Value)> = sqlx::query_as(
         "SELECT \
             d._id,jsonb_build_object('id',d._id,'name',d.name,'organization',d._organization,\
             'directoryName',d.directoryName) FROM webknossos.datasets_ d JOIN \
@@ -250,7 +250,7 @@ async fn update_metadata(
 ) -> ApiResult<Json<Value>> {
     require_edit(&state, &user, &id).await?;
     let mut transaction = state.pool.begin().await?;
-    crate::dataset::access::lock_edit(&mut transaction, &user, id.as_str(), true).await?;
+    crate::dataset::access::lock_edit(&mut transaction, &user, &id, true).await?;
     let (existing_metadata, existing_folder, organization, created): (
         Value,
         String,
@@ -296,13 +296,8 @@ async fn update_metadata(
     if !readable {
         return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }
-    let result = full_json_on_connection(
-        &mut transaction,
-        Some(&user),
-        id.as_str(),
-        features.jobs_enabled,
-    )
-    .await?;
+    let result =
+        full_json_on_connection(&mut transaction, Some(&user), &id, features.jobs_enabled).await?;
     transaction.commit().await?;
     // ChangeDatasetSettingsEvent(request.identity, updated)
     crate::system::analytics::track(
@@ -376,13 +371,7 @@ async fn superuser_data_source(
         return Err(ApiError::forbidden(crate::msg::user::SUPER_USER_ROUTE_ONLY));
     }
     Ok(Json(
-        data_source_json(
-            &state.pool,
-            id.as_str(),
-            CredentialIdExposure::Include,
-            true,
-        )
-        .await?,
+        data_source_json(&state.pool, &id, CredentialIdExposure::Include, true).await?,
     ))
 }
 
@@ -396,7 +385,7 @@ enum CredentialIdExposure {
 /// `use_real_paths = false`, stored paths are used instead of resolved real paths.
 pub(crate) async fn data_source_for_rpc(
     pool: &sqlx::PgPool,
-    id: &str,
+    id: &ObjectId,
     use_real_paths: bool,
 ) -> ApiResult<Value> {
     data_source_json(pool, id, CredentialIdExposure::Include, use_real_paths).await
@@ -404,7 +393,7 @@ pub(crate) async fn data_source_for_rpc(
 
 async fn data_source_json(
     pool: &sqlx::PgPool,
-    id: &str,
+    id: &ObjectId,
     exposure: CredentialIdExposure,
     use_real_paths: bool,
 ) -> ApiResult<Value> {
@@ -452,7 +441,7 @@ async fn read(
     if !crate::dataset::access::can_read(
         &state.pool,
         user.as_ref(),
-        id.as_str(),
+        &id,
         query.sharing_token.as_deref(),
     )
     .await?
@@ -467,15 +456,9 @@ async fn read(
         sqlx::query("INSERT INTO webknossos.dataset_lastUsedTimes (_dataset,_user,lastUsedTime) VALUES ($1,$2,NOW()) ON CONFLICT (_dataset,_user) DO UPDATE SET lastUsedTime = NOW()")
             .bind(id.as_str()).bind(&user.id).execute(&state.pool).await?;
     }
-    let result = full_json(
-        &state.pool,
-        user.as_ref(),
-        id.as_str(),
-        features.jobs_enabled,
-    )
-    .await?;
+    let result = full_json(&state.pool, user.as_ref(), &id, features.jobs_enabled).await?;
     if let Some(user) = user {
-        crate::system::analytics::track_open_dataset(&state, &misc, &user, id.as_str());
+        crate::system::analytics::track_open_dataset(&state, &misc, &user, &id);
         sqlx::query("UPDATE webknossos.users SET lastActivity = NOW() WHERE _id = $1")
             .bind(user.id)
             .execute(&state.pool)
@@ -489,7 +472,7 @@ async fn read(
 pub(crate) async fn full_json(
     pool: &sqlx::PgPool,
     user: Option<&AuthUser>,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
     let mut connection = pool.acquire().await?;
@@ -499,7 +482,7 @@ pub(crate) async fn full_json(
 pub(crate) async fn full_json_on_connection(
     connection: &mut sqlx::PgConnection,
     user: Option<&AuthUser>,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
     let user_id = user.map(|u| u.id.as_str());
@@ -784,13 +767,16 @@ fn canonicalize_transform(transform: &mut Value) -> ApiResult<()> {
     Ok(())
 }
 
-pub(crate) async fn full_layers(pool: &sqlx::PgPool, dataset_id: &str) -> ApiResult<Vec<Value>> {
+pub(crate) async fn full_layers(
+    pool: &sqlx::PgPool,
+    dataset_id: &ObjectId,
+) -> ApiResult<Vec<Value>> {
     full_layers_with_exposure(pool, dataset_id, CredentialIdExposure::Omit, true).await
 }
 
 async fn full_layers_with_exposure(
     pool: &sqlx::PgPool,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
     exposure: CredentialIdExposure,
     use_real_paths: bool,
 ) -> ApiResult<Vec<Value>> {
@@ -801,7 +787,7 @@ async fn full_layers_with_exposure(
 
 async fn full_layers_with_exposure_on_connection(
     connection: &mut sqlx::PgConnection,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
     exposure: CredentialIdExposure,
     use_real_paths: bool,
 ) -> ApiResult<Vec<Value>> {
@@ -1163,7 +1149,7 @@ struct CompactDataset {
 }
 
 async fn require_read(state: &AppState, user: &AuthUser, id: &ObjectId) -> ApiResult<()> {
-    if !crate::dataset::access::can_read(&state.pool, Some(user), id.as_str(), None).await? {
+    if !crate::dataset::access::can_read(&state.pool, Some(user), id, None).await? {
         return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }
     Ok(())
@@ -1171,7 +1157,7 @@ async fn require_read(state: &AppState, user: &AuthUser, id: &ObjectId) -> ApiRe
 
 async fn require_edit(state: &AppState, user: &AuthUser, id: &ObjectId) -> ApiResult<()> {
     require_read(state, user, id).await?;
-    if !crate::dataset::access::can_edit(&state.pool, user, id.as_str()).await? {
+    if !crate::dataset::access::can_edit(&state.pool, user, id).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     Ok(())
@@ -1229,7 +1215,7 @@ async fn update_teams(
 ) -> ApiResult<Json<Vec<String>>> {
     require_edit(&state, &user, &id).await?;
     let mut transaction = state.pool.begin().await?;
-    crate::dataset::access::lock_edit(&mut transaction, &user, id.as_str(), true).await?;
+    crate::dataset::access::lock_edit(&mut transaction, &user, &id, true).await?;
     // Dataset managers can update teams they can read; other users only teams
     // they manage. Unmanageable current grants must survive the replacement.
     let managed: Vec<String> = sqlx::query_scalar(
@@ -1259,9 +1245,7 @@ async fn update_teams(
     let pending_emails = notification_emails
         .prepare_share_emails(
             &mut transaction,
-            SharedResource::Dataset {
-                id: id.as_str().to_owned(),
-            },
+            SharedResource::Dataset { id: (*id).clone() },
             &current,
             &updated,
             &[user.id.as_str()],

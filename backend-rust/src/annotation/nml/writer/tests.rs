@@ -5,9 +5,14 @@
 //! `Double.toString`/`Float.toString`); see `checkpoints/nml-writer.md`.
 
 use super::*;
+use std::sync::LazyLock;
+
 use crate::proto::datastore::{
     AdditionalAxisProto, BranchPoint, Comment, Edge, Id32WithBool, Id64WithBool, Node, Vec2IntProto,
 };
+
+static BASE_DATASET_ID: LazyLock<ObjectId> =
+    LazyLock::new(|| ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9e0").unwrap());
 
 fn v3(x: i32, y: i32, z: i32) -> Vec3IntProto {
     Vec3IntProto { x, y, z }
@@ -63,7 +68,7 @@ fn base_input<'a>(layers: Vec<NmlLayer<'a>>) -> NmlWriteInput<'a> {
         organization_id: "org",
         wk_url: "http://x",
         dataset_name: "ds",
-        dataset_id: "d",
+        dataset_id: &BASE_DATASET_ID,
         skip_volume_data: false,
         volume_data_zip_format: VolumeDataZipFormat::Wkw,
         writer_git_commit: "",
@@ -339,6 +344,7 @@ fn skeleton_document_matches_golden() {
         factor: [11.24, 11.24, 28.0],
         unit: "nanometer".to_owned(),
     };
+    let dataset_id = ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9d2").unwrap();
     let input = NmlWriteInput {
         annotation_user_states: &annotation_states,
         requesting_user_id: Some("viewer"),
@@ -351,7 +357,7 @@ fn skeleton_document_matches_golden() {
         task_id: Some("66f0a1b2c3d4e5f6a7b8c9d1"),
         voxel_size: Some(&voxel_size),
         wk_url: "http://localhost:9000",
-        dataset_id: "66f0a1b2c3d4e5f6a7b8c9d2",
+        dataset_id: &dataset_id,
         writer_git_commit: "abc123",
         timestamp_millis: 1_700_000_000_000,
         ..base_input(vec![skeleton_layer("skeleton-id", &skeleton)])
@@ -370,7 +376,7 @@ const GOLDEN_VOLUMES: &str = r#"<things>
   <meta name="username" content="Owner"/>
   <meta name="taskId" content="t1"/>
   <parameters>
-    <experiment name="ds" organization="org" datasetId="d1" description="" wkUrl="https://wk.example"/>
+    <experiment name="ds" organization="org" datasetId="66f0a1b2c3d4e5f6a7b8c9e1" description="" wkUrl="https://wk.example"/>
     <scale x="4.0" y="4.0" z="40.0" unit="nanometer"/>
     <offset x="0" y="0" z="0"/>
     <time ms="5"/>
@@ -483,6 +489,7 @@ fn volume_document_matches_golden() {
         factor: [4.0, 4.0, 40.0],
         unit: "nanometer".to_owned(),
     };
+    let dataset_id = ObjectId::parse("66f0a1b2c3d4e5f6a7b8c9e1").unwrap();
     let mut editable_layer = volume_layer("t-2", "Volume", &editable);
     editable_layer.has_edited_mapping_edges = true;
     editable_layer.base_mapping_name = Some("agglomerate_view_70");
@@ -496,7 +503,7 @@ fn volume_document_matches_golden() {
         task_id: Some("t1"),
         voxel_size: Some(&voxel_size),
         wk_url: "https://wk.example",
-        dataset_id: "d1",
+        dataset_id: &dataset_id,
         volume_data_zip_format: VolumeDataZipFormat::Zarr3,
         writer_git_commit: "abc123",
         timestamp_millis: 42,
@@ -515,7 +522,7 @@ const GOLDEN_HYBRID_COMPOUND: &str = r#"<things>
   <meta name="timestamp" content="0"/>
   <meta name="username" content=""/>
   <parameters>
-    <experiment name="ds" organization="org" datasetId="d" wkUrl="http://x"/>
+    <experiment name="ds" organization="org" datasetId="66f0a1b2c3d4e5f6a7b8c9e0" wkUrl="http://x"/>
     <scale x="-1" y="-1" z="-1"/>
     <offset x="0" y="0" z="0"/>
     <time ms="7"/>
@@ -558,7 +565,7 @@ const GOLDEN_SKIPPED_VOLUME: &str = r#"<things>
   <meta name="annotationId" content="a"/>
   <meta name="username" content=""/>
   <parameters>
-    <experiment name="ds" organization="org" datasetId="d" description="" wkUrl="http://x"/>
+    <experiment name="ds" organization="org" datasetId="66f0a1b2c3d4e5f6a7b8c9e0" description="" wkUrl="http://x"/>
     <scale x="-1" y="-1" z="-1"/>
     <offset x="0" y="0" z="0"/>
     <time ms="8"/>

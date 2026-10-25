@@ -56,7 +56,7 @@ pub fn router(allow_delete_datasets: bool, jobs_enabled: bool) -> Router<AppStat
 
 #[derive(sqlx::FromRow, Clone, Debug)]
 pub(crate) struct DatasetRecord {
-    pub id: String,
+    pub id: ObjectId,
     pub organization: String,
     pub store_url: Option<String>,
     pub store_name: Option<String>,
@@ -77,7 +77,7 @@ impl DatasetRecord {
 
 pub(crate) async fn load_record(
     executor: impl sqlx::PgExecutor<'_>,
-    id: &str,
+    id: &ObjectId,
 ) -> ApiResult<Option<DatasetRecord>> {
     Ok(sqlx::query_as(
         r#"SELECT d._id AS id, d._organization AS organization, s.url AS store_url, s.name AS store_name,
@@ -107,7 +107,7 @@ async fn require_editable_by_name(
     })
 }
 
-pub(crate) fn not_found(id: &str) -> ApiError {
+pub(crate) fn not_found(id: &ObjectId) -> ApiError {
     ApiError::not_found(crate::msg::dataset::not_found(id))
 }
 
@@ -122,7 +122,7 @@ pub(crate) async fn require_editable(
     id: &ObjectId,
 ) -> ApiResult<DatasetRecord> {
     let record = require_readable(state, user, id).await?;
-    if !crate::dataset::access::can_edit(&state.pool, user, id.as_str()).await? {
+    if !crate::dataset::access::can_edit(&state.pool, user, id).await? {
         return Err(not_allowed());
     }
     Ok(record)
@@ -133,12 +133,12 @@ pub(crate) async fn require_readable(
     user: &AuthUser,
     id: &ObjectId,
 ) -> ApiResult<DatasetRecord> {
-    if !crate::dataset::access::can_read(&state.pool, Some(user), id.as_str(), None).await? {
-        return Err(not_found(id.as_str()));
+    if !crate::dataset::access::can_read(&state.pool, Some(user), id, None).await? {
+        return Err(not_found(id));
     }
-    load_record(&state.pool, id.as_str())
+    load_record(&state.pool, id)
         .await?
-        .ok_or_else(|| not_found(id.as_str()))
+        .ok_or_else(|| not_found(id))
 }
 
 fn parse_json<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> ApiResult<T> {
@@ -154,7 +154,7 @@ pub(crate) async fn invalidate_cache(
         .request(
             Method::DELETE,
             record.store_url()?,
-            &["data", "datasets", &record.id],
+            &["data", "datasets", record.id.as_str()],
             &[],
             None,
         )
@@ -173,7 +173,7 @@ pub(crate) async fn update_data_source_on_disk(
         .request(
             Method::PUT,
             record.store_url()?,
-            &["data", "datasets", &record.id],
+            &["data", "datasets", record.id.as_str()],
             &[("rootPath", root_path.to_owned())],
             Some(data_source),
         )
@@ -285,7 +285,7 @@ async fn delete_dataset(
             crate::msg::dataset::delete::NOT_ENABLED,
         ));
     }
-    if !crate::dataset::access::can_edit(&state.pool, &user, id.as_str()).await? {
+    if !crate::dataset::access::can_edit(&state.pool, &user, &id).await? {
         return Err(not_allowed());
     }
     tracing::info!(dataset = %id, user = %user.id, is_virtual = record.is_virtual, "Deleting dataset");
@@ -349,7 +349,7 @@ async fn delete_dataset(
             .map_err(|_| ApiError::bad_request(crate::msg::dataset::delete::FAILED))?;
     }
     let mut transaction = state.pool.begin().await?;
-    let exists: Option<String> =
+    let exists: Option<ObjectId> =
         sqlx::query_scalar("SELECT _id FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE")
             .bind(id.as_str())
             .fetch_optional(&mut *transaction)
@@ -366,14 +366,14 @@ async fn delete_dataset(
         sqlx::query("UPDATE webknossos.jobs SET manualState = 'CANCELLED' WHERE command = 'convert_to_wkw' AND commandArgs->>'dataset_id' = $1 AND (state = 'PENDING' OR state = 'STARTED')")
             .bind(id.as_str()).execute(&mut *transaction).await?;
     }
-    delete_from_db_on_connection(&mut transaction, id.as_str()).await?;
+    delete_from_db_on_connection(&mut transaction, &id).await?;
     transaction.commit().await?;
     Ok(())
 }
 
 /// DatasetService.deleteDatasetFromDB, without disk/RPC deletion or conversion
 /// job cancellation. A missing or already deleted dataset is an idempotent no-op.
-pub(crate) async fn delete_from_db(pool: &sqlx::PgPool, id: &str) -> ApiResult<()> {
+pub(crate) async fn delete_from_db(pool: &sqlx::PgPool, id: &ObjectId) -> ApiResult<()> {
     let mut transaction = pool.begin().await?;
     delete_from_db_on_connection(&mut transaction, id).await?;
     transaction.commit().await?;
@@ -384,9 +384,9 @@ pub(crate) async fn delete_from_db(pool: &sqlx::PgPool, id: &str) -> ApiResult<(
 /// conversion job cancellation and deletion remain atomic.
 async fn delete_from_db_on_connection(
     connection: &mut sqlx::PgConnection,
-    id: &str,
+    id: &ObjectId,
 ) -> ApiResult<()> {
-    let exists: Option<String> =
+    let exists: Option<ObjectId> =
         sqlx::query_scalar("SELECT _id FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE")
             .bind(id)
             .fetch_optional(&mut *connection)
@@ -515,7 +515,7 @@ async fn finish_upload_to_paths(
     .bind(id.as_str())
     .fetch_optional(&mut *transaction)
     .await?
-    .ok_or_else(|| not_found(id.as_str()))?;
+    .ok_or_else(|| not_found(&id))?;
     if !matches!(
         status.as_str(),
         NOT_YET_UPLOADED | NOT_YET_UPLOADED_TO_PATHS
@@ -532,12 +532,12 @@ async fn finish_upload_to_paths(
         .execute(&mut *transaction)
         .await?;
     transaction.commit().await?;
-    let updated = load_record(&state.pool, id.as_str())
+    let updated = load_record(&state.pool, &id)
         .await?
-        .ok_or_else(|| not_found(id.as_str()))?;
+        .ok_or_else(|| not_found(&id))?;
     scan_realpaths_if_virtual(&state.pool, &clients, &updated).await?;
     write_mirror_for_virtual(&state.pool, &clients, &updated).await?;
-    crate::organization::storage::refresh_for_dataset(&state.pool, &clients, id.as_str()).await?;
+    crate::organization::storage::refresh_for_dataset(&state.pool, &clients, &id).await?;
     tracing::info!(dataset = %id, user = %user.id, "Finished uploadToPaths");
     Ok(())
 }

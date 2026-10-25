@@ -49,7 +49,7 @@ async fn find_annotation(
     pool: &PgPool,
     id: &ObjectId,
 ) -> ApiResult<Option<(ObjectId, Vec<AnnotationLayer>)>> {
-    let dataset: Option<String> =
+    let dataset: Option<ObjectId> =
         sqlx::query_scalar("SELECT _dataset FROM webknossos.annotations_ WHERE _id=$1")
             .bind(id.as_str())
             .fetch_optional(pool)
@@ -78,7 +78,6 @@ async fn find_annotation(
             })
         })
         .collect::<ApiResult<Vec<_>>>()?;
-    let dataset = ObjectId::parse(&dataset).map_err(|_| ApiError::internal())?;
     Ok(Some((dataset, layers)))
 }
 

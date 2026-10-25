@@ -377,7 +377,7 @@ async fn explore_and_add_remote(
     Extension(clients): Extension<ServiceClients>,
     Extension(tokens): Extension<DatastoreTokenConfig>,
     RequestJson(body): RequestJson<ExploreAndAddParameters>,
-) -> ApiResult<Json<String>> {
+) -> ApiResult<Json<ObjectId>> {
     let parameters = ExploreParameters {
         remote_uri: body.remote_uri.clone(),
         credential_identifier: body.credential_identifier.clone(),
@@ -526,13 +526,13 @@ async fn duplicate_to_orga(
     Path(id): Path<PathObjectId>,
     Query(query): Query<DuplicateQuery>,
     Extension(clients): Extension<ServiceClients>,
-) -> ApiResult<Json<String>> {
+) -> ApiResult<Json<ObjectId>> {
     if !user.is_superuser {
         return Err(ApiError::forbidden(crate::msg::user::SUPER_USER_ROUTE_ONLY));
     }
-    let record = crate::dataset::lifecycle::load_record(&state.pool, id.as_str())
+    let record = crate::dataset::lifecycle::load_record(&state.pool, &id)
         .await?
-        .ok_or_else(|| crate::dataset::lifecycle::not_found(id.as_str()))?;
+        .ok_or_else(|| crate::dataset::lifecycle::not_found(&id))?;
     let DuplicateSource {
         name,
         metadata,
@@ -554,7 +554,7 @@ async fn duplicate_to_orga(
         .and_then(LengthUnit::from_name)
         .unwrap_or(VoxelSize::DEFAULT_UNIT);
     let source = if record.is_usable {
-        crate::dataset::source::load(&state.pool, id.as_str()).await?
+        crate::dataset::source::load(&state.pool, &id).await?
     } else {
         UsableDataSource {
             id: DataSourceId::new("", ""),
@@ -587,10 +587,10 @@ async fn duplicate_to_orga(
             &query.target_organization_id,
         )));
     }
-    let new_id = ObjectId::new().to_string();
+    let new_id = ObjectId::new();
     let mut adapted = source;
     adapted.id = DataSourceId::new(
-        crate::dataset::create::generate_directory_name(&name, &new_id),
+        crate::dataset::create::generate_directory_name(&name, new_id.as_str()),
         &query.target_organization_id,
     );
     let voxel_size = if record.is_usable {

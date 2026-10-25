@@ -53,7 +53,7 @@ fn require_skeleton(typ: &str) -> ApiResult<()> {
 /// (Internal, Active, Explorational, OwnerOnly, unlocked, empty name and
 /// description, no task, no tags, no tracing time).
 fn sandbox_metadata(
-    dataset_id: &str,
+    dataset_id: &ObjectId,
     now: DateTime<Utc>,
 ) -> crate::annotation::access::AnnotationMetadata {
     crate::annotation::access::AnnotationMetadata {
@@ -89,7 +89,7 @@ fn sandbox_metadata(
 async fn public_json(
     connection: &mut PgConnection,
     user: Option<&AuthUser>,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
     let annotation = sandbox_metadata(dataset_id, Utc::now());
@@ -165,7 +165,7 @@ async fn sandbox(
     if !crate::dataset::access::can_read(
         &state.pool,
         user.as_ref(),
-        dataset_id.as_str(),
+        &dataset_id,
         query.sharing_token.as_deref(),
     )
     .await?
@@ -176,7 +176,7 @@ async fn sandbox(
     }
     require_skeleton(&typ)?;
     let mut connection = state.pool.acquire().await?;
-    let json = public_json(&mut connection, user.as_ref(), dataset_id.as_str(), jobs)
+    let json = public_json(&mut connection, user.as_ref(), &dataset_id, jobs)
         .await
         .map_err(|error| {
             if error.status.is_server_error() {

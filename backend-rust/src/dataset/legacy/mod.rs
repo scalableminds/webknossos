@@ -16,6 +16,7 @@ use crate::{
     dataset::routes::{DatasetFeatures, ListQuery},
     error::{ApiError, ApiResult},
     extract::Query,
+    util::id::ObjectId,
 };
 
 pub fn router(jobs_enabled: bool) -> Router<AppState> {
@@ -42,12 +43,15 @@ async fn list(
     } else {
         let mut values = Vec::with_capacity(rows.len());
         for row in rows {
-            let id = row["id"].as_str().ok_or_else(ApiError::internal)?;
+            let id = row["id"]
+                .as_str()
+                .and_then(|id| ObjectId::parse(id).ok())
+                .ok_or_else(ApiError::internal)?;
             values.push(
                 crate::dataset::routes::full_json(
                     &state.pool,
                     user.as_ref(),
-                    id,
+                    &id,
                     features.jobs_enabled,
                 )
                 .await?,

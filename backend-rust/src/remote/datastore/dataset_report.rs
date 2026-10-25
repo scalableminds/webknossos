@@ -69,7 +69,7 @@ struct ReportDatasetUploadParameters {
 /// The dataset columns this route reads (DatasetDAO.findOne, global access).
 #[derive(sqlx::FromRow)]
 struct ReportedDataset {
-    id: String,
+    id: ObjectId,
     name: String,
     directory_name: String,
     organization: String,
@@ -77,7 +77,7 @@ struct ReportedDataset {
     data_store: String,
 }
 
-async fn find_dataset(pool: &sqlx::PgPool, id: &str) -> ApiResult<ReportedDataset> {
+async fn find_dataset(pool: &sqlx::PgPool, id: &ObjectId) -> ApiResult<ReportedDataset> {
     sqlx::query_as(
         r#"SELECT _id AS id, name, directoryName AS directory_name,
              _organization AS organization, _dataStore AS data_store
@@ -128,7 +128,7 @@ async fn report(
         .map_err(crate::dataset::source::invalid_body)
         .map_err(RunError::Api)?;
     let pool = &state.pool;
-    let id = query.dataset_id.as_str();
+    let id = &query.dataset_id;
     let user = user_for_token_forbidden(pool, &query.token)
         .await
         .map_err(RunError::Api)?;

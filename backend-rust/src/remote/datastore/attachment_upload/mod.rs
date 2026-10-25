@@ -46,7 +46,7 @@ const PENDING_UPLOAD_PATH: &str = "./<pending upload>";
 /// type `typ` and name `name` (the primary key).
 pub(crate) fn push_attachment_key<'a>(
     q: &mut Sql<'a>,
-    dataset: &'a str,
+    dataset: &'a ObjectId,
     layer: &'a str,
     typ: &'a str,
     name: &'a str,
@@ -101,7 +101,7 @@ impl LayerAttachment {
 /// .findAllForDatasetAndDataLayerName); singletons match regardless of name.
 async fn existing_attachment<'e>(
     executor: impl sqlx::PgExecutor<'e>,
-    dataset: &str,
+    dataset: &ObjectId,
     layer: &str,
     typ: LayerAttachmentType,
     name: &str,
@@ -233,7 +233,7 @@ async fn report_attachment_upload(
 ) -> ApiResult<StatusCode> {
     let path = body.attachment.upath()?;
     let pool = &state.pool;
-    let id = body.dataset_id.as_str();
+    let id = &body.dataset_id;
     // DatasetDAO.findOne under GlobalAccessContext; the reporting store need
     // not be the dataset's store (Scala does not check it either).
     let exists: bool =

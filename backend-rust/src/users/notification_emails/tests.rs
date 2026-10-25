@@ -367,7 +367,9 @@ fn access_queries_evaluate_the_grants_per_candidate() {
     let user_ids = ["u"];
     for resource in [
         SharedResource::Annotation { id: "a".into() },
-        SharedResource::Dataset { id: "d".into() },
+        SharedResource::Dataset {
+            id: ObjectId::new(),
+        },
     ] {
         let query = resource.access_query(&user_ids);
         let sql = query.sql();

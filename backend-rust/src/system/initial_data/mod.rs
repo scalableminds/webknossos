@@ -838,7 +838,8 @@ async fn insert_dataset_if_absent(
     .bind(&dataset.metadata)
     .execute(&mut **tx)
     .await?;
-    crate::dataset::source::write_layers(tx, dataset.id, &source.data_layers).await
+    crate::dataset::source::write_layers(tx, &ObjectId::parse(dataset.id)?, &source.data_layers)
+        .await
 }
 
 #[cfg(test)]

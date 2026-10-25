@@ -11,6 +11,7 @@ pub(crate) use webknossos_common::datasource::{
 use webknossos_common::enums::LayerAttachmentType;
 
 use crate::error::{ApiError, ApiResult};
+use crate::util::id::ObjectId;
 
 pub(crate) fn invalid_body(_: impl std::fmt::Display) -> ApiError {
     ApiError::bad_request(crate::msg::request::INVALID_JSON_BODY)
@@ -74,7 +75,10 @@ pub(crate) fn typed_attachments(
 }
 
 /// DatasetService.dataSourceFor on a usable dataset, typed (real paths).
-pub(crate) async fn load(pool: &sqlx::PgPool, dataset_id: &str) -> ApiResult<UsableDataSource> {
+pub(crate) async fn load(
+    pool: &sqlx::PgPool,
+    dataset_id: &ObjectId,
+) -> ApiResult<UsableDataSource> {
     let rendered = crate::dataset::routes::data_source_for_rpc(pool, dataset_id, true).await?;
     UsableDataSource::from_json(&rendered).map_err(|_| ApiError::internal())
 }
@@ -83,7 +87,7 @@ pub(crate) async fn load(pool: &sqlx::PgPool, dataset_id: &str) -> ApiResult<Usa
 /// the caller's transaction; pending upload mags/attachments are kept.
 pub(crate) async fn write_layers(
     connection: &mut sqlx::PgConnection,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
     layers: &[StaticLayer],
 ) -> ApiResult<()> {
     let names: Vec<&str> = layers.iter().map(|l| l.name.as_str()).collect();

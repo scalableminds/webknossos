@@ -9,6 +9,7 @@ use webknossos_backend::{
     },
     annotation::nml::parser::{NmlParseResult, SharedParsingParameters},
     proto::datastore::SkeletonTracing,
+    util::id::ObjectId,
 };
 
 async fn seed_dataset(
@@ -16,8 +17,8 @@ async fn seed_dataset(
     organization_id: &str,
     name: &str,
     directory_name: &str,
-) -> String {
-    let id = object_id();
+) -> ObjectId {
+    let id = ObjectId::new();
     sqlx::query(
         "INSERT INTO webknossos.datasets (_id, _dataStore, _organization, _folder, name, directoryName, sortingKey)
          SELECT $1, 'store', _id, _rootFolder, $3, $4, NOW() FROM webknossos.organizations WHERE _id = $2",
@@ -56,16 +57,16 @@ async fn dataset_lookups_follow_scala_semantics_and_read_access() {
     seed_dataset(&db, &org, "Twin", "dir_c").await;
     seed_dataset(&db, &org, "Twin", "dir_d").await;
     let pool = &db.pool;
-    let find = |user: &str, id: Option<&str>, name: &str| {
+    let find = |user: &str, id: Option<&ObjectId>, name: &str| {
         let (pool, user, id, name, org) = (
             pool.clone(),
             user.to_owned(),
-            id.map(str::to_owned),
+            id.cloned(),
             name.to_owned(),
             org.clone(),
         );
         async move {
-            find_one_by_id_or_name_and_organization(&pool, &user, id.as_deref(), &name, &org)
+            find_one_by_id_or_name_and_organization(&pool, &user, id.as_ref(), &name, &org)
                 .await
                 .unwrap()
                 .map(|d| d.id)
@@ -76,7 +77,7 @@ async fn dataset_lookups_follow_scala_semantics_and_read_access() {
         find(&admin.user_id, Some(&unique), "ignored").await,
         Ok(unique.clone())
     );
-    let missing = object_id();
+    let missing = ObjectId::new();
     assert_eq!(
         find(&admin.user_id, Some(&missing), "x").await,
         Err(format!(
@@ -212,7 +213,7 @@ async fn dataset_lookups_follow_scala_semantics_and_read_access() {
                 "by-id.nml".to_owned(),
                 nml(&format!(
                     r#"name="x" datasetId="{}""#,
-                    unique.to_uppercase()
+                    unique.as_str().to_uppercase()
                 )),
             ),
             ("by-dir.nml".to_owned(), nml(r#"name="dir_a""#)),
@@ -228,7 +229,7 @@ async fn dataset_lookups_follow_scala_semantics_and_read_access() {
     )
     .await
     .unwrap();
-    let datasets: Vec<Result<String, String>> = result
+    let datasets: Vec<Result<ObjectId, String>> = result
         .parse_results
         .iter()
         .map(|r| match r {

@@ -8,7 +8,7 @@ use axum::{
 use common::{Fixture, TestDb, object_id};
 use serde_json::{Value, json};
 use tower::ServiceExt;
-use webknossos_backend::{AppState, auth};
+use webknossos_backend::{AppState, auth, util::id::ObjectId};
 
 /// Analytics side effects of the routes stay local (no forwarding URI).
 fn offline_misc() -> webknossos_backend::system::application_info::MiscState {
@@ -96,7 +96,7 @@ async fn seed_dataset(db: &TestDb, fixture: &Fixture, name: &str, public: bool) 
 async fn dataset_access_covers_public_tokens_inheritance_and_rejects_stale_foreign_grants() {
     let db = TestDb::new().await;
     let fixture = db.fixture().await;
-    let id = seed_dataset(&db, &fixture, "Private_dataset", false).await;
+    let id = ObjectId::parse(&seed_dataset(&db, &fixture, "Private_dataset", false).await).unwrap();
     let member = db
         .seed_user(&object_id(), &fixture.organization_id, false)
         .await;

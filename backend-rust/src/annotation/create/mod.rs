@@ -131,8 +131,7 @@ pub(crate) async fn usable_data_source(
         .wrap(crate::msg::dataset::data_source::NOT_FOUND)
         .with_status(StatusCode::NOT_FOUND));
     }
-    let rendered =
-        crate::dataset::routes::data_source_for_rpc(pool, dataset.id.as_str(), true).await?;
+    let rendered = crate::dataset::routes::data_source_for_rpc(pool, &dataset.id, true).await?;
     let source = UsableDataSource::from_json(&rendered).map_err(|_| ApiError::internal())?;
     Ok(UsableSource { source, rendered })
 }
@@ -367,8 +366,7 @@ async fn create_explorational(
     let dataset_id = ObjectId::parse_path(&dataset_id)?;
     // datasetDAO.findOne(datasetId) under the user's access context.
     let readable =
-        crate::dataset::access::can_read(&state.pool, Some(&user), dataset_id.as_str(), None)
-            .await?;
+        crate::dataset::access::can_read(&state.pool, Some(&user), &dataset_id, None).await?;
     let dataset = if readable {
         find_dataset(&state.pool, &dataset_id).await?
     } else {
@@ -390,7 +388,7 @@ async fn create_explorational(
         &mut transaction,
         &NewAnnotation {
             id: &annotation_id,
-            dataset_id: dataset.id.as_str(),
+            dataset_id: &dataset.id,
             task_id: None,
             owner_id: &user.id,
             description: "",

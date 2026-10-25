@@ -79,7 +79,7 @@ async fn require_read(
     id: &ObjectId,
     sharing_token: Option<&str>,
 ) -> ApiResult<()> {
-    if !crate::dataset::access::can_read(&state.pool, user, id.as_str(), sharing_token).await? {
+    if !crate::dataset::access::can_read(&state.pool, user, id, sharing_token).await? {
         return Err(ApiError::not_found(if user.is_some() {
             crate::msg::dataset::not_found(id)
         } else {
@@ -293,7 +293,7 @@ async fn usable_layers(
             crate::msg::dataset::data_source::USABLE_BUT_NO_VOXEL_SIZE,
         ));
     }
-    crate::dataset::routes::full_layers(&state.pool, id.as_str()).await
+    crate::dataset::routes::full_layers(&state.pool, id).await
 }
 
 fn store_url(dataset: &DatasetRow) -> ApiResult<&str> {

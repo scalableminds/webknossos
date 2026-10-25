@@ -5,6 +5,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     sql::{Arg, PushArg, Sql},
+    util::id::ObjectId,
 };
 
 /// Datasets (alias `d`) of the requester's organization reachable through a
@@ -98,7 +99,7 @@ pub fn push_edit_predicate<'a>(q: &mut Sql<'a>, user: Arg<'a>) {
 pub async fn can_read(
     pool: &PgPool,
     user: Option<&AuthUser>,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
     sharing_token: Option<&str>,
 ) -> ApiResult<bool> {
     let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = ");
@@ -108,7 +109,7 @@ pub async fn can_read(
     Ok(q.build_query_scalar().fetch_one(pool).await?)
 }
 
-pub async fn can_edit(pool: &PgPool, user: &AuthUser, dataset_id: &str) -> ApiResult<bool> {
+pub async fn can_edit(pool: &PgPool, user: &AuthUser, dataset_id: &ObjectId) -> ApiResult<bool> {
     let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = ");
     q.push_bind(dataset_id).push(" AND ");
     push_edit_predicate(&mut q, user.id.as_str().into());
@@ -122,7 +123,7 @@ pub async fn can_edit(pool: &PgPool, user: &AuthUser, dataset_id: &str) -> ApiRe
 pub async fn lock_edit(
     transaction: &mut Transaction<'_, Postgres>,
     user: &AuthUser,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
     require_read: bool,
 ) -> ApiResult<()> {
     sqlx::query("SELECT _id FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE")

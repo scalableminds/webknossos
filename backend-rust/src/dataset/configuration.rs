@@ -13,7 +13,7 @@ use crate::{
     auth::{AuthUser, OptionalAuthUser},
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path, Query},
-    util::id::PathObjectId,
+    util::id::{ObjectId, PathObjectId},
 };
 
 pub fn router() -> Router<AppState> {
@@ -47,7 +47,7 @@ fn merge(base: &mut Map<String, Value>, configuration: Option<Value>) {
 
 async fn complete(
     pool: &PgPool,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
     dataset: DatasetConfiguration,
     existing: Option<Value>,
     user: Option<&AuthUser>,
@@ -120,7 +120,7 @@ async fn complete(
     Ok(Value::Object(result))
 }
 
-async fn dataset(pool: &PgPool, id: &str) -> ApiResult<Option<DatasetConfiguration>> {
+async fn dataset(pool: &PgPool, id: &ObjectId) -> ApiResult<Option<DatasetConfiguration>> {
     Ok(sqlx::query_as("SELECT isUsable AS is_usable, voxelSizeFactor IS NOT NULL AS has_voxel_size, defaultViewConfiguration AS default_configuration, adminViewConfiguration AS admin_configuration FROM webknossos.datasets_ WHERE _id = $1")
         .bind(id).fetch_optional(pool).await?)
 }
@@ -151,14 +151,14 @@ async fn read(
         && !crate::dataset::access::can_read(
             &state.pool,
             user.as_ref(),
-            id.as_str(),
+            &id,
             query.sharing_token.as_deref(),
         )
         .await?
     {
         return Ok(Json(json!({})));
     }
-    let Some(dataset) = dataset(&state.pool, id.as_str()).await? else {
+    let Some(dataset) = dataset(&state.pool, &id).await? else {
         return Ok(Json(json!({})));
     };
     let configured_user = if existing.is_some() {
@@ -169,7 +169,7 @@ async fn read(
     Ok(Json(
         complete(
             &state.pool,
-            id.as_str(),
+            &id,
             dataset,
             existing,
             configured_user,
@@ -186,14 +186,14 @@ async fn read_admin(
     user: AuthUser,
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<Json<Value>> {
-    if !crate::dataset::access::can_read(&state.pool, Some(&user), id.as_str(), None).await? {
+    if !crate::dataset::access::can_read(&state.pool, Some(&user), &id, None).await? {
         return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }
-    let dataset = dataset(&state.pool, id.as_str())
+    let dataset = dataset(&state.pool, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::dataset::MISSING))?;
     Ok(Json(
-        complete(&state.pool, id.as_str(), dataset, None, None, &[], true).await?,
+        complete(&state.pool, &id, dataset, None, None, &[], true).await?,
     ))
 }
 
@@ -256,7 +256,7 @@ async fn update_admin(
     // then DatasetService.assertEditableBy (403 Msg.notAllowed).
     crate::dataset::lifecycle::require_editable(&state, &user, &id).await?;
     let mut transaction = state.pool.begin().await?;
-    crate::dataset::access::lock_edit(&mut transaction, &user, id.as_str(), true).await?;
+    crate::dataset::access::lock_edit(&mut transaction, &user, &id, true).await?;
     sqlx::query(
         "UPDATE webknossos.datasets SET adminViewConfiguration = $2, \
             thumbnailCacheVersion = thumbnailCacheVersion + 1 WHERE _id = $1 AND NOT isDeleted",

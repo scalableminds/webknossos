@@ -40,6 +40,7 @@ use crate::dataset::access::push_read_predicate;
 use crate::error::{ApiError, ApiResult};
 use crate::proto::datastore::{SegmentGroup, SkeletonTracing, TreeGroup, VolumeTracing};
 use crate::sql::Sql;
+use crate::util::id::ObjectId;
 
 // ---------------------------------------------------------------------------
 // Messages (util/Msg.scala)
@@ -156,7 +157,7 @@ pub struct TracingBoxContainer {
     pub description: Result<String, String>,
     pub skeleton: Result<SkeletonTracing, String>,
     pub volume: Result<Option<(UploadedVolumeLayer, Option<Bytes>)>, String>,
-    pub dataset_id: Result<String, String>,
+    pub dataset_id: Result<ObjectId, String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -243,7 +244,7 @@ impl PreparedUpload {
                         Ok(dataset_id) => {
                             lookup
                                 .find_dataset(
-                                    dataset_id.as_deref(),
+                                    dataset_id.as_ref(),
                                     &parsed.dataset_name,
                                     &parsed.organization_id,
                                 )
@@ -597,7 +598,7 @@ fn java_normalized_relative_path(raw_name: &str) -> Option<String> {
 pub trait DatasetLookup: Sync {
     fn find_dataset(
         &self,
-        dataset_id: Option<&str>,
+        dataset_id: Option<&ObjectId>,
         dataset_name: &str,
         organization_id: &str,
     ) -> impl Future<Output = ApiResult<Result<DatasetRef, String>>> + Send;
@@ -614,7 +615,7 @@ pub struct PgDatasetLookup {
 impl DatasetLookup for PgDatasetLookup {
     fn find_dataset(
         &self,
-        dataset_id: Option<&str>,
+        dataset_id: Option<&ObjectId>,
         dataset_name: &str,
         organization_id: &str,
     ) -> impl Future<Output = ApiResult<Result<DatasetRef, String>>> + Send {
@@ -628,7 +629,7 @@ impl DatasetLookup for PgDatasetLookup {
     }
 }
 
-type DatasetRow = (String, String, String);
+type DatasetRow = (ObjectId, String, String);
 
 fn dataset_ref((id, name, organization_id): DatasetRow) -> DatasetRef {
     DatasetRef {
@@ -643,7 +644,7 @@ fn dataset_ref((id, name, organization_id): DatasetRow) -> DatasetRef {
 pub async fn find_readable_dataset(
     pool: &PgPool,
     user_id: &str,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
 ) -> ApiResult<Option<DatasetRef>> {
     let mut q = Sql::new(
         "SELECT d._id, d.name, d._organization FROM webknossos.datasets_ d
@@ -664,7 +665,7 @@ pub async fn find_readable_dataset(
 pub async fn find_one_by_id_or_name_and_organization(
     pool: &PgPool,
     user_id: &str,
-    dataset_id: Option<&str>,
+    dataset_id: Option<&ObjectId>,
     dataset_name: &str,
     organization_id: &str,
 ) -> ApiResult<Result<DatasetRef, String>> {
@@ -945,8 +946,8 @@ pub fn return_error(parse_results: &[NmlParseResult]) -> Response {
 pub fn uploaded_annotations_dataset_and_organization(
     skeletons: &[&SkeletonTracing],
     volumes: &[&UploadedVolumeLayer],
-    dataset_ids: &[&str],
-) -> ApiResult<(String, Option<String>)> {
+    dataset_ids: &[&ObjectId],
+) -> ApiResult<(ObjectId, Option<String>)> {
     let dataset_id = find_unique_element(dataset_ids)
         .ok_or_else(|| ApiError::bad_request(MSG_DIFFERENT_DATASETS))?;
     let organization_ids: Vec<&str> = skeletons
@@ -964,7 +965,7 @@ pub fn uploaded_annotations_dataset_and_organization(
         return Err(ApiError::bad_request(MSG_DIFFERENT_DATASETS));
     }
     Ok((
-        (*dataset_id).to_owned(),
+        (*dataset_id).clone(),
         organization_ids.first().map(|id| (*id).to_owned()),
     ))
 }
@@ -983,7 +984,7 @@ pub async fn find_dataset_for_uploaded_annotations(
     this_host: &str,
     skeletons: &[&SkeletonTracing],
     volumes: &[&UploadedVolumeLayer],
-    dataset_ids: &[&str],
+    dataset_ids: &[&ObjectId],
     wk_url: &str,
 ) -> ApiResult<DatasetRef> {
     let (dataset_id, organization_id) =
@@ -1019,7 +1020,7 @@ pub async fn find_dataset_for_uploaded_annotations(
         .await?
         .ok_or_else(|| {
             ApiError::forbidden(if wrong_host {
-                msg_dataset_not_found_wrong_host(&dataset_id, wk_url, this_host)
+                msg_dataset_not_found_wrong_host(dataset_id.as_str(), wk_url, this_host)
             } else {
                 crate::msg::dataset::not_found(&dataset_id)
             })

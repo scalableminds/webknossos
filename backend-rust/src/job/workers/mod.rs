@@ -517,7 +517,7 @@ async fn clean_up_if_failed(connection: &mut PgConnection, job: &Job) -> ApiResu
         job = %job.id,
         "WKW conversion job failed. Marking dataset as conversion failed..."
     );
-    let dataset: Option<String> = sqlx::query_scalar(
+    let dataset: Option<ObjectId> = sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.datasets_ WHERE directoryName = $1 AND _organization = $2
           ORDER BY created, _id LIMIT 1"#,
     )
@@ -878,7 +878,7 @@ async fn attach_dataset_to_inference(
     find_worker(&mut transaction, &query.key, false).await?;
     let organization = organization_for_job(&mut transaction, id.as_str()).await?;
     // DatasetDAO.findOneByDirectoryNameAndOrganization with global access (empty Fox).
-    let dataset: Option<String> = sqlx::query_scalar(
+    let dataset: Option<ObjectId> = sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.datasets_ WHERE directoryName = $1 AND _organization = $2
           ORDER BY created, _id LIMIT 1"#,
     )

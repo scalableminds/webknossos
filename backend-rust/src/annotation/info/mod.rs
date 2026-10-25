@@ -277,7 +277,7 @@ async fn compound_json(
     compound: &CompoundAnnotation,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
-    let dataset_id = compound.dataset_id.as_str();
+    let dataset_id = &compound.dataset_id;
     let (dataset_name, organization, datastore): (String, String, String) = sqlx::query_as(
         "SELECT d.name,o._id,trim(d._dataStore) FROM webknossos.datasets_ d
          JOIN webknossos.organizations_ o ON o._id=d._organization WHERE d._id=$1",
@@ -371,7 +371,7 @@ fn track_open_annotation(
     user: &AuthUser,
     annotation_id: String,
     owner_id: String,
-    dataset_id: String,
+    dataset_id: ObjectId,
 ) {
     let (state, misc, user) = (state.clone(), misc.clone(), user.clone());
     tokio::spawn(async move {
@@ -396,7 +396,7 @@ fn track_open_annotation(
             "annotation_owner_multiuser_id".into(),
             owner_multi_user.into(),
         );
-        properties.insert("annotation_dataset_id".into(), dataset_id.into());
+        properties.insert("annotation_dataset_id".into(), json!(dataset_id));
         crate::system::analytics::track(&state, &misc, &user, "open_annotation".into(), properties);
     });
 }

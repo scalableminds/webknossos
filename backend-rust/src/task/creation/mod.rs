@@ -838,7 +838,7 @@ pub(crate) async fn find_readable_dataset(
     let Some(dataset) = crate::annotation::create::find_dataset(pool, id).await? else {
         return Ok(None);
     };
-    if !crate::dataset::access::can_read(pool, Some(user), id.as_str(), None).await? {
+    if !crate::dataset::access::can_read(pool, Some(user), id, None).await? {
         return Ok(None);
     }
     Ok(Some(dataset))
@@ -1036,7 +1036,7 @@ async fn create_one(
             &mut tx,
             &NewAnnotation {
                 id: &base_annotation_id,
-                dataset_id: dataset.id.as_str(),
+                dataset_id: &dataset.id,
                 task_id: Some(task_id.as_str()),
                 owner_id: &user.id,
                 description: params.description.as_deref().unwrap_or(""),

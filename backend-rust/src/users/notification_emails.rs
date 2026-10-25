@@ -19,6 +19,7 @@ use crate::{
     mail::{Mail, MailSender, NotificationEmailSettings, templates},
     msg::notification_email as msg,
     sql::{Arg, Requester, Sql},
+    util::id::ObjectId,
 };
 
 /// How long changes after an activation still count as onboarding.
@@ -137,7 +138,7 @@ pub enum SharedResource {
     Annotation { id: String },
     /// Recipients must be able to read the dataset
     /// (DatasetDAO.findUserIdsWithReadAccess).
-    Dataset { id: String },
+    Dataset { id: ObjectId },
 }
 
 impl SharedResource {
@@ -150,7 +151,8 @@ impl SharedResource {
 
     fn id(&self) -> &str {
         match self {
-            Self::Annotation { id } | Self::Dataset { id } => id,
+            Self::Annotation { id } => id,
+            Self::Dataset { id } => id.as_str(),
         }
     }
 
@@ -541,7 +543,7 @@ impl NotificationEmailService {
         pool: &PgPool,
         annotation_id: &str,
         annotation_name: &str,
-        dataset_id: &str,
+        dataset_id: &ObjectId,
         new_owner_id: &str,
         issuer_id: &str,
     ) {
@@ -550,20 +552,9 @@ impl NotificationEmailService {
         }
         let service = self.clone();
         let pool = pool.clone();
-        let [
-            annotation_id,
-            annotation_name,
-            dataset_id,
-            new_owner_id,
-            issuer_id,
-        ] = [
-            annotation_id,
-            annotation_name,
-            dataset_id,
-            new_owner_id,
-            issuer_id,
-        ]
-        .map(str::to_owned);
+        let [annotation_id, annotation_name, new_owner_id, issuer_id] =
+            [annotation_id, annotation_name, new_owner_id, issuer_id].map(str::to_owned);
+        let dataset_id = dataset_id.clone();
         tokio::spawn(async move {
             let result = async {
                 let is_deactivated: bool = sqlx::query_scalar(

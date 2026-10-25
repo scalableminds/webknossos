@@ -142,7 +142,7 @@ pub(crate) async fn assign_one_to(
 #[derive(Debug, FromRow)]
 struct AnnotationBase {
     id: String,
-    dataset_id: String,
+    dataset_id: ObjectId,
     owner_id: String,
     description: String,
     visibility: String,

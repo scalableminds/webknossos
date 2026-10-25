@@ -30,6 +30,7 @@ use crate::proto::datastore::{
     SkeletonUserStateProto, Tree, TreeGroup, Vec3DoubleProto, Vec3IntProto, VolumeTracing,
     VolumeUserStateProto,
 };
+use crate::util::id::ObjectId;
 
 /// Value of the `writer` meta tag. Kept identical to Scala so downstream
 /// tooling sees no difference.
@@ -129,7 +130,7 @@ pub struct NmlWriteInput<'a> {
     /// `conf.Http.uri`.
     pub wk_url: &'a str,
     pub dataset_name: &'a str,
-    pub dataset_id: &'a str,
+    pub dataset_id: &'a ObjectId,
     pub skip_volume_data: bool,
     pub volume_data_zip_format: VolumeDataZipFormat,
     /// `webknossos.BuildInfo.commitHash` for the `writerGitCommit` meta tag.
@@ -483,7 +484,7 @@ fn write_parameters(
     w.start("experiment");
     w.attr("name", input.dataset_name)?;
     w.attr("organization", input.organization_id)?;
-    w.attr("datasetId", input.dataset_id)?;
+    w.attr("datasetId", input.dataset_id.as_str())?;
     if let Some(annotation) = &input.annotation {
         w.attr("description", annotation.description)?;
     }

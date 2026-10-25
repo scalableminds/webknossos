@@ -368,7 +368,7 @@ async fn annotation_layers(pool: &PgPool, annotation_id: &str) -> ApiResult<Vec<
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 struct DatasetRow {
-    id: String,
+    id: ObjectId,
     name: String,
     organization: String,
     factor: Option<Vec<f64>>,
@@ -391,7 +391,7 @@ impl DatasetRow {
 }
 
 /// DatasetDAO.findOne under GlobalAccessContext (live datasets).
-async fn find_dataset(pool: &PgPool, dataset_id: &str) -> ApiResult<Option<DatasetRow>> {
+async fn find_dataset(pool: &PgPool, dataset_id: &ObjectId) -> ApiResult<Option<DatasetRow>> {
     Ok(sqlx::query_as(
         "SELECT _id AS id,name,_organization AS organization,
            CASE WHEN voxelSizeFactor IS NULL THEN NULL
@@ -538,7 +538,7 @@ async fn name_for_annotation(
 struct AnnotationNameParts<'a> {
     id: &'a str,
     owner_id: &'a str,
-    dataset_id: &'a str,
+    dataset_id: &'a ObjectId,
     task_id: Option<&'a str>,
 }
 
@@ -1034,7 +1034,7 @@ pub fn play_header_parameter(name: &str, value: &str) -> String {
 #[derive(Debug, Clone, sqlx::FromRow)]
 struct CompoundRow {
     id: String,
-    dataset_id: String,
+    dataset_id: ObjectId,
     task_id: Option<String>,
     owner_id: String,
     description: String,
@@ -1237,7 +1237,7 @@ async fn finished_task_annotations(
 async fn find_readable_dataset(
     pool: &PgPool,
     user: &AuthUser,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
 ) -> ApiResult<Option<DatasetRow>> {
     let mut q = Sql::new(
         "SELECT d._id AS id,d.name,d._organization AS organization,
@@ -1276,7 +1276,7 @@ struct DownloadAnnotation<'a> {
     task_id: Option<String>,
     organization_id: String,
     dataset_name: String,
-    dataset_id: String,
+    dataset_id: ObjectId,
 }
 
 /// getTracingsScalesAndNamesFor for one dataset group: scale, tracing ids,
@@ -1285,7 +1285,7 @@ struct DownloadAnnotation<'a> {
 async fn download_annotations_for_dataset<'a>(
     context: &Context<'_>,
     user: &AuthUser,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
     group: &[&'a CompoundRow],
     skip_volume_data: bool,
 ) -> RunResult<Vec<DownloadAnnotation<'a>>> {
@@ -1455,11 +1455,11 @@ async fn zip_annotations(
     annotations: &[CompoundRow],
     skip_volume_data: bool,
 ) -> RunResult<Vec<u8>> {
-    let mut groups: Vec<(&str, Vec<&CompoundRow>)> = Vec::new();
+    let mut groups: Vec<(&ObjectId, Vec<&CompoundRow>)> = Vec::new();
     for row in annotations {
         match groups
             .iter_mut()
-            .find(|(dataset, _)| *dataset == row.dataset_id)
+            .find(|(dataset, _)| **dataset == row.dataset_id)
         {
             Some((_, group)) => group.push(row),
             None => groups.push((&row.dataset_id, vec![row])),

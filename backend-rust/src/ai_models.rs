@@ -1233,10 +1233,9 @@ async fn run_model_inference(
     kind: InferenceKind,
 ) -> RunResult<ResponseJson<Value>> {
     let generic_not_found = || Failure::with_status(crate::msg::NOT_FOUND, StatusCode::NOT_FOUND);
-    let dataset =
-        crate::job::submission::find_readable_dataset(state, user, body.dataset_id.as_str())
-            .await?
-            .ok_or_else(generic_not_found)?;
+    let dataset = crate::job::submission::find_readable_dataset(state, user, &body.dataset_id)
+        .await?
+        .ok_or_else(generic_not_found)?;
     if dataset.organization != user.organization_id {
         return Err(Failure::with_status(
             crate::job::submission::INFERENCE_WRONG_ORGA,
@@ -1421,7 +1420,7 @@ async fn run_model_inference(
 pub(crate) struct AiInference {
     pub id: String,
     pub ai_model: Option<String>,
-    pub new_dataset: Option<String>,
+    pub new_dataset: Option<ObjectId>,
     pub inference_job: String,
     pub new_segmentation_layer_name: String,
     pub mask_annotation_layer_name: Option<String>,

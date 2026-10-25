@@ -445,10 +445,10 @@ impl ProvidedAnnotation {
             Self::Compound(compound) => compound.owner_id.as_str(),
         }
     }
-    pub fn dataset_id(&self) -> &str {
+    pub fn dataset_id(&self) -> &ObjectId {
         match self {
             Self::Saved(saved) => &saved.dataset_id,
-            Self::Compound(compound) => compound.dataset_id.as_str(),
+            Self::Compound(compound) => &compound.dataset_id,
         }
     }
     /// The actual (stored or compound) type — NOT the requested path type.
@@ -579,7 +579,7 @@ impl AnnotationDataSourceStore {
 #[derive(Debug, Clone, FromRow)]
 struct TaskAnnotation {
     id: String,
-    dataset_id: String,
+    dataset_id: ObjectId,
     owner_id: String,
     state: String,
 }
@@ -1065,7 +1065,7 @@ impl AnnotationProvider {
     async fn register_data_source(
         &self,
         temporary_annotation_id: &ObjectId,
-        dataset_id: &str,
+        dataset_id: &ObjectId,
     ) -> Result<(), ProviderError> {
         let dataset: Option<(bool, bool)> = sqlx::query_as(
             "SELECT isUsable,voxelSizeFactor IS NOT NULL FROM webknossos.datasets_ WHERE _id=$1",
@@ -1096,7 +1096,7 @@ impl AnnotationProvider {
         self.data_sources.store(
             temporary_annotation_id.clone(),
             data_source,
-            ObjectId::parse(dataset_id)?,
+            dataset_id.clone(),
         );
         Ok(())
     }
@@ -1164,7 +1164,7 @@ impl AnnotationProvider {
         context: AccessContext<'_>,
         identifier: &AnnotationIdentifier,
         user: &AuthUser,
-        dataset_id: &str,
+        dataset_id: &ObjectId,
         annotations: &[&TaskAnnotation],
         additional_bounding_boxes: Vec<NamedBoundingBox>,
     ) -> Result<CompoundAnnotation, ProviderError> {
@@ -1172,13 +1172,12 @@ impl AnnotationProvider {
             return Err(ProviderError::Empty);
         }
         let requesting_user_id = ObjectId::parse(&user.id)?;
-        let dataset_id = ObjectId::parse(dataset_id)?;
         let merged = self
             .merge_in_tracing_store(
                 context,
                 identifier,
                 &requesting_user_id,
-                &dataset_id,
+                dataset_id,
                 annotations,
                 additional_bounding_boxes,
             )
@@ -1186,7 +1185,7 @@ impl AnnotationProvider {
             .map_err(|e| e.wrap(MERGE_FAILED_IN_TRACINGSTORE))?;
         Ok(CompoundAnnotation::from_merge(
             identifier,
-            dataset_id,
+            dataset_id.clone(),
             requesting_user_id,
             &merged,
         ))

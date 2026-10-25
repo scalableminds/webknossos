@@ -39,7 +39,7 @@ async fn delete_dataset(
     ValidatedDataStore(_store): ValidatedDataStore,
     Json(id): Json<ObjectId>,
 ) -> ApiResult<StatusCode> {
-    crate::dataset::lifecycle::delete_from_db(&state.pool, id.as_str()).await?;
+    crate::dataset::lifecycle::delete_from_db(&state.pool, &id).await?;
     Ok(StatusCode::OK)
 }
 
@@ -54,7 +54,7 @@ async fn find_dataset_id(
     State(state): State<AppState>,
     Query(query): Query<DatasetNameQuery>,
     ValidatedDataStore(_store): ValidatedDataStore,
-) -> ApiResult<ResponseJson<String>> {
+) -> ApiResult<ResponseJson<ObjectId>> {
     let organization_exists: bool =
         sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ WHERE _id=$1)")
             .bind(&query.organization_id)
@@ -65,7 +65,7 @@ async fn find_dataset_id(
             &query.organization_id,
         )));
     }
-    let id: Option<String> = sqlx::query_scalar(
+    let id: Option<ObjectId> = sqlx::query_scalar(
         "SELECT _id FROM webknossos.datasets_ WHERE directoryName=$1 AND \
                 _organization=$2 ORDER BY created ASC, _id ASC LIMIT 1",
     )
@@ -91,7 +91,7 @@ async fn find_dataset_local_root_path(
     Query(query): Query<DatasetIdQuery>,
     ValidatedDataStore(store): ValidatedDataStore,
 ) -> ApiResult<ResponseJson<String>> {
-    let record = crate::dataset::lifecycle::load_record(&state.pool, query.dataset_id.as_str())
+    let record = crate::dataset::lifecycle::load_record(&state.pool, &query.dataset_id)
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::dataset::not_found(&query.dataset_id)))?;
     if record.store_name.as_deref() != Some(store.name.as_str()) {

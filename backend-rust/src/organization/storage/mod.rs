@@ -144,7 +144,7 @@ async fn storage_relevant_mags(
     pool: &PgPool,
     organization: &str,
     store_name: &str,
-    dataset_id: Option<&str>,
+    dataset_id: Option<&ObjectId>,
 ) -> Result<Vec<MagRow>, sqlx::Error> {
     sqlx::query_as(
         r#"SELECT mag._dataset AS dataset_id, mag.dataLayerName AS layer_name, (mag.mag).x::int AS mag_x,
@@ -169,7 +169,7 @@ async fn storage_relevant_attachments(
     pool: &PgPool,
     organization: &str,
     store_name: &str,
-    dataset_id: Option<&str>,
+    dataset_id: Option<&ObjectId>,
 ) -> Result<Vec<AttachmentRow>, sqlx::Error> {
     sqlx::query_as(
         r#"SELECT att._dataset AS dataset_id, att.layerName AS layer_name, att.name, att.path, att.type::text AS typ,
@@ -196,7 +196,7 @@ async fn newest_storage_reports(
     clients: &ServiceClients,
     organization: &str,
     store: &StoreRow,
-    dataset_id: Option<&str>,
+    dataset_id: Option<&ObjectId>,
 ) -> ApiResult<StorageReports> {
     let mags = storage_relevant_mags(pool, organization, &store.name, dataset_id).await?;
     let attachments =
@@ -298,7 +298,7 @@ async fn upsert_used_storage(
 pub(crate) async fn refresh_for_dataset(
     pool: &PgPool,
     clients: &ServiceClients,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
 ) -> ApiResult<()> {
     let dataset: Option<(String, String)> =
         sqlx::query_as("SELECT _organization, _dataStore FROM webknossos.datasets WHERE _id=$1")

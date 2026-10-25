@@ -113,7 +113,7 @@ async fn annotation_dataset(
     state: &AppState,
     provider: &AnnotationProvider,
     annotation_id: &ObjectId,
-) -> ApiResult<String> {
+) -> ApiResult<ObjectId> {
     let annotation = provider
         .provide_saved(AccessContext::global(None), annotation_id)
         .await
@@ -152,9 +152,9 @@ async fn dataset_id_for_annotation(
     Query(query): Query<AnnotationQuery>,
     _store: ValidatedTracingStore,
     Extension(provider): Extension<AnnotationProvider>,
-) -> ApiResult<Json<String>> {
+) -> ApiResult<Json<ObjectId>> {
     if let Some(temporary) = provider.data_sources().find(&query.annotation_id) {
-        return Ok(Json(temporary.dataset_id.to_string()));
+        return Ok(Json(temporary.dataset_id));
     }
     Ok(Json(
         annotation_dataset(&state, &provider, &query.annotation_id).await?,
@@ -189,7 +189,6 @@ async fn annotation_id_for_tracing(
     if let Some(id) = saved_id
         && let Ok(Some(annotation)) =
             crate::annotation::access::find_optional(&state.pool, None, &id, true).await
-        && ObjectId::parse(&annotation.dataset_id).is_ok()
         && ObjectId::parse(&annotation.owner_id).is_ok()
         && annotation.annotation_type.parse::<AnnotationType>().is_ok()
         && annotation.task_id.as_deref().is_none_or(|id| ObjectId::parse(id).is_ok())
@@ -217,7 +216,7 @@ struct DatasetPath {
     dataset_id: PathObjectId,
 }
 
-async fn require_dataset(state: &AppState, dataset_id: &str) -> ApiResult<()> {
+async fn require_dataset(state: &AppState, dataset_id: &ObjectId) -> ApiResult<()> {
     let exists: bool =
         sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE _id=$1)")
             .bind(dataset_id)
@@ -231,7 +230,7 @@ async fn require_dataset(state: &AppState, dataset_id: &str) -> ApiResult<()> {
     Ok(())
 }
 
-async fn data_source(state: &AppState, dataset_id: &str) -> ApiResult<Value> {
+async fn data_source(state: &AppState, dataset_id: &ObjectId) -> ApiResult<Value> {
     let missing_voxel: bool = sqlx::query_scalar(
         "SELECT isUsable AND voxelSizeFactor IS NULL FROM webknossos.datasets_ WHERE _id=$1",
     )
@@ -251,7 +250,7 @@ async fn data_store_uri_for_dataset(
     Path(path): Path<DatasetPath>,
     _store: ValidatedTracingStore,
 ) -> ApiResult<Json<String>> {
-    require_dataset(&state, path.dataset_id.as_str()).await?;
+    require_dataset(&state, &path.dataset_id).await?;
     let url: Option<String> = sqlx::query_scalar(
         "SELECT store.url FROM webknossos.datasets_ dataset JOIN webknossos.dataStores_ store ON store.name=TRIM(dataset._dataStore) WHERE dataset._id=$1",
     )
@@ -268,6 +267,6 @@ async fn get_data_source(
     Path(path): Path<DatasetPath>,
     _store: ValidatedTracingStore,
 ) -> ApiResult<Json<Value>> {
-    require_dataset(&state, path.dataset_id.as_str()).await?;
-    Ok(Json(data_source(&state, path.dataset_id.as_str()).await?))
+    require_dataset(&state, &path.dataset_id).await?;
+    Ok(Json(data_source(&state, &path.dataset_id).await?))
 }

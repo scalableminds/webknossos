@@ -215,7 +215,7 @@ fn multiset_difference(left: &[String], right: &[String]) -> Vec<String> {
         .collect()
 }
 
-async fn paths_used_only_by(pool: &sqlx::PgPool, dataset_id: &str) -> ApiResult<Vec<String>> {
+async fn paths_used_only_by(pool: &sqlx::PgPool, dataset_id: &ObjectId) -> ApiResult<Vec<String>> {
     let raw: Vec<String> = sqlx::query_scalar(
         r#"SELECT m1.path FROM webknossos.dataset_mags m1 WHERE m1._dataset = $1 AND m1.path IS NOT NULL
              AND NOT EXISTS (SELECT 1 FROM webknossos.dataset_mags m2 WHERE m2._dataset != $1
@@ -268,7 +268,7 @@ async fn update_partial(
             return Err(ApiError::bad_request(crate::msg::dataset::not_usable(&id)));
         }
         record.store_url()?;
-        let existing = crate::dataset::source::load(&state.pool, id.as_str()).await?;
+        let existing = crate::dataset::source::load(&state.pool, &id).await?;
         let updated = apply_updates(
             &existing,
             &updates,
@@ -282,7 +282,7 @@ async fn update_partial(
             let only_this = if removed.is_empty() {
                 Vec::new()
             } else {
-                paths_used_only_by(&state.pool, id.as_str()).await?
+                paths_used_only_by(&state.pool, &id).await?
             };
             change = Some(SourceChange {
                 paths_to_delete: removed
@@ -297,7 +297,7 @@ async fn update_partial(
     }
 
     let mut transaction = state.pool.begin().await?;
-    crate::dataset::access::lock_edit(&mut transaction, &user, id.as_str(), true).await?;
+    crate::dataset::access::lock_edit(&mut transaction, &user, &id, true).await?;
     if let Some(folder) = &body.folder_id {
         // Same hardening as the full PATCH: keep the dataset in a live folder of its organization.
         sqlx::query(
@@ -355,12 +355,8 @@ async fn update_partial(
         .bind(change.updated.scale.unit.as_str())
         .execute(&mut *transaction)
         .await?;
-        crate::dataset::source::write_layers(
-            &mut transaction,
-            id.as_str(),
-            &change.updated.data_layers,
-        )
-        .await?;
+        crate::dataset::source::write_layers(&mut transaction, &id, &change.updated.data_layers)
+            .await?;
     }
     let mut q = Sql::new("SELECT ");
     crate::dataset::access::push_read_predicate(&mut q, user.id.as_str().into(), None);
@@ -368,7 +364,7 @@ async fn update_partial(
         .push_bind(id.as_str());
     let readable: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;
     if !readable {
-        return Err(crate::dataset::lifecycle::not_found(id.as_str()));
+        return Err(crate::dataset::lifecycle::not_found(&id));
     }
     if let Some(change) = &change
         && !record.is_virtual
@@ -396,9 +392,9 @@ async fn update_partial(
         )
         .await?;
     }
-    let updated = crate::dataset::lifecycle::load_record(&state.pool, id.as_str())
+    let updated = crate::dataset::lifecycle::load_record(&state.pool, &id)
         .await?
-        .ok_or_else(|| crate::dataset::lifecycle::not_found(id.as_str()))?;
+        .ok_or_else(|| crate::dataset::lifecycle::not_found(&id))?;
     crate::dataset::lifecycle::scan_realpaths_if_virtual(&state.pool, &clients, &updated).await?;
     crate::dataset::lifecycle::write_mirror_for_virtual(&state.pool, &clients, &updated).await?;
     // ChangeDatasetSettingsEvent (also LegacyApiController.updatePartialV12,
@@ -411,13 +407,8 @@ async fn update_partial(
         crate::system::analytics::properties("dataset_id", id.as_str()),
     );
     Ok(Json(
-        crate::dataset::routes::full_json(
-            &state.pool,
-            Some(&user),
-            id.as_str(),
-            features.jobs_enabled,
-        )
-        .await?,
+        crate::dataset::routes::full_json(&state.pool, Some(&user), &id, features.jobs_enabled)
+            .await?,
     ))
 }
 

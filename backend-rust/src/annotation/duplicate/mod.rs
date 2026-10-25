@@ -102,7 +102,7 @@ pub(crate) async fn duplicate_in_tracing_store(
 /// no tags, no tracing time, not deleted.
 pub(crate) struct NewAnnotation<'a> {
     pub id: &'a ObjectId,
-    pub dataset_id: &'a str,
+    pub dataset_id: &'a ObjectId,
     pub task_id: Option<&'a str>,
     pub owner_id: &'a str,
     pub description: &'a str,
@@ -160,7 +160,7 @@ pub(crate) async fn insert_annotation(
 /// The fields of the provided annotation that duplicateAnnotation reads.
 pub(crate) struct DuplicateSource<'a> {
     pub id: &'a str,
-    pub dataset_id: &'a str,
+    pub dataset_id: &'a ObjectId,
     pub owner_id: &'a str,
     pub task_id: Option<&'a str>,
     pub description: &'a str,
@@ -180,7 +180,7 @@ impl<'a> DuplicateSource<'a> {
             },
             ProvidedAnnotation::Compound(compound) => Self {
                 id: compound.id.as_str(),
-                dataset_id: compound.dataset_id.as_str(),
+                dataset_id: &compound.dataset_id,
                 owner_id: compound.owner_id.as_str(),
                 task_id: None,
                 description: "",
@@ -194,7 +194,7 @@ impl<'a> DuplicateSource<'a> {
 /// ~> 404`; otherwise BoundingBox.union of all layer boxes (empty = zeros).
 async fn usable_data_source_bounding_box(
     pool: &PgPool,
-    dataset_id: &str,
+    dataset_id: &ObjectId,
     has_voxel_size: bool,
 ) -> Result<[i32; 6], ProviderError> {
     if !has_voxel_size {

@@ -144,7 +144,7 @@ async fn segment_anything_mask(
     if !record.is_usable {
         return Err(ApiError::bad_request(crate::msg::dataset::not_usable(&id)));
     }
-    let source = crate::dataset::source::load(&state.pool, id.as_str()).await?;
+    let source = crate::dataset::source::load(&state.pool, &id).await?;
     let layer = source
         .data_layers
         .iter()

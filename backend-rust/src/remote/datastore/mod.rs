@@ -279,7 +279,7 @@ async fn run_detached(
 
 #[derive(sqlx::FromRow)]
 struct FoundDataset {
-    id: String,
+    id: ObjectId,
     directory_name: String,
     data_store: String,
     is_virtual: bool,
@@ -306,8 +306,8 @@ async fn apply_report(
             .push(entry);
     }
     let mut tx = pool.begin().await?;
-    let mut existing_ids: Vec<String> = Vec::new();
-    let mut updated_ids: Vec<String> = Vec::new();
+    let mut existing_ids: Vec<ObjectId> = Vec::new();
+    let mut updated_ids: Vec<ObjectId> = Vec::new();
     for (organization, entries) in by_organization {
         let exists: bool = sqlx::query_scalar(
             "SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ WHERE _id = $1)",
@@ -431,8 +431,8 @@ async fn update_existing(
     found: &FoundDataset,
     hash: i32,
     entry: &DataSourceWithRootPathInfo,
-    updated_ids: &mut Vec<String>,
-) -> ApiResult<Option<String>> {
+    updated_ids: &mut Vec<ObjectId>,
+) -> ApiResult<Option<ObjectId>> {
     if found.is_virtual {
         // Virtual datasets are not expected on the datastore's disk.
         return Ok(Some(found.id.clone()));
@@ -472,7 +472,7 @@ async fn update_existing(
 /// thumbnailCachingService.removeFromCache, then DatasetDAO.updateDataSource.
 async fn replace_data_source(
     connection: &mut sqlx::PgConnection,
-    id: &str,
+    id: &ObjectId,
     store: &DataStoreRecord,
     hash: i32,
     entry: &DataSourceWithRootPathInfo,
@@ -502,7 +502,7 @@ async fn replace_data_source(
 /// DatasetDAO.updateDataSource: None root paths keep the stored values.
 pub(crate) async fn write_data_source(
     connection: &mut sqlx::PgConnection,
-    id: &str,
+    id: &ObjectId,
     store_name: &str,
     hash: i32,
     source: &DataSource,
@@ -556,8 +556,8 @@ async fn create_disk_scan_dataset(
     store: &DataStoreRecord,
     hash: i32,
     entry: &DataSourceWithRootPathInfo,
-) -> ApiResult<Option<String>> {
-    let id = ObjectId::new().to_string();
+) -> ApiResult<Option<ObjectId>> {
+    let id = ObjectId::new();
     let source = &entry.data_source;
     let shape = crate::dataset::source::as_usable_shape(source);
     let inserted = crate::dataset::create::insert_dataset_unless_directory_name_taken(
@@ -597,7 +597,7 @@ async fn create_disk_scan_dataset(
 /// DatasetDAO.deactivateUnreported.
 async fn deactivate(
     connection: &mut sqlx::PgConnection,
-    existing_ids: &[String],
+    existing_ids: &[ObjectId],
     store_name: &str,
     organization: Option<&str>,
 ) -> ApiResult<()> {
@@ -665,7 +665,7 @@ async fn update_real_paths(
     }
     let mut tx = state.pool.begin().await?;
     for (source_id, mags, attachments) in parsed {
-        let dataset: Option<String> = sqlx::query_scalar(
+        let dataset: Option<ObjectId> = sqlx::query_scalar(
             "SELECT _id FROM webknossos.datasets_ WHERE directoryName = $1 AND _organization = $2 LIMIT 1",
         )
         .bind(&source_id.directory_name)
@@ -718,14 +718,14 @@ async fn get_data_source(
     .fetch_optional(&state.pool)
     .await?;
     let (is_usable, has_voxel_size) =
-        row.ok_or_else(|| crate::dataset::lifecycle::not_found(id.as_str()))?;
+        row.ok_or_else(|| crate::dataset::lifecycle::not_found(&id))?;
     if is_usable && !has_voxel_size {
         return Err(ApiError::bad_request(
             crate::msg::dataset::data_source::USABLE_BUT_NO_VOXEL_SIZE,
         ));
     }
     Ok(ResponseJson(
-        crate::dataset::routes::data_source_for_rpc(&state.pool, id.as_str(), true).await?,
+        crate::dataset::routes::data_source_for_rpc(&state.pool, &id, true).await?,
     ))
 }
 
@@ -744,10 +744,10 @@ async fn update_data_source(
     .bind(id.as_str())
     .fetch_optional(&mut *tx)
     .await?;
-    let is_virtual = is_virtual.ok_or_else(|| crate::dataset::lifecycle::not_found(id.as_str()))?;
+    let is_virtual = is_virtual.ok_or_else(|| crate::dataset::lifecycle::not_found(&id))?;
     if !is_virtual {
         let hash = crate::dataset::source::inbox_source_hash(&source);
-        write_data_source(&mut tx, id.as_str(), &name, hash, &source, None, None).await?;
+        write_data_source(&mut tx, &id, &name, hash, &source, None, None).await?;
     }
     tx.commit().await?;
     Ok(StatusCode::OK)

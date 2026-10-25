@@ -92,7 +92,7 @@ async fn buildinfo_and_features_are_public_and_shaped_like_play() {
             json!({
                 "webknossos": {
                     "name": "webknossos",
-                    "scalaVersion": "3.8.4",
+                    "scalaVersion": "3.10.0",
                     "sbtVersion": "1.12.9",
                     "commitHash": "abc123",
                     "commitDate": "<getting git date failed>",

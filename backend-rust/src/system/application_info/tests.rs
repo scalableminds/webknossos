@@ -80,3 +80,19 @@ async fn check_certificate_adds_remote_origin_headers_to_both_outcomes() {
         assert_eq!(response.headers()[header::ACCESS_CONTROL_MAX_AGE], "600");
     }
 }
+
+#[test]
+fn build_versions_follow_the_play_build() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+    let build_sbt = std::fs::read_to_string(root.join("build.sbt")).unwrap();
+    assert!(
+        build_sbt.contains(&format!("ThisBuild / scalaVersion := \"{SCALA_VERSION}\"")),
+        "SCALA_VERSION differs from build.sbt"
+    );
+    let build_properties =
+        std::fs::read_to_string(root.join("project").join("build.properties")).unwrap();
+    assert!(
+        build_properties.contains(&format!("sbt.version={SBT_VERSION}")),
+        "SBT_VERSION differs from project/build.properties"
+    );
+}

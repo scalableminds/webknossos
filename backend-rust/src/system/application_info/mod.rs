@@ -33,7 +33,7 @@ pub const CURRENT_API_VERSION: i32 = 16;
 pub const OLDEST_SUPPORTED_API_VERSION: i32 = 10;
 /// sbt-buildinfo `scalaVersion`/`sbtVersion` of the Play build (build.sbt,
 /// project/build.properties); kept so the `/buildinfo` shape is unchanged.
-pub const SCALA_VERSION: &str = "3.8.4";
+pub const SCALA_VERSION: &str = "3.10.0";
 pub const SBT_VERSION: &str = "1.12.9";
 /// `backendAnalytics.uri` default in conf/application.conf.
 pub const DEFAULT_ANALYTICS_URI: &str = "https://events-relay.webknossos.org/events";

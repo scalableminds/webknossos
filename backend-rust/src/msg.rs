@@ -241,8 +241,6 @@ pub mod user {
     /// Rust-only wording.
     pub const UNKNOWN: &str = "User could not be found.";
     /// Rust-only wording.
-    pub const SUPER_USER_REQUIRED: &str = "Superuser access required.";
-    /// Rust-only wording.
     pub const NOT_EDITABLE: &str = "User is not editable by the requesting user.";
     /// Rust-only wording.
     pub const NO_LONGER_EDITABLE: &str = "User is no longer editable by the requesting user.";

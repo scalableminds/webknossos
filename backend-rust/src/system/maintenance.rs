@@ -73,7 +73,8 @@ fn require_superuser(user: &AuthUser) -> ApiResult<()> {
     if user.is_superuser {
         Ok(())
     } else {
-        Err(ApiError::forbidden(crate::msg::user::SUPER_USER_REQUIRED))
+        // Play: assertIsSuperUser ?~> Msg.notAllowed
+        Err(ApiError::forbidden(crate::msg::NOT_ALLOWED))
     }
 }
 async fn upcoming(State(state): State<AppState>) -> ApiResult<ResponseJson<Vec<Maintenance>>> {

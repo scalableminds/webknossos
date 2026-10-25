@@ -205,6 +205,9 @@
     "paths": [
      "$",
      "<header:content-type>"
+    ],
+    "headers": [
+     "content-type"
     ]
    }
   },
@@ -731,6 +734,9 @@
     "paths": [
      "$",
      "<header:content-type>"
+    ],
+    "headers": [
+     "content-type"
     ]
    }
   },

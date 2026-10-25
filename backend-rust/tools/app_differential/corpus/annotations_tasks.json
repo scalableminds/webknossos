@@ -18,9 +18,6 @@
    "/tmp/wk-diff/rust-data/": "/tmp/wk-diff/play-data/"
   }
  },
- "db_divergences": {
-  "timespans": "Consequence of the declared finish-again divergence: Rust's repeated finish succeeds and logs the user interaction (one more numberOfUpdates); Play's fails before logging. Without that step the table is identical (verified 2026-10-17)."
- },
  "identities": {
   "admin": {
    "token": "secretSampleUserToken"
@@ -462,13 +459,6 @@
    "as": "admin",
    "query": {
     "timestamp": "1900000000000"
-   },
-   "expected_divergence": {
-    "reason": "Play bug: AnnotationService.finish documents repeatable finish via allowFinishSoft, but AnnotationRestrictions.allowFinishSoft(user: User) delegates to allowFinish(Some(user)), which rejects Finished annotations, so Play answers 400 finishFailed. Rust implements the documented repeatable finish (200, 'Annotation is archived.').",
-    "paths": [
-     "$",
-     "<status>"
-    ]
    }
   },
   {

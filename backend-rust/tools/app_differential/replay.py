@@ -28,7 +28,7 @@ Corpus format (JSON, version 1):
      "service": "datastore",  # Play's embedded datastore vs the standalone one serving Rust
      "expect_status": 200, "capture": {"teamId": "$.id"}, "capture_cookie": {"session": "id"},
      "unordered": ["$"], "ignore": [{"path": "$.foo", "reason": "..."}],
-     "expected_divergence": {"reason": "...", "paths": ["$.bar"]} }
+     "expected_divergence": {"reason": "...", "paths": ["$.bar"], "status_differs": false} }
   ]
 }
 """
@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import copy
 import datetime as dt
 import http.client
 import io
@@ -472,12 +473,26 @@ def run_corpus(corpus: dict, origins: dict, norm: Normalizer, timeout: float, on
             if isinstance(a, str) and isinstance(b, str) and a != b:
                 if not norm.pair(a, b):
                     diffs.append((f"<capture:{var}>", "id-bijection", None, None))
+        declaration = step.get("expected_divergence")
+        if declaration:
+            # A declaration covers its body paths, and differing statuses/headers only when it lists them
+            # ("status_differs": true, "headers": [...]); every other difference still fails the step.
+            declared = {f"<header:{name}>" for name in declaration.get("headers", [])}
+            if declaration.get("status_differs"):
+                declared.add("<status>")
+            leftover = [d for d in diffs if not (d[0] in declared and d[1] in ("value", "attributes"))]
+            # Probe the declared paths on a copy of the normalizer (no id pairs from declared paths leak into
+            # the run): a declaration with nothing left to declare is stale and reported as such.
+            probe: list = []
+            compare(body_play, body_rust, "$", copy.deepcopy(norm), {**opts, "skip": [e["path"] for e in step.get("ignore", [])]}, probe)
+            result["expected_divergence"] = declaration["reason"]
+            if not probe and len(leftover) == len(diffs):
+                result["stale_declaration"] = True
+            diffs = leftover
         result["ok"] = not diffs
         if diffs:
             result["diffs"] = [redact_diff(d) for d in diffs[:25]]
             result["diff_count"] = len(diffs)
-        if "expected_divergence" in step:
-            result["expected_divergence"] = step["expected_divergence"]["reason"]
         results.append(result)
     return results
 
@@ -579,20 +594,28 @@ def db_diff(norm: Normalizer, pg: dict, seed_db: str, rewrites: dict, random_col
                    for table, columns in random_columns.items() for column in columns}
     dumps = {"play": dump_tables("wk_diff_play", pg), "rust": dump_tables("wk_diff_rust", pg)}
     report = {}
+    row_filters = declared_rows or {}
+    stale_rows = []
     for table in sorted(set(dumps["play"]) | set(dumps["rust"])):
         rows = {}
+        unfiltered = {}
         for side in SIDES:
             masked = []
+            unfiltered[side] = []
             for r in dumps[side].get(table, []):
-                if any(all(r.get(k) == v for k, v in f.items()) for f in (declared_rows or {}).get(table, [])):
-                    continue
+                declared = any(all(r.get(k) == v for k, v in f.items()) for f in row_filters.get(table, []))
                 for column in random_columns.get(table, ()):
                     # Random secrets (token values, password hashes): only presence/emptiness is compared,
                     # unless the value is unchanged from the seed.
                     if column in r and canonical(r[column]) not in seed_values.get((table, column), set()):
                         r[column] = "<random>" if r[column] else r[column]
-                masked.append(canonical(normalize_row(r, norm, side, seed_ids, rewrites)))
+                normalized = canonical(normalize_row(r, norm, side, seed_ids, rewrites))
+                unfiltered[side].append(normalized)
+                if not declared:
+                    masked.append(normalized)
             rows[side] = sorted(masked)
+        if table in row_filters and sorted(unfiltered["play"]) == sorted(unfiltered["rust"]):
+            stale_rows.append(table)  # the declared rows no longer differ
         if rows["play"] == rows["rust"]:
             continue
         only_play = multiset_minus(rows["play"], rows["rust"])
@@ -601,6 +624,8 @@ def db_diff(norm: Normalizer, pg: dict, seed_db: str, rewrites: dict, random_col
                          "only_play": [redact_row(r) for r in only_play[:5]],
                          "only_rust": [redact_row(r) for r in only_rust[:5]],
                          "only_play_count": len(only_play), "only_rust_count": len(only_rust)}
+    if stale_rows:
+        report["<stale-row-declarations>"] = stale_rows
     return report
 
 
@@ -688,16 +713,23 @@ def main() -> int:
     report: dict[str, Any] = {"results": all_results, "normalizations": norm.counts}
     if args.db_diff:
         report["db_diff"] = db_diff(norm, PG, "wk_diff_seed", rewrites, random_columns, declared_rows)
-    failed = [r for r in all_results if not r["ok"] and "expected_divergence" not in r]
-    divergent = [r for r in all_results if not r["ok"] and "expected_divergence" in r]
+    failed = [r for r in all_results if not r["ok"]]
+    divergent = [r for r in all_results if r["ok"] and "expected_divergence" in r]
+    stale = [r for r in all_results if r.get("stale_declaration")]
     for r in all_results:
-        mark = "ok  " if r["ok"] else ("DIV " if "expected_divergence" in r else "FAIL")
+        mark = "FAIL" if not r["ok"] else ("STALE" if r.get("stale_declaration") else
+                                          "DIV " if "expected_divergence" in r else "ok  ")
         status = r.get("status", r.get("error"))
         print(f"{mark} {r['corpus']}:{r['name']} {r['method']} {r['path']} {status} {r.get('millis', '')}")
-        if not r["ok"] and (args.verbose or "expected_divergence" not in r):
+        if not r["ok"] or (args.verbose and "expected_divergence" in r):
             for diff in r.get("diffs", []):
                 print(f"       {diff['path']} [{diff['kind']}] play={diff['play']} rust={diff['rust']}")
+    stale_db: list[str] = []
     if args.db_diff:
+        stale_db = report["db_diff"].pop("<stale-row-declarations>", [])
+        stale_db += [table for table in db_divergences if table not in report["db_diff"]]
+        for table in stale_db:
+            print(f"STALE db declaration {table}: no difference left")
         for table, info in report["db_diff"].items():
             if table in db_divergences:
                 info["expected_divergence"] = db_divergences[table]
@@ -710,11 +742,14 @@ def main() -> int:
                 for row in info["only_rust"]:
                     print(f"       rust-only {canonical(row)[:300]}")
     print(f"\n{len(all_results)} steps: {len(all_results) - len(failed) - len(divergent)} match, "
-          f"{len(divergent)} expected divergences, {len(failed)} mismatches; normalizations {norm.counts}"
+          f"{len(divergent)} declared divergences ({len(stale)} stale), {len(failed)} mismatches; "
+          f"normalizations {norm.counts}"
           + (f"; {len(report['db_diff'])} differing tables"
-             f" ({sum(t in db_divergences for t in report['db_diff'])} declared)" if args.db_diff else "")
+             f" ({sum(t in db_divergences for t in report['db_diff'])} declared, {len(stale_db)} stale declarations)"
+             if args.db_diff else "")
           + (f"; skipped corpora: {', '.join(skipped)}" if skipped else ""))
     report["skipped_corpora"] = skipped
+    report["stale_db_declarations"] = stale_db
     if args.report:
         args.report.write_text(json.dumps(report, indent=2))
     undeclared_tables = [t for t in report.get("db_diff", {}) if t not in db_divergences]

@@ -386,8 +386,22 @@ def cmd_start(_args) -> None:
         save_state(state)
     wait_http(f"http://127.0.0.1:{PORTS['ds']}/data/health", 180, "ds")
     wait_http(f"http://127.0.0.1:{PORTS['ts']}/tracings/health", 180, "ts")
+    # Both apps grant the month's free credits shortly after startup; corpora must not race the grant
+    # (organization reads show milliCreditBalance).
+    for database in ("wk_diff_play", "wk_diff_rust"):
+        wait_for_credit_grant(database, 60)
     (WORK / "public_uri").write_text(PUBLIC_URI)  # replay.py skips corpora needing another one
     print(json.dumps({"started": state, "play": PLAY_URI, "rust": RUST_URI, "public_uri": PUBLIC_URI}))
+
+
+def wait_for_credit_grant(database: str, timeout: float) -> None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if psql(database, "SELECT EXISTS (SELECT 1 FROM webknossos.credit_transactions "
+                          "WHERE comment LIKE 'Complimentary credits%')") == "t":
+            return
+        time.sleep(0.5)
+    raise SystemExit(f"no monthly credit grant in {database} within {timeout}s")
 
 
 def play_runtime() -> tuple[dict, dict]:

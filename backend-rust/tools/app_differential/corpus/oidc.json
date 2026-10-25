@@ -230,6 +230,10 @@
      "$",
      "<status>",
      "<header:content-type>"
+    ],
+    "status_differs": true,
+    "headers": [
+     "content-type"
     ]
    }
   },

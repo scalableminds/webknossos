@@ -488,7 +488,8 @@
     "paths": [
      "$",
      "<status>"
-    ]
+    ],
+    "status_differs": true
    }
   },
   {

@@ -634,13 +634,25 @@ def seed_object_ids(pg: dict, seed_db: str) -> set[str]:
 
 def db_diff(norm: Normalizer, pg: dict, seed_db: str, rewrites: dict, random_columns: dict,
             declared_rows: dict | None = None) -> dict:
-    """declared_rows: {table: [{column: value}, ...]}; rows matching one filter (on either side) are left out."""
+    """declared_rows: {table: [{column: value | {"sql": query}}, ...]}; rows matching one filter (on either side) are left out."""
     seed_ids = norm.seed_ids
     seed = dump_tables(seed_db, pg)
     seed_values = {(table, column): {canonical(row.get(column)) for row in seed.get(table, [])}
                    for table, columns in random_columns.items() for column in columns}
     dumps = {"play": dump_tables("wk_diff_play", pg), "rust": dump_tables("wk_diff_rust", pg)}
     report = {}
+    # Filter values {"sql": "SELECT …"} match any value the query returns on that side's database (e.g. ids of teams
+    # created only on one side).
+    resolved = {side: {} for side in SIDES}
+    for table, filters in (declared_rows or {}).items():
+        for side, database in (("play", "wk_diff_play"), ("rust", "wk_diff_rust")):
+            resolved[side][table] = [
+                {k: (set(run_psql(database, pg, v["sql"]).splitlines()) if isinstance(v, dict) else v) for k, v in f.items()}
+                for f in filters]
+
+    def matches(value: Any, expected: Any) -> bool:
+        return value in expected if isinstance(expected, set) else value == expected
+
     row_filters = declared_rows or {}
     stale_rows = []
     for table in sorted(set(dumps["play"]) | set(dumps["rust"])):
@@ -650,7 +662,7 @@ def db_diff(norm: Normalizer, pg: dict, seed_db: str, rewrites: dict, random_col
             masked = []
             unfiltered[side] = []
             for r in dumps[side].get(table, []):
-                declared = any(all(r.get(k) == v for k, v in f.items()) for f in row_filters.get(table, []))
+                declared = any(all(matches(r.get(k), v) for k, v in f.items()) for f in resolved[side].get(table, []))
                 for column in random_columns.get(table, ()):
                     # Random secrets (token values, password hashes): only presence/emptiness is compared,
                     # unless the value is unchanged from the seed.
@@ -724,8 +736,9 @@ def main() -> int:
     declared_rows: dict = {}
     random_columns: dict = {}
     loaded = [(path, json.loads(path.read_text())) for path in args.corpus]
-    # Corpora that change shared credentials ("run_last": reason) run after the others.
-    loaded.sort(key=lambda entry: bool(entry[1].get("run_last")))
+    # Corpora that change shared credentials ("run_last": reason) run after the others; "run_order" (default 0,
+    # run_last 100) places corpora whose leftovers would change other corpora's results (e.g. extra organizations).
+    loaded.sort(key=lambda entry: entry[1].get("run_order", 100 if entry[1].get("run_last") else 0))
     public_uri_file = Path("/tmp/wk-diff/public_uri")
     public_uri = public_uri_file.read_text().strip() if public_uri_file.exists() else None
     skipped = []

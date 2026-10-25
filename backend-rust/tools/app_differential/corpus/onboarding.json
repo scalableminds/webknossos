@@ -1,0 +1,1041 @@
+{
+ "version": 1,
+ "description": "Onboarding and organization lifecycle: organizations with a new admin, for an existing user and by super users; users created in or added to organizations; invites (byInvite, join); terms of service; super-user switching; pricing upgrade requests and plan updates; deletion of every created organization (leaves the seed state for later corpora).",
+ "header_divergences": {
+  "cache-control": "Rust sends `Cache-Control: no-store` on every API response (README: cache prevention); Play sends `no-cache` on most and nothing on auth errors. Play sends no validators (ETag/Last-Modified), so both force a refetch; no-store additionally forbids storage. Deliberate."
+ },
+ "drop_play_chain_messages": "Play appends {\"chain\": \"[Server Time \u2026] \u2026\"} to messages of failed Fox chains (debug context with the server time). Rust returns only the error entry; the frontend shows `error` entries.",
+ "unordered_keys": {
+  "annotationLayers": "Play's AnnotationLayerDAO orders layers by tracingId, a random UUID per side.",
+  "tags": "Scala Set semantics (annotation.tags ++ Set(dataset.name)); hash order for more than four tags.",
+  "jobsSupportedByAvailableWorkers": "DataStoreService.publicWrites serializes JobService.jobsSupportedByAvailableWorkers, a Scala Set (hash order); Rust sorts.",
+  "supportedJobCommands": "Worker.supportedJobCommands is a Scala Set (hash order); Rust keeps the stored order."
+ },
+ "side_rewrites": {
+  "rust": {
+   "http://127.0.0.1:19595": "http://127.0.0.1:19590",
+   "http://127.0.0.1:19596": "http://127.0.0.1:19590",
+   "/tmp/wk-diff/rust-data/": "/tmp/wk-diff/play-data/"
+  }
+ },
+ "run_order": 50,
+ "db_divergences": {
+  "users": {
+   "reason": "organizations-create-foreign-owner: Rust adds the owner to diff_org_3, Play fails first",
+   "rows": [
+    {
+     "_organization": "diff_org_3"
+    }
+   ]
+  },
+  "user_team_roles": {
+   "reason": "organizations-create-foreign-owner: the owner's membership in diff_org_3's team",
+   "rows": [
+    {
+     "_team": {
+      "sql": "SELECT _id FROM webknossos.teams WHERE _organization = 'diff_org_3'"
+     }
+    }
+   ]
+  },
+  "credit_transactions": {
+   "reason": "organizations-create-foreign-owner: Rust grants diff_org_3 its monthly credits",
+   "rows": [
+    {
+     "_organization": "diff_org_3"
+    }
+   ]
+  }
+ },
+ "db_random_columns": {
+  "multiusers.passwordinfo_password": "bcrypt hashes with random salt",
+  "emailverificationkeys.key": "random verification key",
+  "invites.tokenvalue": "random invite token"
+ },
+ "identities": {
+  "admin": {
+   "token": "secretSampleUserToken"
+  },
+  "user2": {
+   "cookie": "{user2Cookie}"
+  },
+  "newadmin": {
+   "cookie": "{newAdminCookie}"
+  },
+  "newadmin2": {
+   "cookie": "{newAdminCookie2}"
+  },
+  "admincookie": {
+   "cookie": "{adminCookie}"
+  },
+  "switched": {
+   "cookie": "{switchedCookie}"
+  },
+  "user2orga": {
+   "cookie": "{user2OrgaCookie}"
+  },
+  "invalidorga": {
+   "cookie": "{invalidOrgaCookie}"
+  }
+ },
+ "steps": [
+  {
+   "name": "user2-login",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "sample2@scm.io",
+    "password": "secret"
+   },
+   "capture_cookie": {
+    "user2Cookie": "id"
+   }
+  },
+  {
+   "name": "admin-cookie-login",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "sample@scm.io",
+    "password": "secret"
+   },
+   "capture_cookie": {
+    "adminCookie": "id"
+   }
+  },
+  {
+   "name": "create-orga-anonymous",
+   "method": "POST",
+   "path": "/api/auth/createOrganizationWithAdmin",
+   "form": {
+    "organization": "diff_org_1",
+    "organizationName": "Diff Organization",
+    "email": "diff-orga-admin@diff.test",
+    "password.password1": "diffpassword1",
+    "password.password2": "diffpassword1",
+    "firstName": "Diff",
+    "lastName": "Admin"
+   }
+  },
+  {
+   "name": "create-orga-user2",
+   "method": "POST",
+   "path": "/api/auth/createOrganizationWithAdmin",
+   "as": "user2",
+   "form": {
+    "organization": "diff_org_1",
+    "organizationName": "Diff Organization",
+    "email": "diff-orga-admin@diff.test",
+    "password.password1": "diffpassword1",
+    "password.password2": "diffpassword1",
+    "firstName": "Diff",
+    "lastName": "Admin"
+   }
+  },
+  {
+   "name": "create-orga-honeypot",
+   "method": "POST",
+   "path": "/api/auth/createOrganizationWithAdmin",
+   "as": "admin",
+   "form": {
+    "organization": "diff_org_1",
+    "organizationName": "Diff Organization",
+    "email": "diff-orga-admin@diff.test",
+    "password.password1": "diffpassword1",
+    "password.password2": "diffpassword1",
+    "firstName": "Diff",
+    "lastName": "Admin",
+    "referral": "bot"
+   }
+  },
+  {
+   "name": "create-orga-missing-fields",
+   "method": "POST",
+   "path": "/api/auth/createOrganizationWithAdmin",
+   "as": "admin",
+   "form": {
+    "organization": "diff_org_1"
+   },
+   "expected_divergence": {
+    "reason": "Form validation failures: Play answers the Form object's toString as text/plain (echoing submitted values, including passwords); Rust answers JSON naming the failing fields. Same status (declared category, CUTOVER.md \u00a71).",
+    "paths": [
+     "$"
+    ],
+    "headers": [
+     "content-type"
+    ]
+   }
+  },
+  {
+   "name": "create-orga-email-taken",
+   "method": "POST",
+   "path": "/api/auth/createOrganizationWithAdmin",
+   "as": "admin",
+   "form": {
+    "organization": "diff_org_1",
+    "organizationName": "Diff Organization",
+    "email": "sample2@scm.io",
+    "password.password1": "diffpassword1",
+    "password.password2": "diffpassword1",
+    "firstName": "Diff",
+    "lastName": "Admin"
+   }
+  },
+  {
+   "name": "create-orga-invalid-id",
+   "method": "POST",
+   "path": "/api/auth/createOrganizationWithAdmin",
+   "as": "admin",
+   "form": {
+    "organization": "Not Valid!",
+    "organizationName": "Diff Organization",
+    "email": "diff-invalid-orga@diff.test",
+    "password.password1": "diffpassword1",
+    "password.password2": "diffpassword1",
+    "firstName": "Diff",
+    "lastName": "Admin"
+   }
+  },
+  {
+   "name": "create-orga",
+   "method": "POST",
+   "path": "/api/auth/createOrganizationWithAdmin",
+   "as": "admin",
+   "form": {
+    "organization": "diff_org_1",
+    "organizationName": "Diff Organization",
+    "email": "diff-orga-admin@diff.test",
+    "password.password1": "diffpassword1",
+    "password.password2": "diffpassword1",
+    "firstName": "Diff",
+    "lastName": "Admin"
+   }
+  },
+  {
+   "name": "create-orga-again",
+   "method": "POST",
+   "path": "/api/auth/createOrganizationWithAdmin",
+   "as": "admin",
+   "form": {
+    "organization": "diff_org_1",
+    "organizationName": "Diff Organization",
+    "email": "diff-orga-admin-2@diff.test",
+    "password.password1": "diffpassword1",
+    "password.password2": "diffpassword1",
+    "firstName": "Diff",
+    "lastName": "Admin"
+   }
+  },
+  {
+   "name": "new-admin-login",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "diff-orga-admin@diff.test",
+    "password": "diffpassword1"
+   },
+   "capture_cookie": {
+    "newAdminCookie": "id"
+   }
+  },
+  {
+   "name": "new-admin-user",
+   "method": "GET",
+   "path": "/api/user",
+   "as": "newadmin"
+  },
+  {
+   "name": "new-orga",
+   "method": "GET",
+   "path": "/api/organizations/diff_org_1",
+   "as": "newadmin"
+  },
+  {
+   "name": "default-orga-with-two",
+   "method": "GET",
+   "path": "/api/organizations/default"
+  },
+  {
+   "name": "new-orga-teams",
+   "method": "GET",
+   "path": "/api/teams",
+   "as": "newadmin"
+  },
+  {
+   "name": "tos-acceptance-needed",
+   "method": "GET",
+   "path": "/api/termsOfService/acceptanceNeeded",
+   "as": "newadmin"
+  },
+  {
+   "name": "tos-accept",
+   "method": "POST",
+   "path": "/api/termsOfService/accept",
+   "as": "newadmin",
+   "query": {
+    "version": "1"
+   }
+  },
+  {
+   "name": "tos-accept-wrong-version",
+   "method": "POST",
+   "path": "/api/termsOfService/accept",
+   "as": "newadmin",
+   "query": {
+    "version": "7"
+   }
+  },
+  {
+   "name": "tos-accept-not-owner",
+   "method": "POST",
+   "path": "/api/termsOfService/accept",
+   "as": "user2",
+   "query": {
+    "version": "1"
+   }
+  },
+  {
+   "name": "tos-accept-missing-version",
+   "method": "POST",
+   "path": "/api/termsOfService/accept",
+   "as": "newadmin",
+   "expected_divergence": {
+    "reason": "Router-level parameter binding error (missing query parameter): Play answers its HTML error page, Rust JSON {\"messages\":[\u2026]}; same status (declared category, CUTOVER.md \u00a71).",
+    "paths": [
+     "$"
+    ],
+    "headers": [
+     "content-type"
+    ]
+   }
+  },
+  {
+   "name": "new-orga-after-tos",
+   "method": "GET",
+   "path": "/api/organizations/diff_org_1",
+   "as": "newadmin"
+  },
+  {
+   "name": "create-user-in-orga-user2",
+   "method": "POST",
+   "path": "/api/auth/createUserInOrganization/diff_org_1",
+   "as": "user2",
+   "json": {
+    "firstName": "Made",
+    "lastName": "ByUser2",
+    "email": "made-by-user2@diff.test",
+    "password": "diffpassword1"
+   }
+  },
+  {
+   "name": "create-user-in-orga-unknown",
+   "method": "POST",
+   "path": "/api/auth/createUserInOrganization/nope",
+   "as": "admin",
+   "json": {
+    "firstName": "Made",
+    "lastName": "Nowhere",
+    "email": "made-nowhere@diff.test",
+    "password": "diffpassword1"
+   }
+  },
+  {
+   "name": "create-user-in-orga-email-taken",
+   "method": "POST",
+   "path": "/api/auth/createUserInOrganization/diff_org_1",
+   "as": "admin",
+   "json": {
+    "firstName": "Made",
+    "lastName": "Twice",
+    "email": "SAMPLE2@scm.io",
+    "password": "diffpassword1"
+   }
+  },
+  {
+   "name": "create-user-in-orga-bad-name",
+   "method": "POST",
+   "path": "/api/auth/createUserInOrganization/diff_org_1",
+   "as": "admin",
+   "json": {
+    "firstName": "",
+    "lastName": "",
+    "email": "made-noname@diff.test",
+    "password": "diffpassword1"
+   }
+  },
+  {
+   "name": "create-user-in-orga",
+   "method": "POST",
+   "path": "/api/auth/createUserInOrganization/diff_org_1",
+   "as": "admin",
+   "json": {
+    "firstName": "Made",
+    "lastName": "BySuper",
+    "email": "Made-By-Super@diff.test",
+    "password": "diffpassword1",
+    "autoActivate": true
+   },
+   "capture": {
+    "madeUserId": "$.<text>"
+   }
+  },
+  {
+   "name": "create-user-in-orga-inactive",
+   "method": "POST",
+   "path": "/api/auth/createUserInOrganization/diff_org_1",
+   "as": "admin",
+   "json": {
+    "firstName": "Made",
+    "lastName": "Inactive",
+    "email": "made-inactive@diff.test",
+    "password": null
+   }
+  },
+  {
+   "name": "create-user-in-orga-invalid",
+   "method": "POST",
+   "path": "/api/auth/createUserInOrganization/diff_org_1",
+   "as": "admin",
+   "json": {
+    "email": 1
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "made-user-login",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "made-by-super@diff.test",
+    "password": "diffpassword1"
+   }
+  },
+  {
+   "name": "add-user-user2",
+   "method": "POST",
+   "path": "/api/organizations/diff_org_1/addUser",
+   "as": "user2",
+   "json": "sample2@scm.io"
+  },
+  {
+   "name": "add-user-unknown-email",
+   "method": "POST",
+   "path": "/api/organizations/diff_org_1/addUser",
+   "as": "admin",
+   "json": "nobody@diff.test"
+  },
+  {
+   "name": "add-user-unknown-orga",
+   "method": "POST",
+   "path": "/api/organizations/nope/addUser",
+   "as": "admin",
+   "json": "sample2@scm.io"
+  },
+  {
+   "name": "add-user",
+   "method": "POST",
+   "path": "/api/organizations/diff_org_1/addUser",
+   "as": "admin",
+   "json": "sample2@scm.io"
+  },
+  {
+   "name": "add-user-again",
+   "method": "POST",
+   "path": "/api/organizations/diff_org_1/addUser",
+   "as": "admin",
+   "json": "sample2@scm.io",
+   "expected_divergence": {
+    "reason": "Adding a user who already joined: Play attempts the insert and answers 400 with the raw \"SQL Failure: \u2026 duplicate key value violates unique constraint users__multiuser__organization_key \u2026\" text; Rust checks first (hardening 46552fe734) and answers 400 \"Your account is already associated with the selected organization.\"",
+    "paths": [
+     "$.messages[0].error"
+    ]
+   }
+  },
+  {
+   "name": "new-orga-users",
+   "method": "GET",
+   "path": "/api/users",
+   "as": "newadmin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "user2-switchable",
+   "method": "GET",
+   "path": "/api/auth/accessibleBySwitching",
+   "as": "user2",
+   "query": {
+    "datasetId": "68b80290d4000090f8f4aa62"
+   }
+  },
+  {
+   "name": "create-orga-existing-user-user2",
+   "method": "POST",
+   "path": "/api/auth/createOrganizationWithExistingUser",
+   "as": "user2",
+   "json": {
+    "userId": "{seedUser2Id}",
+    "newOrganizationName": "User2 Lab"
+   }
+  },
+  {
+   "name": "create-orga-existing-user",
+   "method": "POST",
+   "path": "/api/auth/createOrganizationWithExistingUser",
+   "as": "admin",
+   "json": {
+    "userId": "{seedUser2Id}",
+    "newOrganizationName": "User2 Lab"
+   },
+   "capture": {
+    "user2OrgaId": "$"
+   },
+   "ignore": [
+    {
+     "path": "$",
+     "reason": "random 8-hex organization id per side (RandomIDGenerator), paired via the capture"
+    }
+   ]
+  },
+  {
+   "name": "create-orga-existing-user-unknown",
+   "method": "POST",
+   "path": "/api/auth/createOrganizationWithExistingUser",
+   "as": "admin",
+   "json": {
+    "userId": "0123456789abcdef01234567",
+    "newOrganizationName": "Nobody Lab"
+   }
+  },
+  {
+   "name": "user2-orga-by-id",
+   "method": "GET",
+   "path": "/api/organizations/{user2OrgaId}",
+   "as": "admin"
+  },
+  {
+   "name": "organizations-create-user2",
+   "method": "POST",
+   "path": "/api/organizations",
+   "as": "user2",
+   "json": {
+    "organization": "diff_org_2",
+    "organizationName": "Second Diff",
+    "ownerEmail": "sample2@scm.io"
+   }
+  },
+  {
+   "name": "organizations-create-unknown-owner",
+   "method": "POST",
+   "path": "/api/organizations",
+   "as": "admin",
+   "json": {
+    "organization": "diff_org_x",
+    "organizationName": "Nobody",
+    "ownerEmail": "nobody@diff.test"
+   }
+  },
+  {
+   "name": "organizations-create",
+   "method": "POST",
+   "path": "/api/organizations",
+   "as": "admin",
+   "json": {
+    "organization": "diff_org_2",
+    "organizationName": "Second Diff",
+    "ownerEmail": "sample2@scm.io"
+   }
+  },
+  {
+   "name": "organizations-create-duplicate",
+   "method": "POST",
+   "path": "/api/organizations",
+   "as": "admin",
+   "json": {
+    "organization": "diff_org_2",
+    "organizationName": "Second Diff",
+    "ownerEmail": "sample2@scm.io"
+   }
+  },
+  {
+   "name": "organizations-create-generated-id",
+   "method": "POST",
+   "path": "/api/organizations",
+   "as": "admin",
+   "json": {
+    "organizationName": "Generated Id",
+    "ownerEmail": "sample2@scm.io"
+   }
+  },
+  {
+   "name": "organizations-create-foreign-owner",
+   "method": "POST",
+   "path": "/api/organizations",
+   "as": "admin",
+   "json": {
+    "organization": "diff_org_3",
+    "organizationName": "Foreign Owner",
+    "ownerEmail": "diff-orga-admin@diff.test"
+   },
+   "expected_divergence": {
+    "reason": "Play bug: OrganizationController.create inserts the organization, then looks up the owner's user with the requesting super user's access context, which only sees users of the super user's current organization; for an owner from another organization Play answers 404 and leaves an organization without users or credits. Rust creates the organization with the owner as admin and grants the monthly credits (200).",
+    "paths": [
+     "$"
+    ],
+    "status_differs": true,
+    "headers": [
+     "content-type"
+    ]
+   }
+  },
+  {
+   "name": "credit-transactions-after-create",
+   "method": "GET",
+   "path": "/api/creditTransactions",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "by-invite",
+   "method": "GET",
+   "path": "/api/organizations/byInvite/diffInviteToken"
+  },
+  {
+   "name": "by-invite-unknown",
+   "method": "GET",
+   "path": "/api/organizations/byInvite/nope"
+  },
+  {
+   "name": "join-unknown-invite",
+   "method": "POST",
+   "path": "/api/auth/joinOrganization/nope",
+   "as": "newadmin"
+  },
+  {
+   "name": "join-already-member",
+   "method": "POST",
+   "path": "/api/auth/joinOrganization/diffInviteToken",
+   "as": "admin"
+  },
+  {
+   "name": "join",
+   "method": "POST",
+   "path": "/api/auth/joinOrganization/diffInviteToken",
+   "as": "newadmin"
+  },
+  {
+   "name": "join-used-invite",
+   "method": "POST",
+   "path": "/api/auth/joinOrganization/diffInviteToken",
+   "as": "newadmin"
+  },
+  {
+   "name": "by-invite-after-join",
+   "method": "GET",
+   "path": "/api/organizations/byInvite/diffInviteToken"
+  },
+  {
+   "name": "sample-users-after-join",
+   "method": "GET",
+   "path": "/api/users",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "switch-user2",
+   "method": "GET",
+   "path": "/api/auth/switch",
+   "as": "user2",
+   "query": {
+    "to": "sample@scm.io"
+   }
+  },
+  {
+   "name": "switch-unknown",
+   "method": "GET",
+   "path": "/api/auth/switch",
+   "as": "admincookie",
+   "query": {
+    "to": "nobody@diff.test"
+   }
+  },
+  {
+   "name": "switch",
+   "method": "GET",
+   "path": "/api/auth/switch",
+   "as": "admincookie",
+   "query": {
+    "to": "sample2@scm.io"
+   },
+   "capture_cookie": {
+    "switchedCookie": "id"
+   }
+  },
+  {
+   "name": "switched-user",
+   "method": "GET",
+   "path": "/api/user",
+   "as": "switched",
+   "ignore": [
+    {
+     "path": "$.lastActivity",
+     "reason": "Play serves lastActivity from its user cache (see read.json)"
+    }
+   ]
+  },
+  {
+   "name": "sso-not-configured",
+   "method": "GET",
+   "path": "/api/auth/sso",
+   "as": "admin",
+   "query": {
+    "sso": "bm9uY2U9MQ==",
+    "sig": "00"
+   },
+   "expected_divergence": {
+    "reason": "Discourse SSO is not configured in the dev configuration: both fail with 500; Play renders its HTML error page, Rust {\"messages\":[{\"error\":\"Internal server error.\"}]} (declared category: error pages).",
+    "paths": [
+     "$"
+    ],
+    "headers": [
+     "content-type"
+    ]
+   }
+  },
+  {
+   "name": "upgrade-request-user2",
+   "method": "POST",
+   "path": "/api/pricing/upgradeRequest",
+   "as": "user2",
+   "json": {
+    "users": 2
+   }
+  },
+  {
+   "name": "upgrade-request-empty",
+   "method": "POST",
+   "path": "/api/pricing/upgradeRequest",
+   "as": "admin",
+   "json": {}
+  },
+  {
+   "name": "upgrade-request-invalid-amount",
+   "method": "POST",
+   "path": "/api/pricing/upgradeRequest",
+   "as": "admin",
+   "json": {
+    "users": -1
+   }
+  },
+  {
+   "name": "upgrade-request-note-too-long",
+   "method": "POST",
+   "path": "/api/pricing/upgradeRequest",
+   "as": "admin",
+   "json": {
+    "users": 2,
+    "note": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   }
+  },
+  {
+   "name": "upgrade-request-downgrade",
+   "method": "POST",
+   "path": "/api/pricing/upgradeRequest",
+   "as": "admin",
+   "json": {
+    "plan": "Team"
+   }
+  },
+  {
+   "name": "upgrade-request",
+   "method": "POST",
+   "path": "/api/pricing/upgradeRequest",
+   "as": "admin",
+   "json": {
+    "users": 2,
+    "storageTB": 1,
+    "note": " more "
+   }
+  },
+  {
+   "name": "upgrade-request-credits",
+   "method": "POST",
+   "path": "/api/pricing/upgradeRequest",
+   "as": "admin",
+   "json": {
+    "credits": 100
+   }
+  },
+  {
+   "name": "upgrade-request-new-orga",
+   "method": "POST",
+   "path": "/api/pricing/upgradeRequest",
+   "as": "newadmin",
+   "json": {
+    "plan": "Power",
+    "aiAddon": true,
+    "extendYears": 1
+   }
+  },
+  {
+   "name": "update-plan-user2",
+   "method": "POST",
+   "path": "/api/pricing/updatePlan",
+   "as": "user2",
+   "json": {
+    "organizationId": "diff_org_1",
+    "pricingPlan": "Team"
+   }
+  },
+  {
+   "name": "update-plan-unknown",
+   "method": "POST",
+   "path": "/api/pricing/updatePlan",
+   "as": "admin",
+   "json": {
+    "organizationId": "nope",
+    "pricingPlan": "Team"
+   }
+  },
+  {
+   "name": "update-plan",
+   "method": "POST",
+   "path": "/api/pricing/updatePlan",
+   "as": "admin",
+   "json": {
+    "organizationId": "diff_org_1",
+    "description": "diff upgrade",
+    "pricingPlan": "Power",
+    "aiPlan": "Team_AI",
+    "paidUntil": 1900000000000,
+    "includedUsers": 10,
+    "includedStorageBytes": 1000000000
+   }
+  },
+  {
+   "name": "plan-after-update",
+   "method": "GET",
+   "path": "/api/organizations/diff_org_1",
+   "as": "newadmin"
+  },
+  {
+   "name": "update-plan-defaults",
+   "method": "POST",
+   "path": "/api/pricing/updatePlan",
+   "as": "admin",
+   "json": {
+    "organizationId": "diff_org_1",
+    "description": "only description"
+   }
+  },
+  {
+   "name": "plan-after-defaults",
+   "method": "GET",
+   "path": "/api/organizations/diff_org_1",
+   "as": "newadmin"
+  },
+  {
+   "name": "update-plan-nulls",
+   "method": "POST",
+   "path": "/api/pricing/updatePlan",
+   "as": "admin",
+   "json": {
+    "organizationId": "diff_org_1",
+    "aiPlan": null,
+    "paidUntil": null,
+    "includedUsers": null,
+    "includedStorageBytes": null
+   }
+  },
+  {
+   "name": "plan-updates",
+   "method": "GET",
+   "path": "/api/pricing/planUpdates",
+   "as": "newadmin"
+  },
+  {
+   "name": "pricing-status",
+   "method": "GET",
+   "path": "/api/pricing/status",
+   "as": "newadmin"
+  },
+  {
+   "name": "update-plan-invalid",
+   "method": "POST",
+   "path": "/api/pricing/updatePlan",
+   "as": "admin",
+   "json": {
+    "organizationId": "diff_org_1",
+    "pricingPlan": "Gold"
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "delete-orga-foreign-admin",
+   "method": "DELETE",
+   "path": "/api/organizations/diff_org_1",
+   "as": "admin"
+  },
+  {
+   "name": "delete-orga-unknown",
+   "method": "DELETE",
+   "path": "/api/organizations/nope",
+   "as": "newadmin"
+  },
+  {
+   "name": "delete-orga",
+   "method": "DELETE",
+   "path": "/api/organizations/diff_org_1",
+   "as": "newadmin"
+  },
+  {
+   "name": "deleted-orga",
+   "method": "GET",
+   "path": "/api/organizations/diff_org_1",
+   "as": "admin"
+  },
+  {
+   "name": "new-admin-after-delete",
+   "method": "GET",
+   "path": "/api/user",
+   "as": "newadmin",
+   "expected_divergence": {
+    "reason": "Session of a user deleted with their organization: Play authenticates through its user cache (UserService.findOneCached), so the deleted user stays logged in until the cache entry expires and GET /api/user then fails on the deleted organization (404); Rust reads users without a cache and rejects the session (401).",
+    "paths": [
+     "$"
+    ],
+    "status_differs": true
+   }
+  },
+  {
+   "name": "invalid-id-admin-login",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "diff-invalid-orga@diff.test",
+    "password": "diffpassword1"
+   },
+   "capture_cookie": {
+    "invalidOrgaCookie": "id"
+   }
+  },
+  {
+   "name": "delete-normalized-id-orga",
+   "method": "DELETE",
+   "path": "/api/organizations/Not_Valid",
+   "as": "invalidorga"
+  },
+  {
+   "name": "user2-login-for-second",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "sample2@scm.io",
+    "password": "secret"
+   },
+   "capture_cookie": {
+    "user2Cookie": "id"
+   }
+  },
+  {
+   "name": "user2-switch-to-second",
+   "method": "POST",
+   "path": "/api/auth/switchOrganization/diff_org_2",
+   "as": "user2",
+   "capture_cookie": {
+    "user2OrgaCookie": "id"
+   }
+  },
+  {
+   "name": "delete-second-orga",
+   "method": "DELETE",
+   "path": "/api/organizations/diff_org_2",
+   "as": "user2orga"
+  },
+  {
+   "name": "user2-login-for-generated",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "sample2@scm.io",
+    "password": "secret"
+   },
+   "capture_cookie": {
+    "user2Cookie": "id"
+   }
+  },
+  {
+   "name": "user2-switch-to-generated",
+   "method": "POST",
+   "path": "/api/auth/switchOrganization/Generated_Id",
+   "as": "user2",
+   "capture_cookie": {
+    "user2OrgaCookie": "id"
+   }
+  },
+  {
+   "name": "delete-generated-orga",
+   "method": "DELETE",
+   "path": "/api/organizations/Generated_Id",
+   "as": "user2orga"
+  },
+  {
+   "name": "user2-login-for-user2-lab",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "sample2@scm.io",
+    "password": "secret"
+   },
+   "capture_cookie": {
+    "user2Cookie": "id"
+   }
+  },
+  {
+   "name": "user2-switch-to-user2-lab",
+   "method": "POST",
+   "path": "/api/auth/switchOrganization/{user2OrgaId}",
+   "as": "user2",
+   "capture_cookie": {
+    "user2OrgaCookie": "id"
+   }
+  },
+  {
+   "name": "delete-user2-lab-orga",
+   "method": "DELETE",
+   "path": "/api/organizations/{user2OrgaId}",
+   "as": "user2orga"
+  },
+  {
+   "name": "default-orga-after-deletes",
+   "method": "GET",
+   "path": "/api/organizations/default"
+  },
+  {
+   "name": "user2-login-after-deletes",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "sample2@scm.io",
+    "password": "secret"
+   }
+  }
+ ]
+}

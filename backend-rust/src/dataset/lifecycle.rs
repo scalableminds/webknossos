@@ -91,6 +91,22 @@ pub(crate) async fn load_record(
     .await?)
 }
 
+/// Play passes `datasetId.toString` to `notFoundMessage` in writeMirror and the finish-to-path routes, which picks the
+/// "Dataset with name “…”" overload.
+async fn require_editable_by_name(
+    state: &AppState,
+    user: &AuthUser,
+    id: &PathObjectId,
+) -> ApiResult<DatasetRecord> {
+    require_editable(state, user, id).await.map_err(|error| {
+        if error.status == axum::http::StatusCode::NOT_FOUND {
+            ApiError::not_found(crate::msg::dataset::not_found_by_name(id.as_str()))
+        } else {
+            error
+        }
+    })
+}
+
 pub(crate) fn not_found(id: &str) -> ApiError {
     ApiError::not_found(crate::msg::dataset::not_found(id))
 }
@@ -421,7 +437,7 @@ async fn write_mirror(
     Path(id): Path<PathObjectId>,
     Extension(clients): Extension<ServiceClients>,
 ) -> ApiResult<()> {
-    let record = require_editable(&state, &user, &id).await?;
+    let record = require_editable_by_name(&state, &user, &id).await?;
     if !record.is_virtual {
         return Err(ApiError::bad_request(
             crate::msg::dataset::mirror::ONLY_FOR_VIRTUAL,
@@ -582,7 +598,7 @@ async fn finish_mag_upload_to_path(
     Extension(clients): Extension<ServiceClients>,
     RequestJson(body): RequestJson<MagUploadRequest>,
 ) -> ApiResult<()> {
-    let record = require_editable(&state, &user, &id).await?;
+    let record = require_editable_by_name(&state, &user, &id).await?;
     let [x, y, z] = body.mag.map(f64::from);
     let updated = sqlx::query(
         r#"UPDATE webknossos.dataset_mags SET uploadToPathIsPending = false, uploadIsPending = false
@@ -610,7 +626,7 @@ async fn finish_attachment_upload_to_path(
     Extension(clients): Extension<ServiceClients>,
     RequestJson(body): RequestJson<AttachmentUploadRequest>,
 ) -> ApiResult<()> {
-    let record = require_editable(&state, &user, &id).await?;
+    let record = require_editable_by_name(&state, &user, &id).await?;
     let updated = sqlx::query(
         r#"UPDATE webknossos.dataset_layer_attachments SET uploadToPathIsPending = false, uploadIsPending = false
            WHERE _dataset = $1 AND layerName = $2 AND type = $3::webknossos.LAYER_ATTACHMENT_TYPE AND name = $4 AND uploadToPathIsPending"#,

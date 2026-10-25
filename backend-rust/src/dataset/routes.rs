@@ -827,10 +827,12 @@ async fn full_layers_with_exposure_on_connection(
     .bind(use_real_paths)
     .fetch_all(&mut *connection)
     .await?;
+    // Play reads the attachments per layer through the primary key index, i.e. in name order.
     let attachments: Vec<(String, String, Value)> = sqlx::query_as(
         r#"SELECT layerName,type::text,jsonb_build_object('name',name,
         'path',CASE WHEN $2 THEN COALESCE(realPath,path) ELSE path END,'dataFormat',dataFormat,'credentialId',credentialId) FROM webknossos.dataset_layer_attachments
-        WHERE _dataset=$1 AND NOT uploadToPathIsPending AND NOT uploadIsPending"#,
+        WHERE _dataset=$1 AND NOT uploadToPathIsPending AND NOT uploadIsPending
+        ORDER BY layerName, name, type"#,
     )
     .bind(dataset_id)
     .bind(use_real_paths)

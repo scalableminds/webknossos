@@ -77,6 +77,16 @@ WORKER_COMMANDS = ("compute_mesh_file", "convert_to_wkw", "export_tiff", "find_l
                    "render_animation", "compute_segment_index_file", "infer_mitochondria", "train_neuron_model",
                    "train_instance_model", "infer_instances", "align_sections")
 
+# Fixtures added to wk_diff_seed after Play's initial data (cmd_seed): the voxelytics rows of the test database,
+# moved into the sample organization and owned by the sample admin, and one credential for findCredential.
+VOXELYTICS_FIXTURES = ("voxelytics_workflows", "voxelytics_runs", "voxelytics_tasks", "voxelytics_chunks",
+                       "voxelytics_artifacts", "voxelytics_chunkProfilingEvents", "voxelytics_runHeartbeatEvents")
+FIXTURE_ORGANIZATION = "Organization_X"  # test/db/organizations.csv
+FIXTURE_USER = "570b9f4d2a7c0e4d008da6ef"  # test/db/users.csv
+CREDENTIAL_ID = "6a1c0000000000000000c001"
+INVITE_ID = "6a1c0000000000000000c002"
+INVITE_TOKEN = "diffInviteToken"
+
 STATE = WORK / "state.json"
 LOGS = WORK / "logs"
 
@@ -333,7 +343,34 @@ def cmd_seed(_args) -> None:
     # initial data insertion runs asynchronously right before the startup-complete log line
     time.sleep(3)
     terminate(["play-seed"])
+    load_seed_fixtures()
     print(psql("wk_diff_seed", "SELECT count(*) FROM webknossos.organizations") + " organization(s) seeded")
+
+
+def load_seed_fixtures() -> None:
+    admin = ("(SELECT u._id FROM webknossos.users u JOIN webknossos.multiUsers m ON m._id = u._multiUser "
+             "WHERE m.email = 'sample@scm.io')")
+    script = ["BEGIN;", "SET CONSTRAINTS ALL DEFERRED;"]
+    for table in VOXELYTICS_FIXTURES:
+        csv = WORKTREE / "test" / "db" / f"{table}.csv"
+        script.append(f"\\copy webknossos.{table} FROM '{csv}' WITH CSV HEADER QUOTE ''''")
+    script += [
+        # ON UPDATE CASCADE carries the organization from the workflows to their runs.
+        f"UPDATE webknossos.voxelytics_workflows SET _organization = 'sample_organization' "
+        f"WHERE _organization = '{FIXTURE_ORGANIZATION}';",
+        f"UPDATE webknossos.voxelytics_runs SET _user = {admin} WHERE _user = '{FIXTURE_USER}';",
+        "INSERT INTO webknossos.credentials(_id, type, name, identifier, secret, _user, _organization) VALUES "
+        f"('{CREDENTIAL_ID}', 'HttpBasicAuth', 'https://diff.example/data', 'diff-user', 'diff-password', {admin}, "
+        "'sample_organization');",
+        # Invite tokens only travel by email; corpus/onboarding.json joins the sample organization with this one.
+        "INSERT INTO webknossos.invites(_id, tokenValue, _organization, autoActivate, isAdmin, isDatasetManager, "
+        f"expirationDateTime) VALUES ('{INVITE_ID}', '{INVITE_TOKEN}', 'sample_organization', true, false, false, "
+        "'2100-01-01T00:00:00Z');",
+        "COMMIT;",
+    ]
+    env = {**os.environ, "PGPASSWORD": PG["password"]}
+    subprocess.run(["psql", "-h", PG["host"], "-p", PG["port"], "-U", PG["user"], "-d", "wk_diff_seed", "-q",
+                    "-v", "ON_ERROR_STOP=1"], input="\n".join(script), text=True, env=env, check=True)
 
 
 def cmd_reset(args) -> None:

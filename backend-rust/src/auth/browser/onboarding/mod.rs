@@ -911,7 +911,8 @@ async fn create_organization_with_existing_user(
             .fetch_one(&mut *tx)
             .await?;
     if !exists {
-        return Err(ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID));
+        // Play: `userDAO.findOne(userId)` without a message, an empty Fox: the generic 404.
+        return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
     let organization = create_organization(
         &mut tx,
@@ -1224,7 +1225,7 @@ async fn add_user(
             .bind(&email)
             .fetch_optional(&mut *tx)
             .await?
-            .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
+            .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let organization = find_organization(&mut tx, &organization_id)
         .await?
         .ok_or_else(|| {
@@ -1246,7 +1247,7 @@ async fn add_user(
     .bind(&multi_user_id)
     .fetch_optional(&mut *tx)
     .await?
-    .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
+    .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let team_memberships = initial_team_memberships(&mut tx, &organization.id, None).await?;
     let user_id = join_organization_as(
         &mut tx,

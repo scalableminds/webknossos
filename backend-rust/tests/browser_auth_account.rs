@@ -416,26 +416,26 @@ async fn accessible_by_switching_finds_the_identity_with_access() {
             .get("milliCreditBalance")
             .is_some_and(Value::is_null)
     );
-    // Accessible in the current organization (or nowhere): 400.
+    // Accessible in the current organization (or nowhere): Play's empty Fox, 404.
     assert_eq!(
         get("workflowHash=workflow-a", &fixture.token).await.status,
-        StatusCode::BAD_REQUEST
+        StatusCode::NOT_FOUND
     );
     assert_eq!(
         get("workflowHash=workflow-c", &fixture.token).await.status,
-        StatusCode::BAD_REQUEST
+        StatusCode::NOT_FOUND
     );
     assert_eq!(
         get(&format!("datasetId={}", object_id()), &fixture.token)
             .await
             .status,
-        StatusCode::BAD_REQUEST
+        StatusCode::NOT_FOUND
     );
     assert_eq!(
         get(&format!("annotationId={}", object_id()), &fixture.token)
             .await
             .status,
-        StatusCode::BAD_REQUEST
+        StatusCode::NOT_FOUND
     );
     let combined = get(
         &format!("datasetId={}&workflowHash=x", object_id()),

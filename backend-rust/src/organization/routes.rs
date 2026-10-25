@@ -194,7 +194,7 @@ async fn by_invite(
     .bind(token)
     .fetch_optional(&state.pool)
     .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::organization::NOT_FOUND_BY_INVITE))?;
+    .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     Ok(ResponseJson(
         public_json(&state.pool, &organization, None, false, false).await?,
     ))

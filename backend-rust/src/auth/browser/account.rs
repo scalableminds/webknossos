@@ -425,7 +425,8 @@ async fn accessible_by_switching(
         (None, None, Some(hash)) => Target::Workflow(hash),
         _ => return Err(ApiError::bad_request(COMBINATION_ERROR)),
     };
-    let not_found = || ApiError::bad_request(crate::msg::NOT_FOUND);
+    // Play's lookups end in empty Foxes (no message): the generic 404.
+    let not_found = || ApiError::not_found(crate::msg::NOT_FOUND);
     let organization: String = if user.is_superuser {
         let found: Option<String> = match &target {
             Target::Dataset(id) => sqlx::query_scalar(

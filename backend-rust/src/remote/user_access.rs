@@ -302,7 +302,6 @@ async fn job_export(
         )));
     }
     let id = required_id(id)?;
-    let id = id.as_str();
     let allowed: bool = sqlx::query_scalar(
         r#"SELECT EXISTS(SELECT 1 FROM webknossos.jobs_ j WHERE j._id=$1 AND
       (j._owner=$2 OR $3 OR ($4 AND EXISTS (SELECT 1 FROM webknossos.users_ owner WHERE owner._id=j._owner AND owner._organization=$5))
@@ -311,7 +310,7 @@ async fn job_export(
         JOIN webknossos.users_ owner ON owner._id=owner_role._user AND owner._organization=$5
         WHERE requester._user=$2 AND requester.isTeamManager AND owner._id=j._owner)))"#,
     )
-    .bind(id)
+    .bind(&id)
     .bind(user.map(|u| &u.id))
     .bind(user.is_some_and(|u| u.is_superuser))
     .bind(user.is_some_and(|u| u.is_admin))

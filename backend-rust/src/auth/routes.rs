@@ -164,7 +164,7 @@ async fn insert_token(
             statement_timestamp() + $4::bigint * INTERVAL '1 millisecond', $5,
             $6::webknossos.TOKEN_TYPES, statement_timestamp())"#,
     )
-    .bind(ObjectId::new().as_str())
+    .bind(ObjectId::new())
     .bind(&value)
     .bind(user_id)
     .bind(expiry_ms)
@@ -370,7 +370,7 @@ async fn remove_key(
     sqlx::query(
         "UPDATE webknossos.webauthnCredentials SET isDeleted = TRUE WHERE _id = $1 AND _multiUser = $2 AND NOT isDeleted",
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .bind(&multi_user)
     .execute(&mut *tx)
     .await?;

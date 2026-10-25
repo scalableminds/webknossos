@@ -159,7 +159,7 @@ pub(crate) async fn load_virtual_upload_target(
              voxelSizeFactor IS NOT NULL AS has_voxel_size
            FROM webknossos.datasets_ WHERE _id = $1"#,
     )
-    .bind(dataset_id.as_str())
+    .bind(dataset_id)
     .fetch_optional(pool)
     .await?
     .ok_or_else(not_found)?;

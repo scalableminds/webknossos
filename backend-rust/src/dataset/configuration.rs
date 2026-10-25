@@ -141,7 +141,7 @@ async fn read(
                 _user = $1 AND _dataset = $2",
         )
         .bind(&user.id)
-        .bind(id.as_str())
+        .bind(&*id)
         .fetch_optional(&state.pool)
         .await?
     } else {
@@ -211,7 +211,7 @@ async fn update(
     // UserService intentionally permits saving a personal configuration for
     // any existing dataset; dataset sharing permissions are not an edit grant.
     sqlx::query("SELECT _id FROM webknossos.datasets_ WHERE _id = $1 FOR SHARE")
-        .bind(id.as_str())
+        .bind(&*id)
         .fetch_one(&mut *transaction)
         .await?;
     if let Some(Value::Object(layers)) = config.remove("layers") {
@@ -224,7 +224,7 @@ async fn update(
                         EXCLUDED.viewConfiguration",
                 )
                 .bind(&user.id)
-                .bind(id.as_str())
+                .bind(&*id)
                 .bind(name)
                 .bind(layer)
                 .execute(&mut *transaction)
@@ -238,7 +238,7 @@ async fn update(
             DO UPDATE SET viewConfiguration = EXCLUDED.viewConfiguration",
     )
     .bind(&user.id)
-    .bind(id.as_str())
+    .bind(&*id)
     .bind(Value::Object(config))
     .execute(&mut *transaction)
     .await?;
@@ -261,7 +261,7 @@ async fn update_admin(
         "UPDATE webknossos.datasets SET adminViewConfiguration = $2, \
             thumbnailCacheVersion = thumbnailCacheVersion + 1 WHERE _id = $1 AND NOT isDeleted",
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .bind(Value::Object({
         let mut dataset = config.clone();
         dataset.remove("layers");
@@ -275,12 +275,12 @@ async fn update_admin(
         if layers.values().all(Value::is_object) {
             for (name, layer) in layers {
                 sqlx::query("UPDATE webknossos.dataset_layers SET adminViewConfiguration = $3 WHERE _dataset = $1 AND name = $2")
-                .bind(id.as_str()).bind(name).bind(layer).execute(&mut *transaction).await?;
+                .bind(&*id).bind(name).bind(layer).execute(&mut *transaction).await?;
             }
         }
     }
     sqlx::query("DELETE FROM webknossos.dataset_thumbnails WHERE _dataset = $1")
-        .bind(id.as_str())
+        .bind(&*id)
         .execute(&mut *transaction)
         .await?;
     transaction.commit().await?;

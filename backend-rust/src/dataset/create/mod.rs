@@ -13,10 +13,10 @@ use crate::{
     util::text::normalize_strong,
 };
 
-pub(crate) fn generate_directory_name(name: &str, id: &str) -> String {
+pub(crate) fn generate_directory_name(name: &str, id: &ObjectId) -> String {
     match normalize_strong(name) {
         Some(prefix) => format!("{prefix}-{id}"),
-        None => id.to_owned(),
+        None => id.to_string(),
     }
 }
 
@@ -138,7 +138,7 @@ async fn insert(
     new: NewDataset<'_>,
     skip_on_directory_name_conflict: bool,
 ) -> ApiResult<bool> {
-    let root: Option<String> = sqlx::query_scalar(
+    let root: Option<ObjectId> = sqlx::query_scalar(
         "SELECT _rootFolder FROM webknossos.organizations_ WHERE _id = $1 FOR SHARE",
     )
     .bind(&new.source.id.organization_id)
@@ -230,7 +230,7 @@ pub(crate) async fn set_up_dataset(
     let id = ObjectId::new();
     let mut source = setup.source.clone();
     source.id = DataSourceId::new(
-        generate_directory_name(setup.name, id.as_str()),
+        generate_directory_name(setup.name, &id),
         &user.organization_id,
     );
     insert_dataset(

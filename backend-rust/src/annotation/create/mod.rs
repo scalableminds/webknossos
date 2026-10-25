@@ -89,7 +89,7 @@ pub(crate) async fn find_dataset(pool: &PgPool, id: &ObjectId) -> ApiResult<Opti
         "SELECT name,_organization,trim(_dataStore),isUsable,voxelSizeFactor IS NOT NULL
          FROM webknossos.datasets_ WHERE _id=$1",
     )
-    .bind(id.as_str())
+    .bind(id)
     .fetch_optional(pool)
     .await?;
     Ok(row.map(
@@ -372,7 +372,7 @@ async fn create_explorational(
     } else {
         None
     }
-    .ok_or_else(|| ApiError::not_found(crate::msg::dataset::not_found(dataset_id.as_str())))?;
+    .ok_or_else(|| ApiError::not_found(crate::msg::dataset::not_found(&dataset_id)))?;
 
     // createExplorationalFor ?~> createFailed; createLayersForExplorational
     // ?~> createTracingsFailed. Database faults stay 5xx.

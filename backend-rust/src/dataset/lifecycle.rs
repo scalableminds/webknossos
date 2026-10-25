@@ -100,7 +100,7 @@ async fn require_editable_by_name(
 ) -> ApiResult<DatasetRecord> {
     require_editable(state, user, id).await.map_err(|error| {
         if error.status == axum::http::StatusCode::NOT_FOUND {
-            ApiError::not_found(crate::msg::dataset::not_found_by_name(id.as_str()))
+            ApiError::not_found(crate::msg::dataset::not_found_by_name(id))
         } else {
             error
         }
@@ -300,7 +300,7 @@ async fn delete_dataset(
                  AND NOT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments a2 WHERE a2._dataset != $1
                    AND (a2.path = a1.path OR (a2.realpath IS NOT NULL AND a2.realpath = a1.realpath)))"#,
         )
-        .bind(id.as_str())
+        .bind(&*id)
         .fetch_all(&state.pool)
         .await?;
         crate::dataset::paths::delete_paths(&state.pool, &clients, &store_url, &paths).await?;
@@ -326,7 +326,7 @@ async fn delete_dataset(
                ORDER BY id"#,
         )
         .bind(&directory)
-        .bind(id.as_str())
+        .bind(&*id)
         .bind(&store_name)
         .fetch_all(&state.pool)
         .await?;
@@ -351,7 +351,7 @@ async fn delete_dataset(
     let mut transaction = state.pool.begin().await?;
     let exists: Option<ObjectId> =
         sqlx::query_scalar("SELECT _id FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE")
-            .bind(id.as_str())
+            .bind(&*id)
             .fetch_optional(&mut *transaction)
             .await?;
     if exists.is_none() {
@@ -364,7 +364,7 @@ async fn delete_dataset(
         )
     {
         sqlx::query("UPDATE webknossos.jobs SET manualState = 'CANCELLED' WHERE command = 'convert_to_wkw' AND commandArgs->>'dataset_id' = $1 AND (state = 'PENDING' OR state = 'STARTED')")
-            .bind(id.as_str()).execute(&mut *transaction).await?;
+            .bind(&*id).execute(&mut *transaction).await?;
     }
     delete_from_db_on_connection(&mut transaction, &id).await?;
     transaction.commit().await?;
@@ -512,7 +512,7 @@ async fn finish_upload_to_paths(
     let (status, usable): (String, bool) = sqlx::query_as(
         "SELECT status, isUsable FROM webknossos.datasets WHERE _id = $1 AND NOT isDeleted FOR UPDATE",
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .fetch_optional(&mut *transaction)
     .await?
     .ok_or_else(|| not_found(&id))?;
@@ -528,7 +528,7 @@ async fn finish_upload_to_paths(
         return Err(ApiError::bad_request(crate::msg::dataset::ALREADY_USABLE));
     }
     sqlx::query("UPDATE webknossos.datasets SET isUsable = true, status = '' WHERE _id = $1")
-        .bind(id.as_str())
+        .bind(&*id)
         .execute(&mut *transaction)
         .await?;
     transaction.commit().await?;
@@ -604,7 +604,7 @@ async fn finish_mag_upload_to_path(
         r#"UPDATE webknossos.dataset_mags SET uploadToPathIsPending = false, uploadIsPending = false
            WHERE _dataset = $1 AND dataLayerName = $2 AND mag = ROW($3, $4, $5)::webknossos.VECTOR3 AND uploadToPathIsPending"#,
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .bind(&body.layer_name)
     .bind(x)
     .bind(y)
@@ -631,7 +631,7 @@ async fn finish_attachment_upload_to_path(
         r#"UPDATE webknossos.dataset_layer_attachments SET uploadToPathIsPending = false, uploadIsPending = false
            WHERE _dataset = $1 AND layerName = $2 AND type = $3::webknossos.LAYER_ATTACHMENT_TYPE AND name = $4 AND uploadToPathIsPending"#,
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .bind(&body.layer_name)
     .bind(body.attachment_type.as_str())
     .bind(&body.attachment_name)

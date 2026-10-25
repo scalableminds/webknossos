@@ -322,7 +322,7 @@ async fn update_partial(
              metadata = COALESCE($10, metadata)
            WHERE _id = $1 AND NOT isDeleted"#,
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .bind(body.description.is_some())
     .bind(body.description.clone().flatten())
     .bind(body.name.is_some())
@@ -339,7 +339,7 @@ async fn update_partial(
         // DAO also nulls defaultViewConfiguration here (the loaded source never
         // carries one); it is deliberately kept.
         sqlx::query("DELETE FROM webknossos.dataset_thumbnails WHERE _dataset = $1")
-            .bind(id.as_str())
+            .bind(&*id)
             .execute(&mut *transaction)
             .await?;
         sqlx::query(
@@ -348,7 +348,7 @@ async fn update_partial(
                  voxelSizeFactor = ROW($2, $3, $4)::webknossos.VECTOR3, voxelSizeUnit = $5::webknossos.LENGTH_UNIT
                WHERE _id = $1"#,
         )
-        .bind(id.as_str())
+        .bind(&*id)
         .bind(change.updated.scale.factor.x)
         .bind(change.updated.scale.factor.y)
         .bind(change.updated.scale.factor.z)
@@ -361,7 +361,7 @@ async fn update_partial(
     let mut q = Sql::new("SELECT ");
     crate::dataset::access::push_read_predicate(&mut q, (&user.id).into(), None);
     q.push(" FROM webknossos.datasets_ d WHERE d._id=")
-        .push_bind(id.as_str());
+        .push_bind(&*id);
     let readable: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;
     if !readable {
         return Err(crate::dataset::lifecycle::not_found(&id));

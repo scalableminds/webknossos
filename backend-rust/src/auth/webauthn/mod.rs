@@ -573,7 +573,7 @@ async fn register_finalize(
     let inserted = sqlx::query(
         "INSERT INTO webknossos.webauthnCredentials (_id, _multiUser, credentialId, name, userVerified, backupEligible, backupState, serializedAttestationStatement, serializedAttestedCredential, serializedExtensions, signatureCount) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
     )
-    .bind(ObjectId::new().as_str())
+    .bind(ObjectId::new())
     .bind(&multi_user)
     .bind(&registration.credential.credential_id)
     .bind(&body.name)

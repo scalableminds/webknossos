@@ -990,7 +990,7 @@ pub(crate) async fn create_email_verification(
                ELSE statement_timestamp() + $5::bigint * INTERVAL '1 millisecond' END,
              FALSE)"#,
     )
-    .bind(ObjectId::new().as_str())
+    .bind(ObjectId::new())
     .bind(&key)
     .bind(&email)
     .bind(multi_user_id)

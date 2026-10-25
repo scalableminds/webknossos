@@ -405,7 +405,7 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
                VALUES ($1, $2, $3, NOW(), NOW() + make_interval(secs => $4::float8 / 1000), NULL,
                  'Authentication', NOW(), FALSE)"#,
         )
-        .bind(ObjectId::new().as_str())
+        .bind(ObjectId::new())
         .bind(&sample.token)
         .bind(&user_id)
         .bind(expiry_millis)

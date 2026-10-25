@@ -1091,7 +1091,7 @@ async fn warnings(
            JOIN webknossos.datasets_ d ON fp._descendant=d._folder
            WHERE d._id=$1",
     )
-    .bind(dataset.id.as_str())
+    .bind(&dataset.id)
     .fetch_all(pool)
     .await?;
     let mut warnings = Vec::new();
@@ -1171,9 +1171,7 @@ pub(crate) async fn create_tasks(
         .ok_or_else(|| ApiError::bad_request(NOT_ON_SAME_DATASET))?;
     let dataset = find_readable_dataset(pool, user, &dataset_id)
         .await?
-        .ok_or_else(|| {
-            ApiError::bad_request(crate::msg::dataset::not_found(dataset_id.as_str()))
-        })?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::dataset::not_found(&dataset_id)))?;
     let source = crate::annotation::create::usable_data_source(pool, &dataset).await?;
     if !successful
         .iter()
@@ -1280,9 +1278,7 @@ async fn create(
         .ok_or_else(|| ApiError::bad_request(NOT_ON_SAME_DATASET))?;
     let dataset = find_readable_dataset(pool, &user, &dataset_id)
         .await?
-        .ok_or_else(|| {
-            ApiError::bad_request(crate::msg::dataset::not_found(dataset_id.as_str()))
-        })?;
+        .ok_or_else(|| ApiError::bad_request(crate::msg::dataset::not_found(&dataset_id)))?;
     let source = crate::annotation::create::usable_data_source(pool, &dataset).await?;
     if dataset.organization_id != user.organization_id {
         return Err(ApiError::bad_request(DATASET_OF_OTHER_ORGA));

@@ -188,7 +188,7 @@ async fn insert_many(pool: &sqlx::PgPool, events: &[AnalyticsEvent]) -> ApiResul
         "INSERT INTO webknossos.analyticsEvents(_id, created, sessionId, eventType, eventProperties, _user, _organization, isOrganizationAdmin, isSuperUser, webknossosUri) ",
     );
     builder.push_values(events, |mut row, event| {
-        row.push_bind(ObjectId::new().as_str().to_owned())
+        row.push_bind(ObjectId::new())
             .push_bind(event.time)
             .push_bind(event.session_id)
             .push_bind(&event.event_type)

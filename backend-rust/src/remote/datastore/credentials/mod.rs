@@ -143,7 +143,7 @@ pub async fn insert_credential(
             AND NOT usr.isDeleted AND NOT usr.isDeactivated AND NOT multi.isDeleted AND NOT org.isDeleted
           FOR SHARE OF multi, usr, org"#,
     )
-    .bind(id.as_str()).bind(kind).bind(name).bind(identifier).bind(secret)
+    .bind(&id).bind(kind).bind(name).bind(identifier).bind(secret)
     .bind(&user.id).bind(&user.organization_id)
     .execute(&mut **tx).await?;
     if result.rows_affected() != 1 {
@@ -186,7 +186,7 @@ async fn find_credential(
     };
     let row = sqlx::query_as::<_, StoredCredential>(
         "SELECT type::text AS kind, name, identifier, secret, _user AS user_id, _organization AS organization FROM webknossos.credentials WHERE _id = $1 AND NOT isDeleted",
-    ).bind(query.credential_id.as_str()).fetch_optional(&mut *tx).await?;
+    ).bind(&query.credential_id).fetch_optional(&mut *tx).await?;
     let credential = row.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if only_allowed_organization.is_some_and(|organization| organization != credential.organization)
     {

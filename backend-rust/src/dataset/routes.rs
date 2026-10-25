@@ -259,7 +259,7 @@ async fn update_metadata(
     ) = sqlx::query_as(
         "SELECT metadata,_folder,_organization,created FROM webknossos.datasets_ WHERE _id=$1",
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .fetch_one(&mut *transaction)
     .await?;
     let metadata = body
@@ -278,7 +278,7 @@ async fn update_metadata(
             description=$2,name=$3,sortingKey=$4,isPublic=$5,tags=$6,metadata=$7,_folder=$8 \
             WHERE _id=$1 AND NOT isDeleted",
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .bind(body.description)
     .bind(body.display_name.or(body.name))
     .bind(sorting_key)
@@ -291,7 +291,7 @@ async fn update_metadata(
     let mut q = Sql::new("SELECT ");
     crate::dataset::access::push_read_predicate(&mut q, (&user.id).into(), None);
     q.push(" FROM webknossos.datasets_ d WHERE d._id=")
-        .push_bind(id.as_str());
+        .push_bind(&*id);
     let readable: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;
     if !readable {
         return Err(ApiError::not_found(crate::msg::dataset::MISSING));
@@ -318,7 +318,7 @@ async fn access_list(
     require_read(&state, &user, &id).await?;
     let organization: String =
         sqlx::query_scalar("SELECT _organization FROM webknossos.datasets_ WHERE _id=$1")
-            .bind(id.as_str())
+            .bind(&*id)
             .fetch_one(&state.pool)
             .await?;
     let can_read_organization: bool = sqlx::query_scalar(
@@ -356,7 +356,7 @@ async fn access_list(
     .bind(organization)
     .bind(user.is_admin)
     .bind(&user.organization_id)
-    .bind(id.as_str())
+    .bind(&*id)
     .fetch_all(&state.pool)
     .await?;
     Ok(Json(rows))
@@ -447,14 +447,14 @@ async fn read(
     .await?
     {
         return Err(ApiError::not_found(if user.is_some() {
-            crate::msg::dataset::not_found(id.as_str())
+            crate::msg::dataset::not_found(&id)
         } else {
-            crate::msg::dataset::not_found_consider_login(id.as_str())
+            crate::msg::dataset::not_found_consider_login(&id)
         }));
     }
     if let Some(user) = user.as_ref() {
         sqlx::query("INSERT INTO webknossos.dataset_lastUsedTimes (_dataset,_user,lastUsedTime) VALUES ($1,$2,NOW()) ON CONFLICT (_dataset,_user) DO UPDATE SET lastUsedTime = NOW()")
-            .bind(id.as_str()).bind(&user.id).execute(&state.pool).await?;
+            .bind(&*id).bind(&user.id).execute(&state.pool).await?;
     }
     let result = full_json(&state.pool, user.as_ref(), &id, features.jobs_enabled).await?;
     if let Some(user) = user {
@@ -1007,7 +1007,7 @@ pub(crate) async fn list_values(
         GROUP BY _dataset) ats ON ats._dataset = d._id"#
     };
     let user_id = user.map(|u| &u.id);
-    let uploader = query.uploader_id.as_ref().map(ObjectId::as_str);
+    let uploader = query.uploader_id.as_ref();
     let folder = query.folder_id.as_ref();
     let mut q = Sql::new(
         r#"SELECT d._id AS id, d.name, d._organization AS owning_organization, d._folder AS folder_id,
@@ -1173,7 +1173,7 @@ async fn sharing_token(
     // RandomIDGenerator.generateBlocking(): 16 random bytes, unpadded base64url (22 characters).
     q.push_bind(crate::auth::browser::random_base64url(16)?)
         .push(") WHERE d._id = ")
-        .push_bind(id.as_str())
+        .push_bind(&*id)
         .push(" AND d._organization = ")
         .push_bind(&user.organization_id)
         .push(" AND NOT d.isDeleted AND ");
@@ -1192,7 +1192,7 @@ async fn delete_sharing_token(
 ) -> ApiResult<()> {
     require_edit(&state, &user, &id).await?;
     let mut q = Sql::new("UPDATE webknossos.datasets d SET sharingToken = NULL WHERE d._id = ");
-    q.push_bind(id.as_str())
+    q.push_bind(&*id)
         .push(" AND d._organization = ")
         .push_bind(&user.organization_id)
         .push(" AND NOT d.isDeleted AND ");
@@ -1231,7 +1231,7 @@ async fn update_teams(
     .await?;
     let current: Vec<ObjectId> =
         sqlx::query_scalar("SELECT _team FROM webknossos.dataset_allowedTeams WHERE _dataset = $1")
-            .bind(id.as_str())
+            .bind(&*id)
             .fetch_all(&mut *transaction)
             .await?;
     let mut updated: Vec<ObjectId> = requested
@@ -1251,11 +1251,11 @@ async fn update_teams(
         )
         .await;
     sqlx::query("DELETE FROM webknossos.dataset_allowedTeams WHERE _dataset = $1")
-        .bind(id.as_str())
+        .bind(&*id)
         .execute(&mut *transaction)
         .await?;
     sqlx::query("INSERT INTO webknossos.dataset_allowedTeams (_dataset, _team) SELECT $1, unnest($2::text[])")
-        .bind(id.as_str()).bind(&updated).execute(&mut *transaction).await?;
+        .bind(&*id).bind(&*updated).execute(&mut *transaction).await?;
     transaction.commit().await?;
     notification_emails.send_share_emails(&state.pool, pending_emails, &user.id);
     Ok(Json(updated))

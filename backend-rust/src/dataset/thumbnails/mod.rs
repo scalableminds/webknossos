@@ -102,7 +102,7 @@ async fn cached(
     Ok(sqlx::query_scalar(
         "SELECT image FROM webknossos.dataset_thumbnails WHERE _dataset=$1 AND dataLayerName=$2 AND width=$3 AND height=$4 AND mappingName=$5 AND created > NOW() - INTERVAL '10 days'",
     )
-    .bind(id.as_str())
+    .bind(id)
     .bind(layer)
     .bind(width)
     .bind(height)
@@ -273,7 +273,7 @@ async fn load_dataset(state: &AppState, id: &ObjectId) -> ApiResult<DatasetRow> 
     sqlx::query_as(
         "SELECT d.isUsable AS is_usable, d.voxelSizeFactor IS NOT NULL AS has_voxel_size, s.url AS store_url, d.thumbnailCacheVersion AS cache_version, d.defaultViewConfiguration AS default_configuration, d.adminViewConfiguration AS admin_configuration FROM webknossos.datasets_ d LEFT JOIN webknossos.dataStores_ s ON s.name = trim(d._dataStore) WHERE d._id = $1",
     )
-    .bind(id.as_str())
+    .bind(id)
     .fetch_optional(&state.pool)
     .await?
     .ok_or_else(|| ApiError::not_found(crate::msg::dataset::not_found(id)))
@@ -325,7 +325,7 @@ async fn store(
     let current: Option<i32> = sqlx::query_scalar(
         "SELECT thumbnailCacheVersion FROM webknossos.datasets WHERE _id=$1 AND NOT isDeleted FOR SHARE",
     )
-    .bind(id.as_str())
+    .bind(id)
     .fetch_optional(&mut *transaction)
     .await?;
     if current != Some(version) {
@@ -342,7 +342,7 @@ async fn store(
           image = EXCLUDED.image, mimetype = EXCLUDED.mimetype, mag = EXCLUDED.mag,
           mag1BoundingBox = EXCLUDED.mag1BoundingBox, created = EXCLUDED.created"#,
     )
-    .bind(id.as_str())
+    .bind(id)
     .bind(record.layer)
     .bind(record.width)
     .bind(record.height)

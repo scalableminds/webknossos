@@ -249,7 +249,7 @@ async fn data_store_uri_for_dataset(
     let url: Option<String> = sqlx::query_scalar(
         "SELECT store.url FROM webknossos.datasets_ dataset JOIN webknossos.dataStores_ store ON store.name=TRIM(dataset._dataStore) WHERE dataset._id=$1",
     )
-    .bind(path.dataset_id.as_str())
+    .bind(&*path.dataset_id)
     .fetch_optional(&state.pool)
     .await?;
     Ok(Json(url.ok_or_else(|| {

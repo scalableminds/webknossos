@@ -67,7 +67,7 @@ fn push_optional_filters<'a>(q: &mut Sql<'a>, owner: Option<&'a ObjectId>, filte
         q.push(" AND a._user=").push_bind(owner);
     }
     if let Some(dataset_id) = &filters.dataset_id {
-        q.push(" AND a._dataset=").push_bind(dataset_id.as_str());
+        q.push(" AND a._dataset=").push_bind(dataset_id);
     }
 }
 const LAYERS: &str = "SELECT jsonb_agg(jsonb_build_object('tracingId',layer.tracingId,'typ',layer.typ,'name',layer.name,'stats',layer.statistics) ORDER BY layer.tracingId) FROM webknossos.annotation_layers layer WHERE layer._annotation=a._id";

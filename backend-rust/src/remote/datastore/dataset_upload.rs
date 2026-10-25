@@ -260,7 +260,7 @@ async fn create_and_set_up_dataset(
     // The voxel size stays unset (`voxel_size: None` below).
     let source = UsableDataSource {
         id: DataSourceId::new(
-            crate::dataset::create::generate_directory_name(name, id.as_str()),
+            crate::dataset::create::generate_directory_name(name, &id),
             &user.organization_id,
         ),
         data_layers: Vec::new(),

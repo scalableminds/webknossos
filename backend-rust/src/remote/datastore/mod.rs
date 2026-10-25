@@ -714,7 +714,7 @@ async fn get_data_source(
     let row: Option<(bool, bool)> = sqlx::query_as(
         "SELECT isUsable, voxelSizeFactor IS NOT NULL FROM webknossos.datasets_ WHERE _id = $1",
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .fetch_optional(&state.pool)
     .await?;
     let (is_usable, has_voxel_size) =
@@ -741,7 +741,7 @@ async fn update_data_source(
     let is_virtual: Option<bool> = sqlx::query_scalar(
         "SELECT isVirtual FROM webknossos.datasets_ WHERE _id = $1 FOR NO KEY UPDATE",
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .fetch_optional(&mut *tx)
     .await?;
     let is_virtual = is_virtual.ok_or_else(|| crate::dataset::lifecycle::not_found(&id))?;

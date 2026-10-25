@@ -102,7 +102,7 @@ async fn transfer(
     }
     // datasetDAO.findOne under AuthorizedAccessContext(newUser): no sharing token.
     let mut q = Sql::new("SELECT EXISTS(SELECT 1 FROM webknossos.datasets_ d WHERE d._id=");
-    q.push_bind(annotation.dataset_id.as_str()).push(" AND ");
+    q.push_bind(&annotation.dataset_id).push(" AND ");
     crate::dataset::access::push_read_predicate(&mut q, target.into(), None);
     q.push(")");
     let transferee_can_read: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;

@@ -198,7 +198,7 @@ pub(crate) async fn resolve_linked_layers(
         }
         let usable: bool =
             sqlx::query_scalar("SELECT isUsable FROM webknossos.datasets_ WHERE _id = $1")
-                .bind(link.dataset_id.as_str())
+                .bind(&link.dataset_id)
                 .fetch_one(&state.pool)
                 .await?;
         if !usable {
@@ -357,7 +357,7 @@ async fn reserve_upload_to_paths(
     }
     let id = ObjectId::new();
     source.id = DataSourceId::new(
-        crate::dataset::create::generate_directory_name(&body.dataset_name, id.as_str()),
+        crate::dataset::create::generate_directory_name(&body.dataset_name, &id),
         &user.organization_id,
     );
     if source.data_layers.is_empty() {
@@ -440,7 +440,7 @@ async fn reserve_for_preliminary(
     let (status, uploader, directory): (String, Option<ObjectId>, String) = sqlx::query_as(
         "SELECT status, _uploader, directoryName FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE",
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .fetch_one(&mut *transaction)
     .await?;
     if status != NOT_YET_UPLOADED && status != crate::dataset::lifecycle::CONVERSION_FAILED {
@@ -464,7 +464,7 @@ async fn reserve_for_preliminary(
              isUsable = false, voxelSizeFactor = ROW($4, $5, $6)::webknossos.VECTOR3,
              voxelSizeUnit = $7::webknossos.LENGTH_UNIT, status = $8 WHERE _id = $1"#,
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .bind(&user.organization_id)
     .bind(source.default_view_configuration.clone().map(Value::Object))
     .bind(source.scale.factor.x)
@@ -547,7 +547,7 @@ async fn reserve_mag_upload_to_path(
     let parent = dataset_parent(&config, path_prefix.as_deref(), &record.organization)?;
     let directory: String =
         sqlx::query_scalar("SELECT directoryName FROM webknossos.datasets_ WHERE _id = $1")
-            .bind(id.as_str())
+            .bind(&*id)
             .fetch_one(&state.pool)
             .await?;
     let layer_path = join(&parent, &directory)?.join(&body.layer_name);
@@ -567,7 +567,7 @@ async fn reserve_mag_upload_to_path(
     }
     sqlx::query(r#"INSERT INTO webknossos.dataset_mags (_dataset, dataLayerName, mag, path, axisOrder, channelIndex, uploadToPathIsPending, uploadIsPending)
         VALUES ($1, $2, ROW($3, $4, $5)::webknossos.VECTOR3, $6, $7, $8, true, false)"#)
-        .bind(id.as_str()).bind(&body.layer_name).bind(x).bind(y).bind(z)
+        .bind(&*id).bind(&*body.layer_name).bind(x).bind(y).bind(z)
         .bind(&path).bind(axis_order).bind(body.channel_index)
         .execute(&mut *transaction).await?;
     transaction.commit().await?;
@@ -590,7 +590,7 @@ async fn reserve_attachment_upload_to_path(
     let typ = attachment_type.as_str();
     let mut transaction = state.pool.begin().await?;
     sqlx::query("SELECT _id FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE")
-        .bind(id.as_str())
+        .bind(&*id)
         .fetch_one(&mut *transaction)
         .await?;
     if body.overwrite_pending.unwrap_or(false) {
@@ -614,7 +614,7 @@ async fn reserve_attachment_upload_to_path(
     let existing: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM webknossos.dataset_layer_attachments WHERE _dataset = $1 AND layerName = $2 AND ($3::text IS NULL OR name = $3) AND type = $4::webknossos.LAYER_ATTACHMENT_TYPE",
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .bind(&body.layer_name)
     .bind((!singleton).then_some(&body.attachment_name))
     .bind(typ)
@@ -629,7 +629,7 @@ async fn reserve_attachment_upload_to_path(
     }
     let directory: String =
         sqlx::query_scalar("SELECT directoryName FROM webknossos.datasets_ WHERE _id = $1")
-            .bind(id.as_str())
+            .bind(&*id)
             .fetch_one(&mut *transaction)
             .await?;
     let parent = dataset_parent(&config, path_prefix.as_deref(), &record.organization)?;
@@ -639,7 +639,7 @@ async fn reserve_attachment_upload_to_path(
         attachment_path(&body.attachment_name, format, attachment_type, &layer_path)?.to_string();
     sqlx::query(r#"INSERT INTO webknossos.dataset_layer_attachments (_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending, uploadIsPending)
         VALUES ($1, $2, $3, $4, $5::webknossos.LAYER_ATTACHMENT_TYPE, $6::webknossos.LAYER_ATTACHMENT_DATAFORMAT, true, false)"#)
-        .bind(id.as_str()).bind(&body.layer_name).bind(&body.attachment_name).bind(&path)
+        .bind(&*id).bind(&*body.layer_name).bind(&*body.attachment_name).bind(&*path)
         .bind(typ).bind(format.as_str())
         .execute(&mut *transaction).await?;
     transaction.commit().await?;

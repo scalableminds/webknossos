@@ -98,7 +98,7 @@ async fn datastore_token(
            VALUES ($1, $2, $3, statement_timestamp(), statement_timestamp() + $4::bigint * INTERVAL '1 millisecond', $5,
              'DataStore', statement_timestamp())"#,
     )
-    .bind(ObjectId::new().as_str())
+    .bind(ObjectId::new())
     .bind(&value)
     .bind(&user.id)
     .bind(expiry)
@@ -546,7 +546,7 @@ async fn duplicate_to_orga(
              COALESCE(voxelSizeUnit::text, 'nanometer') AS unit
            FROM webknossos.datasets_ WHERE _id = $1"#,
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .fetch_one(&state.pool)
     .await?;
     let unit = unit
@@ -590,7 +590,7 @@ async fn duplicate_to_orga(
     let new_id = ObjectId::new();
     let mut adapted = source;
     adapted.id = DataSourceId::new(
-        crate::dataset::create::generate_directory_name(&name, new_id.as_str()),
+        crate::dataset::create::generate_directory_name(&name, &new_id),
         &query.target_organization_id,
     );
     let voxel_size = if record.is_usable {

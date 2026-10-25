@@ -134,7 +134,7 @@ async fn start_reset_password(
                  statement_timestamp() + $4::bigint * INTERVAL '1 millisecond', $5,
                  'ResetPassword', statement_timestamp())"#,
         )
-        .bind(ObjectId::new().as_str())
+        .bind(ObjectId::new())
         .bind(&token)
         .bind(&user_id)
         .bind(expiry_ms)
@@ -432,14 +432,14 @@ async fn accessible_by_switching(
             Target::Dataset(id) => sqlx::query_scalar(
                 "SELECT o._id FROM webknossos.datasets_ d JOIN webknossos.organizations_ o ON o._id = d._organization WHERE d._id = $1",
             )
-            .bind(id.as_str())
+            .bind(id)
             .fetch_optional(&state.pool)
             .await?,
             Target::Annotation(id) => sqlx::query_scalar(
                 r#"SELECT o._id FROM webknossos.annotations_ a JOIN webknossos.users_ u ON u._id = a._user
                    JOIN webknossos.organizations_ o ON o._id = u._organization WHERE a._id = $1"#,
             )
-            .bind(id.as_str())
+            .bind(id)
             .fetch_optional(&state.pool)
             .await?,
             Target::Workflow(hash) => sqlx::query_scalar(
@@ -488,7 +488,7 @@ async fn verify_email(
 ) -> ApiResult<StatusCode> {
     use verification_messages as msg;
     let mut tx = state.pool.begin().await?;
-    let key_row: Option<(String, String, ObjectId, bool, bool)> = sqlx::query_as(
+    let key_row: Option<(ObjectId, String, ObjectId, bool, bool)> = sqlx::query_as(
         r#"SELECT _id, email, _multiUser, isUsed,
              validUntil IS NOT NULL AND validUntil <= statement_timestamp()
            FROM webknossos.emailVerificationKeys WHERE key = $1 ORDER BY _id LIMIT 1 FOR UPDATE"#,

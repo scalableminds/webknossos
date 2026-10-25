@@ -104,7 +104,7 @@ async fn read(
     let mut q = Sql::new("SELECT ");
     q.push(COLUMNS)
         .push(" FROM webknossos.maintenances_ WHERE _id=")
-        .push_bind(id.as_str());
+        .push_bind(&*id);
     Ok(ResponseJson(
         q.build_query_as()
             .fetch_optional(&state.pool)
@@ -119,7 +119,7 @@ async fn insert(pool: &sqlx::PgPool, user: &AuthUser, body: Parameters) -> ApiRe
     );
     let mut values = q.separated(",");
     values
-        .push_bind(ObjectId::new().as_str().to_owned())
+        .push_bind(ObjectId::new())
         .push_bind(&user.id)
         .push_bind(body.start_time)
         .push_bind(body.end_time)
@@ -160,7 +160,7 @@ async fn update(
         .push(", message=")
         .push_bind(body.message)
         .push(" WHERE _id=")
-        .push_bind(id.as_str())
+        .push_bind(&*id)
         .push(" AND NOT isDeleted RETURNING ")
         .push(COLUMNS);
     Ok(ResponseJson(
@@ -179,7 +179,7 @@ async fn delete(
     if sqlx::query(
         "UPDATE webknossos.maintenances SET isDeleted=TRUE WHERE _id=$1 AND NOT isDeleted",
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .execute(&state.pool)
     .await?
     .rows_affected()

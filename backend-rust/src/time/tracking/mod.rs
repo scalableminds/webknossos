@@ -73,7 +73,7 @@ async fn require_user(pool: &PgPool, requester: &AuthUser, id: &ObjectId) -> Api
            FROM webknossos.users_ u
            WHERE u._id = ",
     )
-    .push_bind(id.as_str())
+    .push_bind(id)
     .push(" AND u._organization = ")
     .push_bind(requester.organization_id.as_str())
     .push(" AND (u._id = ")
@@ -84,7 +84,7 @@ async fn require_user(pool: &PgPool, requester: &AuthUser, id: &ObjectId) -> Api
     q.build_query_as::<TargetUser>()
         .fetch_optional(pool)
         .await?
-        .ok_or_else(|| ApiError::not_found(crate::msg::user::not_found(id.as_str())))
+        .ok_or_else(|| ApiError::not_found(crate::msg::user::not_found(id)))
 }
 
 async fn logged_time(

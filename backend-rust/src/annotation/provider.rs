@@ -1202,7 +1202,7 @@ impl AnnotationProvider {
     ) -> Result<AnnotationProto, ProviderError> {
         // datasetDAO.findOne(datasetId) under the caller's access context.
         let mut q = Sql::new("SELECT EXISTS(SELECT 1 FROM webknossos.datasets_ d WHERE d._id=");
-        q.push_bind(dataset_id.as_str());
+        q.push_bind(dataset_id);
         if !context.global {
             q.push(" AND ");
             crate::dataset::access::push_read_predicate(

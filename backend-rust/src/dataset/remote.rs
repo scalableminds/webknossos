@@ -65,7 +65,7 @@ async fn health(
         "SELECT d.isUsable,d.voxelSizeFactor IS NOT NULL,s.url FROM webknossos.datasets_ \
             d JOIN webknossos.dataStores_ s ON s.name=trim(d._dataStore) WHERE d._id=$1",
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .fetch_one(&state.pool)
     .await?;
     if !usable {
@@ -102,13 +102,13 @@ async fn clear_thumbnail_cache(
     require_read(&state, Some(&user), &id, None).await?;
     let mut transaction = state.pool.begin().await?;
     sqlx::query("SELECT _id FROM webknossos.datasets_ WHERE _id=$1 FOR UPDATE")
-        .bind(id.as_str())
+        .bind(&*id)
         .fetch_one(&mut *transaction)
         .await?;
     let mut q = Sql::new("SELECT ");
     crate::dataset::access::push_read_predicate(&mut q, (&user.id).into(), None);
     q.push(" FROM webknossos.datasets_ d WHERE d._id=")
-        .push_bind(id.as_str());
+        .push_bind(&*id);
     let readable: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;
     if !readable {
         return Err(ApiError::not_found(crate::msg::dataset::MISSING));
@@ -116,11 +116,11 @@ async fn clear_thumbnail_cache(
     // Unlike Scala's secured-only handler, require a live readable dataset.
     // Reading is sufficient; this operation changes no dataset settings.
     sqlx::query("DELETE FROM webknossos.dataset_thumbnails WHERE _dataset=$1")
-        .bind(id.as_str())
+        .bind(&*id)
         .execute(&mut *transaction)
         .await?;
     sqlx::query("UPDATE webknossos.datasets SET thumbnailCacheVersion=thumbnailCacheVersion+1 WHERE _id=$1 AND NOT isDeleted")
-        .bind(id.as_str()).execute(&mut *transaction).await?;
+        .bind(&*id).execute(&mut *transaction).await?;
     transaction.commit().await?;
     Ok(())
 }
@@ -135,7 +135,7 @@ async fn used_storage_details(
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let usable: bool = sqlx::query_scalar("SELECT isUsable FROM webknossos.datasets_ WHERE _id=$1")
-        .bind(id.as_str())
+        .bind(&*id)
         .fetch_one(&state.pool)
         .await?;
     if !usable {
@@ -147,7 +147,7 @@ async fn used_storage_details(
       'lastUpdated',floor(extract(epoch from lastUpdated)*1000)::bigint)
       FROM webknossos.organization_usedStorage_mags WHERE _dataset=$1"#,
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .fetch_all(&state.pool)
     .await?;
     let attachments = sqlx::query_scalar::<_, Value>(
@@ -155,7 +155,7 @@ async fn used_storage_details(
       'attachmentType',type,'usedStorageBytes',usedStorageBytes,'lastUpdated',floor(extract(epoch from lastUpdated)*1000)::bigint)
       FROM webknossos.organization_usedStorage_attachments WHERE _dataset=$1"#,
     )
-    .bind(id.as_str())
+    .bind(&*id)
     .fetch_all(&state.pool)
     .await?;
     rows.extend(attachments);

@@ -319,7 +319,7 @@ async fn execute_plan(
         sqlx::query(
             "INSERT INTO webknossos.timespans(_id,_user,_annotation,time,lastUpdate,numberOfUpdates,created,isDeleted) VALUES($1,$2,$3,$4,$5,$6,$7,false)",
         )
-        .bind(id.as_str())
+        .bind(&id)
         .bind(user_id)
         .bind(&insert.state.annotation_id)
         .bind(insert.state.time_millis)
@@ -337,7 +337,7 @@ async fn execute_plan(
         sqlx::query(
             "UPDATE webknossos.timespans SET _user=$2,_annotation=$3,time=$4,lastUpdate=$5,numberOfUpdates=$6,isDeleted=false WHERE _id=$1",
         )
-        .bind(span_id.as_str())
+        .bind(&span_id)
         .bind(user_id)
         .bind(&close.after.annotation_id)
         .bind(close.after.time_millis)

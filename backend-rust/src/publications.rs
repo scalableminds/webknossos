@@ -50,7 +50,7 @@ async fn read(
     let publication: Publication = Sql::new("SELECT ")
         .push(COLUMNS)
         .push(" FROM webknossos.publications_ WHERE _id = ")
-        .push_bind(id.as_str())
+        .push_bind(&*id)
         .build_query_as()
         .fetch_optional(&state.pool)
         .await?
@@ -99,7 +99,7 @@ async fn publication_json(
                 .await?,
         );
     }
-    let annotations: Vec<(String, String, String, String, ObjectId)> = sqlx::query_as(
+    let annotations: Vec<(ObjectId, String, String, String, ObjectId)> = sqlx::query_as(
         r#"SELECT _id, name, description, typ::text, _dataset FROM webknossos.annotations_
           WHERE _publication = $1 ORDER BY created, _id"#,
     )
@@ -136,7 +136,7 @@ async fn publication_json(
 /// AnnotationService.writesWithDataset (GlobalAccessContext, no requesting user).
 async fn annotation_json(
     connection: &mut PgConnection,
-    id: &str,
+    id: &ObjectId,
     name: String,
     description: String,
     typ: String,

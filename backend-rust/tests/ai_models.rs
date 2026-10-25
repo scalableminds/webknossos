@@ -2037,7 +2037,7 @@ async fn training_validation_order_permissions_and_rollback() {
         ),
     )
     .await;
-    assert_eq!(status, 409);
+    assert_eq!(status, 400);
     assert_eq!(training_counts(&db).await, (0, 2, 2, 0));
     // The model name is still free, and a valid request succeeds.
     let (status, model) = neuron(
@@ -2644,7 +2644,7 @@ async fn inference_validation_order_permissions_and_rollback() {
     // A failing inference insert (unknown annotation) rolls back the job and
     // the reservation together with the inference.
     let (status, _) = neuron(&owner.token, with("annotationId", json!(object_id()))).await;
-    assert_eq!(status, 409);
+    assert_eq!(status, 400);
     assert_eq!(inference_counts(&db).await, (0, 3, 0));
     let (status, inference) = neuron(&owner.token, with("annotationId", json!(annotation))).await;
     assert_eq!(status, 200, "{inference}");

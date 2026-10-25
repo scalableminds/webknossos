@@ -688,10 +688,10 @@ async fn assign_failures_abort_the_initializing_annotation() {
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(counts(&db, &w.task).await, before);
     // A duplicated layer colliding with an existing tracing id fails the
-    // transactional updateInitialized (crate 409), which leaves no layers.
+    // transactional updateInitialized (400, like Play's SQL failures), which leaves no layers.
     mock.set_mode(Mode::CollidingLayer);
     let (status, _) = post(&app, Some(&w.manager.token), &assign).await;
-    assert_eq!(status, StatusCode::CONFLICT);
+    assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(counts(&db, &w.task).await, before);
     // Every RPC saw its own Initializing row with the pending count taken.
     let calls = mock.calls();

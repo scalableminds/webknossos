@@ -316,7 +316,7 @@ async fn constraint_and_late_failures_roll_back_and_concurrent_updates_never_mix
                     layer("dup", "Two", AnnotationLayerTypeProto::Volume),
                 ],
             ),
-            StatusCode::CONFLICT,
+            StatusCode::BAD_REQUEST,
         ),
         (
             proto(
@@ -326,7 +326,7 @@ async fn constraint_and_late_failures_roll_back_and_concurrent_updates_never_mix
                     layer("new", "Same", AnnotationLayerTypeProto::Volume),
                 ],
             ),
-            StatusCode::CONFLICT,
+            StatusCode::BAD_REQUEST,
         ),
         (
             proto(

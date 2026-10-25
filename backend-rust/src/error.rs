@@ -82,9 +82,12 @@ impl From<sqlx::Error> for ApiError {
                 // PostgreSQL details can contain tokens, personal data and submitted values.
                 let code = db.code();
                 match code.as_deref() {
-                    Some("23505") => Self::conflict("A resource with these values already exists."),
+                    // Play answers every SQL failure with 400 (and the raw SQL text, which Rust withholds).
+                    Some("23505") => {
+                        Self::bad_request("A resource with these values already exists.")
+                    }
                     Some("23503") => {
-                        Self::conflict("A related resource is missing or still in use.")
+                        Self::bad_request("A related resource is missing or still in use.")
                     }
                     Some("23514" | "23502" | "22P02" | "22003" | "22008") => {
                         Self::bad_request(crate::msg::request::INVALID_RESOURCE_VALUES)

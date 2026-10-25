@@ -803,9 +803,8 @@ async fn simultaneous_duplicate_creations_are_serialized() {
             Some(project(&f, "Project-1"))
         )
     );
-    // The loser fails at the existence check (Play's 400) or at the unique constraint (409).
-    let duplicate =
-        |status: StatusCode| status == StatusCode::BAD_REQUEST || status == StatusCode::CONFLICT;
+    // The loser fails at the existence check or at the unique constraint, both 400 like Play.
+    let duplicate = |status: StatusCode| status == StatusCode::BAD_REQUEST;
     assert!(
         (a.0 == StatusCode::OK && duplicate(b.0)) || (b.0 == StatusCode::OK && duplicate(a.0)),
         "{a:?} {b:?}"

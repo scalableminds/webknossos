@@ -429,7 +429,7 @@ async fn datastore_deletion_is_superuser_only_idempotent_soft_and_preserves_depe
         )
         .await
         .0,
-        StatusCode::CONFLICT
+        StatusCode::BAD_REQUEST
     );
     database.cleanup().await;
 }

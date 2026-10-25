@@ -740,7 +740,7 @@ async fn failures_after_or_during_rpc_leave_no_rows() {
     // insert rolls back, including the annotation row and first layer.
     mock.set_mode(Mode::CollidingLayer);
     let (status, _) = post(&app, Some(&w.owner.token), &uri).await;
-    assert_eq!(status, StatusCode::CONFLICT);
+    assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(mock.duplicate_calls().len(), 5);
     assert_eq!(annotation_count(&db).await, annotations);
     assert_eq!(layer_count(&db).await, layer_rows);

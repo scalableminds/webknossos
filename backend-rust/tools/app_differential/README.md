@@ -67,6 +67,15 @@ Reports redact fields whose names contain token/password/secret/key/cookie. The 
 - `webauthn.json`: passkey registration/authentication with the virtual ES256 authenticator in `webauthn_client.py` (request bodies are built per side from its captured challenge via `"hook"` steps); needs a stack started with `WK_DIFF_PUBLIC_URI=https://localhost:19590` (passkeys refuse http) and is skipped otherwise, see below.
 - `uploads.json`: dataset upload through the datastores (reserve, chunk, finish, cancel, unfinished uploads) with `test/dataset/test-dataset.zip`, upload-to-paths, delete.
 
+## Route coverage (`coverage.py`)
+
+```sh
+python3 tools/app_differential/coverage.py            # covered/total, per controller, uncovered routes
+python3 tools/app_differential/coverage.py --min 250  # exit 1 below 250 covered routes (CI: .github/workflows/rust.yml)
+```
+
+Maps every main-application step to a route of `conf/webknossos.latest.routes` (strips `/api` and `/api/vN`; `{variables}` are one segment, `:param` one segment, `*param` several; first matching route in file order wins, as in Play). Steps hitting a dedicated route in `conf/webknossos.versioned.routes` are listed as legacy and don't count. Store steps (`"service"`) are not main-application routes. Steps matching no route are listed (the deliberate unknown-route/wrong-method negatives). Raise the `--min` value in CI when adding coverage; it must never drop.
+
 ## Benchmark and coexistence
 
 ```sh

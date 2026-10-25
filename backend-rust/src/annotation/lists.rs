@@ -242,7 +242,7 @@ async fn assert_editable_user(pool: &PgPool, user: &AuthUser, id: &ObjectId) -> 
     .fetch_optional(pool)
     .await?;
     match access {
-        None => Err(ApiError::not_found(crate::msg::user::MISSING)),
+        None => Err(ApiError::not_found(crate::msg::user::not_found(id))),
         Some((true, _)) | Some((_, true)) => Ok(()),
         _ => Err(ApiError::forbidden(crate::msg::NOT_ALLOWED)),
     }

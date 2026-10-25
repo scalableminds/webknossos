@@ -259,7 +259,7 @@ async fn update_experience(
     RequestJson(body): RequestJson<Map<String, Value>>,
 ) -> ApiResult<Json<Value>> {
     if user.id != id.as_str() {
-        return Err(ApiError::forbidden(crate::msg::user::EXPERIENCE_OWN_ONLY));
+        return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     sqlx::query("UPDATE webknossos.multiUsers AS multi SET novelUserExperienceInfos = $2 FROM webknossos.users_ AS usr WHERE usr._id = $1 AND usr._multiUser = multi._id AND NOT multi.isDeleted")
         .bind(&user.id).bind(Value::Object(body)).execute(&state.pool).await?;

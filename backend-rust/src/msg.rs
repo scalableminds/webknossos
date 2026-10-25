@@ -248,8 +248,6 @@ pub mod user {
     pub const NOT_EDITABLE: &str = "User is not editable by the requesting user.";
     /// Rust-only wording.
     pub const NO_LONGER_EDITABLE: &str = "User is no longer editable by the requesting user.";
-    /// Rust-only wording.
-    pub const EXPERIENCE_OWN_ONLY: &str = "Users can only update their own experience information.";
 
     pub mod configuration {
         pub const UPDATE_SUCCESS_FOR_DATASET: &str =

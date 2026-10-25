@@ -1,5 +1,5 @@
 //! Independently captured actual Scala3/Play3.0.11 HTTP responses, through the Rust router.
-mod common;
+use crate::common;
 use axum::{body::Body, http::Request};
 use common::{header, send};
 use serde_json::Value;

@@ -1,6 +1,6 @@
 //! POST /user/tasks/request (TaskController.request) against a real database
 //! and a mock tracing store answering the duplicate RPC.
-mod common;
+use crate::common;
 
 use std::sync::{Arc, Mutex};
 

@@ -1,5 +1,5 @@
 //! Worker liveness monitor against a real database and a mock Slack incoming webhook.
-mod common;
+use crate::common;
 
 use std::{
     sync::{Arc, Mutex},

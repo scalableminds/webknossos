@@ -1,4 +1,4 @@
-mod mock_wk;
+use crate::mock_wk;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use mock_wk::{MockWk, Reply};

@@ -1,6 +1,6 @@
 //! Periodic organization used-storage scan (Scala `UsedStorageService.tick`) against a fresh
 //! database and a mock datastore (`POST /data/datasets/measureUsedStorage/{organization}`).
-mod common;
+use crate::common;
 
 use std::{
     collections::{HashMap, HashSet},

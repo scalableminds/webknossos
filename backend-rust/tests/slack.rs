@@ -1,6 +1,6 @@
 //! Slack notifications end to end: a local mock incoming webhook receives the
 //! JSON bodies the service POSTs, directly and through real routes.
-mod common;
+use crate::common;
 
 use std::{
     sync::{Arc, Mutex},

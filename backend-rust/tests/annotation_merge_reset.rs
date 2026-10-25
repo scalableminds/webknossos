@@ -2,7 +2,7 @@
 //! POST /annotations/:id/merge/:mergedTyp/:mergedId and
 //! PUT /annotations/:typ/:id/reset against a real database and a mock
 //! tracing store.
-mod common;
+use crate::common;
 
 use std::sync::{Arc, Mutex};
 

@@ -1,7 +1,7 @@
 //! GET /annotations/:typ/:id/download and GET /annotations/:id/download
 //! (AnnotationIOController.download / downloadWithoutType) against a real
 //! database and a mock tracing store serving protobuf and zip bytes.
-mod common;
+use crate::common;
 
 use std::{
     io::{Cursor, Read},

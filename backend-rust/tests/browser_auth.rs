@@ -1,7 +1,7 @@
 //! Browser sessions: Silhouette cookie interoperability, BCrypt hashes from
 //! the real Java hasher, password login and cookie/bearer priority.
-mod browser_auth_support;
-mod common;
+use crate::browser_auth_support;
+use crate::common;
 
 use axum::{
     body::Body,

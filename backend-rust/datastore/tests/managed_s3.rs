@@ -1,4 +1,4 @@
-mod mock_s3;
+use crate::mock_s3;
 use axum::http::StatusCode;
 use mock_s3::{MockS3, Reply};
 use std::{

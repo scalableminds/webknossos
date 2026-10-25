@@ -1,7 +1,7 @@
 //! POST /datasets/:datasetId/createExplorational and the tracing-store
 //! callback POST /tracingstores/:name/createTracing against a real database
 //! and one mock server acting as tracing store and datastore.
-mod common;
+use crate::common;
 
 use std::sync::{Arc, Mutex};
 

@@ -1,6 +1,6 @@
 //! Segment index routes with a hand-built Zarr3 segment index file (identity hash).
-mod common;
-mod mock_wk;
+use crate::common;
+use crate::mock_wk;
 use axum::{
     Router,
     body::Body,

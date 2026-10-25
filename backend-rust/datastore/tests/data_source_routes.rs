@@ -1,6 +1,6 @@
 //! Real source mutation/reload flows against a stateful mock WEBKNOSSOS and local arrays.
-mod common;
-mod mock_wk;
+use crate::common;
+use crate::mock_wk;
 use axum::{
     Router,
     body::Body,

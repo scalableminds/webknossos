@@ -1,6 +1,6 @@
 //! User access validation through a controller route against a mock WEBKNOSSOS.
 
-mod mock_wk;
+use crate::mock_wk;
 
 use axum::{
     Router,

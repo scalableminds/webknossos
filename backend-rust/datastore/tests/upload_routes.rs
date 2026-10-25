@@ -1,8 +1,8 @@
 //! UploadController reservation/chunk/cancel routes through the actual router, with a mock WK
 //! and an in-process fake Redis (keys and values checked against the Scala formats).
-mod common;
-mod fake_redis;
-mod mock_wk;
+use crate::common;
+use crate::fake_redis;
+use crate::mock_wk;
 use axum::{
     Router,
     body::Body,

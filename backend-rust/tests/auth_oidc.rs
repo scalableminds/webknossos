@@ -1,6 +1,6 @@
 //! OIDC (/auth/oidc/login, /auth/oidc/callback) and Discourse SSO (/auth/sso)
 //! against a mock OpenID provider signing with a test-only RSA key.
-mod common;
+use crate::common;
 
 use std::{
     collections::HashMap,

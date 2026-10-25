@@ -1,6 +1,6 @@
 //! Agglomerate-file routes and mapped data reads with a Zarr3 agglomerate attachment.
-mod common;
-mod mock_wk;
+use crate::common;
+use crate::mock_wk;
 use axum::{
     Router,
     body::Body,

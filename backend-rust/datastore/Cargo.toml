@@ -6,6 +6,7 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 license.workspace = true
+autotests = false
 
 [dependencies]
 webknossos-common.workspace = true
@@ -39,6 +40,11 @@ hdf5-reader = { version = "=0.9.1", default-features = false }
 lru = "=0.16.4"
 moka = { version = "0.12.16", features = ["sync"] }
 draco-core = { version = "=2.3.2", default-features = false, features = ["decoder", "edgebreaker_valence_decode", "legacy_bitstream_decode"] }
+
+# One integration-test binary instead of one per `tests/*.rs` file; see tests/main.rs.
+[[test]]
+name = "integration"
+path = "tests/main.rs"
 
 [dev-dependencies]
 http-body-util.workspace = true

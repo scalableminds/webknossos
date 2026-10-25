@@ -1,7 +1,7 @@
 //! Scala `DatasetUploadMetadataStoreTestSuite`: the upload id stored per data source id is a plain
 //! string (not JSON-encoded), so the unfinished-upload lookup reads back the identical id.
 
-mod fake_redis;
+use crate::fake_redis;
 
 use fake_redis::FakeRedis;
 use webknossos_common::datasource::DataSourceId;

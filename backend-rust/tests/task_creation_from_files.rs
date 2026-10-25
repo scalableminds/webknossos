@@ -1,6 +1,6 @@
 //! POST /tasks/createFromFiles (TaskController.createFromFiles) against a real
 //! database and a mock tracing store that records every RPC.
-mod common;
+use crate::common;
 
 use std::{
     io::{Cursor, Write},

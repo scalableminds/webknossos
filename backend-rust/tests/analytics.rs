@@ -1,5 +1,5 @@
 #![allow(clippy::type_complexity, clippy::field_reassign_with_default)]
-mod common;
+use crate::common;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,

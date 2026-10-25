@@ -1,6 +1,6 @@
 //! GET /annotations/:typ/:id/info and GET /annotations/:id/info against a real
 //! database and, for compound types, a mock tracing store.
-mod common;
+use crate::common;
 
 use std::sync::{Arc, Mutex};
 

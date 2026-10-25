@@ -1,5 +1,5 @@
-mod common;
-mod mock_wk;
+use crate::common;
+use crate::mock_wk;
 use axum::{
     Router,
     body::Body,

@@ -1,6 +1,6 @@
 //! ZIP metadata and chunk reads via actual authorization, readers and reload invalidation.
-mod common;
-mod mock_wk;
+use crate::common;
+use crate::mock_wk;
 use axum::{
     body::Body,
     http::{Request, StatusCode},

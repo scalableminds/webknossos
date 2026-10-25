@@ -1,6 +1,6 @@
-mod common;
-mod mock_s3;
-mod mock_wk;
+use crate::common;
+use crate::mock_s3;
+use crate::mock_wk;
 use axum::{
     body::Body,
     http::{Request, StatusCode},

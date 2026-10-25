@@ -1,9 +1,9 @@
 //! finishUpload through the actual router: reserve → chunks → finish, with a mock WK and the fake
 //! Redis; checks the on-disk result, clean-up and the report sent to WEBKNOSSOS.
-mod common;
-mod fake_redis;
-mod mock_s3;
-mod mock_wk;
+use crate::common;
+use crate::fake_redis;
+use crate::mock_s3;
+use crate::mock_wk;
 use axum::{
     Router,
     body::Body,

@@ -1,7 +1,7 @@
 //! layerThumbnail / datasetThumbnail through the actual router; JPEGs are decoded and compared
 //! with tolerance (encoder rounding differs from Java ImageIO).
-mod common;
-mod mock_wk;
+use crate::common;
+use crate::mock_wk;
 use axum::{
     Router,
     body::Body,

@@ -46,6 +46,7 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 license.workspace = true
+autotests = false
 
 [dependencies]
 webknossos-common.workspace = true
@@ -75,6 +76,11 @@ quick-xml.workspace = true
 zip = { workspace = true, features = ["deflate"] }
 lettre = { version = "0.11.23", default-features = false, features = ["smtp-transport", "tokio1", "tokio1-rustls-tls", "builder", "hostname", "ring"] }
 
+# One integration-test binary instead of one per `tests/*.rs` file; see tests/main.rs.
+[[test]]
+name = "integration"
+path = "tests/main.rs"
+
 [dev-dependencies]
 http-body-util.workspace = true
 tower.workspace = true
@@ -85,3 +91,18 @@ workspace = true
 [profile.release]
 lto = "thin"
 strip = true
+
+# Debug info is the bulk of target/: full type/variable info is emitted for every generic
+# instantiation in every codegen unit and test binary. Applies to `cargo test` too (the test
+# profile inherits dev). To undo, delete these two sections; to get full debug info for a
+# single debugger session instead: `CARGO_PROFILE_DEV_DEBUG=full cargo build`.
+
+# Our crates: file/line tables only, which keeps `RUST_BACKTRACE=1` backtraces readable but
+# drops the variable/type info needed to inspect locals in lldb/CodeLLDB.
+[profile.dev]
+debug = "line-tables-only"
+
+# All non-workspace dependencies: no debug info. Their backtrace frames keep function names
+# (from the symbol table) but lose file:line.
+[profile.dev.package."*"]
+debug = false

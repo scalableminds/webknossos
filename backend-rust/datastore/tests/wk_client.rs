@@ -1,6 +1,6 @@
 //! WK RPC client against a mock WEBKNOSSOS HTTP server.
 
-mod mock_wk;
+use crate::mock_wk;
 
 use std::time::Duration;
 

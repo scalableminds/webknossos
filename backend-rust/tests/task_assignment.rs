@@ -1,7 +1,7 @@
 //! POST /tasks/:id/assign?userId= against a real database and a mock tracing
 //! store that records every RPC together with the database state observed
 //! while the RPC runs (the Initializing row and the pending count).
-mod common;
+use crate::common;
 
 use std::sync::{Arc, Mutex};
 

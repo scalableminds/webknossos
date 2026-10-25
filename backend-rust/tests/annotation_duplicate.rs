@@ -1,6 +1,6 @@
 //! POST /annotations/:typ/:id/duplicate against a real database and a mock
 //! tracing store recording every RPC.
-mod common;
+use crate::common;
 
 use std::sync::{Arc, Mutex};
 

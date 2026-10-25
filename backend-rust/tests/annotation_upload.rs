@@ -1,6 +1,6 @@
 //! POST /annotations/upload against a real database and one mock server acting
 //! as tracing store and datastore.
-mod common;
+use crate::common;
 
 use std::io::{Cursor, Read, Write};
 use std::sync::{Arc, Mutex};

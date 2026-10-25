@@ -1,5 +1,5 @@
 #![allow(clippy::field_reassign_with_default)]
-mod common;
+use crate::common;
 use axum::{body::Body, http::Request};
 use chrono::{Duration, Utc};
 use common::{TestDb, object_id};

@@ -1,5 +1,5 @@
 //! WKW range reader: coordinate values provide an independent layout oracle.
-mod reader_support;
+use crate::reader_support;
 use std::{
     path::{Path, PathBuf},
     sync::{

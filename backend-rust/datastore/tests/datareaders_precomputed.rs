@@ -229,7 +229,7 @@ async fn compressed_segmentation_reader_and_empty_minishards_are_fill() {
         );
     }
 }
-mod reader_support;
+use crate::reader_support;
 #[tokio::test]
 async fn shard_range_reads_cache_indexes_and_forward_current_token() {
     let p = fixtures().join("shard_identity/1");

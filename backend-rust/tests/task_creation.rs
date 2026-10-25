@@ -1,6 +1,6 @@
 //! POST /tasks (TaskController.create) against a real database and a mock
 //! tracing store that records every RPC and can fail selected ones.
-mod common;
+use crate::common;
 
 use std::sync::{Arc, Mutex};
 

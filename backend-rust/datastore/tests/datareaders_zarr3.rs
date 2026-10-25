@@ -70,7 +70,7 @@ async fn python_zarr3_golden_codecs_endian_transpose_and_sharding() {
     }
 }
 
-mod reader_support;
+use crate::reader_support;
 fn cache() -> Arc<ChunkContentsCache> {
     Arc::new(ChunkContentsCache::new(100_000_000))
 }

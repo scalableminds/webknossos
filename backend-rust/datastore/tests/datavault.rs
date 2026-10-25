@@ -2,7 +2,7 @@
 //! against local mock servers, GCS service-account tokens, and `DataVaultService` dispatch, cache
 //! and whitelist.
 
-mod mock_wk;
+use crate::mock_wk;
 
 use std::{
     collections::HashMap,

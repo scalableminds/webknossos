@@ -1,8 +1,8 @@
 //! Server-side analytics events emitted by other controllers (signup,
 //! send_invites, join_organization, open_dataset, change_dataset_settings)
 //! and the 24 h `webknossos_heartbeat` ticker, asserted via database saving.
-mod browser_auth_support;
-mod common;
+use crate::browser_auth_support;
+use crate::common;
 
 use std::time::Duration;
 

@@ -1,7 +1,7 @@
 //! NotificationEmailService through the real routes: who is notified when
 //! datasets or annotations are shared with teams and when users' access
 //! changes (the emails are sent in the background).
-mod common;
+use crate::common;
 
 use std::time::Duration;
 

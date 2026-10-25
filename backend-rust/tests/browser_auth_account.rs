@@ -1,6 +1,6 @@
 //! Password reset/change, identity switching and email verification.
-mod browser_auth_support;
-mod common;
+use crate::browser_auth_support;
+use crate::common;
 
 use axum::http::{Method, StatusCode, header};
 use browser_auth_support::{

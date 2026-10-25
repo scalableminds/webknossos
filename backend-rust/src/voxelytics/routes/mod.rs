@@ -950,11 +950,20 @@ fn required_task_name(query: &StatisticsQuery) -> ApiResult<&str> {
 }
 
 fn statistics_json(entry: &dao::StatisticsEntry) -> Value {
-    let mut value = json!({"max": entry.max, "median": entry.median, "stddev": entry.stddev});
+    let mut value = json!({
+        "max": play_double(entry.max),
+        "median": play_double(entry.median),
+        "stddev": play_double(entry.stddev),
+    });
     if let Some(sum) = entry.sum {
-        value["sum"] = json!(sum);
+        value["sum"] = play_double(sum);
     }
     value
+}
+
+/// Play writes doubles through BigDecimal: whole numbers without `.0` (`1355.0` → `1355`).
+fn play_double(value: f64) -> Value {
+    webknossos_common::json::play_f64_number(value).map_or(Value::Null, Value::Number)
 }
 
 /// GET /voxelytics/workflows/:workflowHash/chunkStatistics?runId=&taskName=
@@ -980,7 +989,7 @@ async fn chunk_statistics(
             object.insert("chunkCounts".into(), entry.chunk_counts.to_json());
             insert_opt(&mut object, "beginTime", millis(&entry.begin_time));
             insert_opt(&mut object, "endTime", millis(&entry.end_time));
-            object.insert("wallTime".into(), json!(entry.wall_time));
+            object.insert("wallTime".into(), play_double(entry.wall_time));
             object.insert("memory".into(), statistics_json(&entry.memory));
             object.insert("cpuUser".into(), statistics_json(&entry.cpu_user));
             object.insert("cpuSystem".into(), statistics_json(&entry.cpu_system));

@@ -468,10 +468,11 @@ async fn workflows_events_reports_and_statistics() {
             "chunkCounts": {"total": 2, "failed": 0, "skipped": 0, "complete": 2, "cancelled": 0},
             "beginTime": 1000,
             "endTime": 4000,
-            "wallTime": 3.0,
-            "memory": {"max": 30.0, "median": 20.0, "stddev": body[0]["memory"]["stddev"]},
-            "cpuUser": {"max": 3.0, "median": 2.0, "stddev": body[0]["cpuUser"]["stddev"]},
-            "cpuSystem": {"max": 0.5, "median": 0.5, "stddev": 0.0},
+            // Play writes doubles via BigDecimal: whole numbers without `.0`.
+            "wallTime": 3,
+            "memory": {"max": 30, "median": 20, "stddev": body[0]["memory"]["stddev"]},
+            "cpuUser": {"max": 3, "median": 2, "stddev": body[0]["cpuUser"]["stddev"]},
+            "cpuSystem": {"max": 0.5, "median": 0.5, "stddev": 0},
             "duration": {"max": 2.5, "median": 2.25, "stddev": body[0]["duration"]["stddev"], "sum": 4.5}
         }])
     );
@@ -743,11 +744,11 @@ async fn reruns_report_the_computing_chunk_and_scoped_aggregates() {
     );
     assert_eq!(
         body[0]["duration"],
-        json!({"max": 600.0, "median": 600.0, "stddev": 0.0, "sum": 600.0})
+        json!({"max": 600, "median": 600, "stddev": 0, "sum": 600})
     );
     assert_eq!(body[0]["beginTime"], ms("2026-10-12T09:00:00Z"));
     assert_eq!(body[0]["endTime"], ms("2026-10-13T08:00:02Z"));
-    assert_eq!(body[0]["wallTime"], 602.0);
+    assert_eq!(body[0]["wallTime"], 602);
 
     // Workflow report: combined counts prefer the computing run, per-run counts
     // are each run's own.

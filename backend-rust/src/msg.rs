@@ -462,8 +462,11 @@ pub mod annotation {
     }
 
     pub mod private_link {
-        /// Rust-only wording.
-        pub const MISSING: &str = "Annotation private link not found.";
+        use std::fmt::Display;
+
+        pub fn not_found(id: impl Display) -> String {
+            format!("Annotation private link “{id}” could not be found or accessed.")
+        }
         pub const EXPIRED: &str = "Annotation private link token is expired.";
         /// Rust-only wording.
         pub const OWNER_ONLY: &str = "Only the annotation owner can manage its private links.";

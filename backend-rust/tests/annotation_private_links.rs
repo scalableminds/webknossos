@@ -366,8 +366,8 @@ async fn annotation_source_uses_private_link_or_query_user_token_and_real_metada
     let path = format!("/api/annotations/source/{}", a.annotation);
     assert_eq!(
         request(&app, Some(&f.token), "GET", &path, None).await.0,
-        StatusCode::NOT_FOUND
-    ); // Header auth is ignored by this raw Action.
+        StatusCode::BAD_REQUEST
+    ); // Header auth is ignored by this raw Action; Play: `?~> annotation.notFound` (400).
     let (status, direct) = request(
         &app,
         None,
@@ -388,7 +388,7 @@ async fn annotation_source_uses_private_link_or_query_user_token_and_real_metada
         )
         .await
         .0,
-        StatusCode::NOT_FOUND
+        StatusCode::BAD_REQUEST
     );
     assert_eq!(
         request(
@@ -400,7 +400,7 @@ async fn annotation_source_uses_private_link_or_query_user_token_and_real_metada
         )
         .await
         .0,
-        StatusCode::NOT_FOUND
+        StatusCode::BAD_REQUEST
     );
     // The Scala userForToken helper accepts every token type usable for
     // authentication; reset-password tokens fall back to anonymous access.
@@ -422,7 +422,7 @@ async fn annotation_source_uses_private_link_or_query_user_token_and_real_metada
         )
         .await
         .0,
-        StatusCode::NOT_FOUND
+        StatusCode::BAD_REQUEST
     );
     let last_used: chrono::DateTime<chrono::Utc> =
         sqlx::query_scalar("SELECT lastUsedDateTime FROM webknossos.tokens WHERE value=$1")
@@ -459,7 +459,7 @@ async fn annotation_source_uses_private_link_or_query_user_token_and_real_metada
         request(&app, None, "GET", &format!("{path}?userToken={job}"), None)
             .await
             .0,
-        StatusCode::NOT_FOUND
+        StatusCode::BAD_REQUEST
     );
     sqlx::query("INSERT INTO webknossos.tokens(_id,value,_user,lastUsedDateTime,expirationDateTime,tokenType,created) SELECT $1,value,_user,lastUsedDateTime,expirationDateTime,tokenType,created FROM webknossos.tokens WHERE value=$2")
         .bind(object_id()).bind(&reset).execute(&db.pool).await.unwrap();
@@ -473,7 +473,7 @@ async fn annotation_source_uses_private_link_or_query_user_token_and_real_metada
         )
         .await
         .0,
-        StatusCode::NOT_FOUND
+        StatusCode::BAD_REQUEST
     );
     sqlx::query("UPDATE webknossos.annotations SET visibility='Public' WHERE _id=$1")
         .bind(&a.annotation)

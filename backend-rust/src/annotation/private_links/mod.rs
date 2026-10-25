@@ -74,7 +74,7 @@ async fn owned_link<'e, E: Executor<'e, Database = Postgres>>(
     q.build_query_as()
         .fetch_optional(executor)
         .await?
-        .ok_or_else(|| ApiError::not_found(crate::msg::annotation::private_link::MISSING))
+        .ok_or_else(|| ApiError::not_found(crate::msg::annotation::private_link::not_found(id)))
 }
 
 async fn list(
@@ -104,7 +104,10 @@ async fn read(
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<PrivateLink>> {
     let id = ObjectId::parse_path(&id)?;
-    let link = owned_link(&state.pool, &user, &id, false).await?;
+    // Play's `findOne(id)` without a message: the generic 404 (update/delete name the link).
+    let link = owned_link(&state.pool, &user, &id, false)
+        .await
+        .map_err(|_| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if link
         .expiration
         .is_some_and(|expiration| expiration <= Utc::now())
@@ -234,15 +237,23 @@ async fn source(
     let annotation = if let Some(id) = linked {
         crate::annotation::access::find(&state.pool, None, &id, true).await?
     } else {
-        let token_or_id = ObjectId::parse(&token_or_id)?;
+        let token_or_id = ObjectId::parse(&token_or_id)
+            .map_err(|_| ApiError::bad_request(crate::msg::object_id::invalid(&token_or_id)))?;
         // This raw Action uses only userToken, not normal authentication headers.
         // Invalid userToken falls back to anonymous annotation access.
         let user = match query.user_token {
             Some(token) => crate::auth::user_for_service_token(&state.pool, &token).await?,
             None => None,
         };
-        crate::annotation::access::find(&state.pool, user.as_ref(), token_or_id.as_str(), false)
-            .await?
+        // Play: `annotationDAO.findOne(…) ?~> annotation.notFound` on an empty result (400).
+        crate::annotation::access::find_optional(
+            &state.pool,
+            user.as_ref(),
+            token_or_id.as_str(),
+            false,
+        )
+        .await?
+        .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?
     };
     let value: Value = sqlx::query_scalar(
         r#"SELECT jsonb_build_object('id',a._id,

@@ -397,7 +397,7 @@ class AnnotationTransactionService @Inject() (
         updateGroup.transactionGroupIndex
       )
       _ <- Fox.fromBool(groupWasHandled) ?~> errorMessage ~> CONFLICT
-    } yield updateGroup.version
+    } yield previousVersion // already handled, so do not move the committed version backwards
   }
 
   private def reportUpdates(annotationId: ObjectId, updateGroups: List[UpdateActionGroup])(using

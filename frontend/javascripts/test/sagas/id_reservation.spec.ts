@@ -30,6 +30,7 @@ function createBookmark(id: number): APIAnnotationBookmark {
     id,
     created: 0,
     name: null,
+    createdAtVersion: null,
     state: {
       position: [0, 0, 0],
       mode: "orthogonal",

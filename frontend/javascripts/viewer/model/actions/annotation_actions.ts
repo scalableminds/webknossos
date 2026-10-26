@@ -53,6 +53,7 @@ type SetAnnotationVisibilityAction = ReturnType<typeof setAnnotationVisibilityAc
 export type EditAnnotationLayerAction = ReturnType<typeof editAnnotationLayerAction>;
 export type SetAnnotationDescriptionAction = ReturnType<typeof setAnnotationDescriptionAction>;
 export type AddBookmarkAction = ReturnType<typeof addBookmarkAction>;
+type SetBookmarkCreatedAtVersionAction = ReturnType<typeof setBookmarkCreatedAtVersionAction>;
 type SetAnnotationAllowUpdateAction = ReturnType<
   typeof setIsUpdatingAnnotationCurrentlyAllowedAction
 >;
@@ -92,6 +93,7 @@ export type AnnotationActionTypes =
   | EditAnnotationLayerAction
   | SetAnnotationDescriptionAction
   | AddBookmarkAction
+  | SetBookmarkCreatedAtVersionAction
   | SetAnnotationAllowUpdateAction
   | SetUserBoundingBoxesAction
   | ChangeUserBoundingBoxAction
@@ -187,6 +189,13 @@ export const addBookmarkAction = (bookmark: APIAnnotationBookmark) =>
   ({
     type: "ADD_BOOKMARK",
     bookmark,
+  }) as const;
+
+export const setBookmarkCreatedAtVersionAction = (bookmarkId: number, createdAtVersion: number) =>
+  ({
+    type: "SET_BOOKMARK_CREATED_AT_VERSION",
+    bookmarkId,
+    createdAtVersion,
   }) as const;
 
 export const setIsUpdatingAnnotationCurrentlyAllowedAction = (currentlyAllowUpdate: boolean) =>

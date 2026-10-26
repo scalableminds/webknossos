@@ -808,6 +808,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
               created: 123,
               name: "Replayed Bookmark",
               state: bookmarkState,
+              createdAtVersion: null,
               smallThumbnailDataBase64: null,
             },
             null,
@@ -823,6 +824,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           created: 123,
           name: "Replayed Bookmark",
           state: bookmarkState,
+          createdAtVersion: 1,
           smallThumbnailDataBase64: null,
         },
       ]);

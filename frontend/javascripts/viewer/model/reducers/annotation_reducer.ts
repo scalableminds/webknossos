@@ -196,6 +196,15 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       });
     }
 
+    case "SET_BOOKMARK_CREATED_AT_VERSION": {
+      const { bookmarkId, createdAtVersion } = action;
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.map((bookmark) =>
+          bookmark.id === bookmarkId ? { ...bookmark, createdAtVersion } : bookmark,
+        ),
+      });
+    }
+
     case "SET_ANNOTATION_ALLOW_UPDATE": {
       const { currentlyAllowUpdate } = action;
       return updateKey(state, "annotation", {

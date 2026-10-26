@@ -78,6 +78,7 @@ export default function BookmarksTab() {
       created: Date.now(),
       name: null,
       state,
+      createdAtVersion: null,
       smallThumbnailDataBase64: thumbnails?.smallDataBase64 ?? null,
     };
     dispatch(addBookmarkAction(bookmark));

@@ -44,12 +44,20 @@ case class AddBookmarkAnnotationAction(
     state: AnnotationBookmarkState,
     largeThumbnailDataBase64: Option[String],
     smallThumbnailDataBase64: Option[String],
+    createdAtVersion: Option[Long] = None, // set by the backend when the update is saved
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends BookmarkUpdateAction derives JsonAutoFormat {
-  def toProto: AnnotationBookmarkProto =
-    AnnotationBookmarkProto(id = id, created = created, name = name, description = description, state = state.toProto)
+  def toProto(fallbackCreatedAtVersion: Long): AnnotationBookmarkProto =
+    AnnotationBookmarkProto(
+      id = id,
+      created = created,
+      name = name,
+      description = description,
+      state = state.toProto,
+      createdAtVersion = createdAtVersion.getOrElse(fallbackCreatedAtVersion)
+    )
 
   def thumbnails: Seq[(BookmarkThumbnailSize.Value, Array[Byte])] =
     Seq(

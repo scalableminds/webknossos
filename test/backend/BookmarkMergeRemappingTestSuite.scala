@@ -30,6 +30,7 @@ class BookmarkMergeRemappingTestSuite extends AnyWordSpec {
     AnnotationBookmarkProto(
       id = 3,
       created = 0L,
+      createdAtVersion = 4L,
       name = Some("name"),
       state = AnnotationBookmarkStateProto(
         position = origin,
@@ -110,11 +111,17 @@ class BookmarkMergeRemappingTestSuite extends AnyWordSpec {
           mapping = Some(BookmarkMappingProto("volumeA", MappingTypeProto.AGGLOMERATE)),
           meshes = Seq(adHocMesh(5, Some("volumeA")), adHocMesh(6))
         ),
-        BookmarkLayerStateProto("color", mapping = Some(BookmarkMappingProto("agglomerate_view_5", MappingTypeProto.AGGLOMERATE)))
+        BookmarkLayerStateProto(
+          "color",
+          mapping = Some(BookmarkMappingProto("agglomerate_view_5", MappingTypeProto.AGGLOMERATE))
+        )
       )
       val withEditableMapping =
         remapping.copy(editableMappingIdMap = Map("volumeA" -> "mergedVolume"))(bookmark(layers = layers), 1)
-      assert(withEditableMapping.state.layers.flatMap(_.mapping.map(_.mappingName)) == Seq("mergedVolume", "agglomerate_view_5"))
+      assert(
+        withEditableMapping.state.layers
+          .flatMap(_.mapping.map(_.mappingName)) == Seq("mergedVolume", "agglomerate_view_5")
+      )
       assert(withEditableMapping.state.layers.head.meshes.map(_.mappingName) == Seq(Some("mergedVolume"), None))
 
       val withoutEditableMapping = remapping(bookmark(layers = layers), 1)

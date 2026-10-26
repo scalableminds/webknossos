@@ -204,6 +204,7 @@ export function parseProtoAnnotationBookmarks(
     created: Number(bookmark.created),
     name: bookmark.name ?? null,
     state: bookmarkStateFromProto(bookmark.state),
+    createdAtVersion: Number(bookmark.createdAtVersion),
     // Thumbnails are loaded separately, see getBookmarkThumbnailUrl.
     smallThumbnailDataBase64: null,
   }));

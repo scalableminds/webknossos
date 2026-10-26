@@ -407,6 +407,8 @@ export function* tryToIncorporateActions(
               created,
               name,
               state,
+              // Unsaved bookmarks of the user get their version once they are saved.
+              createdAtVersion: areUnsavedChangesOfUser ? null : actionBatch.version,
               smallThumbnailDataBase64: smallThumbnailDataBase64 ?? null,
             }),
           );

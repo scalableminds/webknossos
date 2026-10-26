@@ -99,6 +99,7 @@ import {
 import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
 import { diffBoundingBoxes } from "./diffing/bounding_box_diffing";
 import { diffGroups } from "./diffing/group_diffing";
+import { createOperationContext, type OperationContext } from "./operation_context_saga";
 import { ensureWkInitialized } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 import { subscribeToAnnotationMutex } from "./saving/save_mutex_saga";
@@ -279,8 +280,25 @@ function* watchAgglomerateLoading(): Saga<void> {
   ]);
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* call(ensureWkInitialized);
-  yield* takeEvery(channel, loadAgglomerateTreeWithAtPosition);
+  yield* takeEvery(channel, loadAgglomerateTreeInOperationContext);
 }
+
+function* loadAgglomerateTreeInOperationContext(
+  action: LoadAgglomerateTreeFromIdAction | LoadAgglomerateTreeAtPositionAction,
+): Saga<void> {
+  // Loading an agglomerate tree must not interleave with proofreading actions. Otherwise, a
+  // proofreading action could change the agglomerate while its tree is being fetched. The
+  // agglomerate tree syncing of that action only updates trees that are already loaded, so the
+  // tree would be outdated when it's added.
+  // Waiting (instead of ignoring the request) is safe here, because nothing is held while waiting.
+  const ctx = yield* createOperationContext({
+    id: "LOAD_AGGLOMERATE_TREE",
+    description: "Loading agglomerate tree",
+    behaviorWhenDisallowed: "wait",
+  });
+  yield* ctx.execute(() => loadAgglomerateTreeWithAtPosition(action, ctx));
+}
+
 function* watchConnectomeAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
   const channel = yield* actionChannel("LOAD_CONNECTOME_AGGLOMERATE_TREE");
@@ -404,6 +422,7 @@ function handleAgglomerateLoadingError(
 
 function* loadAgglomerateTreeWithAtPosition(
   action: LoadAgglomerateTreeFromIdAction | LoadAgglomerateTreeAtPositionAction,
+  ctx: OperationContext,
 ): Saga<void> {
   const allowUpdate = yield* select(mayEditAnnotation);
   if (!allowUpdate) return;
@@ -429,7 +448,7 @@ function* loadAgglomerateTreeWithAtPosition(
     );
 
     // We already sync here to ensure to have the newest annotation version to get an up-to-date agglomerate tree.
-    yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+    yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch, ctx);
   }
 
   const agglomerateId =
@@ -505,7 +524,9 @@ function* loadAgglomerateTreeWithAtPosition(
     if (shouldGuardWithAnnotationMutex) {
       // Enforces to directly store the loaded agglomerate tree to the annotation on the server
       // to enforce that all users also have the agglomerate tree present upon the next sync.
-      yield* call([Model, Model.ensureSavedState]);
+      // The context must be passed. Otherwise, saving would need its own operation, which
+      // can't start while this one is running.
+      yield* call([Model, Model.ensureSavedState], ctx);
       // Then release the mutex if it was acquired.
       if (unsubscribeFromAnnotationMutex) {
         yield* call(unsubscribeFromAnnotationMutex);

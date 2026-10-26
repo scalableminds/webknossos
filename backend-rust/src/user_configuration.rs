@@ -34,7 +34,6 @@ async fn update(
     user: AuthUser,
     RequestJson(configuration): RequestJson<Map<String, Value>>,
 ) -> ApiResult<Json<Messages>> {
-    // The Scala UserDAO replaces the entire configuration, without merging keys.
     let rows_affected =
         dao::update_user_configuration(&state.pool, user.id, Value::Object(configuration)).await?;
     if rows_affected != 1 {

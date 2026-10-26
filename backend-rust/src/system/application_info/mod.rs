@@ -2,6 +2,8 @@
 //! check, help mail) plus the configuration shared by the remaining
 //! "misc" controllers (analytics, credits, pricing, terms of service,
 //! initial data). Defaults follow `conf/application.conf` unless noted.
+mod dao;
+
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -438,12 +440,7 @@ pub(crate) fn ok_empty() -> Response {
 }
 
 pub(crate) async fn build_info_json(state: &AppState, config: &MiscConfig) -> Value {
-    let schema_version: Option<i64> =
-        sqlx::query_scalar("SELECT schemaVersion FROM webknossos.releaseInformation")
-            .fetch_optional(&state.pool)
-            .await
-            .ok()
-            .flatten();
+    let schema_version = dao::find_schema_version(&state.pool).await.ok().flatten();
     let info = &config.build_info;
     json!({
         "webknossos": {
@@ -532,16 +529,10 @@ async fn help_email(
     user: AuthUser,
     Json(body): Json<HelpEmailParameters>,
 ) -> ApiResult<Response> {
-    let (organization_name, first_name, last_name, email): (String, String, String, String) =
-        sqlx::query_as(
-            r#"SELECT o.name, m.firstName, m.lastName, m.email FROM webknossos.users_ u
-               JOIN webknossos.organizations_ o ON o._id = u._organization
-               JOIN webknossos.multiUsers_ m ON m._id = u._multiUser WHERE u._id = $1"#,
-        )
-        .bind(&user.id)
-        .fetch_optional(&state.pool)
-        .await?
-        .ok_or_else(|| ApiError::not_found(crate::msg::user::NOT_FOUND_NO_ID))?;
+    let (organization_name, first_name, last_name, email) =
+        dao::find_help_email_context(&state.pool, &user.id)
+            .await?
+            .ok_or_else(|| ApiError::not_found(crate::msg::user::NOT_FOUND_NO_ID))?;
     let name = format!("{first_name} {last_name}");
     mailer.send(templates::help(
         &name,

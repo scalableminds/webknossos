@@ -23,7 +23,6 @@ use std::{
 };
 
 use futures_util::FutureExt;
-use sqlx::PgConnection;
 use tokio::{sync::watch, task::JoinHandle};
 
 use crate::config::{ConfigError, Env};
@@ -241,17 +240,9 @@ pub const fn advisory_lock_key(name: &str) -> i64 {
     hash as i64
 }
 
-/// `pg_try_advisory_xact_lock(key)` on a connection that is inside a transaction. The lock is
-/// released automatically at commit or rollback. Returns false if another session holds it.
-pub async fn try_advisory_xact_lock(
-    connection: &mut PgConnection,
-    key: i64,
-) -> Result<bool, sqlx::Error> {
-    sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1)")
-        .bind(key)
-        .fetch_one(connection)
-        .await
-}
+mod dao;
+
+pub use dao::try_advisory_xact_lock;
 
 #[cfg(test)]
 mod tests;

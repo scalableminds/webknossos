@@ -14,6 +14,8 @@
 //! uses `NOW()`. Every run is one transaction that first takes the job's advisory lock
 //! (`crate::background::scheduler::try_advisory_xact_lock`), so concurrent instances never run the same job at once.
 
+mod dao;
+
 use crate::config::{ConfigError, Env};
 use std::{collections::HashMap, time::Duration};
 
@@ -119,33 +121,20 @@ impl HousekeepingJob {
         connection: &mut PgConnection,
         now: DateTime<Utc>,
     ) -> Result<u64, sqlx::Error> {
-        let query = match self {
-            Self::ExpiredTokens => sqlx::query(
-                "UPDATE webknossos.tokens SET isDeleted = TRUE WHERE NOT isDeleted AND expirationDateTime <= $1",
-            )
-            .bind(now),
-            Self::OldTokens => sqlx::query(
-                "DELETE FROM webknossos.tokens WHERE isDeleted AND expirationDateTime <= $1",
-            )
-            .bind(now - TOKEN_HARD_DELETE_GRACE_PERIOD),
-            Self::ExpiredInvites => sqlx::query(
-                "UPDATE webknossos.invites SET isDeleted = TRUE WHERE NOT isDeleted AND expirationDateTime <= $1",
-            )
-            .bind(now),
-            Self::InitializingAnnotations => sqlx::query(
-                "DELETE FROM webknossos.annotations \
-                 WHERE state = 'Initializing'::webknossos.ANNOTATION_STATE \
-                 AND created < (NOW() - INTERVAL '1 hour')",
-            ),
+        match self {
+            Self::ExpiredTokens => dao::mark_expired_tokens_deleted(connection, now).await,
+            Self::OldTokens => {
+                dao::delete_old_tokens(connection, now - TOKEN_HARD_DELETE_GRACE_PERIOD).await
+            }
+            Self::ExpiredInvites => dao::mark_expired_invites_deleted(connection, now).await,
+            Self::InitializingAnnotations => dao::delete_initializing_annotations(connection).await,
             Self::ExpiredThumbnails => {
-                sqlx::query("DELETE FROM webknossos.dataset_thumbnails WHERE created < $1")
-                    .bind(now - THUMBNAIL_CACHE_DURATION)
+                dao::delete_expired_thumbnails(connection, now - THUMBNAIL_CACHE_DURATION).await
             }
             Self::ExpiredAnnotationMutexes => {
-                sqlx::query("DELETE FROM webknossos.annotation_mutexes WHERE expiry < NOW()")
+                dao::delete_expired_annotation_mutexes(connection).await
             }
-        };
-        Ok(query.execute(connection).await?.rows_affected())
+        }
     }
 
     /// One complete run: transaction, advisory lock (skip if held elsewhere), statement, commit.

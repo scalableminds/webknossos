@@ -49,8 +49,10 @@
 //! actor). The default `LogMailer` does not deliver SMTP mail; that transport
 //! gap is crate-wide and not specific to this writer.
 
+mod dao;
+
 use chrono::{DateTime, Utc};
-use sqlx::{FromRow, PgPool, Postgres, Transaction};
+use sqlx::{PgPool, Postgres, Transaction};
 
 use crate::{
     annotation::provider::AccessContext,
@@ -183,37 +185,12 @@ impl PendingInteraction {
     }
 }
 
-#[derive(FromRow)]
-struct OverLimitRow {
-    project_name: String,
-    expected_time: Option<i64>,
-    owner_first_name: String,
-    owner_last_name: String,
-    project_owner_email: String,
-}
-
-/// Scala `signalOverTime` lookups: annotation owner + MultiUser, task,
-/// project, expectedTime, project owner + MultiUser, all live.
 async fn over_limit_mail_for(
     pool: &PgPool,
     candidate: &OverLimitCandidate,
     public_uri: &str,
 ) -> Result<Option<Mail>, sqlx::Error> {
-    let row: Option<OverLimitRow> = sqlx::query_as(
-        r#"SELECT p.name AS project_name,p.expectedTime AS expected_time,
-             m.firstName AS owner_first_name,m.lastName AS owner_last_name,
-             pm.email AS project_owner_email
-           FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON m._id=u._multiUser
-           JOIN webknossos.tasks_ t ON t._id=$2
-           JOIN webknossos.projects_ p ON p._id=t._project
-           JOIN webknossos.users_ po ON po._id=p._owner
-           JOIN webknossos.multiUsers_ pm ON pm._id=po._multiUser
-           WHERE u._id=$1"#,
-    )
-    .bind(&candidate.owner_id)
-    .bind(&candidate.task_id)
-    .fetch_optional(pool)
-    .await?;
+    let row = dao::find_over_limit_row(pool, &candidate.owner_id, &candidate.task_id).await?;
     let Some(row) = row else { return Ok(None) };
     let Some(limit) = row.expected_time else {
         return Ok(None);
@@ -282,23 +259,12 @@ async fn lock_accounting_rows(
     if annotations.is_empty() {
         return Ok(());
     }
-    // Global like Scala's logTime UPDATE (deleted rows included).
-    let tasks: Vec<Option<ObjectId>> = sqlx::query_scalar(
-        "SELECT _task FROM webknossos.annotations WHERE _id=ANY($1) ORDER BY _id FOR NO KEY UPDATE",
-    )
-    .bind(&annotations)
-    .fetch_all(&mut **transaction)
-    .await?;
+    let tasks = dao::find_task_ids_for_update(transaction, &annotations).await?;
     let mut tasks: Vec<ObjectId> = tasks.into_iter().flatten().collect();
     tasks.sort_unstable();
     tasks.dedup();
     if !tasks.is_empty() {
-        sqlx::query(
-            "SELECT 1 FROM webknossos.tasks WHERE _id=ANY($1) ORDER BY _id FOR NO KEY UPDATE",
-        )
-        .bind(&tasks)
-        .execute(&mut **transaction)
-        .await?;
+        dao::lock_tasks(transaction, &tasks).await?;
     }
     Ok(())
 }
@@ -314,49 +280,38 @@ async fn execute_plan(
 
     for insert in &plan.inserts {
         let id = SpanRef::New(insert.ordinal).resolve(new_span_ids)?;
-        // TimeSpan.fromInstant: time 0 and numberOfUpdates 0 explicitly (the
-        // column default is 1), lastUpdate = created.
-        sqlx::query(
-            "INSERT INTO webknossos.timespans(_id,_user,_annotation,time,lastUpdate,numberOfUpdates,created,isDeleted) VALUES($1,$2,$3,$4,$5,$6,$7,false)",
+        dao::insert_one(
+            transaction,
+            &id,
+            user_id,
+            &insert.state.annotation_id,
+            insert.state.time_millis,
+            timestamp(insert.state.last_update_millis)?,
+            insert.state.number_of_updates,
+            timestamp(insert.state.created_millis)?,
         )
-        .bind(&id)
-        .bind(user_id)
-        .bind(&insert.state.annotation_id)
-        .bind(insert.state.time_millis)
-        .bind(timestamp(insert.state.last_update_millis)?)
-        .bind(insert.state.number_of_updates)
-        .bind(timestamp(insert.state.created_millis)?)
-        .execute(&mut **transaction)
         .await?;
     }
 
     let mut candidates = Vec::new();
     for close in &plan.closes {
         let span_id = close.span.resolve(new_span_ids)?;
-        // TimeSpanDAO.updateOne: every field except created, no row-count check.
-        sqlx::query(
-            "UPDATE webknossos.timespans SET _user=$2,_annotation=$3,time=$4,lastUpdate=$5,numberOfUpdates=$6,isDeleted=false WHERE _id=$1",
+        dao::update_one(
+            transaction,
+            &span_id,
+            user_id,
+            &close.after.annotation_id,
+            close.after.time_millis,
+            timestamp(close.after.last_update_millis)?,
+            close.after.number_of_updates,
         )
-        .bind(&span_id)
-        .bind(user_id)
-        .bind(&close.after.annotation_id)
-        .bind(close.after.time_millis)
-        .bind(timestamp(close.after.last_update_millis)?)
-        .bind(close.after.number_of_updates)
-        .execute(&mut **transaction)
         .await?;
 
         // Legacy span without annotation: nothing else to credit.
         let Some(annotation_id) = &close.after.annotation_id else {
             continue;
         };
-        sqlx::query(
-            "UPDATE webknossos.annotations SET tracingTime=COALESCE(tracingTime,0)+$2 WHERE _id=$1",
-        )
-        .bind(annotation_id)
-        .bind(close.delta_millis)
-        .execute(&mut **transaction)
-        .await?;
+        dao::add_tracing_time_to_annotation(transaction, annotation_id, close.delta_millis).await?;
         let annotation = crate::annotation::access::find_optional(
             &mut **transaction,
             access.requester,
@@ -366,13 +321,7 @@ async fn execute_plan(
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
         if let Some(task_id) = annotation.task_id {
-            sqlx::query(
-                "UPDATE webknossos.tasks SET tracingTime=COALESCE(tracingTime,0)+$2 WHERE _id=$1",
-            )
-            .bind(&task_id)
-            .bind(close.delta_millis)
-            .execute(&mut **transaction)
-            .await?;
+            dao::add_tracing_time_to_task(transaction, &task_id, close.delta_millis).await?;
             if let Some(tracing_time_after) = annotation.tracing_time {
                 candidates.push(OverLimitCandidate {
                     annotation_id: annotation.id,

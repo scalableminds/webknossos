@@ -1,9 +1,10 @@
+mod dao;
+
 use crate::{
     AppState,
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json, Path},
-    sql::Sql,
     util::id::{ObjectId, PathObjectId},
 };
 use axum::{
@@ -58,7 +59,6 @@ struct Maintenance {
     end_time: DateTime<Utc>,
     message: String,
 }
-const COLUMNS: &str = "_id AS id, startTime AS start_time, endTime AS end_time, message";
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -78,11 +78,8 @@ fn require_superuser(user: &AuthUser) -> ApiResult<()> {
     }
 }
 async fn upcoming(State(state): State<AppState>) -> ApiResult<ResponseJson<Vec<Maintenance>>> {
-    let query = format!(
-        "SELECT {COLUMNS} FROM webknossos.maintenances_ WHERE endTime >= NOW() ORDER BY startTime, _id"
-    );
     Ok(ResponseJson(
-        sqlx::query_as(&query).fetch_all(&state.pool).await?,
+        dao::find_all_current_and_upcoming(&state.pool).await?,
     ))
 }
 async fn list(
@@ -90,10 +87,7 @@ async fn list(
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Vec<Maintenance>>> {
     require_superuser(&user)?;
-    let query = format!("SELECT {COLUMNS} FROM webknossos.maintenances_ ORDER BY startTime, _id");
-    Ok(ResponseJson(
-        sqlx::query_as(&query).fetch_all(&state.pool).await?,
-    ))
+    Ok(ResponseJson(dao::find_all(&state.pool).await?))
 }
 async fn read(
     State(state): State<AppState>,
@@ -101,31 +95,15 @@ async fn read(
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<ResponseJson<Maintenance>> {
     require_superuser(&user)?;
-    let mut q = Sql::new("SELECT ");
-    q.push(COLUMNS)
-        .push(" FROM webknossos.maintenances_ WHERE _id=")
-        .push_bind(&*id);
     Ok(ResponseJson(
-        q.build_query_as()
-            .fetch_optional(&state.pool)
+        dao::find_one(&state.pool, &id)
             .await?
             .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?,
     ))
 }
 async fn insert(pool: &sqlx::PgPool, user: &AuthUser, body: Parameters) -> ApiResult<Maintenance> {
     require_superuser(user)?;
-    let mut q = Sql::new(
-        "INSERT INTO webknossos.maintenances (_id, _user, startTime, endTime, message) VALUES (",
-    );
-    let mut values = q.separated(",");
-    values
-        .push_bind(ObjectId::new())
-        .push_bind(&user.id)
-        .push_bind(body.start_time)
-        .push_bind(body.end_time)
-        .push_bind(body.message);
-    q.push(") RETURNING ").push(COLUMNS);
-    Ok(q.build_query_as().fetch_one(pool).await?)
+    dao::insert_one(pool, &user.id, body.start_time, body.end_time, body.message).await
 }
 async fn create(
     State(state): State<AppState>,
@@ -153,21 +131,16 @@ async fn update(
     Json(body): Json<Parameters>,
 ) -> ApiResult<ResponseJson<Maintenance>> {
     require_superuser(&user)?;
-    let mut q = Sql::new("UPDATE webknossos.maintenances SET startTime=");
-    q.push_bind(body.start_time)
-        .push(", endTime=")
-        .push_bind(body.end_time)
-        .push(", message=")
-        .push_bind(body.message)
-        .push(" WHERE _id=")
-        .push_bind(&*id)
-        .push(" AND NOT isDeleted RETURNING ")
-        .push(COLUMNS);
     Ok(ResponseJson(
-        q.build_query_as()
-            .fetch_optional(&state.pool)
-            .await?
-            .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?,
+        dao::update_one(
+            &state.pool,
+            &id,
+            body.start_time,
+            body.end_time,
+            body.message,
+        )
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?,
     ))
 }
 async fn delete(
@@ -176,15 +149,7 @@ async fn delete(
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<StatusCode> {
     require_superuser(&user)?;
-    if sqlx::query(
-        "UPDATE webknossos.maintenances SET isDeleted=TRUE WHERE _id=$1 AND NOT isDeleted",
-    )
-    .bind(&*id)
-    .execute(&state.pool)
-    .await?
-    .rows_affected()
-        == 0
-    {
+    if dao::delete_one(&state.pool, &id).await? == 0 {
         return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
     Ok(StatusCode::OK)

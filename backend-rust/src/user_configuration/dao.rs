@@ -13,6 +13,7 @@ pub(crate) async fn find_user_configuration(pool: &PgPool, user_id: ObjectId) ->
     )
 }
 
+/// Replaces the entire configuration, without merging keys (as the Scala UserDAO does).
 /// Returns the number of updated rows.
 pub(crate) async fn update_user_configuration(
     pool: &PgPool,

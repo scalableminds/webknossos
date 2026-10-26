@@ -11,6 +11,8 @@
 //! [`track_for_user`] (another identity, e.g. a freshly created account) or
 //! [`track_open_dataset`]. [`spawn_heartbeat`] runs Play's 24-hour
 //! `webknossos_heartbeat` ticker (`AnalyticsService.tick`).
+mod dao;
+
 use std::{future::Future, time::Duration};
 
 use axum::{
@@ -182,27 +184,6 @@ pub(crate) fn parse_well_known_uris(
 // ---------------------------------------------------------------------------
 // Persistence and forwarding
 
-/// AnalyticsDAO.insertMany (one statement, like Play's multi-row VALUES).
-async fn insert_many(pool: &sqlx::PgPool, events: &[AnalyticsEvent]) -> ApiResult<()> {
-    let mut builder = sqlx::QueryBuilder::new(
-        "INSERT INTO webknossos.analyticsEvents(_id, created, sessionId, eventType, eventProperties, _user, _organization, isOrganizationAdmin, isSuperUser, webknossosUri) ",
-    );
-    builder.push_values(events, |mut row, event| {
-        row.push_bind(ObjectId::new())
-            .push_bind(event.time)
-            .push_bind(event.session_id)
-            .push_bind(&event.event_type)
-            .push_bind(Value::Object(event.event_properties.clone()))
-            .push_bind(&event.user_id)
-            .push_bind(&event.user_properties.organization_id)
-            .push_bind(event.user_properties.is_organization_admin)
-            .push_bind(event.user_properties.is_super_user)
-            .push_bind(&event.user_properties.webknossos_uri);
-    });
-    builder.build().execute(pool).await?;
-    Ok(())
-}
-
 /// AnalyticsSessionService.refreshAndGetSessionId
 pub(crate) fn refresh_session_id(
     misc: &MiscState,
@@ -262,12 +243,8 @@ pub(crate) fn track(
 /// Identity fields of the requesting user: organization and admin flag of the
 /// request identity, superuser flag of its account.
 async fn actor_for_auth_user(pool: &sqlx::PgPool, user: &AuthUser) -> ApiResult<Actor> {
-    let (multi_user_id, is_super_user): (ObjectId, bool) = sqlx::query_as(
-        "SELECT m._id, m.isSuperUser FROM webknossos.users u JOIN webknossos.multiUsers_ m ON m._id = u._multiUser WHERE u._id = $1",
-    )
-    .bind(&user.id)
-    .fetch_one(pool)
-    .await?;
+    let (multi_user_id, is_super_user) =
+        dao::find_multi_user_and_super_user_flag(pool, &user.id).await?;
     Ok(Actor {
         multi_user_id,
         organization_id: user.organization_id.clone(),
@@ -278,13 +255,8 @@ async fn actor_for_auth_user(pool: &sqlx::PgPool, user: &AuthUser) -> ApiResult<
 
 /// Loads the event user's identity fields by user id.
 async fn actor_for(pool: &sqlx::PgPool, user_id: &ObjectId) -> ApiResult<Actor> {
-    let (multi_user_id, organization_id, is_admin, is_super_user): (ObjectId, String, bool, bool) =
-        sqlx::query_as(
-            "SELECT m._id, u._organization, u.isAdmin, m.isSuperUser FROM webknossos.users u JOIN webknossos.multiUsers_ m ON m._id = u._multiUser WHERE u._id = $1",
-        )
-        .bind(user_id)
-        .fetch_one(pool)
-        .await?;
+    let (multi_user_id, organization_id, is_admin, is_super_user) =
+        dao::find_actor_fields(pool, user_id).await?;
     Ok(Actor {
         multi_user_id,
         organization_id,
@@ -318,21 +290,10 @@ async fn open_dataset_properties(
     pool: &sqlx::PgPool,
     dataset_id: &ObjectId,
 ) -> ApiResult<Map<String, Value>> {
-    let (name, organization, uploader): (String, String, Option<ObjectId>) = sqlx::query_as(
-        "SELECT name, _organization, _uploader FROM webknossos.datasets WHERE _id = $1",
-    )
-    .bind(dataset_id)
-    .fetch_one(pool)
-    .await?;
+    let (name, organization, uploader) =
+        dao::find_name_organization_and_uploader(pool, dataset_id).await?;
     let uploader_multi_user_id = match uploader {
-        Some(uploader) => Some(
-            sqlx::query_scalar::<_, ObjectId>(
-                "SELECT _multiUser FROM webknossos.users_ WHERE _id = $1",
-            )
-            .bind(uploader)
-            .fetch_one(pool)
-            .await?,
-        ),
+        Some(uploader) => Some(dao::find_multi_user_id(pool, uploader).await?),
         None => None,
     };
     let Value::Object(properties) = json!({
@@ -404,7 +365,7 @@ async fn emit(
         if analytics.verbose_logging_enabled {
             tracing::info!(event_type = %event.event_type, session_id, "Storing analytics event");
         }
-        if let Err(error) = insert_many(pool, std::slice::from_ref(&event)).await {
+        if let Err(error) = dao::insert_many(pool, std::slice::from_ref(&event)).await {
             tracing::warn!(%error, "Storing analytics event failed");
         }
     } else if analytics.verbose_logging_enabled {
@@ -470,11 +431,7 @@ pub async fn run_heartbeat(pool: &sqlx::PgPool, misc: &MiscState) -> Result<JobO
         lock.rollback().await?;
         return Ok(JobOutcome::SkippedLocked);
     }
-    let oldest: Option<ObjectId> = sqlx::query_scalar(
-        "SELECT _id FROM webknossos.users_ WHERE NOT isDeactivated ORDER BY created LIMIT 1",
-    )
-    .fetch_optional(&mut *lock)
-    .await?;
+    let oldest = dao::find_oldest_active_user_id(&mut lock).await?;
     let Some(user_id) = oldest else {
         lock.rollback().await?;
         // Play's parseFirst fails the tick; nothing is sent.
@@ -568,7 +525,7 @@ async fn ingest(
         // Play renders an empty multi-row INSERT, which PostgreSQL rejects.
         return Err(ApiError::bad_request(crate::msg::analytics::NO_EVENTS));
     }
-    insert_many(&state.pool, &events).await?;
+    dao::insert_many(&state.pool, &events).await?;
     Ok(ok_empty())
 }
 

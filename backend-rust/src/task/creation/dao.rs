@@ -137,8 +137,8 @@ pub(crate) async fn is_script_readable(
     .await?)
 }
 
-/// The team's organization and whether the user manages it (task creation
-/// through the JSON route). `None` if the team does not exist.
+/// The team's organization and whether the user manages it. `None` if the
+/// team does not exist.
 pub(crate) async fn find_team_organization_and_manager(
     pool: &PgPool,
     user: &AuthUser,
@@ -148,24 +148,6 @@ pub(crate) async fn find_team_organization_and_manager(
         "SELECT t._organization, EXISTS (SELECT 1 FROM webknossos.user_team_roles r
                WHERE r._user=$2 AND r._team=t._id AND r.isTeamManager)
              FROM webknossos.teams_ t WHERE t._id=$1",
-    )
-    .bind(team_id)
-    .bind(&user.id)
-    .fetch_optional(pool)
-    .await?)
-}
-
-/// The team's organization and whether the user manages it (task creation
-/// from files). `None` if the team does not exist.
-pub(crate) async fn find_team_organization_and_manager_for_files(
-    pool: &PgPool,
-    user: &AuthUser,
-    team_id: &ObjectId,
-) -> ApiResult<Option<(String, bool)>> {
-    Ok(sqlx::query_as(
-        "SELECT t._organization, EXISTS (SELECT 1 FROM webknossos.user_team_roles r
-           WHERE r._user=$2 AND r._team=t._id AND r.isTeamManager)
-         FROM webknossos.teams_ t WHERE t._id=$1",
     )
     .bind(team_id)
     .bind(&user.id)

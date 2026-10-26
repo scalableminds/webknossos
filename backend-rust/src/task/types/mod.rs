@@ -155,7 +155,7 @@ async fn create(
     if !crate::projects::can_manage_team_in_tx(&mut tx, &user, &parameters.team_id).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    dao::lock_summary_for_create(&mut tx, &user.organization_id, &parameters.summary).await?;
+    dao::lock_summary(&mut tx, &user.organization_id, &parameters.summary).await?;
     let exists = dao::is_summary_taken(&mut tx, &user.organization_id, &parameters.summary).await?;
     if exists {
         return Err(ApiError::bad_request(crate::msg::task_type::summary_taken(
@@ -194,7 +194,7 @@ async fn update(
             crate::msg::task_type::MAG_RESTRICTIONS_IMMUTABLE,
         ));
     }
-    dao::lock_summary_for_update(&mut tx, &user.organization_id, &parameters.summary).await?;
+    dao::lock_summary(&mut tx, &user.organization_id, &parameters.summary).await?;
     let exists =
         dao::is_summary_taken_by_other(&mut tx, &user.organization_id, &parameters.summary, &id)
             .await?;

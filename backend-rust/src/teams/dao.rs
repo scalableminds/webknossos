@@ -51,8 +51,6 @@ pub(crate) async fn is_organization_team_for_update(
     id: &ObjectId,
     organization_id: &str,
 ) -> ApiResult<Option<bool>> {
-    // READ COMMITTED intentionally refreshes the reference-check snapshot after
-    // waiting for creators' team SHARE locks. FOR UPDATE fences new references.
     Ok(sqlx::query_scalar(
         "SELECT isOrganizationTeam FROM webknossos.teams
          WHERE _id = $1 AND _organization = $2 AND NOT isDeleted FOR UPDATE",

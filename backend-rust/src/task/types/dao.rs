@@ -53,20 +53,7 @@ pub(crate) async fn find_all_json(pool: &PgPool, user: &AuthUser) -> ApiResult<V
 }
 
 /// Takes a transaction-scoped advisory lock on the organization/summary.
-pub(crate) async fn lock_summary_for_create(
-    connection: &mut PgConnection,
-    organization_id: &str,
-    summary: &str,
-) -> ApiResult<()> {
-    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
-        .bind(format!("taskType:{}:{}", organization_id, summary))
-        .execute(connection)
-        .await?;
-    Ok(())
-}
-
-/// Takes a transaction-scoped advisory lock on the organization/summary.
-pub(crate) async fn lock_summary_for_update(
+pub(crate) async fn lock_summary(
     connection: &mut PgConnection,
     organization_id: &str,
     summary: &str,

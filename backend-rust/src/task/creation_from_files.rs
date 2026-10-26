@@ -165,10 +165,8 @@ async fn assert_team_manager_or_admin_of(
     user: &AuthUser,
     team_id: &ObjectId,
 ) -> ApiResult<()> {
-    let team = crate::task::creation::dao::find_team_organization_and_manager_for_files(
-        pool, user, team_id,
-    )
-    .await?;
+    let team =
+        crate::task::creation::dao::find_team_organization_and_manager(pool, user, team_id).await?;
     let (organization, manages) =
         team.ok_or_else(|| ApiError::bad_request(crate::msg::team::ADMIN_NOT_ALLOWED))?;
     if manages || (user.is_admin && organization == user.organization_id) {

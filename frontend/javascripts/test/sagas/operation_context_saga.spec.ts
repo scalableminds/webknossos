@@ -492,6 +492,34 @@ describe("operation_context_saga", () => {
       expect(ctx!.isActive()).toBe(false);
     });
 
+    it("does not continue the cancelled saga after execute() but still unregisters", async () => {
+      const { sagaMiddleware, store } = makeTestStore();
+      let isExecuting = false;
+      let continuedAfterCancel = false;
+
+      function* op() {
+        const ctx = yield* createOperationContext({ id: "PROOFREADING" });
+        const child = borrowedContext(ctx, "SAVE");
+        yield* ctx.execute(function* () {
+          yield* child.execute(function* () {
+            isExecuting = true;
+            yield delay(1000);
+          });
+        });
+        continuedAfterCancel = true;
+      }
+
+      const task = sagaMiddleware.run(op);
+      await vi.waitFor(() => expect(isExecuting).toBe(true));
+      task.cancel();
+      await task.toPromise();
+      // The cleanup (yielding effects in finally blocks) must not make the cancelled saga resume.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(continuedAfterCancel).toBe(false);
+      expect(store.getState().operationContext.activeOperations).toEqual([]);
+      expect(store.getState().operationContext.childOperations).toEqual([]);
+    });
+
     it("is false for a borrowed context once its parent finished", async () => {
       const { sagaMiddleware } = makeTestStore();
       let child: OperationContext | null = null;

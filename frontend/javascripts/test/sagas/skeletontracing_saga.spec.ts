@@ -14,6 +14,7 @@ import {
   createNodeAction,
   createTreeAction,
   deleteNodeAction,
+  deleteNodeAndReconnectNeighborsAction,
   deleteTreeAction,
   mergeTreesAction,
   setActiveNodeAction,
@@ -305,6 +306,25 @@ describe("SkeletonTracingSaga", () => {
         target: 2,
       },
     });
+  });
+
+  it("should emit deleteNode, deleteEdge and createEdge update actions when reconnecting neighbors", () => {
+    const testState = applyActions(initialState, [createNode, createNode, createNode]);
+    const newState = SkeletonTracingReducer(testState, deleteNodeAndReconnectNeighborsAction(2, 1));
+    const updateActions = testDiffing(testState.annotation, newState.annotation);
+    const treeUpdateActions = updateActions.filter((ua) =>
+      ["deleteNode", "deleteEdge", "createEdge", "createNode", "deleteTree"].includes(ua.name),
+    );
+
+    expect(treeUpdateActions).toHaveLength(4);
+    expect(treeUpdateActions).toEqual(
+      expect.arrayContaining([
+        { name: "deleteNode", value: { actionTracingId, nodeId: 2, treeId: 1 } },
+        { name: "deleteEdge", value: { actionTracingId, treeId: 1, source: 1, target: 2 } },
+        { name: "deleteEdge", value: { actionTracingId, treeId: 1, source: 2, target: 3 } },
+        { name: "createEdge", value: { actionTracingId, treeId: 1, source: 1, target: 3 } },
+      ]),
+    );
   });
 
   it("should emit a deleteTree update action", () => {

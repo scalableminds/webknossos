@@ -4,11 +4,10 @@ import Ansi from "ansi-to-react";
 import { App, Button, Flex, Select, Switch } from "antd";
 import chalk from "chalk";
 import classnames from "classnames";
-import { usePolling } from "libs/react_hooks";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { VoxelyticsLogLine } from "types/api_types";
 import { LOG_LEVELS } from "viewer/constants";
-import { addAfterPadding, addBeforePadding, type Result, VX_POLLING_INTERVAL } from "./utils";
+import { addAfterPadding, addBeforePadding, type Result } from "./utils";
 
 type LogResult = Result<Array<VoxelyticsLogLine>>;
 
@@ -55,14 +54,12 @@ export default function LogTab({
   workflowHash,
   runId,
   taskName,
-  isRunning,
   beginTime,
   endTime,
 }: {
   workflowHash: string;
   runId: string;
   taskName: string;
-  isRunning: boolean;
   beginTime: Date | null;
   endTime: Date | null;
 }) {
@@ -96,7 +93,10 @@ export default function LogTab({
     }
   }
 
-  usePolling(loadLog, isRunning ? VX_POLLING_INTERVAL : null, [runId, taskName, level]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only reload when the selected task or log level changes; the Refresh button covers manual reloads
+  useEffect(() => {
+    loadLog();
+  }, [runId, taskName, level]);
 
   const logText = useMemo(() => {
     switch (logResult.type) {

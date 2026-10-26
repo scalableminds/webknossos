@@ -185,17 +185,7 @@ export function useNodeContextMenuOptions(
                 disabled: !canReconnectNeighbors,
                 onClick: () =>
                   actions.deleteNodeAndReconnectNeighbors(clickedNodeId, clickedTree.treeId),
-                label: (
-                  <FastTooltip
-                    title={
-                      canReconnectNeighbors
-                        ? "Deletes this node and connects its two neighbors with a new edge, so that the tree is not split."
-                        : "Only possible for nodes with exactly two neighbors."
-                    }
-                  >
-                    Delete this Node & Reconnect Neighbors
-                  </FastTooltip>
-                ),
+                label: "Delete this Node & Reconnect Neighbors",
               }
             : null,
           isBranchpoint

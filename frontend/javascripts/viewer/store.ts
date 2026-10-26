@@ -531,6 +531,7 @@ export type ProofreadingPostProcessingInfo = {
 };
 export type SaveState = {
   readonly isSavingDisabled: boolean; // true when the user explicitly disabled saving in the WK menu dropdown
+  readonly hasSaveError: boolean; // true while saving fails; the navbar is highlighted in red then
   readonly queue: Array<SaveQueueEntry>;
   readonly lastSaveTimestamp: number;
   readonly progressInfo: ProgressInfo;

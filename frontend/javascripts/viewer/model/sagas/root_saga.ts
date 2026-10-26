@@ -109,9 +109,9 @@ function* restartableSaga(): Saga<void> {
       ErrorHandling.notifyWithPrefix(err, "Root saga crashed: ");
 
       // Hide potentially old error highlighting which mentions a retry mechanism.
-      toggleErrorHighlighting(false);
+      yield* call(toggleErrorHighlighting, false);
       // Show error highlighting which mentions the permanent error.
-      toggleErrorHighlighting(true, true);
+      yield* call(toggleErrorHighlighting, true, true);
       alert(`\
 Internal error.
 Please reload the page to avoid losing data.

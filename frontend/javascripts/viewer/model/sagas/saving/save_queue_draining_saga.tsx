@@ -7,7 +7,7 @@ import { sendSaveRequestWithToken } from "admin/rest_api";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import window, { alert, document, location } from "libs/window";
+import window, { alert, location } from "libs/window";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import { actionChannel, call, delay, flush, put, race, take } from "typed-redux-saga";
@@ -24,6 +24,7 @@ import {
 import {
   dispatchEnsureHasNewestVersionAsync,
   type SaveNowAction,
+  setHasSaveErrorAction,
   setLastSaveTimestampAction,
   setVersionNumberAction,
   shiftSaveQueueAction,
@@ -399,10 +400,11 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
   }
 }
 
-export function toggleErrorHighlighting(state: boolean, permanentError: boolean = false): void {
-  if (document.body != null) {
-    document.body.classList.toggle("save-error", state);
-  }
+export function* toggleErrorHighlighting(
+  state: boolean,
+  permanentError: boolean = false,
+): Saga<void> {
+  yield* put(setHasSaveErrorAction(state));
 
   if (state) {
     const message = permanentError ? messages["save.failed.permanent"] : messages["save.failed"];
@@ -410,9 +412,14 @@ export function toggleErrorHighlighting(state: boolean, permanentError: boolean 
       sticky: true,
     });
   } else {
-    Toast.close(messages["save.failed.permanent"]);
-    Toast.close(messages["save.failed"]);
+    closeSaveErrorToasts();
   }
+}
+
+// The toasts are not part of the store, so they are not cleared when the store is reset.
+export function closeSaveErrorToasts(): void {
+  Toast.close(messages["save.failed.permanent"]);
+  Toast.close(messages["save.failed"]);
 }
 
 // This function returns the first n batches of the provided array, so that the count of

@@ -28,12 +28,14 @@ use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use subtle::ConstantTimeEq;
 
+pub(crate) mod dao;
+
 use crate::{
     AppState,
     auth::OptionalAuthUser,
     auth::browser::onboarding::{
-        NewAccount, ORGANIZATION_COLUMNS, OrganizationRow, admin_notifier_mail,
-        assert_users_can_be_added, initial_team_memberships, insert_account, organization_messages,
+        NewAccount, admin_notifier_mail, assert_users_can_be_added, dao as onboarding_dao,
+        initial_team_memberships, insert_account, organization_messages,
     },
     auth::browser::{BrowserAuthConfig, login_user},
     config::{ConfigError, Env},
@@ -251,14 +253,9 @@ async fn single_sign_on(
     let nonce = first("nonce").ok_or_else(|| ApiError::bad_request(messages::NONCE_MISSING))?;
     let return_url = first("return_sso_url")
         .ok_or_else(|| ApiError::bad_request(messages::RETURN_URL_MISSING))?;
-    let (email, first_name, last_name): (String, String, String) = sqlx::query_as(
-        r#"SELECT m.email, m.firstName, m.lastName FROM webknossos.users_ u
-           JOIN webknossos.multiUsers_ m ON m._id = u._multiUser WHERE u._id = $1"#,
-    )
-    .bind(&user.id)
-    .fetch_optional(&state.pool)
-    .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::request::RESOURCE_NOT_FOUND))?;
+    let (email, first_name, last_name) = dao::find_multi_user_name_of_user(&state.pool, &user.id)
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::request::RESOURCE_NOT_FOUND))?;
     tracing::info!(user = %user.id, "User logged in to discuss.webknossos.org via WK SSO.");
     let abbreviated_name = format!(
         "{}{}",
@@ -615,22 +612,6 @@ async fn open_id_callback(
     login_or_signup(&state, &browser, &mailer, &misc, &headers, &info).await
 }
 
-/// userService.userFromMultiUserEmail (exact email match, like Play here).
-async fn user_for_email(state: &AppState, email: &str) -> ApiResult<Option<ObjectId>> {
-    let user_id: Option<Option<ObjectId>> = sqlx::query_scalar(
-        r#"SELECT COALESCE(
-             (SELECT u._id FROM webknossos.users_ u JOIN webknossos.organizations_ o ON o._id = u._organization
-               WHERE u._id = m._lastLoggedInIdentity AND u._multiUser = m._id AND NOT u.isDeactivated),
-             (SELECT u._id FROM webknossos.users_ u JOIN webknossos.organizations_ o ON o._id = u._organization
-               WHERE u._multiUser = m._id AND NOT u.isDeactivated ORDER BY u.created, u._id LIMIT 1)
-           ) FROM webknossos.multiUsers_ m WHERE m.email = $1"#,
-    )
-    .bind(email)
-    .fetch_optional(&state.pool)
-    .await?;
-    Ok(user_id.flatten())
-}
-
 async fn login_or_signup(
     state: &AppState,
     browser: &BrowserAuthConfig,
@@ -639,7 +620,7 @@ async fn login_or_signup(
     headers: &HeaderMap,
     info: &UserInfo,
 ) -> ApiResult<Response> {
-    let user_id = match user_for_email(state, &info.email).await? {
+    let user_id = match dao::find_user_id_by_multi_user_email(&state.pool, &info.email).await? {
         Some(user_id) => user_id,
         None => {
             let user_id = create_user(state, browser, mailer, info).await?;
@@ -672,11 +653,7 @@ async fn create_user(
     info: &UserInfo,
 ) -> ApiResult<ObjectId> {
     let mut tx = state.pool.begin().await?;
-    let organizations: Vec<OrganizationRow> = sqlx::query_as(&format!(
-        "SELECT {ORGANIZATION_COLUMNS} FROM webknossos.organizations_ ORDER BY _id LIMIT 2"
-    ))
-    .fetch_all(&mut *tx)
-    .await?;
+    let organizations = onboarding_dao::find_first_two_organizations(&mut tx).await?;
     let organization = match organizations.as_slice() {
         [organization] => organization,
         _ => return Err(ApiError::bad_request(organization_messages::AMBIGUOUS)),

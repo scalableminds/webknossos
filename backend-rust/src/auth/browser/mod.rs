@@ -7,6 +7,7 @@
 //! golden value produced by the real Silhouette classes.
 
 pub mod account;
+pub(crate) mod dao;
 pub mod onboarding;
 
 use std::{
@@ -42,6 +43,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use sqlx::{PgPool, Postgres, Transaction};
+
+use dao::LoginCandidate;
 use webknossos_common::text::hex;
 
 use crate::{
@@ -559,17 +562,6 @@ pub(crate) enum CookieOutcome {
 #[derive(Clone, Default)]
 pub(crate) struct DiscardCookie(Arc<AtomicBool>);
 
-#[derive(sqlx::FromRow)]
-struct CookieUserRow {
-    id: ObjectId,
-    organization_id: String,
-    is_admin: bool,
-    is_dataset_manager: bool,
-    is_superuser: bool,
-    logged_out_everywhere: Option<DateTime<Utc>>,
-    active: bool,
-}
-
 /// CombinedAuthenticatorService.retrieve + Silhouette's validity check +
 /// identity lookup for the cookie half.
 pub(crate) async fn authenticate_cookie(parts: &Parts, pool: &PgPool) -> ApiResult<CookieOutcome> {
@@ -591,19 +583,7 @@ pub(crate) async fn authenticate_cookie(parts: &Parts, pool: &PgPool) -> ApiResu
         return Ok(CookieOutcome::Absent);
     }
     let row = if ObjectId::parse(&cookie.user_id).is_ok() {
-        sqlx::query_as::<_, CookieUserRow>(
-            r#"SELECT u._id AS id, u._organization AS organization_id, u.isAdmin AS is_admin,
-                 u.isDatasetManager AS is_dataset_manager, m.isSuperUser AS is_superuser,
-                 u.loggedOutEverywhereTime AS logged_out_everywhere,
-                 (NOT u.isDeactivated AND NOT m.isDeleted AND NOT o.isDeleted) AS active
-               FROM webknossos.users_ u
-               JOIN webknossos.multiUsers m ON m._id = u._multiUser
-               JOIN webknossos.organizations o ON o._id = u._organization
-               WHERE u._id = $1"#,
-        )
-        .bind(&cookie.user_id)
-        .fetch_optional(pool)
-        .await?
+        dao::find_one_for_cookie(pool, &cookie.user_id).await?
     } else {
         None
     };
@@ -641,16 +621,7 @@ pub(crate) async fn cookie_still_valid(
     user_id: &ObjectId,
     cookie: &CookieAuthenticator,
 ) -> ApiResult<bool> {
-    let row: Option<(Option<DateTime<Utc>>,)> = sqlx::query_as(
-        r#"SELECT u.loggedOutEverywhereTime FROM webknossos.users u
-           JOIN webknossos.multiUsers m ON m._id = u._multiUser
-           JOIN webknossos.organizations o ON o._id = u._organization
-           WHERE u._id = $1 AND NOT u.isDeleted AND NOT u.isDeactivated
-             AND NOT m.isDeleted AND NOT o.isDeleted"#,
-    )
-    .bind(user_id)
-    .fetch_optional(&mut **tx)
-    .await?;
+    let row = dao::find_logged_out_everywhere_time_of_active_user(tx, user_id).await?;
     Ok(match row {
         None => false,
         Some((cutoff,)) => {
@@ -971,32 +942,15 @@ pub(crate) async fn create_email_verification(
     config: &BrowserAuthConfig,
     multi_user_id: &ObjectId,
 ) -> ApiResult<Mail> {
-    let (email, first_name, last_name): (String, String, String) = sqlx::query_as(
-        "SELECT email, firstName, lastName FROM webknossos.multiUsers_ WHERE _id = $1",
-    )
-    .bind(multi_user_id)
-    .fetch_optional(&mut **tx)
-    .await?
-    .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
+    let (email, first_name, last_name) = dao::find_one_multi_user_name_and_email(tx, multi_user_id)
+        .await?
+        .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
     let key = random_base64url(32)?;
     let expiry_ms = config
         .email_verification_link_expiry
         .map(|expiry| i64::try_from(expiry.as_millis()).map_err(|_| ApiError::internal()))
         .transpose()?;
-    sqlx::query(
-        r#"INSERT INTO webknossos.emailVerificationKeys(_id, key, email, _multiUser, validUntil, isUsed)
-           VALUES($1, $2, $3, $4,
-             CASE WHEN $5::bigint IS NULL THEN NULL
-               ELSE statement_timestamp() + $5::bigint * INTERVAL '1 millisecond' END,
-             FALSE)"#,
-    )
-    .bind(ObjectId::new())
-    .bind(&key)
-    .bind(&email)
-    .bind(multi_user_id)
-    .bind(expiry_ms)
-    .execute(&mut **tx)
-    .await?;
+    dao::insert_email_verification_key(tx, &key, &email, multi_user_id, expiry_ms).await?;
     tracing::info!("Sending email verification mail");
     let link = format!("{}/verifyEmail/{key}", config.public_uri);
     let expiry_text = config.email_verification_link_expiry.map(duration_text);
@@ -1015,13 +969,6 @@ pub fn router() -> Router<AppState> {
     Router::new().route("/auth/login", post(login))
 }
 
-#[derive(sqlx::FromRow)]
-struct LoginCandidate {
-    user_id: Option<ObjectId>,
-    hasher: String,
-    password_hash: String,
-}
-
 async fn login(
     State(state): State<AppState>,
     Extension(config): Extension<BrowserAuthConfig>,
@@ -1035,21 +982,7 @@ async fn login(
     form.finish()?;
     signer_secret(&config)?;
     let email = email.to_lowercase();
-    // userFromMultiUserEmail: the last logged-in identity if still active,
-    // otherwise the first active identity of the account.
-    let candidate = sqlx::query_as::<_, LoginCandidate>(
-        r#"SELECT COALESCE(
-             (SELECT u._id FROM webknossos.users_ u JOIN webknossos.organizations_ o ON o._id = u._organization
-               WHERE u._id = m._lastLoggedInIdentity AND u._multiUser = m._id AND NOT u.isDeactivated),
-             (SELECT u._id FROM webknossos.users_ u JOIN webknossos.organizations_ o ON o._id = u._organization
-               WHERE u._multiUser = m._id AND NOT u.isDeactivated ORDER BY u.created, u._id LIMIT 1)
-           ) AS user_id,
-           m.passwordInfo_hasher::text AS hasher, m.passwordInfo_password AS password_hash
-         FROM webknossos.multiUsers_ m WHERE m.email = $1"#,
-    )
-    .bind(&email)
-    .fetch_optional(&state.pool)
-    .await?;
+    let candidate = dao::find_login_candidate_by_email(&state.pool, &email).await?;
     let invalid = || ApiError::bad_request(crate::msg::user::INVALID_CREDENTIALS);
     let Some(LoginCandidate {
         user_id: Some(user_id),
@@ -1079,16 +1012,11 @@ pub(crate) async fn login_user(
     skip_email_verification: bool,
 ) -> ApiResult<HeaderValue> {
     let mut tx = pool.begin().await?;
-    let row: Option<(ObjectId, bool, bool, bool)> = sqlx::query_as(
-        r#"SELECT m._id, u.isDeactivated, m.isEmailVerified,
-             m.emailChangeDate + $2::bigint * INTERVAL '1 millisecond' > statement_timestamp()
-           FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON m._id = u._multiUser
-           JOIN webknossos.organizations_ o ON o._id = u._organization
-           WHERE u._id = $1 FOR UPDATE OF m"#,
+    let row = dao::find_login_state_for_update(
+        &mut tx,
+        user_id,
+        i64::try_from(config.email_verification_grace_period.as_millis()).unwrap_or(i64::MAX),
     )
-    .bind(user_id)
-    .bind(i64::try_from(config.email_verification_grace_period.as_millis()).unwrap_or(i64::MAX))
-    .fetch_optional(&mut *tx)
     .await?;
     let (multi_user_id, deactivated, verified, within_grace) =
         row.ok_or_else(|| ApiError::bad_request(crate::msg::user::INVALID_CREDENTIALS))?;
@@ -1109,15 +1037,8 @@ pub(crate) async fn login_user(
         mailer.send(mail);
         return Err(ApiError::bad_request(messages::NOT_VERIFIED));
     }
-    sqlx::query("UPDATE webknossos.multiUsers SET _lastLoggedInIdentity = $2 WHERE _id = $1")
-        .bind(&multi_user_id)
-        .bind(user_id)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("UPDATE webknossos.users SET lastActivity = statement_timestamp() WHERE _id = $1")
-        .bind(user_id)
-        .execute(&mut *tx)
-        .await?;
+    dao::update_last_logged_in_identity(&mut tx, &multi_user_id, user_id).await?;
+    dao::update_last_activity(&mut tx, user_id).await?;
     tx.commit().await?;
     tracing::info!(user = %user_id, "User logged in via password form.");
     Ok(cookie)

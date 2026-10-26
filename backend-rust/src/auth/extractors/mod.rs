@@ -3,6 +3,7 @@ use axum::http::{header::AUTHORIZATION, request::Parts};
 use sqlx::PgPool;
 
 use crate::AppState;
+use crate::auth::dao;
 use crate::error::{ApiError, ApiResult};
 use crate::util::id::ObjectId;
 
@@ -112,76 +113,17 @@ pub(crate) fn extract_token(parts: &Parts) -> ApiResult<String> {
     Ok(token.clone())
 }
 
-/// Authenticate and touch the token in one statement. Invalid or revoked tokens are
-/// never touched, and overlapping requests cannot move lastUsedDateTime backwards.
-/// Like Silhouette's BearerTokenAuthenticatorService.touch, only tokens with an idle
-/// timeout are written: tokens without one are read-only, so concurrent requests with
-/// the same token neither lock its row nor create a new row version per request.
 pub async fn authenticate(pool: &PgPool, token: &str) -> ApiResult<AuthUser> {
-    let user = sqlx::query_as::<_, AuthUser>(
-        r#"
-        WITH matched AS (
-          SELECT token._id AS token_id, token.idleTimeout IS NOT NULL AS has_idle_timeout,
-            usr._id AS id, usr._organization AS organization_id,
-            usr.isAdmin AS is_admin, usr.isDatasetManager AS is_dataset_manager,
-            multi.isSuperUser AS is_superuser
-          FROM webknossos.tokens AS token
-          JOIN webknossos.users AS usr ON usr._id = token._user
-          JOIN webknossos.multiUsers AS multi ON multi._id = usr._multiUser
-          JOIN webknossos.organizations AS org ON org._id = usr._organization
-          WHERE token.value = $1
-            AND NOT token.isDeleted
-            AND token.tokenType IN ('Authentication', 'DataStore', 'Job')
-            AND token.expirationDateTime > statement_timestamp()
-            AND (token.idleTimeout IS NULL OR (
-              token.idleTimeout > 0 AND
-              EXTRACT(EPOCH FROM (statement_timestamp() - token.lastUsedDateTime)) * 1000
-                < token.idleTimeout
-            ))
-            AND NOT usr.isDeleted AND NOT usr.isDeactivated
-            AND NOT multi.isDeleted AND NOT org.isDeleted
-            AND (usr.loggedOutEverywhereTime IS NULL
-              OR token.created > usr.loggedOutEverywhereTime)
-            AND (SELECT COUNT(*) FROM webknossos.tokens AS matching
-              WHERE matching.value = $1 AND NOT matching.isDeleted) = 1
-        ), touched AS (
-          UPDATE webknossos.tokens AS token
-          SET lastUsedDateTime = GREATEST(token.lastUsedDateTime, statement_timestamp())
-          FROM matched
-          WHERE token._id = matched.token_id AND matched.has_idle_timeout
-        )
-        SELECT id, organization_id, is_admin, is_dataset_manager, is_superuser FROM matched
-        "#,
-    )
-    .bind(token)
-    .fetch_optional(pool)
-    .await?;
-    user.ok_or_else(ApiError::unauthorized)
+    dao::find_one_and_touch_for_authentication(pool, token)
+        .await?
+        .ok_or_else(ApiError::unauthorized)
 }
 
 pub async fn user_for_service_token(
     pool: &sqlx::PgPool,
     token: &str,
 ) -> ApiResult<Option<AuthUser>> {
-    // WebknossosBearerTokenAuthenticatorService.userForToken is a read-only
-    // lookup accepting every token type usable for authentication
-    // (findOneUsableForAuthentication), i.e. all but ResetPassword. It does not
-    // touch lastUsedDateTime. Account-revocation checks match the Rust
-    // authentication boundary (deactivated users are rejected).
-    let user = sqlx::query_as(
-        r#"SELECT u._id AS id,u._organization AS organization_id,u.isAdmin AS is_admin,u.isDatasetManager AS is_dataset_manager,m.isSuperUser AS is_superuser
-        FROM webknossos.tokens_ token JOIN webknossos.users_ u ON u._id=token._user
-        JOIN webknossos.multiUsers_ m ON m._id=u._multiUser JOIN webknossos.organizations_ organization ON organization._id=u._organization
-        WHERE token.value=$1 AND token.tokenType<>'ResetPassword'
-        AND token.expirationDateTime>statement_timestamp() AND NOT u.isDeactivated
-        AND (token.idleTimeout IS NULL OR (token.idleTimeout>0 AND extract(epoch FROM (statement_timestamp()-token.lastUsedDateTime))*1000<token.idleTimeout))
-        AND (u.loggedOutEverywhereTime IS NULL OR token.created>u.loggedOutEverywhereTime)
-        AND (SELECT count(*) FROM webknossos.tokens_ duplicate WHERE duplicate.value=$1)=1"#,
-    )
-    .bind(token)
-    .fetch_optional(pool)
-    .await?;
-    Ok(user)
+    dao::find_user_for_service_token(pool, token).await
 }
 
 impl AuthUser {
@@ -189,36 +131,18 @@ impl AuthUser {
         if self.is_admin {
             return Ok(true);
         }
-        Ok(sqlx::query_scalar(
-            r#"SELECT EXISTS (
-              SELECT 1 FROM webknossos.user_team_roles AS role
-              JOIN webknossos.teams_ AS team ON team._id = role._team
-              WHERE role._user = $1 AND role.isTeamManager AND team._organization = $2
-            )"#,
-        )
-        .bind(&self.id)
-        .bind(&self.organization_id)
-        .fetch_one(pool)
-        .await?)
+        dao::is_team_manager_in_organization(pool, &self.id, &self.organization_id).await
     }
 
     pub async fn can_manage_team(&self, pool: &PgPool, team_id: &ObjectId) -> ApiResult<bool> {
-        Ok(sqlx::query_scalar(
-            r#"SELECT EXISTS (
-              SELECT 1 FROM webknossos.teams_ AS team
-              WHERE team._id = $1 AND team._organization = $2
-                AND ($3 OR EXISTS (
-                  SELECT 1 FROM webknossos.user_team_roles AS role
-                  WHERE role._team = team._id AND role._user = $4 AND role.isTeamManager
-                ))
-            )"#,
+        dao::can_manage_team(
+            pool,
+            team_id,
+            &self.organization_id,
+            self.is_admin,
+            &self.id,
         )
-        .bind(team_id)
-        .bind(&self.organization_id)
-        .bind(self.is_admin)
-        .bind(&self.id)
-        .fetch_one(pool)
-        .await?)
+        .await
     }
 }
 

@@ -17,7 +17,7 @@ use sqlx::{Postgres, Transaction};
 use crate::{
     AppState,
     auth::browser::{BrowserAuthConfig, cookie_still_valid, discarding_cookie_header},
-    auth::{AuthCredential, AuthUser, authenticate_request},
+    auth::{AuthCredential, AuthUser, authenticate_request, dao},
     error::{ApiError, ApiResult},
     extract::Path,
     util::id::{ObjectId, PathObjectId},
@@ -93,17 +93,10 @@ async fn lock_account(
     tx: &mut Transaction<'_, Postgres>,
     auth: &LifecycleAuth,
 ) -> ApiResult<ObjectId> {
-    let multi_user: ObjectId = sqlx::query_scalar(
-        "SELECT multi._id FROM webknossos.multiUsers AS multi JOIN webknossos.users AS usr ON usr._multiUser = multi._id WHERE usr._id = $1 AND NOT usr.isDeleted AND NOT usr.isDeactivated AND NOT multi.isDeleted FOR UPDATE OF multi",
-    )
-    .bind(&auth.user.id)
-    .fetch_optional(&mut **tx)
-    .await?
-    .ok_or_else(ApiError::unauthorized)?;
-    sqlx::query("SELECT _id FROM webknossos.users WHERE _id = $1 FOR UPDATE")
-        .bind(&auth.user.id)
-        .fetch_one(&mut **tx)
-        .await?;
+    let multi_user: ObjectId = dao::lock_multi_user_of_active_user(tx, &auth.user.id)
+        .await?
+        .ok_or_else(ApiError::unauthorized)?;
+    dao::lock_user(tx, &auth.user.id).await?;
     let token = match &auth.credential {
         AuthCredential::Token(token) => token,
         AuthCredential::Cookie(cookie) => {
@@ -114,25 +107,7 @@ async fn lock_account(
             return Ok(multi_user);
         }
     };
-    let valid: bool = sqlx::query_scalar(
-        r#"SELECT EXISTS (
-          SELECT 1 FROM webknossos.tokens AS token
-          JOIN webknossos.users AS usr ON usr._id = token._user
-          JOIN webknossos.organizations AS org ON org._id = usr._organization
-          WHERE token.value = $1 AND usr._id = $2
-            AND NOT token.isDeleted AND NOT usr.isDeleted AND NOT usr.isDeactivated
-            AND NOT org.isDeleted AND token.tokenType IN ('Authentication', 'DataStore')
-            AND token.expirationDateTime > statement_timestamp()
-            AND (token.idleTimeout IS NULL OR (token.idleTimeout > 0 AND
-              EXTRACT(EPOCH FROM (statement_timestamp() - token.lastUsedDateTime)) * 1000 < token.idleTimeout))
-            AND (usr.loggedOutEverywhereTime IS NULL OR token.created > usr.loggedOutEverywhereTime)
-            AND (SELECT COUNT(*) FROM webknossos.tokens WHERE value = $1 AND NOT isDeleted) = 1
-        )"#,
-    )
-    .bind(token)
-    .bind(&auth.user.id)
-    .fetch_one(&mut **tx)
-    .await?;
+    let valid = dao::is_token_valid_for_user(tx, token, &auth.user.id).await?;
     if !valid {
         return Err(ApiError::unauthorized());
     }
@@ -157,21 +132,7 @@ async fn insert_token(
     let mut random = [0_u8; 16];
     getrandom::fill(&mut random).map_err(|_| ApiError::internal())?;
     let value = URL_SAFE_NO_PAD.encode(random);
-    sqlx::query(
-        r#"INSERT INTO webknossos.tokens
-          (_id, value, _user, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created)
-          VALUES ($1, $2, $3, statement_timestamp(),
-            statement_timestamp() + $4::bigint * INTERVAL '1 millisecond', $5,
-            $6::webknossos.TOKEN_TYPES, statement_timestamp())"#,
-    )
-    .bind(ObjectId::new())
-    .bind(&value)
-    .bind(user_id)
-    .bind(expiry_ms)
-    .bind(idle_ms)
-    .bind(token_type)
-    .execute(&mut **tx)
-    .await?;
+    dao::insert_token(tx, user_id, &value, expiry_ms, idle_ms, token_type).await?;
     Ok(value)
 }
 
@@ -184,27 +145,11 @@ async fn get_token(
     lock_account(&mut tx, &auth).await?;
     // Only return usable tokens. Unlike the legacy DAO's unfiltered lookup,
     // this excludes expired, idle-expired and account-revoked credentials.
-    let existing: Option<String> = sqlx::query_scalar(
-        r#"SELECT token.value FROM webknossos.tokens AS token
-          JOIN webknossos.users AS usr ON usr._id = token._user
-          WHERE token._user = $1 AND token.tokenType = 'Authentication' AND NOT token.isDeleted
-            AND token.expirationDateTime > statement_timestamp()
-            AND (token.idleTimeout IS NULL OR (token.idleTimeout > 0 AND
-              EXTRACT(EPOCH FROM (statement_timestamp() - token.lastUsedDateTime)) * 1000 < token.idleTimeout))
-            AND (usr.loggedOutEverywhereTime IS NULL OR token.created > usr.loggedOutEverywhereTime)
-            AND (SELECT COUNT(*) FROM webknossos.tokens AS matching WHERE matching.value = token.value AND NOT matching.isDeleted) = 1
-          ORDER BY token.created, token._id LIMIT 1"#,
-    )
-    .bind(&auth.user.id)
-    .fetch_optional(&mut *tx)
-    .await?;
+    let existing = dao::find_one_usable_authentication_token(&mut tx, &auth.user.id).await?;
     let token = match existing {
         Some(token) => token,
         None => {
-            sqlx::query("UPDATE webknossos.tokens SET isDeleted = TRUE WHERE _user = $1 AND tokenType = 'Authentication' AND NOT isDeleted")
-                .bind(&auth.user.id)
-                .execute(&mut *tx)
-                .await?;
+            dao::delete_authentication_tokens_for_user(&mut tx, &auth.user.id).await?;
             insert_token(
                 &mut tx,
                 &auth.user.id,
@@ -222,13 +167,7 @@ async fn get_token(
 async fn delete_token(State(state): State<AppState>, auth: LifecycleAuth) -> ApiResult<Response> {
     let mut tx = state.pool.begin().await?;
     lock_account(&mut tx, &auth).await?;
-    let deleted = sqlx::query(
-        "UPDATE webknossos.tokens SET isDeleted = TRUE WHERE _id = (SELECT _id FROM webknossos.tokens WHERE _user = $1 AND tokenType = 'Authentication' AND NOT isDeleted ORDER BY created, _id LIMIT 1)",
-    )
-    .bind(&auth.user.id)
-    .execute(&mut *tx)
-    .await?
-    .rows_affected();
+    let deleted = dao::delete_oldest_authentication_token(&mut tx, &auth.user.id).await?;
     tx.commit().await?;
     Ok(if deleted == 0 {
         StatusCode::OK.into_response()
@@ -286,13 +225,7 @@ async fn logout(
             let mut tx = state.pool.begin().await?;
             lock_account(&mut tx, &auth).await?;
             if let AuthCredential::Token(token) = &auth.credential {
-                sqlx::query(
-                    "UPDATE webknossos.tokens SET isDeleted = TRUE WHERE value = $1 AND _user = $2 AND NOT isDeleted",
-                )
-                .bind(token)
-                .bind(&auth.user.id)
-                .execute(&mut *tx)
-                .await?;
+                dao::delete_token_for_user(&mut tx, token, &auth.user.id).await?;
             }
             tx.commit().await?;
             tracing::info!(user = %auth.user.id, "User logged out.");
@@ -308,18 +241,8 @@ async fn logout_everywhere(
 ) -> ApiResult<StatusCode> {
     let mut tx = state.pool.begin().await?;
     let multi_user = lock_account(&mut tx, &auth).await?;
-    sqlx::query(
-        "UPDATE webknossos.users SET loggedOutEverywhereTime = GREATEST(loggedOutEverywhereTime, statement_timestamp()) WHERE _multiUser = $1",
-    )
-    .bind(&multi_user)
-    .execute(&mut *tx)
-    .await?;
-    sqlx::query(
-        "UPDATE webknossos.tokens SET isDeleted = TRUE WHERE tokenType = 'DataStore' AND NOT isDeleted AND _user IN (SELECT _id FROM webknossos.users WHERE _multiUser = $1)",
-    )
-    .bind(&multi_user)
-    .execute(&mut *tx)
-    .await?;
+    dao::update_logged_out_everywhere_time(&mut tx, &multi_user).await?;
+    dao::delete_datastore_tokens_for_multi_user(&mut tx, &multi_user).await?;
     tx.commit().await?;
     Ok(StatusCode::OK)
 }
@@ -335,9 +258,9 @@ fn check_passkeys(config: &AuthRouteConfig) -> ApiResult<()> {
 }
 
 #[derive(Serialize, sqlx::FromRow)]
-struct KeyDescriptor {
-    id: String,
-    name: String,
+pub(crate) struct KeyDescriptor {
+    pub(crate) id: String,
+    pub(crate) name: String,
 }
 
 async fn list_keys(
@@ -348,12 +271,7 @@ async fn list_keys(
     check_passkeys(&config)?;
     let mut tx = state.pool.begin().await?;
     let multi_user = lock_account(&mut tx, &auth).await?;
-    let keys = sqlx::query_as::<_, KeyDescriptor>(
-        "SELECT _id AS id, name FROM webknossos.webauthnCredentials WHERE _multiUser = $1 AND NOT isDeleted ORDER BY _id",
-    )
-    .bind(&multi_user)
-    .fetch_all(&mut *tx)
-    .await?;
+    let keys = dao::find_all_webauthn_credentials(&mut tx, &multi_user).await?;
     tx.commit().await?;
     Ok(Json(keys))
 }
@@ -367,13 +285,7 @@ async fn remove_key(
     check_passkeys(&config)?;
     let mut tx = state.pool.begin().await?;
     let multi_user = lock_account(&mut tx, &auth).await?;
-    sqlx::query(
-        "UPDATE webknossos.webauthnCredentials SET isDeleted = TRUE WHERE _id = $1 AND _multiUser = $2 AND NOT isDeleted",
-    )
-    .bind(&*id)
-    .bind(&multi_user)
-    .execute(&mut *tx)
-    .await?;
+    dao::delete_webauthn_credential(&mut tx, &id, &multi_user).await?;
     // Match the Scala DAO's idempotent scoped UPDATE: a missing, foreign or
     // already deleted credential changes nothing and still returns {}.
     tx.commit().await?;

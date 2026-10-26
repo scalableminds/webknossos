@@ -379,7 +379,7 @@ fn access_queries_evaluate_the_grants_per_candidate() {
             id: ObjectId::new(),
         },
     ] {
-        let query = resource.access_query(&user_ids);
+        let query = dao::access_query(&resource, &user_ids);
         let sql = query.sql();
         let (head, predicate) = sql.split_once(" AND ").unwrap();
         assert!(head.contains("$1") && head.contains("$2"), "{head}");
@@ -390,7 +390,7 @@ fn access_queries_evaluate_the_grants_per_candidate() {
     let annotation = SharedResource::Annotation {
         id: ObjectId::new(),
     };
-    let annotation = annotation.access_query(&user_ids);
+    let annotation = dao::access_query(&annotation, &user_ids);
     // Shared annotations also require read access to their dataset.
     assert!(
         annotation

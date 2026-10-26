@@ -28,6 +28,8 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue, json};
 use sqlx::PgExecutor;
+
+pub(crate) mod dao;
 use webauthn_rs_core::{
     WebauthnCore,
     error::WebauthnError,
@@ -429,12 +431,7 @@ pub(crate) async fn credentials_for_multi_user<'e>(
     executor: impl PgExecutor<'e>,
     multi_user: &ObjectId,
 ) -> ApiResult<Result<Vec<(String, AttestedCredential)>, &'static str>> {
-    let rows: Vec<(String, Vec<u8>)> = sqlx::query_as(
-        "SELECT _id, serializedAttestedCredential FROM webknossos.webauthnCredentials_ WHERE _multiUser = $1 ORDER BY _id",
-    )
-    .bind(multi_user)
-    .fetch_all(executor)
-    .await?;
+    let rows = dao::find_all_for_multi_user(executor, multi_user).await?;
     Ok(rows
         .into_iter()
         .map(|(id, bytes)| Ok((id, AttestedCredential::from_webauthn4j_bytes(&bytes)?)))
@@ -442,13 +439,9 @@ pub(crate) async fn credentials_for_multi_user<'e>(
 }
 
 async fn multi_user_of(state: &AppState, user: &AuthUser) -> ApiResult<(ObjectId, String, String)> {
-    sqlx::query_as(
-        "SELECT m._id, m.email, m.firstName || ' ' || m.lastName FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON m._id = u._multiUser WHERE u._id = $1",
-    )
-    .bind(&user.id)
-    .fetch_optional(&state.pool)
-    .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))
+    dao::find_multi_user_of_user(&state.pool, &user.id)
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))
 }
 
 // ---------------------------------------------------------------------------
@@ -570,22 +563,20 @@ async fn register_finalize(
         .map_err(|_| ApiError::bad_request(MSG_INVALID_REGISTRATION))?;
     let (multi_user, _, _) = multi_user_of(&state, &user).await?;
     let flags = registration.auth_data.flags;
-    let inserted = sqlx::query(
-        "INSERT INTO webknossos.webauthnCredentials (_id, _multiUser, credentialId, name, userVerified, backupEligible, backupState, serializedAttestationStatement, serializedAttestedCredential, serializedExtensions, signatureCount) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+    let inserted = dao::insert_credential(
+        &state.pool,
+        &multi_user,
+        &registration.credential.credential_id,
+        &body.name,
+        flags & FLAG_UV != 0,
+        flags & FLAG_BE != 0,
+        flags & FLAG_BS != 0,
+        none_attestation_statement_json(),
+        registration.credential.to_webauthn4j_bytes(),
+        extensions,
+        // Scala `getCounter.toInt` wraps.
+        registration.auth_data.sign_count as i32,
     )
-    .bind(ObjectId::new())
-    .bind(&multi_user)
-    .bind(&registration.credential.credential_id)
-    .bind(&body.name)
-    .bind(flags & FLAG_UV != 0)
-    .bind(flags & FLAG_BE != 0)
-    .bind(flags & FLAG_BS != 0)
-    .bind(none_attestation_statement_json())
-    .bind(registration.credential.to_webauthn4j_bytes())
-    .bind(extensions)
-    // Scala `getCounter.toInt` wraps.
-    .bind(registration.auth_data.sign_count as i32)
-    .execute(&state.pool)
     .await;
     if inserted.is_err() {
         return Err(ApiError::new(
@@ -761,20 +752,11 @@ async fn auth_finalize(
         .user_handle()
         .and_then(|handle| ObjectId::parse(&String::from_utf8_lossy(handle)).ok())
         .ok_or_else(unauthorized)?;
-    let multi_user: Option<(ObjectId, Option<ObjectId>)> = sqlx::query_as(
-        "SELECT _id, _lastLoggedInIdentity FROM webknossos.multiUsers_ WHERE _id = $1",
-    )
-    .bind(&multi_user_id)
-    .fetch_optional(&state.pool)
-    .await?;
+    let multi_user = dao::find_one_multi_user(&state.pool, &multi_user_id).await?;
     let (multi_user_id, last_identity) = multi_user.ok_or_else(unauthorized)?;
-    let row: Option<(String, Vec<u8>, bool, i32)> = sqlx::query_as(
-        "SELECT _id, serializedAttestedCredential, backupEligible, signatureCount FROM webknossos.webauthnCredentials_ WHERE _multiUser = $1 AND credentialId = $2",
-    )
-    .bind(&multi_user_id)
-    .bind(assertion.credential_id())
-    .fetch_optional(&state.pool)
-    .await?;
+    let row =
+        dao::find_one_by_credential_id(&state.pool, &multi_user_id, assertion.credential_id())
+            .await?;
     let (id, attested, backup_eligible, sign_count) = row.ok_or_else(unauthorized)?;
     let stored = StoredCredential {
         id,
@@ -786,12 +768,13 @@ async fn auth_finalize(
     verify_assertion(&assertion, &stored, ceremony, &rp).map_err(|_| unauthorized())?;
     // updateSignCount binds the Long counter: values beyond INTEGER fail in
     // PostgreSQL, which Scala maps to 401 as well.
-    sqlx::query("UPDATE webknossos.webauthnCredentials_ SET signatureCount = $2 WHERE _id = $1")
-        .bind(&stored.id)
-        .bind(i64::from(assertion.auth_data.sign_count))
-        .execute(&state.pool)
-        .await
-        .map_err(|_| unauthorized())?;
+    dao::update_signature_count(
+        &state.pool,
+        &stored.id,
+        i64::from(assertion.auth_data.sign_count),
+    )
+    .await
+    .map_err(|_| unauthorized())?;
     let user_id = last_identity.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let cookie = login_user(&state.pool, &browser, &mailer, &headers, &user_id, false).await?;
     tracing::info!(user = %user_id, "User logged in via passkey/webauthn.");

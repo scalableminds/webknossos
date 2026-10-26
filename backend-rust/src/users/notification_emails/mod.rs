@@ -15,10 +15,12 @@ use std::{
 
 use sqlx::{Acquire, FromRow, PgPool, Postgres, Transaction};
 
+pub(crate) mod dao;
+use dao::Person;
+
 use crate::{
     mail::{Mail, MailSender, NotificationEmailSettings, templates},
     msg::notification_email as msg,
-    sql::{Arg, Requester, Sql},
     util::id::ObjectId,
 };
 
@@ -149,40 +151,10 @@ impl SharedResource {
         }
     }
 
-    fn id(&self) -> &ObjectId {
+    pub(crate) fn id(&self) -> &ObjectId {
         match self {
             Self::Annotation { id } | Self::Dataset { id } => id,
         }
-    }
-
-    /// Those of the candidate users with access to the resource. The
-    /// requester-based access predicates are evaluated per candidate: the
-    /// requester becomes `candidate._id`, the organization scope the
-    /// candidate's organization.
-    fn access_query<'a>(&'a self, user_ids: &'a [&'a ObjectId]) -> Sql<'a> {
-        let candidate = Requester {
-            id: Arg::Sql("candidate._id"),
-            organization: Arg::Sql("candidate._organization"),
-            is_admin: false,
-        };
-        let mut q = Sql::new("SELECT candidate._id FROM webknossos.users_ candidate JOIN ");
-        match self {
-            Self::Annotation { .. } => q.push("webknossos.annotations_ a ON a._id = "),
-            Self::Dataset { .. } => q.push("webknossos.datasets_ d ON d._id = "),
-        }
-        .push_bind(self.id())
-        .push(" WHERE candidate._id = ANY(")
-        .push_bind(user_ids)
-        .push(") AND ");
-        match self {
-            Self::Annotation { .. } => {
-                crate::annotation::lists::push_list_grant(&mut q, candidate, true);
-            }
-            Self::Dataset { .. } => {
-                crate::dataset::access::push_read_predicate(&mut q, candidate.id, None);
-            }
-        }
-        q
     }
 }
 
@@ -229,14 +201,6 @@ pub fn recipient_team_names(
         .filter(|team| recipient_team_ids.contains(team))
         .filter_map(|team| team_names.get(team).cloned())
         .collect()
-}
-
-#[derive(FromRow)]
-struct Person {
-    user_id: ObjectId,
-    email: String,
-    first_name: String,
-    last_name: String,
 }
 
 impl Person {
@@ -362,26 +326,13 @@ impl NotificationEmailService {
         let exclude: Vec<&ObjectId> = exclude.to_vec();
         let prepared = async {
             let mut savepoint = transaction.begin().await?;
-            let candidates: Vec<Candidate> = sqlx::query_as(
-                "SELECT u._id AS user_id, array_agg(DISTINCT r._team ORDER BY r._team) AS team_ids
-                 FROM webknossos.users_ u JOIN webknossos.user_team_roles r ON r._user = u._id
-                 WHERE r._team = ANY($1) AND NOT u.isDeactivated AND NOT u.isUnlisted
-                 AND NOT (u._id = ANY($2))
-                 GROUP BY u._id ORDER BY u._id",
-            )
-            .bind(&added_team_ids)
-            .bind(&exclude)
-            .fetch_all(&mut *savepoint)
-            .await?;
+            let candidates =
+                dao::find_all_share_candidates(&mut savepoint, &added_team_ids, &exclude).await?;
             let user_ids: Vec<&ObjectId> = candidates.iter().map(|c| &c.user_id).collect();
             let had_access: Vec<ObjectId> = if user_ids.is_empty() {
                 Vec::new()
             } else {
-                resource
-                    .access_query(&user_ids)
-                    .build_query_scalar()
-                    .fetch_all(&mut *savepoint)
-                    .await?
+                dao::find_all_user_ids_with_access(&mut *savepoint, &resource, &user_ids).await?
             };
             // Read-only: dropping the savepoint rolls it back.
             drop(savepoint);
@@ -442,13 +393,11 @@ impl NotificationEmailService {
             had_access,
         } = pending;
         let user_ids: Vec<&ObjectId> = candidates.iter().map(|c| &c.user_id).collect();
-        let has_access: HashSet<ObjectId> = resource
-            .access_query(&user_ids)
-            .build_query_scalar::<ObjectId>()
-            .fetch_all(pool)
-            .await?
-            .into_iter()
-            .collect();
+        let has_access: HashSet<ObjectId> =
+            dao::find_all_user_ids_with_access(pool, &resource, &user_ids)
+                .await?
+                .into_iter()
+                .collect();
         let recipients = newly_allowed(&candidates, &had_access, &has_access);
         if recipients.is_empty() {
             return Ok(());
@@ -475,13 +424,7 @@ impl NotificationEmailService {
         }
         let named = match &resource {
             SharedResource::Annotation { id } => {
-                let (name, dataset_name): (String, String) = sqlx::query_as(
-                    "SELECT a.name, d.name FROM webknossos.annotations_ a
-                     JOIN webknossos.datasets_ d ON d._id = a._dataset WHERE a._id = $1",
-                )
-                .bind(id)
-                .fetch_one(pool)
-                .await?;
+                let (name, dataset_name) = dao::find_annotation_and_dataset_names(pool, id).await?;
                 Named::Annotation {
                     name,
                     dataset_name,
@@ -489,10 +432,7 @@ impl NotificationEmailService {
                 }
             }
             SharedResource::Dataset { id } => Named::Dataset {
-                name: sqlx::query_scalar("SELECT name FROM webknossos.datasets_ WHERE _id = $1")
-                    .bind(id)
-                    .fetch_one(pool)
-                    .await?,
+                name: dao::find_dataset_name(pool, id).await?,
                 // The dataset name is left out, as it may contain characters
                 // that are not valid in a URL path.
                 url: format!("{}/datasets/{id}/view", self.uri),
@@ -556,22 +496,13 @@ impl NotificationEmailService {
             [annotation_id, dataset_id, new_owner_id, issuer_id].map(ObjectId::clone);
         tokio::spawn(async move {
             let result = async {
-                let is_deactivated: bool = sqlx::query_scalar(
-                    "SELECT isDeactivated FROM webknossos.users_ WHERE _id = $1",
-                )
-                .bind(&new_owner_id)
-                .fetch_one(&pool)
-                .await?;
+                let is_deactivated = dao::is_user_deactivated(&pool, &new_owner_id).await?;
                 if is_deactivated {
                     return Ok(());
                 }
                 let recipient = person(&pool, &new_owner_id).await?;
                 let issuer = person(&pool, &issuer_id).await?;
-                let dataset_name: String =
-                    sqlx::query_scalar("SELECT name FROM webknossos.datasets_ WHERE _id = $1")
-                        .bind(&dataset_id)
-                        .fetch_one(&pool)
-                        .await?;
+                let dataset_name = dao::find_dataset_name(&pool, &dataset_id).await?;
                 service.send(templates::annotation_transferred(
                     &recipient.full_name(),
                     &recipient.email,
@@ -636,13 +567,8 @@ impl NotificationEmailService {
                 }
                 let recipient = person(&pool, &user_id).await?;
                 let issuer = person(&pool, &issuer_id).await?;
-                let organization_name: String = sqlx::query_scalar(
-                    "SELECT o.name FROM webknossos.users_ u
-                     JOIN webknossos.organizations_ o ON o._id = u._organization WHERE u._id = $1",
-                )
-                .bind(&user_id)
-                .fetch_one(&pool)
-                .await?;
+                let organization_name =
+                    dao::find_organization_name_of_user(&pool, &user_id).await?;
                 service.send(templates::access_changed(
                     &recipient.full_name(),
                     &recipient.email,
@@ -689,15 +615,8 @@ impl NotificationEmailService {
             let result = async {
                 let recipient = person(&pool, &assignee_id).await?;
                 let issuer = person(&pool, &issuer_id).await?;
-                let (project_name, task_type_summary): (String, String) = sqlx::query_as(
-                    "SELECT p.name, tt.summary FROM webknossos.tasks_ t
-                     JOIN webknossos.projects_ p ON p._id = t._project
-                     JOIN webknossos.taskTypes_ tt ON tt._id = t._taskType
-                     WHERE t._id = $1",
-                )
-                .bind(&task_id)
-                .fetch_one(&pool)
-                .await?;
+                let (project_name, task_type_summary) =
+                    dao::find_project_name_and_task_type_summary(&pool, &task_id).await?;
                 service.send(templates::task_assigned(
                     &recipient.full_name(),
                     &recipient.email,
@@ -719,43 +638,23 @@ impl NotificationEmailService {
     }
 }
 
-/// TeamDAO.findAllByIds (global): names of the live teams among `team_ids`.
 async fn team_names(
     pool: &PgPool,
     team_ids: &[ObjectId],
 ) -> Result<HashMap<ObjectId, String>, sqlx::Error> {
-    Ok(sqlx::query_as::<_, (ObjectId, String)>(
-        "SELECT _id, name FROM webknossos.teams_ WHERE _id = ANY($1)",
-    )
-    .bind(team_ids)
-    .fetch_all(pool)
-    .await?
-    .into_iter()
-    .collect())
+    Ok(dao::find_all_team_names_by_ids(pool, team_ids)
+        .await?
+        .into_iter()
+        .collect())
 }
-
-const PERSON: &str =
-    "SELECT u._id AS user_id, m.email, m.firstName AS first_name, m.lastName AS last_name
-    FROM webknossos.users u JOIN webknossos.multiUsers_ m ON m._id = u._multiUser";
 
 /// The multi user (name and email) of a user.
 async fn person(pool: &PgPool, user_id: &ObjectId) -> Result<Person, sqlx::Error> {
-    Sql::new(PERSON)
-        .push(" WHERE u._id = ")
-        .push_bind(user_id)
-        .build_query_as()
-        .fetch_one(pool)
-        .await
+    dao::find_one_person(pool, user_id).await
 }
 
 async fn people(pool: &PgPool, user_ids: &[&ObjectId]) -> Result<Vec<Person>, sqlx::Error> {
-    Sql::new(PERSON)
-        .push(" WHERE u._id = ANY(")
-        .push_bind(user_ids)
-        .push(")")
-        .build_query_as()
-        .fetch_all(pool)
-        .await
+    dao::find_all_people(pool, user_ids).await
 }
 
 #[cfg(test)]

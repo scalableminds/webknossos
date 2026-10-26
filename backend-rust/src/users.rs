@@ -1,6 +1,8 @@
+pub(crate) mod dao;
 pub mod notification_emails;
 
 use crate::auth::browser::onboarding::assert_users_can_be_added;
+use crate::auth::browser::onboarding::dao::delete_team_memberships_for_user;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use axum::{
@@ -18,8 +20,9 @@ use crate::auth::browser::{BrowserAuthConfig, verify_password};
 use crate::error::{ApiError, ApiResult};
 use crate::extract::{Json as RequestJson, Path, Query};
 use crate::mail::{MailSender, templates};
-use crate::sql::{Arg, PushArg, Requester, Sql};
 use crate::util::id::{ObjectId, PathObjectId};
+pub(crate) use dao::push_read_access;
+use dao::{OldMembership, Target};
 use notification_emails::{NotificationEmailService, TeamMembership, UserAccess};
 
 pub fn router(email_verification_enabled: bool) -> Router<AppState> {
@@ -47,118 +50,13 @@ struct Filters {
     is_admin: Option<bool>,
 }
 
-// The public response without account hashes, internal configuration, or tokens. Shared by
-// the single-user and the list statement; both provide `team_data` (teams, is_manager,
-// managed: requester manages one of the user's teams; all NULL without teams),
-// `experience_data` and `paying`.
-macro_rules! user_json {
-    () => {
-        r#"
-SELECT jsonb_build_object(
-  'id', usr._id, 'email', multi.email, 'firstName', multi.firstName, 'lastName', multi.lastName,
-  'isAdmin', usr.isAdmin, 'isOrganizationOwner', usr.isOrganizationOwner,
-  'isDatasetManager', usr.isDatasetManager, 'isActive', NOT usr.isDeactivated,
-  'teams', COALESCE(team_data.teams, '[]'::jsonb),
-  'experiences', COALESCE(experience_data.experiences, '{}'::jsonb),
-  'lastActivity', FLOOR(EXTRACT(EPOCH FROM usr.lastActivity) * 1000)::BIGINT,
-  'isAnonymous', FALSE, 'isEditable', $3 OR COALESCE(team_data.managed, FALSE) OR team_data.teams IS NULL,
-  'organization', usr._organization, 'novelUserExperienceInfos', multi.novelUserExperienceInfos,
-  'selectedTheme', multi.selectedTheme, 'created', FLOOR(EXTRACT(EPOCH FROM usr.created) * 1000)::BIGINT,
-  'lastTaskTypeId', usr.lastTaskTypeId, 'isSuperUser', multi.isSuperUser,
-  'isEmailVerified', multi.isEmailVerified, 'isUnlisted', usr.isUnlisted,
-  'isGuest', paying._organization IS NOT NULL AND paying._organization != usr._organization
-)
-FROM webknossos.users_ AS usr
-JOIN webknossos.multiUsers_ AS multi ON multi._id = usr._multiUser
-JOIN webknossos.organizations_ AS org ON org._id = usr._organization
-"#
-    };
-}
-
-// One user: per-row lateral aggregates. Binds $1 requester, $2 organization, $3 admin, $4 user.
-const USER_DOCUMENT: &str = concat!(
-    user_json!(),
-    r#"CROSS JOIN LATERAL (
-  SELECT jsonb_agg(jsonb_build_object('id', team._id, 'name', team.name,
-    'isTeamManager', role.isTeamManager) ORDER BY team.name) AS teams,
-    bool_or(role._team IN (SELECT _team FROM webknossos.user_team_roles
-      WHERE _user = $1 AND isTeamManager)) AS managed
-  FROM webknossos.user_team_roles AS role
-  JOIN webknossos.teams_ AS team ON team._id = role._team AND team._organization = $2
-  WHERE role._user = usr._id
-) AS team_data
-CROSS JOIN LATERAL (
-  SELECT jsonb_object_agg(domain, value) AS experiences
-  FROM webknossos.user_experiences WHERE _user = usr._id
-) AS experience_data
-LEFT JOIN LATERAL (
-  SELECT identity._organization FROM webknossos.users_ AS identity
-  JOIN webknossos.organizations_ AS organization ON organization._id = identity._organization
-  WHERE identity._multiUser = usr._multiUser AND NOT identity.isDeactivated
-    AND organization.pricingPlan IN ('Team', 'Power', 'Custom', 'Team_Trial', 'Power_Trial')
-  ORDER BY identity.created ASC LIMIT 1
-) AS paying ON TRUE
-WHERE usr._id = $4 AND usr._organization = $2
-  AND ($3 OR COALESCE(team_data.managed, FALSE) OR usr._id = $1)
-"#
-);
-
-// The organization's users: each aggregate is computed once for the organization and hash
-// joined, instead of per user (3.4x faster on 300 users). Its generic plan is good, so it
-// stays a cached prepared statement. Binds $1 requester, $2 organization, $3 admin,
-// $4 superuser, $5..$7 the optional filters.
-const USER_LIST: &str = concat!(
-    r#"
-WITH member AS MATERIALIZED (
-  SELECT role._user, role._team, role.isTeamManager, team.name
-  FROM webknossos.user_team_roles AS role
-  JOIN webknossos.teams_ AS team ON team._id = role._team AND team._organization = $2
-), team_data AS (
-  SELECT _user,
-    jsonb_agg(jsonb_build_object('id', _team, 'name', name, 'isTeamManager', isTeamManager)
-      ORDER BY name) AS teams,
-    bool_or(isTeamManager) AS is_manager,
-    bool_or(_team IN (SELECT _team FROM member WHERE _user = $1 AND isTeamManager)) AS managed
-  FROM member GROUP BY _user
-), experience_data AS (
-  SELECT _user, jsonb_object_agg(domain, value) AS experiences
-  FROM webknossos.user_experiences
-  WHERE _user IN (SELECT _id FROM webknossos.users_ WHERE _organization = $2)
-  GROUP BY _user
-), paying AS (
-  SELECT DISTINCT ON (identity._multiUser) identity._multiUser, identity._organization
-  FROM webknossos.users_ AS identity
-  JOIN webknossos.organizations_ AS organization ON organization._id = identity._organization
-  WHERE NOT identity.isDeactivated
-    AND organization.pricingPlan IN ('Team', 'Power', 'Custom', 'Team_Trial', 'Power_Trial')
-    AND identity._multiUser IN (SELECT _multiUser FROM webknossos.users_ WHERE _organization = $2)
-  ORDER BY identity._multiUser, identity.created
-)"#,
-    user_json!(),
-    r#"LEFT JOIN team_data ON team_data._user = usr._id
-LEFT JOIN experience_data ON experience_data._user = usr._id
-LEFT JOIN paying ON paying._multiUser = usr._multiUser
-WHERE usr._organization = $2 AND ($3 OR COALESCE(team_data.managed, FALSE) OR usr._id = $1)
-  AND (NOT usr.isUnlisted OR $4)
-  AND ($5::BOOLEAN IS NULL OR ($3 OR COALESCE(team_data.managed, FALSE)) = $5)
-  AND ($6::BOOLEAN IS NULL OR (usr.isAdmin OR COALESCE(team_data.is_manager, FALSE)) = $6)
-  AND ($7::BOOLEAN IS NULL OR usr.isAdmin = $7)
-ORDER BY LOWER(multi.lastName), usr._id
-"#
-);
-
 async fn document(
     state: &AppState,
     requester: &AuthUser,
     id: &ObjectId,
     verification: &EmailVerification,
 ) -> ApiResult<Value> {
-    let mut value: Value = sqlx::query_scalar(USER_DOCUMENT)
-        .bind(&requester.id)
-        .bind(&requester.organization_id)
-        .bind(requester.is_admin)
-        .bind(id)
-        .fetch_optional(&state.pool)
+    let mut value: Value = dao::find_one_document(&state.pool, requester, id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::user::not_found(id)))?;
     if !verification.0 {
@@ -173,8 +71,7 @@ async fn current(
     Extension(verification): Extension<EmailVerification>,
 ) -> ApiResult<Json<Value>> {
     let result = document(&state, &user, &user.id, &verification).await?;
-    sqlx::query("UPDATE webknossos.users SET lastActivity = GREATEST(lastActivity, statement_timestamp()) WHERE _id = $1 AND NOT isDeleted")
-        .bind(&user.id).execute(&state.pool).await?;
+    dao::update_last_activity(&state.pool, &user.id).await?;
     Ok(Json(result))
 }
 
@@ -184,16 +81,14 @@ async fn list(
     Query(filters): Query<Filters>,
 ) -> ApiResult<Json<Vec<Value>>> {
     Ok(Json(
-        sqlx::query_scalar(USER_LIST)
-            .bind(&user.id)
-            .bind(&user.organization_id)
-            .bind(user.is_admin)
-            .bind(user.is_superuser)
-            .bind(filters.is_editable)
-            .bind(filters.is_team_manager_or_admin)
-            .bind(filters.is_admin)
-            .fetch_all(&state.pool)
-            .await?,
+        dao::find_all_documents(
+            &state.pool,
+            &user,
+            filters.is_editable,
+            filters.is_team_manager_or_admin,
+            filters.is_admin,
+        )
+        .await?,
     ))
 }
 
@@ -227,23 +122,10 @@ async fn update_task_type(
     if original["isEditable"] != true && user.id != *id {
         return Err(ApiError::forbidden(crate::msg::user::NOT_EDITABLE));
     }
-    let result = sqlx::query(r#"
-        UPDATE webknossos.users AS target SET lastTaskTypeId = $2
-        WHERE target._id = $1 AND NOT target.isDeleted AND target._organization = $4
-          AND (target._id = $3 OR $5 OR NOT EXISTS (
-            SELECT 1 FROM webknossos.user_team_roles AS role
-            JOIN webknossos.teams_ AS team ON team._id = role._team AND team._organization = $4
-            WHERE role._user = target._id
-          ) OR EXISTS (
-            SELECT 1 FROM webknossos.user_team_roles AS target_role
-            JOIN webknossos.teams_ AS team ON team._id = target_role._team AND team._organization = $4
-            JOIN webknossos.user_team_roles AS requester_role ON requester_role._team = team._id
-            WHERE target_role._user = target._id AND requester_role._user = $3 AND requester_role.isTeamManager
-          ))
-        "#)
-        .bind(&*id).bind(&body.last_task_type_id)
-        .bind(&user.id).bind(&user.organization_id).bind(user.is_admin).execute(&state.pool).await?;
-    if result.rows_affected() != 1 {
+    let rows_affected =
+        dao::update_last_task_type_if_editable(&state.pool, &id, &body.last_task_type_id, &user)
+            .await?;
+    if rows_affected != 1 {
         return Err(ApiError::forbidden(crate::msg::user::NO_LONGER_EDITABLE));
     }
     Ok(Json(document(&state, &user, &id, &verification).await?))
@@ -259,8 +141,7 @@ async fn update_experience(
     if user.id != *id {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    sqlx::query("UPDATE webknossos.multiUsers AS multi SET novelUserExperienceInfos = $2 FROM webknossos.users_ AS usr WHERE usr._id = $1 AND usr._multiUser = multi._id AND NOT multi.isDeleted")
-        .bind(&user.id).bind(Value::Object(body)).execute(&state.pool).await?;
+    dao::update_novel_user_experience_infos(&state.pool, &user.id, Value::Object(body)).await?;
     Ok(Json(document(&state, &user, &id, &verification).await?))
 }
 
@@ -292,8 +173,7 @@ async fn update_theme(
     if user.id != *id {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    sqlx::query("UPDATE webknossos.multiUsers AS multi SET selectedTheme = $2::webknossos.THEME FROM webknossos.users_ AS usr WHERE usr._id = $1 AND usr._multiUser = multi._id AND NOT multi.isDeleted")
-        .bind(&user.id).bind(theme.as_str()).execute(&state.pool).await?;
+    dao::update_selected_theme(&state.pool, &user.id, theme.as_str()).await?;
     Ok(Json(document(&state, &user, &id, &verification).await?))
 }
 
@@ -315,25 +195,6 @@ pub(crate) mod msg {
             "User “{user_name}” cannot be assigned administrative rights in team “{team_name}” because they are not in the same organization."
         )
     }
-}
-
-/// UserDAO.readAccessQ (also its update access) for a `users_` row aliased
-/// `usr`: members of teams the requester manages, users of the organization
-/// the requester administers, and the requester themself.
-pub(crate) fn push_read_access<'a>(q: &mut Sql<'a>, requester: Arg<'a>) {
-    q.push(
-        "(usr._id IN (SELECT _user FROM webknossos.user_team_roles WHERE _team IN (
-    SELECT _team FROM webknossos.user_team_roles WHERE _user = ",
-    )
-    .push_arg(requester)
-    .push(
-        " AND isTeamManager))
-  OR usr._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = ",
-    )
-    .push_arg(requester)
-    .push(" AND isAdmin) OR usr._id = ")
-    .push_arg(requester)
-    .push(")");
 }
 
 #[derive(Deserialize)]
@@ -359,42 +220,6 @@ struct Membership {
     is_team_manager: bool,
 }
 
-#[derive(sqlx::FromRow)]
-struct Target {
-    organization: String,
-    multi_user: ObjectId,
-    is_admin: bool,
-    is_dataset_manager: bool,
-    is_deactivated: bool,
-    is_organization_owner: bool,
-    last_task_type_id: Option<ObjectId>,
-    email: String,
-    first_name: String,
-    last_name: String,
-}
-
-#[derive(sqlx::FromRow)]
-struct OldMembership {
-    team: ObjectId,
-    is_team_manager: bool,
-    team_exists: bool,
-    manageable: bool,
-}
-
-/// Whether the requester manages the team (alias `team`): team manager of it,
-/// or admin of its organization (UserService.isTeamManagerOrAdminOf(user, team)).
-fn push_team_manageable<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
-    q.push(
-        "(EXISTS (SELECT 1 FROM webknossos.user_team_roles AS r WHERE r._team = team._id AND r._user = ",
-    )
-    .push_arg(requester.id)
-    .push(" AND r.isTeamManager) OR (")
-    .push_bind(requester.is_admin)
-    .push(" AND team._organization = ")
-    .push_arg(requester.organization)
-    .push("))");
-}
-
 #[allow(clippy::too_many_arguments)]
 async fn update(
     State(state): State<AppState>,
@@ -409,70 +234,23 @@ async fn update(
     let id: &ObjectId = &id;
     let not_found = || ApiError::not_found(crate::msg::user::not_found(id));
     let mut tx = state.pool.begin().await?;
-    let mut q = Sql::new("SELECT usr._organization FROM webknossos.users_ AS usr WHERE usr._id = ");
-    q.push_bind(id).push(" AND ");
-    push_read_access(&mut q, (&requester.id).into());
-    let organization: String = q
-        .build_query_scalar()
-        .fetch_optional(&mut *tx)
+    let organization = dao::find_organization_id_if_readable(&mut tx, id, &requester)
         .await?
         .ok_or_else(not_found)?;
     // Admin/owner counts and the user limit are organization-wide invariants.
     // Lock the organization first, like onboarding does before adding users.
-    sqlx::query("SELECT _id FROM webknossos.organizations WHERE _id = $1 FOR UPDATE")
-        .bind(&organization)
-        .execute(&mut *tx)
-        .await?;
-    let target: Target = sqlx::query_as(
-        r#"SELECT u._organization AS organization, u._multiUser AS multi_user,
-             u.isAdmin AS is_admin, u.isDatasetManager AS is_dataset_manager,
-             u.isDeactivated AS is_deactivated, u.isOrganizationOwner AS is_organization_owner,
-             u.lastTaskTypeId AS last_task_type_id, m.email, m.firstName AS first_name,
-             m.lastName AS last_name
-           FROM webknossos.users AS u JOIN webknossos.multiUsers AS m ON m._id = u._multiUser
-           WHERE u._id = $1 AND NOT u.isDeleted AND NOT m.isDeleted
-           FOR UPDATE OF u, m"#,
-    )
-    .bind(id)
-    .fetch_optional(&mut *tx)
-    .await?
-    .ok_or_else(not_found)?;
-    let mut q = Sql::new(
-        "SELECT role._team AS team, role.isTeamManager AS is_team_manager,
-             team._id IS NOT NULL AS team_exists, COALESCE(",
-    );
-    push_team_manageable(&mut q, (&requester).into());
-    q.push(
-        ", FALSE) AS manageable
-           FROM webknossos.user_team_roles AS role
-           LEFT JOIN webknossos.teams_ AS team ON team._id = role._team
-           WHERE role._user = ",
-    )
-    .push_bind(id)
-    .push(" ORDER BY role._team");
-    let old_memberships: Vec<OldMembership> = q.build_query_as().fetch_all(&mut *tx).await?;
-    let old_experiences: BTreeMap<String, i32> = sqlx::query_as::<_, (String, i32)>(
-        "SELECT domain, value FROM webknossos.user_experiences WHERE _user = $1",
-    )
-    .bind(id)
-    .fetch_all(&mut *tx)
-    .await?
-    .into_iter()
-    .collect();
+    dao::lock_organization(&mut tx, &organization).await?;
+    let target = dao::find_one_target_for_update(&mut tx, id)
+        .await?
+        .ok_or_else(not_found)?;
+    let old_memberships = dao::find_all_memberships_for_user(&mut tx, &requester, id).await?;
+    let old_experiences = dao::find_all_experiences_for_user(&mut tx, id).await?;
 
     let is_self = requester.id == *id;
     let admin_of_target = requester.is_admin && requester.organization_id == target.organization;
     // UserService.isEditableBy: team manager of a shared team, organization
     // admin, or the user has no team memberships.
-    let shares_managed_team: bool = sqlx::query_scalar(
-        r#"SELECT EXISTS (SELECT 1 FROM webknossos.user_team_roles AS target_role
-             JOIN webknossos.user_team_roles AS requester_role ON requester_role._team = target_role._team
-             WHERE target_role._user = $1 AND requester_role._user = $2 AND requester_role.isTeamManager)"#,
-    )
-    .bind(id)
-    .bind(&requester.id)
-    .fetch_one(&mut *tx)
-    .await?;
+    let shares_managed_team = dao::shares_managed_team(&mut tx, id, &requester.id).await?;
     let team_manager_or_admin_of_target = shares_managed_team || admin_of_target;
     let is_editable = team_manager_or_admin_of_target || old_memberships.is_empty();
 
@@ -507,14 +285,11 @@ async fn update(
     if experiences != old_experiences || teams_changed {
         let team_manager_or_admin_of_org = requester.organization_id == target.organization
             && (requester.is_admin
-                || sqlx::query_scalar::<_, bool>(
-                    r#"SELECT EXISTS (SELECT 1 FROM webknossos.user_team_roles AS role
-                         JOIN webknossos.teams_ AS team ON team._id = role._team
-                         WHERE role._user = $1 AND role.isTeamManager AND team._organization = $2)"#,
+                || dao::is_team_manager_in_organization(
+                    &mut tx,
+                    &requester.id,
+                    &requester.organization_id,
                 )
-                .bind(&requester.id)
-                .bind(&requester.organization_id)
-                .fetch_one(&mut *tx)
                 .await?);
         if !(team_manager_or_admin_of_target
             || (old_memberships.is_empty() && team_manager_or_admin_of_org))
@@ -538,21 +313,11 @@ async fn update(
         let Some(password) = body.password else {
             return Err(ApiError::bad_request(crate::msg::user::INVALID_CREDENTIALS));
         };
-        let (hasher, hash): (String, String) = sqlx::query_as(
-            "SELECT passwordInfo_hasher::text, passwordInfo_password FROM webknossos.multiUsers WHERE _id = $1",
-        )
-        .bind(&target.multi_user)
-        .fetch_one(&mut *tx)
-        .await?;
+        let (hasher, hash) = dao::find_password_info(&mut tx, &target.multi_user).await?;
         if !verify_password(password, &hasher, hash).await {
             return Err(ApiError::bad_request(crate::msg::user::INVALID_CREDENTIALS));
         }
-        let taken: bool = sqlx::query_scalar(
-            "SELECT EXISTS (SELECT 1 FROM webknossos.multiUsers_ WHERE email = $1)",
-        )
-        .bind(&email)
-        .fetch_one(&mut *tx)
-        .await?;
+        let taken = dao::multi_user_email_exists(&mut tx, &email).await?;
         if taken {
             return Err(ApiError::bad_request(crate::msg::user::email::TAKEN));
         }
@@ -561,12 +326,7 @@ async fn update(
         return Err(ApiError::forbidden(msg::NO_SELF_DEACTIVATE));
     }
     if !is_active && !target.is_deactivated {
-        let tasks: Vec<String> = sqlx::query_scalar(
-            "SELECT _task FROM webknossos.annotations_ WHERE _user = $1 AND typ = 'Task' AND state = 'Active' AND _task IS NOT NULL ORDER BY created, _id",
-        )
-        .bind(id)
-        .fetch_all(&mut *tx)
-        .await?;
+        let tasks = dao::find_active_task_ids_for_user(&mut tx, id).await?;
         if !tasks.is_empty() {
             return Err(ApiError::bad_request(format!(
                 "Cannot deactivate user with active tasks. Task ids are: {}",
@@ -578,23 +338,13 @@ async fn update(
         assert_users_can_be_added(&mut tx, &target.organization).await?;
     }
     if target.is_admin && !is_admin {
-        let admins: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM webknossos.users_ WHERE _organization = $1 AND isAdmin AND NOT isUnlisted",
-        )
-        .bind(&target.organization)
-        .fetch_one(&mut *tx)
-        .await?;
+        let admins = dao::count_admins(&mut tx, &target.organization).await?;
         if admins <= 1 {
             return Err(ApiError::bad_request(msg::LAST_ADMIN));
         }
     }
     if target.is_organization_owner && !target.is_deactivated && !is_active {
-        let owners: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM webknossos.users_ WHERE _organization = $1 AND isOrganizationOwner AND NOT isUnlisted",
-        )
-        .bind(&target.organization)
-        .fetch_one(&mut *tx)
-        .await?;
+        let owners = dao::count_owners(&mut tx, &target.organization).await?;
         if owners <= 1 {
             return Err(ApiError::bad_request(msg::LAST_OWNER));
         }
@@ -622,63 +372,41 @@ async fn update(
     };
 
     if email != target.email {
-        sqlx::query("UPDATE webknossos.multiUsers SET email = $2, isEmailVerified = FALSE, emailChangeDate = NOW() WHERE _id = $1")
-            .bind(&target.multi_user).bind(&email).execute(&mut *tx).await?;
+        dao::update_email(&mut tx, &target.multi_user, &email).await?;
         tracing::info!(multi_user = %target.multi_user, "Email of multi user changed");
     }
-    sqlx::query("UPDATE webknossos.users SET isAdmin = $2, isDatasetManager = $3, isDeactivated = $4, lastTaskTypeId = $5 WHERE _id = $1")
-        .bind(id).bind(is_admin).bind(is_dataset_manager).bind(!is_active).bind(&last_task_type_id)
-        .execute(&mut *tx).await?;
+    dao::update_user_flags(
+        &mut tx,
+        id,
+        is_admin,
+        is_dataset_manager,
+        !is_active,
+        &last_task_type_id,
+    )
+    .await?;
     if name_changed {
-        sqlx::query(
-            "UPDATE webknossos.multiUsers SET firstName = $2, lastName = $3 WHERE _id = $1",
-        )
-        .bind(&target.multi_user)
-        .bind(first_name)
-        .bind(last_name)
-        .execute(&mut *tx)
-        .await?;
+        dao::update_names(&mut tx, &target.multi_user, first_name, last_name).await?;
     }
-    sqlx::query("DELETE FROM webknossos.user_team_roles WHERE _user = $1")
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
+    delete_team_memberships_for_user(&mut tx, id).await?;
     for (team, is_team_manager) in &updated_teams {
-        // Re-select from teams_ so deleted teams are never (re)assigned.
-        sqlx::query("INSERT INTO webknossos.user_team_roles (_user, _team, isTeamManager) SELECT $1, t._id, $3 FROM webknossos.teams_ AS t WHERE t._id = $2")
-            .bind(id).bind(team).bind(is_team_manager).execute(&mut *tx).await?;
+        dao::insert_team_membership_if_team_exists(&mut tx, id, team, is_team_manager).await?;
     }
     // Play's experience update re-checks update access after the membership
     // change, so a team manager cannot remove the user from their last shared team.
-    let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.users_ AS usr WHERE usr._id = ");
-    q.push_bind(id).push(" AND ");
-    push_read_access(&mut q, (&requester.id).into());
-    q.push(")");
-    let still_accessible: bool = q.build_query_scalar().fetch_one(&mut *tx).await?;
+    let still_accessible = dao::is_readable(&mut tx, id, &requester).await?;
     if !still_accessible {
         return Err(ApiError::bad_request(
             crate::msg::annotation::NO_UPDATE_ACCESS,
         ));
     }
-    sqlx::query("DELETE FROM webknossos.user_experiences WHERE _user = $1")
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
+    dao::delete_experiences_for_user(&mut tx, id).await?;
     let trimmed: BTreeMap<&str, i32> = experiences
         .iter()
         .map(|(domain, value)| (domain.trim(), *value))
         .collect();
     for (domain, value) in &trimmed {
-        sqlx::query(
-            "INSERT INTO webknossos.user_experiences (_user, domain, value) VALUES ($1, $2, $3)",
-        )
-        .bind(id)
-        .bind(domain)
-        .bind(value)
-        .execute(&mut *tx)
-        .await?;
-        sqlx::query("INSERT INTO webknossos.experienceDomains (domain, _organization) VALUES ($1, $2) ON CONFLICT DO NOTHING")
-            .bind(domain).bind(&target.organization).execute(&mut *tx).await?;
+        dao::insert_experience(&mut tx, id, domain, value).await?;
+        dao::insert_experience_domain(&mut tx, domain, &target.organization).await?;
     }
     tx.commit().await?;
 
@@ -727,14 +455,7 @@ async fn membership_updates(
 ) -> ApiResult<Vec<(ObjectId, bool)>> {
     let mut teams: HashMap<&ObjectId, (String, String, bool)> = HashMap::new();
     for membership in requested {
-        let mut q = Sql::new("SELECT team.name, team._organization, ");
-        push_team_manageable(&mut q, requester.into());
-        q.push(" FROM webknossos.teams_ AS team WHERE team._id = ")
-            .push_bind(&membership.id)
-            .push(" FOR SHARE OF team");
-        let team: (String, String, bool) = q
-            .build_query_as()
-            .fetch_optional(&mut **tx)
+        let team = dao::find_one_team_for_share(tx, requester, &membership.id)
             .await?
             .ok_or_else(|| ApiError::not_found(crate::msg::team::not_found(&membership.id)))?;
         teams.insert(&membership.id, team);

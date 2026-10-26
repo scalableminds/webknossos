@@ -17,6 +17,9 @@ use serde::Deserialize;
 use serde_json::json;
 use sqlx::{Postgres, Transaction};
 
+pub(crate) mod dao;
+use dao::{InviteRow, OrganizationRow};
+
 use crate::{
     AppState,
     auth::browser::{
@@ -28,7 +31,6 @@ use crate::{
     extract::{Json, Path},
     mail::{Mail, MailSender, templates},
     slack::SlackNotificationService,
-    sql::Sql,
     stores::client::ServiceClients,
     system::analytics::{properties, track, track_for_user},
     system::application_info::MiscState,
@@ -121,11 +123,7 @@ async fn validate_name_and_email(
     }
     let email = email.to_lowercase();
     // Deleted accounts still own their address (UNIQUE across all rows).
-    let taken: bool =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.multiUsers WHERE email = $1)")
-            .bind(&email)
-            .fetch_one(&mut **tx)
-            .await?;
+    let taken = dao::multi_user_email_exists(tx, &email).await?;
     if taken {
         errors.insert(0, crate::msg::user::email::TAKEN.to_owned());
     }
@@ -165,25 +163,11 @@ fn notify_on_suspicious_names(
     }
 }
 
-#[derive(sqlx::FromRow)]
-pub(crate) struct OrganizationRow {
-    pub id: String,
-    pub name: String,
-    pub enable_auto_verify: bool,
-    pub new_user_mailing_list: String,
-}
-
-pub(crate) const ORGANIZATION_COLUMNS: &str = "_id AS id, name, enableAutoVerify AS enable_auto_verify, newUserMailingList AS new_user_mailing_list";
-
 async fn find_organization(
     tx: &mut Transaction<'_, Postgres>,
     id: &str,
 ) -> ApiResult<Option<OrganizationRow>> {
-    let mut q = Sql::new("SELECT ");
-    q.push(ORGANIZATION_COLUMNS)
-        .push(" FROM webknossos.organizations_ WHERE _id = ")
-        .push_bind(id);
-    Ok(q.build_query_as().fetch_optional(&mut **tx).await?)
+    dao::find_one_organization(tx, id).await
 }
 
 /// organizationService.assertUsersCanBeAdded. Locks the organization row so
@@ -192,30 +176,11 @@ pub(crate) async fn assert_users_can_be_added(
     tx: &mut Transaction<'_, Postgres>,
     organization_id: &str,
 ) -> ApiResult<()> {
-    let included: Option<Option<i32>> = sqlx::query_scalar(
-        "SELECT includedUsers FROM webknossos.organizations_ WHERE _id = $1 FOR UPDATE",
-    )
-    .bind(organization_id)
-    .fetch_optional(&mut **tx)
-    .await?;
+    let included = dao::find_included_users_for_update(tx, organization_id).await?;
     let Some(Some(included)) = included else {
         return Ok(());
     };
-    let count: i64 = sqlx::query_scalar(
-        r#"SELECT COUNT(*) FROM webknossos.users_ AS u
-           LEFT JOIN (
-             SELECT DISTINCT ON (_multiUser) _multiUser, _organization FROM webknossos.users
-             WHERE NOT isDeactivated AND _organization IN (
-               SELECT _id FROM webknossos.organizations
-               WHERE pricingPlan IN ('Team', 'Power', 'Custom', 'Team_Trial', 'Power_Trial'))
-             ORDER BY _multiUser, created ASC
-           ) AS paying ON paying._multiUser = u._multiUser
-           WHERE u._organization = $1 AND NOT u.isDeactivated AND NOT u.isUnlisted
-             AND (paying._organization IS NULL OR paying._organization = $1)"#,
-    )
-    .bind(organization_id)
-    .fetch_one(&mut **tx)
-    .await?;
+    let count = dao::count_users_towards_limit(tx, organization_id).await?;
     if count + 1 > i64::from(included) {
         return Err(ApiError::bad_request(org_msg::USER_LIMIT_REACHED));
     }
@@ -229,20 +194,11 @@ pub(crate) async fn initial_team_memberships(
     invite_id: Option<&ObjectId>,
 ) -> ApiResult<Vec<(ObjectId, bool)>> {
     if let Some(invite_id) = invite_id {
-        return Ok(sqlx::query_as(
-            "SELECT _team, isTeamManager FROM webknossos.invite_team_roles WHERE _invite = $1 ORDER BY _team",
-        )
-        .bind(invite_id)
-        .fetch_all(&mut **tx)
-        .await?);
+        return dao::find_all_invite_team_roles(tx, invite_id).await;
     }
-    let team: ObjectId = sqlx::query_scalar(
-        "SELECT _id FROM webknossos.organizationTeams WHERE _organization = $1 LIMIT 1",
-    )
-    .bind(organization_id)
-    .fetch_optional(&mut **tx)
-    .await?
-    .ok_or_else(|| ApiError::bad_request(crate::msg::organization::TEAM_MISSING))?;
+    let team = dao::find_one_organization_team(tx, organization_id)
+        .await?
+        .ok_or_else(|| ApiError::bad_request(crate::msg::organization::TEAM_MISSING))?;
     Ok(vec![(team, false)])
 }
 
@@ -251,19 +207,9 @@ async fn insert_team_memberships(
     user_id: &ObjectId,
     memberships: &[(ObjectId, bool)],
 ) -> ApiResult<()> {
-    sqlx::query("DELETE FROM webknossos.user_team_roles WHERE _user = $1")
-        .bind(user_id)
-        .execute(&mut **tx)
-        .await?;
+    dao::delete_team_memberships_for_user(tx, user_id).await?;
     for (team, is_manager) in memberships {
-        sqlx::query(
-            "INSERT INTO webknossos.user_team_roles(_user, _team, isTeamManager) VALUES($1, $2, $3)",
-        )
-        .bind(user_id)
-        .bind(team)
-        .bind(is_manager)
-        .execute(&mut **tx)
-        .await?;
+        dao::insert_team_membership(tx, user_id, team, *is_manager).await?;
     }
     Ok(())
 }
@@ -294,11 +240,7 @@ pub(crate) async fn insert_account(
     config: &BrowserAuthConfig,
     account: NewAccount<'_>,
 ) -> ApiResult<CreatedAccount> {
-    let taken: bool =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.multiUsers WHERE email = $1)")
-            .bind(account.email)
-            .fetch_one(&mut **tx)
-            .await?;
+    let taken = dao::multi_user_email_exists(tx, account.email).await?;
     if taken {
         return Err(ApiError::bad_request(crate::msg::user::email::TAKEN));
     }
@@ -307,38 +249,32 @@ pub(crate) async fn insert_account(
         None => ("Empty", String::new()),
     };
     let multi_user_id = ObjectId::new();
-    sqlx::query(
-        r#"INSERT INTO webknossos.multiUsers(_id, email, passwordInfo_hasher, passwordInfo_password,
-             firstName, lastName, isSuperUser, isEmailVerified)
-           VALUES($1, $2, $3::webknossos.USER_PASSWORDINFO_HASHERS, $4, $5, $6, FALSE, $7)"#,
+    dao::insert_multi_user(
+        tx,
+        &multi_user_id,
+        account.email,
+        hasher,
+        &hash,
+        account.first_name,
+        account.last_name,
+        account.is_email_verified,
     )
-    .bind(&multi_user_id)
-    .bind(account.email)
-    .bind(hasher)
-    .bind(&hash)
-    .bind(account.first_name)
-    .bind(account.last_name)
-    .bind(account.is_email_verified)
-    .execute(&mut **tx)
     .await?;
     let mut mails = Vec::new();
     if !account.is_email_verified {
         mails.push(create_email_verification(tx, config, &multi_user_id).await?);
     }
     let user_id = ObjectId::new();
-    sqlx::query(
-        r#"INSERT INTO webknossos.users(_id, _multiUser, _organization, lastActivity, userConfiguration,
-             isDeactivated, isAdmin, isOrganizationOwner, isDatasetManager, isUnlisted, created)
-           VALUES($1, $2, $3, statement_timestamp(), '{}'::jsonb, $4, $5, $6, $7, FALSE, statement_timestamp())"#,
+    dao::insert_user(
+        tx,
+        &user_id,
+        &multi_user_id,
+        account.organization_id,
+        !account.is_active,
+        account.is_admin,
+        account.is_organization_owner,
+        account.is_dataset_manager,
     )
-    .bind(&user_id)
-    .bind(&multi_user_id)
-    .bind(account.organization_id)
-    .bind(!account.is_active)
-    .bind(account.is_admin)
-    .bind(account.is_organization_owner)
-    .bind(account.is_dataset_manager)
-    .execute(&mut **tx)
     .await?;
     insert_team_memberships(tx, &user_id, &account.team_memberships).await?;
     Ok(CreatedAccount { user_id, mails })
@@ -359,25 +295,18 @@ pub(crate) async fn join_organization_as(
     team_memberships: &[(ObjectId, bool)],
 ) -> ApiResult<ObjectId> {
     let new_user_id = ObjectId::new();
-    let inserted = sqlx::query(
-        r#"INSERT INTO webknossos.users(_id, _multiUser, _organization, lastActivity, userConfiguration,
-             isDeactivated, isAdmin, isOrganizationOwner, isDatasetManager, isUnlisted,
-             loggedOutEverywhereTime, created, lastTaskTypeId, isDeleted)
-           SELECT $1, _multiUser, $3, statement_timestamp(), userConfiguration, $4, $5, $6, $7, $8,
-             loggedOutEverywhereTime, statement_timestamp(), NULL, FALSE
-           FROM webknossos.users_ WHERE _id = $2"#,
+    let inserted = dao::insert_user_copying_original(
+        tx,
+        &new_user_id,
+        original_user_id,
+        organization_id,
+        !auto_activate,
+        is_admin,
+        is_organization_owner,
+        is_dataset_manager,
+        is_unlisted,
     )
-    .bind(&new_user_id)
-    .bind(original_user_id)
-    .bind(organization_id)
-    .bind(!auto_activate)
-    .bind(is_admin)
-    .bind(is_organization_owner)
-    .bind(is_dataset_manager)
-    .bind(is_unlisted)
-    .execute(&mut **tx)
-    .await?
-    .rows_affected();
+    .await?;
     if inserted == 0 {
         return Err(ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID));
     }
@@ -398,13 +327,7 @@ async fn new_user_mail_recipient(
     if !organization.new_user_mailing_list.is_empty() {
         return Ok(Some(organization.new_user_mailing_list.clone()));
     }
-    Ok(sqlx::query_scalar(
-        r#"SELECT m.email FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON u._multiUser = m._id
-           WHERE u.isOrganizationOwner AND NOT u.isDeactivated AND u._organization = $1 LIMIT 1"#,
-    )
-    .bind(&organization.id)
-    .fetch_optional(&mut **tx)
-    .await?)
+    dao::find_organization_owner_email(tx, &organization.id).await
 }
 
 pub(crate) async fn admin_notifier_mail(
@@ -434,41 +357,19 @@ pub(crate) async fn admin_notifier_mail(
     }))
 }
 
-#[derive(sqlx::FromRow)]
-struct InviteRow {
-    id: ObjectId,
-    organization_id: String,
-    auto_activate: bool,
-    is_admin: bool,
-    is_dataset_manager: bool,
-}
-
-/// inviteDAO.findOneByTokenValue, locked for single use. Expired invites are
-/// excluded, as in the DAO query.
+/// inviteDAO.findOneByTokenValue, locked for single use.
 async fn find_invite(
     tx: &mut Transaction<'_, Postgres>,
     token: &str,
 ) -> ApiResult<Option<InviteRow>> {
-    Ok(sqlx::query_as(
-        r#"SELECT _id AS id, _organization AS organization_id, autoActivate AS auto_activate,
-             isAdmin AS is_admin, isDatasetManager AS is_dataset_manager
-           FROM webknossos.invites_ WHERE tokenValue = $1 AND expirationDateTime > statement_timestamp()
-           ORDER BY created LIMIT 1 FOR UPDATE"#,
-    )
-    .bind(token)
-    .fetch_optional(&mut **tx)
-    .await?)
+    dao::find_one_invite_by_token_for_update(tx, token).await
 }
 
 async fn deactivate_invite(
     tx: &mut Transaction<'_, Postgres>,
     invite_id: &ObjectId,
 ) -> ApiResult<()> {
-    sqlx::query("UPDATE webknossos.invites SET isDeleted = TRUE WHERE _id = $1")
-        .bind(invite_id)
-        .execute(&mut **tx)
-        .await?;
-    Ok(())
+    dao::delete_invite(tx, invite_id).await
 }
 
 /// AuthenticationController.createUser
@@ -547,11 +448,7 @@ pub(crate) async fn insert_organization(
     }
     .replace(' ', "_");
     // Ids of deleted organizations stay reserved (primary key).
-    let exists: bool =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.organizations WHERE _id = $1)")
-            .bind(&id)
-            .fetch_one(&mut **tx)
-            .await?;
+    let exists = dao::organization_id_exists(tx, &id).await?;
     if exists {
         return Err(ApiError::bad_request(org_msg::ID_TAKEN));
     }
@@ -562,42 +459,20 @@ pub(crate) async fn insert_organization(
             ("Custom", None, None)
         };
     let root_folder = ObjectId::new();
-    sqlx::query(
-        "INSERT INTO webknossos.folders(_id, name, metadata) VALUES($1, 'Datasets', '[]'::jsonb)",
+    dao::insert_root_folder(tx, &root_folder).await?;
+    dao::insert_root_folder_path(tx, &root_folder).await?;
+    dao::insert_organization(
+        tx,
+        &id,
+        name,
+        &root_folder,
+        plan,
+        included_users,
+        included_storage,
     )
-    .bind(&root_folder)
-    .execute(&mut **tx)
-    .await?;
-    sqlx::query(
-        "INSERT INTO webknossos.folder_paths(_ancestor, _descendant, depth) VALUES($1, $1, 0)",
-    )
-    .bind(&root_folder)
-    .execute(&mut **tx)
-    .await?;
-    sqlx::query(
-        r#"INSERT INTO webknossos.organizations(_id, additionalInformation, logoUrl, name, _rootFolder,
-             newUserMailingList, enableAutoVerify, pricingPlan, aiPlan, paidUntil, includedUsers,
-             includedStorage, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion,
-             created, isDeleted)
-           VALUES($1, '', '', $2, $3, '', FALSE, $4::webknossos.PRICING_PLANS, NULL, NULL, $5, $6,
-             NULL, 0, statement_timestamp(), FALSE)"#,
-    )
-    .bind(&id)
-    .bind(name)
-    .bind(&root_folder)
-    .bind(plan)
-    .bind(included_users)
-    .bind(included_storage)
-    .execute(&mut **tx)
     .await?;
     let team = ObjectId::new();
-    sqlx::query(
-        "INSERT INTO webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted) VALUES($1, $2, 'Default', statement_timestamp(), TRUE, FALSE)",
-    )
-    .bind(&team)
-    .bind(&id)
-    .execute(&mut **tx)
-    .await?;
+    dao::insert_organization_team(tx, &team, &id).await?;
     Ok((id, team))
 }
 
@@ -627,17 +502,13 @@ pub(crate) async fn create_organization_directory(
     let Some(clients) = clients else {
         return;
     };
-    let urls: Vec<String> =
-        match sqlx::query_scalar("SELECT url FROM webknossos.dataStores_ ORDER BY name")
-            .fetch_all(pool)
-            .await
-        {
-            Ok(urls) => urls,
-            Err(_) => {
-                tracing::warn!("Could not list datastores for organization directory creation");
-                return;
-            }
-        };
+    let urls: Vec<String> = match dao::find_all_data_store_urls(pool).await {
+        Ok(urls) => urls,
+        Err(_) => {
+            tracing::warn!("Could not list datastores for organization directory creation");
+            return;
+        }
+    };
     let query = [("organizationId", organization_id.to_owned())];
     let requests = urls.iter().map(|url| {
         clients.request(
@@ -724,11 +595,7 @@ async fn register(
             .await?
             .ok_or_else(|| ApiError::bad_request(crate::msg::organization::NOT_FOUND_BY_INVITE))?,
         None => {
-            let organizations: Vec<OrganizationRow> = sqlx::query_as(&format!(
-                "SELECT {ORGANIZATION_COLUMNS} FROM webknossos.organizations_ ORDER BY _id LIMIT 2"
-            ))
-            .fetch_all(&mut *tx)
-            .await?;
+            let organizations = dao::find_first_two_organizations(&mut tx).await?;
             let mut organizations = organizations.into_iter();
             match (organizations.next(), organizations.next()) {
                 (Some(organization), None) => organization,
@@ -789,10 +656,7 @@ async fn create_organization_with_admin(
     let mut tx = state.pool.begin().await?;
     // assertMayCreateOrganization: no organization yet, a wkorg instance, or
     // a superuser.
-    let no_organizations: bool =
-        sqlx::query_scalar("SELECT NOT EXISTS(SELECT 1 FROM webknossos.organizations_)")
-            .fetch_one(&mut *tx)
-            .await?;
+    let no_organizations = dao::has_no_organizations(&mut tx).await?;
     if !(no_organizations
         || config.is_wkorg_instance
         || user.as_ref().is_some_and(|u| u.is_superuser))
@@ -853,13 +717,7 @@ async fn create_organization_with_admin(
                 ),
             ));
         }
-        sqlx::query(
-            "UPDATE webknossos.organizations SET lastTermsOfServiceAcceptanceTime = statement_timestamp(), lastTermsOfServiceAcceptanceVersion = $2 WHERE _id = $1",
-        )
-        .bind(&organization.id)
-        .bind(version)
-        .execute(&mut *tx)
-        .await?;
+        dao::update_terms_of_service_acceptance(&mut tx, &organization.id, version).await?;
     }
     tx.commit().await?;
     track_for_user(
@@ -905,11 +763,7 @@ async fn create_organization_with_existing_user(
         return Err(ApiError::bad_request(crate::msg::user::SUPER_USER_ONLY));
     }
     let mut tx = state.pool.begin().await?;
-    let exists: bool =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.users_ WHERE _id = $1)")
-            .bind(&body.user_id)
-            .fetch_one(&mut *tx)
-            .await?;
+    let exists = dao::user_exists(&mut tx, &body.user_id).await?;
     if !exists {
         // Play: `userDAO.findOne(userId)` without a message, an empty Fox: the generic 404.
         return Err(ApiError::not_found(crate::msg::NOT_FOUND));
@@ -1013,15 +867,9 @@ async fn lock_multi_user(
     tx: &mut Transaction<'_, Postgres>,
     user_id: &ObjectId,
 ) -> ApiResult<(ObjectId, String, String, String, bool)> {
-    sqlx::query_as(
-        r#"SELECT m._id, m.email, m.firstName, m.lastName, m.isSuperUser
-           FROM webknossos.multiUsers_ m JOIN webknossos.users_ u ON u._multiUser = m._id
-           WHERE u._id = $1 FOR UPDATE OF m"#,
-    )
-    .bind(user_id)
-    .fetch_optional(&mut **tx)
-    .await?
-    .ok_or_else(ApiError::unauthorized)
+    dao::find_multi_user_of_user_for_update(tx, user_id)
+        .await?
+        .ok_or_else(ApiError::unauthorized)
 }
 
 async fn join_organization(
@@ -1041,25 +889,12 @@ async fn join_organization(
     let organization = find_organization(&mut tx, &invite.organization_id)
         .await?
         .ok_or_else(|| ApiError::bad_request(org_msg::INVALID_INVITE_TOKEN))?;
-    let already: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM webknossos.users_ WHERE _multiUser = $1 AND _organization = $2)",
-    )
-    .bind(&multi_user_id)
-    .bind(&organization.id)
-    .fetch_one(&mut *tx)
-    .await?;
+    let already =
+        dao::multi_user_has_user_in_organization(&mut tx, &multi_user_id, &organization.id).await?;
     if already {
         return Err(ApiError::bad_request(org_msg::ALREADY_JOINED));
     }
-    let paying: Option<String> = sqlx::query_scalar(
-        r#"SELECT _organization FROM webknossos.users_ WHERE _multiUser = $1 AND NOT isDeactivated
-           AND _organization IN (SELECT _id FROM webknossos.organizations
-             WHERE pricingPlan IN ('Team', 'Power', 'Custom', 'Team_Trial', 'Power_Trial'))
-           ORDER BY created ASC LIMIT 1"#,
-    )
-    .bind(&multi_user_id)
-    .fetch_optional(&mut *tx)
-    .await?;
+    let paying = dao::find_paying_organization_of_multi_user(&mut tx, &multi_user_id).await?;
     if !is_superuser && paying.is_none() {
         assert_users_can_be_added(&mut tx, &organization.id).await?;
     }
@@ -1144,43 +979,32 @@ async fn send_invites(
         ));
     }
     let mut tx = state.pool.begin().await?;
-    let (organization_name, sender_name): (String, String) = sqlx::query_as(
-        r#"SELECT o.name, m.firstName || ' ' || m.lastName FROM webknossos.users_ u
-           JOIN webknossos.multiUsers_ m ON m._id = u._multiUser
-           JOIN webknossos.organizations_ o ON o._id = u._organization WHERE u._id = $1"#,
-    )
-    .bind(&user.id)
-    .fetch_one(&mut *tx)
-    .await?;
+    let (organization_name, sender_name) =
+        dao::find_organization_name_and_sender_name(&mut tx, &user.id).await?;
     let expiry_ms =
         i64::try_from(config.invite_expiry.as_millis()).map_err(|_| ApiError::internal())?;
     let mut mails = Vec::new();
     for recipient in &body.recipients {
         let invite_id = ObjectId::new();
         let token = random_base64url(16)?;
-        sqlx::query(
-            r#"INSERT INTO webknossos.invites(_id, tokenValue, _organization, autoActivate, isAdmin,
-                 isDatasetManager, expirationDateTime, created, isDeleted)
-               VALUES($1, $2, $3, $4, $5, $6,
-                 statement_timestamp() + $7::bigint * INTERVAL '1 millisecond', statement_timestamp(), FALSE)"#,
+        dao::insert_invite(
+            &mut tx,
+            &invite_id,
+            &token,
+            &user.organization_id,
+            body.auto_activate,
+            body.is_admin,
+            body.is_dataset_manager,
+            expiry_ms,
         )
-        .bind(&invite_id)
-        .bind(&token)
-        .bind(&user.organization_id)
-        .bind(body.auto_activate)
-        .bind(body.is_admin)
-        .bind(body.is_dataset_manager)
-        .bind(expiry_ms)
-        .execute(&mut *tx)
         .await?;
         for membership in &body.team_memberships {
-            sqlx::query(
-                "INSERT INTO webknossos.invite_team_roles(_invite, _team, isTeamManager) VALUES($1, $2, $3)",
+            dao::insert_invite_team_role(
+                &mut tx,
+                &invite_id,
+                &membership.id,
+                membership.is_team_manager,
             )
-            .bind(&invite_id)
-            .bind(&membership.id)
-            .bind(membership.is_team_manager)
-            .execute(&mut *tx)
             .await?;
         }
         tracing::info!("sending invite mail");
@@ -1217,34 +1041,22 @@ async fn add_user(
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let mut tx = state.pool.begin().await?;
-    let multi_user_id: ObjectId =
-        sqlx::query_scalar("SELECT _id FROM webknossos.multiUsers_ WHERE email = $1 FOR UPDATE")
-            .bind(&email)
-            .fetch_optional(&mut *tx)
-            .await?
-            .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+    let multi_user_id = dao::find_multi_user_id_by_email_for_update(&mut tx, &email)
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let organization = find_organization(&mut tx, &organization_id)
         .await?
         .ok_or_else(|| {
             ApiError::not_found(crate::msg::organization::not_found(&organization_id))
         })?;
-    let already: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM webknossos.users_ WHERE _multiUser = $1 AND _organization = $2)",
-    )
-    .bind(&multi_user_id)
-    .bind(&organization.id)
-    .fetch_one(&mut *tx)
-    .await?;
+    let already =
+        dao::multi_user_has_user_in_organization(&mut tx, &multi_user_id, &organization.id).await?;
     if already {
         return Err(ApiError::bad_request(org_msg::ALREADY_JOINED));
     }
-    let original: ObjectId = sqlx::query_scalar(
-        "SELECT _id FROM webknossos.users_ WHERE _multiUser = $1 AND NOT isDeactivated ORDER BY created, _id LIMIT 1",
-    )
-    .bind(&multi_user_id)
-    .fetch_optional(&mut *tx)
-    .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+    let original = dao::find_first_active_user_of_multi_user(&mut tx, &multi_user_id)
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let team_memberships = initial_team_memberships(&mut tx, &organization.id, None).await?;
     let user_id = join_organization_as(
         &mut tx,

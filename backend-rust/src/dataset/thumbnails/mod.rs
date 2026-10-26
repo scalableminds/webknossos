@@ -11,6 +11,8 @@ use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
+mod dao;
+
 use crate::{
     AppState,
     auth::OptionalAuthUser,
@@ -19,6 +21,7 @@ use crate::{
     stores::client::ServiceClients,
     util::id::{ObjectId, PathObjectId},
 };
+use dao::DatasetRow;
 use webknossos_common::{datasource::StaticLayer, geometry::Vec3Int, json::read_i32};
 
 const DEFAULT_SIZE: i32 = 400;
@@ -97,28 +100,7 @@ async fn cached(
     height: i32,
     mapping: Option<&str>,
 ) -> ApiResult<Option<Vec<u8>>> {
-    // Scala's cleanup job deletes rows older than ten days; filtering here keeps
-    // that expiry without depending on the periodic job having run.
-    Ok(sqlx::query_scalar(
-        "SELECT image FROM webknossos.dataset_thumbnails WHERE _dataset=$1 AND dataLayerName=$2 AND width=$3 AND height=$4 AND mappingName=$5 AND created > NOW() - INTERVAL '10 days'",
-    )
-    .bind(id)
-    .bind(layer)
-    .bind(width)
-    .bind(height)
-    .bind(mapping.unwrap_or(""))
-    .fetch_optional(&state.pool)
-    .await?)
-}
-
-#[derive(sqlx::FromRow)]
-struct DatasetRow {
-    is_usable: bool,
-    has_voxel_size: bool,
-    store_url: Option<String>,
-    cache_version: i32,
-    default_configuration: Option<Value>,
-    admin_configuration: Option<Value>,
+    dao::find_cached_image(&state.pool, id, layer, width, height, mapping).await
 }
 
 /// A rendered data layer (StaticLayer reads).
@@ -270,13 +252,9 @@ pub(crate) fn java_double_string(value: f64) -> String {
 }
 
 async fn load_dataset(state: &AppState, id: &ObjectId) -> ApiResult<DatasetRow> {
-    sqlx::query_as(
-        "SELECT d.isUsable AS is_usable, d.voxelSizeFactor IS NOT NULL AS has_voxel_size, s.url AS store_url, d.thumbnailCacheVersion AS cache_version, d.defaultViewConfiguration AS default_configuration, d.adminViewConfiguration AS admin_configuration FROM webknossos.datasets_ d LEFT JOIN webknossos.dataStores_ s ON s.name = trim(d._dataStore) WHERE d._id = $1",
-    )
-    .bind(id)
-    .fetch_optional(&state.pool)
-    .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::dataset::not_found(id)))
+    dao::find_dataset_row(&state.pool, id)
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::dataset::not_found(id)))
 }
 
 /// DatasetService.usableDataSourceFor: unusable datasets fail before layers load.
@@ -322,44 +300,11 @@ async fn store(
     image: &[u8],
 ) -> ApiResult<()> {
     let mut transaction = state.pool.begin().await?;
-    let current: Option<i32> = sqlx::query_scalar(
-        "SELECT thumbnailCacheVersion FROM webknossos.datasets WHERE _id=$1 AND NOT isDeleted FOR SHARE",
-    )
-    .bind(id)
-    .fetch_optional(&mut *transaction)
-    .await?;
+    let current = dao::find_cache_version_for_share(&mut transaction, id).await?;
     if current != Some(version) {
         return Ok(());
     }
-    let [x, y, z, width, height, depth] = record.bounding_box.map(f64::from);
-    let [mx, my, mz] = record.mag.to_array().map(f64::from);
-    sqlx::query(
-        r#"INSERT INTO webknossos.dataset_thumbnails
-          (_dataset, dataLayerName, width, height, mappingName, image, mimetype, mag, mag1BoundingBox, created)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, ROW($8, $9, $10)::webknossos.VECTOR3,
-          ROW($11, $12, $13, $14, $15, $16)::webknossos.BOUNDING_BOX, NOW())
-        ON CONFLICT (_dataset, dataLayerName, width, height, mappingName) DO UPDATE SET
-          image = EXCLUDED.image, mimetype = EXCLUDED.mimetype, mag = EXCLUDED.mag,
-          mag1BoundingBox = EXCLUDED.mag1BoundingBox, created = EXCLUDED.created"#,
-    )
-    .bind(id)
-    .bind(record.layer)
-    .bind(record.width)
-    .bind(record.height)
-    .bind(record.mapping.unwrap_or(""))
-    .bind(image)
-    .bind(JPEG)
-    .bind(mx)
-    .bind(my)
-    .bind(mz)
-    .bind(x)
-    .bind(y)
-    .bind(z)
-    .bind(width)
-    .bind(height)
-    .bind(depth)
-    .execute(&mut *transaction)
-    .await?;
+    dao::upsert_thumbnail(&mut transaction, id, record, image).await?;
     transaction.commit().await?;
     Ok(())
 }

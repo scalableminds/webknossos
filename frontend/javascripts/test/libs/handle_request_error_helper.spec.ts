@@ -16,8 +16,8 @@ function jsonResponse(body: unknown, status: number) {
   return new Response(JSON.stringify(body), { status });
 }
 
-async function handle(response: Response, showErrorToast = true) {
-  return handleError(URL, showErrorToast, true, response).catch((error) => error);
+async function handle(response: Response, showErrorToast = true, url = URL) {
+  return handleError(url, showErrorToast, true, response).catch((error) => error);
 }
 
 describe("handleError", () => {
@@ -26,22 +26,18 @@ describe("handleError", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
-  it("shows only the readable session expired toast for a generic 401 JSON response", async () => {
+  it("shows only the session expired toast for a 401 response", async () => {
     const error = await handle(
-      jsonResponse({ success: false, message: "Authentication required" }, 401),
+      jsonResponse({ messages: [{ error: "You are not authorized to view this resource." }] }, 401),
     );
 
     expect(showToastOnce).toHaveBeenCalledTimes(1);
     expect(Toast.messages).not.toHaveBeenCalled();
     expect(Toast.error).not.toHaveBeenCalled();
-    expect(error).toMatchObject({
-      status: 401,
-      messages: [{ error: "Authentication required" }],
-      url: URL,
-    });
+    expect(error).toMatchObject({ status: 401, url: URL });
   });
 
-  it("shows only the readable session expired toast for a 401 plain text response", async () => {
+  it("shows only the session expired toast for a 401 plain text response", async () => {
     await handle(new Response("Not authenticated", { status: 401 }));
 
     expect(showToastOnce).toHaveBeenCalledTimes(1);
@@ -49,16 +45,20 @@ describe("handleError", () => {
     expect(Toast.error).not.toHaveBeenCalled();
   });
 
-  it("still shows structured server messages of 401 responses", async () => {
-    await handle(jsonResponse({ messages: [{ error: "Passkey is not authorized." }] }, 401));
+  it("shows the server messages instead of the session expired toast for 401 responses of authentication routes", async () => {
+    await handle(
+      jsonResponse({ messages: [{ error: "Passkey is not authorized." }] }, 401),
+      true,
+      "/api/auth/webauthn/auth/finalize",
+    );
 
-    expect(showToastOnce).toHaveBeenCalledTimes(1);
+    expect(showToastOnce).not.toHaveBeenCalled();
     expect(Toast.messages).toHaveBeenCalledWith([
       { error: "Passkey is not authorized.", key: "401" },
     ]);
   });
 
-  it("shows structured server messages", async () => {
+  it("shows server messages", async () => {
     const error = await handle(jsonResponse({ messages: [{ error: "Dataset not found" }] }, 404));
 
     expect(showToastOnce).not.toHaveBeenCalled();
@@ -70,13 +70,6 @@ describe("handleError", () => {
     });
   });
 
-  it("shows the message of a JSON response with a single message instead of the raw JSON", async () => {
-    await handle(jsonResponse({ success: false, message: "Something went wrong" }, 400));
-
-    expect(Toast.messages).toHaveBeenCalledWith([{ error: "Something went wrong", key: "400" }]);
-    expect(Toast.error).not.toHaveBeenCalled();
-  });
-
   it("shows plain text error responses as-is", async () => {
     const error = await handle(new Response("Internal Server Error", { status: 500 }));
 
@@ -85,7 +78,7 @@ describe("handleError", () => {
   });
 
   it("does not show any toasts if showErrorToast is false", async () => {
-    await handle(jsonResponse({ success: false, message: "Authentication required" }, 401), false);
+    await handle(jsonResponse({ messages: [{ error: "Not authenticated" }] }, 401), false);
     await handle(new Response("Internal Server Error", { status: 500 }), false);
 
     expect(showToastOnce).not.toHaveBeenCalled();

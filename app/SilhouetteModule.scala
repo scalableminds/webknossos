@@ -1,4 +1,5 @@
 import com.google.inject.{AbstractModule, Provides, TypeLiteral}
+import play.silhouette.api.actions.SecuredErrorHandler
 import play.silhouette.api.repositories.AuthInfoRepository
 import play.silhouette.api.util.PasswordHasherRegistry
 import play.silhouette.api.{Environment, Silhouette, SilhouetteProvider}
@@ -9,6 +10,8 @@ class SilhouetteModule extends AbstractModule {
     bind(new TypeLiteral[Environment[WkEnv]] {}).to(new TypeLiteral[WkSilhouetteEnvironment] {})
     bind(new TypeLiteral[Silhouette[WkEnv]] {}).to(new TypeLiteral[SilhouetteProvider[WkEnv]] {})
     bind(new TypeLiteral[AuthInfoRepository] {}).to(new TypeLiteral[UserAuthInfoRepository] {})
+    // Replaces silhouette's default SecuredErrorHandlerModule, which is disabled in application.conf
+    bind(classOf[SecuredErrorHandler]).to(classOf[ErrorHandler])
     ()
   }
 

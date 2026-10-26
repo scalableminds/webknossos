@@ -32,7 +32,9 @@ pub async fn lock_edit(
     dataset_id: &ObjectId,
     require_read: bool,
 ) -> ApiResult<()> {
-    dao::lock_dataset(transaction, dataset_id).await?;
+    dao::find_id_for_update(transaction, dataset_id)
+        .await?
+        .ok_or(sqlx::Error::RowNotFound)?;
     dao::lock_organization_teams(transaction, &user.organization_id).await?;
     dao::lock_user_team_roles(transaction, &user.id).await?;
     // Prevent an inherited folder grant changing while this write is in flight.

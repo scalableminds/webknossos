@@ -11,6 +11,10 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use webknossos_common::enums::{LayerAttachmentDataformat, LayerAttachmentType};
 
+mod dao;
+
+pub(crate) use dao::find_record as load_record;
+
 use crate::{
     AppState,
     auth::AuthUser,
@@ -73,22 +77,6 @@ impl DatasetRecord {
             .as_deref()
             .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))
     }
-}
-
-pub(crate) async fn load_record(
-    executor: impl sqlx::PgExecutor<'_>,
-    id: &ObjectId,
-) -> ApiResult<Option<DatasetRecord>> {
-    Ok(sqlx::query_as(
-        r#"SELECT d._id AS id, d._organization AS organization, s.url AS store_url, s.name AS store_name,
-             d.isVirtual AS is_virtual, d.isUsable AS is_usable, d.status, d.rootPath AS root_path,
-             d.rootRealPath AS root_real_path
-           FROM webknossos.datasets_ d LEFT JOIN webknossos.dataStores_ s ON s.name = trim(d._dataStore)
-           WHERE d._id = $1"#,
-    )
-    .bind(id)
-    .fetch_optional(executor)
-    .await?)
 }
 
 /// Play passes `datasetId.toString` to `notFoundMessage` in writeMirror and the finish-to-path routes, which picks the
@@ -201,11 +189,7 @@ pub(crate) async fn write_mirror_for_virtual(
         .await?;
     let written: Vec<(String, String)> = parse_json(&response.bytes)?;
     if let Some((_, path)) = written.first() {
-        sqlx::query("UPDATE webknossos.datasets SET mirrorPath = $2 WHERE _id = $1")
-            .bind(&record.id)
-            .bind(path)
-            .execute(pool)
-            .await?;
+        dao::update_mirror_path(pool, record.id.as_str(), path).await?;
     }
     Ok(())
 }
@@ -291,18 +275,7 @@ async fn delete_dataset(
     tracing::info!(dataset = %id, user = %user.id, is_virtual = record.is_virtual, "Deleting dataset");
     let store_url = record.store_url()?.to_owned();
     if record.is_virtual {
-        let paths: Vec<String> = sqlx::query_scalar(
-            r#"SELECT m1.path FROM webknossos.dataset_mags m1 WHERE m1._dataset = $1 AND m1.path IS NOT NULL
-                 AND NOT EXISTS (SELECT 1 FROM webknossos.dataset_mags m2 WHERE m2._dataset != $1
-                   AND (m2.path = m1.path OR (m2.realpath IS NOT NULL AND m2.realpath = m1.realpath)))
-               UNION ALL
-               SELECT a1.path FROM webknossos.dataset_layer_attachments a1 WHERE a1._dataset = $1
-                 AND NOT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments a2 WHERE a2._dataset != $1
-                   AND (a2.path = a1.path OR (a2.realpath IS NOT NULL AND a2.realpath = a1.realpath)))"#,
-        )
-        .bind(&*id)
-        .fetch_all(&state.pool)
-        .await?;
+        let paths = dao::find_exclusive_paths(&state.pool, &id).await?;
         crate::dataset::paths::delete_paths(&state.pool, &clients, &store_url, &paths).await?;
     } else if let Some(root) = record.root_path.clone().or(record.root_real_path.clone()) {
         if !crate::organization::storage::is_local_path(&root) {
@@ -316,20 +289,8 @@ async fn delete_dataset(
             format!("{root}/")
         };
         let store_name = record.store_name.clone().unwrap_or_default();
-        let users: Vec<String> = sqlx::query_scalar(
-            r#"SELECT DISTINCT id FROM (
-                 SELECT d._id AS id FROM webknossos.dataset_mags m JOIN webknossos.datasets d ON m._dataset = d._id
-                 WHERE m.realpath IS NOT NULL AND starts_with(m.realpath, $1) AND d._id != $2 AND d._datastore = $3
-                 UNION ALL
-                 SELECT d._id FROM webknossos.dataset_layer_attachments a JOIN webknossos.datasets d ON a._dataset = d._id
-                 WHERE a.realpath IS NOT NULL AND starts_with(a.realpath, $1) AND d._id != $2 AND d._datastore = $3) referencing
-               ORDER BY id"#,
-        )
-        .bind(&directory)
-        .bind(&*id)
-        .bind(&store_name)
-        .fetch_all(&state.pool)
-        .await?;
+        let users =
+            dao::find_ids_referencing_directory(&state.pool, &directory, &id, &store_name).await?;
         if !users.is_empty() {
             return Err(ApiError::bad_request(format!(
                 "Cannot delete dataset because {} other datasets reference its data: {}",
@@ -349,11 +310,7 @@ async fn delete_dataset(
             .map_err(|_| ApiError::bad_request(crate::msg::dataset::delete::FAILED))?;
     }
     let mut transaction = state.pool.begin().await?;
-    let exists: Option<ObjectId> =
-        sqlx::query_scalar("SELECT _id FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE")
-            .bind(&*id)
-            .fetch_optional(&mut *transaction)
-            .await?;
+    let exists = crate::dataset::dao::find_id_for_update(&mut transaction, &id).await?;
     if exists.is_none() {
         return Ok(());
     }
@@ -363,8 +320,7 @@ async fn delete_dataset(
             NOT_YET_UPLOADED | NOT_YET_UPLOADED_TO_PATHS
         )
     {
-        sqlx::query("UPDATE webknossos.jobs SET manualState = 'CANCELLED' WHERE command = 'convert_to_wkw' AND commandArgs->>'dataset_id' = $1 AND (state = 'PENDING' OR state = 'STARTED')")
-            .bind(&*id).execute(&mut *transaction).await?;
+        dao::cancel_conversion_jobs(&mut transaction, &id).await?;
     }
     delete_from_db_on_connection(&mut transaction, &id).await?;
     transaction.commit().await?;
@@ -386,47 +342,17 @@ async fn delete_from_db_on_connection(
     connection: &mut sqlx::PgConnection,
     id: &ObjectId,
 ) -> ApiResult<()> {
-    let exists: Option<ObjectId> =
-        sqlx::query_scalar("SELECT _id FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE")
-            .bind(id)
-            .fetch_optional(&mut *connection)
-            .await?;
+    let exists = crate::dataset::dao::find_id_for_update(connection, id).await?;
     if exists.is_none() {
         return Ok(());
     }
-    let annotations: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM webknossos.annotations WHERE _dataset = $1")
-            .bind(id)
-            .fetch_one(&mut *connection)
-            .await?;
-    for statement in [
-        "DELETE FROM webknossos.dataset_mags WHERE _dataset = $1",
-        "DELETE FROM webknossos.dataset_layer_additionalAxes WHERE _dataset = $1",
-        "DELETE FROM webknossos.dataset_layers WHERE _dataset = $1",
-        "DELETE FROM webknossos.dataset_allowedTeams WHERE _dataset = $1",
-        "DELETE FROM webknossos.dataset_layer_coordinateTransformations WHERE _dataset = $1",
-        // refreshStorageReportForDataset finds no remaining mags/attachments
-        // afterwards and therefore only clears these rows.
-        "DELETE FROM webknossos.organization_usedStorage_mags WHERE _dataset = $1",
-        "DELETE FROM webknossos.organization_usedStorage_attachments WHERE _dataset = $1",
-    ] {
-        sqlx::query(statement)
-            .bind(id)
-            .execute(&mut *connection)
-            .await?;
-    }
+    let annotations = dao::count_annotations(connection, id).await?;
+    dao::delete_dependent_rows(connection, id).await?;
     if annotations > 0 {
         // Annotations keep referencing the dataset; it stays as an unusable row.
-        sqlx::query("UPDATE webknossos.datasets SET status = $2, isUsable = false WHERE _id = $1")
-            .bind(id)
-            .bind(DELETED_BY_USER)
-            .execute(&mut *connection)
-            .await?;
+        dao::mark_unusable(connection, id, DELETED_BY_USER).await?;
     } else {
-        sqlx::query("DELETE FROM webknossos.datasets WHERE _id = $1")
-            .bind(id)
-            .execute(&mut *connection)
-            .await?;
+        dao::delete_one(connection, id).await?;
     }
     Ok(())
 }
@@ -468,17 +394,9 @@ async fn write_all_mirrors(
         return Err(ApiError::bad_request(crate::msg::user::SUPER_USER_ONLY));
     }
     tracing::info!(user = %user.id, "Writing mirrors for all datasets");
-    let groups: Vec<(String, Vec<String>)> = sqlx::query_as(
-        "SELECT _dataStore, array_agg(_id ORDER BY _id) FROM webknossos.datasets_ WHERE isVirtual AND isUsable GROUP BY _dataStore ORDER BY _dataStore",
-    )
-    .fetch_all(&state.pool)
-    .await?;
+    let groups = dao::find_virtual_usable_ids_by_store(&state.pool).await?;
     for (store_name, ids) in groups {
-        let url: Option<String> =
-            sqlx::query_scalar("SELECT url FROM webknossos.dataStores_ WHERE name = trim($1)")
-                .bind(&store_name)
-                .fetch_optional(&state.pool)
-                .await?;
+        let url = dao::find_store_url(&state.pool, &store_name).await?;
         let url = url.ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
         let response = clients
             .request(
@@ -491,11 +409,7 @@ async fn write_all_mirrors(
             .await?;
         let written: Vec<(String, String)> = parse_json(&response.bytes)?;
         for (dataset, path) in written {
-            sqlx::query("UPDATE webknossos.datasets SET mirrorPath = $2 WHERE _id = $1")
-                .bind(dataset)
-                .bind(path)
-                .execute(&state.pool)
-                .await?;
+            dao::update_mirror_path(&state.pool, &dataset, &path).await?;
         }
     }
     Ok(())
@@ -509,13 +423,9 @@ async fn finish_upload_to_paths(
 ) -> ApiResult<()> {
     require_editable(&state, &user, &id).await?;
     let mut transaction = state.pool.begin().await?;
-    let (status, usable): (String, bool) = sqlx::query_as(
-        "SELECT status, isUsable FROM webknossos.datasets WHERE _id = $1 AND NOT isDeleted FOR UPDATE",
-    )
-    .bind(&*id)
-    .fetch_optional(&mut *transaction)
-    .await?
-    .ok_or_else(|| not_found(&id))?;
+    let (status, usable) = dao::find_status_for_update(&mut transaction, &id)
+        .await?
+        .ok_or_else(|| not_found(&id))?;
     if !matches!(
         status.as_str(),
         NOT_YET_UPLOADED | NOT_YET_UPLOADED_TO_PATHS
@@ -527,10 +437,7 @@ async fn finish_upload_to_paths(
     if usable {
         return Err(ApiError::bad_request(crate::msg::dataset::ALREADY_USABLE));
     }
-    sqlx::query("UPDATE webknossos.datasets SET isUsable = true, status = '' WHERE _id = $1")
-        .bind(&*id)
-        .execute(&mut *transaction)
-        .await?;
+    dao::mark_usable(&mut transaction, &id).await?;
     transaction.commit().await?;
     let updated = load_record(&state.pool, &id)
         .await?
@@ -600,18 +507,9 @@ async fn finish_mag_upload_to_path(
 ) -> ApiResult<()> {
     let record = require_editable_by_name(&state, &user, &id).await?;
     let [x, y, z] = body.mag.map(f64::from);
-    let updated = sqlx::query(
-        r#"UPDATE webknossos.dataset_mags SET uploadToPathIsPending = false, uploadIsPending = false
-           WHERE _dataset = $1 AND dataLayerName = $2 AND mag = ROW($3, $4, $5)::webknossos.VECTOR3 AND uploadToPathIsPending"#,
-    )
-    .bind(&*id)
-    .bind(&body.layer_name)
-    .bind(x)
-    .bind(y)
-    .bind(z)
-    .execute(&state.pool)
-    .await?;
-    if updated.rows_affected() == 0 {
+    let rows_affected =
+        dao::finish_mag_upload(&state.pool, &id, &body.layer_name, [x, y, z]).await?;
+    if rows_affected == 0 {
         return Err(ApiError::bad_request(
             crate::msg::dataset::upload::to_paths::MAG_NOT_PENDING,
         ));
@@ -627,17 +525,15 @@ async fn finish_attachment_upload_to_path(
     RequestJson(body): RequestJson<AttachmentUploadRequest>,
 ) -> ApiResult<()> {
     let record = require_editable_by_name(&state, &user, &id).await?;
-    let updated = sqlx::query(
-        r#"UPDATE webknossos.dataset_layer_attachments SET uploadToPathIsPending = false, uploadIsPending = false
-           WHERE _dataset = $1 AND layerName = $2 AND type = $3::webknossos.LAYER_ATTACHMENT_TYPE AND name = $4 AND uploadToPathIsPending"#,
+    let rows_affected = dao::finish_attachment_upload(
+        &state.pool,
+        &id,
+        &body.layer_name,
+        body.attachment_type.as_str(),
+        &body.attachment_name,
     )
-    .bind(&*id)
-    .bind(&body.layer_name)
-    .bind(body.attachment_type.as_str())
-    .bind(&body.attachment_name)
-    .execute(&state.pool)
     .await?;
-    if updated.rows_affected() == 0 {
+    if rows_affected == 0 {
         return Err(ApiError::bad_request(
             crate::msg::dataset::upload::to_paths::ATTACHMENT_NOT_PENDING,
         ));

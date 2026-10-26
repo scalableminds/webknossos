@@ -143,16 +143,17 @@ pub(crate) async fn is_readable_on_connection(
     Ok(q.build_query_scalar().fetch_one(connection).await?)
 }
 
-/// Row-locks the dataset (`FOR UPDATE`), failing if it does not exist.
-pub(crate) async fn lock_dataset(
+/// Row-locks the dataset (`FOR UPDATE`); `None` if it does not exist.
+pub(crate) async fn find_id_for_update(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<()> {
-    sqlx::query("SELECT _id FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE")
-        .bind(dataset_id)
-        .fetch_one(connection)
-        .await?;
-    Ok(())
+) -> ApiResult<Option<ObjectId>> {
+    Ok(
+        sqlx::query_scalar("SELECT _id FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE")
+            .bind(dataset_id)
+            .fetch_optional(connection)
+            .await?,
+    )
 }
 
 /// Share-locks the live teams of an organization.

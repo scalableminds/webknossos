@@ -404,6 +404,135 @@ function* processTasksAndReturnError(tasks: Array<() => Saga<void>>): Saga<unkno
   }
 }
 
+// Everything besides the geometry that is needed to add a mesh of one lod of a segment to the scene.
+type MeshSceneParams = {
+  segmentId: bigint;
+  scale: Vector3 | null;
+  lod: number;
+  layerName: string;
+  additionalCoordinates: AdditionalCoordinate[] | null;
+  opacity: number | undefined;
+};
+
+function* addGeometryToScene(
+  sceneParams: MeshSceneParams,
+  geometry: BufferGeometry,
+  isMerged: boolean,
+): Saga<void> {
+  const { segmentMeshController } = getSceneController();
+  const { segmentId, scale, lod, layerName, additionalCoordinates, opacity } = sceneParams;
+  yield* call(
+    {
+      context: segmentMeshController,
+      fn: segmentMeshController.addMeshFromGeometry,
+    },
+    geometry,
+    segmentId,
+    scale,
+    lod,
+    layerName,
+    additionalCoordinates,
+    opacity,
+    isMerged,
+  );
+}
+
+// Decodes the Draco data of the chunks and moves each geometry to the position of its chunk.
+// dataForChunks[i] holds the data of chunks[i]. Chunks that fail to decode are left out of the
+// geometries and reported in errors.
+function* decodeChunks(
+  chunks: MeshChunk[],
+  dataForChunks: Array<ArrayBuffer | undefined>,
+  chunkScale: Vector3 | null,
+): Saga<{
+  geometries: UnmergedBufferGeometryWithInfo[];
+  errors: Array<{ error: unknown; chunk: MeshChunk | undefined }>;
+}> {
+  const loader = getDracoLoader();
+  const geometries: UnmergedBufferGeometryWithInfo[] = [];
+  const errors: Array<{ error: unknown; chunk: MeshChunk | undefined }> = [];
+
+  for (const [chunk, data] of zip(chunks, dataForChunks)) {
+    try {
+      if (chunk == null || data == null) {
+        throw new Error("Unexpected null value.");
+      }
+      const position = chunk.position;
+      const bufferGeometry = (yield* call(
+        loader.decodeDracoFileAsync,
+        data,
+      )) as UnmergedBufferGeometryWithInfo;
+      bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
+      if (chunkScale != null) {
+        bufferGeometry.scale(...chunkScale);
+      }
+
+      bufferGeometry.translate(position[0], position[1], position[2]);
+      // Compute vertex normals to achieve smooth shading. We do this here
+      // within the chunk-specific code (instead of after all chunks are merged)
+      // to distribute the workload a bit over time.
+      bufferGeometry.computeVertexNormals();
+
+      geometries.push(bufferGeometry);
+    } catch (error) {
+      errors.push({ error, chunk });
+    }
+  }
+  return { geometries, errors };
+}
+
+// Merges the chunk geometries of a segment into one geometry, which also knows which vertices
+// belong to which unmapped segment. Returns null if there are no geometries or if merging fails.
+function* mergeChunkGeometries(
+  chunkGeometries: UnmergedBufferGeometryWithInfo[],
+  segmentId: bigint,
+): Saga<BufferGeometryWithInfo | null> {
+  // mergeGeometries will crash if the array is empty. Even if it's not empty,
+  // the function might return null or throw (e.g., when the necessary buffers
+  // cannot be allocated because of memory pressure).
+  if (chunkGeometries.length === 0) {
+    return null;
+  }
+  const sortedGeometries = sortBy(chunkGeometries, (geometry) => geometry.unmappedSegmentId);
+  let mergedGeometry: BufferGeometryWithInfo | null = null;
+  try {
+    mergedGeometry = mergeGeometries(sortedGeometries, false) as BufferGeometryWithInfo | null;
+    if (mergedGeometry != null) {
+      mergedGeometry.vertexSegmentMapping = new VertexSegmentMapping(sortedGeometries);
+      mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
+    }
+  } catch (exception) {
+    mergedGeometry?.dispose();
+    mergedGeometry = null;
+    console.error(`Failed to merge mesh chunks for segment ${segmentId}:`, exception);
+  }
+  return mergedGeometry;
+}
+
+// Features that require the merged geometry (e.g., highlighting of unmapped segments during
+// proofreading) won't work for a mesh that is shown in parts.
+function warnAboutUnmergedMesh(segmentId: bigint, hasChunks: boolean): void {
+  if (hasChunks) {
+    Toast.error(
+      `The mesh chunks of segment ${segmentId} could not be merged. The mesh is shown in parts, so some features like highlighting segments in the mesh won't work for it. This might be due to not having enough RAM. Consider reloading.`,
+    );
+  }
+  console.warn(
+    `Falling back to the unmerged mesh chunks for segment ${segmentId}. See errors above for details.`,
+  );
+}
+
+// Returns null if the geometries can't be merged, e.g., because the merged buffers can't be
+// allocated.
+function mergeGeometriesOrNull(geometries: BufferGeometry[]): BufferGeometry | null {
+  try {
+    return mergeGeometries(geometries, false);
+  } catch (exception) {
+    console.warn("Could not merge mesh chunks:", exception);
+    return null;
+  }
+}
+
 function* loadPrecomputedMeshesInChunksForLod(
   dataset: APIDataset,
   layerName: string,
@@ -548,135 +677,6 @@ function* loadPrecomputedMeshesInChunksForLod(
     { lod },
   );
   yield* call(addGeometryToScene, sceneParams, mergedGeometry, true);
-}
-
-// Everything besides the geometry that is needed to add a mesh of one lod of a segment to the scene.
-type MeshSceneParams = {
-  segmentId: bigint;
-  scale: Vector3 | null;
-  lod: number;
-  layerName: string;
-  additionalCoordinates: AdditionalCoordinate[] | null;
-  opacity: number | undefined;
-};
-
-function* addGeometryToScene(
-  sceneParams: MeshSceneParams,
-  geometry: BufferGeometry,
-  isMerged: boolean,
-): Saga<void> {
-  const { segmentMeshController } = getSceneController();
-  const { segmentId, scale, lod, layerName, additionalCoordinates, opacity } = sceneParams;
-  yield* call(
-    {
-      context: segmentMeshController,
-      fn: segmentMeshController.addMeshFromGeometry,
-    },
-    geometry,
-    segmentId,
-    scale,
-    lod,
-    layerName,
-    additionalCoordinates,
-    opacity,
-    isMerged,
-  );
-}
-
-// Decodes the Draco data of the chunks and moves each geometry to the position of its chunk.
-// dataForChunks[i] holds the data of chunks[i]. Chunks that fail to decode are left out of the
-// geometries and reported in errors.
-function* decodeChunks(
-  chunks: MeshChunk[],
-  dataForChunks: Array<ArrayBuffer | undefined>,
-  chunkScale: Vector3 | null,
-): Saga<{
-  geometries: UnmergedBufferGeometryWithInfo[];
-  errors: Array<{ error: unknown; chunk: MeshChunk | undefined }>;
-}> {
-  const loader = getDracoLoader();
-  const geometries: UnmergedBufferGeometryWithInfo[] = [];
-  const errors: Array<{ error: unknown; chunk: MeshChunk | undefined }> = [];
-
-  for (const [chunk, data] of zip(chunks, dataForChunks)) {
-    try {
-      if (chunk == null || data == null) {
-        throw new Error("Unexpected null value.");
-      }
-      const position = chunk.position;
-      const bufferGeometry = (yield* call(
-        loader.decodeDracoFileAsync,
-        data,
-      )) as UnmergedBufferGeometryWithInfo;
-      bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
-      if (chunkScale != null) {
-        bufferGeometry.scale(...chunkScale);
-      }
-
-      bufferGeometry.translate(position[0], position[1], position[2]);
-      // Compute vertex normals to achieve smooth shading. We do this here
-      // within the chunk-specific code (instead of after all chunks are merged)
-      // to distribute the workload a bit over time.
-      bufferGeometry.computeVertexNormals();
-
-      geometries.push(bufferGeometry);
-    } catch (error) {
-      errors.push({ error, chunk });
-    }
-  }
-  return { geometries, errors };
-}
-
-// Merges the chunk geometries of a segment into one geometry, which also knows which vertices
-// belong to which unmapped segment. Returns null if there are no geometries or if merging fails.
-function* mergeChunkGeometries(
-  chunkGeometries: UnmergedBufferGeometryWithInfo[],
-  segmentId: bigint,
-): Saga<BufferGeometryWithInfo | null> {
-  // mergeGeometries will crash if the array is empty. Even if it's not empty,
-  // the function might return null or throw (e.g., when the necessary buffers
-  // cannot be allocated because of memory pressure).
-  if (chunkGeometries.length === 0) {
-    return null;
-  }
-  const sortedGeometries = sortBy(chunkGeometries, (geometry) => geometry.unmappedSegmentId);
-  let mergedGeometry: BufferGeometryWithInfo | null = null;
-  try {
-    mergedGeometry = mergeGeometries(sortedGeometries, false) as BufferGeometryWithInfo | null;
-    if (mergedGeometry != null) {
-      mergedGeometry.vertexSegmentMapping = new VertexSegmentMapping(sortedGeometries);
-      mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
-    }
-  } catch (exception) {
-    mergedGeometry?.dispose();
-    mergedGeometry = null;
-    console.error(`Failed to merge mesh chunks for segment ${segmentId}:`, exception);
-  }
-  return mergedGeometry;
-}
-
-// Features that require the merged geometry (e.g., highlighting of unmapped segments during
-// proofreading) won't work for a mesh that is shown in parts.
-function warnAboutUnmergedMesh(segmentId: bigint, hasChunks: boolean): void {
-  if (hasChunks) {
-    Toast.error(
-      `The mesh chunks of segment ${segmentId} could not be merged. The mesh is shown in parts, so some features like highlighting segments in the mesh won't work for it. This might be due to not having enough RAM. Consider reloading.`,
-    );
-  }
-  console.warn(
-    `Falling back to the unmerged mesh chunks for segment ${segmentId}. See errors above for details.`,
-  );
-}
-
-// Returns null if the geometries can't be merged, e.g., because the merged buffers can't be
-// allocated.
-function mergeGeometriesOrNull(geometries: BufferGeometry[]): BufferGeometry | null {
-  try {
-    return mergeGeometries(geometries, false);
-  } catch (exception) {
-    console.warn("Could not merge mesh chunks:", exception);
-    return null;
-  }
 }
 
 export default function* precomputedMeshSaga(): Saga<void> {

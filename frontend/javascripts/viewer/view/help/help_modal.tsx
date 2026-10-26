@@ -6,7 +6,7 @@ import { type CSSProperties, useRef, useState } from "react";
 import { ModalWidth } from "theme";
 import { HelpChat, useHelpChatSession } from "./help_chat";
 import { HelpEmail } from "./help_email";
-import { AssistantAvatar, Eyebrow } from "./help_panel_parts";
+import { AssistantAvatar } from "./help_panel_parts";
 
 type HelpMode = "ai" | "email";
 
@@ -39,9 +39,8 @@ function HelpPanelTitle({
   return (
     <Flex align="center" gap="small">
       <AssistantAvatar size={32} />
-      <Flex vertical style={{ flex: 1, minWidth: 0 }}>
-        <span>Help</span>
-        <Eyebrow>{mode === "ai" ? "WEBKNOSSOS assistant" : "A person replies by email"}</Eyebrow>
+      <Flex flex={1} style={{ minWidth: 0 }}>
+        Help
       </Flex>
       <Flex align="center">
         {mode === "ai" && hasMessages && (

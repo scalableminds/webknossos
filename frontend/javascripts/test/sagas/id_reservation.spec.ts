@@ -38,7 +38,7 @@ function createBookmark(id: number): APIAnnotationBookmark {
       clipSkeletonToCurrentSection: false,
       layers: [],
     },
-    thumbnailDataBase64: null,
+    smallThumbnailDataBase64: null,
   };
 }
 

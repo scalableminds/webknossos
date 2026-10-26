@@ -1,10 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
-import com.google.protobuf.ByteString
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{JsonAutoFormat, TristateOptionJsonHelper}
-import com.scalableminds.webknossos.datastore.Annotation.{AnnotationBookmarkProto, AnnotationProto}
+import com.scalableminds.webknossos.datastore.Annotation.AnnotationBookmarkProto
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
@@ -33,8 +32,8 @@ object AnnotationLayerParameters {
 
 trait AnnotationUpdateAction extends UpdateAction
 
-trait ApplyableAnnotationUpdateAction extends AnnotationUpdateAction {
-  def applyOn(annotation: AnnotationProto): AnnotationProto
+trait BookmarkUpdateAction extends AnnotationUpdateAction {
+  def id: Int
 }
 
 case class AddBookmarkAnnotationAction(
@@ -43,22 +42,25 @@ case class AddBookmarkAnnotationAction(
     name: Option[String],
     description: Option[String],
     state: AnnotationBookmarkState,
-    thumbnailDataBase64: Option[String],
+    largeThumbnailDataBase64: Option[String],
+    smallThumbnailDataBase64: Option[String],
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends ApplyableAnnotationUpdateAction derives JsonAutoFormat {
-  override def applyOn(annotation: AnnotationProto): AnnotationProto =
-    annotation.copy(
-      bookmarks = annotation.bookmarks :+ AnnotationBookmarkProto(
-        id = id,
-        created = created,
-        name = name,
-        description = description,
-        state = state.toProto,
-        thumbnailData = thumbnailDataBase64.map(base64 => ByteString.copyFrom(Base64.getDecoder.decode(base64)))
-      )
-    )
+) extends BookmarkUpdateAction derives JsonAutoFormat {
+  def toProto: AnnotationBookmarkProto =
+    AnnotationBookmarkProto(id = id, created = created, name = name, description = description, state = state.toProto)
+
+  def thumbnails: Seq[(BookmarkThumbnailSize.Value, Array[Byte])] =
+    Seq(
+      BookmarkThumbnailSize.large -> largeThumbnailDataBase64,
+      BookmarkThumbnailSize.small -> smallThumbnailDataBase64
+    ).collect { case (size, Some(base64)) => size -> Base64.getDecoder.decode(base64) }
+
+  // The thumbnails are stored in their own column family when the update is saved.
+  def withoutThumbnails: AddBookmarkAnnotationAction =
+    this.copy(largeThumbnailDataBase64 = None, smallThumbnailDataBase64 = None)
+
   override def addTimestamp(timestamp: Long): UpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def addAuthorId(authorId: Option[ObjectId]): UpdateAction = this.copy(actionAuthorId = authorId)
@@ -73,13 +75,9 @@ case class UpdateBookmarkAnnotationAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends ApplyableAnnotationUpdateAction {
-  override def applyOn(annotation: AnnotationProto): AnnotationProto =
-    annotation.copy(bookmarks = annotation.bookmarks.map { bookmark =>
-      if (bookmark.id == id)
-        bookmark.copy(name = name.getOrElse(bookmark.name), description = description.getOrElse(bookmark.description))
-      else bookmark
-    })
+) extends BookmarkUpdateAction {
+  def applyOn(bookmark: AnnotationBookmarkProto): AnnotationBookmarkProto =
+    bookmark.copy(name = name.getOrElse(bookmark.name), description = description.getOrElse(bookmark.description))
   override def addTimestamp(timestamp: Long): UpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def addAuthorId(authorId: Option[ObjectId]): UpdateAction = this.copy(actionAuthorId = authorId)
@@ -95,9 +93,7 @@ case class DeleteBookmarkAnnotationAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends ApplyableAnnotationUpdateAction derives JsonAutoFormat {
-  override def applyOn(annotation: AnnotationProto): AnnotationProto =
-    annotation.copy(bookmarks = annotation.bookmarks.filter(_.id != id))
+) extends BookmarkUpdateAction derives JsonAutoFormat {
   override def addTimestamp(timestamp: Long): UpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def addAuthorId(authorId: Option[ObjectId]): UpdateAction = this.copy(actionAuthorId = authorId)

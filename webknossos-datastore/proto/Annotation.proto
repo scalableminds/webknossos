@@ -16,7 +16,7 @@ message AnnotationProto {
   optional bool skeletonMayHavePendingUpdates = 5; // relevant only for annotations migrated by https://github.com/scalableminds/webknossos/pull/7917
   optional bool editableMappingsMayHavePendingUpdates = 6; // relevant only for annotations migrated by https://github.com/scalableminds/webknossos/pull/7917
   repeated AnnotationUserStateProto userStates = 7;
-  repeated AnnotationBookmarkProto bookmarks = 8;
+  repeated int32 bookmarkIds = 8; // bookmarks are stored in the annotationBookmarks column family
 }
 
 message AnnotationLayerProto {
@@ -39,7 +39,11 @@ message AnnotationBookmarkProto {
   optional string name = 3;
   optional string description = 4;
   required AnnotationBookmarkStateProto state = 5;
-  optional bytes thumbnailData = 6;
+  // Thumbnails are stored in the annotationBookmarkThumbnails column family.
+}
+
+message AnnotationBookmarksProto {
+  repeated AnnotationBookmarkProto bookmarks = 1;
 }
 
 // Mirrors the view state of a sharing link (UrlManagerState in the frontend).

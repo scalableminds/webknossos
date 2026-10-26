@@ -29,7 +29,8 @@ class AnnotationTransactionService @Inject() (
     volumeTracingService: VolumeTracingService,
     tracingDataStore: TracingDataStore,
     remoteWebknossosClient: TSRemoteWebknossosClient,
-    annotationService: TSAnnotationService
+    annotationService: TSAnnotationService,
+    annotationBookmarkService: AnnotationBookmarkService
 ) extends KeyValueStoreConversions
     with LazyLogging {
 
@@ -311,6 +312,13 @@ class AnnotationTransactionService @Inject() (
           )
         } yield ()
       }
+      _ <- Fox.serialCombined(updateActionGroup.actions) {
+        case a: AddBookmarkAnnotationAction =>
+          Fox.serialCombined(a.thumbnails) { case (size, thumbnail) =>
+            annotationBookmarkService.saveThumbnail(annotationId, a.id, size, updateActionGroup.version, thumbnail)
+          }
+        case _ => Fox.successful(List.empty)
+      }
       updateActionsJson = Json.toJson(updateActionsProcessed)
       _ <- stats.time("annotationUpdates.put")(
         tracingDataStore.annotationUpdates.put(
@@ -336,8 +344,9 @@ class AnnotationTransactionService @Inject() (
       case first :: rest => first.addInfo(updateActionGroup.info) :: rest
     }
     actionsWithInfo.map {
-      case a: UpdateBucketVolumeAction => a.withoutBase64Data
-      case a: AddLayerAnnotationAction =>
+      case a: UpdateBucketVolumeAction    => a.withoutBase64Data
+      case a: AddBookmarkAnnotationAction => a.withoutThumbnails
+      case a: AddLayerAnnotationAction    =>
         // Note: this generated tracingId must not be read from this action before it was committed to fossildb,
         // to keep save retries idempotent.
         a.copy(tracingId = Some(TracingId.generate))

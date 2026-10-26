@@ -11,6 +11,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.{
+  AnnotationBookmarksProto,
   AnnotationLayerProto,
   AnnotationLayerTypeProto,
   AnnotationProto
@@ -22,7 +23,9 @@ import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationIdDom
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
 import com.scalableminds.webknossos.tracingstore.annotation.{
+  AnnotationBookmarkService,
   AnnotationTransactionService,
+  BookmarkThumbnailSize,
   ResetToBaseAnnotationAction,
   TSAnnotationService,
   UpdateActionGroup,
@@ -49,6 +52,7 @@ class TSAnnotationController @Inject() (
     accessTokenService: TracingStoreAccessTokenService,
     slackNotificationService: TSSlackNotificationService,
     annotationService: TSAnnotationService,
+    annotationBookmarkService: AnnotationBookmarkService,
     editableMappingMergeService: EditableMappingMergeService,
     annotationTransactionService: AnnotationTransactionService,
     skeletonTracingService: SkeletonTracingService,
@@ -124,6 +128,36 @@ class TSAnnotationController @Inject() (
       }
     }
   }
+
+  def bookmarks(annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
+    Action.fox { implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
+            for {
+              annotation <- annotationService.get(annotationId, version)
+              bookmarks <- annotationBookmarkService.findBookmarks(
+                annotationId,
+                annotation.bookmarkIds,
+                annotation.version
+              )
+            } yield Ok(AnnotationBookmarksProto(bookmarks).toByteArray).as(protobufMimeType)
+          }
+        }
+      }
+    }
+
+  def bookmarkThumbnail(annotationId: ObjectId, bookmarkId: Int, size: String): Action[AnyContent] =
+    Action.fox { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
+        for {
+          sizeValidated <- BookmarkThumbnailSize
+            .fromString(size)
+            .toFox ?~> s"Invalid thumbnail size $size" ~> BAD_REQUEST
+          thumbnail <- annotationBookmarkService.findThumbnail(annotationId, bookmarkId, sizeValidated) ~> NOT_FOUND
+        } yield Ok(thumbnail).as("image/webp").withHeaders(CACHE_CONTROL -> "private, max-age=31536000, immutable")
+      }
+    }
 
   def get(annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
     Action.fox { implicit request =>
@@ -248,7 +282,7 @@ class TSAnnotationController @Inject() (
                   // Bookmarks belong to the annotation, their tracingId is empty.
                   for {
                     annotation <- annotationService.get(annotationId, version = None)
-                  } yield annotation.bookmarks.map(_.id).maxOption.map(_.toLong).getOrElse(fallbackId)
+                  } yield annotation.bookmarkIds.maxOption.map(_.toLong).getOrElse(fallbackId)
               }
             } yield Ok(Json.toJson(largestIdWithFallback))
           }
@@ -407,8 +441,10 @@ class TSAnnotationController @Inject() (
             )
             mergedLayers = Seq(mergedSkeletonLayerOpt, mergedVolumeLayerOpt).flatten
             firstAnnotation <- annotations.headOption.toFox
+            // Bookmarks reference ids of the source annotations, which are not remapped yet, so they are dropped.
             mergedAnnotation = firstAnnotation
               .withAnnotationLayers(mergedLayers)
+              .withBookmarkIds(Seq.empty)
               .withEarliestAccessibleVersion(newTargetVersion)
               .withVersion(newTargetVersion)
             _ <- annotationService.saveAnnotationProto(

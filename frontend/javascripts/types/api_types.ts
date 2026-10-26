@@ -692,7 +692,8 @@ export type APIAnnotationBookmark = {
   created: number;
   name: string | null;
   state: APIAnnotationBookmarkState;
-  thumbnailDataBase64: string | null;
+  // Only set for bookmarks created in this session. Otherwise, the thumbnail is loaded from the server.
+  smallThumbnailDataBase64: string | null;
 };
 
 export type APITracingStoreAnnotation = {
@@ -701,9 +702,7 @@ export type APITracingStoreAnnotation = {
   readonly earliestAccessibleVersion: number;
   readonly annotationLayers: APITracingStoreAnnotationLayer[];
   readonly userStates: APIAnnotationUserState[];
-  readonly bookmarks: Array<
-    Omit<APIAnnotationBookmark, "thumbnailDataBase64"> & { thumbnailData?: string }
-  >;
+  readonly bookmarkIds: number[];
 };
 
 export type APITimeTrackingPerUser = {

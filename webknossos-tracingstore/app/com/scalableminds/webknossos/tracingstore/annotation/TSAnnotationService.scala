@@ -48,6 +48,7 @@ class TSAnnotationService @Inject() (
     skeletonTracingMigrationService: SkeletonTracingMigrationService,
     volumeTracingMigrationService: VolumeTracingMigrationService,
     temporaryTracingService: TemporaryTracingService,
+    annotationBookmarkService: AnnotationBookmarkService,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
     tracingDataStore: TracingDataStore
 ) extends KeyValueStoreConversions
@@ -207,8 +208,12 @@ class TSAnnotationService @Inject() (
         Fox.failure("Received updateVolumeBucketDataHasChanged action with value=false, which is not allowed.")
       case a: ApplyableVolumeUpdateAction =>
         annotationWithTracings.applyVolumeAction(a).toFox ?~> Msg.Annotation.ApplyUpdate.volumeActionFailed
-      case a: ApplyableAnnotationUpdateAction =>
-        Fox.successful(annotationWithTracings.copy(annotation = a.applyOn(annotationWithTracings.annotation)))
+      case a: AddBookmarkAnnotationAction =>
+        Fox.successful(annotationWithTracings.addBookmark(a))
+      case a: UpdateBookmarkAnnotationAction =>
+        updateBookmark(annotationId, annotationWithTracings, a) ?~> Msg.Annotation.ApplyUpdate.updateBookmarkFailed
+      case a: DeleteBookmarkAnnotationAction =>
+        Fox.successful(annotationWithTracings.deleteBookmark(a))
       case a: EditableMappingUpdateAction =>
         annotationWithTracings.applyEditableMappingAction(a) ?~> Msg.Annotation.ApplyUpdate.editableMappingActionFailed
       case a: RevertToVersionAnnotationAction =>
@@ -255,6 +260,33 @@ class TSAnnotationService @Inject() (
       updated = annotationWithTracings.addLayer(action, tracingId, tracing)
     } yield updated
 
+  private def updateBookmark(
+      annotationId: ObjectId,
+      annotationWithTracings: AnnotationWithTracings,
+      action: UpdateBookmarkAnnotationAction
+  )(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+    if (!annotationWithTracings.annotation.bookmarkIds.contains(action.id)) Fox.successful(annotationWithTracings)
+    else
+      for {
+        bookmark <- annotationWithTracings.updatedBookmarks.get(action.id) match {
+          case Some(updatedBookmark) => Fox.successful(updatedBookmark)
+          case None                  =>
+            annotationBookmarkService.findBookmark(annotationId, action.id, annotationWithTracings.version)
+        }
+      } yield annotationWithTracings.withUpdatedBookmarks(Seq(action.applyOn(bookmark)))
+
+  // After a revert, the bookmarks of the source version have to be written again at the new version.
+  private def markAllBookmarksAsChanged(annotationId: ObjectId, sourceAnnotation: AnnotationWithTracings)(implicit
+      ec: ExecutionContext
+  ): Fox[AnnotationWithTracings] =
+    for {
+      bookmarks <- annotationBookmarkService.findBookmarks(
+        annotationId,
+        sourceAnnotation.annotation.bookmarkIds,
+        sourceAnnotation.version
+      )
+    } yield sourceAnnotation.withUpdatedBookmarks(bookmarks)
+
   private def revertToVersion(
       annotationId: ObjectId,
       annotationWithTracings: AnnotationWithTracings,
@@ -278,11 +310,12 @@ class TSAnnotationService @Inject() (
         revertAction.sourceVersion,
         newVersion
       ) ?~> Msg.Annotation.Revert.revertDistributedElementsFailed
+      withBookmarks <- markAllBookmarksAsChanged(annotationId, sourceAnnotation)
       _ = Instant.logSince(
         before,
         s"Reverting annotation $annotationId from v${annotationWithTracings.version} to v${revertAction.sourceVersion}"
       )
-    } yield sourceAnnotation.markAllTreeBodiesAsChanged
+    } yield withBookmarks.markAllTreeBodiesAsChanged
 
   private def resetToBase(
       annotationId: ObjectId,
@@ -295,8 +328,9 @@ class TSAnnotationService @Inject() (
     for {
       sourceAnnotation: AnnotationWithTracings <- getWithTracings(annotationId, Some(sourceVersion))
       _ <- revertDistributedElements(annotationId, annotationWithTracings, sourceAnnotation, sourceVersion, newVersion)
+      withBookmarks <- markAllBookmarksAsChanged(annotationId, sourceAnnotation)
       _ = Instant.logSince(before, s"Resetting annotation $annotationId to base (v$sourceVersion)")
-    } yield sourceAnnotation.markAllTreeBodiesAsChanged
+    } yield withBookmarks.markAllTreeBodiesAsChanged
   }
 
   def saveAnnotationProto(
@@ -666,11 +700,17 @@ class TSAnnotationService @Inject() (
         _ <- updatedWithNewVersion
           .flushEditableMappingUpdaterBuffers() ?~> Msg.Annotation.flushEditableMappingUpdaterBuffersFailed
         _ <- flushUpdatedTracings(updatedWithNewVersion, updates) ?~> Msg.Annotation.flushUpdatedTracingsFailed
+        // Bookmarks are flushed before the annotation proto that references them.
+        _ <- annotationBookmarkService.saveBookmarks(
+          annotationId,
+          targetVersion,
+          updatedWithNewVersion.updatedBookmarks.values
+        ) ?~> Msg.Annotation.flushBookmarksFailed
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVersion) ?~> Msg.Annotation.flushAnnotationInfoFailed
         _ <- Fox.runIf(reportChangesToWk && annotationWithTracings.annotation != updated.annotation)(
           remoteWebknossosClient.updateAnnotation(annotationId, updatedWithNewVersion.annotation)
         ) ?~> Msg.Annotation.updateRemoteFailed
-      } yield updatedWithNewVersion
+      } yield updatedWithNewVersion.withoutUpdatedBookmarks
     }
   }
 
@@ -874,6 +914,20 @@ class TSAnnotationService @Inject() (
       }
     }
 
+  private def duplicateBookmarks(annotationId: ObjectId, newAnnotationId: ObjectId, annotation: AnnotationProto)(
+      implicit ec: ExecutionContext
+  ): Fox[Unit] =
+    for {
+      bookmarks <- annotationBookmarkService.findBookmarks(annotationId, annotation.bookmarkIds, annotation.version)
+      _ <- annotationBookmarkService.saveBookmarks(newAnnotationId, annotation.version, bookmarks)
+      _ <- annotationBookmarkService.duplicateThumbnails(
+        annotationId,
+        newAnnotationId,
+        annotation.bookmarkIds,
+        annotation.version
+      )
+    } yield ()
+
   def duplicate(
       annotationId: ObjectId,
       newAnnotationId: ObjectId,
@@ -914,6 +968,7 @@ class TSAnnotationService @Inject() (
         earliestAccessibleVersion = v0Annotation.version
       )
 
+      _ <- duplicateBookmarks(annotationId, newAnnotationId, v0Annotation)
       _ <- saveAnnotationProto(newAnnotationId, v0Annotation.version, v0DuplicatedAnnotation)
 
       // Duplicate current
@@ -937,6 +992,7 @@ class TSAnnotationService @Inject() (
               annotationLayers = newLayers,
               earliestAccessibleVersion = currentAnnotation.version
             )
+            _ <- duplicateBookmarks(annotationId, newAnnotationId, currentAnnotation)
             _ <- saveAnnotationProto(newAnnotationId, currentAnnotation.version, currentDuplicatedAnnotation)
           } yield currentDuplicatedAnnotation
         } else Fox.successful(v0DuplicatedAnnotation)

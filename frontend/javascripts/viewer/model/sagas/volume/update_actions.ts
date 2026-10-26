@@ -1255,10 +1255,15 @@ export function updateMetadataOfAnnotation(description: string) {
   } as const;
 }
 
-export function addBookmark(bookmark: APIAnnotationBookmark) {
+// The large thumbnail is only sent to the server and not kept in the store.
+// Both thumbnails are stripped from the update actions when they are stored.
+export function addBookmark(
+  bookmark: APIAnnotationBookmark,
+  largeThumbnailDataBase64: string | null,
+) {
   return {
     name: "addBookmark",
-    value: bookmark,
+    value: { ...bookmark, largeThumbnailDataBase64 },
   } as const;
 }
 

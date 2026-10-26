@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.Annotation.{
+  AnnotationBookmarkProto,
   AnnotationLayerProto,
   AnnotationProto,
   AnnotationUserStateProto
@@ -28,7 +29,9 @@ import scala.concurrent.ExecutionContext
 case class AnnotationWithTracings(
     annotation: AnnotationProto,
     tracingsById: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]],
-    editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)]
+    editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)],
+    // Bookmarks that changed since the last flush. Their ids are stored in the annotation proto.
+    updatedBookmarks: Map[Int, AnnotationBookmarkProto] = Map.empty
 ) extends LazyLogging
     with ProtoGeometryConversions {
 
@@ -229,6 +232,23 @@ case class AnnotationWithTracings(
       _ <- Fox.serialCombined(updaters)(updater => updater.flushBuffersToFossil())
     } yield ()
   }
+
+  def addBookmark(a: AddBookmarkAnnotationAction): AnnotationWithTracings =
+    this.copy(
+      annotation = annotation.copy(bookmarkIds = annotation.bookmarkIds.filterNot(_ == a.id) :+ a.id),
+      updatedBookmarks = updatedBookmarks.updated(a.id, a.toProto)
+    )
+
+  def withUpdatedBookmarks(bookmarks: Seq[AnnotationBookmarkProto]): AnnotationWithTracings =
+    this.copy(updatedBookmarks = updatedBookmarks ++ bookmarks.map(bookmark => bookmark.id -> bookmark))
+
+  def deleteBookmark(a: DeleteBookmarkAnnotationAction): AnnotationWithTracings =
+    this.copy(
+      annotation = annotation.copy(bookmarkIds = annotation.bookmarkIds.filterNot(_ == a.id)),
+      updatedBookmarks = updatedBookmarks.removed(a.id)
+    )
+
+  def withoutUpdatedBookmarks: AnnotationWithTracings = this.copy(updatedBookmarks = Map.empty)
 
   def markAllTreeBodiesAsChanged: AnnotationWithTracings = {
     val newTracingsById = tracingsById.view.map {

@@ -199,5 +199,5 @@ export const annotationProto: APITracingStoreAnnotation = {
     },
   ],
   userStates: [],
-  bookmarks: [],
+  bookmarkIds: [],
 };

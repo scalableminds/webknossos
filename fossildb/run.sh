@@ -14,6 +14,6 @@ if [ ! -f "$JAR" ] || [ ! "$CURRENT_VERSION" == "$VERSION" ]; then
   wget -q --show-progress -O "$JAR" "$URL"
 fi
 
-COLLECTIONS="skeletons,skeletonTreeBodies,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates"
+COLLECTIONS="skeletons,skeletonTreeBodies,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates,annotationBookmarks,annotationBookmarkThumbnails"
 
 exec java -jar "$JAR" -c "$COLLECTIONS" -d "$FOSSILDB_HOME/data" -b "$FOSSILDB_HOME/backup"

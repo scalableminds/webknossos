@@ -802,13 +802,16 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
       Store.dispatch(startForwardingUpdateActionsAction());
       await incorporateActions(
         [
-          addBookmark({
-            id: 1,
-            created: 123,
-            name: "Replayed Bookmark",
-            state: bookmarkState,
-            thumbnailDataBase64: null,
-          }),
+          addBookmark(
+            {
+              id: 1,
+              created: 123,
+              name: "Replayed Bookmark",
+              state: bookmarkState,
+              smallThumbnailDataBase64: null,
+            },
+            null,
+          ),
         ],
         1,
       );
@@ -820,7 +823,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           created: 123,
           name: "Replayed Bookmark",
           state: bookmarkState,
-          thumbnailDataBase64: null,
+          smallThumbnailDataBase64: null,
         },
       ]);
       expect(Store.getState().save.queue).toEqual([]);

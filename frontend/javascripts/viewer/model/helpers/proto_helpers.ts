@@ -10,6 +10,7 @@ import { toBigInt } from "libs/bigint_helpers";
 import Long from "long";
 import { configure, Root, util } from "protobufjs/light";
 import type {
+  APIAnnotationBookmark,
   APIAnnotationBookmarkState,
   APITracingStoreAnnotation,
   ServerTracing,
@@ -167,25 +168,41 @@ export function parseProtoAnnotation(
   const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.AnnotationProto`);
   const message = messageType.decode(new Uint8Array(annotationArrayBuffer));
 
-  // longs: String keeps uint64 segment ids of bookmarked meshes precise.
-  // The remaining 64-bit fields fit into a number and are converted back below.
   const annotation = messageType.toObject(message, {
     arrays: true,
     objects: true,
     enums: String,
     longs: String,
-    // Decodes bytes fields (e.g. bookmark thumbnails) as base64 strings.
-    bytes: String,
   }) as any;
 
   return {
     ...annotation,
     version: Number(annotation.version),
     earliestAccessibleVersion: Number(annotation.earliestAccessibleVersion),
-    bookmarks: annotation.bookmarks.map((bookmark: any) => ({
-      ...bookmark,
-      created: Number(bookmark.created),
-      state: bookmarkStateFromProto(bookmark.state),
-    })),
   };
+}
+
+export function parseProtoAnnotationBookmarks(
+  bookmarksArrayBuffer: ArrayBuffer,
+): APIAnnotationBookmark[] {
+  const protoRoot = Root.fromJSON(AnnotationProto);
+  const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.AnnotationBookmarksProto`);
+  const message = messageType.decode(new Uint8Array(bookmarksArrayBuffer));
+
+  // longs: String keeps uint64 segment ids of bookmarked meshes precise.
+  const { bookmarks } = messageType.toObject(message, {
+    arrays: true,
+    objects: true,
+    enums: String,
+    longs: String,
+  }) as { bookmarks: any[] };
+
+  return bookmarks.map((bookmark) => ({
+    id: bookmark.id,
+    created: Number(bookmark.created),
+    name: bookmark.name ?? null,
+    state: bookmarkStateFromProto(bookmark.state),
+    // Thumbnails are loaded separately, see getBookmarkThumbnailUrl.
+    smallThumbnailDataBase64: null,
+  }));
 }

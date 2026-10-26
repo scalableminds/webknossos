@@ -241,9 +241,30 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-// Renders the first visible viewport (by priority) as a base64-encoded WebP image.
-// Returns null if no viewport is visible in the current layout.
-export async function captureBookmarkThumbnail(): Promise<string | null> {
+const SMALL_BOOKMARK_THUMBNAIL_MAX_EDGE = 96;
+
+async function downsampleImage(blob: Blob, maxEdge: number): Promise<Blob | null> {
+  const bitmap = await createImageBitmap(blob);
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const context = canvas.getContext("2d");
+  if (context == null) return null;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/webp"));
+}
+
+export type BookmarkThumbnails = {
+  largeDataBase64: string;
+  smallDataBase64: string;
+};
+
+// Renders the first visible viewport (by priority) as base64-encoded WebP images, once in
+// full size and once downsampled. Returns null if no viewport is visible in the current layout.
+export async function captureBookmarkThumbnails(): Promise<BookmarkThumbnails | null> {
   const state = Store.getState();
   const candidates: Array<OrthoView | typeof FlightViewport> =
     state.temporaryConfiguration.viewMode === constants.MODE_PLANE_TRACING
@@ -259,7 +280,13 @@ export async function captureBookmarkThumbnail(): Promise<string | null> {
   // A clear color of 0xffffff is mapped to the theme's background color, matching the on-screen look.
   const buffer = renderToTexture(viewport, undefined, undefined, false, 0xffffff, true);
   const blob = await convertBufferToImage(buffer, width, height, null, null, true, "image/webp");
-  return blob != null ? blobToBase64(blob) : null;
+  if (blob == null) return null;
+  const smallBlob = await downsampleImage(blob, SMALL_BOOKMARK_THUMBNAIL_MAX_EDGE);
+  if (smallBlob == null) return null;
+  return {
+    largeDataBase64: await blobToBase64(blob),
+    smallDataBase64: await blobToBase64(smallBlob),
+  };
 }
 
 export async function downloadScreenshot() {

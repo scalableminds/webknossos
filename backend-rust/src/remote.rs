@@ -1,3 +1,4 @@
+pub(crate) mod dao;
 pub mod datastore;
 pub mod tracingstore;
 pub mod user_access;

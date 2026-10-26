@@ -25,8 +25,11 @@ use crate::{
     error::{ApiError, ApiResult},
     extract::{Json, Query},
     job::submission::{Failure, RunError, RunResult, Submission},
-    remote::datastore::ValidatedDataStore,
     remote::datastore::mag_upload::user_for_token_forbidden,
+    remote::datastore::{
+        ValidatedDataStore,
+        dao::{self, ReportedDataset},
+    },
     slack::SlackNotificationService,
     stores::client::ServiceClients,
     system::application_info::MiscState,
@@ -66,27 +69,10 @@ struct ReportDatasetUploadParameters {
     voxel_size: Option<Value>,
 }
 
-/// The dataset columns this route reads (DatasetDAO.findOne, global access).
-#[derive(sqlx::FromRow)]
-struct ReportedDataset {
-    id: ObjectId,
-    name: String,
-    directory_name: String,
-    organization: String,
-    /// Raw `_dataStore` column, written back and used for job submission as is.
-    data_store: String,
-}
-
 async fn find_dataset(pool: &sqlx::PgPool, id: &ObjectId) -> ApiResult<ReportedDataset> {
-    sqlx::query_as(
-        r#"SELECT _id AS id, name, directoryName AS directory_name,
-             _organization AS organization, _dataStore AS data_store
-           FROM webknossos.datasets_ WHERE _id = $1"#,
-    )
-    .bind(id)
-    .fetch_optional(pool)
-    .await?
-    .ok_or_else(|| crate::dataset::lifecycle::not_found(id))
+    dao::find_reported_dataset(pool, id)
+        .await?
+        .ok_or_else(|| crate::dataset::lifecycle::not_found(id))
 }
 
 async fn report_dataset_upload(
@@ -175,11 +161,7 @@ async fn track_new_dataset(
     }
     // dataStoreDAO.findOneByName(dataset._dataStore): a missing store skips the event.
     let public_url: Option<String> =
-        match sqlx::query_scalar("SELECT publicUrl FROM webknossos.dataStores_ WHERE name = $1")
-            .bind(&dataset.data_store)
-            .fetch_optional(&state.pool)
-            .await
-        {
+        match dao::find_public_url(&state.pool, &dataset.data_store).await {
             Ok(url) => url,
             Err(error) => {
                 tracing::debug!(%error, "Upload analytics: datastore lookup failed");
@@ -333,11 +315,8 @@ async fn submit_convert_to_wkw_job(
     unit: &str,
     base_directory: Value,
 ) -> RunResult<()> {
-    let organization: Option<(String, String)> =
-        sqlx::query_as("SELECT _id, name FROM webknossos.organizations_ WHERE _id = $1")
-            .bind(&dataset.organization)
-            .fetch_optional(&state.pool)
-            .await?;
+    let organization =
+        dao::find_organization_id_and_name(&state.pool, &dataset.organization).await?;
     let (organization_id, organization_name) = organization
         .ok_or_else(|| Failure::new(crate::msg::organization::not_found(&dataset.organization)))?;
     let args = json!({

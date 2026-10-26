@@ -182,12 +182,12 @@ Raw data: `/tmp/wk-mem-run1` (`bench.md`, `summary.json`) in the session temp di
 | GET | `/datastores/:name/datasources/:datasetId` | [src/remote/datastore/mod.rs](src/remote/datastore/mod.rs) |
 | PUT | `/datastores/:name/datasources/:datasetId` | [src/remote/datastore/mod.rs](src/remote/datastore/mod.rs) |
 | PATCH | `/datastores/:name/status` | [src/remote/datastore/mod.rs](src/remote/datastore/mod.rs) |
-| POST | `/datastores/:name/reserveDatasetUpload` | [src/remote/datastore/dataset_upload.rs](src/remote/datastore/dataset_upload.rs) |
-| POST | `/datastores/:name/reserveMagUpload` | [src/remote/datastore/mag_upload.rs](src/remote/datastore/mag_upload.rs) |
+| POST | `/datastores/:name/reserveDatasetUpload` | [src/remote/datastore/dataset_upload/mod.rs](src/remote/datastore/dataset_upload/mod.rs) |
+| POST | `/datastores/:name/reserveMagUpload` | [src/remote/datastore/mag_upload/mod.rs](src/remote/datastore/mag_upload/mod.rs) |
 | POST | `/datastores/:name/reserveAttachmentUpload` | [src/remote/datastore/attachment_upload/mod.rs](src/remote/datastore/attachment_upload/mod.rs) |
-| GET | `/datastores/:name/getUnfinishedDatasetUploadsForUser` | [src/remote/datastore/dataset_upload.rs](src/remote/datastore/dataset_upload.rs) |
+| GET | `/datastores/:name/getUnfinishedDatasetUploadsForUser` | [src/remote/datastore/dataset_upload/mod.rs](src/remote/datastore/dataset_upload/mod.rs) |
 | POST | `/datastores/:name/reportDatasetUpload` | [src/remote/datastore/dataset_report.rs](src/remote/datastore/dataset_report.rs) |
-| POST | `/datastores/:name/reportMagUpload` | [src/remote/datastore/mag_upload.rs](src/remote/datastore/mag_upload.rs) |
+| POST | `/datastores/:name/reportMagUpload` | [src/remote/datastore/mag_upload/mod.rs](src/remote/datastore/mag_upload/mod.rs) |
 | POST | `/datastores/:name/reportAttachmentUpload` | [src/remote/datastore/attachment_upload/mod.rs](src/remote/datastore/attachment_upload/mod.rs) |
 | POST | `/datastores/:name/deleteDataset` | [src/remote/datastore/lookup.rs](src/remote/datastore/lookup.rs) |
 | GET | `/datastores/:name/findDatasetId` | [src/remote/datastore/lookup.rs](src/remote/datastore/lookup.rs) |

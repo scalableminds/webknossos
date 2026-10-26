@@ -1,5 +1,6 @@
 //! Read callbacks from WKRemoteTracingStoreController. A tracing-store key
 //! grants global access; the caller's path name is informational.
+use super::dao;
 use axum::{
     Extension, Json, Router,
     extract::{FromRequestParts, State},
@@ -87,12 +88,7 @@ impl IntoResponse for CallbackError {
 }
 
 pub(crate) async fn validate_key(pool: &sqlx::PgPool, key: &str) -> Result<(), CallbackError> {
-    let valid: bool =
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.tracingStores_ WHERE key=$1)")
-            .bind(key)
-            .fetch_one(pool)
-            .await
-            .map_err(ApiError::from)?;
+    let valid = dao::key_is_valid(pool, key).await?;
     if valid {
         Ok(())
     } else {
@@ -118,11 +114,7 @@ async fn annotation_dataset(
         .provide_saved(AccessContext::global(None), annotation_id)
         .await
         .map_err(|error| error.into_api_error(StatusCode::BAD_REQUEST))?;
-    let exists: bool =
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE _id=$1)")
-            .bind(&annotation.dataset_id)
-            .fetch_one(&state.pool)
-            .await?;
+    let exists = dao::dataset_exists(&state.pool, &annotation.dataset_id).await?;
     if !exists {
         return Err(ApiError::bad_request(
             crate::msg::dataset::not_found_for_annotation(&annotation.dataset_id, annotation_id),
@@ -175,24 +167,27 @@ async fn annotation_id_for_tracing(
     }
     // AnnotationInformationProvider shifts the saved lookup's Box and falls
     // back to the existing compound cache on Empty or Failure. Never merge.
-    let saved_id: Option<ObjectId> = sqlx::query_scalar(
-        "SELECT _annotation FROM webknossos.annotation_layers WHERE tracingId=$1",
-    )
-    .bind(&query.tracing_id)
-    .fetch_optional(&state.pool)
-    .await
-    .ok()
-    .flatten();
+    let saved_id = dao::find_annotation_id_for_tracing(&state.pool, &query.tracing_id)
+        .await
+        .ok()
+        .flatten();
     if let Some(id) = saved_id
         && let Ok(Some(annotation)) =
             crate::annotation::access::find_optional(&state.pool, None, &id, true).await
         && annotation.annotation_type.parse::<AnnotationType>().is_ok()
-        && matches!(annotation.state.as_str(), "Active" | "Finished" | "Cancelled" | "Initializing")
-        && matches!(annotation.visibility.as_str(), "Private" | "Internal" | "Public")
-        && matches!(annotation.collaboration_mode.as_str(), "OwnerOnly" | "Exclusive" | "Concurrent")
-        && let Ok(false) = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS (SELECT 1 FROM webknossos.annotation_layers WHERE _annotation=$1 AND (typ::text NOT IN ('Skeleton','Volume') OR jsonb_typeof(statistics)<>'object'))",
-        ).bind(&annotation.id).fetch_one(&state.pool).await
+        && matches!(
+            annotation.state.as_str(),
+            "Active" | "Finished" | "Cancelled" | "Initializing"
+        )
+        && matches!(
+            annotation.visibility.as_str(),
+            "Private" | "Internal" | "Public"
+        )
+        && matches!(
+            annotation.collaboration_mode.as_str(),
+            "OwnerOnly" | "Exclusive" | "Concurrent"
+        )
+        && let Ok(false) = dao::has_unreadable_layer(&state.pool, &annotation.id).await
     {
         return Ok(Json(annotation.id));
     }
@@ -212,11 +207,7 @@ struct DatasetPath {
 }
 
 async fn require_dataset(state: &AppState, dataset_id: &ObjectId) -> ApiResult<()> {
-    let exists: bool =
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE _id=$1)")
-            .bind(dataset_id)
-            .fetch_one(&state.pool)
-            .await?;
+    let exists = dao::dataset_exists(&state.pool, dataset_id).await?;
     if !exists {
         return Err(ApiError::not_found(crate::msg::dataset::not_found(
             dataset_id,
@@ -226,12 +217,7 @@ async fn require_dataset(state: &AppState, dataset_id: &ObjectId) -> ApiResult<(
 }
 
 async fn data_source(state: &AppState, dataset_id: &ObjectId) -> ApiResult<Value> {
-    let missing_voxel: bool = sqlx::query_scalar(
-        "SELECT isUsable AND voxelSizeFactor IS NULL FROM webknossos.datasets_ WHERE _id=$1",
-    )
-    .bind(dataset_id)
-    .fetch_one(&state.pool)
-    .await?;
+    let missing_voxel = dao::is_usable_without_voxel_size(&state.pool, dataset_id).await?;
     if missing_voxel {
         return Err(ApiError::bad_request(
             crate::msg::dataset::data_source::USABLE_BUT_NO_VOXEL_SIZE,
@@ -246,12 +232,7 @@ async fn data_store_uri_for_dataset(
     _store: ValidatedTracingStore,
 ) -> ApiResult<Json<String>> {
     require_dataset(&state, &path.dataset_id).await?;
-    let url: Option<String> = sqlx::query_scalar(
-        "SELECT store.url FROM webknossos.datasets_ dataset JOIN webknossos.dataStores_ store ON store.name=TRIM(dataset._dataStore) WHERE dataset._id=$1",
-    )
-    .bind(&*path.dataset_id)
-    .fetch_optional(&state.pool)
-    .await?;
+    let url = dao::find_data_store_url_for_dataset(&state.pool, &path.dataset_id).await?;
     Ok(Json(url.ok_or_else(|| {
         ApiError::bad_request(crate::msg::data_store::NOT_FOUND)
     })?))

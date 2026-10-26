@@ -25,7 +25,10 @@ use crate::{
     annotation::tracing_initialization::{AnnotationLayerParameters, precedence_fetch_request},
     error::{ApiError, ApiResult},
     extract::{Json, Path, Query},
-    remote::tracingstore::reads::{CallbackError, validate_key},
+    remote::tracingstore::{
+        dao,
+        reads::{CallbackError, validate_key},
+    },
     stores::client::{PROTOBUF_CONTENT_TYPE, ServiceClients},
     stores::tracing_client::TracingStoreClient,
     util::id::ObjectId,
@@ -49,20 +52,11 @@ async fn find_annotation(
     pool: &PgPool,
     id: &ObjectId,
 ) -> ApiResult<Option<(ObjectId, Vec<AnnotationLayer>)>> {
-    let dataset: Option<ObjectId> =
-        sqlx::query_scalar("SELECT _dataset FROM webknossos.annotations_ WHERE _id=$1")
-            .bind(id)
-            .fetch_optional(pool)
-            .await?;
+    let dataset = dao::find_dataset_id_for_annotation(pool, id).await?;
     let Some(dataset) = dataset else {
         return Ok(None);
     };
-    let rows: Vec<(String, String, String)> = sqlx::query_as(
-        "SELECT tracingId,typ::text,name FROM webknossos.annotation_layers WHERE _annotation=$1 ORDER BY tracingId",
-    )
-    .bind(id)
-    .fetch_all(pool)
-    .await?;
+    let rows = dao::find_all_layers_for_annotation(pool, id).await?;
     let layers = rows
         .into_iter()
         .map(|(tracing_id, typ, name)| {

@@ -21,6 +21,7 @@
 
 pub mod attachment_upload;
 pub mod credentials;
+pub(crate) mod dao;
 pub mod dataset_report;
 pub mod dataset_upload;
 pub mod lookup;
@@ -47,7 +48,6 @@ use crate::{
     dataset::source::DataSource,
     error::{ApiError, ApiResult},
     extract::{Json, Path, Query},
-    sql::Sql,
     stores::client::ServiceClients,
     util::id::{ObjectId, PathObjectId},
 };
@@ -56,15 +56,6 @@ use crate::{
 const PLAY_MAX_MEMORY_BUFFER: usize = 250 * 1024 * 1024;
 /// DataSourceStatus.unreported.
 pub(crate) const UNREPORTED: &str = "No longer available on datastore.";
-/// DataSourceStatus.inactiveStatusList.
-const INACTIVE_STATUSES: [&str; 5] = [
-    UNREPORTED,
-    "Not yet fully uploaded.",
-    "Not yet marked as fully uploaded to paths.",
-    "Deleted by user.",
-    crate::dataset::lifecycle::CONVERSION_FAILED,
-];
-
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/datastores/{name}/status", patch(status_update))
@@ -83,12 +74,7 @@ pub fn router() -> Router<AppState> {
 
 // ---------------------------------------------------------------- access
 
-/// A live datastore row as needed by the callbacks. The key is never selected.
-#[derive(Clone, Debug, sqlx::FromRow)]
-pub(crate) struct DataStoreRecord {
-    pub name: String,
-    pub only_allowed_organization: Option<String>,
-}
+pub(crate) use dao::{DataStoreRecord, FoundDataset};
 
 /// DataStoreService.validateAccess: the `{name}` path parameter and the `key`
 /// query parameter must match a non-deleted datastore. Place it after the
@@ -114,28 +100,12 @@ impl FromRequestParts<AppState> for ValidatedDataStore {
         let Query(query) = Query::<KeyQuery>::from_request_parts(parts, state)
             .await
             .map_err(IntoResponse::into_response)?;
-        match validate_access(&state.pool, name, &query.key).await {
+        match dao::find_one_by_name_and_key(&state.pool, name, &query.key).await {
             Ok(Some(store)) => Ok(Self(store)),
             Ok(None) => Err(forbidden_response()),
             Err(error) => Err(error.into_response()),
         }
     }
-}
-
-/// Look up a live datastore by name and key (never logs the key).
-pub(crate) async fn validate_access(
-    executor: impl sqlx::PgExecutor<'_>,
-    name: &str,
-    key: &str,
-) -> ApiResult<Option<DataStoreRecord>> {
-    Ok(sqlx::query_as(
-        r#"SELECT name, onlyAllowedOrganization AS only_allowed_organization
-           FROM webknossos.dataStores_ WHERE name = $1 AND key = $2"#,
-    )
-    .bind(name)
-    .bind(key)
-    .fetch_optional(executor)
-    .await?)
 }
 
 /// `Forbidden(Json.obj("granted" -> false, "msg" -> Msg.DataStore.notFound))`.
@@ -173,11 +143,7 @@ async fn status_update(
         "Status update from data store. Status {}",
         if body.ok { "ok" } else { "not ok" }
     );
-    sqlx::query("UPDATE webknossos.dataStores SET url = $2 WHERE name = $1 AND NOT isDeleted")
-        .bind(&store.name)
-        .bind(&body.url)
-        .execute(&state.pool)
-        .await?;
+    dao::update_url(&state.pool, &store.name, &body.url).await?;
     Ok(StatusCode::OK)
 }
 
@@ -277,18 +243,6 @@ async fn run_detached(
     .map_err(|_| ApiError::internal())?
 }
 
-#[derive(sqlx::FromRow)]
-struct FoundDataset {
-    id: ObjectId,
-    directory_name: String,
-    data_store: String,
-    is_virtual: bool,
-    inbox_source_hash: Option<i32>,
-    root_path: Option<String>,
-    root_real_path: Option<String>,
-    status: String,
-}
-
 /// DatasetService.updateDataSources (+ deactivateUnreportedDataSources when
 /// `deactivate_unreported` is set, with its optional organization filter).
 async fn apply_report(
@@ -309,12 +263,7 @@ async fn apply_report(
     let mut existing_ids: Vec<ObjectId> = Vec::new();
     let mut updated_ids: Vec<ObjectId> = Vec::new();
     for (organization, entries) in by_organization {
-        let exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ WHERE _id = $1)",
-        )
-        .bind(&organization)
-        .fetch_one(&mut *tx)
-        .await?;
+        let exists = dao::organization_exists_on_connection(&mut tx, &organization).await?;
         if !exists {
             tracing::info!(
                 "Ignoring {} reported datasets for non-existing organization {organization}",
@@ -338,14 +287,7 @@ async fn apply_report(
             .iter()
             .map(|e| e.data_source.id().directory_name.as_str())
             .collect();
-        let mut q = Sql::new("SELECT ");
-        q.push(FOUND_DATASET_COLUMNS)
-            .push(" FROM webknossos.datasets_ WHERE directoryName = ANY(")
-            .push_bind(&names)
-            .push(") AND _organization = ")
-            .push_bind(&organization)
-            .push(" ORDER BY created, _id");
-        let found: Vec<FoundDataset> = q.build_query_as().fetch_all(&mut *tx).await?;
+        let found = dao::find_all_by_directory_names(&mut tx, &names, &organization).await?;
         let mut by_name: HashMap<&str, &FoundDataset> = HashMap::new();
         for dataset in &found {
             by_name
@@ -369,12 +311,13 @@ async fn apply_report(
                             id.organization_id,
                             id.directory_name
                         );
-                        let found = find_by_directory_name(
+                        let found = dao::find_one_by_directory_name(
                             &mut tx,
                             &id.directory_name,
                             &id.organization_id,
                         )
-                        .await?;
+                        .await?
+                        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
                         update_existing(&mut tx, store, &found, hash, entry, &mut updated_ids)
                             .await?
                     }
@@ -384,7 +327,8 @@ async fn apply_report(
         }
     }
     if let Some(organization) = deactivate_unreported {
-        deactivate(&mut tx, &existing_ids, &store.name, organization.as_deref()).await?;
+        dao::deactivate_unreported(&mut tx, &existing_ids, &store.name, organization.as_deref())
+            .await?;
     }
     tx.commit().await?;
     // notifyDatastoreOnUpdate, after the commit. All are attempted; the first
@@ -401,26 +345,6 @@ async fn apply_report(
         }
     }
     first_error.map_or(Ok(()), Err)
-}
-
-const FOUND_DATASET_COLUMNS: &str = "_id AS id, directoryName AS directory_name, \
-    _dataStore AS data_store, isVirtual AS is_virtual, inboxSourceHash AS inbox_source_hash, \
-    rootPath AS root_path, rootRealPath AS root_real_path, status";
-
-/// DatasetDAO.findOneByDataSourceId.
-async fn find_by_directory_name(
-    connection: &mut sqlx::PgConnection,
-    directory_name: &str,
-    organization: &str,
-) -> ApiResult<FoundDataset> {
-    let mut q = Sql::new("SELECT ");
-    q.push(FOUND_DATASET_COLUMNS)
-        .push(" FROM webknossos.datasets_ WHERE directoryName = ")
-        .push_bind(directory_name)
-        .push(" AND _organization = ")
-        .push_bind(organization);
-    let found: Option<FoundDataset> = q.build_query_as().fetch_optional(&mut *connection).await?;
-    found.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))
 }
 
 /// DatasetService.updateExistingDataset: returns the id to keep active, or
@@ -477,16 +401,8 @@ async fn replace_data_source(
     hash: i32,
     entry: &DataSourceWithRootPathInfo,
 ) -> ApiResult<()> {
-    sqlx::query("DELETE FROM webknossos.dataset_thumbnails WHERE _dataset = $1")
-        .bind(id)
-        .execute(&mut *connection)
-        .await?;
-    sqlx::query(
-        "UPDATE webknossos.datasets SET thumbnailCacheVersion = thumbnailCacheVersion + 1 WHERE _id = $1",
-    )
-    .bind(id)
-    .execute(&mut *connection)
-    .await?;
+    dao::delete_thumbnails(connection, id).await?;
+    dao::increment_thumbnail_cache_version(connection, id).await?;
     write_data_source(
         connection,
         id,
@@ -509,41 +425,17 @@ pub(crate) async fn write_data_source(
     root_path: Option<&str>,
     root_real_path: Option<&str>,
 ) -> ApiResult<()> {
-    let organization: Option<String> =
-        sqlx::query_scalar("SELECT _id FROM webknossos.organizations_ WHERE _id = $1")
-            .bind(&source.id().organization_id)
-            .fetch_optional(&mut *connection)
-            .await?;
+    let organization = dao::find_organization_id(connection, &source.id().organization_id).await?;
     let organization = organization.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
-    let voxel_size = source.voxel_size_opt();
-    let status: String = source
-        .status_opt()
-        .unwrap_or_default()
-        .chars()
-        .take(1024)
-        .collect();
-    sqlx::query(
-        r#"UPDATE webknossos.datasets SET _dataStore = $2, _organization = $3, inboxSourceHash = $4,
-             defaultViewConfiguration = $5, isUsable = $6,
-             voxelSizeFactor = CASE WHEN $7::float8 IS NULL THEN NULL ELSE ROW($7, $8, $9)::webknossos.VECTOR3 END,
-             voxelSizeUnit = $10::webknossos.LENGTH_UNIT, status = $11,
-             rootPath = COALESCE($12, rootPath), rootRealPath = COALESCE($13, rootRealPath)
-           WHERE _id = $1"#,
+    dao::update_data_source(
+        connection,
+        id,
+        store_name,
+        &organization,
+        hash,
+        source,
+        (root_path, root_real_path),
     )
-    .bind(id)
-    .bind(store_name)
-    .bind(&organization)
-    .bind(hash)
-    .bind(source.default_view_configuration().cloned().map(Value::Object))
-    .bind(source.is_usable())
-    .bind(voxel_size.map(|v| v.factor.x))
-    .bind(voxel_size.map(|v| v.factor.y))
-    .bind(voxel_size.map(|v| v.factor.z))
-    .bind(voxel_size.map(|v| v.unit.as_str()))
-    .bind(status)
-    .bind(root_path)
-    .bind(root_real_path)
-    .execute(&mut *connection)
     .await?;
     crate::dataset::source::write_layers(connection, id, source.all_layers()).await
 }
@@ -582,53 +474,15 @@ async fn create_disk_scan_dataset(
         return Ok(None);
     }
     // createDataset stores the hash only for usable data sources.
-    sqlx::query(
-        "UPDATE webknossos.datasets SET inboxSourceHash = $2, rootPath = $3, rootRealPath = $4 WHERE _id = $1",
+    dao::update_inbox_source(
+        connection,
+        &id,
+        source.is_usable().then_some(hash),
+        entry.root_path.as_deref(),
+        entry.root_real_path.as_deref(),
     )
-    .bind(&id)
-    .bind(source.is_usable().then_some(hash))
-    .bind(&entry.root_path)
-    .bind(&entry.root_real_path)
-    .execute(&mut *connection)
     .await?;
     Ok(Some(id))
-}
-
-/// DatasetDAO.deactivateUnreported.
-async fn deactivate(
-    connection: &mut sqlx::PgConnection,
-    existing_ids: &[ObjectId],
-    store_name: &str,
-    organization: Option<&str>,
-) -> ApiResult<()> {
-    for table in ["dataset_mags", "dataset_layers"] {
-        let mut q = Sql::new("DELETE FROM webknossos.");
-        q.push(table)
-            .push(" WHERE _dataset IN (SELECT _id FROM webknossos.datasets WHERE _dataStore = ")
-            .push_bind(store_name)
-            .push(" AND NOT (_id = ANY(")
-            .push_bind(existing_ids)
-            .push(")) AND NOT isVirtual");
-        if let Some(organization) = organization {
-            q.push(" AND _organization = ").push_bind(organization);
-        }
-        q.push(")");
-        q.build().execute(&mut *connection).await?;
-    }
-    sqlx::query(
-        r#"UPDATE webknossos.datasets
-           SET isUsable = false, status = $4, voxelSizeFactor = NULL, voxelSizeUnit = NULL, inboxSourceHash = NULL
-           WHERE _dataStore = $1 AND NOT (_id = ANY($2)) AND NOT isVirtual AND ($3::text IS NULL OR _organization = $3)
-             AND NOT (status = ANY($5))"#,
-    )
-    .bind(store_name)
-    .bind(existing_ids)
-    .bind(organization)
-    .bind(UNREPORTED)
-    .bind(&INACTIVE_STATUSES[..])
-    .execute(&mut *connection)
-    .await?;
-    Ok(())
 }
 
 // ---------------------------------------------------------------- real paths
@@ -665,12 +519,11 @@ async fn update_real_paths(
     }
     let mut tx = state.pool.begin().await?;
     for (source_id, mags, attachments) in parsed {
-        let dataset: Option<ObjectId> = sqlx::query_scalar(
-            "SELECT _id FROM webknossos.datasets_ WHERE directoryName = $1 AND _organization = $2 LIMIT 1",
+        let dataset = dao::find_dataset_id_by_directory_name(
+            &mut tx,
+            &source_id.directory_name,
+            &source_id.organization_id,
         )
-        .bind(&source_id.directory_name)
-        .bind(&source_id.organization_id)
-        .fetch_optional(&mut *tx)
         .await?;
         let Some(dataset) = dataset else { continue };
         // Rows already carrying the reported values are left untouched, like
@@ -680,22 +533,8 @@ async fn update_real_paths(
             ("dataset_layer_attachments", &attachments),
         ] {
             for (path, real_path, has_local_data) in infos {
-                let mut q = Sql::new("UPDATE webknossos.");
-                q.push(table)
-                    .push(" SET realPath = ")
-                    .push_bind(real_path)
-                    .push(", hasLocalData = ")
-                    .push_bind(has_local_data)
-                    .push(" WHERE _dataset = ")
-                    .push_bind(&dataset)
-                    .push(" AND path = ")
-                    .push_bind(path)
-                    .push(" AND (realPath IS DISTINCT FROM ")
-                    .push_bind(real_path)
-                    .push(" OR hasLocalData <> ")
-                    .push_bind(has_local_data)
-                    .push(")");
-                q.build().execute(&mut *tx).await?;
+                dao::update_real_path(&mut tx, table, &dataset, path, real_path, *has_local_data)
+                    .await?;
             }
         }
     }
@@ -711,12 +550,7 @@ async fn get_data_source(
     Path((_name, id)): Path<(String, PathObjectId)>,
     ValidatedDataStore(_store): ValidatedDataStore,
 ) -> ApiResult<ResponseJson<Value>> {
-    let row: Option<(bool, bool)> = sqlx::query_as(
-        "SELECT isUsable, voxelSizeFactor IS NOT NULL FROM webknossos.datasets_ WHERE _id = $1",
-    )
-    .bind(&*id)
-    .fetch_optional(&state.pool)
-    .await?;
+    let row = dao::find_usable_flags(&state.pool, &id).await?;
     let (is_usable, has_voxel_size) =
         row.ok_or_else(|| crate::dataset::lifecycle::not_found(&id))?;
     if is_usable && !has_voxel_size {
@@ -738,12 +572,7 @@ async fn update_data_source(
 ) -> ApiResult<StatusCode> {
     let source = DataSource::from_json(&body).map_err(|_| invalid_body())?;
     let mut tx = state.pool.begin().await?;
-    let is_virtual: Option<bool> = sqlx::query_scalar(
-        "SELECT isVirtual FROM webknossos.datasets_ WHERE _id = $1 FOR NO KEY UPDATE",
-    )
-    .bind(&*id)
-    .fetch_optional(&mut *tx)
-    .await?;
+    let is_virtual = dao::find_is_virtual_for_update(&mut tx, &id).await?;
     let is_virtual = is_virtual.ok_or_else(|| crate::dataset::lifecycle::not_found(&id))?;
     if !is_virtual {
         let hash = crate::dataset::source::inbox_source_hash(&source);

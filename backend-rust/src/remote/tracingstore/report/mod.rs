@@ -30,6 +30,8 @@
 //! `Invalid JSON request body.` 400 rather than Play's JsError document.
 //! Token resolution reuses `auth::user_for_service_token` (all but reset-password tokens,
 //! deactivated users rejected, as the other service callbacks).
+mod dao;
+
 use axum::{Extension, Router, extract::State, http::StatusCode, routing::post};
 use serde::{Deserialize, Deserializer};
 use serde_json::{Map, Value, json};
@@ -138,12 +140,7 @@ async fn handle_report(
             .await?;
     }
     if user.id != owner {
-        sqlx::query("INSERT INTO webknossos.annotation_contributors(_annotation,_user) VALUES($1,$2) ON CONFLICT DO NOTHING")
-            .bind(&report.annotation_id)
-            .bind(&user.id)
-            .execute(pool)
-            .await
-            .map_err(ApiError::from)?;
+        dao::insert_contributor(pool, &report.annotation_id, &user.id).await?;
     }
     after_user_resolved(&state, &misc, &user, &report).await;
     Ok(StatusCode::OK)
@@ -153,32 +150,17 @@ async fn handle_report(
 async fn touch_annotation(pool: &PgPool, report: &AnnotationUpdatesReport) -> ApiResult<ObjectId> {
     let id = &report.annotation_id;
     let mut transaction = pool.begin().await?;
-    let row: Option<(ObjectId, String)> = sqlx::query_as(
-        "SELECT _user, state::text FROM webknossos.annotations WHERE _id=$1 AND NOT isDeleted FOR NO KEY UPDATE",
-    )
-    .bind(id)
-    .fetch_optional(&mut *transaction)
-    .await?;
+    let row = dao::find_owner_and_state_for_update(&mut transaction, id).await?;
     let (owner, annotation_state) =
         row.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if annotation_state == "Finished" {
         return Err(ApiError::bad_request(ANNOTATION_FINISHED));
     }
-    sqlx::query("UPDATE webknossos.annotations SET modified=NOW() WHERE _id=$1")
-        .bind(id)
-        .execute(&mut *transaction)
-        .await?;
+    dao::update_modified(&mut transaction, id).await?;
     for (tracing_id, statistics) in report.statistics.iter().flatten() {
         // AnnotationService.updateStatistics: fail silently per layer.
         let mut savepoint = transaction.begin().await?;
-        let result = sqlx::query(
-            "UPDATE webknossos.annotation_layers SET statistics=$3 WHERE _annotation=$1 AND tracingId=$2",
-        )
-        .bind(id)
-        .bind(tracing_id)
-        .bind(statistics)
-        .execute(&mut *savepoint)
-        .await;
+        let result = dao::update_layer_statistics(&mut savepoint, id, tracing_id, statistics).await;
         match result {
             Ok(_) => savepoint.commit().await?,
             Err(error) => {
@@ -198,11 +180,7 @@ async fn after_user_resolved(
     user: &AuthUser,
     report: &AnnotationUpdatesReport,
 ) {
-    if let Err(error) = sqlx::query("UPDATE webknossos.users SET lastActivity=NOW() WHERE _id=$1")
-        .bind(&user.id)
-        .execute(&state.pool)
-        .await
-    {
+    if let Err(error) = dao::update_last_activity(&state.pool, &user.id).await {
         tracing::warn!(%error, "Updating user last activity failed");
     }
     for (event_type, count) in [

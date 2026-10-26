@@ -13,7 +13,10 @@ use crate::{
     error::ApiResult,
     extract::Query,
     proto::{AnnotationLayerTypeProto, AnnotationProto},
-    remote::tracingstore::reads::{CallbackError, validate_key},
+    remote::tracingstore::{
+        dao,
+        reads::{CallbackError, validate_key},
+    },
     stores::tracing_client::decode_annotation_proto,
     util::id::ObjectId,
 };
@@ -46,65 +49,33 @@ async fn update(
 
 async fn persist_update(pool: &PgPool, id: &ObjectId, update: AnnotationProto) -> ApiResult<()> {
     let mut transaction = pool.begin().await?;
-    // Layers may arrive before their parent annotation: schema185 deliberately
-    // has no annotation_layers -> annotations foreign key. Serialize those
-    // callbacks too, where no annotation row exists to lock yet.
-    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
-        .bind(format!("annotation-layers:{id}"))
-        .execute(&mut *transaction)
-        .await?;
-    // Serialize replacements of the same annotation across server processes.
-    // Global Scala update access deliberately does not require a live row:
-    // an empty update for a nonexistent annotation is a successful no-op.
-    sqlx::query("SELECT _id FROM webknossos.annotations WHERE _id=$1 FOR UPDATE")
-        .bind(id)
-        .fetch_optional(&mut *transaction)
-        .await?;
-    let previous: HashSet<String> = sqlx::query_scalar(
-        "SELECT tracingId FROM webknossos.annotation_layers WHERE _annotation=$1",
-    )
-    .bind(id)
-    .fetch_all(&mut *transaction)
-    .await?
-    .into_iter()
-    .collect();
+    dao::lock_annotation_layers(&mut transaction, id).await?;
+    dao::lock_annotation(&mut transaction, id).await?;
+    let previous: HashSet<String> = dao::find_all_tracing_ids_for_annotation(&mut transaction, id)
+        .await?
+        .into_iter()
+        .collect();
     let incoming: Vec<&str> = update
         .annotation_layers
         .iter()
         .map(|layer| layer.tracing_id.as_str())
         .collect();
-    sqlx::query(
-        "DELETE FROM webknossos.annotation_layers WHERE _annotation=$1 AND NOT (tracingId=ANY($2::text[]))",
-    )
-    .bind(id)
-    .bind(&incoming)
-    .execute(&mut *transaction)
-    .await?;
+    dao::delete_layers_except(&mut transaction, id, &incoming).await?;
     for layer in update.annotation_layers {
         if previous.contains(&layer.tracing_id) {
             // Existing layer type and statistics stay unchanged. Statistics
             // arrive separately in handleTracingUpdateReport, not this RPC.
-            sqlx::query("UPDATE webknossos.annotation_layers SET name=$3 WHERE _annotation=$1 AND tracingId=$2")
-                .bind(id).bind(&layer.tracing_id).bind(&layer.name)
-                .execute(&mut *transaction).await?;
+            dao::update_layer_name(&mut transaction, id, &layer.tracing_id, &layer.name).await?;
         } else {
             let typ = AnnotationLayerType::from(
                 AnnotationLayerTypeProto::try_from(layer.typ)
                     .expect("validated protobuf layer type"),
             )
             .as_str();
-            // Do not use UPSERT: duplicate new tracing IDs must fail rather
-            // than silently becoming repeated updates to the inserted row.
-            sqlx::query("INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics) VALUES($1,$2,$3::webknossos.ANNOTATION_LAYER_TYPE,$4,'{}'::jsonb)")
-                .bind(id).bind(&layer.tracing_id).bind(typ).bind(&layer.name)
-                .execute(&mut *transaction).await?;
+            dao::insert_layer(&mut transaction, id, &layer.tracing_id, typ, &layer.name).await?;
         }
     }
-    sqlx::query("UPDATE webknossos.annotations SET description=$2 WHERE _id=$1")
-        .bind(id)
-        .bind(update.description)
-        .execute(&mut *transaction)
-        .await?;
+    dao::update_description(&mut transaction, id, update.description).await?;
     // Deletion, insertion, rename and description are committed together;
     // deferred layer-name constraints are checked before success is returned.
     transaction.commit().await?;

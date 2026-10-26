@@ -14,6 +14,7 @@ use crate::{
     auth::{self, AuthUser},
     error::{ApiError, ApiResult},
     extract::{Json, Path, Query},
+    remote::{dao, tracingstore::dao as tracingstore_dao},
     stores::client::ServiceClients,
     util::id::ObjectId,
 };
@@ -112,13 +113,7 @@ async fn datastore(
     Extension(features): Extension<AccessFeatures>,
     Json(body): Json<AccessRequest>,
 ) -> ApiResult<Response> {
-    let valid: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM webknossos.dataStores_ WHERE name=$1 AND key=$2)",
-    )
-    .bind(name)
-    .bind(&query.key)
-    .fetch_one(&state.pool)
-    .await?;
+    let valid = dao::data_store_key_is_valid(&state.pool, name, &query.key).await?;
     if !valid {
         return Ok((
             StatusCode::FORBIDDEN,
@@ -140,11 +135,7 @@ async fn tracingstore(
     Json(body): Json<AccessRequest>,
 ) -> ApiResult<Response> {
     // TracingStoreService validates the key globally; name is informational.
-    let valid: bool =
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.tracingStores_ WHERE key=$1)")
-            .bind(&query.key)
-            .fetch_one(&state.pool)
-            .await?;
+    let valid = tracingstore_dao::key_is_valid(&state.pool, &query.key).await?;
     if !valid {
         return Ok((StatusCode::FORBIDDEN, crate::msg::tracing_store::NOT_FOUND).into_response());
     }
@@ -184,16 +175,10 @@ async fn validate(
             }
             let id =
                 id.ok_or_else(|| ApiError::bad_request(crate::msg::request::TRACING_ID_REQUIRED))?;
-            let annotation_id: ObjectId = sqlx::query_scalar(
-                "SELECT a._id FROM webknossos.annotations_ a JOIN \
-                    webknossos.annotation_layers layer ON layer._annotation=a._id WHERE \
-                    layer.tracingId=$1 LIMIT 1",
-            )
-            .bind(id)
-            .fetch_optional(&state.pool)
-            .await?
-            // Play: `annotationForTracing(…) ?~> annotation.notFound` on an empty result (400).
-            .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?;
+            let annotation_id = dao::find_annotation_id_for_tracing(&state.pool, id)
+                .await?
+                // Play: `annotationForTracing(…) ?~> annotation.notFound` on an empty result (400).
+                .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?;
             annotation(state, user.as_ref(), &annotation_id, body.mode, token).await
         }
         Resource::JobExport => job_export(state, user.as_ref(), id, body.mode).await,
@@ -220,12 +205,9 @@ async fn dataset(
                 ));
             }
             let id = &required_id(id)?;
-            let organization: String =
-                sqlx::query_scalar("SELECT _organization FROM webknossos.datasets_ WHERE _id=$1")
-                    .bind(id)
-                    .fetch_optional(&state.pool)
-                    .await?
-                    .ok_or_else(|| ApiError::not_found(crate::msg::dataset::MISSING))?;
+            let organization = dao::find_dataset_organization(&state.pool, id)
+                .await?
+                .ok_or_else(|| ApiError::not_found(crate::msg::dataset::MISSING))?;
             let allowed = match user {
                 Some(user) if mode == Mode::Write => {
                     crate::dataset::access::can_edit(&state.pool, user, id).await?
@@ -267,16 +249,8 @@ async fn annotation(
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // Private links only grant read access, and only until they expire.
-    let allowed_by_link = mode == Mode::Read
-        && sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS (SELECT 1 FROM webknossos.annotation_privateLinks_ WHERE \
-                _annotation=$1 AND accessToken=$2 AND (expirationDateTime IS NULL OR \
-                expirationDateTime > statement_timestamp()))",
-        )
-        .bind(id)
-        .bind(token)
-        .fetch_one(&state.pool)
-        .await?;
+    let allowed_by_link =
+        mode == Mode::Read && dao::has_valid_private_link(&state.pool, id, token).await?;
     let restrictions = crate::annotation::access::restrictions(&metadata, user);
     let allowed = allowed_by_link
         || match mode {
@@ -302,20 +276,6 @@ async fn job_export(
         )));
     }
     let id = required_id(id)?;
-    let allowed: bool = sqlx::query_scalar(
-        r#"SELECT EXISTS(SELECT 1 FROM webknossos.jobs_ j WHERE j._id=$1 AND
-      (j._owner=$2 OR $3 OR ($4 AND EXISTS (SELECT 1 FROM webknossos.users_ owner WHERE owner._id=j._owner AND owner._organization=$5))
-      OR EXISTS(SELECT 1 FROM webknossos.user_team_roles requester JOIN webknossos.user_team_roles owner_role ON owner_role._team=requester._team
-        JOIN webknossos.teams_ team ON team._id=requester._team AND team._organization=$5
-        JOIN webknossos.users_ owner ON owner._id=owner_role._user AND owner._organization=$5
-        WHERE requester._user=$2 AND requester.isTeamManager AND owner._id=j._owner)))"#,
-    )
-    .bind(&id)
-    .bind(user.map(|u| &u.id))
-    .bind(user.is_some_and(|u| u.is_superuser))
-    .bind(user.is_some_and(|u| u.is_admin))
-    .bind(user.map(|u| u.organization_id.as_str()))
-    .fetch_one(&state.pool)
-    .await?;
+    let allowed = dao::can_read_job_export(&state.pool, &id, user).await?;
     Ok(Answer::condition(allowed, "No read access to job export"))
 }

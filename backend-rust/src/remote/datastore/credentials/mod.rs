@@ -1,6 +1,8 @@
 //! Datastore credential RPC and the credential creation/storage prerequisite
 //! used by remote dataset exploration. There are no public credential CRUD
 //! routes in the Scala application's route table.
+mod dao;
+
 use std::fmt;
 
 use axum::{
@@ -133,20 +135,8 @@ pub async fn insert_credential(
 ) -> ApiResult<ObjectId> {
     let id = ObjectId::new();
     let (kind, name, identifier, secret) = credential.storage_fields();
-    let result = sqlx::query(
-        r#"INSERT INTO webknossos.credentials (_id, type, name, identifier, secret, _user, _organization)
-          SELECT $1, $2::webknossos.CREDENTIAL_TYPE, $3, $4, $5, usr._id, usr._organization
-          FROM webknossos.users AS usr
-          JOIN webknossos.multiUsers AS multi ON multi._id = usr._multiUser
-          JOIN webknossos.organizations AS org ON org._id = usr._organization
-          WHERE usr._id = $6 AND usr._organization = $7
-            AND NOT usr.isDeleted AND NOT usr.isDeactivated AND NOT multi.isDeleted AND NOT org.isDeleted
-          FOR SHARE OF multi, usr, org"#,
-    )
-    .bind(&id).bind(kind).bind(name).bind(identifier).bind(secret)
-    .bind(&user.id).bind(&user.organization_id)
-    .execute(&mut **tx).await?;
-    if result.rows_affected() != 1 {
+    let affected = dao::insert_one(tx, &id, kind, name, identifier, secret, user).await?;
+    if affected != 1 {
         return Err(ApiError::unauthorized());
     }
     Ok(id)
@@ -171,9 +161,7 @@ async fn find_credential(
     Query(query): Query<CredentialQuery>,
 ) -> ApiResult<Response> {
     let mut tx = state.pool.begin().await?;
-    let allowed: Option<Option<String>> = sqlx::query_scalar(
-        "SELECT onlyAllowedOrganization FROM webknossos.dataStores WHERE name = $1 AND key = $2 AND NOT isDeleted FOR SHARE",
-    ).bind(&name).bind(&query.key).fetch_optional(&mut *tx).await?;
+    let allowed = dao::find_only_allowed_organization_for_share(&mut tx, &name, &query.key).await?;
     let Some(only_allowed_organization) = allowed else {
         return Ok((
             StatusCode::FORBIDDEN,
@@ -184,9 +172,7 @@ async fn find_credential(
         )
             .into_response());
     };
-    let row = sqlx::query_as::<_, StoredCredential>(
-        "SELECT type::text AS kind, name, identifier, secret, _user AS user_id, _organization AS organization FROM webknossos.credentials WHERE _id = $1 AND NOT isDeleted",
-    ).bind(&query.credential_id).fetch_optional(&mut *tx).await?;
+    let row = dao::find_one(&mut tx, &query.credential_id).await?;
     let credential = row.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if only_allowed_organization.is_some_and(|organization| organization != credential.organization)
     {

@@ -14,9 +14,7 @@ use crate::{
     AppState,
     error::{ApiError, ApiResult},
     extract::{Json, Query},
-    job::routes::{JOB_COLUMNS, Job},
-    remote::datastore::ValidatedDataStore,
-    sql::Sql,
+    remote::datastore::{ValidatedDataStore, dao},
     util::id::ObjectId,
 };
 
@@ -55,23 +53,17 @@ async fn find_dataset_id(
     Query(query): Query<DatasetNameQuery>,
     ValidatedDataStore(_store): ValidatedDataStore,
 ) -> ApiResult<ResponseJson<ObjectId>> {
-    let organization_exists: bool =
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ WHERE _id=$1)")
-            .bind(&query.organization_id)
-            .fetch_one(&state.pool)
-            .await?;
+    let organization_exists = dao::organization_exists(&state.pool, &query.organization_id).await?;
     if !organization_exists {
         return Err(ApiError::not_found(crate::msg::organization::not_found(
             &query.organization_id,
         )));
     }
-    let id: Option<ObjectId> = sqlx::query_scalar(
-        "SELECT _id FROM webknossos.datasets_ WHERE directoryName=$1 AND \
-                _organization=$2 ORDER BY created ASC, _id ASC LIMIT 1",
+    let id = dao::find_oldest_dataset_id(
+        &state.pool,
+        &query.dataset_directory_name,
+        &query.organization_id,
     )
-    .bind(&query.dataset_directory_name)
-    .bind(&query.organization_id)
-    .fetch_optional(&state.pool)
     .await?;
     Ok(ResponseJson(id.ok_or_else(|| {
         ApiError::bad_request(crate::msg::dataset::not_found_by_name(
@@ -117,13 +109,7 @@ async fn job_export_properties(
     Query(query): Query<JobIdQuery>,
     ValidatedDataStore(_store): ValidatedDataStore,
 ) -> ApiResult<ResponseJson<Value>> {
-    let mut q = Sql::new("SELECT ");
-    q.push(JOB_COLUMNS)
-        .push(" FROM webknossos.jobs_ j WHERE j._id=")
-        .push_bind(&query.job_id);
-    let job: Job = q
-        .build_query_as()
-        .fetch_optional(&state.pool)
+    let job = dao::find_job(&state.pool, &query.job_id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if !job.is_valid() {
@@ -132,14 +118,9 @@ async fn job_export_properties(
             query.job_id
         )));
     }
-    let organization: String = sqlx::query_scalar(
-        "SELECT o._id FROM webknossos.users_ u JOIN webknossos.organizations_ o ON \
-                o._id=u._organization WHERE u._id=$1",
-    )
-    .bind(&job.owner)
-    .fetch_optional(&state.pool)
-    .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+    let organization = dao::find_organization_id_for_user(&state.pool, &job.owner)
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let run_id = job
         .latest_run_id
         .ok_or_else(|| ApiError::bad_request(crate::msg::job::NOT_RUN))?;

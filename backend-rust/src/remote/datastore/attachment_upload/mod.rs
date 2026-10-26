@@ -6,6 +6,10 @@
 //! Authentication and the dataset/layer lookup are shared with the mag upload
 //! callbacks (`remote_datastore_mag_upload`). Deviations from Play are listed
 //! in checkpoints/remote-datastore-attachment-upload.md.
+mod dao;
+
+pub(crate) use dao::push_attachment_key;
+
 use axum::{
     Extension, Json as ResponseJson, Router, extract::State, http::StatusCode, routing::post,
 };
@@ -20,12 +24,11 @@ use crate::{
     AppState,
     error::{ApiError, ApiResult},
     extract::{Json, Query},
-    remote::datastore::ValidatedDataStore,
     remote::datastore::mag_upload::{
         ResumableUploadInfo, TokenQuery, after_upload_reported, load_virtual_upload_target,
         require_same_datastore, require_usable_layer, user_for_callback_token,
     },
-    sql::Sql,
+    remote::datastore::{ValidatedDataStore, dao as datastore_dao},
     stores::client::ServiceClients,
     util::id::ObjectId,
 };
@@ -40,26 +43,6 @@ const DIFFERENT_DATASTORE: &str =
 /// `UPath.fromString("<pending upload>")` (a relative LocalUPath, rendered
 /// with its `./` prefix): placeholder path until the report.
 const PENDING_UPLOAD_PATH: &str = "./<pending upload>";
-
-/// One attachment row (the table's primary key).
-/// The `dataset_layer_attachments` row of `dataset`'s layer `layer` with
-/// type `typ` and name `name` (the primary key).
-pub(crate) fn push_attachment_key<'a>(
-    q: &mut Sql<'a>,
-    dataset: &'a ObjectId,
-    layer: &'a str,
-    typ: &'a str,
-    name: &'a str,
-) {
-    q.push("_dataset = ")
-        .push_bind(dataset)
-        .push(" AND layerName = ")
-        .push_bind(layer)
-        .push(" AND type = ")
-        .push_bind(typ)
-        .push("::webknossos.LAYER_ATTACHMENT_TYPE AND name = ")
-        .push_bind(name);
-}
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -94,30 +77,6 @@ impl LayerAttachment {
             .map(|path| path.to_string())
             .map_err(crate::dataset::source::invalid_body)
     }
-}
-
-/// `dataLayer.attachments.getByTypeAndNameAlwaysReturnSingletons(type, name)`
-/// on the non-pending attachments (DatasetLayerAttachmentDAO
-/// .findAllForDatasetAndDataLayerName); singletons match regardless of name.
-async fn existing_attachment<'e>(
-    executor: impl sqlx::PgExecutor<'e>,
-    dataset: &ObjectId,
-    layer: &str,
-    typ: LayerAttachmentType,
-    name: &str,
-) -> ApiResult<bool> {
-    let name = (!typ.is_singleton()).then_some(name);
-    Ok(sqlx::query_scalar(
-        r#"SELECT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments
-             WHERE _dataset = $1 AND layerName = $2 AND type = $3::webknossos.LAYER_ATTACHMENT_TYPE
-               AND ($4::text IS NULL OR name = $4) AND NOT uploadToPathIsPending AND NOT uploadIsPending)"#,
-    )
-    .bind(dataset)
-    .bind(layer)
-    .bind(typ.as_str())
-    .bind(name)
-    .fetch_one(executor)
-    .await?)
 }
 
 fn exists_error(typ: LayerAttachmentType) -> ApiError {
@@ -159,7 +118,7 @@ async fn reserve_attachment_upload(
     require_usable_layer(pool, &target, &body.layer_name).await?;
     let typ = body.attachment_type;
     let name = &body.attachment.name;
-    if existing_attachment(pool, &target.id, &body.layer_name, typ, name).await? {
+    if dao::existing_attachment_exists(pool, &target.id, &body.layer_name, typ, name).await? {
         return Err(exists_error(typ));
     }
     require_same_datastore(&target, &store.name, DIFFERENT_DATASTORE)?;
@@ -167,42 +126,45 @@ async fn reserve_attachment_upload(
     // transaction; the dataset row lock serializes concurrent reservations.
     // Unlike mags, overwriting a pending attachment deletes no stored paths.
     let mut transaction = pool.begin().await?;
-    sqlx::query("SELECT 1 FROM webknossos.datasets WHERE _id = $1 FOR UPDATE")
-        .bind(&target.id)
-        .execute(&mut *transaction)
-        .await?;
-    if existing_attachment(&mut *transaction, &target.id, &body.layer_name, typ, name).await? {
+    datastore_dao::lock_dataset(&mut transaction, &target.id).await?;
+    if dao::existing_attachment_exists(&mut *transaction, &target.id, &body.layer_name, typ, name)
+        .await?
+    {
         return Err(exists_error(typ));
     }
     if body.overwrite_pending {
-        let mut q = Sql::new("DELETE FROM webknossos.dataset_layer_attachments WHERE ");
-        push_attachment_key(&mut q, &target.id, &body.layer_name, typ.as_str(), name);
-        q.push(" AND (uploadIsPending OR uploadToPathIsPending)");
-        q.build().execute(&mut *transaction).await?;
+        dao::delete_pending_attachment(
+            &mut transaction,
+            &target.id,
+            &body.layer_name,
+            typ.as_str(),
+            name,
+        )
+        .await?;
     } else {
-        let mut q =
-            Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments WHERE ");
-        push_attachment_key(&mut q, &target.id, &body.layer_name, typ.as_str(), name);
-        q.push(" AND (uploadIsPending OR uploadToPathIsPending))");
-        let pending: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;
+        let pending = dao::pending_attachment_exists(
+            &mut transaction,
+            &target.id,
+            &body.layer_name,
+            typ.as_str(),
+            name,
+        )
+        .await?;
         if pending {
             return Err(ApiError::bad_request(
                 crate::msg::dataset::layer::ATTACHMENT_ALREADY_PENDING,
             ));
         }
     }
-    // DatasetLayerAttachmentDAO.insertWithUploadPending (credentialId unset).
-    sqlx::query(
-        r#"INSERT INTO webknossos.dataset_layer_attachments (_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending, uploadIsPending)
-           VALUES ($1, $2, $3, $4, $5::webknossos.LAYER_ATTACHMENT_TYPE, $6::webknossos.LAYER_ATTACHMENT_DATAFORMAT, false, true)"#,
+    dao::insert_with_upload_pending(
+        &mut transaction,
+        &target.id,
+        &body.layer_name,
+        name,
+        PENDING_UPLOAD_PATH,
+        typ.as_str(),
+        body.attachment.data_format.as_str(),
     )
-    .bind(&target.id)
-    .bind(&body.layer_name)
-    .bind(name)
-    .bind(PENDING_UPLOAD_PATH)
-    .bind(typ.as_str())
-    .bind(body.attachment.data_format.as_str())
-    .execute(&mut *transaction)
     .await?;
     transaction.commit().await?;
     tracing::info!(dataset = %target.id, layer = %body.layer_name, attachment_type = typ.as_str(), user = %user.id, "Reserved attachment upload");
@@ -236,31 +198,19 @@ async fn report_attachment_upload(
     let id = &body.dataset_id;
     // DatasetDAO.findOne under GlobalAccessContext; the reporting store need
     // not be the dataset's store (Scala does not check it either).
-    let exists: bool =
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE _id = $1)")
-            .bind(id)
-            .fetch_one(pool)
-            .await?;
+    let exists = datastore_dao::dataset_exists(pool, id).await?;
     if !exists {
         return Err(crate::dataset::lifecycle::not_found(id));
     }
-    // findOneWithPendingUpload + finishUpload: the key is the primary key, so
-    // the guarded update touches exactly the row Scala finds and updates.
-    // Only the path changes (dataFormat/credentialId are kept, as in Scala).
-    let mut q = Sql::new(
-        "UPDATE webknossos.dataset_layer_attachments \
-         SET uploadToPathIsPending = false, uploadIsPending = false, path = ",
-    );
-    q.push_bind(&path).push(" WHERE ");
-    push_attachment_key(
-        &mut q,
+    let finished = dao::finish_upload(
+        pool,
         id,
         &body.layer_name,
         body.attachment_type.as_str(),
         &body.attachment.name,
-    );
-    q.push(" AND uploadIsPending");
-    let finished = q.build().execute(pool).await?.rows_affected() > 0;
+        &path,
+    )
+    .await?;
     if !finished {
         return Err(ApiError::bad_request(ATTACHMENT_NOT_PENDING));
     }

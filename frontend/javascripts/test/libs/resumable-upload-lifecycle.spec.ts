@@ -156,8 +156,13 @@ describe("Resumable chunk lifecycle", () => {
     expect(fileErrorSpy).toHaveBeenCalled();
   });
 
-  it("should fail a chunk after maxChunkRetries network errors", async () => {
-    const fetchMock = vi.fn(() => Promise.reject(new TypeError("Network failure")));
+  it("should keep retrying network errors beyond maxChunkRetries", async () => {
+    let attempts = 0;
+    const fetchMock = vi.fn(() =>
+      ++attempts <= 5
+        ? Promise.reject(new TypeError("Network failure"))
+        : Promise.resolve(new Response("ok")),
+    );
     vi.stubGlobal("fetch", fetchMock);
     const resumable = new ResumableUpload({
       target: "/upload",
@@ -167,18 +172,18 @@ describe("Resumable chunk lifecycle", () => {
       chunkRetryInterval: 1,
     });
     resumable.addFile(new File(["x".repeat(10)], "test.txt"));
-    const fileError = new Promise<string>((resolve) =>
-      resumable.addEventListener("fileError", (event) =>
-        resolve((event as CustomEvent).detail.message),
-      ),
+    const fileErrorSpy = vi.fn();
+    resumable.addEventListener("fileError", fileErrorSpy);
+    const fileSuccess = new Promise<void>((resolve) =>
+      resumable.addEventListener("fileSuccess", () => resolve()),
     );
     await sleep(0);
 
     resumable.upload();
 
-    expect(await fileError).toBe("Network failure");
-    // The initial attempt plus two retries
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    await fileSuccess;
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(fileErrorSpy).not.toHaveBeenCalled();
   });
 
   it("should not resume a paused upload when retrying a failed file", async () => {

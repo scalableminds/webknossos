@@ -89,10 +89,6 @@ export class ResumableChunk {
     for (;;) {
       const retryReason = await this.upload(signal);
       if (retryReason == null || signal.aborted) return;
-      if (this.retries >= this.getOpt("maxChunkRetries")) {
-        this.finish("error", retryReason);
-        return;
-      }
 
       this.callback("retry", retryReason);
       // A retry listener may have paused or cancelled the upload.
@@ -142,11 +138,12 @@ export class ResumableChunk {
       customHeaders = customHeaders(this.fileObj, this);
     }
 
+    const fetchSignal = this.withFetchTimeout(signal);
     try {
       const response = await fetch(targetUrl, {
         method: "GET",
         headers: customHeaders,
-        signal: this.withFetchTimeout(signal).signal,
+        signal: fetchSignal.signal,
         credentials: this.getOpt("withCredentials") ? "include" : "same-origin",
       });
       // Status 200: chunk already exists on server
@@ -154,8 +151,11 @@ export class ResumableChunk {
       if (response.ok && response.status !== 204) {
         return await response.text();
       }
+      discardBody(response);
     } catch (_error) {
       // Aborted, timed out or failed: run() either stops or falls back to uploading the chunk.
+    } finally {
+      fetchSignal.dispose();
     }
     return null;
   }
@@ -244,23 +244,44 @@ export class ResumableChunk {
         if (signal.aborted) return null;
         this.finish("error", message);
       } else {
+        discardBody(response);
         return `Server responded with ${response.status}`;
       }
       return null;
     } catch (error: any) {
       if (signal.aborted) return null;
+      // Network errors and timeouts are retried indefinitely, only HTTP errors count
+      // towards maxChunkRetries.
       return fetchSignal.hasTimedOut() ? "Timeout" : error.message;
+    } finally {
+      fetchSignal.dispose();
     }
   }
 
-  // Combines the run's signal with the fetchTimeout option.
+  // Combines the run's signal with the fetchTimeout option. dispose() must be called once the
+  // request has finished so that neither the timer nor the abort listener outlive it.
   private withFetchTimeout(signal: AbortSignal) {
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    signal.addEventListener("abort", abort, { once: true });
+
     const fetchTimeout = this.getOpt("fetchTimeout");
-    if (fetchTimeout <= 0) return { signal, hasTimedOut: () => false };
-    const timeoutSignal = AbortSignal.timeout(fetchTimeout);
+    let hasTimedOut = false;
+    const timeoutId =
+      fetchTimeout > 0
+        ? setTimeout(() => {
+            hasTimedOut = true;
+            controller.abort();
+          }, fetchTimeout)
+        : null;
+
     return {
-      signal: AbortSignal.any([signal, timeoutSignal]),
-      hasTimedOut: () => timeoutSignal.aborted,
+      signal: controller.signal,
+      hasTimedOut: () => hasTimedOut,
+      dispose: () => {
+        if (timeoutId != null) clearTimeout(timeoutId);
+        signal.removeEventListener("abort", abort);
+      },
     };
   }
 
@@ -307,6 +328,11 @@ export class ResumableChunk {
         return 0;
     }
   }
+}
+
+// Releases the connection of a response whose body is not needed.
+function discardBody(response: Response): void {
+  response.body?.cancel().catch(() => {});
 }
 
 function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {

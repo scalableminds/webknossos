@@ -612,6 +612,45 @@ describe("Resumable Use Cases (WEBKNOSSOS Patterns)", () => {
   });
 
   describe("Race Condition: chunk test body-read gap", () => {
+    it("should not send a duplicate POST when uploadNextChunk is re-entered during test body read", async () => {
+      // GET returns 200 (chunk exists), but the body is still being read when another
+      // chunk finishing re-enters uploadNextChunk(). Chunk 1 must still count as uploading,
+      // otherwise send() starts a second run that POSTs a chunk the server already has.
+
+      const {
+        handler,
+        trigger: releaseChunk1Body,
+        getArrived: chunk1GetArrived,
+      } = makeSlowChunk1Handler();
+      server.use(handler);
+
+      resumable = new ResumableUpload({
+        target: "/upload",
+        chunkSize: 10,
+        testChunks: true,
+        simultaneousUploads: 1,
+      });
+
+      const file = new File(["12345678901234567890"], "race.txt", { type: "text/plain" });
+      resumable.addFile(file);
+      resumable.upload();
+
+      // Wait until chunk 1's GET handler has fired and its response headers have arrived.
+      await chunk1GetArrived;
+      await sleep(10);
+
+      resumable.uploadNextChunk();
+      releaseChunk1Body();
+
+      await resumable.waitForComplete();
+      // Allow any in-flight duplicate POST to land on the backend before asserting.
+      await backendMock.waitForIdle();
+
+      // Chunk 1 existed on the server, so only chunk 2 may have been POSTed.
+      expect(backendMock.getUploadRequestCount()).toBe(1);
+      expect(backendMock.requestLog.filter((e) => e.method === "POST").length).toBe(1);
+    });
+
     it("should not POST an existing chunk when pausing and resuming during the test body read", async () => {
       // GET returns 200 (chunk exists), but the body is still being read when the user
       // pauses and resumes. The probe's result must not count until the body has been

@@ -1,14 +1,9 @@
 import { V3 } from "libs/mjs";
-import {
-  type AnnotationLayerDescriptor,
-  AnnotationLayerEnum,
-  type APIAnnotation,
-  type ServerSkeletonTracing,
-  type ServerTracing,
-} from "types/api_types";
+import type { ServerSkeletonTracing, ServerTracing } from "types/api_types";
 import { IdentityTransform, type TreeType, type Vector3 } from "viewer/constants";
 import {
   type BranchPoint,
+  type Edge,
   type Node,
   type Tree,
   type TreeGroup,
@@ -28,20 +23,6 @@ import { isRotated } from "./flycam_accessor";
 export function getSkeletonTracing(annotation: StoreAnnotation): SkeletonTracing | null {
   if (annotation.skeleton != null) {
     return annotation.skeleton;
-  }
-
-  return null;
-}
-
-export function getSkeletonDescriptor(
-  annotation: APIAnnotation,
-): AnnotationLayerDescriptor | null | undefined {
-  const skeletonLayers = annotation.annotationLayers.filter(
-    (descriptor) => descriptor.typ === AnnotationLayerEnum.Skeleton,
-  );
-
-  if (skeletonLayers.length > 0) {
-    return skeletonLayers[0];
   }
 
   return null;
@@ -116,6 +97,30 @@ export function getActiveNodeFromTree(skeletonTracing: SkeletonTracing, tree: Tr
 
 export function findTreeByNodeId(trees: TreeMap, nodeId: number): Tree | undefined {
   return trees.values().find((tree) => tree.nodes.has(nodeId));
+}
+
+// If the given node has exactly two (distinct) neighbors, returns the edge that should connect
+// these neighbors when the node is deleted so that the tree is not split. Otherwise, returns null.
+// The direction of the existing edges is preserved where possible (A -> N -> B yields A -> B).
+export function getEdgeForReconnectingNeighbors(tree: Tree, nodeId: number): Edge | null {
+  const ingoingEdges = tree.edges.getIngoingEdgesForNode(nodeId);
+  const outgoingEdges = tree.edges.getOutgoingEdgesForNode(nodeId);
+  if (ingoingEdges.length + outgoingEdges.length !== 2) {
+    return null;
+  }
+  if (ingoingEdges.length === 1 && outgoingEdges.length === 1) {
+    const source = ingoingEdges[0].source;
+    const target = outgoingEdges[0].target;
+    return source !== target ? { source, target } : null;
+  }
+  // Both edges point in the same direction (relative to the node). Fall back to
+  // connecting the neighbor with the lower id to the one with the higher id.
+  const neighborIds = [
+    ...ingoingEdges.map((edge) => edge.source),
+    ...outgoingEdges.map((edge) => edge.target),
+  ];
+  const [source, target] = neighborIds.sort((a, b) => a - b);
+  return source !== target ? { source, target } : null;
 }
 
 export function hasEmptyTrees(trees: TreeMap): boolean {

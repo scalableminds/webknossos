@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(186);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(188);
 COMMIT TRANSACTION;
 
 
@@ -939,6 +939,8 @@ CREATE INDEX ON webknossos.tokens(value);
 CREATE INDEX ON webknossos.tokens(_user, tokenType);
 CREATE INDEX ON webknossos.tokens(expirationDateTime);
 CREATE INDEX ON webknossos.dataset_layer_attachments(path);
+CREATE INDEX ON webknossos.dataset_layer_coordinateTransformations(_dataset, layerName);
+CREATE INDEX ON webknossos.dataset_layer_additionalAxes(_dataset, layerName);
 CREATE INDEX ON webknossos.organization_usedStorage_mags(_organization);
 CREATE INDEX ON webknossos.organization_usedStorage_attachments(_organization);
 CREATE INDEX ON webknossos.user_team_roles(_team);
@@ -947,7 +949,8 @@ CREATE INDEX ON webknossos.folder_allowedTeams(_team);
 CREATE INDEX ON webknossos.annotation_sharedTeams(_team);
 CREATE INDEX ON webknossos.folder_paths(_descendant);
 CREATE INDEX ON webknossos.jobs(state, _dataStore, created);
-CREATE INDEX ON webknossos.jobs(_worker);
+CREATE INDEX ON webknossos.jobs(_worker, manualState, state);
+CREATE INDEX ON webknossos.jobs(_owner);
 CREATE INDEX ON webknossos.credit_transactions(_paid_job);
 CREATE INDEX ON webknossos.credit_transactions(_organization);
 

@@ -1,6 +1,7 @@
 pub mod assignment;
 pub mod creation;
 pub mod creation_from_files;
+pub(crate) mod dao;
 pub mod request;
 pub mod routes;
 pub mod types;

@@ -1,3 +1,5 @@
+pub(crate) mod dao;
+
 use crate::{
     AppState,
     error::{ApiError, ApiResult},
@@ -17,7 +19,7 @@ pub struct PublicUrl(pub Url);
 
 #[derive(Serialize, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]
-struct ShortLink {
+pub(crate) struct ShortLink {
     #[serde(rename = "_id")]
     _id: ObjectId,
     key: String,
@@ -59,21 +61,16 @@ async fn create(
     // UUID's random tail supplies 70 random bits; the other two are variant bits.
     let bytes = *uuid::Uuid::new_v4().as_bytes();
     let key: String = bytes[7..16].iter().map(|b| format!("{b:02x}")).collect();
-    let result = sqlx::query_as("INSERT INTO webknossos.shortLinks (_id,key,longLink) VALUES ($1,$2,$3) RETURNING _id,key,longLink AS long_link")
-        .bind(ObjectId::new()).bind(key).bind(link).fetch_one(&state.pool).await?;
+    let result = dao::insert_one(&state.pool, ObjectId::new(), key, link).await?;
     Ok(ResponseJson(result))
 }
 async fn read(
     State(state): State<AppState>,
     Path(key): Path<String>,
 ) -> ApiResult<ResponseJson<ShortLink>> {
-    let result = sqlx::query_as(
-        "SELECT _id,key,longLink AS long_link FROM webknossos.shortLinks WHERE key=$1",
-    )
-    .bind(key)
-    .fetch_optional(&state.pool)
-    .await?
-    .ok_or_else(|| ApiError::bad_request(crate::msg::SHORT_LINK_NOT_FOUND))?;
+    let result = dao::find_one_by_key(&state.pool, key)
+        .await?
+        .ok_or_else(|| ApiError::bad_request(crate::msg::SHORT_LINK_NOT_FOUND))?;
     Ok(ResponseJson(result))
 }
 

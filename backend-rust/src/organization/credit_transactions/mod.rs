@@ -4,12 +4,15 @@
 //! Every credit mutation runs in a SERIALIZABLE transaction (as in Scala) so the
 //! `enforce_non_negative_balance` trigger sees a consistent organization balance;
 //! the refunded/revoked rows are additionally locked with `FOR UPDATE`.
+pub(crate) mod dao;
+
+use dao::CreditTransaction;
+
 use crate::{
     AppState,
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Path, Query},
-    sql::Sql,
     util::id::{ObjectId, PathObjectId},
 };
 use axum::{
@@ -23,22 +26,6 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use sqlx::{Acquire, PgConnection, PgPool, Postgres, Transaction};
 use webknossos_common::java_format::java_double;
-
-/// CreditTransactionDAO.listAccessQ for the requesting `user`.
-fn push_list_access<'a>(q: &mut Sql<'a>, user: &'a ObjectId) {
-    q.push(
-        "(_organization IN (SELECT _organization FROM webknossos.users_ \
-         WHERE (isAdmin OR isDatasetManager) AND _id = ",
-    )
-    .push_bind(user)
-    .push(
-        ")
-  OR _organization IN (SELECT _organization FROM webknossos.teams_ WHERE _id IN \
-         (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = ",
-    )
-    .push_bind(user)
-    .push(")))");
-}
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -89,11 +76,7 @@ async fn add_credits(
     user: AuthUser,
 ) -> ApiResult<StatusCode> {
     require_superuser(&user, "Only super users can add credits to an organization")?;
-    let exists: bool =
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ WHERE _id=$1)")
-            .bind(&query.organization_id)
-            .fetch_one(&state.pool)
-            .await?;
+    let exists = crate::organization::dao::exists(&state.pool, &query.organization_id).await?;
     if !exists {
         return Err(ApiError::bad_request(crate::msg::organization::not_found(
             &query.organization_id,
@@ -140,18 +123,14 @@ async fn add_credits(
         ApiError::bad_request(crate::msg::credit_transaction::CREDIT_AMOUNT_TOO_LARGE)
     })?;
     let mut transaction = serializable(&state.pool).await?;
-    sqlx::query(
-        r#"INSERT INTO webknossos.credit_transactions
-          (_id, _organization, milli_credit_delta, _related_transaction, comment, _paid_job,
-           transaction_state, credit_state, expiration_date, created_at, updated_at, is_deleted)
-          VALUES ($1, $2, $3, NULL, $4, NULL, 'Complete', 'AddCredits', $5, NOW(), NOW(), FALSE)"#,
+    dao::insert_add_credits(
+        &mut transaction,
+        ObjectId::new(),
+        &query.organization_id,
+        milli_credits,
+        comment,
+        expiration,
     )
-    .bind(ObjectId::new())
-    .bind(&query.organization_id)
-    .bind(milli_credits)
-    .bind(comment)
-    .bind(expiration)
-    .execute(&mut *transaction)
     .await
     .map_err(balance_error)?;
     transaction.commit().await?;
@@ -283,13 +262,7 @@ async fn refund(
     require_superuser(&user, "Only super users can manually refund credits")?;
     let id = &*transaction_id;
     let mut transaction = serializable(&state.pool).await?;
-    let row: Option<(String, Option<ObjectId>, String, String, i32)> = sqlx::query_as(
-        r#"SELECT _organization, _paid_job, transaction_state::text, credit_state::text, milli_credit_delta
-          FROM webknossos.credit_transactions WHERE _id = $1 AND NOT is_deleted FOR UPDATE"#,
-    )
-    .bind(id)
-    .fetch_optional(&mut *transaction)
-    .await?;
+    let row = dao::find_one_for_update(&mut transaction, id).await?;
     let (organization, paid_job, transaction_state, credit_state, delta) =
         row.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if organization != query.organization_id {
@@ -312,28 +285,19 @@ async fn refund(
         Some(job) => format!("Refund for failed job {job}."),
         None => format!("Refund for transaction {id}."),
     };
-    sqlx::query(
-        r#"INSERT INTO webknossos.credit_transactions
-          (_id, _organization, _related_transaction, milli_credit_delta, comment, transaction_state, credit_state)
-          VALUES ($1, $2, $3, $4, $5, 'Complete', 'Refunding')"#,
+    dao::insert_refund(
+        &mut transaction,
+        ObjectId::new(),
+        &organization,
+        id,
+        -delta,
+        comment,
     )
-    .bind(ObjectId::new())
-    .bind(&organization)
-    .bind(id)
-    .bind(-delta)
-    .bind(comment)
-    .execute(&mut *transaction)
     .await
     .map_err(balance_error)?;
-    sqlx::query(
-        r#"UPDATE webknossos.credit_transactions
-          SET transaction_state = 'Complete', credit_state = 'Refunded', updated_at = NOW()
-          WHERE _id = $1"#,
-    )
-    .bind(id)
-    .execute(&mut *transaction)
-    .await
-    .map_err(balance_error)?;
+    dao::mark_refunded(&mut transaction, id)
+        .await
+        .map_err(balance_error)?;
     transaction.commit().await?;
     Ok(StatusCode::OK)
 }
@@ -360,25 +324,11 @@ pub(crate) struct FailedRevocation {
 pub(crate) async fn revoke_expired_credits(
     pool: &PgPool,
 ) -> Result<Vec<FailedRevocation>, sqlx::Error> {
-    let organizations: Vec<String> = sqlx::query_scalar(
-        r#"SELECT DISTINCT _organization FROM webknossos.credit_transactions
-          WHERE expiration_date <= NOW() AND credit_state = 'Pending' AND milli_credit_delta > 0
-          ORDER BY _organization"#,
-    )
-    .fetch_all(pool)
-    .await?;
+    let organizations = dao::find_organizations_with_expired_grants(pool).await?;
     let mut failed = Vec::new();
     for organization in organizations {
         let mut transaction = serializable_transaction(pool).await?;
-        let grants: Vec<(ObjectId, DateTime<Utc>, i32)> = sqlx::query_as(
-            r#"SELECT _id, created_at, milli_credit_delta FROM webknossos.credit_transactions
-              WHERE NOT is_deleted AND _organization = $1 AND expiration_date <= NOW()
-                AND credit_state = 'Pending' AND milli_credit_delta > 0
-              ORDER BY created_at DESC FOR UPDATE"#,
-        )
-        .bind(&organization)
-        .fetch_all(&mut *transaction)
-        .await?;
+        let grants = dao::find_expired_grants_for_update(&mut transaction, &organization).await?;
         for (grant_id, created_at, delta) in grants {
             // A savepoint keeps one failed revocation (e.g. the balance trigger)
             // from aborting the organization's other revocations.
@@ -438,25 +388,9 @@ async fn revoke_grant(
     created_at: DateTime<Utc>,
     delta: i32,
 ) -> Result<(), sqlx::Error> {
-    // Spent credits since the grant, refunds and other expired grants (base table, as in Scala).
-    let available: i64 = sqlx::query_scalar(
-        r#"SELECT COALESCE(SUM(milli_credit_delta), 0)::bigint FROM webknossos.credit_transactions
-          WHERE _organization = $1 AND created_at >= $2 AND (
-            milli_credit_delta < 0
-            OR (milli_credit_delta > 0 AND _related_transaction IS NOT NULL AND credit_state = 'Refunding')
-            OR (milli_credit_delta > 0 AND expiration_date <= NOW()))"#,
-    )
-    .bind(organization)
-    .bind(created_at)
-    .fetch_one(&mut *connection)
-    .await?;
+    let available = dao::sum_available_since(connection, organization, created_at).await?;
     if available <= 0 {
-        sqlx::query(
-            "UPDATE webknossos.credit_transactions SET credit_state = 'Spent', updated_at = NOW() WHERE _id = $1",
-        )
-        .bind(grant_id)
-        .execute(&mut *connection)
-        .await?;
+        dao::mark_spent(connection, grant_id).await?;
         return Ok(());
     }
     let available = i32::try_from(available)
@@ -466,44 +400,19 @@ async fn revoke_grant(
     } else {
         "PartiallyRevoked"
     };
-    sqlx::query(
-        "UPDATE webknossos.credit_transactions SET credit_state = $2::webknossos.credit_state, updated_at = NOW() WHERE _id = $1",
-    )
-    .bind(grant_id)
-    .bind(state)
-    .execute(&mut *connection)
-    .await?;
+    dao::update_credit_state(connection, grant_id, state).await?;
     // Scala formats the grant month in the JVM's default time zone.
     let month = created_at.with_timezone(&chrono::Local).format("%Y-%m");
-    sqlx::query(
-        r#"INSERT INTO webknossos.credit_transactions
-          (_id, _organization, _related_transaction, milli_credit_delta, comment, _paid_job,
-           transaction_state, credit_state, expiration_date, created_at, updated_at, is_deleted)
-          VALUES ($1, $2, $3, $4, $5, NULL, 'Complete', 'Revoking', NULL, NOW(), NOW(), FALSE)"#,
+    dao::insert_revocation(
+        connection,
+        ObjectId::new(),
+        organization,
+        grant_id,
+        -available,
+        format!("Revoked unused complimentary credits ({month})"),
     )
-    .bind(ObjectId::new())
-    .bind(organization)
-    .bind(grant_id)
-    .bind(-available)
-    .bind(format!("Revoked unused complimentary credits ({month})"))
-    .execute(&mut *connection)
     .await?;
     Ok(())
-}
-
-#[derive(sqlx::FromRow, Clone)]
-struct CreditTransaction {
-    id: ObjectId,
-    organization: String,
-    related_transaction: Option<ObjectId>,
-    paid_job: Option<ObjectId>,
-    milli_credit_delta: i32,
-    comment: String,
-    transaction_state: String,
-    credit_state: String,
-    expiration_date: Option<DateTime<Utc>>,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
 }
 
 async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<Vec<Value>>> {
@@ -512,16 +421,7 @@ async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<V
             crate::msg::organization::LIST_CREDIT_TRANSACTIONS_ONLY_ADMIN,
         ));
     }
-    // Scala has no ORDER BY; creation order is the deterministic equivalent.
-    let mut q = Sql::new(
-        r#"SELECT _id AS id, _organization AS organization, _related_transaction AS related_transaction,
-          _paid_job AS paid_job, milli_credit_delta, comment, transaction_state::text AS transaction_state,
-          credit_state::text AS credit_state, expiration_date, created_at, updated_at
-          FROM webknossos.credit_transactions_ WHERE "#,
-    );
-    push_list_access(&mut q, &user.id);
-    q.push(" ORDER BY created_at, _id");
-    let transactions: Vec<CreditTransaction> = q.build_query_as().fetch_all(&state.pool).await?;
+    let transactions = dao::find_all_for_user(&state.pool, &user.id).await?;
     let mut connection = state.pool.acquire().await?;
     let mut result = Vec::new();
     for transaction in compact_free_credits_for_display(transactions)

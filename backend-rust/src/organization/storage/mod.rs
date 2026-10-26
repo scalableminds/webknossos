@@ -11,6 +11,8 @@
 //! `housekeeping.rs`: every run holds `pg_try_advisory_xact_lock(advisory_lock_key(JOB_NAME))` in
 //! one transaction for its whole duration and is skipped if another instance holds it. The Scala
 //! backend takes no lock; a parallel Scala scan only measures the same organizations again.
+mod dao;
+
 use crate::util::id::ObjectId;
 use std::{collections::HashMap, time::Duration};
 
@@ -29,31 +31,10 @@ use crate::{
     error::{ApiError, ApiResult},
     stores::client::{ServiceClients, ServiceError},
 };
+use dao::{AttachmentRow, MagRow, StoreRow};
 use webknossos_common::geometry::Vec3Int;
 
 const MAX_PATHS_PER_REQUEST: usize = 200;
-
-#[derive(Clone, sqlx::FromRow)]
-struct MagRow {
-    dataset_id: ObjectId,
-    layer_name: String,
-    mag_x: i32,
-    mag_y: i32,
-    mag_z: i32,
-    path: Option<String>,
-    real_path: Option<String>,
-    directory_name: String,
-}
-
-#[derive(Clone, sqlx::FromRow)]
-struct AttachmentRow {
-    dataset_id: ObjectId,
-    layer_name: String,
-    name: String,
-    path: String,
-    typ: String,
-    directory_name: String,
-}
 
 enum Artifact<'a> {
     Mag(&'a MagRow),
@@ -70,13 +51,6 @@ struct PathReport {
 #[derive(Deserialize)]
 struct PathReports {
     reports: Vec<PathReport>,
-}
-
-/// One datastore with `reportUsedStorageEnabled` (`DataStoreDAO.findAllWithStorageReporting`).
-#[derive(Clone, Debug, sqlx::FromRow)]
-struct StoreRow {
-    name: String,
-    url: String,
 }
 
 /// `DatasetMagStorageReport` / `DataLayerAttachmentStorageReport` lists of one measurement.
@@ -139,54 +113,6 @@ fn attachment_path(attachment: &AttachmentRow) -> String {
     }
 }
 
-/// `DatasetMagDAO.findAllStorageRelevantMags` (optionally for one dataset).
-async fn storage_relevant_mags(
-    pool: &PgPool,
-    organization: &str,
-    store_name: &str,
-    dataset_id: Option<&ObjectId>,
-) -> Result<Vec<MagRow>, sqlx::Error> {
-    sqlx::query_as(
-        r#"SELECT mag._dataset AS dataset_id, mag.dataLayerName AS layer_name, (mag.mag).x::int AS mag_x,
-             (mag.mag).y::int AS mag_y, (mag.mag).z::int AS mag_z, mag.path, mag.realPath AS real_path,
-             ds.directoryName AS directory_name
-           FROM webknossos.dataset_mags AS mag JOIN webknossos.datasets AS ds ON mag._dataset = ds._id
-           WHERE ds._organization = $1 AND ds._dataStore = $2 AND ($3::text IS NULL OR mag._dataset = $3)
-             AND (mag.path IS NOT NULL OR mag.realPath IS NOT NULL)
-             AND NOT EXISTS (SELECT 1 FROM webknossos.dataset_mags AS mag2 JOIN webknossos.datasets AS ds2 ON mag2._dataset = ds2._id
-               WHERE COALESCE(mag2.realPath, mag2.path) = COALESCE(mag.realPath, mag.path)
-                 AND (ds2.created < ds.created OR (ds2.created = ds.created AND ds2._id < ds._id)))"#,
-    )
-    .bind(organization)
-    .bind(store_name)
-    .bind(dataset_id)
-    .fetch_all(pool)
-    .await
-}
-
-/// `DatasetLayerAttachmentDAO.findAllStorageRelevantAttachments` (optionally for one dataset).
-async fn storage_relevant_attachments(
-    pool: &PgPool,
-    organization: &str,
-    store_name: &str,
-    dataset_id: Option<&ObjectId>,
-) -> Result<Vec<AttachmentRow>, sqlx::Error> {
-    sqlx::query_as(
-        r#"SELECT att._dataset AS dataset_id, att.layerName AS layer_name, att.name, att.path, att.type::text AS typ,
-             ds.directoryName AS directory_name
-           FROM webknossos.dataset_layer_attachments AS att JOIN webknossos.datasets AS ds ON att._dataset = ds._id
-           WHERE ds._organization = $1 AND ds._dataStore = $2 AND ($3::text IS NULL OR att._dataset = $3)
-             AND NOT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments AS att2 JOIN webknossos.datasets AS ds2 ON att2._dataset = ds2._id
-               WHERE COALESCE(att2.realPath, att2.path) = COALESCE(att.realPath, att.path)
-                 AND (ds2.created < ds.created OR (ds2.created = ds.created AND ds2._id < ds._id)))"#,
-    )
-    .bind(organization)
-    .bind(store_name)
-    .bind(dataset_id)
-    .fetch_all(pool)
-    .await
-}
-
 /// `UsedStorageService.getNewestStorageReports`: resolve the storage relevant paths of the
 /// organization (or one dataset) at one datastore and measure them in batches of 200 via
 /// `POST {store}/data/datasets/measureUsedStorage/{organization}`. Reports for unknown paths are
@@ -198,9 +124,11 @@ async fn newest_storage_reports(
     store: &StoreRow,
     dataset_id: Option<&ObjectId>,
 ) -> ApiResult<StorageReports> {
-    let mags = storage_relevant_mags(pool, organization, &store.name, dataset_id).await?;
+    let mags =
+        dao::find_all_storage_relevant_mags(pool, organization, &store.name, dataset_id).await?;
     let attachments =
-        storage_relevant_attachments(pool, organization, &store.name, dataset_id).await?;
+        dao::find_all_storage_relevant_attachments(pool, organization, &store.name, dataset_id)
+            .await?;
     let mut lookup: HashMap<String, Artifact> = HashMap::new();
     let mut paths = Vec::new();
     for mag in &mags {
@@ -256,39 +184,11 @@ async fn upsert_used_storage(
     reports: &StorageReports,
 ) -> Result<(), sqlx::Error> {
     for (mag, path, bytes) in &reports.mags {
-        sqlx::query(
-            r#"INSERT INTO webknossos.organization_usedStorage_mags (_dataset, layerName, mag, path, _organization, usedStorageBytes, lastUpdated)
-               VALUES ($1, $2, ROW($3, $4, $5)::webknossos.VECTOR3, $6, $7, $8, NOW())
-               ON CONFLICT (_dataset, layerName, mag) DO UPDATE SET path = EXCLUDED.path, _organization = EXCLUDED._organization,
-                 usedStorageBytes = EXCLUDED.usedStorageBytes, lastUpdated = EXCLUDED.lastUpdated"#,
-        )
-        .bind(&mag.dataset_id)
-        .bind(&mag.layer_name)
-        .bind(f64::from(mag.mag_x))
-        .bind(f64::from(mag.mag_y))
-        .bind(f64::from(mag.mag_z))
-        .bind(path)
-        .bind(organization)
-        .bind(bytes)
-        .execute(&mut *connection)
-        .await?;
+        dao::upsert_used_storage_mag(connection, organization, mag, path, *bytes).await?;
     }
     for (attachment, path, bytes) in &reports.attachments {
-        sqlx::query(
-            r#"INSERT INTO webknossos.organization_usedStorage_attachments (_dataset, layerName, name, path, type, _organization, usedStorageBytes, lastUpdated)
-               VALUES ($1, $2, $3, $4, $5::webknossos.LAYER_ATTACHMENT_TYPE, $6, $7, NOW())
-               ON CONFLICT (_dataset, layerName, name, type) DO UPDATE SET path = EXCLUDED.path, _organization = EXCLUDED._organization,
-                 usedStorageBytes = EXCLUDED.usedStorageBytes, lastUpdated = EXCLUDED.lastUpdated"#,
-        )
-        .bind(&attachment.dataset_id)
-        .bind(&attachment.layer_name)
-        .bind(&attachment.name)
-        .bind(path)
-        .bind(&attachment.typ)
-        .bind(organization)
-        .bind(bytes)
-        .execute(&mut *connection)
-        .await?;
+        dao::upsert_used_storage_attachment(connection, organization, attachment, path, *bytes)
+            .await?;
     }
     Ok(())
 }
@@ -300,20 +200,11 @@ pub(crate) async fn refresh_for_dataset(
     clients: &ServiceClients,
     dataset_id: &ObjectId,
 ) -> ApiResult<()> {
-    let dataset: Option<(String, String)> =
-        sqlx::query_as("SELECT _organization, _dataStore FROM webknossos.datasets WHERE _id=$1")
-            .bind(dataset_id)
-            .fetch_optional(pool)
-            .await?;
+    let dataset = dao::find_organization_and_store_name(pool, dataset_id).await?;
     let Some((organization, store_name)) = dataset else {
         return Ok(());
     };
-    let store: Option<(String, String, bool)> = sqlx::query_as(
-        "SELECT name, url, reportUsedStorageEnabled FROM webknossos.dataStores_ WHERE name=trim($1)",
-    )
-    .bind(&store_name)
-    .fetch_optional(pool)
-    .await?;
+    let store = dao::find_store_for_reporting(pool, &store_name).await?;
     let (name, url, enabled) =
         store.ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     if !enabled {
@@ -323,14 +214,8 @@ pub(crate) async fn refresh_for_dataset(
     let reports =
         newest_storage_reports(pool, clients, &organization, &store, Some(dataset_id)).await?;
     let mut transaction = pool.begin().await?;
-    sqlx::query("DELETE FROM webknossos.organization_usedStorage_mags WHERE _dataset = $1")
-        .bind(dataset_id)
-        .execute(&mut *transaction)
-        .await?;
-    sqlx::query("DELETE FROM webknossos.organization_usedStorage_attachments WHERE _dataset = $1")
-        .bind(dataset_id)
-        .execute(&mut *transaction)
-        .await?;
+    dao::delete_used_storage_mags_for_dataset(&mut transaction, dataset_id).await?;
+    dao::delete_used_storage_attachments_for_dataset(&mut transaction, dataset_id).await?;
     upsert_used_storage(&mut transaction, &organization, &reports).await?;
     transaction.commit().await?;
     Ok(())
@@ -353,22 +238,10 @@ async fn refresh_for_organization(
         reports.attachments.extend(store_reports.attachments);
     }
     let mut transaction = pool.begin().await?;
-    sqlx::query("DELETE FROM webknossos.organization_usedStorage_mags WHERE _organization = $1")
-        .bind(organization)
-        .execute(&mut *transaction)
-        .await?;
-    sqlx::query(
-        "DELETE FROM webknossos.organization_usedStorage_attachments WHERE _organization = $1",
-    )
-    .bind(organization)
-    .execute(&mut *transaction)
-    .await?;
+    dao::delete_used_storage_mags_for_organization(&mut transaction, organization).await?;
+    dao::delete_used_storage_attachments_for_organization(&mut transaction, organization).await?;
     upsert_used_storage(&mut transaction, organization, &reports).await?;
-    sqlx::query("UPDATE webknossos.organizations SET lastStorageScanTime = $1 WHERE _id = $2")
-        .bind(Utc::now())
-        .bind(organization)
-        .execute(&mut *transaction)
-        .await?;
+    dao::update_last_storage_scan_time(&mut transaction, organization, Utc::now()).await?;
     transaction.commit().await?;
     Ok(())
 }
@@ -390,19 +263,10 @@ pub async fn run_scan(
         return Ok(JobOutcome::SkippedLocked);
     }
     let rescan = chrono::Duration::from_std(config.rescan_interval)?;
-    let organizations: Vec<String> = sqlx::query_scalar(
-        "SELECT _id FROM webknossos.organizations_ WHERE lastStorageScanTime < $1 \
-         ORDER BY lastStorageScanTime LIMIT $2",
-    )
-    .bind(Utc::now() - rescan)
-    .bind(i64::from(config.scans_per_tick))
-    .fetch_all(pool)
-    .await?;
-    let stores: Vec<StoreRow> = sqlx::query_as(
-        "SELECT name, url FROM webknossos.dataStores_ WHERE reportUsedStorageEnabled ORDER BY name",
-    )
-    .fetch_all(pool)
-    .await?;
+    let organizations =
+        dao::find_not_recently_scanned(pool, Utc::now() - rescan, i64::from(config.scans_per_tick))
+            .await?;
+    let stores = dao::find_all_with_storage_reporting(pool).await?;
     tracing::info!(
         organizations = ?organizations,
         data_stores = ?stores.iter().map(|store| store.name.as_str()).collect::<Vec<_>>(),

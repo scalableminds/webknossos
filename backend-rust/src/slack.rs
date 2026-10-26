@@ -285,12 +285,8 @@ impl SlackNotificationService {
         );
         let result_link = format!("{}/datasets/{dataset_id}", self.inner.public_uri);
         runtime.spawn(async move {
-            let name: Option<String> = match sqlx::query_scalar(
-                "SELECT name FROM webknossos.organizations_ WHERE _id = $1",
-            )
-            .bind(&organization_id)
-            .fetch_optional(&pool)
-            .await
+            let name: Option<String> =
+                match crate::organization::dao::find_name(&pool, &organization_id).await
             {
                 Ok(name) => name,
                 Err(error) => {

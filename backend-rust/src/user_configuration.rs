@@ -1,3 +1,5 @@
+pub(crate) mod dao;
+
 use crate::response::Messages;
 use axum::{Json, Router, extract::State, routing::get};
 use serde_json::{Map, Value, json};
@@ -21,12 +23,7 @@ async fn read(
     OptionalAuthUser(user): OptionalAuthUser,
 ) -> ApiResult<Json<Value>> {
     let configuration = match user {
-        Some(user) => {
-            sqlx::query_scalar("SELECT userConfiguration FROM webknossos.users_ WHERE _id = $1")
-                .bind(user.id)
-                .fetch_one(&state.pool)
-                .await?
-        }
+        Some(user) => dao::find_user_configuration(&state.pool, user.id).await?,
         None => json!({}),
     };
     Ok(Json(configuration))
@@ -38,14 +35,9 @@ async fn update(
     RequestJson(configuration): RequestJson<Map<String, Value>>,
 ) -> ApiResult<Json<Messages>> {
     // The Scala UserDAO replaces the entire configuration, without merging keys.
-    let result = sqlx::query(
-        "UPDATE webknossos.users SET userConfiguration = $2 WHERE _id = $1 AND NOT isDeleted",
-    )
-    .bind(user.id)
-    .bind(Value::Object(configuration))
-    .execute(&state.pool)
-    .await?;
-    if result.rows_affected() != 1 {
+    let rows_affected =
+        dao::update_user_configuration(&state.pool, user.id, Value::Object(configuration)).await?;
+    if rows_affected != 1 {
         return Err(ApiError::not_found(crate::msg::user::MISSING));
     }
     Ok(Messages::success(
@@ -58,9 +50,9 @@ async fn read_shortcuts(
     OptionalAuthUser(user): OptionalAuthUser,
 ) -> ApiResult<Json<Value>> {
     let shortcuts = match user {
-        Some(user) => sqlx::query_scalar(
-            "SELECT config.shortcutsConfig FROM webknossos.multiUser_keyboardShortcutsConfigs AS config JOIN webknossos.users_ AS usr ON usr._multiUser = config._multiUser WHERE usr._id = $1"
-        ).bind(user.id).fetch_optional(&state.pool).await?.unwrap_or_else(|| json!({})),
+        Some(user) => dao::find_keyboard_shortcuts_config(&state.pool, user.id)
+            .await?
+            .unwrap_or_else(|| json!({})),
         None => json!({}),
     };
     Ok(Json(shortcuts))
@@ -71,10 +63,10 @@ async fn update_shortcuts(
     user: AuthUser,
     RequestJson(configuration): RequestJson<Map<String, Value>>,
 ) -> ApiResult<Json<Messages>> {
-    let result = sqlx::query(
-        "INSERT INTO webknossos.multiUser_keyboardShortcutsConfigs (_multiUser, shortcutsConfig) SELECT _multiUser, $2 FROM webknossos.users_ WHERE _id = $1 ON CONFLICT (_multiUser) DO UPDATE SET shortcutsConfig = EXCLUDED.shortcutsConfig"
-    ).bind(user.id).bind(Value::Object(configuration)).execute(&state.pool).await?;
-    if result.rows_affected() != 1 {
+    let rows_affected =
+        dao::upsert_keyboard_shortcuts_config(&state.pool, user.id, Value::Object(configuration))
+            .await?;
+    if rows_affected != 1 {
         return Err(ApiError::not_found(crate::msg::user::MISSING));
     }
     Ok(Messages::success(

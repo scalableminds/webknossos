@@ -4,16 +4,16 @@
 //! PublicationService.publicWrites renders with GlobalAccessContext and no
 //! requesting user, so the result never depends on the caller; the controller
 //! also sets `allowRemoteOrigin` (CORS headers on every response).
+pub(crate) mod dao;
+
 use crate::util::id::ObjectId;
 use crate::{
     AppState,
     error::{ApiError, ApiResult},
     extract::Path,
-    sql::Sql,
     util::id::PathObjectId,
 };
 use axum::{Extension, Json, Router, extract::State, middleware, routing::get};
-use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 use sqlx::PgConnection;
 
@@ -30,29 +30,12 @@ pub fn router(jobs_enabled: bool) -> Router<AppState> {
         ))
 }
 
-#[derive(sqlx::FromRow)]
-struct Publication {
-    id: ObjectId,
-    publication_date: Option<DateTime<Utc>>,
-    image_url: Option<String>,
-    title: Option<String>,
-    description: Option<String>,
-    created: DateTime<Utc>,
-}
-
-const COLUMNS: &str = "_id AS id, publicationDate AS publication_date, imageUrl AS image_url, title, description, created";
-
 async fn read(
     State(state): State<AppState>,
     Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<Json<Value>> {
-    let publication: Publication = Sql::new("SELECT ")
-        .push(COLUMNS)
-        .push(" FROM webknossos.publications_ WHERE _id = ")
-        .push_bind(&*id)
-        .build_query_as()
-        .fetch_optional(&state.pool)
+    let publication = dao::find_one(&state.pool, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::PUBLICATION_NOT_FOUND))?;
     let mut connection = state.pool.acquire().await?;
@@ -65,13 +48,7 @@ async fn list(
     State(state): State<AppState>,
     Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
 ) -> ApiResult<Json<Vec<Value>>> {
-    // Scala has no ORDER BY; creation order is the deterministic equivalent.
-    let publications: Vec<Publication> = Sql::new("SELECT ")
-        .push(COLUMNS)
-        .push(" FROM webknossos.publications_ ORDER BY created, _id")
-        .build_query_as()
-        .fetch_all(&state.pool)
-        .await?;
+    let publications = dao::find_all(&state.pool).await?;
     let mut connection = state.pool.acquire().await?;
     let mut result = Vec::with_capacity(publications.len());
     for publication in publications {
@@ -83,15 +60,10 @@ async fn list(
 /// PublicationService.publicWrites.
 async fn publication_json(
     connection: &mut PgConnection,
-    publication: Publication,
+    publication: dao::Publication,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
-    let dataset_ids: Vec<ObjectId> = sqlx::query_scalar(
-        "SELECT _id FROM webknossos.datasets_ WHERE _publication = $1 ORDER BY created, _id",
-    )
-    .bind(&publication.id)
-    .fetch_all(&mut *connection)
-    .await?;
+    let dataset_ids = dao::find_dataset_ids_for_publication(connection, &publication.id).await?;
     let mut datasets = Vec::with_capacity(dataset_ids.len());
     for id in dataset_ids {
         datasets.push(
@@ -99,13 +71,7 @@ async fn publication_json(
                 .await?,
         );
     }
-    let annotations: Vec<(ObjectId, String, String, String, ObjectId)> = sqlx::query_as(
-        r#"SELECT _id, name, description, typ::text, _dataset FROM webknossos.annotations_
-          WHERE _publication = $1 ORDER BY created, _id"#,
-    )
-    .bind(&publication.id)
-    .fetch_all(&mut *connection)
-    .await?;
+    let annotations = dao::find_annotations_for_publication(connection, &publication.id).await?;
     let mut annotations_json = Vec::with_capacity(annotations.len());
     for (id, name, description, typ, dataset) in annotations {
         annotations_json.push(
@@ -143,22 +109,16 @@ async fn annotation_json(
     dataset: &ObjectId,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
-    let dataset_exists: bool =
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE _id = $1)")
-            .bind(dataset)
-            .fetch_one(&mut *connection)
-            .await?;
+    let dataset_exists = dao::dataset_exists(connection, dataset).await?;
     if !dataset_exists {
         return Err(ApiError::bad_request(
             crate::msg::dataset::not_found_for_annotation(dataset, id),
         ));
     }
-    // TracingStoreDAO.findFirst: an empty Fox without message (Play's generic 404).
-    let (store_name, store_url): (String, String) =
-        sqlx::query_as("SELECT name, publicUrl FROM webknossos.tracingStores_ LIMIT 1")
-            .fetch_optional(&mut *connection)
-            .await?
-            .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+    // An empty Fox without message (Play's generic 404).
+    let (store_name, store_url) = dao::find_first_tracing_store(connection)
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let dataset_json =
         crate::dataset::routes::full_json_on_connection(connection, None, dataset, jobs_enabled)
             .await?;

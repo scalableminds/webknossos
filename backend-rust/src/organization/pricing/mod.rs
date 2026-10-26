@@ -1,6 +1,8 @@
 //! OrganizationController pricing routes: upgrade requests, pricing status
 //! and plan updates (`models.organization.{PricingPlan, UpgradeRequest,
 //! OrganizationPlanUpdate, PricingPlanFeatures}`).
+mod dao;
+
 use axum::{
     Extension, Router,
     extract::State,
@@ -257,15 +259,10 @@ async fn upgrade_request(
     if !user.is_admin {
         return Err(ApiError::bad_request(messages::PRICING_UPDATES_ONLY_ADMIN));
     }
-    let (is_owner, email, first_name, last_name): (bool, String, String, String) = sqlx::query_as(
-        r#"SELECT u.isOrganizationOwner, m.email, m.firstName, m.lastName
-               FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON m._id = u._multiUser
-               WHERE u._id = $1"#,
-    )
-    .bind(&user.id)
-    .fetch_optional(&state.pool)
-    .await?
-    .ok_or_else(ApiError::unauthorized)?;
+    let (is_owner, email, first_name, last_name) =
+        dao::find_owner_flag_and_contact(&state.pool, &user.id)
+            .await?
+            .ok_or_else(ApiError::unauthorized)?;
     if request.credits.is_some() && !is_owner {
         return Err(ApiError::bad_request(messages::CREDIT_ORDERS_ONLY_OWNER));
     }
@@ -284,17 +281,12 @@ async fn upgrade_request(
             messages::upgrade_request_note_too_long(MAX_NOTE_LENGTH),
         ));
     }
-    let (organization_name, pricing_plan, ai_plan): (String, String, Option<String>) =
-        sqlx::query_as(
-            "SELECT name, pricingPlan::text, aiPlan::text FROM \
-                    webknossos.organizations_ WHERE _id = $1",
-        )
-        .bind(&user.organization_id)
-        .fetch_optional(&state.pool)
-        .await?
-        .ok_or_else(|| {
-            ApiError::not_found(crate::msg::organization::not_found(&user.organization_id))
-        })?;
+    let (organization_name, pricing_plan, ai_plan) =
+        dao::find_name_and_plans(&state.pool, &user.organization_id)
+            .await?
+            .ok_or_else(|| {
+                ApiError::not_found(crate::msg::organization::not_found(&user.organization_id))
+            })?;
     let current_plan = PricingPlan::parse(&pricing_plan).ok_or_else(ApiError::internal)?;
     if let Some(plan) = request.plan
         && !(matches!(plan, PricingPlan::Team | PricingPlan::Power)
@@ -341,35 +333,15 @@ async fn upgrade_request(
 // ---------------------------------------------------------------------------
 // GET /pricing/status
 
-/// userDAO.countAllForOrganization: active, listed users that do not count
-/// towards another (earlier joined) paying organization.
-pub(crate) const COUNT_USERS_FOR_ORGANIZATION: &str = r#"SELECT COUNT(*) FROM webknossos.users_ AS u
-   LEFT JOIN (
-     SELECT DISTINCT ON (_multiUser) _multiUser, _organization FROM webknossos.users
-     WHERE NOT isDeactivated AND _organization IN (
-       SELECT _id FROM webknossos.organizations
-       WHERE pricingPlan IN ('Team', 'Power', 'Custom', 'Team_Trial', 'Power_Trial'))
-     ORDER BY _multiUser, created ASC
-   ) AS paying ON paying._multiUser = u._multiUser
-   WHERE u._organization = $1 AND NOT u.isDeactivated AND NOT u.isUnlisted
-     AND (paying._organization IS NULL OR paying._organization = $1)"#;
-
 async fn status(State(state): State<AppState>, user: AuthUser) -> ApiResult<axum::Json<Value>> {
-    let (pricing_plan, included_users, paid_until): (String, Option<i32>, Option<DateTime<Utc>>) =
-        sqlx::query_as(
-            "SELECT pricingPlan::text, includedUsers, paidUntil FROM \
-                    webknossos.organizations_ WHERE _id = $1",
-        )
-        .bind(&user.organization_id)
-        .fetch_optional(&state.pool)
-        .await?
-        .ok_or_else(|| {
-            ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
-        })?;
-    let active_users: i64 = sqlx::query_scalar(COUNT_USERS_FOR_ORGANIZATION)
-        .bind(&user.organization_id)
-        .fetch_one(&state.pool)
-        .await?;
+    let (pricing_plan, included_users, paid_until) =
+        dao::find_plan_limits(&state.pool, &user.organization_id)
+            .await?
+            .ok_or_else(|| {
+                ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
+            })?;
+    let active_users =
+        dao::count_all_users_for_organization(&state.pool, &user.organization_id).await?;
     let now = Utc::now();
     // Note that, like Play, this does not yet account for storage.
     let is_exceeded = included_users.is_some_and(|limit| active_users > i64::from(limit))
@@ -547,61 +519,15 @@ async fn update_plan(
         return Err(ApiError::bad_request(crate::msg::user::SUPER_USER_ONLY));
     }
     let mut tx = state.pool.begin().await?;
-    let (organization_name, previous_plan): (String, String) = sqlx::query_as(
-        "SELECT name, pricingPlan::text FROM webknossos.organizations WHERE _id = $1 \
-                AND NOT isDeleted FOR UPDATE",
-    )
-    .bind(&update.organization_id)
-    .fetch_optional(&mut *tx)
-    .await?
-    .ok_or_else(|| {
-        ApiError::not_found(crate::msg::organization::not_found(&update.organization_id))
-    })?;
+    let (organization_name, previous_plan) =
+        dao::find_name_and_pricing_plan_for_update(&mut tx, &update.organization_id)
+            .await?
+            .ok_or_else(|| {
+                ApiError::not_found(crate::msg::organization::not_found(&update.organization_id))
+            })?;
     let previous_plan = PricingPlan::parse(&previous_plan).ok_or_else(ApiError::internal)?;
-    sqlx::query(
-        r#"INSERT INTO webknossos.organization_plan_updates(
-             _organization, description, pricingPlan, aiPlan, aiPlanChanged,
-             paidUntil, paidUntilChanged, includedUsers, includedUsersChanged,
-             includedStorage, includedStorageChanged, created)
-           VALUES($1, $2, $3::webknossos.PRICING_PLANS, $4::webknossos.AI_PLANS, $5,
-             $6, $7, $8, $9, $10, $11, $12)"#,
-    )
-    .bind(&update.organization_id)
-    .bind(&update.description)
-    .bind(update.pricing_plan.map(PricingPlan::as_str))
-    .bind(update.ai_plan.value().copied())
-    .bind(update.ai_plan.changed())
-    .bind(update.paid_until.value())
-    .bind(update.paid_until.changed())
-    .bind(update.included_users.value())
-    .bind(update.included_users.changed())
-    .bind(update.included_storage.value())
-    .bind(update.included_storage.changed())
-    .bind(update.created)
-    .execute(&mut *tx)
-    .await?;
-    // organizationDAO.updatePlan: only the provided fields are written.
-    sqlx::query(
-        r#"UPDATE webknossos.organizations SET
-             pricingPlan = COALESCE($2::webknossos.PRICING_PLANS, pricingPlan),
-             aiPlan = CASE WHEN $4 THEN $3::webknossos.AI_PLANS ELSE aiPlan END,
-             paidUntil = CASE WHEN $6 THEN $5 ELSE paidUntil END,
-             includedUsers = CASE WHEN $8 THEN $7 ELSE includedUsers END,
-             includedStorage = CASE WHEN $10 THEN $9 ELSE includedStorage END
-           WHERE _id = $1"#,
-    )
-    .bind(&update.organization_id)
-    .bind(update.pricing_plan.map(PricingPlan::as_str))
-    .bind(update.ai_plan.value().copied())
-    .bind(update.ai_plan.changed())
-    .bind(update.paid_until.value())
-    .bind(update.paid_until.changed())
-    .bind(update.included_users.value())
-    .bind(update.included_users.changed())
-    .bind(update.included_storage.value())
-    .bind(update.included_storage.changed())
-    .execute(&mut *tx)
-    .await?;
+    dao::insert_plan_update(&mut tx, &update).await?;
+    dao::update_plan(&mut tx, &update).await?;
     tx.commit().await?;
     if let Some(new_plan) = update.pricing_plan {
         send_pricing_plan_upgrade_mails(
@@ -632,27 +558,18 @@ async fn send_pricing_plan_upgrade_mails(
     let Some((plan_label, highlights)) = unlocked_features(previous_plan, new_plan) else {
         return;
     };
-    let recipients: Vec<(String, String, String)> = match sqlx::query_as(
-        r#"SELECT m.email, m.firstName, m.lastName FROM webknossos.users_ u
-           JOIN webknossos.multiUsers_ m ON u._multiUser = m._id
-           WHERE (u.isOrganizationOwner OR u.isAdmin) AND NOT u.isDeactivated
-             AND u._organization = $1
-           ORDER BY u.created, u._id"#,
-    )
-    .bind(organization_id)
-    .fetch_all(&state.pool)
-    .await
-    {
-        Ok(recipients) => recipients,
-        Err(error) => {
-            tracing::warn!(
-                organization = %organization_id,
-                %error,
-                "Could not notify owner/admins about the pricing plan upgrade"
-            );
-            return;
-        }
-    };
+    let recipients: Vec<(String, String, String)> =
+        match dao::find_owner_and_admin_contacts(&state.pool, organization_id).await {
+            Ok(recipients) => recipients,
+            Err(error) => {
+                tracing::warn!(
+                    organization = %organization_id,
+                    %error,
+                    "Could not notify owner/admins about the pricing plan upgrade"
+                );
+                return;
+            }
+        };
     for (email, first_name, last_name) in &recipients {
         mailer.send(pricing_plan_upgraded_mail(
             email,
@@ -689,51 +606,14 @@ async fn plan_updates(
             messages::LIST_PLAN_UPDATES_ONLY_ADMIN,
         ));
     }
-    type Row = (
-        String,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        bool,
-        Option<DateTime<Utc>>,
-        bool,
-        Option<i32>,
-        bool,
-        Option<i64>,
-        bool,
-        DateTime<Utc>,
-    );
-    let rows: Vec<Row> = sqlx::query_as(
-        r#"SELECT _organization, description, pricingPlan::text, aiPlan::text, aiPlanChanged,
-             paidUntil, paidUntilChanged, includedUsers, includedUsersChanged,
-             includedStorage, includedStorageChanged, created
-           FROM webknossos.organization_plan_updates
-           WHERE _organization = $1
-           ORDER BY created"#,
-    )
-    .bind(&user.organization_id)
-    .fetch_all(&state.pool)
-    .await?;
+    let rows = dao::find_all_plan_updates(&state.pool, &user.organization_id).await?;
     let updates: Vec<Value> = if rows.is_empty() {
         // defaultPlanUpdate: unset limits are omitted (None), not null.
-        type OrganizationRow = (
-            String,
-            Option<String>,
-            Option<DateTime<Utc>>,
-            Option<i32>,
-            Option<i64>,
-            DateTime<Utc>,
-        );
-        let row: OrganizationRow = sqlx::query_as(
-            "SELECT pricingPlan::text, aiPlan::text, paidUntil, includedUsers, \
-                    includedStorage, created FROM webknossos.organizations_ WHERE _id = $1",
-        )
-        .bind(&user.organization_id)
-        .fetch_optional(&state.pool)
-        .await?
-        .ok_or_else(|| {
-            ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
-        })?;
+        let row = dao::find_plan_row(&state.pool, &user.organization_id)
+            .await?
+            .ok_or_else(|| {
+                ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
+            })?;
         let (pricing_plan, ai_plan, paid_until, included_users, included_storage, created) = row;
         let mut update = Map::new();
         update.insert("organizationId".into(), json!(user.organization_id));

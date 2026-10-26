@@ -3,7 +3,7 @@ import showFpsMeter from "libs/fps_meter";
 import { V3 } from "libs/mjs";
 import { roundTo, sleep } from "libs/utils";
 import mean from "lodash-es/mean";
-import { type OrthographicCamera, type PerspectiveCamera, WebGLRenderTarget } from "three";
+import type { OrthographicCamera, PerspectiveCamera } from "three";
 import { type OrthoView, OrthoViews, type Vector3 } from "viewer/constants";
 import { Model, Store } from "viewer/singletons";
 import type { ApiInterface } from "./api_latest";
@@ -428,6 +428,7 @@ export default class WkDev {
       "viewer/controller/scene_controller_provider"
     );
     const { getInputCatcherRect } = await import("viewer/model/accessors/view_mode_accessor");
+    const { WebGLRenderTarget } = await loadBenchmarkDeps();
 
     await this.waitForCompletedDataLoading();
     const areUploadsDone = () =>

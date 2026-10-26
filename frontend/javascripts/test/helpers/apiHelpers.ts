@@ -51,7 +51,6 @@ import type {
 import type { ArbitraryObject } from "types/type_utils";
 import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
-import { setupApi } from "viewer/api/internal_api";
 import Constants, { ControlModeEnum, type Vector3 } from "viewer/constants";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
 import SegmentMeshController from "viewer/controller/segment_mesh_controller";
@@ -73,8 +72,9 @@ import type { RequestBucketInfo } from "viewer/model/bucket_data_handling/wkstor
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import rootSaga from "viewer/model/sagas/root_saga";
-import { setModel, setStore } from "viewer/singletons";
+import { setStore } from "viewer/singletons";
 import { type NumberLike, type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
+import { setupViewer } from "viewer/viewer_setup";
 import { setSlowCompression } from "viewer/workers/slow_byte_array_lz4_compression.worker";
 import { afterAll, type TestContext as BaseTestContext, type Mock, vi } from "vitest";
 import DATASET, {
@@ -570,9 +570,8 @@ const modelData = {
   },
 };
 
-setModel(Model);
 setStore(Store);
-setupApi();
+setupViewer();
 startSaga(rootSaga);
 
 // Stop all background work once the test file is done. Otherwise, work started by the

@@ -355,7 +355,8 @@ async fn reserve_upload_to_paths(
         },
     )
     .await?;
-    dao::update_folder_and_uploader(&mut transaction, &id, folder, &user.id).await?;
+    crate::dataset::dao::update_folder_and_uploader(&mut transaction, &id, folder, &user.id)
+        .await?;
     add_initial_teams(&mut transaction, &user, &id, &body.initial_team_ids).await?;
     transaction.commit().await?;
     // Linked layers are managed by the server; the client only needs its own paths.

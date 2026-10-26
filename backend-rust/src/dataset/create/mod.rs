@@ -1,5 +1,7 @@
 //! DatasetService.createDataset / createAndSetUpDataset and the validation
 //! helpers shared by upload-to-paths, compose, explore+add and duplication.
+mod dao;
+
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use serde_json::{Value, json};
 use webknossos_common::datasource::DataSourceId;
@@ -83,19 +85,7 @@ pub(crate) async fn folder_writable(
     user: &AuthUser,
     folder: &ObjectId,
 ) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
-        r#"SELECT EXISTS (SELECT 1 FROM webknossos.folders_ f WHERE f._id = $1 AND (
-             f._id IN (SELECT fp._descendant FROM webknossos.folder_paths fp WHERE fp._ancestor IN (
-               SELECT o._rootFolder FROM webknossos.organizations_ o JOIN webknossos.users_ u ON u._organization = o._id
-               WHERE u._id = $2 AND (u.isAdmin OR u.isDatasetManager)))
-             OR f._id IN (SELECT fp._descendant FROM webknossos.folder_paths fp WHERE fp._ancestor IN (
-               SELECT at._folder FROM webknossos.folder_allowedTeams at JOIN webknossos.user_team_roles tr ON at._team = tr._team
-               WHERE tr._user = $2 AND tr.isTeamManager))))"#,
-    )
-    .bind(folder)
-    .bind(&user.id)
-    .fetch_one(&mut *connection)
-    .await?)
+    dao::is_folder_writable(connection, user, folder).await
 }
 
 pub(crate) struct NewDataset<'a> {
@@ -138,58 +128,21 @@ async fn insert(
     new: NewDataset<'_>,
     skip_on_directory_name_conflict: bool,
 ) -> ApiResult<bool> {
-    let root: Option<ObjectId> = sqlx::query_scalar(
-        "SELECT _rootFolder FROM webknossos.organizations_ WHERE _id = $1 FOR SHARE",
-    )
-    .bind(&new.source.id.organization_id)
-    .fetch_optional(&mut *connection)
-    .await?;
+    let root = dao::find_root_folder_for_share(connection, &new.source.id.organization_id).await?;
     let root = root.ok_or_else(|| {
         ApiError::bad_request(crate::msg::organization::not_found(
             &new.source.id.organization_id,
         ))
     })?;
     let status: String = new.status.chars().take(1024).collect();
-    let statement = r#"INSERT INTO webknossos.datasets (_id, _dataStore, _organization, _folder, inboxSourceHash,
-             defaultViewConfiguration, description, directoryName, isPublic, isUsable, isVirtual, name,
-             voxelSizeFactor, voxelSizeUnit, status, sortingKey, metadata, tags, creationType, importURL, created)
-           VALUES ($1, $2, $3, $4, NULL, $5, $6, $7, false, $8, $9, $10,
-             CASE WHEN $11::float8 IS NULL THEN NULL ELSE ROW($11, $12, $13)::webknossos.VECTOR3 END,
-             $14::webknossos.LENGTH_UNIT, $15, NOW(), $16, '{}',
-             $17::webknossos.DATASET_CREATION_TYPE, $18, NOW())"#;
-    let on_conflict = if skip_on_directory_name_conflict {
-        " ON CONFLICT (directoryName, _organization) DO NOTHING"
-    } else {
-        ""
-    };
-    let inserted = sqlx::query(&format!("{statement}{on_conflict}"))
-        .bind(new.id)
-        .bind(new.store_name)
-        .bind(&new.source.id.organization_id)
-        .bind(&root)
-        .bind(
-            new.source
-                .default_view_configuration
-                .clone()
-                .map(Value::Object),
-        )
-        .bind(new.description)
-        .bind(&new.source.id.directory_name)
-        .bind(new.is_usable)
-        .bind(new.is_virtual)
-        .bind(new.name)
-        .bind(new.voxel_size.map(|v| v.factor.x))
-        .bind(new.voxel_size.map(|v| v.factor.y))
-        .bind(new.voxel_size.map(|v| v.factor.z))
-        .bind(new.voxel_size.map(|v| v.unit.as_str()))
-        .bind(status)
-        .bind(new.metadata)
-        .bind(new.creation_type)
-        .bind(new.import_url)
-        .execute(&mut *connection)
-        .await?
-        .rows_affected()
-        > 0;
+    let inserted = dao::insert_one(
+        connection,
+        &new,
+        &root,
+        status,
+        skip_on_directory_name_conflict,
+    )
+    .await?;
     if inserted {
         crate::dataset::source::write_layers(connection, new.id, &new.source.data_layers).await?;
     }
@@ -214,15 +167,11 @@ pub(crate) async fn set_up_dataset(
     setup: SetUp<'_>,
 ) -> ApiResult<ObjectId> {
     validate_dataset_name(setup.name)?;
-    let root: ObjectId = sqlx::query_scalar(
-        "SELECT _rootFolder FROM webknossos.organizations_ WHERE _id = $1 FOR SHARE",
-    )
-    .bind(&user.organization_id)
-    .fetch_optional(&mut *connection)
-    .await?
-    .ok_or_else(|| {
-        ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
-    })?;
+    let root = dao::find_root_folder_for_share(connection, &user.organization_id)
+        .await?
+        .ok_or_else(|| {
+            ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
+        })?;
     let folder = setup.folder.unwrap_or(&root);
     if !folder_writable(connection, user, folder).await? {
         return Err(ApiError::bad_request(crate::msg::folder::NO_WRITE_ACCESS));
@@ -251,12 +200,7 @@ pub(crate) async fn set_up_dataset(
         },
     )
     .await?;
-    sqlx::query("UPDATE webknossos.datasets SET _folder = $2, _uploader = $3 WHERE _id = $1")
-        .bind(&id)
-        .bind(folder)
-        .bind(&user.id)
-        .execute(&mut *connection)
-        .await?;
+    crate::dataset::dao::update_folder_and_uploader(connection, &id, folder, &user.id).await?;
     Ok(id)
 }
 

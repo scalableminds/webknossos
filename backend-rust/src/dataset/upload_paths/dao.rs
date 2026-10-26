@@ -131,21 +131,6 @@ pub(crate) async fn is_name_taken(
     .await?)
 }
 
-pub(crate) async fn update_folder_and_uploader(
-    connection: &mut PgConnection,
-    dataset_id: &ObjectId,
-    folder: &ObjectId,
-    uploader: &ObjectId,
-) -> ApiResult<()> {
-    sqlx::query("UPDATE webknossos.datasets SET _folder = $2, _uploader = $3 WHERE _id = $1")
-        .bind(dataset_id)
-        .bind(folder)
-        .bind(uploader)
-        .execute(connection)
-        .await?;
-    Ok(())
-}
-
 /// (status, uploader, directoryName) of the dataset, row-locked.
 pub(crate) async fn find_upload_state_for_update(
     connection: &mut PgConnection,

@@ -516,3 +516,18 @@ pub(crate) async fn insert_paths_to_delete(pool: &PgPool, paths: &[String]) -> A
             .await?;
     Ok(())
 }
+
+pub(crate) async fn update_folder_and_uploader(
+    connection: &mut PgConnection,
+    dataset_id: &ObjectId,
+    folder: &ObjectId,
+    uploader: &ObjectId,
+) -> ApiResult<()> {
+    sqlx::query("UPDATE webknossos.datasets SET _folder = $2, _uploader = $3 WHERE _id = $1")
+        .bind(dataset_id)
+        .bind(folder)
+        .bind(uploader)
+        .execute(connection)
+        .await?;
+    Ok(())
+}

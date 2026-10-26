@@ -129,6 +129,20 @@ pub(crate) async fn is_editable(
     Ok(q.build_query_scalar().fetch_one(pool).await?)
 }
 
+/// Whether the dataset is readable by the user, evaluated on an existing connection
+/// (for example inside the caller's transaction).
+pub(crate) async fn is_readable_on_connection(
+    connection: &mut PgConnection,
+    user_id: &ObjectId,
+    dataset_id: &ObjectId,
+) -> ApiResult<bool> {
+    let mut q = Sql::new("SELECT ");
+    push_read_predicate(&mut q, user_id.into(), None);
+    q.push(" FROM webknossos.datasets_ d WHERE d._id=")
+        .push_bind(dataset_id);
+    Ok(q.build_query_scalar().fetch_one(connection).await?)
+}
+
 /// Row-locks the dataset (`FOR UPDATE`), failing if it does not exist.
 pub(crate) async fn lock_dataset(
     connection: &mut PgConnection,

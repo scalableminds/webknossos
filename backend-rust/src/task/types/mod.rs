@@ -235,7 +235,7 @@ async fn lock_task_type(
     id: &ObjectId,
     organization: &str,
 ) -> ApiResult<ObjectId> {
-    dao::lock_one(&mut **tx, id, organization)
+    dao::lock_one(tx, id, organization)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::task_type::not_found(id)))
 }

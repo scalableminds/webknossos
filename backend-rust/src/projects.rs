@@ -154,8 +154,7 @@ async fn check_references(
     if !can_manage_team_in_tx(tx, user, &parameters.team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let owner =
-        dao::find_owner_for_share(&mut **tx, &parameters.owner, &user.organization_id).await?;
+    let owner = dao::find_owner_for_share(tx, &parameters.owner, &user.organization_id).await?;
     if owner.is_none() {
         return Err(ApiError::bad_request(crate::msg::user::not_found(
             &parameters.owner,
@@ -308,7 +307,7 @@ async fn lock_project(
     id: &ObjectId,
     organization: &str,
 ) -> ApiResult<ObjectId> {
-    dao::lock_one(&mut **tx, id, organization)
+    dao::lock_one(tx, id, organization)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found(id)))
 }
@@ -318,7 +317,7 @@ pub(crate) async fn can_manage_team_in_tx(
     user: &AuthUser,
     team: &ObjectId,
 ) -> ApiResult<bool> {
-    dao::can_manage_team(&mut **tx, user, team).await
+    dao::can_manage_team(tx, user, team).await
 }
 
 async fn for_task_type(

@@ -220,16 +220,16 @@ async fn lock_managed_task(
 ) -> ApiResult<(i64, i64)> {
     // Lock the project before the task, in the same order as project mutations.
     // This keeps concurrent changes to project team/visibility from invalidating authorization.
-    let project = dao::find_project_id_with_read_access(&mut **tx, user, id)
+    let project = dao::find_project_id_with_read_access(tx, user, id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::task::not_found(id)))?;
-    let team = dao::lock_project_team_for_share(&mut **tx, &project, &user.organization_id)
+    let team = dao::lock_project_team_for_share(tx, &project, &user.organization_id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found(&project)))?;
     if !crate::projects::can_manage_team_in_tx(tx, user, &team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    dao::lock_instances(&mut **tx, id, &project)
+    dao::lock_instances(tx, id, &project)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::task::not_found(id)))
 }

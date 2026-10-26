@@ -27,6 +27,7 @@ object WKWArray extends WKWDataFormatHelper {
       headerBytes <- (path / FILENAME_HEADER_WKW).readBytes() ?~> s"Could not read header at $FILENAME_HEADER_WKW"
       dataInputStream = new LittleEndianDataInputStream(new ByteArrayInputStream(headerBytes))
       header <- WKWHeader(dataInputStream, readJumpTable = false).toFox
+      _ <- DatasetArray.assertChunkSizeLimit(header.bytesPerChunk)
       array <- tryo(
         new WKWArray(path, dataSourceId, layerName, header, AxisOrder.cxyz, None, None, sharedChunkContentsCache)
       ).toFox ?~> "Could not open wkw array"

@@ -5,7 +5,11 @@ import scala.jdk.CollectionConverters.SetHasAsScala
 trait LRUConcurrentCache[K, V] {
   def maxEntries: Int
 
-  private val cache = new java.util.LinkedHashMap[K, V]() {
+  private val cache: java.util.LinkedHashMap[K, V] = new java.util.LinkedHashMap[K, V](
+    /* initialCapacity (default) = */ 16,
+    /* loadFactor (default) = */ 0.75f,
+    /* accessOrder = */ true
+  ) {
     override def removeEldestEntry(eldest: java.util.Map.Entry[K, V]): Boolean =
       if (this.size > maxEntries) {
         onElementRemoval(eldest.getKey, eldest.getValue)

@@ -40,6 +40,7 @@ import { CommandPalette } from "viewer/view/components/command_palette";
 const { Content } = Layout;
 
 import AccountAuthTokenView from "admin/account/account_auth_token_view";
+import AccountMcpAgentConnectionsView from "admin/account/account_mcp_agent_connections_view";
 import AccountProfileView from "admin/account/account_profile_view";
 import AccountSecurityView from "admin/account/account_security_view";
 import { OrganizationCreditActivityView } from "admin/organization/organization_credit_activity_view";
@@ -483,6 +484,7 @@ const routes: RouteObject[] = [
           { path: "profile", element: <AccountProfileView /> },
           { path: "security", element: <AccountSecurityView /> },
           { path: "token", element: <AccountAuthTokenView /> },
+          { path: "mcp", element: <AccountMcpAgentConnectionsView /> },
         ],
       },
       { path: "*", element: <PageNotFoundView /> },

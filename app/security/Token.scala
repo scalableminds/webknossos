@@ -115,6 +115,13 @@ class TokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"UPDATE $collectionName SET isDeleted = TRUE WHERE value = $value".asUpdate)
     } yield ()
 
+  def deleteAllByUserIdAndType(userId: ObjectId, tokenType: TokenType): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE $collectionName SET isDeleted = TRUE
+                   WHERE _user = $userId
+                   AND tokenType = $tokenType""".asUpdate)
+    } yield ()
+
   def deleteAllExpired(): Fox[Unit] =
     for {
       _ <- run(

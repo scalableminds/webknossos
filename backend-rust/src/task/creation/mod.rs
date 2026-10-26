@@ -31,6 +31,8 @@
 //! TracingBase annotation and returns the `TaskCreationResult` JSON
 //! (`{tasks: [{status, success|error}], warnings}`), one item per requested
 //! task in request order; per-task failures are items, not request failures.
+pub(crate) mod dao;
+
 use axum::{
     Router,
     extract::{FromRequestParts, State},
@@ -65,7 +67,6 @@ use crate::{
             StringOpt, Tree, VolumeTracing,
         },
     },
-    sql::Sql,
     stores::tracing_client::{SaveMultipleResult, TracingStoreClient, VolumeSaveDataSource},
     util::id::ObjectId,
     util::instant::now_millis,
@@ -166,16 +167,7 @@ pub(crate) async fn find_task_type(
     user: &AuthUser,
     id: &ObjectId,
 ) -> ApiResult<Option<TaskTypeFacts>> {
-    let row: Option<(String, Option<i32>, Option<i32>)> = sqlx::query_as(
-        "SELECT tt.tracingType::text, tt.settings_magRestrictions_min, tt.settings_magRestrictions_max
-         FROM webknossos.taskTypes_ tt
-         WHERE tt._id=$1 AND (tt._team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$2)
-           OR tt._organization=(SELECT _organization FROM webknossos.users_ WHERE _id=$2 AND isAdmin))",
-    )
-    .bind(id)
-    .bind(&user.id)
-    .fetch_optional(pool)
-    .await?;
+    let row = dao::find_task_type_facts(pool, user, id).await?;
     Ok(row.map(|(typ, min, max)| TaskTypeFacts {
         id: id.clone(),
         tracing_type: match typ.as_str() {
@@ -376,11 +368,7 @@ pub(crate) async fn volume_tracing_base(
     start_rotation: [f64; 3],
     mag_restrictions: MagRestrictions,
 ) -> Result<VolumeTracing, ProviderError> {
-    let data_store: Option<String> =
-        sqlx::query_scalar("SELECT name FROM webknossos.dataStores_ WHERE name=$1")
-            .bind(&dataset.data_store)
-            .fetch_optional(pool)
-            .await?;
+    let data_store = dao::find_data_store_name(pool, &dataset.data_store).await?;
     if data_store.is_none() {
         return Err(ProviderError::Empty);
     }
@@ -632,12 +620,7 @@ async fn base_from_annotation_row(
     annotation_id: &ObjectId,
     owner_id: ObjectId,
 ) -> Result<ResolvedBase, ProviderError> {
-    let layers: Vec<(String, String)> = sqlx::query_as(
-        "SELECT tracingId, typ::text FROM webknossos.annotation_layers WHERE _annotation=$1 ORDER BY tracingId",
-    )
-    .bind(annotation_id)
-    .fetch_all(pool)
-    .await?;
+    let layers = dao::find_annotation_layers(pool, annotation_id).await?;
     let of_type = |typ: &str| -> Vec<String> {
         layers
             .iter()
@@ -662,36 +645,15 @@ async fn resolve_base(
     user: &AuthUser,
     id: &ObjectId,
 ) -> Result<ResolvedBase, ProviderError> {
-    let mut q = Sql::new("SELECT a._user FROM webknossos.annotations_ a WHERE a._id=");
-    q.push_bind(id).push(" AND ");
-    crate::annotation::access::push_read_predicate(&mut q, user.into());
-    let annotation: Option<ObjectId> = q.build_query_scalar().fetch_optional(pool).await?;
+    let annotation = dao::find_readable_annotation_owner(pool, user, id).await?;
     if let Some(owner) = annotation {
         return base_from_annotation_row(pool, id, owner).await;
     }
-    let task: Option<(i64, i64)> = sqlx::query_as(
-        "SELECT t.totalInstances, t.pendingInstances FROM webknossos.tasks_ t
-         WHERE t._id=$1 AND ((SELECT p._team FROM webknossos.projects p WHERE p._id=t._project)
-             IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$2)
-           OR (SELECT team._organization FROM webknossos.teams team WHERE team._id=(SELECT p._team FROM webknossos.projects p WHERE p._id=t._project))
-             IN (SELECT _organization FROM webknossos.users_ WHERE _id=$2 AND isAdmin))",
-    )
-    .bind(id)
-    .bind(&user.id)
-    .fetch_optional(pool)
-    .await?;
+    let task = dao::find_task_instances_with_read_access(pool, user, id).await?;
     let Some((total, pending)) = task else {
         return Err(ProviderError::Empty);
     };
-    let mut q = Sql::new(
-        "SELECT a._id, a._user, a.state::text FROM webknossos.annotations_ a
-         WHERE a._task=",
-    );
-    q.push_bind(id)
-        .push(" AND a.typ='Task' AND a.state<>'Cancelled' AND ");
-    crate::annotation::access::push_read_predicate(&mut q, user.into());
-    q.push(" ORDER BY a.created, a._id");
-    let annotations: Vec<(ObjectId, ObjectId, String)> = q.build_query_as().fetch_all(pool).await?;
+    let annotations = dao::find_task_annotations(pool, user, id).await?;
     match annotations.first() {
         Some((annotation_id, owner, state))
             if total == 1 && pending == 0 && state == "Finished" =>
@@ -862,19 +824,7 @@ pub(crate) async fn find_project(
     user: &AuthUser,
     name: &str,
 ) -> ApiResult<Option<ProjectFacts>> {
-    let row: Option<(ObjectId, ObjectId)> = sqlx::query_as(
-        "SELECT p._id, p._team FROM webknossos.projects_ p
-         WHERE p.name=$1 AND p._organization=$2
-           AND (p._team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$3)
-             OR p._owner=$3
-             OR p._organization=(SELECT _organization FROM webknossos.users_ WHERE _id=$3 AND isAdmin))
-         ORDER BY p.created, p._id LIMIT 1",
-    )
-    .bind(name)
-    .bind(&user.organization_id)
-    .bind(&user.id)
-    .fetch_optional(pool)
-    .await?;
+    let row = dao::find_project_by_name(pool, user, name).await?;
     Ok(row.map(|(id, team)| ProjectFacts { id, team }))
 }
 
@@ -919,15 +869,7 @@ async fn create_one(
                 ProviderError::failure(crate::msg::project::not_found_by_name(&params.project_name))
             })?;
         if let Some(script) = &params.script_id {
-            let readable: bool = sqlx::query_scalar(
-                "SELECT EXISTS (SELECT 1 FROM webknossos.scripts_ s
-                   JOIN webknossos.users_ owner ON owner._id=s._owner
-                   WHERE s._id=$1 AND owner._organization=$2)",
-            )
-            .bind(script)
-            .bind(&user.organization_id)
-            .fetch_one(pool)
-            .await?;
+            let readable = dao::is_script_readable(pool, user, script).await?;
             if !readable {
                 return Err(ProviderError::failure(crate::msg::script::not_found(
                     script,
@@ -936,15 +878,7 @@ async fn create_one(
         }
         // Fox.assertTrue(isTeamManagerOrAdminOf(user, project._team)):
         // missing team → adminNotAllowed; false → Fox.empty.
-        let team: Option<(String, bool)> = sqlx::query_as(
-            "SELECT t._organization, EXISTS (SELECT 1 FROM webknossos.user_team_roles r
-               WHERE r._user=$2 AND r._team=t._id AND r.isTeamManager)
-             FROM webknossos.teams_ t WHERE t._id=$1",
-        )
-        .bind(&project.team)
-        .bind(&user.id)
-        .fetch_optional(pool)
-        .await?;
+        let team = dao::find_team_organization_and_manager(pool, user, &project.team).await?;
         let (team_organization, is_manager) =
             team.ok_or_else(|| ProviderError::failure(crate::msg::team::ADMIN_NOT_ALLOWED))?;
         if !(is_manager || (user.is_admin && team_organization == user.organization_id)) {
@@ -995,43 +929,18 @@ async fn create_one(
         let domain = params.needed_experience.domain.trim();
         let bbox = non_empty(params.bounding_box);
         let mut tx = pool.begin().await?;
-        sqlx::query(
-            "INSERT INTO webknossos.tasks(_id,_project,_script,_taskType,neededExperience_domain,neededExperience_value,
-               totalInstances,pendingInstances,tracingTime,boundingBox,editPosition,editRotation,creationInfo,created,isDeleted)
-             VALUES($1,$2,$3,$4,$5,$6,$7,$7,NULL,
-               CASE WHEN $8::float8 IS NULL THEN NULL ELSE ROW($8,$9,$10,$11,$12,$13)::webknossos.BOUNDING_BOX END,
-               ROW($14,$15,$16)::webknossos.VECTOR3,ROW($17,$18,$19)::webknossos.VECTOR3,$20,$21,false)",
+        dao::insert_one(
+            &mut tx,
+            &task_id,
+            &project.id,
+            &task_type.id,
+            params,
+            domain,
+            bbox,
+            created,
         )
-        .bind(&task_id)
-        .bind(&project.id)
-        .bind(&params.script_id)
-        .bind(&task_type.id)
-        .bind(domain)
-        .bind(params.needed_experience.value)
-        .bind(i64::from(params.pending_instances))
-        .bind(bbox.map(|b| f64::from(b.top_left.x)))
-        .bind(bbox.map(|b| f64::from(b.top_left.y)))
-        .bind(bbox.map(|b| f64::from(b.top_left.z)))
-        .bind(bbox.map(|b| f64::from(b.width)))
-        .bind(bbox.map(|b| f64::from(b.height)))
-        .bind(bbox.map(|b| f64::from(b.depth)))
-        .bind(f64::from(params.edit_position[0]))
-        .bind(f64::from(params.edit_position[1]))
-        .bind(f64::from(params.edit_position[2]))
-        .bind(params.edit_rotation[0])
-        .bind(params.edit_rotation[1])
-        .bind(params.edit_rotation[2])
-        .bind(&params.creation_info)
-        .bind(created)
-        .execute(&mut *tx)
         .await?;
-        sqlx::query(
-            "INSERT INTO webknossos.experienceDomains(domain,_organization) VALUES($1,$2) ON CONFLICT DO NOTHING",
-        )
-        .bind(domain)
-        .bind(&user.organization_id)
-        .execute(&mut *tx)
-        .await?;
+        dao::insert_experience_domain(&mut tx, domain, &user.organization_id).await?;
         insert_annotation(
             &mut tx,
             &NewAnnotation {
@@ -1083,46 +992,19 @@ async fn warnings(
             .ok_or_else(|| ProviderError::failure(crate::msg::project::not_found_by_name(name)))?;
         project_teams.push(project.team);
     }
-    let dataset_teams: Vec<ObjectId> = sqlx::query_scalar(
-        "SELECT _team FROM webknossos.dataset_allowedTeams WHERE _dataset=$1
-         UNION
-         SELECT DISTINCT at._team FROM webknossos.folder_allowedTeams at
-           JOIN webknossos.folder_paths fp ON at._folder=fp._ancestor
-           JOIN webknossos.datasets_ d ON fp._descendant=d._folder
-           WHERE d._id=$1",
-    )
-    .bind(&dataset.id)
-    .fetch_all(pool)
-    .await?;
+    let dataset_teams = dao::find_dataset_allowed_team_ids(pool, &dataset.id).await?;
     let mut warnings = Vec::new();
     for team in project_teams {
         if dataset_teams.contains(&team) {
             continue;
         }
         if !dataset_teams.is_empty() {
-            let uncovered: bool = sqlx::query_scalar(
-                "SELECT EXISTS (SELECT 1 FROM webknossos.users_ u
-                   JOIN webknossos.user_team_roles tr ON u._id=tr._user
-                   WHERE NOT u.isAdmin AND NOT u.isDeactivated AND tr._team=$1
-                     AND u._id NOT IN (SELECT _user FROM webknossos.user_team_roles WHERE _team = ANY($2)))",
-            )
-            .bind(&team)
-            .bind(&dataset_teams)
-            .fetch_one(pool)
-            .await?;
+            let uncovered = dao::has_members_outside_teams(pool, &team, &dataset_teams).await?;
             if !uncovered {
                 continue;
             }
         }
-        let name: Option<String> = sqlx::query_scalar(
-            "SELECT t.name FROM webknossos.teams_ t WHERE t._id=$1
-               AND (t._id IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$2)
-                 OR t._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id=$2 AND isAdmin))",
-        )
-        .bind(&team)
-        .bind(&user.id)
-        .fetch_optional(pool)
-        .await?;
+        let name = dao::find_team_name_with_read_access(pool, user, &team).await?;
         let name = name.ok_or(ProviderError::Empty)?;
         warnings.push(format!(
             "Project team “{name}” has no read permission to dataset “{}”.",

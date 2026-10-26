@@ -165,14 +165,9 @@ async fn assert_team_manager_or_admin_of(
     user: &AuthUser,
     team_id: &ObjectId,
 ) -> ApiResult<()> {
-    let team: Option<(String, bool)> = sqlx::query_as(
-        "SELECT t._organization, EXISTS (SELECT 1 FROM webknossos.user_team_roles r
-           WHERE r._user=$2 AND r._team=t._id AND r.isTeamManager)
-         FROM webknossos.teams_ t WHERE t._id=$1",
+    let team = crate::task::creation::dao::find_team_organization_and_manager_for_files(
+        pool, user, team_id,
     )
-    .bind(team_id)
-    .bind(&user.id)
-    .fetch_optional(pool)
     .await?;
     let (organization, manages) =
         team.ok_or_else(|| ApiError::bad_request(crate::msg::team::ADMIN_NOT_ALLOWED))?;

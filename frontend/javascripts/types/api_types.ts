@@ -6,12 +6,14 @@ import type {
   AdditionalCoordinate,
   ColorObject,
   LOG_LEVELS,
+  MappingType,
   NestedMatrix4,
   Point3,
   TreeType,
   UnitLong,
   Vector3,
   Vector6,
+  ViewMode,
 } from "viewer/constants";
 import type {
   SkeletonTracingStats,
@@ -641,11 +643,55 @@ export type APIAnnotationUserState = {
   zoomLevel: number;
 };
 
+// Mirrors AnnotationBookmarkStateProto. Optional fields are null or undefined when unset.
+export type APIAnnotationBookmarkMesh = {
+  segmentId: bigint;
+  seedPosition: Vector3;
+} & (
+  | { isPrecomputed: true; meshFileName: string }
+  | {
+      isPrecomputed: false;
+      mappingName: string | null | undefined;
+      mappingType: MappingType | null | undefined;
+    }
+);
+export type APIAnnotationBookmarkLayerState = {
+  layerName: string;
+  isDisabled?: boolean | null;
+  intensityRange?: readonly [number, number] | null;
+  color?: Vector3 | null;
+  isInverted?: boolean | null;
+  gammaCorrectionValue?: number | null;
+  mapping?: { mappingName: string; mappingType: MappingType } | null;
+  meshFileName?: string | null;
+  meshes: APIAnnotationBookmarkMesh[];
+};
+export type APIAnnotationBookmarkState = {
+  position: Vector3;
+  mode: ViewMode;
+  zoomStep: number;
+  rotation?: Vector3 | null;
+  activeNodeId?: number | null;
+  additionalCoordinates?: AdditionalCoordinate[] | null;
+  nativelyRenderedLayerName?: string | null;
+  clippingDistance: number;
+  clipSkeletonToCurrentSection: boolean;
+  tdCamera?: {
+    position: Vector3;
+    up: Vector3;
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+  } | null;
+  showSkeletons?: boolean | null;
+  layers: APIAnnotationBookmarkLayerState[];
+};
 export type APIAnnotationBookmark = {
   id: number;
   created: number;
   name: string | null;
-  stateHash: string;
+  state: APIAnnotationBookmarkState;
   thumbnailDataBase64: string | null;
 };
 

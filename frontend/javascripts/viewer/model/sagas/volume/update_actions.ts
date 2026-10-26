@@ -1,6 +1,7 @@
 import { computeBoundingBoxObjectFromBoundingBox } from "libs/utils";
 import type {
   AdditionalCoordinate,
+  APIAnnotationBookmark,
   APIMagRestrictions,
   MetadataEntryProto,
   TreeAgglomerateInfo,
@@ -1254,13 +1255,7 @@ export function updateMetadataOfAnnotation(description: string) {
   } as const;
 }
 
-export function addBookmark(bookmark: {
-  id: number;
-  created: number;
-  name: string | null;
-  stateHash: string;
-  thumbnailDataBase64: string | null;
-}) {
+export function addBookmark(bookmark: APIAnnotationBookmark) {
   return {
     name: "addBookmark",
     value: bookmark,

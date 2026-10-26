@@ -1,14 +1,11 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { Empty, List, Space } from "antd";
-import { bigIntReplacer } from "libs/bigint_helpers";
 import { useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
-import messages from "messages";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import type { APIAnnotationBookmark } from "types/api_types";
-import { validateUrlStateJSON } from "types/validation";
 import { applyBookmarkState } from "viewer/controller/apply_url_state";
+import { bookmarkStateToUrlState, urlStateToBookmarkState } from "viewer/controller/bookmark_state";
 import UrlManager from "viewer/controller/url_manager";
 import { addBookmarkAction } from "viewer/model/actions/annotation_actions";
 import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
@@ -28,7 +25,7 @@ export default function BookmarksTab() {
   const dispatch = useDispatch();
 
   const handleAddBookmark = useCallback(async () => {
-    const stateHash = JSON.stringify(UrlManager.getUrlState(Store.getState()), bigIntReplacer);
+    const state = urlStateToBookmarkState(UrlManager.getUrlState(Store.getState()));
     let thumbnailDataBase64: string | null = null;
     try {
       thumbnailDataBase64 = await captureBookmarkThumbnail();
@@ -40,7 +37,7 @@ export default function BookmarksTab() {
       id: getMaximumBookmarkId(Store.getState().annotation.bookmarks) + 1,
       created: Date.now(),
       name: null,
-      stateHash,
+      state,
       thumbnailDataBase64,
     };
     dispatch(addBookmarkAction(bookmark));
@@ -49,14 +46,7 @@ export default function BookmarksTab() {
 
   const handleJumpToBookmark = useCallback(
     (bookmark: APIAnnotationBookmark) => {
-      let urlState: ReturnType<typeof validateUrlStateJSON>;
-      try {
-        urlState = validateUrlStateJSON(bookmark.stateHash);
-      } catch (e) {
-        Toast.error(messages["tracing.invalid_json_url_hash"]);
-        console.error(e);
-        return;
-      }
+      const urlState = bookmarkStateToUrlState(bookmark.state);
       // The view mode is not part of applyState and is dispatched separately,
       // mirroring model_initialization.ts.
       applyBookmarkState(urlState, Store.getState().dataset);

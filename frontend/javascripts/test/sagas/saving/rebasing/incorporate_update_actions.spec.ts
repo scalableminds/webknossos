@@ -25,6 +25,7 @@ import {
   REPLAYED_BOUNDING_BOX_ID,
 } from "test/sagas/saving/rebasing/incorporate_update_actions_fixtures";
 import { call } from "typed-redux-saga";
+import type { APIAnnotationBookmarkState } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
@@ -789,6 +790,14 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
 
     it("applies a replayed bookmark creation to local state and does not echo it back", async () => {
       Store.dispatch(discardSaveQueueAction());
+      const bookmarkState: APIAnnotationBookmarkState = {
+        position: [1, 2, 3],
+        mode: "orthogonal",
+        zoomStep: 1,
+        clippingDistance: 50,
+        clipSkeletonToCurrentSection: false,
+        layers: [],
+      };
 
       Store.dispatch(startForwardingUpdateActionsAction());
       await incorporateActions(
@@ -797,7 +806,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
             id: 1,
             created: 123,
             name: "Replayed Bookmark",
-            stateHash: "{}",
+            state: bookmarkState,
             thumbnailDataBase64: null,
           }),
         ],
@@ -810,7 +819,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           id: 1,
           created: 123,
           name: "Replayed Bookmark",
-          stateHash: "{}",
+          state: bookmarkState,
           thumbnailDataBase64: null,
         },
       ]);

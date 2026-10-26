@@ -398,7 +398,9 @@ export function* tryToIncorporateActions(
           break;
         }
         case "addBookmark": {
-          yield* put(addBookmarkAction(action.value));
+          // Server-side update actions also carry metadata such as actionTimestamp.
+          const { id, created, name, state, thumbnailDataBase64 } = action.value;
+          yield* put(addBookmarkAction({ id, created, name, state, thumbnailDataBase64 }));
           break;
         }
         case "addSegmentIndex": {

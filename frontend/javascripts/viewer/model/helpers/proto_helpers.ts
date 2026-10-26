@@ -9,7 +9,12 @@ import VolumeTracingProto from "VolumeTracing.proto";
 import { toBigInt } from "libs/bigint_helpers";
 import Long from "long";
 import { configure, Root, util } from "protobufjs/light";
-import type { APITracingStoreAnnotation, ServerTracing } from "types/api_types";
+import type {
+  APIAnnotationBookmarkState,
+  APITracingStoreAnnotation,
+  ServerTracing,
+} from "types/api_types";
+import type { Vector3 } from "viewer/constants";
 
 // protobufjs resolves its optional Long support via a try/catch require("long") call (see
 // node_modules/protobufjs/src/util/minimal.js). Wire it up explicitly via a real, bundler-visible
@@ -125,17 +130,62 @@ export function parseProtoListOfLong(listArrayBuffer: ArrayBuffer): Array<bigint
   return items.map(toBigInt);
 }
 
-export function parseProtoAnnotation(annotationArrayBuffer: ArrayBuffer): any {
+type ProtoVec3 = { x: number; y: number; z: number };
+const vec3FromProto = ({ x, y, z }: ProtoVec3): Vector3 => [x, y, z];
+
+function bookmarkStateFromProto(state: any): APIAnnotationBookmarkState {
+  return {
+    ...state,
+    position: vec3FromProto(state.position),
+    rotation: state.rotation != null ? vec3FromProto(state.rotation) : null,
+    tdCamera:
+      state.tdCamera != null
+        ? {
+            ...state.tdCamera,
+            position: vec3FromProto(state.tdCamera.position),
+            up: vec3FromProto(state.tdCamera.up),
+          }
+        : null,
+    layers: state.layers.map((layer: any) => ({
+      ...layer,
+      intensityRange:
+        layer.intensityRange != null ? [layer.intensityRange.x, layer.intensityRange.y] : null,
+      color: layer.color != null ? vec3FromProto(layer.color) : null,
+      meshes: layer.meshes.map((mesh: any) => ({
+        ...mesh,
+        segmentId: toBigInt(mesh.segmentId),
+        seedPosition: vec3FromProto(mesh.seedPosition),
+      })),
+    })),
+  };
+}
+
+export function parseProtoAnnotation(
+  annotationArrayBuffer: ArrayBuffer,
+): APITracingStoreAnnotation {
   const protoRoot = Root.fromJSON(AnnotationProto);
   const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.AnnotationProto`);
   const message = messageType.decode(new Uint8Array(annotationArrayBuffer));
 
-  return messageType.toObject(message, {
+  // longs: String keeps uint64 segment ids of bookmarked meshes precise.
+  // The remaining 64-bit fields fit into a number and are converted back below.
+  const annotation = messageType.toObject(message, {
     arrays: true,
     objects: true,
     enums: String,
-    longs: Number,
+    longs: String,
     // Decodes bytes fields (e.g. bookmark thumbnails) as base64 strings.
     bytes: String,
-  }) as APITracingStoreAnnotation;
+  }) as any;
+
+  return {
+    ...annotation,
+    version: Number(annotation.version),
+    earliestAccessibleVersion: Number(annotation.earliestAccessibleVersion),
+    bookmarks: annotation.bookmarks.map((bookmark: any) => ({
+      ...bookmark,
+      created: Number(bookmark.created),
+      state: bookmarkStateFromProto(bookmark.state),
+    })),
+  };
 }

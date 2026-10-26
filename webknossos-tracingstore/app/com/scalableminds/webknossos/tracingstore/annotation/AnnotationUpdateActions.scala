@@ -42,7 +42,7 @@ case class AddBookmarkAnnotationAction(
     created: Long,
     name: Option[String],
     description: Option[String],
-    stateHash: String,
+    state: AnnotationBookmarkState,
     thumbnailDataBase64: Option[String],
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
@@ -55,7 +55,7 @@ case class AddBookmarkAnnotationAction(
         created = created,
         name = name,
         description = description,
-        stateHash = stateHash,
+        state = state.toProto,
         thumbnailData = thumbnailDataBase64.map(base64 => ByteString.copyFrom(Base64.getDecoder.decode(base64)))
       )
     )

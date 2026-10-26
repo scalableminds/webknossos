@@ -14,6 +14,11 @@ message Vec2IntProto {
   required int32 y = 2;
 }
 
+message Vec2DoubleProto {
+  required double x = 1;
+  required double y = 2;
+}
+
 message ListOfVec3IntProto {
   repeated Vec3IntProto values = 1;
 }

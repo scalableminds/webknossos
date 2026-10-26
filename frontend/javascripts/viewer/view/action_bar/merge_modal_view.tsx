@@ -29,7 +29,7 @@ import messages from "messages";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { type APIAnnotation, APIAnnotationTypeEnum } from "types/api_types";
-import { getSkeletonDescriptor } from "viewer/model/accessors/skeletontracing_accessor";
+import { getSkeletonDescriptor } from "viewer/model/accessors/annotation_accessor";
 import { addTreesAndGroupsAction } from "viewer/model/actions/skeletontracing_actions";
 import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { api } from "viewer/singletons";

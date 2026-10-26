@@ -3,7 +3,7 @@ import RulerIcon from "@images/icons/icon-ruler.svg?react";
 import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
 import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.svg?react";
 import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
-import { type MenuProps, notification } from "antd";
+import { notification } from "antd";
 import type { MenuItemGroupType, MenuItemType } from "antd/es/menu/interface";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import { roundTo } from "libs/utils";
@@ -16,21 +16,6 @@ import { extractPathAsNewTree } from "viewer/model/reducers/skeletontracing_redu
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
-
-export const getNoActionsAvailableMenu = (hideContextMenu: () => void): MenuProps => ({
-  onClick: hideContextMenu,
-  style: {
-    borderRadius: 6,
-  },
-  mode: "vertical",
-  items: [
-    {
-      key: "view",
-      disabled: true,
-      title: "No actions available.",
-    },
-  ],
-});
 
 export function measureAndShowLengthBetweenNodes(
   sourceNodeId: number,
@@ -175,28 +160,4 @@ export function getInfoMenuItem(
    */
 
   return { key, label, type: "group" };
-}
-
-export function getContextMenuPositionFromEvent(
-  event: React.MouseEvent<HTMLElement>,
-  className: string,
-): [number, number] {
-  const overlayDivs = document.getElementsByClassName(className);
-  const referenceDiv = Array.from(overlayDivs)
-    .map((p) => p.parentElement)
-    .find((potentialParent) => {
-      if (potentialParent == null) {
-        return false;
-      }
-      const bounds = potentialParent.getBoundingClientRect();
-      return bounds.width > 0;
-    });
-
-  if (referenceDiv == null) {
-    return [0, 0];
-  }
-  const bounds = referenceDiv.getBoundingClientRect();
-  const x = event.clientX - bounds.left;
-  const y = event.clientY - bounds.top;
-  return [x, y];
 }

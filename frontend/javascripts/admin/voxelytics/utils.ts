@@ -2,7 +2,6 @@ import { useWkSelector } from "libs/react_hooks";
 import { getActiveTheme } from "theme";
 import { VoxelyticsRunState } from "types/api_types";
 
-export const VX_POLLING_INTERVAL = null; // disabled for now. 30 * 1000; // 30s
 const LOG_TIME_PADDING = 60 * 1000; // 1 minute
 
 export type Result<T> =

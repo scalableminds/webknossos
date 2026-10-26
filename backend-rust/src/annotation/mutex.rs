@@ -8,6 +8,7 @@ use serde_json::{Value, json};
 
 use crate::{
     AppState,
+    annotation::dao,
     annotation::provider::{
         AccessContext, AnnotationIdentifier, AnnotationProvider, ProviderError,
         RESTRICTIONS_NOT_FOUND,
@@ -110,49 +111,26 @@ async fn acquire(
         .await
         .map_err(ApiError::from)
         .map_err(acquisition_error)?;
-    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
-        .bind(format!("annotation-mutex:{id}"))
-        .execute(&mut *transaction)
+    dao::advisory_xact_lock(&mut transaction, &format!("annotation-mutex:{id}"))
         .await
         .map_err(ApiError::from)
         .map_err(acquisition_error)?;
     // Protect state, visibility, collaboration mode and owner while checking
     // runtime restrictions; collaborators do not need a DAO write grant.
-    let live = crate::annotation::access::lock_readable(&mut transaction, &user, &id)
+    let live = crate::annotation::dao::lock_readable(&mut transaction, &user, &id)
         .await?
         .ok_or_else(|| ProviderError::NotFound.into_api_error(StatusCode::NOT_FOUND))?;
     acquisition_gate(&live, &user)?;
-    let acquired: Option<(ObjectId, String)> = sqlx::query_as(
-        "INSERT INTO webknossos.annotation_mutexes(_annotation,_user,sessionId,expiry)
-         VALUES($1,$2,$3,statement_timestamp()+($4::bigint * interval '1 microsecond'))
-         ON CONFLICT (_annotation) DO UPDATE SET _user=EXCLUDED._user,
-           sessionId=EXCLUDED.sessionId,expiry=EXCLUDED.expiry
-         WHERE (webknossos.annotation_mutexes._user=EXCLUDED._user AND
-                webknossos.annotation_mutexes.sessionId=EXCLUDED.sessionId)
-            OR webknossos.annotation_mutexes.expiry<statement_timestamp()
-         RETURNING _user,sessionId",
-    )
-    .bind(&id)
-    .bind(&user.id)
-    .bind(&session)
-    .bind(micros)
-    .fetch_optional(&mut *transaction)
-    .await
-    .map_err(ApiError::from)
-    .map_err(acquisition_error)?;
+    let acquired = dao::upsert_mutex(&mut transaction, &id, &user.id, &session, micros)
+        .await
+        .map_err(acquisition_error)?;
     // The separate statement gets a fresh READ COMMITTED snapshot after any
     // conflicting insert commits. Advisory serialization also covers release.
     let (holder, holder_session) = match acquired {
         Some(holder) => holder,
-        None => sqlx::query_as(
-            "SELECT _user,sessionId FROM webknossos.annotation_mutexes WHERE \
-                _annotation=$1 FOR UPDATE",
-        )
-        .bind(&id)
-        .fetch_one(&mut *transaction)
-        .await
-        .map_err(ApiError::from)
-        .map_err(acquisition_error)?,
+        None => dao::find_mutex_holder_for_update(&mut transaction, &id)
+            .await
+            .map_err(acquisition_error)?,
     };
     let can_edit = holder == user.id && holder_session == session;
     let (blocked_user, blocked_session) = if can_edit {
@@ -193,19 +171,8 @@ async fn release(
     // release remains usable after access/state/lock/visibility changes.
     let operation = async {
         let mut transaction = state.pool.begin().await?;
-        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
-            .bind(format!("annotation-mutex:{id}"))
-            .execute(&mut *transaction)
-            .await?;
-        sqlx::query(
-            "DELETE FROM webknossos.annotation_mutexes WHERE _annotation=$1 AND _user=$2 \
-                AND sessionId=$3",
-        )
-        .bind(&id)
-        .bind(&user.id)
-        .bind(session)
-        .execute(&mut *transaction)
-        .await?;
+        dao::advisory_xact_lock(&mut transaction, &format!("annotation-mutex:{id}")).await?;
+        dao::delete_mutex(&mut transaction, &id, &user.id, &session).await?;
         transaction.commit().await?;
         Ok::<_, sqlx::Error>(())
     }

@@ -112,15 +112,15 @@ Raw data: `/tmp/wk-mem-run1` (`bench.md`, `summary.json`) in the session temp di
 | GET | `/user/tasks/peek` | [src/task/routes/mod.rs](src/task/routes/mod.rs) |
 | GET | `/users` | [src/users.rs](src/users.rs) |
 | GET | `/user` | [src/users.rs](src/users.rs) |
-| GET | `/user/tasks` | [src/annotation/lists.rs](src/annotation/lists.rs) |
-| GET | `/user/annotations` | [src/annotation/lists.rs](src/annotation/lists.rs) |
+| GET | `/user/tasks` | [src/annotation/lists/mod.rs](src/annotation/lists/mod.rs) |
+| GET | `/user/annotations` | [src/annotation/lists/mod.rs](src/annotation/lists/mod.rs) |
 | GET | `/users/:id` | [src/users.rs](src/users.rs) |
 | PATCH | `/users/:id` | [src/users.rs](src/users.rs) |
 | PUT | `/users/:id/taskTypeId` | [src/users.rs](src/users.rs) |
 | PUT | `/users/:id/novelUserExperienceInfos` | [src/users.rs](src/users.rs) |
 | PUT | `/users/:id/selectedTheme` | [src/users.rs](src/users.rs) |
-| GET | `/users/:id/tasks` | [src/annotation/lists.rs](src/annotation/lists.rs) |
-| GET | `/users/:id/annotations` | [src/annotation/lists.rs](src/annotation/lists.rs) |
+| GET | `/users/:id/tasks` | [src/annotation/lists/mod.rs](src/annotation/lists/mod.rs) |
+| GET | `/users/:id/annotations` | [src/annotation/lists/mod.rs](src/annotation/lists/mod.rs) |
 | GET | `/users/:id/loggedTime` | [src/time/tracking/mod.rs](src/time/tracking/mod.rs) |
 | GET | `/teams` | [src/teams.rs](src/teams.rs) |
 | POST | `/teams` | [src/teams.rs](src/teams.rs) |
@@ -231,7 +231,7 @@ Raw data: `/tmp/wk-mem-run1` (`bench.md`, `summary.json`) in the session temp di
 | POST | `/annotations/:typ/:id/merge/:mergedTyp/:mergedId` | [src/annotation/merge/mod.rs](src/annotation/merge/mod.rs) |
 | GET | `/annotations/:typ/:id/download` | [src/annotation/io/download/mod.rs](src/annotation/io/download/mod.rs) |
 | GET | `/annotations/source/:accessTokenOrId` | [src/annotation/private_links/mod.rs](src/annotation/private_links/mod.rs) |
-| GET | `/annotations/readable` | [src/annotation/lists.rs](src/annotation/lists.rs) |
+| GET | `/annotations/readable` | [src/annotation/lists/mod.rs](src/annotation/lists/mod.rs) |
 | GET | `/annotations/:typ/:id/sharedTeams` | [src/annotation/metadata.rs](src/annotation/metadata.rs) |
 | PATCH | `/annotations/:typ/:id/sharedTeams` | [src/annotation/metadata.rs](src/annotation/metadata.rs) |
 | PATCH | `/annotations/:typ/:id/collaborationMode` | [src/annotation/lifecycle.rs](src/annotation/lifecycle.rs) |
@@ -249,7 +249,7 @@ Raw data: `/tmp/wk-mem-run1` (`bench.md`, `summary.json`) in the session temp di
 | DELETE | `/tasks/:id` | [src/task/routes/mod.rs](src/task/routes/mod.rs) |
 | PUT | `/tasks/:id` | [src/task/routes/mod.rs](src/task/routes/mod.rs) |
 | POST | `/tasks/:id/assign` | [src/task/assignment/mod.rs](src/task/assignment/mod.rs) |
-| GET | `/tasks/:id/annotations` | [src/annotation/lists.rs](src/annotation/lists.rs) |
+| GET | `/tasks/:id/annotations` | [src/annotation/lists/mod.rs](src/annotation/lists/mod.rs) |
 | GET | `/taskTypes` | [src/task/types/mod.rs](src/task/types/mod.rs) |
 | POST | `/taskTypes` | [src/task/types/mod.rs](src/task/types/mod.rs) |
 | DELETE | `/taskTypes/:id` | [src/task/types/mod.rs](src/task/types/mod.rs) |

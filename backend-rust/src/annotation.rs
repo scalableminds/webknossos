@@ -1,5 +1,6 @@
 pub mod access;
 pub mod create;
+pub(crate) mod dao;
 pub mod duplicate;
 pub mod finish;
 pub mod info;

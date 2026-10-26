@@ -1,4 +1,6 @@
 //! Owner-managed annotation private links and database-backed annotation sources.
+mod dao;
+
 use crate::response::Messages;
 use axum::{Json as ResponseJson, Router, extract::State, routing::get};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
@@ -12,7 +14,6 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json, Path, Query},
-    sql::Sql,
     util::id::ObjectId,
 };
 
@@ -54,25 +55,13 @@ struct PrivateLink {
     )]
     expiration: Option<DateTime<Utc>>,
 }
-/// Live private links of the user's live annotations; callers append further conditions.
-fn select(user: &AuthUser) -> Sql<'_> {
-    let mut q = Sql::new(
-        "SELECT link._id AS id,link._annotation AS annotation,link.accessToken AS access_token,link.expirationDateTime AS expiration FROM webknossos.annotation_privateLinks link JOIN webknossos.annotations a ON a._id=link._annotation WHERE NOT link.isDeleted AND NOT a.isDeleted AND a._user=",
-    );
-    q.push_bind(&user.id);
-    q
-}
 async fn owned_link<'e, E: Executor<'e, Database = Postgres>>(
     executor: E,
     user: &AuthUser,
     id: &ObjectId,
     lock: bool,
 ) -> ApiResult<PrivateLink> {
-    let suffix = if lock { " FOR UPDATE OF link" } else { "" };
-    let mut q = select(user);
-    q.push(" AND link._id=").push_bind(id).push(suffix);
-    q.build_query_as()
-        .fetch_optional(executor)
+    dao::find_one_owned(executor, user, id, lock)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::annotation::private_link::not_found(id)))
 }
@@ -81,10 +70,7 @@ async fn list(
     State(state): State<AppState>,
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Vec<PrivateLink>>> {
-    let links: Vec<PrivateLink> = select(&user)
-        .build_query_as()
-        .fetch_all(&state.pool)
-        .await?;
+    let links = dao::find_all_for_user(&state.pool, &user).await?;
     Ok(ResponseJson(links))
 }
 async fn by_annotation(
@@ -93,9 +79,7 @@ async fn by_annotation(
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Vec<PrivateLink>>> {
     let id = ObjectId::parse_path(&id)?;
-    let mut q = select(&user);
-    q.push(" AND link._annotation=").push_bind(&id);
-    let links: Vec<PrivateLink> = q.build_query_as().fetch_all(&state.pool).await?;
+    let links = dao::find_all_for_annotation(&state.pool, &user, &id).await?;
     Ok(ResponseJson(links))
 }
 async fn read(
@@ -143,16 +127,13 @@ async fn create(
         ));
     }
     let id = ObjectId::new();
-    sqlx::query(
-        "INSERT INTO \
-            webknossos.annotation_privateLinks(_id,_annotation,accessToken,expirationDateTime) \
-            VALUES($1,$2,$3,$4)",
+    dao::insert_one(
+        &mut tx,
+        &id,
+        &parameters.annotation,
+        token()?,
+        parameters.expiration,
     )
-    .bind(&id)
-    .bind(&parameters.annotation)
-    .bind(token()?)
-    .bind(parameters.expiration)
-    .execute(&mut *tx)
     .await?;
     let link = owned_link(&mut *tx, &user, &id, false).await?;
     tx.commit().await?;
@@ -180,15 +161,7 @@ async fn update(
             ));
         }
     }
-    sqlx::query(
-        "UPDATE webknossos.annotation_privateLinks SET \
-            _annotation=$2,expirationDateTime=$3 WHERE _id=$1 AND NOT isDeleted",
-    )
-    .bind(&id)
-    .bind(&parameters.annotation)
-    .bind(parameters.expiration)
-    .execute(&mut *tx)
-    .await?;
+    dao::update_one(&mut tx, &id, &parameters.annotation, parameters.expiration).await?;
     let link = owned_link(&mut *tx, &user, &id, false).await?;
     tx.commit().await?;
     Ok(ResponseJson(link))
@@ -202,10 +175,7 @@ async fn delete(
     let mut tx = state.pool.begin().await?;
     let link = owned_link(&mut *tx, &user, &id, true).await?;
     crate::annotation::access::lock_for_mutation(&mut tx, &user, &link.annotation).await?;
-    sqlx::query("UPDATE webknossos.annotation_privateLinks SET isDeleted=true WHERE _id=$1")
-        .bind(&id)
-        .execute(&mut *tx)
-        .await?;
+    dao::delete_one(&mut tx, &id).await?;
     tx.commit().await?;
     Ok(Messages::success(
         crate::msg::annotation::private_link::DELETE_SUCCESS,
@@ -222,14 +192,7 @@ async fn source(
     Path(token_or_id): Path<String>,
     Query(query): Query<SourceQuery>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let linked: Option<ObjectId> = sqlx::query_scalar(
-        "SELECT link._annotation FROM webknossos.annotation_privateLinks_ link JOIN \
-            webknossos.annotations_ a ON a._id=link._annotation WHERE link.accessToken=$1 AND \
-            (link.expirationDateTime IS NULL OR link.expirationDateTime>statement_timestamp())",
-    )
-    .bind(&token_or_id)
-    .fetch_optional(&state.pool)
-    .await?;
+    let linked = dao::find_annotation_id_by_access_token(&state.pool, &token_or_id).await?;
     let via_private_link = linked.is_some();
     let annotation = if let Some(id) = linked {
         crate::annotation::access::find(&state.pool, None, &id, true).await?
@@ -247,22 +210,9 @@ async fn source(
             .await?
             .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?
     };
-    let value: Value = sqlx::query_scalar(
-        r#"SELECT jsonb_build_object('id',a._id,
-        'annotationLayers',COALESCE((SELECT jsonb_agg(jsonb_build_object('tracingId',layer.tracingId,'typ',layer.typ,'name',layer.name,'stats',layer.statistics) ORDER BY layer.tracingId) FROM webknossos.annotation_layers layer WHERE layer._annotation=a._id),'[]'::jsonb),
-        'datasetDirectoryName',d.directoryName,'datasetId',d._id,'organizationId',organization._id,
-        'dataStoreUrl',store.publicUrl,'tracingStoreUrl',(SELECT publicUrl FROM webknossos.tracingStores_ LIMIT 1),
-        'accessViaPrivateLink',$2)
-        FROM webknossos.annotations_ a JOIN webknossos.datasets_ d ON d._id=a._dataset
-        JOIN webknossos.organizations_ organization ON organization._id=d._organization
-        JOIN webknossos.dataStores_ store ON store.name=trim(d._dataStore)
-        WHERE a._id=$1"#,
-    )
-    .bind(&annotation.id)
-    .bind(via_private_link)
-    .fetch_optional(&state.pool)
-    .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::annotation::SOURCE_MISSING))?;
+    let value = dao::find_source_json(&state.pool, &annotation.id, via_private_link)
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::annotation::SOURCE_MISSING))?;
     if value["tracingStoreUrl"].is_null() {
         return Err(ApiError::not_found(crate::msg::tracing_store::MISSING));
     }

@@ -18,6 +18,7 @@ use sqlx::PgConnection;
 
 use crate::{
     AppState,
+    annotation::dao,
     annotation::metadata::PUBLIC_WRITES_FAILED,
     annotation::provider::{
         AccessContext, AnnotationIdentifier, AnnotationLayerType, AnnotationProvider,
@@ -278,14 +279,10 @@ async fn compound_json(
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
     let dataset_id = &compound.dataset_id;
-    let (dataset_name, organization, datastore): (String, String, String) = sqlx::query_as(
-        "SELECT d.name,o._id,trim(d._dataStore) FROM webknossos.datasets_ d
-         JOIN webknossos.organizations_ o ON o._id=d._organization WHERE d._id=$1",
-    )
-    .bind(dataset_id)
-    .fetch_optional(&mut *connection)
-    .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::annotation::DATASET_MISSING))?;
+    let (dataset_name, organization, datastore) =
+        dao::find_dataset_with_organization(connection, dataset_id)
+            .await?
+            .ok_or_else(|| ApiError::not_found(crate::msg::annotation::DATASET_MISSING))?;
     let owner = crate::annotation::lists::compact_user(connection, &compound.owner_id).await?;
     let data_store = crate::dataset::routes::public_datastore_json_on_connection(
         connection,
@@ -293,12 +290,9 @@ async fn compound_json(
         jobs_enabled,
     )
     .await?;
-    let tracing_store: Value = sqlx::query_scalar(
-        "SELECT jsonb_build_object('name',store.name,'url',store.publicUrl) FROM webknossos.tracingStores_ store LIMIT 1",
-    )
-    .fetch_optional(&mut *connection)
-    .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
+    let tracing_store: Value = dao::find_first_tracing_store_json(connection)
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
     let layers: Vec<Value> = compound
         .layers
         .iter()
@@ -351,12 +345,7 @@ async fn compound_json(
 fn touch_last_activity(state: &AppState, user: &AuthUser) {
     let (pool, user_id) = (state.pool.clone(), user.id.clone());
     tokio::spawn(async move {
-        if let Err(error) =
-            sqlx::query("UPDATE webknossos.users SET lastActivity=now() WHERE _id=$1")
-                .bind(&user_id)
-                .execute(&pool)
-                .await
-        {
+        if let Err(error) = dao::update_last_activity(&pool, &user_id).await {
             tracing::debug!(%error, "Could not update last activity");
         }
     });
@@ -375,11 +364,7 @@ fn track_open_annotation(
     let (state, misc, user) = (state.clone(), misc.clone(), user.clone());
     tokio::spawn(async move {
         let owner_multi_user: Option<ObjectId> =
-            match sqlx::query_scalar("SELECT _multiUser FROM webknossos.users_ WHERE _id=$1")
-                .bind(&owner_id)
-                .fetch_optional(&state.pool)
-                .await
-            {
+            match dao::find_multi_user_id(&state.pool, &owner_id).await {
                 Ok(found) => found,
                 Err(error) => {
                     tracing::debug!(%error, "Analytics owner lookup failed");

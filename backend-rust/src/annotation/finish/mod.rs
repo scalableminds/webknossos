@@ -186,7 +186,7 @@ async fn finish_saved(
         .await
         .map_err(|e| FinishFailure::Finish(e.into()))?;
     // restrictionsFor: AnnotationDAO.findOne under the requester's access.
-    let annotation = crate::annotation::access::lock_readable(&mut transaction, user, id)
+    let annotation = crate::annotation::dao::lock_readable(&mut transaction, user, id)
         .await
         .map_err(|e| {
             if passthrough(&e) {
@@ -228,16 +228,13 @@ async fn finish_saved(
         }
     }
     // updateModified/updateState: AnnotationDAO.assertUpdateAccess.
-    if !crate::annotation::access::lock_update_access(&mut transaction, user, &annotation.id)
+    if !crate::annotation::dao::lock_update_access(&mut transaction, user, &annotation.id)
         .await
         .map_err(finish_error)?
     {
         return Err(finish_error(ApiError::bad_request(FINISH_FAILED)));
     }
-    sqlx::query("UPDATE webknossos.annotations SET modified=$2,state='Finished' WHERE _id=$1")
-        .bind(&annotation.id)
-        .bind(now_millis())
-        .execute(&mut *transaction)
+    crate::annotation::dao::update_state_finished(&mut transaction, &annotation.id, now_millis())
         .await
         .map_err(|e| finish_error(e.into()))?;
     // TaskService.clearCompoundCache: a missing live task fails the finish.

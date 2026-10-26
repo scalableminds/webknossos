@@ -18,6 +18,9 @@
 //! `UploadedVolumeLayer::data_zip_location` and in the names of NMLs from nested
 //! zips when `useZipName` is set, where Scala exposes its temp-file path).
 
+mod dao;
+
+use dao::DatasetRow;
 use std::collections::{BTreeMap, HashMap};
 use std::future::Future;
 use std::io::{Cursor, Read};
@@ -36,10 +39,8 @@ use crate::annotation::nml::parser::{
     DatasetRef, NmlParseContext, NmlParseOutcome, NmlParseResult, SharedParsingParameters,
     UploadedVolumeLayer, file_name_without_extension, parse_nml,
 };
-use crate::dataset::access::push_read_predicate;
 use crate::error::{ApiError, ApiResult};
 use crate::proto::datastore::{SegmentGroup, SkeletonTracing, TreeGroup, VolumeTracing};
-use crate::sql::Sql;
 use crate::util::id::ObjectId;
 
 // ---------------------------------------------------------------------------
@@ -629,8 +630,6 @@ impl DatasetLookup for PgDatasetLookup {
     }
 }
 
-type DatasetRow = (ObjectId, String, String);
-
 fn dataset_ref((id, name, organization_id): DatasetRow) -> DatasetRef {
     DatasetRef {
         id,
@@ -646,13 +645,7 @@ pub async fn find_readable_dataset(
     user_id: &ObjectId,
     dataset_id: &ObjectId,
 ) -> ApiResult<Option<DatasetRef>> {
-    let mut q = Sql::new(
-        "SELECT d._id, d.name, d._organization FROM webknossos.datasets_ d
-         WHERE d._id = ",
-    );
-    q.push_bind(dataset_id).push(" AND ");
-    push_read_predicate(&mut q, user_id.into(), None);
-    let row: Option<DatasetRow> = q.build_query_as().fetch_optional(pool).await?;
+    let row = dao::find_readable_dataset(pool, user_id, dataset_id).await?;
     Ok(row.map(dataset_ref))
 }
 
@@ -674,31 +667,19 @@ pub async fn find_one_by_id_or_name_and_organization(
             .await?
             .ok_or_else(|| crate::msg::dataset::not_found(dataset_id)));
     }
-    let mut q = Sql::new(
-        "SELECT d._id, d.name, d._organization FROM webknossos.datasets_ d
-         WHERE d.directoryName = ",
-    );
-    q.push_bind(dataset_name)
-        .push(" AND d._organization = ")
-        .push_bind(organization_id)
-        .push(" AND ");
-    push_read_predicate(&mut q, user_id.into(), None);
-    q.push(" ORDER BY d.created ASC LIMIT 1");
-    let by_directory_name: Option<DatasetRow> = q.build_query_as().fetch_optional(pool).await?;
+    let by_directory_name = dao::find_one_by_directory_name_and_organization(
+        pool,
+        user_id,
+        dataset_name,
+        organization_id,
+    )
+    .await?;
     if let Some(row) = by_directory_name {
         return Ok(Ok(dataset_ref(row)));
     }
-    let mut q = Sql::new(
-        "SELECT d._id, d.name, d._organization FROM webknossos.datasets_ d
-         WHERE d.name = ",
-    );
-    q.push_bind(dataset_name)
-        .push(" AND d._organization = ")
-        .push_bind(organization_id)
-        .push(" AND ");
-    push_read_predicate(&mut q, user_id.into(), None);
-    q.push(" LIMIT 2");
-    let mut by_name: Vec<DatasetRow> = q.build_query_as().fetch_all(pool).await?;
+    let mut by_name =
+        dao::find_up_to_two_by_name_and_organization(pool, user_id, dataset_name, organization_id)
+            .await?;
     Ok(match by_name.len() {
         0 => Err(crate::msg::dataset::not_found_by_name(dataset_name)),
         1 => Ok(dataset_ref(by_name.remove(0))),
@@ -992,12 +973,7 @@ pub async fn find_dataset_for_uploaded_annotations(
     let wrong_host = !wk_url.is_empty() && this_host != wk_url;
     let organization_id = match organization_id {
         Some(organization_id) => {
-            let exists: bool = sqlx::query_scalar(
-                "SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ WHERE _id = $1)",
-            )
-            .bind(&organization_id)
-            .fetch_one(pool)
-            .await?;
+            let exists = dao::organization_exists(pool, &organization_id).await?;
             if !exists {
                 return Err(ApiError::not_found(if wrong_host {
                     msg_organization_not_found_wrong_host(&organization_id, wk_url, this_host)
@@ -1007,14 +983,9 @@ pub async fn find_dataset_for_uploaded_annotations(
             }
             organization_id
         }
-        None => sqlx::query_scalar::<_, String>(
-            "SELECT o._id FROM webknossos.organizations_ o
-             JOIN webknossos.datasets_ d ON o._id = d._organization WHERE d._id = $1",
-        )
-        .bind(&dataset_id)
-        .fetch_optional(pool)
-        .await?
-        .ok_or_else(|| ApiError::forbidden(crate::msg::dataset::not_found(&dataset_id)))?,
+        None => dao::find_organization_id_for_dataset(pool, &dataset_id)
+            .await?
+            .ok_or_else(|| ApiError::forbidden(crate::msg::dataset::not_found(&dataset_id)))?,
     };
     let dataset = find_readable_dataset(pool, user_id, &dataset_id)
         .await?

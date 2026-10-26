@@ -3,6 +3,8 @@
 //! reservation work per annotation with an in-process semaphore; here a
 //! transaction-scoped advisory lock shared with the collaboration-mode change
 //! (`annotation_lifecycle`) serializes across application instances.
+mod dao;
+
 use axum::{
     Extension, Json, Router,
     extract::State,
@@ -144,10 +146,11 @@ async fn lock_reservations(
     transaction: &mut Transaction<'_, Postgres>,
     id: &ObjectId,
 ) -> ApiResult<()> {
-    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
-        .bind(format!("annotation-reservations:{id}"))
-        .execute(&mut **transaction)
-        .await?;
+    crate::annotation::dao::advisory_xact_lock(
+        transaction,
+        &format!("annotation-reservations:{id}"),
+    )
+    .await?;
     Ok(())
 }
 
@@ -171,17 +174,13 @@ async fn reserved_ids(
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let mut transaction = state.pool.begin().await?;
     lock_reservations(&mut transaction, &id).await?;
-    let ids: Vec<i64> = sqlx::query_scalar(
-        "SELECT id FROM webknossos.annotation_reserved_ids
-         WHERE _annotation=$1 AND tracingId=$2 AND _user=$3
-           AND domain=$4::webknossos.ANNOTATION_ID_DOMAIN
-         ORDER BY id",
+    let ids = dao::find_all_reserved_ids(
+        &mut transaction,
+        &id,
+        &tracing_id,
+        &user.id,
+        domain.as_str(),
     )
-    .bind(&id)
-    .bind(&tracing_id)
-    .bind(&user.id)
-    .bind(domain.as_str())
-    .fetch_all(&mut *transaction)
     .await?;
     transaction.commit().await?;
     Ok(Json(ids))
@@ -214,15 +213,8 @@ async fn reserve_ids(
     if !crate::annotation::access::restrictions(&live, Some(&user)).allow_update {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let largest_reserved: Option<i64> = sqlx::query_scalar(
-        "SELECT MAX(id) FROM webknossos.annotation_reserved_ids
-         WHERE _annotation=$1 AND tracingId=$2 AND domain=$3::webknossos.ANNOTATION_ID_DOMAIN",
-    )
-    .bind(&id)
-    .bind(&body.tracing_id)
-    .bind(domain)
-    .fetch_one(&mut *transaction)
-    .await?;
+    let largest_reserved =
+        dao::find_largest_reserved_id(&mut transaction, &id, &body.tracing_id, domain).await?;
     let largest_existing = match largest_reserved {
         Some(largest) => largest,
         None => {
@@ -239,30 +231,25 @@ async fn reserve_ids(
         .ok_or_else(|| ApiError::bad_request(ID_RANGE_OVERFLOW))?;
     let reserved: Vec<i64> = (first..end).collect();
     if !reserved.is_empty() {
-        sqlx::query(
-            "INSERT INTO webknossos.annotation_reserved_ids(_annotation,tracingId,domain,_user,id)
-             SELECT $1,$2,$3::webknossos.ANNOTATION_ID_DOMAIN,$4,UNNEST($5::bigint[])",
+        dao::insert_reserved_ids(
+            &mut transaction,
+            &id,
+            &body.tracing_id,
+            domain,
+            &user.id,
+            &reserved,
         )
-        .bind(&id)
-        .bind(&body.tracing_id)
-        .bind(domain)
-        .bind(&user.id)
-        .bind(&reserved)
-        .execute(&mut *transaction)
         .await?;
     }
     if !body.ids_to_release.is_empty() {
-        sqlx::query(
-            "DELETE FROM webknossos.annotation_reserved_ids
-             WHERE _annotation=$1 AND tracingId=$2 AND domain=$3::webknossos.ANNOTATION_ID_DOMAIN
-               AND _user=$4 AND id=ANY($5::bigint[])",
+        dao::delete_reserved_ids(
+            &mut transaction,
+            &id,
+            &body.tracing_id,
+            domain,
+            &user.id,
+            &body.ids_to_release,
         )
-        .bind(&id)
-        .bind(&body.tracing_id)
-        .bind(domain)
-        .bind(&user.id)
-        .bind(&body.ids_to_release)
-        .execute(&mut *transaction)
         .await?;
     }
     transaction.commit().await?;

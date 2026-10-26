@@ -98,7 +98,7 @@ async fn reopen(
     let mut transaction = state.pool.begin().await?;
     let annotation = match provided {
         ProvidedAnnotation::Saved(saved) => {
-            crate::annotation::access::lock_readable(&mut transaction, &user, &saved.id)
+            crate::annotation::dao::lock_readable(&mut transaction, &user, &saved.id)
                 .await?
                 .ok_or_else(|| ApiError::bad_request(UPDATE_STATE_FAILED))?
         }
@@ -128,9 +128,7 @@ async fn reopen(
         configured_seconds,
     )
     .await?;
-    if !crate::annotation::access::lock_update_access(&mut transaction, &user, &annotation.id)
-        .await?
-    {
+    if !crate::annotation::dao::lock_update_access(&mut transaction, &user, &annotation.id).await? {
         return Err(ApiError::bad_request(UPDATE_STATE_FAILED));
     }
     let cache_keys = if let Some(task) = &annotation.task_id {
@@ -138,9 +136,7 @@ async fn reopen(
     } else {
         None
     };
-    sqlx::query("UPDATE webknossos.annotations SET state='Active' WHERE _id=$1")
-        .bind(&annotation.id)
-        .execute(&mut *transaction)
+    crate::annotation::dao::update_state_active(&mut transaction, &annotation.id)
         .await
         .map_err(|error| {
             let error = ApiError::from(error);

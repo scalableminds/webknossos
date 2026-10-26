@@ -9,6 +9,8 @@
 //!
 //! The tracing-store step is shared with task assignment
 //! (AnnotationService.createAnnotationFor), see [`duplicate_in_tracing_store`].
+mod dao;
+
 use axum::{
     Extension, Json, Router,
     extract::{FromRequestParts, State},
@@ -122,32 +124,15 @@ pub(crate) async fn insert_annotation(
     annotation: &NewAnnotation<'_>,
     layers: &[AnnotationLayer],
 ) -> ApiResult<()> {
-    sqlx::query(
-        "INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,description,visibility,name,state,tags,tracingTime,typ,collaborationMode,created,modified,isDeleted)
-         VALUES($1,$2,$3,$4,$5,$6::webknossos.ANNOTATION_VISIBILITY,$7,'Active','{}',NULL,$8::webknossos.ANNOTATION_TYPE,$9::webknossos.ANNOTATION_COLLABORATION_MODE,$10,$10,false)",
-    )
-    .bind(annotation.id)
-    .bind(annotation.dataset_id)
-    .bind(annotation.task_id)
-    .bind(annotation.owner_id)
-    .bind(annotation.description)
-    .bind(annotation.visibility)
-    .bind(annotation.name)
-    .bind(annotation.annotation_type)
-    .bind(annotation.collaboration_mode)
-    .bind(annotation.created)
-    .execute(&mut *connection)
-    .await?;
+    crate::annotation::dao::insert_one(connection, annotation).await?;
     for layer in layers {
-        sqlx::query(
-            "INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics)
-             VALUES($1,$2,$3::webknossos.ANNOTATION_LAYER_TYPE,$4,'{}'::jsonb)",
+        crate::annotation::dao::insert_layer(
+            connection,
+            annotation.id,
+            &layer.tracing_id,
+            layer.typ.as_str(),
+            &layer.name,
         )
-        .bind(annotation.id)
-        .bind(&layer.tracing_id)
-        .bind(layer.typ.as_str())
-        .bind(&layer.name)
-        .execute(&mut *connection)
         .await?;
     }
     Ok(())
@@ -204,14 +189,7 @@ async fn usable_data_source_bounding_box(
         .wrap(crate::msg::dataset::data_source::NOT_FOUND)
         .with_status(StatusCode::NOT_FOUND));
     }
-    let boxes: Vec<Vec<i32>> = sqlx::query_scalar(
-        "SELECT ARRAY[(boundingBox).x::int,(boundingBox).y::int,(boundingBox).z::int,
-           (boundingBox).width::int,(boundingBox).height::int,(boundingBox).depth::int]
-         FROM webknossos.dataset_layers WHERE _dataset=$1 ORDER BY name",
-    )
-    .bind(dataset_id)
-    .fetch_all(pool)
-    .await?;
+    let boxes = dao::find_layer_bounding_boxes(pool, dataset_id).await?;
     let mut union: Option<[i32; 6]> = None;
     for bbox in boxes {
         let bbox = <[i32; 6]>::try_from(bbox).map_err(|_| ApiError::internal())?;
@@ -256,12 +234,7 @@ pub(crate) async fn duplicate_source_in_tracing_store(
     requesting_user_id: &ObjectId,
 ) -> Result<Vec<AnnotationLayer>, ProviderError> {
     // GlobalAccessContext: the requester was already allowed to see the annotation.
-    let dataset: Option<(bool, bool)> = sqlx::query_as(
-        "SELECT isUsable, voxelSizeFactor IS NOT NULL FROM webknossos.datasets_ WHERE _id=$1",
-    )
-    .bind(source.dataset_id)
-    .fetch_optional(pool)
-    .await?;
+    let dataset = dao::find_dataset_usability(pool, source.dataset_id).await?;
     let (is_usable, has_voxel_size) = dataset.ok_or_else(|| {
         ProviderError::failure(crate::msg::dataset::not_found_for_annotation(
             source.dataset_id,

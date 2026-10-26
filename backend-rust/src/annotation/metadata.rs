@@ -15,6 +15,7 @@ use serde_json::{Map, Value, json};
 
 use crate::{
     AppState,
+    annotation::dao,
     annotation::provider::{
         AccessContext, AnnotationIdentifier, AnnotationProvider, AnnotationType, ProviderError,
         RESTRICTIONS_NOT_FOUND,
@@ -22,7 +23,6 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json, Path},
-    sql::{PushArg, Requester, Sql},
     users::notification_emails::{NotificationEmailService, SharedResource},
     util::id::ObjectId,
 };
@@ -129,7 +129,7 @@ async fn edit(
     let mut transaction = state.pool.begin().await?;
     // Re-check the runtime gate on the locked live row (no TOCTOU between the
     // provider read and the writes); a concurrently deleted row is not found.
-    let locked = crate::annotation::access::lock_readable(&mut transaction, &user, annotation_id)
+    let locked = crate::annotation::dao::lock_readable(&mut transaction, &user, annotation_id)
         .await?
         .ok_or_else(|| ProviderError::NotFound.into_api_error(StatusCode::NOT_FOUND))?;
     if !crate::annotation::access::restrictions(&locked, Some(&user)).allow_update {
@@ -141,7 +141,7 @@ async fn edit(
     // AnnotationDAO update access only gates the DAO-protected fields; a
     // view-configuration-only (or empty) edit succeeds for collaborators.
     if dao_fields
-        && !crate::annotation::access::lock_update_access(&mut transaction, &user, annotation_id)
+        && !crate::annotation::dao::lock_update_access(&mut transaction, &user, annotation_id)
             .await?
     {
         return Err(ApiError::bad_request(if clears_teams {
@@ -151,41 +151,24 @@ async fn edit(
         }));
     }
     if clears_teams {
-        sqlx::query("DELETE FROM webknossos.annotation_sharedTeams WHERE _annotation=$1")
-            .bind(annotation_id)
-            .execute(&mut *transaction)
-            .await?;
+        dao::delete_shared_teams(&mut transaction, annotation_id).await?;
     }
     if let Some(name) = &body.name {
-        sqlx::query("UPDATE webknossos.annotations SET name=$1 WHERE _id=$2")
-            .bind(name)
-            .bind(annotation_id)
-            .execute(&mut *transaction)
-            .await?;
+        dao::update_name(&mut transaction, annotation_id, name).await?;
     }
     if let Some(visibility) = body.visibility {
-        sqlx::query("UPDATE webknossos.annotations SET visibility=$1::webknossos.ANNOTATION_VISIBILITY WHERE _id=$2")
-            .bind(visibility.as_str())
-            .bind(annotation_id)
-            .execute(&mut *transaction)
-            .await?;
+        dao::update_visibility(&mut transaction, annotation_id, visibility.as_str()).await?;
     }
     if let Some(tags) = &body.tags {
-        sqlx::query("UPDATE webknossos.annotations SET tags=$1 WHERE _id=$2")
-            .bind(tags)
-            .bind(annotation_id)
-            .execute(&mut *transaction)
-            .await?;
+        dao::update_tags(&mut transaction, annotation_id, tags).await?;
     }
     if let Some(view_configuration) = body.view_configuration {
-        sqlx::query(
-            "INSERT INTO webknossos.user_annotationViewConfigurations(_annotation,_user,viewConfiguration) VALUES($1,$2,$3)
-             ON CONFLICT (_user,_annotation) DO UPDATE SET viewConfiguration=EXCLUDED.viewConfiguration",
+        dao::upsert_view_configuration(
+            &mut transaction,
+            annotation_id,
+            &user.id,
+            Value::Object(view_configuration),
         )
-        .bind(annotation_id)
-        .bind(&user.id)
-        .bind(sqlx::types::Json(Value::Object(view_configuration)))
-        .execute(&mut *transaction)
         .await?;
     }
     transaction.commit().await?;
@@ -243,15 +226,10 @@ async fn edit_locked_state(
         .filter(|_| provided.annotation_type() == Some(AnnotationType::Explorational))
         .ok_or_else(|| ApiError::bad_request(LOCK_EXPLORATIONALS_ONLY))?;
     let mut transaction = state.pool.begin().await?;
-    if !crate::annotation::access::lock_update_access(&mut transaction, &user, &saved.id).await? {
+    if !crate::annotation::dao::lock_update_access(&mut transaction, &user, &saved.id).await? {
         return Err(ApiError::bad_request(LOCK_FAILED));
     }
-    // No modified timestamp change, like AnnotationDAO.updateLockedState.
-    sqlx::query("UPDATE webknossos.annotations SET isLockedByOwner=$1 WHERE _id=$2")
-        .bind(is_locked)
-        .bind(&saved.id)
-        .execute(&mut *transaction)
-        .await?;
+    dao::update_locked_state(&mut transaction, &saved.id, is_locked).await?;
     transaction.commit().await?;
     tracing::info!(locked = is_locked, "Updated annotation locked state");
 
@@ -281,24 +259,6 @@ fn public_writes_error(error: ApiError) -> ApiError {
     }
 }
 
-/// TeamDAO read access (member, or admin of the team's organization),
-/// scoped to live teams of the requester's organization like the rest of
-/// the crate; TeamService.publicWrites also needs the live organization.
-fn push_readable_team<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
-    q.push("team._organization=")
-        .push_arg(requester.organization)
-        .push(" AND (")
-        .push_bind(requester.is_admin)
-        .push(
-            " OR EXISTS(SELECT 1 FROM webknossos.user_team_roles role WHERE role._team=team._id AND role._user=",
-        )
-        .push_arg(requester.id)
-        .push(
-            "))
-    AND EXISTS(SELECT 1 FROM webknossos.organizations_ organization WHERE organization._id=team._organization)",
-        );
-}
-
 /// GET /annotations/:typ/:id/sharedTeams (AnnotationController.getSharedTeams).
 async fn shared_teams(
     State(state): State<AppState>,
@@ -313,15 +273,7 @@ async fn shared_teams(
     if *provided.owner_id() != user.id {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let mut q = Sql::new(
-        "SELECT jsonb_build_object('id',team._id,'name',team.name,'organization',team._organization,'isOrganizationTeam',team.isOrganizationTeam)
-         FROM webknossos.teams_ team
-         WHERE team._id IN (SELECT shared._team FROM webknossos.annotation_sharedTeams shared WHERE shared._annotation=",
-    );
-    q.push_bind(provided.id()).push(") AND ");
-    push_readable_team(&mut q, (&user).into());
-    q.push(" ORDER BY team._id");
-    let teams: Vec<Value> = q.build_query_scalar().fetch_all(&state.pool).await?;
+    let teams = dao::find_shared_teams_json(&state.pool, &user, provided.id()).await?;
     Ok(ResponseJson(teams))
 }
 
@@ -352,40 +304,22 @@ async fn update_shared_teams(
         .collect::<ApiResult<Vec<ObjectId>>>()?;
 
     let mut transaction = state.pool.begin().await?;
-    // teamDAO.findOne for every team before any mutation; FOR SHARE keeps the
-    // validated teams live (soft deletion is an UPDATE) until commit.
+    // teamDAO.findOne for every team before any mutation.
     let mut unique: Vec<&ObjectId> = team_ids.iter().collect();
     unique.sort();
     unique.dedup();
-    let mut q = Sql::new(
-        "SELECT count(*) FROM (SELECT team._id FROM webknossos.teams team
-         WHERE NOT team.isDeleted AND team._id=ANY(",
-    );
-    q.push_bind(&unique).push(") AND ");
-    push_readable_team(&mut q, (&user).into());
-    q.push(" ORDER BY team._id FOR SHARE OF team) locked");
-    let readable: i64 = q.build_query_scalar().fetch_one(&mut *transaction).await?;
+    let readable = dao::count_readable_teams_for_share(&mut transaction, &user, &unique).await?;
     if usize::try_from(readable).ok() != Some(unique.len()) {
         return Err(ApiError::bad_request(ACCESSING_TEAM_FAILED));
     }
     // AnnotationDAO.updateTeamsForSharedAnnotation: update access on the live
     // persisted row. Compounds have none and fail here, like Scala.
-    if !crate::annotation::access::lock_update_access(&mut transaction, &user, provided.id())
-        .await?
-    {
+    if !crate::annotation::dao::lock_update_access(&mut transaction, &user, provided.id()).await? {
         return Err(ApiError::bad_request(
             crate::msg::annotation::NO_UPDATE_ACCESS,
         ));
     }
-    // teamDAO.findSharedTeamsForAnnotation under the requester's access
-    // context: the previously shared teams the requester can read.
-    let mut q = Sql::new(
-        "SELECT team._id FROM webknossos.teams_ team
-         WHERE team._id IN (SELECT shared._team FROM webknossos.annotation_sharedTeams shared WHERE shared._annotation=",
-    );
-    q.push_bind(provided.id()).push(") AND ");
-    push_readable_team(&mut q, (&user).into());
-    let old_team_ids: Vec<ObjectId> = q.build_query_scalar().fetch_all(&mut *transaction).await?;
+    let old_team_ids = dao::find_shared_team_ids(&mut transaction, &user, provided.id()).await?;
     let pending_emails = notification_emails
         .prepare_share_emails(
             &mut transaction,
@@ -397,25 +331,17 @@ async fn update_shared_teams(
             &[&user.id, provided.owner_id()],
         )
         .await;
-    sqlx::query("DELETE FROM webknossos.annotation_sharedTeams WHERE _annotation=$1")
-        .bind(provided.id())
-        .execute(&mut *transaction)
-        .await?;
+    dao::delete_shared_teams(&mut transaction, provided.id()).await?;
     // Duplicates are not deduplicated: the primary key rejects them and the
     // whole replacement rolls back.
-    sqlx::query(
-        "INSERT INTO webknossos.annotation_sharedTeams(_annotation,_team) SELECT $1,team FROM unnest($2::text[]) team",
-    )
-    .bind(provided.id())
-    .bind(&team_ids)
-    .execute(&mut *transaction)
-    .await
-    .map_err(|error| match &error {
-        sqlx::Error::Database(db) if db.code().as_deref() == Some("23505") => {
-            ApiError::bad_request(SHARED_TEAMS_UPDATE_FAILED)
-        }
-        _ => error.into(),
-    })?;
+    dao::insert_shared_teams(&mut transaction, provided.id(), &team_ids)
+        .await
+        .map_err(|error| match &error {
+            sqlx::Error::Database(db) if db.code().as_deref() == Some("23505") => {
+                ApiError::bad_request(SHARED_TEAMS_UPDATE_FAILED)
+            }
+            _ => error.into(),
+        })?;
     transaction.commit().await?;
     notification_emails.send_share_emails(&state.pool, pending_emails, &user.id);
     Ok(ResponseJson(team_ids))

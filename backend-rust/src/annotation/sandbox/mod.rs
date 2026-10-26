@@ -9,6 +9,7 @@ use sqlx::PgConnection;
 
 use crate::{
     AppState,
+    annotation::dao,
     annotation::metadata::PUBLIC_WRITES_FAILED,
     auth::{AuthUser, OptionalAuthUser},
     error::{ApiError, ApiResult},
@@ -93,13 +94,7 @@ async fn public_json(
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
     let annotation = sandbox_metadata(dataset_id, Utc::now());
-    let dataset: Option<(String, String, String)> = sqlx::query_as(
-        "SELECT d.name,o._id,trim(d._dataStore) FROM webknossos.datasets_ d
-         JOIN webknossos.organizations_ o ON o._id=d._organization WHERE d._id=$1",
-    )
-    .bind(dataset_id)
-    .fetch_optional(&mut *connection)
-    .await?;
+    let dataset = dao::find_dataset_with_organization(connection, dataset_id).await?;
     let (dataset_name, organization, datastore) =
         dataset.ok_or_else(|| ApiError::not_found(crate::msg::annotation::DATASET_MISSING))?;
     let data_store = crate::dataset::routes::public_datastore_json_on_connection(
@@ -108,12 +103,9 @@ async fn public_json(
         jobs_enabled,
     )
     .await?;
-    let tracing_store: Value = sqlx::query_scalar(
-        "SELECT jsonb_build_object('name',store.name,'url',store.publicUrl) FROM webknossos.tracingStores_ store LIMIT 1",
-    )
-    .fetch_optional(&mut *connection)
-    .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
+    let tracing_store: Value = dao::find_first_tracing_store_json(connection)
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
     let restrictions = crate::annotation::access::restrictions(&annotation, user);
     let timestamp = annotation.created.timestamp_millis();
     Ok(json!({

@@ -239,26 +239,22 @@ async fn merge_typed(
     // description, Internal, Active, no tags, no tracing time, OwnerOnly.
     let now = now_millis();
     let mut transaction = state.pool.begin().await?;
-    sqlx::query(
-        "INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,description,visibility,name,state,tags,tracingTime,typ,collaborationMode,created,modified,isDeleted)
-         VALUES($1,$2,NULL,$3,'','Internal','','Active','{}',NULL,'Explorational','OwnerOnly',$4,$4,false)",
+    crate::annotation::dao::insert_one_merged(
+        &mut transaction,
+        &new_id,
+        annotation_b.dataset_id(),
+        &user.id,
+        now,
     )
-    .bind(&new_id)
-    .bind(annotation_b.dataset_id())
-    .bind(&user.id)
-    .bind(now)
-    .execute(&mut *transaction)
     .await?;
     for layer in &merged.annotation_layers {
-        sqlx::query(
-            "INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics)
-             VALUES($1,$2,$3::webknossos.ANNOTATION_LAYER_TYPE,$4,'{}'::jsonb)",
+        crate::annotation::dao::insert_layer(
+            &mut transaction,
+            &new_id,
+            &layer.tracing_id,
+            AnnotationLayerType::from(layer.typ()).as_str(),
+            &layer.name,
         )
-        .bind(&new_id)
-        .bind(&layer.tracing_id)
-        .bind(AnnotationLayerType::from(layer.typ()).as_str())
-        .bind(&layer.name)
-        .execute(&mut *transaction)
         .await?;
     }
     // restrictions = defaultsFor(merged); Fox.assertTrue(allowAccess(..))

@@ -11,6 +11,8 @@
 //! annotation row and its layers are inserted in one transaction. Any failure
 //! before the insert renders `Msg.Annotation.createFailed` (chain:
 //! `createTracingsFailed`, inner message) and keeps a ParamFailure status.
+mod dao;
+
 use axum::{
     Extension, Json, Router,
     extract::{FromRequestParts, State},
@@ -85,13 +87,7 @@ pub(crate) struct DatasetFacts {
 
 /// `datasets_` row by id under GlobalAccessContext; `None` when missing or deleted.
 pub(crate) async fn find_dataset(pool: &PgPool, id: &ObjectId) -> ApiResult<Option<DatasetFacts>> {
-    let row: Option<(String, String, String, bool, bool)> = sqlx::query_as(
-        "SELECT name,_organization,trim(_dataStore),isUsable,voxelSizeFactor IS NOT NULL
-         FROM webknossos.datasets_ WHERE _id=$1",
-    )
-    .bind(id)
-    .fetch_optional(pool)
-    .await?;
+    let row = dao::find_dataset(pool, id).await?;
     Ok(row.map(
         |(name, organization_id, data_store, is_usable, has_voxel_size)| DatasetFacts {
             id: id.clone(),
@@ -150,11 +146,7 @@ pub(crate) async fn data_store_url(
     pool: &PgPool,
     dataset: &DatasetFacts,
 ) -> Result<String, ProviderError> {
-    let url: Option<String> =
-        sqlx::query_scalar("SELECT url FROM webknossos.dataStores_ WHERE name=$1")
-            .bind(&dataset.data_store)
-            .fetch_optional(pool)
-            .await?;
+    let url = dao::find_data_store_url(pool, &dataset.data_store).await?;
     url.ok_or_else(|| ProviderError::failure(DATA_STORE_NOT_FOUND_FOR_DATASET))
 }
 
@@ -402,13 +394,12 @@ async fn create_explorational(
     )
     .await?;
     for layer in &layers {
-        sqlx::query(
-            "UPDATE webknossos.annotation_layers SET statistics=$3 WHERE _annotation=$1 AND tracingId=$2",
+        dao::update_layer_statistics(
+            &mut transaction,
+            &annotation_id,
+            &layer.tracing_id,
+            zeroed_statistics(layer.typ),
         )
-        .bind(&annotation_id)
-        .bind(&layer.tracing_id)
-        .bind(zeroed_statistics(layer.typ))
-        .execute(&mut *transaction)
         .await?;
     }
     let json = crate::annotation::lists::full_json(

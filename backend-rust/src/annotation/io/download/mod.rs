@@ -6,6 +6,8 @@
 //!
 //! Both are UserAwareActions (anonymous requesters may download what they can
 //! read). Responses are buffered in memory (Scala writes a temporary file).
+mod dao;
+
 use std::{
     fmt::Write as _,
     io::{Cursor, Write},
@@ -32,7 +34,7 @@ use crate::{
     },
     annotation::provider::{
         AccessContext, AnnotationIdentifier, AnnotationProvider, AnnotationType, ProviderError,
-        RESTRICTIONS_NOT_FOUND, push_task_list, push_task_read, push_task_type_read,
+        RESTRICTIONS_NOT_FOUND,
     },
     auth::{AuthUser, OptionalAuthUser},
     error::{ApiError, ApiResult},
@@ -40,14 +42,12 @@ use crate::{
     extract::extension,
     job::submission::{Failure, RunError, RunResult},
     proto::{AnnotationUserStateProto, SkeletonTracing, VolumeTracing},
-    sql::Sql,
     stores::client::ServiceError,
     stores::tracing_client::{
         FetchedVolumeLayer, TracingStoreClient, TracingStoreError, VolumeLayerFetch,
         find_first_tracing_store_url,
     },
     system::application_info::MiscState,
-    users,
     util::id::ObjectId,
 };
 
@@ -356,16 +356,6 @@ struct LayerRow {
     name: String,
 }
 
-async fn annotation_layers(pool: &PgPool, annotation_id: &ObjectId) -> ApiResult<Vec<LayerRow>> {
-    Ok(sqlx::query_as(
-        "SELECT tracingId AS tracing_id,typ::text AS typ,name FROM webknossos.annotation_layers
-         WHERE _annotation=$1 ORDER BY tracingId",
-    )
-    .bind(annotation_id)
-    .fetch_all(pool)
-    .await?)
-}
-
 #[derive(Debug, Clone, sqlx::FromRow)]
 struct DatasetRow {
     id: ObjectId,
@@ -390,41 +380,12 @@ impl DatasetRow {
     }
 }
 
-/// DatasetDAO.findOne under GlobalAccessContext (live datasets).
-async fn find_dataset(pool: &PgPool, dataset_id: &ObjectId) -> ApiResult<Option<DatasetRow>> {
-    Ok(sqlx::query_as(
-        "SELECT _id AS id,name,_organization AS organization,
-           CASE WHEN voxelSizeFactor IS NULL THEN NULL
-             ELSE ARRAY[(voxelSizeFactor).x,(voxelSizeFactor).y,(voxelSizeFactor).z] END AS factor,
-           voxelSizeUnit::text AS unit
-         FROM webknossos.datasets_ WHERE _id=$1",
-    )
-    .bind(dataset_id)
-    .fetch_optional(pool)
-    .await?)
-}
-
-async fn organization_exists(pool: &PgPool, organization_id: &str) -> ApiResult<bool> {
-    Ok(
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.organizations_ WHERE _id=$1)")
-            .bind(organization_id)
-            .fetch_one(pool)
-            .await?,
-    )
-}
-
 /// UserService.findOneCached under GlobalAccessContext: the owner's MultiUser id.
 async fn find_user_multi_user(pool: &PgPool, user_id: &ObjectId) -> ApiResult<Option<ObjectId>> {
-    Ok(
-        sqlx::query_scalar("SELECT _multiUser FROM webknossos.users_ WHERE _id=$1")
-            .bind(user_id)
-            .fetch_optional(pool)
-            .await?,
-    )
+    Ok(crate::annotation::dao::find_multi_user_id(pool, user_id).await?)
 }
 
-/// MultiUserDAO.findOne: (firstName, lastName). MultiUserDAO keeps the
-/// default access predicates: global/authenticated TRUE, anonymous FALSE.
+/// MultiUserDAO.findOne: (firstName, lastName), `None` when unreadable.
 async fn find_multi_user(
     pool: &PgPool,
     multi_user_id: &ObjectId,
@@ -433,12 +394,7 @@ async fn find_multi_user(
     if !readable {
         return Ok(None);
     }
-    Ok(
-        sqlx::query_as("SELECT firstName,lastName FROM webknossos.multiUsers_ WHERE _id=$1")
-            .bind(multi_user_id)
-            .fetch_optional(pool)
-            .await?,
-    )
+    dao::find_multi_user_names(pool, multi_user_id).await
 }
 
 /// MultiUser.abbreviatedName.
@@ -447,23 +403,6 @@ fn abbreviated_name(first_name: &str, last_name: &str) -> String {
     format!("{initial}{last_name}")
         .to_lowercase()
         .replace(' ', "_")
-}
-
-/// TaskDAO.findOne: globally (`requester = None`) or under the requester's
-/// read access (`Some(user_opt)`).
-async fn task_exists(
-    pool: &PgPool,
-    task_id: &ObjectId,
-    requester: Option<Option<&AuthUser>>,
-) -> ApiResult<bool> {
-    let mut q = Sql::new("SELECT EXISTS(SELECT 1 FROM webknossos.tasks_ t WHERE t._id=");
-    q.push_bind(task_id);
-    if let Some(user) = requester {
-        q.push(" AND ");
-        push_task_read(&mut q, user.into());
-    }
-    q.push(")");
-    Ok(q.build_query_scalar().fetch_one(pool).await?)
 }
 
 /// TextUtils.normalize (umlaut and accent replacement map).
@@ -522,7 +461,7 @@ async fn name_for_annotation(
             .unwrap_or_default(),
         None => String::new(),
     };
-    let Some(dataset) = find_dataset(pool, annotation.dataset_id).await? else {
+    let Some(dataset) = dao::find_dataset(pool, annotation.dataset_id).await? else {
         return Ok(None);
     };
     let task = annotation.task_id.map_or("explorational", ObjectId::as_str);
@@ -627,14 +566,14 @@ async fn download_saved(
         .await
         .map_err(|error| provider_failure(error).wrap(RESTRICTIONS_NOT_FOUND))?;
     let name = name_for(context, annotation).await?;
-    let layers = annotation_layers(context.pool(), &annotation.id).await?;
+    let layers = dao::find_all_layers(context.pool(), &annotation.id).await?;
     let skeleton_only = layers.iter().any(|layer| layer.typ == "Skeleton")
         && !layers.iter().any(|layer| layer.typ == "Volume");
     // Fox.assertTrue(restrictions.allowDownload(user)) ?~> notAllowed ~> FORBIDDEN.
     if !restrictions.allow_download {
         return Err(Failure::with_status(DOWNLOAD_NOT_ALLOWED, StatusCode::FORBIDDEN).into());
     }
-    let dataset = find_dataset(context.pool(), &annotation.dataset_id)
+    let dataset = dao::find_dataset(context.pool(), &annotation.dataset_id)
         .await?
         .ok_or_else(|| {
             RunError::from(Failure::with_status(
@@ -645,7 +584,7 @@ async fn download_saved(
                 StatusCode::NOT_FOUND,
             ))
         })?;
-    if !organization_exists(context.pool(), &dataset.organization).await? {
+    if !dao::organization_exists(context.pool(), &dataset.organization).await? {
         return Err(Failure::with_status(
             crate::msg::organization::not_found(&dataset.organization),
             StatusCode::NOT_FOUND,
@@ -804,7 +743,7 @@ async fn skeleton_to_file(
     // access context; an unreadable task is Fox.empty.
     let task_id = match &download.annotation.task_id {
         Some(task_id) => {
-            if !task_exists(context.pool(), task_id, Some(context.user)).await? {
+            if !dao::task_exists(context.pool(), task_id, Some(context.user)).await? {
                 return Err(fail(TASK_NOT_FOUND));
             }
             Some(task_id)
@@ -874,7 +813,7 @@ async fn volume_or_hybrid_to_file(
         .ok_or_else(|| fail(crate::msg::user::NOT_FOUND_NO_ID))?;
     let task_id = match &download.annotation.task_id {
         Some(task_id) => {
-            if !task_exists(context.pool(), task_id, None).await? {
+            if !dao::task_exists(context.pool(), task_id, None).await? {
                 return Err(fail(TASK_NOT_FOUND));
             }
             Some(task_id)
@@ -1039,9 +978,6 @@ struct CompoundRow {
     description: String,
 }
 
-const COMPOUND_COLUMNS: &str = "a._id AS id,a._dataset AS dataset_id,a._task AS task_id,\
-     a._user AS owner_id,a.description";
-
 /// downloadProject / downloadTask / downloadTaskType: a logged-in team
 /// manager or administrator of the parent's team receives a zip of the
 /// finished Task annotations (`AnnotationService.zipAnnotations`).
@@ -1055,45 +991,49 @@ async fn download_compound(
     let pool = context.pool();
     let (annotations, zip_name) = match typ {
         AnnotationType::CompoundProject => {
-            let (team, name) = find_project(pool, user, id).await?.ok_or_else(|| {
+            let (team, name) = dao::find_project(pool, user, id).await?.ok_or_else(|| {
                 RunError::from(Failure::with_status(
                     crate::msg::project::not_found(id),
                     StatusCode::NOT_FOUND,
                 ))
             })?;
             assert_team_manager_or_admin(pool, user, &team).await?;
-            (finished_project_annotations(pool, id).await?, name)
+            (dao::finished_project_annotations(pool, id).await?, name)
         }
         AnnotationType::CompoundTask => {
-            let project = find_task_project(pool, user, id).await?.ok_or_else(|| {
-                RunError::from(Failure::with_status(
-                    crate::msg::task::not_found(id),
-                    StatusCode::NOT_FOUND,
-                ))
-            })?;
-            let (team, _) = find_project(pool, user, &project).await?.ok_or_else(|| {
-                RunError::from(Failure::with_status(
-                    crate::msg::project::not_found(&project),
-                    StatusCode::NOT_FOUND,
-                ))
-            })?;
+            let project = dao::find_task_project(pool, user, id)
+                .await?
+                .ok_or_else(|| {
+                    RunError::from(Failure::with_status(
+                        crate::msg::task::not_found(id),
+                        StatusCode::NOT_FOUND,
+                    ))
+                })?;
+            let (team, _) = dao::find_project(pool, user, &project)
+                .await?
+                .ok_or_else(|| {
+                    RunError::from(Failure::with_status(
+                        crate::msg::project::not_found(&project),
+                        StatusCode::NOT_FOUND,
+                    ))
+                })?;
             assert_team_manager_or_admin(pool, user, &team).await?;
             (
-                finished_task_annotations(pool, user, std::slice::from_ref(id)).await?,
+                dao::finished_task_annotations(pool, user, std::slice::from_ref(id)).await?,
                 id.to_string(),
             )
         }
         AnnotationType::CompoundTaskType => {
-            let (team, summary) = find_task_type(pool, user, id).await?.ok_or_else(|| {
+            let (team, summary) = dao::find_task_type(pool, user, id).await?.ok_or_else(|| {
                 RunError::from(Failure::with_status(
                     crate::msg::task_type::not_found(id),
                     StatusCode::NOT_FOUND,
                 ))
             })?;
             assert_team_manager_or_admin(pool, user, &team).await?;
-            let tasks = task_type_tasks(pool, user, id).await?;
+            let tasks = dao::task_type_tasks(pool, user, id).await?;
             (
-                finished_task_annotations(pool, user, &tasks).await?,
+                dao::finished_task_annotations(pool, user, &tasks).await?,
                 summary,
             )
         }
@@ -1111,42 +1051,6 @@ async fn download_compound(
     ))
 }
 
-/// ProjectDAO.findOne under the requester: (team, name).
-async fn find_project(
-    pool: &PgPool,
-    user: &AuthUser,
-    project_id: &ObjectId,
-) -> ApiResult<Option<(ObjectId, String)>> {
-    let mut q = Sql::new("SELECT p._team,p.name FROM webknossos.projects_ p WHERE p._id=");
-    q.push_bind(project_id).push(" AND ");
-    crate::projects::push_read_access(&mut q, user.into());
-    Ok(q.build_query_as().fetch_optional(pool).await?)
-}
-
-/// TaskDAO.findOne under the requester: the task's project.
-async fn find_task_project(
-    pool: &PgPool,
-    user: &AuthUser,
-    task_id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
-    let mut q = Sql::new("SELECT t._project FROM webknossos.tasks_ t WHERE t._id=");
-    q.push_bind(task_id).push(" AND ");
-    push_task_read(&mut q, user.into());
-    Ok(q.build_query_scalar().fetch_optional(pool).await?)
-}
-
-/// TaskTypeDAO.findOne under the requester: (team, summary).
-async fn find_task_type(
-    pool: &PgPool,
-    user: &AuthUser,
-    task_type_id: &ObjectId,
-) -> ApiResult<Option<(ObjectId, String)>> {
-    let mut q = Sql::new("SELECT tt._team,tt.summary FROM webknossos.taskTypes_ tt WHERE tt._id=");
-    q.push_bind(task_type_id).push(" AND ");
-    push_task_type_read(&mut q, user.into());
-    Ok(q.build_query_as().fetch_optional(pool).await?)
-}
-
 /// `Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, team)) ?~>
 /// notAllowed ~> FORBIDDEN`. A missing team is Msg.Team.adminNotAllowed
 /// (kept as cause); team-manager roles count only inside the user's
@@ -1156,15 +1060,7 @@ async fn assert_team_manager_or_admin(
     user: &AuthUser,
     team_id: &ObjectId,
 ) -> RunResult<()> {
-    let team: Option<(String, bool)> = sqlx::query_as(
-        "SELECT team._organization,EXISTS(SELECT 1 FROM webknossos.user_team_roles role
-           WHERE role._team=team._id AND role._user=$2 AND role.isTeamManager)
-         FROM webknossos.teams_ team WHERE team._id=$1",
-    )
-    .bind(team_id)
-    .bind(&user.id)
-    .fetch_optional(pool)
-    .await?;
+    let team = crate::annotation::dao::find_team_with_manager_flag(pool, user, team_id).await?;
     match team {
         None => Err(Failure::new(crate::msg::team::ADMIN_NOT_ALLOWED)
             .wrap(crate::msg::NOT_ALLOWED)
@@ -1177,76 +1073,6 @@ async fn assert_team_manager_or_admin(
         }
         Some(_) => Err(not_allowed()),
     }
-}
-
-/// AnnotationDAO.findAllFinishedForProject (no annotation access predicate;
-/// Scala has no ORDER BY, ordered by creation for determinism).
-async fn finished_project_annotations(
-    pool: &PgPool,
-    project_id: &ObjectId,
-) -> ApiResult<Vec<CompoundRow>> {
-    let mut q = Sql::new("SELECT ");
-    q.push(COMPOUND_COLUMNS)
-        .push(
-            " FROM webknossos.annotations_ a
-         JOIN webknossos.tasks_ t ON a._task=t._id
-         WHERE t._project=",
-        )
-        .push_bind(project_id)
-        .push(" AND a.typ='Task' AND a.state='Finished' ORDER BY a.created,a._id");
-    Ok(q.build_query_as().fetch_all(pool).await?)
-}
-
-/// TaskDAO.findAllByTaskType: list access, at most 1000 tasks.
-async fn task_type_tasks(
-    pool: &PgPool,
-    user: &AuthUser,
-    task_type_id: &ObjectId,
-) -> ApiResult<Vec<ObjectId>> {
-    let mut q = Sql::new("SELECT t._id FROM webknossos.tasks_ t WHERE t._taskType=");
-    q.push_bind(task_type_id).push(" AND ");
-    push_task_list(&mut q, user.into());
-    q.push(" ORDER BY t._id LIMIT 1000");
-    Ok(q.build_query_scalar().fetch_all(pool).await?)
-}
-
-/// `annotationService.annotationsFor(task)` (readable, non-cancelled Task
-/// annotations) per task in order, filtered to Finished.
-async fn finished_task_annotations(
-    pool: &PgPool,
-    user: &AuthUser,
-    task_ids: &[ObjectId],
-) -> ApiResult<Vec<CompoundRow>> {
-    let mut q = Sql::new("SELECT ");
-    q.push(COMPOUND_COLUMNS)
-        .push(" FROM webknossos.annotations_ a JOIN unnest(")
-        .push_bind(task_ids)
-        .push(
-            "::text[]) WITH ORDINALITY AS requested(task, position) ON requested.task=a._task
-         WHERE a.typ='Task' AND a.state='Finished' AND ",
-        );
-    crate::annotation::access::push_read_predicate(&mut q, user.into());
-    q.push(" ORDER BY requested.position,a.created,a._id");
-    Ok(q.build_query_as().fetch_all(pool).await?)
-}
-
-/// DatasetDAO.findOne under the requester (AuthorizedAccessContext, no
-/// sharing token).
-async fn find_readable_dataset(
-    pool: &PgPool,
-    user: &AuthUser,
-    dataset_id: &ObjectId,
-) -> ApiResult<Option<DatasetRow>> {
-    let mut q = Sql::new(
-        "SELECT d._id AS id,d.name,d._organization AS organization,
-           CASE WHEN d.voxelSizeFactor IS NULL THEN NULL
-             ELSE ARRAY[(d.voxelSizeFactor).x,(d.voxelSizeFactor).y,(d.voxelSizeFactor).z] END AS factor,
-           d.voxelSizeUnit::text AS unit
-         FROM webknossos.datasets_ d WHERE d._id=",
-    );
-    q.push_bind(dataset_id).push(" AND ");
-    crate::dataset::access::push_read_predicate(&mut q, (&user.id).into(), None);
-    Ok(q.build_query_as().fetch_optional(pool).await?)
 }
 
 /// Annotation.skeletonTracingId / volumeTracingId: at most one layer of the
@@ -1289,13 +1115,13 @@ async fn download_annotations_for_dataset<'a>(
 ) -> RunResult<Vec<DownloadAnnotation<'a>>> {
     let pool = context.pool();
     let tracing_store = &context.services.tracing_store;
-    let dataset = find_readable_dataset(pool, user, dataset_id)
+    let dataset = dao::find_readable_dataset(pool, user, dataset_id)
         .await?
         .ok_or_else(empty)?;
     let voxel_size = dataset.voxel_size();
     let mut layers = Vec::with_capacity(group.len());
     for row in group {
-        layers.push(annotation_layers(pool, &row.id).await?);
+        layers.push(dao::find_all_layers(pool, &row.id).await?);
     }
     let skeleton_ids = layers
         .iter()
@@ -1386,10 +1212,7 @@ async fn single_download_annotation<'a>(
 ) -> RunResult<DownloadAnnotation<'a>> {
     let pool = context.pool();
     // userService.findOneCached under UserDAO read access ?~> Msg.User.notFound
-    let mut q = Sql::new("SELECT usr._multiUser FROM webknossos.users_ usr WHERE usr._id=");
-    q.push_bind(&row.owner_id).push(" AND ");
-    users::push_read_access(&mut q, (&user.id).into());
-    let multi_user: Option<ObjectId> = q.build_query_scalar().fetch_optional(pool).await?;
+    let multi_user = dao::find_multi_user_id_readable(pool, user, &row.owner_id).await?;
     let multi_user = multi_user.ok_or_else(|| fail(crate::msg::user::NOT_FOUND_NO_ID))?;
     let owner_name = find_multi_user(pool, &multi_user, true)
         .await?
@@ -1397,7 +1220,7 @@ async fn single_download_annotation<'a>(
         .ok_or_else(empty)?;
     let task_id = match &row.task_id {
         Some(task_id) => {
-            if !task_exists(pool, task_id, Some(Some(user))).await? {
+            if !dao::task_exists(pool, task_id, Some(Some(user))).await? {
                 return Err(fail(TASK_NOT_FOUND));
             }
             Some(task_id)
@@ -1413,20 +1236,12 @@ async fn single_download_annotation<'a>(
     let name = name_for_annotation(pool, parts, true)
         .await?
         .ok_or_else(empty)?;
-    let dataset = find_readable_dataset(pool, user, &row.dataset_id)
+    let dataset = dao::find_readable_dataset(pool, user, &row.dataset_id)
         .await?
         .ok_or_else(empty)?;
-    // OrganizationDAO.findOrganizationIdForAnnotation (no access predicate).
-    let organization_id: String = sqlx::query_scalar(
-        "SELECT o._id FROM webknossos.annotations_ a
-         JOIN webknossos.datasets_ d ON a._dataset=d._id
-         JOIN webknossos.organizations_ o ON d._organization=o._id
-         WHERE a._id=$1",
-    )
-    .bind(&row.id)
-    .fetch_optional(pool)
-    .await?
-    .ok_or_else(empty)?;
+    let organization_id = dao::find_organization_id_for_annotation(pool, &row.id)
+        .await?
+        .ok_or_else(empty)?;
     Ok(DownloadAnnotation {
         row,
         skeleton_id,

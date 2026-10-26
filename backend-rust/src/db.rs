@@ -1,5 +1,5 @@
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use sqlx::{ConnectOptions, PgPool};
+use sqlx::{ConnectOptions, PgPool, Postgres, Transaction};
 
 use crate::config::DatabaseConfig;
 use crate::error::{ApiError, ApiResult};
@@ -65,4 +65,13 @@ pub async fn ready(pool: &PgPool) -> ApiResult<()> {
     check_schema(pool).await.map_err(|_| {
         ApiError::service_unavailable(crate::msg::request::DATABASE_SCHEMA_INCOMPATIBLE)
     })
+}
+
+/// Begins a SERIALIZABLE transaction.
+pub async fn begin_serializable(pool: &PgPool) -> ApiResult<Transaction<'static, Postgres>> {
+    let mut transaction = pool.begin().await?;
+    sqlx::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+        .execute(&mut *transaction)
+        .await?;
+    Ok(transaction)
 }

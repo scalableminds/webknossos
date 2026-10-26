@@ -4,15 +4,43 @@ import {
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import { getIdReservationsForBoundingBoxes } from "viewer/model/accessors/tracing_accessor";
+import type { APIAnnotationBookmark } from "types/api_types";
+import {
+  getIdReservationsForBookmarks,
+  getIdReservationsForBoundingBoxes,
+} from "viewer/model/accessors/tracing_accessor";
 import { getIdReservationsForSegmentationLayer } from "viewer/model/accessors/volumetracing_accessor";
-import { dispatchGetNewIdAsync, setIdReservationsAction } from "viewer/model/actions/actions";
-import { setUserBoundingBoxesAction } from "viewer/model/actions/annotation_actions";
+import {
+  ANNOTATION_SCOPED_TRACING_ID,
+  dispatchGetNewIdAsync,
+  setIdReservationsAction,
+} from "viewer/model/actions/actions";
+import {
+  addBookmarkAction,
+  setUserBoundingBoxesAction,
+} from "viewer/model/actions/annotation_actions";
 import { setSegmentGroupsAction } from "viewer/model/actions/volumetracing_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, type TestContext, vi } from "vitest";
+
+function createBookmark(id: number): APIAnnotationBookmark {
+  return {
+    id,
+    created: 0,
+    name: null,
+    state: {
+      position: [0, 0, 0],
+      mode: "orthogonal",
+      zoomStep: 1,
+      clippingDistance: 50,
+      clipSkeletonToCurrentSection: false,
+      layers: [],
+    },
+    thumbnailDataBase64: null,
+  };
+}
 
 describe("ID reservation saga (concurrent collaboration mode)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -437,6 +465,38 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
 
     await task.toPromise();
   });
+
+  it("should fetch new Bookmark IDs, using the annotation-scoped tracing id", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    const { annotationId } = Store.getState().annotation;
+    Store.dispatch(addBookmarkAction(createBookmark(600)));
+
+    mockReserveIdsEndpoint(mocks, [600, 601, 602, 603, 604]);
+
+    const task = startSaga(function* task() {
+      const id = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, ANNOTATION_SCOPED_TRACING_ID, "Bookmark"),
+      );
+
+      // ID 600 is filtered because a bookmark with that id already exists.
+      expect(id).toBe(601);
+      expect(vi.mocked(mocks.Request.sendJSONReceiveJSON)).toHaveBeenCalledWith(
+        expect.stringContaining(`/api/annotations/${annotationId}/reserveIds`),
+        expect.objectContaining({
+          data: expect.objectContaining({ tracingId: "", domain: "Bookmark" }),
+        }),
+      );
+      expect(getIdReservationsForBookmarks(Store.getState())).toEqual([
+        { id: 600, used: false },
+        { id: 601, used: true },
+        { id: 602, used: false },
+        { id: 603, used: false },
+        { id: 604, used: false },
+      ]);
+    });
+
+    await task.toPromise();
+  });
 });
 
 describe("ID reservation saga (exclusive collaboration mode)", () => {
@@ -536,6 +596,24 @@ describe("ID reservation saga (exclusive collaboration mode)", () => {
 
       const id7 = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "BoundingBox"));
       expect(id7).toBe(7);
+    });
+
+    await task.toPromise();
+  });
+
+  it("should assign new Bookmark IDs, using the annotation-scoped tracing id", async () => {
+    const task = startSaga(function* task() {
+      Store.dispatch(addBookmarkAction(createBookmark(3)));
+
+      const id4 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, ANNOTATION_SCOPED_TRACING_ID, "Bookmark"),
+      );
+      expect(id4).toBe(4);
+
+      const id5 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, ANNOTATION_SCOPED_TRACING_ID, "Bookmark"),
+      );
+      expect(id5).toBe(5);
     });
 
     await task.toPromise();

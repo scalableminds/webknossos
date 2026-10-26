@@ -20,7 +20,10 @@ private def protoEnumFormat[E <: GeneratedEnum](companion: GeneratedEnumCompanio
   Format(
     Reads {
       case JsString(name) =>
-        companion.fromName(name).map(JsSuccess(_)).getOrElse(JsError(s"Invalid ${companion.scalaDescriptor.name}: $name"))
+        companion
+          .fromName(name)
+          .map(JsSuccess(_))
+          .getOrElse(JsError(s"Invalid ${companion.scalaDescriptor.name}: $name"))
       case _ => JsError(s"Expected string for ${companion.scalaDescriptor.name}")
     },
     Writes(value => JsString(value.name))

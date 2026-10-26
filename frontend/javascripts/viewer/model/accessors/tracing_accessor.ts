@@ -145,6 +145,10 @@ export function getIdReservationsForBoundingBoxes(state: WebknossosState): IdRes
   return state.localAnnotationState.idReservationsForBoundingBoxes;
 }
 
+export function getIdReservationsForBookmarks(state: WebknossosState): IdReservation[] {
+  return state.localAnnotationState.idReservationsForBookmarks;
+}
+
 export type MipEnabledBBox = { bbox: UserBoundingBox; configs: MipLayerConfig[] };
 
 // Layer bounding boxes are read-only and not part of the annotation's user bounding boxes, so they

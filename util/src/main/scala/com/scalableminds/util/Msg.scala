@@ -63,6 +63,8 @@ object Msg {
     val notActive: String = "The annotation is not active and cannot be finished."
     val finishNotAllowed: String = "Could not access annotation to finish it."
     def reserveTooManyIds(limit: Int): String = s"Cannot reserve more than $limit ids in one request."
+    def reservedIdsTracingIdMismatch(domain: String): String =
+      s"The tracingId must be empty for annotation-scoped id domains and set for all others (domain $domain)."
     val countListableFailed: String = "Could not count listable annotations."
     val duplicateFailed: String = "Could not duplicate annotation."
     val nameNotAvailable: String = "Could not determine name for annotation."

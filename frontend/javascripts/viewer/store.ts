@@ -723,6 +723,8 @@ export type LocalAnnotationState = {
   // updateUserBoundingBoxes in annotation_reducer.ts), so their id reservations are
   // tracked here on the annotation level instead of per segmentation layer.
   readonly idReservationsForBoundingBoxes: IdReservation[];
+  // Bookmarks belong to the annotation, see ANNOTATION_SCOPED_TRACING_ID.
+  readonly idReservationsForBookmarks: IdReservation[];
 };
 
 export type StoreDataset = APIDataset & {

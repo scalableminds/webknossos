@@ -1119,7 +1119,8 @@ export type AnnotationIdDomain =
   | "Tree"
   | "Node"
   | "TreeGroup"
-  | "BoundingBox";
+  | "BoundingBox"
+  | "Bookmark";
 
 export type APIMeshFileInfo = {
   name: string;

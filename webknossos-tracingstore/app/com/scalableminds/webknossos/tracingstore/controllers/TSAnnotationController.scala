@@ -244,6 +244,11 @@ class TSAnnotationController @Inject() (
                       case f: Failure => f.toFox
                     }
                   } yield maxBboxId
+                case AnnotationIdDomain.Bookmark =>
+                  // Bookmarks belong to the annotation, their tracingId is empty.
+                  for {
+                    annotation <- annotationService.get(annotationId, version = None)
+                  } yield annotation.bookmarks.map(_.id).maxOption.map(_.toLong).getOrElse(fallbackId)
               }
             } yield Ok(Json.toJson(largestIdWithFallback))
           }

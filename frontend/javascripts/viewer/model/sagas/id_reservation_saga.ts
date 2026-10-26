@@ -5,22 +5,22 @@ import { actionChannel, call, fork, put } from "typed-redux-saga";
 import type { AnnotationIdDomain } from "types/api_types";
 import Constants from "viewer/constants";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
-import type {
-  EditableMapping,
-  IdReservation,
-  SkeletonTracing,
-  VolumeTracing,
-  WebknossosState,
-} from "viewer/store";
-import { getIdReservationsForBoundingBoxes, getTracingById } from "../accessors/tracing_accessor";
-import { getIdReservationsForSegmentationLayer } from "../accessors/volumetracing_accessor";
-import type { GetNewIdAction, ReservableIdDomain } from "../actions/actions";
+import type { IdReservation, SkeletonTracing, VolumeTracing, WebknossosState } from "viewer/store";
 import {
+  getIdReservationsForBookmarks,
+  getIdReservationsForBoundingBoxes,
+  getTracingById,
+} from "../accessors/tracing_accessor";
+import { getIdReservationsForSegmentationLayer } from "../accessors/volumetracing_accessor";
+import {
+  ANNOTATION_SCOPED_TRACING_ID,
+  type GetNewIdAction,
   type IdsReplenishedAction,
   type IdsReplenishmentFailedAction,
   idsReplenishedAction,
   idsReplenishmentFailedAction,
   type RequestIdReplenishmentAction,
+  type ReservableIdDomain,
   requestIdReplenishmentAction,
   setIdReservationsAction,
 } from "../actions/actions";
@@ -36,35 +36,55 @@ const RETRY_DELAY_MULTIPLIER = import.meta.env.MODE === "test" ? 0.1 : 2;
 type SupportedTracing = VolumeTracing | SkeletonTracing;
 
 function isSupportedDomain(domain: AnnotationIdDomain): domain is ReservableIdDomain {
-  return domain === "SegmentGroup" || domain === "BoundingBox";
+  return domain === "SegmentGroup" || domain === "BoundingBox" || domain === "Bookmark";
 }
 
+// Bookmarks belong to the annotation instead of a tracing, so their reservations use
+// ANNOTATION_SCOPED_TRACING_ID in place of a tracing id.
 // SegmentGroup reservations only make sense for volume tracings (segment groups don't exist
 // on skeleton tracings). BoundingBox reservations are valid for both, since user bounding boxes
 // are mirrored across all tracings of an annotation (see updateUserBoundingBoxes in
 // annotation_reducer.ts).
-function isTracingSupportedForDomain(
-  tracing: SkeletonTracing | VolumeTracing | EditableMapping,
+function isScopeSupportedForDomain(
+  state: WebknossosState,
+  tracingId: string,
   domain: ReservableIdDomain,
-): tracing is SupportedTracing {
+): boolean {
+  if (domain === "Bookmark") {
+    return tracingId === ANNOTATION_SCOPED_TRACING_ID;
+  }
+  const tracing = getTracingById(state, tracingId);
   if (domain === "SegmentGroup") {
     return tracing.type === "volume";
   }
   return tracing.type === "volume" || tracing.type === "skeleton";
 }
 
-function getExistingIdSet(tracing: SupportedTracing, domain: ReservableIdDomain): Set<number> {
-  if (domain === "SegmentGroup") {
-    return getGroupIdSet((tracing as VolumeTracing).segmentGroups);
+function getExistingIds(
+  state: WebknossosState,
+  tracingId: string,
+  domain: ReservableIdDomain,
+): number[] {
+  if (domain === "Bookmark") {
+    return state.annotation.bookmarks.map((bookmark) => bookmark.id);
   }
-  return new Set(tracing.userBoundingBoxes.map((bbox) => bbox.id));
+  const tracing = getTracingById(state, tracingId) as SupportedTracing;
+  if (domain === "SegmentGroup") {
+    return Array.from(getGroupIdSet((tracing as VolumeTracing).segmentGroups));
+  }
+  return tracing.userBoundingBoxes.map((bbox) => bbox.id);
 }
 
-function getMaxExistingId(tracing: SupportedTracing, domain: ReservableIdDomain): number {
+function getMaxExistingId(
+  state: WebknossosState,
+  tracingId: string,
+  domain: ReservableIdDomain,
+): number {
   if (domain === "SegmentGroup") {
-    return getMaximumGroupId((tracing as VolumeTracing).segmentGroups);
+    const tracing = getTracingById(state, tracingId) as VolumeTracing;
+    return getMaximumGroupId(tracing.segmentGroups);
   }
-  return Math.max(0, ...tracing.userBoundingBoxes.map((bbox) => bbox.id));
+  return Math.max(0, ...getExistingIds(state, tracingId, domain));
 }
 
 function getReservationsForDomain(
@@ -74,6 +94,9 @@ function getReservationsForDomain(
 ): IdReservation[] {
   if (domain === "BoundingBox") {
     return getIdReservationsForBoundingBoxes(state);
+  }
+  if (domain === "Bookmark") {
+    return getIdReservationsForBookmarks(state);
   }
   return getIdReservationsForSegmentationLayer(state, tracingId)[domain];
 }
@@ -88,6 +111,7 @@ export default function* idReservationSaga(): Saga<void> {
   // replenishment requests for multiple tracings. However, this is probably overkill right now.
   yield* fork(replenishmentLoop, "SegmentGroup");
   yield* fork(replenishmentLoop, "BoundingBox");
+  yield* fork(replenishmentLoop, "Bookmark");
 
   while (true) {
     const action = (yield* take(getNewIdActionChannel)) as GetNewIdAction;
@@ -96,7 +120,8 @@ export default function* idReservationSaga(): Saga<void> {
 }
 
 function getUsableReservations(
-  tracing: SupportedTracing,
+  state: WebknossosState,
+  tracingId: string,
   reservations: IdReservation[],
   domain: ReservableIdDomain,
 ) {
@@ -111,7 +136,7 @@ function getUsableReservations(
    * we can simply compare the maximum known ID against the current reservations and
    * clean up by that.
    */
-  const existingIdSet = getExistingIdSet(tracing, domain);
+  const existingIdSet = new Set(getExistingIds(state, tracingId, domain));
 
   return reservations.filter(({ used, id }) => !used && !existingIdSet.has(id));
 }
@@ -126,15 +151,21 @@ function* replenishmentLoop(domain: ReservableIdDomain): Saga<void> {
   while (true) {
     const action = (yield* take(replenishChannel)) as RequestIdReplenishmentAction;
 
-    const tracing = yield* select((state) => getTracingById(state, action.tracingId));
-    if (!isTracingSupportedForDomain(tracing, domain)) {
+    const isSupported = yield* select((state) =>
+      isScopeSupportedForDomain(state, action.tracingId, domain),
+    );
+    if (!isSupported) {
       continue;
     }
 
-    const reservations = yield* select((state) =>
-      getReservationsForDomain(state, action.tracingId, domain),
+    const usableReservations = yield* select((state) =>
+      getUsableReservations(
+        state,
+        action.tracingId,
+        getReservationsForDomain(state, action.tracingId, domain),
+        domain,
+      ),
     );
-    const usableReservations = getUsableReservations(tracing, reservations, domain);
     if (usableReservations.length < IDEAL_ID_BUFFER_SIZE / 2) {
       // This will block until new reservations were fetched.
       try {
@@ -160,18 +191,18 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
     return;
   }
 
-  const tracing = yield* select((state) => getTracingById(state, tracingId));
-  if (!isTracingSupportedForDomain(tracing, domain)) {
-    const error = new Error(
-      `Domain "${domain}" is not supported for tracing type "${tracing.type}".`,
-    );
+  const isSupported = yield* select((state) => isScopeSupportedForDomain(state, tracingId, domain));
+  if (!isSupported) {
+    const error = new Error(`Domain "${domain}" is not supported for "${tracingId}".`);
     console.warn(error.message);
     action.errorCallback(error);
     return;
   }
 
   const reservations = yield* select((state) => getReservationsForDomain(state, tracingId, domain));
-  const usableReservations = getUsableReservations(tracing, reservations, domain);
+  const usableReservations = yield* select((state) =>
+    getUsableReservations(state, tracingId, reservations, domain),
+  );
 
   if (usableReservations.length > 0) {
     // Mark the first usable reservation as used, preserving all other entries (including
@@ -224,16 +255,17 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
 }
 
 function* fetchNewReservations(tracingId: string, domain: ReservableIdDomain): Saga<void> {
-  const tracing = yield* select((state) => getTracingById(state, tracingId));
-
-  if (!isTracingSupportedForDomain(tracing, domain)) {
+  const isSupported = yield* select((state) => isScopeSupportedForDomain(state, tracingId, domain));
+  if (!isSupported) {
     return;
   }
 
   const unfilteredReservations = yield* select((state) =>
     getReservationsForDomain(state, tracingId, domain),
   );
-  const usableReservations = getUsableReservations(tracing, unfilteredReservations, domain);
+  const usableReservations = yield* select((state) =>
+    getUsableReservations(state, tracingId, unfilteredReservations, domain),
+  );
   const numberOfIdsToReserve = Math.max(1, IDEAL_ID_BUFFER_SIZE - usableReservations.length);
 
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
@@ -263,7 +295,7 @@ function* fetchNewReservations(tracingId: string, domain: ReservableIdDomain): S
       }
     }
   } else {
-    const maxExistingId = getMaxExistingId(tracing, domain);
+    const maxExistingId = yield* select((state) => getMaxExistingId(state, tracingId, domain));
     const maxReservationId =
       unfilteredReservations.length > 0 ? Math.max(...unfilteredReservations.map((r) => r.id)) : 0;
     const startId = Math.max(maxExistingId, maxReservationId) + 1;
@@ -272,12 +304,16 @@ function* fetchNewReservations(tracingId: string, domain: ReservableIdDomain): S
 
   // Re-read fresh state: the async call above may have suspended this saga long enough for
   // another request to mark some reservations as used in the meantime.
-  const freshTracing = yield* select((state) => getTracingById(state, tracingId));
-  const freshUnfilteredReservations = isTracingSupportedForDomain(freshTracing, domain)
+  const isStillSupported = yield* select((state) =>
+    isScopeSupportedForDomain(state, tracingId, domain),
+  );
+  const freshUnfilteredReservations = isStillSupported
     ? yield* select((state) => getReservationsForDomain(state, tracingId, domain))
     : [];
-  const freshUsableReservations = isTracingSupportedForDomain(freshTracing, domain)
-    ? getUsableReservations(freshTracing, freshUnfilteredReservations, domain)
+  const freshUsableReservations = isStillSupported
+    ? yield* select((state) =>
+        getUsableReservations(state, tracingId, freshUnfilteredReservations, domain),
+      )
     : [];
   // Preserve IDs that were marked used during the async call (not already sent in releasedIds),
   // so they can be included in idsToRelease on the next replenishment.

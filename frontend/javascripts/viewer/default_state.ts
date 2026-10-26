@@ -336,6 +336,7 @@ const defaultState: WebknossosState = {
   },
   localAnnotationState: {
     idReservationsForBoundingBoxes: [],
+    idReservationsForBookmarks: [],
   },
   operationContext: {
     activeOperations: [],

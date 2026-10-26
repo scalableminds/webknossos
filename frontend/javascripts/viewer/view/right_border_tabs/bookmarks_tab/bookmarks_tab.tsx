@@ -1,5 +1,6 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { Empty, List, Space } from "antd";
+import { handleGenericError } from "libs/error_handling";
 import { useWkSelector } from "libs/react_hooks";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
@@ -7,18 +8,15 @@ import type { APIAnnotationBookmark } from "types/api_types";
 import { applyBookmarkState } from "viewer/controller/apply_url_state";
 import { bookmarkStateToUrlState, urlStateToBookmarkState } from "viewer/controller/bookmark_state";
 import UrlManager from "viewer/controller/url_manager";
+import { ANNOTATION_SCOPED_TRACING_ID, dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addBookmarkAction } from "viewer/model/actions/annotation_actions";
 import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import { setViewModeAction } from "viewer/model/actions/settings_actions";
-import { max } from "viewer/model/helpers/iterator_utils";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 import { addBookmark } from "viewer/model/sagas/volume/update_actions";
 import Store from "viewer/store";
 import { captureBookmarkThumbnail } from "viewer/view/rendering_utils";
 import ButtonComponent from "../../components/button_component";
-
-function getMaximumBookmarkId(bookmarks: APIAnnotationBookmark[]): number {
-  return max(bookmarks.values().map((bookmark) => bookmark.id)) ?? 0;
-}
 
 export default function BookmarksTab() {
   const bookmarks = useWkSelector((state) => state.annotation.bookmarks);
@@ -32,9 +30,16 @@ export default function BookmarksTab() {
     } catch (error) {
       console.error("Could not capture bookmark thumbnail.", error);
     }
-    // Determine the id only after the await so that concurrently added bookmarks don't collide.
+    let id: number;
+    try {
+      id = await dispatchGetNewIdAsync(dispatch, ANNOTATION_SCOPED_TRACING_ID, "Bookmark");
+    } catch (error) {
+      handleGenericError(error as Error, "Could not create a new bookmark.");
+      return;
+    }
+    await waitUntilRebaseFinished();
     const bookmark: APIAnnotationBookmark = {
-      id: getMaximumBookmarkId(Store.getState().annotation.bookmarks) + 1,
+      id,
       created: Date.now(),
       name: null,
       state,

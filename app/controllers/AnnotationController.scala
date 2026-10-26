@@ -586,6 +586,7 @@ class AnnotationController @Inject() (
           ) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
           _ <- Fox.assertTrue(restrictions.allowAccess(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
           domainValidated <- AnnotationIdDomain.fromString(domain).toFox
+          _ <- annotationIdReservationService.assertTracingIdFitsDomain(tracingId, domainValidated) ~> BAD_REQUEST
           ids: Seq[Long] <- annotationIdReservationService.reservedIds(
             id,
             tracingId,
@@ -608,6 +609,10 @@ class AnnotationController @Inject() (
           // Note: this limit should match what the frontend requests, see IDEAL_ID_BUFFER_SIZE in id_reservation_saga.
           _ <- Fox.fromBool(request.body.numberOfIdsToReserve <= numberOfIdsToReservePerRequest) ?~> Msg.Annotation
             .reserveTooManyIds(numberOfIdsToReservePerRequest) ~> FORBIDDEN
+          _ <- annotationIdReservationService.assertTracingIdFitsDomain(
+            request.body.tracingId,
+            request.body.domain
+          ) ~> BAD_REQUEST
           ids: Seq[Long] <- annotationIdReservationService.reserveIds(
             id,
             request.body.tracingId,

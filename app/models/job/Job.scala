@@ -148,7 +148,6 @@ class JobDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
   // Own jobs, plus all jobs of the organization the requesting user is admin of.
   // Phrased as a set of owner ids (instead of looking up each job owner’s organization) so that
   // the planner can fetch the matching jobs via the _owner index instead of scanning all jobs.
-  // (readAccessQ keeps the per-row lookup, as it is only used for single-job lookups by _id.)
   private def listAccessQ(requestingUserId: ObjectId, prefix: SqlToken) =
     q"""${prefix}_owner IN (
           SELECT $requestingUserId::TEXT

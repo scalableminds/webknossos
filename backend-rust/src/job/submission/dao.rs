@@ -96,7 +96,7 @@ pub(crate) async fn find_all_layers(
     .await
 }
 
-/// DatasetMagsDAO.findMagsForLayer: without pending uploads and, as in Scala, without
+/// DatasetMagDAO.findMagLocatorsForLayer: without pending uploads and, as in Scala, without
 /// an ORDER BY.
 pub(crate) async fn find_mags_for_layer(
     pool: &PgPool,
@@ -204,7 +204,7 @@ pub(crate) async fn insert_one(
     Ok(())
 }
 
-/// CreditTransactionDAO.reserveCredits: a pending reservation that is not yet linked
+/// CreditTransactionDAO.insertNewPendingTransaction: a pending reservation that is not yet linked
 /// to a job.
 pub(crate) async fn insert_pending_credit_transaction(
     connection: &mut PgConnection,
@@ -269,7 +269,7 @@ pub(crate) async fn update_credit_transaction_refunded(
     Ok(())
 }
 
-/// CreditTransactionDAO.setPaidJob: links the reservation to its job.
+/// CreditTransactionDAO.addJobIdToTransaction: links the reservation to its job.
 pub(crate) async fn update_credit_transaction_paid_job(
     connection: &mut PgConnection,
     id: &ObjectId,

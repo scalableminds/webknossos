@@ -241,7 +241,7 @@ pub(crate) async fn insert_one_for_training(
     Ok(())
 }
 
-/// AiModelDAO.insertTrainingAnnotation.
+/// AiModelDAO.insertTrainingAnnotationIdQuery.
 pub(crate) async fn insert_training_annotation(
     connection: &mut PgConnection,
     model_id: &ObjectId,
@@ -299,7 +299,7 @@ pub(crate) async fn count_inferences_of_model(
     )
 }
 
-/// AiModelDAO.updateUploadToPathIsPending(false).
+/// AiModelDAO.finishUploadToPath.
 pub(crate) async fn update_upload_to_path_finished(
     connection: &mut PgConnection,
     id: &ObjectId,

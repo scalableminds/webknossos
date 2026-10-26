@@ -351,7 +351,7 @@ pub(crate) async fn find_organization_id_of_job(
     .await?)
 }
 
-/// WorkflowDAO.upsertWorkflow with a placeholder name. DO NOTHING keeps a concurrently
+/// VoxelyticsDAO.upsertWorkflow with a placeholder name. DO NOTHING keeps a concurrently
 /// created workflow's real name.
 pub(crate) async fn insert_voxelytics_workflow_if_missing(
     connection: &mut PgConnection,

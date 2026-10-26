@@ -639,7 +639,7 @@ pub(crate) async fn usable_data_source(
     Ok((data_source_box, layers))
 }
 
-/// All mags of a data layer (DatasetMagsDAO.findMagsForLayer: without pending
+/// All mags of a data layer (DatasetMagDAO.findMagLocatorsForLayer: without pending
 /// uploads and, as in Scala, without an ORDER BY).
 pub(crate) async fn layer_mags(
     state: &AppState,

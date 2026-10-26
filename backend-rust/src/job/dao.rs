@@ -372,7 +372,7 @@ pub(crate) async fn find_credit_transaction_of_job(
     Ok(q.build_query_as().fetch_optional(&mut *connection).await?)
 }
 
-/// CreditTransactionDAO.reserveCredits for a retried job: a pending reservation of `delta`.
+/// CreditTransactionDAO.insertNewPendingTransaction for a retried job: a pending reservation of `delta`.
 pub(crate) async fn insert_pending_credit_transaction(
     connection: &mut PgConnection,
     id: &ObjectId,

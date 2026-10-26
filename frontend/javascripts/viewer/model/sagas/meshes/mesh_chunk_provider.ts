@@ -20,6 +20,10 @@ import sum from "lodash-es/sum";
 type ChunksPerLod = MeshChunk[][];
 // A null value marks a segment without a mesh.
 export type ChunkListsBySegmentId = Map<bigint, ChunksPerLod | null>;
+// Identifies a chunk within a mesh file, see getChunkDataKey. The byte offset alone is not unique
+// in Neuroglancer precomputed mesh files, because they address chunks relative to the shard of the
+// segment. Adding the segment id makes it unique, because the segment id selects the shard.
+type ChunkDataKey = string;
 
 export type MeshFileLocation = {
   dataStoreUrl: string;
@@ -55,9 +59,7 @@ export class MeshFileCache {
   readonly chunkLists = new LruMapWithSize<bigint, ChunksPerLod | null>((chunksPerLod) =>
     Math.max(1, sum(chunksPerLod?.map((chunks) => chunks.length))),
   );
-  // Keyed by getChunkDataKey. The byte offset alone is not unique in Neuroglancer precomputed mesh
-  // files, because they address chunks relative to the shard of the segment.
-  readonly chunkData = new LruMapWithSize<string, ArrayBuffer>((buffer) => buffer.byteLength);
+  readonly chunkData = new LruMapWithSize<ChunkDataKey, ArrayBuffer>((buffer) => buffer.byteLength);
   // Called after the cache grew. The memory limits apply to the caches of all mesh files together.
   private readonly evictIfNeeded: () => void;
 
@@ -131,8 +133,7 @@ export class MeshFileCache {
   }
 }
 
-// Unique within a mesh file. The segment id selects the shard in Neuroglancer precomputed mesh files.
-function getChunkDataKey(chunk: MeshChunk): string {
+function getChunkDataKey(chunk: MeshChunk): ChunkDataKey {
   return `${chunk.unmappedSegmentId}-${chunk.byteOffset}`;
 }
 

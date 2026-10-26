@@ -9,6 +9,10 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use webknossos_common::{datasource::DataSourceId, enums::LengthUnit, geometry::Vec3Double};
 
+mod dao;
+
+use dao::DuplicateSource;
+
 use crate::{
     AppState,
     auth::AuthUser,
@@ -18,7 +22,6 @@ use crate::{
     extract::{Json as RequestJson, Path, Query},
     remote::datastore::credentials::CredentialInput,
     slack::SlackNotificationService,
-    sql::Sql,
     stores::client::{ServiceClients, ServiceError},
     util::id::{ObjectId, PathObjectId},
 };
@@ -93,18 +96,7 @@ async fn datastore_token(
     let value = URL_SAFE_NO_PAD.encode(random);
     let expiry = i64::try_from(config.expiry.as_millis()).map_err(|_| ApiError::internal())?;
     let idle = i64::try_from(config.idle_timeout.as_millis()).map_err(|_| ApiError::internal())?;
-    sqlx::query(
-        r#"INSERT INTO webknossos.tokens (_id, value, _user, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created)
-           VALUES ($1, $2, $3, statement_timestamp(), statement_timestamp() + $4::bigint * INTERVAL '1 millisecond', $5,
-             'DataStore', statement_timestamp())"#,
-    )
-    .bind(ObjectId::new())
-    .bind(&value)
-    .bind(&user.id)
-    .bind(expiry)
-    .bind(idle)
-    .execute(pool)
-    .await?;
+    dao::insert_datastore_token(pool, &value, &user.id, expiry, idle).await?;
     Ok(value)
 }
 
@@ -160,12 +152,7 @@ async fn explore(
             crate::msg::dataset::explore::DATA_STORE_MUST_BE_EQUAL_FOR_ALL,
         ));
     }
-    let url: Option<String> = sqlx::query_scalar(
-        "SELECT url FROM webknossos.dataStores_ WHERE ($1::text IS NULL AND allowsUpload OR name = $1) ORDER BY name LIMIT 1",
-    )
-    .bind(names[0])
-    .fetch_optional(&state.pool)
-    .await?;
+    let url = dao::find_explore_store_url(&state.pool, names[0].as_ref()).await?;
     let url = url.ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     let token = datastore_token(&state.pool, user, tokens).await?;
     let response = clients
@@ -246,41 +233,6 @@ fn split_path(literal: &str) -> Vec<&str> {
     parts
 }
 
-/// Folders (alias `f`) visible to `user`: below the root of an organization
-/// they administer or manage datasets of, below or above a folder shared with
-/// one of their teams, or above a public dataset or one shared with their teams.
-fn push_visible_folder<'a>(q: &mut Sql<'a>, user: &'a ObjectId) {
-    q.push(
-        r#"(
-        f._id IN (SELECT fp._descendant FROM webknossos.folder_paths fp WHERE fp._ancestor IN (
-          SELECT o._rootFolder FROM webknossos.organizations_ o JOIN webknossos.users_ u ON u._organization = o._id
-          WHERE u._id = "#,
-    )
-    .push_bind(user)
-    .push(
-        r#" AND (u.isAdmin OR u.isDatasetManager)))
-        OR f._id IN (SELECT fp._descendant FROM webknossos.folder_paths fp WHERE fp._ancestor IN (
-          SELECT at._folder FROM webknossos.folder_allowedTeams at
-          JOIN webknossos.user_team_roles tr ON at._team = tr._team WHERE tr._user = "#,
-    )
-    .push_bind(user)
-    .push(
-        r#"))
-        OR f._id IN (SELECT fp._ancestor FROM webknossos.folder_paths fp WHERE fp._descendant IN (
-          SELECT at._folder FROM webknossos.folder_allowedTeams at
-          JOIN webknossos.user_team_roles utr ON at._team = utr._team WHERE utr._user = "#,
-    )
-    .push_bind(user)
-    .push(
-        r#"))
-        OR f._id IN (SELECT fp._ancestor FROM webknossos.folder_paths fp WHERE fp._descendant IN (
-          SELECT d._folder FROM webknossos.datasets_ d LEFT JOIN webknossos.dataset_allowedTeams dt ON dt._dataset = d._id
-          LEFT JOIN webknossos.user_team_roles utr ON dt._team = utr._team WHERE utr._user = "#,
-    )
-    .push_bind(user)
-    .push(" OR d.isPublic)))");
-}
-
 /// FolderService.getOrCreateFromPathLiteral with the user's folder visibility.
 async fn get_or_create_folder(
     connection: &mut sqlx::PgConnection,
@@ -288,23 +240,8 @@ async fn get_or_create_folder(
     literal: &str,
 ) -> ApiResult<ObjectId> {
     let failed = || ApiError::bad_request(crate::msg::dataset::explore::AUTO_ADD_GET_FOLDER_FAILED);
-    let root: ObjectId =
-        sqlx::query_scalar("SELECT _rootFolder FROM webknossos.organizations_ WHERE _id = $1")
-            .bind(&user.organization_id)
-            .fetch_one(&mut *connection)
-            .await?;
-    let mut q = Sql::new(
-        r#"SELECT f._id, f.name, fp._ancestor FROM webknossos.folders_ f JOIN webknossos.folder_paths fp ON f._id = fp._descendant
-           WHERE fp.depth = 1 AND f._id IN (SELECT _descendant FROM webknossos.folder_paths WHERE _ancestor = "#,
-    );
-    q.push_bind(&root).push(") AND ");
-    push_visible_folder(&mut q, &user.id);
-    q.push(" UNION ALL SELECT f._id, f.name, NULL FROM webknossos.folders_ f WHERE f._id = ")
-        .push_bind(&root)
-        .push(" AND ");
-    push_visible_folder(&mut q, &user.id);
-    let folders: Vec<(ObjectId, String, Option<ObjectId>)> =
-        q.build_query_as().fetch_all(&mut *connection).await?;
+    let root = dao::find_root_folder(connection, &user.organization_id).await?;
+    let folders = dao::find_visible_folders(connection, &root, &user.id).await?;
     let root_folder = folders.iter().find(|f| f.2.is_none()).ok_or_else(failed)?;
     let rest = literal.strip_prefix('/').ok_or_else(failed)?;
     let names = split_path(rest);
@@ -326,21 +263,10 @@ async fn get_or_create_folder(
             return Err(failed());
         }
         let id = ObjectId::new();
-        sqlx::query("INSERT INTO webknossos.folders (_id, name, created) VALUES ($1, $2, NOW())")
-            .bind(&id)
-            .bind(name)
-            .execute(&mut *connection)
+        dao::insert_folder(connection, &id, name)
             .await
             .map_err(|_| failed())?;
-        sqlx::query(
-            r#"INSERT INTO webknossos.folder_paths (_ancestor, _descendant, depth)
-               SELECT _ancestor, $1, depth + 1 FROM webknossos.folder_paths WHERE _descendant = $2
-               UNION ALL SELECT $1, $1, 0"#,
-        )
-        .bind(&id)
-        .bind(&current)
-        .execute(&mut *connection)
-        .await?;
+        dao::insert_folder_paths(connection, &id, &current).await?;
         current = id;
     }
     Ok(current)
@@ -362,13 +288,9 @@ async fn upload_store(
     connection: &mut sqlx::PgConnection,
     user: &AuthUser,
 ) -> ApiResult<(String, String)> {
-    sqlx::query_as(
-        "SELECT name, url FROM webknossos.dataStores_ WHERE allowsUpload AND (onlyAllowedOrganization IS NULL OR onlyAllowedOrganization = $1) ORDER BY name LIMIT 1",
-    )
-    .bind(&user.organization_id)
-    .fetch_optional(&mut *connection)
-    .await?
-    .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))
+    dao::find_upload_store(connection, &user.organization_id)
+        .await?
+        .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))
 }
 
 async fn explore_and_add_remote(
@@ -453,22 +375,12 @@ async fn add_virtual_dataset(
 ) -> ApiResult<Json<Value>> {
     let source = UsableDataSource::from_json(&body.data_source)
         .map_err(crate::dataset::source::invalid_body)?;
-    let store: Option<(String, String)> = sqlx::query_as(
-        "SELECT name, url FROM webknossos.dataStores_ WHERE name = $1 AND (onlyAllowedOrganization IS NULL OR onlyAllowedOrganization = $2)",
-    )
-    .bind(&body.data_store_name)
-    .bind(&user.organization_id)
-    .fetch_optional(&state.pool)
-    .await?;
+    let store =
+        dao::find_store_for_organization(&state.pool, &body.data_store_name, &user.organization_id)
+            .await?;
     let (store_name, store_url) =
         store.ok_or_else(|| ApiError::not_found(crate::msg::data_store::NOT_FOUND))?;
-    let team_manager: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM webknossos.user_team_roles r JOIN webknossos.teams_ t ON t._id = r._team WHERE r._user = $1 AND r.isTeamManager AND t._organization = $2)",
-    )
-    .bind(&user.id)
-    .bind(&user.organization_id)
-    .fetch_one(&state.pool)
-    .await?;
+    let team_manager = dao::is_team_manager(&state.pool, &user.id, &user.organization_id).await?;
     if !(team_manager || user.is_admin || user.is_dataset_manager) {
         return Err(crate::dataset::lifecycle::not_allowed());
     }
@@ -504,16 +416,6 @@ async fn add_virtual_dataset(
     Ok(Json(json!({ "newDatasetId": id })))
 }
 
-#[derive(sqlx::FromRow)]
-struct DuplicateSource {
-    name: String,
-    metadata: Value,
-    description: Option<String>,
-    status: String,
-    factor: Option<Vec<f64>>,
-    unit: Option<String>,
-}
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct DuplicateQuery {
@@ -540,15 +442,7 @@ async fn duplicate_to_orga(
         status,
         factor,
         unit,
-    } = sqlx::query_as(
-        r#"SELECT name, metadata, description, status,
-             CASE WHEN voxelSizeFactor IS NULL THEN NULL ELSE ARRAY[(voxelSizeFactor).x, (voxelSizeFactor).y, (voxelSizeFactor).z] END AS factor,
-             COALESCE(voxelSizeUnit::text, 'nanometer') AS unit
-           FROM webknossos.datasets_ WHERE _id = $1"#,
-    )
-    .bind(&*id)
-    .fetch_one(&state.pool)
-    .await?;
+    } = dao::find_duplicate_source(&state.pool, &id).await?;
     let unit = unit
         .as_deref()
         .and_then(LengthUnit::from_name)
@@ -576,12 +470,8 @@ async fn duplicate_to_orga(
             crate::msg::dataset::DUPLICATE_ONLY_VIRTUAL,
         ));
     }
-    let organization_exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ WHERE _id = $1)",
-    )
-    .bind(&query.target_organization_id)
-    .fetch_one(&state.pool)
-    .await?;
+    let organization_exists =
+        dao::organization_exists(&state.pool, &query.target_organization_id).await?;
     if !organization_exists {
         return Err(ApiError::bad_request(crate::msg::organization::not_found(
             &query.target_organization_id,

@@ -8,7 +8,7 @@ import com.scalableminds.util.geometry.Vec3Float
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.ShardingSpecification
-import com.scalableminds.webknossos.datastore.datavault.{ByteRange, VaultPath}
+import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 
@@ -81,51 +81,64 @@ class NeuroglancerPrecomputedMeshFileService @Inject() (dataVaultService: DataVa
       vaultPath <- dataVaultService.vaultPathFor(meshFileKey.attachment)
       mesh <- meshInfoCache.getOrLoad(meshFileKey, loadRemoteMeshInfo)
       chunkScale = Array.fill(3)(1 / math.pow(2, mesh.meshInfo.vertex_quantization_bits))
-      lookups <-
-        if (failOnZeroChunks)
-          Fox.serialCombined(segmentIds)(id =>
-            listMeshChunks(vaultPath, mesh, id).map(lods => SegmentMeshLookup(id, Some(lods)))
-          )
-        else lookUpSegmentsSkippingFailed(vaultPath, mesh, segmentIds)
+      lookups <- lookUpSegmentsSkippingFailed(vaultPath, mesh, segmentIds)
       _ <- Fox.fromBool(lookups.exists(_.hasEntry) || !failOnZeroChunks) ?~>
         Msg.Mesh.File.zeroChunks(segmentIds.mkString(","), meshFileKey.attachment.name)
       segmentInfo <- WebknossosSegmentInfo.fromSegmentLookups(lookups, NeuroglancerMesh.meshEncoding, chunkScale).toFox
     } yield segmentInfo
 
-  // Leaves out the segments whose lookup failed, e.g. because of a read error. listMeshChunks returns Empty, not a
-  // Failure, if the shard or its minishard index has no entry for the segment.
+  // Leaves out the segments whose lookup failed, e.g. because of a read error.
   private def lookUpSegmentsSkippingFailed(vaultPath: VaultPath, mesh: NeuroglancerMesh, segmentIds: Seq[Long])(using
       tc: TokenContext
   ): Fox[List[SegmentMeshLookup]] =
     Fox
       .serialCombined(segmentIds)(id =>
-        listMeshChunks(vaultPath, mesh, id).shiftBox.map {
-          case Full(lods) => Some(SegmentMeshLookup(id, Some(lods)))
-          case Empty      => Some(SegmentMeshLookup(id, None))
-          case _: Failure => None
-        }
+        listMeshChunks(vaultPath, mesh, id).map(lods => Some(SegmentMeshLookup(id, lods))).orElse(Fox.successful(None))
       )
       .map(_.flatten)
 
+  // None if the mesh has no entry for the segment.
   private def listMeshChunks(vaultPath: VaultPath, mesh: NeuroglancerMesh, segmentId: Long)(using
       tc: TokenContext
-  ): Fox[List[MeshLodInfo]] =
+  ): Fox[Option[List[MeshLodInfo]]] =
     for {
       _ <- Fox.successful(())
-      minishardInfo = mesh.shardingSpecification.getMinishardInfo(segmentId)
-      shardUrl = mesh.shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
-      minishardIndex <- mesh.getMinishardIndex(shardUrl, minishardInfo._2.toInt)
+      (shardNumber, minishardNumber) = mesh.shardingSpecification.getMinishardInfo(segmentId)
+      shardUrl = mesh.shardingSpecification.getPathForShard(vaultPath, shardNumber)
+      chunkRangeOpt <- findChunkRange(mesh, shardUrl, minishardNumber.toInt, segmentId)
+      lods <- Fox.runOptional(chunkRangeOpt)(chunkRange => readSegmentLods(mesh, shardUrl, chunkRange, segmentId))
+    } yield lods
+
+  // None if the shard file does not exist or its minishard index has no entry for the segment. The sharding utils
+  // signal both cases with Empty, because for volume data they mean "fill value".
+  private def findChunkRange(mesh: NeuroglancerMesh, shardUrl: VaultPath, minishardNumber: Int, segmentId: Long)(using
+      tc: TokenContext
+  ): Fox[Option[StartEndExclusiveByteRange]] =
+    (for {
+      minishardIndex <- mesh.getMinishardIndex(shardUrl, minishardNumber)
       chunkRange <- mesh.getChunkRange(segmentId, minishardIndex)
+    } yield chunkRange).shiftBox.flatMap {
+      case Full(chunkRange) => Fox.successful(Some(chunkRange))
+      case Empty            => Fox.successful(None)
+      case failure: Failure => failure.toFox
+    }
+
+  private def readSegmentLods(
+      mesh: NeuroglancerMesh,
+      shardUrl: VaultPath,
+      chunkRange: StartEndExclusiveByteRange,
+      segmentId: Long
+  )(using tc: TokenContext): Fox[List[MeshLodInfo]] =
+    for {
       chunk <- mesh.getChunk(chunkRange, shardUrl)
       segmentManifest = NeuroglancerSegmentManifest.fromBytes(chunk)
-      meshSegmentInfo = enrichSegmentInfo(
-        segmentManifest,
-        mesh.meshInfo.lod_scale_multiplier,
-        mesh.transformAsMatrix,
-        chunkRange.start,
-        segmentId
-      )
-    } yield meshSegmentInfo
+    } yield enrichSegmentInfo(
+      segmentManifest,
+      mesh.meshInfo.lod_scale_multiplier,
+      mesh.transformAsMatrix,
+      chunkRange.start,
+      segmentId
+    )
 
   def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest])(using
       tc: TokenContext

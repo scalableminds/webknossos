@@ -34,12 +34,14 @@
 //! - No compound-annotation cache invalidation: Scala's assignOne does not
 //!   clear it either (the new annotation is Active, compound caches expire
 //!   after 60 minutes as in Scala).
+pub(crate) mod dao;
+
 use axum::{
     Extension, Json as ResponseJson, Router, extract::State, http::StatusCode, routing::post,
 };
 use serde::Deserialize;
 use serde_json::Value;
-use sqlx::{FromRow, PgConnection, PgPool};
+use sqlx::PgPool;
 
 use crate::{
     AppState,
@@ -48,7 +50,6 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Path, Query},
-    sql::Sql,
     stores::tracing_client::{DuplicateAnnotationRequest, TracingStoreClient},
     users::notification_emails::NotificationEmailService,
     util::id::ObjectId,
@@ -66,52 +67,6 @@ pub fn router(_jobs_enabled: bool) -> Router<AppState> {
 // Step 1: Initializing annotation (TaskDAO.assignOneTo / assignNext)
 // ---------------------------------------------------------------------------
 
-/// Locks the live task row if it still has pending instances
-/// (`findNextTaskByIdQ`). Returns false when the task is deleted, unknown or
-/// fully assigned. Must run inside the caller's transaction, before
-/// [`insert_initializing_annotation`].
-pub(crate) async fn lock_task_with_pending_instances(
-    connection: &mut PgConnection,
-    task_id: &ObjectId,
-) -> ApiResult<bool> {
-    let locked: Option<ObjectId> = sqlx::query_scalar(
-        "SELECT _id FROM webknossos.tasks WHERE _id=$1 AND NOT isDeleted AND pendingInstances > 0 FOR UPDATE",
-    )
-    .bind(task_id)
-    .fetch_optional(&mut *connection)
-    .await?;
-    Ok(locked.is_some())
-}
-
-/// The INSERT of TaskDAO.assignOneTo/assignNext for an already locked task
-/// (see [`lock_task_with_pending_instances`]): a new `Initializing` Task
-/// annotation owned by `user_id` with the placeholder dataset
-/// `SELECT _id FROM datasets_ LIMIT 1` (replaced by updateInitialized),
-/// description/name `''`, Internal, tags `{}`, tracingTime 0,
-/// created = modified = now. The insert trigger decrements
-/// `pendingInstances`. Returns `None` (→ `task.unavailable`) when no live
-/// dataset exists at all, as Scala's `FROM task, dataset` yields no row.
-pub(crate) async fn insert_initializing_annotation(
-    connection: &mut PgConnection,
-    task_id: &ObjectId,
-    user_id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
-    let annotation_id = ObjectId::new();
-    let inserted = sqlx::query(
-        "WITH dataset AS (SELECT _id FROM webknossos.datasets_ LIMIT 1)
-         INSERT INTO webknossos.annotations(_id,_dataset,_task,_user,description,visibility,name,state,tags,tracingTime,typ,created,modified,isDeleted)
-         SELECT $1,dataset._id,$2,$3,'','Internal','','Initializing','{}',0,'Task',$4,$4,FALSE FROM dataset",
-    )
-    .bind(&annotation_id)
-    .bind(task_id)
-    .bind(user_id)
-    .bind(now_millis())
-    .execute(&mut *connection)
-    .await?
-    .rows_affected();
-    Ok((inserted == 1).then_some(annotation_id))
-}
-
 /// TaskDAO.assignOneTo: in one transaction, lock the task if it has pending
 /// instances and insert the Initializing annotation for `user_id`. `None`
 /// means `?~> Msg.Task.unavailable` (400) in the caller. Does no permission,
@@ -123,10 +78,11 @@ pub(crate) async fn assign_one_to(
     user_id: &ObjectId,
 ) -> ApiResult<Option<ObjectId>> {
     let mut tx = pool.begin().await?;
-    if !lock_task_with_pending_instances(&mut tx, task_id).await? {
+    if !dao::lock_task_with_pending_instances(&mut tx, task_id).await? {
         return Ok(None);
     }
-    let Some(annotation_id) = insert_initializing_annotation(&mut tx, task_id, user_id).await?
+    let Some(annotation_id) =
+        dao::insert_initializing_annotation(&mut tx, task_id, user_id).await?
     else {
         return Ok(None);
     };
@@ -137,20 +93,6 @@ pub(crate) async fn assign_one_to(
 // ---------------------------------------------------------------------------
 // Step 2: AnnotationService.createAnnotationFor
 // ---------------------------------------------------------------------------
-
-/// The TracingBase fields copied into the new Task annotation.
-#[derive(Debug, FromRow)]
-struct AnnotationBase {
-    id: ObjectId,
-    dataset_id: ObjectId,
-    owner_id: ObjectId,
-    description: String,
-    visibility: String,
-    name: String,
-    tags: Vec<String>,
-    tracing_time: Option<i64>,
-    collaboration_mode: String,
-}
 
 /// AnnotationService.createAnnotationFor(assignee, taskId, initializingId)
 /// with DB reads in `context_user`'s access context (the requester for
@@ -175,24 +117,10 @@ pub(crate) async fn create_annotation_for(
     task_id: &ObjectId,
     initializing_annotation_id: &ObjectId,
 ) -> Result<(), ProviderError> {
-    let mut q = Sql::new(
-        "SELECT a._id AS id,a._dataset AS dataset_id,a._user AS owner_id,a.description,
-           a.visibility::text AS visibility,a.name,a.tags,a.tracingTime AS tracing_time,
-           a.collaborationMode::text AS collaboration_mode
-         FROM webknossos.annotations_ a
-         WHERE a._task=",
-    );
-    q.push_bind(task_id)
-        .push(" AND a.typ='TracingBase' AND a.state<>'Cancelled' AND ");
-    crate::annotation::access::push_read_predicate(&mut q, context_user.into());
-    q.push(" LIMIT 1");
-    let base: Option<AnnotationBase> = q.build_query_as().fetch_optional(pool).await?;
+    let base = dao::find_annotation_base(pool, context_user, task_id).await?;
     let base = base.ok_or_else(|| ProviderError::failure(BASE_ID_FAILED))?;
 
-    let mut q = Sql::new("SELECT d.isUsable FROM webknossos.datasets_ d WHERE d._id=");
-    q.push_bind(&base.dataset_id).push(" AND ");
-    crate::dataset::access::push_read_predicate(&mut q, (&context_user.id).into(), None);
-    let is_usable: Option<bool> = q.build_query_scalar().fetch_optional(pool).await?;
+    let is_usable = dao::find_dataset_is_usable(pool, context_user, &base.dataset_id).await?;
     match is_usable {
         None => {
             return Err(ProviderError::failure(
@@ -243,51 +171,20 @@ async fn update_initialized(
     pool: &PgPool,
     annotation_id: &ObjectId,
     assignee_id: &ObjectId,
-    base: &AnnotationBase,
+    base: &dao::AnnotationBase,
     layers: &[AnnotationLayer],
 ) -> Result<(), ProviderError> {
     let now = now_millis();
     let mut tx = pool.begin().await?;
-    let updated = sqlx::query(
-        "UPDATE webknossos.annotations SET _dataset=$2,_user=$3,description=$4,
-           visibility=$5::webknossos.ANNOTATION_VISIBILITY,name=$6,state='Active',tags=$7,
-           tracingTime=$8,typ='Task',
-           collaborationMode=$9::webknossos.ANNOTATION_COLLABORATION_MODE,
-           created=$10,modified=$10,isDeleted=FALSE
-         WHERE _id=$1 AND state='Initializing' AND NOT isDeleted",
-    )
-    .bind(annotation_id)
-    .bind(&base.dataset_id)
-    .bind(assignee_id)
-    .bind(&base.description)
-    .bind(&base.visibility)
-    .bind(&base.name)
-    .bind(&base.tags)
-    .bind(base.tracing_time)
-    .bind(&base.collaboration_mode)
-    .bind(now)
-    .execute(&mut *tx)
-    .await?
-    .rows_affected();
+    let updated =
+        dao::update_initialized_annotation(&mut tx, annotation_id, assignee_id, base, now).await?;
     if updated != 1 {
         tracing::warn!(annotation = %annotation_id, "initializing task annotation vanished");
         return Err(ProviderError::failure(crate::msg::NOT_FOUND));
     }
-    sqlx::query("DELETE FROM webknossos.annotation_layers WHERE _annotation=$1")
-        .bind(annotation_id)
-        .execute(&mut *tx)
-        .await?;
+    dao::delete_annotation_layers(&mut tx, annotation_id).await?;
     for layer in layers {
-        sqlx::query(
-            "INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics)
-             VALUES($1,$2,$3::webknossos.ANNOTATION_LAYER_TYPE,$4,'{}'::jsonb)",
-        )
-        .bind(annotation_id)
-        .bind(&layer.tracing_id)
-        .bind(layer.typ.as_str())
-        .bind(&layer.name)
-        .execute(&mut *tx)
-        .await?;
+        dao::insert_annotation_layer(&mut tx, annotation_id, layer).await?;
     }
     tx.commit().await?;
     tracing::info!(annotation = %annotation_id, "initialized task annotation, state is now Active");
@@ -306,14 +203,8 @@ pub(crate) async fn abort_initializing_annotation(
     annotation_id: &ObjectId,
 ) -> ApiResult<()> {
     let mut tx = pool.begin().await?;
-    sqlx::query("DELETE FROM webknossos.annotation_layers WHERE _annotation=$1 AND EXISTS (SELECT 1 FROM webknossos.annotations WHERE _id=$1 AND state='Initializing')")
-        .bind(annotation_id)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM webknossos.annotations WHERE _id=$1 AND state='Initializing'")
-        .bind(annotation_id)
-        .execute(&mut *tx)
-        .await?;
+    dao::delete_initializing_annotation_layers(&mut tx, annotation_id).await?;
+    dao::delete_initializing_annotation(&mut tx, annotation_id).await?;
     tx.commit().await?;
     tracing::info!(annotation = %annotation_id, "aborted initializing task annotation");
     Ok(())
@@ -366,24 +257,6 @@ fn not_found() -> ApiError {
     ApiError::not_found(crate::msg::NOT_FOUND)
 }
 
-/// `userService.isTeamManagerOrAdminOf(requester, project._team)`: the team
-/// is read globally (missing → adminNotAllowed, replaced by the route's
-/// `?~> notAllowed`); allowed for its team managers and admins of its
-/// organization.
-async fn manages_team(pool: &PgPool, requester: &AuthUser, team_id: &ObjectId) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM webknossos.teams_ t WHERE t._id=$1 AND (
-           ($3 AND t._organization=$4)
-           OR EXISTS (SELECT 1 FROM webknossos.user_team_roles r WHERE r._team=t._id AND r._user=$2 AND r.isTeamManager)))",
-    )
-    .bind(team_id)
-    .bind(&requester.id)
-    .bind(requester.is_admin)
-    .bind(&requester.organization_id)
-    .fetch_one(pool)
-    .await?)
-}
-
 /// `userService.isTeamManagerOrAdminOf(requester, assignee)`: the requester
 /// manages one of the assignee's teams (raw memberships), or is an admin of
 /// the assignee's organization.
@@ -396,15 +269,7 @@ async fn manages_user(
     if requester.is_admin && requester.organization_id == assignee_organization {
         return Ok(true);
     }
-    Ok(sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM webknossos.user_team_roles member
-           JOIN webknossos.user_team_roles manager ON manager._team=member._team
-           WHERE member._user=$1 AND manager._user=$2 AND manager.isTeamManager)",
-    )
-    .bind(assignee_id)
-    .bind(&requester.id)
-    .fetch_one(pool)
-    .await?)
+    dao::manages_user_through_team(pool, requester, assignee_id).await
 }
 
 async fn assign_one(
@@ -423,46 +288,23 @@ async fn assign_one(
     let pool = &state.pool;
 
     // userService.findOneCached(userId): UserDAO.readAccessQ, Empty → 404.
-    let mut q = Sql::new(
-        "SELECT usr._organization, usr.isDeactivated FROM webknossos.users_ usr WHERE usr._id=",
-    );
-    q.push_bind(&assignee_id).push(" AND ");
-    crate::users::push_read_access(&mut q, (&user.id).into());
-    let (assignee_organization, assignee_is_deactivated): (String, bool) = q
-        .build_query_as()
-        .fetch_optional(pool)
+    let (assignee_organization, assignee_is_deactivated) =
+        dao::find_assignee(pool, &user, &assignee_id)
+            .await?
+            .ok_or_else(not_found)?;
+
+    // taskDAO.findOne(id): TaskDAO.readAccessQ, Empty → 404.
+    let project_id = dao::find_task_project_id(pool, &user, &task_id)
         .await?
         .ok_or_else(not_found)?;
 
-    // taskDAO.findOne(id): TaskDAO.readAccessQ, Empty → 404.
-    let project_id: ObjectId = sqlx::query_scalar(
-        "SELECT t._project FROM webknossos.tasks_ t WHERE t._id=$1 AND (
-           (SELECT p._team FROM webknossos.projects p WHERE p._id=t._project)
-             IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$2)
-           OR (SELECT team._organization FROM webknossos.teams team WHERE team._id=(SELECT p._team FROM webknossos.projects p WHERE p._id=t._project))
-             IN (SELECT _organization FROM webknossos.users_ WHERE _id=$2 AND isAdmin))",
-    )
-    .bind(&task_id)
-    .bind(&user.id)
-    .fetch_optional(pool)
-    .await?
-    .ok_or_else(not_found)?;
-
     // projectDAO.findOne(task._project): ProjectDAO.readAccessQ, Empty → 404.
-    let team_id: ObjectId = sqlx::query_scalar(
-        "SELECT p._team FROM webknossos.projects_ p WHERE p._id=$1 AND (
-           p._team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$2)
-           OR p._owner=$2
-           OR p._organization=(SELECT _organization FROM webknossos.users_ WHERE _id=$2 AND isAdmin))",
-    )
-    .bind(&project_id)
-    .bind(&user.id)
-    .fetch_optional(pool)
-    .await?
-    .ok_or_else(not_found)?;
+    let team_id = dao::find_project_team_id(pool, &user, &project_id)
+        .await?
+        .ok_or_else(not_found)?;
 
     // Fox.assertTrue(..) ?~> Msg.notAllowed (no status: 400).
-    if !manages_team(pool, &user, &team_id).await? {
+    if !dao::manages_team(pool, &user, &team_id).await? {
         return Err(ApiError::new(
             StatusCode::BAD_REQUEST,
             crate::msg::NOT_ALLOWED,

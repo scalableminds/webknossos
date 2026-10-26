@@ -36,16 +36,18 @@
 //!   fails the query).
 use axum::{Extension, Json as ResponseJson, Router, extract::State, routing::post};
 use serde_json::{Value, json};
-use sqlx::{PgConnection, PgPool};
+use sqlx::PgPool;
 
 use crate::{
     AppState,
     auth::AuthUser,
     error::{ApiError, ApiResult},
-    sql::Sql,
     stores::tracing_client::TracingStoreClient,
     system::application_info::MiscState,
-    task::assignment::{initialize_task_annotation, insert_initializing_annotation},
+    task::assignment::{
+        dao::{self, insert_initializing_annotation},
+        initialize_task_annotation,
+    },
     util::id::ObjectId,
 };
 
@@ -69,43 +71,6 @@ struct JobsEnabled(bool);
 // TaskService.getAllowedTeamsForNextTask / isTeamManagerOrAdminOfOrg
 // ---------------------------------------------------------------------------
 
-/// `userService.teamIdsFor` / `teamManagerTeamIdsFor` (raw memberships).
-async fn team_ids(
-    pool: &PgPool,
-    user_id: &ObjectId,
-    managed_only: bool,
-) -> ApiResult<Vec<ObjectId>> {
-    Ok(sqlx::query_scalar(
-        "SELECT _team FROM webknossos.user_team_roles WHERE _user=$1 AND (NOT $2 OR isTeamManager)",
-    )
-    .bind(user_id)
-    .bind(managed_only)
-    .fetch_all(pool)
-    .await?)
-}
-
-/// AnnotationDAO.countActiveAnnotationsFor(user, Task, teamManagerTeamIds) in
-/// the user's access context.
-async fn count_open_non_admin_tasks(
-    pool: &PgPool,
-    user: &AuthUser,
-    managed_team_ids: &[ObjectId],
-) -> ApiResult<i64> {
-    let mut q = Sql::new(
-        "SELECT COUNT(*) FROM webknossos.annotations_ a
-         JOIN webknossos.tasks_ t ON a._task=t._id
-         JOIN webknossos.projects_ p ON t._project=p._id
-         WHERE a._user=",
-    );
-    q.push_bind(&user.id)
-        .push(" AND a.typ='Task' AND a.state='Active' AND ");
-    crate::annotation::access::push_read_predicate(&mut q, user.into());
-    q.push(" AND NOT (p._team = ANY(")
-        .push_bind(managed_team_ids)
-        .push("::text[]))");
-    Ok(q.build_query_scalar().fetch_one(pool).await?)
-}
-
 /// TaskService.getAllowedTeamsForNextTask.
 pub(crate) async fn allowed_teams_for_next_task(
     pool: &PgPool,
@@ -115,17 +80,12 @@ pub(crate) async fn allowed_teams_for_next_task(
     if user.is_admin {
         // teamDAO.findAllIdsByOrganization: an admin reads every live team of
         // the own organization.
-        return Ok(
-            sqlx::query_scalar("SELECT _id FROM webknossos.teams_ WHERE _organization=$1")
-                .bind(&user.organization_id)
-                .fetch_all(pool)
-                .await?,
-        );
+        return dao::find_all_team_ids_by_organization(pool, &user.organization_id).await;
     }
-    let managed = team_ids(pool, &user.id, true).await?;
-    let open = count_open_non_admin_tasks(pool, user, &managed).await?;
+    let managed = dao::find_team_ids(pool, &user.id, true).await?;
+    let open = dao::count_open_non_admin_tasks(pool, user, &managed).await?;
     let teams = if open < max_open_tasks_per_user {
-        team_ids(pool, &user.id, false).await?
+        dao::find_team_ids(pool, &user.id, false).await?
     } else {
         managed
     };
@@ -140,53 +100,12 @@ async fn is_team_manager_or_admin(pool: &PgPool, user: &AuthUser) -> ApiResult<b
     if user.is_admin {
         return Ok(true);
     }
-    Ok(sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM webknossos.user_team_roles WHERE _user=$1 AND isTeamManager)",
-    )
-    .bind(&user.id)
-    .fetch_one(pool)
-    .await?)
+    dao::is_team_manager(pool, &user.id).await
 }
 
 // ---------------------------------------------------------------------------
 // TaskDAO.assignNext
 // ---------------------------------------------------------------------------
-
-/// TaskDAO.findNextTaskQ `FROM … WHERE` for the user, the allowed team ids
-/// and isTeamManagerOrAdmin. The experience join yields at most one row per
-/// task (user_experiences PK is (_user, domain)); the LEFT JOIN … IS NULL of
-/// the user's previous Task annotations is written as NOT EXISTS.
-fn push_next_task_from_where<'a>(
-    q: &mut Sql<'a>,
-    user_id: &'a ObjectId,
-    team_ids: &'a [ObjectId],
-    is_team_manager_or_admin: bool,
-) {
-    q.push(
-        "FROM webknossos.tasks t
-     JOIN webknossos.user_experiences ux
-       ON ux._user=",
-    )
-    .push_bind(user_id)
-    .push(
-        " AND t.neededExperience_domain=ux.domain AND t.neededExperience_value<=ux.value
-     JOIN webknossos.projects p ON t._project=p._id AND NOT p.isDeleted
-     WHERE NOT t.isDeleted
-       AND t.pendingInstances > 0
-       AND p._team = ANY(",
-    )
-    .push_bind(team_ids)
-    .push(
-        "::text[])
-       AND NOT EXISTS (
-         SELECT 1 FROM webknossos.annotations_ a
-         WHERE a._task=t._id AND a._user=",
-    )
-    .push_bind(user_id)
-    .push(" AND a.typ='Task' AND NOT (")
-    .push_bind(is_team_manager_or_admin)
-    .push(" AND a.state='Cancelled')) AND NOT p.paused");
-}
 
 /// One allocation attempt in its own transaction. `Ok(None)`: no task;
 /// `Ok(Some(None))`: the locked candidate no longer qualifies (retry);
@@ -198,14 +117,13 @@ async fn try_assign_next(
     is_team_manager_or_admin: bool,
 ) -> ApiResult<Option<Option<(ObjectId, ObjectId)>>> {
     let mut tx = pool.begin().await?;
-    let mut q = Sql::new("SELECT t._id ");
-    push_next_task_from_where(&mut q, user_id, team_ids, is_team_manager_or_admin);
-    q.push(" ORDER BY p.priority DESC LIMIT 1 FOR UPDATE OF t");
-    let candidate: Option<ObjectId> = q.build_query_scalar().fetch_optional(&mut *tx).await?;
+    let candidate =
+        dao::find_next_task_for_update(&mut tx, user_id, team_ids, is_team_manager_or_admin)
+            .await?;
     let Some(task_id) = candidate else {
         return Ok(None);
     };
-    if !still_qualifies(
+    if !dao::is_next_task_candidate(
         &mut tx,
         user_id,
         team_ids,
@@ -223,22 +141,6 @@ async fn try_assign_next(
     };
     tx.commit().await?;
     Ok(Some(Some((task_id, annotation_id))))
-}
-
-/// Re-evaluates the full candidate predicate for the locked task in a fresh
-/// READ COMMITTED statement snapshot (sees transactions committed while the
-/// lock was awaited, e.g. a concurrent request of the same user).
-async fn still_qualifies(
-    connection: &mut PgConnection,
-    user_id: &ObjectId,
-    team_ids: &[ObjectId],
-    is_team_manager_or_admin: bool,
-    task_id: &ObjectId,
-) -> ApiResult<bool> {
-    let mut q = Sql::new("SELECT EXISTS (SELECT 1 ");
-    push_next_task_from_where(&mut q, user_id, team_ids, is_team_manager_or_admin);
-    q.push(" AND t._id=").push_bind(task_id).push(")");
-    Ok(q.build_query_scalar().fetch_one(&mut *connection).await?)
 }
 
 /// TaskDAO.assignNext: `(taskId, initializingAnnotationId)` or `None`

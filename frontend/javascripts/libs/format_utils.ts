@@ -1,7 +1,6 @@
 import dayjs from "dayjs";
 import calendar from "dayjs/plugin/calendar";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import type { Duration } from "dayjs/plugin/duration";
 import duration from "dayjs/plugin/duration";
 import localeData from "dayjs/plugin/localeData";
 import localizedFormat from "dayjs/plugin/localizedFormat";
@@ -19,7 +18,7 @@ import {
   type Vector3,
   type Vector6,
 } from "viewer/constants";
-import { map3, roundTo } from "./utils";
+import { map3, pluralize, roundTo } from "./utils";
 
 dayjs.extend(updateLocale);
 dayjs.extend(duration);
@@ -422,52 +421,81 @@ export function formatExtentInUnitWithLength(
     formattingFunction(extent.depth),
   ].join(`${ThinSpace}×${ThinSpace}`);
 }
-export function formatMilliseconds(durationMilliSeconds: number): string {
-  return formatSeconds(durationMilliSeconds / 1000);
-}
-export function formatSeconds(durationSeconds: number): string {
-  const t = dayjs.duration(durationSeconds, "seconds");
-  const [days, hours, minutes, seconds] = [t.days(), t.hours(), t.minutes(), t.seconds()];
-  let timeString;
-
-  if (days === 0 && hours === 0 && minutes === 0) {
-    timeString = `${seconds}s`;
-  } else if (days === 0 && hours === 0) {
-    timeString = `${minutes}m ${seconds}s`;
-  } else if (days === 0) {
-    timeString = `${hours}h ${minutes}m ${seconds}s`;
-  } else {
-    timeString = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-  }
-
-  return timeString;
-}
-
 export function formatDateMedium(date: Date | number): string {
   return dayjs(date).format("lll");
 }
-export function formatTimeIntervalStrict(start: Date | number, end: Date | number): string {
-  const duration = dayjs.duration(dayjs(start).diff(dayjs(end)));
-  return formatDurationStrict(duration);
-}
-export function formatDurationStrict(duration: Duration): string {
+const MS_PER_SECOND = 1000;
+const MS_PER_MINUTE = 60 * MS_PER_SECOND;
+const MS_PER_HOUR = 60 * MS_PER_MINUTE;
+const MS_PER_DAY = 24 * MS_PER_HOUR;
+// Below these thresholds, the remainder is not rounded up to the next unit.
+const MINUTE_ROUNDING_THRESHOLD_MS_FOR_RENDERING_MILLIS = 59995;
+const MINUTE_ROUNDING_THRESHOLD_MS_FOR_RENDERING_SECONDS = 59499;
+
+/**
+ * Formats a duration with a precision that depends on its magnitude, e.g.
+ * "400 ms", "1.23 s", "2 m 5 s", "1 h 45 m 10 s" or "3 days 4 h". Seconds are
+ * omitted once the duration exceeds a day. This mirrors formatDuration in the
+ * backend's Formatter.scala. Please prefer the <FormattedDuration /> component
+ * when rendering React elements.
+ */
+export function formatDuration(durationMs: number): string {
+  const sign = durationMs < 0 ? "-" : "";
+  let remainingMs = Math.round(Math.abs(durationMs));
+
+  if (remainingMs < MS_PER_SECOND) {
+    return `${sign}${remainingMs}${ThinSpace}ms`;
+  }
+  if (remainingMs < MINUTE_ROUNDING_THRESHOLD_MS_FOR_RENDERING_MILLIS) {
+    // Up to two decimals for durations below one minute
+    const seconds = Math.round(remainingMs / 10) / 100;
+    return `${sign}${seconds}${ThinSpace}s`;
+  }
+
   const parts: Array<string> = [];
-  if (Math.floor(duration.asDays()) > 0) {
-    parts.push(`${formatNumber(Math.floor(duration.asDays()))}d`);
+  // Round up to the next unit to avoid rendering, e.g., "24 h" or "60 m".
+  let days = Math.floor(remainingMs / MS_PER_DAY);
+  if (
+    remainingMs - days * MS_PER_DAY >
+    MS_PER_DAY - MS_PER_MINUTE + MINUTE_ROUNDING_THRESHOLD_MS_FOR_RENDERING_SECONDS
+  ) {
+    days += 1;
   }
-  if (duration.hours() > 0) {
-    parts.push(`${duration.hours()}h`);
+  if (days > 0) {
+    parts.push(`${formatNumber(days)} ${pluralize("day", days)}`);
+    remainingMs -= days * MS_PER_DAY;
   }
-  if (duration.minutes() > 0) {
-    parts.push(`${duration.minutes()}m`);
+
+  let hours = Math.floor(remainingMs / MS_PER_HOUR);
+  if (
+    remainingMs - hours * MS_PER_HOUR >
+    MS_PER_HOUR - MS_PER_MINUTE + MINUTE_ROUNDING_THRESHOLD_MS_FOR_RENDERING_SECONDS
+  ) {
+    hours += 1;
   }
-  if (duration.seconds() > 0) {
-    parts.push(`${duration.seconds()}s`);
+  if (hours > 0) {
+    parts.push(`${hours}${ThinSpace}h`);
+    remainingMs -= hours * MS_PER_HOUR;
   }
-  if (duration.asSeconds() < 1) {
-    parts.push("0s");
+
+  let minutes = Math.floor(remainingMs / MS_PER_MINUTE);
+  if (remainingMs - minutes * MS_PER_MINUTE > MINUTE_ROUNDING_THRESHOLD_MS_FOR_RENDERING_SECONDS) {
+    minutes += 1;
   }
-  return parts.join(" ");
+  if (minutes > 0) {
+    parts.push(`${minutes}${ThinSpace}m`);
+    remainingMs -= minutes * MS_PER_MINUTE;
+  }
+
+  const seconds = Math.round(remainingMs / MS_PER_SECOND);
+  if (days === 0 && seconds > 0) {
+    parts.push(`${seconds}${ThinSpace}s`);
+  }
+
+  return sign + parts.join(" ");
+}
+export function formatTimeInterval(begin: Date | number, end: Date | number): string {
+  return formatDuration(dayjs(end).diff(dayjs(begin)));
 }
 
 export function formatCPU(cpuShare: number) {

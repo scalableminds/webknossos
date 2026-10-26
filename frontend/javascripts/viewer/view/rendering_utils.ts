@@ -2,6 +2,7 @@ import logoScreenshot from "@images/logo-screenshot.svg";
 import { saveAs } from "file-saver";
 import importDynamic from "libs/import_dynamic";
 import { convertBufferToImage } from "libs/utils";
+import { getActiveTheme } from "theme";
 import {
   type OrthographicCamera,
   type PerspectiveCamera,
@@ -24,7 +25,7 @@ import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import Store from "viewer/store";
 
 const getBackgroundColor = (): number =>
-  Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;
+  getActiveTheme(Store.getState()) === "dark" ? 0x000000 : 0xffffff;
 
 // Shared with PlaneView.getActiveTDViewCamera so both places agree on which
 // camera is actually active for the TD viewport.

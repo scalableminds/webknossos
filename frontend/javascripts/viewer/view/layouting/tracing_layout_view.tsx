@@ -10,7 +10,7 @@ import messages from "messages";
 import { Fragment, PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import { NavAndStatusBarTheme } from "theme";
+import { getActiveTheme, NavAndStatusBarTheme } from "theme";
 import type { APICompoundType } from "types/api_types";
 import CrossOriginApi from "viewer/api/cross_origin_api";
 import Constants, { type Vector3 } from "viewer/constants";
@@ -31,6 +31,7 @@ import { Model, Store } from "viewer/singletons";
 import { startSaga, type Theme, type TraceOrViewCommand, type WebknossosState } from "viewer/store";
 import ActionBarView from "viewer/view/action_bar_view";
 import { AiJobsDrawer } from "viewer/view/ai_jobs/ai_jobs_drawer";
+import { CommandPaletteViewerCommands } from "viewer/view/components/command_palette_viewer_commands";
 import WkContextMenu from "viewer/view/context_menu/wk_context_menu";
 import DistanceMeasurementTooltip from "viewer/view/distance_measurement_tooltip";
 import {
@@ -52,7 +53,7 @@ import NmlUploadZoneContainer, {
 import WelcomeToast from "viewer/view/novel_user_experiences/welcome_toast";
 import { importTracingFiles } from "viewer/view/right_border_tabs/skeleton_tab/import_tracing_files";
 import TracingView from "viewer/view/tracing_view";
-import VersionView from "viewer/view/version_view";
+import VersionView from "viewer/view/version_restore_view/version_view";
 import TabTitle from "../components/tab_title_component";
 import VoxelValueTooltip from "../voxel_pipette_tooltip";
 import { determineLayout } from "./default_layout_configs";
@@ -357,6 +358,7 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
             setControllerStatus={this.setControllerStatus}
           />
           <CrossOriginApi />
+          <CommandPaletteViewerCommands />
           <Layout className="tracing-layout">
             <RenderToPortal portalId="navbarTracingSlot">
               <ConfigProvider theme={NavAndStatusBarTheme}>
@@ -453,7 +455,7 @@ function mapStateToProps(state: WebknossosState) {
     organization: state.dataset.owningOrganization,
     activeTool: state.uiInformation.activeTool,
     additionalCoordinates: state.flycam.additionalCoordinates,
-    UITheme: state.uiInformation.theme,
+    UITheme: getActiveTheme(state),
     aiJobDrawerState: state.uiInformation.aIJobDrawerState,
   };
 }

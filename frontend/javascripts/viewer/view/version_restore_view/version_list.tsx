@@ -1,4 +1,4 @@
-import VirtualList from "@rc-component/virtual-list";
+import VirtualList, { type ListRef } from "@rc-component/virtual-list";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
   downloadAnnotation,
@@ -11,6 +11,7 @@ import dayjs from "dayjs";
 import { handleGenericError } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
 import { chunkIntoTimeWindows } from "libs/utils";
 import flattenDepth from "lodash-es/flattenDepth";
 import groupBy from "lodash-es/groupBy";
@@ -18,7 +19,8 @@ import isEqual from "lodash-es/isEqual";
 import isString from "lodash-es/isString";
 import mapValues from "lodash-es/mapValues";
 import max from "lodash-es/max";
-import { useEffect, useMemo, useState } from "react";
+import min from "lodash-es/min";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { APIUpdateActionBatch } from "types/api_types";
 import {
@@ -42,7 +44,12 @@ import {
 import { api, Model } from "viewer/singletons";
 import type { StoreAnnotation } from "viewer/store";
 import Store from "viewer/store";
-import VersionEntryGroup, { isActiveVersionInGroup } from "viewer/view/version_entry_group";
+import VersionEntryGroup, {
+  isActiveVersionInGroup,
+} from "viewer/view/version_restore_view/version_entry_group";
+import VersionPowerTools, {
+  VersionPowerToolsToggle,
+} from "viewer/view/version_restore_view/version_power_tools";
 
 // This used to be 5000 but we had logs where lots of UPDATE_BUCKET
 // update actions existed in one batch. The JSON payload exceeded a length
@@ -260,6 +267,14 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
   const [isChangingVersion, setIsChangingVersion] = useState(false);
 
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
+  const [isPowerToolsOpen, setIsPowerToolsOpen] = useState(false);
+  const listRef = useRef<ListRef>(null);
+  // A version which should be revealed (group expanded and scrolled into view)
+  // as soon as the page containing it is rendered.
+  const [versionToReveal, setVersionToReveal] = useState<number | null>(null);
+  // The group which should be scrolled to after it was expanded. Wrapped in an
+  // object so that revealing the same group again triggers the effect again.
+  const [groupToScrollTo, setGroupToScrollTo] = useState<{ key: number } | null>(null);
 
   function fetchPaginatedVersions({ pageParam }: { pageParam?: number }) {
     if (pageParam == null) {
@@ -347,6 +362,34 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
     }
   }, [error]);
 
+  useEffect(() => {
+    if (versionToReveal == null) {
+      return;
+    }
+    const group = batchesAndDateStrings.find(
+      (entry): entry is APIUpdateActionBatch[] =>
+        !isString(entry) && entry.some((batch) => batch.version === versionToReveal),
+    );
+    if (group == null) {
+      return;
+    }
+    const groupKey = group[0].version;
+    setExpandedGroups((prev) => ({ ...prev, [groupKey]: true }));
+    setGroupToScrollTo({ key: groupKey });
+    setVersionToReveal(null);
+  }, [versionToReveal, batchesAndDateStrings]);
+
+  useEffect(() => {
+    if (groupToScrollTo == null) {
+      return;
+    }
+    // Scroll in the next frame so that the list has measured the expanded group.
+    const handle = requestAnimationFrame(() => {
+      listRef.current?.scrollTo({ key: groupToScrollTo.key, align: "top" });
+    });
+    return () => cancelAnimationFrame(handle);
+  }, [groupToScrollTo]);
+
   const executeUnlessSwitchingVersions = async (fn: () => Promise<void>) => {
     if (isChangingVersion) {
       return;
@@ -357,6 +400,63 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
     } finally {
       setIsChangingVersion(false);
     }
+  };
+
+  // Loads pages until the given version is part of the list. Returns false if
+  // the version cannot be found.
+  const ensureVersionIsLoaded = async (version: number): Promise<boolean> => {
+    let pages = versions?.pages ?? [];
+    while (true) {
+      const loadedVersions = pages.flatMap((page) => page.data.map((batch) => batch.version));
+      if (loadedVersions.includes(version)) {
+        return true;
+      }
+      const newestLoaded = max(loadedVersions);
+      const oldestLoaded = min(loadedVersions);
+      if (newestLoaded == null || oldestLoaded == null) {
+        return false;
+      }
+      let result: typeof versions;
+      // If a fetch fails, the result still contains the old pages. Stop in that case,
+      // because the same page would be requested again and again otherwise.
+      if (version > newestLoaded && pages[0].previousPage != null) {
+        const fetchResult = await fetchPreviousPage();
+        if (fetchResult.isError) return false;
+        result = fetchResult.data;
+      } else if (version < oldestLoaded && pages[pages.length - 1].nextPage != null) {
+        const fetchResult = await fetchNextPage();
+        if (fetchResult.isError) return false;
+        result = fetchResult.data;
+      } else {
+        return false;
+      }
+      if (result == null) {
+        return false;
+      }
+      pages = result.pages;
+    }
+  };
+
+  // Activates the given version, expands its group and scrolls to it.
+  const navigateToVersion = async (version: number): Promise<boolean> => {
+    if (isChangingVersion) {
+      return false;
+    }
+    let success = false;
+    await executeUnlessSwitchingVersions(async () => {
+      try {
+        if (!(await ensureVersionIsLoaded(version))) {
+          Toast.warning(`Version ${version} could not be found.`);
+          return;
+        }
+        await previewVersion(version);
+        setVersionToReveal(version);
+        success = true;
+      } catch (exception) {
+        handleGenericError(exception as Error);
+      }
+    });
+    return success;
   };
 
   return (
@@ -371,6 +471,20 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
           </Button>
         </div>
       )}
+      <div style={{ textAlign: "right", padding: "0 4px" }}>
+        <VersionPowerToolsToggle
+          isOpen={isPowerToolsOpen}
+          onToggle={() => setIsPowerToolsOpen((isOpen) => !isOpen)}
+        />
+      </div>
+      {isPowerToolsOpen && (
+        <VersionPowerTools
+          minVersion={Math.max(earliestAccessibleVersion, 0)}
+          newestVersion={newestVersion}
+          disabled={isChangingVersion}
+          onNavigateToVersion={navigateToVersion}
+        />
+      )}
       <div style={{ flex: "1 1 auto", minHeight: 0 }}>
         <AutoSizer disableWidth>
           {({ height }) => (
@@ -381,6 +495,7 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
                 // (date sections, collapsible groups); VirtualList measures the
                 // actual heights, itemHeight is only an initial estimate.
                 <VirtualList
+                  ref={listRef}
                   data={batchesAndDateStrings}
                   height={height}
                   itemHeight={40}

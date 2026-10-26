@@ -130,3 +130,6 @@ tsconfig.tsbuildinfo
 diffy-report.html
 
 local.sbt
+
+# Generated documentation screenshot review
+.docs-screenshots/

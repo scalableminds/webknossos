@@ -81,6 +81,16 @@ type State = {
   model: Model;
 };
 const rightBorderId = "right-border-tab-container";
+
+// The model of a sub-layout (e.g., the content of a border) is created lazily, usually when the
+// sub-layout is rendered for the first time. Create it here if it is accessed before that.
+function getSubLayoutModel(node: TabNode): Model {
+  const extraData = node.getExtraData();
+  if (extraData.model == null) {
+    extraData.model = Model.fromJson(node.getConfig().model);
+  }
+  return extraData.model;
+}
 const ignoredLayoutChangesByAnalytics = ["FlexLayout_SetActiveTabset", "FlexLayout_SelectTab"];
 type BorderOpenStatusKeys = keyof BorderOpenStatus;
 
@@ -183,7 +193,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
   getRightBorderModel(model: Model): Model | null {
     const node = model.getNodeById(rightBorderId);
     if (node?.getType() !== "tab") return null;
-    return (node as TabNode).getExtraData().model ?? null;
+    return getSubLayoutModel(node as TabNode);
   }
 
   // Adds the tab to the tabset that contains siblingTab, unless the tab already exists.
@@ -428,13 +438,8 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     }
   }
 
-  renderSubLayout(node: Record<string, any>) {
-    let { model } = node.getExtraData();
-
-    if (model == null) {
-      model = Model.fromJson(node.getConfig().model);
-      node.getExtraData().model = model;
-    }
+  renderSubLayout(node: TabNode) {
+    const model = getSubLayoutModel(node);
 
     return (
       <FlexLayoutComponent
@@ -455,7 +460,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     );
   }
 
-  layoutFactory(node: Record<string, any>): React.ReactNode | null | undefined {
+  layoutFactory(node: TabNode): React.ReactNode | null | undefined {
     const component = node.getComponent();
     const id = node.getId();
 

@@ -87,8 +87,9 @@ export class MeshFileCache {
   // Stores the chunk lists of a listing reply per segment, and the segments of
   // segmentIdsWithoutMesh as having no mesh. A requested segment that is in neither, e.g. because
   // the back-end failed to read it, is not stored, so that it is requested again next time.
-  // Returns the stored chunk lists. Callers should use them instead of reading them back from the
-  // cache, because storing them can evict other entries, even ones of the same reply.
+  // Returns the stored chunk lists. Use them instead of calling getChunkLists afterwards:
+  // this method evicts at its end, which removes some of them already if the reply is large
+  // and exceeds the full cache size limit.
   addChunkLists(info: MeshSegmentInfo): ChunkListsBySegmentId {
     if (info.lods.length > 0) {
       this.metadata = {
@@ -172,6 +173,8 @@ function formatToMeshSegmentInfo(
  */
 export class MeshChunkProvider {
   // Ordered by use, so that eviction empties the caches of unused mesh files first.
+  // Needs no maxCount: evictIfNeeded enforces the memory limits over all mesh files together,
+  // and the cache of a mesh file that was emptied this way takes almost no memory.
   private readonly meshFileCaches = new LruMap<string, MeshFileCache>();
 
   getCacheForMeshFile(location: MeshFileLocation): MeshFileCache {

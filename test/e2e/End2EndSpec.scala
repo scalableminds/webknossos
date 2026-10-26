@@ -20,7 +20,8 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
   private val argumentMapRead = parseCustomJavaArgs(arguments)
   private val testPort = 9000
   private val argumentMap = argumentMapRead +
-    ("http.port" -> testPort)
+    ("http.port" -> testPort) +
+    ("features.voxelyticsEnabled" -> true)
 
   private val application = new GuiceApplicationBuilder().configure(argumentMap).build()
 

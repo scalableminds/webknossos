@@ -22,27 +22,32 @@ import {
 } from "admin/rest_api";
 import {
   Button,
+  Collapse,
+  type CollapseProps,
   DatePicker,
   type DatePickerProps,
   Dropdown,
+  Flex,
   Input,
   type MenuProps,
   Modal,
   Popover,
   Space,
   Spin,
-  Table,
+  Tag,
   Tooltip,
   Typography,
+  theme,
 } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import { AsyncButton, AsyncIconButton } from "components/async_clickables";
-import FormattedDate from "components/formatted_date";
+import { AsyncButton } from "components/async_clickables";
+import FormattedDate, { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
 import { copyToClipboard } from "libs/clipboard";
 import { makeComponentLazy } from "libs/react_helpers";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import messages from "messages";
+import { useState } from "react";
 import { ModalWidth } from "theme";
 import type { ZarrPrivateLink } from "types/api_types";
 import { getDataLayers } from "viewer/model/accessors/dataset_accessor";
@@ -143,7 +148,14 @@ function useDeleteLinkMutation(annotationId: string) {
   });
 }
 
-export function useZarrLinkMenu(maybeAccessToken: string | null) {
+type ZarrLinkRow = {
+  key: string;
+  label: string;
+  url: string;
+  isWkOnly: boolean;
+};
+
+function useZarrLinks(maybeAccessToken: string | null) {
   const dataset = useWkSelector((state) => state.dataset);
   const annotation = useWkSelector((state) => state.annotation);
   const dataStoreURL = dataset.dataStore.url;
@@ -169,72 +181,93 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
   const isLoading = buildInfoQuery.isLoading;
   const isUnavailable = !isLoading && baseUrl == null;
 
-  const copyTokenToClipboard = ({ key: layerName }: { key: string }) => {
-    if (baseUrl == null) {
-      return;
-    }
-    copyToClipboard(`${baseUrl}/${layerName}`, "URL");
-  };
-
-  const copyLayerUrlMenu: MenuProps = {
-    onClick: copyTokenToClipboard,
-    items: [
-      {
-        type: "group",
-        label: "Select layer to copy URL",
-        children: dataLayers.map((layer) => {
-          const readableLayerName =
-            "tracingId" in layer && layer.tracingId != null
-              ? getReadableNameByVolumeTracingId(annotation, layer.tracingId)
-              : layer.name;
-          return {
-            label: readableLayerName,
-            key: readableLayerName,
-          };
-        }),
-      },
-    ],
+  const layerRows: ZarrLinkRow[] = dataLayers.map((layer) => {
+    const readableLayerName =
+      "tracingId" in layer && layer.tracingId != null
+        ? getReadableNameByVolumeTracingId(annotation, layer.tracingId)
+        : layer.name;
+    return {
+      key: layer.name,
+      label: readableLayerName,
+      url: baseUrl == null ? "" : `${baseUrl}/${readableLayerName}`,
+      isWkOnly: false,
+    };
+  });
+  // The base URL itself references the whole dataset, which only WEBKNOSSOS can import.
+  const allLayersRow: ZarrLinkRow = {
+    key: "__all-layers__",
+    label: "All layers",
+    url: baseUrl ?? "",
+    isWkOnly: true,
   };
 
   return {
-    baseUrl: baseUrl ?? "",
-    copyLayerUrlMenu,
+    rows: [...layerRows, allLayersRow],
     isLoading,
     isUnavailable,
     error: buildInfoQuery.error,
   };
 }
 
-function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
-  const { baseUrl, copyLayerUrlMenu, isLoading, isUnavailable } = useZarrLinkMenu(
-    linkItem.accessToken,
-  );
+function ZarrLinkUrlRow({
+  row,
+  isLoading,
+  isUnavailable,
+}: {
+  row: ZarrLinkRow;
+  isLoading: boolean;
+  isUnavailable: boolean;
+}) {
+  const { token } = theme.useToken();
   const isDisabled = isLoading || isUnavailable;
 
   return (
-    <Space.Compact className="no-borders" block>
-      <Input
-        value={isLoading ? "Loading…" : isUnavailable ? "Unavailable" : baseUrl}
-        size="small"
-        style={{
-          width: "90%",
-          background: "transparent",
-          color: "var(--ant-color-text-secondary)",
-        }}
-        readOnly
-        disabled
-      />
-
-      <Dropdown menu={copyLayerUrlMenu} disabled={isDisabled}>
-        <Button
-          size="small"
-          icon={<CopyOutlined />}
-          style={{ background: "transparent" }}
-          disabled={isDisabled}
+    <Flex vertical gap={token.marginXXS}>
+      <Space size="small">
+        <Typography.Text strong>{row.label}</Typography.Text>
+        {row.isWkOnly && <Tag>WEBKNOSSOS only</Tag>}
+      </Space>
+      <Space.Compact block>
+        <Input
+          value={isLoading ? "Loading…" : isUnavailable ? "Unavailable" : row.url}
+          style={{ fontFamily: token.fontFamilyCode, fontSize: token.fontSizeSM }}
+          onFocus={(event) => event.target.select()}
+          readOnly
         />
-      </Dropdown>
-    </Space.Compact>
+        <Button
+          icon={<CopyOutlined />}
+          disabled={isDisabled}
+          onClick={() => copyToClipboard(row.url, "URL")}
+        >
+          Copy
+        </Button>
+      </Space.Compact>
+    </Flex>
   );
+}
+
+export function ZarrLinkUrlRows({ maybeAccessToken }: { maybeAccessToken: string | null }) {
+  const { token } = theme.useToken();
+  const { rows, isLoading, isUnavailable } = useZarrLinks(maybeAccessToken);
+
+  return (
+    <Flex vertical gap={token.marginSM}>
+      {rows.map((row) => (
+        <ZarrLinkUrlRow
+          key={row.key}
+          row={row}
+          isLoading={isLoading}
+          isUnavailable={isUnavailable}
+        />
+      ))}
+    </Flex>
+  );
+}
+
+// Private links don't store a creation date, but their id is an ObjectId whose first
+// 4 bytes encode the creation time in seconds since the epoch.
+function getCreationTimestamp(linkItem: ZarrPrivateLink) {
+  return Number.parseInt(linkItem.id.slice(0, 8), 16) * 1000;
 }
 
 function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
@@ -319,17 +352,15 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
       <FormattedDate timestamp={linkItem.expirationDateTime} />
       <Popover
         content={
-          <>
-            <div>
-              <DatePicker onChange={onChange} defaultValue={expirationDate} allowClear={false} />
-            </div>
-            <Button
-              type="link"
-              onClick={() => updateMutation.mutate({ ...linkItem, expirationDateTime: null })}
-            >
-              Remove expiration date
-            </Button>
-          </>
+          <Space.Compact>
+            <DatePicker onChange={onChange} defaultValue={expirationDate} allowClear={false} />
+            <Tooltip title="Remove expiration date">
+              <Button
+                icon={<DeleteOutlined />}
+                onClick={() => updateMutation.mutate({ ...linkItem, expirationDateTime: null })}
+              />
+            </Tooltip>
+          </Space.Compact>
         }
         title="Set an expiration date"
         trigger="click"
@@ -360,41 +391,91 @@ function HumanizedDuration({ expirationDate }: { expirationDate: dayjs.Dayjs }) 
   );
 }
 
+function PrivateLinkHeaderExtra({ linkItem }: { linkItem: ZarrPrivateLink }) {
+  const deleteMutation = useDeleteLinkMutation(linkItem.annotation);
+
+  return (
+    // Interacting with the expiration date or the delete button must not toggle the panel.
+    // React events also bubble out of the popovers rendered in portals, hence the wrapper.
+    <span onClick={(event) => event.stopPropagation()}>
+      <Space size="small">
+        <ExpirationDate linkItem={linkItem} />
+        <Tooltip title="Delete Link" placement="left">
+          <AsyncButton
+            type="text"
+            size="small"
+            icon={<DeleteOutlined />}
+            onClick={() => deleteMutation.mutateAsync(linkItem.id)}
+          />
+        </Tooltip>
+      </Space>
+    </span>
+  );
+}
+
+function EmptyLinkList({ onCreate }: { onCreate: () => Promise<void> }) {
+  const { token } = theme.useToken();
+
+  // Mimics the Collapse's border and header background, so the modal looks the same before and
+  // after creating the first link.
+  return (
+    <Flex
+      align="center"
+      justify="space-between"
+      gap="middle"
+      style={{
+        border: `${token.lineWidth}px ${token.lineType} ${token.colorBorder}`,
+        borderRadius: token.borderRadiusLG,
+        background: token.colorFillAlter,
+        padding: `${token.padding}px ${token.paddingLG}px`,
+      }}
+    >
+      <div>
+        <Typography.Paragraph strong style={{ marginBottom: 0 }}>
+          No Zarr links yet
+        </Typography.Paragraph>
+        <Typography.Text type="secondary">
+          A link gives access to every layer of this annotation. It expires after 1 month by
+          default.
+        </Typography.Text>
+      </div>
+      <AsyncButton type="primary" icon={<PlusOutlined />} onClick={onCreate}>
+        Create Zarr Link
+      </AsyncButton>
+    </Flex>
+  );
+}
+
 function PrivateLinksView({ annotationId }: { annotationId: string }) {
+  const { token } = theme.useToken();
   const { error, data: links, isPending } = useLinksQuery(annotationId);
   const createLinkMutation = useCreateLinkMutation(annotationId);
-  const deleteMutation = useDeleteLinkMutation(annotationId);
+  // undefined: the user did not pick a link yet, so the newest one is expanded.
+  // null: the user collapsed all links.
+  const [activeLinkId, setActiveLinkId] = useState<string | null | undefined>(undefined);
 
   if (error) {
     return <span>Error while loading the private links: {error.message}</span>;
   }
 
-  const columns: ColumnsType<ZarrPrivateLink> = [
-    {
-      title: "Base URL",
-      key: "name",
-      render: (_, linkItem) => <UrlInput linkItem={linkItem} />,
-      width: "60%",
-    },
-    {
-      title: "Expiration Date",
-      key: "name",
-      dataIndex: "expirationDateTime",
-      render: (_, linkItem) => <ExpirationDate linkItem={linkItem} />,
-    },
-    {
-      title: "",
-      key: "action",
-      render: (_, linkItem) => (
-        <Tooltip title="Delete Link" placement="left">
-          <AsyncIconButton
-            onClick={() => deleteMutation.mutateAsync(linkItem.id)}
-            icon={<DeleteOutlined />}
-          />
-        </Tooltip>
-      ),
-    },
-  ];
+  const createLink = async () => {
+    const newLink = await createLinkMutation.mutateAsync(annotationId);
+    setActiveLinkId(newLink.id);
+  };
+
+  const collapseItems: CollapseProps["items"] = (links ?? []).map((linkItem) => ({
+    key: linkItem.id,
+    label: (
+      <Space size="small">
+        <Typography.Text strong>Zarr Link</Typography.Text>
+        <Typography.Text type="secondary">
+          created {formatDateInLocalTimeZone(getCreationTimestamp(linkItem), "D MMMM YYYY HH:mm")}
+        </Typography.Text>
+      </Space>
+    ),
+    extra: <PrivateLinkHeaderExtra linkItem={linkItem} />,
+    children: <ZarrLinkUrlRows maybeAccessToken={linkItem.accessToken} />,
+  }));
 
   return (
     <div>
@@ -417,28 +498,29 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
         >
           <Spin />
         </div>
+      ) : links.length === 0 ? (
+        <EmptyLinkList onCreate={createLink} />
       ) : (
         <>
-          {links.length > 0 && (
-            <Table
-              rowKey="id"
-              columns={columns}
-              dataSource={links}
-              size="small"
-              pagination={false}
-            />
-          )}
-
-          <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
-            <AsyncButton
-              type={links.length === 0 ? "primary" : "link"}
-              size={links.length === 0 ? "large" : undefined}
-              icon={<PlusOutlined />}
-              onClick={() => createLinkMutation.mutateAsync(annotationId)}
-            >
-              Create Zarr Link
-            </AsyncButton>
-          </div>
+          <Collapse
+            accordion
+            size="small"
+            items={collapseItems}
+            activeKey={activeLinkId === undefined ? (links.at(-1)?.id ?? []) : (activeLinkId ?? [])}
+            onChange={(keys) => setActiveLinkId(keys[0] ?? null)}
+          />
+          <Typography.Paragraph
+            type="secondary"
+            style={{
+              fontSize: token.fontSizeSM,
+              margin: `${token.marginXS}px 0 ${token.margin}px`,
+            }}
+          >
+            {messages["tracing.zarr_link_compatibility_hint"]}
+          </Typography.Paragraph>
+          <AsyncButton icon={<PlusOutlined />} onClick={createLink}>
+            Create Another Zarr Link
+          </AsyncButton>
         </>
       )}
     </div>
@@ -467,11 +549,13 @@ function PrivateLinksModalInner({
     <Modal
       title="Manage Zarr Links"
       open={isOpen}
-      width={ModalWidth.Large}
+      width={ModalWidth.ExtraLarge}
       onCancel={onOk}
-      onOk={onOk}
-      okButtonProps={{ loading: isBusy }}
-      footer={(_, { OkBtn }) => <OkBtn />} // exclude cancel button
+      footer={
+        <Button onClick={onOk} loading={isBusy}>
+          Close
+        </Button>
+      }
     >
       <PrivateLinksView annotationId={annotationId} />
     </Modal>

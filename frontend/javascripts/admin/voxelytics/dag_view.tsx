@@ -17,6 +17,7 @@ import ReactFlow, {
 } from "reactflow";
 import { getActiveTheme } from "theme";
 import "reactflow/dist/style.css";
+import { WK_FONT } from "theme";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfigWithName,
@@ -28,8 +29,6 @@ import type { Theme } from "viewer/store";
 
 export const colorHasher = new ColorHash({ lightness: [0.35, 0.5, 0.65] });
 
-const FONT_FAMILY =
-  '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif';
 const NODE_FONT_SIZE = 12;
 const NODE_PADDING = 10;
 const NODE_HEIGHT = 36;
@@ -50,7 +49,7 @@ const getMeasuringCanvas = memoize((): CanvasRenderingContext2D => {
 const measureTextWidth = memoize(
   (text: string, fontSize: number): number => {
     const ctx = getMeasuringCanvas();
-    ctx.font = `${fontSize}px ${FONT_FAMILY}`;
+    ctx.font = `${fontSize}px ${WK_FONT}`;
     return Math.ceil(ctx.measureText(text).width);
   },
   (text, fontSize) => `${fontSize}#${text}`,
@@ -325,7 +324,7 @@ function computeLayout(key: string): DagLayout {
 }
 
 // Laying out the DAG is expensive, so it is only recomputed when the graph structure changes,
-// not when only run states (e.g., while polling a running workflow) or the selection change.
+// not when only run states (e.g., when refreshing a running workflow) or the selection change.
 function useDagLayout(dag: VoxelyticsWorkflowDag): DagLayout {
   const layoutInputKey = JSON.stringify(getLayoutInput(dag));
   return useMemo(() => computeLayout(layoutInputKey), [layoutInputKey]);

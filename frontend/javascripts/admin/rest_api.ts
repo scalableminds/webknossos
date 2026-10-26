@@ -1049,11 +1049,13 @@ export function getBookmarkThumbnailUrl(
   tracingStoreUrl: string,
   annotationId: string,
   bookmarkId: number,
+  createdAtVersion: number,
   size: "small" | "large",
 ): Promise<string> {
+  // Bookmark ids can be reused (e.g. after a revert), so createdAtVersion keeps the cached thumbnails apart.
   return doWithToken(
     async (token) =>
-      `${tracingStoreUrl}/tracings/annotation/${annotationId}/bookmarks/${bookmarkId}/thumbnail?size=${size}&token=${token}`,
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}/bookmarks/${bookmarkId}/thumbnail?size=${size}&v=${createdAtVersion}&token=${token}`,
   );
 }
 

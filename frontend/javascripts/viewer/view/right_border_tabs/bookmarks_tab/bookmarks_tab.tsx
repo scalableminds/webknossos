@@ -24,18 +24,21 @@ function BookmarkThumbnail({ bookmark }: { bookmark: APIAnnotationBookmark }) {
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
   const [serverUrl, setServerUrl] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
-  const { id, smallThumbnailDataBase64 } = bookmark;
+  const { id, createdAtVersion, smallThumbnailDataBase64 } = bookmark;
 
   useEffect(() => {
-    if (smallThumbnailDataBase64 != null) return;
+    // Unsaved bookmarks have no thumbnail on the server yet.
+    if (smallThumbnailDataBase64 != null || createdAtVersion == null) return;
     let isCancelled = false;
-    getBookmarkThumbnailUrl(tracingStoreUrl, annotationId, id, "small").then((url) => {
-      if (!isCancelled) setServerUrl(url);
-    });
+    getBookmarkThumbnailUrl(tracingStoreUrl, annotationId, id, createdAtVersion, "small").then(
+      (url) => {
+        if (!isCancelled) setServerUrl(url);
+      },
+    );
     return () => {
       isCancelled = true;
     };
-  }, [tracingStoreUrl, annotationId, id, smallThumbnailDataBase64]);
+  }, [tracingStoreUrl, annotationId, id, createdAtVersion, smallThumbnailDataBase64]);
 
   const src =
     smallThumbnailDataBase64 != null

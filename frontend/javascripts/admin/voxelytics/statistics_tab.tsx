@@ -9,29 +9,13 @@ import {
   formatNumber,
   formatTimeIntervalStrict,
 } from "libs/format_utils";
-import { usePolling } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { VoxelyticsChunkStatistics } from "types/api_types";
+import { parseStatistics } from "./parse_api_data";
 import type { Result } from "./utils";
 
 type StatisticsResult = Result<Array<VoxelyticsChunkStatistics>>;
-
-function parseStatistics(row: VoxelyticsChunkStatistics): VoxelyticsChunkStatistics {
-  return Object.fromEntries(
-    Object.entries(row).map(([key, value]) => {
-      if (key === "executionId") {
-        return [key, value];
-      } else if (value == null) {
-        return [key, null];
-      } else if (key === "beginTime" || key === "endTime") {
-        return [key, new Date(value as string)];
-      } else {
-        return [key, value];
-      }
-    }),
-  ) as VoxelyticsChunkStatistics;
-}
 
 export default function StatisticsTab({
   workflowHash,
@@ -41,7 +25,6 @@ export default function StatisticsTab({
   workflowHash: string;
   runId: string | null;
   taskName: string;
-  isRunning: boolean;
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [statisticsResult, setStatisticsResult] = useState<StatisticsResult>({ type: "LOADING" });
@@ -63,7 +46,10 @@ export default function StatisticsTab({
     }
   }
 
-  usePolling(loadStatistics, null, [runId, taskName]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only reload when the selected task changes; the Refresh button covers manual reloads
+  useEffect(() => {
+    loadStatistics();
+  }, [runId, taskName]);
 
   function renderContent() {
     if (statisticsResult.type === "LOADING") {

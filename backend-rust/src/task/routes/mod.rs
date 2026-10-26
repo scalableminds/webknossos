@@ -159,7 +159,7 @@ pub(crate) async fn public_json_for(
     );
     // Script lookup is request-scoped; ScriptService.compactWrites uses global
     // access for its owner. A missing/deleted script is serialized as null.
-    q.push(crate::scripts::SELECT_LIVE_SCRIPTS);
+    q.push(crate::scripts::dao::SELECT_LIVE_SCRIPTS);
     if !global {
         q.push(" AND u._organization = ")
             .push_arg(requester.organization);

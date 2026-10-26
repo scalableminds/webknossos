@@ -1,4 +1,6 @@
 //! Script CRUD with organization-scoped reads and owner-only mutations.
+pub(crate) mod dao;
+
 use axum::{Json, Router, extract::State, http::StatusCode, routing::get};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -9,7 +11,6 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path},
-    sql::Sql,
     util::id::ObjectId,
 };
 
@@ -22,36 +23,13 @@ struct ScriptParameters {
 
 /// ScriptService.publicWrites (the owner as UserService.compactWrites).
 #[derive(FromRow, Serialize)]
-struct Script {
+pub(crate) struct Script {
     id: ObjectId,
     #[serde(skip)]
     owner_id: ObjectId,
     name: String,
     gist: String,
     owner: Value,
-}
-
-/// Live scripts; callers append further conditions. Compact owner JSON is the
-/// UserService.compactWrites contract, including memberships.
-pub(crate) const SELECT_LIVE_SCRIPTS: &str =
-    "SELECT s._id AS id, s._owner AS owner_id, s.name, s.gist,
-    jsonb_build_object('id', u._id, 'email', m.email, 'firstName', m.firstName,
-      'lastName', m.lastName, 'isAdmin', u.isAdmin, 'isDatasetManager', u.isDatasetManager,
-      'isActive', NOT u.isDeactivated, 'isAnonymous', false,
-      'teams', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', t._id, 'name', t.name,
-        'isTeamManager', r.isTeamManager) ORDER BY t._id)
-        FROM webknossos.user_team_roles r JOIN webknossos.teams_ t ON t._id = r._team
-        WHERE r._user = u._id), '[]'::jsonb)) AS owner
-    FROM webknossos.scripts s
-    JOIN webknossos.users_ u ON u._id = s._owner
-    JOIN webknossos.multiUsers_ m ON m._id = u._multiUser
-    WHERE NOT s.isDeleted";
-
-/// The live scripts of `organization`.
-fn select_scripts(organization: &str) -> Sql<'_> {
-    let mut q = Sql::new(SELECT_LIVE_SCRIPTS);
-    q.push(" AND u._organization = ").push_bind(organization);
-    q
 }
 
 pub fn router() -> Router<AppState> {
@@ -61,9 +39,7 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<Vec<Script>>> {
-    let mut q = select_scripts(&user.organization_id);
-    q.push(" ORDER BY s._id");
-    let scripts = q.build_query_as::<Script>().fetch_all(&state.pool).await?;
+    let scripts = dao::find_all(&state.pool, &user.organization_id).await?;
     Ok(Json(scripts))
 }
 
@@ -73,13 +49,7 @@ async fn find(
     id: &ObjectId,
     lock: bool,
 ) -> ApiResult<Script> {
-    let mut q = select_scripts(organization_id);
-    q.push(" AND s._id = ").push_bind(id);
-    if lock {
-        q.push(" FOR UPDATE OF s");
-    }
-    q.build_query_as::<Script>()
-        .fetch_optional(connection)
+    dao::find_one(connection, organization_id, id, lock)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::script::not_found(id)))
 }
@@ -107,13 +77,7 @@ async fn create(
     validate(&body)?;
     let id = ObjectId::new();
     let mut transaction = state.pool.begin().await?;
-    sqlx::query("INSERT INTO webknossos.scripts (_id, _owner, name, gist) VALUES ($1, $2, $3, $4)")
-        .bind(&id)
-        .bind(&body.owner)
-        .bind(&body.name)
-        .bind(&body.gist)
-        .execute(&mut *transaction)
-        .await?;
+    dao::insert_one(&mut transaction, &id, &body.owner, &body.name, &body.gist).await?;
     let script = find(&mut transaction, &user.organization_id, &id, false).await?;
     transaction.commit().await?;
     Ok(Json(script))
@@ -132,25 +96,14 @@ async fn update(
         return Err(ApiError::forbidden(crate::msg::script::UPDATE_ONLY_OWNER));
     }
     validate(&body)?;
-    let target_exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM webknossos.users_ WHERE _id = $1 AND _organization = $2)",
-    )
-    .bind(&body.owner)
-    .bind(&user.organization_id)
-    .fetch_one(&mut *transaction)
-    .await?;
+    let target_exists =
+        dao::is_user_in_organization(&mut transaction, &body.owner, &user.organization_id).await?;
     if !target_exists {
         return Err(ApiError::bad_request(crate::msg::user::not_found(
             &body.owner,
         )));
     }
-    sqlx::query("UPDATE webknossos.scripts SET _owner = $2, name = $3, gist = $4 WHERE _id = $1")
-        .bind(&id)
-        .bind(&body.owner)
-        .bind(&body.name)
-        .bind(&body.gist)
-        .execute(&mut *transaction)
-        .await?;
+    dao::update_one(&mut transaction, &id, &body.owner, &body.name, &body.gist).await?;
     let script = find(&mut transaction, &user.organization_id, &id, false).await?;
     transaction.commit().await?;
     Ok(Json(script))
@@ -167,15 +120,8 @@ async fn remove(
     if old.owner_id != user.id {
         return Err(ApiError::forbidden(crate::msg::script::DELETE_ONLY_OWNER));
     }
-    sqlx::query("UPDATE webknossos.scripts SET isDeleted = TRUE WHERE _id = $1")
-        .bind(&id)
-        .execute(&mut *transaction)
-        .await?;
-    // Include deleted tasks, matching TaskDAO.removeScriptFromAllTasks.
-    sqlx::query("UPDATE webknossos.tasks SET _script = NULL WHERE _script = $1")
-        .bind(&id)
-        .execute(&mut *transaction)
-        .await?;
+    dao::delete_one(&mut transaction, &id).await?;
+    dao::remove_script_from_all_tasks(&mut transaction, &id).await?;
     transaction.commit().await?;
     Ok(StatusCode::OK)
 }

@@ -303,6 +303,30 @@ class AnnotationTransactionService @Inject() (
       )
     } yield ()
 
+  private def assertNoInvalidUpdateGroupCombinations(
+      updateGroup: UpdateActionGroup,
+      eagerBucketMutatingActions: Seq[EagerUpdateBucketVolumeAction]
+  )(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- Fox.fromBool(
+        updateGroup.actions.length <= 1000000
+      ) ?~> "Annotation update transactions with more than 1M update actions are not currently supported"
+      // Reverts, resets and add-layer actions are assumed, by the replay-time regrouping in
+      // UpdateGroupHandling, to always be the only update in their update group. That assumption is only
+      // ever established here, at commit time, since nothing re-validates or restores it during replay.
+      _ <- Fox.fromBool(
+        updateGroup.actions.length <= 1 || !updateGroup.actions.exists(
+          UpdateGroupHandling.isIsolationSensitiveAction
+        )
+      ) ?~> "An update group containing a revert, reset-to-base, or add-layer action must not contain any other actions"
+
+      _ <- Fox.fromBool(
+        eagerBucketMutatingActions.isEmpty || !updateGroup.actions.exists(
+          _.isInstanceOf[LazyBucketMutatingVolumeUpdateAction]
+        )
+      ) ?~> "Cannot mix eager bucket mutating actions with lazily applied bucket mutating actions in the same update group"
+    } yield ()
+
   private def applyEagerUpdateBucketActions(
       actions: Seq[EagerUpdateBucketVolumeAction],
       annotationId: ObjectId,
@@ -330,30 +354,6 @@ class AnnotationTransactionService @Inject() (
       }
       .map(_ => ())
   }
-
-  private def assertNoInvalidUpdateGroupCombinations(
-      updateGroup: UpdateActionGroup,
-      eagerBucketMutatingActions: Seq[EagerUpdateBucketVolumeAction]
-  )(implicit ec: ExecutionContext): Fox[Unit] =
-    for {
-      _ <- Fox.fromBool(
-        updateGroup.actions.length <= 1000000
-      ) ?~> "Annotation update transactions with more than 1M update actions are not currently supported"
-      // Reverts, resets and add-layer actions are assumed, by the replay-time regrouping in
-      // UpdateGroupHandling, to always be the only update in their update group. That assumption is only
-      // ever established here, at commit time, since nothing re-validates or restores it during replay.
-      _ <- Fox.fromBool(
-        updateGroup.actions.length <= 1 || !updateGroup.actions.exists(
-          UpdateGroupHandling.isIsolationSensitiveAction
-        )
-      ) ?~> "An update group containing a revert, reset-to-base, or add-layer action must not contain any other actions"
-
-      _ <- Fox.fromBool(
-        eagerBucketMutatingActions.isEmpty || !updateGroup.actions.exists(
-          _.isInstanceOf[LazyBucketMutatingVolumeUpdateAction]
-        )
-      ) ?~> "Cannot mix eager bucket mutating actions with lazily applied bucket mutating actions in the same update group"
-    } yield ()
 
   private def findEagerUpdateBucketActions(
       updateActionGroup: UpdateActionGroup

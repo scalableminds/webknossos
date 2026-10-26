@@ -1,0 +1,3 @@
+### Changed
+- The `Connectome` tab in the right-hand side panel is now only shown if the dataset contains connectome files.
+- The `AbsTree` tab is no longer part of the default layout. Open it via **Show Abstract Tree** in the actions menu of the `Skeleton` tab.

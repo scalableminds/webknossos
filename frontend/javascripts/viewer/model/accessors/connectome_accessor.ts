@@ -1,3 +1,4 @@
+import type { APIDataLayer, APIDataset } from "types/api_types";
 import type { WebknossosState } from "viewer/store";
 import { getVisibleOrLastSegmentationLayer } from "./dataset_accessor";
 
@@ -18,6 +19,17 @@ const CONNECTOME_STATES = {
 
 export function getConnectomeDataForLayer(state: WebknossosState, layerName: string) {
   return state.localSegmentationStateByLayer[layerName].connectomeData;
+}
+
+function hasConnectomeAttachment(layer: APIDataLayer | null | undefined): boolean {
+  if (layer == null) return false;
+  if ((layer.attachments?.connectomes?.length ?? 0) > 0) return true;
+  // Volume annotation layers replace their fallback layer, which holds the attachments.
+  return layer.category === "segmentation" && hasConnectomeAttachment(layer.fallbackLayerInfo);
+}
+
+export function datasetHasConnectomes(dataset: APIDataset): boolean {
+  return dataset.dataSource.dataLayers.some(hasConnectomeAttachment);
 }
 
 export function hasConnectomeFile(state: WebknossosState) {

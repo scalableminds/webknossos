@@ -10,10 +10,10 @@ extern "C" {
 /*
  * Class:      com_scalableminds_webknossos_datastore_compresso_NativeCompressoCompressor
  * Method:     decompress
- * Signature:  ([B)[B
+ * Signature:  ([BI)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_compresso_NativeCompressoCompressor_decompress
-  (JNIEnv *, jobject, jbyteArray);
+  (JNIEnv *, jobject, jbyteArray, jint);
 
 #ifdef __cplusplus
 }

@@ -1,7 +1,7 @@
 import { CloseOutlined } from "@ant-design/icons";
 import { Alert, Button, Typography } from "antd";
 import { Fragment } from "react";
-import VersionList, { handleCloseRestoreView } from "viewer/view/version_list";
+import VersionList, { handleCloseRestoreView } from "viewer/view/version_restore_view/version_list";
 
 function VersionView() {
   return (

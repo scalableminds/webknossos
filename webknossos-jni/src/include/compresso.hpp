@@ -225,7 +225,7 @@ std::vector<WINDOW> run_length_decode_windows(
 			index += (block >> 1);
 		}
 		else {
-			windows[index] = block >> 1;
+			windows.at(index) = block >> 1;
 			index++;
 		}
 	}
@@ -278,7 +278,7 @@ std::unique_ptr<bool[]> decode_boundaries(
 					size_t block = xblock + yblock + zblock;
 					size_t offset = xoffset + yoffset + zoffset;
 
-					WINDOW value = window_values[windows[block]];
+					WINDOW value = window_values.at(windows[block]);
 					boundaries[iv] = (value >> offset) & 0b1;
 				}
 			}
@@ -291,7 +291,7 @@ std::unique_ptr<bool[]> decode_boundaries(
 					size_t block = xblock + yblock + zblock;
 					size_t offset = xoffset + yoffset + zoffset;
 
-					WINDOW value = window_values[windows[block]];
+					WINDOW value = window_values.at(windows[block]);
 					boundaries[iv] = (value >> offset) & 0b1;
 				}
 			}
@@ -309,7 +309,7 @@ void decode_nonboundary_labels(
 ) {
 	const size_t voxels = sx * sy * sz;
 	for (size_t i = 0; i < voxels; i++) {
-		output[i] = ids[components[i]];
+		output[i] = ids.at(components[i]);
 	}
 }
 
@@ -350,7 +350,7 @@ int decode_indeterminate_locations(
 					return 1;
 				}
 
-				size_t offset = locations[index];
+				size_t offset = locations.at(index);
 
 				if (offset == 0) {
 					if (x == 0) {
@@ -389,7 +389,7 @@ int decode_indeterminate_locations(
 					labels[loc] = labels[loc + sxy];
 				}
 				else if (offset == 6) {
-					labels[loc] = locations[index + 1];
+					labels[loc] = locations.at(index + 1);
 					index++;
 				}
 				else {
@@ -431,20 +431,38 @@ int decompress(unsigned char* buffer, size_t num_bytes, LABEL* output) {
 		return 11;
 	}
 
+	// Reject crafted headers: zero steps would divide by zero, too large windows overflow the bit shifts
+	if (xstep == 0 || ystep == 0 || zstep == 0) {
+		return 14;
+	}
+	if (xstep * ystep * zstep > sizeof(WINDOW) * 8) {
+		return 15;
+	}
+
 	const size_t nx = (sx + xstep - 1) / xstep; // round up
 	const size_t ny = (sy + ystep - 1) / ystep; // round up
 	const size_t nz = (sz + zstep - 1) / zstep; // round up
 	const size_t nblocks = nz * ny * nx;
 
-	size_t window_bytes = (
-		num_bytes
-			- CompressoHeader::header_size
-			- (header.id_size * sizeof(LABEL))
-			- (header.value_size * sizeof(WINDOW))
-			- (header.location_size * sizeof(LABEL))
-			- (sz * index_width * random_access_z_index) // components index
-			- (sz * index_width * random_access_z_index) // locations index
-	);
+	// Section sizes come from the header, so check them against num_bytes without overflowing
+	size_t window_bytes = num_bytes - CompressoHeader::header_size;
+	if (header.id_size > window_bytes / sizeof(LABEL)) {
+		return 16;
+	}
+	window_bytes -= header.id_size * sizeof(LABEL);
+	if (header.value_size > window_bytes / sizeof(WINDOW)) {
+		return 16;
+	}
+	window_bytes -= header.value_size * sizeof(WINDOW);
+	if (header.location_size > window_bytes / sizeof(LABEL)) {
+		return 16;
+	}
+	window_bytes -= header.location_size * sizeof(LABEL);
+	const size_t z_index_bytes = 2 * sz * index_width * random_access_z_index; // components + locations index
+	if (z_index_bytes > window_bytes) {
+		return 16;
+	}
+	window_bytes -= z_index_bytes;
 	size_t num_condensed_windows = window_bytes / sizeof(WINDOW);
 
 	// allocate memory for all arrays
@@ -532,6 +550,9 @@ int decompress_helper(
 
 template <>
 int decompress<void,void>(unsigned char* buffer, size_t num_bytes, void* output) {
+	if (num_bytes < CompressoHeader::header_size) {
+		return 9;
+	}
 	if (!CompressoHeader::valid_header(buffer)) {
 		return 12;
 	}

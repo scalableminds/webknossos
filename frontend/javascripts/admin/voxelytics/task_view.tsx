@@ -71,7 +71,6 @@ function TaskView({
         workflowHash={workflowHash}
         runId={runId}
         taskName={taskInfo.taskName}
-        isRunning={taskInfo.state === VoxelyticsRunState.RUNNING}
         beginTime={taskInfo.beginTime}
         endTime={taskInfo.endTime}
       />
@@ -139,12 +138,7 @@ function TaskView({
       label: "Statistics",
       key: "5",
       children: (
-        <StatisticsTab
-          workflowHash={workflowHash}
-          runId={runId}
-          taskName={taskInfo.taskName}
-          isRunning={taskInfo.state === VoxelyticsRunState.RUNNING}
-        />
+        <StatisticsTab workflowHash={workflowHash} runId={runId} taskName={taskInfo.taskName} />
       ),
     });
   }

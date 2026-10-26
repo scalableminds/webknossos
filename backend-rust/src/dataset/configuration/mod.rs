@@ -1,9 +1,12 @@
+mod dao;
+
 use crate::response::Messages;
 use axum::{
     Json, Router,
     extract::State,
     routing::{get, post},
 };
+use dao::DatasetConfiguration;
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use sqlx::PgPool;
@@ -29,14 +32,6 @@ pub fn router() -> Router<AppState> {
 #[serde(rename_all = "camelCase")]
 struct SharingQuery {
     sharing_token: Option<String>,
-}
-
-#[derive(sqlx::FromRow)]
-struct DatasetConfiguration {
-    is_usable: bool,
-    has_voxel_size: bool,
-    default_configuration: Option<Value>,
-    admin_configuration: Option<Value>,
 }
 
 fn merge(base: &mut Map<String, Value>, configuration: Option<Value>) {
@@ -100,16 +95,8 @@ async fn complete(
     }
     if let Some(user) = user {
         let names: Vec<&str> = layers.keys().map(String::as_str).collect();
-        let existing: Vec<(String, Value)> = sqlx::query_as(
-            "SELECT layerName, viewConfiguration FROM \
-                webknossos.user_datasetLayerConfigurations WHERE _user = $1 AND _dataset = $2 \
-                AND layerName = ANY($3::text[])",
-        )
-        .bind(&user.id)
-        .bind(dataset_id)
-        .bind(&names)
-        .fetch_all(pool)
-        .await?;
+        let existing =
+            dao::find_user_layer_configurations(pool, &user.id, dataset_id, &names).await?;
         for (name, config) in existing {
             if let Some(Value::Object(layer)) = layers.get_mut(&name) {
                 merge(layer, Some(config));
@@ -121,8 +108,7 @@ async fn complete(
 }
 
 async fn dataset(pool: &PgPool, id: &ObjectId) -> ApiResult<Option<DatasetConfiguration>> {
-    Ok(sqlx::query_as("SELECT isUsable AS is_usable, voxelSizeFactor IS NOT NULL AS has_voxel_size, defaultViewConfiguration AS default_configuration, adminViewConfiguration AS admin_configuration FROM webknossos.datasets_ WHERE _id = $1")
-        .bind(id).fetch_optional(pool).await?)
+    dao::find_configuration(pool, id).await
 }
 
 async fn read(
@@ -136,14 +122,7 @@ async fn read(
     // GlobalAccessContext. Only if it does not exist does it fall back to the
     // dataset default configuration through normal sharing-aware read access.
     let existing = if let Some(user) = user.as_ref() {
-        sqlx::query_scalar::<_, Value>(
-            "SELECT viewConfiguration FROM webknossos.user_datasetConfigurations WHERE \
-                _user = $1 AND _dataset = $2",
-        )
-        .bind(&user.id)
-        .bind(&*id)
-        .fetch_optional(&state.pool)
-        .await?
+        dao::find_user_configuration(&state.pool, &user.id, &id).await?
     } else {
         None
     };
@@ -210,38 +189,16 @@ async fn update(
     let mut transaction = state.pool.begin().await?;
     // UserService intentionally permits saving a personal configuration for
     // any existing dataset; dataset sharing permissions are not an edit grant.
-    sqlx::query("SELECT _id FROM webknossos.datasets_ WHERE _id = $1 FOR SHARE")
-        .bind(&*id)
-        .fetch_one(&mut *transaction)
-        .await?;
+    dao::lock_dataset_for_share(&mut transaction, &id).await?;
     if let Some(Value::Object(layers)) = config.remove("layers") {
         for (name, layer) in layers {
             if layer.is_object() {
-                sqlx::query(
-                    "INSERT INTO webknossos.user_datasetLayerConfigurations \
-                        (_user,_dataset,layerName,viewConfiguration) VALUES ($1,$2,$3,$4) ON \
-                        CONFLICT (_user,_dataset,layerName) DO UPDATE SET viewConfiguration = \
-                        EXCLUDED.viewConfiguration",
-                )
-                .bind(&user.id)
-                .bind(&*id)
-                .bind(name)
-                .bind(layer)
-                .execute(&mut *transaction)
-                .await?;
+                dao::upsert_user_layer_configuration(&mut transaction, &user.id, &id, name, layer)
+                    .await?;
             }
         }
     }
-    sqlx::query(
-        "INSERT INTO webknossos.user_datasetConfigurations \
-            (_user,_dataset,viewConfiguration) VALUES ($1,$2,$3) ON CONFLICT (_user,_dataset) \
-            DO UPDATE SET viewConfiguration = EXCLUDED.viewConfiguration",
-    )
-    .bind(&user.id)
-    .bind(&*id)
-    .bind(Value::Object(config))
-    .execute(&mut *transaction)
-    .await?;
+    dao::upsert_user_configuration(&mut transaction, &user.id, &id, Value::Object(config)).await?;
     transaction.commit().await?;
     Ok(success())
 }
@@ -257,32 +214,27 @@ async fn update_admin(
     crate::dataset::lifecycle::require_editable(&state, &user, &id).await?;
     let mut transaction = state.pool.begin().await?;
     crate::dataset::access::lock_edit(&mut transaction, &user, &id, true).await?;
-    sqlx::query(
-        "UPDATE webknossos.datasets SET adminViewConfiguration = $2, \
-            thumbnailCacheVersion = thumbnailCacheVersion + 1 WHERE _id = $1 AND NOT isDeleted",
+    dao::update_admin_view_configuration(
+        &mut transaction,
+        &id,
+        Value::Object({
+            let mut dataset = config.clone();
+            dataset.remove("layers");
+            dataset
+        }),
     )
-    .bind(&*id)
-    .bind(Value::Object({
-        let mut dataset = config.clone();
-        dataset.remove("layers");
-        dataset
-    }))
-    .execute(&mut *transaction)
     .await?;
     if let Some(Value::Object(layers)) = config.remove("layers") {
         // The Scala decoder accepts the whole layer map only when every
         // configuration is an object. An invalid entry causes all to be ignored.
         if layers.values().all(Value::is_object) {
             for (name, layer) in layers {
-                sqlx::query("UPDATE webknossos.dataset_layers SET adminViewConfiguration = $3 WHERE _dataset = $1 AND name = $2")
-                .bind(&*id).bind(name).bind(layer).execute(&mut *transaction).await?;
+                dao::update_layer_admin_view_configuration(&mut transaction, &id, name, layer)
+                    .await?;
             }
         }
     }
-    sqlx::query("DELETE FROM webknossos.dataset_thumbnails WHERE _dataset = $1")
-        .bind(&*id)
-        .execute(&mut *transaction)
-        .await?;
+    dao::delete_thumbnails(&mut transaction, &id).await?;
     transaction.commit().await?;
     Ok(success())
 }

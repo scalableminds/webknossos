@@ -2,10 +2,11 @@ import ErrorHandling from "libs/error_handling";
 import { noop } from "lodash-es";
 import { applyMiddleware, createStore } from "redux";
 import createSagaMiddleware from "redux-saga";
-import { delay } from "redux-saga/effects";
+import { delay, take } from "redux-saga/effects";
 import { call } from "typed-redux-saga";
 import defaultState from "viewer/default_state";
 import type { Action } from "viewer/model/actions/actions";
+import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { combinedReducer } from "viewer/model/reducers/root_reducer";
 import {
   _resetOperationContextForTesting,
@@ -503,7 +504,8 @@ describe("operation_context_saga", () => {
         yield* ctx.execute(function* () {
           yield* child.execute(function* () {
             isExecuting = true;
-            yield delay(1000);
+            // Stays pending until the test dispatches this action after cancelling.
+            yield take("SET_ZOOM_STEP");
           });
         });
         continuedAfterCancel = true;
@@ -513,6 +515,8 @@ describe("operation_context_saga", () => {
       await vi.waitFor(() => expect(isExecuting).toBe(true));
       task.cancel();
       await task.toPromise();
+      // If the cancelled saga was still alive, this would let it run to completion.
+      store.dispatch(setZoomStepAction(1));
       // The cleanup (yielding effects in finally blocks) must not make the cancelled saga resume.
       await new Promise((resolve) => setTimeout(resolve, 20));
       expect(continuedAfterCancel).toBe(false);

@@ -611,7 +611,7 @@ type APIAnnotationBase = APIAnnotationInfo & {
   readonly collaborationMode: AnnotationCollaborationMode;
   // Only populated once the tracingstore's AnnotationProto has been fetched
   // (see model_initialization.ts); not part of the plain /info JSON.
-  readonly bookmarks: APIAnnotationBookmark[];
+  readonly bookmarks?: APIAnnotationBookmark[];
 };
 export type APIAnnotation = APIAnnotationBase & {
   readonly task: APITask | null | undefined;

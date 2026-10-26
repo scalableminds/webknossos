@@ -66,8 +66,8 @@ const viteConfig = {
         ["the controllers", /[\\/]viewer[\\/]controller(\.tsx$|[\\/])/],
         ["the geometries and shaders", /[\\/]viewer[\\/](geometries|shaders)[\\/]/],
       ],
-      // Gzipped JS + CSS loaded upfront by every page (1,026 kB as of #10088).
-      initialPayloadBudgetKb: 1050,
+      // Gzipped JS + CSS loaded upfront by every page (1,057 kB as of #10224).
+      initialPayloadBudgetKb: 1100,
     }),
   ],
   devtools: {

@@ -25,7 +25,7 @@ use crate::{
     auth::routes::AuthRouteConfig,
     error::{ApiError, ApiResult},
     extract::{Path, Query},
-    sql::Sql,
+    job::dao,
     system::application_info::MiscState,
     util::id::{ObjectId, PathObjectId},
 };
@@ -59,77 +59,11 @@ pub(crate) const JOB_COMMANDS: [&str; 17] = [
 /// JobState values (also the order of the JOB_STATE database enum).
 pub(crate) const JOB_STATES: [&str; 5] = ["PENDING", "STARTED", "SUCCESS", "FAILURE", "CANCELLED"];
 
-/// DataSourceStatus.unreportedStatusList.
-const UNREPORTED_DATASET_STATUSES: [&str; 3] = [
-    "No longer available on datastore.",
-    "Deleted by user.",
-    crate::dataset::lifecycle::CONVERSION_FAILED,
-];
-
 pub(crate) fn is_job_command(command: &str) -> bool {
     JOB_COMMANDS.contains(&command)
 }
 
-/// JobDAO.readAccessQ for alias `j`: own jobs, jobs of members of teams the
-/// user manages, jobs of the admin's organization, or superuser.
-fn push_job_read_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
-    q.push("(j._owner = ")
-        .push_bind(user_id)
-        .push(
-            r#"
-  OR j._owner IN (SELECT _user FROM webknossos.user_team_roles WHERE _team IN
-    (SELECT _team FROM webknossos.user_team_roles WHERE _user = "#,
-        )
-        .push_bind(user_id)
-        .push(
-            r#" AND isTeamManager))
-  OR (SELECT ou._organization FROM webknossos.users_ ou WHERE ou._id = j._owner) IN
-    (SELECT _organization FROM webknossos.users_ WHERE _id = "#,
-        )
-        .push_bind(user_id)
-        .push(" AND isAdmin)\n  OR ")
-        .push_bind(user_id)
-        .push(
-            " IN (SELECT su._id FROM webknossos.users_ su JOIN webknossos.multiUsers_ sm ON su._multiUser = sm._id WHERE sm.isSuperUser))",
-        );
-}
-
-/// JobDAO.listAccessQ for alias `j`: own jobs or jobs of the admin's organization.
-fn push_job_list_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
-    q.push("(j._owner = ")
-        .push_bind(user_id)
-        .push(
-            r#"
-  OR (SELECT ou._organization FROM webknossos.users_ ou WHERE ou._id = j._owner) IN
-    (SELECT _organization FROM webknossos.users_ WHERE _id = "#,
-        )
-        .push_bind(user_id)
-        .push(" AND isAdmin))");
-}
-
-/// CreditTransactionDAO.readAccessQ (unaliased credit_transactions_).
-fn push_credit_read_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
-    q.push(
-        "(_organization IN (SELECT _organization FROM webknossos.users_ WHERE (isAdmin OR isDatasetManager) AND _id = ",
-    )
-    .push_bind(user_id)
-    .push(
-        ")\n  OR _organization IN (SELECT _organization FROM webknossos.teams_ WHERE _id IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = ",
-    )
-    .push_bind(user_id)
-    .push(
-        "))\n  OR TRUE IN (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN (SELECT _multiUser FROM webknossos.users_ WHERE _id = ",
-    )
-    .push_bind(user_id)
-    .push(")))");
-}
-
-/// Column list for [`Job`] (alias `j`, `_dataStore` trimmed as in JobDAO.parse).
-pub(crate) const JOB_COLUMNS: &str = r#"j._id AS id, j._owner AS owner, TRIM(j._dataStore) AS data_store,
-  j.command, j.commandArgs AS args, j.state::text AS state, j.manualState::text AS manual_state,
-  j._worker AS worker, j._voxelytics_workflowHash AS workflow_hash, j.latestRunId AS latest_run_id,
-  j.latestRunErrorDetails AS error_details, j.returnValue AS return_value,
-  j.retriedBySuperUser AS retried_by_superuser, j.started, j.ended, j.lastRetry AS last_retry, j.created"#;
+pub(crate) use dao::JOB_COLUMNS;
 
 /// Settings for the jobs routes that are not covered by other configuration.
 #[derive(Clone, Debug)]
@@ -228,13 +162,7 @@ pub(crate) async fn find_job(
     user_id: &ObjectId,
     job_id: &ObjectId,
 ) -> ApiResult<Option<Job>> {
-    let mut q = Sql::new("SELECT ");
-    q.push(JOB_COLUMNS)
-        .push(" FROM webknossos.jobs_ j WHERE j._id = ")
-        .push_bind(job_id)
-        .push(" AND ");
-    push_job_read_access(&mut q, user_id);
-    let job: Option<Job> = q.build_query_as().fetch_optional(&mut *connection).await?;
+    let job = dao::find_one(connection, user_id, job_id).await?;
     match job {
         Some(job) if !job.is_valid() => Err(ApiError::bad_request(format!(
             "Parsing failed for row in webknossos.jobs queried by {job_id}"
@@ -322,55 +250,21 @@ pub(crate) async fn public_writes(
     user_id: &ObjectId,
     job: &Job,
 ) -> ApiResult<Value> {
-    // UserDAO.findOne (read access: managed team member, own organization as admin, self).
-    let owner: (String, ObjectId) = sqlx::query_as(
-        r#"SELECT u._organization, u._multiUser FROM webknossos.users_ u
-          WHERE u._id = $2 AND (
-            u._id IN (SELECT _user FROM webknossos.user_team_roles WHERE _team IN
-              (SELECT _team FROM webknossos.user_team_roles WHERE _user = $1 AND isTeamManager))
-            OR u._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $1 AND isAdmin)
-            OR u._id = $1)"#,
-    )
-    .bind(user_id)
-    .bind(&job.owner)
-    .fetch_optional(&mut *connection)
-    .await?
-    .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
+    let owner = dao::find_owner_organization_and_multi_user(connection, user_id, &job.owner)
+        .await?
+        .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
     let (owner_organization, owner_multi_user) = owner;
-    // MultiUserDAO.findOne (no access restriction, empty Fox when missing).
-    let (first_name, last_name, email): (String, String, String) = sqlx::query_as(
-        "SELECT firstName, lastName, email FROM webknossos.multiUsers_ WHERE _id = $1",
-    )
-    .bind(&owner_multi_user)
-    .fetch_optional(&mut *connection)
-    .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
-    // OrganizationDAO.findOne (read access: an organization of the user's account, or superuser).
-    let organization: String = sqlx::query_scalar(
-        r#"SELECT _id FROM webknossos.organizations_ WHERE _id = $2 AND (
-            _id IN (SELECT _organization FROM webknossos.users_ WHERE _multiUser =
-              (SELECT _multiUser FROM webknossos.users_ WHERE _id = $1))
-            OR TRUE IN (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN
-              (SELECT _multiUser FROM webknossos.users_ WHERE _id = $1)))"#,
-    )
-    .bind(user_id)
-    .bind(&owner_organization)
-    .fetch_optional(&mut *connection)
-    .await?
-    .ok_or_else(|| {
-        ApiError::bad_request(crate::msg::organization::not_found(&owner_organization))
-    })?;
+    let (first_name, last_name, email) =
+        dao::find_multi_user_name_and_email(connection, &owner_multi_user)
+            .await?
+            .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+    let organization = dao::find_readable_organization_id(connection, user_id, &owner_organization)
+        .await?
+        .ok_or_else(|| {
+            ApiError::bad_request(crate::msg::organization::not_found(&owner_organization))
+        })?;
     // CreditTransactionService.findTransactionOfJob; any failure means "no cost".
-    let mut q = Sql::new(
-        "SELECT milli_credit_delta FROM webknossos.credit_transactions_ WHERE _paid_job = ",
-    );
-    q.push_bind(&job.id).push(" AND ");
-    push_credit_read_access(&mut q, user_id);
-    q.push(" ORDER BY created_at, _id LIMIT 1");
-    let delta: Option<i32> = q
-        .build_query_scalar()
-        .fetch_optional(&mut *connection)
-        .await?;
+    let delta = dao::find_credit_delta_of_job(connection, user_id, &job.id).await?;
     Ok(JobCompactInfo {
         id: job.id.clone(),
         command: job.command.clone(),
@@ -455,26 +349,6 @@ struct ListQuery {
     skip_for_deleted_datasets: Option<bool>,
 }
 
-#[derive(sqlx::FromRow)]
-struct CompactRow {
-    id: ObjectId,
-    command: String,
-    organization: String,
-    first_name: String,
-    last_name: String,
-    email: String,
-    args: Value,
-    state: String,
-    return_value: Option<String>,
-    error_details: Option<Value>,
-    workflow_hash: Option<String>,
-    created: DateTime<Utc>,
-    started: Option<DateTime<Utc>>,
-    ended: Option<DateTime<Utc>>,
-    last_retry: Option<DateTime<Utc>>,
-    milli_credit_delta: Option<i32>,
-}
-
 // Query extraction precedes authentication: Play binds route parameters first.
 async fn list(
     State(state): State<AppState>,
@@ -488,39 +362,14 @@ async fn list(
     {
         return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
-    // JobDAO.findAllCompact. The credit lateral join has no access check (as in Scala);
-    // retries can attach several transactions with the same delta, so one suffices.
     let skip_for_deleted_datasets = query.skip_for_deleted_datasets.unwrap_or(false);
-    let mut q = Sql::new(
-        r#"SELECT j._id AS id, j.command, u._organization AS organization, mu.firstName AS first_name,
-            mu.lastName AS last_name, mu.email, j.commandArgs AS args,
-            COALESCE(j.manualState, j.state)::text AS state, j.returnValue AS return_value,
-            j.latestRunErrorDetails AS error_details, j._voxelytics_workflowHash AS workflow_hash,
-            j.created, j.started, j.ended, j.lastRetry AS last_retry, ct.milli_credit_delta
-          FROM webknossos.jobs_ j
-          JOIN webknossos.users_ u ON j._owner = u._id
-          JOIN webknossos.multiUsers_ mu ON u._multiUser = mu._id
-          LEFT JOIN LATERAL (SELECT milli_credit_delta FROM webknossos.credit_transactions_
-            WHERE _paid_job = j._id LIMIT 1) ct ON TRUE
-          WHERE ("#,
-    );
-    q.push_bind(&query.command)
-        .push("::text IS NULL OR j.command = ")
-        .push_bind(&query.command)
-        .push(") AND ");
-    push_job_list_access(&mut q, &user.id);
-    q.push(" AND (NOT ")
-        .push_bind(skip_for_deleted_datasets)
-        .push(
-            " OR (j.commandArgs->>'dataset_id')::text IN
-              (SELECT _id FROM webknossos.datasets WHERE status NOT IN (",
-        );
-    let mut statuses = q.separated(", ");
-    for status in UNREPORTED_DATASET_STATUSES {
-        statuses.push_bind(status);
-    }
-    q.push("))) ORDER BY j.created DESC, j._id DESC");
-    let rows: Vec<CompactRow> = q.build_query_as().fetch_all(&state.pool).await?;
+    let rows = dao::find_all_compact(
+        &state.pool,
+        &user.id,
+        query.command.as_deref(),
+        skip_for_deleted_datasets,
+    )
+    .await?;
     let mut result = Vec::with_capacity(rows.len());
     for row in rows {
         // JobCommand/JobState/JsObject parsing without message: an empty Fox.
@@ -555,38 +404,14 @@ async fn list(
     Ok(Json(result))
 }
 
-#[derive(sqlx::FromRow)]
-struct WorkerRow {
-    id: ObjectId,
-    name: String,
-    max_high: i32,
-    max_low: i32,
-    commands: Vec<String>,
-    created: DateTime<Utc>,
-    last_heart_beat: DateTime<Utc>,
-    last_reported_version: Option<String>,
-}
-
 /// JobController.status: all workers (global access) and job counts by worker state.
 async fn status(
     State(state): State<AppState>,
     Extension(routes): Extension<JobRoutes>,
     _user: AuthUser,
 ) -> ApiResult<Json<Value>> {
-    let counts: Vec<(String, i64)> = sqlx::query_as(
-        r#"SELECT state::text, COUNT(_id) FROM webknossos.jobs_
-          WHERE manualState IS NULL GROUP BY state ORDER BY state"#,
-    )
-    .fetch_all(&state.pool)
-    .await?;
-    let workers: Vec<WorkerRow> = sqlx::query_as(
-        r#"SELECT _id AS id, name, maxParallelHighPriorityJobs AS max_high,
-            maxParallelLowPriorityJobs AS max_low, supportedJobCommands AS commands, created,
-            lastHeartBeat AS last_heart_beat, lastReportedVersion AS last_reported_version
-          FROM webknossos.workers_ ORDER BY created, _id"#,
-    )
-    .fetch_all(&state.pool)
-    .await?;
+    let counts = dao::count_by_state(&state.pool).await?;
+    let workers = dao::find_all_workers(&state.pool).await?;
     let now = Utc::now();
     let timeout = chrono::Duration::from_std(routes.config.worker_liveness_timeout)
         .unwrap_or(chrono::Duration::MAX);
@@ -671,15 +496,7 @@ async fn cancel(
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // JobDAO.updateManualState: update access equals read access, checked by find_job.
-    // Finished jobs stay as they are; cancelling them would hide their result and make the
-    // worker see them as to-cancel on every poll.
-    sqlx::query(
-        "UPDATE webknossos.jobs SET manualState = 'CANCELLED'
-         WHERE _id = $1 AND state NOT IN ('SUCCESS', 'FAILURE')",
-    )
-    .bind(&job.id)
-    .execute(&mut *transaction)
-    .await?;
+    dao::update_manual_state_cancelled(&mut transaction, &job.id).await?;
     if job.state == "PENDING" || job.state == "STARTED" {
         refund_transaction_for_job(&mut transaction, &job.id, true)
             .await
@@ -704,14 +521,7 @@ pub(crate) async fn refund_transaction_for_job(
     job_id: &ObjectId,
     is_cancelled: bool,
 ) -> ApiResult<()> {
-    let pending: Option<ObjectId> = sqlx::query_scalar(
-        r#"SELECT _id FROM webknossos.credit_transactions_
-          WHERE _paid_job = $1 AND transaction_state = 'Pending'
-          ORDER BY created_at, _id LIMIT 1 FOR UPDATE"#,
-    )
-    .bind(job_id)
-    .fetch_optional(&mut *connection)
-    .await?;
+    let pending = dao::find_pending_transaction_of_job(connection, job_id).await?;
     let Some(transaction_id) = pending else {
         // Assume a transaction-less (unpaid) job.
         return Ok(());
@@ -721,35 +531,14 @@ pub(crate) async fn refund_transaction_for_job(
     } else {
         format!("Refund for failed job {job_id}.")
     };
-    // CreditTransactionDAO.refundTransaction: the refund amount is NULL (and the
-    // insert fails) unless the reservation is still pending with a non-positive delta.
-    let inserted = sqlx::query(
-        r#"INSERT INTO webknossos.credit_transactions
-          (_id, _organization, _related_transaction, milli_credit_delta, comment, transaction_state, credit_state)
-          SELECT $1, _organization, _id,
-            (SELECT milli_credit_delta * -1 FROM webknossos.credit_transactions
-              WHERE _id = $2 AND transaction_state = 'Pending' AND credit_state = 'Pending'
-                AND milli_credit_delta <= 0),
-            $3, 'Complete', 'Refunding'
-          FROM webknossos.credit_transactions WHERE _id = $2"#,
-    )
-    .bind(ObjectId::new())
-    .bind(&transaction_id)
-    .bind(&comment)
-    .execute(&mut *connection)
-    .await
-    .map_err(refund_error)?
-    .rows_affected();
-    let updated = sqlx::query(
-        r#"UPDATE webknossos.credit_transactions
-          SET transaction_state = 'Complete', credit_state = 'Refunded', updated_at = NOW()
-          WHERE _id = $1 AND transaction_state = 'Pending' AND milli_credit_delta <= 0"#,
-    )
-    .bind(&transaction_id)
-    .execute(&mut *connection)
-    .await
-    .map_err(refund_error)?
-    .rows_affected();
+    // CreditTransactionDAO.refundTransaction.
+    let inserted =
+        dao::insert_refund_transaction(connection, &ObjectId::new(), &transaction_id, &comment)
+            .await
+            .map_err(refund_error)?;
+    let updated = dao::update_transaction_refunded(connection, &transaction_id)
+        .await
+        .map_err(refund_error)?;
     if inserted != 1 || updated != 1 {
         return Err(ApiError::bad_request(format!(
             "Failed to refund transaction {transaction_id} properly."
@@ -787,19 +576,8 @@ async fn retry(
         return Err(ApiError::forbidden(ALREADY_RETRIED));
     }
     let mut transaction = serializable(&state.pool).await?;
-    // JobDAO.retryOne: only failed or cancelled jobs are reset (otherwise a no-op). The retry
-    // limit is re-checked here so that concurrent retries cannot both pass it.
-    let reset = sqlx::query(
-        r#"UPDATE webknossos.jobs
-          SET state = 'PENDING', manualState = NULL, retriedBySuperUser = $2, lastRetry = NOW()
-          WHERE _id = $1 AND ($2 OR lastRetry IS NULL)
-            AND (state IN ('FAILURE', 'CANCELLED') OR manualState = 'CANCELLED')"#,
-    )
-    .bind(&job.id)
-    .bind(user.is_superuser)
-    .execute(&mut *transaction)
-    .await?
-    .rows_affected();
+    // JobDAO.retryOne.
+    let reset = dao::retry_one(&mut transaction, &job.id, user.is_superuser).await?;
     // Credits are only reserved for jobs that actually rerun; a failure rolls the reset back.
     if reset == 1 {
         reserve_credits_for_retry(&mut transaction, &user.id, &job.id).await?;
@@ -816,52 +594,26 @@ async fn reserve_credits_for_retry(
     user_id: &ObjectId,
     job_id: &ObjectId,
 ) -> ApiResult<()> {
-    let mut q = Sql::new(
-        "SELECT _organization, milli_credit_delta, comment FROM webknossos.credit_transactions_ WHERE _paid_job = ",
-    );
-    q.push_bind(job_id).push(" AND ");
-    push_credit_read_access(&mut q, user_id);
-    q.push(" ORDER BY created_at, _id LIMIT 1");
-    let existing: Option<(String, i32, String)> =
-        q.build_query_as().fetch_optional(&mut *connection).await?;
+    let existing = dao::find_credit_transaction_of_job(connection, user_id, job_id).await?;
     let Some((organization, delta, comment)) = existing else {
         // Assume a transaction-less (unpaid) job.
         return Ok(());
     };
-    let balance = milli_credit_balance(connection, user_id, &organization).await?;
+    let balance = dao::get_milli_credit_balance(connection, user_id, &organization).await?;
     if balance < -i64::from(delta) {
         return Err(ApiError::bad_request(NOT_ENOUGH_CREDITS));
     }
-    sqlx::query(
-        r#"INSERT INTO webknossos.credit_transactions
-          (_id, _organization, milli_credit_delta, comment, _paid_job,
-           transaction_state, credit_state, expiration_date, created_at, updated_at, is_deleted)
-          VALUES ($1, $2, $3, $4, $5, 'Pending', 'Pending', NULL, NOW(), NOW(), FALSE)"#,
+    dao::insert_pending_credit_transaction(
+        connection,
+        &ObjectId::new(),
+        &organization,
+        delta,
+        &comment,
+        job_id,
     )
-    .bind(ObjectId::new())
-    .bind(&organization)
-    .bind(delta)
-    .bind(&comment)
-    .bind(job_id)
-    .execute(&mut *connection)
     .await
     .map_err(crate::organization::credit_transactions::balance_error)?;
     Ok(())
-}
-
-/// CreditTransactionDAO.getMilliCreditBalance with the user's read access
-/// (users without credit access see a balance of 0).
-pub(crate) async fn milli_credit_balance(
-    connection: &mut PgConnection,
-    user_id: &ObjectId,
-    organization: &str,
-) -> ApiResult<i64> {
-    let mut q = Sql::new(
-        "SELECT COALESCE(SUM(milli_credit_delta), 0)::bigint FROM webknossos.credit_transactions_ WHERE _organization = ",
-    );
-    q.push_bind(organization).push(" AND ");
-    push_credit_read_access(&mut q, user_id);
-    Ok(q.build_query_scalar().fetch_one(&mut *connection).await?)
 }
 
 /// Redirect to the datastore's export download, authenticated with the user's
@@ -876,17 +628,9 @@ async fn redirect_to_export(
     let job = find_job(&mut connection, &user.id, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
-    // DataStoreDAO.findOneByName (read access: unrestricted or the user's organization).
-    let public_url: String = sqlx::query_scalar(
-        r#"SELECT publicUrl FROM webknossos.dataStores_ WHERE name = $1 AND
-          (onlyAllowedOrganization IS NULL OR onlyAllowedOrganization IN
-            (SELECT _organization FROM webknossos.users_ WHERE _id = $2))"#,
-    )
-    .bind(&job.data_store)
-    .bind(&user.id)
-    .fetch_optional(&mut *connection)
-    .await?
-    .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
+    let public_url = dao::find_data_store_public_url(&mut connection, &job.data_store, &user.id)
+        .await?
+        .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     drop(connection);
     let token = find_or_create_token(&state.pool, &user.id, &routes.auth).await?;
     let token: String = url::form_urlencoded::byte_serialize(token.as_bytes()).collect();
@@ -907,24 +651,8 @@ async fn find_or_create_token(
 ) -> ApiResult<String> {
     let mut transaction = pool.begin().await?;
     // Serialize concurrent creation for the same user.
-    sqlx::query("SELECT _id FROM webknossos.users WHERE _id = $1 FOR UPDATE")
-        .bind(user_id)
-        .fetch_one(&mut *transaction)
-        .await?;
-    let existing: Option<String> = sqlx::query_scalar(
-        r#"SELECT token.value FROM webknossos.tokens AS token
-          JOIN webknossos.users AS usr ON usr._id = token._user
-          WHERE token._user = $1 AND token.tokenType = 'Authentication' AND NOT token.isDeleted
-            AND token.expirationDateTime > statement_timestamp()
-            AND (token.idleTimeout IS NULL OR (token.idleTimeout > 0 AND
-              EXTRACT(EPOCH FROM (statement_timestamp() - token.lastUsedDateTime)) * 1000 < token.idleTimeout))
-            AND (usr.loggedOutEverywhereTime IS NULL OR token.created > usr.loggedOutEverywhereTime)
-            AND (SELECT COUNT(*) FROM webknossos.tokens AS matching WHERE matching.value = token.value AND NOT matching.isDeleted) = 1
-          ORDER BY token.created, token._id LIMIT 1"#,
-    )
-    .bind(user_id)
-    .fetch_optional(&mut *transaction)
-    .await?;
+    dao::lock_user(&mut transaction, user_id).await?;
+    let existing = dao::find_usable_authentication_token(&mut transaction, user_id).await?;
     if let Some(token) = existing {
         transaction.commit().await?;
         return Ok(token);
@@ -936,28 +664,18 @@ async fn find_or_create_token(
     if expiry_ms <= 0 || idle_ms <= 0 {
         return Err(ApiError::internal());
     }
-    sqlx::query(
-        "UPDATE webknossos.tokens SET isDeleted = TRUE WHERE _user = $1 AND tokenType = 'Authentication' AND NOT isDeleted",
-    )
-    .bind(user_id)
-    .execute(&mut *transaction)
-    .await?;
+    dao::delete_authentication_tokens(&mut transaction, user_id).await?;
     let mut random = [0_u8; 16];
     getrandom::fill(&mut random).map_err(|_| ApiError::internal())?;
     let value = URL_SAFE_NO_PAD.encode(random);
-    sqlx::query(
-        r#"INSERT INTO webknossos.tokens
-          (_id, value, _user, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created)
-          VALUES ($1, $2, $3, statement_timestamp(),
-            statement_timestamp() + $4::bigint * INTERVAL '1 millisecond', $5,
-            'Authentication', statement_timestamp())"#,
+    dao::insert_authentication_token(
+        &mut transaction,
+        &ObjectId::new(),
+        &value,
+        user_id,
+        expiry_ms,
+        idle_ms,
     )
-    .bind(ObjectId::new())
-    .bind(&value)
-    .bind(user_id)
-    .bind(expiry_ms)
-    .bind(idle_ms)
-    .execute(&mut *transaction)
     .await?;
     transaction.commit().await?;
     Ok(value)
@@ -1027,7 +745,8 @@ async fn credit_cost(
     let cost = job_cost_in_milli_credits(&misc.config().features, &query.command, &bounding_box)
         .map_err(ApiError::bad_request)?;
     let mut connection = state.pool.acquire().await?;
-    let balance = milli_credit_balance(&mut connection, &user.id, &user.organization_id).await?;
+    let balance =
+        dao::get_milli_credit_balance(&mut connection, &user.id, &user.organization_id).await?;
     Ok(Json(json!({
         "costInMilliCredits": cost,
         "hasEnoughCredits": i64::from(cost) <= balance,

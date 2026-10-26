@@ -24,14 +24,17 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json as JsonBody, Path, Query},
-    job::routes::{JOB_COLUMNS, JOB_COMMANDS, JOB_STATES, Job, JobsConfig},
+    job::routes::{JOB_COMMANDS, JOB_STATES, Job, JobsConfig},
     mail::{Mail, MailSender, templates},
     slack::{self, SlackNotificationService},
-    sql::Sql,
     stores::client::ServiceClients,
     system::application_info::{MiscState, ok_empty},
     util::id::{ObjectId, PathObjectId},
 };
+
+mod dao;
+
+use dao::{Owner, Worker};
 
 const WORKER_NOT_FOUND: &str = "Could not find this worker in the database.";
 const UPDATE_STATUS_FAILED: &str = "Could not update job status.";
@@ -82,22 +85,6 @@ struct RequestQuery {
     worker_version: Option<String>,
 }
 
-#[derive(sqlx::FromRow)]
-struct Worker {
-    id: ObjectId,
-    data_store: String,
-    max_high: i32,
-    max_low: i32,
-    commands: Vec<String>,
-    last_reported_version: Option<String>,
-}
-
-impl Worker {
-    fn supports(&self, command: &str) -> bool {
-        self.commands.iter().any(|supported| supported == command)
-    }
-}
-
 /// WorkerDAO.findOneByKey (`?~> Msg.Job.workerNotFound`): a missing worker and an
 /// unparsable one (unknown supported job command) are both 400 workerNotFound.
 async fn find_worker(
@@ -105,15 +92,7 @@ async fn find_worker(
     key: &str,
     for_update: bool,
 ) -> ApiResult<Worker> {
-    let lock = if for_update { " FOR UPDATE" } else { "" };
-    let mut q = Sql::new(
-        r#"SELECT _id AS id, _dataStore AS data_store, maxParallelHighPriorityJobs AS max_high,
-            maxParallelLowPriorityJobs AS max_low, supportedJobCommands AS commands,
-            lastReportedVersion AS last_reported_version
-          FROM webknossos.workers_ WHERE key = "#,
-    );
-    q.push_bind(key).push(lock);
-    let worker: Option<Worker> = q.build_query_as().fetch_optional(&mut *connection).await?;
+    let worker = dao::find_one_by_key(connection, key, for_update).await?;
     match worker {
         Some(worker)
             if worker
@@ -156,28 +135,18 @@ async fn request_jobs(
         .worker_version
         .as_ref()
         .filter(|version| worker.last_reported_version.as_ref() != Some(*version));
-    sqlx::query(
-        r#"UPDATE webknossos.workers SET lastHeartBeat = NOW(),
-            lastReportedVersion = COALESCE($2, lastReportedVersion) WHERE _id = $1"#,
+    dao::update_heart_beat(
+        &mut transaction,
+        &worker.id,
+        new_version.map(String::as_str),
     )
-    .bind(&worker.id)
-    .bind(new_version)
-    .execute(&mut *transaction)
     .await?;
     reserve_next_jobs(&mut transaction, &worker).await?;
-    let to_run = worker_jobs(
-        &mut transaction,
-        &worker.id,
-        "j.state IN ('PENDING', 'STARTED') AND j.manualState IS NULL",
-    )
-    .await?;
+    let to_run =
+        validated_jobs(dao::find_all_unfinished_by_worker(&mut transaction, &worker.id).await?)?;
     // Jobs cancelled by a user (manualState) that the worker has not cancelled yet.
-    let to_cancel = worker_jobs(
-        &mut transaction,
-        &worker.id,
-        "j.state != 'CANCELLED' AND j.manualState = 'CANCELLED'",
-    )
-    .await?;
+    let to_cancel =
+        validated_jobs(dao::find_all_cancelling_by_worker(&mut transaction, &worker.id).await?)?;
     transaction.commit().await?;
     let to_run: Vec<&Job> = to_run
         .iter()
@@ -220,20 +189,7 @@ async fn reserve_next_jobs(connection: &mut PgConnection, worker: &Worker) -> Ap
         if may_assign_high {
             assignable.extend(supported_high.iter().cloned());
         }
-        // JobDAO.reserveNextJob.
-        sqlx::query(
-            r#"UPDATE webknossos.jobs SET _worker = $1
-              WHERE _worker IS NULL AND _id = (
-                SELECT _id FROM webknossos.jobs_
-                WHERE state = 'PENDING' AND _dataStore = $2 AND manualState IS NULL
-                  AND _worker IS NULL AND command = ANY($3)
-                ORDER BY created, _id LIMIT 1 FOR UPDATE SKIP LOCKED)"#,
-        )
-        .bind(&worker.id)
-        .bind(&worker.data_store)
-        .bind(&assignable)
-        .execute(&mut *connection)
-        .await?;
+        dao::reserve_next_job(connection, &worker.id, &worker.data_store, &assignable).await?;
     }
     Ok(())
 }
@@ -247,15 +203,7 @@ async fn count_unfinished(
     if commands.is_empty() {
         return Ok(0);
     }
-    Ok(sqlx::query_scalar(
-        r#"SELECT COUNT(*) FROM webknossos.jobs_
-          WHERE _worker = $1 AND state IN ('PENDING', 'STARTED') AND command = ANY($2)
-            AND manualState IS NULL"#,
-    )
-    .bind(worker_id)
-    .bind(commands)
-    .fetch_one(&mut *connection)
-    .await?)
+    dao::count_unfinished_by_worker(connection, worker_id, commands).await
 }
 
 /// JobDAO.countUnassignedPendingForDataStore.
@@ -267,31 +215,11 @@ async fn count_pending(
     if commands.is_empty() {
         return Ok(0);
     }
-    Ok(sqlx::query_scalar(
-        r#"SELECT COUNT(*) FROM webknossos.jobs_
-          WHERE state = 'PENDING' AND command = ANY($2) AND manualState IS NULL
-            AND _dataStore = $1 AND _worker IS NULL"#,
-    )
-    .bind(data_store)
-    .bind(commands)
-    .fetch_one(&mut *connection)
-    .await?)
+    dao::count_unassigned_pending_for_data_store(connection, data_store, commands).await
 }
 
-/// JobDAO.findAllUnfinishedByWorker / findAllCancellingByWorker (parseAll).
-async fn worker_jobs(
-    connection: &mut PgConnection,
-    worker_id: &ObjectId,
-    condition: &str,
-) -> ApiResult<Vec<Job>> {
-    let mut q = Sql::new("SELECT ");
-    q.push(JOB_COLUMNS)
-        .push(" FROM webknossos.jobs_ j WHERE j._worker = ")
-        .push_bind(worker_id)
-        .push(" AND ")
-        .push(condition)
-        .push(" ORDER BY j.created, j._id");
-    let jobs: Vec<Job> = q.build_query_as().fetch_all(&mut *connection).await?;
+/// parseAll of JobDAO.findAllUnfinishedByWorker / findAllCancellingByWorker.
+fn validated_jobs(jobs: Vec<Job>) -> ApiResult<Vec<Job>> {
     if jobs.iter().any(|job| !job.is_valid()) {
         return Err(ApiError::bad_request(JOBS_PARSING_FAILED));
     }
@@ -302,11 +230,7 @@ async fn worker_jobs(
 /// token of the owner (createAndInitJobTokenForUser; reused for up to an hour).
 async fn parameter_writes(pool: &PgPool, routes: &WorkerRoutes, job: &Job) -> ApiResult<Value> {
     // UserDAO.findOne with global access: an empty Fox when the owner is gone.
-    let owner: Option<ObjectId> =
-        sqlx::query_scalar("SELECT _id FROM webknossos.users_ WHERE _id = $1")
-            .bind(&job.owner)
-            .fetch_optional(pool)
-            .await?;
+    let owner = dao::find_user_id(pool, &job.owner).await?;
     let owner = owner.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let token = insert_job_token(pool, &owner, routes).await?;
     let mut kwargs = job.args.as_object().cloned().unwrap_or_default();
@@ -331,36 +255,14 @@ async fn insert_job_token(
         return Err(ApiError::internal());
     }
     // Workers poll every few seconds; reuse a recent token instead of minting one per poll.
-    let recent: Option<String> = sqlx::query_scalar(
-        r#"SELECT value FROM webknossos.tokens
-          WHERE _user = $1 AND tokenType = 'Job'
-            AND created > statement_timestamp() - INTERVAL '1 hour'
-            AND expirationDateTime > statement_timestamp() + INTERVAL '1 hour'
-          ORDER BY created DESC LIMIT 1"#,
-    )
-    .bind(user_id)
-    .fetch_optional(pool)
-    .await?;
+    let recent = dao::find_recent_job_token(pool, user_id).await?;
     if let Some(value) = recent {
         return Ok(value);
     }
     let mut random = [0_u8; 16];
     getrandom::fill(&mut random).map_err(|_| ApiError::internal())?;
     let value = URL_SAFE_NO_PAD.encode(random);
-    sqlx::query(
-        r#"INSERT INTO webknossos.tokens
-          (_id, value, _user, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created)
-          VALUES ($1, $2, $3, statement_timestamp(),
-            statement_timestamp() + $4::bigint * INTERVAL '1 millisecond', $5,
-            'Job', statement_timestamp())"#,
-    )
-    .bind(ObjectId::new())
-    .bind(&value)
-    .bind(user_id)
-    .bind(expiry_ms)
-    .bind(idle_ms)
-    .execute(pool)
-    .await?;
+    dao::insert_job_token(pool, &ObjectId::new(), &value, user_id, expiry_ms, idle_ms).await?;
     Ok(value)
 }
 
@@ -417,19 +319,16 @@ async fn update_status(
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // JobDAO.updateStatus: absent optional fields are written as NULL.
-    sqlx::query(
-        r#"UPDATE webknossos.jobs SET latestRunId = $2, latestRunErrorDetails = $3,
-            state = $4::webknossos.JOB_STATE, returnValue = $5, started = $6, ended = $7
-          WHERE _id = $1"#,
+    dao::update_status(
+        &mut transaction,
+        &before.id,
+        status.latest_run_id.as_deref(),
+        status.error_details.clone().map(Value::Object),
+        status.state.as_str(),
+        status.return_value.as_deref(),
+        status.started,
+        status.ended,
     )
-    .bind(&before.id)
-    .bind(&status.latest_run_id)
-    .bind(status.error_details.clone().map(Value::Object))
-    .bind(status.state.as_str())
-    .bind(&status.return_value)
-    .bind(status.started)
-    .bind(status.ended)
-    .execute(&mut *transaction)
     .await
     .map_err(|error| failure_as(error, UPDATE_STATUS_FAILED))?;
     let after = find_job_global(&mut transaction, &before.id, false)
@@ -464,13 +363,7 @@ async fn find_job_global(
     job_id: &ObjectId,
     for_update: bool,
 ) -> ApiResult<Option<Job>> {
-    let lock = if for_update { " FOR UPDATE" } else { "" };
-    let mut q = Sql::new("SELECT ");
-    q.push(JOB_COLUMNS)
-        .push(" FROM webknossos.jobs_ j WHERE j._id = ")
-        .push_bind(job_id)
-        .push(lock);
-    let job: Option<Job> = q.build_query_as().fetch_optional(&mut *connection).await?;
+    let job = dao::find_one_global(connection, job_id, for_update).await?;
     match job {
         Some(job) if !job.is_valid() => Err(ApiError::bad_request(format!(
             "Parsing failed for row in webknossos.jobs queried by {job_id}"
@@ -517,22 +410,20 @@ async fn clean_up_if_failed(connection: &mut PgConnection, job: &Job) -> ApiResu
         job = %job.id,
         "WKW conversion job failed. Marking dataset as conversion failed..."
     );
-    let dataset: Option<ObjectId> = sqlx::query_scalar(
-        r#"SELECT _id FROM webknossos.datasets_ WHERE directoryName = $1 AND _organization = $2
-          ORDER BY created, _id LIMIT 1"#,
+    let dataset = dao::find_dataset_id_by_directory_name_and_organization(
+        connection,
+        directory_name,
+        organization,
     )
-    .bind(directory_name)
-    .bind(organization)
-    .fetch_optional(&mut *connection)
     .await?;
     let dataset = dataset.ok_or_else(|| ApiError::bad_request(CLEANUP_FAILED))?;
-    // DatasetDAO.updateDatasetStatusByDatasetId(isUsable = false).
-    sqlx::query("UPDATE webknossos.datasets SET isUsable = false, status = $2 WHERE _id = $1")
-        .bind(&dataset)
-        .bind(crate::dataset::lifecycle::CONVERSION_FAILED)
-        .execute(&mut *connection)
-        .await
-        .map_err(|error| failure_as(error, CLEANUP_FAILED))?;
+    dao::update_dataset_status_unusable(
+        connection,
+        &dataset,
+        crate::dataset::lifecycle::CONVERSION_FAILED,
+    )
+    .await
+    .map_err(|error| failure_as(error, CLEANUP_FAILED))?;
     Ok(())
 }
 
@@ -542,41 +433,15 @@ async fn complete_transaction_of_job(
     connection: &mut PgConnection,
     job_id: &ObjectId,
 ) -> ApiResult<()> {
-    let pending: Option<ObjectId> = sqlx::query_scalar(
-        r#"SELECT _id FROM webknossos.credit_transactions_
-          WHERE _paid_job = $1 AND transaction_state = 'Pending'
-          ORDER BY created_at, _id LIMIT 1 FOR UPDATE"#,
-    )
-    .bind(job_id)
-    .fetch_optional(&mut *connection)
-    .await?;
+    let pending = crate::job::dao::find_pending_transaction_of_job(connection, job_id).await?;
     let Some(transaction_id) = pending else {
         // Assume a transaction-less (unpaid) job.
         return Ok(());
     };
-    sqlx::query(
-        r#"UPDATE webknossos.credit_transactions
-          SET transaction_state = 'Complete', credit_state = 'Spent', updated_at = NOW()
-          WHERE _id = $1"#,
-    )
-    .bind(&transaction_id)
-    .execute(&mut *connection)
-    .await
-    .map_err(|error| failure_as(error, CREDITS_FAILED))?;
+    dao::update_transaction_spent(connection, &transaction_id)
+        .await
+        .map_err(|error| failure_as(error, CREDITS_FAILED))?;
     Ok(())
-}
-
-#[derive(sqlx::FromRow)]
-struct Owner {
-    id: ObjectId,
-    organization: String,
-    organization_name: String,
-    is_admin: bool,
-    is_dataset_manager: bool,
-    is_superuser: bool,
-    first_name: String,
-    last_name: String,
-    email: String,
 }
 
 /// JobService.trackStatusChange: fire-and-forget log, Slack, analytics and
@@ -605,21 +470,10 @@ fn track_status_change(
         after.clone(),
     );
     tokio::spawn(async move {
-        let owner: Option<Owner> = sqlx::query_as(
-            r#"SELECT u._id AS id, u._organization AS organization, o.name AS organization_name,
-                u.isAdmin AS is_admin, u.isDatasetManager AS is_dataset_manager,
-                m.isSuperUser AS is_superuser, m.firstName AS first_name, m.lastName AS last_name,
-                m.email
-              FROM webknossos.users_ u
-              JOIN webknossos.multiUsers_ m ON m._id = u._multiUser
-              JOIN webknossos.organizations_ o ON o._id = u._organization
-              WHERE u._id = $1"#,
-        )
-        .bind(&after.owner)
-        .fetch_optional(&state.pool)
-        .await
-        .ok()
-        .flatten();
+        let owner = dao::find_owner(&state.pool, &after.owner)
+            .await
+            .ok()
+            .flatten();
         let Some(owner) = owner else {
             return;
         };
@@ -785,13 +639,10 @@ fn clean_up_upload_files_if_needed(
     );
     tokio::spawn(async move {
         // DataStoreDAO.findOneByName with global access.
-        let url: Option<String> =
-            sqlx::query_scalar("SELECT url FROM webknossos.dataStores_ WHERE name = $1")
-                .bind(&data_store)
-                .fetch_optional(&pool)
-                .await
-                .ok()
-                .flatten();
+        let url = crate::job::dao::find_data_store_url(&pool, &data_store)
+            .await
+            .ok()
+            .flatten();
         let Some(url) = url else {
             return;
         };
@@ -825,13 +676,7 @@ async fn organization_for_job(
     connection: &mut PgConnection,
     job_id: &ObjectId,
 ) -> ApiResult<String> {
-    let organization: Option<String> = sqlx::query_scalar(
-        r#"SELECT u._organization FROM webknossos.users u
-          JOIN webknossos.jobs j ON j._owner = u._id WHERE j._id = $1"#,
-    )
-    .bind(job_id)
-    .fetch_optional(&mut *connection)
-    .await?;
+    let organization = dao::find_organization_id_of_job(connection, job_id).await?;
     organization.ok_or_else(|| ApiError::bad_request(crate::msg::job::NOT_FOUND))
 }
 
@@ -856,20 +701,9 @@ async fn attach_voxelytics_workflow(
     let organization = organization_for_job(&mut transaction, &id).await?;
     // findWorkflowByHashAndOrganization, else upsertWorkflow with a placeholder name.
     // DO NOTHING keeps a concurrently created workflow's real name.
-    sqlx::query(
-        r#"INSERT INTO webknossos.voxelytics_workflows (hash, name, _organization)
-          VALUES ($1, 'initializing worker workflow', $2)
-          ON CONFLICT (_organization, hash) DO NOTHING"#,
-    )
-    .bind(&workflow_hash)
-    .bind(&organization)
-    .execute(&mut *transaction)
-    .await?;
-    sqlx::query("UPDATE webknossos.jobs SET _voxelytics_workflowHash = $2 WHERE _id = $1")
-        .bind(&*id)
-        .bind(&workflow_hash)
-        .execute(&mut *transaction)
+    dao::insert_voxelytics_workflow_if_missing(&mut transaction, &workflow_hash, &organization)
         .await?;
+    dao::update_voxelytics_workflow_hash(&mut transaction, &id, &workflow_hash).await?;
     transaction.commit().await?;
     Ok(ok_empty())
 }
@@ -884,29 +718,18 @@ async fn attach_dataset_to_inference(
     find_worker(&mut transaction, &query.key, false).await?;
     let organization = organization_for_job(&mut transaction, &id).await?;
     // DatasetDAO.findOneByDirectoryNameAndOrganization with global access (empty Fox).
-    let dataset: Option<ObjectId> = sqlx::query_scalar(
-        r#"SELECT _id FROM webknossos.datasets_ WHERE directoryName = $1 AND _organization = $2
-          ORDER BY created, _id LIMIT 1"#,
+    let dataset = dao::find_dataset_id_by_directory_name_and_organization(
+        &mut transaction,
+        &directory_name,
+        &organization,
     )
-    .bind(&directory_name)
-    .bind(&organization)
-    .fetch_optional(&mut *transaction)
     .await?;
     let dataset = dataset.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // AiInferenceDAO.findOneByJobId (`?~> Msg.AiInference.notFound`).
-    let inference: Option<ObjectId> = sqlx::query_scalar(
-        r#"SELECT _id FROM webknossos.aiInferences_ WHERE _inferenceJob = $1
-          ORDER BY created, _id LIMIT 1 FOR UPDATE"#,
-    )
-    .bind(&*id)
-    .fetch_optional(&mut *transaction)
-    .await?;
+    let inference = crate::ai_models::dao::find_inference_id_by_job(&mut transaction, &id).await?;
     let inference =
         inference.ok_or_else(|| ApiError::bad_request(crate::msg::ai_inference::NOT_FOUND))?;
-    sqlx::query("UPDATE webknossos.aiInferences SET _newDataset = $2 WHERE _id = $1")
-        .bind(&inference)
-        .bind(&dataset)
-        .execute(&mut *transaction)
+    crate::ai_models::dao::update_inference_new_dataset(&mut transaction, &inference, &dataset)
         .await?;
     transaction.commit().await?;
     Ok(ok_empty())

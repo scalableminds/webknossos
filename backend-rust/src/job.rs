@@ -1,3 +1,4 @@
+pub(crate) mod dao;
 pub mod routes;
 pub mod submission;
 pub mod workers;

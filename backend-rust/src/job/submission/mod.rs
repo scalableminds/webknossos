@@ -24,12 +24,10 @@ use sqlx::PgConnection;
 use crate::{
     AppState,
     auth::{AuthUser, authenticate_request},
-    dataset::access::push_read_predicate,
     dataset::create::{validate_dataset_name, validate_layer_name_lax},
     error::ApiError,
     extract::extension,
     job::routes::NOT_ENOUGH_CREDITS,
-    sql::Sql,
     stores::client::ServiceClients,
     system::application_info::MiscState,
     util::id::ObjectId,
@@ -38,6 +36,10 @@ use webknossos_common::{
     enums::LengthUnit,
     geometry::{BoundingBox, Vec3Int},
 };
+
+mod dao;
+
+use dao::{Dataset, LayerRow};
 
 const NO_WORKER: &str =
     "No worker supporting the requested job is available for the selected data store.";
@@ -489,19 +491,6 @@ where
 // Dataset, organization and datastore lookups
 // ---------------------------------------------------------------------------
 
-#[derive(sqlx::FromRow)]
-pub(crate) struct Dataset {
-    pub(crate) id: ObjectId,
-    pub(crate) name: String,
-    pub(crate) directory_name: String,
-    pub(crate) organization: String,
-    pub(crate) data_store: String,
-    is_usable: bool,
-    has_voxel_size: bool,
-    voxel_size_factor: Option<Vec<f64>>,
-    voxel_size_unit: Option<String>,
-}
-
 impl Dataset {
     /// The data source's voxel size (`dataset.voxelSize`) in nanometers
     /// (VoxelSize.toNanometer; a missing unit is nanometer).
@@ -523,16 +512,7 @@ pub(crate) async fn find_readable_dataset(
     user: &AuthUser,
     id: &ObjectId,
 ) -> RunResult<Option<Dataset>> {
-    let mut q = Sql::new(
-        r#"SELECT d._id AS id, d.name, d.directoryName AS directory_name, d._organization AS organization,
-            d._dataStore AS data_store, d.isUsable AS is_usable, d.voxelSizeFactor IS NOT NULL AS has_voxel_size,
-            CASE WHEN d.voxelSizeFactor IS NULL THEN NULL ELSE ARRAY[(d.voxelSizeFactor).x, (d.voxelSizeFactor).y,
-              (d.voxelSizeFactor).z]::float8[] END AS voxel_size_factor, d.voxelSizeUnit::text AS voxel_size_unit
-          FROM webknossos.datasets_ d WHERE d._id = "#,
-    );
-    q.push_bind(id).push(" AND ");
-    push_read_predicate(&mut q, (&user.id).into(), None);
-    Ok(q.build_query_as().fetch_optional(&state.pool).await?)
+    Ok(dao::find_one_readable_dataset(&state.pool, &user.id, id).await?)
 }
 
 /// DatasetDAO.findOne with the user's access `?~> Msg.Dataset.notFound(id) ~> NOT_FOUND`.
@@ -546,9 +526,7 @@ async fn find_dataset(state: &AppState, user: &AuthUser, id: &ObjectId) -> RunRe
 
 /// OrganizationDAO.findOne(dataset._organization) with global access.
 async fn find_organization(state: &AppState, organization: &str) -> RunResult<String> {
-    sqlx::query_scalar("SELECT _id FROM webknossos.organizations_ WHERE _id = $1")
-        .bind(organization)
-        .fetch_optional(&state.pool)
+    dao::find_organization_id(&state.pool, organization)
         .await?
         .ok_or_else(|| Failure::new(crate::msg::organization::not_found(organization)).into())
 }
@@ -575,16 +553,9 @@ async fn organization_base_directory(
     dataset: &Dataset,
 ) -> RunResult<String> {
     // DataStoreDAO.findOneByName with the user's access.
-    let url: String = sqlx::query_scalar(
-        r#"SELECT url FROM webknossos.dataStores_ WHERE name = $1 AND
-          (onlyAllowedOrganization IS NULL OR onlyAllowedOrganization IN
-            (SELECT _organization FROM webknossos.users_ WHERE _id = $2))"#,
-    )
-    .bind(dataset.data_store.trim())
-    .bind(&user.id)
-    .fetch_optional(&state.pool)
-    .await?
-    .ok_or_else(|| Failure::new(crate::msg::data_store::NOT_FOUND))?;
+    let url = dao::find_data_store_url_for_user(&state.pool, dataset.data_store.trim(), &user.id)
+        .await?
+        .ok_or_else(|| Failure::new(crate::msg::data_store::NOT_FOUND))?;
     let directory: Value = clients
         .get_json(
             &url,
@@ -610,13 +581,6 @@ pub(crate) struct DataLayer {
     pub(crate) name: String,
     pub(crate) bounding_box: BoundingBox,
     pub(crate) finest_mag: Option<[i32; 3]>,
-}
-
-#[derive(sqlx::FromRow)]
-struct LayerRow {
-    name: String,
-    bounding_box: Vec<i32>,
-    finest_mag: Option<Vec<i32>>,
 }
 
 /// DatasetService.getDataSourceAndLayerFor: the usable data source's bounding box
@@ -651,20 +615,7 @@ pub(crate) async fn usable_data_source(
                 .into(),
         );
     }
-    let rows: Vec<LayerRow> = sqlx::query_as(
-        r#"SELECT l.name,
-            ARRAY[(l.boundingBox).x::int, (l.boundingBox).y::int, (l.boundingBox).z::int,
-              (l.boundingBox).width::int, (l.boundingBox).height::int, (l.boundingBox).depth::int] AS bounding_box,
-            (SELECT ARRAY[(m.mag).x::int, (m.mag).y::int, (m.mag).z::int] FROM webknossos.dataset_mags m
-              WHERE m._dataset = l._dataset AND m.dataLayerName = l.name
-                AND NOT m.uploadToPathIsPending AND NOT m.uploadIsPending
-              ORDER BY GREATEST((m.mag).x, (m.mag).y, (m.mag).z), (m.mag).x, (m.mag).y, (m.mag).z
-              LIMIT 1) AS finest_mag
-          FROM webknossos.dataset_layers l WHERE l._dataset = $1 ORDER BY l.name"#,
-    )
-    .bind(&dataset.id)
-    .fetch_all(&state.pool)
-    .await?;
+    let rows: Vec<LayerRow> = dao::find_all_layers(&state.pool, &dataset.id).await?;
     let mut layers = Vec::with_capacity(rows.len());
     for row in rows {
         let bounding_box = BoundingBox::from_sql(&row.bounding_box)
@@ -695,14 +646,7 @@ pub(crate) async fn layer_mags(
     dataset: &Dataset,
     layer_name: &str,
 ) -> RunResult<Vec<[i32; 3]>> {
-    let rows: Vec<(i32, i32, i32)> = sqlx::query_as(
-        r#"SELECT (mag).x::int, (mag).y::int, (mag).z::int FROM webknossos.dataset_mags
-          WHERE _dataset = $1 AND dataLayerName = $2 AND NOT uploadToPathIsPending AND NOT uploadIsPending"#,
-    )
-    .bind(&dataset.id)
-    .bind(layer_name)
-    .fetch_all(&state.pool)
-    .await?;
+    let rows = dao::find_mags_for_layer(&state.pool, &dataset.id, layer_name).await?;
     Ok(rows.into_iter().map(|(x, y, z)| [x, y, z]).collect())
 }
 
@@ -735,25 +679,13 @@ async fn assert_storage_not_exceeded(
     if !JOBS_WRITING_TO_STORAGE.contains(&command) {
         return Ok(());
     }
-    let included: Option<i64> =
-        sqlx::query_scalar("SELECT includedStorage FROM webknossos.organizations_ WHERE _id = $1")
-            .bind(organization)
-            .fetch_optional(&mut *connection)
-            .await?
-            .ok_or_else(|| Failure::new(crate::msg::organization::not_found(organization)))?;
+    let included: Option<i64> = dao::find_included_storage(connection, organization)
+        .await?
+        .ok_or_else(|| Failure::new(crate::msg::organization::not_found(organization)))?;
     let Some(included) = included else {
         return Ok(());
     };
-    let used: i64 = sqlx::query_scalar(
-        r#"SELECT COALESCE(SUM(usedStorageBytes), 0)::bigint FROM (
-            SELECT usedStorageBytes FROM webknossos.organization_usedStorage_mags WHERE _organization = $1
-            UNION ALL
-            SELECT usedStorageBytes FROM webknossos.organization_usedStorage_attachments WHERE _organization = $1
-          ) combined"#,
-    )
-    .bind(organization)
-    .fetch_one(&mut *connection)
-    .await?;
+    let used: i64 = dao::find_used_storage_bytes(connection, organization).await?;
     if used > included {
         return Err(Failure::new(ORGANIZATION_STORAGE_EXCEEDED)
             .wrap(STORAGE_EXCEEDED)
@@ -776,12 +708,8 @@ pub(crate) async fn submit_job(
     }
     // WorkerDAO.findAllByDataStore: union of all workers' supported commands;
     // an unparsable worker row fails the lookup.
-    let commands: Vec<Vec<String>> = sqlx::query_scalar(
-        "SELECT supportedJobCommands FROM webknossos.workers_ WHERE _dataStore = $1",
-    )
-    .bind(submission.data_store)
-    .fetch_all(&mut *connection)
-    .await?;
+    let commands: Vec<Vec<String>> =
+        dao::find_supported_job_commands_by_data_store(connection, submission.data_store).await?;
     let parsable = commands
         .iter()
         .flatten()
@@ -796,16 +724,14 @@ pub(crate) async fn submit_job(
     }
     assert_storage_not_exceeded(connection, submission.command, &user.organization_id).await?;
     let job_id = ObjectId::new();
-    sqlx::query(
-        r#"INSERT INTO webknossos.jobs (_id, _owner, _dataStore, command, commandArgs, state, created, isDeleted)
-          VALUES ($1, $2, $3, $4, $5, 'PENDING', NOW(), FALSE)"#,
+    dao::insert_one(
+        connection,
+        &job_id,
+        &user.id,
+        submission.data_store,
+        submission.command,
+        &submission.args,
     )
-    .bind(&job_id)
-    .bind(&user.id)
-    .bind(submission.data_store)
-    .bind(submission.command)
-    .bind(&submission.args)
-    .execute(&mut *connection)
     .await?;
     Ok(job_id)
 }
@@ -841,60 +767,39 @@ async fn submit_paid_job(
     )
     .map_err(Failure::new)?;
     let balance =
-        crate::job::routes::milli_credit_balance(connection, &user.id, &user.organization_id)
+        crate::job::dao::get_milli_credit_balance(connection, &user.id, &user.organization_id)
             .await?;
     if balance < i64::from(cost) {
         return Err(Failure::new(NOT_ENOUGH_CREDITS).into());
     }
     let transaction_id = ObjectId::new();
-    sqlx::query(
-        r#"INSERT INTO webknossos.credit_transactions
-          (_id, _organization, milli_credit_delta, comment, _paid_job,
-           transaction_state, credit_state, expiration_date, created_at, updated_at, is_deleted)
-          VALUES ($1, $2, $3, $4, NULL, 'Pending', 'Pending', NULL, NOW(), NOW(), FALSE)"#,
+    dao::insert_pending_credit_transaction(
+        connection,
+        &transaction_id,
+        &user.organization_id,
+        -cost,
+        comment,
     )
-    .bind(&transaction_id)
-    .bind(&user.organization_id)
-    .bind(-cost)
-    .bind(comment)
-    .execute(&mut *connection)
     .await
     .map_err(crate::organization::credit_transactions::balance_error)?;
     let job_id = match submit_job(connection, enabled, user, submission).await {
         Ok(job_id) => job_id,
         Err(RunError::Failure(_)) => {
-            sqlx::query(
-                r#"INSERT INTO webknossos.credit_transactions
-                  (_id, _organization, _related_transaction, milli_credit_delta, comment,
-                   transaction_state, credit_state)
-                  VALUES ($1, $2, $3, $4, $5, 'Complete', 'Refunding')"#,
+            dao::insert_refund_credit_transaction(
+                connection,
+                &ObjectId::new(),
+                &user.organization_id,
+                &transaction_id,
+                cost,
+                &format!("Refund for transaction {transaction_id}."),
             )
-            .bind(ObjectId::new())
-            .bind(&user.organization_id)
-            .bind(&transaction_id)
-            .bind(cost)
-            .bind(format!("Refund for transaction {transaction_id}."))
-            .execute(&mut *connection)
             .await?;
-            sqlx::query(
-                r#"UPDATE webknossos.credit_transactions
-                  SET transaction_state = 'Complete', credit_state = 'Refunded', updated_at = NOW()
-                  WHERE _id = $1"#,
-            )
-            .bind(&transaction_id)
-            .execute(&mut *connection)
-            .await?;
+            dao::update_credit_transaction_refunded(connection, &transaction_id).await?;
             return Ok(PaidSubmission::Refunded(Failure::new(SUBMIT_FAILED)));
         }
         Err(error) => return Err(error),
     };
-    sqlx::query(
-        "UPDATE webknossos.credit_transactions SET _paid_job = $2, updated_at = NOW() WHERE _id = $1",
-    )
-    .bind(&transaction_id)
-    .bind(&job_id)
-    .execute(&mut *connection)
-    .await?;
+    dao::update_credit_transaction_paid_job(connection, &transaction_id, &job_id).await?;
     Ok(PaidSubmission::Submitted(job_id))
 }
 
@@ -1280,18 +1185,10 @@ async fn export_tiff(
     assert_bounding_box_limits(&misc, &bbox, mag.as_deref())?;
     // DatasetLayerAdditionalAxesDAO + Zarr3OutputHelper.reorderAdditionalAxes:
     // sorted by index and renumbered after the channel axis.
-    let additional_axes: Vec<(String, i32, i32)> =
-        match &layer_name {
-            Some(layer_name) => sqlx::query_as(
-                r#"SELECT name, lowerBound, upperBound FROM webknossos.dataset_layer_additionalAxes
-              WHERE _dataset = $1 AND layerName = $2 ORDER BY index, name"#,
-            )
-            .bind(&dataset.id)
-            .bind(layer_name)
-            .fetch_all(&state.pool)
-            .await?,
-            None => Vec::new(),
-        };
+    let additional_axes: Vec<(String, i32, i32)> = match &layer_name {
+        Some(layer_name) => dao::find_additional_axes(&state.pool, &dataset.id, layer_name).await?,
+        None => Vec::new(),
+    };
     let rank = i32::try_from(additional_axes.len()).unwrap_or(i32::MAX - 4) + 4;
     let three_d_box =
         BoundingBox::from_literal(&bbox).ok_or_else(|| Failure::new(INVALID_BOUNDING_BOX))?;
@@ -1533,13 +1430,9 @@ async fn render_animation(
     let clients: ServiceClients = extension(&parts)?;
     let dataset = find_dataset(&state, &user, &dataset_id).await?;
     let organization = find_organization(&state, &dataset.organization).await?;
-    let pricing_plan: String = sqlx::query_scalar(
-        "SELECT pricingPlan::text FROM webknossos.organizations_ WHERE _id = $1",
-    )
-    .bind(&user.organization_id)
-    .fetch_optional(&state.pool)
-    .await?
-    .ok_or_else(|| RunError::Api(ApiError::not_found(crate::msg::NOT_FOUND)))?;
+    let pricing_plan: String = dao::find_pricing_plan(&state.pool, &user.organization_id)
+        .await?
+        .ok_or_else(|| RunError::Api(ApiError::not_found(crate::msg::NOT_FOUND)))?;
     // PricingPlan.isPaidPlan: everything but Personal.
     if pricing_plan == "Personal" {
         if !options.include_watermark {

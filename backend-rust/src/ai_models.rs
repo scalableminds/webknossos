@@ -26,10 +26,8 @@ use crate::{
     extract::{Json, Path},
     job::routes::Job,
     job::submission::{Failure, RunResult, Submission},
-    sql::Sql,
     stores::client::{ServiceClients, ServiceError},
     system::application_info::MiscState,
-    users,
     util::id::{ObjectId, PathObjectId},
 };
 use webknossos_common::{
@@ -37,6 +35,8 @@ use webknossos_common::{
     json::play_f64_value,
     upath::{UPath, UPathError},
 };
+
+pub(crate) mod dao;
 
 const MODEL_NOT_FOUND: &str = "Could not find requested AI model.";
 const UPDATING_FAILED: &str = "Could not update AI model’s name and comment.";
@@ -88,59 +88,6 @@ pub(crate) const PRETRAINED_VOXEL_SIZES: [(&str, [f64; 3]); 4] = [
     ("576500000000000000000003", [179.84, 179.84, 224.0]),
     ("576500000000000000000004", [179.84, 179.84, 224.0]),
 ];
-
-/// AiModelDAO.readAccessQ for alias `m`: models shared with or owned by the
-/// user's organization, or pretrained; superuser-only models only for
-/// superusers. AiModelDAO has no deleteAccessQ, so this is also delete access.
-pub(crate) fn push_model_read_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
-    q.push(
-        r#"((m._id IN (
-      SELECT a._aiModel FROM webknossos.aiModel_organizations AS a
-      INNER JOIN webknossos.organizations AS o ON a._organization = o._id
-      WHERE o._id IN (SELECT _organization FROM webknossos.users_ WHERE _id = "#,
-    )
-    .push_bind(user_id)
-    .push(
-        r#"))
-    OR m._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = "#,
-    )
-    .push_bind(user_id)
-    .push(
-        r#")
-    OR m.isPretrained)
-  AND (NOT m.isSuperUserOnly OR TRUE IN (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN
-    (SELECT _multiUser FROM webknossos.users_ WHERE _id = "#,
-    )
-    .push_bind(user_id)
-    .push("))))");
-}
-
-/// AiInferenceDAO.readAccessQ for alias `i`.
-fn push_inference_read_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
-    q.push("i._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = ")
-        .push_bind(user_id)
-        .push(")");
-}
-
-/// Column list for [`AiModel`] (alias `m`, `_dataStore` trimmed as in AiModelDAO.parse;
-/// shared organizations ordered as in findSharedOrganizationsFor).
-pub(crate) const MODEL_COLUMNS: &str = r#"m._id AS id, m._organization AS organization,
-  TRIM(m._dataStore) AS data_store, m._user AS user_id, m._trainingJob AS training_job, m.path,
-  m.uploadToPathIsPending AS upload_to_path_is_pending, m.name, m.comment, m.category::text AS category,
-  m.created, m.isSuperUserOnly AS is_super_user_only, m.isPretrained AS is_pretrained,
-  ARRAY(SELECT ao._organization FROM webknossos.aiModel_organizations ao WHERE ao._aiModel = m._id
-    ORDER BY ao._organization) AS shared_organizations"#;
-
-const INFERENCE_COLUMNS: &str = r#"i._id AS id, i._aiModel AS ai_model, i._newDataset AS new_dataset,
-  i._inferenceJob AS inference_job, i.newSegmentationLayerName AS new_segmentation_layer_name,
-  i.maskAnnotationLayerName AS mask_annotation_layer_name, i.created"#;
-
-/// UserService.compactWrites for `$1` (teams of the user's organization).
-const COMPACT_USER: &str = r#"SELECT jsonb_build_object('id',u._id,'email',m.email,'firstName',m.firstName,'lastName',m.lastName,
-    'isAdmin',u.isAdmin,'isDatasetManager',u.isDatasetManager,'isActive',NOT u.isDeactivated,'isAnonymous',false,
-    'teams',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',team._id,'name',team.name,'isTeamManager',role.isTeamManager) ORDER BY team._id)
-      FROM webknossos.user_team_roles role JOIN webknossos.teams_ team ON team._id=role._team WHERE role._user=u._id AND team._organization=u._organization),'[]'::jsonb))
-    FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON m._id=u._multiUser WHERE u._id=$1"#;
 
 #[derive(Clone, Copy)]
 struct JobsEnabled(bool);
@@ -240,12 +187,7 @@ pub(crate) async fn find_model(
     user_id: &ObjectId,
     model_id: &ObjectId,
 ) -> ApiResult<Option<AiModel>> {
-    let mut q = Sql::new("SELECT ");
-    q.push(MODEL_COLUMNS)
-        .push(" FROM webknossos.aiModels_ m WHERE m._id = ");
-    q.push_bind(model_id).push(" AND ");
-    push_model_read_access(&mut q, user_id);
-    let model: Option<AiModel> = q.build_query_as().fetch_optional(&mut *connection).await?;
+    let model = dao::find_one(connection, user_id, model_id).await?;
     model
         .map(|model| {
             model.parse().map_err(|_| {
@@ -262,12 +204,7 @@ async fn list_all_models(
     connection: &mut PgConnection,
     user_id: &ObjectId,
 ) -> ApiResult<Vec<AiModel>> {
-    let mut q = Sql::new("SELECT ");
-    q.push(MODEL_COLUMNS)
-        .push(" FROM webknossos.aiModels_ m WHERE ");
-    push_model_read_access(&mut q, user_id);
-    q.push(" ORDER BY m.created, m._id");
-    let models: Vec<AiModel> = q.build_query_as().fetch_all(&mut *connection).await?;
+    let models = dao::find_all(connection, user_id).await?;
     models
         .into_iter()
         .map(AiModel::parse)
@@ -279,37 +216,12 @@ async fn list_all_models(
         })
 }
 
-/// DataStoreDAO.findOneByName with the user's access (onlyAllowedOrganization); returns the internal URL.
-async fn find_data_store_url(
-    connection: &mut PgConnection,
-    user_id: &ObjectId,
-    name: &str,
-) -> ApiResult<Option<String>> {
-    Ok(sqlx::query_scalar(
-        r#"SELECT url FROM webknossos.dataStores_ WHERE name = $2 AND ((onlyAllowedOrganization IS NULL)
-          OR (onlyAllowedOrganization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $1)))"#,
-    )
-    .bind(user_id)
-    .bind(name)
-    .fetch_optional(&mut *connection)
-    .await?)
-}
-
 /// OrganizationDAO.findAll ids (organizations of the user's account, or all for superusers).
 async fn accessible_organization_ids(
     connection: &mut PgConnection,
     user_id: &ObjectId,
 ) -> ApiResult<HashSet<String>> {
-    let ids: Vec<String> = sqlx::query_scalar(
-        r#"SELECT _id FROM webknossos.organizations_ WHERE
-          (_id IN (SELECT _organization FROM webknossos.users_ WHERE _multiUser =
-            (SELECT _multiUser FROM webknossos.users_ WHERE _id = $1)))
-          OR TRUE IN (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN
-            (SELECT _multiUser FROM webknossos.users_ WHERE _id = $1))"#,
-    )
-    .bind(user_id)
-    .fetch_all(&mut *connection)
-    .await?;
+    let ids = dao::find_all_accessible_organization_ids(connection, user_id).await?;
     Ok(ids.into_iter().collect())
 }
 
@@ -319,20 +231,11 @@ async fn readable_compact_user(
     requesting_user_id: &ObjectId,
     user_id: &ObjectId,
 ) -> ApiResult<Option<Value>> {
-    let mut q = Sql::new("SELECT usr._id FROM webknossos.users_ usr WHERE usr._id = ");
-    q.push_bind(user_id).push(" AND ");
-    users::push_read_access(&mut q, requesting_user_id.into());
-    let readable: Option<ObjectId> = q
-        .build_query_scalar()
-        .fetch_optional(&mut *connection)
-        .await?;
+    let readable = dao::find_readable_user_id(connection, requesting_user_id, user_id).await?;
     if readable.is_none() {
         return Ok(None);
     }
-    Ok(sqlx::query_scalar(COMPACT_USER)
-        .bind(user_id)
-        .fetch_optional(&mut *connection)
-        .await?)
+    dao::find_compact_user(connection, user_id).await
 }
 
 /// AiModelService.pathWithFallback: the stored path, or the legacy
@@ -350,9 +253,7 @@ async fn path_with_fallback(
         .as_deref()
         .ok_or_else(|| ApiError::bad_request(crate::msg::ai_model::NO_ORGANIZATION))?;
     // DataStoreDAO.findOneByName with GlobalAccessContext.
-    let url: String = sqlx::query_scalar("SELECT url FROM webknossos.dataStores_ WHERE name = $1")
-        .bind(&model.data_store)
-        .fetch_optional(&mut *connection)
+    let url = crate::job::dao::find_data_store_url(&mut *connection, &model.data_store)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let base: String = clients
@@ -374,7 +275,7 @@ pub(crate) async fn model_public_writes(
     jobs_enabled: bool,
     model: &AiModel,
 ) -> ApiResult<Value> {
-    find_data_store_url(connection, &user.id, &model.data_store)
+    dao::find_data_store_url_for_user(connection, &user.id, &model.data_store)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // A user that cannot be read is rendered as null.
@@ -496,7 +397,7 @@ async fn model_voxel_size(
 ) -> ApiResult<ResponseJson<Value>> {
     let mut connection = state.pool.acquire().await?;
     let model = find_model_or_404(&mut connection, &user.id, &id).await?;
-    let store_url = find_data_store_url(&mut connection, &user.id, &model.data_store)
+    let store_url = dao::find_data_store_url_for_user(&mut connection, &user.id, &model.data_store)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let voxel_size = find_model_voxel_size(connection, &clients, &store_url, &model).await?;
@@ -575,23 +476,14 @@ async fn update_model(
     // Deviation: Scala commits the name/comment update even if the sharing update
     // fails afterwards; here both happen in one transaction.
     let mut tx = state.pool.begin().await?;
-    sqlx::query("SELECT _id FROM webknossos.aiModels WHERE _id = $1 FOR UPDATE")
-        .bind(&*id)
-        .fetch_optional(&mut *tx)
-        .await?;
+    dao::lock_one(&mut tx, &id).await?;
     let model = find_model_or_404(&mut tx, &user.id, &id).await?;
     if model.organization.as_deref() != Some(user.organization_id.as_str()) {
         return Err(ApiError::bad_request(NOT_OWNED));
     }
-    sqlx::query(
-        "UPDATE webknossos.aiModels SET name = $1, comment = $2, modified = NOW() WHERE _id = $3",
-    )
-    .bind(&body.name)
-    .bind(&body.comment)
-    .bind(&model.id)
-    .execute(&mut *tx)
-    .await
-    .map_err(write_failed(UPDATING_FAILED))?;
+    dao::update_name_and_comment(&mut tx, &model.id, &body.name, body.comment.as_deref())
+        .await
+        .map_err(write_failed(UPDATING_FAILED))?;
     let current: HashSet<&String> = model.shared_organizations.iter().collect();
     let requested: HashSet<&String> = requested_shared.iter().flatten().collect();
     if requested != current
@@ -609,20 +501,13 @@ async fn update_model(
             )
             .collect();
         if organizations.iter().copied().collect::<HashSet<_>>() != current {
-            sqlx::query("DELETE FROM webknossos.aiModel_organizations WHERE _aiModel = $1")
-                .bind(&model.id)
-                .execute(&mut *tx)
+            dao::delete_shared_organizations(&mut tx, &model.id)
                 .await
                 .map_err(write_failed(UPDATING_SHARED_FAILED))?;
             for organization in organizations {
-                sqlx::query(
-                    "INSERT INTO webknossos.aiModel_organizations (_aiModel, _organization) VALUES ($1, $2)",
-                )
-                .bind(&model.id)
-                .bind(organization)
-                .execute(&mut *tx)
-                .await
-                .map_err(write_failed(UPDATING_SHARED_FAILED))?;
+                dao::insert_shared_organization(&mut tx, &model.id, organization)
+                    .await
+                    .map_err(write_failed(UPDATING_SHARED_FAILED))?;
             }
         }
     }
@@ -644,23 +529,13 @@ async fn delete_model(
     let mut tx = state.pool.begin().await?;
     // FOR UPDATE conflicts with the KEY SHARE lock of a concurrent inference
     // insert (foreign key), so the reference count below cannot go stale.
-    sqlx::query("SELECT _id FROM webknossos.aiModels WHERE _id = $1 FOR UPDATE")
-        .bind(&*id)
-        .fetch_optional(&mut *tx)
-        .await?;
-    let references: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM webknossos.aiInferences_ WHERE _aiModel = $1")
-            .bind(&*id)
-            .fetch_one(&mut *tx)
-            .await?;
+    dao::lock_one(&mut tx, &id).await?;
+    let references = dao::count_inferences_of_model(&mut tx, &id).await?;
     if references != 0 {
         return Err(ApiError::bad_request(REFERENCED_BY_INFERENCES));
     }
     find_model_or_404(&mut tx, &user.id, &id).await?;
-    sqlx::query("UPDATE webknossos.aiModels SET isDeleted = TRUE WHERE _id = $1")
-        .bind(&*id)
-        .execute(&mut *tx)
-        .await?;
+    dao::delete_one(&mut tx, &id).await?;
     tx.commit().await?;
     Ok(StatusCode::OK)
 }
@@ -729,15 +604,12 @@ async fn reserve_upload_to_path(
     }
     let path_prefix = crate::dataset::upload_paths::parse_prefix(body.path_prefix.as_deref())?;
     let mut tx = state.pool.begin().await?;
-    find_data_store_url(&mut tx, &user.id, &body.data_store_name)
+    dao::find_data_store_url_for_user(&mut tx, &user.id, &body.data_store_name)
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     let model_id = match &body.existing_ai_model_id {
         Some(existing_id) => {
-            sqlx::query("SELECT _id FROM webknossos.aiModels WHERE _id = $1 FOR UPDATE")
-                .bind(existing_id)
-                .fetch_optional(&mut *tx)
-                .await?;
+            dao::lock_one(&mut tx, existing_id).await?;
             let existing = find_model(&mut tx, &user.id, existing_id)
                 .await?
                 .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
@@ -755,27 +627,19 @@ async fn reserve_upload_to_path(
             )?;
             // AiModelDAO.updatePath, then updateOne (name, comment, modified);
             // the category is kept.
-            sqlx::query(
-                "UPDATE webknossos.aiModels SET path = $2, name = $3, comment = $4, modified = NOW() WHERE _id = $1",
+            dao::update_path_name_and_comment(
+                &mut tx,
+                &existing.id,
+                &path,
+                &body.name,
+                body.comment.as_deref(),
             )
-            .bind(&existing.id)
-            .bind(&path)
-            .bind(&body.name)
-            .bind(&body.comment)
-            .execute(&mut *tx)
             .await
             .map_err(name_write_failed(&body.name))?;
             existing.id
         }
         None => {
-            // AiModelDAO.findOneByName(name).reverse: any model readable by the
-            // user (also of other organizations or pretrained) blocks the name.
-            let mut q =
-                Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.aiModels_ m WHERE m.name = ");
-            q.push_bind(&body.name).push(" AND ");
-            push_model_read_access(&mut q, &user.id);
-            q.push(")");
-            let taken: bool = q.build_query_scalar().fetch_one(&mut *tx).await?;
+            let taken = dao::is_name_taken(&mut tx, &user.id, &body.name).await?;
             if taken {
                 return Err(ApiError::bad_request(name_taken(&body.name)));
             }
@@ -784,20 +648,17 @@ async fn reserve_upload_to_path(
                 generate_model_path(&config, &id, &user.organization_id, path_prefix.as_deref())?;
             // AiModelDAO.insertOne writes no shared organizations; the owning
             // organization is implied.
-            sqlx::query(
-                r#"INSERT INTO webknossos.aiModels (_id, _organization, _dataStore, _user, _trainingJob, path,
-                  uploadToPathIsPending, name, comment, category, created, modified, isDeleted, isSuperUserOnly, isPretrained)
-                  VALUES ($1, $2, $3, $4, NULL, $5, TRUE, $6, $7, $8::webknossos.AI_MODEL_CATEGORY, NOW(), NOW(), FALSE, FALSE, FALSE)"#,
+            dao::insert_one_with_path(
+                &mut tx,
+                &id,
+                &user.organization_id,
+                &body.data_store_name,
+                &user.id,
+                &path,
+                &body.name,
+                body.comment.as_deref(),
+                body.category.as_deref(),
             )
-            .bind(&id)
-            .bind(&user.organization_id)
-            .bind(&body.data_store_name)
-            .bind(&user.id)
-            .bind(&path)
-            .bind(&body.name)
-            .bind(&body.comment)
-            .bind(&body.category)
-            .execute(&mut *tx)
             .await
             .map_err(name_write_failed(&body.name))?;
             id
@@ -821,10 +682,7 @@ async fn finish_upload_to_path(
     user: AuthUser,
 ) -> ApiResult<StatusCode> {
     let mut tx = state.pool.begin().await?;
-    sqlx::query("SELECT _id FROM webknossos.aiModels WHERE _id = $1 FOR UPDATE")
-        .bind(&*id)
-        .fetch_optional(&mut *tx)
-        .await?;
+    dao::lock_one(&mut tx, &id).await?;
     let model = find_model(&mut tx, &user.id, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
@@ -834,10 +692,7 @@ async fn finish_upload_to_path(
     if model.organization.as_deref() != Some(user.organization_id.as_str()) {
         return Err(ApiError::forbidden(FINISH_WRONG_ORGA));
     }
-    sqlx::query("UPDATE webknossos.aiModels SET uploadToPathIsPending = FALSE WHERE _id = $1")
-        .bind(&model.id)
-        .execute(&mut *tx)
-        .await?;
+    dao::update_upload_to_path_finished(&mut tx, &model.id).await?;
     tx.commit().await?;
     Ok(StatusCode::OK)
 }
@@ -961,14 +816,9 @@ async fn run_model_training(
 
     // OrganizationDAO.findOne (global) ?~> Msg.Organization.notFound, then
     // OrganizationService.assertIsSuperUserOrOrganizationHasAiPlan.
-    let ai_plan: Option<String> =
-        sqlx::query_scalar("SELECT aiPlan::text FROM webknossos.organizations_ WHERE _id = $1")
-            .bind(&user.organization_id)
-            .fetch_optional(&state.pool)
-            .await?
-            .ok_or_else(|| {
-                Failure::new(crate::msg::organization::not_found(&user.organization_id))
-            })?;
+    let ai_plan: Option<String> = dao::find_ai_plan(&state.pool, &user.organization_id)
+        .await?
+        .ok_or_else(|| Failure::new(crate::msg::organization::not_found(&user.organization_id)))?;
     if !user.is_superuser && ai_plan.is_none() {
         return Err(Failure::new(NO_AI_PLAN).into());
     }
@@ -999,7 +849,7 @@ async fn run_model_training(
     let data_store = dataset.data_store.trim().to_owned();
     {
         let mut connection = state.pool.acquire().await?;
-        find_data_store_url(&mut connection, &user.id, &data_store)
+        dao::find_data_store_url_for_user(&mut connection, &user.id, &data_store)
             .await?
             .ok_or_else(|| Failure::new(crate::msg::data_store::NOT_FOUND))?;
     }
@@ -1014,13 +864,8 @@ async fn run_model_training(
         .ok_or_else(|| Failure::new(crate::msg::annotation::NOT_FOUND))?;
     }
     // AiModelDAO.countByNameAndOrganization counts soft-deleted models, too.
-    let existing: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM webknossos.aiModels WHERE name = $1 AND _organization = $2",
-    )
-    .bind(&body.name)
-    .bind(&user.organization_id)
-    .fetch_one(&state.pool)
-    .await?;
+    let existing =
+        dao::count_by_name_and_organization(&state.pool, &body.name, &user.organization_id).await?;
     if existing != 0 {
         return Err(Failure::new(name_taken(&body.name)).into());
     }
@@ -1075,32 +920,28 @@ async fn run_model_training(
     // Instant.now has millisecond precision.
     let now = Utc::now();
     let created = DateTime::from_timestamp_millis(now.timestamp_millis()).unwrap_or(now);
-    sqlx::query(
-        r#"INSERT INTO webknossos.aiModels (_id, _organization, _dataStore, _user, _trainingJob, path,
-          uploadToPathIsPending, name, comment, category, created, modified, isDeleted, isSuperUserOnly, isPretrained)
-          VALUES ($1, $2, $3, $4, $5, NULL, TRUE, $6, $7, $8::webknossos.AI_MODEL_CATEGORY, $9, $9, FALSE, FALSE, FALSE)"#,
+    dao::insert_one_for_training(
+        pending.connection(),
+        &model_id,
+        &user.organization_id,
+        &data_store,
+        &user.id,
+        &job_id,
+        &body.name,
+        body.comment.as_deref(),
+        body.ai_model_category.as_deref(),
+        created,
     )
-    .bind(&model_id)
-    .bind(&user.organization_id)
-    .bind(&data_store)
-    .bind(&user.id)
-    .bind(&job_id)
-    .bind(&body.name)
-    .bind(&body.comment)
-    .bind(&body.ai_model_category)
-    .bind(created)
-    .execute(pending.connection())
     .await
     .map_err(name_write_failed(&body.name))?;
     for specification in annotations {
         // Duplicate annotation ids violate the primary key; everything rolls
         // back (Scala fails after the job was already created).
-        sqlx::query(
-            "INSERT INTO webknossos.aiModel_trainingAnnotations (_aiModel, _annotation) VALUES ($1, $2)",
+        dao::insert_training_annotation(
+            pending.connection(),
+            &model_id,
+            &specification.annotation_id,
         )
-        .bind(&model_id)
-        .bind(&specification.annotation_id)
-        .execute(pending.connection())
         .await?;
     }
     pending.commit(state, misc, user).await?;
@@ -1270,7 +1111,7 @@ async fn run_model_inference(
         crate::job::submission::data_source_and_layer(state, &dataset, &body.color_layer_name)
             .await?;
     let mut connection = state.pool.acquire().await?;
-    let store_url = find_data_store_url(&mut connection, &user.id, &data_store)
+    let store_url = dao::find_data_store_url_for_user(&mut connection, &user.id, &data_store)
         .await?
         .ok_or_else(|| Failure::new(crate::msg::data_store::NOT_FOUND))?;
     crate::dataset::create::validate_dataset_name(&body.new_dataset_name)?;
@@ -1382,20 +1223,17 @@ async fn run_model_inference(
     let created = DateTime::from_timestamp_millis(now.timestamp_millis()).unwrap_or(now);
     // An unknown annotation id violates the foreign key; everything rolls back
     // (Scala fails after the job was already created).
-    sqlx::query(
-        r#"INSERT INTO webknossos.aiInferences (_id, _organization, _aiModel, _newDataset, _annotation,
-          _inferenceJob, boundingBox, newSegmentationLayerName, maskAnnotationLayerName, created, modified, isDeleted)
-          VALUES ($1, $2, $3, NULL, $4, $5, ('(' || $6 || ')')::webknossos.BOUNDING_BOX, 'segmentation', $7, $8, $8, FALSE)"#,
+    dao::insert_one_inference(
+        pending.connection(),
+        &inference_id,
+        &user.organization_id,
+        &model.id,
+        body.annotation_id.as_ref(),
+        &job_id,
+        &mag1_bounding_box.to_literal(),
+        body.mask_annotation_layer_name.as_deref(),
+        created,
     )
-    .bind(&inference_id)
-    .bind(&user.organization_id)
-    .bind(&model.id)
-    .bind(&body.annotation_id)
-    .bind(&job_id)
-    .bind(mag1_bounding_box.to_literal())
-    .bind(&body.mask_annotation_layer_name)
-    .bind(created)
-    .execute(pending.connection())
     .await?;
     pending.commit(state, misc, user).await?;
 
@@ -1440,7 +1278,7 @@ pub(crate) async fn inference_public_writes(
         .await?
         .ok_or_else(empty)?;
     let job_json = crate::job::routes::public_writes(connection, &user.id, &job).await?;
-    find_data_store_url(connection, &user.id, &job.data_store)
+    dao::find_data_store_url_for_user(connection, &user.id, &job.data_store)
         .await?
         .ok_or_else(empty)?;
     let data_store_json =
@@ -1456,12 +1294,7 @@ pub(crate) async fn inference_public_writes(
     };
     let dataset_json = match &inference.new_dataset {
         Some(dataset_id) => {
-            let mut q =
-                Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = ");
-            q.push_bind(dataset_id).push(" AND ");
-            crate::dataset::access::push_read_predicate(&mut q, (&user.id).into(), None);
-            q.push(")");
-            let readable: bool = q.build_query_scalar().fetch_one(&mut *connection).await?;
+            let readable = dao::is_dataset_readable(connection, &user.id, dataset_id).await?;
             if !readable {
                 return Err(empty());
             }
@@ -1492,13 +1325,7 @@ async fn list_inferences(
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Vec<Value>>> {
     let mut connection = state.pool.acquire().await?;
-    // AiInferenceDAO.findAll has no ORDER BY; creation order is used for stability.
-    let mut q = Sql::new("SELECT ");
-    q.push(INFERENCE_COLUMNS)
-        .push(" FROM webknossos.aiInferences_ i WHERE ");
-    push_inference_read_access(&mut q, &user.id);
-    q.push(" ORDER BY i.created, i._id");
-    let inferences: Vec<AiInference> = q.build_query_as().fetch_all(&mut *connection).await?;
+    let inferences = dao::find_all_inferences(&mut connection, &user.id).await?;
     let mut values = Vec::with_capacity(inferences.len());
     for inference in &inferences {
         values.push(
@@ -1517,14 +1344,7 @@ async fn read_inference(
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Value>> {
     let mut connection = state.pool.acquire().await?;
-    let mut q = Sql::new("SELECT ");
-    q.push(INFERENCE_COLUMNS)
-        .push(" FROM webknossos.aiInferences_ i WHERE i._id = ");
-    q.push_bind(&*id).push(" AND ");
-    push_inference_read_access(&mut q, &user.id);
-    let inference: AiInference = q
-        .build_query_as()
-        .fetch_optional(&mut *connection)
+    let inference: AiInference = dao::find_one_inference(&mut connection, &user.id, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::ai_inference::NOT_FOUND))?;
     Ok(ResponseJson(

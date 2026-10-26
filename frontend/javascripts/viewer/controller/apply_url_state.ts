@@ -2,11 +2,12 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
 import type { APIAnnotation, APIDataset } from "types/api_types";
-import { MappingStatusEnum } from "viewer/constants";
+import { MappingStatusEnum, OrthoViews } from "viewer/constants";
 import type {
   DirectLayerSpecificProps,
   MeshUrlDescriptor,
   PartialUrlManagerState,
+  TdCameraUrlState,
   UrlStateByLayer,
 } from "viewer/controller/url_manager";
 import {
@@ -14,6 +15,7 @@ import {
   getSegmentationLayerByName,
   isSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import {
   getMeshesForAdditionalCoordinates,
   hasEditableMapping,
@@ -130,6 +132,29 @@ function isSameMesh(loadedMesh: MeshInformation, descriptor: MeshUrlDescriptor):
   return false;
 }
 
+// Widens the frustum horizontally or vertically so that the bookmarked view stays
+// fully visible and undistorted in a 3D viewport with a different aspect ratio.
+function fitTDCameraToAspectRatio(
+  tdCamera: TdCameraUrlState,
+  aspectRatio: number,
+): TdCameraUrlState {
+  const { left, right, top, bottom } = tdCamera;
+  const width = right - left;
+  const height = top - bottom;
+  if (width <= 0 || height <= 0) return tdCamera;
+  const newWidth = Math.max(width, height * aspectRatio);
+  const newHeight = newWidth / aspectRatio;
+  const centerX = (left + right) / 2;
+  const centerY = (top + bottom) / 2;
+  return {
+    ...tdCamera,
+    left: centerX - newWidth / 2,
+    right: centerX + newWidth / 2,
+    top: centerY + newHeight / 2,
+    bottom: centerY - newHeight / 2,
+  };
+}
+
 // applyState only applies what the url state contains, which is enough for an initial page load.
 // When jumping to a bookmark, the current view also has to be reset where getUrlState omits
 // values that are off or default. Meshes and mappings that are already loaded are reused.
@@ -190,7 +215,14 @@ export function applyBookmarkState(urlState: PartialUrlManagerState, dataset: AP
     }
   }
 
-  applyState({ rotation: [0, 0, 0], ...urlState, stateByLayer }, false, dataset);
+  // If the 3D viewport is hidden, the camera controller adapts the aspect ratio once it is shown.
+  const tdRect = getInputCatcherRect(state, OrthoViews.TDView);
+  const tdCamera =
+    urlState.tdCamera != null && tdRect.width > 0 && tdRect.height > 0
+      ? fitTDCameraToAspectRatio(urlState.tdCamera, tdRect.width / tdRect.height)
+      : urlState.tdCamera;
+
+  applyState({ rotation: [0, 0, 0], ...urlState, tdCamera, stateByLayer }, false, dataset);
 }
 
 async function applyLayerState(stateByLayer: UrlStateByLayer) {

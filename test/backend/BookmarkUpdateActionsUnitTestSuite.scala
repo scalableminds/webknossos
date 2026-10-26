@@ -32,7 +32,8 @@ class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
     "update existing entries in place, append new ones and remove the requested keys" in {
       val action = UpdateMetadataOfBookmarkAnnotationAction(
         id = 1,
-        upsertEntriesByKey = Seq(MetadataEntry("b", numberValue = Some(3.0)), MetadataEntry("d", stringValue = Some("4"))),
+        upsertEntriesByKey =
+          Seq(MetadataEntry("b", numberValue = Some(3.0)), MetadataEntry("d", stringValue = Some("4"))),
         removeEntriesByKey = Seq("a")
       )
       assert(

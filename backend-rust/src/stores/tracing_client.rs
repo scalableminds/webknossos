@@ -960,11 +960,7 @@ pub async fn first_tracing_store_url<'e, E: Executor<'e, Database = Postgres>>(
 pub async fn find_first_tracing_store_url<'e, E: Executor<'e, Database = Postgres>>(
     executor: E,
 ) -> ApiResult<Option<String>> {
-    Ok(
-        sqlx::query_scalar("SELECT url FROM webknossos.tracingStores_ ORDER BY name LIMIT 1")
-            .fetch_optional(executor)
-            .await?,
-    )
+    super::dao::find_first_tracing_store_url(executor).await
 }
 
 /// Decode an annotation including the nested proto2 required-field checks

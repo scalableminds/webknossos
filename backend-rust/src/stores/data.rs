@@ -16,8 +16,9 @@ use crate::{
     dataset::routes::public_datastore_json_on_connection,
     error::{ApiError, ApiResult},
     extract::{Json, Path},
-    util::id::ObjectId,
 };
+
+use super::dao;
 
 #[derive(Clone, Copy)]
 struct JobsEnabled(bool);
@@ -40,9 +41,7 @@ async fn list(
         return Ok(ResponseJson(Vec::new()));
     };
     let mut tx = state.pool.begin().await?;
-    let names: Vec<String> = sqlx::query_scalar(
-        "SELECT name FROM webknossos.dataStores WHERE NOT isDeleted AND (onlyAllowedOrganization IS NULL OR onlyAllowedOrganization = $1) ORDER BY name FOR SHARE",
-    ).bind(&user.organization_id).fetch_all(&mut *tx).await?;
+    let names = dao::find_all_names_for_organization(&mut tx, &user.organization_id).await?;
     let mut values = Vec::with_capacity(names.len());
     for name in names {
         values.push(public_datastore_json_on_connection(&mut tx, &name, jobs_enabled).await?);
@@ -73,9 +72,7 @@ async fn create(
     }
     let mut tx = state.pool.begin().await?;
     lock_superuser(&mut tx, &user, crate::msg::user::SUPER_USER_ONLY).await?;
-    let taken: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM webknossos.dataStores WHERE name = $1 AND NOT isDeleted AND (onlyAllowedOrganization IS NULL OR onlyAllowedOrganization = $2))",
-    ).bind(&body.name).bind(&user.organization_id).fetch_one(&mut *tx).await?;
+    let taken = dao::name_is_taken(&mut tx, &body.name, &user.organization_id).await?;
     if taken {
         return Err(ApiError::bad_request(format!(
             "A data store named “{}” already exists. Please choose a different name.",
@@ -84,18 +81,15 @@ async fn create(
     }
     // The original DTO does not accept onlyAllowedOrganization or storage
     // reporting configuration. Unknown fields cannot set those private flags.
-    sqlx::query(
-        "INSERT INTO webknossos.dataStores (name, url, publicUrl, key, \
-                allowsUpload, allowsUploadToPaths, reportUsedStorageEnabled) VALUES ($1, $2, \
-                $3, $4, $5, $6, FALSE)",
+    dao::insert_one(
+        &mut tx,
+        &body.name,
+        &body.url,
+        &body.public_url,
+        &body.key,
+        body.allows_upload.unwrap_or(true),
+        body.allows_upload_to_paths.unwrap_or(true),
     )
-    .bind(&body.name)
-    .bind(&body.url)
-    .bind(&body.public_url)
-    .bind(&body.key)
-    .bind(body.allows_upload.unwrap_or(true))
-    .bind(body.allows_upload_to_paths.unwrap_or(true))
-    .execute(&mut *tx)
     .await?;
     let response = public_datastore_json_on_connection(&mut tx, &body.name, jobs_enabled).await?;
     tx.commit().await?;
@@ -114,10 +108,7 @@ async fn remove(
     // workers and credentials keep their records; nothing cascades here.
     let mut tx = state.pool.begin().await?;
     lock_superuser(&mut tx, &user, crate::msg::NOT_ALLOWED).await?;
-    sqlx::query("UPDATE webknossos.dataStores SET isDeleted = TRUE WHERE name = $1")
-        .bind(name)
-        .execute(&mut *tx)
-        .await?;
+    dao::delete_one(&mut tx, name).await?;
     tx.commit().await?;
     Ok(StatusCode::OK)
 }
@@ -129,14 +120,7 @@ async fn lock_superuser(
     user: &AuthUser,
     message: &str,
 ) -> ApiResult<()> {
-    let live: Option<ObjectId> = sqlx::query_scalar(
-        r#"SELECT usr._id FROM webknossos.users AS usr
-          JOIN webknossos.multiUsers AS multi ON multi._id = usr._multiUser
-          JOIN webknossos.organizations AS org ON org._id = usr._organization
-          WHERE usr._id = $1 AND usr._organization = $2 AND multi.isSuperUser
-            AND NOT usr.isDeleted AND NOT usr.isDeactivated AND NOT multi.isDeleted AND NOT org.isDeleted
-          FOR SHARE OF multi, usr, org"#,
-    ).bind(&user.id).bind(&user.organization_id).fetch_optional(&mut **tx).await?;
+    let live = dao::lock_live_superuser(tx, &user.id, &user.organization_id).await?;
     if live.is_none() {
         return Err(ApiError::forbidden(message));
     }

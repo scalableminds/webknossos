@@ -14,6 +14,8 @@ use crate::{
     extract::{Json, Path},
 };
 
+use super::dao;
+
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/tracingstore", get(first))
@@ -24,13 +26,9 @@ async fn first(
     State(state): State<AppState>,
     _user: OptionalAuthUser,
 ) -> ApiResult<ResponseJson<Value>> {
-    let value = sqlx::query_scalar(
-        "SELECT jsonb_build_object('name', name, 'url', publicUrl) FROM \
-            webknossos.tracingStores_ LIMIT 1",
-    )
-    .fetch_optional(&state.pool)
-    .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
+    let value = dao::find_first_public_json(&state.pool)
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
     Ok(ResponseJson(value))
 }
 
@@ -52,12 +50,7 @@ async fn update(
     if !user.is_admin {
         return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
-    let exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM webknossos.tracingStores_ WHERE name = $1)",
-    )
-    .bind(&name)
-    .fetch_one(&state.pool)
-    .await?;
+    let exists = dao::tracing_store_exists(&state.pool, &name).await?;
     if !exists {
         return Err(ApiError::not_found(crate::msg::tracing_store::NOT_FOUND));
     }
@@ -66,8 +59,8 @@ async fn update(
     }
     // The existing API permits an organization admin to update this shared
     // registry. Preserve the private URL/key and soft-delete boundaries.
-    let value = sqlx::query_scalar("UPDATE webknossos.tracingStores SET url=$2, publicUrl=$3 WHERE name=$1 AND NOT isDeleted RETURNING jsonb_build_object('name',name,'url',publicUrl)")
-        .bind(name).bind(body.url).bind(body.public_url).fetch_optional(&state.pool).await?
+    let value = dao::update_tracing_store(&state.pool, name, body.url, body.public_url)
+        .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::NOT_FOUND))?;
     Ok(ResponseJson(value))
 }

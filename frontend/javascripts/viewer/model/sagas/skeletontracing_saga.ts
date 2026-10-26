@@ -99,9 +99,9 @@ import {
 import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
 import { diffBoundingBoxes } from "./diffing/bounding_box_diffing";
 import { diffGroups } from "./diffing/group_diffing";
-import { createOperationContext, type OperationContext } from "./operation_context_saga";
+import type { OperationContext } from "./operation_context_saga";
 import { ensureWkInitialized } from "./ready_sagas";
-import { takeWithBatchActionSupport } from "./saga_helpers";
+import { takeEveryInOperationContext, takeWithBatchActionSupport } from "./saga_helpers";
 import { subscribeToAnnotationMutex } from "./saving/save_mutex_saga";
 
 function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>): Vector3 {
@@ -274,29 +274,19 @@ function* watchTreeNames(): Saga<void> {
 
 function* watchAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
-  const channel = yield* actionChannel([
-    "LOAD_AGGLOMERATE_TREE_FROM_ID",
-    "LOAD_AGGLOMERATE_TREE_AT_POSITION",
-  ]);
+  const channel = yield* actionChannel<
+    LoadAgglomerateTreeFromIdAction | LoadAgglomerateTreeAtPositionAction
+  >(["LOAD_AGGLOMERATE_TREE_FROM_ID", "LOAD_AGGLOMERATE_TREE_AT_POSITION"]);
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* call(ensureWkInitialized);
-  yield* takeEvery(channel, loadAgglomerateTreeInOperationContext);
-}
-
-function* loadAgglomerateTreeInOperationContext(
-  action: LoadAgglomerateTreeFromIdAction | LoadAgglomerateTreeAtPositionAction,
-): Saga<void> {
   // Loading an agglomerate tree must not interleave with proofreading actions. Otherwise, a
   // proofreading action could change the agglomerate while its tree is being fetched. The
   // agglomerate tree syncing of that action only updates trees that are already loaded, so the
   // tree would be outdated when it's added.
-  // Waiting (instead of ignoring the request) is safe here, because nothing is held while waiting.
-  const ctx = yield* createOperationContext({
+  yield* takeEveryInOperationContext(channel, loadAgglomerateTreeWithAtPosition, {
     id: "LOAD_AGGLOMERATE_TREE",
     description: "Loading agglomerate tree",
-    behaviorWhenDisallowed: "wait",
   });
-  yield* ctx.execute(() => loadAgglomerateTreeWithAtPosition(action, ctx));
 }
 
 function* watchConnectomeAgglomerateLoading(): Saga<void> {

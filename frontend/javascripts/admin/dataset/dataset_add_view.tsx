@@ -21,6 +21,11 @@ function DatasetAddView() {
   // Uploads show their own modal, so this is only used for remote and composed datasets.
   const [addedDatasetStatus, setAddedDatasetStatus] = useState<UploadStatus>({ kind: "idle" });
   const [datasetAddType, setDatasetAddType] = useState<DatasetAddType>(DatasetAddType.REMOTE);
+  // Remounting a view resets its form, so that the next dataset can be added from scratch.
+  const [viewKeys, setViewKeys] = useState({
+    [DatasetAddType.REMOTE]: 0,
+    [DatasetAddType.COMPOSE]: 0,
+  });
 
   const handleDatasetAdded = async (
     datasetAddType: DatasetAddType,
@@ -29,6 +34,12 @@ function DatasetAddView() {
   ): Promise<void> => {
     setDatasetAddType(datasetAddType);
     setAddedDatasetStatus(getAddedDatasetStatus(datasetId, datasetName));
+  };
+
+  const handleAddedDatasetModalClose = () => {
+    setAddedDatasetStatus({ kind: "idle" });
+    if (datasetAddType === DatasetAddType.UPLOAD) return;
+    setViewKeys((keys) => ({ ...keys, [datasetAddType]: keys[datasetAddType] + 1 }));
   };
 
   const defaultActiveTabFromHash = location.hash.substring(1);
@@ -51,6 +62,7 @@ function DatasetAddView() {
       key: DatasetAddType.REMOTE,
       children: (
         <DatasetAddRemoteView
+          key={viewKeys[DatasetAddType.REMOTE]}
           datastores={datastores}
           onAdded={handleDatasetAdded.bind(null, DatasetAddType.REMOTE)}
         />
@@ -62,6 +74,7 @@ function DatasetAddView() {
       key: DatasetAddType.COMPOSE,
       children: (
         <DatasetAddComposeView
+          key={viewKeys[DatasetAddType.COMPOSE]}
           datastores={datastores}
           onAdded={handleDatasetAdded.bind(null, DatasetAddType.COMPOSE)}
         />
@@ -92,7 +105,7 @@ function DatasetAddView() {
       <UploadProgressModal
         status={addedDatasetStatus}
         datasetAddType={datasetAddType}
-        onClose={() => setAddedDatasetStatus({ kind: "idle" })}
+        onClose={handleAddedDatasetModalClose}
       />
     </React.Fragment>
   );

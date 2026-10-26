@@ -20,28 +20,21 @@ import {
   getViewDatasetURL,
 } from "viewer/model/accessors/dataset_accessor";
 import type { DatasetAddType } from "../dataset_add_type";
+import { getDatasetLayerRows, type LayerRow } from "./upload_layers";
 import {
   LayerList,
-  type LayerRow,
   MiddleEllipsisText,
   ProgressPanel,
   StageBar,
   ThumbnailPanel,
   TransferRateText,
 } from "./upload_progress_components";
-import { getStageStatuses, getUploadPhase } from "./upload_progress_stages";
+import { getStageStatuses, getStages, getUploadPhase } from "./upload_progress_stages";
 import { useConversionJob } from "./use_conversion_job";
 import type { UploadStatus } from "./use_resumable_dataset_upload";
 import { useTransferRate } from "./use_transfer_rate";
 
 type ActiveUploadStatus = Exclude<UploadStatus, { kind: "idle" }>;
-
-// Remote and composed datasets skip the upload pipeline and are ready right away.
-const hasUploadPipeline: Record<DatasetAddType, boolean> = {
-  upload: true,
-  remote: false,
-  compose: false,
-};
 
 const addAnotherLabel: Record<DatasetAddType, string> = {
   upload: "Upload another",
@@ -89,13 +82,14 @@ function getProgressCaption(status: ActiveUploadStatus): string {
   }
 }
 
-function getLayerRows(status: ActiveUploadStatus, dataset: APIMaybeUnimportedDataset | null) {
-  if (status.layers.length > 0) return status.layers;
-  // Added datasets have no upload progress, so their layers are listed without sizes.
-  if (dataset == null || !("dataLayers" in dataset.dataSource)) return [];
-  return dataset.dataSource.dataLayers.map(
-    (layer): LayerRow => ({ name: layer.name, bytes: null, sentBytes: null }),
-  );
+// Until the dataset is ready, only the uploaded files are known. Afterwards, the server's layers
+// are listed, since they carry more details and differ from the uploaded ones after a conversion.
+function getLayerRows(
+  status: ActiveUploadStatus,
+  dataset: APIMaybeUnimportedDataset | null,
+): LayerRow[] {
+  if (dataset == null || !("dataLayers" in dataset.dataSource)) return status.layers;
+  return getDatasetLayerRows(dataset.dataSource.dataLayers, status.layers);
 }
 
 function FooterHint({ icon, children }: { icon?: React.ReactNode; children: React.ReactNode }) {
@@ -144,7 +138,7 @@ function UploadProgressContent({
   );
   const phase = getUploadPhase(status, conversionJob);
   const isReady = phase.kind === "ready";
-  const { data: dataset = null } = useQueryWithErrorHandling({
+  const { data: dataset = null, isPending: isDatasetPending } = useQueryWithErrorHandling({
     queryKey: ["uploadedDataset", datasetId],
     queryFn: () => getDataset(datasetId as string),
     enabled: isReady && datasetId != null,
@@ -158,6 +152,7 @@ function UploadProgressContent({
   const uploadPercent = getUploadPercent(status);
   const datasetUrlPart = { name: status.datasetName, id: datasetId ?? "" };
   const layerRows = getLayerRows(status, dataset);
+  const stages = getStages(datasetAddType, status.needsConversion);
   const closeOrCancel = phase.kind === "uploading" ? onCancelUpload : onClose;
 
   const bodyText =
@@ -226,7 +221,10 @@ function UploadProgressContent({
     <Flex style={{ minHeight: 420 }}>
       <div style={{ width: 260, flex: "none" }}>
         {isReady ? (
-          <ThumbnailPanel thumbnailUrl={dataset != null ? getDatasetThumbnailURL(dataset) : null} />
+          <ThumbnailPanel
+            thumbnailUrl={dataset != null ? getDatasetThumbnailURL(dataset) : null}
+            isLoading={isDatasetPending}
+          />
         ) : (
           <ProgressPanel
             percent={uploadPercent}
@@ -257,13 +255,11 @@ function UploadProgressContent({
           ) : null}
         </Flex>
 
-        {hasUploadPipeline[datasetAddType] ? (
-          <StageBar
-            statuses={getStageStatuses(phase)}
-            uploadPercent={uploadPercent}
-            needsConversion={status.needsConversion}
-          />
-        ) : null}
+        <StageBar
+          stages={stages}
+          statuses={getStageStatuses(phase, stages)}
+          uploadPercent={uploadPercent}
+        />
 
         {bodyText != null ? (
           <Typography.Paragraph type="secondary" style={{ margin: 0 }}>

@@ -1,8 +1,9 @@
 import type { APIJob } from "types/api_types";
+import { DatasetAddType } from "../dataset_add_type";
 import type { UploadStatus } from "./use_resumable_dataset_upload";
 
-export const STAGES = ["upload", "finalize", "convert", "ready"] as const;
-export type Stage = (typeof STAGES)[number];
+export type Stage = "upload" | "finalize" | "convert" | "import" | "compose" | "ready";
+const UPLOAD_STAGES: readonly Stage[] = ["upload", "finalize", "convert", "ready"];
 export type StageStatus = "todo" | "active" | "done" | "error";
 
 // What the dialog shows. Unlike UploadStatus, this includes the server-side conversion.
@@ -49,21 +50,34 @@ export function getUploadPhase(
   }
 }
 
-/** The stages to show. Datasets that don't need a conversion skip the convert stage. */
-export function getStages(needsConversion: boolean): readonly Stage[] {
-  return needsConversion ? STAGES : STAGES.filter((stage) => stage !== "convert");
+/**
+ * The stages to show. Uploads that don't need a conversion skip the convert stage. Remote and
+ * composed datasets are added with a single request, which is done once the dialog opens.
+ */
+export function getStages(
+  datasetAddType: DatasetAddType,
+  needsConversion: boolean,
+): readonly Stage[] {
+  switch (datasetAddType) {
+    case DatasetAddType.UPLOAD:
+      return needsConversion ? UPLOAD_STAGES : UPLOAD_STAGES.filter((stage) => stage !== "convert");
+    case DatasetAddType.REMOTE:
+      return ["import", "ready"];
+    case DatasetAddType.COMPOSE:
+      return ["compose", "ready"];
+  }
 }
 
-export function getStageStatuses(phase: UploadPhase): Record<Stage, StageStatus> {
+export function getStageStatuses(
+  phase: UploadPhase,
+  stages: readonly Stage[] = UPLOAD_STAGES,
+): Partial<Record<Stage, StageStatus>> {
   const currentStage = phase.kind === "failed" ? phase.stage : PHASE_STAGES[phase.kind];
-  const currentIndex = STAGES.indexOf(currentStage);
+  const currentIndex = stages.indexOf(currentStage);
   const getStatus = (index: number): StageStatus => {
     if (index < currentIndex || phase.kind === "ready") return "done";
     if (index === currentIndex) return phase.kind === "failed" ? "error" : "active";
     return "todo";
   };
-  return Object.fromEntries(STAGES.map((stage, index) => [stage, getStatus(index)])) as Record<
-    Stage,
-    StageStatus
-  >;
+  return Object.fromEntries(stages.map((stage, index) => [stage, getStatus(index)]));
 }

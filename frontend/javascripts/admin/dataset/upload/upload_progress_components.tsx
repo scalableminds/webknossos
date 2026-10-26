@@ -8,7 +8,9 @@ import {
   Image,
   Progress,
   Row,
+  Skeleton,
   Statistic,
+  Tag,
   Typography,
   theme,
 } from "antd";
@@ -17,7 +19,8 @@ import { formatBytes } from "libs/format_utils";
 import type React from "react";
 import { useState } from "react";
 import { getAntdTheme } from "theme";
-import { getStages, type Stage, type StageStatus } from "./upload_progress_stages";
+import type { LayerRow } from "./upload_layers";
+import type { Stage, StageStatus } from "./upload_progress_stages";
 import type { TransferRate } from "./use_transfer_rate";
 
 const GRID_SIZE = 6;
@@ -29,6 +32,8 @@ const STAGE_LABELS: Record<Stage, string> = {
   upload: "Upload",
   finalize: "Finalize",
   convert: "Convert",
+  import: "Import",
+  compose: "Compose",
   ready: "Ready",
 };
 
@@ -150,9 +155,29 @@ export function ProgressPanel(props: ProgressPanelProps) {
   );
 }
 
-/** Shows the dataset's thumbnail, or a completed grid if there is none (yet). */
-export function ThumbnailPanel({ thumbnailUrl }: { thumbnailUrl: string | null }) {
+// Thumbnails of remote datasets are rendered from the remote data, which can take a while.
+function ThumbnailSkeleton() {
+  return (
+    <Skeleton.Image
+      active
+      styles={{
+        root: { display: "block", width: "100%", height: "100%" },
+        content: { width: "100%", height: "100%", borderRadius: 0 },
+      }}
+    />
+  );
+}
+
+/** Shows the dataset's thumbnail, a skeleton while it loads, or a completed grid if there is none. */
+export function ThumbnailPanel({
+  thumbnailUrl,
+  isLoading,
+}: {
+  thumbnailUrl: string | null;
+  isLoading: boolean;
+}) {
   const [hasFailed, setHasFailed] = useState(false);
+  if (isLoading) return <ThumbnailSkeleton />;
   if (thumbnailUrl == null || hasFailed) {
     return (
       <ConfigProvider theme={getAntdTheme("dark")}>
@@ -165,6 +190,7 @@ export function ThumbnailPanel({ thumbnailUrl }: { thumbnailUrl: string | null }
       src={thumbnailUrl}
       alt="Dataset thumbnail"
       preview={false}
+      placeholder={<ThumbnailSkeleton />}
       styles={{
         root: { display: "block", width: "100%", height: "100%" },
         image: { width: "100%", height: "100%", objectFit: "cover" },
@@ -239,22 +265,21 @@ function StageBarItem({
 }
 
 export function StageBar({
+  stages,
   statuses,
   uploadPercent,
-  needsConversion,
 }: {
-  statuses: Record<Stage, StageStatus>;
+  stages: readonly Stage[];
+  statuses: Partial<Record<Stage, StageStatus>>;
   uploadPercent: number;
-  needsConversion: boolean;
 }) {
-  const stages = getStages(needsConversion);
   return (
     <Row gutter={6}>
       {stages.map((stage) => (
         <Col key={stage} span={24 / stages.length}>
           <StageBarItem
             stage={stage}
-            status={statuses[stage]}
+            status={statuses[stage] ?? "todo"}
             percent={stage === "upload" ? uploadPercent : null}
           />
         </Col>
@@ -262,8 +287,6 @@ export function StageBar({
     </Row>
   );
 }
-
-export type LayerRow = { name: string; bytes: number | null; sentBytes: number | null };
 
 function LayerStatusIcon({ status }: { status: "pending" | "uploading" | "done" }) {
   const { token } = theme.useToken();
@@ -295,12 +318,26 @@ function LayerListItem({ layer }: { layer: LayerRow }) {
         <Typography.Text strong={status === "uploading"} ellipsis style={{ flex: 1 }}>
           {layer.name}
         </Typography.Text>
+        {layer.category != null ? (
+          <Tag variant="filled" style={{ marginInlineEnd: 0 }}>
+            {layer.category === "segmentation" ? "Segmentation" : "Color"}
+          </Tag>
+        ) : null}
         {layer.bytes != null ? (
           <Typography.Text type="secondary" style={TABULAR_NUMBERS}>
             {formatBytes(layer.bytes, 1)}
           </Typography.Text>
         ) : null}
       </Flex>
+      {layer.details != null ? (
+        <Typography.Text
+          type="secondary"
+          ellipsis={{ tooltip: layer.details }}
+          style={{ ...TABULAR_NUMBERS, paddingInlineStart: 24, marginTop: -6 }}
+        >
+          {layer.details}
+        </Typography.Text>
+      ) : null}
       {status === "uploading" && layer.bytes != null && layer.sentBytes != null ? (
         <Progress
           percent={(layer.sentBytes / layer.bytes) * 100}

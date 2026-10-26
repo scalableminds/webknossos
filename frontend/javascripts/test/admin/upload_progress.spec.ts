@@ -1,4 +1,9 @@
-import { getUploadProgress, groupFilesByLayer } from "admin/dataset/upload/upload_layers";
+import { DatasetAddType } from "admin/dataset/dataset_add_type";
+import {
+  getDatasetLayerRows,
+  getUploadProgress,
+  groupFilesByLayer,
+} from "admin/dataset/upload/upload_layers";
 import {
   getStageStatuses,
   getStages,
@@ -6,7 +11,7 @@ import {
 } from "admin/dataset/upload/upload_progress_stages";
 import type { UploadStatus } from "admin/dataset/upload/use_resumable_dataset_upload";
 import type { FileWithPath } from "react-dropzone";
-import type { APIJob } from "types/api_types";
+import type { APIDataLayer, APIJob } from "types/api_types";
 import { describe, expect, it } from "vitest";
 
 function createFile(path: string, size: number): FileWithPath {
@@ -56,6 +61,36 @@ describe("groupFilesByLayer", () => {
   });
 });
 
+describe("getDatasetLayerRows", () => {
+  const dataLayer = (name: string, category: APIDataLayer["category"]) =>
+    ({
+      name,
+      category,
+      elementClass: "uint8",
+      boundingBox: { topLeft: [0, 0, 0], width: 2048, height: 1024, depth: 512 },
+      mags: [{ mag: [1, 1, 1] }, { mag: [2, 2, 1] }],
+      dataFormat: "zarr3",
+      additionalAxes: null,
+    }) as unknown as APIDataLayer;
+
+  it("describes the server's layers and keeps the sizes of uploaded layers", () => {
+    const rows = getDatasetLayerRows(
+      [dataLayer("color", "color"), dataLayer("segmentation", "segmentation")],
+      [{ name: "color", bytes: 100, sentBytes: 100 }],
+    );
+    expect(rows).toEqual([
+      {
+        name: "color",
+        bytes: 100,
+        sentBytes: 100,
+        category: "color",
+        details: "uint8 · 2048\u202f×\u202f1024\u202f×\u202f512 vx · 2 mags · Zarr 3",
+      },
+      expect.objectContaining({ name: "segmentation", bytes: null, category: "segmentation" }),
+    ]);
+  });
+});
+
 describe("upload stages", () => {
   const uploadInfo = {
     datasetName: "ds",
@@ -75,8 +110,18 @@ describe("upload stages", () => {
   it("skips the conversion of native datasets", () => {
     const phase = getUploadPhase(finished(false), null);
     expect(phase).toEqual({ kind: "ready" });
-    expect(getStages(false)).toEqual(["upload", "finalize", "ready"]);
-    expect(getStages(true)).toEqual(["upload", "finalize", "convert", "ready"]);
+    expect(getStages(DatasetAddType.UPLOAD, false)).toEqual(["upload", "finalize", "ready"]);
+    expect(getStages(DatasetAddType.UPLOAD, true)).toEqual([
+      "upload",
+      "finalize",
+      "convert",
+      "ready",
+    ]);
+  });
+
+  it("marks all stages of added datasets as done", () => {
+    const stages = getStages(DatasetAddType.REMOTE, false);
+    expect(getStageStatuses({ kind: "ready" }, stages)).toEqual({ import: "done", ready: "done" });
   });
 
   it("follows the conversion job", () => {

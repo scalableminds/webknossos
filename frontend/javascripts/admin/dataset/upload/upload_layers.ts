@@ -1,7 +1,28 @@
+import { formatExtentInUnitWithLength } from "libs/format_utils";
+import { pluralize } from "libs/utils";
 import type { FileWithPath } from "react-dropzone";
+import type { APIDataLayer } from "types/api_types";
 import { detectDatasetFormat, summarizeSelection } from "./detect_dataset_format";
 
 export type UploadLayerProgress = { name: string; bytes: number; sentBytes: number };
+
+/** A row of the layer list. Sizes are only known for uploaded layers. */
+export type LayerRow = {
+  name: string;
+  bytes: number | null;
+  sentBytes: number | null;
+  category?: APIDataLayer["category"];
+  // E.g. "uint8 · 2048 × 2048 × 512 vx · 6 mags · Zarr"
+  details?: string;
+};
+
+const DATA_FORMAT_NAMES: Record<string, string> = {
+  wkw: "WKW",
+  zarr: "Zarr",
+  zarr3: "Zarr 3",
+  n5: "N5",
+  neuroglancerPrecomputed: "Neuroglancer Precomputed",
+};
 
 export type UploadLayerGroups = {
   layers: UploadLayerProgress[];
@@ -69,6 +90,40 @@ export function getUploadProgress(
     bytesSent,
     layers: layers.map((layer, index) => ({ ...layer, sentBytes: sentBytesPerLayer[index] })),
   };
+}
+
+function describeDataLayer(layer: APIDataLayer): string {
+  // The API type is narrower than the formats the server actually supports.
+  const dataFormat: string | undefined = layer.dataFormat;
+  return [
+    layer.elementClass,
+    `${formatExtentInUnitWithLength(layer.boundingBox, String)} vx`,
+    `${layer.mags.length} ${pluralize("mag", layer.mags.length)}`,
+    dataFormat != null ? (DATA_FORMAT_NAMES[dataFormat] ?? dataFormat) : null,
+  ]
+    .filter((part) => part != null)
+    .join(" · ");
+}
+
+/**
+ * Lists the layers of a dataset as the server sees them. Uploaded layers keep their size, if the
+ * upload could tell them apart. Converted uploads have different layers than were uploaded.
+ */
+export function getDatasetLayerRows(
+  dataLayers: APIDataLayer[],
+  uploadedLayers: UploadLayerProgress[],
+): LayerRow[] {
+  const uploadedBytesByName = new Map(uploadedLayers.map((layer) => [layer.name, layer.bytes]));
+  return dataLayers.map((layer) => {
+    const bytes = uploadedBytesByName.get(layer.name) ?? null;
+    return {
+      name: layer.name,
+      bytes,
+      sentBytes: bytes,
+      category: layer.category,
+      details: describeDataLayer(layer),
+    };
+  });
 }
 
 export function markLayersAsSent(layers: UploadLayerProgress[]): UploadLayerProgress[] {

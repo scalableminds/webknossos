@@ -4,8 +4,12 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.Annotation.AnnotationBookmarkProto
-import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBPutBuffer, KeyValueStoreConversions, TracingDataStore}
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  FossilDBPutBuffer,
+  KeyValueStoreConversions,
+  TracingDataStore
+}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

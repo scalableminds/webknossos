@@ -1,5 +1,7 @@
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'AnnotationProto.proto' or its co... Remove this comment to see the full error message
 import AnnotationProto from "Annotation.proto";
+// @ts-expect-error Cannot find module 'AnnotationBookmark.proto' or its corresponding type declarations.
+import AnnotationBookmarkProto from "AnnotationBookmark.proto";
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'ListOfLong.proto' or its co... Remove this comment to see the full error message
 import ListOfLongProto from "ListOfLong.proto";
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'SkeletonTracing.proto' or its ... Remove this comment to see the full error message
@@ -185,7 +187,7 @@ export function parseProtoAnnotation(
 export function parseProtoAnnotationBookmarks(
   bookmarksArrayBuffer: ArrayBuffer,
 ): APIAnnotationBookmark[] {
-  const protoRoot = Root.fromJSON(AnnotationProto);
+  const protoRoot = Root.fromJSON(AnnotationBookmarkProto);
   const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.AnnotationBookmarksProto`);
   const message = messageType.decode(new Uint8Array(bookmarksArrayBuffer));
 

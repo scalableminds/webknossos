@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.annotation
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{JsonAutoFormat, TristateOptionJsonHelper}
-import com.scalableminds.webknossos.datastore.Annotation.AnnotationBookmarkProto
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType

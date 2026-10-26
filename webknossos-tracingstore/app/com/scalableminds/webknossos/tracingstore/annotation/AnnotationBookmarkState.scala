@@ -2,14 +2,17 @@ package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.JsonAutoFormat
-import com.scalableminds.webknossos.datastore.Annotation.{
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.{
   AnnotationBookmarkStateProto,
   BookmarkLayerStateProto,
   BookmarkMappingProto,
   BookmarkMeshProto,
   BookmarkTdCameraProto
 }
-import com.scalableminds.webknossos.datastore.Annotation.AnnotationBookmarkStateProto.{MappingTypeProto, ViewModeProto}
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkStateProto.{
+  MappingTypeProto,
+  ViewModeProto
+}
 import com.scalableminds.webknossos.datastore.geometry.Vec2DoubleProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryConversions, UnsignedLong}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate

@@ -2,11 +2,11 @@ package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.Annotation.{
-  AnnotationBookmarkProto,
   AnnotationLayerProto,
   AnnotationProto,
   AnnotationUserStateProto
 }
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo

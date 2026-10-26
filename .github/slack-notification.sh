@@ -2,7 +2,18 @@
 
 set -Eeuo pipefail
 
+commitmsg=$(git log --format=%s -n 1)
+
 author=${GITHUB_ACTOR}
+# Merge queue bot merged the PR: notify whoever added the automerge label instead
+if [[ "$author" == "mergecow[bot]" && "$commitmsg" =~ \(#([0-9]+)\)$ ]]; then
+    labeler=$(curl -s \
+        -H "Authorization: Bearer ${GITHUB_TOKEN:-}" \
+        "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/issues/${BASH_REMATCH[1]}/events?per_page=100" \
+        | jq -r '[.[] | select(.event == "labeled" and .label.name == "automerge")] | last | .actor.login // empty' \
+    ) || true
+    author=${labeler:-$author}
+fi
 author=${author/fm3/<@florian>}
 author=${author/daniel-wer/<@daniel>}
 author=${author/hotzenklotz/<@tom>}
@@ -13,7 +24,6 @@ author=${author/valentin-pinkau/<@valentin>}
 author=${author/frcroth/<@felix.roth>}
 author=${author/knollengewaechs/<@charlie.meister>}
 channel="webknossos-bots"
-commitmsg=$(git log --format=%s -n 1)
 pullregex="(.*)#([0-9]+)(.*)"
 
 while [[ "$commitmsg" =~ $pullregex ]]; do

@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
@@ -80,6 +80,7 @@ class TSFullMeshService @Inject() (
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
+      _ <- Fox.fromBool(fullMeshRequest.segmentId.toLong != 0L) ?~> Msg.Mesh.segmentIdZeroForAdHoc
       _ <- Fox.fromBool(tracing.mags.contains(vec3IntToProto(mag))) ?~> Msg.Annotation.Volume
         .wrongMag(tracingId, mag.toMagLiteral(allowScalar = true))
       before = Instant.now
@@ -132,6 +133,9 @@ class TSFullMeshService @Inject() (
         .map(_ * mag * DataLayer.bucketLength)
         .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, fullMeshRequest.additionalCoordinates))
         .toList
+      _ <- Fox.fromBool(bucketPositions.length <= maxAdHocFullMeshChunks) ?~> Msg.Mesh.tooManyAdHocMeshRequests(
+        maxAdHocFullMeshChunks
+      )
       vertexChunksWithNeighbors: List[(Array[Float], List[Int])] <- Fox.serialCombined(bucketPositions) {
         bucketPosition =>
           val adHocMeshRequest = WebknossosAdHocMeshRequest(
@@ -163,12 +167,18 @@ class TSFullMeshService @Inject() (
   )(using ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] = {
     // visited does not need to be thread-safe: it is mutated only at the start of each
     // processFrontier call (before any concurrent work begins); Fox.combined only reads it
-    // (via generateNextTopLeftsFromNeighbors.filterNot), and waves execute sequentially
+    // (via generateNextTopLeftsFromNeighbors), and waves execute sequentially
     // via Fox.serialCombined, so no two writes ever race.
     val visited = collection.mutable.Set[VoxelPosition]()
 
-    def processFrontier(frontier: List[VoxelPosition], acc: List[Array[Float]]): Fox[List[Array[Float]]] =
+    def processFrontier(
+        frontier: List[VoxelPosition],
+        acc: List[Array[Float]],
+        datasetBoundingBox: BoundingBox
+    ): Fox[List[Array[Float]]] =
       if (frontier.isEmpty) Fox.successful(acc)
+      else if (visited.size + frontier.size > maxAdHocFullMeshChunks)
+        Fox.failure(Msg.Mesh.tooManyAdHocMeshRequests(maxAdHocFullMeshChunks))
       else {
         visited ++= frontier
         val batches = frontier.grouped(adHocMeshingBatchSize).toList
@@ -188,20 +198,31 @@ class TSFullMeshService @Inject() (
               )
               loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest).map {
                 case (vertices, neighborIds) =>
-                  (vertices, generateNextTopLeftsFromNeighbors(position, neighborIds, chunkSize, visited))
+                  (
+                    vertices,
+                    generateNextTopLeftsFromNeighbors(
+                      position,
+                      neighborIds,
+                      chunkSize,
+                      visited,
+                      datasetBoundingBox
+                    )
+                  )
               }
             })
           }
           results = batchResults.flatten
           newVertices = results.map(_._1)
           nextFrontier = results.flatMap(_._2).distinct
-          allVertices <- processFrontier(nextFrontier, newVertices ::: acc)
+          allVertices <- processFrontier(nextFrontier, newVertices ::: acc, datasetBoundingBox)
         } yield allVertices
       }
 
     for {
       topLeft <- topLeftOpt.toFox ?~> Msg.Mesh.seedPosNeededForAdHoc
-      result <- processFrontier(List(topLeft), List.empty)
+      // Not tracing.boundingBox, which may be a smaller task bounding box
+      dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId)
+      result <- processFrontier(List(topLeft), List.empty, dataSource.boundingBox)
     } yield result
   }
 

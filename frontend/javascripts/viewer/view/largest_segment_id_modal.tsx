@@ -15,7 +15,7 @@ import {
   createCellAction,
   setLargestSegmentIdAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import { getSegmentIdRangeForElementClass } from "viewer/model/helpers/element_class_ranges";
 import type { VolumeTracing } from "viewer/store";
 import Store from "viewer/throttled_store";
 

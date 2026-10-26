@@ -1,4 +1,5 @@
 import template from "lodash-es/template";
+import type { ReactNode } from "react";
 import type { Vector4 } from "viewer/constants";
 import type {
   DatasetConfiguration,
@@ -160,21 +161,30 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.out_of_task_bounds": "The current position is outside of the task's bounding box.",
   "tracing.copy_position": "Copy position to clipboard",
   "tracing.copy_sharing_link": "Copy sharing link to clipboard",
-  "tracing.tree_length_notification": (treeName: string, lengthInNm: string, lengthInVx: string) =>
-    `The tree ${treeName} has a total path length of ${lengthInNm} (${lengthInVx}).`,
+  "tracing.tree_length_notification": (
+    treeName: string,
+    lengthInUnit: ReactNode,
+    lengthInVx: string,
+  ) => (
+    <>
+      The tree {treeName} has a total path length of {lengthInUnit} ({lengthInVx}).
+    </>
+  ),
   "tracing.sharing_modal_basic_information": (sharingActiveNode?: boolean) =>
     `This link includes the ${
       sharingActiveNode ? "active tree node," : ""
     } current position, zoom value and ID mapping. Consider fine-tuning your current view before copying the URL.`,
   "tracing.sharing_modal_zarr_information": (
     <span>
-      This{" "}
+      These{" "}
       <a href="https://zarr.dev" target="_blank" rel="noreferrer">
         Zarr
       </a>{" "}
-      link may be used by other tools to load the dataset&apos;s data in a streaming manner.
+      links may be used by other tools to load the dataset&apos;s data in a streaming manner.
     </span>
   ),
+  "tracing.zarr_link_compatibility_hint":
+    'Layer links work with any Zarr-compatible tool. The "All layers" link only works in WEBKNOSSOS.',
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
   "tracing.segment_id_out_of_bounds": (
     requestedId: bigint,

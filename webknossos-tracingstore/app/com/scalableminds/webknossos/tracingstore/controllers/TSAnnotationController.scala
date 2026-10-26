@@ -24,6 +24,7 @@ import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
 import com.scalableminds.webknossos.tracingstore.annotation.{
   AnnotationBookmarkService,
+  BookmarkMergeRemapping,
   AnnotationTransactionService,
   BookmarkThumbnailSize,
   ResetToBaseAnnotationAction,
@@ -330,6 +331,36 @@ class TSAnnotationController @Inject() (
     } yield skeletonTracingsAdapted
   }
 
+  private def buildBookmarkMergeRemappings(
+      annotations: Seq[AnnotationProto],
+      skeletonTracingsNested: Seq[Seq[SkeletonTracing]],
+      nodeMappings: Seq[Int => Int], // one per skeleton tracing
+      segmentIdMapsByTracingId: Map[String, Map[Long, Long]],
+      mergedSkeletonIdOpt: Option[String],
+      mergedVolumeIdOpt: Option[String],
+      mergedEditableMappingIdOpt: Option[String]
+  ): Seq[BookmarkMergeRemapping] = {
+    val firstSkeletonIndices = skeletonTracingsNested.map(_.length).scanLeft(0)(_ + _)
+    annotations.lazyZip(skeletonTracingsNested).lazyZip(firstSkeletonIndices).toSeq.map {
+      case (annotation, skeletonTracings, firstSkeletonIndex) =>
+        val mergedTracingIdsBySourceTracingId = annotation.annotationLayers.flatMap { layer =>
+          val mergedTracingIdOpt =
+            if (layer.typ == AnnotationLayerTypeProto.Skeleton) mergedSkeletonIdOpt else mergedVolumeIdOpt
+          mergedTracingIdOpt.map(layer.tracingId -> _)
+        }.toMap
+        val volumeTracingIds =
+          annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume).map(_.tracingId)
+        BookmarkMergeRemapping(
+          existingNodeIds = skeletonTracings.flatMap(_.trees.flatMap(_.nodes.map(_.id))).toSet,
+          nodeIdMap = nodeMappings.lift(firstSkeletonIndex).filter(_ => skeletonTracings.nonEmpty).getOrElse(identity),
+          tracingIdMap = mergedTracingIdsBySourceTracingId,
+          segmentIdMapsByTracingId = segmentIdMapsByTracingId,
+          editableMappingIdMap =
+            mergedEditableMappingIdOpt.map(mappingId => volumeTracingIds.map(_ -> mappingId).toMap).getOrElse(Map.empty)
+        )
+    }
+  }
+
   def mergedFromIds(
       toTemporaryStore: Boolean,
       newAnnotationId: ObjectId,
@@ -412,7 +443,7 @@ class TSAnnotationController @Inject() (
               findAndAdaptSkeletonsForAnnotation(annotation, requestingUserId, ownerId)
             }
             skeletonTracings = skeletonTracingsAdaptedNested.flatten
-            mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
+            mergedSkeletonWithNodeMappingsOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
               skeletonTracingService
                 .merge(
                   skeletonTracings,
@@ -421,6 +452,7 @@ class TSAnnotationController @Inject() (
                 )
                 .toFox
             )
+            mergedSkeletonOpt = mergedSkeletonWithNodeMappingsOpt.map(_._1)
             _ <- Fox.runOptional(mergedSkeletonOpt)(
               skeletonTracingService
                 .saveSkeleton(newSkeletonId, version = newTargetVersion, _, toTemporaryStore = toTemporaryStore)
@@ -440,11 +472,25 @@ class TSAnnotationController @Inject() (
               )
             )
             mergedLayers = Seq(mergedSkeletonLayerOpt, mergedVolumeLayerOpt).flatten
+            bookmarkMergeRemappings = buildBookmarkMergeRemappings(
+              annotations,
+              skeletonTracingsAdaptedNested,
+              mergedSkeletonWithNodeMappingsOpt.map(_._2).getOrElse(Seq.empty),
+              volumeLayers.map(_.tracingId).zip(mergedVolumeStats.idMaps).toMap,
+              mergedSkeletonLayerOpt.map(_.tracingId),
+              mergedVolumeLayerOpt.map(_.tracingId),
+              newMappingName
+            )
+            mergedBookmarkIds <- annotationBookmarkService.mergeBookmarks(
+              request.body.annotationIds.lazyZip(annotations).lazyZip(bookmarkMergeRemappings).toSeq,
+              newAnnotationId,
+              newTargetVersion,
+              toTemporaryStore
+            ) ?~> Msg.Annotation.Merge.mergeBookmarksFailed
             firstAnnotation <- annotations.headOption.toFox
-            // Bookmarks reference ids of the source annotations, which are not remapped yet, so they are dropped.
             mergedAnnotation = firstAnnotation
               .withAnnotationLayers(mergedLayers)
-              .withBookmarkIds(Seq.empty)
+              .withBookmarkIds(mergedBookmarkIds)
               .withEarliestAccessibleVersion(newTargetVersion)
               .withVersion(newTargetVersion)
             _ <- annotationService.saveAnnotationProto(

@@ -89,24 +89,36 @@ class SkeletonTracingService @Inject() (
     if (fromTask) newTracing.clearBoundingBox else newTracing
   }
 
+  // Also returns how the node ids of each input tracing map to those of the merged tracing.
   def merge(
       tracings: Seq[SkeletonTracing],
       newVersion: Long,
       additionalBoundingBoxes: Seq[NamedBoundingBox]
-  ): Box[SkeletonTracing] =
+  ): Box[(SkeletonTracing, Seq[Int => Int])] =
     for {
-      tracing <- tracings.map(Full(_)).reduceLeft(mergeTwo)
-    } yield tracing.copy(
-      createdTimestamp = System.currentTimeMillis(),
-      version = newVersion,
-      storedWithExternalTreeBodies = Some(false),
-      userBoundingBoxes = addAdditionalBoundingBoxes(tracing.userBoundingBoxes, additionalBoundingBoxes)
+      firstTracing <- Box.fromOption(tracings.headOption)
+      (tracing, nodeMappings) <- tracings.tail.foldLeft(
+        Full((firstTracing, Seq[Int => Int](identity))): Box[
+          (SkeletonTracing, Seq[Int => Int])
+        ]
+      ) { (mergedBox, tracingB) =>
+        for {
+          (tracingA, nodeMappings) <- mergedBox
+          (merged, nodeMappingB) <- mergeTwo(tracingA, tracingB)
+        } yield (merged, nodeMappings :+ nodeMappingB)
+      }
+    } yield (
+      tracing.copy(
+        createdTimestamp = System.currentTimeMillis(),
+        version = newVersion,
+        storedWithExternalTreeBodies = Some(false),
+        userBoundingBoxes = addAdditionalBoundingBoxes(tracing.userBoundingBoxes, additionalBoundingBoxes)
+      ),
+      nodeMappings
     )
 
-  private def mergeTwo(tracingA: Box[SkeletonTracing], tracingB: Box[SkeletonTracing]): Box[SkeletonTracing] =
+  private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing): Box[(SkeletonTracing, Int => Int)] =
     for {
-      tracingA <- tracingA
-      tracingB <- tracingB
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
         Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes))
       )
@@ -136,14 +148,17 @@ class SkeletonTracingService @Inject() (
         bboxIdMapA,
         bboxIdMapB
       )
-    } yield tracingA.copy(
-      trees = mergedTrees,
-      treeGroups = mergedGroups,
-      boundingBox = mergedBoundingBox,
-      userBoundingBox = None,
-      userBoundingBoxes = userBoundingBoxes,
-      additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes),
-      userStates = userStates
+    } yield (
+      tracingA.copy(
+        trees = mergedTrees,
+        treeGroups = mergedGroups,
+        boundingBox = mergedBoundingBox,
+        userBoundingBox = None,
+        userBoundingBoxes = userBoundingBoxes,
+        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes),
+        userStates = userStates
+      ),
+      nodeMappingB
     )
 
   // Can be removed again when https://github.com/scalableminds/webknossos/issues/5009 is fixed

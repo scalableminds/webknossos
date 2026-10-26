@@ -114,6 +114,7 @@ object Msg {
       val noAccessOnMerged: String = "Could not access merged annotation."
       val failedCompound: String = "Could not merge annotations for compound view."
       val mergeVolumeFailed: String = "Could not merge volume tracings."
+      val mergeBookmarksFailed: String = "Could not merge annotation bookmarks."
       val mergeVolumeDataFailed: String = "Could not merge volume data."
     }
     object Reset {

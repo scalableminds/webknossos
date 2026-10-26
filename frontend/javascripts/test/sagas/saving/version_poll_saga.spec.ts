@@ -10,7 +10,7 @@ import { createOperationContext } from "viewer/model/sagas/operation_context_sag
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("Version polling", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -52,7 +52,6 @@ describe("Version polling", () => {
     expect(ensureActionCount).toBeLessThan(20);
 
     Store.dispatch({ type: "TEST_FINISH_OPERATION" } as any);
-    await sleep(500);
-    expect(isRequestResolved).toBe(true);
+    await vi.waitFor(() => expect(isRequestResolved).toBe(true), { timeout: 5000 });
   });
 });

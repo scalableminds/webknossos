@@ -29,12 +29,13 @@ import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
+import FormattedDuration from "components/formatted_duration";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import features from "features";
 import { copyToClipboard } from "libs/clipboard";
 import { handleGenericError } from "libs/error_handling";
-import { formatSeconds, formatTuple } from "libs/format_utils";
+import { formatTuple } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
 import {
@@ -309,7 +310,7 @@ function TaskListView({ initialFieldValues }: Props) {
           <br />
           <span title="Annotation Time">
             <ClockCircleOutlined className="icon-margin-right" />
-            {formatSeconds((task.tracingTime || 0) / 1000)}
+            <FormattedDuration durationMs={task.tracingTime || 0} />
           </span>
         </div>
       ),

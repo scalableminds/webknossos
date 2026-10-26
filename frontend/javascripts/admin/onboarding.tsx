@@ -83,7 +83,7 @@ function StepHeader({
           style={{
             fontSize: 14,
             margin: "14px 0",
-            color: "gray",
+            color: "var(--ant-color-text-description)",
             display: "inline-block",
             width: 500,
           }}
@@ -142,7 +142,7 @@ function FeatureCard({
         </p>
         <p
           style={{
-            color: "gray",
+            color: "var(--ant-color-text-description)",
           }}
         >
           {children}

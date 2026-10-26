@@ -18,10 +18,8 @@ import type { UserConfiguration } from "viewer/store";
 
 const { Text } = Typography;
 
-const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
   height: 14,
-  color: lineColor,
 };
 
 export type ShortcutItem = {

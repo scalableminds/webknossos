@@ -1,4 +1,5 @@
 import { Alert, Modal, Space, Spin, Table } from "antd";
+import { saveAsCSV, transformToCSVRow } from "libs/csv";
 import { formatNumberToArea, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
@@ -11,7 +12,6 @@ import {
   getAdditionalCoordinatesAsString,
   hasAdditionalCoordinates,
 } from "viewer/model/accessors/flycam_accessor";
-import { saveAsCSV, transformToCSVRow } from "viewer/model/helpers/csv_helpers";
 import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
 import type { Segment, SegmentGroup } from "viewer/store";

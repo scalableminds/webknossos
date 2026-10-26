@@ -1,7 +1,12 @@
+import ErrorHandling from "libs/error_handling";
 import Mutex from "libs/mutex";
-import { call, put, take } from "redux-saga/effects";
-import { takeEvery } from "typed-redux-saga";
-import type { OperationId } from "viewer/model/actions/operation_context_actions";
+import { type ActionPattern, call, put } from "redux-saga/effects";
+import { delay, race, takeEvery } from "typed-redux-saga";
+import type { Action } from "viewer/model/actions/actions";
+import type {
+  OperationId,
+  RegisterOperationAction,
+} from "viewer/model/actions/operation_context_actions";
 import {
   registerChildOperationAction,
   registerOperationAction,
@@ -9,7 +14,7 @@ import {
   unregisterOperationAction,
 } from "viewer/model/actions/operation_context_actions";
 import type { WebknossosState } from "viewer/store";
-import { type Saga, select } from "./effect_generators";
+import { type Saga, select, take } from "./effect_generators";
 
 /*
  * This module introduces the concept of Operation Contexts that can be used
@@ -64,6 +69,9 @@ export interface OperationOptions {
 export interface OperationContext {
   id: OperationId;
   execute<T>(saga: () => Saga<T>): Saga<T>;
+  // False once execute() finished (also if the saga was cancelled, e.g., by a saga restart).
+  // For borrowed contexts, the parent context must be active, too.
+  isActive(): boolean;
 }
 
 // Tracks a running operation alongside its concurrency predicate.
@@ -144,6 +152,7 @@ export function* createOperationContext(
     // Closure variable: guards against calling execute() more than once on the
     // same context, which would run a saga without holding the lock.
     let consumed = false;
+    let isFinished = false;
     const context: OperationContext = {
       id: options.id,
       *execute<T>(saga: () => Saga<T>): Saga<T> {
@@ -156,16 +165,18 @@ export function* createOperationContext(
         try {
           return yield* saga();
         } finally {
+          isFinished = true;
           activeOperations = activeOperations.filter((op) => op.id !== options.id);
           yield put(unregisterOperationAction(options.id));
         }
       },
+      isActive: () => !isFinished,
     };
     return context;
   }
 
   if (behavior === "wait") {
-    yield take("UNREGISTER_OPERATION");
+    yield* take("UNREGISTER_OPERATION");
     // Re-check after waking: another waiter may have grabbed the lock first.
     // Cast is safe: we only reach "wait" when behaviorWhenDisallowed is "wait" or undefined.
     return yield call(createOperationContext, options as NonNullableOptions);
@@ -194,6 +205,7 @@ export function borrowedContext(
   childId: OperationId,
 ): OperationContext {
   let consumed = false;
+  let isFinished = false;
   return {
     id: existing.id,
     *execute<T>(saga: () => Saga<T>): Saga<T> {
@@ -203,9 +215,11 @@ export function borrowedContext(
       try {
         return yield* saga();
       } finally {
+        isFinished = true;
         yield put(unregisterChildOperationAction(childId, existing.id));
       }
     },
+    isActive: () => !isFinished && existing.isActive(),
   };
 }
 
@@ -222,10 +236,74 @@ export function* getOrCreateOperationContext(
   existing?: OperationContext | null,
 ): Generator<any, OperationContext | null, any> {
   if (existing != null) {
+    if (!existing.isActive()) {
+      // Borrowing from a finished context would register a child operation under a parent
+      // that doesn't exist anymore. This indicates a bug, e.g., a request that carries the
+      // context of an operation that was already cancelled.
+      throw new Error(
+        `Cannot run "${options.id}" within the operation context "${existing.id}", because that operation is already finished.`,
+      );
+    }
     return borrowedContext(existing, options.id);
   }
   // Cast is safe: if options is NonNullableOptions, the result is non-null (handled by overloads).
   return yield* createOperationContext(options as NonNullableOptions);
+}
+
+// ─── Watchdog ─────────────────────────────────────────────────────────────────
+
+// While an operation is registered, the user interface is blocked. An operation that
+// never finishes (e.g., because it waits for something that never happens) makes the
+// viewports unusable without any hint about the reason. The watchdog reports such operations.
+export const LONG_RUNNING_OPERATION_THRESHOLD_MS = 20 * 1000;
+
+function* reportIfOperationRunsTooLong(
+  action: RegisterOperationAction,
+  thresholdMs: number,
+): Saga<void> {
+  const { id, description } = action;
+  const isThisOperationUnregistered = ((a: Action) =>
+    a.type === "UNREGISTER_OPERATION" && a.id === id) as ActionPattern<Action>;
+  const startTime = Date.now();
+
+  const { unregistered } = yield* race({
+    unregistered: take(isThisOperationUnregistered),
+    timeout: delay(thresholdMs),
+  });
+  // If the browser thread was blocked for longer than the threshold, the timeout
+  // cannot fire in time and the unregistration can win the race even though the
+  // operation took too long. Therefore, check the elapsed time explicitly.
+  const hasExceededThreshold = Date.now() - startTime >= thresholdMs;
+  if (unregistered != null && !hasExceededThreshold) {
+    return;
+  }
+
+  const { activeOperations, childOperations } = yield* select((state) => state.operationContext);
+  const message = `Operation "${id}" has been running for more than ${thresholdMs / 1000} seconds.`;
+  console.warn(
+    `${message} The user interface might be blocked. Active operations:`,
+    activeOperations,
+    "Child operations:",
+    childOperations,
+  );
+  ErrorHandling.notify(
+    new Error(message),
+    { operationId: id, description, activeOperations, childOperations },
+    "warning",
+  );
+
+  if (unregistered == null) {
+    yield* take(isThisOperationUnregistered);
+  }
+  console.warn(`Operation "${id}" finished after ${(Date.now() - startTime) / 1000} seconds.`);
+}
+
+export function* watchForLongRunningOperations(
+  thresholdMs: number = LONG_RUNNING_OPERATION_THRESHOLD_MS,
+): Saga<void> {
+  yield* takeEvery("REGISTER_OPERATION", function* (action: RegisterOperationAction) {
+    yield* reportIfOperationRunsTooLong(action, thresholdMs);
+  });
 }
 
 // ─── Test utilities ───────────────────────────────────────────────────────────

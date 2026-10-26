@@ -12,10 +12,11 @@ object Dependencies {
     )
 
   private val silhouetteVersion = "10.0.4"
-  private val brotliVersion = "1.23.0"
+  private val brotliVersion = "1.24.0"
   private val slickVersion = "3.6.1"
   private val awsVersion = "2.55.16"
   private val postgresVersion = "42.7.14"
+  private val jacksonVersion = "2.18.12"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
   private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
 
@@ -131,8 +132,19 @@ object Dependencies {
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(
-    // Play framework relies on an older version of jackson-databind than webauthn4j. Because of that, we set the
-    // version to newest version supported by Play.
-    "com.fasterxml.jackson.core" % "jackson-databind" % "2.14.3"
+    // Transitive dependencies (Play, Pekko, play-json, cloud SDKs) pull in mixed jackson 2.x versions.
+    // Align them on one patched version. jackson-module-scala refuses to run with a different databind minor version.
+    "com.fasterxml.jackson.core" % "jackson-core" % jacksonVersion,
+    "com.fasterxml.jackson.core" % "jackson-databind" % jacksonVersion,
+    "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % jacksonVersion,
+    "com.fasterxml.jackson.dataformat" % "jackson-dataformat-xml" % jacksonVersion,
+    "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8" % jacksonVersion,
+    "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % jacksonVersion,
+    "com.fasterxml.jackson.module" % "jackson-module-parameter-names" % jacksonVersion,
+    "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion,
+    // Security patch for transitive dependency of commons-email
+    "com.sun.mail" % "jakarta.mail" % "1.6.8",
+    // Security patch for transitive dependency of cdm-core
+    "org.jdom" % "jdom2" % "2.0.6.1"
   )
 }

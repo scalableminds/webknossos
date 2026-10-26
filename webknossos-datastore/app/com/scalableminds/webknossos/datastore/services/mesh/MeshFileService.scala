@@ -137,7 +137,6 @@ class MeshFileService @Inject() (
       case _ => Fox.successful(0)
     }
 
-  // If failOnZeroChunks is false, segments without a mesh are skipped, even if this applies to all of them.
   def listMeshChunksForSegmentsMerged(
       meshFileKey: MeshFileKey,
       segmentIds: Seq[Long],

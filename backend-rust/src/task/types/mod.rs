@@ -1,3 +1,5 @@
+pub(crate) mod dao;
+
 use crate::response::Messages;
 use axum::{Json as ResponseJson, Router, extract::State, routing::get};
 use serde::{Deserialize, Serialize};
@@ -9,7 +11,6 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json, Path},
-    sql::{PushArg, Requester, Sql},
     util::id::ObjectId,
 };
 
@@ -77,7 +78,7 @@ struct AnnotationSettings {
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct TaskTypeParameters {
+pub(crate) struct TaskTypeParameters {
     summary: String,
     description: String,
     team_id: ObjectId,
@@ -111,37 +112,12 @@ fn validate(parameters: &TaskTypeParameters) -> ApiResult<()> {
     Ok(())
 }
 
-pub(crate) const PUBLIC_TASK_TYPE: &str = r#"SELECT jsonb_build_object(
- 'id',tt._id,'summary',tt.summary,'description',tt.description,'teamId',tt._team,
- 'teamName',team.name,'settings',jsonb_strip_nulls(jsonb_build_object(
-    'allowedModes',tt.settings_allowedmodes,'preferredMode',tt.settings_preferredmode,
-    'branchPointsAllowed',tt.settings_branchpointsallowed,'somaClickingAllowed',tt.settings_somaclickingallowed,
-    'volumeInterpolationAllowed',tt.settings_volumeinterpolationallowed,'mergerMode',tt.settings_mergermode,
-    'magRestrictions',jsonb_build_object('min',tt.settings_magrestrictions_min,'max',tt.settings_magrestrictions_max))),
- 'recommendedConfiguration',tt.recommendedconfiguration,'tracingType',tt.tracingtype
-) FROM webknossos.tasktypes_ tt JOIN webknossos.teams_ team ON team._id=tt._team "#;
-/// TaskTypeDAO.readAccessQ for alias `tt`.
-fn push_read_access<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
-    q.push("(tt._organization=")
-        .push_arg(requester.organization)
-        .push(" AND (")
-        .push_bind(requester.is_admin)
-        .push(" OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE _user=")
-        .push_arg(requester.id)
-        .push(" AND _team=tt._team)))");
-}
-
 async fn public_json<'e, E: sqlx::Executor<'e, Database = sqlx::Postgres>>(
     executor: E,
     user: &AuthUser,
     id: &ObjectId,
 ) -> ApiResult<Value> {
-    let mut q = Sql::new(PUBLIC_TASK_TYPE);
-    q.push(" WHERE ");
-    push_read_access(&mut q, user.into());
-    q.push(" AND tt._id=").push_bind(id);
-    q.build_query_scalar()
-        .fetch_optional(executor)
+    dao::find_one_json(executor, user, id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::task_type::not_found(id)))
 }
@@ -153,10 +129,7 @@ async fn check_manage(pool: &PgPool, user: &AuthUser, team: &ObjectId) -> ApiRes
 }
 
 async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<ResponseJson<Value>> {
-    let mut q = Sql::new(PUBLIC_TASK_TYPE);
-    q.push(" WHERE ");
-    push_read_access(&mut q, (&user).into());
-    let values: Vec<Value> = q.build_query_scalar().fetch_all(&state.pool).await?;
+    let values = dao::find_all_json(&state.pool, &user).await?;
     Ok(ResponseJson(Value::Array(values)))
 }
 async fn read(
@@ -182,64 +155,14 @@ async fn create(
     if !crate::projects::can_manage_team_in_tx(&mut tx, &user, &parameters.team_id).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
-        .bind(format!(
-            "taskType:{}:{}",
-            user.organization_id, parameters.summary
-        ))
-        .execute(&mut *tx)
-        .await?;
-    let exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM webknossos.tasktypes_ WHERE _organization=$1 AND summary=$2)",
-    )
-    .bind(&user.organization_id)
-    .bind(&parameters.summary)
-    .fetch_one(&mut *tx)
-    .await?;
+    dao::lock_summary_for_create(&mut tx, &user.organization_id, &parameters.summary).await?;
+    let exists = dao::is_summary_taken(&mut tx, &user.organization_id, &parameters.summary).await?;
     if exists {
         return Err(ApiError::bad_request(crate::msg::task_type::summary_taken(
             &parameters.summary,
         )));
     }
-    let modes: Vec<&str> = parameters
-        .settings
-        .allowed_modes
-        .iter()
-        .map(TracingMode::as_str)
-        .collect();
-    sqlx::query(
-        "INSERT INTO \
-            webknossos.tasktypes(_id,_organization,_team,summary,description,\
-            settings_allowedmodes,settings_preferredmode,settings_branchpointsallowed,\
-            settings_somaclickingallowed,settings_volumeinterpolationallowed,\
-            settings_mergermode,settings_magrestrictions_min,settings_magrestrictions_max,\
-            recommendedconfiguration,tracingtype) VALUES($1,$2,$3,$4,$5,\
-            $6::text[]::webknossos.tasktype_modes[],$7::text::webknossos.tasktype_modes,$8,$9,\
-            $10,$11,$12,$13,$14,$15::text::webknossos.tasktype_tracingtypes)",
-    )
-    .bind(&id)
-    .bind(&user.organization_id)
-    .bind(&parameters.team_id)
-    .bind(&parameters.summary)
-    .bind(&parameters.description)
-    .bind(modes)
-    .bind(
-        parameters
-            .settings
-            .preferred_mode
-            .as_ref()
-            .map(TracingMode::as_str),
-    )
-    .bind(parameters.settings.branch_points_allowed)
-    .bind(parameters.settings.soma_clicking_allowed)
-    .bind(parameters.settings.volume_interpolation_allowed)
-    .bind(parameters.settings.merger_mode)
-    .bind(parameters.settings.mag_restrictions.min)
-    .bind(parameters.settings.mag_restrictions.max)
-    .bind(&parameters.recommended_configuration)
-    .bind(parameters.tracing_type.as_str())
-    .execute(&mut *tx)
-    .await?;
+    dao::insert_one(&mut tx, &id, &user.organization_id, &parameters).await?;
     let response = public_json(&mut *tx, &user, &id).await?;
     tx.commit().await?;
     Ok(ResponseJson(response))
@@ -271,54 +194,16 @@ async fn update(
             crate::msg::task_type::MAG_RESTRICTIONS_IMMUTABLE,
         ));
     }
-    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
-        .bind(format!(
-            "taskType:{}:{}",
-            user.organization_id, parameters.summary
-        ))
-        .execute(&mut *tx)
-        .await?;
-    let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.tasktypes_ WHERE _organization=$1 AND summary=$2 AND _id<>$3)")
-        .bind(&user.organization_id).bind(&parameters.summary).bind(&id).fetch_one(&mut *tx).await?;
+    dao::lock_summary_for_update(&mut tx, &user.organization_id, &parameters.summary).await?;
+    let exists =
+        dao::is_summary_taken_by_other(&mut tx, &user.organization_id, &parameters.summary, &id)
+            .await?;
     if exists {
         return Err(ApiError::bad_request(crate::msg::task_type::summary_taken(
             &parameters.summary,
         )));
     }
-    let modes: Vec<&str> = parameters
-        .settings
-        .allowed_modes
-        .iter()
-        .map(TracingMode::as_str)
-        .collect();
-    sqlx::query(
-        "UPDATE webknossos.tasktypes SET \
-            _team=$2,summary=$3,description=$4,\
-            settings_allowedmodes=$5::text[]::webknossos.tasktype_modes[],\
-            settings_preferredmode=$6::text::webknossos.tasktype_modes,\
-            settings_branchpointsallowed=$7,settings_somaclickingallowed=$8,\
-            settings_volumeinterpolationallowed=$9,settings_mergermode=$10,\
-            recommendedconfiguration=$11 WHERE _id=$1 AND NOT isdeleted",
-    )
-    .bind(&id)
-    .bind(&parameters.team_id)
-    .bind(&parameters.summary)
-    .bind(&parameters.description)
-    .bind(modes)
-    .bind(
-        parameters
-            .settings
-            .preferred_mode
-            .as_ref()
-            .map(TracingMode::as_str),
-    )
-    .bind(parameters.settings.branch_points_allowed)
-    .bind(parameters.settings.soma_clicking_allowed)
-    .bind(parameters.settings.volume_interpolation_allowed)
-    .bind(parameters.settings.merger_mode)
-    .bind(&parameters.recommended_configuration)
-    .execute(&mut *tx)
-    .await?;
+    dao::update_one(&mut tx, &id, &parameters).await?;
     let mut value = public_json(&mut *tx, &user, &id).await?;
     tx.commit().await?;
     value["messages"] = json!([{"success":crate::msg::task_type::EDIT_SUCCESS}]);
@@ -337,8 +222,7 @@ async fn delete(
     if !crate::projects::can_manage_team_in_tx(&mut tx, &user, &team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    sqlx::query("UPDATE webknossos.tasktypes SET isdeleted=true,summary=summary || '.deleted.at.' || floor(extract(epoch FROM clock_timestamp())*1000)::bigint::text WHERE _id=$1 AND NOT isdeleted")
-        .bind(&id).execute(&mut *tx).await?;
+    dao::delete_one(&mut tx, &id).await?;
     crate::projects::dao::delete_tasks(&mut tx, "_tasktype", &id).await?;
     tx.commit().await?;
     Ok(Messages::success(crate::msg::task_type::delete_success(
@@ -351,15 +235,9 @@ async fn lock_task_type(
     id: &ObjectId,
     organization: &str,
 ) -> ApiResult<ObjectId> {
-    sqlx::query_scalar(
-        "SELECT _team FROM webknossos.tasktypes WHERE _id=$1 AND _organization=$2 AND NOT \
-            isdeleted FOR UPDATE",
-    )
-    .bind(id)
-    .bind(organization)
-    .fetch_optional(&mut **tx)
-    .await?
-    .ok_or_else(|| ApiError::not_found(crate::msg::task_type::not_found(id)))
+    dao::lock_one(&mut **tx, id, organization)
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::task_type::not_found(id)))
 }
 
 #[cfg(test)]

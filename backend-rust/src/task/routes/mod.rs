@@ -149,7 +149,7 @@ pub(crate) async fn public_json_for(
       'id',t._id,'projectId',p._id,'projectName',p.name,'team',team.name,
       'type',("#,
     );
-    q.push(crate::task::types::PUBLIC_TASK_TYPE).push(
+    q.push(crate::task::types::dao::PUBLIC_TASK_TYPE).push(
         r#" WHERE tt._id=t._tasktype),
       'datasetName',d.name,'datasetId',d._id,
       'neededExperience',jsonb_build_object('domain',t.neededexperience_domain,'value',t.neededexperience_value),

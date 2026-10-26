@@ -60,6 +60,7 @@ import {
   type ServerUpdateAction,
   splitAgglomerate,
   updateAnnotationLayerName,
+  updateBookmark,
   updateLargestSegmentId,
   updateMappingName,
   updateMetadataOfAnnotation,
@@ -131,6 +132,7 @@ const actionNamesHelper: Record<ServerUpdateAction["name"], true> = {
   updateLayerMetadata: true,
   updateMetadataOfAnnotation: true,
   addBookmark: true,
+  updateBookmark: true,
   updateMetadataOfBookmark: true,
   addSegmentIndex: true,
   revertToVersion: true,
@@ -880,6 +882,37 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
         { key: "c", boolValue: true },
         { key: "d", stringValue: "4" },
       ]);
+      expect(Store.getState().save.queue).toEqual([]);
+    });
+
+    it("applies replayed bookmark renames", async () => {
+      Store.dispatch(discardSaveQueueAction());
+      const bookmark = {
+        id: 1,
+        created: 123,
+        name: "Old Name",
+        state: {
+          position: [1, 2, 3] as Vector3,
+          mode: "orthogonal" as const,
+          zoomStep: 1,
+          clippingDistance: 50,
+          clipSkeletonToCurrentSection: false,
+          layers: [],
+        },
+        createdAtVersion: null,
+        metadata: [],
+        smallThumbnailDataBase64: null,
+      };
+
+      Store.dispatch(startForwardingUpdateActionsAction());
+      await incorporateActions([addBookmark(bookmark, null), updateBookmark(1, "New Name")], 1);
+      Store.dispatch(finishForwardingUpdateActionsAction());
+      expect(Store.getState().annotation.bookmarks[0].name).toBe("New Name");
+
+      Store.dispatch(startForwardingUpdateActionsAction());
+      await incorporateActions([updateBookmark(1, null)], 2);
+      Store.dispatch(finishForwardingUpdateActionsAction());
+      expect(Store.getState().annotation.bookmarks[0].name).toBeNull();
       expect(Store.getState().save.queue).toEqual([]);
     });
 

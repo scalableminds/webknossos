@@ -15,15 +15,22 @@ import { ANNOTATION_SCOPED_TRACING_ID, dispatchGetNewIdAsync } from "viewer/mode
 import {
   addBookmarkAction,
   setBookmarkMetadataAction,
+  setBookmarkNameAction,
 } from "viewer/model/actions/annotation_actions";
 import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import { setViewModeAction } from "viewer/model/actions/settings_actions";
 import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 import { diffMetadata } from "viewer/model/sagas/diffing/volume_diffing";
-import { addBookmark, updateMetadataOfBookmark } from "viewer/model/sagas/volume/update_actions";
+import {
+  addBookmark,
+  updateBookmark,
+  updateMetadataOfBookmark,
+} from "viewer/model/sagas/volume/update_actions";
 import Store from "viewer/store";
 import { type BookmarkThumbnails, captureBookmarkThumbnails } from "viewer/view/rendering_utils";
 import ButtonComponent from "../../components/button_component";
+import EditableTextLabel from "../../components/editable_text_label";
+import { InputWithUpdateOnBlur } from "../../components/input_with_update_on_blur";
 import { MetadataEntryTableRows } from "../metadata_table";
 import { ResizableSplitPane } from "../resizable_split_pane";
 
@@ -64,9 +71,27 @@ function BookmarkThumbnail({ bookmark }: { bookmark: APIAnnotationBookmark }) {
   );
 }
 
+const getDefaultBookmarkName = (bookmark: APIAnnotationBookmark) => `Bookmark ${bookmark.id}`;
+
+function useRenameBookmark() {
+  const dispatch = useDispatch();
+  return useCallback(
+    async (bookmark: APIAnnotationBookmark, newName: string) => {
+      // An empty name clears it, so that the default name is shown.
+      const name = newName.trim() === "" ? null : newName;
+      if (name === bookmark.name) return;
+      await waitUntilRebaseFinished();
+      dispatch(setBookmarkNameAction(bookmark.id, name));
+      dispatch(pushSaveQueueTransaction([updateBookmark(bookmark.id, name)]));
+    },
+    [dispatch],
+  );
+}
+
 function BookmarkDetails({ bookmark }: { bookmark: APIAnnotationBookmark }) {
   const dispatch = useDispatch();
   const readOnly = !useWkSelector(mayEditAnnotation);
+  const renameBookmark = useRenameBookmark();
 
   const setMetadata = useCallback(
     async (updatedBookmark: APIAnnotationBookmark, newMetadata: MetadataEntryProto[]) => {
@@ -92,7 +117,17 @@ function BookmarkDetails({ bookmark }: { bookmark: APIAnnotationBookmark }) {
         <SimpleRow isTableHead label="ID" value={bookmark.id} />
       </thead>
       <tbody>
-        <SimpleRow label="Name" value={bookmark.name ?? `Bookmark ${bookmark.id}`} />
+        <SimpleRow
+          label="Name"
+          value={
+            <InputWithUpdateOnBlur
+              value={bookmark.name ?? ""}
+              placeholder={getDefaultBookmarkName(bookmark)}
+              onChange={(newName) => renameBookmark(bookmark, newName)}
+              disabled={readOnly}
+            />
+          }
+        />
         <MetadataEntryTableRows item={bookmark} setMetadata={setMetadata} readOnly={readOnly} />
       </tbody>
     </table>
@@ -103,6 +138,9 @@ export default function BookmarksTab() {
   const bookmarks = useWkSelector((state) => state.annotation.bookmarks);
   const dispatch = useDispatch();
   const [selectedBookmarkId, setSelectedBookmarkId] = useState<number | null>(null);
+  const [renamingBookmarkId, setRenamingBookmarkId] = useState<number | null>(null);
+  const readOnly = !useWkSelector(mayEditAnnotation);
+  const renameBookmark = useRenameBookmark();
   const selectedBookmark = bookmarks.find((bookmark) => bookmark.id === selectedBookmarkId);
 
   const handleAddBookmark = useCallback(async () => {
@@ -175,6 +213,8 @@ export default function BookmarksTab() {
                 renderItem={(bookmark) => (
                   <List.Item
                     onClick={() => {
+                      // Clicks into the name input must not jump to the bookmark.
+                      if (renamingBookmarkId === bookmark.id) return;
                       setSelectedBookmarkId(bookmark.id);
                       handleJumpToBookmark(bookmark);
                     }}
@@ -189,7 +229,16 @@ export default function BookmarksTab() {
                   >
                     <Space>
                       <BookmarkThumbnail bookmark={bookmark} />
-                      {bookmark.name ?? `Bookmark ${bookmark.id}`}
+                      <EditableTextLabel
+                        value={bookmark.name ?? ""}
+                        placeholder={getDefaultBookmarkName(bookmark)}
+                        label="Bookmark Name"
+                        onChange={(newName) => renameBookmark(bookmark, newName)}
+                        onRenameStart={() => setRenamingBookmarkId(bookmark.id)}
+                        onRenameEnd={() => setRenamingBookmarkId(null)}
+                        disableEditing={readOnly}
+                        trimValue
+                      />
                     </Space>
                   </List.Item>
                 )}

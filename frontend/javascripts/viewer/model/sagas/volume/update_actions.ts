@@ -128,6 +128,7 @@ export type DeleteAnnotationLayerUpdateAction = ReturnType<typeof deleteAnnotati
 export type UpdateAnnotationLayerNameUpdateAction = ReturnType<typeof updateAnnotationLayerName>;
 export type UpdateMetadataOfAnnotationUpdateAction = ReturnType<typeof updateMetadataOfAnnotation>;
 export type AddBookmarkUpdateAction = ReturnType<typeof addBookmark>;
+export type UpdateBookmarkUpdateAction = ReturnType<typeof updateBookmark>;
 export type UpdateMetadataOfBookmarkUpdateAction = ReturnType<typeof updateMetadataOfBookmark>;
 export type SplitAgglomerateUpdateAction = ReturnType<typeof splitAgglomerate>;
 export type MergeAgglomerateUpdateAction = ReturnType<typeof mergeAgglomerate>;
@@ -283,6 +284,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateAnnotationLayerNameUpdateAction
   | UpdateMetadataOfAnnotationUpdateAction
   | AddBookmarkUpdateAction
+  | UpdateBookmarkUpdateAction
   | UpdateMetadataOfBookmarkUpdateAction
   | SplitAgglomerateUpdateAction
   | MergeAgglomerateUpdateAction;
@@ -1272,6 +1274,14 @@ export function addBookmark(
       metadata: enforceValidMetadata(bookmark.metadata),
       largeThumbnailDataBase64,
     },
+  } as const;
+}
+
+// A null name clears it.
+export function updateBookmark(id: number, name: string | null) {
+  return {
+    name: "updateBookmark",
+    value: { id, name },
   } as const;
 }
 

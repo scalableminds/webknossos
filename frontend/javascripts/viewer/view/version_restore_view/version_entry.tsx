@@ -59,6 +59,7 @@ import type {
   UpdateActiveNodeUpdateAction,
   UpdateActiveSegmentIdUpdateAction,
   UpdateAnnotationLayerNameUpdateAction,
+  UpdateBookmarkUpdateAction,
   UpdateBucketUpdateAction,
   UpdateCameraAnnotationAction,
   UpdateLargestSegmentIdVolumeAction,
@@ -506,6 +507,13 @@ const descriptionFns: Record<
   addBookmark: (action: AsServerAction<AddBookmarkUpdateAction>): Description => ({
     description: `Added the bookmark ${action.value.name ?? action.value.id}.`,
     icon: <PlusOutlined />,
+  }),
+  updateBookmark: (action: AsServerAction<UpdateBookmarkUpdateAction>): Description => ({
+    description:
+      action.value.name != null
+        ? `Renamed the bookmark with id ${action.value.id} to ${action.value.name}.`
+        : `Updated the bookmark with id ${action.value.id}.`,
+    icon: <EditOutlined />,
   }),
   updateMetadataOfBookmark: (
     action: AsServerAction<UpdateMetadataOfBookmarkUpdateAction>,

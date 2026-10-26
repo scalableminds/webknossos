@@ -218,6 +218,15 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       });
     }
 
+    case "SET_BOOKMARK_NAME": {
+      const { bookmarkId, name } = action;
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.map((bookmark) =>
+          bookmark.id === bookmarkId ? { ...bookmark, name } : bookmark,
+        ),
+      });
+    }
+
     case "SET_BOOKMARK_METADATA": {
       const { bookmarkId, metadata } = action;
       return updateAnnotation(state, {

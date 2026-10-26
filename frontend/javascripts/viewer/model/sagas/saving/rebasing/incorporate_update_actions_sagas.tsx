@@ -15,6 +15,7 @@ import {
   addBookmarkAction,
   editAnnotationLayerAction,
   setAnnotationDescriptionAction,
+  setBookmarkNameAction,
   setIsUpdatingAnnotationCurrentlyAllowedAction,
   updateBookmarkMetadataAction,
 } from "viewer/model/actions/annotation_actions";
@@ -414,6 +415,14 @@ export function* tryToIncorporateActions(
               smallThumbnailDataBase64: smallThumbnailDataBase64 ?? null,
             }),
           );
+          break;
+        }
+        case "updateBookmark": {
+          // The description of a bookmark is not used in the frontend yet.
+          const { id, name } = action.value;
+          if (name !== undefined) {
+            yield* put(setBookmarkNameAction(id, name));
+          }
           break;
         }
         case "updateMetadataOfBookmark": {

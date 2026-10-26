@@ -118,28 +118,55 @@ describe("Format Utils", () => {
   });
 
   it("Format durations", () => {
-    const s = 1000;
-    const m = 60 * s;
-    const h = 60 * m;
-    expect(formatDuration(0)).toBe(`0${ThinSpace}s`);
-    expect(formatDuration(400)).toBe(`<1${ThinSpace}s`);
-    expect(formatDuration(5 * s)).toBe(`5${ThinSpace}s`);
-    expect(formatDuration(2 * m + 5 * s)).toBe(`2${ThinSpace}m 5${ThinSpace}s`);
-    expect(formatDuration(1 * h + 45 * m)).toBe(`1${ThinSpace}h 45${ThinSpace}m`);
-    expect(formatDuration(1 * h + 5 * s)).toBe(`1${ThinSpace}h 5${ThinSpace}s`);
-    // Hours are the largest unit
-    expect(formatDuration(1234 * h)).toBe(`1,234${ThinSpace}h`);
-    expect(formatDuration(-5 * s)).toBe(`0${ThinSpace}s`);
-  });
-
-  it("Format durations with minute precision", () => {
-    const s = 1000;
-    const m = 60 * s;
-    expect(formatDuration(0, "minutes")).toBe(`0${ThinSpace}m`);
-    expect(formatDuration(20 * s, "minutes")).toBe(`<1${ThinSpace}m`);
-    expect(formatDuration(105 * m + 10 * s, "minutes")).toBe(`1${ThinSpace}h 45${ThinSpace}m`);
-    // Rounds to the nearest minute, carrying over into hours
-    expect(formatDuration(59 * m + 40 * s, "minutes")).toBe(`1${ThinSpace}h`);
+    // Mirrors the backend's FormatterTestSuite
+    const T = ThinSpace;
+    const cases: Array<[number, string]> = [
+      [0, `0${T}ms`],
+      [10, `10${T}ms`],
+      [999, `999${T}ms`],
+      [1000, `1${T}s`],
+      [1004, `1${T}s`],
+      [1005, `1.01${T}s`],
+      [1014, `1.01${T}s`],
+      [1015, `1.02${T}s`],
+      [4000, `4${T}s`],
+      [4100, `4.1${T}s`],
+      [4110, `4.11${T}s`],
+      [4114, `4.11${T}s`],
+      [4115, `4.12${T}s`],
+      [59994, `59.99${T}s`],
+      [59995, `1${T}m`],
+      [60000, `1${T}m`],
+      [60499, `1${T}m`],
+      [60500, `1${T}m 1${T}s`],
+      [61111, `1${T}m 1${T}s`],
+      [120000, `2${T}m`],
+      [3600000 - 501, `59${T}m 59${T}s`],
+      [3600000 - 500, `1${T}h`],
+      [3600000 - 1, `1${T}h`],
+      [3600000, `1${T}h`],
+      [3600000 + 60000, `1${T}h 1${T}m`],
+      [3600000 + 60010, `1${T}h 1${T}m`],
+      [3600000 + 60500, `1${T}h 1${T}m 1${T}s`],
+      [24 * 3600000 - 1, "1 day"],
+      [24 * 3600000 - 500, "1 day"],
+      [24 * 3600000 - 501, `23${T}h 59${T}m 59${T}s`],
+      [24 * 3600000 + 501, "1 day"],
+      [24 * 3600000 + 59000 + 500, `1 day 1${T}m`],
+      [24 * 3600000 + 60000, `1 day 1${T}m`],
+      [25 * 3600000 + 60000 + 1000, `1 day 1${T}h 1${T}m`],
+      [49 * 3600000 + 60000 + 500, `2 days 1${T}h 1${T}m`],
+      [24 * 24 * 3600000 + 60000 + 500, `24 days 1${T}m`],
+      [1000 * 24 * 3600000 + 60000 + 500, `1,000 days 1${T}m`],
+      [-50, `-50${T}ms`],
+      [-5000, `-5${T}s`],
+      [-1 * (49 * 3600000 + 60000 + 500), `-2 days 1${T}h 1${T}m`],
+      // Fractional milliseconds, e.g., from averaging
+      [1999.6, `2${T}s`],
+    ];
+    for (const [durationMs, expected] of cases) {
+      expect(formatDuration(durationMs)).toBe(expected);
+    }
   });
 
   it("Format time intervals", () => {

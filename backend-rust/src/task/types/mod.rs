@@ -339,7 +339,7 @@ async fn delete(
     }
     sqlx::query("UPDATE webknossos.tasktypes SET isdeleted=true,summary=summary || '.deleted.at.' || floor(extract(epoch FROM clock_timestamp())*1000)::bigint::text WHERE _id=$1 AND NOT isdeleted")
         .bind(&id).execute(&mut *tx).await?;
-    crate::projects::delete_tasks(&mut tx, "_tasktype", &id).await?;
+    crate::projects::dao::delete_tasks(&mut tx, "_tasktype", &id).await?;
     tx.commit().await?;
     Ok(Messages::success(crate::msg::task_type::delete_success(
         existing["summary"].as_str().unwrap_or_default(),

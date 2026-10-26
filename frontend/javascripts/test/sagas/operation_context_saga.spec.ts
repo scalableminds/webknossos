@@ -6,6 +6,7 @@ import { delay } from "redux-saga/effects";
 import { call } from "typed-redux-saga";
 import defaultState from "viewer/default_state";
 import type { Action } from "viewer/model/actions/actions";
+import { combinedReducer } from "viewer/model/reducers/root_reducer";
 import {
   _resetOperationContextForTesting,
   borrowedContext,
@@ -14,7 +15,7 @@ import {
   type OperationContext,
   watchForLongRunningOperations,
 } from "viewer/model/sagas/operation_context_saga";
-import { combinedReducer, type OperationContextState, type WebknossosState } from "viewer/store";
+import type { OperationContextState, WebknossosState } from "viewer/store";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Minimal store for operation context tests — only handles the four operation context

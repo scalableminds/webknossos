@@ -419,3 +419,28 @@ pub(crate) async fn insert_additional_axis(
         .execute(connection).await?;
     Ok(())
 }
+
+/// Whether the dataset is usable.
+pub(crate) async fn find_is_usable(
+    executor: impl sqlx::PgExecutor<'_>,
+    dataset_id: &ObjectId,
+) -> ApiResult<bool> {
+    Ok(
+        sqlx::query_scalar("SELECT isUsable FROM webknossos.datasets_ WHERE _id = $1")
+            .bind(dataset_id)
+            .fetch_one(executor)
+            .await?,
+    )
+}
+
+pub(crate) async fn find_directory_name(
+    executor: impl sqlx::PgExecutor<'_>,
+    dataset_id: &ObjectId,
+) -> ApiResult<String> {
+    Ok(
+        sqlx::query_scalar("SELECT directoryName FROM webknossos.datasets_ WHERE _id = $1")
+            .bind(dataset_id)
+            .fetch_one(executor)
+            .await?,
+    )
+}

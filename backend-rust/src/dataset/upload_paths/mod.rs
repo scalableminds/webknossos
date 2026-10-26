@@ -3,6 +3,8 @@ use axum::{Extension, Json, Router, extract::State, routing::post};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
+mod dao;
+
 use crate::{
     AppState,
     auth::AuthUser,
@@ -14,8 +16,6 @@ use crate::{
     dataset::source::{StaticLayer, UsableDataSource},
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path},
-    remote::datastore::{attachment_upload::push_attachment_key, mag_upload::push_mag_predicate},
-    sql::Sql,
     stores::client::ServiceClients,
     util::id::{ObjectId, PathObjectId},
 };
@@ -196,11 +196,7 @@ pub(crate) async fn resolve_linked_layers(
         {
             return Err(failed());
         }
-        let usable: bool =
-            sqlx::query_scalar("SELECT isUsable FROM webknossos.datasets_ WHERE _id = $1")
-                .bind(&link.dataset_id)
-                .fetch_one(&state.pool)
-                .await?;
+        let usable = crate::dataset::dao::find_is_usable(&state.pool, &link.dataset_id).await?;
         if !usable {
             return Err(failed());
         }
@@ -225,25 +221,12 @@ async fn referenced_data_store(
     linked: &[LinkedLayer],
 ) -> ApiResult<String> {
     let ids: Vec<&ObjectId> = linked.iter().map(|l| &l.dataset_id).collect();
-    let names: Vec<String> = sqlx::query_scalar(
-        "SELECT DISTINCT trim(_dataStore) FROM webknossos.datasets_ WHERE _id = ANY($1) AND NOT isVirtual ORDER BY 1",
-    )
-    .bind(&ids)
-    .fetch_all(&mut *connection)
-    .await?;
+    let names = dao::find_data_store_names(connection, &ids).await?;
     if names.len() > 1 {
         return Err(ApiError::bad_request(crate::msg::data_store::AMBIGUOUS));
     }
-    let store: Option<(String, bool)> = sqlx::query_as(
-        r#"SELECT name, allowsUploadToPaths FROM webknossos.dataStores_
-           WHERE ($1::text IS NULL AND allowsUploadToPaths OR name = $1)
-             AND (onlyAllowedOrganization IS NULL OR onlyAllowedOrganization = $2)
-           ORDER BY name LIMIT 1"#,
-    )
-    .bind(names.first())
-    .bind(&user.organization_id)
-    .fetch_optional(&mut *connection)
-    .await?;
+    let store =
+        dao::find_upload_to_paths_store(connection, names.first(), &user.organization_id).await?;
     let (name, allows) =
         store.ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     if !allows {
@@ -261,16 +244,7 @@ pub(crate) async fn add_initial_teams(
     dataset: &ObjectId,
     teams: &[ObjectId],
 ) -> ApiResult<()> {
-    let allowed: i64 = sqlx::query_scalar(
-        r#"SELECT count(*) FROM webknossos.teams_ t WHERE t._id = ANY($1) AND (
-             t._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $2 AND isAdmin)
-             OR t._id IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $2 AND ($3 OR isTeamManager)))"#,
-    )
-    .bind(teams)
-    .bind(&user.id)
-    .bind(user.is_dataset_manager)
-    .fetch_one(&mut *connection)
-    .await?;
+    let allowed = dao::count_grantable_teams(connection, user, teams).await?;
     let mut distinct: Vec<&ObjectId> = teams.iter().collect();
     distinct.sort_unstable();
     distinct.dedup();
@@ -279,21 +253,13 @@ pub(crate) async fn add_initial_teams(
             crate::msg::dataset::initial_teams::INVALID_TEAMS,
         ));
     }
-    let mut q = Sql::new("SELECT ");
-    crate::dataset::access::push_read_predicate(&mut q, (&user.id).into(), None);
-    q.push(" FROM webknossos.datasets_ d WHERE d._id = ")
-        .push_bind(dataset);
-    let readable: bool = q.build_query_scalar().fetch_one(&mut *connection).await?;
+    let readable = dao::is_dataset_readable_by(connection, user, dataset).await?;
     if !readable {
         return Err(ApiError::bad_request(
             crate::msg::dataset::initial_teams::FORBIDDEN,
         ));
     }
-    sqlx::query("INSERT INTO webknossos.dataset_allowedTeams (_dataset, _team) SELECT $1, unnest($2::text[]) ON CONFLICT DO NOTHING")
-        .bind(dataset)
-        .bind(&distinct)
-        .execute(&mut *connection)
-        .await?;
+    dao::insert_allowed_teams_ignoring_conflicts(connection, dataset, &distinct).await?;
     Ok(())
 }
 
@@ -306,22 +272,10 @@ async fn reserve_upload_to_paths(
     let mut source = UsableDataSource::from_json(&body.data_source)
         .map_err(crate::dataset::source::invalid_body)?;
     let path_prefix = parse_prefix(body.path_prefix.as_deref())?;
-    let (root_folder, included): (ObjectId, Option<i64>) = sqlx::query_as(
-        "SELECT _rootFolder, includedStorage FROM webknossos.organizations_ WHERE _id = $1",
-    )
-    .bind(&user.organization_id)
-    .fetch_one(&state.pool)
-    .await?;
+    let (root_folder, included) =
+        dao::find_root_folder_and_included_storage(&state.pool, &user.organization_id).await?;
     if let Some(included) = included {
-        let used: i64 = sqlx::query_scalar(
-            r#"SELECT COALESCE(SUM(usedStorageBytes), 0)::bigint FROM (
-                 SELECT usedStorageBytes FROM webknossos.organization_usedStorage_mags WHERE _organization = $1
-                 UNION ALL
-                 SELECT usedStorageBytes FROM webknossos.organization_usedStorage_attachments WHERE _organization = $1) combined"#,
-        )
-        .bind(&user.organization_id)
-        .fetch_one(&state.pool)
-        .await?;
+        let used = dao::find_used_storage_bytes(&state.pool, &user.organization_id).await?;
         if used > included {
             return Err(ApiError::forbidden(
                 crate::msg::dataset::upload::STORAGE_EXCEEDED,
@@ -331,13 +285,8 @@ async fn reserve_upload_to_paths(
     if body.require_unique_name {
         // Scala passes the arguments swapped, which disables this check; the
         // intended uniqueness check is applied.
-        let taken: bool = sqlx::query_scalar(
-            "SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE name = $1 AND _organization = $2)",
-        )
-        .bind(&body.dataset_name)
-        .bind(&user.organization_id)
-        .fetch_one(&state.pool)
-        .await?;
+        let taken =
+            dao::is_name_taken(&state.pool, &body.dataset_name, &user.organization_id).await?;
         if taken {
             return Err(ApiError::bad_request(crate::msg::dataset::name::taken(
                 &body.dataset_name,
@@ -406,12 +355,7 @@ async fn reserve_upload_to_paths(
         },
     )
     .await?;
-    sqlx::query("UPDATE webknossos.datasets SET _folder = $2, _uploader = $3 WHERE _id = $1")
-        .bind(&id)
-        .bind(folder)
-        .bind(&user.id)
-        .execute(&mut *transaction)
-        .await?;
+    dao::update_folder_and_uploader(&mut transaction, &id, folder, &user.id).await?;
     add_initial_teams(&mut transaction, &user, &id, &body.initial_team_ids).await?;
     transaction.commit().await?;
     // Linked layers are managed by the server; the client only needs its own paths.
@@ -437,12 +381,8 @@ async fn reserve_for_preliminary(
     let path_prefix = parse_prefix(body.path_prefix.as_deref())?;
     crate::dataset::lifecycle::require_readable(&state, &user, &id).await?;
     let mut transaction = state.pool.begin().await?;
-    let (status, uploader, directory): (String, Option<ObjectId>, String) = sqlx::query_as(
-        "SELECT status, _uploader, directoryName FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE",
-    )
-    .bind(&*id)
-    .fetch_one(&mut *transaction)
-    .await?;
+    let (status, uploader, directory) =
+        dao::find_upload_state_for_update(&mut transaction, &id).await?;
     if status != NOT_YET_UPLOADED && status != crate::dataset::lifecycle::CONVERSION_FAILED {
         return Err(ApiError::bad_request(format!(
             "Dataset is not in uploading status, got {status}."
@@ -459,20 +399,13 @@ async fn reserve_for_preliminary(
     add_paths(&mut source, &parent)?;
     crate::dataset::create::assert_valid_data_source(&source)?;
     // DatasetDAO.updateDataSource(isUsable = false).
-    sqlx::query(
-        r#"UPDATE webknossos.datasets SET _organization = $2, inboxSourceHash = NULL, defaultViewConfiguration = $3,
-             isUsable = false, voxelSizeFactor = ROW($4, $5, $6)::webknossos.VECTOR3,
-             voxelSizeUnit = $7::webknossos.LENGTH_UNIT, status = $8 WHERE _id = $1"#,
+    dao::update_data_source_unusable(
+        &mut transaction,
+        &id,
+        &user.organization_id,
+        &source,
+        NOT_YET_UPLOADED,
     )
-    .bind(&*id)
-    .bind(&user.organization_id)
-    .bind(source.default_view_configuration.clone().map(Value::Object))
-    .bind(source.scale.factor.x)
-    .bind(source.scale.factor.y)
-    .bind(source.scale.factor.z)
-    .bind(source.scale.unit.as_str())
-    .bind(NOT_YET_UPLOADED)
-    .execute(&mut *transaction)
     .await?;
     crate::dataset::source::write_layers(&mut transaction, &id, &source.data_layers).await?;
     transaction.commit().await?;
@@ -519,10 +452,7 @@ async fn reserve_mag_upload_to_path(
         return Err(not_usable(&id));
     }
     let [x, y, z] = body.mag.map(f64::from);
-    let mut q = Sql::new("SELECT path, uploadToPathIsPending FROM webknossos.dataset_mags WHERE ");
-    push_mag_predicate(&mut q, &id, &body.layer_name, [x, y, z]);
-    q.push(" AND (uploadToPathIsPending OR uploadIsPending)");
-    let pending: Vec<(Option<String>, bool)> = q.build_query_as().fetch_all(&state.pool).await?;
+    let pending = dao::find_pending_mags(&state.pool, &id, &body.layer_name, [x, y, z]).await?;
     if !pending.is_empty() {
         if !body.overwrite_pending {
             return Err(ApiError::bad_request(
@@ -545,11 +475,7 @@ async fn reserve_mag_upload_to_path(
         }
     }
     let parent = dataset_parent(&config, path_prefix.as_deref(), &record.organization)?;
-    let directory: String =
-        sqlx::query_scalar("SELECT directoryName FROM webknossos.datasets_ WHERE _id = $1")
-            .bind(&*id)
-            .fetch_one(&state.pool)
-            .await?;
+    let directory = crate::dataset::dao::find_directory_name(&state.pool, &id).await?;
     let layer_path = join(&parent, &directory)?.join(&body.layer_name);
     let path = layer_path
         .join(&format!(
@@ -560,16 +486,18 @@ async fn reserve_mag_upload_to_path(
         .to_string();
     let mut transaction = state.pool.begin().await?;
     if body.overwrite_pending {
-        let mut q = Sql::new("DELETE FROM webknossos.dataset_mags WHERE ");
-        push_mag_predicate(&mut q, &id, &body.layer_name, [x, y, z]);
-        q.push(" AND (uploadToPathIsPending OR uploadIsPending)");
-        q.build().execute(&mut *transaction).await?;
+        dao::delete_pending_mags(&mut transaction, &id, &body.layer_name, [x, y, z]).await?;
     }
-    sqlx::query(r#"INSERT INTO webknossos.dataset_mags (_dataset, dataLayerName, mag, path, axisOrder, channelIndex, uploadToPathIsPending, uploadIsPending)
-        VALUES ($1, $2, ROW($3, $4, $5)::webknossos.VECTOR3, $6, $7, $8, true, false)"#)
-        .bind(&*id).bind(&*body.layer_name).bind(x).bind(y).bind(z)
-        .bind(&path).bind(axis_order).bind(body.channel_index)
-        .execute(&mut *transaction).await?;
+    dao::insert_pending_mag(
+        &mut transaction,
+        &id,
+        &body.layer_name,
+        [x, y, z],
+        &path,
+        axis_order,
+        body.channel_index,
+    )
+    .await?;
     transaction.commit().await?;
     Ok(Json(path))
 }
@@ -589,21 +517,27 @@ async fn reserve_attachment_upload_to_path(
     let attachment_type = body.attachment_type;
     let typ = attachment_type.as_str();
     let mut transaction = state.pool.begin().await?;
-    sqlx::query("SELECT _id FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE")
-        .bind(&*id)
-        .fetch_one(&mut *transaction)
-        .await?;
+    crate::dataset::dao::find_id_for_update(&mut transaction, &id)
+        .await?
+        .ok_or(sqlx::Error::RowNotFound)?;
     if body.overwrite_pending.unwrap_or(false) {
-        let mut q = Sql::new("DELETE FROM webknossos.dataset_layer_attachments WHERE ");
-        push_attachment_key(&mut q, &id, &body.layer_name, typ, &body.attachment_name);
-        q.push(" AND (uploadIsPending OR uploadToPathIsPending)");
-        q.build().execute(&mut *transaction).await?;
+        dao::delete_pending_attachments(
+            &mut transaction,
+            &id,
+            &body.layer_name,
+            typ,
+            &body.attachment_name,
+        )
+        .await?;
     } else {
-        let mut q =
-            Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments WHERE ");
-        push_attachment_key(&mut q, &id, &body.layer_name, typ, &body.attachment_name);
-        q.push(" AND (uploadIsPending OR uploadToPathIsPending))");
-        let pending: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;
+        let pending = dao::has_pending_attachment(
+            &mut transaction,
+            &id,
+            &body.layer_name,
+            typ,
+            &body.attachment_name,
+        )
+        .await?;
         if pending {
             return Err(ApiError::bad_request(
                 crate::msg::dataset::layer::ATTACHMENT_ALREADY_PENDING,
@@ -611,14 +545,13 @@ async fn reserve_attachment_upload_to_path(
         }
     }
     let singleton = body.attachment_type.is_singleton();
-    let existing: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM webknossos.dataset_layer_attachments WHERE _dataset = $1 AND layerName = $2 AND ($3::text IS NULL OR name = $3) AND type = $4::webknossos.LAYER_ATTACHMENT_TYPE",
+    let existing = dao::count_attachments(
+        &mut transaction,
+        &id,
+        &body.layer_name,
+        (!singleton).then_some(&body.attachment_name),
+        typ,
     )
-    .bind(&*id)
-    .bind(&body.layer_name)
-    .bind((!singleton).then_some(&body.attachment_name))
-    .bind(typ)
-    .fetch_one(&mut *transaction)
     .await?;
     if existing != 0 {
         return Err(ApiError::bad_request(if singleton {
@@ -627,21 +560,22 @@ async fn reserve_attachment_upload_to_path(
             crate::msg::dataset::layer::ATTACHMENT_NAME_TAKEN
         }));
     }
-    let directory: String =
-        sqlx::query_scalar("SELECT directoryName FROM webknossos.datasets_ WHERE _id = $1")
-            .bind(&*id)
-            .fetch_one(&mut *transaction)
-            .await?;
+    let directory = crate::dataset::dao::find_directory_name(&mut *transaction, &id).await?;
     let parent = dataset_parent(&config, path_prefix.as_deref(), &record.organization)?;
     let layer_path = join(&parent, &directory)?.join(&body.layer_name);
     let format = body.attachment_dataformat;
     let path =
         attachment_path(&body.attachment_name, format, attachment_type, &layer_path)?.to_string();
-    sqlx::query(r#"INSERT INTO webknossos.dataset_layer_attachments (_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending, uploadIsPending)
-        VALUES ($1, $2, $3, $4, $5::webknossos.LAYER_ATTACHMENT_TYPE, $6::webknossos.LAYER_ATTACHMENT_DATAFORMAT, true, false)"#)
-        .bind(&*id).bind(&*body.layer_name).bind(&*body.attachment_name).bind(&*path)
-        .bind(typ).bind(format.as_str())
-        .execute(&mut *transaction).await?;
+    dao::insert_pending_attachment(
+        &mut transaction,
+        &id,
+        &body.layer_name,
+        &body.attachment_name,
+        &path,
+        typ,
+        format.as_str(),
+    )
+    .await?;
     transaction.commit().await?;
     Ok(Json(path))
 }

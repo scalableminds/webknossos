@@ -21,11 +21,9 @@ export class ResumableChunk {
   startByte: number;
   endByte: number;
 
-  private abortController: AbortController | null = null;
-  private retryTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  // Incremented whenever the chunk is started or aborted. In-flight requests and retry
-  // timers compare it against the value they were started with to detect that they are stale.
-  private attempt = 0;
+  // Created by send() and aborted by abort(). Every probe, upload and retry wait of one
+  // run observes its signal, so an aborted run can neither restart nor change the chunk's state.
+  private runController: AbortController | null = null;
   private _status: "pending" | "uploading" | "success" | "error" = "pending";
   private _message: string = "";
 
@@ -59,31 +57,61 @@ export class ResumableChunk {
     return this.fileObj.getOpt(key);
   }
 
-  private isStale(attempt: number): boolean {
-    return attempt !== this.attempt;
-  }
-
   // send() starts uploading the chunk. If testChunks is enabled, the server is asked first
   // whether it already has the chunk.
   send(): void {
     // Never run two probes/uploads for the same chunk concurrently.
-    if (this._status === "uploading" || this.pendingRetry) return;
+    if (this._status === "uploading") return;
 
-    const attempt = ++this.attempt;
+    const runController = new AbortController();
+    this.runController = runController;
     // Probing counts as uploading so that the scheduler, pause and cancel take it into account.
     this._status = "uploading";
+    this.run(runController.signal).catch((error) => {
+      if (runController.signal.aborted || this._status !== "uploading") return;
+      // E.g. a query or headers option threw or the file could not be read.
+      this.finish("error", error instanceof Error ? error.message : String(error));
+    });
+  }
+
+  private async run(signal: AbortSignal): Promise<void> {
     if (this.getOpt("testChunks") && !this.tested) {
-      this.test(attempt);
-    } else {
-      this.upload(attempt);
+      const existingChunkMessage = await this.test(signal);
+      if (signal.aborted) return;
+      this.tested = true;
+      if (existingChunkMessage != null) {
+        this.markComplete = true;
+        this.finish("success", existingChunkMessage);
+        return;
+      }
+    }
+
+    for (;;) {
+      const retryReason = await this.upload(signal);
+      if (retryReason == null || signal.aborted) return;
+      if (this.retries >= this.getOpt("maxChunkRetries")) {
+        this.finish("error", retryReason);
+        return;
+      }
+
+      this.callback("retry", retryReason);
+      // A retry listener may have paused or cancelled the upload.
+      if (signal.aborted) return;
+      this.retries++;
+
+      const retryInterval = this.getOpt("chunkRetryInterval");
+      if (retryInterval != null) {
+        this.pendingRetry = true;
+        await abortableSleep(retryInterval, signal);
+        if (signal.aborted) return;
+        this.pendingRetry = false;
+      }
     }
   }
 
-  // test() checks whether the chunk already exists on the server in a GET call
-  private async test(attempt: number): Promise<void> {
-    const abortController = new AbortController();
-    this.abortController = abortController;
-
+  // test() checks whether the chunk already exists on the server in a GET call.
+  // Resolves to the server's message if it does and to null if the chunk needs to be uploaded.
+  private async test(signal: AbortSignal): Promise<string | null> {
     let customQueryParameters = this.getOpt("query");
 
     if (typeof customQueryParameters === "function") {
@@ -114,49 +142,27 @@ export class ResumableChunk {
       customHeaders = customHeaders(this.fileObj, this);
     }
 
-    const fetchTimeout = this.getOpt("fetchTimeout");
-    const timeoutId =
-      fetchTimeout > 0 ? setTimeout(() => abortController.abort(), fetchTimeout) : null;
-
     try {
       const response = await fetch(targetUrl, {
         method: "GET",
         headers: customHeaders,
-        signal: abortController.signal,
+        signal: this.withFetchTimeout(signal).signal,
         credentials: this.getOpt("withCredentials") ? "include" : "same-origin",
       });
-      if (timeoutId != null) clearTimeout(timeoutId);
-      if (this.isStale(attempt)) return;
-      this.tested = true;
-
       // Status 200: chunk already exists on server
       // Status 204: chunk does not exist on server, please upload
       if (response.ok && response.status !== 204) {
-        const message = await response.text();
-        if (this.isStale(attempt)) return;
-        this.markComplete = true;
-        this._status = "success";
-        this._message = message;
-        this.callback("success", this._message);
-        this.resumableObj.uploadNextChunk();
-      } else {
-        this.upload(attempt);
+        return await response.text();
       }
     } catch (_error) {
-      if (timeoutId != null) clearTimeout(timeoutId);
-      // Aborted by abort()
-      if (this.isStale(attempt)) return;
-
-      this.tested = true;
-      this.upload(attempt);
+      // Aborted, timed out or failed: run() either stops or falls back to uploading the chunk.
     }
+    return null;
   }
 
-  // upload() uploads the actual data in a POST call
-  private async upload(attempt: number): Promise<void> {
-    const abortController = new AbortController();
-    this.abortController = abortController;
-    this.pendingRetry = false;
+  // upload() uploads the actual data in a POST call.
+  // Resolves to the reason for a retry if the upload should be retried and to null otherwise.
+  private async upload(signal: AbortSignal): Promise<string | null> {
     this.callback("progress");
 
     const standardQueryParameters: Partial<Record<string, any>> = {
@@ -202,95 +208,74 @@ export class ResumableChunk {
       data = formData;
     } else {
       // chunkFormat == base64
-      const readPromise = new Promise<string>((resolve) => {
+      const readPromise = new Promise<string>((resolve, reject) => {
         const fr = new FileReader();
         fr.onload = () => resolve(fr.result as string);
+        fr.onerror = () => reject(fr.error);
         fr.readAsDataURL(bytes);
       });
       const base64Data = await readPromise;
-      if (this.isStale(attempt)) return;
+      if (signal.aborted) return null;
       formData.append(this.getOpt("fileParameterName"), base64Data);
       data = formData;
     }
 
     const targetUrl = getTargetURI(this.resumableObj, queryParameters);
-    const fetchTimeout = this.getOpt("fetchTimeout");
-    let hasTimedOut = false;
-    const timeoutId =
-      fetchTimeout > 0
-        ? setTimeout(() => {
-            hasTimedOut = true;
-            abortController.abort();
-          }, fetchTimeout)
-        : null;
+    const fetchSignal = this.withFetchTimeout(signal);
 
     try {
       const response = await fetch(targetUrl, {
         method: "POST",
         headers,
         body: data,
-        signal: abortController.signal,
+        signal: fetchSignal.signal,
         credentials: this.getOpt("withCredentials") ? "include" : "same-origin",
       });
-      if (timeoutId != null) clearTimeout(timeoutId);
-      if (this.isStale(attempt)) return;
 
       if (response.ok) {
         const message = await response.text();
-        if (this.isStale(attempt)) return;
-        this._status = "success";
-        this._message = message;
-        this.callback("success", this._message);
-        this.resumableObj.uploadNextChunk();
+        if (signal.aborted) return null;
+        this.finish("success", message);
       } else if (
         this.getOpt("permanentErrors").includes(response.status) ||
         this.retries >= this.getOpt("maxChunkRetries")
       ) {
         const message = await response.text();
-        if (this.isStale(attempt)) return;
-        this._status = "error";
-        this._message = message;
-        this.callback("error", this._message);
-        this.resumableObj.uploadNextChunk();
+        if (signal.aborted) return null;
+        this.finish("error", message);
       } else {
-        throw new Error(`Server responded with ${response.status}`);
+        return `Server responded with ${response.status}`;
       }
+      return null;
     } catch (error: any) {
-      if (timeoutId != null) clearTimeout(timeoutId);
-      // Aborted by abort()
-      if (this.isStale(attempt)) return;
-
-      this.callback("retry", hasTimedOut ? "Timeout" : error.message);
-      // A retry listener may have paused or cancelled the upload.
-      if (this.isStale(attempt)) return;
-      this.abortController = null;
-      this.retries++;
-
-      const retryInterval = this.getOpt("chunkRetryInterval");
-      if (retryInterval != null) {
-        this.pendingRetry = true;
-        this.retryTimeoutId = setTimeout(() => {
-          this.retryTimeoutId = null;
-          if (!this.isStale(attempt)) this.upload(attempt);
-        }, retryInterval);
-      } else {
-        this.upload(attempt);
-      }
+      if (signal.aborted) return null;
+      return fetchSignal.hasTimedOut() ? "Timeout" : error.message;
     }
   }
 
+  // Combines the run's signal with the fetchTimeout option.
+  private withFetchTimeout(signal: AbortSignal) {
+    const fetchTimeout = this.getOpt("fetchTimeout");
+    if (fetchTimeout <= 0) return { signal, hasTimedOut: () => false };
+    const timeoutSignal = AbortSignal.timeout(fetchTimeout);
+    return {
+      signal: AbortSignal.any([signal, timeoutSignal]),
+      hasTimedOut: () => timeoutSignal.aborted,
+    };
+  }
+
+  private finish(status: "success" | "error", message: string): void {
+    this._status = status;
+    this._message = message;
+    this.callback(status, message);
+    this.resumableObj.uploadNextChunk();
+  }
+
   abort(): void {
-    // Invalidates all in-flight requests and pending retries of this chunk.
-    this.attempt++;
-    if (this.retryTimeoutId != null) {
-      clearTimeout(this.retryTimeoutId);
-      this.retryTimeoutId = null;
-    }
+    // Stops in-flight requests and pending retries of this chunk.
+    this.runController?.abort();
+    this.runController = null;
     this.pendingRetry = false;
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
-    }
     this._status = "pending";
   }
 
@@ -322,4 +307,18 @@ export class ResumableChunk {
         return 0;
     }
   }
+}
+
+function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const timeoutId = setTimeout(resolve, ms);
+    signal.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timeoutId);
+        resolve();
+      },
+      { once: true },
+    );
+  });
 }

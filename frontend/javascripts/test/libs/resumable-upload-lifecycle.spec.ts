@@ -132,6 +132,81 @@ describe("Resumable chunk lifecycle", () => {
     });
   });
 
+  it("should mark a chunk as failed instead of leaving it uploading when preparing a request throws", async () => {
+    const requests = installControllableFetch();
+    const resumable = new ResumableUpload({
+      target: "/upload",
+      chunkSize: 10,
+      simultaneousUploads: 3,
+      testChunks: true,
+      query: () => {
+        throw new Error("No token");
+      },
+    });
+    resumable.addFile(new File(["x".repeat(60)], "test.txt"));
+    const fileErrorSpy = vi.fn();
+    resumable.addEventListener("fileError", fileErrorSpy);
+    await sleep(0);
+
+    resumable.upload();
+    await sleep(0);
+
+    expect(requests).toEqual([]);
+    expect(resumable.isUploading()).toBe(false);
+    expect(fileErrorSpy).toHaveBeenCalled();
+  });
+
+  it("should fail a chunk after maxChunkRetries network errors", async () => {
+    const fetchMock = vi.fn(() => Promise.reject(new TypeError("Network failure")));
+    vi.stubGlobal("fetch", fetchMock);
+    const resumable = new ResumableUpload({
+      target: "/upload",
+      chunkSize: 10,
+      testChunks: false,
+      maxChunkRetries: 2,
+      chunkRetryInterval: 1,
+    });
+    resumable.addFile(new File(["x".repeat(10)], "test.txt"));
+    const fileError = new Promise<string>((resolve) =>
+      resumable.addEventListener("fileError", (event) =>
+        resolve((event as CustomEvent).detail.message),
+      ),
+    );
+    await sleep(0);
+
+    resumable.upload();
+
+    expect(await fileError).toBe("Network failure");
+    // The initial attempt plus two retries
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("should not resume a paused upload when retrying a failed file", async () => {
+    const requests = installControllableFetch();
+    const resumable = createUpload({ testChunks: false });
+    await sleep(0);
+    const file = resumable.files[0];
+
+    resumable.upload();
+    await sleep(0);
+    // A permanent error fails the file, then the user pauses, e.g. in the cancel dialog.
+    requests[0].resolve(new Response("Forbidden", { status: 403 }));
+    await sleep(0);
+    resumable.pause();
+    const requestCountBeforeRetry = requests.length;
+
+    file.retry();
+    await sleep(10);
+
+    expect(file.isPaused()).toBe(true);
+    expect(requests.length).toBe(requestCountBeforeRetry);
+
+    resumable.upload();
+    await sleep(0);
+
+    expect(activeRequests(requests).map((r) => r.chunkNumber)).toEqual([1, 2, 3]);
+  });
+
   describe("retry timers", () => {
     const RETRY_INTERVAL = 30;
 

@@ -3,7 +3,7 @@
 //! upload report. Callbacks with a lot of SQL of their own (mag, attachment,
 //! dataset upload, credentials) have a `dao.rs` next to their handlers.
 use serde_json::Value;
-use sqlx::{PgConnection, PgPool};
+use sqlx::{PgConnection, PgExecutor, PgPool};
 
 use super::UNREPORTED;
 use crate::{
@@ -82,8 +82,8 @@ pub(crate) async fn update_url(pool: &PgPool, name: &str, url: &str) -> ApiResul
     Ok(())
 }
 
-pub(crate) async fn organization_exists_on_connection(
-    connection: &mut PgConnection,
+pub(crate) async fn organization_exists(
+    executor: impl PgExecutor<'_>,
     organization: &str,
 ) -> ApiResult<bool> {
     Ok(
@@ -91,7 +91,7 @@ pub(crate) async fn organization_exists_on_connection(
             "SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ WHERE _id = $1)",
         )
         .bind(organization)
-        .fetch_one(connection)
+        .fetch_one(executor)
         .await?,
     )
 }
@@ -165,6 +165,7 @@ pub(crate) async fn find_organization_id(
 }
 
 /// DatasetDAO.updateDataSource (the dataset row): None root paths keep the stored values.
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn update_data_source(
     connection: &mut PgConnection,
     id: &ObjectId,
@@ -172,7 +173,8 @@ pub(crate) async fn update_data_source(
     organization: &str,
     hash: i32,
     source: &DataSource,
-    (root_path, root_real_path): (Option<&str>, Option<&str>),
+    root_path: Option<&str>,
+    root_real_path: Option<&str>,
 ) -> ApiResult<()> {
     let voxel_size = source.voxel_size_opt();
     let status: String = source
@@ -356,15 +358,6 @@ pub(crate) async fn lock_dataset(
 }
 
 // ---------------------------------------------------------------- lookups
-
-pub(crate) async fn organization_exists(pool: &PgPool, organization: &str) -> ApiResult<bool> {
-    Ok(
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ WHERE _id=$1)")
-            .bind(organization)
-            .fetch_one(pool)
-            .await?,
-    )
-}
 
 /// The oldest dataset with this directory name in the organization.
 pub(crate) async fn find_oldest_dataset_id(

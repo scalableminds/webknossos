@@ -42,6 +42,9 @@ trait ApplyableVolumeUpdateAction extends VolumeUpdateAction {
   def applyOn(tracing: VolumeTracing): VolumeTracing
 }
 
+// Note: upon the first bucket-mutating action the volumeBucketDataHasChanged flag of the
+// volume tracing proto should be set to true. This is done by the  action
+// UpdateVolumeBucketDataHasChangedVolumeAction which needs to be sent by the frontend.
 trait LazyBucketMutatingVolumeUpdateAction extends VolumeUpdateAction
 
 trait UserStateVolumeUpdateAction extends ApplyableVolumeUpdateAction with UserStateUpdateAction {
@@ -98,6 +101,9 @@ case class EagerUpdateBucketVolumeAction(
     additionalCoordinates
   )
 
+  // Upon the first Bucket-mutating action the volumeBucketDataHasChanged flag of the
+  // volume tracing proto should be set to true. This is done by the  action
+  // UpdateVolumeBucketDataHasChangedVolumeAction which needs to be sent by the frontend.
   override def applyOn(tracing: VolumeTracing): VolumeTracing = tracing
 }
 

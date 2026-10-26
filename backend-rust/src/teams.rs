@@ -1,4 +1,6 @@
 //! Organization teams. These routes mirror TeamController (there is no get/update route).
+pub(crate) mod dao;
+
 use crate::response::{Messages, WithMessages};
 use axum::{
     Json, Router,
@@ -13,7 +15,6 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path, Query},
-    sql::Sql,
     util::id::ObjectId,
 };
 
@@ -31,7 +32,7 @@ struct TeamParameters {
 
 #[derive(Serialize, FromRow)]
 #[serde(rename_all = "camelCase")]
-struct Team {
+pub(crate) struct Team {
     id: ObjectId,
     name: String,
     organization: String,
@@ -49,22 +50,7 @@ async fn list(
     user: AuthUser,
     Query(query): Query<ListQuery>,
 ) -> ApiResult<Json<Vec<Team>>> {
-    let teams = sqlx::query_as::<_, Team>(
-        "SELECT t._id AS id, t.name, t._organization AS organization,
-                t.isOrganizationTeam AS is_organization_team
-         FROM webknossos.teams_ t
-         WHERE t._organization = $1 AND ($2 OR EXISTS (
-           SELECT 1 FROM webknossos.user_team_roles r
-           WHERE r._team = t._id AND r._user = $3
-             AND (NOT $4 OR r.isTeamManager)
-         )) ORDER BY t._id",
-    )
-    .bind(&user.organization_id)
-    .bind(user.is_admin)
-    .bind(&user.id)
-    .bind(query.is_editable)
-    .fetch_all(&state.pool)
-    .await?;
+    let teams = dao::find_all_for_user(&state.pool, &user, query.is_editable).await?;
     Ok(Json(teams))
 }
 
@@ -81,13 +67,7 @@ async fn create(
         return Err(ApiError::bad_request(crate::msg::team::INVALID_NAME));
     }
     let id = ObjectId::new();
-    let inserted =
-        sqlx::query("INSERT INTO webknossos.teams (_id, _organization, name) VALUES ($1, $2, $3)")
-            .bind(&id)
-            .bind(&user.organization_id)
-            .bind(&body.name)
-            .execute(&state.pool)
-            .await;
+    let inserted = dao::insert_one(&state.pool, &id, &user.organization_id, &body.name).await;
     if let Err(error) = inserted {
         if error
             .as_database_error()
@@ -123,14 +103,8 @@ async fn remove(
     let mut transaction = state.pool.begin().await?;
     // READ COMMITTED intentionally refreshes the reference-check snapshot after
     // waiting for creators' team SHARE locks. FOR UPDATE fences new references.
-    let is_organization_team: Option<bool> = sqlx::query_scalar(
-        "SELECT isOrganizationTeam FROM webknossos.teams
-         WHERE _id = $1 AND _organization = $2 AND NOT isDeleted FOR UPDATE",
-    )
-    .bind(&id)
-    .bind(&user.organization_id)
-    .fetch_optional(&mut *transaction)
-    .await?;
+    let is_organization_team =
+        dao::is_organization_team_for_update(&mut transaction, &id, &user.organization_id).await?;
     let Some(is_organization_team) = is_organization_team else {
         return Err(ApiError::not_found(crate::msg::team::not_found(&id)));
     };
@@ -139,39 +113,17 @@ async fn remove(
             crate::msg::team::DELETE_ORGANIZATION_TEAM,
         ));
     }
-    let referenced: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM webknossos.projects_ WHERE _team = $1)
-             OR EXISTS (SELECT 1 FROM webknossos.taskTypes_ WHERE _team = $1)",
-    )
-    .bind(&id)
-    .fetch_one(&mut *transaction)
-    .await?;
+    let referenced = dao::is_referenced(&mut transaction, &id).await?;
     if referenced {
         return Err(ApiError::forbidden(crate::msg::team::DELETE_IN_USE));
     }
-    sqlx::query("UPDATE webknossos.teams SET isDeleted = TRUE, name = name || $2 WHERE _id = $1")
-        .bind(&id)
-        .bind(format!(
-            ".deleted.at.{}",
-            chrono::Utc::now().timestamp_millis()
-        ))
-        .execute(&mut *transaction)
-        .await?;
-    for table in [
-        "user_team_roles",
-        "invite_team_roles",
-        "annotation_sharedTeams",
-        "dataset_allowedTeams",
-        "folder_allowedTeams",
-    ] {
-        Sql::new("DELETE FROM webknossos.")
-            .push(table)
-            .push(" WHERE _team = ")
-            .push_bind(&id)
-            .build()
-            .execute(&mut *transaction)
-            .await?;
-    }
+    dao::mark_deleted(
+        &mut transaction,
+        &id,
+        &format!(".deleted.at.{}", chrono::Utc::now().timestamp_millis()),
+    )
+    .await?;
+    dao::delete_team_references(&mut transaction, &id).await?;
     transaction.commit().await?;
     Ok(Messages::success(crate::msg::team::DELETE_SUCCESS))
 }

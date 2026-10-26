@@ -128,6 +128,7 @@ export type DeleteAnnotationLayerUpdateAction = ReturnType<typeof deleteAnnotati
 export type UpdateAnnotationLayerNameUpdateAction = ReturnType<typeof updateAnnotationLayerName>;
 export type UpdateMetadataOfAnnotationUpdateAction = ReturnType<typeof updateMetadataOfAnnotation>;
 export type AddBookmarkUpdateAction = ReturnType<typeof addBookmark>;
+export type UpdateMetadataOfBookmarkUpdateAction = ReturnType<typeof updateMetadataOfBookmark>;
 export type SplitAgglomerateUpdateAction = ReturnType<typeof splitAgglomerate>;
 export type MergeAgglomerateUpdateAction = ReturnType<typeof mergeAgglomerate>;
 
@@ -282,6 +283,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateAnnotationLayerNameUpdateAction
   | UpdateMetadataOfAnnotationUpdateAction
   | AddBookmarkUpdateAction
+  | UpdateMetadataOfBookmarkUpdateAction
   | SplitAgglomerateUpdateAction
   | MergeAgglomerateUpdateAction;
 
@@ -1265,7 +1267,26 @@ export function addBookmark(
   const { createdAtVersion: _createdAtVersion, ...bookmarkWithoutVersion } = bookmark;
   return {
     name: "addBookmark",
-    value: { ...bookmarkWithoutVersion, largeThumbnailDataBase64 },
+    value: {
+      ...bookmarkWithoutVersion,
+      metadata: enforceValidMetadata(bookmark.metadata),
+      largeThumbnailDataBase64,
+    },
+  } as const;
+}
+
+export function updateMetadataOfBookmark(
+  id: number,
+  upsertEntriesByKey: Array<MetadataEntryProto>,
+  removeEntriesByKey: Array<string>,
+) {
+  return {
+    name: "updateMetadataOfBookmark",
+    value: {
+      id,
+      upsertEntriesByKey: enforceValidMetadata(upsertEntriesByKey),
+      removeEntriesByKey,
+    },
   } as const;
 }
 

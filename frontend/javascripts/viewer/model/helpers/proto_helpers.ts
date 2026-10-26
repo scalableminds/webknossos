@@ -18,6 +18,7 @@ import type {
   ServerTracing,
 } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
+import { sanitizeMetadata } from "viewer/model/reducers/skeletontracing_reducer";
 
 // protobufjs resolves its optional Long support via a try/catch require("long") call (see
 // node_modules/protobufjs/src/util/minimal.js). Wire it up explicitly via a real, bundler-visible
@@ -205,6 +206,7 @@ export function parseProtoAnnotationBookmarks(
     name: bookmark.name ?? null,
     state: bookmarkStateFromProto(bookmark.state),
     createdAtVersion: Number(bookmark.createdAtVersion),
+    metadata: sanitizeMetadata(bookmark.metadata),
     // Thumbnails are loaded separately, see getBookmarkThumbnailUrl.
     smallThumbnailDataBase64: null,
   }));

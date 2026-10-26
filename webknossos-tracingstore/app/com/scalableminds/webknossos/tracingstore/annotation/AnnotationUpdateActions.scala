@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
+import com.scalableminds.webknossos.tracingstore.tracings.MetadataEntry
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json.{Json, OFormat}
@@ -44,6 +45,7 @@ case class AddBookmarkAnnotationAction(
     state: AnnotationBookmarkState,
     largeThumbnailDataBase64: Option[String],
     smallThumbnailDataBase64: Option[String],
+    metadata: Option[Seq[MetadataEntry]] = None,
     createdAtVersion: Option[Long] = None, // set by the backend when the update is saved
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
@@ -56,7 +58,8 @@ case class AddBookmarkAnnotationAction(
       name = name,
       description = description,
       state = state.toProto,
-      createdAtVersion = createdAtVersion.getOrElse(fallbackCreatedAtVersion)
+      createdAtVersion = createdAtVersion.getOrElse(fallbackCreatedAtVersion),
+      metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
     )
 
   def thumbnails: Seq[(BookmarkThumbnailSize.Value, Array[Byte])] =
@@ -94,6 +97,21 @@ case class UpdateBookmarkAnnotationAction(
 object UpdateBookmarkAnnotationAction extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[UpdateBookmarkAnnotationAction] =
     Json.configured(using tristateOptionParsing).format[UpdateBookmarkAnnotationAction]
+}
+
+case class UpdateMetadataOfBookmarkAnnotationAction(
+    id: Int,
+    upsertEntriesByKey: Seq[MetadataEntry],
+    removeEntriesByKey: Seq[String],
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends BookmarkUpdateAction derives JsonAutoFormat {
+  def applyOn(bookmark: AnnotationBookmarkProto): AnnotationBookmarkProto =
+    bookmark.withMetadata(MetadataEntry.upsertAndRemove(bookmark.metadata, upsertEntriesByKey, removeEntriesByKey))
+  override def addTimestamp(timestamp: Long): UpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction = this.copy(actionAuthorId = authorId)
 }
 
 case class DeleteBookmarkAnnotationAction(

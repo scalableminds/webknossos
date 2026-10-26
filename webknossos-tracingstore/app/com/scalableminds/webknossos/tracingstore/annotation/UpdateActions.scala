@@ -118,6 +118,7 @@ object UpdateAction {
           case "addBookmark"                => deserialize[AddBookmarkAnnotationAction](jsonValue)
           case "updateBookmark"             => deserialize[UpdateBookmarkAnnotationAction](jsonValue)
           case "deleteBookmark"             => deserialize[DeleteBookmarkAnnotationAction](jsonValue)
+          case "updateMetadataOfBookmark"   => deserialize[UpdateMetadataOfBookmarkAnnotationAction](jsonValue)
 
           case unknownAction: String => JsError(s"Invalid update action s'$unknownAction'")
         }
@@ -383,6 +384,8 @@ object UpdateAction {
         Json.obj("name" -> "updateBookmark", "value" -> Json.toJson(s)(using UpdateBookmarkAnnotationAction.jsonFormat))
       case s: DeleteBookmarkAnnotationAction =>
         Json.obj("name" -> "deleteBookmark", "value" -> Json.toJson(s))
+      case s: UpdateMetadataOfBookmarkAnnotationAction =>
+        Json.obj("name" -> "updateMetadataOfBookmark", "value" -> Json.toJson(s))
     }
   }
 }

@@ -64,6 +64,7 @@ import type {
   UpdateLargestSegmentIdVolumeAction,
   UpdateMappingNameUpdateAction,
   UpdateMetadataOfAnnotationUpdateAction,
+  UpdateMetadataOfBookmarkUpdateAction,
   UpdateMetadataOfSegmentUpdateAction,
   UpdateNodeUpdateAction,
   UpdateSegmentGroupsExpandedStateUpdateAction,
@@ -505,6 +506,12 @@ const descriptionFns: Record<
   addBookmark: (action: AsServerAction<AddBookmarkUpdateAction>): Description => ({
     description: `Added the bookmark ${action.value.name ?? action.value.id}.`,
     icon: <PlusOutlined />,
+  }),
+  updateMetadataOfBookmark: (
+    action: AsServerAction<UpdateMetadataOfBookmarkUpdateAction>,
+  ): Description => ({
+    description: `Updated metadata of the bookmark with id ${action.value.id}.`,
+    icon: <EditOutlined />,
   }),
   updateActiveNode: (action: AsServerAction<UpdateActiveNodeUpdateAction>): Description => {
     return {

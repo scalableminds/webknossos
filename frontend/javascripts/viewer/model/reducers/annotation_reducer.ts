@@ -4,7 +4,7 @@ import { V3 } from "libs/mjs";
 import isEqual from "lodash-es/isEqual";
 import reduce from "lodash-es/reduce";
 import uniqWith from "lodash-es/uniqWith";
-import type { AdditionalCoordinate } from "types/api_types";
+import type { AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
 import defaultState from "viewer/default_state";
 import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getExtentForNewBoundingBox } from "viewer/model/accessors/view_mode_accessor";
@@ -16,6 +16,7 @@ import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
 import type { ChangeUserBoundingBoxAction } from "../actions/annotation_actions";
 import BoundingBox from "../bucket_data_handling/bounding_box";
+import { sanitizeMetadata } from "./skeletontracing_reducer";
 
 const updateAnnotation = (
   state: WebknossosState,
@@ -193,6 +194,27 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     case "ADD_BOOKMARK": {
       return updateAnnotation(state, {
         bookmarks: [...state.annotation.bookmarks, action.bookmark],
+      });
+    }
+
+    case "UPDATE_BOOKMARK_METADATA": {
+      const { bookmarkId, upsertEntriesByKey, removeEntriesByKey } = action;
+      // Same semantics as in the backend: existing entries are updated in place, new ones are appended.
+      const updateMetadata = (metadata: MetadataEntryProto[]) => {
+        const remainingMetadata = metadata
+          .filter((entry) => !removeEntriesByKey.includes(entry.key))
+          .map((entry) => upsertEntriesByKey.find((upsert) => upsert.key === entry.key) ?? entry);
+        const newEntries = upsertEntriesByKey.filter(
+          (upsert) => !remainingMetadata.some((entry) => entry.key === upsert.key),
+        );
+        return sanitizeMetadata([...remainingMetadata, ...newEntries]);
+      };
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.map((bookmark) =>
+          bookmark.id === bookmarkId
+            ? { ...bookmark, metadata: updateMetadata(bookmark.metadata) }
+            : bookmark,
+        ),
       });
     }
 

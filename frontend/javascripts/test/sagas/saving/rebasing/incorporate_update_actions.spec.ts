@@ -63,6 +63,7 @@ import {
   updateLargestSegmentId,
   updateMappingName,
   updateMetadataOfAnnotation,
+  updateMetadataOfBookmark,
   updateMetadataOfSegmentUpdateAction,
   updateNode,
   updateSegmentPartialVolumeAction,
@@ -130,6 +131,7 @@ const actionNamesHelper: Record<ServerUpdateAction["name"], true> = {
   updateLayerMetadata: true,
   updateMetadataOfAnnotation: true,
   addBookmark: true,
+  updateMetadataOfBookmark: true,
   addSegmentIndex: true,
   revertToVersion: true,
   addLayerToAnnotation: true,
@@ -809,6 +811,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
               name: "Replayed Bookmark",
               state: bookmarkState,
               createdAtVersion: null,
+              metadata: [{ key: "k", stringValue: "v" }],
               smallThumbnailDataBase64: null,
             },
             null,
@@ -825,8 +828,57 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           name: "Replayed Bookmark",
           state: bookmarkState,
           createdAtVersion: 1,
+          metadata: [{ key: "k", stringValue: "v" }],
           smallThumbnailDataBase64: null,
         },
+      ]);
+      expect(Store.getState().save.queue).toEqual([]);
+    });
+
+    it("applies replayed bookmark metadata updates", async () => {
+      Store.dispatch(discardSaveQueueAction());
+      const bookmark = {
+        id: 1,
+        created: 123,
+        name: null,
+        state: {
+          position: [1, 2, 3] as Vector3,
+          mode: "orthogonal" as const,
+          zoomStep: 1,
+          clippingDistance: 50,
+          clipSkeletonToCurrentSection: false,
+          layers: [],
+        },
+        createdAtVersion: null,
+        metadata: [
+          { key: "a", stringValue: "1" },
+          { key: "b", numberValue: 2 },
+          { key: "c", boolValue: true },
+        ],
+        smallThumbnailDataBase64: null,
+      };
+
+      Store.dispatch(startForwardingUpdateActionsAction());
+      await incorporateActions(
+        [
+          addBookmark(bookmark, null),
+          updateMetadataOfBookmark(
+            1,
+            [
+              { key: "b", numberValue: 3 },
+              { key: "d", stringValue: "4" },
+            ],
+            ["a"],
+          ),
+        ],
+        1,
+      );
+      Store.dispatch(finishForwardingUpdateActionsAction());
+
+      expect(Store.getState().annotation.bookmarks[0].metadata).toEqual([
+        { key: "b", numberValue: 3 },
+        { key: "c", boolValue: true },
+        { key: "d", stringValue: "4" },
       ]);
       expect(Store.getState().save.queue).toEqual([]);
     });

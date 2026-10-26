@@ -527,18 +527,8 @@ case class UpdateMetadataOfSegmentVolumeAction(
     this.copy(actionTracingId = newTracingId)
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
-    def segmentTransform(segment: Segment): Segment = {
-      val segmentMetadata = segment.metadata.map(MetadataEntry.fromProto)
-      val metadataWithoutDeletedEntries = segmentMetadata.filter(m => !removeEntriesByKey.contains(m.key))
-      val newEntries = upsertEntriesByKey.filter(m => !metadataWithoutDeletedEntries.exists(m.key == _.key))
-      val metadataWithUpdatedEntries = metadataWithoutDeletedEntries.map(entry =>
-        upsertEntriesByKey.find(entry.key == _.key).map(entry.update).getOrElse(entry)
-      )
-      val metadataWithNewEntries = metadataWithUpdatedEntries ++ newEntries
-      segment.copy(
-        metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(Some(metadataWithNewEntries)))
-      )
-    }
+    def segmentTransform(segment: Segment): Segment =
+      segment.withMetadata(MetadataEntry.upsertAndRemove(segment.metadata, upsertEntriesByKey, removeEntriesByKey))
 
     tracing.withSegments(mapSegments(tracing, id.toLong, segmentTransform))
   }

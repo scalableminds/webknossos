@@ -16,6 +16,7 @@ import {
   editAnnotationLayerAction,
   setAnnotationDescriptionAction,
   setIsUpdatingAnnotationCurrentlyAllowedAction,
+  updateBookmarkMetadataAction,
 } from "viewer/model/actions/annotation_actions";
 import {
   ensureLayerMappingsAreLoadedAction,
@@ -399,7 +400,7 @@ export function* tryToIncorporateActions(
         }
         case "addBookmark": {
           // Server-side update actions also carry metadata such as actionTimestamp.
-          const { id, created, name, state, smallThumbnailDataBase64 } = action.value;
+          const { id, created, name, state, metadata, smallThumbnailDataBase64 } = action.value;
           yield* put(
             // Thumbnails are stripped from stored update actions and loaded from the server instead.
             addBookmarkAction({
@@ -409,9 +410,15 @@ export function* tryToIncorporateActions(
               state,
               // Unsaved bookmarks of the user get their version once they are saved.
               createdAtVersion: areUnsavedChangesOfUser ? null : actionBatch.version,
+              metadata,
               smallThumbnailDataBase64: smallThumbnailDataBase64 ?? null,
             }),
           );
+          break;
+        }
+        case "updateMetadataOfBookmark": {
+          const { id, upsertEntriesByKey, removeEntriesByKey } = action.value;
+          yield* put(updateBookmarkMetadataAction(id, upsertEntriesByKey, removeEntriesByKey));
           break;
         }
         case "addSegmentIndex": {

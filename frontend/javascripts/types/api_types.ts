@@ -694,6 +694,7 @@ export type APIAnnotationBookmark = {
   state: APIAnnotationBookmarkState;
   // The annotation version that added the bookmark. null until the bookmark was saved.
   createdAtVersion: number | null;
+  metadata: MetadataEntryProto[];
   // Only set for bookmarks created in this session. Otherwise, the thumbnail is loaded from the server.
   smallThumbnailDataBase64: string | null;
 };

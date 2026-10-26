@@ -11,6 +11,7 @@ import type {
   APIDataset,
   APIMeshFileInfo,
   EditableLayerProperties,
+  MetadataEntryProto,
 } from "types/api_types";
 import type { MappingType, Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
@@ -54,6 +55,7 @@ export type EditAnnotationLayerAction = ReturnType<typeof editAnnotationLayerAct
 export type SetAnnotationDescriptionAction = ReturnType<typeof setAnnotationDescriptionAction>;
 export type AddBookmarkAction = ReturnType<typeof addBookmarkAction>;
 type SetBookmarkCreatedAtVersionAction = ReturnType<typeof setBookmarkCreatedAtVersionAction>;
+type UpdateBookmarkMetadataAction = ReturnType<typeof updateBookmarkMetadataAction>;
 type SetAnnotationAllowUpdateAction = ReturnType<
   typeof setIsUpdatingAnnotationCurrentlyAllowedAction
 >;
@@ -94,6 +96,7 @@ export type AnnotationActionTypes =
   | SetAnnotationDescriptionAction
   | AddBookmarkAction
   | SetBookmarkCreatedAtVersionAction
+  | UpdateBookmarkMetadataAction
   | SetAnnotationAllowUpdateAction
   | SetUserBoundingBoxesAction
   | ChangeUserBoundingBoxAction
@@ -189,6 +192,18 @@ export const addBookmarkAction = (bookmark: APIAnnotationBookmark) =>
   ({
     type: "ADD_BOOKMARK",
     bookmark,
+  }) as const;
+
+export const updateBookmarkMetadataAction = (
+  bookmarkId: number,
+  upsertEntriesByKey: MetadataEntryProto[],
+  removeEntriesByKey: string[],
+) =>
+  ({
+    type: "UPDATE_BOOKMARK_METADATA",
+    bookmarkId,
+    upsertEntriesByKey,
+    removeEntriesByKey,
   }) as const;
 
 export const setBookmarkCreatedAtVersionAction = (bookmarkId: number, createdAtVersion: number) =>

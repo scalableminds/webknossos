@@ -3,6 +3,7 @@ syntax = "proto2";
 package com.scalableminds.webknossos.datastore;
 
 import "geometry.proto";
+import "MetadataEntry.proto";
 
 // Bookmarks are stored separately from the AnnotationProto, which only holds their ids.
 message AnnotationBookmarkProto {
@@ -12,6 +13,7 @@ message AnnotationBookmarkProto {
   optional string description = 4;
   required AnnotationBookmarkStateProto state = 5;
   required int64 createdAtVersion = 6; // annotation version that added the bookmark
+  repeated MetadataEntryProto metadata = 7;
   // Thumbnails are stored in the annotationBookmarkThumbnails column family.
 }
 

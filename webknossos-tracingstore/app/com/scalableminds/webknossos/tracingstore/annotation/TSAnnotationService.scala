@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerTypeProto,
   AnnotationProto
 }
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, Tree, TreeBody}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -211,7 +212,13 @@ class TSAnnotationService @Inject() (
       case a: AddBookmarkAnnotationAction =>
         Fox.successful(annotationWithTracings.addBookmark(a, targetVersion))
       case a: UpdateBookmarkAnnotationAction =>
-        updateBookmark(annotationId, annotationWithTracings, a) ?~> Msg.Annotation.ApplyUpdate.updateBookmarkFailed
+        updateBookmark(annotationId, annotationWithTracings, a.id)(
+          a.applyOn
+        ) ?~> Msg.Annotation.ApplyUpdate.updateBookmarkFailed
+      case a: UpdateMetadataOfBookmarkAnnotationAction =>
+        updateBookmark(annotationId, annotationWithTracings, a.id)(
+          a.applyOn
+        ) ?~> Msg.Annotation.ApplyUpdate.updateBookmarkFailed
       case a: DeleteBookmarkAnnotationAction =>
         Fox.successful(annotationWithTracings.deleteBookmark(a))
       case a: EditableMappingUpdateAction =>
@@ -263,17 +270,19 @@ class TSAnnotationService @Inject() (
   private def updateBookmark(
       annotationId: ObjectId,
       annotationWithTracings: AnnotationWithTracings,
-      action: UpdateBookmarkAnnotationAction
-  )(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
-    if (!annotationWithTracings.annotation.bookmarkIds.contains(action.id)) Fox.successful(annotationWithTracings)
+      bookmarkId: Int
+  )(transform: AnnotationBookmarkProto => AnnotationBookmarkProto)(implicit
+      ec: ExecutionContext
+  ): Fox[AnnotationWithTracings] =
+    if (!annotationWithTracings.annotation.bookmarkIds.contains(bookmarkId)) Fox.successful(annotationWithTracings)
     else
       for {
-        bookmark <- annotationWithTracings.updatedBookmarks.get(action.id) match {
+        bookmark <- annotationWithTracings.updatedBookmarks.get(bookmarkId) match {
           case Some(updatedBookmark) => Fox.successful(updatedBookmark)
           case None                  =>
-            annotationBookmarkService.findBookmark(annotationId, action.id, annotationWithTracings.version)
+            annotationBookmarkService.findBookmark(annotationId, bookmarkId, annotationWithTracings.version)
         }
-      } yield annotationWithTracings.withUpdatedBookmarks(Seq(action.applyOn(bookmark)))
+      } yield annotationWithTracings.withUpdatedBookmarks(Seq(transform(bookmark)))
 
   // After a revert, the bookmarks of the source version have to be written again at the new version.
   private def markAllBookmarksAsChanged(annotationId: ObjectId, sourceAnnotation: AnnotationWithTracings)(implicit

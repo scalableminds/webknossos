@@ -52,9 +52,7 @@ async fn list_paths_to_delete(
 ) -> ApiResult<Json<Vec<String>>> {
     authenticate(&config, &query.key)?;
     Ok(Json(
-        sqlx::query_scalar("SELECT path FROM webknossos.remote_paths_to_delete ORDER BY created")
-            .fetch_all(&state.pool)
-            .await?,
+        crate::dataset::dao::find_paths_to_delete(&state.pool).await?,
     ))
 }
 
@@ -67,10 +65,7 @@ async fn mark_as_deleted(
     authenticate(&config, &query.key)?;
     // Scala deletes in batches of 100 without a transaction; a single bound
     // statement is equivalent and atomic.
-    sqlx::query("DELETE FROM webknossos.remote_paths_to_delete WHERE path = ANY($1)")
-        .bind(&paths)
-        .execute(&state.pool)
-        .await?;
+    crate::dataset::dao::delete_paths_to_delete(&state.pool, &paths).await?;
     Ok(())
 }
 
@@ -100,10 +95,7 @@ pub(crate) async fn delete_paths(
     let external: Vec<String> = serde_json::from_slice(&response.bytes)
         .map_err(|_| ApiError::from(crate::stores::client::ServiceError::InvalidJson))?;
     if !external.is_empty() {
-        sqlx::query("INSERT INTO webknossos.remote_paths_to_delete (path) SELECT unnest($1::text[]) ON CONFLICT DO NOTHING")
-            .bind(&external)
-            .execute(pool)
-            .await?;
+        crate::dataset::dao::insert_paths_to_delete(pool, &external).await?;
     }
     Ok(())
 }

@@ -444,3 +444,75 @@ pub(crate) async fn find_directory_name(
             .await?,
     )
 }
+
+/// UPDATE of a dataset's last activity timestamp for the user (users table).
+pub(crate) async fn touch_user_last_activity(pool: &PgPool, user_id: ObjectId) -> ApiResult<()> {
+    sqlx::query("UPDATE webknossos.users SET lastActivity = NOW() WHERE _id = $1")
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+// --- compose ---
+
+/// The name of the first datastore that allows uploads and is open to the organization.
+pub(crate) async fn find_upload_store_name(
+    connection: &mut PgConnection,
+    organization_id: &str,
+) -> ApiResult<Option<String>> {
+    Ok(sqlx::query_scalar(
+        "SELECT name FROM webknossos.dataStores_ WHERE allowsUpload AND (onlyAllowedOrganization IS NULL OR onlyAllowedOrganization = $1) ORDER BY name LIMIT 1",
+    )
+    .bind(organization_id)
+    .fetch_optional(connection)
+    .await?)
+}
+
+/// Marks the dataset usable with the data source's voxel size.
+pub(crate) async fn update_voxel_size_usable(
+    connection: &mut PgConnection,
+    dataset_id: &ObjectId,
+    source: &crate::dataset::source::UsableDataSource,
+) -> ApiResult<()> {
+    sqlx::query(
+        r#"UPDATE webknossos.datasets SET inboxSourceHash = NULL, isUsable = true, status = '',
+             voxelSizeFactor = ROW($2, $3, $4)::webknossos.VECTOR3, voxelSizeUnit = $5::webknossos.LENGTH_UNIT
+           WHERE _id = $1"#,
+    )
+    .bind(dataset_id)
+    .bind(source.scale.factor.x)
+    .bind(source.scale.factor.y)
+    .bind(source.scale.factor.z)
+    .bind(source.scale.unit.as_str())
+    .execute(connection)
+    .await?;
+    Ok(())
+}
+
+// --- remote paths to delete ---
+
+/// The paths queued for deletion by the external path deletion service, oldest first.
+pub(crate) async fn find_paths_to_delete(pool: &PgPool) -> ApiResult<Vec<String>> {
+    Ok(
+        sqlx::query_scalar("SELECT path FROM webknossos.remote_paths_to_delete ORDER BY created")
+            .fetch_all(pool)
+            .await?,
+    )
+}
+
+pub(crate) async fn delete_paths_to_delete(pool: &PgPool, paths: &[String]) -> ApiResult<()> {
+    sqlx::query("DELETE FROM webknossos.remote_paths_to_delete WHERE path = ANY($1)")
+        .bind(paths)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub(crate) async fn insert_paths_to_delete(pool: &PgPool, paths: &[String]) -> ApiResult<()> {
+    sqlx::query("INSERT INTO webknossos.remote_paths_to_delete (path) SELECT unnest($1::text[]) ON CONFLICT DO NOTHING")
+            .bind(paths)
+            .execute(pool)
+            .await?;
+    Ok(())
+}

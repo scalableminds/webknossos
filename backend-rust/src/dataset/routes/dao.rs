@@ -228,14 +228,6 @@ pub(crate) async fn upsert_last_used_time(
     Ok(())
 }
 
-pub(crate) async fn touch_user_last_activity(pool: &PgPool, user_id: ObjectId) -> ApiResult<()> {
-    sqlx::query("UPDATE webknossos.users SET lastActivity = NOW() WHERE _id = $1")
-        .bind(user_id)
-        .execute(pool)
-        .await?;
-    Ok(())
-}
-
 /// DatasetService.publicWrites as JSON (with the datastore name only).
 pub(crate) async fn find_public_json(
     connection: &mut PgConnection,

@@ -371,7 +371,7 @@ async fn read(
     let result = full_json(&state.pool, user.as_ref(), &id, features.jobs_enabled).await?;
     if let Some(user) = user {
         crate::system::analytics::track_open_dataset(&state, &misc, &user, &id);
-        dao::touch_user_last_activity(&state.pool, user.id).await?;
+        crate::dataset::dao::touch_user_last_activity(&state.pool, user.id).await?;
     }
     Ok(Json(result))
 }
@@ -725,7 +725,7 @@ async fn list(
 ) -> ApiResult<Json<Vec<Value>>> {
     let rows = list_values(&state.pool, user.as_ref(), &query).await?;
     if let Some(user) = user {
-        dao::touch_user_last_activity(&state.pool, user.id).await?;
+        crate::dataset::dao::touch_user_last_activity(&state.pool, user.id).await?;
     }
     Ok(Json(rows))
 }

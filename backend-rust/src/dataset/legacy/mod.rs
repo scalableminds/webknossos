@@ -60,10 +60,7 @@ async fn list(
         values
     };
     if let Some(user) = user {
-        sqlx::query("UPDATE webknossos.users SET lastActivity = NOW() WHERE _id = $1")
-            .bind(user.id)
-            .execute(&state.pool)
-            .await?;
+        crate::dataset::dao::touch_user_last_activity(&state.pool, user.id).await?;
     }
     Ok(Json(result))
 }

@@ -51,7 +51,6 @@ import type {
 import type { ArbitraryObject } from "types/type_utils";
 import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
-import { setupApi } from "viewer/api/internal_api";
 import Constants, { ControlModeEnum, type Vector3 } from "viewer/constants";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
 import SegmentMeshController from "viewer/controller/segment_mesh_controller";
@@ -74,8 +73,9 @@ import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/pr
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import { GlobalMeshChunkProvider } from "viewer/model/sagas/meshes/mesh_chunk_provider";
 import rootSaga from "viewer/model/sagas/root_saga";
-import { setModel, setStore } from "viewer/singletons";
+import { setStore } from "viewer/singletons";
 import { type NumberLike, type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
+import { setupViewer } from "viewer/viewer_setup";
 import { setSlowCompression } from "viewer/workers/slow_byte_array_lz4_compression.worker";
 import { afterAll, type TestContext as BaseTestContext, type Mock, vi } from "vitest";
 import DATASET, {
@@ -301,7 +301,7 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
-    getUpdateActionLog: vi.fn(() => Promise.resolve([])),
+    getUpdateActionLog: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
     getPositionForSegmentInAgglomerate: vi.fn(
       (
         _datastoreUrl: string,
@@ -597,9 +597,8 @@ const modelData = {
   },
 };
 
-setModel(Model);
 setStore(Store);
-setupApi();
+setupViewer();
 startSaga(rootSaga);
 
 // Stop all background work once the test file is done. Otherwise, work started by the

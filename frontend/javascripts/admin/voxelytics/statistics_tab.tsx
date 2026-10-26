@@ -1,17 +1,14 @@
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsChunkStatistics } from "admin/rest_api";
 import { Button, Flex, Tooltip } from "antd";
-import dayjs from "dayjs";
 import {
   formatCountToDataAmountUnit,
   formatCPU,
-  formatDurationStrict,
+  formatDuration,
   formatNumber,
-  formatTimeIntervalStrict,
 } from "libs/format_utils";
-import { usePolling } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { VoxelyticsChunkStatistics } from "types/api_types";
 import { parseStatistics } from "./parse_api_data";
 import type { Result } from "./utils";
@@ -26,7 +23,6 @@ export default function StatisticsTab({
   workflowHash: string;
   runId: string | null;
   taskName: string;
-  isRunning: boolean;
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [statisticsResult, setStatisticsResult] = useState<StatisticsResult>({ type: "LOADING" });
@@ -48,7 +44,10 @@ export default function StatisticsTab({
     }
   }
 
-  usePolling(loadStatistics, null, [runId, taskName]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only reload when the selected task changes; the Refresh button covers manual reloads
+  useEffect(() => {
+    loadStatistics();
+  }, [runId, taskName]);
 
   function renderContent() {
     if (statisticsResult.type === "LOADING") {
@@ -173,7 +172,7 @@ export default function StatisticsTab({
                     row.duration?.max != null && (
                       <>
                         <span className="stats-label">Sum</span>{" "}
-                        {formatTimeIntervalStrict(row.duration.max * 1000, 0)}
+                        {formatDuration(row.duration.max * 1000)}
                       </>
                     )
                   ) : (
@@ -181,21 +180,21 @@ export default function StatisticsTab({
                       {row.duration?.max != null && (
                         <>
                           <span className="stats-label">Max</span>{" "}
-                          {formatTimeIntervalStrict(row.duration.max * 1000, 0)}
+                          {formatDuration(row.duration.max * 1000)}
                         </>
                       )}
                       <br />
                       {row.duration?.median != null && (
                         <>
                           <span className="stats-label">Median</span>{" "}
-                          {formatTimeIntervalStrict(row.duration.median * 1000, 0)}
+                          {formatDuration(row.duration.median * 1000)}
                         </>
                       )}
                       <br />{" "}
                       {row.duration?.sum != null && (
                         <>
                           <span className="stats-label">Sum</span>{" "}
-                          {formatTimeIntervalStrict(row.duration.sum * 1000, 0)}
+                          {formatDuration(row.duration.sum * 1000)}
                         </>
                       )}
                     </>
@@ -204,7 +203,7 @@ export default function StatisticsTab({
                   {row.wallTime != null && (
                     <>
                       <span className="stats-label">Wall</span>{" "}
-                      {formatDurationStrict(dayjs.duration(row.wallTime, "seconds"))}
+                      {formatDuration(row.wallTime * 1000)}
                     </>
                   )}
                 </td>

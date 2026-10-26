@@ -45,7 +45,7 @@ import type { PreservedMeshDisplayProps } from "../../volume/proofreading/proofr
 import { getMeshDisplayPropsByOldAgglomerateId } from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
 import {
   type ApplyingUpdateResults,
-  FailedIncorporateActionsReturnValue,
+  getFailedIncorporateActionsReturnValue,
 } from "./applying_update_artifacts";
 
 const ANNOTATION_REVERTED_TOAST_KEY = "annotation_reverted_warning";
@@ -224,7 +224,10 @@ export function* tryToIncorporateActions(
               action.value,
             );
             yield* call(finalize);
-            return FailedIncorporateActionsReturnValue;
+            return getFailedIncorporateActionsReturnValue({
+              reason: "Cannot apply mergeAgglomerate action without agglomerate ids",
+              details: { actionValue: action.value },
+            });
           }
           // Legacy persisted actions may still have a plain number here instead of bigint.
           const agglomerateId1 = BigInt(action.value.agglomerateId1);
@@ -416,7 +419,10 @@ export function* tryToIncorporateActions(
               "Your local session is now out of sync and further changes can no longer be saved. Please reload the page.",
           );
           yield* call(finalize);
-          return FailedIncorporateActionsReturnValue;
+          return getFailedIncorporateActionsReturnValue({
+            reason: "Annotation was reverted by another user",
+            isExpected: true,
+          });
         }
 
         /*
@@ -444,7 +450,11 @@ export function* tryToIncorporateActions(
               "now out of sync and further changes can no longer be saved. Please reload the page.",
           );
           yield* call(finalize);
-          return FailedIncorporateActionsReturnValue;
+          return getFailedIncorporateActionsReturnValue({
+            reason: "Layers were changed by another user",
+            isExpected: true,
+            details: { actionName: action.name },
+          });
         }
 
         // Legacy! The following actions are legacy actions and don't
@@ -458,7 +468,10 @@ export function* tryToIncorporateActions(
         case "updateUserBoundingBoxesInVolumeTracing": {
           console.error("Cannot apply legacy action", action.name);
           yield* call(finalize);
-          return FailedIncorporateActionsReturnValue;
+          return getFailedIncorporateActionsReturnValue({
+            reason: "Cannot apply legacy action",
+            details: { actionName: action.name },
+          });
         }
         default: {
           action satisfies never;
@@ -487,7 +500,9 @@ export function* tryToIncorporateActions(
             "Failed to apply an agglomerate split action from another user. Please refresh the page to resync.";
           console.error(message);
           Toast.error(message);
-          return FailedIncorporateActionsReturnValue;
+          return getFailedIncorporateActionsReturnValue({
+            reason: "Failed to apply an agglomerate split action of another user",
+          });
         }
         const {
           mappingWithSplitApplied,

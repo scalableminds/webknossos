@@ -16,7 +16,7 @@ import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
 import type { ChangeUserBoundingBoxAction } from "../actions/annotation_actions";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { sanitizeMetadata } from "./skeletontracing_reducer";
+import { sanitizeMetadata } from "./reducer_helpers";
 
 const updateAnnotation = (
   state: WebknossosState,

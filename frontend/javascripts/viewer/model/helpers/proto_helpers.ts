@@ -18,7 +18,7 @@ import type {
   ServerTracing,
 } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import { sanitizeMetadata } from "viewer/model/reducers/skeletontracing_reducer";
+import { sanitizeMetadata } from "viewer/model/reducers/reducer_helpers";
 
 // protobufjs resolves its optional Long support via a try/catch require("long") call (see
 // node_modules/protobufjs/src/util/minimal.js). Wire it up explicitly via a real, bundler-visible

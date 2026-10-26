@@ -31,7 +31,7 @@ import {
   resetOperationContextOnWkReady,
   watchForLongRunningOperations,
 } from "./operation_context_saga";
-import { toggleErrorHighlighting } from "./saving/save_queue_draining_saga";
+import { closeSaveErrorToasts, setSaveErrorDisplay } from "./saving/save_queue_draining_saga";
 import splitBoundaryMeshSaga from "./split_boundary_mesh_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
 
@@ -108,10 +108,9 @@ function* restartableSaga(): Saga<void> {
     if (import.meta.env.MODE !== "test") {
       ErrorHandling.notifyWithPrefix(err, "Root saga crashed: ");
 
-      // Hide potentially old error highlighting which mentions a retry mechanism.
-      yield* call(toggleErrorHighlighting, false);
-      // Show error highlighting which mentions the permanent error.
-      yield* call(toggleErrorHighlighting, true, true);
+      closeSaveErrorToasts();
+      // Show the error highlighting and a toast which mentions the permanent error.
+      yield* call(setSaveErrorDisplay, true, true);
       alert(`\
 Internal error.
 Please reload the page to avoid losing data.

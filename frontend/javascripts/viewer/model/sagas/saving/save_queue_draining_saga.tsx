@@ -261,7 +261,7 @@ export function* sendSaveRequestToServer(
           data: compactedSaveQueue,
           compress: process.env.NODE_ENV === "production",
           // Suppressing error toast, as the doWithToken retry with personal token functionality should not show an error.
-          // Instead the error is logged and toggleErrorHighlighting should take care of showing an error to the user.
+          // Instead the error is logged and setSaveErrorDisplay should take care of showing an error to the user.
           showErrorToast: false,
         },
       );
@@ -289,7 +289,7 @@ export function* sendSaveRequestToServer(
         throw error;
       }
 
-      yield* call(toggleErrorHighlighting, false);
+      yield* call(setSaveErrorDisplay, false);
       return { numberOfSentItems: saveQueue.length, hadConflict: false };
     } catch (error) {
       if (exceptionDuringMarkBucketsAsNotDirty) {
@@ -309,7 +309,7 @@ export function* sendSaveRequestToServer(
       if (!isViewOrSandboxMode) {
         // Notify user about error unless, view or sandbox mode is active. In that case,
         // we do not need to show the error as it is not so important and distracts the user.
-        yield* call(toggleErrorHighlighting, true);
+        yield* call(setSaveErrorDisplay, true);
       }
 
       // Log the error to airbrake. Also compactedSaveQueue needs to be within an object
@@ -400,13 +400,13 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
   }
 }
 
-export function* toggleErrorHighlighting(
-  state: boolean,
+export function* setSaveErrorDisplay(
+  hasError: boolean,
   permanentError: boolean = false,
 ): Saga<void> {
-  yield* put(setHasSaveErrorAction(state));
+  yield* put(setHasSaveErrorAction(hasError));
 
-  if (state) {
+  if (hasError) {
     const message = permanentError ? messages["save.failed.permanent"] : messages["save.failed"];
     Toast.error(message, {
       sticky: true,

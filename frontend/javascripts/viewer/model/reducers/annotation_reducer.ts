@@ -218,6 +218,17 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       });
     }
 
+    case "SET_BOOKMARK_METADATA": {
+      const { bookmarkId, metadata } = action;
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.map((bookmark) =>
+          bookmark.id === bookmarkId
+            ? { ...bookmark, metadata: sanitizeMetadata(metadata) }
+            : bookmark,
+        ),
+      });
+    }
+
     case "SET_BOOKMARK_CREATED_AT_VERSION": {
       const { bookmarkId, createdAtVersion } = action;
       return updateAnnotation(state, {

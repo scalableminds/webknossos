@@ -4,7 +4,7 @@ import isEqual from "lodash-es/isEqual";
 import keyBy from "lodash-es/keyBy";
 import sortedIndexBy from "lodash-es/sortedIndexBy";
 import memoizeOne from "memoize-one";
-import { AnnotationLayerEnum } from "types/api_types";
+import { AnnotationLayerEnum, type MetadataEntryProto } from "types/api_types";
 import { getUpdatedSourcePropsAfterMerge } from "viewer/model/reducers/volumetracing_reducer_helpers";
 import {
   buildOrderDependencies,
@@ -248,6 +248,16 @@ export function* diffMetadataOfSegments(segment: Segment, prevSegment: Segment, 
     return;
   }
 
+  const { upsertEntriesByKey, removeEntriesByKey } = diffMetadata(prevMetadata, metadata);
+  yield updateMetadataOfSegmentUpdateAction(
+    segment.id,
+    upsertEntriesByKey,
+    removeEntriesByKey,
+    tracingId,
+  );
+}
+
+export function diffMetadata(prevMetadata: MetadataEntryProto[], metadata: MetadataEntryProto[]) {
   const metadataDict = keyBy(metadata, "key");
   const prevMetadataDict = keyBy(prevMetadata, "key");
 
@@ -261,14 +271,7 @@ export function* diffMetadataOfSegments(segment: Segment, prevSegment: Segment, 
     ...changedKeys.map((key) => metadataDict[key]),
     ...onlyB.map((key) => metadataDict[key]),
   ];
-  const removeEntriesByKey = onlyA;
-
-  yield updateMetadataOfSegmentUpdateAction(
-    segment.id,
-    upsertEntriesByKey,
-    removeEntriesByKey,
-    tracingId,
-  );
+  return { upsertEntriesByKey, removeEntriesByKey: onlyA };
 }
 
 export function* diffSegmentGroups(

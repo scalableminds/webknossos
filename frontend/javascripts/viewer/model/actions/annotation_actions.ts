@@ -56,6 +56,7 @@ export type SetAnnotationDescriptionAction = ReturnType<typeof setAnnotationDesc
 export type AddBookmarkAction = ReturnType<typeof addBookmarkAction>;
 type SetBookmarkCreatedAtVersionAction = ReturnType<typeof setBookmarkCreatedAtVersionAction>;
 type UpdateBookmarkMetadataAction = ReturnType<typeof updateBookmarkMetadataAction>;
+type SetBookmarkMetadataAction = ReturnType<typeof setBookmarkMetadataAction>;
 type SetAnnotationAllowUpdateAction = ReturnType<
   typeof setIsUpdatingAnnotationCurrentlyAllowedAction
 >;
@@ -97,6 +98,7 @@ export type AnnotationActionTypes =
   | AddBookmarkAction
   | SetBookmarkCreatedAtVersionAction
   | UpdateBookmarkMetadataAction
+  | SetBookmarkMetadataAction
   | SetAnnotationAllowUpdateAction
   | SetUserBoundingBoxesAction
   | ChangeUserBoundingBoxAction
@@ -204,6 +206,14 @@ export const updateBookmarkMetadataAction = (
     bookmarkId,
     upsertEntriesByKey,
     removeEntriesByKey,
+  }) as const;
+
+// Replaces the whole list, so that the order of the entries is kept while editing.
+export const setBookmarkMetadataAction = (bookmarkId: number, metadata: MetadataEntryProto[]) =>
+  ({
+    type: "SET_BOOKMARK_METADATA",
+    bookmarkId,
+    metadata,
   }) as const;
 
 export const setBookmarkCreatedAtVersionAction = (bookmarkId: number, createdAtVersion: number) =>

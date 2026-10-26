@@ -1,23 +1,31 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { getBookmarkThumbnailUrl } from "admin/rest_api";
 import { Empty, List, Space } from "antd";
+import { SimpleRow } from "dashboard/folders/metadata_table";
 import { handleGenericError } from "libs/error_handling";
 import { useWkSelector } from "libs/react_hooks";
 import { useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import type { APIAnnotationBookmark } from "types/api_types";
+import type { APIAnnotationBookmark, MetadataEntryProto } from "types/api_types";
 import { applyBookmarkState } from "viewer/controller/apply_url_state";
 import { bookmarkStateToUrlState, urlStateToBookmarkState } from "viewer/controller/bookmark_state";
 import UrlManager from "viewer/controller/url_manager";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { ANNOTATION_SCOPED_TRACING_ID, dispatchGetNewIdAsync } from "viewer/model/actions/actions";
-import { addBookmarkAction } from "viewer/model/actions/annotation_actions";
+import {
+  addBookmarkAction,
+  setBookmarkMetadataAction,
+} from "viewer/model/actions/annotation_actions";
 import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import { setViewModeAction } from "viewer/model/actions/settings_actions";
 import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
-import { addBookmark } from "viewer/model/sagas/volume/update_actions";
+import { diffMetadata } from "viewer/model/sagas/diffing/volume_diffing";
+import { addBookmark, updateMetadataOfBookmark } from "viewer/model/sagas/volume/update_actions";
 import Store from "viewer/store";
 import { type BookmarkThumbnails, captureBookmarkThumbnails } from "viewer/view/rendering_utils";
 import ButtonComponent from "../../components/button_component";
+import { MetadataEntryTableRows } from "../metadata_table";
+import { ResizableSplitPane } from "../resizable_split_pane";
 
 function BookmarkThumbnail({ bookmark }: { bookmark: APIAnnotationBookmark }) {
   const tracingStoreUrl = useWkSelector((state) => state.annotation.tracingStore.url);
@@ -56,9 +64,46 @@ function BookmarkThumbnail({ bookmark }: { bookmark: APIAnnotationBookmark }) {
   );
 }
 
+function BookmarkDetails({ bookmark }: { bookmark: APIAnnotationBookmark }) {
+  const dispatch = useDispatch();
+  const readOnly = !useWkSelector(mayEditAnnotation);
+
+  const setMetadata = useCallback(
+    async (updatedBookmark: APIAnnotationBookmark, newMetadata: MetadataEntryProto[]) => {
+      const { upsertEntriesByKey, removeEntriesByKey } = diffMetadata(
+        updatedBookmark.metadata,
+        newMetadata,
+      );
+      if (upsertEntriesByKey.length === 0 && removeEntriesByKey.length === 0) return;
+      await waitUntilRebaseFinished();
+      dispatch(setBookmarkMetadataAction(updatedBookmark.id, newMetadata));
+      dispatch(
+        pushSaveQueueTransaction([
+          updateMetadataOfBookmark(updatedBookmark.id, upsertEntriesByKey, removeEntriesByKey),
+        ]),
+      );
+    },
+    [dispatch],
+  );
+
+  return (
+    <table className="metadata-table">
+      <thead>
+        <SimpleRow isTableHead label="ID" value={bookmark.id} />
+      </thead>
+      <tbody>
+        <SimpleRow label="Name" value={bookmark.name ?? `Bookmark ${bookmark.id}`} />
+        <MetadataEntryTableRows item={bookmark} setMetadata={setMetadata} readOnly={readOnly} />
+      </tbody>
+    </table>
+  );
+}
+
 export default function BookmarksTab() {
   const bookmarks = useWkSelector((state) => state.annotation.bookmarks);
   const dispatch = useDispatch();
+  const [selectedBookmarkId, setSelectedBookmarkId] = useState<number | null>(null);
+  const selectedBookmark = bookmarks.find((bookmark) => bookmark.id === selectedBookmarkId);
 
   const handleAddBookmark = useCallback(async () => {
     const state = urlStateToBookmarkState(UrlManager.getUrlState(Store.getState()));
@@ -105,7 +150,10 @@ export default function BookmarksTab() {
   );
 
   return (
-    <div className="padded-tab-content" style={{ height: "100%", overflow: "auto" }}>
+    <div
+      className="padded-tab-content"
+      style={{ height: "100%", display: "flex", flexDirection: "column" }}
+    >
       <ButtonComponent
         variant="text"
         color="default"
@@ -118,22 +166,40 @@ export default function BookmarksTab() {
       {bookmarks.length === 0 ? (
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="There are no bookmarks yet." />
       ) : (
-        <List
-          dataSource={bookmarks}
-          rowKey="id"
-          renderItem={(bookmark) => (
-            <List.Item
-              onClick={() => handleJumpToBookmark(bookmark)}
-              style={{ cursor: "pointer" }}
-              title="Click to jump to this bookmark."
-            >
-              <Space>
-                <BookmarkThumbnail bookmark={bookmark} />
-                {bookmark.name ?? `Bookmark ${bookmark.id}`}
-              </Space>
-            </List.Item>
-          )}
-        />
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <ResizableSplitPane
+            firstChild={
+              <List
+                dataSource={bookmarks}
+                rowKey="id"
+                renderItem={(bookmark) => (
+                  <List.Item
+                    onClick={() => {
+                      setSelectedBookmarkId(bookmark.id);
+                      handleJumpToBookmark(bookmark);
+                    }}
+                    style={{
+                      cursor: "pointer",
+                      background:
+                        bookmark.id === selectedBookmarkId
+                          ? "var(--ant-color-primary-bg)"
+                          : undefined,
+                    }}
+                    title="Click to jump to this bookmark and show its details."
+                  >
+                    <Space>
+                      <BookmarkThumbnail bookmark={bookmark} />
+                      {bookmark.name ?? `Bookmark ${bookmark.id}`}
+                    </Space>
+                  </List.Item>
+                )}
+              />
+            }
+            secondChild={
+              selectedBookmark != null ? <BookmarkDetails bookmark={selectedBookmark} /> : null
+            }
+          />
+        </div>
       )}
     </div>
   );

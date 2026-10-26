@@ -11,34 +11,40 @@ import slick.sql.SqlAction
 import utils.sql.{SimpleSQLDAO, SqlClient, SqlToken}
 import slick.jdbc.PostgresProfile.api.*
 
-import java.util.concurrent.Semaphore
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 class AnnotationReservedIdsService @Inject() (
     annotationReservedIdsDAO: AnnotationReservedIdsDAO,
     tracingStoreService: TracingStoreService
 ) extends LazyLogging {
 
-  private val mutexes = new scala.collection.concurrent.TrieMap[ObjectId, Semaphore]()
+  // Per annotation, the completion future of the most recently queued operation. Operations are chained without blocking threads.
+  private val queueTails = new scala.collection.concurrent.TrieMap[ObjectId, Future[Unit]]()
 
-  private def withMutex[T](annotationId: ObjectId)(block: => Fox[T])(implicit ec: ExecutionContext): Fox[T] = {
-    val semaphore = mutexes.getOrElseUpdate(annotationId, new Semaphore(1))
-    for {
-      _ <- Fox.successful(semaphore.acquire())
-      result <- Fox.withCleanup(block)(semaphore.release())
-    } yield result
+  private def serializedPerAnnotation[T](
+      annotationId: ObjectId
+  )(block: => Fox[T])(implicit ec: ExecutionContext): Fox[T] = {
+    // Promise as placeholder: the tail must be registered atomically before the chained work (which depends on previous) exists.
+    // It always succeeds, so a failed operation does not fail the ones queued after it.
+    val done = Promise[Unit]()
+    val previous = queueTails.put(annotationId, done.future).getOrElse(Future.unit)
+    def releaseQueue(): Unit = {
+      done.success(())
+      queueTails.remove(annotationId, done.future) // only removes if no later operation is queued
+    }
+    Fox.fromFutureBox(previous.flatMap(_ => block.futureBox).andThen { case _ => releaseQueue() })
   }
 
   def reservedIds(annotationId: ObjectId, tracingId: String, domain: AnnotationIdDomain, userId: ObjectId)(implicit
       ec: ExecutionContext
   ): Fox[Seq[Long]] =
-    withMutex(annotationId) {
+    serializedPerAnnotation(annotationId) {
       annotationReservedIdsDAO.findReservedIdsForUser(annotationId, tracingId, domain, userId)
     }
 
   def releaseAllForAnnotation(annotationId: ObjectId)(implicit ec: ExecutionContext): Fox[Unit] =
-    withMutex(annotationId) {
+    serializedPerAnnotation(annotationId) {
       annotationReservedIdsDAO.releaseAllForAnnotation(annotationId)
     }
 
@@ -50,7 +56,7 @@ class AnnotationReservedIdsService @Inject() (
       numberOfIdsToReserve: Int,
       idsToRelease: Seq[Long]
   )(implicit ec: ExecutionContext): Fox[Seq[Long]] =
-    withMutex(annotationId) {
+    serializedPerAnnotation(annotationId) {
       for {
         largestExistingIdFromDatabaseBox <- annotationReservedIdsDAO
           .findLargestReservedId(annotationId, tracingId, domain)

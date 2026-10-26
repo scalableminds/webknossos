@@ -16,6 +16,7 @@ import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDuration from "components/formatted_duration";
 import LinkButton from "components/link_button";
 import dayjs, { type Dayjs } from "dayjs";
+import { saveAsCSV, transformToCSVRow } from "libs/csv";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { compareBy, isUserAdminOrTeamManager, localeCompareBy } from "libs/utils";
@@ -23,7 +24,6 @@ import messages from "messages";
 import { useState } from "react";
 import type { APITimeTrackingPerUser } from "types/api_types";
 import { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "viewer/constants";
-import { saveAsCSV, transformToCSVRow } from "viewer/model/helpers/csv_helpers";
 import ProjectAndAnnotationTypeDropdown from "./project_and_annotation_type_dropdown";
 import TimeTrackingDetailView from "./time_tracking_detail_view";
 

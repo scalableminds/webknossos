@@ -531,3 +531,43 @@ pub(crate) async fn update_folder_and_uploader(
         .await?;
     Ok(())
 }
+
+/// The mag and attachment paths of the dataset that no other dataset references.
+pub(crate) async fn find_exclusive_paths(
+    pool: &PgPool,
+    dataset_id: &ObjectId,
+) -> ApiResult<Vec<String>> {
+    Ok(sqlx::query_scalar(
+            r#"SELECT m1.path FROM webknossos.dataset_mags m1 WHERE m1._dataset = $1 AND m1.path IS NOT NULL
+                 AND NOT EXISTS (SELECT 1 FROM webknossos.dataset_mags m2 WHERE m2._dataset != $1
+                   AND (m2.path = m1.path OR (m2.realpath IS NOT NULL AND m2.realpath = m1.realpath)))
+               UNION ALL
+               SELECT a1.path FROM webknossos.dataset_layer_attachments a1 WHERE a1._dataset = $1
+                 AND NOT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments a2 WHERE a2._dataset != $1
+                   AND (a2.path = a1.path OR (a2.realpath IS NOT NULL AND a2.realpath = a1.realpath)))"#,
+        )
+        .bind(dataset_id)
+        .fetch_all(pool)
+        .await?)
+}
+
+/// Share-locks the folder if it is live and within the organization.
+pub(crate) async fn lock_folder_in_organization(
+    connection: &mut PgConnection,
+    folder: &ObjectId,
+    organization: &str,
+) -> ApiResult<Option<ObjectId>> {
+    Ok(sqlx::query_scalar("SELECT f._id FROM webknossos.folders_ f JOIN webknossos.folder_paths fp ON fp._descendant=f._id JOIN webknossos.organizations_ o ON o._rootFolder=fp._ancestor WHERE f._id=$1 AND o._id=$2 FOR SHARE OF f, fp")
+        .bind(folder).bind(organization).fetch_optional(connection).await?)
+}
+
+pub(crate) async fn delete_thumbnails(
+    connection: &mut PgConnection,
+    dataset_id: &ObjectId,
+) -> ApiResult<()> {
+    sqlx::query("DELETE FROM webknossos.dataset_thumbnails WHERE _dataset = $1")
+        .bind(dataset_id)
+        .execute(connection)
+        .await?;
+    Ok(())
+}

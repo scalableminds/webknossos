@@ -6,13 +6,14 @@ use serde::{Deserialize, Deserializer};
 use serde_json::{Value, json};
 use webknossos_common::{enums::LayerAttachmentType, upath::UPath};
 
+mod dao;
+
 use crate::{
     AppState,
     auth::AuthUser,
     dataset::source::{DataLayerAttachments, LayerKind, StaticLayer, UsableDataSource},
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path},
-    sql::Sql,
     stores::client::ServiceClients,
     util::id::{ObjectId, PathObjectId},
 };
@@ -216,18 +217,7 @@ fn multiset_difference(left: &[String], right: &[String]) -> Vec<String> {
 }
 
 async fn paths_used_only_by(pool: &sqlx::PgPool, dataset_id: &ObjectId) -> ApiResult<Vec<String>> {
-    let raw: Vec<String> = sqlx::query_scalar(
-        r#"SELECT m1.path FROM webknossos.dataset_mags m1 WHERE m1._dataset = $1 AND m1.path IS NOT NULL
-             AND NOT EXISTS (SELECT 1 FROM webknossos.dataset_mags m2 WHERE m2._dataset != $1
-               AND (m2.path = m1.path OR (m2.realpath IS NOT NULL AND m2.realpath = m1.realpath)))
-           UNION ALL
-           SELECT a1.path FROM webknossos.dataset_layer_attachments a1 WHERE a1._dataset = $1
-             AND NOT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments a2 WHERE a2._dataset != $1
-               AND (a2.path = a1.path OR (a2.realpath IS NOT NULL AND a2.realpath = a1.realpath)))"#,
-    )
-    .bind(dataset_id)
-    .fetch_all(pool)
-    .await?;
+    let raw = crate::dataset::dao::find_exclusive_paths(pool, dataset_id).await?;
     raw.iter()
         .map(|p| {
             UPath::parse(p)
@@ -300,69 +290,26 @@ async fn update_partial(
     crate::dataset::access::lock_edit(&mut transaction, &user, &id, true).await?;
     if let Some(folder) = &body.folder_id {
         // Same hardening as the full PATCH: keep the dataset in a live folder of its organization.
-        sqlx::query(
-            "SELECT f._id FROM webknossos.folders_ f JOIN webknossos.folder_paths fp ON \
-                fp._descendant=f._id JOIN webknossos.organizations_ o ON \
-                o._rootFolder=fp._ancestor WHERE f._id=$1 AND o._id=$2 FOR SHARE OF f, fp",
+        crate::dataset::dao::lock_folder_in_organization(
+            &mut transaction,
+            folder,
+            &record.organization,
         )
-        .bind(folder)
-        .bind(&record.organization)
-        .fetch_optional(&mut *transaction)
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::folder::NOT_IN_DATASET_ORGANIZATION))?;
     }
-    sqlx::query(
-        r#"UPDATE webknossos.datasets SET
-             description = CASE WHEN $2 THEN $3 ELSE description END,
-             name = CASE WHEN $4 THEN $5 ELSE name END,
-             sortingKey = COALESCE($6, sortingKey),
-             isPublic = COALESCE($7, isPublic),
-             tags = COALESCE($8, tags),
-             _folder = COALESCE($9, _folder),
-             metadata = COALESCE($10, metadata)
-           WHERE _id = $1 AND NOT isDeleted"#,
-    )
-    .bind(&*id)
-    .bind(body.description.is_some())
-    .bind(body.description.clone().flatten())
-    .bind(body.name.is_some())
-    .bind(body.name.clone().flatten())
-    .bind(body.sorting_key)
-    .bind(body.is_public)
-    .bind(&body.tags)
-    .bind(&body.folder_id)
-    .bind(body.metadata.as_ref().map(|m| json!(m)))
-    .execute(&mut *transaction)
-    .await?;
+    dao::update_partial(&mut transaction, &id, &body).await?;
     if let Some(change) = &change {
         // DatasetDAO.updateDataSource with the user-changed source. The Scala
         // DAO also nulls defaultViewConfiguration here (the loaded source never
         // carries one); it is deliberately kept.
-        sqlx::query("DELETE FROM webknossos.dataset_thumbnails WHERE _dataset = $1")
-            .bind(&*id)
-            .execute(&mut *transaction)
-            .await?;
-        sqlx::query(
-            r#"UPDATE webknossos.datasets SET thumbnailCacheVersion = thumbnailCacheVersion + 1,
-                 inboxSourceHash = NULL, isUsable = true, status = '',
-                 voxelSizeFactor = ROW($2, $3, $4)::webknossos.VECTOR3, voxelSizeUnit = $5::webknossos.LENGTH_UNIT
-               WHERE _id = $1"#,
-        )
-        .bind(&*id)
-        .bind(change.updated.scale.factor.x)
-        .bind(change.updated.scale.factor.y)
-        .bind(change.updated.scale.factor.z)
-        .bind(change.updated.scale.unit.as_str())
-        .execute(&mut *transaction)
-        .await?;
+        crate::dataset::dao::delete_thumbnails(&mut transaction, &id).await?;
+        dao::update_data_source(&mut transaction, &id, &change.updated).await?;
         crate::dataset::source::write_layers(&mut transaction, &id, &change.updated.data_layers)
             .await?;
     }
-    let mut q = Sql::new("SELECT ");
-    crate::dataset::access::push_read_predicate(&mut q, (&user.id).into(), None);
-    q.push(" FROM webknossos.datasets_ d WHERE d._id=")
-        .push_bind(&*id);
-    let readable: bool = q.build_query_scalar().fetch_one(&mut *transaction).await?;
+    let readable =
+        crate::dataset::dao::is_readable_on_connection(&mut transaction, &user.id, &id).await?;
     if !readable {
         return Err(crate::dataset::lifecycle::not_found(&id));
     }

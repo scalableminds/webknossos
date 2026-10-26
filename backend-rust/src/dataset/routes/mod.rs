@@ -233,7 +233,7 @@ async fn update_metadata(
     let folder = body.folder_id.unwrap_or(existing_folder);
     // Keep folder references live and within the dataset's organization. A
     // settings editor can move a dataset without managing the target folder.
-    dao::lock_folder_in_organization(&mut transaction, &folder, &organization)
+    crate::dataset::dao::lock_folder_in_organization(&mut transaction, &folder, &organization)
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::folder::NOT_IN_DATASET_ORGANIZATION))?;
     let sorting_key = body.sorting_key.unwrap_or(created);

@@ -275,7 +275,7 @@ async fn delete_dataset(
     tracing::info!(dataset = %id, user = %user.id, is_virtual = record.is_virtual, "Deleting dataset");
     let store_url = record.store_url()?.to_owned();
     if record.is_virtual {
-        let paths = dao::find_exclusive_paths(&state.pool, &id).await?;
+        let paths = crate::dataset::dao::find_exclusive_paths(&state.pool, &id).await?;
         crate::dataset::paths::delete_paths(&state.pool, &clients, &store_url, &paths).await?;
     } else if let Some(root) = record.root_path.clone().or(record.root_real_path.clone()) {
         if !crate::organization::storage::is_local_path(&root) {

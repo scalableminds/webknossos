@@ -97,16 +97,6 @@ pub(crate) async fn find_metadata_fields(
     .await?)
 }
 
-/// Share-locks the folder if it is live and within the organization.
-pub(crate) async fn lock_folder_in_organization(
-    connection: &mut PgConnection,
-    folder: &ObjectId,
-    organization: &str,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar("SELECT f._id FROM webknossos.folders_ f JOIN webknossos.folder_paths fp ON fp._descendant=f._id JOIN webknossos.organizations_ o ON o._rootFolder=fp._ancestor WHERE f._id=$1 AND o._id=$2 FOR SHARE OF f, fp")
-        .bind(folder).bind(organization).fetch_optional(connection).await?)
-}
-
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn update_metadata(
     connection: &mut PgConnection,

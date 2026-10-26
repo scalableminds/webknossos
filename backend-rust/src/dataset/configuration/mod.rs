@@ -234,7 +234,7 @@ async fn update_admin(
             }
         }
     }
-    dao::delete_thumbnails(&mut transaction, &id).await?;
+    crate::dataset::dao::delete_thumbnails(&mut transaction, &id).await?;
     transaction.commit().await?;
     Ok(success())
 }

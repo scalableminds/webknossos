@@ -135,14 +135,3 @@ pub(crate) async fn update_layer_admin_view_configuration(
         .bind(dataset_id).bind(layer_name).bind(configuration).execute(connection).await?;
     Ok(())
 }
-
-pub(crate) async fn delete_thumbnails(
-    connection: &mut PgConnection,
-    dataset_id: &ObjectId,
-) -> ApiResult<()> {
-    sqlx::query("DELETE FROM webknossos.dataset_thumbnails WHERE _dataset = $1")
-        .bind(dataset_id)
-        .execute(connection)
-        .await?;
-    Ok(())
-}

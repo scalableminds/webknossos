@@ -68,7 +68,7 @@ pub async fn ready(pool: &PgPool) -> ApiResult<()> {
 }
 
 /// Begins a SERIALIZABLE transaction.
-pub async fn begin_serializable(pool: &PgPool) -> ApiResult<Transaction<'static, Postgres>> {
+pub async fn begin_serializable(pool: &PgPool) -> sqlx::Result<Transaction<'static, Postgres>> {
     let mut transaction = pool.begin().await?;
     sqlx::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
         .execute(&mut *transaction)

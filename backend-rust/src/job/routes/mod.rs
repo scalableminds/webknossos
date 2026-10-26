@@ -17,7 +17,7 @@ use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
-use sqlx::{PgConnection, PgPool, Postgres, Transaction};
+use sqlx::{PgConnection, PgPool};
 
 use crate::{
     AppState,
@@ -474,14 +474,6 @@ fn job_not_found(error: ApiError) -> ApiError {
     }
 }
 
-pub(crate) async fn serializable(pool: &PgPool) -> ApiResult<Transaction<'static, Postgres>> {
-    let mut transaction = pool.begin().await?;
-    sqlx::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
-        .execute(&mut *transaction)
-        .await?;
-    Ok(transaction)
-}
-
 /// Job cancelling protocol: the user sets manualState immediately; the worker
 /// later sets state. Pending/started paid jobs get their reservation refunded.
 async fn cancel(
@@ -491,7 +483,7 @@ async fn cancel(
     user: AuthUser,
 ) -> ApiResult<Json<Value>> {
     require_enabled(&routes)?;
-    let mut transaction = serializable(&state.pool).await?;
+    let mut transaction = crate::db::begin_serializable(&state.pool).await?;
     let job = find_job(&mut transaction, &user.id, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
@@ -575,7 +567,7 @@ async fn retry(
     if !(user.is_superuser || job.last_retry.is_none()) {
         return Err(ApiError::forbidden(ALREADY_RETRIED));
     }
-    let mut transaction = serializable(&state.pool).await?;
+    let mut transaction = crate::db::begin_serializable(&state.pool).await?;
     // JobDAO.retryOne.
     let reset = dao::retry_one(&mut transaction, &job.id, user.is_superuser).await?;
     // Credits are only reserved for jobs that actually rerun; a failure rolls the reset back.

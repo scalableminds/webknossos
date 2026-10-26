@@ -24,7 +24,7 @@ use axum::{
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Value, json};
-use sqlx::{Acquire, PgConnection, PgPool, Postgres, Transaction};
+use sqlx::{Acquire, PgConnection, PgPool};
 use webknossos_common::java_format::java_double;
 
 pub fn router() -> Router<AppState> {
@@ -42,20 +42,6 @@ fn require_superuser(user: &AuthUser, message: &str) -> ApiResult<()> {
     } else {
         Err(ApiError::bad_request(message))
     }
-}
-
-async fn serializable(pool: &PgPool) -> ApiResult<Transaction<'static, Postgres>> {
-    Ok(serializable_transaction(pool).await?)
-}
-
-async fn serializable_transaction(
-    pool: &PgPool,
-) -> Result<Transaction<'static, Postgres>, sqlx::Error> {
-    let mut transaction = pool.begin().await?;
-    sqlx::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
-        .execute(&mut *transaction)
-        .await?;
-    Ok(transaction)
 }
 
 #[derive(Deserialize)]
@@ -122,7 +108,7 @@ async fn add_credits(
     let milli_credits = query.credit_amount.checked_mul(1000).ok_or_else(|| {
         ApiError::bad_request(crate::msg::credit_transaction::CREDIT_AMOUNT_TOO_LARGE)
     })?;
-    let mut transaction = serializable(&state.pool).await?;
+    let mut transaction = crate::db::begin_serializable(&state.pool).await?;
     dao::insert_add_credits(
         &mut transaction,
         ObjectId::new(),
@@ -261,7 +247,7 @@ async fn refund(
 ) -> ApiResult<StatusCode> {
     require_superuser(&user, "Only super users can manually refund credits")?;
     let id = &*transaction_id;
-    let mut transaction = serializable(&state.pool).await?;
+    let mut transaction = crate::db::begin_serializable(&state.pool).await?;
     let row = dao::find_one_for_update(&mut transaction, id).await?;
     let (organization, paid_job, transaction_state, credit_state, delta) =
         row.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
@@ -327,7 +313,7 @@ pub(crate) async fn revoke_expired_credits(
     let organizations = dao::find_organizations_with_expired_grants(pool).await?;
     let mut failed = Vec::new();
     for organization in organizations {
-        let mut transaction = serializable_transaction(pool).await?;
+        let mut transaction = crate::db::begin_serializable(pool).await?;
         let grants = dao::find_expired_grants_for_update(&mut transaction, &organization).await?;
         for (grant_id, created_at, delta) in grants {
             // A savepoint keeps one failed revocation (e.g. the balance trigger)

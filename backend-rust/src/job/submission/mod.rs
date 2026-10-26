@@ -859,7 +859,7 @@ pub(crate) async fn begin_paid_job(
             .is_team_manager_or_admin(&state.pool)
             .await
             .map_err(RunError::Api)?;
-    let mut transaction = crate::job::routes::serializable(&state.pool).await?;
+    let mut transaction = crate::db::begin_serializable(&state.pool).await?;
     let outcome = submit_paid_job(
         &mut transaction,
         jobs_enabled,

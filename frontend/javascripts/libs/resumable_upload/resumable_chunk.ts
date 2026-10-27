@@ -256,8 +256,8 @@ export class ResumableChunk {
       message = await response.text();
     } catch (error: any) {
       if (signal.aborted) return null;
-      // Network errors and timeouts are retried indefinitely, only HTTP errors count
-      // towards maxChunkRetries.
+      // Network errors and timeouts are retried indefinitely. Only HTTP errors are checked
+      // against maxChunkRetries, although every retry increments this.retries.
       return fetchSignal.hasTimedOut() ? "Timeout" : error.message;
     } finally {
       fetchSignal.dispose();

@@ -7,7 +7,7 @@
 //! route's "Could not start …" message; the cause is reported in Play's `chain`
 //! entry (see [`Failure`]).
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     body::Bytes,
     extract::{
         FromRequestParts, State,
@@ -27,6 +27,7 @@ use crate::{
     dataset::create::{validate_dataset_name, validate_layer_name_lax},
     error::ApiError,
     job::routes::NOT_ENOUGH_CREDITS,
+    state::JobsEnabled,
     stores::client::ServiceClients,
     system::application_info::MiscState,
     util::id::ObjectId,
@@ -93,12 +94,7 @@ const JOBS_WRITING_TO_STORAGE: [&str; 7] = [
     "materialize_volume_annotation",
 ];
 
-#[derive(Clone)]
-struct SubmitRoutes {
-    enabled: bool,
-}
-
-pub fn router(enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route(
             "/jobs/run/computeMeshFile/{datasetId}",
@@ -126,7 +122,6 @@ pub fn router(enabled: bool) -> Router<AppState> {
             "/jobs/run/renderAnimation/{datasetId}",
             post(render_animation),
         )
-        .layer(Extension(SubmitRoutes { enabled }))
 }
 
 // ---------------------------------------------------------------------------
@@ -889,7 +884,7 @@ pub(crate) async fn begin_paid_job(
 async fn run_submission(
     state: &AppState,
     misc: &MiscState,
-    routes: &SubmitRoutes,
+    jobs_enabled: bool,
     user: &AuthUser,
     submission: Submission<'_>,
     paid: Option<(BoundingBox, String)>,
@@ -898,7 +893,7 @@ async fn run_submission(
     let job_id = match paid {
         None => {
             let mut transaction = state.pool.begin().await?;
-            let job_id = submit_job(&mut transaction, routes.enabled, user, &submission)
+            let job_id = submit_job(&mut transaction, jobs_enabled, user, &submission)
                 .await
                 .map_err(|error| error.wrap(submit_failed))?;
             transaction.commit().await?;
@@ -911,7 +906,7 @@ async fn run_submission(
             begin_paid_job(
                 state,
                 misc,
-                routes.enabled,
+                jobs_enabled,
                 user,
                 &submission,
                 bounding_box,
@@ -939,7 +934,7 @@ async fn run_submission(
 async fn compute_mesh_file(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(routes): Extension<SubmitRoutes>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
 ) -> RunResult<Json<Value>> {
     let dataset_id = dataset_id(&mut parts, &state).await?;
@@ -968,7 +963,7 @@ async fn compute_mesh_file(
     run_submission(
         &state,
         &misc,
-        &routes,
+        jobs_enabled,
         &user,
         submission,
         None,
@@ -980,7 +975,7 @@ async fn compute_mesh_file(
 async fn compute_segment_index_file(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(routes): Extension<SubmitRoutes>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
 ) -> RunResult<Json<Value>> {
     let dataset_id = dataset_id(&mut parts, &state).await?;
@@ -1005,7 +1000,7 @@ async fn compute_segment_index_file(
     run_submission(
         &state,
         &misc,
-        &routes,
+        jobs_enabled,
         &user,
         submission,
         None,
@@ -1017,7 +1012,7 @@ async fn compute_segment_index_file(
 async fn infer_mitochondria(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(routes): Extension<SubmitRoutes>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
 ) -> RunResult<Json<Value>> {
     let dataset_id = dataset_id(&mut parts, &state).await?;
@@ -1059,7 +1054,7 @@ async fn infer_mitochondria(
     run_submission(
         &state,
         &misc,
-        &routes,
+        jobs_enabled,
         &user,
         submission,
         Some((target_bounding_box, comment)),
@@ -1071,7 +1066,7 @@ async fn infer_mitochondria(
 async fn align_sections(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(routes): Extension<SubmitRoutes>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
     body: Result<Bytes, BytesRejection>,
 ) -> RunResult<Json<Value>> {
@@ -1120,7 +1115,7 @@ async fn align_sections(
     run_submission(
         &state,
         &misc,
-        &routes,
+        jobs_enabled,
         &user,
         submission,
         Some((finest_mag_box, comment)),
@@ -1154,7 +1149,7 @@ async fn export_tiff(
     State(state): State<AppState>,
     State(clients): State<ServiceClients>,
     State(misc): State<MiscState>,
-    Extension(routes): Extension<SubmitRoutes>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
 ) -> RunResult<Json<Value>> {
     let dataset_id = dataset_id(&mut parts, &state).await?;
@@ -1251,7 +1246,7 @@ async fn export_tiff(
     run_submission(
         &state,
         &misc,
-        &routes,
+        jobs_enabled,
         &user,
         submission,
         None,
@@ -1264,7 +1259,7 @@ async fn materialize_volume_annotation(
     State(state): State<AppState>,
     State(clients): State<ServiceClients>,
     State(misc): State<MiscState>,
-    Extension(routes): Extension<SubmitRoutes>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
 ) -> RunResult<Json<Value>> {
     let dataset_id = dataset_id(&mut parts, &state).await?;
@@ -1315,7 +1310,7 @@ async fn materialize_volume_annotation(
     run_submission(
         &state,
         &misc,
-        &routes,
+        jobs_enabled,
         &user,
         submission,
         None,
@@ -1327,7 +1322,7 @@ async fn materialize_volume_annotation(
 async fn find_largest_segment_id(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(routes): Extension<SubmitRoutes>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
 ) -> RunResult<Json<Value>> {
     let dataset_id = dataset_id(&mut parts, &state).await?;
@@ -1353,7 +1348,7 @@ async fn find_largest_segment_id(
     run_submission(
         &state,
         &misc,
-        &routes,
+        jobs_enabled,
         &user,
         submission,
         None,
@@ -1419,7 +1414,7 @@ async fn render_animation(
     State(state): State<AppState>,
     State(clients): State<ServiceClients>,
     State(misc): State<MiscState>,
-    Extension(routes): Extension<SubmitRoutes>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
     body: Result<Bytes, BytesRejection>,
 ) -> RunResult<Json<Value>> {
@@ -1487,7 +1482,7 @@ async fn render_animation(
     run_submission(
         &state,
         &misc,
-        &routes,
+        jobs_enabled,
         &user,
         submission,
         None,

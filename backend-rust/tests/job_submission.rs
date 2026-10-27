@@ -66,8 +66,9 @@ fn app(db: &TestDb, enabled: bool) -> Router {
         ..ServiceClientConfig::default()
     })
     .unwrap();
-    webknossos_backend::job::submission::router(enabled).with_state(
+    webknossos_backend::job::submission::router().with_state(
         AppState::builder(db.pool.clone())
+            .jobs_enabled(enabled)
             .misc(MiscConfig {
                 jobs_enabled: enabled,
                 ..MiscConfig::default()

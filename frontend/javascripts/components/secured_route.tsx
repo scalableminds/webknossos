@@ -40,7 +40,7 @@ function SecuredRoute({
     if (id) {
       try {
         const annotationInformation = unwrapOrThrow(
-          await getUnversionedAnnotationInformation(id || ""),
+          await getUnversionedAnnotationInformation(id),
         );
         return annotationInformation.visibility === "Public";
       } catch (_ex) {

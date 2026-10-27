@@ -84,7 +84,7 @@ exports[`Misc APIs (E2E)  > getFeatureToggles() 1`] = `
   "recommendWkorgInstance": true,
   "registerToDefaultOrgaEnabled": true,
   "segmentAnythingEnabled": false,
-  "supportAiAgentUrl": "https://docs.webknossos.org/webhooks/webknossos/ask",
+  "supportAiAgentUrl": "https://docs.webknossos.org/webhooks/webknossos-combined/ask",
   "taskReopenAllowedInSeconds": 30,
   "voxelyticsEnabled": true,
 }

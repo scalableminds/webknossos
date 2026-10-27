@@ -47,6 +47,11 @@ export interface FloodFillResult extends DriverResult {
    */
   wasBoundingBoxExceeded: boolean;
   /**
+   * True iff the fill stopped early because it reached the resolver's voxel
+   * limit. The true region is then larger than what was written.
+   */
+  wasVoxelLimitExceeded: boolean;
+  /**
    * Tight bounding box around every written voxel, in mag-1 (global) space —
    * the same space `addUserBoundingBoxAction` expects. Null if nothing was
    * written (including the seed-already-matches no-op).
@@ -86,18 +91,19 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
         checkLineIntersection(splitBoundaryMesh, V3.scale3(from, mag), V3.scale3(to, mag))
     : undefined;
 
-  const { bucketWrites, wasBoundingBoxExceeded, coveredBoundingBox } = await resolveFloodFill(
-    {
-      kind: "floodFill",
-      seed: options.seed,
-      is3D: options.is3D,
-      bounds: options.bounds,
-      isBlocked,
-    },
-    ctx,
-    adapter,
-    options.signal,
-  );
+  const { bucketWrites, wasBoundingBoxExceeded, wasVoxelLimitExceeded, coveredBoundingBox } =
+    await resolveFloodFill(
+      {
+        kind: "floodFill",
+        seed: options.seed,
+        is3D: options.is3D,
+        bounds: options.bounds,
+        isBlocked,
+      },
+      ctx,
+      adapter,
+      options.signal,
+    );
 
   const transaction = new VolumeTransaction(
     `floodfill-${Date.now()}`,
@@ -143,6 +149,7 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
     mags: [...new Set(diff.bucketDiffs.map((d) => d.address[3]))].sort((a, b) => a - b),
     durationMs: performance.now() - startedAt,
     wasBoundingBoxExceeded,
+    wasVoxelLimitExceeded,
     coveredBoundingBox: coveredBoundingBoxMag1,
   };
 }

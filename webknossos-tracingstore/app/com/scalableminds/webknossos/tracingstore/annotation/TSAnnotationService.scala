@@ -824,14 +824,26 @@ class TSAnnotationService @Inject() (
     tracingDataStore.skeletons
       .get[SkeletonTracing](tracingId, version, mayBeEmpty = Some(true))(fromProtoBytes[SkeletonTracing])
 
+  private def assertTemporaryAnnotationHasLayer(annotationId: ObjectId, tracingId: String)(using
+      ec: ExecutionContext
+  ): Fox[Unit] =
+    for {
+      annotation <- temporaryTracingService.getAnnotation(annotationId)
+      _ <- Fox.fromBool(annotation.annotationLayers.exists(_.tracingId == tracingId)) ?~> Msg.Annotation.notFound
+    } yield ()
+
   def findVolume(annotationId: ObjectId, tracingId: String, version: Option[Long] = None)(using
       tc: TokenContext,
       ec: ExecutionContext
   ): Fox[VolumeTracing] =
     for {
-      isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
+      isTemporaryAnnotation <- temporaryTracingService.isTemporaryAnnotation(annotationId)
       tracing <-
-        if (isTemporaryTracing) temporaryTracingService.getVolume(tracingId)
+        if (isTemporaryAnnotation)
+          for {
+            _ <- assertTemporaryAnnotationHasLayer(annotationId, tracingId)
+            tracing <- temporaryTracingService.getVolume(tracingId)
+          } yield tracing
         else
           for {
             annotation <- getWithTracings(annotationId, version)
@@ -849,9 +861,13 @@ class TSAnnotationService @Inject() (
       Fox.successful(skeletonTracingService.dummyTracing)
     else {
       for {
-        isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
+        isTemporaryAnnotation <- temporaryTracingService.isTemporaryAnnotation(annotationId)
         tracing <-
-          if (isTemporaryTracing) temporaryTracingService.getSkeleton(tracingId)
+          if (isTemporaryAnnotation)
+            for {
+              _ <- assertTemporaryAnnotationHasLayer(annotationId, tracingId)
+              tracing <- temporaryTracingService.getSkeleton(tracingId)
+            } yield tracing
           else
             for {
               annotation <- getWithTracings(annotationId, version)

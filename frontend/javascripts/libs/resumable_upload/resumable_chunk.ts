@@ -223,6 +223,8 @@ export class ResumableChunk {
     const targetUrl = getTargetURI(this.resumableObj, queryParameters);
     const fetchSignal = this.withFetchTimeout(signal);
 
+    let status: "success" | "error";
+    let message: string;
     try {
       const response = await fetch(targetUrl, {
         method: "POST",
@@ -233,21 +235,17 @@ export class ResumableChunk {
       });
 
       if (response.ok) {
-        const message = await response.text();
-        if (signal.aborted) return null;
-        this.finish("success", message);
+        status = "success";
       } else if (
         this.getOpt("permanentErrors").includes(response.status) ||
         this.retries >= this.getOpt("maxChunkRetries")
       ) {
-        const message = await response.text();
-        if (signal.aborted) return null;
-        this.finish("error", message);
+        status = "error";
       } else {
         discardBody(response);
         return `Server responded with ${response.status}`;
       }
-      return null;
+      message = await response.text();
     } catch (error: any) {
       if (signal.aborted) return null;
       // Network errors and timeouts are retried indefinitely, only HTTP errors count
@@ -256,6 +254,12 @@ export class ResumableChunk {
     } finally {
       fetchSignal.dispose();
     }
+
+    if (signal.aborted) return null;
+    // Outside of the try block, so that an error thrown by a callback isn't mistaken for a
+    // network error, which would upload the finished chunk again.
+    this.finish(status, message);
+    return null;
   }
 
   // Combines the run's signal with the fetchTimeout option. dispose() must be called once the

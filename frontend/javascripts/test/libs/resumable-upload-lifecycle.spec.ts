@@ -169,6 +169,23 @@ describe("Resumable chunk lifecycle", () => {
     expect(fileErrorSpy).toHaveBeenCalled();
   });
 
+  it("should not upload a finished chunk again when finishing it throws", async () => {
+    const requests = installControllableFetch();
+    const resumable = createUpload({ testChunks: false });
+    await sleep(0);
+
+    resumable.upload();
+    await sleep(0);
+    vi.spyOn(resumable, "uploadNextChunk").mockImplementation(() => {
+      throw new Error("Scheduler failed");
+    });
+    requests[0].resolve(new Response("ok"));
+    await sleep(0);
+
+    expect(resumable.files[0].chunks[0].status()).toBe("success");
+    expect(requests.filter((r) => r.chunkNumber === 1)).toHaveLength(1);
+  });
+
   it("should keep retrying network errors beyond maxChunkRetries", async () => {
     let attempts = 0;
     const fetchMock = vi.fn(() =>

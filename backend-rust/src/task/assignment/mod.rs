@@ -36,9 +36,7 @@
 //!   after 60 minutes as in Scala).
 pub(crate) mod dao;
 
-use axum::{
-    Extension, Json as ResponseJson, Router, extract::State, http::StatusCode, routing::post,
-};
+use axum::{Json as ResponseJson, Router, extract::State, http::StatusCode, routing::post};
 use serde::Deserialize;
 use serde_json::Value;
 use sqlx::PgPool;
@@ -275,7 +273,7 @@ async fn manages_user(
 async fn assign_one(
     State(state): State<AppState>,
     State(tracing_store): State<TracingStoreClient>,
-    Extension(notification_emails): Extension<NotificationEmailService>,
+    State(notification_emails): State<NotificationEmailService>,
     user: AuthUser,
     Path(id): Path<String>,
     Query(query): Query<AssignQuery>,

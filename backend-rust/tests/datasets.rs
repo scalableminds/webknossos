@@ -23,16 +23,16 @@ fn app(db: &TestDb) -> Router {
         .merge(webknossos_backend::dataset::routes::read_router())
         .merge(webknossos_backend::dataset::routes::metadata_router())
         .merge(webknossos_backend::dataset::routes::lookup_router())
-        .layer(axum::Extension(
-            webknossos_backend::users::notification_emails::NotificationEmailService::new(
-                webknossos_backend::mail::MailSender::default(),
-                "http://localhost:9000",
-            ),
-        ))
         .with_state(
             AppState::builder(db.pool.clone())
                 .jobs_enabled(true)
                 .misc(offline_misc())
+                .notification_emails(
+                    webknossos_backend::users::notification_emails::NotificationEmailService::new(
+                        webknossos_backend::mail::MailSender::default(),
+                        "http://localhost:9000",
+                    ),
+                )
                 .build(),
         )
 }

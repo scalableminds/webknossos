@@ -1,7 +1,7 @@
 use crate::common;
 
 use axum::{
-    Extension, Router,
+    Router,
     body::{Body, to_bytes},
     http::{Request, StatusCode},
 };
@@ -24,14 +24,14 @@ fn app(database: &TestDb, mailer: &RecordingMailer, wkorg: bool) -> Router {
     };
     users::router()
         // Notification emails are covered by tests/notification_emails.rs.
-        .layer(Extension(NotificationEmailService::new(
-            MailSender::default(),
-            "http://localhost:9000",
-        )))
         .with_state(
             AppState::builder(database.pool.clone())
                 .browser_auth(config)
                 .mailer(MailSender::new(mailer.clone()))
+                .notification_emails(NotificationEmailService::new(
+                    MailSender::default(),
+                    "http://localhost:9000",
+                ))
                 .build(),
         )
 }

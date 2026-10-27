@@ -1,6 +1,6 @@
 //! AnnotationController.transfer / AnnotationService.transferAnnotationToUser:
 //! hand a saved annotation over to another user who can read its dataset.
-use axum::{Extension, Json, Router, extract::State, http::StatusCode, routing::patch};
+use axum::{Json, Router, extract::State, http::StatusCode, routing::patch};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -33,7 +33,7 @@ async fn transfer(
     State(state): State<AppState>,
     State(provider): State<AnnotationProvider>,
     State(JobsEnabled(jobs)): State<JobsEnabled>,
-    Extension(notification_emails): Extension<NotificationEmailService>,
+    State(notification_emails): State<NotificationEmailService>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,
     JsonBody(body): JsonBody<TransferParameters>,

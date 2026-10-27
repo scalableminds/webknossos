@@ -5,7 +5,7 @@
 //! rejects them) and writes to the database only for saved annotations.
 use crate::response::Messages;
 use axum::{
-    Extension, Json as ResponseJson, Router,
+    Json as ResponseJson, Router,
     extract::{RawQuery, State},
     http::StatusCode,
     routing::{get, patch},
@@ -279,7 +279,7 @@ async fn shared_teams(
 async fn update_shared_teams(
     State(state): State<AppState>,
     State(provider): State<AnnotationProvider>,
-    Extension(notification_emails): Extension<NotificationEmailService>,
+    State(notification_emails): State<NotificationEmailService>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,
     Json(body): Json<Vec<String>>,

@@ -88,10 +88,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
             public_url.as_str(),
         ),
     );
-    let notification_emails = crate::users::notification_emails::NotificationEmailService::new(
-        state.mailer.clone(),
-        &state.browser_auth.public_uri,
-    );
     let api = Router::new()
         .route("/health", get(|| async { "Ok" }))
         .merge(crate::annotation::router(annotation_mutex_expiry))
@@ -153,7 +149,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
             state.clone(),
             crate::auth::browser::cookie_middleware,
         ))
-        .layer(axum::Extension(notification_emails))
         .layer(axum::Extension(time_interaction_writer))
         .layer(axum::Extension(time_tracking))
         .layer(axum::Extension(

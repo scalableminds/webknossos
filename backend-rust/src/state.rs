@@ -8,7 +8,7 @@ use crate::{
         tracing_client::TracingStoreClient,
     },
     system::application_info::{MiscConfig, MiscState},
-    users::EmailVerification,
+    users::{EmailVerification, notification_emails::NotificationEmailService},
     voxelytics::{VoxelyticsConfig, routes::Voxelytics},
 };
 use axum::extract::FromRef;
@@ -29,6 +29,7 @@ pub struct AppState {
     pub jobs: JobsConfig,
     pub voxelytics: Voxelytics,
     pub email_verification: EmailVerification,
+    pub notification_emails: NotificationEmailService,
 }
 
 /// `features.jobsEnabled`.
@@ -50,6 +51,7 @@ pub struct AppStateBuilder {
     jobs: JobsConfig,
     voxelytics: VoxelyticsConfig,
     email_verification: bool,
+    notification_emails: Option<NotificationEmailService>,
 }
 
 impl AppState {
@@ -74,6 +76,7 @@ impl AppState {
             jobs: JobsConfig::default(),
             voxelytics: VoxelyticsConfig::default(),
             email_verification: true,
+            notification_emails: None,
         }
     }
 
@@ -156,6 +159,12 @@ impl AppStateBuilder {
         self
     }
 
+    /// A notification-email service other than the one sending through `mailer`.
+    pub fn notification_emails(mut self, service: NotificationEmailService) -> Self {
+        self.notification_emails = Some(service);
+        self
+    }
+
     pub fn build(self) -> AppState {
         let clients = self.clients.unwrap_or_else(|| {
             ServiceClients::new(self.service_client.clone())
@@ -168,6 +177,9 @@ impl AppStateBuilder {
         let annotation_provider = self
             .annotation_provider
             .unwrap_or_else(|| AnnotationProvider::new(self.pool.clone(), tracing_store.clone()));
+        let notification_emails = self.notification_emails.unwrap_or_else(|| {
+            NotificationEmailService::new(self.mailer.clone(), &self.browser_auth.public_uri)
+        });
         AppState {
             pool: self.pool,
             jobs_enabled: JobsEnabled(self.jobs_enabled),
@@ -181,6 +193,7 @@ impl AppStateBuilder {
             jobs: self.jobs,
             voxelytics: Voxelytics::new(self.voxelytics),
             email_verification: EmailVerification(self.email_verification),
+            notification_emails,
         }
     }
 }

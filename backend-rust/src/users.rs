@@ -6,7 +6,7 @@ use crate::auth::browser::onboarding::dao::delete_team_memberships_for_user;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::State,
     routing::{get, put},
 };
@@ -227,7 +227,7 @@ async fn update(
     Path(id): Path<PathObjectId>,
     State(verification): State<EmailVerification>,
     State(mailer): State<MailSender>,
-    Extension(notification_emails): Extension<NotificationEmailService>,
+    State(notification_emails): State<NotificationEmailService>,
     State(auth_config): State<BrowserAuthConfig>,
     RequestJson(body): RequestJson<UserUpdate>,
 ) -> ApiResult<Json<Value>> {

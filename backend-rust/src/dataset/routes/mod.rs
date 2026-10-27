@@ -1,5 +1,5 @@
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::State,
     routing::{get, patch},
 };
@@ -822,7 +822,7 @@ async fn delete_sharing_token(
 
 async fn update_teams(
     State(state): State<AppState>,
-    Extension(notification_emails): Extension<NotificationEmailService>,
+    State(notification_emails): State<NotificationEmailService>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
     RequestJson(requested): RequestJson<Vec<ObjectId>>,

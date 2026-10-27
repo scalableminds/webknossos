@@ -1,7 +1,7 @@
 use crate::common;
 
 use axum::{
-    Extension, Router,
+    Router,
     body::Body,
     extract::Request,
     http::{Method, StatusCode, header},
@@ -100,15 +100,15 @@ fn app(db: &TestDb) -> Router {
             webknossos_backend::annotation::sandbox::router()
                 .merge(webknossos_backend::annotation::transfer::router()),
         )
-        .layer(Extension(
-            webknossos_backend::users::notification_emails::NotificationEmailService::new(
-                webknossos_backend::mail::MailSender::default(),
-                "http://localhost:9000",
-            ),
-        ))
         .with_state(
             AppState::builder(db.pool.clone())
                 .annotation_provider(provider)
+                .notification_emails(
+                    webknossos_backend::users::notification_emails::NotificationEmailService::new(
+                        webknossos_backend::mail::MailSender::default(),
+                        "http://localhost:9000",
+                    ),
+                )
                 .build(),
         )
 }

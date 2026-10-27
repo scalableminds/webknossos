@@ -69,6 +69,21 @@ async fn call(
     (status, body)
 }
 
+/// A workflow report with its tasks in name order (task runs carry no total order).
+fn sorted_tasks(report: &Value) -> Value {
+    let mut report = report.clone();
+    let tasks = report["tasks"].as_array_mut().unwrap();
+    tasks.sort_by_key(|task| task["taskName"].as_str().unwrap().to_owned());
+    report
+}
+
+/// The same GET under the oldest supported API version answers the same body.
+async fn assert_legacy_body(app: &Router, uri: &str, token: &str, body: &Value) {
+    let legacy = uri.replacen("/api/", "/api/v10/", 1);
+    let (status, legacy_body) = call(app, Method::GET, &legacy, Some(token), None).await;
+    assert_eq!((status, &legacy_body), (200, body), "{legacy}");
+}
+
 fn error(body: &Value) -> &str {
     body["messages"][0]["error"].as_str().unwrap_or_default()
 }
@@ -304,6 +319,48 @@ async fn workflows_events_reports_and_statistics() {
     )
     .await;
     assert_eq!(status, 200, "{body}");
+    let run2_id: String =
+        sqlx::query_scalar("SELECT _id FROM webknossos.voxelytics_runs WHERE name = 'run-2'")
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
+    // The listing query has no ORDER BY.
+    let mut sorted = body.as_array().unwrap().clone();
+    sorted.sort_by_key(|workflow| workflow["hash"].as_str().unwrap().to_owned());
+    assert_eq!(
+        Value::Array(sorted),
+        json!([
+            {
+                "name": "Workflow wf1", "hash": "wf1", "beginTime": 1000, "endTime": 7000,
+                "state": "COMPLETE",
+                "taskCounts": {"total": 2, "failed": 0, "skipped": 1, "complete": 1, "cancelled": 0,
+                               "fileSize": 150, "inodeCount": 4},
+                "runs": [{
+                    "id": run_id, "name": "run-1", "hostUserName": "host-user", "hostName": "host",
+                    "voxelyticsVersion": "1.0", "workflowHash": "wf1", "state": "COMPLETE",
+                    "beginTime": 1000, "endTime": 7000,
+                    "taskCounts": {"total": 2, "failed": 0, "skipped": 1, "complete": 1, "cancelled": 0,
+                                   "fileSize": 150, "inodeCount": 4},
+                    "userFirstName": "Rust", "userLastName": "Test"
+                }]
+            },
+            {
+                "name": "Workflow wf2", "hash": "wf2", "beginTime": 1000, "endTime": 2000,
+                "state": "STALE",
+                "taskCounts": {"total": 2, "failed": 1, "skipped": 0, "complete": 0, "cancelled": 0,
+                               "fileSize": 100, "inodeCount": 2},
+                "runs": [{
+                    "id": run2_id, "name": "run-2", "hostUserName": "host-user", "hostName": "host",
+                    "voxelyticsVersion": "1.0", "workflowHash": "wf2", "state": "STALE",
+                    "beginTime": 1000, "endTime": 2000,
+                    "taskCounts": {"total": 2, "failed": 1, "skipped": 0, "complete": 0, "cancelled": 0,
+                                   "fileSize": 100, "inodeCount": 2},
+                    "userFirstName": "Rust", "userLastName": "Test"
+                }]
+            }
+        ])
+    );
+    assert_legacy_body(&app, "/api/voxelytics/workflows", &member.token, &body).await;
     let workflows = body.as_array().unwrap();
     assert_eq!(workflows.len(), 2);
     let wf1 = workflows.iter().find(|w| w["hash"] == "wf1").unwrap();
@@ -356,6 +413,65 @@ async fn workflows_events_reports_and_statistics() {
     )
     .await;
     assert_eq!(status, 200, "{body}");
+    fn counts(total: i64, complete: i64) -> Value {
+        json!({"total": total, "failed": 0, "skipped": 0, "complete": complete, "cancelled": 0})
+    }
+    let task_a_id = &body["artifacts"]["taskA"]["out"]["taskId"];
+    let vx_artifact = |id: &Value, name: &str, size: i64| {
+        json!({
+            "artifactId": id, "taskId": task_a_id, "name": name, "path": format!("/data/{name}"),
+            "fileSize": size, "inodeCount": 2, "version": "1",
+            "metadata": {"attributes": {"a": 1}, "iframes": {}, "links": {}}, "taskName": "taskA"
+        })
+    };
+    let workflow_config =
+        json!({"global_parameters": {"p": 1}, "paths": ["/data"], "schema_version": 2});
+    assert_eq!(
+        sorted_tasks(&body),
+        json!({
+            "config": {
+                "global_parameters": {"p": 1}, "paths": ["/data"], "schema_version": 2,
+                "tasks": {
+                    "taskA": {"config": {"x": 1}, "description": "first", "distribution": {"strategy": "local"},
+                              "inputs": {}, "output_paths": {}, "task": "a.task"},
+                    "taskB": {"config": {}, "description": null, "distribution": {}, "inputs": null,
+                              "output_paths": {}, "task": "b.task"}
+                }
+            },
+            "artifacts": {"taskA": {
+                "out": vx_artifact(&body["artifacts"]["taskA"]["out"]["artifactId"], "out", 100),
+                "out2": vx_artifact(&body["artifacts"]["taskA"]["out2"]["artifactId"], "out2", 50)
+            }},
+            "runs": [{
+                "id": run_id, "name": "run-1", "hostUserName": "host-user", "hostName": "host",
+                "voxelyticsVersion": "1.0", "workflowHash": "wf1", "workflowYamlContent": "steps: []",
+                "workflowConfig": workflow_config, "state": "COMPLETE", "beginTime": 1000, "endTime": 7000
+            }],
+            "tasks": [
+                {
+                    "taskName": "taskA", "state": "COMPLETE", "beginTime": 1000, "endTime": 5000,
+                    "currentExecutionId": null, "chunkCounts": counts(2, 2),
+                    "runs": [{"runId": run_id, "state": "COMPLETE", "beginTime": 1000, "endTime": 5000,
+                              "currentExecutionId": null, "chunkCounts": counts(2, 2)}]
+                },
+                {
+                    "taskName": "taskB", "state": "SKIPPED", "beginTime": null, "endTime": null,
+                    "currentExecutionId": null, "chunkCounts": counts(0, 0),
+                    "runs": [{"runId": run_id, "state": "SKIPPED", "beginTime": null, "endTime": null,
+                              "currentExecutionId": null, "chunkCounts": counts(0, 0)}]
+                }
+            ],
+            "workflow": {"name": "Workflow wf1", "hash": "wf1", "yamlContent": "steps: []"}
+        })
+    );
+    assert!(task_a_id.is_string());
+    assert_legacy_body(
+        &app,
+        "/api/voxelytics/workflows/wf1",
+        &other_member.token,
+        &body,
+    )
+    .await;
     assert_eq!(
         body["workflow"],
         json!({"name": "Workflow wf1", "hash": "wf1", "yamlContent": "steps: []"})
@@ -477,6 +593,13 @@ async fn workflows_events_reports_and_statistics() {
         }])
     );
     assert!((body[0]["memory"]["stddev"].as_f64().unwrap() - 14.142135).abs() < 1e-5);
+    assert_legacy_body(
+        &app,
+        "/api/voxelytics/workflows/wf1/chunkStatistics?taskName=taskA",
+        &member.token,
+        &body,
+    )
+    .await;
     let (status, _) = call(
         &app,
         Method::GET,
@@ -516,6 +639,15 @@ async fn workflows_events_reports_and_statistics() {
         json!([{"taskName": "taskA", "artifactName": "out", "path": "p1", "resolvedPath": "/r/p1",
                 "timestamp": 6000, "checksumMethod": "md5", "checksum": "aa", "fileSize": 7, "lastModified": 100}])
     );
+    assert_legacy_body(
+        &app,
+        &format!(
+            "/api/voxelytics/workflows/wf1/artifactChecksums?taskName=taskA&artifactName=out&runId={run_id}"
+        ),
+        &member.token,
+        &body,
+    )
+    .await;
     let (_, body) = call(
         &app,
         Method::GET,
@@ -736,6 +868,28 @@ async fn reruns_report_the_computing_chunk_and_scoped_aggregates() {
     )
     .await;
     assert_eq!(status, 200, "{body}");
+    let zero_stats = json!({"max": 0, "median": 0, "stddev": 0});
+    assert_eq!(
+        body,
+        json!([{
+            "executionId": "main",
+            "chunkCounts": {"total": 2, "failed": 0, "skipped": 0, "complete": 2, "cancelled": 0},
+            "beginTime": ms("2026-10-12T09:00:00Z"),
+            "endTime": ms("2026-10-13T08:00:02Z"),
+            "wallTime": 602,
+            "memory": zero_stats,
+            "cpuUser": zero_stats,
+            "cpuSystem": zero_stats,
+            "duration": {"max": 600, "median": 600, "stddev": 0, "sum": 600}
+        }])
+    );
+    assert_legacy_body(
+        &app,
+        "/api/voxelytics/workflows/wfr/chunkStatistics?taskName=export",
+        &admin.token,
+        &body,
+    )
+    .await;
     assert_eq!(body.as_array().unwrap().len(), 1);
     assert_eq!(body[0]["executionId"], "main");
     assert_eq!(
@@ -761,6 +915,47 @@ async fn reruns_report_the_computing_chunk_and_scoped_aggregates() {
     )
     .await;
     assert_eq!(status, 200, "{body}");
+    let report_run = |id: &str, name: &str, begin: &str, end: &str| {
+        json!({
+            "id": id, "name": name, "hostUserName": "u", "hostName": "h", "voxelyticsVersion": "1.0",
+            "workflowHash": "wfr", "workflowYamlContent": null, "workflowConfig": {},
+            "state": "COMPLETE", "beginTime": ms(begin), "endTime": ms(end)
+        })
+    };
+    let report_artifact = |id: &str, name: &str, path: &str, size: i64| {
+        json!({
+            "artifactId": id, "taskId": task1, "name": name, "path": path, "fileSize": size,
+            "inodeCount": 1, "version": "0", "metadata": {}, "taskName": "export"
+        })
+    };
+    let complete = json!({"total": 2, "failed": 0, "skipped": 0, "complete": 2, "cancelled": 0});
+    assert_eq!(
+        body,
+        json!({
+            "config": {"tasks": {"export": {"task": "Export"}}},
+            "artifacts": {"export": {
+                "a-art": report_artifact(&artifact_a, "a-art", "/data/a", 20),
+                "b-art": report_artifact(&artifact_b, "b-art", "/data/b", 10)
+            }},
+            "runs": [
+                report_run(&run2, "run-2", "2026-10-13T08:00:00Z", "2026-10-13T09:00:00Z"),
+                report_run(&run1, "run-1", "2026-10-12T08:00:00Z", "2026-10-12T10:00:00Z")
+            ],
+            "tasks": [{
+                "taskName": "export", "state": "COMPLETE", "beginTime": ms("2026-10-12T08:58:00Z"),
+                "endTime": null, "currentExecutionId": null, "chunkCounts": complete,
+                "runs": [
+                    {"runId": run1, "state": "COMPLETE", "beginTime": ms("2026-10-12T08:58:00Z"),
+                     "endTime": null, "currentExecutionId": null, "chunkCounts": complete},
+                    {"runId": run2, "state": "SKIPPED", "beginTime": null, "endTime": null,
+                     "currentExecutionId": null,
+                     "chunkCounts": {"total": 2, "failed": 0, "skipped": 2, "complete": 0, "cancelled": 0}}
+                ]
+            }],
+            "workflow": {"name": "Reruns", "hash": "wfr", "yamlContent": null}
+        })
+    );
+    assert_legacy_body(&app, "/api/voxelytics/workflows/wfr", &admin.token, &body).await;
     let export = &body["tasks"][0];
     assert_eq!(export["taskName"], "export");
     assert_eq!(
@@ -794,6 +989,27 @@ async fn reruns_report_the_computing_chunk_and_scoped_aggregates() {
     )
     .await;
     assert_eq!(status, 200, "{body}");
+    let checksum = |artifact: &str, path: &str, checksum: &str| {
+        json!({
+            "taskName": "export", "artifactName": artifact, "path": path, "resolvedPath": path,
+            "timestamp": ms("2026-10-12T10:00:00Z"), "checksumMethod": "md5", "checksum": checksum,
+            "fileSize": 1, "lastModified": ms("2026-10-12T10:00:00Z")
+        })
+    };
+    assert_eq!(
+        body,
+        json!([
+            checksum("a-art", "z.txt", "a1"),
+            checksum("b-art", "a.txt", "b1")
+        ])
+    );
+    assert_legacy_body(
+        &app,
+        "/api/voxelytics/workflows/wfr/artifactChecksums?taskName=export",
+        &admin.token,
+        &body,
+    )
+    .await;
     let checksums: Vec<(&str, &str, &str)> = body
         .as_array()
         .unwrap()
@@ -831,6 +1047,36 @@ async fn reruns_report_the_computing_chunk_and_scoped_aggregates() {
     )
     .await;
     assert_eq!(status, 200, "{body}");
+    let listing_run = |id: &str, name: &str, begin: &str, end: &str, counts: Value| {
+        json!({
+            "id": id, "name": name, "hostUserName": "u", "hostName": "h", "voxelyticsVersion": "1.0",
+            "workflowHash": "wfr", "state": "COMPLETE", "beginTime": ms(begin), "endTime": ms(end),
+            "taskCounts": counts, "userFirstName": "Rust", "userLastName": "Test"
+        })
+    };
+    let run1_counts = json!({"total": 1, "failed": 0, "skipped": 0, "complete": 1, "cancelled": 0,
+                             "fileSize": 30, "inodeCount": 2});
+    let mut listing = body.clone();
+    // The listing query has no ORDER BY.
+    listing[0]["runs"]
+        .as_array_mut()
+        .unwrap()
+        .sort_by_key(|run| run["name"].as_str().unwrap().to_owned());
+    assert_eq!(
+        listing,
+        json!([{
+            "name": "Reruns", "hash": "wfr",
+            "beginTime": ms("2026-10-12T08:00:00Z"), "endTime": ms("2026-10-13T09:00:00Z"),
+            "state": "COMPLETE", "taskCounts": run1_counts,
+            "runs": [
+                listing_run(&run1, "run-1", "2026-10-12T08:00:00Z", "2026-10-12T10:00:00Z", run1_counts.clone()),
+                listing_run(&run2, "run-2", "2026-10-13T08:00:00Z", "2026-10-13T09:00:00Z",
+                    json!({"total": 1, "failed": 0, "skipped": 1, "complete": 0, "cancelled": 0,
+                           "fileSize": 0, "inodeCount": 0}))
+            ]
+        }])
+    );
+    assert_legacy_body(&app, "/api/voxelytics/workflows", &admin.token, &body).await;
     let workflows = body.as_array().unwrap();
     assert_eq!(workflows.len(), 1);
     let run = workflows[0]["runs"]

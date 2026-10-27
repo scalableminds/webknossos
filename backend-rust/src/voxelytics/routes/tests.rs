@@ -51,3 +51,48 @@ fn state_times_follow_the_event_state() {
     );
     assert_eq!(state_times("SKIPPED", t), (Value::Null, Value::Null));
 }
+
+#[test]
+fn report_entries_omit_absent_options_and_link_foreign_workflows() {
+    let id = ObjectId::parse("0123456789abcdef01234567").unwrap();
+    let artifact = dao::ArtifactEntry {
+        artifact_id: id.clone(),
+        task_id: id.clone(),
+        name: "out".into(),
+        path: "/out".into(),
+        file_size: 1,
+        inode_count: 2,
+        version: "1".into(),
+        metadata: json!({}),
+        task_name: "t".into(),
+        foreign_workflow: Some(("other".into(), id.clone())),
+    };
+    assert_eq!(
+        serde_json::to_value(&artifact).unwrap(),
+        json!({
+            "artifactId": id, "taskId": id, "name": "out", "path": "/out", "fileSize": 1,
+            "inodeCount": 2, "version": "1", "metadata": {}, "taskName": "t",
+            "foreignWorkflow": ["other", id]
+        })
+    );
+    let run = dao::RunEntry {
+        id: id.clone(),
+        name: "r".into(),
+        host_user_name: "u".into(),
+        host_name: "h".into(),
+        voxelytics_version: "1".into(),
+        workflow_hash: "w".into(),
+        workflow_yaml_content: None,
+        workflow_config: json!({}),
+        state: "PENDING".into(),
+        begin_time: None,
+        end_time: None,
+    };
+    assert_eq!(
+        serde_json::to_value(&run).unwrap(),
+        json!({
+            "id": id, "name": "r", "hostUserName": "u", "hostName": "h", "voxelyticsVersion": "1",
+            "workflowHash": "w", "workflowYamlContent": null, "workflowConfig": {}, "state": "PENDING"
+        })
+    );
+}

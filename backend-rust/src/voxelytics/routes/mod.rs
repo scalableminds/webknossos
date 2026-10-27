@@ -4,7 +4,10 @@
 //! (400 otherwise). Reads are scoped to the user's organization; non-admin,
 //! non-dataset-manager users list only their own runs, but may open any run
 //! report of their organization (Play's `allowUnlisted`).
-use std::{collections::HashMap, time::Duration};
+use std::{
+    collections::{BTreeMap, HashMap},
+    time::Duration,
+};
 
 use axum::{
     Json, Router,
@@ -14,7 +17,7 @@ use axum::{
     routing::{get, post},
 };
 use chrono::{DateTime, SecondsFormat, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
 use crate::{
@@ -112,17 +115,6 @@ fn ensure_enabled(misc: &MiscState) -> ApiResult<()> {
         Ok(())
     } else {
         Err(ApiError::bad_request(crate::msg::voxelytics::NOT_ENABLED))
-    }
-}
-
-fn millis(time: &Timestamp) -> Value {
-    time.map_or(Value::Null, |t| json!(t.timestamp_millis()))
-}
-
-/// Json.format of a case class omits `None` fields.
-fn insert_opt(object: &mut Map<String, Value>, key: &str, value: Value) {
-    if !value.is_null() {
-        object.insert(key.into(), value);
     }
 }
 
@@ -489,7 +481,7 @@ async fn list_workflows(
     ensure_enabled(&misc)?;
     let runs = dao::find_runs_for_workflow_listing(&state.pool, &user, vx.stale_timeout).await?;
     if runs.is_empty() {
-        return Ok(Json(json!([])).into_response());
+        return Ok(Json(Vec::<WorkflowListEntry>::new()).into_response());
     }
     let mut hashes: Vec<String> = runs.iter().map(|r| r.workflow_hash.clone()).collect();
     hashes.sort();
@@ -508,7 +500,7 @@ async fn list_workflows(
     if workflows.is_empty() {
         return Err(ApiError::not_found(NO_WORKFLOW_FOUND));
     }
-    let result: Vec<Value> = workflows
+    let result: Vec<WorkflowListEntry> = workflows
         .iter()
         .filter_map(|workflow| {
             let workflow_runs: Vec<&dao::WorkflowListingRunEntry> = runs
@@ -524,78 +516,75 @@ async fn list_workflows(
             }
             let begin_time = workflow_runs.iter().map(|r| r.begin_time).min().flatten();
             let end_time = workflow_runs.iter().filter_map(|r| r.end_time).max();
-            Some(json!({
-                "name": workflow.name,
-                "hash": workflow.hash,
-                "beginTime": millis(&begin_time),
-                "endTime": millis(&end_time),
-                "state": latest.state,
-                "taskCounts": task_counts.get(&workflow.hash).map(dao::TaskCounts::to_json),
-                "runs": workflow_runs.iter().map(|run| listing_run_json(run)).collect::<Vec<_>>(),
-            }))
+            Some(WorkflowListEntry {
+                name: &workflow.name,
+                hash: &workflow.hash,
+                begin_time,
+                end_time,
+                state: &latest.state,
+                task_counts: task_counts.get(&workflow.hash),
+                runs: workflow_runs,
+            })
         })
         .collect();
-    Ok(Json(Value::Array(result)).into_response())
+    Ok(Json(result).into_response())
 }
 
-fn listing_run_json(run: &dao::WorkflowListingRunEntry) -> Value {
-    let mut object = Map::new();
-    object.insert("id".into(), json!(run.id));
-    object.insert("name".into(), json!(run.name));
-    object.insert("hostUserName".into(), json!(run.host_user_name));
-    object.insert("hostName".into(), json!(run.host_name));
-    object.insert("voxelyticsVersion".into(), json!(run.voxelytics_version));
-    object.insert("workflowHash".into(), json!(run.workflow_hash));
-    object.insert("state".into(), json!(run.state));
-    insert_opt(&mut object, "beginTime", millis(&run.begin_time));
-    insert_opt(&mut object, "endTime", millis(&run.end_time));
-    object.insert("taskCounts".into(), run.task_counts.to_json());
-    insert_opt(&mut object, "userFirstName", json!(run.user_first_name));
-    insert_opt(&mut object, "userLastName", json!(run.user_last_name));
-    Value::Object(object)
+/// A workflow of the listing with its visible runs.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WorkflowListEntry<'a> {
+    name: &'a str,
+    hash: &'a str,
+    #[serde(with = "chrono::serde::ts_milliseconds_option")]
+    begin_time: Timestamp,
+    #[serde(with = "chrono::serde::ts_milliseconds_option")]
+    end_time: Timestamp,
+    state: &'a str,
+    task_counts: Option<&'a dao::TaskCounts>,
+    runs: Vec<&'a dao::WorkflowListingRunEntry>,
 }
 
-fn run_json(run: &dao::RunEntry) -> Value {
-    let mut object = Map::new();
-    object.insert("id".into(), json!(run.id));
-    object.insert("name".into(), json!(run.name));
-    object.insert("hostUserName".into(), json!(run.host_user_name));
-    object.insert("hostName".into(), json!(run.host_name));
-    object.insert("voxelyticsVersion".into(), json!(run.voxelytics_version));
-    object.insert("workflowHash".into(), json!(run.workflow_hash));
-    object.insert(
-        "workflowYamlContent".into(),
-        json!(run.workflow_yaml_content),
-    );
-    object.insert("workflowConfig".into(), run.workflow_config.clone());
-    object.insert("state".into(), json!(run.state));
-    insert_opt(&mut object, "beginTime", millis(&run.begin_time));
-    insert_opt(&mut object, "endTime", millis(&run.end_time));
-    Value::Object(object)
+/// The workflow report of getWorkflow.
+#[derive(Serialize)]
+struct WorkflowReport<'a> {
+    /// workflowConfigPublicWrites: the stored run config plus each task's config and name.
+    config: Map<String, Value>,
+    /// artifactsPublicWrites: {taskName: {artifactName: artifact}}.
+    artifacts: BTreeMap<&'a str, BTreeMap<&'a str, &'a dao::ArtifactEntry>>,
+    runs: &'a [dao::RunEntry],
+    tasks: Vec<TaskReport<'a>>,
+    workflow: WorkflowReportWorkflow<'a>,
 }
 
-fn artifact_json(artifact: &dao::ArtifactEntry) -> Value {
-    let mut object = Map::new();
-    object.insert("artifactId".into(), json!(artifact.artifact_id));
-    object.insert("taskId".into(), json!(artifact.task_id));
-    object.insert("name".into(), json!(artifact.name));
-    object.insert("path".into(), json!(artifact.path));
-    object.insert("fileSize".into(), json!(artifact.file_size));
-    object.insert("inodeCount".into(), json!(artifact.inode_count));
-    object.insert("version".into(), json!(artifact.version));
-    object.insert("metadata".into(), artifact.metadata.clone());
-    object.insert("taskName".into(), json!(artifact.task_name));
-    if let Some((hash, run)) = &artifact.foreign_workflow {
-        object.insert("foreignWorkflow".into(), json!([hash, run]));
-    }
-    Value::Object(object)
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WorkflowReportWorkflow<'a> {
+    name: &'a str,
+    hash: &'a str,
+    yaml_content: Option<&'a str>,
+}
+
+/// A task of the report with its runs, newest first.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TaskReport<'a> {
+    task_name: &'a str,
+    state: &'a str,
+    #[serde(with = "chrono::serde::ts_milliseconds_option")]
+    begin_time: Timestamp,
+    #[serde(with = "chrono::serde::ts_milliseconds_option")]
+    end_time: Timestamp,
+    current_execution_id: Option<&'a str>,
+    chunk_counts: dao::ChunkCounts,
+    runs: Vec<&'a dao::TaskRunEntry>,
 }
 
 /// VoxelyticsService.taskRunsPublicWrites.
-fn task_runs_json(
-    combined: &[dao::CombinedTaskRunEntry],
-    task_runs: &[dao::TaskRunEntry],
-) -> Value {
+fn task_reports<'a>(
+    combined: &'a [dao::CombinedTaskRunEntry],
+    task_runs: &'a [dao::TaskRunEntry],
+) -> Vec<TaskReport<'a>> {
     let mut groups: Vec<(&str, Vec<&dao::TaskRunEntry>)> = Vec::new();
     for task_run in task_runs {
         match groups
@@ -606,7 +595,7 @@ fn task_runs_json(
             None => groups.push((&task_run.task_name, vec![task_run])),
         }
     }
-    let tasks = groups
+    groups
         .into_iter()
         .map(|(task_name, mut runs)| {
             // sortBy(beginTime).reverse: newest first, missing beginTime last.
@@ -619,29 +608,19 @@ fn task_runs_json(
                 .find(|s| *s != "SKIPPED" && *s != "PENDING")
                 .or_else(|| runs.first().map(|run| run.state.as_str()))
                 .unwrap_or("SKIPPED");
-            let chunk_counts = combined_run.map_or_else(
-                || json!({"total": 0, "failed": 0, "skipped": 0, "complete": 0, "cancelled": 0}),
-                |c| c.chunk_counts.to_json(),
-            );
-            json!({
-                "taskName": task_name,
-                "state": state,
-                "beginTime": millis(&runs.iter().filter_map(|r| r.begin_time).min()),
-                "endTime": millis(&runs.iter().filter_map(|r| r.end_time).max()),
-                "currentExecutionId": combined_run.and_then(|c| c.current_execution_id.clone()),
-                "chunkCounts": chunk_counts,
-                "runs": runs.iter().map(|run| json!({
-                    "runId": run.run_id,
-                    "state": run.state,
-                    "beginTime": millis(&run.begin_time),
-                    "endTime": millis(&run.end_time),
-                    "currentExecutionId": run.current_execution_id,
-                    "chunkCounts": run.chunk_counts.to_json(),
-                })).collect::<Vec<_>>(),
-            })
+            TaskReport {
+                task_name,
+                state,
+                begin_time: runs.iter().filter_map(|r| r.begin_time).min(),
+                end_time: runs.iter().filter_map(|r| r.end_time).max(),
+                current_execution_id: combined_run.and_then(|c| c.current_execution_id.as_deref()),
+                chunk_counts: combined_run
+                    .map(|c| c.chunk_counts.clone())
+                    .unwrap_or_default(),
+                runs,
+            }
         })
-        .collect();
-    Value::Array(tasks)
+        .collect()
 }
 
 #[derive(Deserialize)]
@@ -719,26 +698,26 @@ async fn get_workflow(
     }
     config.insert("tasks".into(), Value::Object(task_configs));
 
-    // artifactsPublicWrites: {taskName: {artifactName: artifact}}.
-    let mut artifacts_json = Map::new();
+    let mut artifacts_by_task: BTreeMap<&str, BTreeMap<&str, &dao::ArtifactEntry>> =
+        BTreeMap::new();
     for artifact in &artifacts {
-        let entry = artifacts_json
-            .entry(artifact.task_name.clone())
-            .or_insert_with(|| json!({}));
-        entry[&artifact.name] = artifact_json(artifact);
+        artifacts_by_task
+            .entry(&artifact.task_name)
+            .or_default()
+            .insert(&artifact.name, artifact);
     }
 
-    Ok(Json(json!({
-        "config": config,
-        "artifacts": artifacts_json,
-        "runs": runs.iter().map(run_json).collect::<Vec<_>>(),
-        "tasks": task_runs_json(&combined, &task_runs),
-        "workflow": {
-            "name": workflow.name,
-            "hash": workflow_hash,
-            "yamlContent": selected.workflow_yaml_content,
+    Ok(Json(WorkflowReport {
+        config,
+        artifacts: artifacts_by_task,
+        runs: &runs,
+        tasks: task_reports(&combined, &task_runs),
+        workflow: WorkflowReportWorkflow {
+            name: &workflow.name,
+            hash: &workflow_hash,
+            yaml_content: selected.workflow_yaml_content.as_deref(),
         },
-    }))
+    })
     .into_response())
 }
 
@@ -956,23 +935,6 @@ fn required_task_name(query: &StatisticsQuery) -> ApiResult<&str> {
         .ok_or_else(|| ApiError::bad_request(crate::msg::request::missing_parameter("taskName")))
 }
 
-fn statistics_json(entry: &dao::StatisticsEntry) -> Value {
-    let mut value = json!({
-        "max": play_double(entry.max),
-        "median": play_double(entry.median),
-        "stddev": play_double(entry.stddev),
-    });
-    if let Some(sum) = entry.sum {
-        value["sum"] = play_double(sum);
-    }
-    value
-}
-
-/// Play writes doubles through BigDecimal: whole numbers without `.0` (`1355.0` → `1355`).
-fn play_double(value: f64) -> Value {
-    webknossos_common::json::play_f64_number(value).map_or(Value::Null, Value::Number)
-}
-
 /// GET /voxelytics/workflows/:workflowHash/chunkStatistics?runId=&taskName=
 async fn chunk_statistics(
     State(state): State<AppState>,
@@ -981,30 +943,14 @@ async fn chunk_statistics(
     user: AuthUser,
     Path(workflow_hash): Path<String>,
     Query(query): Query<StatisticsQuery>,
-) -> ApiResult<Response> {
+) -> ApiResult<Json<Vec<dao::ChunkStatisticsEntry>>> {
     let run_id = optional_run_id(query.run_id.as_deref())?;
     let task_name = required_task_name(&query)?;
     ensure_enabled(&misc)?;
     let run_ids =
         statistics_runs(&state.pool, &user, &workflow_hash, run_id, vx.stale_timeout).await?;
     let entries = dao::chunk_statistics(&state.pool, &run_ids, task_name, vx.stale_timeout).await?;
-    let result: Vec<Value> = entries
-        .iter()
-        .map(|entry| {
-            let mut object = Map::new();
-            object.insert("executionId".into(), json!(entry.execution_id));
-            object.insert("chunkCounts".into(), entry.chunk_counts.to_json());
-            insert_opt(&mut object, "beginTime", millis(&entry.begin_time));
-            insert_opt(&mut object, "endTime", millis(&entry.end_time));
-            object.insert("wallTime".into(), play_double(entry.wall_time));
-            object.insert("memory".into(), statistics_json(&entry.memory));
-            object.insert("cpuUser".into(), statistics_json(&entry.cpu_user));
-            object.insert("cpuSystem".into(), statistics_json(&entry.cpu_system));
-            object.insert("duration".into(), statistics_json(&entry.duration));
-            Value::Object(object)
-        })
-        .collect();
-    Ok(Json(Value::Array(result)).into_response())
+    Ok(Json(entries))
 }
 
 /// GET /voxelytics/workflows/:workflowHash/artifactChecksums?runId=&taskName=&artifactName=
@@ -1015,7 +961,7 @@ async fn artifact_checksums(
     user: AuthUser,
     Path(workflow_hash): Path<String>,
     Query(query): Query<StatisticsQuery>,
-) -> ApiResult<Response> {
+) -> ApiResult<Json<Vec<dao::ArtifactChecksumEntry>>> {
     let run_id = optional_run_id(query.run_id.as_deref())?;
     let task_name = required_task_name(&query)?;
     ensure_enabled(&misc)?;
@@ -1031,23 +977,7 @@ async fn artifact_checksums(
         vx.stale_timeout,
     )
     .await?;
-    let result: Vec<Value> = entries
-        .iter()
-        .map(|entry| {
-            json!({
-                "taskName": entry.task_name,
-                "artifactName": entry.artifact_name,
-                "path": entry.path,
-                "resolvedPath": entry.resolved_path,
-                "timestamp": entry.timestamp.timestamp_millis(),
-                "checksumMethod": entry.checksum_method,
-                "checksum": entry.checksum,
-                "fileSize": entry.file_size,
-                "lastModified": entry.last_modified.timestamp_millis(),
-            })
-        })
-        .collect();
-    Ok(Json(Value::Array(result)).into_response())
+    Ok(Json(entries))
 }
 
 /// POST /voxelytics/logs: forward log entries to Loki.

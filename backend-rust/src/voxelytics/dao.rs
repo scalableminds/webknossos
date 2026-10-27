@@ -5,8 +5,10 @@
 //! SQL constants, and multi-row upserts pass one JSONB array expanded with
 //! `jsonb_to_recordset` (the VALUES lists of Scala).
 use chrono::{DateTime, Utc};
+use serde::{Serialize, Serializer};
 use serde_json::{Value, json};
 use sqlx::{PgConnection, PgPool, Row};
+use webknossos_common::json::play_f64;
 
 use crate::{auth::AuthUser, error::ApiResult, sql::Sql, util::id::ObjectId};
 
@@ -191,7 +193,7 @@ fn sees_all_runs(user: &AuthUser) -> bool {
     user.is_admin || user.is_dataset_manager
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
 pub(crate) struct ChunkCounts {
     pub total: i64,
     pub failed: i64,
@@ -201,16 +203,6 @@ pub(crate) struct ChunkCounts {
 }
 
 impl ChunkCounts {
-    pub fn to_json(&self) -> Value {
-        json!({
-            "total": self.total,
-            "failed": self.failed,
-            "skipped": self.skipped,
-            "complete": self.complete,
-            "cancelled": self.cancelled,
-        })
-    }
-
     fn from_row(row: &sqlx::postgres::PgRow, offset: usize) -> sqlx::Result<Self> {
         Ok(Self {
             total: row.try_get(offset)?,
@@ -222,23 +214,19 @@ impl ChunkCounts {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct TaskCounts {
+    #[serde(flatten)]
     pub chunk_like: ChunkCounts,
     pub file_size: i64,
     pub inode_count: i64,
 }
 
-impl TaskCounts {
-    pub fn to_json(&self) -> Value {
-        let mut value = self.chunk_like.to_json();
-        value["fileSize"] = json!(self.file_size);
-        value["inodeCount"] = json!(self.inode_count);
-        value
-    }
-}
-
-#[derive(Clone, Debug)]
+/// Json.format of a case class omits `None` fields, so the optional fields
+/// of the run entries are skipped instead of written as `null`.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct RunEntry {
     pub id: ObjectId,
     pub name: String,
@@ -249,11 +237,20 @@ pub(crate) struct RunEntry {
     pub workflow_yaml_content: Option<String>,
     pub workflow_config: Value,
     pub state: String,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        with = "chrono::serde::ts_milliseconds_option"
+    )]
     pub begin_time: Timestamp,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        with = "chrono::serde::ts_milliseconds_option"
+    )]
     pub end_time: Timestamp,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct WorkflowListingRunEntry {
     pub id: ObjectId,
     pub name: String,
@@ -262,19 +259,34 @@ pub(crate) struct WorkflowListingRunEntry {
     pub voxelytics_version: String,
     pub workflow_hash: String,
     pub state: String,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        with = "chrono::serde::ts_milliseconds_option"
+    )]
     pub begin_time: Timestamp,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        with = "chrono::serde::ts_milliseconds_option"
+    )]
     pub end_time: Timestamp,
     pub task_counts: TaskCounts,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub user_first_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub user_last_name: Option<String>,
 }
 
-#[derive(Clone, Debug)]
+/// Written in the workflow report under its task, hence without the task name.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct TaskRunEntry {
     pub run_id: ObjectId,
+    #[serde(skip)]
     pub task_name: String,
     pub state: String,
+    #[serde(with = "chrono::serde::ts_milliseconds_option")]
     pub begin_time: Timestamp,
+    #[serde(with = "chrono::serde::ts_milliseconds_option")]
     pub end_time: Timestamp,
     pub current_execution_id: Option<String>,
     pub chunk_counts: ChunkCounts,
@@ -287,7 +299,8 @@ pub(crate) struct CombinedTaskRunEntry {
     pub chunk_counts: ChunkCounts,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ArtifactEntry {
     pub artifact_id: ObjectId,
     pub task_id: ObjectId,
@@ -298,6 +311,8 @@ pub(crate) struct ArtifactEntry {
     pub version: String,
     pub metadata: Value,
     pub task_name: String,
+    /// `[workflowHash, runId]`.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub foreign_workflow: Option<(String, ObjectId)>,
 }
 
@@ -314,20 +329,45 @@ pub(crate) struct WorkflowEntry {
     pub hash: String,
 }
 
-#[derive(Clone, Debug)]
+/// Play writes doubles through BigDecimal: whole numbers without `.0` (`1355.0` → `1355`).
+#[derive(Clone, Debug, Serialize)]
 pub(crate) struct StatisticsEntry {
+    #[serde(serialize_with = "play_f64")]
     pub max: f64,
+    #[serde(serialize_with = "play_f64")]
     pub median: f64,
+    #[serde(serialize_with = "play_f64")]
     pub stddev: f64,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "play_f64_some"
+    )]
     pub sum: Option<f64>,
 }
 
-#[derive(Clone, Debug)]
+fn play_f64_some<S: Serializer>(value: &Option<f64>, serializer: S) -> Result<S::Ok, S::Error> {
+    match value {
+        Some(value) => play_f64(value, serializer),
+        None => serializer.serialize_none(),
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ChunkStatisticsEntry {
     pub execution_id: String,
     pub chunk_counts: ChunkCounts,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        with = "chrono::serde::ts_milliseconds_option"
+    )]
     pub begin_time: Timestamp,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        with = "chrono::serde::ts_milliseconds_option"
+    )]
     pub end_time: Timestamp,
+    #[serde(serialize_with = "play_f64")]
     pub wall_time: f64,
     pub memory: StatisticsEntry,
     pub cpu_user: StatisticsEntry,
@@ -335,16 +375,19 @@ pub(crate) struct ChunkStatisticsEntry {
     pub duration: StatisticsEntry,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ArtifactChecksumEntry {
     pub task_name: String,
     pub artifact_name: String,
     pub path: String,
     pub resolved_path: String,
+    #[serde(with = "chrono::serde::ts_milliseconds")]
     pub timestamp: DateTime<Utc>,
     pub checksum_method: String,
     pub checksum: String,
     pub file_size: i64,
+    #[serde(with = "chrono::serde::ts_milliseconds")]
     pub last_modified: DateTime<Utc>,
 }
 

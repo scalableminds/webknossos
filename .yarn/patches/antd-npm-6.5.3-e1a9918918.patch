@@ -1,0 +1,32 @@
+diff --git a/es/grid/row.js b/es/grid/row.js
+index e5dbb193d5a18bc9e5ada3ffa27413407bf3487c..0a83a831a961994a20804201a0b3712934ef2bb7 100644
+--- a/es/grid/row.js
++++ b/es/grid/row.js
+@@ -54,7 +54,10 @@ const Row = /*#__PURE__*/React.forwardRef((props, ref) => {
+     getPrefixCls,
+     direction
+   } = React.useContext(ConfigContext);
+-  const screens = useBreakpoint(true, null);
++  // Only re-render on breakpoint changes if a prop actually depends on them. An unconditional
++  // re-render runs synchronously from a layout effect on every mount (see webknossos#10277).
++  const needsResponsiveScreens = isPlainObject(align) || isPlainObject(justify) || (Array.isArray(gutter) ? gutter : [gutter]).some(g => isPlainObject(g));
++  const screens = useBreakpoint(needsResponsiveScreens, null);
+   const mergedAlign = useMergedPropByScreen(align, screens);
+   const mergedJustify = useMergedPropByScreen(justify, screens);
+   const prefixCls = getPrefixCls('row', customizePrefixCls);
+diff --git a/lib/grid/row.js b/lib/grid/row.js
+index db3c7f35cc19b000da662c9d81485dcc47f17972..8d17983b09dc74e8d5aef4e2082be713a0152cdb 100644
+--- a/lib/grid/row.js
++++ b/lib/grid/row.js
+@@ -61,7 +61,10 @@ const Row = /*#__PURE__*/React.forwardRef((props, ref) => {
+     getPrefixCls,
+     direction
+   } = React.useContext(_configProvider.ConfigContext);
+-  const screens = (0, _useBreakpoint.default)(true, null);
++  // Only re-render on breakpoint changes if a prop actually depends on them. An unconditional
++  // re-render runs synchronously from a layout effect on every mount (see webknossos#10277).
++  const needsResponsiveScreens = (0, _is.isPlainObject)(align) || (0, _is.isPlainObject)(justify) || (Array.isArray(gutter) ? gutter : [gutter]).some(g => (0, _is.isPlainObject)(g));
++  const screens = (0, _useBreakpoint.default)(needsResponsiveScreens, null);
+   const mergedAlign = useMergedPropByScreen(align, screens);
+   const mergedJustify = useMergedPropByScreen(justify, screens);
+   const prefixCls = getPrefixCls('row', customizePrefixCls);

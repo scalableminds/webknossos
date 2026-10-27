@@ -3673,7 +3673,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"antd@npm:^6.5.3":
+"antd@npm:6.5.3":
   version: 6.5.3
   resolution: "antd@npm:6.5.3"
   dependencies:
@@ -3728,6 +3728,64 @@ __metadata:
     react: ">=18.0.0"
     react-dom: ">=18.0.0"
   checksum: 10c0/ea4916a38bb26559dfe077eabeb1d3a1c93bb7568b623b3abd7d78cc434899010dccbf7495dfe571fe21665f670de619a99de9b1ed6d8cee19893563a5f7ec01
+  languageName: node
+  linkType: hard
+
+"antd@patch:antd@npm%3A6.5.3#~/.yarn/patches/antd-npm-6.5.3-e1a9918918.patch":
+  version: 6.5.3
+  resolution: "antd@patch:antd@npm%3A6.5.3#~/.yarn/patches/antd-npm-6.5.3-e1a9918918.patch::version=6.5.3&hash=e6fcd9"
+  dependencies:
+    "@ant-design/colors": "npm:^8.0.1"
+    "@ant-design/cssinjs": "npm:^2.1.2"
+    "@ant-design/cssinjs-utils": "npm:^2.1.2"
+    "@ant-design/fast-color": "npm:^3.0.1"
+    "@ant-design/icons": "npm:^6.3.2"
+    "@ant-design/react-slick": "npm:~2.0.0"
+    "@babel/runtime": "npm:^7.29.2"
+    "@rc-component/cascader": "npm:~1.17.0"
+    "@rc-component/checkbox": "npm:~2.0.0"
+    "@rc-component/collapse": "npm:~1.2.0"
+    "@rc-component/color-picker": "npm:~3.1.1"
+    "@rc-component/dialog": "npm:~1.10.0"
+    "@rc-component/drawer": "npm:~1.4.2"
+    "@rc-component/dropdown": "npm:~1.0.3"
+    "@rc-component/form": "npm:~1.8.6"
+    "@rc-component/image": "npm:~1.9.0"
+    "@rc-component/input": "npm:~1.3.1"
+    "@rc-component/input-number": "npm:~1.6.2"
+    "@rc-component/mentions": "npm:~1.10.0"
+    "@rc-component/menu": "npm:~1.4.1"
+    "@rc-component/motion": "npm:^1.3.3"
+    "@rc-component/mutate-observer": "npm:^2.0.1"
+    "@rc-component/notification": "npm:~2.0.7"
+    "@rc-component/pagination": "npm:~1.4.0"
+    "@rc-component/picker": "npm:~1.12.0"
+    "@rc-component/progress": "npm:~1.0.2"
+    "@rc-component/qrcode": "npm:~2.0.0"
+    "@rc-component/rate": "npm:~1.0.1"
+    "@rc-component/resize-observer": "npm:^1.1.2"
+    "@rc-component/segmented": "npm:~1.3.0"
+    "@rc-component/select": "npm:~1.8.2"
+    "@rc-component/slider": "npm:~1.1.1"
+    "@rc-component/steps": "npm:~1.2.2"
+    "@rc-component/switch": "npm:~1.0.3"
+    "@rc-component/table": "npm:~1.10.4"
+    "@rc-component/tabs": "npm:~1.11.0"
+    "@rc-component/tooltip": "npm:~1.4.0"
+    "@rc-component/tour": "npm:~2.4.0"
+    "@rc-component/tree": "npm:~1.3.2"
+    "@rc-component/tree-select": "npm:~1.11.0"
+    "@rc-component/trigger": "npm:^3.10.1"
+    "@rc-component/upload": "npm:~1.1.1"
+    "@rc-component/util": "npm:^1.12.0"
+    clsx: "npm:^2.1.1"
+    dayjs: "npm:^1.11.11"
+    scroll-into-view-if-needed: "npm:^3.1.0"
+    throttle-debounce: "npm:^5.0.2"
+  peerDependencies:
+    react: ">=18.0.0"
+    react-dom: ">=18.0.0"
+  checksum: 10c0/4cff3edf67328c20594be1599533272cf1ab4f3d13dc40e70ab38e534568a0f0a12ad5d78763298f10ec36002bba46d7db596b3d92d4c63c2818ceffd74c8313
   languageName: node
   linkType: hard
 
@@ -11519,7 +11577,7 @@ __metadata:
     "@zip.js/zip.js": "npm:^2.7.32"
     abort-controller: "npm:^3.0.0"
     ansi-to-react: "npm:^6.1.6"
-    antd: "npm:^6.5.3"
+    antd: "patch:antd@npm%3A6.5.3#~/.yarn/patches/antd-npm-6.5.3-e1a9918918.patch"
     babel-plugin-react-compiler: "npm:^1.0.0"
     ball-morphology: "npm:^0.1.0"
     base64-js: "npm:^1.2.1"

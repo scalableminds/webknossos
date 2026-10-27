@@ -335,16 +335,18 @@ function discardBody(response: Response): void {
   response.body?.cancel().catch(() => {});
 }
 
+// Resolves after ms or as soon as the signal is aborted. Removes its abort listener when the
+// timer fires, because a run may wait many times on the same signal.
 function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
-    const timeoutId = setTimeout(resolve, ms);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timeoutId);
-        resolve();
-      },
-      { once: true },
-    );
+    const onAbort = () => {
+      clearTimeout(timeoutId);
+      resolve();
+    };
+    const timeoutId = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", onAbort, { once: true });
   });
 }

@@ -186,6 +186,45 @@ describe("Resumable chunk lifecycle", () => {
     expect(fileErrorSpy).not.toHaveBeenCalled();
   });
 
+  it("should not leave abort listeners behind after waiting for retries", async () => {
+    let attempts = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        ++attempts <= 5
+          ? Promise.reject(new TypeError("Network failure"))
+          : Promise.resolve(new Response("ok")),
+      ),
+    );
+    const addSpy = vi.spyOn(EventTarget.prototype, "addEventListener");
+    const removeSpy = vi.spyOn(EventTarget.prototype, "removeEventListener");
+    const abortListenerCount = (spy: typeof addSpy | typeof removeSpy) =>
+      spy.mock.calls.filter(([type]) => type === "abort").length;
+    const resumable = new ResumableUpload({
+      target: "/upload",
+      chunkSize: 10,
+      testChunks: false,
+      chunkRetryInterval: 1,
+    });
+    resumable.addFile(new File(["x".repeat(10)], "test.txt"));
+    const fileSuccess = new Promise<void>((resolve) =>
+      resumable.addEventListener("fileSuccess", () => resolve()),
+    );
+    await sleep(0);
+
+    try {
+      resumable.upload();
+      await fileSuccess;
+
+      // One listener per request and one per retry wait, each removed again.
+      expect(abortListenerCount(addSpy)).toBe(6 + 5);
+      expect(abortListenerCount(removeSpy)).toBe(abortListenerCount(addSpy));
+    } finally {
+      addSpy.mockRestore();
+      removeSpy.mockRestore();
+    }
+  });
+
   it("should not resume a paused upload when retrying a failed file", async () => {
     const requests = installControllableFetch();
     const resumable = createUpload({ testChunks: false });

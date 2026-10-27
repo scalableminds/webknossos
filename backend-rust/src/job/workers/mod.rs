@@ -287,7 +287,7 @@ async fn update_status(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
     Extension(mailer): Extension<MailSender>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     slack: SlackNotificationService,
     Path(id): Path<PathObjectId>,
     Query(query): Query<KeyQuery>,

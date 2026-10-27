@@ -10,9 +10,7 @@ mod dao;
 
 pub(crate) use dao::push_attachment_key;
 
-use axum::{
-    Extension, Json as ResponseJson, Router, extract::State, http::StatusCode, routing::post,
-};
+use axum::{Json as ResponseJson, Router, extract::State, http::StatusCode, routing::post};
 use serde::Deserialize;
 use serde_json::Value;
 use webknossos_common::{
@@ -190,7 +188,7 @@ struct ReportAttachmentUploadParameters {
 async fn report_attachment_upload(
     State(state): State<AppState>,
     ValidatedDataStore(_store): ValidatedDataStore,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     Json(body): Json<ReportAttachmentUploadParameters>,
 ) -> ApiResult<StatusCode> {
     let path = body.attachment.upath()?;

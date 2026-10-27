@@ -1,7 +1,7 @@
 //! DatasetController.layerThumbnail / datasetThumbnail with ThumbnailService's
 //! parameter selection, the PostgreSQL thumbnail cache and datastore RPC.
 use axum::{
-    Extension, Router,
+    Router,
     extract::State,
     http::{HeaderName, HeaderValue, header},
     response::{IntoResponse, Response},
@@ -314,7 +314,7 @@ async fn layer_thumbnail(
     OptionalAuthUser(user): OptionalAuthUser,
     Path((id, layer_name)): Path<(PathObjectId, String)>,
     Query(query): Query<ThumbnailQuery>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
 ) -> ApiResult<Response> {
     require_read(&state, user.as_ref(), &id, query.sharing_token.as_deref()).await?;
     let width = clamp_size(query.w);
@@ -485,7 +485,7 @@ async fn dataset_thumbnail(
     OptionalAuthUser(user): OptionalAuthUser,
     Path(id): Path<PathObjectId>,
     Query(query): Query<ThumbnailQuery>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
 ) -> ApiResult<Response> {
     require_read(&state, user.as_ref(), &id, query.sharing_token.as_deref()).await?;
     let width = clamp_size(query.w);

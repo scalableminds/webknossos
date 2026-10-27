@@ -30,7 +30,7 @@ pub mod mag_upload;
 use std::collections::{BTreeMap, HashMap};
 
 use axum::{
-    Extension, Json as ResponseJson, Router,
+    Json as ResponseJson, Router,
     extract::{DefaultBodyLimit, FromRequestParts, State},
     http::{StatusCode, request::Parts},
     response::{IntoResponse, Response},
@@ -156,7 +156,7 @@ fn parse_reported(value: &Value) -> ApiResult<DataSourceWithRootPathInfo> {
 /// updateOne: a single data source; root path info None never overwrites.
 async fn update_one(
     State(state): State<AppState>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     ValidatedDataStore(store): ValidatedDataStore,
     Json(body): Json<Value>,
 ) -> ApiResult<StatusCode> {
@@ -181,7 +181,7 @@ struct UpdateAllQuery {
 async fn update_all(
     State(state): State<AppState>,
     Query(query): Query<UpdateAllQuery>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     ValidatedDataStore(store): ValidatedDataStore,
     Json(body): Json<Value>,
 ) -> ApiResult<StatusCode> {

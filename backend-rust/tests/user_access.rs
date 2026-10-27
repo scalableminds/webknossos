@@ -1,7 +1,7 @@
 use crate::common;
 
 use axum::{
-    Extension, Router,
+    Router,
     body::Body,
     http::{Request, StatusCode},
 };
@@ -15,15 +15,17 @@ use webknossos_backend::{
 };
 
 fn app(db: &TestDb, allow_delete: bool) -> Router {
-    webknossos_backend::remote::user_access::router(allow_delete)
-        .layer(Extension(
-            ServiceClients::new(ServiceClientConfig {
-                rpc_token: "process-secret".into(),
-                ..Default::default()
-            })
-            .unwrap(),
-        ))
-        .with_state(AppState::new(db.pool.clone()))
+    webknossos_backend::remote::user_access::router(allow_delete).with_state(
+        AppState::builder(db.pool.clone())
+            .clients(
+                ServiceClients::new(ServiceClientConfig {
+                    rpc_token: "process-secret".into(),
+                    ..Default::default()
+                })
+                .unwrap(),
+            )
+            .build(),
+    )
 }
 async fn request(
     app: &Router,
@@ -198,15 +200,17 @@ async fn callbacks_validate_service_keys_before_rpc_bypass_and_dataset_permissio
         .1,
         json!({"granted":false})
     );
-    let disabled = webknossos_backend::remote::user_access::router(false)
-        .layer(Extension(
-            ServiceClients::new(ServiceClientConfig {
-                rpc_token: "process-secret".into(),
-                ..Default::default()
-            })
-            .unwrap(),
-        ))
-        .with_state(AppState::new(db.pool.clone()));
+    let disabled = webknossos_backend::remote::user_access::router(false).with_state(
+        AppState::builder(db.pool.clone())
+            .clients(
+                ServiceClients::new(ServiceClientConfig {
+                    rpc_token: "process-secret".into(),
+                    ..Default::default()
+                })
+                .unwrap(),
+            )
+            .build(),
+    );
     assert_eq!(
         request(
             &disabled,

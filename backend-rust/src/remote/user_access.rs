@@ -109,7 +109,7 @@ async fn datastore(
     State(state): State<AppState>,
     Path(name): Path<String>,
     Query(query): Query<ServiceQuery>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     Extension(features): Extension<AccessFeatures>,
     Json(body): Json<AccessRequest>,
 ) -> ApiResult<Response> {
@@ -130,7 +130,7 @@ async fn tracingstore(
     State(state): State<AppState>,
     Path(_name): Path<String>,
     Query(query): Query<ServiceQuery>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     Extension(features): Extension<AccessFeatures>,
     Json(body): Json<AccessRequest>,
 ) -> ApiResult<Response> {

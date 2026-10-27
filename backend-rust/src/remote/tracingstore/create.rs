@@ -122,7 +122,7 @@ async fn create(
     State(state): State<AppState>,
     Path(_name): Path<String>,
     Query(query): Query<CreateTracingQuery>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     Extension(tracing_store): Extension<TracingStoreClient>,
     Json(params): Json<AnnotationLayerParameters>,
 ) -> Result<Response, CallbackError> {

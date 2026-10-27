@@ -6,7 +6,7 @@ use std::{
 };
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     body::{Body, to_bytes},
     extract::{Request, State},
     http::StatusCode,
@@ -90,17 +90,19 @@ async fn compose_and_in_place_additions_build_virtual_datasets() {
     let server = tokio::spawn(async move { axum::serve(listener, mock).await.unwrap() });
     sqlx::query("INSERT INTO webknossos.dataStores (name,url,publicUrl,key) VALUES ('store',$1,'http://public.invalid','k')")
         .bind(&base).execute(&db.pool).await.unwrap();
-    let app = webknossos_backend::dataset::compose::router()
-        .layer(Extension(
-            ServiceClients::new(ServiceClientConfig {
-                request_timeout: Duration::from_secs(5),
-                connect_timeout: Duration::from_secs(1),
-                max_response_bytes: 1 << 20,
-                rpc_token: "rpc".into(),
-            })
-            .unwrap(),
-        ))
-        .with_state(AppState::new(db.pool.clone()));
+    let app = webknossos_backend::dataset::compose::router().with_state(
+        AppState::builder(db.pool.clone())
+            .clients(
+                ServiceClients::new(ServiceClientConfig {
+                    request_timeout: Duration::from_secs(5),
+                    connect_timeout: Duration::from_secs(1),
+                    max_response_bytes: 1 << 20,
+                    rpc_token: "rpc".into(),
+                })
+                .unwrap(),
+            )
+            .build(),
+    );
     let fine = seed(&db, &fixture, 4.0, false).await;
     let coarse = seed(&db, &fixture, 8.0, true).await;
     let root: String =

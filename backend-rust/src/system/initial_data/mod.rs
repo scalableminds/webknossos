@@ -16,7 +16,7 @@ mod dao;
 #[cfg(test)]
 use dao::{DEFAULT_WORKER_COMMANDS, DEFAULT_WORKER_ID};
 
-use axum::{Extension, Router, extract::State, response::Response, routing::post};
+use axum::{Router, extract::State, response::Response, routing::post};
 use serde_json::{Value, json};
 
 use crate::{
@@ -62,7 +62,7 @@ pub fn router() -> Router<AppState> {
 async fn trigger_insert(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    clients: Option<Extension<ServiceClients>>,
+    State(clients): State<ServiceClients>,
 ) -> ApiResult<Response> {
     let config = misc.config();
     let pool = &state.pool;
@@ -87,9 +87,7 @@ async fn trigger_insert(
         dao::upsert_default_worker(pool, &store.name).await?;
     }
     insert_sample_organization(&state, config).await?;
-    if let Some(Extension(clients)) = clients {
-        create_organization_directory(pool, Some(&clients), SAMPLE_ORGANIZATION_ID).await;
-    }
+    create_organization_directory(pool, Some(&clients), SAMPLE_ORGANIZATION_ID).await;
     Ok(ok_empty())
 }
 

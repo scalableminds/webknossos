@@ -3,7 +3,7 @@ use crate::common;
 use std::sync::{Arc, Mutex};
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     body::{Body, to_bytes},
     extract::{Request as ExtractRequest, State},
     http::Request,
@@ -66,16 +66,15 @@ fn app(db: &TestDb, enabled: bool) -> Router {
         ..ServiceClientConfig::default()
     })
     .unwrap();
-    webknossos_backend::job::submission::router(enabled)
-        .layer(Extension(clients))
-        .with_state(
-            AppState::builder(db.pool.clone())
-                .misc(MiscConfig {
-                    jobs_enabled: enabled,
-                    ..MiscConfig::default()
-                })
-                .build(),
-        )
+    webknossos_backend::job::submission::router(enabled).with_state(
+        AppState::builder(db.pool.clone())
+            .misc(MiscConfig {
+                jobs_enabled: enabled,
+                ..MiscConfig::default()
+            })
+            .clients(clients)
+            .build(),
+    )
 }
 
 async fn request(

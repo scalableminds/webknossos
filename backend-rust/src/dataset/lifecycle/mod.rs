@@ -261,7 +261,7 @@ async fn delete_dataset(
     Path(id): Path<PathObjectId>,
     Extension(features): Extension<LifecycleFeatures>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
 ) -> ApiResult<()> {
     let record = require_readable(&state, &user, &id).await?;
     if !features.allow_delete_datasets {
@@ -361,7 +361,7 @@ async fn write_mirror(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
 ) -> ApiResult<()> {
     let record = require_editable_by_name(&state, &user, &id).await?;
     if !record.is_virtual {
@@ -388,7 +388,7 @@ async fn write_mirror(
 async fn write_all_mirrors(
     State(state): State<AppState>,
     user: AuthUser,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
 ) -> ApiResult<()> {
     if !user.is_superuser {
         return Err(ApiError::bad_request(crate::msg::user::SUPER_USER_ONLY));
@@ -419,7 +419,7 @@ async fn finish_upload_to_paths(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
 ) -> ApiResult<()> {
     require_editable(&state, &user, &id).await?;
     let mut transaction = state.pool.begin().await?;
@@ -502,7 +502,7 @@ async fn finish_mag_upload_to_path(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     RequestJson(body): RequestJson<MagUploadRequest>,
 ) -> ApiResult<()> {
     let record = require_editable_by_name(&state, &user, &id).await?;
@@ -521,7 +521,7 @@ async fn finish_attachment_upload_to_path(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     RequestJson(body): RequestJson<AttachmentUploadRequest>,
 ) -> ApiResult<()> {
     let record = require_editable_by_name(&state, &user, &id).await?;

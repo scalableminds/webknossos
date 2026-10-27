@@ -6,7 +6,7 @@ use std::{
 };
 
 use axum::{
-    Extension, Router,
+    Router,
     body::{Body, Bytes, to_bytes},
     extract::{Request, State},
     http::{HeaderMap, StatusCode, header},
@@ -76,9 +76,11 @@ fn clients() -> ServiceClients {
 }
 
 fn app(db: &TestDb, config: DatasetRouteConfig) -> Router {
-    webknossos_backend::dataset::sam::router(config)
-        .layer(Extension(clients()))
-        .with_state(AppState::new(db.pool.clone()))
+    webknossos_backend::dataset::sam::router(config).with_state(
+        AppState::builder(db.pool.clone())
+            .clients(clients())
+            .build(),
+    )
 }
 
 async fn seed_dataset(db: &TestDb, fixture: &Fixture, usable: bool) -> String {

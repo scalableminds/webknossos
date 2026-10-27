@@ -110,12 +110,13 @@ struct Services {
 impl<S: Send + Sync> FromRequestParts<S> for Services
 where
     MiscState: FromRef<S>,
+    ServiceClients: FromRef<S>,
 {
     type Rejection = ApiError;
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         Ok(Self {
             provider: extension(parts)?,
-            clients: extension(parts)?,
+            clients: ServiceClients::from_ref(state),
             tracing_store: extension(parts)?,
             misc: MiscState::from_ref(state),
         })

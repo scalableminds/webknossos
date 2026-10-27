@@ -6,7 +6,7 @@ use std::{
 };
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     body::{Body, to_bytes},
     extract::{Request, State},
     http::StatusCode,
@@ -83,9 +83,12 @@ fn app(db: &TestDb, jobs_enabled: bool) -> Router {
     };
     misc.analytics.uri = String::new();
     misc.analytics.save_to_database_enabled = true;
-    webknossos_backend::remote::datastore::dataset_report::router()
-        .layer(Extension(clients))
-        .with_state(AppState::builder(db.pool.clone()).misc(misc).build())
+    webknossos_backend::remote::datastore::dataset_report::router().with_state(
+        AppState::builder(db.pool.clone())
+            .misc(misc)
+            .clients(clients)
+            .build(),
+    )
 }
 
 async fn setup() -> Setup {

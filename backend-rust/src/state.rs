@@ -1,4 +1,7 @@
-use crate::system::application_info::{MiscConfig, MiscState};
+use crate::{
+    stores::client::{ServiceClientConfig, ServiceClients},
+    system::application_info::{MiscConfig, MiscState},
+};
 use axum::extract::FromRef;
 
 /// Shared services and startup configuration. Handlers extract the part they need with
@@ -8,6 +11,7 @@ pub struct AppState {
     pub pool: sqlx::PgPool,
     pub jobs_enabled: JobsEnabled,
     pub misc: MiscState,
+    pub clients: ServiceClients,
 }
 
 /// `features.jobsEnabled`.
@@ -19,6 +23,8 @@ pub struct AppStateBuilder {
     pool: sqlx::PgPool,
     jobs_enabled: bool,
     misc: MiscConfig,
+    service_client: ServiceClientConfig,
+    clients: Option<ServiceClients>,
 }
 
 impl AppState {
@@ -33,6 +39,8 @@ impl AppState {
             pool,
             jobs_enabled: false,
             misc: MiscConfig::default(),
+            service_client: ServiceClientConfig::default(),
+            clients: None,
         }
     }
 
@@ -40,6 +48,7 @@ impl AppState {
         Self::builder(pool)
             .jobs_enabled(config.jobs_enabled)
             .misc(config.misc.clone())
+            .service_client(config.service_client.clone())
             .build()
     }
 }
@@ -55,11 +64,27 @@ impl AppStateBuilder {
         self
     }
 
+    pub fn service_client(mut self, config: ServiceClientConfig) -> Self {
+        self.service_client = config;
+        self
+    }
+
+    /// Datastore/tracingstore RPC clients other than the ones `service_client` configures.
+    pub fn clients(mut self, clients: ServiceClients) -> Self {
+        self.clients = Some(clients);
+        self
+    }
+
     pub fn build(self) -> AppState {
+        let clients = self.clients.unwrap_or_else(|| {
+            ServiceClients::new(self.service_client.clone())
+                .expect("validated service client configuration")
+        });
         AppState {
             pool: self.pool,
             jobs_enabled: JobsEnabled(self.jobs_enabled),
             misc: MiscState::new(self.misc),
+            clients,
         }
     }
 }

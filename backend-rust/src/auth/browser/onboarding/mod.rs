@@ -643,7 +643,7 @@ async fn create_organization_with_admin(
     Extension(config): Extension<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
     State(misc): State<MiscState>,
-    clients: Option<Extension<ServiceClients>>,
+    State(clients): State<ServiceClients>,
     slack: SlackNotificationService,
     headers: HeaderMap,
     OptionalAuthUser(user): OptionalAuthUser,
@@ -727,7 +727,7 @@ async fn create_organization_with_admin(
         "signup",
         properties("had_invite", false),
     );
-    create_organization_directory(&state.pool, clients.as_deref(), &organization.id).await;
+    create_organization_directory(&state.pool, Some(&clients), &organization.id).await;
     for mail in created.mails {
         mailer.send(mail);
     }
@@ -755,7 +755,7 @@ async fn create_organization_with_existing_user(
     State(state): State<AppState>,
     Extension(config): Extension<BrowserAuthConfig>,
     State(misc): State<MiscState>,
-    clients: Option<Extension<ServiceClients>>,
+    State(clients): State<ServiceClients>,
     requester: AuthUser,
     Json(body): Json<ExistingUserOrganization>,
 ) -> ApiResult<axum::Json<String>> {
@@ -797,7 +797,7 @@ async fn create_organization_with_existing_user(
         "join_organization",
         properties("joined_organization_id", organization.id.as_str()),
     );
-    create_organization_directory(&state.pool, clients.as_deref(), &organization.id).await;
+    create_organization_directory(&state.pool, Some(&clients), &organization.id).await;
     Ok(axum::Json(organization.id))
 }
 

@@ -6,7 +6,7 @@ use std::{
 };
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     body::{Body, to_bytes},
     extract::{Request, State},
     http::StatusCode,
@@ -72,7 +72,6 @@ fn app(db: &TestDb) -> Router {
     .unwrap();
     ai_models::router()
         .merge(ai_models::upload_router(config))
-        .layer(Extension(clients))
         .with_state(
             AppState::builder(db.pool.clone())
                 .jobs_enabled(true)
@@ -80,6 +79,7 @@ fn app(db: &TestDb) -> Router {
                     jobs_enabled: true,
                     ..MiscConfig::default()
                 })
+                .clients(clients)
                 .build(),
         )
 }

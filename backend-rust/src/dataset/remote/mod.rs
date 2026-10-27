@@ -1,5 +1,5 @@
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::State,
     routing::{get, put},
 };
@@ -57,7 +57,7 @@ async fn health(
     OptionalAuthUser(user): OptionalAuthUser,
     Path(id): Path<PathObjectId>,
     Query(query): Query<SharingQuery>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
 ) -> ApiResult<&'static str> {
     require_read(&state, user.as_ref(), &id, query.sharing_token.as_deref()).await?;
     // Global datastore lookup after the dataset grant allows public/shared

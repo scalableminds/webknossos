@@ -13,9 +13,7 @@ mod dao;
 
 pub(crate) use dao::push_mag_predicate;
 
-use axum::{
-    Extension, Json as ResponseJson, Router, extract::State, http::StatusCode, routing::post,
-};
+use axum::{Json as ResponseJson, Router, extract::State, http::StatusCode, routing::post};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use webknossos_common::geometry::Vec3Int;
@@ -229,7 +227,7 @@ async fn reserve_mag_upload(
     State(state): State<AppState>,
     Query(query): Query<TokenQuery>,
     ValidatedDataStore(store): ValidatedDataStore,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     Json(body): Json<MagUploadInfo>,
 ) -> ApiResult<ResponseJson<Value>> {
     let mag = mag_locator(&body.mag)?;
@@ -322,7 +320,7 @@ struct ReportMagUploadParameters {
 async fn report_mag_upload(
     State(state): State<AppState>,
     ValidatedDataStore(_store): ValidatedDataStore,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     Json(body): Json<ReportMagUploadParameters>,
 ) -> ApiResult<StatusCode> {
     let mag = mag_locator(&body.mag)?;

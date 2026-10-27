@@ -183,7 +183,7 @@ async fn explore(
 async fn explore_remote(
     State(state): State<AppState>,
     user: AuthUser,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     Extension(tokens): Extension<DatastoreTokenConfig>,
     RequestJson(parameters): RequestJson<Vec<ExploreParameters>>,
 ) -> ApiResult<Json<Value>> {
@@ -296,7 +296,7 @@ async fn upload_store(
 async fn explore_and_add_remote(
     State(state): State<AppState>,
     user: AuthUser,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     Extension(tokens): Extension<DatastoreTokenConfig>,
     RequestJson(body): RequestJson<ExploreAndAddParameters>,
 ) -> ApiResult<Json<ObjectId>> {
@@ -369,7 +369,7 @@ async fn add_virtual_dataset(
     State(state): State<AppState>,
     user: AuthUser,
     Path(name): Path<String>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     slack: SlackNotificationService,
     RequestJson(body): RequestJson<RegistrationInfo>,
 ) -> ApiResult<Json<Value>> {
@@ -427,7 +427,7 @@ async fn duplicate_to_orga(
     user: AuthUser,
     Path(id): Path<PathObjectId>,
     Query(query): Query<DuplicateQuery>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
 ) -> ApiResult<Json<ObjectId>> {
     if !user.is_superuser {
         return Err(ApiError::forbidden(crate::msg::user::SUPER_USER_ROUTE_ONLY));

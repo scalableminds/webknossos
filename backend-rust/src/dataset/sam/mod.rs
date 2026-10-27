@@ -118,7 +118,7 @@ async fn segment_anything_mask(
     Path((id, layer_name)): Path<(PathObjectId, String)>,
     Query(query): Query<IntensityQuery>,
     Extension(config): Extension<DatasetRouteConfig>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     RequestJson(parameters): RequestJson<MaskParameters>,
 ) -> ApiResult<Response> {
     let bbox = BoundingBox::from_json(&parameters.surrounding_bounding_box)

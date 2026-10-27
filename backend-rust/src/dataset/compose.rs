@@ -1,5 +1,5 @@
 //! POST /datasets/compose and /datasets/{id}/compose/add{Layer,Mag,Attachment} (ComposeService).
-use axum::{Extension, Json, Router, extract::State, routing::post};
+use axum::{Json, Router, extract::State, routing::post};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use webknossos_common::{
@@ -86,7 +86,7 @@ fn transforms(values: &Option<Vec<Value>>) -> ApiResult<Option<Vec<CoordinateTra
 async fn compose(
     State(state): State<AppState>,
     user: AuthUser,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     RequestJson(body): RequestJson<ComposeRequest>,
 ) -> ApiResult<Json<Value>> {
     let requested_size =
@@ -237,7 +237,7 @@ async fn add_layer(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     RequestJson(body): RequestJson<AddLayerRequest>,
 ) -> ApiResult<()> {
     transforms(&body.transformations)?;
@@ -281,7 +281,7 @@ async fn add_mag(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     RequestJson(body): RequestJson<AddMagRequest>,
 ) -> ApiResult<()> {
     let source_mag =
@@ -343,7 +343,7 @@ async fn add_attachment(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     RequestJson(body): RequestJson<AddAttachmentRequest>,
 ) -> ApiResult<()> {
     let failed = || ApiError::bad_request(ADD_ATTACHMENT_FAILED);

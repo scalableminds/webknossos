@@ -26,7 +26,6 @@ use crate::{
     auth::{AuthUser, authenticate_request},
     dataset::create::{validate_dataset_name, validate_layer_name_lax},
     error::ApiError,
-    extract::extension,
     job::routes::NOT_ENOUGH_CREDITS,
     stores::client::ServiceClients,
     system::application_info::MiscState,
@@ -1153,6 +1152,7 @@ fn parse_additional_coordinates(text: &str) -> Result<Vec<(String, i32)>, &'stat
 
 async fn export_tiff(
     State(state): State<AppState>,
+    State(clients): State<ServiceClients>,
     State(misc): State<MiscState>,
     Extension(routes): Extension<SubmitRoutes>,
     mut parts: Parts,
@@ -1167,7 +1167,6 @@ async fn export_tiff(
     let annotation_id = params.optional_object_id("annotationId")?;
     let export_format = params.required("exportFormat")?;
     let user = authenticate(&parts, &state).await?;
-    let clients: ServiceClients = extension(&parts)?;
     let dataset = find_dataset(&state, &user, &dataset_id).await?;
     let dataset_organization = find_organization(&state, &dataset.organization).await?;
     if let Some(layer_name) = &layer_name {
@@ -1263,6 +1262,7 @@ async fn export_tiff(
 
 async fn materialize_volume_annotation(
     State(state): State<AppState>,
+    State(clients): State<ServiceClients>,
     State(misc): State<MiscState>,
     Extension(routes): Extension<SubmitRoutes>,
     mut parts: Parts,
@@ -1279,7 +1279,6 @@ async fn materialize_volume_annotation(
     let includes_editable_mapping = params.boolean("includesEditableMapping")?;
     let bounding_box = params.optional("boundingBox");
     let user = authenticate(&parts, &state).await?;
-    let clients: ServiceClients = extension(&parts)?;
     let dataset = find_dataset(&state, &user, &dataset_id).await?;
     let organization = own_organization(&state, &user, &dataset, MATERIALIZE_WRONG_ORGA).await?;
     validate_layer_name_lax(&fallback_layer_name)?;
@@ -1418,6 +1417,7 @@ fn read_animation_options(body: &Map<String, Value>) -> RunResult<AnimationOptio
 
 async fn render_animation(
     State(state): State<AppState>,
+    State(clients): State<ServiceClients>,
     State(misc): State<MiscState>,
     Extension(routes): Extension<SubmitRoutes>,
     mut parts: Parts,
@@ -1427,7 +1427,6 @@ async fn render_animation(
     let body = json_body(&parts, body)?;
     let options = read_animation_options(&body)?;
     let user = authenticate(&parts, &state).await?;
-    let clients: ServiceClients = extension(&parts)?;
     let dataset = find_dataset(&state, &user, &dataset_id).await?;
     let organization = find_organization(&state, &dataset.organization).await?;
     let pricing_plan: String = dao::find_pricing_plan(&state.pool, &user.organization_id)

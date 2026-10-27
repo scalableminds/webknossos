@@ -422,7 +422,7 @@ async fn reserve_mag_upload_to_path(
     user: AuthUser,
     Path(id): Path<PathObjectId>,
     Extension(config): Extension<UploadToPathsConfig>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     RequestJson(body): RequestJson<MagUploadRequest>,
 ) -> ApiResult<Json<String>> {
     let path_prefix = parse_prefix(body.path_prefix.as_deref())?;

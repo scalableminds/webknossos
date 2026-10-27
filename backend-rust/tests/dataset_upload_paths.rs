@@ -6,7 +6,7 @@ use std::{
 };
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     body::{Body, to_bytes},
     extract::{Request, State},
     http::StatusCode,
@@ -61,8 +61,7 @@ async fn setup() -> Setup {
     })
     .unwrap();
     let app = webknossos_backend::dataset::upload_paths::router(config)
-        .layer(Extension(clients))
-        .with_state(AppState::new(db.pool.clone()));
+        .with_state(AppState::builder(db.pool.clone()).clients(clients).build());
     Setup {
         db,
         fixture,

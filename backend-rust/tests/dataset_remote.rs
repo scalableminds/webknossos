@@ -6,7 +6,7 @@ use std::{
 };
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     body::{Body, to_bytes},
     extract::{Request, State},
     http::{StatusCode, header},
@@ -75,8 +75,7 @@ fn app(db: &TestDb) -> Router {
     })
     .unwrap();
     webknossos_backend::dataset::remote::router()
-        .layer(Extension(clients))
-        .with_state(AppState::new(db.pool.clone()))
+        .with_state(AppState::builder(db.pool.clone()).clients(clients).build())
 }
 
 async fn request(

@@ -125,10 +125,11 @@ fn app(db: &TestDb) -> Router {
         )
         .nest("/api", webknossos_backend::annotation::lifecycle::router())
         .layer(Extension(provider))
-        .layer(Extension(
-            ServiceClients::new(ServiceClientConfig::default()).unwrap(),
-        ))
-        .with_state(AppState::new(db.pool.clone()))
+        .with_state(
+            AppState::builder(db.pool.clone())
+                .clients(ServiceClients::new(ServiceClientConfig::default()).unwrap())
+                .build(),
+        )
 }
 
 async fn send(

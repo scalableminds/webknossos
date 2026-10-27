@@ -7,7 +7,7 @@
 //! a `convert_to_wkw` job is submitted instead. Deviations from Play are listed
 //! in checkpoints/remote-datastore-dataset-report.md.
 use axum::{
-    Extension, Router,
+    Router,
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -79,7 +79,7 @@ async fn report_dataset_upload(
     State(state): State<AppState>,
     Query(query): Query<ReportQuery>,
     ValidatedDataStore(store): ValidatedDataStore,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     State(misc): State<MiscState>,
     slack: SlackNotificationService,
     Json(body): Json<ReportDatasetUploadParameters>,

@@ -189,7 +189,7 @@ async fn reserved_ids(
 async fn reserve_ids(
     State(state): State<AppState>,
     Extension(provider): Extension<AnnotationProvider>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     user: AuthUser,
     Path(id): Path<String>,
     JsonBody(body): JsonBody<ReserveIdParameters>,

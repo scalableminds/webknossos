@@ -355,7 +355,7 @@ async fn find_model_or_404(
 async fn list_models(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Vec<Value>>> {
     let mut connection = state.pool.acquire().await?;
@@ -372,7 +372,7 @@ async fn list_models(
 async fn read_model(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     Path(id): Path<PathObjectId>,
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Value>> {
@@ -387,7 +387,7 @@ async fn read_model(
 /// the datastore reads it from the model directory (VoxelSize JSON).
 async fn model_voxel_size(
     State(state): State<AppState>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     Path(id): Path<PathObjectId>,
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Value>> {
@@ -457,7 +457,7 @@ fn write_failed(message: &'static str) -> impl Fn(sqlx::Error) -> ApiError {
 async fn update_model(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     Path(id): Path<PathObjectId>,
     user: AuthUser,
     Json(body): Json<UpdateAiModelParameters>,
@@ -585,7 +585,7 @@ async fn reserve_upload_to_path(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(ModelUploadPaths(config)): Extension<ModelUploadPaths>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     user: AuthUser,
     Json(body): Json<ReserveUploadToPathParameters>,
 ) -> ApiResult<ResponseJson<Value>> {
@@ -745,7 +745,7 @@ async fn run_neuron_model_training(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     State(misc): State<MiscState>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     user: AuthUser,
     Json(body): Json<RunModelTrainingParameters>,
 ) -> RunResult<ResponseJson<Value>> {
@@ -765,7 +765,7 @@ async fn run_instance_model_training(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     State(misc): State<MiscState>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     user: AuthUser,
     Json(body): Json<RunModelTrainingParameters>,
 ) -> RunResult<ResponseJson<Value>> {
@@ -1002,7 +1002,7 @@ async fn run_neuron_model_inference(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     State(misc): State<MiscState>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     user: AuthUser,
     Json(body): Json<RunInferenceParameters>,
 ) -> RunResult<ResponseJson<Value>> {
@@ -1022,7 +1022,7 @@ async fn run_instance_model_inference(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     State(misc): State<MiscState>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     user: AuthUser,
     Json(body): Json<RunInferenceParameters>,
 ) -> RunResult<ResponseJson<Value>> {
@@ -1317,7 +1317,7 @@ pub(crate) async fn inference_public_writes(
 async fn list_inferences(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Vec<Value>>> {
     let mut connection = state.pool.acquire().await?;
@@ -1335,7 +1335,7 @@ async fn list_inferences(
 async fn read_inference(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     Path(id): Path<PathObjectId>,
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Value>> {

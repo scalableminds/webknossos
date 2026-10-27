@@ -1,7 +1,7 @@
 //! PATCH /datasets/{id}/updatePartial with DatasetService.updateDataSourceFromUserChanges.
 use std::collections::HashMap;
 
-use axum::{Extension, Json, Router, extract::State, routing::patch};
+use axum::{Json, Router, extract::State, routing::patch};
 use serde::{Deserialize, Deserializer};
 use serde_json::{Value, json};
 use webknossos_common::{enums::LayerAttachmentType, upath::UPath};
@@ -231,7 +231,7 @@ async fn update_partial(
     user: AuthUser,
     Path(id): Path<PathObjectId>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-    Extension(clients): Extension<ServiceClients>,
+    State(clients): State<ServiceClients>,
     State(misc): State<crate::system::application_info::MiscState>,
     RequestJson(body): RequestJson<PartialUpdate>,
 ) -> ApiResult<Json<Value>> {

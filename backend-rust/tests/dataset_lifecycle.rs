@@ -6,7 +6,7 @@ use std::{
 };
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     body::{Body, to_bytes},
     extract::{Request, State},
     http::{Method, StatusCode},
@@ -92,13 +92,12 @@ fn clients() -> ServiceClients {
 }
 
 fn app(db: &TestDb, allow_delete: bool, jobs_enabled: bool) -> Router {
-    webknossos_backend::dataset::lifecycle::router(allow_delete)
-        .layer(Extension(clients()))
-        .with_state(
-            AppState::builder(db.pool.clone())
-                .jobs_enabled(jobs_enabled)
-                .build(),
-        )
+    webknossos_backend::dataset::lifecycle::router(allow_delete).with_state(
+        AppState::builder(db.pool.clone())
+            .jobs_enabled(jobs_enabled)
+            .clients(clients())
+            .build(),
+    )
 }
 
 async fn call(

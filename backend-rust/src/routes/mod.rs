@@ -169,8 +169,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         mailer.clone(),
         &browser_auth.public_uri,
     );
-    let clients = crate::stores::client::ServiceClients::new(service_client)
-        .expect("validated service client configuration");
     let datastore_tokens = crate::dataset::explore::DatastoreTokenConfig {
         expiry: auth_routes.datastore_expiry,
         idle_timeout: auth_routes.auth_idle_timeout,
@@ -240,7 +238,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
             ApiError::new(StatusCode::METHOD_NOT_ALLOWED, crate::msg::request::METHOD_NOT_ALLOWED)
         })
         .layer(DefaultBodyLimit::max(body_limit))
-        .layer(axum::Extension(clients))
         .layer(axum::Extension(tracing_store_client))
         .layer(axum::Extension(annotation_provider))
         .layer(middleware::from_fn(crate::auth::browser::cookie_middleware))

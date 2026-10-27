@@ -218,7 +218,7 @@ class EditableMappingController @Inject() (
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          tracing <- annotationService.findVolume(annotationId, tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId, version)
           _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
           remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
           editedEdges: Seq[(Long, Long, Boolean)] <- editableMappingService.getEditedEdges(

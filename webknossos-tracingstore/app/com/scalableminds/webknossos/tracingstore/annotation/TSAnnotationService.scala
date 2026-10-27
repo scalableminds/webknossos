@@ -327,13 +327,15 @@ class TSAnnotationService @Inject() (
       )
 
     for {
+      isTemporaryAnnotation <- temporaryTracingService.isTemporaryAnnotation(annotationId)
       newestMaterializableVersion <- currentMaterializableVersion(annotationId)
-      newestMaterialized <- getNewestMatchingMaterializedAnnotation(
-        annotationId,
-        version = None
-      ) ?~> Msg.Annotation.getNewestMaterializedFailed
+      earliestAccessibleVersion <-
+        if (isTemporaryAnnotation) Fox.successful(0L)
+        else
+          getNewestMatchingMaterializedAnnotation(annotationId, version = None)
+            .map(_.earliestAccessibleVersion) ?~> Msg.Annotation.getNewestMaterializedFailed
       newestVersion = requestedNewestVersion.fold(newestMaterializableVersion)(math.min(_, newestMaterializableVersion))
-      oldestVersion = math.max(requestedOldestVersion.getOrElse(0L), newestMaterialized.earliestAccessibleVersion)
+      oldestVersion = math.max(requestedOldestVersion.getOrElse(0L), earliestAccessibleVersion)
       batchRanges =
         if (oldestVersion > newestVersion) Seq.empty
         else SequenceUtils.batchRangeInclusive(oldestVersion, newestVersion, batchSize = 1000).reverse

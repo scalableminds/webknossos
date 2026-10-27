@@ -51,6 +51,16 @@ async fn request(app: &axum::Router, method: &str, uri: &str, token: Option<&str
     (answer.status, answer.body)
 }
 
+/// The same GET under the oldest supported API version answers the same body.
+async fn assert_legacy_body(app: &axum::Router, uri: &str, token: &str, body: &Value) {
+    let legacy = uri.replacen("/api/", "/api/v10/", 1);
+    assert_eq!(
+        request(app, "GET", &legacy, Some(token)).await,
+        (200, body.clone()),
+        "{legacy}"
+    );
+}
+
 fn error(message: &str) -> Value {
     json!({"messages": [{"error": message}]})
 }
@@ -267,6 +277,7 @@ async fn list_read_status_and_credit_cost() {
     let (status, list) = request(&app, "GET", "/api/jobs", Some(&member.token)).await;
     assert_eq!(status, 200, "{list}");
     assert_eq!(list, json!([export_json]));
+    assert_legacy_body(&app, "/api/jobs", &member.token, &list).await;
     let (status, list) = request(&app, "GET", "/api/jobs", Some(&admin.token)).await;
     assert_eq!(status, 200, "{list}");
     let failed_json = json!({
@@ -343,8 +354,15 @@ async fn list_read_status_and_credit_cost() {
             Some(&admin.token)
         )
         .await,
-        (200, export_json)
+        (200, export_json.clone())
     );
+    assert_legacy_body(
+        &app,
+        &format!("/api/jobs/{export}"),
+        &admin.token,
+        &export_json,
+    )
+    .await;
     // publicWrites with the requester's context: the cost is only visible with credit access.
     assert_eq!(
         request(
@@ -417,6 +435,28 @@ async fn list_read_status_and_credit_cost() {
     // Status needs authentication only, not enabled jobs.
     let (status, body) = request(&disabled, "GET", "/api/jobs/status", Some(&member.token)).await;
     assert_eq!(status, 200, "{body}");
+    let worker_id: String = sqlx::query_scalar("SELECT _id FROM webknossos.workers")
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        body,
+        json!({
+            "workers": [{
+                "id": worker_id,
+                "name": "w1",
+                "maxParallelHighPriorityJobs": 2,
+                "maxParallelLowPriorityJobs": 1,
+                "supportedJobCommands": ["export_tiff", "infer_neurons"],
+                "created": 5000,
+                "lastHeartBeat": body["workers"][0]["lastHeartBeat"],
+                "lastHeartBeatIsRecent": true,
+                "lastReportedVersion": null
+            }],
+            "jobsByState": {"SUCCESS": 1, "FAILURE": 1}
+        })
+    );
+    assert_legacy_body(&app, "/api/jobs/status", &member.token, &body).await;
     assert_eq!(body["jobsByState"], json!({"SUCCESS": 1, "FAILURE": 1}));
     let workers = body["workers"].as_array().unwrap();
     assert_eq!(workers.len(), 1);
@@ -466,6 +506,13 @@ async fn list_read_status_and_credit_cost() {
             json!({"costInMilliCredits": 1, "hasEnoughCredits": false, "organizationMilliCredits": 0})
         )
     );
+    assert_legacy_body(
+        &app,
+        &cost("align_sections", "0,0,0,10,10,10"),
+        &member.token,
+        &json!({"costInMilliCredits": 1, "hasEnoughCredits": false, "organizationMilliCredits": 0}),
+    )
+    .await;
     assert_eq!(
         request(
             &app,
@@ -572,6 +619,21 @@ async fn cancel_and_retry_manage_credits() {
     )
     .await;
     assert_eq!(status, 200, "{body}");
+    assert_eq!(
+        body,
+        json!({
+            "id": paid,
+            "command": "infer_neurons",
+            "organizationId": org,
+            "ownerFirstName": "Rust",
+            "ownerLastName": "Test",
+            "ownerEmail": format!("{}@example.test", admin.multi_user_id),
+            "args": {},
+            "state": "STARTED",
+            "created": 1_000_000,
+            "costInMilliCredits": 1500
+        })
+    );
     assert_eq!(body["state"], "STARTED");
     assert_eq!(body["costInMilliCredits"], 1500);
     let (state, manual): (String, Option<String>) =
@@ -741,6 +803,20 @@ async fn cancel_and_retry_manage_credits() {
     )
     .await;
     assert_eq!(status, 200, "{body}");
+    assert_eq!(
+        body,
+        json!({
+            "id": own,
+            "command": "infer_neurons",
+            "organizationId": org,
+            "ownerFirstName": "Rust",
+            "ownerLastName": "Test",
+            "ownerEmail": format!("{}@example.test", member.multi_user_id),
+            "args": {},
+            "state": "FAILURE",
+            "created": 3_000_000
+        })
+    );
     assert!(body.get("costInMilliCredits").is_none());
     assert_eq!(transactions_of_organization(&db, org).await.len(), before);
     db.cleanup().await;

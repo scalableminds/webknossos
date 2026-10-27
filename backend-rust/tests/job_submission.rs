@@ -226,6 +226,23 @@ async fn all_eight_routes_submit_pending_jobs_with_contract_arguments_and_costs(
                 .await
                 .unwrap();
         assert_eq!(stored, response["args"]);
+        let mut expected = json!({
+            "id": response["id"],
+            "command": command,
+            "organizationId": fixture.organization_id,
+            "ownerFirstName": "Rust",
+            "ownerLastName": "Test",
+            "ownerEmail": format!("{}@example.test", fixture.multi_user_id),
+            "args": stored,
+            "state": "PENDING",
+            "created": response["created"]
+        });
+        match command {
+            "infer_mitochondria" => expected["costInMilliCredits"] = json!(125),
+            "align_sections" => expected["costInMilliCredits"] = json!(63),
+            _ => {}
+        }
+        assert_eq!(response, expected, "{command}");
         responses.push(response);
     }
     assert_eq!(responses[0]["args"]["mag"], "2");

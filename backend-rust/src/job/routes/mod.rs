@@ -4,7 +4,7 @@
 //!
 //! Worker-facing routes (`/jobs/request`, `/jobs/:id/status`, attach*) live in
 //! `job_workers.rs`; job submission (`/jobs/run/*`), voxelytics and AI models elsewhere.
-use std::time::Duration;
+use std::{collections::BTreeMap, time::Duration};
 
 use axum::{
     Json, Router,
@@ -15,8 +15,8 @@ use axum::{
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
-use serde_json::{Map, Value, json};
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use sqlx::{PgConnection, PgPool};
 
 use crate::{
@@ -179,6 +179,8 @@ pub(crate) async fn find_job(
 }
 
 /// JobCompactInfo (JsonAutoFormat: absent optional fields are omitted).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct JobCompactInfo {
     pub id: ObjectId,
     pub command: String,
@@ -186,68 +188,55 @@ pub(crate) struct JobCompactInfo {
     pub owner_first_name: String,
     pub owner_last_name: String,
     pub owner_email: String,
+    /// The stored job arguments.
     pub args: Value,
     pub state: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub error_details: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub return_value: Option<String>,
+    /// Set by [`JobCompactInfo::enrich`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result_link: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub voxelytics_workflow_hash: Option<String>,
+    #[serde(with = "chrono::serde::ts_milliseconds")]
     pub created: DateTime<Utc>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        with = "chrono::serde::ts_milliseconds_option"
+    )]
     pub started: Option<DateTime<Utc>>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        with = "chrono::serde::ts_milliseconds_option"
+    )]
     pub ended: Option<DateTime<Utc>>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        with = "chrono::serde::ts_milliseconds_option"
+    )]
     pub last_retry: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cost_in_milli_credits: Option<i32>,
 }
 
 impl JobCompactInfo {
-    /// JobCompactInfo.enrich + Json.toJson: strip worker tokens from the
-    /// arguments and add the result link.
-    pub(crate) fn into_json(self) -> Value {
-        let mut args = self.args;
-        if let Some(args) = args.as_object_mut() {
+    /// JobCompactInfo.enrich: strip worker tokens from the arguments and add the result link.
+    pub(crate) fn enrich(mut self) -> Self {
+        if let Some(args) = self.args.as_object_mut() {
             args.remove("webknossos_token");
             args.remove("user_auth_token");
         }
-        let result_link = result_link(
+        self.result_link = result_link(
             &self.command,
             &self.state,
-            &args,
+            &self.args,
             self.return_value.as_deref(),
             &self.id,
             &self.organization_id,
         );
-        let millis = |date: DateTime<Utc>| json!(date.timestamp_millis());
-        let mut value = Map::new();
-        value.insert("id".into(), json!(self.id));
-        value.insert("command".into(), json!(self.command));
-        value.insert("organizationId".into(), json!(self.organization_id));
-        value.insert("ownerFirstName".into(), json!(self.owner_first_name));
-        value.insert("ownerLastName".into(), json!(self.owner_last_name));
-        value.insert("ownerEmail".into(), json!(self.owner_email));
-        value.insert("args".into(), args);
-        value.insert("state".into(), json!(self.state));
-        let optional = [
-            ("errorDetails", self.error_details),
-            ("returnValue", self.return_value.map(Value::from)),
-            ("resultLink", result_link.map(Value::from)),
-            (
-                "voxelyticsWorkflowHash",
-                self.voxelytics_workflow_hash.map(Value::from),
-            ),
-            ("created", Some(millis(self.created))),
-            ("started", self.started.map(millis)),
-            ("ended", self.ended.map(millis)),
-            ("lastRetry", self.last_retry.map(millis)),
-            (
-                "costInMilliCredits",
-                self.cost_in_milli_credits.map(Value::from),
-            ),
-        ];
-        for (key, field) in optional {
-            if let Some(field) = field {
-                value.insert(key.into(), field);
-            }
-        }
-        Value::Object(value)
+        self
     }
 }
 
@@ -256,7 +245,7 @@ pub(crate) async fn public_writes(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     job: &Job,
-) -> ApiResult<Value> {
+) -> ApiResult<JobCompactInfo> {
     let owner = dao::find_owner_organization_and_multi_user(connection, user_id, &job.owner)
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
@@ -283,6 +272,7 @@ pub(crate) async fn public_writes(
         state: job.effective_state().to_owned(),
         error_details: job.error_details.clone(),
         return_value: job.return_value.clone(),
+        result_link: None,
         voxelytics_workflow_hash: job.workflow_hash.clone(),
         created: job.created,
         started: job.started,
@@ -291,7 +281,7 @@ pub(crate) async fn public_writes(
         // The delta is negative, the cost positive.
         cost_in_milli_credits: delta.map(|delta| -delta),
     }
-    .into_json())
+    .enrich())
 }
 
 /// JobResultLinks.constructResultLink (`state` is the effective state).
@@ -362,7 +352,7 @@ async fn list(
     State(routes): State<JobRoutes>,
     Query(query): Query<ListQuery>,
     user: AuthUser,
-) -> ApiResult<Json<Vec<Value>>> {
+) -> ApiResult<Json<Vec<JobCompactInfo>>> {
     require_enabled(&routes)?;
     if let Some(command) = &query.command
         && !is_job_command(command)
@@ -398,6 +388,7 @@ async fn list(
                 state: row.state,
                 error_details: row.error_details,
                 return_value: row.return_value,
+                result_link: None,
                 voxelytics_workflow_hash: row.workflow_hash,
                 created: row.created,
                 started: row.started,
@@ -405,10 +396,34 @@ async fn list(
                 last_retry: row.last_retry,
                 cost_in_milli_credits: row.milli_credit_delta.map(|delta| -delta),
             }
-            .into_json(),
+            .enrich(),
         );
     }
     Ok(Json(result))
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct JobsStatus {
+    workers: Vec<WorkerStatus>,
+    jobs_by_state: BTreeMap<String, i64>,
+}
+
+/// WorkerService.publicWrites.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WorkerStatus {
+    id: ObjectId,
+    name: String,
+    max_parallel_high_priority_jobs: i32,
+    max_parallel_low_priority_jobs: i32,
+    supported_job_commands: Vec<String>,
+    #[serde(with = "chrono::serde::ts_milliseconds")]
+    created: DateTime<Utc>,
+    #[serde(with = "chrono::serde::ts_milliseconds")]
+    last_heart_beat: DateTime<Utc>,
+    last_heart_beat_is_recent: bool,
+    last_reported_version: Option<String>,
 }
 
 /// JobController.status: all workers (global access) and job counts by worker state.
@@ -416,13 +431,13 @@ async fn status(
     State(state): State<AppState>,
     State(routes): State<JobRoutes>,
     _user: AuthUser,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<JobsStatus>> {
     let counts = dao::count_by_state(&state.pool).await?;
     let workers = dao::find_all_workers(&state.pool).await?;
     let now = Utc::now();
     let timeout = chrono::Duration::from_std(routes.config.worker_liveness_timeout)
         .unwrap_or(chrono::Duration::MAX);
-    let mut workers_json = Vec::with_capacity(workers.len());
+    let mut worker_statuses = Vec::with_capacity(workers.len());
     for worker in workers {
         let mut commands: Vec<String> = Vec::new();
         for command in worker.commands {
@@ -435,26 +450,22 @@ async fn status(
                 commands.push(command);
             }
         }
-        workers_json.push(json!({
-            "id": worker.id,
-            "name": worker.name,
-            "maxParallelHighPriorityJobs": worker.max_high,
-            "maxParallelLowPriorityJobs": worker.max_low,
-            "supportedJobCommands": commands,
-            "created": worker.created.timestamp_millis(),
-            "lastHeartBeat": worker.last_heart_beat.timestamp_millis(),
-            "lastHeartBeatIsRecent": now - worker.last_heart_beat < timeout,
-            "lastReportedVersion": worker.last_reported_version,
-        }));
+        worker_statuses.push(WorkerStatus {
+            id: worker.id,
+            name: worker.name,
+            max_parallel_high_priority_jobs: worker.max_high,
+            max_parallel_low_priority_jobs: worker.max_low,
+            supported_job_commands: commands,
+            created: worker.created,
+            last_heart_beat_is_recent: now - worker.last_heart_beat < timeout,
+            last_heart_beat: worker.last_heart_beat,
+            last_reported_version: worker.last_reported_version,
+        });
     }
-    let jobs_by_state: Map<String, Value> = counts
-        .into_iter()
-        .map(|(state, count)| (state, Value::from(count)))
-        .collect();
-    Ok(Json(json!({
-        "workers": workers_json,
-        "jobsByState": jobs_by_state,
-    })))
+    Ok(Json(JobsStatus {
+        workers: worker_statuses,
+        jobs_by_state: counts.into_iter().collect(),
+    }))
 }
 
 async fn read(
@@ -462,7 +473,7 @@ async fn read(
     State(routes): State<JobRoutes>,
     Path(id): Path<PathObjectId>,
     user: AuthUser,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<JobCompactInfo>> {
     require_enabled(&routes)?;
     let mut connection = state.pool.acquire().await?;
     let job = find_job(&mut connection, &user.id, &id)
@@ -488,7 +499,7 @@ async fn cancel(
     State(routes): State<JobRoutes>,
     Path(id): Path<PathObjectId>,
     user: AuthUser,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<JobCompactInfo>> {
     require_enabled(&routes)?;
     let mut transaction = crate::db::begin_serializable(&state.pool).await?;
     let job = find_job(&mut transaction, &user.id, &id)
@@ -564,7 +575,7 @@ async fn retry(
     State(routes): State<JobRoutes>,
     Path(id): Path<PathObjectId>,
     user: AuthUser,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<JobCompactInfo>> {
     require_enabled(&routes)?;
     let mut connection = state.pool.acquire().await?;
     let job = find_job(&mut connection, &user.id, &id)
@@ -680,6 +691,14 @@ async fn find_or_create_token(
     Ok(value)
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CreditCost {
+    cost_in_milli_credits: i32,
+    has_enough_credits: bool,
+    organization_milli_credits: i64,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CreditCostQuery {
@@ -735,7 +754,7 @@ async fn credit_cost(
     State(misc): State<MiscState>,
     Query(query): Query<CreditCostQuery>,
     user: AuthUser,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<CreditCost>> {
     let bounding_box = BoundingBox::from_literal(&query.bounding_box_in_mag)
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if !is_job_command(&query.command) {
@@ -746,11 +765,11 @@ async fn credit_cost(
     let mut connection = state.pool.acquire().await?;
     let balance =
         dao::get_milli_credit_balance(&mut connection, &user.id, &user.organization_id).await?;
-    Ok(Json(json!({
-        "costInMilliCredits": cost,
-        "hasEnoughCredits": i64::from(cost) <= balance,
-        "organizationMilliCredits": balance,
-    })))
+    Ok(Json(CreditCost {
+        cost_in_milli_credits: cost,
+        has_enough_credits: i64::from(cost) <= balance,
+        organization_milli_credits: balance,
+    }))
 }
 
 #[cfg(test)]

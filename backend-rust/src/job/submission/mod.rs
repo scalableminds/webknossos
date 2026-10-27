@@ -26,7 +26,7 @@ use crate::{
     auth::{AuthUser, authenticate_request},
     dataset::create::{validate_dataset_name, validate_layer_name_lax},
     error::ApiError,
-    job::routes::NOT_ENOUGH_CREDITS,
+    job::routes::{JobCompactInfo, NOT_ENOUGH_CREDITS},
     state::JobsEnabled,
     stores::client::ServiceClients,
     system::application_info::MiscState,
@@ -889,7 +889,7 @@ async fn run_submission(
     submission: Submission<'_>,
     paid: Option<(BoundingBox, String)>,
     submit_failed: &str,
-) -> RunResult<Json<Value>> {
+) -> RunResult<Json<JobCompactInfo>> {
     let job_id = match paid {
         None => {
             let mut transaction = state.pool.begin().await?;
@@ -936,7 +936,7 @@ async fn compute_mesh_file(
     State(misc): State<MiscState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
-) -> RunResult<Json<Value>> {
+) -> RunResult<Json<JobCompactInfo>> {
     let dataset_id = dataset_id(&mut parts, &state).await?;
     let params = Params::from_parts(&parts)?;
     let layer_name = params.required("layerName")?;
@@ -977,7 +977,7 @@ async fn compute_segment_index_file(
     State(misc): State<MiscState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
-) -> RunResult<Json<Value>> {
+) -> RunResult<Json<JobCompactInfo>> {
     let dataset_id = dataset_id(&mut parts, &state).await?;
     let params = Params::from_parts(&parts)?;
     let layer_name = params.required("layerName")?;
@@ -1014,7 +1014,7 @@ async fn infer_mitochondria(
     State(misc): State<MiscState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
-) -> RunResult<Json<Value>> {
+) -> RunResult<Json<JobCompactInfo>> {
     let dataset_id = dataset_id(&mut parts, &state).await?;
     let params = Params::from_parts(&parts)?;
     let layer_name = params.required("layerName")?;
@@ -1069,7 +1069,7 @@ async fn align_sections(
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
     body: Result<Bytes, BytesRejection>,
-) -> RunResult<Json<Value>> {
+) -> RunResult<Json<JobCompactInfo>> {
     let dataset_id = dataset_id(&mut parts, &state).await?;
     // AlignSectionsJobOptions
     let body = json_body(&parts, body)?;
@@ -1151,7 +1151,7 @@ async fn export_tiff(
     State(misc): State<MiscState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
-) -> RunResult<Json<Value>> {
+) -> RunResult<Json<JobCompactInfo>> {
     let dataset_id = dataset_id(&mut parts, &state).await?;
     let params = Params::from_parts(&parts)?;
     let bbox = params.required("bbox")?;
@@ -1261,7 +1261,7 @@ async fn materialize_volume_annotation(
     State(misc): State<MiscState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
-) -> RunResult<Json<Value>> {
+) -> RunResult<Json<JobCompactInfo>> {
     let dataset_id = dataset_id(&mut parts, &state).await?;
     let params = Params::from_parts(&parts)?;
     let fallback_layer_name = params.required("fallbackLayerName")?;
@@ -1324,7 +1324,7 @@ async fn find_largest_segment_id(
     State(misc): State<MiscState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
-) -> RunResult<Json<Value>> {
+) -> RunResult<Json<JobCompactInfo>> {
     let dataset_id = dataset_id(&mut parts, &state).await?;
     let params = Params::from_parts(&parts)?;
     let layer_name = params.required("layerName")?;
@@ -1417,7 +1417,7 @@ async fn render_animation(
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     mut parts: Parts,
     body: Result<Bytes, BytesRejection>,
-) -> RunResult<Json<Value>> {
+) -> RunResult<Json<JobCompactInfo>> {
     let dataset_id = dataset_id(&mut parts, &state).await?;
     let body = json_body(&parts, body)?;
     let options = read_animation_options(&body)?;

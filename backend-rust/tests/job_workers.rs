@@ -384,6 +384,23 @@ async fn request_jobs_reserves_by_priority_and_hands_out_tokens() {
         again["to_run"][0]["job_kwargs"]["user_auth_token"],
         json!(token)
     );
+    // The full body: the stored arguments plus the owner's Job token.
+    let mut to_run = Vec::new();
+    for entry in again["to_run"].as_array().unwrap() {
+        let id = entry["job_id"].as_str().unwrap();
+        let (command, mut kwargs): (String, Value) =
+            sqlx::query_as("SELECT command::text, commandArgs FROM webknossos.jobs WHERE _id=$1")
+                .bind(id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+        kwargs["user_auth_token"] = entry["job_kwargs"]["user_auth_token"].clone();
+        assert!(kwargs["user_auth_token"].is_string());
+        to_run.push(json!({"job_id": id, "command": command, "job_kwargs": kwargs}));
+    }
+    assert_eq!(again, json!({"to_run": to_run, "to_cancel": []}));
+    let (status, legacy) = call(&app, "GET", "/api/v10/jobs/request?key=worker-key", None).await;
+    assert_eq!((status, legacy), (200, again.clone()));
     let version: Option<String> =
         sqlx::query_scalar("SELECT lastReportedVersion FROM webknossos.workers WHERE _id=$1")
             .bind(&worker)

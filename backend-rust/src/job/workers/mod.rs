@@ -15,8 +15,8 @@ use axum::{
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
-use serde_json::{Map, Value, json};
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use sqlx::{PgConnection, PgPool};
 
 use crate::{
@@ -133,7 +133,7 @@ async fn request_jobs(
     State(state): State<AppState>,
     State(routes): State<WorkerRoutes>,
     Query(query): Query<RequestQuery>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<WorkerJobs>> {
     let mut transaction = state.pool.begin().await?;
     let worker = find_worker(&mut transaction, &query.key, true).await?;
     // WorkerDAO.updateHeartBeat / updateLastReportedVersion (only if it changed).
@@ -158,17 +158,34 @@ async fn request_jobs(
         .iter()
         .filter(|job| !to_cancel.iter().any(|cancelled| cancelled.id == job.id))
         .collect();
-    let mut to_run_json = Vec::with_capacity(to_run.len());
+    let mut to_run_parameters = Vec::with_capacity(to_run.len());
     for job in to_run {
-        to_run_json.push(parameter_writes(&state.pool, &routes, job).await?);
+        to_run_parameters.push(parameter_writes(&state.pool, &routes, job).await?);
     }
-    let mut to_cancel_json = Vec::with_capacity(to_cancel.len());
+    let mut to_cancel_parameters = Vec::with_capacity(to_cancel.len());
     for job in &to_cancel {
-        to_cancel_json.push(parameter_writes(&state.pool, &routes, job).await?);
+        to_cancel_parameters.push(parameter_writes(&state.pool, &routes, job).await?);
     }
-    Ok(Json(
-        json!({"to_run": to_run_json, "to_cancel": to_cancel_json}),
-    ))
+    Ok(Json(WorkerJobs {
+        to_run: to_run_parameters,
+        to_cancel: to_cancel_parameters,
+    }))
+}
+
+/// The worker's poll answer (snake_case keys, as the worker expects).
+#[derive(Serialize)]
+struct WorkerJobs {
+    to_run: Vec<JobParameters>,
+    to_cancel: Vec<JobParameters>,
+}
+
+/// JobService.parameterWrites.
+#[derive(Serialize)]
+struct JobParameters {
+    job_id: ObjectId,
+    command: String,
+    /// The stored job arguments plus the owner's Job token.
+    job_kwargs: Map<String, Value>,
 }
 
 /// WKRemoteWorkerController.reserveNextJobs: claim the oldest assignable pending job
@@ -215,18 +232,22 @@ fn validated_jobs(jobs: Vec<Job>) -> ApiResult<Vec<Job>> {
 
 /// JobService.parameterWrites: the job as the worker sees it, with a Job
 /// token of the owner (createAndInitJobTokenForUser; reused for up to an hour).
-async fn parameter_writes(pool: &PgPool, routes: &WorkerRoutes, job: &Job) -> ApiResult<Value> {
+async fn parameter_writes(
+    pool: &PgPool,
+    routes: &WorkerRoutes,
+    job: &Job,
+) -> ApiResult<JobParameters> {
     // UserDAO.findOne with global access: an empty Fox when the owner is gone.
     let owner = dao::find_user_id(pool, &job.owner).await?;
     let owner = owner.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let token = insert_job_token(pool, &owner, routes).await?;
     let mut kwargs = job.args.as_object().cloned().unwrap_or_default();
     kwargs.insert("user_auth_token".into(), Value::String(token));
-    Ok(json!({
-        "job_id": job.id,
-        "command": job.command,
-        "job_kwargs": kwargs,
-    }))
+    Ok(JobParameters {
+        job_id: job.id.clone(),
+        command: job.command.clone(),
+        job_kwargs: kwargs,
+    })
 }
 
 async fn insert_job_token(

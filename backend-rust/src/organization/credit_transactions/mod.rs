@@ -415,8 +415,8 @@ async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<V
         .filter(|transaction| transaction.milli_credit_delta != 0)
     {
         let paid_job = match &transaction.paid_job {
-            Some(job) => paid_job_json(&mut connection, &user, job).await?,
-            None => Value::Null,
+            Some(job) => Some(paid_job(&mut connection, &user, job).await?),
+            None => None,
         };
         result.push(json!({
             "id": transaction.id,
@@ -474,11 +474,11 @@ fn compact_free_credits_for_display(
 }
 
 /// JobDAO.findOne (user read access) + JobService.publicWrites.
-async fn paid_job_json(
+async fn paid_job(
     connection: &mut PgConnection,
     user: &AuthUser,
     job_id: &ObjectId,
-) -> ApiResult<Value> {
+) -> ApiResult<crate::job::routes::JobCompactInfo> {
     let job = crate::job::routes::find_job(connection, &user.id, job_id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;

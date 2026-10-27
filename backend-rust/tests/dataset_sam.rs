@@ -76,9 +76,10 @@ fn clients() -> ServiceClients {
 }
 
 fn app(db: &TestDb, config: DatasetRouteConfig) -> Router {
-    webknossos_backend::dataset::sam::router(config).with_state(
+    webknossos_backend::dataset::sam::router().with_state(
         AppState::builder(db.pool.clone())
             .clients(clients())
+            .datasets(config)
             .build(),
     )
 }

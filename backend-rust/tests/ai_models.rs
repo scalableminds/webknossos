@@ -17,7 +17,7 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState, ai_models,
-    dataset::options::UploadToPathsConfig,
+    dataset::options::{DatasetRouteConfig, UploadToPathsConfig},
     router,
     stores::client::{ServiceClientConfig, ServiceClients},
     system::application_info::MiscConfig,
@@ -71,7 +71,7 @@ fn app(db: &TestDb) -> Router {
     })
     .unwrap();
     ai_models::router()
-        .merge(ai_models::upload_router(config))
+        .merge(ai_models::upload_router())
         .with_state(
             AppState::builder(db.pool.clone())
                 .jobs_enabled(true)
@@ -80,6 +80,10 @@ fn app(db: &TestDb) -> Router {
                     ..MiscConfig::default()
                 })
                 .clients(clients)
+                .datasets(DatasetRouteConfig {
+                    upload_to_paths: config,
+                    ..DatasetRouteConfig::default()
+                })
                 .build(),
         )
 }

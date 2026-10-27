@@ -200,14 +200,16 @@ async fn path_deletion_service_routes_require_the_configured_key() {
         sqlx::query("INSERT INTO webknossos.remote_paths_to_delete (path,created) VALUES ($1,NOW() - make_interval(mins => $2))")
             .bind(path).bind(offset).execute(&db.pool).await.unwrap();
     }
-    let state = AppState::new(db.pool.clone());
-    let unconfigured = webknossos_backend::dataset::paths::router(DatasetRouteConfig::default())
-        .with_state(state.clone());
-    let configured = webknossos_backend::dataset::paths::router(DatasetRouteConfig {
-        external_path_deletion_key: Some("deletion-key".into()),
-        ..Default::default()
-    })
-    .with_state(state);
+    let unconfigured =
+        webknossos_backend::dataset::paths::router().with_state(AppState::new(db.pool.clone()));
+    let configured = webknossos_backend::dataset::paths::router().with_state(
+        AppState::builder(db.pool.clone())
+            .datasets(DatasetRouteConfig {
+                external_path_deletion_key: Some("deletion-key".into()),
+                ..Default::default()
+            })
+            .build(),
+    );
     let (status, body) = call(
         &unconfigured,
         "GET",

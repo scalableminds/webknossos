@@ -1,6 +1,6 @@
 //! PathDeletionController and PathDeletionService.
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::State,
     routing::{get, post},
 };
@@ -16,14 +16,13 @@ use crate::{
     stores::client::ServiceClients,
 };
 
-pub fn router(config: DatasetRouteConfig) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/datasets/pathsToDelete", get(list_paths_to_delete))
         .route(
             "/datasets/pathsToDelete/markAsDeleted",
             post(mark_as_deleted),
         )
-        .layer(Extension(config))
 }
 
 #[derive(Deserialize)]
@@ -47,7 +46,7 @@ fn authenticate(config: &DatasetRouteConfig, key: &str) -> ApiResult<()> {
 
 async fn list_paths_to_delete(
     State(state): State<AppState>,
-    Extension(config): Extension<DatasetRouteConfig>,
+    State(config): State<DatasetRouteConfig>,
     Query(query): Query<KeyQuery>,
 ) -> ApiResult<Json<Vec<String>>> {
     authenticate(&config, &query.key)?;
@@ -58,7 +57,7 @@ async fn list_paths_to_delete(
 
 async fn mark_as_deleted(
     State(state): State<AppState>,
-    Extension(config): Extension<DatasetRouteConfig>,
+    State(config): State<DatasetRouteConfig>,
     Query(query): Query<KeyQuery>,
     RequestJson(paths): RequestJson<Vec<String>>,
 ) -> ApiResult<()> {

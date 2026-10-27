@@ -65,3 +65,11 @@ impl fmt::Debug for SegmentAnythingConfig {
             .finish()
     }
 }
+
+/// `webKnossos.datasets.uploadToPaths`, shared by the dataset and AI-model upload-to-path
+/// routes (UploadToPathsService).
+impl axum::extract::FromRef<crate::AppState> for UploadToPathsConfig {
+    fn from_ref(state: &crate::AppState) -> Self {
+        state.datasets.upload_to_paths.clone()
+    }
+}

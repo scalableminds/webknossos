@@ -1,5 +1,5 @@
 //! DatasetController reserve*UploadToPath* routes (UploadToPathsService, LayerToLinkService).
-use axum::{Extension, Json, Router, extract::State, routing::post};
+use axum::{Json, Router, extract::State, routing::post};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -12,7 +12,7 @@ use crate::{
     dataset::lifecycle::{
         AttachmentUploadRequest, MagUploadRequest, NOT_YET_UPLOADED, NOT_YET_UPLOADED_TO_PATHS,
     },
-    dataset::options::{DatasetRouteConfig, UploadToPathsConfig},
+    dataset::options::UploadToPathsConfig,
     dataset::source::{StaticLayer, UsableDataSource},
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path},
@@ -31,7 +31,7 @@ const NO_MATCHING_PREFIX: &str =
     "Could not determine a configured path prefix that matches the request.";
 const FALLBACK_PREFIX: &str = "./binaryData";
 
-pub fn router(config: DatasetRouteConfig) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route(
             "/datasets/reserveUploadToPaths",
@@ -49,7 +49,6 @@ pub fn router(config: DatasetRouteConfig) -> Router<AppState> {
             "/datasets/{datasetId}/reserveAttachmentUploadToPath",
             post(reserve_attachment_upload_to_path),
         )
-        .layer(Extension(config.upload_to_paths))
 }
 
 /// A request body's `pathPrefix` (Reads[UPath]); invalid paths are invalid JSON.
@@ -266,7 +265,7 @@ pub(crate) async fn add_initial_teams(
 async fn reserve_upload_to_paths(
     State(state): State<AppState>,
     user: AuthUser,
-    Extension(config): Extension<UploadToPathsConfig>,
+    State(config): State<UploadToPathsConfig>,
     RequestJson(body): RequestJson<ReserveRequest>,
 ) -> ApiResult<Json<Value>> {
     let mut source = UsableDataSource::from_json(&body.data_source)
@@ -374,7 +373,7 @@ async fn reserve_for_preliminary(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(config): Extension<UploadToPathsConfig>,
+    State(config): State<UploadToPathsConfig>,
     RequestJson(body): RequestJson<PreliminaryRequest>,
 ) -> ApiResult<Json<Value>> {
     let mut source = UsableDataSource::from_json(&body.data_source)
@@ -421,7 +420,7 @@ async fn reserve_mag_upload_to_path(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(config): Extension<UploadToPathsConfig>,
+    State(config): State<UploadToPathsConfig>,
     State(clients): State<ServiceClients>,
     RequestJson(body): RequestJson<MagUploadRequest>,
 ) -> ApiResult<Json<String>> {
@@ -507,7 +506,7 @@ async fn reserve_attachment_upload_to_path(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(config): Extension<UploadToPathsConfig>,
+    State(config): State<UploadToPathsConfig>,
     RequestJson(body): RequestJson<AttachmentUploadRequest>,
 ) -> ApiResult<Json<String>> {
     let path_prefix = parse_prefix(body.path_prefix.as_deref())?;

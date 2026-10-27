@@ -6,7 +6,7 @@
 use std::collections::HashSet;
 
 use axum::{
-    Extension, Json as ResponseJson, Router,
+    Json as ResponseJson, Router,
     extract::State,
     http::StatusCode,
     routing::{get, post},
@@ -119,13 +119,8 @@ pub fn router() -> Router<AppState> {
         )
 }
 
-/// `webKnossos.datasets.uploadToPaths` prefixes, shared with the dataset
-/// upload-to-path routes (UploadToPathsService.generateAiModelPath).
-#[derive(Clone)]
-struct ModelUploadPaths(UploadToPathsConfig);
-
 /// The AI model upload-to-path routes, which need the upload-to-paths config.
-pub fn upload_router(upload_to_paths: UploadToPathsConfig) -> Router<AppState> {
+pub fn upload_router() -> Router<AppState> {
     Router::new()
         .route(
             "/aiModels/reserveUploadToPath",
@@ -135,7 +130,6 @@ pub fn upload_router(upload_to_paths: UploadToPathsConfig) -> Router<AppState> {
             "/aiModels/{id}/finishUploadToPath",
             post(finish_upload_to_path),
         )
-        .layer(Extension(ModelUploadPaths(upload_to_paths)))
 }
 
 /// A row of webknossos.aiModels_ as parsed by AiModelDAO (training annotations
@@ -584,7 +578,7 @@ fn generate_model_path(
 async fn reserve_upload_to_path(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-    Extension(ModelUploadPaths(config)): Extension<ModelUploadPaths>,
+    State(config): State<UploadToPathsConfig>,
     State(clients): State<ServiceClients>,
     user: AuthUser,
     Json(body): Json<ReserveUploadToPathParameters>,

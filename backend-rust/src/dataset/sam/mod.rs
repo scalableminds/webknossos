@@ -1,6 +1,6 @@
 //! POST /datasets/{id}/layers/{layer}/segmentAnythingMask (WKRemoteSegmentAnythingClient).
 use axum::{
-    Extension, Router,
+    Router,
     extract::State,
     http::{HeaderValue, header},
     response::{IntoResponse, Response},
@@ -21,13 +21,11 @@ use crate::{
 };
 use webknossos_common::{geometry::BoundingBox, json::read_i32, math::ceil_div};
 
-pub fn router(config: DatasetRouteConfig) -> Router<AppState> {
-    Router::new()
-        .route(
-            "/datasets/{datasetId}/layers/{layer}/segmentAnythingMask",
-            post(segment_anything_mask),
-        )
-        .layer(Extension(config))
+pub fn router() -> Router<AppState> {
+    Router::new().route(
+        "/datasets/{datasetId}/layers/{layer}/segmentAnythingMask",
+        post(segment_anything_mask),
+    )
 }
 
 #[derive(Deserialize, Default)]
@@ -117,7 +115,7 @@ async fn segment_anything_mask(
     user: AuthUser,
     Path((id, layer_name)): Path<(PathObjectId, String)>,
     Query(query): Query<IntensityQuery>,
-    Extension(config): Extension<DatasetRouteConfig>,
+    State(config): State<DatasetRouteConfig>,
     State(clients): State<ServiceClients>,
     RequestJson(parameters): RequestJson<MaskParameters>,
 ) -> ApiResult<Response> {

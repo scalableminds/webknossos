@@ -60,8 +60,12 @@ async fn setup() -> Setup {
         rpc_token: "rpc-secret".to_owned(),
     })
     .unwrap();
-    let app = webknossos_backend::dataset::upload_paths::router(config)
-        .with_state(AppState::builder(db.pool.clone()).clients(clients).build());
+    let app = webknossos_backend::dataset::upload_paths::router().with_state(
+        AppState::builder(db.pool.clone())
+            .clients(clients)
+            .datasets(config)
+            .build(),
+    );
     Setup {
         db,
         fixture,

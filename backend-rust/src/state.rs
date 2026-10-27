@@ -2,6 +2,7 @@ use crate::{
     annotation::provider::AnnotationProvider,
     auth::{browser::BrowserAuthConfig, routes::AuthRouteConfig},
     config::TimeTrackingConfig,
+    dataset::options::DatasetRouteConfig,
     job::routes::JobsConfig,
     mail::MailSender,
     short_links::PublicUrl,
@@ -39,6 +40,7 @@ pub struct AppState {
     /// One writer per app: its per-user cache and locks must be shared by all routes.
     pub time_interaction_writer: TimeInteractionWriter,
     pub slack: SlackNotificationService,
+    pub datasets: DatasetRouteConfig,
 }
 
 /// `features.jobsEnabled`.
@@ -65,6 +67,7 @@ pub struct AppStateBuilder {
     time_tracking: TimeTrackingConfig,
     time_interaction_writer: Option<TimeInteractionWriter>,
     slack: SlackConfig,
+    datasets: DatasetRouteConfig,
 }
 
 impl AppState {
@@ -94,6 +97,7 @@ impl AppState {
             time_tracking: TimeTrackingConfig::default(),
             time_interaction_writer: None,
             slack: SlackConfig::default(),
+            datasets: DatasetRouteConfig::default(),
         }
     }
 
@@ -111,6 +115,7 @@ impl AppState {
             .public_url(config.public_url.clone())
             .time_tracking(config.time_tracking)
             .slack(config.slack.clone())
+            .datasets(config.datasets.clone())
             .build()
     }
 }
@@ -182,6 +187,11 @@ impl AppStateBuilder {
         self
     }
 
+    pub fn datasets(mut self, config: DatasetRouteConfig) -> Self {
+        self.datasets = config;
+        self
+    }
+
     /// A time-interaction writer other than the one `time_tracking` configures.
     pub fn time_interaction_writer(mut self, writer: TimeInteractionWriter) -> Self {
         self.time_interaction_writer = Some(writer);
@@ -246,6 +256,7 @@ impl AppStateBuilder {
             time_tracking: self.time_tracking,
             time_interaction_writer,
             slack: SlackNotificationService::new(&self.slack),
+            datasets: self.datasets,
         }
     }
 }

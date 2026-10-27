@@ -30,7 +30,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
             body_limit: config.body_limit,
             annotation_mutex_expiry: config.annotation_mutex_expiry,
             allow_delete_datasets: config.allow_delete_datasets,
-            datasets: config.datasets.clone(),
             oidc: config.oidc.clone(),
         },
     )
@@ -41,7 +40,6 @@ struct RouteOptions {
     body_limit: usize,
     annotation_mutex_expiry: Duration,
     allow_delete_datasets: bool,
-    datasets: crate::dataset::options::DatasetRouteConfig,
     oidc: crate::auth::oidc::OidcConfig,
 }
 
@@ -52,7 +50,6 @@ impl RouteOptions {
             body_limit: 2 * 1024 * 1024,
             annotation_mutex_expiry: Duration::from_secs(120),
             allow_delete_datasets: true,
-            datasets: Default::default(),
             oidc: Default::default(),
         }
     }
@@ -64,7 +61,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         body_limit,
         annotation_mutex_expiry,
         allow_delete_datasets,
-        datasets,
         oidc,
     } = options;
     let api = Router::new()
@@ -73,14 +69,12 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         .merge(crate::task::router())
         .merge(crate::job::router())
         .merge(crate::ai_models::router())
-        .merge(crate::ai_models::upload_router(
-            datasets.upload_to_paths.clone(),
-        ))
+        .merge(crate::ai_models::upload_router())
         .merge(crate::voxelytics::router())
         .merge(crate::auth::router(oidc))
         .merge(crate::remote::router(allow_delete_datasets))
         .merge(crate::stores::router())
-        .merge(crate::dataset::router(&datasets, allow_delete_datasets))
+        .merge(crate::dataset::router(allow_delete_datasets))
         .merge(crate::organization::router())
         .merge(crate::system::router())
         .merge(crate::teams::router())

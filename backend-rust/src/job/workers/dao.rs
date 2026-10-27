@@ -101,36 +101,48 @@ pub(crate) async fn reserve_next_job(
     Ok(())
 }
 
-/// JobDAO.countUnfinishedByWorker.
+/// JobDAO.countUnfinishedByWorker: the counts for both command sets in one query.
+/// An empty set matches nothing (`command = ANY('{}')` is false).
 pub(crate) async fn count_unfinished_by_worker(
     connection: &mut PgConnection,
     worker_id: &ObjectId,
-    commands: &[String],
-) -> ApiResult<i64> {
-    Ok(sqlx::query_scalar(
-        r#"SELECT COUNT(*) FROM webknossos.jobs_
-          WHERE _worker = $1 AND state IN ('PENDING', 'STARTED') AND command = ANY($2)
+    commands_a: &[String],
+    commands_b: &[String],
+) -> ApiResult<(i64, i64)> {
+    let commands_any: Vec<&String> = commands_a.iter().chain(commands_b).collect();
+    Ok(sqlx::query_as(
+        r#"SELECT COUNT(*) FILTER (WHERE command = ANY($2)), COUNT(*) FILTER (WHERE command = ANY($3))
+          FROM webknossos.jobs_
+          WHERE _worker = $1 AND state IN ('PENDING', 'STARTED') AND command = ANY($4)
             AND manualState IS NULL"#,
     )
     .bind(worker_id)
-    .bind(commands)
+    .bind(commands_a)
+    .bind(commands_b)
+    .bind(commands_any)
     .fetch_one(&mut *connection)
     .await?)
 }
 
-/// JobDAO.countUnassignedPendingForDataStore.
+/// JobDAO.countUnassignedPendingForDataStore: the counts for both command sets in
+/// one query. An empty set matches nothing.
 pub(crate) async fn count_unassigned_pending_for_data_store(
     connection: &mut PgConnection,
     data_store: &str,
-    commands: &[String],
-) -> ApiResult<i64> {
-    Ok(sqlx::query_scalar(
-        r#"SELECT COUNT(*) FROM webknossos.jobs_
-          WHERE state = 'PENDING' AND command = ANY($2) AND manualState IS NULL
+    commands_a: &[String],
+    commands_b: &[String],
+) -> ApiResult<(i64, i64)> {
+    let commands_any: Vec<&String> = commands_a.iter().chain(commands_b).collect();
+    Ok(sqlx::query_as(
+        r#"SELECT COUNT(*) FILTER (WHERE command = ANY($2)), COUNT(*) FILTER (WHERE command = ANY($3))
+          FROM webknossos.jobs_
+          WHERE state = 'PENDING' AND command = ANY($4) AND manualState IS NULL
             AND _dataStore = $1 AND _worker IS NULL"#,
     )
     .bind(data_store)
-    .bind(commands)
+    .bind(commands_a)
+    .bind(commands_b)
+    .bind(commands_any)
     .fetch_one(&mut *connection)
     .await?)
 }

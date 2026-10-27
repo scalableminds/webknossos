@@ -20,6 +20,7 @@ env `WK_WORKER_LIVENESS_TIMEOUT_SECONDS`, default 60), `tests/server_boundary.rs
 - Jobs-enabled check (400 "Long-running jobs are not enabled for this WEBKNOSSOS instance.") on list/get/cancel/retry
   only; status, getCreditCost and export have none (as in Scala).
 - list: JobDAO.listAccessQ (own jobs or admin of owner's org; NO superuser/team-manager access), ORDER BY created DESC
+  (#10232: phrased as `j._owner IN (requester UNION ALL users of orgs the requester admins)` to use `jobs(_owner)`)
   (+ _id tiebreak). Unknown `command` -> 404 generic. skipForDeletedDatasets keeps only jobs whose args.dataset_id is
   a dataset (base table) not in the unreported status list. Cost via LATERAL credit join WITHOUT access check.
 - read/retry: job lookup failure -> 400 "Job could not be found or accessed."; cancel/export: empty -> 404 generic.

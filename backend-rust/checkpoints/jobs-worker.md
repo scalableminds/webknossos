@@ -22,7 +22,8 @@ before the jobs router), `src/config.rs` (env `WK_JOB_TOKEN_EXPIRY_SECONDS`, def
 - request: one READ COMMITTED transaction: worker row FOR UPDATE (serializes polls of one worker), heartbeat
   NOW() + lastReportedVersion only when workerVersion given and different; reserveNextJobs up to 10 iterations with
   high (convert_to_wkw, export_tiff) / low (all others incl. legacy) unfinished counts vs maxParallel*, pending
-  counts restricted to supported commands; reserveNextJob claims the oldest (created, _id) pending, unassigned,
+  counts restricted to supported commands (#10232: high/low pairs merged into one `COUNT(*) FILTER` query each,
+  empty command set counts 0); reserveNextJob claims the oldest (created, _id) pending, unassigned,
   non-manual job of the datastore via `FOR UPDATE SKIP LOCKED` + `_worker IS NULL` (replaces Scala's SERIALIZABLE
   retry loop; no double assignment). Response {"to_run", "to_cancel"} (ORDER BY created, _id), to_run minus to_cancel;
   each entry {"job_id","command","job_kwargs": args + "user_auth_token"}, where every poll creates a NEW Job token

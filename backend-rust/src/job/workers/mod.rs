@@ -173,10 +173,15 @@ async fn reserve_next_jobs(connection: &mut PgConnection, worker: &Worker) -> Ap
     let supported_high = commands(true, Some(worker));
     let supported_low = commands(false, Some(worker));
     for _ in 0..RESERVE_ITERATIONS {
-        let unfinished_high = count_unfinished(connection, &worker.id, &all_high).await?;
-        let unfinished_low = count_unfinished(connection, &worker.id, &all_low).await?;
-        let pending_high = count_pending(connection, &worker.data_store, &supported_high).await?;
-        let pending_low = count_pending(connection, &worker.data_store, &supported_low).await?;
+        let (unfinished_high, unfinished_low) =
+            dao::count_unfinished_by_worker(connection, &worker.id, &all_high, &all_low).await?;
+        let (pending_high, pending_low) = dao::count_unassigned_pending_for_data_store(
+            connection,
+            &worker.data_store,
+            &supported_high,
+            &supported_low,
+        )
+        .await?;
         let may_assign_high = unfinished_high < i64::from(worker.max_high) && pending_high > 0;
         let may_assign_low = unfinished_low < i64::from(worker.max_low) && pending_low > 0;
         if !may_assign_high && !may_assign_low {
@@ -192,30 +197,6 @@ async fn reserve_next_jobs(connection: &mut PgConnection, worker: &Worker) -> Ap
         dao::reserve_next_job(connection, &worker.id, &worker.data_store, &assignable).await?;
     }
     Ok(())
-}
-
-/// JobDAO.countUnfinishedByWorker.
-async fn count_unfinished(
-    connection: &mut PgConnection,
-    worker_id: &ObjectId,
-    commands: &[String],
-) -> ApiResult<i64> {
-    if commands.is_empty() {
-        return Ok(0);
-    }
-    dao::count_unfinished_by_worker(connection, worker_id, commands).await
-}
-
-/// JobDAO.countUnassignedPendingForDataStore.
-async fn count_pending(
-    connection: &mut PgConnection,
-    data_store: &str,
-    commands: &[String],
-) -> ApiResult<i64> {
-    if commands.is_empty() {
-        return Ok(0);
-    }
-    dao::count_unassigned_pending_for_data_store(connection, data_store, commands).await
 }
 
 /// parseAll of JobDAO.findAllUnfinishedByWorker / findAllCancellingByWorker.

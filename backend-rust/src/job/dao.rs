@@ -41,13 +41,17 @@ fn push_job_read_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
 }
 
 /// JobDAO.listAccessQ for alias `j`: own jobs or jobs of the admin's organization.
+/// Phrased as a set of owner ids (not a per-job owner organization lookup) so the
+/// planner can fetch the matching jobs via the `jobs(_owner)` index.
 fn push_job_list_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
-    q.push("(j._owner = ")
+    q.push("j._owner IN (\n  SELECT ")
         .push_bind(user_id)
         .push(
-            r#"
-  OR (SELECT ou._organization FROM webknossos.users_ ou WHERE ou._id = j._owner) IN
-    (SELECT _organization FROM webknossos.users_ WHERE _id = "#,
+            r#"::TEXT
+  UNION ALL
+  SELECT orgUser._id
+  FROM webknossos.users_ orgUser
+  WHERE orgUser._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = "#,
         )
         .push_bind(user_id)
         .push(" AND isAdmin))");

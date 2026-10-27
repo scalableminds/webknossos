@@ -21,14 +21,11 @@ import type { Vector3 } from "viewer/constants";
 import { MappingStatusEnum } from "viewer/constants";
 import { sortByDistanceTo } from "viewer/controller/mesh_helpers";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import {
-  getMagInfo,
-  getMappingInfo,
-  getVisibleSegmentationLayer,
-} from "viewer/model/accessors/dataset_accessor";
+import { getMagInfo, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   getActiveSegmentationTracing,
   getMeshInfoForSegment,
+  getVolumeTracingByLayerName,
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
@@ -316,7 +313,6 @@ function* getUsePositionsFromSegmentIndex(
   volumeTracing: VolumeTracing | null | undefined,
   dataset: StoreDataset,
   layerName: string,
-  maybeTracingId?: string | null,
 ): Saga<boolean> {
   if (volumeTracing == null) {
     return yield* call(
@@ -326,9 +322,7 @@ function* getUsePositionsFromSegmentIndex(
       layerName,
     );
   }
-  return (
-    volumeTracing?.hasSegmentIndex && !volumeTracing.hasEditableMapping && maybeTracingId != null
-  );
+  return volumeTracing.hasSegmentIndex && !volumeTracing.hasEditableMapping;
 }
 
 function* loadFullAdHocMesh(
@@ -367,16 +361,10 @@ function* loadFullAdHocMesh(
     const dataset = yield* select((state) => state.dataset);
     const mag = magInfo.getMagByIndexOrThrow(zoomStep);
 
-    const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
     const annotation = yield* select((state) => state.annotation);
-    const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
-    if (visibleSegmentationLayer == null) {
-      throw new Error(
-        "Loading the ad-hoc mesh failed because the visible segmentation layer must not be null.",
-      );
-    }
+    const volumeTracing = getVolumeTracingByLayerName(annotation, layer.name);
     // Fetch from datastore if no volumetracing ...
-    let forceUsingDataStore = volumeTracing == null || visibleSegmentationLayer.tracingId == null;
+    let forceUsingDataStore = volumeTracing == null;
     if (meshExtraInfo.useDataStore != null) {
       // ... except if the caller specified whether to use the data store ...
       forceUsingDataStore = meshExtraInfo.useDataStore;
@@ -392,15 +380,13 @@ function* loadFullAdHocMesh(
       volumeTracing,
       dataset,
       layer.name,
-      visibleSegmentationLayer.tracingId,
     );
 
     const layerSourceInfo: LayerSourceInfo = {
       dataset,
       annotation,
-      tracingId: visibleSegmentationLayer.tracingId,
-      segmentationLayerName:
-        visibleSegmentationLayer.fallbackLayer ?? visibleSegmentationLayer.name,
+      tracingId: volumeTracing?.tracingId,
+      segmentationLayerName: layer.fallbackLayer ?? layer.name,
       useDataStore: forceUsingDataStore,
     };
 

@@ -56,7 +56,7 @@ pub(crate) mod messages {
     pub const NONCE_MISSING: &str = "Nonce is missing";
     pub const RETURN_URL_MISSING: &str = "Return url is missing";
     pub const DISCOURSE_LOGIN_REDIRECT: &str =
-        "/auth/login?redirectPage=http://discuss.webknossos.org";
+        "/auth/login?redirectPage=https://discuss.webknossos.org";
 }
 
 /// `singleSignOn.openIdConnect.*`, `features.openIdConnectEnabled` and

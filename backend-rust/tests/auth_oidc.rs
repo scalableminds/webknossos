@@ -654,7 +654,7 @@ async fn discourse_single_sign_on() {
     assert_eq!(anonymous.status, StatusCode::SEE_OTHER);
     assert_eq!(
         anonymous.location(),
-        "/auth/login?redirectPage=http://discuss.webknossos.org"
+        "/auth/login?redirectPage=https://discuss.webknossos.org"
     );
 
     let bad = send(

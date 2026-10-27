@@ -33,6 +33,7 @@ export enum DatasetAddType {
   COMPOSE = "compose",
 }
 
+// Not part of DatasetAddType, because this tab creates an alignment project, not a dataset.
 const ALIGNMENT_PROJECT_TAB_KEY = "alignmentProject";
 
 function DatasetAddView() {
@@ -76,13 +77,6 @@ function DatasetAddView() {
       />
     );
   };
-
-  const defaultActiveTabFromHash = location.hash.substring(1);
-  const defaultActiveKey = [...Object.values(DatasetAddType), ALIGNMENT_PROJECT_TAB_KEY].includes(
-    defaultActiveTabFromHash,
-  )
-    ? defaultActiveTabFromHash
-    : DatasetAddType.UPLOAD;
 
   const tabs: TabsProps["items"] = [
     {
@@ -129,6 +123,11 @@ function DatasetAddView() {
         ]
       : []),
   ];
+
+  const defaultActiveTabFromHash = location.hash.substring(1);
+  const defaultActiveKey = tabs.some((tab) => tab.key === defaultActiveTabFromHash)
+    ? defaultActiveTabFromHash
+    : DatasetAddType.UPLOAD;
 
   return (
     <React.Fragment>

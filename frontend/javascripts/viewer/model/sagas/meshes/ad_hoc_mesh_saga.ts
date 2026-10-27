@@ -371,11 +371,9 @@ function* loadFullAdHocMesh(
     const annotation = yield* select((state) => state.annotation);
     const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
     if (visibleSegmentationLayer == null) {
-      // The segmentation layer was hidden while this mesh was waiting for a worker.
-      // Abort quietly instead of reporting an error.
-      yield* put(finishedLoadingMeshAction(layer.name, segmentId));
-      yield* put(removeMeshAction(layer.name, segmentId));
-      return;
+      throw new Error(
+        "Loading the ad-hoc mesh failed because the visible segmentation layer must not be null.",
+      );
     }
     // Fetch from datastore if no volumetracing ...
     let forceUsingDataStore = volumeTracing == null || visibleSegmentationLayer.tracingId == null;

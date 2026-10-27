@@ -36,6 +36,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{self, Path},
+    state::JobsEnabled,
     time::interaction_writer::TimeInteractionWriter,
     util::id::ObjectId,
     util::instant::now_millis,
@@ -52,14 +53,10 @@ pub const NOT_ACTIVE: &str = "The annotation is not active and cannot be finishe
 /// Msg.Annotation.finishNotAllowed (inner chain message; wrapped by FINISH_FAILED).
 pub const FINISH_NOT_ALLOWED: &str = "Could not access annotation to finish it.";
 
-#[derive(Clone, Copy)]
-struct JobsEnabled(bool);
-
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/annotations/{typ}/{id}/finish", patch(finish))
         .route("/annotations/{typ}/finish", patch(finish_all))
-        .layer(Extension(JobsEnabled(jobs_enabled)))
 }
 
 /// Play's required `timestamp: Long` query binder (first value wins). Bound
@@ -326,7 +323,7 @@ async fn finish(
     State(state): State<AppState>,
     Extension(provider): Extension<AnnotationProvider>,
     Extension(writer): Extension<TimeInteractionWriter>,
-    Extension(JobsEnabled(jobs)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs)): State<JobsEnabled>,
     Path((typ, id)): Path<(String, String)>,
     Timestamp(timestamp): Timestamp,
     user: AuthUser,

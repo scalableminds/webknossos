@@ -7,8 +7,6 @@ pub mod tracing_client;
 use crate::AppState;
 use axum::Router;
 
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
-    Router::new()
-        .merge(data::router(jobs_enabled))
-        .merge(tracing::router())
+pub fn router() -> Router<AppState> {
+    Router::new().merge(data::router()).merge(tracing::router())
 }

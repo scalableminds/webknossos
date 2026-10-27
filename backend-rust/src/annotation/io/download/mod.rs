@@ -74,7 +74,7 @@ pub const NEEDS_SKELETON_OR_VOLUME: &str =
 const XML_MIME_TYPE: &str = "application/xml";
 const ZIP_MIME_TYPE: &str = "application/zip";
 
-pub fn router(_jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/annotations/{typ}/{id}/download", get(download))
         .route("/annotations/{id}/download", get(download_without_type))

@@ -13,8 +13,9 @@
 //! `createTracingsFailed`, inner message) and keeps a ParamFailure status.
 mod dao;
 
+use axum::extract::FromRef;
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::{FromRequestParts, State},
     http::{StatusCode, request::Parts},
     routing::post,
@@ -42,6 +43,7 @@ use crate::{
     extract::extension,
     extract::{self, Path},
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
+    state::JobsEnabled,
     stores::client::ServiceClients,
     stores::tracing_client::{TracingStoreClient, VolumeSaveDataSource},
     system::application_info::MiscState,
@@ -52,16 +54,11 @@ use crate::{
 /// Msg.Annotation.createFailed.
 pub const CREATE_FAILED: &str = "Could not create annotation.";
 
-#[derive(Clone, Copy)]
-struct JobsEnabled(bool);
-
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
-    Router::new()
-        .route(
-            "/datasets/{datasetId}/createExplorational",
-            post(create_explorational),
-        )
-        .layer(Extension(JobsEnabled(jobs_enabled)))
+pub fn router() -> Router<AppState> {
+    Router::new().route(
+        "/datasets/{datasetId}/createExplorational",
+        post(create_explorational),
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -244,15 +241,18 @@ struct Services {
     jobs_enabled: bool,
 }
 
-impl<S: Send + Sync> FromRequestParts<S> for Services {
+impl<S: Send + Sync> FromRequestParts<S> for Services
+where
+    JobsEnabled: FromRef<S>,
+{
     type Rejection = ApiError;
-    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         Ok(Self {
             provider: extension(parts)?,
             clients: extension(parts)?,
             tracing_store: extension(parts)?,
             misc: extension(parts)?,
-            jobs_enabled: extension::<JobsEnabled>(parts)?.0,
+            jobs_enabled: JobsEnabled::from_ref(state).0,
         })
     }
 }

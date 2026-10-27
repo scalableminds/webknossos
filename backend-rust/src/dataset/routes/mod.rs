@@ -13,6 +13,7 @@ use crate::{
     auth::{AuthUser, OptionalAuthUser},
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path, Query},
+    state::JobsEnabled,
     system::application_info::MiscState,
     users::notification_emails::{NotificationEmailService, SharedResource},
     util::id::{ObjectId, PathObjectId},
@@ -47,26 +48,17 @@ pub fn list_router() -> Router<AppState> {
         ))
 }
 
-#[derive(Clone, Copy)]
-pub struct DatasetFeatures {
-    pub jobs_enabled: bool,
-}
-
-pub fn read_router(jobs_enabled: bool) -> Router<AppState> {
-    Router::new()
-        .route("/datasets/{datasetId}", get(read))
-        .layer(Extension(DatasetFeatures { jobs_enabled }))
+pub fn read_router() -> Router<AppState> {
+    Router::new().route("/datasets/{datasetId}", get(read))
 }
 
 /// Main settings PATCH has no legacy response adapter; keep it separate from
 /// the read router, which older API versions wrap in bigint compatibility.
-pub fn metadata_router(jobs_enabled: bool) -> Router<AppState> {
-    Router::new()
-        .route("/datasets/{datasetId}", patch(update_metadata))
-        .layer(Extension(DatasetFeatures { jobs_enabled }))
+pub fn metadata_router() -> Router<AppState> {
+    Router::new().route("/datasets/{datasetId}", patch(update_metadata))
 }
 
-pub fn lookup_router(jobs_enabled: bool) -> Router<AppState> {
+pub fn lookup_router() -> Router<AppState> {
     Router::new()
         .route("/datasets/findByImportURL", get(find_by_import_url))
         .route(
@@ -77,7 +69,6 @@ pub fn lookup_router(jobs_enabled: bool) -> Router<AppState> {
             "/datasets/disambiguate/{organizationId}/{datasetName}/toId",
             get(id_for_directory_name),
         )
-        .layer(Extension(DatasetFeatures { jobs_enabled }))
 }
 
 #[derive(Deserialize)]
@@ -91,11 +82,11 @@ async fn find_by_import_url(
     State(state): State<AppState>,
     user: AuthUser,
     Query(query): Query<ImportQuery>,
-    Extension(features): Extension<DatasetFeatures>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
 ) -> ApiResult<Json<Value>> {
     let id = dao::find_id_by_import_url(&state.pool, &user, &query.import_url).await?;
     Ok(Json(match id {
-        Some(id) => full_json(&state.pool, Some(&user), &id, features.jobs_enabled).await?,
+        Some(id) => full_json(&state.pool, Some(&user), &id, jobs_enabled).await?,
         None => Value::Null,
     }))
 }
@@ -213,7 +204,7 @@ async fn update_metadata(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(features): Extension<DatasetFeatures>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(misc): Extension<MiscState>,
     RequestJson(body): RequestJson<MetadataUpdate>,
 ) -> ApiResult<Json<Value>> {
@@ -254,8 +245,7 @@ async fn update_metadata(
     if !readable {
         return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }
-    let result =
-        full_json_on_connection(&mut transaction, Some(&user), &id, features.jobs_enabled).await?;
+    let result = full_json_on_connection(&mut transaction, Some(&user), &id, jobs_enabled).await?;
     transaction.commit().await?;
     // ChangeDatasetSettingsEvent(request.identity, updated)
     crate::system::analytics::track(
@@ -348,7 +338,7 @@ async fn read(
     OptionalAuthUser(user): OptionalAuthUser,
     Path(id): Path<PathObjectId>,
     Query(query): Query<ReadQuery>,
-    Extension(features): Extension<DatasetFeatures>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(misc): Extension<MiscState>,
 ) -> ApiResult<Json<Value>> {
     if !crate::dataset::access::can_read(
@@ -368,7 +358,7 @@ async fn read(
     if let Some(user) = user.as_ref() {
         dao::upsert_last_used_time(&state.pool, &id, &user.id).await?;
     }
-    let result = full_json(&state.pool, user.as_ref(), &id, features.jobs_enabled).await?;
+    let result = full_json(&state.pool, user.as_ref(), &id, jobs_enabled).await?;
     if let Some(user) = user {
         crate::system::analytics::track_open_dataset(&state, &misc, &user, &id);
         crate::dataset::dao::touch_user_last_activity(&state.pool, user.id).await?;

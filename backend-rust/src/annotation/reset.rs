@@ -14,6 +14,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::Path,
+    state::JobsEnabled,
     stores::tracing_client::TracingStoreClient,
     util::id::ObjectId,
 };
@@ -26,13 +27,8 @@ pub const RESET_SUCCESS: &str = "Annotation was successfully reset.";
 pub const RESET_TASKS_ONLY: &str =
     "Resetting an annotation to base state is only implemented for tasks.";
 
-#[derive(Clone, Copy)]
-struct JobsEnabled(bool);
-
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
-    Router::new()
-        .route("/annotations/{typ}/{id}/reset", put(reset))
-        .layer(Extension(JobsEnabled(jobs_enabled)))
+pub fn router() -> Router<AppState> {
+    Router::new().route("/annotations/{typ}/{id}/reset", put(reset))
 }
 
 /// AnnotationService.resetToBase: only Task annotations (actual type);
@@ -71,7 +67,7 @@ async fn reset(
     State(state): State<AppState>,
     Extension(provider): Extension<AnnotationProvider>,
     Extension(client): Extension<TracingStoreClient>,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,
 ) -> ApiResult<Json<Value>> {

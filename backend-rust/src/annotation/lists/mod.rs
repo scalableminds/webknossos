@@ -8,10 +8,11 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Path, Query},
+    state::JobsEnabled,
     util::id::ObjectId,
 };
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::State,
     http::{HeaderMap, HeaderValue},
     routing::get,
@@ -20,9 +21,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use sqlx::{PgConnection, PgPool};
 
-#[derive(Clone, Copy)]
-struct JobsEnabled(bool);
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/user/annotations", get(own_annotations))
         .route("/user/tasks", get(own_tasks))
@@ -30,7 +29,6 @@ pub fn router(jobs_enabled: bool) -> Router<AppState> {
         .route("/users/{id}/tasks", get(user_tasks))
         .route("/annotations/readable", get(readable))
         .route("/tasks/{id}/annotations", get(task_annotations))
-        .layer(Extension(JobsEnabled(jobs_enabled)))
 }
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -274,7 +272,7 @@ async fn own_tasks(
     State(state): State<AppState>,
     user: AuthUser,
     Query(filters): Query<Filters>,
-    Extension(JobsEnabled(jobs)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs)): State<JobsEnabled>,
 ) -> ApiResult<(HeaderMap, Json<Value>)> {
     let result = task_list(&state.pool, &user, &user.id, &filters, jobs).await?;
     activity(&state.pool, &user).await?;
@@ -285,7 +283,7 @@ async fn user_tasks(
     user: AuthUser,
     Path(id): Path<String>,
     Query(filters): Query<Filters>,
-    Extension(JobsEnabled(jobs)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs)): State<JobsEnabled>,
 ) -> ApiResult<(HeaderMap, Json<Value>)> {
     let id = ObjectId::parse_path(&id)?;
     assert_editable_user(&state.pool, &user, &id).await?;
@@ -295,7 +293,7 @@ async fn task_annotations(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<String>,
-    Extension(JobsEnabled(jobs)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs)): State<JobsEnabled>,
 ) -> ApiResult<Json<Value>> {
     let id = ObjectId::parse_path(&id)?;
     let team = dao::find_task_team(&state.pool, &user, &id)

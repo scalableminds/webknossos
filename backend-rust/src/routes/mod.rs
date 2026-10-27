@@ -26,7 +26,6 @@ pub fn router(state: AppState) -> Router {
             body_limit: 2 * 1024 * 1024,
             public_url: url::Url::parse("http://localhost:9000").expect("valid default URL"),
             email_verification_enabled: true,
-            jobs_enabled: false,
             jobs: Default::default(),
             annotation_mutex_expiry: Duration::from_secs(120),
             time_tracking: Default::default(),
@@ -58,7 +57,6 @@ pub fn router_with_browser_auth(
             body_limit: 2 * 1024 * 1024,
             public_url: url::Url::parse("http://localhost:9000").expect("valid default URL"),
             email_verification_enabled: true,
-            jobs_enabled: false,
             jobs: Default::default(),
             annotation_mutex_expiry: Duration::from_secs(120),
             time_tracking: Default::default(),
@@ -84,13 +82,12 @@ pub fn router_with_misc(
     mailer: crate::mail::MailSender,
 ) -> Router {
     build_router(
-        state,
+        state.with_jobs_enabled(misc.jobs_enabled),
         RouteOptions {
             request_timeout: Duration::from_secs(30),
             body_limit: 2 * 1024 * 1024,
             public_url: url::Url::parse("http://localhost:9000").expect("valid default URL"),
             email_verification_enabled: true,
-            jobs_enabled: misc.jobs_enabled,
             jobs: Default::default(),
             annotation_mutex_expiry: Duration::from_secs(120),
             time_tracking: Default::default(),
@@ -116,13 +113,12 @@ pub fn router_with_voxelytics(
     voxelytics: crate::voxelytics::VoxelyticsConfig,
 ) -> Router {
     build_router(
-        state,
+        state.with_jobs_enabled(misc.jobs_enabled),
         RouteOptions {
             request_timeout: Duration::from_secs(30),
             body_limit: 2 * 1024 * 1024,
             public_url: url::Url::parse("http://localhost:9000").expect("valid default URL"),
             email_verification_enabled: true,
-            jobs_enabled: misc.jobs_enabled,
             jobs: Default::default(),
             annotation_mutex_expiry: Duration::from_secs(120),
             time_tracking: Default::default(),
@@ -148,7 +144,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
             body_limit: config.body_limit,
             public_url: config.public_url.clone(),
             email_verification_enabled: config.email_verification_enabled,
-            jobs_enabled: config.jobs_enabled,
             jobs: config.jobs.clone(),
             annotation_mutex_expiry: config.annotation_mutex_expiry,
             time_tracking: config.time_tracking,
@@ -171,7 +166,6 @@ struct RouteOptions {
     body_limit: usize,
     public_url: url::Url,
     email_verification_enabled: bool,
-    jobs_enabled: bool,
     jobs: crate::job::routes::JobsConfig,
     annotation_mutex_expiry: Duration,
     time_tracking: crate::config::TimeTrackingConfig,
@@ -193,7 +187,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         body_limit,
         public_url,
         email_verification_enabled,
-        jobs_enabled,
         jobs,
         annotation_mutex_expiry,
         time_tracking,
@@ -236,23 +229,22 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
     };
     let api = Router::new()
         .route("/health", get(|| async { "Ok" }))
-        .merge(crate::annotation::router(
-            jobs_enabled,
-            annotation_mutex_expiry,
+        .merge(crate::annotation::router(annotation_mutex_expiry))
+        .merge(crate::task::router())
+        .merge(crate::job::router(
+            state.jobs_enabled.0,
+            &jobs,
+            &auth_routes,
         ))
-        .merge(crate::task::router(jobs_enabled))
-        .merge(crate::job::router(jobs_enabled, &jobs, &auth_routes))
-        .merge(crate::ai_models::router(jobs_enabled))
+        .merge(crate::ai_models::router())
         .merge(crate::ai_models::upload_router(
-            jobs_enabled,
             datasets.upload_to_paths.clone(),
         ))
         .merge(crate::voxelytics::router(voxelytics))
         .merge(crate::auth::router(oidc, auth_routes.clone()))
         .merge(crate::remote::router(allow_delete_datasets))
-        .merge(crate::stores::router(jobs_enabled))
+        .merge(crate::stores::router())
         .merge(crate::dataset::router(
-            jobs_enabled,
             &datasets,
             allow_delete_datasets,
             datastore_tokens,
@@ -268,7 +260,7 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         .merge(crate::projects::router())
         .merge(crate::time::tracking::router())
         .merge(crate::reports::router())
-        .merge(crate::publications::router(jobs_enabled));
+        .merge(crate::publications::router());
     let mut app = Router::new()
         .route("/health/live", get(|| async { "Ok" }))
         .route("/health/ready", get(readiness))
@@ -276,16 +268,16 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
             "/api",
             api.clone()
                 .merge(crate::dataset::routes::list_router())
-                .merge(crate::dataset::routes::read_router(jobs_enabled)),
+                .merge(crate::dataset::routes::read_router()),
         );
     // Dataset list defaults changed in v16; bigint envelopes changed in v15.
     for version in 10..=16 {
         let dataset_api = if version == 16 {
             crate::dataset::routes::list_router()
         } else {
-            crate::dataset::legacy::router(jobs_enabled)
+            crate::dataset::legacy::router()
         }
-        .merge(crate::dataset::routes::read_router(jobs_enabled));
+        .merge(crate::dataset::routes::read_router());
         let dataset_api = if version <= 14 {
             dataset_api.layer(middleware::from_fn(
                 crate::dataset::legacy::downgrade_response,

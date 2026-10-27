@@ -26,6 +26,7 @@ use crate::{
     extract::{Json, Path},
     job::routes::Job,
     job::submission::{Failure, RunResult, Submission},
+    state::JobsEnabled,
     stores::client::{ServiceClients, ServiceError},
     system::application_info::MiscState,
     util::id::{ObjectId, PathObjectId},
@@ -89,10 +90,7 @@ pub(crate) const PRETRAINED_VOXEL_SIZES: [(&str, [f64; 3]); 4] = [
     ("576500000000000000000004", [179.84, 179.84, 224.0]),
 ];
 
-#[derive(Clone, Copy)]
-struct JobsEnabled(bool);
-
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     // Static segments win over `{id}` in axum's router, as the earlier Play routes do.
     Router::new()
         .route("/aiModels", get(list_models))
@@ -119,7 +117,6 @@ pub fn router(jobs_enabled: bool) -> Router<AppState> {
             "/aiModels/inferences/runInstanceModelInference",
             post(run_instance_model_inference),
         )
-        .layer(Extension(JobsEnabled(jobs_enabled)))
 }
 
 /// `webKnossos.datasets.uploadToPaths` prefixes, shared with the dataset
@@ -128,7 +125,7 @@ pub fn router(jobs_enabled: bool) -> Router<AppState> {
 struct ModelUploadPaths(UploadToPathsConfig);
 
 /// The AI model upload-to-path routes, which need the upload-to-paths config.
-pub fn upload_router(jobs_enabled: bool, upload_to_paths: UploadToPathsConfig) -> Router<AppState> {
+pub fn upload_router(upload_to_paths: UploadToPathsConfig) -> Router<AppState> {
     Router::new()
         .route(
             "/aiModels/reserveUploadToPath",
@@ -138,7 +135,6 @@ pub fn upload_router(jobs_enabled: bool, upload_to_paths: UploadToPathsConfig) -
             "/aiModels/{id}/finishUploadToPath",
             post(finish_upload_to_path),
         )
-        .layer(Extension(JobsEnabled(jobs_enabled)))
         .layer(Extension(ModelUploadPaths(upload_to_paths)))
 }
 
@@ -358,7 +354,7 @@ async fn find_model_or_404(
 
 async fn list_models(
     State(state): State<AppState>,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(clients): Extension<ServiceClients>,
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Vec<Value>>> {
@@ -375,7 +371,7 @@ async fn list_models(
 
 async fn read_model(
     State(state): State<AppState>,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(clients): Extension<ServiceClients>,
     Path(id): Path<PathObjectId>,
     user: AuthUser,
@@ -460,7 +456,7 @@ fn write_failed(message: &'static str) -> impl Fn(sqlx::Error) -> ApiError {
 
 async fn update_model(
     State(state): State<AppState>,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(clients): Extension<ServiceClients>,
     Path(id): Path<PathObjectId>,
     user: AuthUser,
@@ -587,7 +583,7 @@ fn generate_model_path(
 /// The model stays pending (unusable) until `finishUploadToPath`.
 async fn reserve_upload_to_path(
     State(state): State<AppState>,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(ModelUploadPaths(config)): Extension<ModelUploadPaths>,
     Extension(clients): Extension<ServiceClients>,
     user: AuthUser,
@@ -747,7 +743,7 @@ impl TrainingKind {
 
 async fn run_neuron_model_training(
     State(state): State<AppState>,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(misc): Extension<MiscState>,
     Extension(clients): Extension<ServiceClients>,
     user: AuthUser,
@@ -767,7 +763,7 @@ async fn run_neuron_model_training(
 
 async fn run_instance_model_training(
     State(state): State<AppState>,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(misc): Extension<MiscState>,
     Extension(clients): Extension<ServiceClients>,
     user: AuthUser,
@@ -1004,7 +1000,7 @@ enum InferenceKind {
 
 async fn run_neuron_model_inference(
     State(state): State<AppState>,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(misc): Extension<MiscState>,
     Extension(clients): Extension<ServiceClients>,
     user: AuthUser,
@@ -1024,7 +1020,7 @@ async fn run_neuron_model_inference(
 
 async fn run_instance_model_inference(
     State(state): State<AppState>,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(misc): Extension<MiscState>,
     Extension(clients): Extension<ServiceClients>,
     user: AuthUser,
@@ -1320,7 +1316,7 @@ pub(crate) async fn inference_public_writes(
 
 async fn list_inferences(
     State(state): State<AppState>,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(clients): Extension<ServiceClients>,
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Vec<Value>>> {
@@ -1338,7 +1334,7 @@ async fn list_inferences(
 
 async fn read_inference(
     State(state): State<AppState>,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(clients): Extension<ServiceClients>,
     Path(id): Path<PathObjectId>,
     user: AuthUser,

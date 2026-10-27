@@ -152,10 +152,7 @@ fn app_with(db: &TestDb, reopen_seconds: Option<i64>) -> (Router, AnnotationProv
         features.insert("taskReopenAllowedInSeconds".into(), json!(seconds));
     }
     let app = Router::new()
-        .nest(
-            "/api",
-            webknossos_backend::annotation::reopen::router(false),
-        )
+        .nest("/api", webknossos_backend::annotation::reopen::router())
         .layer(Extension(provider.clone()))
         .layer(Extension(MiscState::new(MiscConfig {
             features,

@@ -57,7 +57,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let (shutdown_send, shutdown_recv) = tokio::sync::oneshot::channel();
     let server = axum::serve(
         listener,
-        router_with_config(AppState::new(pool.clone()), &config),
+        router_with_config(AppState::from_config(pool.clone(), &config), &config),
     )
     .with_graceful_shutdown(async {
         let _ = shutdown_recv.await;

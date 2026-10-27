@@ -4,8 +4,9 @@
 //! annotations in the tracing store into a NEW persistent Explorational owned
 //! by the requester (`mergedFromIds` with `toTemporaryStore=false`), which is
 //! then inserted (AnnotationDAO.insertOne) and serialized.
+use axum::extract::FromRef;
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::{FromRequestParts, State},
     http::{StatusCode, request::Parts},
     routing::post,
@@ -25,6 +26,7 @@ use crate::{
     extract::Path,
     extract::extension,
     proto::AnnotationProto,
+    state::JobsEnabled,
     stores::tracing_client::{MergeRequest, TracingStoreClient},
     util::id::ObjectId,
     util::instant::now_millis,
@@ -37,10 +39,7 @@ pub const MERGE_SUCCESS: &str = "Merging annotations was successful.";
 /// Msg.Annotation.Merge.noAccessOnMerged.
 pub const NO_ACCESS_ON_MERGED: &str = "Could not access merged annotation.";
 
-#[derive(Clone, Copy)]
-struct JobsEnabled(bool);
-
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route(
             "/annotations/{typ}/{id}/merge/{merged_typ}/{merged_id}",
@@ -50,7 +49,6 @@ pub fn router(jobs_enabled: bool) -> Router<AppState> {
             "/annotations/{id}/merge/{merged_typ}/{merged_id}",
             post(merge_without_type),
         )
-        .layer(Extension(JobsEnabled(jobs_enabled)))
 }
 
 /// Play's `remapSegmentIds: Option[Boolean]` binder (first value wins; the
@@ -89,13 +87,16 @@ struct Services {
     jobs_enabled: bool,
 }
 
-impl<S: Send + Sync> FromRequestParts<S> for Services {
+impl<S: Send + Sync> FromRequestParts<S> for Services
+where
+    JobsEnabled: FromRef<S>,
+{
     type Rejection = ApiError;
-    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         Ok(Self {
             provider: extension(parts)?,
             tracing_store: extension(parts)?,
-            jobs_enabled: extension::<JobsEnabled>(parts)?.0,
+            jobs_enabled: JobsEnabled::from_ref(state).0,
         })
     }
 }

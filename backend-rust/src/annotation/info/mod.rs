@@ -7,8 +7,9 @@
 //! `DBAccessContext(request.identity)`, so anonymous requesters can only read
 //! Public saved annotations (AnnotationDAO.anonymousReadAccessQ). A
 //! `sharingToken` query parameter is ignored like any unknown parameter.
+use axum::extract::FromRef;
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::{FromRequestParts, State},
     http::{StatusCode, request::Parts},
     routing::get,
@@ -28,6 +29,7 @@ use crate::{
     error::{ApiError, ApiResult},
     extract::Path,
     extract::extension,
+    state::JobsEnabled,
     system::application_info::MiscState,
     time::interaction_writer::TimeInteractionWriter,
     util::id::ObjectId,
@@ -45,14 +47,10 @@ pub fn invalid_type(typ: &str) -> String {
     format!("The supplied annotation type “{typ}” is not a valid annotation type.")
 }
 
-#[derive(Clone, Copy)]
-struct JobsEnabled(bool);
-
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/annotations/{typ}/{id}/info", get(info))
         .route("/annotations/{id}/info", get(info_without_type))
-        .layer(Extension(JobsEnabled(jobs_enabled)))
 }
 
 /// Play's `timestamp: Option[Long]` query binder: absent is `None`, present
@@ -84,14 +82,17 @@ struct Services {
     jobs_enabled: bool,
 }
 
-impl<S: Send + Sync> FromRequestParts<S> for Services {
+impl<S: Send + Sync> FromRequestParts<S> for Services
+where
+    JobsEnabled: FromRef<S>,
+{
     type Rejection = ApiError;
-    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         Ok(Self {
             provider: extension(parts)?,
             writer: extension(parts)?,
             misc: extension(parts)?,
-            jobs_enabled: extension::<JobsEnabled>(parts)?.0,
+            jobs_enabled: JobsEnabled::from_ref(state).0,
         })
     }
 }

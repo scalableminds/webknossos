@@ -176,10 +176,7 @@ fn app(db: &TestDb) -> (Router, AnnotationProvider) {
         OverLimitNotifier::new(MailSender::default(), "https://wk.example.test"),
     );
     let app = Router::new()
-        .nest(
-            "/api",
-            webknossos_backend::annotation::finish::router(false),
-        )
+        .nest("/api", webknossos_backend::annotation::finish::router())
         .layer(Extension(provider.clone()))
         .layer(Extension(writer))
         .with_state(AppState::new(db.pool.clone()));

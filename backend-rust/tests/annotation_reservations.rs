@@ -121,7 +121,7 @@ fn app(db: &TestDb) -> Router {
     Router::new()
         .nest(
             "/api",
-            webknossos_backend::annotation::reservations::router(false),
+            webknossos_backend::annotation::reservations::router(),
         )
         .nest("/api", webknossos_backend::annotation::lifecycle::router())
         .layer(Extension(provider))

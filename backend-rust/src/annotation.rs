@@ -23,23 +23,23 @@ pub mod transfer;
 use crate::AppState;
 use axum::Router;
 
-pub fn router(jobs_enabled: bool, mutex_expiry: std::time::Duration) -> Router<AppState> {
+pub fn router(mutex_expiry: std::time::Duration) -> Router<AppState> {
     Router::new()
         .merge(private_links::router())
-        .merge(lists::router(jobs_enabled))
+        .merge(lists::router())
         .merge(lifecycle::router())
-        .merge(metadata::router(jobs_enabled))
+        .merge(metadata::router())
         .merge(mutex::router(mutex_expiry))
-        .merge(reopen::router(jobs_enabled))
-        .merge(finish::router(jobs_enabled))
-        .merge(info::router(jobs_enabled))
-        .merge(duplicate::router(jobs_enabled))
-        .merge(io::download::router(jobs_enabled))
-        .merge(create::router(jobs_enabled))
-        .merge(io::upload::router(jobs_enabled))
-        .merge(merge::router(jobs_enabled))
-        .merge(reset::router(jobs_enabled))
-        .merge(reservations::router(jobs_enabled))
-        .merge(sandbox::router(jobs_enabled))
-        .merge(transfer::router(jobs_enabled))
+        .merge(reopen::router())
+        .merge(finish::router())
+        .merge(info::router())
+        .merge(duplicate::router())
+        .merge(io::download::router())
+        .merge(create::router())
+        .merge(io::upload::router())
+        .merge(merge::router())
+        .merge(reset::router())
+        .merge(reservations::router())
+        .merge(sandbox::router())
+        .merge(transfer::router())
 }

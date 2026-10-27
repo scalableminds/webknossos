@@ -1,7 +1,7 @@
 //! Main application's datastore registry. Actual dataset storage runs in the
 //! separately deployed datastore service.
 use axum::{
-    Extension, Json as ResponseJson, Router,
+    Json as ResponseJson, Router,
     extract::State,
     http::StatusCode,
     routing::{delete, get},
@@ -16,24 +16,21 @@ use crate::{
     dataset::routes::public_datastore_json_on_connection,
     error::{ApiError, ApiResult},
     extract::{Json, Path},
+    state::JobsEnabled,
 };
 
 use super::dao;
 
-#[derive(Clone, Copy)]
-struct JobsEnabled(bool);
-
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/datastores", get(list).post(create))
         .route("/datastores/{name}", delete(remove))
-        .layer(Extension(JobsEnabled(jobs_enabled)))
 }
 
 async fn list(
     State(state): State<AppState>,
     OptionalAuthUser(user): OptionalAuthUser,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
 ) -> ApiResult<ResponseJson<Vec<Value>>> {
     // DataStoreDAO has no anonymousReadAccessQ override, so anonymous requests
     // receive an empty list. Superuser status does not bypass this read scope.
@@ -64,7 +61,7 @@ struct DataStoreParameters {
 async fn create(
     State(state): State<AppState>,
     user: AuthUser,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Json(body): Json<DataStoreParameters>,
 ) -> ApiResult<ResponseJson<Value>> {
     if !user.is_superuser {

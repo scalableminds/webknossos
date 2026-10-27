@@ -11,20 +11,17 @@ use crate::{
     AppState,
     error::{ApiError, ApiResult},
     extract::Path,
+    state::JobsEnabled,
     util::id::PathObjectId,
 };
-use axum::{Extension, Json, Router, extract::State, middleware, routing::get};
+use axum::{Json, Router, extract::State, middleware, routing::get};
 use serde_json::{Value, json};
 use sqlx::PgConnection;
 
-#[derive(Clone, Copy)]
-struct JobsEnabled(bool);
-
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/publications", get(list))
         .route("/publications/{id}", get(read))
-        .layer(Extension(JobsEnabled(jobs_enabled)))
         .layer(middleware::map_response(
             crate::util::cors::remote_origin_headers,
         ))
@@ -32,7 +29,7 @@ pub fn router(jobs_enabled: bool) -> Router<AppState> {
 
 async fn read(
     State(state): State<AppState>,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<Json<Value>> {
     let publication = dao::find_one(&state.pool, &id)
@@ -46,7 +43,7 @@ async fn read(
 
 async fn list(
     State(state): State<AppState>,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
 ) -> ApiResult<Json<Vec<Value>>> {
     let publications = dao::find_all(&state.pool).await?;
     let mut connection = state.pool.acquire().await?;

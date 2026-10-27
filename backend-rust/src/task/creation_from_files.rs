@@ -78,7 +78,7 @@ struct NmlTaskParameters {
     bounding_box: Option<BoundingBox>,
 }
 
-pub fn router(_jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/tasks/createFromFiles", post(create_from_files))
         .layer(DefaultBodyLimit::max(PLAY_MAX_DISK_BUFFER))

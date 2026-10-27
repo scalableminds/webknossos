@@ -59,7 +59,7 @@ use crate::{
 /// AnnotationService.createAnnotationFor `?~>` messages.
 pub(crate) const BASE_ID_FAILED: &str = "Failed to retrieve annotation base id.";
 
-pub fn router(_jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new().route("/tasks/{id}/assign", post(assign_one))
 }
 

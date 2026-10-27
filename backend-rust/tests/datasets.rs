@@ -20,9 +20,9 @@ fn offline_misc() -> webknossos_backend::system::application_info::MiscState {
 fn app(db: &TestDb) -> Router {
     webknossos_backend::dataset::routes::router()
         .merge(webknossos_backend::dataset::routes::list_router())
-        .merge(webknossos_backend::dataset::routes::read_router(true))
-        .merge(webknossos_backend::dataset::routes::metadata_router(true))
-        .merge(webknossos_backend::dataset::routes::lookup_router(true))
+        .merge(webknossos_backend::dataset::routes::read_router())
+        .merge(webknossos_backend::dataset::routes::metadata_router())
+        .merge(webknossos_backend::dataset::routes::lookup_router())
         .layer(axum::Extension(offline_misc()))
         .layer(axum::Extension(
             webknossos_backend::users::notification_emails::NotificationEmailService::new(
@@ -30,7 +30,7 @@ fn app(db: &TestDb) -> Router {
                 "http://localhost:9000",
             ),
         ))
-        .with_state(AppState::new(db.pool.clone()))
+        .with_state(AppState::new(db.pool.clone()).with_jobs_enabled(true))
 }
 
 async fn request(
@@ -476,7 +476,7 @@ async fn compact_and_full_dataset_responses_preserve_composites_paths_unsigned_i
     assert_eq!(filtered.as_array().unwrap().len(), 1);
     sqlx::query("UPDATE webknossos.workers SET supportedJobCommands=ARRAY['unknown_command'] WHERE _dataStore='test-store'")
         .execute(&db.pool).await.unwrap();
-    let jobs_disabled = webknossos_backend::dataset::routes::read_router(false)
+    let jobs_disabled = webknossos_backend::dataset::routes::read_router()
         .layer(axum::Extension(offline_misc()))
         .with_state(AppState::new(db.pool.clone()));
     assert_eq!(
@@ -1201,7 +1201,7 @@ async fn metadata_updates_render_before_commit_and_work_with_one_database_connec
         .connect(&db.connection_url())
         .await
         .unwrap();
-    let application = webknossos_backend::dataset::routes::metadata_router(false)
+    let application = webknossos_backend::dataset::routes::metadata_router()
         .layer(axum::Extension(offline_misc()))
         .with_state(AppState::new(single.clone()));
     let path = format!("/datasets/{id}");

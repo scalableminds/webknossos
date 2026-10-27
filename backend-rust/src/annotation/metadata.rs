@@ -23,6 +23,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json, Path},
+    state::JobsEnabled,
     users::notification_emails::{NotificationEmailService, SharedResource},
     util::id::ObjectId,
 };
@@ -51,10 +52,7 @@ pub const LOCK_SUCCESS: &str = "The locking state of the annotation was successf
 /// Msg.Annotation.publicWritesFailed.
 pub const PUBLIC_WRITES_FAILED: &str = "Could not convert annotation to json.";
 
-#[derive(Clone, Copy)]
-struct JobsEnabled(bool);
-
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/annotations/{typ}/{id}/edit", patch(edit))
         .route(
@@ -65,7 +63,6 @@ pub fn router(jobs_enabled: bool) -> Router<AppState> {
             "/annotations/{typ}/{id}/sharedTeams",
             get(shared_teams).patch(update_shared_teams),
         )
-        .layer(Extension(JobsEnabled(jobs_enabled)))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -207,7 +204,7 @@ fn is_locked_by_owner(query: Option<&str>) -> ApiResult<bool> {
 async fn edit_locked_state(
     State(state): State<AppState>,
     Extension(provider): Extension<AnnotationProvider>,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,
     RawQuery(query): RawQuery,

@@ -61,7 +61,7 @@ fn app(db: &TestDb, only_with_significant_changes: bool) -> Router {
         used_storage: Default::default(),
         worker_liveness: Default::default(),
     };
-    router_with_config(AppState::new(db.pool.clone()), &config)
+    router_with_config(AppState::from_config(db.pool.clone(), &config), &config)
 }
 
 struct World {

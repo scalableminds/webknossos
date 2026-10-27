@@ -12,6 +12,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::Path,
+    state::JobsEnabled,
     system::application_info::MiscState,
     util::id::ObjectId,
 };
@@ -20,13 +21,8 @@ pub const REOPEN_FAILED: &str = "Could not reopen the annotation.";
 pub const UPDATE_STATE_FAILED: &str = "Could not update state of annotation.";
 pub const REOPEN_SUCCESS: &str = "Annotation was reopened.";
 
-#[derive(Clone, Copy)]
-struct JobsEnabled(bool);
-
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
-    Router::new()
-        .route("/annotations/{typ}/{id}/reopen", patch(reopen))
-        .layer(Extension(JobsEnabled(jobs_enabled)))
+pub fn router() -> Router<AppState> {
+    Router::new().route("/annotations/{typ}/{id}/reopen", patch(reopen))
 }
 
 /// Owner-only gate: `!(modified + configured + 10 s).isPast`. Instant.isPast
@@ -79,7 +75,7 @@ async fn reopen(
     State(state): State<AppState>,
     Extension(provider): Extension<AnnotationProvider>,
     Extension(misc): Extension<MiscState>,
-    Extension(JobsEnabled(jobs)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs)): State<JobsEnabled>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,
 ) -> ApiResult<Json<Value>> {

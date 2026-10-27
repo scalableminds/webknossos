@@ -1,7 +1,7 @@
 //! AnnotationController.getSandbox: a synthetic, never persisted skeleton
 //! annotation (dummy annotation/owner IDs and the `dummyTracingId` layer)
 //! serialized like AnnotationService.publicWrites.
-use axum::{Extension, Json, Router, extract::State, routing::get};
+use axum::{Json, Router, extract::State, routing::get};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -14,6 +14,7 @@ use crate::{
     auth::{AuthUser, OptionalAuthUser},
     error::{ApiError, ApiResult},
     extract::{Path, Query},
+    state::JobsEnabled,
     util::id::ObjectId,
 };
 
@@ -25,13 +26,8 @@ pub const DUMMY_ID: &str = "000000000000000000000000";
 /// TracingId.dummy.
 pub const DUMMY_TRACING_ID: &str = "dummyTracingId";
 
-#[derive(Clone, Copy)]
-struct JobsEnabled(bool);
-
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
-    Router::new()
-        .route("/datasets/{datasetId}/sandbox/{typ}", get(sandbox))
-        .layer(Extension(JobsEnabled(jobs_enabled)))
+pub fn router() -> Router<AppState> {
+    Router::new().route("/datasets/{datasetId}/sandbox/{typ}", get(sandbox))
 }
 
 #[derive(Default, Deserialize)]
@@ -146,7 +142,7 @@ async fn public_json(
 
 async fn sandbox(
     State(state): State<AppState>,
-    Extension(JobsEnabled(jobs)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs)): State<JobsEnabled>,
     OptionalAuthUser(user): OptionalAuthUser,
     Path((dataset_id, typ)): Path<(String, String)>,
     Query(query): Query<SandboxQuery>,

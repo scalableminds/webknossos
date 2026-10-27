@@ -13,17 +13,13 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json as JsonBody, Path},
+    state::JobsEnabled,
     users::notification_emails::NotificationEmailService,
     util::id::ObjectId,
 };
 
-#[derive(Clone, Copy)]
-struct JobsEnabled(bool);
-
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
-    Router::new()
-        .route("/annotations/{typ}/{id}/transfer", patch(transfer))
-        .layer(Extension(JobsEnabled(jobs_enabled)))
+pub fn router() -> Router<AppState> {
+    Router::new().route("/annotations/{typ}/{id}/transfer", patch(transfer))
 }
 
 /// TransferAnnotationParameters.
@@ -36,7 +32,7 @@ struct TransferParameters {
 async fn transfer(
     State(state): State<AppState>,
     Extension(provider): Extension<AnnotationProvider>,
-    Extension(JobsEnabled(jobs)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs)): State<JobsEnabled>,
     Extension(notification_emails): Extension<NotificationEmailService>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,

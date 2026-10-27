@@ -97,8 +97,8 @@ fn app(db: &TestDb) -> Router {
     Router::new()
         .nest(
             "/api",
-            webknossos_backend::annotation::sandbox::router(false)
-                .merge(webknossos_backend::annotation::transfer::router(false)),
+            webknossos_backend::annotation::sandbox::router()
+                .merge(webknossos_backend::annotation::transfer::router()),
         )
         .layer(Extension(provider))
         .layer(Extension(

@@ -20,6 +20,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path},
+    state::JobsEnabled,
     stores::client::{ServiceClients, ServiceError},
     util::id::{ObjectId, PathObjectId},
 };
@@ -32,10 +33,9 @@ const DELETED_BY_USER: &str = "Deleted by user.";
 #[derive(Clone, Copy)]
 struct LifecycleFeatures {
     allow_delete_datasets: bool,
-    jobs_enabled: bool,
 }
 
-pub fn router(allow_delete_datasets: bool, jobs_enabled: bool) -> Router<AppState> {
+pub fn router(allow_delete_datasets: bool) -> Router<AppState> {
     Router::new()
         .route("/datasets/{datasetId}", delete(delete_dataset))
         .route("/datasets/{datasetId}/writeMirror", post(write_mirror))
@@ -54,7 +54,6 @@ pub fn router(allow_delete_datasets: bool, jobs_enabled: bool) -> Router<AppStat
         )
         .layer(Extension(LifecycleFeatures {
             allow_delete_datasets,
-            jobs_enabled,
         }))
 }
 
@@ -261,6 +260,7 @@ async fn delete_dataset(
     user: AuthUser,
     Path(id): Path<PathObjectId>,
     Extension(features): Extension<LifecycleFeatures>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(clients): Extension<ServiceClients>,
 ) -> ApiResult<()> {
     let record = require_readable(&state, &user, &id).await?;
@@ -314,7 +314,7 @@ async fn delete_dataset(
     if exists.is_none() {
         return Ok(());
     }
-    if features.jobs_enabled
+    if jobs_enabled
         && matches!(
             record.status.as_str(),
             NOT_YET_UPLOADED | NOT_YET_UPLOADED_TO_PATHS

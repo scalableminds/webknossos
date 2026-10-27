@@ -9,12 +9,12 @@ pub mod types;
 use crate::AppState;
 use axum::Router;
 
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
-        .merge(assignment::router(jobs_enabled))
-        .merge(request::router(jobs_enabled))
-        .merge(creation::router(jobs_enabled))
-        .merge(creation_from_files::router(jobs_enabled))
+        .merge(assignment::router())
+        .merge(request::router())
+        .merge(creation::router())
+        .merge(creation_from_files::router())
         .merge(types::router())
         .merge(routes::router())
 }

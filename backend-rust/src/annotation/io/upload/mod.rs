@@ -89,7 +89,7 @@ const MULTIPLE_EDITABLE_MAPPINGS: &str =
 const EDITABLE_MAPPING_INCOMPLETE: &str =
     "Could not store editable mapping, either file or baseMappingName is missing.";
 
-pub fn router(_jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/annotations/upload", post(upload))
         .layer(DefaultBodyLimit::max(PLAY_MAX_DISK_BUFFER))

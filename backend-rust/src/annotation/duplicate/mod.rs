@@ -11,8 +11,9 @@
 //! (AnnotationService.createAnnotationFor), see [`duplicate_in_tracing_store`].
 mod dao;
 
+use axum::extract::FromRef;
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::{FromRequestParts, State},
     http::{StatusCode, request::Parts},
     routing::post,
@@ -32,6 +33,7 @@ use crate::{
     error::{ApiError, ApiResult},
     extract::Path,
     extract::extension,
+    state::JobsEnabled,
     stores::tracing_client::{DuplicateAnnotationRequest, TracingStoreClient},
     util::id::ObjectId,
     util::instant::now_millis,
@@ -40,13 +42,8 @@ use crate::{
 /// Msg.Annotation.duplicateFailed.
 pub const DUPLICATE_FAILED: &str = "Could not duplicate annotation.";
 
-#[derive(Clone, Copy)]
-struct JobsEnabled(bool);
-
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
-    Router::new()
-        .route("/annotations/{typ}/{id}/duplicate", post(duplicate))
-        .layer(Extension(JobsEnabled(jobs_enabled)))
+pub fn router() -> Router<AppState> {
+    Router::new().route("/annotations/{typ}/{id}/duplicate", post(duplicate))
 }
 
 struct Services {
@@ -55,13 +52,16 @@ struct Services {
     jobs_enabled: bool,
 }
 
-impl<S: Send + Sync> FromRequestParts<S> for Services {
+impl<S: Send + Sync> FromRequestParts<S> for Services
+where
+    JobsEnabled: FromRef<S>,
+{
     type Rejection = ApiError;
-    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         Ok(Self {
             provider: extension(parts)?,
             tracing_store: extension(parts)?,
-            jobs_enabled: extension::<JobsEnabled>(parts)?.0,
+            jobs_enabled: JobsEnabled::from_ref(state).0,
         })
     }
 }

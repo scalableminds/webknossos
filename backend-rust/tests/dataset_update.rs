@@ -76,7 +76,7 @@ async fn setup() -> (TestDb, Fixture, Store, Router, tokio::task::JoinHandle<()>
     // Analytics side effects stay local (no forwarding URI).
     let mut misc = MiscConfig::default();
     misc.analytics.uri.clear();
-    let app = webknossos_backend::dataset::update::router(false)
+    let app = webknossos_backend::dataset::update::router()
         .layer(Extension(clients))
         .layer(Extension(MiscState::new(misc)))
         .with_state(AppState::new(db.pool.clone()));

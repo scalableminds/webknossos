@@ -117,7 +117,7 @@ fn app(db: &TestDb, hook: &str) -> Router {
         used_storage: Default::default(),
         worker_liveness: Default::default(),
     };
-    router_with_config(AppState::new(db.pool.clone()), &config)
+    router_with_config(AppState::from_config(db.pool.clone(), &config), &config)
 }
 
 async fn call(app: &Router, method: Method, uri: &str, body: Value) -> StatusCode {

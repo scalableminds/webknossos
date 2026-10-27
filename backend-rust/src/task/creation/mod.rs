@@ -1137,7 +1137,7 @@ pub(crate) async fn create_tasks(
 // POST /tasks
 // ---------------------------------------------------------------------------
 
-pub fn router(_jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new().route("/tasks", post(create))
 }
 

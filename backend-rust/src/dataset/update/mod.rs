@@ -14,19 +14,13 @@ use crate::{
     dataset::source::{DataLayerAttachments, LayerKind, StaticLayer, UsableDataSource},
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path},
+    state::JobsEnabled,
     stores::client::ServiceClients,
     util::id::{ObjectId, PathObjectId},
 };
 
-#[derive(Clone, Copy)]
-struct Features {
-    jobs_enabled: bool,
-}
-
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
-    Router::new()
-        .route("/datasets/{datasetId}/updatePartial", patch(update_partial))
-        .layer(Extension(Features { jobs_enabled }))
+pub fn router() -> Router<AppState> {
+    Router::new().route("/datasets/{datasetId}/updatePartial", patch(update_partial))
 }
 
 /// TristateOptionJsonHelper: absent → None, null → Some(None).
@@ -236,7 +230,7 @@ async fn update_partial(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(features): Extension<Features>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(clients): Extension<ServiceClients>,
     Extension(misc): Extension<crate::system::application_info::MiscState>,
     RequestJson(body): RequestJson<PartialUpdate>,
@@ -354,8 +348,7 @@ async fn update_partial(
         crate::system::analytics::properties("dataset_id", id.as_str()),
     );
     Ok(Json(
-        crate::dataset::routes::full_json(&state.pool, Some(&user), &id, features.jobs_enabled)
-            .await?,
+        crate::dataset::routes::full_json(&state.pool, Some(&user), &id, jobs_enabled).await?,
     ))
 }
 

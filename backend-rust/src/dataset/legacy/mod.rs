@@ -1,6 +1,6 @@
 //! Dataset response compatibility for API versions 10–15.
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     body::{Body, to_bytes},
     extract::{Request, State},
     http::StatusCode,
@@ -13,16 +13,16 @@ use serde_json::Value;
 use crate::{
     AppState,
     auth::OptionalAuthUser,
-    dataset::routes::{DatasetFeatures, ListQuery},
+    dataset::routes::ListQuery,
     error::{ApiError, ApiResult},
     extract::Query,
+    state::JobsEnabled,
     util::id::ObjectId,
 };
 
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/datasets", get(list))
-        .layer(Extension(DatasetFeatures { jobs_enabled }))
         // LegacyApiController.listDatasets wraps its success result in addRemoteOriginHeaders.
         .layer(axum::middleware::map_response(
             crate::util::cors::remote_origin_headers_on_success,
@@ -33,7 +33,7 @@ async fn list(
     State(state): State<AppState>,
     OptionalAuthUser(user): OptionalAuthUser,
     Query(mut query): Query<ListQuery>,
-    Extension(features): Extension<DatasetFeatures>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
 ) -> ApiResult<Json<Vec<Value>>> {
     // This parameter is only part of the latest compact API contract.
     query.include_annotation_count = None;
@@ -48,13 +48,8 @@ async fn list(
                 .and_then(|id| ObjectId::parse(id).ok())
                 .ok_or_else(ApiError::internal)?;
             values.push(
-                crate::dataset::routes::full_json(
-                    &state.pool,
-                    user.as_ref(),
-                    &id,
-                    features.jobs_enabled,
-                )
-                .await?,
+                crate::dataset::routes::full_json(&state.pool, user.as_ref(), &id, jobs_enabled)
+                    .await?,
             );
         }
         values

@@ -42,6 +42,7 @@ use crate::{
     AppState,
     auth::AuthUser,
     error::{ApiError, ApiResult},
+    state::JobsEnabled,
     stores::tracing_client::TracingStoreClient,
     system::application_info::MiscState,
     task::assignment::{
@@ -58,14 +59,9 @@ pub(crate) const TASK_ASSIGNED: &str = "You have been assigned a new task.";
 /// TaskDAO.assignNext `retryCount = 50`.
 const MAX_ATTEMPTS: usize = 50;
 
-pub fn router(jobs_enabled: bool) -> Router<AppState> {
-    Router::new()
-        .route("/user/tasks/request", post(request))
-        .layer(Extension(JobsEnabled(jobs_enabled)))
+pub fn router() -> Router<AppState> {
+    Router::new().route("/user/tasks/request", post(request))
 }
-
-#[derive(Clone, Copy)]
-struct JobsEnabled(bool);
 
 // ---------------------------------------------------------------------------
 // TaskService.getAllowedTeamsForNextTask / isTeamManagerOrAdminOfOrg
@@ -175,7 +171,7 @@ pub(crate) async fn assign_next(
 async fn request(
     State(state): State<AppState>,
     Extension(tracing_store): Extension<TracingStoreClient>,
-    Extension(JobsEnabled(jobs_enabled)): Extension<JobsEnabled>,
+    State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(misc): Extension<MiscState>,
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Value>> {

@@ -17,11 +17,8 @@ use webknossos_backend::{
 
 fn app(database: &TestDb, jobs_enabled: bool) -> Router {
     Router::new()
-        .nest(
-            "/api",
-            webknossos_backend::stores::data::router(jobs_enabled),
-        )
-        .with_state(AppState::new(database.pool.clone()))
+        .nest("/api", webknossos_backend::stores::data::router())
+        .with_state(AppState::new(database.pool.clone()).with_jobs_enabled(jobs_enabled))
 }
 
 async fn request(

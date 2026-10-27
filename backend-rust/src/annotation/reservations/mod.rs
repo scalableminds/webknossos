@@ -78,7 +78,7 @@ impl AnnotationIdDomain {
     }
 }
 
-pub fn router(_jobs_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/annotations/{id}/reservedIds", get(reserved_ids))
         .route("/annotations/{id}/reserveIds", post(reserve_ids))

@@ -2,7 +2,7 @@
 //! database so independent application processes cannot both acquire a mutex.
 use std::time::Duration;
 
-use axum::{Extension, Json, Router, extract::State, http::StatusCode, routing::post};
+use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -22,14 +22,14 @@ use crate::{
 pub const ACQUIRE_FAILED: &str = "Could not acquire annotation editing mutex.";
 pub const RELEASE_FAILED: &str = "Could not release annotation editing mutex.";
 
-#[derive(Clone, Copy)]
-struct MutexExpiry(Duration);
+/// `webKnossos.annotation.mutex.expiryTime`.
+#[derive(Clone, Copy, Debug)]
+pub struct MutexExpiry(pub Duration);
 
-pub fn router(expiry: Duration) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/annotations/{id}/acquireMutex", post(acquire))
         .route("/annotations/{id}/releaseMutex", post(release))
-        .layer(Extension(MutexExpiry(expiry)))
 }
 
 #[derive(Deserialize)]
@@ -65,7 +65,7 @@ fn acquisition_error(error: ApiError) -> ApiError {
 async fn acquire(
     State(state): State<AppState>,
     State(provider): State<AnnotationProvider>,
-    Extension(MutexExpiry(expiry)): Extension<MutexExpiry>,
+    State(MutexExpiry(expiry)): State<MutexExpiry>,
     user: AuthUser,
     Path(id): Path<String>,
     Query(query): Query<SessionQuery>,

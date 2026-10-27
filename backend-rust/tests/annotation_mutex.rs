@@ -135,13 +135,11 @@ fn app(db: &TestDb, expiry: Duration) -> Router {
         TracingStoreClient::new(ServiceClientConfig::default()).unwrap(),
     );
     Router::new()
-        .nest(
-            "/api",
-            webknossos_backend::annotation::mutex::router(expiry),
-        )
+        .nest("/api", webknossos_backend::annotation::mutex::router())
         .with_state(
             AppState::builder(db.pool.clone())
                 .annotation_provider(provider)
+                .annotation_mutex_expiry(expiry)
                 .build(),
         )
 }

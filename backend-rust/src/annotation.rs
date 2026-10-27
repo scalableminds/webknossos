@@ -23,13 +23,13 @@ pub mod transfer;
 use crate::AppState;
 use axum::Router;
 
-pub fn router(mutex_expiry: std::time::Duration) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .merge(private_links::router())
         .merge(lists::router())
         .merge(lifecycle::router())
         .merge(metadata::router())
-        .merge(mutex::router(mutex_expiry))
+        .merge(mutex::router())
         .merge(reopen::router())
         .merge(finish::router())
         .merge(info::router())

@@ -1,5 +1,5 @@
 use crate::{
-    annotation::provider::AnnotationProvider,
+    annotation::{mutex::MutexExpiry, provider::AnnotationProvider},
     auth::{browser::BrowserAuthConfig, routes::AuthRouteConfig},
     config::TimeTrackingConfig,
     dataset::options::DatasetRouteConfig,
@@ -42,6 +42,7 @@ pub struct AppState {
     pub slack: SlackNotificationService,
     pub datasets: DatasetRouteConfig,
     pub allow_delete_datasets: AllowDeleteDatasets,
+    pub annotation_mutex_expiry: MutexExpiry,
 }
 
 /// `features.allowDeleteDatasets`.
@@ -74,6 +75,7 @@ pub struct AppStateBuilder {
     slack: SlackConfig,
     datasets: DatasetRouteConfig,
     allow_delete_datasets: bool,
+    annotation_mutex_expiry: std::time::Duration,
 }
 
 impl AppState {
@@ -105,6 +107,7 @@ impl AppState {
             slack: SlackConfig::default(),
             datasets: DatasetRouteConfig::default(),
             allow_delete_datasets: true,
+            annotation_mutex_expiry: std::time::Duration::from_secs(120),
         }
     }
 
@@ -124,6 +127,7 @@ impl AppState {
             .slack(config.slack.clone())
             .datasets(config.datasets.clone())
             .allow_delete_datasets(config.allow_delete_datasets)
+            .annotation_mutex_expiry(config.annotation_mutex_expiry)
             .build()
     }
 }
@@ -205,6 +209,11 @@ impl AppStateBuilder {
         self
     }
 
+    pub fn annotation_mutex_expiry(mut self, expiry: std::time::Duration) -> Self {
+        self.annotation_mutex_expiry = expiry;
+        self
+    }
+
     /// A time-interaction writer other than the one `time_tracking` configures.
     pub fn time_interaction_writer(mut self, writer: TimeInteractionWriter) -> Self {
         self.time_interaction_writer = Some(writer);
@@ -271,6 +280,7 @@ impl AppStateBuilder {
             slack: SlackNotificationService::new(&self.slack),
             datasets: self.datasets,
             allow_delete_datasets: AllowDeleteDatasets(self.allow_delete_datasets),
+            annotation_mutex_expiry: MutexExpiry(self.annotation_mutex_expiry),
         }
     }
 }

@@ -28,7 +28,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
         RouteOptions {
             request_timeout: config.request_timeout,
             body_limit: config.body_limit,
-            annotation_mutex_expiry: config.annotation_mutex_expiry,
             oidc: config.oidc.clone(),
         },
     )
@@ -37,7 +36,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
 struct RouteOptions {
     request_timeout: Duration,
     body_limit: usize,
-    annotation_mutex_expiry: Duration,
     oidc: crate::auth::oidc::OidcConfig,
 }
 
@@ -46,7 +44,6 @@ impl RouteOptions {
         Self {
             request_timeout: Duration::from_secs(30),
             body_limit: 2 * 1024 * 1024,
-            annotation_mutex_expiry: Duration::from_secs(120),
             oidc: Default::default(),
         }
     }
@@ -56,12 +53,11 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
     let RouteOptions {
         request_timeout,
         body_limit,
-        annotation_mutex_expiry,
         oidc,
     } = options;
     let api = Router::new()
         .route("/health", get(|| async { "Ok" }))
-        .merge(crate::annotation::router(annotation_mutex_expiry))
+        .merge(crate::annotation::router())
         .merge(crate::task::router())
         .merge(crate::job::router())
         .merge(crate::ai_models::router())

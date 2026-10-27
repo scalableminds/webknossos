@@ -26,7 +26,6 @@ import type { FlycamAction } from "../../actions/flycam_actions";
 import type {
   ApplyVolumeUpdateActionsFromServerAction,
   BatchUpdateGroupsAndSegmentsAction,
-  MergeSegmentItemsAction,
   RemoveSegmentAction,
   UpdateSegmentAction,
 } from "../../actions/volumetracing_actions";
@@ -150,12 +149,6 @@ function* handleRemoveSegment(action: RemoveSegmentAction) {
   yield* put(removeMeshAction(action.layerName, action.segmentId));
 }
 
-function* handleMergeSegmentItems(action: MergeSegmentItemsAction) {
-  // The dispatched action will make sure that the mesh entry is removed from the
-  // store and from the scene.
-  yield* put(removeMeshAction(action.layerName, action.targetAgglomerateId));
-}
-
 function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<void> {
   const { id, visibility, layerName, additionalCoordinates } = action;
   const { segmentMeshController } = yield* call(getSceneController);
@@ -273,7 +266,6 @@ export default function* commonMeshSaga(): Saga<void> {
   yield* takeEvery("TRIGGER_MESH_DOWNLOAD", downloadMeshCell);
   yield* takeEvery("TRIGGER_MESHES_DOWNLOAD", downloadMeshCells);
   yield* takeEvery("REMOVE_SEGMENT", handleRemoveSegment);
-  yield* takeEvery("MERGE_SEGMENTS_ITEMS", handleMergeSegmentItems);
   yield* takeEvery("UPDATE_MESH_VISIBILITY", handleMeshVisibilityChange);
   yield* takeEvery("UPDATE_SEGMENT", handleSegmentColorChange);
   yield* takeEvery("UPDATE_MESH_OPACITY", handleMeshOpacityChange);

@@ -3,7 +3,6 @@ import { requestResult } from "admin/api/api_result";
 import dayjs from "dayjs";
 import update from "immutability-helper";
 import { toBigInt } from "libs/bigint_helpers";
-import importDynamic from "libs/import_dynamic";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import ResumableUpload from "libs/resumable_upload/resumable_upload";
@@ -109,28 +108,12 @@ import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboa
 import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
 import { getOrganization } from "./api/organization";
+import { loadProtoHelpers } from "./api/proto_helpers_loader";
 import { doWithToken, refreshToken } from "./api/token";
 
 export * from "./api/jobs";
 export * as meshApi from "./api/mesh";
 export * from "./api/token";
-
-// The protobuf helpers (and with them protobufjs) are only needed by the viewer, which also
-// imports them statically. Importing them dynamically here keeps them out of the initially
-// loaded code of all other pages. Within the viewer, the module is already loaded.
-// The promise is shared by all callers, since vitest returns the unmocked module to all but
-// the first of several concurrent dynamic imports of a mocked module. A failed import is not
-// kept, so that a later call can try again.
-let protoHelpersPromise: Promise<typeof import("viewer/model/helpers/proto_helpers")> | null = null;
-function loadProtoHelpers() {
-  protoHelpersPromise ??= importDynamic(() => import("viewer/model/helpers/proto_helpers")).catch(
-    (error) => {
-      protoHelpersPromise = null;
-      throw error;
-    },
-  );
-  return protoHelpersPromise;
-}
 
 type NewTeam = {
   readonly name: string;
@@ -2449,6 +2432,42 @@ export function getAgglomeratesForSegmentsFromTracingstore<T extends number | bi
     `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments`,
     extraParams,
   );
+}
+
+export type SegmentsOfAgglomerate = {
+  segmentIds: bigint[];
+  // False if the editable mapping has no graph for the agglomerate at the requested version. This
+  // is the case for agglomerates that were not edited in this annotation up to that version (their
+  // segments are only listed in the agglomerate file) and for ids that never existed. segmentIds is
+  // empty then. An agglomerate that was merged into another one is present and has no segments.
+  agglomerateIdIsPresent: boolean;
+};
+export async function getSegmentsForAgglomerateFromTracingStore<T extends number | bigint>(
+  tracingStoreUrl: string,
+  tracingId: string,
+  agglomerateId: T,
+  // Omit to get the newest version.
+  version?: number,
+): Promise<SegmentsOfAgglomerate> {
+  const result: SegmentsOfAgglomerate = await doWithToken((token) => {
+    const params = new URLSearchParams({
+      agglomerateId: agglomerateId.toString(),
+      token: token,
+    });
+    if (version != null) {
+      params.set("version", version.toString());
+    }
+    return retryAsyncFunction(() =>
+      Request.receiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/segmentsForAgglomerate?${params}`,
+        {
+          method: "GET",
+          showErrorToast: false,
+        },
+      ),
+    );
+  });
+  return result;
 }
 
 export function getEditableAgglomerateTreeAsSkeletonTracing(

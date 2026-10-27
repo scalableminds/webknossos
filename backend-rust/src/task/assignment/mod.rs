@@ -274,7 +274,7 @@ async fn manages_user(
 
 async fn assign_one(
     State(state): State<AppState>,
-    Extension(tracing_store): Extension<TracingStoreClient>,
+    State(tracing_store): State<TracingStoreClient>,
     Extension(notification_emails): Extension<NotificationEmailService>,
     user: AuthUser,
     Path(id): Path<String>,

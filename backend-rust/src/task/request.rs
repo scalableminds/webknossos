@@ -34,7 +34,7 @@
 //!   wraps every assignNext failure into `task.unavailable`. An empty team
 //!   list is `task.unavailable` here as there (Scala: the empty SQL tuple
 //!   fails the query).
-use axum::{Extension, Json as ResponseJson, Router, extract::State, routing::post};
+use axum::{Json as ResponseJson, Router, extract::State, routing::post};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 
@@ -170,7 +170,7 @@ pub(crate) async fn assign_next(
 
 async fn request(
     State(state): State<AppState>,
-    Extension(tracing_store): Extension<TracingStoreClient>,
+    State(tracing_store): State<TracingStoreClient>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     State(misc): State<MiscState>,
     user: AuthUser,

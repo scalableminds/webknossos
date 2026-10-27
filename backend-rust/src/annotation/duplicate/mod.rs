@@ -55,12 +55,13 @@ struct Services {
 impl<S: Send + Sync> FromRequestParts<S> for Services
 where
     JobsEnabled: FromRef<S>,
+    TracingStoreClient: FromRef<S>,
 {
     type Rejection = ApiError;
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         Ok(Self {
             provider: extension(parts)?,
-            tracing_store: extension(parts)?,
+            tracing_store: TracingStoreClient::from_ref(state),
             jobs_enabled: JobsEnabled::from_ref(state).0,
         })
     }

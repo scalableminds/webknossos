@@ -33,6 +33,7 @@
 //! task in request order; per-task failures are items, not request failures.
 pub(crate) mod dao;
 
+use axum::extract::FromRef;
 use axum::{
     Router,
     extract::{FromRequestParts, State},
@@ -280,11 +281,14 @@ pub(crate) struct CreationServices {
     pub slack: crate::slack::SlackNotificationService,
 }
 
-impl<S: Send + Sync> FromRequestParts<S> for CreationServices {
+impl<S: Send + Sync> FromRequestParts<S> for CreationServices
+where
+    TracingStoreClient: FromRef<S>,
+{
     type Rejection = ApiError;
-    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         Ok(Self {
-            tracing_store: extension(parts)?,
+            tracing_store: TracingStoreClient::from_ref(state),
             provider: extension(parts)?,
             slack: parts
                 .extensions

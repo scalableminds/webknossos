@@ -1,5 +1,8 @@
 use crate::{
-    stores::client::{ServiceClientConfig, ServiceClients},
+    stores::{
+        client::{ServiceClientConfig, ServiceClients},
+        tracing_client::TracingStoreClient,
+    },
     system::application_info::{MiscConfig, MiscState},
 };
 use axum::extract::FromRef;
@@ -12,6 +15,7 @@ pub struct AppState {
     pub jobs_enabled: JobsEnabled,
     pub misc: MiscState,
     pub clients: ServiceClients,
+    pub tracing_store: TracingStoreClient,
 }
 
 /// `features.jobsEnabled`.
@@ -25,6 +29,7 @@ pub struct AppStateBuilder {
     misc: MiscConfig,
     service_client: ServiceClientConfig,
     clients: Option<ServiceClients>,
+    tracing_store: Option<TracingStoreClient>,
 }
 
 impl AppState {
@@ -41,6 +46,7 @@ impl AppState {
             misc: MiscConfig::default(),
             service_client: ServiceClientConfig::default(),
             clients: None,
+            tracing_store: None,
         }
     }
 
@@ -75,9 +81,19 @@ impl AppStateBuilder {
         self
     }
 
+    /// A tracing-store client other than the one `service_client` configures.
+    pub fn tracing_store(mut self, client: TracingStoreClient) -> Self {
+        self.tracing_store = Some(client);
+        self
+    }
+
     pub fn build(self) -> AppState {
         let clients = self.clients.unwrap_or_else(|| {
             ServiceClients::new(self.service_client.clone())
+                .expect("validated service client configuration")
+        });
+        let tracing_store = self.tracing_store.unwrap_or_else(|| {
+            TracingStoreClient::new(self.service_client.clone())
                 .expect("validated service client configuration")
         });
         AppState {
@@ -85,6 +101,7 @@ impl AppStateBuilder {
             jobs_enabled: JobsEnabled(self.jobs_enabled),
             misc: MiscState::new(self.misc),
             clients,
+            tracing_store,
         }
     }
 }

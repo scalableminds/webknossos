@@ -66,7 +66,7 @@ async fn reset_to_base(
 async fn reset(
     State(state): State<AppState>,
     Extension(provider): Extension<AnnotationProvider>,
-    Extension(client): Extension<TracingStoreClient>,
+    State(client): State<TracingStoreClient>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,

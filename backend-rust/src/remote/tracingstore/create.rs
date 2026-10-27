@@ -6,7 +6,7 @@
 //! the annotation's old precedence layer at `previousVersion`, and returned
 //! as protobuf bytes. Nothing is saved here; the tracing store persists it.
 use axum::{
-    Extension, Router,
+    Router,
     extract::State,
     http::{StatusCode, header},
     response::{IntoResponse, Response},
@@ -123,7 +123,7 @@ async fn create(
     Path(_name): Path<String>,
     Query(query): Query<CreateTracingQuery>,
     State(clients): State<ServiceClients>,
-    Extension(tracing_store): Extension<TracingStoreClient>,
+    State(tracing_store): State<TracingStoreClient>,
     Json(params): Json<AnnotationLayerParameters>,
 ) -> Result<Response, CallbackError> {
     // Play parses the JSON body (validateJson) before validateAccess; the

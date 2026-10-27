@@ -80,7 +80,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
             mailer: crate::mail::MailSender::from_config(&config.mail),
             allow_delete_datasets: config.allow_delete_datasets,
             datasets: config.datasets.clone(),
-            service_client: config.service_client.clone(),
             voxelytics: config.voxelytics.clone(),
             oidc: config.oidc.clone(),
             slack: config.slack.clone(),
@@ -101,7 +100,6 @@ struct RouteOptions {
     mailer: crate::mail::MailSender,
     allow_delete_datasets: bool,
     datasets: crate::dataset::options::DatasetRouteConfig,
-    service_client: crate::stores::client::ServiceClientConfig,
     voxelytics: crate::voxelytics::VoxelyticsConfig,
     oidc: crate::auth::oidc::OidcConfig,
     slack: crate::slack::SlackConfig,
@@ -122,7 +120,6 @@ impl RouteOptions {
             auth_routes: crate::auth::routes::AuthRouteConfig::default(),
             browser_auth: crate::auth::browser::BrowserAuthConfig::default(),
             mailer: crate::mail::MailSender::default(),
-            service_client: Default::default(),
             voxelytics: Default::default(),
             oidc: Default::default(),
             slack: Default::default(),
@@ -144,17 +141,13 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         mailer,
         allow_delete_datasets,
         datasets,
-        service_client,
         voxelytics,
         oidc,
         slack,
     } = options;
-    let tracing_store_client =
-        crate::stores::tracing_client::TracingStoreClient::new(service_client.clone())
-            .expect("validated service client configuration");
     let annotation_provider = crate::annotation::provider::AnnotationProvider::new(
         state.pool.clone(),
-        tracing_store_client.clone(),
+        state.tracing_store.clone(),
     );
     // One writer per app: its per-user cache and locks must be shared by all routes.
     let time_interaction_writer = crate::time::interaction_writer::TimeInteractionWriter::new(
@@ -238,7 +231,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
             ApiError::new(StatusCode::METHOD_NOT_ALLOWED, crate::msg::request::METHOD_NOT_ALLOWED)
         })
         .layer(DefaultBodyLimit::max(body_limit))
-        .layer(axum::Extension(tracing_store_client))
         .layer(axum::Extension(annotation_provider))
         .layer(middleware::from_fn(crate::auth::browser::cookie_middleware))
         .layer(axum::Extension(browser_auth))

@@ -279,7 +279,10 @@ class VolumeTracingController @Inject() (
   def importVolumeData(tracingId: String): Action[MultipartFormData[TemporaryFile]] =
     Action.fox(parse.multipartFormData) { implicit request =>
       log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeTracing(tracingId)) {
+        accessTokenService.validateAccessFromTokenContext(
+          UserAccessRequest.writeTracing(tracingId),
+          useCaching = false
+        ) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound

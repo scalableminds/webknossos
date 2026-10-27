@@ -289,4 +289,28 @@ describe("volume annotation core — flood fill", () => {
       expect(coveredBoundingBox).toBeNull();
     });
   });
+
+  it("stops at the voxel limit instead of throwing", async () => {
+    const cube: LoadingVoxelCube = {
+      applyWrites() {},
+      getIsOverwritableFunction: () => null,
+      ensureLoaded: async () => new BigUint64Array(BUCKET_VOXEL_COUNT),
+    };
+    const { bucketWrites, wasVoxelLimitExceeded, coveredBoundingBox } = await resolveFloodFill(
+      {
+        kind: "floodFill",
+        seed: [10, 10, 10],
+        is3D: true,
+        bounds: { min: [0, 0, 0], max: [64, 64, 64] },
+      },
+      editContext({ activeSegmentId: FILL }),
+      cube,
+      undefined,
+      { maxVisitedVoxels: 100 },
+    );
+
+    expect(wasVoxelLimitExceeded).toBe(true);
+    expect(countVoxels(bucketWrites)).toBe(100);
+    expect(coveredBoundingBox).not.toBeNull();
+  });
 });

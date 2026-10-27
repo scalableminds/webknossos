@@ -871,13 +871,10 @@ pub(crate) fn is_valid_email(value: &str) -> bool {
 // Passwords (PasswordHasher "SCrypt" = at.favre BCrypt 2a, cost 10)
 
 const BCRYPT_COST: u32 = 10;
-/// at.favre's strict long-password strategy rejects more than 72 bytes.
-const BCRYPT_MAX_BYTES: usize = 72;
+// Like Scala (jBCrypt semantics), bytes beyond bcrypt's 72-byte input limit are ignored
+// instead of rejected; the bcrypt crate truncates by default.
 
 pub async fn hash_password(password: String) -> ApiResult<String> {
-    if password.len() > BCRYPT_MAX_BYTES {
-        return Err(ApiError::bad_request(crate::msg::user::PASSWORD_TOO_LONG));
-    }
     tokio::task::spawn_blocking(move || {
         bcrypt::hash_with_result(password.as_bytes(), BCRYPT_COST)
             .map(|parts| parts.format_for_version(bcrypt::Version::TwoA))
@@ -900,9 +897,6 @@ pub async fn dummy_password_check(password: String) {
 }
 
 pub async fn verify_password(password: String, hasher: &str, hash: String) -> bool {
-    if password.len() > BCRYPT_MAX_BYTES {
-        return false;
-    }
     if hasher != "SCrypt" || hash.is_empty() {
         // Spend the same time as a real check, so latency does not reveal the account state.
         dummy_password_check(password).await;

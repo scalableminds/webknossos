@@ -87,8 +87,10 @@ async fn verifies_and_produces_java_compatible_bcrypt_hashes() {
             )
             .await
         );
-        assert!(
-            !webknossos_backend::auth::browser::verify_password(
+        // Bytes beyond 72 are ignored, so appending to a full-length password still matches.
+        assert_eq!(
+            password.len() >= 72,
+            webknossos_backend::auth::browser::verify_password(
                 format!("{password}x"),
                 "SCrypt",
                 hash.into()
@@ -119,7 +121,7 @@ async fn verifies_and_produces_java_compatible_bcrypt_hashes() {
     assert!(
         webknossos_backend::auth::browser::hash_password("x".repeat(73))
             .await
-            .is_err()
+            .is_ok()
     );
 }
 

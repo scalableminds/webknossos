@@ -104,3 +104,20 @@ fn signatures_reject_tampering_and_other_versions() {
     assert!(extract("secret", &format!("{signed}x")).is_none());
     assert!(extract("secret", "data").is_none());
 }
+
+#[tokio::test]
+async fn long_passwords_are_truncated_to_72_bytes_not_rejected() {
+    let long = "x".repeat(100);
+    let hash = hash_password(long.clone()).await.unwrap();
+    assert!(hash.starts_with("$2a$10$"));
+    assert!(verify_password(long, "SCrypt", hash.clone()).await);
+    // Bytes beyond 72 are ignored; the first 72 still have to match.
+    assert!(verify_password("x".repeat(72), "SCrypt", hash.clone()).await);
+    assert!(verify_password(format!("{}y", "x".repeat(72)), "SCrypt", hash.clone()).await);
+    assert!(!verify_password("x".repeat(71), "SCrypt", hash).await);
+    // A hash created by the old (truncating) hasher still verifies.
+    let old = bcrypt::hash_with_salt("y".repeat(72), 4, [7u8; 16])
+        .unwrap()
+        .format_for_version(bcrypt::Version::TwoA);
+    assert!(verify_password("y".repeat(90), "SCrypt", old).await);
+}

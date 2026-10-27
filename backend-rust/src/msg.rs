@@ -236,8 +236,6 @@ pub mod user {
     /// Rust-only wording.
     pub const BROWSER_SESSIONS_NOT_CONFIGURED: &str =
         "Browser sessions are not configured on this server (WK_COOKIE_SIGNER_SECRET).";
-    /// Rust-only: bcrypt's input limit.
-    pub const PASSWORD_TOO_LONG: &str = "Password must not be longer than 72 bytes.";
     /// Rust-only wording.
     pub const UNKNOWN: &str = "User could not be found.";
     /// Rust-only wording.

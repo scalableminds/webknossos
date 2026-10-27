@@ -239,6 +239,13 @@ function* loadPrecomputedMeshForSegmentId(
     return;
   }
 
+  // Only proofreading changes agglomerates and thus requires reloading their meshes. Other meshes
+  // are rarely reloaded, so caching their chunks would only cost memory. Meshes loaded before the
+  // first proofreading action, which creates the editable mapping, are not cached either.
+  const shouldUseMeshChunkCache = yield* select(
+    (state) => getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId) != null,
+  );
+
   // Limit the number of segments that are meshed at the same time. This way,
   // the first meshes are fully visible earlier and the memory pressure of
   // in-flight chunk buffers stays bounded. Note that the loading state for
@@ -257,6 +264,7 @@ function* loadPrecomputedMeshForSegmentId(
         segmentationLayer,
         meshFile,
         annotationVersion,
+        shouldUseMeshChunkCache,
       );
       lods = chunkDescriptors.segmentInfo.lods;
       availableChunksMap = chunkDescriptors.availableChunksMap;
@@ -289,6 +297,7 @@ function* loadPrecomputedMeshForSegmentId(
         chunkScale,
         additionalCoordinates,
         opacity,
+        shouldUseMeshChunkCache,
       );
     }
   } finally {
@@ -318,6 +327,7 @@ function* _getChunkLoadingDescriptors(
   segmentationLayer: APISegmentationLayer,
   meshFile: APIMeshFileInfo,
   annotationVersion: number,
+  shouldUseMeshChunkCache: boolean,
 ) {
   const availableChunksMap: ChunksMap = {};
   let loadingOrder: number[] = [];
@@ -345,21 +355,27 @@ function* _getChunkLoadingDescriptors(
   }
 
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
-  const segmentInfo = yield* call(listMeshChunks, {
-    dataStoreUrl: dataset.dataStore.url,
-    datasetId: dataset.id,
-    layerName: getBaseSegmentationName(segmentationLayer),
-    meshFile,
-    segmentId,
-    // The back-end should only receive a non-null mapping name,
-    // if it should perform extra (reverse) look ups to compute a mesh
-    // with a specific mapping from a mesh file that was computed
-    // without a mapping.
-    targetMappingName: meshFile.mappingName == null ? mappingName : null,
-    editableMapping:
-      editableMapping != null && tracing ? { tracingStoreUrl, tracingId: tracing.tracingId } : null,
-    annotationVersion,
-  });
+  const segmentInfo = yield* call(
+    listMeshChunks,
+    {
+      dataStoreUrl: dataset.dataStore.url,
+      datasetId: dataset.id,
+      layerName: getBaseSegmentationName(segmentationLayer),
+      meshFile,
+      segmentId,
+      // The back-end should only receive a non-null mapping name,
+      // if it should perform extra (reverse) look ups to compute a mesh
+      // with a specific mapping from a mesh file that was computed
+      // without a mapping.
+      targetMappingName: meshFile.mappingName == null ? mappingName : null,
+      editableMapping:
+        editableMapping != null && tracing
+          ? { tracingStoreUrl, tracingId: tracing.tracingId }
+          : null,
+      annotationVersion,
+    },
+    shouldUseMeshChunkCache,
+  );
   segmentInfo.lods.forEach((meshLodInfo, lodIndex) => {
     availableChunksMap[lodIndex] = meshLodInfo?.chunks;
     loadingOrder.push(lodIndex);
@@ -546,6 +562,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   chunkScale: Vector3 | null,
   additionalCoordinates: AdditionalCoordinate[] | null,
   opacity: number | undefined,
+  shouldUseMeshChunkCache: boolean,
 ) {
   if (availableChunksMap[lod] == null) {
     return;
@@ -573,6 +590,7 @@ function* loadPrecomputedMeshesInChunksForLod(
     meshFileLocation,
     sortedAvailableChunks as MeshChunk[],
     MIN_BATCH_SIZE_IN_BYTES,
+    shouldUseMeshChunkCache,
   );
 
   const allChunkGeometries: UnmergedBufferGeometryWithInfo[] = [];
@@ -611,7 +629,13 @@ function* loadPrecomputedMeshesInChunksForLod(
 
   const createLoadTask = (chunks: MeshChunk[], isCached: boolean) =>
     function* loadChunks(): Saga<void> {
-      const dataForChunks = yield* call(getMeshChunkData, meshFileLocation, segmentId, chunks);
+      const dataForChunks = yield* call(
+        getMeshChunkData,
+        meshFileLocation,
+        segmentId,
+        chunks,
+        shouldUseMeshChunkCache,
+      );
       const { geometries, errors } = yield* call(decodeChunks, chunks, dataForChunks, chunkScale);
       allChunkGeometries.push(...geometries);
       yield* call(onBatchDecoded, geometries, isCached);

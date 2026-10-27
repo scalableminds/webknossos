@@ -80,14 +80,14 @@ function mockSegmentsOfAgglomerate(segmentIds: bigint[]) {
 // Agglomerate 1 consists of the segments 10, 11 and 12. Segment 12 has no mesh.
 async function loadAgglomerate1() {
   listingMock.mockResolvedValueOnce(listing([chunk(10n, 0), chunk(11n, 10)], [12n]));
-  return listMeshChunks(paramsFor(1n));
+  return listMeshChunks(paramsFor(1n), true);
 }
 
 // Agglomerate 2 consists of the segments 20 and 21 and was never edited.
 async function loadAgglomerate2() {
   getSegmentsMock.mockResolvedValueOnce({ segmentIds: [], agglomerateIdIsPresent: false });
   listingMock.mockResolvedValueOnce(listing([chunk(20n, 20), chunk(21n, 30)]));
-  return listMeshChunks(paramsFor(2n));
+  return listMeshChunks(paramsFor(2n), true);
 }
 
 describe("Mesh chunk provider", () => {
@@ -118,7 +118,7 @@ describe("Mesh chunk provider", () => {
       await loadAgglomerate2();
 
       mockSegmentsOfAgglomerate([10n, 11n, 12n, 20n, 21n]);
-      const info = await listMeshChunks(paramsFor(1n));
+      const info = await listMeshChunks(paramsFor(1n), true);
 
       expect(listedChunks(info)).toEqual([
         chunk(10n, 0),
@@ -137,9 +137,9 @@ describe("Mesh chunk provider", () => {
       await loadAgglomerate1();
 
       mockSegmentsOfAgglomerate([10n]);
-      const keptAgglomerate = await listMeshChunks(paramsFor(1n));
+      const keptAgglomerate = await listMeshChunks(paramsFor(1n), true);
       mockSegmentsOfAgglomerate([11n, 12n]);
-      const splitOffAgglomerate = await listMeshChunks(paramsFor(3n));
+      const splitOffAgglomerate = await listMeshChunks(paramsFor(3n), true);
 
       expect(listedChunks(keptAgglomerate)).toEqual([chunk(10n, 0)]);
       expect(listedChunks(splitOffAgglomerate)).toEqual([chunk(11n, 10)]);
@@ -152,7 +152,7 @@ describe("Mesh chunk provider", () => {
 
       mockSegmentsOfAgglomerate([10n, 11n, 12n, 30n, 31n]);
       listingForSegmentsMock.mockResolvedValueOnce(listing([chunk(30n, 40)], [31n]));
-      const info = await listMeshChunks(paramsFor(1n));
+      const info = await listMeshChunks(paramsFor(1n), true);
 
       expect(listedChunks(info)).toEqual([chunk(10n, 0), chunk(11n, 10), chunk(30n, 40)]);
       expect(listingForSegmentsMock).toHaveBeenCalledTimes(1);
@@ -160,7 +160,7 @@ describe("Mesh chunk provider", () => {
 
       // All segments are known now, including that segment 31 has no mesh.
       mockSegmentsOfAgglomerate([31n, 30n, 10n]);
-      await listMeshChunks(paramsFor(1n));
+      await listMeshChunks(paramsFor(1n), true);
       expect(listingForSegmentsMock).toHaveBeenCalledTimes(1);
       expect(listingMock).toHaveBeenCalledTimes(1);
     });
@@ -175,7 +175,7 @@ describe("Mesh chunk provider", () => {
       // read error. So segment 32 is left out of the listing and stays unknown in the cache.
       mockSegmentsOfAgglomerate([10n, 32n]);
       listingForSegmentsMock.mockResolvedValueOnce(listing([]));
-      const info = await listMeshChunks(paramsFor(1n));
+      const info = await listMeshChunks(paramsFor(1n), true);
 
       expect(listedChunks(info)).toEqual([chunk(10n, 0)]);
       expect(warnSpy).toHaveBeenCalledTimes(1);
@@ -184,7 +184,7 @@ describe("Mesh chunk provider", () => {
       // as having no mesh. This time, the back-end lists its chunk.
       mockSegmentsOfAgglomerate([10n, 32n]);
       listingForSegmentsMock.mockResolvedValueOnce(listing([chunk(32n, 80)]));
-      const retriedInfo = await listMeshChunks(paramsFor(1n));
+      const retriedInfo = await listMeshChunks(paramsFor(1n), true);
 
       expect(listedChunks(retriedInfo)).toEqual([chunk(10n, 0), chunk(32n, 80)]);
       // The second request by ids contains only segment 32. Segment 10 comes from the cache.
@@ -210,7 +210,7 @@ describe("Mesh chunk provider", () => {
 
       mockSegmentsOfAgglomerate([10n, 11n, 30n]);
       listingForSegmentsMock.mockResolvedValueOnce(listing([chunk(30n, 40)]));
-      const info = await listMeshChunks(paramsFor(1n));
+      const info = await listMeshChunks(paramsFor(1n), true);
 
       expect(listedChunks(info)).toEqual([chunk(10n, 0), chunk(11n, 10), chunk(30n, 40)]);
       expect(listingMock).toHaveBeenCalledTimes(1);
@@ -221,7 +221,7 @@ describe("Mesh chunk provider", () => {
 
       mockSegmentsOfAgglomerate([10n, 40n, 41n]);
       listingForSegmentsMock.mockResolvedValueOnce(listing([chunk(40n, 50), chunk(41n, 60)]));
-      const info = await listMeshChunks(paramsFor(1n));
+      const info = await listMeshChunks(paramsFor(1n), true);
 
       expect(listedChunks(info)).toEqual([chunk(10n, 0), chunk(40n, 50), chunk(41n, 60)]);
       expect(listingForSegmentsMock.mock.calls[0][4]).toEqual([40n, 41n]);
@@ -233,7 +233,7 @@ describe("Mesh chunk provider", () => {
 
       mockSegmentsOfAgglomerate([40n, 41n]);
       listingMock.mockResolvedValueOnce(listing([chunk(40n, 50), chunk(41n, 60)]));
-      const info = await listMeshChunks(paramsFor(4n));
+      const info = await listMeshChunks(paramsFor(4n), true);
 
       expect(listedChunks(info)).toHaveLength(2);
       expect(listingForSegmentsMock).not.toHaveBeenCalled();
@@ -246,7 +246,7 @@ describe("Mesh chunk provider", () => {
       mockSegmentsOfAgglomerate([12n]);
       listingMock.mockResolvedValueOnce(failedRequest(400, "zero chunks"));
 
-      await expect(listMeshChunks(paramsFor(5n))).rejects.toThrow("zero chunks");
+      await expect(listMeshChunks(paramsFor(5n), true)).rejects.toThrow("zero chunks");
       expect(listingMock).toHaveBeenCalledTimes(2);
     });
 
@@ -256,12 +256,12 @@ describe("Mesh chunk provider", () => {
       // The segments of the agglomerate can't be fetched.
       getSegmentsMock.mockRejectedValueOnce(new Error("network error"));
       listingMock.mockResolvedValueOnce(listing([chunk(10n, 0)]));
-      await listMeshChunks(paramsFor(1n));
+      await listMeshChunks(paramsFor(1n), true);
       // An older data store doesn't know how to list several segments.
       mockSegmentsOfAgglomerate([10n, 11n, 50n]);
       listingForSegmentsMock.mockResolvedValueOnce(failedRequest(404, "Not Found"));
       listingMock.mockResolvedValueOnce(listing([chunk(10n, 0), chunk(11n, 10), chunk(50n, 70)]));
-      const info = await listMeshChunks(paramsFor(1n));
+      const info = await listMeshChunks(paramsFor(1n), true);
 
       expect(listedChunks(info)).toHaveLength(3);
       expect(listingMock).toHaveBeenCalledTimes(3);
@@ -271,7 +271,10 @@ describe("Mesh chunk provider", () => {
       await loadAgglomerate1();
 
       listingMock.mockResolvedValueOnce(listing([chunk(10n, 0)]));
-      await listMeshChunks({ ...paramsFor(10n), targetMappingName: null, editableMapping: null });
+      await listMeshChunks(
+        { ...paramsFor(10n), targetMappingName: null, editableMapping: null },
+        true,
+      );
 
       expect(getSegmentsMock).not.toHaveBeenCalled();
       expect(listingMock).toHaveBeenCalledTimes(2);
@@ -285,26 +288,45 @@ describe("Mesh chunk provider", () => {
       };
       // Cached under the key 10: the mesh of agglomerate 10 of the mapping.
       listingMock.mockResolvedValueOnce(listing([chunk(10n, 0)]));
-      await listMeshChunks({
-        ...paramsFor(10n),
-        meshFile: meshFileForMapping,
-        targetMappingName: null,
-        editableMapping: null,
-      });
+      await listMeshChunks(
+        {
+          ...paramsFor(10n),
+          meshFile: meshFileForMapping,
+          targetMappingName: null,
+          editableMapping: null,
+        },
+        true,
+      );
 
       // With the editable mapping, agglomerate 3 consists of the unmapped segment 10, which is a
       // different object than agglomerate 10.
       mockSegmentsOfAgglomerate([10n]);
       listingMock.mockResolvedValueOnce(listing([chunk(30n, 30)]));
-      const info = await listMeshChunks({
-        ...paramsFor(3n),
-        meshFile: meshFileForMapping,
-        targetMappingName: null,
-      });
+      const info = await listMeshChunks(
+        { ...paramsFor(3n), meshFile: meshFileForMapping, targetMappingName: null },
+        true,
+      );
 
       expect(listedChunks(info)).toEqual([chunk(30n, 30)]);
       expect(getSegmentsMock).not.toHaveBeenCalled();
       expect(listingMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("neither reads from nor writes to the cache if it shouldn't be used", async () => {
+      await loadAgglomerate1();
+
+      listingMock.mockResolvedValueOnce(listing([chunk(10n, 0), chunk(11n, 10)], [12n]));
+      await listMeshChunks(paramsFor(1n), false);
+      listingMock.mockResolvedValueOnce(listing([chunk(60n, 90)]));
+      await listMeshChunks(paramsFor(6n), false);
+
+      expect(getSegmentsMock).not.toHaveBeenCalled();
+      expect(listingMock).toHaveBeenCalledTimes(3);
+      const cache = GlobalMeshChunkProvider.getCacheForMeshFile({
+        ...paramsFor(6n),
+        meshFileName: meshFile.name,
+      });
+      expect(cache.getChunkLists([60n]).size).toBe(0);
     });
   });
 
@@ -326,7 +348,7 @@ describe("Mesh chunk provider", () => {
     }
 
     function getData(chunks: MeshChunk[]) {
-      return getMeshChunkData(location, 1n, chunks);
+      return getMeshChunkData(location, 1n, chunks, true);
     }
 
     function firstBytes(buffers: Array<ArrayBuffer | undefined>) {
@@ -343,6 +365,26 @@ describe("Mesh chunk provider", () => {
       expect(chunkDataMock.mock.calls[1][3].requests).toEqual([
         { byteOffset: 20, byteSize: 10, segmentId: 1n },
       ]);
+    });
+
+    it("fetches all chunks and caches none if the cache shouldn't be used", async () => {
+      mockChunkData();
+      await getData([chunk(10n, 0)]);
+      const buffers = await getMeshChunkData(location, 1n, [chunk(10n, 0), chunk(11n, 10)], false);
+      const { cachedBatches, missingBatches } = batchMeshChunksForLoading(
+        location,
+        [chunk(10n, 0), chunk(11n, 10)],
+        15,
+        false,
+      );
+
+      expect(firstBytes(buffers)).toEqual([0, 10]);
+      expect(chunkDataMock).toHaveBeenCalledTimes(2);
+      expect(chunkDataMock.mock.calls[1][3].requests).toHaveLength(2);
+      expect(cachedBatches).toEqual([]);
+      expect(missingBatches).toHaveLength(1);
+      const cache = GlobalMeshChunkProvider.getCacheForMeshFile(location);
+      expect(cache.getChunkData(chunk(11n, 10))).toBeUndefined();
     });
 
     it("caches chunks of different segments at the same byte offset separately", async () => {
@@ -379,7 +421,12 @@ describe("Mesh chunk provider", () => {
       ];
 
       // A batch is closed once it has more than 15 bytes, i.e., after two chunks.
-      const { cachedBatches, missingBatches } = batchMeshChunksForLoading(location, chunks, 15);
+      const { cachedBatches, missingBatches } = batchMeshChunksForLoading(
+        location,
+        chunks,
+        15,
+        true,
+      );
       const segmentIdsPerBatch = (batches: MeshChunk[][]) =>
         batches.map((batch) => batch.map((c) => c.unmappedSegmentId));
       expect(segmentIdsPerBatch(missingBatches)).toEqual([[20n, 21n], [22n]]);
@@ -399,7 +446,7 @@ describe("Mesh chunk provider", () => {
       const otherMeshFileOfLayer = { ...location, meshFileName: "other_meshfile" };
       const meshFileOfOtherLayer = { ...location, layerName: "other_segmentation" };
       for (const meshFileLocation of [location, otherMeshFileOfLayer, meshFileOfOtherLayer]) {
-        await getMeshChunkData(meshFileLocation, 1n, [chunk(10n, 0)]);
+        await getMeshChunkData(meshFileLocation, 1n, [chunk(10n, 0)], true);
       }
 
       GlobalMeshChunkProvider.clearForLayer(location);

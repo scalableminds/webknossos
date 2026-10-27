@@ -112,12 +112,12 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       (manifestStart, manifestEnd) <- getNeuroglancerSegmentManifestOffsets(meshFileKey, meshFileAttributes, segmentId)
       segmentManifest <- readSegmentManifest(meshFileKey, manifestStart, manifestEnd)
       lods = enrichSegmentInfo(
-      segmentManifest,
-      meshFileAttributes.lodScaleMultiplier,
-      meshFileAttributes.transform,
-      manifestStart,
-      segmentId
-    )
+        segmentManifest,
+        meshFileAttributes.lodScaleMultiplier,
+        meshFileAttributes.transform,
+        manifestStart,
+        segmentId
+      )
     } yield lods
 
   private def readSegmentManifest(meshFileKey: MeshFileKey, manifestStart: Long, manifestEnd: Long)(using

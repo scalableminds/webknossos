@@ -13,6 +13,8 @@ import sum from "lodash-es/sum";
  * Which segments form an agglomerate is never cached, since every proofreading action changes it.
  * Everything the caches don't know is requested from the back-end, so a cache miss costs a request
  * but never produces a wrong mesh.
+ * Only meshes of a layer with an editable mapping, i.e., meshes used for proofreading, are cached.
+ * Other meshes are rarely reloaded, so caching them would only cost memory.
  * The functions that load mesh chunks through the provider are in mesh_chunk_provider_accessors.ts.
  */
 

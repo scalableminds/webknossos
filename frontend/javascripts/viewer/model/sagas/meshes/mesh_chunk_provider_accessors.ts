@@ -13,6 +13,8 @@ import {
 /*
  * Loads mesh chunk lists and chunk bytes. Answers from the GlobalMeshChunkProvider where it can
  * and requests everything else from the back-end. See mesh_chunk_provider.ts.
+ * Each function takes shouldUseMeshChunkCache. If it is false, the function neither reads from nor
+ * writes to the cache and requests everything from the back-end.
  */
 
 type TracingStoreURLAndTracingId = { tracingStoreUrl: string; tracingId: string };
@@ -33,7 +35,12 @@ export type ListMeshChunksParamsWithTracingStoreURL = Omit<
  */
 export async function listMeshChunks(
   params: ListMeshChunksParamsWithTracingStoreURL,
+  shouldUseMeshChunkCache: boolean,
 ): Promise<MeshSegmentInfo> {
+  const adaptedParams = { ...params, editableMappingTracingId: params.editableMapping?.tracingId };
+  if (!shouldUseMeshChunkCache) {
+    return unwrapOrThrow(await meshApi.getMeshFileChunksForSegment(adaptedParams));
+  }
   const cache = GlobalMeshChunkProvider.getCacheForMeshFile({
     ...params,
     meshFileName: params.meshFile.name,
@@ -48,7 +55,6 @@ export async function listMeshChunks(
       return listing;
     }
   }
-  const adaptedParams = { ...params, editableMappingTracingId: params.editableMapping?.tracingId };
   const listing = unwrapOrThrow(await meshApi.getMeshFileChunksForSegment(adaptedParams));
   cache.addChunkLists(listing);
   return listing;
@@ -167,14 +173,18 @@ export function batchMeshChunksForLoading(
   location: MeshFileLocation,
   chunks: MeshChunk[],
   minBatchSizeInBytes: number,
+  shouldUseMeshChunkCache: boolean,
 ): { cachedBatches: MeshChunk[][]; missingBatches: MeshChunk[][] } {
+  const batchBySize = (chunksToBatch: MeshChunk[]) =>
+    chunkDynamically(chunksToBatch, minBatchSizeInBytes, (chunk) => chunk.byteSize);
+  if (!shouldUseMeshChunkCache) {
+    return { cachedBatches: [], missingBatches: batchBySize(chunks) };
+  }
   const cache = GlobalMeshChunkProvider.getCacheForMeshFile(location);
   const [cachedChunks, missingChunks] = partition(
     chunks,
     (chunk) => cache.getChunkData(chunk) != null,
   );
-  const batchBySize = (chunksToBatch: MeshChunk[]) =>
-    chunkDynamically(chunksToBatch, minBatchSizeInBytes, (chunk) => chunk.byteSize);
   return { cachedBatches: batchBySize(cachedChunks), missingBatches: batchBySize(missingChunks) };
 }
 
@@ -209,7 +219,11 @@ export async function getMeshChunkData(
   // The segment id the chunks were listed for. Only relevant for neuroglancer precomputed meshes.
   segmentIdForRequest: bigint,
   chunks: MeshChunk[],
+  shouldUseMeshChunkCache: boolean,
 ): Promise<Array<ArrayBuffer | undefined>> {
+  if (!shouldUseMeshChunkCache) {
+    return fetchChunkData(location, segmentIdForRequest, chunks);
+  }
   const cache = GlobalMeshChunkProvider.getCacheForMeshFile(location);
   const buffers = chunks.map((chunk) => cache.getChunkData(chunk));
   const missingChunkIndices = buffers.flatMap((buffer, index) => (buffer == null ? [index] : []));

@@ -47,7 +47,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
             jobs: config.jobs.clone(),
             annotation_mutex_expiry: config.annotation_mutex_expiry,
             time_tracking: config.time_tracking,
-            auth_routes: config.auth_routes.clone(),
             allow_delete_datasets: config.allow_delete_datasets,
             datasets: config.datasets.clone(),
             voxelytics: config.voxelytics.clone(),
@@ -65,7 +64,6 @@ struct RouteOptions {
     jobs: crate::job::routes::JobsConfig,
     annotation_mutex_expiry: Duration,
     time_tracking: crate::config::TimeTrackingConfig,
-    auth_routes: crate::auth::routes::AuthRouteConfig,
     allow_delete_datasets: bool,
     datasets: crate::dataset::options::DatasetRouteConfig,
     voxelytics: crate::voxelytics::VoxelyticsConfig,
@@ -85,7 +83,6 @@ impl RouteOptions {
             time_tracking: Default::default(),
             allow_delete_datasets: true,
             datasets: Default::default(),
-            auth_routes: crate::auth::routes::AuthRouteConfig::default(),
             voxelytics: Default::default(),
             oidc: Default::default(),
             slack: Default::default(),
@@ -102,7 +99,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         jobs,
         annotation_mutex_expiry,
         time_tracking,
-        auth_routes,
         allow_delete_datasets,
         datasets,
         voxelytics,
@@ -123,8 +119,8 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         &state.browser_auth.public_uri,
     );
     let datastore_tokens = crate::dataset::explore::DatastoreTokenConfig {
-        expiry: auth_routes.datastore_expiry,
-        idle_timeout: auth_routes.auth_idle_timeout,
+        expiry: state.auth_routes.datastore_expiry,
+        idle_timeout: state.auth_routes.auth_idle_timeout,
     };
     let api = Router::new()
         .route("/health", get(|| async { "Ok" }))
@@ -133,14 +129,14 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         .merge(crate::job::router(
             state.jobs_enabled.0,
             &jobs,
-            &auth_routes,
+            &state.auth_routes,
         ))
         .merge(crate::ai_models::router())
         .merge(crate::ai_models::upload_router(
             datasets.upload_to_paths.clone(),
         ))
         .merge(crate::voxelytics::router(voxelytics))
-        .merge(crate::auth::router(oidc, auth_routes.clone()))
+        .merge(crate::auth::router(oidc))
         .merge(crate::remote::router(allow_delete_datasets))
         .merge(crate::stores::router())
         .merge(crate::dataset::router(

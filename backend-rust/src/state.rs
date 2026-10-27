@@ -1,6 +1,6 @@
 use crate::{
     annotation::provider::AnnotationProvider,
-    auth::browser::BrowserAuthConfig,
+    auth::{browser::BrowserAuthConfig, routes::AuthRouteConfig},
     mail::MailSender,
     stores::{
         client::{ServiceClientConfig, ServiceClients},
@@ -22,6 +22,7 @@ pub struct AppState {
     pub annotation_provider: AnnotationProvider,
     pub browser_auth: BrowserAuthConfig,
     pub mailer: MailSender,
+    pub auth_routes: AuthRouteConfig,
 }
 
 /// `features.jobsEnabled`.
@@ -39,6 +40,7 @@ pub struct AppStateBuilder {
     annotation_provider: Option<AnnotationProvider>,
     browser_auth: BrowserAuthConfig,
     mailer: MailSender,
+    auth_routes: AuthRouteConfig,
 }
 
 impl AppState {
@@ -59,6 +61,7 @@ impl AppState {
             annotation_provider: None,
             browser_auth: BrowserAuthConfig::default(),
             mailer: MailSender::default(),
+            auth_routes: AuthRouteConfig::default(),
         }
     }
 
@@ -69,6 +72,7 @@ impl AppState {
             .service_client(config.service_client.clone())
             .browser_auth(config.browser_auth.clone())
             .mailer(MailSender::from_config(&config.mail))
+            .auth_routes(config.auth_routes.clone())
             .build()
     }
 }
@@ -105,6 +109,11 @@ impl AppStateBuilder {
         self
     }
 
+    pub fn auth_routes(mut self, config: AuthRouteConfig) -> Self {
+        self.auth_routes = config;
+        self
+    }
+
     /// A tracing-store client other than the one `service_client` configures.
     pub fn tracing_store(mut self, client: TracingStoreClient) -> Self {
         self.tracing_store = Some(client);
@@ -138,6 +147,7 @@ impl AppStateBuilder {
             annotation_provider,
             browser_auth: self.browser_auth,
             mailer: self.mailer,
+            auth_routes: self.auth_routes,
         }
     }
 }

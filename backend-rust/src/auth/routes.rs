@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::{FromRequestParts, State},
     http::{StatusCode, header, request::Parts},
     response::{IntoResponse, Response},
@@ -46,7 +46,7 @@ impl Default for AuthRouteConfig {
     }
 }
 
-pub fn router(config: AuthRouteConfig) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/auth/token", get(get_token).delete(delete_token))
         .route("/userToken/generate", post(generate_datastore_token))
@@ -54,7 +54,6 @@ pub fn router(config: AuthRouteConfig) -> Router<AppState> {
         .route("/auth/logoutEverywhere", post(logout_everywhere))
         .route("/auth/webauthn/keys", get(list_keys))
         .route("/auth/webauthn/keys/{id}", delete(remove_key))
-        .layer(Extension(config))
 }
 
 struct LifecycleAuth {
@@ -138,7 +137,7 @@ async fn insert_token(
 
 async fn get_token(
     State(state): State<AppState>,
-    Extension(config): Extension<AuthRouteConfig>,
+    State(config): State<AuthRouteConfig>,
     auth: LifecycleAuth,
 ) -> ApiResult<Json<Value>> {
     let mut tx = state.pool.begin().await?;
@@ -178,7 +177,7 @@ async fn delete_token(State(state): State<AppState>, auth: LifecycleAuth) -> Api
 
 async fn generate_datastore_token(
     State(state): State<AppState>,
-    Extension(config): Extension<AuthRouteConfig>,
+    State(config): State<AuthRouteConfig>,
     OptionalLifecycleAuth(auth): OptionalLifecycleAuth,
 ) -> ApiResult<Json<Value>> {
     let token = if let Some(auth) = auth {
@@ -202,7 +201,7 @@ async fn generate_datastore_token(
 
 async fn logout(
     State(state): State<AppState>,
-    Extension(config): Extension<AuthRouteConfig>,
+    State(config): State<AuthRouteConfig>,
     State(browser): State<BrowserAuthConfig>,
     OptionalLifecycleAuth(auth): OptionalLifecycleAuth,
 ) -> ApiResult<Response> {
@@ -263,7 +262,7 @@ pub(crate) struct KeyDescriptor {
 
 async fn list_keys(
     State(state): State<AppState>,
-    Extension(config): Extension<AuthRouteConfig>,
+    State(config): State<AuthRouteConfig>,
     auth: LifecycleAuth,
 ) -> ApiResult<Json<Vec<KeyDescriptor>>> {
     check_passkeys(&config)?;
@@ -276,7 +275,7 @@ async fn list_keys(
 
 async fn remove_key(
     State(state): State<AppState>,
-    Extension(config): Extension<AuthRouteConfig>,
+    State(config): State<AuthRouteConfig>,
     auth: LifecycleAuth,
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<Json<Value>> {

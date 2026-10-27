@@ -10,11 +10,11 @@ pub use extractors::*;
 use crate::AppState;
 use axum::Router;
 
-pub fn router(oidc: oidc::OidcConfig, auth_routes: routes::AuthRouteConfig) -> Router<AppState> {
+pub fn router(oidc: oidc::OidcConfig) -> Router<AppState> {
     Router::new()
         .merge(oidc::router(oidc))
         .merge(webauthn::router())
-        .merge(routes::router(auth_routes))
+        .merge(routes::router())
         .merge(browser::router())
         .merge(browser::account::router())
         .merge(browser::onboarding::router())

@@ -16,8 +16,12 @@ use webknossos_backend::{AppState, auth::authenticate, auth::routes::AuthRouteCo
 
 fn configured_router(database: &TestDb, config: AuthRouteConfig) -> Router {
     Router::new()
-        .nest("/api", webknossos_backend::auth::routes::router(config))
-        .with_state(AppState::new(database.pool.clone()))
+        .nest("/api", webknossos_backend::auth::routes::router())
+        .with_state(
+            AppState::builder(database.pool.clone())
+                .auth_routes(config)
+                .build(),
+        )
 }
 
 fn app(database: &TestDb) -> Router {

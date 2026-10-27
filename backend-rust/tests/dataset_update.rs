@@ -18,7 +18,7 @@ use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
     stores::client::{ServiceClientConfig, ServiceClients},
-    system::application_info::{MiscConfig, MiscState},
+    system::application_info::MiscConfig,
 };
 
 #[derive(Clone, Default)]
@@ -78,8 +78,7 @@ async fn setup() -> (TestDb, Fixture, Store, Router, tokio::task::JoinHandle<()>
     misc.analytics.uri.clear();
     let app = webknossos_backend::dataset::update::router()
         .layer(Extension(clients))
-        .layer(Extension(MiscState::new(misc)))
-        .with_state(AppState::new(db.pool.clone()));
+        .with_state(AppState::builder(db.pool.clone()).misc(misc).build());
     (db, fixture, store, app, server)
 }
 

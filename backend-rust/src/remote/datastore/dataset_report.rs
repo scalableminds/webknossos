@@ -80,7 +80,7 @@ async fn report_dataset_upload(
     Query(query): Query<ReportQuery>,
     ValidatedDataStore(store): ValidatedDataStore,
     Extension(clients): Extension<ServiceClients>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     slack: SlackNotificationService,
     Json(body): Json<ReportDatasetUploadParameters>,
 ) -> Response {

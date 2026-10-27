@@ -111,7 +111,7 @@ async fn handle_report(
     State(state): State<AppState>,
     Extension(writer): Extension<TimeInteractionWriter>,
     Extension(time_tracking): Extension<TimeTrackingConfig>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Query(query): Query<KeyQuery>,
     Json(report): Json<AnnotationUpdatesReport>,
 ) -> Result<StatusCode, CallbackError> {

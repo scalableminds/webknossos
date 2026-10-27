@@ -11,7 +11,7 @@ use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
-    AppState, mail::MailSender, router_with_misc, system::application_info::MiscConfig,
+    AppState, mail::MailSender, router_with_mailer, system::application_info::MiscConfig,
 };
 
 async fn send(app: &axum::Router, uri: &str, token: Option<&str>, body: &str) -> (u16, Value) {
@@ -40,7 +40,13 @@ async fn send(app: &axum::Router, uri: &str, token: Option<&str>, body: &str) ->
 }
 
 fn app(db: &TestDb, misc: MiscConfig) -> axum::Router {
-    router_with_misc(AppState::new(db.pool.clone()), misc, MailSender::default())
+    router_with_mailer(
+        AppState::builder(db.pool.clone())
+            .jobs_enabled(misc.jobs_enabled)
+            .misc(misc)
+            .build(),
+        MailSender::default(),
+    )
 }
 
 fn error(message: &str) -> Value {

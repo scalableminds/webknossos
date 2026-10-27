@@ -8,6 +8,7 @@
 //! read). Responses are buffered in memory (Scala writes a temporary file).
 mod dao;
 
+use axum::extract::FromRef;
 use std::{
     fmt::Write as _,
     io::{Cursor, Write},
@@ -160,13 +161,16 @@ struct Services {
     misc: MiscState,
 }
 
-impl<S: Send + Sync> FromRequestParts<S> for Services {
+impl<S: Send + Sync> FromRequestParts<S> for Services
+where
+    MiscState: FromRef<S>,
+{
     type Rejection = ApiError;
-    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         Ok(Self {
             provider: extension(parts)?,
             tracing_store: extension(parts)?,
-            misc: extension(parts)?,
+            misc: MiscState::from_ref(state),
         })
     }
 }

@@ -74,7 +74,7 @@ async fn require_reopen(
 async fn reopen(
     State(state): State<AppState>,
     Extension(provider): Extension<AnnotationProvider>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     State(JobsEnabled(jobs)): State<JobsEnabled>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,

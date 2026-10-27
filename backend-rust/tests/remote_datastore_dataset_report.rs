@@ -18,7 +18,7 @@ use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
     stores::client::{ServiceClientConfig, ServiceClients},
-    system::application_info::{MiscConfig, MiscState},
+    system::application_info::MiscConfig,
 };
 
 /// One recorded datastore call: method, URI (incl. query), JSON body.
@@ -85,8 +85,7 @@ fn app(db: &TestDb, jobs_enabled: bool) -> Router {
     misc.analytics.save_to_database_enabled = true;
     webknossos_backend::remote::datastore::dataset_report::router()
         .layer(Extension(clients))
-        .layer(Extension(MiscState::new(misc)))
-        .with_state(AppState::new(db.pool.clone()))
+        .with_state(AppState::builder(db.pool.clone()).misc(misc).build())
 }
 
 async fn setup() -> Setup {

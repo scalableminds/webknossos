@@ -1,6 +1,6 @@
 //! OrganizationController: operator data and terms of service.
 use axum::{
-    Extension, Router,
+    Router,
     extract::State,
     http::{HeaderValue, header},
     response::{IntoResponse, Response},
@@ -43,11 +43,11 @@ fn no_cache(body: serde_json::Value) -> Response {
         .into_response()
 }
 
-async fn operator_data(Extension(misc): Extension<MiscState>) -> Response {
+async fn operator_data(State(misc): State<MiscState>) -> Response {
     no_cache(json!(misc.config().operator_data))
 }
 
-async fn terms_of_service(Extension(misc): Extension<MiscState>) -> Response {
+async fn terms_of_service(State(misc): State<MiscState>) -> Response {
     let config = &misc.config().terms_of_service;
     no_cache(json!({
         "version": config.version,
@@ -58,7 +58,7 @@ async fn terms_of_service(Extension(misc): Extension<MiscState>) -> Response {
 
 async fn acceptance_needed(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     user: AuthUser,
 ) -> ApiResult<axum::Json<serde_json::Value>> {
     let config = &misc.config().terms_of_service;
@@ -83,7 +83,7 @@ struct AcceptParameters {
 
 async fn accept(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     user: AuthUser,
     Query(parameters): Query<AcceptParameters>,
 ) -> ApiResult<Response> {

@@ -15,7 +15,7 @@ use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
     stores::client::{ServiceClientConfig, ServiceClients},
-    system::application_info::{MiscConfig, MiscState},
+    system::application_info::MiscConfig,
 };
 
 const COMMANDS: [&str; 8] = [
@@ -67,12 +67,15 @@ fn app(db: &TestDb, enabled: bool) -> Router {
     })
     .unwrap();
     webknossos_backend::job::submission::router(enabled)
-        .layer(Extension(MiscState::new(MiscConfig {
-            jobs_enabled: enabled,
-            ..MiscConfig::default()
-        })))
         .layer(Extension(clients))
-        .with_state(AppState::new(db.pool.clone()))
+        .with_state(
+            AppState::builder(db.pool.clone())
+                .misc(MiscConfig {
+                    jobs_enabled: enabled,
+                    ..MiscConfig::default()
+                })
+                .build(),
+        )
 }
 
 async fn request(

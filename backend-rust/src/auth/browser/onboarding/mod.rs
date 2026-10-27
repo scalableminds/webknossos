@@ -562,7 +562,7 @@ async fn register(
     State(state): State<AppState>,
     Extension(config): Extension<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     slack: SlackNotificationService,
     FormBody(data): FormBody,
 ) -> ApiResult<Response> {
@@ -642,7 +642,7 @@ async fn create_organization_with_admin(
     State(state): State<AppState>,
     Extension(config): Extension<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     clients: Option<Extension<ServiceClients>>,
     slack: SlackNotificationService,
     headers: HeaderMap,
@@ -754,7 +754,7 @@ struct ExistingUserOrganization {
 async fn create_organization_with_existing_user(
     State(state): State<AppState>,
     Extension(config): Extension<BrowserAuthConfig>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     clients: Option<Extension<ServiceClients>>,
     requester: AuthUser,
     Json(body): Json<ExistingUserOrganization>,
@@ -815,7 +815,7 @@ async fn create_user_in_organization(
     State(state): State<AppState>,
     Extension(config): Extension<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     requester: AuthUser,
     Path(organization_id): Path<String>,
     Json(body): Json<CreateUserInOrganization>,
@@ -876,7 +876,7 @@ async fn join_organization(
     State(state): State<AppState>,
     Extension(config): Extension<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     user: AuthUser,
     Path(invite_token): Path<String>,
 ) -> ApiResult<Response> {
@@ -958,7 +958,7 @@ async fn send_invites(
     State(state): State<AppState>,
     Extension(config): Extension<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     user: AuthUser,
     Json(body): Json<InviteParameters>,
 ) -> ApiResult<Response> {

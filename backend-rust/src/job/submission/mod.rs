@@ -939,6 +939,7 @@ async fn run_submission(
 
 async fn compute_mesh_file(
     State(state): State<AppState>,
+    State(misc): State<MiscState>,
     Extension(routes): Extension<SubmitRoutes>,
     mut parts: Parts,
 ) -> RunResult<Json<Value>> {
@@ -948,7 +949,6 @@ async fn compute_mesh_file(
     let mag = params.required("mag")?;
     let agglomerate_view = params.optional("agglomerateView");
     let user = authenticate(&parts, &state).await?;
-    let misc: MiscState = extension(&parts)?;
     let dataset = find_dataset(&state, &user, &dataset_id).await?;
     let organization = own_organization(&state, &user, &dataset, MESH_WRONG_ORGA).await?;
     validate_layer_name_lax(&layer_name)?;
@@ -980,6 +980,7 @@ async fn compute_mesh_file(
 
 async fn compute_segment_index_file(
     State(state): State<AppState>,
+    State(misc): State<MiscState>,
     Extension(routes): Extension<SubmitRoutes>,
     mut parts: Parts,
 ) -> RunResult<Json<Value>> {
@@ -987,7 +988,6 @@ async fn compute_segment_index_file(
     let params = Params::from_parts(&parts)?;
     let layer_name = params.required("layerName")?;
     let user = authenticate(&parts, &state).await?;
-    let misc: MiscState = extension(&parts)?;
     let dataset = find_dataset(&state, &user, &dataset_id).await?;
     own_organization(&state, &user, &dataset, SEGMENT_INDEX_WRONG_ORGA).await?;
     validate_layer_name_lax(&layer_name)?;
@@ -1017,6 +1017,7 @@ async fn compute_segment_index_file(
 
 async fn infer_mitochondria(
     State(state): State<AppState>,
+    State(misc): State<MiscState>,
     Extension(routes): Extension<SubmitRoutes>,
     mut parts: Parts,
 ) -> RunResult<Json<Value>> {
@@ -1026,7 +1027,6 @@ async fn infer_mitochondria(
     let bbox = params.required("bbox")?;
     let new_dataset_name = params.required("newDatasetName")?;
     let user = authenticate(&parts, &state).await?;
-    let misc: MiscState = extension(&parts)?;
     let dataset = find_dataset(&state, &user, &dataset_id).await?;
     own_organization(&state, &user, &dataset, INFERENCE_WRONG_ORGA).await?;
     validate_dataset_name(&new_dataset_name)?;
@@ -1071,6 +1071,7 @@ async fn infer_mitochondria(
 
 async fn align_sections(
     State(state): State<AppState>,
+    State(misc): State<MiscState>,
     Extension(routes): Extension<SubmitRoutes>,
     mut parts: Parts,
     body: Result<Bytes, BytesRejection>,
@@ -1086,7 +1087,6 @@ async fn align_sections(
     })?;
     let fine_alignment_max_jump_size = read_optional(&body, "fineAlignmentMaxJumpSize", json_int)?;
     let user = authenticate(&parts, &state).await?;
-    let misc: MiscState = extension(&parts)?;
     let dataset = find_dataset(&state, &user, &dataset_id).await?;
     let organization = own_organization(&state, &user, &dataset, ALIGN_WRONG_ORGA).await?;
     validate_dataset_name(&new_dataset_name)?;
@@ -1153,6 +1153,7 @@ fn parse_additional_coordinates(text: &str) -> Result<Vec<(String, i32)>, &'stat
 
 async fn export_tiff(
     State(state): State<AppState>,
+    State(misc): State<MiscState>,
     Extension(routes): Extension<SubmitRoutes>,
     mut parts: Parts,
 ) -> RunResult<Json<Value>> {
@@ -1166,7 +1167,6 @@ async fn export_tiff(
     let annotation_id = params.optional_object_id("annotationId")?;
     let export_format = params.required("exportFormat")?;
     let user = authenticate(&parts, &state).await?;
-    let misc: MiscState = extension(&parts)?;
     let clients: ServiceClients = extension(&parts)?;
     let dataset = find_dataset(&state, &user, &dataset_id).await?;
     let dataset_organization = find_organization(&state, &dataset.organization).await?;
@@ -1263,6 +1263,7 @@ async fn export_tiff(
 
 async fn materialize_volume_annotation(
     State(state): State<AppState>,
+    State(misc): State<MiscState>,
     Extension(routes): Extension<SubmitRoutes>,
     mut parts: Parts,
 ) -> RunResult<Json<Value>> {
@@ -1278,7 +1279,6 @@ async fn materialize_volume_annotation(
     let includes_editable_mapping = params.boolean("includesEditableMapping")?;
     let bounding_box = params.optional("boundingBox");
     let user = authenticate(&parts, &state).await?;
-    let misc: MiscState = extension(&parts)?;
     let clients: ServiceClients = extension(&parts)?;
     let dataset = find_dataset(&state, &user, &dataset_id).await?;
     let organization = own_organization(&state, &user, &dataset, MATERIALIZE_WRONG_ORGA).await?;
@@ -1327,6 +1327,7 @@ async fn materialize_volume_annotation(
 
 async fn find_largest_segment_id(
     State(state): State<AppState>,
+    State(misc): State<MiscState>,
     Extension(routes): Extension<SubmitRoutes>,
     mut parts: Parts,
 ) -> RunResult<Json<Value>> {
@@ -1334,7 +1335,6 @@ async fn find_largest_segment_id(
     let params = Params::from_parts(&parts)?;
     let layer_name = params.required("layerName")?;
     let user = authenticate(&parts, &state).await?;
-    let misc: MiscState = extension(&parts)?;
     let dataset = find_dataset(&state, &user, &dataset_id).await?;
     let organization =
         own_organization(&state, &user, &dataset, LARGEST_SEGMENT_WRONG_ORGA).await?;
@@ -1418,6 +1418,7 @@ fn read_animation_options(body: &Map<String, Value>) -> RunResult<AnimationOptio
 
 async fn render_animation(
     State(state): State<AppState>,
+    State(misc): State<MiscState>,
     Extension(routes): Extension<SubmitRoutes>,
     mut parts: Parts,
     body: Result<Bytes, BytesRejection>,
@@ -1426,7 +1427,6 @@ async fn render_animation(
     let body = json_body(&parts, body)?;
     let options = read_animation_options(&body)?;
     let user = authenticate(&parts, &state).await?;
-    let misc: MiscState = extension(&parts)?;
     let clients: ServiceClients = extension(&parts)?;
     let dataset = find_dataset(&state, &user, &dataset_id).await?;
     let organization = find_organization(&state, &dataset.organization).await?;

@@ -31,7 +31,13 @@ fn enabled_misc() -> MiscConfig {
 }
 
 fn app(db: &TestDb, misc: MiscConfig, config: VoxelyticsConfig) -> Router {
-    router_with_voxelytics(AppState::new(db.pool.clone()), misc, config)
+    router_with_voxelytics(
+        AppState::builder(db.pool.clone())
+            .jobs_enabled(misc.jobs_enabled)
+            .misc(misc)
+            .build(),
+        config,
+    )
 }
 
 async fn call(

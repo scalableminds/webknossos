@@ -25,6 +25,7 @@
 //! Body limit: Play buffers multipart files on disk up to `maxDiskBuffer = 1G`
 //! (application.conf); this router raises the crate-wide default to 1 GiB for
 //! this route only. Unlike Play, the parts are held in memory.
+use axum::extract::FromRef;
 use std::io::{Cursor, Write};
 
 use axum::{
@@ -106,14 +107,17 @@ struct Services {
     misc: MiscState,
 }
 
-impl<S: Send + Sync> FromRequestParts<S> for Services {
+impl<S: Send + Sync> FromRequestParts<S> for Services
+where
+    MiscState: FromRef<S>,
+{
     type Rejection = ApiError;
-    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         Ok(Self {
             provider: extension(parts)?,
             clients: extension(parts)?,
             tracing_store: extension(parts)?,
-            misc: extension(parts)?,
+            misc: MiscState::from_ref(state),
         })
     }
 }

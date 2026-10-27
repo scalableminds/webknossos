@@ -16,7 +16,7 @@ mod dao;
 use std::{future::Future, time::Duration};
 
 use axum::{
-    Extension, Router,
+    Router,
     extract::{FromRequestParts, State},
     http::{StatusCode, request::Parts},
     response::Response,
@@ -439,8 +439,7 @@ pub async fn run_heartbeat(pool: &sqlx::PgPool, misc: &MiscState) -> Result<JobO
             "No active user, heartbeat not sent.".into(),
         ));
     };
-    let state = AppState::new(pool.clone());
-    let build_info = build_info_json(&state, misc.config()).await;
+    let build_info = build_info_json(pool, misc.config()).await;
     let actor = actor_for(pool, &user_id).await?;
     emit(
         pool,
@@ -497,7 +496,7 @@ impl FromRequestParts<AppState> for UserAware {
 
 async fn ingest(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Json(body): Json<Value>,
 ) -> ApiResult<Response> {
     let (events, api_key) = read_ingest(&body)
@@ -531,7 +530,7 @@ async fn ingest(
 
 async fn track_frontend_event(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     UserAware(user): UserAware,
     Path(event_type): Path<String>,
     Json(body): Json<Value>,

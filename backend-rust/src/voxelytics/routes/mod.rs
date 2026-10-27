@@ -408,7 +408,7 @@ fn state_times(state: &str, timestamp: DateTime<Utc>) -> (Value, Value) {
 /// POST /voxelytics/workflows: upsert workflow, run, tasks and artifacts.
 async fn store_workflow(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     user: AuthUser,
     body: axum::body::Bytes,
 ) -> ApiResult<Response> {
@@ -477,7 +477,7 @@ async fn store_workflow(
 /// GET /voxelytics/workflows: workflows with the user's listed runs.
 async fn list_workflows(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(vx): Extension<Voxelytics>,
     user: AuthUser,
 ) -> ApiResult<Response> {
@@ -652,7 +652,7 @@ fn optional_run_id(run_id: Option<&str>) -> ApiResult<Option<ObjectId>> {
 /// GET /voxelytics/workflows/:workflowHash?runId=: the workflow report.
 async fn get_workflow(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(vx): Extension<Voxelytics>,
     user: AuthUser,
     Path(workflow_hash): Path<String>,
@@ -740,7 +740,7 @@ async fn get_workflow(
 /// DELETE /voxelytics/workflows/:workflowHash (superusers only).
 async fn delete_workflow(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     user: AuthUser,
     Path(workflow_hash): Path<String>,
 ) -> ApiResult<Response> {
@@ -770,7 +770,7 @@ struct EventsQuery {
 /// POST /voxelytics/workflows/:workflowHash/events?runName=
 async fn store_workflow_events(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     user: AuthUser,
     Path(workflow_hash): Path<String>,
     Query(query): Query<EventsQuery>,
@@ -971,7 +971,7 @@ fn play_double(value: f64) -> Value {
 /// GET /voxelytics/workflows/:workflowHash/chunkStatistics?runId=&taskName=
 async fn chunk_statistics(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(vx): Extension<Voxelytics>,
     user: AuthUser,
     Path(workflow_hash): Path<String>,
@@ -1005,7 +1005,7 @@ async fn chunk_statistics(
 /// GET /voxelytics/workflows/:workflowHash/artifactChecksums?runId=&taskName=&artifactName=
 async fn artifact_checksums(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(vx): Extension<Voxelytics>,
     user: AuthUser,
     Path(workflow_hash): Path<String>,
@@ -1047,7 +1047,7 @@ async fn artifact_checksums(
 
 /// POST /voxelytics/logs: forward log entries to Loki.
 async fn append_logs(
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(vx): Extension<Voxelytics>,
     user: AuthUser,
     body: axum::body::Bytes,
@@ -1080,7 +1080,7 @@ fn required_param<'a>(value: &'a Option<String>, name: &str) -> ApiResult<&'a st
 /// GET /voxelytics/logs?runId=&taskName=&minLevel=&startTimestamp=&endTimestamp=&limit=
 async fn get_logs(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(vx): Extension<Voxelytics>,
     user: AuthUser,
     Query(query): Query<LogsQuery>,

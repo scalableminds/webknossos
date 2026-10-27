@@ -205,7 +205,7 @@ async fn update_metadata(
     user: AuthUser,
     Path(id): Path<PathObjectId>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     RequestJson(body): RequestJson<MetadataUpdate>,
 ) -> ApiResult<Json<Value>> {
     require_edit(&state, &user, &id).await?;
@@ -339,7 +339,7 @@ async fn read(
     Path(id): Path<PathObjectId>,
     Query(query): Query<ReadQuery>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
 ) -> ApiResult<Json<Value>> {
     if !crate::dataset::access::can_read(
         &state.pool,

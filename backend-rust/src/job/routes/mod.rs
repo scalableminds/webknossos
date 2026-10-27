@@ -725,7 +725,7 @@ pub(crate) fn job_cost_in_milli_credits(
 // Query extraction precedes authentication: Play binds route parameters first.
 async fn credit_cost(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Query(query): Query<CreditCostQuery>,
     user: AuthUser,
 ) -> ApiResult<Json<Value>> {

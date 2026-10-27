@@ -19,7 +19,7 @@ use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
     mail::{MailSender, RecordingMailer},
-    system::application_info::{MiscConfig, MiscState},
+    system::application_info::MiscConfig,
 };
 
 /// _id, credentialId, name, UV, BE, BS, statement, attested, extensions, count, deleted.
@@ -49,8 +49,7 @@ fn app(database: &TestDb, public_uri: &str, enabled: bool) -> Router {
         .insert("passkeysEnabled".into(), Value::Bool(enabled));
     Router::new()
         .nest("/api", webknossos_backend::auth::webauthn::router())
-        .layer(Extension(MiscState::new(misc)))
-        .with_state(AppState::new(database.pool.clone()))
+        .with_state(AppState::builder(database.pool.clone()).misc(misc).build())
 }
 
 struct Reply {

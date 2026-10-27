@@ -74,7 +74,7 @@ async fn check_certificate_adds_remote_origin_headers_to_both_outcomes() {
             certificate: cert,
             ..MiscConfig::default()
         };
-        let response = check_certificate(Extension(MiscState::new(config))).await;
+        let response = check_certificate(State(MiscState::new(config))).await;
         assert_eq!(response.status(), status);
         assert_eq!(response.headers()[header::ACCESS_CONTROL_ALLOW_ORIGIN], "*");
         assert_eq!(response.headers()[header::ACCESS_CONTROL_MAX_AGE], "600");

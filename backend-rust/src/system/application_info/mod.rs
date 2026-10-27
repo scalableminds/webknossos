@@ -439,8 +439,8 @@ pub(crate) fn ok_empty() -> Response {
     StatusCode::OK.into_response()
 }
 
-pub(crate) async fn build_info_json(state: &AppState, config: &MiscConfig) -> Value {
-    let schema_version = dao::find_schema_version(&state.pool).await.ok().flatten();
+pub(crate) async fn build_info_json(pool: &sqlx::PgPool, config: &MiscConfig) -> Value {
+    let schema_version = dao::find_schema_version(pool).await.ok().flatten();
     let info = &config.build_info;
     json!({
         "webknossos": {
@@ -465,12 +465,10 @@ pub(crate) async fn build_info_json(state: &AppState, config: &MiscConfig) -> Va
 
 /// UserAwareAction without using the identity: like Play, credentials
 /// (even invalid ones) never change the response.
-async fn build_info(
-    State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
-) -> Response {
+async fn build_info(State(state): State<AppState>, State(misc): State<MiscState>) -> Response {
     // Used by external applications: keep stable, allow any origin.
-    let mut response = axum::Json(build_info_json(&state, misc.config()).await).into_response();
+    let mut response =
+        axum::Json(build_info_json(&state.pool, misc.config()).await).into_response();
     let headers = response.headers_mut();
     headers.insert(
         header::ACCESS_CONTROL_ALLOW_ORIGIN,
@@ -483,7 +481,7 @@ async fn build_info(
     response
 }
 
-async fn features(Extension(misc): Extension<MiscState>) -> Response {
+async fn features(State(misc): State<MiscState>) -> Response {
     // addNoCacheHeaderFallback
     (
         [(header::CACHE_CONTROL, HeaderValue::from_static("no-cache"))],
@@ -492,7 +490,7 @@ async fn features(Extension(misc): Extension<MiscState>) -> Response {
         .into_response()
 }
 
-async fn check_certificate(Extension(misc): Extension<MiscState>) -> Response {
+async fn check_certificate(State(misc): State<MiscState>) -> Response {
     let config = misc.config();
     let (valid, expires_at) = check_certificate_values(
         config.certificate_public_key.as_deref(),
@@ -524,7 +522,7 @@ struct HelpEmailParameters {
 
 async fn help_email(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(mailer): Extension<MailSender>,
     user: AuthUser,
     Json(body): Json<HelpEmailParameters>,

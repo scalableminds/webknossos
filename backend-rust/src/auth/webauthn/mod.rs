@@ -449,7 +449,7 @@ async fn multi_user_of(state: &AppState, user: &AuthUser) -> ApiResult<(ObjectId
 
 async fn register_start(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(stores): Extension<WebAuthnStores>,
     user: AuthUser,
 ) -> ApiResult<Response> {
@@ -540,7 +540,7 @@ struct RegistrationBody {
 
 async fn register_finalize(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(stores): Extension<WebAuthnStores>,
     user: AuthUser,
     headers: HeaderMap,
@@ -690,7 +690,7 @@ fn verify_assertion(
 }
 
 async fn auth_start(
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(stores): Extension<WebAuthnStores>,
 ) -> ApiResult<Response> {
     let rp = relying_party(&misc)?;
@@ -731,7 +731,7 @@ struct AuthenticationBody {
 
 async fn auth_finalize(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(stores): Extension<WebAuthnStores>,
     Extension(browser): Extension<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,

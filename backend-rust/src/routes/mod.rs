@@ -19,28 +19,7 @@ use tower_http::{
 
 /// Construct the API with conservative local defaults, also used by HTTP tests.
 pub fn router(state: AppState) -> Router {
-    build_router(
-        state,
-        RouteOptions {
-            request_timeout: Duration::from_secs(30),
-            body_limit: 2 * 1024 * 1024,
-            public_url: url::Url::parse("http://localhost:9000").expect("valid default URL"),
-            email_verification_enabled: true,
-            jobs: Default::default(),
-            annotation_mutex_expiry: Duration::from_secs(120),
-            time_tracking: Default::default(),
-            allow_delete_datasets: true,
-            datasets: Default::default(),
-            auth_routes: crate::auth::routes::AuthRouteConfig::default(),
-            browser_auth: crate::auth::browser::BrowserAuthConfig::default(),
-            mailer: crate::mail::MailSender::default(),
-            service_client: Default::default(),
-            misc: Default::default(),
-            voxelytics: Default::default(),
-            oidc: Default::default(),
-            slack: Default::default(),
-        },
-    )
+    build_router(state, RouteOptions::local_defaults())
 }
 
 /// Local defaults plus explicit browser-session configuration and mailer
@@ -53,85 +32,34 @@ pub fn router_with_browser_auth(
     build_router(
         state,
         RouteOptions {
-            request_timeout: Duration::from_secs(30),
-            body_limit: 2 * 1024 * 1024,
-            public_url: url::Url::parse("http://localhost:9000").expect("valid default URL"),
-            email_verification_enabled: true,
-            jobs: Default::default(),
-            annotation_mutex_expiry: Duration::from_secs(120),
-            time_tracking: Default::default(),
-            allow_delete_datasets: true,
-            datasets: Default::default(),
-            auth_routes: crate::auth::routes::AuthRouteConfig::default(),
             browser_auth,
             mailer,
-            service_client: Default::default(),
-            misc: Default::default(),
-            voxelytics: Default::default(),
-            oidc: Default::default(),
-            slack: Default::default(),
+            ..RouteOptions::local_defaults()
         },
     )
 }
 
-/// Local defaults plus explicit misc-controller configuration and mailer
-/// (used by the misc controller tests).
-pub fn router_with_misc(
-    state: AppState,
-    misc: crate::system::application_info::MiscConfig,
-    mailer: crate::mail::MailSender,
-) -> Router {
+/// Local defaults plus an explicit mailer (used by the misc controller tests).
+pub fn router_with_mailer(state: AppState, mailer: crate::mail::MailSender) -> Router {
     build_router(
-        state.with_jobs_enabled(misc.jobs_enabled),
+        state,
         RouteOptions {
-            request_timeout: Duration::from_secs(30),
-            body_limit: 2 * 1024 * 1024,
-            public_url: url::Url::parse("http://localhost:9000").expect("valid default URL"),
-            email_verification_enabled: true,
-            jobs: Default::default(),
-            annotation_mutex_expiry: Duration::from_secs(120),
-            time_tracking: Default::default(),
-            allow_delete_datasets: true,
-            datasets: Default::default(),
-            auth_routes: crate::auth::routes::AuthRouteConfig::default(),
-            browser_auth: crate::auth::browser::BrowserAuthConfig::default(),
             mailer,
-            service_client: Default::default(),
-            misc,
-            voxelytics: Default::default(),
-            oidc: Default::default(),
-            slack: Default::default(),
+            ..RouteOptions::local_defaults()
         },
     )
 }
 
-/// Local defaults plus explicit misc configuration (feature flags) and
-/// voxelytics settings (used by the voxelytics tests).
+/// Local defaults plus explicit voxelytics settings (used by the voxelytics tests).
 pub fn router_with_voxelytics(
     state: AppState,
-    misc: crate::system::application_info::MiscConfig,
     voxelytics: crate::voxelytics::VoxelyticsConfig,
 ) -> Router {
     build_router(
-        state.with_jobs_enabled(misc.jobs_enabled),
+        state,
         RouteOptions {
-            request_timeout: Duration::from_secs(30),
-            body_limit: 2 * 1024 * 1024,
-            public_url: url::Url::parse("http://localhost:9000").expect("valid default URL"),
-            email_verification_enabled: true,
-            jobs: Default::default(),
-            annotation_mutex_expiry: Duration::from_secs(120),
-            time_tracking: Default::default(),
-            allow_delete_datasets: true,
-            datasets: Default::default(),
-            auth_routes: crate::auth::routes::AuthRouteConfig::default(),
-            browser_auth: crate::auth::browser::BrowserAuthConfig::default(),
-            mailer: crate::mail::MailSender::default(),
-            service_client: Default::default(),
-            misc,
             voxelytics,
-            oidc: Default::default(),
-            slack: Default::default(),
+            ..RouteOptions::local_defaults()
         },
     )
 }
@@ -153,7 +81,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
             allow_delete_datasets: config.allow_delete_datasets,
             datasets: config.datasets.clone(),
             service_client: config.service_client.clone(),
-            misc: config.misc.clone(),
             voxelytics: config.voxelytics.clone(),
             oidc: config.oidc.clone(),
             slack: config.slack.clone(),
@@ -175,10 +102,32 @@ struct RouteOptions {
     allow_delete_datasets: bool,
     datasets: crate::dataset::options::DatasetRouteConfig,
     service_client: crate::stores::client::ServiceClientConfig,
-    misc: crate::system::application_info::MiscConfig,
     voxelytics: crate::voxelytics::VoxelyticsConfig,
     oidc: crate::auth::oidc::OidcConfig,
     slack: crate::slack::SlackConfig,
+}
+
+impl RouteOptions {
+    fn local_defaults() -> Self {
+        Self {
+            request_timeout: Duration::from_secs(30),
+            body_limit: 2 * 1024 * 1024,
+            public_url: url::Url::parse("http://localhost:9000").expect("valid default URL"),
+            email_verification_enabled: true,
+            jobs: Default::default(),
+            annotation_mutex_expiry: Duration::from_secs(120),
+            time_tracking: Default::default(),
+            allow_delete_datasets: true,
+            datasets: Default::default(),
+            auth_routes: crate::auth::routes::AuthRouteConfig::default(),
+            browser_auth: crate::auth::browser::BrowserAuthConfig::default(),
+            mailer: crate::mail::MailSender::default(),
+            service_client: Default::default(),
+            voxelytics: Default::default(),
+            oidc: Default::default(),
+            slack: Default::default(),
+        }
+    }
 }
 
 fn build_router(state: AppState, options: RouteOptions) -> Router {
@@ -196,7 +145,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         allow_delete_datasets,
         datasets,
         service_client,
-        misc,
         voxelytics,
         oidc,
         slack,
@@ -303,9 +251,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         .layer(axum::Extension(time_tracking))
         .layer(axum::Extension(
             crate::slack::SlackNotificationService::new(&slack),
-        ))
-        .layer(axum::Extension(
-            crate::system::application_info::MiscState::new(misc),
         ))
         .layer(axum::Extension(crate::short_links::PublicUrl(public_url)))
         .layer(middleware::from_fn_with_state(request_timeout, timeout))

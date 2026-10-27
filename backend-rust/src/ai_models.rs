@@ -744,7 +744,7 @@ impl TrainingKind {
 async fn run_neuron_model_training(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(clients): Extension<ServiceClients>,
     user: AuthUser,
     Json(body): Json<RunModelTrainingParameters>,
@@ -764,7 +764,7 @@ async fn run_neuron_model_training(
 async fn run_instance_model_training(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(clients): Extension<ServiceClients>,
     user: AuthUser,
     Json(body): Json<RunModelTrainingParameters>,
@@ -1001,7 +1001,7 @@ enum InferenceKind {
 async fn run_neuron_model_inference(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(clients): Extension<ServiceClients>,
     user: AuthUser,
     Json(body): Json<RunInferenceParameters>,
@@ -1021,7 +1021,7 @@ async fn run_neuron_model_inference(
 async fn run_instance_model_inference(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(clients): Extension<ServiceClients>,
     user: AuthUser,
     Json(body): Json<RunInferenceParameters>,

@@ -11,10 +11,10 @@ use tower::ServiceExt;
 use webknossos_backend::{AppState, auth, util::id::ObjectId};
 
 /// Analytics side effects of the routes stay local (no forwarding URI).
-fn offline_misc() -> webknossos_backend::system::application_info::MiscState {
+fn offline_misc() -> webknossos_backend::system::application_info::MiscConfig {
     let mut config = webknossos_backend::system::application_info::MiscConfig::default();
     config.analytics.uri.clear();
-    webknossos_backend::system::application_info::MiscState::new(config)
+    config
 }
 
 fn app(db: &TestDb) -> Router {
@@ -23,14 +23,18 @@ fn app(db: &TestDb) -> Router {
         .merge(webknossos_backend::dataset::routes::read_router())
         .merge(webknossos_backend::dataset::routes::metadata_router())
         .merge(webknossos_backend::dataset::routes::lookup_router())
-        .layer(axum::Extension(offline_misc()))
         .layer(axum::Extension(
             webknossos_backend::users::notification_emails::NotificationEmailService::new(
                 webknossos_backend::mail::MailSender::default(),
                 "http://localhost:9000",
             ),
         ))
-        .with_state(AppState::new(db.pool.clone()).with_jobs_enabled(true))
+        .with_state(
+            AppState::builder(db.pool.clone())
+                .jobs_enabled(true)
+                .misc(offline_misc())
+                .build(),
+        )
 }
 
 async fn request(
@@ -476,9 +480,11 @@ async fn compact_and_full_dataset_responses_preserve_composites_paths_unsigned_i
     assert_eq!(filtered.as_array().unwrap().len(), 1);
     sqlx::query("UPDATE webknossos.workers SET supportedJobCommands=ARRAY['unknown_command'] WHERE _dataStore='test-store'")
         .execute(&db.pool).await.unwrap();
-    let jobs_disabled = webknossos_backend::dataset::routes::read_router()
-        .layer(axum::Extension(offline_misc()))
-        .with_state(AppState::new(db.pool.clone()));
+    let jobs_disabled = webknossos_backend::dataset::routes::read_router().with_state(
+        AppState::builder(db.pool.clone())
+            .misc(offline_misc())
+            .build(),
+    );
     assert_eq!(
         request(
             &jobs_disabled,
@@ -1201,9 +1207,11 @@ async fn metadata_updates_render_before_commit_and_work_with_one_database_connec
         .connect(&db.connection_url())
         .await
         .unwrap();
-    let application = webknossos_backend::dataset::routes::metadata_router()
-        .layer(axum::Extension(offline_misc()))
-        .with_state(AppState::new(single.clone()));
+    let application = webknossos_backend::dataset::routes::metadata_router().with_state(
+        AppState::builder(single.clone())
+            .misc(offline_misc())
+            .build(),
+    );
     let path = format!("/datasets/{id}");
     let (status, result) = tokio::time::timeout(
         std::time::Duration::from_secs(3),

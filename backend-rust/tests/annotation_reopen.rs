@@ -22,7 +22,7 @@ use webknossos_backend::{
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
     stores::client::ServiceClientConfig,
     stores::tracing_client::TracingStoreClient,
-    system::application_info::{MiscConfig, MiscState, default_features},
+    system::application_info::{MiscConfig, default_features},
     util::id::ObjectId,
 };
 
@@ -154,11 +154,14 @@ fn app_with(db: &TestDb, reopen_seconds: Option<i64>) -> (Router, AnnotationProv
     let app = Router::new()
         .nest("/api", webknossos_backend::annotation::reopen::router())
         .layer(Extension(provider.clone()))
-        .layer(Extension(MiscState::new(MiscConfig {
-            features,
-            ..MiscConfig::default()
-        })))
-        .with_state(AppState::new(db.pool.clone()));
+        .with_state(
+            AppState::builder(db.pool.clone())
+                .misc(MiscConfig {
+                    features,
+                    ..MiscConfig::default()
+                })
+                .build(),
+        );
     (app, provider)
 }
 

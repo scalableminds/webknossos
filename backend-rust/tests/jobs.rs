@@ -8,7 +8,7 @@ use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
-    AppState, mail::MailSender, router, router_with_misc, system::application_info::MiscConfig,
+    AppState, mail::MailSender, router, router_with_mailer, system::application_info::MiscConfig,
 };
 
 const NOT_FOUND: &str = "Could not find or access the requested resource.";
@@ -58,12 +58,14 @@ fn error(message: &str) -> Value {
 }
 
 fn enabled_app(db: &TestDb) -> axum::Router {
-    router_with_misc(
-        AppState::new(db.pool.clone()),
-        MiscConfig {
-            jobs_enabled: true,
-            ..MiscConfig::default()
-        },
+    router_with_mailer(
+        AppState::builder(db.pool.clone())
+            .jobs_enabled(true)
+            .misc(MiscConfig {
+                jobs_enabled: true,
+                ..MiscConfig::default()
+            })
+            .build(),
         MailSender::default(),
     )
 }

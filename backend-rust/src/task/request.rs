@@ -172,7 +172,7 @@ async fn request(
     State(state): State<AppState>,
     Extension(tracing_store): Extension<TracingStoreClient>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Value>> {
     let pool = &state.pool;

@@ -232,7 +232,7 @@ async fn update_partial(
     Path(id): Path<PathObjectId>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Extension(clients): Extension<ServiceClients>,
-    Extension(misc): Extension<crate::system::application_info::MiscState>,
+    State(misc): State<crate::system::application_info::MiscState>,
     RequestJson(body): RequestJson<PartialUpdate>,
 ) -> ApiResult<Json<Value>> {
     let record = crate::dataset::lifecycle::require_editable(&state, &user, &id).await?;

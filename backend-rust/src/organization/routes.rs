@@ -1,5 +1,5 @@
 use axum::{
-    Extension, Json as ResponseJson, Router,
+    Json as ResponseJson, Router,
     extract::{FromRequestParts, State},
     http::{HeaderValue, StatusCode, header, request::Parts},
     response::{IntoResponse, Response},
@@ -194,7 +194,7 @@ struct OrganizationCreationParameters {
 
 async fn create(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     user: AuthUser,
     Json(parameters): Json<OrganizationCreationParameters>,
 ) -> ApiResult<Response> {

@@ -94,7 +94,11 @@ fn clients() -> ServiceClients {
 fn app(db: &TestDb, allow_delete: bool, jobs_enabled: bool) -> Router {
     webknossos_backend::dataset::lifecycle::router(allow_delete)
         .layer(Extension(clients()))
-        .with_state(AppState::new(db.pool.clone()).with_jobs_enabled(jobs_enabled))
+        .with_state(
+            AppState::builder(db.pool.clone())
+                .jobs_enabled(jobs_enabled)
+                .build(),
+        )
 }
 
 async fn call(

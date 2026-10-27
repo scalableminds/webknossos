@@ -590,7 +590,7 @@ async fn open_id_callback(
     Extension(oidc): Extension<Arc<Oidc>>,
     Extension(browser): Extension<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     headers: HeaderMap,
     RawQuery(query): RawQuery,
 ) -> ApiResult<Response> {

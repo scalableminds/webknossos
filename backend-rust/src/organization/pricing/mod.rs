@@ -251,7 +251,7 @@ fn upgrade_request_mail(
 
 async fn upgrade_request(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(mailer): Extension<MailSender>,
     user: AuthUser,
     Json(request): Json<UpgradeRequest>,
@@ -509,7 +509,7 @@ fn pricing_plan_upgraded_mail(
 
 async fn update_plan(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(mailer): Extension<MailSender>,
     user: AuthUser,
     Json(body): Json<Value>,

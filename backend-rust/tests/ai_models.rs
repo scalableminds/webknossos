@@ -20,7 +20,7 @@ use webknossos_backend::{
     dataset::options::UploadToPathsConfig,
     router,
     stores::client::{ServiceClientConfig, ServiceClients},
-    system::application_info::{MiscConfig, MiscState},
+    system::application_info::MiscConfig,
 };
 
 type Calls = Arc<Mutex<Vec<(String, String, Value)>>>;
@@ -72,12 +72,16 @@ fn app(db: &TestDb) -> Router {
     .unwrap();
     ai_models::router()
         .merge(ai_models::upload_router(config))
-        .layer(Extension(MiscState::new(MiscConfig {
-            jobs_enabled: true,
-            ..MiscConfig::default()
-        })))
         .layer(Extension(clients))
-        .with_state(AppState::new(db.pool.clone()).with_jobs_enabled(true))
+        .with_state(
+            AppState::builder(db.pool.clone())
+                .jobs_enabled(true)
+                .misc(MiscConfig {
+                    jobs_enabled: true,
+                    ..MiscConfig::default()
+                })
+                .build(),
+        )
 }
 
 async fn send(

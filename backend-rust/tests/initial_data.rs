@@ -8,7 +8,7 @@ use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
     mail::MailSender,
-    router_with_misc,
+    router_with_mailer,
     system::application_info::{LocalStoreConfig, MiscConfig},
 };
 
@@ -35,7 +35,13 @@ async fn send(app: &axum::Router, method: &str, uri: &str, token: Option<&str>) 
 }
 
 async fn trigger(db: &TestDb, misc: MiscConfig) -> (u16, Value) {
-    let app = router_with_misc(AppState::new(db.pool.clone()), misc, MailSender::default());
+    let app = router_with_mailer(
+        AppState::builder(db.pool.clone())
+            .jobs_enabled(misc.jobs_enabled)
+            .misc(misc)
+            .build(),
+        MailSender::default(),
+    );
     send(
         &app,
         "POST",
@@ -286,9 +292,11 @@ async fn sample_organization_is_inserted_once() {
     );
 
     // The configured sample token authenticates the default user.
-    let app = router_with_misc(
-        AppState::new(db.pool.clone()),
-        misc.clone(),
+    let app = router_with_mailer(
+        AppState::builder(db.pool.clone())
+            .jobs_enabled(misc.jobs_enabled)
+            .misc(misc.clone())
+            .build(),
         MailSender::default(),
     );
     let (status, datasets) =

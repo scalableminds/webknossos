@@ -285,7 +285,7 @@ impl JobState {
 #[allow(clippy::too_many_arguments)]
 async fn update_status(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Extension(mailer): Extension<MailSender>,
     Extension(clients): Extension<ServiceClients>,
     slack: SlackNotificationService,
@@ -663,7 +663,7 @@ async fn organization_for_job(
 
 async fn attach_voxelytics_workflow(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     Path(id): Path<PathObjectId>,
     Query(query): Query<KeyQuery>,
     JsonBody(workflow_hash): JsonBody<String>,

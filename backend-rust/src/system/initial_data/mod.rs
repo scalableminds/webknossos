@@ -61,7 +61,7 @@ pub fn router() -> Router<AppState> {
 
 async fn trigger_insert(
     State(state): State<AppState>,
-    Extension(misc): Extension<MiscState>,
+    State(misc): State<MiscState>,
     clients: Option<Extension<ServiceClients>>,
 ) -> ApiResult<Response> {
     let config = misc.config();

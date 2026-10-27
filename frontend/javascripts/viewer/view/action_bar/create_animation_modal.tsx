@@ -266,13 +266,22 @@ function CreateAnimationModal(props: Props) {
         "Your selected bounding box is located outside the dataset's volume. Please select a bounding box contained within the dataset's outer bounds.",
       );
 
+    // The rendering bounding box is the intersection with the color layer, so it only equals the selected one if the latter is fully contained.
+    const isBoundingBoxPartiallyOutsideLayer =
+      !isRenderingBoundingBoxEmpty && !renderingBoundingBox.equals(selectedBoundingBox);
+    if (isBoundingBoxPartiallyOutsideLayer)
+      errorMessages.push(
+        `Your selected bounding box extends beyond the bounds of the color layer "${colorLayer.name}". Please select a bounding box that is fully contained within this layer.`,
+      );
+
     const validationStatus =
       hasEnoughMags &&
       isDtypeSupported &&
       isDataset3D &&
       !isTooManyTriangles &&
       !isBoundingBoxEmpty &&
-      !isRenderingBoundingBoxEmpty;
+      !isRenderingBoundingBoxEmpty &&
+      !isBoundingBoxPartiallyOutsideLayer;
 
     setValidationErrors(errorMessages);
     setIsValid(validationStatus);

@@ -7,10 +7,8 @@ import {
   updateTemporarySettingAction,
 } from "viewer/model/actions/settings_actions";
 import { setHideUnregisteredSegmentsAction } from "viewer/model/actions/volumetracing_actions";
-import {
-  getDtypeConfigForElementClass,
-  getSupportedValueRangeForElementClass,
-} from "viewer/model/bucket_data_handling/data_rendering_logic";
+import { getDtypeConfigForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import { getSupportedValueRangeForElementClass } from "viewer/model/helpers/element_class_ranges";
 import type { DatasetLayerConfiguration, PartialDatasetConfiguration } from "viewer/store";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, test } from "vitest";
 import {

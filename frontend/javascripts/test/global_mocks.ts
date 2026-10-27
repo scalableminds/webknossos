@@ -81,6 +81,7 @@ vi.mock("libs/error_handling", () => {
       assertExists: vi.fn(),
       assert: vi.fn(),
       notify: vi.fn(),
+      notifyWithPrefix: vi.fn(),
     },
   };
 });

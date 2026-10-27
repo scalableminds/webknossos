@@ -1,3 +1,4 @@
+import type { ApiResult } from "admin/api/api_result";
 import type { MinCutTargetEdge, NeighborInfo } from "admin/rest_api";
 import { toBigInt } from "libs/bigint_helpers";
 import type { RequestOptionsWithData } from "libs/request";
@@ -46,6 +47,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { combinedReducer } from "viewer/model/reducers/root_reducer";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/preparation_sagas";
@@ -57,7 +59,6 @@ import type {
 } from "viewer/model/sagas/volume/update_actions";
 import { Store } from "viewer/singletons";
 import type { NumberLike, SaveQueueEntry, Segment, WebknossosState } from "viewer/store";
-import { combinedReducer } from "viewer/store";
 import { expect, vi } from "vitest";
 import { edgesForInitialMapping, initialMapping } from "./proofreading_fixtures";
 
@@ -304,17 +305,17 @@ export class BackendMock {
     _newestVersion?: number,
     _truncateActionLog: boolean = false,
     sortAscending: boolean = false,
-  ): Promise<Array<APIUpdateActionBatch>> => {
+  ): Promise<ApiResult<Array<APIUpdateActionBatch>>> => {
     const firstUnseenVersionIndex = this.updateActionLog.findIndex(
       (item) => item.version === oldestVersion,
     );
     if (firstUnseenVersionIndex === -1) {
-      return [];
+      return { ok: true, value: [] };
     }
     if (!sortAscending) {
       throw new Error("Unexpected request");
     }
-    return this.updateActionLog.slice(firstUnseenVersionIndex);
+    return { ok: true, value: this.updateActionLog.slice(firstUnseenVersionIndex) };
   };
 
   getPositionForSegmentInAgglomerate = async (

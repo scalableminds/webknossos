@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 use sqlx::{PgConnection, PgPool, Row};
 use webknossos_common::json::play_f64;
 
-use crate::{auth::AuthUser, error::ApiResult, sql::Sql, util::id::ObjectId};
+use crate::{auth::AuthUser, sql::Sql, util::id::ObjectId};
 
 pub(crate) type Timestamp = Option<DateTime<Utc>>;
 
@@ -403,7 +403,7 @@ pub(crate) async fn find_runs(
     workflow_hash: Option<&str>,
     stale_timeout: std::time::Duration,
     allow_unlisted: bool,
-) -> ApiResult<Vec<RunEntry>> {
+) -> sqlx::Result<Vec<RunEntry>> {
     let mut q = Sql::new(
         r#"SELECT
           r._id,
@@ -451,14 +451,13 @@ pub(crate) async fn find_runs(
             })
         })
         .collect::<sqlx::Result<_>>()
-        .map_err(Into::into)
 }
 
 pub(crate) async fn find_runs_for_workflow_listing(
     pool: &PgPool,
     user: &AuthUser,
     stale_timeout: std::time::Duration,
-) -> ApiResult<Vec<WorkflowListingRunEntry>> {
+) -> sqlx::Result<Vec<WorkflowListingRunEntry>> {
     // Inlined instead of a CTE: a CTE that is referenced multiple times is
     // materialized, which prevents parallel plans and made this query several
     // times slower on production data.
@@ -553,7 +552,6 @@ pub(crate) async fn find_runs_for_workflow_listing(
             })
         })
         .collect::<sqlx::Result<_>>()
-        .map_err(Into::into)
 }
 
 /// findWorkflowTaskCounts: per workflow, the latest state of each task name
@@ -563,7 +561,7 @@ pub(crate) async fn find_workflow_task_counts(
     user: &AuthUser,
     workflow_hashes: &[String],
     stale_timeout: std::time::Duration,
-) -> ApiResult<Vec<(String, TaskCounts)>> {
+) -> sqlx::Result<Vec<(String, TaskCounts)>> {
     let sees_all = Some(sees_all_runs(user));
     let mut q = Sql::new("WITH task_states AS (");
     push_tasks_with_state(&mut q, stale_millis(stale_timeout));
@@ -632,14 +630,13 @@ pub(crate) async fn find_workflow_task_counts(
             ))
         })
         .collect::<sqlx::Result<_>>()
-        .map_err(Into::into)
 }
 
 pub(crate) async fn find_workflows_by_hash_and_organization(
     pool: &PgPool,
     organization_id: &str,
     workflow_hashes: &[String],
-) -> ApiResult<Vec<WorkflowEntry>> {
+) -> sqlx::Result<Vec<WorkflowEntry>> {
     let rows: Vec<(String, String)> = sqlx::query_as(
         "SELECT name, hash FROM webknossos.voxelytics_workflows WHERE hash = ANY($1) AND _organization = $2",
     )
@@ -657,7 +654,7 @@ pub(crate) async fn find_workflow_by_hash_and_organization(
     pool: &PgPool,
     organization_id: &str,
     workflow_hash: &str,
-) -> ApiResult<Option<WorkflowEntry>> {
+) -> sqlx::Result<Option<WorkflowEntry>> {
     let row: Option<(String, String)> = sqlx::query_as(
         "SELECT name, hash FROM webknossos.voxelytics_workflows WHERE hash = $1 AND _organization = $2",
     )
@@ -669,20 +666,20 @@ pub(crate) async fn find_workflow_by_hash_and_organization(
 }
 
 /// findWorkflowByHash: in ANY organization (DELETE only checks existence).
-pub(crate) async fn workflow_hash_exists(pool: &PgPool, workflow_hash: &str) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+pub(crate) async fn workflow_hash_exists(pool: &PgPool, workflow_hash: &str) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM webknossos.voxelytics_workflows WHERE hash = $1)",
     )
     .bind(workflow_hash)
     .fetch_one(pool)
-    .await?)
+    .await
 }
 
 pub(crate) async fn find_task_runs(
     pool: &PgPool,
     run_ids: &[ObjectId],
     stale_timeout: std::time::Duration,
-) -> ApiResult<Vec<TaskRunEntry>> {
+) -> sqlx::Result<Vec<TaskRunEntry>> {
     let stale_millis = stale_millis(stale_timeout);
     let mut q = Sql::new("WITH task_states AS (");
     push_tasks_with_state(&mut q, stale_millis);
@@ -747,14 +744,13 @@ pub(crate) async fn find_task_runs(
             })
         })
         .collect::<sqlx::Result<_>>()
-        .map_err(Into::into)
 }
 
 pub(crate) async fn find_combined_task_runs(
     pool: &PgPool,
     run_ids: &[ObjectId],
     stale_timeout: std::time::Duration,
-) -> ApiResult<Vec<CombinedTaskRunEntry>> {
+) -> sqlx::Result<Vec<CombinedTaskRunEntry>> {
     let mut q = Sql::new("WITH ");
     push_latest_chunk_states_ctes(&mut q, stale_millis(stale_timeout), run_ids, None);
     q.push(
@@ -796,7 +792,6 @@ pub(crate) async fn find_combined_task_runs(
             })
         })
         .collect::<sqlx::Result<_>>()
-        .map_err(Into::into)
 }
 
 /// findArtifacts: artifacts of the latest complete-or-skipped task per name.
@@ -807,7 +802,7 @@ pub(crate) async fn find_artifacts(
     user: &AuthUser,
     run_ids: &[ObjectId],
     stale_timeout: std::time::Duration,
-) -> ApiResult<Vec<ArtifactEntry>> {
+) -> sqlx::Result<Vec<ArtifactEntry>> {
     let stale_millis = stale_millis(stale_timeout);
     let mut q = Sql::new("WITH latest_complete_tasks AS (");
     push_latest_complete_or_skipped_task(&mut q, stale_millis, run_ids, None);
@@ -866,10 +861,9 @@ pub(crate) async fn find_artifacts(
             })
         })
         .collect::<sqlx::Result<_>>()
-        .map_err(Into::into)
 }
 
-pub(crate) async fn find_tasks(pool: &PgPool, run_id: &ObjectId) -> ApiResult<Vec<TaskEntry>> {
+pub(crate) async fn find_tasks(pool: &PgPool, run_id: &ObjectId) -> sqlx::Result<Vec<TaskEntry>> {
     let rows: Vec<(String, String, Value)> = sqlx::query_as(
         "SELECT t.name, t.task, t.config FROM webknossos.voxelytics_tasks t WHERE _run = $1",
     )
@@ -889,8 +883,8 @@ pub(crate) async fn run_id_by_name_and_workflow_hash(
     run_name: &str,
     workflow_hash: &str,
     user: &AuthUser,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.voxelytics_runs
         WHERE name = $1 AND workflow_hash = $2 AND _organization = $3 AND ($4 OR _user = $5)
         LIMIT 1"#,
@@ -901,35 +895,35 @@ pub(crate) async fn run_id_by_name_and_workflow_hash(
     .bind(user.is_admin)
     .bind(&user.id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 pub(crate) async fn run_name_by_id(
     pool: &PgPool,
     run_id: &ObjectId,
     organization_id: &str,
-) -> ApiResult<Option<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
         "SELECT name FROM webknossos.voxelytics_runs WHERE _id = $1 AND _organization = $2",
     )
     .bind(run_id)
     .bind(organization_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 pub(crate) async fn user_id_for_run_name(
     conn: &mut PgConnection,
     run_name: &str,
     organization_id: &str,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT _user FROM webknossos.voxelytics_runs WHERE name = $1 AND _organization = $2",
     )
     .bind(run_name)
     .bind(organization_id)
     .fetch_optional(conn)
-    .await?)
+    .await
 }
 
 pub(crate) async fn chunk_statistics(
@@ -937,7 +931,7 @@ pub(crate) async fn chunk_statistics(
     run_ids: &[ObjectId],
     task_name: &str,
     stale_timeout: std::time::Duration,
-) -> ApiResult<Vec<ChunkStatisticsEntry>> {
+) -> sqlx::Result<Vec<ChunkStatisticsEntry>> {
     let mut q = Sql::new("WITH ");
     push_latest_chunk_states_ctes(
         &mut q,
@@ -1055,7 +1049,6 @@ pub(crate) async fn chunk_statistics(
             })
         })
         .collect::<sqlx::Result<_>>()
-        .map_err(Into::into)
 }
 
 /// getArtifactChecksums: the first (oldest) checksum event per artifact file
@@ -1066,7 +1059,7 @@ pub(crate) async fn artifact_checksums(
     task_name: &str,
     artifact_name: Option<&str>,
     stale_timeout: std::time::Duration,
-) -> ApiResult<Vec<ArtifactChecksumEntry>> {
+) -> sqlx::Result<Vec<ArtifactChecksumEntry>> {
     let mut q = Sql::new("WITH latest_complete_tasks AS (");
     push_latest_complete_or_skipped_task(
         &mut q,
@@ -1116,7 +1109,6 @@ pub(crate) async fn artifact_checksums(
             })
         })
         .collect::<sqlx::Result<_>>()
-        .map_err(Into::into)
 }
 
 // ---------------------------------------------------------------------------
@@ -1127,7 +1119,7 @@ pub(crate) async fn upsert_workflow(
     hash: &str,
     name: &str,
     organization_id: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.voxelytics_workflows (hash, name, _organization)
         VALUES ($1, $2, $3)
@@ -1155,8 +1147,8 @@ pub(crate) struct NewRun<'a> {
 }
 
 /// upsertRun: one run per (organization, name); returns its id.
-pub(crate) async fn upsert_run(conn: &mut PgConnection, run: NewRun<'_>) -> ApiResult<ObjectId> {
-    Ok(sqlx::query_scalar(
+pub(crate) async fn upsert_run(conn: &mut PgConnection, run: NewRun<'_>) -> sqlx::Result<ObjectId> {
+    sqlx::query_scalar(
         r#"INSERT INTO webknossos.voxelytics_runs (_id, _organization, _user, name, username, hostname, voxelyticsVersion, workflow_hash, workflow_yamlContent, workflow_config)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT (_organization, name)
@@ -1181,7 +1173,7 @@ pub(crate) async fn upsert_run(conn: &mut PgConnection, run: NewRun<'_>) -> ApiR
     .bind(run.workflow_yaml_content)
     .bind(run.workflow_config)
     .fetch_one(conn)
-    .await?)
+    .await
 }
 
 pub(crate) async fn upsert_task(
@@ -1190,8 +1182,8 @@ pub(crate) async fn upsert_task(
     name: &str,
     task: &str,
     config: &Value,
-) -> ApiResult<ObjectId> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<ObjectId> {
+    sqlx::query_scalar(
         r#"INSERT INTO webknossos.voxelytics_tasks (_id, _run, name, task, config)
         VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (_run, name)
@@ -1206,7 +1198,7 @@ pub(crate) async fn upsert_task(
     .bind(task)
     .bind(config)
     .fetch_one(conn)
-    .await?)
+    .await
 }
 
 pub(crate) struct ArtifactValues<'a> {
@@ -1222,7 +1214,7 @@ pub(crate) async fn upsert_artifact(
     task_id: &ObjectId,
     name: &str,
     artifact: &ArtifactValues<'_>,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.voxelytics_artifacts (_id, _task, name, path, fileSize, inodeCount, version, metadata)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -1253,7 +1245,7 @@ pub(crate) async fn upsert_artifacts(
     conn: &mut PgConnection,
     run_id: &ObjectId,
     rows: &[Value],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     let rows: Vec<Value> = rows
         .iter()
         .map(|row| {
@@ -1287,7 +1279,7 @@ pub(crate) async fn update_run_states(
     conn: &mut PgConnection,
     run_id: &ObjectId,
     rows: &[Value],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"UPDATE webknossos.voxelytics_runs u
         SET
@@ -1309,7 +1301,7 @@ pub(crate) async fn update_task_states(
     conn: &mut PgConnection,
     run_id: &ObjectId,
     rows: &[Value],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"UPDATE webknossos.voxelytics_tasks u
         SET
@@ -1336,7 +1328,7 @@ pub(crate) async fn upsert_chunk_states(
     conn: &mut PgConnection,
     run_id: &ObjectId,
     rows: &[Value],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     let rows: Vec<Value> = rows
         .iter()
         .map(|row| {
@@ -1375,7 +1367,7 @@ pub(crate) async fn upsert_run_heartbeats(
     conn: &mut PgConnection,
     run_id: &ObjectId,
     rows: &[Value],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.voxelytics_runHeartbeatEvents (_run, timestamp)
         SELECT $1, iv.timestamp
@@ -1396,7 +1388,7 @@ pub(crate) async fn upsert_chunk_profiling(
     conn: &mut PgConnection,
     run_id: &ObjectId,
     rows: &[Value],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.voxelytics_chunkProfilingEvents (_chunk, hostname, pid, memory, cpuUser, cpuSystem, timestamp)
         SELECT
@@ -1431,7 +1423,7 @@ pub(crate) async fn upsert_artifact_checksums(
     conn: &mut PgConnection,
     run_id: &ObjectId,
     rows: &[Value],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.voxelytics_artifactFileChecksumEvents (_artifact, path, resolvedPath, checksumMethod, checksum, fileSize, lastModified, timestamp)
         SELECT
@@ -1467,7 +1459,7 @@ pub(crate) async fn delete_workflow(
     conn: &mut PgConnection,
     hash: &str,
     organization_id: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "DELETE FROM webknossos.voxelytics_workflows WHERE hash = $1 AND _organization = $2",
     )

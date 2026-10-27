@@ -6,7 +6,6 @@ use sqlx::{PgConnection, PgPool, Postgres};
 use super::ProjectParameters;
 use crate::{
     auth::AuthUser,
-    error::{ApiError, ApiResult},
     sql::{PushArg, Requester, Sql},
     users,
     util::id::ObjectId,
@@ -73,27 +72,27 @@ pub(crate) async fn find_one_json<'e, E: sqlx::Executor<'e, Database = Postgres>
     executor: E,
     user: &AuthUser,
     id: &ObjectId,
-) -> ApiResult<Option<Value>> {
+) -> sqlx::Result<Option<Value>> {
     let mut q = public_projects(user);
     q.push(" AND p._id=").push_bind(id);
-    Ok(q.build_query_scalar().fetch_optional(executor).await?)
+    q.build_query_scalar().fetch_optional(executor).await
 }
 
 /// The public JSON of every project the user may read, oldest first.
-pub(crate) async fn find_all_json(pool: &PgPool, user: &AuthUser) -> ApiResult<Vec<Value>> {
+pub(crate) async fn find_all_json(pool: &PgPool, user: &AuthUser) -> sqlx::Result<Vec<Value>> {
     let mut q = public_projects(user);
     q.push(" ORDER BY p.created");
-    Ok(q.build_query_scalar().fetch_all(pool).await?)
+    q.build_query_scalar().fetch_all(pool).await
 }
 
 pub(crate) async fn find_one_json_by_name(
     pool: &PgPool,
     user: &AuthUser,
     name: &str,
-) -> ApiResult<Option<Value>> {
+) -> sqlx::Result<Option<Value>> {
     let mut q = public_projects(user);
     q.push(" AND p.name=").push_bind(name);
-    Ok(q.build_query_scalar().fetch_optional(pool).await?)
+    q.build_query_scalar().fetch_optional(pool).await
 }
 
 /// The public JSON of the readable projects that have tasks of the task type.
@@ -101,41 +100,41 @@ pub(crate) async fn find_all_json_for_task_type(
     pool: &PgPool,
     user: &AuthUser,
     task_type_id: &ObjectId,
-) -> ApiResult<Vec<Value>> {
+) -> sqlx::Result<Vec<Value>> {
     let mut q = public_projects(user);
     q.push(" AND EXISTS(SELECT 1 FROM webknossos.tasks_ WHERE _project=p._id AND _tasktype=")
         .push_bind(task_type_id)
         .push(") ORDER BY p.created");
-    Ok(q.build_query_scalar().fetch_all(pool).await?)
+    q.build_query_scalar().fetch_all(pool).await
 }
 
 /// Summed (pending instances, tracing time) of the tasks per project id.
 pub(crate) async fn find_task_status_for_projects(
     pool: &PgPool,
     ids: Vec<&str>,
-) -> ApiResult<Vec<(String, i64, i64)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Vec<(String, i64, i64)>> {
+    sqlx::query_as(
         "SELECT \
             _project,COALESCE(sum(pendinginstances),0)::bigint,COALESCE(sum(tracingtime),\
             0)::bigint FROM webknossos.tasks_ WHERE _project=ANY($1) GROUP BY _project",
     )
     .bind(ids)
     .fetch_all(pool)
-    .await?)
+    .await
 }
 
 /// Summed (pending instances, tracing time) of the tasks of one project.
 pub(crate) async fn find_task_status<'e, E: sqlx::Executor<'e, Database = Postgres>>(
     executor: E,
     project_id: &str,
-) -> ApiResult<(i64, i64)> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<(i64, i64)> {
+    sqlx::query_as(
         "SELECT COALESCE(sum(pendinginstances),0)::bigint, \
             COALESCE(sum(tracingtime),0)::bigint FROM webknossos.tasks_ WHERE _project=$1",
     )
     .bind(project_id)
     .fetch_one(executor)
-    .await?)
+    .await
 }
 
 /// The live owner, locked FOR SHARE, if they belong to the organization.
@@ -143,14 +142,14 @@ pub(crate) async fn find_owner_for_share(
     connection: &mut PgConnection,
     owner: &ObjectId,
     organization_id: &str,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT _id FROM webknossos.users WHERE _id=$1 AND _organization=$2 AND NOT isDeleted FOR SHARE",
     )
     .bind(owner)
     .bind(organization_id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 /// Takes a transaction-scoped advisory lock on the organization/project name.
@@ -158,7 +157,7 @@ pub(crate) async fn lock_name(
     connection: &mut PgConnection,
     organization_id: &str,
     name: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
         .bind(format!("project:{}:{}", organization_id, name))
         .execute(connection)
@@ -170,14 +169,14 @@ pub(crate) async fn is_name_taken(
     connection: &mut PgConnection,
     name: &str,
     organization_id: &str,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM webknossos.projects_ WHERE name=$1 AND _organization=$2)",
     )
     .bind(name)
     .bind(organization_id)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn insert_one(
@@ -185,7 +184,7 @@ pub(crate) async fn insert_one(
     id: &ObjectId,
     organization_id: &str,
     parameters: &ProjectParameters,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "INSERT INTO \
             webknossos.projects(_id,_organization,_team,_owner,name,priority,paused,\
@@ -209,7 +208,7 @@ pub(crate) async fn update_one(
     connection: &mut PgConnection,
     id: &ObjectId,
     parameters: &ProjectParameters,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.projects SET \
             _team=$2,_owner=$3,priority=$4,expectedtime=$5,isblacklistedfromreport=$6 WHERE \
@@ -230,7 +229,7 @@ pub(crate) async fn update_paused(
     connection: &mut PgConnection,
     id: &ObjectId,
     paused: bool,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.projects SET paused=$2 WHERE _id=$1 AND NOT isdeleted")
         .bind(id)
         .bind(paused)
@@ -246,22 +245,35 @@ pub(crate) async fn increase_task_instances(
     user: &AuthUser,
     id: &ObjectId,
     delta: i64,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.tasks t SET totalinstances=totalinstances+$2 FROM webknossos.projects_ p WHERE t._project=p._id AND p._id=$1 AND NOT t.isdeleted AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE _user=$4 AND _team=p._team))")
         .bind(id).bind(delta).bind(user.is_admin).bind(&user.id).execute(connection).await?;
     Ok(())
 }
 
-/// Soft-deletes the tasks (and their annotations) whose `column` is `id`.
+/// The task column that [`delete_tasks`] matches against.
+#[derive(Clone, Copy)]
+pub(crate) enum TaskParent {
+    Project,
+    TaskType,
+}
+
+impl TaskParent {
+    fn column(self) -> &'static str {
+        match self {
+            Self::Project => "_project",
+            Self::TaskType => "_tasktype",
+        }
+    }
+}
+
+/// Soft-deletes the tasks (and their annotations) whose `parent` column is `id`.
 pub(crate) async fn delete_tasks(
     connection: &mut PgConnection,
-    column: &str,
+    parent: TaskParent,
     id: &ObjectId,
-) -> ApiResult<()> {
-    // column is chosen only by these two internal call sites, never request input.
-    if !matches!(column, "_project" | "_tasktype") {
-        return Err(ApiError::internal());
-    }
+) -> sqlx::Result<()> {
+    let column = parent.column();
     Sql::new(
         "UPDATE webknossos.annotations SET isdeleted=true WHERE _task IN (SELECT _id FROM webknossos.tasks WHERE ",
     )
@@ -286,17 +298,15 @@ pub(crate) async fn delete_tasks(
 pub(crate) async fn find_owner(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<ObjectId> {
-    Ok(
-        sqlx::query_scalar("SELECT _owner FROM webknossos.projects WHERE _id=$1")
-            .bind(id)
-            .fetch_one(connection)
-            .await?,
-    )
+) -> sqlx::Result<ObjectId> {
+    sqlx::query_scalar("SELECT _owner FROM webknossos.projects WHERE _id=$1")
+        .bind(id)
+        .fetch_one(connection)
+        .await
 }
 
 /// Soft-deletes the project and suffixes its name.
-pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> ApiResult<()> {
+pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.projects SET isdeleted=true,name=name || '.deleted.at.' || floor(extract(epoch FROM clock_timestamp())*1000)::bigint::text WHERE _id=$1 AND NOT isdeleted")
         .bind(id).execute(connection).await?;
     Ok(())
@@ -307,15 +317,15 @@ pub(crate) async fn lock_one(
     connection: &mut PgConnection,
     id: &ObjectId,
     organization: &str,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT _team FROM webknossos.projects WHERE _id=$1 AND _organization=$2 AND NOT \
             isdeleted FOR UPDATE",
     )
     .bind(id)
     .bind(organization)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 /// Whether the user may manage the live team of the organization (admin or
@@ -324,7 +334,7 @@ pub(crate) async fn can_manage_team(
     connection: &mut PgConnection,
     user: &AuthUser,
     team: &ObjectId,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     // SHARE conflicts with soft deletion (KEY SHARE would not). Hold the live
     // referenced team until the project/task type mutation commits.
     let team: Option<ObjectId> = sqlx::query_scalar(
@@ -346,8 +356,8 @@ pub(crate) async fn is_task_type_readable(
     pool: &PgPool,
     user: &AuthUser,
     task_type_id: &ObjectId,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM webknossos.tasktypes_ t WHERE t._id=$1 AND \
             t._organization=$2 AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles WHERE \
             _user=$4 AND _team=t._team)))",
@@ -357,14 +367,17 @@ pub(crate) async fn is_task_type_readable(
     .bind(user.is_admin)
     .bind(&user.id)
     .fetch_one(pool)
-    .await?)
+    .await
 }
 
 /// The users with active task annotations in the project, as JSON.
-pub(crate) async fn find_active_users_json(pool: &PgPool, id: ObjectId) -> ApiResult<Vec<Value>> {
-    Ok(sqlx::query_scalar("SELECT \
+pub(crate) async fn find_active_users_json(
+    pool: &PgPool,
+    id: ObjectId,
+) -> sqlx::Result<Vec<Value>> {
+    sqlx::query_scalar("SELECT \
             jsonb_build_object('email',m.email,'firstName',m.firstname,'lastName',m.lastname,'activeTasks',count(a._id)) FROM webknossos.annotations_ a JOIN webknossos.tasks_ t ON t._id=a._task JOIN webknossos.users_ u ON u._id=a._user JOIN webknossos.multiusers_ m ON m._id=u._multiuser WHERE t._project=$1 AND a.state='Active' AND a.typ='Task' GROUP BY m.email,m.firstname,m.lastname")
-        .bind(id).fetch_all(pool).await?)
+        .bind(id).fetch_all(pool).await
 }
 
 /// ProjectDAO.findOne with the requester's read access; returns the team.
@@ -372,11 +385,11 @@ pub(crate) async fn find_team_with_read_access(
     connection: &mut PgConnection,
     user: &AuthUser,
     id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
+) -> sqlx::Result<Option<ObjectId>> {
     let mut q = Sql::new("SELECT p._team FROM webknossos.projects_ p WHERE ");
     push_read_access(&mut q, user.into());
     q.push(" AND p._id=").push_bind(id);
-    Ok(q.build_query_scalar().fetch_optional(connection).await?)
+    q.build_query_scalar().fetch_optional(connection).await
 }
 
 /// UserDAO.findOne with the requester's read access, locked FOR SHARE.
@@ -384,20 +397,20 @@ pub(crate) async fn find_user_for_share(
     connection: &mut PgConnection,
     user: &AuthUser,
     user_id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
+) -> sqlx::Result<Option<ObjectId>> {
     let mut q = Sql::new("SELECT usr._id FROM webknossos.users_ AS usr WHERE usr._id = ");
     q.push_bind(user_id).push(" AND ");
     users::push_read_access(&mut q, (&user.id).into());
     q.push(" FOR SHARE OF usr");
-    Ok(q.build_query_scalar().fetch_optional(connection).await?)
+    q.build_query_scalar().fetch_optional(connection).await
 }
 
 /// The ids of the project's active task annotations.
 pub(crate) async fn find_active_task_annotation_ids(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<Vec<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Vec<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT a._id FROM webknossos.annotations_ a JOIN webknossos.tasks_ t ON \
             a._task=t._id JOIN webknossos.projects_ p ON t._project=p._id JOIN \
             webknossos.users_ u ON a._user=u._id WHERE p._id=$1 AND a.state='Active' AND \
@@ -405,7 +418,7 @@ pub(crate) async fn find_active_task_annotation_ids(
     )
     .bind(id)
     .fetch_all(connection)
-    .await?)
+    .await
 }
 
 /// The annotation's dataset and whether the user may mutate it, locked FOR
@@ -414,7 +427,7 @@ pub(crate) async fn find_annotation_for_transfer(
     connection: &mut PgConnection,
     user: &AuthUser,
     annotation: &ObjectId,
-) -> ApiResult<Option<(ObjectId, bool)>> {
+) -> sqlx::Result<Option<(ObjectId, bool)>> {
     // AnnotationService.transferAnnotationToUser, under the requester's context.
     let mut q = Sql::new("SELECT a._dataset, ");
     crate::annotation::access::push_mutate_predicate(&mut q, user.into());
@@ -423,26 +436,26 @@ pub(crate) async fn find_annotation_for_transfer(
         .push(" AND NOT a.isDeleted AND ");
     crate::annotation::access::push_read_predicate(&mut q, user.into());
     q.push(" FOR UPDATE OF a");
-    Ok(q.build_query_as().fetch_optional(connection).await?)
+    q.build_query_as().fetch_optional(connection).await
 }
 
 pub(crate) async fn is_dataset_readable(
     connection: &mut PgConnection,
     dataset: &ObjectId,
     user_id: &ObjectId,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = ");
     q.push_bind(dataset).push(" AND ");
     crate::dataset::access::push_read_predicate(&mut q, user_id.into(), None);
     q.push(")");
-    Ok(q.build_query_scalar().fetch_one(connection).await?)
+    q.build_query_scalar().fetch_one(connection).await
 }
 
 pub(crate) async fn update_annotation_user(
     connection: &mut PgConnection,
     annotation: &ObjectId,
     new_user: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.annotations SET _user=$2 WHERE _id=$1")
         .bind(annotation)
         .bind(new_user)
@@ -456,10 +469,10 @@ pub(crate) async fn is_annotation_readable(
     connection: &mut PgConnection,
     user: &AuthUser,
     annotation: &ObjectId,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.annotations_ a WHERE a._id=");
     q.push_bind(annotation).push(" AND ");
     crate::annotation::access::push_read_predicate(&mut q, user.into());
     q.push(")");
-    Ok(q.build_query_scalar().fetch_one(connection).await?)
+    q.build_query_scalar().fetch_one(connection).await
 }

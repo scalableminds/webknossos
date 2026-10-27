@@ -2,7 +2,7 @@
 use serde_json::Value;
 use sqlx::PgPool;
 
-use crate::{auth::AuthUser, error::ApiResult, util::id::ObjectId};
+use crate::{auth::AuthUser, util::id::ObjectId};
 
 /// TeamDAO.findOne under the requester's access context: members and
 /// administrators of the team's organization.
@@ -10,8 +10,8 @@ pub(crate) async fn is_team_readable(
     pool: &PgPool,
     user: &AuthUser,
     id: &ObjectId,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         r#"SELECT EXISTS(SELECT 1 FROM webknossos.teams_ t WHERE t._id = $1 AND t._organization = $3
              AND ($4 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles r WHERE r._team = t._id AND r._user = $2)))"#,
     )
@@ -20,14 +20,14 @@ pub(crate) async fn is_team_readable(
     .bind(&user.organization_id)
     .bind(user.is_admin)
     .fetch_one(pool)
-    .await?)
+    .await
 }
 
 pub(crate) async fn find_project_progress_report(
     pool: &PgPool,
     team_id: &ObjectId,
-) -> ApiResult<Vec<Value>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Vec<Value>> {
+    sqlx::query_scalar(
         r#"WITH teamMembers AS (
              SELECT _user FROM webknossos.user_team_roles ut WHERE ut._team = $1
            ), experiences AS (
@@ -84,7 +84,7 @@ pub(crate) async fn find_project_progress_report(
     )
     .bind(team_id)
     .fetch_all(pool)
-    .await?)
+    .await
 }
 
 /// UserDAO.findAllByTeams (listable, active members of the team), minus
@@ -94,8 +94,8 @@ pub(crate) async fn find_all_by_team_for_available_tasks_report(
     pool: &PgPool,
     user: &AuthUser,
     team_id: &ObjectId,
-) -> ApiResult<Vec<(ObjectId, String)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Vec<(ObjectId, String)>> {
+    sqlx::query_as(
         r#"SELECT u._id, m.firstName || ' ' || m.lastName
            FROM webknossos.users_ u
            JOIN webknossos.multiUsers_ m ON m._id = u._multiUser
@@ -116,7 +116,7 @@ pub(crate) async fn find_all_by_team_for_available_tasks_report(
     .bind(&user.organization_id)
     .bind(user.is_admin)
     .fetch_all(pool)
-    .await?)
+    .await
 }
 
 /// Per project and required experience: the number of open tasks the user
@@ -125,8 +125,8 @@ pub(crate) async fn find_all_by_team_for_available_tasks_report(
 pub(crate) async fn find_available_task_counts_for_user(
     pool: &PgPool,
     user_id: &ObjectId,
-) -> ApiResult<Vec<(String, String, i32, i64)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Vec<(String, String, i32, i64)>> {
+    sqlx::query_as(
         r#"SELECT p.name, t.neededExperience_domain, t.neededExperience_value, COUNT(t._id)
                FROM webknossos.tasks_ t
                JOIN (SELECT domain, value FROM webknossos.user_experiences WHERE _user = $1) AS ue
@@ -141,5 +141,5 @@ pub(crate) async fn find_available_task_counts_for_user(
     )
     .bind(user_id)
     .fetch_all(pool)
-    .await?)
+    .await
 }

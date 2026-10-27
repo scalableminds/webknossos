@@ -2,7 +2,7 @@
 use sqlx::{PgConnection, PgPool};
 
 use super::Script;
-use crate::{error::ApiResult, sql::Sql, util::id::ObjectId};
+use crate::{sql::Sql, util::id::ObjectId};
 
 /// Live scripts; callers append further conditions. Compact owner JSON is the
 /// UserService.compactWrites contract, including memberships.
@@ -27,10 +27,10 @@ fn select_scripts(organization: &str) -> Sql<'_> {
     q
 }
 
-pub(crate) async fn find_all(pool: &PgPool, organization_id: &str) -> ApiResult<Vec<Script>> {
+pub(crate) async fn find_all(pool: &PgPool, organization_id: &str) -> sqlx::Result<Vec<Script>> {
     let mut q = select_scripts(organization_id);
     q.push(" ORDER BY s._id");
-    Ok(q.build_query_as::<Script>().fetch_all(pool).await?)
+    q.build_query_as::<Script>().fetch_all(pool).await
 }
 
 /// With `lock`, the script row is locked (FOR UPDATE).
@@ -39,15 +39,15 @@ pub(crate) async fn find_one(
     organization_id: &str,
     id: &ObjectId,
     lock: bool,
-) -> ApiResult<Option<Script>> {
+) -> sqlx::Result<Option<Script>> {
     let mut q = select_scripts(organization_id);
     q.push(" AND s._id = ").push_bind(id);
     if lock {
         q.push(" FOR UPDATE OF s");
     }
-    Ok(q.build_query_as::<Script>()
+    q.build_query_as::<Script>()
         .fetch_optional(connection)
-        .await?)
+        .await
 }
 
 pub(crate) async fn insert_one(
@@ -56,7 +56,7 @@ pub(crate) async fn insert_one(
     owner: &ObjectId,
     name: &str,
     gist: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("INSERT INTO webknossos.scripts (_id, _owner, name, gist) VALUES ($1, $2, $3, $4)")
         .bind(id)
         .bind(owner)
@@ -72,14 +72,14 @@ pub(crate) async fn is_user_in_organization(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     organization_id: &str,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM webknossos.users_ WHERE _id = $1 AND _organization = $2)",
     )
     .bind(user_id)
     .bind(organization_id)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn update_one(
@@ -88,7 +88,7 @@ pub(crate) async fn update_one(
     owner: &ObjectId,
     name: &str,
     gist: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.scripts SET _owner = $2, name = $3, gist = $4 WHERE _id = $1")
         .bind(id)
         .bind(owner)
@@ -99,7 +99,7 @@ pub(crate) async fn update_one(
     Ok(())
 }
 
-pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> ApiResult<()> {
+pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.scripts SET isDeleted = TRUE WHERE _id = $1")
         .bind(id)
         .execute(connection)
@@ -111,7 +111,7 @@ pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> 
 pub(crate) async fn remove_script_from_all_tasks(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.tasks SET _script = NULL WHERE _script = $1")
         .bind(id)
         .execute(connection)

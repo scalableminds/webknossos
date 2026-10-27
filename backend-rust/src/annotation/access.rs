@@ -59,7 +59,7 @@ pub async fn find_optional<'e, E: Executor<'e, Database = Postgres>>(
     id: &ObjectId,
     global: bool,
 ) -> ApiResult<Option<AnnotationMetadata>> {
-    dao::find_one(executor, Requester::from(user), id, global).await
+    Ok(dao::find_one(executor, Requester::from(user), id, global).await?)
 }
 
 /// Hold live annotation metadata through a mutation, see

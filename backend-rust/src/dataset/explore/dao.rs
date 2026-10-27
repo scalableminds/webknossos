@@ -2,7 +2,7 @@
 use serde_json::Value;
 use sqlx::{PgConnection, PgPool};
 
-use crate::{error::ApiResult, sql::Sql, util::id::ObjectId};
+use crate::{sql::Sql, util::id::ObjectId};
 
 #[derive(sqlx::FromRow)]
 pub(crate) struct DuplicateSource {
@@ -20,7 +20,7 @@ pub(crate) async fn insert_datastore_token(
     user_id: &ObjectId,
     expiry_millis: i64,
     idle_millis: i64,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.tokens (_id, value, _user, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created)
            VALUES ($1, $2, $3, statement_timestamp(), statement_timestamp() + $4::bigint * INTERVAL '1 millisecond', $5,
@@ -40,25 +40,23 @@ pub(crate) async fn insert_datastore_token(
 pub(crate) async fn find_explore_store_url(
     pool: &PgPool,
     name: Option<&String>,
-) -> ApiResult<Option<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
         "SELECT url FROM webknossos.dataStores_ WHERE ($1::text IS NULL AND allowsUpload OR name = $1) ORDER BY name LIMIT 1",
     )
     .bind(name)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 pub(crate) async fn find_root_folder(
     connection: &mut PgConnection,
     organization_id: &str,
-) -> ApiResult<ObjectId> {
-    Ok(
-        sqlx::query_scalar("SELECT _rootFolder FROM webknossos.organizations_ WHERE _id = $1")
-            .bind(organization_id)
-            .fetch_one(connection)
-            .await?,
-    )
+) -> sqlx::Result<ObjectId> {
+    sqlx::query_scalar("SELECT _rootFolder FROM webknossos.organizations_ WHERE _id = $1")
+        .bind(organization_id)
+        .fetch_one(connection)
+        .await
 }
 
 /// Folders (alias `f`) visible to `user`: below the root of an organization
@@ -102,7 +100,7 @@ pub(crate) async fn find_visible_folders(
     connection: &mut PgConnection,
     root: &ObjectId,
     user_id: &ObjectId,
-) -> ApiResult<Vec<(ObjectId, String, Option<ObjectId>)>> {
+) -> sqlx::Result<Vec<(ObjectId, String, Option<ObjectId>)>> {
     let mut q = Sql::new(
         r#"SELECT f._id, f.name, fp._ancestor FROM webknossos.folders_ f JOIN webknossos.folder_paths fp ON f._id = fp._descendant
            WHERE fp.depth = 1 AND f._id IN (SELECT _descendant FROM webknossos.folder_paths WHERE _ancestor = "#,
@@ -113,7 +111,7 @@ pub(crate) async fn find_visible_folders(
         .push_bind(root)
         .push(" AND ");
     push_visible_folder(&mut q, user_id);
-    Ok(q.build_query_as().fetch_all(connection).await?)
+    q.build_query_as().fetch_all(connection).await
 }
 
 pub(crate) async fn insert_folder(
@@ -134,7 +132,7 @@ pub(crate) async fn insert_folder_paths(
     connection: &mut PgConnection,
     id: &ObjectId,
     parent: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.folder_paths (_ancestor, _descendant, depth)
                SELECT _ancestor, $1, depth + 1 FROM webknossos.folder_paths WHERE _descendant = $2
@@ -151,13 +149,13 @@ pub(crate) async fn insert_folder_paths(
 pub(crate) async fn find_upload_store(
     connection: &mut PgConnection,
     organization_id: &str,
-) -> ApiResult<Option<(String, String)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(String, String)>> {
+    sqlx::query_as(
         "SELECT name, url FROM webknossos.dataStores_ WHERE allowsUpload AND (onlyAllowedOrganization IS NULL OR onlyAllowedOrganization = $1) ORDER BY name LIMIT 1",
     )
     .bind(organization_id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 /// (name, url) of the named datastore if it is open to the organization.
@@ -165,14 +163,14 @@ pub(crate) async fn find_store_for_organization(
     pool: &PgPool,
     name: &str,
     organization_id: &str,
-) -> ApiResult<Option<(String, String)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(String, String)>> {
+    sqlx::query_as(
         "SELECT name, url FROM webknossos.dataStores_ WHERE name = $1 AND (onlyAllowedOrganization IS NULL OR onlyAllowedOrganization = $2)",
     )
     .bind(name)
     .bind(organization_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// Whether the user manages a team of the organization.
@@ -180,22 +178,22 @@ pub(crate) async fn is_team_manager(
     pool: &PgPool,
     user_id: &ObjectId,
     organization_id: &str,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM webknossos.user_team_roles r JOIN webknossos.teams_ t ON t._id = r._team WHERE r._user = $1 AND r.isTeamManager AND t._organization = $2)",
     )
     .bind(user_id)
     .bind(organization_id)
     .fetch_one(pool)
-    .await?)
+    .await
 }
 
 /// Name, metadata, description, status and voxel size of the dataset.
 pub(crate) async fn find_duplicate_source(
     pool: &PgPool,
     dataset_id: &ObjectId,
-) -> ApiResult<DuplicateSource> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<DuplicateSource> {
+    sqlx::query_as(
         r#"SELECT name, metadata, description, status,
              CASE WHEN voxelSizeFactor IS NULL THEN NULL ELSE ARRAY[(voxelSizeFactor).x, (voxelSizeFactor).y, (voxelSizeFactor).z] END AS factor,
              COALESCE(voxelSizeUnit::text, 'nanometer') AS unit
@@ -203,5 +201,5 @@ pub(crate) async fn find_duplicate_source(
     )
     .bind(dataset_id)
     .fetch_one(pool)
-    .await?)
+    .await
 }

@@ -1,7 +1,7 @@
 //! The annotation_reserved_ids queries.
 use sqlx::PgConnection;
 
-use crate::{error::ApiResult, util::id::ObjectId};
+use crate::util::id::ObjectId;
 
 /// The IDs the user reserved for the layer's domain, ascending.
 pub(crate) async fn find_all_reserved_ids(
@@ -10,8 +10,8 @@ pub(crate) async fn find_all_reserved_ids(
     tracing_id: &str,
     user_id: &ObjectId,
     domain: &str,
-) -> ApiResult<Vec<i64>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Vec<i64>> {
+    sqlx::query_scalar(
         "SELECT id FROM webknossos.annotation_reserved_ids
          WHERE _annotation=$1 AND tracingId=$2 AND _user=$3
            AND domain=$4::webknossos.ANNOTATION_ID_DOMAIN
@@ -22,7 +22,7 @@ pub(crate) async fn find_all_reserved_ids(
     .bind(user_id)
     .bind(domain)
     .fetch_all(connection)
-    .await?)
+    .await
 }
 
 /// The largest ID reserved for the layer's domain by any user.
@@ -31,8 +31,8 @@ pub(crate) async fn find_largest_reserved_id(
     annotation_id: &ObjectId,
     tracing_id: &str,
     domain: &str,
-) -> ApiResult<Option<i64>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<i64>> {
+    sqlx::query_scalar(
         "SELECT MAX(id) FROM webknossos.annotation_reserved_ids
          WHERE _annotation=$1 AND tracingId=$2 AND domain=$3::webknossos.ANNOTATION_ID_DOMAIN",
     )
@@ -40,7 +40,7 @@ pub(crate) async fn find_largest_reserved_id(
     .bind(tracing_id)
     .bind(domain)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn insert_reserved_ids(
@@ -50,7 +50,7 @@ pub(crate) async fn insert_reserved_ids(
     domain: &str,
     user_id: &ObjectId,
     ids: &[i64],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "INSERT INTO webknossos.annotation_reserved_ids(_annotation,tracingId,domain,_user,id)
              SELECT $1,$2,$3::webknossos.ANNOTATION_ID_DOMAIN,$4,UNNEST($5::bigint[])",
@@ -72,7 +72,7 @@ pub(crate) async fn delete_reserved_ids(
     domain: &str,
     user_id: &ObjectId,
     ids: &[i64],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "DELETE FROM webknossos.annotation_reserved_ids
              WHERE _annotation=$1 AND tracingId=$2 AND domain=$3::webknossos.ANNOTATION_ID_DOMAIN

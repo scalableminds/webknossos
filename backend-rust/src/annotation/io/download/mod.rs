@@ -399,7 +399,7 @@ async fn find_multi_user(
     if !readable {
         return Ok(None);
     }
-    dao::find_multi_user_names(pool, multi_user_id).await
+    Ok(dao::find_multi_user_names(pool, multi_user_id).await?)
 }
 
 /// MultiUser.abbreviatedName.

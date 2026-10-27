@@ -5,7 +5,6 @@ use sqlx::{PgConnection, PgPool};
 use crate::{
     auth::AuthUser,
     dataset::{dao::push_read_predicate, source::UsableDataSource},
-    error::ApiResult,
     remote::datastore::{attachment_upload::push_attachment_key, mag_upload::push_mag_predicate},
     sql::Sql,
     util::id::ObjectId,
@@ -15,13 +14,13 @@ use crate::{
 pub(crate) async fn find_data_store_names(
     connection: &mut PgConnection,
     dataset_ids: &[&ObjectId],
-) -> ApiResult<Vec<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Vec<String>> {
+    sqlx::query_scalar(
         "SELECT DISTINCT trim(_dataStore) FROM webknossos.datasets_ WHERE _id = ANY($1) AND NOT isVirtual ORDER BY 1",
     )
     .bind(dataset_ids)
     .fetch_all(connection)
-    .await?)
+    .await
 }
 
 /// (name, allowsUploadToPaths) of the datastore the user's organization may use: the named
@@ -30,8 +29,8 @@ pub(crate) async fn find_upload_to_paths_store(
     connection: &mut PgConnection,
     name: Option<&String>,
     organization_id: &str,
-) -> ApiResult<Option<(String, bool)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(String, bool)>> {
+    sqlx::query_as(
         r#"SELECT name, allowsUploadToPaths FROM webknossos.dataStores_
            WHERE ($1::text IS NULL AND allowsUploadToPaths OR name = $1)
              AND (onlyAllowedOrganization IS NULL OR onlyAllowedOrganization = $2)
@@ -40,7 +39,7 @@ pub(crate) async fn find_upload_to_paths_store(
     .bind(name)
     .bind(organization_id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 /// How many of the teams the user may grant dataset access to.
@@ -48,8 +47,8 @@ pub(crate) async fn count_grantable_teams(
     connection: &mut PgConnection,
     user: &AuthUser,
     team_ids: &[ObjectId],
-) -> ApiResult<i64> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<i64> {
+    sqlx::query_scalar(
         r#"SELECT count(*) FROM webknossos.teams_ t WHERE t._id = ANY($1) AND (
              t._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $2 AND isAdmin)
              OR t._id IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $2 AND ($3 OR isTeamManager)))"#,
@@ -58,7 +57,7 @@ pub(crate) async fn count_grantable_teams(
     .bind(&user.id)
     .bind(user.is_dataset_manager)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 /// Whether the user can read the dataset, evaluated in the caller's transaction.
@@ -66,19 +65,19 @@ pub(crate) async fn is_dataset_readable_by(
     connection: &mut PgConnection,
     user: &AuthUser,
     dataset: &ObjectId,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     let mut q = Sql::new("SELECT ");
     push_read_predicate(&mut q, (&user.id).into(), None);
     q.push(" FROM webknossos.datasets_ d WHERE d._id = ")
         .push_bind(dataset);
-    Ok(q.build_query_scalar().fetch_one(connection).await?)
+    q.build_query_scalar().fetch_one(connection).await
 }
 
 pub(crate) async fn insert_allowed_teams_ignoring_conflicts(
     connection: &mut PgConnection,
     dataset: &ObjectId,
     team_ids: &[&ObjectId],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("INSERT INTO webknossos.dataset_allowedTeams (_dataset, _team) SELECT $1, unnest($2::text[]) ON CONFLICT DO NOTHING")
         .bind(dataset)
         .bind(team_ids)
@@ -91,21 +90,21 @@ pub(crate) async fn insert_allowed_teams_ignoring_conflicts(
 pub(crate) async fn find_root_folder_and_included_storage(
     pool: &PgPool,
     organization_id: &str,
-) -> ApiResult<(ObjectId, Option<i64>)> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<(ObjectId, Option<i64>)> {
+    sqlx::query_as(
         "SELECT _rootFolder, includedStorage FROM webknossos.organizations_ WHERE _id = $1",
     )
     .bind(organization_id)
     .fetch_one(pool)
-    .await?)
+    .await
 }
 
 /// Total bytes used by the organization's mags and attachments.
 pub(crate) async fn find_used_storage_bytes(
     pool: &PgPool,
     organization_id: &str,
-) -> ApiResult<i64> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<i64> {
+    sqlx::query_scalar(
         r#"SELECT COALESCE(SUM(usedStorageBytes), 0)::bigint FROM (
                  SELECT usedStorageBytes FROM webknossos.organization_usedStorage_mags WHERE _organization = $1
                  UNION ALL
@@ -113,7 +112,7 @@ pub(crate) async fn find_used_storage_bytes(
     )
     .bind(organization_id)
     .fetch_one(pool)
-    .await?)
+    .await
 }
 
 /// Whether the organization already has a dataset with this name.
@@ -121,27 +120,27 @@ pub(crate) async fn is_name_taken(
     pool: &PgPool,
     name: &str,
     organization_id: &str,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE name = $1 AND _organization = $2)",
     )
     .bind(name)
     .bind(organization_id)
     .fetch_one(pool)
-    .await?)
+    .await
 }
 
 /// (status, uploader, directoryName) of the dataset, row-locked.
 pub(crate) async fn find_upload_state_for_update(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<(String, Option<ObjectId>, String)> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<(String, Option<ObjectId>, String)> {
+    sqlx::query_as(
         "SELECT status, _uploader, directoryName FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE",
     )
     .bind(dataset_id)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 /// DatasetDAO.updateDataSource(isUsable = false).
@@ -151,7 +150,7 @@ pub(crate) async fn update_data_source_unusable(
     organization_id: &str,
     source: &UsableDataSource,
     status: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"UPDATE webknossos.datasets SET _organization = $2, inboxSourceHash = NULL, defaultViewConfiguration = $3,
              isUsable = false, voxelSizeFactor = ROW($4, $5, $6)::webknossos.VECTOR3,
@@ -176,11 +175,11 @@ pub(crate) async fn find_pending_mags(
     dataset_id: &ObjectId,
     layer_name: &str,
     mag: [f64; 3],
-) -> ApiResult<Vec<(Option<String>, bool)>> {
+) -> sqlx::Result<Vec<(Option<String>, bool)>> {
     let mut q = Sql::new("SELECT path, uploadToPathIsPending FROM webknossos.dataset_mags WHERE ");
     push_mag_predicate(&mut q, dataset_id, layer_name, mag);
     q.push(" AND (uploadToPathIsPending OR uploadIsPending)");
-    Ok(q.build_query_as().fetch_all(pool).await?)
+    q.build_query_as().fetch_all(pool).await
 }
 
 pub(crate) async fn delete_pending_mags(
@@ -188,7 +187,7 @@ pub(crate) async fn delete_pending_mags(
     dataset_id: &ObjectId,
     layer_name: &str,
     mag: [f64; 3],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     let mut q = Sql::new("DELETE FROM webknossos.dataset_mags WHERE ");
     push_mag_predicate(&mut q, dataset_id, layer_name, mag);
     q.push(" AND (uploadToPathIsPending OR uploadIsPending)");
@@ -205,7 +204,7 @@ pub(crate) async fn insert_pending_mag(
     path: &str,
     axis_order: Option<Value>,
     channel_index: Option<i32>,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     let [x, y, z] = mag;
     sqlx::query(r#"INSERT INTO webknossos.dataset_mags (_dataset, dataLayerName, mag, path, axisOrder, channelIndex, uploadToPathIsPending, uploadIsPending)
         VALUES ($1, $2, ROW($3, $4, $5)::webknossos.VECTOR3, $6, $7, $8, true, false)"#)
@@ -221,7 +220,7 @@ pub(crate) async fn delete_pending_attachments(
     layer_name: &str,
     attachment_type: &str,
     attachment_name: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     let mut q = Sql::new("DELETE FROM webknossos.dataset_layer_attachments WHERE ");
     push_attachment_key(
         &mut q,
@@ -241,7 +240,7 @@ pub(crate) async fn has_pending_attachment(
     layer_name: &str,
     attachment_type: &str,
     attachment_name: &str,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     let mut q =
         Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments WHERE ");
     push_attachment_key(
@@ -252,7 +251,7 @@ pub(crate) async fn has_pending_attachment(
         attachment_name,
     );
     q.push(" AND (uploadIsPending OR uploadToPathIsPending))");
-    Ok(q.build_query_scalar().fetch_one(connection).await?)
+    q.build_query_scalar().fetch_one(connection).await
 }
 
 /// How many attachments of the layer have this type (and name, unless `name` is `None`).
@@ -262,8 +261,8 @@ pub(crate) async fn count_attachments(
     layer_name: &str,
     name: Option<&String>,
     attachment_type: &str,
-) -> ApiResult<i64> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<i64> {
+    sqlx::query_scalar(
         "SELECT count(*) FROM webknossos.dataset_layer_attachments WHERE _dataset = $1 AND layerName = $2 AND ($3::text IS NULL OR name = $3) AND type = $4::webknossos.LAYER_ATTACHMENT_TYPE",
     )
     .bind(dataset_id)
@@ -271,7 +270,7 @@ pub(crate) async fn count_attachments(
     .bind(name)
     .bind(attachment_type)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -283,7 +282,7 @@ pub(crate) async fn insert_pending_attachment(
     path: &str,
     attachment_type: &str,
     data_format: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(r#"INSERT INTO webknossos.dataset_layer_attachments (_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending, uploadIsPending)
         VALUES ($1, $2, $3, $4, $5::webknossos.LAYER_ATTACHMENT_TYPE, $6::webknossos.LAYER_ATTACHMENT_DATAFORMAT, true, false)"#)
         .bind(dataset_id).bind(layer_name).bind(name).bind(path)

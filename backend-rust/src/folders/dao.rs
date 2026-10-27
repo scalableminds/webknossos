@@ -7,7 +7,7 @@ use serde::Serialize;
 use serde_json::Value;
 use sqlx::{FromRow, PgConnection};
 
-use crate::{auth::AuthUser, error::ApiResult, sql::Sql, util::id::ObjectId};
+use crate::{auth::AuthUser, sql::Sql, util::id::ObjectId};
 
 #[derive(FromRow, Serialize)]
 pub(crate) struct Folder {
@@ -34,14 +34,14 @@ pub(crate) async fn organization_root(
     connection: &mut PgConnection,
     organization_id: &str,
     lock: bool,
-) -> ApiResult<Option<ObjectId>> {
+) -> sqlx::Result<Option<ObjectId>> {
     let suffix = if lock { " FOR UPDATE OF f" } else { "" };
     let mut q = Sql::new(
         "SELECT o._rootFolder FROM webknossos.organizations_ o
         JOIN webknossos.folders_ f ON f._id = o._rootFolder WHERE o._id = ",
     );
     q.push_bind(organization_id).push(suffix);
-    Ok(q.build_query_scalar().fetch_optional(connection).await?)
+    q.build_query_scalar().fetch_optional(connection).await
 }
 
 /// FolderDAO.rawAccessQ: whether `user` may read (or, with `write`, edit) the folder.
@@ -50,8 +50,8 @@ pub(crate) async fn has_access(
     user: &AuthUser,
     id: &ObjectId,
     write: bool,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM webknossos.folders_ f
           JOIN webknossos.folder_paths own_path ON own_path._descendant = f._id
           JOIN webknossos.organizations_ o ON o._rootFolder = own_path._ancestor
@@ -87,46 +87,46 @@ pub(crate) async fn has_access(
     .bind(&user.id)
     .bind(write)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn find_one(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<Option<Folder>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<Folder>> {
+    sqlx::query_as(
         "SELECT _id AS id, name, metadata, created FROM webknossos.folders_ WHERE _id = $1",
     )
     .bind(id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 /// The folder and all its descendants, parents before children.
 pub(crate) async fn find_subtree(
     connection: &mut PgConnection,
     root: &ObjectId,
-) -> ApiResult<Vec<Folder>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Vec<Folder>> {
+    sqlx::query_as(
         "SELECT f._id AS id, f.name, f.metadata, f.created
         FROM webknossos.folders_ f JOIN webknossos.folder_paths p ON p._descendant = f._id
         WHERE p._ancestor = $1 ORDER BY p.depth, f._id",
     )
     .bind(root)
     .fetch_all(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn find_parent(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT _ancestor FROM webknossos.folder_paths WHERE _descendant = $1 AND depth = 1",
     )
     .bind(id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 /// The teams granted on the folder itself or, with `cumulative`, on it or an
@@ -136,8 +136,8 @@ pub(crate) async fn find_allowed_teams(
     user: &AuthUser,
     id: &ObjectId,
     cumulative: bool,
-) -> ApiResult<Vec<FolderTeam>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Vec<FolderTeam>> {
+    sqlx::query_as(
         "SELECT DISTINCT t._id AS id, t.name, t._organization AS organization,
              t.isOrganizationTeam AS is_organization_team
          FROM webknossos.teams_ t JOIN webknossos.folder_allowedTeams a ON a._team = t._id
@@ -154,7 +154,7 @@ pub(crate) async fn find_allowed_teams(
     .bind(id)
     .bind(cumulative)
     .fetch_all(connection)
-    .await?)
+    .await
 }
 
 /// The teams whose folder grants `user` may change: all teams of the
@@ -163,8 +163,8 @@ pub(crate) async fn find_allowed_teams(
 pub(crate) async fn find_grantable_team_ids(
     connection: &mut PgConnection,
     user: &AuthUser,
-) -> ApiResult<Vec<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Vec<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT t._id FROM webknossos.teams_ t
         WHERE t._organization = $1 AND ($2 OR EXISTS (
             SELECT 1 FROM webknossos.user_team_roles r WHERE r._team = t._id
@@ -175,40 +175,44 @@ pub(crate) async fn find_grantable_team_ids(
     .bind(&user.id)
     .bind(user.is_dataset_manager)
     .fetch_all(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn is_descendant(
     connection: &mut PgConnection,
     ancestor: &ObjectId,
     descendant: &ObjectId,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM webknossos.folder_paths \
             WHERE _ancestor = $1 AND _descendant = $2)",
     )
     .bind(ancestor)
     .bind(descendant)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
-pub(crate) async fn has_children(connection: &mut PgConnection, id: &ObjectId) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+pub(crate) async fn has_children(
+    connection: &mut PgConnection,
+    id: &ObjectId,
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM webknossos.folder_paths WHERE _ancestor = $1 AND depth = 1)",
     )
     .bind(id)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
-pub(crate) async fn has_datasets(connection: &mut PgConnection, id: &ObjectId) -> ApiResult<bool> {
-    Ok(
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE _folder = $1)")
-            .bind(id)
-            .fetch_one(connection)
-            .await?,
-    )
+pub(crate) async fn has_datasets(
+    connection: &mut PgConnection,
+    id: &ObjectId,
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE _folder = $1)")
+        .bind(id)
+        .fetch_one(connection)
+        .await
 }
 
 /// Inserts the folder and its closure-table paths below `parent`.
@@ -217,7 +221,7 @@ pub(crate) async fn insert_as_child(
     parent: &ObjectId,
     id: &ObjectId,
     name: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("INSERT INTO webknossos.folders (_id, name) VALUES ($1, $2)")
         .bind(id)
         .bind(name)
@@ -240,7 +244,7 @@ pub(crate) async fn update_name_and_metadata(
     id: &ObjectId,
     name: &str,
     metadata: &Value,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.folders SET name = $2, metadata = $3 WHERE _id = $1")
         .bind(id)
         .bind(name)
@@ -254,7 +258,7 @@ pub(crate) async fn remove_allowed_teams(
     connection: &mut PgConnection,
     id: &ObjectId,
     teams: &[ObjectId],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "DELETE FROM webknossos.folder_allowedTeams WHERE _folder = $1 AND _team = ANY($2::text[])",
     )
@@ -269,7 +273,7 @@ pub(crate) async fn insert_allowed_team(
     connection: &mut PgConnection,
     id: &ObjectId,
     team: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "INSERT INTO webknossos.folder_allowedTeams (_folder, _team) VALUES ($1, $2) \
             ON CONFLICT DO NOTHING",
@@ -287,7 +291,7 @@ pub(crate) async fn move_subtree(
     connection: &mut PgConnection,
     id: &ObjectId,
     new_parent: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "DELETE FROM webknossos.folder_paths p
         WHERE p._descendant IN (SELECT _descendant FROM webknossos.folder_paths WHERE _ancestor = $1)
@@ -311,7 +315,7 @@ pub(crate) async fn move_subtree(
 }
 
 /// Soft-deletes the folder and drops its paths. The caller ensures it is empty.
-pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> ApiResult<()> {
+pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.folders SET isDeleted = TRUE WHERE _id = $1")
         .bind(id)
         .execute(&mut *connection)

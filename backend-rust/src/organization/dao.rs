@@ -2,7 +2,7 @@
 use serde_json::Value;
 use sqlx::{PgConnection, PgExecutor, PgPool, Postgres};
 
-use crate::{error::ApiResult, sql::Sql, util::id::ObjectId};
+use crate::{sql::Sql, util::id::ObjectId};
 
 /// OrganizationService.publicWrites for alias `o`; callers append the
 /// `WHERE` clause. It includes milliCreditBalance for members of the
@@ -54,10 +54,10 @@ pub(crate) async fn find_one_public_json<'e, E: sqlx::Executor<'e, Database = Po
     requesting_organization: Option<&str>,
     is_admin: bool,
     credit_access: bool,
-) -> ApiResult<Option<Value>> {
+) -> sqlx::Result<Option<Value>> {
     let mut q = select_public(requesting_organization, is_admin, credit_access);
     q.push("WHERE o._id=").push_bind(id);
-    Ok(q.build_query_scalar().fetch_optional(executor).await?)
+    q.build_query_scalar().fetch_optional(executor).await
 }
 
 /// Id and name of the organizations the user's account belongs to; superusers see all.
@@ -65,12 +65,12 @@ pub(crate) async fn find_all_compact_for_user(
     pool: &PgPool,
     user_id: &ObjectId,
     is_superuser: bool,
-) -> ApiResult<Vec<Value>> {
-    Ok(sqlx::query_scalar("SELECT jsonb_build_object('id',o._id,'name',o.name) FROM webknossos.organizations_ o WHERE ($2 OR o._id IN (SELECT _organization FROM webknossos.users_ WHERE _multiuser=(SELECT _multiuser FROM webknossos.users_ WHERE _id=$1))) ORDER BY o._id")
+) -> sqlx::Result<Vec<Value>> {
+    sqlx::query_scalar("SELECT jsonb_build_object('id',o._id,'name',o.name) FROM webknossos.organizations_ o WHERE ($2 OR o._id IN (SELECT _organization FROM webknossos.users_ WHERE _multiuser=(SELECT _multiuser FROM webknossos.users_ WHERE _id=$1))) ORDER BY o._id")
         .bind(user_id)
         .bind(is_superuser)
         .fetch_all(pool)
-        .await?)
+        .await
 }
 
 /// The public JSON of the organizations the user's account belongs to; superusers see all.
@@ -78,7 +78,7 @@ pub(crate) async fn find_all_public_json_for_user(
     pool: &PgPool,
     user_id: &ObjectId,
     is_superuser: bool,
-) -> ApiResult<Vec<Value>> {
+) -> sqlx::Result<Vec<Value>> {
     // Scala deliberately calls publicWrites without requestingUser here,
     // so list responses never include administrator fields or balances.
     let mut q = select_public(None, false, false);
@@ -90,38 +90,34 @@ pub(crate) async fn find_all_public_json_for_user(
         )
         .push_bind(user_id)
         .push("))) ORDER BY o._id");
-    Ok(q.build_query_scalar().fetch_all(pool).await?)
+    q.build_query_scalar().fetch_all(pool).await
 }
 
 /// At most two organization ids, enough to tell whether there is exactly one.
-pub(crate) async fn find_up_to_two_ids(pool: &PgPool) -> ApiResult<Vec<String>> {
-    Ok(
-        sqlx::query_scalar("SELECT _id FROM webknossos.organizations_ LIMIT 2")
-            .fetch_all(pool)
-            .await?,
-    )
+pub(crate) async fn find_up_to_two_ids(pool: &PgPool) -> sqlx::Result<Vec<String>> {
+    sqlx::query_scalar("SELECT _id FROM webknossos.organizations_ LIMIT 2")
+        .fetch_all(pool)
+        .await
 }
 
 /// The organization an unexpired invite token belongs to.
 pub(crate) async fn find_organization_id_by_invite_token(
     pool: &PgPool,
     token: String,
-) -> ApiResult<Option<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
         "SELECT _organization FROM webknossos.invites_ WHERE tokenvalue=$1 AND \
             expirationdatetime>statement_timestamp() LIMIT 1",
     )
     .bind(token)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
-pub(crate) async fn is_empty(pool: &PgPool) -> ApiResult<bool> {
-    Ok(
-        sqlx::query_scalar("SELECT NOT EXISTS(SELECT 1 FROM webknossos.organizations_)")
-            .fetch_one(pool)
-            .await?,
-    )
+pub(crate) async fn is_empty(pool: &PgPool) -> sqlx::Result<bool> {
+    sqlx::query_scalar("SELECT NOT EXISTS(SELECT 1 FROM webknossos.organizations_)")
+        .fetch_one(pool)
+        .await
 }
 
 /// Whether the organization is visible to the user: they or their account belong to it, or they are superuser.
@@ -130,8 +126,8 @@ pub(crate) async fn is_accessible(
     id: &str,
     user_id: &ObjectId,
     is_superuser: bool,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM webknossos.organizations_ o WHERE o._id=$1 AND ($3 \
             OR o._id IN(SELECT _organization FROM webknossos.users_ WHERE _multiuser=(SELECT \
             _multiuser FROM webknossos.users_ WHERE _id=$2))))",
@@ -140,7 +136,7 @@ pub(crate) async fn is_accessible(
     .bind(user_id)
     .bind(is_superuser)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 /// Like `is_accessible`, but only for live organizations (reads the base table).
@@ -149,15 +145,15 @@ pub(crate) async fn is_accessible_not_deleted(
     id: &str,
     user_id: &ObjectId,
     is_superuser: bool,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM webknossos.organizations o WHERE o._id=$1 AND NOT o.isDeleted AND ($3 OR o._id IN(SELECT _organization FROM webknossos.users_ WHERE _multiuser=(SELECT _multiuser FROM webknossos.users_ WHERE _id=$2))))",
     )
     .bind(id)
     .bind(user_id)
     .bind(is_superuser)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 /// Returns the number of updated rows.
@@ -166,7 +162,7 @@ pub(crate) async fn update_name_and_new_user_mailing_list(
     id: &str,
     name: String,
     new_user_mailing_list: String,
-) -> ApiResult<u64> {
+) -> sqlx::Result<u64> {
     let updated = sqlx::query(
         "UPDATE webknossos.organizations SET name=$2,newusermailinglist=$3 WHERE _id=$1 \
             AND NOT isdeleted",
@@ -180,7 +176,7 @@ pub(crate) async fn update_name_and_new_user_mailing_list(
 }
 
 /// Returns the number of deleted rows.
-pub(crate) async fn mark_deleted(connection: &mut PgConnection, id: &str) -> ApiResult<u64> {
+pub(crate) async fn mark_deleted(connection: &mut PgConnection, id: &str) -> sqlx::Result<u64> {
     let deleted = sqlx::query(
         "UPDATE webknossos.organizations SET isDeleted = TRUE WHERE _id = $1 AND NOT isDeleted",
     )
@@ -194,7 +190,7 @@ pub(crate) async fn mark_deleted(connection: &mut PgConnection, id: &str) -> Api
 pub(crate) async fn mark_users_deleted(
     connection: &mut PgConnection,
     organization_id: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.users SET isDeleted = TRUE WHERE _organization = $1")
         .bind(organization_id)
         .execute(connection)
@@ -206,7 +202,7 @@ pub(crate) async fn mark_users_deleted(
 pub(crate) async fn clear_last_logged_in_identities(
     connection: &mut PgConnection,
     organization_id: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.multiUsers SET _lastLoggedInIdentity = NULL WHERE _lastLoggedInIdentity IN (SELECT _id FROM webknossos.users WHERE _organization = $1)",
     )
@@ -219,7 +215,7 @@ pub(crate) async fn clear_last_logged_in_identities(
 pub(crate) async fn mark_token_deleted(
     connection: &mut PgConnection,
     token: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.tokens SET isDeleted = TRUE WHERE value = $1")
         .bind(token)
         .execute(connection)
@@ -231,45 +227,43 @@ pub(crate) async fn mark_token_deleted(
 pub(crate) async fn find_multi_user_id_by_email_for_update(
     connection: &mut PgConnection,
     email: &str,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(
-        sqlx::query_scalar("SELECT _id FROM webknossos.multiUsers_ WHERE email = $1 FOR UPDATE")
-            .bind(email)
-            .fetch_optional(connection)
-            .await?,
-    )
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar("SELECT _id FROM webknossos.multiUsers_ WHERE email = $1 FOR UPDATE")
+        .bind(email)
+        .fetch_optional(connection)
+        .await
 }
 
 /// userDAO.findFirstByMultiUser
 pub(crate) async fn find_first_user_id_by_multi_user(
     connection: &mut PgConnection,
     multi_user_id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT _id FROM webknossos.users_ WHERE _multiUser = $1 AND NOT isDeactivated ORDER BY created, _id LIMIT 1",
     )
     .bind(multi_user_id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn find_last_terms_of_service_acceptance_version(
     pool: &PgPool,
     id: &str,
-) -> ApiResult<Option<i32>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<i32>> {
+    sqlx::query_scalar(
         "SELECT lastTermsOfServiceAcceptanceVersion FROM webknossos.organizations_ WHERE _id = $1",
     )
     .bind(id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 pub(crate) async fn update_terms_of_service_acceptance(
     pool: &PgPool,
     id: &str,
     version: i32,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"UPDATE webknossos.organizations
            SET lastTermsOfServiceAcceptanceTime = statement_timestamp(),
@@ -284,7 +278,7 @@ pub(crate) async fn update_terms_of_service_acceptance(
 }
 
 /// Whether the user is an organization owner; missing users count as no.
-pub(crate) async fn is_organization_owner(pool: &PgPool, user_id: &ObjectId) -> ApiResult<bool> {
+pub(crate) async fn is_organization_owner(pool: &PgPool, user_id: &ObjectId) -> sqlx::Result<bool> {
     Ok(
         sqlx::query_scalar("SELECT isOrganizationOwner FROM webknossos.users_ WHERE _id = $1")
             .bind(user_id)
@@ -294,13 +288,11 @@ pub(crate) async fn is_organization_owner(pool: &PgPool, user_id: &ObjectId) -> 
     )
 }
 
-pub(crate) async fn exists(executor: impl PgExecutor<'_>, id: &str) -> ApiResult<bool> {
-    Ok(
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ WHERE _id=$1)")
-            .bind(id)
-            .fetch_one(executor)
-            .await?,
-    )
+pub(crate) async fn exists(executor: impl PgExecutor<'_>, id: &str) -> sqlx::Result<bool> {
+    sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ WHERE _id=$1)")
+        .bind(id)
+        .fetch_one(executor)
+        .await
 }
 
 /// The name of the organization, if it exists.

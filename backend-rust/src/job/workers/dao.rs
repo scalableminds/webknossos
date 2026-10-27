@@ -7,7 +7,6 @@ use serde_json::Value;
 use sqlx::{PgConnection, PgPool};
 
 use crate::{
-    error::ApiResult,
     job::{dao::JOB_COLUMNS, routes::Job},
     sql::Sql,
     util::id::ObjectId,
@@ -49,7 +48,7 @@ pub(crate) async fn find_one_by_key(
     connection: &mut PgConnection,
     key: &str,
     for_update: bool,
-) -> ApiResult<Option<Worker>> {
+) -> sqlx::Result<Option<Worker>> {
     let lock = if for_update { " FOR UPDATE" } else { "" };
     let mut q = Sql::new(
         r#"SELECT _id AS id, _dataStore AS data_store, maxParallelHighPriorityJobs AS max_high,
@@ -58,7 +57,7 @@ pub(crate) async fn find_one_by_key(
           FROM webknossos.workers_ WHERE key = "#,
     );
     q.push_bind(key).push(lock);
-    Ok(q.build_query_as().fetch_optional(&mut *connection).await?)
+    q.build_query_as().fetch_optional(&mut *connection).await
 }
 
 /// WorkerDAO.updateHeartBeat / updateLastReportedVersion (only if it changed).
@@ -66,7 +65,7 @@ pub(crate) async fn update_heart_beat(
     connection: &mut PgConnection,
     worker_id: &ObjectId,
     new_version: Option<&str>,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"UPDATE webknossos.workers SET lastHeartBeat = NOW(),
             lastReportedVersion = COALESCE($2, lastReportedVersion) WHERE _id = $1"#,
@@ -84,7 +83,7 @@ pub(crate) async fn reserve_next_job(
     worker_id: &ObjectId,
     data_store: &str,
     assignable: &[String],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"UPDATE webknossos.jobs SET _worker = $1
           WHERE _worker IS NULL AND _id = (
@@ -108,9 +107,9 @@ pub(crate) async fn count_unfinished_by_worker(
     worker_id: &ObjectId,
     commands_a: &[String],
     commands_b: &[String],
-) -> ApiResult<(i64, i64)> {
+) -> sqlx::Result<(i64, i64)> {
     let commands_any: Vec<&String> = commands_a.iter().chain(commands_b).collect();
-    Ok(sqlx::query_as(
+    sqlx::query_as(
         r#"SELECT COUNT(*) FILTER (WHERE command = ANY($2)), COUNT(*) FILTER (WHERE command = ANY($3))
           FROM webknossos.jobs_
           WHERE _worker = $1 AND state IN ('PENDING', 'STARTED') AND command = ANY($4)
@@ -121,7 +120,7 @@ pub(crate) async fn count_unfinished_by_worker(
     .bind(commands_b)
     .bind(commands_any)
     .fetch_one(&mut *connection)
-    .await?)
+    .await
 }
 
 /// JobDAO.countUnassignedPendingForDataStore: the counts for both command sets in
@@ -131,9 +130,9 @@ pub(crate) async fn count_unassigned_pending_for_data_store(
     data_store: &str,
     commands_a: &[String],
     commands_b: &[String],
-) -> ApiResult<(i64, i64)> {
+) -> sqlx::Result<(i64, i64)> {
     let commands_any: Vec<&String> = commands_a.iter().chain(commands_b).collect();
-    Ok(sqlx::query_as(
+    sqlx::query_as(
         r#"SELECT COUNT(*) FILTER (WHERE command = ANY($2)), COUNT(*) FILTER (WHERE command = ANY($3))
           FROM webknossos.jobs_
           WHERE state = 'PENDING' AND command = ANY($4) AND manualState IS NULL
@@ -144,14 +143,14 @@ pub(crate) async fn count_unassigned_pending_for_data_store(
     .bind(commands_b)
     .bind(commands_any)
     .fetch_one(&mut *connection)
-    .await?)
+    .await
 }
 
 /// JobDAO.findAllUnfinishedByWorker. The rows are not validated.
 pub(crate) async fn find_all_unfinished_by_worker(
     connection: &mut PgConnection,
     worker_id: &ObjectId,
-) -> ApiResult<Vec<Job>> {
+) -> sqlx::Result<Vec<Job>> {
     find_all_by_worker(
         connection,
         worker_id,
@@ -165,7 +164,7 @@ pub(crate) async fn find_all_unfinished_by_worker(
 pub(crate) async fn find_all_cancelling_by_worker(
     connection: &mut PgConnection,
     worker_id: &ObjectId,
-) -> ApiResult<Vec<Job>> {
+) -> sqlx::Result<Vec<Job>> {
     find_all_by_worker(
         connection,
         worker_id,
@@ -178,7 +177,7 @@ async fn find_all_by_worker(
     connection: &mut PgConnection,
     worker_id: &ObjectId,
     condition: &str,
-) -> ApiResult<Vec<Job>> {
+) -> sqlx::Result<Vec<Job>> {
     let mut q = Sql::new("SELECT ");
     q.push(JOB_COLUMNS)
         .push(" FROM webknossos.jobs_ j WHERE j._worker = ")
@@ -186,25 +185,26 @@ async fn find_all_by_worker(
         .push(" AND ")
         .push(condition)
         .push(" ORDER BY j.created, j._id");
-    Ok(q.build_query_as().fetch_all(&mut *connection).await?)
+    q.build_query_as().fetch_all(&mut *connection).await
 }
 
 /// UserDAO.findOne with global access: the user id.
-pub(crate) async fn find_user_id(pool: &PgPool, user_id: &ObjectId) -> ApiResult<Option<ObjectId>> {
-    Ok(
-        sqlx::query_scalar("SELECT _id FROM webknossos.users_ WHERE _id = $1")
-            .bind(user_id)
-            .fetch_optional(pool)
-            .await?,
-    )
+pub(crate) async fn find_user_id(
+    pool: &PgPool,
+    user_id: &ObjectId,
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar("SELECT _id FROM webknossos.users_ WHERE _id = $1")
+        .bind(user_id)
+        .fetch_optional(pool)
+        .await
 }
 
 /// A recent Job token of the user, to be reused instead of minting one per poll.
 pub(crate) async fn find_recent_job_token(
     pool: &PgPool,
     user_id: &ObjectId,
-) -> ApiResult<Option<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
         r#"SELECT value FROM webknossos.tokens
           WHERE _user = $1 AND tokenType = 'Job'
             AND created > statement_timestamp() - INTERVAL '1 hour'
@@ -213,7 +213,7 @@ pub(crate) async fn find_recent_job_token(
     )
     .bind(user_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// Inserts a Job token expiring after `expiry_ms` with the given idle timeout.
@@ -224,7 +224,7 @@ pub(crate) async fn insert_job_token(
     user_id: &ObjectId,
     expiry_ms: i64,
     idle_ms: i64,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.tokens
           (_id, value, _user, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created)
@@ -247,14 +247,14 @@ pub(crate) async fn find_one_global(
     connection: &mut PgConnection,
     job_id: &ObjectId,
     for_update: bool,
-) -> ApiResult<Option<Job>> {
+) -> sqlx::Result<Option<Job>> {
     let lock = if for_update { " FOR UPDATE" } else { "" };
     let mut q = Sql::new("SELECT ");
     q.push(JOB_COLUMNS)
         .push(" FROM webknossos.jobs_ j WHERE j._id = ")
         .push_bind(job_id)
         .push(lock);
-    Ok(q.build_query_as().fetch_optional(&mut *connection).await?)
+    q.build_query_as().fetch_optional(&mut *connection).await
 }
 
 /// JobDAO.updateStatus: absent optional fields are written as NULL.
@@ -291,15 +291,15 @@ pub(crate) async fn find_dataset_id_by_directory_name_and_organization(
     connection: &mut PgConnection,
     directory_name: &str,
     organization: &str,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.datasets_ WHERE directoryName = $1 AND _organization = $2
           ORDER BY created, _id LIMIT 1"#,
     )
     .bind(directory_name)
     .bind(organization)
     .fetch_optional(&mut *connection)
-    .await?)
+    .await
 }
 
 /// DatasetDAO.updateDatasetStatusByDatasetId(isUsable = false).
@@ -333,8 +333,8 @@ pub(crate) async fn update_transaction_spent(
 }
 
 /// The job owner with the organization and account fields of the status notifications.
-pub(crate) async fn find_owner(pool: &PgPool, user_id: &ObjectId) -> ApiResult<Option<Owner>> {
-    Ok(sqlx::query_as(
+pub(crate) async fn find_owner(pool: &PgPool, user_id: &ObjectId) -> sqlx::Result<Option<Owner>> {
+    sqlx::query_as(
         r#"SELECT u._id AS id, u._organization AS organization, o.name AS organization_name,
                 u.isAdmin AS is_admin, u.isDatasetManager AS is_dataset_manager,
                 m.isSuperUser AS is_superuser, m.firstName AS first_name, m.lastName AS last_name,
@@ -346,21 +346,21 @@ pub(crate) async fn find_owner(pool: &PgPool, user_id: &ObjectId) -> ApiResult<O
     )
     .bind(user_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// JobDAO.organizationIdForJobId (base tables).
 pub(crate) async fn find_organization_id_of_job(
     connection: &mut PgConnection,
     job_id: &ObjectId,
-) -> ApiResult<Option<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
         r#"SELECT u._organization FROM webknossos.users u
           JOIN webknossos.jobs j ON j._owner = u._id WHERE j._id = $1"#,
     )
     .bind(job_id)
     .fetch_optional(&mut *connection)
-    .await?)
+    .await
 }
 
 /// VoxelyticsDAO.upsertWorkflow with a placeholder name. DO NOTHING keeps a concurrently
@@ -369,7 +369,7 @@ pub(crate) async fn insert_voxelytics_workflow_if_missing(
     connection: &mut PgConnection,
     workflow_hash: &str,
     organization: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.voxelytics_workflows (hash, name, _organization)
           VALUES ($1, 'initializing worker workflow', $2)
@@ -387,7 +387,7 @@ pub(crate) async fn update_voxelytics_workflow_hash(
     connection: &mut PgConnection,
     job_id: &ObjectId,
     workflow_hash: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.jobs SET _voxelytics_workflowHash = $2 WHERE _id = $1")
         .bind(job_id)
         .bind(workflow_hash)

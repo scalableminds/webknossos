@@ -8,7 +8,6 @@ use sqlx::{PgConnection, PgPool};
 use super::UNREPORTED;
 use crate::{
     dataset::source::DataSource,
-    error::ApiResult,
     job::routes::{JOB_COLUMNS, Job},
     sql::Sql,
     util::id::ObjectId,
@@ -62,18 +61,18 @@ pub(crate) async fn find_one_by_name_and_key(
     executor: impl sqlx::PgExecutor<'_>,
     name: &str,
     key: &str,
-) -> ApiResult<Option<DataStoreRecord>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<DataStoreRecord>> {
+    sqlx::query_as(
         r#"SELECT name, onlyAllowedOrganization AS only_allowed_organization
            FROM webknossos.dataStores_ WHERE name = $1 AND key = $2"#,
     )
     .bind(name)
     .bind(key)
     .fetch_optional(executor)
-    .await?)
+    .await
 }
 
-pub(crate) async fn update_url(pool: &PgPool, name: &str, url: &str) -> ApiResult<()> {
+pub(crate) async fn update_url(pool: &PgPool, name: &str, url: &str) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.dataStores SET url = $2 WHERE name = $1 AND NOT isDeleted")
         .bind(name)
         .bind(url)
@@ -86,7 +85,7 @@ pub(crate) async fn find_all_by_directory_names(
     connection: &mut PgConnection,
     names: &[&str],
     organization: &str,
-) -> ApiResult<Vec<FoundDataset>> {
+) -> sqlx::Result<Vec<FoundDataset>> {
     let mut q = Sql::new("SELECT ");
     q.push(FOUND_DATASET_COLUMNS)
         .push(" FROM webknossos.datasets_ WHERE directoryName = ANY(")
@@ -94,7 +93,7 @@ pub(crate) async fn find_all_by_directory_names(
         .push(") AND _organization = ")
         .push_bind(organization)
         .push(" ORDER BY created, _id");
-    Ok(q.build_query_as().fetch_all(connection).await?)
+    q.build_query_as().fetch_all(connection).await
 }
 
 /// DatasetDAO.findOneByDataSourceId.
@@ -102,21 +101,21 @@ pub(crate) async fn find_one_by_directory_name(
     connection: &mut PgConnection,
     directory_name: &str,
     organization: &str,
-) -> ApiResult<Option<FoundDataset>> {
+) -> sqlx::Result<Option<FoundDataset>> {
     let mut q = Sql::new("SELECT ");
     q.push(FOUND_DATASET_COLUMNS)
         .push(" FROM webknossos.datasets_ WHERE directoryName = ")
         .push_bind(directory_name)
         .push(" AND _organization = ")
         .push_bind(organization);
-    Ok(q.build_query_as().fetch_optional(connection).await?)
+    q.build_query_as().fetch_optional(connection).await
 }
 
 /// thumbnailCachingService.removeFromCache, first half.
 pub(crate) async fn delete_thumbnails(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("DELETE FROM webknossos.dataset_thumbnails WHERE _dataset = $1")
         .bind(dataset_id)
         .execute(connection)
@@ -128,7 +127,7 @@ pub(crate) async fn delete_thumbnails(
 pub(crate) async fn increment_thumbnail_cache_version(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.datasets SET thumbnailCacheVersion = thumbnailCacheVersion + 1 WHERE _id = $1",
     )
@@ -141,13 +140,11 @@ pub(crate) async fn increment_thumbnail_cache_version(
 pub(crate) async fn find_organization_id(
     connection: &mut PgConnection,
     organization: &str,
-) -> ApiResult<Option<String>> {
-    Ok(
-        sqlx::query_scalar("SELECT _id FROM webknossos.organizations_ WHERE _id = $1")
-            .bind(organization)
-            .fetch_optional(connection)
-            .await?,
-    )
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar("SELECT _id FROM webknossos.organizations_ WHERE _id = $1")
+        .bind(organization)
+        .fetch_optional(connection)
+        .await
 }
 
 /// DatasetDAO.updateDataSource (the dataset row): None root paths keep the stored values.
@@ -161,7 +158,7 @@ pub(crate) async fn update_data_source(
     source: &DataSource,
     root_path: Option<&str>,
     root_real_path: Option<&str>,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     let voxel_size = source.voxel_size_opt();
     let status: String = source
         .status_opt()
@@ -202,7 +199,7 @@ pub(crate) async fn update_inbox_source(
     hash: Option<i32>,
     root_path: Option<&str>,
     root_real_path: Option<&str>,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.datasets SET inboxSourceHash = $2, rootPath = $3, rootRealPath = $4 WHERE _id = $1",
     )
@@ -221,7 +218,7 @@ pub(crate) async fn deactivate_unreported(
     existing_ids: &[ObjectId],
     store_name: &str,
     organization: Option<&str>,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     for table in ["dataset_mags", "dataset_layers"] {
         let mut q = Sql::new("DELETE FROM webknossos.");
         q.push(table)
@@ -256,14 +253,14 @@ pub(crate) async fn find_dataset_id_by_directory_name(
     connection: &mut PgConnection,
     directory_name: &str,
     organization: &str,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT _id FROM webknossos.datasets_ WHERE directoryName = $1 AND _organization = $2 LIMIT 1",
     )
     .bind(directory_name)
     .bind(organization)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 /// Rows already carrying the reported values are left untouched. `table` is
@@ -275,7 +272,7 @@ pub(crate) async fn update_real_path(
     path: &str,
     real_path: &str,
     has_local_data: bool,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     let mut q = Sql::new("UPDATE webknossos.");
     q.push(table)
         .push(" SET realPath = ")
@@ -299,43 +296,41 @@ pub(crate) async fn update_real_path(
 pub(crate) async fn find_usable_flags(
     pool: &PgPool,
     id: &ObjectId,
-) -> ApiResult<Option<(bool, bool)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(bool, bool)>> {
+    sqlx::query_as(
         "SELECT isUsable, voxelSizeFactor IS NOT NULL FROM webknossos.datasets_ WHERE _id = $1",
     )
     .bind(id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// `isVirtual` of a dataset, locking its row.
 pub(crate) async fn find_is_virtual_for_update(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<Option<bool>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<bool>> {
+    sqlx::query_scalar(
         "SELECT isVirtual FROM webknossos.datasets_ WHERE _id = $1 FOR NO KEY UPDATE",
     )
     .bind(id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 /// Whether the dataset exists (DatasetDAO.findOne under GlobalAccessContext).
-pub(crate) async fn dataset_exists(pool: &PgPool, id: &ObjectId) -> ApiResult<bool> {
-    Ok(
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE _id = $1)")
-            .bind(id)
-            .fetch_one(pool)
-            .await?,
-    )
+pub(crate) async fn dataset_exists(pool: &PgPool, id: &ObjectId) -> sqlx::Result<bool> {
+    sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE _id = $1)")
+        .bind(id)
+        .fetch_one(pool)
+        .await
 }
 
 /// Row lock on the dataset, serializing concurrent upload reservations.
 pub(crate) async fn lock_dataset(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("SELECT 1 FROM webknossos.datasets WHERE _id = $1 FOR UPDATE")
         .bind(dataset_id)
         .execute(connection)
@@ -350,37 +345,37 @@ pub(crate) async fn find_oldest_dataset_id(
     pool: &PgPool,
     directory_name: &str,
     organization: &str,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT _id FROM webknossos.datasets_ WHERE directoryName=$1 AND \
                 _organization=$2 ORDER BY created ASC, _id ASC LIMIT 1",
     )
     .bind(directory_name)
     .bind(organization)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
-pub(crate) async fn find_job(pool: &PgPool, id: &ObjectId) -> ApiResult<Option<Job>> {
+pub(crate) async fn find_job(pool: &PgPool, id: &ObjectId) -> sqlx::Result<Option<Job>> {
     let mut q = Sql::new("SELECT ");
     q.push(JOB_COLUMNS)
         .push(" FROM webknossos.jobs_ j WHERE j._id=")
         .push_bind(id);
-    Ok(q.build_query_as().fetch_optional(pool).await?)
+    q.build_query_as().fetch_optional(pool).await
 }
 
 /// The organization of a user.
 pub(crate) async fn find_organization_id_for_user(
     pool: &PgPool,
     user_id: &ObjectId,
-) -> ApiResult<Option<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
         "SELECT o._id FROM webknossos.users_ u JOIN webknossos.organizations_ o ON \
                 o._id=u._organization WHERE u._id=$1",
     )
     .bind(user_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 // ---------------------------------------------------------------- dataset upload report
@@ -388,15 +383,15 @@ pub(crate) async fn find_organization_id_for_user(
 pub(crate) async fn find_reported_dataset(
     pool: &PgPool,
     id: &ObjectId,
-) -> ApiResult<Option<ReportedDataset>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<ReportedDataset>> {
+    sqlx::query_as(
         r#"SELECT _id AS id, name, directoryName AS directory_name,
              _organization AS organization, _dataStore AS data_store
            FROM webknossos.datasets_ WHERE _id = $1"#,
     )
     .bind(id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// DataStoreDAO.findOneByName, reduced to the public URL.

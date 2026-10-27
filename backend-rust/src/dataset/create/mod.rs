@@ -92,7 +92,7 @@ pub(crate) async fn folder_writable(
     user: &AuthUser,
     folder: &ObjectId,
 ) -> ApiResult<bool> {
-    dao::is_folder_writable(connection, user, folder).await
+    Ok(dao::is_folder_writable(connection, user, folder).await?)
 }
 
 pub(crate) struct NewDataset<'a> {

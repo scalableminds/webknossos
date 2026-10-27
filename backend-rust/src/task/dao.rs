@@ -6,7 +6,6 @@ use sqlx::{PgConnection, PgPool};
 use super::routes::ListParameters;
 use crate::{
     auth::AuthUser,
-    error::ApiResult,
     sql::{PushArg, Requester, Sql},
     util::id::ObjectId,
 };
@@ -45,7 +44,7 @@ pub(crate) async fn find_one_json(
     user: Option<&AuthUser>,
     id: &ObjectId,
     global: bool,
-) -> ApiResult<Option<Value>> {
+) -> sqlx::Result<Option<Value>> {
     let requester = Requester::from(user);
     let mut q = Sql::new(
         r#"SELECT jsonb_build_object(
@@ -94,7 +93,7 @@ pub(crate) async fn find_one_json(
         push_task_access(&mut q, requester, false);
         q.push(")");
     }
-    Ok(q.build_query_scalar().fetch_optional(connection).await?)
+    q.build_query_scalar().fetch_optional(connection).await
 }
 
 /// TaskDAO.listAccessQ ids matching the filters, at most 1000.
@@ -102,7 +101,7 @@ pub(crate) async fn find_all_ids(
     connection: &mut PgConnection,
     user: &AuthUser,
     parameters: &ListParameters,
-) -> ApiResult<Vec<ObjectId>> {
+) -> sqlx::Result<Vec<ObjectId>> {
     let order = if parameters.random == Some(true) {
         " ORDER BY RANDOM()"
     } else {
@@ -131,7 +130,7 @@ pub(crate) async fn find_all_ids(
         .push(")");
     }
     q.push(order).push(" LIMIT 1000");
-    Ok(q.build_query_scalar().fetch_all(connection).await?)
+    q.build_query_scalar().fetch_all(connection).await
 }
 
 /// The team of the project, if the user may read the project (owner, admin or team member).
@@ -139,8 +138,8 @@ pub(crate) async fn find_project_team_with_read_access(
     connection: &mut PgConnection,
     user: &AuthUser,
     project_id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT p._team FROM webknossos.projects_ p WHERE p._id=$4 AND \
             p._organization=$2 AND (p._owner=$1 OR $3 OR EXISTS(SELECT 1 FROM \
             webknossos.user_team_roles WHERE _user=$1 AND _team=p._team))",
@@ -150,7 +149,7 @@ pub(crate) async fn find_project_team_with_read_access(
     .bind(user.is_admin)
     .bind(project_id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 /// Whether the user may manage the team (admin or team manager).
@@ -158,8 +157,8 @@ pub(crate) async fn can_manage_team(
     connection: &mut PgConnection,
     user: &AuthUser,
     team: &ObjectId,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM webknossos.teams_ t WHERE t._id=$1 AND \
             t._organization=$2 AND ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles r \
             WHERE r._team=t._id AND r._user=$4 AND r.isteammanager)))",
@@ -169,7 +168,7 @@ pub(crate) async fn can_manage_team(
     .bind(user.is_admin)
     .bind(&user.id)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 /// A page of the ids of the project's tasks the user may list, newest first.
@@ -179,7 +178,7 @@ pub(crate) async fn find_ids_for_project(
     project_id: &ObjectId,
     limit: i32,
     page: i32,
-) -> ApiResult<Vec<ObjectId>> {
+) -> sqlx::Result<Vec<ObjectId>> {
     let mut q = Sql::new(
         "SELECT t._id FROM webknossos.tasks_ t JOIN webknossos.projects_ p ON p._id=t._project WHERE ",
     );
@@ -190,19 +189,17 @@ pub(crate) async fn find_ids_for_project(
         .push_bind(i64::from(limit))
         .push(" OFFSET ")
         .push_bind(i64::from(page) * i64::from(limit));
-    Ok(q.build_query_scalar().fetch_all(connection).await?)
+    q.build_query_scalar().fetch_all(connection).await
 }
 
 pub(crate) async fn count_for_project(
     connection: &mut PgConnection,
     project_id: &ObjectId,
-) -> ApiResult<i64> {
-    Ok(
-        sqlx::query_scalar("SELECT count(*) FROM webknossos.tasks_ WHERE _project=$1")
-            .bind(project_id)
-            .fetch_one(connection)
-            .await?,
-    )
+) -> sqlx::Result<i64> {
+    sqlx::query_scalar("SELECT count(*) FROM webknossos.tasks_ WHERE _project=$1")
+        .bind(project_id)
+        .fetch_one(connection)
+        .await
 }
 
 /// The project id of the task, if the user may read it (member of the project
@@ -211,8 +208,8 @@ pub(crate) async fn find_project_id_with_read_access(
     connection: &mut PgConnection,
     user: &AuthUser,
     id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT t._project FROM webknossos.tasks_ t JOIN webknossos.projects_ p ON \
             p._id=t._project WHERE t._id=$4 AND p._organization=$2 AND ($3 OR EXISTS(SELECT 1 \
             FROM webknossos.user_team_roles WHERE _user=$1 AND _team=p._team))",
@@ -222,7 +219,7 @@ pub(crate) async fn find_project_id_with_read_access(
     .bind(user.is_admin)
     .bind(id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 /// Locks the live project of the organization (FOR SHARE) and returns its team.
@@ -230,15 +227,15 @@ pub(crate) async fn lock_project_team_for_share(
     connection: &mut PgConnection,
     project_id: &ObjectId,
     organization_id: &str,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT _team FROM webknossos.projects WHERE _id=$1 AND _organization=$2 AND NOT \
             isdeleted FOR SHARE",
     )
     .bind(project_id)
     .bind(organization_id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 /// Locks the live task of the project (FOR UPDATE) and returns
@@ -247,22 +244,22 @@ pub(crate) async fn lock_instances(
     connection: &mut PgConnection,
     id: &ObjectId,
     project_id: &ObjectId,
-) -> ApiResult<Option<(i64, i64)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(i64, i64)>> {
+    sqlx::query_as(
         "SELECT totalinstances,pendinginstances FROM webknossos.tasks WHERE _id=$1 AND \
             _project=$2 AND NOT isdeleted FOR UPDATE",
     )
     .bind(id)
     .bind(project_id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn update_total_instances(
     connection: &mut PgConnection,
     id: &ObjectId,
     total_instances: i64,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.tasks SET totalinstances=$2 WHERE _id=$1")
         .bind(id)
         .bind(total_instances)
@@ -271,7 +268,7 @@ pub(crate) async fn update_total_instances(
     Ok(())
 }
 
-pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> ApiResult<()> {
+pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.tasks SET isdeleted=true WHERE _id=$1")
         .bind(id)
         .execute(connection)
@@ -283,7 +280,7 @@ pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> 
 pub(crate) async fn delete_annotations(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.annotations SET isdeleted=true WHERE _task=$1")
         .bind(id)
         .execute(connection)
@@ -294,15 +291,11 @@ pub(crate) async fn delete_annotations(
 pub(crate) async fn find_experience_domains(
     pool: &PgPool,
     organization_id: &str,
-) -> ApiResult<Vec<String>> {
-    Ok(
-        sqlx::query_scalar(
-            "SELECT domain FROM webknossos.experiencedomains WHERE _organization=$1",
-        )
+) -> sqlx::Result<Vec<String>> {
+    sqlx::query_scalar("SELECT domain FROM webknossos.experiencedomains WHERE _organization=$1")
         .bind(organization_id)
         .fetch_all(pool)
-        .await?,
-    )
+        .await
 }
 
 /// The highest-priority task the user could be assigned (matching experience,
@@ -311,8 +304,8 @@ pub(crate) async fn find_next_task_id_for_peek(
     pool: &PgPool,
     user: &AuthUser,
     is_team_manager_or_admin: bool,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         r#"SELECT t._id FROM webknossos.tasks_ t
         JOIN webknossos.user_experiences e ON e.domain=t.neededexperience_domain AND e._user=$1 AND e.value>=t.neededexperience_value
         JOIN webknossos.projects_ p ON p._id=t._project
@@ -325,5 +318,5 @@ pub(crate) async fn find_next_task_id_for_peek(
     .bind(is_team_manager_or_admin)
     .bind(&user.organization_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }

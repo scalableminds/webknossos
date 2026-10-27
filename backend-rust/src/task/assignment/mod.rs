@@ -267,7 +267,7 @@ async fn manages_user(
     if requester.is_admin && requester.organization_id == assignee_organization {
         return Ok(true);
     }
-    dao::manages_user_through_team(pool, requester, assignee_id).await
+    Ok(dao::manages_user_through_team(pool, requester, assignee_id).await?)
 }
 
 async fn assign_one(

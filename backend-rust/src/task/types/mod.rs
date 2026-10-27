@@ -223,7 +223,8 @@ async fn delete(
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     dao::delete_one(&mut tx, &id).await?;
-    crate::projects::dao::delete_tasks(&mut tx, "_tasktype", &id).await?;
+    crate::projects::dao::delete_tasks(&mut tx, crate::projects::dao::TaskParent::TaskType, &id)
+        .await?;
     tx.commit().await?;
     Ok(Messages::success(crate::msg::task_type::delete_success(
         existing["summary"].as_str().unwrap_or_default(),

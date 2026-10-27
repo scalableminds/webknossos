@@ -3,7 +3,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgConnection, PgPool};
 
-use crate::{error::ApiResult, util::id::ObjectId};
+use crate::util::id::ObjectId;
 
 #[derive(FromRow)]
 pub(super) struct OverLimitRow {
@@ -42,18 +42,21 @@ pub(super) async fn find_over_limit_row(
 pub(super) async fn find_task_ids_for_update(
     connection: &mut PgConnection,
     annotations: &[&ObjectId],
-) -> ApiResult<Vec<Option<ObjectId>>> {
+) -> sqlx::Result<Vec<Option<ObjectId>>> {
     // Global like Scala's logTime UPDATE (deleted rows included).
-    Ok(sqlx::query_scalar(
+    sqlx::query_scalar(
         "SELECT _task FROM webknossos.annotations WHERE _id=ANY($1) ORDER BY _id FOR NO KEY UPDATE",
     )
     .bind(annotations)
     .fetch_all(connection)
-    .await?)
+    .await
 }
 
 /// Locks the task rows (sorted by id).
-pub(super) async fn lock_tasks(connection: &mut PgConnection, tasks: &[ObjectId]) -> ApiResult<()> {
+pub(super) async fn lock_tasks(
+    connection: &mut PgConnection,
+    tasks: &[ObjectId],
+) -> sqlx::Result<()> {
     sqlx::query("SELECT 1 FROM webknossos.tasks WHERE _id=ANY($1) ORDER BY _id FOR NO KEY UPDATE")
         .bind(tasks)
         .execute(connection)
@@ -73,7 +76,7 @@ pub(super) async fn insert_one(
     last_update: DateTime<Utc>,
     number_of_updates: i64,
     created: DateTime<Utc>,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "INSERT INTO webknossos.timespans(_id,_user,_annotation,time,lastUpdate,numberOfUpdates,created,isDeleted) VALUES($1,$2,$3,$4,$5,$6,$7,false)",
     )
@@ -98,7 +101,7 @@ pub(super) async fn update_one(
     time_millis: i64,
     last_update: DateTime<Utc>,
     number_of_updates: i64,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.timespans SET _user=$2,_annotation=$3,time=$4,lastUpdate=$5,numberOfUpdates=$6,isDeleted=false WHERE _id=$1",
     )
@@ -117,7 +120,7 @@ pub(super) async fn add_tracing_time_to_annotation(
     connection: &mut PgConnection,
     annotation_id: &ObjectId,
     delta_millis: i64,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.annotations SET tracingTime=COALESCE(tracingTime,0)+$2 WHERE _id=$1",
     )
@@ -132,7 +135,7 @@ pub(super) async fn add_tracing_time_to_task(
     connection: &mut PgConnection,
     task_id: &ObjectId,
     delta_millis: i64,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.tasks SET tracingTime=COALESCE(tracingTime,0)+$2 WHERE _id=$1")
         .bind(task_id)
         .bind(delta_millis)

@@ -4,7 +4,6 @@ use sqlx::PgPool;
 
 use super::{AccessContext, TASK_ANNOTATION_COLUMNS, TaskAnnotation};
 use crate::{
-    error::ApiResult,
     sql::{PushArg, Requester, Sql},
     util::id::ObjectId,
 };
@@ -77,7 +76,7 @@ pub(crate) fn push_task_type_read<'a>(q: &mut Sql<'a>, requester: Requester<'a>)
 pub(crate) async fn find_all_finished_for_project(
     pool: &PgPool,
     project_id: &ObjectId,
-) -> ApiResult<Vec<TaskAnnotation>> {
+) -> sqlx::Result<Vec<TaskAnnotation>> {
     let mut q = Sql::new("SELECT ");
     q.push(TASK_ANNOTATION_COLUMNS)
         .push(
@@ -87,7 +86,7 @@ pub(crate) async fn find_all_finished_for_project(
         )
         .push_bind(project_id)
         .push(" AND a.typ='Task' AND a.state='Finished' ORDER BY a.created,a._id");
-    Ok(q.build_query_as().fetch_all(pool).await?)
+    q.build_query_as().fetch_all(pool).await
 }
 
 /// The IDs of the task type's tasks (first page of 1000), under the TaskDAO
@@ -96,7 +95,7 @@ pub(crate) async fn find_all_task_ids_for_task_type(
     pool: &PgPool,
     context: AccessContext<'_>,
     task_type_id: &ObjectId,
-) -> ApiResult<Vec<ObjectId>> {
+) -> sqlx::Result<Vec<ObjectId>> {
     let mut q = Sql::new("SELECT t._id FROM webknossos.tasks_ t WHERE t._taskType=");
     q.push_bind(task_type_id);
     if !context.global {
@@ -105,7 +104,7 @@ pub(crate) async fn find_all_task_ids_for_task_type(
     }
     q.push(" ORDER BY t._id LIMIT ")
         .push_bind(TASK_TYPE_TASK_LIMIT);
-    Ok(q.build_query_scalar().fetch_all(pool).await?)
+    q.build_query_scalar().fetch_all(pool).await
 }
 
 /// TaskDAO.findOne under the access context: the task's project ID.
@@ -113,14 +112,14 @@ pub(crate) async fn find_task_project(
     pool: &PgPool,
     context: AccessContext<'_>,
     task_id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
+) -> sqlx::Result<Option<ObjectId>> {
     let mut q = Sql::new("SELECT t._project FROM webknossos.tasks_ t WHERE t._id=");
     q.push_bind(task_id);
     if !context.global {
         q.push(" AND ");
         push_task_read(&mut q, context.requester.into());
     }
-    Ok(q.build_query_scalar().fetch_optional(pool).await?)
+    q.build_query_scalar().fetch_optional(pool).await
 }
 
 /// ProjectDAO.findOne under the access context: the project's team.
@@ -128,14 +127,14 @@ pub(crate) async fn find_project_team(
     pool: &PgPool,
     context: AccessContext<'_>,
     project_id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
+) -> sqlx::Result<Option<ObjectId>> {
     let mut q = Sql::new("SELECT p._team FROM webknossos.projects_ p WHERE p._id=");
     q.push_bind(project_id);
     if !context.global {
         q.push(" AND ");
         crate::projects::push_read_access(&mut q, context.requester.into());
     }
-    Ok(q.build_query_scalar().fetch_optional(pool).await?)
+    q.build_query_scalar().fetch_optional(pool).await
 }
 
 /// TaskTypeDAO.findOne under the access context: the task type's team.
@@ -143,14 +142,14 @@ pub(crate) async fn find_task_type_team(
     pool: &PgPool,
     context: AccessContext<'_>,
     task_type_id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
+) -> sqlx::Result<Option<ObjectId>> {
     let mut q = Sql::new("SELECT tt._team FROM webknossos.taskTypes_ tt WHERE tt._id=");
     q.push_bind(task_type_id);
     if !context.global {
         q.push(" AND ");
         push_task_type_read(&mut q, context.requester.into());
     }
-    Ok(q.build_query_scalar().fetch_optional(pool).await?)
+    q.build_query_scalar().fetch_optional(pool).await
 }
 
 /// AnnotationDAO.findAllByTaskIdAndType(task, Task) for each task in order
@@ -159,7 +158,7 @@ pub(crate) async fn find_all_task_annotations(
     pool: &PgPool,
     context: AccessContext<'_>,
     task_ids: &[ObjectId],
-) -> ApiResult<Vec<TaskAnnotation>> {
+) -> sqlx::Result<Vec<TaskAnnotation>> {
     let mut q = Sql::new("SELECT ");
     q.push(TASK_ANNOTATION_COLUMNS)
         .push(" FROM webknossos.annotations_ a JOIN unnest(")
@@ -173,28 +172,28 @@ pub(crate) async fn find_all_task_annotations(
         crate::annotation::access::push_read_predicate(&mut q, context.requester.into());
     }
     q.push(" ORDER BY requested.position,a.created,a._id");
-    Ok(q.build_query_as().fetch_all(pool).await?)
+    q.build_query_as().fetch_all(pool).await
 }
 
 /// The live dataset (global access): whether it is usable and has a voxel size.
 pub(crate) async fn find_dataset_usability(
     pool: &PgPool,
     dataset_id: &ObjectId,
-) -> ApiResult<Option<(bool, bool)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(bool, bool)>> {
+    sqlx::query_as(
         "SELECT isUsable,voxelSizeFactor IS NOT NULL FROM webknossos.datasets_ WHERE _id=$1",
     )
     .bind(dataset_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// TaskDAO.findTaskBoundingBoxesByAnnotationIds (no access predicate).
 pub(crate) async fn find_task_bounding_boxes_by_annotation_ids(
     pool: &PgPool,
     annotation_ids: &[ObjectId],
-) -> ApiResult<Vec<TaskBoundingBoxRow>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Vec<TaskBoundingBoxRow>> {
+    sqlx::query_as(
         "SELECT (t.boundingBox).x,(t.boundingBox).y,(t.boundingBox).z,
                (t.boundingBox).width,(t.boundingBox).height,(t.boundingBox).depth,t._id,a._id
              FROM webknossos.tasks_ t JOIN webknossos.annotations_ a ON a._task=t._id
@@ -202,7 +201,7 @@ pub(crate) async fn find_task_bounding_boxes_by_annotation_ids(
     )
     .bind(annotation_ids)
     .fetch_all(pool)
-    .await?)
+    .await
 }
 
 /// datasetDAO.findOne(datasetId) under the access context: whether the dataset is readable.
@@ -210,7 +209,7 @@ pub(crate) async fn is_dataset_readable(
     pool: &PgPool,
     context: AccessContext<'_>,
     dataset_id: &ObjectId,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     let mut q = Sql::new("SELECT EXISTS(SELECT 1 FROM webknossos.datasets_ d WHERE d._id=");
     q.push_bind(dataset_id);
     if !context.global {
@@ -222,5 +221,5 @@ pub(crate) async fn is_dataset_readable(
         );
     }
     q.push(")");
-    Ok(q.build_query_scalar().fetch_one(pool).await?)
+    q.build_query_scalar().fetch_one(pool).await
 }

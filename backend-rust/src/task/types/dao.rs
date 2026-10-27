@@ -5,7 +5,6 @@ use sqlx::{PgConnection, PgPool};
 use super::{TaskTypeParameters, TracingMode};
 use crate::{
     auth::AuthUser,
-    error::ApiResult,
     sql::{PushArg, Requester, Sql},
     util::id::ObjectId,
 };
@@ -36,20 +35,20 @@ pub(crate) async fn find_one_json<'e, E: sqlx::Executor<'e, Database = sqlx::Pos
     executor: E,
     user: &AuthUser,
     id: &ObjectId,
-) -> ApiResult<Option<Value>> {
+) -> sqlx::Result<Option<Value>> {
     let mut q = Sql::new(PUBLIC_TASK_TYPE);
     q.push(" WHERE ");
     push_read_access(&mut q, user.into());
     q.push(" AND tt._id=").push_bind(id);
-    Ok(q.build_query_scalar().fetch_optional(executor).await?)
+    q.build_query_scalar().fetch_optional(executor).await
 }
 
 /// The public JSON of every task type the user may read.
-pub(crate) async fn find_all_json(pool: &PgPool, user: &AuthUser) -> ApiResult<Vec<Value>> {
+pub(crate) async fn find_all_json(pool: &PgPool, user: &AuthUser) -> sqlx::Result<Vec<Value>> {
     let mut q = Sql::new(PUBLIC_TASK_TYPE);
     q.push(" WHERE ");
     push_read_access(&mut q, user.into());
-    Ok(q.build_query_scalar().fetch_all(pool).await?)
+    q.build_query_scalar().fetch_all(pool).await
 }
 
 /// Takes a transaction-scoped advisory lock on the organization/summary.
@@ -57,7 +56,7 @@ pub(crate) async fn lock_summary(
     connection: &mut PgConnection,
     organization_id: &str,
     summary: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
         .bind(format!("taskType:{}:{}", organization_id, summary))
         .execute(connection)
@@ -69,14 +68,14 @@ pub(crate) async fn is_summary_taken(
     connection: &mut PgConnection,
     organization_id: &str,
     summary: &str,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM webknossos.tasktypes_ WHERE _organization=$1 AND summary=$2)",
     )
     .bind(organization_id)
     .bind(summary)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 /// Whether another task type (not `id`) of the organization has the summary.
@@ -85,9 +84,9 @@ pub(crate) async fn is_summary_taken_by_other(
     organization_id: &str,
     summary: &str,
     id: &ObjectId,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.tasktypes_ WHERE _organization=$1 AND summary=$2 AND _id<>$3)")
-        .bind(organization_id).bind(summary).bind(id).fetch_one(connection).await?)
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM webknossos.tasktypes_ WHERE _organization=$1 AND summary=$2 AND _id<>$3)")
+        .bind(organization_id).bind(summary).bind(id).fetch_one(connection).await
 }
 
 pub(crate) async fn insert_one(
@@ -95,7 +94,7 @@ pub(crate) async fn insert_one(
     id: &ObjectId,
     organization_id: &str,
     parameters: &TaskTypeParameters,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     let modes: Vec<&str> = parameters
         .settings
         .allowed_modes
@@ -142,7 +141,7 @@ pub(crate) async fn update_one(
     connection: &mut PgConnection,
     id: &ObjectId,
     parameters: &TaskTypeParameters,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     let modes: Vec<&str> = parameters
         .settings
         .allowed_modes
@@ -181,7 +180,7 @@ pub(crate) async fn update_one(
 }
 
 /// Soft-deletes the task type and suffixes its summary.
-pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> ApiResult<()> {
+pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.tasktypes SET isdeleted=true,summary=summary || '.deleted.at.' || floor(extract(epoch FROM clock_timestamp())*1000)::bigint::text WHERE _id=$1 AND NOT isdeleted")
         .bind(id).execute(connection).await?;
     Ok(())
@@ -192,13 +191,13 @@ pub(crate) async fn lock_one(
     connection: &mut PgConnection,
     id: &ObjectId,
     organization: &str,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT _team FROM webknossos.tasktypes WHERE _id=$1 AND _organization=$2 AND NOT \
             isdeleted FOR UPDATE",
     )
     .bind(id)
     .bind(organization)
     .fetch_optional(connection)
-    .await?)
+    .await
 }

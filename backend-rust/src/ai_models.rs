@@ -225,7 +225,7 @@ async fn readable_compact_user(
     if readable.is_none() {
         return Ok(None);
     }
-    dao::find_compact_user(connection, user_id).await
+    Ok(dao::find_compact_user(connection, user_id).await?)
 }
 
 /// AiModelService.pathWithFallback: the stored path, or the legacy

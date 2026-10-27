@@ -185,6 +185,7 @@ async fn finish_saved(
     // restrictionsFor: AnnotationDAO.findOne under the requester's access.
     let annotation = crate::annotation::dao::lock_readable(&mut transaction, user, id)
         .await
+        .map_err(ApiError::from)
         .map_err(|e| {
             if passthrough(&e) {
                 FinishFailure::Finish(e)
@@ -227,6 +228,7 @@ async fn finish_saved(
     // updateModified/updateState: AnnotationDAO.assertUpdateAccess.
     if !crate::annotation::dao::lock_update_access(&mut transaction, user, &annotation.id)
         .await
+        .map_err(ApiError::from)
         .map_err(finish_error)?
     {
         return Err(finish_error(ApiError::bad_request(FINISH_FAILED)));

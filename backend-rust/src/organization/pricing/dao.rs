@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use sqlx::{PgConnection, PgPool};
 
 use super::{PlanUpdate, PricingPlan};
-use crate::{error::ApiResult, util::id::ObjectId};
+use crate::util::id::ObjectId;
 
 /// A row of `organization_plan_updates`: organization, description, pricing plan, AI plan,
 /// AI plan changed, paid until, paid until changed, included users, included users changed,
@@ -50,73 +50,73 @@ const COUNT_USERS_FOR_ORGANIZATION: &str = r#"SELECT COUNT(*) FROM webknossos.us
 pub(super) async fn find_owner_flag_and_contact(
     pool: &PgPool,
     user_id: &ObjectId,
-) -> ApiResult<Option<(bool, String, String, String)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(bool, String, String, String)>> {
+    sqlx::query_as(
         r#"SELECT u.isOrganizationOwner, m.email, m.firstName, m.lastName
                FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON m._id = u._multiUser
                WHERE u._id = $1"#,
     )
     .bind(user_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// Returns `(name, pricing plan, AI plan)` of the organization.
 pub(super) async fn find_name_and_plans(
     pool: &PgPool,
     organization_id: &str,
-) -> ApiResult<Option<(String, String, Option<String>)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(String, String, Option<String>)>> {
+    sqlx::query_as(
         "SELECT name, pricingPlan::text, aiPlan::text FROM \
                     webknossos.organizations_ WHERE _id = $1",
     )
     .bind(organization_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// Returns `(pricing plan, included users, paid until)` of the organization.
 pub(super) async fn find_plan_limits(
     pool: &PgPool,
     organization_id: &str,
-) -> ApiResult<Option<(String, Option<i32>, Option<DateTime<Utc>>)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(String, Option<i32>, Option<DateTime<Utc>>)>> {
+    sqlx::query_as(
         "SELECT pricingPlan::text, includedUsers, paidUntil FROM \
                     webknossos.organizations_ WHERE _id = $1",
     )
     .bind(organization_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 pub(super) async fn count_all_users_for_organization(
     pool: &PgPool,
     organization_id: &str,
-) -> ApiResult<i64> {
-    Ok(sqlx::query_scalar(COUNT_USERS_FOR_ORGANIZATION)
+) -> sqlx::Result<i64> {
+    sqlx::query_scalar(COUNT_USERS_FOR_ORGANIZATION)
         .bind(organization_id)
         .fetch_one(pool)
-        .await?)
+        .await
 }
 
 /// Locks and returns `(name, pricing plan)` of the live organization.
 pub(super) async fn find_name_and_pricing_plan_for_update(
     connection: &mut PgConnection,
     organization_id: &str,
-) -> ApiResult<Option<(String, String)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(String, String)>> {
+    sqlx::query_as(
         "SELECT name, pricingPlan::text FROM webknossos.organizations WHERE _id = $1 \
                 AND NOT isDeleted FOR UPDATE",
     )
     .bind(organization_id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 pub(super) async fn insert_plan_update(
     connection: &mut PgConnection,
     update: &PlanUpdate,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.organization_plan_updates(
              _organization, description, pricingPlan, aiPlan, aiPlanChanged,
@@ -146,7 +146,7 @@ pub(super) async fn insert_plan_update(
 pub(super) async fn update_plan(
     connection: &mut PgConnection,
     update: &PlanUpdate,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"UPDATE webknossos.organizations SET
              pricingPlan = COALESCE($2::webknossos.PRICING_PLANS, pricingPlan),
@@ -191,8 +191,8 @@ pub(super) async fn find_owner_and_admin_contacts(
 pub(super) async fn find_all_plan_updates(
     pool: &PgPool,
     organization_id: &str,
-) -> ApiResult<Vec<PlanUpdateRow>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Vec<PlanUpdateRow>> {
+    sqlx::query_as(
         r#"SELECT _organization, description, pricingPlan::text, aiPlan::text, aiPlanChanged,
              paidUntil, paidUntilChanged, includedUsers, includedUsersChanged,
              includedStorage, includedStorageChanged, created
@@ -202,18 +202,18 @@ pub(super) async fn find_all_plan_updates(
     )
     .bind(organization_id)
     .fetch_all(pool)
-    .await?)
+    .await
 }
 
 pub(super) async fn find_plan_row(
     pool: &PgPool,
     organization_id: &str,
-) -> ApiResult<Option<OrganizationPlanRow>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<OrganizationPlanRow>> {
+    sqlx::query_as(
         "SELECT pricingPlan::text, aiPlan::text, paidUntil, includedUsers, \
                     includedStorage, created FROM webknossos.organizations_ WHERE _id = $1",
     )
     .bind(organization_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }

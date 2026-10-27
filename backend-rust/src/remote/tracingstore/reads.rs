@@ -78,6 +78,12 @@ impl From<ApiError> for CallbackError {
     }
 }
 
+impl From<sqlx::Error> for CallbackError {
+    fn from(error: sqlx::Error) -> Self {
+        Self::Api(error.into())
+    }
+}
+
 impl IntoResponse for CallbackError {
     fn into_response(self) -> Response {
         match self {

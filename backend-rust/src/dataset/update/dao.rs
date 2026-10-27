@@ -2,7 +2,7 @@
 use sqlx::PgConnection;
 
 use super::PartialUpdate;
-use crate::{dataset::source::UsableDataSource, error::ApiResult, util::id::ObjectId};
+use crate::{dataset::source::UsableDataSource, util::id::ObjectId};
 use serde_json::json;
 
 /// Applies the fields present in the request; absent fields keep their value.
@@ -10,7 +10,7 @@ pub(crate) async fn update_partial(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
     body: &PartialUpdate,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"UPDATE webknossos.datasets SET
              description = CASE WHEN $2 THEN $3 ELSE description END,
@@ -42,7 +42,7 @@ pub(crate) async fn update_data_source(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
     source: &UsableDataSource,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
             r#"UPDATE webknossos.datasets SET thumbnailCacheVersion = thumbnailCacheVersion + 1,
                  inboxSourceHash = NULL, isUsable = true, status = '',

@@ -100,7 +100,7 @@ async fn cached(
     height: i32,
     mapping: Option<&str>,
 ) -> ApiResult<Option<Vec<u8>>> {
-    dao::find_cached_image(&state.pool, id, layer, width, height, mapping).await
+    Ok(dao::find_cached_image(&state.pool, id, layer, width, height, mapping).await?)
 }
 
 /// A rendered data layer (StaticLayer reads).

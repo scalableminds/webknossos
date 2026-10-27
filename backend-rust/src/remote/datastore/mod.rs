@@ -103,7 +103,7 @@ impl FromRequestParts<AppState> for ValidatedDataStore {
         match dao::find_one_by_name_and_key(&state.pool, name, &query.key).await {
             Ok(Some(store)) => Ok(Self(store)),
             Ok(None) => Err(forbidden_response()),
-            Err(error) => Err(error.into_response()),
+            Err(error) => Err(ApiError::from(error).into_response()),
         }
     }
 }
@@ -338,7 +338,7 @@ async fn apply_report(
         let result = match crate::dataset::lifecycle::load_record(pool, &id).await {
             Ok(Some(record)) => crate::dataset::lifecycle::invalidate_cache(clients, &record).await,
             Ok(None) => Err(crate::dataset::lifecycle::not_found(&id)),
-            Err(error) => Err(error),
+            Err(error) => Err(error.into()),
         };
         if let Err(error) = result {
             first_error.get_or_insert(error);

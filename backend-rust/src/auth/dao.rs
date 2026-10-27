@@ -7,7 +7,6 @@ use sqlx::{PgConnection, PgPool};
 
 use crate::{
     auth::{AuthUser, routes::KeyDescriptor},
-    error::ApiResult,
     util::id::ObjectId,
 };
 
@@ -19,8 +18,8 @@ use crate::{
 pub(crate) async fn find_one_and_touch_for_authentication(
     pool: &PgPool,
     token: &str,
-) -> ApiResult<Option<AuthUser>> {
-    Ok(sqlx::query_as::<_, AuthUser>(
+) -> sqlx::Result<Option<AuthUser>> {
+    sqlx::query_as::<_, AuthUser>(
         r#"
         WITH matched AS (
           SELECT token._id AS token_id, token.idleTimeout IS NOT NULL AS has_idle_timeout,
@@ -57,7 +56,7 @@ pub(crate) async fn find_one_and_touch_for_authentication(
     )
     .bind(token)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// WebknossosBearerTokenAuthenticatorService.userForToken is a read-only
@@ -68,8 +67,8 @@ pub(crate) async fn find_one_and_touch_for_authentication(
 pub(crate) async fn find_user_for_service_token(
     pool: &PgPool,
     token: &str,
-) -> ApiResult<Option<AuthUser>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<AuthUser>> {
+    sqlx::query_as(
         r#"SELECT u._id AS id,u._organization AS organization_id,u.isAdmin AS is_admin,u.isDatasetManager AS is_dataset_manager,m.isSuperUser AS is_superuser
         FROM webknossos.tokens_ token JOIN webknossos.users_ u ON u._id=token._user
         JOIN webknossos.multiUsers_ m ON m._id=u._multiUser JOIN webknossos.organizations_ organization ON organization._id=u._organization
@@ -81,15 +80,15 @@ pub(crate) async fn find_user_for_service_token(
     )
     .bind(token)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 pub(crate) async fn is_team_manager_in_organization(
     pool: &PgPool,
     user_id: &ObjectId,
     organization_id: &str,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         r#"SELECT EXISTS (
               SELECT 1 FROM webknossos.user_team_roles AS role
               JOIN webknossos.teams_ AS team ON team._id = role._team
@@ -99,7 +98,7 @@ pub(crate) async fn is_team_manager_in_organization(
     .bind(user_id)
     .bind(organization_id)
     .fetch_one(pool)
-    .await?)
+    .await
 }
 
 pub(crate) async fn can_manage_team(
@@ -108,8 +107,8 @@ pub(crate) async fn can_manage_team(
     organization_id: &str,
     is_admin: bool,
     user_id: &ObjectId,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         r#"SELECT EXISTS (
               SELECT 1 FROM webknossos.teams_ AS team
               WHERE team._id = $1 AND team._organization = $2
@@ -124,23 +123,26 @@ pub(crate) async fn can_manage_team(
     .bind(is_admin)
     .bind(user_id)
     .fetch_one(pool)
-    .await?)
+    .await
 }
 
 /// Locks the account's multiUsers row (serializes token issuance and revocation).
 pub(crate) async fn lock_multi_user_of_active_user(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT multi._id FROM webknossos.multiUsers AS multi JOIN webknossos.users AS usr ON usr._multiUser = multi._id WHERE usr._id = $1 AND NOT usr.isDeleted AND NOT usr.isDeactivated AND NOT multi.isDeleted FOR UPDATE OF multi",
     )
     .bind(user_id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
-pub(crate) async fn lock_user(connection: &mut PgConnection, user_id: &ObjectId) -> ApiResult<()> {
+pub(crate) async fn lock_user(
+    connection: &mut PgConnection,
+    user_id: &ObjectId,
+) -> sqlx::Result<()> {
     sqlx::query("SELECT _id FROM webknossos.users WHERE _id = $1 FOR UPDATE")
         .bind(user_id)
         .fetch_one(connection)
@@ -153,8 +155,8 @@ pub(crate) async fn is_token_valid_for_user(
     connection: &mut PgConnection,
     token: &str,
     user_id: &ObjectId,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         r#"SELECT EXISTS (
           SELECT 1 FROM webknossos.tokens AS token
           JOIN webknossos.users AS usr ON usr._id = token._user
@@ -172,7 +174,7 @@ pub(crate) async fn is_token_valid_for_user(
     .bind(token)
     .bind(user_id)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn insert_token(
@@ -182,7 +184,7 @@ pub(crate) async fn insert_token(
     expiry_ms: i64,
     idle_ms: Option<i64>,
     token_type: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.tokens
           (_id, value, _user, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created)
@@ -206,8 +208,8 @@ pub(crate) async fn insert_token(
 pub(crate) async fn find_one_usable_authentication_token(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-) -> ApiResult<Option<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
         r#"SELECT token.value FROM webknossos.tokens AS token
           JOIN webknossos.users AS usr ON usr._id = token._user
           WHERE token._user = $1 AND token.tokenType = 'Authentication' AND NOT token.isDeleted
@@ -220,13 +222,13 @@ pub(crate) async fn find_one_usable_authentication_token(
     )
     .bind(user_id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn delete_authentication_tokens_for_user(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.tokens SET isDeleted = TRUE WHERE _user = $1 AND tokenType = 'Authentication' AND NOT isDeleted")
         .bind(user_id)
         .execute(connection)
@@ -238,7 +240,7 @@ pub(crate) async fn delete_authentication_tokens_for_user(
 pub(crate) async fn delete_oldest_authentication_token(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-) -> ApiResult<u64> {
+) -> sqlx::Result<u64> {
     Ok(sqlx::query(
         "UPDATE webknossos.tokens SET isDeleted = TRUE WHERE _id = (SELECT _id FROM webknossos.tokens WHERE _user = $1 AND tokenType = 'Authentication' AND NOT isDeleted ORDER BY created, _id LIMIT 1)",
     )
@@ -252,7 +254,7 @@ pub(crate) async fn delete_token_for_user(
     connection: &mut PgConnection,
     token: &str,
     user_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.tokens SET isDeleted = TRUE WHERE value = $1 AND _user = $2 AND NOT isDeleted",
     )
@@ -266,7 +268,7 @@ pub(crate) async fn delete_token_for_user(
 pub(crate) async fn update_logged_out_everywhere_time(
     connection: &mut PgConnection,
     multi_user_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.users SET loggedOutEverywhereTime = GREATEST(loggedOutEverywhereTime, statement_timestamp()) WHERE _multiUser = $1",
     )
@@ -279,7 +281,7 @@ pub(crate) async fn update_logged_out_everywhere_time(
 pub(crate) async fn delete_datastore_tokens_for_multi_user(
     connection: &mut PgConnection,
     multi_user_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.tokens SET isDeleted = TRUE WHERE tokenType = 'DataStore' AND NOT isDeleted AND _user IN (SELECT _id FROM webknossos.users WHERE _multiUser = $1)",
     )
@@ -292,20 +294,20 @@ pub(crate) async fn delete_datastore_tokens_for_multi_user(
 pub(crate) async fn find_all_webauthn_credentials(
     connection: &mut PgConnection,
     multi_user_id: &ObjectId,
-) -> ApiResult<Vec<KeyDescriptor>> {
-    Ok(sqlx::query_as::<_, KeyDescriptor>(
+) -> sqlx::Result<Vec<KeyDescriptor>> {
+    sqlx::query_as::<_, KeyDescriptor>(
         "SELECT _id AS id, name FROM webknossos.webauthnCredentials WHERE _multiUser = $1 AND NOT isDeleted ORDER BY _id",
     )
     .bind(multi_user_id)
     .fetch_all(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn delete_webauthn_credential(
     connection: &mut PgConnection,
     id: &ObjectId,
     multi_user_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.webauthnCredentials SET isDeleted = TRUE WHERE _id = $1 AND _multiUser = $2 AND NOT isDeleted",
     )

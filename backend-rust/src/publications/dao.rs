@@ -3,7 +3,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::{PgConnection, PgPool};
 
-use crate::{error::ApiResult, sql::Sql, util::id::ObjectId};
+use crate::{sql::Sql, util::id::ObjectId};
 
 #[derive(sqlx::FromRow)]
 pub(crate) struct Publication {
@@ -17,71 +17,67 @@ pub(crate) struct Publication {
 
 const COLUMNS: &str = "_id AS id, publicationDate AS publication_date, imageUrl AS image_url, title, description, created";
 
-pub(crate) async fn find_one(pool: &PgPool, id: &ObjectId) -> ApiResult<Option<Publication>> {
-    Ok(Sql::new("SELECT ")
+pub(crate) async fn find_one(pool: &PgPool, id: &ObjectId) -> sqlx::Result<Option<Publication>> {
+    Sql::new("SELECT ")
         .push(COLUMNS)
         .push(" FROM webknossos.publications_ WHERE _id = ")
         .push_bind(id)
         .build_query_as()
         .fetch_optional(pool)
-        .await?)
+        .await
 }
 
-pub(crate) async fn find_all(pool: &PgPool) -> ApiResult<Vec<Publication>> {
+pub(crate) async fn find_all(pool: &PgPool) -> sqlx::Result<Vec<Publication>> {
     // Scala has no ORDER BY; creation order is the deterministic equivalent.
-    Ok(Sql::new("SELECT ")
+    Sql::new("SELECT ")
         .push(COLUMNS)
         .push(" FROM webknossos.publications_ ORDER BY created, _id")
         .build_query_as()
         .fetch_all(pool)
-        .await?)
+        .await
 }
 
 pub(crate) async fn find_dataset_ids_for_publication(
     connection: &mut PgConnection,
     publication_id: &ObjectId,
-) -> ApiResult<Vec<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Vec<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT _id FROM webknossos.datasets_ WHERE _publication = $1 ORDER BY created, _id",
     )
     .bind(publication_id)
     .fetch_all(connection)
-    .await?)
+    .await
 }
 
 /// Returns `(id, name, description, typ, dataset id)` per annotation.
 pub(crate) async fn find_annotations_for_publication(
     connection: &mut PgConnection,
     publication_id: &ObjectId,
-) -> ApiResult<Vec<(ObjectId, String, String, String, ObjectId)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Vec<(ObjectId, String, String, String, ObjectId)>> {
+    sqlx::query_as(
         r#"SELECT _id, name, description, typ::text, _dataset FROM webknossos.annotations_
           WHERE _publication = $1 ORDER BY created, _id"#,
     )
     .bind(publication_id)
     .fetch_all(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn dataset_exists(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<bool> {
-    Ok(
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE _id = $1)")
-            .bind(dataset_id)
-            .fetch_one(connection)
-            .await?,
-    )
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE _id = $1)")
+        .bind(dataset_id)
+        .fetch_one(connection)
+        .await
 }
 
 /// TracingStoreDAO.findFirst: the name and public URL of the first tracing store.
 pub(crate) async fn find_first_tracing_store(
     connection: &mut PgConnection,
-) -> ApiResult<Option<(String, String)>> {
-    Ok(
-        sqlx::query_as("SELECT name, publicUrl FROM webknossos.tracingStores_ LIMIT 1")
-            .fetch_optional(connection)
-            .await?,
-    )
+) -> sqlx::Result<Option<(String, String)>> {
+    sqlx::query_as("SELECT name, publicUrl FROM webknossos.tracingStores_ LIMIT 1")
+        .fetch_optional(connection)
+        .await
 }

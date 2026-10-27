@@ -103,7 +103,7 @@ async fn read(
 }
 async fn insert(pool: &sqlx::PgPool, user: &AuthUser, body: Parameters) -> ApiResult<Maintenance> {
     require_superuser(user)?;
-    dao::insert_one(pool, &user.id, body.start_time, body.end_time, body.message).await
+    Ok(dao::insert_one(pool, &user.id, body.start_time, body.end_time, body.message).await?)
 }
 async fn create(
     State(state): State<AppState>,

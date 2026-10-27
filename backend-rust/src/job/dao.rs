@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use serde_json::Value;
 use sqlx::{PgConnection, PgPool};
 
-use crate::{error::ApiResult, job::routes::Job, sql::Sql, util::id::ObjectId};
+use crate::{job::routes::Job, sql::Sql, util::id::ObjectId};
 
 /// DataSourceStatus.unreportedStatusList.
 const UNREPORTED_DATASET_STATUSES: [&str; 3] = [
@@ -121,14 +121,14 @@ pub(crate) async fn find_one(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     job_id: &ObjectId,
-) -> ApiResult<Option<Job>> {
+) -> sqlx::Result<Option<Job>> {
     let mut q = Sql::new("SELECT ");
     q.push(JOB_COLUMNS)
         .push(" FROM webknossos.jobs_ j WHERE j._id = ")
         .push_bind(job_id)
         .push(" AND ");
     push_job_read_access(&mut q, user_id);
-    Ok(q.build_query_as().fetch_optional(&mut *connection).await?)
+    q.build_query_as().fetch_optional(&mut *connection).await
 }
 
 /// UserDAO.findOne (read access: managed team member, own organization as admin, self);
@@ -137,8 +137,8 @@ pub(crate) async fn find_owner_organization_and_multi_user(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     owner_id: &ObjectId,
-) -> ApiResult<Option<(String, ObjectId)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(String, ObjectId)>> {
+    sqlx::query_as(
         r#"SELECT u._organization, u._multiUser FROM webknossos.users_ u
           WHERE u._id = $2 AND (
             u._id IN (SELECT _user FROM webknossos.user_team_roles WHERE _team IN
@@ -149,20 +149,18 @@ pub(crate) async fn find_owner_organization_and_multi_user(
     .bind(user_id)
     .bind(owner_id)
     .fetch_optional(&mut *connection)
-    .await?)
+    .await
 }
 
 /// MultiUserDAO.findOne (no access restriction): first name, last name and email.
 pub(crate) async fn find_multi_user_name_and_email(
     connection: &mut PgConnection,
     multi_user_id: &ObjectId,
-) -> ApiResult<Option<(String, String, String)>> {
-    Ok(sqlx::query_as(
-        "SELECT firstName, lastName, email FROM webknossos.multiUsers_ WHERE _id = $1",
-    )
-    .bind(multi_user_id)
-    .fetch_optional(&mut *connection)
-    .await?)
+) -> sqlx::Result<Option<(String, String, String)>> {
+    sqlx::query_as("SELECT firstName, lastName, email FROM webknossos.multiUsers_ WHERE _id = $1")
+        .bind(multi_user_id)
+        .fetch_optional(&mut *connection)
+        .await
 }
 
 /// OrganizationDAO.findOne (read access: an organization of the user's account, or superuser).
@@ -170,8 +168,8 @@ pub(crate) async fn find_readable_organization_id(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     organization: &str,
-) -> ApiResult<Option<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.organizations_ WHERE _id = $2 AND (
             _id IN (SELECT _organization FROM webknossos.users_ WHERE _multiUser =
               (SELECT _multiUser FROM webknossos.users_ WHERE _id = $1))
@@ -181,7 +179,7 @@ pub(crate) async fn find_readable_organization_id(
     .bind(user_id)
     .bind(organization)
     .fetch_optional(&mut *connection)
-    .await?)
+    .await
 }
 
 /// CreditTransactionService.findTransactionOfJob: the milli credit delta of the job's
@@ -190,16 +188,16 @@ pub(crate) async fn find_credit_delta_of_job(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     job_id: &ObjectId,
-) -> ApiResult<Option<i32>> {
+) -> sqlx::Result<Option<i32>> {
     let mut q = Sql::new(
         "SELECT milli_credit_delta FROM webknossos.credit_transactions_ WHERE _paid_job = ",
     );
     q.push_bind(job_id).push(" AND ");
     push_credit_read_access(&mut q, user_id);
     q.push(" ORDER BY created_at, _id LIMIT 1");
-    Ok(q.build_query_scalar()
+    q.build_query_scalar()
         .fetch_optional(&mut *connection)
-        .await?)
+        .await
 }
 
 /// JobDAO.findAllCompact. The credit lateral join has no access check (as in Scala);
@@ -209,7 +207,7 @@ pub(crate) async fn find_all_compact(
     user_id: &ObjectId,
     command: Option<&str>,
     skip_for_deleted_datasets: bool,
-) -> ApiResult<Vec<CompactRow>> {
+) -> sqlx::Result<Vec<CompactRow>> {
     let mut q = Sql::new(
         r#"SELECT j._id AS id, j.command, u._organization AS organization, mu.firstName AS first_name,
             mu.lastName AS last_name, mu.email, j.commandArgs AS args,
@@ -239,29 +237,29 @@ pub(crate) async fn find_all_compact(
         statuses.push_bind(status);
     }
     q.push("))) ORDER BY j.created DESC, j._id DESC");
-    Ok(q.build_query_as().fetch_all(pool).await?)
+    q.build_query_as().fetch_all(pool).await
 }
 
 /// Job counts by state of the jobs without a manual state.
-pub(crate) async fn count_by_state(pool: &PgPool) -> ApiResult<Vec<(String, i64)>> {
-    Ok(sqlx::query_as(
+pub(crate) async fn count_by_state(pool: &PgPool) -> sqlx::Result<Vec<(String, i64)>> {
+    sqlx::query_as(
         r#"SELECT state::text, COUNT(_id) FROM webknossos.jobs_
           WHERE manualState IS NULL GROUP BY state ORDER BY state"#,
     )
     .fetch_all(pool)
-    .await?)
+    .await
 }
 
 /// WorkerDAO.findAll (global access).
-pub(crate) async fn find_all_workers(pool: &PgPool) -> ApiResult<Vec<WorkerRow>> {
-    Ok(sqlx::query_as(
+pub(crate) async fn find_all_workers(pool: &PgPool) -> sqlx::Result<Vec<WorkerRow>> {
+    sqlx::query_as(
         r#"SELECT _id AS id, name, maxParallelHighPriorityJobs AS max_high,
             maxParallelLowPriorityJobs AS max_low, supportedJobCommands AS commands, created,
             lastHeartBeat AS last_heart_beat, lastReportedVersion AS last_reported_version
           FROM webknossos.workers_ ORDER BY created, _id"#,
     )
     .fetch_all(pool)
-    .await?)
+    .await
 }
 
 /// JobDAO.updateManualState: update access equals read access, checked by the caller.
@@ -270,7 +268,7 @@ pub(crate) async fn find_all_workers(pool: &PgPool) -> ApiResult<Vec<WorkerRow>>
 pub(crate) async fn update_manual_state_cancelled(
     connection: &mut PgConnection,
     job_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.jobs SET manualState = 'CANCELLED'
          WHERE _id = $1 AND state NOT IN ('SUCCESS', 'FAILURE')",
@@ -288,7 +286,7 @@ pub(crate) async fn retry_one(
     connection: &mut PgConnection,
     job_id: &ObjectId,
     is_superuser: bool,
-) -> ApiResult<u64> {
+) -> sqlx::Result<u64> {
     Ok(sqlx::query(
         r#"UPDATE webknossos.jobs
           SET state = 'PENDING', manualState = NULL, retriedBySuperUser = $2, lastRetry = NOW()
@@ -306,15 +304,15 @@ pub(crate) async fn retry_one(
 pub(crate) async fn find_pending_transaction_of_job(
     connection: &mut PgConnection,
     job_id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.credit_transactions_
           WHERE _paid_job = $1 AND transaction_state = 'Pending'
           ORDER BY created_at, _id LIMIT 1 FOR UPDATE"#,
     )
     .bind(job_id)
     .fetch_optional(&mut *connection)
-    .await?)
+    .await
 }
 
 /// CreditTransactionDAO.refundTransaction, insert part: the refund amount is NULL (and the
@@ -366,14 +364,14 @@ pub(crate) async fn find_credit_transaction_of_job(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     job_id: &ObjectId,
-) -> ApiResult<Option<(String, i32, String)>> {
+) -> sqlx::Result<Option<(String, i32, String)>> {
     let mut q = Sql::new(
         "SELECT _organization, milli_credit_delta, comment FROM webknossos.credit_transactions_ WHERE _paid_job = ",
     );
     q.push_bind(job_id).push(" AND ");
     push_credit_read_access(&mut q, user_id);
     q.push(" ORDER BY created_at, _id LIMIT 1");
-    Ok(q.build_query_as().fetch_optional(&mut *connection).await?)
+    q.build_query_as().fetch_optional(&mut *connection).await
 }
 
 /// CreditTransactionDAO.insertNewPendingTransaction for a retried job: a pending reservation of `delta`.
@@ -407,13 +405,13 @@ pub(crate) async fn get_milli_credit_balance(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     organization: &str,
-) -> ApiResult<i64> {
+) -> sqlx::Result<i64> {
     let mut q = Sql::new(
         "SELECT COALESCE(SUM(milli_credit_delta), 0)::bigint FROM webknossos.credit_transactions_ WHERE _organization = ",
     );
     q.push_bind(organization).push(" AND ");
     push_credit_read_access(&mut q, user_id);
-    Ok(q.build_query_scalar().fetch_one(&mut *connection).await?)
+    q.build_query_scalar().fetch_one(&mut *connection).await
 }
 
 /// DataStoreDAO.findOneByName (read access: unrestricted or the user's organization);
@@ -422,8 +420,8 @@ pub(crate) async fn find_data_store_public_url(
     connection: &mut PgConnection,
     name: &str,
     user_id: &ObjectId,
-) -> ApiResult<Option<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
         r#"SELECT publicUrl FROM webknossos.dataStores_ WHERE name = $1 AND
           (onlyAllowedOrganization IS NULL OR onlyAllowedOrganization IN
             (SELECT _organization FROM webknossos.users_ WHERE _id = $2))"#,
@@ -431,24 +429,25 @@ pub(crate) async fn find_data_store_public_url(
     .bind(name)
     .bind(user_id)
     .fetch_optional(&mut *connection)
-    .await?)
+    .await
 }
 
 /// DataStoreDAO.findOneByName with global access: the internal URL.
 pub(crate) async fn find_data_store_url(
     executor: impl sqlx::PgExecutor<'_>,
     name: &str,
-) -> ApiResult<Option<String>> {
-    Ok(
-        sqlx::query_scalar("SELECT url FROM webknossos.dataStores_ WHERE name = $1")
-            .bind(name)
-            .fetch_optional(executor)
-            .await?,
-    )
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar("SELECT url FROM webknossos.dataStores_ WHERE name = $1")
+        .bind(name)
+        .fetch_optional(executor)
+        .await
 }
 
 /// Serializes concurrent token creation for the same user (row lock).
-pub(crate) async fn lock_user(connection: &mut PgConnection, user_id: &ObjectId) -> ApiResult<()> {
+pub(crate) async fn lock_user(
+    connection: &mut PgConnection,
+    user_id: &ObjectId,
+) -> sqlx::Result<()> {
     sqlx::query("SELECT _id FROM webknossos.users WHERE _id = $1 FOR UPDATE")
         .bind(user_id)
         .fetch_one(&mut *connection)
@@ -461,8 +460,8 @@ pub(crate) async fn lock_user(connection: &mut PgConnection, user_id: &ObjectId)
 pub(crate) async fn find_usable_authentication_token(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-) -> ApiResult<Option<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
         r#"SELECT token.value FROM webknossos.tokens AS token
           JOIN webknossos.users AS usr ON usr._id = token._user
           WHERE token._user = $1 AND token.tokenType = 'Authentication' AND NOT token.isDeleted
@@ -475,14 +474,14 @@ pub(crate) async fn find_usable_authentication_token(
     )
     .bind(user_id)
     .fetch_optional(&mut *connection)
-    .await?)
+    .await
 }
 
 /// Retires all Authentication tokens of the user.
 pub(crate) async fn delete_authentication_tokens(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.tokens SET isDeleted = TRUE WHERE _user = $1 AND tokenType = 'Authentication' AND NOT isDeleted",
     )
@@ -500,7 +499,7 @@ pub(crate) async fn insert_authentication_token(
     user_id: &ObjectId,
     expiry_ms: i64,
     idle_ms: i64,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.tokens
           (_id, value, _user, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created)

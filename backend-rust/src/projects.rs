@@ -297,7 +297,7 @@ async fn delete(
         return Err(ApiError::forbidden(crate::msg::project::DELETE_NOT_ALLOWED));
     }
     dao::delete_one(&mut tx, &id).await?;
-    dao::delete_tasks(&mut tx, "_project", &id).await?;
+    dao::delete_tasks(&mut tx, dao::TaskParent::Project, &id).await?;
     tx.commit().await?;
     Ok(Messages::success(crate::msg::project::DELETE_SUCCESS))
 }
@@ -317,7 +317,7 @@ pub(crate) async fn can_manage_team_in_tx(
     user: &AuthUser,
     team: &ObjectId,
 ) -> ApiResult<bool> {
-    dao::can_manage_team(tx, user, team).await
+    Ok(dao::can_manage_team(tx, user, team).await?)
 }
 
 async fn for_task_type(

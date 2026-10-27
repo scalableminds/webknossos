@@ -3,7 +3,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::{PgConnection, PgPool};
 
-use crate::{error::ApiResult, sql::Sql, util::id::ObjectId};
+use crate::{sql::Sql, util::id::ObjectId};
 
 #[derive(sqlx::FromRow, Clone)]
 pub(crate) struct CreditTransaction {
@@ -64,14 +64,14 @@ pub(crate) async fn insert_add_credits(
 pub(crate) async fn find_one_for_update(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<Option<(String, Option<ObjectId>, String, String, i32)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(String, Option<ObjectId>, String, String, i32)>> {
+    sqlx::query_as(
         r#"SELECT _organization, _paid_job, transaction_state::text, credit_state::text, milli_credit_delta
           FROM webknossos.credit_transactions WHERE _id = $1 AND NOT is_deleted FOR UPDATE"#,
     )
     .bind(id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn insert_refund(
@@ -216,7 +216,7 @@ pub(crate) async fn insert_revocation(
 pub(crate) async fn find_all_for_user(
     pool: &PgPool,
     user_id: &ObjectId,
-) -> ApiResult<Vec<CreditTransaction>> {
+) -> sqlx::Result<Vec<CreditTransaction>> {
     // Scala has no ORDER BY; creation order is the deterministic equivalent.
     let mut q = Sql::new(
         r#"SELECT _id AS id, _organization AS organization, _related_transaction AS related_transaction,
@@ -226,7 +226,7 @@ pub(crate) async fn find_all_for_user(
     );
     push_list_access(&mut q, user_id);
     q.push(" ORDER BY created_at, _id");
-    Ok(q.build_query_as().fetch_all(pool).await?)
+    q.build_query_as().fetch_all(pool).await
 }
 
 /// CreditTransactionDAO.handOutMonthlyFreeCredits (`jobs.monthlyFreeMilliCredits`), shared by

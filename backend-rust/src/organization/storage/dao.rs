@@ -3,7 +3,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::{PgConnection, PgPool};
 
-use crate::{error::ApiResult, util::id::ObjectId};
+use crate::util::id::ObjectId;
 
 #[derive(Clone, sqlx::FromRow)]
 pub(super) struct MagRow {
@@ -139,32 +139,30 @@ pub(super) async fn upsert_used_storage_attachment(
 pub(super) async fn find_organization_and_store_name(
     pool: &PgPool,
     dataset_id: &ObjectId,
-) -> ApiResult<Option<(String, String)>> {
-    Ok(
-        sqlx::query_as("SELECT _organization, _dataStore FROM webknossos.datasets WHERE _id=$1")
-            .bind(dataset_id)
-            .fetch_optional(pool)
-            .await?,
-    )
+) -> sqlx::Result<Option<(String, String)>> {
+    sqlx::query_as("SELECT _organization, _dataStore FROM webknossos.datasets WHERE _id=$1")
+        .bind(dataset_id)
+        .fetch_optional(pool)
+        .await
 }
 
 /// Returns `(name, url, reportUsedStorageEnabled)` of the datastore.
 pub(super) async fn find_store_for_reporting(
     pool: &PgPool,
     store_name: &str,
-) -> ApiResult<Option<(String, String, bool)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(String, String, bool)>> {
+    sqlx::query_as(
         "SELECT name, url, reportUsedStorageEnabled FROM webknossos.dataStores_ WHERE name=trim($1)",
     )
     .bind(store_name)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 pub(super) async fn delete_used_storage_mags_for_dataset(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("DELETE FROM webknossos.organization_usedStorage_mags WHERE _dataset = $1")
         .bind(dataset_id)
         .execute(connection)
@@ -175,7 +173,7 @@ pub(super) async fn delete_used_storage_mags_for_dataset(
 pub(super) async fn delete_used_storage_attachments_for_dataset(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("DELETE FROM webknossos.organization_usedStorage_attachments WHERE _dataset = $1")
         .bind(dataset_id)
         .execute(connection)
@@ -186,7 +184,7 @@ pub(super) async fn delete_used_storage_attachments_for_dataset(
 pub(super) async fn delete_used_storage_mags_for_organization(
     connection: &mut PgConnection,
     organization: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("DELETE FROM webknossos.organization_usedStorage_mags WHERE _organization = $1")
         .bind(organization)
         .execute(connection)
@@ -197,7 +195,7 @@ pub(super) async fn delete_used_storage_mags_for_organization(
 pub(super) async fn delete_used_storage_attachments_for_organization(
     connection: &mut PgConnection,
     organization: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "DELETE FROM webknossos.organization_usedStorage_attachments WHERE _organization = $1",
     )
@@ -211,7 +209,7 @@ pub(super) async fn update_last_storage_scan_time(
     connection: &mut PgConnection,
     organization: &str,
     time: DateTime<Utc>,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.organizations SET lastStorageScanTime = $1 WHERE _id = $2")
         .bind(time)
         .bind(organization)

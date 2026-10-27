@@ -8,7 +8,7 @@ use serde_json::Value;
 use sqlx::{PgConnection, PgPool};
 
 use super::{AiInference, AiModel};
-use crate::{error::ApiResult, sql::Sql, users, util::id::ObjectId};
+use crate::{sql::Sql, users, util::id::ObjectId};
 
 /// AiModelDAO.readAccessQ for alias `m`: models shared with or owned by the
 /// user's organization, or pretrained; superuser-only models only for
@@ -69,13 +69,13 @@ pub(crate) async fn find_one(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     model_id: &ObjectId,
-) -> ApiResult<Option<AiModel>> {
+) -> sqlx::Result<Option<AiModel>> {
     let mut q = Sql::new("SELECT ");
     q.push(MODEL_COLUMNS)
         .push(" FROM webknossos.aiModels_ m WHERE m._id = ");
     q.push_bind(model_id).push(" AND ");
     push_model_read_access(&mut q, user_id);
-    Ok(q.build_query_as().fetch_optional(&mut *connection).await?)
+    q.build_query_as().fetch_optional(&mut *connection).await
 }
 
 /// AiModelDAO.findAll. Scala has no ORDER BY; creation order is used for stability.
@@ -83,17 +83,17 @@ pub(crate) async fn find_one(
 pub(crate) async fn find_all(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-) -> ApiResult<Vec<AiModel>> {
+) -> sqlx::Result<Vec<AiModel>> {
     let mut q = Sql::new("SELECT ");
     q.push(MODEL_COLUMNS)
         .push(" FROM webknossos.aiModels_ m WHERE ");
     push_model_read_access(&mut q, user_id);
     q.push(" ORDER BY m.created, m._id");
-    Ok(q.build_query_as().fetch_all(&mut *connection).await?)
+    q.build_query_as().fetch_all(&mut *connection).await
 }
 
 /// Row lock on the model, so that concurrent changes of it are serialized.
-pub(crate) async fn lock_one(connection: &mut PgConnection, id: &ObjectId) -> ApiResult<()> {
+pub(crate) async fn lock_one(connection: &mut PgConnection, id: &ObjectId) -> sqlx::Result<()> {
     sqlx::query("SELECT _id FROM webknossos.aiModels WHERE _id = $1 FOR UPDATE")
         .bind(id)
         .fetch_optional(&mut *connection)
@@ -168,7 +168,7 @@ pub(crate) async fn insert_shared_organization(
 }
 
 /// Soft delete.
-pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> ApiResult<()> {
+pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.aiModels SET isDeleted = TRUE WHERE _id = $1")
         .bind(id)
         .execute(&mut *connection)
@@ -263,12 +263,12 @@ pub(crate) async fn is_name_taken(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     name: &str,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.aiModels_ m WHERE m.name = ");
     q.push_bind(name).push(" AND ");
     push_model_read_access(&mut q, user_id);
     q.push(")");
-    Ok(q.build_query_scalar().fetch_one(&mut *connection).await?)
+    q.build_query_scalar().fetch_one(&mut *connection).await
 }
 
 /// AiModelDAO.countByNameAndOrganization counts soft-deleted models, too.
@@ -290,20 +290,18 @@ pub(crate) async fn count_by_name_and_organization(
 pub(crate) async fn count_inferences_of_model(
     connection: &mut PgConnection,
     model_id: &ObjectId,
-) -> ApiResult<i64> {
-    Ok(
-        sqlx::query_scalar("SELECT COUNT(*) FROM webknossos.aiInferences_ WHERE _aiModel = $1")
-            .bind(model_id)
-            .fetch_one(&mut *connection)
-            .await?,
-    )
+) -> sqlx::Result<i64> {
+    sqlx::query_scalar("SELECT COUNT(*) FROM webknossos.aiInferences_ WHERE _aiModel = $1")
+        .bind(model_id)
+        .fetch_one(&mut *connection)
+        .await
 }
 
 /// AiModelDAO.finishUploadToPath.
 pub(crate) async fn update_upload_to_path_finished(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.aiModels SET uploadToPathIsPending = FALSE WHERE _id = $1")
         .bind(id)
         .execute(&mut *connection)
@@ -316,23 +314,23 @@ pub(crate) async fn find_data_store_url_for_user(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     name: &str,
-) -> ApiResult<Option<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
         r#"SELECT url FROM webknossos.dataStores_ WHERE name = $2 AND ((onlyAllowedOrganization IS NULL)
           OR (onlyAllowedOrganization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $1)))"#,
     )
     .bind(user_id)
     .bind(name)
     .fetch_optional(&mut *connection)
-    .await?)
+    .await
 }
 
 /// OrganizationDAO.findAll ids (organizations of the user's account, or all for superusers).
 pub(crate) async fn find_all_accessible_organization_ids(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-) -> ApiResult<Vec<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Vec<String>> {
+    sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.organizations_ WHERE
           (_id IN (SELECT _organization FROM webknossos.users_ WHERE _multiUser =
             (SELECT _multiUser FROM webknossos.users_ WHERE _id = $1)))
@@ -341,7 +339,7 @@ pub(crate) async fn find_all_accessible_organization_ids(
     )
     .bind(user_id)
     .fetch_all(&mut *connection)
-    .await?)
+    .await
 }
 
 /// UserDAO.findOne with the requesting user's read access: the user id.
@@ -349,24 +347,24 @@ pub(crate) async fn find_readable_user_id(
     connection: &mut PgConnection,
     requesting_user_id: &ObjectId,
     user_id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
+) -> sqlx::Result<Option<ObjectId>> {
     let mut q = Sql::new("SELECT usr._id FROM webknossos.users_ usr WHERE usr._id = ");
     q.push_bind(user_id).push(" AND ");
     users::push_read_access(&mut q, requesting_user_id.into());
-    Ok(q.build_query_scalar()
+    q.build_query_scalar()
         .fetch_optional(&mut *connection)
-        .await?)
+        .await
 }
 
 /// UserService.compactWrites of the user.
 pub(crate) async fn find_compact_user(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-) -> ApiResult<Option<Value>> {
-    Ok(sqlx::query_scalar(COMPACT_USER)
+) -> sqlx::Result<Option<Value>> {
+    sqlx::query_scalar(COMPACT_USER)
         .bind(user_id)
         .fetch_optional(&mut *connection)
-        .await?)
+        .await
 }
 
 /// OrganizationDAO.findOne (global): the AI plan. The outer `Option` is the organization
@@ -386,25 +384,25 @@ pub(crate) async fn is_dataset_readable(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     dataset_id: &ObjectId,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = ");
     q.push_bind(dataset_id).push(" AND ");
     crate::dataset::access::push_read_predicate(&mut q, user_id.into(), None);
     q.push(")");
-    Ok(q.build_query_scalar().fetch_one(&mut *connection).await?)
+    q.build_query_scalar().fetch_one(&mut *connection).await
 }
 
 /// AiInferenceDAO.findAll has no ORDER BY; creation order is used for stability.
 pub(crate) async fn find_all_inferences(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-) -> ApiResult<Vec<AiInference>> {
+) -> sqlx::Result<Vec<AiInference>> {
     let mut q = Sql::new("SELECT ");
     q.push(INFERENCE_COLUMNS)
         .push(" FROM webknossos.aiInferences_ i WHERE ");
     push_inference_read_access(&mut q, user_id);
     q.push(" ORDER BY i.created, i._id");
-    Ok(q.build_query_as().fetch_all(&mut *connection).await?)
+    q.build_query_as().fetch_all(&mut *connection).await
 }
 
 /// AiInferenceDAO.findOne with the requesting user's read access.
@@ -412,13 +410,13 @@ pub(crate) async fn find_one_inference(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     id: &ObjectId,
-) -> ApiResult<Option<AiInference>> {
+) -> sqlx::Result<Option<AiInference>> {
     let mut q = Sql::new("SELECT ");
     q.push(INFERENCE_COLUMNS)
         .push(" FROM webknossos.aiInferences_ i WHERE i._id = ");
     q.push_bind(id).push(" AND ");
     push_inference_read_access(&mut q, user_id);
-    Ok(q.build_query_as().fetch_optional(&mut *connection).await?)
+    q.build_query_as().fetch_optional(&mut *connection).await
 }
 
 /// AiInferenceDAO.insertOne.
@@ -456,14 +454,14 @@ pub(crate) async fn insert_one_inference(
 pub(crate) async fn find_inference_id_by_job(
     connection: &mut PgConnection,
     job_id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         r#"SELECT _id FROM webknossos.aiInferences_ WHERE _inferenceJob = $1
           ORDER BY created, _id LIMIT 1 FOR UPDATE"#,
     )
     .bind(job_id)
     .fetch_optional(&mut *connection)
-    .await?)
+    .await
 }
 
 /// AiInferenceDAO.updateDataset.
@@ -471,7 +469,7 @@ pub(crate) async fn update_inference_new_dataset(
     connection: &mut PgConnection,
     inference_id: &ObjectId,
     dataset_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.aiInferences SET _newDataset = $2 WHERE _id = $1")
         .bind(inference_id)
         .bind(dataset_id)

@@ -16,11 +16,11 @@ pub async fn can_read(
     dataset_id: &ObjectId,
     sharing_token: Option<&str>,
 ) -> ApiResult<bool> {
-    dao::is_readable(pool, user, dataset_id, sharing_token).await
+    Ok(dao::is_readable(pool, user, dataset_id, sharing_token).await?)
 }
 
 pub async fn can_edit(pool: &PgPool, user: &AuthUser, dataset_id: &ObjectId) -> ApiResult<bool> {
-    dao::is_editable(pool, user, dataset_id).await
+    Ok(dao::is_editable(pool, user, dataset_id).await?)
 }
 
 /// Serialize dataset permission changes, and retain live teams/memberships

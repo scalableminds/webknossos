@@ -5,7 +5,7 @@ use sqlx::{PgConnection, PgPool};
 use webknossos_common::geometry::BoundingBox;
 
 use super::TaskParameters;
-use crate::{auth::AuthUser, error::ApiResult, sql::Sql, util::id::ObjectId};
+use crate::{auth::AuthUser, sql::Sql, util::id::ObjectId};
 
 /// TaskTypeDAO.findOne under the requester's access (team member or admin
 /// of the task type's organization): `(tracingType, magRestrictions min, max)`.
@@ -13,8 +13,8 @@ pub(crate) async fn find_task_type_facts(
     pool: &PgPool,
     user: &AuthUser,
     id: &ObjectId,
-) -> ApiResult<Option<(String, Option<i32>, Option<i32>)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(String, Option<i32>, Option<i32>)>> {
+    sqlx::query_as(
         "SELECT tt.tracingType::text, tt.settings_magRestrictions_min, tt.settings_magRestrictions_max
          FROM webknossos.taskTypes_ tt
          WHERE tt._id=$1 AND (tt._team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$2)
@@ -23,30 +23,31 @@ pub(crate) async fn find_task_type_facts(
     .bind(id)
     .bind(&user.id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// The name of the data store, if it exists (data stores table).
-pub(crate) async fn find_data_store_name(pool: &PgPool, name: &str) -> ApiResult<Option<String>> {
-    Ok(
-        sqlx::query_scalar("SELECT name FROM webknossos.dataStores_ WHERE name=$1")
-            .bind(name)
-            .fetch_optional(pool)
-            .await?,
-    )
+pub(crate) async fn find_data_store_name(
+    pool: &PgPool,
+    name: &str,
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar("SELECT name FROM webknossos.dataStores_ WHERE name=$1")
+        .bind(name)
+        .fetch_optional(pool)
+        .await
 }
 
 /// The `(tracingId, typ)` layers of the annotation (annotation layers table).
 pub(crate) async fn find_annotation_layers(
     pool: &PgPool,
     annotation_id: &ObjectId,
-) -> ApiResult<Vec<(String, String)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Vec<(String, String)>> {
+    sqlx::query_as(
         "SELECT tracingId, typ::text FROM webknossos.annotation_layers WHERE _annotation=$1 ORDER BY tracingId",
     )
     .bind(annotation_id)
     .fetch_all(pool)
-    .await?)
+    .await
 }
 
 /// The owner of the annotation, if the requester may read it (any type/state).
@@ -54,11 +55,11 @@ pub(crate) async fn find_readable_annotation_owner(
     pool: &PgPool,
     user: &AuthUser,
     id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
+) -> sqlx::Result<Option<ObjectId>> {
     let mut q = Sql::new("SELECT a._user FROM webknossos.annotations_ a WHERE a._id=");
     q.push_bind(id).push(" AND ");
     crate::annotation::access::push_read_predicate(&mut q, user.into());
-    Ok(q.build_query_scalar().fetch_optional(pool).await?)
+    q.build_query_scalar().fetch_optional(pool).await
 }
 
 /// `(totalInstances, pendingInstances)` of the task, if the requester may read it.
@@ -66,8 +67,8 @@ pub(crate) async fn find_task_instances_with_read_access(
     pool: &PgPool,
     user: &AuthUser,
     id: &ObjectId,
-) -> ApiResult<Option<(i64, i64)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(i64, i64)>> {
+    sqlx::query_as(
         "SELECT t.totalInstances, t.pendingInstances FROM webknossos.tasks_ t
          WHERE t._id=$1 AND ((SELECT p._team FROM webknossos.projects p WHERE p._id=t._project)
              IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$2)
@@ -77,7 +78,7 @@ pub(crate) async fn find_task_instances_with_read_access(
     .bind(id)
     .bind(&user.id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// `(id, owner, state)` of the task's non-cancelled Task annotations the
@@ -86,7 +87,7 @@ pub(crate) async fn find_task_annotations(
     pool: &PgPool,
     user: &AuthUser,
     task_id: &ObjectId,
-) -> ApiResult<Vec<(ObjectId, ObjectId, String)>> {
+) -> sqlx::Result<Vec<(ObjectId, ObjectId, String)>> {
     let mut q = Sql::new(
         "SELECT a._id, a._user, a.state::text FROM webknossos.annotations_ a
          WHERE a._task=",
@@ -95,7 +96,7 @@ pub(crate) async fn find_task_annotations(
         .push(" AND a.typ='Task' AND a.state<>'Cancelled' AND ");
     crate::annotation::access::push_read_predicate(&mut q, user.into());
     q.push(" ORDER BY a.created, a._id");
-    Ok(q.build_query_as().fetch_all(pool).await?)
+    q.build_query_as().fetch_all(pool).await
 }
 
 /// ProjectDAO.findOneByNameAndOrganization under the requester's access
@@ -104,8 +105,8 @@ pub(crate) async fn find_project_by_name(
     pool: &PgPool,
     user: &AuthUser,
     name: &str,
-) -> ApiResult<Option<(ObjectId, ObjectId)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(ObjectId, ObjectId)>> {
+    sqlx::query_as(
         "SELECT p._id, p._team FROM webknossos.projects_ p
          WHERE p.name=$1 AND p._organization=$2
            AND (p._team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$3)
@@ -117,7 +118,7 @@ pub(crate) async fn find_project_by_name(
     .bind(&user.organization_id)
     .bind(&user.id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// Whether the script exists and its owner belongs to the user's organization.
@@ -125,8 +126,8 @@ pub(crate) async fn is_script_readable(
     pool: &PgPool,
     user: &AuthUser,
     script_id: &ObjectId,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM webknossos.scripts_ s
                    JOIN webknossos.users_ owner ON owner._id=s._owner
                    WHERE s._id=$1 AND owner._organization=$2)",
@@ -134,7 +135,7 @@ pub(crate) async fn is_script_readable(
     .bind(script_id)
     .bind(&user.organization_id)
     .fetch_one(pool)
-    .await?)
+    .await
 }
 
 /// The team's organization and whether the user manages it. `None` if the
@@ -143,8 +144,8 @@ pub(crate) async fn find_team_organization_and_manager(
     pool: &PgPool,
     user: &AuthUser,
     team_id: &ObjectId,
-) -> ApiResult<Option<(String, bool)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(String, bool)>> {
+    sqlx::query_as(
         "SELECT t._organization, EXISTS (SELECT 1 FROM webknossos.user_team_roles r
                WHERE r._user=$2 AND r._team=t._id AND r.isTeamManager)
              FROM webknossos.teams_ t WHERE t._id=$1",
@@ -152,7 +153,7 @@ pub(crate) async fn find_team_organization_and_manager(
     .bind(team_id)
     .bind(&user.id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// TaskDAO.insertOne. `domain` is the trimmed needed-experience domain and
@@ -167,7 +168,7 @@ pub(crate) async fn insert_one(
     domain: &str,
     bounding_box: Option<BoundingBox>,
     created: chrono::DateTime<chrono::Utc>,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     let bbox = bounding_box;
     sqlx::query(
         "INSERT INTO webknossos.tasks(_id,_project,_script,_taskType,neededExperience_domain,neededExperience_value,
@@ -207,7 +208,7 @@ pub(crate) async fn insert_experience_domain(
     connection: &mut PgConnection,
     domain: &str,
     organization_id: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "INSERT INTO webknossos.experienceDomains(domain,_organization) VALUES($1,$2) ON CONFLICT DO NOTHING",
     )
@@ -222,8 +223,8 @@ pub(crate) async fn insert_experience_domain(
 pub(crate) async fn find_dataset_allowed_team_ids(
     pool: &PgPool,
     dataset_id: &ObjectId,
-) -> ApiResult<Vec<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Vec<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT _team FROM webknossos.dataset_allowedTeams WHERE _dataset=$1
          UNION
          SELECT DISTINCT at._team FROM webknossos.folder_allowedTeams at
@@ -233,7 +234,7 @@ pub(crate) async fn find_dataset_allowed_team_ids(
     )
     .bind(dataset_id)
     .fetch_all(pool)
-    .await?)
+    .await
 }
 
 /// Whether the team has active non-admin members outside the dataset's allowed teams.
@@ -241,8 +242,8 @@ pub(crate) async fn has_members_outside_teams(
     pool: &PgPool,
     team: &ObjectId,
     dataset_teams: &[ObjectId],
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM webknossos.users_ u
                    JOIN webknossos.user_team_roles tr ON u._id=tr._user
                    WHERE NOT u.isAdmin AND NOT u.isDeactivated AND tr._team=$1
@@ -251,7 +252,7 @@ pub(crate) async fn has_members_outside_teams(
     .bind(team)
     .bind(dataset_teams)
     .fetch_one(pool)
-    .await?)
+    .await
 }
 
 /// The name of the team, if the user is a member or admin of its organization.
@@ -259,8 +260,8 @@ pub(crate) async fn find_team_name_with_read_access(
     pool: &PgPool,
     user: &AuthUser,
     team: &ObjectId,
-) -> ApiResult<Option<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
         "SELECT t.name FROM webknossos.teams_ t WHERE t._id=$1
                AND (t._id IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$2)
                  OR t._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id=$2 AND isAdmin))",
@@ -268,5 +269,5 @@ pub(crate) async fn find_team_name_with_read_access(
     .bind(team)
     .bind(&user.id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }

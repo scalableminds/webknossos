@@ -6,7 +6,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::{PgConnection, PgPool};
 
-use crate::{error::ApiResult, util::id::ObjectId};
+use crate::util::id::ObjectId;
 
 #[derive(sqlx::FromRow)]
 pub(crate) struct CookieUserRow {
@@ -30,8 +30,8 @@ pub(crate) struct LoginCandidate {
 pub(crate) async fn find_one_for_cookie(
     pool: &PgPool,
     user_id: &str,
-) -> ApiResult<Option<CookieUserRow>> {
-    Ok(sqlx::query_as::<_, CookieUserRow>(
+) -> sqlx::Result<Option<CookieUserRow>> {
+    sqlx::query_as::<_, CookieUserRow>(
         r#"SELECT u._id AS id, u._organization AS organization_id, u.isAdmin AS is_admin,
                  u.isDatasetManager AS is_dataset_manager, m.isSuperUser AS is_superuser,
                  u.loggedOutEverywhereTime AS logged_out_everywhere,
@@ -43,15 +43,15 @@ pub(crate) async fn find_one_for_cookie(
     )
     .bind(user_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// The logout-everywhere cutoff of an active user; `None` if the user is missing or inactive.
 pub(crate) async fn find_logged_out_everywhere_time_of_active_user(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-) -> ApiResult<Option<(Option<DateTime<Utc>>,)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(Option<DateTime<Utc>>,)>> {
+    sqlx::query_as(
         r#"SELECT u.loggedOutEverywhereTime FROM webknossos.users u
            JOIN webknossos.multiUsers m ON m._id = u._multiUser
            JOIN webknossos.organizations o ON o._id = u._organization
@@ -60,19 +60,17 @@ pub(crate) async fn find_logged_out_everywhere_time_of_active_user(
     )
     .bind(user_id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn find_one_multi_user_name_and_email(
     connection: &mut PgConnection,
     multi_user_id: &ObjectId,
-) -> ApiResult<Option<(String, String, String)>> {
-    Ok(sqlx::query_as(
-        "SELECT email, firstName, lastName FROM webknossos.multiUsers_ WHERE _id = $1",
-    )
-    .bind(multi_user_id)
-    .fetch_optional(connection)
-    .await?)
+) -> sqlx::Result<Option<(String, String, String)>> {
+    sqlx::query_as("SELECT email, firstName, lastName FROM webknossos.multiUsers_ WHERE _id = $1")
+        .bind(multi_user_id)
+        .fetch_optional(connection)
+        .await
 }
 
 pub(crate) async fn insert_email_verification_key(
@@ -81,7 +79,7 @@ pub(crate) async fn insert_email_verification_key(
     email: &str,
     multi_user_id: &ObjectId,
     expiry_ms: Option<i64>,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.emailVerificationKeys(_id, key, email, _multiUser, validUntil, isUsed)
            VALUES($1, $2, $3, $4,
@@ -104,8 +102,8 @@ pub(crate) async fn insert_email_verification_key(
 pub(crate) async fn find_login_candidate_by_email(
     pool: &PgPool,
     email: &str,
-) -> ApiResult<Option<LoginCandidate>> {
-    Ok(sqlx::query_as::<_, LoginCandidate>(
+) -> sqlx::Result<Option<LoginCandidate>> {
+    sqlx::query_as::<_, LoginCandidate>(
         r#"SELECT COALESCE(
              (SELECT u._id FROM webknossos.users_ u JOIN webknossos.organizations_ o ON o._id = u._organization
                WHERE u._id = m._lastLoggedInIdentity AND u._multiUser = m._id AND NOT u.isDeactivated),
@@ -117,7 +115,7 @@ pub(crate) async fn find_login_candidate_by_email(
     )
     .bind(email)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// Locks the account row and returns its id, the user's deactivation flag, the
@@ -126,8 +124,8 @@ pub(crate) async fn find_login_state_for_update(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     grace_period_ms: i64,
-) -> ApiResult<Option<(ObjectId, bool, bool, bool)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(ObjectId, bool, bool, bool)>> {
+    sqlx::query_as(
         r#"SELECT m._id, u.isDeactivated, m.isEmailVerified,
              m.emailChangeDate + $2::bigint * INTERVAL '1 millisecond' > statement_timestamp()
            FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON m._id = u._multiUser
@@ -137,14 +135,14 @@ pub(crate) async fn find_login_state_for_update(
     .bind(user_id)
     .bind(grace_period_ms)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn update_last_logged_in_identity(
     connection: &mut PgConnection,
     multi_user_id: &ObjectId,
     user_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.multiUsers SET _lastLoggedInIdentity = $2 WHERE _id = $1")
         .bind(multi_user_id)
         .bind(user_id)

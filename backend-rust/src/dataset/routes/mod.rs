@@ -768,7 +768,7 @@ pub(crate) async fn list_rows(
     let searched_id = tokens
         .first()
         .filter(|s| tokens.len() == 1 && ObjectId::parse(s).is_ok());
-    dao::find_all_compact(pool, user, query, organization, &tokens, searched_id).await
+    Ok(dao::find_all_compact(pool, user, query, organization, &tokens, searched_id).await?)
 }
 
 /// DatasetCompactInfo as serialized by DatasetController.list (compact).

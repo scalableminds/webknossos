@@ -2,51 +2,45 @@
 //! service-key validation, the read callbacks, createTracing and updateAnnotation.
 use sqlx::{PgConnection, PgPool};
 
-use crate::{error::ApiResult, util::id::ObjectId};
+use crate::util::id::ObjectId;
 
 /// TracingStoreService.validateAccess: whether a live tracing store has this key.
-pub(crate) async fn key_is_valid(pool: &PgPool, key: &str) -> ApiResult<bool> {
-    Ok(
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.tracingStores_ WHERE key=$1)")
-            .bind(key)
-            .fetch_one(pool)
-            .await?,
-    )
+pub(crate) async fn key_is_valid(pool: &PgPool, key: &str) -> sqlx::Result<bool> {
+    sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.tracingStores_ WHERE key=$1)")
+        .bind(key)
+        .fetch_one(pool)
+        .await
 }
 
-pub(crate) async fn dataset_exists(pool: &PgPool, id: &ObjectId) -> ApiResult<bool> {
-    Ok(
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE _id=$1)")
-            .bind(id)
-            .fetch_one(pool)
-            .await?,
-    )
+pub(crate) async fn dataset_exists(pool: &PgPool, id: &ObjectId) -> sqlx::Result<bool> {
+    sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ WHERE _id=$1)")
+        .bind(id)
+        .fetch_one(pool)
+        .await
 }
 
 /// The dataset of a live annotation.
 pub(crate) async fn find_dataset_id_for_annotation(
     pool: &PgPool,
     annotation_id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(
-        sqlx::query_scalar("SELECT _dataset FROM webknossos.annotations_ WHERE _id=$1")
-            .bind(annotation_id)
-            .fetch_optional(pool)
-            .await?,
-    )
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar("SELECT _dataset FROM webknossos.annotations_ WHERE _id=$1")
+        .bind(annotation_id)
+        .fetch_optional(pool)
+        .await
 }
 
 /// The `(tracingId, typ, name)` rows of an annotation's layers.
 pub(crate) async fn find_all_layers_for_annotation(
     pool: &PgPool,
     annotation_id: &ObjectId,
-) -> ApiResult<Vec<(String, String, String)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Vec<(String, String, String)>> {
+    sqlx::query_as(
         "SELECT tracingId,typ::text,name FROM webknossos.annotation_layers WHERE _annotation=$1 ORDER BY tracingId",
     )
     .bind(annotation_id)
     .fetch_all(pool)
-    .await?)
+    .await
 }
 
 /// The annotation a tracing id belongs to.
@@ -75,26 +69,26 @@ pub(crate) async fn has_unreadable_layer(
 pub(crate) async fn is_usable_without_voxel_size(
     pool: &PgPool,
     dataset_id: &ObjectId,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT isUsable AND voxelSizeFactor IS NULL FROM webknossos.datasets_ WHERE _id=$1",
     )
     .bind(dataset_id)
     .fetch_one(pool)
-    .await?)
+    .await
 }
 
 /// The (internal) URL of the data store of a dataset.
 pub(crate) async fn find_data_store_url_for_dataset(
     pool: &PgPool,
     dataset_id: &ObjectId,
-) -> ApiResult<Option<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
         "SELECT store.url FROM webknossos.datasets_ dataset JOIN webknossos.dataStores_ store ON store.name=TRIM(dataset._dataStore) WHERE dataset._id=$1",
     )
     .bind(dataset_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 // ---------------------------------------------------------------- updateAnnotation
@@ -105,7 +99,7 @@ pub(crate) async fn find_data_store_url_for_dataset(
 pub(crate) async fn lock_annotation_layers(
     connection: &mut PgConnection,
     annotation_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
         .bind(format!("annotation-layers:{annotation_id}"))
         .execute(connection)
@@ -119,7 +113,7 @@ pub(crate) async fn lock_annotation_layers(
 pub(crate) async fn lock_annotation(
     connection: &mut PgConnection,
     annotation_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("SELECT _id FROM webknossos.annotations WHERE _id=$1 FOR UPDATE")
         .bind(annotation_id)
         .fetch_optional(connection)
@@ -130,20 +124,18 @@ pub(crate) async fn lock_annotation(
 pub(crate) async fn find_all_tracing_ids_for_annotation(
     connection: &mut PgConnection,
     annotation_id: &ObjectId,
-) -> ApiResult<Vec<String>> {
-    Ok(sqlx::query_scalar(
-        "SELECT tracingId FROM webknossos.annotation_layers WHERE _annotation=$1",
-    )
-    .bind(annotation_id)
-    .fetch_all(connection)
-    .await?)
+) -> sqlx::Result<Vec<String>> {
+    sqlx::query_scalar("SELECT tracingId FROM webknossos.annotation_layers WHERE _annotation=$1")
+        .bind(annotation_id)
+        .fetch_all(connection)
+        .await
 }
 
 pub(crate) async fn delete_layers_except(
     connection: &mut PgConnection,
     annotation_id: &ObjectId,
     keep_tracing_ids: &[&str],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "DELETE FROM webknossos.annotation_layers WHERE _annotation=$1 AND NOT (tracingId=ANY($2::text[]))",
     )
@@ -159,7 +151,7 @@ pub(crate) async fn update_layer_name(
     annotation_id: &ObjectId,
     tracing_id: &str,
     name: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.annotation_layers SET name=$3 WHERE _annotation=$1 AND tracingId=$2",
     )
@@ -179,7 +171,7 @@ pub(crate) async fn insert_layer(
     tracing_id: &str,
     typ: &str,
     name: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics) VALUES($1,$2,$3::webknossos.ANNOTATION_LAYER_TYPE,$4,'{}'::jsonb)")
         .bind(annotation_id).bind(tracing_id).bind(typ).bind(name)
         .execute(connection).await?;
@@ -190,7 +182,7 @@ pub(crate) async fn update_description(
     connection: &mut PgConnection,
     annotation_id: &ObjectId,
     description: String,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.annotations SET description=$2 WHERE _id=$1")
         .bind(annotation_id)
         .bind(description)

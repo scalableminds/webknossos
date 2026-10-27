@@ -6,7 +6,6 @@ use sqlx::PgPool;
 use super::{Filters, TargetUser};
 use crate::{
     auth::AuthUser,
-    error::ApiResult,
     sql::{PushArg, Requester, Sql},
     util::id::ObjectId,
 };
@@ -58,7 +57,7 @@ pub(super) async fn find_target_user(
     pool: &PgPool,
     requester: &AuthUser,
     id: &ObjectId,
-) -> ApiResult<Option<TargetUser>> {
+) -> sqlx::Result<Option<TargetUser>> {
     let mut q = Sql::new("SELECT u._id AS id, ");
     push_manageable(&mut q, requester.into());
     q.push(
@@ -75,29 +74,25 @@ pub(super) async fn find_target_user(
     .push(" OR ");
     push_manageable(&mut q, requester.into());
     q.push(")");
-    Ok(q.build_query_as::<TargetUser>()
-        .fetch_optional(pool)
-        .await?)
+    q.build_query_as::<TargetUser>().fetch_optional(pool).await
 }
 
 /// Creation time and duration in milliseconds of all time spans of the user.
 pub(super) async fn find_all_created_and_time_for_user(
     pool: &PgPool,
     user_id: &ObjectId,
-) -> ApiResult<Vec<(DateTime<Utc>, i64)>> {
-    Ok(
-        sqlx::query_as("SELECT created, time FROM webknossos.timespans_ WHERE _user = $1")
-            .bind(user_id)
-            .fetch_all(pool)
-            .await?,
-    )
+) -> sqlx::Result<Vec<(DateTime<Utc>, i64)>> {
+    sqlx::query_as("SELECT created, time FROM webknossos.timespans_ WHERE _user = $1")
+        .bind(user_id)
+        .fetch_all(pool)
+        .await
 }
 
 pub(super) async fn find_all_span_json_for_user(
     pool: &PgPool,
     user_id: &ObjectId,
     filters: &Filters,
-) -> ApiResult<Vec<Value>> {
+) -> sqlx::Result<Vec<Value>> {
     let mut q = Sql::new(
         r#"SELECT jsonb_build_object(
              'userId', ts._user, 'userEmail', mu.email, 'datasetOrganization', o._id,
@@ -120,14 +115,14 @@ pub(super) async fn find_all_span_json_for_user(
     q.push_bind(user_id).push(" AND ");
     push_span_filter(&mut q, filters);
     q.push(" ORDER BY ts.created, ts._id");
-    Ok(q.build_query_scalar().fetch_all(pool).await?)
+    q.build_query_scalar().fetch_all(pool).await
 }
 
 pub(super) async fn find_all_summed_by_annotation_json_for_user(
     pool: &PgPool,
     user_id: &ObjectId,
     filters: &Filters,
-) -> ApiResult<Vec<Value>> {
+) -> sqlx::Result<Vec<Value>> {
     let mut q = Sql::new(
         "WITH timeSummedPerAnnotation AS (
              SELECT a._id AS _annotation, t._id AS _task, p.name AS projectName, SUM(ts.time) AS timeSummed
@@ -150,7 +145,7 @@ pub(super) async fn find_all_summed_by_annotation_json_for_user(
            GROUP BY ti._annotation, ti._task, ti.projectName, ti.timeSummed
            ORDER BY ti._annotation"#,
     );
-    Ok(q.build_query_scalar().fetch_all(pool).await?)
+    q.build_query_scalar().fetch_all(pool).await
 }
 
 /// UserDAO.findAll (or findAllByTeams: active members of the given teams)
@@ -159,7 +154,7 @@ pub(super) async fn find_all_listable_user_ids(
     pool: &PgPool,
     requester: &AuthUser,
     teams: &[ObjectId],
-) -> ApiResult<Vec<ObjectId>> {
+) -> sqlx::Result<Vec<ObjectId>> {
     let mut q = Sql::new(
         "WITH listable AS (
              SELECT u._id, u.isAdmin, u.isDeactivated FROM webknossos.users_ u
@@ -185,7 +180,7 @@ pub(super) async fn find_all_listable_user_ids(
         .push("::text[]) AND NOT l.isDeactivated");
     }
     q.push(" UNION SELECT _id FROM listable WHERE isAdmin AND NOT isDeactivated");
-    Ok(q.build_query_scalar().fetch_all(pool).await?)
+    q.build_query_scalar().fetch_all(pool).await
 }
 
 /// The tracked time and annotation count per user, within the filters.
@@ -193,7 +188,7 @@ pub(super) async fn find_all_overview_json(
     pool: &PgPool,
     users: &[ObjectId],
     filters: &Filters,
-) -> ApiResult<Vec<Value>> {
+) -> sqlx::Result<Vec<Value>> {
     let mut q = Sql::new(
         "SELECT jsonb_build_object(
              'user', jsonb_build_object('id', u._id, 'firstName', mu.firstName,
@@ -213,5 +208,5 @@ pub(super) async fn find_all_overview_json(
         " GROUP BY u._id, mu.firstName, mu.lastName, mu.email
            ORDER BY u._id",
     );
-    Ok(q.build_query_scalar().fetch_all(pool).await?)
+    q.build_query_scalar().fetch_all(pool).await
 }

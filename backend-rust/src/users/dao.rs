@@ -9,7 +9,6 @@ use sqlx::{PgConnection, PgExecutor, PgPool};
 
 use crate::{
     auth::AuthUser,
-    error::ApiResult,
     sql::{Arg, PushArg, Requester, Sql},
     util::id::ObjectId,
 };
@@ -174,14 +173,14 @@ pub(crate) async fn find_one_document(
     pool: &PgPool,
     requester: &AuthUser,
     id: &ObjectId,
-) -> ApiResult<Option<Value>> {
-    Ok(sqlx::query_scalar(USER_DOCUMENT)
+) -> sqlx::Result<Option<Value>> {
+    sqlx::query_scalar(USER_DOCUMENT)
         .bind(&requester.id)
         .bind(&requester.organization_id)
         .bind(requester.is_admin)
         .bind(id)
         .fetch_optional(pool)
-        .await?)
+        .await
 }
 
 pub(crate) async fn find_all_documents(
@@ -190,8 +189,8 @@ pub(crate) async fn find_all_documents(
     is_editable: Option<bool>,
     is_team_manager_or_admin: Option<bool>,
     is_admin: Option<bool>,
-) -> ApiResult<Vec<Value>> {
-    Ok(sqlx::query_scalar(USER_LIST)
+) -> sqlx::Result<Vec<Value>> {
+    sqlx::query_scalar(USER_LIST)
         .bind(&requester.id)
         .bind(&requester.organization_id)
         .bind(requester.is_admin)
@@ -200,7 +199,7 @@ pub(crate) async fn find_all_documents(
         .bind(is_team_manager_or_admin)
         .bind(is_admin)
         .fetch_all(pool)
-        .await?)
+        .await
 }
 
 /// UserDAO.updateLastActivity. `GREATEST` keeps concurrent fire-and-forget
@@ -225,7 +224,7 @@ pub(crate) async fn update_last_task_type_if_editable(
     id: &ObjectId,
     last_task_type_id: &Option<ObjectId>,
     requester: &AuthUser,
-) -> ApiResult<u64> {
+) -> sqlx::Result<u64> {
     let result = sqlx::query(
         r#"
         UPDATE webknossos.users AS target SET lastTaskTypeId = $2
@@ -256,7 +255,7 @@ pub(crate) async fn update_novel_user_experience_infos(
     pool: &PgPool,
     user_id: &ObjectId,
     infos: Value,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.multiUsers AS multi SET novelUserExperienceInfos = $2 FROM \
          webknossos.users_ AS usr WHERE usr._id = $1 AND usr._multiUser = multi._id \
@@ -273,7 +272,7 @@ pub(crate) async fn update_selected_theme(
     pool: &PgPool,
     user_id: &ObjectId,
     theme: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.multiUsers AS multi SET selectedTheme = \
          $2::webknossos.THEME FROM webknossos.users_ AS usr WHERE usr._id = $1 AND \
@@ -291,18 +290,18 @@ pub(crate) async fn find_organization_id_if_readable(
     connection: &mut PgConnection,
     id: &ObjectId,
     requester: &AuthUser,
-) -> ApiResult<Option<String>> {
+) -> sqlx::Result<Option<String>> {
     let mut q = Sql::new("SELECT usr._organization FROM webknossos.users_ AS usr WHERE usr._id = ");
     q.push_bind(id).push(" AND ");
     push_read_access(&mut q, (&requester.id).into());
-    Ok(q.build_query_scalar().fetch_optional(connection).await?)
+    q.build_query_scalar().fetch_optional(connection).await
 }
 
 /// Admin/owner counts and the user limit are organization-wide invariants.
 pub(crate) async fn lock_organization(
     connection: &mut PgConnection,
     organization_id: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("SELECT _id FROM webknossos.organizations WHERE _id = $1 FOR UPDATE")
         .bind(organization_id)
         .execute(connection)
@@ -314,8 +313,8 @@ pub(crate) async fn lock_organization(
 pub(crate) async fn find_one_target_for_update(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<Option<Target>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<Target>> {
+    sqlx::query_as(
         r#"SELECT u._organization AS organization, u._multiUser AS multi_user,
              u.isAdmin AS is_admin, u.isDatasetManager AS is_dataset_manager,
              u.isDeactivated AS is_deactivated, u.isOrganizationOwner AS is_organization_owner,
@@ -327,7 +326,7 @@ pub(crate) async fn find_one_target_for_update(
     )
     .bind(id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 /// The user's team memberships, with whether the requester can manage each team.
@@ -335,7 +334,7 @@ pub(crate) async fn find_all_memberships_for_user(
     connection: &mut PgConnection,
     requester: &AuthUser,
     id: &ObjectId,
-) -> ApiResult<Vec<OldMembership>> {
+) -> sqlx::Result<Vec<OldMembership>> {
     let mut q = Sql::new(
         "SELECT role._team AS team, role.isTeamManager AS is_team_manager,
              team._id IS NOT NULL AS team_exists, COALESCE(",
@@ -349,13 +348,13 @@ pub(crate) async fn find_all_memberships_for_user(
     )
     .push_bind(id)
     .push(" ORDER BY role._team");
-    Ok(q.build_query_as().fetch_all(connection).await?)
+    q.build_query_as().fetch_all(connection).await
 }
 
 pub(crate) async fn find_all_experiences_for_user(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<BTreeMap<String, i32>> {
+) -> sqlx::Result<BTreeMap<String, i32>> {
     Ok(sqlx::query_as::<_, (String, i32)>(
         "SELECT domain, value FROM webknossos.user_experiences WHERE _user = $1",
     )
@@ -370,8 +369,8 @@ pub(crate) async fn shares_managed_team(
     connection: &mut PgConnection,
     id: &ObjectId,
     requester_id: &ObjectId,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         r#"SELECT EXISTS (SELECT 1 FROM webknossos.user_team_roles AS target_role
              JOIN webknossos.user_team_roles AS requester_role ON requester_role._team = target_role._team
              WHERE target_role._user = $1 AND requester_role._user = $2 AND requester_role.isTeamManager)"#,
@@ -379,15 +378,15 @@ pub(crate) async fn shares_managed_team(
     .bind(id)
     .bind(requester_id)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn is_team_manager_in_organization(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     organization_id: &str,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar::<_, bool>(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar::<_, bool>(
         r#"SELECT EXISTS (SELECT 1 FROM webknossos.user_team_roles AS role
                          JOIN webknossos.teams_ AS team ON team._id = role._team
                          WHERE role._user = $1 AND role.isTeamManager AND team._organization = $2)"#,
@@ -395,76 +394,74 @@ pub(crate) async fn is_team_manager_in_organization(
     .bind(user_id)
     .bind(organization_id)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 /// The password hasher and hash of the account.
 pub(crate) async fn find_password_info(
     connection: &mut PgConnection,
     multi_user_id: &ObjectId,
-) -> ApiResult<(String, String)> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<(String, String)> {
+    sqlx::query_as(
         "SELECT passwordInfo_hasher::text, passwordInfo_password FROM webknossos.multiUsers WHERE _id = $1",
     )
     .bind(multi_user_id)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn multi_user_email_exists(
     connection: &mut PgConnection,
     email: &str,
-) -> ApiResult<bool> {
-    Ok(
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.multiUsers_ WHERE email = $1)")
-            .bind(email)
-            .fetch_one(connection)
-            .await?,
-    )
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.multiUsers_ WHERE email = $1)")
+        .bind(email)
+        .fetch_one(connection)
+        .await
 }
 
 /// The ids of the user's active task annotations.
 pub(crate) async fn find_active_task_ids_for_user(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<Vec<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Vec<String>> {
+    sqlx::query_scalar(
         "SELECT _task FROM webknossos.annotations_ WHERE _user = $1 AND typ = 'Task' AND state = 'Active' AND _task IS NOT NULL ORDER BY created, _id",
     )
     .bind(id)
     .fetch_all(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn count_admins(
     connection: &mut PgConnection,
     organization_id: &str,
-) -> ApiResult<i64> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<i64> {
+    sqlx::query_scalar(
         "SELECT COUNT(*) FROM webknossos.users_ WHERE _organization = $1 AND isAdmin AND NOT isUnlisted",
     )
     .bind(organization_id)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn count_owners(
     connection: &mut PgConnection,
     organization_id: &str,
-) -> ApiResult<i64> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<i64> {
+    sqlx::query_scalar(
         "SELECT COUNT(*) FROM webknossos.users_ WHERE _organization = $1 AND isOrganizationOwner AND NOT isUnlisted",
     )
     .bind(organization_id)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn update_email(
     connection: &mut PgConnection,
     multi_user_id: &ObjectId,
     email: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.multiUsers SET email = $2, isEmailVerified = FALSE, \
          emailChangeDate = NOW() WHERE _id = $1",
@@ -483,7 +480,7 @@ pub(crate) async fn update_user_flags(
     is_dataset_manager: bool,
     is_deactivated: bool,
     last_task_type_id: &Option<ObjectId>,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.users SET isAdmin = $2, isDatasetManager = $3, \
          isDeactivated = $4, lastTaskTypeId = $5 WHERE _id = $1",
@@ -503,7 +500,7 @@ pub(crate) async fn update_names(
     multi_user_id: &ObjectId,
     first_name: &str,
     last_name: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.multiUsers SET firstName = $2, lastName = $3 WHERE _id = $1")
         .bind(multi_user_id)
         .bind(first_name)
@@ -519,7 +516,7 @@ pub(crate) async fn insert_team_membership_if_team_exists(
     id: &ObjectId,
     team: &ObjectId,
     is_team_manager: &bool,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "INSERT INTO webknossos.user_team_roles (_user, _team, isTeamManager) SELECT \
          $1, t._id, $3 FROM webknossos.teams_ AS t WHERE t._id = $2",
@@ -537,18 +534,18 @@ pub(crate) async fn is_readable(
     connection: &mut PgConnection,
     id: &ObjectId,
     requester: &AuthUser,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.users_ AS usr WHERE usr._id = ");
     q.push_bind(id).push(" AND ");
     push_read_access(&mut q, (&requester.id).into());
     q.push(")");
-    Ok(q.build_query_scalar().fetch_one(connection).await?)
+    q.build_query_scalar().fetch_one(connection).await
 }
 
 pub(crate) async fn delete_experiences_for_user(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("DELETE FROM webknossos.user_experiences WHERE _user = $1")
         .bind(id)
         .execute(connection)
@@ -561,7 +558,7 @@ pub(crate) async fn insert_experience(
     id: &ObjectId,
     domain: &str,
     value: &i32,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "INSERT INTO webknossos.user_experiences (_user, domain, value) VALUES ($1, $2, $3)",
     )
@@ -577,7 +574,7 @@ pub(crate) async fn insert_experience_domain(
     connection: &mut PgConnection,
     domain: &str,
     organization_id: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "INSERT INTO webknossos.experienceDomains (domain, _organization) VALUES ($1, \
          $2) ON CONFLICT DO NOTHING",
@@ -594,11 +591,11 @@ pub(crate) async fn find_one_team_for_share(
     connection: &mut PgConnection,
     requester: &AuthUser,
     team_id: &ObjectId,
-) -> ApiResult<Option<(String, String, bool)>> {
+) -> sqlx::Result<Option<(String, String, bool)>> {
     let mut q = Sql::new("SELECT team.name, team._organization, ");
     push_team_manageable(&mut q, requester.into());
     q.push(" FROM webknossos.teams_ AS team WHERE team._id = ")
         .push_bind(team_id)
         .push(" FOR SHARE OF team");
-    Ok(q.build_query_as().fetch_optional(connection).await?)
+    q.build_query_as().fetch_optional(connection).await
 }

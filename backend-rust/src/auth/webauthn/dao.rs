@@ -6,32 +6,32 @@
 use serde_json::Value as JsonValue;
 use sqlx::{PgExecutor, PgPool};
 
-use crate::{error::ApiResult, util::id::ObjectId};
+use crate::util::id::ObjectId;
 
 /// Non-deleted credentials of an account (`findAllForUser`): id and serialized attested credential.
 pub(crate) async fn find_all_for_multi_user<'e>(
     executor: impl PgExecutor<'e>,
     multi_user: &ObjectId,
-) -> ApiResult<Vec<(String, Vec<u8>)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Vec<(String, Vec<u8>)>> {
+    sqlx::query_as(
         "SELECT _id, serializedAttestedCredential FROM webknossos.webauthnCredentials_ WHERE _multiUser = $1 ORDER BY _id",
     )
     .bind(multi_user)
     .fetch_all(executor)
-    .await?)
+    .await
 }
 
 /// The account of a user: id, email and full name.
 pub(crate) async fn find_multi_user_of_user(
     pool: &PgPool,
     user_id: &ObjectId,
-) -> ApiResult<Option<(ObjectId, String, String)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(ObjectId, String, String)>> {
+    sqlx::query_as(
         "SELECT m._id, m.email, m.firstName || ' ' || m.lastName FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON m._id = u._multiUser WHERE u._id = $1",
     )
     .bind(user_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -71,13 +71,11 @@ pub(crate) async fn insert_credential(
 pub(crate) async fn find_one_multi_user(
     pool: &PgPool,
     multi_user_id: &ObjectId,
-) -> ApiResult<Option<(ObjectId, Option<ObjectId>)>> {
-    Ok(sqlx::query_as(
-        "SELECT _id, _lastLoggedInIdentity FROM webknossos.multiUsers_ WHERE _id = $1",
-    )
-    .bind(multi_user_id)
-    .fetch_optional(pool)
-    .await?)
+) -> sqlx::Result<Option<(ObjectId, Option<ObjectId>)>> {
+    sqlx::query_as("SELECT _id, _lastLoggedInIdentity FROM webknossos.multiUsers_ WHERE _id = $1")
+        .bind(multi_user_id)
+        .fetch_optional(pool)
+        .await
 }
 
 /// The credential of an account by its credential id: id, serialized attested
@@ -86,14 +84,14 @@ pub(crate) async fn find_one_by_credential_id(
     pool: &PgPool,
     multi_user_id: &ObjectId,
     credential_id: &[u8],
-) -> ApiResult<Option<(String, Vec<u8>, bool, i32)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(String, Vec<u8>, bool, i32)>> {
+    sqlx::query_as(
         "SELECT _id, serializedAttestedCredential, backupEligible, signatureCount FROM webknossos.webauthnCredentials_ WHERE _multiUser = $1 AND credentialId = $2",
     )
     .bind(multi_user_id)
     .bind(credential_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 pub(crate) async fn update_signature_count(

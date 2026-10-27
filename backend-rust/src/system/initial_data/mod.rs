@@ -312,7 +312,7 @@ async fn user_for_email(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     email: &str,
 ) -> ApiResult<Option<String>> {
-    dao::find_user_id_by_multi_user_email(tx, email).await
+    Ok(dao::find_user_id_by_multi_user_email(tx, email).await?)
 }
 
 async fn insert_default_user(

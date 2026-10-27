@@ -6,7 +6,6 @@ use sqlx::{PgConnection, PgPool};
 use super::Filters;
 use crate::{
     auth::AuthUser,
-    error::ApiResult,
     sql::{PushArg, Requester, Sql},
     util::id::ObjectId,
 };
@@ -56,12 +55,12 @@ pub(crate) async fn count(
     typ: &str,
     filters: &Filters,
     shared: bool,
-) -> ApiResult<i64> {
+) -> sqlx::Result<i64> {
     let mut q = Sql::new("SELECT count(*) FROM webknossos.annotations_ a WHERE ");
     push_list_grant(&mut q, user.into(), shared);
     push_optional_filters(&mut q, owner, filters);
     q.push(" AND a.typ::text=").push_bind(typ);
-    Ok(q.build_query_scalar().fetch_one(connection).await?)
+    q.build_query_scalar().fetch_one(connection).await
 }
 
 /// One page of the compact annotation JSON.
@@ -73,7 +72,7 @@ pub(crate) async fn find_all_compact(
     shared: bool,
     limit: i64,
     offset: i64,
-) -> ApiResult<Vec<Value>> {
+) -> sqlx::Result<Vec<Value>> {
     // Two steps: select the page of ids over narrow rows first, then build the JSON (layers,
     // tags, shared teams) only for that page instead of for every row up to the offset.
     let mut q = Sql::new(
@@ -114,7 +113,7 @@ pub(crate) async fn find_all_compact(
         ORDER BY a._id DESC"#,
     );
     // Run inside `GENERIC_PLANS` (see there).
-    Ok(q.build_query_scalar().fetch_all(connection).await?)
+    q.build_query_scalar().fetch_all(connection).await
 }
 
 /// Whether the user manages the target user (or is admin of its organization)
@@ -124,8 +123,8 @@ pub(crate) async fn find_user_access(
     pool: &PgPool,
     user: &AuthUser,
     id: &ObjectId,
-) -> ApiResult<Option<(bool, bool)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(bool, bool)>> {
+    sqlx::query_as(
         r#"SELECT ($3 OR EXISTS(SELECT 1 FROM webknossos.user_team_roles target_role
         JOIN webknossos.teams_ team ON team._id=target_role._team AND team._organization=$2
         JOIN webknossos.user_team_roles requester_role ON requester_role._team=team._id AND requester_role._user=$1 AND requester_role.isTeamManager
@@ -140,7 +139,7 @@ pub(crate) async fn find_user_access(
     .bind(user.is_admin)
     .bind(id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// One page of the ids of the owner's Task annotations the user may read.
@@ -151,7 +150,7 @@ pub(crate) async fn find_all_task_annotation_ids(
     filters: &Filters,
     limit: i64,
     offset: i64,
-) -> ApiResult<Vec<ObjectId>> {
+) -> sqlx::Result<Vec<ObjectId>> {
     let mut q = Sql::new("SELECT a._id FROM webknossos.annotations_ a WHERE ");
     crate::annotation::access::push_read_predicate(&mut q, user.into());
     q.push(" AND a._user=")
@@ -162,7 +161,7 @@ pub(crate) async fn find_all_task_annotation_ids(
         .push_bind(limit)
         .push(" OFFSET ")
         .push_bind(offset);
-    Ok(q.build_query_scalar().fetch_all(pool).await?)
+    q.build_query_scalar().fetch_all(pool).await
 }
 
 /// The team of the task's project, if the task is live and the user belongs to
@@ -171,8 +170,8 @@ pub(crate) async fn find_task_team(
     pool: &PgPool,
     user: &AuthUser,
     task_id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT p._team FROM webknossos.tasks_ task JOIN webknossos.projects_ p ON \
             p._id=task._project JOIN webknossos.teams_ team ON team._id=p._team AND \
             team._organization=$2 WHERE task._id=$4 AND p._organization=$2 AND ($3 OR \
@@ -184,7 +183,7 @@ pub(crate) async fn find_task_team(
     .bind(user.is_admin)
     .bind(task_id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// The ids of the task's non-cancelled annotations the user may read.
@@ -192,12 +191,12 @@ pub(crate) async fn find_all_annotation_ids_for_task(
     pool: &PgPool,
     user: &AuthUser,
     task_id: &ObjectId,
-) -> ApiResult<Vec<ObjectId>> {
+) -> sqlx::Result<Vec<ObjectId>> {
     let mut q = Sql::new("SELECT a._id FROM webknossos.annotations_ a WHERE a._task=");
     q.push_bind(task_id)
         .push(" AND a.typ='Task' AND a.state<>'Cancelled' AND ");
     crate::annotation::access::push_read_predicate(&mut q, user.into());
-    Ok(q.build_query_scalar().fetch_all(pool).await?)
+    q.build_query_scalar().fetch_all(pool).await
 }
 
 /// The annotation as `publicWrites` renders it, without owner, contributors,
@@ -206,7 +205,7 @@ pub(crate) async fn find_full_json(
     connection: &mut PgConnection,
     viewer: Option<&ObjectId>,
     id: &ObjectId,
-) -> ApiResult<Option<Value>> {
+) -> sqlx::Result<Option<Value>> {
     let mut q = Sql::new(
         r#"SELECT jsonb_build_object('modified',floor(extract(epoch FROM a.modified)*1000)::bigint,'created',floor(extract(epoch FROM a.created)*1000)::bigint,
         'state',a.state,'isLockedByOwner',a.isLockedByOwner,'id',a._id,'name',a.name,'description',a.description,
@@ -234,44 +233,42 @@ pub(crate) async fn find_full_json(
         FROM webknossos.annotations_ a JOIN webknossos.datasets_ d ON d._id=a._dataset JOIN webknossos.organizations_ organization ON organization._id=d._organization WHERE a._id="#,
         )
         .push_bind(id);
-    Ok(q.build_query_scalar().fetch_optional(connection).await?)
+    q.build_query_scalar().fetch_optional(connection).await
 }
 
 /// The ids of the annotation's listed contributors.
 pub(crate) async fn find_contributor_ids(
     connection: &mut PgConnection,
     annotation_id: &ObjectId,
-) -> ApiResult<Vec<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Vec<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT u._id FROM webknossos.annotation_contributors contributor JOIN \
             webknossos.users_ u ON u._id=contributor._user WHERE contributor._annotation=$1 AND \
             NOT u.isUnlisted ORDER BY u._id",
     )
     .bind(annotation_id)
     .fetch_all(connection)
-    .await?)
+    .await
 }
 
 /// The trimmed name of the dataset's data store.
 pub(crate) async fn find_dataset_data_store(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<String> {
-    Ok(
-        sqlx::query_scalar("SELECT trim(_dataStore) FROM webknossos.datasets_ WHERE _id=$1")
-            .bind(dataset_id)
-            .fetch_one(connection)
-            .await?,
-    )
+) -> sqlx::Result<String> {
+    sqlx::query_scalar("SELECT trim(_dataStore) FROM webknossos.datasets_ WHERE _id=$1")
+        .bind(dataset_id)
+        .fetch_one(connection)
+        .await
 }
 
 /// The user as the compact JSON `publicWrites` renders.
 pub(crate) async fn find_compact_user(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<Option<Value>> {
-    Ok(sqlx::query_scalar(COMPACT_USER)
+) -> sqlx::Result<Option<Value>> {
+    sqlx::query_scalar(COMPACT_USER)
         .bind(id)
         .fetch_optional(connection)
-        .await?)
+        .await
 }

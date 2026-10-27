@@ -108,7 +108,7 @@ async fn complete(
 }
 
 async fn dataset(pool: &PgPool, id: &ObjectId) -> ApiResult<Option<DatasetConfiguration>> {
-    dao::find_configuration(pool, id).await
+    Ok(dao::find_configuration(pool, id).await?)
 }
 
 async fn read(

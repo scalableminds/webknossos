@@ -2,7 +2,7 @@
 use sqlx::{PgConnection, PgPool};
 use webknossos_common::enums::LayerAttachmentType;
 
-use crate::{error::ApiResult, sql::Sql, util::id::ObjectId};
+use crate::{sql::Sql, util::id::ObjectId};
 
 /// One attachment row (the table's primary key).
 /// The `dataset_layer_attachments` row of `dataset`'s layer `layer` with
@@ -33,9 +33,9 @@ pub(crate) async fn existing_attachment_exists<'e>(
     layer: &str,
     typ: LayerAttachmentType,
     name: &str,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     let name = (!typ.is_singleton()).then_some(name);
-    Ok(sqlx::query_scalar(
+    sqlx::query_scalar(
         r#"SELECT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments
              WHERE _dataset = $1 AND layerName = $2 AND type = $3::webknossos.LAYER_ATTACHMENT_TYPE
                AND ($4::text IS NULL OR name = $4) AND NOT uploadToPathIsPending AND NOT uploadIsPending)"#,
@@ -45,7 +45,7 @@ pub(crate) async fn existing_attachment_exists<'e>(
     .bind(typ.as_str())
     .bind(name)
     .fetch_one(executor)
-    .await?)
+    .await
 }
 
 pub(crate) async fn delete_pending_attachment(
@@ -54,7 +54,7 @@ pub(crate) async fn delete_pending_attachment(
     layer: &str,
     typ: &str,
     name: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     let mut q = Sql::new("DELETE FROM webknossos.dataset_layer_attachments WHERE ");
     push_attachment_key(&mut q, dataset, layer, typ, name);
     q.push(" AND (uploadIsPending OR uploadToPathIsPending)");
@@ -68,12 +68,12 @@ pub(crate) async fn pending_attachment_exists(
     layer: &str,
     typ: &str,
     name: &str,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     let mut q =
         Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.dataset_layer_attachments WHERE ");
     push_attachment_key(&mut q, dataset, layer, typ, name);
     q.push(" AND (uploadIsPending OR uploadToPathIsPending))");
-    Ok(q.build_query_scalar().fetch_one(connection).await?)
+    q.build_query_scalar().fetch_one(connection).await
 }
 
 /// DatasetLayerAttachmentDAO.insertWithUploadPending (credentialId unset).
@@ -85,7 +85,7 @@ pub(crate) async fn insert_with_upload_pending(
     path: &str,
     typ: &str,
     data_format: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.dataset_layer_attachments (_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending, uploadIsPending)
            VALUES ($1, $2, $3, $4, $5::webknossos.LAYER_ATTACHMENT_TYPE, $6::webknossos.LAYER_ATTACHMENT_DATAFORMAT, false, true)"#,
@@ -112,7 +112,7 @@ pub(crate) async fn finish_upload(
     typ: &str,
     name: &str,
     path: &str,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     let mut q = Sql::new(
         "UPDATE webknossos.dataset_layer_attachments \
          SET uploadToPathIsPending = false, uploadIsPending = false, path = ",

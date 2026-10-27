@@ -8,7 +8,6 @@ use super::{CompactDataset, DELETED_BY_USER, ListQuery, UNREPORTED};
 use crate::{
     auth::AuthUser,
     dataset::dao::{push_edit_predicate, push_read_predicate},
-    error::ApiResult,
     sql::Sql,
     util::id::ObjectId,
 };
@@ -18,7 +17,7 @@ pub(crate) async fn find_id_by_import_url(
     pool: &PgPool,
     user: &AuthUser,
     import_url: &str,
-) -> ApiResult<Option<ObjectId>> {
+) -> sqlx::Result<Option<ObjectId>> {
     let mut q = Sql::new("SELECT d._id FROM webknossos.datasets_ d WHERE ");
     push_read_predicate(&mut q, (&user.id).into(), None);
     q.push(" AND d._organization=")
@@ -26,7 +25,7 @@ pub(crate) async fn find_id_by_import_url(
         .push(" AND d.importURL=")
         .push_bind(import_url)
         .push(" ORDER BY d.created,d._id LIMIT 1");
-    Ok(q.build_query_scalar().fetch_optional(pool).await?)
+    q.build_query_scalar().fetch_optional(pool).await
 }
 
 /// The organization of the oldest dataset with this name that the user can read.
@@ -35,13 +34,13 @@ pub(crate) async fn find_organization_by_name(
     user: Option<&AuthUser>,
     sharing_token: Option<&str>,
     name: &str,
-) -> ApiResult<Option<String>> {
+) -> sqlx::Result<Option<String>> {
     let mut q = Sql::new("SELECT d._organization FROM webknossos.datasets_ d WHERE ");
     push_read_predicate(&mut q, user.map(|u| &u.id).into(), sharing_token);
     q.push(" AND d.name=")
         .push_bind(name)
         .push(" ORDER BY d.created LIMIT 1");
-    Ok(q.build_query_scalar().fetch_optional(pool).await?)
+    q.build_query_scalar().fetch_optional(pool).await
 }
 
 /// The disambiguation answer for a dataset (DatasetController.getDatasetIdFromNameAndOrganization).
@@ -59,8 +58,8 @@ pub(crate) async fn find_by_directory_name(
     pool: &PgPool,
     organization: &str,
     name: &str,
-) -> ApiResult<Option<DatasetIdentity>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<DatasetIdentity>> {
+    sqlx::query_as(
         "SELECT \
             d._id AS id,d.name,d._organization AS organization,d.directoryName AS directory_name \
             FROM webknossos.datasets_ d JOIN webknossos.organizations_ o ON \
@@ -70,7 +69,7 @@ pub(crate) async fn find_by_directory_name(
     .bind(organization)
     .bind(name)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// The active identities of the requester's multi-user in `organization`.
@@ -78,8 +77,8 @@ pub(crate) async fn find_identities_in_organization(
     pool: &PgPool,
     user_id: &ObjectId,
     organization: &str,
-) -> ApiResult<Vec<AuthUser>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Vec<AuthUser>> {
+    sqlx::query_as(
         "SELECT identity._id AS id,identity._organization AS \
                 organization_id,identity.isAdmin AS is_admin,identity.isDatasetManager AS \
                 is_dataset_manager,multi.isSuperUser AS is_superuser FROM webknossos.users_ \
@@ -92,20 +91,20 @@ pub(crate) async fn find_identities_in_organization(
     .bind(user_id)
     .bind(organization)
     .fetch_all(pool)
-    .await?)
+    .await
 }
 
 /// (metadata, folder, organization, created) of the dataset.
 pub(crate) async fn find_metadata_fields(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<(Value, ObjectId, String, chrono::DateTime<chrono::Utc>)> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<(Value, ObjectId, String, chrono::DateTime<chrono::Utc>)> {
+    sqlx::query_as(
         "SELECT metadata,_folder,_organization,created FROM webknossos.datasets_ WHERE _id=$1",
     )
     .bind(dataset_id)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -119,7 +118,7 @@ pub(crate) async fn update_metadata(
     tags: Vec<String>,
     metadata: Value,
     folder: ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.datasets SET \
             description=$2,name=$3,sortingKey=$4,isPublic=$5,tags=$6,metadata=$7,_folder=$8 \
@@ -141,13 +140,11 @@ pub(crate) async fn update_metadata(
 pub(crate) async fn find_organization_id(
     pool: &PgPool,
     dataset_id: &ObjectId,
-) -> ApiResult<String> {
-    Ok(
-        sqlx::query_scalar("SELECT _organization FROM webknossos.datasets_ WHERE _id=$1")
-            .bind(dataset_id)
-            .fetch_one(pool)
-            .await?,
-    )
+) -> sqlx::Result<String> {
+    sqlx::query_scalar("SELECT _organization FROM webknossos.datasets_ WHERE _id=$1")
+        .bind(dataset_id)
+        .fetch_one(pool)
+        .await
 }
 
 /// Whether the user (or any identity of their multi-user) may see the organization.
@@ -155,8 +152,8 @@ pub(crate) async fn can_read_organization(
     pool: &PgPool,
     organization: &str,
     user: &AuthUser,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ o WHERE o._id=$1 AND ($3 \
             OR EXISTS (SELECT 1 FROM webknossos.users_ identity JOIN webknossos.users_ \
             requesting_identity ON requesting_identity._multiUser=identity._multiUser WHERE \
@@ -166,7 +163,7 @@ pub(crate) async fn can_read_organization(
     .bind(&user.id)
     .bind(user.is_superuser)
     .fetch_one(pool)
-    .await?)
+    .await
 }
 
 /// JSON of the users who can access the dataset, as visible to the requesting user.
@@ -175,8 +172,8 @@ pub(crate) async fn find_access_list(
     user: &AuthUser,
     organization: &str,
     dataset_id: &ObjectId,
-) -> ApiResult<Vec<Value>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Vec<Value>> {
+    sqlx::query_scalar(
         r#"SELECT jsonb_build_object('id',u._id,'email',m.email,'firstName',m.firstName,'lastName',m.lastName,
       'isAdmin',u.isAdmin,'isDatasetManager',u.isDatasetManager,'isActive',NOT u.isDeactivated,'isAnonymous',false,
       'teams',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',t._id,'name',t.name,'isTeamManager',r.isTeamManager) ORDER BY t._id)
@@ -199,14 +196,14 @@ pub(crate) async fn find_access_list(
     .bind(&user.organization_id)
     .bind(dataset_id)
     .fetch_all(pool)
-    .await?)
+    .await
 }
 
 /// (isUsable, id/status/scale JSON, defaultViewConfiguration) of the dataset.
 pub(crate) async fn find_data_source_header(
     pool: &PgPool,
     dataset_id: &ObjectId,
-) -> ApiResult<(bool, Value, Option<Value>)> {
+) -> sqlx::Result<(bool, Value, Option<Value>)> {
     type Row = (bool, Value, Option<Value>);
     let row: Row = sqlx::query_as(
         r#"SELECT isUsable,jsonb_build_object('id',jsonb_build_object('name',directoryName,'team',_organization),
@@ -223,7 +220,7 @@ pub(crate) async fn upsert_last_used_time(
     pool: &PgPool,
     dataset_id: &ObjectId,
     user_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("INSERT INTO webknossos.dataset_lastUsedTimes (_dataset,_user,lastUsedTime) VALUES ($1,$2,NOW()) ON CONFLICT (_dataset,_user) DO UPDATE SET lastUsedTime = NOW()")
             .bind(dataset_id).bind(user_id).execute(pool).await?;
     Ok(())
@@ -234,7 +231,7 @@ pub(crate) async fn find_public_json(
     connection: &mut PgConnection,
     user: Option<&AuthUser>,
     dataset_id: &ObjectId,
-) -> ApiResult<Value> {
+) -> sqlx::Result<Value> {
     let user_id = user.map(|u| &u.id);
     let organization = user.map(|u| u.organization_id.as_str());
     let mut q = Sql::new(
@@ -295,7 +292,7 @@ pub(crate) async fn find_public_json(
       JOIN webknossos.dataStores_ store ON store.name=trim(d._dataStore) WHERE d._id="#,
         )
         .push_bind(dataset_id);
-    Ok(q.build_query_scalar().fetch_one(&mut *connection).await?)
+    q.build_query_scalar().fetch_one(&mut *connection).await
 }
 
 /// The teams (alias `t`) among `team_ids` that are visible to the requester
@@ -329,27 +326,25 @@ fn push_visible_teams<'a>(
 pub(crate) async fn find_datastore_public_fields(
     connection: &mut PgConnection,
     name: &str,
-) -> ApiResult<(String, String, bool)> {
-    Ok(sqlx::query_as(
-        "SELECT name,publicUrl,allowsUpload FROM webknossos.dataStores_ WHERE name=$1",
-    )
-    .bind(name)
-    .fetch_one(&mut *connection)
-    .await?)
+) -> sqlx::Result<(String, String, bool)> {
+    sqlx::query_as("SELECT name,publicUrl,allowsUpload FROM webknossos.dataStores_ WHERE name=$1")
+        .bind(name)
+        .fetch_one(&mut *connection)
+        .await
 }
 
 /// The distinct job commands supported by the datastore's workers, sorted.
 pub(crate) async fn find_supported_job_commands(
     connection: &mut PgConnection,
     datastore_name: &str,
-) -> ApiResult<Vec<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Vec<String>> {
+    sqlx::query_scalar(
         "SELECT DISTINCT unnest(supportedJobCommands) FROM webknossos.workers_ WHERE \
             _dataStore=$1 ORDER BY 1",
     )
     .bind(datastore_name)
     .fetch_all(&mut *connection)
-    .await?)
+    .await
 }
 
 /// JSON of the dataset's layers (without attachments), in name order.
@@ -357,8 +352,8 @@ pub(crate) async fn find_layers_json(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
     use_real_paths: bool,
-) -> ApiResult<Vec<Value>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Vec<Value>> {
+    sqlx::query_scalar(
         r#"SELECT jsonb_build_object('name',l.name,'category',l.category,
       'elementClass',l.elementClass,'dataFormat',l.dataFormat,
       'boundingBox',jsonb_build_object('topLeft',jsonb_build_array((l.boundingBox).x::int,(l.boundingBox).y::int,(l.boundingBox).z::int),
@@ -379,7 +374,7 @@ pub(crate) async fn find_layers_json(
     .bind(dataset_id)
     .bind(use_real_paths)
     .fetch_all(&mut *connection)
-    .await?)
+    .await
 }
 
 /// (layer name, attachment type, attachment JSON) of the dataset's settled attachments.
@@ -387,9 +382,9 @@ pub(crate) async fn find_attachments_json(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
     use_real_paths: bool,
-) -> ApiResult<Vec<(String, String, Value)>> {
+) -> sqlx::Result<Vec<(String, String, Value)>> {
     // Play reads the attachments per layer through the primary key index, i.e. in name order.
-    Ok(sqlx::query_as(
+    sqlx::query_as(
         r#"SELECT layerName,type::text,jsonb_build_object('name',name,
         'path',CASE WHEN $2 THEN COALESCE(realPath,path) ELSE path END,'dataFormat',dataFormat,'credentialId',credentialId) FROM webknossos.dataset_layer_attachments
         WHERE _dataset=$1 AND NOT uploadToPathIsPending AND NOT uploadIsPending
@@ -398,7 +393,7 @@ pub(crate) async fn find_attachments_json(
     .bind(dataset_id)
     .bind(use_real_paths)
     .fetch_all(&mut *connection)
-    .await?)
+    .await
 }
 
 /// DatasetDAO.findAllCompactWithSearch: the readable datasets matching the list filters.
@@ -410,7 +405,7 @@ pub(crate) async fn find_all_compact(
     organization: Option<&str>,
     tokens: &[String],
     searched_id: Option<&String>,
-) -> ApiResult<Vec<CompactDataset>> {
+) -> sqlx::Result<Vec<CompactDataset>> {
     // Set-based like DatasetDAO.findAllCompactWithSearch: the selection (with its limit) is
     // filtered first, then layer names and storage are joined, and the JSON is built here
     // instead of with jsonb_build_object (together ~3x faster for thousands of datasets).
@@ -537,7 +532,7 @@ pub(crate) async fn find_all_compact(
       LEFT JOIN webknossos.dataset_lastUsedTimes lu ON lu._dataset = d._id AND lu._user = ",
     );
     q.push_bind(user_id).push("\n      ").push(joins);
-    Ok(q.build_query_as::<CompactDataset>().fetch_all(pool).await?)
+    q.build_query_as::<CompactDataset>().fetch_all(pool).await
 }
 
 /// `(d.status IN (...))`: the dataset is no longer reported by its datastore.
@@ -558,7 +553,7 @@ pub(crate) async fn set_sharing_token_if_absent(
     user: &AuthUser,
     dataset_id: &ObjectId,
     new_token: String,
-) -> ApiResult<Option<String>> {
+) -> sqlx::Result<Option<String>> {
     let mut q = Sql::new("UPDATE webknossos.datasets d SET sharingToken = COALESCE(sharingToken, ");
     q.push_bind(new_token)
         .push(") WHERE d._id = ")
@@ -568,7 +563,7 @@ pub(crate) async fn set_sharing_token_if_absent(
         .push(" AND NOT d.isDeleted AND ");
     push_read_predicate(&mut q, (&user.id).into(), None);
     q.push(" RETURNING sharingToken");
-    Ok(q.build_query_scalar().fetch_optional(pool).await?)
+    q.build_query_scalar().fetch_optional(pool).await
 }
 
 /// Clears the sharing token; returns the number of rows changed.
@@ -576,7 +571,7 @@ pub(crate) async fn clear_sharing_token(
     pool: &PgPool,
     user: &AuthUser,
     dataset_id: &ObjectId,
-) -> ApiResult<u64> {
+) -> sqlx::Result<u64> {
     let mut q = Sql::new("UPDATE webknossos.datasets d SET sharingToken = NULL WHERE d._id = ");
     q.push_bind(dataset_id)
         .push(" AND d._organization = ")
@@ -592,8 +587,8 @@ pub(crate) async fn clear_sharing_token(
 pub(crate) async fn find_manageable_team_ids(
     connection: &mut PgConnection,
     user: &AuthUser,
-) -> ApiResult<Vec<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Vec<ObjectId>> {
+    sqlx::query_scalar(
         r#"SELECT t._id FROM webknossos.teams_ t WHERE t._organization = $2 AND
       ($3 OR EXISTS (SELECT 1 FROM webknossos.user_team_roles r
         WHERE r._team = t._id AND r._user = $1 AND ($4 OR r.isTeamManager)))"#,
@@ -603,25 +598,23 @@ pub(crate) async fn find_manageable_team_ids(
     .bind(user.is_admin)
     .bind(user.is_dataset_manager)
     .fetch_all(connection)
-    .await?)
+    .await
 }
 
 pub(crate) async fn find_allowed_team_ids(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<Vec<ObjectId>> {
-    Ok(
-        sqlx::query_scalar("SELECT _team FROM webknossos.dataset_allowedTeams WHERE _dataset = $1")
-            .bind(dataset_id)
-            .fetch_all(connection)
-            .await?,
-    )
+) -> sqlx::Result<Vec<ObjectId>> {
+    sqlx::query_scalar("SELECT _team FROM webknossos.dataset_allowedTeams WHERE _dataset = $1")
+        .bind(dataset_id)
+        .fetch_all(connection)
+        .await
 }
 
 pub(crate) async fn delete_allowed_teams(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("DELETE FROM webknossos.dataset_allowedTeams WHERE _dataset = $1")
         .bind(dataset_id)
         .execute(connection)
@@ -633,7 +626,7 @@ pub(crate) async fn insert_allowed_teams(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
     team_ids: &[ObjectId],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("INSERT INTO webknossos.dataset_allowedTeams (_dataset, _team) SELECT $1, unnest($2::text[])")
         .bind(dataset_id).bind(team_ids).execute(connection).await?;
     Ok(())

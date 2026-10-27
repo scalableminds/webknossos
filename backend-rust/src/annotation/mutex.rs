@@ -123,6 +123,7 @@ async fn acquire(
     acquisition_gate(&live, &user)?;
     let acquired = dao::upsert_mutex(&mut transaction, &id, &user.id, &session, micros)
         .await
+        .map_err(ApiError::from)
         .map_err(acquisition_error)?;
     // The separate statement gets a fresh READ COMMITTED snapshot after any
     // conflicting insert commits. Advisory serialization also covers release.
@@ -130,6 +131,7 @@ async fn acquire(
         Some(holder) => holder,
         None => dao::find_mutex_holder_for_update(&mut transaction, &id)
             .await
+            .map_err(ApiError::from)
             .map_err(acquisition_error)?,
     };
     let can_edit = holder == user.id && holder_session == session;

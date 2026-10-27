@@ -7,7 +7,6 @@ use sqlx::{PgConnection, PgPool};
 
 use crate::{
     dataset::source::{LayerKind, StaticLayer},
-    error::ApiResult,
     sql::{Arg, PushArg, Sql},
     util::id::ObjectId,
 };
@@ -108,12 +107,12 @@ pub(crate) async fn is_readable(
     user: Option<&crate::auth::AuthUser>,
     dataset_id: &ObjectId,
     sharing_token: Option<&str>,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = ");
     q.push_bind(dataset_id).push(" AND ");
     push_read_predicate(&mut q, user.map(|u| &u.id).into(), sharing_token);
     q.push(")");
-    Ok(q.build_query_scalar().fetch_one(pool).await?)
+    q.build_query_scalar().fetch_one(pool).await
 }
 
 /// Whether the dataset exists and is editable by `user`.
@@ -121,12 +120,12 @@ pub(crate) async fn is_editable(
     pool: &PgPool,
     user: &crate::auth::AuthUser,
     dataset_id: &ObjectId,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     let mut q = Sql::new("SELECT EXISTS (SELECT 1 FROM webknossos.datasets_ d WHERE d._id = ");
     q.push_bind(dataset_id).push(" AND ");
     push_edit_predicate(&mut q, (&user.id).into());
     q.push(")");
-    Ok(q.build_query_scalar().fetch_one(pool).await?)
+    q.build_query_scalar().fetch_one(pool).await
 }
 
 /// Whether the dataset is readable by the user, evaluated on an existing connection
@@ -135,32 +134,30 @@ pub(crate) async fn is_readable_on_connection(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     dataset_id: &ObjectId,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     let mut q = Sql::new("SELECT ");
     push_read_predicate(&mut q, user_id.into(), None);
     q.push(" FROM webknossos.datasets_ d WHERE d._id=")
         .push_bind(dataset_id);
-    Ok(q.build_query_scalar().fetch_one(connection).await?)
+    q.build_query_scalar().fetch_one(connection).await
 }
 
 /// Row-locks the dataset (`FOR UPDATE`); `None` if it does not exist.
 pub(crate) async fn find_id_for_update(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(
-        sqlx::query_scalar("SELECT _id FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE")
-            .bind(dataset_id)
-            .fetch_optional(connection)
-            .await?,
-    )
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar("SELECT _id FROM webknossos.datasets_ WHERE _id = $1 FOR UPDATE")
+        .bind(dataset_id)
+        .fetch_optional(connection)
+        .await
 }
 
 /// Share-locks the live teams of an organization.
 pub(crate) async fn lock_organization_teams(
     connection: &mut PgConnection,
     organization_id: &str,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "SELECT _id FROM webknossos.teams_ WHERE _organization = $1 ORDER BY _id FOR SHARE",
     )
@@ -174,7 +171,7 @@ pub(crate) async fn lock_organization_teams(
 pub(crate) async fn lock_user_team_roles(
     connection: &mut PgConnection,
     user_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "SELECT _team FROM webknossos.user_team_roles WHERE _user = $1 ORDER BY _team FOR SHARE",
     )
@@ -188,7 +185,7 @@ pub(crate) async fn lock_user_team_roles(
 pub(crate) async fn lock_inherited_folder_grants(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("SELECT ft._folder FROM webknossos.folder_allowedTeams ft JOIN webknossos.folder_paths fp ON fp._ancestor = ft._folder JOIN webknossos.datasets_ d ON d._folder = fp._descendant WHERE d._id = $1 ORDER BY ft._folder, ft._team FOR SHARE OF ft, fp")
         .bind(dataset_id).fetch_all(connection).await?;
     Ok(())
@@ -199,14 +196,14 @@ pub(crate) async fn read_and_edit_access(
     connection: &mut PgConnection,
     user_id: &ObjectId,
     dataset_id: &ObjectId,
-) -> ApiResult<(bool, bool)> {
+) -> sqlx::Result<(bool, bool)> {
     let mut q = Sql::new("SELECT ");
     push_read_predicate(&mut q, user_id.into(), None);
     q.push(", ");
     push_edit_predicate(&mut q, user_id.into());
     q.push(" FROM webknossos.datasets_ d WHERE d._id = ")
         .push_bind(dataset_id);
-    Ok(q.build_query_as().fetch_one(connection).await?)
+    q.build_query_as().fetch_one(connection).await
 }
 
 // --- layers, mags, attachments written by DatasetLayerDAO.updateLayers ---
@@ -216,7 +213,7 @@ pub(crate) async fn delete_layers_not_in(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
     names: &[&str],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "DELETE FROM webknossos.dataset_layers WHERE _dataset = $1 AND NOT (name = ANY($2))",
     )
@@ -232,7 +229,7 @@ pub(crate) async fn upsert_layer(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
     layer: &StaticLayer,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     let bbox = &layer.bounding_box;
     let top_left = bbox.top_left;
     let [x, y, z, width, height, depth] = [
@@ -305,7 +302,7 @@ pub(crate) async fn upsert_layer(
 pub(crate) async fn delete_settled_mags(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("DELETE FROM webknossos.dataset_mags WHERE _dataset = $1 AND NOT uploadToPathIsPending AND NOT uploadIsPending")
         .bind(dataset_id).execute(connection).await?;
     Ok(())
@@ -317,7 +314,7 @@ pub(crate) async fn insert_mag(
     dataset_id: &ObjectId,
     layer_name: &str,
     mag: &crate::dataset::source::MagLocator,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     let [mx, my, mz] = [mag.mag.x, mag.mag.y, mag.mag.z].map(f64::from);
     let path = mag.path.as_ref().map(ToString::to_string);
     let axis_order = mag.axis_order.map(|order| serde_json::json!(order));
@@ -332,7 +329,7 @@ pub(crate) async fn insert_mag(
 pub(crate) async fn delete_coordinate_transformations(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "DELETE FROM webknossos.dataset_layer_coordinateTransformations WHERE _dataset = $1",
     )
@@ -350,7 +347,7 @@ pub(crate) async fn insert_coordinate_transformation(
     matrix: serde_json::Value,
     correspondences: serde_json::Value,
     insertion_order_index: i32,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("INSERT INTO webknossos.dataset_layer_coordinateTransformations(_dataset, layerName, type, matrix, correspondences, insertionOrderIndex) VALUES ($1, $2, $3, $4, $5, $6)")
         .bind(dataset_id).bind(layer_name).bind(transformation_type)
         .bind(matrix)
@@ -364,7 +361,7 @@ pub(crate) async fn insert_coordinate_transformation(
 pub(crate) async fn delete_settled_attachments(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $1 AND NOT uploadToPathIsPending AND NOT uploadIsPending")
         .bind(dataset_id).execute(connection).await?;
     Ok(())
@@ -377,7 +374,7 @@ pub(crate) async fn insert_attachment(
     layer_name: &str,
     attachment_type: webknossos_common::enums::LayerAttachmentType,
     attachment: &crate::dataset::source::LayerAttachment,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, credentialId, uploadToPathIsPending, uploadIsPending)
                 VALUES ($1, $2, $3, $4, $5::webknossos.LAYER_ATTACHMENT_TYPE, $6::webknossos.LAYER_ATTACHMENT_DATAFORMAT, $7, false, false)"#,
@@ -397,7 +394,7 @@ pub(crate) async fn insert_attachment(
 pub(crate) async fn delete_additional_axes(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("DELETE FROM webknossos.dataset_layer_additionalAxes WHERE _dataset = $1")
         .bind(dataset_id)
         .execute(connection)
@@ -412,7 +409,7 @@ pub(crate) async fn insert_additional_axis(
     axis: &crate::dataset::source::AdditionalAxis,
     lower_bound: i32,
     upper_bound: i32,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("INSERT INTO webknossos.dataset_layer_additionalAxes(_dataset, layerName, name, lowerBound, upperBound, index) VALUES ($1, $2, $3, $4, $5, $6)")
         .bind(dataset_id).bind(layer_name).bind(&axis.name)
         .bind(lower_bound).bind(upper_bound).bind(axis.index)
@@ -424,29 +421,25 @@ pub(crate) async fn insert_additional_axis(
 pub(crate) async fn find_is_usable(
     executor: impl sqlx::PgExecutor<'_>,
     dataset_id: &ObjectId,
-) -> ApiResult<bool> {
-    Ok(
-        sqlx::query_scalar("SELECT isUsable FROM webknossos.datasets_ WHERE _id = $1")
-            .bind(dataset_id)
-            .fetch_one(executor)
-            .await?,
-    )
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar("SELECT isUsable FROM webknossos.datasets_ WHERE _id = $1")
+        .bind(dataset_id)
+        .fetch_one(executor)
+        .await
 }
 
 pub(crate) async fn find_directory_name(
     executor: impl sqlx::PgExecutor<'_>,
     dataset_id: &ObjectId,
-) -> ApiResult<String> {
-    Ok(
-        sqlx::query_scalar("SELECT directoryName FROM webknossos.datasets_ WHERE _id = $1")
-            .bind(dataset_id)
-            .fetch_one(executor)
-            .await?,
-    )
+) -> sqlx::Result<String> {
+    sqlx::query_scalar("SELECT directoryName FROM webknossos.datasets_ WHERE _id = $1")
+        .bind(dataset_id)
+        .fetch_one(executor)
+        .await
 }
 
 /// UPDATE of a dataset's last activity timestamp for the user (users table).
-pub(crate) async fn touch_user_last_activity(pool: &PgPool, user_id: ObjectId) -> ApiResult<()> {
+pub(crate) async fn touch_user_last_activity(pool: &PgPool, user_id: ObjectId) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.users SET lastActivity = NOW() WHERE _id = $1")
         .bind(user_id)
         .execute(pool)
@@ -460,13 +453,13 @@ pub(crate) async fn touch_user_last_activity(pool: &PgPool, user_id: ObjectId) -
 pub(crate) async fn find_upload_store_name(
     connection: &mut PgConnection,
     organization_id: &str,
-) -> ApiResult<Option<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
         "SELECT name FROM webknossos.dataStores_ WHERE allowsUpload AND (onlyAllowedOrganization IS NULL OR onlyAllowedOrganization = $1) ORDER BY name LIMIT 1",
     )
     .bind(organization_id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 /// Marks the dataset usable with the data source's voxel size.
@@ -474,7 +467,7 @@ pub(crate) async fn update_voxel_size_usable(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
     source: &crate::dataset::source::UsableDataSource,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         r#"UPDATE webknossos.datasets SET inboxSourceHash = NULL, isUsable = true, status = '',
              voxelSizeFactor = ROW($2, $3, $4)::webknossos.VECTOR3, voxelSizeUnit = $5::webknossos.LENGTH_UNIT
@@ -493,15 +486,13 @@ pub(crate) async fn update_voxel_size_usable(
 // --- remote paths to delete ---
 
 /// The paths queued for deletion by the external path deletion service, oldest first.
-pub(crate) async fn find_paths_to_delete(pool: &PgPool) -> ApiResult<Vec<String>> {
-    Ok(
-        sqlx::query_scalar("SELECT path FROM webknossos.remote_paths_to_delete ORDER BY created")
-            .fetch_all(pool)
-            .await?,
-    )
+pub(crate) async fn find_paths_to_delete(pool: &PgPool) -> sqlx::Result<Vec<String>> {
+    sqlx::query_scalar("SELECT path FROM webknossos.remote_paths_to_delete ORDER BY created")
+        .fetch_all(pool)
+        .await
 }
 
-pub(crate) async fn delete_paths_to_delete(pool: &PgPool, paths: &[String]) -> ApiResult<()> {
+pub(crate) async fn delete_paths_to_delete(pool: &PgPool, paths: &[String]) -> sqlx::Result<()> {
     sqlx::query("DELETE FROM webknossos.remote_paths_to_delete WHERE path = ANY($1)")
         .bind(paths)
         .execute(pool)
@@ -509,7 +500,7 @@ pub(crate) async fn delete_paths_to_delete(pool: &PgPool, paths: &[String]) -> A
     Ok(())
 }
 
-pub(crate) async fn insert_paths_to_delete(pool: &PgPool, paths: &[String]) -> ApiResult<()> {
+pub(crate) async fn insert_paths_to_delete(pool: &PgPool, paths: &[String]) -> sqlx::Result<()> {
     sqlx::query("INSERT INTO webknossos.remote_paths_to_delete (path) SELECT unnest($1::text[]) ON CONFLICT DO NOTHING")
             .bind(paths)
             .execute(pool)
@@ -522,7 +513,7 @@ pub(crate) async fn update_folder_and_uploader(
     dataset_id: &ObjectId,
     folder: &ObjectId,
     uploader: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.datasets SET _folder = $2, _uploader = $3 WHERE _id = $1")
         .bind(dataset_id)
         .bind(folder)
@@ -536,8 +527,8 @@ pub(crate) async fn update_folder_and_uploader(
 pub(crate) async fn find_exclusive_paths(
     pool: &PgPool,
     dataset_id: &ObjectId,
-) -> ApiResult<Vec<String>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Vec<String>> {
+    sqlx::query_scalar(
             r#"SELECT m1.path FROM webknossos.dataset_mags m1 WHERE m1._dataset = $1 AND m1.path IS NOT NULL
                  AND NOT EXISTS (SELECT 1 FROM webknossos.dataset_mags m2 WHERE m2._dataset != $1
                    AND (m2.path = m1.path OR (m2.realpath IS NOT NULL AND m2.realpath = m1.realpath)))
@@ -548,7 +539,7 @@ pub(crate) async fn find_exclusive_paths(
         )
         .bind(dataset_id)
         .fetch_all(pool)
-        .await?)
+        .await
 }
 
 /// Share-locks the folder if it is live and within the organization.
@@ -556,15 +547,15 @@ pub(crate) async fn lock_folder_in_organization(
     connection: &mut PgConnection,
     folder: &ObjectId,
     organization: &str,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar("SELECT f._id FROM webknossos.folders_ f JOIN webknossos.folder_paths fp ON fp._descendant=f._id JOIN webknossos.organizations_ o ON o._rootFolder=fp._ancestor WHERE f._id=$1 AND o._id=$2 FOR SHARE OF f, fp")
-        .bind(folder).bind(organization).fetch_optional(connection).await?)
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar("SELECT f._id FROM webknossos.folders_ f JOIN webknossos.folder_paths fp ON fp._descendant=f._id JOIN webknossos.organizations_ o ON o._rootFolder=fp._ancestor WHERE f._id=$1 AND o._id=$2 FOR SHARE OF f, fp")
+        .bind(folder).bind(organization).fetch_optional(connection).await
 }
 
 pub(crate) async fn delete_thumbnails(
     connection: &mut PgConnection,
     dataset_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("DELETE FROM webknossos.dataset_thumbnails WHERE _dataset = $1")
         .bind(dataset_id)
         .execute(connection)

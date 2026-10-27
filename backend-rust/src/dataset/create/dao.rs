@@ -3,7 +3,7 @@ use serde_json::Value;
 use sqlx::PgConnection;
 
 use super::NewDataset;
-use crate::{auth::AuthUser, error::ApiResult, util::id::ObjectId};
+use crate::{auth::AuthUser, util::id::ObjectId};
 
 /// FolderDAO update access: organization admins/dataset managers, or team
 /// managers of a team allowed on the folder or one of its ancestors.
@@ -11,8 +11,8 @@ pub(crate) async fn is_folder_writable(
     connection: &mut PgConnection,
     user: &AuthUser,
     folder: &ObjectId,
-) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
         r#"SELECT EXISTS (SELECT 1 FROM webknossos.folders_ f WHERE f._id = $1 AND (
              f._id IN (SELECT fp._descendant FROM webknossos.folder_paths fp WHERE fp._ancestor IN (
                SELECT o._rootFolder FROM webknossos.organizations_ o JOIN webknossos.users_ u ON u._organization = o._id
@@ -24,20 +24,18 @@ pub(crate) async fn is_folder_writable(
     .bind(folder)
     .bind(&user.id)
     .fetch_one(connection)
-    .await?)
+    .await
 }
 
 /// Share-locks and returns the root folder of the organization.
 pub(crate) async fn find_root_folder_for_share(
     connection: &mut PgConnection,
     organization_id: &str,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
-        "SELECT _rootFolder FROM webknossos.organizations_ WHERE _id = $1 FOR SHARE",
-    )
-    .bind(organization_id)
-    .fetch_optional(connection)
-    .await?)
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar("SELECT _rootFolder FROM webknossos.organizations_ WHERE _id = $1 FOR SHARE")
+        .bind(organization_id)
+        .fetch_optional(connection)
+        .await
 }
 
 /// Inserts the dataset row; returns whether a row was written (it is not when
@@ -48,7 +46,7 @@ pub(crate) async fn insert_one(
     root: &ObjectId,
     status: String,
     skip_on_directory_name_conflict: bool,
-) -> ApiResult<bool> {
+) -> sqlx::Result<bool> {
     let statement = r#"INSERT INTO webknossos.datasets (_id, _dataStore, _organization, _folder, inboxSourceHash,
              defaultViewConfiguration, description, directoryName, isPublic, isUsable, isVirtual, name,
              voxelSizeFactor, voxelSizeUnit, status, sortingKey, metadata, tags, creationType, importURL, created)

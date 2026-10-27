@@ -76,7 +76,7 @@ pub(crate) async fn allowed_teams_for_next_task(
     if user.is_admin {
         // teamDAO.findAllIdsByOrganization: an admin reads every live team of
         // the own organization.
-        return dao::find_all_team_ids_by_organization(pool, &user.organization_id).await;
+        return Ok(dao::find_all_team_ids_by_organization(pool, &user.organization_id).await?);
     }
     let managed = dao::find_team_ids(pool, &user.id, true).await?;
     let open = dao::count_open_non_admin_tasks(pool, user, &managed).await?;
@@ -96,7 +96,7 @@ async fn is_team_manager_or_admin(pool: &PgPool, user: &AuthUser) -> ApiResult<b
     if user.is_admin {
         return Ok(true);
     }
-    dao::is_team_manager(pool, &user.id).await
+    Ok(dao::is_team_manager(pool, &user.id).await?)
 }
 
 // ---------------------------------------------------------------------------

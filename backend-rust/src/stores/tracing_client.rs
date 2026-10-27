@@ -960,7 +960,7 @@ pub async fn first_tracing_store_url<'e, E: Executor<'e, Database = Postgres>>(
 pub async fn find_first_tracing_store_url<'e, E: Executor<'e, Database = Postgres>>(
     executor: E,
 ) -> ApiResult<Option<String>> {
-    super::dao::find_first_tracing_store_url(executor).await
+    Ok(super::dao::find_first_tracing_store_url(executor).await?)
 }
 
 /// Decode an annotation including the nested proto2 required-field checks

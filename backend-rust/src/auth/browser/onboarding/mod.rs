@@ -167,7 +167,7 @@ async fn find_organization(
     tx: &mut Transaction<'_, Postgres>,
     id: &str,
 ) -> ApiResult<Option<OrganizationRow>> {
-    dao::find_one_organization(tx, id).await
+    Ok(dao::find_one_organization(tx, id).await?)
 }
 
 /// organizationService.assertUsersCanBeAdded. Locks the organization row so
@@ -194,7 +194,7 @@ pub(crate) async fn initial_team_memberships(
     invite_id: Option<&ObjectId>,
 ) -> ApiResult<Vec<(ObjectId, bool)>> {
     if let Some(invite_id) = invite_id {
-        return dao::find_all_invite_team_roles(tx, invite_id).await;
+        return Ok(dao::find_all_invite_team_roles(tx, invite_id).await?);
     }
     let team = dao::find_one_organization_team(tx, organization_id)
         .await?
@@ -327,7 +327,7 @@ async fn new_user_mail_recipient(
     if !organization.new_user_mailing_list.is_empty() {
         return Ok(Some(organization.new_user_mailing_list.clone()));
     }
-    dao::find_organization_owner_email(tx, &organization.id).await
+    Ok(dao::find_organization_owner_email(tx, &organization.id).await?)
 }
 
 pub(crate) async fn admin_notifier_mail(
@@ -362,14 +362,14 @@ async fn find_invite(
     tx: &mut Transaction<'_, Postgres>,
     token: &str,
 ) -> ApiResult<Option<InviteRow>> {
-    dao::find_one_invite_by_token_for_update(tx, token).await
+    Ok(dao::find_one_invite_by_token_for_update(tx, token).await?)
 }
 
 async fn deactivate_invite(
     tx: &mut Transaction<'_, Postgres>,
     invite_id: &ObjectId,
 ) -> ApiResult<()> {
-    dao::delete_invite(tx, invite_id).await
+    Ok(dao::delete_invite(tx, invite_id).await?)
 }
 
 /// AuthenticationController.createUser

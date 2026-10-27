@@ -123,7 +123,7 @@ pub async fn user_for_service_token(
     pool: &sqlx::PgPool,
     token: &str,
 ) -> ApiResult<Option<AuthUser>> {
-    dao::find_user_for_service_token(pool, token).await
+    Ok(dao::find_user_for_service_token(pool, token).await?)
 }
 
 impl AuthUser {
@@ -131,18 +131,18 @@ impl AuthUser {
         if self.is_admin {
             return Ok(true);
         }
-        dao::is_team_manager_in_organization(pool, &self.id, &self.organization_id).await
+        Ok(dao::is_team_manager_in_organization(pool, &self.id, &self.organization_id).await?)
     }
 
     pub async fn can_manage_team(&self, pool: &PgPool, team_id: &ObjectId) -> ApiResult<bool> {
-        dao::can_manage_team(
+        Ok(dao::can_manage_team(
             pool,
             team_id,
             &self.organization_id,
             self.is_admin,
             &self.id,
         )
-        .await
+        .await?)
     }
 }
 

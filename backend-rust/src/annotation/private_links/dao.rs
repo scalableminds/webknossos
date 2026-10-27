@@ -5,7 +5,7 @@ use serde_json::Value;
 use sqlx::{Executor, PgConnection, PgPool, Postgres};
 
 use super::PrivateLink;
-use crate::{auth::AuthUser, error::ApiResult, sql::Sql, util::id::ObjectId};
+use crate::{auth::AuthUser, sql::Sql, util::id::ObjectId};
 
 /// Live private links of the user's live annotations; callers append further conditions.
 fn select(user: &AuthUser) -> Sql<'_> {
@@ -22,29 +22,29 @@ pub(crate) async fn find_one_owned<'e, E: Executor<'e, Database = Postgres>>(
     user: &AuthUser,
     id: &ObjectId,
     lock: bool,
-) -> ApiResult<Option<PrivateLink>> {
+) -> sqlx::Result<Option<PrivateLink>> {
     let suffix = if lock { " FOR UPDATE OF link" } else { "" };
     let mut q = select(user);
     q.push(" AND link._id=").push_bind(id).push(suffix);
-    Ok(q.build_query_as().fetch_optional(executor).await?)
+    q.build_query_as().fetch_optional(executor).await
 }
 
 pub(crate) async fn find_all_for_user(
     pool: &PgPool,
     user: &AuthUser,
-) -> ApiResult<Vec<PrivateLink>> {
-    Ok(select(user).build_query_as().fetch_all(pool).await?)
+) -> sqlx::Result<Vec<PrivateLink>> {
+    select(user).build_query_as().fetch_all(pool).await
 }
 
 pub(crate) async fn find_all_for_annotation(
     pool: &PgPool,
     user: &AuthUser,
     annotation_id: &ObjectId,
-) -> ApiResult<Vec<PrivateLink>> {
+) -> sqlx::Result<Vec<PrivateLink>> {
     let mut q = select(user);
     q.push(" AND link._annotation=").push_bind(annotation_id);
     q.push(" ORDER BY link._id");
-    Ok(q.build_query_as().fetch_all(pool).await?)
+    q.build_query_as().fetch_all(pool).await
 }
 
 pub(crate) async fn insert_one(
@@ -53,7 +53,7 @@ pub(crate) async fn insert_one(
     annotation_id: &ObjectId,
     access_token: String,
     expiration: Option<DateTime<Utc>>,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "INSERT INTO \
             webknossos.annotation_privateLinks(_id,_annotation,accessToken,expirationDateTime) \
@@ -73,7 +73,7 @@ pub(crate) async fn update_one(
     id: &ObjectId,
     annotation_id: &ObjectId,
     expiration: Option<DateTime<Utc>>,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.annotation_privateLinks SET \
             _annotation=$2,expirationDateTime=$3 WHERE _id=$1 AND NOT isDeleted",
@@ -86,7 +86,7 @@ pub(crate) async fn update_one(
     Ok(())
 }
 
-pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> ApiResult<()> {
+pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.annotation_privateLinks SET isDeleted=true WHERE _id=$1")
         .bind(id)
         .execute(connection)
@@ -98,15 +98,15 @@ pub(crate) async fn delete_one(connection: &mut PgConnection, id: &ObjectId) -> 
 pub(crate) async fn find_annotation_id_by_access_token(
     pool: &PgPool,
     access_token: &str,
-) -> ApiResult<Option<ObjectId>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<ObjectId>> {
+    sqlx::query_scalar(
         "SELECT link._annotation FROM webknossos.annotation_privateLinks_ link JOIN \
             webknossos.annotations_ a ON a._id=link._annotation WHERE link.accessToken=$1 AND \
             (link.expirationDateTime IS NULL OR link.expirationDateTime>statement_timestamp())",
     )
     .bind(access_token)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// The annotation's layers and its dataset, data store and tracing store URLs
@@ -115,8 +115,8 @@ pub(crate) async fn find_source_json(
     pool: &PgPool,
     annotation_id: &ObjectId,
     via_private_link: bool,
-) -> ApiResult<Option<Value>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<Value>> {
+    sqlx::query_scalar(
         r#"SELECT jsonb_build_object('id',a._id,
         'annotationLayers',COALESCE((SELECT jsonb_agg(jsonb_build_object('tracingId',layer.tracingId,'typ',layer.typ,'name',layer.name,'stats',layer.statistics) ORDER BY layer.tracingId) FROM webknossos.annotation_layers layer WHERE layer._annotation=a._id),'[]'::jsonb),
         'datasetDirectoryName',d.directoryName,'datasetId',d._id,'organizationId',organization._id,
@@ -130,5 +130,5 @@ pub(crate) async fn find_source_json(
     .bind(annotation_id)
     .bind(via_private_link)
     .fetch_optional(pool)
-    .await?)
+    .await
 }

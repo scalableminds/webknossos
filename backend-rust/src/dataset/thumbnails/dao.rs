@@ -3,7 +3,7 @@ use serde_json::Value;
 use sqlx::{PgConnection, PgPool};
 
 use super::{JPEG, ThumbnailRecord};
-use crate::{error::ApiResult, util::id::ObjectId};
+use crate::util::id::ObjectId;
 
 #[derive(sqlx::FromRow)]
 pub(crate) struct DatasetRow {
@@ -23,10 +23,10 @@ pub(crate) async fn find_cached_image(
     width: i32,
     height: i32,
     mapping: Option<&str>,
-) -> ApiResult<Option<Vec<u8>>> {
+) -> sqlx::Result<Option<Vec<u8>>> {
     // Scala's cleanup job deletes rows older than ten days; filtering here keeps
     // that expiry without depending on the periodic job having run.
-    Ok(sqlx::query_scalar(
+    sqlx::query_scalar(
         "SELECT image FROM webknossos.dataset_thumbnails WHERE _dataset=$1 AND dataLayerName=$2 AND width=$3 AND height=$4 AND mappingName=$5 AND created > NOW() - INTERVAL '10 days'",
     )
     .bind(id)
@@ -35,32 +35,32 @@ pub(crate) async fn find_cached_image(
     .bind(height)
     .bind(mapping.unwrap_or(""))
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 pub(crate) async fn find_dataset_row(
     pool: &PgPool,
     id: &ObjectId,
-) -> ApiResult<Option<DatasetRow>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<DatasetRow>> {
+    sqlx::query_as(
         "SELECT d.isUsable AS is_usable, d.voxelSizeFactor IS NOT NULL AS has_voxel_size, s.url AS store_url, d.thumbnailCacheVersion AS cache_version, d.defaultViewConfiguration AS default_configuration, d.adminViewConfiguration AS admin_configuration FROM webknossos.datasets_ d LEFT JOIN webknossos.dataStores_ s ON s.name = trim(d._dataStore) WHERE d._id = $1",
     )
     .bind(id)
     .fetch_optional(pool)
-    .await?)
+    .await
 }
 
 /// The thumbnail cache version of the live dataset, share-locked.
 pub(crate) async fn find_cache_version_for_share(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<Option<i32>> {
-    Ok(sqlx::query_scalar(
+) -> sqlx::Result<Option<i32>> {
+    sqlx::query_scalar(
         "SELECT thumbnailCacheVersion FROM webknossos.datasets WHERE _id=$1 AND NOT isDeleted FOR SHARE",
     )
     .bind(id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
 /// Stores (or replaces) the thumbnail image of the layer.
@@ -69,7 +69,7 @@ pub(crate) async fn upsert_thumbnail(
     id: &ObjectId,
     record: ThumbnailRecord<'_>,
     image: &[u8],
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     let [x, y, z, width, height, depth] = record.bounding_box.map(f64::from);
     let [mx, my, mz] = record.mag.to_array().map(f64::from);
     sqlx::query(

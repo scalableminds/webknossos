@@ -2,22 +2,25 @@
 use serde_json::Value;
 use sqlx::{PgConnection, PgPool};
 
-use crate::{error::ApiResult, util::id::ObjectId};
+use crate::util::id::ObjectId;
 
 /// The `(owner, state)` of a live annotation, locking its row.
 pub(crate) async fn find_owner_and_state_for_update(
     connection: &mut PgConnection,
     id: &ObjectId,
-) -> ApiResult<Option<(ObjectId, String)>> {
-    Ok(sqlx::query_as(
+) -> sqlx::Result<Option<(ObjectId, String)>> {
+    sqlx::query_as(
         "SELECT _user, state::text FROM webknossos.annotations WHERE _id=$1 AND NOT isDeleted FOR NO KEY UPDATE",
     )
     .bind(id)
     .fetch_optional(connection)
-    .await?)
+    .await
 }
 
-pub(crate) async fn update_modified(connection: &mut PgConnection, id: &ObjectId) -> ApiResult<()> {
+pub(crate) async fn update_modified(
+    connection: &mut PgConnection,
+    id: &ObjectId,
+) -> sqlx::Result<()> {
     sqlx::query("UPDATE webknossos.annotations SET modified=NOW() WHERE _id=$1")
         .bind(id)
         .execute(connection)
@@ -48,7 +51,7 @@ pub(crate) async fn insert_contributor(
     pool: &PgPool,
     annotation_id: &ObjectId,
     user_id: &ObjectId,
-) -> ApiResult<()> {
+) -> sqlx::Result<()> {
     sqlx::query("INSERT INTO webknossos.annotation_contributors(_annotation,_user) VALUES($1,$2) ON CONFLICT DO NOTHING")
         .bind(annotation_id)
         .bind(user_id)

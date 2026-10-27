@@ -7,7 +7,7 @@ import { mergeGeometries } from "libs/BufferGeometryUtils";
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import { getDracoLoader } from "libs/draco";
 import Toast from "libs/toast";
-import { chunkDynamically, sleep } from "libs/utils";
+import { chunkDynamically, getUrlParamValue, sleep } from "libs/utils";
 import sortBy from "lodash-es/sortBy";
 import zip from "lodash-es/zip";
 import messages from "messages";
@@ -381,6 +381,9 @@ function extractScaleFromMatrix(transform: [Vector4, Vector4, Vector4]): Vector3
   return [transform[0][0], transform[1][1], transform[2][2]];
 }
 
+// TEMP: Summed up duration of all unifyNormalsAtChunkBorders calls (see below).
+let totalUnifyNormalsDuration = 0;
+
 function* loadPrecomputedMeshesInChunksForLod(
   dataset: APIDataset,
   layerName: string,
@@ -518,7 +521,17 @@ function* loadPrecomputedMeshesInChunksForLod(
     ) as BufferGeometryWithInfo | null;
     if (mergedGeometry != null) {
       mergedGeometry.vertexSegmentMapping = new VertexSegmentMapping(sortedBufferGeometries);
-      unifyNormalsAtChunkBorders(mergedGeometry, sortedBufferGeometries);
+      // TEMP: The seam removal can be disabled via ?unifyChunkNormals=false to measure
+      // its impact on loading time and rendering.
+      if (getUrlParamValue("unifyChunkNormals") !== "false") {
+        const startTime = performance.now();
+        unifyNormalsAtChunkBorders(mergedGeometry, sortedBufferGeometries);
+        const duration = performance.now() - startTime;
+        totalUnifyNormalsDuration += duration;
+        console.log(
+          `unifyNormalsAtChunkBorders: ${duration.toFixed(1)} ms for segment ${segmentId} (lod ${lod}, ${sortedBufferGeometries.length} chunks, ${mergedGeometry.attributes.position.count} vertices). Total so far: ${totalUnifyNormalsDuration.toFixed(1)} ms`,
+        );
+      }
       mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
     }
   } catch (exception) {

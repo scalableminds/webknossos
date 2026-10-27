@@ -283,9 +283,11 @@ function* watchAgglomerateLoading(): Saga<void> {
   // proofreading action could change the agglomerate while its tree is being fetched. The
   // agglomerate tree syncing of that action only updates trees that are already loaded, so the
   // tree would be outdated when it's added.
+  // Waiting (instead of ignoring the request) is safe here, because nothing is held while waiting.
   yield* takeEveryInOperationContext(channel, loadAgglomerateTreeWithAtPosition, {
     id: "LOAD_AGGLOMERATE_TREE",
     description: "Loading agglomerate tree",
+    behaviorWhenDisallowed: "wait",
   });
 }
 

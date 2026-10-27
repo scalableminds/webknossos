@@ -45,13 +45,14 @@ export function* takeEveryInOperationContext<P extends ActionPattern | Channel<A
    * automatically acquiring and releasing the context. If an action carries an
    * operationContext field, that context is used as the parent (for nested operations);
    * otherwise creates a fresh context.
-   * Ignores the action if the operation context cannot be acquired (i.e., another operation
-   * is already ongoing which doesn't allow additional executions).
+   * By default, ignores the action if the operation context cannot be acquired (i.e., another
+   * operation is already ongoing which doesn't allow additional executions). Pass
+   * behaviorWhenDisallowed: "wait" to run the saga once the other operation is finished instead.
    */
   function* wrapper(action: Action) {
     const existingCtx = (action as any).operationContext ?? null;
     const ctx = yield* getOrCreateOperationContext(
-      { ...options, behaviorWhenDisallowed: "ignore" },
+      { behaviorWhenDisallowed: "ignore", ...options },
       existingCtx,
     );
     if (ctx == null) {

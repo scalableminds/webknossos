@@ -26,6 +26,25 @@ const SUGGESTED_QUESTIONS = [
   "How do I share an annotation with a colleague?",
 ];
 
+// Shown while waiting for a reply, so that a slow answer does not look stuck. The first message
+// is always shown first, followed by random ones from the list until the reply arrives.
+const FIRST_THINKING_MESSAGE = "Searching the documentation…";
+const THINKING_MESSAGES = [
+  "Reading the relevant pages…",
+  "Adjusting the focus…",
+  "Connecting the dots…",
+  "Tracing the axons…",
+  "Checking the details…",
+  "Staining the membranes…",
+  "Increasing the magnification…",
+  "Counting the synapses…",
+  "Aligning the sections…",
+  "Drafting an answer…",
+  "Proofreading the segmentation…",
+  "Polishing the wording…",
+];
+const THINKING_MESSAGE_INTERVAL_MS = 2500;
+
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
@@ -199,11 +218,34 @@ function AssistantMessage({ children }: { children: ReactNode }) {
   );
 }
 
+function pickRandomMessage(messages: string[], current: string): string {
+  // Never pick the current message again, so that the text visibly changes.
+  const candidates = messages.filter((message) => message !== current);
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+function useRandomMessage(first: string, messages: string[], intervalMs: number): string {
+  const [message, setMessage] = useState(first);
+  useEffect(() => {
+    const intervalId = window.setInterval(
+      () => setMessage((current) => pickRandomMessage(messages, current)),
+      intervalMs,
+    );
+    return () => window.clearInterval(intervalId);
+  }, [messages, intervalMs]);
+  return message;
+}
+
 function AssistantThinking() {
+  const message = useRandomMessage(
+    FIRST_THINKING_MESSAGE,
+    THINKING_MESSAGES,
+    THINKING_MESSAGE_INTERVAL_MS,
+  );
   return (
     <AssistantMessage>
       <Flex vertical gap="small" style={{ paddingTop: 3 }}>
-        <Eyebrow caps={false}>Searching the documentation…</Eyebrow>
+        <Eyebrow caps={false}>{message}</Eyebrow>
         <Skeleton active title={false} paragraph={{ rows: 2, width: ["88%", "60%"] }} />
       </Flex>
     </AssistantMessage>

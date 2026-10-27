@@ -107,9 +107,7 @@ fn app(db: &TestDb) -> Router {
                 "http://localhost:9000",
             ),
         ))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        })
+        .with_state(AppState::new(db.pool.clone()))
 }
 
 async fn send(

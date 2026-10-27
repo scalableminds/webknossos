@@ -439,7 +439,7 @@ pub async fn run_heartbeat(pool: &sqlx::PgPool, misc: &MiscState) -> Result<JobO
             "No active user, heartbeat not sent.".into(),
         ));
     };
-    let state = AppState { pool: pool.clone() };
+    let state = AppState::new(pool.clone());
     let build_info = build_info_json(&state, misc.config()).await;
     let actor = actor_for(pool, &user_id).await?;
     emit(

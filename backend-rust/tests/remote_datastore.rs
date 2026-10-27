@@ -81,9 +81,7 @@ async fn setup() -> Setup {
     .unwrap();
     let app = webknossos_backend::remote::datastore::router()
         .layer(Extension(clients))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        });
+        .with_state(AppState::new(db.pool.clone()));
     Setup {
         db,
         app,

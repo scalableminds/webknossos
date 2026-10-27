@@ -49,9 +49,7 @@ async fn request(
 #[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB; run cargo test -- --ignored"]
 async fn anonymous_reads_are_empty_and_private_writes_require_authentication() {
     let database = TestDb::new().await;
-    let app = webknossos_backend::router(AppState {
-        pool: database.pool.clone(),
-    });
+    let app = webknossos_backend::router(AppState::new(database.pool.clone()));
     for path in [
         "/api/user/userConfiguration",
         "/api/user/keyboardShortcutsConfig",
@@ -77,9 +75,7 @@ async fn anonymous_reads_are_empty_and_private_writes_require_authentication() {
 async fn configuration_and_shortcuts_replace_objects_without_merging() {
     let database = TestDb::new().await;
     let fixture = database.fixture().await;
-    let app = webknossos_backend::router(AppState {
-        pool: database.pool.clone(),
-    });
+    let app = webknossos_backend::router(AppState::new(database.pool.clone()));
     for path in [
         "/api/user/userConfiguration",
         "/api/user/keyboardShortcutsConfig",
@@ -146,9 +142,7 @@ async fn shortcuts_belong_to_account_but_configuration_belongs_to_identity() {
         .execute(&database.pool)
         .await
         .unwrap();
-    let app = webknossos_backend::router(AppState {
-        pool: database.pool.clone(),
-    });
+    let app = webknossos_backend::router(AppState::new(database.pool.clone()));
     request(
         &app,
         "PUT",

@@ -62,9 +62,7 @@ async fn setup() -> Setup {
     .unwrap();
     let app = webknossos_backend::dataset::upload_paths::router(config)
         .layer(Extension(clients))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        });
+        .with_state(AppState::new(db.pool.clone()));
     Setup {
         db,
         fixture,

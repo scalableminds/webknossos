@@ -21,10 +21,8 @@ const CREATE_FAILED: &str = "Could not create dataset.";
 
 async fn setup() -> (TestDb, Router) {
     let db = TestDb::new().await;
-    let app =
-        webknossos_backend::remote::datastore::dataset_upload::router().with_state(AppState {
-            pool: db.pool.clone(),
-        });
+    let app = webknossos_backend::remote::datastore::dataset_upload::router()
+        .with_state(AppState::new(db.pool.clone()));
     (db, app)
 }
 

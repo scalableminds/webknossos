@@ -32,9 +32,7 @@ fn misc_config() -> MiscConfig {
 
 fn app(db: &TestDb) -> Router {
     router_with_misc(
-        AppState {
-            pool: db.pool.clone(),
-        },
+        AppState::new(db.pool.clone()),
         misc_config(),
         MailSender::default(),
     )

@@ -140,9 +140,7 @@ async fn compact_annotations_preserve_privacy_order_state_count_and_shared_datas
     .await;
     let public = "100000000000000000000004";
     annotation(&db, &dataset, &f.user_id, public, "Active", "Public", true).await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let (status, headers, values) = request(
         &app,
         &owner.token,
@@ -322,9 +320,7 @@ async fn other_user_annotations_require_user_edit_access_and_annotation_read_acc
         true,
     )
     .await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let path = format!(
         "/api/users/{}/annotations?includeTotalCount=true",
         owner.user_id
@@ -500,9 +496,7 @@ async fn task_annotation_lists_emit_complete_database_contract_and_respect_route
             .await
             .unwrap();
     }
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let (status, headers, values) = request(
         &app,
         &owner.token,

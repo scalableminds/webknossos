@@ -30,9 +30,7 @@ fn app(database: &TestDb, mailer: &RecordingMailer, wkorg: bool) -> Router {
             "http://localhost:9000",
         )))
         .layer(Extension(config))
-        .with_state(AppState {
-            pool: database.pool.clone(),
-        })
+        .with_state(AppState::new(database.pool.clone()))
 }
 
 async fn patch(app: &Router, id: &str, token: &str, body: Value) -> (StatusCode, Value) {

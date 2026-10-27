@@ -31,9 +31,7 @@ async fn setup(db: &TestDb) -> (Router, String) {
     sqlx::query(r#"INSERT INTO webknossos.annotation_layers(_annotation,tracingId,typ,name,statistics) VALUES($1,'keep','Skeleton','OldName','{"nodes":17}'),($1,'remove','Volume','Removed','{}')"#)
         .bind(&id).execute(&db.pool).await.unwrap();
     (
-        webknossos_backend::router(AppState {
-            pool: db.pool.clone(),
-        }),
+        webknossos_backend::router(AppState::new(db.pool.clone())),
         id,
     )
 }

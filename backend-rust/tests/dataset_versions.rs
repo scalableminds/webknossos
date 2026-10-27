@@ -40,9 +40,7 @@ async fn dataset_versions_preserve_list_defaults_and_uint64_boundaries() {
         sqlx::query("INSERT INTO webknossos.dataset_layers(_dataset,name,category,elementclass,boundingbox,largestsegmentid,dataformat) VALUES($1,$2,'segmentation','uint64',ROW(0,0,0,10,10,10)::webknossos.bounding_box,$3,'wkw')")
             .bind(&id).bind(name).bind(segment_id).execute(&db.pool).await.unwrap();
     }
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     for prefix in ["/api", "/api/v16"] {
         for suffix in ["", "?compact=false", "?compact=true"] {
             let (status, list) = get(&app, &format!("{prefix}/datasets{suffix}")).await;

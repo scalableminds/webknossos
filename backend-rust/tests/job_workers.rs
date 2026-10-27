@@ -36,9 +36,7 @@ fn app(db: &TestDb, voxelytics: bool, mailer: &RecordingMailer) -> Router {
     let mut features = default_features();
     features.insert("voxelyticsEnabled".into(), json!(voxelytics));
     router_with_misc(
-        AppState {
-            pool: db.pool.clone(),
-        },
+        AppState::new(db.pool.clone()),
         MiscConfig {
             jobs_enabled: true,
             features,

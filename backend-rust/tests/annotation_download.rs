@@ -343,9 +343,7 @@ async fn annotation(db: &TestDb, w: &World, seed: Seed<'_>) -> String {
 }
 
 fn app(db: &TestDb) -> Router {
-    router(AppState {
-        pool: db.pool.clone(),
-    })
+    router(AppState::new(db.pool.clone()))
 }
 
 struct Reply {

@@ -312,9 +312,7 @@ async fn annotation(
 }
 
 fn app(db: &TestDb) -> Router {
-    router(AppState {
-        pool: db.pool.clone(),
-    })
+    router(AppState::new(db.pool.clone()))
 }
 
 async fn annotation_count(db: &TestDb) -> i64 {

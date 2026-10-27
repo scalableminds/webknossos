@@ -370,9 +370,7 @@ async fn world(db: &TestDb, tracing_store_url: &str) -> World {
 }
 
 fn app(db: &TestDb) -> Router {
-    router(AppState {
-        pool: db.pool.clone(),
-    })
+    router(AppState::new(db.pool.clone()))
 }
 
 #[derive(sqlx::FromRow, Debug, PartialEq)]

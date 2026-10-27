@@ -226,12 +226,7 @@ fn app(db: &TestDb, oidc: OidcConfig) -> Router {
         used_storage: Default::default(),
         worker_liveness: Default::default(),
     };
-    router_with_config(
-        AppState {
-            pool: db.pool.clone(),
-        },
-        &config,
-    )
+    router_with_config(AppState::new(db.pool.clone()), &config)
 }
 
 struct Reply {

@@ -62,9 +62,8 @@ async fn default_admin_and_personal_configurations_merge_at_the_correct_levels()
         .bind(&id).bind(&fixture.organization_id).execute(&db.pool).await.unwrap();
     sqlx::query("INSERT INTO webknossos.dataset_layers (_dataset,name,category,elementClass,boundingBox,dataFormat,defaultViewConfiguration,adminViewConfiguration) VALUES ($1,'color','color','uint8',ROW(0,0,0,10,10,10)::webknossos.BOUNDING_BOX,'wkw','{\"color\":[1,2,3],\"defaultLayer\":true,\"shared\":1}','{\"alpha\":0.5,\"shared\":2}')")
         .bind(&id).execute(&db.pool).await.unwrap();
-    let application = webknossos_backend::dataset::configuration::router().with_state(AppState {
-        pool: db.pool.clone(),
-    });
+    let application = webknossos_backend::dataset::configuration::router()
+        .with_state(AppState::new(db.pool.clone()));
     let path = format!("/datasetConfigurations/{id}");
     let admin_path = format!("/datasetConfigurations/default/{id}");
     let (status, defaults) = request(
@@ -214,9 +213,8 @@ async fn inaccessible_missing_and_unusable_datasets_follow_configuration_fallbac
     .unwrap();
     sqlx::query("INSERT INTO webknossos.datasets (_id,_dataStore,_organization,_folder,name,directoryName,sortingKey,sharingToken,adminViewConfiguration) SELECT $1,'config-store',$2,_rootFolder,'Private','Private',NOW(),'sharing','{\"zoom\":2}' FROM webknossos.organizations WHERE _id=$2")
         .bind(&id).bind(&fixture.organization_id).execute(&db.pool).await.unwrap();
-    let application = webknossos_backend::dataset::configuration::router().with_state(AppState {
-        pool: db.pool.clone(),
-    });
+    let application = webknossos_backend::dataset::configuration::router()
+        .with_state(AppState::new(db.pool.clone()));
     let path = format!("/datasetConfigurations/{id}");
     assert_eq!(
         request(&application, "POST", &path, None, Some(json!([]))).await,

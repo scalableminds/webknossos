@@ -92,9 +92,7 @@ async fn private_links_preserve_owner_crud_expiration_and_token_lifecycle() {
     let db = TestDb::new().await;
     let f = db.fixture().await;
     let a = seed(&db, &f).await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let expiry = chrono::Utc::now().timestamp_millis() + 3_600_000;
     let created = create_link(&app, &f, &a.annotation, json!(expiry.to_string())).await;
     assert_eq!(created["annotation"], a.annotation);
@@ -224,9 +222,7 @@ async fn private_link_permissions_are_owner_only_and_rejected_rebind_is_atomic()
     .execute(&db.pool)
     .await
     .unwrap();
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let created = create_link(&app, &f, &a.annotation, Value::Null).await;
     let id = created["id"].as_str().unwrap();
     let path = format!("/api/zarrPrivateLinks/{id}");
@@ -344,9 +340,7 @@ async fn annotation_source_uses_private_link_or_query_user_token_and_real_metada
     let f = db.fixture().await;
     let a = seed(&db, &f).await;
     let member = db.seed_user(&object_id(), &f.organization_id, false).await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let created = create_link(&app, &f, &a.annotation, Value::Null).await;
     let access = created["accessToken"].as_str().unwrap();
     let (status, value) = request(

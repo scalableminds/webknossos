@@ -11,11 +11,11 @@ use webknossos_backend::{AppState, router};
 fn app() -> axum::Router {
     // No database connection is established: public probes and unauthenticated
     // rejections must work even while the database is unavailable.
-    router(AppState {
-        pool: PgPoolOptions::new()
+    router(AppState::new(
+        PgPoolOptions::new()
             .connect_lazy("postgres://unused@127.0.0.1:1/unused")
             .unwrap(),
-    })
+    ))
 }
 
 #[tokio::test]

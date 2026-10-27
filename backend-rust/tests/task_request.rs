@@ -248,9 +248,7 @@ async fn task_annotation(db: &TestDb, w: &World, task: &str, user: &str, state: 
 }
 
 fn app(db: &TestDb) -> Router {
-    router(AppState {
-        pool: db.pool.clone(),
-    })
+    router(AppState::new(db.pool.clone()))
 }
 
 async fn pending(db: &TestDb, task: &str) -> i64 {

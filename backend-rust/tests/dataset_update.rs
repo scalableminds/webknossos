@@ -79,9 +79,7 @@ async fn setup() -> (TestDb, Fixture, Store, Router, tokio::task::JoinHandle<()>
     let app = webknossos_backend::dataset::update::router(false)
         .layer(Extension(clients))
         .layer(Extension(MiscState::new(misc)))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        });
+        .with_state(AppState::new(db.pool.clone()));
     (db, fixture, store, app, server)
 }
 

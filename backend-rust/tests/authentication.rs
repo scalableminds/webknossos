@@ -23,9 +23,7 @@ fn auth_router(database: &TestDb) -> Router {
                 }
             }),
         )
-        .with_state(AppState {
-            pool: database.pool.clone(),
-        })
+        .with_state(AppState::new(database.pool.clone()))
 }
 
 async fn last_used(database: &TestDb, token: &str) -> DateTime<Utc> {

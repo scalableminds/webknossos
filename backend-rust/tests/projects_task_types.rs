@@ -107,9 +107,7 @@ async fn project_owner_details_obey_user_read_permissions() {
         .execute(&db.pool)
         .await
         .unwrap();
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let (_, created) = request(
         &app,
         &f.token,
@@ -176,9 +174,7 @@ async fn project_and_type_creation_recheck_a_team_deleted_while_waiting() {
         ("/api/taskTypes", "tasktypes"),
     ] {
         let f = db.fixture().await;
-        let app = router(AppState {
-            pool: db.pool.clone(),
-        });
+        let app = router(AppState::new(db.pool.clone()));
         let body = if table == "projects" {
             project(&f, "Blocked-project")
         } else {
@@ -222,9 +218,7 @@ async fn team_deletion_sees_references_committed_while_it_waited() {
         ("/api/taskTypes", "tasktypes"),
     ] {
         let f = db.fixture().await;
-        let app = router(AppState {
-            pool: db.pool.clone(),
-        });
+        let app = router(AppState::new(db.pool.clone()));
         // Pause the actual INSERT after it has acquired its live-team lock.
         let trigger = format!(
             "CREATE FUNCTION webknossos.pause_{table}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_advisory_xact_lock(714123); RETURN NEW; END $$; CREATE TRIGGER pause_insert BEFORE INSERT ON webknossos.{table} FOR EACH ROW EXECUTE FUNCTION webknossos.pause_{table}();"
@@ -282,9 +276,7 @@ async fn team_deletion_sees_references_committed_while_it_waited() {
 async fn projects_crud_pause_status_and_transactional_cascade() {
     let db = TestDb::new().await;
     let f = db.fixture().await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let (status, created) = request(
         &app,
         &f.token,
@@ -509,9 +501,7 @@ async fn projects_crud_pause_status_and_transactional_cascade() {
 async fn task_types_crud_immutability_uniqueness_and_cascade() {
     let db = TestDb::new().await;
     let f = db.fixture().await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let (status, created) = request(
         &app,
         &f.token,
@@ -658,9 +648,7 @@ async fn team_member_manager_owner_and_organization_permissions() {
         .await
         .unwrap();
     }
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let (_, p) = request(
         &app,
         &f.token,
@@ -784,9 +772,7 @@ async fn team_member_manager_owner_and_organization_permissions() {
 async fn simultaneous_duplicate_creations_are_serialized() {
     let db = TestDb::new().await;
     let f = db.fixture().await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let (a, b) = tokio::join!(
         request(
             &app,

@@ -44,9 +44,7 @@ fn provider(db: &TestDb) -> AnnotationProvider {
 fn app(db: &TestDb, provider: &AnnotationProvider) -> Router {
     webknossos_backend::remote::tracingstore::reads::router()
         .layer(Extension(provider.clone()))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        })
+        .with_state(AppState::new(db.pool.clone()))
 }
 async fn setup() -> (TestDb, AnnotationProvider, Router) {
     let db = TestDb::new().await;

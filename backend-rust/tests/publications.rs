@@ -30,9 +30,7 @@ async fn get(app: &axum::Router, uri: &str, token: Option<&str>) -> (u16, Header
 async fn publications_embed_datasets_and_annotations() {
     let db = TestDb::new().await;
     let f = db.fixture().await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     sqlx::query("INSERT INTO webknossos.dataStores (name,url,publicUrl,key) VALUES ('pub-store','http://store.internal','http://store.public','secret-key')")
         .execute(&db.pool).await.unwrap();
     let publication = object_id();

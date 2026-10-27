@@ -21,9 +21,7 @@ fn app(database: &TestDb, jobs_enabled: bool) -> Router {
             "/api",
             webknossos_backend::stores::data::router(jobs_enabled),
         )
-        .with_state(AppState {
-            pool: database.pool.clone(),
-        })
+        .with_state(AppState::new(database.pool.clone()))
 }
 
 async fn request(

@@ -22,9 +22,7 @@ use webknossos_backend::{
 
 fn app(db: &TestDb, mailer: &RecordingMailer) -> Router {
     router_with_browser_auth(
-        AppState {
-            pool: db.pool.clone(),
-        },
+        AppState::new(db.pool.clone()),
         BrowserAuthConfig::default(),
         MailSender::new(mailer.clone()),
     )

@@ -59,9 +59,7 @@ fn error(message: &str) -> Value {
 
 fn enabled_app(db: &TestDb) -> axum::Router {
     router_with_misc(
-        AppState {
-            pool: db.pool.clone(),
-        },
+        AppState::new(db.pool.clone()),
         MiscConfig {
             jobs_enabled: true,
             ..MiscConfig::default()
@@ -71,9 +69,7 @@ fn enabled_app(db: &TestDb) -> axum::Router {
 }
 
 fn disabled_app(db: &TestDb) -> axum::Router {
-    router(AppState {
-        pool: db.pool.clone(),
-    })
+    router(AppState::new(db.pool.clone()))
 }
 
 async fn make_superuser(db: &TestDb, multi_user: &str) {

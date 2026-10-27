@@ -30,9 +30,7 @@ fn app(db: &TestDb) -> Router {
                 "http://localhost:9000",
             ),
         ))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        })
+        .with_state(AppState::new(db.pool.clone()))
 }
 
 async fn request(
@@ -480,9 +478,7 @@ async fn compact_and_full_dataset_responses_preserve_composites_paths_unsigned_i
         .execute(&db.pool).await.unwrap();
     let jobs_disabled = webknossos_backend::dataset::routes::read_router(false)
         .layer(axum::Extension(offline_misc()))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        });
+        .with_state(AppState::new(db.pool.clone()));
     assert_eq!(
         request(
             &jobs_disabled,
@@ -1207,9 +1203,7 @@ async fn metadata_updates_render_before_commit_and_work_with_one_database_connec
         .unwrap();
     let application = webknossos_backend::dataset::routes::metadata_router(false)
         .layer(axum::Extension(offline_misc()))
-        .with_state(AppState {
-            pool: single.clone(),
-        });
+        .with_state(AppState::new(single.clone()));
     let path = format!("/datasets/{id}");
     let (status, result) = tokio::time::timeout(
         std::time::Duration::from_secs(3),

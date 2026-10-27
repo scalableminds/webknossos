@@ -23,9 +23,7 @@ fn app(db: &TestDb, allow_delete: bool) -> Router {
             })
             .unwrap(),
         ))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        })
+        .with_state(AppState::new(db.pool.clone()))
 }
 async fn request(
     app: &Router,
@@ -208,9 +206,7 @@ async fn callbacks_validate_service_keys_before_rpc_bypass_and_dataset_permissio
             })
             .unwrap(),
         ))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        });
+        .with_state(AppState::new(db.pool.clone()));
     assert_eq!(
         request(
             &disabled,

@@ -190,9 +190,7 @@ async fn world() -> World {
     let recent_task = task(&db, &recent, &task_type, "test", 1, 1, Some(7)).await;
     task_annotation(&db, &dataset, &recent_task, &admin.user_id, "Finished").await;
 
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     World {
         db,
         app,

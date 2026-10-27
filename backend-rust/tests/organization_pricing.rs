@@ -59,9 +59,7 @@ async fn send(
 
 fn app(db: &TestDb, misc: MiscConfig, mailer: &RecordingMailer) -> axum::Router {
     router_with_misc(
-        AppState {
-            pool: db.pool.clone(),
-        },
+        AppState::new(db.pool.clone()),
         misc,
         MailSender::new(mailer.clone()),
     )

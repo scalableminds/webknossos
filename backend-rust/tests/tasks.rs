@@ -176,9 +176,7 @@ async fn task_public_contract_preserves_annotation_dataset_and_script_access() {
     let outsider = db.seed_user(&object_id(), &f.organization_id, false).await;
     annotation(&db, &t, &f.user_id, "Active", "Private").await;
     annotation(&db, &t, &f.user_id, "Finished", "Internal").await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let path = format!("/api/tasks/{}", t.task);
     let (status, _, value) = request(&app, &member.token, "GET", &path, None).await;
     assert_eq!(status, StatusCode::OK);
@@ -270,9 +268,7 @@ async fn task_lists_obey_management_filters_pagination_and_organization_domains(
     let manager = team_user(&db, &f, true).await;
     let foreign = db.fixture().await;
     annotation(&db, &t, &member.user_id, "Active", "Internal").await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     assert_eq!(
         request(
             &app,
@@ -388,9 +384,7 @@ async fn task_lists_obey_management_filters_pagination_and_organization_domains(
         .connect(&db.connection_url())
         .await
         .unwrap();
-    let single_app = router(AppState {
-        pool: single_pool.clone(),
-    });
+    let single_app = router(AppState::new(single_pool.clone()));
     let single = tokio::time::timeout(
         std::time::Duration::from_secs(3),
         request(&single_app, &manager.token, "GET", &path, None),
@@ -465,9 +459,7 @@ async fn task_updates_are_atomic_and_delete_cascades_through_counter_triggers() 
     let member = team_user(&db, &f, false).await;
     let manager = team_user(&db, &f, true).await;
     let active = annotation(&db, &t, &member.user_id, "Active", "Internal").await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let path = format!("/api/tasks/{}", t.task);
     assert_eq!(
         request(
@@ -602,9 +594,7 @@ async fn task_peek_uses_experience_membership_priority_and_cancellation_rules() 
     let t = seed(&db, &f).await;
     let member = team_user(&db, &f, false).await;
     let manager = team_user(&db, &f, true).await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let path = "/api/user/tasks/peek";
     assert_eq!(
         request(&app, &member.token, "GET", path, None).await.0,

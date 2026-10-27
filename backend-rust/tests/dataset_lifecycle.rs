@@ -94,9 +94,7 @@ fn clients() -> ServiceClients {
 fn app(db: &TestDb, allow_delete: bool, jobs_enabled: bool) -> Router {
     webknossos_backend::dataset::lifecycle::router(allow_delete, jobs_enabled)
         .layer(Extension(clients()))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        })
+        .with_state(AppState::new(db.pool.clone()))
 }
 
 async fn call(
@@ -199,9 +197,7 @@ async fn path_deletion_service_routes_require_the_configured_key() {
         sqlx::query("INSERT INTO webknossos.remote_paths_to_delete (path,created) VALUES ($1,NOW() - make_interval(mins => $2))")
             .bind(path).bind(offset).execute(&db.pool).await.unwrap();
     }
-    let state = AppState {
-        pool: db.pool.clone(),
-    };
+    let state = AppState::new(db.pool.clone());
     let unconfigured = webknossos_backend::dataset::paths::router(DatasetRouteConfig::default())
         .with_state(state.clone());
     let configured = webknossos_backend::dataset::paths::router(DatasetRouteConfig {

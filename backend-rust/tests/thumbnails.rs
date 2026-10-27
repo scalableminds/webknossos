@@ -198,9 +198,7 @@ async fn layer_thumbnail_selects_parameters_caches_and_keeps_public_cache_header
         (None, None),
     )
     .await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let path = format!("/api/datasets/{id}/layers/color/thumbnail");
 
     let (status, _, _) = call(&app, &format!("{path}?w=50&h=5000"), None).await;
@@ -383,9 +381,7 @@ async fn dataset_thumbnail_posts_layer_composition_and_caches_with_sentinel() {
         (Some(json!({"mapping":{"name":"m"}})), None),
     )
     .await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let path = format!("/api/datasets/{id}/thumbnail?w=100&h=60");
     let (status, headers, body) = call(&app, &path, Some(&fixture.token)).await;
     assert_eq!((status, body.as_ref()), (StatusCode::OK, IMAGE));

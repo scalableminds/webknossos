@@ -14,9 +14,7 @@ fn app(database: &TestDb) -> Router {
     Router::new()
         .merge(teams::router())
         .merge(scripts::router())
-        .with_state(AppState {
-            pool: database.pool.clone(),
-        })
+        .with_state(AppState::new(database.pool.clone()))
 }
 
 async fn request(

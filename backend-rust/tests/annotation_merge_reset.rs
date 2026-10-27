@@ -268,9 +268,7 @@ async fn layer_count(db: &TestDb) -> i64 {
 }
 
 fn app(db: &TestDb) -> Router {
-    router(AppState {
-        pool: db.pool.clone(),
-    })
+    router(AppState::new(db.pool.clone()))
 }
 
 // ---------------------------------------------------------------------------

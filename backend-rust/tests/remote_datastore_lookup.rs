@@ -24,9 +24,8 @@ async fn setup() -> (TestDb, Router) {
         .await
         .unwrap();
     }
-    let app = webknossos_backend::remote::datastore::lookup::router().with_state(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = webknossos_backend::remote::datastore::lookup::router()
+        .with_state(AppState::new(db.pool.clone()));
     (db, app)
 }
 

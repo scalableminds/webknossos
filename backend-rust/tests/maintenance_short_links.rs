@@ -46,9 +46,7 @@ async fn request(
 async fn maintenance_permissions_lifecycle_and_public_filter() {
     let db = TestDb::new().await;
     let f = db.fixture().await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let now = chrono::Utc::now().timestamp_millis();
     let body = json!({"startTime":now,"endTime":now+600000,"message":"Test maintenance"});
     assert_eq!(
@@ -151,9 +149,7 @@ async fn maintenance_permissions_lifecycle_and_public_filter() {
 #[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
 async fn short_link_roundtrip_and_origin_validation() {
     let db = TestDb::new().await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let link = "http://localhost:9000/datasets/test#settings";
     let (status, created) = request(&app, "POST", "/api/shortLinks", None, Some(json!(link))).await;
     assert_eq!(status, 200, "{created}");

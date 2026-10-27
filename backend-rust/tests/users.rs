@@ -11,9 +11,7 @@ use tower::ServiceExt;
 use webknossos_backend::{AppState, users};
 
 fn app(database: &TestDb, email_verification: bool) -> Router {
-    users::router(email_verification).with_state(AppState {
-        pool: database.pool.clone(),
-    })
+    users::router(email_verification).with_state(AppState::new(database.pool.clone()))
 }
 
 async fn request(

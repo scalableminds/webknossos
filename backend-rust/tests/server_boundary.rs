@@ -20,7 +20,7 @@ async fn closed_database_readiness_is_unavailable_but_liveness_remains_healthy()
         .connect_lazy("postgres://unused@127.0.0.1:1/unavailable")
         .unwrap();
     pool.close().await;
-    let app = router(AppState { pool });
+    let app = router(AppState::new(pool));
     let response = app
         .clone()
         .oneshot(
@@ -88,7 +88,7 @@ async fn request_timeout_bounds_database_waits_and_preserves_error_headers() {
         used_storage: Default::default(),
         worker_liveness: Default::default(),
     };
-    let app = router_with_config(AppState { pool: pool.clone() }, &config);
+    let app = router_with_config(AppState::new(pool.clone()), &config);
     let response = tokio::time::timeout(
         Duration::from_secs(1),
         app.oneshot(

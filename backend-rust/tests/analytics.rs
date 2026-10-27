@@ -40,13 +40,7 @@ async fn send(app: &axum::Router, uri: &str, token: Option<&str>, body: &str) ->
 }
 
 fn app(db: &TestDb, misc: MiscConfig) -> axum::Router {
-    router_with_misc(
-        AppState {
-            pool: db.pool.clone(),
-        },
-        misc,
-        MailSender::default(),
-    )
+    router_with_misc(AppState::new(db.pool.clone()), misc, MailSender::default())
 }
 
 fn error(message: &str) -> Value {

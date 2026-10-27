@@ -11,9 +11,7 @@ use tower::ServiceExt;
 use webknossos_backend::{AppState, folders};
 
 fn app(database: &TestDb) -> Router {
-    folders::router().with_state(AppState {
-        pool: database.pool.clone(),
-    })
+    folders::router().with_state(AppState::new(database.pool.clone()))
 }
 
 async fn request(

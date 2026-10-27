@@ -100,9 +100,7 @@ async fn compose_and_in_place_additions_build_virtual_datasets() {
             })
             .unwrap(),
         ))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        });
+        .with_state(AppState::new(db.pool.clone()));
     let fine = seed(&db, &fixture, 4.0, false).await;
     let coarse = seed(&db, &fixture, 8.0, true).await;
     let root: String =

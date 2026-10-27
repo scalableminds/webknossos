@@ -323,9 +323,7 @@ async fn task(db: &TestDb, w: &World, pending: i64) -> (String, String) {
 }
 
 fn app(db: &TestDb) -> Router {
-    router(AppState {
-        pool: db.pool.clone(),
-    })
+    router(AppState::new(db.pool.clone()))
 }
 
 fn uri(task: &str, user: &str) -> String {

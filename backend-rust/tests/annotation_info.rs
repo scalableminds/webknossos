@@ -225,9 +225,7 @@ async fn annotation(
 }
 
 fn app(db: &TestDb) -> Router {
-    router(AppState {
-        pool: db.pool.clone(),
-    })
+    router(AppState::new(db.pool.clone()))
 }
 
 async fn spans(db: &TestDb, user: &str, annotation: &str) -> i64 {

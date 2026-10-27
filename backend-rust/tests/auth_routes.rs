@@ -17,9 +17,7 @@ use webknossos_backend::{AppState, auth::authenticate, auth::routes::AuthRouteCo
 fn configured_router(database: &TestDb, config: AuthRouteConfig) -> Router {
     Router::new()
         .nest("/api", webknossos_backend::auth::routes::router(config))
-        .with_state(AppState {
-            pool: database.pool.clone(),
-        })
+        .with_state(AppState::new(database.pool.clone()))
 }
 
 fn app(database: &TestDb) -> Router {

@@ -182,9 +182,7 @@ fn app(db: &TestDb) -> (Router, AnnotationProvider) {
         )
         .layer(Extension(provider.clone()))
         .layer(Extension(writer))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        });
+        .with_state(AppState::new(db.pool.clone()));
     (app, provider)
 }
 

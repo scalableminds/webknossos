@@ -161,9 +161,7 @@ fn app_with(db: &TestDb, reopen_seconds: Option<i64>) -> (Router, AnnotationProv
             features,
             ..MiscConfig::default()
         })))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        });
+        .with_state(AppState::new(db.pool.clone()));
     (app, provider)
 }
 

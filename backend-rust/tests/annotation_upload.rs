@@ -179,9 +179,7 @@ async fn world(db: &TestDb) -> World {
                 .execute(&db.pool).await.unwrap();
         }
     }
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     World {
         f,
         foreign,

@@ -21,9 +21,7 @@ fn app(database: &TestDb) -> Router {
             "/api",
             webknossos_backend::remote::datastore::credentials::router(),
         )
-        .with_state(AppState {
-            pool: database.pool.clone(),
-        })
+        .with_state(AppState::new(database.pool.clone()))
 }
 
 async fn get(app: &Router, path: &str, token: Option<&str>) -> (StatusCode, Value) {

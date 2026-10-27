@@ -37,9 +37,7 @@ async fn request(
     (status, serde_json::from_slice(&bytes).unwrap())
 }
 fn app(db: &TestDb) -> Router {
-    webknossos_backend::organization::routes::router().with_state(AppState {
-        pool: db.pool.clone(),
-    })
+    webknossos_backend::organization::routes::router().with_state(AppState::new(db.pool.clone()))
 }
 async fn seed_billing(db: &TestDb, f: &Fixture) {
     sqlx::query("UPDATE webknossos.users SET isorganizationowner=true WHERE _id=$1")

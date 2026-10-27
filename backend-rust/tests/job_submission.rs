@@ -72,9 +72,7 @@ fn app(db: &TestDb, enabled: bool) -> Router {
             ..MiscConfig::default()
         })))
         .layer(Extension(clients))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        })
+        .with_state(AppState::new(db.pool.clone()))
 }
 
 async fn request(

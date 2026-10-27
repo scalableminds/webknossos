@@ -86,9 +86,7 @@ fn app(db: &TestDb, jobs_enabled: bool) -> Router {
     webknossos_backend::remote::datastore::dataset_report::router()
         .layer(Extension(clients))
         .layer(Extension(MiscState::new(misc)))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        })
+        .with_state(AppState::new(db.pool.clone()))
 }
 
 async fn setup() -> Setup {

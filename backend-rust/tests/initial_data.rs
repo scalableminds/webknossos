@@ -35,13 +35,7 @@ async fn send(app: &axum::Router, method: &str, uri: &str, token: Option<&str>) 
 }
 
 async fn trigger(db: &TestDb, misc: MiscConfig) -> (u16, Value) {
-    let app = router_with_misc(
-        AppState {
-            pool: db.pool.clone(),
-        },
-        misc,
-        MailSender::default(),
-    );
+    let app = router_with_misc(AppState::new(db.pool.clone()), misc, MailSender::default());
     send(
         &app,
         "POST",
@@ -293,9 +287,7 @@ async fn sample_organization_is_inserted_once() {
 
     // The configured sample token authenticates the default user.
     let app = router_with_misc(
-        AppState {
-            pool: db.pool.clone(),
-        },
+        AppState::new(db.pool.clone()),
         misc.clone(),
         MailSender::default(),
     );

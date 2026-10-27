@@ -128,9 +128,7 @@ fn app(db: &TestDb) -> Router {
         .layer(Extension(
             ServiceClients::new(ServiceClientConfig::default()).unwrap(),
         ))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        })
+        .with_state(AppState::new(db.pool.clone()))
 }
 
 async fn send(

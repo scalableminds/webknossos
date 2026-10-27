@@ -11,9 +11,7 @@ use tower::ServiceExt;
 use webknossos_backend::{AppState, projects};
 
 fn app(database: &TestDb) -> Router {
-    projects::router().with_state(AppState {
-        pool: database.pool.clone(),
-    })
+    projects::router().with_state(AppState::new(database.pool.clone()))
 }
 
 async fn transfer(app: &Router, project: &str, token: &str, body: Value) -> (StatusCode, String) {

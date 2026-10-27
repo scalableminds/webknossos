@@ -91,9 +91,7 @@ async fn seed_transaction(
 async fn add_credits_validation_and_permissions() {
     let db = TestDb::new().await;
     let f = db.fixture().await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let org = &f.organization_id;
     let add = |query: String| format!("/api/creditTransactions/addCredits?{query}");
     let base = format!("organizationId={org}&creditAmount=5&moneySpent=12.50&currency=EUR");
@@ -186,9 +184,7 @@ async fn add_credits_validation_and_permissions() {
 async fn list_serializes_paid_jobs_and_refund_flow() {
     let db = TestDb::new().await;
     let f = db.fixture().await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let org = &f.organization_id;
     let member = db.seed_user(&object_id(), org, false).await;
     let other = db.fixture().await;
@@ -383,9 +379,7 @@ async fn list_serializes_paid_jobs_and_refund_flow() {
 async fn revoke_expired_credits_and_compact_display() {
     let db = TestDb::new().await;
     let f = db.fixture().await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     let org = &f.organization_id;
     let other = db.fixture().await;
     // Partially used grant: 2000 granted, 500 spent afterwards.

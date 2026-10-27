@@ -55,9 +55,7 @@ async fn tracing_store_registry_exposes_only_public_fields_and_requires_admin_up
     .execute(&db.pool)
     .await
     .unwrap();
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     assert_eq!(
         request(&app, "GET", "/api/tracingstore", None, None).await,
         (

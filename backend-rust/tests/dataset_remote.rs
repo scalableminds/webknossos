@@ -76,9 +76,7 @@ fn app(db: &TestDb) -> Router {
     .unwrap();
     webknossos_backend::dataset::remote::router()
         .layer(Extension(clients))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        })
+        .with_state(AppState::new(db.pool.clone()))
 }
 
 async fn request(

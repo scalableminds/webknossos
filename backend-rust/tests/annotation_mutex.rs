@@ -140,9 +140,7 @@ fn app(db: &TestDb, expiry: Duration) -> Router {
             webknossos_backend::annotation::mutex::router(expiry),
         )
         .layer(Extension(provider))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        })
+        .with_state(AppState::new(db.pool.clone()))
 }
 fn path(id: &str, operation: &str, session: &str) -> String {
     let query = serde_urlencoded::to_string([("sessionId", session)]).unwrap();

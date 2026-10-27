@@ -77,9 +77,7 @@ fn app(db: &TestDb) -> Router {
             ..MiscConfig::default()
         })))
         .layer(Extension(clients))
-        .with_state(AppState {
-            pool: db.pool.clone(),
-        })
+        .with_state(AppState::new(db.pool.clone()))
 }
 
 async fn send(
@@ -358,9 +356,7 @@ async fn model_read_scopes_pretrained_datastore_and_serialization() {
     );
     assert!(calls.lock().unwrap().is_empty());
     // Verify the parent router mounts the routes with API prefix (including jobs disabled).
-    let full = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let full = router(AppState::new(db.pool.clone()));
     assert_eq!(send(&full, "GET", "/api/aiModels", None, None).await.0, 401);
     server.abort();
     db.cleanup().await;
@@ -1236,9 +1232,7 @@ async fn reserve_new_model_upload_to_path_and_finish() {
         (400, error("Data store could not be found or accessed."))
     );
     assert!(calls.lock().unwrap().is_empty());
-    let full = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let full = router(AppState::new(db.pool.clone()));
     assert_eq!(
         send(
             &full,

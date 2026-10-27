@@ -105,9 +105,7 @@ async fn explore_add_virtual_and_duplicate_create_datasets_through_the_datastore
         })
         .unwrap(),
     ))
-    .with_state(AppState {
-        pool: db.pool.clone(),
-    });
+    .with_state(AppState::new(db.pool.clone()));
 
     // exploreRemote: credentials stored, datastore called with a fresh user DataStore token.
     let (status, body) = post(

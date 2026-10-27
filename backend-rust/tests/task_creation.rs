@@ -301,9 +301,7 @@ async fn world(db: &TestDb) -> World {
     let script = object_id();
     sqlx::query("INSERT INTO webknossos.scripts(_id,_owner,name,gist) VALUES($1,$2,'Script','https://gist.example.test/x')")
         .bind(&script).bind(&f.user_id).execute(&db.pool).await.unwrap();
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     World {
         f,
         manager,

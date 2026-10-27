@@ -50,9 +50,7 @@ fn app(database: &TestDb, public_uri: &str, enabled: bool) -> Router {
     Router::new()
         .nest("/api", webknossos_backend::auth::webauthn::router())
         .layer(Extension(MiscState::new(misc)))
-        .with_state(AppState {
-            pool: database.pool.clone(),
-        })
+        .with_state(AppState::new(database.pool.clone()))
 }
 
 struct Reply {

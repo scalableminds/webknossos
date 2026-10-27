@@ -320,9 +320,7 @@ async fn world(db: &TestDb) -> World {
     let skeleton_type = add_task_type(db, &org, &f.team_id, "skeleton", None).await;
     let volume_type = add_task_type(db, &org, &f.team_id, "volume", None).await;
     let hybrid_type = add_task_type(db, &org, &f.team_id, "hybrid", Some(2)).await;
-    let app = router(AppState {
-        pool: db.pool.clone(),
-    });
+    let app = router(AppState::new(db.pool.clone()));
     World {
         f,
         manager,

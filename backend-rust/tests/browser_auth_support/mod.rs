@@ -100,9 +100,7 @@ pub async fn send(
 
 pub fn app(database: &TestDb, config: BrowserAuthConfig, mailer: &RecordingMailer) -> Router {
     router_with_browser_auth(
-        AppState {
-            pool: database.pool.clone(),
-        },
+        AppState::new(database.pool.clone()),
         config,
         MailSender::new(mailer.clone()),
     )

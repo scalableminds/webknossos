@@ -733,7 +733,7 @@ async fn auth_finalize(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
     Extension(stores): Extension<WebAuthnStores>,
-    Extension(browser): Extension<BrowserAuthConfig>,
+    State(browser): State<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
     headers: HeaderMap,
     JsonBody(body): JsonBody<AuthenticationBody>,

@@ -22,23 +22,6 @@ pub fn router(state: AppState) -> Router {
     build_router(state, RouteOptions::local_defaults())
 }
 
-/// Local defaults plus explicit browser-session configuration and mailer
-/// (used by browser authentication tests).
-pub fn router_with_browser_auth(
-    state: AppState,
-    browser_auth: crate::auth::browser::BrowserAuthConfig,
-    mailer: crate::mail::MailSender,
-) -> Router {
-    build_router(
-        state,
-        RouteOptions {
-            browser_auth,
-            mailer,
-            ..RouteOptions::local_defaults()
-        },
-    )
-}
-
 /// Local defaults plus an explicit mailer (used by the misc controller tests).
 pub fn router_with_mailer(state: AppState, mailer: crate::mail::MailSender) -> Router {
     build_router(
@@ -76,7 +59,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
             annotation_mutex_expiry: config.annotation_mutex_expiry,
             time_tracking: config.time_tracking,
             auth_routes: config.auth_routes.clone(),
-            browser_auth: config.browser_auth.clone(),
             mailer: crate::mail::MailSender::from_config(&config.mail),
             allow_delete_datasets: config.allow_delete_datasets,
             datasets: config.datasets.clone(),
@@ -96,7 +78,6 @@ struct RouteOptions {
     annotation_mutex_expiry: Duration,
     time_tracking: crate::config::TimeTrackingConfig,
     auth_routes: crate::auth::routes::AuthRouteConfig,
-    browser_auth: crate::auth::browser::BrowserAuthConfig,
     mailer: crate::mail::MailSender,
     allow_delete_datasets: bool,
     datasets: crate::dataset::options::DatasetRouteConfig,
@@ -118,7 +99,6 @@ impl RouteOptions {
             allow_delete_datasets: true,
             datasets: Default::default(),
             auth_routes: crate::auth::routes::AuthRouteConfig::default(),
-            browser_auth: crate::auth::browser::BrowserAuthConfig::default(),
             mailer: crate::mail::MailSender::default(),
             voxelytics: Default::default(),
             oidc: Default::default(),
@@ -137,7 +117,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         annotation_mutex_expiry,
         time_tracking,
         auth_routes,
-        browser_auth,
         mailer,
         allow_delete_datasets,
         datasets,
@@ -156,7 +135,7 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
     );
     let notification_emails = crate::users::notification_emails::NotificationEmailService::new(
         mailer.clone(),
-        &browser_auth.public_uri,
+        &state.browser_auth.public_uri,
     );
     let datastore_tokens = crate::dataset::explore::DatastoreTokenConfig {
         expiry: auth_routes.datastore_expiry,
@@ -227,8 +206,10 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
             ApiError::new(StatusCode::METHOD_NOT_ALLOWED, crate::msg::request::METHOD_NOT_ALLOWED)
         })
         .layer(DefaultBodyLimit::max(body_limit))
-        .layer(middleware::from_fn(crate::auth::browser::cookie_middleware))
-        .layer(axum::Extension(browser_auth))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            crate::auth::browser::cookie_middleware,
+        ))
         .layer(axum::Extension(mailer))
         .layer(axum::Extension(notification_emails))
         .layer(axum::Extension(time_interaction_writer))

@@ -29,8 +29,11 @@ fn app(database: &TestDb, mailer: &RecordingMailer, wkorg: bool) -> Router {
             MailSender::default(),
             "http://localhost:9000",
         )))
-        .layer(Extension(config))
-        .with_state(AppState::new(database.pool.clone()))
+        .with_state(
+            AppState::builder(database.pool.clone())
+                .browser_auth(config)
+                .build(),
+        )
 }
 
 async fn patch(app: &Router, id: &str, token: &str, body: Value) -> (StatusCode, Value) {

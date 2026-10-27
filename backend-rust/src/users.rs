@@ -228,7 +228,7 @@ async fn update(
     Extension(verification): Extension<EmailVerification>,
     Extension(mailer): Extension<MailSender>,
     Extension(notification_emails): Extension<NotificationEmailService>,
-    Extension(auth_config): Extension<BrowserAuthConfig>,
+    State(auth_config): State<BrowserAuthConfig>,
     RequestJson(body): RequestJson<UserUpdate>,
 ) -> ApiResult<Json<Value>> {
     let id: &ObjectId = &id;

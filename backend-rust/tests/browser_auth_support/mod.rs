@@ -13,7 +13,7 @@ use webknossos_backend::{
     AppState,
     auth::browser::BrowserAuthConfig,
     mail::{MailSender, RecordingMailer},
-    router_with_browser_auth,
+    router_with_mailer,
 };
 
 use crate::common::TestDb;
@@ -99,9 +99,10 @@ pub async fn send(
 }
 
 pub fn app(database: &TestDb, config: BrowserAuthConfig, mailer: &RecordingMailer) -> Router {
-    router_with_browser_auth(
-        AppState::new(database.pool.clone()),
-        config,
+    router_with_mailer(
+        AppState::builder(database.pool.clone())
+            .browser_auth(config)
+            .build(),
         MailSender::new(mailer.clone()),
     )
 }

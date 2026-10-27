@@ -92,7 +92,7 @@ async fn identity_for_email(
 
 async fn start_reset_password(
     State(state): State<AppState>,
-    Extension(config): Extension<BrowserAuthConfig>,
+    State(config): State<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
     FormBody(data): FormBody,
 ) -> ApiResult<StatusCode> {
@@ -148,7 +148,7 @@ async fn reset_password(
 
 async fn change_password(
     State(state): State<AppState>,
-    Extension(config): Extension<BrowserAuthConfig>,
+    State(config): State<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
     secured: Secured,
     FormBody(data): FormBody,
@@ -192,7 +192,7 @@ struct SwitchQuery {
 
 async fn switch_multi_user(
     State(state): State<AppState>,
-    Extension(config): Extension<BrowserAuthConfig>,
+    State(config): State<BrowserAuthConfig>,
     headers: HeaderMap,
     secured: Secured,
     Query(query): Query<SwitchQuery>,
@@ -214,7 +214,7 @@ async fn switch_multi_user(
 
 async fn switch_organization(
     State(state): State<AppState>,
-    Extension(config): Extension<BrowserAuthConfig>,
+    State(config): State<BrowserAuthConfig>,
     headers: HeaderMap,
     secured: Secured,
     Path(organization_id): Path<String>,
@@ -391,7 +391,7 @@ async fn verify_email(
 
 async fn request_verification_mail(
     State(state): State<AppState>,
-    Extension(config): Extension<BrowserAuthConfig>,
+    State(config): State<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
     user: AuthUser,
 ) -> ApiResult<StatusCode> {

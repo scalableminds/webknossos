@@ -43,7 +43,7 @@ pub async fn authenticate_request(
     state: &AppState,
 ) -> ApiResult<Option<(AuthUser, AuthCredential)>> {
     use crate::auth::browser::{CookieOutcome, authenticate_cookie};
-    match authenticate_cookie(parts, &state.pool).await? {
+    match authenticate_cookie(parts, &state.pool, &state.browser_auth).await? {
         CookieOutcome::Authenticated(user, cookie) => {
             return Ok(Some((*user, AuthCredential::Cookie(cookie))));
         }

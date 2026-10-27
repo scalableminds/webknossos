@@ -1,5 +1,6 @@
 use crate::{
     annotation::provider::AnnotationProvider,
+    auth::browser::BrowserAuthConfig,
     stores::{
         client::{ServiceClientConfig, ServiceClients},
         tracing_client::TracingStoreClient,
@@ -18,6 +19,7 @@ pub struct AppState {
     pub clients: ServiceClients,
     pub tracing_store: TracingStoreClient,
     pub annotation_provider: AnnotationProvider,
+    pub browser_auth: BrowserAuthConfig,
 }
 
 /// `features.jobsEnabled`.
@@ -33,6 +35,7 @@ pub struct AppStateBuilder {
     clients: Option<ServiceClients>,
     tracing_store: Option<TracingStoreClient>,
     annotation_provider: Option<AnnotationProvider>,
+    browser_auth: BrowserAuthConfig,
 }
 
 impl AppState {
@@ -51,6 +54,7 @@ impl AppState {
             clients: None,
             tracing_store: None,
             annotation_provider: None,
+            browser_auth: BrowserAuthConfig::default(),
         }
     }
 
@@ -59,6 +63,7 @@ impl AppState {
             .jobs_enabled(config.jobs_enabled)
             .misc(config.misc.clone())
             .service_client(config.service_client.clone())
+            .browser_auth(config.browser_auth.clone())
             .build()
     }
 }
@@ -82,6 +87,11 @@ impl AppStateBuilder {
     /// Datastore/tracingstore RPC clients other than the ones `service_client` configures.
     pub fn clients(mut self, clients: ServiceClients) -> Self {
         self.clients = Some(clients);
+        self
+    }
+
+    pub fn browser_auth(mut self, config: BrowserAuthConfig) -> Self {
+        self.browser_auth = config;
         self
     }
 
@@ -116,6 +126,7 @@ impl AppStateBuilder {
             clients,
             tracing_store,
             annotation_provider,
+            browser_auth: self.browser_auth,
         }
     }
 }

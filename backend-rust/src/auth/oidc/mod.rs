@@ -553,7 +553,7 @@ fn audience_contains(claims: &Map<String, Value>, client_id: &str) -> bool {
 
 async fn login_via_open_id_connect(
     Extension(oidc): Extension<Arc<Oidc>>,
-    Extension(browser): Extension<BrowserAuthConfig>,
+    State(browser): State<BrowserAuthConfig>,
 ) -> ApiResult<Response> {
     if !oidc.config.enabled {
         return Ok((StatusCode::BAD_REQUEST, "SSO is not enabled").into_response());
@@ -588,7 +588,7 @@ fn user_info(claims: &Map<String, Value>) -> Option<UserInfo> {
 async fn open_id_callback(
     State(state): State<AppState>,
     Extension(oidc): Extension<Arc<Oidc>>,
-    Extension(browser): Extension<BrowserAuthConfig>,
+    State(browser): State<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
     State(misc): State<MiscState>,
     headers: HeaderMap,

@@ -19,6 +19,7 @@ use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
     mail::{MailSender, RecordingMailer},
+    state::AppStateBuilder,
     system::application_info::MiscConfig,
 };
 
@@ -41,15 +42,23 @@ const PUBLIC_URI: &str = "https://wk.example.org";
 const RP_ID: &str = "wk.example.org";
 
 fn app(database: &TestDb, public_uri: &str, enabled: bool) -> Router {
+    app_with_state(state(database, public_uri, enabled).build())
+}
+
+fn app_with_state(state: AppState) -> Router {
+    Router::new()
+        .nest("/api", webknossos_backend::auth::webauthn::router())
+        .with_state(state)
+}
+
+fn state(database: &TestDb, public_uri: &str, enabled: bool) -> AppStateBuilder {
     let mut misc = MiscConfig {
         public_uri: public_uri.into(),
         ..MiscConfig::default()
     };
     misc.features
         .insert("passkeysEnabled".into(), Value::Bool(enabled));
-    Router::new()
-        .nest("/api", webknossos_backend::auth::webauthn::router())
-        .with_state(AppState::builder(database.pool.clone()).misc(misc).build())
+    AppState::builder(database.pool.clone()).misc(misc)
 }
 
 struct Reply {
@@ -635,9 +644,12 @@ impl Authenticator {
 /// W2 handlers additionally need the router-wide browser-auth config and
 /// mailer (login_user).
 fn auth_app(database: &TestDb, public_uri: &str, enabled: bool) -> Router {
-    app(database, public_uri, enabled)
-        .layer(Extension(browser_auth_support::config()))
-        .layer(Extension(MailSender::new(RecordingMailer::default())))
+    app_with_state(
+        state(database, public_uri, enabled)
+            .browser_auth(browser_auth_support::config())
+            .build(),
+    )
+    .layer(Extension(MailSender::new(RecordingMailer::default())))
 }
 
 async fn post_assertion(app: &Router, path: &str, session: Option<&str>, body: Value) -> Reply {

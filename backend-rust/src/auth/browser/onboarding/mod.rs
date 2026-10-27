@@ -560,7 +560,7 @@ fn bind_sign_up(data: &std::collections::HashMap<String, String>) -> ApiResult<S
 
 async fn register(
     State(state): State<AppState>,
-    Extension(config): Extension<BrowserAuthConfig>,
+    State(config): State<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
     State(misc): State<MiscState>,
     slack: SlackNotificationService,
@@ -640,7 +640,7 @@ async fn register(
 #[allow(clippy::too_many_arguments)]
 async fn create_organization_with_admin(
     State(state): State<AppState>,
-    Extension(config): Extension<BrowserAuthConfig>,
+    State(config): State<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
     State(misc): State<MiscState>,
     State(clients): State<ServiceClients>,
@@ -753,7 +753,7 @@ struct ExistingUserOrganization {
 
 async fn create_organization_with_existing_user(
     State(state): State<AppState>,
-    Extension(config): Extension<BrowserAuthConfig>,
+    State(config): State<BrowserAuthConfig>,
     State(misc): State<MiscState>,
     State(clients): State<ServiceClients>,
     requester: AuthUser,
@@ -813,7 +813,7 @@ struct CreateUserInOrganization {
 
 async fn create_user_in_organization(
     State(state): State<AppState>,
-    Extension(config): Extension<BrowserAuthConfig>,
+    State(config): State<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
     State(misc): State<MiscState>,
     requester: AuthUser,
@@ -874,7 +874,7 @@ async fn lock_multi_user(
 
 async fn join_organization(
     State(state): State<AppState>,
-    Extension(config): Extension<BrowserAuthConfig>,
+    State(config): State<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
     State(misc): State<MiscState>,
     user: AuthUser,
@@ -956,7 +956,7 @@ struct InviteParameters {
 
 async fn send_invites(
     State(state): State<AppState>,
-    Extension(config): Extension<BrowserAuthConfig>,
+    State(config): State<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
     State(misc): State<MiscState>,
     user: AuthUser,

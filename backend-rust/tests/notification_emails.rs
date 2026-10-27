@@ -15,15 +15,13 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    auth::browser::BrowserAuthConfig,
     mail::{Mail, MailSender, RecordingMailer},
-    router_with_browser_auth,
+    router_with_mailer,
 };
 
 fn app(db: &TestDb, mailer: &RecordingMailer) -> Router {
-    router_with_browser_auth(
+    router_with_mailer(
         AppState::new(db.pool.clone()),
-        BrowserAuthConfig::default(),
         MailSender::new(mailer.clone()),
     )
 }

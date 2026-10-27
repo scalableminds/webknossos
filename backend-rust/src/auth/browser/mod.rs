@@ -564,10 +564,11 @@ pub(crate) struct DiscardCookie(Arc<AtomicBool>);
 
 /// CombinedAuthenticatorService.retrieve + Silhouette's validity check +
 /// identity lookup for the cookie half.
-pub(crate) async fn authenticate_cookie(parts: &Parts, pool: &PgPool) -> ApiResult<CookieOutcome> {
-    let Some(config) = parts.extensions.get::<BrowserAuthConfig>() else {
-        return Ok(CookieOutcome::Absent);
-    };
+pub(crate) async fn authenticate_cookie(
+    parts: &Parts,
+    pool: &PgPool,
+    config: &BrowserAuthConfig,
+) -> ApiResult<CookieOutcome> {
     let Some(secret) = config.signer_secret.as_deref() else {
         return Ok(CookieOutcome::Absent);
     };
@@ -637,14 +638,15 @@ pub(crate) async fn cookie_still_valid(
 /// Global layer: lets cookie authentication request a discarding cookie
 /// (Silhouette discards invalid authenticators) unless the handler already
 /// set this cookie itself.
-pub async fn cookie_middleware(mut request: Request, next: Next) -> Response {
-    let config = request.extensions().get::<BrowserAuthConfig>().cloned();
+pub async fn cookie_middleware(
+    State(config): State<BrowserAuthConfig>,
+    mut request: Request,
+    next: Next,
+) -> Response {
     let discard = DiscardCookie::default();
     request.extensions_mut().insert(discard.clone());
     let mut response = next.run(request).await;
-    if let Some(config) = config
-        && discard.0.load(Ordering::Relaxed)
-    {
+    if discard.0.load(Ordering::Relaxed) {
         let prefix = format!("{}=", config.cookie_name);
         let already_set = response
             .headers()
@@ -965,7 +967,7 @@ pub fn router() -> Router<AppState> {
 
 async fn login(
     State(state): State<AppState>,
-    Extension(config): Extension<BrowserAuthConfig>,
+    State(config): State<BrowserAuthConfig>,
     Extension(mailer): Extension<MailSender>,
     headers: HeaderMap,
     FormBody(data): FormBody,

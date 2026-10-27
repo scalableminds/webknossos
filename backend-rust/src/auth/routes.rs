@@ -203,7 +203,7 @@ async fn generate_datastore_token(
 async fn logout(
     State(state): State<AppState>,
     Extension(config): Extension<AuthRouteConfig>,
-    browser: Option<Extension<BrowserAuthConfig>>,
+    State(browser): State<BrowserAuthConfig>,
     OptionalLifecycleAuth(auth): OptionalLifecycleAuth,
 ) -> ApiResult<Response> {
     let mut response = Json(config.logout_redirect_url).into_response();
@@ -214,11 +214,9 @@ async fn logout(
         }) => {
             // Silhouette discard for a repository-less cookie authenticator:
             // only the browser cookie is cleared; bearer tokens stay valid.
-            if let Some(Extension(browser)) = browser {
-                response
-                    .headers_mut()
-                    .append(header::SET_COOKIE, discarding_cookie_header(&browser));
-            }
+            response
+                .headers_mut()
+                .append(header::SET_COOKIE, discarding_cookie_header(&browser));
             tracing::info!(user = %user.id, "User logged out.");
         }
         Some(auth) => {

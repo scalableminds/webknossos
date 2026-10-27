@@ -2,16 +2,18 @@ import ErrorHandling from "libs/error_handling";
 import { noop } from "lodash-es";
 import { applyMiddleware, createStore } from "redux";
 import createSagaMiddleware from "redux-saga";
-import { delay } from "redux-saga/effects";
+import { delay, take } from "redux-saga/effects";
 import { call } from "typed-redux-saga";
 import defaultState from "viewer/default_state";
 import type { Action } from "viewer/model/actions/actions";
+import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { combinedReducer } from "viewer/model/reducers/root_reducer";
 import {
   _resetOperationContextForTesting,
   borrowedContext,
   createOperationContext,
   getOrCreateOperationContext,
+  type OperationContext,
   watchForLongRunningOperations,
 } from "viewer/model/sagas/operation_context_saga";
 import type { OperationContextState, WebknossosState } from "viewer/store";
@@ -449,6 +451,117 @@ describe("operation_context_saga", () => {
       await sagaMiddleware.run(op, 3 * THRESHOLD_MS).toPromise();
 
       expect(ErrorHandling.notify).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("isActive", () => {
+    it("is true until execute() finished", async () => {
+      const { sagaMiddleware } = makeTestStore();
+      const log: boolean[] = [];
+
+      function* op() {
+        const ctx = yield* createOperationContext({ id: "FLOODFILL" });
+        log.push(ctx.isActive());
+        yield* ctx.execute(function* () {
+          log.push(ctx.isActive());
+          yield delay(5);
+        });
+        log.push(ctx.isActive());
+      }
+
+      await sagaMiddleware.run(op).toPromise();
+      expect(log).toEqual([true, true, false]);
+    });
+
+    it("is false after the operation was cancelled", async () => {
+      const { sagaMiddleware } = makeTestStore();
+      let ctx: OperationContext | null = null;
+
+      function* op() {
+        ctx = yield* createOperationContext({ id: "PROOFREADING" });
+        yield* ctx.execute(function* () {
+          yield delay(1000);
+        });
+      }
+
+      const task = sagaMiddleware.run(op);
+      // Creating the context is asynchronous (critical section mutex).
+      await vi.waitFor(() => expect(ctx).not.toBeNull());
+      expect(ctx!.isActive()).toBe(true);
+      task.cancel();
+      await task.toPromise();
+      expect(ctx!.isActive()).toBe(false);
+    });
+
+    it("does not continue the cancelled saga after execute() but still unregisters", async () => {
+      const { sagaMiddleware, store } = makeTestStore();
+      let isExecuting = false;
+      let continuedAfterCancel = false;
+
+      function* op() {
+        const ctx = yield* createOperationContext({ id: "PROOFREADING" });
+        const child = borrowedContext(ctx, "SAVE");
+        yield* ctx.execute(function* () {
+          yield* child.execute(function* () {
+            isExecuting = true;
+            // Stays pending until the test dispatches this action after cancelling.
+            yield take("SET_ZOOM_STEP");
+          });
+        });
+        continuedAfterCancel = true;
+      }
+
+      const task = sagaMiddleware.run(op);
+      await vi.waitFor(() => expect(isExecuting).toBe(true));
+      task.cancel();
+      await task.toPromise();
+      // If the cancelled saga was still alive, this would let it run to completion.
+      store.dispatch(setZoomStepAction(1));
+      // The cleanup (yielding effects in finally blocks) must not make the cancelled saga resume.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(continuedAfterCancel).toBe(false);
+      expect(store.getState().operationContext.activeOperations).toEqual([]);
+      expect(store.getState().operationContext.childOperations).toEqual([]);
+    });
+
+    it("is false for a borrowed context once its parent finished", async () => {
+      const { sagaMiddleware } = makeTestStore();
+      let child: OperationContext | null = null;
+
+      function* op() {
+        const parent = yield* createOperationContext({ id: "PROOFREADING" });
+        yield* parent.execute(function* () {
+          child = borrowedContext(parent, "SAVE");
+          expect(child.isActive()).toBe(true);
+          yield* call(noop);
+        });
+      }
+
+      await sagaMiddleware.run(op).toPromise();
+      expect(child!.isActive()).toBe(false);
+    });
+
+    it("getOrCreateOperationContext throws for a finished context", async () => {
+      const { sagaMiddleware } = makeTestStore();
+      let error: unknown = null;
+
+      function* op() {
+        const finishedCtx = yield* createOperationContext({ id: "PROOFREADING" });
+        yield* finishedCtx.execute(function* () {
+          yield* call(noop);
+        });
+
+        try {
+          yield* getOrCreateOperationContext({ id: "SAVE" }, finishedCtx);
+        } catch (e) {
+          error = e;
+        }
+      }
+
+      await sagaMiddleware.run(op).toPromise();
+      expect((error as Error).message).toBe(
+        'Cannot run "SAVE" within the operation context "PROOFREADING", because that operation is already finished.',
+      );
     });
   });
 });

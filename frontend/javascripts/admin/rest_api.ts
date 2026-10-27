@@ -949,6 +949,12 @@ export async function getTracingForAnnotationType(
   return tracing;
 }
 
+const UPDATE_ACTION_LOG_RETRY_OPTIONS: RetryOptions = {
+  retries: 3,
+  initialDelayMs: 2000,
+  backoffFactor: 2,
+};
+
 export function getUpdateActionLog(
   tracingStoreUrl: string,
   annotationId: string,
@@ -956,27 +962,33 @@ export function getUpdateActionLog(
   newestVersion?: number,
   truncateActionLog: boolean = false,
   sortAscending: boolean = false,
-): Promise<Array<APIUpdateActionBatch>> {
-  return doWithToken(async (token) => {
-    const params = new URLSearchParams([["truncate", truncateActionLog.toString()]]);
-    params.set("token", token);
-    if (oldestVersion != null) {
-      params.set("oldestVersion", oldestVersion.toString());
-    }
-    if (newestVersion != null) {
-      params.set("newestVersion", newestVersion.toString());
-    }
-    const log: APIUpdateActionBatch[] = await retryAsyncFunction(() =>
-      Request.receiveJSON(
-        `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
-      ),
-    );
+  options: RequestOptions = {},
+  retryOptions: RetryOptions = UPDATE_ACTION_LOG_RETRY_OPTIONS,
+): Promise<ApiResult<Array<APIUpdateActionBatch>>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken(async (token) => {
+        const params = new URLSearchParams([["truncate", truncateActionLog.toString()]]);
+        params.set("token", token);
+        if (oldestVersion != null) {
+          params.set("oldestVersion", oldestVersion.toString());
+        }
+        if (newestVersion != null) {
+          params.set("newestVersion", newestVersion.toString());
+        }
+        const log: APIUpdateActionBatch[] = await Request.receiveJSON(
+          `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
+          adaptedOptions,
+        );
 
-    if (sortAscending) {
-      log.reverse();
-    }
-    return log;
-  });
+        if (sortAscending) {
+          log.reverse();
+        }
+        return log;
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function getNewestVersionForAnnotation(

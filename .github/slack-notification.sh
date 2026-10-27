@@ -14,15 +14,13 @@ if [[ "$author" == "mergecow[bot]" && "$commitmsg" =~ \(#([0-9]+)\)$ ]]; then
     ) || true
     author=${labeler:-$author}
 fi
-author=${author/fm3/<@florian>}
-author=${author/daniel-wer/<@daniel>}
-author=${author/hotzenklotz/<@tom>}
-author=${author/MichaelBuessemeyer/<@michael>}
-author=${author/normanrz/<@norman>}
-author=${author/philippotto/<@philipp>}
-author=${author/valentin-pinkau/<@valentin>}
-author=${author/frcroth/<@felix.roth>}
-author=${author/knollengewaechs/<@charlie.meister>}
+author=${author/fm3/<@U5F5GG0N9>}
+author=${author/daniel-wer/<@U02A8PAF9>}
+author=${author/hotzenklotz/<@U02A9H73G>}
+author=${author/MichaelBuessemeyer/<@UAQKLJBJM>}
+author=${author/normanrz/<@U02A9E68E>}
+author=${author/philippotto/<@U02A8PAJK>}
+author=${author/valentin-pinkau/<@U19635SLU>}
 channel="webknossos-bots"
 pullregex="(.*)#([0-9]+)(.*)"
 

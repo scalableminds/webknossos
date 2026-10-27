@@ -27,6 +27,7 @@ import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_ac
 import { cancelSagaAction, resetStoreAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import rootSaga from "viewer/model/sagas/root_saga";
+import { closeSaveErrorToasts } from "viewer/model/sagas/saving/save_queue_draining_saga";
 import { Model, Store } from "viewer/singletons";
 import { startSaga, type Theme, type TraceOrViewCommand, type WebknossosState } from "viewer/store";
 import ActionBarView from "viewer/view/action_bar_view";
@@ -127,6 +128,7 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
     destroySceneController();
     Store.dispatch(resetStoreAction());
     Store.dispatch(cancelSagaAction());
+    closeSaveErrorToasts();
 
     const { activeUser } = Store.getState();
     if (activeUser?.isSuperUser) {

@@ -1,13 +1,11 @@
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsChunkStatistics } from "admin/rest_api";
 import { Button, Flex, Tooltip } from "antd";
-import dayjs from "dayjs";
 import {
   formatCountToDataAmountUnit,
   formatCPU,
-  formatDurationStrict,
+  formatDuration,
   formatNumber,
-  formatTimeIntervalStrict,
 } from "libs/format_utils";
 import { pluralize } from "libs/utils";
 import { useEffect, useState } from "react";
@@ -174,7 +172,7 @@ export default function StatisticsTab({
                     row.duration?.max != null && (
                       <>
                         <span className="stats-label">Sum</span>{" "}
-                        {formatTimeIntervalStrict(row.duration.max * 1000, 0)}
+                        {formatDuration(row.duration.max * 1000)}
                       </>
                     )
                   ) : (
@@ -182,21 +180,21 @@ export default function StatisticsTab({
                       {row.duration?.max != null && (
                         <>
                           <span className="stats-label">Max</span>{" "}
-                          {formatTimeIntervalStrict(row.duration.max * 1000, 0)}
+                          {formatDuration(row.duration.max * 1000)}
                         </>
                       )}
                       <br />
                       {row.duration?.median != null && (
                         <>
                           <span className="stats-label">Median</span>{" "}
-                          {formatTimeIntervalStrict(row.duration.median * 1000, 0)}
+                          {formatDuration(row.duration.median * 1000)}
                         </>
                       )}
                       <br />{" "}
                       {row.duration?.sum != null && (
                         <>
                           <span className="stats-label">Sum</span>{" "}
-                          {formatTimeIntervalStrict(row.duration.sum * 1000, 0)}
+                          {formatDuration(row.duration.sum * 1000)}
                         </>
                       )}
                     </>
@@ -205,7 +203,7 @@ export default function StatisticsTab({
                   {row.wallTime != null && (
                     <>
                       <span className="stats-label">Wall</span>{" "}
-                      {formatDurationStrict(dayjs.duration(row.wallTime, "seconds"))}
+                      {formatDuration(row.wallTime * 1000)}
                     </>
                   )}
                 </td>

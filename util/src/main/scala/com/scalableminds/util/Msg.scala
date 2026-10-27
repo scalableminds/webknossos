@@ -441,6 +441,7 @@ object Msg {
     val loadingDataFailed: String = "Could not load data for the requested dataset."
     val noLayers: String = "Dataset has no data layers."
     val noMags: String = "Data layer does not contain any mags."
+    val noLayersRenderableAtZoom: String = "No data layer has mags coarse enough to render a thumbnail at this zoom."
     val allowedTeamsNotFound: String = "Could not find allowed teams for dataset."
     val voxelSizeFailedToFetch: String = "Could not fetch voxel size for annotation."
     val additionalCoordinatesDiffer: String = "Additional coordinates differ in merged units."

@@ -81,7 +81,7 @@ async fn report_dataset_upload(
     ValidatedDataStore(store): ValidatedDataStore,
     State(clients): State<ServiceClients>,
     State(misc): State<MiscState>,
-    slack: SlackNotificationService,
+    State(slack): State<SlackNotificationService>,
     Json(body): Json<ReportDatasetUploadParameters>,
 ) -> Response {
     match report(&state, &store.name, &clients, &misc, &slack, query, body).await {

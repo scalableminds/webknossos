@@ -9,11 +9,10 @@
 //! messages per fixed one-minute window, as in Scala) is checked
 //! synchronously, the POST runs on a spawned task and errors are only logged.
 //!
-//! Handlers obtain the service as an extractor; a router without the
-//! `Extension(SlackNotificationService)` layer gets a disabled service.
+//! Handlers extract the service with `State<SlackNotificationService>`; without a
+//! configured webhook (the `AppState` default) it is disabled.
 use std::{
     collections::HashMap,
-    convert::Infallible,
     fmt,
     sync::{Arc, Mutex, OnceLock},
     time::{Duration, Instant},
@@ -21,7 +20,6 @@ use std::{
 
 use crate::config::{ConfigError, Env};
 use crate::util::id::ObjectId;
-use axum::{extract::FromRequestParts, http::request::Parts};
 use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 
@@ -429,14 +427,6 @@ pub fn global() -> SlackNotificationService {
 /// connection and schema check succeeded.
 pub fn notice_startup(version: &str) {
     global().notice_startup(version);
-}
-
-/// Router-wide extension lookup; without the layer Slack is disabled.
-impl<S: Send + Sync> FromRequestParts<S> for SlackNotificationService {
-    type Rejection = Infallible;
-    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
-        Ok(parts.extensions.get::<Self>().cloned().unwrap_or_default())
-    }
 }
 
 /// Formatter.formatDuration (util/mvc/Formatter.scala), for milliseconds.

@@ -5,6 +5,7 @@ use crate::{
     job::routes::JobsConfig,
     mail::MailSender,
     short_links::PublicUrl,
+    slack::{SlackConfig, SlackNotificationService},
     stores::{
         client::{ServiceClientConfig, ServiceClients},
         tracing_client::TracingStoreClient,
@@ -37,6 +38,7 @@ pub struct AppState {
     pub time_tracking: TimeTrackingConfig,
     /// One writer per app: its per-user cache and locks must be shared by all routes.
     pub time_interaction_writer: TimeInteractionWriter,
+    pub slack: SlackNotificationService,
 }
 
 /// `features.jobsEnabled`.
@@ -62,6 +64,7 @@ pub struct AppStateBuilder {
     public_url: url::Url,
     time_tracking: TimeTrackingConfig,
     time_interaction_writer: Option<TimeInteractionWriter>,
+    slack: SlackConfig,
 }
 
 impl AppState {
@@ -90,6 +93,7 @@ impl AppState {
             public_url: url::Url::parse("http://localhost:9000").expect("valid default URL"),
             time_tracking: TimeTrackingConfig::default(),
             time_interaction_writer: None,
+            slack: SlackConfig::default(),
         }
     }
 
@@ -106,6 +110,7 @@ impl AppState {
             .email_verification(config.email_verification_enabled)
             .public_url(config.public_url.clone())
             .time_tracking(config.time_tracking)
+            .slack(config.slack.clone())
             .build()
     }
 }
@@ -172,6 +177,11 @@ impl AppStateBuilder {
         self
     }
 
+    pub fn slack(mut self, config: SlackConfig) -> Self {
+        self.slack = config;
+        self
+    }
+
     /// A time-interaction writer other than the one `time_tracking` configures.
     pub fn time_interaction_writer(mut self, writer: TimeInteractionWriter) -> Self {
         self.time_interaction_writer = Some(writer);
@@ -235,6 +245,7 @@ impl AppStateBuilder {
             public_url: PublicUrl(self.public_url),
             time_tracking: self.time_tracking,
             time_interaction_writer,
+            slack: SlackNotificationService::new(&self.slack),
         }
     }
 }

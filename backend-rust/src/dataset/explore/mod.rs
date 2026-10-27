@@ -380,7 +380,7 @@ async fn add_virtual_dataset(
     user: AuthUser,
     Path(name): Path<String>,
     State(clients): State<ServiceClients>,
-    slack: SlackNotificationService,
+    State(slack): State<SlackNotificationService>,
     RequestJson(body): RequestJson<RegistrationInfo>,
 ) -> ApiResult<Json<Value>> {
     let source = UsableDataSource::from_json(&body.data_source)

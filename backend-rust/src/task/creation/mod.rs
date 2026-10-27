@@ -284,17 +284,14 @@ impl<S: Send + Sync> FromRequestParts<S> for CreationServices
 where
     TracingStoreClient: FromRef<S>,
     AnnotationProvider: FromRef<S>,
+    crate::slack::SlackNotificationService: FromRef<S>,
 {
     type Rejection = ApiError;
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         Ok(Self {
             tracing_store: TracingStoreClient::from_ref(state),
             provider: AnnotationProvider::from_ref(state),
-            slack: parts
-                .extensions
-                .get::<crate::slack::SlackNotificationService>()
-                .cloned()
-                .unwrap_or_default(),
+            slack: crate::slack::SlackNotificationService::from_ref(state),
         })
     }
 }

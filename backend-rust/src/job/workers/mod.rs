@@ -294,7 +294,7 @@ async fn update_status(
     State(misc): State<MiscState>,
     State(mailer): State<MailSender>,
     State(clients): State<ServiceClients>,
-    slack: SlackNotificationService,
+    State(slack): State<SlackNotificationService>,
     Path(id): Path<PathObjectId>,
     Query(query): Query<KeyQuery>,
     JsonBody(status): JsonBody<JobStatus>,

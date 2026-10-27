@@ -32,7 +32,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
             allow_delete_datasets: config.allow_delete_datasets,
             datasets: config.datasets.clone(),
             oidc: config.oidc.clone(),
-            slack: config.slack.clone(),
         },
     )
 }
@@ -44,7 +43,6 @@ struct RouteOptions {
     allow_delete_datasets: bool,
     datasets: crate::dataset::options::DatasetRouteConfig,
     oidc: crate::auth::oidc::OidcConfig,
-    slack: crate::slack::SlackConfig,
 }
 
 impl RouteOptions {
@@ -56,7 +54,6 @@ impl RouteOptions {
             allow_delete_datasets: true,
             datasets: Default::default(),
             oidc: Default::default(),
-            slack: Default::default(),
         }
     }
 }
@@ -69,7 +66,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         allow_delete_datasets,
         datasets,
         oidc,
-        slack,
     } = options;
     let api = Router::new()
         .route("/health", get(|| async { "Ok" }))
@@ -131,9 +127,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         .layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth::browser::cookie_middleware,
-        ))
-        .layer(axum::Extension(
-            crate::slack::SlackNotificationService::new(&slack),
         ))
         .layer(middleware::from_fn_with_state(request_timeout, timeout))
         .layer(CatchPanicLayer::custom(|_| {

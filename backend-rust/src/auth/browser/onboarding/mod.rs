@@ -563,7 +563,7 @@ async fn register(
     State(config): State<BrowserAuthConfig>,
     State(mailer): State<MailSender>,
     State(misc): State<MiscState>,
-    slack: SlackNotificationService,
+    State(slack): State<SlackNotificationService>,
     FormBody(data): FormBody,
 ) -> ApiResult<Response> {
     let sign_up = bind_sign_up(&data)?;
@@ -644,7 +644,7 @@ async fn create_organization_with_admin(
     State(mailer): State<MailSender>,
     State(misc): State<MiscState>,
     State(clients): State<ServiceClients>,
-    slack: SlackNotificationService,
+    State(slack): State<SlackNotificationService>,
     headers: HeaderMap,
     OptionalAuthUser(user): OptionalAuthUser,
     FormBody(data): FormBody,

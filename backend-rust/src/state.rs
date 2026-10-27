@@ -68,7 +68,6 @@ pub struct AppStateBuilder {
     misc: MiscConfig,
     service_client: ServiceClientConfig,
     clients: Option<ServiceClients>,
-    tracing_store: Option<TracingStoreClient>,
     annotation_provider: Option<AnnotationProvider>,
     browser_auth: BrowserAuthConfig,
     mailer: MailSender,
@@ -88,7 +87,7 @@ pub struct AppStateBuilder {
 }
 
 impl AppState {
-    /// Local defaults (matching `router`'s), as used by tests.
+    /// Local development defaults, as used by tests.
     pub fn new(pool: sqlx::PgPool) -> Self {
         Self::builder(pool).build()
     }
@@ -101,7 +100,6 @@ impl AppState {
             misc: MiscConfig::default(),
             service_client: ServiceClientConfig::default(),
             clients: None,
-            tracing_store: None,
             annotation_provider: None,
             browser_auth: BrowserAuthConfig::default(),
             mailer: MailSender::default(),
@@ -236,12 +234,6 @@ impl AppStateBuilder {
         self
     }
 
-    /// A tracing-store client other than the one `service_client` configures.
-    pub fn tracing_store(mut self, client: TracingStoreClient) -> Self {
-        self.tracing_store = Some(client);
-        self
-    }
-
     /// An annotation provider other than the one built on this state's tracing-store client.
     pub fn annotation_provider(mut self, provider: AnnotationProvider) -> Self {
         self.annotation_provider = Some(provider);
@@ -259,10 +251,8 @@ impl AppStateBuilder {
             ServiceClients::new(self.service_client.clone())
                 .expect("validated service client configuration")
         });
-        let tracing_store = self.tracing_store.unwrap_or_else(|| {
-            TracingStoreClient::new(self.service_client.clone())
-                .expect("validated service client configuration")
-        });
+        let tracing_store = TracingStoreClient::new(self.service_client.clone())
+            .expect("validated service client configuration");
         let annotation_provider = self
             .annotation_provider
             .unwrap_or_else(|| AnnotationProvider::new(self.pool.clone(), tracing_store.clone()));

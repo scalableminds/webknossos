@@ -10,15 +10,6 @@ use axum::{
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 
-/// A value the router installed with `.layer(Extension(..))`; a missing one is a wiring bug (500).
-pub fn extension<T: Clone + Send + Sync + 'static>(parts: &Parts) -> Result<T, ApiError> {
-    parts
-        .extensions
-        .get::<T>()
-        .cloned()
-        .ok_or_else(ApiError::internal)
-}
-
 pub struct Json<T>(pub T);
 pub struct Path<T>(pub T);
 pub struct Query<T>(pub T);

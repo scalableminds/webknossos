@@ -1110,7 +1110,7 @@ async fn compound_task_merges_readable_finished_annotations_and_caches_the_resul
     assert_eq!(cached.compound(), Some(&compound));
     assert_eq!(cached.owner_id().as_str(), w.manager);
     assert_eq!(mock.requests().len(), 1);
-    // A clone shares the cache (Extension clones per request).
+    // A clone shares the cache (`State` extraction clones per request).
     let clone = provider.clone();
     assert_eq!(clone.find_in_cache(&oid(&w.task_a)), Some(compound.clone()));
     assert_eq!(

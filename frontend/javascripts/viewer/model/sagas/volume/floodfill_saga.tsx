@@ -355,8 +355,10 @@ function* notifyUserAboutResult(
     // fill may then have stopped before reaching the bounding box.
     if (!isRestrictedToBoundingBox || wasVoxelLimitExceeded) {
       // The bounding box is overkill for the 2D mode because in that case,
-      // it's trivial to check the borders manually.
-      const createNewBoundingBox = fillMode === FillModeEnum._3D;
+      // it's trivial to check the borders manually. When restricted, a new box
+      // would be smaller than the restricting one and would therefore be picked
+      // as the restriction for the next fill (see getBoundingBoxForFloodFillWhenRestricted).
+      const createNewBoundingBox = fillMode === FillModeEnum._3D && !isRestrictedToBoundingBox;
       const warningDetails = createNewBoundingBox
         ? "A bounding box that represents the labeled volume was added so that you can check the borders manually."
         : "Please check the borders of the filled area manually and use the fill tool again if necessary.";

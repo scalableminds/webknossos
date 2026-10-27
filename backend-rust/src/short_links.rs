@@ -7,7 +7,7 @@ use crate::{
     util::id::ObjectId,
 };
 use axum::{
-    Extension, Json as ResponseJson, Router,
+    Json as ResponseJson, Router,
     extract::State,
     routing::{get, post},
 };
@@ -54,7 +54,7 @@ fn validate_link(base: &Url, value: &str) -> ApiResult<()> {
 
 async fn create(
     State(state): State<AppState>,
-    Extension(PublicUrl(base)): Extension<PublicUrl>,
+    State(PublicUrl(base)): State<PublicUrl>,
     Json(link): Json<String>,
 ) -> ApiResult<ResponseJson<ShortLink>> {
     validate_link(&base, &link)?;

@@ -3,6 +3,7 @@ use crate::{
     auth::{browser::BrowserAuthConfig, routes::AuthRouteConfig},
     job::routes::JobsConfig,
     mail::MailSender,
+    short_links::PublicUrl,
     stores::{
         client::{ServiceClientConfig, ServiceClients},
         tracing_client::TracingStoreClient,
@@ -30,6 +31,7 @@ pub struct AppState {
     pub voxelytics: Voxelytics,
     pub email_verification: EmailVerification,
     pub notification_emails: NotificationEmailService,
+    pub public_url: PublicUrl,
 }
 
 /// `features.jobsEnabled`.
@@ -52,6 +54,7 @@ pub struct AppStateBuilder {
     voxelytics: VoxelyticsConfig,
     email_verification: bool,
     notification_emails: Option<NotificationEmailService>,
+    public_url: url::Url,
 }
 
 impl AppState {
@@ -77,6 +80,7 @@ impl AppState {
             voxelytics: VoxelyticsConfig::default(),
             email_verification: true,
             notification_emails: None,
+            public_url: url::Url::parse("http://localhost:9000").expect("valid default URL"),
         }
     }
 
@@ -91,6 +95,7 @@ impl AppState {
             .jobs(config.jobs.clone())
             .voxelytics(config.voxelytics.clone())
             .email_verification(config.email_verification_enabled)
+            .public_url(config.public_url.clone())
             .build()
     }
 }
@@ -147,6 +152,11 @@ impl AppStateBuilder {
         self
     }
 
+    pub fn public_url(mut self, url: url::Url) -> Self {
+        self.public_url = url;
+        self
+    }
+
     /// A tracing-store client other than the one `service_client` configures.
     pub fn tracing_store(mut self, client: TracingStoreClient) -> Self {
         self.tracing_store = Some(client);
@@ -194,6 +204,7 @@ impl AppStateBuilder {
             voxelytics: Voxelytics::new(self.voxelytics),
             email_verification: EmailVerification(self.email_verification),
             notification_emails,
+            public_url: PublicUrl(self.public_url),
         }
     }
 }

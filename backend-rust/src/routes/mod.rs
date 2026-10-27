@@ -28,7 +28,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
         RouteOptions {
             request_timeout: config.request_timeout,
             body_limit: config.body_limit,
-            public_url: config.public_url.clone(),
             annotation_mutex_expiry: config.annotation_mutex_expiry,
             time_tracking: config.time_tracking,
             allow_delete_datasets: config.allow_delete_datasets,
@@ -42,7 +41,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
 struct RouteOptions {
     request_timeout: Duration,
     body_limit: usize,
-    public_url: url::Url,
     annotation_mutex_expiry: Duration,
     time_tracking: crate::config::TimeTrackingConfig,
     allow_delete_datasets: bool,
@@ -56,7 +54,6 @@ impl RouteOptions {
         Self {
             request_timeout: Duration::from_secs(30),
             body_limit: 2 * 1024 * 1024,
-            public_url: url::Url::parse("http://localhost:9000").expect("valid default URL"),
             annotation_mutex_expiry: Duration::from_secs(120),
             time_tracking: Default::default(),
             allow_delete_datasets: true,
@@ -71,7 +68,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
     let RouteOptions {
         request_timeout,
         body_limit,
-        public_url,
         annotation_mutex_expiry,
         time_tracking,
         allow_delete_datasets,
@@ -85,7 +81,7 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         time_tracking.interaction,
         crate::time::interaction_writer::OverLimitNotifier::new(
             state.mailer.clone(),
-            public_url.as_str(),
+            state.public_url.0.as_str(),
         ),
     );
     let api = Router::new()
@@ -154,7 +150,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         .layer(axum::Extension(
             crate::slack::SlackNotificationService::new(&slack),
         ))
-        .layer(axum::Extension(crate::short_links::PublicUrl(public_url)))
         .layer(middleware::from_fn_with_state(request_timeout, timeout))
         .layer(CatchPanicLayer::custom(|_| {
             ApiError::internal().into_response()

@@ -254,6 +254,11 @@ async fn reserve_upload_to_paths_creates_pending_virtual_dataset_with_generated_
     let (status, body) = post(&app, path, &fixture.token, base.clone()).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let id = body["newDatasetId"].as_str().unwrap().to_owned();
+    // The data source is UsableDataSource's own serialization.
+    assert_eq!(
+        body,
+        json!({"newDatasetId": id, "dataSource": body["dataSource"]})
+    );
     let directory = format!("new_ds-{id}");
     assert_eq!(
         body["dataSource"]["id"],
@@ -373,6 +378,7 @@ async fn preliminary_mag_and_attachment_reservations_enforce_pending_rules() {
     );
     let (status, response) = post(&app, &preliminary, &fixture.token, body.clone()).await;
     assert_eq!(status, StatusCode::OK, "{response}");
+    assert_eq!(response, json!({"dataSource": response["dataSource"]}));
     assert_eq!(
         response["dataSource"]["statusOpt"],
         "Not yet fully uploaded."

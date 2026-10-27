@@ -7,13 +7,12 @@ use axum::{
     routing::{delete, get},
 };
 use serde::Deserialize;
-use serde_json::Value;
 use sqlx::{Postgres, Transaction};
 
 use crate::{
     AppState,
     auth::{AuthUser, OptionalAuthUser},
-    dataset::routes::public_datastore_json_on_connection,
+    dataset::routes::{PublicDataStore, public_datastore_on_connection},
     error::{ApiError, ApiResult},
     extract::{Json, Path},
     state::JobsEnabled,
@@ -31,7 +30,7 @@ async fn list(
     State(state): State<AppState>,
     OptionalAuthUser(user): OptionalAuthUser,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
-) -> ApiResult<ResponseJson<Vec<Value>>> {
+) -> ApiResult<ResponseJson<Vec<PublicDataStore>>> {
     // DataStoreDAO has no anonymousReadAccessQ override, so anonymous requests
     // receive an empty list. Superuser status does not bypass this read scope.
     let Some(user) = user else {
@@ -41,7 +40,7 @@ async fn list(
     let names = dao::find_all_names_for_organization(&mut tx, &user.organization_id).await?;
     let mut values = Vec::with_capacity(names.len());
     for name in names {
-        values.push(public_datastore_json_on_connection(&mut tx, &name, jobs_enabled).await?);
+        values.push(public_datastore_on_connection(&mut tx, &name, jobs_enabled).await?);
     }
     tx.commit().await?;
     Ok(ResponseJson(values))
@@ -63,7 +62,7 @@ async fn create(
     user: AuthUser,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Json(body): Json<DataStoreParameters>,
-) -> ApiResult<ResponseJson<Value>> {
+) -> ApiResult<ResponseJson<PublicDataStore>> {
     if !user.is_superuser {
         return Err(ApiError::forbidden(crate::msg::user::SUPER_USER_ONLY));
     }
@@ -88,7 +87,7 @@ async fn create(
         body.allows_upload_to_paths.unwrap_or(true),
     )
     .await?;
-    let response = public_datastore_json_on_connection(&mut tx, &body.name, jobs_enabled).await?;
+    let response = public_datastore_on_connection(&mut tx, &body.name, jobs_enabled).await?;
     tx.commit().await?;
     Ok(ResponseJson(response))
 }

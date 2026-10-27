@@ -22,6 +22,13 @@ pub(crate) fn generate_directory_name(name: &str, id: &ObjectId) -> String {
     }
 }
 
+/// The answer of the routes that create a dataset (compose, explore+add).
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct CreatedDataset {
+    pub new_dataset_id: ObjectId,
+}
+
 /// RandomIDGenerator.generateBlocking: URL-safe base64 without padding.
 pub(crate) fn random_id(bytes: usize) -> ApiResult<String> {
     let mut random = vec![0_u8; bytes];

@@ -1300,3 +1300,195 @@ async fn metadata_updates_render_before_commit_and_work_with_one_database_connec
     single.close().await;
     db.cleanup().await;
 }
+
+/// Full bodies of the typed dataset responses through the real router, on the current API and
+/// on v10, whose dataset list and read go through the bigint downgrade middleware.
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL database with CREATEDB"]
+async fn typed_dataset_responses_match_on_current_and_legacy_api_versions() {
+    let db = TestDb::new().await;
+    let fixture = db.fixture().await;
+    let id = seed_dataset(&db, &fixture, "Typed_sample", true).await;
+    sqlx::query(
+        "UPDATE webknossos.datasets SET isUsable=true,voxelSizeFactor=ROW(1,1,1)::webknossos.VECTOR3,\
+            created=to_timestamp(1000),tags=ARRAY['b','a'] WHERE _id=$1",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.dataset_layers \
+            (_dataset,name,category,elementClass,boundingBox,dataFormat,largestSegmentId) VALUES \
+            ($1,'seg','segmentation','uint32',ROW(0,0,0,10,10,10)::webknossos.BOUNDING_BOX,\
+            'zarr3',42),($1,'color','color','uint8',ROW(0,0,0,10,10,10)::webknossos.BOUNDING_BOX,\
+            'zarr3',NULL)",
+    )
+    .bind(&id)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO webknossos.workers (_id,_dataStore,key,supportedJobCommands) VALUES \
+            ($1,'test-store','worker-key',ARRAY['convert_to_wkw'])",
+    )
+    .bind(object_id())
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    let folder: String = sqlx::query_scalar("SELECT _folder FROM webknossos.datasets WHERE _id=$1")
+        .bind(&id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+    let application = webknossos_backend::router(
+        AppState::builder(db.pool.clone())
+            .jobs_enabled(true)
+            .misc(offline_misc())
+            .build(),
+    );
+    let get = |path: String, token: Option<&str>| {
+        let application = application.clone();
+        let token = token.map(str::to_owned);
+        async move {
+            let (status, body) = request(&application, "GET", &path, token.as_deref(), None).await;
+            assert_eq!(status, StatusCode::OK, "{path}: {body}");
+            body
+        }
+    };
+    let anonymous_compact = json!([{
+        "id": id,
+        "name": "Typed_sample",
+        "owningOrganization": fixture.organization_id,
+        "folderId": folder,
+        "isActive": true,
+        "directoryName": "Typed_sample",
+        "created": 1_000_000,
+        "isEditable": false,
+        "lastUsedByUser": 0,
+        "status": "",
+        "tags": ["b", "a"],
+        "isUnreported": false,
+        "colorLayerNames": ["color"],
+        "segmentationLayerNames": ["seg"],
+        "usedStorageBytes": 0,
+        "thumbnailCacheVersion": 0
+    }]);
+    for version in ["", "v16/", "v10/"] {
+        assert_eq!(
+            get(format!("/api/{version}datasets?compact=true"), None).await,
+            anonymous_compact,
+            "{version}"
+        );
+    }
+    let mut counted = anonymous_compact.clone();
+    counted[0]["annotationCount"] = json!(0);
+    assert_eq!(
+        get(
+            "/api/datasets?includeAnnotationCount=true&compact=true".into(),
+            Some(&fixture.token)
+        )
+        .await[0]["annotationCount"],
+        counted[0]["annotationCount"]
+    );
+
+    // The full dataset embeds the datastore's publicWrites; v10 downgrades the bigint envelope.
+    let data_store = json!({
+        "name": "test-store",
+        "url": "http://localhost:9002",
+        "allowsUpload": true,
+        "jobsSupportedByAvailableWorkers": ["convert_to_wkw"],
+        "jobsEnabled": true
+    });
+    let full = get(format!("/api/datasets/{id}"), None).await;
+    assert_eq!(full["dataStore"], data_store);
+    let segmentation = |dataset: &Value| {
+        dataset["dataSource"]["dataLayers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|layer| layer["name"] == "seg")
+            .unwrap()["largestSegmentId"]
+            .clone()
+    };
+    assert_eq!(
+        segmentation(&full),
+        json!({"customJsonEncoding": "bigint", "value": "42"})
+    );
+    let mut downgraded = full.clone();
+    for layer in downgraded["dataSource"]["dataLayers"]
+        .as_array_mut()
+        .unwrap()
+    {
+        if layer["name"] == "seg" {
+            layer["largestSegmentId"] = json!(42);
+        }
+    }
+    assert_eq!(
+        get(format!("/api/v10/datasets/{id}"), None).await,
+        downgraded
+    );
+    assert_eq!(
+        get("/api/v10/datasets".into(), None).await,
+        json!([downgraded])
+    );
+
+    for version in ["", "v10/"] {
+        assert_eq!(
+            get(
+                format!("/api/{version}datasets/disambiguate/Typed_sample/toNew"),
+                None
+            )
+            .await,
+            json!({"organization": fixture.organization_id}),
+            "{version}"
+        );
+        assert_eq!(
+            get(
+                format!(
+                    "/api/{version}datasets/disambiguate/{}/Typed_sample/toId",
+                    fixture.organization_id
+                ),
+                None
+            )
+            .await,
+            json!({"id": id, "name": "Typed_sample", "organization": fixture.organization_id,
+                   "directoryName": "Typed_sample"}),
+            "{version}"
+        );
+        assert_eq!(
+            get(
+                format!("/api/{version}datasets/ab/isValidNewName"),
+                Some(&fixture.token)
+            )
+            .await,
+            json!({"isValid": false, "errors": "Dataset name is invalid. Please use at least three characters."}),
+            "{version}"
+        );
+        assert_eq!(
+            get(
+                format!("/api/{version}datasets/abc/isValidNewName"),
+                Some(&fixture.token)
+            )
+            .await,
+            json!({"isValid": true}),
+            "{version}"
+        );
+    }
+    let token = get(
+        format!("/api/datasets/{id}/sharingToken"),
+        Some(&fixture.token),
+    )
+    .await;
+    assert_eq!(token["sharingToken"].as_str().unwrap().len(), 22);
+    assert_eq!(token.as_object().unwrap().len(), 1);
+    assert_eq!(
+        get(
+            format!("/api/v10/datasets/{id}/sharingToken"),
+            Some(&fixture.token)
+        )
+        .await,
+        token
+    );
+    db.cleanup().await;
+}

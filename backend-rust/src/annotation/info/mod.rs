@@ -287,7 +287,7 @@ async fn compound_json(
             .await?
             .ok_or_else(|| ApiError::not_found(crate::msg::annotation::DATASET_MISSING))?;
     let owner = crate::annotation::lists::compact_user(connection, &compound.owner_id).await?;
-    let data_store = crate::dataset::routes::public_datastore_json_on_connection(
+    let data_store = crate::dataset::routes::public_datastore_on_connection(
         connection,
         &datastore,
         jobs_enabled,

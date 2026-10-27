@@ -1,7 +1,7 @@
 //! POST /datasets/compose and /datasets/{id}/compose/add{Layer,Mag,Attachment} (ComposeService).
 use axum::{Json, Router, extract::State, routing::post};
 use serde::Deserialize;
-use serde_json::{Value, json};
+use serde_json::Value;
 use webknossos_common::{
     datasource::DataSourceId, enums::LayerAttachmentType,
     explore_layers::adapt_layers_and_voxel_size, geometry::Vec3Int,
@@ -10,6 +10,7 @@ use webknossos_common::{
 use crate::{
     AppState,
     auth::AuthUser,
+    dataset::create::CreatedDataset,
     dataset::lifecycle::DatasetRecord,
     dataset::source::{CoordinateTransformation, UsableDataSource, VoxelSize},
     error::{ApiError, ApiResult},
@@ -88,7 +89,7 @@ async fn compose(
     user: AuthUser,
     State(clients): State<ServiceClients>,
     RequestJson(body): RequestJson<ComposeRequest>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<CreatedDataset>> {
     let requested_size =
         VoxelSize::from_json(&body.voxel_size).map_err(crate::dataset::source::invalid_body)?;
     let mut extra_transforms = Vec::new();
@@ -175,7 +176,7 @@ async fn compose(
     })?;
     transaction.commit().await?;
     crate::dataset::create::after_create(&state.pool, &clients, &id).await?;
-    Ok(Json(json!({ "newDatasetId": id })))
+    Ok(Json(CreatedDataset { new_dataset_id: id }))
 }
 
 /// Shared start of the in-place compose routes: the target must be readable

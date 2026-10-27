@@ -1,7 +1,8 @@
 //! DatasetDAO read queries behind the dataset routes: lookups, the JSON renderings of a dataset,
 //! its layers and datastore, the compact list, sharing tokens and allowed teams.
+use serde::Serialize;
 use serde_json::Value;
-use sqlx::{PgConnection, PgPool};
+use sqlx::{FromRow, PgConnection, PgPool};
 
 use super::{CompactDataset, DELETED_BY_USER, ListQuery, UNREPORTED};
 use crate::{
@@ -43,18 +44,28 @@ pub(crate) async fn find_organization_by_name(
     Ok(q.build_query_scalar().fetch_optional(pool).await?)
 }
 
-/// (id, id/name/organization/directoryName JSON) of the oldest dataset with this directory name.
+/// The disambiguation answer for a dataset (DatasetController.getDatasetIdFromNameAndOrganization).
+#[derive(FromRow, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct DatasetIdentity {
+    pub id: ObjectId,
+    pub name: String,
+    pub organization: String,
+    pub directory_name: String,
+}
+
+/// The oldest dataset with this directory name.
 pub(crate) async fn find_by_directory_name(
     pool: &PgPool,
     organization: &str,
     name: &str,
-) -> ApiResult<Option<(ObjectId, Value)>> {
+) -> ApiResult<Option<DatasetIdentity>> {
     Ok(sqlx::query_as(
         "SELECT \
-            d._id,jsonb_build_object('id',d._id,'name',d.name,'organization',d._organization,\
-            'directoryName',d.directoryName) FROM webknossos.datasets_ d JOIN \
-            webknossos.organizations_ o ON o._id=d._organization WHERE d._organization=$1 AND \
-            d.directoryName=$2 ORDER BY d.created LIMIT 1",
+            d._id AS id,d.name,d._organization AS organization,d.directoryName AS directory_name \
+            FROM webknossos.datasets_ d JOIN webknossos.organizations_ o ON \
+            o._id=d._organization WHERE d._organization=$1 AND d.directoryName=$2 ORDER BY \
+            d.created LIMIT 1",
     )
     .bind(organization)
     .bind(name)

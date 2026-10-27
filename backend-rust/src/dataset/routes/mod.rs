@@ -3,7 +3,7 @@ use axum::{
     extract::State,
     routing::{get, patch},
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 mod dao;
@@ -91,12 +91,17 @@ async fn find_by_import_url(
     }))
 }
 
+#[derive(Serialize)]
+struct DatasetOrganization {
+    organization: String,
+}
+
 async fn organization_for_name(
     State(state): State<AppState>,
     OptionalAuthUser(user): OptionalAuthUser,
     Path(name): Path<String>,
     Query(query): Query<ReadQuery>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<DatasetOrganization>> {
     let organization = dao::find_organization_by_name(
         &state.pool,
         user.as_ref(),
@@ -104,9 +109,8 @@ async fn organization_for_name(
         &name,
     )
     .await?;
-    Ok(Json(
-        json!({"organization":organization.ok_or_else(||ApiError::not_found(crate::msg::NOT_FOUND))?}),
-    ))
+    let organization = organization.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+    Ok(Json(DatasetOrganization { organization }))
 }
 
 async fn id_for_directory_name(
@@ -114,9 +118,10 @@ async fn id_for_directory_name(
     OptionalAuthUser(user): OptionalAuthUser,
     Path((organization, name)): Path<(String, String)>,
     Query(query): Query<ReadQuery>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<dao::DatasetIdentity>> {
     let selected = dao::find_by_directory_name(&state.pool, &organization, &name).await?;
-    let (id, result) = selected.ok_or_else(|| ApiError::not_found(crate::msg::dataset::MISSING))?;
+    let result = selected.ok_or_else(|| ApiError::not_found(crate::msg::dataset::MISSING))?;
+    let id = result.id.clone();
     if crate::dataset::access::can_read(
         &state.pool,
         user.as_ref(),
@@ -390,7 +395,7 @@ pub(crate) async fn full_json_on_connection(
         .ok_or_else(ApiError::internal)?
         .to_owned();
     result["dataStore"] =
-        public_datastore_json_on_connection(connection, &datastore_name, jobs_enabled).await?;
+        json!(public_datastore_on_connection(connection, &datastore_name, jobs_enabled).await?);
     let usable = result["isActive"].as_bool().unwrap_or(false);
     let datasource = result["dataSource"]
         .as_object_mut()
@@ -420,13 +425,24 @@ pub(crate) async fn full_json_on_connection(
     Ok(result)
 }
 
+/// DataStoreService.publicWrites.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct PublicDataStore {
+    name: String,
+    url: String,
+    allows_upload: bool,
+    jobs_supported_by_available_workers: Vec<String>,
+    jobs_enabled: bool,
+}
+
 /// DataStoreService.publicWrites, including WorkerDAO's command validation.
 /// Datastore list routes can share this after applying their own read predicate.
-pub(crate) async fn public_datastore_json_on_connection(
+pub(crate) async fn public_datastore_on_connection(
     connection: &mut sqlx::PgConnection,
     name: &str,
     jobs_enabled: bool,
-) -> ApiResult<Value> {
+) -> ApiResult<PublicDataStore> {
     let (name, url, allows_upload) = dao::find_datastore_public_fields(connection, name).await?;
     let mut commands = dao::find_supported_job_commands(connection, &name).await?;
     for command in &commands {
@@ -457,9 +473,13 @@ pub(crate) async fn public_datastore_json_on_connection(
     if !jobs_enabled {
         commands.clear();
     }
-    Ok(
-        json!({"name":name,"url":url,"allowsUpload":allows_upload,"jobsSupportedByAvailableWorkers":commands,"jobsEnabled":enabled}),
-    )
+    Ok(PublicDataStore {
+        name,
+        url,
+        allows_upload,
+        jobs_supported_by_available_workers: commands,
+        jobs_enabled: enabled,
+    })
 }
 
 fn scrub_credentials(value: &mut Value) {
@@ -712,19 +732,19 @@ async fn list(
     State(state): State<AppState>,
     OptionalAuthUser(user): OptionalAuthUser,
     Query(query): Query<ListQuery>,
-) -> ApiResult<Json<Vec<Value>>> {
-    let rows = list_values(&state.pool, user.as_ref(), &query).await?;
+) -> ApiResult<Json<Vec<CompactDataset>>> {
+    let rows = list_rows(&state.pool, user.as_ref(), &query).await?;
     if let Some(user) = user {
         crate::dataset::dao::touch_user_last_activity(&state.pool, user.id).await?;
     }
     Ok(Json(rows))
 }
 
-pub(crate) async fn list_values(
+pub(crate) async fn list_rows(
     pool: &sqlx::PgPool,
     user: Option<&AuthUser>,
     query: &ListQuery,
-) -> ApiResult<Vec<Value>> {
+) -> ApiResult<Vec<CompactDataset>> {
     if query.limit.is_some_and(|n| n < 0) {
         return Err(ApiError::bad_request(crate::msg::request::INVALID_LIMIT));
     }
@@ -748,17 +768,14 @@ pub(crate) async fn list_values(
     let searched_id = tokens
         .first()
         .filter(|s| tokens.len() == 1 && ObjectId::parse(s).is_ok());
-    let rows = dao::find_all_compact(pool, user, query, organization, &tokens, searched_id).await?;
-    rows.into_iter()
-        .map(|row| serde_json::to_value(row).map_err(|_| ApiError::internal()))
-        .collect()
+    dao::find_all_compact(pool, user, query, organization, &tokens, searched_id).await
 }
 
 /// DatasetCompactInfo as serialized by DatasetController.list (compact).
-#[derive(sqlx::FromRow, serde::Serialize)]
+#[derive(sqlx::FromRow, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct CompactDataset {
-    id: ObjectId,
+pub(crate) struct CompactDataset {
+    pub(crate) id: ObjectId,
     name: String,
     owning_organization: String,
     folder_id: ObjectId,
@@ -793,18 +810,25 @@ async fn require_edit(state: &AppState, user: &AuthUser, id: &ObjectId) -> ApiRe
     Ok(())
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SharingToken {
+    sharing_token: String,
+}
+
 async fn sharing_token(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<SharingToken>> {
     require_read(&state, &user, &id).await?;
     // RandomIDGenerator.generateBlocking(): 16 random bytes, unpadded base64url (22 characters).
     let new_token = crate::auth::browser::random_base64url(16)?;
     let result = dao::set_sharing_token_if_absent(&state.pool, &user, &id, new_token).await?;
-    Ok(Json(
-        json!({"sharingToken": result.ok_or_else(|| ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT))?.trim()}),
-    ))
+    let token = result.ok_or_else(|| ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT))?;
+    Ok(Json(SharingToken {
+        sharing_token: token.trim().to_owned(),
+    }))
 }
 
 async fn delete_sharing_token(
@@ -857,7 +881,15 @@ async fn update_teams(
     Ok(Json(updated))
 }
 
-async fn valid_name(_user: AuthUser, Path(name): Path<String>) -> Json<Value> {
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct NameValidation {
+    is_valid: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    errors: Option<&'static str>,
+}
+
+async fn valid_name(_user: AuthUser, Path(name): Path<String>) -> Json<NameValidation> {
     let error = if !name
         .bytes()
         .all(|c| c.is_ascii_alphanumeric() || b"_-.".contains(&c))
@@ -870,9 +902,8 @@ async fn valid_name(_user: AuthUser, Path(name): Path<String>) -> Json<Value> {
     } else {
         None
     };
-    Json(
-        error
-            .map(|e| json!({"isValid": false, "errors": e}))
-            .unwrap_or_else(|| json!({"isValid": true})),
-    )
+    Json(NameValidation {
+        is_valid: error.is_none(),
+        errors: error,
+    })
 }

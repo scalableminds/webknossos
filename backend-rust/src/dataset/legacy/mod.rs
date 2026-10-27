@@ -17,7 +17,6 @@ use crate::{
     error::{ApiError, ApiResult},
     extract::Query,
     state::JobsEnabled,
-    util::id::ObjectId,
 };
 
 pub fn router() -> Router<AppState> {
@@ -37,27 +36,20 @@ async fn list(
 ) -> ApiResult<Json<Vec<Value>>> {
     // This parameter is only part of the latest compact API contract.
     query.include_annotation_count = None;
-    let rows = crate::dataset::routes::list_values(&state.pool, user.as_ref(), &query).await?;
-    let result = if query.compact == Some(true) {
-        rows
-    } else {
-        let mut values = Vec::with_capacity(rows.len());
-        for row in rows {
-            let id = row["id"]
-                .as_str()
-                .and_then(|id| ObjectId::parse(id).ok())
-                .ok_or_else(ApiError::internal)?;
-            values.push(
-                crate::dataset::routes::full_json(&state.pool, user.as_ref(), &id, jobs_enabled)
-                    .await?,
-            );
-        }
-        values
-    };
+    let rows = crate::dataset::routes::list_rows(&state.pool, user.as_ref(), &query).await?;
+    let mut values = Vec::with_capacity(rows.len());
+    for row in rows {
+        values.push(if query.compact == Some(true) {
+            serde_json::to_value(row).map_err(|_| ApiError::internal())?
+        } else {
+            crate::dataset::routes::full_json(&state.pool, user.as_ref(), &row.id, jobs_enabled)
+                .await?
+        });
+    }
     if let Some(user) = user {
         crate::dataset::dao::touch_user_last_activity(&state.pool, user.id).await?;
     }
-    Ok(Json(result))
+    Ok(Json(values))
 }
 
 /// Apply only to legacy dataset read/list routes. Other bigint fields retain

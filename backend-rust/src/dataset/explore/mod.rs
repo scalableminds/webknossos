@@ -16,7 +16,7 @@ use dao::DuplicateSource;
 use crate::{
     AppState,
     auth::AuthUser,
-    dataset::create::{NewDataset, SetUp},
+    dataset::create::{CreatedDataset, NewDataset, SetUp},
     dataset::source::{UsableDataSource, VoxelSize},
     error::{ApiError, ApiResult},
     extract::{Json as RequestJson, Path, Query},
@@ -382,7 +382,7 @@ async fn add_virtual_dataset(
     State(clients): State<ServiceClients>,
     State(slack): State<SlackNotificationService>,
     RequestJson(body): RequestJson<RegistrationInfo>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<CreatedDataset>> {
     let source = UsableDataSource::from_json(&body.data_source)
         .map_err(crate::dataset::source::invalid_body)?;
     let store =
@@ -423,7 +423,7 @@ async fn add_virtual_dataset(
         &id,
         "via explore+add",
     );
-    Ok(Json(json!({ "newDatasetId": id })))
+    Ok(Json(CreatedDataset { new_dataset_id: id }))
 }
 
 #[derive(Deserialize)]

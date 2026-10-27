@@ -93,7 +93,7 @@ async fn public_json(
     let dataset = dao::find_dataset_with_organization(connection, dataset_id).await?;
     let (dataset_name, organization, datastore) =
         dataset.ok_or_else(|| ApiError::not_found(crate::msg::annotation::DATASET_MISSING))?;
-    let data_store = crate::dataset::routes::public_datastore_json_on_connection(
+    let data_store = crate::dataset::routes::public_datastore_on_connection(
         connection,
         &datastore,
         jobs_enabled,

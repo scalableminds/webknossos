@@ -141,6 +141,7 @@ async fn compose_and_in_place_additions_build_virtual_datasets() {
     let (status, body) = post(&app, "/datasets/compose", &fixture.token, request(layers)).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let composed = body["newDatasetId"].as_str().unwrap().to_owned();
+    assert_eq!(body, json!({"newDatasetId": composed}));
     // Differing voxel sizes without explicit transforms are rescaled to 4 nm.
     let rows: Vec<(String, i32, i32, String)> = sqlx::query_as(
         "SELECT l.name,(m.mag).x::int,(l.boundingBox).width::int,m.path FROM \
@@ -202,6 +203,7 @@ async fn compose_and_in_place_additions_build_virtual_datasets() {
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let id = body["newDatasetId"].as_str().unwrap();
+    assert_eq!(body, json!({"newDatasetId": id}));
     let (transforms, factor): (i64, f64) = sqlx::query_as(
         "SELECT (SELECT count(*) FROM webknossos.dataset_layer_coordinateTransformations \
             WHERE _dataset=$1),(voxelSizeFactor).x FROM webknossos.datasets WHERE _id=$1",

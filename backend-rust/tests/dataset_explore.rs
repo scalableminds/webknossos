@@ -305,6 +305,7 @@ async fn explore_add_virtual_and_duplicate_create_datasets_through_the_datastore
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let virtual_id = body["newDatasetId"].as_str().unwrap().to_owned();
+    assert_eq!(body, json!({"newDatasetId": virtual_id}));
     let (import_url, directory): (Option<String>, String) =
         sqlx::query_as("SELECT importURL,directoryName FROM webknossos.datasets WHERE _id=$1")
             .bind(&virtual_id)

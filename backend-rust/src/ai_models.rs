@@ -20,7 +20,7 @@ use crate::{
     AppState,
     auth::AuthUser,
     dataset::options::UploadToPathsConfig,
-    dataset::routes::{full_json_on_connection, public_datastore_json_on_connection},
+    dataset::routes::{full_json_on_connection, public_datastore_on_connection},
     dataset::source::VoxelSize,
     error::{ApiError, ApiResult},
     extract::{Json, Path},
@@ -274,7 +274,7 @@ pub(crate) async fn model_public_writes(
         None => None,
     };
     let data_store_json =
-        public_datastore_json_on_connection(connection, &model.data_store, jobs_enabled).await?;
+        public_datastore_on_connection(connection, &model.data_store, jobs_enabled).await?;
     // A training job that cannot be read (or parsed) is rendered as null.
     let training_job: Option<Job> = match &model.training_job {
         Some(job_id) => match crate::job::routes::find_job(connection, &user.id, job_id).await {
@@ -1272,7 +1272,7 @@ pub(crate) async fn inference_public_writes(
         .await?
         .ok_or_else(empty)?;
     let data_store_json =
-        public_datastore_json_on_connection(connection, &job.data_store, jobs_enabled).await?;
+        public_datastore_on_connection(connection, &job.data_store, jobs_enabled).await?;
     let model_json = match &inference.ai_model {
         Some(model_id) => {
             let model = find_model(connection, &user.id, model_id)

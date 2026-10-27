@@ -1,6 +1,6 @@
 //! DatasetController reserve*UploadToPath* routes (UploadToPathsService, LayerToLinkService).
 use axum::{Json, Router, extract::State, routing::post};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 mod dao;
@@ -267,7 +267,7 @@ async fn reserve_upload_to_paths(
     user: AuthUser,
     State(config): State<UploadToPathsConfig>,
     RequestJson(body): RequestJson<ReserveRequest>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<Reservation>> {
     let mut source = UsableDataSource::from_json(&body.data_source)
         .map_err(crate::dataset::source::invalid_body)?;
     let path_prefix = parse_prefix(body.path_prefix.as_deref())?;
@@ -359,7 +359,19 @@ async fn reserve_upload_to_paths(
     add_initial_teams(&mut transaction, &user, &id, &body.initial_team_ids).await?;
     transaction.commit().await?;
     // Linked layers are managed by the server; the client only needs its own paths.
-    Ok(Json(json!({"newDatasetId": id, "dataSource": source})))
+    Ok(Json(Reservation {
+        new_dataset_id: Some(id),
+        data_source: source,
+    }))
+}
+
+/// The reserved dataset with the paths the client uploads to.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Reservation {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    new_dataset_id: Option<ObjectId>,
+    data_source: UsableDataSource,
 }
 
 #[derive(Deserialize)]
@@ -375,7 +387,7 @@ async fn reserve_for_preliminary(
     Path(id): Path<PathObjectId>,
     State(config): State<UploadToPathsConfig>,
     RequestJson(body): RequestJson<PreliminaryRequest>,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Json<Reservation>> {
     let mut source = UsableDataSource::from_json(&body.data_source)
         .map_err(crate::dataset::source::invalid_body)?;
     let path_prefix = parse_prefix(body.path_prefix.as_deref())?;
@@ -409,7 +421,10 @@ async fn reserve_for_preliminary(
     .await?;
     crate::dataset::source::write_layers(&mut transaction, &id, &source.data_layers).await?;
     transaction.commit().await?;
-    Ok(Json(json!({"dataSource": source})))
+    Ok(Json(Reservation {
+        new_dataset_id: None,
+        data_source: source,
+    }))
 }
 
 fn not_usable(id: &ObjectId) -> ApiError {

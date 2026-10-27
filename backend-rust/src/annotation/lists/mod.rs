@@ -198,12 +198,14 @@ pub(crate) async fn full_json_for(
     let restrictions = crate::annotation::access::restrictions(&metadata, user);
     value["restrictions"] = restrictions.public_json();
     let datastore = dao::find_dataset_data_store(connection, &metadata.dataset_id).await?;
-    value["dataStore"] = crate::dataset::routes::public_datastore_json_on_connection(
-        connection,
-        &datastore,
-        jobs_enabled,
-    )
-    .await?;
+    value["dataStore"] = json!(
+        crate::dataset::routes::public_datastore_on_connection(
+            connection,
+            &datastore,
+            jobs_enabled
+        )
+        .await?
+    );
     let task = if let Some(task) = &metadata.task_id {
         Some(crate::task::routes::public_json_for(connection, user, task, true).await?)
     } else {

@@ -37,6 +37,19 @@ trait BookmarkUpdateAction extends AnnotationUpdateAction {
   def id: Int
 }
 
+// The thumbnails are stored in their own column family when the update is saved
+// and are stripped from the stored update action.
+trait BookmarkThumbnailUpdateAction extends BookmarkUpdateAction {
+  def largeThumbnailDataBase64: Option[String]
+  def smallThumbnailDataBase64: Option[String]
+
+  def thumbnails: Seq[(BookmarkThumbnailSize.Value, Array[Byte])] =
+    Seq(
+      BookmarkThumbnailSize.large -> largeThumbnailDataBase64,
+      BookmarkThumbnailSize.small -> smallThumbnailDataBase64
+    ).collect { case (size, Some(base64)) => size -> Base64.getDecoder.decode(base64) }
+}
+
 case class AddBookmarkAnnotationAction(
     id: Int,
     created: Long,
@@ -50,25 +63,21 @@ case class AddBookmarkAnnotationAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends BookmarkUpdateAction derives JsonAutoFormat {
-  def toProto(fallbackCreatedAtVersion: Long): AnnotationBookmarkProto =
+) extends BookmarkThumbnailUpdateAction derives JsonAutoFormat {
+  def toProto(fallbackCreatedAtVersion: Long): AnnotationBookmarkProto = {
+    val version = createdAtVersion.getOrElse(fallbackCreatedAtVersion)
     AnnotationBookmarkProto(
       id = id,
       created = created,
       name = name,
       description = description,
       state = state.toProto,
-      createdAtVersion = createdAtVersion.getOrElse(fallbackCreatedAtVersion),
-      metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
+      createdAtVersion = version,
+      metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata)),
+      thumbnailVersion = version
     )
+  }
 
-  def thumbnails: Seq[(BookmarkThumbnailSize.Value, Array[Byte])] =
-    Seq(
-      BookmarkThumbnailSize.large -> largeThumbnailDataBase64,
-      BookmarkThumbnailSize.small -> smallThumbnailDataBase64
-    ).collect { case (size, Some(base64)) => size -> Base64.getDecoder.decode(base64) }
-
-  // The thumbnails are stored in their own column family when the update is saved.
   def withoutThumbnails: AddBookmarkAnnotationAction =
     this.copy(largeThumbnailDataBase64 = None, smallThumbnailDataBase64 = None)
 
@@ -97,6 +106,49 @@ case class UpdateBookmarkAnnotationAction(
 object UpdateBookmarkAnnotationAction extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[UpdateBookmarkAnnotationAction] =
     Json.configured(using tristateOptionParsing).format[UpdateBookmarkAnnotationAction]
+}
+
+// Replaces the view of a bookmark together with its thumbnails.
+case class UpdateBookmarkStateAnnotationAction(
+    id: Int,
+    state: AnnotationBookmarkState,
+    largeThumbnailDataBase64: Option[String],
+    smallThumbnailDataBase64: Option[String],
+    thumbnailVersion: Option[Long] = None, // set by the backend when the update is saved
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends BookmarkThumbnailUpdateAction derives JsonAutoFormat {
+  def applyOn(fallbackThumbnailVersion: Long)(bookmark: AnnotationBookmarkProto): AnnotationBookmarkProto =
+    bookmark.withState(state.toProto).withThumbnailVersion(thumbnailVersion.getOrElse(fallbackThumbnailVersion))
+
+  def withoutThumbnails: UpdateBookmarkStateAnnotationAction =
+    this.copy(largeThumbnailDataBase64 = None, smallThumbnailDataBase64 = None)
+
+  override def addTimestamp(timestamp: Long): UpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction = this.copy(actionAuthorId = authorId)
+}
+
+// Replaces the thumbnails of a bookmark, e.g. with another viewport of its view.
+case class UpdateBookmarkThumbnailAnnotationAction(
+    id: Int,
+    largeThumbnailDataBase64: Option[String],
+    smallThumbnailDataBase64: Option[String],
+    thumbnailVersion: Option[Long] = None, // set by the backend when the update is saved
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends BookmarkThumbnailUpdateAction derives JsonAutoFormat {
+  def applyOn(fallbackThumbnailVersion: Long)(bookmark: AnnotationBookmarkProto): AnnotationBookmarkProto =
+    bookmark.withThumbnailVersion(thumbnailVersion.getOrElse(fallbackThumbnailVersion))
+
+  def withoutThumbnails: UpdateBookmarkThumbnailAnnotationAction =
+    this.copy(largeThumbnailDataBase64 = None, smallThumbnailDataBase64 = None)
+
+  override def addTimestamp(timestamp: Long): UpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction = this.copy(actionAuthorId = authorId)
 }
 
 case class UpdateMetadataOfBookmarkAnnotationAction(

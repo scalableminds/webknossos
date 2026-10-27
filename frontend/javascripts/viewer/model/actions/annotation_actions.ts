@@ -6,6 +6,7 @@ import type {
   AdditionalCoordinate,
   AnnotationCollaborationMode,
   APIAnnotationBookmark,
+  APIAnnotationBookmarkState,
   APIAnnotationVisibility,
   APIDataLayer,
   APIDataset,
@@ -58,6 +59,10 @@ type SetBookmarkCreatedAtVersionAction = ReturnType<typeof setBookmarkCreatedAtV
 type UpdateBookmarkMetadataAction = ReturnType<typeof updateBookmarkMetadataAction>;
 type SetBookmarkMetadataAction = ReturnType<typeof setBookmarkMetadataAction>;
 type SetBookmarkNameAction = ReturnType<typeof setBookmarkNameAction>;
+type DeleteBookmarkAction = ReturnType<typeof deleteBookmarkAction>;
+type SetBookmarkStateAction = ReturnType<typeof setBookmarkStateAction>;
+type SetBookmarkThumbnailAction = ReturnType<typeof setBookmarkThumbnailAction>;
+type SetBookmarkThumbnailVersionAction = ReturnType<typeof setBookmarkThumbnailVersionAction>;
 type SetAnnotationAllowUpdateAction = ReturnType<
   typeof setIsUpdatingAnnotationCurrentlyAllowedAction
 >;
@@ -101,6 +106,10 @@ export type AnnotationActionTypes =
   | UpdateBookmarkMetadataAction
   | SetBookmarkMetadataAction
   | SetBookmarkNameAction
+  | DeleteBookmarkAction
+  | SetBookmarkStateAction
+  | SetBookmarkThumbnailAction
+  | SetBookmarkThumbnailVersionAction
   | SetAnnotationAllowUpdateAction
   | SetUserBoundingBoxesAction
   | ChangeUserBoundingBoxAction
@@ -223,6 +232,47 @@ export const setBookmarkMetadataAction = (bookmarkId: number, metadata: Metadata
     type: "SET_BOOKMARK_METADATA",
     bookmarkId,
     metadata,
+  }) as const;
+
+export const deleteBookmarkAction = (bookmarkId: number) =>
+  ({
+    type: "DELETE_BOOKMARK",
+    bookmarkId,
+  }) as const;
+
+// The new thumbnail is kept locally until it was saved (see thumbnailVersion).
+export const setBookmarkStateAction = (
+  bookmarkId: number,
+  state: APIAnnotationBookmarkState,
+  smallThumbnailDataBase64: string | null,
+  thumbnailVersion: number | null,
+) =>
+  ({
+    type: "SET_BOOKMARK_STATE",
+    bookmarkId,
+    state,
+    smallThumbnailDataBase64,
+    thumbnailVersion,
+  }) as const;
+
+// See setBookmarkStateAction.
+export const setBookmarkThumbnailAction = (
+  bookmarkId: number,
+  smallThumbnailDataBase64: string | null,
+  thumbnailVersion: number | null,
+) =>
+  ({
+    type: "SET_BOOKMARK_THUMBNAIL",
+    bookmarkId,
+    smallThumbnailDataBase64,
+    thumbnailVersion,
+  }) as const;
+
+export const setBookmarkThumbnailVersionAction = (bookmarkId: number, thumbnailVersion: number) =>
+  ({
+    type: "SET_BOOKMARK_THUMBNAIL_VERSION",
+    bookmarkId,
+    thumbnailVersion,
   }) as const;
 
 export const setBookmarkCreatedAtVersionAction = (bookmarkId: number, createdAtVersion: number) =>

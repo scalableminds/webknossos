@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.AnnotationBookmark.{
   BookmarkMappingProto,
   BookmarkMeshProto
 }
-import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
+import com.scalableminds.webknossos.datastore.geometry.{Vec3DoubleProto, Vec3IntProto}
 import com.scalableminds.webknossos.tracingstore.annotation.BookmarkMergeRemapping
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -31,11 +31,13 @@ class BookmarkMergeRemappingTestSuite extends AnyWordSpec {
       id = 3,
       created = 0L,
       createdAtVersion = 4L,
+      thumbnailVersion = 4L,
       name = Some("name"),
       state = AnnotationBookmarkStateProto(
         position = origin,
         mode = ViewModeProto.orthogonal,
         zoomStep = 1.0,
+        rotation = Vec3DoubleProto(0, 0, 0),
         activeNodeId = activeNodeId,
         nativelyRenderedLayerName = nativelyRenderedLayerName,
         clippingDistance = 50.0,

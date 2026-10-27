@@ -313,7 +313,7 @@ class AnnotationTransactionService @Inject() (
         } yield ()
       }
       _ <- Fox.serialCombined(updateActionGroup.actions) {
-        case a: AddBookmarkAnnotationAction =>
+        case a: BookmarkThumbnailUpdateAction =>
           Fox.serialCombined(a.thumbnails) { case (size, thumbnail) =>
             annotationBookmarkService.saveThumbnail(annotationId, a.id, size, updateActionGroup.version, thumbnail)
           }
@@ -347,6 +347,10 @@ class AnnotationTransactionService @Inject() (
       case a: UpdateBucketVolumeAction    => a.withoutBase64Data
       case a: AddBookmarkAnnotationAction =>
         a.withoutThumbnails.copy(createdAtVersion = Some(updateActionGroup.version))
+      case a: UpdateBookmarkStateAnnotationAction =>
+        a.withoutThumbnails.copy(thumbnailVersion = Some(updateActionGroup.version))
+      case a: UpdateBookmarkThumbnailAnnotationAction =>
+        a.withoutThumbnails.copy(thumbnailVersion = Some(updateActionGroup.version))
       case a: AddLayerAnnotationAction =>
         // Note: this generated tracingId must not be read from this action before it was committed to fossildb,
         // to keep save retries idempotent.

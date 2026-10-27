@@ -17,7 +17,10 @@ import {
   maySendSaveRequest,
 } from "viewer/model/accessors/annotation_accessor";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
-import { setBookmarkCreatedAtVersionAction } from "viewer/model/actions/annotation_actions";
+import {
+  setBookmarkCreatedAtVersionAction,
+  setBookmarkThumbnailVersionAction,
+} from "viewer/model/actions/annotation_actions";
 import {
   type OperationId,
   SYNC_RELATED_OPERATION_IDS,
@@ -282,6 +285,13 @@ export function* sendSaveRequestToServer(
         for (const action of batch.actions) {
           if (action.name === "addBookmark") {
             yield* put(setBookmarkCreatedAtVersionAction(action.value.id, batch.version));
+          }
+          if (
+            action.name === "addBookmark" ||
+            action.name === "updateBookmarkState" ||
+            action.name === "updateBookmarkThumbnail"
+          ) {
+            yield* put(setBookmarkThumbnailVersionAction(action.value.id, batch.version));
           }
         }
       }

@@ -141,7 +141,7 @@ function bookmarkStateFromProto(state: any): APIAnnotationBookmarkState {
   return {
     ...state,
     position: vec3FromProto(state.position),
-    rotation: state.rotation != null ? vec3FromProto(state.rotation) : null,
+    rotation: vec3FromProto(state.rotation),
     tdCamera:
       state.tdCamera != null
         ? {
@@ -206,6 +206,7 @@ export function parseProtoAnnotationBookmarks(
     name: bookmark.name ?? null,
     state: bookmarkStateFromProto(bookmark.state),
     createdAtVersion: Number(bookmark.createdAtVersion),
+    thumbnailVersion: Number(bookmark.thumbnailVersion),
     metadata: sanitizeMetadata(bookmark.metadata),
     // Thumbnails are loaded separately, see getBookmarkThumbnailUrl.
     smallThumbnailDataBase64: null,

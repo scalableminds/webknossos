@@ -51,7 +51,8 @@ export function urlStateToBookmarkState(
     position: urlState.position,
     mode: urlState.mode,
     zoomStep: urlState.zoomStep,
-    rotation: urlState.rotation,
+    // The url state omits a zero rotation.
+    rotation: urlState.rotation ?? [0, 0, 0],
     activeNodeId: urlState.activeNode,
     additionalCoordinates: urlState.additionalCoordinates,
     nativelyRenderedLayerName: urlState.nativelyRenderedLayerName,
@@ -88,7 +89,7 @@ export function bookmarkStateToUrlState(state: APIAnnotationBookmarkState): UrlM
     position: state.position,
     mode: state.mode,
     zoomStep: state.zoomStep,
-    rotation: state.rotation ?? undefined,
+    rotation: state.rotation,
     activeNode: state.activeNodeId ?? undefined,
     // Unset repeated proto fields are decoded as empty arrays.
     additionalCoordinates:

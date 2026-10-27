@@ -262,21 +262,33 @@ export type BookmarkThumbnails = {
   smallDataBase64: string;
 };
 
-// Renders the first visible viewport (by priority) as base64-encoded WebP images, once in
-// full size and once downsampled. Returns null if no viewport is visible in the current layout.
-export async function captureBookmarkThumbnails(): Promise<BookmarkThumbnails | null> {
+export type BookmarkThumbnailViewport = OrthoView | typeof FlightViewport;
+
+// The viewports that are visible in the current layout, by thumbnail priority.
+export function getRenderedBookmarkThumbnailViewports(): BookmarkThumbnailViewport[] {
   const state = Store.getState();
-  const candidates: Array<OrthoView | typeof FlightViewport> =
+  const candidates: BookmarkThumbnailViewport[] =
     state.temporaryConfiguration.viewMode === constants.MODE_PLANE_TRACING
       ? BOOKMARK_THUMBNAIL_PRIORITY
       : [FlightViewport];
-  const viewport = candidates.find((candidate) => {
+  return candidates.filter((candidate) => {
     const { width, height } = getInputCatcherRect(state, candidate);
     return width > 0 && height > 0;
   });
-  if (viewport == null) return null;
+}
 
-  const { width, height } = getInputCatcherRect(state, viewport);
+// Renders the first visible viewport (by priority) as base64-encoded WebP images, once in
+// full size and once downsampled. Returns null if no viewport is visible in the current layout.
+export async function captureBookmarkThumbnails(): Promise<BookmarkThumbnails | null> {
+  const viewport = getRenderedBookmarkThumbnailViewports()[0];
+  if (viewport == null) return null;
+  return captureBookmarkThumbnailsOfViewport(viewport);
+}
+
+export async function captureBookmarkThumbnailsOfViewport(
+  viewport: BookmarkThumbnailViewport,
+): Promise<BookmarkThumbnails | null> {
+  const { width, height } = getInputCatcherRect(Store.getState(), viewport);
   // A clear color of 0xffffff is mapped to the theme's background color, matching the on-screen look.
   const buffer = renderToTexture(viewport, undefined, undefined, false, 0xffffff, true);
   const blob = await convertBufferToImage(buffer, width, height, null, null, true, "image/webp");

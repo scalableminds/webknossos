@@ -14,6 +14,7 @@ message AnnotationBookmarkProto {
   required AnnotationBookmarkStateProto state = 5;
   required int64 createdAtVersion = 6; // annotation version that added the bookmark
   repeated MetadataEntryProto metadata = 7;
+  required int64 thumbnailVersion = 8; // annotation version that stored the current thumbnails
   // Thumbnails are stored in the annotationBookmarkThumbnails column family.
 }
 
@@ -36,7 +37,7 @@ message AnnotationBookmarkStateProto {
   required Vec3IntProto position = 1;
   required ViewModeProto mode = 2;
   required double zoomStep = 3;
-  optional Vec3DoubleProto rotation = 4; // unset encodes no rotation
+  required Vec3DoubleProto rotation = 4;
   optional int32 activeNodeId = 5;
   repeated AdditionalCoordinateProto additionalCoordinates = 6;
   optional string nativelyRenderedLayerName = 7; // layer name or tracingId, unset renders all layers with their transforms

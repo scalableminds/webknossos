@@ -222,7 +222,7 @@ export function applyBookmarkState(urlState: PartialUrlManagerState, dataset: AP
       ? fitTDCameraToAspectRatio(urlState.tdCamera, tdRect.width / tdRect.height)
       : urlState.tdCamera;
 
-  applyState({ rotation: [0, 0, 0], ...urlState, tdCamera, stateByLayer }, false, dataset);
+  applyState({ ...urlState, tdCamera, stateByLayer }, false, dataset);
 }
 
 async function applyLayerState(stateByLayer: UrlStateByLayer) {

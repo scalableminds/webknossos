@@ -195,7 +195,7 @@ class AnnotationBookmarkService @Inject() (
     } yield ()
 
   // The merged bookmarks get dense new ids, in the order of the source annotations, and count as created
-  // at the first version of the merged annotation. Returns the new ids.
+  // (with their thumbnails) at the first version of the merged annotation. Returns the new ids.
   def mergeBookmarks(
       sources: Seq[(ObjectId, AnnotationProto, BookmarkMergeRemapping)],
       newAnnotationId: ObjectId,
@@ -212,7 +212,7 @@ class AnnotationBookmarkService @Inject() (
         (sourceBookmark, index + 1)
       }
       mergedBookmarks = sourceBookmarksWithNewIds.map { case ((_, bookmark, remapping), newId) =>
-        remapping(bookmark, newId).withCreatedAtVersion(newVersion)
+        remapping(bookmark, newId).withCreatedAtVersion(newVersion).withThumbnailVersion(newVersion)
       }
       _ <- saveBookmarks(newAnnotationId, newVersion, mergedBookmarks, toTemporaryStore)
       _ <- Fox.serialCombined(sourceBookmarksWithNewIds) { case ((annotationId, bookmark, _), newId) =>

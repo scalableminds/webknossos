@@ -37,6 +37,7 @@ import type {
   CreateNodeUpdateAction,
   CreateSegmentUpdateAction,
   DeleteAnnotationLayerUpdateAction,
+  DeleteBookmarkUpdateAction,
   DeleteEdgeUpdateAction,
   DeleteNodeUpdateAction,
   DeleteSegmentDataUpdateAction,
@@ -59,6 +60,8 @@ import type {
   UpdateActiveNodeUpdateAction,
   UpdateActiveSegmentIdUpdateAction,
   UpdateAnnotationLayerNameUpdateAction,
+  UpdateBookmarkStateUpdateAction,
+  UpdateBookmarkThumbnailUpdateAction,
   UpdateBookmarkUpdateAction,
   UpdateBucketUpdateAction,
   UpdateCameraAnnotationAction,
@@ -520,6 +523,20 @@ const descriptionFns: Record<
   ): Description => ({
     description: `Updated metadata of the bookmark with id ${action.value.id}.`,
     icon: <EditOutlined />,
+  }),
+  updateBookmarkState: (action: AsServerAction<UpdateBookmarkStateUpdateAction>): Description => ({
+    description: `Updated the view of the bookmark with id ${action.value.id}.`,
+    icon: <EditOutlined />,
+  }),
+  updateBookmarkThumbnail: (
+    action: AsServerAction<UpdateBookmarkThumbnailUpdateAction>,
+  ): Description => ({
+    description: `Switched the thumbnail of the bookmark with id ${action.value.id}.`,
+    icon: <EditOutlined />,
+  }),
+  deleteBookmark: (action: AsServerAction<DeleteBookmarkUpdateAction>): Description => ({
+    description: `Deleted the bookmark with id ${action.value.id}.`,
+    icon: <DeleteOutlined />,
   }),
   updateActiveNode: (action: AsServerAction<UpdateActiveNodeUpdateAction>): Description => {
     return {

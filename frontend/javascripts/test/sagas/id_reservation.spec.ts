@@ -31,11 +31,13 @@ function createBookmark(id: number): APIAnnotationBookmark {
     created: 0,
     name: null,
     createdAtVersion: null,
+    thumbnailVersion: null,
     metadata: [],
     state: {
       position: [0, 0, 0],
       mode: "orthogonal",
       zoomStep: 1,
+      rotation: [0, 0, 0],
       clippingDistance: 50,
       clipSkeletonToCurrentSection: false,
       layers: [],

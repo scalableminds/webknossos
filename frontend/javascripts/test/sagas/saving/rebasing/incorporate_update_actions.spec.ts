@@ -46,6 +46,7 @@ import {
   createNode,
   createSegmentVolumeAction,
   createTree,
+  deleteBookmark,
   deleteEdge,
   deleteNode,
   deleteSegmentGroupUpdateAction,
@@ -61,6 +62,8 @@ import {
   splitAgglomerate,
   updateAnnotationLayerName,
   updateBookmark,
+  updateBookmarkState,
+  updateBookmarkThumbnail,
   updateLargestSegmentId,
   updateMappingName,
   updateMetadataOfAnnotation,
@@ -134,6 +137,9 @@ const actionNamesHelper: Record<ServerUpdateAction["name"], true> = {
   addBookmark: true,
   updateBookmark: true,
   updateMetadataOfBookmark: true,
+  deleteBookmark: true,
+  updateBookmarkState: true,
+  updateBookmarkThumbnail: true,
   addSegmentIndex: true,
   revertToVersion: true,
   addLayerToAnnotation: true,
@@ -798,6 +804,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
         position: [1, 2, 3],
         mode: "orthogonal",
         zoomStep: 1,
+        rotation: [0, 0, 0] as Vector3,
         clippingDistance: 50,
         clipSkeletonToCurrentSection: false,
         layers: [],
@@ -813,6 +820,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
               name: "Replayed Bookmark",
               state: bookmarkState,
               createdAtVersion: null,
+              thumbnailVersion: null,
               metadata: [{ key: "k", stringValue: "v" }],
               smallThumbnailDataBase64: null,
             },
@@ -830,6 +838,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           name: "Replayed Bookmark",
           state: bookmarkState,
           createdAtVersion: 1,
+          thumbnailVersion: 1,
           metadata: [{ key: "k", stringValue: "v" }],
           smallThumbnailDataBase64: null,
         },
@@ -847,11 +856,13 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           position: [1, 2, 3] as Vector3,
           mode: "orthogonal" as const,
           zoomStep: 1,
+          rotation: [0, 0, 0] as Vector3,
           clippingDistance: 50,
           clipSkeletonToCurrentSection: false,
           layers: [],
         },
         createdAtVersion: null,
+        thumbnailVersion: null,
         metadata: [
           { key: "a", stringValue: "1" },
           { key: "b", numberValue: 2 },
@@ -885,7 +896,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
       expect(Store.getState().save.queue).toEqual([]);
     });
 
-    it("applies replayed bookmark renames", async () => {
+    it("applies replayed bookmark renames, view and thumbnail updates and deletions", async () => {
       Store.dispatch(discardSaveQueueAction());
       const bookmark = {
         id: 1,
@@ -895,11 +906,13 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           position: [1, 2, 3] as Vector3,
           mode: "orthogonal" as const,
           zoomStep: 1,
+          rotation: [0, 0, 0] as Vector3,
           clippingDistance: 50,
           clipSkeletonToCurrentSection: false,
           layers: [],
         },
         createdAtVersion: null,
+        thumbnailVersion: null,
         metadata: [],
         smallThumbnailDataBase64: null,
       };
@@ -913,6 +926,26 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
       await incorporateActions([updateBookmark(1, null)], 2);
       Store.dispatch(finishForwardingUpdateActionsAction());
       expect(Store.getState().annotation.bookmarks[0].name).toBeNull();
+      expect(Store.getState().save.queue).toEqual([]);
+
+      const newState = { ...bookmark.state, position: [4, 5, 6] as Vector3 };
+      Store.dispatch(startForwardingUpdateActionsAction());
+      await incorporateActions([updateBookmarkState(1, newState, null, null)], 3);
+      Store.dispatch(finishForwardingUpdateActionsAction());
+      expect(Store.getState().annotation.bookmarks[0].state).toEqual(newState);
+      expect(Store.getState().annotation.bookmarks[0].thumbnailVersion).toBe(3);
+      expect(Store.getState().save.queue).toEqual([]);
+
+      Store.dispatch(startForwardingUpdateActionsAction());
+      await incorporateActions([updateBookmarkThumbnail(1, null, null)], 4);
+      Store.dispatch(finishForwardingUpdateActionsAction());
+      expect(Store.getState().annotation.bookmarks[0].thumbnailVersion).toBe(4);
+      expect(Store.getState().save.queue).toEqual([]);
+
+      Store.dispatch(startForwardingUpdateActionsAction());
+      await incorporateActions([deleteBookmark(1)], 5);
+      Store.dispatch(finishForwardingUpdateActionsAction());
+      expect(Store.getState().annotation.bookmarks).toEqual([]);
       expect(Store.getState().save.queue).toEqual([]);
     });
 

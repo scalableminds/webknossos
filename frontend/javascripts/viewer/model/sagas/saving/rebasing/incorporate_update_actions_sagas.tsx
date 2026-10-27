@@ -13,9 +13,12 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
   addBookmarkAction,
+  deleteBookmarkAction,
   editAnnotationLayerAction,
   setAnnotationDescriptionAction,
   setBookmarkNameAction,
+  setBookmarkStateAction,
+  setBookmarkThumbnailAction,
   setIsUpdatingAnnotationCurrentlyAllowedAction,
   updateBookmarkMetadataAction,
 } from "viewer/model/actions/annotation_actions";
@@ -409,8 +412,9 @@ export function* tryToIncorporateActions(
               created,
               name,
               state,
-              // Unsaved bookmarks of the user get their version once they are saved.
+              // Unsaved bookmarks of the user get their versions once they are saved.
               createdAtVersion: areUnsavedChangesOfUser ? null : actionBatch.version,
+              thumbnailVersion: areUnsavedChangesOfUser ? null : actionBatch.version,
               metadata,
               smallThumbnailDataBase64: smallThumbnailDataBase64 ?? null,
             }),
@@ -428,6 +432,34 @@ export function* tryToIncorporateActions(
         case "updateMetadataOfBookmark": {
           const { id, upsertEntriesByKey, removeEntriesByKey } = action.value;
           yield* put(updateBookmarkMetadataAction(id, upsertEntriesByKey, removeEntriesByKey));
+          break;
+        }
+        case "updateBookmarkState": {
+          const { id, state, smallThumbnailDataBase64 } = action.value;
+          yield* put(
+            setBookmarkStateAction(
+              id,
+              state,
+              // Like in addBookmark, stored update actions don't carry the thumbnails anymore.
+              smallThumbnailDataBase64 ?? null,
+              areUnsavedChangesOfUser ? null : actionBatch.version,
+            ),
+          );
+          break;
+        }
+        case "updateBookmarkThumbnail": {
+          const { id, smallThumbnailDataBase64 } = action.value;
+          yield* put(
+            setBookmarkThumbnailAction(
+              id,
+              smallThumbnailDataBase64 ?? null,
+              areUnsavedChangesOfUser ? null : actionBatch.version,
+            ),
+          );
+          break;
+        }
+        case "deleteBookmark": {
+          yield* put(deleteBookmarkAction(action.value.id));
           break;
         }
         case "addSegmentIndex": {

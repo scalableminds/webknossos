@@ -238,6 +238,50 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       });
     }
 
+    case "DELETE_BOOKMARK": {
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.filter(
+          (bookmark) => bookmark.id !== action.bookmarkId,
+        ),
+      });
+    }
+
+    case "SET_BOOKMARK_STATE": {
+      const {
+        bookmarkId,
+        state: bookmarkState,
+        smallThumbnailDataBase64,
+        thumbnailVersion,
+      } = action;
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.map((bookmark) =>
+          bookmark.id === bookmarkId
+            ? { ...bookmark, state: bookmarkState, smallThumbnailDataBase64, thumbnailVersion }
+            : bookmark,
+        ),
+      });
+    }
+
+    case "SET_BOOKMARK_THUMBNAIL": {
+      const { bookmarkId, smallThumbnailDataBase64, thumbnailVersion } = action;
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.map((bookmark) =>
+          bookmark.id === bookmarkId
+            ? { ...bookmark, smallThumbnailDataBase64, thumbnailVersion }
+            : bookmark,
+        ),
+      });
+    }
+
+    case "SET_BOOKMARK_THUMBNAIL_VERSION": {
+      const { bookmarkId, thumbnailVersion } = action;
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.map((bookmark) =>
+          bookmark.id === bookmarkId ? { ...bookmark, thumbnailVersion } : bookmark,
+        ),
+      });
+    }
+
     case "SET_BOOKMARK_CREATED_AT_VERSION": {
       const { bookmarkId, createdAtVersion } = action;
       return updateAnnotation(state, {

@@ -670,7 +670,7 @@ export type APIAnnotationBookmarkState = {
   position: Vector3;
   mode: ViewMode;
   zoomStep: number;
-  rotation?: Vector3 | null;
+  rotation: Vector3;
   activeNodeId?: number | null;
   additionalCoordinates?: AdditionalCoordinate[] | null;
   nativelyRenderedLayerName?: string | null;
@@ -694,6 +694,8 @@ export type APIAnnotationBookmark = {
   state: APIAnnotationBookmarkState;
   // The annotation version that added the bookmark. null until the bookmark was saved.
   createdAtVersion: number | null;
+  // The annotation version that stored the current thumbnails. null until they were saved.
+  thumbnailVersion: number | null;
   metadata: MetadataEntryProto[];
   // Only set for bookmarks created in this session. Otherwise, the thumbnail is loaded from the server.
   smallThumbnailDataBase64: string | null;

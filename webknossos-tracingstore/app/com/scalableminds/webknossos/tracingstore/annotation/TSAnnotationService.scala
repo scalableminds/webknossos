@@ -219,6 +219,14 @@ class TSAnnotationService @Inject() (
         updateBookmark(annotationId, annotationWithTracings, a.id)(
           a.applyOn
         ) ?~> Msg.Annotation.ApplyUpdate.updateBookmarkFailed
+      case a: UpdateBookmarkStateAnnotationAction =>
+        updateBookmark(annotationId, annotationWithTracings, a.id)(
+          a.applyOn(targetVersion)
+        ) ?~> Msg.Annotation.ApplyUpdate.updateBookmarkFailed
+      case a: UpdateBookmarkThumbnailAnnotationAction =>
+        updateBookmark(annotationId, annotationWithTracings, a.id)(
+          a.applyOn(targetVersion)
+        ) ?~> Msg.Annotation.ApplyUpdate.updateBookmarkFailed
       case a: DeleteBookmarkAnnotationAction =>
         Fox.successful(annotationWithTracings.deleteBookmark(a))
       case a: EditableMappingUpdateAction =>

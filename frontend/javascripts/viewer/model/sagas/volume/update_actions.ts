@@ -2,6 +2,7 @@ import { computeBoundingBoxObjectFromBoundingBox } from "libs/utils";
 import type {
   AdditionalCoordinate,
   APIAnnotationBookmark,
+  APIAnnotationBookmarkState,
   APIMagRestrictions,
   MetadataEntryProto,
   TreeAgglomerateInfo,
@@ -130,6 +131,9 @@ export type UpdateMetadataOfAnnotationUpdateAction = ReturnType<typeof updateMet
 export type AddBookmarkUpdateAction = ReturnType<typeof addBookmark>;
 export type UpdateBookmarkUpdateAction = ReturnType<typeof updateBookmark>;
 export type UpdateMetadataOfBookmarkUpdateAction = ReturnType<typeof updateMetadataOfBookmark>;
+export type DeleteBookmarkUpdateAction = ReturnType<typeof deleteBookmark>;
+export type UpdateBookmarkStateUpdateAction = ReturnType<typeof updateBookmarkState>;
+export type UpdateBookmarkThumbnailUpdateAction = ReturnType<typeof updateBookmarkThumbnail>;
 export type SplitAgglomerateUpdateAction = ReturnType<typeof splitAgglomerate>;
 export type MergeAgglomerateUpdateAction = ReturnType<typeof mergeAgglomerate>;
 
@@ -286,6 +290,9 @@ export type UpdateActionWithoutIsolationRequirement =
   | AddBookmarkUpdateAction
   | UpdateBookmarkUpdateAction
   | UpdateMetadataOfBookmarkUpdateAction
+  | DeleteBookmarkUpdateAction
+  | UpdateBookmarkStateUpdateAction
+  | UpdateBookmarkThumbnailUpdateAction
   | SplitAgglomerateUpdateAction
   | MergeAgglomerateUpdateAction;
 
@@ -1261,12 +1268,16 @@ export function updateMetadataOfAnnotation(description: string) {
 
 // The large thumbnail is only sent to the server and not kept in the store.
 // Both thumbnails are stripped from the update actions when they are stored.
-// createdAtVersion is set by the server.
+// createdAtVersion and thumbnailVersion are set by the server.
 export function addBookmark(
   bookmark: APIAnnotationBookmark,
   largeThumbnailDataBase64: string | null,
 ) {
-  const { createdAtVersion: _createdAtVersion, ...bookmarkWithoutVersion } = bookmark;
+  const {
+    createdAtVersion: _createdAtVersion,
+    thumbnailVersion: _thumbnailVersion,
+    ...bookmarkWithoutVersion
+  } = bookmark;
   return {
     name: "addBookmark",
     value: {
@@ -1297,6 +1308,39 @@ export function updateMetadataOfBookmark(
       upsertEntriesByKey: enforceValidMetadata(upsertEntriesByKey),
       removeEntriesByKey,
     },
+  } as const;
+}
+
+// Like in addBookmark, the thumbnails are stripped when the update action is stored
+// and thumbnailVersion is set by the server.
+export function updateBookmarkState(
+  id: number,
+  state: APIAnnotationBookmarkState,
+  largeThumbnailDataBase64: string | null,
+  smallThumbnailDataBase64: string | null,
+) {
+  return {
+    name: "updateBookmarkState",
+    value: { id, state, largeThumbnailDataBase64, smallThumbnailDataBase64 },
+  } as const;
+}
+
+// See updateBookmarkState.
+export function updateBookmarkThumbnail(
+  id: number,
+  largeThumbnailDataBase64: string | null,
+  smallThumbnailDataBase64: string | null,
+) {
+  return {
+    name: "updateBookmarkThumbnail",
+    value: { id, largeThumbnailDataBase64, smallThumbnailDataBase64 },
+  } as const;
+}
+
+export function deleteBookmark(id: number) {
+  return {
+    name: "deleteBookmark",
+    value: { id },
   } as const;
 }
 

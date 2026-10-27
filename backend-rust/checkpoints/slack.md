@@ -54,7 +54,7 @@ limit; currently they are two instances with 30 msgs/min each.)
 
 ## Deviations
 - Schema mismatch text: Rust only compares `releaseInformation.schemaVersion` (no dbtool diff), message
-  "The database schema version is not 187 ... which this backend requires."; Rust then refuses to start.
+  "The database schema version is not 188 ... which this backend requires."; Rust then refuses to start.
 - Rate-limit log line logs only the title (Scala logs the full JSON message which may contain user names).
 - Request-scoped service and global service have separate rate limiters (see above).
 - `noticeSlowRequest`/`noticeFailedJobRequest` (logTime/log wrappers in JobController/AnnotationController/

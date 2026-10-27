@@ -3,7 +3,7 @@
 //! annotation to its task base (`POST /tracings/annotation/:id/resetToBase`).
 //! No database row is written by the main application; the annotation is
 //! re-provided and serialized afterwards.
-use axum::{Extension, Json, Router, extract::State, http::StatusCode, routing::put};
+use axum::{Json, Router, extract::State, http::StatusCode, routing::put};
 use serde_json::{Value, json};
 
 use crate::{
@@ -65,7 +65,7 @@ async fn reset_to_base(
 /// PUT /annotations/:typ/:id/reset
 async fn reset(
     State(state): State<AppState>,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
     State(client): State<TracingStoreClient>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     user: AuthUser,

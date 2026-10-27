@@ -1,6 +1,6 @@
 //! AnnotationController.reopen, including the owner's reopen window: owners may
 //! only reopen within the configured time (plus 10 s) after the last change.
-use axum::{Extension, Json, Router, extract::State, routing::patch};
+use axum::{Json, Router, extract::State, routing::patch};
 use chrono::Utc;
 use serde_json::Value;
 use sqlx::PgConnection;
@@ -73,7 +73,7 @@ async fn require_reopen(
 
 async fn reopen(
     State(state): State<AppState>,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
     State(misc): State<MiscState>,
     State(JobsEnabled(jobs)): State<JobsEnabled>,
     user: AuthUser,

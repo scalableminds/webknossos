@@ -321,7 +321,7 @@ async fn finish_annotation(
 /// PATCH /annotations/:typ/:id/finish?timestamp=
 async fn finish(
     State(state): State<AppState>,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
     Extension(writer): Extension<TimeInteractionWriter>,
     State(JobsEnabled(jobs)): State<JobsEnabled>,
     Path((typ, id)): Path<(String, String)>,
@@ -348,7 +348,7 @@ async fn finish(
 /// serial, stopping at the first failure (earlier finishes stay committed).
 async fn finish_all(
     State(state): State<AppState>,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
     Extension(writer): Extension<TimeInteractionWriter>,
     Path(typ): Path<String>,
     Timestamp(timestamp): Timestamp,

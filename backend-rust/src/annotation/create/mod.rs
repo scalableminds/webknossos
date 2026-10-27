@@ -40,7 +40,6 @@ use crate::{
     auth::AuthUser,
     dataset::source::UsableDataSource,
     error::{ApiError, ApiResult},
-    extract::extension,
     extract::{self, Path},
     proto::{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto},
     state::JobsEnabled,
@@ -247,11 +246,12 @@ where
     MiscState: FromRef<S>,
     ServiceClients: FromRef<S>,
     TracingStoreClient: FromRef<S>,
+    AnnotationProvider: FromRef<S>,
 {
     type Rejection = ApiError;
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         Ok(Self {
-            provider: extension(parts)?,
+            provider: AnnotationProvider::from_ref(state),
             clients: ServiceClients::from_ref(state),
             tracing_store: TracingStoreClient::from_ref(state),
             misc: MiscState::from_ref(state),

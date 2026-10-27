@@ -1,7 +1,7 @@
 use crate::common;
 
 use axum::{
-    Extension, Router,
+    Router,
     body::{Body, to_bytes},
     extract::{Request, State},
     http::{StatusCode, header},
@@ -42,9 +42,11 @@ fn provider(db: &TestDb) -> AnnotationProvider {
     )
 }
 fn app(db: &TestDb, provider: &AnnotationProvider) -> Router {
-    webknossos_backend::remote::tracingstore::reads::router()
-        .layer(Extension(provider.clone()))
-        .with_state(AppState::new(db.pool.clone()))
+    webknossos_backend::remote::tracingstore::reads::router().with_state(
+        AppState::builder(db.pool.clone())
+            .annotation_provider(provider.clone())
+            .build(),
+    )
 }
 async fn setup() -> (TestDb, AnnotationProvider, Router) {
     let db = TestDb::new().await;

@@ -40,7 +40,6 @@ use crate::{
     auth::{AuthUser, OptionalAuthUser},
     error::{ApiError, ApiResult},
     extract::Path,
-    extract::extension,
     job::submission::{Failure, RunError, RunResult},
     proto::{AnnotationUserStateProto, SkeletonTracing, VolumeTracing},
     stores::client::ServiceError,
@@ -165,11 +164,12 @@ impl<S: Send + Sync> FromRequestParts<S> for Services
 where
     MiscState: FromRef<S>,
     TracingStoreClient: FromRef<S>,
+    AnnotationProvider: FromRef<S>,
 {
     type Rejection = ApiError;
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         Ok(Self {
-            provider: extension(parts)?,
+            provider: AnnotationProvider::from_ref(state),
             tracing_store: TracingStoreClient::from_ref(state),
             misc: MiscState::from_ref(state),
         })

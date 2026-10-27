@@ -145,10 +145,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         oidc,
         slack,
     } = options;
-    let annotation_provider = crate::annotation::provider::AnnotationProvider::new(
-        state.pool.clone(),
-        state.tracing_store.clone(),
-    );
     // One writer per app: its per-user cache and locks must be shared by all routes.
     let time_interaction_writer = crate::time::interaction_writer::TimeInteractionWriter::new(
         Default::default(),
@@ -231,7 +227,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
             ApiError::new(StatusCode::METHOD_NOT_ALLOWED, crate::msg::request::METHOD_NOT_ALLOWED)
         })
         .layer(DefaultBodyLimit::max(body_limit))
-        .layer(axum::Extension(annotation_provider))
         .layer(middleware::from_fn(crate::auth::browser::cookie_middleware))
         .layer(axum::Extension(browser_auth))
         .layer(axum::Extension(mailer))

@@ -100,7 +100,7 @@ fn path_id(id: &str) -> ApiResult<ObjectId> {
 /// PATCH /annotations/:typ/:id/edit (AnnotationController.editAnnotation).
 async fn edit(
     State(state): State<AppState>,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,
     Json(body): Json<EditParameters>,
@@ -203,7 +203,7 @@ fn is_locked_by_owner(query: Option<&str>) -> ApiResult<bool> {
 /// (AnnotationController.editLockedState).
 async fn edit_locked_state(
     State(state): State<AppState>,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,
@@ -259,7 +259,7 @@ fn public_writes_error(error: ApiError) -> ApiError {
 /// GET /annotations/:typ/:id/sharedTeams (AnnotationController.getSharedTeams).
 async fn shared_teams(
     State(state): State<AppState>,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,
 ) -> ApiResult<ResponseJson<Vec<Value>>> {
@@ -278,7 +278,7 @@ async fn shared_teams(
 /// (AnnotationController.updateSharedTeams).
 async fn update_shared_teams(
     State(state): State<AppState>,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
     Extension(notification_emails): Extension<NotificationEmailService>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,

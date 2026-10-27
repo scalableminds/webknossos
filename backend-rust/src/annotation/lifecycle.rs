@@ -3,7 +3,7 @@
 use crate::annotation::dao;
 use crate::response::Messages;
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::State,
     http::StatusCode,
     routing::{delete, patch},
@@ -77,7 +77,7 @@ pub(crate) async fn is_manager_or_admin(
 
 async fn cancel(
     State(state): State<AppState>,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,
 ) -> ApiResult<Json<Messages>> {
@@ -86,7 +86,7 @@ async fn cancel(
 
 async fn cancel_without_type(
     State(state): State<AppState>,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
     user: AuthUser,
     Path(id): Path<String>,
 ) -> ApiResult<Json<Messages>> {
@@ -196,7 +196,7 @@ struct CollaborationQuery {
 
 async fn collaboration_mode(
     State(state): State<AppState>,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
     user: AuthUser,
     Path((typ, id)): Path<(String, String)>,
     Query(query): Query<CollaborationQuery>,

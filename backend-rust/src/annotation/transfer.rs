@@ -31,7 +31,7 @@ struct TransferParameters {
 
 async fn transfer(
     State(state): State<AppState>,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
     State(JobsEnabled(jobs)): State<JobsEnabled>,
     Extension(notification_emails): Extension<NotificationEmailService>,
     user: AuthUser,

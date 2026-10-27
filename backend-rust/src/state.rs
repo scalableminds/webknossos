@@ -1,4 +1,5 @@
 use crate::{
+    annotation::provider::AnnotationProvider,
     stores::{
         client::{ServiceClientConfig, ServiceClients},
         tracing_client::TracingStoreClient,
@@ -16,6 +17,7 @@ pub struct AppState {
     pub misc: MiscState,
     pub clients: ServiceClients,
     pub tracing_store: TracingStoreClient,
+    pub annotation_provider: AnnotationProvider,
 }
 
 /// `features.jobsEnabled`.
@@ -30,6 +32,7 @@ pub struct AppStateBuilder {
     service_client: ServiceClientConfig,
     clients: Option<ServiceClients>,
     tracing_store: Option<TracingStoreClient>,
+    annotation_provider: Option<AnnotationProvider>,
 }
 
 impl AppState {
@@ -47,6 +50,7 @@ impl AppState {
             service_client: ServiceClientConfig::default(),
             clients: None,
             tracing_store: None,
+            annotation_provider: None,
         }
     }
 
@@ -87,6 +91,12 @@ impl AppStateBuilder {
         self
     }
 
+    /// An annotation provider other than the one built on this state's tracing-store client.
+    pub fn annotation_provider(mut self, provider: AnnotationProvider) -> Self {
+        self.annotation_provider = Some(provider);
+        self
+    }
+
     pub fn build(self) -> AppState {
         let clients = self.clients.unwrap_or_else(|| {
             ServiceClients::new(self.service_client.clone())
@@ -96,12 +106,16 @@ impl AppStateBuilder {
             TracingStoreClient::new(self.service_client.clone())
                 .expect("validated service client configuration")
         });
+        let annotation_provider = self
+            .annotation_provider
+            .unwrap_or_else(|| AnnotationProvider::new(self.pool.clone(), tracing_store.clone()));
         AppState {
             pool: self.pool,
             jobs_enabled: JobsEnabled(self.jobs_enabled),
             misc: MiscState::new(self.misc),
             clients,
             tracing_store,
+            annotation_provider,
         }
     }
 }

@@ -100,14 +100,17 @@ fn app(db: &TestDb) -> Router {
             webknossos_backend::annotation::sandbox::router()
                 .merge(webknossos_backend::annotation::transfer::router()),
         )
-        .layer(Extension(provider))
         .layer(Extension(
             webknossos_backend::users::notification_emails::NotificationEmailService::new(
                 webknossos_backend::mail::MailSender::default(),
                 "http://localhost:9000",
             ),
         ))
-        .with_state(AppState::new(db.pool.clone()))
+        .with_state(
+            AppState::builder(db.pool.clone())
+                .annotation_provider(provider)
+                .build(),
+        )
 }
 
 async fn send(

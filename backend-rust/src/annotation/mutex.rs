@@ -64,7 +64,7 @@ fn acquisition_error(error: ApiError) -> ApiError {
 
 async fn acquire(
     State(state): State<AppState>,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
     Extension(MutexExpiry(expiry)): Extension<MutexExpiry>,
     user: AuthUser,
     Path(id): Path<String>,

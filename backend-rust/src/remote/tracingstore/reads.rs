@@ -2,7 +2,7 @@
 //! grants global access; the caller's path name is informational.
 use super::dao;
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::{FromRequestParts, State},
     http::{StatusCode, request::Parts},
     response::{IntoResponse, Response},
@@ -127,7 +127,7 @@ async fn data_source_for_annotation(
     State(state): State<AppState>,
     Query(query): Query<AnnotationQuery>,
     _store: ValidatedTracingStore,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
 ) -> ApiResult<Json<Value>> {
     if let Some(temporary) = provider.data_sources().find(&query.annotation_id) {
         return Ok(Json(temporary.data_source));
@@ -140,7 +140,7 @@ async fn dataset_id_for_annotation(
     State(state): State<AppState>,
     Query(query): Query<AnnotationQuery>,
     _store: ValidatedTracingStore,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
 ) -> ApiResult<Json<ObjectId>> {
     if let Some(temporary) = provider.data_sources().find(&query.annotation_id) {
         return Ok(Json(temporary.dataset_id));
@@ -160,7 +160,7 @@ async fn annotation_id_for_tracing(
     State(state): State<AppState>,
     Query(query): Query<TracingQuery>,
     _store: ValidatedTracingStore,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
 ) -> ApiResult<Json<ObjectId>> {
     if query.tracing_id == "dummyTracingId" {
         return Ok(Json(ObjectId::dummy()));

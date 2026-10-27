@@ -177,9 +177,12 @@ fn app(db: &TestDb) -> (Router, AnnotationProvider) {
     );
     let app = Router::new()
         .nest("/api", webknossos_backend::annotation::finish::router())
-        .layer(Extension(provider.clone()))
         .layer(Extension(writer))
-        .with_state(AppState::new(db.pool.clone()));
+        .with_state(
+            AppState::builder(db.pool.clone())
+                .annotation_provider(provider.clone())
+                .build(),
+        );
     (app, provider)
 }
 

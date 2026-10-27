@@ -1,7 +1,7 @@
 use crate::common;
 
 use axum::{
-    Extension, Router,
+    Router,
     body::Body,
     extract::{Request, State},
     http::{Method, StatusCode, header},
@@ -124,10 +124,10 @@ fn app(db: &TestDb) -> Router {
             webknossos_backend::annotation::reservations::router(),
         )
         .nest("/api", webknossos_backend::annotation::lifecycle::router())
-        .layer(Extension(provider))
         .with_state(
             AppState::builder(db.pool.clone())
                 .clients(ServiceClients::new(ServiceClientConfig::default()).unwrap())
+                .annotation_provider(provider)
                 .build(),
         )
 }

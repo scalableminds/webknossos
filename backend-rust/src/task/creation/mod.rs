@@ -59,7 +59,6 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::Json,
-    extract::extension,
     proto::{
         AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto, BoundingBoxProto,
         ColorProto,
@@ -284,12 +283,13 @@ pub(crate) struct CreationServices {
 impl<S: Send + Sync> FromRequestParts<S> for CreationServices
 where
     TracingStoreClient: FromRef<S>,
+    AnnotationProvider: FromRef<S>,
 {
     type Rejection = ApiError;
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         Ok(Self {
             tracing_store: TracingStoreClient::from_ref(state),
-            provider: extension(parts)?,
+            provider: AnnotationProvider::from_ref(state),
             slack: parts
                 .extensions
                 .get::<crate::slack::SlackNotificationService>()

@@ -6,7 +6,7 @@
 mod dao;
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::State,
     http::StatusCode,
     routing::{get, post},
@@ -156,7 +156,7 @@ async fn lock_reservations(
 
 async fn reserved_ids(
     State(state): State<AppState>,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
     user: AuthUser,
     Path(id): Path<String>,
     Query(query): Query<ReservedIdsQuery>,
@@ -188,7 +188,7 @@ async fn reserved_ids(
 
 async fn reserve_ids(
     State(state): State<AppState>,
-    Extension(provider): Extension<AnnotationProvider>,
+    State(provider): State<AnnotationProvider>,
     State(clients): State<ServiceClients>,
     user: AuthUser,
     Path(id): Path<String>,

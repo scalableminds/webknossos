@@ -1,7 +1,7 @@
 use crate::common;
 
 use axum::{
-    Extension, Router,
+    Router,
     body::Body,
     extract::Request,
     http::{Method, StatusCode},
@@ -139,8 +139,11 @@ fn app(db: &TestDb, expiry: Duration) -> Router {
             "/api",
             webknossos_backend::annotation::mutex::router(expiry),
         )
-        .layer(Extension(provider))
-        .with_state(AppState::new(db.pool.clone()))
+        .with_state(
+            AppState::builder(db.pool.clone())
+                .annotation_provider(provider)
+                .build(),
+        )
 }
 fn path(id: &str, operation: &str, session: &str) -> String {
     let query = serde_urlencoded::to_string([("sessionId", session)]).unwrap();

@@ -2,7 +2,7 @@
 //! DatasetService side effects (datastore cache invalidation, mirrors,
 //! real-path scans) shared by other dataset mutation modules.
 use axum::{
-    Extension, Router,
+    Router,
     extract::State,
     routing::{delete, post},
 };
@@ -24,6 +24,7 @@ use crate::{
     stores::client::{ServiceClients, ServiceError},
     util::id::{ObjectId, PathObjectId},
 };
+use axum::extract::FromRef;
 
 pub(crate) const NOT_YET_UPLOADED: &str = "Not yet fully uploaded.";
 pub(crate) const NOT_YET_UPLOADED_TO_PATHS: &str = "Not yet marked as fully uploaded to paths.";
@@ -35,7 +36,15 @@ struct LifecycleFeatures {
     allow_delete_datasets: bool,
 }
 
-pub fn router(allow_delete_datasets: bool) -> Router<AppState> {
+impl FromRef<AppState> for LifecycleFeatures {
+    fn from_ref(state: &AppState) -> Self {
+        Self {
+            allow_delete_datasets: state.allow_delete_datasets.0,
+        }
+    }
+}
+
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/datasets/{datasetId}", delete(delete_dataset))
         .route("/datasets/{datasetId}/writeMirror", post(write_mirror))
@@ -52,9 +61,6 @@ pub fn router(allow_delete_datasets: bool) -> Router<AppState> {
             "/datasets/{datasetId}/finishAttachmentUploadToPath",
             post(finish_attachment_upload_to_path),
         )
-        .layer(Extension(LifecycleFeatures {
-            allow_delete_datasets,
-        }))
 }
 
 #[derive(sqlx::FromRow, Clone, Debug)]
@@ -259,7 +265,7 @@ async fn delete_dataset(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(features): Extension<LifecycleFeatures>,
+    State(features): State<LifecycleFeatures>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     State(clients): State<ServiceClients>,
 ) -> ApiResult<()> {

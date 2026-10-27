@@ -41,7 +41,12 @@ pub struct AppState {
     pub time_interaction_writer: TimeInteractionWriter,
     pub slack: SlackNotificationService,
     pub datasets: DatasetRouteConfig,
+    pub allow_delete_datasets: AllowDeleteDatasets,
 }
+
+/// `features.allowDeleteDatasets`.
+#[derive(Clone, Copy, Debug)]
+pub struct AllowDeleteDatasets(pub bool);
 
 /// `features.jobsEnabled`.
 #[derive(Clone, Copy, Debug, Default)]
@@ -68,6 +73,7 @@ pub struct AppStateBuilder {
     time_interaction_writer: Option<TimeInteractionWriter>,
     slack: SlackConfig,
     datasets: DatasetRouteConfig,
+    allow_delete_datasets: bool,
 }
 
 impl AppState {
@@ -98,6 +104,7 @@ impl AppState {
             time_interaction_writer: None,
             slack: SlackConfig::default(),
             datasets: DatasetRouteConfig::default(),
+            allow_delete_datasets: true,
         }
     }
 
@@ -116,6 +123,7 @@ impl AppState {
             .time_tracking(config.time_tracking)
             .slack(config.slack.clone())
             .datasets(config.datasets.clone())
+            .allow_delete_datasets(config.allow_delete_datasets)
             .build()
     }
 }
@@ -192,6 +200,11 @@ impl AppStateBuilder {
         self
     }
 
+    pub fn allow_delete_datasets(mut self, allowed: bool) -> Self {
+        self.allow_delete_datasets = allowed;
+        self
+    }
+
     /// A time-interaction writer other than the one `time_tracking` configures.
     pub fn time_interaction_writer(mut self, writer: TimeInteractionWriter) -> Self {
         self.time_interaction_writer = Some(writer);
@@ -257,6 +270,7 @@ impl AppStateBuilder {
             time_interaction_writer,
             slack: SlackNotificationService::new(&self.slack),
             datasets: self.datasets,
+            allow_delete_datasets: AllowDeleteDatasets(self.allow_delete_datasets),
         }
     }
 }

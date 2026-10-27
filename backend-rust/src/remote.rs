@@ -6,7 +6,7 @@ pub mod user_access;
 use crate::AppState;
 use axum::Router;
 
-pub fn router(allow_delete_datasets: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .merge(datastore::credentials::router())
         .merge(datastore::router())
@@ -19,5 +19,5 @@ pub fn router(allow_delete_datasets: bool) -> Router<AppState> {
         .merge(tracingstore::update::router())
         .merge(tracingstore::report::router())
         .merge(tracingstore::create::router())
-        .merge(user_access::router(allow_delete_datasets))
+        .merge(user_access::router())
 }

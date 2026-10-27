@@ -15,7 +15,7 @@ use webknossos_backend::{
 };
 
 fn app(db: &TestDb, allow_delete: bool) -> Router {
-    webknossos_backend::remote::user_access::router(allow_delete).with_state(
+    webknossos_backend::remote::user_access::router().with_state(
         AppState::builder(db.pool.clone())
             .clients(
                 ServiceClients::new(ServiceClientConfig {
@@ -24,6 +24,7 @@ fn app(db: &TestDb, allow_delete: bool) -> Router {
                 })
                 .unwrap(),
             )
+            .allow_delete_datasets(allow_delete)
             .build(),
     )
 }
@@ -200,7 +201,7 @@ async fn callbacks_validate_service_keys_before_rpc_bypass_and_dataset_permissio
         .1,
         json!({"granted":false})
     );
-    let disabled = webknossos_backend::remote::user_access::router(false).with_state(
+    let disabled = webknossos_backend::remote::user_access::router().with_state(
         AppState::builder(db.pool.clone())
             .clients(
                 ServiceClients::new(ServiceClientConfig {
@@ -209,6 +210,7 @@ async fn callbacks_validate_service_keys_before_rpc_bypass_and_dataset_permissio
                 })
                 .unwrap(),
             )
+            .allow_delete_datasets(false)
             .build(),
     );
     assert_eq!(

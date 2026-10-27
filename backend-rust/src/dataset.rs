@@ -19,7 +19,7 @@ pub mod upload_paths;
 use crate::AppState;
 use axum::Router;
 
-pub fn router(allow_delete_datasets: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .merge(routes::router())
         .merge(routes::metadata_router())
@@ -33,5 +33,5 @@ pub fn router(allow_delete_datasets: bool) -> Router<AppState> {
         .merge(explore::router())
         .merge(upload_paths::router())
         .merge(update::router())
-        .merge(lifecycle::router(allow_delete_datasets))
+        .merge(lifecycle::router())
 }

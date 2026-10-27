@@ -1,6 +1,6 @@
 //! Authorization callbacks made by the existing datastore and tracingstore.
 use axum::{
-    Extension, Json as ResponseJson, Router,
+    Json as ResponseJson, Router,
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -18,22 +18,28 @@ use crate::{
     stores::client::ServiceClients,
     util::id::ObjectId,
 };
+use axum::extract::FromRef;
 
 #[derive(Clone, Copy)]
 struct AccessFeatures {
     allow_delete_datasets: bool,
 }
 
-pub fn router(allow_delete_datasets: bool) -> Router<AppState> {
+impl FromRef<AppState> for AccessFeatures {
+    fn from_ref(state: &AppState) -> Self {
+        Self {
+            allow_delete_datasets: state.allow_delete_datasets.0,
+        }
+    }
+}
+
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/datastores/{name}/validateUserAccess", post(datastore))
         .route(
             "/tracingstores/{name}/validateUserAccess",
             post(tracingstore),
         )
-        .layer(Extension(AccessFeatures {
-            allow_delete_datasets,
-        }))
 }
 
 #[derive(Deserialize)]
@@ -110,7 +116,7 @@ async fn datastore(
     Path(name): Path<String>,
     Query(query): Query<ServiceQuery>,
     State(clients): State<ServiceClients>,
-    Extension(features): Extension<AccessFeatures>,
+    State(features): State<AccessFeatures>,
     Json(body): Json<AccessRequest>,
 ) -> ApiResult<Response> {
     let valid = dao::data_store_key_is_valid(&state.pool, name, &query.key).await?;
@@ -131,7 +137,7 @@ async fn tracingstore(
     Path(_name): Path<String>,
     Query(query): Query<ServiceQuery>,
     State(clients): State<ServiceClients>,
-    Extension(features): Extension<AccessFeatures>,
+    State(features): State<AccessFeatures>,
     Json(body): Json<AccessRequest>,
 ) -> ApiResult<Response> {
     // TracingStoreService validates the key globally; name is informational.

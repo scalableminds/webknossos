@@ -226,9 +226,7 @@ class DataSourceController @Inject() (
     }
 
   def createOrganizationDirectory(organizationId: String): Action[AnyContent] = Action.fox { implicit request =>
-    accessTokenService.validateAccessFromTokenContext(
-      UserAccessRequest.administrateDatasets(organizationId)
-    ) {
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
       for {
         _ <- baseDirService.getOneLocalForOrga(organizationId, createIfMissing = true, checkWritable = true).toFox
       } yield Ok

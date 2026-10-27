@@ -215,7 +215,7 @@ class EditableMappingController @Inject() (
 
   def editedEdgesZip(tracingId: String, version: Option[Long]): Action[AnyContent] =
     Action.fox { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId)

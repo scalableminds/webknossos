@@ -26,7 +26,7 @@ import models.annotation.*
 import models.dataset.{Dataset, DatasetDAO, DatasetService}
 import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO, TeamService}
-import models.user.{User, UserDAO, UserExperiencesDAO, UserService}
+import models.user.{User, UserDAO, UserExperiencesDAO}
 import play.api.libs.json.{JsObject, Json}
 import telemetry.SlackNotificationService
 import com.scalableminds.util.objectid.ObjectId
@@ -38,7 +38,6 @@ class TaskCreationService @Inject() (
     annotationService: AnnotationService,
     taskDAO: TaskDAO,
     taskService: TaskService,
-    userService: UserService,
     teamDAO: TeamDAO,
     teamService: TeamService,
     userDAO: UserDAO,
@@ -597,7 +596,6 @@ class TaskCreationService @Inject() (
         requestingUser._organization
       ) ?~> Msg.Project.notFound(params.projectName)
       _ <- Fox.runOptional(params.scriptId)(id => scriptDAO.findOne(id) ?~> Msg.Script.notFound(id))
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, project._team))
       task = Task(
         ObjectId.generate,
         project._id,

@@ -68,7 +68,12 @@ export class ResumableChunk {
     // Probing counts as uploading so that the scheduler, pause and cancel take it into account.
     this._status = "uploading";
     this.run(runController.signal).catch((error) => {
-      if (runController.signal.aborted || this._status !== "uploading") return;
+      if (runController.signal.aborted) return;
+      if (this._status !== "uploading") {
+        // The chunk already finished, e.g. a success or error callback threw.
+        console.error(error);
+        return;
+      }
       // E.g. a query or headers option threw or the file could not be read.
       this.finish("error", error instanceof Error ? error.message : String(error));
     });

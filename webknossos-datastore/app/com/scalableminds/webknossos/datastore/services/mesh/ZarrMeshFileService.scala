@@ -102,25 +102,22 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       meshFileAttributes <- readMeshFileAttributes(meshFileKey)
     } yield meshFileAttributes.mappingName
 
-  // None if the mesh file has no entry for the segment.
+  // Empty if the mesh file has no entry for the segment.
   private def listMeshChunksForSegment(
       meshFileKey: MeshFileKey,
       segmentId: Long,
       meshFileAttributes: MeshFileAttributes
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[Option[List[MeshLodInfo]]] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[MeshLodInfo]] =
     for {
-      manifestOffsets <- getNeuroglancerSegmentManifestOffsets(meshFileKey, meshFileAttributes, segmentId)
-      lods <- Fox.runOptional(manifestOffsets) { (manifestStart, manifestEnd) =>
-        readSegmentManifest(meshFileKey, manifestStart, manifestEnd).map(segmentManifest =>
-          enrichSegmentInfo(
-            segmentManifest,
-            meshFileAttributes.lodScaleMultiplier,
-            meshFileAttributes.transform,
-            manifestStart,
-            segmentId
-          )
-        )
-      }
+      (manifestStart, manifestEnd) <- getNeuroglancerSegmentManifestOffsets(meshFileKey, meshFileAttributes, segmentId)
+      segmentManifest <- readSegmentManifest(meshFileKey, manifestStart, manifestEnd)
+      lods = enrichSegmentInfo(
+      segmentManifest,
+      meshFileAttributes.lodScaleMultiplier,
+      meshFileAttributes.transform,
+      manifestStart,
+      segmentId
+    )
     } yield lods
 
   private def readSegmentManifest(meshFileKey: MeshFileKey, manifestStart: Long, manifestEnd: Long)(using
@@ -138,12 +135,12 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       ).toFox
     } yield segmentManifest
 
-  // None if the mesh file has no entry for the segment.
+  // Empty if the mesh file has no entry for the segment.
   private def getNeuroglancerSegmentManifestOffsets(
       meshFileKey: MeshFileKey,
       meshFileAttributes: MeshFileAttributes,
       segmentId: Long
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[Option[(Long, Long)]] = {
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[(Long, Long)] = {
     val bucketIndex =
       java.lang.Long.remainderUnsigned(meshFileAttributes.applyHashFunction(segmentId), meshFileAttributes.nBuckets)
     for {
@@ -154,11 +151,11 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       bucketSize = (bucketEnd - bucketStart).toInt
       manifestOffsets <-
         if (bucketSize > 0) findManifestOffsetsInBucket(meshFileKey, bucketStart, bucketSize, segmentId)
-        else Fox.successful(None)
+        else Fox.empty
     } yield manifestOffsets
   }
 
-  // None if the bucket has no entry for the segment.
+  // Empty if the bucket has no entry for the segment.
   private def findManifestOffsetsInBucket(
       meshFileKey: MeshFileKey,
       bucketStart: Long,
@@ -167,15 +164,14 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
   )(using
       ec: ExecutionContext,
       tc: TokenContext
-  ): Fox[Option[(Long, Long)]] =
+  ): Fox[(Long, Long)] =
     for {
       bucketsArray <- openZarrArray(meshFileKey, keyBuckets)
       bucket <- bucketsArray.readAsMultiArray(offset = Array(bucketStart, 0), shape = Array(bucketSize + 1, 3))
-    } yield findLocalOffsetInBucket(bucket, segmentId).map { bucketLocalOffset =>
-      val neuroglancerStart = bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 1)))
-      val neuroglancerEnd = bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 2)))
-      (neuroglancerStart, neuroglancerEnd)
-    }
+      bucketLocalOffset <- findLocalOffsetInBucket(bucket, segmentId).toFox
+      neuroglancerStart = bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 1)))
+      neuroglancerEnd = bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 2)))
+    } yield (neuroglancerStart, neuroglancerEnd)
 
   private def findLocalOffsetInBucket(bucket: MultiArray, segmentId: Long): Option[Int] =
     (0 until bucket.getShape()(0)).find(idx => bucket.getLong(bucket.getIndex.set(Array(idx, 0))) == segmentId)
@@ -238,9 +234,8 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       meshFileAttributes: MeshFileAttributes
   )(using ec: ExecutionContext, tc: TokenContext): Fox[List[SegmentMeshLookup]] = {
     def lookupOne(segmentId: Long): Fox[Option[SegmentMeshLookup]] =
-      listMeshChunksForSegment(meshFileKey, segmentId, meshFileAttributes)
-        .map(lods => Some(SegmentMeshLookup(segmentId, lods)))
-        .orElse(Fox.successful(None))
+      listMeshChunksForSegment(meshFileKey, segmentId, meshFileAttributes).shiftBox
+        .map(SegmentMeshLookup.fromBox(segmentId, _))
     if (meshFileKey.attachment.path.isRemote)
       Fox.batchCombined(segmentIds, parallelity = 32)(lookupOne).map(_.flatten)
     else

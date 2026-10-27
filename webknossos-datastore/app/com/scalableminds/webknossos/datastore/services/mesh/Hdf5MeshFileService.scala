@@ -44,56 +44,61 @@ class Hdf5MeshFileService @Inject() extends NeuroglancerMeshHelper with MeshFile
     fileHandleCache
       .withCachedHdf5(meshFileKey) { (cachedMeshFile: CachedHdf5File) =>
         segmentIds.toList.flatMap(segmentId =>
-          listMeshChunksForSegment(cachedMeshFile, segmentId, lodScaleMultiplier, transform)
-            .map(lods => SegmentMeshLookup(segmentId, lods))
+          SegmentMeshLookup.fromBox(
+            segmentId,
+            listMeshChunksForSegment(cachedMeshFile, segmentId, lodScaleMultiplier, transform)
+          )
         )
       }
       .toOption
       .getOrElse(List.empty)
 
-  // Full(None) if the mesh file has no entry for the segment.
+  // Empty if the mesh file has no entry for the segment.
   private def listMeshChunksForSegment(
       cachedMeshFile: CachedHdf5File,
       segmentId: Long,
       lodScaleMultiplier: Double,
       transform: Array[Array[Double]]
-  ): Box[Option[List[MeshLodInfo]]] =
-    tryo {
-      getNeuroglancerSegmentManifestOffsets(segmentId, cachedMeshFile).map {
-        (neuroglancerSegmentManifestStart, neuroglancerSegmentManifestEnd) =>
-          val manifestBytes = cachedMeshFile.uint8Reader.readArrayBlockWithOffset(
-            "/neuroglancer",
-            (neuroglancerSegmentManifestEnd - neuroglancerSegmentManifestStart).toInt,
-            neuroglancerSegmentManifestStart
-          )
-          val segmentManifest = NeuroglancerSegmentManifest.fromBytes(manifestBytes)
-          enrichSegmentInfo(segmentManifest, lodScaleMultiplier, transform, neuroglancerSegmentManifestStart, segmentId)
+  ): Box[List[MeshLodInfo]] =
+    for {
+      (manifestStart, manifestEnd) <- getNeuroglancerSegmentManifestOffsets(segmentId, cachedMeshFile)
+      lods <- tryo {
+        val manifestBytes = cachedMeshFile.uint8Reader.readArrayBlockWithOffset(
+          "/neuroglancer",
+          (manifestEnd - manifestStart).toInt,
+          manifestStart
+        )
+        val segmentManifest = NeuroglancerSegmentManifest.fromBytes(manifestBytes)
+        enrichSegmentInfo(segmentManifest, lodScaleMultiplier, transform, manifestStart, segmentId)
       }
-    }
+    } yield lods
 
-  // None if the mesh file has no entry for the segment.
+  // Empty if the mesh file has no entry for the segment.
   private def getNeuroglancerSegmentManifestOffsets(
       segmentId: Long,
       cachedMeshFile: CachedHdf5File
-  ): Option[(Long, Long)] = {
-    val bucketIndex = java.lang.Long.remainderUnsigned(cachedMeshFile.hashFunction(segmentId), cachedMeshFile.nBuckets)
-    val bucketOffsets = cachedMeshFile.uint64Reader.readArrayBlockWithOffset(keyBucketOffsets, 2, bucketIndex)
-    val bucketStart = bucketOffsets(0)
-    val bucketEnd = bucketOffsets(1)
-
-    if (bucketEnd - bucketStart == 0) None
-    else {
-      val buckets = cachedMeshFile.uint64Reader.readMatrixBlockWithOffset(
-        keyBuckets,
-        (bucketEnd - bucketStart + 1).toInt,
-        3,
-        bucketStart,
-        0
+  ): Box[(Long, Long)] =
+    for {
+      bucketOffsets <- tryo {
+        val bucketIndex =
+          java.lang.Long.remainderUnsigned(cachedMeshFile.hashFunction(segmentId), cachedMeshFile.nBuckets)
+        cachedMeshFile.uint64Reader.readArrayBlockWithOffset(keyBucketOffsets, 2, bucketIndex)
+      }
+      bucketStart = bucketOffsets(0)
+      bucketEnd = bucketOffsets(1)
+      _ <- Box.fromBool(bucketEnd - bucketStart > 0)
+      buckets <- tryo(
+        cachedMeshFile.uint64Reader.readMatrixBlockWithOffset(
+          keyBuckets,
+          (bucketEnd - bucketStart + 1).toInt,
+          3,
+          bucketStart,
+          0
+        )
       )
-      val bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
-      if (bucketLocalOffset >= 0) Some(buckets(bucketLocalOffset)(1), buckets(bucketLocalOffset)(2)) else None
-    }
-  }
+      bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
+      _ <- Box.fromBool(bucketLocalOffset >= 0)
+    } yield (buckets(bucketLocalOffset)(1), buckets(bucketLocalOffset)(2))
 
   override def computeGlobalPosition(
       segmentInfo: NeuroglancerSegmentManifest,

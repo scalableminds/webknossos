@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.google.common.io.LittleEndianDataInputStream
-import com.scalableminds.util.box.Box
+import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.tools.JsonAutoFormat
 import Box.tryo
@@ -101,6 +101,15 @@ case class MeshLodInfo(chunks: List[MeshChunk], transform: Array[Array[Double]])
 // segment.
 case class SegmentMeshLookup(segmentId: Long, lods: Option[List[MeshLodInfo]]) {
   def hasEntry: Boolean = lods.isDefined
+}
+
+object SegmentMeshLookup {
+  // The mesh file services return Empty if the mesh file has no entry for a segment. None if the lookup failed.
+  def fromBox(segmentId: Long, lodsBox: Box[List[MeshLodInfo]]): Option[SegmentMeshLookup] = lodsBox match {
+    case Full(lods) => Some(SegmentMeshLookup(segmentId, Some(lods)))
+    case Empty      => Some(SegmentMeshLookup(segmentId, None))
+    case _: Failure => None
+  }
 }
 
 case class WebknossosSegmentInfo(

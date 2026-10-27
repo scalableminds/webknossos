@@ -8,6 +8,7 @@ use crate::{
         tracing_client::TracingStoreClient,
     },
     system::application_info::{MiscConfig, MiscState},
+    voxelytics::{VoxelyticsConfig, routes::Voxelytics},
 };
 use axum::extract::FromRef;
 
@@ -25,6 +26,7 @@ pub struct AppState {
     pub mailer: MailSender,
     pub auth_routes: AuthRouteConfig,
     pub jobs: JobsConfig,
+    pub voxelytics: Voxelytics,
 }
 
 /// `features.jobsEnabled`.
@@ -44,6 +46,7 @@ pub struct AppStateBuilder {
     mailer: MailSender,
     auth_routes: AuthRouteConfig,
     jobs: JobsConfig,
+    voxelytics: VoxelyticsConfig,
 }
 
 impl AppState {
@@ -66,6 +69,7 @@ impl AppState {
             mailer: MailSender::default(),
             auth_routes: AuthRouteConfig::default(),
             jobs: JobsConfig::default(),
+            voxelytics: VoxelyticsConfig::default(),
         }
     }
 
@@ -78,6 +82,7 @@ impl AppState {
             .mailer(MailSender::from_config(&config.mail))
             .auth_routes(config.auth_routes.clone())
             .jobs(config.jobs.clone())
+            .voxelytics(config.voxelytics.clone())
             .build()
     }
 }
@@ -124,6 +129,11 @@ impl AppStateBuilder {
         self
     }
 
+    pub fn voxelytics(mut self, config: VoxelyticsConfig) -> Self {
+        self.voxelytics = config;
+        self
+    }
+
     /// A tracing-store client other than the one `service_client` configures.
     pub fn tracing_store(mut self, client: TracingStoreClient) -> Self {
         self.tracing_store = Some(client);
@@ -159,6 +169,7 @@ impl AppStateBuilder {
             mailer: self.mailer,
             auth_routes: self.auth_routes,
             jobs: self.jobs,
+            voxelytics: Voxelytics::new(self.voxelytics),
         }
     }
 }

@@ -7,7 +7,7 @@
 use std::{collections::HashMap, time::Duration};
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -66,17 +66,23 @@ impl Default for VoxelyticsConfig {
     }
 }
 
+/// The voxelytics routes' shared settings and Loki client.
 #[derive(Clone)]
-struct Voxelytics {
+pub struct Voxelytics {
     stale_timeout: Duration,
     loki: LokiClient,
 }
 
-pub fn router(config: VoxelyticsConfig) -> Router<AppState> {
-    let state = Voxelytics {
-        stale_timeout: config.stale_timeout,
-        loki: LokiClient::new(config.loki),
-    };
+impl Voxelytics {
+    pub fn new(config: VoxelyticsConfig) -> Self {
+        Self {
+            stale_timeout: config.stale_timeout,
+            loki: LokiClient::new(config.loki),
+        }
+    }
+}
+
+pub fn router() -> Router<AppState> {
     Router::new()
         .route(
             "/voxelytics/workflows",
@@ -99,7 +105,6 @@ pub fn router(config: VoxelyticsConfig) -> Router<AppState> {
             get(artifact_checksums),
         )
         .route("/voxelytics/logs", post(append_logs).get(get_logs))
-        .layer(Extension(state))
 }
 
 fn ensure_enabled(misc: &MiscState) -> ApiResult<()> {
@@ -478,7 +483,7 @@ async fn store_workflow(
 async fn list_workflows(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(vx): Extension<Voxelytics>,
+    State(vx): State<Voxelytics>,
     user: AuthUser,
 ) -> ApiResult<Response> {
     ensure_enabled(&misc)?;
@@ -653,7 +658,7 @@ fn optional_run_id(run_id: Option<&str>) -> ApiResult<Option<ObjectId>> {
 async fn get_workflow(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(vx): Extension<Voxelytics>,
+    State(vx): State<Voxelytics>,
     user: AuthUser,
     Path(workflow_hash): Path<String>,
     Query(query): Query<RunQuery>,
@@ -972,7 +977,7 @@ fn play_double(value: f64) -> Value {
 async fn chunk_statistics(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(vx): Extension<Voxelytics>,
+    State(vx): State<Voxelytics>,
     user: AuthUser,
     Path(workflow_hash): Path<String>,
     Query(query): Query<StatisticsQuery>,
@@ -1006,7 +1011,7 @@ async fn chunk_statistics(
 async fn artifact_checksums(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(vx): Extension<Voxelytics>,
+    State(vx): State<Voxelytics>,
     user: AuthUser,
     Path(workflow_hash): Path<String>,
     Query(query): Query<StatisticsQuery>,
@@ -1048,7 +1053,7 @@ async fn artifact_checksums(
 /// POST /voxelytics/logs: forward log entries to Loki.
 async fn append_logs(
     State(misc): State<MiscState>,
-    Extension(vx): Extension<Voxelytics>,
+    State(vx): State<Voxelytics>,
     user: AuthUser,
     body: axum::body::Bytes,
 ) -> ApiResult<Response> {
@@ -1081,7 +1086,7 @@ fn required_param<'a>(value: &'a Option<String>, name: &str) -> ApiResult<&'a st
 async fn get_logs(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(vx): Extension<Voxelytics>,
+    State(vx): State<Voxelytics>,
     user: AuthUser,
     Query(query): Query<LogsQuery>,
 ) -> ApiResult<Response> {

@@ -15,7 +15,7 @@ use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
-    AppState, router_with_voxelytics,
+    AppState, router,
     system::application_info::MiscConfig,
     voxelytics::{LokiConfig, VoxelyticsConfig},
 };
@@ -31,12 +31,12 @@ fn enabled_misc() -> MiscConfig {
 }
 
 fn app(db: &TestDb, misc: MiscConfig, config: VoxelyticsConfig) -> Router {
-    router_with_voxelytics(
+    router(
         AppState::builder(db.pool.clone())
             .jobs_enabled(misc.jobs_enabled)
             .misc(misc)
+            .voxelytics(config)
             .build(),
-        config,
     )
 }
 

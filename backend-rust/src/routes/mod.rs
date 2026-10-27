@@ -22,20 +22,6 @@ pub fn router(state: AppState) -> Router {
     build_router(state, RouteOptions::local_defaults())
 }
 
-/// Local defaults plus explicit voxelytics settings (used by the voxelytics tests).
-pub fn router_with_voxelytics(
-    state: AppState,
-    voxelytics: crate::voxelytics::VoxelyticsConfig,
-) -> Router {
-    build_router(
-        state,
-        RouteOptions {
-            voxelytics,
-            ..RouteOptions::local_defaults()
-        },
-    )
-}
-
 pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Router {
     build_router(
         state,
@@ -48,7 +34,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
             time_tracking: config.time_tracking,
             allow_delete_datasets: config.allow_delete_datasets,
             datasets: config.datasets.clone(),
-            voxelytics: config.voxelytics.clone(),
             oidc: config.oidc.clone(),
             slack: config.slack.clone(),
         },
@@ -64,7 +49,6 @@ struct RouteOptions {
     time_tracking: crate::config::TimeTrackingConfig,
     allow_delete_datasets: bool,
     datasets: crate::dataset::options::DatasetRouteConfig,
-    voxelytics: crate::voxelytics::VoxelyticsConfig,
     oidc: crate::auth::oidc::OidcConfig,
     slack: crate::slack::SlackConfig,
 }
@@ -80,7 +64,6 @@ impl RouteOptions {
             time_tracking: Default::default(),
             allow_delete_datasets: true,
             datasets: Default::default(),
-            voxelytics: Default::default(),
             oidc: Default::default(),
             slack: Default::default(),
         }
@@ -97,7 +80,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         time_tracking,
         allow_delete_datasets,
         datasets,
-        voxelytics,
         oidc,
         slack,
     } = options;
@@ -123,7 +105,7 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         .merge(crate::ai_models::upload_router(
             datasets.upload_to_paths.clone(),
         ))
-        .merge(crate::voxelytics::router(voxelytics))
+        .merge(crate::voxelytics::router())
         .merge(crate::auth::router(oidc))
         .merge(crate::remote::router(allow_delete_datasets))
         .merge(crate::stores::router())

@@ -96,6 +96,24 @@ let activeOperations: ActiveOperation[] = [];
 // the other.
 let criticalSectionMutex = new Mutex();
 
+// Runs `saga` and afterwards (also if cancelled or failed) `cleanup`, which may yield effects.
+// This is done in a separate task via `call` on purpose: If a saga is cancelled, redux-saga
+// calls return() on its generator. When a `finally` block within a `yield*` delegation
+// yields an effect, the delegating generator resumes *normally* afterwards instead of
+// continuing to return. Thus, the cancelled caller (e.g., a `while (true)` loop) would keep
+// running as a zombie. With `call`, the generator that the callers delegate to only
+// contains a plain yield and terminates immediately when cancelled, while the cleanup
+// still runs in the cancelled child task.
+function* runWithCleanup<T>(saga: () => Saga<T>, cleanup: () => Saga<void>): Saga<T> {
+  return (yield call(function* () {
+    try {
+      return yield* saga();
+    } finally {
+      yield* cleanup();
+    }
+  })) as T;
+}
+
 // ─── Operation Context ────────────────────────────────────────────────────────
 
 // Pure synchronous check — called while holding the mutex, so activeOperations
@@ -162,13 +180,11 @@ export function* createOperationContext(
           );
         }
         consumed = true;
-        try {
-          return yield* saga();
-        } finally {
+        return yield* runWithCleanup(saga, function* () {
           isFinished = true;
           activeOperations = activeOperations.filter((op) => op.id !== options.id);
           yield put(unregisterOperationAction(options.id));
-        }
+        });
       },
       isActive: () => !isFinished,
     };
@@ -212,12 +228,10 @@ export function borrowedContext(
       if (consumed) throw new Error(`[${childId}] borrowed context already consumed`);
       consumed = true;
       yield put(registerChildOperationAction(childId, existing.id));
-      try {
-        return yield* saga();
-      } finally {
+      return yield* runWithCleanup(saga, function* () {
         isFinished = true;
         yield put(unregisterChildOperationAction(childId, existing.id));
-      }
+      });
     },
     isActive: () => !isFinished && existing.isActive(),
   };
@@ -231,6 +245,10 @@ export function getOrCreateOperationContext(
   options: NonNullableOptions,
   existing?: OperationContext | null,
 ): Generator<any, OperationContext, any>;
+export function getOrCreateOperationContext(
+  options: OperationOptions,
+  existing?: OperationContext | null,
+): Generator<any, OperationContext | null, any>;
 export function* getOrCreateOperationContext(
   options: OperationOptions,
   existing?: OperationContext | null,

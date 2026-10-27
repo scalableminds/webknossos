@@ -28,7 +28,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
         RouteOptions {
             request_timeout: config.request_timeout,
             body_limit: config.body_limit,
-            oidc: config.oidc.clone(),
         },
     )
 }
@@ -36,7 +35,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
 struct RouteOptions {
     request_timeout: Duration,
     body_limit: usize,
-    oidc: crate::auth::oidc::OidcConfig,
 }
 
 impl RouteOptions {
@@ -44,7 +42,6 @@ impl RouteOptions {
         Self {
             request_timeout: Duration::from_secs(30),
             body_limit: 2 * 1024 * 1024,
-            oidc: Default::default(),
         }
     }
 }
@@ -53,7 +50,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
     let RouteOptions {
         request_timeout,
         body_limit,
-        oidc,
     } = options;
     let api = Router::new()
         .route("/health", get(|| async { "Ok" }))
@@ -63,7 +59,7 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         .merge(crate::ai_models::router())
         .merge(crate::ai_models::upload_router())
         .merge(crate::voxelytics::router())
-        .merge(crate::auth::router(oidc))
+        .merge(crate::auth::router())
         .merge(crate::remote::router())
         .merge(crate::stores::router())
         .merge(crate::dataset::router())

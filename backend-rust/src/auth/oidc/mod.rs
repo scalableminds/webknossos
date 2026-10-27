@@ -13,7 +13,7 @@
 use std::{collections::HashMap, fmt, sync::Arc, time::Duration};
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::{RawQuery, State},
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Response},
@@ -146,21 +146,27 @@ pub fn config_from_values(values: &HashMap<String, String>) -> Result<OidcConfig
     })
 }
 
-struct Oidc {
+/// The OpenID Connect settings and the HTTP client for the provider.
+pub struct Oidc {
     config: OidcConfig,
     http: reqwest::Client,
 }
 
-pub fn router(config: OidcConfig) -> Router<AppState> {
-    let http = reqwest::Client::builder()
-        .timeout(config.http_timeout)
-        .build()
-        .unwrap_or_else(|_| reqwest::Client::new());
+impl Oidc {
+    pub fn new(config: OidcConfig) -> Self {
+        let http = reqwest::Client::builder()
+            .timeout(config.http_timeout)
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
+        Self { config, http }
+    }
+}
+
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/auth/sso", get(single_sign_on))
         .route("/auth/oidc/login", get(login_via_open_id_connect))
         .route("/auth/oidc/callback", get(open_id_callback))
-        .layer(Extension(Arc::new(Oidc { config, http })))
 }
 
 fn see_other(location: &str) -> Response {
@@ -215,7 +221,7 @@ fn java_url_encode(value: &str) -> String {
 
 async fn single_sign_on(
     State(state): State<AppState>,
-    Extension(oidc): Extension<Arc<Oidc>>,
+    State(oidc): State<Arc<Oidc>>,
     OptionalAuthUser(user): OptionalAuthUser,
     RawQuery(query): RawQuery,
 ) -> ApiResult<Response> {
@@ -552,7 +558,7 @@ fn audience_contains(claims: &Map<String, Value>, client_id: &str) -> bool {
 // Routes
 
 async fn login_via_open_id_connect(
-    Extension(oidc): Extension<Arc<Oidc>>,
+    State(oidc): State<Arc<Oidc>>,
     State(browser): State<BrowserAuthConfig>,
 ) -> ApiResult<Response> {
     if !oidc.config.enabled {
@@ -587,7 +593,7 @@ fn user_info(claims: &Map<String, Value>) -> Option<UserInfo> {
 
 async fn open_id_callback(
     State(state): State<AppState>,
-    Extension(oidc): Extension<Arc<Oidc>>,
+    State(oidc): State<Arc<Oidc>>,
     State(browser): State<BrowserAuthConfig>,
     State(mailer): State<MailSender>,
     State(misc): State<MiscState>,

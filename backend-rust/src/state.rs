@@ -1,6 +1,11 @@
 use crate::{
     annotation::{mutex::MutexExpiry, provider::AnnotationProvider},
-    auth::{browser::BrowserAuthConfig, routes::AuthRouteConfig, webauthn::WebAuthnStores},
+    auth::{
+        browser::BrowserAuthConfig,
+        oidc::{Oidc, OidcConfig},
+        routes::AuthRouteConfig,
+        webauthn::WebAuthnStores,
+    },
     config::TimeTrackingConfig,
     dataset::options::DatasetRouteConfig,
     job::routes::JobsConfig,
@@ -17,6 +22,7 @@ use crate::{
     voxelytics::{VoxelyticsConfig, routes::Voxelytics},
 };
 use axum::extract::FromRef;
+use std::sync::Arc;
 
 /// Shared services and startup configuration. Handlers extract the part they need with
 /// `State<T>`; `FromRef` makes a field that is not in the state a compile error.
@@ -44,6 +50,7 @@ pub struct AppState {
     pub allow_delete_datasets: AllowDeleteDatasets,
     pub annotation_mutex_expiry: MutexExpiry,
     pub webauthn: WebAuthnStores,
+    pub oidc: Arc<Oidc>,
 }
 
 /// `features.allowDeleteDatasets`.
@@ -77,6 +84,7 @@ pub struct AppStateBuilder {
     datasets: DatasetRouteConfig,
     allow_delete_datasets: bool,
     annotation_mutex_expiry: std::time::Duration,
+    oidc: OidcConfig,
 }
 
 impl AppState {
@@ -109,6 +117,7 @@ impl AppState {
             datasets: DatasetRouteConfig::default(),
             allow_delete_datasets: true,
             annotation_mutex_expiry: std::time::Duration::from_secs(120),
+            oidc: OidcConfig::default(),
         }
     }
 
@@ -129,6 +138,7 @@ impl AppState {
             .datasets(config.datasets.clone())
             .allow_delete_datasets(config.allow_delete_datasets)
             .annotation_mutex_expiry(config.annotation_mutex_expiry)
+            .oidc(config.oidc.clone())
             .build()
     }
 }
@@ -215,6 +225,11 @@ impl AppStateBuilder {
         self
     }
 
+    pub fn oidc(mut self, config: OidcConfig) -> Self {
+        self.oidc = config;
+        self
+    }
+
     /// A time-interaction writer other than the one `time_tracking` configures.
     pub fn time_interaction_writer(mut self, writer: TimeInteractionWriter) -> Self {
         self.time_interaction_writer = Some(writer);
@@ -283,6 +298,7 @@ impl AppStateBuilder {
             allow_delete_datasets: AllowDeleteDatasets(self.allow_delete_datasets),
             annotation_mutex_expiry: MutexExpiry(self.annotation_mutex_expiry),
             webauthn: WebAuthnStores::default(),
+            oidc: Arc::new(Oidc::new(self.oidc)),
         }
     }
 }

@@ -3,7 +3,7 @@ import type { RequestOptions } from "libs/request";
 import Request from "libs/request";
 import type { APIMeshFileInfo } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
-import { serializeProtoListOfLong } from "viewer/model/helpers/proto_helpers";
+import { loadProtoHelpers } from "./proto_helpers_loader";
 import { doWithToken } from "./token";
 
 export type MeshChunk = {
@@ -125,7 +125,8 @@ export function getMeshFileChunksForSegments(
 ): Promise<ApiResult<MeshSegmentInfo>> {
   return requestResult(
     (adaptedOptions) =>
-      doWithToken((token) => {
+      doWithToken(async (token) => {
+        const { serializeProtoListOfLong } = await loadProtoHelpers();
         const params = new URLSearchParams({ token, meshFileName: meshFile.name });
         // The ids are sent as protobuf, which takes about 4 bytes per id instead of about 50 bytes
         // in the JSON encoding of bigints. Request bodies are not compressed.

@@ -19,9 +19,10 @@ import sum from "lodash-es/sum";
  */
 
 // The chunks of one segment, indexed by LOD: ChunksPerLod[lodIndex][chunkIndex].
+// A segment without a mesh has an empty array, i.e., no LODs.
 type ChunksPerLod = MeshChunk[][];
-// A null value marks a segment without a mesh.
-export type ChunkListsBySegmentId = Map<bigint, ChunksPerLod | null>;
+// A segment without an entry is unknown, i.e., its chunks were never listed.
+export type ChunkListsBySegmentId = Map<bigint, ChunksPerLod>;
 // Identifies a chunk within a mesh file, see getChunkDataKey. The byte offset alone is not unique
 // in Neuroglancer precomputed mesh files, because they address chunks relative to the shard of the
 // segment. Adding the segment id makes it unique, because the segment id selects the shard.
@@ -57,9 +58,9 @@ type MeshFileMetadata = Pick<MeshSegmentInfo, "meshFormat" | "chunkScale"> & {
 export class MeshFileCache {
   // The LOD transforms and the chunk scale are the same for every segment of a mesh file.
   private metadata: MeshFileMetadata | null = null;
-  // A null value marks a segment without a mesh. A segment without chunks still takes an entry in the map; thus returning 1 as size.
-  readonly chunkLists = new LruMapWithSize<bigint, ChunksPerLod | null>((chunksPerLod) =>
-    Math.max(1, sum(chunksPerLod?.map((chunks) => chunks.length))),
+  // A segment without a mesh still takes an entry in the map, thus its size is 1.
+  readonly chunkLists = new LruMapWithSize<bigint, ChunksPerLod>((chunksPerLod) =>
+    Math.max(1, sum(chunksPerLod.map((chunks) => chunks.length))),
   );
   readonly chunkData = new LruMapWithSize<ChunkDataKey, ArrayBuffer>((buffer) => buffer.byteLength);
   // Called after the cache grew. The memory limits apply to the caches of all mesh files together.
@@ -102,7 +103,7 @@ export class MeshFileCache {
     }
     const chunkLists: ChunkListsBySegmentId = new Map(groupChunksBySegmentId(info));
     for (const segmentId of info.segmentIdsWithoutMesh ?? []) {
-      chunkLists.set(segmentId, null);
+      chunkLists.set(segmentId, []);
     }
     for (const [segmentId, chunksPerLod] of chunkLists) {
       this.chunkLists.set(segmentId, chunksPerLod);
@@ -112,12 +113,11 @@ export class MeshFileCache {
   }
 
   // Builds a listing from the given chunk lists. Returns null if none of them has a chunk.
-  toMeshSegmentInfo(chunkLists: Iterable<ChunksPerLod | null>): MeshSegmentInfo | null {
+  toMeshSegmentInfo(chunkLists: Iterable<ChunksPerLod>): MeshSegmentInfo | null {
     if (this.metadata == null) {
       return null;
     }
-    const chunksPerLodOfSegments = [...chunkLists].filter((chunksPerLod) => chunksPerLod != null);
-    return formatToMeshSegmentInfo(this.metadata, chunksPerLodOfSegments);
+    return formatToMeshSegmentInfo(this.metadata, [...chunkLists]);
   }
 
   getChunkData(chunk: MeshChunk): ArrayBuffer | undefined {
@@ -161,6 +161,7 @@ function formatToMeshSegmentInfo(
   chunksPerLodOfSegments: ChunksPerLod[],
 ): MeshSegmentInfo | null {
   const lods = metadata.lodTransforms.map((transform, lodIndex) => ({
+    // Segments without a mesh have no LODs and thus add no chunks.
     chunks: chunksPerLodOfSegments.flatMap((chunksPerLod) => chunksPerLod[lodIndex] ?? []),
     transform,
   }));

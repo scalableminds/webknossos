@@ -311,7 +311,12 @@ class TSAnnotationService @Inject() (
     else
       tracingDataStore.annotations.put(annotationId.toString, version, annotationProto.toByteArray)
 
-  def updateActionLog(annotationId: ObjectId, newestVersion: Long, oldestVersion: Long, truncate: Boolean)(implicit
+  def updateActionLog(
+      annotationId: ObjectId,
+      requestedNewestVersion: Option[Long],
+      requestedOldestVersion: Option[Long],
+      truncate: Boolean
+  )(implicit
       ec: ExecutionContext
   ): Fox[JsValue] = {
     val MaxUpdateActionEntriesPerVersion = 1000
@@ -321,8 +326,17 @@ class TSAnnotationService @Inject() (
         "value" -> Json.toJson(tuple._2)
       )
 
-    val batchRanges = SequenceUtils.batchRangeInclusive(oldestVersion, newestVersion, batchSize = 1000).reverse
     for {
+      newestMaterializableVersion <- currentMaterializableVersion(annotationId)
+      newestMaterialized <- getNewestMatchingMaterializedAnnotation(
+        annotationId,
+        version = None
+      ) ?~> Msg.Annotation.getNewestMaterializedFailed
+      newestVersion = requestedNewestVersion.fold(newestMaterializableVersion)(math.min(_, newestMaterializableVersion))
+      oldestVersion = math.max(requestedOldestVersion.getOrElse(0L), newestMaterialized.earliestAccessibleVersion)
+      batchRanges =
+        if (oldestVersion > newestVersion) Seq.empty
+        else SequenceUtils.batchRangeInclusive(oldestVersion, newestVersion, batchSize = 1000).reverse
       updateActionBatches <- Fox.serialCombined(batchRanges.toList) { batchRange =>
         val batchFrom = batchRange._1
         val batchTo = batchRange._2

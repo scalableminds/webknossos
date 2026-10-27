@@ -315,6 +315,8 @@ pub mod dataset {
     }
     pub const NO_LAYERS: &str = "Dataset has no data layers.";
     pub const NO_MAGS: &str = "Data layer does not contain any mags.";
+    pub const NO_LAYERS_RENDERABLE_AT_ZOOM: &str =
+        "No data layer has mags coarse enough to render a thumbnail at this zoom.";
 
     pub mod name {
         use std::fmt::Display;

@@ -431,6 +431,15 @@ struct LayerParameters {
     opacity: f64,
 }
 
+/// Must match the per-layer limit enforced by the datastore (`MAX_THUMBNAIL_DIMENSION`).
+const MAX_LAYER_FETCH_DIMENSION: i32 = 3000;
+
+/// Drops layers lacking a mag coarse enough for the zoom (they would need too many voxels).
+fn retain_renderable(parameters: &mut Vec<LayerParameters>) {
+    parameters
+        .retain(|p| p.width <= MAX_LAYER_FETCH_DIMENSION && p.height <= MAX_LAYER_FETCH_DIMENSION);
+}
+
 /// ThumbnailService.selectLayersToRender: ordered enabled color layers plus the
 /// alphabetically first segmentation layer, falling back to all renderable.
 fn layers_to_render<'a>(config: &Config, layers: &'a [StaticLayer]) -> Vec<&'a StaticLayer> {
@@ -528,6 +537,12 @@ async fn dataset_thumbnail(
             invert_color: color.as_ref().map(|c| c.1),
             opacity: config.opacity(&layer.name, layer.is_segmentation(), has_color_layers),
         });
+    }
+    retain_renderable(&mut parameters);
+    if parameters.is_empty() {
+        return Err(ApiError::not_found(
+            crate::msg::dataset::NO_LAYERS_RENDERABLE_AT_ZOOM,
+        ));
     }
     let body = json!({
         "width": width,

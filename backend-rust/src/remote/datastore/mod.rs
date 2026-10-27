@@ -263,7 +263,7 @@ async fn apply_report(
     let mut existing_ids: Vec<ObjectId> = Vec::new();
     let mut updated_ids: Vec<ObjectId> = Vec::new();
     for (organization, entries) in by_organization {
-        let exists = dao::organization_exists(&mut *tx, &organization).await?;
+        let exists = crate::organization::dao::exists(&mut *tx, &organization).await?;
         if !exists {
             tracing::info!(
                 "Ignoring {} reported datasets for non-existing organization {organization}",

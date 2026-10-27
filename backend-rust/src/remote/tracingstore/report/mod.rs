@@ -180,7 +180,7 @@ async fn after_user_resolved(
     user: &AuthUser,
     report: &AnnotationUpdatesReport,
 ) {
-    if let Err(error) = dao::update_last_activity(&state.pool, &user.id).await {
+    if let Err(error) = crate::users::dao::update_last_activity(&state.pool, &user.id).await {
         tracing::warn!(%error, "Updating user last activity failed");
     }
     for (event_type, count) in [

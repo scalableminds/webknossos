@@ -3,7 +3,7 @@
 //! upload report. Callbacks with a lot of SQL of their own (mag, attachment,
 //! dataset upload, credentials) have a `dao.rs` next to their handlers.
 use serde_json::Value;
-use sqlx::{PgConnection, PgExecutor, PgPool};
+use sqlx::{PgConnection, PgPool};
 
 use super::UNREPORTED;
 use crate::{
@@ -80,20 +80,6 @@ pub(crate) async fn update_url(pool: &PgPool, name: &str, url: &str) -> ApiResul
         .execute(pool)
         .await?;
     Ok(())
-}
-
-pub(crate) async fn organization_exists(
-    executor: impl PgExecutor<'_>,
-    organization: &str,
-) -> ApiResult<bool> {
-    Ok(
-        sqlx::query_scalar(
-            "SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ WHERE _id = $1)",
-        )
-        .bind(organization)
-        .fetch_one(executor)
-        .await?,
-    )
 }
 
 pub(crate) async fn find_all_by_directory_names(

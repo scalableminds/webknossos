@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 
 use serde_json::Value;
-use sqlx::{PgConnection, PgPool};
+use sqlx::{PgConnection, PgExecutor, PgPool};
 
 use crate::{
     auth::AuthUser,
@@ -203,13 +203,18 @@ pub(crate) async fn find_all_documents(
         .await?)
 }
 
-pub(crate) async fn update_last_activity(pool: &PgPool, user_id: &ObjectId) -> ApiResult<()> {
+/// UserDAO.updateLastActivity. `GREATEST` keeps concurrent fire-and-forget
+/// updates from moving the timestamp backwards.
+pub(crate) async fn update_last_activity(
+    executor: impl PgExecutor<'_>,
+    user_id: &ObjectId,
+) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE webknossos.users SET lastActivity = GREATEST(lastActivity, \
          statement_timestamp()) WHERE _id = $1 AND NOT isDeleted",
     )
     .bind(user_id)
-    .execute(pool)
+    .execute(executor)
     .await?;
     Ok(())
 }

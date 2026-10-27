@@ -686,16 +686,6 @@ pub(crate) async fn find_first_tracing_store_json(
     .await?)
 }
 
-/// UserDAO.updateLastActivity; the raw sqlx error is returned because the
-/// caller only logs it.
-pub(crate) async fn update_last_activity(pool: &PgPool, user_id: &ObjectId) -> sqlx::Result<()> {
-    sqlx::query("UPDATE webknossos.users SET lastActivity=now() WHERE _id=$1")
-        .bind(user_id)
-        .execute(pool)
-        .await?;
-    Ok(())
-}
-
 /// The MultiUser id of the user (global lookup of a live user); the raw sqlx
 /// error is returned because the callers inspect it.
 pub(crate) async fn find_multi_user_id(

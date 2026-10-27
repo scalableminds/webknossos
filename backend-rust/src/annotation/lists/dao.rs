@@ -117,14 +117,6 @@ pub(crate) async fn find_all_compact(
     Ok(q.build_query_scalar().fetch_all(connection).await?)
 }
 
-pub(crate) async fn update_last_activity(pool: &PgPool, user_id: &ObjectId) -> ApiResult<()> {
-    sqlx::query("UPDATE webknossos.users SET lastActivity=now() WHERE _id=$1 AND NOT isDeleted")
-        .bind(user_id)
-        .execute(pool)
-        .await?;
-    Ok(())
-}
-
 /// Whether the user manages the target user (or is admin of its organization)
 /// and whether the target belongs to no team of its organization; `None` unless
 /// the target is the user itself, in the user's organization and visible to it.

@@ -481,7 +481,7 @@ async fn duplicate_to_orga(
         ));
     }
     let organization_exists =
-        dao::organization_exists(&state.pool, &query.target_organization_id).await?;
+        crate::organization::dao::exists(&state.pool, &query.target_organization_id).await?;
     if !organization_exists {
         return Err(ApiError::bad_request(crate::msg::organization::not_found(
             &query.target_organization_id,

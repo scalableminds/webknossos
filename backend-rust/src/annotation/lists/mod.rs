@@ -107,7 +107,8 @@ async fn compact_response(
     Ok((headers(total)?, Json(value)))
 }
 async fn activity(pool: &PgPool, user: &AuthUser) -> ApiResult<()> {
-    dao::update_last_activity(pool, &user.id).await
+    crate::users::dao::update_last_activity(pool, &user.id).await?;
+    Ok(())
 }
 async fn own_annotations(
     State(state): State<AppState>,

@@ -589,7 +589,7 @@ async fn download_saved(
                 StatusCode::NOT_FOUND,
             ))
         })?;
-    if !dao::organization_exists(context.pool(), &dataset.organization).await? {
+    if !crate::organization::dao::exists(context.pool(), &dataset.organization).await? {
         return Err(Failure::with_status(
             crate::msg::organization::not_found(&dataset.organization),
             StatusCode::NOT_FOUND,

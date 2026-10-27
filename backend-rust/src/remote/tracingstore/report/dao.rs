@@ -56,12 +56,3 @@ pub(crate) async fn insert_contributor(
         .await?;
     Ok(())
 }
-
-/// UserDAO.updateLastActivity; the caller only logs a failure.
-pub(crate) async fn update_last_activity(pool: &PgPool, user_id: &ObjectId) -> sqlx::Result<()> {
-    sqlx::query("UPDATE webknossos.users SET lastActivity=NOW() WHERE _id=$1")
-        .bind(user_id)
-        .execute(pool)
-        .await
-        .map(|_| ())
-}

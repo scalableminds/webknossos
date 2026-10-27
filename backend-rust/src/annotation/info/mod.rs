@@ -348,7 +348,7 @@ async fn compound_json(
 fn touch_last_activity(state: &AppState, user: &AuthUser) {
     let (pool, user_id) = (state.pool.clone(), user.id.clone());
     tokio::spawn(async move {
-        if let Err(error) = dao::update_last_activity(&pool, &user_id).await {
+        if let Err(error) = crate::users::dao::update_last_activity(&pool, &user_id).await {
             tracing::debug!(%error, "Could not update last activity");
         }
     });

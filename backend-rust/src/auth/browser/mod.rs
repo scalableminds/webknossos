@@ -1034,7 +1034,7 @@ pub(crate) async fn login_user(
         return Err(ApiError::bad_request(messages::NOT_VERIFIED));
     }
     dao::update_last_logged_in_identity(&mut tx, &multi_user_id, user_id).await?;
-    dao::update_last_activity(&mut tx, user_id).await?;
+    crate::users::dao::update_last_activity(&mut *tx, user_id).await?;
     tx.commit().await?;
     tracing::info!(user = %user_id, "User logged in via password form.");
     Ok(cookie)

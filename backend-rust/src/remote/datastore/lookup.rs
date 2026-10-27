@@ -53,7 +53,8 @@ async fn find_dataset_id(
     Query(query): Query<DatasetNameQuery>,
     ValidatedDataStore(_store): ValidatedDataStore,
 ) -> ApiResult<ResponseJson<ObjectId>> {
-    let organization_exists = dao::organization_exists(&state.pool, &query.organization_id).await?;
+    let organization_exists =
+        crate::organization::dao::exists(&state.pool, &query.organization_id).await?;
     if !organization_exists {
         return Err(ApiError::not_found(crate::msg::organization::not_found(
             &query.organization_id,

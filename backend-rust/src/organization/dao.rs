@@ -1,6 +1,6 @@
 //! OrganizationDAO: the organization queries.
 use serde_json::Value;
-use sqlx::{PgConnection, PgPool, Postgres};
+use sqlx::{PgConnection, PgExecutor, PgPool, Postgres};
 
 use crate::{error::ApiResult, sql::Sql, util::id::ObjectId};
 
@@ -294,11 +294,11 @@ pub(crate) async fn is_organization_owner(pool: &PgPool, user_id: &ObjectId) -> 
     )
 }
 
-pub(crate) async fn exists(pool: &PgPool, id: &str) -> ApiResult<bool> {
+pub(crate) async fn exists(executor: impl PgExecutor<'_>, id: &str) -> ApiResult<bool> {
     Ok(
         sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ WHERE _id=$1)")
             .bind(id)
-            .fetch_one(pool)
+            .fetch_one(executor)
             .await?,
     )
 }

@@ -205,14 +205,3 @@ pub(crate) async fn find_duplicate_source(
     .fetch_one(pool)
     .await?)
 }
-
-pub(crate) async fn organization_exists(pool: &PgPool, organization_id: &str) -> ApiResult<bool> {
-    Ok(
-        sqlx::query_scalar(
-            "SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ WHERE _id = $1)",
-        )
-        .bind(organization_id)
-        .fetch_one(pool)
-        .await?,
-    )
-}

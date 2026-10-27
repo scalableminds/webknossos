@@ -973,7 +973,7 @@ pub async fn find_dataset_for_uploaded_annotations(
     let wrong_host = !wk_url.is_empty() && this_host != wk_url;
     let organization_id = match organization_id {
         Some(organization_id) => {
-            let exists = dao::organization_exists(pool, &organization_id).await?;
+            let exists = crate::organization::dao::exists(pool, &organization_id).await?;
             if !exists {
                 return Err(ApiError::not_found(if wrong_host {
                     msg_organization_not_found_wrong_host(&organization_id, wk_url, this_host)

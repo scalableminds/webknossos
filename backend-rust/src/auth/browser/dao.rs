@@ -152,14 +152,3 @@ pub(crate) async fn update_last_logged_in_identity(
         .await?;
     Ok(())
 }
-
-pub(crate) async fn update_last_activity(
-    connection: &mut PgConnection,
-    user_id: &ObjectId,
-) -> ApiResult<()> {
-    sqlx::query("UPDATE webknossos.users SET lastActivity = statement_timestamp() WHERE _id = $1")
-        .bind(user_id)
-        .execute(connection)
-        .await?;
-    Ok(())
-}

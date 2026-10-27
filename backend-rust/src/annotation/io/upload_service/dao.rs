@@ -63,17 +63,6 @@ pub(crate) async fn find_up_to_two_by_name_and_organization(
     Ok(q.build_query_as().fetch_all(pool).await?)
 }
 
-pub(crate) async fn organization_exists(pool: &PgPool, organization_id: &str) -> ApiResult<bool> {
-    Ok(
-        sqlx::query_scalar(
-            "SELECT EXISTS (SELECT 1 FROM webknossos.organizations_ WHERE _id = $1)",
-        )
-        .bind(organization_id)
-        .fetch_one(pool)
-        .await?,
-    )
-}
-
 /// The organization of the dataset (no access predicate).
 pub(crate) async fn find_organization_id_for_dataset(
     pool: &PgPool,

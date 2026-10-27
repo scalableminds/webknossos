@@ -2,7 +2,7 @@
 //! and duplicateToOrga.
 use std::time::Duration;
 
-use axum::{Extension, Json, Router, extract::State, routing::post};
+use axum::{Json, Router, extract::State, routing::post};
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use reqwest::Method;
 use serde::Deserialize;
@@ -25,6 +25,7 @@ use crate::{
     stores::client::{ServiceClients, ServiceError},
     util::id::{ObjectId, PathObjectId},
 };
+use axum::extract::FromRef;
 
 #[derive(Clone, Copy)]
 pub struct DatastoreTokenConfig {
@@ -32,7 +33,17 @@ pub struct DatastoreTokenConfig {
     pub idle_timeout: Duration,
 }
 
-pub fn router(tokens: DatastoreTokenConfig) -> Router<AppState> {
+/// The datastore-token lifetimes, from the auth route configuration.
+impl FromRef<AppState> for DatastoreTokenConfig {
+    fn from_ref(state: &AppState) -> Self {
+        Self {
+            expiry: state.auth_routes.datastore_expiry,
+            idle_timeout: state.auth_routes.auth_idle_timeout,
+        }
+    }
+}
+
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/datasets/exploreRemote", post(explore_remote))
         .route(
@@ -47,7 +58,6 @@ pub fn router(tokens: DatastoreTokenConfig) -> Router<AppState> {
             "/datasets/{datasetId}/duplicateToOrga",
             post(duplicate_to_orga),
         )
-        .layer(Extension(tokens))
 }
 
 const ADD_PATHS_NOT_ALLOWED: &str = "Cannot directly add a data source with local paths that leave the dataset, or with paths that match the WEBKNOSSOS reserved paths.";
@@ -184,7 +194,7 @@ async fn explore_remote(
     State(state): State<AppState>,
     user: AuthUser,
     State(clients): State<ServiceClients>,
-    Extension(tokens): Extension<DatastoreTokenConfig>,
+    State(tokens): State<DatastoreTokenConfig>,
     RequestJson(parameters): RequestJson<Vec<ExploreParameters>>,
 ) -> ApiResult<Json<Value>> {
     Ok(Json(
@@ -297,7 +307,7 @@ async fn explore_and_add_remote(
     State(state): State<AppState>,
     user: AuthUser,
     State(clients): State<ServiceClients>,
-    Extension(tokens): Extension<DatastoreTokenConfig>,
+    State(tokens): State<DatastoreTokenConfig>,
     RequestJson(body): RequestJson<ExploreAndAddParameters>,
 ) -> ApiResult<Json<ObjectId>> {
     let parameters = ExploreParameters {

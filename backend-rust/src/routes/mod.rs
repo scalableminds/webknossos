@@ -114,10 +114,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         state.mailer.clone(),
         &state.browser_auth.public_uri,
     );
-    let datastore_tokens = crate::dataset::explore::DatastoreTokenConfig {
-        expiry: state.auth_routes.datastore_expiry,
-        idle_timeout: state.auth_routes.auth_idle_timeout,
-    };
     let api = Router::new()
         .route("/health", get(|| async { "Ok" }))
         .merge(crate::annotation::router(annotation_mutex_expiry))
@@ -131,11 +127,7 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         .merge(crate::auth::router(oidc))
         .merge(crate::remote::router(allow_delete_datasets))
         .merge(crate::stores::router())
-        .merge(crate::dataset::router(
-            &datasets,
-            allow_delete_datasets,
-            datastore_tokens,
-        ))
+        .merge(crate::dataset::router(&datasets, allow_delete_datasets))
         .merge(crate::organization::router())
         .merge(crate::system::router())
         .merge(crate::teams::router())

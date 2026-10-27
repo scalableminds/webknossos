@@ -17,7 +17,7 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
-    dataset::explore::DatastoreTokenConfig,
+    auth::routes::AuthRouteConfig,
     stores::client::{ServiceClientConfig, ServiceClients},
 };
 
@@ -92,12 +92,13 @@ async fn explore_add_virtual_and_duplicate_create_datasets_through_the_datastore
     let server = tokio::spawn(async move { axum::serve(listener, mock).await.unwrap() });
     sqlx::query("INSERT INTO webknossos.dataStores (name,url,publicUrl,key) VALUES ('store',$1,'http://public.invalid','k')")
         .bind(&base).execute(&db.pool).await.unwrap();
-    let app = webknossos_backend::dataset::explore::router(DatastoreTokenConfig {
-        expiry: Duration::from_secs(3600),
-        idle_timeout: Duration::from_secs(3600),
-    })
-    .with_state(
+    let app = webknossos_backend::dataset::explore::router().with_state(
         AppState::builder(db.pool.clone())
+            .auth_routes(AuthRouteConfig {
+                datastore_expiry: Duration::from_secs(3600),
+                auth_idle_timeout: Duration::from_secs(3600),
+                ..AuthRouteConfig::default()
+            })
             .clients(
                 ServiceClients::new(ServiceClientConfig {
                     request_timeout: Duration::from_secs(5),

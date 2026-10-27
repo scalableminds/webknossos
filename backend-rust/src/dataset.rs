@@ -22,7 +22,6 @@ use axum::Router;
 pub fn router(
     datasets: &options::DatasetRouteConfig,
     allow_delete_datasets: bool,
-    datastore_tokens: explore::DatastoreTokenConfig,
 ) -> Router<AppState> {
     Router::new()
         .merge(routes::router())
@@ -34,7 +33,7 @@ pub fn router(
         .merge(paths::router(datasets.clone()))
         .merge(compose::router())
         .merge(sam::router(datasets.clone()))
-        .merge(explore::router(datastore_tokens))
+        .merge(explore::router())
         .merge(upload_paths::router(datasets.clone()))
         .merge(update::router())
         .merge(lifecycle::router(allow_delete_datasets))

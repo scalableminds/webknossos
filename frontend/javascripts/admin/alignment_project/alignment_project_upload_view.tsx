@@ -12,7 +12,7 @@ import {
   UploadProgressModal,
 } from "admin/dataset/components/upload_components";
 import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
-import { createResumableUpload } from "admin/rest_api";
+import { createResumableUpload, generateResumableUploadId } from "admin/rest_api";
 import { Alert, App, Button, Col, Form, Input, Row, Select } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import type ResumableUpload from "libs/resumable_upload/resumable_upload";
@@ -47,14 +47,6 @@ const initialUploadState: UploadState = {
   isRetrying: false,
   progress: 0,
 };
-
-function generateUploadId(): string {
-  const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));
-  const randomString = Array.from(randomBytes, (byte) => `0${byte.toString(16)}`.slice(-2)).join(
-    "",
-  );
-  return `${new Date().toISOString().replace(/[:.]/g, "-")}__alignmentProject__${randomString}`;
-}
 
 export default function AlignmentProjectUploadView({ datastores }: { datastores: APIDataStore[] }) {
   const [form] = Form.useForm<FormValues>();
@@ -95,7 +87,7 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
   const getFileAlert = () => {
     if (files.length === 0 || isZipUpload) return null;
     if (csvFiles.length === 0) {
-      return { type: "error" as const, title: "No CSV file found among the selected files." };
+      return { type: "error" as const, title: "No tile CSV file found among the selected files." };
     }
     if (csvFiles.length > 1) {
       return {
@@ -156,7 +148,8 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
       return;
     }
     if (activeUser == null) return;
-    const uploadId = generateUploadId();
+    // Without the project name, which may contain characters that are unsafe in directory names.
+    const uploadId = generateResumableUploadId("alignmentProject");
     const datastoreUrl = values.datastoreUrl;
     isCancellingRef.current = false;
     setUploadState({ ...initialUploadState, isUploading: true });

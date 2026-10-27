@@ -4,7 +4,7 @@ import classnames from "classnames";
 import type React from "react";
 import { type FileWithPath, useDropzone } from "react-dropzone";
 
-// react-dropzone sets file.path (via file-selector::toFileWithPath), which the resumable upload uses.
+// react-dropzone sets file.path (with the toFileWithPath function of the file-selector package), which the resumable upload uses.
 export function FileDropzone({
   onDropAccepted,
   children,
@@ -63,7 +63,7 @@ export function UploadedFileList({
           renderItem={(item: FileWithPath) => (
             <List.Item
               actions={[
-                <a key="list-loadmore-edit" onClick={() => onRemove(item)}>
+                <a key="remove" onClick={() => onRemove(item)}>
                   remove
                 </a>,
               ]}

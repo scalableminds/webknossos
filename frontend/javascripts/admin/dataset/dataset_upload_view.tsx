@@ -13,6 +13,7 @@ import {
   cancelDatasetUpload,
   createResumableUpload,
   finishDatasetUpload,
+  generateResumableUploadId,
   getUnfinishedUploads,
   refreshToken,
   reserveDatasetUpload,
@@ -23,7 +24,6 @@ import {
 import { Alert, Button, Col, Form, Popover, Row, Select, Space, Tooltip, Typography } from "antd";
 import type { FormInstance } from "antd/es/form";
 import FolderSelection from "dashboard/folders/folder_selection";
-import dayjs from "dayjs";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
 import importDynamic from "libs/import_dynamic";
@@ -322,15 +322,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       shouldBlock: beforeUnload,
     });
 
-    const getRandomString = () => {
-      const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));
-      return Array.from(randomBytes, (byte) => `0${byte.toString(16)}`.slice(-2)).join("");
-    };
     const newDatasetName = formValues.name;
 
     const uploadId = unfinishedUploadToContinue
       ? unfinishedUploadToContinue.uploadId
-      : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${newDatasetName}__${getRandomString()}`;
+      : generateResumableUploadId("dataset", newDatasetName);
     const filePaths = formValues.zipFile.map((file) => file.path || "");
     const totalFileSizeInBytes = getFileSize(formValues.zipFile);
     const resumableUploadInfo = {

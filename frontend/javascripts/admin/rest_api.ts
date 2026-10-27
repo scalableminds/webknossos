@@ -1517,10 +1517,27 @@ export function createDatasetComposition(
   );
 }
 
+export type ResumableUploadDomain = "dataset" | "alignmentProject";
+
+// E.g. "2026-10-27_14-03__dataset__my_dataset__a1b2c3d4e5f6". The upload domain is part of the id,
+// so that the id alone tells which kind of upload it belongs to. The backend does not parse the id.
+export function generateResumableUploadId(
+  uploadDomain: ResumableUploadDomain,
+  label?: string,
+): string {
+  const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));
+  const randomString = Array.from(randomBytes, (byte) => `0${byte.toString(16)}`.slice(-2)).join(
+    "",
+  );
+  return [dayjs().format("YYYY-MM-DD_HH-mm"), uploadDomain, label, randomString]
+    .filter((part) => part != null)
+    .join("__");
+}
+
 export function createResumableUpload(
   datastoreUrl: string,
   uploadId: string,
-  uploadDomain: "dataset" | "alignmentProject" = "dataset",
+  uploadDomain: ResumableUploadDomain = "dataset",
 ): Promise<ResumableUpload> {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
   const generateUniqueIdentifier = (file) => {

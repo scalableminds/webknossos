@@ -8,6 +8,7 @@ use crate::{
         tracing_client::TracingStoreClient,
     },
     system::application_info::{MiscConfig, MiscState},
+    users::EmailVerification,
     voxelytics::{VoxelyticsConfig, routes::Voxelytics},
 };
 use axum::extract::FromRef;
@@ -27,6 +28,7 @@ pub struct AppState {
     pub auth_routes: AuthRouteConfig,
     pub jobs: JobsConfig,
     pub voxelytics: Voxelytics,
+    pub email_verification: EmailVerification,
 }
 
 /// `features.jobsEnabled`.
@@ -47,6 +49,7 @@ pub struct AppStateBuilder {
     auth_routes: AuthRouteConfig,
     jobs: JobsConfig,
     voxelytics: VoxelyticsConfig,
+    email_verification: bool,
 }
 
 impl AppState {
@@ -70,6 +73,7 @@ impl AppState {
             auth_routes: AuthRouteConfig::default(),
             jobs: JobsConfig::default(),
             voxelytics: VoxelyticsConfig::default(),
+            email_verification: true,
         }
     }
 
@@ -83,6 +87,7 @@ impl AppState {
             .auth_routes(config.auth_routes.clone())
             .jobs(config.jobs.clone())
             .voxelytics(config.voxelytics.clone())
+            .email_verification(config.email_verification_enabled)
             .build()
     }
 }
@@ -134,6 +139,11 @@ impl AppStateBuilder {
         self
     }
 
+    pub fn email_verification(mut self, enabled: bool) -> Self {
+        self.email_verification = enabled;
+        self
+    }
+
     /// A tracing-store client other than the one `service_client` configures.
     pub fn tracing_store(mut self, client: TracingStoreClient) -> Self {
         self.tracing_store = Some(client);
@@ -170,6 +180,7 @@ impl AppStateBuilder {
             auth_routes: self.auth_routes,
             jobs: self.jobs,
             voxelytics: Voxelytics::new(self.voxelytics),
+            email_verification: EmailVerification(self.email_verification),
         }
     }
 }

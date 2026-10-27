@@ -29,7 +29,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
             request_timeout: config.request_timeout,
             body_limit: config.body_limit,
             public_url: config.public_url.clone(),
-            email_verification_enabled: config.email_verification_enabled,
             annotation_mutex_expiry: config.annotation_mutex_expiry,
             time_tracking: config.time_tracking,
             allow_delete_datasets: config.allow_delete_datasets,
@@ -44,7 +43,6 @@ struct RouteOptions {
     request_timeout: Duration,
     body_limit: usize,
     public_url: url::Url,
-    email_verification_enabled: bool,
     annotation_mutex_expiry: Duration,
     time_tracking: crate::config::TimeTrackingConfig,
     allow_delete_datasets: bool,
@@ -59,7 +57,6 @@ impl RouteOptions {
             request_timeout: Duration::from_secs(30),
             body_limit: 2 * 1024 * 1024,
             public_url: url::Url::parse("http://localhost:9000").expect("valid default URL"),
-            email_verification_enabled: true,
             annotation_mutex_expiry: Duration::from_secs(120),
             time_tracking: Default::default(),
             allow_delete_datasets: true,
@@ -75,7 +72,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         request_timeout,
         body_limit,
         public_url,
-        email_verification_enabled,
         annotation_mutex_expiry,
         time_tracking,
         allow_delete_datasets,
@@ -116,7 +112,7 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         .merge(crate::scripts::router())
         .merge(crate::folders::router())
         .merge(crate::user_configuration::router())
-        .merge(crate::users::router(email_verification_enabled))
+        .merge(crate::users::router())
         .merge(crate::short_links::router())
         .merge(crate::projects::router())
         .merge(crate::time::tracking::router())

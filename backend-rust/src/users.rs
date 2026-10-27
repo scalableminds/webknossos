@@ -25,7 +25,7 @@ pub(crate) use dao::push_read_access;
 use dao::{OldMembership, Target};
 use notification_emails::{NotificationEmailService, TeamMembership, UserAccess};
 
-pub fn router(email_verification_enabled: bool) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/user", get(current))
         .route("/users", get(list))
@@ -36,11 +36,11 @@ pub fn router(email_verification_enabled: bool) -> Router<AppState> {
             put(update_experience),
         )
         .route("/users/{id}/selectedTheme", put(update_theme))
-        .layer(Extension(EmailVerification(email_verification_enabled)))
 }
 
-#[derive(Clone)]
-struct EmailVerification(bool);
+/// `webKnossos.user.emailVerification.activated`.
+#[derive(Clone, Copy, Debug)]
+pub struct EmailVerification(pub bool);
 
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -68,7 +68,7 @@ async fn document(
 async fn current(
     State(state): State<AppState>,
     user: AuthUser,
-    Extension(verification): Extension<EmailVerification>,
+    State(verification): State<EmailVerification>,
 ) -> ApiResult<Json<Value>> {
     let result = document(&state, &user, &user.id, &verification).await?;
     dao::update_last_activity(&state.pool, &user.id).await?;
@@ -96,7 +96,7 @@ async fn read(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(verification): Extension<EmailVerification>,
+    State(verification): State<EmailVerification>,
 ) -> ApiResult<Json<Value>> {
     let result = document(&state, &user, &id, &verification).await?;
     if result["isEditable"] != true {
@@ -115,7 +115,7 @@ async fn update_task_type(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(verification): Extension<EmailVerification>,
+    State(verification): State<EmailVerification>,
     RequestJson(body): RequestJson<LastTaskType>,
 ) -> ApiResult<Json<Value>> {
     let original = document(&state, &user, &id, &verification).await?;
@@ -135,7 +135,7 @@ async fn update_experience(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(verification): Extension<EmailVerification>,
+    State(verification): State<EmailVerification>,
     RequestJson(body): RequestJson<Map<String, Value>>,
 ) -> ApiResult<Json<Value>> {
     if user.id != *id {
@@ -167,7 +167,7 @@ async fn update_theme(
     State(state): State<AppState>,
     user: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(verification): Extension<EmailVerification>,
+    State(verification): State<EmailVerification>,
     RequestJson(theme): RequestJson<Theme>,
 ) -> ApiResult<Json<Value>> {
     if user.id != *id {
@@ -225,7 +225,7 @@ async fn update(
     State(state): State<AppState>,
     requester: AuthUser,
     Path(id): Path<PathObjectId>,
-    Extension(verification): Extension<EmailVerification>,
+    State(verification): State<EmailVerification>,
     State(mailer): State<MailSender>,
     Extension(notification_emails): Extension<NotificationEmailService>,
     State(auth_config): State<BrowserAuthConfig>,

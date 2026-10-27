@@ -22,7 +22,7 @@ fn app(database: &TestDb, mailer: &RecordingMailer, wkorg: bool) -> Router {
         is_wkorg_instance: wkorg,
         ..BrowserAuthConfig::default()
     };
-    users::router(true)
+    users::router()
         // Notification emails are covered by tests/notification_emails.rs.
         .layer(Extension(NotificationEmailService::new(
             MailSender::default(),

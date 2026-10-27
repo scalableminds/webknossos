@@ -1,6 +1,7 @@
 use crate::{
     annotation::provider::AnnotationProvider,
     auth::{browser::BrowserAuthConfig, routes::AuthRouteConfig},
+    config::TimeTrackingConfig,
     job::routes::JobsConfig,
     mail::MailSender,
     short_links::PublicUrl,
@@ -9,6 +10,7 @@ use crate::{
         tracing_client::TracingStoreClient,
     },
     system::application_info::{MiscConfig, MiscState},
+    time::interaction_writer::{OverLimitNotifier, TimeInteractionWriter},
     users::{EmailVerification, notification_emails::NotificationEmailService},
     voxelytics::{VoxelyticsConfig, routes::Voxelytics},
 };
@@ -32,6 +34,9 @@ pub struct AppState {
     pub email_verification: EmailVerification,
     pub notification_emails: NotificationEmailService,
     pub public_url: PublicUrl,
+    pub time_tracking: TimeTrackingConfig,
+    /// One writer per app: its per-user cache and locks must be shared by all routes.
+    pub time_interaction_writer: TimeInteractionWriter,
 }
 
 /// `features.jobsEnabled`.
@@ -55,6 +60,8 @@ pub struct AppStateBuilder {
     email_verification: bool,
     notification_emails: Option<NotificationEmailService>,
     public_url: url::Url,
+    time_tracking: TimeTrackingConfig,
+    time_interaction_writer: Option<TimeInteractionWriter>,
 }
 
 impl AppState {
@@ -81,6 +88,8 @@ impl AppState {
             email_verification: true,
             notification_emails: None,
             public_url: url::Url::parse("http://localhost:9000").expect("valid default URL"),
+            time_tracking: TimeTrackingConfig::default(),
+            time_interaction_writer: None,
         }
     }
 
@@ -96,6 +105,7 @@ impl AppState {
             .voxelytics(config.voxelytics.clone())
             .email_verification(config.email_verification_enabled)
             .public_url(config.public_url.clone())
+            .time_tracking(config.time_tracking)
             .build()
     }
 }
@@ -157,6 +167,17 @@ impl AppStateBuilder {
         self
     }
 
+    pub fn time_tracking(mut self, config: TimeTrackingConfig) -> Self {
+        self.time_tracking = config;
+        self
+    }
+
+    /// A time-interaction writer other than the one `time_tracking` configures.
+    pub fn time_interaction_writer(mut self, writer: TimeInteractionWriter) -> Self {
+        self.time_interaction_writer = Some(writer);
+        self
+    }
+
     /// A tracing-store client other than the one `service_client` configures.
     pub fn tracing_store(mut self, client: TracingStoreClient) -> Self {
         self.tracing_store = Some(client);
@@ -190,6 +211,13 @@ impl AppStateBuilder {
         let notification_emails = self.notification_emails.unwrap_or_else(|| {
             NotificationEmailService::new(self.mailer.clone(), &self.browser_auth.public_uri)
         });
+        let time_interaction_writer = self.time_interaction_writer.unwrap_or_else(|| {
+            TimeInteractionWriter::new(
+                Default::default(),
+                self.time_tracking.interaction,
+                OverLimitNotifier::new(self.mailer.clone(), self.public_url.as_str()),
+            )
+        });
         AppState {
             pool: self.pool,
             jobs_enabled: JobsEnabled(self.jobs_enabled),
@@ -205,6 +233,8 @@ impl AppStateBuilder {
             email_verification: EmailVerification(self.email_verification),
             notification_emails,
             public_url: PublicUrl(self.public_url),
+            time_tracking: self.time_tracking,
+            time_interaction_writer,
         }
     }
 }

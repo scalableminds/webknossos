@@ -29,7 +29,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
             request_timeout: config.request_timeout,
             body_limit: config.body_limit,
             annotation_mutex_expiry: config.annotation_mutex_expiry,
-            time_tracking: config.time_tracking,
             allow_delete_datasets: config.allow_delete_datasets,
             datasets: config.datasets.clone(),
             oidc: config.oidc.clone(),
@@ -42,7 +41,6 @@ struct RouteOptions {
     request_timeout: Duration,
     body_limit: usize,
     annotation_mutex_expiry: Duration,
-    time_tracking: crate::config::TimeTrackingConfig,
     allow_delete_datasets: bool,
     datasets: crate::dataset::options::DatasetRouteConfig,
     oidc: crate::auth::oidc::OidcConfig,
@@ -55,7 +53,6 @@ impl RouteOptions {
             request_timeout: Duration::from_secs(30),
             body_limit: 2 * 1024 * 1024,
             annotation_mutex_expiry: Duration::from_secs(120),
-            time_tracking: Default::default(),
             allow_delete_datasets: true,
             datasets: Default::default(),
             oidc: Default::default(),
@@ -69,21 +66,11 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         request_timeout,
         body_limit,
         annotation_mutex_expiry,
-        time_tracking,
         allow_delete_datasets,
         datasets,
         oidc,
         slack,
     } = options;
-    // One writer per app: its per-user cache and locks must be shared by all routes.
-    let time_interaction_writer = crate::time::interaction_writer::TimeInteractionWriter::new(
-        Default::default(),
-        time_tracking.interaction,
-        crate::time::interaction_writer::OverLimitNotifier::new(
-            state.mailer.clone(),
-            state.public_url.0.as_str(),
-        ),
-    );
     let api = Router::new()
         .route("/health", get(|| async { "Ok" }))
         .merge(crate::annotation::router(annotation_mutex_expiry))
@@ -145,8 +132,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
             state.clone(),
             crate::auth::browser::cookie_middleware,
         ))
-        .layer(axum::Extension(time_interaction_writer))
-        .layer(axum::Extension(time_tracking))
         .layer(axum::Extension(
             crate::slack::SlackNotificationService::new(&slack),
         ))

@@ -28,7 +28,6 @@ use crate::{
     auth::{AuthUser, OptionalAuthUser},
     error::{ApiError, ApiResult},
     extract::Path,
-    extract::extension,
     state::JobsEnabled,
     system::application_info::MiscState,
     time::interaction_writer::TimeInteractionWriter,
@@ -87,12 +86,13 @@ where
     JobsEnabled: FromRef<S>,
     MiscState: FromRef<S>,
     AnnotationProvider: FromRef<S>,
+    TimeInteractionWriter: FromRef<S>,
 {
     type Rejection = ApiError;
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         Ok(Self {
             provider: AnnotationProvider::from_ref(state),
-            writer: extension(parts)?,
+            writer: TimeInteractionWriter::from_ref(state),
             misc: MiscState::from_ref(state),
             jobs_enabled: JobsEnabled::from_ref(state).0,
         })

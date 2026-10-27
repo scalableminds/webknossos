@@ -32,7 +32,7 @@
 //! deactivated users rejected, as the other service callbacks).
 mod dao;
 
-use axum::{Extension, Router, extract::State, http::StatusCode, routing::post};
+use axum::{Router, extract::State, http::StatusCode, routing::post};
 use serde::{Deserialize, Deserializer};
 use serde_json::{Map, Value, json};
 use sqlx::{Acquire, PgPool};
@@ -109,8 +109,8 @@ pub fn should_track_time(
 
 async fn handle_report(
     State(state): State<AppState>,
-    Extension(writer): Extension<TimeInteractionWriter>,
-    Extension(time_tracking): Extension<TimeTrackingConfig>,
+    State(writer): State<TimeInteractionWriter>,
+    State(time_tracking): State<TimeTrackingConfig>,
     State(misc): State<MiscState>,
     Query(query): Query<KeyQuery>,
     Json(report): Json<AnnotationUpdatesReport>,

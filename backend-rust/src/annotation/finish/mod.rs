@@ -19,7 +19,7 @@
 //! failure leaves the annotation Finished, exactly as in Scala.
 use crate::response::Messages;
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::{FromRequestParts, State},
     http::{StatusCode, request::Parts},
     routing::patch,
@@ -322,7 +322,7 @@ async fn finish_annotation(
 async fn finish(
     State(state): State<AppState>,
     State(provider): State<AnnotationProvider>,
-    Extension(writer): Extension<TimeInteractionWriter>,
+    State(writer): State<TimeInteractionWriter>,
     State(JobsEnabled(jobs)): State<JobsEnabled>,
     Path((typ, id)): Path<(String, String)>,
     Timestamp(timestamp): Timestamp,
@@ -349,7 +349,7 @@ async fn finish(
 async fn finish_all(
     State(state): State<AppState>,
     State(provider): State<AnnotationProvider>,
-    Extension(writer): Extension<TimeInteractionWriter>,
+    State(writer): State<TimeInteractionWriter>,
     Path(typ): Path<String>,
     Timestamp(timestamp): Timestamp,
     user: AuthUser,

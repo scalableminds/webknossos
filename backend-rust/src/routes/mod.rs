@@ -44,7 +44,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
             body_limit: config.body_limit,
             public_url: config.public_url.clone(),
             email_verification_enabled: config.email_verification_enabled,
-            jobs: config.jobs.clone(),
             annotation_mutex_expiry: config.annotation_mutex_expiry,
             time_tracking: config.time_tracking,
             allow_delete_datasets: config.allow_delete_datasets,
@@ -61,7 +60,6 @@ struct RouteOptions {
     body_limit: usize,
     public_url: url::Url,
     email_verification_enabled: bool,
-    jobs: crate::job::routes::JobsConfig,
     annotation_mutex_expiry: Duration,
     time_tracking: crate::config::TimeTrackingConfig,
     allow_delete_datasets: bool,
@@ -78,7 +76,6 @@ impl RouteOptions {
             body_limit: 2 * 1024 * 1024,
             public_url: url::Url::parse("http://localhost:9000").expect("valid default URL"),
             email_verification_enabled: true,
-            jobs: Default::default(),
             annotation_mutex_expiry: Duration::from_secs(120),
             time_tracking: Default::default(),
             allow_delete_datasets: true,
@@ -96,7 +93,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         body_limit,
         public_url,
         email_verification_enabled,
-        jobs,
         annotation_mutex_expiry,
         time_tracking,
         allow_delete_datasets,
@@ -126,11 +122,7 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         .route("/health", get(|| async { "Ok" }))
         .merge(crate::annotation::router(annotation_mutex_expiry))
         .merge(crate::task::router())
-        .merge(crate::job::router(
-            state.jobs_enabled.0,
-            &jobs,
-            &state.auth_routes,
-        ))
+        .merge(crate::job::router())
         .merge(crate::ai_models::router())
         .merge(crate::ai_models::upload_router(
             datasets.upload_to_paths.clone(),

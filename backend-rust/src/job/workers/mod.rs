@@ -7,7 +7,7 @@
 use std::time::Duration;
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::State,
     http::Method,
     response::Response,
@@ -24,13 +24,14 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json as JsonBody, Path, Query},
-    job::routes::{JOB_COMMANDS, JOB_STATES, Job, JobsConfig},
+    job::routes::{JOB_COMMANDS, JOB_STATES, Job},
     mail::{Mail, MailSender, templates},
     slack::{self, SlackNotificationService},
     stores::client::ServiceClients,
     system::application_info::{MiscState, ok_empty},
     util::id::{ObjectId, PathObjectId},
 };
+use axum::extract::FromRef;
 
 mod dao;
 
@@ -53,9 +54,18 @@ struct WorkerRoutes {
     token_idle_timeout: Duration,
 }
 
-/// `config.job_token_expiry` is silhouette's jobExpiry; `token_idle_timeout` its
+/// `job_token_expiry` is silhouette's jobExpiry; `token_idle_timeout` its
 /// authenticatorIdleTimeout (shared with Authentication tokens).
-pub fn router(config: &JobsConfig, token_idle_timeout: Duration) -> Router<AppState> {
+impl FromRef<AppState> for WorkerRoutes {
+    fn from_ref(state: &AppState) -> Self {
+        Self {
+            job_token_expiry: state.jobs.job_token_expiry,
+            token_idle_timeout: state.auth_routes.auth_idle_timeout,
+        }
+    }
+}
+
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/jobs/request", get(request_jobs))
         .route("/jobs/{id}/status", post(update_status))
@@ -67,10 +77,6 @@ pub fn router(config: &JobsConfig, token_idle_timeout: Duration) -> Router<AppSt
             "/jobs/{id}/attachDatasetToInference",
             post(attach_dataset_to_inference),
         )
-        .layer(Extension(WorkerRoutes {
-            job_token_expiry: config.job_token_expiry,
-            token_idle_timeout,
-        }))
 }
 
 #[derive(Deserialize)]
@@ -125,7 +131,7 @@ fn commands(high: bool, worker: Option<&Worker>) -> Vec<String> {
 /// `FOR UPDATE SKIP LOCKED` plus `_worker IS NULL`, so no job goes to two workers.
 async fn request_jobs(
     State(state): State<AppState>,
-    Extension(routes): Extension<WorkerRoutes>,
+    State(routes): State<WorkerRoutes>,
     Query(query): Query<RequestQuery>,
 ) -> ApiResult<Json<Value>> {
     let mut transaction = state.pool.begin().await?;

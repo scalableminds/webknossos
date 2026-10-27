@@ -7,7 +7,7 @@
 use std::time::Duration;
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::State,
     http::{StatusCode, header},
     response::{IntoResponse, Response},
@@ -29,6 +29,7 @@ use crate::{
     system::application_info::MiscState,
     util::id::{ObjectId, PathObjectId},
 };
+use axum::extract::FromRef;
 use webknossos_common::geometry::BoundingBox;
 
 const ALREADY_RETRIED: &str = "This job has already been retried once and failed again. This is likely a persistent failure. Please contact an administrator for help.";
@@ -91,7 +92,18 @@ struct JobRoutes {
     auth: AuthRouteConfig,
 }
 
-pub fn router(enabled: bool, config: JobsConfig, auth: AuthRouteConfig) -> Router<AppState> {
+/// The configuration the job routes read, taken from the app state per request.
+impl FromRef<AppState> for JobRoutes {
+    fn from_ref(state: &AppState) -> Self {
+        Self {
+            enabled: state.jobs_enabled.0,
+            config: state.jobs.clone(),
+            auth: state.auth_routes.clone(),
+        }
+    }
+}
+
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/jobs", get(list))
         .route("/jobs/status", get(status))
@@ -100,11 +112,6 @@ pub fn router(enabled: bool, config: JobsConfig, auth: AuthRouteConfig) -> Route
         .route("/jobs/{id}/cancel", patch(cancel))
         .route("/jobs/{id}/retry", patch(retry))
         .route("/jobs/{id}/export", get(redirect_to_export))
-        .layer(Extension(JobRoutes {
-            enabled,
-            config,
-            auth,
-        }))
 }
 
 fn require_enabled(routes: &JobRoutes) -> ApiResult<()> {
@@ -352,7 +359,7 @@ struct ListQuery {
 // Query extraction precedes authentication: Play binds route parameters first.
 async fn list(
     State(state): State<AppState>,
-    Extension(routes): Extension<JobRoutes>,
+    State(routes): State<JobRoutes>,
     Query(query): Query<ListQuery>,
     user: AuthUser,
 ) -> ApiResult<Json<Vec<Value>>> {
@@ -407,7 +414,7 @@ async fn list(
 /// JobController.status: all workers (global access) and job counts by worker state.
 async fn status(
     State(state): State<AppState>,
-    Extension(routes): Extension<JobRoutes>,
+    State(routes): State<JobRoutes>,
     _user: AuthUser,
 ) -> ApiResult<Json<Value>> {
     let counts = dao::count_by_state(&state.pool).await?;
@@ -452,7 +459,7 @@ async fn status(
 
 async fn read(
     State(state): State<AppState>,
-    Extension(routes): Extension<JobRoutes>,
+    State(routes): State<JobRoutes>,
     Path(id): Path<PathObjectId>,
     user: AuthUser,
 ) -> ApiResult<Json<Value>> {
@@ -478,7 +485,7 @@ fn job_not_found(error: ApiError) -> ApiError {
 /// later sets state. Pending/started paid jobs get their reservation refunded.
 async fn cancel(
     State(state): State<AppState>,
-    Extension(routes): Extension<JobRoutes>,
+    State(routes): State<JobRoutes>,
     Path(id): Path<PathObjectId>,
     user: AuthUser,
 ) -> ApiResult<Json<Value>> {
@@ -554,7 +561,7 @@ fn refund_error(error: sqlx::Error) -> ApiError {
 /// Users may retry a failed job once; superusers always.
 async fn retry(
     State(state): State<AppState>,
-    Extension(routes): Extension<JobRoutes>,
+    State(routes): State<JobRoutes>,
     Path(id): Path<PathObjectId>,
     user: AuthUser,
 ) -> ApiResult<Json<Value>> {
@@ -612,7 +619,7 @@ async fn reserve_credits_for_retry(
 /// (found or newly created) Authentication token. No jobs-enabled check (as in Scala).
 async fn redirect_to_export(
     State(state): State<AppState>,
-    Extension(routes): Extension<JobRoutes>,
+    State(routes): State<JobRoutes>,
     Path(id): Path<PathObjectId>,
     user: AuthUser,
 ) -> ApiResult<Response> {

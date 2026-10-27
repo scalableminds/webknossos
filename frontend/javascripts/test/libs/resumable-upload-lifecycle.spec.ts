@@ -132,6 +132,19 @@ describe("Resumable chunk lifecycle", () => {
     });
   });
 
+  it("should not send a request when a progress listener pauses the upload", async () => {
+    const requests = installControllableFetch();
+    const resumable = createUpload({ testChunks: false });
+    await sleep(0);
+    resumable.addEventListener("progress", () => resumable.pause(), { once: true });
+
+    resumable.upload();
+    await sleep(0);
+
+    expect(requests.every((r) => r.signal.aborted)).toBe(true);
+    expect(resumable.isUploading()).toBe(false);
+  });
+
   it("should mark a chunk as failed instead of leaving it uploading when preparing a request throws", async () => {
     const requests = installControllableFetch();
     const resumable = new ResumableUpload({

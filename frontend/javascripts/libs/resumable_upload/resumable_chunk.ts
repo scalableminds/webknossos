@@ -263,6 +263,9 @@ export class ResumableChunk {
   private withFetchTimeout(signal: AbortSignal) {
     const controller = new AbortController();
     const abort = () => controller.abort();
+    // A synchronous listener (e.g. of the progress callback) may already have aborted the run.
+    // The abort event doesn't fire again for it.
+    if (signal.aborted) abort();
     signal.addEventListener("abort", abort, { once: true });
 
     const fetchTimeout = this.getOpt("fetchTimeout");

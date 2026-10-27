@@ -1,6 +1,6 @@
 use crate::{
     annotation::{mutex::MutexExpiry, provider::AnnotationProvider},
-    auth::{browser::BrowserAuthConfig, routes::AuthRouteConfig},
+    auth::{browser::BrowserAuthConfig, routes::AuthRouteConfig, webauthn::WebAuthnStores},
     config::TimeTrackingConfig,
     dataset::options::DatasetRouteConfig,
     job::routes::JobsConfig,
@@ -43,6 +43,7 @@ pub struct AppState {
     pub datasets: DatasetRouteConfig,
     pub allow_delete_datasets: AllowDeleteDatasets,
     pub annotation_mutex_expiry: MutexExpiry,
+    pub webauthn: WebAuthnStores,
 }
 
 /// `features.allowDeleteDatasets`.
@@ -281,6 +282,7 @@ impl AppStateBuilder {
             datasets: self.datasets,
             allow_delete_datasets: AllowDeleteDatasets(self.allow_delete_datasets),
             annotation_mutex_expiry: MutexExpiry(self.annotation_mutex_expiry),
+            webauthn: WebAuthnStores::default(),
         }
     }
 }

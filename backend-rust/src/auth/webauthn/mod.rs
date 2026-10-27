@@ -17,7 +17,7 @@ use std::{
 use webknossos_common::bytes::{array, u32_be};
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::State,
     http::{HeaderMap, HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
@@ -76,7 +76,6 @@ pub fn router() -> Router<AppState> {
         .route("/auth/webauthn/register/finalize", post(register_finalize))
         .route("/auth/webauthn/auth/start", post(auth_start))
         .route("/auth/webauthn/auth/finalize", post(auth_finalize))
-        .layer(Extension(WebAuthnStores::default()))
 }
 
 // ---------------------------------------------------------------------------
@@ -130,11 +129,11 @@ impl<T> ChallengeStore<T> {
     }
 }
 
-/// Router-local extension: one store per ceremony, as Scala injects two.
+/// One challenge store per ceremony, as Scala injects two; shared by all routes of an app.
 #[derive(Clone, Default)]
-pub(crate) struct WebAuthnStores {
-    pub registration: ChallengeStore<RegistrationState>,
-    pub assertion: ChallengeStore<AuthenticationState>,
+pub struct WebAuthnStores {
+    pub(crate) registration: ChallengeStore<RegistrationState>,
+    pub(crate) assertion: ChallengeStore<AuthenticationState>,
 }
 
 /// A fresh UUID ceremony session id (the challenge cookie value).
@@ -450,7 +449,7 @@ async fn multi_user_of(state: &AppState, user: &AuthUser) -> ApiResult<(ObjectId
 async fn register_start(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(stores): Extension<WebAuthnStores>,
+    State(stores): State<WebAuthnStores>,
     user: AuthUser,
 ) -> ApiResult<Response> {
     let rp = relying_party(&misc)?;
@@ -541,7 +540,7 @@ struct RegistrationBody {
 async fn register_finalize(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(stores): Extension<WebAuthnStores>,
+    State(stores): State<WebAuthnStores>,
     user: AuthUser,
     headers: HeaderMap,
     JsonBody(body): JsonBody<RegistrationBody>,
@@ -691,7 +690,7 @@ fn verify_assertion(
 
 async fn auth_start(
     State(misc): State<MiscState>,
-    Extension(stores): Extension<WebAuthnStores>,
+    State(stores): State<WebAuthnStores>,
 ) -> ApiResult<Response> {
     let rp = relying_party(&misc)?;
     // Discoverable credentials: the account is only known from the
@@ -732,7 +731,7 @@ struct AuthenticationBody {
 async fn auth_finalize(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(stores): Extension<WebAuthnStores>,
+    State(stores): State<WebAuthnStores>,
     State(browser): State<BrowserAuthConfig>,
     State(mailer): State<MailSender>,
     headers: HeaderMap,

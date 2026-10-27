@@ -43,6 +43,7 @@ pub(crate) async fn find_all_for_annotation(
 ) -> ApiResult<Vec<PrivateLink>> {
     let mut q = select(user);
     q.push(" AND link._annotation=").push_bind(annotation_id);
+    q.push(" ORDER BY link._id");
     Ok(q.build_query_as().fetch_all(pool).await?)
 }
 

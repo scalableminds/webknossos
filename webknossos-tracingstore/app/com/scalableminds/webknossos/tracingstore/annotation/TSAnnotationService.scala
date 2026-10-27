@@ -264,6 +264,9 @@ class TSAnnotationService @Inject() (
       _ <- Fox.fromBool(
         revertAction.sourceVersion >= annotationWithTracings.annotation.earliestAccessibleVersion
       ) ?~> f"Trying to revert to ${revertAction.sourceVersion}, but earliest accessible is ${annotationWithTracings.annotation.earliestAccessibleVersion}"
+      _ <- Fox.fromBool(
+        revertAction.sourceVersion < newVersion
+      ) ?~> Msg.Annotation.Revert.sourceVersionNotEarlier(revertAction.sourceVersion, newVersion)
       before = Instant.now
       sourceAnnotation: AnnotationWithTracings <- getWithTracings(
         annotationId,

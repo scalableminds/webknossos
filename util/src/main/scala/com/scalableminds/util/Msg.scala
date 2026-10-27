@@ -122,6 +122,8 @@ object Msg {
       val editableMappingDataFailed: String = "Could not revert editable mapping data."
       val getSourceFailed: String = "Could not get source version for annotation revert."
       val revertDistributedElementsFailed: String = "Could not revert distributed annotation elements."
+      def sourceVersionNotEarlier(sourceVersion: Long, newVersion: Long): String =
+        s"Trying to revert to v$sourceVersion in v$newVersion, but can only revert to earlier versions."
       val volumeDataFailed: String = "Could not revert volume data."
     }
     object Reopen {

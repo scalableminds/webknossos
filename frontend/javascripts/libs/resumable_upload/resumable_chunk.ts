@@ -21,8 +21,11 @@ export class ResumableChunk {
   startByte: number;
   endByte: number;
 
-  // Created by send() and aborted by abort(). Every probe, upload and retry wait of one
-  // run observes its signal, so an aborted run can neither restart nor change the chunk's state.
+  // A run is one attempt to get the chunk to the server, started by send(): the optional probe,
+  // all upload attempts and the waits between retries. It ends when the chunk succeeds or fails,
+  // or when abort() is called. Each run creates its own controller and only ever observes that
+  // controller's signal, so an aborted run can neither restart nor change the chunk's state,
+  // even after a new run has started. runController belongs to the current run.
   private runController: AbortController | null = null;
   private _status: "pending" | "uploading" | "success" | "error" = "pending";
   private _message: string = "";

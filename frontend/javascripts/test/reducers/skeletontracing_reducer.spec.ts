@@ -27,6 +27,7 @@ import {
   setActiveNodeAction,
   setActiveTreeAction,
   setNodeRadiusAction,
+  setSkeletonTracingAction,
   setTreeColorIndexAction,
   setTreeGroupAction,
   setTreeGroupsAction,
@@ -680,6 +681,44 @@ describe("SkeletonTracing", () => {
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.activeNodeId).toBe(1);
     expect(newState.localSkeletonState.activeTreeId).toBe(1);
+  });
+
+  it("should sync the active tree with the active node when restoring a skeleton (e.g., undo)", () => {
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+
+    // Tree 1 with node 1 (active), tree 3 with node 2 (tree 2 of the fixture is empty).
+    let newState = SkeletonTracingReducer(initialState, createNode);
+    newState = SkeletonTracingReducer(newState, createTreeAction());
+    newState = SkeletonTracingReducer(newState, createNode);
+    newState = SkeletonTracingReducer(newState, setActiveNodeAction(1));
+    const snapshot = enforceSkeletonTracing(newState.annotation);
+
+    // Activate tree 3 and restore the snapshot in which node 1 (of tree 1) is active.
+    newState = SkeletonTracingReducer(newState, setActiveTreeAction(3));
+    expect(newState.localSkeletonState.activeTreeId).toBe(3);
+    newState = SkeletonTracingReducer(newState, setSkeletonTracingAction(snapshot));
+    expect(enforceSkeletonTracing(newState.annotation).activeNodeId).toBe(1);
+    expect(newState.localSkeletonState.activeTreeId).toBe(1);
+
+    // Creating a node must not crash and should add it to tree 1.
+    newState = SkeletonTracingReducer(newState, createNode);
+    const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
+    expect(newSkeletonTracing.trees.getOrThrow(1).nodes.size()).toBe(2);
+    expect(newSkeletonTracing.trees.getOrThrow(3).nodes.size()).toBe(1);
+  });
+
+  it("should reset the active tree when restoring a skeleton which does not contain it", () => {
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    let newState = SkeletonTracingReducer(initialState, createNode);
+    const snapshot = enforceSkeletonTracing(
+      SkeletonTracingReducer(newState, setActiveNodeAction(null)).annotation,
+    );
+    newState = SkeletonTracingReducer(newState, createTreeAction());
+    expect(newState.localSkeletonState.activeTreeId).toBe(3);
+
+    newState = SkeletonTracingReducer(newState, setSkeletonTracingAction(snapshot));
+    expect(enforceSkeletonTracing(newState.annotation).activeNodeId).toBeNull();
+    expect(newState.localSkeletonState.activeTreeId).toBeNull();
   });
 
   it("should set a new node radius", () => {

@@ -89,7 +89,9 @@ export function getActiveNodeFromTree(skeletonTracing: SkeletonTracing, tree: Tr
   const { activeNodeId } = skeletonTracing;
 
   if (activeNodeId != null) {
-    return tree.nodes.getOrThrow(activeNodeId);
+    // The active node might not be part of the given tree (e.g., if the active tree and the
+    // active node got out of sync), so do not throw here.
+    return tree.nodes.getNullable(activeNodeId) ?? null;
   }
 
   return null;
@@ -228,7 +230,7 @@ export function getTreeAndNode(
       const { activeNodeId } = skeletonTracing;
 
       if (activeNodeId != null) {
-        node = tree.nodes.getOrThrow(activeNodeId);
+        node = tree.nodes.getNullable(activeNodeId);
       }
     }
 

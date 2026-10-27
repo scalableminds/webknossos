@@ -629,11 +629,34 @@ function SkeletonTracingReducer(
     }
 
     case "SET_SKELETON_TRACING": {
+      // The active tree lives in localSkeletonState and is not part of the tracing (e.g., when
+      // restoring an undo/redo snapshot). Keep it consistent with the restored activeNodeId.
+      const { tracing } = action;
+      const { activeTreeId, activeGroupId } = state.localSkeletonState;
+      const treeOfActiveNode =
+        tracing.activeNodeId != null
+          ? findTreeByNodeId(tracing.trees, tracing.activeNodeId)
+          : undefined;
+      let newActiveTreeId: number | null;
+      if (treeOfActiveNode != null) {
+        newActiveTreeId = treeOfActiveNode.treeId;
+      } else if (activeTreeId != null && tracing.trees.has(activeTreeId)) {
+        newActiveTreeId = activeTreeId;
+      } else {
+        newActiveTreeId = null;
+      }
       return update(state, {
         annotation: {
           skeleton: {
-            $set: action.tracing,
+            $set: {
+              ...tracing,
+              activeNodeId: treeOfActiveNode != null ? tracing.activeNodeId : null,
+            },
           },
+        },
+        localSkeletonState: {
+          activeTreeId: { $set: newActiveTreeId },
+          activeGroupId: { $set: newActiveTreeId != null ? null : activeGroupId },
         },
       });
     }

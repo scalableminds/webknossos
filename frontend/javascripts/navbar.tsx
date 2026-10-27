@@ -882,6 +882,7 @@ function Navbar() {
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
   const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
+  const hasSaveError = useWkSelector((state) => state.save.hasSaveError);
   // Pushes the navbar items below the maintenance/upgrade banner when one is shown.
   const bannerOffset = navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0;
   const historyLocation = useLocation();
@@ -1005,6 +1006,7 @@ function Navbar() {
     <Header
       className={classnames("navbar-header", {
         "collapsed-nav-header": collapseAllNavItems,
+        "save-error": hasSaveError,
       })}
     >
       <GlobalProgressBar />

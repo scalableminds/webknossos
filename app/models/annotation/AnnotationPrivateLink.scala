@@ -86,7 +86,7 @@ class AnnotationPrivateLinkDAO @Inject() (sqlClient: SqlClient)(implicit ec: Exe
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        q"""SELECT $columns FROM $existingCollectionName WHERE _annotation = $annotationId AND $accessQuery"""
+        q"""SELECT $columns FROM $existingCollectionName WHERE _annotation = $annotationId AND $accessQuery ORDER BY _id"""
           .as[AnnotationPrivatelinksRow]
       )
       parsed <- parseAll(r)

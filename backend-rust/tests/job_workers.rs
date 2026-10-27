@@ -17,7 +17,7 @@ use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
     mail::{MailSender, RecordingMailer},
-    router_with_mailer,
+    router,
     system::application_info::{MiscConfig, default_features},
 };
 
@@ -35,7 +35,7 @@ fn error(message: &str) -> Value {
 fn app(db: &TestDb, voxelytics: bool, mailer: &RecordingMailer) -> Router {
     let mut features = default_features();
     features.insert("voxelyticsEnabled".into(), json!(voxelytics));
-    router_with_mailer(
+    router(
         AppState::builder(db.pool.clone())
             .jobs_enabled(true)
             .misc(MiscConfig {
@@ -44,8 +44,8 @@ fn app(db: &TestDb, voxelytics: bool, mailer: &RecordingMailer) -> Router {
                 public_uri: "http://wk.example".into(),
                 ..MiscConfig::default()
             })
+            .mailer(MailSender::new(mailer.clone()))
             .build(),
-        MailSender::new(mailer.clone()),
     )
 }
 

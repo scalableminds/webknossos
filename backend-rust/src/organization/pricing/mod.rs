@@ -4,7 +4,7 @@
 mod dao;
 
 use axum::{
-    Extension, Router,
+    Router,
     extract::State,
     response::Response,
     routing::{get, post},
@@ -252,7 +252,7 @@ fn upgrade_request_mail(
 async fn upgrade_request(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     user: AuthUser,
     Json(request): Json<UpgradeRequest>,
 ) -> ApiResult<Response> {
@@ -510,7 +510,7 @@ fn pricing_plan_upgraded_mail(
 async fn update_plan(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     user: AuthUser,
     Json(body): Json<Value>,
 ) -> ApiResult<Response> {

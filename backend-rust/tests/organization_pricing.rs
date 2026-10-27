@@ -9,7 +9,7 @@ use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
     mail::{MailSender, RecordingMailer},
-    router_with_mailer,
+    router,
     system::application_info::MiscConfig,
 };
 
@@ -58,12 +58,12 @@ async fn send(
 }
 
 fn app(db: &TestDb, misc: MiscConfig, mailer: &RecordingMailer) -> axum::Router {
-    router_with_mailer(
+    router(
         AppState::builder(db.pool.clone())
             .jobs_enabled(misc.jobs_enabled)
             .misc(misc)
+            .mailer(MailSender::new(mailer.clone()))
             .build(),
-        MailSender::new(mailer.clone()),
     )
 }
 

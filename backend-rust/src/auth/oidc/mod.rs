@@ -589,7 +589,7 @@ async fn open_id_callback(
     State(state): State<AppState>,
     Extension(oidc): Extension<Arc<Oidc>>,
     State(browser): State<BrowserAuthConfig>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     State(misc): State<MiscState>,
     headers: HeaderMap,
     RawQuery(query): RawQuery,

@@ -6,9 +6,7 @@ use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 use webknossos_backend::{
-    AppState,
-    mail::MailSender,
-    router_with_mailer,
+    AppState, router,
     system::application_info::{LocalStoreConfig, MiscConfig},
 };
 
@@ -35,12 +33,11 @@ async fn send(app: &axum::Router, method: &str, uri: &str, token: Option<&str>) 
 }
 
 async fn trigger(db: &TestDb, misc: MiscConfig) -> (u16, Value) {
-    let app = router_with_mailer(
+    let app = router(
         AppState::builder(db.pool.clone())
             .jobs_enabled(misc.jobs_enabled)
             .misc(misc)
             .build(),
-        MailSender::default(),
     );
     send(
         &app,
@@ -292,12 +289,11 @@ async fn sample_organization_is_inserted_once() {
     );
 
     // The configured sample token authenticates the default user.
-    let app = router_with_mailer(
+    let app = router(
         AppState::builder(db.pool.clone())
             .jobs_enabled(misc.jobs_enabled)
             .misc(misc.clone())
             .build(),
-        MailSender::default(),
     );
     let (status, datasets) =
         send(&app, "GET", "/api/datasets", Some("secretSampleUserToken")).await;

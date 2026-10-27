@@ -286,7 +286,7 @@ impl JobState {
 async fn update_status(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     State(clients): State<ServiceClients>,
     slack: SlackNotificationService,
     Path(id): Path<PathObjectId>,

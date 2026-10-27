@@ -21,7 +21,7 @@ use std::{
 };
 
 use axum::{
-    Extension, Router,
+    Router,
     body::Bytes,
     extract::{FromRequest, Request, State},
     http::{
@@ -968,7 +968,7 @@ pub fn router() -> Router<AppState> {
 async fn login(
     State(state): State<AppState>,
     State(config): State<BrowserAuthConfig>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     headers: HeaderMap,
     FormBody(data): FormBody,
 ) -> ApiResult<Response> {

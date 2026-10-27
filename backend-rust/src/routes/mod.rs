@@ -22,17 +22,6 @@ pub fn router(state: AppState) -> Router {
     build_router(state, RouteOptions::local_defaults())
 }
 
-/// Local defaults plus an explicit mailer (used by the misc controller tests).
-pub fn router_with_mailer(state: AppState, mailer: crate::mail::MailSender) -> Router {
-    build_router(
-        state,
-        RouteOptions {
-            mailer,
-            ..RouteOptions::local_defaults()
-        },
-    )
-}
-
 /// Local defaults plus explicit voxelytics settings (used by the voxelytics tests).
 pub fn router_with_voxelytics(
     state: AppState,
@@ -59,7 +48,6 @@ pub fn router_with_config(state: AppState, config: &crate::config::Config) -> Ro
             annotation_mutex_expiry: config.annotation_mutex_expiry,
             time_tracking: config.time_tracking,
             auth_routes: config.auth_routes.clone(),
-            mailer: crate::mail::MailSender::from_config(&config.mail),
             allow_delete_datasets: config.allow_delete_datasets,
             datasets: config.datasets.clone(),
             voxelytics: config.voxelytics.clone(),
@@ -78,7 +66,6 @@ struct RouteOptions {
     annotation_mutex_expiry: Duration,
     time_tracking: crate::config::TimeTrackingConfig,
     auth_routes: crate::auth::routes::AuthRouteConfig,
-    mailer: crate::mail::MailSender,
     allow_delete_datasets: bool,
     datasets: crate::dataset::options::DatasetRouteConfig,
     voxelytics: crate::voxelytics::VoxelyticsConfig,
@@ -99,7 +86,6 @@ impl RouteOptions {
             allow_delete_datasets: true,
             datasets: Default::default(),
             auth_routes: crate::auth::routes::AuthRouteConfig::default(),
-            mailer: crate::mail::MailSender::default(),
             voxelytics: Default::default(),
             oidc: Default::default(),
             slack: Default::default(),
@@ -117,7 +103,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         annotation_mutex_expiry,
         time_tracking,
         auth_routes,
-        mailer,
         allow_delete_datasets,
         datasets,
         voxelytics,
@@ -129,12 +114,12 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         Default::default(),
         time_tracking.interaction,
         crate::time::interaction_writer::OverLimitNotifier::new(
-            mailer.clone(),
+            state.mailer.clone(),
             public_url.as_str(),
         ),
     );
     let notification_emails = crate::users::notification_emails::NotificationEmailService::new(
-        mailer.clone(),
+        state.mailer.clone(),
         &state.browser_auth.public_uri,
     );
     let datastore_tokens = crate::dataset::explore::DatastoreTokenConfig {
@@ -210,7 +195,6 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
             state.clone(),
             crate::auth::browser::cookie_middleware,
         ))
-        .layer(axum::Extension(mailer))
         .layer(axum::Extension(notification_emails))
         .layer(axum::Extension(time_interaction_writer))
         .layer(axum::Extension(time_tracking))

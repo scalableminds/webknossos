@@ -226,7 +226,7 @@ async fn update(
     requester: AuthUser,
     Path(id): Path<PathObjectId>,
     Extension(verification): Extension<EmailVerification>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     Extension(notification_emails): Extension<NotificationEmailService>,
     State(auth_config): State<BrowserAuthConfig>,
     RequestJson(body): RequestJson<UserUpdate>,

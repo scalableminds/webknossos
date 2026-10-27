@@ -7,9 +7,7 @@ use common::{TestDb, object_id};
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
-use webknossos_backend::{
-    AppState, mail::MailSender, router, router_with_mailer, system::application_info::MiscConfig,
-};
+use webknossos_backend::{AppState, router, system::application_info::MiscConfig};
 
 const NOT_FOUND: &str = "Could not find or access the requested resource.";
 const NOT_ENABLED: &str = "Long-running jobs are not enabled for this WEBKNOSSOS instance.";
@@ -58,7 +56,7 @@ fn error(message: &str) -> Value {
 }
 
 fn enabled_app(db: &TestDb) -> axum::Router {
-    router_with_mailer(
+    router(
         AppState::builder(db.pool.clone())
             .jobs_enabled(true)
             .misc(MiscConfig {
@@ -66,7 +64,6 @@ fn enabled_app(db: &TestDb) -> axum::Router {
                 ..MiscConfig::default()
             })
             .build(),
-        MailSender::default(),
     )
 }
 

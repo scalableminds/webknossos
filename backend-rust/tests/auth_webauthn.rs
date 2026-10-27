@@ -2,7 +2,7 @@ use crate::browser_auth_support;
 use crate::common;
 
 use axum::{
-    Extension, Router,
+    Router,
     body::Body,
     http::{Method, Request, StatusCode, header},
 };
@@ -647,9 +647,9 @@ fn auth_app(database: &TestDb, public_uri: &str, enabled: bool) -> Router {
     app_with_state(
         state(database, public_uri, enabled)
             .browser_auth(browser_auth_support::config())
+            .mailer(MailSender::new(RecordingMailer::default()))
             .build(),
     )
-    .layer(Extension(MailSender::new(RecordingMailer::default())))
 }
 
 async fn post_assertion(app: &Router, path: &str, session: Option<&str>, body: Value) -> Reply {

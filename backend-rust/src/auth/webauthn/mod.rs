@@ -734,7 +734,7 @@ async fn auth_finalize(
     State(misc): State<MiscState>,
     Extension(stores): Extension<WebAuthnStores>,
     State(browser): State<BrowserAuthConfig>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     headers: HeaderMap,
     JsonBody(body): JsonBody<AuthenticationBody>,
 ) -> ApiResult<Response> {

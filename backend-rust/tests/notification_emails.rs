@@ -16,13 +16,14 @@ use tower::ServiceExt;
 use webknossos_backend::{
     AppState,
     mail::{Mail, MailSender, RecordingMailer},
-    router_with_mailer,
+    router,
 };
 
 fn app(db: &TestDb, mailer: &RecordingMailer) -> Router {
-    router_with_mailer(
-        AppState::new(db.pool.clone()),
-        MailSender::new(mailer.clone()),
+    router(
+        AppState::builder(db.pool.clone())
+            .mailer(MailSender::new(mailer.clone()))
+            .build(),
     )
 }
 

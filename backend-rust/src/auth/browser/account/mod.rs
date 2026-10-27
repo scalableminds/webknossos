@@ -1,7 +1,7 @@
 //! Password reset/change, identity switching and email verification
 //! (AuthenticationController, EmailVerificationController).
 use axum::{
-    Extension, Router,
+    Router,
     extract::{FromRequestParts, State},
     http::{HeaderMap, StatusCode, header, request::Parts},
     response::{IntoResponse, Response},
@@ -93,7 +93,7 @@ async fn identity_for_email(
 async fn start_reset_password(
     State(state): State<AppState>,
     State(config): State<BrowserAuthConfig>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     FormBody(data): FormBody,
 ) -> ApiResult<StatusCode> {
     let mut form = Form::new(&data);
@@ -149,7 +149,7 @@ async fn reset_password(
 async fn change_password(
     State(state): State<AppState>,
     State(config): State<BrowserAuthConfig>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     secured: Secured,
     FormBody(data): FormBody,
 ) -> ApiResult<StatusCode> {
@@ -392,7 +392,7 @@ async fn verify_email(
 async fn request_verification_mail(
     State(state): State<AppState>,
     State(config): State<BrowserAuthConfig>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     user: AuthUser,
 ) -> ApiResult<StatusCode> {
     let mut tx = state.pool.begin().await?;

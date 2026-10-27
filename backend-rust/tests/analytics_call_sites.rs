@@ -13,8 +13,7 @@ use serde_json::{Value, json};
 use webknossos_backend::{
     AppState,
     background::scheduler::{JobOutcome, advisory_lock_key},
-    mail::MailSender,
-    router_with_mailer,
+    router,
     system::analytics::{HEARTBEAT_JOB_NAME, run_heartbeat},
     system::application_info::{MiscConfig, MiscState},
 };
@@ -31,11 +30,10 @@ fn misc_config() -> MiscConfig {
 }
 
 fn app(db: &TestDb) -> Router {
-    router_with_mailer(
+    router(
         AppState::builder(db.pool.clone())
             .misc(misc_config())
             .build(),
-        MailSender::default(),
     )
 }
 

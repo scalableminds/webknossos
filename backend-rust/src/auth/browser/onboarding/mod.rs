@@ -7,7 +7,7 @@
 //! after commit. Mailchimp side effects are not ported; suspicious
 //! registration names are reported to Slack.
 use axum::{
-    Extension, Router,
+    Router,
     extract::State,
     http::{HeaderMap, HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
@@ -561,7 +561,7 @@ fn bind_sign_up(data: &std::collections::HashMap<String, String>) -> ApiResult<S
 async fn register(
     State(state): State<AppState>,
     State(config): State<BrowserAuthConfig>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     State(misc): State<MiscState>,
     slack: SlackNotificationService,
     FormBody(data): FormBody,
@@ -641,7 +641,7 @@ async fn register(
 async fn create_organization_with_admin(
     State(state): State<AppState>,
     State(config): State<BrowserAuthConfig>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     State(misc): State<MiscState>,
     State(clients): State<ServiceClients>,
     slack: SlackNotificationService,
@@ -814,7 +814,7 @@ struct CreateUserInOrganization {
 async fn create_user_in_organization(
     State(state): State<AppState>,
     State(config): State<BrowserAuthConfig>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     State(misc): State<MiscState>,
     requester: AuthUser,
     Path(organization_id): Path<String>,
@@ -875,7 +875,7 @@ async fn lock_multi_user(
 async fn join_organization(
     State(state): State<AppState>,
     State(config): State<BrowserAuthConfig>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     State(misc): State<MiscState>,
     user: AuthUser,
     Path(invite_token): Path<String>,
@@ -957,7 +957,7 @@ struct InviteParameters {
 async fn send_invites(
     State(state): State<AppState>,
     State(config): State<BrowserAuthConfig>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     State(misc): State<MiscState>,
     user: AuthUser,
     Json(body): Json<InviteParameters>,

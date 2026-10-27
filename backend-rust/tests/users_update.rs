@@ -23,7 +23,6 @@ fn app(database: &TestDb, mailer: &RecordingMailer, wkorg: bool) -> Router {
         ..BrowserAuthConfig::default()
     };
     users::router(true)
-        .layer(Extension(MailSender::new(mailer.clone())))
         // Notification emails are covered by tests/notification_emails.rs.
         .layer(Extension(NotificationEmailService::new(
             MailSender::default(),
@@ -32,6 +31,7 @@ fn app(database: &TestDb, mailer: &RecordingMailer, wkorg: bool) -> Router {
         .with_state(
             AppState::builder(database.pool.clone())
                 .browser_auth(config)
+                .mailer(MailSender::new(mailer.clone()))
                 .build(),
         )
 }

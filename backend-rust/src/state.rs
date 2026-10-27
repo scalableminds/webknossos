@@ -1,6 +1,7 @@
 use crate::{
     annotation::provider::AnnotationProvider,
     auth::browser::BrowserAuthConfig,
+    mail::MailSender,
     stores::{
         client::{ServiceClientConfig, ServiceClients},
         tracing_client::TracingStoreClient,
@@ -20,6 +21,7 @@ pub struct AppState {
     pub tracing_store: TracingStoreClient,
     pub annotation_provider: AnnotationProvider,
     pub browser_auth: BrowserAuthConfig,
+    pub mailer: MailSender,
 }
 
 /// `features.jobsEnabled`.
@@ -36,6 +38,7 @@ pub struct AppStateBuilder {
     tracing_store: Option<TracingStoreClient>,
     annotation_provider: Option<AnnotationProvider>,
     browser_auth: BrowserAuthConfig,
+    mailer: MailSender,
 }
 
 impl AppState {
@@ -55,6 +58,7 @@ impl AppState {
             tracing_store: None,
             annotation_provider: None,
             browser_auth: BrowserAuthConfig::default(),
+            mailer: MailSender::default(),
         }
     }
 
@@ -64,6 +68,7 @@ impl AppState {
             .misc(config.misc.clone())
             .service_client(config.service_client.clone())
             .browser_auth(config.browser_auth.clone())
+            .mailer(MailSender::from_config(&config.mail))
             .build()
     }
 }
@@ -92,6 +97,11 @@ impl AppStateBuilder {
 
     pub fn browser_auth(mut self, config: BrowserAuthConfig) -> Self {
         self.browser_auth = config;
+        self
+    }
+
+    pub fn mailer(mut self, mailer: MailSender) -> Self {
+        self.mailer = mailer;
         self
     }
 
@@ -127,6 +137,7 @@ impl AppStateBuilder {
             tracing_store,
             annotation_provider,
             browser_auth: self.browser_auth,
+            mailer: self.mailer,
         }
     }
 }

@@ -12,7 +12,7 @@ use std::{
 };
 
 use axum::{
-    Extension, Router,
+    Router,
     extract::State,
     http::{HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
@@ -523,7 +523,7 @@ struct HelpEmailParameters {
 async fn help_email(
     State(state): State<AppState>,
     State(misc): State<MiscState>,
-    Extension(mailer): Extension<MailSender>,
+    State(mailer): State<MailSender>,
     user: AuthUser,
     Json(body): Json<HelpEmailParameters>,
 ) -> ApiResult<Response> {

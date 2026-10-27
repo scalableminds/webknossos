@@ -915,57 +915,60 @@ impl UploadService {
     /// Redis metadata in any domain are deleted.
     pub async fn clean_up_orphan_uploads(&self) -> DsResult<()> {
         let bases = self.base_dirs.clone();
-        let orga_dirs = tokio::task::spawn_blocking(move || -> Vec<PathBuf> {
-            let mut dirs: Vec<PathBuf> = Vec::new();
-            for (base, organization) in bases.local_dirs(None, false) {
-                if organization.is_some() {
-                    dirs.push(base);
-                } else if let Ok(entries) = std::fs::read_dir(&base) {
-                    dirs.extend(
+        let upload_dirs = tokio::task::spawn_blocking(move || {
+            let subdirectories = |dir: &Path| -> Vec<PathBuf> {
+                std::fs::read_dir(dir)
+                    .map(|entries| {
                         entries
                             .filter_map(Result::ok)
                             .map(|e| e.path())
-                            .filter(|p| p.is_dir()),
-                    );
+                            .filter(|p| p.is_dir())
+                            .collect()
+                    })
+                    .unwrap_or_default()
+            };
+            let mut orga_dirs: Vec<PathBuf> = Vec::new();
+            for (base, organization) in bases.local_dirs(None, false) {
+                if organization.is_some() {
+                    orga_dirs.push(base);
+                } else {
+                    orga_dirs.extend(subdirectories(&base));
                 }
             }
-            dirs
+            let mut upload_dirs: Vec<(UploadDomain, PathBuf)> = Vec::new();
+            for orga_dir in orga_dirs {
+                for domain in UploadDomain::ALL {
+                    let uploading = orga_dir.join(UPLOADING_DIR).join(domain.as_str());
+                    upload_dirs.extend(subdirectories(&uploading).into_iter().map(|d| (domain, d)));
+                }
+            }
+            upload_dirs
         })
         .await
         .map_err(DsError::from_exception)?;
-        for orga_dir in orga_dirs {
-            for domain in UploadDomain::ALL {
-                let uploading = orga_dir.join(UPLOADING_DIR).join(domain.as_str());
-                let Ok(entries) = std::fs::read_dir(&uploading) else {
-                    continue;
-                };
-                for dir in entries
-                    .filter_map(Result::ok)
-                    .map(|e| e.path())
-                    .filter(|p| p.is_dir())
-                {
-                    let upload_id = dir
-                        .file_name()
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .into_owned();
-                    let mut known = false;
-                    for any in UploadDomain::ALL {
-                        known |= self.is_known_upload(&upload_id, any).await?;
-                    }
-                    if !known {
-                        match delete_directory_recursively(&dir) {
-                            Ok(()) => tracing::info!(
-                                "Deleted orphan {domain} upload at {}",
-                                dir.display()
-                            ),
-                            Err(_) => tracing::warn!(
-                                "Failed to delete orphan {domain} upload at {}",
-                                dir.display()
-                            ),
-                        }
-                    }
-                }
+        for (domain, dir) in upload_dirs {
+            let upload_id = dir
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned();
+            let mut known = false;
+            for any in UploadDomain::ALL {
+                known |= self.is_known_upload(&upload_id, any).await?;
+            }
+            if known {
+                continue;
+            }
+            let path = dir.clone();
+            let deleted = tokio::task::spawn_blocking(move || delete_directory_recursively(&path))
+                .await
+                .map_err(DsError::from_exception)?;
+            match deleted {
+                Ok(()) => tracing::info!("Deleted orphan {domain} upload at {}", dir.display()),
+                Err(_) => tracing::warn!(
+                    "Failed to delete orphan {domain} upload at {}",
+                    dir.display()
+                ),
             }
         }
         Ok(())

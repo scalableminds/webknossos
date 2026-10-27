@@ -296,15 +296,15 @@ async fn open_dataset_properties(
         Some(uploader) => Some(dao::find_multi_user_id(pool, uploader).await?),
         None => None,
     };
-    let Value::Object(properties) = json!({
-        "dataset_id": dataset_id,
-        "dataset_name": name,
-        "dataset_organization_id": organization,
-        "dataset_uploader_multiuser_id": uploader_multi_user_id,
-    }) else {
-        unreachable!("json! object literal");
-    };
-    Ok(properties)
+    Ok(Map::from_iter([
+        ("dataset_id".to_owned(), json!(dataset_id)),
+        ("dataset_name".to_owned(), json!(name)),
+        ("dataset_organization_id".to_owned(), json!(organization)),
+        (
+            "dataset_uploader_multiuser_id".to_owned(),
+            json!(uploader_multi_user_id),
+        ),
+    ]))
 }
 
 /// `OpenDatasetEvent(user, dataset)`.

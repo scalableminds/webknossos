@@ -21,8 +21,10 @@ import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { applyBucketWriteToData, type BucketWrite } from "../core/bucket_write_map";
 import {
+  type BoundingBox,
   type BucketAddress,
   type Mag,
+  type MagIndex,
   MagList,
   type SegmentBucketData,
   type SegmentId,
@@ -141,6 +143,18 @@ export class WkLoadingCubeAdapter extends WkDataCubeAdapter implements LoadingVo
     if (bucket.type === "null") return null;
     return asSegmentData(await bucket.getDataForMutation());
   }
+}
+
+/**
+ * The cube's bounding box (e.g., the task bounding box) in source-mag voxels,
+ * for EditContext.editableBoundingBox. The cube drops writes to buckets outside
+ * of it, but not to the outside part of a partially contained bucket. Clipping
+ * in the rasterizer covers both, and keeps the diff free of discarded writes.
+ * Rounded like the bucket containment in data_cube.ts.
+ */
+export function getEditableBoundingBoxInMag(cube: DataCube, magIndex: MagIndex): BoundingBox {
+  const { min, max } = cube.boundingBox.fromMag1ToMag(cube.magInfo.getMagByIndexOrThrow(magIndex));
+  return { min, max };
 }
 
 /**

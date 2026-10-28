@@ -13,7 +13,11 @@ import type { MaskShape } from "../core/volume_edit_intents";
 import { VolumeTransaction } from "../core/volume_transaction";
 import { rasterize } from "../core/voxel_rasterizer";
 import type { DriverOptions, DriverResult } from "./tool_driver_types";
-import { magListForCube, WkDataCubeAdapter } from "./wk_data_cube_adapter";
+import {
+  getEditableBoundingBoxInMag,
+  magListForCube,
+  WkDataCubeAdapter,
+} from "./wk_data_cube_adapter";
 
 export interface MaskDriverOptions extends DriverOptions {
   overwriteMode: OverwriteMode;
@@ -33,7 +37,7 @@ export function runMaskEdit(
     activeSegmentId: options.segmentId,
     overwriteMode: options.overwriteMode,
     overwritableValue: options.overwritableValue,
-    editableBoundingBox: null,
+    editableBoundingBox: getEditableBoundingBoxInMag(options.cube, options.magIndex),
     additionalCoordinates: options.additionalCoordinates,
   };
   const transaction = new VolumeTransaction(

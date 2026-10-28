@@ -1,4 +1,5 @@
 import Icon, {
+  ApartmentOutlined,
   ArrowLeftOutlined,
   ArrowRightOutlined,
   ArrowsAltOutlined,
@@ -46,6 +47,7 @@ import {
 import { handleDeleteTreeByUser } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
 import ButtonComponent from "viewer/view/components/button_component";
+import { LayoutEvents, layoutEmitter } from "viewer/view/layouting/layout_persistence";
 import {
   additionallyExpandGroup,
   createGroupToParentMap,
@@ -255,6 +257,14 @@ export function SkeletonToolbar({ hierarchy, selection, groupOperations, skeleto
         title: "Measure Length of All Skeletons",
         icon: <ArrowsAltOutlined />,
         label: "Measure Length of All Skeletons",
+      },
+      { type: "divider" },
+      {
+        key: "showAbstractTree",
+        onClick: () => layoutEmitter.emit(LayoutEvents.showAbstractTreeTab),
+        title: "Show an abstract version of the active tree in a separate tab",
+        icon: <ApartmentOutlined />,
+        label: "Show Abstract Tree",
       },
     ],
   };

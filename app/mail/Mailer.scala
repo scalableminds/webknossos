@@ -38,7 +38,8 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
         new Authenticator {
           override def getPasswordAuthentication: PasswordAuthentication =
             new PasswordAuthentication(conf.smtpUser, conf.smtpPass)
-        } else null
+        }
+      else null
     Session.getInstance(props, authenticator)
   }
 
@@ -74,9 +75,9 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
     }
 
   private def parseAddress(emailAddress: String): Option[InternetAddress] =
-    try {
+    try
       Some(new InternetAddress(emailAddress))
-    } catch {
+    catch {
       case e: Exception =>
         logger.warn(s"Failed to set email address: $e")
         None

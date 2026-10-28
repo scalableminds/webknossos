@@ -318,7 +318,7 @@ impl Config {
             )?,
             allow_delete_datasets: env.bool_or("WK_ALLOW_DELETE_DATASETS", true)?,
             email_verification_enabled: env.bool_or("WK_EMAIL_VERIFICATION_ENABLED", true)?,
-            jobs_enabled: env.bool_or("WK_JOBS_ENABLED", false)?,
+            jobs_enabled: env.bool_or("WK_JOBS_ENABLED", true)?,
             jobs: crate::job::routes::JobsConfig {
                 worker_liveness_timeout: env
                     .seconds("WK_WORKER_LIVENESS_TIMEOUT_SECONDS", false)?

@@ -29,7 +29,6 @@ The Rust application backend and datastore run as separate processes next to the
 1. **Application backend** (from `backend-rust/`, serves on `127.0.0.1:9001`):
    ```sh
    DATABASE_URL='postgres://postgres:postgresD@localhost:5432/webknossos' \
-   WK_JOBS_ENABLED=true \
    WK_COOKIE_SIGNER_SECRET=something-secure \
    LOG_FORMAT=pretty \
    cargo run --locked

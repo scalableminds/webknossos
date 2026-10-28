@@ -7,9 +7,15 @@ import {
 } from "test/helpers/apiHelpers";
 import type { AnnotationCollaborationMode } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import { FillModeEnum, OrthoViews, type Vector3 } from "viewer/constants";
+import {
+  ContourModeEnum,
+  FillModeEnum,
+  OrthoViews,
+  OverwriteModeEnum,
+  type Vector3,
+} from "viewer/constants";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { AnnotationTool, VolumeTools } from "viewer/model/accessors/tool_accessor";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { dispatchUndoAsync } from "viewer/model/actions/save_actions";
@@ -21,6 +27,7 @@ import {
   finishEditingAction,
   resetContourAction,
   setActiveCellAction,
+  setContourTracingModeAction,
   startEditingAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
@@ -70,6 +77,22 @@ function brushAt(brushPosition: Vector3) {
   Store.dispatch(startEditingAction(brushPosition, OrthoViews.PLANE_XY));
   Store.dispatch(addToContourListAction(brushPosition));
   // As handleEndForDrawOrErase does.
+  Store.dispatch(finishEditingAction());
+  Store.dispatch(resetContourAction());
+}
+
+// Traces the outline of a square around `center`, as the trace tool does on mouse moves.
+function traceSquareAround(center: Vector3, halfWidth: number) {
+  const [x, y, z] = center;
+  const corners: Vector3[] = [
+    [x - halfWidth, y - halfWidth, z],
+    [x + halfWidth, y - halfWidth, z],
+    [x + halfWidth, y + halfWidth, z],
+    [x - halfWidth, y + halfWidth, z],
+    [x - halfWidth, y - halfWidth, z],
+  ];
+  Store.dispatch(startEditingAction(corners[0], OrthoViews.PLANE_XY));
+  for (const corner of corners.slice(1)) Store.dispatch(addToContourListAction(corner));
   Store.dispatch(finishEditingAction());
   Store.dispatch(resetContourAction());
 }
@@ -190,32 +213,53 @@ describe("Volume save mode", () => {
     expect(names).not.toContain("updateBucket");
   });
 
-  it<WebknossosTestContext>("only allows volume tools that save partial updates in live collaboration", async (context) => {
+  it<WebknossosTestContext>("allows the volume tools in live collaboration", async (context) => {
     await setup(context, "Concurrent");
     const disabledInfo = getDisabledInfoForTools(Store.getState());
     const isDisabledForLiveCollaboration = (tool: AnnotationTool) =>
       disabledInfo[tool.id].explanation.includes("simultaneous editing");
 
-    for (const tool of [
-      AnnotationTool.BRUSH,
-      AnnotationTool.ERASE_BRUSH,
-      AnnotationTool.FILL_CELL,
-    ]) {
+    for (const tool of VolumeTools) {
       expect(isDisabledForLiveCollaboration(tool), tool.id).toBe(false);
     }
-    for (const tool of [
-      AnnotationTool.TRACE,
-      AnnotationTool.ERASE_TRACE,
-      AnnotationTool.QUICK_SELECT,
-    ]) {
-      expect(isDisabledForLiveCollaboration(tool), tool.id).toBe(true);
-    }
+    expect(isDisabledForLiveCollaboration(AnnotationTool.SKELETON)).toBe(true);
 
     WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation = false;
     // getDisabledInfoForTools is memoized on the state.
     Store.dispatch(updateUserSettingAction("brushSize", 11));
     const disabledInfoWithoutFlag = getDisabledInfoForTools(Store.getState());
     expect(disabledInfoWithoutFlag[AnnotationTool.BRUSH.id].isDisabled).toBe(true);
+  });
+
+  it<WebknossosTestContext>("saves traced areas as partial updates in live collaboration", async (context) => {
+    await setup(context, "Concurrent");
+    Store.dispatch(setToolAction(AnnotationTool.TRACE));
+    traceSquareAround(position, 8);
+    await context.api.tracing.save();
+
+    expect(await getValue(context)).toBe(5);
+    const names = sentBucketActionNames(context);
+    expect(names).toContain("updateBucketPartial");
+    expect(names).not.toContain("updateBucket");
+  });
+
+  it<WebknossosTestContext>("saves areas erased with the trace tool as partial updates in live collaboration", async (context) => {
+    await setup(context, "Concurrent");
+    brushAt(position);
+    await context.api.tracing.save();
+    expect(await getValue(context)).toBe(5);
+    const requestsBeforeErasing = context.receivedDataPerSaveRequest.length;
+
+    Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
+    Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
+    Store.dispatch(setToolAction(AnnotationTool.ERASE_TRACE));
+    traceSquareAround(position, 8);
+    await context.api.tracing.save();
+
+    expect(await getValue(context)).toBe(0);
+    const names = sentBucketActionNames(context, requestsBeforeErasing);
+    expect(names).toContain("updateBucketPartial");
+    expect(names).not.toContain("updateBucket");
   });
 
   it<WebknossosTestContext>("saves labelVoxels as partial updates in live collaboration", async (context) => {

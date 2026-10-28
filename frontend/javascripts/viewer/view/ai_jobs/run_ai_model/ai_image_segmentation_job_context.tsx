@@ -125,6 +125,13 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     }
   }, [dataset, selectedModel]);
 
+  // The affinity threshold is tuned per model, so don't carry it over to a newly selected model.
+  const selectedModelId = selectedModel?.id;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset whenever the selected model changes.
+  useEffect(() => {
+    setAbsoluteAffinityThreshold(null);
+  }, [selectedModelId]);
+
   useEffect(() => {
     if (colorLayers.length > 0) {
       setSelectedLayer(colorLayers[0]);

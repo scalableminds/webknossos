@@ -349,9 +349,8 @@ class JobService @Inject() (
   def assertCustomConfigurationAllowed(customConfiguration: Option[JsObject], user: User)(using
       ctx: DBAccessContext
   ): Fox[Unit] =
-    for {
-      _ <- Fox.runIf(customConfiguration.exists(_.keys.nonEmpty))(userService.assertIsSuperUser(user)) ~> FORBIDDEN
-    } yield ()
+    if (customConfiguration.exists(_.keys.nonEmpty)) userService.assertIsSuperUser(user) ~> FORBIDDEN
+    else Fox.successful(())
 
   def jobsSupportedByAvailableWorkers(dataStoreName: String): Fox[Set[JobCommand]] =
     for {

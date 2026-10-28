@@ -215,26 +215,10 @@ object ZipIO extends LazyLogging {
       Path.of("")
     }
 
-    val resultFox = zipEntries.foldLeft[Fox[List[A]]](Fox.successful(List.empty)) { (results, entry) =>
-      results.shiftBox.map {
-        case Full(rs) =>
-          val input: InputStream = zip.getInputStream(entry)
-          val path = commonRootDir.relativize(Path.of(entry.getName))
-          val innerResultFox: Fox[List[A]] = Fox.fromFutureBox(f(path, input).futureBox.map {
-            case Full(result) =>
-              input.close()
-              Full(rs :+ result)
-            case Empty =>
-              input.close()
-              Empty
-            case failure: Failure =>
-              input.close()
-              failure
-          })
-          innerResultFox
-        case e =>
-          e.toFox
-      }.flatten
+    val resultFox = Fox.serialCombined(zipEntries) { entry =>
+      val input: InputStream = zip.getInputStream(entry)
+      val path = commonRootDir.relativize(Path.of(entry.getName))
+      Fox.withCleanup(f(path, input))(input.close())
     }
 
     Fox.fromFutureBox {
@@ -285,7 +269,7 @@ object ZipIO extends LazyLogging {
               } else {
                 val r = f(path, input) match {
                   case Full(result) =>
-                    Full(rs :+ result)
+                    Full(result :: rs)
                   case Empty =>
                     Empty
                   case f: Failure =>
@@ -305,7 +289,7 @@ object ZipIO extends LazyLogging {
     }
 
     zip.close()
-    result
+    result.map(_.reverse)
   }
 
   def unzipToDirectory(

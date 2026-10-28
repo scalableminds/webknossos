@@ -879,7 +879,7 @@ Three terms, used consistently from here on:
 
 Both walks start at the **source mag** — the mag the user drew in — and move outward through *adjacent* mags. Between neighbours the factor is small (typically 2 per axis), and every mag in the list is visited exactly once: those finer than the source by Step A, those coarser by Step B.
 
-Note these are the same terms, in the same directions, as `upsampleVoxelMap` / `downsampleVoxelMap` in today's `volume_annotation_sampling.ts`. Beware that they run *opposite* to mag index: upsampling moves toward mag 1, downsampling away from it. Sampling direction is stated in terms of resolution throughout this doc, never in terms of "up" or "down" the mag list.
+Note these are the same terms, in the same directions, as `upsampleVoxelMap` / `downsampleVoxelMap` in the former `volume_annotation_sampling.ts`. Beware that they run *opposite* to mag index: upsampling moves toward mag 1, downsampling away from it. Sampling direction is stated in terms of resolution throughout this doc, never in terms of "up" or "down" the mag list.
 
 ```ts
 interface MagPropagationService {
@@ -1769,7 +1769,7 @@ Nothing below revises the design. This section records where the code currently 
 | `VolumeEditingSession` | 5 | `not_yet_integrated/volume_editing_session.ts` | the app opens transactions from the sagas instead |
 | Integration glue | — | `integration/` | `WkDataCubeAdapter`, `WkLoadingCubeAdapter`, `BrushDriver`, `runFloodFill`, `runMaskEdit`, `runVoxelsEdit` |
 
-Every volume tool now labels through the new code: brushing in `volumetracing_saga.tsx`, flood fill in `floodfill_saga.tsx`, volume interpolation in `volume_interpolation_saga.ts` (all interpolated slices as one `MaskShape` in a single transaction), the trace tools and quick select via `labelWithVoxelBuffer2D` in `sagas/volume/helpers.ts`, and `api.data.labelVoxels` via `runVoxelsEdit`. The old paths of brush and flood fill are gone: the `VoxelBuffer2D` brush branch and `DataCube.floodFill`. The trace tools and quick select still use the section labeler to compute their 2D region, which becomes a `MaskShape`. The brush uses it only to compute its auto-fill, which joins the stroke's transaction as a `MaskShape`, so that stroke and fill are propagated and saved as one. Writes land in real buckets; nothing else about the existing pipeline changes.
+Every volume tool now labels through the new code: brushing in `volumetracing_saga.tsx`, flood fill in `floodfill_saga.tsx`, volume interpolation in `volume_interpolation_saga.ts` (all interpolated slices as one `MaskShape` in a single transaction), the trace tools and quick select via `labelWithVoxelBuffer2D` in `sagas/volume/helpers.ts`, and `api.data.labelVoxels` via `runVoxelsEdit`. The old paths are gone: the `VoxelBuffer2D` brush branch, `DataCube.floodFill`, and the per-mag sampling of `volume_annotation_sampling.ts`. The trace tools and quick select still use the section labeler to compute their 2D region, which becomes a `MaskShape`. The brush uses it only to compute its auto-fill, which joins the stroke's transaction as a `MaskShape`, so that stroke and fill are propagated and saved as one. Writes land in real buckets; nothing else about the existing pipeline changes.
 
 ### 12.2 Skipped, and why
 
@@ -1791,6 +1791,6 @@ Ordered so that each step is independently reviewable, and so that the frontend 
 4. **Save queue** (§5.8) — emit the two new update actions of §7.1 instead of today's. This is the hard boundary: it needs the backend side designed and built in parallel.
 5. **Visibility-driven materialization** (§1.1), which is what makes coarse-mag editing viable within the memory budget of §5.4.
 6. **Remaining tools onto the intent pipeline**, starting with quick select (it already produces something mask-shaped), then interpolation and the trace tools. Done.
-7. **Delete the remaining old paths** as the tools above move over.
+7. **Delete the remaining old paths** as the tools above move over. Done.
 
 Steps 1–3 are frontend-only. Everything from step 4 on is a joint change.

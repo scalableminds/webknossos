@@ -277,18 +277,6 @@ export const Unicode = {
   NonBreakingSpace: "\u00a0",
   MultiplicationSymbol: "×",
 };
-// A LabeledVoxelsMap maps from a bucket address
-// to a 2D slice of labeled voxels within a bucket.
-// These labeled voxels are stored in a Uint8Array in a binary way (which
-// segment id the voxels should be changed to is not encoded).
-// The array should have BUCKET_WIDTH**2 entries.
-export type LabeledVoxelsMap = Map<BucketAddress, Uint8Array>;
-
-// LabelMasksByBucketAndW is similar to LabeledVoxelsMap with the difference
-// that it can hold multiple slices per bucket (keyed by the W component,
-// e.g., z in XY viewport).
-export type LabelMasksByBucketAndW = Map<BucketAddress, Map<number, Uint8Array>>;
-
 const Constants = {
   FLIGHT_VIEW: 4,
   DEFAULT_BORDER_WIDTH_IN_IFRAME: 200,

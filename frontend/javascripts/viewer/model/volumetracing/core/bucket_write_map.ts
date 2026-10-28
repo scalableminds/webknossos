@@ -191,9 +191,9 @@ export function clipBucketWriteMap(
 ): BucketWriteMap {
   const clipped: BucketWriteMap = new Map();
   for (const [key, entry] of bucketWriteMap) {
-    // The part of the box that overlaps this bucket, as voxel offsets within
-    // the bucket (0 to BUCKET_WIDTH), like the offsets of the mask's runs.
     const origin = originVoxelOf(entry.address);
+    // Min and max will contain the part of the box that overlaps the current bucket.
+    // The values are voxel offsets within the bucket (0 to BUCKET_WIDTH).
     const min: Vector3 = [0, 0, 0];
     const max: Vector3 = [0, 0, 0];
     let isEmpty = false;

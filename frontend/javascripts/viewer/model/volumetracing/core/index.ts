@@ -10,21 +10,24 @@
 
 export {
   applyRun,
+  BUCKET_DIFF_FORMAT_VERSION,
   type BucketDiff,
   bucketDiffsOf,
   countDiffVoxels,
   decodeBucketDiff,
   encodeBucketDiff,
+  runAxisForPlane,
   type TransactionDiff,
   type TransactionId,
   toRuns,
   type VoxelRun,
 } from "./bucket_diff";
-export { BucketVoxelMask } from "./bucket_voxel_mask";
+export { BucketVoxelMask, type RunAxis } from "./bucket_voxel_mask";
 export {
   type BucketWrite,
   type BucketWriteMap,
   BucketWriteMapBuilder,
+  clipBucketWriteMap,
   countVoxels,
 } from "./bucket_write_map";
 export { resolve, resolveFloodFill } from "./flood_fill_resolver";
@@ -48,6 +51,7 @@ export {
   type SegmentBucketData,
   type SegmentId,
   type StoredSegmentId,
+  UNBOUNDED_BOUNDING_BOX,
   type Vector3,
   type VoxelIndex,
   voxelIndexOf,

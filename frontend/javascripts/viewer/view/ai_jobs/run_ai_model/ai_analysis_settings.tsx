@@ -37,6 +37,8 @@ export const AiAnalysisSettings: React.FC = () => {
     selectedModel,
     seedGeneratorDistanceThreshold,
     setSeedGeneratorDistanceThreshold,
+    absoluteAffinityThreshold,
+    setAbsoluteAffinityThreshold,
     isEvaluationActive,
     setIsEvaluationActive,
     splitMergerEvaluationSettings,
@@ -51,6 +53,7 @@ export const AiAnalysisSettings: React.FC = () => {
   const dataset = useWkSelector((state) => state.dataset);
   const colorLayers = getColorLayers(dataset);
   const activeUser = useWkSelector((state) => state.activeUser);
+  const isSuperUser = activeUser?.isSuperUser ?? false;
 
   const handleValuesChange: FormProps["onValuesChange"] = (changedValues, allValues) => {
     if ("newDatasetName" in changedValues) {
@@ -66,6 +69,9 @@ export const AiAnalysisSettings: React.FC = () => {
     }
     if ("seedGeneratorDistanceThreshold" in changedValues) {
       setSeedGeneratorDistanceThreshold(changedValues.seedGeneratorDistanceThreshold);
+    }
+    if ("absoluteAffinityThreshold" in changedValues) {
+      setAbsoluteAffinityThreshold(changedValues.absoluteAffinityThreshold);
     }
     if ("splitMergerEvaluationSettings" in allValues) {
       setSplitMergerEvaluationSettings(
@@ -96,6 +102,7 @@ export const AiAnalysisSettings: React.FC = () => {
   }, [form, newDatasetName]);
 
   const isInstanceModel = selectedJobType === APIJobCommand.INFER_INSTANCES;
+  const isNeuronJob = selectedJobType === APIJobCommand.INFER_NEURONS;
   const isNeuronModel =
     selectedModel != null && selectedModel.category === APIAiModelCategory.EM_NEURONS;
 
@@ -104,6 +111,7 @@ export const AiAnalysisSettings: React.FC = () => {
     { name: ["selectedLayer"], value: selectedLayer?.name },
     { name: ["selectedBoundingBox"], value: selectedBoundingBox },
     { name: ["seedGeneratorDistanceThreshold"], value: seedGeneratorDistanceThreshold },
+    { name: ["absoluteAffinityThreshold"], value: absoluteAffinityThreshold },
     {
       name: ["splitMergerEvaluationSettings", "useSparseTracing"],
       value: splitMergerEvaluationSettings?.useSparseTracing,
@@ -221,8 +229,21 @@ export const AiAnalysisSettings: React.FC = () => {
                 </Form.Item>
               </Col>
             )}
+            {isNeuronJob && (
+              <Col span={12}>
+                <Form.Item
+                  name="absoluteAffinityThreshold"
+                  label="Affinity threshold"
+                  tooltip="Minimum predicted affinity between neighboring voxels for them to be merged into the same segment. Increase it if neurons are merged that should be separate, decrease it if neurons are split into too many pieces. If empty, the model's default is used."
+                >
+                  <InputNumber min={-16} max={16} style={{ width: "100%" }} />
+                </Form.Item>
+              </Col>
+            )}
           </Row>
-          <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
+          {isSuperUser && (
+            <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
+          )}
 
           {isNeuronModel && (
             <CollapsibleSplitMergerEvaluationSettings

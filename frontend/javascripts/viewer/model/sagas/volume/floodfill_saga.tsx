@@ -31,12 +31,15 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import { requestBucketModificationInVolumeTracing } from "viewer/model/sagas/saga_helpers";
+import { runAxisForPlane } from "viewer/model/volumetracing/core/bucket_diff";
+import type { RunAxis } from "viewer/model/volumetracing/core/bucket_voxel_mask";
 import { runFloodFill } from "viewer/model/volumetracing/integration/flood_fill_driver";
 import { Model, Store } from "viewer/singletons";
 import {
   getSomeTracing,
   getUserBoundingBoxesThatContainPosition,
 } from "../../accessors/tracing_accessor";
+import { getVolumeSaveMode, pushPartialBucketUpdates } from "./helpers";
 
 const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
 const NO_SUCCESS_MSG_WHEN_WITHIN_MS = 500;
@@ -258,6 +261,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
       Toast.close(NO_FLOODFILL_BBOX_TOAST_KEY);
     }
     const fillMode = yield* select((state) => state.userConfiguration.fillMode);
+    const saveMode = yield* call(getVolumeSaveMode);
 
     const progressCallback = createProgressCallback({
       pauseDelay: 200,
@@ -288,7 +292,6 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     ];
     const stats = yield* call(runFloodFill, {
       cube,
-      denseMags: magInfo.getDenseMags(),
       magIndex: labeledZoomStep,
       segmentId: activeCellId,
       additionalCoordinates: additionalCoordinates ?? null,
@@ -299,7 +302,19 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
         max: toExclusiveSourceMagBound(boundingBoxForFloodFill.max),
       },
       splitBoundaryMesh,
+      saveMode,
     });
+    // A 2D fill lies in the viewport's plane, so it uses the run order in which
+    // that plane is contiguous. A 3D fill has no such plane and keeps x order.
+    const runAxis: RunAxis = fillMode === FillModeEnum._3D ? 0 : runAxisForPlane(planeId);
+    yield* call(
+      pushPartialBucketUpdates,
+      saveMode,
+      stats.bucketDiffs,
+      cube,
+      volumeTracing.tracingId,
+      runAxis,
+    );
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
     yield* put(
       updateSegmentAction(
@@ -314,11 +329,12 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     yield* call(
       notifyUserAboutResult,
       stats.wasBoundingBoxExceeded,
+      stats.wasVoxelLimitExceeded,
       startTimeOfFloodfill,
       progressCallback,
       fillMode,
-      // Only read by notifyUserAboutResult when wasBoundingBoxExceeded is
-      // true, in which case coveredBoundingBox is never null (see
+      // Only read by notifyUserAboutResult when the fill terminated early,
+      // in which case coveredBoundingBox is never null (see
       // FloodFillResult's doc comment) — the fallback here is unreachable.
       stats.coveredBoundingBox ?? { min: [0, 0, 0], max: [0, 0, 0] },
       oldSegmentIdAtSeed,
@@ -334,6 +350,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
 
 function* notifyUserAboutResult(
   wasBoundingBoxExceeded: boolean,
+  wasVoxelLimitExceeded: boolean,
   startTimeOfFloodfill: number,
   progressCallback: ProgressCallback,
   fillMode: FillMode,
@@ -343,17 +360,20 @@ function* notifyUserAboutResult(
   seedPosition: Vector3,
 ) {
   let showSuccessMsg = false;
-  if (wasBoundingBoxExceeded) {
+  if (wasBoundingBoxExceeded || wasVoxelLimitExceeded) {
     const isRestrictedToBoundingBox = yield* select(
       (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
     );
     // Don't notify the user about early-terminated floodfills if the floodfill
     // was configured to be restricted, anyway. Also, don't create a new bounding
-    // box in that case.
-    if (!isRestrictedToBoundingBox) {
+    // box in that case. Reaching the voxel limit is always reported, because the
+    // fill may then have stopped before reaching the bounding box.
+    if (!isRestrictedToBoundingBox || wasVoxelLimitExceeded) {
       // The bounding box is overkill for the 2D mode because in that case,
-      // it's trivial to check the borders manually.
-      const createNewBoundingBox = fillMode === FillModeEnum._3D;
+      // it's trivial to check the borders manually. When restricted, a new box
+      // would be smaller than the restricting one and would therefore be picked
+      // as the restriction for the next fill (see getBoundingBoxForFloodFillWhenRestricted).
+      const createNewBoundingBox = fillMode === FillModeEnum._3D && !isRestrictedToBoundingBox;
       const warningDetails = createNewBoundingBox
         ? "A bounding box that represents the labeled volume was added so that you can check the borders manually."
         : "Please check the borders of the filled area manually and use the fill tool again if necessary.";
@@ -368,11 +388,7 @@ function* notifyUserAboutResult(
         progressCallback,
         true,
         <>
-          Floodfill is done, but terminated because{" "}
-          {isRestrictedToBoundingBox
-            ? "the labeled volume touched the bounding box to which the floodfill was restricted"
-            : "the labeled volume got too large"}
-          .
+          Floodfill is done, but terminated because the labeled volume got too large.
           <br />
           {warningDetails} {Unicode.NonBreakingSpace}
           <LinkButton onClick={() => hideBox?.hideFn()}>Close</LinkButton>

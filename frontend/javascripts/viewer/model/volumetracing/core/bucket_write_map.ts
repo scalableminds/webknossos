@@ -180,7 +180,10 @@ export class BucketWriteMapBuilder {
 
 /**
  * The writes of `bucketWriteMap` that lie within `box`, given in the voxels of
- * the write set's mag. Buckets fully inside are passed on as they are.
+ * the write set's mag. Each bucket is either
+ * - fully outside of the box: dropped,
+ * - fully inside of it: passed on as it is, without copying its mask, or
+ * - partially inside: its runs are cut to the box and copied into a new mask.
  */
 export function clipBucketWriteMap(
   bucketWriteMap: BucketWriteMap,
@@ -188,7 +191,8 @@ export function clipBucketWriteMap(
 ): BucketWriteMap {
   const clipped: BucketWriteMap = new Map();
   for (const [key, entry] of bucketWriteMap) {
-    // The box in bucket-local voxels, clamped to the bucket.
+    // The part of the box that overlaps this bucket, as voxel offsets within
+    // the bucket (0 to BUCKET_WIDTH), like the offsets of the mask's runs.
     const origin = originVoxelOf(entry.address);
     const min: Vector3 = [0, 0, 0];
     const max: Vector3 = [0, 0, 0];
@@ -206,8 +210,10 @@ export function clipBucketWriteMap(
       continue;
     }
 
+    // Partially inside: keep a run only if its row lies within the box, and cut
+    // it to the box along x. That suffices, since every run is an x-run within
+    // one row (see BucketVoxelMask.runs).
     const mask = new BucketVoxelMask();
-    // Every run is an x-run within one row (see BucketVoxelMask.runs).
     for (const { start, length } of entry.write.mask.runs()) {
       const [x, y, z] = voxelOffsetOf(start);
       if (y < min[1] || y >= max[1] || z < min[2] || z >= max[2]) continue;

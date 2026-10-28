@@ -119,11 +119,11 @@ export class WkDataCubeAdapter implements TransactionCube {
   }
 
   /**
-   * The cube's bounding box (e.g., the task bounding box) in the voxels of the
-   * given mag. The cube drops writes to buckets outside of it, but not to the
-   * outside part of a partially contained bucket. Clipping in the core covers
-   * both, and keeps the diff free of discarded writes. Rounded like the bucket
-   * containment in data_cube.ts.
+   * The DataCube's bounding box (e.g., the task bounding box) in the voxels of
+   * the given mag. The DataCube drops writes to buckets outside of it, but not
+   * to the outside part of a partially contained bucket. Clipping in the core
+   * covers both, and keeps the diff free of discarded writes. Rounded like the
+   * bucket containment in data_cube.ts.
    */
   getEditableBoundingBox(magIndex: MagIndex): BoundingBox {
     // Dense mags, since mag propagation also passes through mags that are

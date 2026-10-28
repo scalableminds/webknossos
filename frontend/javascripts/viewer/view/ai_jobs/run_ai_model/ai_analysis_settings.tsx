@@ -234,7 +234,7 @@ export const AiAnalysisSettings: React.FC = () => {
                 <Form.Item
                   name="absoluteAffinityThreshold"
                   label="Affinity threshold"
-                  tooltip="Minimum predicted affinity between neighboring voxels for them to be merged into the same segment. Increase it if neurons are merged that should be separate, decrease it if neurons are split into too many pieces. If empty, the model's default is used."
+                  tooltip="Everything below this threshold is considered as background and belongs to no segment. Use values between -16 and 0 to filter regions the model was trained to treat as background, e.g. myelin or ECS."
                 >
                   <InputNumber style={{ width: "100%" }} />
                 </Form.Item>

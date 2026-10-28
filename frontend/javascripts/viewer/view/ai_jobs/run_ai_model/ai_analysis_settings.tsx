@@ -236,7 +236,7 @@ export const AiAnalysisSettings: React.FC = () => {
                   label="Affinity threshold"
                   tooltip="Minimum predicted affinity between neighboring voxels for them to be merged into the same segment. Increase it if neurons are merged that should be separate, decrease it if neurons are split into too many pieces. If empty, the model's default is used."
                 >
-                  <InputNumber style={{ width: "100%" }} />
+                  <InputNumber min={-16} max={16} style={{ width: "100%" }} />
                 </Form.Item>
               </Col>
             )}

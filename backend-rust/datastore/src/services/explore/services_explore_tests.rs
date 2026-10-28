@@ -1,4 +1,11 @@
-use super::*;
+use serde_json::json;
+
+use super::{
+    layer_utils::{
+        remove_header_file_names_from_uri_suffix, remove_neuroglancer_prefixes_from_uri,
+    },
+    neuroglancer,
+};
 
 #[test]
 fn strips_uri_decorations() {

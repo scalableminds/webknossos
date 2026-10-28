@@ -85,6 +85,7 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
   private def parseAddress(emailAddress: String, charset: String): Option[InternetAddress] =
     try {
       val address = new InternetAddress(emailAddress)
+      address.validate()
       // Re-encode the display name with the mail's charset instead of the JVM default
       Option(address.getPersonal).foreach(personal => address.setPersonal(personal, charset))
       Some(address)

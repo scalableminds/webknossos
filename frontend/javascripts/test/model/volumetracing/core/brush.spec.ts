@@ -3,6 +3,7 @@ import {
   countDiffVoxels,
   decodeBucketDiff,
   encodeBucketDiff,
+  MagList,
   type SegmentId,
   type Vector3,
 } from "viewer/model/volumetracing/core";
@@ -57,7 +58,7 @@ function referenceStroke(path: Vector3[], radius: Vector3, planeAxis: 0 | 1 | 2)
         const delta = (voxel[axis] + 0.5 - closest) / radius[axis];
         distanceSquared += delta * delta;
       }
-      if (distanceSquared <= 1) inside = true;
+      if (distanceSquared < 1) inside = true;
     }
     if (inside) painted.add(keyOf(voxel));
   }
@@ -242,6 +243,18 @@ describe("volume annotation core — brush", () => {
     // Still one transaction, still covering every mag.
     expect(magIndicesOf(diff.bucketDiffs.map((d) => d.address))).toEqual([0, 1, 2]);
     expect(diff.sourceMagIndex).toBe(1);
+  });
+
+  it("doesn't upsample below the finest mag of the MagList", async () => {
+    // As for a layer that starts at the second mag.
+    const { cube, session } = createHarness(new MagList(MAGS.mags, 1));
+    await materialize(cube, originBuckets(MAGS.length));
+
+    const ctx = editContext({ sourceMagIndex: 2, activeSegmentId: SEGMENT });
+    session.beginBrushStroke(ctx, [4, 4, 2], iso(1.2), 2);
+    const diff = session.endBrushStroke();
+
+    expect(magIndicesOf(diff.bucketDiffs.map((d) => d.address))).toEqual([1, 2]);
   });
 
   it("records diffs for buckets that were never loaded, without fetching them", async () => {

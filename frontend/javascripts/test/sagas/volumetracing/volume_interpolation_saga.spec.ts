@@ -6,17 +6,24 @@ import {
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import type { ElementClass } from "types/api_types";
-import { OrthoViews, type Vector3 } from "viewer/constants";
+import { WkDevFlags } from "viewer/api/wk_dev";
+import { type OrthoView, OrthoViews, type Vector3 } from "viewer/constants";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { setPositionAction } from "viewer/model/actions/flycam_actions";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
+import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
+import { dispatchUndoAsync } from "viewer/model/actions/save_actions";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
+import { setInputCatcherRects, setViewportAction } from "viewer/model/actions/view_mode_actions";
 import {
   addToContourListAction,
   finishEditingAction,
   interpolateSegmentationLayerAction,
+  resetContourAction,
   setActiveCellAction,
   startEditingAction,
 } from "viewer/model/actions/volumetracing_actions";
+import Dimensions from "viewer/model/dimensions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import Store from "viewer/store";
 import { afterEach, describe, expect, it, type TestContext, vi } from "vitest";
@@ -73,11 +80,34 @@ async function setupInterpolationTest(context: WebknossosTestContext, elementCla
   await context.api.data.reloadAllBuckets();
 }
 
-function brushActiveCellAt(position: Vector3) {
+function brushActiveCellAt(position: Vector3, plane: OrthoView = OrthoViews.PLANE_XY) {
   Store.dispatch(setPositionAction(position));
-  Store.dispatch(startEditingAction(position, OrthoViews.PLANE_XY));
+  Store.dispatch(startEditingAction(position, plane));
   Store.dispatch(addToContourListAction(position));
+  // As handleEndForDrawOrErase does, so that the next stroke has a contour of its own.
   Store.dispatch(finishEditingAction());
+  Store.dispatch(resetContourAction());
+}
+
+function prepareBrushingInViewport(plane: OrthoView, activeCellId: number) {
+  // The interpolation only covers what the viewport shows, so the viewports
+  // need a size: 64 px at zoom 1 are 64 voxels in each direction. Setting
+  // the rects clamps the zoom, hence setting it afterwards.
+  const rect = { top: 0, left: 0, width: 64, height: 64 };
+  Store.dispatch(
+    setInputCatcherRects({
+      PLANE_XY: rect,
+      PLANE_YZ: rect,
+      PLANE_XZ: rect,
+      TDView: rect,
+      flightViewport: rect,
+    }),
+  );
+  Store.dispatch(setZoomStepAction(1));
+  Store.dispatch(setViewportAction(plane));
+  Store.dispatch(updateUserSettingAction("brushSize", 10));
+  Store.dispatch(setToolAction(AnnotationTool.BRUSH));
+  Store.dispatch(setActiveCellAction(BigInt(activeCellId)));
 }
 
 async function runInterpolationTest(context: WebknossosTestContext, elementClass: ElementClass) {
@@ -112,7 +142,9 @@ async function runInterpolationTest(context: WebknossosTestContext, elementClass
 }
 
 describe("Volume Interpolation", () => {
+  const previousAllowFlag = WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation;
   afterEach<WebknossosTestContext>(async (context) => {
+    WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation = previousAllowFlag;
     expect(hasRootSagaCrashed()).toBe(false);
     context.tearDownPullQueues();
   });
@@ -123,4 +155,86 @@ describe("Volume Interpolation", () => {
       await runInterpolationTest(context as WebknossosTestContext, elementClass);
     },
   );
+
+  it.for([OrthoViews.PLANE_XY, OrthoViews.PLANE_YZ, OrthoViews.PLANE_XZ] as const)(
+    "should interpolate exactly between two identical slices in %s, in one undo step",
+    async (plane, context: TestContext) => {
+      await setupInterpolationTest(context as WebknossosTestContext, "uint32");
+      const { api } = context as WebknossosTestContext;
+      const layerName = api.data.getVolumeTracingLayerIds()[0];
+      const activeCellId = 5;
+      const interpolationDepth = 5;
+      // (a, b) within the viewport, c along its normal; around (40, 40, 40).
+      const [u, v, w] = Dimensions.getIndices(plane);
+      const at = (a: number, b: number, c: number): Vector3 => {
+        const position: Vector3 = [0, 0, 0];
+        position[u] = 40 + a;
+        position[v] = 40 + b;
+        position[w] = 40 + c;
+        return position;
+      };
+      const slice = (c: number) =>
+        api.data
+          .getDataForBoundingBox(layerName, { min: at(-10, -10, c), max: at(11, 11, c + 1) }, 0)
+          .then((data) => Array.from(data, Number));
+
+      prepareBrushingInViewport(plane, activeCellId);
+      brushActiveCellAt(at(0, 0, 0), plane);
+      brushActiveCellAt(at(0, 0, interpolationDepth), plane);
+      const labeledSlice = await slice(0);
+      expect(labeledSlice.filter((value) => value === activeCellId).length).toBeGreaterThan(0);
+      expect(await slice(interpolationDepth)).toEqual(labeledSlice);
+
+      Store.dispatch(interpolateSegmentationLayerAction());
+      await waitUntilNotBusy();
+
+      // Both labeled slices hold the same dab, so every slice in between is that dab, too.
+      for (let c = 1; c < interpolationDepth; c++) {
+        expect(await slice(c), `slice ${c}`).toEqual(labeledSlice);
+      }
+      // Nothing beyond the labeled slices.
+      const emptySlice = labeledSlice.map(() => 0);
+      expect(await slice(-1)).toEqual(emptySlice);
+      expect(await slice(interpolationDepth + 1)).toEqual(emptySlice);
+      // The interpolated slices are propagated to the coarser mags.
+      expect(await api.data.getDataValue(layerName, at(0, 0, 2), 1), "mag 2").toBe(activeCellId);
+
+      // One undo removes all interpolated slices, but not the labeled ones.
+      await dispatchUndoAsync(Store.dispatch);
+      for (let c = 1; c < interpolationDepth; c++) {
+        expect(await slice(c), `slice ${c} after undo`).toEqual(emptySlice);
+      }
+      expect(await slice(0)).toEqual(labeledSlice);
+      expect(await slice(interpolationDepth)).toEqual(labeledSlice);
+    },
+  );
+  it("should save interpolations as partial updates in live collaboration", async (context: TestContext) => {
+    // Volume tools are only enabled in live collaboration with this flag. Reset in afterEach.
+    WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation = true;
+    const testContext = context as WebknossosTestContext;
+    await setupInterpolationTest(testContext, "uint32");
+    const { api } = testContext;
+    const layerName = api.data.getVolumeTracingLayerIds()[0];
+    const activeCellId = 5;
+    prepareBrushingInViewport(OrthoViews.PLANE_XY, activeCellId);
+    brushActiveCellAt([40, 40, 40]);
+    brushActiveCellAt([40, 40, 45]);
+    // Switching saves the strokes' pending whole buckets first.
+    Store.dispatch(setCollaborationModeAction("Concurrent"));
+    await waitUntilNotBusy();
+    const requestsBeforeInterpolation = testContext.receivedDataPerSaveRequest.length;
+
+    Store.dispatch(interpolateSegmentationLayerAction());
+    await waitUntilNotBusy();
+    await api.tracing.save();
+
+    expect(await api.data.getDataValue(layerName, [40, 40, 42])).toBe(activeCellId);
+    const bucketActionNames = testContext.receivedDataPerSaveRequest
+      .slice(requestsBeforeInterpolation)
+      .flatMap((entries) => entries.flatMap((entry) => entry.actions))
+      .map((action) => action.name)
+      .filter((name) => name === "updateBucket" || name === "updateBucketPartial");
+    expect(bucketActionNames).toContain("updateBucketPartial");
+    expect(bucketActionNames).not.toContain("updateBucket");
+  });
 });

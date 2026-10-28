@@ -19,8 +19,6 @@ trait JobResultLinks {
 
   protected def argAsStringOpt(key: String): Option[String] = (args \ key).toOption.flatMap(_.asOpt[String])
 
-  protected def argAsBooleanOpt(key: String): Option[Boolean] = (args \ key).toOption.flatMap(_.asOpt[Boolean])
-
   def constructResultLink(organizationId: String): Option[String] =
     if (effectiveState != JobState.SUCCESS) None
     else {
@@ -32,29 +30,26 @@ trait JobResultLinks {
           }.getOrElse(datasetName.map(name => s"/datasets/$organizationId/$name/view"))
         case JobCommand.export_tiff | JobCommand.render_animation =>
           Some(s"/api/jobs/${this.id}/export")
-        case JobCommand.infer_neurons
-            if this
-              .argAsBooleanOpt("do_split_merger_evaluation")
-              .getOrElse(false) || this.argAsBooleanOpt("do_evaluation").getOrElse(false) =>
-          returnValue.map { resultAnnotationLink =>
-            resultAnnotationLink
-          }
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation |
             JobCommand.infer_with_model | JobCommand.infer_mitochondria | JobCommand.align_sections |
             JobCommand.infer_instances | JobCommand.align =>
-          // There exist jobs with dataset name as return value, some with directoryName, and newest with datasetId
-          // Construct links that work in either case.
-          returnValue.map { datasetIdentifier =>
-            ObjectId
-              .fromStringSync(datasetIdentifier)
-              .map { asObjectId =>
-                s"/datasets/$asObjectId/view"
-              }
-              .getOrElse(s"/datasets/$organizationId/$datasetIdentifier/view")
-          }
+          returnValue.map(linkFromDatasetOrAnnotationReturnValue(_, organizationId))
         case _ => None
       }
     }
+
+  // Newer jobs return the path (or url) of the annotation containing their result, which is already a link.
+  // Older jobs returned a dataset name or a directoryName or a datasetId. Construct links that work in either case.
+  private def linkFromDatasetOrAnnotationReturnValue(returnValue: String, organizationId: String): String =
+    if (returnValue.startsWith("/") || returnValue.startsWith("http://") || returnValue.startsWith("https://"))
+      returnValue
+    else
+      ObjectId
+        .fromStringSync(returnValue)
+        .map { asObjectId =>
+          s"/datasets/$asObjectId/view"
+        }
+        .getOrElse(s"/datasets/$organizationId/$returnValue/view")
 
   def resultLinkPublic(organizationId: String, webknossosPublicUrl: String): Option[String] =
     for {

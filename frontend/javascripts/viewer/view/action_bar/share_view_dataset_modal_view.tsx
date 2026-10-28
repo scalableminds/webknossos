@@ -1,11 +1,10 @@
-import { CopyOutlined } from "@ant-design/icons";
-import { Button, Col, Dropdown, Input, Modal, Row, Space } from "antd";
+import { Col, Modal, Row } from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import messages from "messages";
 import { ModalWidth } from "theme";
-import { useZarrLinkMenu } from "./private_links_view";
-import { CopyableSharingLink, getUrl, useDatasetSharingToken } from "./share_modal_view";
+import { ZarrLinkUrlRows } from "./private_links_view";
+import { CopyableSharingLink, useDatasetSharingToken, useSharingUrl } from "./share_modal_view";
 
 const sharingActiveNode = false;
 
@@ -18,15 +17,7 @@ function ShareViewDatasetModalViewInner(props: Props) {
   const { isOpen, onOk } = props;
   const dataset = useWkSelector((state) => state.dataset);
   const sharingToken = useDatasetSharingToken(dataset);
-  const longUrl = getUrl(sharingToken, !dataset.isPublic);
-
-  const {
-    baseUrl: zarrBaseUrl,
-    copyLayerUrlMenu,
-    isLoading: isZarrLinkLoading,
-    isUnavailable: isZarrLinkUnavailable,
-  } = useZarrLinkMenu(null);
-  const isZarrLinkDisabled = isZarrLinkLoading || isZarrLinkUnavailable;
+  const longUrl = useSharingUrl(isOpen, sharingToken, !dataset.isPublic);
 
   return (
     <Modal
@@ -69,36 +60,10 @@ function ShareViewDatasetModalViewInner(props: Props) {
               lineHeight: "30px",
             }}
           >
-            Zarr Link
+            Zarr Links
           </Col>
           <Col span={18}>
-            <Space.Compact block>
-              <Input
-                name="zarrPublicSharingLink"
-                style={{
-                  width: "calc(78% + 32px)",
-                }}
-                value={
-                  isZarrLinkLoading
-                    ? "Loading…"
-                    : isZarrLinkUnavailable
-                      ? "Unavailable"
-                      : zarrBaseUrl
-                }
-                readOnly
-              />
-              <Dropdown menu={copyLayerUrlMenu} disabled={isZarrLinkDisabled}>
-                <Button
-                  style={{
-                    width: "15%",
-                  }}
-                  icon={<CopyOutlined />}
-                  disabled={isZarrLinkDisabled}
-                >
-                  Copy
-                </Button>
-              </Dropdown>
-            </Space.Compact>
+            <ZarrLinkUrlRows maybeAccessToken={null} />
             <div
               style={{
                 marginBottom: 12,
@@ -106,6 +71,7 @@ function ShareViewDatasetModalViewInner(props: Props) {
               }}
             >
               {messages["tracing.sharing_modal_zarr_information"]}{" "}
+              {messages["tracing.zarr_link_compatibility_hint"]}
             </div>
           </Col>
         </Row>

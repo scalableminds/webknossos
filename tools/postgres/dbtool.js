@@ -132,6 +132,13 @@ const TEST_CSV_IMPORT_ORDER = [
   "user_experiences.csv",       // → users
   "timeSpans.csv",              // → users, annotations
   "tokens.csv",                 // no strict FK, but after users
+  "voxelytics_workflows.csv",   // → organizations
+  "voxelytics_runs.csv",        // → voxelytics_workflows, users
+  "voxelytics_tasks.csv",       // → voxelytics_runs
+  "voxelytics_chunks.csv",      // → voxelytics_tasks
+  "voxelytics_artifacts.csv",   // → voxelytics_tasks
+  "voxelytics_runHeartbeatEvents.csv", // → voxelytics_runs
+  "voxelytics_chunkProfilingEvents.csv", // → voxelytics_chunks
 ];
 
 function importTestCsvFiles() {

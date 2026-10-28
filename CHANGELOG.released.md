@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.10.2](https://github.com/scalableminds/webknossos/releases/tag/26.10.2) - 2026-10-21
+[Commits](https://github.com/scalableminds/webknossos/compare/26.10.1...26.10.2)
+
+### Changed
+- The brush is now centered on the hovered voxel for odd brush sizes and on the nearest voxel corner for even brush sizes. This avoids single-voxel bumps at the edges of the brush, and a brush of size 1 paints exactly the hovered voxel. The brush only moves when the mouse crosses a voxel boundary (odd sizes) or the middle of a voxel (even sizes), also when brushing in a coarser mag. [#10187](https://github.com/scalableminds/webknossos/pull/10187)
+
+### Fixed
+- Fixed that the brush preview was always rendered in mag 1, even if the brush is applied in a coarser mag of the volume layer. The preview now matches the painted voxels. [#10187](https://github.com/scalableminds/webknossos/pull/10187)
+
 ## [26.10.1](https://github.com/scalableminds/webknossos/releases/tag/26.10.1) - 2026-10-15
 [Commits](https://github.com/scalableminds/webknossos/compare/26.10.0...26.10.1)
 
@@ -130,7 +139,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Upgraded react-router from v6 to v7. The deprecated `react-router-dom` package was replaced by `react-router`. [#9988](https://github.com/scalableminds/webknossos/pull/9988)
 
 ### Fixed
-- Fixed screenshot downloading for Safari which could not handle multi files bulk downloads. Now each download has a little delay inbetween. [#10018](https://github.com/scalableminds/webknossos/pull/10018)
+- Fixed screenshot downloading for Safari which could not handle multi files bulk downloads. Now each download has a little delay in between. [#10018](https://github.com/scalableminds/webknossos/pull/10018)
 - Fixed that mappings for uint64 segmentation layers could fail with "Cannot rehash, since 20 attempts were exceeded", because 64-bit segment ids were hashed with a poorly distributed hash function. [#10020](https://github.com/scalableminds/webknossos/pull/10020)
 - Fixed that the proofreading multi cut tool highlighting was not properly preserved in live collaboration mode when another user does interfering proofreading actions. [#9855](https://github.com/scalableminds/webknossos/pull/9855)
 - Fixed rare crash when opening an annotation (mostly when loaded in a background tab). [#9869](https://github.com/scalableminds/webknossos/pull/9869)

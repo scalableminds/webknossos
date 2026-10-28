@@ -29,6 +29,7 @@ export type SetVersionNumberAction = ReturnType<typeof setVersionNumberAction>;
 export type UndoAction = ReturnType<typeof undoAction>;
 export type RedoAction = ReturnType<typeof redoAction>;
 type DisableSavingAction = ReturnType<typeof disableSavingAction>;
+type SetHasSaveErrorAction = ReturnType<typeof setHasSaveErrorAction>;
 export type EnsureTracingsWereDiffedToSaveQueueAction = ReturnType<
   typeof ensureTracingsWereDiffedToSaveQueueAction
 >;
@@ -74,6 +75,7 @@ export type SaveAction =
   | UndoAction
   | RedoAction
   | DisableSavingAction
+  | SetHasSaveErrorAction
   | EnsureTracingsWereDiffedToSaveQueueAction
   | EnsureHasNewestVersionAction
   | SetIsMutexAcquiredAction
@@ -167,6 +169,12 @@ export const redoAction = (callback?: () => void) =>
 export const disableSavingAction = () =>
   ({
     type: "DISABLE_SAVING",
+  }) as const;
+
+export const setHasSaveErrorAction = (hasSaveError: boolean) =>
+  ({
+    type: "SET_HAS_SAVE_ERROR",
+    hasSaveError,
   }) as const;
 
 export const dispatchUndoAsync = async (dispatch: Dispatch<any>): Promise<void> => {

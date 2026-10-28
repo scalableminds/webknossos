@@ -55,6 +55,12 @@ case class Job(
 
   def exportFileName: Option[String] = argAsStringOpt("export_file_name")
 
+  // Alignment project jobs have no input dataset, so they are named after the dataset they create.
+  def datasetNameForEmail: Option[String] = command match {
+    case JobCommand.align => argAsStringOpt("new_dataset_name")
+    case _                => datasetName
+  }
+
   def resultLinkSlackFormatted(organizationId: String, webknossosPublicUrl: String): String =
     (for {
       resultLink <- resultLinkPublic(organizationId, webknossosPublicUrl)

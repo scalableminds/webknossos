@@ -114,7 +114,7 @@ class JobService @Inject() (
   private def sendSuccessEmailNotification(user: User, job: Job, resultLink: String): Unit =
     for {
       multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
-      datasetName = job.datasetName.getOrElse("")
+      datasetName = job.datasetNameForEmail.getOrElse("")
       genericEmailTemplate = defaultMails.jobSuccessfulGenericMail(multiUser, datasetName, resultLink, _, _)
       emailTemplate <- (job.command match {
         case JobCommand.convert_to_wkw =>
@@ -180,7 +180,7 @@ class JobService @Inject() (
   private def sendFailedEmailNotification(user: User, job: Job): Unit =
     for {
       multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
-      datasetName = job.datasetName.getOrElse("")
+      datasetName = job.datasetNameForEmail.getOrElse("")
       errorMessage = job.latestRunErrorDetails
         .flatMap(details => (details \ "message").asOpt[String])
         .map(_.trim)

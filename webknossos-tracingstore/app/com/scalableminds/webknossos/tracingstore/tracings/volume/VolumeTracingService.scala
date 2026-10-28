@@ -448,7 +448,7 @@ class VolumeTracingService @Inject() (
       tracing: VolumeTracing,
       volumeDataZipFormat: VolumeDataZipFormat,
       voxelSize: Option[VoxelSize]
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[Path] = {
+  )(using ec: ExecutionContext): Fox[Path] = {
     val zipped = tempFileService.create(tracingId)
     val os = new BufferedOutputStream(new FileOutputStream(new File(zipped.toString)))
     allDataToOutputStream(annotationId, tracingId, tracing, volumeDataZipFormat, voxelSize, os).map(_ => zipped)
@@ -461,7 +461,7 @@ class VolumeTracingService @Inject() (
       volumeDataZipFormat: VolumeDataZipFormat,
       voxelSize: Option[VoxelSize],
       os: OutputStream
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] = {
+  )(using ec: ExecutionContext): Fox[Unit] = {
     val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
     val buckets: FoxIterator[NamedStream] = volumeDataZipFormat match {
       case VolumeDataZipFormat.wkw =>
@@ -676,7 +676,7 @@ class VolumeTracingService @Inject() (
       tracing: VolumeTracing,
       isTemporaryTracing: Boolean = false,
       includeFallbackDataIfAvailable: Boolean = false
-  )(using tc: TokenContext): VolumeTracingLayer =
+  ): VolumeTracingLayer =
     VolumeTracingLayer(
       name = tracingId,
       annotationId = annotationId,
@@ -686,7 +686,6 @@ class VolumeTracingService @Inject() (
       volumeDataStore = volumeDataStore,
       includeFallbackDataIfAvailable = includeFallbackDataIfAvailable,
       tracing = tracing,
-      tokenContext = tc,
       additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
     )
 
@@ -729,9 +728,7 @@ class VolumeTracingService @Inject() (
       result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
     } yield result
 
-  def findData(annotationId: ObjectId, tracingId: String, tracing: VolumeTracing)(using
-      tc: TokenContext
-  ): Fox[Option[Vec3Int]] =
+  def findData(annotationId: ObjectId, tracingId: String, tracing: VolumeTracing): Fox[Option[Vec3Int]] =
     for {
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
       volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing, isTemporaryTracing = isTemporaryTracing)
@@ -795,6 +792,7 @@ class VolumeTracingService @Inject() (
       tracing.copy(
         segments = tracing.segments
           .map(segment => segment.copy(segmentId = segmentIdMap.getOrElse(segment.segmentId, segment.segmentId))),
+        activeSegmentId = tracing.activeSegmentId.map(id => segmentIdMap.getOrElse(id, id)),
         userStates = remapSegmentIdsInVolumeUserStates(tracing.userStates, segmentIdMap)
       )
 

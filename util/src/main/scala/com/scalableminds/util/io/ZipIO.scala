@@ -216,9 +216,11 @@ object ZipIO extends LazyLogging {
     }
 
     val resultFox = Fox.serialCombined(zipEntries) { entry =>
-      val input: InputStream = zip.getInputStream(entry)
-      val path = commonRootDir.relativize(Path.of(entry.getName))
-      Fox.withCleanup(f(path, input))(input.close())
+      for {
+        input <- tryo(zip.getInputStream(entry)).toFox
+        path <- tryo(commonRootDir.relativize(Path.of(entry.getName))).toFox
+        result <- Fox.withCleanup(f(path, input))(input.close())
+      } yield result
     }
 
     Fox.fromFutureBox {

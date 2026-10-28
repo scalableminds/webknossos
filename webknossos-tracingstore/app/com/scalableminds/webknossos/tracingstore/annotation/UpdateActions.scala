@@ -126,7 +126,7 @@ object UpdateAction {
         case "updateTdCamera"             => deserialize[UpdateTdCameraAnnotationAction](jsonValue)
         case "updateCamera"               => deserialize[UpdateCameraAnnotationAction](jsonValue)
 
-        case unknownAction: String => JsError(s"Invalid update action s'$unknownAction'")
+        case unknownAction: String => JsError(s"Invalid update action '$unknownAction'")
       }
 
     private def deserialize[T](json: JsValue, shouldTransformPositions: Boolean = false)(implicit

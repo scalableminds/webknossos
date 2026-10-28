@@ -1757,7 +1757,7 @@ Nothing below revises the design. This section records where the code currently 
 
 | Concept | § | Module | Notes |
 |---|---|---|---|
-| `EditIntent` and its shapes | 5.1 | `core/volume_edit_intents.ts` | brush, box, mask and floodFill exist; only brush and floodFill are reachable from the UI |
+| `EditIntent` and its shapes | 5.1 | `core/volume_edit_intents.ts` | brush, box, mask and floodFill exist; all but box are reachable from the UI |
 | Rasterizer | 5.3 | `core/voxel_rasterizer.ts` | capsule / box / mask, run-emitting, synchronous |
 | Resolver | 5.1 | `core/flood_fill_resolver.ts` | flood fill, with the bounding-box limit and the split-tool boundary gate |
 | `BucketVoxelMask`, `BucketWrite`, `BucketWriteMap` | 4 | `core/bucket_voxel_mask.ts`, `core/bucket_write_map.ts` | |

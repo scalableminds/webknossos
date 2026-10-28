@@ -245,6 +245,10 @@ export function getOrCreateOperationContext(
   options: NonNullableOptions,
   existing?: OperationContext | null,
 ): Generator<any, OperationContext, any>;
+export function getOrCreateOperationContext(
+  options: OperationOptions,
+  existing?: OperationContext | null,
+): Generator<any, OperationContext | null, any>;
 export function* getOrCreateOperationContext(
   options: OperationOptions,
   existing?: OperationContext | null,

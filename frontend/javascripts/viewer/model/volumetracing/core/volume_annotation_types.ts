@@ -176,8 +176,20 @@ export function isInBoundingBox(voxel: Vector3, box: BoundingBox | null): boolea
  * which is what makes the propagation cascade in mag_propagation.ts possible.
  */
 export class MagList {
-  constructor(readonly mags: Mag[]) {
+  /**
+   * `finestIndex` is the finest mag that edits are propagated to. A layer's dense
+   * mags start at mag 1 even when the layer itself starts at a coarser mag, and
+   * propagating into the mags below it would only produce writes that nothing
+   * stores.
+   */
+  constructor(
+    readonly mags: Mag[],
+    readonly finestIndex: MagIndex = FINEST_MAG_INDEX,
+  ) {
     if (mags.length === 0) throw new Error("MagList must not be empty");
+    if (finestIndex < 0 || finestIndex >= mags.length) {
+      throw new Error(`The finest mag index ${finestIndex} is not in the MagList`);
+    }
     for (let i = 1; i < mags.length; i++) {
       // Throws if the list is not a chain.
       relativeFactorOrThrow(mags[i - 1], mags[i]);

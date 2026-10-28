@@ -1,6 +1,6 @@
 # DS0b datastore WK RPC client + user access checkpoint
 
-Owner: ds0b sub-agent. Files: backend-rust/datastore/{src/wk_client.rs, src/access.rs, AppState/main wiring in src/lib.rs + src/main.rs, tests/wk_client.rs, tests/access.rs, tests/mock_wk/mod.rs (new shared mock-WK test helper)}. No Cargo changes (reqwest/url/tokio sync were already present).
+Owner: ds0b sub-agent. Files: backend-rust/datastore/{src/wk_client.rs, src/access.rs, AppState/main wiring in src/lib.rs + src/main.rs, tests/wk_client.rs, tests/access.rs, tests/mock_wk.rs (new shared mock-WK test helper)}. No Cargo changes (reqwest/url/tokio sync were already present).
 
 ## Status
 

@@ -80,7 +80,7 @@ impl TestDb {
             admin,
             database_name,
         };
-        let schema = include_str!("../../../schema/schema.sql");
+        let schema = include_str!("../../schema/schema.sql");
         if sqlx::raw_sql(schema).execute(&database.pool).await.is_err() {
             database.cleanup().await;
             panic!("Cannot initialize the isolated test database from schema/schema.sql");

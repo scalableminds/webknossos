@@ -3,7 +3,7 @@
 Status: DONE (2026-10-11). Generic chunked-array core + Zarr v2 + OME-NGFF metadata implemented under `datastore/src/datareaders/`, tests in `datastore/tests/datareaders_zarr.rs`. Cargo.toml unchanged (no new deps; concurrency via an own `join_all` over `poll_fn`).
 
 ## Files
-- `datareaders/mod.rs` re-exports; `data_type.rs` (ArrayDataType, ArrayOrder, DimensionSeparator, ByteOrder, JavaNumber, FillValue); `axis_order.rs` (inherent helpers on `models::AxisOrder`, FullAxisOrder); `nd_array.rs` (ucar MultiArray subset + MultiArrayUtils + BytesConverter); `chunk_utils.rs`; `header.rs` (DatasetHeader trait); `chunk.rs` (ChunkContents, typing, ArrayFormat hooks, read_chunk); `cache.rs` (ChunkContentsCache); `dataset_array.rs` (DatasetArray); `zarr/{header,array,ngff}.rs`.
+- `datareaders.rs` re-exports; `data_type.rs` (ArrayDataType, ArrayOrder, DimensionSeparator, ByteOrder, JavaNumber, FillValue); `axis_order.rs` (inherent helpers on `models::AxisOrder`, FullAxisOrder); `nd_array.rs` (ucar MultiArray subset + MultiArrayUtils + BytesConverter); `chunk_utils.rs`; `header.rs` (DatasetHeader trait); `chunk.rs` (ChunkContents, typing, ArrayFormat hooks, read_chunk); `cache.rs` (ChunkContentsCache); `dataset_array.rs` (DatasetArray); `zarr/{header,array,ngff}.rs`.
 
 ## Public API for the WKW / Zarr3 / N5 / Precomputed agents (`webknossos_datastore::datareaders`)
 - Implement `DatasetHeader` (Send+Sync+Debug) for the format header. Required: `dataset_shape() -> Option<&[i64]>` (physical), `chunk_shape() -> &[i32]`, `dimension_separator()`, `fill_value() -> &FillValue`, `order() -> ArrayOrder`, `resolved_data_type() -> ArrayDataType`, `compressor() -> DsResult<&Compressor>` (Result = Scala lazy failure, surfaces as `Could not decompress data chunk.`), `voxel_offset() -> &[i32]`. Overridable: `byte_order()` (default BigEndian), `chunk_shape_at_index(&[i64])`, `is_sharded()`. Provided: `fill_value_number()` (`"NaN"`/unknown → 0, `"Infinity"`/`"-Infinity"` → max/min value of the dtype, Scala quirks kept), `fill_value_boolean()`, `bytes_per_element()`, `bytes_per_chunk()` (i64), `rank()`, `element_class()`, `bounding_box(&AxisOrder)`.
@@ -42,7 +42,7 @@ Ported: `ChunkContentsCache::new(max_size_bytes)` = Scala `ChunkCacheService.sha
 ## Coordinator decisions (2026-10-11)
 
 - 2-d chunk filename `drop(1)` quirk: KEEP Scala parity (files on disk were written/read by Scala; changing Scala is out of scope). Revisit only together with a Scala change.
-- Parent pre-registered datareaders submodules wkw, zarr3, n5, precomputed (scaffold mod.rs each) so format agents never edit datareaders/mod.rs.
+- Parent pre-registered datareaders submodules wkw, zarr3, n5, precomputed (scaffold mod.rs each) so format agents never edit datareaders.rs.
 
 
 DS3 integration update (Codex 2026-10-11): AppState now owns the shared chunk cache; DatasetArrayBucketProvider is implemented. Chunk cache source/layer identity now uses a JSON scope instead of delimiter-only strings, with exact selective invalidation (color and color__extra tested). Full-chunk shortcut also checks actual chunk shape: boundary N5/precomputed blocks must pad via typed assembly. Historical cache-key/shortcut descriptions above refer to the initial DS2 version. Existing full nominal F-order endian/fill behavior remains. Whole datastore207 tests pass; DS3 checkpoint has current evidence.

@@ -76,7 +76,7 @@ During stages 1–4 both applications run against the **same** production databa
 
 | Route | Play | Rust | Cause / status |
 | --- | ---: | ---: | --- |
-| `GET /api/folders/tree` | 9–23 ms | 49–52 ms | `tree()` (`src/folders/routes/mod.rs`) runs three queries per folder (`has_access`, `find_parent`, `has_access`); Play runs one. Open: replace with one set-based query. |
+| `GET /api/folders/tree` | 9–23 ms | 49–52 ms | `tree()` (`src/folders/routes.rs`) runs three queries per folder (`has_access`, `find_parent`, `has_access`); Play runs one. Open: replace with one set-based query. |
 | `GET /api/annotations/readable?isFinished=true&…&includeTotalCount=true` (admins) | 22–31 ms | 32–38 ms | Open, not analyzed. |
 | `GET /api/user/annotations` (all, and `isFinished=true&…&includeTotalCount=true`) | 4.5–11 ms | 7–14 ms | Open, not analyzed. |
 | `GET /api/users/:id/annotations`, `GET /api/users/:id/tasks` | 1.8–3.1 ms | 2.4–4.0 ms | Open, not analyzed. |

@@ -1,6 +1,6 @@
 # DS0a datastore foundation checkpoint
 
-Owner: ds0a sub-agent. Files: backend-rust/datastore/{Cargo.toml (tokio `io-util` feature only; Cargo.lock unchanged), src/config.rs, src/error.rs, src/redis.rs, src/versioning.rs, src/lib.rs, src/main.rs, tests/common/mod.rs, tests/health.rs, tests/routing.rs}.
+Owner: ds0a sub-agent. Files: backend-rust/datastore/{Cargo.toml (tokio `io-util` feature only; Cargo.lock unchanged), src/config.rs, src/error.rs, src/redis.rs, src/versioning.rs, src/lib.rs, src/main.rs, tests/common.rs, tests/health.rs, tests/routing.rs}.
 
 ## Status
 

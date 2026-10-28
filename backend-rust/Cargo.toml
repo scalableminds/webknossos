@@ -37,6 +37,8 @@ unsafe_code = "forbid"
 [workspace.lints.clippy]
 # `Arc::clone(&x)` marks a reference-count bump, not a deep copy.
 clone_on_ref_ptr = "warn"
+# `foo.rs` next to `foo/`, never `foo/mod.rs`: many identically named tabs are hard to navigate.
+mod_module_files = "warn"
 
 [package]
 name = "webknossos-backend"

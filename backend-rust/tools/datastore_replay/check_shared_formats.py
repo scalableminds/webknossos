@@ -15,7 +15,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[3]
 SCALA = ROOT / 'webknossos-datastore/app/com/scalableminds/webknossos/datastore/services/uploading/UploadMetadataStore.scala'
-RUST = ROOT / 'backend-rust/datastore/src/services/upload/mod.rs'
+RUST = ROOT / 'backend-rust/datastore/src/services/upload.rs'
 SCALA_APP = ROOT / 'webknossos-datastore/app'
 RUST_SRC = ROOT / 'backend-rust/datastore/src'
 SPECIAL_DIR = re.compile(r'"(\.(?:uploading|unpacked|forConversion|converting|trash|mirror))"')

@@ -77,9 +77,9 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
     overwriteMode: "overwrite-all",
     // Irrelevant under overwrite-all; flood fill has no overwrite toggle.
     overwritableValue: 0n,
-    // Doesn't restrict the traversal. The transaction still drops the writes
-    // outside of the cube's editable region.
-    editableBoundingBox: null,
+    // Restricts the traversal, so the voxel limit and coveredBoundingBox only
+    // count voxels that are actually written.
+    editableBoundingBox: adapter.getEditableBoundingBox(options.magIndex),
     additionalCoordinates: options.additionalCoordinates,
   };
 

@@ -118,6 +118,12 @@ object UpdateAction {
           case "resetToBase"                => deserialize[ResetToBaseAnnotationAction](jsonValue)
           case "updateTdCamera"             => deserialize[UpdateTdCameraAnnotationAction](jsonValue)
           case "updateCamera"               => deserialize[UpdateCameraAnnotationAction](jsonValue)
+          case "addBookmark"                => deserialize[AddBookmarkAnnotationAction](jsonValue)
+          case "updateBookmark"             => deserialize[UpdateBookmarkAnnotationAction](jsonValue)
+          case "deleteBookmark"             => deserialize[DeleteBookmarkAnnotationAction](jsonValue)
+          case "updateMetadataOfBookmark"   => deserialize[UpdateMetadataOfBookmarkAnnotationAction](jsonValue)
+          case "updateBookmarkState"        => deserialize[UpdateBookmarkStateAnnotationAction](jsonValue)
+          case "updateBookmarkThumbnail"    => deserialize[UpdateBookmarkThumbnailAnnotationAction](jsonValue)
 
           case unknownAction: String => JsError(s"Invalid update action s'$unknownAction'")
         }
@@ -379,6 +385,18 @@ object UpdateAction {
         Json.obj("name" -> "updateTdCamera", "value" -> Json.toJson(s))
       case s: UpdateCameraAnnotationAction =>
         Json.obj("name" -> "updateCamera", "value" -> Json.toJson(s))
+      case s: AddBookmarkAnnotationAction =>
+        Json.obj("name" -> "addBookmark", "value" -> Json.toJson(s))
+      case s: UpdateBookmarkAnnotationAction =>
+        Json.obj("name" -> "updateBookmark", "value" -> Json.toJson(s)(using UpdateBookmarkAnnotationAction.jsonFormat))
+      case s: DeleteBookmarkAnnotationAction =>
+        Json.obj("name" -> "deleteBookmark", "value" -> Json.toJson(s))
+      case s: UpdateMetadataOfBookmarkAnnotationAction =>
+        Json.obj("name" -> "updateMetadataOfBookmark", "value" -> Json.toJson(s))
+      case s: UpdateBookmarkStateAnnotationAction =>
+        Json.obj("name" -> "updateBookmarkState", "value" -> Json.toJson(s))
+      case s: UpdateBookmarkThumbnailAnnotationAction =>
+        Json.obj("name" -> "updateBookmarkThumbnail", "value" -> Json.toJson(s))
     }
   }
 }

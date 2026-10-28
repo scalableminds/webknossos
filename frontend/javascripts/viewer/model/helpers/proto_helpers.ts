@@ -1,5 +1,7 @@
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'AnnotationProto.proto' or its co... Remove this comment to see the full error message
 import AnnotationProto from "Annotation.proto";
+// @ts-expect-error Cannot find module 'AnnotationBookmark.proto' or its corresponding type declarations.
+import AnnotationBookmarkProto from "AnnotationBookmark.proto";
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'ListOfLong.proto' or its co... Remove this comment to see the full error message
 import ListOfLongProto from "ListOfLong.proto";
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'SkeletonTracing.proto' or its ... Remove this comment to see the full error message
@@ -9,7 +11,14 @@ import VolumeTracingProto from "VolumeTracing.proto";
 import { toBigInt } from "libs/bigint_helpers";
 import Long from "long";
 import { configure, Root, util } from "protobufjs/light";
-import type { APITracingStoreAnnotation, ServerTracing } from "types/api_types";
+import type {
+  APIAnnotationBookmark,
+  APIAnnotationBookmarkState,
+  APITracingStoreAnnotation,
+  ServerTracing,
+} from "types/api_types";
+import type { Vector3 } from "viewer/constants";
+import { sanitizeMetadata } from "viewer/model/reducers/reducer_helpers";
 
 // protobufjs resolves its optional Long support via a try/catch require("long") call (see
 // node_modules/protobufjs/src/util/minimal.js). Wire it up explicitly via a real, bundler-visible
@@ -125,15 +134,83 @@ export function parseProtoListOfLong(listArrayBuffer: ArrayBuffer): Array<bigint
   return items.map(toBigInt);
 }
 
-export function parseProtoAnnotation(annotationArrayBuffer: ArrayBuffer): any {
+type ProtoVec3 = { x: number; y: number; z: number };
+const vec3FromProto = ({ x, y, z }: ProtoVec3): Vector3 => [x, y, z];
+
+function bookmarkStateFromProto(state: any): APIAnnotationBookmarkState {
+  return {
+    ...state,
+    position: vec3FromProto(state.position),
+    rotation: vec3FromProto(state.rotation),
+    tdCamera:
+      state.tdCamera != null
+        ? {
+            ...state.tdCamera,
+            position: vec3FromProto(state.tdCamera.position),
+            up: vec3FromProto(state.tdCamera.up),
+          }
+        : null,
+    layers: state.layers.map((layer: any) => ({
+      ...layer,
+      intensityRange:
+        layer.intensityRange != null ? [layer.intensityRange.x, layer.intensityRange.y] : null,
+      color: layer.color != null ? vec3FromProto(layer.color) : null,
+      meshes: layer.meshes.map((mesh: any) => ({
+        ...mesh,
+        segmentId: toBigInt(mesh.segmentId),
+        seedPosition: vec3FromProto(mesh.seedPosition),
+      })),
+    })),
+  };
+}
+
+export function parseProtoAnnotation(
+  annotationArrayBuffer: ArrayBuffer,
+): APITracingStoreAnnotation {
   const protoRoot = Root.fromJSON(AnnotationProto);
   const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.AnnotationProto`);
   const message = messageType.decode(new Uint8Array(annotationArrayBuffer));
 
-  return messageType.toObject(message, {
+  const annotation = messageType.toObject(message, {
     arrays: true,
     objects: true,
     enums: String,
-    longs: Number,
-  }) as APITracingStoreAnnotation;
+    longs: String,
+  }) as any;
+
+  return {
+    ...annotation,
+    version: Number(annotation.version),
+    earliestAccessibleVersion: Number(annotation.earliestAccessibleVersion),
+  };
+}
+
+export function parseProtoAnnotationBookmarks(
+  bookmarksArrayBuffer: ArrayBuffer,
+): APIAnnotationBookmark[] {
+  const protoRoot = Root.fromJSON(AnnotationBookmarkProto);
+  const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.AnnotationBookmarksProto`);
+  const message = messageType.decode(new Uint8Array(bookmarksArrayBuffer));
+
+  // longs: String keeps uint64 segment ids of bookmarked meshes precise.
+  const { bookmarks } = messageType.toObject(message, {
+    arrays: true,
+    objects: true,
+    enums: String,
+    longs: String,
+  }) as { bookmarks: any[] };
+
+  return bookmarks.map((bookmark) => ({
+    id: bookmark.id,
+    created: Number(bookmark.created),
+    name: bookmark.name ?? null,
+    description: bookmark.description ?? null,
+    state: bookmarkStateFromProto(bookmark.state),
+    createdAtVersion: Number(bookmark.createdAtVersion),
+    thumbnailVersion: Number(bookmark.thumbnailVersion),
+    metadata: sanitizeMetadata(bookmark.metadata),
+    // Thumbnails are loaded separately, see getBookmarkThumbnailUrl.
+    smallThumbnailDataBase64: null,
+    largeThumbnailDataBase64: null,
+  }));
 }

@@ -4,6 +4,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
@@ -21,6 +22,8 @@ class TemporaryTracingService @Inject() (
     volumeDataStore: TemporaryTracingStore[Array[Byte]],
     annotationStore: TemporaryTracingStore[AnnotationProto],
     segmentIndexStore: TemporaryTracingStore[Set[Vec3IntProto]],
+    bookmarkStore: TemporaryTracingStore[AnnotationBookmarkProto],
+    bookmarkThumbnailStore: TemporaryTracingStore[Array[Byte]],
     temporaryTracingIdStore: TracingStoreRedisStore
 )(implicit ec: ExecutionContext) {
 
@@ -56,6 +59,11 @@ class TemporaryTracingService @Inject() (
   def getVolumeSegmentIndexBufferForKey(segmentIndexKey: String): Option[Set[Vec3IntProto]] =
     segmentIndexStore.get(segmentIndexKey)
 
+  def getBookmarks(bookmarkKeys: Seq[String]): Seq[Option[AnnotationBookmarkProto]] =
+    bookmarkStore.getMultiple(bookmarkKeys)
+
+  def getBookmarkThumbnail(thumbnailKey: String): Fox[Array[Byte]] = bookmarkThumbnailStore.get(thumbnailKey).toFox
+
   def saveSkeleton(tracingId: String, skeletonTracing: SkeletonTracing): Fox[Unit] = {
     skeletonStore.insert(tracingId, skeletonTracing, Some(temporaryStoreTimeout))
     registerTracingId(tracingId)
@@ -81,6 +89,16 @@ class TemporaryTracingService @Inject() (
   def saveAnnotationProto(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] = {
     annotationStore.insert(annotationId.toString, annotationProto, Some(temporaryStoreTimeout))
     registerAnnotationId(annotationId)
+    Fox.successful(())
+  }
+
+  def saveBookmarks(bookmarksByKey: Seq[(String, AnnotationBookmarkProto)]): Fox[Unit] = {
+    bookmarkStore.insertAll(bookmarksByKey, Some(temporaryStoreTimeout))
+    Fox.successful(())
+  }
+
+  def saveBookmarkThumbnail(thumbnailKey: String, thumbnail: Array[Byte]): Fox[Unit] = {
+    bookmarkThumbnailStore.insert(thumbnailKey, thumbnail, Some(temporaryStoreTimeout))
     Fox.successful(())
   }
 

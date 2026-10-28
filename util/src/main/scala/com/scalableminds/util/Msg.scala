@@ -63,6 +63,8 @@ object Msg {
     val notActive: String = "The annotation is not active and cannot be finished."
     val finishNotAllowed: String = "Could not access annotation to finish it."
     def reserveTooManyIds(limit: Int): String = s"Cannot reserve more than $limit ids in one request."
+    def reservedIdsTracingIdMismatch(domain: String): String =
+      s"The tracingId must be empty for annotation-scoped id domains and set for all others (domain $domain)."
     val countListableFailed: String = "Could not count listable annotations."
     val duplicateFailed: String = "Could not duplicate annotation."
     val nameNotAvailable: String = "Could not determine name for annotation."
@@ -86,6 +88,7 @@ object Msg {
     val findTracingsFailed: String = "Could not find tracings for annotation."
     val findVolumeRawFailed: String = "Could not find raw volume tracing."
     val flushAnnotationInfoFailed: String = "Could not flush annotation info."
+    val flushBookmarksFailed: String = "Could not flush annotation bookmarks."
     val flushEditableMappingUpdaterBuffersFailed: String =
       "Could not flush editable mapping updater buffers."
     val initEditableMappingUpdaterFailed: String =
@@ -111,6 +114,7 @@ object Msg {
       val noAccessOnMerged: String = "Could not access merged annotation."
       val failedCompound: String = "Could not merge annotations for compound view."
       val mergeVolumeFailed: String = "Could not merge volume tracings."
+      val mergeBookmarksFailed: String = "Could not merge annotation bookmarks."
       val mergeVolumeDataFailed: String = "Could not merge volume data."
     }
     object Reset {
@@ -178,6 +182,7 @@ object Msg {
         "Could not apply editable mapping action during annotation update."
       val resetToBaseFailed: String = "Could not reset to base during annotation update."
       val revertToVersionFailed: String = "Could not revert to version during annotation update."
+      val updateBookmarkFailed: String = "Could not update bookmark during annotation update."
       val skeletonActionFailed: String = "Could not apply skeleton action during annotation update."
       val volumeActionFailed: String = "Could not apply volume action during annotation update."
       val layerNameTaken: String =

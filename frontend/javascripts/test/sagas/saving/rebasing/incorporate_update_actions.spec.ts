@@ -25,6 +25,7 @@ import {
   REPLAYED_BOUNDING_BOX_ID,
 } from "test/sagas/saving/rebasing/incorporate_update_actions_fixtures";
 import { call } from "typed-redux-saga";
+import type { APIAnnotationBookmarkState } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
@@ -39,12 +40,14 @@ import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import type { ApplyingUpdateResults } from "viewer/model/sagas/saving/rebasing/applying_update_artifacts";
 import { tryToIncorporateActions } from "viewer/model/sagas/saving/rebasing/incorporate_update_actions_sagas";
 import {
+  addBookmark,
   addUserBoundingBoxInSkeletonTracing,
   addUserBoundingBoxInVolumeTracing,
   createEdge,
   createNode,
   createSegmentVolumeAction,
   createTree,
+  deleteBookmark,
   deleteEdge,
   deleteNode,
   deleteSegmentGroupUpdateAction,
@@ -59,9 +62,13 @@ import {
   type ServerUpdateAction,
   splitAgglomerate,
   updateAnnotationLayerName,
+  updateBookmark,
+  updateBookmarkState,
+  updateBookmarkThumbnail,
   updateLargestSegmentId,
   updateMappingName,
   updateMetadataOfAnnotation,
+  updateMetadataOfBookmark,
   updateMetadataOfSegmentUpdateAction,
   updateNode,
   updateSegmentPartialVolumeAction,
@@ -130,6 +137,12 @@ const actionNamesHelper: Record<ServerUpdateAction["name"], true> = {
   updateMappingName: true,
   updateLayerMetadata: true,
   updateMetadataOfAnnotation: true,
+  addBookmark: true,
+  updateBookmark: true,
+  updateMetadataOfBookmark: true,
+  deleteBookmark: true,
+  updateBookmarkState: true,
+  updateBookmarkThumbnail: true,
   addSegmentIndex: true,
   revertToVersion: true,
   addLayerToAnnotation: true,
@@ -869,6 +882,158 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           layerName: "Second Local Rename",
         });
       });
+    });
+
+    it("applies a replayed bookmark creation to local state and does not echo it back", async () => {
+      Store.dispatch(discardSaveQueueAction());
+      const bookmarkState: APIAnnotationBookmarkState = {
+        position: [1, 2, 3],
+        mode: "orthogonal",
+        zoomStep: 1,
+        rotation: [0, 0, 0] as Vector3,
+        clippingDistance: 50,
+        clipSkeletonToCurrentSection: false,
+        layers: [],
+      };
+
+      Store.dispatch(startForwardingUpdateActionsAction());
+      await incorporateActions(
+        [
+          addBookmark({
+            id: 1,
+            created: 123,
+            name: "Replayed Bookmark",
+            state: bookmarkState,
+            createdAtVersion: null,
+            thumbnailVersion: null,
+            metadata: [{ key: "k", stringValue: "v" }],
+            smallThumbnailDataBase64: null,
+            largeThumbnailDataBase64: null,
+          }),
+        ],
+        1,
+      );
+      Store.dispatch(finishForwardingUpdateActionsAction());
+
+      expect(Store.getState().annotation.bookmarks).toEqual([
+        {
+          id: 1,
+          created: 123,
+          name: "Replayed Bookmark",
+          state: bookmarkState,
+          createdAtVersion: 1,
+          thumbnailVersion: 1,
+          metadata: [{ key: "k", stringValue: "v" }],
+          smallThumbnailDataBase64: null,
+          largeThumbnailDataBase64: null,
+        },
+      ]);
+      expect(Store.getState().save.queue).toEqual([]);
+    });
+
+    it("applies replayed bookmark metadata updates", async () => {
+      Store.dispatch(discardSaveQueueAction());
+      const bookmark = {
+        id: 1,
+        created: 123,
+        name: null,
+        state: {
+          position: [1, 2, 3] as Vector3,
+          mode: "orthogonal" as const,
+          zoomStep: 1,
+          rotation: [0, 0, 0] as Vector3,
+          clippingDistance: 50,
+          clipSkeletonToCurrentSection: false,
+          layers: [],
+        },
+        createdAtVersion: null,
+        thumbnailVersion: null,
+        metadata: [
+          { key: "a", stringValue: "1" },
+          { key: "b", numberValue: 2 },
+          { key: "c", boolValue: true },
+        ],
+        smallThumbnailDataBase64: null,
+        largeThumbnailDataBase64: null,
+      };
+
+      Store.dispatch(startForwardingUpdateActionsAction());
+      await incorporateActions(
+        [
+          addBookmark(bookmark),
+          updateMetadataOfBookmark(
+            1,
+            [
+              { key: "b", numberValue: 3 },
+              { key: "d", stringValue: "4" },
+            ],
+            ["a"],
+          ),
+        ],
+        1,
+      );
+      Store.dispatch(finishForwardingUpdateActionsAction());
+
+      expect(Store.getState().annotation.bookmarks[0].metadata).toEqual([
+        { key: "b", numberValue: 3 },
+        { key: "c", boolValue: true },
+        { key: "d", stringValue: "4" },
+      ]);
+      expect(Store.getState().save.queue).toEqual([]);
+    });
+
+    it("applies replayed bookmark renames, view and thumbnail updates and deletions", async () => {
+      Store.dispatch(discardSaveQueueAction());
+      const bookmark = {
+        id: 1,
+        created: 123,
+        name: "Old Name",
+        state: {
+          position: [1, 2, 3] as Vector3,
+          mode: "orthogonal" as const,
+          zoomStep: 1,
+          rotation: [0, 0, 0] as Vector3,
+          clippingDistance: 50,
+          clipSkeletonToCurrentSection: false,
+          layers: [],
+        },
+        createdAtVersion: null,
+        thumbnailVersion: null,
+        metadata: [],
+        smallThumbnailDataBase64: null,
+        largeThumbnailDataBase64: null,
+      };
+
+      Store.dispatch(startForwardingUpdateActionsAction());
+      await incorporateActions([addBookmark(bookmark), updateBookmark(1, "New Name")], 1);
+      Store.dispatch(finishForwardingUpdateActionsAction());
+      expect(Store.getState().annotation.bookmarks[0].name).toBe("New Name");
+
+      Store.dispatch(startForwardingUpdateActionsAction());
+      await incorporateActions([updateBookmark(1, null)], 2);
+      Store.dispatch(finishForwardingUpdateActionsAction());
+      expect(Store.getState().annotation.bookmarks[0].name).toBeNull();
+      expect(Store.getState().save.queue).toEqual([]);
+
+      const newState = { ...bookmark.state, position: [4, 5, 6] as Vector3 };
+      Store.dispatch(startForwardingUpdateActionsAction());
+      await incorporateActions([updateBookmarkState(1, newState)], 3);
+      Store.dispatch(finishForwardingUpdateActionsAction());
+      expect(Store.getState().annotation.bookmarks[0].state).toEqual(newState);
+      expect(Store.getState().save.queue).toEqual([]);
+
+      Store.dispatch(startForwardingUpdateActionsAction());
+      // The server sets the thumbnailVersion of stored actions, which may point to older thumbnails.
+      await incorporateActions([updateBookmarkThumbnail({ ...bookmark, thumbnailVersion: 2 })], 4);
+      Store.dispatch(finishForwardingUpdateActionsAction());
+      expect(Store.getState().annotation.bookmarks[0].thumbnailVersion).toBe(2);
+      expect(Store.getState().save.queue).toEqual([]);
+
+      Store.dispatch(startForwardingUpdateActionsAction());
+      await incorporateActions([deleteBookmark(1)], 5);
+      Store.dispatch(finishForwardingUpdateActionsAction());
+      expect(Store.getState().annotation.bookmarks).toEqual([]);
+      expect(Store.getState().save.queue).toEqual([]);
     });
 
     it("applies addSegmentIndex", async () => {

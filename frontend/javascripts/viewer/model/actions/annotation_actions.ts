@@ -5,11 +5,14 @@ import { batchActions } from "redux-batched-actions";
 import type {
   AdditionalCoordinate,
   AnnotationCollaborationMode,
+  APIAnnotationBookmark,
+  APIAnnotationBookmarkState,
   APIAnnotationVisibility,
   APIDataLayer,
   APIDataset,
   APIMeshFileInfo,
   EditableLayerProperties,
+  MetadataEntryProto,
 } from "types/api_types";
 import type { MappingType, Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
@@ -51,6 +54,16 @@ export type SetAnnotationNameAction = ReturnType<typeof setAnnotationNameAction>
 type SetAnnotationVisibilityAction = ReturnType<typeof setAnnotationVisibilityAction>;
 export type EditAnnotationLayerAction = ReturnType<typeof editAnnotationLayerAction>;
 export type SetAnnotationDescriptionAction = ReturnType<typeof setAnnotationDescriptionAction>;
+export type AddBookmarkAction = ReturnType<typeof addBookmarkAction>;
+type SetBookmarkCreatedAtVersionAction = ReturnType<typeof setBookmarkCreatedAtVersionAction>;
+type UpdateBookmarkMetadataAction = ReturnType<typeof updateBookmarkMetadataAction>;
+type SetBookmarkMetadataAction = ReturnType<typeof setBookmarkMetadataAction>;
+type SetBookmarkNameAction = ReturnType<typeof setBookmarkNameAction>;
+type DeleteBookmarkAction = ReturnType<typeof deleteBookmarkAction>;
+type SetBookmarkStateAction = ReturnType<typeof setBookmarkStateAction>;
+type SetBookmarkThumbnailAction = ReturnType<typeof setBookmarkThumbnailAction>;
+type SetBookmarksAction = ReturnType<typeof setBookmarksAction>;
+type SetBookmarkThumbnailVersionAction = ReturnType<typeof setBookmarkThumbnailVersionAction>;
 type SetAnnotationAllowUpdateAction = ReturnType<
   typeof setIsUpdatingAnnotationCurrentlyAllowedAction
 >;
@@ -89,6 +102,16 @@ export type AnnotationActionTypes =
   | SetAnnotationVisibilityAction
   | EditAnnotationLayerAction
   | SetAnnotationDescriptionAction
+  | AddBookmarkAction
+  | SetBookmarkCreatedAtVersionAction
+  | UpdateBookmarkMetadataAction
+  | SetBookmarkMetadataAction
+  | SetBookmarkNameAction
+  | DeleteBookmarkAction
+  | SetBookmarkStateAction
+  | SetBookmarkThumbnailAction
+  | SetBookmarksAction
+  | SetBookmarkThumbnailVersionAction
   | SetAnnotationAllowUpdateAction
   | SetUserBoundingBoxesAction
   | ChangeUserBoundingBoxAction
@@ -132,12 +155,25 @@ export const AllUserBoundingBoxActions: Action["type"][] = [
   "ADD_USER_BOUNDING_BOXES",
 ];
 
-// Actions whose effect on annotation-level metadata (layer names, description) should be
+// User changes to bookmarks, which can be undone (see undo_saga.ts).
+export const BookmarkUndoRelevantActions: Action["type"][] = [
+  "ADD_BOOKMARK",
+  "DELETE_BOOKMARK",
+  "SET_BOOKMARK_NAME",
+  "SET_BOOKMARK_METADATA",
+  "SET_BOOKMARK_STATE",
+  "SET_BOOKMARK_THUMBNAIL",
+];
+
+// Actions whose effect on annotation-level data (layer names, description, bookmarks) should be
 // diffed into the save queue, mirroring SkeletonTracingSaveRelevantActions /
 // VolumeTracingSaveRelevantActions.
 export const AnnotationMetadataSaveRelevantActions: Action["type"][] = [
   "EDIT_ANNOTATION_LAYER",
   "SET_ANNOTATION_DESCRIPTION",
+  ...BookmarkUndoRelevantActions,
+  // Not undo-relevant itself, as it is dispatched by undo/redo.
+  "SET_BOOKMARKS",
 ];
 
 export const initializeAnnotationAction = (annotation: Annotation) =>
@@ -178,6 +214,98 @@ export const setAnnotationDescriptionAction = (description: string) =>
   ({
     type: "SET_ANNOTATION_DESCRIPTION",
     description,
+  }) as const;
+
+export const addBookmarkAction = (bookmark: APIAnnotationBookmark) =>
+  ({
+    type: "ADD_BOOKMARK",
+    bookmark,
+  }) as const;
+
+export const updateBookmarkMetadataAction = (
+  bookmarkId: number,
+  upsertEntriesByKey: MetadataEntryProto[],
+  removeEntriesByKey: string[],
+) =>
+  ({
+    type: "UPDATE_BOOKMARK_METADATA",
+    bookmarkId,
+    upsertEntriesByKey,
+    removeEntriesByKey,
+  }) as const;
+
+export const setBookmarkNameAction = (bookmarkId: number, name: string | null) =>
+  ({
+    type: "SET_BOOKMARK_NAME",
+    bookmarkId,
+    name,
+  }) as const;
+
+// Replaces the whole list, so that the order of the entries is kept while editing.
+export const setBookmarkMetadataAction = (bookmarkId: number, metadata: MetadataEntryProto[]) =>
+  ({
+    type: "SET_BOOKMARK_METADATA",
+    bookmarkId,
+    metadata,
+  }) as const;
+
+export const deleteBookmarkAction = (bookmarkId: number) =>
+  ({
+    type: "DELETE_BOOKMARK",
+    bookmarkId,
+  }) as const;
+
+export type BookmarkThumbnail = Pick<
+  APIAnnotationBookmark,
+  "smallThumbnailDataBase64" | "largeThumbnailDataBase64" | "thumbnailVersion"
+>;
+
+// A newly captured thumbnail has no thumbnailVersion until it was saved.
+export const setBookmarkStateAction = (
+  bookmarkId: number,
+  state: APIAnnotationBookmarkState,
+  thumbnail: BookmarkThumbnail | null,
+) =>
+  ({
+    type: "SET_BOOKMARK_STATE",
+    bookmarkId,
+    state,
+    thumbnail,
+  }) as const;
+
+// See setBookmarkStateAction.
+export const setBookmarkThumbnailAction = (bookmarkId: number, thumbnail: BookmarkThumbnail) =>
+  ({
+    type: "SET_BOOKMARK_THUMBNAIL",
+    bookmarkId,
+    thumbnail,
+  }) as const;
+
+// Replaces all bookmarks, used by undo/redo.
+export const setBookmarksAction = (bookmarks: APIAnnotationBookmark[]) =>
+  ({
+    type: "SET_BOOKMARKS",
+    bookmarks,
+  }) as const;
+
+// Marks the saved thumbnail, unless the bookmark got another thumbnail in the meantime.
+export const setBookmarkThumbnailVersionAction = (
+  bookmarkId: number,
+  thumbnailVersion: number,
+  savedLargeThumbnailDataBase64: string,
+) =>
+  ({
+    type: "SET_BOOKMARK_THUMBNAIL_VERSION",
+    bookmarkId,
+    thumbnailVersion,
+    savedLargeThumbnailDataBase64,
+  }) as const;
+
+export const setBookmarkCreatedAtVersionAction = (bookmarkId: number, createdAtVersion: number) =>
+  ({
+    type: "SET_BOOKMARK_CREATED_AT_VERSION",
+    bookmarkId,
+    createdAtVersion,
   }) as const;
 
 export const setIsUpdatingAnnotationCurrentlyAllowedAction = (currentlyAllowUpdate: boolean) =>

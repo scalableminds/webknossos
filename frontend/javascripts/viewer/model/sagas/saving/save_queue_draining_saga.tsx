@@ -18,6 +18,10 @@ import {
 } from "viewer/model/accessors/annotation_accessor";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
+  setBookmarkCreatedAtVersionAction,
+  setBookmarkThumbnailVersionAction,
+} from "viewer/model/actions/annotation_actions";
+import {
   type OperationId,
   SYNC_RELATED_OPERATION_IDS,
 } from "viewer/model/actions/operation_context_actions";
@@ -277,6 +281,25 @@ export function* sendSaveRequestToServer(
       }
 
       yield* put(setVersionNumberAction(version + versionIncrement));
+      for (const batch of compactedSaveQueue) {
+        for (const action of batch.actions) {
+          if (action.name === "addBookmark") {
+            yield* put(setBookmarkCreatedAtVersionAction(action.value.id, batch.version));
+          }
+          if (
+            (action.name === "addBookmark" || action.name === "updateBookmarkThumbnail") &&
+            action.value.largeThumbnailDataBase64 != null
+          ) {
+            yield* put(
+              setBookmarkThumbnailVersionAction(
+                action.value.id,
+                batch.version,
+                action.value.largeThumbnailDataBase64,
+              ),
+            );
+          }
+        }
+      }
       yield* put(setLastSaveTimestampAction());
       yield* put(shiftSaveQueueAction(saveQueue.length));
 

@@ -224,6 +224,83 @@ export async function captureScreenshots(
   return results;
 }
 
+const BOOKMARK_THUMBNAIL_PRIORITY: OrthoView[] = [
+  OrthoViews.PLANE_XY,
+  OrthoViews.PLANE_YZ,
+  OrthoViews.PLANE_XZ,
+  OrthoViews.TDView,
+];
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    // The data URL has the form "data:<mime>;base64,<data>".
+    reader.onload = () => resolve((reader.result as string).split(",")[1]);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+const SMALL_BOOKMARK_THUMBNAIL_MAX_EDGE = 96;
+
+async function downsampleImage(blob: Blob, maxEdge: number): Promise<Blob | null> {
+  const bitmap = await createImageBitmap(blob);
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const context = canvas.getContext("2d");
+  if (context == null) return null;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/webp"));
+}
+
+export type BookmarkThumbnails = {
+  largeDataBase64: string;
+  smallDataBase64: string;
+};
+
+export type BookmarkThumbnailViewport = OrthoView | typeof FlightViewport;
+
+// The viewports that are visible in the current layout, by thumbnail priority.
+export function getRenderedBookmarkThumbnailViewports(): BookmarkThumbnailViewport[] {
+  const state = Store.getState();
+  const candidates: BookmarkThumbnailViewport[] =
+    state.temporaryConfiguration.viewMode === constants.MODE_PLANE_TRACING
+      ? BOOKMARK_THUMBNAIL_PRIORITY
+      : [FlightViewport];
+  return candidates.filter((candidate) => {
+    const { width, height } = getInputCatcherRect(state, candidate);
+    return width > 0 && height > 0;
+  });
+}
+
+// Renders the first visible viewport (by priority) as base64-encoded WebP images, once in
+// full size and once downsampled. Returns null if no viewport is visible in the current layout.
+export async function captureBookmarkThumbnails(): Promise<BookmarkThumbnails | null> {
+  const viewport = getRenderedBookmarkThumbnailViewports()[0];
+  if (viewport == null) return null;
+  return captureBookmarkThumbnailsOfViewport(viewport);
+}
+
+export async function captureBookmarkThumbnailsOfViewport(
+  viewport: BookmarkThumbnailViewport,
+): Promise<BookmarkThumbnails | null> {
+  const { width, height } = getInputCatcherRect(Store.getState(), viewport);
+  // A clear color of 0xffffff is mapped to the theme's background color, matching the on-screen look.
+  const buffer = renderToTexture(viewport, undefined, undefined, false, 0xffffff, true);
+  const blob = await convertBufferToImage(buffer, width, height, null, null, true, "image/webp");
+  if (blob == null) return null;
+  const smallBlob = await downsampleImage(blob, SMALL_BOOKMARK_THUMBNAIL_MAX_EDGE);
+  if (smallBlob == null) return null;
+  return {
+    largeDataBase64: await blobToBase64(blob),
+    smallDataBase64: await blobToBase64(smallBlob),
+  };
+}
+
 export async function downloadScreenshot() {
   // Save each screenshot after another with a delay as else Safari only downloads the last one. (See #10018)
   await captureScreenshots(undefined, ({ name, blob }) => saveAs(blob, name));

@@ -1,6 +1,8 @@
 import { computeBoundingBoxObjectFromBoundingBox } from "libs/utils";
 import type {
   AdditionalCoordinate,
+  APIAnnotationBookmark,
+  APIAnnotationBookmarkState,
   APIMagRestrictions,
   MetadataEntryProto,
   TreeAgglomerateInfo,
@@ -127,6 +129,12 @@ export type AddLayerToAnnotationUpdateAction = ReturnType<typeof addLayerToAnnot
 export type DeleteAnnotationLayerUpdateAction = ReturnType<typeof deleteAnnotationLayer>;
 export type UpdateAnnotationLayerNameUpdateAction = ReturnType<typeof updateAnnotationLayerName>;
 export type UpdateMetadataOfAnnotationUpdateAction = ReturnType<typeof updateMetadataOfAnnotation>;
+export type AddBookmarkUpdateAction = ReturnType<typeof addBookmark>;
+export type UpdateBookmarkUpdateAction = ReturnType<typeof updateBookmark>;
+export type UpdateMetadataOfBookmarkUpdateAction = ReturnType<typeof updateMetadataOfBookmark>;
+export type DeleteBookmarkUpdateAction = ReturnType<typeof deleteBookmark>;
+export type UpdateBookmarkStateUpdateAction = ReturnType<typeof updateBookmarkState>;
+export type UpdateBookmarkThumbnailUpdateAction = ReturnType<typeof updateBookmarkThumbnail>;
 export type SplitAgglomerateUpdateAction = ReturnType<typeof splitAgglomerate>;
 export type MergeAgglomerateUpdateAction = ReturnType<typeof mergeAgglomerate>;
 
@@ -281,6 +289,12 @@ export type UpdateActionWithoutIsolationRequirement =
   | DeleteAnnotationLayerUpdateAction
   | UpdateAnnotationLayerNameUpdateAction
   | UpdateMetadataOfAnnotationUpdateAction
+  | AddBookmarkUpdateAction
+  | UpdateBookmarkUpdateAction
+  | UpdateMetadataOfBookmarkUpdateAction
+  | DeleteBookmarkUpdateAction
+  | UpdateBookmarkStateUpdateAction
+  | UpdateBookmarkThumbnailUpdateAction
   | SplitAgglomerateUpdateAction
   | MergeAgglomerateUpdateAction;
 
@@ -1274,6 +1288,82 @@ export function updateMetadataOfAnnotation(description: string) {
   return {
     name: "updateMetadataOfAnnotation",
     value: { description },
+  } as const;
+}
+
+// A saved thumbnail is referenced by its version, so that no image data has to be sent again
+// (e.g. when a deleted bookmark is restored by undo). Otherwise, the local thumbnails are sent.
+// The server strips them from the stored update actions and sets the thumbnailVersion.
+function getThumbnailUpdate(bookmark: APIAnnotationBookmark) {
+  return bookmark.thumbnailVersion != null
+    ? {
+        largeThumbnailDataBase64: null,
+        smallThumbnailDataBase64: null,
+        thumbnailVersion: bookmark.thumbnailVersion,
+      }
+    : {
+        largeThumbnailDataBase64: bookmark.largeThumbnailDataBase64,
+        smallThumbnailDataBase64: bookmark.smallThumbnailDataBase64,
+        thumbnailVersion: null,
+      };
+}
+
+// createdAtVersion is set by the server.
+export function addBookmark(bookmark: APIAnnotationBookmark) {
+  return {
+    name: "addBookmark",
+    value: {
+      id: bookmark.id,
+      created: bookmark.created,
+      name: bookmark.name,
+      state: bookmark.state,
+      metadata: enforceValidMetadata(bookmark.metadata),
+      ...getThumbnailUpdate(bookmark),
+    },
+  } as const;
+}
+
+// A null name clears it.
+export function updateBookmark(id: number, name: string | null) {
+  return {
+    name: "updateBookmark",
+    value: { id, name },
+  } as const;
+}
+
+export function updateMetadataOfBookmark(
+  id: number,
+  upsertEntriesByKey: Array<MetadataEntryProto>,
+  removeEntriesByKey: Array<string>,
+) {
+  return {
+    name: "updateMetadataOfBookmark",
+    value: {
+      id,
+      upsertEntriesByKey: enforceValidMetadata(upsertEntriesByKey),
+      removeEntriesByKey,
+    },
+  } as const;
+}
+
+export function updateBookmarkState(id: number, state: APIAnnotationBookmarkState) {
+  return {
+    name: "updateBookmarkState",
+    value: { id, state },
+  } as const;
+}
+
+export function updateBookmarkThumbnail(bookmark: APIAnnotationBookmark) {
+  return {
+    name: "updateBookmarkThumbnail",
+    value: { id: bookmark.id, ...getThumbnailUpdate(bookmark) },
+  } as const;
+}
+
+export function deleteBookmark(id: number) {
+  return {
+    name: "deleteBookmark",
+    value: { id },
   } as const;
 }
 

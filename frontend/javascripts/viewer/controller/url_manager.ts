@@ -47,7 +47,7 @@ type PrecomputedMeshUrlDescriptor = BaseMeshUrlDescriptor & {
   readonly isPrecomputed: true;
   meshFileName: string;
 };
-type MeshUrlDescriptor = AdHocMeshUrlDescriptor | PrecomputedMeshUrlDescriptor;
+export type MeshUrlDescriptor = AdHocMeshUrlDescriptor | PrecomputedMeshUrlDescriptor;
 export type DirectLayerSpecificProps = Mutable<
   Partial<
     Pick<
@@ -134,6 +134,13 @@ export type UrlManagerState = {
   tdCamera?: TdCameraUrlState;
 };
 export type PartialUrlManagerState = Partial<UrlManagerState>;
+export type CompleteUrlManagerState = UrlManagerState &
+  Required<
+    Pick<
+      UrlManagerState,
+      "position" | "mode" | "zoomStep" | "clippingDistance" | "clipSkeletonToCurrentSection"
+    >
+  >;
 
 class UrlManager {
   baseUrl: string = "";
@@ -299,7 +306,7 @@ class UrlManager {
     window.onhashchange = null;
   }
 
-  getUrlState(state: WebknossosState): UrlManagerState & { mode: ViewMode } {
+  getUrlState(state: WebknossosState): CompleteUrlManagerState {
     const position: Vector3 = V3.floor(getPosition(state.flycam));
     const { viewMode: mode } = state.temporaryConfiguration;
     const zoomStep = roundTo(state.flycam.zoomStep, 3);

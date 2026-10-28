@@ -13,9 +13,16 @@ import {
   isMeshLoaded,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
+  addBookmarkAction,
+  type BookmarkThumbnail,
+  deleteBookmarkAction,
   editAnnotationLayerAction,
   setAnnotationDescriptionAction,
+  setBookmarkNameAction,
+  setBookmarkStateAction,
+  setBookmarkThumbnailAction,
   setIsUpdatingAnnotationCurrentlyAllowedAction,
+  updateBookmarkMetadataAction,
 } from "viewer/model/actions/annotation_actions";
 import {
   ensureLayerMappingsAreLoadedAction,
@@ -109,6 +116,24 @@ export function* tryToIncorporateActions(
   }
 
   for (const actionBatch of newerActions) {
+    // Stored update actions don't carry thumbnail data, but the server set their thumbnailVersion.
+    // Unsaved actions of the user still carry the local thumbnails (or reference saved ones).
+    const getIncorporatedBookmarkThumbnail = (value: {
+      smallThumbnailDataBase64?: string | null;
+      largeThumbnailDataBase64?: string | null;
+      thumbnailVersion?: number | null;
+    }): BookmarkThumbnail =>
+      areUnsavedChangesOfUser
+        ? {
+            smallThumbnailDataBase64: value.smallThumbnailDataBase64 ?? null,
+            largeThumbnailDataBase64: value.largeThumbnailDataBase64 ?? null,
+            thumbnailVersion: value.thumbnailVersion ?? null,
+          }
+        : {
+            smallThumbnailDataBase64: null,
+            largeThumbnailDataBase64: null,
+            thumbnailVersion: value.thumbnailVersion ?? actionBatch.version,
+          };
     // Per layer: maps each split segment id (segmentId1/segmentId2 of splitAgglomerate actions)
     // to the agglomerate id it belonged to before the split.
     const splitSegmentIdToOldAgglomeratePerLayer: Map<string, Map<bigint, bigint>> = new Map();
@@ -418,6 +443,53 @@ export function* tryToIncorporateActions(
         }
         case "updateMetadataOfAnnotation": {
           yield* put(setAnnotationDescriptionAction(action.value.description));
+          break;
+        }
+        case "addBookmark": {
+          // Server-side update actions also carry metadata such as actionTimestamp.
+          const { id, created, name, state, metadata } = action.value;
+          yield* put(
+            addBookmarkAction({
+              id,
+              created,
+              name,
+              state,
+              // Unsaved bookmarks of the user get their version once they are saved.
+              createdAtVersion: areUnsavedChangesOfUser ? null : actionBatch.version,
+              metadata,
+              ...getIncorporatedBookmarkThumbnail(action.value),
+            }),
+          );
+          break;
+        }
+        case "updateBookmark": {
+          // The description of a bookmark is not used in the frontend yet.
+          const { id, name } = action.value;
+          if (name !== undefined) {
+            yield* put(setBookmarkNameAction(id, name));
+          }
+          break;
+        }
+        case "updateMetadataOfBookmark": {
+          const { id, upsertEntriesByKey, removeEntriesByKey } = action.value;
+          yield* put(updateBookmarkMetadataAction(id, upsertEntriesByKey, removeEntriesByKey));
+          break;
+        }
+        case "updateBookmarkState": {
+          yield* put(setBookmarkStateAction(action.value.id, action.value.state, null));
+          break;
+        }
+        case "updateBookmarkThumbnail": {
+          yield* put(
+            setBookmarkThumbnailAction(
+              action.value.id,
+              getIncorporatedBookmarkThumbnail(action.value),
+            ),
+          );
+          break;
+        }
+        case "deleteBookmark": {
+          yield* put(deleteBookmarkAction(action.value.id));
           break;
         }
         case "addSegmentIndex": {

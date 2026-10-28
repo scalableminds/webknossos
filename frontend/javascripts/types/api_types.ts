@@ -6,12 +6,14 @@ import type {
   AdditionalCoordinate,
   ColorObject,
   LOG_LEVELS,
+  MappingType,
   NestedMatrix4,
   Point3,
   TreeType,
   UnitLong,
   Vector3,
   Vector6,
+  ViewMode,
 } from "viewer/constants";
 import type {
   SkeletonTracingStats,
@@ -607,6 +609,9 @@ type APIAnnotationBase = APIAnnotationInfo & {
   readonly user?: APIUserBase;
   readonly contributors: APIUserBase[];
   readonly collaborationMode: AnnotationCollaborationMode;
+  // Only populated once the tracingstore's AnnotationProto has been fetched
+  // (see model_initialization.ts); not part of the plain /info JSON.
+  readonly bookmarks?: APIAnnotationBookmark[];
 };
 export type APIAnnotation = APIAnnotationBase & {
   readonly task: APITask | null | undefined;
@@ -638,12 +643,75 @@ export type APIAnnotationUserState = {
   zoomLevel: number;
 };
 
+// Mirrors AnnotationBookmarkStateProto. Optional fields are null or undefined when unset.
+export type APIAnnotationBookmarkMesh = {
+  segmentId: bigint;
+  seedPosition: Vector3;
+} & (
+  | { isPrecomputed: true; meshFileName: string }
+  | {
+      isPrecomputed: false;
+      mappingName: string | null | undefined;
+      mappingType: MappingType | null | undefined;
+    }
+);
+export type APIAnnotationBookmarkLayerState = {
+  layerName: string;
+  isDisabled?: boolean | null;
+  intensityRange?: readonly [number, number] | null;
+  color?: Vector3 | null;
+  isInverted?: boolean | null;
+  gammaCorrectionValue?: number | null;
+  mapping?: { mappingName: string; mappingType: MappingType } | null;
+  meshFileName?: string | null;
+  meshes: APIAnnotationBookmarkMesh[];
+};
+export type APIAnnotationBookmarkState = {
+  position: Vector3;
+  mode: ViewMode;
+  zoomStep: number;
+  rotation: Vector3;
+  activeNodeId?: number | null;
+  additionalCoordinates?: AdditionalCoordinate[] | null;
+  nativelyRenderedLayerName?: string | null;
+  clippingDistance: number;
+  clipSkeletonToCurrentSection: boolean;
+  tdCamera?: {
+    position: Vector3;
+    up: Vector3;
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+  } | null;
+  showSkeletons?: boolean | null;
+  layers: APIAnnotationBookmarkLayerState[];
+};
+export type APIAnnotationBookmark = {
+  id: number;
+  created: number;
+  name: string | null;
+  // Cannot be edited in the frontend yet, so it is only read from the server (e.g. for the CSV export).
+  description?: string | null;
+  state: APIAnnotationBookmarkState;
+  // The annotation version that added the bookmark. null until the bookmark was saved.
+  createdAtVersion: number | null;
+  // The annotation version that stored the current thumbnails. null until they were saved.
+  thumbnailVersion: number | null;
+  metadata: MetadataEntryProto[];
+  // Only set for thumbnails captured in this session. Otherwise, the thumbnail is loaded from
+  // the server. They are kept after saving, as they identify the thumbnail when diffing.
+  smallThumbnailDataBase64: string | null;
+  largeThumbnailDataBase64: string | null;
+};
+
 export type APITracingStoreAnnotation = {
   readonly description: string;
   readonly version: number;
   readonly earliestAccessibleVersion: number;
   readonly annotationLayers: APITracingStoreAnnotationLayer[];
   readonly userStates: APIAnnotationUserState[];
+  readonly bookmarkIds: number[];
 };
 
 export type APITimeTrackingPerUser = {
@@ -1059,7 +1127,8 @@ export type AnnotationIdDomain =
   | "Tree"
   | "Node"
   | "TreeGroup"
-  | "BoundingBox";
+  | "BoundingBox"
+  | "Bookmark";
 
 export type APIMeshFileInfo = {
   name: string;

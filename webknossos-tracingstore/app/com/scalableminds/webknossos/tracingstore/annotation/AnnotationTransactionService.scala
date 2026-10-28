@@ -29,7 +29,8 @@ class AnnotationTransactionService @Inject() (
     volumeTracingService: VolumeTracingService,
     tracingDataStore: TracingDataStore,
     remoteWebknossosClient: TSRemoteWebknossosClient,
-    annotationService: TSAnnotationService
+    annotationService: TSAnnotationService,
+    annotationBookmarkService: AnnotationBookmarkService
 ) extends KeyValueStoreConversions
     with LazyLogging {
 
@@ -293,6 +294,13 @@ class AnnotationTransactionService @Inject() (
       _ = stats.count("eagerUpdateBucketActions", eagerUpdateBucketActions.length)
       _ <- assertNoInvalidUpdateGroupCombinations(updateActionGroup, eagerUpdateBucketActions)
       _ <- applyEagerUpdateBucketActions(eagerUpdateBucketActions, annotationId, updateActionGroup.version)
+      _ <- Fox.serialCombined(updateActionGroup.actions) {
+        case a: BookmarkThumbnailUpdateAction =>
+          Fox.serialCombined(a.thumbnails) { case (size, thumbnail) =>
+            annotationBookmarkService.saveThumbnail(annotationId, a.id, size, updateActionGroup.version, thumbnail)
+          }
+        case _ => Fox.successful(List.empty)
+      }
       updateActionsJson = Json.toJson(updateActionsProcessed)
       _ <- stats.time("annotationUpdates.put")(
         tracingDataStore.annotationUpdates.put(
@@ -373,7 +381,14 @@ class AnnotationTransactionService @Inject() (
     }
     actionsWithInfo.map {
       case a: EagerUpdateBucketVolumeAction => a.withoutBase64Data
-      case a: AddLayerAnnotationAction      =>
+      case a: AddBookmarkAnnotationAction   =>
+        a.withoutThumbnails.copy(
+          createdAtVersion = Some(updateActionGroup.version),
+          thumbnailVersion = Some(a.resultingThumbnailVersion(updateActionGroup.version))
+        )
+      case a: UpdateBookmarkThumbnailAnnotationAction =>
+        a.withoutThumbnails.copy(thumbnailVersion = Some(a.resultingThumbnailVersion(updateActionGroup.version)))
+      case a: AddLayerAnnotationAction =>
         // Note: this generated tracingId must not be read from this action before it was committed to fossildb,
         // to keep save retries idempotent.
         a.copy(tracingId = Some(TracingId.generate))

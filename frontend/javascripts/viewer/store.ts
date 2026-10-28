@@ -7,6 +7,7 @@ import type {
   AdditionalAxis,
   AnnotationCollaborationMode,
   AnnotationLayerDescriptor,
+  APIAnnotationBookmark,
   APIAnnotationType,
   APIAnnotationVisibility,
   APIConnectomeFile,
@@ -119,6 +120,7 @@ export type Annotation = {
   readonly restrictions: RestrictionsAndSettings;
   readonly visibility: AnnotationVisibility;
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
+  readonly bookmarks: Array<APIAnnotationBookmark>;
   readonly tags: Array<string>;
   readonly stats: TracingStats | null | undefined;
   readonly description: string;
@@ -602,6 +604,8 @@ type UiInformation = {
   readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
   readonly activeUserBoundingBoxId: number | null | undefined;
+  // Asks the bookmarks tab to jump to this bookmark and to start renaming it.
+  readonly bookmarkIdToFocus: number | null;
   readonly storedLayouts: Record<string, any>;
   readonly isImportingMesh: boolean;
   readonly isInAnnotationView: boolean;
@@ -722,6 +726,8 @@ export type LocalAnnotationState = {
   // updateUserBoundingBoxes in annotation_reducer.ts), so their id reservations are
   // tracked here on the annotation level instead of per segmentation layer.
   readonly idReservationsForBoundingBoxes: IdReservation[];
+  // Bookmarks belong to the annotation, see ANNOTATION_SCOPED_TRACING_ID.
+  readonly idReservationsForBookmarks: IdReservation[];
 };
 
 export type StoreDataset = APIDataset & {

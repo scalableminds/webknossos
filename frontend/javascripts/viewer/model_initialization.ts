@@ -4,6 +4,7 @@ import {
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import {
+  getAnnotationBookmarks,
   getAnnotationCompoundInformation,
   getAnnotationProto,
   getDataset,
@@ -29,6 +30,7 @@ import merge from "lodash-es/merge";
 import messages from "messages";
 import type {
   APIAnnotation,
+  APIAnnotationBookmark,
   APIAnnotationUserState,
   APICompoundType,
   APIDataLayer,
@@ -153,11 +155,19 @@ export async function initialize(
         throw unversionedAnnotationResult.error.cause;
       }
       let unversionedAnnotation = unversionedAnnotationResult.value;
-      annotationProto = await getAnnotationProto(
-        unversionedAnnotation.tracingStore.url,
-        unversionedAnnotation.id,
-        version,
-      );
+      let bookmarks: APIAnnotationBookmark[];
+      [annotationProto, bookmarks] = await Promise.all([
+        getAnnotationProto(
+          unversionedAnnotation.tracingStore.url,
+          unversionedAnnotation.id,
+          version,
+        ),
+        getAnnotationBookmarks(
+          unversionedAnnotation.tracingStore.url,
+          unversionedAnnotation.id,
+          version,
+        ),
+      ]);
       userState =
         annotationProto != null
           ? getUserStateForTracing(annotationProto, Store.getState().activeUser, annotation?.owner)
@@ -182,6 +192,7 @@ export async function initialize(
         description: annotationProto.description,
         annotationProto: annotationProto.earliestAccessibleVersion,
         annotationLayers: layersWithStats,
+        bookmarks,
       };
       annotation = completeAnnotation;
     }

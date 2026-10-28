@@ -28,6 +28,7 @@ import {
   AnnotationLayerEnum,
   type AnnotationViewConfiguration,
   type APIAnnotation,
+  type APIAnnotationBookmark,
   type APIAnnotationInfo,
   type APIAnnotationType,
   type APIAnnotationVisibility,
@@ -1030,6 +1031,45 @@ export async function getAnnotationProto(
     console.log("Parsed protobuf annotation:", annotationProto);
   }
   return annotationProto;
+}
+
+export async function getAnnotationBookmarks(
+  tracingStoreUrl: string,
+  annotationId: string,
+  version?: number | null | undefined,
+): Promise<APIAnnotationBookmark[]> {
+  const params = new URLSearchParams();
+  if (version != null) {
+    params.set("version", version.toString());
+  }
+  const bookmarksArrayBuffer = await doWithToken((token) => {
+    params.set("token", token);
+    return Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}/bookmarks?${params}`,
+      {
+        headers: {
+          Accept: "application/x-protobuf",
+        },
+      },
+    );
+  });
+  const { parseProtoAnnotationBookmarks } = await loadProtoHelpers();
+  return parseProtoAnnotationBookmarks(bookmarksArrayBuffer);
+}
+
+export function getBookmarkThumbnailUrl(
+  tracingStoreUrl: string,
+  annotationId: string,
+  bookmarkId: number,
+  thumbnailVersion: number,
+  size: "small" | "large",
+): Promise<string> {
+  // Thumbnails can be replaced and bookmark ids reused (e.g. after a revert), so thumbnailVersion
+  // keeps the cached thumbnails apart.
+  return doWithToken(
+    async (token) =>
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}/bookmarks/${bookmarkId}/thumbnail?size=${size}&v=${thumbnailVersion}&token=${token}`,
+  );
 }
 
 export function hasSegmentIndexInDataStore(

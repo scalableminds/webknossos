@@ -3,6 +3,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import type { Channel } from "redux-saga";
 import { actionChannel, call, delay, put, take } from "typed-redux-saga";
+import type { APIAnnotationBookmark } from "types/api_types";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
@@ -18,6 +19,8 @@ import type {
 } from "viewer/model/actions/annotation_actions";
 import {
   AllUserBoundingBoxActions,
+  BookmarkUndoRelevantActions,
+  setBookmarksAction,
   setUserBoundingBoxesAction,
 } from "viewer/model/actions/annotation_actions";
 import type { RedoAction, UndoAction } from "viewer/model/actions/save_actions";
@@ -69,17 +72,27 @@ type BoundingBoxUndoState = {
   type: "bounding_box";
   data: Array<UserBoundingBox>;
 };
+type BookmarkUndoState = {
+  type: "bookmarks";
+  data: Array<APIAnnotationBookmark>;
+};
 type WarnUndoState = {
   type: "warning";
   reason: string;
 };
-type UndoState = SkeletonUndoState | VolumeUndoState | BoundingBoxUndoState | WarnUndoState;
+type UndoState =
+  | SkeletonUndoState
+  | VolumeUndoState
+  | BoundingBoxUndoState
+  | BookmarkUndoState
+  | WarnUndoState;
 type RelevantActionsForUndoRedo = {
   setCollaborationModeAction?: SetCollaborationModeAction;
   skeletonUserAction?: SkeletonTracingAction;
   addBucketToUndoAction?: AddBucketToUndoAction;
   finishAnnotationStrokeAction?: FinishAnnotationStrokeAction;
   userBoundingBoxAction?: UserBoundingBoxAction;
+  bookmarkAction?: Action;
   importVolumeTracingAction?: ImportVolumeTracingAction;
   undo?: UndoAction;
   redo?: RedoAction;
@@ -134,6 +147,10 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
     return {
       userBoundingBoxAction: action as any as UserBoundingBoxAction,
     };
+  } else if (BookmarkUndoRelevantActions.includes(action.type)) {
+    return {
+      bookmarkAction: action,
+    };
   }
   if (SkeletonTracingSaveRelevantActions.includes(action.type)) {
     return {
@@ -154,6 +171,7 @@ function* manageUndoStates(): Saga<never> {
   let previousAction: Action | null | undefined = null;
   let prevSkeletonTracingOrNull: SkeletonTracing | null | undefined = null;
   let prevUserBoundingBoxes: Array<UserBoundingBox> = [];
+  let prevBookmarks: Array<APIAnnotationBookmark> = [];
   const volumeInfoById: Record<
     string, // volume tracing id
     {
@@ -174,6 +192,7 @@ function* manageUndoStates(): Saga<never> {
   // Initialization of the local state variables from above.
   prevSkeletonTracingOrNull = yield* select((state) => state.annotation.skeleton);
   prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
+  prevBookmarks = yield* select((state) => state.annotation.bookmarks);
   const volumeTracings = yield* select((state) => getVolumeTracings(state.annotation));
   for (const volumeTracing of volumeTracings) {
     volumeInfoById[volumeTracing.tracingId] = {
@@ -212,6 +231,7 @@ function* manageUndoStates(): Saga<never> {
   const channel: Channel<Action> = yield* actionChannel([
     ...SkeletonTracingSaveRelevantActions,
     ...UndoRedoRelevantBoundingBoxActions,
+    ...BookmarkUndoRelevantActions,
     "ADD_BUCKET_TO_UNDO",
     "SET_SEGMENT_GROUPS",
     "FINISH_ANNOTATION_STROKE",
@@ -244,6 +264,7 @@ function* manageUndoStates(): Saga<never> {
       addBucketToUndoAction,
       finishAnnotationStrokeAction,
       userBoundingBoxAction,
+      bookmarkAction,
       importVolumeTracingAction,
       undo,
       redo,
@@ -293,6 +314,7 @@ function* manageUndoStates(): Saga<never> {
               redoStack,
               prevSkeletonTracingOrNull,
               prevUserBoundingBoxes,
+              prevBookmarks,
               "undo",
             );
 
@@ -327,6 +349,7 @@ function* manageUndoStates(): Saga<never> {
             undoStack,
             prevSkeletonTracingOrNull,
             prevUserBoundingBoxes,
+            prevBookmarks,
             "redo",
           );
 
@@ -399,6 +422,16 @@ function* manageUndoStates(): Saga<never> {
         }
 
         previousAction = userBoundingBoxAction;
+      } else if (bookmarkAction) {
+        // Bookmark changes of other users (or replayed ones of this user) are incorporated with the
+        // same actions, but must not be undone.
+        const isRebasingOrForwarding = yield* select(
+          (state) => state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding,
+        );
+        if (!isRebasingOrForwarding) {
+          shouldClearRedoState = true;
+          undoStack.push({ type: "bookmarks", data: prevBookmarks });
+        }
       } else if (updateSegment || removeSegment) {
         // Updates to the segment list shouldn't necessarily create new undo states. In particular,
         // no new undo state is created when the updateSegment action is a byproduct of another
@@ -497,6 +530,7 @@ function* manageUndoStates(): Saga<never> {
     // We need the updated tracing here
     prevSkeletonTracingOrNull = yield* select((state) => state.annotation.skeleton);
     prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
+    prevBookmarks = yield* select((state) => state.annotation.bookmarks);
   }
 }
 
@@ -589,6 +623,7 @@ function* applyStateOfStack(
   stackToPushTo: Array<UndoState>,
   prevSkeletonTracingOrNull: SkeletonTracing | null | undefined,
   prevUserBoundingBoxes: Array<UserBoundingBox> | null | undefined,
+  prevBookmarks: Array<APIAnnotationBookmark>,
   direction: "undo" | "redo",
 ): Saga<void> {
   if (sourceStack.length <= 0) {
@@ -660,6 +695,12 @@ function* applyStateOfStack(
 
     const newBoundingBoxes = stateToRestore.data;
     yield* put(setUserBoundingBoxesAction(newBoundingBoxes));
+  } else if (stateToRestore.type === "bookmarks") {
+    stackToPushTo.push({
+      type: "bookmarks",
+      data: prevBookmarks,
+    });
+    yield* put(setBookmarksAction(stateToRestore.data));
   } else if (stateToRestore.type === "warning") {
     Toast.info(stateToRestore.reason);
   }

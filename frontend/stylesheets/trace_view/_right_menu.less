@@ -454,3 +454,31 @@
     border-bottom-right-radius: var(--ant-border-radius);
   }
 }
+
+// Like in .list-tree, the row actions are only shown while the bookmark is hovered,
+// focused or selected.
+.bookmark-list {
+  // antd's default of 12px leaves the rows rather loose.
+  .ant-list-item {
+    padding-block: 8px;
+    // So that the highlight of the selected bookmark surrounds the thumbnail.
+    padding-left: 2px;
+  }
+
+  .list-row__on-hover {
+    visibility: hidden;
+
+    // See .list-tree: only the buttons' own hover feedback is meant to be animated.
+    .ant-btn {
+      transition-property: color, background-color, border-color, box-shadow;
+    }
+  }
+
+  .ant-list-item:hover,
+  .ant-list-item:focus-within,
+  .bookmark-list__item--selected {
+    .list-row__on-hover {
+      visibility: visible;
+    }
+  }
+}

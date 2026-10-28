@@ -44,6 +44,7 @@ class TSAnnotationService @Inject() (
     val remoteWebknossosClient: TSRemoteWebknossosClient,
     editableMappingService: EditableMappingService,
     val volumeTracingService: VolumeTracingService,
+    volumeSegmentIndexService: VolumeSegmentIndexService,
     skeletonTracingService: SkeletonTracingService,
     skeletonTracingMigrationService: SkeletonTracingMigrationService,
     volumeTracingMigrationService: VolumeTracingMigrationService,
@@ -126,8 +127,13 @@ class TSAnnotationService @Inject() (
         materializedAnnotation.version,
         targetVersion // Note: this targetVersion is used for the updater buffers, and is overwritten for each update group, see annotation.withNewUpdaters
       ) ?~> Msg.Annotation.findEditableMappingsFailed
-      updated <- applyPendingUpdates(
+      annotationWithTracingsAndBuffers = findVolumeBucketBuffersForAnnotation(
+        annotationId,
         annotationWithTracingsAndMappings,
+        targetVersion
+      )
+      updated <- applyPendingUpdates(
+        annotationWithTracingsAndBuffers,
         annotationId,
         targetVersion,
         reportChangesToWk
@@ -205,6 +211,11 @@ class TSAnnotationService @Inject() (
         // volumeBucketDataHasChanged can only ever be set to true (once bucket data was
         // mutated) and never back to false. A false value indicates a frontend bug.
         Fox.failure("Received updateVolumeBucketDataHasChanged action with value=false, which is not allowed.")
+      case a: UpdateBucketPartialVolumeAction =>
+        annotationWithTracings.applyUpdateBucketPartialVolumeAction(a)
+      case a: DeleteSegmentDataVolumeAction =>
+        applyDeleteSegmentDataVolumeAction(annotationId, annotationWithTracings, a, targetVersion) ?~>
+          "Failed to delete segment data."
       case a: ApplyableVolumeUpdateAction =>
         annotationWithTracings.applyVolumeAction(a).toFox ?~> Msg.Annotation.ApplyUpdate.volumeActionFailed
       case a: EditableMappingUpdateAction =>
@@ -234,7 +245,7 @@ class TSAnnotationService @Inject() (
       annotationWithTracings: AnnotationWithTracings,
       action: AddLayerAnnotationAction,
       targetVersion: Long
-  )(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
       tracingId <- action.tracingId.toFox ?~> "add layer action has no tracingId"
       _ <- Fox.fromBool(
@@ -245,13 +256,24 @@ class TSAnnotationService @Inject() (
           _.typ == AnnotationLayerTypeProto.Skeleton && action.layerParameters.typ == AnnotationLayerType.Skeleton
         )
       ) ?~> Msg.Annotation.ApplyUpdate.onlyOneSkeletonAllowed
-      tracing <- remoteWebknossosClient.createTracingFor(
+      newTracing <- remoteWebknossosClient.createTracingFor(
         annotationId,
         action.layerParameters,
         previousVersion = targetVersion - 1
       )
-      updated = annotationWithTracings.addLayer(action, tracingId, tracing)
-    } yield updated
+      withNewLayer = annotationWithTracings.addLayer(action, tracingId, newTracing)
+
+      withNewLayerAndBuffer = newTracing match {
+        case Right(volumeTracing) if !volumeTracing.getHasEditableMapping =>
+          withNewLayer.copy(volumeBucketBuffersByTracingId =
+            withNewLayer.volumeBucketBuffersByTracingId.updated(
+              tracingId,
+              volumeTracingService.createVolumeBucketBuffer(annotationId, tracingId, volumeTracing, targetVersion)
+            )
+          )
+        case _ => withNewLayer
+      }
+    } yield withNewLayerAndBuffer
 
   private def revertToVersion(
       annotationId: ObjectId,
@@ -333,11 +355,25 @@ class TSAnnotationService @Inject() (
         if (truncate)
           updateActionBatches.map(batch =>
             batch.map { case (version, updateActions) =>
-              (version, updateActions.take(MaxUpdateActionEntriesPerVersion))
+              (
+                version,
+                withoutDuplicateBucketActions(updateActions).take(MaxUpdateActionEntriesPerVersion).map(_.truncated)
+              )
             }
           )
         else updateActionBatches
     } yield Json.toJson(truncatedUpdateActionBatches.flatten.map(versionedTupleToJson))
+  }
+
+  // The version restore view only needs one of these per version to describe it
+  private def withoutDuplicateBucketActions(updateActions: List[UpdateAction]): List[UpdateAction] = {
+    val bucketPartialActions = updateActions.collect { case a: UpdateBucketPartialVolumeAction => a }
+    val eagerBucketActions = updateActions.collect { case a: EagerUpdateBucketVolumeAction => a }
+    val otherActions = updateActions.filter {
+      case _: UpdateBucketPartialVolumeAction | _: EagerUpdateBucketVolumeAction => false
+      case _                                                                     => true
+    }
+    bucketPartialActions.take(1) ++ eagerBucketActions.take(1) ++ otherActions
   }
 
   def findEditableMappingInfo(annotationId: ObjectId, tracingId: String, version: Option[Long] = None)(using
@@ -375,6 +411,36 @@ class TSAnnotationService @Inject() (
 
   private def assertMappingIsNotLocked(volumeTracing: VolumeTracing)(implicit ec: ExecutionContext): Fox[Unit] =
     Fox.fromBool(!volumeTracing.mappingIsLocked.getOrElse(false)) ?~> Msg.Annotation.ApplyUpdate.mappingIsLocked
+
+  private def applyDeleteSegmentDataVolumeAction(
+      annotationId: ObjectId,
+      annotationWithTracings: AnnotationWithTracings,
+      action: DeleteSegmentDataVolumeAction,
+      targetVersion: Long
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
+    for {
+      tracing <- annotationWithTracings.getVolume(action.actionTracingId).toFox
+      _ <- Fox.fromBool(
+        tracing.getHasSegmentIndex
+      ) ?~> "Cannot delete segment data for annotations without segment index."
+      bucketBuffer <- annotationWithTracings.volumeBucketBuffersByTracingId.get(action.actionTracingId).toFox
+      fallbackLayerOpt <- volumeTracingService.getFallbackLayer(annotationId, tracing)
+      // At targetVersion rather than tracing.version, so that the index includes eager bucket updates saved
+      // within the update groups currently being applied.
+      indexedBucketPositions <- volumeSegmentIndexService.getAllBucketPositionsForSegment(
+        tracing,
+        fallbackLayerOpt,
+        action.actionTracingId,
+        action.id.toLong,
+        tracing.mappingName,
+        editableMappingTracingId = None, // bucket buffers only exist for volumesThatDoNotHaveEditableMapping
+        targetVersion
+      )
+      // Lazy bucket updates earlier in these update groups reach the index only after they are all applied.
+      bufferedBucketPositions = bucketBuffer.bucketPositionsWithPendingAddition(action.id.toLong)
+      bucketPositions = (indexedBucketPositions ++ bufferedBucketPositions).distinct
+      _ <- bucketBuffer.applyDeleteSegmentDataAction(bucketPositions, action.id.toLong)
+    } yield annotationWithTracings
 
   private def applyPendingUpdates(
       annotationWithTracingsAndMappings: AnnotationWithTracings,
@@ -530,7 +596,7 @@ class TSAnnotationService @Inject() (
       volumeTracingsMap: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]] = volumeTracingIds
         .zip(volumeTracings.map(versioned => Right[SkeletonTracingWithUpdatedTreeIds, VolumeTracing](versioned.value)))
         .toMap
-    } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap, Map.empty)
+    } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap, Map.empty, Map.empty)
   }
 
   private def findEditableMappingsForAnnotation(
@@ -558,6 +624,23 @@ class TSAnnotationService @Inject() (
         } yield (editableMappingInfo.key, (editableMappingInfo.value, updater))
       }
     } yield annotationWithTracings.copy(editableMappingsByTracingId = idInfoUpdaterTuples.toMap)
+  }
+
+  private def findVolumeBucketBuffersForAnnotation(
+      annotationId: ObjectId,
+      annotationWithTracings: AnnotationWithTracings,
+      targetVersion: Long
+  )(using ec: ExecutionContext, tc: TokenContext): AnnotationWithTracings = {
+    val volumesWithoutEditableMapping = annotationWithTracings.volumesThatDoNotHaveEditableMapping
+    val bucketBuffersById = volumesWithoutEditableMapping.map { case (volumeTracing, volumeTracingId) =>
+      volumeTracingId -> volumeTracingService.createVolumeBucketBuffer(
+        annotationId,
+        volumeTracingId,
+        volumeTracing,
+        targetVersion
+      )
+    }.toMap
+    annotationWithTracings.copy(volumeBucketBuffersByTracingId = bucketBuffersById)
   }
 
   protected def getEditableMappingInfoRaw(
@@ -656,14 +739,16 @@ class TSAnnotationService @Inject() (
     if (updates.isEmpty) Fox.successful(annotationWithTracings)
     else {
       for {
-        updated <- updateIter(
-          Fox.successful(annotationWithTracings.withNewUpdaters(annotationWithTracings.version, targetVersion)),
-          updates
-        )
+        withNewUpdaters = annotationWithTracings.withNewUpdaters(annotationWithTracings.version, targetVersion)
+        _ <- withNewUpdaters.prefillVolumeBucketBuffers(updates) ?~> "Failed to prefill volume bucket buffers."
+        updated <- updateIter(Fox.successful(withNewUpdaters), updates)
         updatedWithNewVersion = updated.withVersion(targetVersion)
         _ <- updatedWithNewVersion
           .flushEditableMappingUpdaterBuffers() ?~> Msg.Annotation.flushEditableMappingUpdaterBuffersFailed
         _ <- flushUpdatedTracings(updatedWithNewVersion, updates) ?~> Msg.Annotation.flushUpdatedTracingsFailed
+        _ <- updatedWithNewVersion.flushVolumeBucketBuffers()
+        _ <- updateSegmentIndicesFromBucketBuffers(updatedWithNewVersion, annotationId) ?~>
+          "Failed to update segment index from volume bucket buffers."
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVersion) ?~> Msg.Annotation.flushAnnotationInfoFailed
         _ <- Fox.runIf(reportChangesToWk && annotationWithTracings.annotation != updated.annotation)(
           remoteWebknossosClient.updateAnnotation(annotationId, updatedWithNewVersion.annotation)
@@ -683,7 +768,9 @@ class TSAnnotationService @Inject() (
       case _                                  => false
     }
     val tracingIdsWithUpdates: Set[String] = updates.flatMap {
-      case a: LayerUpdateAction        => Some(a.actionTracingId)
+      // These only mutate bucket data / the segment index (flushed separately), never the tracing proto itself.
+      case _: LazyBucketMutatingVolumeUpdateAction => None
+      case a: LayerUpdateAction                    => Some(a.actionTracingId)
       case a: AddLayerAnnotationAction => a.tracingId // tracingId is an option, but filled on save. Drop Nones
       case _                           => None
     }.toSet
@@ -730,6 +817,34 @@ class TSAnnotationService @Inject() (
 
   private def flushAnnotationInfo(annotationId: ObjectId, annotationWithTracings: AnnotationWithTracings) =
     saveAnnotationProto(annotationId, annotationWithTracings.version, annotationWithTracings.annotation)
+
+  private def updateSegmentIndicesFromBucketBuffers(
+      annotationWithTracings: AnnotationWithTracings,
+      annotationId: ObjectId
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+    Fox
+      .serialCombined(annotationWithTracings.volumeBucketBuffersByTracingId.toList) { case (tracingId, bucketBuffer) =>
+        for {
+          tracing <- annotationWithTracings.getVolume(tracingId).toFox
+          hasSegmentIndexChanges =
+            bucketBuffer.segmentAdditions.values.exists(_.nonEmpty) ||
+              bucketBuffer.segmentRemovals.values.exists(_.nonEmpty)
+          _ <- Fox.runIf(tracing.getHasSegmentIndex && hasSegmentIndexChanges) {
+            for {
+              fallbackLayerOpt <- volumeTracingService.getFallbackLayer(annotationId, tracing)
+              _ <- volumeSegmentIndexService.updateFromBucketRemovalsAndAdditions(
+                tracingId,
+                tracing,
+                fallbackLayerOpt,
+                annotationWithTracings.version,
+                bucketBuffer.segmentAdditions,
+                bucketBuffer.segmentRemovals
+              )
+            } yield ()
+          }
+        } yield ()
+      }
+      .map(_ => ())
 
   private def determineTargetVersion(
       annotationId: ObjectId,

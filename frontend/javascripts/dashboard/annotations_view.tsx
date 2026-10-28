@@ -61,9 +61,9 @@ import {
 import type { Comparator } from "types/type_utils";
 import {
   getStatsOfAnnotationInfo,
+  getVolumeDescriptors,
   isAnnotationEditableByNonOwners,
 } from "viewer/model/accessors/annotation_accessor";
-import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
 import { CategorizationSearch } from "viewer/view/components/categorization_label";
 import { AnnotationStats } from "viewer/view/right_border_tabs/info_tab/annotation_stats_section";
 import { AnnotationDetailsSidebar } from "./annotation_details_sidebar";

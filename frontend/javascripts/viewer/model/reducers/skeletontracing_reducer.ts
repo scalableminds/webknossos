@@ -44,6 +44,7 @@ import {
   deleteComment,
   deleteEdge,
   deleteNode,
+  deleteNodeAndReconnectNeighbors,
   deleteTrees,
   ensureTreeNames,
   generateTreeName,
@@ -910,6 +911,51 @@ function SkeletonTracingReducer(
         localSkeletonState: {
           activeTreeId: {
             $set: newActiveTreeId,
+          },
+          activeGroupId: {
+            $set: null,
+          },
+        },
+      });
+    }
+
+    case "DELETE_NODE_AND_RECONNECT_NEIGHBORS": {
+      const { nodeId, treeId } = action;
+      const treeAndNode = getTreeAndNode(
+        skeletonTracing,
+        state.localSkeletonState.activeTreeId,
+        nodeId,
+        treeId,
+        TreeTypeEnum.DEFAULT,
+      );
+      if (treeAndNode == null) {
+        return state;
+      }
+
+      const [tree, node] = treeAndNode;
+      const deleteResult = deleteNodeAndReconnectNeighbors(state, tree, node);
+      if (deleteResult == null) {
+        return state;
+      }
+
+      const [trees, newActiveNodeId, newMaxNodeId] = deleteResult;
+      return update(state, {
+        annotation: {
+          skeleton: {
+            trees: {
+              $set: trees,
+            },
+            activeNodeId: {
+              $set: newActiveNodeId,
+            },
+            cachedMaxNodeId: {
+              $set: newMaxNodeId,
+            },
+          },
+        },
+        localSkeletonState: {
+          activeTreeId: {
+            $set: tree.treeId,
           },
           activeGroupId: {
             $set: null,

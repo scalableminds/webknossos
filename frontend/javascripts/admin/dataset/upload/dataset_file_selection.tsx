@@ -12,7 +12,7 @@ import features from "features";
 import uniqBy from "lodash-es/uniqBy";
 import without from "lodash-es/without";
 import type React from "react";
-import { type ChangeEvent, type RefObject, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, useCallback, useMemo, useState } from "react";
 import { type FileWithPath, useDropzone } from "react-dropzone";
 import { ModalWidth } from "theme";
 import { type SelectionSummary, summarizeSelection } from "./detect_dataset_format";
@@ -51,17 +51,22 @@ function FolderInput({
   inputRef,
   onFilesSelected,
 }: {
-  inputRef: RefObject<HTMLInputElement | null>;
+  inputRef: (element: HTMLInputElement | null) => void;
   onFilesSelected: (files: FileWithPath[]) => void;
 }) {
+  // Stable, so that React doesn't detach and re-attach the element on every render.
+  const setInputElement = useCallback(
+    (element: HTMLInputElement | null) => {
+      inputRef(element);
+      element?.setAttribute("webkitdirectory", "");
+    },
+    [inputRef],
+  );
   return (
     <input
       type="file"
       hidden
-      ref={(element) => {
-        inputRef.current = element;
-        element?.setAttribute("webkitdirectory", "");
-      }}
+      ref={setInputElement}
       onChange={(event: ChangeEvent<HTMLInputElement>) => {
         onFilesSelected(withFolderPaths(Array.from(event.target.files ?? [])));
         // Allow picking the same folder again.
@@ -267,7 +272,8 @@ export function FileSelection({
   onDropRejected?: () => void;
 }) {
   const [isFileListOpen, setIsFileListOpen] = useState(false);
-  const folderInputRef = useRef<HTMLInputElement | null>(null);
+  // Kept in state instead of a ref, so that renderEmptyContent may receive a function using it.
+  const [folderInput, setFolderInput] = useState<HTMLInputElement | null>(null);
 
   const addFiles = (addedFiles: FileWithPath[]) => {
     if (!isMultiple) {
@@ -292,6 +298,7 @@ export function FileSelection({
     noKeyboard: true,
   });
   const hasFiles = fileList.length > 0;
+  const chooseFolder = () => folderInput?.click();
 
   return (
     <>
@@ -305,7 +312,7 @@ export function FileSelection({
       >
         <input {...getInputProps()} />
         {isFolderSelectable ? (
-          <FolderInput inputRef={folderInputRef} onFilesSelected={addFiles} />
+          <FolderInput inputRef={setFolderInput} onFilesSelected={addFiles} />
         ) : null}
         {hasFiles ? (
           <SelectedFilesCard
@@ -316,7 +323,7 @@ export function FileSelection({
           />
         ) : (
           renderEmptyContent({
-            chooseFolder: isFolderSelectable ? () => folderInputRef.current?.click() : undefined,
+            chooseFolder: isFolderSelectable ? chooseFolder : undefined,
             chooseFiles: open,
           })
         )}

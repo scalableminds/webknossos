@@ -50,6 +50,7 @@ import Toast from "libs/toast";
 import {
   filterWithSearchQueryAND,
   isUserAdmin,
+  isUserAdminOrDatasetManager,
   isUserAdminOrManager,
   isUserAdminOrTeamManager,
 } from "libs/utils";
@@ -257,7 +258,7 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
   };
 }
 
-export function getAnalysisSubMenu(collapse: boolean) {
+export function getAnalysisSubMenu(collapse: boolean, activeUser: APIUser | null | undefined) {
   const analysisSubMenuItems = [];
 
   if (features().jobsEnabled) {
@@ -269,6 +270,12 @@ export function getAnalysisSubMenu(collapse: boolean) {
       key: "/aiModels",
       label: <Link to={"/aiModels"}>AI Models</Link>,
     });
+    if (isUserAdminOrDatasetManager(activeUser)) {
+      analysisSubMenuItems.push({
+        key: "/alignmentProjects",
+        label: <Link to="/alignmentProjects">Alignment Projects</Link>,
+      });
+    }
   }
 
   if (features().voxelyticsEnabled) {
@@ -947,7 +954,7 @@ function Navbar() {
   if (isAuthenticated) {
     const loggedInUser: APIUser = activeUser;
     menuItems.push(getDashboardSubMenu(collapseAllNavItems));
-    menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
+    menuItems.push(getAnalysisSubMenu(collapseAllNavItems, activeUser));
 
     if (isUserAdminOrTeamManager(activeUser)) {
       menuItems.push(getTaskManagementSubMenu(collapseAllNavItems));

@@ -84,6 +84,12 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val tickerInterval: FiniteDuration = get[FiniteDuration]("webKnossos.pricingPlanExpiryReminder.tickerInterval")
     }
 
+    object AlignmentProjects {
+      val inputDataRetention: FiniteDuration = get[FiniteDuration]("webKnossos.alignmentProjects.inputDataRetention")
+      val inputDataCleanupInterval: FiniteDuration =
+        get[FiniteDuration]("webKnossos.alignmentProjects.inputDataCleanupInterval")
+    }
+
     object SampleOrganization {
       val enabled: Boolean = get[Boolean]("webKnossos.sampleOrganization.enabled")
 
@@ -134,6 +140,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
         Tasks,
         Cache,
         PricingPlanExpiryReminder,
+        AlignmentProjects,
         SampleOrganization,
         FetchUsedStorage,
         TermsOfService,
@@ -162,6 +169,10 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
     val nucleiInferralCostInMilliCreditsPerGVx: Int = get[Int]("features.nucleiInferralCostInMilliCreditsPerGVx")
     val instancesInferralCostInMilliCreditsPerGVx: Int = get[Int]("features.instancesInferralCostInMilliCreditsPerGVx")
     val alignmentCostInMilliCreditsPerGVx: Int = get[Int]("features.alignmentCostInMilliCreditsPerGVx")
+    val alignmentProjectAlignCostInMilliCreditsPerGB: Int =
+      get[Int]("features.alignmentProjectAlignCostInMilliCreditsPerGB")
+    val alignmentProjectRenderUnalignedCostInMilliCreditsPerGB: Int =
+      get[Int]("features.alignmentProjectRenderUnalignedCostInMilliCreditsPerGB")
     val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds
     val allowDeleteDatasets: Boolean = get[Boolean]("features.allowDeleteDatasets")
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")

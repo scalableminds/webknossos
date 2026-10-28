@@ -11,7 +11,8 @@ import classnames from "classnames";
 import features from "features";
 import uniqBy from "lodash-es/uniqBy";
 import without from "lodash-es/without";
-import { type ChangeEvent, type RefObject, useMemo, useRef, useState } from "react";
+import type React from "react";
+import { type ChangeEvent, useCallback, useMemo, useState } from "react";
 import { type FileWithPath, useDropzone } from "react-dropzone";
 import { ModalWidth } from "theme";
 import { type SelectionSummary, summarizeSelection } from "./detect_dataset_format";
@@ -50,17 +51,22 @@ function FolderInput({
   inputRef,
   onFilesSelected,
 }: {
-  inputRef: RefObject<HTMLInputElement | null>;
+  inputRef: (element: HTMLInputElement | null) => void;
   onFilesSelected: (files: FileWithPath[]) => void;
 }) {
+  // Stable, so that React doesn't detach and re-attach the element on every render.
+  const setInputElement = useCallback(
+    (element: HTMLInputElement | null) => {
+      inputRef(element);
+      element?.setAttribute("webkitdirectory", "");
+    },
+    [inputRef],
+  );
   return (
     <input
       type="file"
       hidden
-      ref={(element) => {
-        inputRef.current = element;
-        element?.setAttribute("webkitdirectory", "");
-      }}
+      ref={setInputElement}
       onChange={(event: ChangeEvent<HTMLInputElement>) => {
         onFilesSelected(withFolderPaths(Array.from(event.target.files ?? [])));
         // Allow picking the same folder again.
@@ -70,13 +76,49 @@ function FolderInput({
   );
 }
 
+export function DropzonePrompt({
+  title,
+  onChooseFolder,
+  onChooseFiles,
+  children,
+}: {
+  title: React.ReactNode;
+  onChooseFolder?: () => void;
+  onChooseFiles: () => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <Flex vertical align="center" gap="middle">
+      <InboxOutlined className="dataset-upload-dropzone-icon" />
+      <Typography.Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+        {title}
+      </Typography.Title>
+      <Space>
+        {onChooseFolder != null ? (
+          <Button size="large" icon={<FolderOpenOutlined />} onClick={onChooseFolder}>
+            Choose folder
+          </Button>
+        ) : null}
+        <Button size="large" icon={<FileOutlined />} onClick={onChooseFiles}>
+          Choose files
+        </Button>
+      </Space>
+      {children != null ? (
+        <Flex vertical align="center" gap="small" style={{ marginTop: 24, maxWidth: 720 }}>
+          {children}
+        </Flex>
+      ) : null}
+    </Flex>
+  );
+}
+
 function EmptyDropzoneContent({
   onChooseFolder,
   onChooseFiles,
   onShowFolderHelp,
   isDatasetConversionEnabled,
 }: {
-  onChooseFolder: () => void;
+  onChooseFolder?: () => void;
   onChooseFiles: () => void;
   onShowFolderHelp: () => void;
   isDatasetConversionEnabled: boolean;
@@ -86,42 +128,33 @@ function EmptyDropzoneContent({
   ).map((tag) => tag.label);
 
   return (
-    <Flex vertical align="center" gap="middle">
-      <InboxOutlined className="dataset-upload-dropzone-icon" />
-      <Typography.Title level={4} style={{ margin: 0, fontWeight: 600 }}>
-        {isDatasetConversionEnabled
+    <DropzonePrompt
+      title={
+        isDatasetConversionEnabled
           ? "Drop a folder, a zip file or image files here"
-          : "Drop a folder or a zip file in WEBKNOSSOS format here"}
-      </Typography.Title>
-      <Space>
-        <Button size="large" icon={<FolderOpenOutlined />} onClick={onChooseFolder}>
-          Choose folder
-        </Button>
-        <Button size="large" icon={<FileOutlined />} onClick={onChooseFiles}>
-          Choose files
-        </Button>
-      </Space>
-      <Flex vertical align="center" gap="small" style={{ marginTop: 24, maxWidth: 720 }}>
-        <Typography.Text type="secondary">Works with</Typography.Text>
-        <Flex wrap justify="center" gap={8}>
-          {formatTags.map((tag) => (
-            <Tag key={tag} variant="outlined" style={{ marginInlineEnd: 0 }}>
-              {tag}
-            </Tag>
-          ))}
-        </Flex>
-        <Button type="link" onClick={onShowFolderHelp}>
-          How should my folder look?
-        </Button>
-        {features().recommendWkorgInstance && !isDatasetConversionEnabled ? (
-          <Typography.Text type="secondary">
-            Need to upload other formats? <a href="https://webknossos.org">webknossos.org</a>{" "}
-            converts them automatically.{" "}
-            <a href="https://webknossos.org/self-hosted-upgrade">Learn more</a>
-          </Typography.Text>
-        ) : null}
+          : "Drop a folder or a zip file in WEBKNOSSOS format here"
+      }
+      onChooseFolder={onChooseFolder}
+      onChooseFiles={onChooseFiles}
+    >
+      <Typography.Text type="secondary">Works with</Typography.Text>
+      <Flex wrap justify="center" gap={8}>
+        {formatTags.map((tag) => (
+          <Tag key={tag} variant="outlined" style={{ marginInlineEnd: 0 }}>
+            {tag}
+          </Tag>
+        ))}
       </Flex>
-    </Flex>
+      <Button type="link" onClick={onShowFolderHelp}>
+        How should my folder look?
+      </Button>
+      {features().recommendWkorgInstance && !isDatasetConversionEnabled ? (
+        <Typography.Text type="secondary">
+          Need to upload other formats? <a href="https://webknossos.org">webknossos.org</a> converts
+          them automatically. <a href="https://webknossos.org/self-hosted-upgrade">Learn more</a>
+        </Typography.Text>
+      ) : null}
+    </DropzonePrompt>
   );
 }
 
@@ -174,14 +207,12 @@ function FileListModal({
 
 function SelectedFilesCard({
   files,
-  inspection,
-  isDatasetConversionEnabled,
+  banner,
   onShowFiles,
   onReplace,
 }: {
   files: FileWithPath[];
-  inspection: FileInspection;
-  isDatasetConversionEnabled: boolean;
+  banner: React.ReactNode;
   onShowFiles: () => void;
   onReplace: () => void;
 }) {
@@ -207,34 +238,48 @@ function SelectedFilesCard({
           </Button>
         </Space>
       </Flex>
-      <InspectionBanner
-        inspection={inspection}
-        isDatasetConversionEnabled={isDatasetConversionEnabled}
-      />
+      {banner}
     </div>
   );
 }
 
 /**
- * Form control for the files to upload: an empty dropzone, or a summary of the selected data
- * including the inferred format. Files dropped onto the summary are added to the selection.
+ * Form control for the files to upload: an empty dropzone, or a summary of the selected files
+ * with a banner below it. Files dropped onto the summary are added to the selection.
  */
-export function DatasetFileSelection({
+export function FileSelection({
   fileList = [],
   onChange,
-  inspection,
-  isDatasetConversionEnabled,
+  renderEmptyContent,
+  banner,
+  isFolderSelectable = true,
+  isMultiple = true,
+  accept,
+  onDropRejected,
 }: {
   fileList?: FileWithPath[];
   onChange?: (files: FileWithPath[]) => void;
-  inspection: FileInspection;
-  isDatasetConversionEnabled: boolean;
+  renderEmptyContent: (actions: {
+    chooseFolder?: () => void;
+    chooseFiles: () => void;
+  }) => React.ReactNode;
+  banner?: React.ReactNode;
+  isFolderSelectable?: boolean;
+  // If false, a newly added file replaces the selected one.
+  isMultiple?: boolean;
+  accept?: string;
+  // E.g. when files of other types or, with isMultiple=false, several files are dropped.
+  onDropRejected?: () => void;
 }) {
   const [isFileListOpen, setIsFileListOpen] = useState(false);
-  const [isFolderHelpOpen, setIsFolderHelpOpen] = useState(false);
-  const folderInputRef = useRef<HTMLInputElement | null>(null);
+  // Kept in state instead of a ref, so that renderEmptyContent may receive a function using it.
+  const [folderInput, setFolderInput] = useState<HTMLInputElement | null>(null);
 
   const addFiles = (addedFiles: FileWithPath[]) => {
+    if (!isMultiple) {
+      onChange?.(addedFiles.slice(0, 1));
+      return;
+    }
     // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
     onChange?.(uniqBy(fileList.concat(addedFiles), (file) => file.path));
   };
@@ -246,10 +291,14 @@ export function DatasetFileSelection({
 
   const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
     onDropAccepted: addFiles,
+    multiple: isMultiple,
+    accept,
+    onDropRejected,
     noClick: true,
     noKeyboard: true,
   });
   const hasFiles = fileList.length > 0;
+  const chooseFolder = () => folderInput?.click();
 
   return (
     <>
@@ -262,22 +311,21 @@ export function DatasetFileSelection({
         })}
       >
         <input {...getInputProps()} />
-        <FolderInput inputRef={folderInputRef} onFilesSelected={addFiles} />
+        {isFolderSelectable ? (
+          <FolderInput inputRef={setFolderInput} onFilesSelected={addFiles} />
+        ) : null}
         {hasFiles ? (
           <SelectedFilesCard
             files={fileList}
-            inspection={inspection}
-            isDatasetConversionEnabled={isDatasetConversionEnabled}
+            banner={banner}
             onShowFiles={() => setIsFileListOpen(true)}
             onReplace={() => onChange?.([])}
           />
         ) : (
-          <EmptyDropzoneContent
-            onChooseFolder={() => folderInputRef.current?.click()}
-            onChooseFiles={open}
-            onShowFolderHelp={() => setIsFolderHelpOpen(true)}
-            isDatasetConversionEnabled={isDatasetConversionEnabled}
-          />
+          renderEmptyContent({
+            chooseFolder: isFolderSelectable ? chooseFolder : undefined,
+            chooseFiles: open,
+          })
         )}
       </div>
       <FileListModal
@@ -285,6 +333,43 @@ export function DatasetFileSelection({
         open={isFileListOpen}
         onClose={() => setIsFileListOpen(false)}
         onRemoveFile={removeFile}
+      />
+    </>
+  );
+}
+
+/** Form control for the files of a dataset upload, including the inferred format. */
+export function DatasetFileSelection({
+  fileList,
+  onChange,
+  inspection,
+  isDatasetConversionEnabled,
+}: {
+  fileList?: FileWithPath[];
+  onChange?: (files: FileWithPath[]) => void;
+  inspection: FileInspection;
+  isDatasetConversionEnabled: boolean;
+}) {
+  const [isFolderHelpOpen, setIsFolderHelpOpen] = useState(false);
+  return (
+    <>
+      <FileSelection
+        fileList={fileList}
+        onChange={onChange}
+        banner={
+          <InspectionBanner
+            inspection={inspection}
+            isDatasetConversionEnabled={isDatasetConversionEnabled}
+          />
+        }
+        renderEmptyContent={({ chooseFolder, chooseFiles }) => (
+          <EmptyDropzoneContent
+            onChooseFolder={chooseFolder}
+            onChooseFiles={chooseFiles}
+            onShowFolderHelp={() => setIsFolderHelpOpen(true)}
+            isDatasetConversionEnabled={isDatasetConversionEnabled}
+          />
+        )}
       />
       <FolderStructureHelpModal
         open={isFolderHelpOpen}

@@ -114,7 +114,7 @@ class JobService @Inject() (
   private def sendSuccessEmailNotification(user: User, job: Job, resultLink: String): Unit =
     for {
       multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
-      datasetName = job.datasetName.getOrElse("")
+      datasetName = job.datasetNameForEmail.getOrElse("")
       genericEmailTemplate = defaultMails.jobSuccessfulGenericMail(multiUser, datasetName, resultLink, _, _)
       emailTemplate <- (job.command match {
         case JobCommand.convert_to_wkw =>
@@ -139,6 +139,13 @@ class JobService @Inject() (
           Some(defaultMails.jobSuccessfulMitoSegmentationMail(multiUser, datasetName, resultLink))
         case JobCommand.align_sections =>
           Some(defaultMails.jobSuccessfulAlignmentMail(multiUser, datasetName, resultLink))
+        case JobCommand.align =>
+          Some(
+            genericEmailTemplate(
+              "Alignment",
+              "Your alignment project job has finished. The result is available as a new dataset in your dashboard."
+            )
+          )
         case JobCommand.train_neuron_model =>
           Some(defaultMails.jobSuccessfulModelTrainingMail(multiUser, resultLink))
         case JobCommand.train_instance_model =>
@@ -173,7 +180,7 @@ class JobService @Inject() (
   private def sendFailedEmailNotification(user: User, job: Job): Unit =
     for {
       multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
-      datasetName = job.datasetName.getOrElse("")
+      datasetName = job.datasetNameForEmail.getOrElse("")
       errorMessage = job.latestRunErrorDetails
         .flatMap(details => (details \ "message").asOpt[String])
         .map(_.trim)
@@ -247,7 +254,8 @@ class JobService @Inject() (
         lastRetry = job.lastRetry,
         costInMilliCredits = creditTransactionBox.toOption.map(t =>
           t.milliCreditDelta * -1
-        ) // delta is negative, so cost should be positive.
+        ), // delta is negative, so cost should be positive.
+        alignmentProjectId = job._alignmentProject
       )
     )
 
@@ -263,17 +271,41 @@ class JobService @Inject() (
       "job_kwargs" -> (job.args ++ Json.obj("user_auth_token" -> userAuthToken))
     )
 
-  def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
+  def submitJob(
+      command: JobCommand,
+      commandArgs: JsObject,
+      owner: User,
+      dataStoreName: String,
+      alignmentProjectId: Option[ObjectId] = None
+  ): Fox[Job] =
     for {
       _ <- Fox.fromBool(wkConf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
       _ <- Fox.assertTrue(
         jobIsSupportedByAvailableWorkers(command, dataStoreName)
       ) ?~> Msg.Job.noWorkerForDatastoreAndJob
       _ <- assertStorageNotExceededFor(command, owner)
-      job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
+      job = Job(
+        ObjectId.generate,
+        owner._id,
+        dataStoreName,
+        command,
+        commandArgs,
+        _alignmentProject = alignmentProjectId
+      )
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
+
+  // Sets the manual state immediately, the worker cancels the run later. Credits of unfinished jobs are refunded.
+  def cancelJob(job: Job)(using ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- jobDAO.updateManualState(job._id, JobState.CANCELLED)
+      _ <- Fox.runIf(job.state == JobState.PENDING || job.state == JobState.STARTED) {
+        creditTransactionService.refundTransactionForJob(job._id, isCancelled = true)(using
+          GlobalAccessContext
+        ) ?~> Msg.Job.Credits.refundFailed
+      }
+    } yield ()
 
   private def assertStorageNotExceededFor(command: JobCommand, owner: User): Fox[Unit] =
     for {
@@ -323,10 +355,30 @@ class JobService @Inject() (
       datastoreName: String
   )(using ctx: DBAccessContext): Fox[Job] =
     for {
+      costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
+      job <- submitPaidJobWithCost(
+        command,
+        commandArgs,
+        costInMilliCredits,
+        creditTransactionComment,
+        user,
+        datastoreName
+      )
+    } yield job
+
+  def submitPaidJobWithCost(
+      command: JobCommand,
+      commandArgs: JsObject,
+      costInMilliCredits: Int,
+      creditTransactionComment: String,
+      user: User,
+      datastoreName: String,
+      alignmentProjectId: Option[ObjectId] = None
+  )(using ctx: DBAccessContext): Fox[Job] =
+    for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> Msg.Job.paidNoAdminOrManager
       _ <- assertStorageNotExceededFor(command, user)
-      costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
       _ <- Fox.assertTrue(
         creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)
       ) ?~> Msg.Job.Credits.notEnoughCredits
@@ -335,7 +387,7 @@ class JobService @Inject() (
         costInMilliCredits,
         creditTransactionComment
       )
-      job <- submitJob(command, commandArgs, user, datastoreName).shiftBox.flatMap {
+      job <- submitJob(command, commandArgs, user, datastoreName, alignmentProjectId).shiftBox.flatMap {
         case Full(job) => Fox.successful(job)
         case _         =>
           creditTransactionService

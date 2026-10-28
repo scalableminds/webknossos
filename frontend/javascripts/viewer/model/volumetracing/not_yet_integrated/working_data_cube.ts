@@ -17,6 +17,7 @@ import {
   type SegmentBucketData,
   type SegmentId,
   type StoredSegmentId,
+  UNBOUNDED_BOUNDING_BOX,
   type Vector3,
   voxelIndexOf,
   voxelOffsetInBucket,
@@ -161,8 +162,8 @@ export class WorkingDataCube implements LoadingVoxelCube {
   }
 
   /** Unrestricted. Tests that need a restriction override this. */
-  getEditableBoundingBox(_magIndex: MagIndex): BoundingBox | null {
-    return null;
+  getEditableBoundingBox(_magIndex: MagIndex): BoundingBox {
+    return UNBOUNDED_BOUNDING_BOX;
   }
 
   /** Overwrite a bucket's content outright (undo rebuild). */

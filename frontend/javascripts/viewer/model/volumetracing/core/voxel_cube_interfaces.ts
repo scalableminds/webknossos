@@ -49,9 +49,10 @@ export interface TransactionCube {
   ): ((index: number) => boolean) | null;
   /**
    * The region of a mag that may be written to (e.g., a task bounding box), in
-   * that mag's voxels. Null when the whole mag is editable.
+   * that mag's voxels. The rasterizer and the flood fill traversal stay within
+   * it at the source mag, and the transaction clips every mag's writes to it.
    */
-  getEditableBoundingBox(magIndex: MagIndex): BoundingBox | null;
+  getEditableBoundingBox(magIndex: MagIndex): BoundingBox;
 }
 
 /**

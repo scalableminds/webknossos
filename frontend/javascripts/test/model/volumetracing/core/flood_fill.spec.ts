@@ -5,6 +5,7 @@ import {
   countVoxels,
   type SegmentBucketData,
   type SegmentId,
+  UNBOUNDED_BOUNDING_BOX,
   type Vector3,
   voxelIndexOf,
 } from "viewer/model/volumetracing/core";
@@ -180,10 +181,8 @@ describe("volume annotation core — flood fill", () => {
     const { cube, backend } = createHarness();
     seedRegion(backend);
     // The region spans x = 28..36, the editable bounding box ends at x = 30.
-    const ctx = editContext({
-      activeSegmentId: FILL,
-      editableBoundingBox: { min: [0, 0, 0], max: [30, 64, 64] },
-    });
+    cube.getEditableBoundingBox = () => ({ min: [0, 0, 0], max: [30, 64, 64] });
+    const ctx = editContext({ activeSegmentId: FILL });
     const shape = {
       kind: "floodFill",
       seed: [29, 12, 3] as Vector3,
@@ -271,7 +270,7 @@ describe("volume annotation core — flood fill", () => {
         return null;
       }
       getEditableBoundingBox() {
-        return null;
+        return UNBOUNDED_BOUNDING_BOX;
       }
       /** Only bucket (0,0,0) exists; everything else is outside the dataset. */
       async ensureLoaded(address: BucketAddress): Promise<SegmentBucketData | null> {
@@ -323,7 +322,7 @@ describe("volume annotation core — flood fill", () => {
     const cube: LoadingVoxelCube = {
       applyWrites() {},
       getIsOverwritableFunction: () => null,
-      getEditableBoundingBox: () => null,
+      getEditableBoundingBox: () => UNBOUNDED_BOUNDING_BOX,
       ensureLoaded: async () => new BigUint64Array(BUCKET_VOXEL_COUNT),
     };
     const { bucketWrites, wasVoxelLimitExceeded, coveredBoundingBox } = await resolveFloodFill(

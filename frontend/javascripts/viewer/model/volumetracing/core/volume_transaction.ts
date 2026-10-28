@@ -7,6 +7,7 @@ import {
 } from "./bucket_write_map";
 import { propagate } from "./mag_propagation";
 import {
+  type BoundingBox,
   type BucketAddress,
   bucketKey,
   type EditContext,
@@ -106,15 +107,19 @@ export class VolumeTransaction {
     }
   }
 
+  /** See TransactionCube.getEditableBoundingBox. */
+  getEditableBoundingBox(magIndex: MagIndex): BoundingBox {
+    return this.cube.getEditableBoundingBox(magIndex);
+  }
+
   /**
    * The writes of one mag that lie within the cube's editable region. The
-   * rasterizer clips the source mag already, but neither resolved write sets
-   * (flood fill) nor propagated mags: upsampling a source voxel that straddles
-   * the region's border writes finer voxels beyond it.
+   * rasterizer and the flood fill traversal stay within it at the source mag,
+   * but propagated mags don't: upsampling a source voxel that straddles the
+   * region's border writes finer voxels beyond it.
    */
   private clipToEditableRegion(magIndex: MagIndex, writes: BucketWriteMap): BucketWriteMap {
-    const box = this.cube.getEditableBoundingBox(magIndex);
-    return box == null ? writes : clipBucketWriteMap(writes, box);
+    return clipBucketWriteMap(writes, this.getEditableBoundingBox(magIndex));
   }
 
   /** Push accumulated source-mag writes into the cube for live feedback. */

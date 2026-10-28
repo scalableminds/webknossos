@@ -158,6 +158,12 @@ export function voxelOffsetInBucket(voxel: Vector3): Vector3 {
 
 export type BoundingBox = BoundingBoxMinMaxType;
 
+/** A box without bounds, for cubes that don't restrict editing. */
+export const UNBOUNDED_BOUNDING_BOX: BoundingBox = {
+  min: [-Infinity, -Infinity, -Infinity],
+  max: [Infinity, Infinity, Infinity],
+};
+
 export function isInBoundingBox(voxel: Vector3, box: BoundingBox | null): boolean {
   if (box == null) return true;
   return (
@@ -241,12 +247,6 @@ export interface EditContext {
    * mode. Ignored under overwrite-all.
    */
   overwritableValue: SegmentId;
-  /**
-   * Annotation-level restriction in source-mag voxels; the rasterizer and the
-   * flood fill traversal clip against it. Independently of it, the transaction
-   * clips every mag to TransactionCube.getEditableBoundingBox.
-   */
-  editableBoundingBox: BoundingBox | null;
   /**
    * Which point in the dataset's extra axes (time, channel, ...) this
    * interaction edits. Constant for the whole transaction — a single stroke

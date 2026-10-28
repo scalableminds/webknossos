@@ -271,11 +271,7 @@ describe("volume annotation core — brush", () => {
       };
     };
 
-    const ctx = editContext({
-      sourceMagIndex: 1,
-      activeSegmentId: SEGMENT,
-      editableBoundingBox: cube.getEditableBoundingBox(1),
-    });
+    const ctx = editContext({ sourceMagIndex: 1, activeSegmentId: SEGMENT });
     session.beginBrushStroke(ctx, [3, 8, 4], iso(3), 2);
     const diff = session.endBrushStroke();
 

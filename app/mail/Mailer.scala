@@ -2,16 +2,13 @@ package mail
 
 import org.apache.pekko.actor.*
 import com.typesafe.scalalogging.LazyLogging
-import javax.mail.internet.InternetAddress
-import org.apache.commons.mail.*
+import jakarta.mail.{Address, Authenticator, Message, PasswordAuthentication, Session, Transport}
+import jakarta.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMultipart}
+
+import java.util.{Date, Properties}
 
 case class Send(mail: Mail)
 
-/** Wrapper for sending email in Play Framework. based on the Mailer Actor by Justin Long based on the EmailNotifier
-  * trait by Aishwarya Singhal
-  *
-  * make sure to include Apache Commons Mail in dependencies "org.apache.commons" % "commons-mail" % "1.2"
-  */
 case class MailerConfig(
     logToStdout: Boolean,
     smtpHost: String,
@@ -23,6 +20,27 @@ case class MailerConfig(
 )
 
 class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
+
+  private val smtpTimeoutMillis = 60000
+
+  private lazy val session: Session = {
+    val props = new Properties()
+    props.put("mail.transport.protocol", "smtp")
+    props.put("mail.smtp.host", conf.smtpHost)
+    props.put("mail.smtp.port", conf.smtpPort.toString)
+    props.put("mail.smtp.starttls.enable", conf.smtpTls.toString)
+    props.put("mail.smtp.auth", conf.smtpAuth.toString)
+    props.put("mail.smtp.ssl.protocols", "TLSv1.2")
+    props.put("mail.smtp.connectiontimeout", smtpTimeoutMillis.toString)
+    props.put("mail.smtp.timeout", smtpTimeoutMillis.toString)
+    val authenticator =
+      if (conf.smtpAuth)
+        new Authenticator {
+          override def getPasswordAuthentication: PasswordAuthentication =
+            new PasswordAuthentication(conf.smtpUser, conf.smtpPass)
+        } else null
+    Session.getInstance(props, authenticator)
+  }
 
   def receive: Receive = {
     case Send(mail) =>
@@ -37,63 +55,47 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
         logger.info(s"Sending mail: $mail")
       }
 
-      val multiPartMail: MultiPartEmail = createEmail(mail)
-
-      setAddress(mail.from)(multiPartMail.setFrom)
-      mail.replyTo.foreach(setAddress(_)(multiPartMail.addReplyTo))
-      mail.recipients.foreach(setAddress(_)(multiPartMail.addTo))
-      mail.ccRecipients.foreach(setAddress(_)(multiPartMail.addCc))
-      mail.bccRecipients.foreach(setAddress(_)(multiPartMail.addBcc))
-
-      multiPartMail.setSubject(mail.subject)
-      mail.headers foreach { case (key, value) => multiPartMail.addHeader(key, value) }
-
-      // do the work to prepare sending on SMTP
-      multiPartMail.setHostName(conf.smtpHost)
-      multiPartMail.setSmtpPort(conf.smtpPort)
-      multiPartMail.setStartTLSEnabled(conf.smtpTls)
-      if (conf.smtpAuth) {
-        multiPartMail.setAuthenticator(new DefaultAuthenticator(conf.smtpUser, conf.smtpPass))
-      }
-      multiPartMail.setDebug(false)
-      multiPartMail.getMailSession.getProperties.put("mail.smtp.ssl.protocols", "TLSv1.2")
+      val message = new MimeMessage(session)
+      parseAddress(mail.from).foreach(message.setFrom)
+      message.setReplyTo(mail.replyTo.flatMap(parseAddress).toArray[Address])
+      addRecipients(message, Message.RecipientType.TO, mail.recipients)
+      addRecipients(message, Message.RecipientType.CC, mail.ccRecipients)
+      addRecipients(message, Message.RecipientType.BCC, mail.bccRecipients)
+      message.setSubject(mail.subject, mail.charset)
+      message.setSentDate(new Date())
+      mail.headers.foreach { case (key, value) => message.addHeader(key, value) }
+      setBody(message, mail)
 
       if (conf.smtpHost.nonEmpty) {
-        multiPartMail.send
-        ()
+        Transport.send(message)
       } else {
         logger.info("Mail was not sent as no smtp host is configured.")
       }
     }
 
-  /** Extracts an email address from the given string and passes to the enclosed method.
-    */
-  private def setAddress(emailAddress: String)(setter: (String, String) => ?): Unit =
+  private def parseAddress(emailAddress: String): Option[InternetAddress] =
     try {
-      val iAddress = new InternetAddress(emailAddress)
-      val address = iAddress.getAddress
-      val name = iAddress.getPersonal
-
-      setter(address, name)
+      Some(new InternetAddress(emailAddress))
     } catch {
-      case e: Exception => logger.warn(s"Failed to set email address: $e")
+      case e: Exception =>
+        logger.warn(s"Failed to set email address: $e")
+        None
     }
 
-  /** Creates an appropriate email object based on the content type.
-    */
-  private def createEmail(mail: Mail): MultiPartEmail =
+  private def addRecipients(message: MimeMessage, recipientType: Message.RecipientType, addresses: List[String]): Unit =
+    message.addRecipients(recipientType, addresses.flatMap(parseAddress).toArray[Address])
+
+  private def setBody(message: MimeMessage, mail: Mail): Unit =
     if (mail.bodyHtml == "") {
-      val email = new MultiPartEmail()
-      email.setCharset(mail.charset)
-      email.setMsg(mail.bodyText)
-      email
+      message.setText(mail.bodyText, mail.charset)
+    } else if (mail.bodyText == "") {
+      message.setText(mail.bodyHtml, mail.charset, "html")
     } else {
-      val email = new HtmlEmail()
-      email.setCharset(mail.charset)
-      email.setHtmlMsg(mail.bodyHtml)
-      if (mail.bodyText != "")
-        email.setTextMsg(mail.bodyText)
-      email
+      val textPart = new MimeBodyPart()
+      textPart.setText(mail.bodyText, mail.charset)
+      val htmlPart = new MimeBodyPart()
+      htmlPart.setText(mail.bodyHtml, mail.charset, "html")
+      message.setContent(new MimeMultipart("alternative", textPart, htmlPart))
     }
 
 }

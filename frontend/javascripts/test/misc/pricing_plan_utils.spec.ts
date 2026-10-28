@@ -8,6 +8,10 @@ import {
   isJobAvailable,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
+import {
+  getPlanTier,
+  getUpgradeTargetTiers,
+} from "admin/organization/upgrade_modal/upgrade_request_items";
 import { formatMilliCreditsString } from "libs/format_utils";
 import dummyOrga from "test/fixtures/dummy_organization";
 import { type APIDataStore, APIJobCommand, type APIOrganization } from "types/api_types";
@@ -164,5 +168,15 @@ describe("Pricing plans", () => {
         PricingPlanEnum.Enterprise,
       ].sort(),
     );
+  });
+
+  it("should offer Personal and Open Source an upgrade to Team or Power, Team first", () => {
+    for (const plan of [PricingPlanEnum.Personal, PricingPlanEnum.OpenSource]) {
+      expect(getUpgradeTargetTiers(getPlanTier(plan))).toEqual([
+        PricingPlanEnum.Team,
+        PricingPlanEnum.Power,
+      ]);
+    }
+    expect(getUpgradeTargetTiers(getPlanTier(PricingPlanEnum.Enterprise))).toEqual([]);
   });
 });

@@ -209,9 +209,10 @@ class OrganizationController @Inject() (
     }
 
   // Only paid, non-trial plans that rank above the current one can be requested.
+  // Open Source may also request Team, which ranks the same but adds jobs and AI features.
   private def isValidPlanUpgrade(currentPlan: PricingPlan.PricingPlan, requestedPlan: PricingPlan.PricingPlan) =
     (requestedPlan == PricingPlan.Team || requestedPlan == PricingPlan.Power) &&
-      PricingPlan.isUpgrade(currentPlan, requestedPlan)
+      (PricingPlan.isUpgrade(currentPlan, requestedPlan) || currentPlan == PricingPlan.Open_Source)
 
   // The AI Add-on needs at least the Team plan (possibly as part of the same request) and must not be active yet.
   private def canRequestAiAddon(organization: Organization, effectivePlan: PricingPlan.PricingPlan) =

@@ -3,9 +3,9 @@ import dayjs from "dayjs";
 import { formatNumber } from "libs/format_utils";
 import type { APIOrganization } from "types/api_types";
 import {
-  areJobsAllowedByPricingPlan,
   canExtendPricingPlan,
   formatIncludedUsers,
+  formatPricingPlanName,
   formatStorage,
   hasAiPlan,
   PLAN_TO_RANK,
@@ -16,7 +16,7 @@ import {
 
 export type ItemId = "plan" | "users" | "storage" | "aiAddon" | "credits" | "extend";
 
-// Trials, Open Source and Enterprise are mapped to the plan whose features they unlock, see getPlanTier.
+// Trials and Enterprise are mapped to the plan whose features they unlock, Open Source to Personal, see getPlanTier.
 export type PlanTier = PricingPlanEnum.Personal | PricingPlanEnum.Team | PricingPlanEnum.Power;
 
 export type ItemSelection = { value?: number; custom?: boolean };
@@ -37,13 +37,14 @@ export type ItemDef = {
 const BYTES_PER_TB = 1e12;
 const DATE_FORMAT = "D MMM YYYY";
 
+// Open Source can't run jobs or use AI features, so it is upgraded like Personal: to Team or Power, with Team quotas.
 export function getPlanTier(pricingPlan: PricingPlanEnum): PlanTier {
   switch (pricingPlan) {
     case PricingPlanEnum.Personal:
+    case PricingPlanEnum.OpenSource:
       return PricingPlanEnum.Personal;
     case PricingPlanEnum.Team:
     case PricingPlanEnum.TeamTrial:
-    case PricingPlanEnum.OpenSource:
       return PricingPlanEnum.Team;
     case PricingPlanEnum.Power:
     case PricingPlanEnum.PowerTrial:
@@ -109,6 +110,7 @@ export function getUpgradeItems(
   const currentTier = getPlanTier(organization.pricingPlan);
   const targetTiers = getUpgradeTargetTiers(currentTier);
   const isPersonal = currentTier === PricingPlanEnum.Personal;
+  const currentPlanLabel = formatPricingPlanName(organization.pricingPlan);
 
   // On Personal, all quota upgrades are based on what the Team plan includes.
   const baseUsers = isPersonal ? teamPlanIncludedUsers : organization.includedUsers;
@@ -123,19 +125,19 @@ export function getUpgradeItems(
     plan = {
       id: "plan",
       label: `Upgrade to ${targetTier} plan`,
-      hint: `${currentTier} → ${targetTier}`,
+      hint: `${currentPlanLabel} → ${targetTier}`,
       minPlan: PricingPlanEnum.Personal,
-      getDelta: () => ({ from: currentTier, to: targetTier }),
+      getDelta: () => ({ from: currentPlanLabel, to: targetTier }),
     };
   } else if (targetTiers.length > 1) {
     plan = {
       id: "plan",
       label: "Upgrade plan",
-      hint: `${currentTier} → ${targetTiers.join(" or ")}`,
+      hint: `${currentPlanLabel} → ${targetTiers.join(" or ")}`,
       amounts: targetTiers.map((tier) => ({ label: tier, value: PLAN_TO_RANK[tier] })),
       minPlan: PricingPlanEnum.Personal,
       getDelta: (value) => ({
-        from: currentTier,
+        from: currentPlanLabel,
         to: UPGRADE_TARGET_TIERS.find((tier) => PLAN_TO_RANK[tier] === value) ?? targetTiers[0],
       }),
     };
@@ -169,19 +171,17 @@ export function getUpgradeItems(
     }),
   };
 
-  // Open Source organizations have no access to WEBKNOSSOS workers, so they can't use AI features.
-  // canOrderCredits already accounts for this, see useCanOrderCredits.
-  const aiAddon: ItemDef | null =
-    hasAiPlan(organization) || !areJobsAllowedByPricingPlan(organization)
-      ? null
-      : {
-          id: "aiAddon",
-          label: "AI Add-on",
-          hint: "Not active",
-          minPlan: PricingPlanEnum.Team,
-          getDelta: () => ({ from: "Not active", to: "Active" }),
-        };
+  const aiAddon: ItemDef | null = hasAiPlan(organization)
+    ? null
+    : {
+        id: "aiAddon",
+        label: "AI Add-on",
+        hint: "Not active",
+        minPlan: PricingPlanEnum.Team,
+        getDelta: () => ({ from: "Not active", to: "Active" }),
+      };
 
+  // Open Source organizations can't order credits, see useCanOrderCredits.
   const credits: ItemDef | null = !canOrderCredits
     ? null
     : {

@@ -19,7 +19,7 @@ import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
 type SidebarPlanHint =
   | { kind: "planExpiring"; daysLeft: number }
-  | { kind: "teamUpgrade" }
+  | { kind: "teamUpgrade"; isOpenSource: boolean }
   | { kind: "aiAddon"; includedCredits: number };
 
 function getSidebarPlanHint(organization: APIOrganization): SidebarPlanHint | null {
@@ -32,8 +32,14 @@ function getSidebarPlanHint(organization: APIOrganization): SidebarPlanHint | nu
   ) {
     return { kind: "planExpiring", daysLeft };
   }
-  if (organization.pricingPlan === PricingPlanEnum.Personal) {
-    return { kind: "teamUpgrade" };
+  if (
+    organization.pricingPlan === PricingPlanEnum.Personal ||
+    organization.pricingPlan === PricingPlanEnum.OpenSource
+  ) {
+    return {
+      kind: "teamUpgrade",
+      isOpenSource: organization.pricingPlan === PricingPlanEnum.OpenSource,
+    };
   }
   if (organization.aiPlan == null && isAiAddonEligiblePlan(organization.pricingPlan)) {
     return {
@@ -126,11 +132,16 @@ function PlanExpiringHintCard({ daysLeft }: { daysLeft: number }) {
   );
 }
 
-function TeamUpgradeHintCard() {
+// Open Source already includes the collaboration features of Team, but no jobs and AI features.
+function TeamUpgradeHintCard({ isOpenSource }: { isOpenSource: boolean }) {
   return (
     <PlanHintCard
-      title="Working with others?"
-      description="Team adds collaborative annotation and project management."
+      title={isOpenSource ? "Need AI or processing jobs?" : "Working with others?"}
+      description={
+        isOpenSource
+          ? "Team adds AI analysis, processing jobs and the AI Add-on."
+          : "Team adds collaborative annotation and project management."
+      }
       actionLabel="Upgrade to Team"
       onAction={() => UpgradePricingPlanModal.upgradePricingPlan(PricingPlanEnum.Team)}
     />
@@ -154,7 +165,7 @@ export function OrganizationSidebarPlanHint() {
     case "planExpiring":
       return <PlanExpiringHintCard daysLeft={planHint.daysLeft} />;
     case "teamUpgrade":
-      return <TeamUpgradeHintCard />;
+      return <TeamUpgradeHintCard isOpenSource={planHint.isOpenSource} />;
     case "aiAddon":
       return <AiAddonHintCard includedCredits={planHint.includedCredits} />;
     default:

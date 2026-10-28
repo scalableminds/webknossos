@@ -6,12 +6,12 @@ import type { APIOrganization } from "types/api_types";
 import { useCanRequestUpgrades } from "./organization_hooks";
 import {
   aiAddonFeatures,
-  getBasePricingPlan,
   isAiAddonEligiblePlan,
   PricingPlanEnum,
   powerPlanFeatures,
   teamPlanFeatures,
 } from "./pricing_plan_utils";
+import { getPlanTier, getUpgradeTargetTiers } from "./upgrade_modal/upgrade_request_items";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
 const UPGRADE_DESCRIPTION =
@@ -105,12 +105,15 @@ export function UpgradeOfferCards({ organization }: { organization: APIOrganizat
   const canRequestUpgrades = useCanRequestUpgrades();
   if (!canRequestUpgrades) return null;
 
-  const basePlan = getBasePricingPlan(organization.pricingPlan);
+  const targetTiers = getUpgradeTargetTiers(getPlanTier(organization.pricingPlan));
   const offers: React.ReactElement[] = [];
-  if (basePlan === PricingPlanEnum.Personal) {
-    offers.push(<TeamPlanUpgradeCard key="team" />, <PowerPlanUpgradeCard key="power" />);
-  } else if (basePlan === PricingPlanEnum.Team) {
-    offers.push(<PowerPlanUpgradeCard key="power" description={UPGRADE_DESCRIPTION} />);
+  if (targetTiers.includes(PricingPlanEnum.Team)) {
+    offers.push(<TeamPlanUpgradeCard key="team" />);
+  }
+  if (targetTiers.includes(PricingPlanEnum.Power)) {
+    // The description is only repeated on the card if it is the only plan offer.
+    const description = targetTiers.length === 1 ? UPGRADE_DESCRIPTION : undefined;
+    offers.push(<PowerPlanUpgradeCard key="power" description={description} />);
   }
   if (organization.aiPlan == null && isAiAddonEligiblePlan(organization.pricingPlan)) {
     offers.push(<AiAddonUpgradeCard key="ai-addon" />);

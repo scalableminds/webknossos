@@ -4,7 +4,6 @@ import type React from "react";
 import { useCallback, useState } from "react";
 import Dropzone from "react-dropzone";
 import { useDispatch } from "react-redux";
-import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
 import type { TreeGroup } from "viewer/model/types/tree_types";
 import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
@@ -42,8 +41,10 @@ export default function NmlUploadZoneContainer({
   const showDropzoneModal = useWkSelector((state) => state.uiInformation.showDropzoneModal);
   const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
+  // Not using getSkeletonTracing here, since this component is also part of the dashboard and
+  // the skeleton accessors would pull in the viewer's code.
   const existingTreeGroups = useWkSelector(
-    (state) => getSkeletonTracing(state.annotation)?.treeGroups ?? EMPTY_TREE_GROUPS,
+    (state) => state.annotation.skeleton?.treeGroups ?? EMPTY_TREE_GROUPS,
   );
   const dispatch = useDispatch();
   // dispatch(setDropzoneModalVisibilityAction(false));

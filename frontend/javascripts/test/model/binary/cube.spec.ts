@@ -67,6 +67,7 @@ describe("DataCube", () => {
       "uint32",
       false,
       "layerName",
+      1,
     );
 
     class PullQueueMock {
@@ -450,6 +451,7 @@ describe.skip("DataCube Benchmark", () => {
       "uint32",
       false,
       "layerName",
+      1,
     );
 
     console.time("outside");

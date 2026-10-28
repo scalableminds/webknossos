@@ -32,6 +32,7 @@ import {
   getActiveNodeFromTree,
   getActiveTree,
   getActiveTreeGroup,
+  getEdgeForReconnectingNeighbors,
   getSkeletonTracing,
   getTree,
   mapGroupsToGenerator,
@@ -214,6 +215,52 @@ export function deleteNode(
   }
   const newActiveTreeId = newActiveTree.treeId;
   return [newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId];
+}
+
+// Deletes a node that has exactly two neighbors and connects these neighbors with a new edge,
+// so that the tree is not split. Returns null if the node does not have exactly two neighbors.
+export function deleteNodeAndReconnectNeighbors(
+  state: WebknossosState,
+  tree: Tree,
+  node: Node,
+): [TreeMap, number, number] | null {
+  const skeletonTracing = getSkeletonTracing(state.annotation);
+  if (skeletonTracing == null) {
+    return null;
+  }
+  const edgeToCreate = getEdgeForReconnectingNeighbors(tree, node.id);
+  if (edgeToCreate == null) {
+    return null;
+  }
+
+  let edges = tree.edges;
+  for (const edge of tree.edges.getEdgesForNode(node.id)) {
+    edges = edges.removeEdge(edge);
+  }
+  // In case of a cycle, the neighbors might already be connected (in either direction).
+  const areNeighborsConnected = edges
+    .getEdgesForNode(edgeToCreate.source)
+    .some((edge) => edge.source === edgeToCreate.target || edge.target === edgeToCreate.target);
+  if (!areNeighborsConnected) {
+    edges = edges.addEdge(edgeToCreate);
+  }
+
+  const newTree: Tree = {
+    ...tree,
+    nodes: tree.nodes.delete(node.id),
+    edges,
+    comments: tree.comments.filter((comment) => comment.nodeId !== node.id),
+    branchPoints: tree.branchPoints.filter((branchPoint) => branchPoint.nodeId !== node.id),
+  };
+  const newTrees = skeletonTracing.trees.set(tree.treeId, newTree);
+
+  let newMaxNodeId = skeletonTracing.cachedMaxNodeId;
+  if (node.id === newMaxNodeId) {
+    newMaxNodeId = getMaximumNodeId(newTrees);
+  }
+
+  // Activate the neighbor that preceded the deleted node.
+  return [newTrees, edgeToCreate.source, newMaxNodeId];
 }
 
 export function deleteEdge(

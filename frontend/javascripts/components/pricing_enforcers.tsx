@@ -4,6 +4,8 @@ import {
   isFeatureAllowedByPricingPlan,
   isUserAllowedToRequestUpgrades,
   type PricingPlanEnum,
+  SALES_MAILTO_URL,
+  shouldContactSalesForUpgrades,
 } from "admin/organization/pricing_plan_utils";
 import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
 import {
@@ -17,6 +19,7 @@ import {
   Row,
 } from "antd";
 import type { TooltipPlacement } from "antd/es/tooltip";
+import features from "features";
 import { rgbToHex } from "libs/colors";
 import { useWkSelector } from "libs/react_hooks";
 import noop from "lodash-es/noop";
@@ -41,13 +44,21 @@ function getUpgradeNowButton(
   activeUser: APIUser | null | undefined,
   activeOrganization: APIOrganization | null,
 ) {
-  return activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
+  if (!activeUser || !activeOrganization || !isUserAllowedToRequestUpgrades(activeUser))
+    return null;
+  return (
     <div style={{ marginTop: 8 }}>
-      <Button size="small" onClick={() => UpgradePricingPlanModal.upgradePricingPlan()}>
-        Upgrade Now
-      </Button>
+      {shouldContactSalesForUpgrades(activeOrganization, features().isWkorgInstance) ? (
+        <Button size="small" href={SALES_MAILTO_URL}>
+          Contact Sales
+        </Button>
+      ) : (
+        <Button size="small" onClick={() => UpgradePricingPlanModal.upgradePricingPlan()}>
+          Upgrade Now
+        </Button>
+      )}
     </div>
-  ) : null;
+  );
 }
 
 const useActiveUserAndOrganization = (): [APIUser | null | undefined, APIOrganization | null] => {

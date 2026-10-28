@@ -7,6 +7,7 @@ import {
   isFeatureAllowedByPricingPlan,
   isJobAvailable,
   PricingPlanEnum,
+  shouldContactSalesForUpgrades,
 } from "admin/organization/pricing_plan_utils";
 import {
   getPlanTier,
@@ -178,5 +179,14 @@ describe("Pricing plans", () => {
       ]);
     }
     expect(getUpgradeTargetTiers(getPlanTier(PricingPlanEnum.Enterprise))).toEqual([]);
+  });
+
+  it("should point self-hosted Open Source organizations to sales, but not Enterprise ones", () => {
+    expect(plansWith((organization) => shouldContactSalesForUpgrades(organization, false))).toEqual(
+      [PricingPlanEnum.OpenSource],
+    );
+    expect(plansWith((organization) => shouldContactSalesForUpgrades(organization, true))).toEqual(
+      [],
+    );
   });
 });

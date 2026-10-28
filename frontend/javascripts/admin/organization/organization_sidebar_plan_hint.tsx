@@ -3,9 +3,14 @@ import dayjs from "dayjs";
 import { formatNumber } from "libs/format_utils";
 import { pluralize } from "libs/utils";
 import type { APIOrganization } from "types/api_types";
-import { useActiveOrganization, useCanRequestUpgrades } from "./organization_hooks";
+import {
+  useActiveOrganization,
+  useCanRequestUpgrades,
+  useShouldContactSalesForUpgrades,
+} from "./organization_hooks";
 import {
   canExtendPricingPlan,
+  contactSales,
   formatPricingPlanName,
   getAiAddonIncludedCredits,
   getBasePricingPlan,
@@ -20,9 +25,13 @@ import UpgradePricingPlanModal from "./upgrade_plan_modal";
 type SidebarPlanHint =
   | { kind: "planExpiring"; daysLeft: number }
   | { kind: "teamUpgrade"; isOpenSource: boolean }
+  | { kind: "contactSales" }
   | { kind: "aiAddon"; includedCredits: number };
 
-function getSidebarPlanHint(organization: APIOrganization): SidebarPlanHint | null {
+function getSidebarPlanHint(
+  organization: APIOrganization,
+  shouldContactSales: boolean,
+): SidebarPlanHint | null {
   const daysLeft = getDaysUntilPlanExpires(organization);
   // Expired plans (0 days left) are included, so they get the extension hint rather than another offer.
   if (
@@ -31,6 +40,9 @@ function getSidebarPlanHint(organization: APIOrganization): SidebarPlanHint | nu
     (isTrialPlan(organization.pricingPlan) || daysLeft <= PLAN_EXPIRATION_REMINDER_DAYS)
   ) {
     return { kind: "planExpiring", daysLeft };
+  }
+  if (shouldContactSales) {
+    return { kind: "contactSales" };
   }
   if (
     organization.pricingPlan === PricingPlanEnum.Personal ||
@@ -53,7 +65,8 @@ function getSidebarPlanHint(organization: APIOrganization): SidebarPlanHint | nu
 function useSidebarPlanHint(): SidebarPlanHint | null {
   const organization = useActiveOrganization();
   const canRequestUpgrades = useCanRequestUpgrades();
-  return canRequestUpgrades ? getSidebarPlanHint(organization) : null;
+  const shouldContactSales = useShouldContactSalesForUpgrades();
+  return canRequestUpgrades ? getSidebarPlanHint(organization, shouldContactSales) : null;
 }
 
 function PlanHintCard({
@@ -148,6 +161,17 @@ function TeamUpgradeHintCard({ isOpenSource }: { isOpenSource: boolean }) {
   );
 }
 
+function ContactSalesHintCard() {
+  return (
+    <PlanHintCard
+      title="Need AI or processing jobs?"
+      description="Talk to us about a hosted plan on webknossos.org or an Enterprise plan for your own servers."
+      actionLabel="Contact Sales"
+      onAction={contactSales}
+    />
+  );
+}
+
 function AiAddonHintCard({ includedCredits }: { includedCredits: number }) {
   return (
     <PlanHintCard
@@ -166,6 +190,8 @@ export function OrganizationSidebarPlanHint() {
       return <PlanExpiringHintCard daysLeft={planHint.daysLeft} />;
     case "teamUpgrade":
       return <TeamUpgradeHintCard isOpenSource={planHint.isOpenSource} />;
+    case "contactSales":
+      return <ContactSalesHintCard />;
     case "aiAddon":
       return <AiAddonHintCard includedCredits={planHint.includedCredits} />;
     default:

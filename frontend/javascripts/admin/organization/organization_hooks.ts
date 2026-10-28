@@ -1,5 +1,6 @@
 import { updateOrganization } from "admin/api/organization";
 import { getUsers } from "admin/rest_api";
+import features from "features";
 import { useApi, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { useEffect } from "react";
@@ -12,6 +13,7 @@ import {
   isUserAllowedToManageOrganization,
   isUserAllowedToOrderCredits,
   isUserAllowedToRequestUpgrades,
+  shouldContactSalesForUpgrades,
 } from "./pricing_plan_utils";
 
 export function useActiveOrganization(): APIOrganization {
@@ -31,6 +33,12 @@ export function useCanOrderCredits(): boolean {
       ? isUserAllowedToOrderCredits(state.activeUser) &&
         areJobsAllowedByPricingPlan(state.activeOrganization)
       : false,
+  );
+}
+
+export function useShouldContactSalesForUpgrades(): boolean {
+  return useWkSelector((state) =>
+    shouldContactSalesForUpgrades(state.activeOrganization, features().isWkorgInstance),
   );
 }
 

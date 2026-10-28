@@ -56,6 +56,22 @@ const AI_PLAN_LABELS: Record<AiPlanEnum, string> = {
 };
 
 export const PRICING_PAGE_URL = "https://webknossos.org/pricing";
+export const SALES_MAILTO_URL =
+  "mailto:sales@webknossos.org?subject=Upgrading%20our%20self-hosted%20WEBKNOSSOS";
+
+// Upgrade requests are sent with the mail settings of the instance, which self-hosted instances often lack, and
+// sales can't change the plan of a self-hosted organization anyway. So self-hosted Open Source organizations contact
+// sales directly instead. Enterprise is already the highest plan and isn't offered any plan upgrades.
+export function shouldContactSalesForUpgrades(
+  organization: APIOrganization | null,
+  isWkorgInstance: boolean,
+): boolean {
+  return !isWkorgInstance && organization?.pricingPlan === PricingPlanEnum.OpenSource;
+}
+
+export function contactSales() {
+  window.location.href = SALES_MAILTO_URL;
+}
 
 export const teamPlanIncludedUsers = 5;
 export const teamPlanIncludedStorageTB = 1;

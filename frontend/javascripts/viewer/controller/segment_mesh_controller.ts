@@ -103,6 +103,17 @@ const getHoverGlowColor = (originalColor: Vector3): { color: Color; darkness: nu
   return { color, darkness };
 };
 
+const setHoverGlow = (material: MeshMaterial, isGlowing: boolean) => {
+  if (!isGlowing) {
+    material.emissiveIntensity = 0;
+    return;
+  }
+  const { color, darkness } = getHoverGlowColor(material.originalColor);
+  material.emissive.copy(color);
+  material.emissiveIntensity =
+    HOVER_EMISSIVE_INTENSITY_BASE + darkness * HOVER_EMISSIVE_INTENSITY_DARK_BONUS;
+};
+
 // Segment colors with a lightness (HSL) below MIN_MESH_LIGHTNESS are moved
 // DARK_LIGHTNESS_LIFT of the way towards it, e.g. #800000 (lightness 0.25) is rendered
 // with a lightness of 0.35. Lighter colors are left untouched, so they can't overexpose.
@@ -525,6 +536,10 @@ export default class SegmentMeshController {
     // If in nd-dataset, set the color for all additional coordinates
     this.applyOnMeshGroupChildren(layerName, id, (child: MeshSceneNode) => {
       child.material.originalColor = colorArray;
+      // Re-tint the glow of a hovered mesh with the new color.
+      if (child.material.emissiveIntensity > 0) {
+        setHoverGlow(child.material, true);
+      }
       if (child.material.vertexColors) {
         setRangeToColor(child.geometry, null, colorArray);
         child.geometry.attributes.color.needsUpdate = true;
@@ -725,14 +740,7 @@ export default class SegmentMeshController {
         mesh.hoveredState != null && (mesh.hoveredState === "full" || !mesh.isMerged);
       parent.traverse((child) => {
         if (child instanceof Mesh) {
-          if (isWholeMeshHovered) {
-            const { color, darkness } = getHoverGlowColor(child.material.originalColor);
-            child.material.emissive.copy(color);
-            child.material.emissiveIntensity =
-              HOVER_EMISSIVE_INTENSITY_BASE + darkness * HOVER_EMISSIVE_INTENSITY_DARK_BONUS;
-          } else {
-            child.material.emissiveIntensity = 0;
-          }
+          setHoverGlow(child.material, isWholeMeshHovered);
         }
       });
     }

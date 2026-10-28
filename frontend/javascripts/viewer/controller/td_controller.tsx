@@ -5,7 +5,7 @@ import { clamp, waitForElementWithId } from "libs/utils";
 import get from "lodash-es/get";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
-import { type OrthographicCamera, Vector3 as ThreeVector3 } from "three";
+import { type Object3D, type OrthographicCamera, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
 import Constants, {
   type OrthoView,
@@ -22,7 +22,7 @@ import {
   ProofreadToolController,
   SkeletonToolController,
 } from "viewer/controller/combinations/tool_controls";
-import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import CustomLOD from "viewer/controller/custom_lod";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { getActiveNode, getNodePosition } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -339,13 +339,13 @@ class TDController extends PureComponent<Props> {
         const intersection = this.getMeshIntersection(pos);
         if (intersection?.meshId == null) return;
 
-        const state = Store.getState();
-        // Same source the "Change Segment Color" menu item uses - unlike
-        // getActiveSegmentationTracing, this also resolves outside of an active
-        // annotation/tracing session (e.g. plain dataset viewing with precomputed
-        // meshes), which is why that one silently did nothing here before.
-        const layerName = getVisibleSegmentationLayer(state)?.name;
+        // Use the layer of the hit mesh rather than e.g. getActiveSegmentationTracing,
+        // which doesn't resolve outside of an annotation (e.g. plain dataset viewing with
+        // precomputed meshes) and might not be the layer of the hit mesh.
+        const { layerName } = intersection;
         if (layerName == null) return;
+
+        const state = Store.getState();
 
         const currentOpacity =
           getMeshInfoForSegment(
@@ -389,7 +389,19 @@ class TDController extends PureComponent<Props> {
     const meshId: bigint | null = hitResult ? get(hitResult.node.parent, "segmentId", null) : null;
     const unmappedSegmentId: bigint | null = hitResult?.unmappedSegmentId || null;
     const meshClickedPosition = hitResult ? hitResult.point : null;
-    return { meshId, unmappedSegmentId, meshClickedPosition, hitPosition: hitResult.point };
+    // The meshes of each segmentation layer are grouped in a CustomLOD named after the layer.
+    let layerGroup: Object3D | null = hitResult.node;
+    while (layerGroup != null && !(layerGroup instanceof CustomLOD)) {
+      layerGroup = layerGroup.parent;
+    }
+    const layerName = layerGroup?.name ?? null;
+    return {
+      meshId,
+      unmappedSegmentId,
+      meshClickedPosition,
+      hitPosition: hitResult.point,
+      layerName,
+    };
   }
 
   setTargetAndFixPosition = (position?: Vector3): void => {

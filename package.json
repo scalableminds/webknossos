@@ -209,7 +209,7 @@
     "url": "^0.11.0",
     "url-join": "^4.0.0"
   },
-  "packageManager": "yarn@4.17.1",
+  "packageManager": "yarn@4.18.1",
   "dependenciesMeta": {
     "esbuild": {
       "built": true

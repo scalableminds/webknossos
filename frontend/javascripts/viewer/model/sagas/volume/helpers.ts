@@ -14,7 +14,7 @@ import {
   isConcurrentCollaborationMode,
   mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
-import { getLayerByName, getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
   getTransformedDatasetBoundingBox,
   getTransformsForLayer,
@@ -26,7 +26,6 @@ import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { createSendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import Dimensions, { type DimensionMap } from "viewer/model/dimensions";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
-import { zoomedPositionToZoomedAddress } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { getHalfViewportExtentsInVx } from "viewer/model/sagas/saga_selectors";
@@ -34,8 +33,11 @@ import { updateBucketPartial } from "viewer/model/sagas/volume/update_actions";
 import {
   type BucketDiff,
   encodeBucketDiffBase64,
+  runAxisForPlane,
 } from "viewer/model/volumetracing/core/bucket_diff";
 import type { RunAxis } from "viewer/model/volumetracing/core/bucket_voxel_mask";
+import { maskShapeFromVoxelBuffer2D } from "viewer/model/volumetracing/integration/fill_mask";
+import { runMaskEdit } from "viewer/model/volumetracing/integration/mask_driver";
 import type { SaveMode } from "viewer/model/volumetracing/integration/tool_driver_types";
 import type SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
 import {
@@ -228,6 +230,10 @@ export function applyLabeledVoxelMapToAllMissingMags(
   processSamplingSequence(downsampleSequence, (_targetMag) => 1);
 }
 
+/**
+ * Labels the voxels set in a 2D buffer in the plane of the given viewport with the
+ * active segment, or erases them, as one transaction (see mask_driver.ts).
+ */
 export function* labelWithVoxelBuffer2D(
   voxelBuffer: VoxelBuffer2D,
   contourTracingMode: ContourMode,
@@ -241,99 +247,40 @@ export function* labelWithVoxelBuffer2D(
   if (!allowUpdate) return;
   if (voxelBuffer.isEmpty()) return;
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
-  const activeCellId = volumeTracing.activeCellId;
-  const segmentationLayer = yield* call(
-    [Model, Model.getSegmentationTracingLayer],
-    volumeTracing.tracingId,
-  );
-  const { cube } = segmentationLayer;
-  const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
-  const dimensionIndices = Dimensions.getIndices(viewport);
-  const magInfo = yield* call(getMagInfo, segmentationLayer.mags);
-  const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
-
-  const topLeft3DCoord = voxelBuffer.getTopLeft3DCoord();
-  const bottomRight3DCoord = voxelBuffer.getBottomRight3DCoord();
-  // Since the bottomRight3DCoord is exclusive for the described bounding box,
-  // the third dimension has to be increased by one (otherwise, the volume of the bounding
-  // box would be empty)
-  bottomRight3DCoord[dimensionIndices[2]]++;
-  const outerBoundingBox = new BoundingBox({
-    min: topLeft3DCoord,
-    max: bottomRight3DCoord,
-  });
-
-  for (const boundingBoxChunk of outerBoundingBox.chunkIntoBuckets()) {
-    const { min, max } = boundingBoxChunk;
-    const bucketZoomedAddress = zoomedPositionToZoomedAddress(
-      min,
-      labeledZoomStep,
-      additionalCoordinates,
-    );
-
-    if (currentLabeledVoxelMap.get(bucketZoomedAddress)) {
-      throw new Error("When iterating over the buckets, we shouldn't visit the same bucket twice");
-    }
-
-    const labelMapOfBucket = new Uint8Array(Constants.BUCKET_SIZE_2D);
-    currentLabeledVoxelMap.set(bucketZoomedAddress, labelMapOfBucket);
-
-    // globalA (first dim) and globalB (second dim) are global coordinates in layer-space.
-    // They are "global" in the sense that they are not bucket-local coordinates.
-    // which can be used to index into the 2D slice of the VoxelBuffer2D (when subtracting the minCoord2d)
-    // and the LabeledVoxelMap
-    for (let globalA = min[dimensionIndices[0]]; globalA < max[dimensionIndices[0]]; globalA++) {
-      for (let globalB = min[dimensionIndices[1]]; globalB < max[dimensionIndices[1]]; globalB++) {
-        if (voxelBuffer.getValueFromGlobal(globalA, globalB)) {
-          labelMapOfBucket[
-            (globalA % Constants.BUCKET_WIDTH) * Constants.BUCKET_WIDTH +
-              (globalB % Constants.BUCKET_WIDTH)
-          ] = 1;
-        }
-      }
-    }
-  }
-
-  const shouldOverwrite = overwriteMode === OverwriteModeEnum.OVERWRITE_ALL;
-  // Since the LabeledVoxelMap is created in the current magnification,
-  // we only need to annotate one slice in this mag.
-  // `applyLabeledVoxelMapToAllMissingMags` will take care of
-  // annotating multiple slices
-  const numberOfSlices = 1;
-  const thirdDim = dimensionIndices[2];
+  const { activeCellId } = volumeTracing;
+  const { cube } = yield* call([Model, Model.getSegmentationTracingLayer], volumeTracing.tracingId);
   const isDeleting = contourTracingMode === ContourModeEnum.DELETE;
-  const newCellIdValue = isDeleting ? 0n : activeCellId;
-  const overwritableValue = isDeleting ? activeCellId : 0n;
-  const wroteVoxels = applyVoxelMap(
-    currentLabeledVoxelMap,
-    cube,
-    newCellIdValue,
-    voxelBuffer.getFast3DCoordinate,
-    numberOfSlices,
-    thirdDim,
-    shouldOverwrite,
-    overwritableValue,
-  );
-
-  if (wroteVoxels) {
-    // thirdDimensionOfSlice needs to be provided in global coordinates
-    const thirdDimensionOfSlice =
-      topLeft3DCoord[dimensionIndices[2]] * labeledMag[dimensionIndices[2]];
-    applyLabeledVoxelMapToAllMissingMags(
-      currentLabeledVoxelMap,
-      labeledZoomStep,
-      dimensionIndices,
-      magInfo,
+  const saveMode = yield* call(getVolumeSaveMode);
+  const { voxels, bucketDiffs } = runMaskEdit(
+    {
       cube,
-      newCellIdValue,
-      thirdDimensionOfSlice,
-      shouldOverwrite,
-      overwritableValue,
-    );
-  }
+      magIndex: labeledZoomStep,
+      segmentId: isDeleting ? 0n : activeCellId,
+      additionalCoordinates: additionalCoordinates ?? null,
+      overwriteMode:
+        overwriteMode === OverwriteModeEnum.OVERWRITE_EMPTY
+          ? "overwrite-empty-only"
+          : "overwrite-all",
+      // Under overwrite-empty, painting only writes over background, and erasing
+      // only removes the active segment.
+      overwritableValue: isDeleting ? activeCellId : 0n,
+      saveMode,
+    },
+    maskShapeFromVoxelBuffer2D(voxelBuffer, viewport),
+    "voxelBuffer2D",
+  );
+  // In the run order in which the viewport's slice is contiguous.
+  yield* call(
+    pushPartialBucketUpdates,
+    saveMode,
+    bucketDiffs,
+    cube,
+    volumeTracing.tracingId,
+    runAxisForPlane(viewport),
+  );
 
   if (wroteVoxelsBox != null) {
-    wroteVoxelsBox.value = wroteVoxels || wroteVoxelsBox.value;
+    wroteVoxelsBox.value = voxels > 0 || wroteVoxelsBox.value;
   }
 }
 

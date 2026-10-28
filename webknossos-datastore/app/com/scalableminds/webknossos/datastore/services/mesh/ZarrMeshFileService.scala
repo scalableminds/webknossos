@@ -21,6 +21,7 @@ import ucar.ma2.Array as MultiArray
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.reflect.ClassTag
 import ZarrMeshFileService.SegmentRow
 
 case class MeshFileAttributes(
@@ -35,14 +36,9 @@ case class MeshFileAttributes(
     dataOrderMappings: Option[Seq[Int]] // Only from format version 10
 ) extends ArrayArtifactHashing {
   lazy val applyHashFunction: Option[Long => Long] = hashFunction.map(getHashFunction)
-
-  // From format version 10, segments are looked up in a row table in merge-tree order instead of a hash table.
-  def hasRowTable: Boolean = formatVersion >= MeshFileAttributes.minRowTableFormatVersion
 }
 
 object MeshFileAttributes extends MeshFileUtils with VoxelyticsZarrArtifactUtils {
-  val minRowTableFormatVersion = 10
-
   implicit object MeshFileAttributesZarr3GroupHeaderReads extends Reads[MeshFileAttributes] {
     override def reads(json: JsValue): JsResult[MeshFileAttributes] = {
       val meshFileAttrs = lookUpArtifactAttributes(json)
@@ -235,7 +231,8 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       meshFileAttributes: MeshFileAttributes,
       dataOrderMappingName: Option[String]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[List[List[MeshLodInfo]]] =
-    if (meshFileAttributes.hasRowTable)
+    // From format version 10, segments are looked up in a row table in merge-tree order instead of a hash table.
+    if (meshFileAttributes.formatVersion >= 10)
       listMeshChunksFromRowTable(meshFileKey, segmentIds, meshFileAttributes, dataOrderMappingName)
     else listMeshChunksForSegmentsNested(meshFileKey, segmentIds, meshFileAttributes)
 
@@ -342,8 +339,7 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
     def lookUpRounds(seedCounts: List[Int], remaining: Set[Long], found: Seq[SegmentRow]): Fox[Seq[SegmentRow]] =
       seedCounts match {
         case seedCount :: laterSeedCounts if remaining.nonEmpty =>
-          val sortedRemaining = remaining.toArray.sortWith(java.lang.Long.compareUnsigned(_, _) < 0)
-          val seeds = ZarrMeshFileService.evenlySpaced(sortedRemaining, seedCount)
+          val seeds = ZarrMeshFileService.evenlySpaced(remaining.toArray, seedCount)
           for {
             seedRows <- lookUpRowNumbers(meshFileKey, meshFileAttributes, seeds)
             runRows <- readAgglomerateRuns(meshFileKey, seedRows.values.toSeq.distinct, level, requested.size)
@@ -373,7 +369,7 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       rowNumbers <- lookUpRowNumbers(meshFileKey, meshFileAttributes, segmentIds)
       rowsArray <- openZarrArray(meshFileKey, keyRows)
       rowsPerChunk = rowsArray.chunkShape(0).toLong
-      chunks <- readTableChunks(rowsArray, rowNumbers.values.map(_ / rowsPerChunk).toSeq.distinct.sorted)
+      chunks <- readChunks[Long](rowsArray, rowNumbers.values.map(_ / rowsPerChunk).toSeq.distinct.sorted, rank = 2)
     } yield rowNumbers.values.toSeq.sorted.map { rowNumber =>
       ZarrMeshFileService.segmentRowAt(
         chunks(rowNumber / rowsPerChunk),
@@ -398,7 +394,7 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
         else locateIndexChunks(meshFileKey, nFenceLevels, sortedSegmentIds)
       rowsPerChunk = idIndexArray.chunkShape(0).toLong
       rowWidth = idIndexArray.chunkShape(1)
-      chunks <- readTableChunks(idIndexArray, chunkNumbers.filter(_ >= 0).distinct.sorted.toSeq)
+      chunks <- readChunks[Long](idIndexArray, chunkNumbers.filter(_ >= 0).distinct.sorted.toSeq, rank = 2)
     } yield sortedSegmentIds
       .zip(chunkNumbers)
       .flatMap { case (segmentId, chunkNumber) =>
@@ -430,9 +426,10 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
         .filter { case (_, (first, last)) =>
           ZarrMeshFileService.runFitsRequest(last - first + 1, rowsPerChunk, requestedCount)
         }
-      chunks <- readTableChunks(
+      chunks <- readChunks[Long](
         rowsArray,
-        seedSpans.flatMap { case (_, (first, last)) => first to last }.distinct.sorted
+        seedSpans.flatMap { case (_, (first, last)) => first to last }.distinct.sorted,
+        rank = 2
       )
     } yield {
       val runs = seedSpans.map { case (seedRow, (firstChunk, lastChunk)) =>
@@ -454,25 +451,26 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       summary <- summaryArray.readAsMultiArray(offset = 0L, shape = Math.toIntExact(summaryLength))
     } yield summary.get1DJavaArray(ucar.ma2.DataType.BYTE).asInstanceOf[Array[Byte]]
 
-  private def readAllChunks(array: DatasetArray, chunkIndices: Seq[Array[Long]])(using
+  /* Chunks of a uint64 (T = Long) or uint8 (T = Byte) array of rank 1 or 2 by their number along the first axis, each
+   * as its values in C order. Whole chunks are read as typed values, which reading a range that is exactly one chunk
+   * would not give.
+   */
+  private def readChunks[T](array: DatasetArray, chunkNumbers: Seq[Long], rank: Int = 1)(using
       ec: ExecutionContext,
-      tc: TokenContext
-  ): Fox[Seq[MultiArray]] =
-    array.readChunks(chunkIndices, ZarrMeshFileService.maxParallelChunkReads)
-
-  // Chunks of a 2-d uint64 table by chunk number, each as its values in C order.
-  private def readTableChunks(array: DatasetArray, chunkNumbers: Seq[Long])(using
-      ec: ExecutionContext,
-      tc: TokenContext
-  ): Fox[Map[Long, Array[Long]]] =
+      tc: TokenContext,
+      elementType: ClassTag[T]
+  ): Fox[Map[Long, Array[T]]] = {
+    val dataType = if (elementType == ClassTag.Byte) ucar.ma2.DataType.BYTE else ucar.ma2.DataType.LONG
     for {
-      chunks <- readAllChunks(array, chunkNumbers.map(chunkNumber => Array(chunkNumber, 0L)))
+      chunks <- array.readChunks(
+        chunkNumbers.map(chunkNumber => chunkNumber +: Array.fill(rank - 1)(0L)),
+        ZarrMeshFileService.maxParallelChunkReads
+      )
     } yield chunkNumbers
       .zip(chunks)
-      .map { case (chunkNumber, chunk) =>
-        chunkNumber -> chunk.get1DJavaArray(ucar.ma2.DataType.LONG).asInstanceOf[Array[Long]]
-      }
+      .map { case (chunkNumber, chunk) => chunkNumber -> chunk.get1DJavaArray(dataType).asInstanceOf[Array[T]] }
       .toMap
+  }
 
   // For each sorted segment id, the id index chunk it falls into, or -1 if it is smaller than all indexed ids.
   // fence_0[c] is the first segment id of id index chunk c and fence_{l+1}[d] the first entry of chunk d of fence_l.
@@ -484,17 +482,11 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       topLevelArray <- openZarrArray(meshFileKey, keyFence(nFenceLevels - 1))
       topLevelLength <- arrayLength(topLevelArray)
       entriesPerChunk = topLevelArray.chunkShape(0).toLong
-      // Whole chunks are read as typed values, which reading a range that is exactly one chunk would not give.
-      topLevelChunks <- readAllChunks(
-        topLevelArray,
-        (0L until (topLevelLength + entriesPerChunk - 1) / entriesPerChunk).map(chunkNumber => Array(chunkNumber))
-      )
-      topLevelEntries = topLevelChunks
-        .flatMap(_.get1DJavaArray(ucar.ma2.DataType.LONG).asInstanceOf[Array[Long]])
-        .take(Math.toIntExact(topLevelLength))
-        .toArray
+      topLevelChunkNumbers = 0L until (topLevelLength + entriesPerChunk - 1) / entriesPerChunk
+      topLevelChunks <- readChunks[Long](topLevelArray, topLevelChunkNumbers)
+      topLevelEntries = topLevelChunkNumbers.flatMap(topLevelChunks(_)).take(Math.toIntExact(topLevelLength)).toArray
       topLevelPositions = sortedSegmentIds.map(id =>
-        ZarrMeshFileService.lastIndexLessOrEqual(topLevelEntries, topLevelEntries.length, id).toLong
+        ZarrMeshFileService.lastIndexLessOrEqual(topLevelEntries, 1, topLevelEntries.length, id).toLong
       )
       positions <- Fox.foldLeft((nFenceLevels - 1 to 1 by -1).iterator, topLevelPositions) {
         (upperLevelPositions, level) =>
@@ -513,21 +505,14 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       fenceArray <- openZarrArray(meshFileKey, keyFence(level))
       fenceLength <- arrayLength(fenceArray)
       entriesPerChunk = fenceArray.chunkShape(0).toLong
-      chunkNumbers = upperLevelPositions.filter(_ >= 0).distinct.sorted
-      chunks <- readAllChunks(fenceArray, chunkNumbers.toSeq.map(chunkNumber => Array(chunkNumber)))
-      entriesByChunk = chunkNumbers
-        .zip(chunks)
-        .map { case (chunkNumber, chunk) =>
-          chunkNumber -> chunk.get1DJavaArray(ucar.ma2.DataType.LONG).asInstanceOf[Array[Long]]
-        }
-        .toMap
+      entriesByChunk <- readChunks[Long](fenceArray, upperLevelPositions.filter(_ >= 0).distinct.sorted.toSeq)
     } yield upperLevelPositions.zip(sortedSegmentIds).map { case (chunkNumber, segmentId) =>
       if (chunkNumber < 0) -1L
       else {
         val chunkStart = chunkNumber * entriesPerChunk
         val validEntries = Math.toIntExact(Math.min(entriesPerChunk, fenceLength - chunkStart))
         val indexInChunk =
-          ZarrMeshFileService.lastIndexLessOrEqual(entriesByChunk(chunkNumber), validEntries, segmentId)
+          ZarrMeshFileService.lastIndexLessOrEqual(entriesByChunk(chunkNumber), 1, validEntries, segmentId)
         if (indexInChunk < 0) -1L else chunkStart + indexInChunk
       }
     }
@@ -541,16 +526,10 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
     def chunkNumbersOf(start: Long, end: Long) = (start / chunkSize) until ((end + chunkSize - 1) / chunkSize)
     val chunkNumbers = ranges.flatMap(chunkNumbersOf).distinct.sorted
     for {
-      chunks <- readAllChunks(array, chunkNumbers.map(chunkNumber => Array(chunkNumber)))
-      bytesByChunk = chunkNumbers
-        .zip(chunks)
-        .map { case (chunkNumber, chunk) =>
-          chunkNumber -> chunk.get1DJavaArray(ucar.ma2.DataType.BYTE).asInstanceOf[Array[Byte]]
-        }
-        .toMap
-      rangeBytes <- Fox.serialCombined(ranges) { case (start, end) =>
-        tryo(ZarrMeshFileService.copyRange(bytesByChunk, chunkSize, start, end)).toFox
-      }
+      bytesByChunk <- readChunks[Byte](array, chunkNumbers)
+      rangeBytes <- tryo(ranges.map { case (start, end) =>
+        ZarrMeshFileService.copyRange(bytesByChunk, chunkSize, start, end)
+      }).toFox
     } yield rangeBytes
   }
 
@@ -593,16 +572,18 @@ object ZarrMeshFileService {
   private val maxRunRowsPerRequestedSegment = 4L
   private val minRunChunks = 4L
 
-  def runFitsRequest(spanChunks: Long, rowsPerChunk: Long, requestedCount: Int): Boolean =
+  private def runFitsRequest(spanChunks: Long, rowsPerChunk: Long, requestedCount: Int): Boolean =
     spanChunks <= minRunChunks || spanChunks * rowsPerChunk <= maxRunRowsPerRequestedSegment * requestedCount
+
+  private val percentileMappingName = "agglomerate_view_(\\d+)".r
 
   // The percentile of mappings named like agglomerate_view_90.
   def percentileOfMappingName(mappingName: String): Option[Int] =
-    "agglomerate_view_(\\d+)".r.findFirstMatchIn(mappingName).flatMap(m => m.group(1).toIntOption)
+    percentileMappingName.findFirstMatchIn(mappingName).flatMap(m => m.group(1).toIntOption)
 
-  def evenlySpaced(sortedValues: Array[Long], count: Int): Seq[Long] =
-    if (sortedValues.length <= count) sortedValues.toSeq
-    else (0 until count).map(i => sortedValues((i.toLong * sortedValues.length / count).toInt))
+  def evenlySpaced(values: Array[Long], count: Int): Seq[Long] =
+    if (values.length <= count) values.toSeq
+    else (0 until count).map(i => values((i.toLong * values.length / count).toInt))
 
   def segmentRowAt(table: Array[Long], rowWidth: Int, rowInChunk: Long): SegmentRow = {
     val start = Math.toIntExact(rowInChunk) * rowWidth
@@ -648,13 +629,15 @@ object ZarrMeshFileService {
     (start, end)
   }
 
-  // Index of the last of the first `length` sorted values that is at most segmentId (unsigned), -1 if there is none.
-  def lastIndexLessOrEqual(sortedValues: Array[Long], length: Int, segmentId: Long): Int = {
+  /* Index of the last of the first `length` sorted values at most segmentId (unsigned), -1 if there is none. Value i is
+   * at sortedValues(i * stride), e.g. the first column of a C-ordered table with stride columns.
+   */
+  def lastIndexLessOrEqual(sortedValues: Array[Long], stride: Int, length: Int, segmentId: Long): Int = {
     var low = 0
     var high = length
     while (low < high) {
       val middle = (low + high) >>> 1
-      if (java.lang.Long.compareUnsigned(sortedValues(middle), segmentId) <= 0) low = middle + 1
+      if (java.lang.Long.compareUnsigned(sortedValues(middle * stride), segmentId) <= 0) low = middle + 1
       else high = middle
     }
     low - 1
@@ -662,19 +645,8 @@ object ZarrMeshFileService {
 
   // Row of segmentId among the first validRows rows of a C-ordered table sorted by its first column, -1 if absent.
   def indexOfRow(table: Array[Long], rowWidth: Int, validRows: Int, segmentId: Long): Int = {
-    val row = lastIndexLessOrEqualInColumn(table, rowWidth, validRows, segmentId)
+    val row = lastIndexLessOrEqual(table, rowWidth, validRows, segmentId)
     if (row >= 0 && table(row * rowWidth) == segmentId) row else -1
-  }
-
-  private def lastIndexLessOrEqualInColumn(table: Array[Long], rowWidth: Int, validRows: Int, segmentId: Long): Int = {
-    var low = 0
-    var high = validRows
-    while (low < high) {
-      val middle = (low + high) >>> 1
-      if (java.lang.Long.compareUnsigned(table(middle * rowWidth), segmentId) <= 0) low = middle + 1
-      else high = middle
-    }
-    low - 1
   }
 
   // Assembles the bytes [start, end) from the chunks of a 1-d array.

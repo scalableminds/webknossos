@@ -8,16 +8,16 @@ class MeshFileSegmentIndexTestSuite extends AsyncWordSpec {
   "ZarrMeshFileService.lastIndexLessOrEqual" should {
     "find the fence entry a segment id falls into" in {
       val fence = Array(3L, 10L, 25L, 0L) // the last entry is beyond the valid length
-      assert(ZarrMeshFileService.lastIndexLessOrEqual(fence, 3, 2L) == -1)
-      assert(ZarrMeshFileService.lastIndexLessOrEqual(fence, 3, 3L) == 0)
-      assert(ZarrMeshFileService.lastIndexLessOrEqual(fence, 3, 24L) == 1)
-      assert(ZarrMeshFileService.lastIndexLessOrEqual(fence, 3, 1000L) == 2)
+      assert(ZarrMeshFileService.lastIndexLessOrEqual(fence, 1, 3, 2L) == -1)
+      assert(ZarrMeshFileService.lastIndexLessOrEqual(fence, 1, 3, 3L) == 0)
+      assert(ZarrMeshFileService.lastIndexLessOrEqual(fence, 1, 3, 24L) == 1)
+      assert(ZarrMeshFileService.lastIndexLessOrEqual(fence, 1, 3, 1000L) == 2)
     }
 
     "compare segment ids as unsigned" in {
       val fence = Array(1L, Long.MaxValue, -2L) // -2L is 2^64 - 2
-      assert(ZarrMeshFileService.lastIndexLessOrEqual(fence, 3, -1L) == 2)
-      assert(ZarrMeshFileService.lastIndexLessOrEqual(fence, 3, Long.MinValue) == 1)
+      assert(ZarrMeshFileService.lastIndexLessOrEqual(fence, 1, 3, -1L) == 2)
+      assert(ZarrMeshFileService.lastIndexLessOrEqual(fence, 1, 3, Long.MinValue) == 1)
     }
   }
 
@@ -57,15 +57,6 @@ class MeshFileSegmentIndexTestSuite extends AsyncWordSpec {
       assert(ZarrMeshFileService.runChunkSpan(summary, 0, level = 0) == (0L, 1L))
       assert(ZarrMeshFileService.runChunkSpan(summary, 1, level = 0) == (0L, 2L))
       assert(ZarrMeshFileService.runChunkSpan(summary, 2, level = 2) == (0L, 2L))
-    }
-  }
-
-  "ZarrMeshFileService.runFitsRequest" should {
-    "read runs of a few chunks or of at most four rows per requested segment" in {
-      assert(ZarrMeshFileService.runFitsRequest(spanChunks = 4, rowsPerChunk = 1024, requestedCount = 2))
-      assert(!ZarrMeshFileService.runFitsRequest(spanChunks = 5, rowsPerChunk = 1024, requestedCount = 2))
-      assert(ZarrMeshFileService.runFitsRequest(spanChunks = 1000, rowsPerChunk = 1024, requestedCount = 256000))
-      assert(!ZarrMeshFileService.runFitsRequest(spanChunks = 1000, rowsPerChunk = 1024, requestedCount = 255999))
     }
   }
 

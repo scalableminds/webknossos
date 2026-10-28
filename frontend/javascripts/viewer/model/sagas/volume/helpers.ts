@@ -29,7 +29,10 @@ import type { MagInfo } from "viewer/model/helpers/mag_info";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { getHalfViewportExtentsInVx } from "viewer/model/sagas/saga_selectors";
-import { updateBucketPartial } from "viewer/model/sagas/volume/update_actions";
+import {
+  type UpdateBucketPartialUpdateAction,
+  updateBucketPartial,
+} from "viewer/model/sagas/volume/update_actions";
 import {
   type BucketDiff,
   encodeBucketDiffBase64,
@@ -48,7 +51,7 @@ import sampleVoxelMapToMagnification, {
   applyVoxelMap,
 } from "viewer/model/volumetracing/legacy/volume_annotation_sampling";
 import { Model } from "viewer/singletons";
-import type { VolumeTracing } from "viewer/store";
+import type { VolumeTracing, WebknossosState } from "viewer/store";
 
 function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
   for (let i = 0; i < arr.length - 1; i++) {
@@ -65,9 +68,35 @@ export type BooleanBox = {
  * they don't overwrite concurrent edits of the same buckets by others. Otherwise,
  * the touched buckets are saved whole, which keeps undo/redo possible.
  */
+export function getVolumeSaveModeForState(state: WebknossosState): SaveMode {
+  return isConcurrentCollaborationMode(state) ? "partialUpdates" : "fullBuckets";
+}
+
 export function* getVolumeSaveMode(): Saga<SaveMode> {
-  const isLiveCollaboration = yield* select(isConcurrentCollaborationMode);
-  return isLiveCollaboration ? "partialUpdates" : "fullBuckets";
+  return yield* select(getVolumeSaveModeForState);
+}
+
+/** The update actions that save an edit's committed bucket diffs as partial bucket updates. */
+export function createPartialBucketUpdates(
+  bucketDiffs: BucketDiff[],
+  cube: DataCube,
+  tracingId: string,
+  runAxis: RunAxis,
+): UpdateBucketPartialUpdateAction[] {
+  // Diffs can address buckets the layer doesn't have: outside of its bounding box,
+  // or in a mag that is missing between two existing ones (mag propagation passes
+  // through it). Their writes were skipped, so they are not sent.
+  // The core's BucketAddress is structurally the viewer's, additional
+  // coordinates included, so it goes into createSendBucketInfo as-is.
+  return bucketDiffs
+    .filter((diff) => cube.isBucketWithinLayer(diff.address))
+    .map((diff) =>
+      updateBucketPartial(
+        createSendBucketInfo(diff.address, cube.magInfo),
+        encodeBucketDiffBase64(diff, runAxis),
+        tracingId,
+      ),
+    );
 }
 
 /** Sends an edit's committed bucket diffs as partial bucket updates, if it is saved that way. */
@@ -79,24 +108,9 @@ export function* pushPartialBucketUpdates(
   runAxis: RunAxis,
 ): Saga<void> {
   if (saveMode !== "partialUpdates") return;
-  // Diffs can address buckets the layer doesn't have: outside of its bounding box,
-  // or in a mag that is missing between two existing ones (mag propagation passes
-  // through it). Their writes were skipped, so they are not sent.
-  const diffsToSend = bucketDiffs.filter((diff) => cube.isBucketWithinLayer(diff.address));
-  if (diffsToSend.length === 0) return;
-  // The core's BucketAddress is structurally the viewer's, additional
-  // coordinates included, so it goes into createSendBucketInfo as-is.
-  yield* put(
-    pushSaveQueueTransaction(
-      diffsToSend.map((diff) =>
-        updateBucketPartial(
-          createSendBucketInfo(diff.address, cube.magInfo),
-          encodeBucketDiffBase64(diff, runAxis),
-          tracingId,
-        ),
-      ),
-    ),
-  );
+  const updates = createPartialBucketUpdates(bucketDiffs, cube, tracingId, runAxis);
+  if (updates.length === 0) return;
+  yield* put(pushSaveQueueTransaction(updates));
 }
 
 export function* getBoundingBoxForViewport(

@@ -210,14 +210,35 @@ describe("Volume save mode", () => {
     ]) {
       expect(isDisabledForLiveCollaboration(tool), tool.id).toBe(true);
     }
-    // labelVoxels saves whole buckets, too.
-    expect(() => context.api.data.labelVoxels([position], 5n)).toThrow();
 
     WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation = false;
     // getDisabledInfoForTools is memoized on the state.
     Store.dispatch(updateUserSettingAction("brushSize", 11));
     const disabledInfoWithoutFlag = getDisabledInfoForTools(Store.getState());
     expect(disabledInfoWithoutFlag[AnnotationTool.BRUSH.id].isDisabled).toBe(true);
+  });
+
+  it<WebknossosTestContext>("saves labelVoxels as partial updates in live collaboration", async (context) => {
+    await setup(context, "Concurrent");
+    context.api.data.labelVoxels([position, [41, 40, 43]], 7n);
+    await context.api.tracing.save();
+
+    expect(await getValue(context)).toBe(7);
+    expect(await context.api.data.getDataValue(VOLUME_TRACING_ID, [41, 40, 43])).toBe(7);
+    const names = sentBucketActionNames(context);
+    expect(names).toContain("updateBucketPartial");
+    expect(names).not.toContain("updateBucket");
+  });
+
+  it<WebknossosTestContext>("saves labelVoxels as whole buckets outside of live collaboration", async (context) => {
+    await setup(context, "OwnerOnly");
+    context.api.data.labelVoxels([position], 7n);
+    await context.api.tracing.save();
+
+    expect(await getValue(context)).toBe(7);
+    const names = sentBucketActionNames(context);
+    expect(names).toContain("updateBucket");
+    expect(names).not.toContain("updateBucketPartial");
   });
 
   it<WebknossosTestContext>("saves pending whole buckets before live collaboration starts and discards the undo history", async (context) => {

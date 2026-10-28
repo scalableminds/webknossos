@@ -345,8 +345,10 @@ class VolumeTracingService @Inject() (
                     mergedVolume.largestSegmentId,
                     elementClassFromProto(tracing.elementClass)
                   )
-                ) ?~> Msg.Annotation.Volume
-                  .largestSegmentIdExceedsRange(mergedVolume.largestSegmentId, tracing.elementClass.toString)
+                ) ?~> Msg.Annotation.Volume.largestSegmentIdExceedsRange(
+                  mergedVolume.largestSegmentId.getOrElse(-1L),
+                  tracing.elementClass.toString
+                )
                 destinationVolumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
                 fallbackLayer <- getFallbackLayer(annotationId, tracing)
                 segmentIndexBuffer = new VolumeSegmentIndexBuffer(
@@ -781,7 +783,8 @@ class VolumeTracingService @Inject() (
       hasSegmentIndex = Some(mergedVolumeStats.createdSegmentIndex),
       userBoundingBoxes = addAdditionalBoundingBoxes(tracing.userBoundingBoxes, additionalBoundingBoxes),
       mags = mergedVolumeStats.magsMergedWith(tracing.mags),
-      largestSegmentId = mergedVolumeStats.largestSegmentId.orElse(tracing.largestSegmentId)
+      largestSegmentId =
+        combineLargestSegmentIdsByMaxDefined(mergedVolumeStats.largestSegmentId, tracing.largestSegmentId)
     )
   }
 
@@ -901,7 +904,7 @@ class VolumeTracingService @Inject() (
               ElementClass
                 .largestSegmentIdIsInRange(mergedVolume.largestSegmentId, elementClassFromProto(elementClassProto))
             ) ?~> Msg.Annotation.Volume
-              .largestSegmentIdExceedsRange(mergedVolume.largestSegmentId, elementClassProto.toString)
+              .largestSegmentIdExceedsRange(mergedVolume.largestSegmentId.getOrElse(-1L), elementClassProto.toString)
             mergedAdditionalAxes <- AdditionalAxis
               .mergeAndAssertSameAdditionalAxes(
                 volumeLayers.map(l => AdditionalAxis.fromProtosAsOpt(l.tracing.additionalAxes))
@@ -1000,7 +1003,7 @@ class VolumeTracingService @Inject() (
             ElementClass
               .largestSegmentIdIsInRange(mergedVolume.largestSegmentId, elementClassFromProto(tracing.elementClass))
           ) ?~> Msg.Annotation.Volume
-            .largestSegmentIdExceedsRange(mergedVolume.largestSegmentId, tracing.elementClass.toString)
+            .largestSegmentIdExceedsRange(mergedVolume.largestSegmentId.getOrElse(-1L), tracing.elementClass.toString)
           fallbackLayer <- getFallbackLayer(annotationId, tracing)
           mappingName <- getMappingNameUnlessEditable(tracing)
           segmentIndexBuffer <- Fox.successful(
@@ -1036,7 +1039,7 @@ class VolumeTracingService @Inject() (
             } yield ()
           }
           _ <- segmentIndexBuffer.flush()
-        } yield mergedVolume.largestSegmentId
+        } yield mergedVolume.largestSegmentId.getOrElse(largestSegmentId)
       }
     }
 

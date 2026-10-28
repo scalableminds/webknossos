@@ -346,11 +346,12 @@ class AnnotationTransactionService @Inject() (
     actionsWithInfo.map {
       case a: UpdateBucketVolumeAction    => a.withoutBase64Data
       case a: AddBookmarkAnnotationAction =>
-        a.withoutThumbnails.copy(createdAtVersion = Some(updateActionGroup.version))
-      case a: UpdateBookmarkStateAnnotationAction =>
-        a.withoutThumbnails.copy(thumbnailVersion = Some(updateActionGroup.version))
+        a.withoutThumbnails.copy(
+          createdAtVersion = Some(updateActionGroup.version),
+          thumbnailVersion = Some(a.resultingThumbnailVersion(updateActionGroup.version))
+        )
       case a: UpdateBookmarkThumbnailAnnotationAction =>
-        a.withoutThumbnails.copy(thumbnailVersion = Some(updateActionGroup.version))
+        a.withoutThumbnails.copy(thumbnailVersion = Some(a.resultingThumbnailVersion(updateActionGroup.version)))
       case a: AddLayerAnnotationAction =>
         // Note: this generated tracingId must not be read from this action before it was committed to fossildb,
         // to keep save retries idempotent.

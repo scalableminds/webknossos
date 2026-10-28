@@ -148,14 +148,15 @@ class TSAnnotationController @Inject() (
       }
     }
 
-  def bookmarkThumbnail(annotationId: ObjectId, bookmarkId: Int, size: String): Action[AnyContent] =
+  // v is the bookmark's thumbnailVersion. The thumbnails stored at a version never change, so they can be cached.
+  def bookmarkThumbnail(annotationId: ObjectId, bookmarkId: Int, size: String, v: Option[Long]): Action[AnyContent] =
     Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
         for {
           sizeValidated <- BookmarkThumbnailSize
             .fromString(size)
             .toFox ?~> s"Invalid thumbnail size $size" ~> BAD_REQUEST
-          thumbnail <- annotationBookmarkService.findThumbnail(annotationId, bookmarkId, sizeValidated) ~> NOT_FOUND
+          thumbnail <- annotationBookmarkService.findThumbnail(annotationId, bookmarkId, sizeValidated, v) ~> NOT_FOUND
         } yield Ok(thumbnail).as("image/webp").withHeaders(CACHE_CONTROL -> "private, max-age=31536000, immutable")
       }
     }

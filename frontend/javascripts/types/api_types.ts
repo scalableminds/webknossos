@@ -697,8 +697,10 @@ export type APIAnnotationBookmark = {
   // The annotation version that stored the current thumbnails. null until they were saved.
   thumbnailVersion: number | null;
   metadata: MetadataEntryProto[];
-  // Only set for bookmarks created in this session. Otherwise, the thumbnail is loaded from the server.
+  // Only set for thumbnails captured in this session. Otherwise, the thumbnail is loaded from
+  // the server. They are kept after saving, as they identify the thumbnail when diffing.
   smallThumbnailDataBase64: string | null;
+  largeThumbnailDataBase64: string | null;
 };
 
 export type APITracingStoreAnnotation = {

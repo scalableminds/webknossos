@@ -287,11 +287,16 @@ export function* sendSaveRequestToServer(
             yield* put(setBookmarkCreatedAtVersionAction(action.value.id, batch.version));
           }
           if (
-            action.name === "addBookmark" ||
-            action.name === "updateBookmarkState" ||
-            action.name === "updateBookmarkThumbnail"
+            (action.name === "addBookmark" || action.name === "updateBookmarkThumbnail") &&
+            action.value.largeThumbnailDataBase64 != null
           ) {
-            yield* put(setBookmarkThumbnailVersionAction(action.value.id, batch.version));
+            yield* put(
+              setBookmarkThumbnailVersionAction(
+                action.value.id,
+                batch.version,
+                action.value.largeThumbnailDataBase64,
+              ),
+            );
           }
         }
       }

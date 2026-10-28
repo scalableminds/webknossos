@@ -813,19 +813,17 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
       Store.dispatch(startForwardingUpdateActionsAction());
       await incorporateActions(
         [
-          addBookmark(
-            {
-              id: 1,
-              created: 123,
-              name: "Replayed Bookmark",
-              state: bookmarkState,
-              createdAtVersion: null,
-              thumbnailVersion: null,
-              metadata: [{ key: "k", stringValue: "v" }],
-              smallThumbnailDataBase64: null,
-            },
-            null,
-          ),
+          addBookmark({
+            id: 1,
+            created: 123,
+            name: "Replayed Bookmark",
+            state: bookmarkState,
+            createdAtVersion: null,
+            thumbnailVersion: null,
+            metadata: [{ key: "k", stringValue: "v" }],
+            smallThumbnailDataBase64: null,
+            largeThumbnailDataBase64: null,
+          }),
         ],
         1,
       );
@@ -841,6 +839,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           thumbnailVersion: 1,
           metadata: [{ key: "k", stringValue: "v" }],
           smallThumbnailDataBase64: null,
+          largeThumbnailDataBase64: null,
         },
       ]);
       expect(Store.getState().save.queue).toEqual([]);
@@ -869,12 +868,13 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           { key: "c", boolValue: true },
         ],
         smallThumbnailDataBase64: null,
+        largeThumbnailDataBase64: null,
       };
 
       Store.dispatch(startForwardingUpdateActionsAction());
       await incorporateActions(
         [
-          addBookmark(bookmark, null),
+          addBookmark(bookmark),
           updateMetadataOfBookmark(
             1,
             [
@@ -915,10 +915,11 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
         thumbnailVersion: null,
         metadata: [],
         smallThumbnailDataBase64: null,
+        largeThumbnailDataBase64: null,
       };
 
       Store.dispatch(startForwardingUpdateActionsAction());
-      await incorporateActions([addBookmark(bookmark, null), updateBookmark(1, "New Name")], 1);
+      await incorporateActions([addBookmark(bookmark), updateBookmark(1, "New Name")], 1);
       Store.dispatch(finishForwardingUpdateActionsAction());
       expect(Store.getState().annotation.bookmarks[0].name).toBe("New Name");
 
@@ -930,16 +931,16 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
 
       const newState = { ...bookmark.state, position: [4, 5, 6] as Vector3 };
       Store.dispatch(startForwardingUpdateActionsAction());
-      await incorporateActions([updateBookmarkState(1, newState, null, null)], 3);
+      await incorporateActions([updateBookmarkState(1, newState)], 3);
       Store.dispatch(finishForwardingUpdateActionsAction());
       expect(Store.getState().annotation.bookmarks[0].state).toEqual(newState);
-      expect(Store.getState().annotation.bookmarks[0].thumbnailVersion).toBe(3);
       expect(Store.getState().save.queue).toEqual([]);
 
       Store.dispatch(startForwardingUpdateActionsAction());
-      await incorporateActions([updateBookmarkThumbnail(1, null, null)], 4);
+      // The server sets the thumbnailVersion of stored actions, which may point to older thumbnails.
+      await incorporateActions([updateBookmarkThumbnail({ ...bookmark, thumbnailVersion: 2 })], 4);
       Store.dispatch(finishForwardingUpdateActionsAction());
-      expect(Store.getState().annotation.bookmarks[0].thumbnailVersion).toBe(4);
+      expect(Store.getState().annotation.bookmarks[0].thumbnailVersion).toBe(2);
       expect(Store.getState().save.queue).toEqual([]);
 
       Store.dispatch(startForwardingUpdateActionsAction());

@@ -247,37 +247,37 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     }
 
     case "SET_BOOKMARK_STATE": {
-      const {
-        bookmarkId,
-        state: bookmarkState,
-        smallThumbnailDataBase64,
-        thumbnailVersion,
-      } = action;
+      const { bookmarkId, state: bookmarkState, thumbnail } = action;
       return updateAnnotation(state, {
         bookmarks: state.annotation.bookmarks.map((bookmark) =>
           bookmark.id === bookmarkId
-            ? { ...bookmark, state: bookmarkState, smallThumbnailDataBase64, thumbnailVersion }
+            ? { ...bookmark, state: bookmarkState, ...thumbnail }
             : bookmark,
         ),
       });
     }
 
     case "SET_BOOKMARK_THUMBNAIL": {
-      const { bookmarkId, smallThumbnailDataBase64, thumbnailVersion } = action;
+      const { bookmarkId, thumbnail } = action;
       return updateAnnotation(state, {
         bookmarks: state.annotation.bookmarks.map((bookmark) =>
-          bookmark.id === bookmarkId
-            ? { ...bookmark, smallThumbnailDataBase64, thumbnailVersion }
-            : bookmark,
+          bookmark.id === bookmarkId ? { ...bookmark, ...thumbnail } : bookmark,
         ),
       });
     }
 
+    case "SET_BOOKMARKS": {
+      return updateAnnotation(state, { bookmarks: action.bookmarks });
+    }
+
     case "SET_BOOKMARK_THUMBNAIL_VERSION": {
-      const { bookmarkId, thumbnailVersion } = action;
+      const { bookmarkId, thumbnailVersion, savedLargeThumbnailDataBase64 } = action;
       return updateAnnotation(state, {
         bookmarks: state.annotation.bookmarks.map((bookmark) =>
-          bookmark.id === bookmarkId ? { ...bookmark, thumbnailVersion } : bookmark,
+          bookmark.id === bookmarkId &&
+          bookmark.largeThumbnailDataBase64 === savedLargeThumbnailDataBase64
+            ? { ...bookmark, thumbnailVersion }
+            : bookmark,
         ),
       });
     }

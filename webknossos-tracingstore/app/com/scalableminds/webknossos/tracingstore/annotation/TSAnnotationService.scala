@@ -221,7 +221,7 @@ class TSAnnotationService @Inject() (
         ) ?~> Msg.Annotation.ApplyUpdate.updateBookmarkFailed
       case a: UpdateBookmarkStateAnnotationAction =>
         updateBookmark(annotationId, annotationWithTracings, a.id)(
-          a.applyOn(targetVersion)
+          a.applyOn
         ) ?~> Msg.Annotation.ApplyUpdate.updateBookmarkFailed
       case a: UpdateBookmarkThumbnailAnnotationAction =>
         updateBookmark(annotationId, annotationWithTracings, a.id)(
@@ -937,12 +937,7 @@ class TSAnnotationService @Inject() (
     for {
       bookmarks <- annotationBookmarkService.findBookmarks(annotationId, annotation.bookmarkIds, annotation.version)
       _ <- annotationBookmarkService.saveBookmarks(newAnnotationId, annotation.version, bookmarks)
-      _ <- annotationBookmarkService.duplicateThumbnails(
-        annotationId,
-        newAnnotationId,
-        annotation.bookmarkIds,
-        annotation.version
-      )
+      _ <- annotationBookmarkService.duplicateThumbnails(annotationId, newAnnotationId, bookmarks)
     } yield ()
 
   def duplicate(

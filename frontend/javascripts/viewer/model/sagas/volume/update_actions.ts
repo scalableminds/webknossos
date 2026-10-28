@@ -1266,24 +1266,34 @@ export function updateMetadataOfAnnotation(description: string) {
   } as const;
 }
 
-// The large thumbnail is only sent to the server and not kept in the store.
-// Both thumbnails are stripped from the update actions when they are stored.
-// createdAtVersion and thumbnailVersion are set by the server.
-export function addBookmark(
-  bookmark: APIAnnotationBookmark,
-  largeThumbnailDataBase64: string | null,
-) {
-  const {
-    createdAtVersion: _createdAtVersion,
-    thumbnailVersion: _thumbnailVersion,
-    ...bookmarkWithoutVersion
-  } = bookmark;
+// A saved thumbnail is referenced by its version, so that no image data has to be sent again
+// (e.g. when a deleted bookmark is restored by undo). Otherwise, the local thumbnails are sent.
+// The server strips them from the stored update actions and sets the thumbnailVersion.
+function getThumbnailUpdate(bookmark: APIAnnotationBookmark) {
+  return bookmark.thumbnailVersion != null
+    ? {
+        largeThumbnailDataBase64: null,
+        smallThumbnailDataBase64: null,
+        thumbnailVersion: bookmark.thumbnailVersion,
+      }
+    : {
+        largeThumbnailDataBase64: bookmark.largeThumbnailDataBase64,
+        smallThumbnailDataBase64: bookmark.smallThumbnailDataBase64,
+        thumbnailVersion: null,
+      };
+}
+
+// createdAtVersion is set by the server.
+export function addBookmark(bookmark: APIAnnotationBookmark) {
   return {
     name: "addBookmark",
     value: {
-      ...bookmarkWithoutVersion,
+      id: bookmark.id,
+      created: bookmark.created,
+      name: bookmark.name,
+      state: bookmark.state,
       metadata: enforceValidMetadata(bookmark.metadata),
-      largeThumbnailDataBase64,
+      ...getThumbnailUpdate(bookmark),
     },
   } as const;
 }
@@ -1311,29 +1321,17 @@ export function updateMetadataOfBookmark(
   } as const;
 }
 
-// Like in addBookmark, the thumbnails are stripped when the update action is stored
-// and thumbnailVersion is set by the server.
-export function updateBookmarkState(
-  id: number,
-  state: APIAnnotationBookmarkState,
-  largeThumbnailDataBase64: string | null,
-  smallThumbnailDataBase64: string | null,
-) {
+export function updateBookmarkState(id: number, state: APIAnnotationBookmarkState) {
   return {
     name: "updateBookmarkState",
-    value: { id, state, largeThumbnailDataBase64, smallThumbnailDataBase64 },
+    value: { id, state },
   } as const;
 }
 
-// See updateBookmarkState.
-export function updateBookmarkThumbnail(
-  id: number,
-  largeThumbnailDataBase64: string | null,
-  smallThumbnailDataBase64: string | null,
-) {
+export function updateBookmarkThumbnail(bookmark: APIAnnotationBookmark) {
   return {
     name: "updateBookmarkThumbnail",
-    value: { id, largeThumbnailDataBase64, smallThumbnailDataBase64 },
+    value: { id: bookmark.id, ...getThumbnailUpdate(bookmark) },
   } as const;
 }
 

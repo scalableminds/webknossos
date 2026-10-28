@@ -14,7 +14,6 @@ import { Divider, Empty, Flex, List, type MenuProps, Space, Typography } from "a
 import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";
 import { SimpleRow } from "dashboard/folders/metadata_table";
-import { handleGenericError } from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import { map3, roundTo } from "libs/utils";
@@ -26,36 +25,25 @@ import type {
   MetadataEntryProto,
 } from "types/api_types";
 import { applyBookmarkState } from "viewer/controller/apply_url_state";
-import { bookmarkStateToUrlState, urlStateToBookmarkState } from "viewer/controller/bookmark_state";
-import UrlManager from "viewer/controller/url_manager";
+import { bookmarkStateToUrlState } from "viewer/controller/bookmark_state";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
-import { ANNOTATION_SCOPED_TRACING_ID, dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import {
-  addBookmarkAction,
   deleteBookmarkAction,
   setBookmarkMetadataAction,
   setBookmarkNameAction,
   setBookmarkStateAction,
   setBookmarkThumbnailAction,
 } from "viewer/model/actions/annotation_actions";
-import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import { setViewModeAction } from "viewer/model/actions/settings_actions";
 import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 import { diffMetadata } from "viewer/model/sagas/diffing/volume_diffing";
-import {
-  addBookmark,
-  deleteBookmark,
-  updateBookmark,
-  updateBookmarkState,
-  updateBookmarkThumbnail,
-  updateMetadataOfBookmark,
-} from "viewer/model/sagas/volume/update_actions";
 import Store, { type WebknossosState } from "viewer/store";
 import { positionToString } from "viewer/view/context_menu/helpers";
-import { type BookmarkThumbnails, captureBookmarkThumbnails } from "viewer/view/rendering_utils";
+import type { BookmarkThumbnails } from "viewer/view/rendering_utils";
 import ButtonComponent from "../../components/button_component";
 import { InputWithUpdateOnBlur } from "../../components/input_with_update_on_blur";
+import { getShortcutDisplayString } from "../../keyboard_shortcuts/keyboard_shortcut_utils";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import { MetadataEntryTableRows } from "../metadata_table";
 import { ResizableSplitPane } from "../resizable_split_pane";
@@ -63,6 +51,12 @@ import { InlineEditableName } from "../shared/inline_editable_name";
 import { HOVER_ONLY_CLASS, MoreActionsButton, RowActionButton } from "../shared/list_row";
 import { useTreeContextMenu } from "../shared/use_tree_context_menu";
 import { ContextMenuContainer } from "../sidebar_context_menu";
+import {
+  addBookmarkForCurrentView,
+  captureThumbnailsSafely,
+  getCurrentBookmarkState,
+  toUnsavedBookmarkThumbnail,
+} from "./add_bookmark";
 import { SwitchThumbnailModal } from "./switch_thumbnail_modal";
 
 const THUMBNAIL_BOX_SIZE = 48;
@@ -176,9 +170,6 @@ function getViewKey(state: WebknossosState): string {
   ]);
 }
 
-const getCurrentBookmarkState = () =>
-  urlStateToBookmarkState(UrlManager.getUrlState(Store.getState()));
-
 function BookmarkDetailsLine({ bookmark }: { bookmark: APIAnnotationBookmark }) {
   const meshCount = bookmark.state.layers.reduce((sum, layer) => sum + layer.meshes.length, 0);
   const icons = [
@@ -209,15 +200,6 @@ function BookmarkDetailsLine({ bookmark }: { bookmark: APIAnnotationBookmark }) 
   );
 }
 
-async function captureThumbnailsSafely(): Promise<BookmarkThumbnails | null> {
-  try {
-    return await captureBookmarkThumbnails();
-  } catch (error) {
-    console.error("Could not capture bookmark thumbnails.", error);
-    return null;
-  }
-}
-
 const getDefaultBookmarkName = (bookmark: APIAnnotationBookmark) => `Bookmark ${bookmark.id}`;
 
 function useRenameBookmark() {
@@ -229,7 +211,6 @@ function useRenameBookmark() {
       if (name === bookmark.name) return;
       await waitUntilRebaseFinished();
       dispatch(setBookmarkNameAction(bookmark.id, name));
-      dispatch(pushSaveQueueTransaction([updateBookmark(bookmark.id, name)]));
     },
     [dispatch],
   );
@@ -249,11 +230,6 @@ function BookmarkDetails({ bookmark }: { bookmark: APIAnnotationBookmark }) {
       if (upsertEntriesByKey.length === 0 && removeEntriesByKey.length === 0) return;
       await waitUntilRebaseFinished();
       dispatch(setBookmarkMetadataAction(updatedBookmark.id, newMetadata));
-      dispatch(
-        pushSaveQueueTransaction([
-          updateMetadataOfBookmark(updatedBookmark.id, upsertEntriesByKey, removeEntriesByKey),
-        ]),
-      );
     },
     [dispatch],
   );
@@ -290,6 +266,13 @@ export default function BookmarksTab() {
     number | null
   >(null);
   const readOnly = !useWkSelector(mayEditAnnotation);
+  const addBookmarkShortcut = useWkSelector((state) =>
+    getShortcutDisplayString(
+      state.keyboardConfiguration.shortcutsConfig,
+      "ADD_BOOKMARK",
+      state.keyboardConfiguration.unmodifiedLayoutMap,
+    ),
+  );
   const renameBookmark = useRenameBookmark();
   const selectedBookmark = bookmarks.find((bookmark) => bookmark.id === selectedBookmarkId);
   const switchingThumbnailBookmark = bookmarks.find(
@@ -332,34 +315,12 @@ export default function BookmarksTab() {
   );
 
   const handleAddBookmark = useCallback(async () => {
-    const state = getCurrentBookmarkState();
-    const thumbnails = await captureThumbnailsSafely();
-    let id: number;
-    try {
-      id = await dispatchGetNewIdAsync(dispatch, ANNOTATION_SCOPED_TRACING_ID, "Bookmark");
-    } catch (error) {
-      handleGenericError(error as Error, "Could not create a new bookmark.");
-      return;
-    }
-    await waitUntilRebaseFinished();
-    const bookmark: APIAnnotationBookmark = {
-      id,
-      created: Date.now(),
-      name: null,
-      state,
-      createdAtVersion: null,
-      thumbnailVersion: null,
-      metadata: [],
-      smallThumbnailDataBase64: thumbnails?.smallDataBase64 ?? null,
-    };
-    dispatch(addBookmarkAction(bookmark));
+    const id = await addBookmarkForCurrentView(dispatch);
+    if (id == null) return;
     // Nudge users to name the new bookmark.
     selectBookmark(id);
     setPreviousView(null);
     setRenamingBookmarkId(id);
-    dispatch(
-      pushSaveQueueTransaction([addBookmark(bookmark, thumbnails?.largeDataBase64 ?? null)]),
-    );
   }, [dispatch, selectBookmark]);
 
   const handleSelectBookmark = useCallback(
@@ -385,17 +346,12 @@ export default function BookmarksTab() {
       const state = getCurrentBookmarkState();
       const thumbnails = await captureThumbnailsSafely();
       await waitUntilRebaseFinished();
-      const smallThumbnailDataBase64 = thumbnails?.smallDataBase64 ?? null;
-      dispatch(setBookmarkStateAction(bookmarkId, state, smallThumbnailDataBase64, null));
       dispatch(
-        pushSaveQueueTransaction([
-          updateBookmarkState(
-            bookmarkId,
-            state,
-            thumbnails?.largeDataBase64 ?? null,
-            smallThumbnailDataBase64,
-          ),
-        ]),
+        setBookmarkStateAction(
+          bookmarkId,
+          state,
+          thumbnails != null ? toUnsavedBookmarkThumbnail(thumbnails) : null,
+        ),
       );
       // The bookmark matches the current view now.
       selectBookmark(bookmarkId);
@@ -407,16 +363,7 @@ export default function BookmarksTab() {
     async (bookmarkId: number, thumbnails: BookmarkThumbnails) => {
       setSwitchingThumbnailOfBookmarkId(null);
       await waitUntilRebaseFinished();
-      dispatch(setBookmarkThumbnailAction(bookmarkId, thumbnails.smallDataBase64, null));
-      dispatch(
-        pushSaveQueueTransaction([
-          updateBookmarkThumbnail(
-            bookmarkId,
-            thumbnails.largeDataBase64,
-            thumbnails.smallDataBase64,
-          ),
-        ]),
-      );
+      dispatch(setBookmarkThumbnailAction(bookmarkId, toUnsavedBookmarkThumbnail(thumbnails)));
     },
     [dispatch],
   );
@@ -425,7 +372,6 @@ export default function BookmarksTab() {
     async (bookmarkId: number) => {
       await waitUntilRebaseFinished();
       dispatch(deleteBookmarkAction(bookmarkId));
-      dispatch(pushSaveQueueTransaction([deleteBookmark(bookmarkId)]));
       setSelectedBookmarkId((selectedId) => (selectedId === bookmarkId ? null : selectedId));
     },
     [dispatch],
@@ -505,7 +451,9 @@ export default function BookmarksTab() {
             <ButtonComponent
               variant="text"
               color="default"
-              title="Click to add a bookmark for the current view."
+              title={`Click to add a bookmark for the current view.${
+                addBookmarkShortcut != null ? ` (${addBookmarkShortcut})` : ""
+              }`}
               onClick={handleAddBookmark}
               icon={<PlusOutlined />}
             />

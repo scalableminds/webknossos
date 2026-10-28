@@ -55,7 +55,7 @@ class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
   }
 
   "UpdateBookmarkStateAnnotationAction" should {
-    "replace the state and set the thumbnail version, keeping everything else" in {
+    "replace the state, keeping everything else" in {
       val newState = AnnotationBookmarkState(
         position = Vec3Int(1, 2, 3),
         mode = ViewModeProto.flight,
@@ -69,18 +69,8 @@ class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
         tdCamera = None,
         showSkeletons = None
       )
-      val action = UpdateBookmarkStateAnnotationAction(
-        id = 1,
-        state = newState,
-        largeThumbnailDataBase64 = None,
-        smallThumbnailDataBase64 = None,
-        thumbnailVersion = Some(5L)
-      )
-      val updated = action.applyOn(fallbackThumbnailVersion = 9L)(bookmark)
-      assert(updated.state == newState.toProto)
-      assert(updated.thumbnailVersion == 5L)
-      assert(updated.copy(state = bookmark.state, thumbnailVersion = bookmark.thumbnailVersion) == bookmark)
-      assert(action.copy(thumbnailVersion = None).applyOn(9L)(bookmark).thumbnailVersion == 9L)
+      val updated = UpdateBookmarkStateAnnotationAction(id = 1, state = newState).applyOn(bookmark)
+      assert(updated == bookmark.withState(newState.toProto))
     }
   }
 
@@ -93,6 +83,19 @@ class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
         thumbnailVersion = Some(5L)
       )
       assert(action.applyOn(fallbackThumbnailVersion = 9L)(bookmark) == bookmark.withThumbnailVersion(5L))
+    }
+
+    "point to the save version when carrying thumbnails and to an explicit older version otherwise" in {
+      val withThumbnails = UpdateBookmarkThumbnailAnnotationAction(
+        id = 1,
+        largeThumbnailDataBase64 = Some("AA=="),
+        smallThumbnailDataBase64 = Some("AA=="),
+        thumbnailVersion = Some(5L)
+      )
+      assert(withThumbnails.resultingThumbnailVersion(saveVersion = 9L) == 9L)
+      val withoutThumbnails = withThumbnails.copy(largeThumbnailDataBase64 = None, smallThumbnailDataBase64 = None)
+      assert(withoutThumbnails.resultingThumbnailVersion(saveVersion = 9L) == 5L)
+      assert(withoutThumbnails.copy(thumbnailVersion = None).resultingThumbnailVersion(saveVersion = 9L) == 9L)
     }
   }
 }

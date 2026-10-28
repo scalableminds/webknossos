@@ -210,5 +210,6 @@ export function parseProtoAnnotationBookmarks(
     metadata: sanitizeMetadata(bookmark.metadata),
     // Thumbnails are loaded separately, see getBookmarkThumbnailUrl.
     smallThumbnailDataBase64: null,
+    largeThumbnailDataBase64: null,
   }));
 }

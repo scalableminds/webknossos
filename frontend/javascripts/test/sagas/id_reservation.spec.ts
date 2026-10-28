@@ -43,6 +43,7 @@ function createBookmark(id: number): APIAnnotationBookmark {
       layers: [],
     },
     smallThumbnailDataBase64: null,
+    largeThumbnailDataBase64: null,
   };
 }
 

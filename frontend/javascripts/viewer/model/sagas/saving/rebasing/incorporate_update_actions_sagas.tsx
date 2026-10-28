@@ -13,6 +13,7 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
   addBookmarkAction,
+  type BookmarkThumbnail,
   deleteBookmarkAction,
   editAnnotationLayerAction,
   setAnnotationDescriptionAction,
@@ -112,6 +113,24 @@ export function* tryToIncorporateActions(
   }
 
   for (const actionBatch of newerActions) {
+    // Stored update actions don't carry thumbnail data, but the server set their thumbnailVersion.
+    // Unsaved actions of the user still carry the local thumbnails (or reference saved ones).
+    const getIncorporatedBookmarkThumbnail = (value: {
+      smallThumbnailDataBase64?: string | null;
+      largeThumbnailDataBase64?: string | null;
+      thumbnailVersion?: number | null;
+    }): BookmarkThumbnail =>
+      areUnsavedChangesOfUser
+        ? {
+            smallThumbnailDataBase64: value.smallThumbnailDataBase64 ?? null,
+            largeThumbnailDataBase64: value.largeThumbnailDataBase64 ?? null,
+            thumbnailVersion: value.thumbnailVersion ?? null,
+          }
+        : {
+            smallThumbnailDataBase64: null,
+            largeThumbnailDataBase64: null,
+            thumbnailVersion: value.thumbnailVersion ?? actionBatch.version,
+          };
     // Per layer: maps each split segment id (segmentId1/segmentId2 of splitAgglomerate actions)
     // to the agglomerate id it belonged to before the split.
     const splitSegmentIdToOldAgglomeratePerLayer: Map<string, Map<bigint, bigint>> = new Map();
@@ -404,19 +423,17 @@ export function* tryToIncorporateActions(
         }
         case "addBookmark": {
           // Server-side update actions also carry metadata such as actionTimestamp.
-          const { id, created, name, state, metadata, smallThumbnailDataBase64 } = action.value;
+          const { id, created, name, state, metadata } = action.value;
           yield* put(
-            // Thumbnails are stripped from stored update actions and loaded from the server instead.
             addBookmarkAction({
               id,
               created,
               name,
               state,
-              // Unsaved bookmarks of the user get their versions once they are saved.
+              // Unsaved bookmarks of the user get their version once they are saved.
               createdAtVersion: areUnsavedChangesOfUser ? null : actionBatch.version,
-              thumbnailVersion: areUnsavedChangesOfUser ? null : actionBatch.version,
               metadata,
-              smallThumbnailDataBase64: smallThumbnailDataBase64 ?? null,
+              ...getIncorporatedBookmarkThumbnail(action.value),
             }),
           );
           break;
@@ -435,25 +452,14 @@ export function* tryToIncorporateActions(
           break;
         }
         case "updateBookmarkState": {
-          const { id, state, smallThumbnailDataBase64 } = action.value;
-          yield* put(
-            setBookmarkStateAction(
-              id,
-              state,
-              // Like in addBookmark, stored update actions don't carry the thumbnails anymore.
-              smallThumbnailDataBase64 ?? null,
-              areUnsavedChangesOfUser ? null : actionBatch.version,
-            ),
-          );
+          yield* put(setBookmarkStateAction(action.value.id, action.value.state, null));
           break;
         }
         case "updateBookmarkThumbnail": {
-          const { id, smallThumbnailDataBase64 } = action.value;
           yield* put(
             setBookmarkThumbnailAction(
-              id,
-              smallThumbnailDataBase64 ?? null,
-              areUnsavedChangesOfUser ? null : actionBatch.version,
+              action.value.id,
+              getIncorporatedBookmarkThumbnail(action.value),
             ),
           );
           break;

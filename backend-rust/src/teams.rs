@@ -1,5 +1,5 @@
 //! Organization teams. These routes mirror TeamController (there is no get/update route).
-pub(crate) mod dao;
+pub(crate) mod teams_dao;
 
 use crate::response::{Messages, WithMessages};
 use axum::{
@@ -50,7 +50,7 @@ async fn list(
     user: AuthUser,
     Query(query): Query<ListQuery>,
 ) -> ApiResult<Json<Vec<Team>>> {
-    let teams = dao::find_all_for_user(&state.pool, &user, query.is_editable).await?;
+    let teams = teams_dao::find_all_for_user(&state.pool, &user, query.is_editable).await?;
     Ok(Json(teams))
 }
 
@@ -67,7 +67,7 @@ async fn create(
         return Err(ApiError::bad_request(crate::msg::team::INVALID_NAME));
     }
     let id = ObjectId::new();
-    let inserted = dao::insert_one(&state.pool, &id, &user.organization_id, &body.name).await;
+    let inserted = teams_dao::insert_one(&state.pool, &id, &user.organization_id, &body.name).await;
     if let Err(error) = inserted {
         if error
             .as_database_error()
@@ -104,7 +104,8 @@ async fn remove(
     // READ COMMITTED intentionally refreshes the reference-check snapshot after
     // waiting for creators' team SHARE locks. FOR UPDATE fences new references.
     let is_organization_team =
-        dao::is_organization_team_for_update(&mut transaction, &id, &user.organization_id).await?;
+        teams_dao::is_organization_team_for_update(&mut transaction, &id, &user.organization_id)
+            .await?;
     let Some(is_organization_team) = is_organization_team else {
         return Err(ApiError::not_found(crate::msg::team::not_found(&id)));
     };
@@ -113,17 +114,17 @@ async fn remove(
             crate::msg::team::DELETE_ORGANIZATION_TEAM,
         ));
     }
-    let referenced = dao::is_referenced(&mut transaction, &id).await?;
+    let referenced = teams_dao::is_referenced(&mut transaction, &id).await?;
     if referenced {
         return Err(ApiError::forbidden(crate::msg::team::DELETE_IN_USE));
     }
-    dao::mark_deleted(
+    teams_dao::mark_deleted(
         &mut transaction,
         &id,
         &format!(".deleted.at.{}", chrono::Utc::now().timestamp_millis()),
     )
     .await?;
-    dao::delete_team_references(&mut transaction, &id).await?;
+    teams_dao::delete_team_references(&mut transaction, &id).await?;
     transaction.commit().await?;
     Ok(Messages::success(crate::msg::team::DELETE_SUCCESS))
 }

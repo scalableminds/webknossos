@@ -9,9 +9,9 @@
 //! access to the dataset. The `pub(crate)` helpers below are shared with the
 //! analogous attachment upload callbacks. Deviations from Play are listed in
 //! checkpoints/remote-datastore-mag-upload.md.
-mod dao;
+mod remote_mag_upload_dao;
 
-pub(crate) use dao::push_mag_predicate;
+pub(crate) use remote_mag_upload_dao::push_mag_predicate;
 
 use axum::{Json as ResponseJson, Router, extract::State, http::StatusCode, routing::post};
 use serde::Deserialize;
@@ -24,7 +24,7 @@ use crate::{
     dataset::source::MagLocator,
     error::{ApiError, ApiResult},
     extract::{Json, Query},
-    remote::datastore::{ValidatedDataStore, dao as datastore_dao},
+    remote::datastore::{ValidatedDataStore, remote_datastore_dao},
     stores::client::ServiceClients,
     util::id::ObjectId,
 };
@@ -133,7 +133,7 @@ pub(crate) async fn load_virtual_upload_target(
     if !crate::dataset::access::can_read(pool, Some(user), dataset_id, None).await? {
         return Err(not_found());
     }
-    let target = dao::find_upload_target(pool, dataset_id)
+    let target = remote_mag_upload_dao::find_upload_target(pool, dataset_id)
         .await?
         .ok_or_else(not_found)?;
     if !target.is_virtual {
@@ -160,7 +160,7 @@ pub(crate) async fn require_usable_layer(
             &target.id,
         )));
     }
-    let exists = dao::layer_exists(pool, &target.id, layer_name).await?;
+    let exists = remote_mag_upload_dao::layer_exists(pool, &target.id, layer_name).await?;
     if !exists {
         return Err(ApiError::bad_request(
             crate::msg::dataset::layer::not_found(layer_name),
@@ -236,7 +236,8 @@ async fn reserve_mag_upload(
     let target = load_virtual_upload_target(pool, &user, &body.dataset_id, MAG_NOT_VIRTUAL).await?;
     require_usable_layer(pool, &target, &body.layer_name).await?;
     let [x, y, z] = [mag.mag.x, mag.mag.y, mag.mag.z].map(f64::from);
-    let existing = dao::find_mags_for_layer(pool, &target.id, &body.layer_name).await?;
+    let existing =
+        remote_mag_upload_dao::find_mags_for_layer(pool, &target.id, &body.layer_name).await?;
     if existing
         .iter()
         .any(|&(ex, ey, ez)| Vec3Int::new(ex, ey, ez).max_dim() == mag.mag.max_dim())
@@ -248,8 +249,13 @@ async fn reserve_mag_upload(
     }
     require_same_datastore(&target, &store.name, DIFFERENT_DATASTORE)?;
     // UploadToPathsService.handleExistingPendingMag (shared with uploadToPaths).
-    let pending =
-        dao::find_pending_mag_paths(pool, &target.id, &body.layer_name, [x, y, z]).await?;
+    let pending = remote_mag_upload_dao::find_pending_mag_paths(
+        pool,
+        &target.id,
+        &body.layer_name,
+        [x, y, z],
+    )
+    .await?;
     if !pending.is_empty() && !body.overwrite_pending {
         return Err(ApiError::bad_request(
             crate::msg::dataset::upload::to_paths::MAG_ALREADY_PENDING,
@@ -275,20 +281,30 @@ async fn reserve_mag_upload(
     // Pending replacement and the new reservation commit together; the dataset
     // row lock serializes concurrent reservations of the same dataset.
     let mut transaction = pool.begin().await?;
-    datastore_dao::lock_dataset(&mut transaction, &target.id).await?;
+    remote_datastore_dao::lock_dataset(&mut transaction, &target.id).await?;
     if body.overwrite_pending {
-        dao::delete_pending_mag(&mut transaction, &target.id, &body.layer_name, [x, y, z]).await?;
+        remote_mag_upload_dao::delete_pending_mag(
+            &mut transaction,
+            &target.id,
+            &body.layer_name,
+            [x, y, z],
+        )
+        .await?;
     } else {
-        let raced =
-            dao::pending_mag_exists(&mut transaction, &target.id, &body.layer_name, [x, y, z])
-                .await?;
+        let raced = remote_mag_upload_dao::pending_mag_exists(
+            &mut transaction,
+            &target.id,
+            &body.layer_name,
+            [x, y, z],
+        )
+        .await?;
         if raced {
             return Err(ApiError::bad_request(
                 crate::msg::dataset::upload::to_paths::MAG_ALREADY_PENDING,
             ));
         }
     }
-    dao::insert_with_upload_pending(
+    remote_mag_upload_dao::insert_with_upload_pending(
         &mut transaction,
         &target.id,
         &body.layer_name,
@@ -328,7 +344,7 @@ async fn report_mag_upload(
     let id = &body.dataset_id;
     // DatasetDAO.findOne under GlobalAccessContext; the reporting store need
     // not be the dataset's store (Scala does not check it either).
-    let exists = datastore_dao::dataset_exists(pool, id).await?;
+    let exists = remote_datastore_dao::dataset_exists(pool, id).await?;
     if !exists {
         return Err(crate::dataset::lifecycle::not_found(id));
     }
@@ -336,9 +352,14 @@ async fn report_mag_upload(
     let finished = match mag.path.as_ref().map(ToString::to_string) {
         // DatasetMagDAO.finishUpload, guarded by findOneWithPendingUpload in
         // the same statement.
-        Some(path) => dao::finish_upload(pool, id, &body.layer_name, [x, y, z], &path).await?,
+        Some(path) => {
+            remote_mag_upload_dao::finish_upload(pool, id, &body.layer_name, [x, y, z], &path)
+                .await?
+        }
         None => {
-            let pending = dao::upload_is_pending(pool, id, &body.layer_name, [x, y, z]).await?;
+            let pending =
+                remote_mag_upload_dao::upload_is_pending(pool, id, &body.layer_name, [x, y, z])
+                    .await?;
             if pending {
                 return Err(ApiError::bad_request(MAG_PATH_NOT_SET));
             }

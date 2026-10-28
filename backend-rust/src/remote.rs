@@ -1,5 +1,5 @@
-pub(crate) mod dao;
 pub mod datastore;
+pub(crate) mod remote_dao;
 pub mod tracingstore;
 pub mod user_access;
 

@@ -15,7 +15,7 @@ use serde_json::{Map, Value, json};
 
 use crate::{
     AppState,
-    annotation::dao,
+    annotation::annotation_dao,
     annotation::provider::{
         AccessContext, AnnotationIdentifier, AnnotationProvider, AnnotationType, ProviderError,
         RESTRICTIONS_NOT_FOUND,
@@ -126,9 +126,10 @@ async fn edit(
     let mut transaction = state.pool.begin().await?;
     // Re-check the runtime gate on the locked live row (no TOCTOU between the
     // provider read and the writes); a concurrently deleted row is not found.
-    let locked = crate::annotation::dao::lock_readable(&mut transaction, &user, annotation_id)
-        .await?
-        .ok_or_else(|| ProviderError::NotFound.into_api_error(StatusCode::NOT_FOUND))?;
+    let locked =
+        crate::annotation::annotation_dao::lock_readable(&mut transaction, &user, annotation_id)
+            .await?
+            .ok_or_else(|| ProviderError::NotFound.into_api_error(StatusCode::NOT_FOUND))?;
     if !crate::annotation::access::restrictions(&locked, Some(&user)).allow_update {
         return Err(ApiError::forbidden(EDIT_NOT_ALLOWED));
     }
@@ -138,8 +139,12 @@ async fn edit(
     // AnnotationDAO update access only gates the DAO-protected fields; a
     // view-configuration-only (or empty) edit succeeds for collaborators.
     if dao_fields
-        && !crate::annotation::dao::lock_update_access(&mut transaction, &user, annotation_id)
-            .await?
+        && !crate::annotation::annotation_dao::lock_update_access(
+            &mut transaction,
+            &user,
+            annotation_id,
+        )
+        .await?
     {
         return Err(ApiError::bad_request(if clears_teams {
             crate::msg::annotation::NO_UPDATE_ACCESS
@@ -148,19 +153,20 @@ async fn edit(
         }));
     }
     if clears_teams {
-        dao::delete_shared_teams(&mut transaction, annotation_id).await?;
+        annotation_dao::delete_shared_teams(&mut transaction, annotation_id).await?;
     }
     if let Some(name) = &body.name {
-        dao::update_name(&mut transaction, annotation_id, name).await?;
+        annotation_dao::update_name(&mut transaction, annotation_id, name).await?;
     }
     if let Some(visibility) = body.visibility {
-        dao::update_visibility(&mut transaction, annotation_id, visibility.as_str()).await?;
+        annotation_dao::update_visibility(&mut transaction, annotation_id, visibility.as_str())
+            .await?;
     }
     if let Some(tags) = &body.tags {
-        dao::update_tags(&mut transaction, annotation_id, tags).await?;
+        annotation_dao::update_tags(&mut transaction, annotation_id, tags).await?;
     }
     if let Some(view_configuration) = body.view_configuration {
-        dao::upsert_view_configuration(
+        annotation_dao::upsert_view_configuration(
             &mut transaction,
             annotation_id,
             &user.id,
@@ -223,10 +229,12 @@ async fn edit_locked_state(
         .filter(|_| provided.annotation_type() == Some(AnnotationType::Explorational))
         .ok_or_else(|| ApiError::bad_request(LOCK_EXPLORATIONALS_ONLY))?;
     let mut transaction = state.pool.begin().await?;
-    if !crate::annotation::dao::lock_update_access(&mut transaction, &user, &saved.id).await? {
+    if !crate::annotation::annotation_dao::lock_update_access(&mut transaction, &user, &saved.id)
+        .await?
+    {
         return Err(ApiError::bad_request(LOCK_FAILED));
     }
-    dao::update_locked_state(&mut transaction, &saved.id, is_locked).await?;
+    annotation_dao::update_locked_state(&mut transaction, &saved.id, is_locked).await?;
     transaction.commit().await?;
     tracing::info!(locked = is_locked, "Updated annotation locked state");
 
@@ -270,7 +278,7 @@ async fn shared_teams(
     if *provided.owner_id() != user.id {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let teams = dao::find_shared_teams_json(&state.pool, &user, provided.id()).await?;
+    let teams = annotation_dao::find_shared_teams_json(&state.pool, &user, provided.id()).await?;
     Ok(ResponseJson(teams))
 }
 
@@ -305,18 +313,26 @@ async fn update_shared_teams(
     let mut unique: Vec<&ObjectId> = team_ids.iter().collect();
     unique.sort();
     unique.dedup();
-    let readable = dao::count_readable_teams_for_share(&mut transaction, &user, &unique).await?;
+    let readable =
+        annotation_dao::count_readable_teams_for_share(&mut transaction, &user, &unique).await?;
     if usize::try_from(readable).ok() != Some(unique.len()) {
         return Err(ApiError::bad_request(ACCESSING_TEAM_FAILED));
     }
     // AnnotationDAO.updateTeamsForSharedAnnotation: update access on the live
     // persisted row. Compounds have none and fail here, like Scala.
-    if !crate::annotation::dao::lock_update_access(&mut transaction, &user, provided.id()).await? {
+    if !crate::annotation::annotation_dao::lock_update_access(
+        &mut transaction,
+        &user,
+        provided.id(),
+    )
+    .await?
+    {
         return Err(ApiError::bad_request(
             crate::msg::annotation::NO_UPDATE_ACCESS,
         ));
     }
-    let old_team_ids = dao::find_shared_team_ids(&mut transaction, &user, provided.id()).await?;
+    let old_team_ids =
+        annotation_dao::find_shared_team_ids(&mut transaction, &user, provided.id()).await?;
     let pending_emails = notification_emails
         .prepare_share_emails(
             &mut transaction,
@@ -328,10 +344,10 @@ async fn update_shared_teams(
             &[&user.id, provided.owner_id()],
         )
         .await;
-    dao::delete_shared_teams(&mut transaction, provided.id()).await?;
+    annotation_dao::delete_shared_teams(&mut transaction, provided.id()).await?;
     // Duplicates are not deduplicated: the primary key rejects them and the
     // whole replacement rolls back.
-    dao::insert_shared_teams(&mut transaction, provided.id(), &team_ids)
+    annotation_dao::insert_shared_teams(&mut transaction, provided.id(), &team_ids)
         .await
         .map_err(|error| match &error {
             sqlx::Error::Database(db) if db.code().as_deref() == Some("23505") => {

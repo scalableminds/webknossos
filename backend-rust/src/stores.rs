@@ -1,6 +1,6 @@
 pub mod client;
-pub(crate) mod dao;
 pub mod data;
+pub(crate) mod stores_dao;
 pub mod tracing;
 pub mod tracing_client;
 

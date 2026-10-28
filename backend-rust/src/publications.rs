@@ -4,7 +4,7 @@
 //! PublicationService.publicWrites renders with GlobalAccessContext and no
 //! requesting user, so the result never depends on the caller; the controller
 //! also sets `allowRemoteOrigin` (CORS headers on every response).
-pub(crate) mod dao;
+pub(crate) mod publications_dao;
 
 use crate::util::id::ObjectId;
 use crate::{
@@ -32,7 +32,7 @@ async fn read(
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<Json<Value>> {
-    let publication = dao::find_one(&state.pool, &id)
+    let publication = publications_dao::find_one(&state.pool, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::PUBLICATION_NOT_FOUND))?;
     let mut connection = state.pool.acquire().await?;
@@ -45,7 +45,7 @@ async fn list(
     State(state): State<AppState>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
 ) -> ApiResult<Json<Vec<Value>>> {
-    let publications = dao::find_all(&state.pool).await?;
+    let publications = publications_dao::find_all(&state.pool).await?;
     let mut connection = state.pool.acquire().await?;
     let mut result = Vec::with_capacity(publications.len());
     for publication in publications {
@@ -57,10 +57,11 @@ async fn list(
 /// PublicationService.publicWrites.
 async fn publication_json(
     connection: &mut PgConnection,
-    publication: dao::Publication,
+    publication: publications_dao::Publication,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
-    let dataset_ids = dao::find_dataset_ids_for_publication(connection, &publication.id).await?;
+    let dataset_ids =
+        publications_dao::find_dataset_ids_for_publication(connection, &publication.id).await?;
     let mut datasets = Vec::with_capacity(dataset_ids.len());
     for id in dataset_ids {
         datasets.push(
@@ -68,7 +69,8 @@ async fn publication_json(
                 .await?,
         );
     }
-    let annotations = dao::find_annotations_for_publication(connection, &publication.id).await?;
+    let annotations =
+        publications_dao::find_annotations_for_publication(connection, &publication.id).await?;
     let mut annotations_json = Vec::with_capacity(annotations.len());
     for (id, name, description, typ, dataset) in annotations {
         annotations_json.push(
@@ -106,14 +108,14 @@ async fn annotation_json(
     dataset: &ObjectId,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
-    let dataset_exists = dao::dataset_exists(connection, dataset).await?;
+    let dataset_exists = publications_dao::dataset_exists(connection, dataset).await?;
     if !dataset_exists {
         return Err(ApiError::bad_request(
             crate::msg::dataset::not_found_for_annotation(dataset, id),
         ));
     }
     // An empty Fox without message (Play's generic 404).
-    let (store_name, store_url) = dao::find_first_tracing_store(connection)
+    let (store_name, store_url) = publications_dao::find_first_tracing_store(connection)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let dataset_json =

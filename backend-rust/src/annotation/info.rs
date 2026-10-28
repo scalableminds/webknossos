@@ -19,7 +19,7 @@ use sqlx::PgConnection;
 
 use crate::{
     AppState,
-    annotation::dao,
+    annotation::annotation_dao,
     annotation::metadata::PUBLIC_WRITES_FAILED,
     annotation::provider::{
         AccessContext, AnnotationIdentifier, AnnotationLayerType, AnnotationProvider,
@@ -283,7 +283,7 @@ async fn compound_json(
 ) -> ApiResult<Value> {
     let dataset_id = &compound.dataset_id;
     let (dataset_name, organization, datastore) =
-        dao::find_dataset_with_organization(connection, dataset_id)
+        annotation_dao::find_dataset_with_organization(connection, dataset_id)
             .await?
             .ok_or_else(|| ApiError::not_found(crate::msg::annotation::DATASET_MISSING))?;
     let owner = crate::annotation::lists::compact_user(connection, &compound.owner_id).await?;
@@ -293,7 +293,7 @@ async fn compound_json(
         jobs_enabled,
     )
     .await?;
-    let tracing_store: Value = dao::find_first_tracing_store_json(connection)
+    let tracing_store: Value = annotation_dao::find_first_tracing_store_json(connection)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
     let layers: Vec<Value> = compound
@@ -348,7 +348,7 @@ async fn compound_json(
 fn touch_last_activity(state: &AppState, user: &AuthUser) {
     let (pool, user_id) = (state.pool.clone(), user.id.clone());
     tokio::spawn(async move {
-        if let Err(error) = crate::users::dao::update_last_activity(&pool, &user_id).await {
+        if let Err(error) = crate::users::users_dao::update_last_activity(&pool, &user_id).await {
             tracing::debug!(%error, "Could not update last activity");
         }
     });
@@ -367,7 +367,7 @@ fn track_open_annotation(
     let (state, misc, user) = (state.clone(), misc.clone(), user.clone());
     tokio::spawn(async move {
         let owner_multi_user: Option<ObjectId> =
-            match dao::find_multi_user_id(&state.pool, &owner_id).await {
+            match annotation_dao::find_multi_user_id(&state.pool, &owner_id).await {
                 Ok(found) => found,
                 Err(error) => {
                     tracing::debug!(%error, "Analytics owner lookup failed");

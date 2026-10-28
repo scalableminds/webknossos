@@ -14,7 +14,7 @@ use crate::{
     AppState,
     error::{ApiError, ApiResult},
     extract::{Json, Query},
-    remote::datastore::{ValidatedDataStore, dao},
+    remote::datastore::{ValidatedDataStore, remote_datastore_dao},
     util::id::ObjectId,
 };
 
@@ -54,13 +54,13 @@ async fn find_dataset_id(
     ValidatedDataStore(_store): ValidatedDataStore,
 ) -> ApiResult<ResponseJson<ObjectId>> {
     let organization_exists =
-        crate::organization::dao::exists(&state.pool, &query.organization_id).await?;
+        crate::organization::organization_dao::exists(&state.pool, &query.organization_id).await?;
     if !organization_exists {
         return Err(ApiError::not_found(crate::msg::organization::not_found(
             &query.organization_id,
         )));
     }
-    let id = dao::find_oldest_dataset_id(
+    let id = remote_datastore_dao::find_oldest_dataset_id(
         &state.pool,
         &query.dataset_directory_name,
         &query.organization_id,
@@ -110,7 +110,7 @@ async fn job_export_properties(
     Query(query): Query<JobIdQuery>,
     ValidatedDataStore(_store): ValidatedDataStore,
 ) -> ApiResult<ResponseJson<Value>> {
-    let job = dao::find_job(&state.pool, &query.job_id)
+    let job = remote_datastore_dao::find_job(&state.pool, &query.job_id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if !job.is_valid() {
@@ -119,7 +119,7 @@ async fn job_export_properties(
             query.job_id
         )));
     }
-    let organization = dao::find_organization_id_for_user(&state.pool, &job.owner)
+    let organization = remote_datastore_dao::find_organization_id_for_user(&state.pool, &job.owner)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let run_id = job

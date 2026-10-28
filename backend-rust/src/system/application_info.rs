@@ -2,7 +2,7 @@
 //! check, help mail) plus the configuration shared by the remaining
 //! "misc" controllers (analytics, credits, pricing, terms of service,
 //! initial data). Defaults follow `conf/application.conf` unless noted.
-mod dao;
+mod system_application_info_dao;
 
 use std::{
     collections::{HashMap, HashSet},
@@ -440,7 +440,10 @@ pub(crate) fn ok_empty() -> Response {
 }
 
 pub(crate) async fn build_info_json(pool: &sqlx::PgPool, config: &MiscConfig) -> Value {
-    let schema_version = dao::find_schema_version(pool).await.ok().flatten();
+    let schema_version = system_application_info_dao::find_schema_version(pool)
+        .await
+        .ok()
+        .flatten();
     let info = &config.build_info;
     json!({
         "webknossos": {
@@ -528,7 +531,7 @@ async fn help_email(
     Json(body): Json<HelpEmailParameters>,
 ) -> ApiResult<Response> {
     let (organization_name, first_name, last_name, email) =
-        dao::find_help_email_context(&state.pool, &user.id)
+        system_application_info_dao::find_help_email_context(&state.pool, &user.id)
             .await?
             .ok_or_else(|| ApiError::not_found(crate::msg::user::NOT_FOUND_NO_ID))?;
     let name = format!("{first_name} {last_name}");

@@ -51,7 +51,7 @@ pub(crate) async fn find_one_json(
       'id',t._id,'projectId',p._id,'projectName',p.name,'team',team.name,
       'type',("#,
     );
-    q.push(crate::task::types::dao::PUBLIC_TASK_TYPE).push(
+    q.push(crate::task::types::task_types_dao::PUBLIC_TASK_TYPE).push(
         r#" WHERE tt._id=t._tasktype),
       'datasetName',d.name,'datasetId',d._id,
       'neededExperience',jsonb_build_object('domain',t.neededexperience_domain,'value',t.neededexperience_value),
@@ -61,7 +61,7 @@ pub(crate) async fn find_one_json(
     );
     // Script lookup is request-scoped; ScriptService.compactWrites uses global
     // access for its owner. A missing/deleted script is serialized as null.
-    q.push(crate::scripts::dao::SELECT_LIVE_SCRIPTS);
+    q.push(crate::scripts::scripts_dao::SELECT_LIVE_SCRIPTS);
     if !global {
         q.push(" AND u._organization = ")
             .push_arg(requester.organization);

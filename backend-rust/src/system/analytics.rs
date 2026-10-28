@@ -11,7 +11,7 @@
 //! [`track_for_user`] (another identity, e.g. a freshly created account) or
 //! [`track_open_dataset`]. [`spawn_heartbeat`] runs Play's 24-hour
 //! `webknossos_heartbeat` ticker (`AnalyticsService.tick`).
-mod dao;
+mod system_analytics_dao;
 
 use std::{future::Future, time::Duration};
 
@@ -244,7 +244,7 @@ pub(crate) fn track(
 /// request identity, superuser flag of its account.
 async fn actor_for_auth_user(pool: &sqlx::PgPool, user: &AuthUser) -> ApiResult<Actor> {
     let (multi_user_id, is_super_user) =
-        dao::find_multi_user_and_super_user_flag(pool, &user.id).await?;
+        system_analytics_dao::find_multi_user_and_super_user_flag(pool, &user.id).await?;
     Ok(Actor {
         multi_user_id,
         organization_id: user.organization_id.clone(),
@@ -256,7 +256,7 @@ async fn actor_for_auth_user(pool: &sqlx::PgPool, user: &AuthUser) -> ApiResult<
 /// Loads the event user's identity fields by user id.
 async fn actor_for(pool: &sqlx::PgPool, user_id: &ObjectId) -> ApiResult<Actor> {
     let (multi_user_id, organization_id, is_admin, is_super_user) =
-        dao::find_actor_fields(pool, user_id).await?;
+        system_analytics_dao::find_actor_fields(pool, user_id).await?;
     Ok(Actor {
         multi_user_id,
         organization_id,
@@ -291,9 +291,9 @@ async fn open_dataset_properties(
     dataset_id: &ObjectId,
 ) -> ApiResult<Map<String, Value>> {
     let (name, organization, uploader) =
-        dao::find_name_organization_and_uploader(pool, dataset_id).await?;
+        system_analytics_dao::find_name_organization_and_uploader(pool, dataset_id).await?;
     let uploader_multi_user_id = match uploader {
-        Some(uploader) => Some(dao::find_multi_user_id(pool, uploader).await?),
+        Some(uploader) => Some(system_analytics_dao::find_multi_user_id(pool, uploader).await?),
         None => None,
     };
     Ok(Map::from_iter([
@@ -365,7 +365,9 @@ async fn emit(
         if analytics.verbose_logging_enabled {
             tracing::info!(event_type = %event.event_type, session_id, "Storing analytics event");
         }
-        if let Err(error) = dao::insert_many(pool, std::slice::from_ref(&event)).await {
+        if let Err(error) =
+            system_analytics_dao::insert_many(pool, std::slice::from_ref(&event)).await
+        {
             tracing::warn!(%error, "Storing analytics event failed");
         }
     } else if analytics.verbose_logging_enabled {
@@ -431,7 +433,7 @@ pub async fn run_heartbeat(pool: &sqlx::PgPool, misc: &MiscState) -> Result<JobO
         lock.rollback().await?;
         return Ok(JobOutcome::SkippedLocked);
     }
-    let oldest = dao::find_oldest_active_user_id(&mut lock).await?;
+    let oldest = system_analytics_dao::find_oldest_active_user_id(&mut lock).await?;
     let Some(user_id) = oldest else {
         lock.rollback().await?;
         // Play's parseFirst fails the tick; nothing is sent.
@@ -524,7 +526,7 @@ async fn ingest(
         // Play renders an empty multi-row INSERT, which PostgreSQL rejects.
         return Err(ApiError::bad_request(crate::msg::analytics::NO_EVENTS));
     }
-    dao::insert_many(&state.pool, &events).await?;
+    system_analytics_dao::insert_many(&state.pool, &events).await?;
     Ok(ok_empty())
 }
 

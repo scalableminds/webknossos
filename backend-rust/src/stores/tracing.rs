@@ -14,7 +14,7 @@ use crate::{
     extract::{Json, Path},
 };
 
-use super::dao;
+use super::stores_dao;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -26,7 +26,7 @@ async fn first(
     State(state): State<AppState>,
     _user: OptionalAuthUser,
 ) -> ApiResult<ResponseJson<Value>> {
-    let value = dao::find_first_public_json(&state.pool)
+    let value = stores_dao::find_first_public_json(&state.pool)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
     Ok(ResponseJson(value))
@@ -50,7 +50,7 @@ async fn update(
     if !user.is_admin {
         return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
-    let exists = dao::tracing_store_exists(&state.pool, &name).await?;
+    let exists = stores_dao::tracing_store_exists(&state.pool, &name).await?;
     if !exists {
         return Err(ApiError::not_found(crate::msg::tracing_store::NOT_FOUND));
     }
@@ -59,7 +59,7 @@ async fn update(
     }
     // The existing API permits an organization admin to update this shared
     // registry. Preserve the private URL/key and soft-delete boundaries.
-    let value = dao::update_tracing_store(&state.pool, name, body.url, body.public_url)
+    let value = stores_dao::update_tracing_store(&state.pool, name, body.url, body.public_url)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::NOT_FOUND))?;
     Ok(ResponseJson(value))

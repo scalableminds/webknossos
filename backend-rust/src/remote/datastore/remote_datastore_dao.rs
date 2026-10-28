@@ -1,7 +1,8 @@
 //! Queries of the datastore callbacks (WKRemoteDataStoreController): the
 //! datastore lookup, the dataset inbox sync, the lookups and the dataset
 //! upload report. Callbacks with a lot of SQL of their own (mag, attachment,
-//! dataset upload, credentials) have a `dao.rs` next to their handlers.
+//! dataset upload, credentials) have a `remote_<name>_dao.rs` next to their
+//! handlers.
 use serde_json::Value;
 use sqlx::{PgConnection, PgPool};
 

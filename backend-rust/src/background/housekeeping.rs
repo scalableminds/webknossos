@@ -14,7 +14,7 @@
 //! uses `NOW()`. Every run is one transaction that first takes the job's advisory lock
 //! (`crate::background::scheduler::try_advisory_xact_lock`), so concurrent instances never run the same job at once.
 
-mod dao;
+mod background_housekeeping_dao;
 
 use crate::config::{ConfigError, Env};
 use std::{collections::HashMap, time::Duration};
@@ -122,17 +122,31 @@ impl HousekeepingJob {
         now: DateTime<Utc>,
     ) -> Result<u64, sqlx::Error> {
         match self {
-            Self::ExpiredTokens => dao::mark_expired_tokens_deleted(connection, now).await,
-            Self::OldTokens => {
-                dao::delete_old_tokens(connection, now - TOKEN_HARD_DELETE_GRACE_PERIOD).await
+            Self::ExpiredTokens => {
+                background_housekeeping_dao::mark_expired_tokens_deleted(connection, now).await
             }
-            Self::ExpiredInvites => dao::mark_expired_invites_deleted(connection, now).await,
-            Self::InitializingAnnotations => dao::delete_initializing_annotations(connection).await,
+            Self::OldTokens => {
+                background_housekeeping_dao::delete_old_tokens(
+                    connection,
+                    now - TOKEN_HARD_DELETE_GRACE_PERIOD,
+                )
+                .await
+            }
+            Self::ExpiredInvites => {
+                background_housekeeping_dao::mark_expired_invites_deleted(connection, now).await
+            }
+            Self::InitializingAnnotations => {
+                background_housekeeping_dao::delete_initializing_annotations(connection).await
+            }
             Self::ExpiredThumbnails => {
-                dao::delete_expired_thumbnails(connection, now - THUMBNAIL_CACHE_DURATION).await
+                background_housekeeping_dao::delete_expired_thumbnails(
+                    connection,
+                    now - THUMBNAIL_CACHE_DURATION,
+                )
+                .await
             }
             Self::ExpiredAnnotationMutexes => {
-                dao::delete_expired_annotation_mutexes(connection).await
+                background_housekeeping_dao::delete_expired_annotation_mutexes(connection).await
             }
         }
     }

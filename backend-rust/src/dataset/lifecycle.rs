@@ -11,9 +11,9 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use webknossos_common::enums::{LayerAttachmentDataformat, LayerAttachmentType};
 
-mod dao;
+mod dataset_lifecycle_dao;
 
-pub(crate) use dao::find_record as load_record;
+pub(crate) use dataset_lifecycle_dao::find_record as load_record;
 
 use crate::{
     AppState,
@@ -194,7 +194,7 @@ pub(crate) async fn write_mirror_for_virtual(
         .await?;
     let written: Vec<(String, String)> = parse_json(&response.bytes)?;
     if let Some((_, path)) = written.first() {
-        dao::update_mirror_path(pool, record.id.as_str(), path).await?;
+        dataset_lifecycle_dao::update_mirror_path(pool, record.id.as_str(), path).await?;
     }
     Ok(())
 }
@@ -281,7 +281,7 @@ async fn delete_dataset(
     tracing::info!(dataset = %id, user = %user.id, is_virtual = record.is_virtual, "Deleting dataset");
     let store_url = record.store_url()?.to_owned();
     if record.is_virtual {
-        let paths = crate::dataset::dao::find_exclusive_paths(&state.pool, &id).await?;
+        let paths = crate::dataset::dataset_dao::find_exclusive_paths(&state.pool, &id).await?;
         crate::dataset::paths::delete_paths(&state.pool, &clients, &store_url, &paths).await?;
     } else if let Some(root) = record.root_path.clone().or(record.root_real_path.clone()) {
         if !crate::organization::storage::is_local_path(&root) {
@@ -295,8 +295,13 @@ async fn delete_dataset(
             format!("{root}/")
         };
         let store_name = record.store_name.clone().unwrap_or_default();
-        let users =
-            dao::find_ids_referencing_directory(&state.pool, &directory, &id, &store_name).await?;
+        let users = dataset_lifecycle_dao::find_ids_referencing_directory(
+            &state.pool,
+            &directory,
+            &id,
+            &store_name,
+        )
+        .await?;
         if !users.is_empty() {
             return Err(ApiError::bad_request(format!(
                 "Cannot delete dataset because {} other datasets reference its data: {}",
@@ -316,7 +321,7 @@ async fn delete_dataset(
             .map_err(|_| ApiError::bad_request(crate::msg::dataset::delete::FAILED))?;
     }
     let mut transaction = state.pool.begin().await?;
-    let exists = crate::dataset::dao::find_id_for_update(&mut transaction, &id).await?;
+    let exists = crate::dataset::dataset_dao::find_id_for_update(&mut transaction, &id).await?;
     if exists.is_none() {
         return Ok(());
     }
@@ -326,7 +331,7 @@ async fn delete_dataset(
             NOT_YET_UPLOADED | NOT_YET_UPLOADED_TO_PATHS
         )
     {
-        dao::cancel_conversion_jobs(&mut transaction, &id).await?;
+        dataset_lifecycle_dao::cancel_conversion_jobs(&mut transaction, &id).await?;
     }
     delete_from_db_on_connection(&mut transaction, &id).await?;
     transaction.commit().await?;
@@ -348,17 +353,17 @@ async fn delete_from_db_on_connection(
     connection: &mut sqlx::PgConnection,
     id: &ObjectId,
 ) -> ApiResult<()> {
-    let exists = crate::dataset::dao::find_id_for_update(connection, id).await?;
+    let exists = crate::dataset::dataset_dao::find_id_for_update(connection, id).await?;
     if exists.is_none() {
         return Ok(());
     }
-    let annotations = dao::count_annotations(connection, id).await?;
-    dao::delete_dependent_rows(connection, id).await?;
+    let annotations = dataset_lifecycle_dao::count_annotations(connection, id).await?;
+    dataset_lifecycle_dao::delete_dependent_rows(connection, id).await?;
     if annotations > 0 {
         // Annotations keep referencing the dataset; it stays as an unusable row.
-        dao::mark_unusable(connection, id, DELETED_BY_USER).await?;
+        dataset_lifecycle_dao::mark_unusable(connection, id, DELETED_BY_USER).await?;
     } else {
-        dao::delete_one(connection, id).await?;
+        dataset_lifecycle_dao::delete_one(connection, id).await?;
     }
     Ok(())
 }
@@ -400,9 +405,9 @@ async fn write_all_mirrors(
         return Err(ApiError::bad_request(crate::msg::user::SUPER_USER_ONLY));
     }
     tracing::info!(user = %user.id, "Writing mirrors for all datasets");
-    let groups = dao::find_virtual_usable_ids_by_store(&state.pool).await?;
+    let groups = dataset_lifecycle_dao::find_virtual_usable_ids_by_store(&state.pool).await?;
     for (store_name, ids) in groups {
-        let url = dao::find_store_url(&state.pool, &store_name).await?;
+        let url = dataset_lifecycle_dao::find_store_url(&state.pool, &store_name).await?;
         let url = url.ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
         let response = clients
             .request(
@@ -415,7 +420,7 @@ async fn write_all_mirrors(
             .await?;
         let written: Vec<(String, String)> = parse_json(&response.bytes)?;
         for (dataset, path) in written {
-            dao::update_mirror_path(&state.pool, &dataset, &path).await?;
+            dataset_lifecycle_dao::update_mirror_path(&state.pool, &dataset, &path).await?;
         }
     }
     Ok(())
@@ -429,7 +434,7 @@ async fn finish_upload_to_paths(
 ) -> ApiResult<()> {
     require_editable(&state, &user, &id).await?;
     let mut transaction = state.pool.begin().await?;
-    let (status, usable) = dao::find_status_for_update(&mut transaction, &id)
+    let (status, usable) = dataset_lifecycle_dao::find_status_for_update(&mut transaction, &id)
         .await?
         .ok_or_else(|| not_found(&id))?;
     if !matches!(
@@ -443,7 +448,7 @@ async fn finish_upload_to_paths(
     if usable {
         return Err(ApiError::bad_request(crate::msg::dataset::ALREADY_USABLE));
     }
-    dao::mark_usable(&mut transaction, &id).await?;
+    dataset_lifecycle_dao::mark_usable(&mut transaction, &id).await?;
     transaction.commit().await?;
     let updated = load_record(&state.pool, &id)
         .await?
@@ -514,7 +519,8 @@ async fn finish_mag_upload_to_path(
     let record = require_editable_by_name(&state, &user, &id).await?;
     let [x, y, z] = body.mag.map(f64::from);
     let rows_affected =
-        dao::finish_mag_upload(&state.pool, &id, &body.layer_name, [x, y, z]).await?;
+        dataset_lifecycle_dao::finish_mag_upload(&state.pool, &id, &body.layer_name, [x, y, z])
+            .await?;
     if rows_affected == 0 {
         return Err(ApiError::bad_request(
             crate::msg::dataset::upload::to_paths::MAG_NOT_PENDING,
@@ -531,7 +537,7 @@ async fn finish_attachment_upload_to_path(
     RequestJson(body): RequestJson<AttachmentUploadRequest>,
 ) -> ApiResult<()> {
     let record = require_editable_by_name(&state, &user, &id).await?;
-    let rows_affected = dao::finish_attachment_upload(
+    let rows_affected = dataset_lifecycle_dao::finish_attachment_upload(
         &state.pool,
         &id,
         &body.layer_name,

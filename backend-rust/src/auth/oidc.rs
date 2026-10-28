@@ -28,13 +28,13 @@ use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use subtle::ConstantTimeEq;
 
-pub(crate) mod dao;
+pub(crate) mod auth_oidc_dao;
 
 use crate::{
     AppState,
     auth::OptionalAuthUser,
     auth::browser::onboarding::{
-        NewAccount, admin_notifier_mail, assert_users_can_be_added, dao as onboarding_dao,
+        NewAccount, admin_notifier_mail, assert_users_can_be_added, auth_onboarding_dao,
         initial_team_memberships, insert_account, organization_messages,
     },
     auth::browser::{BrowserAuthConfig, login_user},
@@ -259,9 +259,10 @@ async fn single_sign_on(
     let nonce = first("nonce").ok_or_else(|| ApiError::bad_request(messages::NONCE_MISSING))?;
     let return_url = first("return_sso_url")
         .ok_or_else(|| ApiError::bad_request(messages::RETURN_URL_MISSING))?;
-    let (email, first_name, last_name) = dao::find_multi_user_name_of_user(&state.pool, &user.id)
-        .await?
-        .ok_or_else(|| ApiError::not_found(crate::msg::request::RESOURCE_NOT_FOUND))?;
+    let (email, first_name, last_name) =
+        auth_oidc_dao::find_multi_user_name_of_user(&state.pool, &user.id)
+            .await?
+            .ok_or_else(|| ApiError::not_found(crate::msg::request::RESOURCE_NOT_FOUND))?;
     tracing::info!(user = %user.id, "User logged in to discuss.webknossos.org via WK SSO.");
     let abbreviated_name = format!(
         "{}{}",
@@ -626,22 +627,23 @@ async fn login_or_signup(
     headers: &HeaderMap,
     info: &UserInfo,
 ) -> ApiResult<Response> {
-    let user_id = match dao::find_user_id_by_multi_user_email(&state.pool, &info.email).await? {
-        Some(user_id) => user_id,
-        None => {
-            let user_id = create_user(state, browser, mailer, info).await?;
-            tracing::info!(user = %user_id, "New user created via first OIDC single sign-on");
-            // createUser: SignupEvent(user, hadInvite = false)
-            crate::system::analytics::track_for_user(
-                state,
-                misc,
-                &user_id,
-                "signup",
-                crate::system::analytics::properties("had_invite", false),
-            );
-            user_id
-        }
-    };
+    let user_id =
+        match auth_oidc_dao::find_user_id_by_multi_user_email(&state.pool, &info.email).await? {
+            Some(user_id) => user_id,
+            None => {
+                let user_id = create_user(state, browser, mailer, info).await?;
+                tracing::info!(user = %user_id, "New user created via first OIDC single sign-on");
+                // createUser: SignupEvent(user, hadInvite = false)
+                crate::system::analytics::track_for_user(
+                    state,
+                    misc,
+                    &user_id,
+                    "signup",
+                    crate::system::analytics::properties("had_invite", false),
+                );
+                user_id
+            }
+        };
     // Email verification is assumed to be done by the provider.
     let cookie = login_user(&state.pool, browser, mailer, headers, &user_id, true).await?;
     tracing::info!(user = %user_id, "User logged in via OIDC single sign-on.");
@@ -659,7 +661,7 @@ async fn create_user(
     info: &UserInfo,
 ) -> ApiResult<ObjectId> {
     let mut tx = state.pool.begin().await?;
-    let organizations = onboarding_dao::find_first_two_organizations(&mut tx).await?;
+    let organizations = auth_onboarding_dao::find_first_two_organizations(&mut tx).await?;
     let organization = match organizations.as_slice() {
         [organization] => organization,
         _ => return Err(ApiError::bad_request(organization_messages::AMBIGUOUS)),

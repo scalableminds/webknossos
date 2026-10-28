@@ -1,5 +1,5 @@
 //! TimeController: logged time per month and time-span reports.
-mod dao;
+mod time_tracking_dao;
 
 use axum::{Json as ResponseJson, Router, extract::State, routing::get};
 use chrono::{DateTime, Datelike, Utc};
@@ -43,7 +43,7 @@ impl TargetUser {
 }
 
 async fn require_user(pool: &PgPool, requester: &AuthUser, id: &ObjectId) -> ApiResult<TargetUser> {
-    dao::find_target_user(pool, requester, id)
+    time_tracking_dao::find_target_user(pool, requester, id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::user::not_found(id)))
 }
@@ -57,7 +57,8 @@ async fn logged_time(
     if !user.is_editable() {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let spans = dao::find_all_created_and_time_for_user(&state.pool, &user.id).await?;
+    let spans =
+        time_tracking_dao::find_all_created_and_time_for_user(&state.pool, &user.id).await?;
     // TimeSpan.groupByMonth (UTC), summed as a Duration and truncated to seconds.
     let mut months: BTreeMap<(i32, u32), i128> = BTreeMap::new();
     for (created, time) in spans {
@@ -192,7 +193,8 @@ async fn spans(
     if filters.types.is_empty() {
         return Ok(ResponseJson(json!([])));
     }
-    let rows = dao::find_all_span_json_for_user(&state.pool, &user.id, &filters).await?;
+    let rows =
+        time_tracking_dao::find_all_span_json_for_user(&state.pool, &user.id, &filters).await?;
     Ok(ResponseJson(Value::Array(rows)))
 }
 
@@ -206,8 +208,12 @@ async fn summed_by_annotation(
     if filters.types.is_empty() {
         return Ok(ResponseJson(json!([])));
     }
-    let rows =
-        dao::find_all_summed_by_annotation_json_for_user(&state.pool, &user.id, &filters).await?;
+    let rows = time_tracking_dao::find_all_summed_by_annotation_json_for_user(
+        &state.pool,
+        &user.id,
+        &filters,
+    )
+    .await?;
     Ok(ResponseJson(Value::Array(rows)))
 }
 
@@ -251,7 +257,8 @@ async fn overview(
     }
     let projects = parse_object_ids(query.project_ids.as_deref(), None)?;
     let (start, end) = (instant(query.start)?, instant(query.end)?);
-    let users = dao::find_all_listable_user_ids(&state.pool, &requester, &teams).await?;
+    let users =
+        time_tracking_dao::find_all_listable_user_ids(&state.pool, &requester, &teams).await?;
     if users.is_empty() {
         return Ok(ResponseJson(json!([])));
     }
@@ -262,7 +269,7 @@ async fn overview(
         states,
         projects,
     };
-    let rows = dao::find_all_overview_json(&state.pool, &users, &filters).await?;
+    let rows = time_tracking_dao::find_all_overview_json(&state.pool, &users, &filters).await?;
     Ok(ResponseJson(Value::Array(rows)))
 }
 

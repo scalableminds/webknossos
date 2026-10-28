@@ -28,7 +28,7 @@
 //! re-report interval, Scala's stale removal timer can fire early and cause an earlier re-report.
 //! Here every insertion carries its own expiry.
 
-mod dao;
+mod background_worker_liveness_dao;
 
 use std::{
     collections::HashMap,
@@ -234,7 +234,7 @@ impl WorkerLivenessMonitor {
             transaction.rollback().await?;
             return Ok(JobOutcome::SkippedLocked);
         }
-        let workers = dao::find_all_heartbeats(&mut transaction).await?;
+        let workers = background_worker_liveness_dao::find_all_heartbeats(&mut transaction).await?;
         let changes = self.evaluate(&workers, now);
         self.report(&changes, now);
         transaction.commit().await?;

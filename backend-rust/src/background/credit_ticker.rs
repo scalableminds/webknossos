@@ -5,7 +5,7 @@
 //!
 //! The SQL is shared with the superuser route `/maintenance/revokeExpiredCredits`
 //! ([`crate::organization::credit_transactions::revoke_expired_credits`]) and organization creation
-//! ([`crate::organization::credit_transactions::dao::hand_out_monthly_free_credits`]). Both steps are idempotent: only
+//! ([`crate::organization::credit_transactions::organization_credit_transactions_dao::hand_out_monthly_free_credits`]). Both steps are idempotent: only
 //! pending expired grants are revoked, and the SQL function grants an organization at most once
 //! per month (it skips organizations that already have a grant expiring next month).
 //!
@@ -25,7 +25,7 @@ use crate::{
         try_advisory_xact_lock,
     },
     config::{ConfigError, Env},
-    organization::credit_transactions::dao::hand_out_monthly_free_credits,
+    organization::credit_transactions::organization_credit_transactions_dao::hand_out_monthly_free_credits,
     organization::credit_transactions::revoke_expired_credits,
 };
 

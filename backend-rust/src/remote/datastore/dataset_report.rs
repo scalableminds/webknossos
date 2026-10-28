@@ -28,7 +28,7 @@ use crate::{
     remote::datastore::mag_upload::user_for_token_forbidden,
     remote::datastore::{
         ValidatedDataStore,
-        dao::{self, ReportedDataset},
+        remote_datastore_dao::{self, ReportedDataset},
     },
     slack::SlackNotificationService,
     stores::client::ServiceClients,
@@ -70,7 +70,7 @@ struct ReportDatasetUploadParameters {
 }
 
 async fn find_dataset(pool: &sqlx::PgPool, id: &ObjectId) -> ApiResult<ReportedDataset> {
-    dao::find_reported_dataset(pool, id)
+    remote_datastore_dao::find_reported_dataset(pool, id)
         .await?
         .ok_or_else(|| crate::dataset::lifecycle::not_found(id))
 }
@@ -161,7 +161,7 @@ async fn track_new_dataset(
     }
     // dataStoreDAO.findOneByName(dataset._dataStore): a missing store skips the event.
     let public_url: Option<String> =
-        match dao::find_public_url(&state.pool, &dataset.data_store).await {
+        match remote_datastore_dao::find_public_url(&state.pool, &dataset.data_store).await {
             Ok(url) => url,
             Err(error) => {
                 tracing::debug!(%error, "Upload analytics: datastore lookup failed");
@@ -316,7 +316,8 @@ async fn submit_convert_to_wkw_job(
     base_directory: Value,
 ) -> RunResult<()> {
     let organization =
-        dao::find_organization_id_and_name(&state.pool, &dataset.organization).await?;
+        remote_datastore_dao::find_organization_id_and_name(&state.pool, &dataset.organization)
+            .await?;
     let (organization_id, organization_name) = organization
         .ok_or_else(|| Failure::new(crate::msg::organization::not_found(&dataset.organization)))?;
     let args = json!({

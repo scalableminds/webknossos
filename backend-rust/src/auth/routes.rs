@@ -17,7 +17,7 @@ use sqlx::{Postgres, Transaction};
 use crate::{
     AppState,
     auth::browser::{BrowserAuthConfig, cookie_still_valid, discarding_cookie_header},
-    auth::{AuthCredential, AuthUser, authenticate_request, dao},
+    auth::{AuthCredential, AuthUser, auth_dao, authenticate_request},
     error::{ApiError, ApiResult},
     extract::Path,
     util::id::{ObjectId, PathObjectId},
@@ -92,10 +92,10 @@ async fn lock_account(
     tx: &mut Transaction<'_, Postgres>,
     auth: &LifecycleAuth,
 ) -> ApiResult<ObjectId> {
-    let multi_user: ObjectId = dao::lock_multi_user_of_active_user(tx, &auth.user.id)
+    let multi_user: ObjectId = auth_dao::lock_multi_user_of_active_user(tx, &auth.user.id)
         .await?
         .ok_or_else(ApiError::unauthorized)?;
-    dao::lock_user(tx, &auth.user.id).await?;
+    auth_dao::lock_user(tx, &auth.user.id).await?;
     let token = match &auth.credential {
         AuthCredential::Token(token) => token,
         AuthCredential::Cookie(cookie) => {
@@ -106,7 +106,7 @@ async fn lock_account(
             return Ok(multi_user);
         }
     };
-    let valid = dao::is_token_valid_for_user(tx, token, &auth.user.id).await?;
+    let valid = auth_dao::is_token_valid_for_user(tx, token, &auth.user.id).await?;
     if !valid {
         return Err(ApiError::unauthorized());
     }
@@ -131,7 +131,7 @@ async fn insert_token(
     let mut random = [0_u8; 16];
     getrandom::fill(&mut random).map_err(|_| ApiError::internal())?;
     let value = URL_SAFE_NO_PAD.encode(random);
-    dao::insert_token(tx, user_id, &value, expiry_ms, idle_ms, token_type).await?;
+    auth_dao::insert_token(tx, user_id, &value, expiry_ms, idle_ms, token_type).await?;
     Ok(value)
 }
 
@@ -144,11 +144,11 @@ async fn get_token(
     lock_account(&mut tx, &auth).await?;
     // Only return usable tokens. Unlike the legacy DAO's unfiltered lookup,
     // this excludes expired, idle-expired and account-revoked credentials.
-    let existing = dao::find_one_usable_authentication_token(&mut tx, &auth.user.id).await?;
+    let existing = auth_dao::find_one_usable_authentication_token(&mut tx, &auth.user.id).await?;
     let token = match existing {
         Some(token) => token,
         None => {
-            dao::delete_authentication_tokens_for_user(&mut tx, &auth.user.id).await?;
+            auth_dao::delete_authentication_tokens_for_user(&mut tx, &auth.user.id).await?;
             insert_token(
                 &mut tx,
                 &auth.user.id,
@@ -166,7 +166,7 @@ async fn get_token(
 async fn delete_token(State(state): State<AppState>, auth: LifecycleAuth) -> ApiResult<Response> {
     let mut tx = state.pool.begin().await?;
     lock_account(&mut tx, &auth).await?;
-    let deleted = dao::delete_oldest_authentication_token(&mut tx, &auth.user.id).await?;
+    let deleted = auth_dao::delete_oldest_authentication_token(&mut tx, &auth.user.id).await?;
     tx.commit().await?;
     Ok(if deleted == 0 {
         StatusCode::OK.into_response()
@@ -222,7 +222,7 @@ async fn logout(
             let mut tx = state.pool.begin().await?;
             lock_account(&mut tx, &auth).await?;
             if let AuthCredential::Token(token) = &auth.credential {
-                dao::delete_token_for_user(&mut tx, token, &auth.user.id).await?;
+                auth_dao::delete_token_for_user(&mut tx, token, &auth.user.id).await?;
             }
             tx.commit().await?;
             tracing::info!(user = %auth.user.id, "User logged out.");
@@ -238,8 +238,8 @@ async fn logout_everywhere(
 ) -> ApiResult<StatusCode> {
     let mut tx = state.pool.begin().await?;
     let multi_user = lock_account(&mut tx, &auth).await?;
-    dao::update_logged_out_everywhere_time(&mut tx, &multi_user).await?;
-    dao::delete_datastore_tokens_for_multi_user(&mut tx, &multi_user).await?;
+    auth_dao::update_logged_out_everywhere_time(&mut tx, &multi_user).await?;
+    auth_dao::delete_datastore_tokens_for_multi_user(&mut tx, &multi_user).await?;
     tx.commit().await?;
     Ok(StatusCode::OK)
 }
@@ -268,7 +268,7 @@ async fn list_keys(
     check_passkeys(&config)?;
     let mut tx = state.pool.begin().await?;
     let multi_user = lock_account(&mut tx, &auth).await?;
-    let keys = dao::find_all_webauthn_credentials(&mut tx, &multi_user).await?;
+    let keys = auth_dao::find_all_webauthn_credentials(&mut tx, &multi_user).await?;
     tx.commit().await?;
     Ok(Json(keys))
 }
@@ -282,7 +282,7 @@ async fn remove_key(
     check_passkeys(&config)?;
     let mut tx = state.pool.begin().await?;
     let multi_user = lock_account(&mut tx, &auth).await?;
-    dao::delete_webauthn_credential(&mut tx, &id, &multi_user).await?;
+    auth_dao::delete_webauthn_credential(&mut tx, &id, &multi_user).await?;
     // Match the Scala DAO's idempotent scoped UPDATE: a missing, foreign or
     // already deleted credential changes nothing and still returns {}.
     tx.commit().await?;

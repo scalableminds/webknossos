@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::{Executor, FromRow, Postgres, Transaction};
 
-use super::dao;
+use super::annotation_dao;
 
 use crate::{
     auth::AuthUser,
@@ -12,7 +12,7 @@ use crate::{
     util::id::ObjectId,
 };
 
-pub(crate) use super::dao::{
+pub(crate) use super::annotation_dao::{
     push_mutate_predicate, push_owned_or_shared_predicate, push_read_predicate,
 };
 
@@ -59,17 +59,17 @@ pub async fn find_optional<'e, E: Executor<'e, Database = Postgres>>(
     id: &ObjectId,
     global: bool,
 ) -> ApiResult<Option<AnnotationMetadata>> {
-    Ok(dao::find_one(executor, Requester::from(user), id, global).await?)
+    Ok(annotation_dao::find_one(executor, Requester::from(user), id, global).await?)
 }
 
 /// Hold live annotation metadata through a mutation, see
-/// [`dao::find_one_for_mutation`].
+/// [`annotation_dao::find_one_for_mutation`].
 pub async fn lock_for_mutation(
     transaction: &mut Transaction<'_, Postgres>,
     user: &AuthUser,
     id: &ObjectId,
 ) -> ApiResult<AnnotationMetadata> {
-    dao::find_one_for_mutation(transaction, user, id)
+    annotation_dao::find_one_for_mutation(transaction, user, id)
         .await?
         .ok_or_else(|| ApiError::forbidden(crate::msg::annotation::EDIT_NOT_ALLOWED))
 }

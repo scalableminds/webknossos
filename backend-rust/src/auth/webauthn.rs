@@ -29,7 +29,7 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue, json};
 use sqlx::PgExecutor;
 
-pub(crate) mod dao;
+pub(crate) mod auth_webauthn_dao;
 use webauthn_rs_core::{
     WebauthnCore,
     error::WebauthnError,
@@ -430,7 +430,7 @@ pub(crate) async fn credentials_for_multi_user<'e>(
     executor: impl PgExecutor<'e>,
     multi_user: &ObjectId,
 ) -> ApiResult<Result<Vec<(String, AttestedCredential)>, &'static str>> {
-    let rows = dao::find_all_for_multi_user(executor, multi_user).await?;
+    let rows = auth_webauthn_dao::find_all_for_multi_user(executor, multi_user).await?;
     Ok(rows
         .into_iter()
         .map(|(id, bytes)| Ok((id, AttestedCredential::from_webauthn4j_bytes(&bytes)?)))
@@ -438,7 +438,7 @@ pub(crate) async fn credentials_for_multi_user<'e>(
 }
 
 async fn multi_user_of(state: &AppState, user: &AuthUser) -> ApiResult<(ObjectId, String, String)> {
-    dao::find_multi_user_of_user(&state.pool, &user.id)
+    auth_webauthn_dao::find_multi_user_of_user(&state.pool, &user.id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))
 }
@@ -562,7 +562,7 @@ async fn register_finalize(
         .map_err(|_| ApiError::bad_request(MSG_INVALID_REGISTRATION))?;
     let (multi_user, _, _) = multi_user_of(&state, &user).await?;
     let flags = registration.auth_data.flags;
-    let inserted = dao::insert_credential(
+    let inserted = auth_webauthn_dao::insert_credential(
         &state.pool,
         &multi_user,
         &registration.credential.credential_id,
@@ -751,11 +751,14 @@ async fn auth_finalize(
         .user_handle()
         .and_then(|handle| ObjectId::parse(&String::from_utf8_lossy(handle)).ok())
         .ok_or_else(unauthorized)?;
-    let multi_user = dao::find_one_multi_user(&state.pool, &multi_user_id).await?;
+    let multi_user = auth_webauthn_dao::find_one_multi_user(&state.pool, &multi_user_id).await?;
     let (multi_user_id, last_identity) = multi_user.ok_or_else(unauthorized)?;
-    let row =
-        dao::find_one_by_credential_id(&state.pool, &multi_user_id, assertion.credential_id())
-            .await?;
+    let row = auth_webauthn_dao::find_one_by_credential_id(
+        &state.pool,
+        &multi_user_id,
+        assertion.credential_id(),
+    )
+    .await?;
     let (id, attested, backup_eligible, sign_count) = row.ok_or_else(unauthorized)?;
     let stored = StoredCredential {
         id,
@@ -767,7 +770,7 @@ async fn auth_finalize(
     verify_assertion(&assertion, &stored, ceremony, &rp).map_err(|_| unauthorized())?;
     // updateSignCount binds the Long counter: values beyond INTEGER fail in
     // PostgreSQL, which Scala maps to 401 as well.
-    dao::update_signature_count(
+    auth_webauthn_dao::update_signature_count(
         &state.pool,
         &stored.id,
         i64::from(assertion.auth_data.sign_count),

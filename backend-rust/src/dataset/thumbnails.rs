@@ -11,7 +11,7 @@ use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
-mod dao;
+mod dataset_thumbnails_dao;
 
 use crate::{
     AppState,
@@ -21,7 +21,7 @@ use crate::{
     stores::client::ServiceClients,
     util::id::{ObjectId, PathObjectId},
 };
-use dao::DatasetRow;
+use dataset_thumbnails_dao::DatasetRow;
 use webknossos_common::{datasource::StaticLayer, geometry::Vec3Int, json::read_i32};
 
 const DEFAULT_SIZE: i32 = 400;
@@ -100,7 +100,10 @@ async fn cached(
     height: i32,
     mapping: Option<&str>,
 ) -> ApiResult<Option<Vec<u8>>> {
-    Ok(dao::find_cached_image(&state.pool, id, layer, width, height, mapping).await?)
+    Ok(
+        dataset_thumbnails_dao::find_cached_image(&state.pool, id, layer, width, height, mapping)
+            .await?,
+    )
 }
 
 /// A rendered data layer (StaticLayer reads).
@@ -252,7 +255,7 @@ pub(crate) fn java_double_string(value: f64) -> String {
 }
 
 async fn load_dataset(state: &AppState, id: &ObjectId) -> ApiResult<DatasetRow> {
-    dao::find_dataset_row(&state.pool, id)
+    dataset_thumbnails_dao::find_dataset_row(&state.pool, id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::dataset::not_found(id)))
 }
@@ -300,11 +303,12 @@ async fn store(
     image: &[u8],
 ) -> ApiResult<()> {
     let mut transaction = state.pool.begin().await?;
-    let current = dao::find_cache_version_for_share(&mut transaction, id).await?;
+    let current =
+        dataset_thumbnails_dao::find_cache_version_for_share(&mut transaction, id).await?;
     if current != Some(version) {
         return Ok(());
     }
-    dao::upsert_thumbnail(&mut transaction, id, record, image).await?;
+    dataset_thumbnails_dao::upsert_thumbnail(&mut transaction, id, record, image).await?;
     transaction.commit().await?;
     Ok(())
 }

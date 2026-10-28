@@ -9,7 +9,10 @@ use serde::Deserialize;
 use serde_json::Value;
 use sqlx::{PgPool, Postgres};
 
-use super::{credit_transactions::dao::hand_out_monthly_free_credits, dao};
+use super::{
+    credit_transactions::organization_credit_transactions_dao::hand_out_monthly_free_credits,
+    organization_dao,
+};
 
 use crate::{
     AppState,
@@ -46,7 +49,7 @@ pub(crate) async fn public_json<'e, E: sqlx::Executor<'e, Database = Postgres>>(
     is_admin: bool,
     credit_access: bool,
 ) -> ApiResult<Value> {
-    dao::find_one_public_json(
+    organization_dao::find_one_public_json(
         executor,
         id,
         requesting_organization,
@@ -92,9 +95,11 @@ async fn list(
     // Organization membership belongs to the account, not only the current
     // identity. Superusers can list every organization.
     let values: Vec<Value> = if parameters.compact.unwrap_or(false) {
-        dao::find_all_compact_for_user(&state.pool, &user.id, user.is_superuser).await?
+        organization_dao::find_all_compact_for_user(&state.pool, &user.id, user.is_superuser)
+            .await?
     } else {
-        dao::find_all_public_json_for_user(&state.pool, &user.id, user.is_superuser).await?
+        organization_dao::find_all_public_json_for_user(&state.pool, &user.id, user.is_superuser)
+            .await?
     };
     Ok(ResponseJson(Value::Array(values)))
 }
@@ -103,7 +108,7 @@ async fn default_organization(
     State(state): State<AppState>,
     OptionalAuthUser(user): OptionalAuthUser,
 ) -> ApiResult<ResponseJson<Value>> {
-    let ids = dao::find_up_to_two_ids(&state.pool).await?;
+    let ids = organization_dao::find_up_to_two_ids(&state.pool).await?;
     match ids.as_slice() {
         [] => Err(ApiError::bad_request(crate::msg::organization::LIST_FAILED)),
         [id] => {
@@ -131,7 +136,7 @@ async fn by_invite(
     Path(token): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
     // This route intentionally stays anonymous, matching the plain Action.
-    let organization = dao::find_organization_id_by_invite_token(&state.pool, token)
+    let organization = organization_dao::find_organization_id_by_invite_token(&state.pool, token)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     Ok(ResponseJson(
@@ -139,7 +144,7 @@ async fn by_invite(
     ))
 }
 async fn is_empty(State(state): State<AppState>) -> ApiResult<ResponseJson<bool>> {
-    Ok(ResponseJson(dao::is_empty(&state.pool).await?))
+    Ok(ResponseJson(organization_dao::is_empty(&state.pool).await?))
 }
 
 #[derive(Deserialize)]
@@ -155,7 +160,8 @@ async fn update(
     Json(parameters): Json<OrganizationParameters>,
 ) -> ApiResult<ResponseJson<Value>> {
     let mut tx = state.pool.begin().await?;
-    let accessible = dao::is_accessible(&mut tx, &id, &user.id, user.is_superuser).await?;
+    let accessible =
+        organization_dao::is_accessible(&mut tx, &id, &user.id, user.is_superuser).await?;
     if !accessible {
         return Err(ApiError::not_found(crate::msg::organization::not_found(
             &id,
@@ -164,7 +170,7 @@ async fn update(
     if !user.is_admin || user.organization_id != id {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let updated = dao::update_name_and_new_user_mailing_list(
+    let updated = organization_dao::update_name_and_new_user_mailing_list(
         &mut tx,
         &id,
         parameters.name,
@@ -204,9 +210,10 @@ async fn create(
     // Play runs these steps without a transaction; a late failure here
     // leaves no half-created organization behind.
     let mut tx = state.pool.begin().await?;
-    let owner = dao::find_multi_user_id_by_email_for_update(&mut tx, &parameters.owner_email)
-        .await?
-        .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
+    let owner =
+        organization_dao::find_multi_user_id_by_email_for_update(&mut tx, &parameters.owner_email)
+            .await?
+            .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
     let (organization_id, team) = insert_organization(
         &mut tx,
         misc.config().is_wkorg_instance,
@@ -214,7 +221,7 @@ async fn create(
         &parameters.organization_name,
     )
     .await?;
-    let original = dao::find_first_user_id_by_multi_user(&mut tx, &owner)
+    let original = organization_dao::find_first_user_id_by_multi_user(&mut tx, &owner)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     join_organization_as(
@@ -268,7 +275,8 @@ async fn delete(
 ) -> ApiResult<Response> {
     let mut tx = state.pool.begin().await?;
     let accessible =
-        dao::is_accessible_not_deleted(&mut tx, &id, &user.id, user.is_superuser).await?;
+        organization_dao::is_accessible_not_deleted(&mut tx, &id, &user.id, user.is_superuser)
+            .await?;
     if !accessible {
         return Err(ApiError::not_found(crate::msg::organization::not_found(
             &id,
@@ -278,18 +286,18 @@ async fn delete(
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     tracing::info!(organization = %id, "Deleting organization");
-    let deleted = dao::mark_deleted(&mut tx, &id).await?;
+    let deleted = organization_dao::mark_deleted(&mut tx, &id).await?;
     if deleted == 0 {
         return Err(ApiError::not_found(crate::msg::organization::not_found(
             &id,
         )));
     }
-    dao::mark_users_deleted(&mut tx, &id).await?;
-    dao::clear_last_logged_in_identities(&mut tx, &id).await?;
+    organization_dao::mark_users_deleted(&mut tx, &id).await?;
+    organization_dao::clear_last_logged_in_identities(&mut tx, &id).await?;
     // combinedAuthenticatorService.discard: a bearer token is revoked; Play
     // drops the discard result, so no cookie-clearing header is sent.
     if let AuthCredential::Token(token) = &credential {
-        dao::mark_token_deleted(&mut tx, token).await?;
+        organization_dao::mark_token_deleted(&mut tx, token).await?;
     }
     tx.commit().await?;
     Ok(StatusCode::OK.into_response())

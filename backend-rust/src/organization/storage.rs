@@ -11,7 +11,7 @@
 //! `housekeeping.rs`: every run holds `pg_try_advisory_xact_lock(advisory_lock_key(JOB_NAME))` in
 //! one transaction for its whole duration and is skipped if another instance holds it. The Scala
 //! backend takes no lock; a parallel Scala scan only measures the same organizations again.
-mod dao;
+mod organization_storage_dao;
 
 use crate::util::id::ObjectId;
 use std::{collections::HashMap, time::Duration};
@@ -31,7 +31,7 @@ use crate::{
     error::{ApiError, ApiResult},
     stores::client::{ServiceClients, ServiceError},
 };
-use dao::{AttachmentRow, MagRow, StoreRow};
+use organization_storage_dao::{AttachmentRow, MagRow, StoreRow};
 use webknossos_common::geometry::Vec3Int;
 
 const MAX_PATHS_PER_REQUEST: usize = 200;
@@ -124,11 +124,20 @@ async fn newest_storage_reports(
     store: &StoreRow,
     dataset_id: Option<&ObjectId>,
 ) -> ApiResult<StorageReports> {
-    let mags =
-        dao::find_all_storage_relevant_mags(pool, organization, &store.name, dataset_id).await?;
-    let attachments =
-        dao::find_all_storage_relevant_attachments(pool, organization, &store.name, dataset_id)
-            .await?;
+    let mags = organization_storage_dao::find_all_storage_relevant_mags(
+        pool,
+        organization,
+        &store.name,
+        dataset_id,
+    )
+    .await?;
+    let attachments = organization_storage_dao::find_all_storage_relevant_attachments(
+        pool,
+        organization,
+        &store.name,
+        dataset_id,
+    )
+    .await?;
     let mut lookup: HashMap<String, Artifact> = HashMap::new();
     let mut paths = Vec::new();
     for mag in &mags {
@@ -184,11 +193,24 @@ async fn upsert_used_storage(
     reports: &StorageReports,
 ) -> Result<(), sqlx::Error> {
     for (mag, path, bytes) in &reports.mags {
-        dao::upsert_used_storage_mag(connection, organization, mag, path, *bytes).await?;
+        organization_storage_dao::upsert_used_storage_mag(
+            connection,
+            organization,
+            mag,
+            path,
+            *bytes,
+        )
+        .await?;
     }
     for (attachment, path, bytes) in &reports.attachments {
-        dao::upsert_used_storage_attachment(connection, organization, attachment, path, *bytes)
-            .await?;
+        organization_storage_dao::upsert_used_storage_attachment(
+            connection,
+            organization,
+            attachment,
+            path,
+            *bytes,
+        )
+        .await?;
     }
     Ok(())
 }
@@ -200,11 +222,12 @@ pub(crate) async fn refresh_for_dataset(
     clients: &ServiceClients,
     dataset_id: &ObjectId,
 ) -> ApiResult<()> {
-    let dataset = dao::find_organization_and_store_name(pool, dataset_id).await?;
+    let dataset =
+        organization_storage_dao::find_organization_and_store_name(pool, dataset_id).await?;
     let Some((organization, store_name)) = dataset else {
         return Ok(());
     };
-    let store = dao::find_store_for_reporting(pool, &store_name).await?;
+    let store = organization_storage_dao::find_store_for_reporting(pool, &store_name).await?;
     let (name, url, enabled) =
         store.ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     if !enabled {
@@ -214,8 +237,13 @@ pub(crate) async fn refresh_for_dataset(
     let reports =
         newest_storage_reports(pool, clients, &organization, &store, Some(dataset_id)).await?;
     let mut transaction = pool.begin().await?;
-    dao::delete_used_storage_mags_for_dataset(&mut transaction, dataset_id).await?;
-    dao::delete_used_storage_attachments_for_dataset(&mut transaction, dataset_id).await?;
+    organization_storage_dao::delete_used_storage_mags_for_dataset(&mut transaction, dataset_id)
+        .await?;
+    organization_storage_dao::delete_used_storage_attachments_for_dataset(
+        &mut transaction,
+        dataset_id,
+    )
+    .await?;
     upsert_used_storage(&mut transaction, &organization, &reports).await?;
     transaction.commit().await?;
     Ok(())
@@ -238,10 +266,23 @@ async fn refresh_for_organization(
         reports.attachments.extend(store_reports.attachments);
     }
     let mut transaction = pool.begin().await?;
-    dao::delete_used_storage_mags_for_organization(&mut transaction, organization).await?;
-    dao::delete_used_storage_attachments_for_organization(&mut transaction, organization).await?;
+    organization_storage_dao::delete_used_storage_mags_for_organization(
+        &mut transaction,
+        organization,
+    )
+    .await?;
+    organization_storage_dao::delete_used_storage_attachments_for_organization(
+        &mut transaction,
+        organization,
+    )
+    .await?;
     upsert_used_storage(&mut transaction, organization, &reports).await?;
-    dao::update_last_storage_scan_time(&mut transaction, organization, Utc::now()).await?;
+    organization_storage_dao::update_last_storage_scan_time(
+        &mut transaction,
+        organization,
+        Utc::now(),
+    )
+    .await?;
     transaction.commit().await?;
     Ok(())
 }
@@ -263,10 +304,13 @@ pub async fn run_scan(
         return Ok(JobOutcome::SkippedLocked);
     }
     let rescan = chrono::Duration::from_std(config.rescan_interval)?;
-    let organizations =
-        dao::find_not_recently_scanned(pool, Utc::now() - rescan, i64::from(config.scans_per_tick))
-            .await?;
-    let stores = dao::find_all_with_storage_reporting(pool).await?;
+    let organizations = organization_storage_dao::find_not_recently_scanned(
+        pool,
+        Utc::now() - rescan,
+        i64::from(config.scans_per_tick),
+    )
+    .await?;
+    let stores = organization_storage_dao::find_all_with_storage_reporting(pool).await?;
     tracing::info!(
         organizations = ?organizations,
         data_stores = ?stores.iter().map(|store| store.name.as_str()).collect::<Vec<_>>(),

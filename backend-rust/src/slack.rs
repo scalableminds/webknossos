@@ -284,7 +284,7 @@ impl SlackNotificationService {
         let result_link = format!("{}/datasets/{dataset_id}", self.inner.public_uri);
         runtime.spawn(async move {
             let name: Option<String> =
-                match crate::organization::dao::find_name(&pool, &organization_id).await
+                match crate::organization::organization_dao::find_name(&pool, &organization_id).await
             {
                 Ok(name) => name,
                 Err(error) => {

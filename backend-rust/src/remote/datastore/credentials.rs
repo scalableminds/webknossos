@@ -1,7 +1,7 @@
 //! Datastore credential RPC and the credential creation/storage prerequisite
 //! used by remote dataset exploration. There are no public credential CRUD
 //! routes in the Scala application's route table.
-mod dao;
+mod remote_credentials_dao;
 
 use std::fmt;
 
@@ -135,7 +135,8 @@ pub async fn insert_credential(
 ) -> ApiResult<ObjectId> {
     let id = ObjectId::new();
     let (kind, name, identifier, secret) = credential.storage_fields();
-    let affected = dao::insert_one(tx, &id, kind, name, identifier, secret, user).await?;
+    let affected =
+        remote_credentials_dao::insert_one(tx, &id, kind, name, identifier, secret, user).await?;
     if affected != 1 {
         return Err(ApiError::unauthorized());
     }
@@ -161,7 +162,10 @@ async fn find_credential(
     Query(query): Query<CredentialQuery>,
 ) -> ApiResult<Response> {
     let mut tx = state.pool.begin().await?;
-    let allowed = dao::find_only_allowed_organization_for_share(&mut tx, &name, &query.key).await?;
+    let allowed = remote_credentials_dao::find_only_allowed_organization_for_share(
+        &mut tx, &name, &query.key,
+    )
+    .await?;
     let Some(only_allowed_organization) = allowed else {
         return Ok((
             StatusCode::FORBIDDEN,
@@ -172,7 +176,7 @@ async fn find_credential(
         )
             .into_response());
     };
-    let row = dao::find_one(&mut tx, &query.credential_id).await?;
+    let row = remote_credentials_dao::find_one(&mut tx, &query.credential_id).await?;
     let credential = row.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if only_allowed_organization.is_some_and(|organization| organization != credential.organization)
     {

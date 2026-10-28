@@ -9,7 +9,7 @@ use sqlx::PgConnection;
 
 use crate::{
     AppState,
-    annotation::dao,
+    annotation::annotation_dao,
     annotation::metadata::PUBLIC_WRITES_FAILED,
     auth::{AuthUser, OptionalAuthUser},
     error::{ApiError, ApiResult},
@@ -90,7 +90,7 @@ async fn public_json(
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
     let annotation = sandbox_metadata(dataset_id, Utc::now());
-    let dataset = dao::find_dataset_with_organization(connection, dataset_id).await?;
+    let dataset = annotation_dao::find_dataset_with_organization(connection, dataset_id).await?;
     let (dataset_name, organization, datastore) =
         dataset.ok_or_else(|| ApiError::not_found(crate::msg::annotation::DATASET_MISSING))?;
     let data_store = crate::dataset::routes::public_datastore_on_connection(
@@ -99,7 +99,7 @@ async fn public_json(
         jobs_enabled,
     )
     .await?;
-    let tracing_store: Value = dao::find_first_tracing_store_json(connection)
+    let tracing_store: Value = annotation_dao::find_first_tracing_store_json(connection)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::tracing_store::MISSING))?;
     let restrictions = crate::annotation::access::restrictions(&annotation, user);

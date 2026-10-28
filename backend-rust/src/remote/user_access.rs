@@ -14,7 +14,7 @@ use crate::{
     auth::{self, AuthUser},
     error::{ApiError, ApiResult},
     extract::{Json, Path, Query},
-    remote::{dao, tracingstore::dao as tracingstore_dao},
+    remote::{remote_dao, tracingstore::remote_tracingstore_dao},
     stores::client::ServiceClients,
     util::id::ObjectId,
 };
@@ -119,7 +119,7 @@ async fn datastore(
     State(features): State<AccessFeatures>,
     Json(body): Json<AccessRequest>,
 ) -> ApiResult<Response> {
-    let valid = dao::data_store_key_is_valid(&state.pool, name, &query.key).await?;
+    let valid = remote_dao::data_store_key_is_valid(&state.pool, name, &query.key).await?;
     if !valid {
         return Ok((
             StatusCode::FORBIDDEN,
@@ -141,7 +141,7 @@ async fn tracingstore(
     Json(body): Json<AccessRequest>,
 ) -> ApiResult<Response> {
     // TracingStoreService validates the key globally; name is informational.
-    let valid = tracingstore_dao::key_is_valid(&state.pool, &query.key).await?;
+    let valid = remote_tracingstore_dao::key_is_valid(&state.pool, &query.key).await?;
     if !valid {
         return Ok((StatusCode::FORBIDDEN, crate::msg::tracing_store::NOT_FOUND).into_response());
     }
@@ -181,7 +181,7 @@ async fn validate(
             }
             let id =
                 id.ok_or_else(|| ApiError::bad_request(crate::msg::request::TRACING_ID_REQUIRED))?;
-            let annotation_id = dao::find_annotation_id_for_tracing(&state.pool, id)
+            let annotation_id = remote_dao::find_annotation_id_for_tracing(&state.pool, id)
                 .await?
                 // Play: `annotationForTracing(…) ?~> annotation.notFound` on an empty result (400).
                 .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?;
@@ -211,7 +211,7 @@ async fn dataset(
                 ));
             }
             let id = &required_id(id)?;
-            let organization = dao::find_dataset_organization(&state.pool, id)
+            let organization = remote_dao::find_dataset_organization(&state.pool, id)
                 .await?
                 .ok_or_else(|| ApiError::not_found(crate::msg::dataset::MISSING))?;
             let allowed = match user {
@@ -256,7 +256,7 @@ async fn annotation(
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // Private links only grant read access, and only until they expire.
     let allowed_by_link =
-        mode == Mode::Read && dao::has_valid_private_link(&state.pool, id, token).await?;
+        mode == Mode::Read && remote_dao::has_valid_private_link(&state.pool, id, token).await?;
     let restrictions = crate::annotation::access::restrictions(&metadata, user);
     let allowed = allowed_by_link
         || match mode {
@@ -282,6 +282,6 @@ async fn job_export(
         )));
     }
     let id = required_id(id)?;
-    let allowed = dao::can_read_job_export(&state.pool, &id, user).await?;
+    let allowed = remote_dao::can_read_job_export(&state.pool, &id, user).await?;
     Ok(Answer::condition(allowed, "No read access to job export"))
 }

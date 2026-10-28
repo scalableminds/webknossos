@@ -31,7 +31,7 @@
 //! TracingBase annotation and returns the `TaskCreationResult` JSON
 //! (`{tasks: [{status, success|error}], warnings}`), one item per requested
 //! task in request order; per-task failures are items, not request failures.
-pub(crate) mod dao;
+pub(crate) mod task_creation_dao;
 
 use axum::extract::FromRef;
 use axum::{
@@ -167,7 +167,7 @@ pub(crate) async fn find_task_type(
     user: &AuthUser,
     id: &ObjectId,
 ) -> ApiResult<Option<TaskTypeFacts>> {
-    let row = dao::find_task_type_facts(pool, user, id).await?;
+    let row = task_creation_dao::find_task_type_facts(pool, user, id).await?;
     Ok(row.map(|(typ, min, max)| TaskTypeFacts {
         id: id.clone(),
         tracing_type: match typ.as_str() {
@@ -369,7 +369,7 @@ pub(crate) async fn volume_tracing_base(
     start_rotation: [f64; 3],
     mag_restrictions: MagRestrictions,
 ) -> Result<VolumeTracing, ProviderError> {
-    let data_store = dao::find_data_store_name(pool, &dataset.data_store).await?;
+    let data_store = task_creation_dao::find_data_store_name(pool, &dataset.data_store).await?;
     if data_store.is_none() {
         return Err(ProviderError::Empty);
     }
@@ -621,7 +621,7 @@ async fn base_from_annotation_row(
     annotation_id: &ObjectId,
     owner_id: ObjectId,
 ) -> Result<ResolvedBase, ProviderError> {
-    let layers = dao::find_annotation_layers(pool, annotation_id).await?;
+    let layers = task_creation_dao::find_annotation_layers(pool, annotation_id).await?;
     let of_type = |typ: &str| -> Vec<String> {
         layers
             .iter()
@@ -646,15 +646,15 @@ async fn resolve_base(
     user: &AuthUser,
     id: &ObjectId,
 ) -> Result<ResolvedBase, ProviderError> {
-    let annotation = dao::find_readable_annotation_owner(pool, user, id).await?;
+    let annotation = task_creation_dao::find_readable_annotation_owner(pool, user, id).await?;
     if let Some(owner) = annotation {
         return base_from_annotation_row(pool, id, owner).await;
     }
-    let task = dao::find_task_instances_with_read_access(pool, user, id).await?;
+    let task = task_creation_dao::find_task_instances_with_read_access(pool, user, id).await?;
     let Some((total, pending)) = task else {
         return Err(ProviderError::Empty);
     };
-    let annotations = dao::find_task_annotations(pool, user, id).await?;
+    let annotations = task_creation_dao::find_task_annotations(pool, user, id).await?;
     match annotations.first() {
         Some((annotation_id, owner, state))
             if total == 1 && pending == 0 && state == "Finished" =>
@@ -825,7 +825,7 @@ pub(crate) async fn find_project(
     user: &AuthUser,
     name: &str,
 ) -> ApiResult<Option<ProjectFacts>> {
-    let row = dao::find_project_by_name(pool, user, name).await?;
+    let row = task_creation_dao::find_project_by_name(pool, user, name).await?;
     Ok(row.map(|(id, team)| ProjectFacts { id, team }))
 }
 
@@ -870,7 +870,7 @@ async fn create_one(
                 ProviderError::failure(crate::msg::project::not_found_by_name(&params.project_name))
             })?;
         if let Some(script) = &params.script_id {
-            let readable = dao::is_script_readable(pool, user, script).await?;
+            let readable = task_creation_dao::is_script_readable(pool, user, script).await?;
             if !readable {
                 return Err(ProviderError::failure(crate::msg::script::not_found(
                     script,
@@ -879,7 +879,8 @@ async fn create_one(
         }
         // Fox.assertTrue(isTeamManagerOrAdminOf(user, project._team)):
         // missing team → adminNotAllowed; false → Fox.empty.
-        let team = dao::find_team_organization_and_manager(pool, user, &project.team).await?;
+        let team = task_creation_dao::find_team_organization_and_manager(pool, user, &project.team)
+            .await?;
         let (team_organization, is_manager) =
             team.ok_or_else(|| ProviderError::failure(crate::msg::team::ADMIN_NOT_ALLOWED))?;
         if !(is_manager || (user.is_admin && team_organization == user.organization_id)) {
@@ -930,7 +931,7 @@ async fn create_one(
         let domain = params.needed_experience.domain.trim();
         let bbox = non_empty(params.bounding_box);
         let mut tx = pool.begin().await?;
-        dao::insert_one(
+        task_creation_dao::insert_one(
             &mut tx,
             &task_id,
             &project.id,
@@ -941,7 +942,7 @@ async fn create_one(
             created,
         )
         .await?;
-        dao::insert_experience_domain(&mut tx, domain, &user.organization_id).await?;
+        task_creation_dao::insert_experience_domain(&mut tx, domain, &user.organization_id).await?;
         insert_annotation(
             &mut tx,
             &NewAnnotation {
@@ -993,19 +994,20 @@ async fn warnings(
             .ok_or_else(|| ProviderError::failure(crate::msg::project::not_found_by_name(name)))?;
         project_teams.push(project.team);
     }
-    let dataset_teams = dao::find_dataset_allowed_team_ids(pool, &dataset.id).await?;
+    let dataset_teams = task_creation_dao::find_dataset_allowed_team_ids(pool, &dataset.id).await?;
     let mut warnings = Vec::new();
     for team in project_teams {
         if dataset_teams.contains(&team) {
             continue;
         }
         if !dataset_teams.is_empty() {
-            let uncovered = dao::has_members_outside_teams(pool, &team, &dataset_teams).await?;
+            let uncovered =
+                task_creation_dao::has_members_outside_teams(pool, &team, &dataset_teams).await?;
             if !uncovered {
                 continue;
             }
         }
-        let name = dao::find_team_name_with_read_access(pool, user, &team).await?;
+        let name = task_creation_dao::find_team_name_with_read_access(pool, user, &team).await?;
         let name = name.ok_or(ProviderError::Empty)?;
         warnings.push(format!(
             "Project team “{name}” has no read permission to dataset “{}”.",

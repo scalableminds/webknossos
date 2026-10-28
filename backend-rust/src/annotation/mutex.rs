@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 
 use crate::{
     AppState,
-    annotation::dao,
+    annotation::annotation_dao,
     annotation::provider::{
         AccessContext, AnnotationIdentifier, AnnotationProvider, ProviderError,
         RESTRICTIONS_NOT_FOUND,
@@ -111,17 +111,17 @@ async fn acquire(
         .await
         .map_err(ApiError::from)
         .map_err(acquisition_error)?;
-    dao::advisory_xact_lock(&mut transaction, &format!("annotation-mutex:{id}"))
+    annotation_dao::advisory_xact_lock(&mut transaction, &format!("annotation-mutex:{id}"))
         .await
         .map_err(ApiError::from)
         .map_err(acquisition_error)?;
     // Protect state, visibility, collaboration mode and owner while checking
     // runtime restrictions; collaborators do not need a DAO write grant.
-    let live = crate::annotation::dao::lock_readable(&mut transaction, &user, &id)
+    let live = crate::annotation::annotation_dao::lock_readable(&mut transaction, &user, &id)
         .await?
         .ok_or_else(|| ProviderError::NotFound.into_api_error(StatusCode::NOT_FOUND))?;
     acquisition_gate(&live, &user)?;
-    let acquired = dao::upsert_mutex(&mut transaction, &id, &user.id, &session, micros)
+    let acquired = annotation_dao::upsert_mutex(&mut transaction, &id, &user.id, &session, micros)
         .await
         .map_err(ApiError::from)
         .map_err(acquisition_error)?;
@@ -129,7 +129,7 @@ async fn acquire(
     // conflicting insert commits. Advisory serialization also covers release.
     let (holder, holder_session) = match acquired {
         Some(holder) => holder,
-        None => dao::find_mutex_holder_for_update(&mut transaction, &id)
+        None => annotation_dao::find_mutex_holder_for_update(&mut transaction, &id)
             .await
             .map_err(ApiError::from)
             .map_err(acquisition_error)?,
@@ -173,8 +173,9 @@ async fn release(
     // release remains usable after access/state/lock/visibility changes.
     let operation = async {
         let mut transaction = state.pool.begin().await?;
-        dao::advisory_xact_lock(&mut transaction, &format!("annotation-mutex:{id}")).await?;
-        dao::delete_mutex(&mut transaction, &id, &user.id, &session).await?;
+        annotation_dao::advisory_xact_lock(&mut transaction, &format!("annotation-mutex:{id}"))
+            .await?;
+        annotation_dao::delete_mutex(&mut transaction, &id, &user.id, &session).await?;
         transaction.commit().await?;
         Ok::<_, sqlx::Error>(())
     }

@@ -1,5 +1,5 @@
 pub mod create;
-pub(crate) mod dao;
 pub mod reads;
+pub(crate) mod remote_tracingstore_dao;
 pub mod report;
 pub mod update;

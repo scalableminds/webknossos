@@ -1,6 +1,6 @@
 //! Queries of the validateUserAccess callbacks (WKRemoteDataStoreController /
 //! WKRemoteTracingStoreController). The datastore and tracingstore callbacks
-//! have their own `dao.rs` in `datastore` and `tracingstore`.
+//! have their own `remote_datastore_dao.rs` and `remote_tracingstore_dao.rs`.
 use sqlx::PgPool;
 
 use crate::{auth::AuthUser, util::id::ObjectId};

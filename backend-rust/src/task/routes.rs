@@ -16,7 +16,7 @@ use crate::{
     auth::AuthUser,
     error::{ApiError, ApiResult},
     extract::{Json, Path, Query},
-    task::dao,
+    task::task_dao,
     util::id::ObjectId,
 };
 
@@ -116,7 +116,7 @@ pub(crate) async fn public_json_for(
     id: &ObjectId,
     global: bool,
 ) -> ApiResult<Value> {
-    let value = dao::find_one_json(connection, user, id, global)
+    let value = task_dao::find_one_json(connection, user, id, global)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::task::not_found(id)))?;
     if value["type"].is_null() {
@@ -154,7 +154,7 @@ async fn list(
     Json(parameters): Json<ListParameters>,
 ) -> ApiResult<ResponseJson<Value>> {
     let mut connection = state.pool.acquire().await?;
-    let ids = dao::find_all_ids(&mut connection, &user, &parameters).await?;
+    let ids = task_dao::find_all_ids(&mut connection, &user, &parameters).await?;
     Ok(ResponseJson(
         serialize_all(&mut connection, &user, ids).await?,
     ))
@@ -170,7 +170,7 @@ async fn for_task_type(
         ..Default::default()
     };
     let mut connection = state.pool.acquire().await?;
-    let ids = dao::find_all_ids(&mut connection, &user, &parameters).await?;
+    let ids = task_dao::find_all_ids(&mut connection, &user, &parameters).await?;
     Ok(ResponseJson(
         serialize_all(&mut connection, &user, ids).await?,
     ))
@@ -191,17 +191,17 @@ async fn for_project(
         ));
     }
     let mut connection = state.pool.acquire().await?;
-    let team = dao::find_project_team_with_read_access(&mut connection, &user, &id)
+    let team = task_dao::find_project_team_with_read_access(&mut connection, &user, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found(&id)))?;
-    let can_manage = dao::can_manage_team(&mut connection, &user, &team).await?;
+    let can_manage = task_dao::can_manage_team(&mut connection, &user, &team).await?;
     if !can_manage {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let ids = dao::find_ids_for_project(&mut connection, &user, &id, limit, page).await?;
+    let ids = task_dao::find_ids_for_project(&mut connection, &user, &id, limit, page).await?;
     let mut headers = HeaderMap::new();
     if parameters.include_total_count == Some(true) {
-        let count = dao::count_for_project(&mut connection, &id).await?;
+        let count = task_dao::count_for_project(&mut connection, &id).await?;
         headers.insert(
             "X-Total-Count",
             HeaderValue::from_str(&count.to_string()).map_err(|_| ApiError::internal())?,
@@ -220,16 +220,16 @@ async fn lock_managed_task(
 ) -> ApiResult<(i64, i64)> {
     // Lock the project before the task, in the same order as project mutations.
     // This keeps concurrent changes to project team/visibility from invalidating authorization.
-    let project = dao::find_project_id_with_read_access(tx, user, id)
+    let project = task_dao::find_project_id_with_read_access(tx, user, id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::task::not_found(id)))?;
-    let team = dao::lock_project_team_for_share(tx, &project, &user.organization_id)
+    let team = task_dao::lock_project_team_for_share(tx, &project, &user.organization_id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found(&project)))?;
     if !crate::projects::can_manage_team_in_tx(tx, user, &team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    dao::lock_instances(tx, id, &project)
+    task_dao::lock_instances(tx, id, &project)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::task::not_found(id)))
 }
@@ -246,7 +246,7 @@ async fn update(
         .checked_sub(pending)
         .and_then(|used| used.checked_add(i64::from(parameters.pending_instances)))
         .ok_or_else(|| ApiError::bad_request(crate::msg::request::INVALID_RESOURCE_VALUES))?;
-    dao::update_total_instances(&mut tx, &id, total).await?;
+    task_dao::update_total_instances(&mut tx, &id, total).await?;
     let mut value = public_json(&mut tx, &user, &id, false).await?;
     tx.commit().await?;
     value["messages"] = json!([{"success":crate::msg::task::EDIT_SUCCESS}]);
@@ -260,8 +260,8 @@ async fn delete(
     let id = ObjectId::parse_path(&id)?;
     let mut tx = state.pool.begin().await?;
     lock_managed_task(&mut tx, &user, &id).await?;
-    dao::delete_one(&mut tx, &id).await?;
-    dao::delete_annotations(&mut tx, &id).await?;
+    task_dao::delete_one(&mut tx, &id).await?;
+    task_dao::delete_annotations(&mut tx, &id).await?;
     tx.commit().await?;
     Ok(Messages::success(crate::msg::task::DELETE_SUCCESS))
 }
@@ -270,12 +270,12 @@ async fn experience_domains(
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Vec<String>>> {
     Ok(ResponseJson(
-        dao::find_experience_domains(&state.pool, &user.organization_id).await?,
+        task_dao::find_experience_domains(&state.pool, &user.organization_id).await?,
     ))
 }
 async fn peek(State(state): State<AppState>, user: AuthUser) -> ApiResult<ResponseJson<Value>> {
     let manager = user.is_team_manager_or_admin(&state.pool).await?;
-    let id = dao::find_next_task_id_for_peek(&state.pool, &user, manager)
+    let id = task_dao::find_next_task_id_for_peek(&state.pool, &user, manager)
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::task::UNAVAILABLE))?;
     let mut connection = state.pool.acquire().await?;

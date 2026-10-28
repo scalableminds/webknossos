@@ -46,8 +46,8 @@ use crate::{
     stores::tracing_client::TracingStoreClient,
     system::application_info::MiscState,
     task::assignment::{
-        dao::{self, insert_initializing_annotation},
         initialize_task_annotation,
+        task_assignment_dao::{self, insert_initializing_annotation},
     },
     util::id::ObjectId,
 };
@@ -76,12 +76,16 @@ pub(crate) async fn allowed_teams_for_next_task(
     if user.is_admin {
         // teamDAO.findAllIdsByOrganization: an admin reads every live team of
         // the own organization.
-        return Ok(dao::find_all_team_ids_by_organization(pool, &user.organization_id).await?);
+        return Ok(task_assignment_dao::find_all_team_ids_by_organization(
+            pool,
+            &user.organization_id,
+        )
+        .await?);
     }
-    let managed = dao::find_team_ids(pool, &user.id, true).await?;
-    let open = dao::count_open_non_admin_tasks(pool, user, &managed).await?;
+    let managed = task_assignment_dao::find_team_ids(pool, &user.id, true).await?;
+    let open = task_assignment_dao::count_open_non_admin_tasks(pool, user, &managed).await?;
     let teams = if open < max_open_tasks_per_user {
-        dao::find_team_ids(pool, &user.id, false).await?
+        task_assignment_dao::find_team_ids(pool, &user.id, false).await?
     } else {
         managed
     };
@@ -96,7 +100,7 @@ async fn is_team_manager_or_admin(pool: &PgPool, user: &AuthUser) -> ApiResult<b
     if user.is_admin {
         return Ok(true);
     }
-    Ok(dao::is_team_manager(pool, &user.id).await?)
+    Ok(task_assignment_dao::is_team_manager(pool, &user.id).await?)
 }
 
 // ---------------------------------------------------------------------------
@@ -113,13 +117,17 @@ async fn try_assign_next(
     is_team_manager_or_admin: bool,
 ) -> ApiResult<Option<Option<(ObjectId, ObjectId)>>> {
     let mut tx = pool.begin().await?;
-    let candidate =
-        dao::find_next_task_for_update(&mut tx, user_id, team_ids, is_team_manager_or_admin)
-            .await?;
+    let candidate = task_assignment_dao::find_next_task_for_update(
+        &mut tx,
+        user_id,
+        team_ids,
+        is_team_manager_or_admin,
+    )
+    .await?;
     let Some(task_id) = candidate else {
         return Ok(None);
     };
-    if !dao::is_next_task_candidate(
+    if !task_assignment_dao::is_next_task_candidate(
         &mut tx,
         user_id,
         team_ids,

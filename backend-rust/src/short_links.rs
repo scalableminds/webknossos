@@ -1,4 +1,4 @@
-pub(crate) mod dao;
+pub(crate) mod short_links_dao;
 
 use crate::{
     AppState,
@@ -61,14 +61,14 @@ async fn create(
     // UUID's random tail supplies 70 random bits; the other two are variant bits.
     let bytes = *uuid::Uuid::new_v4().as_bytes();
     let key: String = bytes[7..16].iter().map(|b| format!("{b:02x}")).collect();
-    let result = dao::insert_one(&state.pool, ObjectId::new(), key, link).await?;
+    let result = short_links_dao::insert_one(&state.pool, ObjectId::new(), key, link).await?;
     Ok(ResponseJson(result))
 }
 async fn read(
     State(state): State<AppState>,
     Path(key): Path<String>,
 ) -> ApiResult<ResponseJson<ShortLink>> {
-    let result = dao::find_one_by_key(&state.pool, key)
+    let result = short_links_dao::find_one_by_key(&state.pool, key)
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::SHORT_LINK_NOT_FOUND))?;
     Ok(ResponseJson(result))

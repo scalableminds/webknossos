@@ -17,8 +17,8 @@ use serde::Deserialize;
 use serde_json::json;
 use sqlx::{Postgres, Transaction};
 
-pub(crate) mod dao;
-use dao::{InviteRow, OrganizationRow};
+pub(crate) mod auth_onboarding_dao;
+use auth_onboarding_dao::{InviteRow, OrganizationRow};
 
 use crate::{
     AppState,
@@ -123,7 +123,7 @@ async fn validate_name_and_email(
     }
     let email = email.to_lowercase();
     // Deleted accounts still own their address (UNIQUE across all rows).
-    let taken = dao::multi_user_email_exists(tx, &email).await?;
+    let taken = auth_onboarding_dao::multi_user_email_exists(tx, &email).await?;
     if taken {
         errors.insert(0, crate::msg::user::email::TAKEN.to_owned());
     }
@@ -167,7 +167,7 @@ async fn find_organization(
     tx: &mut Transaction<'_, Postgres>,
     id: &str,
 ) -> ApiResult<Option<OrganizationRow>> {
-    Ok(dao::find_one_organization(tx, id).await?)
+    Ok(auth_onboarding_dao::find_one_organization(tx, id).await?)
 }
 
 /// organizationService.assertUsersCanBeAdded. Locks the organization row so
@@ -176,11 +176,11 @@ pub(crate) async fn assert_users_can_be_added(
     tx: &mut Transaction<'_, Postgres>,
     organization_id: &str,
 ) -> ApiResult<()> {
-    let included = dao::find_included_users_for_update(tx, organization_id).await?;
+    let included = auth_onboarding_dao::find_included_users_for_update(tx, organization_id).await?;
     let Some(Some(included)) = included else {
         return Ok(());
     };
-    let count = dao::count_users_towards_limit(tx, organization_id).await?;
+    let count = auth_onboarding_dao::count_users_towards_limit(tx, organization_id).await?;
     if count + 1 > i64::from(included) {
         return Err(ApiError::bad_request(org_msg::USER_LIMIT_REACHED));
     }
@@ -194,9 +194,9 @@ pub(crate) async fn initial_team_memberships(
     invite_id: Option<&ObjectId>,
 ) -> ApiResult<Vec<(ObjectId, bool)>> {
     if let Some(invite_id) = invite_id {
-        return Ok(dao::find_all_invite_team_roles(tx, invite_id).await?);
+        return Ok(auth_onboarding_dao::find_all_invite_team_roles(tx, invite_id).await?);
     }
-    let team = dao::find_one_organization_team(tx, organization_id)
+    let team = auth_onboarding_dao::find_one_organization_team(tx, organization_id)
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::organization::TEAM_MISSING))?;
     Ok(vec![(team, false)])
@@ -207,9 +207,9 @@ async fn insert_team_memberships(
     user_id: &ObjectId,
     memberships: &[(ObjectId, bool)],
 ) -> ApiResult<()> {
-    dao::delete_team_memberships_for_user(tx, user_id).await?;
+    auth_onboarding_dao::delete_team_memberships_for_user(tx, user_id).await?;
     for (team, is_manager) in memberships {
-        dao::insert_team_membership(tx, user_id, team, *is_manager).await?;
+        auth_onboarding_dao::insert_team_membership(tx, user_id, team, *is_manager).await?;
     }
     Ok(())
 }
@@ -240,7 +240,7 @@ pub(crate) async fn insert_account(
     config: &BrowserAuthConfig,
     account: NewAccount<'_>,
 ) -> ApiResult<CreatedAccount> {
-    let taken = dao::multi_user_email_exists(tx, account.email).await?;
+    let taken = auth_onboarding_dao::multi_user_email_exists(tx, account.email).await?;
     if taken {
         return Err(ApiError::bad_request(crate::msg::user::email::TAKEN));
     }
@@ -249,7 +249,7 @@ pub(crate) async fn insert_account(
         None => ("Empty", String::new()),
     };
     let multi_user_id = ObjectId::new();
-    dao::insert_multi_user(
+    auth_onboarding_dao::insert_multi_user(
         tx,
         &multi_user_id,
         account.email,
@@ -265,7 +265,7 @@ pub(crate) async fn insert_account(
         mails.push(create_email_verification(tx, config, &multi_user_id).await?);
     }
     let user_id = ObjectId::new();
-    dao::insert_user(
+    auth_onboarding_dao::insert_user(
         tx,
         &user_id,
         &multi_user_id,
@@ -295,7 +295,7 @@ pub(crate) async fn join_organization_as(
     team_memberships: &[(ObjectId, bool)],
 ) -> ApiResult<ObjectId> {
     let new_user_id = ObjectId::new();
-    let inserted = dao::insert_user_copying_original(
+    let inserted = auth_onboarding_dao::insert_user_copying_original(
         tx,
         &new_user_id,
         original_user_id,
@@ -327,7 +327,7 @@ async fn new_user_mail_recipient(
     if !organization.new_user_mailing_list.is_empty() {
         return Ok(Some(organization.new_user_mailing_list.clone()));
     }
-    Ok(dao::find_organization_owner_email(tx, &organization.id).await?)
+    Ok(auth_onboarding_dao::find_organization_owner_email(tx, &organization.id).await?)
 }
 
 pub(crate) async fn admin_notifier_mail(
@@ -362,14 +362,14 @@ async fn find_invite(
     tx: &mut Transaction<'_, Postgres>,
     token: &str,
 ) -> ApiResult<Option<InviteRow>> {
-    Ok(dao::find_one_invite_by_token_for_update(tx, token).await?)
+    Ok(auth_onboarding_dao::find_one_invite_by_token_for_update(tx, token).await?)
 }
 
 async fn deactivate_invite(
     tx: &mut Transaction<'_, Postgres>,
     invite_id: &ObjectId,
 ) -> ApiResult<()> {
-    Ok(dao::delete_invite(tx, invite_id).await?)
+    Ok(auth_onboarding_dao::delete_invite(tx, invite_id).await?)
 }
 
 /// AuthenticationController.createUser
@@ -448,7 +448,7 @@ pub(crate) async fn insert_organization(
     }
     .replace(' ', "_");
     // Ids of deleted organizations stay reserved (primary key).
-    let exists = dao::organization_id_exists(tx, &id).await?;
+    let exists = auth_onboarding_dao::organization_id_exists(tx, &id).await?;
     if exists {
         return Err(ApiError::bad_request(org_msg::ID_TAKEN));
     }
@@ -459,9 +459,9 @@ pub(crate) async fn insert_organization(
             ("Custom", None, None)
         };
     let root_folder = ObjectId::new();
-    dao::insert_root_folder(tx, &root_folder).await?;
-    dao::insert_root_folder_path(tx, &root_folder).await?;
-    dao::insert_organization(
+    auth_onboarding_dao::insert_root_folder(tx, &root_folder).await?;
+    auth_onboarding_dao::insert_root_folder_path(tx, &root_folder).await?;
+    auth_onboarding_dao::insert_organization(
         tx,
         &id,
         name,
@@ -472,7 +472,7 @@ pub(crate) async fn insert_organization(
     )
     .await?;
     let team = ObjectId::new();
-    dao::insert_organization_team(tx, &team, &id).await?;
+    auth_onboarding_dao::insert_organization_team(tx, &team, &id).await?;
     Ok((id, team))
 }
 
@@ -502,7 +502,7 @@ pub(crate) async fn create_organization_directory(
     let Some(clients) = clients else {
         return;
     };
-    let urls: Vec<String> = match dao::find_all_data_store_urls(pool).await {
+    let urls: Vec<String> = match auth_onboarding_dao::find_all_data_store_urls(pool).await {
         Ok(urls) => urls,
         Err(_) => {
             tracing::warn!("Could not list datastores for organization directory creation");
@@ -595,7 +595,7 @@ async fn register(
             .await?
             .ok_or_else(|| ApiError::bad_request(crate::msg::organization::NOT_FOUND_BY_INVITE))?,
         None => {
-            let organizations = dao::find_first_two_organizations(&mut tx).await?;
+            let organizations = auth_onboarding_dao::find_first_two_organizations(&mut tx).await?;
             let mut organizations = organizations.into_iter();
             match (organizations.next(), organizations.next()) {
                 (Some(organization), None) => organization,
@@ -656,7 +656,7 @@ async fn create_organization_with_admin(
     let mut tx = state.pool.begin().await?;
     // assertMayCreateOrganization: no organization yet, a wkorg instance, or
     // a superuser.
-    let no_organizations = dao::has_no_organizations(&mut tx).await?;
+    let no_organizations = auth_onboarding_dao::has_no_organizations(&mut tx).await?;
     if !(no_organizations
         || config.is_wkorg_instance
         || user.as_ref().is_some_and(|u| u.is_superuser))
@@ -717,7 +717,8 @@ async fn create_organization_with_admin(
                 ),
             ));
         }
-        dao::update_terms_of_service_acceptance(&mut tx, &organization.id, version).await?;
+        auth_onboarding_dao::update_terms_of_service_acceptance(&mut tx, &organization.id, version)
+            .await?;
     }
     tx.commit().await?;
     track_for_user(
@@ -763,7 +764,7 @@ async fn create_organization_with_existing_user(
         return Err(ApiError::bad_request(crate::msg::user::SUPER_USER_ONLY));
     }
     let mut tx = state.pool.begin().await?;
-    let exists = dao::user_exists(&mut tx, &body.user_id).await?;
+    let exists = auth_onboarding_dao::user_exists(&mut tx, &body.user_id).await?;
     if !exists {
         // Play: `userDAO.findOne(userId)` without a message, an empty Fox: the generic 404.
         return Err(ApiError::not_found(crate::msg::NOT_FOUND));
@@ -867,7 +868,7 @@ async fn lock_multi_user(
     tx: &mut Transaction<'_, Postgres>,
     user_id: &ObjectId,
 ) -> ApiResult<(ObjectId, String, String, String, bool)> {
-    dao::find_multi_user_of_user_for_update(tx, user_id)
+    auth_onboarding_dao::find_multi_user_of_user_for_update(tx, user_id)
         .await?
         .ok_or_else(ApiError::unauthorized)
 }
@@ -889,12 +890,18 @@ async fn join_organization(
     let organization = find_organization(&mut tx, &invite.organization_id)
         .await?
         .ok_or_else(|| ApiError::bad_request(org_msg::INVALID_INVITE_TOKEN))?;
-    let already =
-        dao::multi_user_has_user_in_organization(&mut tx, &multi_user_id, &organization.id).await?;
+    let already = auth_onboarding_dao::multi_user_has_user_in_organization(
+        &mut tx,
+        &multi_user_id,
+        &organization.id,
+    )
+    .await?;
     if already {
         return Err(ApiError::bad_request(org_msg::ALREADY_JOINED));
     }
-    let paying = dao::find_paying_organization_of_multi_user(&mut tx, &multi_user_id).await?;
+    let paying =
+        auth_onboarding_dao::find_paying_organization_of_multi_user(&mut tx, &multi_user_id)
+            .await?;
     if !is_superuser && paying.is_none() {
         assert_users_can_be_added(&mut tx, &organization.id).await?;
     }
@@ -980,14 +987,14 @@ async fn send_invites(
     }
     let mut tx = state.pool.begin().await?;
     let (organization_name, sender_name) =
-        dao::find_organization_name_and_sender_name(&mut tx, &user.id).await?;
+        auth_onboarding_dao::find_organization_name_and_sender_name(&mut tx, &user.id).await?;
     let expiry_ms =
         i64::try_from(config.invite_expiry.as_millis()).map_err(|_| ApiError::internal())?;
     let mut mails = Vec::new();
     for recipient in &body.recipients {
         let invite_id = ObjectId::new();
         let token = random_base64url(16)?;
-        dao::insert_invite(
+        auth_onboarding_dao::insert_invite(
             &mut tx,
             &invite_id,
             &token,
@@ -999,7 +1006,7 @@ async fn send_invites(
         )
         .await?;
         for membership in &body.team_memberships {
-            dao::insert_invite_team_role(
+            auth_onboarding_dao::insert_invite_team_role(
                 &mut tx,
                 &invite_id,
                 &membership.id,
@@ -1041,22 +1048,28 @@ async fn add_user(
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     let mut tx = state.pool.begin().await?;
-    let multi_user_id = dao::find_multi_user_id_by_email_for_update(&mut tx, &email)
-        .await?
-        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+    let multi_user_id =
+        auth_onboarding_dao::find_multi_user_id_by_email_for_update(&mut tx, &email)
+            .await?
+            .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let organization = find_organization(&mut tx, &organization_id)
         .await?
         .ok_or_else(|| {
             ApiError::not_found(crate::msg::organization::not_found(&organization_id))
         })?;
-    let already =
-        dao::multi_user_has_user_in_organization(&mut tx, &multi_user_id, &organization.id).await?;
+    let already = auth_onboarding_dao::multi_user_has_user_in_organization(
+        &mut tx,
+        &multi_user_id,
+        &organization.id,
+    )
+    .await?;
     if already {
         return Err(ApiError::bad_request(org_msg::ALREADY_JOINED));
     }
-    let original = dao::find_first_active_user_of_multi_user(&mut tx, &multi_user_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+    let original =
+        auth_onboarding_dao::find_first_active_user_of_multi_user(&mut tx, &multi_user_id)
+            .await?
+            .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let team_memberships = initial_team_memberships(&mut tx, &organization.id, None).await?;
     let user_id = join_organization_as(
         &mut tx,

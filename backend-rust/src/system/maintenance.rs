@@ -1,4 +1,4 @@
-mod dao;
+mod system_maintenance_dao;
 
 use crate::{
     AppState,
@@ -79,7 +79,7 @@ fn require_superuser(user: &AuthUser) -> ApiResult<()> {
 }
 async fn upcoming(State(state): State<AppState>) -> ApiResult<ResponseJson<Vec<Maintenance>>> {
     Ok(ResponseJson(
-        dao::find_all_current_and_upcoming(&state.pool).await?,
+        system_maintenance_dao::find_all_current_and_upcoming(&state.pool).await?,
     ))
 }
 async fn list(
@@ -87,7 +87,9 @@ async fn list(
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Vec<Maintenance>>> {
     require_superuser(&user)?;
-    Ok(ResponseJson(dao::find_all(&state.pool).await?))
+    Ok(ResponseJson(
+        system_maintenance_dao::find_all(&state.pool).await?,
+    ))
 }
 async fn read(
     State(state): State<AppState>,
@@ -96,14 +98,21 @@ async fn read(
 ) -> ApiResult<ResponseJson<Maintenance>> {
     require_superuser(&user)?;
     Ok(ResponseJson(
-        dao::find_one(&state.pool, &id)
+        system_maintenance_dao::find_one(&state.pool, &id)
             .await?
             .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?,
     ))
 }
 async fn insert(pool: &sqlx::PgPool, user: &AuthUser, body: Parameters) -> ApiResult<Maintenance> {
     require_superuser(user)?;
-    Ok(dao::insert_one(pool, &user.id, body.start_time, body.end_time, body.message).await?)
+    Ok(system_maintenance_dao::insert_one(
+        pool,
+        &user.id,
+        body.start_time,
+        body.end_time,
+        body.message,
+    )
+    .await?)
 }
 async fn create(
     State(state): State<AppState>,
@@ -132,7 +141,7 @@ async fn update(
 ) -> ApiResult<ResponseJson<Maintenance>> {
     require_superuser(&user)?;
     Ok(ResponseJson(
-        dao::update_one(
+        system_maintenance_dao::update_one(
             &state.pool,
             &id,
             body.start_time,
@@ -149,7 +158,7 @@ async fn delete(
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<StatusCode> {
     require_superuser(&user)?;
-    if dao::delete_one(&state.pool, &id).await? == 0 {
+    if system_maintenance_dao::delete_one(&state.pool, &id).await? == 0 {
         return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
     Ok(StatusCode::OK)

@@ -9,7 +9,7 @@
 //!
 //! The tracing-store step is shared with task assignment
 //! (AnnotationService.createAnnotationFor), see [`duplicate_in_tracing_store`].
-mod dao;
+mod annotation_duplicate_dao;
 
 use axum::extract::FromRef;
 use axum::{
@@ -125,9 +125,9 @@ pub(crate) async fn insert_annotation(
     annotation: &NewAnnotation<'_>,
     layers: &[AnnotationLayer],
 ) -> ApiResult<()> {
-    crate::annotation::dao::insert_one(connection, annotation).await?;
+    crate::annotation::annotation_dao::insert_one(connection, annotation).await?;
     for layer in layers {
-        crate::annotation::dao::insert_layer(
+        crate::annotation::annotation_dao::insert_layer(
             connection,
             annotation.id,
             &layer.tracing_id,
@@ -190,7 +190,7 @@ async fn usable_data_source_bounding_box(
         .wrap(crate::msg::dataset::data_source::NOT_FOUND)
         .with_status(StatusCode::NOT_FOUND));
     }
-    let boxes = dao::find_layer_bounding_boxes(pool, dataset_id).await?;
+    let boxes = annotation_duplicate_dao::find_layer_bounding_boxes(pool, dataset_id).await?;
     let mut union: Option<[i32; 6]> = None;
     for bbox in boxes {
         let bbox = <[i32; 6]>::try_from(bbox).map_err(|_| ApiError::internal())?;
@@ -235,7 +235,7 @@ pub(crate) async fn duplicate_source_in_tracing_store(
     requesting_user_id: &ObjectId,
 ) -> Result<Vec<AnnotationLayer>, ProviderError> {
     // GlobalAccessContext: the requester was already allowed to see the annotation.
-    let dataset = dao::find_dataset_usability(pool, source.dataset_id).await?;
+    let dataset = annotation_duplicate_dao::find_dataset_usability(pool, source.dataset_id).await?;
     let (is_usable, has_voxel_size) = dataset.ok_or_else(|| {
         ProviderError::failure(crate::msg::dataset::not_found_for_annotation(
             source.dataset_id,

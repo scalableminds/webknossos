@@ -3,7 +3,7 @@ use axum::http::{header::AUTHORIZATION, request::Parts};
 use sqlx::PgPool;
 
 use crate::AppState;
-use crate::auth::dao;
+use crate::auth::auth_dao;
 use crate::error::{ApiError, ApiResult};
 use crate::util::id::ObjectId;
 
@@ -114,7 +114,7 @@ pub(crate) fn extract_token(parts: &Parts) -> ApiResult<String> {
 }
 
 pub async fn authenticate(pool: &PgPool, token: &str) -> ApiResult<AuthUser> {
-    dao::find_one_and_touch_for_authentication(pool, token)
+    auth_dao::find_one_and_touch_for_authentication(pool, token)
         .await?
         .ok_or_else(ApiError::unauthorized)
 }
@@ -123,7 +123,7 @@ pub async fn user_for_service_token(
     pool: &sqlx::PgPool,
     token: &str,
 ) -> ApiResult<Option<AuthUser>> {
-    Ok(dao::find_user_for_service_token(pool, token).await?)
+    Ok(auth_dao::find_user_for_service_token(pool, token).await?)
 }
 
 impl AuthUser {
@@ -131,11 +131,14 @@ impl AuthUser {
         if self.is_admin {
             return Ok(true);
         }
-        Ok(dao::is_team_manager_in_organization(pool, &self.id, &self.organization_id).await?)
+        Ok(
+            auth_dao::is_team_manager_in_organization(pool, &self.id, &self.organization_id)
+                .await?,
+        )
     }
 
     pub async fn can_manage_team(&self, pool: &PgPool, team_id: &ObjectId) -> ApiResult<bool> {
-        Ok(dao::can_manage_team(
+        Ok(auth_dao::can_manage_team(
             pool,
             team_id,
             &self.organization_id,

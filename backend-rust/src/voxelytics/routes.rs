@@ -28,8 +28,8 @@ use crate::{
     system::application_info::MiscState,
     system::application_info::ok_empty,
     util::id::ObjectId,
-    voxelytics::dao::{self as dao, ArtifactValues, NewRun, Timestamp},
     voxelytics::loki::{LOG_LEVELS, LokiClient},
+    voxelytics::voxelytics_dao::{self, ArtifactValues, NewRun, Timestamp},
 };
 
 pub use crate::voxelytics::loki::LokiConfig;
@@ -415,14 +415,15 @@ async fn store_workflow(
     // checkAuthForWorkflowCreation: an existing run of the organization may
     // only be continued by its creator or an admin.
     let owner =
-        dao::user_id_for_run_name(&mut tx, &description.run.name, &user.organization_id).await?;
+        voxelytics_dao::user_id_for_run_name(&mut tx, &description.run.name, &user.organization_id)
+            .await?;
     if !(user.is_admin || owner.is_none_or(|owner| owner == user.id)) {
         return Err(ApiError::new(
             StatusCode::UNAUTHORIZED,
             WORKFLOW_USER_MISMATCH,
         ));
     }
-    dao::upsert_workflow(
+    voxelytics_dao::upsert_workflow(
         &mut tx,
         &description.workflow.hash,
         &description.workflow.name,
@@ -436,7 +437,7 @@ async fn store_workflow(
         "paths": config.paths,
         "schema_version": config.schema_version,
     });
-    let run_id = dao::upsert_run(
+    let run_id = voxelytics_dao::upsert_run(
         &mut tx,
         NewRun {
             organization_id: &user.organization_id,
@@ -460,10 +461,17 @@ async fn store_workflow(
             "output_paths": task.output_paths,
         });
         let task_id =
-            dao::upsert_task(&mut tx, &run_id, task_name, &task.task, &task_config).await?;
+            voxelytics_dao::upsert_task(&mut tx, &run_id, task_name, &task.task, &task_config)
+                .await?;
         if let Some(artifacts) = description.artifacts.get(task_name) {
             for (artifact_name, artifact) in &artifacts.0 {
-                dao::upsert_artifact(&mut tx, &task_id, artifact_name, &artifact.values()).await?;
+                voxelytics_dao::upsert_artifact(
+                    &mut tx,
+                    &task_id,
+                    artifact_name,
+                    &artifact.values(),
+                )
+                .await?;
             }
         }
     }
@@ -479,31 +487,35 @@ async fn list_workflows(
     user: AuthUser,
 ) -> ApiResult<Response> {
     ensure_enabled(&misc)?;
-    let runs = dao::find_runs_for_workflow_listing(&state.pool, &user, vx.stale_timeout).await?;
+    let runs = voxelytics_dao::find_runs_for_workflow_listing(&state.pool, &user, vx.stale_timeout)
+        .await?;
     if runs.is_empty() {
         return Ok(Json(Vec::<WorkflowListEntry>::new()).into_response());
     }
     let mut hashes: Vec<String> = runs.iter().map(|r| r.workflow_hash.clone()).collect();
     hashes.sort();
     hashes.dedup();
-    let task_counts: HashMap<String, dao::TaskCounts> =
-        dao::find_workflow_task_counts(&state.pool, &user, &hashes, vx.stale_timeout)
+    let task_counts: HashMap<String, voxelytics_dao::TaskCounts> =
+        voxelytics_dao::find_workflow_task_counts(&state.pool, &user, &hashes, vx.stale_timeout)
             .await?
             .into_iter()
             .collect();
     if task_counts.is_empty() {
         return Err(ApiError::not_found(NO_TASK_FOUND));
     }
-    let workflows =
-        dao::find_workflows_by_hash_and_organization(&state.pool, &user.organization_id, &hashes)
-            .await?;
+    let workflows = voxelytics_dao::find_workflows_by_hash_and_organization(
+        &state.pool,
+        &user.organization_id,
+        &hashes,
+    )
+    .await?;
     if workflows.is_empty() {
         return Err(ApiError::not_found(NO_WORKFLOW_FOUND));
     }
     let result: Vec<WorkflowListEntry> = workflows
         .iter()
         .filter_map(|workflow| {
-            let workflow_runs: Vec<&dao::WorkflowListingRunEntry> = runs
+            let workflow_runs: Vec<&voxelytics_dao::WorkflowListingRunEntry> = runs
                 .iter()
                 .filter(|run| run.workflow_hash == workflow.hash)
                 .collect();
@@ -541,8 +553,8 @@ struct WorkflowListEntry<'a> {
     #[serde(with = "chrono::serde::ts_milliseconds_option")]
     end_time: Timestamp,
     state: &'a str,
-    task_counts: Option<&'a dao::TaskCounts>,
-    runs: Vec<&'a dao::WorkflowListingRunEntry>,
+    task_counts: Option<&'a voxelytics_dao::TaskCounts>,
+    runs: Vec<&'a voxelytics_dao::WorkflowListingRunEntry>,
 }
 
 /// The workflow report of getWorkflow.
@@ -551,8 +563,8 @@ struct WorkflowReport<'a> {
     /// workflowConfigPublicWrites: the stored run config plus each task's config and name.
     config: Map<String, Value>,
     /// artifactsPublicWrites: {taskName: {artifactName: artifact}}.
-    artifacts: BTreeMap<&'a str, BTreeMap<&'a str, &'a dao::ArtifactEntry>>,
-    runs: &'a [dao::RunEntry],
+    artifacts: BTreeMap<&'a str, BTreeMap<&'a str, &'a voxelytics_dao::ArtifactEntry>>,
+    runs: &'a [voxelytics_dao::RunEntry],
     tasks: Vec<TaskReport<'a>>,
     workflow: WorkflowReportWorkflow<'a>,
 }
@@ -576,16 +588,16 @@ struct TaskReport<'a> {
     #[serde(with = "chrono::serde::ts_milliseconds_option")]
     end_time: Timestamp,
     current_execution_id: Option<&'a str>,
-    chunk_counts: dao::ChunkCounts,
-    runs: Vec<&'a dao::TaskRunEntry>,
+    chunk_counts: voxelytics_dao::ChunkCounts,
+    runs: Vec<&'a voxelytics_dao::TaskRunEntry>,
 }
 
 /// VoxelyticsService.taskRunsPublicWrites.
 fn task_reports<'a>(
-    combined: &'a [dao::CombinedTaskRunEntry],
-    task_runs: &'a [dao::TaskRunEntry],
+    combined: &'a [voxelytics_dao::CombinedTaskRunEntry],
+    task_runs: &'a [voxelytics_dao::TaskRunEntry],
 ) -> Vec<TaskReport<'a>> {
-    let mut groups: Vec<(&str, Vec<&dao::TaskRunEntry>)> = Vec::new();
+    let mut groups: Vec<(&str, Vec<&voxelytics_dao::TaskRunEntry>)> = Vec::new();
     for task_run in task_runs {
         match groups
             .iter_mut()
@@ -645,11 +657,14 @@ async fn get_workflow(
     let run_id = optional_run_id(query.run_id.as_deref())?;
     ensure_enabled(&misc)?;
     let pool = &state.pool;
-    let workflow =
-        dao::find_workflow_by_hash_and_organization(pool, &user.organization_id, &workflow_hash)
-            .await?
-            .ok_or_else(|| ApiError::not_found(WORKFLOW_NOT_FOUND))?;
-    let mut runs = dao::find_runs(
+    let workflow = voxelytics_dao::find_workflow_by_hash_and_organization(
+        pool,
+        &user.organization_id,
+        &workflow_hash,
+    )
+    .await?
+    .ok_or_else(|| ApiError::not_found(WORKFLOW_NOT_FOUND))?;
+    let mut runs = voxelytics_dao::find_runs(
         pool,
         &user,
         None,
@@ -674,12 +689,12 @@ async fn get_workflow(
     // These queries are independent of each other, so they run concurrently.
     let (task_runs, combined, artifacts, tasks) = tokio::try_join!(
         // Task runs for all runs
-        dao::find_task_runs(pool, &run_ids, vx.stale_timeout),
-        dao::find_combined_task_runs(pool, &run_ids, vx.stale_timeout),
+        voxelytics_dao::find_task_runs(pool, &run_ids, vx.stale_timeout),
+        voxelytics_dao::find_combined_task_runs(pool, &run_ids, vx.stale_timeout),
         // Artifact data for task runs
-        dao::find_artifacts(pool, &user, &run_ids, vx.stale_timeout),
+        voxelytics_dao::find_artifacts(pool, &user, &run_ids, vx.stale_timeout),
         // Task configs for the selected run
-        dao::find_tasks(pool, &selected.id),
+        voxelytics_dao::find_tasks(pool, &selected.id),
     )?;
 
     // workflowConfigPublicWrites: the run's config plus each task's config and name.
@@ -698,7 +713,7 @@ async fn get_workflow(
     }
     config.insert("tasks".into(), Value::Object(task_configs));
 
-    let mut artifacts_by_task: BTreeMap<&str, BTreeMap<&str, &dao::ArtifactEntry>> =
+    let mut artifacts_by_task: BTreeMap<&str, BTreeMap<&str, &voxelytics_dao::ArtifactEntry>> =
         BTreeMap::new();
     for artifact in &artifacts {
         artifacts_by_task
@@ -732,7 +747,7 @@ async fn delete_workflow(
     if !user.is_superuser {
         return Err(ApiError::bad_request(crate::msg::user::SUPER_USER_ONLY));
     }
-    if !dao::workflow_hash_exists(&state.pool, &workflow_hash).await? {
+    if !voxelytics_dao::workflow_hash_exists(&state.pool, &workflow_hash).await? {
         return Err(ApiError::not_found(WORKFLOW_NOT_FOUND));
     }
     tracing::info!(
@@ -740,7 +755,7 @@ async fn delete_workflow(
         "Deleting voxelytics workflow"
     );
     let mut tx = state.pool.begin().await?;
-    dao::delete_workflow(&mut tx, &workflow_hash, &user.organization_id).await?;
+    voxelytics_dao::delete_workflow(&mut tx, &workflow_hash, &user.organization_id).await?;
     tx.commit().await?;
     Ok(ok_empty())
 }
@@ -765,10 +780,14 @@ async fn store_workflow_events(
         .ok_or_else(|| ApiError::bad_request(crate::msg::request::missing_parameter("runName")))?;
     let events = parse_events(parse_body(&body)?)?;
     ensure_enabled(&misc)?;
-    let run_id =
-        dao::run_id_by_name_and_workflow_hash(&state.pool, &run_name, &workflow_hash, &user)
-            .await?
-            .ok_or_else(|| ApiError::not_found(RUN_NOT_FOUND))?;
+    let run_id = voxelytics_dao::run_id_by_name_and_workflow_hash(
+        &state.pool,
+        &run_name,
+        &workflow_hash,
+        &user,
+    )
+    .await?
+    .ok_or_else(|| ApiError::not_found(RUN_NOT_FOUND))?;
     // Play answers 500 for any failure while storing events.
     store_events(&state.pool, &run_id, events)
         .await
@@ -798,7 +817,7 @@ async fn store_events(
                 json!({"begin_time": begin, "end_time": end, "state": ev.state})
             })
             .collect();
-        dao::update_run_states(&mut tx, run_id, &rows).await?;
+        voxelytics_dao::update_run_states(&mut tx, run_id, &rows).await?;
     }
     for chunk in events.task_states.chunks(batch) {
         let rows: Vec<Value> = chunk
@@ -808,7 +827,7 @@ async fn store_events(
                 json!({"task_name": ev.task_name, "begin_time": begin, "end_time": end, "state": ev.state})
             })
             .collect();
-        dao::update_task_states(&mut tx, run_id, &rows).await?;
+        voxelytics_dao::update_task_states(&mut tx, run_id, &rows).await?;
         let artifacts: Vec<Value> = chunk
             .iter()
             .flat_map(|ev| {
@@ -826,7 +845,7 @@ async fn store_events(
             })
             .collect();
         if !artifacts.is_empty() {
-            dao::upsert_artifacts(&mut tx, run_id, &artifacts).await?;
+            voxelytics_dao::upsert_artifacts(&mut tx, run_id, &artifacts).await?;
         }
     }
     for chunk in events.chunk_states.chunks(batch) {
@@ -844,14 +863,14 @@ async fn store_events(
                 })
             })
             .collect();
-        dao::upsert_chunk_states(&mut tx, run_id, &rows).await?;
+        voxelytics_dao::upsert_chunk_states(&mut tx, run_id, &rows).await?;
     }
     for chunk in events.heartbeats.chunks(batch) {
         let rows: Vec<Value> = chunk
             .iter()
             .map(|ev| json!({"timestamp": iso(ev.timestamp)}))
             .collect();
-        dao::upsert_run_heartbeats(&mut tx, run_id, &rows).await?;
+        voxelytics_dao::upsert_run_heartbeats(&mut tx, run_id, &rows).await?;
     }
     for chunk in events.profiling.chunks(batch) {
         let rows: Vec<Value> = chunk
@@ -870,7 +889,7 @@ async fn store_events(
                 })
             })
             .collect();
-        dao::upsert_chunk_profiling(&mut tx, run_id, &rows).await?;
+        voxelytics_dao::upsert_chunk_profiling(&mut tx, run_id, &rows).await?;
     }
     for chunk in events.checksums.chunks(batch) {
         let rows: Vec<Value> = chunk
@@ -889,7 +908,7 @@ async fn store_events(
                 })
             })
             .collect();
-        dao::upsert_artifact_checksums(&mut tx, run_id, &rows).await?;
+        voxelytics_dao::upsert_artifact_checksums(&mut tx, run_id, &rows).await?;
     }
     tx.commit().await?;
     Ok(())
@@ -913,7 +932,7 @@ async fn statistics_runs(
     stale_timeout: Duration,
 ) -> ApiResult<Vec<ObjectId>> {
     let run_ids = run_id.map(|id| vec![id]);
-    let runs = dao::find_runs(
+    let runs = voxelytics_dao::find_runs(
         pool,
         user,
         run_ids.as_deref(),
@@ -943,13 +962,15 @@ async fn chunk_statistics(
     user: AuthUser,
     Path(workflow_hash): Path<String>,
     Query(query): Query<StatisticsQuery>,
-) -> ApiResult<Json<Vec<dao::ChunkStatisticsEntry>>> {
+) -> ApiResult<Json<Vec<voxelytics_dao::ChunkStatisticsEntry>>> {
     let run_id = optional_run_id(query.run_id.as_deref())?;
     let task_name = required_task_name(&query)?;
     ensure_enabled(&misc)?;
     let run_ids =
         statistics_runs(&state.pool, &user, &workflow_hash, run_id, vx.stale_timeout).await?;
-    let entries = dao::chunk_statistics(&state.pool, &run_ids, task_name, vx.stale_timeout).await?;
+    let entries =
+        voxelytics_dao::chunk_statistics(&state.pool, &run_ids, task_name, vx.stale_timeout)
+            .await?;
     Ok(Json(entries))
 }
 
@@ -961,7 +982,7 @@ async fn artifact_checksums(
     user: AuthUser,
     Path(workflow_hash): Path<String>,
     Query(query): Query<StatisticsQuery>,
-) -> ApiResult<Json<Vec<dao::ArtifactChecksumEntry>>> {
+) -> ApiResult<Json<Vec<voxelytics_dao::ArtifactChecksumEntry>>> {
     let run_id = optional_run_id(query.run_id.as_deref())?;
     let task_name = required_task_name(&query)?;
     ensure_enabled(&misc)?;
@@ -969,7 +990,7 @@ async fn artifact_checksums(
         statistics_runs(&state.pool, &user, &workflow_hash, run_id, vx.stale_timeout).await?;
     // Deviation: without artifactName Play generated invalid SQL (`WHERE ORDER BY`);
     // here all artifacts of the task are returned.
-    let entries = dao::artifact_checksums(
+    let entries = voxelytics_dao::artifact_checksums(
         &state.pool,
         &run_ids,
         task_name,
@@ -1047,7 +1068,7 @@ async fn get_logs(
     ensure_enabled(&misc)?;
     // Same visibility as the other workflow read endpoints (allowUnlisted): all
     // runs of the user's organization (?~> runNotFound ~> 404).
-    let run_name = dao::run_name_by_id(&state.pool, &run_id, &user.organization_id)
+    let run_name = voxelytics_dao::run_name_by_id(&state.pool, &run_id, &user.organization_id)
         .await?
         .ok_or_else(|| ApiError::not_found(RUN_NOT_FOUND))?;
     let min_level = query

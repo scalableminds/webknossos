@@ -6,7 +6,7 @@
 //!
 //! Both are UserAwareActions (anonymous requesters may download what they can
 //! read). Responses are buffered in memory (Scala writes a temporary file).
-mod dao;
+mod annotation_download_dao;
 
 use axum::extract::FromRef;
 use std::{
@@ -387,7 +387,7 @@ impl DatasetRow {
 
 /// UserService.findOneCached under GlobalAccessContext: the owner's MultiUser id.
 async fn find_user_multi_user(pool: &PgPool, user_id: &ObjectId) -> ApiResult<Option<ObjectId>> {
-    Ok(crate::annotation::dao::find_multi_user_id(pool, user_id).await?)
+    Ok(crate::annotation::annotation_dao::find_multi_user_id(pool, user_id).await?)
 }
 
 /// MultiUserDAO.findOne: (firstName, lastName), `None` when unreadable.
@@ -399,7 +399,7 @@ async fn find_multi_user(
     if !readable {
         return Ok(None);
     }
-    Ok(dao::find_multi_user_names(pool, multi_user_id).await?)
+    Ok(annotation_download_dao::find_multi_user_names(pool, multi_user_id).await?)
 }
 
 /// MultiUser.abbreviatedName.
@@ -466,7 +466,8 @@ async fn name_for_annotation(
             .unwrap_or_default(),
         None => String::new(),
     };
-    let Some(dataset) = dao::find_dataset(pool, annotation.dataset_id).await? else {
+    let Some(dataset) = annotation_download_dao::find_dataset(pool, annotation.dataset_id).await?
+    else {
         return Ok(None);
     };
     let task = annotation.task_id.map_or("explorational", ObjectId::as_str);
@@ -571,14 +572,14 @@ async fn download_saved(
         .await
         .map_err(|error| provider_failure(error).wrap(RESTRICTIONS_NOT_FOUND))?;
     let name = name_for(context, annotation).await?;
-    let layers = dao::find_all_layers(context.pool(), &annotation.id).await?;
+    let layers = annotation_download_dao::find_all_layers(context.pool(), &annotation.id).await?;
     let skeleton_only = layers.iter().any(|layer| layer.typ == "Skeleton")
         && !layers.iter().any(|layer| layer.typ == "Volume");
     // Fox.assertTrue(restrictions.allowDownload(user)) ?~> notAllowed ~> FORBIDDEN.
     if !restrictions.allow_download {
         return Err(Failure::with_status(DOWNLOAD_NOT_ALLOWED, StatusCode::FORBIDDEN).into());
     }
-    let dataset = dao::find_dataset(context.pool(), &annotation.dataset_id)
+    let dataset = annotation_download_dao::find_dataset(context.pool(), &annotation.dataset_id)
         .await?
         .ok_or_else(|| {
             RunError::from(Failure::with_status(
@@ -589,7 +590,8 @@ async fn download_saved(
                 StatusCode::NOT_FOUND,
             ))
         })?;
-    if !crate::organization::dao::exists(context.pool(), &dataset.organization).await? {
+    if !crate::organization::organization_dao::exists(context.pool(), &dataset.organization).await?
+    {
         return Err(Failure::with_status(
             crate::msg::organization::not_found(&dataset.organization),
             StatusCode::NOT_FOUND,
@@ -748,7 +750,9 @@ async fn skeleton_to_file(
     // access context; an unreadable task is Fox.empty.
     let task_id = match &download.annotation.task_id {
         Some(task_id) => {
-            if !dao::task_exists(context.pool(), task_id, Some(context.user)).await? {
+            if !annotation_download_dao::task_exists(context.pool(), task_id, Some(context.user))
+                .await?
+            {
                 return Err(fail(TASK_NOT_FOUND));
             }
             Some(task_id)
@@ -818,7 +822,7 @@ async fn volume_or_hybrid_to_file(
         .ok_or_else(|| fail(crate::msg::user::NOT_FOUND_NO_ID))?;
     let task_id = match &download.annotation.task_id {
         Some(task_id) => {
-            if !dao::task_exists(context.pool(), task_id, None).await? {
+            if !annotation_download_dao::task_exists(context.pool(), task_id, None).await? {
                 return Err(fail(TASK_NOT_FOUND));
             }
             Some(task_id)
@@ -996,17 +1000,22 @@ async fn download_compound(
     let pool = context.pool();
     let (annotations, zip_name) = match typ {
         AnnotationType::CompoundProject => {
-            let (team, name) = dao::find_project(pool, user, id).await?.ok_or_else(|| {
-                RunError::from(Failure::with_status(
-                    crate::msg::project::not_found(id),
-                    StatusCode::NOT_FOUND,
-                ))
-            })?;
+            let (team, name) = annotation_download_dao::find_project(pool, user, id)
+                .await?
+                .ok_or_else(|| {
+                    RunError::from(Failure::with_status(
+                        crate::msg::project::not_found(id),
+                        StatusCode::NOT_FOUND,
+                    ))
+                })?;
             assert_team_manager_or_admin(pool, user, &team).await?;
-            (dao::finished_project_annotations(pool, id).await?, name)
+            (
+                annotation_download_dao::finished_project_annotations(pool, id).await?,
+                name,
+            )
         }
         AnnotationType::CompoundTask => {
-            let project = dao::find_task_project(pool, user, id)
+            let project = annotation_download_dao::find_task_project(pool, user, id)
                 .await?
                 .ok_or_else(|| {
                     RunError::from(Failure::with_status(
@@ -1014,7 +1023,7 @@ async fn download_compound(
                         StatusCode::NOT_FOUND,
                     ))
                 })?;
-            let (team, _) = dao::find_project(pool, user, &project)
+            let (team, _) = annotation_download_dao::find_project(pool, user, &project)
                 .await?
                 .ok_or_else(|| {
                     RunError::from(Failure::with_status(
@@ -1024,21 +1033,28 @@ async fn download_compound(
                 })?;
             assert_team_manager_or_admin(pool, user, &team).await?;
             (
-                dao::finished_task_annotations(pool, user, std::slice::from_ref(id)).await?,
+                annotation_download_dao::finished_task_annotations(
+                    pool,
+                    user,
+                    std::slice::from_ref(id),
+                )
+                .await?,
                 id.to_string(),
             )
         }
         AnnotationType::CompoundTaskType => {
-            let (team, summary) = dao::find_task_type(pool, user, id).await?.ok_or_else(|| {
-                RunError::from(Failure::with_status(
-                    crate::msg::task_type::not_found(id),
-                    StatusCode::NOT_FOUND,
-                ))
-            })?;
+            let (team, summary) = annotation_download_dao::find_task_type(pool, user, id)
+                .await?
+                .ok_or_else(|| {
+                    RunError::from(Failure::with_status(
+                        crate::msg::task_type::not_found(id),
+                        StatusCode::NOT_FOUND,
+                    ))
+                })?;
             assert_team_manager_or_admin(pool, user, &team).await?;
-            let tasks = dao::task_type_tasks(pool, user, id).await?;
+            let tasks = annotation_download_dao::task_type_tasks(pool, user, id).await?;
             (
-                dao::finished_task_annotations(pool, user, &tasks).await?,
+                annotation_download_dao::finished_task_annotations(pool, user, &tasks).await?,
                 summary,
             )
         }
@@ -1065,7 +1081,8 @@ async fn assert_team_manager_or_admin(
     user: &AuthUser,
     team_id: &ObjectId,
 ) -> RunResult<()> {
-    let team = crate::annotation::dao::find_team_with_manager_flag(pool, user, team_id).await?;
+    let team =
+        crate::annotation::annotation_dao::find_team_with_manager_flag(pool, user, team_id).await?;
     match team {
         None => Err(Failure::new(crate::msg::team::ADMIN_NOT_ALLOWED)
             .wrap(crate::msg::NOT_ALLOWED)
@@ -1120,13 +1137,13 @@ async fn download_annotations_for_dataset<'a>(
 ) -> RunResult<Vec<DownloadAnnotation<'a>>> {
     let pool = context.pool();
     let tracing_store = &context.services.tracing_store;
-    let dataset = dao::find_readable_dataset(pool, user, dataset_id)
+    let dataset = annotation_download_dao::find_readable_dataset(pool, user, dataset_id)
         .await?
         .ok_or_else(empty)?;
     let voxel_size = dataset.voxel_size();
     let mut layers = Vec::with_capacity(group.len());
     for row in group {
-        layers.push(dao::find_all_layers(pool, &row.id).await?);
+        layers.push(annotation_download_dao::find_all_layers(pool, &row.id).await?);
     }
     let skeleton_ids = layers
         .iter()
@@ -1217,7 +1234,8 @@ async fn single_download_annotation<'a>(
 ) -> RunResult<DownloadAnnotation<'a>> {
     let pool = context.pool();
     // userService.findOneCached under UserDAO read access ?~> Msg.User.notFound
-    let multi_user = dao::find_multi_user_id_readable(pool, user, &row.owner_id).await?;
+    let multi_user =
+        annotation_download_dao::find_multi_user_id_readable(pool, user, &row.owner_id).await?;
     let multi_user = multi_user.ok_or_else(|| fail(crate::msg::user::NOT_FOUND_NO_ID))?;
     let owner_name = find_multi_user(pool, &multi_user, true)
         .await?
@@ -1225,7 +1243,7 @@ async fn single_download_annotation<'a>(
         .ok_or_else(empty)?;
     let task_id = match &row.task_id {
         Some(task_id) => {
-            if !dao::task_exists(pool, task_id, Some(Some(user))).await? {
+            if !annotation_download_dao::task_exists(pool, task_id, Some(Some(user))).await? {
                 return Err(fail(TASK_NOT_FOUND));
             }
             Some(task_id)
@@ -1241,12 +1259,13 @@ async fn single_download_annotation<'a>(
     let name = name_for_annotation(pool, parts, true)
         .await?
         .ok_or_else(empty)?;
-    let dataset = dao::find_readable_dataset(pool, user, &row.dataset_id)
+    let dataset = annotation_download_dao::find_readable_dataset(pool, user, &row.dataset_id)
         .await?
         .ok_or_else(empty)?;
-    let organization_id = dao::find_organization_id_for_annotation(pool, &row.id)
-        .await?
-        .ok_or_else(empty)?;
+    let organization_id =
+        annotation_download_dao::find_organization_id_for_annotation(pool, &row.id)
+            .await?
+            .ok_or_else(empty)?;
     Ok(DownloadAnnotation {
         row,
         skeleton_id,

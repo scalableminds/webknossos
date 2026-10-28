@@ -18,9 +18,9 @@
 //! `UploadedVolumeLayer::data_zip_location` and in the names of NMLs from nested
 //! zips when `useZipName` is set, where Scala exposes its temp-file path).
 
-mod dao;
+mod annotation_upload_service_dao;
 
-use dao::DatasetRow;
+use annotation_upload_service_dao::DatasetRow;
 use std::collections::{BTreeMap, HashMap};
 use std::future::Future;
 use std::io::{Cursor, Read};
@@ -645,7 +645,8 @@ pub async fn find_readable_dataset(
     user_id: &ObjectId,
     dataset_id: &ObjectId,
 ) -> ApiResult<Option<DatasetRef>> {
-    let row = dao::find_readable_dataset(pool, user_id, dataset_id).await?;
+    let row =
+        annotation_upload_service_dao::find_readable_dataset(pool, user_id, dataset_id).await?;
     Ok(row.map(dataset_ref))
 }
 
@@ -667,19 +668,24 @@ pub async fn find_one_by_id_or_name_and_organization(
             .await?
             .ok_or_else(|| crate::msg::dataset::not_found(dataset_id)));
     }
-    let by_directory_name = dao::find_one_by_directory_name_and_organization(
+    let by_directory_name =
+        annotation_upload_service_dao::find_one_by_directory_name_and_organization(
+            pool,
+            user_id,
+            dataset_name,
+            organization_id,
+        )
+        .await?;
+    if let Some(row) = by_directory_name {
+        return Ok(Ok(dataset_ref(row)));
+    }
+    let mut by_name = annotation_upload_service_dao::find_up_to_two_by_name_and_organization(
         pool,
         user_id,
         dataset_name,
         organization_id,
     )
     .await?;
-    if let Some(row) = by_directory_name {
-        return Ok(Ok(dataset_ref(row)));
-    }
-    let mut by_name =
-        dao::find_up_to_two_by_name_and_organization(pool, user_id, dataset_name, organization_id)
-            .await?;
     Ok(match by_name.len() {
         0 => Err(crate::msg::dataset::not_found_by_name(dataset_name)),
         1 => Ok(dataset_ref(by_name.remove(0))),
@@ -973,7 +979,8 @@ pub async fn find_dataset_for_uploaded_annotations(
     let wrong_host = !wk_url.is_empty() && this_host != wk_url;
     let organization_id = match organization_id {
         Some(organization_id) => {
-            let exists = crate::organization::dao::exists(pool, &organization_id).await?;
+            let exists =
+                crate::organization::organization_dao::exists(pool, &organization_id).await?;
             if !exists {
                 return Err(ApiError::not_found(if wrong_host {
                     msg_organization_not_found_wrong_host(&organization_id, wk_url, this_host)
@@ -983,7 +990,7 @@ pub async fn find_dataset_for_uploaded_annotations(
             }
             organization_id
         }
-        None => dao::find_organization_id_for_dataset(pool, &dataset_id)
+        None => annotation_upload_service_dao::find_organization_id_for_dataset(pool, &dataset_id)
             .await?
             .ok_or_else(|| ApiError::forbidden(crate::msg::dataset::not_found(&dataset_id)))?,
     };

@@ -150,9 +150,11 @@ async fn compose(
         status_opt: None,
     };
     let mut transaction = state.pool.begin().await?;
-    let store =
-        crate::dataset::dao::find_upload_store_name(&mut transaction, &user.organization_id)
-            .await?;
+    let store = crate::dataset::dataset_dao::find_upload_store_name(
+        &mut transaction,
+        &user.organization_id,
+    )
+    .await?;
     let store = store.ok_or_else(failed)?;
     let id = crate::dataset::create::set_up_dataset(
         &mut transaction,
@@ -219,7 +221,8 @@ async fn save(
 ) -> ApiResult<()> {
     let mut transaction = state.pool.begin().await?;
     crate::dataset::access::lock_edit(&mut transaction, user, &target.id, true).await?;
-    crate::dataset::dao::update_voxel_size_usable(&mut transaction, &target.id, source).await?;
+    crate::dataset::dataset_dao::update_voxel_size_usable(&mut transaction, &target.id, source)
+        .await?;
     crate::dataset::source::write_layers(&mut transaction, &target.id, &source.data_layers).await?;
     transaction.commit().await?;
     crate::dataset::lifecycle::invalidate_cache(clients, target).await

@@ -1,7 +1,7 @@
 //! Database-backed annotation lists and AnnotationService public serialization.
-mod dao;
+mod annotation_lists_dao;
 
-pub(crate) use dao::push_list_grant;
+pub(crate) use annotation_lists_dao::push_list_grant;
 
 use crate::{
     AppState,
@@ -69,8 +69,10 @@ async fn compact_list(
     shared: bool,
 ) -> ApiResult<Value> {
     let (limit, offset) = filters.pagination()?;
-    let values =
-        dao::find_all_compact(connection, user, owner, filters, shared, limit, offset).await?;
+    let values = annotation_lists_dao::find_all_compact(
+        connection, user, owner, filters, shared, limit, offset,
+    )
+    .await?;
     Ok(Value::Array(values))
 }
 /// Planning the list statements (permission predicates) takes 5-8 ms, several times their
@@ -90,7 +92,7 @@ async fn compact_response(
     let value = compact_list(&mut transaction, user, owner, filters, shared).await?;
     let total = if filters.include_total_count == Some(true) {
         Some(
-            dao::count(
+            annotation_lists_dao::count(
                 &mut transaction,
                 user,
                 owner,
@@ -107,7 +109,7 @@ async fn compact_response(
     Ok((headers(total)?, Json(value)))
 }
 async fn activity(pool: &PgPool, user: &AuthUser) -> ApiResult<()> {
-    crate::users::dao::update_last_activity(pool, &user.id).await?;
+    crate::users::users_dao::update_last_activity(pool, &user.id).await?;
     Ok(())
 }
 async fn own_annotations(
@@ -133,7 +135,7 @@ async fn readable(
     Ok(result)
 }
 async fn assert_editable_user(pool: &PgPool, user: &AuthUser, id: &ObjectId) -> ApiResult<()> {
-    let access = dao::find_user_access(pool, user, id).await?;
+    let access = annotation_lists_dao::find_user_access(pool, user, id).await?;
     match access {
         None => Err(ApiError::not_found(crate::msg::user::not_found(id))),
         Some((true, _)) | Some((_, true)) => Ok(()),
@@ -176,7 +178,7 @@ pub(crate) async fn full_json_for(
 ) -> ApiResult<Value> {
     let metadata = crate::annotation::access::find(&mut *connection, user, id, true).await?;
     let viewer = user.map(|user| &user.id);
-    let mut value: Value = dao::find_full_json(connection, viewer, id)
+    let mut value: Value = annotation_lists_dao::find_full_json(connection, viewer, id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::annotation::DATASET_MISSING))?;
     if value["tracingStore"].is_null() {
@@ -189,7 +191,7 @@ pub(crate) async fn full_json_for(
     };
     value["owner"] = owner.clone();
     value["user"] = owner;
-    let contributor_ids = dao::find_contributor_ids(connection, id).await?;
+    let contributor_ids = annotation_lists_dao::find_contributor_ids(connection, id).await?;
     let mut contributors = Vec::new();
     for id in contributor_ids {
         contributors.push(compact_user(connection, &id).await?);
@@ -197,7 +199,8 @@ pub(crate) async fn full_json_for(
     value["contributors"] = Value::Array(contributors);
     let restrictions = crate::annotation::access::restrictions(&metadata, user);
     value["restrictions"] = restrictions.public_json();
-    let datastore = dao::find_dataset_data_store(connection, &metadata.dataset_id).await?;
+    let datastore =
+        annotation_lists_dao::find_dataset_data_store(connection, &metadata.dataset_id).await?;
     value["dataStore"] = json!(
         crate::dataset::routes::public_datastore_on_connection(
             connection,
@@ -229,7 +232,7 @@ pub(crate) fn default_settings(skeleton: bool) -> Value {
     json!({"allowedModes":if skeleton{json!(["orthogonal","flight"])}else{json!(["orthogonal"])},"branchPointsAllowed":true,"somaClickingAllowed":true,"volumeInterpolationAllowed":true,"mergerMode":false,"magRestrictions":{}})
 }
 pub(crate) async fn compact_user(connection: &mut PgConnection, id: &ObjectId) -> ApiResult<Value> {
-    dao::find_compact_user(connection, id)
+    annotation_lists_dao::find_compact_user(connection, id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::annotation::USER_MISSING))
 }
@@ -248,10 +251,13 @@ async fn task_list(
         include_total_count: filters.include_total_count,
     };
     let (limit, offset) = filters.pagination()?;
-    let ids = dao::find_all_task_annotation_ids(pool, user, owner, &filters, limit, offset).await?;
+    let ids = annotation_lists_dao::find_all_task_annotation_ids(
+        pool, user, owner, &filters, limit, offset,
+    )
+    .await?;
     let total = if filters.include_total_count == Some(true) {
         Some(
-            dao::count(
+            annotation_lists_dao::count(
                 &mut *pool.acquire().await?,
                 user,
                 Some(owner),
@@ -299,13 +305,14 @@ async fn task_annotations(
     State(JobsEnabled(jobs)): State<JobsEnabled>,
 ) -> ApiResult<Json<Value>> {
     let id = ObjectId::parse_path(&id)?;
-    let team = dao::find_task_team(&state.pool, &user, &id)
+    let team = annotation_lists_dao::find_task_team(&state.pool, &user, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::task::MISSING))?;
     if !user.can_manage_team(&state.pool, &team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let ids = dao::find_all_annotation_ids_for_task(&state.pool, &user, &id).await?;
+    let ids =
+        annotation_lists_dao::find_all_annotation_ids_for_task(&state.pool, &user, &id).await?;
     let mut connection = state.pool.acquire().await?;
     let mut values = Vec::new();
     for id in ids {

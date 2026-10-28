@@ -4,7 +4,7 @@ use sqlx::{PgConnection, PgPool};
 
 use crate::{
     auth::AuthUser,
-    dataset::{dao::push_read_predicate, source::UsableDataSource},
+    dataset::{dataset_dao::push_read_predicate, source::UsableDataSource},
     remote::datastore::{attachment_upload::push_attachment_key, mag_upload::push_mag_predicate},
     sql::Sql,
     util::id::ObjectId,

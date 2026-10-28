@@ -10,7 +10,7 @@ pub(crate) use webknossos_common::datasource::{
 
 use webknossos_common::enums::LayerAttachmentType;
 
-use super::dao;
+use super::dataset_dao;
 use crate::error::{ApiError, ApiResult};
 use crate::util::id::ObjectId;
 
@@ -92,17 +92,17 @@ pub(crate) async fn write_layers(
     layers: &[StaticLayer],
 ) -> ApiResult<()> {
     let names: Vec<&str> = layers.iter().map(|l| l.name.as_str()).collect();
-    dao::delete_layers_not_in(connection, dataset_id, &names).await?;
+    dataset_dao::delete_layers_not_in(connection, dataset_id, &names).await?;
     for layer in layers {
-        dao::upsert_layer(connection, dataset_id, layer).await?;
+        dataset_dao::upsert_layer(connection, dataset_id, layer).await?;
     }
-    dao::delete_settled_mags(connection, dataset_id).await?;
+    dataset_dao::delete_settled_mags(connection, dataset_id).await?;
     for layer in layers {
         for mag in &layer.mags {
-            dao::insert_mag(connection, dataset_id, &layer.name, mag).await?;
+            dataset_dao::insert_mag(connection, dataset_id, &layer.name, mag).await?;
         }
     }
-    dao::delete_coordinate_transformations(connection, dataset_id).await?;
+    dataset_dao::delete_coordinate_transformations(connection, dataset_id).await?;
     for layer in layers {
         for (index, transform) in layer
             .coordinate_transformations
@@ -113,7 +113,7 @@ pub(crate) async fn write_layers(
             // Json.toJson(None) is a JSON null, not SQL NULL.
             let rendered = serde_json::json!(transform);
             let written = |key: &str| rendered.get(key).cloned().unwrap_or(Value::Null);
-            dao::insert_coordinate_transformation(
+            dataset_dao::insert_coordinate_transformation(
                 connection,
                 dataset_id,
                 &layer.name,
@@ -125,21 +125,29 @@ pub(crate) async fn write_layers(
             .await?;
         }
     }
-    dao::delete_settled_attachments(connection, dataset_id).await?;
+    dataset_dao::delete_settled_attachments(connection, dataset_id).await?;
     for layer in layers {
         for (typ, attachment) in layer.attachments.iter().flat_map(typed_attachments) {
-            dao::insert_attachment(connection, dataset_id, &layer.name, typ, attachment).await?;
+            dataset_dao::insert_attachment(connection, dataset_id, &layer.name, typ, attachment)
+                .await?;
         }
     }
-    dao::delete_additional_axes(connection, dataset_id).await?;
+    dataset_dao::delete_additional_axes(connection, dataset_id).await?;
     for layer in layers {
         for axis in layer.additional_axes.iter().flatten() {
             // AdditionalAxis.lowerBound/upperBound index into the bounds array.
             let (Some(lower), Some(upper)) = (axis.lower_bound(), axis.upper_bound()) else {
                 return Err(ApiError::internal());
             };
-            dao::insert_additional_axis(connection, dataset_id, &layer.name, axis, lower, upper)
-                .await?;
+            dataset_dao::insert_additional_axis(
+                connection,
+                dataset_id,
+                &layer.name,
+                axis,
+                lower,
+                upper,
+            )
+            .await?;
         }
     }
     Ok(())

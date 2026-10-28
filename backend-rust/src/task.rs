@@ -1,9 +1,9 @@
 pub mod assignment;
 pub mod creation;
 pub mod creation_from_files;
-pub(crate) mod dao;
 pub mod request;
 pub mod routes;
+pub(crate) mod task_dao;
 pub mod types;
 
 use crate::AppState;

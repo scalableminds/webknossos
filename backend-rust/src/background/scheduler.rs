@@ -240,9 +240,9 @@ pub const fn advisory_lock_key(name: &str) -> i64 {
     hash as i64
 }
 
-mod dao;
+mod background_scheduler_dao;
 
-pub use dao::try_advisory_xact_lock;
+pub use background_scheduler_dao::try_advisory_xact_lock;
 
 #[cfg(test)]
 mod tests;

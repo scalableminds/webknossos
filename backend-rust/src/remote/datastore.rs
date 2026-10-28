@@ -21,11 +21,11 @@
 
 pub mod attachment_upload;
 pub mod credentials;
-pub(crate) mod dao;
 pub mod dataset_report;
 pub mod dataset_upload;
 pub mod lookup;
 pub mod mag_upload;
+pub(crate) mod remote_datastore_dao;
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -74,7 +74,7 @@ pub fn router() -> Router<AppState> {
 
 // ---------------------------------------------------------------- access
 
-pub(crate) use dao::{DataStoreRecord, FoundDataset};
+pub(crate) use remote_datastore_dao::{DataStoreRecord, FoundDataset};
 
 /// DataStoreService.validateAccess: the `{name}` path parameter and the `key`
 /// query parameter must match a non-deleted datastore. Place it after the
@@ -100,7 +100,7 @@ impl FromRequestParts<AppState> for ValidatedDataStore {
         let Query(query) = Query::<KeyQuery>::from_request_parts(parts, state)
             .await
             .map_err(IntoResponse::into_response)?;
-        match dao::find_one_by_name_and_key(&state.pool, name, &query.key).await {
+        match remote_datastore_dao::find_one_by_name_and_key(&state.pool, name, &query.key).await {
             Ok(Some(store)) => Ok(Self(store)),
             Ok(None) => Err(forbidden_response()),
             Err(error) => Err(ApiError::from(error).into_response()),
@@ -143,7 +143,7 @@ async fn status_update(
         "Status update from data store. Status {}",
         if body.ok { "ok" } else { "not ok" }
     );
-    dao::update_url(&state.pool, &store.name, &body.url).await?;
+    remote_datastore_dao::update_url(&state.pool, &store.name, &body.url).await?;
     Ok(StatusCode::OK)
 }
 
@@ -263,7 +263,7 @@ async fn apply_report(
     let mut existing_ids: Vec<ObjectId> = Vec::new();
     let mut updated_ids: Vec<ObjectId> = Vec::new();
     for (organization, entries) in by_organization {
-        let exists = crate::organization::dao::exists(&mut *tx, &organization).await?;
+        let exists = crate::organization::organization_dao::exists(&mut *tx, &organization).await?;
         if !exists {
             tracing::info!(
                 "Ignoring {} reported datasets for non-existing organization {organization}",
@@ -287,7 +287,9 @@ async fn apply_report(
             .iter()
             .map(|e| e.data_source.id().directory_name.as_str())
             .collect();
-        let found = dao::find_all_by_directory_names(&mut tx, &names, &organization).await?;
+        let found =
+            remote_datastore_dao::find_all_by_directory_names(&mut tx, &names, &organization)
+                .await?;
         let mut by_name: HashMap<&str, &FoundDataset> = HashMap::new();
         for dataset in &found {
             by_name
@@ -311,7 +313,7 @@ async fn apply_report(
                             id.organization_id,
                             id.directory_name
                         );
-                        let found = dao::find_one_by_directory_name(
+                        let found = remote_datastore_dao::find_one_by_directory_name(
                             &mut tx,
                             &id.directory_name,
                             &id.organization_id,
@@ -327,8 +329,13 @@ async fn apply_report(
         }
     }
     if let Some(organization) = deactivate_unreported {
-        dao::deactivate_unreported(&mut tx, &existing_ids, &store.name, organization.as_deref())
-            .await?;
+        remote_datastore_dao::deactivate_unreported(
+            &mut tx,
+            &existing_ids,
+            &store.name,
+            organization.as_deref(),
+        )
+        .await?;
     }
     tx.commit().await?;
     // notifyDatastoreOnUpdate, after the commit. All are attempted; the first
@@ -401,8 +408,8 @@ async fn replace_data_source(
     hash: i32,
     entry: &DataSourceWithRootPathInfo,
 ) -> ApiResult<()> {
-    dao::delete_thumbnails(connection, id).await?;
-    dao::increment_thumbnail_cache_version(connection, id).await?;
+    remote_datastore_dao::delete_thumbnails(connection, id).await?;
+    remote_datastore_dao::increment_thumbnail_cache_version(connection, id).await?;
     write_data_source(
         connection,
         id,
@@ -425,9 +432,11 @@ pub(crate) async fn write_data_source(
     root_path: Option<&str>,
     root_real_path: Option<&str>,
 ) -> ApiResult<()> {
-    let organization = dao::find_organization_id(connection, &source.id().organization_id).await?;
+    let organization =
+        remote_datastore_dao::find_organization_id(connection, &source.id().organization_id)
+            .await?;
     let organization = organization.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
-    dao::update_data_source(
+    remote_datastore_dao::update_data_source(
         connection,
         id,
         store_name,
@@ -475,7 +484,7 @@ async fn create_disk_scan_dataset(
         return Ok(None);
     }
     // createDataset stores the hash only for usable data sources.
-    dao::update_inbox_source(
+    remote_datastore_dao::update_inbox_source(
         connection,
         &id,
         source.is_usable().then_some(hash),
@@ -520,7 +529,7 @@ async fn update_real_paths(
     }
     let mut tx = state.pool.begin().await?;
     for (source_id, mags, attachments) in parsed {
-        let dataset = dao::find_dataset_id_by_directory_name(
+        let dataset = remote_datastore_dao::find_dataset_id_by_directory_name(
             &mut tx,
             &source_id.directory_name,
             &source_id.organization_id,
@@ -534,8 +543,15 @@ async fn update_real_paths(
             ("dataset_layer_attachments", &attachments),
         ] {
             for (path, real_path, has_local_data) in infos {
-                dao::update_real_path(&mut tx, table, &dataset, path, real_path, *has_local_data)
-                    .await?;
+                remote_datastore_dao::update_real_path(
+                    &mut tx,
+                    table,
+                    &dataset,
+                    path,
+                    real_path,
+                    *has_local_data,
+                )
+                .await?;
             }
         }
     }
@@ -551,7 +567,7 @@ async fn get_data_source(
     Path((_name, id)): Path<(String, PathObjectId)>,
     ValidatedDataStore(_store): ValidatedDataStore,
 ) -> ApiResult<ResponseJson<Value>> {
-    let row = dao::find_usable_flags(&state.pool, &id).await?;
+    let row = remote_datastore_dao::find_usable_flags(&state.pool, &id).await?;
     let (is_usable, has_voxel_size) =
         row.ok_or_else(|| crate::dataset::lifecycle::not_found(&id))?;
     if is_usable && !has_voxel_size {
@@ -573,7 +589,7 @@ async fn update_data_source(
 ) -> ApiResult<StatusCode> {
     let source = DataSource::from_json(&body).map_err(|_| invalid_body())?;
     let mut tx = state.pool.begin().await?;
-    let is_virtual = dao::find_is_virtual_for_update(&mut tx, &id).await?;
+    let is_virtual = remote_datastore_dao::find_is_virtual_for_update(&mut tx, &id).await?;
     let is_virtual = is_virtual.ok_or_else(|| crate::dataset::lifecycle::not_found(&id))?;
     if !is_virtual {
         let hash = crate::dataset::source::inbox_source_hash(&source);

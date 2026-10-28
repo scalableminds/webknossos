@@ -1,4 +1,4 @@
-//! FolderController: request handling and response shaping. SQL lives in `super::dao`.
+//! FolderController: request handling and response shaping. SQL lives in `super::folders_dao`.
 use std::collections::HashSet;
 
 use axum::{
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sqlx::{PgConnection, Postgres, Transaction};
 
-use super::dao::{self, Folder, FolderTeam};
+use super::folders_dao::{self, Folder, FolderTeam};
 use crate::{
     AppState,
     auth::AuthUser,
@@ -77,13 +77,13 @@ async fn organization_root(
     user: &AuthUser,
     lock: bool,
 ) -> ApiResult<ObjectId> {
-    dao::organization_root(connection, &user.organization_id, lock)
+    folders_dao::organization_root(connection, &user.organization_id, lock)
         .await?
         .ok_or_else(|| ApiError::bad_request(FOLDER_NOT_FOUND))
 }
 
 async fn load(connection: &mut PgConnection, id: &ObjectId) -> ApiResult<Folder> {
-    dao::find_one(connection, id)
+    folders_dao::find_one(connection, id)
         .await?
         .ok_or_else(|| ApiError::bad_request(FOLDER_NOT_FOUND))
 }
@@ -93,7 +93,7 @@ async fn readable(
     user: &AuthUser,
     id: &ObjectId,
 ) -> ApiResult<Folder> {
-    if !dao::has_access(connection, user, id, false).await? {
+    if !folders_dao::has_access(connection, user, id, false).await? {
         return Err(ApiError::bad_request(FOLDER_NOT_FOUND));
     }
     load(connection, id).await
@@ -104,7 +104,7 @@ async fn assert_editable(
     user: &AuthUser,
     id: &ObjectId,
 ) -> ApiResult<()> {
-    if !dao::has_access(connection, user, id, true).await? {
+    if !folders_dao::has_access(connection, user, id, true).await? {
         return Err(ApiError::forbidden(crate::msg::folder::UPDATE_NOT_ALLOWED));
     }
     Ok(())
@@ -115,9 +115,9 @@ async fn public_json(
     user: &AuthUser,
     folder: Folder,
 ) -> ApiResult<FolderJson> {
-    let direct = dao::find_allowed_teams(connection, user, &folder.id, false).await?;
-    let cumulative = dao::find_allowed_teams(connection, user, &folder.id, true).await?;
-    let editable = dao::has_access(connection, user, &folder.id, true).await?;
+    let direct = folders_dao::find_allowed_teams(connection, user, &folder.id, false).await?;
+    let cumulative = folders_dao::find_allowed_teams(connection, user, &folder.id, true).await?;
+    let editable = folders_dao::has_access(connection, user, &folder.id, true).await?;
     Ok(FolderJson {
         folder,
         allowed_teams: direct,
@@ -150,12 +150,13 @@ async fn tree(
 ) -> ApiResult<Json<Vec<FolderTreeEntry>>> {
     let mut connection = state.pool.acquire().await?;
     let root = organization_root(&mut connection, &user, false).await?;
-    let folders = dao::find_subtree(&mut connection, &root).await?;
+    let folders = folders_dao::find_subtree(&mut connection, &root).await?;
     let mut output = Vec::new();
     for folder in folders {
-        if dao::has_access(&mut connection, &user, &folder.id, false).await? {
-            let parent = dao::find_parent(&mut connection, &folder.id).await?;
-            let editable = dao::has_access(&mut connection, &user, &folder.id, true).await?;
+        if folders_dao::has_access(&mut connection, &user, &folder.id, false).await? {
+            let parent = folders_dao::find_parent(&mut connection, &folder.id).await?;
+            let editable =
+                folders_dao::has_access(&mut connection, &user, &folder.id, true).await?;
             output.push(FolderTreeEntry {
                 folder,
                 parent,
@@ -186,7 +187,7 @@ async fn create(
     readable(&mut transaction, &user, &query.parent_id).await?;
     assert_editable(&mut transaction, &user, &query.parent_id).await?;
     let id = ObjectId::new();
-    dao::insert_as_child(&mut transaction, &query.parent_id, &id, &query.name).await?;
+    folders_dao::insert_as_child(&mut transaction, &query.parent_id, &id, &query.name).await?;
     let folder = load(&mut transaction, &id).await?;
     let response = public_json(&mut transaction, &user, folder).await?;
     transaction.commit().await?;
@@ -207,16 +208,17 @@ async fn update(
     validate_metadata(&body.metadata)?;
     // Preserve grants to teams this user cannot manage. Dataset managers can manage
     // their memberships; admins can manage all teams in their organization.
-    let grantable = dao::find_grantable_team_ids(&mut transaction, &user).await?;
-    dao::remove_allowed_teams(&mut transaction, &id, &grantable).await?;
+    let grantable = folders_dao::find_grantable_team_ids(&mut transaction, &user).await?;
+    folders_dao::remove_allowed_teams(&mut transaction, &id, &grantable).await?;
     let grantable: HashSet<_> = grantable.into_iter().collect();
     let mut seen = HashSet::new();
     for team in &body.allowed_teams {
         if grantable.contains(team) && seen.insert(team) {
-            dao::insert_allowed_team(&mut transaction, &id, team).await?;
+            folders_dao::insert_allowed_team(&mut transaction, &id, team).await?;
         }
     }
-    dao::update_name_and_metadata(&mut transaction, &id, &body.name, &json!(body.metadata)).await?;
+    folders_dao::update_name_and_metadata(&mut transaction, &id, &body.name, &json!(body.metadata))
+        .await?;
     let folder = load(&mut transaction, &id).await?;
     let response = public_json(&mut transaction, &user, folder).await?;
     transaction.commit().await?;
@@ -241,12 +243,12 @@ async fn move_folder(
     readable(&mut transaction, &user, &query.new_parent_id).await?;
     assert_editable(&mut transaction, &user, &id).await?;
     assert_editable(&mut transaction, &user, &query.new_parent_id).await?;
-    if dao::is_descendant(&mut transaction, &id, &query.new_parent_id).await? {
+    if folders_dao::is_descendant(&mut transaction, &id, &query.new_parent_id).await? {
         return Err(ApiError::bad_request(
             crate::msg::folder::MOVE_INTO_DESCENDANT,
         ));
     }
-    dao::move_subtree(&mut transaction, &id, &query.new_parent_id).await?;
+    folders_dao::move_subtree(&mut transaction, &id, &query.new_parent_id).await?;
     let folder = load(&mut transaction, &id).await?;
     let response = public_json(&mut transaction, &user, folder).await?;
     transaction.commit().await?;
@@ -265,17 +267,17 @@ async fn remove(
     }
     readable(&mut transaction, &user, &id).await?;
     assert_editable(&mut transaction, &user, &id).await?;
-    if dao::has_children(&mut transaction, &id).await? {
+    if folders_dao::has_children(&mut transaction, &id).await? {
         return Err(ApiError::bad_request(
             crate::msg::folder::DELETE_NOT_EMPTY_CHILDREN,
         ));
     }
-    if dao::has_datasets(&mut transaction, &id).await? {
+    if folders_dao::has_datasets(&mut transaction, &id).await? {
         return Err(ApiError::bad_request(
             crate::msg::folder::DELETE_NOT_EMPTY_DATASETS,
         ));
     }
-    dao::delete_one(&mut transaction, &id).await?;
+    folders_dao::delete_one(&mut transaction, &id).await?;
     transaction.commit().await?;
     Ok(StatusCode::OK)
 }

@@ -6,7 +6,7 @@ use axum::{
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
-mod dao;
+mod dataset_remote_dao;
 
 use crate::{
     AppState,
@@ -62,7 +62,8 @@ async fn health(
     require_read(&state, user.as_ref(), &id, query.sharing_token.as_deref()).await?;
     // Global datastore lookup after the dataset grant allows public/shared
     // datasets to use a service restricted to another organization.
-    let (usable, has_voxel, base) = dao::find_health_fields(&state.pool, &id).await?;
+    let (usable, has_voxel, base) =
+        dataset_remote_dao::find_health_fields(&state.pool, &id).await?;
     if !usable {
         return Err(unusable(&id));
     }
@@ -96,16 +97,17 @@ async fn clear_thumbnail_cache(
 ) -> ApiResult<()> {
     require_read(&state, Some(&user), &id, None).await?;
     let mut transaction = state.pool.begin().await?;
-    dao::lock_dataset(&mut transaction, &id).await?;
+    dataset_remote_dao::lock_dataset(&mut transaction, &id).await?;
     let readable =
-        crate::dataset::dao::is_readable_on_connection(&mut transaction, &user.id, &id).await?;
+        crate::dataset::dataset_dao::is_readable_on_connection(&mut transaction, &user.id, &id)
+            .await?;
     if !readable {
         return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }
     // Unlike Scala's secured-only handler, require a live readable dataset.
     // Reading is sufficient; this operation changes no dataset settings.
-    dao::delete_thumbnails(&mut transaction, &id).await?;
-    dao::increment_thumbnail_cache_version(&mut transaction, &id).await?;
+    dataset_remote_dao::delete_thumbnails(&mut transaction, &id).await?;
+    dataset_remote_dao::increment_thumbnail_cache_version(&mut transaction, &id).await?;
     transaction.commit().await?;
     Ok(())
 }
@@ -119,12 +121,13 @@ async fn used_storage_details(
     if !crate::dataset::access::can_edit(&state.pool, &user, &id).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let usable = dao::is_usable(&state.pool, &id).await?;
+    let usable = dataset_remote_dao::is_usable(&state.pool, &id).await?;
     if !usable {
         return Err(unusable(&id));
     }
-    let mut rows = dao::find_used_storage_of_mags(&state.pool, &id).await?;
-    let attachments = dao::find_used_storage_of_attachments(&state.pool, &id).await?;
+    let mut rows = dataset_remote_dao::find_used_storage_of_mags(&state.pool, &id).await?;
+    let attachments =
+        dataset_remote_dao::find_used_storage_of_attachments(&state.pool, &id).await?;
     rows.extend(attachments);
     Ok(Json(rows))
 }

@@ -3,7 +3,7 @@
 //! reservation work per annotation with an in-process semaphore; here a
 //! transaction-scoped advisory lock shared with the collaboration-mode change
 //! (`annotation_lifecycle`) serializes across application instances.
-mod dao;
+mod annotation_reservations_dao;
 
 use axum::{
     Json, Router,
@@ -146,7 +146,7 @@ async fn lock_reservations(
     transaction: &mut Transaction<'_, Postgres>,
     id: &ObjectId,
 ) -> ApiResult<()> {
-    crate::annotation::dao::advisory_xact_lock(
+    crate::annotation::annotation_dao::advisory_xact_lock(
         transaction,
         &format!("annotation-reservations:{id}"),
     )
@@ -174,7 +174,7 @@ async fn reserved_ids(
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let mut transaction = state.pool.begin().await?;
     lock_reservations(&mut transaction, &id).await?;
-    let ids = dao::find_all_reserved_ids(
+    let ids = annotation_reservations_dao::find_all_reserved_ids(
         &mut transaction,
         &id,
         &tracing_id,
@@ -213,8 +213,13 @@ async fn reserve_ids(
     if !crate::annotation::access::restrictions(&live, Some(&user)).allow_update {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let largest_reserved =
-        dao::find_largest_reserved_id(&mut transaction, &id, &body.tracing_id, domain).await?;
+    let largest_reserved = annotation_reservations_dao::find_largest_reserved_id(
+        &mut transaction,
+        &id,
+        &body.tracing_id,
+        domain,
+    )
+    .await?;
     let largest_existing = match largest_reserved {
         Some(largest) => largest,
         None => {
@@ -231,7 +236,7 @@ async fn reserve_ids(
         .ok_or_else(|| ApiError::bad_request(ID_RANGE_OVERFLOW))?;
     let reserved: Vec<i64> = (first..end).collect();
     if !reserved.is_empty() {
-        dao::insert_reserved_ids(
+        annotation_reservations_dao::insert_reserved_ids(
             &mut transaction,
             &id,
             &body.tracing_id,
@@ -242,7 +247,7 @@ async fn reserve_ids(
         .await?;
     }
     if !body.ids_to_release.is_empty() {
-        dao::delete_reserved_ids(
+        annotation_reservations_dao::delete_reserved_ids(
             &mut transaction,
             &id,
             &body.tracing_id,

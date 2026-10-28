@@ -7,7 +7,7 @@
 //! golden value produced by the real Silhouette classes.
 
 pub mod account;
-pub(crate) mod dao;
+pub(crate) mod auth_browser_dao;
 pub mod onboarding;
 
 use std::{
@@ -44,7 +44,7 @@ use serde_json::Value;
 use sha1::{Digest, Sha1};
 use sqlx::{PgPool, Postgres, Transaction};
 
-use dao::LoginCandidate;
+use auth_browser_dao::LoginCandidate;
 use webknossos_common::text::hex;
 
 use crate::{
@@ -584,7 +584,7 @@ pub(crate) async fn authenticate_cookie(
         return Ok(CookieOutcome::Absent);
     }
     let row = if ObjectId::parse(&cookie.user_id).is_ok() {
-        dao::find_one_for_cookie(pool, &cookie.user_id).await?
+        auth_browser_dao::find_one_for_cookie(pool, &cookie.user_id).await?
     } else {
         None
     };
@@ -622,7 +622,7 @@ pub(crate) async fn cookie_still_valid(
     user_id: &ObjectId,
     cookie: &CookieAuthenticator,
 ) -> ApiResult<bool> {
-    let row = dao::find_logged_out_everywhere_time_of_active_user(tx, user_id).await?;
+    let row = auth_browser_dao::find_logged_out_everywhere_time_of_active_user(tx, user_id).await?;
     Ok(match row {
         None => false,
         Some((cutoff,)) => {
@@ -938,15 +938,17 @@ pub(crate) async fn create_email_verification(
     config: &BrowserAuthConfig,
     multi_user_id: &ObjectId,
 ) -> ApiResult<Mail> {
-    let (email, first_name, last_name) = dao::find_one_multi_user_name_and_email(tx, multi_user_id)
-        .await?
-        .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
+    let (email, first_name, last_name) =
+        auth_browser_dao::find_one_multi_user_name_and_email(tx, multi_user_id)
+            .await?
+            .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
     let key = random_base64url(32)?;
     let expiry_ms = config
         .email_verification_link_expiry
         .map(|expiry| i64::try_from(expiry.as_millis()).map_err(|_| ApiError::internal()))
         .transpose()?;
-    dao::insert_email_verification_key(tx, &key, &email, multi_user_id, expiry_ms).await?;
+    auth_browser_dao::insert_email_verification_key(tx, &key, &email, multi_user_id, expiry_ms)
+        .await?;
     tracing::info!("Sending email verification mail");
     let link = format!("{}/verifyEmail/{key}", config.public_uri);
     let expiry_text = config.email_verification_link_expiry.map(duration_text);
@@ -978,7 +980,7 @@ async fn login(
     form.finish()?;
     signer_secret(&config)?;
     let email = email.to_lowercase();
-    let candidate = dao::find_login_candidate_by_email(&state.pool, &email).await?;
+    let candidate = auth_browser_dao::find_login_candidate_by_email(&state.pool, &email).await?;
     let invalid = || ApiError::bad_request(crate::msg::user::INVALID_CREDENTIALS);
     let Some(LoginCandidate {
         user_id: Some(user_id),
@@ -1008,7 +1010,7 @@ pub(crate) async fn login_user(
     skip_email_verification: bool,
 ) -> ApiResult<HeaderValue> {
     let mut tx = pool.begin().await?;
-    let row = dao::find_login_state_for_update(
+    let row = auth_browser_dao::find_login_state_for_update(
         &mut tx,
         user_id,
         i64::try_from(config.email_verification_grace_period.as_millis()).unwrap_or(i64::MAX),
@@ -1033,8 +1035,8 @@ pub(crate) async fn login_user(
         mailer.send(mail);
         return Err(ApiError::bad_request(messages::NOT_VERIFIED));
     }
-    dao::update_last_logged_in_identity(&mut tx, &multi_user_id, user_id).await?;
-    crate::users::dao::update_last_activity(&mut *tx, user_id).await?;
+    auth_browser_dao::update_last_logged_in_identity(&mut tx, &multi_user_id, user_id).await?;
+    crate::users::users_dao::update_last_activity(&mut *tx, user_id).await?;
     tx.commit().await?;
     tracing::info!(user = %user_id, "User logged in via password form.");
     Ok(cookie)

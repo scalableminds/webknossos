@@ -1,5 +1,5 @@
 //! Script CRUD with organization-scoped reads and owner-only mutations.
-pub(crate) mod dao;
+pub(crate) mod scripts_dao;
 
 use axum::{Json, Router, extract::State, http::StatusCode, routing::get};
 use serde::{Deserialize, Serialize};
@@ -39,7 +39,7 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<Vec<Script>>> {
-    let scripts = dao::find_all(&state.pool, &user.organization_id).await?;
+    let scripts = scripts_dao::find_all(&state.pool, &user.organization_id).await?;
     Ok(Json(scripts))
 }
 
@@ -49,7 +49,7 @@ async fn find(
     id: &ObjectId,
     lock: bool,
 ) -> ApiResult<Script> {
-    dao::find_one(connection, organization_id, id, lock)
+    scripts_dao::find_one(connection, organization_id, id, lock)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::script::not_found(id)))
 }
@@ -77,7 +77,7 @@ async fn create(
     validate(&body)?;
     let id = ObjectId::new();
     let mut transaction = state.pool.begin().await?;
-    dao::insert_one(&mut transaction, &id, &body.owner, &body.name, &body.gist).await?;
+    scripts_dao::insert_one(&mut transaction, &id, &body.owner, &body.name, &body.gist).await?;
     let script = find(&mut transaction, &user.organization_id, &id, false).await?;
     transaction.commit().await?;
     Ok(Json(script))
@@ -97,13 +97,14 @@ async fn update(
     }
     validate(&body)?;
     let target_exists =
-        dao::is_user_in_organization(&mut transaction, &body.owner, &user.organization_id).await?;
+        scripts_dao::is_user_in_organization(&mut transaction, &body.owner, &user.organization_id)
+            .await?;
     if !target_exists {
         return Err(ApiError::bad_request(crate::msg::user::not_found(
             &body.owner,
         )));
     }
-    dao::update_one(&mut transaction, &id, &body.owner, &body.name, &body.gist).await?;
+    scripts_dao::update_one(&mut transaction, &id, &body.owner, &body.name, &body.gist).await?;
     let script = find(&mut transaction, &user.organization_id, &id, false).await?;
     transaction.commit().await?;
     Ok(Json(script))
@@ -120,8 +121,8 @@ async fn remove(
     if old.owner_id != user.id {
         return Err(ApiError::forbidden(crate::msg::script::DELETE_ONLY_OWNER));
     }
-    dao::delete_one(&mut transaction, &id).await?;
-    dao::remove_script_from_all_tasks(&mut transaction, &id).await?;
+    scripts_dao::delete_one(&mut transaction, &id).await?;
+    scripts_dao::remove_script_from_all_tasks(&mut transaction, &id).await?;
     transaction.commit().await?;
     Ok(StatusCode::OK)
 }

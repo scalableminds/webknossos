@@ -26,8 +26,8 @@ use crate::{
     error::{ApiError, ApiResult},
     extract::{Json, Path, Query},
     remote::tracingstore::{
-        dao,
         reads::{CallbackError, validate_key},
+        remote_tracingstore_dao,
     },
     stores::client::{PROTOBUF_CONTENT_TYPE, ServiceClients},
     stores::tracing_client::TracingStoreClient,
@@ -52,11 +52,11 @@ async fn find_annotation(
     pool: &PgPool,
     id: &ObjectId,
 ) -> ApiResult<Option<(ObjectId, Vec<AnnotationLayer>)>> {
-    let dataset = dao::find_dataset_id_for_annotation(pool, id).await?;
+    let dataset = remote_tracingstore_dao::find_dataset_id_for_annotation(pool, id).await?;
     let Some(dataset) = dataset else {
         return Ok(None);
     };
-    let rows = dao::find_all_layers_for_annotation(pool, id).await?;
+    let rows = remote_tracingstore_dao::find_all_layers_for_annotation(pool, id).await?;
     let layers = rows
         .into_iter()
         .map(|(tracing_id, typ, name)| {

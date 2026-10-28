@@ -9,9 +9,9 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use webknossos_common::{datasource::DataSourceId, enums::LengthUnit, geometry::Vec3Double};
 
-mod dao;
+mod dataset_explore_dao;
 
-use dao::DuplicateSource;
+use dataset_explore_dao::DuplicateSource;
 
 use crate::{
     AppState,
@@ -106,7 +106,7 @@ async fn datastore_token(
     let value = URL_SAFE_NO_PAD.encode(random);
     let expiry = i64::try_from(config.expiry.as_millis()).map_err(|_| ApiError::internal())?;
     let idle = i64::try_from(config.idle_timeout.as_millis()).map_err(|_| ApiError::internal())?;
-    dao::insert_datastore_token(pool, &value, &user.id, expiry, idle).await?;
+    dataset_explore_dao::insert_datastore_token(pool, &value, &user.id, expiry, idle).await?;
     Ok(value)
 }
 
@@ -162,7 +162,7 @@ async fn explore(
             crate::msg::dataset::explore::DATA_STORE_MUST_BE_EQUAL_FOR_ALL,
         ));
     }
-    let url = dao::find_explore_store_url(&state.pool, names[0].as_ref()).await?;
+    let url = dataset_explore_dao::find_explore_store_url(&state.pool, names[0].as_ref()).await?;
     let url = url.ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     let token = datastore_token(&state.pool, user, tokens).await?;
     let response = clients
@@ -250,8 +250,8 @@ async fn get_or_create_folder(
     literal: &str,
 ) -> ApiResult<ObjectId> {
     let failed = || ApiError::bad_request(crate::msg::dataset::explore::AUTO_ADD_GET_FOLDER_FAILED);
-    let root = dao::find_root_folder(connection, &user.organization_id).await?;
-    let folders = dao::find_visible_folders(connection, &root, &user.id).await?;
+    let root = dataset_explore_dao::find_root_folder(connection, &user.organization_id).await?;
+    let folders = dataset_explore_dao::find_visible_folders(connection, &root, &user.id).await?;
     let root_folder = folders.iter().find(|f| f.2.is_none()).ok_or_else(failed)?;
     let rest = literal.strip_prefix('/').ok_or_else(failed)?;
     let names = split_path(rest);
@@ -273,10 +273,10 @@ async fn get_or_create_folder(
             return Err(failed());
         }
         let id = ObjectId::new();
-        dao::insert_folder(connection, &id, name)
+        dataset_explore_dao::insert_folder(connection, &id, name)
             .await
             .map_err(|_| failed())?;
-        dao::insert_folder_paths(connection, &id, &current).await?;
+        dataset_explore_dao::insert_folder_paths(connection, &id, &current).await?;
         current = id;
     }
     Ok(current)
@@ -298,7 +298,7 @@ async fn upload_store(
     connection: &mut sqlx::PgConnection,
     user: &AuthUser,
 ) -> ApiResult<(String, String)> {
-    dao::find_upload_store(connection, &user.organization_id)
+    dataset_explore_dao::find_upload_store(connection, &user.organization_id)
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))
 }
@@ -385,12 +385,16 @@ async fn add_virtual_dataset(
 ) -> ApiResult<Json<CreatedDataset>> {
     let source = UsableDataSource::from_json(&body.data_source)
         .map_err(crate::dataset::source::invalid_body)?;
-    let store =
-        dao::find_store_for_organization(&state.pool, &body.data_store_name, &user.organization_id)
-            .await?;
+    let store = dataset_explore_dao::find_store_for_organization(
+        &state.pool,
+        &body.data_store_name,
+        &user.organization_id,
+    )
+    .await?;
     let (store_name, store_url) =
         store.ok_or_else(|| ApiError::not_found(crate::msg::data_store::NOT_FOUND))?;
-    let team_manager = dao::is_team_manager(&state.pool, &user.id, &user.organization_id).await?;
+    let team_manager =
+        dataset_explore_dao::is_team_manager(&state.pool, &user.id, &user.organization_id).await?;
     if !(team_manager || user.is_admin || user.is_dataset_manager) {
         return Err(crate::dataset::lifecycle::not_allowed());
     }
@@ -452,7 +456,7 @@ async fn duplicate_to_orga(
         status,
         factor,
         unit,
-    } = dao::find_duplicate_source(&state.pool, &id).await?;
+    } = dataset_explore_dao::find_duplicate_source(&state.pool, &id).await?;
     let unit = unit
         .as_deref()
         .and_then(LengthUnit::from_name)
@@ -481,7 +485,8 @@ async fn duplicate_to_orga(
         ));
     }
     let organization_exists =
-        crate::organization::dao::exists(&state.pool, &query.target_organization_id).await?;
+        crate::organization::organization_dao::exists(&state.pool, &query.target_organization_id)
+            .await?;
     if !organization_exists {
         return Err(ApiError::bad_request(crate::msg::organization::not_found(
             &query.target_organization_id,

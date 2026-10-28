@@ -10,7 +10,7 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde_json::json;
 
-use super::dao;
+use super::organization_dao;
 use crate::{
     AppState,
     auth::AuthUser,
@@ -62,12 +62,14 @@ async fn acceptance_needed(
     user: AuthUser,
 ) -> ApiResult<axum::Json<serde_json::Value>> {
     let config = &misc.config().terms_of_service;
-    let accepted_version =
-        dao::find_last_terms_of_service_acceptance_version(&state.pool, &user.organization_id)
-            .await?
-            .ok_or_else(|| {
-                ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
-            })?;
+    let accepted_version = organization_dao::find_last_terms_of_service_acceptance_version(
+        &state.pool,
+        &user.organization_id,
+    )
+    .await?
+    .ok_or_else(|| {
+        ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
+    })?;
     let deadline = config.acceptance_deadline;
     Ok(axum::Json(json!({
         "acceptanceNeeded": config.enabled && accepted_version < config.version,
@@ -87,7 +89,7 @@ async fn accept(
     user: AuthUser,
     Query(parameters): Query<AcceptParameters>,
 ) -> ApiResult<Response> {
-    let is_owner = dao::is_organization_owner(&state.pool, &user.id).await?;
+    let is_owner = organization_dao::is_organization_owner(&state.pool, &user.id).await?;
     if !is_owner {
         return Err(ApiError::bad_request(messages::ONLY_ORGANIZATION_OWNER));
     }
@@ -103,8 +105,12 @@ async fn accept(
             ),
         ));
     }
-    dao::update_terms_of_service_acceptance(&state.pool, &user.organization_id, parameters.version)
-        .await?;
+    organization_dao::update_terms_of_service_acceptance(
+        &state.pool,
+        &user.organization_id,
+        parameters.version,
+    )
+    .await?;
     tracing::info!(organization = %user.organization_id, version = parameters.version, "Terms of service accepted.");
     Ok(ok_empty())
 }

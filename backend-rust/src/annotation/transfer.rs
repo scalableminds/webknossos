@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use crate::{
     AppState,
-    annotation::dao,
+    annotation::annotation_dao,
     annotation::provider::{
         AccessContext, AnnotationIdentifier, AnnotationProvider, RESTRICTIONS_NOT_FOUND,
     },
@@ -58,7 +58,7 @@ async fn transfer(
     if !restrictions.allow_finish {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    if !dao::is_user_readable(&state.pool, &user, target).await? {
+    if !annotation_dao::is_user_readable(&state.pool, &user, target).await? {
         return Err(ApiError::bad_request(crate::msg::user::not_found(target)));
     }
     // transferAnnotationToUser: provideAnnotation ?~> Annotation.notFound.
@@ -71,30 +71,38 @@ async fn transfer(
     // Re-read and lock the live row, re-checking the finish restriction that
     // authorized the transfer so a concurrent finish/lock/owner change
     // cannot slip in between the check and the update.
-    let annotation = crate::annotation::dao::lock_readable(&mut transaction, &user, provided.id())
-        .await?
-        .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?;
+    let annotation =
+        crate::annotation::annotation_dao::lock_readable(&mut transaction, &user, provided.id())
+            .await?
+            .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?;
     let restrictions = crate::annotation::access::restrictions(&annotation, Some(&user));
     if !restrictions.allow_finish {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    if !dao::is_user_readable(&mut *transaction, &user, target).await? {
+    if !annotation_dao::is_user_readable(&mut *transaction, &user, target).await? {
         return Err(ApiError::bad_request(crate::msg::user::not_found(target)));
     }
     let transferee_can_read =
-        dao::is_dataset_readable_by(&mut transaction, &annotation.dataset_id, target).await?;
+        annotation_dao::is_dataset_readable_by(&mut transaction, &annotation.dataset_id, target)
+            .await?;
     if !transferee_can_read {
         return Err(ApiError::bad_request(
             crate::msg::annotation::TRANSFEREE_NO_DATASET_ACCESS,
         ));
     }
     // AnnotationDAO.updateUser: assertUpdateAccess, then only `_user` changes.
-    if !crate::annotation::dao::lock_update_access(&mut transaction, &user, &annotation.id).await? {
+    if !crate::annotation::annotation_dao::lock_update_access(
+        &mut transaction,
+        &user,
+        &annotation.id,
+    )
+    .await?
+    {
         return Err(ApiError::bad_request(
             crate::msg::annotation::NO_UPDATE_ACCESS,
         ));
     }
-    dao::update_user(&mut transaction, &annotation.id, target).await?;
+    annotation_dao::update_user(&mut transaction, &annotation.id, target).await?;
     // Scala persists the owner change before reloading. The reload below runs
     // under the requester's read access and can fail afterwards (e.g. a
     // non-admin handing over a Private annotation); the transfer still stands.

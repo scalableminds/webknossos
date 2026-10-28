@@ -33,9 +33,9 @@ use crate::{
 };
 use axum::extract::FromRef;
 
-mod dao;
+mod job_workers_dao;
 
-use dao::{Owner, Worker};
+use job_workers_dao::{Owner, Worker};
 
 const WORKER_NOT_FOUND: &str = "Could not find this worker in the database.";
 const UPDATE_STATUS_FAILED: &str = "Could not update job status.";
@@ -98,7 +98,7 @@ async fn find_worker(
     key: &str,
     for_update: bool,
 ) -> ApiResult<Worker> {
-    let worker = dao::find_one_by_key(connection, key, for_update).await?;
+    let worker = job_workers_dao::find_one_by_key(connection, key, for_update).await?;
     match worker {
         Some(worker)
             if worker
@@ -141,18 +141,20 @@ async fn request_jobs(
         .worker_version
         .as_ref()
         .filter(|version| worker.last_reported_version.as_ref() != Some(*version));
-    dao::update_heart_beat(
+    job_workers_dao::update_heart_beat(
         &mut transaction,
         &worker.id,
         new_version.map(String::as_str),
     )
     .await?;
     reserve_next_jobs(&mut transaction, &worker).await?;
-    let to_run =
-        validated_jobs(dao::find_all_unfinished_by_worker(&mut transaction, &worker.id).await?)?;
+    let to_run = validated_jobs(
+        job_workers_dao::find_all_unfinished_by_worker(&mut transaction, &worker.id).await?,
+    )?;
     // Jobs cancelled by a user (manualState) that the worker has not cancelled yet.
-    let to_cancel =
-        validated_jobs(dao::find_all_cancelling_by_worker(&mut transaction, &worker.id).await?)?;
+    let to_cancel = validated_jobs(
+        job_workers_dao::find_all_cancelling_by_worker(&mut transaction, &worker.id).await?,
+    )?;
     transaction.commit().await?;
     let to_run: Vec<&Job> = to_run
         .iter()
@@ -196,9 +198,11 @@ async fn reserve_next_jobs(connection: &mut PgConnection, worker: &Worker) -> Ap
     let supported_high = commands(true, Some(worker));
     let supported_low = commands(false, Some(worker));
     for _ in 0..RESERVE_ITERATIONS {
-        let (unfinished_high, unfinished_low) =
-            dao::count_unfinished_by_worker(connection, &worker.id, &all_high, &all_low).await?;
-        let (pending_high, pending_low) = dao::count_unassigned_pending_for_data_store(
+        let (unfinished_high, unfinished_low) = job_workers_dao::count_unfinished_by_worker(
+            connection, &worker.id, &all_high, &all_low,
+        )
+        .await?;
+        let (pending_high, pending_low) = job_workers_dao::count_unassigned_pending_for_data_store(
             connection,
             &worker.data_store,
             &supported_high,
@@ -217,7 +221,8 @@ async fn reserve_next_jobs(connection: &mut PgConnection, worker: &Worker) -> Ap
         if may_assign_high {
             assignable.extend(supported_high.iter().cloned());
         }
-        dao::reserve_next_job(connection, &worker.id, &worker.data_store, &assignable).await?;
+        job_workers_dao::reserve_next_job(connection, &worker.id, &worker.data_store, &assignable)
+            .await?;
     }
     Ok(())
 }
@@ -238,7 +243,7 @@ async fn parameter_writes(
     job: &Job,
 ) -> ApiResult<JobParameters> {
     // UserDAO.findOne with global access: an empty Fox when the owner is gone.
-    let owner = dao::find_user_id(pool, &job.owner).await?;
+    let owner = job_workers_dao::find_user_id(pool, &job.owner).await?;
     let owner = owner.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let token = insert_job_token(pool, &owner, routes).await?;
     let mut kwargs = job.args.as_object().cloned().unwrap_or_default();
@@ -263,14 +268,15 @@ async fn insert_job_token(
         return Err(ApiError::internal());
     }
     // Workers poll every few seconds; reuse a recent token instead of minting one per poll.
-    let recent = dao::find_recent_job_token(pool, user_id).await?;
+    let recent = job_workers_dao::find_recent_job_token(pool, user_id).await?;
     if let Some(value) = recent {
         return Ok(value);
     }
     let mut random = [0_u8; 16];
     getrandom::fill(&mut random).map_err(|_| ApiError::internal())?;
     let value = URL_SAFE_NO_PAD.encode(random);
-    dao::insert_job_token(pool, &ObjectId::new(), &value, user_id, expiry_ms, idle_ms).await?;
+    job_workers_dao::insert_job_token(pool, &ObjectId::new(), &value, user_id, expiry_ms, idle_ms)
+        .await?;
     Ok(value)
 }
 
@@ -327,7 +333,7 @@ async fn update_status(
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // JobDAO.updateStatus: absent optional fields are written as NULL.
-    dao::update_status(
+    job_workers_dao::update_status(
         &mut transaction,
         &before.id,
         status.latest_run_id.as_deref(),
@@ -371,7 +377,7 @@ async fn find_job_global(
     job_id: &ObjectId,
     for_update: bool,
 ) -> ApiResult<Option<Job>> {
-    let job = dao::find_one_global(connection, job_id, for_update).await?;
+    let job = job_workers_dao::find_one_global(connection, job_id, for_update).await?;
     match job {
         Some(job) if !job.is_valid() => Err(ApiError::bad_request(format!(
             "Parsing failed for row in webknossos.jobs queried by {job_id}"
@@ -418,14 +424,14 @@ async fn clean_up_if_failed(connection: &mut PgConnection, job: &Job) -> ApiResu
         job = %job.id,
         "WKW conversion job failed. Marking dataset as conversion failed..."
     );
-    let dataset = dao::find_dataset_id_by_directory_name_and_organization(
+    let dataset = job_workers_dao::find_dataset_id_by_directory_name_and_organization(
         connection,
         directory_name,
         organization,
     )
     .await?;
     let dataset = dataset.ok_or_else(|| ApiError::bad_request(CLEANUP_FAILED))?;
-    dao::update_dataset_status_unusable(
+    job_workers_dao::update_dataset_status_unusable(
         connection,
         &dataset,
         crate::dataset::lifecycle::CONVERSION_FAILED,
@@ -441,12 +447,12 @@ async fn complete_transaction_of_job(
     connection: &mut PgConnection,
     job_id: &ObjectId,
 ) -> ApiResult<()> {
-    let pending = crate::job::dao::find_pending_transaction_of_job(connection, job_id).await?;
+    let pending = crate::job::job_dao::find_pending_transaction_of_job(connection, job_id).await?;
     let Some(transaction_id) = pending else {
         // Assume a transaction-less (unpaid) job.
         return Ok(());
     };
-    dao::update_transaction_spent(connection, &transaction_id)
+    job_workers_dao::update_transaction_spent(connection, &transaction_id)
         .await
         .map_err(|error| failure_as(error, CREDITS_FAILED))?;
     Ok(())
@@ -478,7 +484,7 @@ fn track_status_change(
         after.clone(),
     );
     tokio::spawn(async move {
-        let owner = dao::find_owner(&state.pool, &after.owner)
+        let owner = job_workers_dao::find_owner(&state.pool, &after.owner)
             .await
             .ok()
             .flatten();
@@ -647,7 +653,7 @@ fn clean_up_upload_files_if_needed(
     );
     tokio::spawn(async move {
         // DataStoreDAO.findOneByName with global access.
-        let url = crate::job::dao::find_data_store_url(&pool, &data_store)
+        let url = crate::job::job_dao::find_data_store_url(&pool, &data_store)
             .await
             .ok()
             .flatten();
@@ -684,7 +690,7 @@ async fn organization_for_job(
     connection: &mut PgConnection,
     job_id: &ObjectId,
 ) -> ApiResult<String> {
-    let organization = dao::find_organization_id_of_job(connection, job_id).await?;
+    let organization = job_workers_dao::find_organization_id_of_job(connection, job_id).await?;
     organization.ok_or_else(|| ApiError::bad_request(crate::msg::job::NOT_FOUND))
 }
 
@@ -709,9 +715,13 @@ async fn attach_voxelytics_workflow(
     let organization = organization_for_job(&mut transaction, &id).await?;
     // findWorkflowByHashAndOrganization, else upsertWorkflow with a placeholder name.
     // DO NOTHING keeps a concurrently created workflow's real name.
-    dao::insert_voxelytics_workflow_if_missing(&mut transaction, &workflow_hash, &organization)
-        .await?;
-    dao::update_voxelytics_workflow_hash(&mut transaction, &id, &workflow_hash).await?;
+    job_workers_dao::insert_voxelytics_workflow_if_missing(
+        &mut transaction,
+        &workflow_hash,
+        &organization,
+    )
+    .await?;
+    job_workers_dao::update_voxelytics_workflow_hash(&mut transaction, &id, &workflow_hash).await?;
     transaction.commit().await?;
     Ok(ok_empty())
 }
@@ -726,7 +736,7 @@ async fn attach_dataset_to_inference(
     find_worker(&mut transaction, &query.key, false).await?;
     let organization = organization_for_job(&mut transaction, &id).await?;
     // DatasetDAO.findOneByDirectoryNameAndOrganization with global access (empty Fox).
-    let dataset = dao::find_dataset_id_by_directory_name_and_organization(
+    let dataset = job_workers_dao::find_dataset_id_by_directory_name_and_organization(
         &mut transaction,
         &directory_name,
         &organization,
@@ -734,11 +744,16 @@ async fn attach_dataset_to_inference(
     .await?;
     let dataset = dataset.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // AiInferenceDAO.findOneByJobId (`?~> Msg.AiInference.notFound`).
-    let inference = crate::ai_models::dao::find_inference_id_by_job(&mut transaction, &id).await?;
+    let inference =
+        crate::ai_models::ai_models_dao::find_inference_id_by_job(&mut transaction, &id).await?;
     let inference =
         inference.ok_or_else(|| ApiError::bad_request(crate::msg::ai_inference::NOT_FOUND))?;
-    crate::ai_models::dao::update_inference_new_dataset(&mut transaction, &inference, &dataset)
-        .await?;
+    crate::ai_models::ai_models_dao::update_inference_new_dataset(
+        &mut transaction,
+        &inference,
+        &dataset,
+    )
+    .await?;
     transaction.commit().await?;
     Ok(ok_empty())
 }

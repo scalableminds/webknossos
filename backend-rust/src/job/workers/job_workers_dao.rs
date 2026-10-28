@@ -7,7 +7,7 @@ use serde_json::Value;
 use sqlx::{PgConnection, PgPool};
 
 use crate::{
-    job::{dao::JOB_COLUMNS, routes::Job},
+    job::{job_dao::JOB_COLUMNS, routes::Job},
     sql::Sql,
     util::id::ObjectId,
 };

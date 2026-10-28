@@ -49,7 +49,7 @@
 //! actor). The default `LogMailer` does not deliver SMTP mail; that transport
 //! gap is crate-wide and not specific to this writer.
 
-mod dao;
+mod time_interaction_writer_dao;
 
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Postgres, Transaction};
@@ -190,7 +190,12 @@ async fn over_limit_mail_for(
     candidate: &OverLimitCandidate,
     public_uri: &str,
 ) -> Result<Option<Mail>, sqlx::Error> {
-    let row = dao::find_over_limit_row(pool, &candidate.owner_id, &candidate.task_id).await?;
+    let row = time_interaction_writer_dao::find_over_limit_row(
+        pool,
+        &candidate.owner_id,
+        &candidate.task_id,
+    )
+    .await?;
     let Some(row) = row else { return Ok(None) };
     let Some(limit) = row.expected_time else {
         return Ok(None);
@@ -259,12 +264,13 @@ async fn lock_accounting_rows(
     if annotations.is_empty() {
         return Ok(());
     }
-    let tasks = dao::find_task_ids_for_update(transaction, &annotations).await?;
+    let tasks =
+        time_interaction_writer_dao::find_task_ids_for_update(transaction, &annotations).await?;
     let mut tasks: Vec<ObjectId> = tasks.into_iter().flatten().collect();
     tasks.sort_unstable();
     tasks.dedup();
     if !tasks.is_empty() {
-        dao::lock_tasks(transaction, &tasks).await?;
+        time_interaction_writer_dao::lock_tasks(transaction, &tasks).await?;
     }
     Ok(())
 }
@@ -280,7 +286,7 @@ async fn execute_plan(
 
     for insert in &plan.inserts {
         let id = SpanRef::New(insert.ordinal).resolve(new_span_ids)?;
-        dao::insert_one(
+        time_interaction_writer_dao::insert_one(
             transaction,
             &id,
             user_id,
@@ -296,7 +302,7 @@ async fn execute_plan(
     let mut candidates = Vec::new();
     for close in &plan.closes {
         let span_id = close.span.resolve(new_span_ids)?;
-        dao::update_one(
+        time_interaction_writer_dao::update_one(
             transaction,
             &span_id,
             user_id,
@@ -311,7 +317,12 @@ async fn execute_plan(
         let Some(annotation_id) = &close.after.annotation_id else {
             continue;
         };
-        dao::add_tracing_time_to_annotation(transaction, annotation_id, close.delta_millis).await?;
+        time_interaction_writer_dao::add_tracing_time_to_annotation(
+            transaction,
+            annotation_id,
+            close.delta_millis,
+        )
+        .await?;
         let annotation = crate::annotation::access::find_optional(
             &mut **transaction,
             access.requester,
@@ -321,7 +332,12 @@ async fn execute_plan(
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
         if let Some(task_id) = annotation.task_id {
-            dao::add_tracing_time_to_task(transaction, &task_id, close.delta_millis).await?;
+            time_interaction_writer_dao::add_tracing_time_to_task(
+                transaction,
+                &task_id,
+                close.delta_millis,
+            )
+            .await?;
             if let Some(tracing_time_after) = annotation.tracing_time {
                 candidates.push(OverLimitCandidate {
                     annotation_id: annotation.id,

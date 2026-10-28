@@ -1,4 +1,4 @@
-pub(crate) mod dao;
+pub(crate) mod task_types_dao;
 
 use crate::response::Messages;
 use axum::{Json as ResponseJson, Router, extract::State, routing::get};
@@ -117,7 +117,7 @@ async fn public_json<'e, E: sqlx::Executor<'e, Database = sqlx::Postgres>>(
     user: &AuthUser,
     id: &ObjectId,
 ) -> ApiResult<Value> {
-    dao::find_one_json(executor, user, id)
+    task_types_dao::find_one_json(executor, user, id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::task_type::not_found(id)))
 }
@@ -129,7 +129,7 @@ async fn check_manage(pool: &PgPool, user: &AuthUser, team: &ObjectId) -> ApiRes
 }
 
 async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<ResponseJson<Value>> {
-    let values = dao::find_all_json(&state.pool, &user).await?;
+    let values = task_types_dao::find_all_json(&state.pool, &user).await?;
     Ok(ResponseJson(Value::Array(values)))
 }
 async fn read(
@@ -155,14 +155,16 @@ async fn create(
     if !crate::projects::can_manage_team_in_tx(&mut tx, &user, &parameters.team_id).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    dao::lock_summary(&mut tx, &user.organization_id, &parameters.summary).await?;
-    let exists = dao::is_summary_taken(&mut tx, &user.organization_id, &parameters.summary).await?;
+    task_types_dao::lock_summary(&mut tx, &user.organization_id, &parameters.summary).await?;
+    let exists =
+        task_types_dao::is_summary_taken(&mut tx, &user.organization_id, &parameters.summary)
+            .await?;
     if exists {
         return Err(ApiError::bad_request(crate::msg::task_type::summary_taken(
             &parameters.summary,
         )));
     }
-    dao::insert_one(&mut tx, &id, &user.organization_id, &parameters).await?;
+    task_types_dao::insert_one(&mut tx, &id, &user.organization_id, &parameters).await?;
     let response = public_json(&mut *tx, &user, &id).await?;
     tx.commit().await?;
     Ok(ResponseJson(response))
@@ -194,16 +196,20 @@ async fn update(
             crate::msg::task_type::MAG_RESTRICTIONS_IMMUTABLE,
         ));
     }
-    dao::lock_summary(&mut tx, &user.organization_id, &parameters.summary).await?;
-    let exists =
-        dao::is_summary_taken_by_other(&mut tx, &user.organization_id, &parameters.summary, &id)
-            .await?;
+    task_types_dao::lock_summary(&mut tx, &user.organization_id, &parameters.summary).await?;
+    let exists = task_types_dao::is_summary_taken_by_other(
+        &mut tx,
+        &user.organization_id,
+        &parameters.summary,
+        &id,
+    )
+    .await?;
     if exists {
         return Err(ApiError::bad_request(crate::msg::task_type::summary_taken(
             &parameters.summary,
         )));
     }
-    dao::update_one(&mut tx, &id, &parameters).await?;
+    task_types_dao::update_one(&mut tx, &id, &parameters).await?;
     let mut value = public_json(&mut *tx, &user, &id).await?;
     tx.commit().await?;
     value["messages"] = json!([{"success":crate::msg::task_type::EDIT_SUCCESS}]);
@@ -222,9 +228,13 @@ async fn delete(
     if !crate::projects::can_manage_team_in_tx(&mut tx, &user, &team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    dao::delete_one(&mut tx, &id).await?;
-    crate::projects::dao::delete_tasks(&mut tx, crate::projects::dao::TaskParent::TaskType, &id)
-        .await?;
+    task_types_dao::delete_one(&mut tx, &id).await?;
+    crate::projects::projects_dao::delete_tasks(
+        &mut tx,
+        crate::projects::projects_dao::TaskParent::TaskType,
+        &id,
+    )
+    .await?;
     tx.commit().await?;
     Ok(Messages::success(crate::msg::task_type::delete_success(
         existing["summary"].as_str().unwrap_or_default(),
@@ -236,7 +246,7 @@ async fn lock_task_type(
     id: &ObjectId,
     organization: &str,
 ) -> ApiResult<ObjectId> {
-    dao::lock_one(tx, id, organization)
+    task_types_dao::lock_one(tx, id, organization)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::task_type::not_found(id)))
 }

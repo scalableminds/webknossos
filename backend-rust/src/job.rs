@@ -1,4 +1,4 @@
-pub(crate) mod dao;
+pub(crate) mod job_dao;
 pub mod routes;
 pub mod submission;
 pub mod workers;

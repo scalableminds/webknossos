@@ -1,4 +1,4 @@
-mod dao;
+mod dataset_configuration_dao;
 
 use crate::response::Messages;
 use axum::{
@@ -6,7 +6,7 @@ use axum::{
     extract::State,
     routing::{get, post},
 };
-use dao::DatasetConfiguration;
+use dataset_configuration_dao::DatasetConfiguration;
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use sqlx::PgPool;
@@ -95,8 +95,10 @@ async fn complete(
     }
     if let Some(user) = user {
         let names: Vec<&str> = layers.keys().map(String::as_str).collect();
-        let existing =
-            dao::find_user_layer_configurations(pool, &user.id, dataset_id, &names).await?;
+        let existing = dataset_configuration_dao::find_user_layer_configurations(
+            pool, &user.id, dataset_id, &names,
+        )
+        .await?;
         for (name, config) in existing {
             if let Some(Value::Object(layer)) = layers.get_mut(&name) {
                 merge(layer, Some(config));
@@ -108,7 +110,7 @@ async fn complete(
 }
 
 async fn dataset(pool: &PgPool, id: &ObjectId) -> ApiResult<Option<DatasetConfiguration>> {
-    Ok(dao::find_configuration(pool, id).await?)
+    Ok(dataset_configuration_dao::find_configuration(pool, id).await?)
 }
 
 async fn read(
@@ -122,7 +124,7 @@ async fn read(
     // GlobalAccessContext. Only if it does not exist does it fall back to the
     // dataset default configuration through normal sharing-aware read access.
     let existing = if let Some(user) = user.as_ref() {
-        dao::find_user_configuration(&state.pool, &user.id, &id).await?
+        dataset_configuration_dao::find_user_configuration(&state.pool, &user.id, &id).await?
     } else {
         None
     };
@@ -189,16 +191,28 @@ async fn update(
     let mut transaction = state.pool.begin().await?;
     // UserService intentionally permits saving a personal configuration for
     // any existing dataset; dataset sharing permissions are not an edit grant.
-    dao::lock_dataset_for_share(&mut transaction, &id).await?;
+    dataset_configuration_dao::lock_dataset_for_share(&mut transaction, &id).await?;
     if let Some(Value::Object(layers)) = config.remove("layers") {
         for (name, layer) in layers {
             if layer.is_object() {
-                dao::upsert_user_layer_configuration(&mut transaction, &user.id, &id, name, layer)
-                    .await?;
+                dataset_configuration_dao::upsert_user_layer_configuration(
+                    &mut transaction,
+                    &user.id,
+                    &id,
+                    name,
+                    layer,
+                )
+                .await?;
             }
         }
     }
-    dao::upsert_user_configuration(&mut transaction, &user.id, &id, Value::Object(config)).await?;
+    dataset_configuration_dao::upsert_user_configuration(
+        &mut transaction,
+        &user.id,
+        &id,
+        Value::Object(config),
+    )
+    .await?;
     transaction.commit().await?;
     Ok(success())
 }
@@ -214,7 +228,7 @@ async fn update_admin(
     crate::dataset::lifecycle::require_editable(&state, &user, &id).await?;
     let mut transaction = state.pool.begin().await?;
     crate::dataset::access::lock_edit(&mut transaction, &user, &id, true).await?;
-    dao::update_admin_view_configuration(
+    dataset_configuration_dao::update_admin_view_configuration(
         &mut transaction,
         &id,
         Value::Object({
@@ -229,12 +243,17 @@ async fn update_admin(
         // configuration is an object. An invalid entry causes all to be ignored.
         if layers.values().all(Value::is_object) {
             for (name, layer) in layers {
-                dao::update_layer_admin_view_configuration(&mut transaction, &id, name, layer)
-                    .await?;
+                dataset_configuration_dao::update_layer_admin_view_configuration(
+                    &mut transaction,
+                    &id,
+                    name,
+                    layer,
+                )
+                .await?;
             }
         }
     }
-    crate::dataset::dao::delete_thumbnails(&mut transaction, &id).await?;
+    crate::dataset::dataset_dao::delete_thumbnails(&mut transaction, &id).await?;
     transaction.commit().await?;
     Ok(success())
 }

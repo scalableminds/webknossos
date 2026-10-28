@@ -47,7 +47,7 @@ async fn list(
         });
     }
     if let Some(user) = user {
-        crate::dataset::dao::touch_user_last_activity(&state.pool, user.id).await?;
+        crate::dataset::dataset_dao::touch_user_last_activity(&state.pool, user.id).await?;
     }
     Ok(Json(values))
 }

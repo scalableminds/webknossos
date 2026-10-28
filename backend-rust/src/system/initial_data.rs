@@ -12,9 +12,9 @@
 //! runs after that commit, and `inboxSourceHash` stays NULL because Scala's
 //! case-class `hashCode` cannot be reproduced (virtual datasets never compare
 //! it against a datastore report).
-mod dao;
+mod system_initial_data_dao;
 #[cfg(test)]
-use dao::{DEFAULT_WORKER_COMMANDS, DEFAULT_WORKER_ID};
+use system_initial_data_dao::{DEFAULT_WORKER_COMMANDS, DEFAULT_WORKER_ID};
 
 use axum::{Router, extract::State, response::Response, routing::post};
 use serde_json::{Value, json};
@@ -74,7 +74,7 @@ async fn trigger_insert(
     }
     if let Some(store) = &config.local_datastore {
         for model in pretrained_ai_models(&store.name) {
-            dao::insert_ai_model_if_absent(pool, &model).await?;
+            system_initial_data_dao::insert_ai_model_if_absent(pool, &model).await?;
         }
     }
     // Everything below only runs in the dev setup.
@@ -84,7 +84,7 @@ async fn trigger_insert(
     if config.jobs_enabled
         && let Some(store) = &config.local_datastore
     {
-        dao::upsert_default_worker(pool, &store.name).await?;
+        system_initial_data_dao::upsert_default_worker(pool, &store.name).await?;
     }
     insert_sample_organization(&state, config).await?;
     create_organization_directory(pool, Some(&clients), SAMPLE_ORGANIZATION_ID).await;
@@ -104,16 +104,17 @@ async fn sync_local_store(
 ) -> ApiResult<()> {
     // `table` is one of two fixed identifiers.
     debug_assert!(matches!(table, "dataStores" | "tracingStores"));
-    let existing = dao::find_local_store(pool, table, url).await?;
+    let existing = system_initial_data_dao::find_local_store(pool, table, url).await?;
     match existing {
         Some((name, public_url)) => {
             if public_url != store.public_uri {
-                dao::update_local_store_urls(pool, table, store, url, name).await?;
+                system_initial_data_dao::update_local_store_urls(pool, table, store, url, name)
+                    .await?;
             }
         }
         None => {
             tracing::info!(table, "Inserting local store");
-            dao::insert_local_store(pool, table, store, url).await?;
+            system_initial_data_dao::insert_local_store(pool, table, store, url).await?;
         }
     }
     Ok(())
@@ -200,8 +201,8 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
 
     let mut tx = state.pool.begin().await?;
     // Serialize concurrent triggers so only one passes the emptiness check.
-    dao::lock_initial_data(&mut tx).await?;
-    let organizations_present = dao::are_organizations_present(&mut tx).await?;
+    system_initial_data_dao::lock_initial_data(&mut tx).await?;
+    let organizations_present = system_initial_data_dao::are_organizations_present(&mut tx).await?;
     if organizations_present {
         return Err(ApiError::bad_request(ORGANIZATIONS_PRESENT));
     }
@@ -211,9 +212,9 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
     let team = ObjectId::new();
     let user_id = ObjectId::new();
 
-    dao::insert_root_folder(&mut tx, &root_folder, ROOT_FOLDER_NAME).await?;
-    dao::insert_root_folder_path(&mut tx, &root_folder).await?;
-    dao::insert_sample_organization(
+    system_initial_data_dao::insert_root_folder(&mut tx, &root_folder, ROOT_FOLDER_NAME).await?;
+    system_initial_data_dao::insert_root_folder_path(&mut tx, &root_folder).await?;
+    system_initial_data_dao::insert_sample_organization(
         &mut tx,
         organization,
         SAMPLE_ORGANIZATION_INFORMATION,
@@ -221,9 +222,9 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
         &root_folder,
     )
     .await?;
-    let teams_present = dao::are_teams_present(&mut tx).await?;
+    let teams_present = system_initial_data_dao::are_teams_present(&mut tx).await?;
     if !teams_present {
-        dao::insert_default_team(&mut tx, &team, organization).await?;
+        system_initial_data_dao::insert_default_team(&mut tx, &team, organization).await?;
     }
 
     let users = [
@@ -257,29 +258,42 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
     }
 
     // insertToken: one Authentication token for the default user.
-    let token_present = dao::is_authentication_token_present(&mut tx, &user_id).await?;
+    let token_present =
+        system_initial_data_dao::is_authentication_token_present(&mut tx, &user_id).await?;
     if !token_present {
         let expiry_millis = i64::try_from(config.authenticator_expiry.as_millis())
             .map_err(|_| ApiError::internal())?;
-        dao::insert_authentication_token(&mut tx, &sample.token, &user_id, expiry_millis).await?;
+        system_initial_data_dao::insert_authentication_token(
+            &mut tx,
+            &sample.token,
+            &user_id,
+            expiry_millis,
+        )
+        .await?;
     }
 
-    let task_types_present = dao::are_task_types_present(&mut tx).await?;
+    let task_types_present = system_initial_data_dao::are_task_types_present(&mut tx).await?;
     if !task_types_present {
-        dao::insert_sample_task_type(&mut tx, SAMPLE_TASK_TYPE_ID, organization, &team).await?;
+        system_initial_data_dao::insert_sample_task_type(
+            &mut tx,
+            SAMPLE_TASK_TYPE_ID,
+            organization,
+            &team,
+        )
+        .await?;
     }
 
-    let projects_present = dao::are_projects_present(&mut tx).await?;
+    let projects_present = system_initial_data_dao::are_projects_present(&mut tx).await?;
     if !projects_present {
         let owner = user_for_email(&mut tx, &sample.email)
             .await?
             .ok_or_else(|| ApiError::not_found(crate::msg::user::UNKNOWN))?;
-        dao::insert_sample_project(&mut tx, organization, &team, owner).await?;
+        system_initial_data_dao::insert_sample_project(&mut tx, organization, &team, owner).await?;
     }
 
-    let publications_present = dao::are_publications_present(&mut tx).await?;
+    let publications_present = system_initial_data_dao::are_publications_present(&mut tx).await?;
     if !publications_present {
-        dao::insert_sample_publications(&mut tx).await?;
+        system_initial_data_dao::insert_sample_publications(&mut tx).await?;
     }
 
     if let Some(store) = &config.local_datastore {
@@ -287,7 +301,7 @@ async fn insert_sample_organization(state: &AppState, config: &MiscConfig) -> Ap
             insert_dataset_if_absent(&mut tx, &dataset, &store.name, &user_id, &root_folder)
                 .await?;
         }
-        dao::insert_ai_model_if_absent(
+        system_initial_data_dao::insert_ai_model_if_absent(
             &mut *tx,
             &AiModel {
                 id: CUSTOM_AI_MODEL_ID,
@@ -312,7 +326,7 @@ async fn user_for_email(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     email: &str,
 ) -> ApiResult<Option<String>> {
-    Ok(dao::find_user_id_by_multi_user_email(tx, email).await?)
+    Ok(system_initial_data_dao::find_user_id_by_multi_user_email(tx, email).await?)
 }
 
 async fn insert_default_user(
@@ -325,13 +339,13 @@ async fn insert_default_user(
         return Ok(());
     }
     let multi_user = ObjectId::new();
-    dao::insert_multi_user(tx, &multi_user, user).await?;
-    dao::insert_sample_user(tx, user_id, &multi_user, user.is_admin).await?;
+    system_initial_data_dao::insert_multi_user(tx, &multi_user, user).await?;
+    system_initial_data_dao::insert_sample_user(tx, user_id, &multi_user, user.is_admin).await?;
     // userExperiencesDAO.updateExperiencesForUser(user, Map("sampleExp" -> 10))
-    dao::delete_user_experiences(tx, user_id).await?;
-    dao::insert_sample_experience(tx, user_id).await?;
-    dao::insert_sample_experience_domain(tx).await?;
-    dao::insert_user_team_role(tx, user_id, team, user.is_team_manager).await?;
+    system_initial_data_dao::delete_user_experiences(tx, user_id).await?;
+    system_initial_data_dao::insert_sample_experience(tx, user_id).await?;
+    system_initial_data_dao::insert_sample_experience_domain(tx).await?;
+    system_initial_data_dao::insert_user_team_role(tx, user_id, team, user.is_team_manager).await?;
     tracing::info!("Inserted default user");
     Ok(())
 }
@@ -534,7 +548,7 @@ async fn insert_dataset_if_absent(
     uploader: &ObjectId,
     folder: &ObjectId,
 ) -> ApiResult<()> {
-    let present = dao::is_dataset_present(tx, dataset.id).await?;
+    let present = system_initial_data_dao::is_dataset_present(tx, dataset.id).await?;
     if present {
         return Ok(());
     }
@@ -542,7 +556,10 @@ async fn insert_dataset_if_absent(
         tracing::error!(%error, "Invalid built-in sample data source");
         ApiError::internal()
     })?;
-    dao::insert_sample_dataset(tx, dataset, &source, data_store, uploader, folder).await?;
+    system_initial_data_dao::insert_sample_dataset(
+        tx, dataset, &source, data_store, uploader, folder,
+    )
+    .await?;
     crate::dataset::source::write_layers(tx, &ObjectId::parse(dataset.id)?, &source.data_layers)
         .await
 }

@@ -6,7 +6,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-mod dao;
+mod dataset_routes_dao;
 
 use crate::{
     AppState,
@@ -84,7 +84,8 @@ async fn find_by_import_url(
     Query(query): Query<ImportQuery>,
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
 ) -> ApiResult<Json<Value>> {
-    let id = dao::find_id_by_import_url(&state.pool, &user, &query.import_url).await?;
+    let id =
+        dataset_routes_dao::find_id_by_import_url(&state.pool, &user, &query.import_url).await?;
     Ok(Json(match id {
         Some(id) => full_json(&state.pool, Some(&user), &id, jobs_enabled).await?,
         None => Value::Null,
@@ -102,7 +103,7 @@ async fn organization_for_name(
     Path(name): Path<String>,
     Query(query): Query<ReadQuery>,
 ) -> ApiResult<Json<DatasetOrganization>> {
-    let organization = dao::find_organization_by_name(
+    let organization = dataset_routes_dao::find_organization_by_name(
         &state.pool,
         user.as_ref(),
         query.sharing_token.as_deref(),
@@ -118,8 +119,9 @@ async fn id_for_directory_name(
     OptionalAuthUser(user): OptionalAuthUser,
     Path((organization, name)): Path<(String, String)>,
     Query(query): Query<ReadQuery>,
-) -> ApiResult<Json<dao::DatasetIdentity>> {
-    let selected = dao::find_by_directory_name(&state.pool, &organization, &name).await?;
+) -> ApiResult<Json<dataset_routes_dao::DatasetIdentity>> {
+    let selected =
+        dataset_routes_dao::find_by_directory_name(&state.pool, &organization, &name).await?;
     let result = selected.ok_or_else(|| ApiError::not_found(crate::msg::dataset::MISSING))?;
     let id = result.id.clone();
     if crate::dataset::access::can_read(
@@ -139,8 +141,12 @@ async fn id_for_directory_name(
         return Ok(Json(result));
     }
     if user.organization_id != organization {
-        let identities =
-            dao::find_identities_in_organization(&state.pool, &user.id, &organization).await?;
+        let identities = dataset_routes_dao::find_identities_in_organization(
+            &state.pool,
+            &user.id,
+            &organization,
+        )
+        .await?;
         for identity in identities {
             if crate::dataset::access::can_read(&state.pool, Some(&identity), &id, None).await? {
                 return Ok(Json(result));
@@ -221,7 +227,7 @@ async fn update_metadata(
         ObjectId,
         String,
         chrono::DateTime<chrono::Utc>,
-    ) = dao::find_metadata_fields(&mut transaction, &id).await?;
+    ) = dataset_routes_dao::find_metadata_fields(&mut transaction, &id).await?;
     let metadata = body
         .metadata
         .unwrap_or_else(|| existing_metadata.as_array().cloned().unwrap_or_default());
@@ -229,11 +235,15 @@ async fn update_metadata(
     let folder = body.folder_id.unwrap_or(existing_folder);
     // Keep folder references live and within the dataset's organization. A
     // settings editor can move a dataset without managing the target folder.
-    crate::dataset::dao::lock_folder_in_organization(&mut transaction, &folder, &organization)
-        .await?
-        .ok_or_else(|| ApiError::bad_request(crate::msg::folder::NOT_IN_DATASET_ORGANIZATION))?;
+    crate::dataset::dataset_dao::lock_folder_in_organization(
+        &mut transaction,
+        &folder,
+        &organization,
+    )
+    .await?
+    .ok_or_else(|| ApiError::bad_request(crate::msg::folder::NOT_IN_DATASET_ORGANIZATION))?;
     let sorting_key = body.sorting_key.unwrap_or(created);
-    dao::update_metadata(
+    dataset_routes_dao::update_metadata(
         &mut transaction,
         &id,
         body.description,
@@ -246,7 +256,8 @@ async fn update_metadata(
     )
     .await?;
     let readable =
-        crate::dataset::dao::is_readable_on_connection(&mut transaction, &user.id, &id).await?;
+        crate::dataset::dataset_dao::is_readable_on_connection(&mut transaction, &user.id, &id)
+            .await?;
     if !readable {
         return Err(ApiError::not_found(crate::msg::dataset::MISSING));
     }
@@ -269,11 +280,11 @@ async fn access_list(
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<Json<Vec<Value>>> {
     require_read(&state, &user, &id).await?;
-    let organization = dao::find_organization_id(&state.pool, &id).await?;
-    if !dao::can_read_organization(&state.pool, &organization, &user).await? {
+    let organization = dataset_routes_dao::find_organization_id(&state.pool, &id).await?;
+    if !dataset_routes_dao::can_read_organization(&state.pool, &organization, &user).await? {
         return Err(ApiError::not_found(crate::msg::organization::MISSING));
     }
-    let rows = dao::find_access_list(&state.pool, &user, &organization, &id).await?;
+    let rows = dataset_routes_dao::find_access_list(&state.pool, &user, &organization, &id).await?;
     Ok(Json(rows))
 }
 
@@ -313,7 +324,7 @@ async fn data_source_json(
     use_real_paths: bool,
 ) -> ApiResult<Value> {
     let (usable, mut source, default_view_configuration) =
-        dao::find_data_source_header(pool, id).await?;
+        dataset_routes_dao::find_data_source_header(pool, id).await?;
     if usable {
         if source["scale"].is_null() {
             return Err(ApiError::internal());
@@ -361,12 +372,12 @@ async fn read(
         }));
     }
     if let Some(user) = user.as_ref() {
-        dao::upsert_last_used_time(&state.pool, &id, &user.id).await?;
+        dataset_routes_dao::upsert_last_used_time(&state.pool, &id, &user.id).await?;
     }
     let result = full_json(&state.pool, user.as_ref(), &id, jobs_enabled).await?;
     if let Some(user) = user {
         crate::system::analytics::track_open_dataset(&state, &misc, &user, &id);
-        crate::dataset::dao::touch_user_last_activity(&state.pool, user.id).await?;
+        crate::dataset::dataset_dao::touch_user_last_activity(&state.pool, user.id).await?;
     }
     Ok(Json(result))
 }
@@ -389,7 +400,7 @@ pub(crate) async fn full_json_on_connection(
     dataset_id: &ObjectId,
     jobs_enabled: bool,
 ) -> ApiResult<Value> {
-    let mut result = dao::find_public_json(connection, user, dataset_id).await?;
+    let mut result = dataset_routes_dao::find_public_json(connection, user, dataset_id).await?;
     let datastore_name = result["dataStore"]["name"]
         .as_str()
         .ok_or_else(ApiError::internal)?
@@ -448,8 +459,9 @@ pub(crate) async fn public_datastore_on_connection(
     name: &str,
     jobs_enabled: bool,
 ) -> ApiResult<PublicDataStore> {
-    let (name, url, allows_upload) = dao::find_datastore_public_fields(connection, name).await?;
-    let mut commands = dao::find_supported_job_commands(connection, &name).await?;
+    let (name, url, allows_upload) =
+        dataset_routes_dao::find_datastore_public_fields(connection, name).await?;
+    let mut commands = dataset_routes_dao::find_supported_job_commands(connection, &name).await?;
     for command in &commands {
         if !matches!(
             command.as_str(),
@@ -617,8 +629,9 @@ async fn full_layers_with_exposure_on_connection(
     exposure: CredentialIdExposure,
     use_real_paths: bool,
 ) -> ApiResult<Vec<Value>> {
-    let rows = dao::find_layers_json(connection, dataset_id, use_real_paths).await?;
-    let attachments = dao::find_attachments_json(connection, dataset_id, use_real_paths).await?;
+    let rows = dataset_routes_dao::find_layers_json(connection, dataset_id, use_real_paths).await?;
+    let attachments =
+        dataset_routes_dao::find_attachments_json(connection, dataset_id, use_real_paths).await?;
     let attachments = attachments
         .into_iter()
         .map(|(name, typ, mut attachment)| {
@@ -740,7 +753,7 @@ async fn list(
 ) -> ApiResult<Json<Vec<CompactDataset>>> {
     let rows = list_rows(&state.pool, user.as_ref(), &query).await?;
     if let Some(user) = user {
-        crate::dataset::dao::touch_user_last_activity(&state.pool, user.id).await?;
+        crate::dataset::dataset_dao::touch_user_last_activity(&state.pool, user.id).await?;
     }
     Ok(Json(rows))
 }
@@ -773,7 +786,10 @@ pub(crate) async fn list_rows(
     let searched_id = tokens
         .first()
         .filter(|s| tokens.len() == 1 && ObjectId::parse(s).is_ok());
-    Ok(dao::find_all_compact(pool, user, query, organization, &tokens, searched_id).await?)
+    Ok(
+        dataset_routes_dao::find_all_compact(pool, user, query, organization, &tokens, searched_id)
+            .await?,
+    )
 }
 
 /// DatasetCompactInfo as serialized by DatasetController.list (compact).
@@ -829,7 +845,8 @@ async fn sharing_token(
     require_read(&state, &user, &id).await?;
     // RandomIDGenerator.generateBlocking(): 16 random bytes, unpadded base64url (22 characters).
     let new_token = crate::auth::browser::random_base64url(16)?;
-    let result = dao::set_sharing_token_if_absent(&state.pool, &user, &id, new_token).await?;
+    let result =
+        dataset_routes_dao::set_sharing_token_if_absent(&state.pool, &user, &id, new_token).await?;
     let token = result.ok_or_else(|| ApiError::forbidden(crate::msg::NOT_ALLOWED_SHORT))?;
     Ok(Json(SharingToken {
         sharing_token: token.trim().to_owned(),
@@ -842,7 +859,7 @@ async fn delete_sharing_token(
     Path(id): Path<PathObjectId>,
 ) -> ApiResult<()> {
     require_edit(&state, &user, &id).await?;
-    let rows_affected = dao::clear_sharing_token(&state.pool, &user, &id).await?;
+    let rows_affected = dataset_routes_dao::clear_sharing_token(&state.pool, &user, &id).await?;
     if rows_affected != 1 {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
@@ -861,8 +878,8 @@ async fn update_teams(
     crate::dataset::access::lock_edit(&mut transaction, &user, &id, true).await?;
     // Dataset managers can update teams they can read; other users only teams
     // they manage. Unmanageable current grants must survive the replacement.
-    let managed = dao::find_manageable_team_ids(&mut transaction, &user).await?;
-    let current = dao::find_allowed_team_ids(&mut transaction, &id).await?;
+    let managed = dataset_routes_dao::find_manageable_team_ids(&mut transaction, &user).await?;
+    let current = dataset_routes_dao::find_allowed_team_ids(&mut transaction, &id).await?;
     let mut updated: Vec<ObjectId> = requested
         .into_iter()
         .filter(|t| managed.contains(t))
@@ -879,8 +896,8 @@ async fn update_teams(
             &[&user.id],
         )
         .await;
-    dao::delete_allowed_teams(&mut transaction, &id).await?;
-    dao::insert_allowed_teams(&mut transaction, &id, &updated).await?;
+    dataset_routes_dao::delete_allowed_teams(&mut transaction, &id).await?;
+    dataset_routes_dao::insert_allowed_teams(&mut transaction, &id, &updated).await?;
     transaction.commit().await?;
     notification_emails.send_share_emails(&state.pool, pending_emails, &user.id);
     Ok(Json(updated))

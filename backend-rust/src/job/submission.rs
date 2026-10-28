@@ -37,9 +37,9 @@ use webknossos_common::{
     geometry::{BoundingBox, Vec3Int},
 };
 
-mod dao;
+mod job_submission_dao;
 
-use dao::{Dataset, LayerRow};
+use job_submission_dao::{Dataset, LayerRow};
 
 const NO_WORKER: &str =
     "No worker supporting the requested job is available for the selected data store.";
@@ -506,7 +506,7 @@ pub(crate) async fn find_readable_dataset(
     user: &AuthUser,
     id: &ObjectId,
 ) -> RunResult<Option<Dataset>> {
-    Ok(dao::find_one_readable_dataset(&state.pool, &user.id, id).await?)
+    Ok(job_submission_dao::find_one_readable_dataset(&state.pool, &user.id, id).await?)
 }
 
 /// DatasetDAO.findOne with the user's access `?~> Msg.Dataset.notFound(id) ~> NOT_FOUND`.
@@ -520,7 +520,7 @@ async fn find_dataset(state: &AppState, user: &AuthUser, id: &ObjectId) -> RunRe
 
 /// OrganizationDAO.findOne(dataset._organization) with global access.
 async fn find_organization(state: &AppState, organization: &str) -> RunResult<String> {
-    dao::find_organization_id(&state.pool, organization)
+    job_submission_dao::find_organization_id(&state.pool, organization)
         .await?
         .ok_or_else(|| Failure::new(crate::msg::organization::not_found(organization)).into())
 }
@@ -547,9 +547,13 @@ async fn organization_base_directory(
     dataset: &Dataset,
 ) -> RunResult<String> {
     // DataStoreDAO.findOneByName with the user's access.
-    let url = dao::find_data_store_url_for_user(&state.pool, dataset.data_store.trim(), &user.id)
-        .await?
-        .ok_or_else(|| Failure::new(crate::msg::data_store::NOT_FOUND))?;
+    let url = job_submission_dao::find_data_store_url_for_user(
+        &state.pool,
+        dataset.data_store.trim(),
+        &user.id,
+    )
+    .await?
+    .ok_or_else(|| Failure::new(crate::msg::data_store::NOT_FOUND))?;
     let directory: Value = clients
         .get_json(
             &url,
@@ -609,7 +613,7 @@ pub(crate) async fn usable_data_source(
                 .into(),
         );
     }
-    let rows: Vec<LayerRow> = dao::find_all_layers(&state.pool, &dataset.id).await?;
+    let rows: Vec<LayerRow> = job_submission_dao::find_all_layers(&state.pool, &dataset.id).await?;
     let mut layers = Vec::with_capacity(rows.len());
     for row in rows {
         let bounding_box = BoundingBox::from_sql(&row.bounding_box)
@@ -640,7 +644,8 @@ pub(crate) async fn layer_mags(
     dataset: &Dataset,
     layer_name: &str,
 ) -> RunResult<Vec<[i32; 3]>> {
-    let rows = dao::find_mags_for_layer(&state.pool, &dataset.id, layer_name).await?;
+    let rows =
+        job_submission_dao::find_mags_for_layer(&state.pool, &dataset.id, layer_name).await?;
     Ok(rows.into_iter().map(|(x, y, z)| [x, y, z]).collect())
 }
 
@@ -673,13 +678,13 @@ async fn assert_storage_not_exceeded(
     if !JOBS_WRITING_TO_STORAGE.contains(&command) {
         return Ok(());
     }
-    let included: Option<i64> = dao::find_included_storage(connection, organization)
+    let included: Option<i64> = job_submission_dao::find_included_storage(connection, organization)
         .await?
         .ok_or_else(|| Failure::new(crate::msg::organization::not_found(organization)))?;
     let Some(included) = included else {
         return Ok(());
     };
-    let used: i64 = dao::find_used_storage_bytes(connection, organization).await?;
+    let used: i64 = job_submission_dao::find_used_storage_bytes(connection, organization).await?;
     if used > included {
         return Err(Failure::new(ORGANIZATION_STORAGE_EXCEEDED)
             .wrap(STORAGE_EXCEEDED)
@@ -702,8 +707,11 @@ pub(crate) async fn submit_job(
     }
     // WorkerDAO.findAllByDataStore: union of all workers' supported commands;
     // an unparsable worker row fails the lookup.
-    let commands: Vec<Vec<String>> =
-        dao::find_supported_job_commands_by_data_store(connection, submission.data_store).await?;
+    let commands: Vec<Vec<String>> = job_submission_dao::find_supported_job_commands_by_data_store(
+        connection,
+        submission.data_store,
+    )
+    .await?;
     let parsable = commands
         .iter()
         .flatten()
@@ -718,7 +726,7 @@ pub(crate) async fn submit_job(
     }
     assert_storage_not_exceeded(connection, submission.command, &user.organization_id).await?;
     let job_id = ObjectId::new();
-    dao::insert_one(
+    job_submission_dao::insert_one(
         connection,
         &job_id,
         &user.id,
@@ -761,13 +769,13 @@ async fn submit_paid_job(
     )
     .map_err(Failure::new)?;
     let balance =
-        crate::job::dao::get_milli_credit_balance(connection, &user.id, &user.organization_id)
+        crate::job::job_dao::get_milli_credit_balance(connection, &user.id, &user.organization_id)
             .await?;
     if balance < i64::from(cost) {
         return Err(Failure::new(NOT_ENOUGH_CREDITS).into());
     }
     let transaction_id = ObjectId::new();
-    dao::insert_pending_credit_transaction(
+    job_submission_dao::insert_pending_credit_transaction(
         connection,
         &transaction_id,
         &user.organization_id,
@@ -779,7 +787,7 @@ async fn submit_paid_job(
     let job_id = match submit_job(connection, enabled, user, submission).await {
         Ok(job_id) => job_id,
         Err(RunError::Failure(_)) => {
-            dao::insert_refund_credit_transaction(
+            job_submission_dao::insert_refund_credit_transaction(
                 connection,
                 &ObjectId::new(),
                 &user.organization_id,
@@ -788,12 +796,14 @@ async fn submit_paid_job(
                 &format!("Refund for transaction {transaction_id}."),
             )
             .await?;
-            dao::update_credit_transaction_refunded(connection, &transaction_id).await?;
+            job_submission_dao::update_credit_transaction_refunded(connection, &transaction_id)
+                .await?;
             return Ok(PaidSubmission::Refunded(Failure::new(SUBMIT_FAILED)));
         }
         Err(error) => return Err(error),
     };
-    dao::update_credit_transaction_paid_job(connection, &transaction_id, &job_id).await?;
+    job_submission_dao::update_credit_transaction_paid_job(connection, &transaction_id, &job_id)
+        .await?;
     Ok(PaidSubmission::Submitted(job_id))
 }
 
@@ -1180,7 +1190,9 @@ async fn export_tiff(
     // DatasetLayerAdditionalAxesDAO + Zarr3OutputHelper.reorderAdditionalAxes:
     // sorted by index and renumbered after the channel axis.
     let additional_axes: Vec<(String, i32, i32)> = match &layer_name {
-        Some(layer_name) => dao::find_additional_axes(&state.pool, &dataset.id, layer_name).await?,
+        Some(layer_name) => {
+            job_submission_dao::find_additional_axes(&state.pool, &dataset.id, layer_name).await?
+        }
         None => Vec::new(),
     };
     let rank = i32::try_from(additional_axes.len()).unwrap_or(i32::MAX - 4) + 4;
@@ -1424,9 +1436,10 @@ async fn render_animation(
     let user = authenticate(&parts, &state).await?;
     let dataset = find_dataset(&state, &user, &dataset_id).await?;
     let organization = find_organization(&state, &dataset.organization).await?;
-    let pricing_plan: String = dao::find_pricing_plan(&state.pool, &user.organization_id)
-        .await?
-        .ok_or_else(|| RunError::Api(ApiError::not_found(crate::msg::NOT_FOUND)))?;
+    let pricing_plan: String =
+        job_submission_dao::find_pricing_plan(&state.pool, &user.organization_id)
+            .await?
+            .ok_or_else(|| RunError::Api(ApiError::not_found(crate::msg::NOT_FOUND)))?;
     // PricingPlan.isPaidPlan: everything but Personal.
     if pricing_plan == "Personal" {
         if !options.include_watermark {

@@ -1,6 +1,6 @@
 //! Read callbacks from WKRemoteTracingStoreController. A tracing-store key
 //! grants global access; the caller's path name is informational.
-use super::dao;
+use super::remote_tracingstore_dao;
 use axum::{
     Json, Router,
     extract::{FromRequestParts, State},
@@ -94,7 +94,7 @@ impl IntoResponse for CallbackError {
 }
 
 pub(crate) async fn validate_key(pool: &sqlx::PgPool, key: &str) -> Result<(), CallbackError> {
-    let valid = dao::key_is_valid(pool, key).await?;
+    let valid = remote_tracingstore_dao::key_is_valid(pool, key).await?;
     if valid {
         Ok(())
     } else {
@@ -120,7 +120,8 @@ async fn annotation_dataset(
         .provide_saved(AccessContext::global(None), annotation_id)
         .await
         .map_err(|error| error.into_api_error(StatusCode::BAD_REQUEST))?;
-    let exists = dao::dataset_exists(&state.pool, &annotation.dataset_id).await?;
+    let exists =
+        remote_tracingstore_dao::dataset_exists(&state.pool, &annotation.dataset_id).await?;
     if !exists {
         return Err(ApiError::bad_request(
             crate::msg::dataset::not_found_for_annotation(&annotation.dataset_id, annotation_id),
@@ -173,10 +174,11 @@ async fn annotation_id_for_tracing(
     }
     // AnnotationInformationProvider shifts the saved lookup's Box and falls
     // back to the existing compound cache on Empty or Failure. Never merge.
-    let saved_id = dao::find_annotation_id_for_tracing(&state.pool, &query.tracing_id)
-        .await
-        .ok()
-        .flatten();
+    let saved_id =
+        remote_tracingstore_dao::find_annotation_id_for_tracing(&state.pool, &query.tracing_id)
+            .await
+            .ok()
+            .flatten();
     if let Some(id) = saved_id
         && let Ok(Some(annotation)) =
             crate::annotation::access::find_optional(&state.pool, None, &id, true).await
@@ -193,7 +195,8 @@ async fn annotation_id_for_tracing(
             annotation.collaboration_mode.as_str(),
             "OwnerOnly" | "Exclusive" | "Concurrent"
         )
-        && let Ok(false) = dao::has_unreadable_layer(&state.pool, &annotation.id).await
+        && let Ok(false) =
+            remote_tracingstore_dao::has_unreadable_layer(&state.pool, &annotation.id).await
     {
         return Ok(Json(annotation.id));
     }
@@ -213,7 +216,7 @@ struct DatasetPath {
 }
 
 async fn require_dataset(state: &AppState, dataset_id: &ObjectId) -> ApiResult<()> {
-    let exists = dao::dataset_exists(&state.pool, dataset_id).await?;
+    let exists = remote_tracingstore_dao::dataset_exists(&state.pool, dataset_id).await?;
     if !exists {
         return Err(ApiError::not_found(crate::msg::dataset::not_found(
             dataset_id,
@@ -223,7 +226,8 @@ async fn require_dataset(state: &AppState, dataset_id: &ObjectId) -> ApiResult<(
 }
 
 async fn data_source(state: &AppState, dataset_id: &ObjectId) -> ApiResult<Value> {
-    let missing_voxel = dao::is_usable_without_voxel_size(&state.pool, dataset_id).await?;
+    let missing_voxel =
+        remote_tracingstore_dao::is_usable_without_voxel_size(&state.pool, dataset_id).await?;
     if missing_voxel {
         return Err(ApiError::bad_request(
             crate::msg::dataset::data_source::USABLE_BUT_NO_VOXEL_SIZE,
@@ -238,7 +242,9 @@ async fn data_store_uri_for_dataset(
     _store: ValidatedTracingStore,
 ) -> ApiResult<Json<String>> {
     require_dataset(&state, &path.dataset_id).await?;
-    let url = dao::find_data_store_url_for_dataset(&state.pool, &path.dataset_id).await?;
+    let url =
+        remote_tracingstore_dao::find_data_store_url_for_dataset(&state.pool, &path.dataset_id)
+            .await?;
     Ok(Json(url.ok_or_else(|| {
         ApiError::bad_request(crate::msg::data_store::NOT_FOUND)
     })?))

@@ -7,7 +7,7 @@ use sqlx::{FromRow, PgConnection, PgPool};
 use super::{CompactDataset, DELETED_BY_USER, ListQuery, UNREPORTED};
 use crate::{
     auth::AuthUser,
-    dataset::dao::{push_edit_predicate, push_read_predicate},
+    dataset::dataset_dao::{push_edit_predicate, push_read_predicate},
     sql::Sql,
     util::id::ObjectId,
 };

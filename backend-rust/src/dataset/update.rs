@@ -6,7 +6,7 @@ use serde::{Deserialize, Deserializer};
 use serde_json::{Value, json};
 use webknossos_common::{enums::LayerAttachmentType, upath::UPath};
 
-mod dao;
+mod dataset_update_dao;
 
 use crate::{
     AppState,
@@ -211,7 +211,7 @@ fn multiset_difference(left: &[String], right: &[String]) -> Vec<String> {
 }
 
 async fn paths_used_only_by(pool: &sqlx::PgPool, dataset_id: &ObjectId) -> ApiResult<Vec<String>> {
-    let raw = crate::dataset::dao::find_exclusive_paths(pool, dataset_id).await?;
+    let raw = crate::dataset::dataset_dao::find_exclusive_paths(pool, dataset_id).await?;
     raw.iter()
         .map(|p| {
             UPath::parse(p)
@@ -284,7 +284,7 @@ async fn update_partial(
     crate::dataset::access::lock_edit(&mut transaction, &user, &id, true).await?;
     if let Some(folder) = &body.folder_id {
         // Same hardening as the full PATCH: keep the dataset in a live folder of its organization.
-        crate::dataset::dao::lock_folder_in_organization(
+        crate::dataset::dataset_dao::lock_folder_in_organization(
             &mut transaction,
             folder,
             &record.organization,
@@ -292,18 +292,19 @@ async fn update_partial(
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::folder::NOT_IN_DATASET_ORGANIZATION))?;
     }
-    dao::update_partial(&mut transaction, &id, &body).await?;
+    dataset_update_dao::update_partial(&mut transaction, &id, &body).await?;
     if let Some(change) = &change {
         // DatasetDAO.updateDataSource with the user-changed source. The Scala
         // DAO also nulls defaultViewConfiguration here (the loaded source never
         // carries one); it is deliberately kept.
-        crate::dataset::dao::delete_thumbnails(&mut transaction, &id).await?;
-        dao::update_data_source(&mut transaction, &id, &change.updated).await?;
+        crate::dataset::dataset_dao::delete_thumbnails(&mut transaction, &id).await?;
+        dataset_update_dao::update_data_source(&mut transaction, &id, &change.updated).await?;
         crate::dataset::source::write_layers(&mut transaction, &id, &change.updated.data_layers)
             .await?;
     }
     let readable =
-        crate::dataset::dao::is_readable_on_connection(&mut transaction, &user.id, &id).await?;
+        crate::dataset::dataset_dao::is_readable_on_connection(&mut transaction, &user.id, &id)
+            .await?;
     if !readable {
         return Err(crate::dataset::lifecycle::not_found(&id));
     }

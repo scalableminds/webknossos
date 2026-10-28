@@ -18,7 +18,7 @@ use crate::{
     state::JobsEnabled,
 };
 
-use super::dao;
+use super::stores_dao;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -37,7 +37,7 @@ async fn list(
         return Ok(ResponseJson(Vec::new()));
     };
     let mut tx = state.pool.begin().await?;
-    let names = dao::find_all_names_for_organization(&mut tx, &user.organization_id).await?;
+    let names = stores_dao::find_all_names_for_organization(&mut tx, &user.organization_id).await?;
     let mut values = Vec::with_capacity(names.len());
     for name in names {
         values.push(public_datastore_on_connection(&mut tx, &name, jobs_enabled).await?);
@@ -68,7 +68,7 @@ async fn create(
     }
     let mut tx = state.pool.begin().await?;
     lock_superuser(&mut tx, &user, crate::msg::user::SUPER_USER_ONLY).await?;
-    let taken = dao::name_is_taken(&mut tx, &body.name, &user.organization_id).await?;
+    let taken = stores_dao::name_is_taken(&mut tx, &body.name, &user.organization_id).await?;
     if taken {
         return Err(ApiError::bad_request(format!(
             "A data store named “{}” already exists. Please choose a different name.",
@@ -77,7 +77,7 @@ async fn create(
     }
     // The original DTO does not accept onlyAllowedOrganization or storage
     // reporting configuration. Unknown fields cannot set those private flags.
-    dao::insert_one(
+    stores_dao::insert_one(
         &mut tx,
         &body.name,
         &body.url,
@@ -104,7 +104,7 @@ async fn remove(
     // workers and credentials keep their records; nothing cascades here.
     let mut tx = state.pool.begin().await?;
     lock_superuser(&mut tx, &user, crate::msg::NOT_ALLOWED).await?;
-    dao::delete_one(&mut tx, name).await?;
+    stores_dao::delete_one(&mut tx, name).await?;
     tx.commit().await?;
     Ok(StatusCode::OK)
 }
@@ -116,7 +116,7 @@ async fn lock_superuser(
     user: &AuthUser,
     message: &str,
 ) -> ApiResult<()> {
-    let live = dao::lock_live_superuser(tx, &user.id, &user.organization_id).await?;
+    let live = stores_dao::lock_live_superuser(tx, &user.id, &user.organization_id).await?;
     if live.is_none() {
         return Err(ApiError::forbidden(message));
     }

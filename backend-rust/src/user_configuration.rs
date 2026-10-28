@@ -1,4 +1,4 @@
-pub(crate) mod dao;
+pub(crate) mod user_configuration_dao;
 
 use crate::response::Messages;
 use axum::{Json, Router, extract::State, routing::get};
@@ -23,7 +23,7 @@ async fn read(
     OptionalAuthUser(user): OptionalAuthUser,
 ) -> ApiResult<Json<Value>> {
     let configuration = match user {
-        Some(user) => dao::find_user_configuration(&state.pool, user.id).await?,
+        Some(user) => user_configuration_dao::find_user_configuration(&state.pool, user.id).await?,
         None => json!({}),
     };
     Ok(Json(configuration))
@@ -34,8 +34,12 @@ async fn update(
     user: AuthUser,
     RequestJson(configuration): RequestJson<Map<String, Value>>,
 ) -> ApiResult<Json<Messages>> {
-    let rows_affected =
-        dao::update_user_configuration(&state.pool, user.id, Value::Object(configuration)).await?;
+    let rows_affected = user_configuration_dao::update_user_configuration(
+        &state.pool,
+        user.id,
+        Value::Object(configuration),
+    )
+    .await?;
     if rows_affected != 1 {
         return Err(ApiError::not_found(crate::msg::user::MISSING));
     }
@@ -49,7 +53,7 @@ async fn read_shortcuts(
     OptionalAuthUser(user): OptionalAuthUser,
 ) -> ApiResult<Json<Value>> {
     let shortcuts = match user {
-        Some(user) => dao::find_keyboard_shortcuts_config(&state.pool, user.id)
+        Some(user) => user_configuration_dao::find_keyboard_shortcuts_config(&state.pool, user.id)
             .await?
             .unwrap_or_else(|| json!({})),
         None => json!({}),
@@ -62,9 +66,12 @@ async fn update_shortcuts(
     user: AuthUser,
     RequestJson(configuration): RequestJson<Map<String, Value>>,
 ) -> ApiResult<Json<Messages>> {
-    let rows_affected =
-        dao::upsert_keyboard_shortcuts_config(&state.pool, user.id, Value::Object(configuration))
-            .await?;
+    let rows_affected = user_configuration_dao::upsert_keyboard_shortcuts_config(
+        &state.pool,
+        user.id,
+        Value::Object(configuration),
+    )
+    .await?;
     if rows_affected != 1 {
         return Err(ApiError::not_found(crate::msg::user::MISSING));
     }

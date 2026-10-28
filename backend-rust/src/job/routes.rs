@@ -25,7 +25,7 @@ use crate::{
     auth::routes::AuthRouteConfig,
     error::{ApiError, ApiResult},
     extract::{Path, Query},
-    job::dao,
+    job::job_dao,
     system::application_info::MiscState,
     util::id::{ObjectId, PathObjectId},
 };
@@ -64,7 +64,7 @@ pub(crate) fn is_job_command(command: &str) -> bool {
     JOB_COMMANDS.contains(&command)
 }
 
-pub(crate) use dao::JOB_COLUMNS;
+pub(crate) use job_dao::JOB_COLUMNS;
 
 /// Settings for the jobs routes that are not covered by other configuration.
 #[derive(Clone, Debug)]
@@ -169,7 +169,7 @@ pub(crate) async fn find_job(
     user_id: &ObjectId,
     job_id: &ObjectId,
 ) -> ApiResult<Option<Job>> {
-    let job = dao::find_one(connection, user_id, job_id).await?;
+    let job = job_dao::find_one(connection, user_id, job_id).await?;
     match job {
         Some(job) if !job.is_valid() => Err(ApiError::bad_request(format!(
             "Parsing failed for row in webknossos.jobs queried by {job_id}"
@@ -246,21 +246,22 @@ pub(crate) async fn public_writes(
     user_id: &ObjectId,
     job: &Job,
 ) -> ApiResult<JobCompactInfo> {
-    let owner = dao::find_owner_organization_and_multi_user(connection, user_id, &job.owner)
+    let owner = job_dao::find_owner_organization_and_multi_user(connection, user_id, &job.owner)
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
     let (owner_organization, owner_multi_user) = owner;
     let (first_name, last_name, email) =
-        dao::find_multi_user_name_and_email(connection, &owner_multi_user)
+        job_dao::find_multi_user_name_and_email(connection, &owner_multi_user)
             .await?
             .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
-    let organization = dao::find_readable_organization_id(connection, user_id, &owner_organization)
-        .await?
-        .ok_or_else(|| {
-            ApiError::bad_request(crate::msg::organization::not_found(&owner_organization))
-        })?;
+    let organization =
+        job_dao::find_readable_organization_id(connection, user_id, &owner_organization)
+            .await?
+            .ok_or_else(|| {
+                ApiError::bad_request(crate::msg::organization::not_found(&owner_organization))
+            })?;
     // CreditTransactionService.findTransactionOfJob; any failure means "no cost".
-    let delta = dao::find_credit_delta_of_job(connection, user_id, &job.id).await?;
+    let delta = job_dao::find_credit_delta_of_job(connection, user_id, &job.id).await?;
     Ok(JobCompactInfo {
         id: job.id.clone(),
         command: job.command.clone(),
@@ -360,7 +361,7 @@ async fn list(
         return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
     let skip_for_deleted_datasets = query.skip_for_deleted_datasets.unwrap_or(false);
-    let rows = dao::find_all_compact(
+    let rows = job_dao::find_all_compact(
         &state.pool,
         &user.id,
         query.command.as_deref(),
@@ -432,8 +433,8 @@ async fn status(
     State(routes): State<JobRoutes>,
     _user: AuthUser,
 ) -> ApiResult<Json<JobsStatus>> {
-    let counts = dao::count_by_state(&state.pool).await?;
-    let workers = dao::find_all_workers(&state.pool).await?;
+    let counts = job_dao::count_by_state(&state.pool).await?;
+    let workers = job_dao::find_all_workers(&state.pool).await?;
     let now = Utc::now();
     let timeout = chrono::Duration::from_std(routes.config.worker_liveness_timeout)
         .unwrap_or(chrono::Duration::MAX);
@@ -506,7 +507,7 @@ async fn cancel(
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // JobDAO.updateManualState: update access equals read access, checked by find_job.
-    dao::update_manual_state_cancelled(&mut transaction, &job.id).await?;
+    job_dao::update_manual_state_cancelled(&mut transaction, &job.id).await?;
     if job.state == "PENDING" || job.state == "STARTED" {
         refund_transaction_for_job(&mut transaction, &job.id, true)
             .await
@@ -531,7 +532,7 @@ pub(crate) async fn refund_transaction_for_job(
     job_id: &ObjectId,
     is_cancelled: bool,
 ) -> ApiResult<()> {
-    let pending = dao::find_pending_transaction_of_job(connection, job_id).await?;
+    let pending = job_dao::find_pending_transaction_of_job(connection, job_id).await?;
     let Some(transaction_id) = pending else {
         // Assume a transaction-less (unpaid) job.
         return Ok(());
@@ -543,10 +544,10 @@ pub(crate) async fn refund_transaction_for_job(
     };
     // CreditTransactionDAO.refundTransaction.
     let inserted =
-        dao::insert_refund_transaction(connection, &ObjectId::new(), &transaction_id, &comment)
+        job_dao::insert_refund_transaction(connection, &ObjectId::new(), &transaction_id, &comment)
             .await
             .map_err(refund_error)?;
-    let updated = dao::update_transaction_refunded(connection, &transaction_id)
+    let updated = job_dao::update_transaction_refunded(connection, &transaction_id)
         .await
         .map_err(refund_error)?;
     if inserted != 1 || updated != 1 {
@@ -587,7 +588,7 @@ async fn retry(
     }
     let mut transaction = crate::db::begin_serializable(&state.pool).await?;
     // JobDAO.retryOne.
-    let reset = dao::retry_one(&mut transaction, &job.id, user.is_superuser).await?;
+    let reset = job_dao::retry_one(&mut transaction, &job.id, user.is_superuser).await?;
     // Credits are only reserved for jobs that actually rerun; a failure rolls the reset back.
     if reset == 1 {
         reserve_credits_for_retry(&mut transaction, &user.id, &job.id).await?;
@@ -604,16 +605,16 @@ async fn reserve_credits_for_retry(
     user_id: &ObjectId,
     job_id: &ObjectId,
 ) -> ApiResult<()> {
-    let existing = dao::find_credit_transaction_of_job(connection, user_id, job_id).await?;
+    let existing = job_dao::find_credit_transaction_of_job(connection, user_id, job_id).await?;
     let Some((organization, delta, comment)) = existing else {
         // Assume a transaction-less (unpaid) job.
         return Ok(());
     };
-    let balance = dao::get_milli_credit_balance(connection, user_id, &organization).await?;
+    let balance = job_dao::get_milli_credit_balance(connection, user_id, &organization).await?;
     if balance < -i64::from(delta) {
         return Err(ApiError::bad_request(NOT_ENOUGH_CREDITS));
     }
-    dao::insert_pending_credit_transaction(
+    job_dao::insert_pending_credit_transaction(
         connection,
         &ObjectId::new(),
         &organization,
@@ -638,9 +639,10 @@ async fn redirect_to_export(
     let job = find_job(&mut connection, &user.id, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
-    let public_url = dao::find_data_store_public_url(&mut connection, &job.data_store, &user.id)
-        .await?
-        .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
+    let public_url =
+        job_dao::find_data_store_public_url(&mut connection, &job.data_store, &user.id)
+            .await?
+            .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     drop(connection);
     let token = find_or_create_token(&state.pool, &user.id, &routes.auth).await?;
     let token: String = url::form_urlencoded::byte_serialize(token.as_bytes()).collect();
@@ -661,8 +663,8 @@ async fn find_or_create_token(
 ) -> ApiResult<String> {
     let mut transaction = pool.begin().await?;
     // Serialize concurrent creation for the same user.
-    dao::lock_user(&mut transaction, user_id).await?;
-    let existing = dao::find_usable_authentication_token(&mut transaction, user_id).await?;
+    job_dao::lock_user(&mut transaction, user_id).await?;
+    let existing = job_dao::find_usable_authentication_token(&mut transaction, user_id).await?;
     if let Some(token) = existing {
         transaction.commit().await?;
         return Ok(token);
@@ -674,11 +676,11 @@ async fn find_or_create_token(
     if expiry_ms <= 0 || idle_ms <= 0 {
         return Err(ApiError::internal());
     }
-    dao::delete_authentication_tokens(&mut transaction, user_id).await?;
+    job_dao::delete_authentication_tokens(&mut transaction, user_id).await?;
     let mut random = [0_u8; 16];
     getrandom::fill(&mut random).map_err(|_| ApiError::internal())?;
     let value = URL_SAFE_NO_PAD.encode(random);
-    dao::insert_authentication_token(
+    job_dao::insert_authentication_token(
         &mut transaction,
         &ObjectId::new(),
         &value,
@@ -764,7 +766,7 @@ async fn credit_cost(
         .map_err(ApiError::bad_request)?;
     let mut connection = state.pool.acquire().await?;
     let balance =
-        dao::get_milli_credit_balance(&mut connection, &user.id, &user.organization_id).await?;
+        job_dao::get_milli_credit_balance(&mut connection, &user.id, &user.organization_id).await?;
     Ok(Json(CreditCost {
         cost_in_milli_credits: cost,
         has_enough_credits: i64::from(cost) <= balance,

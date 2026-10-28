@@ -8,7 +8,7 @@
 //! ([`ValidatedDataStore`]) and resolve the uploading user from `?token=`;
 //! here an unusable token is a 403 (`userForToken ~> FORBIDDEN`). Deviations
 //! from Play are listed in checkpoints/remote-datastore-dataset-upload.md.
-mod dao;
+mod remote_dataset_upload_dao;
 
 use axum::{
     Json as ResponseJson, Router,
@@ -64,7 +64,7 @@ fn organization_not_found(id: &str) -> ApiError {
 /// `organization._id == user._organization ~> FORBIDDEN` (the caller places the
 /// second check where Scala does). Returns `includedStorage`.
 async fn find_organization(pool: &sqlx::PgPool, id: &str) -> ApiResult<Option<i64>> {
-    dao::find_included_storage(pool, id)
+    remote_dataset_upload_dao::find_included_storage(pool, id)
         .await?
         .ok_or_else(|| organization_not_found(id))
 }
@@ -89,7 +89,7 @@ async fn assert_used_storage_not_exceeded(
         return Ok(());
     };
     // OrganizationDAO.getUsedStorage.
-    let used = dao::get_used_storage(pool, organization).await?;
+    let used = remote_dataset_upload_dao::get_used_storage(pool, organization).await?;
     if i128::from(used) + i128::from(requested.unwrap_or(0)) <= i128::from(included) {
         Ok(())
     } else {
@@ -113,7 +113,7 @@ async fn validate_layer_to_link(
     if !crate::dataset::access::can_read(pool, Some(user), id, None).await? {
         return Err(not_found());
     }
-    let allowed = dao::find_layer_link_allowed(pool, id, user).await?;
+    let allowed = remote_dataset_upload_dao::find_layer_link_allowed(pool, id, user).await?;
     match allowed {
         None => Err(not_found()),
         Some(false) => Err(ApiError::bad_request(INVALID_LINKED_LAYERS)),
@@ -176,7 +176,12 @@ async fn reserve_dataset_upload(
     }
     if body.require_unique_name.unwrap_or(false) {
         // DatasetService.checkNameAvailable(organization._id, datasetName).
-        let taken = dao::dataset_name_is_taken(pool, &body.dataset_name, organization).await?;
+        let taken = remote_dataset_upload_dao::dataset_name_is_taken(
+            pool,
+            &body.dataset_name,
+            organization,
+        )
+        .await?;
         if taken {
             return Err(ApiError::bad_request(crate::msg::dataset::name::taken(
                 &body.dataset_name,
@@ -217,9 +222,10 @@ async fn create_and_set_up_dataset(
 ) -> ApiResult<(ObjectId, String)> {
     let failed = || ApiError::bad_request(CREATE_FAILED);
     crate::dataset::create::validate_dataset_name(name).map_err(|_| failed())?;
-    let root = dao::find_root_folder_for_share(connection, &user.organization_id)
-        .await?
-        .ok_or_else(failed)?;
+    let root =
+        remote_dataset_upload_dao::find_root_folder_for_share(connection, &user.organization_id)
+            .await?
+            .ok_or_else(failed)?;
     let folder = folder.unwrap_or(&root);
     if !crate::dataset::create::folder_writable(connection, user, folder).await? {
         return Err(failed());
@@ -262,7 +268,8 @@ async fn create_and_set_up_dataset(
         }
     })?;
     // DatasetDAO.updateFolder + DatasetService.addUploader (fresh dataset).
-    dao::update_folder_and_uploader(connection, &id, folder, &user.id).await?;
+    remote_dataset_upload_dao::update_folder_and_uploader(connection, &id, folder, &user.id)
+        .await?;
     Ok((id, source.id.directory_name))
 }
 
@@ -290,13 +297,17 @@ async fn unfinished_uploads(
     // DatasetService.getAllUnfinishedDatasetUploadsOfUser
     // (findAllCompactWithSearch under GlobalAccessContext) joined with
     // TeamDAO.findAllowedTeamIdsForDataset.
-    let rows =
-        dao::find_all_unfinished_uploads(pool, &user.id, &user.organization_id, NOT_YET_UPLOADED)
-            .await
-            .map_err(|error| {
-                tracing::error!(%error, "Could not load unfinished uploads");
-                ApiError::bad_request(COULD_NOT_LOAD_UNFINISHED)
-            })?;
+    let rows = remote_dataset_upload_dao::find_all_unfinished_uploads(
+        pool,
+        &user.id,
+        &user.organization_id,
+        NOT_YET_UPLOADED,
+    )
+    .await
+    .map_err(|error| {
+        tracing::error!(%error, "Could not load unfinished uploads");
+        ApiError::bad_request(COULD_NOT_LOAD_UNFINISHED)
+    })?;
     let uploads: Vec<Value> = rows
         .into_iter()
         .map(|row| {

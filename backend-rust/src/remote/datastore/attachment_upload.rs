@@ -6,9 +6,9 @@
 //! Authentication and the dataset/layer lookup are shared with the mag upload
 //! callbacks (`remote_datastore_mag_upload`). Deviations from Play are listed
 //! in checkpoints/remote-datastore-attachment-upload.md.
-mod dao;
+mod remote_attachment_upload_dao;
 
-pub(crate) use dao::push_attachment_key;
+pub(crate) use remote_attachment_upload_dao::push_attachment_key;
 
 use axum::{Json as ResponseJson, Router, extract::State, http::StatusCode, routing::post};
 use serde::Deserialize;
@@ -26,7 +26,7 @@ use crate::{
         ResumableUploadInfo, TokenQuery, after_upload_reported, load_virtual_upload_target,
         require_same_datastore, require_usable_layer, user_for_callback_token,
     },
-    remote::datastore::{ValidatedDataStore, dao as datastore_dao},
+    remote::datastore::{ValidatedDataStore, remote_datastore_dao},
     stores::client::ServiceClients,
     util::id::ObjectId,
 };
@@ -116,7 +116,15 @@ async fn reserve_attachment_upload(
     require_usable_layer(pool, &target, &body.layer_name).await?;
     let typ = body.attachment_type;
     let name = &body.attachment.name;
-    if dao::existing_attachment_exists(pool, &target.id, &body.layer_name, typ, name).await? {
+    if remote_attachment_upload_dao::existing_attachment_exists(
+        pool,
+        &target.id,
+        &body.layer_name,
+        typ,
+        name,
+    )
+    .await?
+    {
         return Err(exists_error(typ));
     }
     require_same_datastore(&target, &store.name, DIFFERENT_DATASTORE)?;
@@ -124,14 +132,20 @@ async fn reserve_attachment_upload(
     // transaction; the dataset row lock serializes concurrent reservations.
     // Unlike mags, overwriting a pending attachment deletes no stored paths.
     let mut transaction = pool.begin().await?;
-    datastore_dao::lock_dataset(&mut transaction, &target.id).await?;
-    if dao::existing_attachment_exists(&mut *transaction, &target.id, &body.layer_name, typ, name)
-        .await?
+    remote_datastore_dao::lock_dataset(&mut transaction, &target.id).await?;
+    if remote_attachment_upload_dao::existing_attachment_exists(
+        &mut *transaction,
+        &target.id,
+        &body.layer_name,
+        typ,
+        name,
+    )
+    .await?
     {
         return Err(exists_error(typ));
     }
     if body.overwrite_pending {
-        dao::delete_pending_attachment(
+        remote_attachment_upload_dao::delete_pending_attachment(
             &mut transaction,
             &target.id,
             &body.layer_name,
@@ -140,7 +154,7 @@ async fn reserve_attachment_upload(
         )
         .await?;
     } else {
-        let pending = dao::pending_attachment_exists(
+        let pending = remote_attachment_upload_dao::pending_attachment_exists(
             &mut transaction,
             &target.id,
             &body.layer_name,
@@ -154,7 +168,7 @@ async fn reserve_attachment_upload(
             ));
         }
     }
-    dao::insert_with_upload_pending(
+    remote_attachment_upload_dao::insert_with_upload_pending(
         &mut transaction,
         &target.id,
         &body.layer_name,
@@ -196,11 +210,11 @@ async fn report_attachment_upload(
     let id = &body.dataset_id;
     // DatasetDAO.findOne under GlobalAccessContext; the reporting store need
     // not be the dataset's store (Scala does not check it either).
-    let exists = datastore_dao::dataset_exists(pool, id).await?;
+    let exists = remote_datastore_dao::dataset_exists(pool, id).await?;
     if !exists {
         return Err(crate::dataset::lifecycle::not_found(id));
     }
-    let finished = dao::finish_upload(
+    let finished = remote_attachment_upload_dao::finish_upload(
         pool,
         id,
         &body.layer_name,

@@ -4,9 +4,9 @@
 //! Every credit mutation runs in a SERIALIZABLE transaction (as in Scala) so the
 //! `enforce_non_negative_balance` trigger sees a consistent organization balance;
 //! the refunded/revoked rows are additionally locked with `FOR UPDATE`.
-pub(crate) mod dao;
+pub(crate) mod organization_credit_transactions_dao;
 
-use dao::CreditTransaction;
+use organization_credit_transactions_dao::CreditTransaction;
 
 use crate::{
     AppState,
@@ -62,7 +62,8 @@ async fn add_credits(
     user: AuthUser,
 ) -> ApiResult<StatusCode> {
     require_superuser(&user, "Only super users can add credits to an organization")?;
-    let exists = crate::organization::dao::exists(&state.pool, &query.organization_id).await?;
+    let exists =
+        crate::organization::organization_dao::exists(&state.pool, &query.organization_id).await?;
     if !exists {
         return Err(ApiError::bad_request(crate::msg::organization::not_found(
             &query.organization_id,
@@ -109,7 +110,7 @@ async fn add_credits(
         ApiError::bad_request(crate::msg::credit_transaction::CREDIT_AMOUNT_TOO_LARGE)
     })?;
     let mut transaction = crate::db::begin_serializable(&state.pool).await?;
-    dao::insert_add_credits(
+    organization_credit_transactions_dao::insert_add_credits(
         &mut transaction,
         ObjectId::new(),
         &query.organization_id,
@@ -248,7 +249,8 @@ async fn refund(
     require_superuser(&user, "Only super users can manually refund credits")?;
     let id = &*transaction_id;
     let mut transaction = crate::db::begin_serializable(&state.pool).await?;
-    let row = dao::find_one_for_update(&mut transaction, id).await?;
+    let row =
+        organization_credit_transactions_dao::find_one_for_update(&mut transaction, id).await?;
     let (organization, paid_job, transaction_state, credit_state, delta) =
         row.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     if organization != query.organization_id {
@@ -271,7 +273,7 @@ async fn refund(
         Some(job) => format!("Refund for failed job {job}."),
         None => format!("Refund for transaction {id}."),
     };
-    dao::insert_refund(
+    organization_credit_transactions_dao::insert_refund(
         &mut transaction,
         ObjectId::new(),
         &organization,
@@ -281,7 +283,7 @@ async fn refund(
     )
     .await
     .map_err(balance_error)?;
-    dao::mark_refunded(&mut transaction, id)
+    organization_credit_transactions_dao::mark_refunded(&mut transaction, id)
         .await
         .map_err(balance_error)?;
     transaction.commit().await?;
@@ -310,11 +312,16 @@ pub(crate) struct FailedRevocation {
 pub(crate) async fn revoke_expired_credits(
     pool: &PgPool,
 ) -> Result<Vec<FailedRevocation>, sqlx::Error> {
-    let organizations = dao::find_organizations_with_expired_grants(pool).await?;
+    let organizations =
+        organization_credit_transactions_dao::find_organizations_with_expired_grants(pool).await?;
     let mut failed = Vec::new();
     for organization in organizations {
         let mut transaction = crate::db::begin_serializable(pool).await?;
-        let grants = dao::find_expired_grants_for_update(&mut transaction, &organization).await?;
+        let grants = organization_credit_transactions_dao::find_expired_grants_for_update(
+            &mut transaction,
+            &organization,
+        )
+        .await?;
         for (grant_id, created_at, delta) in grants {
             // A savepoint keeps one failed revocation (e.g. the balance trigger)
             // from aborting the organization's other revocations.
@@ -374,9 +381,14 @@ async fn revoke_grant(
     created_at: DateTime<Utc>,
     delta: i32,
 ) -> Result<(), sqlx::Error> {
-    let available = dao::sum_available_since(connection, organization, created_at).await?;
+    let available = organization_credit_transactions_dao::sum_available_since(
+        connection,
+        organization,
+        created_at,
+    )
+    .await?;
     if available <= 0 {
-        dao::mark_spent(connection, grant_id).await?;
+        organization_credit_transactions_dao::mark_spent(connection, grant_id).await?;
         return Ok(());
     }
     let available = i32::try_from(available)
@@ -386,10 +398,10 @@ async fn revoke_grant(
     } else {
         "PartiallyRevoked"
     };
-    dao::update_credit_state(connection, grant_id, state).await?;
+    organization_credit_transactions_dao::update_credit_state(connection, grant_id, state).await?;
     // Scala formats the grant month in the JVM's default time zone.
     let month = created_at.with_timezone(&chrono::Local).format("%Y-%m");
-    dao::insert_revocation(
+    organization_credit_transactions_dao::insert_revocation(
         connection,
         ObjectId::new(),
         organization,
@@ -407,7 +419,8 @@ async fn list(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<V
             crate::msg::organization::LIST_CREDIT_TRANSACTIONS_ONLY_ADMIN,
         ));
     }
-    let transactions = dao::find_all_for_user(&state.pool, &user.id).await?;
+    let transactions =
+        organization_credit_transactions_dao::find_all_for_user(&state.pool, &user.id).await?;
     let mut connection = state.pool.acquire().await?;
     let mut result = Vec::new();
     for transaction in compact_free_credits_for_display(transactions)

@@ -1,5 +1,5 @@
+pub(crate) mod auth_dao;
 pub mod browser;
-pub(crate) mod dao;
 pub mod extractors;
 pub mod oidc;
 pub mod routes;

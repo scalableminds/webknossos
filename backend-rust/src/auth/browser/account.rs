@@ -13,8 +13,8 @@ use sqlx::{Postgres, Transaction};
 
 use crate::{
     AppState,
-    auth::browser::dao::update_last_logged_in_identity,
-    auth::browser::onboarding::dao::find_one_organization_team,
+    auth::browser::auth_browser_dao::update_last_logged_in_identity,
+    auth::browser::onboarding::auth_onboarding_dao::find_one_organization_team,
     auth::browser::onboarding::join_organization_as,
     auth::browser::{
         BrowserAuthConfig, Form, FormBody, create_email_verification, hash_password, issue_cookie,
@@ -27,7 +27,7 @@ use crate::{
     util::id::ObjectId,
 };
 
-pub(crate) mod dao;
+pub(crate) mod auth_account_dao;
 
 mod verification_messages {
     pub const KEY_INVALID: &str = "Verification key is invalid.";
@@ -76,7 +76,7 @@ async fn discard_bearer_token(
     secured: &Secured,
 ) -> ApiResult<()> {
     if let AuthCredential::Token(token) = &secured.credential {
-        dao::delete_token_by_value_for_user(tx, token, &secured.user.id).await?;
+        auth_account_dao::delete_token_by_value_for_user(tx, token, &secured.user.id).await?;
     }
     Ok(())
 }
@@ -86,7 +86,7 @@ async fn identity_for_email(
     tx: &mut Transaction<'_, Postgres>,
     email: &str,
 ) -> ApiResult<Option<(ObjectId, String, String)>> {
-    let row = dao::find_identity_by_email(tx, email).await?;
+    let row = auth_account_dao::find_identity_by_email(tx, email).await?;
     Ok(row.and_then(|(user, email, name)| user.map(|user| (user, email, name))))
 }
 
@@ -103,13 +103,16 @@ async fn start_reset_password(
     let mut tx = state.pool.begin().await?;
     // Always 200: never reveal whether an account exists.
     if let Some((user_id, email, name)) = identity_for_email(&mut tx, &email).await? {
-        dao::delete_reset_password_tokens_for_user(&mut tx, &user_id).await?;
+        auth_account_dao::delete_reset_password_tokens_for_user(&mut tx, &user_id).await?;
         let token = random_base64url(16)?;
         let expiry_ms = i64::try_from(config.reset_password_expiry.as_millis())
             .map_err(|_| ApiError::internal())?;
         let idle_ms = i64::try_from(config.token_idle_timeout.as_millis())
             .map_err(|_| ApiError::internal())?;
-        dao::insert_reset_password_token(&mut tx, &token, &user_id, expiry_ms, idle_ms).await?;
+        auth_account_dao::insert_reset_password_token(
+            &mut tx, &token, &user_id, expiry_ms, idle_ms,
+        )
+        .await?;
         tx.commit().await?;
         mailer.send(templates::reset_password(
             &name,
@@ -132,15 +135,15 @@ async fn reset_password(
     let token = token.trim();
     let mut tx = state.pool.begin().await?;
     // userForResetPasswordToken: not for deactivated users.
-    let target = dao::find_user_for_reset_password_token(&mut tx, token).await?;
+    let target = auth_account_dao::find_user_for_reset_password_token(&mut tx, token).await?;
     let (_, multi_user_id, deactivated) =
         target.ok_or_else(|| ApiError::bad_request(crate::msg::user::token::INVALID))?;
     if deactivated {
         return Err(ApiError::bad_request(messages::IS_DEACTIVATED));
     }
     let hash = hash_password(password).await?;
-    dao::update_password(&mut tx, &multi_user_id, &hash).await?;
-    dao::delete_tokens_by_value(&mut tx, token).await?;
+    auth_account_dao::update_password(&mut tx, &multi_user_id, &hash).await?;
+    auth_account_dao::delete_tokens_by_value(&mut tx, token).await?;
     tx.commit().await?;
     tracing::info!(multi_user = %multi_user_id, "Multiuser reset their password.");
     Ok(StatusCode::OK)
@@ -159,14 +162,14 @@ async fn change_password(
     form.finish()?;
     let mut tx = state.pool.begin().await?;
     let (multi_user_id, hasher, current_hash, email, name) =
-        dao::find_password_info_of_user_for_update(&mut tx, &secured.user.id)
+        auth_account_dao::find_password_info_of_user_for_update(&mut tx, &secured.user.id)
             .await?
             .ok_or_else(ApiError::unauthorized)?;
     if !verify_password(old_password, &hasher, current_hash).await {
         return Err(ApiError::bad_request(crate::msg::user::INVALID_CREDENTIALS));
     }
     let hash = hash_password(password).await?;
-    dao::update_password(&mut tx, &multi_user_id, &hash).await?;
+    auth_account_dao::update_password(&mut tx, &multi_user_id, &hash).await?;
     discard_bearer_token(&mut tx, &secured).await?;
     tx.commit().await?;
     tracing::info!(multi_user = %multi_user_id, "Multiuser changed their password.");
@@ -221,10 +224,11 @@ async fn switch_organization(
 ) -> ApiResult<Response> {
     signer_secret(&config)?;
     let mut tx = state.pool.begin().await?;
-    let multi_user_id = dao::find_multi_user_id_of_user_for_update(&mut tx, &secured.user.id)
-        .await?
-        .ok_or_else(ApiError::unauthorized)?;
-    let accessible = dao::is_organization_accessible(
+    let multi_user_id =
+        auth_account_dao::find_multi_user_id_of_user_for_update(&mut tx, &secured.user.id)
+            .await?
+            .ok_or_else(ApiError::unauthorized)?;
+    let accessible = auth_account_dao::is_organization_accessible(
         &mut tx,
         &organization_id,
         &multi_user_id,
@@ -236,9 +240,12 @@ async fn switch_organization(
             &organization_id,
         )));
     }
-    let existing =
-        dao::find_one_user_of_multi_user_in_organization(&mut tx, &multi_user_id, &organization_id)
-            .await?;
+    let existing = auth_account_dao::find_one_user_of_multi_user_in_organization(
+        &mut tx,
+        &multi_user_id,
+        &organization_id,
+    )
+    .await?;
     let (target, deactivated) = match existing {
         Some(existing) => existing,
         None if secured.user.is_superuser => {
@@ -309,7 +316,8 @@ async fn identity_can_access(
             }
         }
         Target::Workflow(hash) => {
-            dao::workflow_exists_in_organization(pool, &identity.organization_id, hash).await?
+            auth_account_dao::workflow_exists_in_organization(pool, &identity.organization_id, hash)
+                .await?
         }
     })
 }
@@ -329,17 +337,20 @@ async fn accessible_by_switching(
     let not_found = || ApiError::not_found(crate::msg::NOT_FOUND);
     let organization: String = if user.is_superuser {
         let found: Option<String> = match &target {
-            Target::Dataset(id) => dao::find_organization_id_of_dataset(&state.pool, id).await?,
+            Target::Dataset(id) => {
+                auth_account_dao::find_organization_id_of_dataset(&state.pool, id).await?
+            }
             Target::Annotation(id) => {
-                dao::find_organization_id_of_annotation(&state.pool, id).await?
+                auth_account_dao::find_organization_id_of_annotation(&state.pool, id).await?
             }
             Target::Workflow(hash) => {
-                dao::find_organization_id_of_workflow(&state.pool, hash).await?
+                auth_account_dao::find_organization_id_of_workflow(&state.pool, hash).await?
             }
         };
         found.ok_or_else(not_found)?
     } else {
-        let identities = dao::find_all_identities_of_account(&state.pool, &user.id).await?;
+        let identities =
+            auth_account_dao::find_all_identities_of_account(&state.pool, &user.id).await?;
         let mut selected = None;
         for identity in identities {
             if identity_can_access(&state.pool, &identity, &target).await? {
@@ -365,12 +376,13 @@ async fn verify_email(
 ) -> ApiResult<StatusCode> {
     use verification_messages as msg;
     let mut tx = state.pool.begin().await?;
-    let key_row = dao::find_email_verification_key_for_update(&mut tx, &key).await?;
+    let key_row = auth_account_dao::find_email_verification_key_for_update(&mut tx, &key).await?;
     let (key_id, key_email, multi_user_id, is_used, expired) =
         key_row.ok_or_else(|| ApiError::bad_request(msg::KEY_INVALID))?;
-    let (email, verified) = dao::find_email_and_verified_for_update(&mut tx, &multi_user_id)
-        .await?
-        .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
+    let (email, verified) =
+        auth_account_dao::find_email_and_verified_for_update(&mut tx, &multi_user_id)
+            .await?
+            .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
     if verified {
         return Ok(StatusCode::OK);
     }
@@ -383,8 +395,8 @@ async fn verify_email(
     if key_email != email {
         return Err(ApiError::bad_request(msg::EMAIL_DOES_NOT_MATCH));
     }
-    dao::update_email_verified(&mut tx, &multi_user_id).await?;
-    dao::update_email_verification_key_used(&mut tx, &key_id).await?;
+    auth_account_dao::update_email_verified(&mut tx, &multi_user_id).await?;
+    auth_account_dao::update_email_verification_key_used(&mut tx, &key_id).await?;
     tx.commit().await?;
     Ok(StatusCode::OK)
 }
@@ -396,7 +408,7 @@ async fn request_verification_mail(
     user: AuthUser,
 ) -> ApiResult<StatusCode> {
     let mut tx = state.pool.begin().await?;
-    let multi_user_id = dao::find_multi_user_id_of_user(&mut tx, &user.id).await?;
+    let multi_user_id = auth_account_dao::find_multi_user_id_of_user(&mut tx, &user.id).await?;
     let mail = create_email_verification(&mut tx, &config, &multi_user_id).await?;
     tx.commit().await?;
     mailer.send(mail);

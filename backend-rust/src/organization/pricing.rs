@@ -1,7 +1,7 @@
 //! OrganizationController pricing routes: upgrade requests, pricing status
 //! and plan updates (`models.organization.{PricingPlan, UpgradeRequest,
 //! OrganizationPlanUpdate, PricingPlanFeatures}`).
-mod dao;
+mod organization_pricing_dao;
 
 use axum::{
     Router,
@@ -260,7 +260,7 @@ async fn upgrade_request(
         return Err(ApiError::bad_request(messages::PRICING_UPDATES_ONLY_ADMIN));
     }
     let (is_owner, email, first_name, last_name) =
-        dao::find_owner_flag_and_contact(&state.pool, &user.id)
+        organization_pricing_dao::find_owner_flag_and_contact(&state.pool, &user.id)
             .await?
             .ok_or_else(ApiError::unauthorized)?;
     if request.credits.is_some() && !is_owner {
@@ -282,7 +282,7 @@ async fn upgrade_request(
         ));
     }
     let (organization_name, pricing_plan, ai_plan) =
-        dao::find_name_and_plans(&state.pool, &user.organization_id)
+        organization_pricing_dao::find_name_and_plans(&state.pool, &user.organization_id)
             .await?
             .ok_or_else(|| {
                 ApiError::not_found(crate::msg::organization::not_found(&user.organization_id))
@@ -335,13 +335,16 @@ async fn upgrade_request(
 
 async fn status(State(state): State<AppState>, user: AuthUser) -> ApiResult<axum::Json<Value>> {
     let (pricing_plan, included_users, paid_until) =
-        dao::find_plan_limits(&state.pool, &user.organization_id)
+        organization_pricing_dao::find_plan_limits(&state.pool, &user.organization_id)
             .await?
             .ok_or_else(|| {
                 ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
             })?;
-    let active_users =
-        dao::count_all_users_for_organization(&state.pool, &user.organization_id).await?;
+    let active_users = organization_pricing_dao::count_all_users_for_organization(
+        &state.pool,
+        &user.organization_id,
+    )
+    .await?;
     let now = Utc::now();
     // Note that, like Play, this does not yet account for storage.
     let is_exceeded = included_users.is_some_and(|limit| active_users > i64::from(limit))
@@ -520,14 +523,17 @@ async fn update_plan(
     }
     let mut tx = state.pool.begin().await?;
     let (organization_name, previous_plan) =
-        dao::find_name_and_pricing_plan_for_update(&mut tx, &update.organization_id)
-            .await?
-            .ok_or_else(|| {
-                ApiError::not_found(crate::msg::organization::not_found(&update.organization_id))
-            })?;
+        organization_pricing_dao::find_name_and_pricing_plan_for_update(
+            &mut tx,
+            &update.organization_id,
+        )
+        .await?
+        .ok_or_else(|| {
+            ApiError::not_found(crate::msg::organization::not_found(&update.organization_id))
+        })?;
     let previous_plan = PricingPlan::parse(&previous_plan).ok_or_else(ApiError::internal)?;
-    dao::insert_plan_update(&mut tx, &update).await?;
-    dao::update_plan(&mut tx, &update).await?;
+    organization_pricing_dao::insert_plan_update(&mut tx, &update).await?;
+    organization_pricing_dao::update_plan(&mut tx, &update).await?;
     tx.commit().await?;
     if let Some(new_plan) = update.pricing_plan {
         send_pricing_plan_upgrade_mails(
@@ -559,7 +565,9 @@ async fn send_pricing_plan_upgrade_mails(
         return;
     };
     let recipients: Vec<(String, String, String)> =
-        match dao::find_owner_and_admin_contacts(&state.pool, organization_id).await {
+        match organization_pricing_dao::find_owner_and_admin_contacts(&state.pool, organization_id)
+            .await
+        {
             Ok(recipients) => recipients,
             Err(error) => {
                 tracing::warn!(
@@ -606,10 +614,11 @@ async fn plan_updates(
             messages::LIST_PLAN_UPDATES_ONLY_ADMIN,
         ));
     }
-    let rows = dao::find_all_plan_updates(&state.pool, &user.organization_id).await?;
+    let rows =
+        organization_pricing_dao::find_all_plan_updates(&state.pool, &user.organization_id).await?;
     let updates: Vec<Value> = if rows.is_empty() {
         // defaultPlanUpdate: unset limits are omitted (None), not null.
-        let row = dao::find_plan_row(&state.pool, &user.organization_id)
+        let row = organization_pricing_dao::find_plan_row(&state.pool, &user.organization_id)
             .await?
             .ok_or_else(|| {
                 ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))

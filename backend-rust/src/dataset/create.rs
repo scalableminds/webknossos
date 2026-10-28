@@ -1,6 +1,6 @@
 //! DatasetService.createDataset / createAndSetUpDataset and the validation
 //! helpers shared by upload-to-paths, compose, explore+add and duplication.
-mod dao;
+mod dataset_create_dao;
 
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use serde_json::{Value, json};
@@ -92,7 +92,7 @@ pub(crate) async fn folder_writable(
     user: &AuthUser,
     folder: &ObjectId,
 ) -> ApiResult<bool> {
-    Ok(dao::is_folder_writable(connection, user, folder).await?)
+    Ok(dataset_create_dao::is_folder_writable(connection, user, folder).await?)
 }
 
 pub(crate) struct NewDataset<'a> {
@@ -135,14 +135,16 @@ async fn insert(
     new: NewDataset<'_>,
     skip_on_directory_name_conflict: bool,
 ) -> ApiResult<bool> {
-    let root = dao::find_root_folder_for_share(connection, &new.source.id.organization_id).await?;
+    let root =
+        dataset_create_dao::find_root_folder_for_share(connection, &new.source.id.organization_id)
+            .await?;
     let root = root.ok_or_else(|| {
         ApiError::bad_request(crate::msg::organization::not_found(
             &new.source.id.organization_id,
         ))
     })?;
     let status: String = new.status.chars().take(1024).collect();
-    let inserted = dao::insert_one(
+    let inserted = dataset_create_dao::insert_one(
         connection,
         &new,
         &root,
@@ -174,7 +176,7 @@ pub(crate) async fn set_up_dataset(
     setup: SetUp<'_>,
 ) -> ApiResult<ObjectId> {
     validate_dataset_name(setup.name)?;
-    let root = dao::find_root_folder_for_share(connection, &user.organization_id)
+    let root = dataset_create_dao::find_root_folder_for_share(connection, &user.organization_id)
         .await?
         .ok_or_else(|| {
             ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
@@ -207,7 +209,8 @@ pub(crate) async fn set_up_dataset(
         },
     )
     .await?;
-    crate::dataset::dao::update_folder_and_uploader(connection, &id, folder, &user.id).await?;
+    crate::dataset::dataset_dao::update_folder_and_uploader(connection, &id, folder, &user.id)
+        .await?;
     Ok(id)
 }
 

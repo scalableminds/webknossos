@@ -37,7 +37,7 @@ use webknossos_common::{
     upath::{UPath, UPathError},
 };
 
-pub(crate) mod dao;
+pub(crate) mod ai_models_dao;
 
 const MODEL_NOT_FOUND: &str = "Could not find requested AI model.";
 const UPDATING_FAILED: &str = "Could not update AI model’s name and comment.";
@@ -177,7 +177,7 @@ pub(crate) async fn find_model(
     user_id: &ObjectId,
     model_id: &ObjectId,
 ) -> ApiResult<Option<AiModel>> {
-    let model = dao::find_one(connection, user_id, model_id).await?;
+    let model = ai_models_dao::find_one(connection, user_id, model_id).await?;
     model
         .map(|model| {
             model.parse().map_err(|_| {
@@ -194,7 +194,7 @@ async fn list_all_models(
     connection: &mut PgConnection,
     user_id: &ObjectId,
 ) -> ApiResult<Vec<AiModel>> {
-    let models = dao::find_all(connection, user_id).await?;
+    let models = ai_models_dao::find_all(connection, user_id).await?;
     models
         .into_iter()
         .map(AiModel::parse)
@@ -211,7 +211,7 @@ async fn accessible_organization_ids(
     connection: &mut PgConnection,
     user_id: &ObjectId,
 ) -> ApiResult<HashSet<String>> {
-    let ids = dao::find_all_accessible_organization_ids(connection, user_id).await?;
+    let ids = ai_models_dao::find_all_accessible_organization_ids(connection, user_id).await?;
     Ok(ids.into_iter().collect())
 }
 
@@ -221,11 +221,12 @@ async fn readable_compact_user(
     requesting_user_id: &ObjectId,
     user_id: &ObjectId,
 ) -> ApiResult<Option<Value>> {
-    let readable = dao::find_readable_user_id(connection, requesting_user_id, user_id).await?;
+    let readable =
+        ai_models_dao::find_readable_user_id(connection, requesting_user_id, user_id).await?;
     if readable.is_none() {
         return Ok(None);
     }
-    Ok(dao::find_compact_user(connection, user_id).await?)
+    Ok(ai_models_dao::find_compact_user(connection, user_id).await?)
 }
 
 /// AiModelService.pathWithFallback: the stored path, or the legacy
@@ -243,7 +244,7 @@ async fn path_with_fallback(
         .as_deref()
         .ok_or_else(|| ApiError::bad_request(crate::msg::ai_model::NO_ORGANIZATION))?;
     // DataStoreDAO.findOneByName with GlobalAccessContext.
-    let url = crate::job::dao::find_data_store_url(&mut *connection, &model.data_store)
+    let url = crate::job::job_dao::find_data_store_url(&mut *connection, &model.data_store)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let base: String = clients
@@ -265,7 +266,7 @@ pub(crate) async fn model_public_writes(
     jobs_enabled: bool,
     model: &AiModel,
 ) -> ApiResult<Value> {
-    dao::find_data_store_url_for_user(connection, &user.id, &model.data_store)
+    ai_models_dao::find_data_store_url_for_user(connection, &user.id, &model.data_store)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     // A user that cannot be read is rendered as null.
@@ -387,9 +388,10 @@ async fn model_voxel_size(
 ) -> ApiResult<ResponseJson<Value>> {
     let mut connection = state.pool.acquire().await?;
     let model = find_model_or_404(&mut connection, &user.id, &id).await?;
-    let store_url = dao::find_data_store_url_for_user(&mut connection, &user.id, &model.data_store)
-        .await?
-        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+    let store_url =
+        ai_models_dao::find_data_store_url_for_user(&mut connection, &user.id, &model.data_store)
+            .await?
+            .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let voxel_size = find_model_voxel_size(connection, &clients, &store_url, &model).await?;
     Ok(ResponseJson(json!(voxel_size)))
 }
@@ -466,12 +468,12 @@ async fn update_model(
     // Deviation: Scala commits the name/comment update even if the sharing update
     // fails afterwards; here both happen in one transaction.
     let mut tx = state.pool.begin().await?;
-    dao::lock_one(&mut tx, &id).await?;
+    ai_models_dao::lock_one(&mut tx, &id).await?;
     let model = find_model_or_404(&mut tx, &user.id, &id).await?;
     if model.organization.as_deref() != Some(user.organization_id.as_str()) {
         return Err(ApiError::bad_request(NOT_OWNED));
     }
-    dao::update_name_and_comment(&mut tx, &model.id, &body.name, body.comment.as_deref())
+    ai_models_dao::update_name_and_comment(&mut tx, &model.id, &body.name, body.comment.as_deref())
         .await
         .map_err(write_failed(UPDATING_FAILED))?;
     let current: HashSet<&String> = model.shared_organizations.iter().collect();
@@ -491,11 +493,11 @@ async fn update_model(
             )
             .collect();
         if organizations.iter().copied().collect::<HashSet<_>>() != current {
-            dao::delete_shared_organizations(&mut tx, &model.id)
+            ai_models_dao::delete_shared_organizations(&mut tx, &model.id)
                 .await
                 .map_err(write_failed(UPDATING_SHARED_FAILED))?;
             for organization in organizations {
-                dao::insert_shared_organization(&mut tx, &model.id, organization)
+                ai_models_dao::insert_shared_organization(&mut tx, &model.id, organization)
                     .await
                     .map_err(write_failed(UPDATING_SHARED_FAILED))?;
             }
@@ -519,13 +521,13 @@ async fn delete_model(
     let mut tx = state.pool.begin().await?;
     // FOR UPDATE conflicts with the KEY SHARE lock of a concurrent inference
     // insert (foreign key), so the reference count below cannot go stale.
-    dao::lock_one(&mut tx, &id).await?;
-    let references = dao::count_inferences_of_model(&mut tx, &id).await?;
+    ai_models_dao::lock_one(&mut tx, &id).await?;
+    let references = ai_models_dao::count_inferences_of_model(&mut tx, &id).await?;
     if references != 0 {
         return Err(ApiError::bad_request(REFERENCED_BY_INFERENCES));
     }
     find_model_or_404(&mut tx, &user.id, &id).await?;
-    dao::delete_one(&mut tx, &id).await?;
+    ai_models_dao::delete_one(&mut tx, &id).await?;
     tx.commit().await?;
     Ok(StatusCode::OK)
 }
@@ -594,12 +596,12 @@ async fn reserve_upload_to_path(
     }
     let path_prefix = crate::dataset::upload_paths::parse_prefix(body.path_prefix.as_deref())?;
     let mut tx = state.pool.begin().await?;
-    dao::find_data_store_url_for_user(&mut tx, &user.id, &body.data_store_name)
+    ai_models_dao::find_data_store_url_for_user(&mut tx, &user.id, &body.data_store_name)
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::data_store::NOT_FOUND))?;
     let model_id = match &body.existing_ai_model_id {
         Some(existing_id) => {
-            dao::lock_one(&mut tx, existing_id).await?;
+            ai_models_dao::lock_one(&mut tx, existing_id).await?;
             let existing = find_model(&mut tx, &user.id, existing_id)
                 .await?
                 .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
@@ -617,7 +619,7 @@ async fn reserve_upload_to_path(
             )?;
             // AiModelDAO.updatePath, then updateOne (name, comment, modified);
             // the category is kept.
-            dao::update_path_name_and_comment(
+            ai_models_dao::update_path_name_and_comment(
                 &mut tx,
                 &existing.id,
                 &path,
@@ -629,7 +631,7 @@ async fn reserve_upload_to_path(
             existing.id
         }
         None => {
-            let taken = dao::is_name_taken(&mut tx, &user.id, &body.name).await?;
+            let taken = ai_models_dao::is_name_taken(&mut tx, &user.id, &body.name).await?;
             if taken {
                 return Err(ApiError::bad_request(name_taken(&body.name)));
             }
@@ -638,7 +640,7 @@ async fn reserve_upload_to_path(
                 generate_model_path(&config, &id, &user.organization_id, path_prefix.as_deref())?;
             // AiModelDAO.insertOne writes no shared organizations; the owning
             // organization is implied.
-            dao::insert_one_with_path(
+            ai_models_dao::insert_one_with_path(
                 &mut tx,
                 &id,
                 &user.organization_id,
@@ -672,7 +674,7 @@ async fn finish_upload_to_path(
     user: AuthUser,
 ) -> ApiResult<StatusCode> {
     let mut tx = state.pool.begin().await?;
-    dao::lock_one(&mut tx, &id).await?;
+    ai_models_dao::lock_one(&mut tx, &id).await?;
     let model = find_model(&mut tx, &user.id, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
@@ -682,7 +684,7 @@ async fn finish_upload_to_path(
     if model.organization.as_deref() != Some(user.organization_id.as_str()) {
         return Err(ApiError::forbidden(FINISH_WRONG_ORGA));
     }
-    dao::update_upload_to_path_finished(&mut tx, &model.id).await?;
+    ai_models_dao::update_upload_to_path_finished(&mut tx, &model.id).await?;
     tx.commit().await?;
     Ok(StatusCode::OK)
 }
@@ -806,7 +808,7 @@ async fn run_model_training(
 
     // OrganizationDAO.findOne (global) ?~> Msg.Organization.notFound, then
     // OrganizationService.assertIsSuperUserOrOrganizationHasAiPlan.
-    let ai_plan: Option<String> = dao::find_ai_plan(&state.pool, &user.organization_id)
+    let ai_plan: Option<String> = ai_models_dao::find_ai_plan(&state.pool, &user.organization_id)
         .await?
         .ok_or_else(|| Failure::new(crate::msg::organization::not_found(&user.organization_id)))?;
     if !user.is_superuser && ai_plan.is_none() {
@@ -839,7 +841,7 @@ async fn run_model_training(
     let data_store = dataset.data_store.trim().to_owned();
     {
         let mut connection = state.pool.acquire().await?;
-        dao::find_data_store_url_for_user(&mut connection, &user.id, &data_store)
+        ai_models_dao::find_data_store_url_for_user(&mut connection, &user.id, &data_store)
             .await?
             .ok_or_else(|| Failure::new(crate::msg::data_store::NOT_FOUND))?;
     }
@@ -854,8 +856,12 @@ async fn run_model_training(
         .ok_or_else(|| Failure::new(crate::msg::annotation::NOT_FOUND))?;
     }
     // AiModelDAO.countByNameAndOrganization counts soft-deleted models, too.
-    let existing =
-        dao::count_by_name_and_organization(&state.pool, &body.name, &user.organization_id).await?;
+    let existing = ai_models_dao::count_by_name_and_organization(
+        &state.pool,
+        &body.name,
+        &user.organization_id,
+    )
+    .await?;
     if existing != 0 {
         return Err(Failure::new(name_taken(&body.name)).into());
     }
@@ -910,7 +916,7 @@ async fn run_model_training(
     // Instant.now has millisecond precision.
     let now = Utc::now();
     let created = DateTime::from_timestamp_millis(now.timestamp_millis()).unwrap_or(now);
-    dao::insert_one_for_training(
+    ai_models_dao::insert_one_for_training(
         pending.connection(),
         &model_id,
         &user.organization_id,
@@ -927,7 +933,7 @@ async fn run_model_training(
     for specification in annotations {
         // Duplicate annotation ids violate the primary key; everything rolls
         // back (Scala fails after the job was already created).
-        dao::insert_training_annotation(
+        ai_models_dao::insert_training_annotation(
             pending.connection(),
             &model_id,
             &specification.annotation_id,
@@ -1101,9 +1107,10 @@ async fn run_model_inference(
         crate::job::submission::data_source_and_layer(state, &dataset, &body.color_layer_name)
             .await?;
     let mut connection = state.pool.acquire().await?;
-    let store_url = dao::find_data_store_url_for_user(&mut connection, &user.id, &data_store)
-        .await?
-        .ok_or_else(|| Failure::new(crate::msg::data_store::NOT_FOUND))?;
+    let store_url =
+        ai_models_dao::find_data_store_url_for_user(&mut connection, &user.id, &data_store)
+            .await?
+            .ok_or_else(|| Failure::new(crate::msg::data_store::NOT_FOUND))?;
     crate::dataset::create::validate_dataset_name(&body.new_dataset_name)?;
     // BoundingBox.fromLiteral(..).toFox: the empty Fox.
     let mag1_bounding_box =
@@ -1213,7 +1220,7 @@ async fn run_model_inference(
     let created = DateTime::from_timestamp_millis(now.timestamp_millis()).unwrap_or(now);
     // An unknown annotation id violates the foreign key; everything rolls back
     // (Scala fails after the job was already created).
-    dao::insert_one_inference(
+    ai_models_dao::insert_one_inference(
         pending.connection(),
         &inference_id,
         &user.organization_id,
@@ -1268,7 +1275,7 @@ pub(crate) async fn inference_public_writes(
         .await?
         .ok_or_else(empty)?;
     let job_json = crate::job::routes::public_writes(connection, &user.id, &job).await?;
-    dao::find_data_store_url_for_user(connection, &user.id, &job.data_store)
+    ai_models_dao::find_data_store_url_for_user(connection, &user.id, &job.data_store)
         .await?
         .ok_or_else(empty)?;
     let data_store_json =
@@ -1284,7 +1291,8 @@ pub(crate) async fn inference_public_writes(
     };
     let dataset_json = match &inference.new_dataset {
         Some(dataset_id) => {
-            let readable = dao::is_dataset_readable(connection, &user.id, dataset_id).await?;
+            let readable =
+                ai_models_dao::is_dataset_readable(connection, &user.id, dataset_id).await?;
             if !readable {
                 return Err(empty());
             }
@@ -1315,7 +1323,7 @@ async fn list_inferences(
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Vec<Value>>> {
     let mut connection = state.pool.acquire().await?;
-    let inferences = dao::find_all_inferences(&mut connection, &user.id).await?;
+    let inferences = ai_models_dao::find_all_inferences(&mut connection, &user.id).await?;
     let mut values = Vec::with_capacity(inferences.len());
     for inference in &inferences {
         values.push(
@@ -1334,7 +1342,7 @@ async fn read_inference(
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Value>> {
     let mut connection = state.pool.acquire().await?;
-    let inference: AiInference = dao::find_one_inference(&mut connection, &user.id, &id)
+    let inference: AiInference = ai_models_dao::find_one_inference(&mut connection, &user.id, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::ai_inference::NOT_FOUND))?;
     Ok(ResponseJson(

@@ -241,7 +241,7 @@ async fn merge_typed(
     // description, Internal, Active, no tags, no tracing time, OwnerOnly.
     let now = now_millis();
     let mut transaction = state.pool.begin().await?;
-    crate::annotation::dao::insert_one_merged(
+    crate::annotation::annotation_dao::insert_one_merged(
         &mut transaction,
         &new_id,
         annotation_b.dataset_id(),
@@ -250,7 +250,7 @@ async fn merge_typed(
     )
     .await?;
     for layer in &merged.annotation_layers {
-        crate::annotation::dao::insert_layer(
+        crate::annotation::annotation_dao::insert_layer(
             &mut transaction,
             &new_id,
             &layer.tracing_id,

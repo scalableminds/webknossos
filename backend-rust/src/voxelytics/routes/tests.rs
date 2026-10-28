@@ -55,7 +55,7 @@ fn state_times_follow_the_event_state() {
 #[test]
 fn report_entries_omit_absent_options_and_link_foreign_workflows() {
     let id = ObjectId::parse("0123456789abcdef01234567").unwrap();
-    let artifact = dao::ArtifactEntry {
+    let artifact = voxelytics_dao::ArtifactEntry {
         artifact_id: id.clone(),
         task_id: id.clone(),
         name: "out".into(),
@@ -75,7 +75,7 @@ fn report_entries_omit_absent_options_and_link_foreign_workflows() {
             "foreignWorkflow": ["other", id]
         })
     );
-    let run = dao::RunEntry {
+    let run = voxelytics_dao::RunEntry {
         id: id.clone(),
         name: "r".into(),
         host_user_name: "u".into(),

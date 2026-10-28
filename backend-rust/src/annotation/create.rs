@@ -11,7 +11,7 @@
 //! annotation row and its layers are inserted in one transaction. Any failure
 //! before the insert renders `Msg.Annotation.createFailed` (chain:
 //! `createTracingsFailed`, inner message) and keeps a ParamFailure status.
-mod dao;
+mod annotation_create_dao;
 
 use axum::extract::FromRef;
 use axum::{
@@ -83,7 +83,7 @@ pub(crate) struct DatasetFacts {
 
 /// `datasets_` row by id under GlobalAccessContext; `None` when missing or deleted.
 pub(crate) async fn find_dataset(pool: &PgPool, id: &ObjectId) -> ApiResult<Option<DatasetFacts>> {
-    let row = dao::find_dataset(pool, id).await?;
+    let row = annotation_create_dao::find_dataset(pool, id).await?;
     Ok(row.map(
         |(name, organization_id, data_store, is_usable, has_voxel_size)| DatasetFacts {
             id: id.clone(),
@@ -142,7 +142,7 @@ pub(crate) async fn data_store_url(
     pool: &PgPool,
     dataset: &DatasetFacts,
 ) -> Result<String, ProviderError> {
-    let url = dao::find_data_store_url(pool, &dataset.data_store).await?;
+    let url = annotation_create_dao::find_data_store_url(pool, &dataset.data_store).await?;
     url.ok_or_else(|| ProviderError::failure(DATA_STORE_NOT_FOUND_FOR_DATASET))
 }
 
@@ -397,7 +397,7 @@ async fn create_explorational(
     )
     .await?;
     for layer in &layers {
-        dao::update_layer_statistics(
+        annotation_create_dao::update_layer_statistics(
             &mut transaction,
             &annotation_id,
             &layer.tracing_id,

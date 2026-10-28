@@ -51,7 +51,7 @@ async fn list_paths_to_delete(
 ) -> ApiResult<Json<Vec<String>>> {
     authenticate(&config, &query.key)?;
     Ok(Json(
-        crate::dataset::dao::find_paths_to_delete(&state.pool).await?,
+        crate::dataset::dataset_dao::find_paths_to_delete(&state.pool).await?,
     ))
 }
 
@@ -64,7 +64,7 @@ async fn mark_as_deleted(
     authenticate(&config, &query.key)?;
     // Scala deletes in batches of 100 without a transaction; a single bound
     // statement is equivalent and atomic.
-    crate::dataset::dao::delete_paths_to_delete(&state.pool, &paths).await?;
+    crate::dataset::dataset_dao::delete_paths_to_delete(&state.pool, &paths).await?;
     Ok(())
 }
 
@@ -94,7 +94,7 @@ pub(crate) async fn delete_paths(
     let external: Vec<String> = serde_json::from_slice(&response.bytes)
         .map_err(|_| ApiError::from(crate::stores::client::ServiceError::InvalidJson))?;
     if !external.is_empty() {
-        crate::dataset::dao::insert_paths_to_delete(pool, &external).await?;
+        crate::dataset::dataset_dao::insert_paths_to_delete(pool, &external).await?;
     }
     Ok(())
 }

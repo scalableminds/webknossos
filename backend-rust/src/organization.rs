@@ -1,5 +1,5 @@
 pub mod credit_transactions;
-pub(crate) mod dao;
+pub(crate) mod organization_dao;
 pub mod pricing;
 pub mod routes;
 pub mod storage;

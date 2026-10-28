@@ -1,5 +1,5 @@
 //! Owner-managed annotation private links and database-backed annotation sources.
-mod dao;
+mod annotation_private_links_dao;
 
 use crate::response::Messages;
 use axum::{Json as ResponseJson, Router, extract::State, routing::get};
@@ -61,7 +61,7 @@ async fn owned_link<'e, E: Executor<'e, Database = Postgres>>(
     id: &ObjectId,
     lock: bool,
 ) -> ApiResult<PrivateLink> {
-    dao::find_one_owned(executor, user, id, lock)
+    annotation_private_links_dao::find_one_owned(executor, user, id, lock)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::annotation::private_link::not_found(id)))
 }
@@ -70,7 +70,7 @@ async fn list(
     State(state): State<AppState>,
     user: AuthUser,
 ) -> ApiResult<ResponseJson<Vec<PrivateLink>>> {
-    let links = dao::find_all_for_user(&state.pool, &user).await?;
+    let links = annotation_private_links_dao::find_all_for_user(&state.pool, &user).await?;
     Ok(ResponseJson(links))
 }
 async fn by_annotation(
@@ -79,7 +79,8 @@ async fn by_annotation(
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Vec<PrivateLink>>> {
     let id = ObjectId::parse_path(&id)?;
-    let links = dao::find_all_for_annotation(&state.pool, &user, &id).await?;
+    let links =
+        annotation_private_links_dao::find_all_for_annotation(&state.pool, &user, &id).await?;
     Ok(ResponseJson(links))
 }
 async fn read(
@@ -127,7 +128,7 @@ async fn create(
         ));
     }
     let id = ObjectId::new();
-    dao::insert_one(
+    annotation_private_links_dao::insert_one(
         &mut tx,
         &id,
         &parameters.annotation,
@@ -161,7 +162,13 @@ async fn update(
             ));
         }
     }
-    dao::update_one(&mut tx, &id, &parameters.annotation, parameters.expiration).await?;
+    annotation_private_links_dao::update_one(
+        &mut tx,
+        &id,
+        &parameters.annotation,
+        parameters.expiration,
+    )
+    .await?;
     let link = owned_link(&mut *tx, &user, &id, false).await?;
     tx.commit().await?;
     Ok(ResponseJson(link))
@@ -175,7 +182,7 @@ async fn delete(
     let mut tx = state.pool.begin().await?;
     let link = owned_link(&mut *tx, &user, &id, true).await?;
     crate::annotation::access::lock_for_mutation(&mut tx, &user, &link.annotation).await?;
-    dao::delete_one(&mut tx, &id).await?;
+    annotation_private_links_dao::delete_one(&mut tx, &id).await?;
     tx.commit().await?;
     Ok(Messages::success(
         crate::msg::annotation::private_link::DELETE_SUCCESS,
@@ -192,7 +199,9 @@ async fn source(
     Path(token_or_id): Path<String>,
     Query(query): Query<SourceQuery>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let linked = dao::find_annotation_id_by_access_token(&state.pool, &token_or_id).await?;
+    let linked =
+        annotation_private_links_dao::find_annotation_id_by_access_token(&state.pool, &token_or_id)
+            .await?;
     let via_private_link = linked.is_some();
     let annotation = if let Some(id) = linked {
         crate::annotation::access::find(&state.pool, None, &id, true).await?
@@ -210,9 +219,13 @@ async fn source(
             .await?
             .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?
     };
-    let value = dao::find_source_json(&state.pool, &annotation.id, via_private_link)
-        .await?
-        .ok_or_else(|| ApiError::not_found(crate::msg::annotation::SOURCE_MISSING))?;
+    let value = annotation_private_links_dao::find_source_json(
+        &state.pool,
+        &annotation.id,
+        via_private_link,
+    )
+    .await?
+    .ok_or_else(|| ApiError::not_found(crate::msg::annotation::SOURCE_MISSING))?;
     if value["tracingStoreUrl"].is_null() {
         return Err(ApiError::not_found(crate::msg::tracing_store::MISSING));
     }

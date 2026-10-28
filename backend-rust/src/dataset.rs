@@ -2,7 +2,7 @@ pub mod access;
 pub mod compose;
 pub mod configuration;
 pub mod create;
-pub(crate) mod dao;
+pub(crate) mod dataset_dao;
 pub mod explore;
 pub(crate) mod legacy;
 pub mod lifecycle;

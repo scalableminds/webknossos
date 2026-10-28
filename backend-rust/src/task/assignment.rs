@@ -34,7 +34,7 @@
 //! - No compound-annotation cache invalidation: Scala's assignOne does not
 //!   clear it either (the new annotation is Active, compound caches expire
 //!   after 60 minutes as in Scala).
-pub(crate) mod dao;
+pub(crate) mod task_assignment_dao;
 
 use axum::{Json as ResponseJson, Router, extract::State, http::StatusCode, routing::post};
 use serde::Deserialize;
@@ -76,11 +76,11 @@ pub(crate) async fn assign_one_to(
     user_id: &ObjectId,
 ) -> ApiResult<Option<ObjectId>> {
     let mut tx = pool.begin().await?;
-    if !dao::lock_task_with_pending_instances(&mut tx, task_id).await? {
+    if !task_assignment_dao::lock_task_with_pending_instances(&mut tx, task_id).await? {
         return Ok(None);
     }
     let Some(annotation_id) =
-        dao::insert_initializing_annotation(&mut tx, task_id, user_id).await?
+        task_assignment_dao::insert_initializing_annotation(&mut tx, task_id, user_id).await?
     else {
         return Ok(None);
     };
@@ -115,10 +115,11 @@ pub(crate) async fn create_annotation_for(
     task_id: &ObjectId,
     initializing_annotation_id: &ObjectId,
 ) -> Result<(), ProviderError> {
-    let base = dao::find_annotation_base(pool, context_user, task_id).await?;
+    let base = task_assignment_dao::find_annotation_base(pool, context_user, task_id).await?;
     let base = base.ok_or_else(|| ProviderError::failure(BASE_ID_FAILED))?;
 
-    let is_usable = dao::find_dataset_is_usable(pool, context_user, &base.dataset_id).await?;
+    let is_usable =
+        task_assignment_dao::find_dataset_is_usable(pool, context_user, &base.dataset_id).await?;
     match is_usable {
         None => {
             return Err(ProviderError::failure(
@@ -169,20 +170,26 @@ async fn update_initialized(
     pool: &PgPool,
     annotation_id: &ObjectId,
     assignee_id: &ObjectId,
-    base: &dao::AnnotationBase,
+    base: &task_assignment_dao::AnnotationBase,
     layers: &[AnnotationLayer],
 ) -> Result<(), ProviderError> {
     let now = now_millis();
     let mut tx = pool.begin().await?;
-    let updated =
-        dao::update_initialized_annotation(&mut tx, annotation_id, assignee_id, base, now).await?;
+    let updated = task_assignment_dao::update_initialized_annotation(
+        &mut tx,
+        annotation_id,
+        assignee_id,
+        base,
+        now,
+    )
+    .await?;
     if updated != 1 {
         tracing::warn!(annotation = %annotation_id, "initializing task annotation vanished");
         return Err(ProviderError::failure(crate::msg::NOT_FOUND));
     }
-    dao::delete_annotation_layers(&mut tx, annotation_id).await?;
+    task_assignment_dao::delete_annotation_layers(&mut tx, annotation_id).await?;
     for layer in layers {
-        dao::insert_annotation_layer(&mut tx, annotation_id, layer).await?;
+        task_assignment_dao::insert_annotation_layer(&mut tx, annotation_id, layer).await?;
     }
     tx.commit().await?;
     tracing::info!(annotation = %annotation_id, "initialized task annotation, state is now Active");
@@ -201,8 +208,8 @@ pub(crate) async fn abort_initializing_annotation(
     annotation_id: &ObjectId,
 ) -> ApiResult<()> {
     let mut tx = pool.begin().await?;
-    dao::delete_initializing_annotation_layers(&mut tx, annotation_id).await?;
-    dao::delete_initializing_annotation(&mut tx, annotation_id).await?;
+    task_assignment_dao::delete_initializing_annotation_layers(&mut tx, annotation_id).await?;
+    task_assignment_dao::delete_initializing_annotation(&mut tx, annotation_id).await?;
     tx.commit().await?;
     tracing::info!(annotation = %annotation_id, "aborted initializing task annotation");
     Ok(())
@@ -267,7 +274,7 @@ async fn manages_user(
     if requester.is_admin && requester.organization_id == assignee_organization {
         return Ok(true);
     }
-    Ok(dao::manages_user_through_team(pool, requester, assignee_id).await?)
+    Ok(task_assignment_dao::manages_user_through_team(pool, requester, assignee_id).await?)
 }
 
 async fn assign_one(
@@ -287,22 +294,22 @@ async fn assign_one(
 
     // userService.findOneCached(userId): UserDAO.readAccessQ, Empty → 404.
     let (assignee_organization, assignee_is_deactivated) =
-        dao::find_assignee(pool, &user, &assignee_id)
+        task_assignment_dao::find_assignee(pool, &user, &assignee_id)
             .await?
             .ok_or_else(not_found)?;
 
     // taskDAO.findOne(id): TaskDAO.readAccessQ, Empty → 404.
-    let project_id = dao::find_task_project_id(pool, &user, &task_id)
+    let project_id = task_assignment_dao::find_task_project_id(pool, &user, &task_id)
         .await?
         .ok_or_else(not_found)?;
 
     // projectDAO.findOne(task._project): ProjectDAO.readAccessQ, Empty → 404.
-    let team_id = dao::find_project_team_id(pool, &user, &project_id)
+    let team_id = task_assignment_dao::find_project_team_id(pool, &user, &project_id)
         .await?
         .ok_or_else(not_found)?;
 
     // Fox.assertTrue(..) ?~> Msg.notAllowed (no status: 400).
-    if !dao::manages_team(pool, &user, &team_id).await? {
+    if !task_assignment_dao::manages_team(pool, &user, &team_id).await? {
         return Err(ApiError::new(
             StatusCode::BAD_REQUEST,
             crate::msg::NOT_ALLOWED,

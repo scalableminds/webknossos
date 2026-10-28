@@ -18,7 +18,7 @@
 //! like `provideAnnotation(typ, id, userOpt)`. Only an upstream tracing-store
 //! HTTP status survives as a status (Scala `ParamFailure`); every other
 //! failure defaults to 400.
-mod dao;
+mod annotation_provider_dao;
 
 use std::{
     collections::HashMap,
@@ -34,7 +34,7 @@ use chrono::{DateTime, Utc};
 use serde_json::Value;
 use sqlx::{FromRow, PgPool};
 
-pub(crate) use dao::{push_task_list, push_task_read, push_task_type_read};
+pub(crate) use annotation_provider_dao::{push_task_list, push_task_read, push_task_type_read};
 
 use crate::{
     annotation::access::{AnnotationMetadata, Restrictions},
@@ -804,7 +804,8 @@ impl AnnotationProvider {
         if !self.is_team_manager_or_admin_of(user, &team).await? {
             return Err(ProviderError::Empty);
         }
-        let annotations = dao::find_all_finished_for_project(&self.pool, project_id).await?;
+        let annotations =
+            annotation_provider_dao::find_all_finished_for_project(&self.pool, project_id).await?;
         assert_all_on_same_dataset(&annotations)?;
         assert_non_empty(&annotations).map_err(|e| e.wrap(PROJECT_NO_ANNOTATIONS))?;
         let dataset_id = annotations[0].dataset_id.clone();
@@ -832,7 +833,12 @@ impl AnnotationProvider {
             .ok_or_else(|| {
                 ProviderError::failure(crate::msg::task_type::not_found(task_type_id))
             })?;
-        let tasks = dao::find_all_task_ids_for_task_type(&self.pool, context, task_type_id).await?;
+        let tasks = annotation_provider_dao::find_all_task_ids_for_task_type(
+            &self.pool,
+            context,
+            task_type_id,
+        )
+        .await?;
         let annotations = self.task_annotations(context, &tasks).await?;
         let finished = finished(&annotations);
         assert_all_on_same_dataset(&finished)?;
@@ -908,7 +914,7 @@ impl AnnotationProvider {
         context: AccessContext<'_>,
         task_id: &ObjectId,
     ) -> Result<Option<ObjectId>, ProviderError> {
-        Ok(dao::find_task_project(&self.pool, context, task_id).await?)
+        Ok(annotation_provider_dao::find_task_project(&self.pool, context, task_id).await?)
     }
 
     /// ProjectDAO.findOne under the access context: the project's team.
@@ -917,7 +923,7 @@ impl AnnotationProvider {
         context: AccessContext<'_>,
         project_id: &ObjectId,
     ) -> Result<Option<ObjectId>, ProviderError> {
-        Ok(dao::find_project_team(&self.pool, context, project_id).await?)
+        Ok(annotation_provider_dao::find_project_team(&self.pool, context, project_id).await?)
     }
 
     /// TaskTypeDAO.findOne under the access context: the task type's team.
@@ -926,7 +932,7 @@ impl AnnotationProvider {
         context: AccessContext<'_>,
         task_type_id: &ObjectId,
     ) -> Result<Option<ObjectId>, ProviderError> {
-        Ok(dao::find_task_type_team(&self.pool, context, task_type_id).await?)
+        Ok(annotation_provider_dao::find_task_type_team(&self.pool, context, task_type_id).await?)
     }
 
     /// AnnotationDAO.findAllByTaskIdAndType(task, Task) for each task in
@@ -936,7 +942,10 @@ impl AnnotationProvider {
         context: AccessContext<'_>,
         task_ids: &[ObjectId],
     ) -> Result<Vec<TaskAnnotation>, ProviderError> {
-        Ok(dao::find_all_task_annotations(&self.pool, context, task_ids).await?)
+        Ok(
+            annotation_provider_dao::find_all_task_annotations(&self.pool, context, task_ids)
+                .await?,
+        )
     }
 
     /// UserService.isTeamManagerOrAdminOf(user, team): the live team is read
@@ -948,8 +957,10 @@ impl AnnotationProvider {
         user: &AuthUser,
         team_id: &ObjectId,
     ) -> Result<bool, ProviderError> {
-        let team =
-            crate::annotation::dao::find_team_with_manager_flag(&self.pool, user, team_id).await?;
+        let team = crate::annotation::annotation_dao::find_team_with_manager_flag(
+            &self.pool, user, team_id,
+        )
+        .await?;
         let (organization, manages) =
             team.ok_or_else(|| ProviderError::failure(crate::msg::team::ADMIN_NOT_ALLOWED))?;
         Ok(organization == user.organization_id && (manages || user.is_admin))
@@ -963,7 +974,8 @@ impl AnnotationProvider {
         temporary_annotation_id: &ObjectId,
         dataset_id: &ObjectId,
     ) -> Result<(), ProviderError> {
-        let dataset = dao::find_dataset_usability(&self.pool, dataset_id).await?;
+        let dataset =
+            annotation_provider_dao::find_dataset_usability(&self.pool, dataset_id).await?;
         let (usable, has_voxel_size) = dataset.ok_or_else(|| {
             ProviderError::failure(crate::msg::dataset::not_found_for_annotation(
                 dataset_id,
@@ -997,8 +1009,11 @@ impl AnnotationProvider {
         &self,
         annotation_ids: &[ObjectId],
     ) -> Result<Vec<NamedBoundingBox>, ProviderError> {
-        let rows =
-            dao::find_task_bounding_boxes_by_annotation_ids(&self.pool, annotation_ids).await?;
+        let rows = annotation_provider_dao::find_task_bounding_boxes_by_annotation_ids(
+            &self.pool,
+            annotation_ids,
+        )
+        .await?;
         let mut boxes = Vec::with_capacity(rows.len());
         for (x, y, z, width, height, depth, task_id, annotation_id) in rows {
             // BoundingBox.fromSQL needs all six components; parseArrayLiteral
@@ -1074,7 +1089,8 @@ impl AnnotationProvider {
         annotations: &[&TaskAnnotation],
         additional_bounding_boxes: Vec<NamedBoundingBox>,
     ) -> Result<AnnotationProto, ProviderError> {
-        let readable = dao::is_dataset_readable(&self.pool, context, dataset_id).await?;
+        let readable =
+            annotation_provider_dao::is_dataset_readable(&self.pool, context, dataset_id).await?;
         if !readable {
             return Err(ProviderError::Empty);
         }

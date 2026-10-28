@@ -1,4 +1,4 @@
-pub(crate) mod dao;
+pub(crate) mod projects_dao;
 
 use crate::response::Messages;
 use axum::{
@@ -11,7 +11,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use sqlx::{PgPool, Postgres, Transaction};
 
-pub(crate) use dao::push_read_access;
+pub(crate) use projects_dao::push_read_access;
 
 use crate::{
     AppState,
@@ -73,13 +73,13 @@ async fn project_json<'e, E: sqlx::Executor<'e, Database = Postgres>>(
     user: &AuthUser,
     id: &ObjectId,
 ) -> ApiResult<Value> {
-    dao::find_one_json(executor, user, id)
+    projects_dao::find_one_json(executor, user, id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found(id)))
 }
 
 async fn projects(pool: &PgPool, user: &AuthUser, with_status: bool) -> ApiResult<Value> {
-    let mut values = dao::find_all_json(pool, user).await?;
+    let mut values = projects_dao::find_all_json(pool, user).await?;
     if with_status {
         add_status_to_all(pool, &mut values).await?;
     }
@@ -91,7 +91,7 @@ async fn add_status_to_all(pool: &PgPool, projects: &mut [Value]) -> ApiResult<(
         return Ok(());
     }
     let ids: Vec<&str> = projects.iter().filter_map(|p| p["id"].as_str()).collect();
-    let rows = dao::find_task_status_for_projects(pool, ids).await?;
+    let rows = projects_dao::find_task_status_for_projects(pool, ids).await?;
     let counts: std::collections::HashMap<_, _> = rows
         .into_iter()
         .map(|(id, pending, time)| (id, (pending, time)))
@@ -112,7 +112,7 @@ async fn add_status<'e, E: sqlx::Executor<'e, Database = Postgres>>(
     project: &mut Value,
 ) -> ApiResult<()> {
     let id = project["id"].as_str().ok_or_else(ApiError::internal)?;
-    let (pending, time) = dao::find_task_status(executor, id).await?;
+    let (pending, time) = projects_dao::find_task_status(executor, id).await?;
     project["pendingInstances"] = json!(pending);
     project["tracingTime"] = json!(time);
     Ok(())
@@ -140,7 +140,7 @@ async fn by_name(
     user: AuthUser,
     Path(name): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
-    let value = dao::find_one_json_by_name(&state.pool, &user, &name)
+    let value = projects_dao::find_one_json_by_name(&state.pool, &user, &name)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found_by_name(&name)))?;
     Ok(ResponseJson(value))
@@ -154,7 +154,8 @@ async fn check_references(
     if !can_manage_team_in_tx(tx, user, &parameters.team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
-    let owner = dao::find_owner_for_share(tx, &parameters.owner, &user.organization_id).await?;
+    let owner =
+        projects_dao::find_owner_for_share(tx, &parameters.owner, &user.organization_id).await?;
     if owner.is_none() {
         return Err(ApiError::bad_request(crate::msg::user::not_found(
             &parameters.owner,
@@ -174,14 +175,15 @@ async fn create(
     check_references(&mut tx, &user, &parameters).await?;
     // Projects have no database uniqueness constraint. Serialize contenders for
     // an organization/name to make the uniqueness check atomic.
-    dao::lock_name(&mut tx, &user.organization_id, &parameters.name).await?;
-    let exists = dao::is_name_taken(&mut tx, &parameters.name, &user.organization_id).await?;
+    projects_dao::lock_name(&mut tx, &user.organization_id, &parameters.name).await?;
+    let exists =
+        projects_dao::is_name_taken(&mut tx, &parameters.name, &user.organization_id).await?;
     if exists {
         return Err(ApiError::bad_request(crate::msg::project::name_taken(
             &parameters.name,
         )));
     }
-    dao::insert_one(&mut tx, &id, &user.organization_id, &parameters).await?;
+    projects_dao::insert_one(&mut tx, &id, &user.organization_id, &parameters).await?;
     let response = project_json(&mut *tx, &user, &id).await?;
     tx.commit().await?;
     Ok(ResponseJson(response))
@@ -212,7 +214,7 @@ async fn update(
     managed_project(&mut tx, &user, &id, &team).await?;
     check_references(&mut tx, &user, &parameters).await?;
     // Project names and paused state are immutable through PUT in Scala.
-    dao::update_one(&mut tx, &id, &parameters).await?;
+    projects_dao::update_one(&mut tx, &id, &parameters).await?;
     let response = project_json(&mut *tx, &user, &id).await?;
     tx.commit().await?;
     Ok(ResponseJson(response))
@@ -227,7 +229,7 @@ async fn set_paused(
     let mut tx = pool.begin().await?;
     let team = lock_project(&mut tx, id, &user.organization_id).await?;
     managed_project(&mut tx, user, id, &team).await?;
-    dao::update_paused(&mut tx, id, paused).await?;
+    projects_dao::update_paused(&mut tx, id, paused).await?;
     let response = project_json(&mut *tx, user, id).await?;
     tx.commit().await?;
     Ok(response)
@@ -276,7 +278,7 @@ async fn increment_instances(
     // (isTeamManagerOrAdminOf, else 403 Msg.notAllowed). The task DAO
     // additionally restricts affected tasks to team members and admins.
     let mut project = managed_project(&mut tx, &user, &id, &team).await?;
-    dao::increase_task_instances(&mut tx, &user, &id, delta).await?;
+    projects_dao::increase_task_instances(&mut tx, &user, &id, delta).await?;
     add_status(&mut *tx, &mut project).await?;
     tx.commit().await?;
     Ok(ResponseJson(project))
@@ -292,12 +294,12 @@ async fn delete(
     lock_project(&mut tx, &id, &user.organization_id).await?;
     project_json(&mut *tx, &user, &id).await?;
     // Authorization uses the stored owner, independently of response privacy.
-    let owner = dao::find_owner(&mut tx, &id).await?;
+    let owner = projects_dao::find_owner(&mut tx, &id).await?;
     if !user.is_admin && owner != user.id {
         return Err(ApiError::forbidden(crate::msg::project::DELETE_NOT_ALLOWED));
     }
-    dao::delete_one(&mut tx, &id).await?;
-    dao::delete_tasks(&mut tx, dao::TaskParent::Project, &id).await?;
+    projects_dao::delete_one(&mut tx, &id).await?;
+    projects_dao::delete_tasks(&mut tx, projects_dao::TaskParent::Project, &id).await?;
     tx.commit().await?;
     Ok(Messages::success(crate::msg::project::DELETE_SUCCESS))
 }
@@ -307,7 +309,7 @@ async fn lock_project(
     id: &ObjectId,
     organization: &str,
 ) -> ApiResult<ObjectId> {
-    dao::lock_one(tx, id, organization)
+    projects_dao::lock_one(tx, id, organization)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found(id)))
 }
@@ -317,7 +319,7 @@ pub(crate) async fn can_manage_team_in_tx(
     user: &AuthUser,
     team: &ObjectId,
 ) -> ApiResult<bool> {
-    Ok(dao::can_manage_team(tx, user, team).await?)
+    Ok(projects_dao::can_manage_team(tx, user, team).await?)
 }
 
 async fn for_task_type(
@@ -326,11 +328,11 @@ async fn for_task_type(
     Path(id): Path<String>,
 ) -> ApiResult<ResponseJson<Value>> {
     let id = ObjectId::parse_path(&id)?;
-    let exists = dao::is_task_type_readable(&state.pool, &user, &id).await?;
+    let exists = projects_dao::is_task_type_readable(&state.pool, &user, &id).await?;
     if !exists {
         return Err(ApiError::not_found(crate::msg::task_type::not_found(&id)));
     }
-    let mut values = dao::find_all_json_for_task_type(&state.pool, &user, &id).await?;
+    let mut values = projects_dao::find_all_json_for_task_type(&state.pool, &user, &id).await?;
     add_status_to_all(&state.pool, &mut values).await?;
     Ok(ResponseJson(Value::Array(values)))
 }
@@ -342,7 +344,7 @@ async fn active_users(
 ) -> ApiResult<ResponseJson<Value>> {
     let id = ObjectId::parse_path(&id)?;
     project_json(&state.pool, &user, &id).await?;
-    let values = dao::find_active_users_json(&state.pool, id).await?;
+    let values = projects_dao::find_active_users_json(&state.pool, id).await?;
     Ok(ResponseJson(Value::Array(values)))
 }
 
@@ -364,23 +366,25 @@ async fn transfer_active_tasks(
     let id = ObjectId::parse_path(&id)?;
     let new_user = &parameters.user_id;
     let mut tx = state.pool.begin().await?;
-    let team = dao::find_team_with_read_access(&mut tx, &user, &id)
+    let team = projects_dao::find_team_with_read_access(&mut tx, &user, &id)
         .await?
         .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found(&id)))?;
     if !can_manage_team_in_tx(&mut tx, &user, &team).await? {
         return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
     }
     // Play answers 400 here.
-    let transferee = dao::find_user_for_share(&mut tx, &user, new_user).await?;
+    let transferee = projects_dao::find_user_for_share(&mut tx, &user, new_user).await?;
     if transferee.is_none() {
         return Err(ApiError::bad_request(crate::msg::user::not_found(new_user)));
     }
-    let annotations = dao::find_active_task_annotation_ids(&mut tx, &id).await?;
+    let annotations = projects_dao::find_active_task_annotation_ids(&mut tx, &id).await?;
     for annotation in annotations {
-        let (dataset, mutable) = dao::find_annotation_for_transfer(&mut tx, &user, &annotation)
-            .await?
-            .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?;
-        let dataset_readable = dao::is_dataset_readable(&mut tx, &dataset, new_user).await?;
+        let (dataset, mutable) =
+            projects_dao::find_annotation_for_transfer(&mut tx, &user, &annotation)
+                .await?
+                .ok_or_else(|| ApiError::bad_request(crate::msg::annotation::NOT_FOUND))?;
+        let dataset_readable =
+            projects_dao::is_dataset_readable(&mut tx, &dataset, new_user).await?;
         if !dataset_readable {
             return Err(ApiError::bad_request(
                 crate::msg::annotation::TRANSFEREE_NO_DATASET_ACCESS,
@@ -391,9 +395,9 @@ async fn transfer_active_tasks(
                 crate::msg::annotation::NO_UPDATE_ACCESS,
             ));
         }
-        dao::update_annotation_user(&mut tx, &annotation, new_user).await?;
+        projects_dao::update_annotation_user(&mut tx, &annotation, new_user).await?;
         // Play re-reads the transferred annotation with the requester's access.
-        let readable = dao::is_annotation_readable(&mut tx, &user, &annotation).await?;
+        let readable = projects_dao::is_annotation_readable(&mut tx, &user, &annotation).await?;
         if !readable {
             return Err(ApiError::bad_request(crate::msg::annotation::NOT_FOUND));
         }

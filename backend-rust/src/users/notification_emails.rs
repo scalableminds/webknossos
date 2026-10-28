@@ -15,8 +15,8 @@ use std::{
 
 use sqlx::{Acquire, FromRow, PgPool, Postgres, Transaction};
 
-pub(crate) mod dao;
-use dao::Person;
+pub(crate) mod users_notification_emails_dao;
+use users_notification_emails_dao::Person;
 
 use crate::{
     mail::{Mail, MailSender, NotificationEmailSettings, templates},
@@ -326,13 +326,22 @@ impl NotificationEmailService {
         let exclude: Vec<&ObjectId> = exclude.to_vec();
         let prepared = async {
             let mut savepoint = transaction.begin().await?;
-            let candidates =
-                dao::find_all_share_candidates(&mut savepoint, &added_team_ids, &exclude).await?;
+            let candidates = users_notification_emails_dao::find_all_share_candidates(
+                &mut savepoint,
+                &added_team_ids,
+                &exclude,
+            )
+            .await?;
             let user_ids: Vec<&ObjectId> = candidates.iter().map(|c| &c.user_id).collect();
             let had_access: Vec<ObjectId> = if user_ids.is_empty() {
                 Vec::new()
             } else {
-                dao::find_all_user_ids_with_access(&mut *savepoint, &resource, &user_ids).await?
+                users_notification_emails_dao::find_all_user_ids_with_access(
+                    &mut *savepoint,
+                    &resource,
+                    &user_ids,
+                )
+                .await?
             };
             // Read-only: dropping the savepoint rolls it back.
             drop(savepoint);
@@ -394,10 +403,12 @@ impl NotificationEmailService {
         } = pending;
         let user_ids: Vec<&ObjectId> = candidates.iter().map(|c| &c.user_id).collect();
         let has_access: HashSet<ObjectId> =
-            dao::find_all_user_ids_with_access(pool, &resource, &user_ids)
-                .await?
-                .into_iter()
-                .collect();
+            users_notification_emails_dao::find_all_user_ids_with_access(
+                pool, &resource, &user_ids,
+            )
+            .await?
+            .into_iter()
+            .collect();
         let recipients = newly_allowed(&candidates, &had_access, &has_access);
         if recipients.is_empty() {
             return Ok(());
@@ -424,7 +435,9 @@ impl NotificationEmailService {
         }
         let named = match &resource {
             SharedResource::Annotation { id } => {
-                let (name, dataset_name) = dao::find_annotation_and_dataset_names(pool, id).await?;
+                let (name, dataset_name) =
+                    users_notification_emails_dao::find_annotation_and_dataset_names(pool, id)
+                        .await?;
                 Named::Annotation {
                     name,
                     dataset_name,
@@ -432,7 +445,7 @@ impl NotificationEmailService {
                 }
             }
             SharedResource::Dataset { id } => Named::Dataset {
-                name: dao::find_dataset_name(pool, id).await?,
+                name: users_notification_emails_dao::find_dataset_name(pool, id).await?,
                 // The dataset name is left out, as it may contain characters
                 // that are not valid in a URL path.
                 url: format!("{}/datasets/{id}/view", self.uri),
@@ -496,13 +509,16 @@ impl NotificationEmailService {
             [annotation_id, dataset_id, new_owner_id, issuer_id].map(ObjectId::clone);
         tokio::spawn(async move {
             let result = async {
-                let is_deactivated = dao::is_user_deactivated(&pool, &new_owner_id).await?;
+                let is_deactivated =
+                    users_notification_emails_dao::is_user_deactivated(&pool, &new_owner_id)
+                        .await?;
                 if is_deactivated {
                     return Ok(());
                 }
                 let recipient = person(&pool, &new_owner_id).await?;
                 let issuer = person(&pool, &issuer_id).await?;
-                let dataset_name = dao::find_dataset_name(&pool, &dataset_id).await?;
+                let dataset_name =
+                    users_notification_emails_dao::find_dataset_name(&pool, &dataset_id).await?;
                 service.send(templates::annotation_transferred(
                     &recipient.full_name(),
                     &recipient.email,
@@ -568,7 +584,8 @@ impl NotificationEmailService {
                 let recipient = person(&pool, &user_id).await?;
                 let issuer = person(&pool, &issuer_id).await?;
                 let organization_name =
-                    dao::find_organization_name_of_user(&pool, &user_id).await?;
+                    users_notification_emails_dao::find_organization_name_of_user(&pool, &user_id)
+                        .await?;
                 service.send(templates::access_changed(
                     &recipient.full_name(),
                     &recipient.email,
@@ -616,7 +633,10 @@ impl NotificationEmailService {
                 let recipient = person(&pool, &assignee_id).await?;
                 let issuer = person(&pool, &issuer_id).await?;
                 let (project_name, task_type_summary) =
-                    dao::find_project_name_and_task_type_summary(&pool, &task_id).await?;
+                    users_notification_emails_dao::find_project_name_and_task_type_summary(
+                        &pool, &task_id,
+                    )
+                    .await?;
                 service.send(templates::task_assigned(
                     &recipient.full_name(),
                     &recipient.email,
@@ -642,19 +662,21 @@ async fn team_names(
     pool: &PgPool,
     team_ids: &[ObjectId],
 ) -> Result<HashMap<ObjectId, String>, sqlx::Error> {
-    Ok(dao::find_all_team_names_by_ids(pool, team_ids)
-        .await?
-        .into_iter()
-        .collect())
+    Ok(
+        users_notification_emails_dao::find_all_team_names_by_ids(pool, team_ids)
+            .await?
+            .into_iter()
+            .collect(),
+    )
 }
 
 /// The multi user (name and email) of a user.
 async fn person(pool: &PgPool, user_id: &ObjectId) -> Result<Person, sqlx::Error> {
-    dao::find_one_person(pool, user_id).await
+    users_notification_emails_dao::find_one_person(pool, user_id).await
 }
 
 async fn people(pool: &PgPool, user_ids: &[&ObjectId]) -> Result<Vec<Person>, sqlx::Error> {
-    dao::find_all_people(pool, user_ids).await
+    users_notification_emails_dao::find_all_people(pool, user_ids).await
 }
 
 #[cfg(test)]

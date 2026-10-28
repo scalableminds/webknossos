@@ -4,7 +4,6 @@ import { getIsInIframe } from "libs/utils";
 import cloneDeep from "lodash-es/cloneDeep";
 import debounce from "lodash-es/debounce";
 import { createNanoEvents } from "nanoevents";
-import { BorderTabs } from "viewer/constants";
 import { setStoredLayoutsAction } from "viewer/model/actions/ui_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/store";
@@ -31,39 +30,6 @@ const localStorageKeys = {
   outdatedGoldenWkLayouts: "goldenWkLayouts",
 };
 
-// Removes all tabs with the given id from serialized layouts, including the sub-layouts of the borders.
-function removeTabFromLayoutJson(node: unknown, tabId: string) {
-  if (node == null || typeof node !== "object") return;
-  if (Array.isArray(node)) {
-    for (const child of node) removeTabFromLayoutJson(child, tabId);
-    return;
-  }
-
-  const layoutNode = node as Record<string, any>;
-  const { children } = layoutNode;
-  if (Array.isArray(children)) {
-    const removedIndex = children.findIndex((child) => child?.type === "tab" && child.id === tabId);
-    if (removedIndex > -1) {
-      children.splice(removedIndex, 1);
-      if (typeof layoutNode.selected === "number" && layoutNode.selected >= removedIndex) {
-        layoutNode.selected = Math.max(0, layoutNode.selected - 1);
-      }
-    }
-  }
-  for (const child of Object.values(layoutNode)) removeTabFromLayoutJson(child, tabId);
-}
-
-// Migrates the stored layouts of the given version to the current version.
-// Returns false if no migration exists, in which case the stored layouts are discarded.
-function migrateLayouts(layouts: unknown, version: number): boolean {
-  if (version === 17) {
-    // Version 18 removed the abstract tree tab from the default layouts. It is now opened on demand.
-    removeTabFromLayoutJson(layouts, BorderTabs.AbstractTreeTab.id);
-    return true;
-  }
-  return false;
-}
-
 function readStoredLayoutConfigs() {
   const storedLayoutVersion = UserLocalStorage.getItem(
     localStorageKeys.currentLayoutVersion,
@@ -87,7 +53,7 @@ function readStoredLayoutConfigs() {
     const version = JSON.parse(storedLayoutVersion);
     const layouts = JSON.parse(layoutString);
 
-    if (currentLayoutVersion !== version && !migrateLayouts(layouts, version)) {
+    if (currentLayoutVersion !== version) {
       return defaultLayoutConfig;
     }
 

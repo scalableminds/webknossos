@@ -27,7 +27,7 @@ import type {
 } from "./flex_layout_types";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 18;
+export const currentLayoutVersion = 17;
 const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInFlightMode = false;

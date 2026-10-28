@@ -236,14 +236,21 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
   adaptModelToConditionalTabs(model: Model) {
     /*
-     * Currently, this method only adapts the visibility/existence of the
-     * ConnectomeTab. It is controlled by the features attributes in
-     * application.conf (see `optInTabs`) and is only shown if the dataset
-     * has connectome files.
+     * This method adapts the visibility/existence of the ConnectomeTab.
+     * It is controlled by the features attributes in application.conf
+     * (see `optInTabs`) and is only shown if the dataset has connectome files.
+     * Also, it makes the AbstractTreeTab closable in layouts that were stored
+     * before the tab became closable.
      */
     const rightBorderModel = this.getRightBorderModel(model);
     if (rightBorderModel == null) {
       return;
+    }
+
+    if (rightBorderModel.getNodeById(BorderTabs.AbstractTreeTab.id) != null) {
+      rightBorderModel.doAction(
+        Actions.updateNodeAttributes(BorderTabs.AbstractTreeTab.id, { enableClose: true }),
+      );
     }
 
     const optInTabs: Array<string> = features().optInTabs || [];

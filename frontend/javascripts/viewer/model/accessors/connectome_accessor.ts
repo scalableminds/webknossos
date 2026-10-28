@@ -22,10 +22,10 @@ export function getConnectomeDataForLayer(state: WebknossosState, layerName: str
 }
 
 function hasConnectomeAttachment(layer: APIDataLayer | null | undefined): boolean {
-  if (layer == null) return false;
+  if (layer == null || layer.category !== "segmentation") return false;
   if ((layer.attachments?.connectomes?.length ?? 0) > 0) return true;
   // Volume annotation layers replace their fallback layer, which holds the attachments.
-  return layer.category === "segmentation" && hasConnectomeAttachment(layer.fallbackLayerInfo);
+  return hasConnectomeAttachment(layer.fallbackLayerInfo);
 }
 
 export function datasetHasConnectomes(dataset: APIDataset): boolean {

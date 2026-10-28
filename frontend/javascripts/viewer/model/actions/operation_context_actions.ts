@@ -16,6 +16,7 @@ export type OperationId =
   | "REDO"
   | "SAVE"
   | "REBASE"
+  | "SAVE_BEFORE_LIVE_COLLABORATION"
   | "LOAD_AGGLOMERATE_TREE";
 
 export const SYNC_RELATED_OPERATION_IDS: OperationId[] = ["SAVE", "REBASE"];

@@ -6,6 +6,7 @@ import {
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import type { ElementClass } from "types/api_types";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { type OrthoView, OrthoViews, type Vector3 } from "viewer/constants";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
@@ -141,7 +142,9 @@ async function runInterpolationTest(context: WebknossosTestContext, elementClass
 }
 
 describe("Volume Interpolation", () => {
+  const previousAllowFlag = WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation;
   afterEach<WebknossosTestContext>(async (context) => {
+    WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation = previousAllowFlag;
     expect(hasRootSagaCrashed()).toBe(false);
     context.tearDownPullQueues();
   });
@@ -206,6 +209,8 @@ describe("Volume Interpolation", () => {
     },
   );
   it("should save interpolations as partial updates in live collaboration", async (context: TestContext) => {
+    // Volume tools are only enabled in live collaboration with this flag. Reset in afterEach.
+    WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation = true;
     const testContext = context as WebknossosTestContext;
     await setupInterpolationTest(testContext, "uint32");
     const { api } = testContext;

@@ -142,7 +142,11 @@ export function InspectionBanner({
   inspection: FileInspection;
   isDatasetConversionEnabled: boolean;
 }) {
-  const bannerProps = getBannerProps(inspection, isDatasetConversionEnabled);
+  return <SelectionBanner bannerProps={getBannerProps(inspection, isDatasetConversionEnabled)} />;
+}
+
+/** Banner below the summary of the selected files. */
+export function SelectionBanner({ bannerProps }: { bannerProps: AlertProps | null }) {
   if (bannerProps == null) return null;
   return <Alert showIcon className="dataset-upload-inspection-banner" {...bannerProps} />;
 }

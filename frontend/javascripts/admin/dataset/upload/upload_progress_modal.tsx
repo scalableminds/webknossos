@@ -1,17 +1,21 @@
 import { FolderOutlined, LoadingOutlined } from "@ant-design/icons";
 import { Flex, Modal, Progress, Spin, Typography } from "antd";
-import type { UploadStatus } from "./use_resumable_dataset_upload";
+import type { UploadStatus } from "./use_resumable_upload";
 
 export function UploadProgressModal({
   status,
   onCancel,
+  title = "Dataset Upload",
+  uploadingLabel = "Uploading dataset",
 }: {
   status: UploadStatus;
   onCancel: () => void;
+  title?: string;
+  uploadingLabel?: string;
 }) {
   return (
     <Modal
-      title="Dataset Upload"
+      title={title}
       open={status.kind !== "idle"}
       keyboard={false}
       mask={{ closable: false }}
@@ -28,9 +32,9 @@ export function UploadProgressModal({
           <>
             <FolderOutlined style={{ fontSize: 50 }} />
             <div style={{ width: "100%", textAlign: "center" }}>
-              {status.isRetrying ? "The upload froze. Retrying to continue …" : "Uploading dataset"}
+              {status.isRetrying ? "The upload froze. Retrying to continue …" : uploadingLabel}
               <Typography.Text strong style={{ display: "block", overflowWrap: "anywhere" }}>
-                {status.datasetName}
+                {status.name}
               </Typography.Text>
             </div>
             <Progress

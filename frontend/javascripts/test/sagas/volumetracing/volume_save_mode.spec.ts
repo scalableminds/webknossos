@@ -1,4 +1,5 @@
 import { sleep } from "libs/utils";
+import isEqual from "lodash-es/isEqual";
 import {
   createBucketResponseFunction,
   setupWebknossosForTesting,
@@ -31,6 +32,7 @@ import {
   startEditingAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { decodeBucketDiff, voxelOffsetOf } from "viewer/model/volumetracing/core";
 import { Model, Store } from "viewer/singletons";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -109,12 +111,36 @@ function sentBucketActionNames(context: WebknossosTestContext, fromRequest = 0):
 // The updateBucketPartial actions in all save requests.
 function sentPartialBucketUpdates(
   context: WebknossosTestContext,
-): Array<{ position: Vector3; mag: Vector3 }> {
+): Array<{ position: Vector3; mag: Vector3; voxelRunsBase64: string }> {
   return context.receivedDataPerSaveRequest
     .flatMap((entries) => entries.flatMap((entry) => entry.actions))
     .filter((action) => action.name === "updateBucketPartial")
-    .map((action) => action.value as { position: Vector3; mag: Vector3 });
+    .map((action) => action.value as { position: Vector3; mag: Vector3; voxelRunsBase64: string });
 }
+
+// Decodes the partial updates sent for the mag-1 bucket that contains `voxel`: the
+// written voxels (bucket-local, as "x,y,z") and the values they were written with.
+function sentVoxelsInBucketOf(
+  context: WebknossosTestContext,
+  voxel: Vector3,
+): { voxels: Set<string>; values: Set<bigint> } {
+  const bucketOrigin = voxel.map((coordinate) => Math.floor(coordinate / 32) * 32);
+  const voxels = new Set<string>();
+  const values = new Set<bigint>();
+  for (const update of sentPartialBucketUpdates(context)) {
+    if (!isEqual(update.mag, [1, 1, 1]) || !isEqual(update.position, bucketOrigin)) continue;
+    const bytes = Uint8Array.from(atob(update.voxelRunsBase64), (char) => char.charCodeAt(0));
+    for (const run of decodeBucketDiff(bytes)) {
+      values.add(run.value);
+      for (let index = run.start; index < run.start + run.length; index++) {
+        voxels.add(voxelOffsetOf(index).join(","));
+      }
+    }
+  }
+  return { voxels, values };
+}
+
+const bucketLocalKey = (voxel: Vector3) => voxel.map((coordinate) => coordinate % 32).join(",");
 
 async function waitUntilNoOperationIsRunning() {
   await sleep(0);
@@ -123,8 +149,12 @@ async function waitUntilNoOperationIsRunning() {
   }
 }
 
-const getValue = (context: WebknossosTestContext) =>
-  context.api.data.getDataValue(VOLUME_TRACING_ID, position);
+const getValueAt = (context: WebknossosTestContext, voxel: Vector3) =>
+  context.api.data.getDataValue(VOLUME_TRACING_ID, voxel);
+const getValue = (context: WebknossosTestContext) => getValueAt(context, position);
+// Off-center within the square that the trace tests trace around `position`, and beyond it.
+const insideTraceSquare: Vector3 = [46, 34, 43];
+const outsideTraceSquare: Vector3 = [52, 40, 43];
 
 describe("Volume save mode", () => {
   const previousAllowFlag = WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation;
@@ -238,14 +268,23 @@ describe("Volume save mode", () => {
     await context.api.tracing.save();
 
     expect(await getValue(context)).toBe(5);
+    expect(await getValueAt(context, insideTraceSquare)).toBe(5);
+    expect(await getValueAt(context, outsideTraceSquare)).toBe(0);
     const names = sentBucketActionNames(context);
     expect(names).toContain("updateBucketPartial");
     expect(names).not.toContain("updateBucket");
+    // The three voxels share a mag-1 bucket.
+    const { voxels, values } = sentVoxelsInBucketOf(context, position);
+    expect(voxels.has(bucketLocalKey(position))).toBe(true);
+    expect(voxels.has(bucketLocalKey(insideTraceSquare))).toBe(true);
+    expect(voxels.has(bucketLocalKey(outsideTraceSquare))).toBe(false);
+    expect([...values]).toEqual([5n]);
   });
 
   it<WebknossosTestContext>("saves areas erased with the trace tool as partial updates in live collaboration", async (context) => {
     await setup(context, "Concurrent");
     brushAt(position);
+    context.api.data.labelVoxels([insideTraceSquare, outsideTraceSquare], 5n);
     await context.api.tracing.save();
     expect(await getValue(context)).toBe(5);
     const requestsBeforeErasing = context.receivedDataPerSaveRequest.length;
@@ -257,6 +296,8 @@ describe("Volume save mode", () => {
     await context.api.tracing.save();
 
     expect(await getValue(context)).toBe(0);
+    expect(await getValueAt(context, insideTraceSquare)).toBe(0);
+    expect(await getValueAt(context, outsideTraceSquare)).toBe(5);
     const names = sentBucketActionNames(context, requestsBeforeErasing);
     expect(names).toContain("updateBucketPartial");
     expect(names).not.toContain("updateBucket");
@@ -264,14 +305,24 @@ describe("Volume save mode", () => {
 
   it<WebknossosTestContext>("saves labelVoxels as partial updates in live collaboration", async (context) => {
     await setup(context, "Concurrent");
-    context.api.data.labelVoxels([position, [41, 40, 43]], 7n);
+    // The last voxel lies in the next bucket along x.
+    const voxels: Vector3[] = [position, [41, 40, 43], [72, 40, 43]];
+    context.api.data.labelVoxels(voxels, 7n);
     await context.api.tracing.save();
 
-    expect(await getValue(context)).toBe(7);
-    expect(await context.api.data.getDataValue(VOLUME_TRACING_ID, [41, 40, 43])).toBe(7);
+    for (const voxel of voxels) expect(await getValueAt(context, voxel)).toBe(7);
     const names = sentBucketActionNames(context);
     expect(names).toContain("updateBucketPartial");
     expect(names).not.toContain("updateBucket");
+    // Exactly the labeled voxels were sent.
+    expect(sentVoxelsInBucketOf(context, position)).toEqual({
+      voxels: new Set([bucketLocalKey(position), bucketLocalKey([41, 40, 43])]),
+      values: new Set([7n]),
+    });
+    expect(sentVoxelsInBucketOf(context, [72, 40, 43])).toEqual({
+      voxels: new Set([bucketLocalKey([72, 40, 43])]),
+      values: new Set([7n]),
+    });
   });
 
   it<WebknossosTestContext>("saves labelVoxels as whole buckets outside of live collaboration", async (context) => {

@@ -35,12 +35,12 @@ import capitalize from "lodash-es/capitalize";
 import type * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { ThemeIndependentStatusColor } from "theme";
 import { type APIJob, APIJobCommand } from "types/api_types";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 
-// Kept as literals: antd derives the second tone from the first via a color library at render
-// time, so neither the twoToneColor nor the style prop can resolve a CSS variable here. These
-// values are antd's dark-algorithm status colors, which are legible on both backgrounds.
+// antd derives the second tone from the first via a color library at render time, so neither the
+// twoToneColor nor the style prop can resolve a CSS variable here.
 export const TOOLTIP_MESSAGES_AND_ICONS = {
   UNKNOWN: {
     tooltip:
@@ -49,11 +49,21 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
   },
   SUCCESS: {
     tooltip: "This job has successfully been executed.",
-    icon: <CheckCircleTwoTone twoToneColor="#49b21b" className="icon-margin-right" />,
+    icon: (
+      <CheckCircleTwoTone
+        twoToneColor={ThemeIndependentStatusColor.success}
+        className="icon-margin-right"
+      />
+    ),
   },
   PENDING: {
     tooltip: "This job will run as soon as a worker becomes available.",
-    icon: <ClockCircleTwoTone twoToneColor="#d89614" className="icon-margin-right" />,
+    icon: (
+      <ClockCircleTwoTone
+        twoToneColor={ThemeIndependentStatusColor.warning}
+        className="icon-margin-right"
+      />
+    ),
   },
   STARTED: {
     tooltip: "This job is currently running.",
@@ -62,7 +72,12 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
   FAILURE: {
     tooltip:
       "Something went wrong when executing this job. Feel free to contact us if you need assistance.",
-    icon: <CloseCircleTwoTone twoToneColor="#a61d24" className="icon-margin-right" />,
+    icon: (
+      <CloseCircleTwoTone
+        twoToneColor={ThemeIndependentStatusColor.error}
+        className="icon-margin-right"
+      />
+    ),
   },
   CANCELLED: {
     tooltip: "This job was cancelled.",

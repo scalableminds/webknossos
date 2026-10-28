@@ -286,7 +286,8 @@ pub(crate) async fn find_public_json(
         + COALESCE((SELECT sum(usedStorageBytes) FROM webknossos.organization_usedStorage_attachments WHERE _dataset=d._id),0) ELSE 0 END,
       'dataSource',jsonb_build_object('id',jsonb_build_object('name',d.directoryName,'team',d._organization),
         'scale',CASE WHEN d.voxelSizeFactor IS NOT NULL THEN jsonb_build_object('factor',jsonb_build_array((d.voxelSizeFactor).x,(d.voxelSizeFactor).y,(d.voxelSizeFactor).z),
-          'unit',COALESCE(d.voxelSizeUnit::text,'nanometer')) ELSE NULL END,'status',d.status),
+          'unit',COALESCE(d.voxelSizeUnit::text,'nanometer')) ELSE NULL END,'status',d.status,
+        'defaultViewConfiguration',d.defaultViewConfiguration),
       'dataStore',jsonb_build_object('name',store.name))
       FROM webknossos.datasets_ d JOIN webknossos.organizations_ o ON o._id=d._organization
       JOIN webknossos.dataStores_ store ON store.name=trim(d._dataStore) WHERE d._id="#,

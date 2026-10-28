@@ -70,7 +70,25 @@ During stages 1–4 both applications run against the **same** production databa
 
 ## 5. Performance
 
-`tools/app_differential/bench.py` on identical data (`stack.py reset --volume`: 2,006 datasets, 302 users, 5,000 annotations), Apple M2 Pro, local PostgreSQL 15, 20 DB connections each, 8 s per level after warmup. Tables in checkpoints/cutover.md ("Final benchmark", "Round 2"). Summary: Rust matches or beats Play on throughput and latency for the measured routes at a fraction of the CPU per request. Closest to Play: the users list at 32 connections (998 vs 1,199 rps; 188 vs 129 rps at 1) and the readable-annotations page (1,006 vs 1,169 rps; equal at 1), both bound by PostgreSQL CPU. Not yet measured: production-size data, Linux, memory behavior of the Linux allocator.
+`tools/app_differential/bench.py` on identical data (`stack.py reset --volume`: 2,006 datasets, 302 users, 5,000 annotations), Apple M2 Pro, local PostgreSQL 15, 20 DB connections each, 8 s per level after warmup. Tables in checkpoints/cutover.md ("Final benchmark", "Round 2"). Summary: Rust matches or beats Play on throughput and latency for the measured routes at a fraction of the CPU per request. Closest to Play: the users list at 32 connections (998 vs 1,199 rps; 188 vs 129 rps at 1) and the readable-annotations page (1,006 vs 1,169 rps; equal at 1), both bound by PostgreSQL CPU. Not yet measured: Linux, memory behavior of the Linux allocator, throughput on production-size data.
+
+**Production data, single requests** (2026-10-27). Setup: the production dump (schema 188, store URLs neutralized) and the GET routes of 5 representative users (super user, two admins, team manager, member). There were 348 requests, sequential on fresh connections, Play and Rust alternating, and each latency is the median of 5 runs after a warmup. Rust's median time is 0.73× Play's, and the totals are 6.2 s for Rust vs 8.7 s for Play. Rust is faster on 204 requests, within ±20 % on 111, and slower on 33. The slower ones are listed below; most of them differ by only 1–3 ms.
+
+| Route | Play | Rust | Cause / status |
+| --- | ---: | ---: | --- |
+| `GET /api/folders/tree` | 9–23 ms | 49–52 ms | `tree()` (`src/folders/routes/mod.rs`) runs three queries per folder (`has_access`, `find_parent`, `has_access`); Play runs one. Open: replace with one set-based query. |
+| `GET /api/annotations/readable?isFinished=true&…&includeTotalCount=true` (admins) | 22–31 ms | 32–38 ms | Open, not analyzed. |
+| `GET /api/user/annotations` (all, and `isFinished=true&…&includeTotalCount=true`) | 4.5–11 ms | 7–14 ms | Open, not analyzed. |
+| `GET /api/users/:id/annotations`, `GET /api/users/:id/tasks` | 1.8–3.1 ms | 2.4–4.0 ms | Open, not analyzed. |
+| `GET /api/annotations/:id/info?timestamp=0` | 5.5–5.9 ms | 7.5–10.6 ms | Open, not analyzed. |
+| `GET /api/projects/:id/tasks` (with and without paging) | 4.3–4.9 ms | 7.1–8.4 ms | Open, not analyzed. |
+| `GET /api/datasets/:id/usedStorageDetails` | 1.7–2.0 ms | 2.9–4.8 ms | Open, not analyzed. |
+| `GET /api/datasets/:id/sharingToken` | 1.6–2.6 ms | 2.4–4.4 ms | Open, not analyzed (creates a token on first call). |
+| `GET /api/jobs/:id`, `GET /api/tasks/:id`, `GET /api/datasetConfigurations/default/:id`, `GET /api/projects/:id/usersWithActiveTasks`, `GET /api/annotations/:typ/:id/sharedTeams`, `GET /api/projects` (member) | 1.5–2.6 ms | 1.9–3.9 ms | Under 1.5 ms each. |
+
+Two fixes came out of this run:
+- **Per-connection router conversion.** Axum serves a `Router` by deep-cloning it and converting every handler again for each new connection. The API is nested once per version (`/api`, `/api/v10`–`/api/v16`, about 2,300 endpoints), so each new connection paid about 9 ms before its first byte. The router is now converted once in `main.rs` (`into_make_service`). Time to first byte on a fresh connection dropped from 9.5 ms to 0.23 ms.
+- **`/api/time/overview` took 400–750 ms (Play: 35–70 ms).** The span filter compared `a.typ::text = ANY(…)`. That cast hides the column statistics, so the planner estimated 4 rows instead of 34k and chose a nested loop. The filter now compares the enum columns directly: 1.2 s → 63 ms for the full query on the dump.
 
 Fixed on the way (all verified by the differential corpora afterwards):
 - Compact dataset list was 2-4x slower than Play: correlated per-row permission subplans, per-row layer/storage subqueries and `jsonb_build_object`. Now uncorrelated permission sets, set-based joins (lateral for small limits), JSON built in Rust.

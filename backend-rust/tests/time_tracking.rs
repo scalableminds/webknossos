@@ -296,6 +296,16 @@ async fn spans_filter_by_range_type_state_and_project() {
             .iter()
             .all(|s| s["taskId"] == w.task.as_str())
     );
+    // Accepted types without a database enum label match nothing instead of failing the cast.
+    let without_label = query(
+        "2024-01-01T00:00:00Z",
+        "2024-03-02T00:00:00Z",
+        "View,CompoundTask",
+        "Active,Finished",
+    );
+    let (status, body) = get(&w.app, &w.member.token, &format!("{base}?{without_label}")).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body, json!([]));
     let explorational_only = query(
         "2024-01-01T00:00:00Z",
         "2024-03-02T00:00:00Z",

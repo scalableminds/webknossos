@@ -406,6 +406,11 @@ pub(crate) async fn full_json_on_connection(
         }
         datasource.remove("scale");
     }
+    // UsableDataSource carries the dataset's defaultViewConfiguration (omitted when unset);
+    // UnusableDataSource has none.
+    if !usable || datasource["defaultViewConfiguration"].is_null() {
+        datasource.remove("defaultViewConfiguration");
+    }
     if usable {
         datasource.remove("status");
         datasource.insert(

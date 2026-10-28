@@ -959,6 +959,19 @@ async fn metadata_settings_access_lists_and_raw_superuser_sources_preserve_permi
     );
     let (_, public) = request(&application, "GET", &format!("/datasets/{id}"), None, None).await;
     assert!(!public.to_string().contains("credential-reference"));
+    let (status, read) = request(
+        &application,
+        "GET",
+        &format!("/datasets/{id}"),
+        Some(&fixture.token),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{read}");
+    assert_eq!(
+        read["dataSource"]["defaultViewConfiguration"],
+        json!({"position":[1,2,3],"zoom":0.5})
+    );
     db.cleanup().await;
 }
 

@@ -45,12 +45,25 @@ fn push_span_filter<'a>(q: &mut Sql<'a>, filters: &'a Filters) {
             .push_bind(&filters.projects)
             .push("::text[])");
     }
-    q.push(" AND a.typ::text = ANY(")
-        .push_bind(&filters.types)
-        .push("::text[]) AND a.state::text = ANY(")
+    // Compare as enums, not `a.typ::text`: the cast hides the column statistics, and the
+    // planner's resulting misestimate made /time/overview ~15x slower on production data.
+    // Types without a database label (View, Compound*) match no row, so they are dropped
+    // before the cast instead of failing it.
+    let types: Vec<&str> = filters
+        .types
+        .iter()
+        .map(String::as_str)
+        .filter(|typ| DB_ANNOTATION_TYPES.contains(typ))
+        .collect();
+    q.push(" AND a.typ = ANY(")
+        .push_bind(types)
+        .push("::text[]::webknossos.ANNOTATION_TYPE[]) AND a.state = ANY(")
         .push_bind(&filters.states)
-        .push("::text[])");
+        .push("::text[]::webknossos.ANNOTATION_STATE[])");
 }
+
+/// The labels of `webknossos.ANNOTATION_TYPE`.
+const DB_ANNOTATION_TYPES: [&str; 4] = ["Task", "Explorational", "TracingBase", "Orphan"];
 
 /// The user, if visible to the requester through UserDAO.readAccessQ (self or manageable).
 pub(super) async fn find_target_user(

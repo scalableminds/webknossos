@@ -55,11 +55,13 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let listener = tokio::net::TcpListener::bind(config.bind).await?;
     tracing::info!(address = %listener.local_addr()?, "Rust application backend listening");
     let (shutdown_send, shutdown_recv) = tokio::sync::oneshot::channel();
-    let server = axum::serve(
-        listener,
-        router_with_config(AppState::from_config(pool.clone(), &config), &config),
-    )
-    .with_graceful_shutdown(async {
+    // Serving the `Router` directly makes axum deep-clone it and convert every handler again on
+    // each new connection (~8 ms with the API nested once per version). Convert once here and
+    // hand out cheap clones instead.
+    let app = router_with_config(AppState::from_config(pool.clone(), &config), &config)
+        .with_state(())
+        .into_make_service();
+    let server = axum::serve(listener, app).with_graceful_shutdown(async {
         let _ = shutdown_recv.await;
     });
     let server = std::future::IntoFuture::into_future(server);

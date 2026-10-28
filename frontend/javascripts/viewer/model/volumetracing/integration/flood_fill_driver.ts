@@ -77,6 +77,8 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
     overwriteMode: "overwrite-all",
     // Irrelevant under overwrite-all; flood fill has no overwrite toggle.
     overwritableValue: 0n,
+    // Doesn't restrict the traversal. The transaction still drops the writes
+    // outside of the cube's editable region.
     editableBoundingBox: null,
     additionalCoordinates: options.additionalCoordinates,
   };

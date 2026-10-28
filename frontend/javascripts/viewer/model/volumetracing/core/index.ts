@@ -27,6 +27,7 @@ export {
   type BucketWrite,
   type BucketWriteMap,
   BucketWriteMapBuilder,
+  clipBucketWriteMap,
   countVoxels,
 } from "./bucket_write_map";
 export { resolve, resolveFloodFill } from "./flood_fill_resolver";

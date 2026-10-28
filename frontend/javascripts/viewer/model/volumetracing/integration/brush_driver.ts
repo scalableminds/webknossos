@@ -20,11 +20,7 @@ import type { MaskShape } from "../core/volume_edit_intents";
 import { VolumeTransaction } from "../core/volume_transaction";
 import { rasterize } from "../core/voxel_rasterizer";
 import type { DriverOptions, DriverResult } from "./tool_driver_types";
-import {
-  getEditableBoundingBoxInMag,
-  magListForCube,
-  WkDataCubeAdapter,
-} from "./wk_data_cube_adapter";
+import { magListForCube, WkDataCubeAdapter } from "./wk_data_cube_adapter";
 
 export interface BrushDriverOptions extends DriverOptions {
   overwriteMode: OverwriteMode;
@@ -57,7 +53,7 @@ export class BrushDriver {
       activeSegmentId: options.segmentId,
       overwriteMode: options.overwriteMode,
       overwritableValue: options.overwritableValue,
-      editableBoundingBox: getEditableBoundingBoxInMag(options.cube, options.magIndex),
+      editableBoundingBox: this.adapter.getEditableBoundingBox(options.magIndex),
       additionalCoordinates: options.additionalCoordinates,
     };
     this.transaction = new VolumeTransaction(

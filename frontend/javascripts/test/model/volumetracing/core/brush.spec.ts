@@ -257,6 +257,41 @@ describe("volume annotation core — brush", () => {
     expect(magIndicesOf(diff.bucketDiffs.map((d) => d.address))).toEqual([1, 2]);
   });
 
+  it("clips every mag to the editable bounding box when drawing at a coarse mag", async () => {
+    const { cube, session } = createHarness();
+    await materialize(cube, originBuckets(MAGS.length));
+    // A finest-mag bound whose x border is not aligned to mag 1 (2-2-1): mag-1
+    // voxel 3 straddles it, covering finest-mag voxels 6 (inside) and 7 (outside).
+    const finestMax: Vector3 = [7, 64, 32];
+    cube.getEditableBoundingBox = (magIndex) => {
+      const mag = MAGS.get(magIndex);
+      return {
+        min: [0, 0, 0],
+        max: [0, 1, 2].map((axis) => Math.ceil(finestMax[axis] / mag[axis])) as Vector3,
+      };
+    };
+
+    const ctx = editContext({
+      sourceMagIndex: 1,
+      activeSegmentId: SEGMENT,
+      editableBoundingBox: cube.getEditableBoundingBox(1),
+    });
+    session.beginBrushStroke(ctx, [3, 8, 4], iso(3), 2);
+    const diff = session.endBrushStroke();
+
+    expect(cube.peek([3, 8, 4], 1)).toBe(SEGMENT);
+    expect(paintedVoxels(cube, [4, 0, 0], [32, 32, 32], SEGMENT, 1)).toEqual([]);
+    expect(cube.peek([6, 16, 4], 0)).toBe(SEGMENT);
+    expect(paintedVoxels(cube, [7, 0, 0], [64, 64, 32], SEGMENT, 0)).toEqual([]);
+
+    // The diff describes exactly the painted voxels.
+    const paintedCount =
+      paintedVoxels(cube, [0, 0, 0], [64, 64, 32], SEGMENT, 0).length +
+      paintedVoxels(cube, [0, 0, 0], [32, 32, 32], SEGMENT, 1).length +
+      paintedVoxels(cube, [0, 0, 0], [16, 16, 16], SEGMENT, 2).length;
+    expect(countDiffVoxels(diff)).toBe(paintedCount);
+  });
+
   it("records diffs for buckets that were never loaded, without fetching them", async () => {
     const { cube, session, backend } = createHarness();
     // Deliberately materialize nothing.

@@ -241,7 +241,11 @@ export interface EditContext {
    * mode. Ignored under overwrite-all.
    */
   overwritableValue: SegmentId;
-  /** Annotation-level restriction; the rasterizer clips against it. */
+  /**
+   * Annotation-level restriction in source-mag voxels; the rasterizer and the
+   * flood fill traversal clip against it. Independently of it, the transaction
+   * clips every mag to TransactionCube.getEditableBoundingBox.
+   */
   editableBoundingBox: BoundingBox | null;
   /**
    * Which point in the dataset's extra axes (time, channel, ...) this

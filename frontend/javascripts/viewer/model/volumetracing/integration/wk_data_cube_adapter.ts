@@ -118,6 +118,22 @@ export class WkDataCubeAdapter implements TransactionCube {
     this.touched.clear();
   }
 
+  /**
+   * The cube's bounding box (e.g., the task bounding box) in the voxels of the
+   * given mag. The cube drops writes to buckets outside of it, but not to the
+   * outside part of a partially contained bucket. Clipping in the core covers
+   * both, and keeps the diff free of discarded writes. Rounded like the bucket
+   * containment in data_cube.ts.
+   */
+  getEditableBoundingBox(magIndex: MagIndex): BoundingBox {
+    // Dense mags, since mag propagation also passes through mags that are
+    // missing between two existing ones.
+    const mag = this.cube.magInfo.getDenseMags()[magIndex];
+    if (mag == null) throw new Error(`No mag at index ${magIndex}`);
+    const { min, max } = this.cube.boundingBox.fromMag1ToMag(mag);
+    return { min, max };
+  }
+
   private rawData(address: BucketAddress): BucketDataArray | null {
     const bucket = this.cube.getBucket(address);
     if (bucket.type === "null" || !bucket.hasData()) return null;
@@ -143,18 +159,6 @@ export class WkLoadingCubeAdapter extends WkDataCubeAdapter implements LoadingVo
     if (bucket.type === "null") return null;
     return asSegmentData(await bucket.getDataForMutation());
   }
-}
-
-/**
- * The cube's bounding box (e.g., the task bounding box) in source-mag voxels,
- * for EditContext.editableBoundingBox. The cube drops writes to buckets outside
- * of it, but not to the outside part of a partially contained bucket. Clipping
- * in the rasterizer covers both, and keeps the diff free of discarded writes.
- * Rounded like the bucket containment in data_cube.ts.
- */
-export function getEditableBoundingBoxInMag(cube: DataCube, magIndex: MagIndex): BoundingBox {
-  const { min, max } = cube.boundingBox.fromMag1ToMag(cube.magInfo.getMagByIndexOrThrow(magIndex));
-  return { min, max };
 }
 
 /**

@@ -1,17 +1,20 @@
 import { BucketVoxelMask } from "./bucket_voxel_mask";
 import {
   type AdditionalCoordinate,
+  type BoundingBox,
   BUCKET_WIDTH,
   type BucketAddress,
   type BucketKey,
   bucketAddressOfVoxel,
   bucketKey,
   type MagIndex,
+  originVoxelOf,
   type SegmentBucketData,
   type SegmentId,
   type Vector3,
   voxelIndexOf,
   voxelOffsetInBucket,
+  voxelOffsetOf,
 } from "./volume_annotation_types";
 
 /**
@@ -173,6 +176,50 @@ export class BucketWriteMapBuilder {
   build(): BucketWriteMap {
     return this.entries;
   }
+}
+
+/**
+ * The writes of `bucketWriteMap` that lie within `box`, given in the voxels of
+ * the write set's mag. Buckets fully inside are passed on as they are.
+ */
+export function clipBucketWriteMap(
+  bucketWriteMap: BucketWriteMap,
+  box: BoundingBox,
+): BucketWriteMap {
+  const clipped: BucketWriteMap = new Map();
+  for (const [key, entry] of bucketWriteMap) {
+    // The box in bucket-local voxels, clamped to the bucket.
+    const origin = originVoxelOf(entry.address);
+    const min: Vector3 = [0, 0, 0];
+    const max: Vector3 = [0, 0, 0];
+    let isEmpty = false;
+    let isFull = true;
+    for (let axis = 0; axis < 3; axis++) {
+      min[axis] = Math.max(box.min[axis] - origin[axis], 0);
+      max[axis] = Math.min(box.max[axis] - origin[axis], BUCKET_WIDTH);
+      if (min[axis] >= max[axis]) isEmpty = true;
+      if (min[axis] > 0 || max[axis] < BUCKET_WIDTH) isFull = false;
+    }
+    if (isEmpty) continue;
+    if (isFull) {
+      clipped.set(key, entry);
+      continue;
+    }
+
+    const mask = new BucketVoxelMask();
+    // Every run is an x-run within one row (see BucketVoxelMask.runs).
+    for (const { start, length } of entry.write.mask.runs()) {
+      const [x, y, z] = voxelOffsetOf(start);
+      if (y < min[1] || y >= max[1] || z < min[2] || z >= max[2]) continue;
+      const xStart = Math.max(x, min[0]);
+      const xEnd = Math.min(x + length, max[0]);
+      if (xStart < xEnd) mask.markRun(start + xStart - x, xEnd - xStart);
+    }
+    if (mask.count > 0) {
+      clipped.set(key, { address: entry.address, write: { mask, value: entry.write.value } });
+    }
+  }
+  return clipped;
 }
 
 /** Total number of marked voxels across a write set. Used by tests. */

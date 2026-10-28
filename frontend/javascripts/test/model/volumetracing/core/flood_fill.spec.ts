@@ -244,6 +244,9 @@ describe("volume annotation core — flood fill", () => {
       getIsOverwritableFunction() {
         return null;
       }
+      getEditableBoundingBox() {
+        return null;
+      }
       /** Only bucket (0,0,0) exists; everything else is outside the dataset. */
       async ensureLoaded(address: BucketAddress): Promise<SegmentBucketData | null> {
         this.loaded.push(address.slice(0, 3).join(","));
@@ -294,6 +297,7 @@ describe("volume annotation core — flood fill", () => {
     const cube: LoadingVoxelCube = {
       applyWrites() {},
       getIsOverwritableFunction: () => null,
+      getEditableBoundingBox: () => null,
       ensureLoaded: async () => new BigUint64Array(BUCKET_VOXEL_COUNT),
     };
     const { bucketWrites, wasVoxelLimitExceeded, coveredBoundingBox } = await resolveFloodFill(

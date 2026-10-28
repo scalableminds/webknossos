@@ -239,7 +239,7 @@ class VolumeTracingService @Inject() (
 
     val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracingBeforeRevert)
     val bucketStreamBeforeRevert =
-      volumeLayer.volumeBucketProvider.bucketStreamWithVersion(version = Some(tracingBeforeRevert.version))
+      bucketStreamWithVersionIncludingReverted(volumeLayer, version = Some(tracingBeforeRevert.version))
 
     for {
       fallbackLayer <- getFallbackLayer(annotationId, tracingBeforeRevert)
@@ -256,7 +256,7 @@ class VolumeTracingService @Inject() (
         temporaryTracingService,
         tc
       )
-      _ <- Fox.serialCombined(bucketStreamBeforeRevert) { case (bucketPosition, dataBeforeRevert, version) =>
+      _ <- Fox.serialCombined(bucketStreamBeforeRevert) { case (bucketPosition, dataBeforeRevertOpt, version) =>
         if (version > sourceVersion) {
           loadBucket(volumeLayer, bucketPosition, Some(sourceVersion)).shiftBox.flatMap {
             case Full(dataAfterRevert) =>
@@ -268,11 +268,13 @@ class VolumeTracingService @Inject() (
                     segmentIndexBuffer,
                     bucketPosition,
                     dataAfterRevert,
-                    Full(dataBeforeRevert),
+                    Box.fromOption(dataBeforeRevertOpt),
                     editableMappingTracingId(sourceTracing, tracingId)
                   )
                 )
               } yield ()
+            case Empty if dataBeforeRevertOpt.isEmpty =>
+              Fox.successful(()) // Already reverted before, nothing to do
             case Empty =>
               for {
                 dataAfterRevert <- Fox.successful(revertedValue)
@@ -283,7 +285,7 @@ class VolumeTracingService @Inject() (
                     segmentIndexBuffer,
                     bucketPosition,
                     dataAfterRevert,
-                    Full(dataBeforeRevert),
+                    Box.fromOption(dataBeforeRevertOpt),
                     editableMappingTracingId(sourceTracing, tracingId)
                   )
                 )

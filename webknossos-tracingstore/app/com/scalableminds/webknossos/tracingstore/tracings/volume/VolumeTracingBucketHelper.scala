@@ -406,23 +406,31 @@ trait VolumeTracingBucketHelper
   def bucketStreamWithVersion(
       volumeLayer: VolumeTracingLayer,
       version: Option[Long]
-  )(using ec: ExecutionContext): FoxIterator[(BucketPosition, Array[Byte], Long)] = {
+  )(using ec: ExecutionContext): FoxIterator[(BucketPosition, Array[Byte], Long)] =
+    bucketStreamWithVersionIncludingReverted(volumeLayer, version).flatMap {
+      case (bucketPosition, Some(data), bucketVersion) => Some((bucketPosition, data, bucketVersion))
+      case _                                           => None
+    }
+
+  // Also yields buckets whose newest value is the reverted marker (with data None),
+  // so that a revert can restore buckets deleted by an earlier revert.
+  def bucketStreamWithVersionIncludingReverted(
+      volumeLayer: VolumeTracingLayer,
+      version: Option[Long]
+  )(using ec: ExecutionContext): FoxIterator[(BucketPosition, Option[Array[Byte]], Long)] = {
     val keyPrefix = buildKeyPrefix(volumeLayer.name)
-    new ReversionAwareVersionedFossilDbIterator[(BucketPosition, Array[Byte], Long)](
-      keyPrefix,
-      volumeDataStore,
-      version
-    )(keyValuePair =>
+    new VersionedFossilDbIterator(keyPrefix, volumeDataStore, version).flatMap { keyValuePair =>
       parseBucketKey(keyValuePair.key, volumeLayer.additionalAxes).map { case (_, bucketPosition) =>
-        val debugInfo =
-          s"key: ${keyValuePair.key}, ${keyValuePair.value.length} bytes, version ${keyValuePair.version}"
-        (
-          bucketPosition,
-          decompressIfNeeded(keyValuePair.value, volumeLayer.expectedUncompressedBucketSize, debugInfo),
-          keyValuePair.version
-        )
+        val dataOpt =
+          if (isRevertedElement(keyValuePair)) None
+          else {
+            val debugInfo =
+              s"key: ${keyValuePair.key}, ${keyValuePair.value.length} bytes, version ${keyValuePair.version}"
+            Some(decompressIfNeeded(keyValuePair.value, volumeLayer.expectedUncompressedBucketSize, debugInfo))
+          }
+        (bucketPosition, dataOpt, keyValuePair.version)
       }
-    )
+    }
   }
 
   def bucketStreamFromTemporaryStore(

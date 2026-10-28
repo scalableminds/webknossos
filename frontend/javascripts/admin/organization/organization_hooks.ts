@@ -24,7 +24,7 @@ export function useCanRequestUpgrades(): boolean {
   );
 }
 
-// Credits are only spent on jobs, which Open-Source organizations can't run.
+// Credits are only spent on jobs, which Open Source organizations can't run.
 export function useCanOrderCredits(): boolean {
   return useWkSelector((state) =>
     state.activeUser

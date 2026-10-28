@@ -98,7 +98,7 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
     if (!areJobsAllowedByPricingPlan(activeOrganization)) {
       return {
         disabled: true,
-        title: "Meshes cannot be precomputed in the Open-Source plan. Ad-hoc meshes are available.",
+        title: "Meshes cannot be precomputed in the Open Source plan. Ad-hoc meshes are available.",
       };
     }
 

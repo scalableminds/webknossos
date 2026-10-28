@@ -20,10 +20,10 @@ export enum PricingPlanEnum {
 const PRICING_PLAN_LABELS: Partial<Record<PricingPlanEnum, string>> = {
   [PricingPlanEnum.TeamTrial]: "Team (Trial)",
   [PricingPlanEnum.PowerTrial]: "Power (Trial)",
-  [PricingPlanEnum.OpenSource]: "Open-Source",
+  [PricingPlanEnum.OpenSource]: "Open Source",
 };
 
-// Open-Source has no access to WEBKNOSSOS workers, so it can run no jobs (including AI analysis and animations).
+// Open Source has no access to WEBKNOSSOS workers, so it can run no jobs (including AI analysis and animations).
 // Mirrors PricingPlan.allowsJobs
 export function areJobsAllowedByPricingPlan(organization: APIOrganization | null): boolean {
   return organization?.pricingPlan !== PricingPlanEnum.OpenSource;
@@ -135,8 +135,8 @@ export function isCreditBalanceLow(milliCreditBalance: number | null | undefined
   return milliCreditBalance != null && milliCreditBalance < LOW_CREDIT_BALANCE * 1000;
 }
 
-// Open-Source unlocks the collaboration features of Team, Enterprise the features of Power. The features that
-// Open-Source lacks are checked separately, see areJobsAllowedByPricingPlan and isAiQuickSelectAllowedByPricingPlan.
+// Open Source unlocks the collaboration features of Team, Enterprise the features of Power. The features that
+// Open Source lacks are checked separately, see areJobsAllowedByPricingPlan and isAiQuickSelectAllowedByPricingPlan.
 // Mirrors PricingPlan.tierRank in app/models/organization/PricingPlan.scala
 export const PLAN_TO_RANK: Record<PricingPlanEnum, number> = {
   [PricingPlanEnum.Personal]: 0,
@@ -211,7 +211,7 @@ export function getBasePricingPlan(pricingPlan: PricingPlanEnum): PricingPlanEnu
   return pricingPlan;
 }
 
-// Personal has to upgrade the plan instead, and Open-Source and Enterprise come with unlimited quotas.
+// Personal has to upgrade the plan instead, and Open Source and Enterprise come with unlimited quotas.
 export function canBuyQuotaUpgrades(pricingPlan: PricingPlanEnum): boolean {
   const basePlan = getBasePricingPlan(pricingPlan);
   return basePlan === PricingPlanEnum.Team || basePlan === PricingPlanEnum.Power;
@@ -256,7 +256,7 @@ export function isAiAddonEligiblePlan(pricingPlan: PricingPlanEnum): boolean {
 
 export function formatAiPlanLabel(organization: APIOrganization): string {
   if (organization.pricingPlan === PricingPlanEnum.OpenSource)
-    return "AI features are not available in the Open-Source plan";
+    return "AI features are not available in the Open Source plan";
   if (!isAiAddonEligiblePlan(organization.pricingPlan))
     return "Upgrade to Team or Power plan for advanced AI features";
 

@@ -34,7 +34,7 @@ object PricingPlan extends ExtendedEnumeration {
   def label(plan: PricingPlan): String = plan match {
     case Team_Trial  => "Team (Trial)"
     case Power_Trial => "Power (Trial)"
-    case Open_Source => "Open-Source"
+    case Open_Source => "Open Source"
     case other       => other.toString
   }
 }

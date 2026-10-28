@@ -98,7 +98,7 @@ describe("Pricing plans", () => {
     jobsSupportedByAvailableWorkers: [APIJobCommand.RENDER_ANIMATION, APIJobCommand.INFER_NEURONS],
   };
 
-  it("should unlock collaboration, project and dataset management for Team and up, including Open-Source", () => {
+  it("should unlock collaboration, project and dataset management for Team and up, including Open Source", () => {
     expect(
       plansWith((organization) =>
         isFeatureAllowedByPricingPlan(organization, PricingPlanEnum.Team),
@@ -125,13 +125,13 @@ describe("Pricing plans", () => {
     );
   });
 
-  it("should allow the AI-based quick-select tool for all plans except Open-Source", () => {
+  it("should allow the AI-based quick-select tool for all plans except Open Source", () => {
     expect(plansWith(isAiQuickSelectAllowedByPricingPlan)).toEqual(
       ALL_PLANS.filter((plan) => plan !== PricingPlanEnum.OpenSource),
     );
   });
 
-  it("should allow worker jobs (AI analysis, animations, precomputed meshes, conversions) for all plans except Open-Source", () => {
+  it("should allow worker jobs (AI analysis, animations, precomputed meshes, conversions) for all plans except Open Source", () => {
     expect(plansWith(areJobsAllowedByPricingPlan)).toEqual(
       ALL_PLANS.filter((plan) => plan !== PricingPlanEnum.OpenSource),
     );
@@ -154,7 +154,7 @@ describe("Pricing plans", () => {
     ).toBe(false);
   });
 
-  it("should make Team, Power and Enterprise eligible for the AI add-on, but not Personal and Open-Source", () => {
+  it("should make Team, Power and Enterprise eligible for the AI add-on, but not Personal and Open Source", () => {
     expect(ALL_PLANS.filter(isAiAddonEligiblePlan).sort()).toEqual(
       [
         PricingPlanEnum.Team,

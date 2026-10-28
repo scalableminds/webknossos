@@ -16,7 +16,7 @@ import {
 
 export type ItemId = "plan" | "users" | "storage" | "aiAddon" | "credits" | "extend";
 
-// Trials, Open-Source and Enterprise are mapped to the plan whose features they unlock, see getPlanTier.
+// Trials, Open Source and Enterprise are mapped to the plan whose features they unlock, see getPlanTier.
 export type PlanTier = PricingPlanEnum.Personal | PricingPlanEnum.Team | PricingPlanEnum.Power;
 
 export type ItemSelection = { value?: number; custom?: boolean };
@@ -169,7 +169,7 @@ export function getUpgradeItems(
     }),
   };
 
-  // Open-Source organizations have no access to WEBKNOSSOS workers, so they can't use AI features.
+  // Open Source organizations have no access to WEBKNOSSOS workers, so they can't use AI features.
   const canUseAi = areJobsAllowedByPricingPlan(organization);
 
   const aiAddon: ItemDef | null =

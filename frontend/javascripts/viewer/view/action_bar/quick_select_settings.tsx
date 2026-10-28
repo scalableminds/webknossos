@@ -34,7 +34,7 @@ function useAISelectUnavailableReason(): string | null {
     return "The quick select tool with AI is only available on webknossos.org";
   }
   if (!isAiQuickSelectAllowedByPricingPlan(activeOrganization)) {
-    return "The quick select tool with AI is not available in the Open-Source plan.";
+    return "The quick select tool with AI is not available in the Open Source plan.";
   }
   return null;
 }

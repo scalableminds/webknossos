@@ -294,7 +294,7 @@ export function DownloadTiffTab({
           <Row>
             <Divider />
             <Typography.Paragraph type="warning">
-              Exporting data as TIFF is not available in the Open-Source plan.
+              Exporting data as TIFF is not available in the Open Source plan.
             </Typography.Paragraph>
           </Row>
         )

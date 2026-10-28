@@ -292,7 +292,7 @@ class JobService @Inject() (
       user: User,
       voxelSize: VoxelSize,
       organizationBaseDirectory: UPath
-  ): Fox[Unit] =
+  ): Fox[Job] =
     for {
       organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
         .notFound(dataset._organization)
@@ -306,13 +306,13 @@ class JobService @Inject() (
         "voxel_size_factor" -> voxelSize.factor.toUriLiteral,
         "voxel_size_unit" -> voxelSize.unit
       )
-      _ <- submitJob(
+      job <- submitJob(
         JobCommand.convert_to_wkw,
         commandArgs,
         user,
         dataset._dataStore
       ) ?~> Msg.Job.ConvertToWkw.submitFailed
-    } yield ()
+    } yield job
 
   def submitPaidJob(
       command: JobCommand,
@@ -344,6 +344,13 @@ class JobService @Inject() (
       }
       _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
     } yield job
+
+  // Arbitrary workflow config overrides are reserved for super users.
+  def assertCustomConfigurationAllowed(customConfiguration: Option[JsObject], user: User)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] =
+    if (customConfiguration.exists(_.keys.nonEmpty)) userService.assertIsSuperUser(user) ~> FORBIDDEN
+    else Fox.successful(())
 
   def jobsSupportedByAvailableWorkers(dataStoreName: String): Fox[Set[JobCommand]] =
     for {

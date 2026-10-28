@@ -267,7 +267,8 @@ export default class SegmentMeshController {
     }) as MeshMaterial;
     meshMaterial.side = FrontSide;
     meshMaterial.transparent = true;
-    const colorArray = color.convertSRGBToLinear().toArray() as Vector3;
+    // getColorObjectForSegment already returns the color in linear space.
+    const colorArray = color.toArray() as Vector3;
     meshMaterial.originalColor = colorArray;
 
     // Theoretically, this is not necessary for meshes that don't need non-uniform

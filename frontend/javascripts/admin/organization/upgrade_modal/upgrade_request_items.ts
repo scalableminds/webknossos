@@ -170,10 +170,9 @@ export function getUpgradeItems(
   };
 
   // Open Source organizations have no access to WEBKNOSSOS workers, so they can't use AI features.
-  const canUseAi = areJobsAllowedByPricingPlan(organization);
-
+  // canOrderCredits already accounts for this, see useCanOrderCredits.
   const aiAddon: ItemDef | null =
-    hasAiPlan(organization) || !canUseAi
+    hasAiPlan(organization) || !areJobsAllowedByPricingPlan(organization)
       ? null
       : {
           id: "aiAddon",
@@ -183,24 +182,20 @@ export function getUpgradeItems(
           getDelta: () => ({ from: "Not active", to: "Active" }),
         };
 
-  const credits: ItemDef | null =
-    !canOrderCredits || !canUseAi
-      ? null
-      : {
-          id: "credits",
-          label: "AI credits",
-          hint: isPersonal ? "For AI jobs" : `${formatNumber(creditBalance)} left`,
-          amounts: [1000, 5000, 10000].map((value) => ({
-            label: `+${formatNumber(value)}`,
-            value,
-          })),
-          allowCustom: true,
-          minPlan: PricingPlanEnum.Team,
-          getDelta: (value = 0) => ({
-            from: formatNumber(creditBalance),
-            to: formatNumber(creditBalance + value),
-          }),
-        };
+  const credits: ItemDef | null = !canOrderCredits
+    ? null
+    : {
+        id: "credits",
+        label: "AI credits",
+        hint: isPersonal ? "For AI jobs" : `${formatNumber(creditBalance)} left`,
+        amounts: [1000, 5000, 10000].map((value) => ({ label: `+${formatNumber(value)}`, value })),
+        allowCustom: true,
+        minPlan: PricingPlanEnum.Team,
+        getDelta: (value = 0) => ({
+          from: formatNumber(creditBalance),
+          to: formatNumber(creditBalance + value),
+        }),
+      };
 
   const extend: ItemDef | null = !canExtendPricingPlan(organization)
     ? null

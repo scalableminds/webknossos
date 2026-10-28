@@ -2,7 +2,10 @@
 //! project, task and task type lookups of the compound downloads.
 use sqlx::PgPool;
 
-use super::{CompoundRow, DatasetRow, LayerRow};
+use super::{
+    compound::CompoundRow,
+    lookups::{DatasetRow, LayerRow},
+};
 use crate::{
     annotation::provider::{push_task_list, push_task_read, push_task_type_read},
     auth::AuthUser,

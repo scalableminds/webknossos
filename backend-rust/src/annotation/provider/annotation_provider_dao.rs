@@ -2,7 +2,10 @@
 //! for the compound handlers and the task read/list access predicates.
 use sqlx::PgPool;
 
-use super::{AccessContext, TASK_ANNOTATION_COLUMNS, TaskAnnotation};
+use super::{
+    AccessContext,
+    compound::{TASK_ANNOTATION_COLUMNS, TaskAnnotation},
+};
 use crate::{
     sql::{PushArg, Requester, Sql},
     util::id::ObjectId,

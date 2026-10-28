@@ -103,6 +103,17 @@ const getHoverGlowColor = (originalColor: Vector3): { color: Color; darkness: nu
   return { color, darkness };
 };
 
+// Segment colors with a lightness (HSL) below MIN_MESH_LIGHTNESS are moved
+// DARK_LIGHTNESS_LIFT of the way towards it, e.g. #800000 (lightness 0.25) is rendered
+// with a lightness of 0.35. Lighter colors are left untouched, so they can't overexpose.
+const MIN_MESH_LIGHTNESS = 0.45;
+const DARK_LIGHTNESS_LIFT = 0.5;
+
+const liftDarkLightness = (lightness: number) =>
+  lightness < MIN_MESH_LIGHTNESS
+    ? lightness + (MIN_MESH_LIGHTNESS - lightness) * DARK_LIGHTNESS_LIFT
+    : lightness;
+
 type MeshMaterial = MeshPhysicalMaterial & { originalColor: Vector3 };
 type HighlightEntry = { range: Vector2; color?: Vector3 };
 type HighlightState = HighlightEntry[] | "full" | null;
@@ -537,7 +548,9 @@ export default class SegmentMeshController {
     // material's shading, but the lighting/material tuning above turned out to give
     // plenty of shading on its own - so the segment's actual color (also used for the
     // 2D view, via getSegmentColorAsHSLA) is used as-is instead of a muted version of it.
-    const color = new Color().setHSL(hue, saturation, light);
+    // Only dark colors are lifted a bit, since their diffuse reflection is so weak that
+    // the colorless specular highlights dominate and they read as almost black.
+    const color = new Color().setHSL(hue, saturation, liftDarkLightness(light));
     color.convertSRGBToLinear();
 
     return color;

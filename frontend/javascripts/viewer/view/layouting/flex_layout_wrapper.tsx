@@ -159,6 +159,11 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
         this.openRightBorderTabById(BorderTabs.SegmentsView);
       }),
     );
+    this.unbindListeners.push(
+      layoutEmitter.on(LayoutEvents.showBookmarksTab, () => {
+        this.openRightBorderTabById(BorderTabs.BookmarksTab);
+      }),
+    );
     this.unbindListeners.push(this.attachKeyboardShortcuts());
   }
 

@@ -204,6 +204,7 @@ export function parseProtoAnnotationBookmarks(
     id: bookmark.id,
     created: Number(bookmark.created),
     name: bookmark.name ?? null,
+    description: bookmark.description ?? null,
     state: bookmarkStateFromProto(bookmark.state),
     createdAtVersion: Number(bookmark.createdAtVersion),
     thumbnailVersion: Number(bookmark.thumbnailVersion),

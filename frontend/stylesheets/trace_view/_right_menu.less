@@ -461,10 +461,8 @@
   // antd's default of 12px leaves the rows rather loose.
   .ant-list-item {
     padding-block: 8px;
-
-    &:first-child {
-      padding-top: 0;
-    }
+    // So that the highlight of the selected bookmark surrounds the thumbnail.
+    padding-left: 2px;
   }
 
   .list-row__on-hover {

@@ -691,6 +691,8 @@ export type APIAnnotationBookmark = {
   id: number;
   created: number;
   name: string | null;
+  // Cannot be edited in the frontend yet, so it is only read from the server (e.g. for the CSV export).
+  description?: string | null;
   state: APIAnnotationBookmarkState;
   // The annotation version that added the bookmark. null until the bookmark was saved.
   createdAtVersion: number | null;

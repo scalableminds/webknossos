@@ -279,6 +279,7 @@ const defaultState: WebknossosState = {
     globalProgress: 0,
     activeTool: AnnotationTool.MOVE,
     activeUserBoundingBoxId: null,
+    bookmarkIdToFocus: null,
     showDropzoneModal: false,
     showVersionRestore: false,
     isRestoringVersion: false,

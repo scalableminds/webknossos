@@ -1,6 +1,7 @@
 import Icon, {
   AimOutlined,
   DeleteOutlined,
+  DownloadOutlined,
   EditOutlined,
   PictureOutlined,
   PlusOutlined,
@@ -10,7 +11,7 @@ import Icon, {
 } from "@ant-design/icons";
 import MeshIcon from "@images/icons/icon-mesh-organic-boundary.svg?react";
 import { getBookmarkThumbnailUrl } from "admin/rest_api";
-import { Divider, Empty, Flex, List, type MenuProps, Space, Typography } from "antd";
+import { Divider, Empty, Flex, List, type MenuProps, Popover, Space, Spin, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";
 import { SimpleRow } from "dashboard/folders/metadata_table";
@@ -36,6 +37,7 @@ import {
   setBookmarkThumbnailAction,
 } from "viewer/model/actions/annotation_actions";
 import { setViewModeAction } from "viewer/model/actions/settings_actions";
+import { setBookmarkIdToFocusAction } from "viewer/model/actions/ui_actions";
 import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 import { diffMetadata } from "viewer/model/sagas/diffing/volume_diffing";
 import Store, { type WebknossosState } from "viewer/store";
@@ -57,6 +59,8 @@ import {
   getCurrentBookmarkState,
   toUnsavedBookmarkThumbnail,
 } from "./add_bookmark";
+import { getDefaultBookmarkName } from "./bookmark_names";
+import { exportBookmarksAsCSV } from "./export_bookmarks_csv";
 import { SwitchThumbnailModal } from "./switch_thumbnail_modal";
 
 const THUMBNAIL_BOX_SIZE = 48;
@@ -64,6 +68,76 @@ const THUMBNAIL_BOX_SIZE = 48;
 const NAME_PADDING_TOP = 3;
 
 const SWITCH_THUMBNAIL_BUTTON_SIZE = 20;
+
+const LARGE_THUMBNAIL_PREVIEW_MAX_EDGE = 400;
+
+// The locally captured thumbnail if there is one, otherwise the one on the server.
+function useBookmarkThumbnailSrc(
+  bookmark: APIAnnotationBookmark,
+  size: "small" | "large",
+): string | null {
+  const tracingStoreUrl = useWkSelector((state) => state.annotation.tracingStore.url);
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const [serverUrl, setServerUrl] = useState<string | null>(null);
+  const { id, thumbnailVersion } = bookmark;
+  const localDataBase64 =
+    size === "small" ? bookmark.smallThumbnailDataBase64 : bookmark.largeThumbnailDataBase64;
+
+  useEffect(() => {
+    // Unsaved thumbnails are not on the server yet.
+    if (localDataBase64 != null || thumbnailVersion == null) return;
+    let isCancelled = false;
+    getBookmarkThumbnailUrl(tracingStoreUrl, annotationId, id, thumbnailVersion, size).then(
+      (url) => {
+        if (!isCancelled) setServerUrl(url);
+      },
+    );
+    return () => {
+      isCancelled = true;
+    };
+  }, [tracingStoreUrl, annotationId, id, thumbnailVersion, localDataBase64, size]);
+
+  return localDataBase64 != null ? `data:image/webp;base64,${localDataBase64}` : serverUrl;
+}
+
+// Only rendered while the popover is open, so that the large thumbnail is loaded on demand.
+// Its size is fixed from the start (by the aspect ratio of the small thumbnail), as the popover
+// would otherwise be positioned for the empty content and jump once the image is loaded.
+function LargeBookmarkThumbnail({
+  bookmark,
+  aspectRatio,
+}: {
+  bookmark: APIAnnotationBookmark;
+  aspectRatio: number;
+}) {
+  const src = useBookmarkThumbnailSrc(bookmark, "large");
+  const width =
+    aspectRatio >= 1
+      ? LARGE_THUMBNAIL_PREVIEW_MAX_EDGE
+      : LARGE_THUMBNAIL_PREVIEW_MAX_EDGE * aspectRatio;
+  const height =
+    aspectRatio >= 1
+      ? LARGE_THUMBNAIL_PREVIEW_MAX_EDGE / aspectRatio
+      : LARGE_THUMBNAIL_PREVIEW_MAX_EDGE;
+  return (
+    <Flex align="center" justify="center" style={{ width, height }}>
+      {src == null ? (
+        <Spin size="small" />
+      ) : (
+        <img
+          src={src}
+          alt=""
+          style={{
+            width,
+            height,
+            display: "block",
+            borderRadius: "var(--ant-border-radius-sm)",
+          }}
+        />
+      )}
+    </Flex>
+  );
+}
 
 function BookmarkThumbnail({
   bookmark,
@@ -73,30 +147,10 @@ function BookmarkThumbnail({
   // Shows a button to switch the thumbnail if set.
   onSwitchThumbnail?: () => void;
 }) {
-  const tracingStoreUrl = useWkSelector((state) => state.annotation.tracingStore.url);
-  const annotationId = useWkSelector((state) => state.annotation.annotationId);
-  const [serverUrl, setServerUrl] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
-  const { id, thumbnailVersion, smallThumbnailDataBase64 } = bookmark;
-
-  useEffect(() => {
-    // Unsaved thumbnails are not on the server yet.
-    if (smallThumbnailDataBase64 != null || thumbnailVersion == null) return;
-    let isCancelled = false;
-    getBookmarkThumbnailUrl(tracingStoreUrl, annotationId, id, thumbnailVersion, "small").then(
-      (url) => {
-        if (!isCancelled) setServerUrl(url);
-      },
-    );
-    return () => {
-      isCancelled = true;
-    };
-  }, [tracingStoreUrl, annotationId, id, thumbnailVersion, smallThumbnailDataBase64]);
-
-  const src =
-    smallThumbnailDataBase64 != null
-      ? `data:image/webp;base64,${smallThumbnailDataBase64}`
-      : serverUrl;
+  // Known once the small thumbnail is loaded. The large one has the same aspect ratio.
+  const [aspectRatio, setAspectRatio] = useState<number | null>(null);
+  const src = useBookmarkThumbnailSrc(bookmark, "small");
 
   // A switched thumbnail may load where the previous one failed.
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reset whenever the source changes.
@@ -114,18 +168,32 @@ function BookmarkThumbnail({
       }}
     >
       {src == null || hasError ? null : (
-        <img
-          src={src}
-          alt=""
-          loading="lazy"
-          onError={() => setHasError(true)}
-          style={{
-            maxWidth: THUMBNAIL_BOX_SIZE,
-            maxHeight: THUMBNAIL_BOX_SIZE,
-            display: "block",
-            borderRadius: "var(--ant-border-radius-sm)",
-          }}
-        />
+        <Popover
+          content={
+            aspectRatio != null ? (
+              <LargeBookmarkThumbnail bookmark={bookmark} aspectRatio={aspectRatio} />
+            ) : null
+          }
+          placement="left"
+          mouseEnterDelay={0.3}
+          destroyOnHidden
+        >
+          <img
+            src={src}
+            alt=""
+            loading="lazy"
+            onLoad={(event) =>
+              setAspectRatio(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight)
+            }
+            onError={() => setHasError(true)}
+            style={{
+              maxWidth: THUMBNAIL_BOX_SIZE,
+              maxHeight: THUMBNAIL_BOX_SIZE,
+              display: "block",
+              borderRadius: "var(--ant-border-radius-sm)",
+            }}
+          />
+        </Popover>
       )}
       {onSwitchThumbnail != null ? (
         <ButtonComponent
@@ -199,8 +267,6 @@ function BookmarkDetailsLine({ bookmark }: { bookmark: APIAnnotationBookmark }) 
     </Typography.Text>
   );
 }
-
-const getDefaultBookmarkName = (bookmark: APIAnnotationBookmark) => `Bookmark ${bookmark.id}`;
 
 function useRenameBookmark() {
   const dispatch = useDispatch();
@@ -333,6 +399,18 @@ export default function BookmarksTab() {
     },
     [applyView, selectBookmark],
   );
+
+  // Requested by the "Show" link of the toast that confirms a bookmark added from elsewhere.
+  const bookmarkIdToFocus = useWkSelector((state) => state.uiInformation.bookmarkIdToFocus);
+  useEffect(() => {
+    if (bookmarkIdToFocus == null) return;
+    dispatch(setBookmarkIdToFocusAction(null));
+    const bookmark = bookmarks.find(({ id }) => id === bookmarkIdToFocus);
+    if (bookmark == null) return;
+    // The view may have changed since the bookmark was added.
+    handleSelectBookmark(bookmark);
+    if (!readOnly) setRenamingBookmarkId(bookmark.id);
+  }, [bookmarkIdToFocus, bookmarks, dispatch, handleSelectBookmark, readOnly]);
 
   const handleBackToPreviousView = useCallback(() => {
     if (previousView == null) return;
@@ -475,8 +553,17 @@ export default function BookmarksTab() {
           onClick={handleBackToPreviousView}
           icon={<RollbackOutlined />}
         />
+        <ButtonComponent
+          disabled={bookmarks.length === 0}
+          variant="text"
+          color="default"
+          title="Export all bookmarks as CSV"
+          onClick={() => exportBookmarksAsCSV(Store.getState())}
+          icon={<DownloadOutlined />}
+        />
       </Space>
-      <Divider size="small" />
+      {/* The first bookmark's own padding provides the space below the divider. */}
+      <Divider size="small" style={{ marginBottom: 0 }} />
       <ContextMenuContainer
         hideContextMenu={hideContextMenu}
         contextMenuPosition={contextMenuPosition}

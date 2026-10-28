@@ -7,8 +7,10 @@ import UrlManager from "viewer/controller/url_manager";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { ANNOTATION_SCOPED_TRACING_ID, dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addBookmarkAction, type BookmarkThumbnail } from "viewer/model/actions/annotation_actions";
+import { setBookmarkIdToFocusAction } from "viewer/model/actions/ui_actions";
 import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 import Store from "viewer/store";
+import { LayoutEvents, layoutEmitter } from "viewer/view/layouting/layout_persistence";
 import { type BookmarkThumbnails, captureBookmarkThumbnails } from "viewer/view/rendering_utils";
 
 export const getCurrentBookmarkState = () =>
@@ -66,7 +68,21 @@ export async function addBookmarkForCurrentViewFromAnywhere(dispatch: Dispatch):
     return;
   }
   const id = await addBookmarkForCurrentView(dispatch);
-  if (id != null) {
-    Toast.success("Added a bookmark for the current view.");
-  }
+  if (id == null) return;
+  const toastKey = `bookmark-added-${id}`;
+  Toast.success(
+    <>
+      Added a bookmark for the current view.{" "}
+      <a
+        onClick={() => {
+          Toast.close(toastKey);
+          dispatch(setBookmarkIdToFocusAction(id));
+          layoutEmitter.emit(LayoutEvents.showBookmarksTab);
+        }}
+      >
+        Show
+      </a>
+    </>,
+    { key: toastKey },
+  );
 }

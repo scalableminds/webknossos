@@ -604,6 +604,8 @@ type UiInformation = {
   readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
   readonly activeUserBoundingBoxId: number | null | undefined;
+  // Asks the bookmarks tab to jump to this bookmark and to start renaming it.
+  readonly bookmarkIdToFocus: number | null;
   readonly storedLayouts: Record<string, any>;
   readonly isImportingMesh: boolean;
   readonly isInAnnotationView: boolean;

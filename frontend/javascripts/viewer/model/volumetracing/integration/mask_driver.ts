@@ -33,7 +33,6 @@ export function runMaskEdit(
     activeSegmentId: options.segmentId,
     overwriteMode: options.overwriteMode,
     overwritableValue: options.overwritableValue,
-    editableBoundingBox: null,
     additionalCoordinates: options.additionalCoordinates,
   };
   const transaction = new VolumeTransaction(

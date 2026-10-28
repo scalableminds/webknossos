@@ -513,6 +513,7 @@ function DAGView({
       multiSelectionKeyCode={null}
       selectionKeyCode={null}
       zoomActivationKeyCode={null}
+      panActivationKeyCode={null}
       fitViewOptions={FIT_VIEW_OPTIONS}
       minZoom={0.3}
       maxZoom={2}

@@ -66,22 +66,24 @@ export function MiddleEllipsisText({
 
 /**
  * A chunky picture of the overall progress: each block stands for 1/36 of the data. The blocks
- * are no real data chunks. The block that is being uploaded breathes. While the server works on
- * the data (isProcessing), a breathing wave runs across the whole grid instead.
+ * are no real data chunks. While uploading, the block that is being uploaded breathes, starting
+ * with the first one. While the server works on the data (isProcessing), a breathing wave runs
+ * across the whole grid instead.
  */
 function ProgressGrid({
   percent,
   isSuccess,
+  isUploading,
   isProcessing,
 }: {
   percent: number;
   isSuccess?: boolean;
+  isUploading?: boolean;
   isProcessing?: boolean;
 }) {
   const { token } = theme.useToken();
   const filledBlockCount = Math.floor((percent / 100) * BLOCK_COUNT);
-  const isCurrentBlock = (index: number) =>
-    index === filledBlockCount && percent > 0 && percent < 100;
+  const isCurrentBlock = (index: number) => isUploading && index === filledBlockCount;
   const getColor = (index: number) => {
     if (index < filledBlockCount) return isSuccess ? token.colorSuccess : token.colorPrimary;
     if (isCurrentBlock(index)) return token.colorPrimaryText;
@@ -111,9 +113,14 @@ function ProgressGrid({
   );
 }
 
-type ProgressPanelProps = { percent: number; caption: string; isProcessing: boolean };
+type ProgressPanelProps = {
+  percent: number;
+  caption: string;
+  isUploading: boolean;
+  isProcessing: boolean;
+};
 
-function ProgressPanelContent({ percent, caption, isProcessing }: ProgressPanelProps) {
+function ProgressPanelContent({ percent, caption, isUploading, isProcessing }: ProgressPanelProps) {
   // Rendered inside the dark theme (see ProgressPanel), so all tokens are the dark ones.
   const { token } = theme.useToken();
   return (
@@ -122,7 +129,7 @@ function ProgressPanelContent({ percent, caption, isProcessing }: ProgressPanelP
       gap={20}
       style={{ height: "100%", padding: token.paddingLG, background: token.colorBgContainer }}
     >
-      <ProgressGrid percent={percent} isProcessing={isProcessing} />
+      <ProgressGrid percent={percent} isUploading={isUploading} isProcessing={isProcessing} />
       <Flex vertical gap={2} style={{ marginTop: "auto" }}>
         <Statistic
           value={percent}
@@ -168,8 +175,39 @@ function ThumbnailSkeleton() {
   );
 }
 
-/** Shows the dataset's thumbnail, a skeleton while it loads, or a completed grid if there is none. */
+/**
+ * Shows the dataset's thumbnail, a skeleton while it loads, or a completed grid if there is none.
+ * The name is shown on top, so that a thumbnail that is e.g. all black doesn't look broken.
+ */
 export function ThumbnailPanel({
+  datasetName,
+  thumbnailUrl,
+  isLoading,
+}: {
+  datasetName: string;
+  thumbnailUrl: string | null;
+  isLoading: boolean;
+}) {
+  const { token } = theme.useToken();
+  return (
+    <div style={{ position: "relative", height: "100%" }}>
+      <ThumbnailImage thumbnailUrl={thumbnailUrl} isLoading={isLoading} />
+      <div
+        style={{
+          position: "absolute",
+          insetInline: 0,
+          bottom: 0,
+          padding: `${token.paddingXL}px ${token.paddingLG}px ${token.paddingLG}px`,
+          background: "linear-gradient(transparent, rgba(0, 0, 0, 0.6))",
+        }}
+      >
+        <MiddleEllipsisText text={datasetName} strong style={{ color: "#fff" }} />
+      </div>
+    </div>
+  );
+}
+
+function ThumbnailImage({
   thumbnailUrl,
   isLoading,
 }: {
@@ -308,9 +346,25 @@ function getLayerStatus(layer: LayerRow): "pending" | "uploading" | "done" {
   return layer.sentBytes > 0 ? "uploading" : "pending";
 }
 
-function LayerListItem({ layer }: { layer: LayerRow }) {
+// Until the first chunk was sent, nothing tells that the upload is running. So the bar of the
+// layer that is sent first already breathes, without showing any progress yet.
+function LayerProgressBar({ layer, isStarting }: { layer: LayerRow; isStarting: boolean }) {
+  const progressProps: React.ComponentProps<typeof Progress> = isStarting
+    ? { percent: 100, status: "normal", className: "upload-progress-block-breathing" }
+    : { percent: ((layer.sentBytes ?? 0) / (layer.bytes ?? 1)) * 100 };
+  return (
+    <Progress
+      {...progressProps}
+      size={BAR_SIZE}
+      showInfo={false}
+      style={{ paddingInlineStart: 24 }}
+    />
+  );
+}
+
+function LayerListItem({ layer, isStarting }: { layer: LayerRow; isStarting: boolean }) {
   const { token } = theme.useToken();
-  const status = getLayerStatus(layer);
+  const status = isStarting ? "uploading" : getLayerStatus(layer);
   return (
     <Flex vertical gap={8} style={{ padding: `${token.paddingXS + 2}px ${token.paddingSM}px` }}>
       <Flex align="center" gap={10}>
@@ -338,19 +392,19 @@ function LayerListItem({ layer }: { layer: LayerRow }) {
           {layer.details}
         </Typography.Text>
       ) : null}
-      {status === "uploading" && layer.bytes != null && layer.sentBytes != null ? (
-        <Progress
-          percent={(layer.sentBytes / layer.bytes) * 100}
-          size={BAR_SIZE}
-          showInfo={false}
-          style={{ paddingInlineStart: 24 }}
-        />
-      ) : null}
+      {status === "uploading" ? <LayerProgressBar layer={layer} isStarting={isStarting} /> : null}
     </Flex>
   );
 }
 
-export function LayerList({ layers }: { layers: LayerRow[] }) {
+export function LayerList({
+  layers,
+  isUploadStarting = false,
+}: {
+  layers: LayerRow[];
+  // True while the upload runs, but nothing was sent yet.
+  isUploadStarting?: boolean;
+}) {
   const { token } = theme.useToken();
   return (
     <Flex
@@ -365,7 +419,7 @@ export function LayerList({ layers }: { layers: LayerRow[] }) {
       {layers.map((layer, index) => (
         <div key={layer.name}>
           {index > 0 ? <Divider style={{ margin: 0 }} /> : null}
-          <LayerListItem layer={layer} />
+          <LayerListItem layer={layer} isStarting={isUploadStarting && index === 0} />
         </div>
       ))}
     </Flex>

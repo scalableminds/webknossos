@@ -100,21 +100,18 @@ function FooterHint({ icon, children }: { icon?: React.ReactNode; children: Reac
   );
 }
 
-function ReadyHeader({ datasetName }: { datasetName: string }) {
+function ReadyHeader() {
   const { token } = theme.useToken();
   return (
-    <Flex gap={12} align="flex-start" style={{ minWidth: 0 }}>
+    <Flex gap={12} align="center" style={{ minWidth: 0 }}>
       <Avatar
         size={32}
         icon={<CheckOutlined />}
         style={{ flex: "none", background: token.colorSuccess }}
       />
-      <Flex vertical style={{ minWidth: 0 }}>
-        <Typography.Title level={4} style={{ margin: 0 }}>
-          Your dataset is ready
-        </Typography.Title>
-        <MiddleEllipsisText text={datasetName} type="secondary" />
-      </Flex>
+      <Typography.Title level={4} style={{ margin: 0 }}>
+        Your dataset is ready
+      </Typography.Title>
     </Flex>
   );
 }
@@ -222,6 +219,7 @@ function UploadProgressContent({
       <div style={{ width: 260, flex: "none" }}>
         {isReady ? (
           <ThumbnailPanel
+            datasetName={status.datasetName}
             thumbnailUrl={dataset != null ? getDatasetThumbnailURL(dataset) : null}
             isLoading={isDatasetPending}
           />
@@ -229,6 +227,7 @@ function UploadProgressContent({
           <ProgressPanel
             percent={uploadPercent}
             caption={getProgressCaption(status)}
+            isUploading={status.kind === "uploading"}
             isProcessing={phase.kind === "finalizing" || phase.kind === "converting"}
           />
         )}
@@ -236,7 +235,7 @@ function UploadProgressContent({
       <Flex vertical gap={18} style={{ flex: 1, minWidth: 0, padding: token.paddingLG }}>
         <Flex gap={12} align="flex-start" justify="space-between">
           {isReady ? (
-            <ReadyHeader datasetName={status.datasetName} />
+            <ReadyHeader />
           ) : (
             <MiddleEllipsisText
               text={status.datasetName}
@@ -268,7 +267,12 @@ function UploadProgressContent({
         ) : null}
         {phase.kind === "failed" ? <Alert type="error" showIcon title={phase.message} /> : null}
 
-        {layerRows.length > 0 ? <LayerList layers={layerRows} /> : null}
+        {layerRows.length > 0 ? (
+          <LayerList
+            layers={layerRows}
+            isUploadStarting={status.kind === "uploading" && status.bytesSent === 0}
+          />
+        ) : null}
 
         {status.kind === "uploading" ? (
           <TransferRateText rate={transferRate} isRetrying={status.isRetrying} />

@@ -75,6 +75,9 @@ type ActiveUpload = {
   uploadId: string;
   datastoreUrl: string;
   resumableUpload: any;
+  // Set if all files were sent while the cancel dialog was open.
+  isFinishPending: boolean;
+  finishUpload: () => void;
 };
 
 function getRandomString() {
@@ -117,7 +120,7 @@ export function useResumableDatasetUpload({
   const [status, setStatus] = useState<UploadStatus>({ kind: "idle" });
   const activeUploadRef = useRef<ActiveUpload | null>(null);
   // Set to true when the user initiates a cancel (before the confirmation dialog is resolved)
-  // to prevent the `complete` event from triggering finishDatasetUpload in the meantime.
+  // to defer finishDatasetUpload until the user decided to keep the upload.
   const isCancellingRef = useRef(false);
 
   useBlockNavigationWhile(status.kind === "uploading" || status.kind === "finishing");
@@ -166,7 +169,6 @@ export function useResumableDatasetUpload({
       setStatus({ kind: "idle" });
       return;
     }
-    activeUploadRef.current = { uploadId, datastoreUrl, resumableUpload };
     const sentUploadInfo = { ...uploadInfo, layers: markLayersAsSent(uploadInfo.layers) };
     // Progress events fire for every chunk, so computing the progress per layer is throttled.
     const updateProgress = throttle(() => {
@@ -185,21 +187,9 @@ export function useResumableDatasetUpload({
     }, PROGRESS_THROTTLE_INTERVAL);
 
     let finishUploadCalled = false;
-    resumableUpload.addEventListener("complete", (event: ResumableUploadEvent) => {
-      if (
-        event.detail.type !== "complete" ||
-        !event.detail.didUploadCompleteSuccessfully ||
-        isCancellingRef.current ||
-        finishUploadCalled
-      ) {
-        // The upload was not successful, or a cancel was initiated before the complete event
-        // fired (e.g. the last in-flight chunk completed while the cancel dialog was open).
-        // A retry might be initiated by other code that listens to fileError events which is
-        // why we ignore the complete event now. The type is only checked to satisfy TS.
-        return;
-      }
+    const finishUpload = () => {
+      if (finishUploadCalled) return;
       finishUploadCalled = true;
-      resumableUpload.pause();
       updateProgress.cancel();
       setStatus({ kind: "finishing", ...sentUploadInfo });
       finishDatasetUpload(datastoreUrl, uploadId).then(
@@ -228,6 +218,29 @@ export function useResumableDatasetUpload({
           onUploadAborted();
         },
       );
+    };
+    const activeUpload: ActiveUpload = {
+      uploadId,
+      datastoreUrl,
+      resumableUpload,
+      isFinishPending: false,
+      finishUpload,
+    };
+    activeUploadRef.current = activeUpload;
+
+    resumableUpload.addEventListener("complete", (event: ResumableUploadEvent) => {
+      if (event.detail.type !== "complete" || !event.detail.didUploadCompleteSuccessfully) {
+        // A retry might be initiated by other code that listens to fileError events which is
+        // why we ignore the complete event now. The type is only checked to satisfy TS.
+        return;
+      }
+      resumableUpload.pause();
+      if (isCancellingRef.current) {
+        // Finish once the user decided to keep the upload.
+        activeUpload.isFinishPending = true;
+        return;
+      }
+      finishUpload();
     });
     resumableUpload.addEventListener("filesAdded", () => {
       resumableUpload.upload();
@@ -265,18 +278,20 @@ export function useResumableDatasetUpload({
   const cancelUpload = async () => {
     const activeUpload = activeUploadRef.current;
     if (activeUpload == null) return;
+    // The upload keeps running while the user decides.
     isCancellingRef.current = true;
-    activeUpload.resumableUpload.pause();
-    const shouldCancel = await modal.confirm({
+    const shouldCancel = await modal.warning({
       title:
         "Cancelling the running upload will delete already uploaded files on the server and cannot be undone. Are you sure you want to cancel the upload?",
       okText: "Yes, cancel the upload",
+      okButtonProps: { danger: true },
+      okCancel: true,
       cancelText: "No, keep it running",
     });
 
     if (!shouldCancel) {
       isCancellingRef.current = false;
-      activeUpload.resumableUpload.upload();
+      if (activeUpload.isFinishPending) activeUpload.finishUpload();
       return;
     }
 

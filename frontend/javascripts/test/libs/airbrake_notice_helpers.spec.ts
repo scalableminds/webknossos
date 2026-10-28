@@ -43,26 +43,50 @@ describe("moveOriginalErrorToNoticeErrors", () => {
   });
 
   it("should not change the first error, which is used for grouping", () => {
+    const fullMessage = `TypeError: ${"a".repeat(100)}`;
+    const firstError = {
+      type: "TypeError",
+      message: `Prefix: ${fullMessage.slice(0, 80)}`,
+      backtrace,
+    };
     const notice: INotice = {
-      errors: [{ type: "TypeError", message: "Prefix: short", backtrace }],
-      params: { [ORIGINAL_ERROR_PARAM]: "TypeError: short but different" },
+      errors: [firstError],
+      params: { [ORIGINAL_ERROR_PARAM]: fullMessage },
     };
 
     const result = moveOriginalErrorToNoticeErrors(notice);
 
-    expect(result.errors?.[0]).toEqual({ type: "TypeError", message: "Prefix: short", backtrace });
+    expect(result.errors?.[0]).toEqual(firstError);
   });
 
-  it("should not add a duplicate error if the message is identical", () => {
+  it("should not add an OriginalError if the message wasn't cut", () => {
+    // The prefixed message differs from the original one, but contains it completely.
     const notice: INotice = {
-      errors: [{ type: "Error", message: "same", backtrace }],
-      params: { [ORIGINAL_ERROR_PARAM]: "same" },
+      errors: [{ type: "TypeError", message: "Prefix: TypeError: short", backtrace }],
+      params: { [ORIGINAL_ERROR_PARAM]: "TypeError: short", other: 1 },
     };
 
     const result = moveOriginalErrorToNoticeErrors(notice);
 
-    expect(result.errors).toHaveLength(1);
-    expect(result.params).toEqual({});
+    expect(result.errors).toEqual([
+      { type: "TypeError", message: "Prefix: TypeError: short", backtrace },
+    ]);
+    // The redundant param is removed nevertheless.
+    expect(result.params).toEqual({ other: 1 });
+  });
+
+  it("should add an OriginalError only if the message is longer than the grouping limit", () => {
+    const getErrorCount = (messageLength: number) => {
+      const fullMessage = "a".repeat(messageLength);
+      const notice: INotice = {
+        errors: [{ type: "Error", message: `Prefix: ${fullMessage.slice(0, 80)}`, backtrace }],
+        params: { [ORIGINAL_ERROR_PARAM]: fullMessage },
+      };
+      return moveOriginalErrorToNoticeErrors(notice).errors?.length;
+    };
+
+    expect(getErrorCount(80)).toBe(1);
+    expect(getErrorCount(81)).toBe(2);
   });
 
   it("should leave notices without original error untouched", () => {

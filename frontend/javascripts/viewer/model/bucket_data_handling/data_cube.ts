@@ -30,6 +30,7 @@ import type {
   SomeContainment,
 } from "viewer/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "viewer/model/bucket_data_handling/bucket";
+import { getBucketCountSoftLimitPerLayer } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import type PushQueue from "viewer/model/bucket_data_handling/pushqueue";
 import TemporalBucketManager from "viewer/model/bucket_data_handling/temporal_bucket_manager";
@@ -82,7 +83,7 @@ const makeLocalMax = (max: Vector3, mag: Vector3): Vector3 => {
 };
 
 class DataCube {
-  BUCKET_COUNT_SOFT_LIMIT: number = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
+  BUCKET_COUNT_SOFT_LIMIT: number;
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
   private cubes: Record<string, CubeEntry>;
@@ -134,10 +135,14 @@ class DataCube {
     elementClass: ElementClass,
     isSegmentation: boolean,
     layerName: string,
+    // Number of layers in the dataset; scales BUCKET_COUNT_SOFT_LIMIT down
+    // (see getBucketCountSoftLimitPerLayer).
+    totalLayerCount: number,
     // Whether this layer is backed by a volume tracing, i.e. can be edited. Only relevant
     // for the t-recycling check below (see usesTRecycling).
     isEditableVolumeLayer: boolean = false,
   ) {
+    this.BUCKET_COUNT_SOFT_LIMIT = getBucketCountSoftLimitPerLayer(totalLayerCount);
     this.elementClass = elementClass;
     this.channelCount = getConstructorForElementClass(this.elementClass)[1];
     this.isSegmentation = isSegmentation;
@@ -340,6 +345,12 @@ class DataCube {
   // Either returns the existing bucket or creates a new one. Only returns
   // NULL_BUCKET if the bucket cannot possibly exist, e.g. because it is
   // outside the dataset's bounding box.
+  // Whether getOrCreateBucket returns a real bucket for the address, i.e., its mag
+  // exists in the layer and it intersects the layer's bounding box.
+  isBucketWithinLayer(address: BucketAddress): boolean {
+    return this.checkContainment(address).type !== "no";
+  }
+
   getOrCreateBucket(address: BucketAddress): Bucket {
     let bucket = this.getBucket(address);
 

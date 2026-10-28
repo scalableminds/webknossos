@@ -20,6 +20,7 @@
 @import "command_palette.less";
 @import "_voxelytics.less";
 @import "_ai_jobs.less";
+@import "_upload_progress.less";
 @import "_help_panel.less";
 
 // Web fonts (SIL Open Font License, see fonts/*-OFL.txt), taken from the fontsource packages
@@ -152,10 +153,10 @@ body {
   top: 0;
 }
 
-/** Highlights the header and menu with an error color when a save operation fails. */
-.save-error {
+/** Highlights the navbar and its menus with an error color when a save operation fails. */
+.navbar-header.save-error {
 
-  .ant-layout-header,
+  &,
   .ant-menu {
     background-color: var(--ant-color-error) !important;
   }

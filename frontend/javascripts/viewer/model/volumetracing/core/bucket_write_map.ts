@@ -1,17 +1,20 @@
 import { BucketVoxelMask } from "./bucket_voxel_mask";
 import {
   type AdditionalCoordinate,
+  type BoundingBox,
   BUCKET_WIDTH,
   type BucketAddress,
   type BucketKey,
   bucketAddressOfVoxel,
   bucketKey,
   type MagIndex,
+  originVoxelOf,
   type SegmentBucketData,
   type SegmentId,
   type Vector3,
   voxelIndexOf,
   voxelOffsetInBucket,
+  voxelOffsetOf,
 } from "./volume_annotation_types";
 
 /**
@@ -173,6 +176,56 @@ export class BucketWriteMapBuilder {
   build(): BucketWriteMap {
     return this.entries;
   }
+}
+
+/**
+ * The writes of `bucketWriteMap` that lie within `box`, given in the voxels of
+ * the write set's mag. Each bucket is either
+ * - fully outside of the box: dropped,
+ * - fully inside of it: passed on as it is, without copying its mask, or
+ * - partially inside: its runs are cut to the box and copied into a new mask.
+ */
+export function clipBucketWriteMap(
+  bucketWriteMap: BucketWriteMap,
+  box: BoundingBox,
+): BucketWriteMap {
+  const clipped: BucketWriteMap = new Map();
+  for (const [key, entry] of bucketWriteMap) {
+    const origin = originVoxelOf(entry.address);
+    // Min and max will contain the part of the box that overlaps the current bucket.
+    // The values are voxel offsets within the bucket (0 to BUCKET_WIDTH).
+    const min: Vector3 = [0, 0, 0];
+    const max: Vector3 = [0, 0, 0];
+    let isEmpty = false;
+    let isFull = true;
+    for (let axis = 0; axis < 3; axis++) {
+      min[axis] = Math.max(box.min[axis] - origin[axis], 0);
+      max[axis] = Math.min(box.max[axis] - origin[axis], BUCKET_WIDTH);
+      if (min[axis] >= max[axis]) isEmpty = true;
+      if (min[axis] > 0 || max[axis] < BUCKET_WIDTH) isFull = false;
+    }
+    if (isEmpty) continue;
+    if (isFull) {
+      clipped.set(key, entry);
+      continue;
+    }
+
+    // Partially inside: keep a run only if its row lies within the box, and cut
+    // it to the box along x. That suffices, since every run is an x-run within
+    // one row (see BucketVoxelMask.runs).
+    const mask = new BucketVoxelMask();
+    for (const { start, length } of entry.write.mask.runs()) {
+      const [x, y, z] = voxelOffsetOf(start);
+      if (y < min[1] || y >= max[1] || z < min[2] || z >= max[2]) continue;
+      const xStart = Math.max(x, min[0]);
+      const xEnd = Math.min(x + length, max[0]);
+      if (xStart < xEnd) mask.markRun(start + xStart - x, xEnd - xStart);
+    }
+    if (mask.count > 0) {
+      clipped.set(key, { address: entry.address, write: { mask, value: entry.write.value } });
+    }
+  }
+  return clipped;
 }
 
 /** Total number of marked voxels across a write set. Used by tests. */

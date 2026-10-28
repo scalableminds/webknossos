@@ -18,7 +18,7 @@ import { resolveFloodFill } from "../core/flood_fill_resolver";
 import type { BoundingBox, EditContext, Vector3 } from "../core/volume_annotation_types";
 import { VolumeTransaction } from "../core/volume_transaction";
 import type { DriverOptions, DriverResult } from "./tool_driver_types";
-import { magListFromDenseMags, WkLoadingCubeAdapter } from "./wk_data_cube_adapter";
+import { magListForCube, WkLoadingCubeAdapter } from "./wk_data_cube_adapter";
 
 export interface FloodFillDriverOptions extends DriverOptions {
   seed: Vector3;
@@ -67,7 +67,7 @@ export interface FloodFillResult extends DriverResult {
  */
 export async function runFloodFill(options: FloodFillDriverOptions): Promise<FloodFillResult> {
   const startedAt = performance.now();
-  const adapter = new WkLoadingCubeAdapter(options.cube);
+  const adapter = new WkLoadingCubeAdapter(options.cube, options.saveMode);
   const ctx: EditContext = {
     sourceMagIndex: options.magIndex,
     activeSegmentId: options.segmentId,
@@ -77,14 +77,13 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
     overwriteMode: "overwrite-all",
     // Irrelevant under overwrite-all; flood fill has no overwrite toggle.
     overwritableValue: 0n,
-    editableBoundingBox: null,
     additionalCoordinates: options.additionalCoordinates,
   };
 
   // checkLineIntersection expects mag1 voxel coordinates; a source-mag voxel
   // q sits at mag1 position q*mag (the same conversion coveredBoundingBoxMag1
   // uses below, just for a point rather than a box corner).
-  const mag = options.denseMags[options.magIndex];
+  const mag = options.cube.magInfo.getMagByIndexOrThrow(options.magIndex);
   const splitBoundaryMesh = options.splitBoundaryMesh;
   const isBlocked = splitBoundaryMesh
     ? (from: Vector3, to: Vector3): boolean =>
@@ -109,7 +108,7 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
     `floodfill-${Date.now()}`,
     ctx,
     adapter,
-    magListFromDenseMags(options.denseMags),
+    magListForCube(options.cube),
   );
   transaction.recordAll(bucketWrites);
   transaction.flushToCube();
@@ -146,6 +145,7 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
   return {
     voxels,
     buckets: diff.bucketDiffs.length,
+    bucketDiffs: diff.bucketDiffs,
     mags: [...new Set(diff.bucketDiffs.map((d) => d.address[3]))].sort((a, b) => a - b),
     durationMs: performance.now() - startedAt,
     wasBoundingBoxExceeded,

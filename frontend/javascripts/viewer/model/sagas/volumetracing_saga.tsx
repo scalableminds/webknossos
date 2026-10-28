@@ -40,6 +40,7 @@ import type { Action } from "viewer/model/actions/actions";
 import type {
   AddAdHocMeshAction,
   AddPrecomputedMeshAction,
+  SetCollaborationModeAction,
 } from "viewer/model/actions/annotation_actions";
 import {
   updateTemporarySettingAction,
@@ -58,11 +59,15 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
+import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import Dimensions from "viewer/model/dimensions";
 import { getSegmentIdRangeForElementClass } from "viewer/model/helpers/element_class_ranges";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
-import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
+import {
+  createOperationContext,
+  type OperationContext,
+} from "viewer/model/sagas/operation_context_saga";
 import {
   requestBucketModificationInVolumeTracing,
   takeEveryInOperationContext,
@@ -72,15 +77,24 @@ import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
 import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { runAxisForPlane } from "viewer/model/volumetracing/core/bucket_diff";
+import type { RunAxis } from "viewer/model/volumetracing/core/bucket_voxel_mask";
 import { BrushDriver } from "viewer/model/volumetracing/integration/brush_driver";
 import { maskShapeFromVoxelBuffer2D } from "viewer/model/volumetracing/integration/fill_mask";
+import type { SaveMode } from "viewer/model/volumetracing/integration/tool_driver_types";
 import type SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
 import type { TransformedSectionLabeler } from "viewer/model/volumetracing/legacy/section_labeling";
 import { api, Model } from "viewer/singletons";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
-import { type BooleanBox, createSectionLabeler, labelWithVoxelBuffer2D } from "./volume/helpers";
+import {
+  type BooleanBox,
+  createSectionLabeler,
+  getVolumeSaveMode,
+  labelWithVoxelBuffer2D,
+  pushPartialBucketUpdates,
+} from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 
 const NO_VOXELS_CHANGED_WARNING_KEY = "NO-VOXELS-CHANGED-WARNING";
@@ -158,6 +172,15 @@ function* warnAboutInvalidSegmentId(): Saga<void> {
     }
   }
 }
+
+// A brush stroke in progress: its driver, plus what is needed to save it.
+type BrushStroke = {
+  driver: BrushDriver;
+  cube: DataCube;
+  // Run order of the wire encoding, in which this viewport's strokes are contiguous.
+  runAxis: RunAxis;
+  saveMode: SaveMode;
+};
 
 export function* editVolumeLayerAsync(): Saga<never> {
   // Waiting for the initialization is important. Otherwise, allowUpdate would be
@@ -266,7 +289,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
     // Only the brush is driven from viewer/model/volumetracing; the trace
     // tool below still builds up a section labeler.
-    let brushDriver: BrushDriver | null = null;
+    let brushStroke: BrushStroke | null = null;
     // Maps a floating mag-1 position to the brush center in source-mag voxels.
     let getBrushCenter: ((position: Vector3) => Vector3) | null = null;
     let lastBrushCenter: Vector3 | null = null;
@@ -287,10 +310,10 @@ export function* editVolumeLayerAsync(): Saga<never> {
       getBrushCenter = (position) =>
         getBrushCenterInMag(position, labeledMag, diameterInMag, planeAxis);
       lastBrushCenter = getBrushCenter(startEditingAction.floatingPositionInLayerSpace);
-      brushDriver = new BrushDriver(
+      const saveMode = yield* call(getVolumeSaveMode);
+      const driver = new BrushDriver(
         {
           cube: segmentationLayer.cube,
-          denseMags: segmentationLayer.cube.magInfo.getDenseMags(),
           magIndex: labeledZoomStep,
           segmentId: contourTracingMode === ContourModeEnum.DELETE ? 0n : activeCellId,
           overwriteMode:
@@ -303,9 +326,16 @@ export function* editVolumeLayerAsync(): Saga<never> {
           additionalCoordinates: additionalCoordinates ?? null,
           radius,
           planeAxis,
+          saveMode,
         },
         lastBrushCenter,
       );
+      brushStroke = {
+        driver,
+        cube: segmentationLayer.cube,
+        runAxis: runAxisForPlane(startEditingAction.planeId),
+        saveMode,
+      };
     }
 
     let lastPosition = startEditingAction.positionInLayerSpace;
@@ -336,14 +366,14 @@ export function* editVolumeLayerAsync(): Saga<never> {
         continue;
       }
 
-      if (brushDriver != null && getBrushCenter != null && lastBrushCenter != null) {
+      if (brushStroke != null && getBrushCenter != null && lastBrushCenter != null) {
         // The brush center can change within a mag-1 voxel (see getBrushCenterInMag),
         // which is why this happens before the check below.
         const brushCenter = getBrushCenter(addToContourListAction.floatingPositionInLayerSpace);
         if (!V3.equals(lastBrushCenter, brushCenter)) {
           // One incremental capsule per pointer-move; the transaction's write set
           // coalesces overlap, and mag propagation is deferred to pointer-up.
-          brushDriver.extend(brushCenter);
+          brushStroke.driver.extend(brushCenter);
           lastBrushCenter = brushCenter;
         }
       }
@@ -367,17 +397,26 @@ export function* editVolumeLayerAsync(): Saga<never> {
       didStrokeEnterBoundingBox ||= editableBoundingBox.containsPoint(lastPosition);
     }
 
-    if (brushDriver != null) {
+    if (brushStroke != null) {
       // A stroke released near its start fills the area it encloses. The fill
       // joins the stroke's transaction, so both are propagated and saved as one.
       const fill = currentSectionLabeler.getFillingVoxelBuffer2D(activeTool);
       if (!fill.isEmpty()) {
-        brushDriver.fill(maskShapeFromVoxelBuffer2D(fill, startEditingAction.planeId));
+        brushStroke.driver.fill(maskShapeFromVoxelBuffer2D(fill, startEditingAction.planeId));
       }
       // Pointer-up: mag propagation runs once over the coalesced write set.
+      const { voxels, bucketDiffs } = brushStroke.driver.finish();
       // Only a stroke that wrote something counts, so that the "no voxels
       // were changed" hint below still fires when overwrite-empty skipped all.
-      if (brushDriver.finish().voxels > 0) wroteVoxelsBox.value = true;
+      if (voxels > 0) wroteVoxelsBox.value = true;
+      yield* call(
+        pushPartialBucketUpdates,
+        brushStroke.saveMode,
+        bucketDiffs,
+        brushStroke.cube,
+        volumeTracing.tracingId,
+        brushStroke.runAxis,
+      );
     }
     // For the trace tool: fills the area enclosed by the stroke, within the
     // same undo step. For every tool, including the brush: registers the stroke
@@ -644,6 +683,30 @@ function* ensureValidBrushSize(): Saga<void> {
   );
 }
 
+function* saveWholeBucketsBeforeLiveCollaboration(): Saga<void> {
+  // In live collaboration, volume edits are saved as partial bucket updates (see
+  // getVolumeSaveMode). Whole buckets still waiting in a push queue would be saved
+  // after such updates and overwrite them, so they are saved first, while the
+  // operation context blocks further edits.
+  function* saveWholeBuckets(action: SetCollaborationModeAction): Saga<void> {
+    if (action.collaborationMode !== "Concurrent") return;
+    const arePushQueuesSaved = Object.values(Model.dataLayers ?? {}).every((layer) =>
+      layer.pushQueue.stateSaved(),
+    );
+    if (arePushQueuesSaved) return;
+    const ctx = yield* createOperationContext({
+      id: "SAVE_BEFORE_LIVE_COLLABORATION",
+      description: "Saving volume changes before live collaboration starts.",
+      behaviorWhenDisallowed: "wait",
+    });
+    if (ctx == null) return;
+    yield* ctx.execute(function* () {
+      yield* call([Model, Model.ensureSavedState], ctx);
+    });
+  }
+  yield* takeEvery("SET_COLLABORATION_MODE", saveWholeBuckets);
+}
+
 function* handleDeleteSegmentData(
   action: DeleteSegmentDataAction,
   ctx: OperationContext,
@@ -676,4 +739,5 @@ export default [
   maintainVolumeTransactionEnds,
   ensureValidBrushSize,
   warnAboutInvalidSegmentId,
+  saveWholeBucketsBeforeLiveCollaboration,
 ];

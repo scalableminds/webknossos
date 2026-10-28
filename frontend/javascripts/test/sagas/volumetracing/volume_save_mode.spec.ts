@@ -83,20 +83,25 @@ function brushAt(brushPosition: Vector3) {
   Store.dispatch(resetContourAction());
 }
 
-// Traces the outline of a square around `center`, as the trace tool does on mouse moves.
+// Traces a stroke through the given points, as the trace tool's mouse handlers do: the
+// start point is added to the contour, too (see handleDrawStart).
+function traceAlong(points: Vector3[]) {
+  Store.dispatch(startEditingAction(points[0], OrthoViews.PLANE_XY));
+  for (const point of points) Store.dispatch(addToContourListAction(point));
+  Store.dispatch(finishEditingAction());
+  Store.dispatch(resetContourAction());
+}
+
+// Traces the outline of a square around `center`, back to its start.
 function traceSquareAround(center: Vector3, halfWidth: number) {
   const [x, y, z] = center;
-  const corners: Vector3[] = [
+  traceAlong([
     [x - halfWidth, y - halfWidth, z],
     [x + halfWidth, y - halfWidth, z],
     [x + halfWidth, y + halfWidth, z],
     [x - halfWidth, y + halfWidth, z],
     [x - halfWidth, y - halfWidth, z],
-  ];
-  Store.dispatch(startEditingAction(corners[0], OrthoViews.PLANE_XY));
-  for (const corner of corners.slice(1)) Store.dispatch(addToContourListAction(corner));
-  Store.dispatch(finishEditingAction());
-  Store.dispatch(resetContourAction());
+  ]);
 }
 
 // The names of the bucket actions in the save requests from `fromRequest` on.
@@ -279,6 +284,24 @@ describe("Volume save mode", () => {
     expect(voxels.has(bucketLocalKey(insideTraceSquare))).toBe(true);
     expect(voxels.has(bucketLocalKey(outsideTraceSquare))).toBe(false);
     expect([...values]).toEqual([5n]);
+  });
+
+  it<WebknossosTestContext>("fills the area of a trace that doesn't return to its start", async (context) => {
+    await setup(context, "OwnerOnly");
+    Store.dispatch(setToolAction(AnnotationTool.TRACE));
+    // The first move jumps far from the start, and the stroke ends elsewhere, so that
+    // only the closing line passes the start point.
+    const [x, y, z] = position;
+    traceAlong([
+      [x - 20, y, z],
+      [x, y - 15, z],
+      [x + 15, y, z],
+      [x, y + 15, z],
+    ]);
+
+    expect(await getValue(context)).toBe(5);
+    expect(await getValueAt(context, [x - 10, y, z])).toBe(5);
+    expect(await getValueAt(context, [x + 20, y, z])).toBe(0);
   });
 
   it<WebknossosTestContext>("saves areas erased with the trace tool as partial updates in live collaboration", async (context) => {

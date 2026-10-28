@@ -14,6 +14,7 @@ case class MailerConfig(
     smtpHost: String,
     smtpPort: Int,
     smtpTls: Boolean,
+    smtpCheckServerIdentity: Boolean,
     smtpAuth: Boolean,
     smtpUser: String,
     smtpPass: String
@@ -31,6 +32,7 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
     props.put("mail.smtp.starttls.enable", conf.smtpTls.toString)
     props.put("mail.smtp.auth", conf.smtpAuth.toString)
     props.put("mail.smtp.ssl.protocols", "TLSv1.2")
+    props.put("mail.smtp.ssl.checkserveridentity", conf.smtpCheckServerIdentity.toString)
     props.put("mail.smtp.connectiontimeout", smtpTimeoutMillis.toString)
     props.put("mail.smtp.timeout", smtpTimeoutMillis.toString)
     val authenticator =
@@ -55,36 +57,45 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
       if (conf.logToStdout) {
         logger.info(s"Sending mail: $mail")
       }
-
-      val message = new MimeMessage(session)
-      parseAddress(mail.from).foreach(message.setFrom)
-      message.setReplyTo(mail.replyTo.flatMap(parseAddress).toArray[Address])
-      addRecipients(message, Message.RecipientType.TO, mail.recipients)
-      addRecipients(message, Message.RecipientType.CC, mail.ccRecipients)
-      addRecipients(message, Message.RecipientType.BCC, mail.bccRecipients)
-      message.setSubject(mail.subject, mail.charset)
-      message.setSentDate(new Date())
-      mail.headers.foreach { case (key, value) => message.addHeader(key, value) }
-      setBody(message, mail)
-
-      if (conf.smtpHost.nonEmpty) {
-        Transport.send(message)
-      } else {
-        logger.info("Mail was not sent as no smtp host is configured.")
+      parseAddress(mail.from, mail.charset) match {
+        case Some(from) => sendFrom(from, mail)
+        case None       => logger.error(s"Mail was not sent due to invalid sender address: ${mail.from}")
       }
     }
 
-  private def parseAddress(emailAddress: String): Option[InternetAddress] =
-    try
-      Some(new InternetAddress(emailAddress))
-    catch {
+  private def sendFrom(from: InternetAddress, mail: Mail): Unit = {
+    val message = new MimeMessage(session)
+    message.setFrom(from)
+    message.setReplyTo(parseAddresses(mail.replyTo, mail.charset))
+    message.addRecipients(Message.RecipientType.TO, parseAddresses(mail.recipients, mail.charset))
+    message.addRecipients(Message.RecipientType.CC, parseAddresses(mail.ccRecipients, mail.charset))
+    message.addRecipients(Message.RecipientType.BCC, parseAddresses(mail.bccRecipients, mail.charset))
+    message.setSubject(mail.subject, mail.charset)
+    message.setSentDate(new Date())
+    mail.headers.foreach { case (key, value) => message.addHeader(key, value) }
+    setBody(message, mail)
+
+    if (conf.smtpHost.nonEmpty) {
+      Transport.send(message)
+    } else {
+      logger.info("Mail was not sent as no smtp host is configured.")
+    }
+  }
+
+  private def parseAddress(emailAddress: String, charset: String): Option[InternetAddress] =
+    try {
+      val address = new InternetAddress(emailAddress)
+      // Re-encode the display name with the mail's charset instead of the JVM default
+      Option(address.getPersonal).foreach(personal => address.setPersonal(personal, charset))
+      Some(address)
+    } catch {
       case e: Exception =>
-        logger.warn(s"Failed to set email address: $e")
+        logger.warn(s"Failed to parse email address $emailAddress: $e")
         None
     }
 
-  private def addRecipients(message: MimeMessage, recipientType: Message.RecipientType, addresses: List[String]): Unit =
-    message.addRecipients(recipientType, addresses.flatMap(parseAddress).toArray[Address])
+  private def parseAddresses(emailAddresses: List[String], charset: String): Array[Address] =
+    emailAddresses.flatMap(parseAddress(_, charset)).toArray[Address]
 
   private def setBody(message: MimeMessage, mail: Mail): Unit =
     if (mail.bodyHtml == "") {

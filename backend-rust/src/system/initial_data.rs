@@ -565,4 +565,4 @@ async fn insert_dataset_if_absent(
 }
 
 #[cfg(test)]
-mod tests;
+mod system_initial_data_tests;

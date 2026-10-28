@@ -134,4 +134,4 @@ pub(crate) fn valid_name_character(character: char) -> bool {
 }
 
 #[cfg(test)]
-mod tests;
+mod teams_tests;

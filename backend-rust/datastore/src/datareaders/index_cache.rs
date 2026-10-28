@@ -52,4 +52,4 @@ impl<T: Send + Sync + 'static> IndexCache<T> {
 }
 
 #[cfg(test)]
-mod tests;
+mod datareaders_index_cache_tests;

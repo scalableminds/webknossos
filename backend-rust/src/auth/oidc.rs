@@ -718,4 +718,4 @@ async fn create_user(
 }
 
 #[cfg(test)]
-mod tests;
+mod auth_oidc_tests;

@@ -1019,4 +1019,4 @@ impl DataVault for S3DataVault {
 }
 
 #[cfg(test)]
-mod tests;
+mod datavault_s3_tests;

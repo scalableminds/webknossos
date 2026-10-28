@@ -115,4 +115,4 @@ impl ChunkContentsCache {
 }
 
 #[cfg(test)]
-mod tests;
+mod datareaders_cache_tests;

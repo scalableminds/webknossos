@@ -551,4 +551,4 @@ async fn track_frontend_event(
 }
 
 #[cfg(test)]
-mod tests;
+mod system_analytics_tests;

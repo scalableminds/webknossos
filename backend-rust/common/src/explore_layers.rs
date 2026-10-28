@@ -169,4 +169,4 @@ pub fn adapt_layers_and_voxel_size(
 }
 
 #[cfg(test)]
-mod tests;
+mod explore_layers_tests;

@@ -66,7 +66,7 @@ pub fn explore_mappings(layer_dir: &Path) -> Vec<String> {
 }
 
 #[cfg(test)]
-mod tests;
+mod services_mapping_tests;
 
 use crate::{clients::wk::AlfuCache, models::ElementClass};
 use std::{collections::HashMap, sync::Arc, time::Duration};

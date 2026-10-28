@@ -560,4 +560,4 @@ function fetchHealth() {{
 }
 
 #[cfg(test)]
-mod tests;
+mod datastore_tests;

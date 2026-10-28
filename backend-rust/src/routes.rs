@@ -209,7 +209,7 @@ async fn response_headers(request: Request, next: Next) -> Response {
 }
 
 #[cfg(test)]
-mod tests;
+mod routes_tests;
 
 /// Unknown routes. Requests for an unsupported API version get Play's
 /// `ApiVersioning.invalidApiVersionMessage` (RequestHandler checks the version before routing).

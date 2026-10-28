@@ -91,4 +91,4 @@ fn is_legacy_override(version: u64, method: &str, rest: &str) -> bool {
 }
 
 #[cfg(test)]
-mod tests;
+mod versioning_tests;

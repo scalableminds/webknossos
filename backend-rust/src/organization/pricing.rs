@@ -690,4 +690,4 @@ async fn plan_updates(
 }
 
 #[cfg(test)]
-mod tests;
+mod organization_pricing_tests;

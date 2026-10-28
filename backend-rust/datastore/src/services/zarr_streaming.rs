@@ -218,4 +218,4 @@ pub fn directory_html(kind: &str, name: &str, folder_contents: &[String]) -> Str
 }
 
 #[cfg(test)]
-mod tests;
+mod services_zarr_streaming_tests;

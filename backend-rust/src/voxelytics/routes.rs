@@ -1093,4 +1093,4 @@ async fn get_logs(
 }
 
 #[cfg(test)]
-mod tests;
+mod voxelytics_routes_tests;

@@ -233,4 +233,4 @@ async fn source(
 }
 
 #[cfg(test)]
-mod tests;
+mod annotation_private_links_tests;

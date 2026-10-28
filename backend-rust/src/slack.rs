@@ -542,4 +542,4 @@ pub fn workflow_link_slack_formatted(public_uri: &str, workflow_hash: Option<&st
 }
 
 #[cfg(test)]
-mod tests;
+mod slack_tests;

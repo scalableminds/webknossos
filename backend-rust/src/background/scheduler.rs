@@ -245,4 +245,4 @@ mod background_scheduler_dao;
 pub use background_scheduler_dao::try_advisory_xact_lock;
 
 #[cfg(test)]
-mod tests;
+mod background_scheduler_tests;

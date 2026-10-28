@@ -1398,4 +1398,4 @@ async fn zip_annotations(
 }
 
 #[cfg(test)]
-mod tests;
+mod annotation_download_tests;

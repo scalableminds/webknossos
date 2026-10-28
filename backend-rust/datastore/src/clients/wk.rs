@@ -732,4 +732,4 @@ impl WkClient {
 }
 
 #[cfg(test)]
-mod tests;
+mod clients_wk_tests;

@@ -190,4 +190,4 @@ async fn effective_voxel_size(
 }
 
 #[cfg(test)]
-mod tests;
+mod controllers_exports_tests;

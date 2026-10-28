@@ -331,4 +331,4 @@ impl serde::Serialize for LengthUnit {
 deserialize_via_from_json!(LengthUnit);
 
 #[cfg(test)]
-mod tests;
+mod enums_tests;

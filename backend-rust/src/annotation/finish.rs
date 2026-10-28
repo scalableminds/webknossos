@@ -374,4 +374,4 @@ async fn finish_all(
 }
 
 #[cfg(test)]
-mod tests;
+mod annotation_finish_tests;

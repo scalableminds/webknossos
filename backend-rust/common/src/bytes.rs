@@ -44,4 +44,4 @@ readers! {
 }
 
 #[cfg(test)]
-mod tests;
+mod bytes_tests;

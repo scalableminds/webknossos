@@ -600,4 +600,4 @@ async fn update_data_source(
 }
 
 #[cfg(test)]
-mod tests;
+mod remote_datastore_tests;

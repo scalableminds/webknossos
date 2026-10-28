@@ -653,4 +653,4 @@ fn detect_and_split_zip_entry_path(literal: &str) -> Result<Option<(&str, String
 }
 
 #[cfg(test)]
-mod tests;
+mod upath_tests;

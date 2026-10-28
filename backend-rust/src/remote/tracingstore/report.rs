@@ -199,4 +199,4 @@ async fn after_user_resolved(
 }
 
 #[cfg(test)]
-mod tests;
+mod remote_report_tests;

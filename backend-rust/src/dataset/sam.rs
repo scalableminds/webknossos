@@ -253,4 +253,4 @@ async fn segment_anything_mask(
 }
 
 #[cfg(test)]
-mod tests;
+mod dataset_sam_tests;

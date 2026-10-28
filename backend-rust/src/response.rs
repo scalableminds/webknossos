@@ -46,4 +46,4 @@ impl<T> WithMessages<T> {
 }
 
 #[cfg(test)]
-mod tests;
+mod response_tests;

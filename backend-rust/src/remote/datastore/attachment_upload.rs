@@ -231,4 +231,4 @@ async fn report_attachment_upload(
 }
 
 #[cfg(test)]
-mod tests;
+mod remote_attachment_upload_tests;

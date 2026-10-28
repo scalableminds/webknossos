@@ -582,4 +582,4 @@ async fn dataset_thumbnail(
 }
 
 #[cfg(test)]
-mod tests;
+mod dataset_thumbnails_tests;

@@ -653,4 +653,4 @@ fn parse_credentials(raw: &str) -> Result<(Vec<DataVaultCredential>, usize), Con
 }
 
 #[cfg(test)]
-mod tests;
+mod datastore_config_tests;

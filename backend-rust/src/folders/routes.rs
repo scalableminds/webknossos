@@ -312,4 +312,4 @@ fn validate_metadata(metadata: &[Value]) -> ApiResult<()> {
 }
 
 #[cfg(test)]
-mod tests;
+mod folders_routes_tests;

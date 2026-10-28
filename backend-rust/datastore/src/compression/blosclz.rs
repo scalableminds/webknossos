@@ -171,4 +171,4 @@ fn emit_match(out: &mut Vec<u8>, distance: usize, len: usize) {
 }
 
 #[cfg(test)]
-mod tests;
+mod compression_blosclz_tests;

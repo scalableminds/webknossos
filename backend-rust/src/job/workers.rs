@@ -759,4 +759,4 @@ async fn attach_dataset_to_inference(
 }
 
 #[cfg(test)]
-mod tests;
+mod job_workers_tests;

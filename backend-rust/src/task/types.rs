@@ -252,4 +252,4 @@ async fn lock_task_type(
 }
 
 #[cfg(test)]
-mod tests;
+mod task_types_tests;

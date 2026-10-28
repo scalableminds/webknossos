@@ -321,4 +321,4 @@ pub fn adapt_paths_for_data_source(source: &UsableDataSource) -> DsResult<Usable
 }
 
 #[cfg(test)]
-mod tests;
+mod controllers_data_proxy_tests;

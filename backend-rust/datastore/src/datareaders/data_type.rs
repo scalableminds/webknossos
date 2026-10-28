@@ -379,4 +379,4 @@ impl Default for FillValue {
 }
 
 #[cfg(test)]
-mod tests;
+mod datareaders_data_type_tests;

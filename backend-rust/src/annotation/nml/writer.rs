@@ -1035,4 +1035,4 @@ impl XmlWriter {
 }
 
 #[cfg(test)]
-mod tests;
+mod annotation_writer_tests;

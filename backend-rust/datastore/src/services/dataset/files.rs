@@ -444,4 +444,4 @@ fn write_mirror_properties(source: &UsableDataSource, mirror_dir: &Path) -> DsRe
 }
 
 #[cfg(test)]
-mod tests;
+mod services_files_tests;

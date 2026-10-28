@@ -562,4 +562,4 @@ fn class_cast_failure(credential: &DataVaultCredential) -> DsError {
 }
 
 #[cfg(test)]
-mod tests;
+mod datavault_service_tests;

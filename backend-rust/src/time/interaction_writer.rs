@@ -446,4 +446,4 @@ impl TimeInteractionWriter {
 }
 
 #[cfg(test)]
-mod tests;
+mod time_interaction_writer_tests;

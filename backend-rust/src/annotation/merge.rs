@@ -286,4 +286,4 @@ async fn merge_typed(
 }
 
 #[cfg(test)]
-mod tests;
+mod annotation_merge_tests;

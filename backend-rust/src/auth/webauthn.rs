@@ -786,4 +786,4 @@ async fn auth_finalize(
 }
 
 #[cfg(test)]
-mod tests;
+mod auth_webauthn_tests;

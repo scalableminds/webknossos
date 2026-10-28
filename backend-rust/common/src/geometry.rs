@@ -624,4 +624,4 @@ impl BoundingBox {
 deserialize_via_from_json!(BoundingBox);
 
 #[cfg(test)]
-mod tests;
+mod geometry_tests;

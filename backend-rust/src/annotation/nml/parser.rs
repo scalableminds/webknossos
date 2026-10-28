@@ -1734,4 +1734,4 @@ fn validate_trees(
 }
 
 #[cfg(test)]
-mod tests;
+mod annotation_parser_tests;

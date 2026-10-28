@@ -256,4 +256,4 @@ where
 }
 
 #[cfg(test)]
-mod tests;
+mod cache_tests;

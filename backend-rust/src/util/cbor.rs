@@ -405,4 +405,4 @@ impl CoseKey {
 }
 
 #[cfg(test)]
-mod tests;
+mod util_cbor_tests;

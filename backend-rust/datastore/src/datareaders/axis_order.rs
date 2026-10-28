@@ -182,4 +182,4 @@ impl fmt::Display for FullAxisOrder {
 }
 
 #[cfg(test)]
-mod tests;
+mod datareaders_axis_order_tests;

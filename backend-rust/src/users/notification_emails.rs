@@ -680,4 +680,4 @@ async fn people(pool: &PgPool, user_ids: &[&ObjectId]) -> Result<Vec<Person>, sq
 }
 
 #[cfg(test)]
-mod tests;
+mod users_notification_emails_tests;

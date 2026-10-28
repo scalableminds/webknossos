@@ -987,4 +987,4 @@ impl UploadService {
 }
 
 #[cfg(test)]
-mod tests;
+mod services_upload_tests;

@@ -150,4 +150,4 @@ impl AuthUser {
 }
 
 #[cfg(test)]
-mod tests;
+mod auth_extractors_tests;

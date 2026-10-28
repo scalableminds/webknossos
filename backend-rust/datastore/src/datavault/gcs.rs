@@ -587,4 +587,4 @@ impl DataVault for GoogleCloudDataVault {
 }
 
 #[cfg(test)]
-mod tests;
+mod datavault_gcs_tests;

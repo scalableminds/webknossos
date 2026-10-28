@@ -99,4 +99,4 @@ fn downgrade_segment_ids(value: &mut Value) {
 }
 
 #[cfg(test)]
-mod tests;
+mod dataset_legacy_tests;

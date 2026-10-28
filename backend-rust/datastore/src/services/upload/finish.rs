@@ -1288,4 +1288,4 @@ fn delete_files_not_referenced(unpacked: &Path, source: &UsableDataSource) {
 }
 
 #[cfg(test)]
-mod tests;
+mod services_finish_tests;

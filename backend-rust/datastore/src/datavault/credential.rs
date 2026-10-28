@@ -308,4 +308,4 @@ impl<'de> Deserialize<'de> for DataVaultCredential {
 }
 
 #[cfg(test)]
-mod tests;
+mod datavault_credential_tests;

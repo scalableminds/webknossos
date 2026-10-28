@@ -416,4 +416,4 @@ impl RawCuboidRequest {
 }
 super::json::deserialize_via_from_json!(RawCuboidRequest);
 #[cfg(test)]
-mod tests;
+mod models_data_requests_tests;

@@ -128,4 +128,4 @@ where
 }
 
 #[cfg(test)]
-mod tests;
+mod datareaders_file_tests;

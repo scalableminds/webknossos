@@ -710,4 +710,4 @@ impl AgglomerateMapper for AgglomerateDataMapper {
 }
 
 #[cfg(test)]
-mod tests;
+mod services_agglomerate_tests;

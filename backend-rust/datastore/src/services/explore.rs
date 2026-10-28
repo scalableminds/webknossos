@@ -2101,4 +2101,4 @@ pub fn write_local_datasource_properties(
 }
 
 #[cfg(test)]
-mod tests;
+mod services_explore_tests;

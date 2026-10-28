@@ -538,4 +538,4 @@ fn push_streams(
 }
 
 #[cfg(test)]
-mod tests;
+mod voxelytics_loki_tests;

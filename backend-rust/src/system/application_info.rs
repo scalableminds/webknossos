@@ -696,4 +696,4 @@ fn apply_feature_overrides(features: &mut Map<String, Value>, overrides: &HashMa
 }
 
 #[cfg(test)]
-mod tests;
+mod system_application_info_tests;

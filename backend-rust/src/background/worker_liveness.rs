@@ -279,4 +279,4 @@ pub fn spawn(
 }
 
 #[cfg(test)]
-mod tests;
+mod background_worker_liveness_tests;

@@ -262,4 +262,4 @@ fn is_valid_host(host: &str) -> bool {
 }
 
 #[cfg(test)]
-mod tests;
+mod datavault_uri_tests;

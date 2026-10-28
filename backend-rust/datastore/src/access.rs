@@ -340,4 +340,4 @@ impl AccessTokenService {
 }
 
 #[cfg(test)]
-mod tests;
+mod access_tests;

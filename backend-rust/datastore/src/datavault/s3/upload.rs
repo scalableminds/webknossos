@@ -333,4 +333,4 @@ fn xml_field(bytes: &[u8], field: &str) -> VaultResult<String> {
 }
 
 #[cfg(test)]
-mod tests;
+mod datavault_upload_tests;

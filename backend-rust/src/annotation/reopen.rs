@@ -175,4 +175,4 @@ async fn reopen(
 }
 
 #[cfg(test)]
-mod tests;
+mod annotation_reopen_tests;

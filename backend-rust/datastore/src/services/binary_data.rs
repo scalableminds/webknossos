@@ -552,4 +552,4 @@ pub fn convert_to_half_byte(input: &[u8]) -> Vec<u8> {
 }
 
 #[cfg(test)]
-mod tests;
+mod services_binary_data_tests;

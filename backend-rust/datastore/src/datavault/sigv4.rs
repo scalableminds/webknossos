@@ -216,4 +216,4 @@ fn civil_from_days(days: i64) -> (i64, u32, u32) {
 }
 
 #[cfg(test)]
-mod tests;
+mod datavault_sigv4_tests;

@@ -554,4 +554,4 @@ pub async fn segment_ids_for_agglomerate_id_if_needed(
 }
 
 #[cfg(test)]
-mod tests;
+mod services_index_tests;

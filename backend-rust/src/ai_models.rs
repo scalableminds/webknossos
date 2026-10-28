@@ -1351,4 +1351,4 @@ async fn read_inference(
 }
 
 #[cfg(test)]
-mod tests;
+mod ai_models_tests;

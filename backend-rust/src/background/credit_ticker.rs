@@ -126,4 +126,4 @@ pub fn spawn(
 }
 
 #[cfg(test)]
-mod tests;
+mod background_credit_ticker_tests;

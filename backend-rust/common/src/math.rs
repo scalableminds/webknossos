@@ -11,4 +11,4 @@ pub fn ceil_div(num: i32, divisor: i32) -> i32 {
 }
 
 #[cfg(test)]
-mod tests;
+mod math_tests;

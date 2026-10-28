@@ -21,4 +21,4 @@ pub fn morton_encode(x: i32, y: i32, z: i32) -> i32 {
 }
 
 #[cfg(test)]
-mod tests;
+mod datareaders_morton_tests;

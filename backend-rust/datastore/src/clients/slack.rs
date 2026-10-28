@@ -143,4 +143,4 @@ pub fn redact_uri(uri: &str) -> String {
 }
 
 #[cfg(test)]
-mod tests;
+mod clients_slack_tests;

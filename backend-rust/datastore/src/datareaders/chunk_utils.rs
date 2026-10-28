@@ -81,4 +81,4 @@ pub fn compute_chunk_indices(
 }
 
 #[cfg(test)]
-mod tests;
+mod datareaders_chunk_utils_tests;

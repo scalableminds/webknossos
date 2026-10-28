@@ -451,4 +451,4 @@ impl DataVault for ZipDataVault {
 }
 
 #[cfg(test)]
-mod tests;
+mod datavault_zip_tests;

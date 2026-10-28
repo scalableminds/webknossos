@@ -47,4 +47,4 @@ impl NgffZarr3GroupHeader {
     }
 }
 #[cfg(test)]
-mod tests;
+mod datareaders_zarr3_ngff_tests;

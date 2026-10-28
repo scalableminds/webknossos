@@ -42,4 +42,4 @@ pub(crate) fn normalize_strong(value: &str) -> Option<String> {
 }
 
 #[cfg(test)]
-mod tests;
+mod util_text_tests;

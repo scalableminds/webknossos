@@ -1012,4 +1012,4 @@ pub async fn find_dataset_for_uploaded_annotations(
 }
 
 #[cfg(test)]
-mod tests;
+mod annotation_upload_service_tests;

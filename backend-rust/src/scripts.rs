@@ -159,4 +159,4 @@ fn validate_name(name: &str) -> ApiResult<()> {
 }
 
 #[cfg(test)]
-mod tests;
+mod scripts_tests;

@@ -636,4 +636,4 @@ macro_rules! string_enum {
 pub use crate::string_enum;
 
 #[cfg(test)]
-mod tests;
+mod json_tests;

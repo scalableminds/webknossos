@@ -249,4 +249,4 @@ pub async fn store_credential(
 }
 
 #[cfg(test)]
-mod tests;
+mod remote_credentials_tests;

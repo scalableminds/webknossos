@@ -1043,4 +1043,4 @@ pub(crate) async fn login_user(
 }
 
 #[cfg(test)]
-mod tests;
+mod auth_browser_tests;

@@ -775,4 +775,4 @@ async fn credit_cost(
 }
 
 #[cfg(test)]
-mod tests;
+mod job_routes_tests;

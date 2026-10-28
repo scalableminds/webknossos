@@ -292,4 +292,4 @@ pub fn spawn(pool: PgPool, config: &HousekeepingConfig) -> SchedulerHandle {
 }
 
 #[cfg(test)]
-mod tests;
+mod background_housekeeping_tests;

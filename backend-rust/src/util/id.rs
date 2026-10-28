@@ -118,4 +118,4 @@ impl fmt::Display for PathObjectId {
 }
 
 #[cfg(test)]
-mod tests;
+mod util_id_tests;

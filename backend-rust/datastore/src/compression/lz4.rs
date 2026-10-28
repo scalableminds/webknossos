@@ -178,4 +178,4 @@ pub(crate) fn compress_block(input: &[u8]) -> Vec<u8> {
 }
 
 #[cfg(test)]
-mod tests;
+mod compression_lz4_tests;

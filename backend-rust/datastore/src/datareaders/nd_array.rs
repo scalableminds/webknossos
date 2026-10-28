@@ -405,4 +405,4 @@ pub fn axis_order_xyz_view_f(
 }
 
 #[cfg(test)]
-mod tests;
+mod datareaders_nd_array_tests;

@@ -358,4 +358,4 @@ async fn duplicate(
 }
 
 #[cfg(test)]
-mod tests;
+mod annotation_duplicate_tests;

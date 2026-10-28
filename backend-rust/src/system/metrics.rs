@@ -219,4 +219,4 @@ async fn render(State(state): State<MetricsState>) -> impl IntoResponse {
 }
 
 #[cfg(test)]
-mod tests;
+mod system_metrics_tests;

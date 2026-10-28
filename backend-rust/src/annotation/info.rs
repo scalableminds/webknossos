@@ -389,4 +389,4 @@ fn track_open_annotation(
 }
 
 #[cfg(test)]
-mod tests;
+mod annotation_info_tests;

@@ -75,4 +75,4 @@ async fn read(
 }
 
 #[cfg(test)]
-mod tests;
+mod short_links_tests;

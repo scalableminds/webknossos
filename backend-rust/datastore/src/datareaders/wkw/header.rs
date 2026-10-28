@@ -460,4 +460,4 @@ pub fn parse_wkw_file_path(path: &str) -> Option<(Vec3Int, Vec3Int)> {
 }
 
 #[cfg(test)]
-mod tests;
+mod datareaders_wkw_header_tests;

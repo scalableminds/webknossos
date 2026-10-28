@@ -694,4 +694,4 @@ async fn upload(
 }
 
 #[cfg(test)]
-mod tests;
+mod annotation_upload_tests;

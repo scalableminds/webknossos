@@ -1615,4 +1615,4 @@ deserialize_via_from_json!(
 );
 
 #[cfg(test)]
-mod tests;
+mod datasource_tests;

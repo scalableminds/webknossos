@@ -413,4 +413,4 @@ pub fn to_jpeg(image: &Image) -> DsResult<Vec<u8>> {
 }
 
 #[cfg(test)]
-mod tests;
+mod services_thumbnail_tests;

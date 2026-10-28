@@ -433,4 +433,4 @@ fn dataset_route_config(
 }
 
 #[cfg(test)]
-mod tests;
+mod config_tests;

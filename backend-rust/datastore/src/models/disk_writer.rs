@@ -164,4 +164,4 @@ fn java_file_error_message(path: &Path, error: &std::io::Error) -> String {
 }
 
 #[cfg(test)]
-mod tests;
+mod models_disk_writer_tests;

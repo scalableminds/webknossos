@@ -249,4 +249,4 @@ impl NgffMetadataV0_5 {
 }
 
 #[cfg(test)]
-mod tests;
+mod datareaders_zarr_ngff_tests;

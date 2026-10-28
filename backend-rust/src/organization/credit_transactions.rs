@@ -499,4 +499,4 @@ async fn paid_job(
 }
 
 #[cfg(test)]
-mod tests;
+mod organization_credit_transactions_tests;

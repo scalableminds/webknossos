@@ -314,4 +314,4 @@ impl DatasetHeader for ZarrHeader {
 }
 
 #[cfg(test)]
-mod tests;
+mod datareaders_zarr_header_tests;

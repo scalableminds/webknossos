@@ -22,4 +22,4 @@ pub fn hex(bytes: &[u8]) -> String {
 }
 
 #[cfg(test)]
-mod tests;
+mod text_tests;

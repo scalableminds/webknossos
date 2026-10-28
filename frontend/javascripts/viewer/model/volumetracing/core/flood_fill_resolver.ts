@@ -98,6 +98,7 @@ class FloodFillTraversal {
   private readonly out: BucketWriteMapBuilder;
   private readonly maxVisited: number;
   private readonly queue: Vector3[];
+  private readonly editableBoundingBox: BoundingBox;
 
   private visited = 0;
   private wasBoundingBoxExceeded = false;
@@ -128,6 +129,7 @@ class FloodFillTraversal {
     );
     this.maxVisited = options.maxVisitedVoxels ?? DEFAULT_MAX_VISITED_VOXELS;
     this.queue = [shape.seed];
+    this.editableBoundingBox = cube.getEditableBoundingBox(ctx.sourceMagIndex);
   }
 
   async run(): Promise<FloodFillResolution> {
@@ -174,8 +176,10 @@ class FloodFillTraversal {
       this.wasBoundingBoxExceeded = true;
       return false;
     }
-    if (!isInBoundingBox(voxel, this.ctx.editableBoundingBox)) {
+    if (!isInBoundingBox(voxel, this.editableBoundingBox)) {
       // This is the annotation-level bounding box. Don't set wasBoundingBoxExceeded.
+      // Not exploring beyond it keeps the voxel limit and coveredBoundingBox
+      // to voxels that are actually written.
       return false;
     }
     return !this.out.has(voxel); // the mask doubles as the visited set

@@ -191,14 +191,14 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     return model;
   }
 
-  getRightBorderModel(model: Model): Model | null {
+  private getRightBorderModel(model: Model): Model | null {
     const node = model.getNodeById(rightBorderId);
     if (node?.getType() !== "tab") return null;
     return getSubLayoutModel(node as TabNode);
   }
 
   // Adds the tab to the tabset that contains siblingTab, unless the tab already exists.
-  addRightBorderTab(
+  private addRightBorderTab(
     rightBorderModel: Model,
     tabType: BorderTabType,
     siblingTab: BorderTabType,

@@ -63,6 +63,7 @@ import type {
   UpdateBookmarkStateUpdateAction,
   UpdateBookmarkThumbnailUpdateAction,
   UpdateBookmarkUpdateAction,
+  UpdateBucketPartialUpdateAction,
   UpdateBucketUpdateAction,
   UpdateCameraAnnotationAction,
   UpdateLargestSegmentIdVolumeAction,
@@ -235,6 +236,21 @@ const descriptionFns: Record<
   }),
   updateBucket: (
     firstAction: AsServerAction<UpdateBucketUpdateAction>,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Updated the segmentation of layer ${layerName}.`,
+      icon: <PictureOutlined />,
+    };
+  },
+  // From the new volume architecture, see update_actions.ts.
+  updateBucketPartial: (
+    firstAction: AsServerAction<UpdateBucketPartialUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {

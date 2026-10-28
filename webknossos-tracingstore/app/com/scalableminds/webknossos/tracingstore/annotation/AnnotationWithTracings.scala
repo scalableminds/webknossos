@@ -21,7 +21,11 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingWithUpdatedTreeIds
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateAction
-import com.scalableminds.webknossos.tracingstore.tracings.volume.ApplyableVolumeUpdateAction
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  ApplyableVolumeUpdateAction,
+  UpdateBucketPartialVolumeAction,
+  VolumeBucketBuffer
+}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
@@ -30,6 +34,7 @@ case class AnnotationWithTracings(
     annotation: AnnotationProto,
     tracingsById: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]],
     editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)],
+    volumeBucketBuffersByTracingId: Map[String, VolumeBucketBuffer],
     // Bookmarks that changed since the last flush. Their ids are stored in the annotation proto.
     updatedBookmarks: Map[Int, AnnotationBookmarkProto] = Map.empty
 ) extends LazyLogging
@@ -78,11 +83,17 @@ case class AnnotationWithTracings(
       }
     } yield volumeTracing
 
-  def volumesThatHaveEditableMapping: List[(VolumeTracing, String)] =
+  def volumesThatHaveEditableMapping: Seq[(VolumeTracing, String)] =
     tracingsById.view.flatMap {
       case (id, Right(vt: VolumeTracing)) if vt.getHasEditableMapping => Some((vt, id))
       case _                                                          => None
-    }.toList
+    }.toSeq
+
+  def volumesThatDoNotHaveEditableMapping: Seq[(VolumeTracing, String)] =
+    tracingsById.view.flatMap {
+      case (id, Right(vt: VolumeTracing)) if !vt.getHasEditableMapping => Some((vt, id))
+      case _                                                           => None
+    }.toSeq
 
   def getEditableMappingTracingIds: List[String] = editableMappingsByTracingId.keys.toList
 
@@ -123,7 +134,8 @@ case class AnnotationWithTracings(
     this.copy(
       annotation = annotation.copy(annotationLayers = annotation.annotationLayers.filter(_.tracingId != a.tracingId)),
       tracingsById = tracingsById.removed(a.tracingId),
-      editableMappingsByTracingId = editableMappingsByTracingId.removed(a.tracingId)
+      editableMappingsByTracingId = editableMappingsByTracingId.removed(a.tracingId),
+      volumeBucketBuffersByTracingId = volumeBucketBuffersByTracingId.removed(a.tracingId)
     )
 
   def updateLayerMetadata(a: UpdateLayerMetadataAnnotationAction): AnnotationWithTracings =
@@ -184,9 +196,14 @@ case class AnnotationWithTracings(
 
   def withNewUpdaters(materializedVersion: Long, targetVersion: Long): AnnotationWithTracings = {
     val editableMappingsUpdated = editableMappingsByTracingId.view.mapValues { case (mapping, updater) =>
-      (mapping, updater.newWithTargetVersion(materializedVersion, targetVersion))
+      (mapping, updater.resetForNextUpdateGroup(materializedVersion, targetVersion))
     }
-    this.copy(editableMappingsByTracingId = editableMappingsUpdated.toMap)
+    val volumeBucketBuffersUpdated =
+      volumeBucketBuffersByTracingId.view.mapValues(buffer => buffer.resetForNextUpdateGroup(targetVersion))
+    this.copy(
+      editableMappingsByTracingId = editableMappingsUpdated.toMap,
+      volumeBucketBuffersByTracingId = volumeBucketBuffersUpdated.toMap
+    )
   }
 
   def addEditableMapping(
@@ -215,6 +232,15 @@ case class AnnotationWithTracings(
       updated = a.applyOn(volumeTracing)
     } yield this.copy(tracingsById = tracingsById.updated(a.actionTracingId, Right(updated)))
 
+  def applyUpdateBucketPartialVolumeAction(
+      a: UpdateBucketPartialVolumeAction
+  )(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+    for {
+      _ <- getVolume(a.actionTracingId).toFox
+      bucketBuffer <- volumeBucketBuffersByTracingId.get(a.actionTracingId).toFox
+      _ <- bucketBuffer.applyUpdateBucketPartialAction(a)
+    } yield this
+
   def applyEditableMappingAction(
       a: EditableMappingUpdateAction
   )(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
@@ -227,7 +253,7 @@ case class AnnotationWithTracings(
     )
 
   def flushEditableMappingUpdaterBuffers()(implicit ec: ExecutionContext): Fox[Unit] = {
-    val updaters = editableMappingsByTracingId.values.map(_._2).toList
+    val updaters = editableMappingsByTracingId.values.map(_._2)
     for {
       _ <- Fox.serialCombined(updaters)(updater => updater.flushBuffersToFossil())
     } yield ()
@@ -249,6 +275,25 @@ case class AnnotationWithTracings(
     )
 
   def withoutUpdatedBookmarks: AnnotationWithTracings = this.copy(updatedBookmarks = Map.empty)
+
+  // Batch-loads the buckets that the update group's updateBucketPartial actions will mutate.
+  def prefillVolumeBucketBuffers(updates: List[UpdateAction])(implicit ec: ExecutionContext): Fox[Unit] = {
+    val bucketPositionsByTracingId =
+      updates.collect { case a: UpdateBucketPartialVolumeAction => a }.groupMap(_.actionTracingId)(_.bucketPosition)
+    for {
+      _ <- Fox.serialCombined(bucketPositionsByTracingId.toList) { case (tracingId, bucketPositions) =>
+        volumeBucketBuffersByTracingId.get(tracingId) match {
+          case Some(bucketBuffer) => bucketBuffer.prefill(bucketPositions)
+          case None               => Fox.successful(()) // applying the actions will fail with a proper message
+        }
+      }
+    } yield ()
+  }
+
+  def flushVolumeBucketBuffers()(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- Fox.serialCombined(volumeBucketBuffersByTracingId.values)(bucketBuffer => bucketBuffer.flush())
+    } yield ()
 
   def markAllTreeBodiesAsChanged: AnnotationWithTracings = {
     val newTracingsById = tracingsById.view.map {

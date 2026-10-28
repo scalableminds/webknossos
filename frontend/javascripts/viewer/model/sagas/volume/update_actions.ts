@@ -109,6 +109,7 @@ export type UpdateUserBoundingBoxVisibilityInVolumeTracingAction = ReturnType<
   typeof updateUserBoundingBoxVisibilityInVolumeTracing
 >;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
+export type UpdateBucketPartialUpdateAction = ReturnType<typeof updateBucketPartial>;
 export type LEGACY_UpdateSegmentGroupsUpdateAction = ReturnType<typeof LEGACY_updateSegmentGroups>;
 export type UpdateSegmentGroupsExpandedStateUpdateAction = ReturnType<
   typeof updateSegmentGroupsExpandedState
@@ -272,6 +273,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | DeleteSegmentUpdateAction
   | DeleteSegmentDataUpdateAction
   | UpdateBucketUpdateAction
+  | UpdateBucketPartialUpdateAction
   | UpdateTreeVisibilityUpdateAction
   | UpdateTreeEdgesVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
@@ -1009,6 +1011,29 @@ export function updateBucket(
       // update actions that can be retrieved from the server.
       // In that case, the value will always be undefined.
       base64Data: base64Data as string | undefined,
+    },
+  } as const;
+}
+// Lightweight counterpart to updateBucket: carries a run-length diff
+// instead of a whole bucket.
+export function updateBucketPartial(
+  bucketInfo: SendBucketInfo,
+  runsBase64: string,
+  actionTracingId: string,
+) {
+  const { position, additionalCoordinates, mag, cubeSize: _cubeSize } = bucketInfo;
+  return {
+    name: "updateBucketPartial",
+    value: {
+      actionTracingId,
+      position,
+      additionalCoordinates,
+      mag,
+      // Base64 of the binary run encoding (encodeBucketDiff in
+      // viewer/model/volumetracing/core/bucket_diff.ts). Deliberately not LZ4'd:
+      // RLE is already a compression, and LZ4 saved almost nothing on recorded
+      // brush strokes.
+      voxelRunsBase64: runsBase64,
     },
   } as const;
 }

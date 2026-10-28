@@ -764,8 +764,14 @@ class VolumeTracingService @Inject() (
         merged <- mergeTwo(tracingAWithIndex._1, tracingBWithIndex._1, tracingBWithIndex._2, mergedVolumeStats)
       } yield (merged, tracingAWithIndex._2)
 
+    // mergeTwo keeps tracing A's segment ids, so the first tracing's id map is applied here, exactly once
+    val tracingsWithFirstRemapped = tracings match {
+      case first +: rest => remapSegmentIds(first, mergedVolumeStats.idMaps.headOption.getOrElse(Map.empty)) +: rest
+      case _             => tracings
+    }
+
     for {
-      tracingsWithIndex <- Full(tracings.zipWithIndex.map(Full(_)))
+      tracingsWithIndex <- Full(tracingsWithFirstRemapped.zipWithIndex.map(Full(_)))
       tracingAndIndex <- tracingsWithIndex.reduceLeft(mergeTwoWithStats)
       tracing = tracingAndIndex._1
     } yield tracing.copy(
@@ -779,6 +785,15 @@ class VolumeTracingService @Inject() (
     )
   }
 
+  private def remapSegmentIds(tracing: VolumeTracing, segmentIdMap: Map[Long, Long]): VolumeTracing =
+    if (segmentIdMap.isEmpty) tracing
+    else
+      tracing.copy(
+        segments = tracing.segments
+          .map(segment => segment.copy(segmentId = segmentIdMap.getOrElse(segment.segmentId, segment.segmentId))),
+        userStates = remapSegmentIdsInVolumeUserStates(tracing.userStates, segmentIdMap)
+      )
+
   private def mergeTwo(
       tracingA: VolumeTracing,
       tracingB: VolumeTracing,
@@ -790,9 +805,10 @@ class VolumeTracingService @Inject() (
     val groupMappingB = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
     val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMappingB)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
-    // Tracing A's segment ids are never remapped; tracing B's are (see MergedVolume), matching the
-    // A-fixed/B-remapped convention also used for segment groups and tree/node ids. Bounding boxes are
-    // the exception (see BoundingBoxMerger): both sides may be remapped there.
+    // Tracing A's segment ids are not remapped here: A is either the first tracing, whose id map was
+    // already applied in merge, or the result of a previous mergeTwo. Tracing B's are (see MergedVolume),
+    // matching the A-fixed/B-remapped convention also used for segment groups and tree/node ids. Bounding
+    // boxes are the exception (see BoundingBoxMerger): both sides may be remapped there.
     val segmentIdMapB =
       if (indexB >= mergedVolumeStats.idMaps.length) Map.empty[Long, Long] else mergedVolumeStats.idMaps(indexB)
     val (mergedUserBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(

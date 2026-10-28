@@ -269,6 +269,7 @@ class JobController @Inject() (
           ) ?~> Msg.Job.AlignSections.wrongOrga ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(request.body.layerName)
+          _ <- jobService.assertCustomConfigurationAllowed(request.body.customConfiguration, request.identity)
           (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(
             dataset,
             request.body.layerName

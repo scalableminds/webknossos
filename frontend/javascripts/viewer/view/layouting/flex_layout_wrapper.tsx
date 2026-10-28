@@ -54,6 +54,7 @@ import {
   getBorderOpenStatus,
   getMaximizedItemId,
   getPositionStatusOf,
+  getTabsetIdToToggleMaximize,
 } from "./flex_layout_helper";
 import { getLayoutConfig, LayoutEvents, layoutEmitter } from "./layout_persistence";
 
@@ -297,13 +298,14 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
   toggleMaximize = () => {
     const { model } = this.state;
-    const activeNode = model.getActiveTabset();
+    const { activeViewport } = Store.getState().viewModeData.plane;
+    const tabsetId = getTabsetIdToToggleMaximize(model, activeViewport);
 
-    if (activeNode == null) {
+    if (tabsetId == null) {
       return;
     }
 
-    const toggleMaximiseAction = Actions.maximizeToggle(activeNode.getId());
+    const toggleMaximiseAction = Actions.maximizeToggle(tabsetId);
     model.doAction(toggleMaximiseAction);
     this.onAction(toggleMaximiseAction);
   };

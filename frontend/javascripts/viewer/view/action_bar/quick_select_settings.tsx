@@ -1,5 +1,5 @@
 import { QuestionCircleOutlined } from "@ant-design/icons";
-import { isAiQuickSelectAllowedByPricingPlan } from "admin/organization/pricing_plan_utils";
+import { areJobsAllowedByPricingPlan } from "admin/organization/pricing_plan_utils";
 import { Radio, type RadioChangeEvent } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
@@ -33,7 +33,7 @@ function useAISelectUnavailableReason(): string | null {
   if (!features().segmentAnythingEnabled) {
     return "The quick select tool with AI is only available on webknossos.org";
   }
-  if (!isAiQuickSelectAllowedByPricingPlan(activeOrganization)) {
+  if (!areJobsAllowedByPricingPlan(activeOrganization)) {
     return "The quick select tool with AI is not available in the Open Source plan.";
   }
   return null;

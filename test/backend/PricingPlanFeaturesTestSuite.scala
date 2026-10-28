@@ -34,11 +34,8 @@ class PricingPlanFeaturesTestSuite extends AsyncWordSpec {
           Set(PricingPlan.Power, PricingPlan.Power_Trial, PricingPlan.Enterprise)
       )
 
-    "allow worker jobs for all plans except Open Source" in
+    "allow worker jobs and the AI-based quick-select tool for all plans except Open Source" in
       assert(plansWith(PricingPlan.allowsJobs) == allPlansExceptOpenSource)
-
-    "allow the AI-based quick-select tool for all plans except Open Source" in
-      assert(plansWith(PricingPlan.allowsAiQuickSelect) == allPlansExceptOpenSource)
 
     "come with unlimited users and storage for Open Source and Enterprise only" in
       assert(plansWith(PricingPlan.hasUnlimitedQuotas) == Set(PricingPlan.Open_Source, PricingPlan.Enterprise))

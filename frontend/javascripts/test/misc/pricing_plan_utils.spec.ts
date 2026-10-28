@@ -2,8 +2,8 @@ import {
   areJobsAllowedByPricingPlan,
   formatStorage,
   getPlanEndLabel,
+  hasSomePaidPlan,
   isAiAddonEligiblePlan,
-  isAiQuickSelectAllowedByPricingPlan,
   isFeatureAllowedByPricingPlan,
   isJobAvailable,
   PricingPlanEnum,
@@ -130,13 +130,15 @@ describe("Pricing plans", () => {
     );
   });
 
-  it("should allow the AI-based quick-select tool for all plans except Open Source", () => {
-    expect(plansWith(isAiQuickSelectAllowedByPricingPlan)).toEqual(
-      ALL_PLANS.filter((plan) => plan !== PricingPlanEnum.OpenSource),
+  it("should treat Personal and Open Source as free plans, without paid perks such as removing the watermark", () => {
+    expect(plansWith(hasSomePaidPlan)).toEqual(
+      ALL_PLANS.filter(
+        (plan) => plan !== PricingPlanEnum.Personal && plan !== PricingPlanEnum.OpenSource,
+      ),
     );
   });
 
-  it("should allow worker jobs (AI analysis, animations, precomputed meshes, conversions) for all plans except Open Source", () => {
+  it("should allow worker jobs (AI analysis, animations, precomputed meshes, conversions) and the AI-based quick-select tool for all plans except Open Source", () => {
     expect(plansWith(areJobsAllowedByPricingPlan)).toEqual(
       ALL_PLANS.filter((plan) => plan !== PricingPlanEnum.OpenSource),
     );

@@ -23,8 +23,8 @@ const PRICING_PLAN_LABELS: Partial<Record<PricingPlanEnum, string>> = {
   [PricingPlanEnum.OpenSource]: "Open Source",
 };
 
-// Open Source has no access to WEBKNOSSOS workers, so it can run no jobs (including AI analysis and animations).
-// Mirrors PricingPlan.allowsJobs
+// Open Source has no access to WEBKNOSSOS workers, so it can run no jobs (including AI analysis and animations)
+// and use no AI quick select. Mirrors PricingPlan.allowsJobs
 export function areJobsAllowedByPricingPlan(organization: APIOrganization | null): boolean {
   return organization?.pricingPlan !== PricingPlanEnum.OpenSource;
 }
@@ -38,11 +38,6 @@ export function isJobAvailable(
     areJobsAllowedByPricingPlan(organization) &&
     dataStore.jobsSupportedByAvailableWorkers.includes(jobCommand)
   );
-}
-
-// Mirrors PricingPlan.allowsAiQuickSelect
-export function isAiQuickSelectAllowedByPricingPlan(organization: APIOrganization | null): boolean {
-  return organization?.pricingPlan !== PricingPlanEnum.OpenSource;
 }
 
 export enum AiPlanEnum {
@@ -152,7 +147,7 @@ export function isCreditBalanceLow(milliCreditBalance: number | null | undefined
 }
 
 // Open Source unlocks the collaboration features of Team, Enterprise the features of Power. The features that
-// Open Source lacks are checked separately, see areJobsAllowedByPricingPlan and isAiQuickSelectAllowedByPricingPlan.
+// Open Source lacks are checked separately, see areJobsAllowedByPricingPlan.
 // Mirrors PricingPlan.tierRank in app/models/organization/PricingPlan.scala
 export const PLAN_TO_RANK: Record<PricingPlanEnum, number> = {
   [PricingPlanEnum.Personal]: 0,
@@ -186,8 +181,14 @@ export function isFeatureAllowedByPricingPlan(
   return isPricingPlanGreaterEqualThan(organization.pricingPlan, requiredPricingPlan);
 }
 
+// Open Source unlocks the features of Team, but isn't paid for, so it doesn't get paid perks such as removing the
+// watermark. Mirrors PricingPlan.isPaidPlan
 export function hasSomePaidPlan(organization: APIOrganization | null) {
-  return isFeatureAllowedByPricingPlan(organization, PricingPlanEnum.Team);
+  return (
+    organization != null &&
+    organization.pricingPlan !== PricingPlanEnum.Personal &&
+    organization.pricingPlan !== PricingPlanEnum.OpenSource
+  );
 }
 
 export function hasAiPlan(organization: APIOrganization | null) {

@@ -1,4 +1,4 @@
-import { isAiQuickSelectAllowedByPricingPlan } from "admin/organization/pricing_plan_utils";
+import { areJobsAllowedByPricingPlan } from "admin/organization/pricing_plan_utils";
 import features from "features";
 import { handleGenericError } from "libs/error_handling";
 import type { ModifierKeys, MouseBindingMap } from "libs/input";
@@ -1141,7 +1141,7 @@ export class QuickSelectToolController extends VolumeToolController {
         const quickSelectConfig = state.userConfiguration.quickSelect;
         const isAISelectAvailable =
           features().segmentAnythingEnabled &&
-          isAiQuickSelectAllowedByPricingPlan(state.activeOrganization);
+          areJobsAllowedByPricingPlan(state.activeOrganization);
         const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
 
         if (!isQuickSelectHeuristic) {

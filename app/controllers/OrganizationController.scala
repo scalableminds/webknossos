@@ -293,7 +293,10 @@ class OrganizationController @Inject() (
         organization <- organizationDAO.findOne(request.body.organizationId) ?~> Msg.Organization.notFound(
           request.body.organizationId
         ) ~> NOT_FOUND
-        planUpdate = request.body.withQuotasOfPlan(request.body.pricingPlan.getOrElse(organization.pricingPlan))
+        planUpdate = request.body.withQuotasOfPlan(
+          organization.pricingPlan,
+          request.body.pricingPlan.getOrElse(organization.pricingPlan)
+        )
         _ <- organizationDAO.insertPlanUpdate(organization._id, planUpdate)
         _ <- organizationDAO.updatePlan(organization._id, planUpdate)
         // Note that this logs its failures rather than propagating them, as the plan update above has

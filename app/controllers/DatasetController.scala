@@ -648,7 +648,7 @@ class DatasetController @Inject() (
           _ <- Fox.fromBool(conf.SegmentAnything.uri.nonEmpty) ?~> Msg.SegmentAnything.noUri
           userOrganization <- organizationDAO.findOne(request.identity._organization)
           _ <- Fox.fromBool(
-            PricingPlan.allowsAiQuickSelect(userOrganization.pricingPlan)
+            PricingPlan.allowsJobs(userOrganization.pricingPlan)
           ) ?~> Msg.SegmentAnything.notAvailableInPlan ~> FORBIDDEN
           dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
           usableDataSource <- datasetService.usableDataSourceFor(dataset)

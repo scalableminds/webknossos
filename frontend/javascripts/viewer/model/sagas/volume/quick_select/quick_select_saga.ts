@@ -1,4 +1,4 @@
-import { isAiQuickSelectAllowedByPricingPlan } from "admin/organization/pricing_plan_utils";
+import { areJobsAllowedByPricingPlan } from "admin/organization/pricing_plan_utils";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
@@ -23,7 +23,7 @@ function* shouldUseHeuristic() {
   return (
     useHeuristic ||
     !features().segmentAnythingEnabled ||
-    !isAiQuickSelectAllowedByPricingPlan(activeOrganization)
+    !areJobsAllowedByPricingPlan(activeOrganization)
   );
 }
 

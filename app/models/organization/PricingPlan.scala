@@ -13,11 +13,22 @@ object PricingPlan extends ExtendedEnumeration {
 
   def isTrialPlan(plan: PricingPlan): Boolean = plan == Team_Trial || plan == Power_Trial
 
+  // Open Source has no access to WEBKNOSSOS workers, so it can run no jobs and use no AI quick select.
   def allowsJobs(plan: PricingPlan): Boolean = plan != Open_Source
 
-  def allowsAiQuickSelect(plan: PricingPlan): Boolean = plan != Open_Source
-
   def hasUnlimitedQuotas(plan: PricingPlan): Boolean = plan == Open_Source || plan == Enterprise
+
+  // The quotas a plan starts with. None if the quotas of the plan are negotiated per organization.
+  // Mirrors teamPlanIncludedUsers/teamPlanIncludedStorageTB in frontend/javascripts/admin/organization/pricing_plan_utils.ts
+  def includedUsersOf(plan: PricingPlan): Option[Int] = plan match {
+    case Team | Team_Trial => Some(5)
+    case _                 => None
+  }
+
+  def includedStorageBytesOf(plan: PricingPlan): Option[Long] = plan match {
+    case Team | Team_Trial => Some(1000000000000L) // 1 TB
+    case _                 => None
+  }
 
   // Ranks the plans by the feature set they unlock. Trials unlock the same features as their paid counterpart.
   // Mirrors PLAN_TO_RANK in frontend/javascripts/admin/organization/pricing_plan_utils.ts

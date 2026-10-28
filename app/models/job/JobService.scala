@@ -345,6 +345,14 @@ class JobService @Inject() (
       _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
     } yield job
 
+  // Arbitrary workflow config overrides are reserved for super users.
+  def assertCustomConfigurationAllowed(customConfiguration: Option[JsObject], user: User)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] =
+    for {
+      _ <- Fox.runIf(customConfiguration.exists(_.keys.nonEmpty))(userService.assertIsSuperUser(user)) ~> FORBIDDEN
+    } yield ()
+
   def jobsSupportedByAvailableWorkers(dataStoreName: String): Fox[Set[JobCommand]] =
     for {
       workers <- workerDAO.findAllByDataStore(dataStoreName)

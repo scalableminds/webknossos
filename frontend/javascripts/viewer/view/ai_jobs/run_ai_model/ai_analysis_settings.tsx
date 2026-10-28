@@ -37,6 +37,8 @@ export const AiAnalysisSettings: React.FC = () => {
     selectedModel,
     seedGeneratorDistanceThreshold,
     setSeedGeneratorDistanceThreshold,
+    absoluteAffinityThreshold,
+    setAbsoluteAffinityThreshold,
     isEvaluationActive,
     setIsEvaluationActive,
     splitMergerEvaluationSettings,
@@ -51,6 +53,7 @@ export const AiAnalysisSettings: React.FC = () => {
   const dataset = useWkSelector((state) => state.dataset);
   const colorLayers = getColorLayers(dataset);
   const activeUser = useWkSelector((state) => state.activeUser);
+  const isSuperUser = activeUser?.isSuperUser ?? false;
 
   const handleValuesChange: FormProps["onValuesChange"] = (changedValues, allValues) => {
     if ("newDatasetName" in changedValues) {
@@ -66,6 +69,9 @@ export const AiAnalysisSettings: React.FC = () => {
     }
     if ("seedGeneratorDistanceThreshold" in changedValues) {
       setSeedGeneratorDistanceThreshold(changedValues.seedGeneratorDistanceThreshold);
+    }
+    if ("absoluteAffinityThreshold" in changedValues) {
+      setAbsoluteAffinityThreshold(changedValues.absoluteAffinityThreshold);
     }
     if ("splitMergerEvaluationSettings" in allValues) {
       setSplitMergerEvaluationSettings(
@@ -96,14 +102,22 @@ export const AiAnalysisSettings: React.FC = () => {
   }, [form, newDatasetName]);
 
   const isInstanceModel = selectedJobType === APIJobCommand.INFER_INSTANCES;
+  const isNeuronJob = selectedJobType === APIJobCommand.INFER_NEURONS;
   const isNeuronModel =
     selectedModel != null && selectedModel.category === APIAiModelCategory.EM_NEURONS;
+  const advancedSettingNames = [
+    isInstanceModel && "Seed Distance",
+    isNeuronJob && "Affinity Threshold",
+    isNeuronModel && "Evaluation",
+    isSuperUser && "Custom Configuration",
+  ].filter(Boolean);
 
   const formFields = [
     { name: ["newDatasetName"], value: newDatasetName },
     { name: ["selectedLayer"], value: selectedLayer?.name },
     { name: ["selectedBoundingBox"], value: selectedBoundingBox },
     { name: ["seedGeneratorDistanceThreshold"], value: seedGeneratorDistanceThreshold },
+    { name: ["absoluteAffinityThreshold"], value: absoluteAffinityThreshold },
     {
       name: ["splitMergerEvaluationSettings", "useSparseTracing"],
       value: splitMergerEvaluationSettings?.useSparseTracing,
@@ -208,29 +222,44 @@ export const AiAnalysisSettings: React.FC = () => {
           <BoundingBoxSelector />
         </Form.Item>
 
-        <AdvancedSettings hint="Custom Configuration">
-          <Row gutter={24}>
-            {isInstanceModel && (
-              <Col span={12}>
-                <Form.Item
-                  name="seedGeneratorDistanceThreshold"
-                  label="Seed generator distance threshold (nm)"
-                  tooltip="Controls the distance between two objects' centers used as a starting point (seed) for a growing segmentation. If empty, a default based on the selected model is used. It should be set to a positive value in nm, typically 10–30% of the model’s `max_distance` parameter (= diameter/thickness of the object). For larger objects, such as nuclei (~1000 nm), use higher values. For small ones, such as synaptic vesicles (~10 nm), use lower values. If set too low, objects may merge; if too high, they may split or be missed."
-                >
-                  <InputNumber min={0.1} suffix="nm" style={{ width: "100%" }} />
-                </Form.Item>
-              </Col>
+        {advancedSettingNames.length > 0 && (
+          <AdvancedSettings hint={advancedSettingNames.join(", ")}>
+            <Row gutter={24}>
+              {isInstanceModel && (
+                <Col span={12}>
+                  <Form.Item
+                    name="seedGeneratorDistanceThreshold"
+                    label="Seed generator distance threshold (nm)"
+                    tooltip="Controls the distance between two objects' centers used as a starting point (seed) for a growing segmentation. If empty, a default based on the selected model is used. It should be set to a positive value in nm, typically 10–30% of the model’s `max_distance` parameter (= diameter/thickness of the object). For larger objects, such as nuclei (~1000 nm), use higher values. For small ones, such as synaptic vesicles (~10 nm), use lower values. If set too low, objects may merge; if too high, they may split or be missed."
+                  >
+                    <InputNumber min={0.1} suffix="nm" style={{ width: "100%" }} />
+                  </Form.Item>
+                </Col>
+              )}
+              {isNeuronJob && (
+                <Col span={12}>
+                  <Form.Item
+                    name="absoluteAffinityThreshold"
+                    label="Affinity threshold"
+                    tooltip="Minimum predicted affinity between neighboring voxels for them to be merged into the same segment. Increase it if neurons are merged that should be separate, decrease it if neurons are split into too many pieces. If empty, the model's default is used."
+                  >
+                    <InputNumber style={{ width: "100%" }} />
+                  </Form.Item>
+                </Col>
+              )}
+            </Row>
+            {isSuperUser && (
+              <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
             )}
-          </Row>
-          <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
 
-          {isNeuronModel && (
-            <CollapsibleSplitMergerEvaluationSettings
-              isActive={isEvaluationActive}
-              setActive={setIsEvaluationActive}
-            />
-          )}
-        </AdvancedSettings>
+            {isNeuronModel && (
+              <CollapsibleSplitMergerEvaluationSettings
+                isActive={isEvaluationActive}
+                setActive={setIsEvaluationActive}
+              />
+            )}
+          </AdvancedSettings>
+        )}
       </Form>
     </JobSection>
   );

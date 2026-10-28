@@ -11,7 +11,10 @@ import {
   updateMeshVisibilityAction,
 } from "viewer/model/actions/annotation_actions";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
-import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
+import {
+  deleteNodeAndReconnectNeighborsAsUserAction,
+  deleteNodeAsUserAction,
+} from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { hideContextMenuAction } from "viewer/model/actions/ui_actions";
 import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
 import Store from "viewer/store";
@@ -23,6 +26,10 @@ export function useContextMenuActions() {
     () => ({
       deleteNode: (nodeId: number, treeId: number) => {
         dispatch(deleteNodeAsUserAction(Store.getState(), nodeId, treeId));
+      },
+
+      deleteNodeAndReconnectNeighbors: (nodeId: number, treeId: number) => {
+        dispatch(deleteNodeAndReconnectNeighborsAsUserAction(Store.getState(), nodeId, treeId));
       },
 
       setActiveCell: (

@@ -11,8 +11,11 @@ const KNOWN_CYCLES = [];
 // especially problematic since they can break the worker bundles).
 const WORKER_DIR = "frontend/javascripts/viewer/workers";
 const WORKER_GLOB = "frontend/javascripts/viewer/workers/**/*.worker.ts";
+// The viewer is loaded on demand via a dynamic import (see router/route_wrappers.tsx),
+// so its entry point needs to be listed explicitly, too.
+const VIEWER_ENTRY = "frontend/javascripts/viewer/viewer_entry.ts";
 
-parseDependencyTree(["frontend/javascripts/main.tsx", WORKER_GLOB], {
+parseDependencyTree(["frontend/javascripts/main.tsx", VIEWER_ENTRY, WORKER_GLOB], {
   /* options, see below */
   extensions: [".ts", ".tsx"],
   transform: true,

@@ -1,7 +1,7 @@
 package com.scalableminds.util.security
 
 import java.nio.charset.StandardCharsets
-import at.favre.lib.crypto.bcrypt.BCrypt
+import at.favre.lib.crypto.bcrypt.{BCrypt, LongPasswordStrategies}
 
 /** Making BCrypt look prettier
   */
@@ -14,6 +14,10 @@ object SCrypt {
   private type PlainPassword = String
   private type PasswordHash = String
 
+  // Like jBCrypt (used before #7335), ignore bytes beyond 72, so that old hashes of longer passwords still verify
+  private val version = BCrypt.Version.VERSION_2A
+  private val longPasswordStrategy = LongPasswordStrategies.truncate(version)
+
   /** @param rounds
     *   this is the base of log2 of the number of salting rounds. Legal values are >=4, sane values are leq 20
     */
@@ -24,12 +28,14 @@ object SCrypt {
                                               	 |with 2^rounds, legal/sane values of rounds are in fixed in (4..20).
                                               |Smaller is less secure, larger is significantly slower""".stripMargin)
 
-    val bcryptHashBytes = BCrypt.withDefaults.hash(rounds, password.getBytes(StandardCharsets.UTF_8))
+    val bcryptHashBytes =
+      BCrypt.`with`(version, longPasswordStrategy).hash(rounds, password.getBytes(StandardCharsets.UTF_8))
     new String(bcryptHashBytes, StandardCharsets.UTF_8)
   }
 
   def verifyPassword(plainTextPassword: PlainPassword, hashedPassword: PasswordHash): Boolean =
-    BCrypt.verifyer
+    BCrypt
+      .verifyer(version, longPasswordStrategy)
       .verify(plainTextPassword.getBytes(StandardCharsets.UTF_8), hashedPassword.getBytes(StandardCharsets.UTF_8))
       .verified
 

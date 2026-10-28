@@ -133,6 +133,7 @@ export type BorderTabType = {
   name: string;
   description: string;
   enableRenderOnDemand?: boolean;
+  enableClose?: boolean;
 };
 export const BorderTabs: Record<string, BorderTabType> = {
   DatasetInfoTabView: {
@@ -159,6 +160,8 @@ export const BorderTabs: Record<string, BorderTabType> = {
     id: "AbstractTreeTab",
     name: "AbsTree",
     description: "Abstract Tree - Shows an abstract version of the active skeleton",
+    // Not part of the default layout. It is opened on demand from the skeleton tab and can be closed again.
+    enableClose: true,
   },
   ControlsAndRenderingSettingsTab: {
     id: "ControlsAndRenderingSettingsTab",
@@ -362,6 +365,8 @@ const Constants = {
   compare https://github.com/scalableminds/webknossos/issues/5223.
  */
 export const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
+
+export const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / Constants.FPS;
 
 export default Constants;
 

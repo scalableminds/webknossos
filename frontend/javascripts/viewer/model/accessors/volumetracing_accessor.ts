@@ -6,7 +6,6 @@ import type {
   AdditionalCoordinate,
   AnnotationLayerDescriptor,
   APIAnnotation,
-  APIAnnotationInfo,
   APIDataLayer,
   APIDataset,
   APISegmentationLayer,
@@ -21,6 +20,7 @@ import Constants, {
   type Vector4,
 } from "viewer/constants";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
+import { getVolumeDescriptors } from "viewer/model/accessors/annotation_accessor";
 import {
   getDataLayers,
   getLayerByName,
@@ -36,7 +36,10 @@ import {
   getFlooredPosition,
 } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
+import { getGlobalMousePositionFloating } from "viewer/model/accessors/view_mode_accessor";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
+import Dimensions from "viewer/model/dimensions";
+import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import { jsConvertCellIdToRGBA } from "viewer/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "viewer/shaders/utils.glsl";
 import { Store } from "viewer/singletons";
@@ -106,12 +109,6 @@ export function getVolumeTracingByNameOrActive(volumeLayerName: string | undefin
 
 export function hasVolumeTracings(annotation: StoreAnnotation): boolean {
   return annotation.volumes.length > 0;
-}
-
-export function getVolumeDescriptors(
-  annotation: APIAnnotation | StoreAnnotation | APIAnnotationInfo,
-): Array<AnnotationLayerDescriptor> {
-  return annotation.annotationLayers.filter((layer) => layer.typ === "Volume");
 }
 
 export function getVolumeDescriptorById(
@@ -627,6 +624,61 @@ function _getRenderableMagForActiveSegmentationTracing(state: WebknossosState):
 export const getRenderableMagForActiveSegmentationTracing = reuseInstanceOnEquality(
   _getRenderableMagForActiveSegmentationTracing,
 );
+
+/**
+ * Per-axis brush diameter in voxels of `mag`. brushSize is a diameter in "base voxels"
+ * (units of the finest axis of the voxel size), so this folds in both the voxel size
+ * (so the brush is a sphere in physical space, not an ellipsoid) and the mag.
+ */
+export function getBrushDiameterInMag(
+  brushSize: number,
+  baseVoxelFactors: Vector3,
+  mag: Vector3,
+): Vector3 {
+  return [0, 1, 2].map((axis) => (brushSize * baseVoxelFactors[axis]) / mag[axis]) as Vector3;
+}
+
+/**
+ * Brush center in voxel coordinates of `mag` for a floating mag-1 position.
+ * Along an in-plane axis with an odd (rounded) diameter, the center snaps to the
+ * center of the hovered voxel, so that the brush is symmetric around it. An even
+ * diameter can't be symmetric around a voxel, so the center snaps to the closest
+ * voxel corner instead. Along the plane axis, the center stays in the hovered slice.
+ */
+export function getBrushCenterInMag(
+  position: Vector3,
+  mag: Vector3,
+  diameterInMag: Vector3,
+  planeAxis: number,
+): Vector3 {
+  return [0, 1, 2].map((axis) => {
+    const positionInMag = position[axis] / mag[axis];
+    const isEven = Math.max(1, Math.round(diameterInMag[axis])) % 2 === 0;
+    return axis !== planeAxis && isEven
+      ? Math.round(positionInMag)
+      : Math.floor(positionInMag) + 0.5;
+  }) as Vector3;
+}
+
+function _getBrushCenterPosition(state: WebknossosState): Vector3 | null {
+  // Global (mag-1) position of the brush center under the mouse, as used by the
+  // brush preview. Like the preview, this ignores transforms of the segmentation layer.
+  const mousePosition = getGlobalMousePositionFloating(state);
+  const maybeMagWithZoomStep = getRenderableMagForActiveSegmentationTracing(state);
+  if (mousePosition == null || maybeMagWithZoomStep == null) {
+    return null;
+  }
+  const { mag } = maybeMagWithZoomStep;
+  const diameterInMag = getBrushDiameterInMag(
+    state.userConfiguration.brushSize,
+    getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
+    mag,
+  );
+  const planeAxis = Dimensions.getIndices(state.viewModeData.plane.activeViewport)[2];
+  return V3.scale3(getBrushCenterInMag(mousePosition, mag, diameterInMag, planeAxis), mag);
+}
+
+export const getBrushCenterPosition = reuseInstanceOnEquality(_getBrushCenterPosition);
 
 export function getMappingInfoForVolumeTracing(
   state: WebknossosState,

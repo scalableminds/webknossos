@@ -155,6 +155,7 @@ export default class LayerRenderingManager {
   cube: DataCube;
   pullQueue: PullQueue;
   dataTextureCount: number;
+  bucketCapacity: number;
   name: string;
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
@@ -171,12 +172,14 @@ export default class LayerRenderingManager {
     cube: DataCube,
     textureWidth: number,
     dataTextureCount: number,
+    bucketCapacity: number,
   ) {
     this.name = name;
     this.pullQueue = pullQueue;
     this.cube = cube;
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
+    this.bucketCapacity = bucketCapacity;
   }
 
   refresh() {
@@ -192,6 +195,7 @@ export default class LayerRenderingManager {
       this.dataTextureCount,
       elementClass,
       this.cube,
+      this.bucketCapacity,
     );
 
     const layerIndex = getGlobalLayerIndexForLayerName(this.name);

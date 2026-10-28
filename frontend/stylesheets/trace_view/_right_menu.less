@@ -9,8 +9,6 @@
   flex-grow: 1;
   min-height: 600px;
   width: 100%;
-  // No dark mode
-  background-color: white;
 }
 
 .flex-center {
@@ -249,7 +247,7 @@
   width: 16px;
   height: 16px;
   border-radius: 3px;
-  box-shadow: 0px 0px 3px #cacaca;
+  box-shadow: 0px 0px 3px var(--ant-color-border);
   vertical-align: middle;
 }
 
@@ -292,6 +290,8 @@
 .bounding-box-table {
   .ant-table {
     border-bottom: none;
+    // Blend in with the tab's background instead of rendering a white container.
+    background: transparent;
   }
 
   .ant-table-cell {

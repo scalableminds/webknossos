@@ -146,6 +146,9 @@ export default class TextureBucketManager {
     dataTextureCount: number,
     elementClass: ElementClass,
     cube: DataCube,
+    // Upper bound for maximumCapacity. The textures are rounded up, so they
+    // may have room for more buckets than this.
+    bucketCapacity: number = Number.POSITIVE_INFINITY,
   ) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)
@@ -158,11 +161,9 @@ export default class TextureBucketManager {
     this.bucketVoxelCount = this.usesTRecycling
       ? constants.BUCKET_SIZE
       : cube.getEffectiveBucketVoxelCount();
-    this.maximumCapacity = getBucketCapacity(
-      dataTextureCount,
-      textureWidth,
-      this.packingDegree,
-      this.bucketVoxelCount,
+    this.maximumCapacity = Math.min(
+      getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree, this.bucketVoxelCount),
+      bucketCapacity,
     );
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;

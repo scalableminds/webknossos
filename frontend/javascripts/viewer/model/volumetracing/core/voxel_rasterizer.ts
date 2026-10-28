@@ -69,7 +69,10 @@ function rasterizeCapsule(
   ctx: EditContext,
   tx: VolumeTransaction,
 ): void {
-  const box = clipBox(capsuleBoundingBox(from, to, radius, planeAxis), ctx.editableBoundingBox);
+  const box = clipBox(
+    capsuleBoundingBox(from, to, radius, planeAxis),
+    tx.getEditableBoundingBox(ctx.sourceMagIndex),
+  );
   if (box == null) return;
 
   forEachBucketRow(box, ctx, tx, (writer, address, rowY, rowZ, xStart, xEnd) => {
@@ -81,7 +84,7 @@ function rasterizeCapsule(
 }
 
 function rasterizeBox(min: Vector3, max: Vector3, ctx: EditContext, tx: VolumeTransaction): void {
-  const box = clipBox({ min, max }, ctx.editableBoundingBox);
+  const box = clipBox({ min, max }, tx.getEditableBoundingBox(ctx.sourceMagIndex));
   if (box == null) return;
   forEachBucketRow(box, ctx, tx, (writer, address, rowY, rowZ, xStart, xEnd) => {
     const rowBase = rowBaseIndex(address, rowY, rowZ);
@@ -97,7 +100,7 @@ function rasterizeMask(shape: MaskShape, ctx: EditContext, tx: VolumeTransaction
   }
   const box = clipBox(
     { min: shape.origin, max: [shape.origin[0] + sx, shape.origin[1] + sy, shape.origin[2] + sz] },
-    ctx.editableBoundingBox,
+    tx.getEditableBoundingBox(ctx.sourceMagIndex),
   );
   if (box == null) return;
 
@@ -243,10 +246,7 @@ function capsuleBoundingBox(
   return { min, max };
 }
 
-function clipBox(box: BoundingBox, clip: BoundingBox | null): BoundingBox | null {
-  if (clip == null) {
-    return box.min.every((value, axis) => value < box.max[axis]) ? box : null;
-  }
+function clipBox(box: BoundingBox, clip: BoundingBox): BoundingBox | null {
   const min: Vector3 = [0, 0, 0];
   const max: Vector3 = [0, 0, 0];
   for (let axis = 0; axis < 3; axis++) {
@@ -264,6 +264,8 @@ function clipBox(box: BoundingBox, clip: BoundingBox | null): BoundingBox | null
  * anisotropic capsule into a unit-radius one — equivalent to testing a sphere
  * in physical space rather than an ellipsoid in voxel space. The plane axis is
  * dropped entirely for 2D brushes, which paint a single slice.
+ * Points exactly on the border are outside. Otherwise, a brush centered on a voxel
+ * would get single-voxel "poles" at its four extreme points.
  */
 function isInsideCapsule(
   point: Vector3,
@@ -289,7 +291,7 @@ function isInsideCapsule(
     const delta = (point[axis] - closest) / radius[axis];
     distanceSquared += delta * delta;
   }
-  return distanceSquared <= 1;
+  return distanceSquared < 1;
 }
 
 export { isInBoundingBox };

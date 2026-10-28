@@ -12,16 +12,17 @@ object Dependencies {
     )
 
   private val silhouetteVersion = "10.0.4"
-  private val brotliVersion = "1.23.0"
+  private val brotliVersion = "1.24.0"
   private val slickVersion = "3.6.1"
-  private val awsVersion = "2.53.2"
-  private val postgresVersion = "42.7.13"
+  private val awsVersion = "2.55.16"
+  private val postgresVersion = "42.7.14"
+  private val jacksonVersion = "2.18.12"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
   private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
 
   val utilDependencies: Seq[ModuleID] = Seq(
     // Play Web Framework. import play
-    "org.playframework" %% "play" % "3.0.11",
+    "org.playframework" %% "play" % "3.0.12",
     // Play’s JSON serialization. import play.api.libs.json
     "org.playframework" %% "play-json" % "3.0.6",
     // Sending emails. import org.apache.commons.mail
@@ -29,7 +30,7 @@ object Dependencies {
     // File utils. import org.apache.commons.io
     "commons-io" % "commons-io" % "2.22.0",
     // HashCodeBuilder. import org.apache.commons.lang3
-    "org.apache.commons" % "commons-lang3" % "3.20.0",
+    "org.apache.commons" % "commons-lang3" % "3.21.0",
     // Protocol buffers. import scalapb
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapbVersion,
     // LazyLogging. import com.typesafe.scalalogging
@@ -52,7 +53,7 @@ object Dependencies {
     // SQL Queries postgres specifics. not imported.
     "org.postgresql" % "postgresql" % postgresVersion,
     // Logging. import org.slf4j
-    "org.slf4j" % "slf4j-simple" % "2.0.18"
+    "org.slf4j" % "slf4j-simple" % "2.0.20"
   )
 
   val webknossosDatastoreDependencies: Seq[ModuleID] = Seq(
@@ -69,7 +70,7 @@ object Dependencies {
     // Dependency Injection. import javax.inject.Inject
     guice,
     // Redis database client. import io.lettuce.core
-    "io.lettuce" % "lettuce-core" % "7.6.0.RELEASE",
+    "io.lettuce" % "lettuce-core" % "7.8.0.RELEASE",
     // Read hdf5 files. import ch.systemsx.cisd.hdf5
     "cisd" % "jhdf5" % "19.04.1",
     // MultiArray (ndarray) handles. import ucar
@@ -79,13 +80,13 @@ object Dependencies {
     // AWS Transfer Manager for multipart uploads. import software.amazon.awssdk.transfer.s3
     "software.amazon.awssdk" % "s3-transfer-manager" % awsVersion,
     // Google cloud storage client. import com.google.cloud.storage, import com.google.auth.oauth2
-    "com.google.cloud" % "google-cloud-storage" % "2.71.0",
+    "com.google.cloud" % "google-cloud-storage" % "2.75.0",
     // Blosc compression. import dev.zarr.bloscjava
     "com.scalableminds" % "blosc-java" % "0.3-1.21.6",
     // Zstd compression. import org.apache.commons.compress
     "org.apache.commons" % "commons-compress" % "1.28.0",
     // Zstd compression native bindings. not imported
-    "com.github.luben" % "zstd-jni" % "1.5.7-15",
+    "com.github.luben" % "zstd-jni" % "1.5.7-23",
     // Brotli compression. import com.aayushatharva.brotli4j
     "com.aayushatharva.brotli4j" % "brotli4j" % brotliVersion,
     // Brotli compression native bindings. not imported
@@ -93,7 +94,7 @@ object Dependencies {
     "com.aayushatharva.brotli4j" % "native-osx-x86_64" % brotliVersion,
     "com.aayushatharva.brotli4j" % "native-osx-aarch64" % brotliVersion,
     // lz4 compression. import net.jpountz.lz4
-    "at.yawk.lz4" % "lz4-java" % "1.11.2"
+    "at.yawk.lz4" % "lz4-java" % "1.12.0"
   )
 
   val webknossosTracingstoreDependencies: Seq[ModuleID] = Seq(
@@ -103,7 +104,7 @@ object Dependencies {
 
   val webknossosDependencies: Seq[ModuleID] = Seq(
     // Base64, Hashing. import org.apache.commons.codec
-    "commons-codec" % "commons-codec" % "1.22.1",
+    "commons-codec" % "commons-codec" % "1.23.0",
     // End-to-end tests, backend unit tests. import org.scalatestplus.play
     "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % "test",
     // Authenticated requests. import play.silhouette
@@ -115,7 +116,7 @@ object Dependencies {
     // Writing XML. import com.sun.xml.txw2
     "org.glassfish.jaxb" % "txw2" % "4.0.9",
     // Makes txw2 write self-closing tags in xml (which we want). Not imported.
-    "com.fasterxml.woodstox" % "woodstox-core" % "7.2.2",
+    "com.fasterxml.woodstox" % "woodstox-core" % "7.3.0",
     // Json Web Tokens (used for OIDC Auth). import pdi.jwt
     "com.github.jwt-scala" %% "jwt-play-json" % "11.0.4",
     // SQL Queries. import slick
@@ -127,12 +128,23 @@ object Dependencies {
     // SQL Queries postgres specifics. not imported.
     "org.postgresql" % "postgresql" % postgresVersion,
     /// WebAuthn for passkey authentication. import com.webauthn4j
-    "com.webauthn4j" % "webauthn4j-core" % "0.31.9.RELEASE" exclude ("com.fasterxml.jackson.core", "jackson-databind")
+    "com.webauthn4j" % "webauthn4j-core" % "0.31.11.RELEASE" exclude ("com.fasterxml.jackson.core", "jackson-databind")
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(
-    // Play framework relies on an older version of jackson-databind than webauthn4j. Because of that, we set the
-    // version to newest version supported by Play.
-    "com.fasterxml.jackson.core" % "jackson-databind" % "2.14.3"
+    // Transitive dependencies (Play, Pekko, play-json, cloud SDKs) pull in mixed jackson 2.x versions.
+    // Align them on one patched version. jackson-module-scala refuses to run with a different databind minor version.
+    "com.fasterxml.jackson.core" % "jackson-core" % jacksonVersion,
+    "com.fasterxml.jackson.core" % "jackson-databind" % jacksonVersion,
+    "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % jacksonVersion,
+    "com.fasterxml.jackson.dataformat" % "jackson-dataformat-xml" % jacksonVersion,
+    "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8" % jacksonVersion,
+    "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % jacksonVersion,
+    "com.fasterxml.jackson.module" % "jackson-module-parameter-names" % jacksonVersion,
+    "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion,
+    // Security patch for transitive dependency of commons-email
+    "com.sun.mail" % "jakarta.mail" % "1.6.8",
+    // Security patch for transitive dependency of cdm-core
+    "org.jdom" % "jdom2" % "2.0.6.1"
   )
 }

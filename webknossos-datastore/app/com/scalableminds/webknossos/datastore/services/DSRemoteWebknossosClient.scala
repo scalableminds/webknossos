@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
@@ -22,6 +23,7 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
   MagUploadInfo,
   ReportAttachmentUploadParameters,
   ReportDatasetUploadParameters,
+  ReportDatasetUploadResult,
   ReportMagUploadParameters
 }
 import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
@@ -95,12 +97,14 @@ class DSRemoteWebknossosClient @Inject() (
 
   def reportDatasetUpload(datasetId: ObjectId, parameters: ReportDatasetUploadParameters)(using
       tc: TokenContext
-  ): Fox[?] =
+  ): Fox[ReportDatasetUploadResult] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
       .addQueryParam("key", dataStoreKey)
       .addQueryParam("datasetId", datasetId)
       .withTokenFromContext
       .postJson[ReportDatasetUploadParameters](parameters)
+      // Older WEBKNOSSOS versions reply with an empty body.
+      .map(response => tryo(response.json.as[ReportDatasetUploadResult]).getOrElse(ReportDatasetUploadResult(None)))
 
   def reportMagUpload(parameters: ReportMagUploadParameters): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportMagUpload")

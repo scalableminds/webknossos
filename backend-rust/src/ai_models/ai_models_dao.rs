@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use serde_json::Value;
 use sqlx::{PgConnection, PgPool};
 
-use super::{AiInference, AiModel};
+use super::service::{AiInference, AiModel};
 use crate::{sql::Sql, users, util::id::ObjectId};
 
 /// AiModelDAO.readAccessQ for alias `m`: models shared with or owned by the

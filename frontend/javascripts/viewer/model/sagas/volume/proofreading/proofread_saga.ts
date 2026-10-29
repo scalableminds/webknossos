@@ -23,6 +23,7 @@ import type { UpdateUserSettingAction } from "viewer/model/actions/settings_acti
 import type {
   CreateNodeAction,
   DeleteNodeAction,
+  DeleteNodeAndReconnectNeighborsAction,
   SetNodePositionAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import type { EscapeAction } from "viewer/model/actions/ui_actions";
@@ -106,7 +107,7 @@ export default function* proofreadRootSaga(): Saga<void> {
   );
 
   yield* takeEvery(
-    ["CREATE_NODE", "DELETE_NODE", "SET_NODE_POSITION"],
+    ["CREATE_NODE", "DELETE_NODE", "DELETE_NODE_AND_RECONNECT_NEIGHBORS", "SET_NODE_POSITION"],
     runSagaAndCatchSoftError(checkForAgglomerateTreeModification),
   );
   yield* takeEvery(["UPDATE_USER_SETTING", "ESCAPE"], clearMinCutPartitionsOnMultiCutDeselect);
@@ -176,7 +177,11 @@ function* showToastIfSegmentOfOtherAgglomerateWasSelected(
 }
 
 function* checkForAgglomerateTreeModification(
-  action: CreateNodeAction | DeleteNodeAction | SetNodePositionAction,
+  action:
+    | CreateNodeAction
+    | DeleteNodeAction
+    | DeleteNodeAndReconnectNeighborsAction
+    | SetNodePositionAction,
 ): Saga<void> {
   let nodeId, treeId;
 

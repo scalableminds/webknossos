@@ -18,6 +18,7 @@ import {
   isUserInterfaceBlocked,
   mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
+import { datasetHasConnectomes } from "viewer/model/accessors/connectome_accessor";
 import { setBorderOpenStatusAction } from "viewer/model/actions/ui_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
@@ -53,6 +54,7 @@ import {
   getBorderOpenStatus,
   getMaximizedItemId,
   getPositionStatusOf,
+  getTabsetIdToToggleMaximize,
 } from "./flex_layout_helper";
 import { getLayoutConfig, LayoutEvents, layoutEmitter } from "./layout_persistence";
 
@@ -79,6 +81,17 @@ type Props = OwnProps & StateProps & DispatchProps;
 type State = {
   model: Model;
 };
+const rightBorderId = "right-border-tab-container";
+
+// The model of a sub-layout (e.g., the content of a border) is created lazily, usually when the
+// sub-layout is rendered for the first time. Create it here if it is accessed before that.
+function getSubLayoutModel(node: TabNode): Model {
+  const extraData = node.getExtraData();
+  if (extraData.model == null) {
+    extraData.model = Model.fromJson(node.getConfig().model);
+  }
+  return extraData.model;
+}
 const ignoredLayoutChangesByAnalytics = ["FlexLayout_SetActiveTabset", "FlexLayout_SelectTab"];
 type BorderOpenStatusKeys = keyof BorderOpenStatus;
 
@@ -157,6 +170,11 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
         this.openRightBorderTabById(BorderTabs.SegmentsView);
       }),
     );
+    this.unbindListeners.push(
+      layoutEmitter.on(LayoutEvents.showAbstractTreeTab, () => {
+        this.openRightBorderTabById(BorderTabs.AbstractTreeTab, BorderTabs.SkeletonTabView);
+      }),
+    );
     this.unbindListeners.push(this.attachKeyboardShortcuts());
   }
 
@@ -173,62 +191,85 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     return model;
   }
 
-  openRightBorderTabById(tabType: BorderTabType) {
-    const rightBorderId = "right-border-tab-container";
-    const node = this.state.model.getNodeById(rightBorderId);
-    if (node?.getType() !== "tab") return;
+  private getRightBorderModel(model: Model): Model | null {
+    const node = model.getNodeById(rightBorderId);
+    if (node?.getType() !== "tab") return null;
+    return getSubLayoutModel(node as TabNode);
+  }
+
+  // Adds the tab to the tabset that contains siblingTab, unless the tab already exists.
+  private addRightBorderTab(
+    rightBorderModel: Model,
+    tabType: BorderTabType,
+    siblingTab: BorderTabType,
+    select: boolean,
+  ) {
+    const tabDescriptor = getTabDescriptorForBorderTab(tabType);
+    if (rightBorderModel.getNodeById(tabDescriptor.id) != null) return;
+
+    const siblingNode = rightBorderModel.getNodeById(siblingTab.id);
+    const targetNode = siblingNode?.getParent() ?? rightBorderModel.getFirstTabSet();
+    rightBorderModel.doAction(
+      Actions.addNode(
+        tabDescriptor,
+        targetNode.getId(), // Don't create a new tab set, but add it to the existing one.
+        DockLocation.CENTER,
+        -1, // Add it to the end.
+        select,
+      ),
+    );
+  }
+
+  // If the tab is not part of the layout (e.g., because it is not part of the default layout
+  // or was closed), it is added next to tabToAddNextTo if given.
+  openRightBorderTabById(tabType: BorderTabType, tabToAddNextTo?: BorderTabType) {
+    const rightBorderModel = this.getRightBorderModel(this.state.model);
+    if (rightBorderModel == null) return;
+    if (rightBorderModel.getNodeById(tabType.id) == null) {
+      if (tabToAddNextTo == null) return;
+      this.addRightBorderTab(rightBorderModel, tabType, tabToAddNextTo, true);
+    }
 
     const isRightOpen = getBorderOpenStatus(this.state.model).right;
     if (!isRightOpen) this.toggleBorder("right");
-
-    const rightBorderModel = (node as TabNode).getExtraData().model;
-    if (rightBorderModel == null) return;
     rightBorderModel.doAction(Actions.selectTab(tabType.id));
   }
 
   adaptModelToConditionalTabs(model: Model) {
     /*
-     * Currently, this method only adapts the visibility/existence of the
-     * ConnectomeTab. It is controlled by the features attributes in
-     * application.conf (see `optInTabs`).
-     * In the future, this method can be adapted to handle the existence of
-     * tabs, too.
+     * This method adapts the visibility/existence of the ConnectomeTab.
+     * It is controlled by the features attributes in application.conf
+     * (see `optInTabs`) and is only shown if the dataset has connectome files.
+     * Also, it makes the AbstractTreeTab closable in layouts that were stored
+     * before the tab became closable.
      */
-    const rightBorderId = "right-border-tab-container";
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'getExtraData' does not exist on type 'No... Remove this comment to see the full error message
-    const rightBorderModel = model.getNodeById(rightBorderId).getExtraData().model;
-
+    const rightBorderModel = this.getRightBorderModel(model);
     if (rightBorderModel == null) {
       return;
     }
 
+    if (rightBorderModel.getNodeById(BorderTabs.AbstractTreeTab.id) != null) {
+      rightBorderModel.doAction(
+        Actions.updateNodeAttributes(BorderTabs.AbstractTreeTab.id, { enableClose: true }),
+      );
+    }
+
     const optInTabs: Array<string> = features().optInTabs || [];
-    const showConnectomeTab = optInTabs.indexOf(BorderTabs.ConnectomeView.id) > -1;
-    const connectomeTabDescriptor = getTabDescriptorForBorderTab(BorderTabs.ConnectomeView);
-    const node = rightBorderModel.getNodeById(connectomeTabDescriptor.id);
+    const showConnectomeTab =
+      optInTabs.includes(BorderTabs.ConnectomeView.id) &&
+      datasetHasConnectomes(Store.getState().dataset);
+    const node = rightBorderModel.getNodeById(BorderTabs.ConnectomeView.id);
 
     if (node && !showConnectomeTab) {
       // Tab exists, but shouldn't. Delete it.
-      rightBorderModel.doAction(Actions.deleteTab(connectomeTabDescriptor.id));
+      rightBorderModel.doAction(Actions.deleteTab(BorderTabs.ConnectomeView.id));
     } else if (!node && showConnectomeTab) {
       // Tab does not exist, but should. Add it next to the info tab.
-      const datasetInfoTabId = BorderTabs.DatasetInfoTabView.id;
-      const infoTabNode = rightBorderModel.getNodeById(datasetInfoTabId);
-
-      if (!infoTabNode) {
-        console.warn(`Could not find tab with id=${datasetInfoTabId}.`);
-        return;
-      }
-
-      const targetId = infoTabNode.getParent().getId();
-      rightBorderModel.doAction(
-        Actions.addNode(
-          connectomeTabDescriptor,
-          targetId, // Don't create a new tab set, but add it to the existing one.
-          DockLocation.CENTER,
-          -1, // Add it to the end.
-          false, // Don't focus it.
-        ),
+      this.addRightBorderTab(
+        rightBorderModel,
+        BorderTabs.ConnectomeView,
+        BorderTabs.DatasetInfoTabView,
+        false, // Don't focus it.
       );
     }
   }
@@ -257,13 +298,14 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
   toggleMaximize = () => {
     const { model } = this.state;
-    const activeNode = model.getActiveTabset();
+    const { activeViewport } = Store.getState().viewModeData.plane;
+    const tabsetId = getTabsetIdToToggleMaximize(model, activeViewport);
 
-    if (activeNode == null) {
+    if (tabsetId == null) {
       return;
     }
 
-    const toggleMaximiseAction = Actions.maximizeToggle(activeNode.getId());
+    const toggleMaximiseAction = Actions.maximizeToggle(tabsetId);
     model.doAction(toggleMaximiseAction);
     this.onAction(toggleMaximiseAction);
   };
@@ -405,13 +447,8 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     }
   }
 
-  renderSubLayout(node: Record<string, any>) {
-    let { model } = node.getExtraData();
-
-    if (model == null) {
-      model = Model.fromJson(node.getConfig().model);
-      node.getExtraData().model = model;
-    }
+  renderSubLayout(node: TabNode) {
+    const model = getSubLayoutModel(node);
 
     return (
       <FlexLayoutComponent
@@ -432,7 +469,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     );
   }
 
-  layoutFactory(node: Record<string, any>): React.ReactNode | null | undefined {
+  layoutFactory(node: TabNode): React.ReactNode | null | undefined {
     const component = node.getComponent();
     const id = node.getId();
 

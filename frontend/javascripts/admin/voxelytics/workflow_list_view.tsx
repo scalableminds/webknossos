@@ -13,7 +13,7 @@ import { type Key, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { VoxelyticsRunState, type VoxelyticsWorkflowListingRun } from "types/api_types";
 import { parseWorkflowInfo } from "./parse_api_data";
-import { runStateToStatus, VX_POLLING_INTERVAL } from "./utils";
+import { runStateToStatus } from "./utils";
 
 const { Search } = Input;
 
@@ -69,7 +69,6 @@ export default function WorkflowListView() {
     },
     // We use the select to transform the data because it is run on cached and fetched data
     select: (data) => data.map(parseWorkflowInfo),
-    refetchInterval: VX_POLLING_INTERVAL ?? false,
   });
 
   const getUserDisplayName = (run: VoxelyticsWorkflowListingRun) => {

@@ -324,7 +324,7 @@ function computeLayout(key: string): DagLayout {
 }
 
 // Laying out the DAG is expensive, so it is only recomputed when the graph structure changes,
-// not when only run states (e.g., while polling a running workflow) or the selection change.
+// not when only run states (e.g., when refreshing a running workflow) or the selection change.
 function useDagLayout(dag: VoxelyticsWorkflowDag): DagLayout {
   const layoutInputKey = JSON.stringify(getLayoutInput(dag));
   return useMemo(() => computeLayout(layoutInputKey), [layoutInputKey]);
@@ -513,6 +513,7 @@ function DAGView({
       multiSelectionKeyCode={null}
       selectionKeyCode={null}
       zoomActivationKeyCode={null}
+      panActivationKeyCode={null}
       fitViewOptions={FIT_VIEW_OPTIONS}
       minZoom={0.3}
       maxZoom={2}

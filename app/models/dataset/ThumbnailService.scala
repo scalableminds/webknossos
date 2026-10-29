@@ -36,6 +36,8 @@ class ThumbnailService @Inject() (
   private val DefaultThumbnailHeight = 400
   private val MaxThumbnailWidth = 4000
   private val MaxThumbnailHeight = 4000
+  // Must match the per-layer limit enforced by the datastore (DSThumbnailService)
+  private val MaxLayerFetchDimension = 3000
 
   // Can’t use None as layerName for whole-dataset thumbnails, because postgres cannot use nullable columns as primary keys.
   private val DatasetThumbnailLayerNameSentinel = ""
@@ -152,10 +154,15 @@ class ThumbnailService @Inject() (
           hasColorLayers
         )
       )
+      // Layers lacking a mag coarse enough for the zoom would need too many voxels, skip those.
+      renderableLayerParameters = layerParameters.filter(p =>
+        p.width <= MaxLayerFetchDimension && p.height <= MaxLayerFetchDimension
+      )
+      _ <- Fox.fromBool(renderableLayerParameters.nonEmpty) ?~> Msg.Dataset.noLayersRenderableAtZoom ~> NOT_FOUND
       client <- datasetService.clientFor(dataset)
       image <- client.getDatasetThumbnail(
         dataset,
-        DatasetThumbnailRequest(width, height, layerParameters, blendMode)
+        DatasetThumbnailRequest(width, height, renderableLayerParameters, blendMode)
       )
       _ <- thumbnailDAO.upsertThumbnail(
         dataset._id,

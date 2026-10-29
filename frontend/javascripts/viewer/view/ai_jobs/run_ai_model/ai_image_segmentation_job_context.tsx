@@ -43,6 +43,7 @@ interface RunAiModelJobContextType {
   newDatasetName: string;
   selectedLayer: APIDataLayer | null;
   seedGeneratorDistanceThreshold: number | null;
+  absoluteAffinityThreshold: number | null;
   isEvaluationActive: boolean;
   splitMergerEvaluationSettings: SplitMergerEvaluationSettings;
   customConfiguration: KeyValuePairs;
@@ -57,6 +58,7 @@ interface RunAiModelJobContextType {
   setNewDatasetName: (name: string) => void;
   setSelectedLayer: (layer: APIDataLayer) => void;
   setSeedGeneratorDistanceThreshold: (threshold: number | null) => void;
+  setAbsoluteAffinityThreshold: (threshold: number | null) => void;
   setIsEvaluationActive: (isActive: boolean) => void;
   setSplitMergerEvaluationSettings: (settings: SplitMergerEvaluationSettings) => void;
   setCustomConfiguration: (config: KeyValuePairs) => void;
@@ -93,6 +95,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
   const [seedGeneratorDistanceThreshold, setSeedGeneratorDistanceThreshold] = useState<
     number | null
   >(null);
+  const [absoluteAffinityThreshold, setAbsoluteAffinityThreshold] = useState<number | null>(null);
   const [isEvaluationActive, setIsEvaluationActive] = useState(false);
   const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
   const [splitMergerEvaluationSettings, setSplitMergerEvaluationSettings] =
@@ -121,6 +124,13 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       setNewDatasetName(`${dataset.name}_${selectedModel.name?.replace(/\s/g, "_")}`);
     }
   }, [dataset, selectedModel]);
+
+  // The affinity threshold is tuned per model, so don't carry it over to a newly selected model.
+  const selectedModelId = selectedModel?.id;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset whenever the selected model changes.
+  useEffect(() => {
+    setAbsoluteAffinityThreshold(null);
+  }, [selectedModelId]);
 
   useEffect(() => {
     if (colorLayers.length > 0) {
@@ -240,6 +250,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
                     splitMergerEvaluationSettings.minimumMergerPathLengthInNm,
                 }
               : {}),
+            absoluteAffinityThreshold,
             customConfiguration,
           });
           break;
@@ -284,6 +295,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     isViewMode,
     annotationId,
     seedGeneratorDistanceThreshold,
+    absoluteAffinityThreshold,
     isEvaluationActive,
     splitMergerEvaluationSettings,
     customConfiguration,
@@ -300,6 +312,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     newDatasetName,
     selectedLayer,
     seedGeneratorDistanceThreshold,
+    absoluteAffinityThreshold,
     isEvaluationActive,
     splitMergerEvaluationSettings,
     customConfiguration,
@@ -309,6 +322,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     setNewDatasetName,
     setSelectedLayer,
     setSeedGeneratorDistanceThreshold,
+    setAbsoluteAffinityThreshold,
     setIsEvaluationActive,
     setSplitMergerEvaluationSettings,
     setCustomConfiguration,

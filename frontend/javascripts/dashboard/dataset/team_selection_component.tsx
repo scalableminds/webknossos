@@ -1,14 +1,14 @@
 import { PlusOutlined, TeamOutlined } from "@ant-design/icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { getEditableTeams, getTeams } from "admin/rest_api";
 import CreateTeamModalView from "admin/team/create_team_modal_view";
 import { Button, Divider, Select } from "antd";
-import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrManager } from "libs/utils";
 import compact from "lodash-es/compact";
 import unionBy from "lodash-es/unionBy";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { APITeam } from "types/api_types";
 
 type TeamSelectionComponentProps = {
@@ -33,9 +33,18 @@ function TeamSelectionComponent({
   disabled,
   prefix,
 }: TeamSelectionComponentProps) {
-  const [possibleTeams, setPossibleTeams] = useState<APITeam[]>([]);
+  const queryClient = useQueryClient();
+  const teamsQueryKey = allowNonEditableTeams ? ["teams"] : ["editableTeams"];
+  const { data: fetchedTeams, isFetching: isFetchingData } = useQueryWithErrorHandling(
+    {
+      queryKey: teamsQueryKey,
+      queryFn: () => (allowNonEditableTeams ? getTeams() : getEditableTeams()),
+      refetchOnWindowFocus: false,
+    },
+    "Could not load teams.",
+  );
+  const possibleTeams = useMemo(() => fetchedTeams ?? [], [fetchedTeams]);
   const [selectedTeams, setSelectedTeams] = useState<APITeam[]>(value ? [value].flat() : []);
-  const [isFetchingData, setIsFetchingData] = useState(false);
   const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false);
   const activeUser = useWkSelector((state) => state.activeUser);
   const canCreateTeams = allowManagingTeams === true && isUserAdminOrManager(activeUser);
@@ -45,25 +54,14 @@ function TeamSelectionComponent({
     setSelectedTeams(value ? [value].flat() : []);
   }, [value]);
 
-  // Fetch teams on mount
-  useEffectOnlyOnce(() => {
-    fetchData();
-  });
-
-  async function fetchData() {
-    setIsFetchingData(true);
-    try {
-      const possibleTeams = allowNonEditableTeams ? await getTeams() : await getEditableTeams();
-      setPossibleTeams(possibleTeams);
-      if (afterFetchedTeams) {
-        afterFetchedTeams(possibleTeams);
-      }
-    } catch (_exception) {
-      Toast.error("Could not load teams.");
-    } finally {
-      setIsFetchingData(false);
+  // Notify the parent whenever the teams were (re)loaded.
+  const afterFetchedTeamsRef = useRef(afterFetchedTeams);
+  afterFetchedTeamsRef.current = afterFetchedTeams;
+  useEffect(() => {
+    if (fetchedTeams != null) {
+      afterFetchedTeamsRef.current?.(fetchedTeams);
     }
-  }
+  }, [fetchedTeams]);
 
   const getAllTeams = useCallback((): APITeam[] => {
     return unionBy(possibleTeams, selectedTeams, (t) => t.id);
@@ -93,7 +91,9 @@ function TeamSelectionComponent({
 
   const onTeamCreated = (newTeam: APITeam) => {
     setIsCreateTeamModalOpen(false);
-    setPossibleTeams((teams) => unionBy(teams, [newTeam], (t) => t.id));
+    queryClient.setQueryData(teamsQueryKey, (teams: APITeam[] = []) =>
+      unionBy(teams, [newTeam], (t) => t.id),
+    );
     const newSelectedTeams =
       mode === "multiple" ? unionBy(selectedTeams, [newTeam], (t) => t.id) : [newTeam];
     setSelectedTeams(newSelectedTeams);

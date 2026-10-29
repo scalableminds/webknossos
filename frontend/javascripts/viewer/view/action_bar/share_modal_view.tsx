@@ -7,6 +7,7 @@ import {
   ShareAltOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   createShortLink,
@@ -40,7 +41,7 @@ import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { copyToClipboard } from "libs/clipboard";
 import { makeComponentLazy } from "libs/react_helpers";
-import { useWkSelector } from "libs/react_hooks";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
 import isEqual from "lodash-es/isEqual";
@@ -245,7 +246,6 @@ function ShareModalViewInner(props: Props) {
   const annotationVisibility = annotation.visibility;
   const [visibility, setVisibility] = useState(annotationVisibility);
   const [isChangingInProgress, setIsChangingInProgress] = useState(false);
-  const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
 
   const othersMayEdit = isAnnotationEditableByNonOwners(annotation);
@@ -264,18 +264,15 @@ function ShareModalViewInner(props: Props) {
   const isMappingStateFixed = useWkSelector(isMappingStateFixedForLiveCollaboration);
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
 
-  const fetchAndSetSharedTeams = async () => {
-    if (!activeUser) {
-      return;
-    }
-    const fetchedSharedTeams = await getTeamsForSharedAnnotation(annotationType, annotationId);
-    setSharedTeams(fetchedSharedTeams);
-  };
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Refetch once annotation or user changes.
-  useEffect(() => {
-    fetchAndSetSharedTeams();
-  }, [annotationType, annotationId, activeUser]);
+  const queryClient = useQueryClient();
+  const sharedTeamsQueryKey = ["sharedTeams", annotationType, annotationId, activeUser?.id];
+  const { data: sharedTeams = [] } = useQueryWithErrorHandling({
+    queryKey: sharedTeamsQueryKey,
+    queryFn: () => getTeamsForSharedAnnotation(annotationType, annotationId),
+    enabled: activeUser != null,
+    refetchOnWindowFocus: false,
+  });
+  const setSharedTeams = (teams: APITeam[]) => queryClient.setQueryData(sharedTeamsQueryKey, teams);
 
   const reportSuccessfulChange = (newVisibility: APIAnnotationVisibility) => {
     const randomKeyToAllowDuplicates = Math.random().toString(36).substring(0, 5);

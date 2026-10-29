@@ -289,11 +289,9 @@
 .navbar-header,
 .statusbar-footer {
   // The antd controls within navbar and footer are styled by the dark NavAndStatusBarTheme
-  // (frontend/javascripts/theme.ts). This mirrors its "Text on ink — Muted" color, because
-  // var(--ant-color-text-secondary) is not in a dark scope on the header/footer itself.
-  @color-text-secondary: #8c8ead;
-
-  color: @color-text-secondary;
+  // (frontend/javascripts/theme.ts). The header/footer itself is not in a dark scope, so
+  // var(--ant-color-text-secondary) would be the light one here.
+  color: var(--color-text-on-ink-muted);
   z-index: 1000;
 
   &.statusbar-footer {
@@ -310,17 +308,16 @@
 
   &.navbar-header {
     width: 100%;
-    // Divider towards the page content (DS "Hairline on ink"). With border-box sizing this
-    // stays within --navbar-height; the 1px the menu overflows is clipped by overflow-y.
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    // Divider towards the page content. With border-box sizing this stays within
+    // --navbar-height; the 1px the menu overflows is clipped by overflow-y.
+    border-bottom: 1px solid var(--color-hairline-on-ink);
   }
 
   .navbar-separator {
     // Shorter than the navbar so that it floats; the header's align-items centers it.
     height: 24px;
     margin-left: 2px;
-    // DS "Hairline on ink"
-    border-left: 1px rgba(255, 255, 255, 0.12) solid;
+    border-left: 1px var(--color-hairline-on-ink) solid;
   }
 
   .ant-select-arrow,
@@ -371,7 +368,7 @@
     height: auto;
     line-height: 10px;
     // Match the gray of the other statusbar icons.
-    color: @color-text-secondary !important;
+    color: var(--color-text-on-ink-muted) !important;
     background-color: inherit;
   }
 
@@ -544,5 +541,5 @@
 
 .read-only-button.ant-btn-dangerous:disabled {
   background-color: var(--ant-color-warning) !important;
-  color: #f5eddf !important;
+  color: var(--ant-color-text-light-solid) !important;
 }

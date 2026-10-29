@@ -45,7 +45,12 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
   UNKNOWN: {
     tooltip:
       "The status information for this job could not be retrieved. Please try again in a few minutes, or contact us if you need assistance.",
-    icon: <QuestionCircleTwoTone twoToneColor="#a3a3a3" className="icon-margin-right" />,
+    icon: (
+      <QuestionCircleTwoTone
+        twoToneColor={ThemeIndependentStatusColor.neutral}
+        className="icon-margin-right"
+      />
+    ),
   },
   SUCCESS: {
     tooltip: "This job has successfully been executed.",
@@ -81,7 +86,12 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
   },
   CANCELLED: {
     tooltip: "This job was cancelled.",
-    icon: <CloseCircleTwoTone twoToneColor="#aaaaaa" className="icon-margin-right" />,
+    icon: (
+      <CloseCircleTwoTone
+        twoToneColor={ThemeIndependentStatusColor.neutral}
+        className="icon-margin-right"
+      />
+    ),
   },
 };
 const refreshInterval = 5000;

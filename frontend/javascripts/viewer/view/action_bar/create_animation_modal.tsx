@@ -33,7 +33,7 @@ import {
 } from "libs/utils";
 import type React from "react";
 import { useState } from "react";
-import { ModalWidth } from "theme";
+import { ColorViewerInk, ModalWidth } from "theme";
 import type { Mesh } from "three";
 import {
   type APIDataLayer,
@@ -460,9 +460,9 @@ function CreateAnimationModal(props: Props) {
                 aspectRatio: "16 / 9",
                 objectFit: "cover",
                 borderRadius: token.borderRadiusLG,
-                // Kept as a literal: letterbox color behind the example video, picked to match
-                // the (fixed) dark background of the video asset itself in both themes.
-                background: "#0d0f17",
+                // Letterbox color behind the example video. It matches the (fixed) dark
+                // background of the video asset itself, so it stays the same in both themes.
+                background: ColorViewerInk,
               }}
               controls={true}
               autoPlay

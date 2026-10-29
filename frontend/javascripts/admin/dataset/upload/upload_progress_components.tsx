@@ -201,7 +201,11 @@ export function ThumbnailPanel({
           background: "linear-gradient(transparent, rgba(0, 0, 0, 0.6))",
         }}
       >
-        <MiddleEllipsisText text={datasetName} strong style={{ color: "#fff" }} />
+        <MiddleEllipsisText
+          text={datasetName}
+          strong
+          style={{ color: token.colorTextLightSolid }}
+        />
       </div>
     </div>
   );

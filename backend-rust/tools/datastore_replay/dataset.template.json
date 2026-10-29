@@ -74,15 +74,6 @@
       "expected_status": 200,
       "query_env": {
         "token": "WK_REPLAY_TOKEN"
-      },
-      "declared_divergence": {
-        "reason": "Scala answers an aligned single bucket fully outside the layer bbox with a failure (no bytes) once the chunk it clamps onto was cached via the full-chunk skip-typing shortcut (cache key ignores the flag); cold it zero-fills like Rust. Rust always zero-fills without a failure. Scala answer depends on cache history, so no per-side oracle (checkpoints/datastore-ds6-negative-buckets.md).",
-        "differences": [
-          "header:failure-bucket-indices",
-          "header:missing-buckets",
-          "body"
-        ],
-        "unverified": true
       }
     },
     {

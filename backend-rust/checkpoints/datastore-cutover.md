@@ -78,6 +78,11 @@ IN PROGRESS. DC1a–e (dataset, mag and attachment uploads), DC2 (first pass inc
   - Observed: Scala answers cancel and failed finishes before its Redis cleanup completes (unawaited future); the phase re-reads for up to 3 s and reports `delayed_cleanup`.
   - **Finding (both sides):** JSON mapping files and other organization lookups use the organization's preferred base directory (`getOneBaseDirForOrga`), not the dataset's root. With an organization-specific upload base directory, JSON mappings of datasets in other base directories are not found. Harness uses an organization-agnostic upload root for that reason.
 
+- Resolved declarations removed (2026-10-29): three Scala bugs behind declared divergences were fixed on master, so their cases failed as `declared_divergence_resolved`.
+  - Remote ZIP over HTTP (Scala dropped X-Auth-Token on ranged reads): #10226 (`withHttpHeaders` -> `addHttpHeaders` in HttpsDataVault). Removed the breadth declaration and the zero-filled Scala golden of `zip-zarr2-http-crop`.
+  - Shortcut chunk cache key (DC1c `batch-with-missing`, `attachments-seg`/`connectome-attachments` `zarr2-layer-cube-2`, segment statistics `volume`/`boundingBox`): #10172 gives skip-typing shortcut reads their own chunk cache key. The statistics failure was the same bug (loadMultiple read the flat cached chunk). Verified by experiment: Scala with only the `'s'` key suffix removed brings back exactly these cases (`/tmp/wk-blosc-live-20261029-exp-cachekey`).
+  - Evidence: `/tmp/wk-blosc-live-20261029-c` (before: only resolved declarations), `-d` all pass (corpus 41, contract 58, breadth 1149 x 3, uploads 78) with the c-blosc Rust binary (sha256 b89c3e9f...). The breadth phase and runner tests need Pillow (Homebrew python3 lacks it; use a venv).
+
 ## Evidence
 
 - Baseline with stale binary `/tmp/wk-ds6-live-20261017-a`: 41×3 corpus 15 body mismatches (5 cases), contract 9 cases — identical to 2026-10-12.

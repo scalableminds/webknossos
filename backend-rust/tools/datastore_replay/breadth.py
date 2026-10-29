@@ -9,8 +9,6 @@ TOKEN = {'token': 'WK_REPLAY_TOKEN'}
 VOXEL_ROUTES = ('histogram', 'raw-get', 'knossos-bucket', 'thumbnail', 'zarr2-layer-cube', 'zarr3-layer-cube-dots')
 SEG32 = 'Scala ByteUtils.intToBytes shifts by 4 instead of 8 bits for uint32 compressed segmentation (bits32 also ' \
         'hits the full-width index mask bug); every voxel route inherits it'
-OUT_OF_BBOX = ('Scala fails an aligned bucket fully outside the bbox once the clamped chunk was cached via the '
-               'full-chunk shortcut (cache-history dependent, datastore-cutover.md DC1c); Rust zero-fills')
 JPEG = 'Java ImageIO vs pure-Rust JPEG IDCT rounding (max 1 level in voxels, 2 after thumbnail re-encoding)'
 # (dataset name, route suffixes, allowed differences, reason). Exact per-case lists, so a new
 # difference elsewhere still fails and a fixed one fails as declared_divergence_resolved.
@@ -23,19 +21,12 @@ DECLARED = [
     ('compressed-segmentation-seg64', ('thumbnail',), ['image'],
      'Scala ImageCreator.normalizeIntensityUint64 adds 0x8000000000000000L.toDouble (= -2^63), so uint64 values '
      '>= 2^63 turn negative and render black; Rust maps them unsigned (histogram range 0..2^64 -> 128)'),
-    ('zip-zarr2-http', VOXEL_ROUTES + ('find-data', 'zarr2-layer-cube-2', 'proxy-mags-info'),
-     ['status', 'header:content-type', 'header:failure-bucket-indices', 'header:missing-buckets', 'body', 'image'],
-     'Scala Play withHttpHeaders drops X-Auth-Token on ranged remote ZIP reads (403), so data routes fail or zero-fill'),
     ('n5-gzip', ('find-data', 'histogram'), ['body'],
      'Scala FindDataService uses handleDataRequest without bbox clipping, so it samples voxels outside the layer '
      'bbox (and reports a bucket-aligned position outside it); Rust clips to the bbox. Open decision'),
     ('attachments-seg', ('thumbnail',), ['image'],
      'JPEG encoders (Java ImageIO vs jpeg-encoder) differ in chroma at segment colour edges; grey thumbnails decode '
      'pixel-identical'),
-    ('attachments-seg', ('zarr2-layer-cube-2',), ['status', 'header:content-type', 'body'], OUT_OF_BBOX),
-    ('connectome-attachments', ('zarr2-layer-cube-2',), ['status', 'header:content-type', 'body'],
-     'Scala fails an aligned bucket fully outside the bbox once the clamped chunk was cached via the full-chunk '
-     'shortcut (cache-history dependent, datastore-cutover.md DC1c); Rust zero-fills'),
 ]
 
 

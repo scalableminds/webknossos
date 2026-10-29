@@ -148,11 +148,7 @@ def build(output, attachments=False, bench=False):
         else:
             locator = '${FIXTURE_ROOT}/' + str(archive.relative_to(output))
         zipped['dataSource']['dataLayers'][0]['mags'][0]['path'] = locator + '|zip:color/1'
-        c.case(zipped, 'zip-zarr2-' + ('http' if remote else 'local') + '-crop', [2, 2, 2], [2, 2, 2], expected,
-               divergence='Scala Play3.0.12 withHttpHeaders rebuilds headers from empty TreeMap and drops X-Auth-Token on ranged ZIP reads; native/Rust bytes retained' if remote else None)
-        if remote:
-            # Scala's denied ranged read fails the bucket, which readData answers with zero fill.
-            c.cases[-1]['expected_sha256']['scala'] = digest(bytes(len(expected)))
+        c.case(zipped, 'zip-zarr2-' + ('http' if remote else 'local') + '-crop', [2, 2, 2], [2, 2, 2], expected)
     for variant in ('little_f', 'big_c', 'gzip', 'zstd', 'blosc', 'crc', 'shard_start', 'shard_end'):
         record, _ = c.dataset('zarr3-' + variant.replace('_', '-'), 'zarr3', 'uint16', [0, 0, 0], [7, 6, 5], cxyz, 'zarr3/' + variant)
         c.case(record, 'zarr3-' + variant.replace('_', '-') + '-crop', [1, 1, 1], [6, 5, 4], (FIXTURES / f'zarr3/{variant}/expected.bin').read_bytes())
@@ -390,13 +386,8 @@ def attachment_routes(c, output):
         add(f'index-{segment}', f'/segmentIndex/{segment}', 'POST', {'mag': [1, 1, 1], 'cubeSize': [32, 32, 32]})
     add('index-batch', '/segmentIndex', 'POST', {'segmentIds': segments, 'mag': [1, 1, 1], 'cubeSize': [32, 32, 32]})
     for metric in ('volume', 'boundingBox', 'surfaceArea', 'covarianceMatrix', 'maxDistance', 'centerOfMass', 'sphericity'):
+        # The real-world index references buckets far outside this 32^3 layer (like a cropped bbox).
         add(f'stats-{metric}', f'/segmentStatistics/{metric}', 'POST', {'mag': [1, 1, 1], 'segmentIds': segments})
-        if metric in ('volume', 'boundingBox'):
-            # The real-world index references buckets far outside this 32^3 layer (like a cropped bbox).
-            cases[-1]['declared_divergence'] = {
-                'reason': 'Scala handleMultipleBucketRequests/loadMultiple throws IllegalArgumentException for '
-                          'segment-index buckets outside the layer (e.g. after cropping the bbox) and fails the '
-                          'statistic; Rust reads them as zeros', 'differences': ['status', 'body'], 'unverified': True}
     java_text = ('same status; the error message is the Java exception text of the Scala HDF5 reader '
                  '(ArrayIndexOutOfBounds / jhdf offset check) vs the Rust reader wording')
     declared = {

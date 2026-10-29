@@ -136,24 +136,23 @@ impl StatisticsFileService {
                 let mut f = Fields::new(&vx["artifact_attributes"]);
                 let mag = f.opt("mag", Vec3Int::from_json);
                 let mapping = f.opt("mapping_name", read_string);
-                f.finish()
-                    .map_err(|e| DsError::failure(e.to_string()).wrap(parse_error))?;
+                f.finish().map_err(|e| DsError::from(e).wrap(parse_error))?;
                 let version = read_i64(&vx["artifact_schema_version"])
-                    .map_err(|e| DsError::failure(e.to_string()).wrap(parse_error))?;
+                    .map_err(|e| DsError::from(e).wrap(parse_error))?;
                 if version < 11 {
                     return Err(DsError::failure(format!(
                         "Segment statistics file has format version {version}, but at least 11 \
                     is required."
                     )));
                 }
-                let mag = mag.map_err(|e| DsError::failure(e.to_string()).wrap(parse_error))?;
+                let mag = mag.map_err(|e| DsError::from(e).wrap(parse_error))?;
                 if mag.is_some_and(|m| m.x <= 0 || m.y <= 0 || m.z <= 0) {
                     return Err(DsError::failure("Invalid segment statistics file mag."));
                 }
                 Ok(Arc::new(Attributes {
                     mag,
                     mapping: mapping
-                        .map_err(|e| DsError::failure(e.to_string()).wrap(parse_error))?
+                        .map_err(|e| DsError::from(e).wrap(parse_error))?
                         .filter(|s| !s.is_empty()),
                 }))
             })

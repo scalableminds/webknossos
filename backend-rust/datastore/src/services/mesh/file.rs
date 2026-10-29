@@ -181,16 +181,15 @@ impl MeshFileService {
                     let hash = f.req("hash_function", read_string);
                     let buckets = f.req("n_buckets", read_i64);
                     let mapping = f.opt("mapping_name", read_string);
-                    f.finish().map_err(|e| DsError::failure(e.to_string()))?;
-                    let field = |e: crate::models::json::JsError| DsError::failure(e.to_string());
+                    f.finish()?;
                     Ok(Attributes {
-                        version: read_i64(&vx["artifact_schema_version"]).map_err(field)?,
-                        format: format.map_err(field)?,
-                        multiplier: multiplier.map_err(field)?,
-                        transform: transform.map_err(field)?,
-                        hash: hash.map_err(field)?,
-                        buckets: buckets.map_err(field)?,
-                        mapping: mapping.map_err(field)?,
+                        version: read_i64(&vx["artifact_schema_version"])?,
+                        format: format?,
+                        multiplier: multiplier?,
+                        transform: transform?,
+                        hash: hash?,
+                        buckets: buckets?,
+                        mapping: mapping?,
                     })
                 };
                 Ok(Arc::new(parse().map_err(|e| {

@@ -210,15 +210,14 @@ impl ConnectomeService {
                     .map_err(|e| DsError::from_exception(e).wrap(error))?;
                 let vx = &json["attributes"]["voxelytics"];
                 read_i64(&vx["artifact_schema_version"])
-                    .map_err(|e| DsError::failure(e.to_string()).wrap(error))?;
+                    .map_err(|e| DsError::from(e).wrap(error))?;
                 let mut f = Fields::new(&vx["artifact_attributes"]);
                 let mapping = f.req("mapping_name", read_string);
                 let types = f.req("synapse_type_names", |v| read_list(v, read_string));
-                f.finish()
-                    .map_err(|e| DsError::failure(e.to_string()).wrap(error))?;
+                f.finish().map_err(|e| DsError::from(e).wrap(error))?;
                 Ok(Arc::new(Attributes {
-                    mapping: mapping.map_err(|e| DsError::failure(e.to_string()).wrap(error))?,
-                    types: types.map_err(|e| DsError::failure(e.to_string()).wrap(error))?,
+                    mapping: mapping.map_err(|e| DsError::from(e).wrap(error))?,
+                    types: types.map_err(|e| DsError::from(e).wrap(error))?,
                 }))
             })
             .await

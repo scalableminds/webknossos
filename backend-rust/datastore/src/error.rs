@@ -177,6 +177,13 @@ impl From<webknossos_common::upath::UPathError> for DsError {
     }
 }
 
+/// Converts a JSON reader error into a 400 failure carrying its message.
+impl From<crate::models::JsError> for DsError {
+    fn from(error: crate::models::JsError) -> Self {
+        Self::failure(error.to_string())
+    }
+}
+
 /// Response extension: the status came from a Scala `ParamFailure` (`~> status`), so Play
 /// answers with it instead of the controller's `defaultErrorCode`.
 #[derive(Debug, Clone, Copy)]

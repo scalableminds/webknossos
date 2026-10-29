@@ -14,7 +14,7 @@ use crate::{
         zarr3::open_zarr3_array,
     },
     datavault::{ByteRange, DataVaultService},
-    error::{DsError, DsResult},
+    error::{DsError, DsResult, blocking},
     models::{
         DataSourceId, LayerAttachment, StaticLayer, UPath,
         enums::LayerAttachmentDataformat,
@@ -141,14 +141,10 @@ impl MeshFileService {
         let file = self
             .hdf5
             .get_or_load(key.cache_key(), || async move {
-                tokio::task::spawn_blocking(move || Ok(Arc::new(Hdf5Reader::open(&path)?)))
-                    .await
-                    .map_err(DsError::from_exception)?
+                blocking(move || Ok(Arc::new(Hdf5Reader::open(&path)?))).await
             })
             .await?;
-        tokio::task::spawn_blocking(move || operation(&file))
-            .await
-            .map_err(DsError::from_exception)?
+        blocking(move || operation(&file)).await
     }
     async fn attributes(
         &self,

@@ -14,7 +14,7 @@ use std::{
 use serde_json::Value;
 
 use crate::{
-    error::{DsError, DsResult},
+    error::{DsError, DsResult, blocking},
     models::DataSourceId,
     redis::store::RedisStore,
     services::{BaseDirService, dataset::files::delete_directory_recursively},
@@ -647,11 +647,7 @@ impl UploadService {
     ) -> DsResult<()> {
         let bases = self.base_dirs.clone();
         let organization = source.organization_id.clone();
-        tokio::task::spawn_blocking(move || {
-            bases.get_one_local_for_org(&organization, true, true, true)
-        })
-        .await
-        .map_err(DsError::from_exception)??;
+        blocking(move || bases.get_one_local_for_org(&organization, true, true, true)).await?;
         let upload_id = &info.upload_id;
         tracing::info!(
             "Reserving {}...",
@@ -820,9 +816,7 @@ impl UploadService {
             "Cleaning up uploaded {}. Reason: {reason}",
             upload_dir.display()
         );
-        tokio::task::spawn_blocking(move || delete_directory_recursively(&upload_dir))
-            .await
-            .map_err(DsError::from_exception)??;
+        blocking(move || delete_directory_recursively(&upload_dir)).await?;
         store.clean_up(upload_id).await
     }
 

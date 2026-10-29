@@ -6,7 +6,7 @@ use crate::{
         wk::{AlfuCache, WkClient},
     },
     datareaders::RequestedAdditionalCoordinate,
-    error::{DsError, DsResult},
+    error::{DsError, DsResult, blocking},
     models::{
         DataSourceId, StaticLayer, UsableDataSource, Vec3Int,
         data_requests::{Cuboid, VoxelPosition},
@@ -219,10 +219,7 @@ impl FullMeshService {
                     )));
                 }
                 let offset = chunk.position;
-                let raw =
-                    tokio::task::spawn_blocking(move || draco_to_stl(&bytes, offset, scale, bits))
-                        .await
-                        .map_err(DsError::from_exception)??;
+                let raw = blocking(move || draco_to_stl(&bytes, offset, scale, bits)).await?;
                 chunks.push(raw);
             }
             return Ok(chunks);

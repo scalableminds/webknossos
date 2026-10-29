@@ -8,7 +8,7 @@ use serde_json::json;
 use crate::{
     access::TokenContext,
     clients::wk::WkClient,
-    error::{DsError, DsResult},
+    error::{DsError, DsResult, blocking, blocking_value},
     models::{
         DataSource, LayerAttachment, LayerAttachmentType, MagLocator, UPath, UsableDataSource,
         VoxelSize, enums::LayerCategory,
@@ -108,14 +108,6 @@ pub struct FinishContext<'a> {
     pub data_sources: &'a DataSourceService,
     pub wk_client: &'a WkClient,
     pub tc: &'a TokenContext,
-}
-
-async fn blocking<T: Send + 'static>(
-    f: impl FnOnce() -> DsResult<T> + Send + 'static,
-) -> DsResult<T> {
-    tokio::task::spawn_blocking(f)
-        .await
-        .map_err(DsError::from_exception)?
 }
 
 impl FinishContext<'_> {
@@ -422,7 +414,7 @@ impl FinishContext<'_> {
             return Ok(());
         }
         let dir = unpack_to.to_path_buf();
-        let kind = blocking(move || Ok(guess_type(&dir))).await?;
+        let kind = blocking_value(move || guess_type(&dir)).await?;
         match kind {
             UploadedDataSourceType::Wkw => {
                 let dir = unpack_to.to_path_buf();
@@ -434,9 +426,10 @@ impl FinishContext<'_> {
                     unpack_to.to_path_buf(),
                     organization.to_owned(),
                 );
-                let source =
-                    blocking(move || Ok(service.data_source_from_dir(&dir, &organization, false)))
-                        .await?;
+                let source = blocking_value(move || {
+                    service.data_source_from_dir(&dir, &organization, false)
+                })
+                .await?;
                 if let DataSource::Usable(usable) = source
                     && !usable.all_explicit_paths().iter().all(|p| {
                         self.data_sources
@@ -504,7 +497,7 @@ impl FinishContext<'_> {
         let dir = path.to_path_buf();
         let layer_dirs = blocking(move || {
             let dirs = list_directories(&dir)?;
-            Ok(match kind {
+            Ok::<_, DsError>(match kind {
                 UploadedDataSourceType::ZarrMultilayer => dirs
                     .into_iter()
                     .filter(|d| {
@@ -581,7 +574,8 @@ impl FinishContext<'_> {
             source.organization_id.clone(),
         );
         let from_dir =
-            blocking(move || Ok(service.data_source_from_dir(&dir, &organization, false))).await?;
+            blocking_value(move || service.data_source_from_dir(&dir, &organization, false))
+                .await?;
         let usable = match from_dir {
             DataSource::Usable(usable) => usable,
             DataSource::Unusable(unusable) => {
@@ -592,11 +586,7 @@ impl FinishContext<'_> {
             }
         };
         let (dir, referenced) = (unpacked.to_path_buf(), usable.clone());
-        blocking(move || {
-            delete_files_not_referenced(&dir, &referenced);
-            Ok(())
-        })
-        .await?;
+        blocking_value(move || delete_files_not_referenced(&dir, &referenced)).await?;
         let new_base = if let Some(base) = self.s3_upload_base(&source.organization_id) {
             let target = base.join(&source.directory_name);
             tracing::info!("finishUpload for {dataset_id}: Copying data to {target}...");

@@ -19,7 +19,7 @@ use crate::{
     clients::wk::WkClient,
     controller,
     datavault::{ByteRange, DataVaultService},
-    error::DsError,
+    error::{DsError, blocking},
     models::{UPath, Vec3Double, VoxelSize},
     services::BaseDirService,
 };
@@ -110,11 +110,9 @@ async fn download(
         .await?;
     let properties = wk_client.get_job_export_properties(&job_id).await?;
     let organization = properties.organization_id.clone();
-    let orga_dir = tokio::task::spawn_blocking(move || {
-        base_dirs.get_one_local_for_org(&organization, false, false, false)
-    })
-    .await
-    .map_err(DsError::from_exception)??;
+    let orga_dir =
+        blocking(move || base_dirs.get_one_local_for_org(&organization, false, false, false))
+            .await?;
     let full_path = properties.full_path_in(&orga_dir);
     let file = match tokio::fs::File::open(&full_path).await {
         Ok(file) if full_path.is_file() => file,

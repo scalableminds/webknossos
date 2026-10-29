@@ -9,7 +9,7 @@ use crate::{
         zarr3::open_zarr3_array,
     },
     datavault::{ByteRange, DataVaultService},
-    error::{DsError, DsResult},
+    error::{DsError, DsResult, blocking},
     models::{
         DataSourceId, LayerAttachment, LayerAttachmentDataformat, StaticLayer, UPath,
         json::{Fields, read_i64, read_list, read_string},
@@ -148,9 +148,7 @@ impl ConnectomeService {
                     .path
                     .to_local_path()
                     .map_err(|_| DsError::failure("HDF5 connectomes require a local file."))?;
-                tokio::task::spawn_blocking(move || Hdf5Reader::open(&path).map(Arc::new))
-                    .await
-                    .map_err(DsError::from_exception)?
+                blocking(move || Hdf5Reader::open(&path).map(Arc::new)).await
             })
             .await
             .map_err(|e| e.wrap("Could not open connectome file for reading."))
@@ -307,12 +305,11 @@ impl ConnectomeService {
         if key.attachment.data_format == LayerAttachmentDataformat::Hdf5 {
             let file = self.hdf5(key).await?;
             let name = name.to_owned();
-            tokio::task::spawn_blocking(move || {
+            blocking(move || {
                 file.uint64_values(&name, start as u64, count as u64, columns.map(|c| c as u64))
                     .map(|v| v.into_iter().map(|v| v as i64).collect())
             })
             .await
-            .map_err(DsError::from_exception)?
         } else {
             let array = self.array(key, name, token).await?;
             let (offset, shape) = if let Some(columns) = columns {

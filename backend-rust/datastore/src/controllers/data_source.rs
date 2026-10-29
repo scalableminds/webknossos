@@ -8,7 +8,7 @@ use crate::{
     config::DatastoreConfig,
     controller,
     datavault::DataVaultService,
-    error::{DsError, DsResult},
+    error::{DsError, DsResult, blocking, blocking_value},
     models::{
         DataSource, DataSourceWithRootPathInfo, DiskWriteError, UsableDataSource,
         update_data_source_on_disk,
@@ -122,9 +122,7 @@ async fn create_org_directory(
     access
         .validate_access(UserAccessRequest::administrate_datasets_of(&org), &tc)
         .await?;
-    tokio::task::spawn_blocking(move || base_dirs.get_one_local_for_org(&org, false, true, true))
-        .await
-        .map_err(DsError::from_exception)??;
+    blocking(move || base_dirs.get_one_local_for_org(&org, false, true, true)).await?;
     Ok(StatusCode::OK)
 }
 
@@ -318,14 +316,6 @@ fn read_object_id(json: &Value) -> crate::models::JsResult<String> {
             "The supplied resource id “{id}” is not a valid ObjectId."
         )))
     }
-}
-
-async fn blocking<T: Send + 'static>(
-    f: impl FnOnce() -> DsResult<T> + Send + 'static,
-) -> DsResult<T> {
-    tokio::task::spawn_blocking(f)
-        .await
-        .map_err(DsError::from_exception)?
 }
 
 async fn get_one_base_dir_absolute(
@@ -547,10 +537,8 @@ async fn list_mappings(
     }
     let mappings = match wk_client.get_local_root_path_or_empty(&id).await? {
         Some(root) => {
-            blocking(move || {
-                Ok(crate::services::agglomerate::mapping::explore_mappings(
-                    &root.join(&layer_name),
-                ))
+            blocking_value(move || {
+                crate::services::agglomerate::mapping::explore_mappings(&root.join(&layer_name))
             })
             .await?
         }

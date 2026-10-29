@@ -17,6 +17,24 @@ use serde_json::{Map, Value};
 
 pub type DsResult<T> = Result<T, DsError>;
 
+/// Runs `f` on the blocking thread pool; a panic or cancellation becomes a failure.
+pub async fn blocking<T, E>(f: impl FnOnce() -> Result<T, E> + Send + 'static) -> Result<T, E>
+where
+    T: Send + 'static,
+    E: From<DsError> + Send + 'static,
+{
+    tokio::task::spawn_blocking(f)
+        .await
+        .map_err(|e| E::from(DsError::from_exception(e)))?
+}
+
+/// [`blocking`] for work that cannot fail by itself.
+pub async fn blocking_value<T: Send + 'static>(
+    f: impl FnOnce() -> T + Send + 'static,
+) -> DsResult<T> {
+    blocking(move || Ok(f())).await
+}
+
 /// Scala `Msg.notFound`, used for `Empty` boxes.
 pub const MSG_NOT_FOUND: &str = "Could not find or access the requested resource.";
 

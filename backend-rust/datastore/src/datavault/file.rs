@@ -12,6 +12,8 @@ use std::{
 
 use bytes::Bytes;
 
+use crate::error::blocking;
+
 use super::{BoxFuture, ByteRange, DataVault, Encoding, RawRead, UPath, VaultError, VaultResult};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -108,14 +110,6 @@ fn size_of(path: &Path) -> std::io::Result<u64> {
         }
     }
     Ok(total)
-}
-
-async fn blocking<T: Send + 'static>(
-    f: impl FnOnce() -> VaultResult<T> + Send + 'static,
-) -> VaultResult<T> {
-    tokio::task::spawn_blocking(f)
-        .await
-        .map_err(VaultError::exception)?
 }
 
 impl DataVault for FileSystemDataVault {

@@ -1,7 +1,7 @@
 //! Binary cuboid → mapped segment membership → MarchingCubes, with the Scala actor pool limit.
 use crate::{
     datareaders::RequestedAdditionalCoordinate,
-    error::{DsError, DsResult},
+    error::{DsError, DsResult, blocking},
     models::{
         DataSourceId, StaticLayer, Vec3Double,
         data_requests::{Cuboid, DataServiceDataRequest, DataServiceRequestSettings},
@@ -160,7 +160,7 @@ impl AdHocMeshService {
             request.cuboid.height as usize,
             request.cuboid.depth as usize,
         ];
-        tokio::task::spawn_blocking(move || {
+        blocking(move || {
             // Keep the pool slot until CPU work finishes, including after the waiting caller times out.
             let _permit = permit;
             let mut membership = Vec::new();
@@ -189,7 +189,6 @@ impl AdHocMeshService {
             )
         })
         .await
-        .map_err(DsError::from_exception)?
     }
 }
 #[cfg(test)]

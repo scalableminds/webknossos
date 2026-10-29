@@ -14,7 +14,7 @@ use crate::{
     AppState,
     access::{AccessResult, AccessTokenService, TokenContext, UserAccessRequest},
     controller,
-    error::{DsError, DsResult},
+    error::{DsError, DsResult, blocking},
     models::{
         StaticLayer, UsableDataSource, Vec3Int,
         data_requests::{
@@ -257,14 +257,13 @@ async fn render_layer(
         opacity: p.opacity,
     };
     let (width, height) = (p.width as usize, p.height as usize);
-    let image = tokio::task::spawn_blocking(move || {
+    let image = blocking(move || {
         thumbnail::image_for(&data, width, height, &params).map(|image| match output {
             Some((w, h)) => thumbnail::resize_if_needed(image, w, h),
             None => image,
         })
     })
-    .await
-    .map_err(DsError::from_exception)??;
+    .await?;
     Ok((is_segmentation, image))
 }
 
@@ -306,9 +305,7 @@ async fn layer_thumbnail(
         .await?;
     thumbnail::validate_dimensions(params.width, params.height)?;
     let (_, image) = render_layer(&datasets, &binary_data, &tc, &id, &params, None, false).await?;
-    let jpeg = tokio::task::spawn_blocking(move || thumbnail::to_jpeg(&image))
-        .await
-        .map_err(DsError::from_exception)??;
+    let jpeg = blocking(move || thumbnail::to_jpeg(&image)).await?;
     Ok(jpeg_response(jpeg))
 }
 
@@ -345,12 +342,11 @@ async fn dataset_thumbnail(
         }
     }
     let blend_mode = request.blend_mode;
-    let jpeg = tokio::task::spawn_blocking(move || {
+    let jpeg = blocking(move || {
         let composite =
             thumbnail::blend_layers(&colors, &segmentations, &blend_mode, output.0, output.1);
         thumbnail::to_jpeg(&composite)
     })
-    .await
-    .map_err(DsError::from_exception)??;
+    .await?;
     Ok(jpeg_response(jpeg))
 }

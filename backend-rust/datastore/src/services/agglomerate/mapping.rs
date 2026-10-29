@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    error::{DsError, DsResult},
+    error::{DsError, DsResult, blocking},
     models::DataSourceId,
     services::BaseDirService,
 };
@@ -112,12 +112,11 @@ impl MappingService {
         self.cache
             .get_or_load(key.clone(), || async {
                 let dirs = self.base_dirs.clone();
-                tokio::task::spawn_blocking(move || {
+                blocking(move || {
                     let bytes = load_mapping_bytes(&dirs, &key.source, &key.layer, &key.name)?;
                     Ok(Arc::new(parse_mapping(&bytes, key.width)?))
                 })
                 .await
-                .map_err(DsError::from_exception)?
             })
             .await
     }

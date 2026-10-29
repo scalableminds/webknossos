@@ -18,7 +18,7 @@ use crate::{
         zarr3::open_zarr3_array,
     },
     datavault::{ByteRange, DataVaultService},
-    error::{DsError, DsResult},
+    error::{DsError, DsResult, blocking},
     models::{
         BUCKET_LENGTH, DataSourceId, LayerAttachment, StaticLayer, UPath, Vec3Int,
         enums::LayerAttachmentDataformat,
@@ -305,7 +305,7 @@ impl SegmentIndexService {
         let file = self
             .hdf5
             .get_or_load(cache_key, || async move {
-                tokio::task::spawn_blocking(move || {
+                blocking(move || {
                     let reader = Hdf5Reader::open(&path)?;
                     let buckets = reader.root_u64("n_hash_buckets")?;
                     if buckets == 0 {
@@ -321,10 +321,9 @@ impl SegmentIndexService {
                     }))
                 })
                 .await
-                .map_err(DsError::from_exception)?
             })
             .await?;
-        tokio::task::spawn_blocking(move || {
+        blocking(move || {
             let bucket = (file.hash)(segment) as u64 % file.buckets;
             let offsets = file.reader.u64_slice("hash_bucket_offsets", bucket, 2, false)?;
             let [start, end] = offsets[..] else {
@@ -360,9 +359,7 @@ impl SegmentIndexService {
             Ok(values.as_chunks::<3>().0.iter()
                 .map(|[x, y, z]| Vec3Int::new(*x as i16 as i32, *y as i16 as i32, *z as i16 as i32))
                 .collect())
-        })
-        .await
-        .map_err(DsError::from_exception)?
+        }).await
     }
 
     /// Scala `readSegmentIndex`: mag-1 bucket top-lefts (as bucket indices); missing segments

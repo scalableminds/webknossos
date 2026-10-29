@@ -5,7 +5,7 @@ use crate::{
     clients::wk::AlfuCache,
     config::AgglomerateFileCacheConfig,
     datareaders::hdf5::Hdf5Reader,
-    error::{DsError, DsResult},
+    error::{DsError, DsResult, blocking},
     models::{DataSourceId, ElementClass, UPath, Vec3Int, data_requests::DataServiceDataRequest},
     proto::{AgglomerateEdge, AgglomerateGraph, datastore::Vec3IntProto},
 };
@@ -58,7 +58,7 @@ impl Hdf5AgglomerateService {
         let entries = self.config.max_segment_id_entries;
         self.files
             .get_or_load(key(k), || async move {
-                tokio::task::spawn_blocking(move || {
+                blocking(move || {
                     let reader = Hdf5Reader::open(&path)?;
                     let cumsum = path
                         .parent()
@@ -79,7 +79,6 @@ impl Hdf5AgglomerateService {
                     }))
                 })
                 .await
-                .map_err(DsError::from_exception)?
             })
             .await
     }
@@ -88,9 +87,7 @@ impl Hdf5AgglomerateService {
         f: impl FnOnce(&Hdf5Reader) -> DsResult<T> + Send + 'static,
     ) -> DsResult<T> {
         let path = k.attachment.local_path()?;
-        tokio::task::spawn_blocking(move || f(&Hdf5Reader::open(&path)?))
-            .await
-            .map_err(DsError::from_exception)?
+        blocking(move || f(&Hdf5Reader::open(&path)?)).await
     }
     fn map_id(
         file: &CachedFile,
@@ -120,14 +117,13 @@ impl Hdf5AgglomerateService {
         let file = self.cached(k).await?;
         let ids = ids.to_vec();
         let block = self.config.block_size;
-        tokio::task::spawn_blocking(move || {
+        blocking(move || {
             let mut cache = file.ids.lock().unwrap_or_else(PoisonError::into_inner);
             ids.into_iter()
                 .map(|id| Self::map_id(&file, &mut cache, id, block))
                 .collect()
         })
         .await
-        .map_err(DsError::from_exception)?
     }
     pub async fn apply(
         &self,
@@ -150,7 +146,7 @@ impl Hdf5AgglomerateService {
             None
         };
         let max_range = self.config.cumsum_max_reader_range;
-        tokio::task::spawn_blocking(move || {
+        blocking(move || {
             let mapped = if let Some((start, end)) = range {
                 let mut mapped = vec![0i64; ids.len()];
                 if end.wrapping_sub(start) < max_range {
@@ -216,7 +212,6 @@ impl Hdf5AgglomerateService {
             apply_segment_id_mapping(&data, width, false, &ids, &mapped)
         })
         .await
-        .map_err(DsError::from_exception)?
     }
     pub async fn largest(k: &AgglomerateFileKey) -> DsResult<i64> {
         Self::fresh(k, |reader| {

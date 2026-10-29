@@ -15,7 +15,7 @@ use crate::{
     access::{AccessResult, AccessTokenService, TokenContext, UserAccessRequest},
     clients::slack::SlackNotifications,
     controller,
-    error::{DsError, DsResult},
+    error::{DsError, DsResult, blocking},
     models::{
         Vec3Int,
         data_requests::{
@@ -347,7 +347,7 @@ async fn mapping_json(
         .into());
     }
     let source_id = source.id.clone();
-    let bytes = tokio::task::spawn_blocking(move || {
+    let bytes = blocking(move || {
         crate::services::agglomerate::mapping::load_mapping_bytes(
             &base_dirs,
             &source_id,
@@ -355,8 +355,7 @@ async fn mapping_json(
             &mapping,
         )
     })
-    .await
-    .map_err(DsError::from_exception)??;
+    .await?;
     Ok(([(header::CONTENT_TYPE, "application/octet-stream")], bytes).into_response())
 }
 

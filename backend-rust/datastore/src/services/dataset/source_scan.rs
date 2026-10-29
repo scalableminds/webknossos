@@ -3,7 +3,7 @@ use crate::services::{BaseDirService, DataSourceService};
 use crate::{
     clients::wk::WkClient,
     config::WatchFileSystemConfig,
-    error::{DsError, DsResult},
+    error::{DsError, DsResult, blocking},
     models::{DataSourcePathInfo, DataSourceWithRootPathInfo, RealPathInfo, UPath},
 };
 use std::{
@@ -109,11 +109,8 @@ impl DataSourceScanner {
         let before = Instant::now();
         let scanner = self.clone();
         let organization = org.map(str::to_owned);
-        let snapshot = tokio::task::spawn_blocking(move || {
-            scanner.scan_snapshot(organization.as_deref(), verbose)
-        })
-        .await
-        .map_err(DsError::from_exception)??;
+        let snapshot =
+            blocking(move || scanner.scan_snapshot(organization.as_deref(), verbose)).await?;
         self.client
             .report_data_sources(&snapshot.sources, org)
             .await?;

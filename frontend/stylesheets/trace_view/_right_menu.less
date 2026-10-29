@@ -323,9 +323,10 @@
 }
 
 .metadata-table {
-  --compact-table-bg1: var(--ant-color-fill-quaternary);
+  // Opaque stripe color: antd's fill tokens are translucent and vanish on the sidebar background.
+  --compact-table-bg1: color-mix(in srgb, var(--ant-color-text) 6%, var(--ant-color-bg-container));
   --compact-table-bg2: var(--ant-color-bg-container);
-  --compact-table-border: var(--ant-color-border-secondary);
+  --compact-table-border: var(--ant-color-border);
 
   width: 100%;
 

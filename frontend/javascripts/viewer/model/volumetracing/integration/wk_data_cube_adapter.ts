@@ -93,9 +93,8 @@ export class WkDataCubeAdapter implements TransactionCube {
     // getOrCreateData's own docstring warns it is unsafe to mutate directly:
     // if the backend's data for this bucket has not arrived yet, that fetch
     // will later overwrite `data` wholesale (see bucket_snapshot.ts), silently
-    // erasing the write above. bucket.needsBackendData() is the same check
-    // Bucket.applyVoxelMap uses to decide whether to additionally register a
-    // pendingOperation that replays the write once real data lands.
+    // erasing the write above. So a pendingOperation additionally replays the
+    // write once real data lands.
     if (bucket.needsBackendData()) {
       bucket.pendingOperations.push((laterData) =>
         applyBucketWriteToData(asSegmentData(laterData), write),

@@ -1,5 +1,5 @@
 import ErrorHandling from "libs/error_handling";
-import { castForArrayType, mod, sleep } from "libs/utils";
+import { mod, sleep } from "libs/utils";
 import window from "libs/window";
 import noop from "lodash-es/noop";
 import throttle from "lodash-es/throttle";
@@ -17,7 +17,6 @@ import type TemporalBucketManager from "viewer/model/bucket_data_handling/tempor
 import { bucketPositionToGlobalAddress } from "viewer/model/helpers/position_converter";
 import Store from "viewer/store";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
-import Dimensions from "../dimensions";
 import { getConstructorForElementClass, uint8ToTypedBuffer } from "../helpers/typed_buffer";
 import BucketSnapshot, { type PendingOperation } from "./bucket_snapshot";
 
@@ -455,8 +454,8 @@ export class DataBucket {
     /*
      * Don't use this method to get the bucket's data, if you want to mutate it.
      * Instead, use
-     *   1) the preferred VoxelMap primitive (via applyVoxelMap) which works for not
-     *      (yet) loaded buckets
+     *   1) the volume tool drivers (viewer/model/volumetracing/integration), which
+     *      work for not (yet) loaded buckets
      *   2) or the async method getDataForMutation(), which ensures that the bucket is
      *      loaded before mutation (therefore, no async merge operations have to be
      *      defined). See DataCube.floodFill() for an example usage of this pattern.
@@ -546,120 +545,6 @@ export class DataBucket {
     ) {
       this.dirty = false;
     }
-  }
-
-  applyVoxelMap(
-    voxelMap: Uint8Array,
-    segmentId: bigint,
-    get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
-    sliceOffset: number,
-    thirdDimensionIndex: 0 | 1 | 2, // If shouldOverwrite is false, a voxel is only overwritten if
-    // its old value is equal to overwritableValue.
-    shouldOverwrite: boolean = true,
-    overwritableValue: bigint = 0n,
-  ): boolean {
-    const data = this.getOrCreateData();
-
-    if (this.needsBackendData()) {
-      // If the frontend does not yet have the backend's data
-      // for this bucket, we apply the voxel map, but also
-      // save it in this.pendingOperations. See Bucket.merge()
-      // for more details.
-      this.pendingOperations.push((_data) =>
-        this._applyVoxelMapInPlace(
-          _data,
-          voxelMap,
-          segmentId,
-          get3DAddress,
-          sliceOffset,
-          thirdDimensionIndex,
-          shouldOverwrite,
-          overwritableValue,
-        ),
-      );
-    }
-
-    return this._applyVoxelMapInPlace(
-      data,
-      voxelMap,
-      segmentId,
-      get3DAddress,
-      sliceOffset,
-      thirdDimensionIndex,
-      shouldOverwrite,
-      overwritableValue,
-    );
-  }
-
-  _applyVoxelMapInPlace(
-    data: BucketDataArray,
-    voxelMap: Uint8Array,
-    uncastSegmentId: bigint,
-    get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
-    sliceOffset: number,
-    thirdDimensionIndex: 0 | 1 | 2,
-    // If shouldOverwrite is false, a voxel is only overwritten if
-    // its old value is equal to overwritableValue.
-    shouldOverwrite: boolean = true,
-    overwritableValue: bigint = 0n,
-  ): boolean {
-    const out = new Float32Array(3);
-    let wroteVoxels = false;
-
-    const segmentId = castForArrayType(uncastSegmentId, data);
-    const castOverwritableValue = castForArrayType(overwritableValue, data);
-
-    const limits = {
-      u: { min: 0, max: Constants.BUCKET_WIDTH as number },
-      v: { min: 0, max: Constants.BUCKET_WIDTH as number },
-      w: { min: 0, max: Constants.BUCKET_WIDTH as number },
-    };
-
-    if (this.containment.type === "partial") {
-      const plane = Dimensions.planeForThirdDimension(thirdDimensionIndex);
-      const [u, v, w] = Dimensions.getIndices(plane);
-      limits.u.min = this.containment.min[u];
-      limits.u.max = this.containment.max[u];
-
-      limits.v.min = this.containment.min[v];
-      limits.v.max = this.containment.max[v];
-
-      limits.w.min = this.containment.min[w];
-      limits.w.max = this.containment.max[w];
-    }
-
-    for (let firstDim = limits.u.min; firstDim < limits.u.max; firstDim++) {
-      for (let secondDim = limits.v.min; secondDim < limits.v.max; secondDim++) {
-        if (voxelMap[firstDim * Constants.BUCKET_WIDTH + secondDim] === 1) {
-          get3DAddress(firstDim, secondDim, out);
-          const voxelToLabel = out;
-          voxelToLabel[thirdDimensionIndex] =
-            (voxelToLabel[thirdDimensionIndex] + sliceOffset) % Constants.BUCKET_WIDTH;
-
-          if (
-            // The is-partial check is only done as a performance improvement.
-            this.containment.type === "partial" &&
-            (voxelToLabel[thirdDimensionIndex] < limits.w.min ||
-              voxelToLabel[thirdDimensionIndex] >= limits.w.max)
-          ) {
-            continue;
-          }
-
-          // The voxelToLabel is already within the bucket and in the correct magnification.
-          const voxelAddress = this.cube.getVoxelIndexByVoxelOffset(voxelToLabel);
-          const currentSegmentId = data[voxelAddress];
-
-          if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === castOverwritableValue)) {
-            data[voxelAddress] = segmentId;
-            wroteVoxels = true;
-          }
-        }
-      }
-    }
-
-    this.invalidateValueSet();
-
-    return wroteVoxels;
   }
 
   markAsRequested(): void {

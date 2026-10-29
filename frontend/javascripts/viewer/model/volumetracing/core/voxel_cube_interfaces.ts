@@ -20,8 +20,8 @@ import type {
  * *fetch* is rather than what the array is good for:
  *   - `absent`  — nothing allocated, and writes against the address are still
  *     fine (they live in the write set / journal). The real DataCube cannot do
- *     this: `applyVoxelMap` calls `getOrCreateData()` first thing, so writing
- *     always materializes.
+ *     this: `WkDataCubeAdapter.applyWrites` calls `getOrCreateData()` first
+ *     thing, so writing always materializes.
  *   - `pending` — an array exists but does not hold backend content yet. Covers
  *     `REQUESTED`, and `UNREQUESTED` after a failed request (which leaves
  *     pendingOperations queued).

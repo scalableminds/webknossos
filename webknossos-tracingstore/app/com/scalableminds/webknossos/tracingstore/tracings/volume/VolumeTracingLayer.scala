@@ -22,10 +22,6 @@ import scala.concurrent.ExecutionContext
 
 trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper {
 
-  def bucketStreamWithVersion(version: Option[Long] = None)(using
-      ec: ExecutionContext
-  ): FoxIterator[(BucketPosition, Array[Byte], Long)]
-
   def bucketStream(version: Option[Long] = None)(using ec: ExecutionContext): FoxIterator[(BucketPosition, Array[Byte])]
 }
 
@@ -56,11 +52,6 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVol
       ec: ExecutionContext
   ): FoxIterator[(BucketPosition, Array[Byte])] =
     bucketStream(layer, version)
-
-  override def bucketStreamWithVersion(version: Option[Long] = None)(using
-      ec: ExecutionContext
-  ): FoxIterator[(BucketPosition, Array[Byte], Long)] =
-    bucketStreamWithVersion(layer, version)
 }
 
 class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {
@@ -80,11 +71,6 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends Ab
       ec: ExecutionContext
   ): FoxIterator[(BucketPosition, Array[Byte])] =
     bucketStreamFromTemporaryStore(layer)
-
-  override def bucketStreamWithVersion(version: Option[Long] = None)(using
-      ec: ExecutionContext
-  ): FoxIterator[(BucketPosition, Array[Byte], Long)] =
-    throw new UnsupportedOperationException // Temporary Volume Tracings do not support versioning
 }
 
 case class VolumeTracingLayer(

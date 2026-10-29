@@ -4,6 +4,7 @@ export type TabNode = {
   component: string;
   id: string;
   enableRenderOnDemand: boolean;
+  enableClose?: boolean;
 };
 export type TabsetNode = {
   type: "tabset";

@@ -292,7 +292,7 @@ class JobService @Inject() (
       user: User,
       voxelSize: VoxelSize,
       organizationBaseDirectory: UPath
-  ): Fox[Unit] =
+  ): Fox[Job] =
     for {
       organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
         .notFound(dataset._organization)
@@ -306,13 +306,13 @@ class JobService @Inject() (
         "voxel_size_factor" -> voxelSize.factor.toUriLiteral,
         "voxel_size_unit" -> voxelSize.unit
       )
-      _ <- submitJob(
+      job <- submitJob(
         JobCommand.convert_to_wkw,
         commandArgs,
         user,
         dataset._dataStore
       ) ?~> Msg.Job.ConvertToWkw.submitFailed
-    } yield ()
+    } yield job
 
   def submitPaidJob(
       command: JobCommand,

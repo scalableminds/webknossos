@@ -428,12 +428,12 @@ class DashboardTaskListView extends PureComponent<Props, State> {
           {task.projectName} (<FormattedDate timestamp={task.created} />)
         </span>
         {getSkeletonDescriptor(task.annotation) == null ? null : (
-          <Tag color="green" variant="outlined">
+          <Tag color="success" variant="outlined">
             skeleton
           </Tag>
         )}
         {getVolumeDescriptors(task.annotation).length === 0 ? null : (
-          <Tag color="orange" variant="outlined">
+          <Tag color="warning" variant="outlined">
             volume
           </Tag>
         )}

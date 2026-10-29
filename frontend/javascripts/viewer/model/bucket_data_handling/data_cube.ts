@@ -601,7 +601,7 @@ class DataCube {
     // This function is only provided for testing purposes and should not be used internally,
     // since it only operates on one voxel and therefore is not performance-optimized. It should
     // be refactored away.
-    // Please make use of a LabeledVoxelsMap instead.
+    // Please use the volume tool drivers (viewer/model/volumetracing/integration) instead.
     const voxelInCube = this.boundingBox.containsPoint(voxel);
 
     if (voxelInCube) {

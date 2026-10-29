@@ -89,6 +89,37 @@ const globalDesignToken: Partial<AliasToken> = {
 
 const lightDesignToken: Partial<AliasToken> = {
   colorBgLayout: ColorPaper,
+
+  // Status colors. All three follow the same recipe, so that they look like one family:
+  // - Text is darkened to ~5:1 on Paper; hover/active darken it by 20%/35%, so that they gain
+  //   contrast instead of losing it (antd's derived hover is lighter and drops below 4.5:1).
+  // - Bg / BgHover / Border / BorderHover are the base color at 9% / 16% / 35% / 55% on white.
+  colorSuccess: "#1fa05a",
+  colorSuccessText: "#137a43",
+  colorSuccessTextHover: "#0f6236",
+  colorSuccessTextActive: "#0c4f2c",
+  colorSuccessBg: "#ebf6f0",
+  colorSuccessBgHover: "#dbf0e5",
+  colorSuccessBorder: "#b1dec5",
+  colorSuccessBorderHover: "#84cba4",
+
+  colorWarning: "#e59a0b",
+  colorWarningText: "#946000",
+  colorWarningTextHover: "#764d00",
+  colorWarningTextActive: "#603e00",
+  colorWarningBg: "#fdf6e9",
+  colorWarningBgHover: "#fbefd8",
+  colorWarningBorder: "#f6dcaa",
+  colorWarningBorderHover: "#f1c779",
+
+  colorError: "#d42f45",
+  colorErrorText: "#c72c41",
+  colorErrorTextHover: "#9f2334",
+  colorErrorTextActive: "#811d2a",
+  colorErrorBg: "#fbecee",
+  colorErrorBgHover: "#f8dee1",
+  colorErrorBorder: "#f0b6be",
+  colorErrorBorderHover: "#e78d99",
 };
 
 // `colorShadow` is consumed by antd at runtime (it derives all box shadows), but is missing from
@@ -116,6 +147,14 @@ const darkDesignToken: Partial<AliasToken> & { colorShadow: string } = {
   // colorLink is a seed token that the dark algorithm would dim, see darkAlgorithm below.
   colorLinkHover: ColorIndigoLightHover,
   colorLinkActive: ColorIndigoLightPressed,
+  colorInfoText: ColorIndigoLight,
+  colorInfoTextHover: ColorIndigoLightHover,
+  colorInfoTextActive: ColorIndigoLightPressed,
+
+  // Status colors. These are seeds, which the dark algorithm dims by ~15%.
+  colorSuccess: "#43e38e", // shows as #3cc47c
+  colorWarning: "#ffb241", // shows as #dc9a3a
+  colorError: "#ff6573", // shows as #dc5965
 
   colorShadow: ColorShadowOnInk,
 };
@@ -155,6 +194,15 @@ const darkGlobalToken = theme.getDesignToken({
   token: { ...globalDesignToken, ...darkDesignToken },
   algorithm: darkAlgorithm,
 });
+
+// Status colors for places that cannot follow the active theme, e.g. two-tone icons (antd derives
+// their second tone at render time, so a CSS variable would not resolve). The dark theme's colors
+// are legible on both backgrounds.
+export const ThemeIndependentStatusColor = {
+  success: darkGlobalToken.colorSuccess,
+  warning: darkGlobalToken.colorWarning,
+  error: darkGlobalToken.colorError,
+};
 
 // The heading scale WEBKNOSSOS has always used. It used to be enforced by global
 // `h1`–`h5` rules in antd_overwrites.less and now lives here, so that

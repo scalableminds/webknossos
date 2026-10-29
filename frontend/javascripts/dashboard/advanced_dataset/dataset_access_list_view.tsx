@@ -33,7 +33,7 @@ const DatasetAccessListView = ({ dataset }: Props) => {
   function renderUserTags(user: APIUser): React.ReactNode[] {
     if (user.isAdmin) {
       return [
-        <Tag key={`team_role_${user.id}`} color="red">
+        <Tag key={`team_role_${user.id}`} color="error">
           Admin
         </Tag>,
       ];

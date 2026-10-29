@@ -1,6 +1,7 @@
 import Deferred from "libs/async/deferred";
 import type { Dispatch } from "redux";
 import type { AnnotationIdDomain } from "types/api_types";
+import type { AgglomerateDiffAction } from "viewer/model/actions/agglomerate_diff_actions";
 import type { AnnotationActionTypes } from "viewer/model/actions/annotation_actions";
 import type { ConnectomeAction } from "viewer/model/actions/connectome_actions";
 import type { DatasetAction } from "viewer/model/actions/dataset_actions";
@@ -42,6 +43,7 @@ export type Action =
   | UiAction
   | SegmentationAction
   | ConnectomeAction
+  | AgglomerateDiffAction
   | ProofreadAction
   | OrganizationAction
   | OperationContextAction

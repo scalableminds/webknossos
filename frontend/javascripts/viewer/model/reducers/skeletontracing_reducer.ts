@@ -9,6 +9,7 @@ import uniqBy from "lodash-es/uniqBy";
 import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { TreeTypeEnum } from "viewer/constants";
+import { createEmptyAgglomerateDiffOverlay } from "viewer/model/accessors/agglomerate_diff_accessor";
 import {
   areGeometriesTransformed,
   enforceSkeletonTracing,
@@ -242,6 +243,8 @@ function SkeletonTracingReducer(
             activeIndex: -1,
           },
           showSkeletons: true,
+          // Diffs are derived from the agglomerate skeletons of the new tracing again
+          agglomerateDiffOverlay: createEmptyAgglomerateDiffOverlay(),
         },
       },
     });

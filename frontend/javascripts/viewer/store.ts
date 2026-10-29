@@ -154,8 +154,38 @@ export type SkeletonTracing = TracingBase & {
   readonly activeNodeId: number | null | undefined;
   readonly cachedMaxNodeId: number;
   // Per segmentation layer, the agglomerate view (agglomerate file) that loaded agglomerate
-  // skeletons are compared against. The differing edges are shown as extra trees.
+  // skeletons are compared against. The differing edges are shown in an overlay
+  // (see AgglomerateDiffOverlay).
   readonly agglomerateDiffReferences: Array<AgglomerateDiffReference>;
+};
+export type AgglomerateDiffDescriptor = {
+  readonly layerName: string;
+  // The agglomerate view of the agglomerate skeleton
+  readonly mappingName: string;
+  readonly agglomerateId: bigint;
+  readonly referenceMappingName: string;
+};
+export type AgglomerateDiff = AgglomerateDiffDescriptor & {
+  readonly status: "loading" | "loaded" | "failed";
+  // The fields below are only set once the diff is loaded
+  readonly referenceAgglomerateId: bigint | null;
+  // The trees of the overlay skeleton that show this diff
+  readonly treeIds: Array<number>;
+  readonly addedEdgeCount: number;
+  readonly removedEdgeCount: number;
+};
+// The differences of the loaded agglomerate skeletons to the reference agglomerate views are
+// derived from the annotation and only kept locally, so they can never become inconsistent
+// with the agglomerate skeletons (see agglomerate_diff_saga.ts).
+export type AgglomerateDiffOverlay = {
+  // Keyed by getAgglomerateDiffKey
+  readonly diffs: Record<string, AgglomerateDiff>;
+  // The segment whose reference agglomerate was compared, keyed by getAgglomerateKey. It is
+  // remembered so that a change of the reference view compares the same part of the agglomerate.
+  readonly segmentIdByAgglomerate: Record<string, bigint>;
+  readonly isVisible: boolean;
+  // Holds the trees of all diffs. It is rendered on top of the annotation's skeleton.
+  readonly skeleton: SkeletonTracing;
 };
 // LocalSkeletonState holds user-local skeleton state that is not persisted
 // on the server. It deliberately lives outside of state.annotation.skeleton
@@ -170,6 +200,7 @@ export type LocalSkeletonState = {
   readonly activeGroupId: number | null | undefined;
   readonly navigationList: NavigationList;
   readonly showSkeletons: boolean;
+  readonly agglomerateDiffOverlay: AgglomerateDiffOverlay;
 };
 export type Segment = {
   readonly id: bigint;

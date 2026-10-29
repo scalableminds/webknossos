@@ -20,7 +20,6 @@ import { ShareButton } from "viewer/view/action_bar/share_modal_view";
 import ButtonComponent from "viewer/view/components/button_component";
 import DatasetRotationPopoverButtonView from "./dataset_rotation_popover_view";
 
-// The border uses colorWarning, too: colorWarningBorder is too dim to stand out in the dark navbar.
 const warningColors: React.CSSProperties = {
   color: "var(--ant-color-warning)",
   borderColor: "var(--ant-color-warning)",

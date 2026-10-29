@@ -41,28 +41,3 @@ You can also materialize annotations made with the proofreading tool. In that ca
 
 !!! info
     This feature is only available to admins and dataset managers, on webknossos.org or on managed instances that have the WEBKNOSSOS worker configured.
-
-## Restricting magnifications
-
-Volume annotations can be stored at multiple [magnifications](../terminology.md) — `1-1-1` being full resolution, `4-4-2` meaning downsampled by 4× in x/y and 2× in z, and so on. By default, a volume layer contains every magnification of the dataset, and each edit is [automatically written to all of them](./tools.md#annotating-in-different-magnifications). When you label large structures, most of this work goes into the finest magnification, which may make the tools slower and brushing less responsive on some machines.
-
-Restricting a volume layer to a range of magnifications means that labels are only stored in those magnifications. This is useful when:
-
-- **You annotate large structures** such as nuclei, cell bodies or organelles, which don't need full-resolution outlines. Excluding `1-1-1` (or the two finest mags) reduces the data that has to be updated and uploaded with each stroke, so the brush stays responsive and the annotation stays small.
-- **You want to annotate while zoomed out.** The volume tools can only be used [up to a certain zoom level](./tools.md#zoom-limits-of-the-tools), counted from the finest magnification of the layer. If the finest mag of the layer is `4-4-4`, the trace and fill tools as well as interpolation work in `4-4-4` instead of being disabled.
-
-WEBKNOSSOS also suggests restricting magnifications when you annotate a large area in a fine magnification.
-
-Keep in mind:
-
-- Choose the finest magnification to match the level of detail you need. Labels can't be more detailed than the finest mag of the layer. If you zoom in further, you still annotate in that mag and the labels may look blocky.
-- The restriction is set when the volume layer is created and can't be changed afterwards. If you need a different range later, add a new volume annotation layer.
-- If the layer is based on an existing segmentation (a fallback layer), you can only choose among the magnifications of that segmentation.
-
-### When creating an annotation
-
-On the dataset dashboard, click the three-dot menu next to **New Annotation** for the dataset you want to annotate. Use the **Restrict Volume Magnifications** setting to choose the range of magnifications. For example, skipping `1-1-1` or the two finest magnifications is a common choice for large structures.
-
-### When adding a new volume annotation layer
-
-In an open annotation, go to the **Layers** tab on the left sidebar and click **Add Volume Annotation Layer** at the bottom of the layer list. The same magnification slider is available there.

@@ -107,7 +107,7 @@ class UserTokenController @Inject() (
           case _ =>
             Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
         }
-      } yield Ok(Json.toJson(answer))
+      } yield Ok(Json.toJson(answer.copy(userId = userBox.toOption.map(_._id))))
     }
 
   private def handleDataSetAccess(idOpt: Option[String], mode: AccessMode.Value, userBox: Box[User])(using

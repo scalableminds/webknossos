@@ -70,7 +70,8 @@ class VolumeTracingService @Inject() (
 
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
-  private val binaryDataService = new BinaryDataService(None, None, None, datasetErrorLoggingService)
+  private val binaryDataService =
+    new BinaryDataService(None, None, None, datasetErrorLoggingService, bucketProviderCacheTimeToLive = 2 minutes)
 
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
@@ -345,8 +346,10 @@ class VolumeTracingService @Inject() (
                     mergedVolume.largestSegmentId,
                     elementClassFromProto(tracing.elementClass)
                   )
-                ) ?~> Msg.Annotation.Volume
-                  .largestSegmentIdExceedsRange(mergedVolume.largestSegmentId, tracing.elementClass.toString)
+                ) ?~> Msg.Annotation.Volume.largestSegmentIdExceedsRange(
+                  mergedVolume.largestSegmentId.getOrElse(-1L),
+                  tracing.elementClass.toString
+                )
                 destinationVolumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
                 fallbackLayer <- getFallbackLayer(annotationId, tracing)
                 segmentIndexBuffer = new VolumeSegmentIndexBuffer(
@@ -445,7 +448,7 @@ class VolumeTracingService @Inject() (
       tracing: VolumeTracing,
       volumeDataZipFormat: VolumeDataZipFormat,
       voxelSize: Option[VoxelSize]
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[Path] = {
+  )(using ec: ExecutionContext): Fox[Path] = {
     val zipped = tempFileService.create(tracingId)
     val os = new BufferedOutputStream(new FileOutputStream(new File(zipped.toString)))
     allDataToOutputStream(annotationId, tracingId, tracing, volumeDataZipFormat, voxelSize, os).map(_ => zipped)
@@ -458,7 +461,7 @@ class VolumeTracingService @Inject() (
       volumeDataZipFormat: VolumeDataZipFormat,
       voxelSize: Option[VoxelSize],
       os: OutputStream
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] = {
+  )(using ec: ExecutionContext): Fox[Unit] = {
     val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
     val buckets: FoxIterator[NamedStream] = volumeDataZipFormat match {
       case VolumeDataZipFormat.wkw =>
@@ -673,7 +676,7 @@ class VolumeTracingService @Inject() (
       tracing: VolumeTracing,
       isTemporaryTracing: Boolean = false,
       includeFallbackDataIfAvailable: Boolean = false
-  )(using tc: TokenContext): VolumeTracingLayer =
+  ): VolumeTracingLayer =
     VolumeTracingLayer(
       name = tracingId,
       annotationId = annotationId,
@@ -683,7 +686,6 @@ class VolumeTracingService @Inject() (
       volumeDataStore = volumeDataStore,
       includeFallbackDataIfAvailable = includeFallbackDataIfAvailable,
       tracing = tracing,
-      tokenContext = tc,
       additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
     )
 
@@ -726,9 +728,7 @@ class VolumeTracingService @Inject() (
       result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
     } yield result
 
-  def findData(annotationId: ObjectId, tracingId: String, tracing: VolumeTracing)(using
-      tc: TokenContext
-  ): Fox[Option[Vec3Int]] =
+  def findData(annotationId: ObjectId, tracingId: String, tracing: VolumeTracing): Fox[Option[Vec3Int]] =
     for {
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
       volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing, isTemporaryTracing = isTemporaryTracing)
@@ -764,8 +764,14 @@ class VolumeTracingService @Inject() (
         merged <- mergeTwo(tracingAWithIndex._1, tracingBWithIndex._1, tracingBWithIndex._2, mergedVolumeStats)
       } yield (merged, tracingAWithIndex._2)
 
+    // mergeTwo keeps tracing A's segment ids, so the first tracing's id map is applied here, exactly once
+    val tracingsWithFirstRemapped = tracings match {
+      case first +: rest => remapSegmentIds(first, mergedVolumeStats.idMaps.headOption.getOrElse(Map.empty)) +: rest
+      case _             => tracings
+    }
+
     for {
-      tracingsWithIndex <- Full(tracings.zipWithIndex.map(Full(_)))
+      tracingsWithIndex <- Full(tracingsWithFirstRemapped.zipWithIndex.map(Full(_)))
       tracingAndIndex <- tracingsWithIndex.reduceLeft(mergeTwoWithStats)
       tracing = tracingAndIndex._1
     } yield tracing.copy(
@@ -775,9 +781,20 @@ class VolumeTracingService @Inject() (
       hasSegmentIndex = Some(mergedVolumeStats.createdSegmentIndex),
       userBoundingBoxes = addAdditionalBoundingBoxes(tracing.userBoundingBoxes, additionalBoundingBoxes),
       mags = mergedVolumeStats.magsMergedWith(tracing.mags),
-      largestSegmentId = mergedVolumeStats.largestSegmentId.orElse(tracing.largestSegmentId)
+      largestSegmentId =
+        combineLargestSegmentIdsByMaxDefined(mergedVolumeStats.largestSegmentId, tracing.largestSegmentId)
     )
   }
+
+  private def remapSegmentIds(tracing: VolumeTracing, segmentIdMap: Map[Long, Long]): VolumeTracing =
+    if (segmentIdMap.isEmpty) tracing
+    else
+      tracing.copy(
+        segments = tracing.segments
+          .map(segment => segment.copy(segmentId = segmentIdMap.getOrElse(segment.segmentId, segment.segmentId))),
+        activeSegmentId = tracing.activeSegmentId.map(id => segmentIdMap.getOrElse(id, id)),
+        userStates = remapSegmentIdsInVolumeUserStates(tracing.userStates, segmentIdMap)
+      )
 
   private def mergeTwo(
       tracingA: VolumeTracing,
@@ -790,9 +807,10 @@ class VolumeTracingService @Inject() (
     val groupMappingB = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
     val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMappingB)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
-    // Tracing A's segment ids are never remapped; tracing B's are (see MergedVolume), matching the
-    // A-fixed/B-remapped convention also used for segment groups and tree/node ids. Bounding boxes are
-    // the exception (see BoundingBoxMerger): both sides may be remapped there.
+    // Tracing A's segment ids are not remapped here: A is either the first tracing, whose id map was
+    // already applied in merge, or the result of a previous mergeTwo. Tracing B's are (see MergedVolume),
+    // matching the A-fixed/B-remapped convention also used for segment groups and tree/node ids. Bounding
+    // boxes are the exception (see BoundingBoxMerger): both sides may be remapped there.
     val segmentIdMapB =
       if (indexB >= mergedVolumeStats.idMaps.length) Map.empty[Long, Long] else mergedVolumeStats.idMaps(indexB)
     val (mergedUserBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(
@@ -885,7 +903,7 @@ class VolumeTracingService @Inject() (
               ElementClass
                 .largestSegmentIdIsInRange(mergedVolume.largestSegmentId, elementClassFromProto(elementClassProto))
             ) ?~> Msg.Annotation.Volume
-              .largestSegmentIdExceedsRange(mergedVolume.largestSegmentId, elementClassProto.toString)
+              .largestSegmentIdExceedsRange(mergedVolume.largestSegmentId.getOrElse(-1L), elementClassProto.toString)
             mergedAdditionalAxes <- AdditionalAxis
               .mergeAndAssertSameAdditionalAxes(
                 volumeLayers.map(l => AdditionalAxis.fromProtosAsOpt(l.tracing.additionalAxes))
@@ -984,7 +1002,7 @@ class VolumeTracingService @Inject() (
             ElementClass
               .largestSegmentIdIsInRange(mergedVolume.largestSegmentId, elementClassFromProto(tracing.elementClass))
           ) ?~> Msg.Annotation.Volume
-            .largestSegmentIdExceedsRange(mergedVolume.largestSegmentId, tracing.elementClass.toString)
+            .largestSegmentIdExceedsRange(mergedVolume.largestSegmentId.getOrElse(-1L), tracing.elementClass.toString)
           fallbackLayer <- getFallbackLayer(annotationId, tracing)
           mappingName <- getMappingNameUnlessEditable(tracing)
           segmentIndexBuffer <- Fox.successful(
@@ -1020,7 +1038,7 @@ class VolumeTracingService @Inject() (
             } yield ()
           }
           _ <- segmentIndexBuffer.flush()
-        } yield mergedVolume.largestSegmentId
+        } yield mergedVolume.largestSegmentId.getOrElse(largestSegmentId)
       }
     }
 

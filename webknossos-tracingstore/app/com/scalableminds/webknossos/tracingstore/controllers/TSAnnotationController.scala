@@ -72,13 +72,16 @@ class TSAnnotationController @Inject() (
     Action.fox(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 minute) {
-          accessTokenService.validateAccessFromTokenContext(
+          accessTokenService.validateAccessFromTokenContextWithUserId(
             UserAccessRequest.writeAnnotation(annotationId),
             useCaching = false
-          ) {
+          ) { requestingUserIdOpt =>
             given stats: UpdateTimingStats = new UpdateTimingStats
             val requestStart = Instant.now
             for {
+              _ <- Fox.fromBool(
+                requestingUserIdOpt.forall(userId => request.body.forall(_.authorId.forall(_ == userId)))
+              ) ?~> Msg.Annotation.ApplyUpdate.authorIdMismatch ~> FORBIDDEN
               _ <- annotationTransactionService.handleUpdateGroups(annotationId, request.body)
               _ = logIfSlow(annotationId, requestStart, stats)
             } yield Ok

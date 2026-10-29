@@ -19,12 +19,14 @@ import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateServic
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 class BinaryDataService(
     val agglomerateServiceOpt: Option[AgglomerateService],
     dataVaultServiceOpt: Option[DataVaultService],
     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
-    datasetErrorLoggingService: DatasetErrorLoggingService
+    datasetErrorLoggingService: DatasetErrorLoggingService,
+    bucketProviderCacheTimeToLive: FiniteDuration = 2 hours
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
 
@@ -33,7 +35,7 @@ class BinaryDataService(
   private val MaxMagForAgglomerateMapping = 16
 
   private lazy val bucketProviderCache: AlfuCache[(DataSourceId, String), BucketProvider] =
-    AlfuCache(maxCapacity = 5000)
+    AlfuCache(maxCapacity = 5000, timeToLive = bucketProviderCacheTimeToLive)
 
   def handleDataRequest(request: DataServiceDataRequest)(using tc: TokenContext): Fox[Array[Byte]] = {
     // Only enumerate buckets after validation, as invalid dimensions could produce a huge bucket list

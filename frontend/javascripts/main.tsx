@@ -1,5 +1,5 @@
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { defaultShouldDehydrateQuery, QueryClient } from "@tanstack/react-query";
+import { defaultShouldDehydrateQuery } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import "admin/datastore_health_check";
 import { getActiveUser } from "admin/rest_api";
@@ -10,6 +10,7 @@ import { RootForFastTooltips } from "components/fast_tooltip";
 import features, { load as loadFeatureToggles } from "features";
 import checkBrowserFeatures from "libs/browser_feature_check";
 import ErrorHandling from "libs/error_handling";
+import { reactQueryClient } from "libs/react_query_client";
 import UserLocalStorage from "libs/user_local_storage";
 import window, { document, location } from "libs/window";
 import { compress, decompress } from "lz-string";
@@ -42,14 +43,6 @@ window.OlvyConfig = null;
 setStore(UnthrottledStore);
 startSaga(warnIfEmailIsUnverified);
 listenToSystemColorThemeChanges((systemTheme) => Store.dispatch(setSystemThemeAction(systemTheme)));
-
-const reactQueryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      gcTime: Number.POSITIVE_INFINITY,
-    },
-  },
-});
 
 const localStoragePersister = createAsyncStoragePersister({
   storage: UserLocalStorage,

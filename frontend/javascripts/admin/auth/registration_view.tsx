@@ -3,30 +3,19 @@ import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
 import { Card, Col, Row, Spin, Typography } from "antd";
 import features from "features";
-import { useWkSelector } from "libs/react_hooks";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import messages from "messages";
-import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
-import type { APIOrganization } from "types/api_types";
 
 function RegistrationViewGeneric() {
   const navigate = useNavigate();
-  const [organization, setOrganization] = useState<APIOrganization | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      setIsLoading(true);
-
-      try {
-        const defaultOrg = await getDefaultOrganization();
-        setOrganization(defaultOrg);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
-  }, []);
+  const { data: organization = null, isLoading } = useQueryWithErrorHandling({
+    queryKey: ["defaultOrganization"],
+    queryFn: getDefaultOrganization,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
 
   let content = null;
 

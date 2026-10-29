@@ -11,6 +11,7 @@ import {
   UserAddOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
 import AnnotationServicesAd from "admin/ads/annotation_services_alert";
 import {
@@ -37,6 +38,7 @@ import { copyToClipboard } from "libs/clipboard";
 import { handleGenericError } from "libs/error_handling";
 import { formatTuple } from "libs/format_utils";
 import Persistence from "libs/persistence";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import Toast from "libs/toast";
 import {
   compareBy,
@@ -67,6 +69,15 @@ const persistence = new Persistence<{ searchQuery: string }>(
   "taskList",
 );
 
+function getTasksQueryOptions(queryObject: QueryObject) {
+  return {
+    queryKey: ["tasks", queryObject],
+    queryFn: () => getTasks(queryObject),
+    // Task lists can be large and the search can be random, so don't persist them.
+    meta: { persist: false },
+  };
+}
+
 function TaskListView({ initialFieldValues }: Props) {
   const { modal } = App.useApp();
   const { taskId, projectId, taskTypeId } = useParams();
@@ -78,37 +89,45 @@ function TaskListView({ initialFieldValues }: Props) {
     taskTypeId,
   };
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [tasks, setTasks] = useState<APITask[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const queryClient = useQueryClient();
+  const [queryObject, setQueryObject] = useState<QueryObject>({});
+  const [isLoadingMutation, setIsLoadingMutation] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(() => persistence.load().searchQuery || "");
   const selectedUserIdForAssignment = useRef<string | null>(null);
   const [isAnonymousTaskLinkModalOpen, setIsAnonymousTaskLinkModalOpen] = useState(
     hasUrlParam("showAnonymousLinks"),
   );
 
-  useEffect(() => {
-    const { searchQuery } = persistence.load();
-    setSearchQuery(searchQuery || "");
-  }, []);
+  const tasksQueryOptions = getTasksQueryOptions(queryObject);
+  const { data: tasks = [], isFetching: isFetchingTasks } = useQueryWithErrorHandling({
+    ...tasksQueryOptions,
+    enabled: !isEmpty(queryObject),
+    refetchOnWindowFocus: false,
+  });
+  const isLoading = isFetchingTasks || isLoadingMutation;
+
+  function setTasks(updater: (currentTasks: APITask[]) => APITask[]) {
+    queryClient.setQueryData(tasksQueryOptions.queryKey, (currentTasks: APITask[] = []) =>
+      updater(currentTasks),
+    );
+  }
 
   useEffect(() => {
     persistence.persist({ searchQuery });
   }, [searchQuery]);
 
-  async function fetchData(queryObject: QueryObject) {
-    if (!isEmpty(queryObject)) {
-      setIsLoading(true);
-
-      try {
-        const tasks = await getTasks(queryObject);
-        setTasks(tasks);
-      } catch (error) {
-        handleGenericError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      setTasks([]);
+  async function fetchData(newQueryObject: QueryObject): Promise<APITask[]> {
+    setQueryObject(newQueryObject);
+    if (isEmpty(newQueryObject)) {
+      return [];
+    }
+    try {
+      // Always refetch, even if the query didn't change (e.g., for random tasks or to refresh
+      // the list). An in-flight request for the same query is reused.
+      return await queryClient.fetchQuery(getTasksQueryOptions(newQueryObject));
+    } catch (_error) {
+      // The error is shown by useQueryWithErrorHandling.
+      return [];
     }
   }
 
@@ -121,13 +140,13 @@ function TaskListView({ initialFieldValues }: Props) {
       title: messages["task.delete"],
       onOk: async () => {
         try {
-          setIsLoading(true);
+          setIsLoadingMutation(true);
           await deleteTaskAPI(task.id);
-          setTasks(tasks.filter((t) => t.id !== task.id));
+          setTasks((currentTasks) => currentTasks.filter((t) => t.id !== task.id));
         } catch (error) {
           handleGenericError(error as Error);
         } finally {
-          setIsLoading(false);
+          setIsLoadingMutation(false);
         }
       },
     });
@@ -160,7 +179,10 @@ function TaskListView({ initialFieldValues }: Props) {
           try {
             const updatedTask = await assignTaskToUserAPI(task.id, userId);
 
-            setTasks([...tasks.filter((t) => t.id !== task.id), updatedTask]);
+            setTasks((currentTasks) => [
+              ...currentTasks.filter((t) => t.id !== task.id),
+              updatedTask,
+            ]);
 
             Toast.success("A user was successfully assigned to the task.");
           } catch (error) {
@@ -173,9 +195,9 @@ function TaskListView({ initialFieldValues }: Props) {
     });
   }
 
-  function getFilteredTasks() {
+  function getFilteredTasks(tasksToFilter: APITask[] = tasks) {
     return filterWithSearchQueryAND(
-      tasks,
+      tasksToFilter,
       [
         "team",
         "projectName",
@@ -190,8 +212,8 @@ function TaskListView({ initialFieldValues }: Props) {
   }
 
   async function downloadSettingsFromAllTasks(queryObject: QueryObject) {
-    await fetchData(queryObject);
-    const filteredTasks = getFilteredTasks();
+    const fetchedTasks = await fetchData(queryObject);
+    const filteredTasks = getFilteredTasks(fetchedTasks);
 
     if (filteredTasks.length > 0) {
       downloadTasksAsCSV(filteredTasks);
@@ -436,7 +458,9 @@ function TaskListView({ initialFieldValues }: Props) {
       alerts={features().isWkorgInstance ? <AnnotationServicesAd /> : null}
       filters={
         <TaskSearchForm
-          onChange={(queryObject) => fetchData(queryObject)}
+          onChange={async (queryObject) => {
+            await fetchData(queryObject);
+          }}
           initialFieldValues={initialFieldValues}
           isLoading={isLoading}
           onDownloadAllTasks={downloadSettingsFromAllTasks}

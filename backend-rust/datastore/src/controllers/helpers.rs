@@ -3,7 +3,9 @@ use crate::{
     AppState,
     access::{AccessResult, AccessTokenService, TokenContext, UserAccessRequest},
     error::{DsError, DsResult},
-    models::{StaticLayer, UsableDataSource},
+    models::{
+        JsError, JsResult, StaticLayer, UsableDataSource, json::read_string, parse_object_id,
+    },
     services::DatasetCache,
 };
 use axum::{
@@ -17,13 +19,21 @@ use std::{collections::HashMap, sync::Arc};
 
 pub(crate) fn dataset_id(literal: &str) -> DsResult<String> {
     let candidate = literal.rsplit('-').next().unwrap_or(literal);
-    if candidate.len() == 24 && candidate.bytes().all(|b| b.is_ascii_hexdigit()) {
-        Ok(candidate.to_ascii_lowercase())
-    } else {
-        Err(DsError::binding(format!(
+    parse_object_id(candidate).ok_or_else(|| {
+        DsError::binding(format!(
             "Cannot parse URI path parameter datasetId with value “{literal}” as ObjectId."
-        )))
-    }
+        ))
+    })
+}
+
+/// Scala `ObjectIdFormat.reads`.
+pub(crate) fn read_object_id(json: &Value) -> JsResult<String> {
+    let id = read_string(json)?;
+    parse_object_id(&id).ok_or_else(|| {
+        JsError::new(format!(
+            "The supplied resource id “{id}” is not a valid ObjectId."
+        ))
+    })
 }
 
 /// Access checks plus the dataset cache: what a route needs to resolve a readable layer.

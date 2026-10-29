@@ -1,7 +1,7 @@
 //! DSLegacyApiController overrides from datastore.versioned.routes, preserving old DTOs.
 use super::{
     data_proxy,
-    helpers::{dataset_id, validated_body},
+    helpers::{dataset_id, read_object_id, validated_body},
     upload, zarr_streaming,
 };
 use crate::{
@@ -275,8 +275,8 @@ fn legacy_reserve<const OLD: bool>(value: &Value) -> JsResult<Value> {
             },
         )
     });
-    let teams = f.req("initialTeams", |v| read_list(v, upload::read_object_id));
-    let folder = f.opt("folderId", upload::read_object_id);
+    let teams = f.req("initialTeams", |v| read_list(v, read_object_id));
+    let folder = f.opt("folderId", read_object_id);
     let unique = f.opt("requireUniqueName", read_bool);
     let virtual_ = f.opt("isVirtual", read_bool);
     let _conversion = f.opt("needsConversion", read_bool); // Scala explicitly discards this field.
@@ -333,8 +333,8 @@ async fn reserve<const OLD: bool>(
                 let name = link["dataSetName"]
                     .as_str()
                     .expect("validated dataset name");
-                let id = if name.len() == 24 && name.bytes().all(|c| c.is_ascii_hexdigit()) {
-                    name.to_ascii_lowercase()
+                let id = if let Some(id) = crate::models::parse_object_id(name) {
+                    id
                 } else {
                     wk_client
                         .get_dataset_id(
@@ -366,8 +366,8 @@ fn manual_info(value: &Value) -> JsResult<Value> {
     let mut f = Fields::new(value);
     let name = f.req("datasetName", read_string);
     let org = f.req("organization", read_string);
-    let teams = f.req("initialTeamIds", |v| read_list(v, upload::read_object_id));
-    let folder = f.opt("folderId", upload::read_object_id);
+    let teams = f.req("initialTeamIds", |v| read_list(v, read_object_id));
+    let folder = f.opt("folderId", read_object_id);
     let unique = f.with_default("requireUniqueName", false, read_bool);
     f.finish()?;
     let mut info = json!({"datasetName":name?, "organizationId":org?, "initialTeamIds":teams?, "resumableUploadInfo":{"uploadId":"aManualUpload","totalFileCount":0,"filePaths":[]}, "requireUniqueName":unique?, "isVirtual":false});

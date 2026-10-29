@@ -25,3 +25,13 @@ pub use geometry::{BoundingBox, Vec3Double, Vec3Int};
 pub use json::{JsError, JsResult};
 pub use source_paths::{DataSourcePathInfo, DataSourceWithRootPathInfo, RealPathInfo};
 pub use upath::{LocalPath, RemotePath, UPath, UPathError};
+
+/// Whether `s` is a 24-character hexadecimal MongoDB ObjectId.
+pub fn is_object_id(s: &str) -> bool {
+    s.len() == 24 && s.bytes().all(|b| b.is_ascii_hexdigit())
+}
+
+/// The lowercase-normalized ObjectId if `s` is a valid one.
+pub fn parse_object_id(s: &str) -> Option<String> {
+    is_object_id(s).then(|| s.to_ascii_lowercase())
+}

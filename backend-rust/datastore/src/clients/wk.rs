@@ -342,7 +342,7 @@ struct ObjectIdString(String);
 impl<'de> Deserialize<'de> for ObjectIdString {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let value = String::deserialize(deserializer)?;
-        if value.len() == 24 && value.bytes().all(|b| b.is_ascii_hexdigit()) {
+        if crate::models::is_object_id(&value) {
             Ok(Self(value))
         } else {
             Err(serde::de::Error::custom(format!(
@@ -740,7 +740,7 @@ impl WkClient {
 fn conversion_job_id(response: &[u8]) -> Option<String> {
     let result: Value = serde_json::from_slice(response).ok()?;
     let id = result.get("conversionJobId")?.as_str()?;
-    (id.len() == 24 && id.bytes().all(|b| b.is_ascii_hexdigit())).then(|| id.to_ascii_lowercase())
+    crate::models::parse_object_id(id)
 }
 
 #[cfg(test)]

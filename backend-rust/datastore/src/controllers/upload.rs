@@ -28,7 +28,7 @@ use crate::{
     services::upload::{ResumableUploadInfo, UploadDomain},
 };
 
-use super::helpers::{QueryFields, validated_body};
+use super::helpers::{QueryFields, read_object_id, validated_body};
 
 const VALIDATION_FAILED: &str = "Could not validate dataset information for upload.";
 
@@ -101,18 +101,6 @@ fn no_such_upload(upload_id: &str, domain: &str) -> String {
 /// Scala `UploadDomain.fromString(..).toFox` (no message: `Empty`).
 fn domain(name: &str) -> DsResult<UploadDomain> {
     UploadDomain::from_name(name).ok_or_else(DsError::empty)
-}
-
-/// Scala `ObjectIdFormat.reads`.
-pub(super) fn read_object_id(json: &Value) -> JsResult<String> {
-    let id = read_string(json)?;
-    if id.len() == 24 && id.bytes().all(|b| b.is_ascii_hexdigit()) {
-        Ok(id.to_ascii_lowercase())
-    } else {
-        Err(crate::models::JsError::new(format!(
-            "The supplied resource id “{id}” is not a valid ObjectId."
-        )))
-    }
 }
 
 /// Scala `LinkedLayerIdentifier` (re-written like `Json.toJson`).

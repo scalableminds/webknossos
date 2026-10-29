@@ -1,5 +1,5 @@
 //! DataSourceController's disk update, reload and cache invalidation entrypoints.
-use super::helpers::{QueryFields, dataset_id, validated_body};
+use super::helpers::{QueryFields, dataset_id, read_object_id, validated_body};
 use crate::{
     AppState,
     access::AccessTokenService,
@@ -303,18 +303,6 @@ async fn refresh_source(
         }
         (_, Some(source)) => Ok(source),
         _ => Err(DsError::failure("DataSource not found").with_param_status(StatusCode::NOT_FOUND)),
-    }
-}
-
-/// Scala `ObjectIdFormat.reads`.
-fn read_object_id(json: &Value) -> crate::models::JsResult<String> {
-    let id = crate::models::json::read_string(json)?;
-    if id.len() == 24 && id.bytes().all(|b| b.is_ascii_hexdigit()) {
-        Ok(id.to_ascii_lowercase())
-    } else {
-        Err(crate::models::JsError::new(format!(
-            "The supplied resource id “{id}” is not a valid ObjectId."
-        )))
     }
 }
 

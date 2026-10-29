@@ -118,6 +118,7 @@ export class DataBucket {
   // - not yet saved (after successful saving the dirtyCount is decremented) or
   // - not yet created by the PushQueue, since the PushQueue creates the snapshots
   //   in a debounced manner
+  // This property is only relevant when savedViaPartialUpdates is true.
   dirtyCount: number = 0;
   // Whether the bucket's changes are saved as partial bucket updates by the tools
   // that made them (live collaboration), not as a whole bucket via the push queue.

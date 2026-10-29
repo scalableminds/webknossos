@@ -184,14 +184,12 @@ export function* tryToIncorporateActions(
 
           const bucket = cube.getBucket(bucketAddress);
           if (action.name === "updateBucketPartial") {
-            // Partial updates never evict a bucket: that wouldn't stop a request in
-            // flight, whose response would land in the bucket created anew.
             if (bucket.type !== "data") break;
             if (bucket.isLoaded() || bucket.isMissing()) {
-              // The runs are applied directly, also to a missing bucket, which is empty
-              // on the backend. As runs are absolute writes, applying others' runs first
+              // The runs are applied directly, also to a "missing" bucket (which means
+              // empty on the backend). As runs are absolute writes, applying others' runs first
               // and then re-applying the user's unsaved ones (see rebasing_sagas.ts)
-              // yields the backend's state after the user's pending save: where both
+              // yields the backend's state after the user's pending save. Where both
               // wrote the same voxels, the user's values win.
               const runs = decodeBucketDiff(
                 Uint8Array.from(atob(action.value.voxelRunsBase64), (char) => char.charCodeAt(0)),
@@ -200,7 +198,13 @@ export function* tryToIncorporateActions(
                 for (const run of runs) applyRun(data as SegmentBucketData, run);
               });
             } else if (bucket.isRequested() && !areUnsavedChangesOfUser) {
-              // The response may predate this change, so it is requested again.
+              // The ongoing bucket request was likely sent before the backend knew of the update
+              // action we just got. This case is detected via a counter that is updated by
+              // notePartialUpdate(). The old bucket request is then discarded and re-initiated.
+              // todop: what happens in this scenario?
+              // - client requests bucket X (the backend will respond with v=5)
+              // - in parallel, the client also fetches new update actions so that notePartialUpdate is called
+              // - the request for bucket X arrives (partialUpdateCount won't match now). the client will discard the request. however, the backend's reply was the newest one?
               bucket.notePartialUpdate();
             }
             // Otherwise, the bucket's data hasn't been requested yet: it will include

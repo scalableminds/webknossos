@@ -39,8 +39,6 @@ import { ThemeIndependentStatusColor } from "theme";
 import { type APIJob, APIJobCommand } from "types/api_types";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 
-// antd derives the second tone from the first via a color library at render time, so neither the
-// twoToneColor nor the style prop can resolve a CSS variable here.
 export const TOOLTIP_MESSAGES_AND_ICONS = {
   UNKNOWN: {
     tooltip:

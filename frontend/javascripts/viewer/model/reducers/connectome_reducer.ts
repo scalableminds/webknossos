@@ -71,6 +71,7 @@ function ConnectomeReducer(state: WebknossosState, action: Action): WebknossosSt
         type: "skeleton",
         activeNodeId: null,
         cachedMaxNodeId: Constants.MIN_NODE_ID - 1,
+        agglomerateDiffReferences: [],
         trees: new TreeMap(),
         treeGroups: [],
         tracingId: "connectome-tracing-data",

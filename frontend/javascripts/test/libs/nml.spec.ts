@@ -36,6 +36,7 @@ const initialSkeletonTracing: SkeletonTracing = {
   createdTimestamp: 0,
   tracingId: "skeletonTracingId",
   cachedMaxNodeId: 7,
+  agglomerateDiffReferences: [],
   trees: new DiffableMap([
     [
       1,

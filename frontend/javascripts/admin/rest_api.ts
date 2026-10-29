@@ -70,6 +70,7 @@ import {
   type APIUserCompact,
   type APIUserLoggedTime,
   type APIUserTheme,
+  type ElementClass,
   type ExperienceDomainList,
   type LayerLink,
   type MaintenanceInfo,
@@ -96,6 +97,7 @@ import {
   getDataOrTracingStoreUrl,
   type LayerSourceInfo,
 } from "viewer/model/bucket_data_handling/wkstore_helper";
+import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import type {
   DatasetConfiguration,
   Mapping,
@@ -2374,6 +2376,67 @@ export function getAgglomerateTreeAsSkeletonTracing(
       },
     ),
   );
+}
+
+export function getAgglomerateDiffToReferenceAsSkeletonTracing(
+  dataStoreUrl: string,
+  dataset: APIDataset,
+  layerName: string,
+  mappingId: string,
+  agglomerateId: bigint,
+  referenceMappingId: string,
+  // Segment of the agglomerate whose reference agglomerate should be used for the comparison
+  segmentId: bigint,
+): Promise<ArrayBuffer> {
+  return doWithToken((token) => {
+    const params = new URLSearchParams({
+      token,
+      referenceMappingName: referenceMappingId,
+      segmentId: segmentId.toString(),
+    });
+    return Request.receiveArraybuffer(
+      `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/diffToReference/${agglomerateId}?${params}`,
+      // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
+      {
+        useWebworkerForArrayBuffer: false,
+        showErrorToast: false,
+      },
+    );
+  });
+}
+
+// Reads the value of a single voxel from the datastore without applying any mapping. In contrast to
+// the bucket data in the frontend, this returns the unmapped segment id even if an agglomerate mapping
+// is applied on the server.
+export async function getUnmappedSegmentIdAtPosition(
+  dataStoreUrl: string,
+  dataset: APIDataset,
+  layerName: string,
+  elementClass: ElementClass,
+  // Mag-1 position in the coordinate system of the layer
+  position: Vector3,
+  mag: Vector3,
+): Promise<bigint> {
+  const buffer = await doWithToken((token) => {
+    const [x, y, z] = position.map(Math.floor);
+    const params = new URLSearchParams({
+      token,
+      x: x.toString(),
+      y: y.toString(),
+      z: z.toString(),
+      width: "1",
+      height: "1",
+      depth: "1",
+      mag: mag.join("-"),
+    });
+    return Request.receiveArraybuffer(
+      `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/data?${params}`,
+      { useWebworkerForArrayBuffer: false },
+    );
+  });
+  const [TypedArrayClass] = getConstructorForElementClass(elementClass);
+  return toBigInt(new TypedArrayClass(buffer)[0]);
 }
 
 async function _getAgglomeratesForSegmentsHelper<T extends number | bigint>(

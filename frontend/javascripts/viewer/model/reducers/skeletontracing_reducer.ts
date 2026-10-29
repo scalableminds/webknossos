@@ -52,6 +52,7 @@ import {
   getOrCreateTree,
   mergeTrees,
   removeMissingGroupsFromTrees,
+  setAgglomerateDiffReference,
   setExpandedTreeGroups,
   setTreeColorIndex,
   shuffleTreeColor,
@@ -213,6 +214,7 @@ function SkeletonTracingReducer(
       boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
       userBoundingBoxes,
       additionalAxes: convertServerAdditionalAxesToFrontEnd(action.tracing.additionalAxes),
+      agglomerateDiffReferences: action.tracing.agglomerateDiffReferences ?? [],
     };
 
     return update(state, {
@@ -1578,6 +1580,22 @@ function SkeletonTracingReducer(
             },
             trees: {
               $set: newTrees,
+            },
+          },
+        },
+      });
+    }
+
+    case "SET_AGGLOMERATE_DIFF_REFERENCE": {
+      return update(state, {
+        annotation: {
+          skeleton: {
+            agglomerateDiffReferences: {
+              $set: setAgglomerateDiffReference(
+                skeletonTracing.agglomerateDiffReferences,
+                action.layerName,
+                action.referenceMappingName,
+              ),
             },
           },
         },

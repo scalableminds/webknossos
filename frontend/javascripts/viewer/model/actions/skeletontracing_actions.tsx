@@ -70,6 +70,7 @@ type SetTreeGroupsAction = ReturnType<typeof setTreeGroupsAction>;
 type SetTreeGroupAction = ReturnType<typeof setTreeGroupAction>;
 type SetShowSkeletonsAction = ReturnType<typeof setShowSkeletonsAction>;
 type SetMergerModeEnabledAction = ReturnType<typeof setMergerModeEnabledAction>;
+type SetAgglomerateDiffReferenceAction = ReturnType<typeof setAgglomerateDiffReferenceAction>;
 type UpdateNavigationListAction = ReturnType<typeof updateNavigationListAction>;
 type ApplySkeletonUpdateActionsFromServerAction = ReturnType<
   typeof applySkeletonUpdateActionsFromServerAction
@@ -146,6 +147,7 @@ export type SkeletonTracingAction =
   | SetTreeGroupAction
   | SetShowSkeletonsAction
   | SetMergerModeEnabledAction
+  | SetAgglomerateDiffReferenceAction
   | UpdateNavigationListAction
   | LoadAgglomerateTreeFromIdAction
   | LoadAgglomerateTreeAtPositionAction
@@ -219,6 +221,7 @@ export const skeletonActionPolicies: Record<SkeletonTracingAction["type"], Skele
   SET_TREE_GROUPS: { needsUpdatePermission: true, collab: "block" },
   SET_MERGER_MODE_ENABLED: { needsUpdatePermission: true, collab: "block" },
   SET_NODE_RADIUS: { needsUpdatePermission: true, collab: "block" },
+  SET_AGGLOMERATE_DIFF_REFERENCE: { needsUpdatePermission: true, collab: "block" },
 
   // Only ever touches agglomerate trees, so it is safe in concurrent collaboration mode.
   SET_TREES_AGGLOMERATE_INFO_TRACING_ID: { needsUpdatePermission: true, collab: "allow" },
@@ -276,6 +279,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "SET_EXPANDED_TREE_GROUPS_BY_IDS",
   "SET_TREE_GROUP",
   "SET_MERGER_MODE_ENABLED",
+  "SET_AGGLOMERATE_DIFF_REFERENCE",
   "TOGGLE_TREE",
   "TOGGLE_TREE_GROUP",
   "TOGGLE_ALL_TREES",
@@ -711,6 +715,17 @@ export const setMergerModeEnabledAction = (active: boolean) =>
   ({
     type: "SET_MERGER_MODE_ENABLED",
     active,
+  }) as const;
+
+// Passing null as referenceMappingName disables the agglomerate diff for the layer.
+export const setAgglomerateDiffReferenceAction = (
+  layerName: string,
+  referenceMappingName: string | null,
+) =>
+  ({
+    type: "SET_AGGLOMERATE_DIFF_REFERENCE",
+    layerName,
+    referenceMappingName,
   }) as const;
 
 export const updateNavigationListAction = (list: Array<number>, activeIndex: number) =>

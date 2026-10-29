@@ -99,6 +99,11 @@ class NodeShader {
       currentSectionFlycamPosition: {
         value: [0, 0, 0],
       },
+      // Opacity of trees that are not priority trees (see Skeleton.isPriorityTree). It is
+      // reduced while priority trees are shown so that those stand out.
+      nonPriorityTreeOpacity: {
+        value: 1,
+      },
     };
 
     for (const coord of additionalCoordinates ?? []) {
@@ -210,6 +215,7 @@ uniform float highlightCommentedNodes;
 uniform float viewMode;
 uniform int clippingAxis;
 uniform vec3 currentSectionFlycamPosition;
+uniform float nonPriorityTreeOpacity;
 
 uniform mat4 transform;
 
@@ -240,6 +246,7 @@ out float v_isHighlightedCommented;
 out float v_isActiveNode;
 out float v_innerPointSize;
 out float v_outerPointSize;
+out float v_opacity;
 in float nodeId;
 in float treeId;
 
@@ -268,6 +275,7 @@ vec3 shiftHue(vec3 color, float shiftValue) {
 }
 
 void main() {
+    v_opacity = 1.0;
     <% additionalCoordinates.map((coord) => { %>
       if (!isnan(additionalCoord_<%= coord.name %>) && additionalCoord_<%= coord.name %> != currentAdditionalCoord_<%= coord.name %>) {
         return;
@@ -286,7 +294,9 @@ void main() {
     vec4 rgba = texelFetch(treeColors, treeIdToTextureCoordinate, 0);
 
     color = rgba.rgb;
-    float alpha = rgba.a;
+    // A negative alpha value marks a priority tree (see Skeleton.getTreeRGBA).
+    float alpha = abs(rgba.a);
+    bool isPriorityTree = rgba.a < 0.0;
     // A alpha value of 0.5 indicates that the edges of the tree are not visible but its nodes are.
     bool isVisible = alpha == 1.0 || alpha == 0.5 ;
 
@@ -341,6 +351,8 @@ void main() {
       gl_PointSize = isTouch == 1 ? max(gl_PointSize * 1.5, 30.0) : max(gl_PointSize * 1.5, 15.0);
       return;
     }
+
+    v_opacity = isPriorityTree ? 1.0 : nonPriorityTreeOpacity;
 
     // NODE COLOR FOR ACTIVE NODE
     v_isActiveNode = activeNodeId == nodeId ? 1.0 : 0.0;
@@ -399,6 +411,7 @@ in float v_isHighlightedCommented;
 in float v_isActiveNode;
 in float v_innerPointSize;
 in float v_outerPointSize;
+in float v_opacity;
 
 out vec4 outputColor;
 
@@ -455,6 +468,8 @@ void main()
         discard;
       }
     }
+
+    outputColor.a *= v_opacity;
 }`;
   }
 

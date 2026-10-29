@@ -18,7 +18,10 @@ import {
   actionChannel,
   all,
   call,
+  cancel,
+  type FixedTask,
   fork,
+  join,
   put,
   race,
   take,
@@ -33,6 +36,7 @@ import {
   mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
+import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   enforceSkeletonTracing,
   findTreeByAgglomerateId,
@@ -80,6 +84,7 @@ import {
   deleteNode,
   deleteTree,
   updateActiveNode,
+  updateAgglomerateDiffReference,
   updateNode,
   updateTree,
   updateTreeEdgesVisibility,
@@ -97,6 +102,12 @@ import {
   reducerInternalMatrixToEulerAngle,
 } from "../helpers/rotation_helpers";
 import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
+import {
+  addAgglomerateDiffTrees,
+  type FetchedAgglomerateDiff,
+  fetchAgglomerateDiff,
+  loadAgglomerateDiffTrees,
+} from "./agglomerate_diff_saga";
 import { diffBoundingBoxes } from "./diffing/bounding_box_diffing";
 import { diffGroups } from "./diffing/group_diffing";
 import { ensureWkInitialized } from "./ready_sagas";
@@ -442,6 +453,7 @@ function* loadAgglomerateTreeWithAtPosition(
     getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
   );
   const maybeTree = findTreeByAgglomerateId(trees, agglomerateId, layerName, mappingName);
+  let diffTask: FixedTask<FetchedAgglomerateDiff | null> | null = null;
 
   try {
     if (maybeTree != null) {
@@ -454,6 +466,22 @@ function* loadAgglomerateTreeWithAtPosition(
         `Tree for agglomerate ${agglomerateId} is already present. If it is not in sync with the mapping, please delete and reload it.`,
       );
       return;
+    }
+
+    // If a reference agglomerate view is configured for the layer, the differences to the reference
+    // agglomerate of the clicked segment are requested in parallel to the agglomerate skeleton.
+    if (action.type === "LOAD_AGGLOMERATE_TREE_AT_POSITION") {
+      const clickedPositionInLayer = yield* select((state) =>
+        globalToLayerTransformedPosition(
+          action.agglomeratePosition,
+          layerName,
+          "segmentation",
+          state,
+        ),
+      );
+      diffTask = yield* fork(fetchAgglomerateDiff, layerName, mappingName, agglomerateId, {
+        positionInLayer: clickedPositionInLayer,
+      });
     }
 
     ({ hideFn } = yield* call(
@@ -500,6 +528,7 @@ function* loadAgglomerateTreeWithAtPosition(
     hideFn?.();
     // @ts-expect-error
     handleAgglomerateLoadingError(e);
+    if (diffTask != null) yield* cancel(diffTask);
     return;
   } finally {
     if (shouldGuardWithAnnotationMutex) {
@@ -518,6 +547,16 @@ function* loadAgglomerateTreeWithAtPosition(
   }
 
   yield* call(progressCallback, true, "Tree generation done.");
+
+  if (diffTask != null) {
+    const diff = yield* join(diffTask);
+    if (diff != null) {
+      yield* call(addAgglomerateDiffTrees, layerName, mappingName, agglomerateId, diff);
+    }
+  } else {
+    // Without a clicked position, the segment at the first node of the agglomerate skeleton is compared
+    yield* call(loadAgglomerateDiffTrees, layerName, mappingName, agglomerateId, null);
+  }
 }
 
 function* loadConnectomeAgglomerateTreeWithId(action: LoadAgglomerateTreeFromIdAction): Saga<void> {
@@ -788,6 +827,31 @@ export function* diffSkeletonTracing(
     skeletonTracing.tracingId,
     AnnotationLayerEnum.Skeleton,
   );
+
+  if (prevSkeletonTracing.agglomerateDiffReferences !== skeletonTracing.agglomerateDiffReferences) {
+    yield* diffAgglomerateDiffReferences(
+      prevSkeletonTracing.agglomerateDiffReferences,
+      skeletonTracing.agglomerateDiffReferences,
+      skeletonTracing.tracingId,
+    );
+  }
+}
+
+function* diffAgglomerateDiffReferences(
+  prevReferences: SkeletonTracing["agglomerateDiffReferences"],
+  references: SkeletonTracing["agglomerateDiffReferences"],
+  tracingId: string,
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
+  const layerNames = new Set([...prevReferences, ...references].map((ref) => ref.layerName));
+  for (const layerName of layerNames) {
+    const prevMappingName =
+      prevReferences.find((ref) => ref.layerName === layerName)?.referenceMappingName ?? null;
+    const mappingName =
+      references.find((ref) => ref.layerName === layerName)?.referenceMappingName ?? null;
+    if (prevMappingName !== mappingName) {
+      yield updateAgglomerateDiffReference(layerName, mappingName, tracingId);
+    }
+  }
 }
 export default [
   watchSkeletonTracingAsync,

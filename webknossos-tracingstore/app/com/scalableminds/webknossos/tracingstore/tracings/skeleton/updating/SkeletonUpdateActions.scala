@@ -7,6 +7,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{JsonAutoFormat, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.IdWithBool.Id32WithBool
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{
+  AgglomerateDiffReferenceProto,
   Edge,
   Node,
   SkeletonTracing,
@@ -797,6 +798,30 @@ case class UpdateUserBoundingBoxVisibilitySkeletonAction(
     this.copy(actionTracingId = newTracingId)
 
   override def isViewOnlyChange: Boolean = true
+}
+
+case class UpdateAgglomerateDiffReferenceSkeletonAction(
+    layerName: String,
+    referenceMappingName: Option[String], // None → disable the agglomerate diff for this layer
+    actionTracingId: String,
+    actionTimestamp: Option[Long] = None,
+    actionAuthorId: Option[ObjectId] = None,
+    info: Option[String] = None
+) extends SkeletonUpdateAction derives JsonAutoFormat {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
+    val otherLayerReferences = tracing.agglomerateDiffReferences.filter(_.layerName != layerName)
+    tracing.withAgglomerateDiffReferences(
+      otherLayerReferences ++ referenceMappingName.map(AgglomerateDiffReferenceProto(layerName, _))
+    )
+  }
+
+  override def addTimestamp(timestamp: Long): UpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 }
 
 object UpdateUserBoundingBoxSkeletonAction extends TristateOptionJsonHelper {

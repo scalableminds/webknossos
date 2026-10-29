@@ -57,6 +57,7 @@ import type {
   SplitAgglomerateUpdateAction,
   UpdateActiveNodeUpdateAction,
   UpdateActiveSegmentIdUpdateAction,
+  UpdateAgglomerateDiffReferenceUpdateAction,
   UpdateAnnotationLayerNameUpdateAction,
   UpdateBucketUpdateAction,
   UpdateCameraAnnotationAction,
@@ -539,6 +540,15 @@ const descriptionFns: Record<
       icon: <FolderOpenOutlined />,
     };
   },
+  updateAgglomerateDiffReference: (
+    action: AsServerAction<UpdateAgglomerateDiffReferenceUpdateAction>,
+  ): Description => ({
+    description:
+      action.value.referenceMappingName != null
+        ? `Set the reference agglomerate view of layer ${action.value.layerName} to ${action.value.referenceMappingName}.`
+        : `Disabled the reference agglomerate view of layer ${action.value.layerName}.`,
+    icon: <EditOutlined />,
+  }),
   updateTreeGroupsExpandedState: (
     action: AsServerAction<UpdateTreeGroupsExpandedStateAction>,
   ): Description => {

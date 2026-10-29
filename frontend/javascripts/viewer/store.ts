@@ -143,12 +143,19 @@ export type NavigationList = {
   readonly list: Array<number>;
   readonly activeIndex: number;
 };
+export type AgglomerateDiffReference = {
+  readonly layerName: string;
+  readonly referenceMappingName: string;
+};
 export type SkeletonTracing = TracingBase & {
   readonly type: "skeleton";
   readonly trees: TreeMap;
   readonly treeGroups: Array<TreeGroup>;
   readonly activeNodeId: number | null | undefined;
   readonly cachedMaxNodeId: number;
+  // Per segmentation layer, the agglomerate view (agglomerate file) that loaded agglomerate
+  // skeletons are compared against. The differing edges are shown as extra trees.
+  readonly agglomerateDiffReferences: Array<AgglomerateDiffReference>;
 };
 // LocalSkeletonState holds user-local skeleton state that is not persisted
 // on the server. It deliberately lives outside of state.annotation.skeleton

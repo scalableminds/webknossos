@@ -54,7 +54,12 @@ import {
   type TreeGroup,
   TreeMap,
 } from "viewer/model/types/tree_types";
-import type { RestrictionsAndSettings, SkeletonTracing, WebknossosState } from "viewer/store";
+import type {
+  AgglomerateDiffReference,
+  RestrictionsAndSettings,
+  SkeletonTracing,
+  WebknossosState,
+} from "viewer/store";
 
 import {
   MISSING_GROUP_ID,
@@ -1035,4 +1040,17 @@ export function extractPathAsNewTree(
     lastNodeId = nodeId;
   }
   return newTree;
+}
+
+export function setAgglomerateDiffReference(
+  agglomerateDiffReferences: Array<AgglomerateDiffReference>,
+  layerName: string,
+  referenceMappingName: string | null | undefined,
+): Array<AgglomerateDiffReference> {
+  const otherLayerReferences = agglomerateDiffReferences.filter(
+    (reference) => reference.layerName !== layerName,
+  );
+  return referenceMappingName != null
+    ? [...otherLayerReferences, { layerName, referenceMappingName }]
+    : otherLayerReferences;
 }

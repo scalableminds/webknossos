@@ -168,6 +168,30 @@ class AgglomerateService @Inject() (
       case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 
+  // Compares the agglomerate to the reference agglomerate that contains the given segment of the agglomerate
+  // (e.g., the one that was clicked on). Other reference agglomerates are not loaded, as these might be huge mergers.
+  def generateDiffToReferenceAsSkeleton(
+      agglomerateFileKey: AgglomerateFileKey,
+      referenceAgglomerateFileKey: AgglomerateFileKey,
+      agglomerateId: Long,
+      segmentId: Long
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[SkeletonTracing] = {
+    // Both graphs can be loaded in parallel, which matters for remote agglomerate files
+    val graphFox = generateAgglomerateGraph(agglomerateFileKey, agglomerateId)
+    val referenceGraphFox = for {
+      referenceAgglomerateIds <- agglomerateIdsForSegmentIds(referenceAgglomerateFileKey, Seq(segmentId))
+      referenceAgglomerateId <- referenceAgglomerateIds.headOption
+        .filter(_ != 0L)
+        .toFox ?~> Msg.AgglomerateDiff.noReferenceAgglomerate
+      referenceGraph <- generateAgglomerateGraph(referenceAgglomerateFileKey, referenceAgglomerateId)
+    } yield (referenceAgglomerateId, referenceGraph)
+    for {
+      graph <- graphFox
+      _ <- Fox.fromBool(graph.segments.contains(segmentId)) ?~> Msg.AgglomerateDiff.segmentNotInAgglomerate
+      (referenceAgglomerateId, referenceGraph) <- referenceGraphFox
+    } yield AgglomerateGraphDiff.diffAsSkeleton(graph, referenceGraph, referenceAgglomerateId)
+  }
+
   private def unsupportedDataFormat(agglomerateFileKey: AgglomerateFileKey)(implicit ec: ExecutionContext) =
     Fox.failure(
       s"Trying to load agglomerate file with unsupported data format ${agglomerateFileKey.attachment.dataFormat}"

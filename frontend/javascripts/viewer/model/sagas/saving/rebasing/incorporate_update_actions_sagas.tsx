@@ -160,7 +160,8 @@ export function* tryToIncorporateActions(
         // Skeleton User Bounding Boxes
         case "addUserBoundingBoxInSkeletonTracing":
         case "updateUserBoundingBoxInSkeletonTracing":
-        case "deleteUserBoundingBoxInSkeletonTracing": {
+        case "deleteUserBoundingBoxInSkeletonTracing":
+        case "updateAgglomerateDiffReference": {
           yield* put(applySkeletonUpdateActionsFromServerAction([action]));
           break;
         }

@@ -1004,6 +1004,7 @@ export type ServerSkeletonTracing = ServerTracingBase & {
   treeGroups: Array<TreeGroup> | null | undefined;
   storedWithExternalTreeBodies?: boolean; // unused in frontend
   userStates: SkeletonUserState[];
+  agglomerateDiffReferences?: Array<{ layerName: string; referenceMappingName: string }>;
 };
 
 export type VolumeUserState = {

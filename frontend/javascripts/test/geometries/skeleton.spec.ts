@@ -18,7 +18,10 @@ import {
   deleteNodeAction,
   initializeSkeletonTracingAction,
   setNodeRadiusAction,
+  setTreeMetadataAction,
+  setTreeVisibilityAction,
 } from "viewer/model/actions/skeletontracing_actions";
+import { getAgglomerateDiffMetadata } from "viewer/model/helpers/agglomerate_diff_helpers";
 import { convertServerAnnotationToFrontendAnnotation } from "viewer/model/reducers/reducer_helpers";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
@@ -209,5 +212,95 @@ describe("Skeleton", () => {
         ),
       );
     }
+  });
+
+  it("should draw the nodes and edges of agglomerate diff trees in the priority buffers", async () => {
+    const skeleton = skeletonCreator();
+    const treeId = 5;
+    const tree = enforceSkeletonTracing(Store.getState().annotation).trees.getOrThrow(treeId);
+    const edgeIds = tree.edges
+      .all()
+      .map((edge) => skeleton.combineIds(treeId, edge.source, edge.target))
+      .toArray();
+    expect(edgeIds.length).toBeGreaterThan(0);
+    const nodeIds = tree.nodes
+      .values()
+      .map((node) => skeleton.combineIds(node.id, treeId))
+      .toArray();
+    const branchPointNodeId = tree.nodes.values().next().value!.id;
+    Store.dispatch(createBranchPointAction(branchPointNodeId, treeId));
+    await sleep(50);
+    const isInPriorityBuffers = (id: string) => skeleton.priorityEdges.idToBufferPosition.has(id);
+    const isInDefaultBuffers = (id: string) => skeleton.edges.idToBufferPosition.has(id);
+    const isInPriorityNodeBuffers = (id: string) =>
+      skeleton.priorityNodes.idToBufferPosition.has(id);
+    const isInDefaultNodeBuffers = (id: string) => skeleton.nodes.idToBufferPosition.has(id);
+    const getNodeType = (nodeId: number) => {
+      const id = skeleton.combineIds(nodeId, treeId);
+      const { buffer, index } = skeleton.getNodeCollection(id).idToBufferPosition.get(id)!;
+      return buffer.geometry.attributes.type.array[index];
+    };
+    expect(edgeIds.every((id) => isInDefaultBuffers(id) && !isInPriorityBuffers(id))).toBe(true);
+    expect(nodeIds.every((id) => isInDefaultNodeBuffers(id) && !isInPriorityNodeBuffers(id))).toBe(
+      true,
+    );
+
+    Store.dispatch(
+      setTreeMetadataAction(
+        getAgglomerateDiffMetadata({
+          layerName: "segmentation",
+          agglomerateId: 1n,
+          mappingName: "agglomerate_view_1",
+          referenceMappingName: "agglomerate_view_0",
+          segmentId: 3n,
+          referenceAgglomerateId: 2n,
+        }),
+        treeId,
+      ),
+    );
+    await sleep(50);
+    expect(edgeIds.every((id) => isInPriorityBuffers(id) && !isInDefaultBuffers(id))).toBe(true);
+    expect(nodeIds.every((id) => isInPriorityNodeBuffers(id) && !isInDefaultNodeBuffers(id))).toBe(
+      true,
+    );
+    // Moving the nodes keeps their branch point state
+    expect(getNodeType(branchPointNodeId)).toBe(NodeTypes.BRANCH_POINT);
+    for (const collection of [skeleton.priorityNodes, skeleton.priorityEdges]) {
+      expect(collection.buffers.every((buffer) => buffer.mesh.renderOrder > 0)).toBe(true);
+    }
+    for (const collection of [skeleton.nodes, skeleton.edges]) {
+      expect(collection.buffers.every((buffer) => buffer.mesh.renderOrder === 0)).toBe(true);
+    }
+    // The tree is marked as priority tree via a negative alpha and all other trees are dimmed
+    expect(skeleton.treeColorTexture.image.data[treeId * 4 + 3]).toBe(-1);
+    expect(skeleton.nodes.material.uniforms.nonPriorityTreeOpacity.value).toBeLessThan(1);
+    expect(skeleton.edges.material.uniforms.nonPriorityTreeOpacity.value).toBeLessThan(1);
+
+    // A newly created skeleton puts the edges into the priority buffers right away
+    const freshSkeleton = skeletonCreator();
+    expect(edgeIds.every((id) => freshSkeleton.priorityEdges.idToBufferPosition.has(id))).toBe(
+      true,
+    );
+    expect(nodeIds.every((id) => freshSkeleton.priorityNodes.idToBufferPosition.has(id))).toBe(
+      true,
+    );
+
+    // Hiding the priority tree removes the dimming
+    Store.dispatch(setTreeVisibilityAction(treeId, false));
+    await sleep(50);
+    expect(skeleton.nodes.material.uniforms.nonPriorityTreeOpacity.value).toBe(1);
+    Store.dispatch(setTreeVisibilityAction(treeId, true));
+    await sleep(50);
+    expect(skeleton.nodes.material.uniforms.nonPriorityTreeOpacity.value).toBeLessThan(1);
+
+    Store.dispatch(setTreeMetadataAction([], treeId));
+    await sleep(50);
+    expect(edgeIds.every((id) => isInDefaultBuffers(id) && !isInPriorityBuffers(id))).toBe(true);
+    expect(nodeIds.every((id) => isInDefaultNodeBuffers(id) && !isInPriorityNodeBuffers(id))).toBe(
+      true,
+    );
+    expect(getNodeType(branchPointNodeId)).toBe(NodeTypes.BRANCH_POINT);
+    expect(skeleton.treeColorTexture.image.data[treeId * 4 + 3]).toBe(1);
+    expect(skeleton.nodes.material.uniforms.nonPriorityTreeOpacity.value).toBe(1);
   });
 });

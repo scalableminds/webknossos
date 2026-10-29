@@ -51,6 +51,11 @@ class EdgeShader {
       currentSectionFlycamPosition: {
         value: [0, 0, 0],
       },
+      // Opacity of trees that are not priority trees (see Skeleton.isPriorityTree). It is
+      // reduced while priority trees are shown so that those stand out.
+      nonPriorityTreeOpacity: {
+        value: 1,
+      },
     };
 
     const dataset = Store.getState().dataset;
@@ -138,6 +143,7 @@ uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float activeTreeId;
 uniform sampler2D treeColors;
+uniform float nonPriorityTreeOpacity;
 
 uniform mat4 transform;
 
@@ -179,7 +185,9 @@ void main() {
       mod(floor(treeId / ${COLOR_TEXTURE_WIDTH_FIXED}), ${COLOR_TEXTURE_WIDTH_FIXED})
     );
     vec4 rgba = texelFetch(treeColors, treeIdToTextureCoordinate, 0);
-    bool isVisible = rgba.a == 1.0;
+    // A negative alpha value marks a priority tree (see Skeleton.getTreeRGBA).
+    bool isVisible = abs(rgba.a) == 1.0;
+    bool isPriorityTree = rgba.a < 0.0;
 
     if (!isVisible) {
       gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);
@@ -200,6 +208,7 @@ void main() {
 
 
     color = rgba.rgb;
+    alpha *= isPriorityTree ? 1.0 : nonPriorityTreeOpacity;
 }`)({
       additionalCoordinates: additionalCoordinates || [],
       tpsTransform: this.scaledTps,

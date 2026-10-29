@@ -114,6 +114,9 @@ export type UpdateSegmentGroupsExpandedStateUpdateAction = ReturnType<
 
 type UpdateTreeGroupsUpdateAction = ReturnType<typeof updateTreeGroups>;
 export type UpdateTreeGroupsExpandedStateAction = ReturnType<typeof updateTreeGroupsExpandedState>;
+export type UpdateAgglomerateDiffReferenceUpdateAction = ReturnType<
+  typeof updateAgglomerateDiffReference
+>;
 
 export type RevertToVersionUpdateAction = ReturnType<typeof revertToVersion>;
 // This action is not dispatched by our code, anymore,
@@ -151,6 +154,7 @@ type _ApplicableSkeletonUpdateAction =
   | UpdateUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
   | DeleteUserBoundingBoxInSkeletonTracingAction
+  | UpdateAgglomerateDiffReferenceUpdateAction
   // User specific actions
   | UpdateActiveNodeUpdateAction
   | UpdateTreeVisibilityUpdateAction
@@ -194,6 +198,7 @@ const ApplicableSkeletonUpdateActionNamesHelper: Record<
   updateUserBoundingBoxInSkeletonTracing: true,
   updateUserBoundingBoxVisibilityInSkeletonTracing: true,
   deleteUserBoundingBoxInSkeletonTracing: true,
+  updateAgglomerateDiffReference: true,
   updateActiveNode: true,
   updateTreeVisibility: true,
   updateTreeGroupVisibility: true,
@@ -272,6 +277,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateSegmentGroupVisibilityVolumeAction
   | UpdateTreeGroupsUpdateAction
   | UpdateTreeGroupsExpandedStateAction
+  | UpdateAgglomerateDiffReferenceUpdateAction
   | RemoveFallbackLayerUpdateAction
   | UpdateCameraAnnotationAction
   | UpdateTdCameraUpdateAction
@@ -1038,6 +1044,21 @@ export function updateTreeGroupsExpandedState(
       actionTracingId,
       groupIds,
       areExpanded,
+    },
+  } as const;
+}
+
+export function updateAgglomerateDiffReference(
+  layerName: string,
+  referenceMappingName: string | null,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateAgglomerateDiffReference",
+    value: {
+      actionTracingId,
+      layerName,
+      referenceMappingName,
     },
   } as const;
 }

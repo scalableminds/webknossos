@@ -307,4 +307,31 @@ class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {
       assert(result.userBoundingBox == userBoundingBox)
     }
   }
+
+  "UpdateAgglomerateDiffReferenceSkeletonAction" should {
+    "set, replace and remove the reference mapping of a layer without touching other layers" in {
+      def setReference(tracing: SkeletonTracing, layerName: String, mappingName: Option[String]) =
+        UpdateAgglomerateDiffReferenceSkeletonAction(layerName, mappingName, actionTracingId = Dummies.tracingId)
+          .applyOn(tracing)
+
+      val withTwoLayers =
+        setReference(setReference(Dummies.skeletonTracing, "layerA", Some("mapping1")), "layerB", Some("mapping2"))
+      assert(
+        withTwoLayers.agglomerateDiffReferences.toSet == Set(
+          AgglomerateDiffReferenceProto("layerA", "mapping1"),
+          AgglomerateDiffReferenceProto("layerB", "mapping2")
+        )
+      )
+      val replaced = setReference(withTwoLayers, "layerA", Some("mapping3"))
+      assert(
+        replaced.agglomerateDiffReferences.toSet == Set(
+          AgglomerateDiffReferenceProto("layerA", "mapping3"),
+          AgglomerateDiffReferenceProto("layerB", "mapping2")
+        )
+      )
+      val removed = setReference(replaced, "layerA", None)
+      assert(removed.agglomerateDiffReferences == Seq(AgglomerateDiffReferenceProto("layerB", "mapping2")))
+      assert(removed.trees == Dummies.skeletonTracing.trees)
+    }
+  }
 }

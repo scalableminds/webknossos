@@ -87,6 +87,7 @@ const createStateWithTrees = (trees: Tree[], genericGroups: TreeGroup[]): Webkno
       trees: createTreeMap(trees),
       activeNodeId: null,
       cachedMaxNodeId: 0,
+      agglomerateDiffReferences: [],
     },
     volumes: [],
   },

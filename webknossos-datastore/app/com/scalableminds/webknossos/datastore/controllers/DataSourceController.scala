@@ -168,6 +168,33 @@ class DataSourceController @Inject() (
     }
   }
 
+  def agglomerateDiffToReference(
+      datasetId: ObjectId,
+      dataLayerName: String,
+      mappingName: String,
+      agglomerateId: Long,
+      referenceMappingName: String,
+      segmentId: Long
+  ): Action[AnyContent] = Action.fox { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+      for {
+        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
+        agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
+        referenceAgglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(
+          dataSource.id,
+          dataLayer,
+          referenceMappingName
+        )
+        skeleton <- agglomerateService.generateDiffToReferenceAsSkeleton(
+          agglomerateFileKey,
+          referenceAgglomerateFileKey,
+          agglomerateId,
+          segmentId
+        ) ?~> Msg.AgglomerateDiff.failed
+      } yield Ok(skeleton.toByteArray).as(protobufMimeType)
+    }
+  }
+
   def positionForSegmentViaAgglomerateFile(
       datasetId: ObjectId,
       dataLayerName: String,

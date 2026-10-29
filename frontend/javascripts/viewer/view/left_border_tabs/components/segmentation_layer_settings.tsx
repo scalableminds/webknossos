@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { defaultDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { updateDatasetSettingAction } from "viewer/model/actions/settings_actions";
+import AgglomerateDiffReferenceView from "../agglomerate_diff_reference_view";
 import { HideUnregisteredSegmentsSwitch } from "../hide_unregistered_segments_switch";
 import MappingSettingsView from "../mapping_settings_view";
 import NumberSliderSetting from "./number_slider_setting";
@@ -32,6 +33,7 @@ export default function SegmentationLayerSettings({ layerName }: { layerName: st
       />
       <HideUnregisteredSegmentsSwitch layerName={layerName} />
       <MappingSettingsView layerName={layerName} />
+      <AgglomerateDiffReferenceView layerName={layerName} />
     </div>
   );
 }

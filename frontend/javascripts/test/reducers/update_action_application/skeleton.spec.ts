@@ -32,6 +32,7 @@ import {
   setActiveNodeAction,
   setActiveTreeAction,
   setActiveTreeGroupAction,
+  setAgglomerateDiffReferenceAction,
   setNodePositionAction,
   setShowSkeletonsAction,
   setTreeEdgeVisibilityAction,
@@ -161,6 +162,10 @@ describe("Update Action Application for SkeletonTracing", () => {
     setActiveTreeGroupAction(3), // also clears the active node and tree
     setActiveNodeAction(11), // also clears the active group
     setTreeEdgeVisibilityAction(2, false),
+    setAgglomerateDiffReferenceAction("segmentation", "reference_mapping"),
+    setAgglomerateDiffReferenceAction("segmentation", "other_reference_mapping"),
+    setAgglomerateDiffReferenceAction("other_layer", "reference_mapping"),
+    setAgglomerateDiffReferenceAction("segmentation", null),
   ];
 
   test("User actions for test should not contain no-ops", () => {

@@ -72,6 +72,7 @@ export const initialSkeletonTracing: SkeletonTracing = {
   treeGroups: [],
   activeNodeId: null,
   cachedMaxNodeId: 0,
+  agglomerateDiffReferences: [],
   boundingBox: null,
   userBoundingBoxes: [],
   additionalAxes: [],

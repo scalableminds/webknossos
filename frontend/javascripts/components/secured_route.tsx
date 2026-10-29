@@ -38,7 +38,8 @@ function SecuredRoute({
     isFetchedAfterMount,
     isSuccess,
   } = useApi({
-    queryKey: ["unversionedAnnotation", id],
+    // Separate key from the merge modal, whose cached data is persisted.
+    queryKey: ["unversionedAnnotation", id, "visibilityCheck"],
     queryFn: () => getUnversionedAnnotationInformation(id as string),
     enabled: !isAuthenticated && checkIfResourceIsPublic && !!id,
     refetchOnWindowFocus: false,

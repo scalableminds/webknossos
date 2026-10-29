@@ -53,7 +53,8 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
   // Poll the jobs while a mesh job is running. Errors are swallowed so that a failing
   // poll doesn't show a toast every few seconds.
   const { data: jobs } = useQuery({
-    queryKey: ["jobs"],
+    // Separate key from the job list view, which uses different retry and persistence settings.
+    queryKey: ["jobs", "meshJobPolling"],
     queryFn: () => getJobs(undefined, undefined, { showErrorToast: false }),
     enabled: activeUser != null && activeMeshJobId != null,
     refetchInterval: REFRESH_INTERVAL,

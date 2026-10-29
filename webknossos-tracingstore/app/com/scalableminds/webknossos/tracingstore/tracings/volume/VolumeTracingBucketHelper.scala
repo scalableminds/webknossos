@@ -401,19 +401,12 @@ trait VolumeTracingBucketHelper
       volumeLayer: VolumeTracingLayer,
       version: Option[Long]
   )(using ec: ExecutionContext): FoxIterator[(BucketPosition, Array[Byte])] =
-    bucketStreamWithVersion(volumeLayer, version).map { case (bucketPosition, data, _) => (bucketPosition, data) }
-
-  def bucketStreamWithVersion(
-      volumeLayer: VolumeTracingLayer,
-      version: Option[Long]
-  )(using ec: ExecutionContext): FoxIterator[(BucketPosition, Array[Byte], Long)] =
     bucketStreamWithVersionIncludingReverted(volumeLayer, version).flatMap {
-      case (bucketPosition, Some(data), bucketVersion) => Some((bucketPosition, data, bucketVersion))
-      case _                                           => None
+      case (bucketPosition, Some(data), _) => Some((bucketPosition, data))
+      case _                               => None // skip reverted elements
     }
 
-  // Also yields buckets whose newest value is the reverted marker (with data None),
-  // so that a revert can restore buckets deleted by an earlier revert.
+  // yields (bucketPosition, dataOpt (reverted elements become None), version)
   def bucketStreamWithVersionIncludingReverted(
       volumeLayer: VolumeTracingLayer,
       version: Option[Long]

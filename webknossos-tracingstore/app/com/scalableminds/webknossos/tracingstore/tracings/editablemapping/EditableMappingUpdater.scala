@@ -454,7 +454,6 @@ class EditableMappingUpdater(
       ) ?~> "trying to revert editable mapping to a version not yet present in the database"
       _ = segmentToAgglomerateBuffer.clear()
       _ = agglomerateToGraphBuffer.clear()
-      // Reverted entries are included, so that entries deleted by an earlier revert can be restored.
       segmentToAgglomerateChunkNewestStream = new VersionedFossilDbIterator(
         tracingId,
         tracingDataStore.editableMappingsSegmentToAgglomerate

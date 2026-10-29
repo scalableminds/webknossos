@@ -122,6 +122,8 @@ object Msg {
       val editableMappingDataFailed: String = "Could not revert editable mapping data."
       val getSourceFailed: String = "Could not get source version for annotation revert."
       val revertDistributedElementsFailed: String = "Could not revert distributed annotation elements."
+      def sourceVersionNotEarlier(sourceVersion: Long, newVersion: Long): String =
+        s"Trying to revert to v$sourceVersion in v$newVersion, but can only revert to earlier versions."
       val volumeDataFailed: String = "Could not revert volume data."
     }
     object Reopen {
@@ -237,7 +239,10 @@ object Msg {
       }
     }
     object EditableMapping {
-      val numEdgesExceedsInt: String = "Edge count for editable mapping exceeds int32 range."
+      def numEdgesExceedsLimit(numEdges: Long, limit: Int): String =
+        s"Edge count $numEdges for editable mapping exceeds the limit of $limit."
+      def edgeIsAdditionShapeMismatch(numEdges: Long, edgeIsAdditionShape: Seq[Long]): String =
+        s"Shape of edgeIsAddition (${edgeIsAdditionShape.mkString(", ")}) does not match edge count $numEdges."
       val getAgglomerateGraphFailed: String =
         "Could not look up an agglomerate graph for requested agglomerate."
       val getAgglomerateIdsForSegmentsFailed: String =

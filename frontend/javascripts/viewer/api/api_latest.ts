@@ -16,10 +16,9 @@ import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
 import { createTween } from "libs/tween_group";
 import UserLocalStorage from "libs/user_local_storage";
-import { coalesce, map3, mod, sleep } from "libs/utils";
+import { coalesce, map3, sleep } from "libs/utils";
 import window, { location } from "libs/window";
 import cloneDeep from "lodash-es/cloneDeep";
-import groupBy from "lodash-es/groupBy";
 import isNumber from "lodash-es/isNumber";
 import messages from "messages";
 import type { Vector16 } from "mjs";
@@ -31,7 +30,6 @@ import type { Writeable } from "types/type_utils";
 import type {
   BucketAddress,
   ControlMode,
-  LabeledVoxelsMap,
   MappingType,
   OrthoView,
   TypedArray,
@@ -59,7 +57,6 @@ import UrlManager from "viewer/controller/url_manager";
 import type { WebKnossosModel } from "viewer/model";
 import {
   getVolumeDescriptors,
-  isConcurrentCollaborationMode,
   mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
 import {
@@ -120,7 +117,11 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 import { setPositionAction, setRotationAction } from "viewer/model/actions/flycam_actions";
-import { disableSavingAction, discardSaveQueueAction } from "viewer/model/actions/save_actions";
+import {
+  disableSavingAction,
+  discardSaveQueueAction,
+  pushSaveQueueTransaction,
+} from "viewer/model/actions/save_actions";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
@@ -170,7 +171,6 @@ import {
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { Bucket, DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataLayer from "viewer/model/data_layer";
-import Dimensions from "viewer/model/dimensions";
 import dimensions from "viewer/model/dimensions";
 import { MagInfo } from "viewer/model/helpers/mag_info";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
@@ -180,16 +180,18 @@ import {
   globalPositionToBucketPosition,
   scaleGlobalPositionWithMagnification,
   zoomedAddressToZoomedPosition,
-  zoomedPositionToZoomedAddress,
 } from "viewer/model/helpers/position_converter";
 import { flatToNestedMatrix } from "viewer/model/helpers/transformation_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
-import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
+import {
+  createPartialBucketUpdates,
+  getVolumeSaveModeForState,
+} from "viewer/model/sagas/volume/helpers";
 import { fetchAgglomeratesForSegmentIds } from "viewer/model/sagas/volume/mapping_saga";
 import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
-import { applyVoxelMap } from "viewer/model/volumetracing/legacy/volume_annotation_sampling";
+import { runVoxelsEdit } from "viewer/model/volumetracing/integration/mask_driver";
 import { api, Model } from "viewer/singletons";
 import type {
   DatasetConfiguration,
@@ -2447,85 +2449,34 @@ class DataApi {
         ? state.flycam.additionalCoordinates
         : optAdditionalCoordinates;
     if (!allowUpdate || globalPositionsMag1.length === 0) return;
-    if (isConcurrentCollaborationMode(state)) {
-      // labelVoxels saves whole buckets, which would overwrite concurrent edits of
-      // the same buckets by others.
-      throw new Error(
-        "labelVoxels is not supported while simultaneous editing is enabled in the sharing settings.",
-      );
-    }
 
     const volumeTracing = enforceActiveVolumeTracing(state);
-    const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
-    const { cube } = segmentationLayer;
-    const magInfo = getMagInfo(segmentationLayer.mags);
-    const labeledZoomStep = magInfo.getClosestExistingIndex(0);
-    const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
-    const dimensionIndices = Dimensions.getIndices(OrthoViews.PLANE_XY);
-    const thirdDim = dimensionIndices[2];
-
-    const globalPositions = globalPositionsMag1.map(
+    const { cube } = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
+    const labeledZoomStep = cube.magInfo.getClosestExistingIndex(0);
+    const labeledMag = cube.magInfo.getMagByIndexOrThrow(labeledZoomStep);
+    const voxels = globalPositionsMag1.map(
       (pos): Vector3 => [
         Math.floor(pos[0] / labeledMag[0]),
         Math.floor(pos[1] / labeledMag[1]),
         Math.floor(pos[2] / labeledMag[2]),
       ],
     );
-    const groupedByW = groupBy(globalPositions, (pos) => pos[thirdDim]);
-
-    for (const group of Object.values(groupedByW)) {
-      const w = group[0][thirdDim];
-      const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
-
-      for (const pos of group) {
-        const bucketZoomedAddress = zoomedPositionToZoomedAddress(
-          pos,
-          labeledZoomStep,
-          additionalCoordinates,
-        );
-
-        let labelMap = currentLabeledVoxelMap.get(bucketZoomedAddress);
-        if (!labelMap) {
-          labelMap = new Uint8Array(Constants.BUCKET_SIZE_2D);
-          currentLabeledVoxelMap.set(bucketZoomedAddress, labelMap);
-        }
-
-        const a = pos[dimensionIndices[0]];
-        const b = pos[dimensionIndices[1]];
-        const localA = mod(a, Constants.BUCKET_WIDTH);
-        const localB = mod(b, Constants.BUCKET_WIDTH);
-        labelMap[localA * Constants.BUCKET_WIDTH + localB] = 1;
-      }
-
-      const numberOfSlices = 1;
-      applyVoxelMap(
-        currentLabeledVoxelMap,
+    const saveMode = getVolumeSaveModeForState(state);
+    const { bucketDiffs } = runVoxelsEdit(
+      {
         cube,
+        magIndex: labeledZoomStep,
         segmentId,
-        (x, y, out) => {
-          out[0] = x;
-          out[1] = y;
-          out[2] = w;
-        },
-        numberOfSlices,
-        thirdDim,
-        true,
-        0n,
-      );
-
-      const thirdDimensionOfSlice = w * labeledMag[thirdDim];
-
-      applyLabeledVoxelMapToAllMissingMags(
-        currentLabeledVoxelMap,
-        labeledZoomStep,
-        dimensionIndices,
-        magInfo,
-        cube,
-        segmentId,
-        thirdDimensionOfSlice,
-        true,
-        0n,
-      );
+        additionalCoordinates: additionalCoordinates ?? null,
+        saveMode,
+      },
+      voxels,
+      "labelVoxels",
+    );
+    if (saveMode === "partialUpdates") {
+      // The voxels follow no viewport, so the runs keep the x order.
+      const updates = createPartialBucketUpdates(bucketDiffs, cube, volumeTracing.tracingId, 0);
+      if (updates.length > 0) Store.dispatch(pushSaveQueueTransaction(updates));
     }
 
     Store.dispatch(

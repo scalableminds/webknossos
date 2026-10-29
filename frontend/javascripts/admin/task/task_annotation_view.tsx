@@ -10,6 +10,7 @@ import {
   RollbackOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { getAnnotationsForTask } from "admin/api/tasks";
 import {
   deleteAnnotation as deleteAnnotationAPI,
@@ -24,7 +25,7 @@ import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedDuration from "components/formatted_duration";
 import TransferTaskModal from "dashboard/transfer_task_modal";
-import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useState } from "react";
@@ -41,16 +42,22 @@ function TaskAnnotationView({ task }: Props) {
   const activeUser = useWkSelector((state) => state.activeUser);
   const [currentAnnotation, setCurrentAnnotation] = useState<APIAnnotation | undefined>(undefined);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-  const [annotations, setAnnotations] = useState<APIAnnotation[]>([]);
-
-  async function fetchData() {
-    const annotations = await getAnnotationsForTask(task.id);
-    setAnnotations(annotations);
-  }
-
-  useEffectOnlyOnce(() => {
-    fetchData();
+  const queryClient = useQueryClient();
+  const annotationsQueryKey = ["taskAnnotations", task.id];
+  const { data: annotations = [] } = useQueryWithErrorHandling({
+    queryKey: annotationsQueryKey,
+    queryFn: () => getAnnotationsForTask(task.id),
+    refetchOnWindowFocus: false,
+    meta: { persist: false },
   });
+
+  async function setAnnotations(updater: (currentAnnotations: APIAnnotation[]) => APIAnnotation[]) {
+    // Cancel a running refetch so that its stale response cannot overwrite this update.
+    await queryClient.cancelQueries({ queryKey: annotationsQueryKey });
+    queryClient.setQueryData(annotationsQueryKey, (currentAnnotations: APIAnnotation[] = []) =>
+      updater(currentAnnotations),
+    );
+  }
 
   function deleteAnnotation(annotation: APIAnnotation) {
     modal.confirm({
@@ -59,7 +66,9 @@ function TaskAnnotationView({ task }: Props) {
       okText: messages.yes,
       onOk: () =>
         deleteAnnotationAPI(annotation.id, annotation.typ).then(() =>
-          setAnnotations(annotations.filter((a) => a.id !== annotation.id)),
+          setAnnotations((currentAnnotations) =>
+            currentAnnotations.filter((a) => a.id !== annotation.id),
+          ),
         ),
     });
   }
@@ -71,7 +80,9 @@ function TaskAnnotationView({ task }: Props) {
 
   function updateAnnotationState(updatedAnnotation: APIAnnotation) {
     setIsTransferModalOpen(false);
-    setAnnotations(annotations.map((a) => (a.id === updatedAnnotation.id ? updatedAnnotation : a)));
+    setAnnotations((currentAnnotations) =>
+      currentAnnotations.map((a) => (a.id === updatedAnnotation.id ? updatedAnnotation : a)),
+    );
   }
 
   async function finishAnnotation(annotation: APIAnnotation) {

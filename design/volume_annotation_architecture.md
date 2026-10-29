@@ -1757,7 +1757,7 @@ Nothing below revises the design. This section records where the code currently 
 
 | Concept | § | Module | Notes |
 |---|---|---|---|
-| `EditIntent` and its shapes | 5.1 | `core/volume_edit_intents.ts` | brush, box, mask and floodFill exist; only brush and floodFill are reachable from the UI |
+| `EditIntent` and its shapes | 5.1 | `core/volume_edit_intents.ts` | brush, box, mask and floodFill exist; all but box are reachable from the UI |
 | Rasterizer | 5.3 | `core/voxel_rasterizer.ts` | capsule / box / mask, run-emitting, synchronous |
 | Resolver | 5.1 | `core/flood_fill_resolver.ts` | flood fill, with the bounding-box limit and the split-tool boundary gate |
 | `BucketVoxelMask`, `BucketWrite`, `BucketWriteMap` | 4 | `core/bucket_voxel_mask.ts`, `core/bucket_write_map.ts` | |
@@ -1767,9 +1767,9 @@ Nothing below revises the design. This section records where the code currently 
 | `WorkingDataCube` | 5.5 | `not_yet_integrated/working_data_cube.ts` | production goes through `WkDataCubeAdapter` over the real `DataCube` instead |
 | `BucketJournal` | 5.7 | `not_yet_integrated/bucket_journal.ts` | nothing in `viewer/` appends to it yet |
 | `VolumeEditingSession` | 5 | `not_yet_integrated/volume_editing_session.ts` | the app opens transactions from the sagas instead |
-| Integration glue | — | `integration/` | `WkDataCubeAdapter`, `WkLoadingCubeAdapter`, `BrushDriver`, `runFloodFill`, `runMaskEdit` |
+| Integration glue | — | `integration/` | `WkDataCubeAdapter`, `WkLoadingCubeAdapter`, `BrushDriver`, `runFloodFill`, `runMaskEdit`, `runVoxelsEdit` |
 
-The running app reaches the new code at three call sites: brushing in `volumetracing_saga.tsx`, flood fill in `floodfill_saga.tsx` and volume interpolation in `volume_interpolation_saga.ts`, which labels all interpolated slices as one `MaskShape` in a single transaction. They are now the only path for those tools — the old `VoxelBuffer2D` brush branch and `DataCube.floodFill` are gone, along with the toggle that used to select between them. The trace tool still uses the section labeler. The brush uses it only to compute its auto-fill, which joins the stroke's transaction as a `MaskShape`, so that stroke and fill are propagated and saved as one. Writes land in real buckets; nothing else about the existing pipeline changes.
+Every volume tool now labels through the new code: brushing in `volumetracing_saga.tsx`, flood fill in `floodfill_saga.tsx`, volume interpolation in `volume_interpolation_saga.ts` (all interpolated slices as one `MaskShape` in a single transaction), the trace tools and quick select via `labelWithVoxelBuffer2D` in `sagas/volume/helpers.ts`, and `api.data.labelVoxels` via `runVoxelsEdit`. The old paths of brush and flood fill are gone: the `VoxelBuffer2D` brush branch and `DataCube.floodFill`. The trace tools and quick select still use the section labeler to compute their 2D region, which becomes a `MaskShape`. The brush uses it only to compute its auto-fill, which joins the stroke's transaction as a `MaskShape`, so that stroke and fill are propagated and saved as one. Writes land in real buckets; nothing else about the existing pipeline changes.
 
 ### 12.2 Skipped, and why
 
@@ -1779,7 +1779,6 @@ The running app reaches the new code at three call sites: brushing in `volumetra
   - **No local checkpoints.** §5.7 folds undo from a local checkpoint and a bucket load from fetched backend data; the implementation has a single `base` field serving both. Checkpoints only bound replay length, so this is not a correctness gap on its own — but they carry the same horizon rule, and the two roles should be separate fields once undo is real.
 - **Save queue and backend sync** (§5.8), and the backend changes in §7. Volume edits still travel as today's update actions.
 - **Visibility-driven materialization** (§1.1, "materialization on write becomes optional"). `WkDataCubeAdapter` still calls `getOrCreateBucket` for every written address, so a coarse-mag stroke instantiates every finer bucket it implies. This is the largest single deviation from the design, and it is exactly the cost §5.4 argues has to be avoided.
-- **Tools other than brush and flood fill**: quick select, interpolation, proofreading and the trace/lasso tools all still run on the old path.
 - **Rasterizing off the main thread** (§10).
 
 ### 12.3 Plan
@@ -1791,7 +1790,7 @@ Ordered so that each step is independently reviewable, and so that the frontend 
 3. **Undo/redo on the journal** (§5.7), replacing the snapshot stack. Reintroduce `beforeCommitted` here; this is the step where it earns its keep.
 4. **Save queue** (§5.8) — emit the two new update actions of §7.1 instead of today's. This is the hard boundary: it needs the backend side designed and built in parallel.
 5. **Visibility-driven materialization** (§1.1), which is what makes coarse-mag editing viable within the memory budget of §5.4.
-6. **Remaining tools onto the intent pipeline**, starting with quick select (it already produces something mask-shaped), then interpolation and the trace tools.
+6. **Remaining tools onto the intent pipeline**, starting with quick select (it already produces something mask-shaped), then interpolation and the trace tools. Done.
 7. **Delete the remaining old paths** as the tools above move over.
 
 Steps 1–3 are frontend-only. Everything from step 4 on is a joint change.

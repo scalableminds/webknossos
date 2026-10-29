@@ -1,6 +1,10 @@
 use chrono::Utc;
+use serde_json::{Value, json};
 
-use super::{inference::find_best_matching_mag, service::AiModel};
+use super::{
+    inference::{custom_configuration, find_best_matching_mag},
+    service::AiModel,
+};
 use crate::util::id::ObjectId;
 
 fn model(path: Option<&str>, organization: Option<&str>, shared: &[&str]) -> AiModel {
@@ -53,4 +57,20 @@ fn parse_normalizes_path_and_appends_owner() {
     let parsed = model(None, None, &[]).parse().unwrap();
     assert!(parsed.shared_organizations.is_empty());
     assert!(model(Some("a|zip|zip"), None, &[]).parse().is_err());
+}
+
+#[test]
+fn affinity_threshold_is_a_config_override_that_explicit_overrides_win() {
+    const KEY: &str = "tasks.segment.config.segmenter.absolute_affinity_threshold";
+    let object = |value: Value| value.as_object().cloned();
+    assert_eq!(custom_configuration(None, None), Value::Null);
+    assert_eq!(custom_configuration(Some(0.5), None), json!({KEY: 0.5}));
+    assert_eq!(
+        custom_configuration(None, object(json!({"a": 1}))),
+        json!({"a": 1})
+    );
+    assert_eq!(
+        custom_configuration(Some(0.5), object(json!({KEY: 0.8, "a": 1}))),
+        json!({KEY: 0.8, "a": 1})
+    );
 }

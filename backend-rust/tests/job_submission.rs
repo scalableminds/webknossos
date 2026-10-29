@@ -205,6 +205,20 @@ async fn all_eight_routes_submit_pending_jobs_with_contract_arguments_and_costs(
             "render_animation",
         ),
     ];
+    // Custom configuration overrides (alignSections) are reserved for super users.
+    let (status, response) = request(
+        &application,
+        &format!("/jobs/run/alignSections/{id}"),
+        Some(&fixture.token),
+        Some(json!({"layerName":"segmentation","newDatasetName":"Aligned","customConfiguration":{"key":true}})),
+    )
+    .await;
+    assert_eq!(status, 403, "{response}");
+    sqlx::query("UPDATE webknossos.multiUsers SET isSuperUser=TRUE WHERE _id=$1")
+        .bind(&fixture.multi_user_id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
     let mut responses = Vec::new();
     for (uri, body, command) in runs {
         let (status, response) = request(&application, &uri, Some(&fixture.token), body).await;

@@ -28,6 +28,7 @@ use super::{
 const DATA_STORE_MISMATCH: &str = "Cannot use AI model on a dataset on a different data store.";
 /// Not a message key in Play's messages: rendered verbatim.
 const MODEL_REQUIRED: &str = "aiModel.required";
+const AFFINITY_THRESHOLD_KEY: &str = "tasks.segment.config.segmenter.absolute_affinity_threshold";
 
 /// RunInferenceParameters (`boundingBox` is a mag1 literal; `workflowYaml` is
 /// bound but unused, as in Scala).
@@ -52,6 +53,7 @@ pub(super) struct RunInferenceParameters {
     eval_max_edge_length: Option<f64>,
     eval_sparse_tube_threshold_nm: Option<f64>,
     eval_min_merger_path_length_nm: Option<f64>,
+    absolute_affinity_threshold: Option<f64>,
     custom_configuration: Option<Map<String, Value>>,
 }
 
@@ -99,6 +101,26 @@ pub(super) async fn run_instance_model_inference(
         InferenceKind::Instance,
     )
     .await
+}
+
+/// The `custom_configuration` job argument. Neuron inference passes the affinity
+/// threshold to the worker as a regular config override; explicit (super user)
+/// overrides of the same key take precedence.
+pub(super) fn custom_configuration(
+    absolute_affinity_threshold: Option<f64>,
+    custom_configuration: Option<Map<String, Value>>,
+) -> Value {
+    let affinity_threshold_override = absolute_affinity_threshold.map(|threshold| {
+        Map::from_iter([(AFFINITY_THRESHOLD_KEY.to_owned(), play_f64_value(threshold))])
+    });
+    match (affinity_threshold_override, custom_configuration) {
+        (None, None) => Value::Null,
+        (Some(configuration), None) | (None, Some(configuration)) => Value::Object(configuration),
+        (Some(mut configuration), Some(overrides)) => {
+            configuration.extend(overrides);
+            Value::Object(configuration)
+        }
+    }
 }
 
 /// AiModelService.findBestMatchingMag: the first mag whose x voxel size (dataset
@@ -175,6 +197,10 @@ async fn run_model_inference(
             .await?
             .ok_or_else(|| Failure::new(crate::msg::data_store::NOT_FOUND))?;
     crate::dataset::create::validate_dataset_name(&body.new_dataset_name)?;
+    crate::job::submission::assert_custom_configuration_allowed(
+        body.custom_configuration.as_ref(),
+        user,
+    )?;
     // BoundingBox.fromLiteral(..).toFox: the empty Fox.
     let mag1_bounding_box =
         BoundingBox::from_literal(&body.bounding_box).ok_or_else(generic_not_found)?;
@@ -200,10 +226,11 @@ async fn run_model_inference(
     } else {
         model.organization.clone()
     };
-    let custom_configuration = body
-        .custom_configuration
-        .clone()
-        .map_or(Value::Null, Value::Object);
+    let custom_configuration = custom_configuration(
+        body.absolute_affinity_threshold
+            .filter(|_| kind == InferenceKind::Neuron),
+        body.custom_configuration.clone(),
+    );
     let mut args = Map::new();
     args.insert("dataset_id".into(), json!(dataset.id));
     args.insert("organization_id".into(), json!(dataset.organization));

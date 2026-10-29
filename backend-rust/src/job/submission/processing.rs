@@ -11,7 +11,7 @@ use super::params::{
     Params, authenticate, dataset_id, json_body, json_int, json_object_id, read_optional,
     read_string,
 };
-use super::service::{Submission, run_submission};
+use super::service::{Submission, assert_custom_configuration_allowed, run_submission};
 use super::{
     failure::{Failure, RunError, RunResult},
     lookups::{data_source_and_layer, find_dataset, own_organization},
@@ -101,7 +101,7 @@ pub(super) async fn align_sections(
     let new_dataset_name = read_string(&body, "newDatasetName")?;
     let annotation_id = read_optional(&body, "annotationId", json_object_id)?;
     let custom_configuration = read_optional(&body, "customConfiguration", |value| {
-        value.is_object().then(|| value.clone())
+        value.as_object().cloned()
     })?;
     let fine_alignment_max_jump_size = read_optional(&body, "fineAlignmentMaxJumpSize", json_int)?;
     let user = authenticate(&parts, &state).await?;
@@ -109,6 +109,7 @@ pub(super) async fn align_sections(
     let organization = own_organization(&state, &user, &dataset, ALIGN_WRONG_ORGA).await?;
     validate_dataset_name(&new_dataset_name)?;
     validate_layer_name_lax(&layer_name)?;
+    assert_custom_configuration_allowed(custom_configuration.as_ref(), &user)?;
     let not_usable = crate::msg::dataset::not_usable(&dataset.id);
     let (data_source_box, layer) = data_source_and_layer(&state, &dataset, &layer_name)
         .await

@@ -156,6 +156,10 @@ async fn run_model_training(
     if !user.is_superuser && ai_plan.is_none() {
         return Err(Failure::new(NO_AI_PLAN).into());
     }
+    crate::job::submission::assert_custom_configuration_allowed(
+        body.custom_configuration.as_ref(),
+        user,
+    )?;
     let annotations = &body.training_annotations;
     if annotations.is_empty() && body.workflow_yaml.is_none() {
         return Err(Failure::new(ZERO_TRAINING_ANNOTATIONS).into());

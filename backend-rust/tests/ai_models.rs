@@ -1509,6 +1509,27 @@ async fn training_submits_paid_job_and_pending_model_atomically() {
         .0,
         401
     );
+    // Custom configuration overrides are reserved for super users.
+    let (status, response) = send(
+        &app,
+        "POST",
+        "/aiModels/runNeuronModelTraining",
+        Some(&owner.token),
+        Some(body.clone()),
+    )
+    .await;
+    assert_eq!(
+        (status, response),
+        (
+            403,
+            error("This feature is currently only available for superusers.")
+        )
+    );
+    sqlx::query("UPDATE webknossos.multiUsers SET isSuperUser=TRUE WHERE _id=$1")
+        .bind(&owner.multi_user_id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
     let (status, model) = send(
         &app,
         "POST",
@@ -2156,6 +2177,7 @@ async fn inference_submits_paid_job_with_target_mag_cost_and_inference_atomicall
         "seedGeneratorDistanceThreshold": 3.5,
         "evalUseSparseTracing": true,
         "evalMaxEdgeLength": 12,
+        "absoluteAffinityThreshold": 0.25,
         "customConfiguration": {"a": {"b": [1]}},
     });
     assert_eq!(
@@ -2170,6 +2192,28 @@ async fn inference_submits_paid_job_with_target_mag_cost_and_inference_atomicall
         .0,
         401
     );
+    // Custom configuration overrides are reserved for super users; the affinity
+    // threshold alone is open to everyone.
+    let (status, response) = send(
+        &app,
+        "POST",
+        "/aiModels/inferences/runNeuronModelInference",
+        Some(&owner.token),
+        Some(body.clone()),
+    )
+    .await;
+    assert_eq!(
+        (status, response),
+        (
+            403,
+            error("This feature is currently only available for superusers.")
+        )
+    );
+    sqlx::query("UPDATE webknossos.multiUsers SET isSuperUser=TRUE WHERE _id=$1")
+        .bind(&owner.multi_user_id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
     let (status, inference) = send(
         &app,
         "POST",
@@ -2223,7 +2267,10 @@ async fn inference_submits_paid_job_with_target_mag_cost_and_inference_atomicall
             "eval_max_edge_length": 12,
             "eval_sparse_tube_threshold_nm": null,
             "eval_min_merger_path_length_nm": null,
-            "custom_configuration": {"a": {"b": [1]}},
+            "custom_configuration": {
+                "a": {"b": [1]},
+                "tasks.segment.config.segmenter.absolute_affinity_threshold": 0.25,
+            },
         })
     );
     // 1000×1000×2000 voxels in mag 4-4-2 at 1000 milli credits per GVx.

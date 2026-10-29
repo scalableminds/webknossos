@@ -36,6 +36,22 @@ const JOBS_WRITING_TO_STORAGE: [&str; 7] = [
     "materialize_volume_annotation",
 ];
 
+/// JobService.assertCustomConfigurationAllowed: arbitrary workflow config
+/// overrides are reserved for super users (`assertIsSuperUser ~> FORBIDDEN`).
+pub(crate) fn assert_custom_configuration_allowed(
+    custom_configuration: Option<&Map<String, Value>>,
+    user: &AuthUser,
+) -> Result<(), Failure> {
+    if custom_configuration.is_some_and(|configuration| !configuration.is_empty())
+        && !user.is_superuser
+    {
+        return Err(
+            Failure::new(crate::msg::user::SUPER_USER_ONLY).with_param(StatusCode::FORBIDDEN)
+        );
+    }
+    Ok(())
+}
+
 /// A job to submit: JobCommand, commandArgs and the datastore whose workers run it.
 pub(crate) struct Submission<'a> {
     pub(crate) command: &'static str,

@@ -6,9 +6,10 @@ import {
   SwapOutlined,
 } from "@ant-design/icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAuthToken, revokeAuthToken } from "admin/rest_api";
+import { revokeAuthToken } from "admin/rest_api";
 import { Button, Col, Row, Spin, Typography } from "antd";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
+import { authTokenQueryOptions } from "./auth_token_query";
 import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
 
@@ -20,8 +21,7 @@ function AccountAuthTokenView() {
 
   const { data: currentToken = "", isLoading: isLoadingToken } = useQueryWithErrorHandling(
     {
-      queryKey: ["authToken"],
-      queryFn: getAuthToken,
+      ...authTokenQueryOptions,
       refetchOnWindowFocus: false,
     },
     "Failed to fetch auth token. Please refresh the page to try again.",
@@ -29,7 +29,7 @@ function AccountAuthTokenView() {
 
   const revokeTokenMutation = useMutation({
     mutationFn: revokeAuthToken,
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["authToken"] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: authTokenQueryOptions.queryKey }),
   });
   const isLoading = isLoadingToken || revokeTokenMutation.isPending;
 

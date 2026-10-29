@@ -259,38 +259,35 @@ class VolumeTracingService @Inject() (
       _ <- Fox.serialCombined(bucketStreamBeforeRevert) { case (bucketPosition, dataBeforeRevertOpt, version) =>
         if (version > sourceVersion) {
           loadBucket(volumeLayer, bucketPosition, Some(sourceVersion)).shiftBox.flatMap {
-            case Full(dataAfterRevert) =>
-              for {
-                _ <- saveBucket(volumeLayer, bucketPosition, dataAfterRevert, newVersion)
-                _ <- Fox.runIfOptionTrue(tracingBeforeRevert.hasSegmentIndex)(
-                  updateSegmentIndex(
-                    volumeLayer,
-                    segmentIndexBuffer,
-                    bucketPosition,
-                    dataAfterRevert,
-                    Box.fromOption(dataBeforeRevertOpt),
-                    editableMappingTracingId(sourceTracing, tracingId)
-                  )
-                )
-              } yield ()
             case Empty if dataBeforeRevertOpt.isEmpty =>
               Fox.successful(()) // Already reverted, leave it alone
-            case Empty =>
+            case Failure(msg, _, chain) => Fox.failure(msg, Empty, chain)
+            case dataAfterRevertBox     =>
               for {
-                dataAfterRevert <- Fox.successful(revertedValue)
-                _ <- saveBucket(volumeLayer, bucketPosition, dataAfterRevert, newVersion)
+                _ <- saveBucket(volumeLayer, bucketPosition, dataAfterRevertBox.getOrElse(revertedValue), newVersion)
                 _ <- Fox.runIfOptionTrue(tracingBeforeRevert.hasSegmentIndex)(
-                  updateSegmentIndex(
-                    volumeLayer,
-                    segmentIndexBuffer,
-                    bucketPosition,
-                    dataAfterRevert,
-                    Box.fromOption(dataBeforeRevertOpt),
-                    editableMappingTracingId(sourceTracing, tracingId)
-                  )
+                  for {
+                    dataBeforeRevertWithFallbackBox <- withFallbackIfReverted(
+                      volumeLayer,
+                      bucketPosition,
+                      Box.fromOption(dataBeforeRevertOpt)
+                    )
+                    dataAfterRevertWithFallbackBox <- withFallbackIfReverted(
+                      volumeLayer,
+                      bucketPosition,
+                      dataAfterRevertBox
+                    )
+                    _ <- updateSegmentIndex(
+                      volumeLayer,
+                      segmentIndexBuffer,
+                      bucketPosition,
+                      dataAfterRevertWithFallbackBox.getOrElse(revertedValue),
+                      dataBeforeRevertWithFallbackBox,
+                      editableMappingTracingId(sourceTracing, tracingId)
+                    )
+                  } yield ()
                 )
               } yield ()
-            case Failure(msg, _, chain) => Fox.failure(msg, Empty, chain)
           }
         } else Fox.successful(())
       }
@@ -301,6 +298,18 @@ class VolumeTracingService @Inject() (
       )
     } yield ()
   }
+
+  // In case of fallback layer, reverted buckets will show the fallback data, so we need it to feed it to the segment index differ.
+  private def withFallbackIfReverted(
+      volumeLayer: VolumeTracingLayer,
+      bucketPosition: BucketPosition,
+      dataBox: Box[Array[Byte]]
+  ): Fox[Box[Array[Byte]]] =
+    dataBox match {
+      case Empty if volumeLayer.tracing.fallbackLayer.nonEmpty =>
+        loadFallbackBucket(volumeLayer, bucketPosition).shiftBox
+      case _ => Fox.successful(dataBox)
+    }
 
   def initializeWithDataMultiple(annotationId: ObjectId, tracingId: String, tracing: VolumeTracing, initialData: File)(
       using tc: TokenContext

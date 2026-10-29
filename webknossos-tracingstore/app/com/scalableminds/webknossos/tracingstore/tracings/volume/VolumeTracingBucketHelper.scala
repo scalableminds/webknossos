@@ -313,7 +313,7 @@ trait VolumeTracingBucketHelper
     }
   }
 
-  private def loadFallbackBucket(layer: VolumeTracingLayer, bucket: BucketPosition)(using
+  protected def loadFallbackBucket(layer: VolumeTracingLayer, bucket: BucketPosition)(using
       ec: ExecutionContext
   ): Fox[Array[Byte]] = {
     val dataRequest: WebknossosDataRequest = WebknossosDataRequest(

@@ -184,12 +184,12 @@ export function* tryToIncorporateActions(
 
           const bucket = cube.getBucket(bucketAddress);
           if (action.name === "updateBucketPartial") {
-            if (bucket.type === "data" && bucket.isLoaded()) {
-              // A loaded bucket gets the runs applied directly. As runs are absolute
-              // writes, applying others' runs first and then re-applying the user's
-              // unsaved ones (see rebasing_sagas.ts) yields the backend's state after
-              // the user's pending save: where both wrote the same voxels, the user's
-              // values win.
+            if (bucket.type === "data" && (bucket.isLoaded() || bucket.isMissing())) {
+              // The runs are applied directly, also to a missing bucket, which is empty
+              // on the backend. As runs are absolute writes, applying others' runs first
+              // and then re-applying the user's unsaved ones (see rebasing_sagas.ts)
+              // yields the backend's state after the user's pending save: where both
+              // wrote the same voxels, the user's values win.
               const runs = decodeBucketDiff(
                 Uint8Array.from(atob(action.value.voxelRunsBase64), (char) => char.charCodeAt(0)),
               );

@@ -64,6 +64,45 @@ function evictBucketOf(voxel: Vector3) {
 const getValueAt = (context: WebknossosTestContext, voxel: Vector3) =>
   context.api.data.getDataValue(VOLUME_TRACING_ID, voxel);
 
+// A bucket response in which neither the volume layer nor its fallback layer have
+// data for any bucket.
+async function respondWithoutData(_url: string, payload: { data: Array<unknown> }) {
+  return {
+    buffer: new ArrayBuffer(0),
+    headers: {
+      "empty-bucket-indices": JSON.stringify(payload.data.map((_, index) => index)),
+      "failure-bucket-indices": "[]",
+    },
+  };
+}
+
+// Lets another user save a partial update that writes 9 to the given voxels of the
+// bucket that contains `position`, as the next version.
+function planOthersPartialUpdate(
+  backendMock: ReturnType<typeof mockInitialBucketAndAgglomerateData>,
+  voxels: Vector3[],
+) {
+  const runAt = (voxel: Vector3) => {
+    const [x, y, z] = voxel.map((coordinate, axis) => coordinate - bucketOrigin[axis]);
+    return { start: voxelIndexOf(x, y, z), length: 1, value: 9n };
+  };
+  backendMock.planVersionInjection(Store.getState().annotation.version + 1, [
+    {
+      name: "updateBucketPartial",
+      value: {
+        actionTracingId: VOLUME_TRACING_ID,
+        position: bucketOrigin,
+        additionalCoordinates: undefined,
+        mag: [1, 1, 1],
+        voxelRunsBase64: encodeBucketDiffBase64({
+          address: [1, 1, 1, 0, null],
+          runs: voxels.map(runAt),
+        }),
+      },
+    },
+  ]);
+}
+
 describe("Unsaved partial bucket updates", () => {
   const previousAllowFlag = WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation;
   beforeEach(() => {
@@ -98,15 +137,8 @@ describe("Unsaved partial bucket updates", () => {
     brushAt(position);
     expect(await getValueAt(context, position)).toBe(5);
 
-    // Neither the volume layer nor its fallback layer have data for any bucket.
     vi.mocked(context.mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      async (_url: string, payload: { data: Array<unknown> }) => ({
-        buffer: new ArrayBuffer(0),
-        headers: {
-          "empty-bucket-indices": JSON.stringify(payload.data.map((_, index) => index)),
-          "failure-bucket-indices": "[]",
-        },
-      }),
+      respondWithoutData,
     );
     expect(hasUnsavedPartialUpdates()).toBe(true);
     evictBucketOf(position);
@@ -126,25 +158,7 @@ describe("Unsaved partial bucket updates", () => {
     // one that it won't, in the same bucket.
     const sharedVoxel = position;
     const othersVoxel: Vector3 = [60, 60, 43];
-    const runAt = (voxel: Vector3) => {
-      const [x, y, z] = voxel.map((coordinate, axis) => coordinate - bucketOrigin[axis]);
-      return { start: voxelIndexOf(x, y, z), length: 1, value: 9n };
-    };
-    backendMock.planVersionInjection(Store.getState().annotation.version + 1, [
-      {
-        name: "updateBucketPartial",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          position: bucketOrigin,
-          additionalCoordinates: undefined,
-          mag: [1, 1, 1],
-          voxelRunsBase64: encodeBucketDiffBase64({
-            address: [1, 1, 1, 0, null],
-            runs: [runAt(sharedVoxel), runAt(othersVoxel)],
-          }),
-        },
-      },
-    ]);
+    planOthersPartialUpdate(backendMock, [sharedVoxel, othersVoxel]);
 
     brushAt(position);
     // The save has to rebase onto the other user's version first.
@@ -153,5 +167,29 @@ describe("Unsaved partial bucket updates", () => {
     expect(await getValueAt(context, sharedVoxel)).toBe(5);
     expect(await getValueAt(context, othersVoxel)).toBe(9);
     expect(hasUnsavedPartialUpdates()).toBe(false);
+  });
+
+  it<WebknossosTestContext>("win over others' partial updates of a missing bucket when rebasing", async (context) => {
+    await setup(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    // Nobody has annotated the bucket yet: it is missing on the backend. Once applied,
+    // the backend mock doesn't return saved updates in bucket data, so a bucket that
+    // is fetched again would lack them.
+    vi.mocked(context.mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+      respondWithoutData,
+    );
+    await context.api.data.reloadAllBuckets();
+    await context.api.tracing.save();
+    expect(await getValueAt(context, position)).toBe(0);
+
+    const sharedVoxel = position;
+    const othersVoxel: Vector3 = [60, 60, 43];
+    brushAt(position);
+    planOthersPartialUpdate(backendMock, [sharedVoxel, othersVoxel]);
+    await context.api.tracing.save();
+
+    // The other user's runs were applied to the missing bucket in place.
+    expect(await getValueAt(context, sharedVoxel)).toBe(5);
+    expect(await getValueAt(context, othersVoxel)).toBe(9);
   });
 });

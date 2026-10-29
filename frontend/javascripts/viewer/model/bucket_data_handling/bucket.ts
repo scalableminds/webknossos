@@ -533,7 +533,8 @@ export class DataBucket {
     // backend already has, or the user's own unsaved one, which is re-applied during
     // rebasing and is saved through the save queue. Unlike a local mutation, the
     // bucket is neither marked dirty nor pushed, and no undo snapshot is taken.
-    mutate(this.getData());
+    // A missing bucket is empty on the backend, so the change applies to empty data.
+    mutate(this.isMissing() ? this.getOrCreateData() : this.getData());
     this.invalidateValueSet();
     this.throttledTriggerLabeled();
   }

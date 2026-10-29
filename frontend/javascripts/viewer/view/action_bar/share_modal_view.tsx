@@ -658,8 +658,8 @@ function ShareModalViewInner(props: Props) {
               and is currently limited to{" "}
               {allowsVolumeAnnotation ? (
                 <>
-                  the proofreading tool, the brush, the eraser and the fill tool (
-                  <b>skeleton and other volume tools will be disabled</b>).
+                  the proofreading tool and the volume tools (
+                  <b>the skeleton tool will be disabled</b>).
                 </>
               ) : (
                 <>

@@ -21,8 +21,10 @@ import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { applyBucketWriteToData, type BucketWrite } from "../core/bucket_write_map";
 import {
+  type BoundingBox,
   type BucketAddress,
   type Mag,
+  type MagIndex,
   MagList,
   type SegmentBucketData,
   type SegmentId,
@@ -114,6 +116,22 @@ export class WkDataCubeAdapter implements TransactionCube {
       }
     }
     this.touched.clear();
+  }
+
+  /**
+   * The DataCube's bounding box (e.g., the task bounding box) in the voxels of
+   * the given mag. The DataCube drops writes to buckets outside of it, but not
+   * to the outside part of a partially contained bucket. Clipping in the core
+   * covers both, and keeps the diff free of discarded writes. Rounded like the
+   * bucket containment in data_cube.ts.
+   */
+  getEditableBoundingBox(magIndex: MagIndex): BoundingBox {
+    // Dense mags, since mag propagation also passes through mags that are
+    // missing between two existing ones.
+    const mag = this.cube.magInfo.getDenseMags()[magIndex];
+    if (mag == null) throw new Error(`No mag at index ${magIndex}`);
+    const { min, max } = this.cube.boundingBox.fromMag1ToMag(mag);
+    return { min, max };
   }
 
   private rawData(address: BucketAddress): BucketDataArray | null {

@@ -129,8 +129,10 @@ export class ResumableFile {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail.file === this) {
-        this.resumableObj.upload();
         this.resumableObj.removeEventListener("chunkingComplete", handler);
+        // Don't resume a paused upload (e.g. while a cancel confirmation is shown). Its
+        // rebuilt chunks are sent once the upload is resumed.
+        if (!this.isPaused()) this.resumableObj.upload();
       }
     };
     this.resumableObj.addEventListener("chunkingComplete", handler);

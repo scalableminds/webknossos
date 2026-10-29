@@ -41,16 +41,3 @@ You can also materialize annotations made with the proofreading tool. In that ca
 
 !!! info
     This feature is only available to admins and dataset managers, on webknossos.org or on managed instances that have the WEBKNOSSOS worker configured.
-
-## Restricting magnifications
-
-Volume annotations can be stored at multiple [magnifications](../terminology.md) — `1-1-1` being full resolution, `4-4-2` meaning downsampled by 4× in x/y and 2× in z, and so on. By default, edits are stored at every available magnification, which can significantly increase annotation size when labeling large structures such as nuclei.
-
-Restricting the annotation to a coarser magnification reduces storage overhead and improves the responsiveness of annotation tools such as the brush — the browser has less data to update and upload with each stroke. Annotation quality is typically unaffected when the selected magnification matches your annotation granularity; choosing a too-coarse a magnification can reduce recoverable fine detail. The restriction is set when the volume layer is first created — either at annotation creation or when adding a new layer to an existing annotation.
-### When creating an annotation
-
-On the dataset dashboard, click the three-dot menu next to **New Annotation** for the dataset you want to annotate. Use the magnification slider to exclude finer magnifications — for example, skipping `1-1-1` or the two finest magnifications is a common choice for large structures.
-
-### When adding a new volume annotation layer
-
-In an open annotation, go to the **Layers** tab on the left sidebar and click **Add Volume Annotation Layer** at the bottom of the layer list. The same magnification slider is available there.

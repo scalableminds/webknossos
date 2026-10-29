@@ -691,6 +691,7 @@ class TracingApi {
 
   /**
    * Adds a segment to the segment list.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * api.tracing.registerSegment(
@@ -701,11 +702,12 @@ class TracingApi {
    * );
    */
   registerSegment(
-    segmentId: bigint,
+    segmentIdLike: NumberLike,
     anchorPosition: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
     layerName?: string,
   ) {
+    const segmentId = toBigInt(segmentIdLike);
     Store.dispatch(clickSegmentAction(segmentId, anchorPosition, additionalCoordinates, layerName));
   }
 
@@ -832,6 +834,7 @@ class TracingApi {
   /**
    * Gets a segment object within the referenced volume layer. Note that this object
    * does not support any modifications made to it.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * const segment = api.tracing.getSegment(
@@ -840,7 +843,8 @@ class TracingApi {
    * );
    * console.log(segment.groupId)
    */
-  getSegment(segmentId: bigint, layerName: string): Segment {
+  getSegment(segmentIdLike: NumberLike, layerName: string): Segment {
+    const segmentId = toBigInt(segmentIdLike);
     const segment = getSegmentsForLayer(Store.getState(), layerName).getOrThrow(segmentId);
     // Return a copy to avoid mutations by third-party code.
     return { ...segment };
@@ -849,6 +853,7 @@ class TracingApi {
   /**
    * Updates a segment. The segment parameter can contain all properties of a Segment
    * (except for the id) or less.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * api.tracing.updateSegment(
@@ -863,12 +868,14 @@ class TracingApi {
    *   "volume-layer-id"
    * );
    */
-  updateSegment(segmentId: bigint, segment: Partial<Segment>, layerName: string) {
+  updateSegment(segmentIdLike: NumberLike, segment: Partial<Segment>, layerName: string) {
+    const segmentId = toBigInt(segmentIdLike);
     Store.dispatch(updateSegmentAction(segmentId, { ...segment, id: segmentId }, layerName));
   }
 
   /**
    * Removes a segment from the segment list. This does *not* mutate the actual voxel data.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * api.tracing.removeSegment(
@@ -876,7 +883,8 @@ class TracingApi {
    *   "volume-layer-id"
    * );
    */
-  removeSegment(segmentId: bigint, layerName: string) {
+  removeSegment(segmentIdLike: NumberLike, layerName: string) {
+    const segmentId = toBigInt(segmentIdLike);
     Store.dispatch(removeSegmentAction(segmentId, layerName));
   }
 
@@ -1097,12 +1105,13 @@ class TracingApi {
    * tree from the backend. By passing any position of the agglomerate instead its id via using
    * api.tracing.loadAgglomerateTreeAtPosition WEBKNOSSOS can ensure to use the up-to-date agglomerate
    * id to request the correct agglomerate tree.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * api.tracing.loadAgglomerateSkeletonForSegmentId(3);
    */
-  loadAgglomerateSkeletonForSegmentId(segmentId: bigint) {
-    loadAgglomerateTreeFromId(segmentId);
+  loadAgglomerateSkeletonForSegmentId(segmentIdLike: NumberLike) {
+    loadAgglomerateTreeFromId(toBigInt(segmentIdLike));
   }
 
   /**
@@ -1572,12 +1581,13 @@ class TracingApi {
   /**
    * Sets the active segment given a segment id.
    * If a segment with the given id doesn't exist, it is created.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    * _Volume tracing only!_
    */
-  setActiveCell(id: bigint) {
+  setActiveCell(idLike: NumberLike) {
     assertVolume(Store.getState());
-    assertExists(id, "Segment id is missing.");
-    Store.dispatch(setActiveCellAction(id));
+    assertExists(idLike, "Segment id is missing.");
+    Store.dispatch(setActiveCellAction(toBigInt(idLike)));
   }
 
   /**
@@ -2416,6 +2426,7 @@ class DataApi {
    * had brushed the provided voxels all at once. If the volume data wasn't
    * downloaded completely yet, WEBKNOSSOS will merge the data as soon as it
    * was downloaded.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * _Volume tracing only!_
    *
@@ -2425,9 +2436,10 @@ class DataApi {
    */
   labelVoxels(
     globalPositionsMag1: Vector3[],
-    segmentId: bigint,
+    segmentIdLike: NumberLike,
     optAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
+    const segmentId = toBigInt(segmentIdLike);
     const state = Store.getState();
     const allowUpdate = mayEditAnnotation(state);
     const additionalCoordinates =
@@ -2712,6 +2724,7 @@ class DataApi {
    * If a mesh file is active, loadPrecomputedMesh can be used to load a mesh for a given segment at a given seed position for
    * a specified segmentation layer. If layerName is not passed, the currently visible segmentation layer will be used.
    * If there is no mesh file for the dataset's segmentation layer available, you can use api.data.computeMeshOnDemand instead.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * const currentPosition = api.tracing.getCameraPosition();
@@ -2722,11 +2735,12 @@ class DataApi {
    * api.data.loadPrecomputedMesh(segmentId, currentPosition);
    */
   loadPrecomputedMesh(
-    segmentId: bigint,
+    segmentIdLike: NumberLike,
     seedPosition: Vector3,
     layerName: string | null | undefined,
     seedAdditionalCoordinates?: AdditionalCoordinate[],
   ) {
+    const segmentId = toBigInt(segmentIdLike);
     const state = Store.getState();
     const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(state, layerName);
 
@@ -2780,6 +2794,7 @@ class DataApi {
 
   /**
    * Load a mesh for a given segment id and a seed position by computing it ad-hoc.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * const currentPosition = api.tracing.getCameraPosition();
@@ -2787,21 +2802,25 @@ class DataApi {
    * api.data.computeMeshOnDemand(segmentId, currentPosition);
    */
   computeMeshOnDemand(
-    segmentId: bigint,
+    segmentIdLike: NumberLike,
     seedPosition: Vector3,
     seedAdditionalCoordinates?: AdditionalCoordinate[],
   ) {
-    Store.dispatch(loadAdHocMeshAction(segmentId, seedPosition, seedAdditionalCoordinates));
+    Store.dispatch(
+      loadAdHocMeshAction(toBigInt(segmentIdLike), seedPosition, seedAdditionalCoordinates),
+    );
   }
 
   /**
    * Set the visibility for a loaded mesh by providing the corresponding segment id.
    * If layerName is not passed, the currently visible segmentation layer will be used.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
-   * api.data.setMeshVisibility(segmentId, false);
+   * api.data.setMeshVisibility(3, false);
    */
-  setMeshVisibility(segmentId: bigint, isVisible: boolean, layerName?: string) {
+  setMeshVisibility(segmentIdLike: NumberLike, isVisible: boolean, layerName?: string) {
+    const segmentId = toBigInt(segmentIdLike);
     const state = Store.getState();
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       state,
@@ -2826,11 +2845,13 @@ class DataApi {
   /**
    * Remove the mesh for a given segment and segmentation layer. If layerName is not passed,
    * the currently visible segmentation layer will be used.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
-   * api.data.removeMesh(segmentId, layerName);
+   * api.data.removeMesh(3, layerName);
    */
-  removeMesh(segmentId: bigint, layerName?: string): void {
+  removeMesh(segmentIdLike: NumberLike, layerName?: string): void {
+    const segmentId = toBigInt(segmentIdLike);
     const state = Store.getState();
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       state,
@@ -2969,11 +2990,13 @@ class DataApi {
   /**
    * Get the RGB color of a segment (and its mesh) for a given segmentation layer. If layerName is not passed,
    * the currently visible segmentation layer will be used.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * api.data.getSegmentColor(3);
    */
-  getSegmentColor(segmentId: bigint, layerName?: string): Vector3 {
+  getSegmentColor(segmentIdLike: NumberLike, layerName?: string): Vector3 {
+    const segmentId = toBigInt(segmentIdLike);
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       Store.getState(),
       layerName,
@@ -2986,11 +3009,18 @@ class DataApi {
   /**
    * Set the RGB color of a segment (and its mesh) for a given segmentation layer. If layerName is not passed,
    * the currently visible segmentation layer will be used. If the mesh is loaded, optionally update its opacity.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * api.data.setSegmentColor(3, [0, 1, 1], "segmentation", 0.5);
    */
-  setSegmentColor(segmentId: bigint, rgbColor: Vector3, layerName?: string, meshOpacity?: number) {
+  setSegmentColor(
+    segmentIdLike: NumberLike,
+    rgbColor: Vector3,
+    layerName?: string,
+    meshOpacity?: number,
+  ) {
+    const segmentId = toBigInt(segmentIdLike);
     const state = Store.getState();
     const additionalCoordinates = state.flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);

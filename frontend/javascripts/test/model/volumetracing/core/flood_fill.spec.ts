@@ -5,6 +5,7 @@ import {
   countVoxels,
   type SegmentBucketData,
   type SegmentId,
+  UNBOUNDED_BOUNDING_BOX,
   type Vector3,
   voxelIndexOf,
 } from "viewer/model/volumetracing/core";
@@ -176,6 +177,30 @@ describe("volume annotation core — flood fill", () => {
     expect(countDiffVoxels({ ...diff, bucketDiffs: mag0 })).toBe(4 * 5);
   });
 
+  it("stays within the editable bounding box without reporting it as exceeded", async () => {
+    const { cube, backend } = createHarness();
+    seedRegion(backend);
+    // The region spans x = 28..36, the editable bounding box ends at x = 30.
+    cube.getEditableBoundingBox = () => ({ min: [0, 0, 0], max: [30, 64, 64] });
+    const ctx = editContext({ activeSegmentId: FILL });
+    const shape = {
+      kind: "floodFill",
+      seed: [29, 12, 3] as Vector3,
+      is3D: false,
+      bounds: { min: [0, 0, 0] as Vector3, max: [64, 64, 64] as Vector3 },
+    } as const;
+
+    const inside = await resolveFloodFill(shape, ctx, cube);
+    // 2 columns (28..29) × 5 rows (10..14) × 1 slice
+    expect(countVoxels(inside.bucketWrites)).toBe(2 * 5);
+    expect(inside.coveredBoundingBox).toEqual({ min: [28, 10, 3], max: [30, 15, 4] });
+    expect(inside.wasBoundingBoxExceeded).toBe(false);
+
+    const outside = await resolveFloodFill({ ...shape, seed: [33, 12, 3] }, ctx, cube);
+    expect(countVoxels(outside.bucketWrites)).toBe(0);
+    expect(outside.coveredBoundingBox).toBeNull();
+  });
+
   it("does nothing when the seed already carries the active segment id", async () => {
     const { session, backend } = createHarness();
     seedRegion(backend);
@@ -244,6 +269,9 @@ describe("volume annotation core — flood fill", () => {
       getIsOverwritableFunction() {
         return null;
       }
+      getEditableBoundingBox() {
+        return UNBOUNDED_BOUNDING_BOX;
+      }
       /** Only bucket (0,0,0) exists; everything else is outside the dataset. */
       async ensureLoaded(address: BucketAddress): Promise<SegmentBucketData | null> {
         this.loaded.push(address.slice(0, 3).join(","));
@@ -294,6 +322,7 @@ describe("volume annotation core — flood fill", () => {
     const cube: LoadingVoxelCube = {
       applyWrites() {},
       getIsOverwritableFunction: () => null,
+      getEditableBoundingBox: () => UNBOUNDED_BOUNDING_BOX,
       ensureLoaded: async () => new BigUint64Array(BUCKET_VOXEL_COUNT),
     };
     const { bucketWrites, wasVoxelLimitExceeded, coveredBoundingBox } = await resolveFloodFill(

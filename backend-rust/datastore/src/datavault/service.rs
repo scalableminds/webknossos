@@ -17,8 +17,7 @@ use super::{
     UPath, VaultPath,
     gcs::{GcsOptions, GoogleCloudDataVault},
     http::build_http_client,
-    s3::{S3DataVault, S3Options, build_s3_http_client},
-    sigv4::AwsCredentials,
+    s3::{AwsCredentials, S3DataVault, S3Options, UPLOAD_RETRY, build_s3_http_client},
 };
 use crate::{
     clients::wk::{AlfuCache, WkClient},
@@ -182,7 +181,10 @@ impl DataVaultService {
             uri,
             Some(AwsCredentials::new(id, secret)),
             self.inner.s3_client.clone(),
-            &self.inner.options.s3,
+            &S3Options {
+                read_retry: UPLOAD_RETRY,
+                ..self.inner.options.s3.clone()
+            },
         ));
         let root = source.to_owned();
         let files = tokio::task::spawn_blocking(move || {
@@ -214,10 +216,8 @@ impl DataVaultService {
         let failures: Vec<String> = futures::stream::iter(files)
             .map(|(path, relative)| {
                 let vault = Arc::clone(&vault);
-                let target = target.join(&super::sigv4::uri_encode(
-                    &relative.to_string_lossy(),
-                    false,
-                ));
+                let target =
+                    target.join(&super::uri::uri_encode(&relative.to_string_lossy(), false));
                 async move {
                     vault
                         .upload_file(&path, &target)
@@ -506,7 +506,6 @@ impl DataVaultService {
                 Arc::new(GoogleCloudDataVault::new(
                     upath.to_remote_uri()?,
                     secret_json,
-                    self.inner.http_client.clone(),
                     &options.gcs,
                 ))
             }

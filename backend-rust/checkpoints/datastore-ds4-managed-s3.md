@@ -62,3 +62,5 @@ whitespace in that target prefix still violates the existing Java-URI contract.
 Restart checks use `CARGO_HOME=/tmp/webknossos-rust-cargo`,
 `CARGO_TARGET_DIR=/tmp/webknossos-rust-ds-verify`,
 `WK_DS2_ORACLE_DIR=/tmp/wk-ds2-oracle-wkw` with the complete locked/offline suite.
+
+Update 2026-10-29: uploads now go through `object_store` (see datastore-ds1b.md); the signing fixtures and `GenerateS3UploadSigningFixtures.java` were removed.

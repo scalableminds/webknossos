@@ -41,6 +41,11 @@ hdf5-reader = { version = "=0.9.1", default-features = false }
 lru = "=0.16.4"
 moka = { version = "0.12.16", features = ["sync"] }
 draco-core = { version = "=2.3.2", default-features = false, features = ["decoder", "edgebreaker_valence_decode", "legacy_bitstream_decode"] }
+object_store = { version = "0.14", default-features = false, features = ["aws-base", "gcp-base", "ring", "reqwest"] }
+# object_store's HTTP client: TLS through rustls with the ring provider (installed in
+# `datavault::object_store_support`), so no second crypto library (aws-lc) is built.
+reqwest-object-store = { package = "reqwest", version = "0.13", default-features = false, features = ["rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 
 # One integration-test binary instead of one per `tests/*.rs` file; see tests/main.rs.
 [[test]]

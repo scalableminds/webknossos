@@ -1,6 +1,6 @@
-//! Data vaults (DS1b): SigV4 against the AWS published examples, S3 and GCS request construction
-//! against local mock servers, GCS service-account tokens, and `DataVaultService` dispatch, cache
-//! and whitelist.
+//! Data vaults (DS1b): S3 and GCS reads, listings, credentials and retries through the
+//! `object_store` clients against local mock servers, and `DataVaultService` dispatch, cache and
+//! whitelist.
 
 use crate::mock_wk;
 
@@ -18,7 +18,6 @@ use std::{
 
 use axum::{
     Router,
-    body::Bytes,
     http::{HeaderMap, Method, StatusCode, Uri},
     response::{IntoResponse, Response},
 };
@@ -35,9 +34,7 @@ use webknossos_datastore::{
         AwsCredentials, ByteRange, CredentialLookup, CredentializedUPath, DataVault,
         DataVaultCredential, DataVaultService, DataVaultServiceOptions, Encoding, GcsOptions,
         GoogleCloudDataVault, HttpsDataVault, MSG_MAG_PATH_NOT_ABSOLUTE, MSG_SETUP_FAILED,
-        RetryPolicy, S3DataVault, S3Options, ServiceAccountTokenSource, UPath, VaultError,
-        VaultPath,
-        sigv4::{self, EMPTY_PAYLOAD_SHA256, SigningRequest},
+        RetryPolicy, S3DataVault, S3Options, UPath, VaultError, VaultPath,
     },
     error::{DsError, DsResult},
     models::{datasource::MagLocator, geometry::Vec3Int},
@@ -54,7 +51,6 @@ struct Req {
     path: String,
     query: Vec<(String, String)>,
     headers: HeaderMap,
-    body: Bytes,
 }
 
 impl Req {
@@ -67,12 +63,6 @@ impl Req {
             .iter()
             .find(|(k, _)| k == name)
             .map(|(_, v)| v.as_str())
-    }
-
-    fn form(&self) -> HashMap<String, String> {
-        url::form_urlencoded::parse(&self.body)
-            .into_owned()
-            .collect()
     }
 }
 
@@ -91,10 +81,6 @@ impl Resp {
         }
     }
 
-    fn json(status: u16, value: Value) -> Self {
-        Self::new(status, value.to_string()).with("content-type", "application/json")
-    }
-
     fn with(mut self, name: &'static str, value: impl Into<String>) -> Self {
         self.headers.push((name, value.into()));
         self
@@ -111,31 +97,28 @@ impl Mock {
         let requests: Arc<Mutex<Vec<Req>>> = Arc::default();
         let recorded = Arc::clone(&requests);
         let handler = Arc::new(handler);
-        let app = Router::new().fallback(
-            move |method: Method, uri: Uri, headers: HeaderMap, body: Bytes| {
-                let recorded = Arc::clone(&recorded);
-                let handler = Arc::clone(&handler);
-                async move {
-                    let req = Req {
-                        method: method.to_string(),
-                        path: uri.path().to_owned(),
-                        query: url::form_urlencoded::parse(uri.query().unwrap_or("").as_bytes())
-                            .into_owned()
-                            .collect(),
-                        headers,
-                        body,
-                    };
-                    let resp = handler(&req);
-                    recorded.lock().unwrap().push(req);
-                    let mut response: Response =
-                        (StatusCode::from_u16(resp.status).unwrap(), resp.body).into_response();
-                    for (name, value) in resp.headers {
-                        response.headers_mut().insert(name, value.parse().unwrap());
-                    }
-                    response
+        let app = Router::new().fallback(move |method: Method, uri: Uri, headers: HeaderMap| {
+            let recorded = Arc::clone(&recorded);
+            let handler = Arc::clone(&handler);
+            async move {
+                let req = Req {
+                    method: method.to_string(),
+                    path: uri.path().to_owned(),
+                    query: url::form_urlencoded::parse(uri.query().unwrap_or("").as_bytes())
+                        .into_owned()
+                        .collect(),
+                    headers,
+                };
+                let resp = handler(&req);
+                recorded.lock().unwrap().push(req);
+                let mut response: Response =
+                    (StatusCode::from_u16(resp.status).unwrap(), resp.body).into_response();
+                for (name, value) in resp.headers {
+                    response.headers_mut().insert(name, value.parse().unwrap());
                 }
-            },
-        );
+                response
+            }
+        });
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
@@ -169,7 +152,7 @@ fn gzip(data: &[u8]) -> Vec<u8> {
 }
 
 // ---------------------------------------------------------------------------------------------
-// SigV4: AWS published examples
+// S3 (object_store client against a mock endpoint)
 // ---------------------------------------------------------------------------------------------
 
 fn pairs(items: &[(&str, &str)]) -> Vec<(String, String)> {
@@ -178,101 +161,6 @@ fn pairs(items: &[(&str, &str)]) -> Vec<(String, String)> {
         .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
         .collect()
 }
-
-/// aws-sig-v4-test-suite `get-vanilla` and `get-vanilla-query-order-key-case`.
-#[test]
-fn sigv4_matches_aws_test_suite() {
-    let credentials =
-        AwsCredentials::new("AKIDEXAMPLE", "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY");
-    let headers = pairs(&[
-        ("Host", "example.amazonaws.com"),
-        ("X-Amz-Date", "20150830T123600Z"),
-    ]);
-    let sign = |query: &[(String, String)]| {
-        sigv4::authorization(
-            &credentials,
-            &SigningRequest {
-                method: "GET",
-                canonical_uri: "/",
-                query,
-                headers: &headers,
-                payload_sha256: EMPTY_PAYLOAD_SHA256,
-            },
-            "us-east-1",
-            "service",
-            "20150830T123600Z",
-        )
-    };
-    assert_eq!(
-        sign(&[]),
-        "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, SignedHeaders=host;x-amz-date, Signature=5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31"
-    );
-    assert_eq!(
-        sign(&pairs(&[("Param2", "value2"), ("Param1", "value1")])),
-        "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, SignedHeaders=host;x-amz-date, Signature=b97d918cfa904a5beff61c982a1b6f458b799221646efd99d3219ec94cdf2500"
-    );
-}
-
-/// S3 documentation "Signature Calculations for the Authorization Header" examples
-/// (GET Object with range, GET Bucket lifecycle, GET Bucket list objects).
-#[test]
-fn sigv4_matches_s3_documentation_examples() {
-    let credentials = AwsCredentials::new(
-        "AKIAIOSFODNN7EXAMPLE",
-        "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-    );
-    let sign = |uri: &str, query: &[(String, String)], headers: &[(String, String)]| {
-        sigv4::authorization(
-            &credentials,
-            &SigningRequest {
-                method: "GET",
-                canonical_uri: uri,
-                query,
-                headers,
-                payload_sha256: EMPTY_PAYLOAD_SHA256,
-            },
-            "us-east-1",
-            "s3",
-            "20130524T000000Z",
-        )
-    };
-    let get_object = sign(
-        "/test.txt",
-        &[],
-        &pairs(&[
-            ("Host", "examplebucket.s3.amazonaws.com"),
-            ("Range", "bytes=0-9"),
-            ("x-amz-content-sha256", EMPTY_PAYLOAD_SHA256),
-            ("x-amz-date", "20130524T000000Z"),
-        ]),
-    );
-    assert_eq!(
-        get_object,
-        "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request, SignedHeaders=host;range;x-amz-content-sha256;x-amz-date, Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41"
-    );
-    let bucket_headers = pairs(&[
-        ("Host", "examplebucket.s3.amazonaws.com"),
-        ("x-amz-content-sha256", EMPTY_PAYLOAD_SHA256),
-        ("x-amz-date", "20130524T000000Z"),
-    ]);
-    assert!(
-        sign("/", &pairs(&[("lifecycle", "")]), &bucket_headers).ends_with(
-            "Signature=fea454ca298b7da1c68078a5d1bdbfbbe0d65c699e0f91ac7a200a0136783543"
-        )
-    );
-    assert!(
-        sign(
-            "/",
-            &pairs(&[("max-keys", "2"), ("prefix", "J")]),
-            &bucket_headers
-        )
-        .ends_with("Signature=34b48302e7b5fa45bde8084f4b7868a86f0a534bc59db6670ed5711ef69dc6f7")
-    );
-}
-
-// ---------------------------------------------------------------------------------------------
-// S3
-// ---------------------------------------------------------------------------------------------
 
 fn s3_vault(path: &str, credential: Option<AwsCredentials>, options: &S3Options) -> S3DataVault {
     S3DataVault::new(
@@ -297,114 +185,107 @@ fn s3_override(mock: &Mock) -> S3Options {
     }
 }
 
-/// Recompute the signature of a received request from its headers.
-fn assert_signature_valid(req: &Req, credentials: &AwsCredentials, region: &str) {
-    let authorization = req.header("authorization").expect("signed request");
-    let signed: Vec<&str> = authorization
-        .split("SignedHeaders=")
-        .nth(1)
-        .unwrap()
-        .split(',')
-        .next()
-        .unwrap()
-        .split(';')
-        .collect();
-    let headers: Vec<(String, String)> = signed
-        .iter()
-        .map(|name| ((*name).to_owned(), req.header(name).unwrap().to_owned()))
-        .collect();
-    let amz_date = req.header("x-amz-date").unwrap();
-    let expected = sigv4::authorization(
-        credentials,
-        &SigningRequest {
-            method: &req.method,
-            canonical_uri: &req.path,
-            query: &req.query,
-            headers: &headers,
-            payload_sha256: EMPTY_PAYLOAD_SHA256,
-        },
-        region,
-        "s3",
-        amz_date,
-    );
-    assert_eq!(authorization, expected);
+const LAST_MODIFIED: &str = "Wed, 21 Oct 2026 07:28:00 GMT";
+
+/// An object response with the metadata headers real stores send.
+fn object(status: u16, body: impl Into<Vec<u8>>) -> Resp {
+    Resp::new(status, body)
+        .with("etag", "\"e1\"")
+        .with("last-modified", LAST_MODIFIED)
+}
+
+/// `bytes=a-b` / `bytes=-n` served from `data` like S3 and GCS do.
+fn ranged(req: &Req, data: &[u8]) -> Resp {
+    let len = data.len();
+    let Some(spec) = req.header("range").and_then(|r| r.strip_prefix("bytes=")) else {
+        return object(200, data.to_vec());
+    };
+    let (start, end) = match spec.split_once('-').unwrap() {
+        ("", suffix) => (len - suffix.parse::<usize>().unwrap().min(len), len - 1),
+        (start, end) => (
+            start.parse().unwrap(),
+            end.parse::<usize>().unwrap().min(len - 1),
+        ),
+    };
+    object(206, data[start..=end].to_vec())
+        .with("content-range", format!("bytes {start}-{end}/{len}"))
+}
+
+/// Requests of the vault itself (without the unsigned bucket-region lookup).
+fn object_requests(mock: &Mock) -> Vec<Req> {
+    mock.requests()
+        .into_iter()
+        .filter(|r| r.method != "HEAD" || r.path.matches('/').count() > 1)
+        .collect()
 }
 
 #[tokio::test]
 async fn s3_signed_range_suffix_and_complete_reads() {
-    let mock = Mock::start(|req| {
-        let body = match req.header("range") {
-            Some("bytes=2-5") => "2345",
-            Some("bytes=-3") => "789",
-            _ => "0123456789",
-        };
-        Resp::new(
-            if req.header("range").is_some() {
-                206
-            } else {
-                200
-            },
-            body,
-        )
-        .with("content-range", "bytes 2-5/10")
-    })
-    .await;
-    let credentials = AwsCredentials::new("AKID", "SECRET");
+    let mock = Mock::start(|req| ranged(req, b"0123456789")).await;
     let vault = s3_vault(
         "s3://my-bucket/data/x%20y.bin",
-        Some(credentials.clone()),
+        Some(AwsCredentials::new("AKID", "SECRET")),
         &s3_override(&mock),
     );
     let path = upath("s3://my-bucket/data/x%20y.bin");
-    let ranged = vault
-        .read_bytes_encoding_and_range_header(&path, ByteRange::start_end_exclusive(2, 6), None)
-        .await
-        .unwrap();
+    let read = |range| vault.read_bytes_encoding_and_range_header(&path, range, None);
+    let ranged = read(ByteRange::start_end_exclusive(2, 6)).await.unwrap();
     assert_eq!(&ranged.bytes[..], b"2345");
     assert_eq!(ranged.encoding, Encoding::Identity);
     assert_eq!(ranged.content_range.as_deref(), Some("bytes 2-5/10"));
-    let suffix = vault
-        .read_bytes_encoding_and_range_header(&path, ByteRange::suffix(3), None)
-        .await
-        .unwrap();
+    let suffix = read(ByteRange::suffix(3)).await.unwrap();
     assert_eq!(&suffix.bytes[..], b"789");
-    let complete = vault
-        .read_bytes_encoding_and_range_header(&path, ByteRange::Complete, None)
-        .await
-        .unwrap();
+    assert_eq!(suffix.content_range.as_deref(), Some("bytes 7-9/10"));
+    let complete = read(ByteRange::Complete).await.unwrap();
     assert_eq!(&complete.bytes[..], b"0123456789");
+    assert_eq!(complete.content_range, None);
+    // A range past the end is clamped like S3 does.
+    let clamped = read(ByteRange::start_end_exclusive(8, 20)).await.unwrap();
+    assert_eq!(&clamped.bytes[..], b"89");
 
-    let requests = mock.requests();
-    assert_eq!(requests.len(), 3);
+    let requests = object_requests(&mock);
+    assert_eq!(requests.len(), 4);
     for req in &requests {
         assert_eq!(req.method, "GET");
         assert_eq!(req.path, "/my-bucket/data/x%20y.bin");
         assert!(req.query.is_empty());
-        assert_eq!(
-            req.header("x-amz-content-sha256"),
-            Some(EMPTY_PAYLOAD_SHA256)
-        );
-        assert!(
-            req.header("authorization")
-                .unwrap()
-                .starts_with("AWS4-HMAC-SHA256 Credential=AKID/")
-        );
-        assert!(
-            req.header("authorization")
-                .unwrap()
-                .contains("/us-east-1/s3/aws4_request")
-        );
-        assert_signature_valid(req, &credentials, "us-east-1");
+        let authorization = req.header("authorization").unwrap();
+        assert!(authorization.starts_with("AWS4-HMAC-SHA256 Credential=AKID/"));
+        assert!(authorization.contains("/us-east-1/s3/aws4_request"));
     }
     assert_eq!(requests[0].header("range"), Some("bytes=2-5"));
-    assert!(
-        requests[0]
-            .header("authorization")
-            .unwrap()
-            .contains("SignedHeaders=host;range;x-amz-content-sha256;x-amz-date,")
-    );
     assert_eq!(requests[1].header("range"), Some("bytes=-3"));
     assert_eq!(requests[2].header("range"), None);
+}
+
+#[tokio::test]
+async fn s3_zero_length_read_only_checks_the_object() {
+    let mock = Mock::start(|req| match req.path.as_str() {
+        "/b/k" => object(200, "").with("content-length", "10"),
+        _ => Resp::new(404, ""),
+    })
+    .await;
+    let vault = s3_vault("s3://b/k", None, &s3_override(&mock));
+    let read = vault
+        .read_bytes_encoding_and_range_header(
+            &upath("s3://b/k"),
+            ByteRange::start_end_exclusive(4, 4),
+            None,
+        )
+        .await
+        .unwrap();
+    assert!(read.bytes.is_empty());
+    assert_eq!(read.content_range.as_deref(), Some("bytes 4-3/10"));
+    let missing = vault
+        .read_bytes_encoding_and_range_header(
+            &upath("s3://b/other"),
+            ByteRange::start_end_exclusive(4, 4),
+            None,
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(missing, VaultError::NotFound);
+    assert!(object_requests(&mock).iter().all(|r| r.method == "HEAD"));
 }
 
 #[tokio::test]
@@ -454,7 +335,7 @@ async fn http_range_requests_keep_the_credential_headers() {
 
 #[tokio::test]
 async fn s3_anonymous_and_env_session_credentials() {
-    let mock = Mock::start(|_| Resp::new(200, "ok")).await;
+    let mock = Mock::start(|_| object(200, "ok")).await;
     let path = upath("s3://my-bucket/k");
     let anonymous = s3_vault("s3://my-bucket/k", None, &s3_override(&mock));
     anonymous
@@ -498,7 +379,7 @@ async fn s3_anonymous_and_env_session_credentials() {
         "Unable to load credentials from system settings."
     );
 
-    let requests = mock.requests();
+    let requests: Vec<Req> = object_requests(&mock);
     assert_eq!(requests.len(), 3);
     assert_eq!(requests[0].header("authorization"), None);
     assert_eq!(requests[0].header("x-amz-date"), None);
@@ -506,13 +387,9 @@ async fn s3_anonymous_and_env_session_credentials() {
         requests[1].header("x-amz-security-token"),
         Some("session-tok")
     );
-    assert!(
-        requests[1]
-            .header("authorization")
-            .unwrap()
-            .contains("SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token,")
-    );
-    assert_signature_valid(&requests[1], &env, "us-east-1");
+    let authorization = requests[1].header("authorization").unwrap();
+    assert!(authorization.starts_with("AWS4-HMAC-SHA256 Credential=ENVID/"));
+    assert!(authorization.contains("x-amz-security-token"));
     assert!(
         requests[2]
             .header("authorization")
@@ -522,7 +399,7 @@ async fn s3_anonymous_and_env_session_credentials() {
 }
 
 #[tokio::test]
-async fn s3_maps_not_found_to_empty_and_errors_to_sdk_failures() {
+async fn s3_maps_not_found_to_empty_and_errors_to_failures() {
     let mock = Mock::start(|req| match req.path.as_str() {
         "/b/missing" => Resp::new(
             404,
@@ -532,11 +409,9 @@ async fn s3_maps_not_found_to_empty_and_errors_to_sdk_failures() {
         "/b/denied" => Resp::new(
             403,
             "<Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>",
-        )
-        .with("x-amz-request-id", "REQ1")
-        .with("x-amz-id-2", "EXT2"),
-        "/b/gz" => Resp::new(200, gzip(b"hello")).with("content-encoding", "gzip"),
-        "/b/chunked" => Resp::new(200, "raw").with("content-encoding", "aws-chunked"),
+        ),
+        "/b/gz" => object(200, gzip(b"hello")).with("content-encoding", "gzip"),
+        "/b/chunked" => object(200, "raw").with("content-encoding", "aws-chunked"),
         _ => Resp::new(500, ""),
     })
     .await;
@@ -554,15 +429,11 @@ async fn s3_maps_not_found_to_empty_and_errors_to_sdk_failures() {
     assert_eq!(read("missing").await.unwrap_err(), VaultError::NotFound);
     assert_eq!(read("nobucket").await.unwrap_err(), VaultError::NotFound);
     let denied = failure(read("denied").await.unwrap_err());
-    assert_eq!(
-        denied.message,
-        "Access Denied (Service: S3, Status Code: 403, Request ID: REQ1, Extended Request ID: EXT2)"
-    );
-    assert_eq!(
-        denied.exception.as_deref(),
-        Some(
-            "software.amazon.awssdk.services.s3.model.S3Exception: Access Denied (Service: S3, Status Code: 403, Request ID: REQ1, Extended Request ID: EXT2)"
-        )
+    assert!(denied.message.contains("403"), "{}", denied.message);
+    assert!(
+        denied.message.contains("Access Denied"),
+        "{}",
+        denied.message
     );
     let gz = read("gz").await.unwrap();
     assert_eq!(gz.encoding, Encoding::Gzip);
@@ -591,15 +462,14 @@ async fn s3_transient_failures_are_retried() {
             503,
             "<Error><Code>SlowDown</Code><Message>Reduce your request rate.</Message></Error>",
         ),
-        "/b/flaky" => Resp::new(500, "<Error><Code>InternalError</Code></Error>")
-            .with("x-amz-request-id", "R2"),
+        "/b/flaky" => Resp::new(500, "<Error><Code>InternalError</Code></Error>"),
         "/b/throttled" => Resp::new(429, ""),
         "/b/denied" => Resp::new(
             403,
             "<Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>",
         ),
         "/b/missing" => Resp::new(404, "<Error><Code>NoSuchKey</Code></Error>"),
-        _ => Resp::new(200, "data"),
+        _ => object(200, "data"),
     })
     .await;
     let options = s3_override(&mock);
@@ -619,13 +489,9 @@ async fn s3_transient_failures_are_retried() {
             .filter(|r| r.path == format!("/b/{key}"))
             .count()
     };
-    // The last attempt's error is reported as without retries.
     let error = failure(read("flaky").await.unwrap_err());
     assert_eq!(attempts("flaky"), 3);
-    assert_eq!(
-        error.message,
-        "null (Service: S3, Status Code: 500, Request ID: R2)"
-    );
+    assert!(error.message.contains("500"), "{}", error.message);
     assert!(read("throttled").await.is_err());
     assert_eq!(attempts("throttled"), 3);
     assert!(read("denied").await.is_err());
@@ -634,9 +500,14 @@ async fn s3_transient_failures_are_retried() {
     assert_eq!(attempts("missing"), 1);
 
     let recovering = AtomicUsize::new(0);
-    let mock = Mock::start(move |_| match recovering.fetch_add(1, Ordering::SeqCst) {
-        0 | 1 => Resp::new(503, "<Error><Code>ServiceUnavailable</Code></Error>"),
-        _ => Resp::new(206, "345").with("content-range", "bytes 3-5/10"),
+    let mock = Mock::start(move |req| {
+        if req.method == "HEAD" {
+            return Resp::new(404, "");
+        }
+        match recovering.fetch_add(1, Ordering::SeqCst) {
+            0 | 1 => Resp::new(503, "<Error><Code>ServiceUnavailable</Code></Error>"),
+            _ => ranged(req, b"0123456789"),
+        }
     })
     .await;
     let vault = s3_vault("s3://b/", None, &s3_override(&mock));
@@ -649,7 +520,7 @@ async fn s3_transient_failures_are_retried() {
         .await
         .unwrap();
     assert_eq!(&read.bytes[..], b"345");
-    let requests = mock.requests();
+    let requests = object_requests(&mock);
     assert_eq!(requests.len(), 3);
     assert!(
         requests
@@ -659,25 +530,18 @@ async fn s3_transient_failures_are_retried() {
 }
 
 #[tokio::test]
-async fn s3_cross_region_redirect_is_retried_and_remembered() {
-    let mock = Mock::start(|req| {
-        if req.header("authorization").unwrap().contains("/us-east-1/") {
-            Resp::new(
-                301,
-                "<Error><Code>PermanentRedirect</Code><Message>moved</Message></Error>",
-            )
-            .with("x-amz-bucket-region", "eu-west-1")
-        } else {
-            Resp::new(200, "data")
-        }
+async fn s3_bucket_region_is_looked_up_once_and_used_for_signing() {
+    let mock = Mock::start(|req| match req.method.as_str() {
+        "HEAD" => Resp::new(403, "").with("x-amz-bucket-region", "eu-west-1"),
+        _ => object(200, "data"),
     })
     .await;
-    let credentials = AwsCredentials::new("AKID", "SECRET");
     let vault = s3_vault(
         "s3://bucket/k",
-        Some(credentials.clone()),
+        Some(AwsCredentials::new("AKID", "SECRET")),
         &s3_override(&mock),
     );
+    assert_eq!(vault.bucket_region().await.unwrap(), "eu-west-1");
     let path = upath("s3://bucket/k");
     for _ in 0..2 {
         let read = vault
@@ -687,26 +551,22 @@ async fn s3_cross_region_redirect_is_retried_and_remembered() {
         assert_eq!(&read.bytes[..], b"data");
     }
     let requests = mock.requests();
-    assert_eq!(requests.len(), 3, "one redirect, then the region is cached");
-    assert!(
-        requests[0]
-            .header("authorization")
-            .unwrap()
-            .contains("/us-east-1/s3/")
-    );
-    assert!(
-        requests[1]
-            .header("authorization")
-            .unwrap()
-            .contains("/eu-west-1/s3/")
-    );
-    assert!(
-        requests[2]
-            .header("authorization")
-            .unwrap()
-            .contains("/eu-west-1/s3/")
-    );
-    assert_signature_valid(&requests[2], &credentials, "eu-west-1");
+    let lookups: Vec<&Req> = requests.iter().filter(|r| r.method == "HEAD").collect();
+    assert_eq!(lookups.len(), 1, "the region is cached");
+    assert_eq!(lookups[0].path, "/bucket");
+    // Signed with the vault's credentials for the default region, like Scala's `HeadBucket`.
+    let authorization = lookups[0].header("authorization").unwrap();
+    assert!(authorization.starts_with("AWS4-HMAC-SHA256 Credential=AKID/"));
+    assert!(authorization.contains("/us-east-1/s3/aws4_request"));
+    let reads: Vec<&Req> = requests.iter().filter(|r| r.method == "GET").collect();
+    assert_eq!(reads.len(), 2);
+    for read in reads {
+        assert!(
+            read.header("authorization")
+                .unwrap()
+                .contains("/eu-west-1/s3/aws4_request")
+        );
+    }
 }
 
 #[tokio::test]
@@ -715,20 +575,32 @@ async fn s3_listing_and_used_storage() {
         if req.query_value("delimiter").is_some() {
             return Resp::new(
                 200,
-                r#"<?xml version="1.0" encoding="UTF-8"?><ListBucketResult><EncodingType>url</EncodingType>
+                r#"<?xml version="1.0" encoding="UTF-8"?><ListBucketResult>
 <CommonPrefixes><Prefix>data/a/</Prefix></CommonPrefixes>
-<CommonPrefixes><Prefix>data/b%20c/</Prefix></CommonPrefixes>
+<CommonPrefixes><Prefix>data/b c/</Prefix></CommonPrefixes>
 <CommonPrefixes><Prefix>data/d/</Prefix></CommonPrefixes></ListBucketResult>"#,
             );
         }
+        let entry = |key: &str, size: u64| {
+            format!(
+                "<Contents><Key>{key}</Key><Size>{size}</Size><LastModified>2026-10-21T07:28:00.000Z</LastModified></Contents>"
+            )
+        };
         match req.query_value("continuation-token") {
             None => Resp::new(
                 200,
-                "<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>t 1</NextContinuationToken><Contents><Size>10</Size></Contents><Contents><Size>20</Size></Contents></ListBucketResult>",
+                format!(
+                    "<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>t 1</NextContinuationToken>{}{}</ListBucketResult>",
+                    entry("data/x", 10),
+                    entry("data/y", 20)
+                ),
             ),
             Some(_) => Resp::new(
                 200,
-                "<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Size>12</Size></Contents></ListBucketResult>",
+                format!(
+                    "<ListBucketResult><IsTruncated>false</IsTruncated>{}</ListBucketResult>",
+                    entry("data/z", 12)
+                ),
             ),
         }
     })
@@ -746,7 +618,7 @@ async fn s3_listing_and_used_storage() {
         .unwrap();
     assert_eq!(size, 42);
 
-    let requests = mock.requests();
+    let requests = object_requests(&mock);
     assert_eq!(requests.len(), 3);
     assert_eq!(requests[0].path, "/bucket");
     let query = |req: &Req| {
@@ -758,7 +630,6 @@ async fn s3_listing_and_used_storage() {
         query(&requests[0]),
         pairs(&[
             ("delimiter", "/"),
-            ("encoding-type", "url"),
             ("list-type", "2"),
             ("max-keys", "7"),
             ("prefix", "data/"),
@@ -766,12 +637,7 @@ async fn s3_listing_and_used_storage() {
     );
     assert_eq!(
         query(&requests[1]),
-        pairs(&[
-            ("encoding-type", "url"),
-            ("list-type", "2"),
-            ("max-keys", "1000"),
-            ("prefix", "data/"),
-        ])
+        pairs(&[("list-type", "2"), ("prefix", "data/")])
     );
     assert_eq!(requests[2].query_value("continuation-token"), Some("t 1"));
 }
@@ -794,28 +660,27 @@ async fn s3_listing_not_found_is_a_failure() {
     assert!(
         error
             .message
-            .starts_with("The specified bucket does not exist (Service: S3, Status Code: 404")
-    );
-    assert!(
-        error
-            .exception
-            .unwrap()
-            .starts_with("software.amazon.awssdk.services.s3.model.NoSuchBucketException: ")
+            .contains("The specified bucket does not exist"),
+        "{}",
+        error.message
     );
 }
 
 #[tokio::test]
 async fn s3_custom_endpoint_uses_path_style_over_http() {
-    let mock = Mock::start(|_| Resp::new(200, "minio")).await;
+    let mock = Mock::start(|req| ranged(req, b"minio-data")).await;
     let path = format!("s3://{}/bucket/dir/key.bin", mock.addr);
-    let credentials = AwsCredentials::new("MINIO", "MINIOSECRET");
     // The AWS override must not apply to custom endpoints.
     let options = S3Options {
         env_credentials: None,
         aws_endpoint_override: Some("http://127.0.0.1:1".into()),
         read_retry: FAST_RETRY,
     };
-    let vault = s3_vault(&path, Some(credentials.clone()), &options);
+    let vault = s3_vault(
+        &path,
+        Some(AwsCredentials::new("MINIO", "MINIOSECRET")),
+        &options,
+    );
     let read = vault
         .read_bytes_encoding_and_range_header(
             &upath(&path),
@@ -836,14 +701,22 @@ async fn s3_custom_endpoint_uses_path_style_over_http() {
         requests[0].header("host"),
         Some(mock.addr.to_string().as_str())
     );
-    assert_signature_valid(&requests[0], &credentials, "us-east-1");
+    let authorization = requests[0].header("authorization").unwrap();
+    assert!(authorization.starts_with("AWS4-HMAC-SHA256 Credential=MINIO/"));
+    assert!(authorization.contains("/us-east-1/s3/aws4_request"));
 }
 
 // ---------------------------------------------------------------------------------------------
-// GCS
+// GCS (object_store client against a mock endpoint)
 // ---------------------------------------------------------------------------------------------
 
 const TEST_RSA_KEY: &str = "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDRoCjhHYgv9Akf\nuWshEOxlAnLLXJqt4bPsgiwDslj9/f9+DwsIRrFV3n4W+o3YFYD7rLb5eDi6lSft\n3C0s8l5xGlawY0oNDV9EixicriN1wUNHIET+iBoGPIv/+EvxcdD74dNkrImGMZ7e\nyEw8kcWC1sovujyzicoUu0G/jmAdkh2cYaWh4lbuC5zgqu85f72En5XOk3sI6AgG\n2oKiSpR+rLv51KxWztujcJWoiR69FieYXBkjYDopp58JQq3+/eosCLLXDc8I459y\nYfuC5dzHraHQWa1sCpNsJmiIFcs7NH+hnAF0VNt7VmaFBqv+BWAkU3vKVfR+Rqbj\ntRBKktm9AgMBAAECggEAS9Iixx3v6uxZOnzN92VQI87pZ44Espz+/64rrmCdWK08\n8sMNKf6r2NPDhps0n/JTN3TGr+AgoLgfe6TWQDogF8e/kEgxehwal8e57L39vHNd\nWsYcvnXK9/OBbeHI0jlpLhoF5JWVnpCnFoybKpNNPeBjvDSgDQ5rJel/RAKC2F6g\nD7gaJ2eY0g+roHBYdyBwD7PCiRCy5+3JLk2EU9dmVp+0OamwHH00EMasbJWQRrIW\n7bo2wqAd+SAo6Pc719w6zRUI1xJBRO6Gy0g5xUElDZK6FeWHQIAhqJFL+ylmxT31\n8MEP7mZNLVx8XCY6ttzjCArMFaT0gh8akr01iacejwKBgQDyYPgXo5q9MY1IpWKv\nEniFXv7AEHIfBR/+qJFyoP/vVlz/zBgumVPIvPNvcmjUn9ocBXV4arP5mH95G6DF\n8nM2uVgIvRrmMossLsfe8zgINPop9W5DSCT3MtsHMzpk6uI3kxGFyUeAE9/IqaAC\nyind5yjDB5mth7oJLteiJ2coKwKBgQDdZ/sMeoK3HtMDKbTEMcvmeSTPMG/BGngn\n6KHL3GGhVuwYBo5frs+7Sdvw3+hIuqKj8qjkTqd2JZSIbi3RW6HVASfAvd1fEdfJ\nTSuWZyjiLaEuxGw3Ak+xgJl7jxAdCWMLwpZKXOMlVYHXKJA/FZcjK6V1TolNH5pX\nHGipW9LptwKBgQDewlBBKZPlnc0Dnzx7OraZnRz02CiKaeNl4PcMKvwNs4n1blYr\nPa/LJh11p+jAwclrR3kXGroeAxHk9IdmZdWNzfoizeoS9xEBolz/gvlUUZw5Q9/6\n5itTJeI3U9WvOlB+UyQfmUWlaJ6bhYoSBktELldAJ5QN8FgCaJK17RDZ0QKBgG1s\npJDoQ45Jd7SKekK08bc4jE6x+6mOcXAX808T3lSk5w6AvwDfHt/Lgx4rK1w2kYdB\nuOMNVIp5zE0ZVx+vj+38Ii+KJsyDvwhIUZCF75jJQG4iufD9/XEWw8RjUm1nZEI9\nq5WZDtI2znMOIyxqeUXynlW5uPYa9mazLa72KOlFAoGABIRms7Qs9/XMET5qLPjK\nyC28jcIDNej7hJB62I0BlALFclAghRhdsL6VDtu5Kx73eQFFvNq2YFtpzg0JfH5F\nzxxFDnlvn9voXF1qv5bpRxHfodBsM4f4zdpvjAIRcszA68p2mOD+HDqaGt7by56L\n1NfeTfPam3FZWBnJrXhlFWk=\n-----END PRIVATE KEY-----";
+
+fn decoded(path: &str) -> String {
+    percent_encoding::percent_decode_str(path)
+        .decode_utf8_lossy()
+        .into_owned()
+}
 
 fn gcs_options(mock: &Mock) -> GcsOptions {
     GcsOptions {
@@ -854,15 +727,10 @@ fn gcs_options(mock: &Mock) -> GcsOptions {
 }
 
 fn gcs_vault(path: &str, secret: Option<&str>, options: &GcsOptions) -> GoogleCloudDataVault {
-    GoogleCloudDataVault::new(
-        upath(path).to_remote_uri().unwrap(),
-        secret,
-        reqwest::Client::new(),
-        options,
-    )
+    GoogleCloudDataVault::new(upath(path).to_remote_uri().unwrap(), secret, options)
 }
 
-fn service_account_json(token_uri: &str) -> String {
+fn service_account_json() -> String {
     json!({
         "type": "service_account",
         "project_id": "p",
@@ -870,387 +738,217 @@ fn service_account_json(token_uri: &str) -> String {
         "private_key": TEST_RSA_KEY,
         "client_email": "sa@p.iam.gserviceaccount.com",
         "client_id": "1",
-        "token_uri": token_uri,
     })
     .to_string()
 }
 
 #[tokio::test]
 async fn gcs_anonymous_reads_with_ranges_and_stored_encoding() {
-    let mock = Mock::start(|req| {
-        let object = req.path.rsplit('/').next().unwrap().to_owned();
-        match (object.as_str(), req.header("range")) {
-            ("dir%2Fobj.bin", Some("bytes=2-5")) => Resp::new(206, "2345")
-                .with("content-range", "bytes 2-5/10")
-                .with("x-goog-stored-content-length", "10"),
-            ("dir%2Fobj.bin", Some("bytes=-3")) => {
-                Resp::new(206, "789").with("content-range", "bytes 7-9/10")
-            }
-            // A server that ignores the range header: the vault slices.
-            ("ignores-range", Some(_)) => Resp::new(200, "0123456789"),
-            ("short", Some(_)) => Resp::new(206, "01"),
-            ("gz", None) => Resp::new(200, gzip(b"hello gcs"))
-                .with("content-encoding", "gzip")
-                .with("x-goog-stored-content-encoding", "gzip"),
-            ("missing", _) => Resp::json(404, json!({"error": {"code": 404, "message": "No such object"}})),
-            ("denied", _) => Resp::json(
-                403,
-                json!({"error": {"code": 403, "message": "anonymous caller does not have storage.objects.get access"}}),
-            ),
-            _ => Resp::new(500, "unexpected"),
-        }
+    let stored = gzip(b"hello gcs");
+    // object_store percent-encodes the whole object name (`/` as `%2F`), which GCS accepts.
+    let mock = Mock::start(move |req| match decoded(&req.path).as_str() {
+        "/bucket/dir/obj a.bin" => ranged(req, b"0123456789"),
+        "/bucket/gz" => object(200, stored.clone()).with("content-encoding", "gzip"),
+        _ => Resp::new(404, "<Error><Code>NoSuchKey</Code></Error>"),
     })
     .await;
     let options = gcs_options(&mock);
-    let vault: Arc<dyn DataVault> = Arc::new(gcs_vault("gs://my_bucket/", None, &options));
-    let read = |name: &str, range: ByteRange| {
-        let vault = Arc::clone(&vault);
-        let path = upath(&format!("gs://my_bucket/{name}"));
-        async move {
-            vault
-                .read_bytes_encoding_and_range_header(&path, range, None)
-                .await
-        }
-    };
-    let ranged = read("dir/obj.bin", ByteRange::start_end_exclusive(2, 6))
+    let vault: Arc<dyn DataVault> = Arc::new(gcs_vault("gs://bucket/", None, &options));
+    let path = upath("gs://bucket/dir/obj%20a.bin");
+    let ranged = vault
+        .read_bytes_encoding_and_range_header(&path, ByteRange::start_end_exclusive(2, 6), None)
         .await
         .unwrap();
     assert_eq!(&ranged.bytes[..], b"2345");
-    assert_eq!(ranged.encoding, Encoding::Identity);
     assert_eq!(ranged.content_range.as_deref(), Some("bytes 2-5/10"));
-    let suffix = read("dir/obj.bin", ByteRange::suffix(3)).await.unwrap();
-    assert_eq!(&suffix.bytes[..], b"789");
-    assert_eq!(suffix.content_range.as_deref(), Some("bytes 7-9/10"));
-    let sliced = read("ignores-range", ByteRange::start_end_exclusive(3, 5))
+    let suffix = vault
+        .read_bytes_encoding_and_range_header(&path, ByteRange::suffix(2), None)
         .await
         .unwrap();
-    assert_eq!(&sliced.bytes[..], b"34");
-    assert_eq!(sliced.content_range.as_deref(), Some("bytes 3-4/10"));
-    let short = failure(
-        read("short", ByteRange::start_end_exclusive(0, 4))
-            .await
-            .unwrap_err(),
-    );
-    assert_eq!(
-        short.message,
-        "Unexpected end of stream while reading from GCS: got 2 of 4 requested bytes"
-    );
-    let gz = read("gz", ByteRange::Complete).await.unwrap();
-    assert_eq!(
-        gz.encoding,
-        Encoding::Gzip,
-        "stored encoding is passed through"
-    );
-    let decoded = VaultPath::new(upath("gs://my_bucket/gz"), Arc::clone(&vault))
+    assert_eq!(&suffix.bytes[..], b"89");
+
+    let gz = vault
+        .read_bytes_encoding_and_range_header(&upath("gs://bucket/gz"), ByteRange::Complete, None)
+        .await
+        .unwrap();
+    assert_eq!(gz.encoding, Encoding::Gzip);
+    let decoded = VaultPath::new(upath("gs://bucket/gz"), Arc::clone(&vault))
         .read_bytes(ByteRange::Complete, None)
         .await
         .unwrap();
     assert_eq!(&decoded[..], b"hello gcs");
-    assert_eq!(
-        read("missing", ByteRange::Complete).await.unwrap_err(),
-        VaultError::NotFound
-    );
-    let denied = failure(read("denied", ByteRange::Complete).await.unwrap_err());
-    assert_eq!(
-        denied.message,
-        "anonymous caller does not have storage.objects.get access"
-    );
-    assert_eq!(
-        denied.exception.as_deref(),
-        Some(
-            "com.google.cloud.storage.StorageException: anonymous caller does not have storage.objects.get access"
+    let missing = vault
+        .read_bytes_encoding_and_range_header(
+            &upath("gs://bucket/missing"),
+            ByteRange::Complete,
+            None,
         )
-    );
+        .await
+        .unwrap_err();
+    assert_eq!(missing, VaultError::NotFound);
 
-    let requests = mock.requests();
-    for req in &requests {
+    for req in mock.requests() {
         assert_eq!(req.method, "GET");
-        assert!(
-            req.path.starts_with("/storage/v1/b/my_bucket/o/"),
-            "{}",
-            req.path
-        );
-        assert_eq!(req.query_value("alt"), Some("media"));
+        // Stored bytes, never transcoded.
         assert_eq!(req.header("accept-encoding"), Some("gzip"));
         assert_eq!(req.header("authorization"), None);
     }
-    assert_eq!(requests[0].path, "/storage/v1/b/my_bucket/o/dir%2Fobj.bin");
-    assert_eq!(requests[0].header("range"), Some("bytes=2-5"));
-    assert_eq!(requests[1].header("range"), Some("bytes=-3"));
 }
 
 #[tokio::test]
 async fn gcs_transient_failures_are_retried() {
-    let flaky = AtomicUsize::new(0);
-    let mock = Mock::start(move |req| {
-        let object = req.path.rsplit('/').next().unwrap();
-        match object {
-            "flaky" => match flaky.fetch_add(1, Ordering::SeqCst) {
-                0 => Resp::new(503, "busy"),
-                1 => Resp::new(429, "slow down"),
-                _ => Resp::new(200, "payload"),
-            },
-            "down" => Resp::json(
-                500,
-                json!({"error": {"code": 500, "message": "backend error"}}),
-            ),
-            "denied" => Resp::json(403, json!({"error": {"code": 403, "message": "denied"}})),
-            "missing" => Resp::json(
-                404,
-                json!({"error": {"code": 404, "message": "No such object"}}),
-            ),
-            _ => Resp::new(500, "unexpected"),
-        }
+    let calls = AtomicUsize::new(0);
+    let mock = Mock::start(move |req| match decoded(&req.path).as_str() {
+        "/bucket/flaky" if calls.fetch_add(1, Ordering::SeqCst) < 2 => Resp::new(503, ""),
+        "/bucket/flaky" => object(200, "ok"),
+        "/bucket/denied" => Resp::new(403, "Access denied."),
+        _ => Resp::new(500, ""),
     })
     .await;
-    let options = gcs_options(&mock);
-    let vault = gcs_vault("gs://bucket/", None, &options);
-    let read = |name: &str| {
-        let path = upath(&format!("gs://bucket/{name}"));
-        let vault = &vault;
-        async move {
-            vault
-                .read_bytes_encoding_and_range_header(&path, ByteRange::Complete, None)
-                .await
-        }
-    };
-    let attempts = |name: &str| {
-        mock.requests()
-            .iter()
-            .filter(|r| r.path.ends_with(&format!("/{name}")))
-            .count()
-    };
-    assert_eq!(&read("flaky").await.unwrap().bytes[..], b"payload");
-    assert_eq!(attempts("flaky"), 3);
-    assert_eq!(
-        failure(read("down").await.unwrap_err()).message,
-        "backend error"
-    );
-    assert_eq!(attempts("down"), 3);
-    assert!(read("denied").await.is_err());
-    assert_eq!(attempts("denied"), 1);
-    assert_eq!(read("missing").await.unwrap_err(), VaultError::NotFound);
-    assert_eq!(attempts("missing"), 1);
-}
-
-#[tokio::test]
-async fn gcs_zero_length_read_uses_object_metadata() {
-    let mock =
-        Mock::start(|_| Resp::json(200, json!({"size": "100", "contentEncoding": "gzip"}))).await;
     let vault = gcs_vault("gs://bucket/", None, &gcs_options(&mock));
     let read = vault
         .read_bytes_encoding_and_range_header(
-            &upath("gs://bucket/obj"),
-            ByteRange::start_end_exclusive(5, 5),
+            &upath("gs://bucket/flaky"),
+            ByteRange::Complete,
             None,
         )
         .await
         .unwrap();
-    assert!(read.bytes.is_empty());
-    assert_eq!(read.encoding, Encoding::Gzip);
-    assert_eq!(read.content_range.as_deref(), Some("bytes 5-4/100"));
-    let requests = mock.requests();
-    assert_eq!(requests[0].path, "/storage/v1/b/bucket/o/obj");
-    assert_eq!(
-        requests[0].query_value("fields"),
-        Some("size,contentEncoding")
-    );
-    assert_eq!(requests[0].query_value("alt"), None);
+    assert_eq!(&read.bytes[..], b"ok");
+    let denied = vault
+        .read_bytes_encoding_and_range_header(
+            &upath("gs://bucket/denied"),
+            ByteRange::Complete,
+            None,
+        )
+        .await
+        .unwrap_err();
+    assert!(failure(denied).message.contains("403"));
+    let attempts = |path: &str| mock.requests().iter().filter(|r| r.path == path).count();
+    assert_eq!(attempts("/bucket/flaky"), 3);
+    assert_eq!(attempts("/bucket/denied"), 1);
 }
 
 #[tokio::test]
 async fn gcs_listing_and_used_storage() {
     let mock = Mock::start(|req| {
         if req.query_value("delimiter").is_some() {
-            return Resp::json(200, json!({"prefixes": ["dir/a/", "dir/b/"], "items": [{"name": "dir/x", "size": "1"}]}));
-        }
-        match req.query_value("pageToken") {
-            None => Resp::json(
+            return Resp::new(
                 200,
-                json!({"items": [{"size": "10"}, {"size": "20"}], "nextPageToken": "p2"}),
+                r#"<?xml version="1.0" encoding="UTF-8"?><ListBucketResult>
+<CommonPrefixes><Prefix>data/a/</Prefix></CommonPrefixes>
+<CommonPrefixes><Prefix>data/b/</Prefix></CommonPrefixes>
+<CommonPrefixes><Prefix>data/c/</Prefix></CommonPrefixes></ListBucketResult>"#,
+            );
+        }
+        let entry = |key: &str, size: u64| {
+            format!(
+                "<Contents><Key>{key}</Key><Size>{size}</Size><LastModified>2026-10-21T07:28:00.000Z</LastModified></Contents>"
+            )
+        };
+        match req.query_value("continuation-token") {
+            None => Resp::new(
+                200,
+                format!(
+                    "<ListBucketResult><NextContinuationToken>p2</NextContinuationToken>{}</ListBucketResult>",
+                    entry("data/x", 7)
+                ),
             ),
-            Some(_) => Resp::json(200, json!({"items": [{"size": "12"}]})),
+            Some(_) => Resp::new(
+                200,
+                format!(
+                    "<ListBucketResult>{}</ListBucketResult>",
+                    entry("data/y", 5)
+                ),
+            ),
         }
     })
     .await;
     let vault = gcs_vault("gs://bucket/", None, &gcs_options(&mock));
     let listed = vault
-        .list_directory(&upath("gs://bucket/dir/"), 1, None)
+        .list_directory(&upath("gs://bucket/data/"), 2, None)
         .await
         .unwrap();
-    assert_eq!(
-        listed.iter().map(UPath::to_string).collect::<Vec<_>>(),
-        vec!["gs://bucket/dir/a/"]
-    );
-    assert_eq!(
-        vault
-            .used_storage_bytes(&upath("gs://bucket/dir"), None)
-            .await
-            .unwrap(),
-        42
-    );
+    let listed: Vec<String> = listed.iter().map(UPath::to_string).collect();
+    assert_eq!(listed, vec!["gs://bucket/data/a/", "gs://bucket/data/b/"]);
+    let size = vault
+        .used_storage_bytes(&upath("gs://bucket/data/"), None)
+        .await
+        .unwrap();
+    assert_eq!(size, 12);
     let requests = mock.requests();
     assert_eq!(requests.len(), 3);
-    assert_eq!(requests[0].path, "/storage/v1/b/bucket/o");
-    assert_eq!(requests[0].query_value("prefix"), Some("dir/"));
-    assert_eq!(requests[0].query_value("delimiter"), Some("/"));
-    assert_eq!(requests[1].query_value("prefix"), Some("dir"));
-    assert_eq!(requests[1].query_value("delimiter"), None);
-    assert_eq!(requests[2].query_value("pageToken"), Some("p2"));
-
-    let failing =
-        Mock::start(|_| Resp::json(404, json!({"error": {"message": "bucket gone"}}))).await;
-    let vault = gcs_vault("gs://bucket/", None, &gcs_options(&failing));
-    let error = vault
-        .list_directory(&upath("gs://bucket/dir/"), 1, None)
-        .await
-        .unwrap_err();
-    assert_eq!(
-        failure(error).message,
-        "bucket gone",
-        "listing 404 is a failure, not Empty"
-    );
-}
-
-fn token_mock_handler(expires_in: u64) -> impl Fn(&Req) -> Resp + Send + Sync + 'static {
-    move |req| {
-        if req.path == "/token" {
-            Resp::json(
-                200,
-                json!({"access_token": "ya29.test", "expires_in": expires_in, "token_type": "Bearer"}),
-            )
-        } else if req.header("authorization") == Some("Bearer ya29.test") {
-            Resp::new(200, "secret data")
-        } else {
-            Resp::json(401, json!({"error": {"message": "Unauthorized"}}))
-        }
-    }
+    assert!(requests.iter().all(|r| r.path == "/bucket"));
+    assert_eq!(requests[0].query_value("prefix"), Some("data/"));
+    assert_eq!(requests[2].query_value("continuation-token"), Some("p2"));
 }
 
 #[tokio::test]
-async fn gcs_service_account_token_is_fetched_once_and_cached() {
-    let mock = Mock::start(token_mock_handler(3600)).await;
-    let secret = service_account_json(&format!("{}/token", mock.base()));
-    let vault = gcs_vault("gs://bucket/", Some(&secret), &gcs_options(&mock));
+async fn gcs_service_account_requests_carry_a_self_signed_token() {
+    let mock = Mock::start(|_| object(200, "secret data")).await;
+    let options = gcs_options(&mock);
+    let secret = service_account_json();
+    let vault = gcs_vault("gs://bucket/", Some(&secret), &options);
     for _ in 0..2 {
-        let read = vault
+        vault
             .read_bytes_encoding_and_range_header(
-                &upath("gs://bucket/obj"),
+                &upath("gs://bucket/o"),
                 ByteRange::Complete,
                 None,
             )
             .await
             .unwrap();
-        assert_eq!(&read.bytes[..], b"secret data");
     }
+    // Application default credentials apply when the vault has none.
+    let defaulted = GcsOptions {
+        default_service_account_json: Some(secret.clone()),
+        ..gcs_options(&mock)
+    };
+    gcs_vault("gs://bucket/", None, &defaulted)
+        .read_bytes_encoding_and_range_header(&upath("gs://bucket/o"), ByteRange::Complete, None)
+        .await
+        .unwrap();
     let requests = mock.requests();
-    let token_requests: Vec<&Req> = requests.iter().filter(|r| r.path == "/token").collect();
-    assert_eq!(token_requests.len(), 1, "token is cached");
     assert_eq!(requests.len(), 3);
-    let token_request = token_requests[0];
-    assert_eq!(token_request.method, "POST");
-    assert_eq!(
-        token_request.header("content-type"),
-        Some("application/x-www-form-urlencoded")
-    );
-    let form = token_request.form();
-    assert_eq!(
-        form["grant_type"],
-        "urn:ietf:params:oauth:grant-type:jwt-bearer"
-    );
-
-    // The assertion is an RS256 JWT signed with the service account key.
-    let assertion = &form["assertion"];
-    let parts: Vec<&str> = assertion.split('.').collect();
-    assert_eq!(parts.len(), 3);
-    let header: Value = serde_json::from_slice(&URL_SAFE_NO_PAD.decode(parts[0]).unwrap()).unwrap();
-    assert_eq!(header, json!({"alg": "RS256", "typ": "JWT", "kid": "kid1"}));
-    let claims: Value = serde_json::from_slice(&URL_SAFE_NO_PAD.decode(parts[1]).unwrap()).unwrap();
-    assert_eq!(claims["iss"], "sa@p.iam.gserviceaccount.com");
-    assert_eq!(claims["aud"], format!("{}/token", mock.base()));
-    assert_eq!(
-        claims["scope"],
-        "https://www.googleapis.com/auth/devstorage.full_control"
-    );
-    assert_eq!(
-        claims["exp"].as_u64().unwrap() - claims["iat"].as_u64().unwrap(),
-        3600
-    );
-    let der: String = TEST_RSA_KEY
-        .lines()
-        .filter(|l| !l.starts_with("-----"))
-        .collect();
-    let key_pair = ring::signature::RsaKeyPair::from_pkcs8(&STANDARD.decode(der).unwrap()).unwrap();
-    use ring::signature::KeyPair;
-    ring::signature::UnparsedPublicKey::new(
-        &ring::signature::RSA_PKCS1_2048_8192_SHA256,
-        key_pair.public_key().as_ref(),
-    )
-    .verify(
-        format!("{}.{}", parts[0], parts[1]).as_bytes(),
-        &URL_SAFE_NO_PAD.decode(parts[2]).unwrap(),
-    )
-    .expect("valid RS256 signature");
-
-    for req in requests.iter().filter(|r| r.path != "/token") {
-        assert_eq!(req.header("authorization"), Some("Bearer ya29.test"));
+    for req in &requests {
+        let token = req
+            .header("authorization")
+            .and_then(|a| a.strip_prefix("Bearer "))
+            .expect("bearer token");
+        let mut parts = token.split('.');
+        let header: Value =
+            serde_json::from_slice(&URL_SAFE_NO_PAD.decode(parts.next().unwrap()).unwrap())
+                .unwrap();
+        let claims: Value =
+            serde_json::from_slice(&URL_SAFE_NO_PAD.decode(parts.next().unwrap()).unwrap())
+                .unwrap();
+        assert_eq!(header["alg"], "RS256");
+        assert_eq!(header["kid"], "kid1");
+        assert_eq!(claims["iss"], "sa@p.iam.gserviceaccount.com");
+        assert!(!parts.next().unwrap().is_empty(), "signed");
     }
 }
 
 #[tokio::test]
-async fn gcs_expiring_tokens_are_refreshed_and_token_errors_fail() {
-    // Tokens valid for less than the five-minute refresh margin are fetched again.
-    let mock = Mock::start(token_mock_handler(60)).await;
-    let source = ServiceAccountTokenSource::from_json(
-        &service_account_json(&format!("{}/token", mock.base())),
-        reqwest::Client::new(),
-    )
-    .unwrap();
-    assert_eq!(source.access_token().await.unwrap(), "ya29.test");
-    assert_eq!(source.access_token().await.unwrap(), "ya29.test");
-    assert_eq!(mock.requests().len(), 2);
-
-    let rejecting = Mock::start(|_| Resp::json(400, json!({"error": "invalid_grant"}))).await;
-    let secret = service_account_json(&format!("{}/token", rejecting.base()));
-    let vault = gcs_vault("gs://bucket/", Some(&secret), &gcs_options(&rejecting));
-    let error = failure(
-        vault
-            .read_bytes_encoding_and_range_header(
-                &upath("gs://bucket/obj"),
-                ByteRange::Complete,
-                None,
-            )
-            .await
-            .unwrap_err(),
-    );
-    assert_eq!(
-        error.message,
-        "Error getting access token for service account: 400 Bad Request, iss: sa@p.iam.gserviceaccount.com"
-    );
-    assert_eq!(
-        rejecting.requests().len(),
-        1,
-        "no storage request without a token"
-    );
-
-    // An unusable key fails on use and never leaks key material.
-    let vault = gcs_vault(
-        "gs://bucket/",
-        Some(r#"{"client_email":"a@b","private_key":"not a key"}"#),
-        &gcs_options(&rejecting),
-    );
-    let error = failure(
-        vault
-            .read_bytes_encoding_and_range_header(
-                &upath("gs://bucket/obj"),
-                ByteRange::Complete,
-                None,
-            )
-            .await
-            .unwrap_err(),
-    );
-    assert_eq!(error.message, "Invalid PKCS#8 data.");
+async fn gcs_invalid_service_account_fails_on_use_without_leaking() {
+    let mock = Mock::start(|_| object(200, "x")).await;
+    let options = gcs_options(&mock);
+    let broken = json!({
+        "type": "service_account",
+        "private_key_id": "kid1",
+        "private_key": "-----BEGIN PRIVATE KEY-----\nnot-a-key\n-----END PRIVATE KEY-----",
+        "client_email": "sa@p.iam.gserviceaccount.com",
+    })
+    .to_string();
+    let vault = gcs_vault("gs://bucket/", Some(&broken), &options);
+    let error = vault
+        .read_bytes_encoding_and_range_header(&upath("gs://bucket/o"), ByteRange::Complete, None)
+        .await
+        .unwrap_err();
+    let error = failure(error);
+    assert!(!error.message.contains("not-a-key"), "{}", error.message);
     assert!(!format!("{vault:?}").contains("PRIVATE"));
+    assert!(mock.requests().is_empty());
 }
 
 // ---------------------------------------------------------------------------------------------

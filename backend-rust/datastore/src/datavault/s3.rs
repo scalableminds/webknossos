@@ -1,32 +1,32 @@
 //! Scala `S3DataVault`, the client-relevant parts of `storage/S3ClientPool` and
-//! `helpers/S3UriUtils`, over plain HTTP requests signed with [`super::sigv4`].
-//!
-//! Client semantics kept from the AWS SDK configuration in `S3ClientPool`:
+//! `helpers/S3UriUtils`. Requests go through the `object_store` crate's S3 client; this module
+//! keeps WEBKNOSSOS' uri styles and the client choices of `S3ClientPool`:
 //! - credentials: the vault credential, else `AWS_ACCESS_KEY_ID`/`AWS_ACCESS_KEY` environment
 //!   credentials, else anonymous (unsigned requests);
-//! - Amazon hosts: region `us-east-1` with cross-region access (a redirect / region-mismatch
-//!   response is retried once in the bucket's region, learned from `x-amz-bucket-region`, the
-//!   error body or a `HeadBucket` request; the region is then remembered per bucket);
+//! - Amazon hosts: the region of a regional endpoint uri, else the bucket's region from one
+//!   `HeadBucket` request (Scala `getBucketRegion`), falling back to `us-east-1`;
 //! - non-Amazon path-style hosts (custom endpoints like MinIO): path-style requests against
 //!   `https://<authority>` if a probe `GET` over HTTPS gets any response, else `http://`; signing
 //!   region per `AwsHostNameUtils.parseSigningRegion(authority, "s3")`, default `us-east-1`.
 
 use std::{
     collections::HashMap,
-    sync::Mutex,
-    time::{Duration, Instant, SystemTime},
+    fmt,
+    sync::{Arc, LazyLock, Mutex},
+    time::{Duration, Instant},
 };
 
-use bytes::Bytes;
-use percent_encoding::percent_decode_str;
-use quick_xml::{Reader, events::Event};
-use reqwest::{Client, Method, StatusCode, header::HeaderMap};
+use object_store::{
+    aws::{AmazonS3Builder, AwsAuthorizer, AwsCredential},
+    client::HttpRequestBody,
+};
+use reqwest::Client;
 use tokio::sync::OnceCell;
 
 use super::{
-    BoxFuture, ByteRange, DataVault, Encoding, RawRead, RemoteUri, RetryPolicy, ToRemoteUri, UPath,
+    BoxFuture, ByteRange, DataVault, RawRead, RemoteUri, RetryPolicy, ToRemoteUri, UPath,
     VaultError, VaultResult,
-    sigv4::{self, AwsCredentials, SigningRequest},
+    cloud::{self, CloudObjectStore, StoreResult},
 };
 use crate::error::DsError;
 
@@ -39,8 +39,8 @@ pub const DEFAULT_REGION: &str = "us-east-1";
 const MAX_HOST_LENGTH: usize = 253;
 /// Timeout of the custom-endpoint HTTPS probe (Play WS would wait for its global timeout).
 const PROTOCOL_PROBE_TIMEOUT: Duration = Duration::from_secs(30);
-/// Timeout of a single S3 request.
-const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
+/// Timeout of the bucket-region lookup.
+const REGION_LOOKUP_TIMEOUT: Duration = Duration::from_secs(30);
 
 // ---------------------------------------------------------------------------------------------
 // S3UriUtils
@@ -243,6 +243,68 @@ pub const DEFAULT_READ_RETRY: RetryPolicy = RetryPolicy {
     initial_delay: Duration::from_millis(100),
 };
 
+/// Retries of managed uploads (Scala's upload S3 client `StandardRetryStrategy`).
+pub const UPLOAD_RETRY: RetryPolicy = RetryPolicy {
+    attempts: 10,
+    initial_delay: Duration::from_millis(100),
+};
+
+/// Static AWS credentials.
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct AwsCredentials {
+    pub access_key_id: String,
+    pub secret_access_key: String,
+    /// `AWS_SESSION_TOKEN` (sent as `x-amz-security-token`).
+    pub session_token: Option<String>,
+}
+
+impl AwsCredentials {
+    pub fn new(access_key_id: impl Into<String>, secret_access_key: impl Into<String>) -> Self {
+        Self {
+            access_key_id: access_key_id.into(),
+            secret_access_key: secret_access_key.into(),
+            session_token: None,
+        }
+    }
+
+    /// Scala `EnvironmentVariableCredentialsProvider` (only consulted when no credential is set
+    /// and `AWS_ACCESS_KEY_ID` or `AWS_ACCESS_KEY` exists). `Err` when the secret is missing.
+    pub fn from_env_vars(get: impl Fn(&str) -> Option<String>) -> Option<Result<Self, String>> {
+        let non_empty = |name: &str| get(name).filter(|v| !v.trim().is_empty());
+        if get("AWS_ACCESS_KEY_ID").is_none() && get("AWS_ACCESS_KEY").is_none() {
+            return None;
+        }
+        let Some(access_key_id) =
+            non_empty("AWS_ACCESS_KEY_ID").or_else(|| non_empty("AWS_ACCESS_KEY"))
+        else {
+            return Some(Err(
+                "Unable to load credentials from system settings. Access key must be specified either via environment variable (AWS_ACCESS_KEY_ID) or system property (aws.accessKeyId).".into(),
+            ));
+        };
+        let Some(secret_access_key) =
+            non_empty("AWS_SECRET_ACCESS_KEY").or_else(|| non_empty("AWS_SECRET_KEY"))
+        else {
+            return Some(Err(
+                "Unable to load credentials from system settings. Secret key must be specified either via environment variable (AWS_SECRET_ACCESS_KEY) or system property (aws.secretAccessKey).".into(),
+            ));
+        };
+        Some(Ok(Self {
+            access_key_id: access_key_id.trim().to_owned(),
+            secret_access_key: secret_access_key.trim().to_owned(),
+            session_token: non_empty("AWS_SESSION_TOKEN").map(|t| t.trim().to_owned()),
+        }))
+    }
+}
+
+impl fmt::Debug for AwsCredentials {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AwsCredentials")
+            .field("access_key_id", &self.access_key_id)
+            .field("secret", &"[redacted]")
+            .finish()
+    }
+}
+
 /// Process-wide S3 settings (Scala reads them from the environment / SDK defaults).
 #[derive(Debug, Clone)]
 pub struct S3Options {
@@ -251,7 +313,7 @@ pub struct S3Options {
     pub env_credentials: Option<Result<AwsCredentials, String>>,
     /// Base URL replacing the Amazon S3 endpoints (path-style). Only for tests.
     pub aws_endpoint_override: Option<String>,
-    /// Retries of requests without a payload (uploads have their own retries).
+    /// Retries of every request (managed uploads use [`UPLOAD_RETRY`]).
     pub read_retry: RetryPolicy,
 }
 
@@ -276,25 +338,16 @@ impl S3Options {
 
 #[derive(Debug)]
 enum Endpoint {
-    /// Amazon S3 (cross-region access); `override_base` replaces the regional endpoints.
+    /// Amazon S3; `override_base` replaces the regional endpoints.
     Aws { override_base: Option<String> },
     /// Custom endpoint (forced path style).
-    Custom {
-        authority: String,
-        protocol: OnceCell<&'static str>,
-        region: String,
-    },
+    Custom { authority: String, region: String },
 }
 
-/// HTTP client for S3 requests: redirects are handled by the cross-region logic, not followed
-/// (a followed redirect would carry a signature for the wrong host), and transfer encodings are
-/// passed through to `VaultPath`.
+/// HTTP client for the bucket-region lookup and the custom-endpoint protocol probe (object
+/// requests use `object_store`'s own client).
 pub fn build_s3_http_client() -> Client {
     Client::builder()
-        .no_gzip()
-        .no_brotli()
-        .no_deflate()
-        .no_zstd()
         .redirect(reqwest::redirect::Policy::none())
         .connect_timeout(Duration::from_secs(120))
         .build()
@@ -307,13 +360,13 @@ pub struct S3DataVault {
     credentials: Result<Option<AwsCredentials>, String>,
     client: Client,
     endpoint: Endpoint,
-    /// Cross-region access: bucket → region learned from redirects.
-    bucket_regions: Mutex<HashMap<String, String>>,
-    read_retry: RetryPolicy,
+    retry: RetryPolicy,
+    /// Built on first use: it needs the bucket region or the endpoint protocol.
+    store: OnceCell<StoreResult>,
 }
 
-impl std::fmt::Debug for S3DataVault {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for S3DataVault {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("S3DataVault")
             .field("uri", &self.uri.as_str())
             .field("bucket", &self.bucket)
@@ -331,160 +384,6 @@ impl std::fmt::Debug for S3DataVault {
     }
 }
 
-/// A complete S3 response.
-struct S3Response {
-    status: StatusCode,
-    headers: HeaderMap,
-    body: Bytes,
-}
-
-impl S3Response {
-    fn header(&self, name: &str) -> Option<String> {
-        self.headers
-            .get(name)
-            .map(|v| String::from_utf8_lossy(v.as_bytes()).into_owned())
-    }
-}
-
-/// Parsed S3 error body (`<Error><Code/><Message/><Region/></Error>`).
-#[derive(Debug, Default)]
-struct S3ErrorBody {
-    code: Option<String>,
-    message: Option<String>,
-    region: Option<String>,
-}
-
-/// Text content of every leaf element as `(element path, text)`, entity references resolved.
-fn xml_leaf_texts(body: &[u8]) -> Result<Vec<(Vec<String>, String)>, String> {
-    let mut reader = Reader::from_reader(body);
-    let mut stack: Vec<String> = Vec::new();
-    let mut text = String::new();
-    let mut leaves = Vec::new();
-    let mut buffer = Vec::new();
-    loop {
-        match reader
-            .read_event_into(&mut buffer)
-            .map_err(|e| e.to_string())?
-        {
-            Event::Start(e) => {
-                stack.push(e.local_name().as_ref().to_owned());
-                text.clear();
-            }
-            Event::Text(t) => text.push_str(&t),
-            Event::GeneralRef(reference) => {
-                if let Some(c) = reference.resolve_char_ref().map_err(|e| e.to_string())? {
-                    text.push(c);
-                } else {
-                    let name: &str = &reference;
-                    text.push_str(match name {
-                        "lt" => "<",
-                        "gt" => ">",
-                        "amp" => "&",
-                        "apos" => "'",
-                        "quot" => "\"",
-                        other => return Err(format!("undeclared entity {other}")),
-                    });
-                }
-            }
-            Event::CData(c) => text.push_str(&c),
-            Event::End(_) => {
-                if !text.is_empty() {
-                    leaves.push((stack.clone(), std::mem::take(&mut text)));
-                }
-                stack.pop();
-            }
-            Event::Eof => return Ok(leaves),
-            _ => {}
-        }
-        buffer.clear();
-    }
-}
-
-fn parse_error_body(body: &[u8]) -> S3ErrorBody {
-    let mut parsed = S3ErrorBody::default();
-    for (path, text) in xml_leaf_texts(body).unwrap_or_default() {
-        match path
-            .iter()
-            .map(String::as_str)
-            .collect::<Vec<_>>()
-            .as_slice()
-        {
-            ["Error", "Code"] => parsed.code = Some(text),
-            ["Error", "Message"] => parsed.message = Some(text),
-            ["Error", "Region"] => parsed.region = Some(text),
-            _ => {}
-        }
-    }
-    parsed
-}
-
-/// AWS SDK `S3Exception` for an error response: `(class, getMessage)`.
-fn sdk_exception(response: &S3Response) -> (&'static str, String) {
-    let error = parse_error_body(&response.body);
-    let class = match error.code.as_deref() {
-        Some("NoSuchKey") => "NoSuchKeyException",
-        Some("NoSuchBucket") => "NoSuchBucketException",
-        _ => "S3Exception",
-    };
-    let mut details = vec![
-        "Service: S3".to_owned(),
-        format!("Status Code: {}", response.status.as_u16()),
-        format!(
-            "Request ID: {}",
-            response
-                .header("x-amz-request-id")
-                .unwrap_or_else(|| "null".into())
-        ),
-    ];
-    if let Some(extended) = response.header("x-amz-id-2") {
-        details.push(format!("Extended Request ID: {extended}"));
-    }
-    let message = error.message.unwrap_or_else(|| "null".into());
-    (class, format!("{message} ({})", details.join(", ")))
-}
-
-/// Scala `BoxFailure(e.getMessage, Full(e), Empty)` for an `S3Exception`.
-fn sdk_failure(response: &S3Response) -> VaultError {
-    let (class, message) = sdk_exception(response);
-    VaultError::Failure(DsError {
-        exception: Some(format!(
-            "software.amazon.awssdk.services.s3.model.{class}: {message}"
-        )),
-        ..DsError::failure(message)
-    })
-}
-
-/// Message prefix of [`transport_failure`] (the SDK's `SdkClientException` for I/O errors).
-const TRANSPORT_FAILURE: &str = "Unable to execute HTTP request";
-
-fn transport_failure(error: reqwest::Error) -> VaultError {
-    let message = format!("{TRANSPORT_FAILURE}: {error}");
-    VaultError::Failure(DsError {
-        exception: Some(format!(
-            "software.amazon.awssdk.core.exception.SdkClientException: {message}"
-        )),
-        ..DsError::failure(message)
-    })
-}
-
-/// SDK retry conditions for requests without payload: I/O failures, throttling, server errors
-/// and transient error codes. Successful bodies are object data and are never parsed.
-fn is_transient(result: &VaultResult<S3Response>) -> bool {
-    match result {
-        Ok(response) if response.status.is_success() => false,
-        Ok(response) => {
-            response.status.is_server_error()
-                || response.status == StatusCode::TOO_MANY_REQUESTS
-                || matches!(
-                    parse_error_body(&response.body).code.as_deref(),
-                    Some("SlowDown" | "InternalError" | "RequestTimeout" | "ServiceUnavailable")
-                )
-        }
-        Err(VaultError::Failure(error)) => error.message.starts_with(TRANSPORT_FAILURE),
-        Err(VaultError::NotFound) => false,
-    }
-}
-
 /// Bucket names that can be used as a virtual host over TLS.
 fn is_virtual_host_compatible(bucket: &str) -> bool {
     (3..=63).contains(&bucket.len())
@@ -495,52 +394,41 @@ fn is_virtual_host_compatible(bucket: &str) -> bool {
         && !bucket.ends_with('-')
 }
 
-/// One page of a `ListObjectsV2` response.
-#[derive(Debug, Default)]
-struct ListPage {
-    common_prefixes: Vec<String>,
-    sizes: Vec<u64>,
-    is_truncated: bool,
-    next_continuation_token: Option<String>,
+/// `HeadBucket` answers per request url (bucket regions never change), shared by all vaults so
+/// that exploring a bucket and reading from it look its region up once.
+static BUCKET_REGIONS: LazyLock<Mutex<HashMap<String, Option<String>>>> =
+    LazyLock::new(Mutex::default);
+
+fn cached_bucket_region(url: &str) -> Option<Option<String>> {
+    BUCKET_REGIONS
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .get(url)
+        .cloned()
 }
 
-fn parse_list_page(body: &[u8]) -> Result<ListPage, VaultError> {
-    let leaves = xml_leaf_texts(body)
-        .map_err(|e| VaultError::failure(format!("Could not parse S3 listing response: {e}")))?;
-    let mut page = ListPage::default();
-    let mut url_encoded = false;
-    let mut raw_prefixes = Vec::new();
-    for (path, text) in leaves {
-        match path
-            .iter()
-            .map(String::as_str)
-            .collect::<Vec<_>>()
-            .as_slice()
-        {
-            [_, "CommonPrefixes", "Prefix"] => raw_prefixes.push(text),
-            [_, "Contents", "Size"] => page.sizes.push(text.trim().parse().map_err(|_| {
-                VaultError::failure(format!("Invalid object size in S3 listing: {text}"))
-            })?),
-            [_, "IsTruncated"] => page.is_truncated = text.trim() == "true",
-            [_, "NextContinuationToken"] => page.next_continuation_token = Some(text),
-            [_, "EncodingType"] => url_encoded = text.trim() == "url",
-            _ => {}
-        }
+/// SigV4 headers of an unpayloaded `HEAD` request in `us-east-1`.
+fn signed_head_bucket_headers(url: &str, credentials: &AwsCredentials) -> Vec<(String, String)> {
+    let credential = AwsCredential {
+        key_id: credentials.access_key_id.clone(),
+        secret_key: credentials.secret_access_key.clone(),
+        token: credentials.session_token.clone(),
+    };
+    let Ok(mut request) = axum::http::Request::head(url).body(HttpRequestBody::empty()) else {
+        return Vec::new();
+    };
+    cloud::install_crypto_provider();
+    if AwsAuthorizer::new(&credential, "s3", DEFAULT_REGION)
+        .try_authorize(&mut request, None)
+        .is_err()
+    {
+        return Vec::new();
     }
-    page.common_prefixes = raw_prefixes
-        .into_iter()
-        .map(|p| {
-            if url_encoded {
-                // SDK `SdkHttpUtils.urlDecode` (form decoding: `+` is a space).
-                percent_decode_str(&p.replace('+', " "))
-                    .decode_utf8_lossy()
-                    .into_owned()
-            } else {
-                p
-            }
-        })
-        .collect();
-    Ok(page)
+    request
+        .headers()
+        .iter()
+        .filter_map(|(name, value)| Some((name.to_string(), value.to_str().ok()?.to_owned())))
+        .collect()
 }
 
 impl S3DataVault {
@@ -565,7 +453,6 @@ impl S3DataVault {
             Endpoint::Custom {
                 region: parse_signing_region(&authority).unwrap_or_else(|| DEFAULT_REGION.into()),
                 authority,
-                protocol: OnceCell::new(),
             }
         } else {
             Endpoint::Aws {
@@ -581,8 +468,8 @@ impl S3DataVault {
             credentials,
             client,
             endpoint,
-            bucket_regions: Mutex::new(HashMap::new()),
-            read_retry: options.read_retry,
+            retry: options.read_retry,
+            store: OnceCell::new(),
         }
     }
 
@@ -595,301 +482,146 @@ impl S3DataVault {
         })
     }
 
-    fn credentials(&self) -> VaultResult<Option<&AwsCredentials>> {
-        match &self.credentials {
-            Ok(credentials) => Ok(credentials.as_ref()),
-            Err(message) => Err(VaultError::Failure(DsError {
-                exception: Some(format!(
-                    "software.amazon.awssdk.core.exception.SdkClientException: {message}"
-                )),
-                ..DsError::failure(message.clone())
-            })),
-        }
+    /// The `object_store` client of this vault, built on first use.
+    async fn store(&self) -> VaultResult<&dyn CloudObjectStore> {
+        let bucket = self.bucket()?;
+        let store = self
+            .store
+            .get_or_init(|| async { self.build_store(bucket).await })
+            .await;
+        cloud::store_or_failure(store)
     }
 
-    fn cached_region(&self, bucket: &str) -> String {
-        self.bucket_regions
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .get(bucket)
-            .cloned()
-            .unwrap_or_else(|| DEFAULT_REGION.to_owned())
+    async fn build_store(&self, bucket: &str) -> StoreResult {
+        let mut builder = AmazonS3Builder::new()
+            .with_bucket_name(bucket)
+            .with_retry(cloud::retry_config(self.retry));
+        let allow_http = match &self.endpoint {
+            Endpoint::Custom { authority, region } => {
+                let protocol = self.custom_protocol(authority).await;
+                builder = builder
+                    .with_endpoint(format!("{protocol}://{authority}"))
+                    .with_region(region);
+                protocol == "http"
+            }
+            Endpoint::Aws { override_base } => {
+                let lookup = match self.region_from_uri() {
+                    Some(region) => Ok(region),
+                    None => self.bucket_region().await,
+                };
+                let region = match lookup {
+                    Ok(region) => region,
+                    Err(error) => {
+                        if !error.is_not_found() {
+                            tracing::info!(bucket, "Could not look up S3 bucket region: {error}");
+                        }
+                        DEFAULT_REGION.to_owned()
+                    }
+                };
+                builder = builder.with_region(region);
+                match override_base {
+                    Some(base) => {
+                        builder = builder.with_endpoint(base);
+                        base.starts_with("http://")
+                    }
+                    None => {
+                        builder = builder
+                            .with_virtual_hosted_style_request(is_virtual_host_compatible(bucket));
+                        false
+                    }
+                }
+            }
+        };
+        builder = match self.credentials.clone()? {
+            Some(credentials) => {
+                let builder = builder
+                    .with_access_key_id(credentials.access_key_id)
+                    .with_secret_access_key(credentials.secret_access_key);
+                match credentials.session_token {
+                    Some(token) => builder.with_token(token),
+                    None => builder,
+                }
+            }
+            None => builder.with_skip_signature(true),
+        };
+        builder
+            .with_client_options(cloud::client_options(allow_http))
+            .build()
+            .map(|store| Arc::new(store) as Arc<dyn CloudObjectStore>)
+            .map_err(|error| error.to_string())
     }
 
     /// Scala `S3ClientPool.determineProtocol`: `https` if a `GET https://<authority>` gets any
     /// response, else `http`.
-    async fn custom_protocol(
-        &self,
-        authority: &str,
-        cell: &OnceCell<&'static str>,
-    ) -> &'static str {
-        *cell
-            .get_or_init(|| async {
-                let probe = self
-                    .client
-                    .get(format!("https://{authority}"))
-                    .timeout(PROTOCOL_PROBE_TIMEOUT)
-                    .send()
-                    .await;
-                if probe.is_ok() { "https" } else { "http" }
-            })
-            .await
+    async fn custom_protocol(&self, authority: &str) -> &'static str {
+        let probe = self
+            .client
+            .get(format!("https://{authority}"))
+            .timeout(PROTOCOL_PROBE_TIMEOUT)
+            .send()
+            .await;
+        if probe.is_ok() { "https" } else { "http" }
     }
 
-    /// `(base url, path prefix for the bucket, signing region)`.
-    async fn target(&self, bucket: &str, region: &str) -> (String, String, String) {
-        match &self.endpoint {
-            Endpoint::Custom {
-                authority,
-                protocol,
-                region,
-            } => {
-                let protocol = self.custom_protocol(authority, protocol).await;
-                (
-                    format!("{protocol}://{authority}"),
-                    format!("/{}", sigv4::uri_encode(bucket, true)),
-                    region.clone(),
-                )
-            }
-            Endpoint::Aws {
-                override_base: Some(base),
-            } => (
-                base.clone(),
-                format!("/{}", sigv4::uri_encode(bucket, true)),
-                region.to_owned(),
-            ),
-            Endpoint::Aws {
-                override_base: None,
-            } => {
-                if is_virtual_host_compatible(bucket) {
-                    (
-                        format!("https://{bucket}.s3.{region}.amazonaws.com"),
-                        String::new(),
-                        region.to_owned(),
-                    )
-                } else {
-                    (
-                        format!("https://s3.{region}.amazonaws.com"),
-                        format!("/{}", sigv4::uri_encode(bucket, true)),
-                        region.to_owned(),
-                    )
-                }
-            }
-        }
-    }
-
-    /// Send one signed request without payload (`key = None` addresses the bucket itself),
-    /// retrying transient failures per `read_retry`. The last attempt's result is returned as is.
-    async fn send_once(
-        &self,
-        method: Method,
-        bucket: &str,
-        key: Option<&str>,
-        query: &[(String, String)],
-        range: Option<String>,
-        region: &str,
-    ) -> VaultResult<S3Response> {
-        let mut attempt = 1;
-        loop {
-            let result = self
-                .send_once_with_payload(
-                    method.clone(),
-                    bucket,
-                    key,
-                    query,
-                    range.clone(),
-                    region,
-                    None,
-                )
-                .await;
-            if attempt >= self.read_retry.attempts || !is_transient(&result) {
-                return result;
-            }
-            tracing::debug!(
-                bucket,
-                key,
-                attempt,
-                "S3 request failed transiently; retrying"
-            );
-            tokio::time::sleep(self.read_retry.delay(attempt)).await;
-            attempt += 1;
-        }
-    }
-
-    #[allow(clippy::too_many_arguments)] // Read requests and replayable upload payloads share signing.
-    async fn send_once_with_payload(
-        &self,
-        method: Method,
-        bucket: &str,
-        key: Option<&str>,
-        query: &[(String, String)],
-        range: Option<String>,
-        region: &str,
-        payload: Option<&upload::UploadBody>,
-    ) -> VaultResult<S3Response> {
-        let (base, bucket_path, signing_region) = self.target(bucket, region).await;
-        let path = match key {
-            Some(key) => format!("{bucket_path}/{}", sigv4::uri_encode(key, false)),
-            None if bucket_path.is_empty() => "/".to_owned(),
-            None => bucket_path,
-        };
-        let query_string = sigv4::canonical_query_string(query);
-        let url_string = if query_string.is_empty() {
-            format!("{base}{path}")
-        } else {
-            format!("{base}{path}?{query_string}")
-        };
-        let url = reqwest::Url::parse(&url_string).map_err(|e| {
-            VaultError::failure(format!("Invalid S3 request url {url_string}: {e}"))
-        })?;
-        let host = match (url.host_str(), url.port()) {
-            (Some(host), Some(port)) => format!("{host}:{port}"),
-            (Some(host), None) => host.to_owned(),
-            (None, _) => String::new(),
-        };
-        let mut headers: Vec<(String, String)> = vec![("host".into(), host)];
-        if let Some(range) = range {
-            headers.push(("range".into(), range));
-        }
-        let payload_sha256 = payload.map_or(sigv4::EMPTY_PAYLOAD_SHA256, |p| p.sha256());
-        if let Some(payload) = payload {
-            headers.push(("content-length".into(), payload.length().to_string()));
-            headers.push(("content-type".into(), payload.content_type().into()));
-        }
-        let credentials = self.credentials()?;
-        if let Some(credentials) = credentials {
-            let amz_date = sigv4::amz_date(SystemTime::now());
-            headers.push(("x-amz-content-sha256".into(), payload_sha256.into()));
-            headers.push(("x-amz-date".into(), amz_date.clone()));
-            if let Some(token) = &credentials.session_token {
-                headers.push(("x-amz-security-token".into(), token.clone()));
-            }
-            let authorization = sigv4::authorization(
-                credentials,
-                &SigningRequest {
-                    method: method.as_str(),
-                    canonical_uri: url.path(),
-                    query,
-                    headers: &headers,
-                    payload_sha256,
-                },
-                &signing_region,
-                "s3",
-                &amz_date,
-            );
-            headers.push(("authorization".into(), authorization));
-        }
-        let mut request = self.client.request(method, url).timeout(REQUEST_TIMEOUT);
-        for (name, value) in headers.iter().filter(|(n, _)| n != "host") {
-            request = request.header(name.as_str(), value.as_str());
-        }
-        if let Some(payload) = payload {
-            request = request.body(payload.body().await?);
-        }
-        let response = request.send().await.map_err(transport_failure)?;
-        let status = response.status();
-        let headers = response.headers().clone();
-        let body = response.bytes().await.map_err(transport_failure)?;
-        Ok(S3Response {
-            status,
-            headers,
-            body,
-        })
-    }
-
-    /// `send_once` plus SDK cross-region access for Amazon endpoints.
-    async fn send(
-        &self,
-        method: Method,
-        key: Option<&str>,
-        query: &[(String, String)],
-        range: Option<String>,
-    ) -> VaultResult<S3Response> {
-        let bucket = self.bucket()?;
-        let region = match self.endpoint {
-            Endpoint::Custom { .. } => DEFAULT_REGION.to_owned(),
-            Endpoint::Aws { .. } => self.cached_region(bucket),
-        };
-        let response = self
-            .send_once(method.clone(), bucket, key, query, range.clone(), &region)
-            .await?;
-        if matches!(self.endpoint, Endpoint::Custom { .. }) || response.status.is_success() {
-            return Ok(response);
-        }
-        let Some(new_region) = self.redirect_region(bucket, &region, &response).await else {
-            return Ok(response);
-        };
-        if new_region == region {
-            return Ok(response);
-        }
-        tracing::debug!(bucket, region = %new_region, "S3 cross-region access: retrying in the bucket's region");
-        self.bucket_regions
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(bucket.to_owned(), new_region.clone());
-        self.send_once(method, bucket, key, query, range, &new_region)
-            .await
-    }
-
-    /// SDK `S3CrossRegionRedirectUtils`: 301/307, an `x-amz-bucket-region` header or an
-    /// `AuthorizationHeaderMalformed` error mark a region redirect. The region comes from the
-    /// header, the error body, or a `HeadBucket` request.
-    async fn redirect_region(
-        &self,
-        bucket: &str,
-        region: &str,
-        response: &S3Response,
-    ) -> Option<String> {
-        let header_region = response.header("x-amz-bucket-region");
-        let error = parse_error_body(&response.body);
-        let is_redirect = matches!(response.status.as_u16(), 301 | 307)
-            || header_region.as_deref().is_some_and(|r| r != region)
-            || error.code.as_deref() == Some("AuthorizationHeaderMalformed");
-        if !is_redirect {
-            return None;
-        }
-        if let Some(region) = header_region.or(error.region) {
-            return Some(region);
-        }
-        let head = self
-            .send_once(Method::HEAD, bucket, None, &[], None, region)
-            .await
-            .ok()?;
-        head.header("x-amz-bucket-region")
-    }
-
-    /// Scala `S3ClientPool.getBucketRegion` (HeadBucket; the header is present even for denied or
-    /// anonymous requests).
+    /// Scala `S3ClientPool.getBucketRegion`: the `x-amz-bucket-region` header of a `HeadBucket`
+    /// request (signed with the vault's credentials for `us-east-1`; the header is present even
+    /// for denied requests and region mismatches), `NotFound` if the response has none.
     pub async fn bucket_region(&self) -> VaultResult<String> {
         let bucket = self.bucket()?;
-        let region = self.cached_region(bucket);
-        let response = self
-            .send_once(Method::HEAD, bucket, None, &[], None, &region)
-            .await?;
-        response
-            .header("x-amz-bucket-region")
-            .ok_or(VaultError::NotFound)
+        let url = match &self.endpoint {
+            Endpoint::Aws {
+                override_base: Some(base),
+            } => format!("{base}/{}", super::uri::uri_encode(bucket, true)),
+            Endpoint::Aws {
+                override_base: None,
+            } if is_virtual_host_compatible(bucket) => format!("https://{bucket}.s3.amazonaws.com"),
+            _ => format!(
+                "https://s3.amazonaws.com/{}",
+                super::uri::uri_encode(bucket, true)
+            ),
+        };
+        if let Some(known) = cached_bucket_region(&url) {
+            return known.ok_or(VaultError::NotFound);
+        }
+        let mut request = self.client.head(&url).timeout(REGION_LOOKUP_TIMEOUT);
+        if let Some(credentials) = self.credentials.as_ref().ok().and_then(Option::as_ref) {
+            for (name, value) in signed_head_bucket_headers(&url, credentials) {
+                request = request.header(name, value);
+            }
+        }
+        let response = request
+            .send()
+            .await
+            .map_err(|e| VaultError::failure(format!("S3 bucket region lookup failed: {e}")))?;
+        let region = response
+            .headers()
+            .get("x-amz-bucket-region")
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_owned);
+        // Only definitive answers are remembered, not throttling or server errors.
+        let status = response.status();
+        if region.is_some() || status.is_success() || matches!(status.as_u16(), 403 | 404) {
+            BUCKET_REGIONS
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .insert(url, region.clone());
+        }
+        region.ok_or(VaultError::NotFound)
+    }
+
+    /// The region named by an Amazon regional endpoint uri (`s3.<region>.amazonaws.com`,
+    /// `<bucket>.s3.<region>.amazonaws.com`), which needs no lookup.
+    fn region_from_uri(&self) -> Option<String> {
+        let host = self.uri.host()?;
+        if !host.ends_with(".amazonaws.com") {
+            return None;
+        }
+        parse_signing_region(host).filter(|region| region != "amazonaws")
     }
 
     fn object_key(path: &UPath) -> VaultResult<String> {
         object_key_from_upath(path).map_err(VaultError::Failure)
     }
-
-    /// Scala `notFoundToFailure(client.listObjectsV2(..))`.
-    async fn list_objects(&self, query: Vec<(String, String)>) -> VaultResult<ListPage> {
-        let response = self.send(Method::GET, None, &query, None).await?;
-        if !response.status.is_success() {
-            return Err(sdk_failure(&response));
-        }
-        parse_list_page(&response.body)
-    }
-}
-
-fn query(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
-    pairs
-        .iter()
-        .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
-        .collect()
 }
 
 impl DataVault for S3DataVault {
@@ -902,26 +634,7 @@ impl DataVault for S3DataVault {
         Box::pin(async move {
             let key = Self::object_key(path)?;
             let before = Instant::now();
-            let result = async {
-                let response = self
-                    .send(Method::GET, Some(&key), &[], range.to_range_header())
-                    .await?;
-                if response.status.is_success() {
-                    return Ok(response);
-                }
-                let error = parse_error_body(&response.body);
-                let not_found = response.status == StatusCode::NOT_FOUND
-                    && matches!(
-                        error.code.as_deref(),
-                        None | Some("NoSuchKey") | Some("NoSuchBucket")
-                    );
-                if not_found {
-                    Err(VaultError::NotFound)
-                } else {
-                    Err(sdk_failure(&response))
-                }
-            }
-            .await;
+            let result = async { cloud::read(self.store().await?, &key, range).await }.await;
             let authority = self.uri.authority().unwrap_or("null");
             let bucket = self.bucket.as_deref().unwrap_or("null");
             tracing::debug!(
@@ -934,17 +647,7 @@ impl DataVault for S3DataVault {
                     error.message
                 );
             }
-            let response = result?;
-            let encoding = response
-                .header("content-encoding")
-                .filter(|e| e != "aws-chunked")
-                .unwrap_or_default();
-            let encoding = Encoding::from_rfc7231(&encoding)?;
-            Ok(RawRead {
-                content_range: response.header("content-range"),
-                bytes: response.body,
-                encoding,
-            })
+            result
         })
     }
 
@@ -956,23 +659,14 @@ impl DataVault for S3DataVault {
     ) -> BoxFuture<'a, VaultResult<Vec<UPath>>> {
         Box::pin(async move {
             let prefix = Self::object_key(path)?;
-            let bucket = self.bucket()?.to_owned();
+            let bucket = self.bucket()?;
             // Common prefixes may filter out some results, so request a few more first.
-            let max_keys = (max_items + 5).to_string();
-            let page = self
-                .list_objects(query(&[
-                    ("list-type", "2"),
-                    ("prefix", &prefix),
-                    ("delimiter", "/"),
-                    ("max-keys", &max_keys),
-                    ("encoding-type", "url"),
-                ]))
-                .await?;
-            page.common_prefixes
-                .iter()
+            let keys =
+                cloud::list_directory(self.store().await?, &prefix, Some(max_items + 5)).await?;
+            keys.iter()
                 .take(max_items)
                 .map(|key| {
-                    UPath::parse(&uri_literal_for_object_key(&self.uri, &bucket, key))
+                    UPath::parse(&uri_literal_for_object_key(&self.uri, bucket, key))
                         .map_err(|e| VaultError::Failure(e.into()))
                 })
                 .collect()
@@ -991,25 +685,7 @@ impl DataVault for S3DataVault {
             } else {
                 format!("{raw_prefix}/")
             };
-            let mut total = 0u64;
-            let mut continuation: Option<String> = None;
-            loop {
-                let mut pairs = query(&[
-                    ("list-type", "2"),
-                    ("prefix", &prefix),
-                    ("max-keys", "1000"),
-                    ("encoding-type", "url"),
-                ]);
-                if let Some(token) = &continuation {
-                    pairs.push(("continuation-token".into(), token.clone()));
-                }
-                let page = self.list_objects(pairs).await?;
-                total += page.sizes.iter().sum::<u64>();
-                match (page.is_truncated, page.next_continuation_token) {
-                    (true, Some(token)) => continuation = Some(token),
-                    _ => return Ok(total),
-                }
-            }
+            cloud::used_storage_bytes(self.store().await?, &prefix).await
         })
     }
 

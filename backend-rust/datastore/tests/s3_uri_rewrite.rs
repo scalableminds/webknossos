@@ -92,7 +92,7 @@ async fn s3_uri_rewrite_matches_actual_scala_helpers_and_uses_explicit_credentia
             );
             let short =
                 webknossos_datastore::datavault::s3::is_short_style(&path.to_remote_uri().unwrap());
-            assert_eq!(mock.calls().len(), usize::from(short));
+            assert_eq!(mock.all_calls().len(), usize::from(short));
         }
     }
     let mock = MockS3::start(|_| {
@@ -189,8 +189,11 @@ async fn explore_remote_returns_regional_or_global_paths_and_denial_has_no_regio
                 "s3://s3.amazonaws.com/bucket/array"
             }
         );
-        assert_eq!(s3.calls().iter().filter(|c| c.method == "HEAD").count(), 1);
-        let before = s3.calls().len();
+        assert_eq!(
+            s3.all_calls().iter().filter(|c| c.method == "HEAD").count(),
+            1
+        );
+        let before = s3.all_calls().len();
         let (status, _, _) = common::send(
             app.clone(),
             Request::post("/data/datasets/exploreRemote")
@@ -201,6 +204,6 @@ async fn explore_remote_returns_regional_or_global_paths_and_denial_has_no_regio
         )
         .await;
         assert_eq!(status, StatusCode::FORBIDDEN);
-        assert_eq!(s3.calls().len(), before);
+        assert_eq!(s3.all_calls().len(), before);
     }
 }

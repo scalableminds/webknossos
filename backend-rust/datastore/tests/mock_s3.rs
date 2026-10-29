@@ -40,8 +40,12 @@ impl Reply {
             headers: Vec::new(),
         }
     }
+    /// Success with an `ETag`, like S3's `PutObject`/`UploadPart` responses.
     pub fn ok() -> Self {
-        Self::xml(StatusCode::OK, "")
+        Self {
+            etag: Some("\"etag\"".into()),
+            ..Self::xml(StatusCode::OK, "")
+        }
     }
     pub fn with(mut self, name: &'static str, value: &str) -> Self {
         self.headers.push((name, value.into()));
@@ -157,7 +161,14 @@ impl MockS3 {
     pub fn base(&self) -> String {
         format!("http://{}", self.address)
     }
+    /// Object requests, without the unsigned bucket-region lookups (`HEAD /<bucket>`).
     pub fn calls(&self) -> Vec<Call> {
+        self.all_calls()
+            .into_iter()
+            .filter(|c| c.method != "HEAD" || c.path.trim_start_matches('/').contains('/'))
+            .collect()
+    }
+    pub fn all_calls(&self) -> Vec<Call> {
         self.calls.lock().unwrap().clone()
     }
 }

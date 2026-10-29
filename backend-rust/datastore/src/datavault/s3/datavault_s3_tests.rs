@@ -93,27 +93,7 @@ fn signing_region_like_aws_host_name_utils() {
 }
 
 #[test]
-fn parses_listing_and_errors() {
-    let page = parse_list_page(
-            br#"<?xml version="1.0" encoding="UTF-8"?>
-<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>b</Name>
-<Prefix>data/</Prefix><EncodingType>url</EncodingType><IsTruncated>true</IsTruncated>
-<NextContinuationToken>tok&amp;1</NextContinuationToken>
-<Contents><Key>data/x</Key><Size>10</Size></Contents><Contents><Key>data/y</Key><Size>5</Size></Contents>
-<CommonPrefixes><Prefix>data/a+b%2Fc/</Prefix></CommonPrefixes></ListBucketResult>"#,
-        )
-        .unwrap();
-    assert_eq!(page.common_prefixes, vec!["data/a b/c/"]);
-    assert_eq!(page.sizes, vec![10, 5]);
-    assert!(page.is_truncated);
-    assert_eq!(page.next_continuation_token.as_deref(), Some("tok&1"));
-
-    let error = parse_error_body(
-            b"<Error><Code>AuthorizationHeaderMalformed</Code><Message>bad &lt;region&gt;</Message><Region>eu-west-1</Region></Error>",
-        );
-    assert_eq!(error.code.as_deref(), Some("AuthorizationHeaderMalformed"));
-    assert_eq!(error.message.as_deref(), Some("bad <region>"));
-    assert_eq!(error.region.as_deref(), Some("eu-west-1"));
+fn virtual_host_compatible_buckets() {
     assert!(is_virtual_host_compatible("my-bucket"));
     assert!(!is_virtual_host_compatible("my.bucket"));
 }

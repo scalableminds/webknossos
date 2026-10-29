@@ -1,4 +1,5 @@
-//! Data vaults: uniform byte access to local files, HTTP(S), S3 and Google Cloud Storage.
+//! Data vaults: uniform byte access to local files, HTTP(S), S3 and Google Cloud Storage (the
+//! latter two through the `object_store` crate).
 //!
 //! Scala truth: `datastore/datavault/*` (`DataVault`, `VaultPath`, `ByteRange`, `Encoding`,
 //! `FileSystemDataVault`, `HttpsDataVault`, `S3DataVault`, `GoogleCloudDataVault`),
@@ -8,24 +9,17 @@
 //! Scala `Fox` results distinguish `Empty` (resource missing) from `Failure`; vault reads keep that
 //! distinction as [`VaultError::NotFound`] so chunk readers can fall back to fill values.
 
+mod cloud;
 mod credential;
 mod file;
 pub mod gcs;
 mod http;
 pub mod s3;
 mod service;
-pub mod sigv4;
 mod uri;
 mod zip;
 
-use std::{
-    fmt,
-    future::Future,
-    io::Read,
-    pin::Pin,
-    sync::Arc,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use std::{fmt, future::Future, io::Read, pin::Pin, sync::Arc, time::Duration};
 
 use axum::http::StatusCode;
 use bytes::Bytes;
@@ -37,15 +31,14 @@ use crate::error::DsError;
 pub use crate::models::upath::{LocalPath, RemotePath, UPath};
 pub use credential::DataVaultCredential;
 pub use file::FileSystemDataVault;
-pub use gcs::{GcsOptions, GoogleCloudDataVault, ServiceAccountTokenSource};
+pub use gcs::{GcsOptions, GoogleCloudDataVault};
 pub use http::HttpsDataVault;
-pub use s3::{S3DataVault, S3Options};
+pub use s3::{AwsCredentials, S3DataVault, S3Options};
 pub use service::{
     CredentialLookup, CredentializedUPath, DataVaultService, DataVaultServiceOptions,
     MSG_MAG_PATH_NOT_ABSOLUTE, MSG_SETUP_FAILED, VAULT_CACHE_CAPACITY,
 };
-pub use sigv4::AwsCredentials;
-pub use uri::{RemoteUri, ToRemoteUri};
+pub use uri::{RemoteUri, ToRemoteUri, uri_encode};
 pub use zip::ZipDataVault;
 
 /// Boxed future used by the object-safe vault traits.
@@ -61,29 +54,14 @@ pub enum VaultError {
 
 pub type VaultResult<T> = Result<T, VaultError>;
 
-/// How often a remote vault sends a request that failed transiently, with exponential backoff and
-/// jitter between attempts (the SDK retry settings the Scala vaults inherited).
+/// How often a remote vault sends a request that failed transiently, with exponential backoff
+/// between attempts (the SDK retry settings the Scala vaults inherited).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RetryPolicy {
     /// Total attempts, including the first.
     pub attempts: u32,
     /// Upper bound of the delay before the first retry; it doubles with every further retry.
     pub initial_delay: Duration,
-}
-
-impl RetryPolicy {
-    /// Delay before retry number `retry` (1-based): between half and all of
-    /// `initial_delay * 2^(retry - 1)`, so concurrent readers of a throttled store spread out.
-    pub(crate) fn delay(&self, retry: u32) -> Duration {
-        let full = self
-            .initial_delay
-            .saturating_mul(1 << retry.saturating_sub(1).min(16));
-        let nanos = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .subsec_nanos();
-        full.mul_f64(0.5 + f64::from(nanos % 1024) / 2048.0)
-    }
 }
 
 impl VaultError {

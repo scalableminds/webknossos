@@ -9,6 +9,21 @@ use percent_encoding::percent_decode_str;
 
 use crate::{error::DsError, models::upath::UPath};
 
+/// Percent-encodes everything but `A-Za-z0-9-_.~` (`%XX`, uppercase); `/` too if `encode_slash`.
+pub fn uri_encode(value: &str, encode_slash: bool) -> String {
+    let mut out = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(byte as char)
+            }
+            b'/' if !encode_slash => out.push('/'),
+            _ => out.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    out
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RemoteUri {
     original: String,

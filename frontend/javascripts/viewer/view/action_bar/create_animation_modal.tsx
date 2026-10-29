@@ -460,8 +460,6 @@ function CreateAnimationModal(props: Props) {
                 aspectRatio: "16 / 9",
                 objectFit: "cover",
                 borderRadius: token.borderRadiusLG,
-                // Letterbox color behind the example video. It matches the (fixed) dark
-                // background of the video asset itself, so it stays the same in both themes.
                 background: ColorViewerInk,
               }}
               controls={true}

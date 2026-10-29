@@ -11,7 +11,6 @@ import { setRotationAction } from "viewer/model/actions/flycam_actions";
 import { setViewModeAction } from "viewer/model/actions/settings_actions";
 import NumberSliderSetting from "../left_border_tabs/components/number_slider_setting";
 
-// Matches the out-of-bounds warning of the position input next to it (dataset_position_view.tsx).
 const warningColors: React.CSSProperties = {
   color: "var(--ant-color-warning)",
   borderColor: "var(--ant-color-warning)",

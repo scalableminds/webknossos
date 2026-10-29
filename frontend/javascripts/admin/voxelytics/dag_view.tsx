@@ -366,8 +366,6 @@ const isEdgeInChain = (chain: TaskChain, source: string, target: string) =>
   (chain.upstream.has(source) && (target === chain.selected || chain.upstream.has(target))) ||
   (chain.downstream.has(target) && (source === chain.selected || chain.downstream.has(source)));
 
-// The run-state colors must stay recognizable (and identical) in both themes, so they use the
-// theme-independent status colors instead of the active theme's tokens.
 const RUN_STATE_COLORS: Partial<Record<VoxelyticsRunState, string>> = {
   [VoxelyticsRunState.COMPLETE]: ThemeIndependentStatusColor.success,
   [VoxelyticsRunState.RUNNING]: ThemeIndependentStatusColor.info,

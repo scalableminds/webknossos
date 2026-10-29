@@ -16,7 +16,6 @@
 //! `CompressedSegmentationCompressor` (DS2d).
 
 mod blosc;
-mod blosclz;
 mod lz4;
 
 use std::{

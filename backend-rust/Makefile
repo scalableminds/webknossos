@@ -2,7 +2,7 @@
 
 # Features unify across the packages of one cargo invocation (the datastore's
 # `serde_json/preserve_order` would change the app's JSON key order), so tests run per package.
-PACKAGES := webknossos-backend webknossos-common webknossos-datastore
+PACKAGES := webknossos-backend webknossos-blosc webknossos-common webknossos-datastore
 
 check: fmt-check
 	cargo clippy --locked --workspace --all-targets -- -D warnings

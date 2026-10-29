@@ -10,6 +10,7 @@ autotests = false
 
 [dependencies]
 webknossos-common.workspace = true
+webknossos-blosc.workspace = true
 async-trait = "0.1"
 futures = "0.3"
 inventory = "0.3"

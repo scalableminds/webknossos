@@ -10,8 +10,7 @@ Status: DONE (2026-10-11). Decompression + compression for Null, LZ4 (raw block)
 - Gzip header written by modern Java: 1f8b 0800 00000000 00 ff.
 
 ## Decisions
-- Blosc: own pure-Rust Blosc1 (container format v2) codec: src/compression/blosc.rs + blosclz.rs (BloscLZ decoder mirrors c-blosc 1.21 bounds checks; own greedy encoder). Rejected: blusc 0.0.6 (pre-alpha c-blosc2 port, needs rustc 1.91), blosc2-pure-rs 0.2.4 / omnizip-blosc (Blosc2-focused, young), blosc/blosc-src (C via cc; not needed). Inner codecs: LZ4 own bounded decoder + lz4_flex encoder; zlib flate2 (miniz_oxide); zstd ruzstd. Snappy blocks -> error (blosc-java has no snappy).
-- Encoder mirrors c-blosc 1.21 compute_blocksize/split_block (FORWARD_COMPAT), memcpyed for clevel 0 / < 128 bytes / incompressible; header flags identical to c-blosc for the generated vectors.
+- Blosc: c-blosc 1.21.6 (the version blosc-java bundles) statically linked through blosc-src 0.3.8 (features lz4/zlib/zstd, no snappy like blosc-java), wrapped by the `webknossos-blosc` crate (backend-rust/blosc, the only crate allowing unsafe). Its compress/decompress repeat the calls of blosc-java's JNI functions (read from the disassembled libbloscjni): `blosc_cbuffer_validate(src, input length)` then `blosc_decompress_ctx(nbytes, 1 thread)`; `blosc_compress_ctx` into `nbytes + 16`; same error texts (`Buffer does not contain valid blosc-encoded contents`, `Error while (de)compressing buffer`). Scala's header pre-checks stay in src/compression/blosc.rs. 2026-10-29: replaced the earlier own pure-Rust Blosc1/BloscLZ port (pure-Rust alternatives blusc, blosc2-pure-rs, omnizip-blosc were too young or Blosc2-only). Consequence: input with bytes after the header's cbytes is rejected (Scala too; the port accepted it).
 - Deps added to datastore/Cargo.toml: lz4_flex 0.14 (default-features=false, std+safe-encode+safe-decode), ruzstd 0.9 (+twox-hash). cargo fetch done; --locked --offline builds work.
 - 2026-10-17: LZ4 blocks are decoded by lz4_flex into an exactly sized buffer; the own bounded decoder only runs when lz4_flex rejects a block (or an OutputFull block ends early), so error texts and partial-consumption results are unchanged (fuzzed equivalence test in lz4/tests.rs). ruzstd replaced by the `zstd` crate (libzstd 1.5.7, default-features=false): single frames with a known content size decode in one call, everything else through the streaming decoder (window log up to 31); compression honors level and checksum; Blosc-zstd maps clevel like c-blosc 1.21 (`2*clevel-1`, 9 = max level 22). Micro-benchmark: LZ4 decode 0.6-1.0 → 1.5-2.3 GB/s, zstd decode 3.5-7.6x faster.
 - Limits: decompress(input, expected_len) bounds output by expected_len, else DEFAULT_MAX_DECOMPRESSED_BYTES (1 GiB); buffers grow incrementally; Blosc header nbytes checked against the limit before allocation; Chained intermediate steps use the default limit.
@@ -23,9 +22,9 @@ Status: DONE (2026-10-11). Decompression + compression for Null, LZ4 (raw block)
 - Error messages mirror Scala exceptions (IllegalArgumentException texts, `key not found: id`, `For input string: "x"`, MatchError text for zarr3 shuffle, "Invalid compression level: 0" for boolean levels).
 
 ## Deviations
-- Compression output is valid for the Java readers but not byte-identical: zstd (until 2026-10-17: ruzstd "Fastest" for every level with an unconditional checksum; now libzstd at the requested level/checksum); LZ4HC (WKW, blosc lz4hc) uses the normal LZ4 encoder; BloscLZ uses an own encoder; gzip xfl byte differs.
+- Compression output is valid for the Java readers but not byte-identical: zstd (until 2026-10-17: ruzstd "Fastest" for every level with an unconditional checksum; now libzstd at the requested level/checksum); LZ4HC (WKW) uses the normal LZ4 encoder; gzip xfl byte differs. Blosc output comes from the same c-blosc version as blosc-java, but blosc-src links lz4 1.10 / the zstd-sys libzstd instead of c-blosc's bundled copies.
 - zarr3 blosc invalid shuffle fails at construction (Scala: lazily at first encode/decode).
-- Blosc typesize <= 0 or > 255 is treated as 1 when compressing (zarr3 omitted typesize gives 0 in Scala).
+- Blosc typesize <= 0 is treated as 1 when compressing (zarr3 omitted typesize gives 0 in Scala, where blosc-java throws); c-blosc itself treats > 255 as 1.
 - Decompressed output larger than the bound is an error (Scala unbounded).
 
 ## Evidence
@@ -37,4 +36,3 @@ Status: DONE (2026-10-11). Decompression + compression for Null, LZ4 (raw block)
 ## Open / next
 - JPEG (precomputed `jpeg`, DS2d): Java ImageIO returns TYPE_BYTE_GRAY bytes for 1 channel and TYPE_3BYTE_BGR (BGR order!) for 3 channels; needs a pure-Rust decoder (zune-jpeg) and parity check.
 - compressed_segmentation (DS2d), compresso (DS5b).
-- Perf (DS6): bit-unshuffle is a scalar per-bit loop; Blosc splits decode into temporary Vecs.

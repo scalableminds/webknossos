@@ -1951,7 +1951,8 @@ fn corrupted_inputs_fail() {
         compressed[30] ^= 0x55;
         match blosc.decompress(&compressed, None) {
             Ok(out) => assert_ne!(out, data, "{cname}"),
-            Err(e) => assert!(e.message.starts_with("blosc:"), "{cname}: {e}"),
+            // blosc-java's JNI error text.
+            Err(e) => assert_eq!(e.message, "Error while decompressing buffer", "{cname}"),
         }
     }
 

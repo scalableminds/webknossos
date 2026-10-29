@@ -1,5 +1,5 @@
 [workspace]
-members = ["common", "datastore"]
+members = ["blosc", "common", "datastore"]
 resolver = "3"
 
 [workspace.package]
@@ -14,6 +14,7 @@ license = "AGPL-3.0-only"
 # `serde_json/preserve_order` changes the app's JSON key order. Build and test per package (`-p`).
 [workspace.dependencies]
 webknossos-common = { path = "common" }
+webknossos-blosc = { path = "blosc" }
 axum = { version = "0.8", features = ["json", "query", "tokio", "http1", "multipart", "macros"] }
 base64 = "0.22"
 prost = "0.14"

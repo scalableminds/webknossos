@@ -302,6 +302,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "blosc-src"
+version = "0.3.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9046dd58971db0226346fde214143d16a6eb12f535b5320d0ea94fcea420631"
+dependencies = [
+ "cc",
+ "libz-sys",
+ "lz4-sys",
+ "zstd-sys",
+]
+
+[[package]]
 name = "blowfish"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1561,6 +1573,16 @@ name = "lru-slab"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4050469837a6ff301cd14c1f8f24f88549e6d548f24f64e2148eb0f72cebc51f"
+
+[[package]]
+name = "lz4-sys"
+version = "1.11.1+lz4-1.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bd8c0d6c6ed0cd30b3652886bb8711dc4bb01d637a68105a3d5158039b418e6"
+dependencies = [
+ "cc",
+ "libc",
+]
 
 [[package]]
 name = "lz4_flex"
@@ -3749,6 +3771,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "webknossos-blosc"
+version = "0.1.0"
+dependencies = [
+ "blosc-src",
+]
+
+[[package]]
 name = "webknossos-common"
 version = "0.1.0"
 dependencies = [
@@ -3792,6 +3821,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+ "webknossos-blosc",
  "webknossos-common",
  "zarrs",
  "zip",

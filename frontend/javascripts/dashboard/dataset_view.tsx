@@ -114,12 +114,14 @@ function DatasetView({
   const [searchTags, setSearchTags] = useState<string[]>([]);
   const [datasetFilteringMode, setDatasetFilteringMode] =
     useState<DatasetFilteringMode>("onlyShowReported");
-  // Plain useQuery so that a failing poll doesn't show a toast every few seconds.
+  // Errors are swallowed so that a failing poll doesn't show a toast every few seconds.
   const { data: jobs = [] } = useQuery({
     queryKey: ["jobs", APIJobCommand.CONVERT_TO_WKW, true],
-    queryFn: () => getJobs(APIJobCommand.CONVERT_TO_WKW, true),
+    queryFn: () => getJobs(APIJobCommand.CONVERT_TO_WKW, true, { showErrorToast: false }),
     enabled: features().jobsEnabled,
     refetchInterval: CONVERSION_JOBS_REFRESH_INTERVAL,
+    retry: false,
+    meta: { persist: false },
   });
   const { data: folder } = useFolderQuery(context.activeFolderId);
 

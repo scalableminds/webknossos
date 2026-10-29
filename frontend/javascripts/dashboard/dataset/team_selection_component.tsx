@@ -8,7 +8,7 @@ import { isUserAdminOrManager } from "libs/utils";
 import compact from "lodash-es/compact";
 import unionBy from "lodash-es/unionBy";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useEffectEvent, useMemo, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import type { APITeam } from "types/api_types";
 
 type TeamSelectionComponentProps = {
@@ -35,7 +35,11 @@ function TeamSelectionComponent({
 }: TeamSelectionComponentProps) {
   const queryClient = useQueryClient();
   const teamsQueryKey = allowNonEditableTeams ? ["teams"] : ["editableTeams"];
-  const { data: fetchedTeams, isFetching: isFetchingData } = useQueryWithErrorHandling(
+  const {
+    data: fetchedTeams,
+    isPending: isFetchingData,
+    isFetchedAfterMount,
+  } = useQueryWithErrorHandling(
     {
       queryKey: teamsQueryKey,
       queryFn: () => (allowNonEditableTeams ? getTeams() : getEditableTeams()),
@@ -54,13 +58,17 @@ function TeamSelectionComponent({
     setSelectedTeams(value ? [value].flat() : []);
   }, [value]);
 
-  // Notify the parent whenever the teams were (re)loaded.
+  // Notify the parent once after the teams were freshly loaded. Later cache updates (e.g.
+  // refetches or a newly created team) must not trigger it again, since the parent may
+  // reset the selection in this callback.
+  const hasNotifiedAboutFetchedTeams = useRef(false);
   const onTeamsFetched = useEffectEvent((teams: APITeam[]) => afterFetchedTeams?.(teams));
   useEffect(() => {
-    if (fetchedTeams != null) {
+    if (fetchedTeams != null && isFetchedAfterMount && !hasNotifiedAboutFetchedTeams.current) {
+      hasNotifiedAboutFetchedTeams.current = true;
       onTeamsFetched(fetchedTeams);
     }
-  }, [fetchedTeams]);
+  }, [fetchedTeams, isFetchedAfterMount]);
 
   const getAllTeams = useCallback((): APITeam[] => {
     return unionBy(possibleTeams, selectedTeams, (t) => t.id);

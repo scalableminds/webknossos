@@ -50,13 +50,15 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
     ),
   );
 
-  // Poll the jobs while a mesh job is running. Plain useQuery is used so that a failing
+  // Poll the jobs while a mesh job is running. Errors are swallowed so that a failing
   // poll doesn't show a toast every few seconds.
   const { data: jobs } = useQuery({
     queryKey: ["jobs"],
-    queryFn: () => getJobs(),
+    queryFn: () => getJobs(undefined, undefined, { showErrorToast: false }),
     enabled: activeUser != null && activeMeshJobId != null,
     refetchInterval: REFRESH_INTERVAL,
+    retry: false,
+    meta: { persist: false },
   });
 
   useEffect(() => {

@@ -31,15 +31,21 @@ function SecuredRoute({
   const activeUser = useWkSelector((state) => state.activeUser);
   const isAuthenticated = activeUser !== null;
   // If the annotation cannot be found, the query fails silently and the resource is
-  // treated as not public.
-  const { data: annotationInformation } = useApi({
+  // treated as not public. Cached data is ignored until a fresh response arrived, since
+  // the visibility might have changed in the meantime.
+  const {
+    data: annotationInformation,
+    isFetchedAfterMount,
+    isSuccess,
+  } = useApi({
     queryKey: ["unversionedAnnotation", id],
     queryFn: () => getUnversionedAnnotationInformation(id as string),
     enabled: !isAuthenticated && checkIfResourceIsPublic && !!id,
     refetchOnWindowFocus: false,
     meta: { persist: false },
   });
-  const isSecuredResourcePubliclyAvailable = annotationInformation?.visibility === "Public";
+  const isSecuredResourcePubliclyAvailable =
+    isFetchedAfterMount && isSuccess && annotationInformation?.visibility === "Public";
 
   const isCompletelyAuthenticated = checkIfResourceIsPublic
     ? isAuthenticated || isSecuredResourcePubliclyAvailable

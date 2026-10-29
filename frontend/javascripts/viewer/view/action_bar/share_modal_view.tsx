@@ -324,6 +324,8 @@ function ShareModalViewInner(props: Props) {
       return;
     }
     setIsChangingInProgress(true);
+    // Cancel a pending fetch so that it can't overwrite the optimistic update with stale data.
+    await queryClient.cancelQueries({ queryKey: sharedTeamsQueryKey });
     setSharedTeams(newTeams);
     try {
       await updateTeamsForSharedAnnotation(

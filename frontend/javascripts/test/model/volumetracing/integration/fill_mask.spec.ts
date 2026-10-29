@@ -32,8 +32,7 @@ describe("maskShapeFromVoxelBuffer2D", () => {
           }
         }
       }
-      // Where the old path (labelWithVoxelBuffer2D) writes them: through the
-      // buffer's own 2D-to-3D mapping.
+      // Where the buffer itself places them: through its own 2D-to-3D mapping.
       const expected = set.map(([a, b]) => {
         const position: Vector3 = [0, 0, 0];
         buffer.getFast3DCoordinate(buffer.minCoord2d[0] + a, buffer.minCoord2d[1] + b, position);

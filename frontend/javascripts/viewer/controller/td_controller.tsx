@@ -5,9 +5,9 @@ import { clamp, waitForElementWithId } from "libs/utils";
 import get from "lodash-es/get";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
-import { type OrthographicCamera, Vector3 as ThreeVector3 } from "three";
+import { type Object3D, type OrthographicCamera, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
-import {
+import Constants, {
   type OrthoView,
   type OrthoViewMap,
   OrthoViews,
@@ -22,6 +22,7 @@ import {
   ProofreadToolController,
   SkeletonToolController,
 } from "viewer/controller/combinations/tool_controls";
+import CustomLOD from "viewer/controller/custom_lod";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { getActiveNode, getNodePosition } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -29,7 +30,9 @@ import { getInputCatcherRect, getViewportScale } from "viewer/model/accessors/vi
 import {
   getActiveSegmentationTracing,
   getActiveUnmappedSegmentId,
+  getMeshInfoForSegment,
 } from "viewer/model/accessors/volumetracing_accessor";
+import { updateMeshOpacityAction } from "viewer/model/actions/annotation_actions";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { toggleSegmentInPartitionAction } from "viewer/model/actions/proofread_actions";
 import {
@@ -330,6 +333,30 @@ class TDController extends PureComponent<Props> {
           }
         }
       },
+      leftDoubleClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
+        if (this.props.planeView == null) return;
+
+        const intersection = this.getMeshIntersection(pos);
+        if (intersection?.meshId == null) return;
+
+        const { layerName } = intersection;
+        if (layerName == null) return;
+
+        const state = Store.getState();
+
+        const currentOpacity =
+          getMeshInfoForSegment(
+            state,
+            state.flycam.additionalCoordinates,
+            layerName,
+            intersection.meshId,
+          )?.opacity ?? Constants.DEFAULT_MESH_OPACITY;
+
+        // Toggle between opaque and half-transparent. Dispatching the action (instead of
+        // calling setMeshOpacity directly) stores the opacity, so it survives a mesh reload.
+        const newOpacity = currentOpacity >= 1 ? 0.5 : 1;
+        Store.dispatch(updateMeshOpacityAction(layerName, intersection.meshId, newOpacity));
+      },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (this.props.planeView == null) return null;
         const intersection = this.getMeshIntersection(pos);
@@ -357,7 +384,19 @@ class TDController extends PureComponent<Props> {
     const meshId: bigint | null = hitResult ? get(hitResult.node.parent, "segmentId", null) : null;
     const unmappedSegmentId: bigint | null = hitResult?.unmappedSegmentId || null;
     const meshClickedPosition = hitResult ? hitResult.point : null;
-    return { meshId, unmappedSegmentId, meshClickedPosition, hitPosition: hitResult.point };
+    // The meshes of each segmentation layer are grouped in a CustomLOD named after the layer.
+    let layerGroup: Object3D | null = hitResult.node;
+    while (layerGroup != null && !(layerGroup instanceof CustomLOD)) {
+      layerGroup = layerGroup.parent;
+    }
+    const layerName = layerGroup?.name ?? null;
+    return {
+      meshId,
+      unmappedSegmentId,
+      meshClickedPosition,
+      hitPosition: hitResult.point,
+      layerName,
+    };
   }
 
   setTargetAndFixPosition = (position?: Vector3): void => {

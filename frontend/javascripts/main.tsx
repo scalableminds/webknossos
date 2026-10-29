@@ -48,7 +48,9 @@ const localStoragePersister = createAsyncStoragePersister({
   storage: UserLocalStorage,
   serialize: (data) => compress(JSON.stringify(data)),
   deserialize: (data) => JSON.parse(decompress(data) || "{}"),
-  key: "query-cache-v3",
+  // Bump the version whenever the shape of cached data changes, so that stale entries
+  // are not restored.
+  key: "query-cache-v4",
 });
 // Queries whose data must never be written to localStorage, identified by the first key segment.
 const NEVER_PERSISTED_QUERY_KEYS = ["authToken"];

@@ -73,7 +73,9 @@ function getTasksQueryOptions(queryObject: QueryObject) {
   return {
     queryKey: ["tasks", queryObject],
     queryFn: () => getTasks(queryObject),
-    // Task lists can be large and the search can be random, so don't persist them.
+    // Task lists can be large and the search can be random, so don't persist them and
+    // drop the results of earlier searches after a while.
+    gcTime: 5 * 60 * 1000,
     meta: { persist: false },
   };
 }
@@ -106,7 +108,9 @@ function TaskListView({ initialFieldValues }: Props) {
   });
   const isLoading = isFetchingTasks || isLoadingMutation;
 
-  function setTasks(updater: (currentTasks: APITask[]) => APITask[]) {
+  async function setTasks(updater: (currentTasks: APITask[]) => APITask[]) {
+    // Cancel a running refetch so that its stale response cannot overwrite this update.
+    await queryClient.cancelQueries({ queryKey: tasksQueryOptions.queryKey });
     queryClient.setQueryData(tasksQueryOptions.queryKey, (currentTasks: APITask[] = []) =>
       updater(currentTasks),
     );
@@ -116,7 +120,8 @@ function TaskListView({ initialFieldValues }: Props) {
     persistence.persist({ searchQuery });
   }, [searchQuery]);
 
-  async function fetchData(newQueryObject: QueryObject): Promise<APITask[]> {
+  // Returns null if the tasks could not be loaded.
+  async function fetchData(newQueryObject: QueryObject): Promise<APITask[] | null> {
     setQueryObject(newQueryObject);
     if (isEmpty(newQueryObject)) {
       return [];
@@ -127,7 +132,7 @@ function TaskListView({ initialFieldValues }: Props) {
       return await queryClient.fetchQuery(getTasksQueryOptions(newQueryObject));
     } catch (_error) {
       // The error is shown by useQueryWithErrorHandling.
-      return [];
+      return null;
     }
   }
 
@@ -213,6 +218,9 @@ function TaskListView({ initialFieldValues }: Props) {
 
   async function downloadSettingsFromAllTasks(queryObject: QueryObject) {
     const fetchedTasks = await fetchData(queryObject);
+    if (fetchedTasks == null) {
+      return;
+    }
     const filteredTasks = getFilteredTasks(fetchedTasks);
 
     if (filteredTasks.length > 0) {

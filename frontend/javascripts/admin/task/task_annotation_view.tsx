@@ -48,9 +48,12 @@ function TaskAnnotationView({ task }: Props) {
     queryKey: annotationsQueryKey,
     queryFn: () => getAnnotationsForTask(task.id),
     refetchOnWindowFocus: false,
+    meta: { persist: false },
   });
 
-  function setAnnotations(updater: (currentAnnotations: APIAnnotation[]) => APIAnnotation[]) {
+  async function setAnnotations(updater: (currentAnnotations: APIAnnotation[]) => APIAnnotation[]) {
+    // Cancel a running refetch so that its stale response cannot overwrite this update.
+    await queryClient.cancelQueries({ queryKey: annotationsQueryKey });
     queryClient.setQueryData(annotationsQueryKey, (currentAnnotations: APIAnnotation[] = []) =>
       updater(currentAnnotations),
     );

@@ -48,8 +48,12 @@ const localStoragePersister = createAsyncStoragePersister({
   storage: UserLocalStorage,
   serialize: (data) => compress(JSON.stringify(data)),
   deserialize: (data) => JSON.parse(decompress(data) || "{}"),
-  key: "query-cache-v3",
+  // Bump the version whenever the shape of cached data changes, so that stale entries
+  // are not restored.
+  key: "query-cache-v4",
 });
+// Queries whose data must never be written to localStorage, identified by the first key segment.
+const NEVER_PERSISTED_QUERY_KEYS = ["authToken"];
 
 async function tryToLoadActiveUser() {
   // Try to retrieve the currently active user if logged in
@@ -145,9 +149,13 @@ async function initApp() {
               persister: localStoragePersister,
               dehydrateOptions: {
                 // Queries can opt out of being persisted to localStorage by setting
-                // meta.persist to false, e.g. for large viewer data.
+                // meta.persist to false, e.g. for large viewer data. Secrets are excluded
+                // by key, because the meta of a query is overwritten by whichever observer
+                // fetched it last.
                 shouldDehydrateQuery: (query) =>
-                  defaultShouldDehydrateQuery(query) && query.meta?.persist !== false,
+                  defaultShouldDehydrateQuery(query) &&
+                  query.meta?.persist !== false &&
+                  !NEVER_PERSISTED_QUERY_KEYS.includes(query.queryKey[0] as string),
               },
             }}
           >

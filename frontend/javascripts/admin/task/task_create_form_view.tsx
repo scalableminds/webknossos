@@ -34,7 +34,7 @@ import { AsyncButton } from "components/async_clickables";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import SelectExperienceDomain from "components/select_experience_domain";
 import { saveAs } from "file-saver";
-import { useEffectOnlyOnce, useQueryWithErrorHandling } from "libs/react_hooks";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { coalesce, pluralize, tryToAwaitPromise } from "libs/utils";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 import isEqual from "lodash-es/isEqual";
@@ -43,7 +43,7 @@ import omit from "lodash-es/omit";
 import omitBy from "lodash-es/omitBy";
 import uniq from "lodash-es/uniq";
 import messages from "messages";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ModalWidth } from "theme";
 import type {
@@ -354,13 +354,20 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   );
   const [isUploading, setIsUploading] = useState(false);
 
-  useEffectOnlyOnce(() => {
-    applyDefaults();
+  const { data: task } = useQueryWithErrorHandling({
+    queryKey: ["taskForEditing", taskId],
+    queryFn: () => getTask(taskId as string),
+    enabled: taskId != null,
+    // Always load the task freshly when opening the form and never refetch it
+    // in the background, so that the user's edits are not overwritten.
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 0,
+    meta: { persist: false },
   });
 
-  async function applyDefaults() {
-    if (taskId) {
-      const task = await getTask(taskId);
+  // Populate the form once the task is loaded.
+  useEffect(() => {
+    if (task != null) {
       const defaultValues = Object.assign({}, task, {
         taskTypeId: task.type.id,
         boundingBox: task.boundingBox ? task.boundingBoxVec6 : null,
@@ -374,7 +381,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
       const { type, ...neededFormValues } = validFormValues;
       form.setFieldsValue(neededFormValues);
     }
-  }
+  }, [task, form]);
 
   function transformBoundingBox(boundingBox: Vector6): BoundingBoxObject {
     return {

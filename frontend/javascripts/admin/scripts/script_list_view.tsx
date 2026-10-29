@@ -56,6 +56,8 @@ function ScriptListView() {
         try {
           setIsLoadingMutation(true);
           await deleteScriptAPI(script.id);
+          // Cancel a running refetch so that its stale response cannot restore the script.
+          await queryClient.cancelQueries({ queryKey: ["scripts"] });
           queryClient.setQueryData(["scripts"], (currentScripts: APIScript[] = []) =>
             currentScripts.filter((s) => s.id !== script.id),
           );

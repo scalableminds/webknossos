@@ -1,6 +1,7 @@
 import { CheckCircleOutlined, InfoCircleOutlined, LoadingOutlined } from "@ant-design/icons";
 import {
   getAnnotationCompoundInformation,
+  getProjects,
   getTracingForAnnotationType,
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
@@ -73,18 +74,12 @@ function MergeModalViewInner({ isOpen, onOk }: Props) {
 
   const { data: projects = [], isFetching: isFetchingProjects } = useQueryWithErrorHandling({
     queryKey: ["projects"],
-    queryFn: async () => {
-      const projectsResponse: Array<{ id: string; name: string }> = await Request.receiveJSON(
-        "/api/projects",
-        {
-          showErrorToast: false,
-        },
-      );
-      return projectsResponse.map((project) => ({
+    queryFn: getProjects,
+    select: (fetchedProjects) =>
+      fetchedProjects.map((project) => ({
         id: project.id,
         label: project.name,
-      }));
-    },
+      })),
     enabled: isOpen,
     refetchOnWindowFocus: false,
   });

@@ -1676,6 +1676,8 @@ type NewDatasetReply = {
 
 type FinishUploadReply = {
   datasetId: string;
+  // Only set if the dataset is converted. Older datastores don't send it.
+  conversionJobId?: string | null;
 };
 
 export function finishDatasetUpload(

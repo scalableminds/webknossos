@@ -16,7 +16,7 @@ import { type FileWithPath, useDropzone } from "react-dropzone";
 import { ModalWidth } from "theme";
 import { type SelectionSummary, summarizeSelection } from "./detect_dataset_format";
 import { FolderStructureHelpModal } from "./folder_structure_help";
-import { InspectionBanner } from "./inspection_banner";
+import { InspectionBanner, ManyFilesHint } from "./inspection_banner";
 import type { FileInspection } from "./use_file_inspection";
 
 const FORMAT_TAGS = [
@@ -211,6 +211,7 @@ function SelectedFilesCard({
         inspection={inspection}
         isDatasetConversionEnabled={isDatasetConversionEnabled}
       />
+      <ManyFilesHint fileCount={files.length} />
     </div>
   );
 }

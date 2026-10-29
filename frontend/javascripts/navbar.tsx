@@ -969,8 +969,9 @@ function Navbar() {
         variant="filled"
         icon={<MessageOutlined />}
         onClick={() => setIsHelpModalOpen((isOpen) => !isOpen)}
+        title="Ask a Question"
       >
-        Ask
+        <span className="hide-on-small-screen">Ask</span>
       </Button>,
     );
 

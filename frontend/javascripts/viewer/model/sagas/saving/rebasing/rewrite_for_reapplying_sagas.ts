@@ -83,6 +83,15 @@ function* getAllUnknownSegmentIdsInPendingUpdates(saveQueue: SaveQueueEntry[]): 
   const activeMappingByLayer = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer,
   );
+  // Agglomerate ids only change through proofreading, i.e., in an editable mapping. Without
+  // one, the segment ids of pending actions stay valid, and the tracingstore has no mapping
+  // to look them up in. Others' proofreading is already incorporated at this point, so a
+  // mapping they made editable is marked as such.
+  const tracingIdsWithEditableMapping = new Set(
+    (yield* select((store) => store.annotation.volumes))
+      .filter((volume) => volume.hasEditableMapping)
+      .map((volume) => volume.tracingId),
+  );
   const idsToReloadByMappingId = new Map();
   const anchorPositionToUnmappedIdByMappingId: AnchorPositionToUnmappedIdByMappingId = new Map();
   const promises = [];
@@ -114,6 +123,9 @@ function* getAllUnknownSegmentIdsInPendingUpdates(saveQueue: SaveQueueEntry[]): 
           break;
         }
         case "createSegment": {
+          if (!tracingIdsWithEditableMapping.has(action.value.actionTracingId)) {
+            break;
+          }
           promises.push(
             action,
             appendIdToReloadFromPositionAsync(

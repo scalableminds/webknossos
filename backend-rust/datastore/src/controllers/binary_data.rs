@@ -12,7 +12,8 @@ use serde_json::{Value, json};
 
 use crate::{
     AppState,
-    access::{AccessResult, TokenContext, UserAccessRequest},
+    access::{AccessResult, AccessTokenService, TokenContext, UserAccessRequest},
+    clients::slack::SlackNotifications,
     controller,
     error::{DsError, DsResult},
     models::{
@@ -23,7 +24,7 @@ use crate::{
         },
     },
     services::{
-        DataResponse,
+        BaseDirService, BinaryDataService, DataResponse, DatasetCache,
         find_data::{FindDataTarget, Histogram, create_histogram, find_position_with_data},
     },
 };
@@ -66,7 +67,10 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn webknossos(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(datasets): State<DatasetCache>,
+    State(binary_data): State<Arc<BinaryDataService>>,
+    State(slack): State<SlackNotifications>,
     tc: TokenContext,
     Path((id, layer)): Path<(String, String)>,
     body: Result<Json<Value>, JsonRejection>,
@@ -78,21 +82,16 @@ async fn webknossos(
         Ok(r) => r,
         Err(response) => return Ok(*response),
     };
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
     let started = Instant::now();
     let route = format!("/data/datasets/{id}/layers/{layer}/data");
     let result: AccessResult<Response> = async {
-        let (source, layer) = state
-            .datasets
-            .get_with_layer(&id, &layer)
-            .await
-            .map_err(|e| {
-                e.wrap(SOURCE_NOT_FOUND)
-                    .with_param_status(StatusCode::NOT_FOUND)
-            })?;
+        let (source, layer) = datasets.get_with_layer(&id, &layer).await.map_err(|e| {
+            e.wrap(SOURCE_NOT_FOUND)
+                .with_param_status(StatusCode::NOT_FOUND)
+        })?;
         let requests = requests
             .iter()
             .map(|r| {
@@ -105,8 +104,7 @@ async fn webknossos(
                 })
             })
             .collect::<DsResult<Vec<_>>>()?;
-        let result = state
-            .binary_data
+        let result = binary_data
             .handle_data_requests(&requests, tc.user_token.as_deref())
             .await;
         if started.elapsed().as_secs() > 10 {
@@ -121,15 +119,15 @@ async fn webknossos(
             Ok(response) => response.status(),
             Err(error) => error.clone().into_response().status(),
         };
-        state
-            .slack
-            .slow_request("POST", &route, started.elapsed(), status.as_u16());
+        slack.slow_request("POST", &route, started.elapsed(), status.as_u16());
     }
     result
 }
 
 async fn raw_post(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(datasets): State<DatasetCache>,
+    State(binary_data): State<Arc<BinaryDataService>>,
     tc: TokenContext,
     Path((id, layer)): Path<(String, String)>,
     body: Result<Json<Value>, JsonRejection>,
@@ -139,12 +137,10 @@ async fn raw_post(
         Ok(r) => r,
         Err(response) => return Ok(*response),
     };
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
-    let (source, layer) = state
-        .datasets
+    let (source, layer) = datasets
         .get_with_layer(&id, &layer)
         .await
         .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?;
@@ -156,15 +152,16 @@ async fn raw_post(
         settings: request.settings(),
     };
     Ok(data_response(
-        state
-            .binary_data
+        binary_data
             .handle_data_requests(&[request], tc.user_token.as_deref())
             .await,
     ))
 }
 
 async fn raw_get(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(datasets): State<DatasetCache>,
+    State(binary_data): State<Arc<BinaryDataService>>,
     tc: TokenContext,
     Path((id, layer)): Path<(String, String)>,
     RawQuery(raw): RawQuery,
@@ -175,12 +172,10 @@ async fn raw_get(
     let size = Vec3Int::new(q.int("width")?, q.int("height")?, q.int("depth")?);
     let literal = q.required("mag")?;
     let half_byte = q.bool_or_false("halfByte")?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
-    let (source, layer) = state
-        .datasets
+    let (source, layer) = datasets
         .get_with_layer(&id, &layer)
         .await
         .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?;
@@ -198,8 +193,7 @@ async fn raw_get(
         },
     };
     Ok(data_response(
-        state
-            .binary_data
+        binary_data
             .handle_data_requests(&[request], tc.user_token.as_deref())
             .await,
     ))
@@ -217,7 +211,9 @@ fn prefixed_int(segment: &str, prefix: &str) -> DsResult<i32> {
 }
 
 async fn knossos(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(datasets): State<DatasetCache>,
+    State(binary_data): State<Arc<BinaryDataService>>,
     tc: TokenContext,
     Path((id, layer, mag, x, y, z)): Path<(String, String, String, String, String, String)>,
     RawQuery(raw): RawQuery,
@@ -230,18 +226,13 @@ async fn knossos(
         prefixed_int(&z, "z")?,
     );
     let size = QueryFields::new(raw).int("cubeSize")?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
-    let (source, layer) = state
-        .datasets
-        .get_with_layer(&id, &layer)
-        .await
-        .map_err(|e| {
-            e.wrap(SOURCE_NOT_FOUND)
-                .with_param_status(StatusCode::NOT_FOUND)
-        })?;
+    let (source, layer) = datasets.get_with_layer(&id, &layer).await.map_err(|e| {
+        e.wrap(SOURCE_NOT_FOUND)
+            .with_param_status(StatusCode::NOT_FOUND)
+    })?;
     let scale = size
         .checked_mul(mag)
         .ok_or_else(|| DsError::failure("Knossos bucket position overflows Int."))?;
@@ -261,38 +252,33 @@ async fn knossos(
         settings: DataServiceRequestSettings::default(),
     };
     Ok(data_response(
-        state
-            .binary_data
+        binary_data
             .handle_data_requests(&[request], tc.user_token.as_deref())
             .await,
     ))
 }
 
 async fn find_data(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(datasets): State<DatasetCache>,
+    State(binary_data): State<Arc<BinaryDataService>>,
     tc: TokenContext,
     Path((id, layer)): Path<(String, String)>,
 ) -> AccessResult<Json<Value>> {
     let id = dataset_id(&id)?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
-    let (source, layer) = state
-        .datasets
-        .get_with_layer(&id, &layer)
-        .await
-        .map_err(|e| {
-            e.wrap(SOURCE_NOT_FOUND)
-                .with_param_status(StatusCode::NOT_FOUND)
-        })?;
+    let (source, layer) = datasets.get_with_layer(&id, &layer).await.map_err(|e| {
+        e.wrap(SOURCE_NOT_FOUND)
+            .with_param_status(StatusCode::NOT_FOUND)
+    })?;
     let target = FindDataTarget {
         dataset_id: &id,
         data_source_id: &source.id,
         layer: &layer,
     };
-    let found =
-        find_position_with_data(&state.binary_data, &target, tc.user_token.as_deref()).await;
+    let found = find_position_with_data(&binary_data, &target, tc.user_token.as_deref()).await;
     Ok(Json(json!({
         "position": found.map(|(position, _)| position),
         "mag": found.map(|(_, mag)| mag),
@@ -300,17 +286,17 @@ async fn find_data(
 }
 
 async fn histogram(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(datasets): State<DatasetCache>,
+    State(binary_data): State<Arc<BinaryDataService>>,
     tc: TokenContext,
     Path((id, layer_name)): Path<(String, String)>,
 ) -> AccessResult<Json<Vec<Histogram>>> {
     let id = dataset_id(&id)?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
-    let (source, layer) = state
-        .datasets
+    let (source, layer) = datasets
         .get_with_layer(&id, &layer_name)
         .await
         .map_err(|e| {
@@ -324,7 +310,7 @@ async fn histogram(
         data_source_id: &source.id,
         layer: &layer,
     };
-    let histograms = create_histogram(&state.binary_data, &target, tc.user_token.as_deref())
+    let histograms = create_histogram(&binary_data, &target, tc.user_token.as_deref())
         .await
         .map_err(|e| {
             e.wrap(format!(
@@ -335,17 +321,17 @@ async fn histogram(
 }
 
 async fn mapping_json(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(datasets): State<DatasetCache>,
+    State(base_dirs): State<BaseDirService>,
     tc: TokenContext,
     Path((id, layer_name, mapping)): Path<(String, String, String)>,
 ) -> AccessResult<Response> {
     let id = dataset_id(&id)?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
-    let (source, layer) = state
-        .datasets
+    let (source, layer) = datasets
         .get_with_layer(&id, &layer_name)
         .await
         .map_err(|e| {
@@ -360,11 +346,10 @@ async fn mapping_json(
         .wrap(format!("Could not find layer “{layer_name}” in dataset."))
         .into());
     }
-    let bases = state.base_dirs.clone();
     let source_id = source.id.clone();
     let bytes = tokio::task::spawn_blocking(move || {
         crate::services::agglomerate::mapping::load_mapping_bytes(
-            &bases,
+            &base_dirs,
             &source_id,
             &layer_name,
             &mapping,

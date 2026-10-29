@@ -12,12 +12,13 @@ use axum::{
 
 use crate::{
     AppState,
-    access::{AccessResult, TokenContext, UserAccessRequest},
+    access::{AccessResult, AccessTokenService, TokenContext, UserAccessRequest},
     controller,
     datareaders::precomputed::{PrecomputedHeader, header::FILENAME_INFO},
-    datavault::{ByteRange, VaultPath},
+    datavault::{ByteRange, DataVaultService, VaultPath},
     error::{DsError, DsResult},
     models::{LayerAttachmentType, StaticLayer, UPath, UsableDataSource, Vec3Int},
+    services::DatasetCache,
 };
 
 use super::helpers::dataset_id;
@@ -111,8 +112,12 @@ fn layer_not_found(name: &str) -> String {
     format!("Could not find layer “{name}” in dataset.")
 }
 
-async fn layer(state: &AppState, id: &str, name: &str) -> DsResult<std::sync::Arc<StaticLayer>> {
-    let (_, layer) = state.datasets.get_with_layer(id, name).await.map_err(|e| {
+async fn layer(
+    datasets: &DatasetCache,
+    id: &str,
+    name: &str,
+) -> DsResult<std::sync::Arc<StaticLayer>> {
+    let (_, layer) = datasets.get_with_layer(id, name).await.map_err(|e| {
         e.wrap(layer_not_found(name))
             .with_param_status(axum::http::StatusCode::NOT_FOUND)
     })?;
@@ -153,15 +158,16 @@ async fn passthrough(
 }
 
 async fn proxy_mag(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(data_vaults): State<DataVaultService>,
+    State(datasets): State<DatasetCache>,
     tc: TokenContext,
     Path((id, layer_name, mag, _)): Path<(String, String, String, String)>,
     uri: Uri,
     headers: HeaderMap,
 ) -> AccessResult<Response> {
     let id = dataset_id(&id)?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
     // ["", "data", "datasets", id, "proxy", "layers", layer, "mags", mag, *path]
@@ -169,7 +175,7 @@ async fn proxy_mag(
     validate_path(&path)?;
     let mag_validated = Vec3Int::from_mag_literal(&mag, true)
         .ok_or_else(|| DsError::failure(format!("Invalid mag “{mag}”. Please use “x-y-z”.")))?;
-    let layer = layer(&state, &id, &layer_name).await?;
+    let layer = layer(&datasets, &id, &layer_name).await?;
     let locator = layer
         .mags
         .iter()
@@ -180,28 +186,29 @@ async fn proxy_mag(
             ))
             .with_param_status(axum::http::StatusCode::NOT_FOUND)
         })?;
-    let mag_path = state.data_vaults.vault_path_for_mag(locator).await?;
+    let mag_path = data_vaults.vault_path_for_mag(locator).await?;
     Ok(passthrough(mag_path.join(&path), &headers, tc.user_token.as_deref()).await?)
 }
 
 /// Neuroglancer readers request `info` at the parent of each mag; serve it with WEBKNOSSOS mag
 /// literals as scale keys, dropping scales that are not a mag of this layer.
 async fn proxy_precomputed_info(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(data_vaults): State<DataVaultService>,
+    State(datasets): State<DatasetCache>,
     tc: TokenContext,
     Path((id, layer_name)): Path<(String, String)>,
 ) -> AccessResult<Json<PrecomputedHeader>> {
     let id = dataset_id(&id)?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
-    let layer = layer(&state, &id, &layer_name).await?;
+    let layer = layer(&datasets, &id, &layer_name).await?;
     let first = layer.mags.first().ok_or_else(|| {
         DsError::failure(format!("Data layer “{layer_name}” has zero mags."))
             .with_param_status(axum::http::StatusCode::NOT_FOUND)
     })?;
-    let mag_path = state.data_vaults.vault_path_for_mag(first).await?;
+    let mag_path = data_vaults.vault_path_for_mag(first).await?;
     let bytes = mag_path
         .parent()
         .join(FILENAME_INFO)
@@ -225,7 +232,9 @@ async fn proxy_precomputed_info(
 }
 
 async fn proxy_attachment(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(data_vaults): State<DataVaultService>,
+    State(datasets): State<DatasetCache>,
     tc: TokenContext,
     Path((id, layer_name, attachment_type, attachment_name, _)): Path<(
         String,
@@ -238,14 +247,13 @@ async fn proxy_attachment(
     headers: HeaderMap,
 ) -> AccessResult<Response> {
     let id = dataset_id(&id)?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
     // ["", "data", "datasets", id, "proxy", "layers", layer, "attachments", type, name, *path]
     let path = raw_tail(&uri, 9);
     validate_path(&path)?;
-    let layer = layer(&state, &id, &layer_name).await?;
+    let layer = layer(&datasets, &id, &layer_name).await?;
     // Scala `fromString(..).toFox` without a message: `Empty`.
     let kind = LayerAttachmentType::from_name(&attachment_type).ok_or_else(DsError::empty)?;
     let attachment = layer
@@ -258,10 +266,7 @@ async fn proxy_attachment(
             ))
             .with_param_status(axum::http::StatusCode::NOT_FOUND)
         })?;
-    let attachment_path = state
-        .data_vaults
-        .vault_path_for_attachment(attachment)
-        .await?;
+    let attachment_path = data_vaults.vault_path_for_attachment(attachment).await?;
     Ok(passthrough(
         attachment_path.join(&path),
         &headers,
@@ -271,16 +276,16 @@ async fn proxy_attachment(
 }
 
 pub(super) async fn proxy_datasource(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(datasets): State<DatasetCache>,
     tc: TokenContext,
     Path(id): Path<String>,
 ) -> AccessResult<Json<UsableDataSource>> {
     let id = dataset_id(&id)?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
-    let source = state.datasets.get_by_id(&id).await.map_err(|e| {
+    let source = datasets.get_by_id(&id).await.map_err(|e| {
         e.wrap(SOURCE_NOT_FOUND)
             .with_param_status(axum::http::StatusCode::NOT_FOUND)
     })?;

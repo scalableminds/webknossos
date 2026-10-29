@@ -1,7 +1,7 @@
 use super::helpers::{dataset_id, validated_body};
 use crate::{
     AppState,
-    access::{AccessResult, TokenContext, UserAccessRequest},
+    access::{AccessResult, AccessTokenService, TokenContext, UserAccessRequest},
     controller,
     datareaders::RequestedAdditionalCoordinate,
     models::{
@@ -10,7 +10,10 @@ use crate::{
         datasource::read_unsigned_long,
         json::{Fields, read_bool, read_i64, read_list, read_string},
     },
-    services::mesh::ad_hoc::{AdHocMeshRequest, MappingType},
+    services::{
+        DatasetCache,
+        mesh::ad_hoc::{AdHocMeshRequest, AdHocMeshService, MappingType},
+    },
 };
 use axum::{
     Json, Router,
@@ -20,6 +23,7 @@ use axum::{
     routing::post,
 };
 use serde_json::Value;
+use std::sync::Arc;
 pub fn router() -> Router<AppState> {
     controller(
         Router::new().route(
@@ -70,7 +74,9 @@ fn parse(value: &Value) -> JsResult<Request> {
     })
 }
 async fn generate(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(datasets): State<DatasetCache>,
+    State(ad_hoc_mesh): State<Arc<AdHocMeshService>>,
     tc: TokenContext,
     Path((id, name)): Path<(String, String)>,
     body: Result<Json<Value>, JsonRejection>,
@@ -80,12 +86,10 @@ async fn generate(
         Err(r) => return Ok(*r),
     };
     let id = dataset_id(&id)?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
-    let (source, layer) = state
-        .datasets
+    let (source, layer) = datasets
         .get_with_layer(&id, &name)
         .await
         .map_err(|e| e.with_param_status(axum::http::StatusCode::NOT_FOUND))?;
@@ -93,8 +97,7 @@ async fn generate(
         VoxelPosition::new(request.position, request.mag)?,
         request.shape,
     );
-    let (vertices, neighbors) = state
-        .ad_hoc_mesh
+    let (vertices, neighbors) = ad_hoc_mesh
         .generate(
             AdHocMeshRequest {
                 dataset_id: Some(id),

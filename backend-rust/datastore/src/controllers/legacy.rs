@@ -6,7 +6,8 @@ use super::{
 };
 use crate::{
     AppState,
-    access::{AccessResult, TokenContext, UserAccessRequest},
+    access::{AccessResult, AccessTokenService, TokenContext, UserAccessRequest},
+    clients::{tracingstore::TracingstoreClient, wk::WkClient},
     controller,
     error::DsError,
     models::{
@@ -14,6 +15,7 @@ use crate::{
         datasource::patch_largest_segment_id,
         json::{Fields, PlayValue, read_bool, read_i64, read_list, read_string},
     },
+    services::{DataSourceService, DatasetCache, upload::UploadService},
 };
 use axum::{
     Json, Router,
@@ -124,21 +126,27 @@ async fn downgrade(mut response: Response) -> Response {
         Err(error) => DsError::from_exception(error).into_response(),
     }
 }
-async fn proxy_source(state: State<AppState>, tc: TokenContext, id: Path<String>) -> Response {
+async fn proxy_source(
+    access: State<AccessTokenService>,
+    datasets: State<DatasetCache>,
+    tc: TokenContext,
+    id: Path<String>,
+) -> Response {
     downgrade(
-        data_proxy::proxy_datasource(state, tc, id)
+        data_proxy::proxy_datasource(access, datasets, tc, id)
             .await
             .into_response(),
     )
     .await
 }
 async fn zarr_source<const V: u8>(
-    state: State<AppState>,
+    datasets: State<DatasetCache>,
+    access: State<AccessTokenService>,
     tc: TokenContext,
     id: Path<String>,
 ) -> Response {
     let binder_ok = dataset_id(&id.0).is_ok();
-    let mut response = zarr_streaming::data_source::<V>(state, tc, id)
+    let mut response = zarr_streaming::data_source::<V>(datasets, access, tc, id)
         .await
         .into_response();
     if binder_ok && response.status() == StatusCode::BAD_REQUEST {
@@ -147,38 +155,53 @@ async fn zarr_source<const V: u8>(
     downgrade(response).await
 }
 async fn private_source<const V: u8>(
-    state: State<AppState>,
+    datasets: State<DatasetCache>,
+    wk_client: State<WkClient>,
+    tracingstore: State<TracingstoreClient>,
     tc: TokenContext,
     id: Path<String>,
 ) -> Response {
-    let mut response = zarr_streaming::private_data_source::<V>(state, tc, id)
-        .await
-        .into_response();
+    let mut response =
+        zarr_streaming::private_data_source::<V>(datasets, wk_client, tracingstore, tc, id)
+            .await
+            .into_response();
     if response.status() == StatusCode::BAD_REQUEST {
         *response.status_mut() = StatusCode::NOT_FOUND;
     }
     downgrade(response).await
 }
 async fn test_chunk(
-    state: State<AppState>,
+    uploads: State<UploadService>,
+    access: State<AccessTokenService>,
     tc: TokenContext,
     query: RawQuery,
 ) -> AccessResult<StatusCode> {
-    upload::test_chunk(state, tc, Path("dataset".into()), query).await
+    upload::test_chunk(uploads, access, tc, Path("dataset".into()), query).await
 }
 async fn upload_chunk(
-    state: State<AppState>,
+    uploads: State<UploadService>,
+    access: State<AccessTokenService>,
     tc: TokenContext,
     multipart: Multipart,
 ) -> AccessResult<Response> {
-    upload::upload_chunk(state, tc, Path("dataset".into()), multipart).await
+    upload::upload_chunk(uploads, access, tc, Path("dataset".into()), multipart).await
 }
 async fn unfinished(
-    state: State<AppState>,
+    access: State<AccessTokenService>,
+    wk_client: State<WkClient>,
+    uploads: State<UploadService>,
     tc: TokenContext,
     query: RawQuery,
 ) -> AccessResult<Json<Vec<Value>>> {
-    upload::unfinished_uploads(state, tc, Path("dataset".into()), query).await
+    upload::unfinished_uploads(
+        access,
+        wk_client,
+        uploads,
+        tc,
+        Path("dataset".into()),
+        query,
+    )
+    .await
 }
 fn legacy_finish(value: &Value) -> JsResult<String> {
     let mut fields = Fields::new(value);
@@ -188,7 +211,10 @@ fn legacy_finish(value: &Value) -> JsResult<String> {
     id
 }
 async fn finish(
-    state: State<AppState>,
+    uploads: State<UploadService>,
+    access: State<AccessTokenService>,
+    data_sources: State<DataSourceService>,
+    wk_client: State<WkClient>,
     tc: TokenContext,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
@@ -199,8 +225,16 @@ async fn finish(
     let query = url::form_urlencoded::Serializer::new(String::new())
         .append_pair("uploadId", &upload_id)
         .finish();
-    let Json(mut body) =
-        upload::finish_upload(state, tc, Path("dataset".into()), RawQuery(Some(query))).await?;
+    let Json(mut body) = upload::finish_upload(
+        uploads,
+        access,
+        data_sources,
+        wk_client,
+        tc,
+        Path("dataset".into()),
+        RawQuery(Some(query)),
+    )
+    .await?;
     if let Some(map) = body.as_object_mut()
         && let Some(id) = map.remove("datasetId")
     {
@@ -267,7 +301,9 @@ fn legacy_reserve<const OLD: bool>(value: &Value) -> JsResult<Value> {
     Ok(info)
 }
 async fn reserve<const OLD: bool>(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(uploads): State<UploadService>,
+    State(wk_client): State<WkClient>,
     tc: TokenContext,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
@@ -279,8 +315,7 @@ async fn reserve<const OLD: bool>(
         if adapted.get("layersToLink").is_none() {
             adapted["layersToLink"] = json!([]);
         }
-        state
-            .access
+        access
             .validate_access(
                 UserAccessRequest::administrate_datasets_of(
                     adapted["organizationId"]
@@ -301,8 +336,7 @@ async fn reserve<const OLD: bool>(
                 let id = if name.len() == 24 && name.bytes().all(|c| c.is_ascii_hexdigit()) {
                     name.to_ascii_lowercase()
                 } else {
-                    state
-                        .wk_client
+                    wk_client
                         .get_dataset_id(
                             link["organization"]
                                 .as_str()
@@ -319,7 +353,14 @@ async fn reserve<const OLD: bool>(
             }
         }
     }
-    upload::reserve_dataset_upload(State(state), tc, Ok(Json(adapted))).await
+    upload::reserve_dataset_upload(
+        State(access),
+        State(uploads),
+        State(wk_client),
+        tc,
+        Ok(Json(adapted)),
+    )
+    .await
 }
 fn manual_info(value: &Value) -> JsResult<Value> {
     let mut f = Fields::new(value);
@@ -336,7 +377,8 @@ fn manual_info(value: &Value) -> JsResult<Value> {
     Ok(info)
 }
 async fn reserve_manual(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(wk_client): State<WkClient>,
     tc: TokenContext,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
@@ -344,8 +386,7 @@ async fn reserve_manual(
         Ok(body) => body,
         Err(response) => return Ok(*response),
     };
-    state
-        .access
+    access
         .validate_access(
             UserAccessRequest::administrate_datasets_of(
                 info["organizationId"]
@@ -355,8 +396,7 @@ async fn reserve_manual(
             &tc,
         )
         .await?;
-    let reserved: Value = state
-        .wk_client
+    let reserved: Value = wk_client
         .reserve_dataset_upload(&info, &tc)
         .await
         .map_err(|e| e.wrap("Could not validate dataset information for upload."))?;

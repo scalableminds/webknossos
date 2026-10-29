@@ -19,13 +19,13 @@ pub mod services;
 pub mod versioning;
 
 use std::{
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, PoisonError},
     time::{Duration, Instant},
 };
 
 use axum::{
     Router,
-    extract::{DefaultBodyLimit, Request, State},
+    extract::{DefaultBodyLimit, FromRef, Request, State},
     http::{HeaderMap, HeaderName, HeaderValue, Method, StatusCode, Uri, header},
     middleware::{self, Next},
     response::{Html, IntoResponse, Response},
@@ -45,8 +45,10 @@ use crate::{
 };
 use webknossos_common::text::escape_html;
 
-/// Shared state of the datastore service.
-#[derive(Clone)]
+/// Shared state of the datastore service. Handlers extract only the fields they use
+/// (`State<T>` via the derived [`FromRef`]) or a view such as
+/// [`controllers::helpers::DatasetLayers`].
+#[derive(Clone, FromRef)]
 pub struct AppState {
     pub slack: crate::clients::slack::SlackNotifications,
     pub config: Arc<DatastoreConfig>,
@@ -133,19 +135,31 @@ impl AppState {
             config.ad_hoc_mesh.timeout,
             config.ad_hoc_mesh.actor_pool_size as usize,
         ));
+        let mesh_files = Arc::new(crate::services::mesh::file::MeshFileService::new(
+            data_vaults.clone(),
+            Arc::clone(&chunk_contents_cache),
+        ));
+        let tracingstore =
+            crate::clients::tracingstore::TracingstoreClient::new(wk_client.rpc().clone());
+        let full_mesh = Arc::new(crate::services::mesh::full::FullMeshService::new(
+            Arc::clone(&mesh_files),
+            Arc::clone(&segment_index),
+            Arc::clone(&agglomerates),
+            wk_client.clone(),
+            tracingstore.clone(),
+            Arc::clone(&ad_hoc_mesh),
+            config.ad_hoc_mesh.actor_pool_size as usize,
+        ));
         Self {
             slack,
             connectomes: Arc::new(crate::services::connectome::ConnectomeService::new(
                 data_vaults.clone(),
                 Arc::clone(&chunk_contents_cache),
             )),
-            full_mesh: Arc::new(crate::services::mesh::full::FullMeshService::default()),
+            full_mesh,
             mappings,
             ad_hoc_mesh,
-            mesh_files: Arc::new(crate::services::mesh::file::MeshFileService::new(
-                data_vaults.clone(),
-                Arc::clone(&chunk_contents_cache),
-            )),
+            mesh_files,
             index_statistics: Arc::new(
                 crate::services::segment::index_statistics::IndexStatisticsService::new(
                     Arc::clone(&segment_index),
@@ -172,9 +186,7 @@ impl AppState {
             data_sources,
             datasets: crate::services::DatasetCache::new(wk_client.clone()),
             access: AccessTokenService::new(wk_client.clone()),
-            tracingstore: crate::clients::tracingstore::TracingstoreClient::new(
-                wk_client.rpc().clone(),
-            ),
+            tracingstore,
             wk_client,
             config: Arc::new(config),
             health,
@@ -199,7 +211,7 @@ impl HealthProblems {
     pub const RECENT_WINDOW: Duration = Duration::from_secs(60);
 
     pub fn push(&self, message: impl Into<String>) {
-        let mut latest = self.latest.lock().unwrap_or_else(|e| e.into_inner());
+        let mut latest = self.latest.lock().unwrap_or_else(PoisonError::into_inner);
         *latest = Some((Instant::now(), message.into()));
         if let Some(slack) = &self.slack {
             slack.internal_error();
@@ -207,7 +219,7 @@ impl HealthProblems {
     }
 
     pub fn recent_problem(&self, window: Duration) -> Option<String> {
-        let latest = self.latest.lock().unwrap_or_else(|e| e.into_inner());
+        let latest = self.latest.lock().unwrap_or_else(PoisonError::into_inner);
         latest
             .as_ref()
             .filter(|(at, _)| at.elapsed() < window)

@@ -2,13 +2,20 @@
 use super::helpers::{QueryFields, dataset_id, validated_body};
 use crate::{
     AppState,
+    access::AccessTokenService,
     access::{AccessResult, TokenContext, UserAccessRequest},
+    clients::wk::WkClient,
+    config::DatastoreConfig,
     controller,
+    datavault::DataVaultService,
     error::{DsError, DsResult},
     models::{
         DataSource, DataSourceWithRootPathInfo, DiskWriteError, UsableDataSource,
         update_data_source_on_disk,
     },
+    services::BaseDirService,
+    services::DataSourceScanner,
+    services::DatasetCache,
 };
 use axum::{
     Json, Router,
@@ -18,6 +25,7 @@ use axum::{
     routing::{delete, get, post, put},
 };
 use serde_json::Value;
+use std::sync::Arc;
 
 /// Scala `Msg.notAllowed`.
 const NOT_ALLOWED: &str = "You are not authorized to view or edit this resource.";
@@ -68,25 +76,25 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn scan_inbox(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(source_scanner): State<DataSourceScanner>,
     tc: TokenContext,
     RawQuery(raw): RawQuery,
 ) -> AccessResult<StatusCode> {
     let q = QueryFields::new(raw);
     let org = q.0.get("organizationId").map(String::as_str);
-    let access = org
-        .map(UserAccessRequest::administrate_datasets_of)
-        .unwrap_or_else(UserAccessRequest::administrate_datasets);
-    state.access.validate_access(access, &tc).await?;
-    state
-        .source_scanner
-        .scan_base_directories(org, true)
-        .await?;
+    let request = org.map_or_else(
+        UserAccessRequest::administrate_datasets,
+        UserAccessRequest::administrate_datasets_of,
+    );
+    access.validate_access(request, &tc).await?;
+    source_scanner.scan_base_directories(org, true).await?;
     Ok(StatusCode::OK)
 }
 
 async fn scan_virtual_paths(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(source_scanner): State<DataSourceScanner>,
     tc: TokenContext,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
@@ -96,37 +104,33 @@ async fn scan_virtual_paths(
         Ok(sources) => sources,
         Err(response) => return Ok(*response),
     };
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::webknossos(), &tc)
         .await?;
-    state
-        .source_scanner
-        .scan_real_paths_for_virtual(sources)
-        .await?;
+    source_scanner.scan_real_paths_for_virtual(sources).await?;
     Ok(StatusCode::OK.into_response())
 }
 
 async fn create_org_directory(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(base_dirs): State<BaseDirService>,
     tc: TokenContext,
     RawQuery(raw): RawQuery,
 ) -> AccessResult<StatusCode> {
     let q = QueryFields::new(raw);
     let org = q.required("organizationId")?.to_owned();
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::administrate_datasets_of(&org), &tc)
         .await?;
-    let bases = state.base_dirs.clone();
-    tokio::task::spawn_blocking(move || bases.get_one_local_for_org(&org, false, true, true))
+    tokio::task::spawn_blocking(move || base_dirs.get_one_local_for_org(&org, false, true, true))
         .await
         .map_err(DsError::from_exception)??;
     Ok(StatusCode::OK)
 }
 
 async fn get_org_directory(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(base_dirs): State<BaseDirService>,
     tc: TokenContext,
     RawQuery(raw): RawQuery,
 ) -> AccessResult<Json<crate::models::UPath>> {
@@ -137,17 +141,15 @@ async fn get_org_directory(
     q.required("requireLocal")?;
     let upload = q.bool_or_false("requireAllowsUpload")?;
     let local = q.bool_or_false("requireLocal")?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::webknossos(), &tc)
         .await?;
-    Ok(Json(
-        state.base_dirs.get_one_for_org(org, upload, local, false)?,
-    ))
+    Ok(Json(base_dirs.get_one_for_org(org, upload, local, false)?))
 }
 
 async fn update_on_disk(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(datasets): State<DatasetCache>,
     tc: TokenContext,
     Path(id): Path<String>,
     RawQuery(raw): RawQuery,
@@ -159,8 +161,7 @@ async fn update_on_disk(
         Ok(source) => source,
         Err(response) => return Ok(*response),
     };
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::webknossos(), &tc)
         .await?;
     let result = tokio::task::spawn_blocking(move || {
@@ -170,7 +171,7 @@ async fn update_on_disk(
     .map_err(DsError::from_exception)?;
     match result {
         Ok(()) => {
-            state.datasets.invalidate(&id);
+            datasets.invalidate(&id);
             Ok(StatusCode::OK.into_response())
         }
         Err(DiskWriteError::Invalid(errors)) => Ok((
@@ -328,22 +329,22 @@ async fn blocking<T: Send + 'static>(
 }
 
 async fn get_one_base_dir_absolute(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(base_dirs): State<BaseDirService>,
     tc: TokenContext,
     RawQuery(raw): RawQuery,
 ) -> AccessResult<Json<crate::models::UPath>> {
     let org = QueryFields::new(raw).required("organizationId")?.to_owned();
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::webknossos(), &tc)
         .await?;
-    let bases = state.base_dirs.clone();
-    let dir = blocking(move || bases.get_one_local_for_org(&org, false, false, false)).await?;
+    let dir = blocking(move || base_dirs.get_one_local_for_org(&org, false, false, false)).await?;
     Ok(Json(crate::models::UPath::from_local_path(&dir)))
 }
 
 async fn measure_used_storage(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(data_vaults): State<DataVaultService>,
     tc: TokenContext,
     Path(organization): Path<String>,
     body: Result<Json<Value>, JsonRejection>,
@@ -359,13 +360,12 @@ async fn measure_used_storage(
         Ok(paths) => paths,
         Err(response) => return Ok(*response),
     };
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::webknossos(), &tc)
         .await?;
     let started = std::time::Instant::now();
     let reports = crate::services::dataset::files::measure_storage_for_paths(
-        &state.data_vaults,
+        &data_vaults,
         &paths,
         tc.user_token.as_deref(),
     )
@@ -381,19 +381,18 @@ async fn measure_used_storage(
 }
 
 async fn delete_on_disk(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(wk_client): State<WkClient>,
     tc: TokenContext,
     Path(id): Path<String>,
     RawQuery(raw): RawQuery,
 ) -> AccessResult<StatusCode> {
     let id = dataset_id(&id)?;
     let root = QueryFields::new(raw).required("rootPath")?.to_owned();
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::webknossos(), &tc)
         .await?;
-    let source: DataSource = state
-        .wk_client
+    let source: DataSource = wk_client
         .get_data_source(&id)
         .await
         .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?;
@@ -412,7 +411,9 @@ async fn delete_on_disk(
 }
 
 async fn delete_paths(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(base_dirs): State<BaseDirService>,
+    State(data_vaults): State<DataVaultService>,
     tc: TokenContext,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
@@ -422,25 +423,24 @@ async fn delete_paths(
         Ok(paths) => paths,
         Err(response) => return Ok(*response),
     };
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::webknossos(), &tc)
         .await?;
-    let bases = state.base_dirs.clone();
     let to_delete = paths.clone();
     blocking(move || {
-        crate::services::dataset::files::delete_local_paths_from_disk(&bases, &to_delete)
+        crate::services::dataset::files::delete_local_paths_from_disk(&base_dirs, &to_delete)
     })
     .await?;
     let managed: Vec<_> = paths
         .into_iter()
-        .filter(|p| state.data_vaults.path_is_in_managed_s3(p))
+        .filter(|p| data_vaults.path_is_in_managed_s3(p))
         .collect();
     Ok(Json(managed).into_response())
 }
 
 async fn validate_paths(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(data_vaults): State<DataVaultService>,
     tc: TokenContext,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
@@ -450,14 +450,13 @@ async fn validate_paths(
         Ok(paths) => paths,
         Err(response) => return Ok(*response),
     };
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::webknossos(), &tc)
         .await?;
     let results: Vec<Value> = paths
         .into_iter()
         .map(|path| {
-            let valid = state.data_vaults.path_is_allowed_to_add_directly(&path);
+            let valid = data_vaults.path_is_allowed_to_add_directly(&path);
             serde_json::json!({ "path": path, "valid": valid })
         })
         .collect();
@@ -465,14 +464,15 @@ async fn validate_paths(
 }
 
 async fn write_mirror_for_dataset(
-    state: &AppState,
+    datasets: &DatasetCache,
+    base_dirs: &BaseDirService,
     id: &str,
 ) -> DsResult<Option<(String, String)>> {
-    state.datasets.invalidate(id);
-    let Ok(source) = state.datasets.get_by_id(id).await else {
+    datasets.invalidate(id);
+    let Ok(source) = datasets.get_by_id(id).await else {
         return Ok(None);
     };
-    let bases = state.base_dirs.clone();
+    let bases = base_dirs.clone();
     let owned_id = id.to_owned();
     let mirror =
         blocking(move || crate::services::dataset::files::write_mirror(&bases, &source, &owned_id))
@@ -482,7 +482,10 @@ async fn write_mirror_for_dataset(
 }
 
 async fn write_mirrors(
-    State(state): State<AppState>,
+    State(config): State<Arc<DatastoreConfig>>,
+    State(access): State<AccessTokenService>,
+    State(datasets): State<DatasetCache>,
+    State(base_dirs): State<BaseDirService>,
     tc: TokenContext,
     RawQuery(raw): RawQuery,
     body: Result<Json<Value>, JsonRejection>,
@@ -494,17 +497,16 @@ async fn write_mirrors(
         Ok(ids) => ids,
         Err(response) => return Ok(*response),
     };
-    if !state.config.write_virtual_datasets_mirror {
+    if !config.write_virtual_datasets_mirror {
         return Ok(Json(Vec::<(String, String)>::new()).into_response());
     }
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::webknossos(), &tc)
         .await?;
     let mut results = Vec::new();
     let mut failures = Vec::new();
     for id in &ids {
-        match write_mirror_for_dataset(&state, id).await {
+        match write_mirror_for_dataset(&datasets, &base_dirs, id).await {
             Ok(result) => results.extend(result),
             Err(e) if fail_on_error => return Err(e.into()),
             Err(e) => failures.push(e.to_string()),
@@ -527,22 +529,23 @@ async fn write_mirrors(
 }
 
 async fn list_mappings(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(datasets): State<DatasetCache>,
+    State(wk_client): State<WkClient>,
     tc: TokenContext,
     Path((id, layer_name)): Path<(String, String)>,
 ) -> AccessResult<Json<Vec<String>>> {
     let id = dataset_id(&id)?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
-    let source = state.datasets.get_by_id(&id).await?;
+    let source = datasets.get_by_id(&id).await?;
     if source.get_data_layer(&layer_name).is_none() {
         return Err(
             DsError::failure(format!("Could not find layer “{layer_name}” in dataset.")).into(),
         );
     }
-    let mappings = match state.wk_client.get_local_root_path_or_empty(&id).await? {
+    let mappings = match wk_client.get_local_root_path_or_empty(&id).await? {
         Some(root) => {
             blocking(move || {
                 Ok(crate::services::agglomerate::mapping::explore_mappings(
@@ -584,7 +587,10 @@ fn uri_scheme(uri: &str) -> Option<&str> {
 }
 
 async fn explore_remote(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(data_vaults): State<DataVaultService>,
+    State(wk_client): State<WkClient>,
+    State(config): State<Arc<DatastoreConfig>>,
     tc: TokenContext,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
@@ -599,8 +605,7 @@ async fn explore_remote(
         Ok(parsed) => parsed,
         Err(response) => return Ok(*response),
     };
-    state
-        .access
+    access
         .validate_access(
             UserAccessRequest::administrate_datasets_of(&organization),
             &tc,
@@ -611,11 +616,11 @@ async fn explore_remote(
         .any(|p| uri_scheme(&p.remote_uri) == Some("file"));
     let service = crate::services::explore::ExploreRemoteLayerService {
         ctx: crate::services::explore::ExploreContext {
-            vaults: state.data_vaults.clone(),
+            vaults: data_vaults.clone(),
             token: tc.user_token.clone(),
         },
-        wk_client: &state.wk_client,
-        local_directory_whitelist: &state.config.local_directory_whitelist,
+        wk_client: &wk_client,
+        local_directory_whitelist: &config.local_directory_whitelist,
     };
     let mut report = Vec::new();
     let result = service

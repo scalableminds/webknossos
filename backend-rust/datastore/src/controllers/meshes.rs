@@ -1,28 +1,33 @@
 //! DSMeshController's file list, merged chunk list and opaque chunk-data routes.
-use super::helpers::{QueryFields, dataset_id, validated_body};
+use super::helpers::{DatasetLayers, QueryFields, dataset_id, validated_body};
 use crate::{
     AppState,
-    access::{AccessResult, TokenContext, UserAccessRequest},
+    access::{AccessResult, TokenContext},
+    clients::{tracingstore::TracingstoreClient, wk::WkClient},
     controller,
     error::DsError,
     models::{
-        StaticLayer, UsableDataSource,
         datasource::read_unsigned_long,
         json::{Fields, JsResult, read_i32, read_i64, read_list, read_string},
     },
     services::{
-        mesh::file::{ChunkRequest, MeshFileService},
+        agglomerate::AgglomerateService,
+        mesh::{
+            file::{ChunkRequest, MeshFileService},
+            full::FullMeshService,
+        },
         segment::index::segment_ids_for_agglomerate_id_if_needed,
     },
 };
 use axum::{
     Json, Router,
     extract::{Path, RawQuery, State, rejection::JsonRejection},
-    http::{StatusCode, header},
+    http::header,
     response::{IntoResponse, Response},
     routing::{get, post},
 };
 use serde_json::Value;
+use std::sync::Arc;
 pub fn router() -> Router<AppState> {
     controller(
         Router::new()
@@ -46,62 +51,44 @@ pub fn router() -> Router<AppState> {
     )
 }
 async fn full_mesh(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(full_mesh): State<Arc<FullMeshService>>,
     tc: TokenContext,
     Path((id, name)): Path<(String, String)>,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
-    use crate::services::mesh::full::{FullMeshRequest, FullMeshService};
+    use crate::services::mesh::full::FullMeshRequest;
     let request = match validated_body(body, FullMeshRequest::from_json) {
         Ok(p) => p,
         Err(r) => return Ok(*r),
     };
-    let (source, layer) = layer(&state, &tc, &id, &name).await?;
+    let (source, layer) = layers.readable(&tc, &id, &name).await?;
     let id = dataset_id(&id)?;
-    let bytes = FullMeshService::load(&state, &id, &source, layer, &request, &tc)
+    let bytes = full_mesh
+        .load(&id, &source, layer, &request, &tc)
         .await
         .map_err(|e| e.wrap("Could not load mesh chunk for segment."))?;
     Ok(([(header::CONTENT_TYPE, "application/octet-stream")], bytes).into_response())
 }
-async fn layer(
-    state: &AppState,
-    tc: &TokenContext,
-    id: &str,
-    name: &str,
-) -> AccessResult<(
-    std::sync::Arc<UsableDataSource>,
-    std::sync::Arc<StaticLayer>,
-)> {
-    let id = dataset_id(id)?;
-    state
-        .access
-        .validate_access(UserAccessRequest::read_dataset(&id), tc)
-        .await?;
-    Ok(state
-        .datasets
-        .get_with_layer(&id, name)
-        .await
-        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?)
-}
-fn json_response(value: Value) -> Response {
+fn json_response(value: &Value) -> Response {
     (
         [(header::CONTENT_TYPE, "application/json")],
-        crate::models::json::compact(&value),
+        crate::models::json::compact(value),
     )
         .into_response()
 }
 async fn list_files(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(mesh_files): State<Arc<MeshFileService>>,
     tc: TokenContext,
     Path((id, name)): Path<(String, String)>,
 ) -> AccessResult<Response> {
-    let (source, layer) = layer(&state, &tc, &id, &name).await?;
-    let infos = state
-        .mesh_files
+    let (source, layer) = layers.readable(&tc, &id, &name).await?;
+    let infos = mesh_files
         .list(&source.id, &layer, tc.user_token.as_deref())
         .await;
     Ok(json_response(
-        serde_json::to_value(infos).map_err(DsError::from_exception)?,
+        &serde_json::to_value(infos).map_err(DsError::from_exception)?,
     ))
 }
 struct ListRequest {
@@ -121,8 +108,13 @@ fn list_request(value: &Value) -> JsResult<ListRequest> {
         version: version?,
     })
 }
+#[allow(clippy::too_many_arguments)]
 async fn list_chunks(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(mesh_files): State<Arc<MeshFileService>>,
+    State(agglomerates): State<Arc<AgglomerateService>>,
+    State(wk_client): State<WkClient>,
+    State(tracingstore): State<TracingstoreClient>,
     tc: TokenContext,
     Path((id, name)): Path<(String, String)>,
     RawQuery(raw): RawQuery,
@@ -135,16 +127,15 @@ async fn list_chunks(
     let q = QueryFields::new(raw);
     let mapping = q.0.get("targetMappingName").map(String::as_str);
     let editable = q.0.get("editableMappingTracingId").map(String::as_str);
-    let (source, layer) = layer(&state, &tc, &id, &name).await?;
+    let (source, layer) = layers.readable(&tc, &id, &name).await?;
     let key = MeshFileService::look_up(&source.id, &layer, &body.name)?;
-    let file_mapping = state
-        .mesh_files
+    let file_mapping = mesh_files
         .mapping_name(&key, tc.user_token.as_deref())
         .await?;
     let segments = segment_ids_for_agglomerate_id_if_needed(
-        &state.agglomerates,
-        &state.wk_client,
-        &state.tracingstore,
+        &agglomerates,
+        &wk_client,
+        &tracingstore,
         &source.id,
         &layer,
         mapping,
@@ -156,12 +147,11 @@ async fn list_chunks(
         &tc,
     )
     .await?;
-    let info = state
-        .mesh_files
+    let info = mesh_files
         .list_chunks(&key, &segments, tc.user_token.as_deref())
         .await?;
     Ok(json_response(
-        serde_json::to_value(info).map_err(DsError::from_exception)?,
+        &serde_json::to_value(info).map_err(DsError::from_exception)?,
     ))
 }
 struct DataRequest {
@@ -191,7 +181,8 @@ fn data_request(value: &Value) -> JsResult<DataRequest> {
     })
 }
 async fn read_chunks(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(mesh_files): State<Arc<MeshFileService>>,
     tc: TokenContext,
     Path((id, name)): Path<(String, String)>,
     body: Result<Json<Value>, JsonRejection>,
@@ -200,10 +191,9 @@ async fn read_chunks(
         Ok(p) => p,
         Err(response) => return Ok(*response),
     };
-    let (source, layer) = layer(&state, &tc, &id, &name).await?;
+    let (source, layer) = layers.readable(&tc, &id, &name).await?;
     let key = MeshFileService::look_up(&source.id, &layer, &body.name)?;
-    let (bytes, encoding) = state
-        .mesh_files
+    let (bytes, encoding) = mesh_files
         .read_chunks(&key, &body.requests, tc.user_token.as_deref())
         .await
         .map_err(|e| e.wrap("Could not load mesh chunk for segment."))?;

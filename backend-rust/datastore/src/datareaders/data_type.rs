@@ -337,9 +337,7 @@ impl JavaNumber {
         if (self.double_value() - long as f64).abs() < 1e-9 {
             Value::from(long)
         } else {
-            serde_json::Number::from_f64(self.double_value())
-                .map(Value::Number)
-                .unwrap_or(Value::Null)
+            serde_json::Number::from_f64(self.double_value()).map_or(Value::Null, Value::Number)
         }
     }
 }

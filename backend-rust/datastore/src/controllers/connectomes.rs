@@ -1,16 +1,19 @@
 //! DataSourceController connectome routes; authorization precedes lookup and every cached read.
-use super::helpers::{dataset_id, validated_body};
+use super::helpers::{DatasetLayers, dataset_id, validated_body};
 use crate::{
     AppState,
-    access::{AccessResult, TokenContext, UserAccessRequest},
+    access::{AccessResult, AccessTokenService, TokenContext, UserAccessRequest},
     controller,
     error::DsError,
     models::{
-        JsResult, StaticLayer, UsableDataSource,
+        JsResult,
         datasource::{read_unsigned_long, unsigned_long_envelope},
         json::{Fields, read_i64, read_list, read_string},
     },
-    services::connectome::{ConnectomeFileKey, ConnectomeService, Direction},
+    services::{
+        DatasetCache,
+        connectome::{ConnectomeFileKey, ConnectomeService, Direction},
+    },
 };
 use axum::{
     Json, Router,
@@ -45,32 +48,15 @@ pub fn router() -> Router<AppState> {
         );
     controller(routes, true)
 }
-async fn layer(
-    state: &AppState,
-    tc: &TokenContext,
-    id: &str,
-    name: &str,
-) -> AccessResult<(Arc<UsableDataSource>, Arc<StaticLayer>)> {
-    let id = dataset_id(id)?;
-    state
-        .access
-        .validate_access(UserAccessRequest::read_dataset(&id), tc)
-        .await?;
-    Ok(state
-        .datasets
-        .get_with_layer(&id, name)
-        .await
-        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?)
-}
 async fn list(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(connectomes): State<Arc<ConnectomeService>>,
     tc: TokenContext,
     Path((id, name)): Path<(String, String)>,
 ) -> AccessResult<Response> {
-    let (source, layer) = layer(&state, &tc, &id, &name).await?;
+    let (source, layer) = layers.readable(&tc, &id, &name).await?;
     Ok(Json(
-        state
-            .connectomes
+        connectomes
             .list(&source.id, &layer, tc.user_token.as_deref())
             .await,
     )
@@ -97,17 +83,18 @@ fn parse(value: &Value, agglomerates: bool) -> JsResult<Query> {
     })
 }
 async fn key(
-    state: &AppState,
+    layers: &DatasetLayers,
     tc: &TokenContext,
     id: &str,
     name: &str,
     file: &str,
 ) -> AccessResult<ConnectomeFileKey> {
-    let (source, layer) = layer(state, tc, id, name).await?;
+    let (source, layer) = layers.readable(tc, id, name).await?;
     Ok(ConnectomeService::look_up(&source.id, &layer, file)?)
 }
 async fn positions(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(connectomes): State<Arc<ConnectomeService>>,
     tc: TokenContext,
     Path((id, name)): Path<(String, String)>,
     body: Result<Json<Value>, JsonRejection>,
@@ -116,17 +103,17 @@ async fn positions(
         Ok(v) => v,
         Err(r) => return Ok(*r),
     };
-    let key = key(&state, &tc, &id, &name, &body.file).await?;
+    let key = key(&layers, &tc, &id, &name, &body.file).await?;
     Ok(Json(
-        state
-            .connectomes
+        connectomes
             .positions(&key, &body.ids, tc.user_token.as_deref())
             .await?,
     )
     .into_response())
 }
 async fn types(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(connectomes): State<Arc<ConnectomeService>>,
     tc: TokenContext,
     Path((id, name)): Path<(String, String)>,
     body: Result<Json<Value>, JsonRejection>,
@@ -135,17 +122,18 @@ async fn types(
         Ok(v) => v,
         Err(r) => return Ok(*r),
     };
-    let key = key(&state, &tc, &id, &name, &body.file).await?;
+    let key = key(&layers, &tc, &id, &name, &body.file).await?;
     Ok(Json(
-        state
-            .connectomes
+        connectomes
             .types(&key, &body.ids, tc.user_token.as_deref())
             .await?,
     )
     .into_response())
 }
 async fn partners(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(datasets): State<DatasetCache>,
+    State(connectomes): State<Arc<ConnectomeService>>,
     tc: TokenContext,
     Path((id, name, direction)): Path<(String, String, String)>,
     body: Result<Json<Value>, JsonRejection>,
@@ -156,8 +144,7 @@ async fn partners(
     };
     // Scala validates access before parsing direction, and parses direction before loading data.
     let dataset = dataset_id(&id)?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&dataset), &tc)
         .await?;
     let direction = match direction.as_str() {
@@ -165,14 +152,12 @@ async fn partners(
         "dst" => Direction::Dst,
         _ => return Err(DsError::failure("could not parse synaptic partner direction").into()),
     };
-    let (source, layer) = state
-        .datasets
+    let (source, layer) = datasets
         .get_with_layer(&dataset, &name)
         .await
         .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?;
     let key = ConnectomeService::look_up(&source.id, &layer, &body.file)?;
-    let values = state
-        .connectomes
+    let values = connectomes
         .partners(&key, &body.ids, direction, tc.user_token.as_deref())
         .await?;
     Ok(Json(
@@ -184,7 +169,8 @@ async fn partners(
     .into_response())
 }
 async fn synapses(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(connectomes): State<Arc<ConnectomeService>>,
     tc: TokenContext,
     Path((id, name)): Path<(String, String)>,
     body: Result<Json<Value>, JsonRejection>,
@@ -193,10 +179,9 @@ async fn synapses(
         Ok(v) => v,
         Err(r) => return Ok(*r),
     };
-    let key = key(&state, &tc, &id, &name, &body.file).await?;
+    let key = key(&layers, &tc, &id, &name, &body.file).await?;
     Ok(Json(
-        state
-            .connectomes
+        connectomes
             .synapses(&key, &body.ids, tc.user_token.as_deref())
             .await?,
     )

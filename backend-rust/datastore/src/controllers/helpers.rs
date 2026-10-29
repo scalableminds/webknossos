@@ -1,13 +1,19 @@
-//! Shared Play-style controller binders and JSON schema validation.
-use crate::error::{DsError, DsResult};
+//! Shared Play-style controller binders, JSON schema validation and state views.
+use crate::{
+    AppState,
+    access::{AccessResult, AccessTokenService, TokenContext, UserAccessRequest},
+    error::{DsError, DsResult},
+    models::{StaticLayer, UsableDataSource},
+    services::DatasetCache,
+};
 use axum::{
     Json,
-    extract::rejection::JsonRejection,
+    extract::{FromRef, rejection::JsonRejection},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
 use serde_json::Value;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 pub(crate) fn dataset_id(literal: &str) -> DsResult<String> {
     let candidate = literal.rsplit('-').next().unwrap_or(literal);
@@ -17,6 +23,43 @@ pub(crate) fn dataset_id(literal: &str) -> DsResult<String> {
         Err(DsError::binding(format!(
             "Cannot parse URI path parameter datasetId with value “{literal}” as ObjectId."
         )))
+    }
+}
+
+/// Access checks plus the dataset cache: what a route needs to resolve a readable layer.
+#[derive(Clone)]
+pub(crate) struct DatasetLayers {
+    pub(crate) access: AccessTokenService,
+    pub(crate) datasets: DatasetCache,
+}
+
+impl FromRef<AppState> for DatasetLayers {
+    fn from_ref(state: &AppState) -> Self {
+        Self {
+            access: state.access.clone(),
+            datasets: state.datasets.clone(),
+        }
+    }
+}
+
+impl DatasetLayers {
+    /// Checks read access to the dataset `id`, then loads it with its layer `layer`
+    /// (`404` if either is missing).
+    pub(crate) async fn readable(
+        &self,
+        tc: &TokenContext,
+        id: &str,
+        layer: &str,
+    ) -> AccessResult<(Arc<UsableDataSource>, Arc<StaticLayer>)> {
+        let id = dataset_id(id)?;
+        self.access
+            .validate_access(UserAccessRequest::read_dataset(&id), tc)
+            .await?;
+        Ok(self
+            .datasets
+            .get_with_layer(&id, layer)
+            .await
+            .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?)
     }
 }
 

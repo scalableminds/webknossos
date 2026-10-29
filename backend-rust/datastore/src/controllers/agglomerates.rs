@@ -8,18 +8,19 @@ use axum::{
     routing::{get, post},
 };
 use prost::Message;
+use std::sync::Arc;
 
 use crate::{
     AppState,
-    access::{AccessResult, TokenContext, UserAccessRequest},
+    access::{AccessResult, TokenContext},
     controller,
     error::{DsError, DsResult},
-    models::{StaticLayer, UsableDataSource, datasource::unsigned_long_envelope},
+    models::datasource::unsigned_long_envelope,
     proto::ListOfLong,
     services::agglomerate::{AgglomerateFileKey, AgglomerateService},
 };
 
-use super::helpers::{QueryFields, dataset_id};
+use super::helpers::{DatasetLayers, QueryFields};
 
 const PROTOBUF: &str = "application/x-protobuf";
 
@@ -67,35 +68,14 @@ fn path_long(name: &str, value: &str) -> DsResult<i64> {
     })
 }
 
-async fn layer(
-    state: &AppState,
-    tc: &TokenContext,
-    id: &str,
-    layer: &str,
-) -> AccessResult<(
-    std::sync::Arc<UsableDataSource>,
-    std::sync::Arc<StaticLayer>,
-)> {
-    let id = dataset_id(id)?;
-    state
-        .access
-        .validate_access(UserAccessRequest::read_dataset(&id), tc)
-        .await?;
-    Ok(state
-        .datasets
-        .get_with_layer(&id, layer)
-        .await
-        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?)
-}
-
 async fn file_key(
-    state: &AppState,
+    layers: &DatasetLayers,
     tc: &TokenContext,
     id: &str,
     layer_name: &str,
     mapping: &str,
 ) -> AccessResult<AgglomerateFileKey> {
-    let (source, layer) = layer(state, tc, id, layer_name).await?;
+    let (source, layer) = layers.readable(tc, id, layer_name).await?;
     Ok(AgglomerateService::look_up(&source.id, &layer, mapping)?)
 }
 
@@ -104,23 +84,23 @@ fn protobuf(bytes: Vec<u8>) -> Response {
 }
 
 async fn list_agglomerates(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
     tc: TokenContext,
     Path((id, layer_name)): Path<(String, String)>,
 ) -> AccessResult<Json<Vec<String>>> {
-    let (_, layer) = layer(&state, &tc, &id, &layer_name).await?;
+    let (_, layer) = layers.readable(&tc, &id, &layer_name).await?;
     Ok(Json(AgglomerateService::list_agglomerate_files(&layer)))
 }
 
 async fn agglomerate_tree(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(agglomerates): State<Arc<AgglomerateService>>,
     tc: TokenContext,
     Path((id, layer_name, mapping, agglomerate)): Path<(String, String, String, String)>,
 ) -> AccessResult<Response> {
     let agglomerate = path_long("agglomerateId", &agglomerate)?;
-    let key = file_key(&state, &tc, &id, &layer_name, &mapping).await?;
-    let skeleton = state
-        .agglomerates
+    let key = file_key(&layers, &tc, &id, &layer_name, &mapping).await?;
+    let skeleton = agglomerates
         .generate_tree(&key, agglomerate, tc.user_token.as_deref())
         .await
         .map_err(|e| e.wrap("Could not generate agglomerate tree."))?;
@@ -128,14 +108,14 @@ async fn agglomerate_tree(
 }
 
 async fn agglomerate_graph(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(agglomerates): State<Arc<AgglomerateService>>,
     tc: TokenContext,
     Path((id, layer_name, mapping, agglomerate)): Path<(String, String, String, String)>,
 ) -> AccessResult<Response> {
     let agglomerate = path_long("agglomerateId", &agglomerate)?;
-    let key = file_key(&state, &tc, &id, &layer_name, &mapping).await?;
-    let graph = state
-        .agglomerates
+    let key = file_key(&layers, &tc, &id, &layer_name, &mapping).await?;
+    let graph = agglomerates
         .generate_agglomerate_graph(&key, agglomerate, tc.user_token.as_deref())
         .await
         .map_err(|e| e.wrap("Could not look up an agglomerate graph for requested agglomerate."))?;
@@ -143,20 +123,21 @@ async fn agglomerate_graph(
 }
 
 async fn largest_agglomerate_id(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(agglomerates): State<Arc<AgglomerateService>>,
     tc: TokenContext,
     Path((id, layer_name, mapping)): Path<(String, String, String)>,
 ) -> AccessResult<Json<serde_json::Value>> {
-    let key = file_key(&state, &tc, &id, &layer_name, &mapping).await?;
-    let largest = state
-        .agglomerates
+    let key = file_key(&layers, &tc, &id, &layer_name, &mapping).await?;
+    let largest = agglomerates
         .largest_agglomerate_id(&key, tc.user_token.as_deref())
         .await?;
     Ok(Json(unsigned_long_envelope(largest as u64)))
 }
 
 async fn agglomerates_for_segments(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(agglomerates): State<Arc<AgglomerateService>>,
     tc: TokenContext,
     Path((id, layer_name, mapping)): Path<(String, String, String)>,
     body: Bytes,
@@ -167,17 +148,16 @@ async fn agglomerates_for_segments(
             (StatusCode::BAD_REQUEST, "Invalid protobuf request body").into_response(),
         ));
     };
-    let key = file_key(&state, &tc, &id, &layer_name, &mapping).await?;
+    let key = file_key(&layers, &tc, &id, &layer_name, &mapping).await?;
     let segment_ids: Vec<i64> = request.items.iter().map(|i| *i as i64).collect();
-    let agglomerates = state
-        .agglomerates
+    let agglomerate_ids = agglomerates
         .agglomerate_ids_for_segment_ids(&key, &segment_ids, tc.user_token.as_deref())
         .await?;
     // Scala answers with the default (octet-stream) content type here.
     Ok((
         [(header::CONTENT_TYPE, "application/octet-stream")],
         ListOfLong {
-            items: agglomerates.iter().map(|a| *a as u64).collect(),
+            items: agglomerate_ids.iter().map(|a| *a as u64).collect(),
         }
         .encode_to_vec(),
     )
@@ -185,7 +165,8 @@ async fn agglomerates_for_segments(
 }
 
 async fn position_for_segment(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(agglomerates): State<Arc<AgglomerateService>>,
     tc: TokenContext,
     Path((id, layer_name, mapping)): Path<(String, String, String)>,
     RawQuery(raw): RawQuery,
@@ -197,9 +178,8 @@ async fn position_for_segment(
             "Cannot parse parameter segmentId as Long: For input string: \"{segment}\""
         ))
     })?;
-    let key = file_key(&state, &tc, &id, &layer_name, &mapping).await?;
-    let position = state
-        .agglomerates
+    let key = file_key(&layers, &tc, &id, &layer_name, &mapping).await?;
+    let position = agglomerates
         .position_for_segment_id(&key, segment, tc.user_token.as_deref())
         .await
         .map_err(|e| {

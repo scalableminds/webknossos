@@ -2,15 +2,16 @@
 use axum::{
     Json, Router,
     extract::{Path, State, rejection::JsonRejection},
-    http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
 };
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 use crate::{
     AppState,
-    access::{AccessResult, TokenContext, UserAccessRequest},
+    access::{AccessResult, TokenContext},
+    clients::{tracingstore::TracingstoreClient, wk::WkClient},
     controller,
     datareaders::RequestedAdditionalCoordinate,
     error::{DsError, DsResult},
@@ -25,13 +26,19 @@ use crate::{
     },
     services::{
         agglomerate::AgglomerateService,
+        mesh::{
+            ad_hoc::MappingType,
+            file::MeshFileService,
+            full::{FullMeshRequest, FullMeshService},
+        },
+        segment::index_statistics::IndexStatisticsService,
         segment::statistics_file::{
             StatisticsFileService, combined_covariance, rescale_volume, weighted_center,
         },
     },
 };
 
-use super::helpers::{dataset_id, validated_body};
+use super::helpers::{DatasetLayers, dataset_id, validated_body};
 
 pub fn router() -> Router<AppState> {
     let routes = Router::new()
@@ -82,33 +89,12 @@ pub fn router() -> Router<AppState> {
     controller(routes, true)
 }
 
-async fn layer(
-    state: &AppState,
-    tc: &TokenContext,
-    id: &str,
-    layer: &str,
-) -> AccessResult<(
-    std::sync::Arc<UsableDataSource>,
-    std::sync::Arc<StaticLayer>,
-)> {
-    let id = dataset_id(id)?;
-    state
-        .access
-        .validate_access(UserAccessRequest::read_dataset(&id), tc)
-        .await?;
-    Ok(state
-        .datasets
-        .get_with_layer(&id, layer)
-        .await
-        .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?)
-}
-
 async fn has_segment_index(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
     tc: TokenContext,
     Path((id, layer_name)): Path<(String, String)>,
 ) -> AccessResult<Json<bool>> {
-    let (source, layer) = layer(&state, &tc, &id, &layer_name).await?;
+    let (source, layer) = layers.readable(&tc, &id, &layer_name).await?;
     Ok(Json(
         SegmentIndexService::look_up(&source.id, &layer).is_ok(),
     ))
@@ -174,7 +160,10 @@ fn read_parameters_mode(
 
 #[allow(clippy::too_many_arguments)]
 async fn bucket_positions(
-    state: &AppState,
+    segment_index: &SegmentIndexService,
+    agglomerates: &Arc<AgglomerateService>,
+    wk_client: &WkClient,
+    tracingstore: &TracingstoreClient,
     tc: &TokenContext,
     source: &UsableDataSource,
     layer: &StaticLayer,
@@ -185,9 +174,9 @@ async fn bucket_positions(
 ) -> DsResult<Vec<Vec3Int>> {
     let key = SegmentIndexService::look_up(&source.id, layer)?;
     let segment_ids = segment_ids_for_agglomerate_id_if_needed(
-        &state.agglomerates,
-        &state.wk_client,
-        &state.tracingstore,
+        agglomerates,
+        wk_client,
+        tracingstore,
         &source.id,
         layer,
         params.mapping_name.as_deref(),
@@ -199,15 +188,19 @@ async fn bucket_positions(
         tc,
     )
     .await?;
-    let top_lefts = state
-        .segment_index
+    let top_lefts = segment_index
         .read_segment_indices(&key, &segment_ids, tc.user_token.as_deref())
         .await?;
     Ok(top_lefts_to_target_mag_buckets(&top_lefts, params.mag))
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn segment_index(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(segment_index): State<Arc<SegmentIndexService>>,
+    State(agglomerates): State<Arc<AgglomerateService>>,
+    State(wk_client): State<WkClient>,
+    State(tracingstore): State<TracingstoreClient>,
     tc: TokenContext,
     Path((id, layer_name, segment)): Path<(String, String, String)>,
     body: Result<Json<Value>, JsonRejection>,
@@ -216,7 +209,7 @@ async fn segment_index(
         Ok(params) => params,
         Err(response) => return Ok(*response),
     };
-    let (source, layer) = layer(&state, &tc, &id, &layer_name).await?;
+    let (source, layer) = layers.readable(&tc, &id, &layer_name).await?;
     let segment: i64 = segment.parse().map_err(|_| {
         DsError::from_exception(format!(
             "java.lang.NumberFormatException: For input string: \"{segment}\""
@@ -224,8 +217,20 @@ async fn segment_index(
     })?;
     // Key lookup precedes the mapping lookup in Scala.
     SegmentIndexService::look_up(&source.id, &layer)?;
-    let buckets =
-        bucket_positions(&state, &tc, &source, &layer, &params, None, segment, false).await?;
+    let buckets = bucket_positions(
+        &segment_index,
+        &agglomerates,
+        &wk_client,
+        &tracingstore,
+        &tc,
+        &source,
+        &layer,
+        &params,
+        None,
+        segment,
+        false,
+    )
+    .await?;
     let cube = params.cube_size;
     let mut positions: Vec<Vec3Int> = Vec::new();
     let mut seen = std::collections::HashSet::new();
@@ -239,8 +244,13 @@ async fn segment_index(
     Ok(Json(positions).into_response())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn query_segment_index(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(segment_index): State<Arc<SegmentIndexService>>,
+    State(agglomerates): State<Arc<AgglomerateService>>,
+    State(wk_client): State<WkClient>,
+    State(tracingstore): State<TracingstoreClient>,
     tc: TokenContext,
     Path((id, layer_name)): Path<(String, String)>,
     body: Result<Json<Value>, JsonRejection>,
@@ -249,12 +259,15 @@ async fn query_segment_index(
         Ok(params) => params,
         Err(response) => return Ok(*response),
     };
-    let (source, layer) = layer(&state, &tc, &id, &layer_name).await?;
+    let (source, layer) = layers.readable(&tc, &id, &layer_name).await?;
     SegmentIndexService::look_up(&source.id, &layer)?;
     let mut result = Vec::new();
     for segment in &params.segment_ids {
         let positions = bucket_positions(
-            &state,
+            &segment_index,
+            &agglomerates,
+            &wk_client,
+            &tracingstore,
             &tc,
             &source,
             &layer,
@@ -270,11 +283,12 @@ async fn query_segment_index(
 }
 
 async fn statistics_file_info(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(statistics_file): State<Arc<StatisticsFileService>>,
     tc: TokenContext,
     Path((id, name)): Path<(String, String)>,
 ) -> AccessResult<Json<Value>> {
-    let (source, layer) = layer(&state, &tc, &id, &name).await?;
+    let (source, layer) = layers.readable(&tc, &id, &name).await?;
     if layer
         .attachments
         .as_ref()
@@ -284,8 +298,7 @@ async fn statistics_file_info(
         return Ok(Json(json!([])));
     }
     let key = StatisticsFileService::look_up(&source.id, &layer)?;
-    let info = state
-        .statistics_file
+    let info = statistics_file
         .infos(&key, &layer, tc.user_token.as_deref())
         .await?;
     Ok(Json(json!([info])))
@@ -316,7 +329,7 @@ impl Metric {
     }
 }
 /// Scala `Seq[Float]`-based results, written with Play's float rendering.
-fn rows_json(metric: Metric, rows: Vec<Vec<f32>>) -> Value {
+fn rows_json(metric: Metric, rows: &[Vec<f32>]) -> Value {
     let floats = |row: &[f32]| Value::Array(row.iter().map(|v| play_f32_value(*v)).collect());
     match metric {
         Metric::Center => Value::Array(rows.iter().map(|row| floats(row)).collect()),
@@ -328,8 +341,12 @@ fn rows_json(metric: Metric, rows: Vec<Vec<f32>>) -> Value {
         _ => Value::Array(rows.iter().map(|row| play_f32_value(row[0])).collect()),
     }
 }
+#[allow(clippy::too_many_arguments)]
 async fn from_statistics_file(
-    state: &AppState,
+    statistics_file: &StatisticsFileService,
+    agglomerates: &Arc<AgglomerateService>,
+    wk_client: &WkClient,
+    tracingstore: &TracingstoreClient,
     tc: &TokenContext,
     source: &UsableDataSource,
     layer: &StaticLayer,
@@ -338,8 +355,7 @@ async fn from_statistics_file(
 ) -> DsResult<Value> {
     let token = tc.user_token.as_deref();
     let key = StatisticsFileService::look_up(&source.id, layer)?;
-    let remap = state
-        .statistics_file
+    let remap = statistics_file
         .check_compatible(
             &key,
             layer,
@@ -354,14 +370,10 @@ async fn from_statistics_file(
         .iter()
         .map(|id| *id as i64)
         .collect::<Vec<_>>();
-    let (file_mag, _) = state
-        .statistics_file
-        .mag_and_mapping(&key, layer, token)
-        .await?;
+    let (file_mag, _) = statistics_file.mag_and_mapping(&key, layer, token).await?;
     if !remap {
         return if matches!(metric, Metric::Volume) {
-            let volumes = state
-                .statistics_file
+            let volumes = statistics_file
                 .volumes(&key, &ids, token)
                 .await?
                 .into_iter()
@@ -371,8 +383,7 @@ async fn from_statistics_file(
         } else {
             Ok(rows_json(
                 metric,
-                state
-                    .statistics_file
+                &statistics_file
                     .float_rows(&key, metric.name(), &ids, token)
                     .await?,
             ))
@@ -382,9 +393,9 @@ async fn from_statistics_file(
     // Each agglomerate read batches its segments; avoid multiplying fan-out here.
     for id in ids {
         let ids = segment_ids_for_agglomerate_id_if_needed(
-            &state.agglomerates,
-            &state.wk_client,
-            &state.tracingstore,
+            agglomerates,
+            wk_client,
+            tracingstore,
             &source.id,
             layer,
             params.mapping_name.as_deref(),
@@ -396,7 +407,7 @@ async fn from_statistics_file(
             tc,
         )
         .await?;
-        let volumes = state.statistics_file.volumes(&key, &ids, token).await?;
+        let volumes = statistics_file.volumes(&key, &ids, token).await?;
         if matches!(metric, Metric::Volume) {
             let sum = volumes.iter().fold(0i64, |n, v| n.wrapping_add(*v));
             values.push(json!(rescale_volume(sum, file_mag, params.mag)?));
@@ -405,8 +416,7 @@ async fn from_statistics_file(
                 .into_iter()
                 .map(|v| rescale_volume(v, file_mag, Vec3Int::ones()))
                 .collect::<DsResult<Vec<_>>>()?;
-            let centers = state
-                .statistics_file
+            let centers = statistics_file
                 .float_rows(&key, "center_of_mass", &ids, token)
                 .await?;
             if matches!(metric, Metric::Center) {
@@ -415,8 +425,7 @@ async fn from_statistics_file(
                     center.iter().map(|v| play_f32_value(*v as f32)).collect(),
                 ));
             } else {
-                let matrices = state
-                    .statistics_file
+                let matrices = statistics_file
                     .float_rows(&key, "covariance_matrix", &ids, token)
                     .await?;
                 let matrix = combined_covariance(&matrices, &centers, &volumes)?;
@@ -431,8 +440,14 @@ async fn from_statistics_file(
     }
     Ok(json!(values))
 }
+#[allow(clippy::too_many_arguments)]
 async fn statistics(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(statistics_file): State<Arc<StatisticsFileService>>,
+    State(agglomerates): State<Arc<AgglomerateService>>,
+    State(wk_client): State<WkClient>,
+    State(tracingstore): State<TracingstoreClient>,
+    State(index_statistics): State<Arc<IndexStatisticsService>>,
     tc: TokenContext,
     Path((id, name)): Path<(String, String)>,
     body: Result<Json<Value>, JsonRejection>,
@@ -442,11 +457,22 @@ async fn statistics(
         Ok(p) => p,
         Err(response) => return Ok(*response),
     };
-    let (source, layer) = layer(&state, &tc, &id, &name).await?;
+    let (source, layer) = layers.readable(&tc, &id, &name).await?;
     if !matches!(metric, Metric::BoundingBox) {
-        let from_file = from_statistics_file(&state, &tc, &source, &layer, &params, metric).await;
+        let from_file = from_statistics_file(
+            &statistics_file,
+            &agglomerates,
+            &wk_client,
+            &tracingstore,
+            &tc,
+            &source,
+            &layer,
+            &params,
+            metric,
+        )
+        .await;
         match from_file {
-            Ok(values) => return Ok(statistics_json(values)),
+            Ok(values) => return Ok(statistics_json(&values)),
             Err(error) if !matches!(metric, Metric::Volume) => return Err(error.into()),
             // Scala falls back on both absent and incompatible/corrupt statistics files.
             Err(_) => {}
@@ -462,8 +488,7 @@ async fn statistics(
     for segment in params.segment_ids {
         if matches!(metric, Metric::Volume) {
             values.push(json!(
-                state
-                    .index_statistics
+                index_statistics
                     .volume(
                         &id,
                         &layer,
@@ -477,8 +502,7 @@ async fn statistics(
             ));
         } else {
             values.push(json!(
-                state
-                    .index_statistics
+                index_statistics
                     .bounding_box(
                         &id,
                         &layer,
@@ -492,24 +516,42 @@ async fn statistics(
             ));
         }
     }
-    Ok(statistics_json(json!(values)))
+    Ok(statistics_json(&json!(values)))
 }
-fn statistics_json(values: Value) -> Response {
+fn statistics_json(values: &Value) -> Response {
     (
         [(axum::http::header::CONTENT_TYPE, "application/json")],
-        crate::models::json::compact(&values),
+        crate::models::json::compact(values),
     )
         .into_response()
 }
 macro_rules! statistics_handler {
     ($handler:ident,$metric:ident) => {
+        #[allow(clippy::too_many_arguments)]
         async fn $handler(
-            state: State<AppState>,
+            layers: State<DatasetLayers>,
+            statistics_file: State<Arc<StatisticsFileService>>,
+            agglomerates: State<Arc<AgglomerateService>>,
+            wk_client: State<WkClient>,
+            tracingstore: State<TracingstoreClient>,
+            index_statistics: State<Arc<IndexStatisticsService>>,
             tc: TokenContext,
             path: Path<(String, String)>,
             body: Result<Json<Value>, JsonRejection>,
         ) -> AccessResult<Response> {
-            statistics(state, tc, path, body, Metric::$metric).await
+            statistics(
+                layers,
+                statistics_file,
+                agglomerates,
+                wk_client,
+                tracingstore,
+                index_statistics,
+                tc,
+                path,
+                body,
+                Metric::$metric,
+            )
+            .await
         }
     };
 }
@@ -548,30 +590,28 @@ fn surface_parameters(value: &Value) -> JsResult<SurfaceParameters> {
     })
 }
 async fn segment_surface_area(
-    State(state): State<AppState>,
+    State(layers): State<DatasetLayers>,
+    State(statistics_file): State<Arc<StatisticsFileService>>,
+    State(mesh_files): State<Arc<MeshFileService>>,
+    State(full_mesh): State<Arc<FullMeshService>>,
     tc: TokenContext,
     Path((id, name)): Path<(String, String)>,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
-    use crate::services::{
-        mesh::ad_hoc::MappingType, mesh::file::MeshFileService, mesh::full::FullMeshRequest,
-    };
     let p = match validated_body(body, surface_parameters) {
         Ok(p) => p,
         Err(r) => return Ok(*r),
     };
-    let (source, layer) = layer(&state, &tc, &id, &name).await?;
+    let (source, layer) = layers.readable(&tc, &id, &name).await?;
     let id = dataset_id(&id)?;
     let token = tc.user_token.as_deref();
     let from_file = async {
         let key = StatisticsFileService::look_up(&source.id, &layer)?;
-        state
-            .statistics_file
+        statistics_file
             .check_compatible(&key, &layer, p.mag, p.mapping.as_deref(), false, token)
             .await?;
         let ids = p.ids.iter().map(|id| *id as i64).collect::<Vec<_>>();
-        let rows = state
-            .statistics_file
+        let rows = statistics_file
             .float_rows(&key, "surfaces", &ids, token)
             .await?;
         Ok::<_, DsError>(rows.into_iter().map(|r| r[0]).collect::<Vec<_>>())
@@ -582,7 +622,7 @@ async fn segment_surface_area(
     } else {
         let mesh = if let Some(mesh) = p.mesh.as_deref() {
             let key = MeshFileService::look_up(&source.id, &layer, mesh)?;
-            let mapping = state.mesh_files.mapping_name(&key, token).await?;
+            let mapping = mesh_files.mapping_name(&key, token).await?;
             if mapping == p.mapping {
                 Some(mesh.to_owned())
             } else {
@@ -606,16 +646,8 @@ async fn segment_surface_area(
                 additional_coordinates: p.coordinates.clone(),
             };
             values.push(
-                state
-                    .full_mesh
-                    .cached_surface_area(
-                        &state,
-                        &id,
-                        &source,
-                        std::sync::Arc::clone(&layer),
-                        &request,
-                        &tc,
-                    )
+                full_mesh
+                    .cached_surface_area(&id, &source, Arc::clone(&layer), &request, &tc)
                     .await
                     .map_err(|e| e.wrap("Could not load full segment mesh."))?,
             );

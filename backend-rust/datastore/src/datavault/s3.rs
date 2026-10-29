@@ -12,7 +12,7 @@
 use std::{
     collections::HashMap,
     fmt,
-    sync::{Arc, LazyLock, Mutex},
+    sync::{Arc, LazyLock, Mutex, PoisonError},
     time::{Duration, Instant},
 };
 
@@ -402,7 +402,7 @@ static BUCKET_REGIONS: LazyLock<Mutex<HashMap<String, Option<String>>>> =
 fn cached_bucket_region(url: &str) -> Option<Option<String>> {
     BUCKET_REGIONS
         .lock()
-        .unwrap_or_else(|e| e.into_inner())
+        .unwrap_or_else(PoisonError::into_inner)
         .get(url)
         .cloned()
 }
@@ -603,7 +603,7 @@ impl S3DataVault {
         if region.is_some() || status.is_success() || matches!(status.as_u16(), 403 | 404) {
             BUCKET_REGIONS
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
+                .unwrap_or_else(PoisonError::into_inner)
                 .insert(url, region.clone());
         }
         region.ok_or(VaultError::NotFound)

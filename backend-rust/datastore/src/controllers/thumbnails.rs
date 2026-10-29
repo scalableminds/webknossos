@@ -12,7 +12,7 @@ use serde_json::Value;
 
 use crate::{
     AppState,
-    access::{AccessResult, TokenContext, UserAccessRequest},
+    access::{AccessResult, AccessTokenService, TokenContext, UserAccessRequest},
     controller,
     error::{DsError, DsResult},
     models::{
@@ -23,7 +23,7 @@ use crate::{
         json::{Fields, JsResult, read_bool, read_f64, read_i32, read_list, read_string},
     },
     services::{
-        BinaryDataService,
+        BinaryDataService, DatasetCache,
         agglomerate::AgglomerateService,
         find_data::{FindDataTarget, create_histogram},
         thumbnail::{self, Color, Image, RenderParameters},
@@ -163,7 +163,7 @@ fn ensure_mapping_supported(
 /// Scala `resolveIntensityRange`: explicit bounds, none for segmentations, else the histogram's
 /// overall min/max (histogram failures are ignored).
 async fn resolve_intensity_range(
-    state: &AppState,
+    binary_data: &BinaryDataService,
     id: &str,
     source: &UsableDataSource,
     layer: &Arc<StaticLayer>,
@@ -182,7 +182,7 @@ async fn resolve_intensity_range(
         data_source_id: &source.id,
         layer,
     };
-    let histograms = create_histogram(&state.binary_data, &target, token)
+    let histograms = create_histogram(binary_data, &target, token)
         .await
         .ok()
         .filter(|h| !h.is_empty())?;
@@ -200,15 +200,15 @@ async fn resolve_intensity_range(
 /// Fetches and renders one layer (Scala `standaloneLayerThumbnail` body and
 /// `datasetThumbnailLayerImage`). Returns whether the layer is a segmentation.
 async fn render_layer(
-    state: &AppState,
+    datasets: &DatasetCache,
+    binary_data: &BinaryDataService,
     tc: &TokenContext,
     id: &str,
     p: &LayerParameters,
     output: Option<(usize, usize)>,
     preserve_alpha: bool,
 ) -> DsResult<(bool, Image)> {
-    let (source, layer) = state
-        .datasets
+    let (source, layer) = datasets
         .get_with_layer(id, &p.data_layer_name)
         .await
         .map_err(|e| {
@@ -232,13 +232,12 @@ async fn render_layer(
         },
     };
     let token = tc.user_token.as_deref();
-    let data = state
-        .binary_data
+    let data = binary_data
         .handle_data_requests(&[request], token)
         .await
         .data;
     let range = resolve_intensity_range(
-        state,
+        binary_data,
         id,
         &source,
         &layer,
@@ -274,7 +273,9 @@ fn jpeg_response(bytes: Vec<u8>) -> Response {
 }
 
 async fn layer_thumbnail(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(datasets): State<DatasetCache>,
+    State(binary_data): State<Arc<BinaryDataService>>,
     tc: TokenContext,
     Path((id, layer_name)): Path<(String, String)>,
     RawQuery(raw): RawQuery,
@@ -300,12 +301,11 @@ async fn layer_thumbnail(
             .transpose()?,
         opacity: 100.0,
     };
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
     thumbnail::validate_dimensions(params.width, params.height)?;
-    let (_, image) = render_layer(&state, &tc, &id, &params, None, false).await?;
+    let (_, image) = render_layer(&datasets, &binary_data, &tc, &id, &params, None, false).await?;
     let jpeg = tokio::task::spawn_blocking(move || thumbnail::to_jpeg(&image))
         .await
         .map_err(DsError::from_exception)??;
@@ -313,7 +313,9 @@ async fn layer_thumbnail(
 }
 
 async fn dataset_thumbnail(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(datasets): State<DatasetCache>,
+    State(binary_data): State<Arc<BinaryDataService>>,
     tc: TokenContext,
     Path(id): Path<String>,
     body: Result<Json<Value>, JsonRejection>,
@@ -323,8 +325,7 @@ async fn dataset_thumbnail(
         Ok(request) => request,
         Err(response) => return Ok(*response),
     };
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), &tc)
         .await?;
     thumbnail::validate_dimensions(request.width, request.height)?;
@@ -336,7 +337,7 @@ async fn dataset_thumbnail(
     let mut segmentations = Vec::new();
     for layer in &request.layers {
         let (is_segmentation, image) =
-            render_layer(&state, &tc, &id, layer, Some(output), true).await?;
+            render_layer(&datasets, &binary_data, &tc, &id, layer, Some(output), true).await?;
         if is_segmentation {
             segmentations.push(image);
         } else {

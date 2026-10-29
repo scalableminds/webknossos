@@ -203,10 +203,10 @@ impl IntoResponse for DsError {
 /// Java `DateTimeFormatter.ISO_INSTANT` for a millisecond-precision instant (Scala util `Instant`):
 /// `2026-10-11T08:15:30Z` or `2026-10-11T08:15:30.120Z`.
 pub fn format_iso_instant(time: SystemTime) -> String {
-    let millis_total = time
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as i64)
-        .unwrap_or_else(|e| -(e.duration().as_millis() as i64));
+    let millis_total = time.duration_since(UNIX_EPOCH).map_or_else(
+        |e| -(e.duration().as_millis() as i64),
+        |d| d.as_millis() as i64,
+    );
     let secs = millis_total.div_euclid(1000);
     let millis = millis_total.rem_euclid(1000);
     let days = secs.div_euclid(86_400);

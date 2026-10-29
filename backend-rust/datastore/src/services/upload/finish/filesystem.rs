@@ -121,7 +121,7 @@ pub(super) fn find_common_root_directory(
         .iter()
         .rposition(|e| boundary_dir_names.contains(e))
     {
-        None => prefix.clone(),
+        None => prefix,
         Some(0) => PathBuf::new(),
         Some(i) => {
             let mut out = if prefix.is_absolute() {

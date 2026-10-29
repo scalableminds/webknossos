@@ -12,7 +12,10 @@ use serde_json::{Value, json};
 
 use crate::{
     AppState,
+    access::AccessTokenService,
     access::{AccessResult, TokenContext, UserAccessRequest},
+    clients::slack::SlackNotifications,
+    clients::wk::WkClient,
     controller,
     error::{DsError, DsResult},
     models::{
@@ -20,6 +23,8 @@ use crate::{
         enums::LengthUnit,
         json::{Fields, JsResult, read_bool, read_list, read_string},
     },
+    services::DataSourceService,
+    services::upload::UploadService,
     services::upload::{ResumableUploadInfo, UploadDomain},
 };
 
@@ -69,7 +74,7 @@ pub fn router(state: AppState) -> Router<AppState> {
 }
 
 pub(super) async fn observe_upload(
-    State(state): State<AppState>,
+    State(slack): State<SlackNotifications>,
     request: Request,
     next: Next,
 ) -> Response {
@@ -81,12 +86,10 @@ pub(super) async fn observe_upload(
     let started = std::time::Instant::now();
     let response = next.run(request).await;
     if !response.status().is_success() {
-        state.slack.failed_upload(&uri, response.status().as_u16());
+        slack.failed_upload(&uri, response.status().as_u16());
     }
     if finish && started.elapsed() > std::time::Duration::from_secs(120) {
-        state
-            .slack
-            .slow_request("POST", &uri, started.elapsed(), response.status().as_u16());
+        slack.slow_request("POST", &uri, started.elapsed(), response.status().as_u16());
     }
     response
 }
@@ -251,7 +254,9 @@ fn data_source_id_from(value: &Value, key: &str) -> DsResult<DataSourceId> {
 }
 
 pub(super) async fn reserve_dataset_upload(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(uploads): State<UploadService>,
+    State(wk_client): State<WkClient>,
     tc: TokenContext,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
@@ -259,23 +264,20 @@ pub(super) async fn reserve_dataset_upload(
         Ok(info) => info,
         Err(response) => return Ok(*response),
     };
-    state
-        .access
+    access
         .validate_access(
             UserAccessRequest::administrate_datasets_of(&info.organization_id),
             &tc,
         )
         .await?;
     let upload_id = info.resumable.upload_id.clone();
-    if state
-        .uploads
+    if uploads
         .is_known_upload(&upload_id, UploadDomain::Dataset)
         .await?
     {
         return Ok(StatusCode::OK.into_response());
     }
-    let additional: Value = state
-        .wk_client
+    let additional: Value = wk_client
         .reserve_dataset_upload(&info.to_json(), &tc)
         .await
         .map_err(|e| e.wrap(VALIDATION_FAILED))?;
@@ -296,7 +298,6 @@ pub(super) async fn reserve_dataset_upload(
             DsError::failure("Cannot use linked layers if the dataset needs conversion").into(),
         );
     }
-    let uploads = &state.uploads;
     uploads
         .reserve_resumable_upload(&info.resumable, &dataset_id, &source, UploadDomain::Dataset)
         .await?;
@@ -324,7 +325,9 @@ pub(super) async fn reserve_dataset_upload(
 }
 
 async fn reserve_mag_upload(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(uploads): State<UploadService>,
+    State(wk_client): State<WkClient>,
     tc: TokenContext,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
@@ -332,18 +335,15 @@ async fn reserve_mag_upload(
         Ok(parsed) => parsed,
         Err(response) => return Ok(*response),
     };
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::write_dataset(&info.dataset_id), &tc)
         .await?;
     let upload_id = info.resumable.upload_id.clone();
-    if !state
-        .uploads
+    if !uploads
         .is_known_upload(&upload_id, UploadDomain::Mag)
         .await?
     {
-        let additional: Value = state
-            .wk_client
+        let additional: Value = wk_client
             .reserve_mag_upload(
                 &json!({
                     "resumableUploadInfo": info.resumable,
@@ -357,8 +357,7 @@ async fn reserve_mag_upload(
             .await
             .map_err(|e| e.wrap(VALIDATION_FAILED))?;
         let source = data_source_id_from(&additional, "dataSourceId")?;
-        state
-            .uploads
+        uploads
             .reserve_resumable_upload(
                 &info.resumable,
                 &info.dataset_id,
@@ -366,7 +365,7 @@ async fn reserve_mag_upload(
                 UploadDomain::Mag,
             )
             .await?;
-        let store = state.uploads.store(UploadDomain::Mag);
+        let store = uploads.store(UploadDomain::Mag);
         store
             .insert_extra_serialized(&upload_id, "mag", &mag.without_credentials())
             .await?;
@@ -378,7 +377,9 @@ async fn reserve_mag_upload(
 }
 
 async fn reserve_attachment_upload(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(uploads): State<UploadService>,
+    State(wk_client): State<WkClient>,
     tc: TokenContext,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
@@ -386,18 +387,15 @@ async fn reserve_attachment_upload(
         Ok(parsed) => parsed,
         Err(response) => return Ok(*response),
     };
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::write_dataset(&info.dataset_id), &tc)
         .await?;
     let upload_id = info.resumable.upload_id.clone();
-    if !state
-        .uploads
+    if !uploads
         .is_known_upload(&upload_id, UploadDomain::Attachment)
         .await?
     {
-        let additional: Value = state
-            .wk_client
+        let additional: Value = wk_client
             .reserve_attachment_upload(
                 &json!({
                     "resumableUploadInfo": info.resumable,
@@ -413,8 +411,7 @@ async fn reserve_attachment_upload(
             // Scala uses the message key here instead of the message text.
             .map_err(|e| e.wrap("dataset.upload.validation.failed"))?;
         let source = data_source_id_from(&additional, "dataSourceId")?;
-        state
-            .uploads
+        uploads
             .reserve_resumable_upload(
                 &info.resumable,
                 &info.dataset_id,
@@ -422,7 +419,7 @@ async fn reserve_attachment_upload(
                 UploadDomain::Attachment,
             )
             .await?;
-        let store = state.uploads.store(UploadDomain::Attachment);
+        let store = uploads.store(UploadDomain::Attachment);
         store
             .insert_extra_serialized(&upload_id, "attachment", &attachment.without_credential())
             .await?;
@@ -437,7 +434,9 @@ async fn reserve_attachment_upload(
 }
 
 pub(super) async fn unfinished_uploads(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(wk_client): State<WkClient>,
+    State(uploads): State<UploadService>,
     tc: TokenContext,
     Path(upload_domain): Path<String>,
     RawQuery(raw): RawQuery,
@@ -445,8 +444,7 @@ pub(super) async fn unfinished_uploads(
     let organization = QueryFields::new(raw)
         .required("organizationName")?
         .to_owned();
-    state
-        .access
+    access
         .validate_access(
             UserAccessRequest::administrate_datasets_of(&organization),
             &tc,
@@ -458,11 +456,10 @@ pub(super) async fn unfinished_uploads(
         )
         .into());
     }
-    let unfinished: Vec<Value> = state
-        .wk_client
+    let unfinished: Vec<Value> = wk_client
         .get_unfinished_uploads_for_user(&organization, &tc)
         .await?;
-    let enriched = state.uploads.enrich_unfinished_uploads(unfinished).await;
+    let enriched = uploads.enrich_unfinished_uploads(unfinished).await;
     Ok(Json(
         enriched
             .into_iter()
@@ -498,7 +495,8 @@ fn form_number(
 }
 
 pub(super) async fn upload_chunk(
-    State(state): State<AppState>,
+    State(uploads): State<UploadService>,
+    State(access): State<AccessTokenService>,
     tc: TokenContext,
     Path(upload_domain): Path<String>,
     mut multipart: Multipart,
@@ -560,25 +558,18 @@ pub(super) async fn upload_chunk(
     };
     let upload_id = crate::services::upload::extract_upload_id(&file_id).to_owned();
     let domain = domain(&upload_domain)?;
-    let dataset_id = state
-        .uploads
+    let dataset_id = uploads
         .dataset_id_by_upload_id(&upload_id, domain)
         .await?
         .ok_or_else(|| DsError::failure(no_such_upload(&upload_id, &upload_domain)))?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::write_dataset(&dataset_id), &tc)
         .await?;
-    if !state
-        .uploads
-        .is_known_upload_by_file_id(&file_id, domain)
-        .await?
-    {
+    if !uploads.is_known_upload_by_file_id(&file_id, domain).await? {
         return Err(DsError::failure("dataset.upload.validation.failed").into());
     }
     let file = file.ok_or_else(|| DsError::failure("zip.file.notFound"))?;
-    state
-        .uploads
+    uploads
         .handle_upload_chunk(
             &file_id,
             chunk_size,
@@ -594,7 +585,8 @@ pub(super) async fn upload_chunk(
 }
 
 pub(super) async fn test_chunk(
-    State(state): State<AppState>,
+    State(uploads): State<UploadService>,
+    State(access): State<AccessTokenService>,
     tc: TokenContext,
     Path(upload_domain): Path<String>,
     RawQuery(raw): RawQuery,
@@ -605,25 +597,21 @@ pub(super) async fn test_chunk(
     let upload_id = crate::services::upload::extract_upload_id(&identifier).to_owned();
     let domain = domain(&upload_domain)?;
     let missing = || DsError::failure(no_such_upload(&upload_id, &upload_domain));
-    let dataset_id = state
-        .uploads
+    let dataset_id = uploads
         .dataset_id_by_upload_id(&upload_id, domain)
         .await?
         .ok_or_else(missing)?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::write_dataset(&dataset_id), &tc)
         .await?;
-    if !state
-        .uploads
+    if !uploads
         .is_known_upload_by_file_id(&identifier, domain)
         .await?
     {
         return Err(missing().into());
     }
     Ok(
-        if state
-            .uploads
+        if uploads
             .is_chunk_present(&identifier, i64::from(chunk_number), domain)
             .await?
         {
@@ -635,7 +623,9 @@ pub(super) async fn test_chunk(
 }
 
 async fn cancel_upload(
-    State(state): State<AppState>,
+    State(uploads): State<UploadService>,
+    State(access): State<AccessTokenService>,
+    State(wk_client): State<WkClient>,
     tc: TokenContext,
     Path(upload_domain): Path<String>,
     RawQuery(raw): RawQuery,
@@ -644,29 +634,24 @@ async fn cancel_upload(
     if domain(&upload_domain)? != UploadDomain::Dataset {
         return Err(DsError::failure("Cancel upload is only supported for datasets.").into());
     }
-    if !state
-        .uploads
+    if !uploads
         .is_known_upload(&upload_id, UploadDomain::Dataset)
         .await?
     {
         return Err(DsError::failure(no_such_upload(&upload_id, &upload_domain)).into());
     }
-    let dataset_id = state
-        .uploads
+    let dataset_id = uploads
         .dataset_id_by_upload_id(&upload_id, UploadDomain::Dataset)
         .await?
         .ok_or_else(DsError::empty)?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::delete_dataset(&dataset_id), &tc)
         .await?;
-    state
-        .wk_client
+    wk_client
         .delete_dataset(&dataset_id)
         .await
         .map_err(|e| e.wrap("Could not delete dataset from WEBKNOSSOS database."))?;
-    state
-        .uploads
+    uploads
         .cancel_upload(UploadDomain::Dataset, &upload_id)
         .await
         .map_err(|e| e.wrap("Could not cancel the upload."))?;
@@ -674,7 +659,8 @@ async fn cancel_upload(
 }
 
 async fn clean_up_upload_files(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(uploads): State<UploadService>,
     tc: TokenContext,
     RawQuery(raw): RawQuery,
 ) -> AccessResult<StatusCode> {
@@ -682,11 +668,9 @@ async fn clean_up_upload_files(
     let organization = q.required("organizationId")?.to_owned();
     let directory_name = q.required("directoryName")?.to_owned();
     let job_id = q.required("jobId")?.to_owned();
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::webknossos(), &tc)
         .await?;
-    let uploads = state.uploads.clone();
     tokio::task::spawn_blocking(move || {
         uploads.clean_up_upload_files_after_convert_job(&organization, &directory_name, &job_id)
     })
@@ -696,27 +680,28 @@ async fn clean_up_upload_files(
 }
 
 pub(super) async fn finish_upload(
-    State(state): State<AppState>,
+    State(uploads): State<UploadService>,
+    State(access): State<AccessTokenService>,
+    State(data_sources): State<DataSourceService>,
+    State(wk_client): State<WkClient>,
     tc: TokenContext,
     Path(upload_domain): Path<String>,
     RawQuery(raw): RawQuery,
 ) -> AccessResult<Json<Value>> {
     let upload_id = QueryFields::new(raw).required("uploadId")?.to_owned();
     let domain = domain(&upload_domain)?;
-    let dataset_id = state
-        .uploads
+    let dataset_id = uploads
         .dataset_id_by_upload_id(&upload_id, domain)
         .await?
         .ok_or_else(|| DsError::failure(no_such_upload(&upload_id, &upload_domain)))?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::write_dataset(&dataset_id), &tc)
         .await?;
     let started = std::time::Instant::now();
     let context = crate::services::upload::finish::FinishContext {
-        uploads: &state.uploads,
-        data_sources: &state.data_sources,
-        wk_client: &state.wk_client,
+        uploads: &uploads,
+        data_sources: &data_sources,
+        wk_client: &wk_client,
         tc: &tc,
     };
     let result = match domain {

@@ -14,9 +14,14 @@ use axum::{
 };
 use serde_json::{Value, json};
 
+use std::sync::Arc;
+
 use crate::{
     AppState,
+    access::AccessTokenService,
     access::{AccessResult, TokenContext, UserAccessRequest},
+    clients::tracingstore::TracingstoreClient,
+    clients::wk::WkClient,
     controller,
     datareaders::zarr::{
         FILENAME_DOT_ZARRAY, ZarrHeader,
@@ -33,6 +38,8 @@ use crate::{
         },
         json::PlayValue,
     },
+    services::BinaryDataService,
+    services::DatasetCache,
     services::zarr_streaming::{
         FILENAME_ZARR_JSON, convert_layer_to_zarr_layer, directory_html, parse_dot_coordinates,
         reorder_additional_axes, zarr3_array_header_json,
@@ -237,24 +244,27 @@ fn to_value(value: impl serde::Serialize) -> DsResult<Value> {
     serde_json::to_value(value).map_err(DsError::from_exception)
 }
 
-async fn authorize(state: &AppState, tc: &TokenContext, id: &str) -> AccessResult<String> {
+async fn authorize(
+    access: &AccessTokenService,
+    tc: &TokenContext,
+    id: &str,
+) -> AccessResult<String> {
     let id = dataset_id(id)?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::read_dataset(&id), tc)
         .await?;
     Ok(id)
 }
 
 async fn layer_or_not_found(
-    state: &AppState,
+    datasets: &DatasetCache,
     id: &str,
     layer: &str,
 ) -> DsResult<(
     std::sync::Arc<UsableDataSource>,
     std::sync::Arc<StaticLayer>,
 )> {
-    state.datasets.get_with_layer(id, layer).await.map_err(|e| {
+    datasets.get_with_layer(id, layer).await.map_err(|e| {
         e.wrap(SOURCE_NOT_FOUND)
             .with_param_status(StatusCode::NOT_FOUND)
     })
@@ -288,12 +298,14 @@ fn source_dir_entries<const V: u8>() -> Vec<String> {
 }
 
 async fn source_dir<const V: u8>(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(access): State<AccessTokenService>,
     tc: TokenContext,
     Path(id): Path<String>,
 ) -> AccessResult<Response> {
-    let id = authorize(&state, &tc, &id).await?;
-    let source = state.datasets.get_by_id(&id).await.map_err(|e| {
+    let id = authorize(&access, &tc, &id).await?;
+    let source = datasets.get_by_id(&id).await.map_err(|e| {
         e.wrap(SOURCE_NOT_FOUND)
             .with_param_status(StatusCode::NOT_FOUND)
     })?;
@@ -307,20 +319,20 @@ fn z_group_json() -> Response {
 }
 
 async fn z_group_root(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
     tc: TokenContext,
     Path(id): Path<String>,
 ) -> AccessResult<Response> {
-    authorize(&state, &tc, &id).await?;
+    authorize(&access, &tc, &id).await?;
     Ok(z_group_json())
 }
 
 async fn z_group_layer(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
     tc: TokenContext,
     Path((id, _layer)): Path<(String, String)>,
 ) -> AccessResult<Response> {
-    authorize(&state, &tc, &id).await?;
+    authorize(&access, &tc, &id).await?;
     Ok(z_group_json())
 }
 
@@ -345,13 +357,14 @@ fn zarr_source_json(source: &UsableDataSource, layers: Vec<Value>) -> DsResult<V
 }
 
 pub(super) async fn data_source<const V: u8>(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(access): State<AccessTokenService>,
     tc: TokenContext,
     Path(id): Path<String>,
 ) -> AccessResult<Response> {
-    let id = authorize(&state, &tc, &id).await?;
-    let source = state
-        .datasets
+    let id = authorize(&access, &tc, &id).await?;
+    let source = datasets
         .get_by_id(&id)
         .await
         .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?;
@@ -360,21 +373,23 @@ pub(super) async fn data_source<const V: u8>(
 }
 
 async fn layer_dir<const V: u8>(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(access): State<AccessTokenService>,
     tc: TokenContext,
     Path((id, layer_name)): Path<(String, String)>,
 ) -> AccessResult<Response> {
-    let id = authorize(&state, &tc, &id).await?;
-    Ok(layer_dir_inner(&state, &id, &layer_name, V).await?)
+    let id = authorize(&access, &tc, &id).await?;
+    Ok(layer_dir_inner(&datasets, &id, &layer_name, V).await?)
 }
 
 async fn layer_dir_inner(
-    state: &AppState,
+    datasets: &DatasetCache,
     id: &str,
     layer_name: &str,
     zarr_version: u8,
 ) -> DsResult<Response> {
-    let (_, layer) = layer_or_not_found(state, id, layer_name).await?;
+    let (_, layer) = layer_or_not_found(datasets, id, layer_name).await?;
     let mut entries: Vec<String> = if zarr_version == 2 {
         vec![FILENAME_DOT_ZATTRS.into(), FILENAME_DOT_ZGROUP.into()]
     } else {
@@ -389,16 +404,18 @@ async fn layer_dir_inner(
 }
 
 async fn z_attrs(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(access): State<AccessTokenService>,
     tc: TokenContext,
     Path((id, layer_name)): Path<(String, String)>,
 ) -> AccessResult<Response> {
-    let id = authorize(&state, &tc, &id).await?;
-    Ok(z_attrs_inner(&state, &id, &layer_name).await?)
+    let id = authorize(&access, &tc, &id).await?;
+    Ok(z_attrs_inner(&datasets, &id, &layer_name).await?)
 }
 
-async fn z_attrs_inner(state: &AppState, id: &str, layer_name: &str) -> DsResult<Response> {
-    let (source, layer) = layer_or_not_found(state, id, layer_name).await?;
+async fn z_attrs_inner(datasets: &DatasetCache, id: &str, layer_name: &str) -> DsResult<Response> {
+    let (source, layer) = layer_or_not_found(datasets, id, layer_name).await?;
     let header = NgffMetadata::from_name_voxel_size_and_mags(
         layer_name,
         &source.scale,
@@ -409,16 +426,22 @@ async fn z_attrs_inner(state: &AppState, id: &str, layer_name: &str) -> DsResult
 }
 
 async fn zarr_json_layer(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(access): State<AccessTokenService>,
     tc: TokenContext,
     Path((id, layer_name)): Path<(String, String)>,
 ) -> AccessResult<Response> {
-    let id = authorize(&state, &tc, &id).await?;
-    Ok(zarr_json_layer_inner(&state, &id, &layer_name).await?)
+    let id = authorize(&access, &tc, &id).await?;
+    Ok(zarr_json_layer_inner(&datasets, &id, &layer_name).await?)
 }
 
-async fn zarr_json_layer_inner(state: &AppState, id: &str, layer_name: &str) -> DsResult<Response> {
-    let (source, layer) = layer_or_not_found(state, id, layer_name).await?;
+async fn zarr_json_layer_inner(
+    datasets: &DatasetCache,
+    id: &str,
+    layer_name: &str,
+) -> DsResult<Response> {
+    let (source, layer) = layer_or_not_found(datasets, id, layer_name).await?;
     let ngff = NgffMetadataV0_5::from_name_voxel_size_and_mags(
         layer_name,
         &source.scale,
@@ -433,23 +456,24 @@ async fn zarr_json_layer_inner(state: &AppState, id: &str, layer_name: &str) -> 
 }
 
 async fn mag_dir<const V: u8>(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(access): State<AccessTokenService>,
     tc: TokenContext,
     Path((id, layer_name, mag)): Path<(String, String, String)>,
 ) -> AccessResult<Response> {
-    let id = authorize(&state, &tc, &id).await?;
-    Ok(mag_dir_inner(&state, &id, &layer_name, &mag, V).await?)
+    let id = authorize(&access, &tc, &id).await?;
+    Ok(mag_dir_inner(&datasets, &id, &layer_name, &mag, V).await?)
 }
 
 async fn mag_dir_inner(
-    state: &AppState,
+    datasets: &DatasetCache,
     id: &str,
     layer_name: &str,
     mag: &str,
     zarr_version: u8,
 ) -> DsResult<Response> {
-    let (_, layer) = state
-        .datasets
+    let (_, layer) = datasets
         .get_with_layer(id, layer_name)
         .await
         .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))?;
@@ -467,21 +491,23 @@ async fn mag_dir_inner(
 }
 
 async fn z_array(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(access): State<AccessTokenService>,
     tc: TokenContext,
     Path((id, layer_name, mag)): Path<(String, String, String)>,
 ) -> AccessResult<Response> {
-    let id = authorize(&state, &tc, &id).await?;
-    Ok(z_array_inner(&state, &id, &layer_name, &mag).await?)
+    let id = authorize(&access, &tc, &id).await?;
+    Ok(z_array_inner(&datasets, &id, &layer_name, &mag).await?)
 }
 
 async fn z_array_inner(
-    state: &AppState,
+    datasets: &DatasetCache,
     id: &str,
     layer_name: &str,
     mag: &str,
 ) -> DsResult<Response> {
-    let (_, layer) = layer_or_not_found(state, id, layer_name).await?;
+    let (_, layer) = layer_or_not_found(datasets, id, layer_name).await?;
     let mag = existing_mag(&layer, layer_name, mag)?;
     let header = ZarrHeader::for_array(
         layer.element_class,
@@ -493,21 +519,23 @@ async fn z_array_inner(
 }
 
 async fn zarr_json_mag(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(access): State<AccessTokenService>,
     tc: TokenContext,
     Path((id, layer_name, mag)): Path<(String, String, String)>,
 ) -> AccessResult<Response> {
-    let id = authorize(&state, &tc, &id).await?;
-    Ok(zarr_json_mag_inner(&state, &id, &layer_name, &mag).await?)
+    let id = authorize(&access, &tc, &id).await?;
+    Ok(zarr_json_mag_inner(&datasets, &id, &layer_name, &mag).await?)
 }
 
 async fn zarr_json_mag_inner(
-    state: &AppState,
+    datasets: &DatasetCache,
     id: &str,
     layer_name: &str,
     mag: &str,
 ) -> DsResult<Response> {
-    let (_, layer) = layer_or_not_found(state, id, layer_name).await?;
+    let (_, layer) = layer_or_not_found(datasets, id, layer_name).await?;
     let mag = existing_mag(&layer, layer_name, mag)?;
     Ok(play_json(&zarr3_array_header_json(
         layer.element_class,
@@ -518,24 +546,37 @@ async fn zarr_json_mag_inner(
 }
 
 async fn raw_cube(
-    State(state): State<AppState>,
+    State(binary_data): State<Arc<BinaryDataService>>,
+
+    State(datasets): State<DatasetCache>,
+
+    State(access): State<AccessTokenService>,
     tc: TokenContext,
     Path((id, layer_name, mag, coordinates)): Path<(String, String, String, String)>,
 ) -> AccessResult<Response> {
-    let id = authorize(&state, &tc, &id).await?;
-    Ok(raw_cube_inner(&state, &tc, &id, &layer_name, &mag, &coordinates).await?)
+    let id = authorize(&access, &tc, &id).await?;
+    Ok(raw_cube_inner(
+        &binary_data,
+        &datasets,
+        &tc,
+        &id,
+        &layer_name,
+        &mag,
+        &coordinates,
+    )
+    .await?)
 }
 
 async fn raw_cube_inner(
-    state: &AppState,
+    binary_data: &Arc<BinaryDataService>,
+    datasets: &DatasetCache,
     tc: &TokenContext,
     id: &str,
     layer_name: &str,
     mag: &str,
     coordinates: &str,
 ) -> DsResult<Response> {
-    let (source, layer) = state
-        .datasets
+    let (source, layer) = datasets
         .get_with_layer(id, layer_name)
         .await
         .map_err(|e| e.with_param_status(StatusCode::SERVICE_UNAVAILABLE))?;
@@ -566,8 +607,7 @@ async fn raw_cube_inner(
             ..Default::default()
         },
     };
-    let result = state
-        .binary_data
+    let result = binary_data
         .handle_data_requests(&[request], tc.user_token.as_deref())
         .await;
     if !result.missing_indices.is_empty() || !result.failed_indices.is_empty() {
@@ -585,11 +625,11 @@ fn octet_stream(data: Vec<u8>) -> Response {
 
 /// Scala `remoteWebknossosClient.getAnnotationSource(accessToken) ~> NOT_FOUND`.
 async fn annotation_source(
-    state: &AppState,
+    wk_client: &WkClient,
     access_token: &str,
     tc: &TokenContext,
 ) -> DsResult<AnnotationSource> {
-    annotation_source_with_rpc_status(state, access_token, tc)
+    annotation_source_with_rpc_status(wk_client, access_token, tc)
         .await
         .map_err(|e| e.with_param_status(StatusCode::NOT_FOUND))
 }
@@ -597,14 +637,11 @@ async fn annotation_source(
 /// Scala `getAnnotationSource(accessToken)` without `~>` (`dataSourceDirectoryContentsPrivateLink`):
 /// a failed RPC keeps WEBKNOSSOS's status.
 async fn annotation_source_with_rpc_status(
-    state: &AppState,
+    wk_client: &WkClient,
     access_token: &str,
     tc: &TokenContext,
 ) -> DsResult<AnnotationSource> {
-    let value = state
-        .wk_client
-        .get_annotation_source(access_token, tc)
-        .await?;
+    let value = wk_client.get_annotation_source(access_token, tc).await?;
     AnnotationSource::from_json(value)
 }
 
@@ -635,12 +672,12 @@ enum LayerTarget {
 }
 
 async fn layer_target(
-    state: &AppState,
+    wk_client: &WkClient,
     access_token: &str,
     layer_name: &str,
     tc: &TokenContext,
 ) -> DsResult<LayerTarget> {
-    let source = annotation_source(state, access_token, tc).await?;
+    let source = annotation_source(wk_client, access_token, tc).await?;
     Ok(match source.annotation_layer(layer_name) {
         Some(layer) => LayerTarget::Annotation {
             tracing_id: layer.tracing_id.clone(),
@@ -654,20 +691,18 @@ async fn layer_target(
 }
 
 async fn private_source_dir<const V: u8>(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(wk_client): State<WkClient>,
     tc: TokenContext,
     Path(access_token): Path<String>,
 ) -> AccessResult<Response> {
     // Scala: no `~> NOT_FOUND` here; a failed RPC answers with WEBKNOSSOS's status.
-    let source = annotation_source_with_rpc_status(&state, &access_token, &tc).await?;
-    let data_source = state
-        .datasets
-        .get_by_id(&source.dataset_id)
-        .await
-        .map_err(|e| {
-            e.wrap(SOURCE_NOT_FOUND)
-                .with_param_status(StatusCode::NOT_FOUND)
-        })?;
+    let source = annotation_source_with_rpc_status(&wk_client, &access_token, &tc).await?;
+    let data_source = datasets.get_by_id(&source.dataset_id).await.map_err(|e| {
+        e.wrap(SOURCE_NOT_FOUND)
+            .with_param_status(StatusCode::NOT_FOUND)
+    })?;
     let annotation_names: Vec<String> = source.volume_layers().map(|l| l.name.clone()).collect();
     let mut entries = source_dir_entries::<V>();
     entries.extend(annotation_names.iter().cloned());
@@ -686,21 +721,21 @@ async fn private_source_dir<const V: u8>(
 }
 
 pub(super) async fn private_data_source<const V: u8>(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(wk_client): State<WkClient>,
+
+    State(tracingstore): State<TracingstoreClient>,
     tc: TokenContext,
     Path(access_token): Path<String>,
 ) -> AccessResult<Response> {
-    let source = annotation_source(&state, &access_token, &tc).await?;
+    let source = annotation_source(&wk_client, &access_token, &tc).await?;
     let relevant_tc = relevant_token_context(&source, &access_token, &tc);
     let volume_layers: Vec<_> = source.volume_layers().collect();
-    let data_source = state
-        .datasets
-        .get_by_id(&source.dataset_id)
-        .await
-        .map_err(|e| {
-            e.wrap(SOURCE_NOT_FOUND)
-                .with_param_status(StatusCode::NOT_FOUND)
-        })?;
+    let data_source = datasets.get_by_id(&source.dataset_id).await.map_err(|e| {
+        e.wrap(SOURCE_NOT_FOUND)
+            .with_param_status(StatusCode::NOT_FOUND)
+    })?;
     let remaining: Vec<StaticLayer> = data_source
         .data_layers
         .iter()
@@ -709,8 +744,7 @@ pub(super) async fn private_data_source<const V: u8>(
         .collect();
     let mut layers = zarr_layers(&remaining, V)?;
     for layer in volume_layers {
-        let raw = state
-            .tracingstore
+        let raw = tracingstore
             .volume_layer_as_zarr_layer(
                 &source.tracing_store_url,
                 &layer.tracing_id,
@@ -728,35 +762,39 @@ pub(super) async fn private_data_source<const V: u8>(
 }
 
 async fn private_z_group_root(
-    State(state): State<AppState>,
+    State(wk_client): State<WkClient>,
+
+    State(tracingstore): State<TracingstoreClient>,
     tc: TokenContext,
     Path(access_token): Path<String>,
 ) -> AccessResult<Response> {
-    Ok(private_z_group_inner(&state, &tc, &access_token, "").await?)
+    Ok(private_z_group_inner(&wk_client, &tracingstore, &tc, &access_token, "").await?)
 }
 
 async fn private_z_group_layer(
-    State(state): State<AppState>,
+    State(wk_client): State<WkClient>,
+
+    State(tracingstore): State<TracingstoreClient>,
     tc: TokenContext,
     Path((access_token, layer_name)): Path<(String, String)>,
 ) -> AccessResult<Response> {
-    Ok(private_z_group_inner(&state, &tc, &access_token, &layer_name).await?)
+    Ok(private_z_group_inner(&wk_client, &tracingstore, &tc, &access_token, &layer_name).await?)
 }
 
 async fn private_z_group_inner(
-    state: &AppState,
+    wk_client: &WkClient,
+    tracingstore: &TracingstoreClient,
     tc: &TokenContext,
     access_token: &str,
     layer_name: &str,
 ) -> DsResult<Response> {
-    match layer_target(state, access_token, layer_name, tc).await? {
+    match layer_target(wk_client, access_token, layer_name, tc).await? {
         LayerTarget::Annotation {
             tracing_id,
             tracing_store_url,
             tc,
         } => Ok(play_json(
-            &state
-                .tracingstore
+            &tracingstore
                 .z_group(&tracing_store_url, &tracing_id, &tc)
                 .await?,
         )),
@@ -765,92 +803,104 @@ async fn private_z_group_inner(
 }
 
 async fn private_layer_dir<const V: u8>(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(wk_client): State<WkClient>,
+
+    State(tracingstore): State<TracingstoreClient>,
     tc: TokenContext,
     Path((access_token, layer_name)): Path<(String, String)>,
 ) -> AccessResult<Response> {
     Ok(
-        match layer_target(&state, &access_token, &layer_name, &tc).await? {
+        match layer_target(&wk_client, &access_token, &layer_name, &tc).await? {
             LayerTarget::Annotation {
                 tracing_id,
                 tracing_store_url,
                 tc,
             } => {
-                let entries = state
-                    .tracingstore
+                let entries = tracingstore
                     .layer_directory_contents(&tracing_store_url, &tracing_id, V, &tc)
                     .await?;
                 html(directory_html("Tracingstore", &tracing_id, &entries))
             }
             LayerTarget::Dataset { dataset_id } => {
-                layer_dir_inner(&state, &dataset_id, &layer_name, V).await?
+                layer_dir_inner(&datasets, &dataset_id, &layer_name, V).await?
             }
         },
     )
 }
 
 async fn private_z_attrs(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(wk_client): State<WkClient>,
+
+    State(tracingstore): State<TracingstoreClient>,
     tc: TokenContext,
     Path((access_token, layer_name)): Path<(String, String)>,
 ) -> AccessResult<Response> {
     Ok(
-        match layer_target(&state, &access_token, &layer_name, &tc).await? {
+        match layer_target(&wk_client, &access_token, &layer_name, &tc).await? {
             LayerTarget::Annotation {
                 tracing_id,
                 tracing_store_url,
                 tc,
             } => play_json(
-                &state
-                    .tracingstore
+                &tracingstore
                     .ome_ngff_header(&tracing_store_url, &tracing_id, &tc)
                     .await?,
             ),
             LayerTarget::Dataset { dataset_id } => {
-                z_attrs_inner(&state, &dataset_id, &layer_name).await?
+                z_attrs_inner(&datasets, &dataset_id, &layer_name).await?
             }
         },
     )
 }
 
 async fn private_zarr_json_layer(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(wk_client): State<WkClient>,
+
+    State(tracingstore): State<TracingstoreClient>,
     tc: TokenContext,
     Path((access_token, layer_name)): Path<(String, String)>,
 ) -> AccessResult<Response> {
     Ok(
-        match layer_target(&state, &access_token, &layer_name, &tc).await? {
+        match layer_target(&wk_client, &access_token, &layer_name, &tc).await? {
             LayerTarget::Annotation {
                 tracing_id,
                 tracing_store_url,
                 tc,
             } => play_json(
-                &state
-                    .tracingstore
+                &tracingstore
                     .zarr_json_group_header(&tracing_store_url, &tracing_id, &tc)
                     .await?,
             ),
             LayerTarget::Dataset { dataset_id } => {
-                zarr_json_layer_inner(&state, &dataset_id, &layer_name).await?
+                zarr_json_layer_inner(&datasets, &dataset_id, &layer_name).await?
             }
         },
     )
 }
 
 async fn private_mag_dir<const V: u8>(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(wk_client): State<WkClient>,
+
+    State(tracingstore): State<TracingstoreClient>,
     tc: TokenContext,
     Path((access_token, layer_name, mag)): Path<(String, String, String)>,
 ) -> AccessResult<Response> {
     Ok(
-        match layer_target(&state, &access_token, &layer_name, &tc).await? {
+        match layer_target(&wk_client, &access_token, &layer_name, &tc).await? {
             LayerTarget::Annotation {
                 tracing_id,
                 tracing_store_url,
                 tc,
             } => {
-                let entries = state
-                    .tracingstore
+                let entries = tracingstore
                     .mag_directory_contents(&tracing_store_url, &tracing_id, &mag, V, &tc)
                     .await?;
                 html(directory_html(
@@ -860,81 +910,101 @@ async fn private_mag_dir<const V: u8>(
                 ))
             }
             LayerTarget::Dataset { dataset_id } => {
-                mag_dir_inner(&state, &dataset_id, &layer_name, &mag, V).await?
+                mag_dir_inner(&datasets, &dataset_id, &layer_name, &mag, V).await?
             }
         },
     )
 }
 
 async fn private_z_array(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(wk_client): State<WkClient>,
+
+    State(tracingstore): State<TracingstoreClient>,
     tc: TokenContext,
     Path((access_token, layer_name, mag)): Path<(String, String, String)>,
 ) -> AccessResult<Response> {
     Ok(
-        match layer_target(&state, &access_token, &layer_name, &tc).await? {
+        match layer_target(&wk_client, &access_token, &layer_name, &tc).await? {
             LayerTarget::Annotation {
                 tracing_id,
                 tracing_store_url,
                 tc,
             } => {
-                let raw = state
-                    .tracingstore
+                let raw = tracingstore
                     .z_array(&tracing_store_url, &tracing_id, &mag, &tc)
                     .await?;
                 // Scala reads a `ZarrHeader` and writes it back.
                 play_json(&ZarrHeader::from_json(&raw)?.to_json())
             }
             LayerTarget::Dataset { dataset_id } => {
-                z_array_inner(&state, &dataset_id, &layer_name, &mag).await?
+                z_array_inner(&datasets, &dataset_id, &layer_name, &mag).await?
             }
         },
     )
 }
 
 async fn private_zarr_json_mag(
-    State(state): State<AppState>,
+    State(datasets): State<DatasetCache>,
+
+    State(wk_client): State<WkClient>,
+
+    State(tracingstore): State<TracingstoreClient>,
     tc: TokenContext,
     Path((access_token, layer_name, mag)): Path<(String, String, String)>,
 ) -> AccessResult<Response> {
     Ok(
-        match layer_target(&state, &access_token, &layer_name, &tc).await? {
+        match layer_target(&wk_client, &access_token, &layer_name, &tc).await? {
             LayerTarget::Annotation {
                 tracing_id,
                 tracing_store_url,
                 tc,
             } => play_json(
-                &state
-                    .tracingstore
+                &tracingstore
                     .zarr_json(&tracing_store_url, &tracing_id, &mag, &tc)
                     .await?,
             ),
             LayerTarget::Dataset { dataset_id } => {
-                zarr_json_mag_inner(&state, &dataset_id, &layer_name, &mag).await?
+                zarr_json_mag_inner(&datasets, &dataset_id, &layer_name, &mag).await?
             }
         },
     )
 }
 
 async fn private_raw_cube(
-    State(state): State<AppState>,
+    State(binary_data): State<Arc<BinaryDataService>>,
+
+    State(datasets): State<DatasetCache>,
+
+    State(wk_client): State<WkClient>,
+
+    State(tracingstore): State<TracingstoreClient>,
     tc: TokenContext,
     Path((access_token, layer_name, mag, coordinates)): Path<(String, String, String, String)>,
 ) -> AccessResult<Response> {
     Ok(
-        match layer_target(&state, &access_token, &layer_name, &tc).await? {
+        match layer_target(&wk_client, &access_token, &layer_name, &tc).await? {
             LayerTarget::Annotation {
                 tracing_id,
                 tracing_store_url,
                 tc,
             } => octet_stream(
-                state
-                    .tracingstore
+                tracingstore
                     .raw_zarr_cube(&tracing_store_url, &tracing_id, &mag, &coordinates, &tc)
                     .await?,
             ),
             LayerTarget::Dataset { dataset_id } => {
-                raw_cube_inner(&state, &tc, &dataset_id, &layer_name, &mag, &coordinates).await?
+                raw_cube_inner(
+                    &binary_data,
+                    &datasets,
+                    &tc,
+                    &dataset_id,
+                    &layer_name,
+                    &mag,
+                    &coordinates,
+                )
+                .await?
             }
         },
     )

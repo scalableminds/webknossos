@@ -1,6 +1,6 @@
 //! Datastore Slack attachments and the Scala 30-message/minute limit.
 use std::{
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, PoisonError},
     time::{Duration, Instant},
 };
 
@@ -70,7 +70,7 @@ impl SlackNotifications {
             .inner
             .rate
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(PoisonError::into_inner)
             .reserve(Instant::now())
         {
             tracing::warn!(title, "Slack notification rate limit reached");

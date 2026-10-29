@@ -1,4 +1,6 @@
 //! ExportsController (job export downloads) and DSAiModelController (model voxel size).
+use std::fmt::Write;
+
 use axum::{
     Json, Router,
     body::Body,
@@ -13,11 +15,13 @@ use tokio::io::AsyncReadExt;
 
 use crate::{
     AppState,
-    access::{AccessResult, TokenContext, UserAccessRequest},
+    access::{AccessResult, AccessTokenService, TokenContext, UserAccessRequest},
+    clients::wk::WkClient,
     controller,
-    datavault::ByteRange,
+    datavault::{ByteRange, DataVaultService},
     error::DsError,
     models::{UPath, Vec3Double, VoxelSize},
+    services::BaseDirService,
 };
 
 use super::helpers::{dataset_id, validated_body};
@@ -63,7 +67,7 @@ pub fn content_disposition_attachment(name: &str) -> String {
             if b.is_ascii_alphanumeric() || b"!#$&+-.^_`|~".contains(&b) {
                 out.push(b as char);
             } else {
-                out.push_str(&format!("%{b:02X}"));
+                let _ = write!(out, "%{b:02X}");
             }
         }
     }
@@ -90,7 +94,9 @@ fn mime_type(name: &str) -> &'static str {
 }
 
 async fn download(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(wk_client): State<WkClient>,
+    State(base_dirs): State<BaseDirService>,
     tc: TokenContext,
     Path(job_id): Path<String>,
 ) -> AccessResult<Response> {
@@ -99,15 +105,13 @@ async fn download(
             "Cannot parse URI path parameter jobId with value “{job_id}” as ObjectId."
         ))
     })?;
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::download_job_export(&job_id), &tc)
         .await?;
-    let properties = state.wk_client.get_job_export_properties(&job_id).await?;
-    let bases = state.base_dirs.clone();
+    let properties = wk_client.get_job_export_properties(&job_id).await?;
     let organization = properties.organization_id.clone();
     let orga_dir = tokio::task::spawn_blocking(move || {
-        bases.get_one_local_for_org(&organization, false, false, false)
+        base_dirs.get_one_local_for_org(&organization, false, false, false)
     })
     .await
     .map_err(DsError::from_exception)??;
@@ -154,7 +158,8 @@ async fn download(
 }
 
 async fn effective_voxel_size(
-    State(state): State<AppState>,
+    State(access): State<AccessTokenService>,
+    State(data_vaults): State<DataVaultService>,
     tc: TokenContext,
     body: Result<Json<Value>, JsonRejection>,
 ) -> AccessResult<Response> {
@@ -167,11 +172,10 @@ async fn effective_voxel_size(
         Ok(path) => path,
         Err(response) => return Ok(*response),
     };
-    state
-        .access
+    access
         .validate_access(UserAccessRequest::webknossos(), &tc)
         .await?;
-    let model = state.data_vaults.vault_path_for(&model_path).await?;
+    let model = data_vaults.vault_path_for(&model_path).await?;
     let bytes = model
         .join("model")
         .join(STATISTICS_JSON)

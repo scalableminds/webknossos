@@ -3,7 +3,7 @@
 //! (spaces, `<>"{}|\^` and backticks, control characters, malformed `%` escapes) are rejected with
 //! a `URISyntaxException`-style message.
 
-use std::fmt;
+use std::fmt::{self, Write};
 
 use percent_encoding::percent_decode_str;
 
@@ -18,7 +18,9 @@ pub fn uri_encode(value: &str, encode_slash: bool) -> String {
                 out.push(byte as char)
             }
             b'/' if !encode_slash => out.push('/'),
-            _ => out.push_str(&format!("%{byte:02X}")),
+            _ => {
+                let _ = write!(out, "%{byte:02X}");
+            }
         }
     }
     out
@@ -75,9 +77,7 @@ impl RemoteUri {
             let query_start = path_start + raw_path.len() + 1;
             check_chars(query, query_start, input, Component::Query)?;
         }
-        let (host, port) = authority
-            .map(parse_server_authority)
-            .unwrap_or((None, None));
+        let (host, port) = authority.map_or((None, None), parse_server_authority);
         Ok(Self {
             original: input.to_owned(),
             scheme: scheme.to_owned(),

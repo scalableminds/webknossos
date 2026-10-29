@@ -7,7 +7,7 @@ use crate::{
 };
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, PoisonError},
     time::{Duration, Instant},
 };
 struct Errors {
@@ -32,7 +32,7 @@ impl DatasetErrorLoggingService {
     pub fn clear_for_dataset(&self, id: &DataSourceId) {
         self.inner
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(PoisonError::into_inner)
             .counts
             .remove(id);
     }
@@ -40,7 +40,7 @@ impl DatasetErrorLoggingService {
         *self
             .inner
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(PoisonError::into_inner)
             .counts
             .get(id)
             .unwrap_or(&0)
@@ -67,7 +67,7 @@ impl DatasetErrorLoggingService {
                 self.health.push(error.to_string());
                 tracing::error!(source=%id, label, error=%error,"Caught internal dataset error");
             } else {
-                let mut errors = self.inner.lock().unwrap_or_else(|e| e.into_inner());
+                let mut errors = self.inner.lock().unwrap_or_else(PoisonError::into_inner);
                 if errors.window.elapsed() >= Duration::from_secs(3600) {
                     errors.counts.clear();
                     errors.window = Instant::now();

@@ -16,7 +16,7 @@ use crate::{
 };
 use serde_json::Value;
 use std::{
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, PoisonError},
     time::{Duration, Instant},
 };
 use store::{IndexValidation, VaultStore};
@@ -203,7 +203,7 @@ impl Zarr3Format {
         token: Option<&str>,
     ) -> Arc<AsyncArrayShardedReadableExtCache> {
         let cache = {
-            let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
+            let mut sessions = self.sessions.lock().unwrap_or_else(PoisonError::into_inner);
             let now = Instant::now();
             sessions.retain(|s| {
                 now.duration_since(s.created) < Duration::from_secs(7200)

@@ -1,39 +1,48 @@
 //! Name normalization and ObjectId generation.
-use std::sync::atomic::Ordering;
+use std::{fmt::Write, sync::atomic::Ordering};
 use webknossos_common::bytes::array;
 
 /// Scala `TextUtils.normalize` (umlauts and accented letters transliterated).
 pub fn normalize_text(name: &str) -> String {
-    name.chars()
-        .map(|c| match c {
-            'ü' => "ue".into(),
-            'Ü' => "Ue".into(),
-            'ö' => "oe".into(),
-            'Ö' => "Oe".into(),
-            'ä' => "ae".into(),
-            'Ä' => "Ae".into(),
-            'ß' => "ss".into(),
-            'é' | 'è' | 'ê' | 'ë' => "e".into(),
-            'È' | 'É' | 'Ê' | 'Ë' => "E".into(),
-            'Ç' => "C".into(),
-            'ç' => "c".into(),
-            'ñ' => "n".into(),
-            'Ñ' => "N".into(),
-            'ï' | 'í' | 'ì' => "i".into(),
-            'Ï' => "I".into(),
-            'å' => "a".into(),
-            'Å' => "A".into(),
-            'œ' => "oe".into(),
-            'Œ' => "Oe".into(),
-            'æ' => "ae".into(),
-            'Æ' => "Ae".into(),
-            'þ' => "th".into(),
-            'Þ' => "Th".into(),
-            'ø' => "oe".into(),
-            'Ø' => "Oe".into(),
-            other => other.to_string(),
-        })
-        .collect()
+    let mut out = String::with_capacity(name.len());
+    for c in name.chars() {
+        match transliteration(c) {
+            Some(replacement) => out.push_str(replacement),
+            None => out.push(c),
+        }
+    }
+    out
+}
+
+fn transliteration(c: char) -> Option<&'static str> {
+    Some(match c {
+        'ü' => "ue",
+        'Ü' => "Ue",
+        'ö' => "oe",
+        'Ö' => "Oe",
+        'ä' => "ae",
+        'Ä' => "Ae",
+        'ß' => "ss",
+        'é' | 'è' | 'ê' | 'ë' => "e",
+        'È' | 'É' | 'Ê' | 'Ë' => "E",
+        'Ç' => "C",
+        'ç' => "c",
+        'ñ' => "n",
+        'Ñ' => "N",
+        'ï' | 'í' | 'ì' => "i",
+        'Ï' => "I",
+        'å' => "a",
+        'Å' => "A",
+        'œ' => "oe",
+        'Œ' => "Oe",
+        'æ' => "ae",
+        'Æ' => "Ae",
+        'þ' => "th",
+        'Þ' => "Th",
+        'ø' => "oe",
+        'Ø' => "Oe",
+        _ => return None,
+    })
 }
 
 /// Scala `TextUtils.normalizeStrong` (Option rendered like Scala string interpolation).
@@ -76,5 +85,8 @@ pub(super) fn generate_object_id() -> String {
     id.extend(seconds.to_be_bytes());
     id.extend(process);
     id.extend(&c.to_be_bytes()[1..]);
-    id.iter().map(|b| format!("{b:02x}")).collect()
+    id.iter().fold(String::with_capacity(24), |mut hex, b| {
+        let _ = write!(hex, "{b:02x}");
+        hex
+    })
 }

@@ -545,7 +545,7 @@ impl MeshFileService {
                     .info
                     .transform
                     .chunks(4)
-                    .map(|row| row.to_vec())
+                    .map(<[f64]>::to_vec)
                     .collect::<Vec<_>>();
                 let mut groups = Vec::new();
                 for id in ids {

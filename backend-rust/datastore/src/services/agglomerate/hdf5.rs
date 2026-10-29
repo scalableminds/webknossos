@@ -12,7 +12,7 @@ use crate::{
 use lru::LruCache;
 use std::{
     num::NonZeroUsize,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, PoisonError},
 };
 type FileKey = (DataSourceId, String, String, UPath);
 struct CachedFile {
@@ -121,7 +121,7 @@ impl Hdf5AgglomerateService {
         let ids = ids.to_vec();
         let block = self.config.block_size;
         tokio::task::spawn_blocking(move || {
-            let mut cache = file.ids.lock().unwrap_or_else(|e| e.into_inner());
+            let mut cache = file.ids.lock().unwrap_or_else(PoisonError::into_inner);
             ids.into_iter()
                 .map(|id| Self::map_id(&file, &mut cache, id, block))
                 .collect()
@@ -208,7 +208,7 @@ impl Hdf5AgglomerateService {
                 }
                 mapped
             } else {
-                let mut cache = file.ids.lock().unwrap_or_else(|e| e.into_inner());
+                let mut cache = file.ids.lock().unwrap_or_else(PoisonError::into_inner);
                 ids.iter()
                     .map(|id| Self::map_id(&file, &mut cache, *id, block))
                     .collect::<DsResult<Vec<_>>>()?

@@ -256,8 +256,7 @@ impl From<&config::DataVaultCredential> for DataVaultCredential {
                 Self::GoogleServiceAccount {
                     name: name.clone(),
                     secret_json: serde_json::from_str::<Value>(secret_json.expose())
-                        .map(|v| v.to_string())
-                        .unwrap_or_else(|_| secret_json.expose().to_owned()),
+                        .map_or_else(|_| secret_json.expose().to_owned(), |v| v.to_string()),
                     user: None,
                     organization: None,
                 }

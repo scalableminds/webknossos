@@ -157,7 +157,7 @@ impl Hdf5Reader {
         }
         Ok(values
             .chunks(shape[1] as usize)
-            .map(|row| row.to_vec())
+            .map(<[f64]>::to_vec)
             .collect())
     }
     pub fn bytes(&self, name: &str, start: u64, count: u64) -> DsResult<Vec<u8>> {

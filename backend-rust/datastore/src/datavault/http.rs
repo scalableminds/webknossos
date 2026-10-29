@@ -1,6 +1,10 @@
 //! Scala `HttpsDataVault`.
 
-use std::{collections::HashMap, sync::Mutex, time::Duration};
+use std::{
+    collections::HashMap,
+    sync::{Mutex, PoisonError},
+    time::Duration,
+};
 
 use reqwest::{Client, Method, RequestBuilder, Response, StatusCode, header};
 
@@ -46,21 +50,21 @@ impl HttpsDataVault {
         *self
             .supports_range_requests
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(PoisonError::into_inner)
     }
 
     fn set_supports_range_requests(&self, value: bool) {
         *self
             .supports_range_requests
             .lock()
-            .unwrap_or_else(|e| e.into_inner()) = Some(value);
+            .unwrap_or_else(PoisonError::into_inner) = Some(value);
     }
 
     async fn header_information(&self, uri: &RemoteUri) -> VaultResult<(bool, u64)> {
         if let Some(info) = self
             .header_info_cache
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(PoisonError::into_inner)
             .get(uri.as_str())
         {
             return Ok(*info);
@@ -93,7 +97,7 @@ impl HttpsDataVault {
         };
         self.header_info_cache
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(PoisonError::into_inner)
             .insert(uri.as_str().to_owned(), (accepts_ranges, size));
         Ok((accepts_ranges, size))
     }

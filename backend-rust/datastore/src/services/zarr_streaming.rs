@@ -1,6 +1,8 @@
 //! Output side of Scala `ZarrStreamingController`: wk layers exposed as Zarr v2 / v3 arrays
 //! (`Zarr3OutputHelper`, `ZarrCoordinatesParser`, `Zarr3ArrayHeader.fromDataLayer`,
 //! `convertLayerToZarrLayer`) and the `datastoreZarrDatasourceDir` directory listing.
+use std::fmt::Write;
+
 use serde_json::{Map, Value, json};
 
 pub use crate::datareaders::zarr::reorder_additional_axes;
@@ -156,13 +158,14 @@ pub fn convert_layer_to_zarr_layer(layer: &StaticLayer, zarr_version: u8) -> DsR
 pub fn directory_html(kind: &str, name: &str, folder_contents: &[String]) -> String {
     let kind = escape_html(kind);
     let name = escape_html(name);
-    let items: String = folder_contents
-        .iter()
-        .map(|entry| {
-            let entry = escape_html(entry);
-            format!("\n        <li><a href=\"{entry}\">{entry}</a></li>\n      ")
-        })
-        .collect();
+    let mut items = String::new();
+    for entry in folder_contents {
+        let entry = escape_html(entry);
+        let _ = write!(
+            items,
+            "\n        <li><a href=\"{entry}\">{entry}</a></li>\n      "
+        );
+    }
     // Byte-identical to the Twirl output: no leading newline, trailing spaces kept (`{sp}`, so
     // editors cannot strip them), the removed `@* *@` comment and a blank CSS line leave their
     // indentation (`{blank4}`, `{blank6}`).

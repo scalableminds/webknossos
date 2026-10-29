@@ -189,7 +189,7 @@ async fn explore_local_n5_array(
         recurse_subdirs_until(path, &has_n5_header, 0).unwrap_or_else(|| path.to_path_buf());
     let base = UPath::from_local_path(path);
     let mut explored =
-        explore_local_layer(ctx, Explorer::N5Array, |p| p.clone(), &layer_path, id, "").await?;
+        explore_local_layer(ctx, Explorer::N5Array, Clone::clone, &layer_path, id, "").await?;
     explored.data_layers = map_mag_paths(explored.data_layers, |p| p.relativized_in(&base));
     Ok(explored)
 }

@@ -23,6 +23,7 @@ case class MailerConfig(
 class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
 
   private val smtpTimeoutMillis = 60000
+  private val charset = "utf-8"
 
   private lazy val session: Session = {
     val props = new Properties()
@@ -35,7 +36,7 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
     props.put("mail.smtp.ssl.checkserveridentity", conf.smtpCheckServerIdentity.toString)
     props.put("mail.smtp.connectiontimeout", smtpTimeoutMillis.toString)
     props.put("mail.smtp.timeout", smtpTimeoutMillis.toString)
-    val authenticator =
+    val authenticator: Authenticator =
       if (conf.smtpAuth)
         new Authenticator {
           override def getPasswordAuthentication: PasswordAuthentication =
@@ -57,7 +58,7 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
       if (conf.logToStdout) {
         logger.info(s"Sending mail: $mail")
       }
-      parseAddress(mail.from, mail.charset) match {
+      parseAddress(mail.from) match {
         case Some(from) => sendFrom(from, mail)
         case None       => logger.error(s"Mail was not sent due to invalid sender address: ${mail.from}")
       }
@@ -66,13 +67,12 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
   private def sendFrom(from: InternetAddress, mail: Mail): Unit = {
     val message = new MimeMessage(session)
     message.setFrom(from)
-    message.setReplyTo(parseAddresses(mail.replyTo, mail.charset))
-    message.addRecipients(Message.RecipientType.TO, parseAddresses(mail.recipients, mail.charset))
-    message.addRecipients(Message.RecipientType.CC, parseAddresses(mail.ccRecipients, mail.charset))
-    message.addRecipients(Message.RecipientType.BCC, parseAddresses(mail.bccRecipients, mail.charset))
-    message.setSubject(mail.subject, mail.charset)
+    message.setReplyTo(parseAddresses(mail.replyTo))
+    message.addRecipients(Message.RecipientType.TO, parseAddresses(mail.recipients))
+    message.addRecipients(Message.RecipientType.CC, parseAddresses(mail.ccRecipients))
+    message.addRecipients(Message.RecipientType.BCC, parseAddresses(mail.bccRecipients))
+    message.setSubject(mail.subject, charset)
     message.setSentDate(new Date())
-    mail.headers.foreach { case (key, value) => message.addHeader(key, value) }
     setBody(message, mail)
 
     if (conf.smtpHost.nonEmpty) {
@@ -82,11 +82,11 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
     }
   }
 
-  private def parseAddress(emailAddress: String, charset: String): Option[InternetAddress] =
+  private def parseAddress(emailAddress: String): Option[InternetAddress] =
     try {
       val address = new InternetAddress(emailAddress)
       address.validate()
-      // Re-encode the display name with the mail's charset instead of the JVM default
+      // Re-encode the display name with UTF-8 instead of the JVM default
       Option(address.getPersonal).foreach(personal => address.setPersonal(personal, charset))
       Some(address)
     } catch {
@@ -95,19 +95,19 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
         None
     }
 
-  private def parseAddresses(emailAddresses: List[String], charset: String): Array[Address] =
-    emailAddresses.flatMap(parseAddress(_, charset)).toArray[Address]
+  private def parseAddresses(emailAddresses: List[String]): Array[Address] =
+    emailAddresses.flatMap(parseAddress).toArray[Address]
 
   private def setBody(message: MimeMessage, mail: Mail): Unit =
     if (mail.bodyHtml == "") {
-      message.setText(mail.bodyText, mail.charset)
+      message.setText(mail.bodyText, charset)
     } else if (mail.bodyText == "") {
-      message.setText(mail.bodyHtml, mail.charset, "html")
+      message.setText(mail.bodyHtml, charset, "html")
     } else {
       val textPart = new MimeBodyPart()
-      textPart.setText(mail.bodyText, mail.charset)
+      textPart.setText(mail.bodyText, charset)
       val htmlPart = new MimeBodyPart()
-      htmlPart.setText(mail.bodyHtml, mail.charset, "html")
+      htmlPart.setText(mail.bodyHtml, charset, "html")
       message.setContent(new MimeMultipart("alternative", textPart, htmlPart))
     }
 

@@ -178,7 +178,7 @@ export function* reconcileMultiCutSelectionAfterForeignSplit(
   if (resolution.type === "unresolved") {
     // Still log this error.
     console.error(
-      "Could not resolve mapping for all segments of the current mulit part mincut partitions during resolving a foreign split action.",
+      "Could not resolve mapping for all segments of the current multi part mincut partitions during resolving a foreign split action.",
     );
   }
 }

@@ -1,3 +1,4 @@
+import ErrorHandling from "libs/error_handling";
 import { buffers, type Channel } from "redux-saga";
 import { actionChannel, call, delay, flush, put, race } from "typed-redux-saga";
 import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
@@ -10,6 +11,7 @@ import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import type { WebknossosState } from "viewer/store";
 import { getOrCreateOperationContext } from "../operation_context_saga";
 import { waitFor } from "../saga_helpers";
+import type { RebasingFailure } from "./rebasing/applying_update_artifacts";
 import { performRebasingIfNecessary } from "./rebasing/rebasing_sagas";
 
 /*
@@ -23,6 +25,7 @@ const VERSION_POLL_INTERVAL_READ_ONLY = process.env.IS_TESTING ? 250 : 5 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = process.env.IS_TESTING ? 1 * 1000 : 30 * 1000;
 
 const REBASING_BUSY_BLOCK_REASON = "Syncing Annotation";
+const RETRY_DELAY_WHILE_OTHER_OPERATION_IS_RUNNING = process.env.IS_TESTING ? 100 : 1000;
 
 export function* watchForNewerAnnotationVersion(): Saga<void> {
   yield* call(ensureWkInitialized);
@@ -66,21 +69,55 @@ export function* watchForNewerAnnotationVersion(): Saga<void> {
       ensureHasNewestVersion?.operationContext ?? null,
     );
     if (ctx == null) {
+      // Another operation is running that doesn't allow rebasing in parallel. Requeue the
+      // request and try again after a short delay. Without the delay, the requeued request
+      // would be taken again immediately (needsPollAnnotationUpdates is already "yes"), which
+      // results in an endless loop that never yields to the event loop.
+      // Waiting until the other operation is finished (e.g., with behaviorWhenDisallowed: "wait")
+      // could deadlock instead, because that operation might itself wait for an
+      // ENSURE_HAS_NEWEST_VERSION request that is queued in the channel behind this one.
       yield* maybeRequeuePollAndWait(ensureHasNewestVersion);
+      yield* delay(RETRY_DELAY_WHILE_OTHER_OPERATION_IS_RUNNING);
       continue;
     }
-    const { successful } = yield* ctx.execute(function* () {
+    const rebasingResult = yield* ctx.execute(function* () {
       return yield* call(performRebasingIfNecessary);
     });
 
-    if (successful) {
+    if (rebasingResult.successful) {
       yield* call(fulfillAllEnsureHasNewestVersionActions, ensureHasNewestVersion, channel);
     } else {
+      yield* call(reportRebasingFailure, rebasingResult.failure, ensureHasNewestVersion != null);
       // The user was already notified about the current annotation being outdated.
       // There is not much else we can do now. Sleep for 5 minutes.
       yield* delay(5 * 60 * 1000);
     }
   }
+}
+
+function* reportRebasingFailure(failure: RebasingFailure, isCallerWaiting: boolean): Saga<void> {
+  // A failed rebase cannot be recovered from (the user is asked to reload). Report it with as much
+  // context as possible, because it should not happen in the first place.
+  const { annotationId, version, collaborationMode } = yield* select((state) => state.annotation);
+  const { activeOperations } = yield* select((state) => state.operationContext);
+  const params = {
+    reason: failure.reason,
+    ...failure.details,
+    annotationId,
+    annotationVersion: version,
+    collaborationMode,
+    // If an ENSURE_HAS_NEWEST_VERSION request triggered the rebase, its caller keeps waiting
+    // (and its operation, e.g. SAVE or PROOFREADING, stays registered).
+    isCallerWaiting,
+    activeOperations,
+  };
+  console.error(`Rebasing failed: ${failure.reason}`, params, failure.error);
+  ErrorHandling.notifyWithPrefix(
+    failure.error ?? new Error(failure.reason),
+    "Rebasing failed: ",
+    params,
+    failure.isExpected ? "warning" : "error",
+  );
 }
 
 function* getPollInterval(): Saga<number> {

@@ -3,6 +3,7 @@ import Icon, {
   ExperimentOutlined,
   HomeOutlined,
   LoadingOutlined,
+  MessageOutlined,
   QuestionCircleOutlined,
   ScheduleOutlined,
   SwapOutlined,
@@ -24,6 +25,7 @@ import type { MenuProps } from "antd";
 import {
   Avatar,
   Badge,
+  Button,
   ConfigProvider,
   Flex,
   Input,
@@ -569,15 +571,14 @@ function OrganizationFilterInput({
 }) {
   const ref = useRef<InputRef>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesn't understand that ref.current is accessed?
   useEffect(() => {
-    if (ref?.current && isVisible) {
+    if (ref.current && isVisible) {
       setTimeout(() => {
         // Without the timeout, the focus doesn't work unfortunately.
         ref.current?.input?.focus();
       }, 100);
     }
-  }, [ref.current, isVisible]);
+  }, [isVisible]);
   const onChangeImpl = (evt: React.ChangeEvent<HTMLInputElement>) => {
     onChange(evt.target.value);
   };
@@ -602,11 +603,9 @@ function OrganizationFilterInput({
 function LoggedInAvatar({
   activeUser,
   handleLogout,
-  navbarHeight,
 }: {
   activeUser: APIUser;
   handleLogout: (event: React.SyntheticEvent) => void;
-  navbarHeight: number;
 } & SubMenuProps) {
   const { firstName, lastName, organization: organizationId } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
@@ -651,7 +650,6 @@ function LoggedInAvatar({
       selectedKeys={["prevent highlighting of this menu"]}
       mode="horizontal"
       style={{
-        paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
         marginInlineStart: "10px",
       }}
@@ -884,6 +882,9 @@ function Navbar() {
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
   const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
+  const hasSaveError = useWkSelector((state) => state.save.hasSaveError);
+  // Pushes the navbar items below the maintenance/upgrade banner when one is shown.
+  const bannerOffset = navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0;
   const historyLocation = useLocation();
 
   const handleLogout = async (event: React.SyntheticEvent) => {
@@ -920,14 +921,22 @@ function Navbar() {
       label: (
         <Link
           to="/dashboard"
+          aria-label="WEBKNOSSOS"
           style={{
             verticalAlign: "middle",
           }}
         >
-          {getCollapsibleMenuTitle(
-            "WEBKNOSSOS",
-            <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
-            collapseAllNavItems,
+          {collapseAllNavItems ? (
+            getCollapsibleMenuTitle(
+              "WEBKNOSSOS",
+              <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+              true,
+            )
+          ) : (
+            <>
+              <Icon component={WkLogoIcon} className="logo" />
+              <span className="logo-wordmark">WEBKNOSSOS</span>
+            </>
           )}
         </Link>
       ),
@@ -953,11 +962,23 @@ function Navbar() {
     trailingNavItems.push(<AnnotationLockedTag key="annotation-locked-tag" />);
 
     trailingNavItems.push(
+      <Button
+        key="help-chat-button"
+        shape="round"
+        color="default"
+        variant="filled"
+        icon={<MessageOutlined />}
+        onClick={() => setIsHelpModalOpen((isOpen) => !isOpen)}
+      >
+        Ask
+      </Button>,
+    );
+
+    trailingNavItems.push(
       <LoggedInAvatar
         key="logged-in-avatar"
         activeUser={loggedInUser}
         handleLogout={handleLogout}
-        navbarHeight={navbarHeight}
       />,
     );
   }
@@ -985,6 +1006,7 @@ function Navbar() {
     <Header
       className={classnames("navbar-header", {
         "collapsed-nav-header": collapseAllNavItems,
+        "save-error": hasSaveError,
       })}
     >
       <GlobalProgressBar />
@@ -997,7 +1019,7 @@ function Navbar() {
         selectedKeys={selectedKeys}
         onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
         style={{
-          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
+          paddingTop: bannerOffset,
           lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
         }}
         theme="dark"
@@ -1009,21 +1031,17 @@ function Navbar() {
         items={menuItems}
       />
       {isInAnnotationView ? separator : null}
-      <HelpModal
-        isModalOpen={isHelpModalOpen}
-        onCancel={() => setIsHelpModalOpen(false)}
-        centeredLayout
-      />
+      <HelpModal isModalOpen={isHelpModalOpen} onCancel={() => setIsHelpModalOpen(false)} />
       <PortalTarget
         portalId="navbarTracingSlot"
         style={{
           flex: 1,
           display: "flex",
-          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
+          paddingTop: bannerOffset,
         }}
       />
       <ConfigProvider theme={getAntdTheme("dark")}>
-        <Flex align="center" justify="flex-end" gap="small">
+        <Flex align="center" justify="flex-end" gap="small" style={{ paddingTop: bannerOffset }}>
           {trailingNavItems}
         </Flex>
       </ConfigProvider>

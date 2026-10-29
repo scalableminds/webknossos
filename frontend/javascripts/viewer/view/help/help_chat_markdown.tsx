@@ -29,10 +29,13 @@ const CHAT_MARKDOWN_COMPONENTS = {
     </Typography.Title>
   ),
   hr: () => <hr style={{ margin: "10px 0" }} />,
-  ul: ({ children }: { children: ReactNode }) => <ul style={{ paddingLeft: 16 }}>{children}</ul>,
-  ol: ({ children }: { children: ReactNode }) => <ol style={{ paddingLeft: 16 }}>{children}</ol>,
 };
 
 export function HelpChatMarkdown({ text }: { text: string }) {
-  return <Markdown components={CHAT_MARKDOWN_COMPONENTS}>{text}</Markdown>;
+  // The Typography container styles the lists, inline code, keys and code blocks of the reply.
+  return (
+    <Typography>
+      <Markdown components={CHAT_MARKDOWN_COMPONENTS}>{text}</Markdown>
+    </Typography>
+  );
 }

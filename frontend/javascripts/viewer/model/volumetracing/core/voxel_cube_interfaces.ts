@@ -6,7 +6,13 @@
  */
 
 import type { BucketWrite } from "./bucket_write_map";
-import type { BucketAddress, SegmentBucketData, SegmentId } from "./volume_annotation_types";
+import type {
+  BoundingBox,
+  BucketAddress,
+  MagIndex,
+  SegmentBucketData,
+  SegmentId,
+} from "./volume_annotation_types";
 
 /**
  * What can be done with a bucket right now. Two of the three states have no
@@ -41,6 +47,12 @@ export interface TransactionCube {
     address: BucketAddress,
     overwritableValue: SegmentId,
   ): ((index: number) => boolean) | null;
+  /**
+   * The region of a mag that may be written to (e.g., a task bounding box), in
+   * that mag's voxels. The rasterizer and the flood fill traversal stay within
+   * it at the source mag, and the transaction clips every mag's writes to it.
+   */
+  getEditableBoundingBox(magIndex: MagIndex): BoundingBox;
 }
 
 /**

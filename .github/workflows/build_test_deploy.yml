@@ -46,6 +46,8 @@ jobs:
         run: yarn typecheck
       - name: Check for cyclic dependencies in frontend
         run: yarn check-cyclic-dependencies
+      - name: Check that the React Compiler compiles all components
+        run: yarn check-react-compiler
       - name: Run frontend tests
         run: yarn run vitest run --config vitest_spec.config.ts --coverage.enabled true --silent=passed-only
       - name:
@@ -135,7 +137,8 @@ jobs:
         uses: actions/cache@v6
         with:
           # actions/cache does not expand directories, so exclusions only apply to paths listed by the globs.
-          # Hence the children of each target dir are listed, minus staged apps, web assets and logs.
+          # Hence the children of each target dir are listed, minus staged apps, web assets, logs and the native JNI build
+          # (its CMake cache pins the absolute JDK path, which differs between runner images).
           # YAML anchor, reused by the other compile cache steps below.
           path: &zinc-cache-paths |
             target/*
@@ -144,6 +147,7 @@ jobs:
             !**/target/universal
             !**/target/web
             !**/target/global-logging
+            !**/target/native
           key: zinc-test-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
             zinc-test-${{ github.ref_name }}-
@@ -244,7 +248,8 @@ jobs:
           if [ "$GITHUB_REF_TYPE" == "branch" ]; then
             echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" | tee -a "$GITHUB_ENV"
           else
-            CI_TAG=$GITHUB_REF_NAME
+            # release tags in the monorepo (scalableminds/mono) are webknossos/<version>
+            CI_TAG=${GITHUB_REF_NAME#webknossos/}
             echo "CI_TAG=$CI_TAG" | tee -a "$GITHUB_ENV"
             echo "NORMALIZED_BRANCH=$CI_TAG" | tee -a "$GITHUB_ENV"
           fi
@@ -421,3 +426,4 @@ jobs:
         run: .github/slack-notification.sh
         env:
           SLACK_NOTIFY_TOKEN: ${{ secrets.SLACK_NOTIFY_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

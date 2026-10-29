@@ -30,9 +30,11 @@ import { PureComponent, useContext } from "react";
 import { connect } from "react-redux";
 import { Link } from "react-router";
 import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_types";
-import { getSkeletonDescriptor } from "viewer/model/accessors/skeletontracing_accessor";
+import {
+  getSkeletonDescriptor,
+  getVolumeDescriptors,
+} from "viewer/model/accessors/annotation_accessor";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
-import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
 import type { WebknossosState } from "viewer/store";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
@@ -426,12 +428,12 @@ class DashboardTaskListView extends PureComponent<Props, State> {
           {task.projectName} (<FormattedDate timestamp={task.created} />)
         </span>
         {getSkeletonDescriptor(task.annotation) == null ? null : (
-          <Tag color="green" variant="outlined">
+          <Tag color="success" variant="outlined">
             skeleton
           </Tag>
         )}
         {getVolumeDescriptors(task.annotation).length === 0 ? null : (
-          <Tag color="orange" variant="outlined">
+          <Tag color="warning" variant="outlined">
             volume
           </Tag>
         )}

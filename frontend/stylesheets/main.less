@@ -20,27 +20,120 @@
 @import "command_palette.less";
 @import "_voxelytics.less";
 @import "_ai_jobs.less";
+@import "_upload_progress.less";
+@import "_help_panel.less";
 
-// Nunito is a variable font with a wght axis spanning 200-1000. The font-weight range has to be
-// declared, otherwise the browser treats each face as a single normal-weight font and synthesizes
-// bold instead of using the axis.
+// Web fonts (SIL Open Font License, see fonts/*-OFL.txt), taken from the fontsource packages
+// @fontsource-variable/hanken-grotesk and @fontsource/ibm-plex-mono. Each font is split into a
+// latin and a latin-ext subset; thanks to `unicode-range`, browsers only download the latin-ext
+// file when a page actually contains such characters.
+//
+// Hanken Grotesk is a variable font with a wght axis spanning 100-900. The font-weight range has
+// to be declared, otherwise the browser treats each face as a single normal-weight font and
+// synthesizes bold instead of using the axis.
+
 @font-face {
-  font-family: Nunito;
-  src:
-    local("Nunito"),
-    url("Nunito-VariableFont_wght.woff2") format("woff2");
-  font-weight: 200 1000;
+  font-family: "Hanken Grotesk";
+  src: url("fonts/hanken-grotesk-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
   font-display: swap;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
-  font-family: Nunito;
-  src:
-    local("Nunito"),
-    url("Nunito-Italic-VariableFont_wght.woff2") format("woff2");
-  font-weight: 200 1000;
+  font-family: "Hanken Grotesk";
+  src: url("fonts/hanken-grotesk-latin-wght-italic.woff2") format("woff2");
+  font-weight: 100 900;
   font-style: italic;
   font-display: swap;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Hanken Grotesk";
+  src: url("fonts/hanken-grotesk-latin-ext-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Hanken Grotesk";
+  src: url("fonts/hanken-grotesk-latin-ext-wght-italic.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+// IBM Plex Mono is not a variable font, so only the weights we use are shipped.
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("fonts/ibm-plex-mono-latin-600-normal.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("fonts/ibm-plex-mono-latin-ext-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("fonts/ibm-plex-mono-latin-ext-600-normal.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+// Navbar wordmark: Nunito Light, subset to "WEBKNOS" and autohinted. Rendered as text instead of
+// SVG paths, which look blurry on low-DPI screens at this size.
+@font-face {
+  font-family: "Nunito Wordmark";
+  src: url("fonts/nunito-wordmark.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: block;
 }
 
 // ----------------------- MAIN STYLES
@@ -60,10 +153,10 @@ body {
   top: 0;
 }
 
-/** Highlights the header and menu with an error color when a save operation fails. */
-.save-error {
+/** Highlights the navbar and its menus with an error color when a save operation fails. */
+.navbar-header.save-error {
 
-  .ant-layout-header,
+  &,
   .ant-menu {
     background-color: var(--ant-color-error) !important;
   }
@@ -81,6 +174,23 @@ body {
       color: white;
       width: 100%;
       height: 100%;
+    }
+  }
+
+  // Size and spacing match the wordmark in logo.svg next to the 30px mark.
+  .logo-wordmark {
+    margin-left: 10px;
+    font-family: "Nunito Wordmark", @font-family;
+    font-size: 15.5px;
+    font-weight: 300;
+    letter-spacing: -0.35px;
+    color: white;
+    vertical-align: middle;
+    position: relative;
+    top: 1px;
+
+    @media @smartphones {
+      display: none;
     }
   }
 
@@ -198,7 +308,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: var(--ant-color-bg-base);
+  background: var(--ant-color-bg-layout);
   z-index: 300;
 }
 
@@ -310,34 +420,59 @@ body {
   margin: 0 auto;
 }
 
-/** Styles for the dataset upload dropzone, including active, accept, and reject states. */
+/** Styles for the dataset upload dropzone and the summary of the selected data. */
 .dataset-upload-dropzone {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-  border-width: 2px;
-  border-radius: 2px;
-  border-color: var(--ant-color-border-secondary);
-  border-style: dashed;
-  background-color: var(--ant-color-bg-container);
-  color: var(--ant-color-text);
-  font-size: 16px;
+  padding: 64px 24px;
+  border: 2px dashed var(--ant-color-primary-border);
+  border-radius: var(--ant-border-radius-lg);
+  background-color: var(--ant-color-fill-quaternary);
   outline: none;
-  transition: border 0.24s ease-in-out;
-  cursor: pointer;
+  transition:
+    border-color 0.2s ease-in-out,
+    background-color 0.2s ease-in-out;
 
   &.dataset-upload-dropzone-active {
-    border-color: var(--ant-color-border);
+    border-color: var(--ant-color-primary);
+    background-color: var(--ant-color-primary-bg);
+  }
+}
+
+.dataset-upload-dropzone-icon {
+  font-size: 64px;
+  color: var(--ant-color-primary);
+}
+
+.dataset-upload-selection {
+  overflow: hidden;
+  border: 1px solid var(--ant-color-border);
+  border-radius: var(--ant-border-radius-lg);
+  transition: border-color 0.2s ease-in-out;
+
+  .dataset-upload-dropzone-active > & {
+    border-color: var(--ant-color-primary);
   }
 
-  &.dataset-upload-dropzone-accept {
-    border-color: var(--ant-color-success-border);
+  .dataset-upload-selection-header {
+    padding: 16px 24px;
   }
 
-  &.dataset-upload-dropzone-reject {
-    border-color: var(--ant-color-error-border);
+  .dataset-upload-selection-icon {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--ant-border-radius-lg);
+    background-color: var(--ant-color-primary-bg);
+    color: var(--ant-color-primary);
+    font-size: 24px;
+  }
+
+  .dataset-upload-inspection-banner {
+    padding: 12px 24px;
+    border-width: 1px 0 0;
+    border-radius: 0;
   }
 }
 

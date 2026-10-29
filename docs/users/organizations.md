@@ -24,6 +24,8 @@ The overview tab provides a summary of your organization, including:
 - **Member Information:** A count of the total users in the organization.
 - **WEBKNOSSOS Credits:** The amount of credits available to the organization for AI jobs.
 
+![Overview of an organization on the Power plan](../images/organization_overview.jpeg)
+
 ### Notifications
 
 This tab allows admins to configure email notifications for the organization:

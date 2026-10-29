@@ -18,6 +18,9 @@ import { bucketPositionToGlobalAddress } from "viewer/model/helpers/position_con
 import Store from "viewer/store";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { getConstructorForElementClass, uint8ToTypedBuffer } from "../helpers/typed_buffer";
+import { applyRun, type VoxelRun } from "../volumetracing/core/bucket_diff";
+import type { SegmentBucketData } from "../volumetracing/core/volume_annotation_types";
+import { getUnsavedPartialUpdateRuns } from "../volumetracing/integration/unsaved_partial_updates";
 import BucketSnapshot, { type PendingOperation } from "./bucket_snapshot";
 
 export enum BucketStateEnum {
@@ -96,6 +99,10 @@ export type Containment =
   | {
       type: "no";
     };
+
+function applyRuns(data: BucketDataArray, runs: VoxelRun[]): void {
+  for (const run of runs) applyRun(data as SegmentBucketData, run);
+}
 
 export class DataBucket {
   readonly type = "data" as const;
@@ -535,9 +542,8 @@ export class DataBucket {
     // bucket that is saved via partial updates being dirty anymore. A bucket that
     // is still loading is cleared by the TemporalBucketManager once it arrives. A
     // whole-bucket save that is still pending clears it via markAsPushed.
-    // Known gap: until its partial updates are saved, a bucket that is evicted and
-    // loaded again lacks them. Re-applying pending partial updates on load would
-    // close it.
+    // The bucket may then be evicted before its partial updates are saved: when it is
+    // loaded again, they are re-applied (see unsaved_partial_updates.ts).
     if (
       this.savedViaPartialUpdates &&
       this.dirtyCount === 0 &&
@@ -561,7 +567,25 @@ export class DataBucket {
 
   // The bucket is not present on the datastore. It transitions to MISSING and stays there.
   markAsMissing(): void {
+    // Without data on the backend, the bucket's unsaved partial updates still apply,
+    // to empty data.
+    const unsavedRuns = this.isRequested() ? this.getUnsavedPartialUpdateRuns() : [];
+    if (unsavedRuns.length > 0) {
+      const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
+      const emptyData = new TypedArrayClass(
+        channelCount * this.cube.getEffectiveBucketVoxelCount(),
+      );
+      applyRuns(emptyData, unsavedRuns);
+      if (this.dirty && this.data != null) {
+        // Like for fetched data, the changes made while the bucket was requested come last.
+        this.merge(emptyData);
+      } else {
+        this.data = emptyData;
+      }
+      this.invalidateValueSet();
+    }
     this.markAsUnavailable(BucketStateEnum.MISSING, "bucketMissing");
+    if (unsavedRuns.length > 0) this.throttledTriggerLabeled();
   }
 
   // The bucket's request could not be read (e.g. transient error or a failure bucket). It
@@ -640,13 +664,19 @@ export class DataBucket {
 
     switch (this.state) {
       case BucketStateEnum.REQUESTED: {
+        // The backend's data lacks the bucket's partial updates that are not saved
+        // yet (see unsaved_partial_updates.ts). The changes made while the bucket was
+        // requested are newer, so merge applies them afterwards.
+        const unsavedRuns = this.getUnsavedPartialUpdateRuns();
         if (this.dirty) {
           // Clone the data for the unmergedBucketDataLoaded event,
           // as the following merge operation is done in-place.
           const dataClone = data.slice();
           this.trigger("unmergedBucketDataLoaded", dataClone);
+          applyRuns(data, unsavedRuns);
           this.merge(data);
         } else {
+          applyRuns(data, unsavedRuns);
           this.data = data;
         }
         this.invalidateValueSet();
@@ -715,6 +745,15 @@ export class DataBucket {
 
   getTracingId(): string {
     return this.cube.layerName;
+  }
+
+  private getUnsavedPartialUpdateRuns(): VoxelRun[] {
+    if (!this.cube.isSegmentation) return [];
+    return getUnsavedPartialUpdateRuns(
+      Store.getState().save.queue,
+      this.getTracingId(),
+      this.zoomedAddress,
+    );
   }
 
   merge(fetchedData: BucketDataArray): void {

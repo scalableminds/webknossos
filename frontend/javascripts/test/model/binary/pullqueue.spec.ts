@@ -52,6 +52,8 @@ vi.mock("viewer/store", function () {
         datasetConfiguration: {
           renderMissingDataBlack: true,
         },
+        // Read when bucket data arrives (see unsaved_partial_updates.ts).
+        save: { queue: [] },
       }),
       dispatch: vi.fn(),
       subscribe: vi.fn(),

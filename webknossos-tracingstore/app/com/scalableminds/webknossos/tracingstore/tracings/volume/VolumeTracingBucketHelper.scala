@@ -231,7 +231,7 @@ trait VolumeTracingBucketHelper
             fourBit = None,
             applyAgglomerate = volumeLayer.tracing.mappingName,
             version = None,
-            additionalCoordinates = None
+            additionalCoordinates = bucketPosition.additionalCoordinates
           )
         }
         (fallbackDataFlat, fallbackEmptyBucketIndices, fallbackFailureBucketIndices) <- volumeLayer.volumeTracingService
@@ -323,7 +323,7 @@ trait VolumeTracingBucketHelper
       fourBit = None,
       applyAgglomerate = layer.tracing.mappingName,
       version = None,
-      additionalCoordinates = None
+      additionalCoordinates = bucket.additionalCoordinates
     )
     for {
       remoteFallbackLayer <- layer.volumeTracingService

@@ -267,22 +267,19 @@ class VolumeTracingService @Inject() (
                 _ <- saveBucket(volumeLayer, bucketPosition, dataAfterRevertBox.getOrElse(revertedValue), newVersion)
                 _ <- Fox.runIfOptionTrue(tracingBeforeRevert.hasSegmentIndex)(
                   for {
-                    dataBeforeRevertWithFallbackBox <- withFallbackIfReverted(
+                    dataBeforeRevertBox <- withFallbackIfReverted(
                       volumeLayer,
                       bucketPosition,
-                      Box.fromOption(dataBeforeRevertOpt)
-                    )
-                    dataAfterRevertWithFallbackBox <- withFallbackIfReverted(
-                      volumeLayer,
-                      bucketPosition,
-                      dataAfterRevertBox
-                    )
+                      dataBeforeRevertOpt
+                    ).shiftBox
+                    dataAfterRevert <- withFallbackIfReverted(volumeLayer, bucketPosition, dataAfterRevertBox.toOption)
+                      .fillEmpty(revertedValue)
                     _ <- updateSegmentIndex(
                       volumeLayer,
                       segmentIndexBuffer,
                       bucketPosition,
-                      dataAfterRevertWithFallbackBox.getOrElse(revertedValue),
-                      dataBeforeRevertWithFallbackBox,
+                      dataAfterRevert,
+                      dataBeforeRevertBox,
                       editableMappingTracingId(sourceTracing, tracingId)
                     )
                   } yield ()
@@ -299,17 +296,15 @@ class VolumeTracingService @Inject() (
     } yield ()
   }
 
-  // In case of fallback layer, reverted buckets will show the fallback data, so we need it to feed it to the segment index differ.
+  // Reverted buckets show fallback data (if it exists); the segment index differ needs it.
   private def withFallbackIfReverted(
       volumeLayer: VolumeTracingLayer,
       bucketPosition: BucketPosition,
-      dataBox: Box[Array[Byte]]
-  ): Fox[Box[Array[Byte]]] =
-    dataBox match {
-      case Empty if volumeLayer.tracing.fallbackLayer.nonEmpty =>
-        loadFallbackBucket(volumeLayer, bucketPosition).shiftBox
-      case _ => Fox.successful(dataBox)
-    }
+      dataOpt: Option[Array[Byte]]
+  ): Fox[Array[Byte]] =
+    Fox.fillOption(dataOpt)(
+      if (volumeLayer.tracing.fallbackLayer.nonEmpty) loadFallbackBucket(volumeLayer, bucketPosition) else Fox.empty
+    )
 
   def initializeWithDataMultiple(annotationId: ObjectId, tracingId: String, tracing: VolumeTracing, initialData: File)(
       using tc: TokenContext

@@ -1,15 +1,14 @@
 import { SyncOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
 import { getVoxelyticsLogs } from "admin/rest_api";
 import Ansi from "ansi-to-react";
 import { App, Button, Flex, Select, Switch } from "antd";
 import chalk from "chalk";
 import classnames from "classnames";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { VoxelyticsLogLine } from "types/api_types";
 import { LOG_LEVELS } from "viewer/constants";
-import { addAfterPadding, addBeforePadding, type Result } from "./utils";
-
-type LogResult = Result<Array<VoxelyticsLogLine>>;
+import { addAfterPadding, addBeforePadding } from "./utils";
 
 // These constants need to be in sync with the variables in main.less
 const LOG_LINE_LIMIT = 1000;
@@ -66,48 +65,46 @@ export default function LogTab({
   const { message } = App.useApp();
   const [showTimestamps, setShowTimestamps] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [level, setLevel] = useState(LOG_LEVELS.INFO);
 
-  const [logResult, setLogResult] = useState<LogResult>({ type: "LOADING" });
-
-  async function loadLog() {
-    setIsLoading(true);
-    try {
-      const log =
-        beginTime == null
-          ? []
-          : await getVoxelyticsLogs(
-              runId,
-              taskName,
-              level,
-              addBeforePadding(beginTime),
-              addAfterPadding(endTime ?? new Date()),
-              LOG_LINE_LIMIT,
-            );
-      setLogResult({ type: "SUCCESS", value: log });
-    } catch {
-      setLogResult({ type: "ERROR" });
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only reload when the selected task or log level changes; the Refresh button covers manual reloads
-  useEffect(() => {
-    loadLog();
-  }, [runId, taskName, level]);
+  // Errors are shown inline instead of as a toast, so plain useQuery is used here.
+  // beginTime and endTime are intentionally not part of the key: only reload when the selected
+  // task or log level changes; the Refresh button covers manual reloads.
+  const {
+    data: log,
+    status,
+    isFetching,
+    refetch,
+  } = useQuery({
+    queryKey: ["voxelyticsLogs", runId, taskName, level],
+    queryFn: async (): Promise<Array<VoxelyticsLogLine>> =>
+      beginTime == null
+        ? []
+        : await getVoxelyticsLogs(
+            runId,
+            taskName,
+            level,
+            addBeforePadding(beginTime),
+            addAfterPadding(endTime ?? new Date()),
+            LOG_LINE_LIMIT,
+          ),
+    retry: false,
+    refetchOnWindowFocus: false,
+    // Logs can be large, so don't keep them around after the tab is closed.
+    gcTime: 0,
+    meta: { persist: false },
+  });
 
   const logText = useMemo(() => {
-    switch (logResult.type) {
-      case "LOADING":
+    switch (status) {
+      case "pending":
         return ["Loading..."];
-      case "ERROR":
+      case "error":
         return ["Could not load log data."];
-      case "SUCCESS":
-        return logResult.value.length === 0
+      case "success":
+        return log.length === 0
           ? ["Empty."]
-          : logResult.value.map((line: any) =>
+          : log.map((line: any) =>
               formatLog(line, {
                 timestamps: showTimestamps,
                 pid: false,
@@ -118,7 +115,7 @@ export default function LogTab({
       default:
         return [];
     }
-  }, [logResult, showTimestamps]);
+  }, [status, log, showTimestamps]);
 
   async function downloadFullLog() {
     try {
@@ -172,7 +169,7 @@ export default function LogTab({
           />{" "}
           Fullscreen
         </span>
-        <Button onClick={() => loadLog()} icon={<SyncOutlined spin={isLoading} />}>
+        <Button onClick={() => refetch()} icon={<SyncOutlined spin={isFetching} />}>
           Refresh
         </Button>
         <Button onClick={downloadFullLog}>Download</Button>

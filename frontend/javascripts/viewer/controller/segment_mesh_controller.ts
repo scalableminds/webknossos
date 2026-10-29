@@ -2,6 +2,7 @@ import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import { createTween } from "libs/tween_group";
+import { clamp } from "libs/utils";
 import forEach from "lodash-es/forEach";
 import get from "lodash-es/get";
 import isEqual from "lodash-es/isEqual";
@@ -53,7 +54,6 @@ const ACTIVATED_COLOR_VEC3 = ACTIVATED_COLOR.toArray() as Vector3;
 // applies to the whole mesh, so that part is recolored instead.
 const HOVERED_COLOR_VEC3 = hslToSRGB([0.65, 0.9, 0.75]).toArray() as Vector3;
 // A hovered mesh glows via its emissive color, which is tinted with the segment color.
-// (A light can't be restricted to a single mesh without extra render passes.)
 // A dark or dull tint barely shows on a dark surface, so getHoverGlowColor lightens and
 // saturates the tint, and the intensity is raised, the darker/duller the color is.
 // Light, saturated colors stay close to unchanged.
@@ -66,8 +66,6 @@ const HOVER_GLOW_MAX_SATURATION_BLEND = 0.4;
 const HOVER_EMISSIVE_INTENSITY_BASE = 0.15;
 const HOVER_EMISSIVE_INTENSITY_DARK_BONUS = 0.35;
 
-const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
-
 const getHoverGlowColor = (originalColor: Vector3): { color: Color; darkness: number } => {
   // originalColor is in linear space. Convert it back to sRGB so that the HSL values
   // match the segment's hex color.
@@ -76,8 +74,8 @@ const getHoverGlowColor = (originalColor: Vector3): { color: Color; darkness: nu
   srgbColor.getHSL(hsl);
 
   // 0 if the color is at least as light/saturated as the target, up to 1 for black/gray.
-  const darkness = clamp01(1 - hsl.l / HOVER_GLOW_TARGET_LIGHTNESS);
-  const dullness = clamp01(1 - hsl.s / HOVER_GLOW_TARGET_SATURATION);
+  const darkness = clamp(0, 1 - hsl.l / HOVER_GLOW_TARGET_LIGHTNESS, 1);
+  const dullness = clamp(0, 1 - hsl.s / HOVER_GLOW_TARGET_SATURATION, 1);
 
   const boostedLightness =
     hsl.l + (HOVER_GLOW_TARGET_LIGHTNESS - hsl.l) * darkness * HOVER_GLOW_MAX_LIGHTNESS_BLEND;

@@ -57,20 +57,13 @@ import {
 } from "viewer/view/rendering_utils";
 
 // The lights below are attached to the TD camera, so their positions are in camera
-// space: the camera looks along -z, i.e. a positive z means "in front of the object,
-// on the viewer's side". All lights point at the origin, so a light's position is also
-// the direction it comes from.
-//
-// Key, fill and under light all come from the front, from different sides/elevations.
-// The key light rakes in from the upper right, so curved surfaces show a clear
-// light-to-dark gradient. Fill and under light are kept much weaker than the key light:
-// they only keep the shadowed sides from going black, and raising them washes out the
-// shadows that make the shape readable. The rim light comes from behind and only
-// catches silhouette edges, which keeps overlapping branches visually separated.
-//
-// Keep an eye on the *combined* effect where two lights' regions overlap - stacking
-// can blow that area out toward white/desaturated if the intensities are pushed up
-// too far.
+// space (positive z is on the viewer's side). They point at the origin, so a light's
+// position is also the direction it comes from.
+// The key light gives curved surfaces a clear light-to-dark gradient. Fill and under
+// light are much weaker and only keep the shadowed sides from going black. Stronger
+// values wash out the shading, and where lights overlap, their intensities add up to
+// whitish areas. The rim light only catches silhouette edges, which keeps overlapping
+// branches visually separated.
 const KEY_LIGHT_INTENSITY = 7;
 const FILL_LIGHT_INTENSITY = 1.5;
 const UNDER_LIGHT_INTENSITY = 1;
@@ -152,15 +145,14 @@ class PlaneView {
 
     this.cameras = { ...this.nonTdCameras, [OrthoViews.TDView]: this.tdCameras.ORTHOGRAPHIC };
 
-    // Key light: from the upper right, raking in from the front.
+    // Key light: from the front upper right.
     createDirLight([14, 12, 8], KEY_LIGHT_INTENSITY, tdOrthographicCamera);
-    // Fill light: from the front left, slightly below, so the side facing away from
-    // the key light doesn't go dark.
+    // Fill light: from the front left, slightly below.
     createDirLight([-14, -2, 10], FILL_LIGHT_INTENSITY, tdOrthographicCamera);
-    // Under light: from the front below, so the undersides of round shapes (e.g. a
-    // soma) get their own falloff instead of just flat ambient light.
+    // Under light: from the front below, so that the undersides of round shapes (e.g. a
+    // soma) are shaded, too.
     createDirLight([3, -14, 6], UNDER_LIGHT_INTENSITY, tdOrthographicCamera);
-    // Rim light: from behind upper left, only catching silhouette edges.
+    // Rim light: from behind upper left.
     createDirLight([-8, 10, -14], RIM_LIGHT_INTENSITY, tdOrthographicCamera);
 
     this.nonTdCameras[OrthoViews.PLANE_XY].position.z = -1;

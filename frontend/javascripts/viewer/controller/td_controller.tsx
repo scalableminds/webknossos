@@ -339,9 +339,6 @@ class TDController extends PureComponent<Props> {
         const intersection = this.getMeshIntersection(pos);
         if (intersection?.meshId == null) return;
 
-        // Use the layer of the hit mesh rather than e.g. getActiveSegmentationTracing,
-        // which doesn't resolve outside of an annotation (e.g. plain dataset viewing with
-        // precomputed meshes) and might not be the layer of the hit mesh.
         const { layerName } = intersection;
         if (layerName == null) return;
 
@@ -355,10 +352,8 @@ class TDController extends PureComponent<Props> {
             intersection.meshId,
           )?.opacity ?? Constants.DEFAULT_MESH_OPACITY;
 
-        // Toggle between fully opaque and half-transparent. Dispatched as the same
-        // action the "Change Segment Color" menu uses (rather than calling
-        // segmentMeshController.setMeshOpacity directly), so the new opacity is
-        // persisted the same way and survives a mesh reload.
+        // Toggle between opaque and half-transparent. Dispatching the action (instead of
+        // calling setMeshOpacity directly) stores the opacity, so it survives a mesh reload.
         const newOpacity = currentOpacity >= 1 ? 0.5 : 1;
         Store.dispatch(updateMeshOpacityAction(layerName, intersection.meshId, newOpacity));
       },

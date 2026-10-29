@@ -49,47 +49,33 @@ export const PARTITION_COLORS = {
   partitionB: [0.7, 0.7, 0.7] as Vector3,
 };
 const ACTIVATED_COLOR_VEC3 = ACTIVATED_COLOR.toArray() as Vector3;
-// Still used for the proofreading-only case where just part of a merged, multi-segment
-// mesh is hovered (see updateMeshAppearance) - a specific sub-range can only be
-// distinguished by recoloring it, since a light can't target part of one mesh object.
+// Only used when part of a merged mesh is hovered (proofreading). The hover glow
+// applies to the whole mesh, so that part is recolored instead.
 const HOVERED_COLOR_VEC3 = hslToSRGB([0.65, 0.9, 0.75]).toArray() as Vector3;
-// Used to give a hovered mesh a glow instead of recoloring it (see updateMeshAppearance):
-// tried scoping an extra light to just the hovered mesh via a dedicated three.js render
-// layer first, but Light.layers only gates whether a light is active for the *camera*
-// (light.layers.test(camera.layers)) - it doesn't test a light against each individual
-// mesh's own layers, so it can't target one specific mesh within a single render pass
-// (the true "selective lighting" example does this via multiple render passes per
-// frame, toggling the camera's layers each time, which isn't worth the extra cost of a
-// 5th full-scene render pass just for a hover effect here). emissive is a genuine
-// per-mesh material property instead, so it doesn't have that problem.
-//
-// The glow is tinted with the segment's own color, which means a dark/muddy color
-// (e.g. #0000bd - fully saturated, but not very light) barely shows it: a dark tint
-// added on top of an already-dark surface stays dark. getHoverGlowColor below brightens
-// and re-saturates that tint - and boosts its intensity - proportionally to how far the
-// color already is from looking vivid, so an already-bright/saturated color (which
-// already pops on hover) is left close to untouched.
+// A hovered mesh glows via its emissive color, which is tinted with the segment color.
+// (A light can't be restricted to a single mesh without extra render passes.)
+// A dark or dull tint barely shows on a dark surface, so getHoverGlowColor lightens and
+// saturates the tint, and the intensity is raised, the darker/duller the color is.
+// Light, saturated colors stay close to unchanged.
 const HOVER_GLOW_TARGET_LIGHTNESS = 0.65;
 const HOVER_GLOW_TARGET_SATURATION = 0.8;
 const HOVER_GLOW_MAX_LIGHTNESS_BLEND = 0.7;
 const HOVER_GLOW_MAX_SATURATION_BLEND = 0.4;
-// BASE applies to every hovered mesh regardless of its own color, so it's the main
-// dial for how noticeable the effect is on already-bright/saturated segments (which
-// get ~0 of the DARK_BONUS below, since darkness/dullness are ~0 for those already).
+// BASE applies to all colors and mainly sets how noticeable the glow is for light
+// colors. DARK_BONUS is scaled by how dark the color is.
 const HOVER_EMISSIVE_INTENSITY_BASE = 0.15;
 const HOVER_EMISSIVE_INTENSITY_DARK_BONUS = 0.35;
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
 const getHoverGlowColor = (originalColor: Vector3): { color: Color; darkness: number } => {
-  // originalColor is stored in linear space (see getColorObjectForSegment); undo that
-  // to get the perceptual HSL values matching how the color would read as a hex code.
+  // originalColor is in linear space. Convert it back to sRGB so that the HSL values
+  // match the segment's hex color.
   const srgbColor = new Color(...originalColor).convertLinearToSRGB();
   const hsl = { h: 0, s: 0, l: 0 };
   srgbColor.getHSL(hsl);
 
-  // 0 once the color is already at/above the target lightness/saturation, ramping up to
-  // 1 the darker/duller it is.
+  // 0 if the color is at least as light/saturated as the target, up to 1 for black/gray.
   const darkness = clamp01(1 - hsl.l / HOVER_GLOW_TARGET_LIGHTNESS);
   const dullness = clamp01(1 - hsl.s / HOVER_GLOW_TARGET_SATURATION);
 
@@ -114,9 +100,10 @@ const setHoverGlow = (material: MeshMaterial, isGlowing: boolean) => {
     HOVER_EMISSIVE_INTENSITY_BASE + darkness * HOVER_EMISSIVE_INTENSITY_DARK_BONUS;
 };
 
-// Segment colors with a lightness (HSL) below MIN_MESH_LIGHTNESS are moved
-// DARK_LIGHTNESS_LIFT of the way towards it, e.g. #800000 (lightness 0.25) is rendered
-// with a lightness of 0.35. Lighter colors are left untouched, so they can't overexpose.
+// Dark colors reflect so little light that the colorless highlights dominate and they
+// look almost black. So, colors with a lightness (HSL) below MIN_MESH_LIGHTNESS are
+// moved DARK_LIGHTNESS_LIFT of the way towards it, e.g. #800000 (lightness 0.25) is
+// rendered with a lightness of 0.35. Lighter colors are left untouched.
 const MIN_MESH_LIGHTNESS = 0.45;
 const DARK_LIGHTNESS_LIFT = 0.5;
 
@@ -252,27 +239,17 @@ export default class SegmentMeshController {
     const color = this.getColorObjectForSegment(segmentId, layerName);
     const meshMaterial = new MeshPhysicalMaterial({
       vertexColors: true,
-      // A mid-range roughness gives the mesh a soft specular highlight (unlike the
-      // purely-diffuse Lambert material used previously), which helps the eye read
-      // curved/cylindrical surfaces like dendrites as three-dimensional. Lower than
-      // 0.5 starts looking noticeably glossy/plastic; higher spreads the highlight so
-      // thin it barely reads, which was contributing to the overall dark/flat look.
+      // A soft highlight makes curved surfaces (e.g. dendrites) read as 3D. Lower
+      // roughness looks like plastic, higher roughness makes the highlight barely visible.
       roughness: 0.4,
       metalness: 0.05,
-      // Sheen adds a rim-light glint at grazing angles, e.g. along silhouette edges
-      // where branches overlap. A moderate/broad sheen visibly washes the segment's own
-      // color out (it layers a white lobe over it), so this is intentionally low, and
-      // sheenRoughness is kept low too so the lobe stays narrow/grazing-only rather than
-      // spreading across most of the visible, front-facing surface.
+      // Sheen adds a white glint at grazing angles, e.g. along silhouettes. Kept low and
+      // narrow, since more sheen washes out the segment color.
       sheen: 0.2,
       sheenRoughness: 0.25,
       sheenColor: WHITE,
-      // A thin, glossy clearcoat layer on top of the base material - reads as a "wet
-      // tissue" look, and gives a second, tighter specular highlight independent of the
-      // (fairly soft) base roughness above. Unlike sheen, clearcoat's reflectance is
-      // Fresnel-based and close to colorless, concentrated in a sharp highlight rather
-      // than broadly tinting the diffuse color, so it doesn't reintroduce the washed-out
-      // look sheen caused at higher values.
+      // A thin clearcoat adds a second, sharper highlight ("wet tissue" look). It's
+      // almost colorless and concentrated, so it doesn't wash out the segment color.
       clearcoat: 0.05,
       clearcoatRoughness: 0.1,
     }) as MeshMaterial;
@@ -560,12 +537,6 @@ export default class SegmentMeshController {
 
   getColorObjectForSegment(segmentId: bigint, layerName: string) {
     const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), segmentId, layerName);
-    // Previously pulled saturation/lightness in a bit here to leave headroom for the
-    // material's shading, but the lighting/material tuning above turned out to give
-    // plenty of shading on its own - so the segment's actual color (also used for the
-    // 2D view, via getSegmentColorAsHSLA) is used as-is instead of a muted version of it.
-    // Only dark colors are lifted a bit, since their diffuse reflection is so weak that
-    // the colorless specular highlights dominate and they read as almost black.
     const color = new Color().setHSL(hue, saturation, liftDarkLightness(light));
     color.convertSRGBToLinear();
 
@@ -573,29 +544,22 @@ export default class SegmentMeshController {
   }
 
   addLights(): void {
-    // Note that the PlaneView also attaches key/fill/under/rim lights directly to the
-    // TD camera, so that light always moves along with the current viewing angle and
-    // provides the main shading. The lights added here stay fixed in world space and
-    // are only meant to keep the mesh from ever going fully unlit/black. Having many
-    // lights of similar intensity coming from (almost) every direction (the previous
-    // approach) cancels out the shading gradients that make a surface read as
-    // three-dimensional, so this is deliberately kept to a hemisphere light plus two
-    // faint, distinctly-colored directional lights.
-    // Unlike a flat ambient light, the hemisphere light still has a (soft) top-to-bottom
-    // gradient, so it can be bright enough to lift the shadows without making the meshes
-    // look flat. "Up" is -z, which matches the up vector of the default TD camera.
+    // The main lights are attached to the TD camera (see PlaneView). These world-space
+    // lights only keep meshes from going completely black. They are few and faint on
+    // purpose: many similar lights from all directions cancel out the shading.
+    // Unlike an ambient light, the hemisphere light has a soft top-to-bottom gradient,
+    // so it lifts the shadows without making the meshes look flat. "Up" is -z, which
+    // matches the up vector of the default TD camera.
     const hemisphereLight = new HemisphereLight("white", 0x808080, 0.25);
     hemisphereLight.position.set(0, 0, -1);
     this.lightsGroup.add(hemisphereLight);
 
-    // Subtle, cool-toned rim/back light so overlapping branches keep an edge of
-    // separation even when the camera-attached key light above is grazing or
-    // pointing away from them.
+    // Faint, cool-toned light from behind so that overlapping branches keep a visible edge.
     const rimLight = new DirectionalLight(0xcfe0ff, 0.5);
     rimLight.position.set(-1, 0.5, -1).normalize();
     this.lightsGroup.add(rimLight);
 
-    // Faint, warm-toned bounce light from below so undersides never go pure black.
+    // Faint, warm-toned light from below so that undersides never go completely black.
     const bounceLight = new DirectionalLight(0xffe9cf, 0.2);
     bounceLight.position.set(0.4, -1, 0.5).normalize();
     this.lightsGroup.add(bounceLight);
@@ -729,13 +693,8 @@ export default class SegmentMeshController {
     }
 
     if (isHovered != null) {
-      // Whole-mesh hover (the common case, and the only kind possible for a non-merged
-      // mesh) is shown via an emissive glow, tinted to the segment's own color, rather
-      // than a color change - the segment's own color/shading stays legible, just
-      // brighter, while hovered. This can't represent hovering just part of a merged,
-      // multi-segment mesh though (e.g. one specific unmapped segment while
-      // proofreading) - emissive is a whole-material property, not a per-range one - so
-      // that case is left to the vertex-range recoloring below instead, same as before.
+      // The glow applies to the whole material. If only part of a merged mesh is
+      // hovered (proofreading), that part is recolored below instead.
       const isWholeMeshHovered =
         mesh.hoveredState != null && (mesh.hoveredState === "full" || !mesh.isMerged);
       parent.traverse((child) => {

@@ -7,6 +7,7 @@ import {
   ShareAltOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
+import { unwrapOrThrow } from "admin/api/api_result";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   createShortLink,
@@ -305,9 +306,11 @@ function ShareModalViewInner(props: Props) {
     setIsChangingInProgress(true);
     setVisibility(newVisibility as any as APIAnnotationVisibility);
     try {
-      await editAnnotation(annotationId, annotationType, {
-        visibility: newVisibility,
-      });
+      unwrapOrThrow(
+        await editAnnotation(annotationId, annotationType, {
+          visibility: newVisibility,
+        }),
+      );
       dispatch(setAnnotationVisibilityAction(newVisibility));
       reportSuccessfulChange(newVisibility);
     } catch (e) {

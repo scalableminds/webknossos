@@ -432,20 +432,23 @@ describe("Proofreading (with mesh actions)", () => {
           agglomerateId: NumberLike;
           editableMappingId: string;
         },
-      ): Promise<Array<MinCutTargetEdge>> => {
+      ): Promise<ApiResult<Array<MinCutTargetEdge>>> => {
         if (version !== 6) {
           throw new Error("Unexpected version of min cut request:" + version);
         }
         const { agglomerateId, partition1, partition2 } = segmentsInfo;
         if (agglomerateId === 6n && isEqual(partition1, [1337n]) && isEqual(partition2, [1338n])) {
-          return [
-            {
-              position1: getPositionForSegmentId(1337),
-              position2: getPositionForSegmentId(1338),
-              segmentId1: 1337n,
-              segmentId2: 1338n,
-            },
-          ];
+          return {
+            ok: true,
+            value: [
+              {
+                position1: getPositionForSegmentId(1337),
+                position2: getPositionForSegmentId(1338),
+                segmentId1: 1337n,
+                segmentId2: 1338n,
+              },
+            ],
+          };
         }
         throw new Error("Unexpected min cut request");
       },

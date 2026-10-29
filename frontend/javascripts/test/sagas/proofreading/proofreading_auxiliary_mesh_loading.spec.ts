@@ -237,14 +237,17 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
         // Prepare the server's reply for the upcoming split.
         vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-          Promise.resolve([
-            {
-              position1: getPositionForSegmentId(1),
-              position2: getPositionForSegmentId(2),
-              segmentId1: 1n,
-              segmentId2: 2n,
-            },
-          ]),
+          Promise.resolve({
+            ok: true,
+            value: [
+              {
+                position1: getPositionForSegmentId(1),
+                position2: getPositionForSegmentId(2),
+                segmentId1: 1n,
+                segmentId2: 2n,
+              },
+            ],
+          }),
         );
 
         // Execute the actual merge and wait for the finished mapping.
@@ -535,14 +538,17 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-        Promise.resolve([
-          {
-            position1: getPositionForSegmentId(1),
-            position2: getPositionForSegmentId(2),
-            segmentId1: 1n,
-            segmentId2: 2n,
-          },
-        ]),
+        Promise.resolve({
+          ok: true,
+          value: [
+            {
+              position1: getPositionForSegmentId(1),
+              position2: getPositionForSegmentId(2),
+              segmentId1: 1n,
+              segmentId2: 2n,
+            },
+          ],
+        }),
       );
 
       const meshTracker = yield* trackMeshes(context, tracingId);
@@ -605,14 +611,17 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-        Promise.resolve([
-          {
-            position1: getPositionForSegmentId(1),
-            position2: getPositionForSegmentId(2),
-            segmentId1: 1n,
-            segmentId2: 2n,
-          },
-        ]),
+        Promise.resolve({
+          ok: true,
+          value: [
+            {
+              position1: getPositionForSegmentId(1),
+              position2: getPositionForSegmentId(2),
+              segmentId1: 1n,
+              segmentId2: 2n,
+            },
+          ],
+        }),
       );
 
       const meshTracker = yield* trackMeshes(context, tracingId);

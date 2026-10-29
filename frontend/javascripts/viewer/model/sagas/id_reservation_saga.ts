@@ -1,5 +1,5 @@
+import type { RetryOptions } from "admin/api/api_result";
 import { reserveIdsForAnnotation } from "admin/rest_api";
-import { sleep } from "libs/utils";
 import without from "lodash-es/without";
 import { actionChannel, call, fork, put } from "typed-redux-saga";
 import type { AnnotationIdDomain } from "types/api_types";
@@ -30,8 +30,10 @@ import { type Saga, select, take } from "./effect_generators";
 
 const { IDEAL_ID_BUFFER_SIZE } = Constants;
 
-const RESERVE_IDS_MAX_RETRIES = 3;
-const RETRY_DELAY_MULTIPLIER = import.meta.env.MODE === "test" ? 0.1 : 2;
+const RESERVE_IDS_RETRY_OPTIONS: RetryOptions = {
+  retries: 2,
+  initialDelayMs: import.meta.env.MODE === "test" ? 1 : 500,
+};
 
 type SupportedTracing = VolumeTracing | SkeletonTracing;
 
@@ -246,22 +248,21 @@ function* fetchNewReservations(tracingId: string, domain: ReservableIdDomain): S
 
   if (collaborationMode === "Concurrent") {
     const annotationId = yield* select((state) => state.annotation.annotationId);
-    for (let attempt = 0; attempt < RESERVE_IDS_MAX_RETRIES; attempt++) {
-      try {
-        newIds = yield* call(
-          reserveIdsForAnnotation,
-          annotationId,
-          tracingId,
-          domain,
-          numberOfIdsToReserve,
-          releasedIds,
-        );
-        break;
-      } catch (error) {
-        if (attempt === RESERVE_IDS_MAX_RETRIES - 1) throw error;
-        yield* call(sleep, RETRY_DELAY_MULTIPLIER * 2 ** attempt);
-      }
+    const result = yield* call(
+      reserveIdsForAnnotation,
+      annotationId,
+      tracingId,
+      domain,
+      numberOfIdsToReserve,
+      releasedIds,
+      {},
+      RESERVE_IDS_RETRY_OPTIONS,
+    );
+    if (!result.ok) {
+      // The caller turns this into an IDS_REPLENISHMENT_FAILED action.
+      throw result.error.cause;
     }
+    newIds = result.value;
   } else {
     const maxExistingId = getMaxExistingId(tracing, domain);
     const maxReservationId =

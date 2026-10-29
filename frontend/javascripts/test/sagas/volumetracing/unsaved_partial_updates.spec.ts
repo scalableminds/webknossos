@@ -15,6 +15,7 @@ import {
   setActiveCellAction,
   startEditingAction,
 } from "viewer/model/actions/volumetracing_actions";
+import type { RequestBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { voxelIndexOf } from "viewer/model/volumetracing/core";
 import { encodeBucketDiffBase64 } from "viewer/model/volumetracing/core/bucket_diff";
@@ -191,5 +192,53 @@ describe("Unsaved partial bucket updates", () => {
     // The other user's runs were applied to the missing bucket in place.
     expect(await getValueAt(context, sharedVoxel)).toBe(5);
     expect(await getValueAt(context, othersVoxel)).toBe(9);
+  });
+
+  it<WebknossosTestContext>("aren't lost when a bucket's data predates their save", async (context) => {
+    await setup(context);
+    const layers = { [VOLUME_TRACING_ID]: "uint16", color: "uint8" } as const;
+    vi.mocked(context.mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+      createBucketResponseFunction(layers, 0, 0),
+    );
+    await context.api.data.reloadAllBuckets();
+    // Loads the bucket, so that the stroke doesn't cause a request of its own.
+    expect(await getValueAt(context, position)).toBe(0);
+    brushAt(position);
+    evictBucketOf(position);
+
+    // The bucket is requested again while the stroke's save is in flight. The backend
+    // answers that request with its data from before the save, but the response only
+    // arrives after the save went through. Later requests get data with the stroke.
+    let releaseStaleResponse = () => {};
+    const staleResponseReleased = new Promise<void>((resolve) => {
+      releaseStaleResponse = resolve;
+    });
+    let hasHeldBackResponse = false;
+    const respondBeforeSave = createBucketResponseFunction(layers, 0, 0);
+    const respondAfterSave = createBucketResponseFunction(layers, 0, 0, [{ position, value: 5 }]);
+    vi.mocked(context.mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+      async (url: string, payload: { data: Array<RequestBucketInfo> }) => {
+        const requestsBucket =
+          url.includes(VOLUME_TRACING_ID) &&
+          payload.data.some(
+            ({ position: bucketPosition, mag }) =>
+              bucketPosition.every((coordinate, axis) => coordinate === bucketOrigin[axis]) &&
+              mag[0] === 1,
+          );
+        if (requestsBucket && !hasHeldBackResponse) {
+          hasHeldBackResponse = true;
+          await staleResponseReleased;
+          return respondBeforeSave(url, payload);
+        }
+        return respondAfterSave(url, payload);
+      },
+    );
+    const value = getValueAt(context, position);
+    await context.api.tracing.save();
+    expect(hasUnsavedPartialUpdates()).toBe(false);
+    releaseStaleResponse();
+
+    expect(await value).toBe(5);
+    expect(hasHeldBackResponse).toBe(true);
   });
 });

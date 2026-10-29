@@ -184,7 +184,10 @@ export function* tryToIncorporateActions(
 
           const bucket = cube.getBucket(bucketAddress);
           if (action.name === "updateBucketPartial") {
-            if (bucket.type === "data" && (bucket.isLoaded() || bucket.isMissing())) {
+            // Partial updates never evict a bucket: that wouldn't stop a request in
+            // flight, whose response would land in the bucket created anew.
+            if (bucket.type !== "data") break;
+            if (bucket.isLoaded() || bucket.isMissing()) {
               // The runs are applied directly, also to a missing bucket, which is empty
               // on the backend. As runs are absolute writes, applying others' runs first
               // and then re-applying the user's unsaved ones (see rebasing_sagas.ts)
@@ -196,13 +199,14 @@ export function* tryToIncorporateActions(
               bucket.applyChangeFromUpdateAction((data) => {
                 for (const run of runs) applyRun(data as SegmentBucketData, run);
               });
-              break;
+            } else if (bucket.isRequested() && !areUnsavedChangesOfUser) {
+              // The response may predate this change, so it is requested again.
+              bucket.notePartialUpdate();
             }
-            if (areUnsavedChangesOfUser) {
-              // An unloaded bucket gets the user's unsaved runs when its data arrives
-              // (see unsaved_partial_updates.ts).
-              break;
-            }
+            // Otherwise, the bucket's data hasn't been requested yet: it will include
+            // others' changes, and get the user's unsaved ones re-applied (see
+            // unsaved_partial_updates.ts).
+            break;
           }
           // Otherwise, drop the local cache and force a re-fetch. A bucket that is
           // not loaded yet may still receive backend data from before the change.

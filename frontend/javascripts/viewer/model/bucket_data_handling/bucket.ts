@@ -125,6 +125,10 @@ export class DataBucket {
   // into it (see endDataMutationForPartialUpdates).
   savedViaPartialUpdates: boolean = false;
   pendingOperations: Array<PendingOperation> = [];
+  // Counts the partial updates of this bucket that were saved by the user or
+  // incorporated from others while it was requested (see notePartialUpdate).
+  private partialUpdateCount = 0;
+  private partialUpdateCountAtRequest = 0;
   state: BucketStateEnumType;
   // The bucket-picker tick during which this bucket was last marked as needed.
   lastNeededTick: number = -1;
@@ -539,6 +543,24 @@ export class DataBucket {
     this.throttledTriggerLabeled();
   }
 
+  /**
+   * To be called when a partial update of this bucket was saved by the user, or
+   * incorporated from another user, while the bucket is requested. The response to
+   * the request may predate the update: the backend's data then lacks it, and the
+   * save queue no longer has it to re-apply. Such a response is discarded, and the
+   * bucket is requested again (see requestAgainIfResponseIsStale).
+   */
+  notePartialUpdate(): void {
+    this.partialUpdateCount++;
+  }
+
+  private requestAgainIfResponseIsStale(): boolean {
+    if (this.partialUpdateCount === this.partialUpdateCountAtRequest) return false;
+    this.markAsFailed();
+    this.addToPullQueueWithHighestPriority();
+    return true;
+  }
+
   clearDirtyIfSavedViaPartialUpdates(): void {
     // Once the backend's data is merged (or there is none), nothing depends on a
     // bucket that is saved via partial updates being dirty anymore. A bucket that
@@ -559,6 +581,7 @@ export class DataBucket {
     switch (this.state) {
       case BucketStateEnum.UNREQUESTED: {
         this.state = BucketStateEnum.REQUESTED;
+        this.partialUpdateCountAtRequest = this.partialUpdateCount;
         break;
       }
 
@@ -569,6 +592,7 @@ export class DataBucket {
 
   // The bucket is not present on the datastore. It transitions to MISSING and stays there.
   markAsMissing(): void {
+    if (this.isRequested() && this.requestAgainIfResponseIsStale()) return;
     // Without data on the backend, the bucket's unsaved partial updates still apply,
     // to empty data.
     const unsavedRuns = this.isRequested() ? this.getUnsavedPartialUpdateRuns() : [];
@@ -652,6 +676,7 @@ export class DataBucket {
       throw error;
     }
 
+    if (this.requestAgainIfResponseIsStale()) return;
     this.rawBucketData = wireData;
 
     const effectiveVoxelCount = this.cube.getEffectiveBucketVoxelCount();

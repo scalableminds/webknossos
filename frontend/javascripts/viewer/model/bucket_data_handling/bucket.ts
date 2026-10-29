@@ -528,10 +528,11 @@ export class DataBucket {
     this.throttledTriggerLabeled();
   }
 
-  applyRemoteChange(mutate: (data: BucketDataArray) => void): void {
-    // For a change by another user, which the backend already has: unlike a local
-    // mutation, the bucket is neither marked dirty nor pushed, and no undo snapshot
-    // is taken.
+  applyChangeFromUpdateAction(mutate: (data: BucketDataArray) => void): void {
+    // For a change from an incorporated update action: another user's, which the
+    // backend already has, or the user's own unsaved one, which is re-applied during
+    // rebasing and is saved through the save queue. Unlike a local mutation, the
+    // bucket is neither marked dirty nor pushed, and no undo snapshot is taken.
     mutate(this.getData());
     this.invalidateValueSet();
     this.throttledTriggerLabeled();

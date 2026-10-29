@@ -16,15 +16,20 @@ import {
   startEditingAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { voxelIndexOf } from "viewer/model/volumetracing/core";
+import { encodeBucketDiffBase64 } from "viewer/model/volumetracing/core/bucket_diff";
 import { Model, Store } from "viewer/singletons";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mockInitialBucketAndAgglomerateData } from "../proofreading/proofreading_test_utils";
 
 // In live collaboration, volume edits are saved as partial bucket updates. Until their
-// save succeeds, buckets whose data arrives (again) get them re-applied (see
-// unsaved_partial_updates.ts).
+// save succeeds, buckets whose data arrives (again) get them re-applied, and during
+// rebasing they are re-applied on top of others' updates (see unsaved_partial_updates.ts).
 
 const VOLUME_TRACING_ID = "volumeTracingId";
 const position: Vector3 = [40, 40, 43];
+// The mag-1 bucket that contains `position`.
+const bucketOrigin: Vector3 = [32, 32, 32];
 
 async function setup(context: WebknossosTestContext) {
   await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
@@ -108,4 +113,45 @@ describe("Unsaved partial bucket updates", () => {
     expect(await getValueAt(context, position)).toBe(5);
   });
 
+  it<WebknossosTestContext>("win over others' partial updates of the same voxels when rebasing", async (context) => {
+    await setup(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    await context.api.data.reloadAllBuckets();
+    await context.api.tracing.save();
+    // Loads the bucket, as it would be in the viewport. The backend mock doesn't apply
+    // saved updates to its bucket data, so fetching the bucket again would lose them.
+    expect(await getValueAt(context, position)).toBe(backendMock.fillValue);
+
+    // Another user writes 9 to a voxel that the local stroke will cover, too, and to
+    // one that it won't, in the same bucket.
+    const sharedVoxel = position;
+    const othersVoxel: Vector3 = [60, 60, 43];
+    const runAt = (voxel: Vector3) => {
+      const [x, y, z] = voxel.map((coordinate, axis) => coordinate - bucketOrigin[axis]);
+      return { start: voxelIndexOf(x, y, z), length: 1, value: 9n };
+    };
+    backendMock.planVersionInjection(Store.getState().annotation.version + 1, [
+      {
+        name: "updateBucketPartial",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          position: bucketOrigin,
+          additionalCoordinates: undefined,
+          mag: [1, 1, 1],
+          voxelRunsBase64: encodeBucketDiffBase64({
+            address: [1, 1, 1, 0, null],
+            runs: [runAt(sharedVoxel), runAt(othersVoxel)],
+          }),
+        },
+      },
+    ]);
+
+    brushAt(position);
+    // The save has to rebase onto the other user's version first.
+    await context.api.tracing.save();
+
+    expect(await getValueAt(context, sharedVoxel)).toBe(5);
+    expect(await getValueAt(context, othersVoxel)).toBe(9);
+    expect(hasUnsavedPartialUpdates()).toBe(false);
+  });
 });

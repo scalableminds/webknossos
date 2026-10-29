@@ -4,7 +4,6 @@ import { addToNestedMap, addToSetMap } from "libs/utils";
 import { actionChannel, call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import type { LayerNameAsKey } from "types/type_utils";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import { getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
   getAllLoadedMeshes,
@@ -184,23 +183,26 @@ export function* tryToIncorporateActions(
           );
 
           const bucket = cube.getBucket(bucketAddress);
-          const voxelRunsBase64 =
-            action.name === "updateBucketPartial" ? action.value.voxelRunsBase64 : null;
-          if (
-            voxelRunsBase64 != null &&
-            bucket.type === "data" &&
-            bucket.isLoaded() &&
-            !WkDevFlags.liveCollaboration.refetchBucketsForRemotePartialUpdates
-          ) {
-            // A loaded bucket gets the runs applied directly. Concurrent local edits
-            // of the same voxels are not reconciled yet: locally, the remote values win.
-            const runs = decodeBucketDiff(
-              Uint8Array.from(atob(voxelRunsBase64), (char) => char.charCodeAt(0)),
-            );
-            bucket.applyRemoteChange((data) => {
-              for (const run of runs) applyRun(data as SegmentBucketData, run);
-            });
-            break;
+          if (action.name === "updateBucketPartial") {
+            if (bucket.type === "data" && bucket.isLoaded()) {
+              // A loaded bucket gets the runs applied directly. As runs are absolute
+              // writes, applying others' runs first and then re-applying the user's
+              // unsaved ones (see rebasing_sagas.ts) yields the backend's state after
+              // the user's pending save: where both wrote the same voxels, the user's
+              // values win.
+              const runs = decodeBucketDiff(
+                Uint8Array.from(atob(action.value.voxelRunsBase64), (char) => char.charCodeAt(0)),
+              );
+              bucket.applyChangeFromUpdateAction((data) => {
+                for (const run of runs) applyRun(data as SegmentBucketData, run);
+              });
+              break;
+            }
+            if (areUnsavedChangesOfUser) {
+              // An unloaded bucket gets the user's unsaved runs when its data arrives
+              // (see unsaved_partial_updates.ts).
+              break;
+            }
           }
           // Otherwise, drop the local cache and force a re-fetch. A bucket that is
           // not loaded yet may still receive backend data from before the change.

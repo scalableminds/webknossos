@@ -53,7 +53,7 @@ const localStoragePersister = createAsyncStoragePersister({
   key: "query-cache-v4",
 });
 // Queries whose data must never be written to localStorage, identified by the first key segment.
-const NEVER_PERSISTED_QUERY_KEYS = ["authToken"];
+const NEVER_PERSISTED_QUERY_KEYS = ["authToken", "datasetSharingToken"];
 
 async function tryToLoadActiveUser() {
   // Try to retrieve the currently active user if logged in

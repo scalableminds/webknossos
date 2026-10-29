@@ -274,7 +274,7 @@ class VolumeTracingService @Inject() (
                 )
               } yield ()
             case Empty if dataBeforeRevertOpt.isEmpty =>
-              Fox.successful(()) // Already reverted before, nothing to do
+              Fox.successful(()) // Already reverted, leave it alone
             case Empty =>
               for {
                 dataAfterRevert <- Fox.successful(revertedValue)

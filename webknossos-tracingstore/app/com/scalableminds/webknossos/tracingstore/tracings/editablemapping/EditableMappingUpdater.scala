@@ -463,7 +463,7 @@ class EditableMappingUpdater(
         if (keyValuePair.version > sourceVersion) {
           editableMappingService.getSegmentToAgglomerateChunk(chunkKey, Some(sourceVersion)).shiftBox.flatMap {
             case Full(chunkData) => Fox.successful(segmentToAgglomerateBuffer.put(chunkKey, (chunkData.toMap, false)))
-            case Empty if isRevertedElement(keyValuePair) => Fox.successful(())
+            case Empty if isRevertedElement(keyValuePair) => Fox.successful(()) // Already reverted, leave it alone
             case Empty => Fox.successful(segmentToAgglomerateBuffer.put(chunkKey, (Map[Long, Long](), true)))
             case Failure(msg, _, chain) =>
               Fox.failure(msg, Empty, chain)

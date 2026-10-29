@@ -27,12 +27,32 @@ struct WeighedChunk {
     weight_kb: u32,
 }
 
-/// The shared chunk contents cache (Scala `AlfuCache[String, MultiArray]`).
+/// Cache key scope for one source layer: the JSON array `[organization, directory, layer]`.
+/// JSON keeps the scope unambiguous for names containing delimiters; see `key_matches_source`.
 pub(crate) fn source_layer_cache_key(id: &crate::models::DataSourceId, layer: &str) -> String {
     serde_json::to_string(&[&id.organization_id, &id.directory_name, layer])
         .expect("string array serializes")
 }
 
+/// Whether `key` starts with the `source_layer_cache_key` scope of `id` (and `layer`, if given).
+/// Anything after the leading JSON array is ignored.
+pub(crate) fn key_matches_source(
+    key: &str,
+    id: &crate::models::DataSourceId,
+    layer: Option<&str>,
+) -> bool {
+    let mut stream = serde_json::Deserializer::from_str(key).into_iter::<Vec<String>>();
+    stream.next().is_some_and(|scope| {
+        scope.is_ok_and(|scope| {
+            scope.len() == 3
+                && scope[0] == id.organization_id
+                && scope[1] == id.directory_name
+                && layer.is_none_or(|l| scope[2] == l)
+        })
+    })
+}
+
+/// The shared chunk contents cache (Scala `AlfuCache[String, MultiArray]`).
 #[derive(Debug)]
 pub struct ChunkContentsCache {
     cache: AlfuCache<String, WeighedChunk, DsError>,
@@ -76,17 +96,7 @@ impl ChunkContentsCache {
 
     /// Clear exactly one source/layer, including names containing the old __ delimiter.
     pub fn clear_for_source(&self, id: &crate::models::DataSourceId, layer: Option<&str>) -> usize {
-        self.clear_matching(|key| {
-            let mut stream = serde_json::Deserializer::from_str(key).into_iter::<Vec<String>>();
-            stream.next().is_some_and(|scope| {
-                scope.is_ok_and(|scope| {
-                    scope.len() == 3
-                        && scope[0] == id.organization_id
-                        && scope[1] == id.directory_name
-                        && layer.is_none_or(|l| scope[2] == l)
-                })
-            })
-        })
+        self.clear_matching(|key| key_matches_source(key, id, layer))
     }
 
     /// Scala `getOrLoad`. `weigh` gives the loaded value's size in bytes.

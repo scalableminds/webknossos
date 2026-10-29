@@ -4,6 +4,7 @@ use crate::{
     datareaders::{
         ChunkContentsCache,
         bucket_provider::{BucketProvider, DatasetArrayBucketProvider},
+        cache::{key_matches_source, source_layer_cache_key},
         index_cache::IndexCache,
     },
     datavault::{BoxFuture, DataVaultService, VaultError, VaultResult},
@@ -60,16 +61,12 @@ impl BinaryDataService {
     pub fn cached_provider_count(&self) -> usize {
         self.providers.len()
     }
-    fn provider_key(id: &DataSourceId, layer: &str) -> String {
-        serde_json::to_string(&[&id.organization_id, &id.directory_name, layer])
-            .expect("string array serializes")
-    }
     async fn provider(
         &self,
         r: &DataServiceDataRequest,
     ) -> VaultResult<Arc<Arc<dyn BucketProvider>>> {
         let id = r.data_source_id_or_volume_dummy();
-        let key = Self::provider_key(&id, &r.data_layer.name);
+        let key = source_layer_cache_key(&id, &r.data_layer.name);
         self.providers
             .get_or_load(&key, || async {
                 let provider: Arc<dyn BucketProvider> = Arc::new(DatasetArrayBucketProvider::new(
@@ -374,14 +371,9 @@ impl BinaryDataService {
             .mapper
             .as_ref()
             .map_or(0, |m| m.clear_caches(&id, layer));
-        let removed = self.providers.clear_matching(|key| {
-            serde_json::from_str::<Vec<String>>(key).is_ok_and(|k| {
-                k.len() == 3
-                    && k[0] == organization
-                    && k[1] == directory
-                    && layer.is_none_or(|layer| k[2] == layer)
-            })
-        });
+        let removed = self
+            .providers
+            .clear_matching(|key| key_matches_source(key, &id, layer));
         self.errors.clear_for_dataset(&id);
         (closed, removed, chunks)
     }

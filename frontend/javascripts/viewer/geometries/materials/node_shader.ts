@@ -398,6 +398,9 @@ precision highp float;
 
 uniform float viewMode;
 uniform float opacity;
+// The precision has to match the declaration in the vertex shader (int defaults to mediump in
+// fragment shaders), otherwise the program fails to link.
+uniform highp int isPicking;
 
 in vec3 color;
 in float v_isHighlightedCommented;
@@ -461,7 +464,10 @@ void main()
       }
     }
 
-    outputColor.a *= opacity;
+    // During picking, the color encodes the node id, which must not be blended with the background
+    if (isPicking == 0) {
+      outputColor.a *= opacity;
+    }
 }`;
   }
 

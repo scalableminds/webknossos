@@ -297,8 +297,13 @@ impl FinishContext<'_> {
         }
     }
 
-    /// Scala `finishDatasetUpload`.
-    pub async fn finish_dataset_upload(&self, upload_id: &str, dataset_id: &str) -> DsResult<()> {
+    /// Scala `finishDatasetUpload`. Returns the id of the conversion job, if
+    /// one was started.
+    pub async fn finish_dataset_upload(
+        &self,
+        upload_id: &str,
+        dataset_id: &str,
+    ) -> DsResult<Option<String>> {
         let domain = UploadDomain::Dataset;
         let store = self.uploads.store(domain);
         let source = store

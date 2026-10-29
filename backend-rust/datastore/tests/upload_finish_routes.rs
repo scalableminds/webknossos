@@ -17,6 +17,7 @@ use std::{io::Write, path::PathBuf};
 use webknossos_datastore::{AppState, config::BaseDirectory, router};
 
 const ID: &str = "0123456789abcdef01234567";
+const JOB_ID: &str = "abcdef0123456789abcdef01";
 const BOUNDARY: &str = "wkboundary";
 
 fn temp() -> PathBuf {
@@ -63,6 +64,8 @@ async fn fixture_with_s3(s3: Option<&mock_s3::MockS3>, credentials: bool) -> Fix
             )
         } else if path.ends_with("/findDatasetId") {
             Reply::json(StatusCode::OK, json!(ID))
+        } else if path.ends_with("/reportDatasetUpload") && call.json()["needsConversion"] == true {
+            Reply::json(StatusCode::OK, json!({"conversionJobId": JOB_ID}))
         } else {
             Reply::json(StatusCode::OK, json!({}))
         }
@@ -277,7 +280,7 @@ async fn finishes_zipped_explored_dataset_uploads() {
     chunk(&f.app, "dataset", "up1/ds.zip", &archive).await;
     let (status, body) = finish(&f, "dataset", "up1").await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    assert_eq!(body, json!({"datasetId": ID}));
+    assert_eq!(body, json!({"datasetId": ID, "conversionJobId": null}));
 
     let target = f.orga_dir.join("my_ds");
     assert_eq!(
@@ -425,6 +428,7 @@ async fn moves_datasets_needing_conversion() {
     chunk(&f.app, "dataset", "up1/stack/b.tif", b"b").await;
     let (status, body) = finish(&f, "dataset", "up1").await;
     assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body, json!({"datasetId": ID, "conversionJobId": JOB_ID}));
     assert_eq!(
         std::fs::read(f.orga_dir.join(".forConversion/my_ds/a.tif")).unwrap(),
         b"a"
@@ -723,7 +727,8 @@ async fn legacy_chunk_endpoints_and_finish_body_preserve_old_response_fields() {
         )
         .await;
         assert_eq!(status, StatusCode::OK, "{body}");
-        assert_eq!(body, json!({"newDatasetId":ID}));
+        // Scala: `(json - "datasetId") ++ Json.obj("newDatasetId" -> ..)`.
+        assert_eq!(body, json!({"conversionJobId":JOB_ID,"newDatasetId":ID}));
         assert_eq!(
             std::fs::read(f.orga_dir.join(".forConversion/my_ds/a.tif")).unwrap(),
             b"pixels"

@@ -344,8 +344,9 @@ async fn report_dataset_upload_without_conversion() {
 
     // Success: data source with linked layer stored, usable; storage refresh,
     // real-path scan (local mag path) and mirror follow.
+    // ReportDatasetUploadResult without a conversion job (JsonAutoFormat omits None).
     let (status, response) = call(&app, &uri, valid.clone()).await;
-    assert_eq!((status, response), (StatusCode::OK, Value::Null));
+    assert_eq!((status, response), (StatusCode::OK, json!({})));
     let (usable, status_text, hash, unit, mirror) = dataset_row(&db, &dataset).await;
     assert!(usable);
     assert_eq!(status_text, "");
@@ -492,15 +493,22 @@ async fn report_dataset_upload_with_conversion() {
     // A worker of the dataset's store supports convert_to_wkw: job inserted.
     sqlx::query("INSERT INTO webknossos.workers (_id,_dataStore,key,supportedJobCommands) VALUES ($1,'store','worker-secret',ARRAY['convert_to_wkw'])")
         .bind(object_id()).execute(&db.pool).await.unwrap();
-    let (status, _) = call(&app, &uri, body(true, None, json!([]), voxel_size.clone())).await;
+    let (status, response) =
+        call(&app, &uri, body(true, None, json!([]), voxel_size.clone())).await;
     assert_eq!(status, StatusCode::OK);
-    let (owner_id, store, command, args, state): (String, String, String, Value, String) =
-        sqlx::query_as(
-            "SELECT _owner, _dataStore, command, commandArgs, state::text FROM webknossos.jobs",
-        )
-        .fetch_one(&db.pool)
-        .await
-        .unwrap();
+    let (job_id, owner_id, store, command, args, state): (
+        String,
+        String,
+        String,
+        String,
+        Value,
+        String,
+    ) = sqlx::query_as(
+        "SELECT _id, _owner, _dataStore, command, commandArgs, state::text FROM webknossos.jobs",
+    )
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
     assert_eq!(
         (
             owner_id.as_str(),
@@ -510,6 +518,7 @@ async fn report_dataset_upload_with_conversion() {
         ),
         (owner.user_id.as_str(), "store", "convert_to_wkw", "PENDING")
     );
+    assert_eq!(response, json!({"conversionJobId": job_id}));
     assert_eq!(
         args,
         json!({

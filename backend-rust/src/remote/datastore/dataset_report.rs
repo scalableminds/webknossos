@@ -4,7 +4,7 @@
 //! Without conversion the reported data source (plus linked layers) is stored
 //! and the dataset becomes usable; then used storage is refreshed, real paths
 //! are scanned and the mirror is written for virtual datasets. With conversion
-//! a `convert_to_wkw` job is submitted instead. Deviations from Play are listed
+//! a `convert_to_wkw` job is submitted instead and its id returned. Deviations from Play are listed
 //! in checkpoints/remote-datastore-dataset-report.md.
 use axum::{
     Router,
@@ -13,7 +13,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
 use crate::{
@@ -69,6 +69,14 @@ struct ReportDatasetUploadParameters {
     voxel_size: Option<Value>,
 }
 
+/// ReportDatasetUploadResult (JsonAutoFormat omits `None`).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ReportDatasetUploadResult {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    conversion_job_id: Option<ObjectId>,
+}
+
 async fn find_dataset(pool: &sqlx::PgPool, id: &ObjectId) -> ApiResult<ReportedDataset> {
     remote_datastore_dao::find_reported_dataset(pool, id)
         .await?
@@ -85,7 +93,9 @@ async fn report_dataset_upload(
     Json(body): Json<ReportDatasetUploadParameters>,
 ) -> Response {
     match report(&state, &store.name, &clients, &misc, &slack, query, body).await {
-        Ok(()) => StatusCode::OK.into_response(),
+        Ok(conversion_job_id) => {
+            axum::Json(ReportDatasetUploadResult { conversion_job_id }).into_response()
+        }
         Err(error) => error.into_response(),
     }
 }
@@ -98,7 +108,7 @@ async fn report(
     slack: &SlackNotificationService,
     query: ReportQuery,
     body: ReportDatasetUploadParameters,
-) -> RunResult<()> {
+) -> RunResult<Option<ObjectId>> {
     let data_source = body
         .data_source_opt
         .as_ref()
@@ -131,11 +141,14 @@ async fn report(
     }
     let updated = find_dataset(pool, id).await.map_err(RunError::Api)?;
     if body.needs_conversion {
-        submit_conversion(state, clients, misc, &user, &dataset, &updated, voxel_size).await
+        submit_conversion(state, clients, misc, &user, &dataset, &updated, voxel_size)
+            .await
+            .map(Some)
     } else {
         finish_without_conversion(pool, clients, &updated)
             .await
-            .map_err(RunError::Api)
+            .map_err(RunError::Api)?;
+        Ok(None)
     }
 }
 
@@ -254,7 +267,7 @@ async fn submit_conversion(
     dataset: &ReportedDataset,
     updated: &ReportedDataset,
     voxel_size: Option<VoxelSize>,
-) -> RunResult<()> {
+) -> RunResult<ObjectId> {
     let VoxelSize { factor, unit } =
         voxel_size.ok_or_else(|| RunError::Api(ApiError::bad_request(MISSING_VOXEL_SIZE)))?;
     let base_directory = organization_base_directory(&state.pool, clients, dataset)
@@ -314,7 +327,7 @@ async fn submit_convert_to_wkw_job(
     factor: [f64; 3],
     unit: &str,
     base_directory: Value,
-) -> RunResult<()> {
+) -> RunResult<ObjectId> {
     let organization =
         remote_datastore_dao::find_organization_id_and_name(&state.pool, &dataset.organization)
             .await?;
@@ -349,5 +362,5 @@ async fn submit_convert_to_wkw_job(
     properties.insert("command".into(), json!(submission.command));
     crate::system::analytics::track(state, misc, user, "run_job".into(), properties);
     tracing::info!(dataset = %dataset.id, job = %job_id, "Submitted convert_to_wkw job after upload");
-    Ok(())
+    Ok(job_id)
 }

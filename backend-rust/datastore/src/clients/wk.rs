@@ -473,19 +473,22 @@ impl WkClient {
     }
 
     /// Scala `reportDatasetUpload`: `POST …/reportDatasetUpload?datasetId=`.
+    /// Returns the id of the conversion job, if one was started
+    /// (`ReportDatasetUploadResult.conversionJobId`).
     /// TODO(DS4 upload): typed `ReportDatasetUploadParameters`.
     pub async fn report_dataset_upload<B: Serialize + ?Sized>(
         &self,
         dataset_id: &str,
         parameters: &B,
         tc: &TokenContext,
-    ) -> DsResult<()> {
-        self.datastore_rpc("reportDatasetUpload")
+    ) -> DsResult<Option<String>> {
+        let response = self
+            .datastore_rpc("reportDatasetUpload")
             .query("datasetId", dataset_id)
             .with_token(tc)
             .post_json(parameters)
             .await?;
-        Ok(())
+        Ok(conversion_job_id(&response))
     }
 
     /// Scala `reportMagUpload`. TODO(DS4 upload): typed `ReportMagUploadParameters`.
@@ -729,6 +732,15 @@ impl WkClient {
             .map_err(|e| e.wrap("Failed to get data source root path remote webknossos"))?;
         Ok((!root.is_empty()).then(|| PathBuf::from(root)))
     }
+}
+
+/// `ReportDatasetUploadResult` read leniently, like Scala's `tryo(as[..])`:
+/// older WEBKNOSSOS versions reply with an empty body, which (like any reply
+/// without a valid ObjectId) means no conversion job.
+fn conversion_job_id(response: &[u8]) -> Option<String> {
+    let result: Value = serde_json::from_slice(response).ok()?;
+    let id = result.get("conversionJobId")?.as_str()?;
+    (id.len() == 24 && id.bytes().all(|b| b.is_ascii_hexdigit())).then(|| id.to_ascii_lowercase())
 }
 
 #[cfg(test)]

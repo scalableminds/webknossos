@@ -721,11 +721,10 @@ pub(super) async fn finish_upload(
     };
     let result = match domain {
         UploadDomain::Dataset => context.finish_dataset_upload(&upload_id, &dataset_id).await,
-        other => {
-            context
-                .finish_mag_or_attachment_upload(&upload_id, &dataset_id, other)
-                .await
-        }
+        other => context
+            .finish_mag_or_attachment_upload(&upload_id, &dataset_id, other)
+            .await
+            .map(|()| None),
     };
     if started.elapsed() > std::time::Duration::from_secs(30) {
         tracing::info!(
@@ -733,11 +732,13 @@ pub(super) async fn finish_upload(
             started.elapsed()
         );
     }
-    result.map_err(|e| {
+    let conversion_job_id = result.map_err(|e| {
         tracing::warn!("Failed upload request: {e}");
         e.wrap(format!(
             "Could not finalize upload for {upload_domain} “{dataset_id}”."
         ))
     })?;
-    Ok(Json(json!({ "datasetId": dataset_id })))
+    Ok(Json(
+        json!({ "datasetId": dataset_id, "conversionJobId": conversion_job_id }),
+    ))
 }

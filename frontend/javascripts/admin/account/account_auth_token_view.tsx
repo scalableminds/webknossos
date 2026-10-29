@@ -23,8 +23,6 @@ function AccountAuthTokenView() {
       queryKey: ["authToken"],
       queryFn: getAuthToken,
       refetchOnWindowFocus: false,
-      // Never persist the token to localStorage.
-      meta: { persist: false },
     },
     "Failed to fetch auth token. Please refresh the page to try again.",
   );

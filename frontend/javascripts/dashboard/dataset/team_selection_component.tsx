@@ -8,7 +8,7 @@ import { isUserAdminOrManager } from "libs/utils";
 import compact from "lodash-es/compact";
 import unionBy from "lodash-es/unionBy";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useMemo, useState } from "react";
 import type { APITeam } from "types/api_types";
 
 type TeamSelectionComponentProps = {
@@ -55,11 +55,10 @@ function TeamSelectionComponent({
   }, [value]);
 
   // Notify the parent whenever the teams were (re)loaded.
-  const afterFetchedTeamsRef = useRef(afterFetchedTeams);
-  afterFetchedTeamsRef.current = afterFetchedTeams;
+  const onTeamsFetched = useEffectEvent((teams: APITeam[]) => afterFetchedTeams?.(teams));
   useEffect(() => {
     if (fetchedTeams != null) {
-      afterFetchedTeamsRef.current?.(fetchedTeams);
+      onTeamsFetched(fetchedTeams);
     }
   }, [fetchedTeams]);
 

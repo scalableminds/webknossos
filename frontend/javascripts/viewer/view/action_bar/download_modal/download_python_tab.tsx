@@ -1,4 +1,4 @@
-import { getAuthToken } from "admin/rest_api";
+import { authTokenQueryOptions } from "admin/account/auth_token_query";
 import { Alert, Button, Divider, Flex, Typography } from "antd";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -39,8 +39,7 @@ export function DownloadPythonTab({ isAnnotation }: { isAnnotation: boolean }) {
   const activeUser = useWkSelector((state) => state.activeUser);
 
   const { data: authToken } = useQueryWithErrorHandling({
-    queryKey: ["authToken"],
-    queryFn: getAuthToken,
+    ...authTokenQueryOptions,
     enabled: activeUser != null,
   });
 

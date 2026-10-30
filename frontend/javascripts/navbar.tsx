@@ -62,7 +62,7 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Link, useLocation } from "react-router";
-import { getAntdTheme } from "theme";
+import { getAntdTheme, ThemeIndependentStatusColor } from "theme";
 import type {
   APIOrganization,
   APIOrganizationCompact,
@@ -108,9 +108,7 @@ const OLVY_CONFIG = {
     showHeader: true,
     // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
     showUnreadIndicator: false,
-    // Kept as a literal: this is configuration handed to the third-party Olvy widget, which
-    // renders in its own iframe and cannot resolve our CSS variables.
-    unreadIndicatorColor: "#cc1919",
+    unreadIndicatorColor: ThemeIndependentStatusColor.error,
     unreadIndicatorPosition: "top-right",
   },
 };
@@ -978,8 +976,9 @@ function Navbar() {
         variant="filled"
         icon={<MessageOutlined />}
         onClick={() => setIsHelpModalOpen((isOpen) => !isOpen)}
+        title="Ask a Question"
       >
-        Ask
+        <span className="hide-on-small-screen">Ask</span>
       </Button>,
     );
 

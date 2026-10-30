@@ -180,12 +180,12 @@ function TaskTypeListView() {
               return (
                 <Space wrap>
                   {taskType.tracingType === "skeleton" || taskType.tracingType === "hybrid" ? (
-                    <Tag color="green" key={`${taskType.id}_skeleton`} variant="outlined">
+                    <Tag color="success" key={`${taskType.id}_skeleton`} variant="outlined">
                       skeleton
                     </Tag>
                   ) : null}
                   {taskType.tracingType === "volume" || taskType.tracingType === "hybrid" ? (
-                    <Tag color="orange" key={`${taskType.id}_volume`} variant="outlined">
+                    <Tag color="warning" key={`${taskType.id}_volume`} variant="outlined">
                       volume
                     </Tag>
                   ) : null}

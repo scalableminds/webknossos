@@ -1,9 +1,8 @@
 import AdminPage from "admin/admin_page";
-import { unwrapOrThrow } from "admin/api/api_result";
 import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } from "admin/rest_api";
 import { Button, Col, Form, Input, Row, Select, theme } from "antd";
-import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
-import { useState } from "react";
+import { useApi, useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
+import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import type { APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
@@ -16,31 +15,37 @@ function ScriptCreateView() {
 
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
-  const [users, setUsers] = useState<APIUser[]>([]);
-  const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
 
-  async function fetchData() {
-    setIsFetchingData(true);
-    const fetchedUsers = unwrapOrThrow(await getTeamManagerOrAdminUsers());
-    const onlyActiveUsers = fetchedUsers.filter((user) => user.isActive);
-    setUsers(onlyActiveUsers);
-    setIsFetchingData(false);
-  }
+  const { data: users = [], isLoading: isFetchingData } = useApi({
+    queryKey: ["teamManagerOrAdminUsers"],
+    queryFn: () => getTeamManagerOrAdminUsers(),
+    select: (fetchedUsers) => fetchedUsers.filter((user) => user.isActive),
+    refetchOnWindowFocus: false,
+  });
 
-  async function applyDefaults() {
-    const script = scriptId ? await getScript(scriptId) : null;
+  const { data: script } = useQueryWithErrorHandling({
+    queryKey: ["scriptForEditing", scriptId],
+    queryFn: () => getScript(scriptId as string),
+    enabled: scriptId != null,
+    // Always load the script freshly when opening the form and never refetch it
+    // in the background, so that the user's edits are not overwritten.
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 0,
+    meta: { persist: false },
+  });
+
+  // Populate the form with the defaults (or the script once it is loaded).
+  useEffect(() => {
+    if (scriptId != null && script == null) {
+      return;
+    }
     const defaultValues = {
       owner: script ? script.owner.id : activeUser.id,
     };
     const defaultFormValues = Object.assign({}, script, defaultValues);
     form.setFieldsValue(defaultFormValues);
-  }
-
-  useEffectOnlyOnce(() => {
-    fetchData();
-    applyDefaults();
-  });
+  }, [form, scriptId, script, activeUser.id]);
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const onFinish = async (formValues) => {

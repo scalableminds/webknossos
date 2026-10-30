@@ -37,6 +37,7 @@ import { syncValidator } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "viewer/constants";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
+import { DatasetAddType } from "./dataset_add_type";
 import { DatasetFileSelection } from "./upload/dataset_file_selection";
 import { inferDatasetName } from "./upload/detect_dataset_format";
 import { isInspectionBlockingUpload } from "./upload/inspection_banner";
@@ -61,7 +62,8 @@ type UploadFormFieldTypes = {
 type Props = {
   datastores: Array<APIDataStore>;
   withoutCard?: boolean;
-  onUploaded: (
+  // The upload view shows the progress and the result of the upload in a modal itself.
+  onUploaded?: (
     datasetId: string,
     datasetName: string,
     needsConversion: boolean,
@@ -211,7 +213,7 @@ function DatasetUploadView({ datastores, withoutCard, onUploaded }: Props) {
     onUploaded: (datasetId, datasetName, needsConversion) => {
       form.setFieldsValue({ name: "", zipFile: [] });
       setUnfinishedUploadToContinue(null);
-      onUploaded(datasetId, datasetName, needsConversion);
+      onUploaded?.(datasetId, datasetName, needsConversion);
     },
     onUploadAborted: () => setUnfinishedUploadToContinue(null),
   });
@@ -260,6 +262,12 @@ function DatasetUploadView({ datastores, withoutCard, onUploaded }: Props) {
       targetFolderId: formValues.targetFolderId,
       datastoreUrl: formValues.datastoreUrl,
       needsConversion: datasetNeedsConversion,
+      formatName:
+        datasetNeedsConversion &&
+        inspection.status === "done" &&
+        inspection.format.kind !== "unknown"
+          ? inspection.format.formatName
+          : null,
       voxelSizeFactor: formValues.voxelSizeFactor,
       voxelSizeUnit: formValues.voxelSizeUnit,
       unfinishedUploadToContinue,
@@ -408,7 +416,12 @@ function DatasetUploadView({ datastores, withoutCard, onUploaded }: Props) {
         </Form>
       </CardContainer>
 
-      <UploadProgressModal status={upload.status} onCancel={upload.cancelUpload} />
+      <UploadProgressModal
+        status={upload.status}
+        datasetAddType={DatasetAddType.UPLOAD}
+        onCancelUpload={upload.cancelUpload}
+        onClose={upload.reset}
+      />
     </div>
   );
 }

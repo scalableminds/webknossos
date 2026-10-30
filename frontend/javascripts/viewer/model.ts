@@ -34,7 +34,6 @@ const WAIT_AFTER_SAVE_TRIGGER = import.meta.env.MODE === "test" ? 50 : 500;
 export class WebKnossosModel {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'dataLayers' has no initializer and is no... Remove this comment to see the full error message
   dataLayers: Record<string, DataLayer>;
-  maximumTextureCountForLayer: number = 0;
 
   async fetch(
     initialMaybeCompoundType: APICompoundType | null,
@@ -52,7 +51,7 @@ export class WebKnossosModel {
 
       if (initializationInformation) {
         // Only executed on initial fetch
-        const { dataLayers, maximumTextureCountForLayer } = initializationInformation;
+        const { dataLayers } = initializationInformation;
 
         if (this.dataLayers != null) {
           Object.values(this.dataLayers).forEach((layer) => {
@@ -61,7 +60,6 @@ export class WebKnossosModel {
         }
 
         this.dataLayers = dataLayers;
-        this.maximumTextureCountForLayer = maximumTextureCountForLayer;
       }
     } catch (error) {
       try {

@@ -1,4 +1,4 @@
-import UpdatableTexture from "libs/UpdatableTexture";
+import UpdatableTexture, { UpdatableTextureArray } from "libs/UpdatableTexture";
 import {
   ClampToEdgeWrapping,
   NearestFilter,
@@ -36,6 +36,26 @@ export function createUpdatableTexture(
     // derive this value by itself.
     // See https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
     // for a reference of the internal formats.
+    newTexture.internalFormat = internalFormat;
+  }
+
+  return newTexture;
+}
+
+// This function has to be in its own file as non-resolvable cycles are created otherwise
+export function createUpdatableTextureArray(
+  width: number,
+  height: number,
+  depth: number,
+  type: TextureDataType,
+  renderer: WebGLRenderer,
+  format: PixelFormat,
+  internalFormat?: PixelFormatGPU,
+): UpdatableTextureArray {
+  const newTexture = new UpdatableTextureArray(width, height, depth, format, type);
+  newTexture.setRenderer(renderer);
+
+  if (internalFormat) {
     newTexture.internalFormat = internalFormat;
   }
 

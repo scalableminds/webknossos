@@ -151,19 +151,23 @@ export class DataBucket {
   };
 
   // Saving edits as partial bucket updates (updateBucketPartial), in collaborative
-  // volume annotation. Edits go through applyPartialChange and don't use the fields
-  // above.
-  //
-  // The changes made while the bucket isn't loaded, in the order they were applied.
-  // These are the user's local writes (saved or not), others' partial updates, and
-  // the user's own ones re-applied during rebasing. Once the backend's data arrives,
-  // they are applied to it. As they are absolute writes and all changes since the
-  // bucket was created are kept, it doesn't matter which of them the data already
-  // contains (see applyPartialChange).
-  private pendingPartialChanges: Map<object, (data: BucketDataArray) => void> = new Map();
-  // How many partial updates of this bucket are in the save queue. While there are
-  // any, the bucket isn't garbage collected: fetched again, its data would lack them.
-  unsavedPartialUpdateCount: number = 0;
+  // volume annotation. Edits go through applyPartialChange and don't use
+  // fullBucketSaveState.
+  partialUpdateState: {
+    // The changes made while the bucket isn't loaded, in the order they were applied.
+    // These are the user's local writes (saved or not), others' partial updates, and
+    // the user's own ones re-applied during rebasing. Once the backend's data arrives,
+    // they are applied to it. As they are absolute writes and all changes since the
+    // bucket was created are kept, it doesn't matter which of them the data already
+    // contains (see applyPartialChange).
+    pendingChanges: Map<object, (data: BucketDataArray) => void>;
+    // How many partial updates of this bucket are in the save queue. While there are
+    // any, the bucket isn't garbage collected: fetched again, its data would lack them.
+    unsavedCount: number;
+  } = {
+    pendingChanges: new Map(),
+    unsavedCount: 0,
+  };
 
   constructor(
     elementClass: ElementClass,
@@ -236,7 +240,7 @@ export class DataBucket {
       !this.fullBucketSaveState.dirty &&
       this.state !== BucketStateEnum.REQUESTED &&
       this.fullBucketSaveState.dirtyCount === 0 &&
-      this.unsavedPartialUpdateCount === 0;
+      this.partialUpdateState.unsavedCount === 0;
     return mayBeCollected;
   }
 
@@ -533,7 +537,7 @@ export class DataBucket {
   /**
    * Applies a change of collaborative volume annotation: a local write, another
    * user's partial update, or the user's own one re-applied during rebasing. A bucket
-   * that isn't loaded keeps it in pendingPartialChanges. `key` identifies the change:
+   * that isn't loaded keeps it in partialUpdateState.pendingChanges. `key` identifies the change:
    * applying a change with the same key again (e.g., a stroke's write, which grows
    * with the stroke) moves it to the end of the pending changes.
    */
@@ -542,8 +546,8 @@ export class DataBucket {
       // A missing bucket is empty on the backend, so the change applies to empty data.
       apply(this.getOrCreateData());
     } else {
-      this.pendingPartialChanges.delete(key);
-      this.pendingPartialChanges.set(key, apply);
+      this.partialUpdateState.pendingChanges.delete(key);
+      this.partialUpdateState.pendingChanges.set(key, apply);
       // Preliminary data, if there is any, shows the change until the backend's data
       // arrives.
       if (this.data != null) apply(this.data);
@@ -553,8 +557,8 @@ export class DataBucket {
   }
 
   private applyPendingPartialChanges(data: BucketDataArray): void {
-    for (const apply of this.pendingPartialChanges.values()) apply(data);
-    this.pendingPartialChanges.clear();
+    for (const apply of this.partialUpdateState.pendingChanges.values()) apply(data);
+    this.partialUpdateState.pendingChanges.clear();
   }
 
   markAsRequested(): void {
@@ -572,7 +576,8 @@ export class DataBucket {
   // The bucket is not present on the datastore. It transitions to MISSING and stays there.
   markAsMissing(): void {
     // Without data on the backend, the pending partial changes apply to empty data.
-    const hasPendingPartialChanges = this.isRequested() && this.pendingPartialChanges.size > 0;
+    const hasPendingPartialChanges =
+      this.isRequested() && this.partialUpdateState.pendingChanges.size > 0;
     if (hasPendingPartialChanges) {
       const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
       const emptyData = new TypedArrayClass(

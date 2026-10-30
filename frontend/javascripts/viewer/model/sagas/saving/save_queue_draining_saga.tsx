@@ -400,14 +400,14 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
         }
       } else if (updateAction.name === "updateBucketPartial") {
         // The backend has the partial update now, so the bucket may be garbage collected
-        // again once it has no other unsaved ones (see unsavedPartialUpdateCount).
+        // again once it has no other unsaved ones (see DataBucket.partialUpdateState).
         const { actionTracingId, position, mag, additionalCoordinates } = updateAction.value;
         const { cube } = Model.getSegmentationTracingLayer(actionTracingId);
         const bucket = cube.getBucket(
           globalPositionToBucketPositionWithMag(position, mag, additionalCoordinates),
         );
-        if (bucket.type === "data" && bucket.unsavedPartialUpdateCount > 0) {
-          bucket.unsavedPartialUpdateCount--;
+        if (bucket.type === "data" && bucket.partialUpdateState.unsavedCount > 0) {
+          bucket.partialUpdateState.unsavedCount--;
         }
       }
     }

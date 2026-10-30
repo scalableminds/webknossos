@@ -68,7 +68,7 @@ export function* getVolumeSaveMode(): Saga<SaveMode> {
 /**
  * The update actions that save an edit's committed bucket diffs as partial bucket updates.
  * They must be pushed to the save queue right away: each one counts as unsaved for its
- * bucket (see DataBucket.unsavedPartialUpdateCount) until its save is acknowledged.
+ * bucket (see DataBucket.partialUpdateState.unsavedCount) until its save is acknowledged.
  */
 export function createPartialBucketUpdates(
   bucketDiffs: BucketDiff[],
@@ -85,7 +85,7 @@ export function createPartialBucketUpdates(
     .filter((diff) => cube.isBucketWithinLayer(diff.address))
     .map((diff) => {
       const bucket = cube.getBucket(diff.address);
-      if (bucket.type === "data") bucket.unsavedPartialUpdateCount++;
+      if (bucket.type === "data") bucket.partialUpdateState.unsavedCount++;
       return updateBucketPartial(
         createSendBucketInfo(diff.address, cube.magInfo),
         encodeBucketDiffBase64(diff, runAxis),

@@ -24,7 +24,12 @@ export const handleError = async (
     if (error instanceof Response) {
       // Handle 401 Unauthorized errors and ensure an understandable error toast is shown.
       // This might happen e.g. after a user logged out everywhere.
-      if (error.status === 401 && showErrorToast) {
+      // Requests to authentication routes (e.g. a failed passkey login) can fail with 401
+      // without an expired session, so their error messages are shown instead.
+      const isAuthenticationRequest = requestedUrl.includes("/api/auth/");
+      const showSessionExpiredToast =
+        error.status === 401 && showErrorToast && !isAuthenticationRequest;
+      if (showSessionExpiredToast) {
         showToastOnce(
           "error",
           <>
@@ -51,7 +56,8 @@ export const handleError = async (
               ...message,
               key: json.status.toString(),
             }));
-            if (showErrorToast) {
+            // The session expired toast already explains the error.
+            if (showErrorToast && !showSessionExpiredToast) {
               Toast.messages(messages); // Note: Toast.error internally logs to console
             } else {
               console.error(messages);
@@ -63,7 +69,7 @@ export const handleError = async (
             /* eslint-disable-next-line prefer-promise-reject-errors */
             return Promise.reject({ ...json, url: requestedUrl });
           } catch (_jsonError) {
-            if (showErrorToast) {
+            if (showErrorToast && !showSessionExpiredToast) {
               Toast.error(text); // Note: Toast.error internally logs to console
             } else {
               console.error(`Request failed for ${requestedUrl}:`, text);

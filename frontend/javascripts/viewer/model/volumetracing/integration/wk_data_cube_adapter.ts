@@ -96,6 +96,7 @@ export class WkDataCubeAdapter implements TransactionCube {
     // erasing the write above. So a pendingOperation additionally replays the
     // write once real data lands.
     if (bucket.needsBackendData()) {
+      // todop: still correct?
       bucket.pendingOperations.push((laterData) =>
         applyBucketWriteToData(asSegmentData(laterData), write),
       );

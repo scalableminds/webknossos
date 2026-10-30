@@ -587,7 +587,7 @@ export class DataBucket {
     switch (this.state) {
       case BucketStateEnum.UNREQUESTED: {
         this.state = BucketStateEnum.REQUESTED;
-        this.partialUpdateRunsSinceRequest = [];
+        this.partialUpdateRunsSinceRequest = []; // todop: is this save?
         break;
       }
 

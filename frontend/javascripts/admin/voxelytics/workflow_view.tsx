@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isWorkflowAccessibleBySwitching } from "admin/api/organization";
 import { getVoxelyticsWorkflow } from "admin/rest_api";
 import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
@@ -43,6 +43,15 @@ export default function WorkflowView() {
     placeholderData: keepPreviousData,
   });
 
+  const queryClient = useQueryClient();
+  // Reloading the report also refreshes the chunk statistics of its tasks, which change
+  // while the workflow is still running. Mounted statistics refetch right away, the
+  // others once they are opened again.
+  const reload = useCallback(() => {
+    refetch();
+    queryClient.invalidateQueries({ queryKey: ["voxelyticsChunkStatistics", workflowHash] });
+  }, [refetch, queryClient, workflowHash]);
+
   const { data: accessibleOrganization } = useQuery({
     queryKey: ["voxelyticsWorkflowAccess", workflowHash],
     queryFn: () => isWorkflowAccessibleBySwitching(workflowHash),
@@ -83,7 +92,7 @@ export default function WorkflowView() {
         onToggleMetaTaskInDag={toggleMetaTask}
         openMetatask={metatask}
         runId={runId ?? null}
-        onReload={refetch}
+        onReload={reload}
         isLoading={isLoading}
       />
     </div>

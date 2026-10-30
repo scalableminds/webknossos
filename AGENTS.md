@@ -10,6 +10,7 @@ Code Verification:
 - Formatting (biome): `yarn fix-frontend` 
 - Linting (biome): `yarn check-frontend`
 
+Beware of this pitfall in redux-saga: If a saga uses a try with a finally block, that finally block should ideally not yield effects. Otherwise, the following error can happen: If the calling saga is cancelled, the inner finally-block is executed. The yielded effect will then resume the calling saga which is most likely not desired. There are two options to avoid this: a) Don't yield effects in finally blocks in sagas OR b) Ensure that the saga that contains the finally-block is called with `yield* call(saga)`  (instead of `yield* saga()`). Additional context can be found here: https://github.com/scalableminds/webknossos/pull/10267.
 
 ## Backend 
 - the backend uses Scala, sbt and the Play framework

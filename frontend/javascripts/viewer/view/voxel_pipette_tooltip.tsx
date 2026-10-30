@@ -114,7 +114,7 @@ export default function VoxelValueTooltip() {
         return null;
       }
 
-      return Promise.all(
+      const entries = await Promise.all(
         layers.map(async (layer) => {
           // getCurrentMagIndex depends on the current state, but we don't
           // want to refetch these data values here every time the state changes.
@@ -141,7 +141,15 @@ export default function VoxelValueTooltip() {
                 channelIndex,
               ),
             ),
-          );
+          ).catch((error) => {
+            // The bucket could not be loaded (e.g., the data store is unreachable). The user is
+            // already warned about failing data requests, so just omit this layer.
+            console.warn(`Could not read voxel value of layer ${layer.name}:`, error);
+            return null;
+          });
+          if (dataValue == null) {
+            return null;
+          }
 
           return [
             getReadableNameForLayerName(dataset, annotation, layer.name),
@@ -149,6 +157,7 @@ export default function VoxelValueTooltip() {
           ];
         }),
       );
+      return compact(entries);
     },
     [],
     [debouncedPosition],

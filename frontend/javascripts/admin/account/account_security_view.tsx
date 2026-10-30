@@ -1,30 +1,25 @@
 import { EditOutlined, LockOutlined, LogoutOutlined } from "@ant-design/icons";
-import { unwrapOrThrow } from "admin/api/api_result";
-import { changePassword, logoutUserEverywhere } from "admin/rest_api";
+import { useLogout } from "admin/auth/use_logout";
+import { changePassword } from "admin/rest_api";
 import { Alert, App, Button, Col, Form, Input, Row, Space } from "antd";
 import features from "features";
-import { reactQueryClient } from "libs/react_query_client";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { logoutUserAction } from "viewer/model/actions/user_actions";
 import { SettingsTitle } from "./helpers/settings_title";
 
 const FormItem = Form.Item;
 const { Password } = Input;
 
-import { useDispatch } from "react-redux";
 import PasskeysView from "../auth/passkeys_view";
 import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 
 const MIN_PASSWORD_LENGTH = 8;
 
 function AccountSecurityView() {
-  const navigate = useNavigate();
   const [form] = Form.useForm();
   const { modal } = App.useApp();
-  const dispatch = useDispatch();
+  const logout = useLogout();
 
   const [isResetPasswordVisible, setResetPasswordVisible] = useState(false);
 
@@ -32,11 +27,7 @@ function AccountSecurityView() {
     try {
       await changePassword(formValues);
       Toast.success(messages["auth.reset_pw_confirmation"]);
-      unwrapOrThrow(await logoutUserEverywhere());
-      // Don't keep the previous user's data around for the next login in this tab.
-      reactQueryClient.clear();
-      dispatch(logoutUserAction());
-      navigate("/auth/login");
+      await logout({ everywhere: true });
     } catch (error) {
       console.error("Password change failed:", error);
       Toast.error("Failed to change password. Please try again.");
@@ -164,17 +155,10 @@ function AccountSecurityView() {
   }
 
   async function handleLogout() {
-    logoutUserEverywhere()
-      .then((result) => unwrapOrThrow(result))
-      .then(() => {
-        reactQueryClient.clear();
-        dispatch(logoutUserAction());
-        navigate("/auth/login");
-      })
-      .catch((error) => {
-        Toast.error("Failed to log out. See console for more details");
-        console.error("Logout failed:", error);
-      });
+    logout({ everywhere: true }).catch((error) => {
+      Toast.error("Failed to log out. See console for more details");
+      console.error("Logout failed:", error);
+    });
   }
 
   const handleLogoutEverywhere = () => {

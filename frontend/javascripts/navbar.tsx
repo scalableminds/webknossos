@@ -11,16 +11,11 @@ import Icon, {
   UserOutlined,
 } from "@ant-design/icons";
 import WkLogoIcon from "@images/wk-logo.svg?react";
-import { unwrapOrThrow } from "admin/api/api_result";
 import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
+import { useLogout } from "admin/auth/use_logout";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import {
-  getBuildInfo,
-  logoutUser,
-  sendAnalyticsEvent,
-  updateNovelUserExperienceInfos,
-} from "admin/rest_api";
+import { getBuildInfo, sendAnalyticsEvent, updateNovelUserExperienceInfos } from "admin/rest_api";
 import type { MenuProps } from "antd";
 import {
   Avatar,
@@ -70,7 +65,7 @@ import {
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { retryMutexAcquisitionNowAction } from "viewer/model/actions/save_actions";
-import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
 import { HelpModal } from "viewer/view/help/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
@@ -875,7 +870,6 @@ function AnnotationLockedTag(): React.ReactElement | null {
 }
 
 function Navbar() {
-  const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
@@ -885,12 +879,10 @@ function Navbar() {
   const bannerOffset = navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0;
   const historyLocation = useLocation();
 
+  const logout = useLogout();
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
-    const redirectUrl = unwrapOrThrow(await logoutUser());
-    dispatch(logoutUserAction());
-    // Hard navigation
-    location.href = redirectUrl;
+    await logout({ everywhere: false });
   };
 
   const version = useFetch(getVersion, null, []);

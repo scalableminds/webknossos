@@ -8,14 +8,15 @@ use webknossos_datastore::{
     config::DatastoreConfig,
     models::{DataSourceId, LayerAttachment},
     services::{
-        mesh::file::{ChunkRequest, MeshFileKey, MeshFileService},
+        attachment::AttachmentFileKey,
+        mesh::file::{ChunkRequest, MeshFileService},
         mesh::manifest::{Manifest, merge},
     },
 };
 fn root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/meshes")
 }
-fn key(name: &str) -> MeshFileKey {
+fn key(name: &str) -> AttachmentFileKey {
     let (path, format) = if name == "local" || name == "real" {
         (root().join(format!("{name}.hdf5")), "hdf5")
     } else if name == "zarr3" {
@@ -23,7 +24,7 @@ fn key(name: &str) -> MeshFileKey {
     } else {
         (root().join(name), "neuroglancerPrecomputed")
     };
-    MeshFileKey {
+    AttachmentFileKey {
         source: DataSourceId::new("ds", "org"),
         layer: "seg".into(),
         attachment: LayerAttachment::from_json(

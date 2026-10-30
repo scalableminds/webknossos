@@ -15,7 +15,7 @@ use webknossos_datastore::{
     config::DatastoreConfig,
     models::{DataSourceId, LayerAttachment},
     router,
-    services::segment::index::SegmentIndexFileKey,
+    services::attachment::AttachmentFileKey,
 };
 
 const ID: &str = "0123456789abcdef01234567";
@@ -282,9 +282,9 @@ async fn zarr_index_reload_discards_shared_chunks_and_invalid_tables_fail() {
     let root = temp();
     segment_index(&root);
     let state = AppState::new(DatastoreConfig::defaults(&root));
-    let key = SegmentIndexFileKey {
-        data_source_id: DataSourceId::new("ds", "org"),
-        layer_name: "seg".into(),
+    let key = AttachmentFileKey {
+        source: DataSourceId::new("ds", "org"),
+        layer: "seg".into(),
         attachment: LayerAttachment::from_json(
             &json!({"name":"idx","path":root.to_str().unwrap(),"dataFormat":"zarr3"}),
         )
@@ -305,17 +305,10 @@ async fn zarr_index_reload_discards_shared_chunks_and_invalid_tables_fail() {
         json!([[0, 0, 0], [1, 0, 0]])
     );
     assert_eq!(
-        state
-            .segment_index
-            .clear_caches(&key.data_source_id, Some("other")),
+        state.segment_index.clear_caches(&key.source, Some("other")),
         0
     );
-    assert!(
-        state
-            .segment_index
-            .clear_caches(&key.data_source_id, Some("seg"))
-            > 0
-    );
+    assert!(state.segment_index.clear_caches(&key.source, Some("seg")) > 0);
     assert_eq!(
         serde_json::to_value(query().await.unwrap()).unwrap(),
         json!([[9, 0, 0], [1, 0, 0]])
@@ -323,13 +316,13 @@ async fn zarr_index_reload_discards_shared_chunks_and_invalid_tables_fail() {
     // Previously these unchecked offsets could create invalid or enormous array requests.
     for offsets in [[2, 1, 3], [0, u64::MAX, 3], [0, 2000000, 3]] {
         std::fs::write(root.join("hash_bucket_offsets/c/0"), u64s(&offsets)).unwrap();
-        state.segment_index.clear_caches(&key.data_source_id, None);
+        state.segment_index.clear_caches(&key.source, None);
         assert!(query().await.is_err(), "{offsets:?}");
     }
     let path = root.join("zarr.json");
     let mut metadata: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
     metadata["attributes"]["voxelytics"]["artifact_attributes"]["n_hash_buckets"] = json!(0);
     std::fs::write(path, serde_json::to_vec(&metadata).unwrap()).unwrap();
-    state.segment_index.clear_caches(&key.data_source_id, None);
+    state.segment_index.clear_caches(&key.source, None);
     assert!(query().await.is_err());
 }

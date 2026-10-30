@@ -17,7 +17,7 @@ use crate::{
     error::{DsError, DsResult},
     models::datasource::unsigned_long_envelope,
     proto::ListOfLong,
-    services::agglomerate::{AgglomerateFileKey, AgglomerateService},
+    services::{agglomerate::AgglomerateService, attachment::AttachmentFileKey},
 };
 
 use super::helpers::{DatasetLayers, QueryFields};
@@ -74,7 +74,7 @@ async fn file_key(
     id: &str,
     layer_name: &str,
     mapping: &str,
-) -> AccessResult<AgglomerateFileKey> {
+) -> AccessResult<AttachmentFileKey> {
     let (source, layer) = layers.readable(tc, id, layer_name).await?;
     Ok(AgglomerateService::look_up(&source.id, &layer, mapping)?)
 }

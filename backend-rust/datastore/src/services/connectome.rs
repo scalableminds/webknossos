@@ -1,45 +1,25 @@
 //! Scala connectome readers: CSR/CSC agglomerate pairs and ordered synapse attributes.
 use crate::cache::{DEFAULT_TIME_TO_IDLE, DEFAULT_TIME_TO_LIVE};
-use crate::datareaders::{ArrayAxes, ArraySource};
+use crate::services::attachment::{AttachmentArrays, AttachmentFileKey, AttachmentId};
 use crate::{
     cache::AlfuCache,
     datareaders::{
-        ChunkContentsCache, DatasetArray,
+        ChunkContentsCache,
         hdf5::Hdf5Reader,
         nd_array::{MaDataType, NdArray},
-        zarr3::open_zarr3_array,
     },
-    datavault::{ByteRange, DataVaultService},
+    datavault::DataVaultService,
     error::{DsError, DsResult, blocking},
     models::{
-        DataSourceId, LayerAttachment, LayerAttachmentDataformat, StaticLayer, UPath,
+        DataSourceId, LayerAttachmentDataformat, StaticLayer,
         json::{Fields, read_i64, read_list, read_string},
     },
 };
 use serde::Serialize;
-use serde_json::Value;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
-type CacheKey = (DataSourceId, String, String, UPath, Option<String>);
-#[derive(Clone)]
-pub struct ConnectomeFileKey {
-    pub source: DataSourceId,
-    pub layer: String,
-    pub attachment: LayerAttachment,
-}
-impl ConnectomeFileKey {
-    fn cache_key(&self) -> CacheKey {
-        (
-            self.source.clone(),
-            self.layer.clone(),
-            self.attachment.name.clone(),
-            self.attachment.path.clone(),
-            self.attachment.credential_id.clone(),
-        )
-    }
-}
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectomeFileInfo {
@@ -81,53 +61,38 @@ enum TableShape {
     LongVector,
 }
 pub struct ConnectomeService {
-    vaults: DataVaultService,
-    chunks: Arc<ChunkContentsCache>,
-    hdf5: AlfuCache<CacheKey, Arc<Hdf5Reader>>,
-    attributes: AlfuCache<CacheKey, Arc<Attributes>>,
-    arrays: AlfuCache<(CacheKey, String), Arc<DatasetArray>>,
+    zarr: AttachmentArrays,
+    hdf5: AlfuCache<AttachmentId, Arc<Hdf5Reader>>,
+    attributes: AlfuCache<AttachmentId, Arc<Attributes>>,
 }
 impl ConnectomeService {
     pub fn new(vaults: DataVaultService, chunks: Arc<ChunkContentsCache>) -> Self {
         Self {
-            vaults,
-            chunks,
+            zarr: AttachmentArrays::new(vaults, chunks),
             hdf5: AlfuCache::new(30, DEFAULT_TIME_TO_LIVE, DEFAULT_TIME_TO_IDLE),
             attributes: AlfuCache::with_defaults(),
-            arrays: AlfuCache::with_defaults(),
         }
     }
     pub fn look_up(
         source: &DataSourceId,
         layer: &StaticLayer,
         name: &str,
-    ) -> DsResult<ConnectomeFileKey> {
+    ) -> DsResult<AttachmentFileKey> {
         let attachment = layer
             .attachments
             .as_ref()
             .and_then(|a| a.connectomes.iter().find(|a| a.name == name))
             .cloned()
             .ok_or_else(DsError::empty)?;
-        if !attachment.path.is_absolute() {
-            return Err(DsError::failure(
-                "Path of connectome file is ambiguous, must be absolute.",
-            ));
-        }
-        Ok(ConnectomeFileKey {
-            source: source.clone(),
-            layer: layer.name.clone(),
-            attachment,
-        })
+        AttachmentFileKey::new(source, layer, attachment, "connectome")
     }
     pub fn clear_caches(&self, source: &DataSourceId, layer: Option<&str>) -> usize {
-        let matches =
-            |(s, l, _, _, _): &CacheKey| s == source && layer.is_none_or(|name| name == l);
+        let matches = |id: &AttachmentId| id.belongs_to(source, layer);
         self.hdf5.clear_matching(matches)
             + self.attributes.clear_matching(matches)
-            + self.arrays.clear_matching(|(key, _)| matches(key))
-            + self.chunks.clear_for_source(source, layer)
+            + self.zarr.clear(source, layer)
     }
-    fn supported(key: &ConnectomeFileKey) -> DsResult<()> {
+    fn supported(key: &AttachmentFileKey) -> DsResult<()> {
         if matches!(
             key.attachment.data_format,
             LayerAttachmentDataformat::Hdf5 | LayerAttachmentDataformat::Zarr3
@@ -140,9 +105,9 @@ impl ConnectomeService {
             )))
         }
     }
-    async fn hdf5(&self, key: &ConnectomeFileKey) -> DsResult<Arc<Hdf5Reader>> {
+    async fn hdf5(&self, key: &AttachmentFileKey) -> DsResult<Arc<Hdf5Reader>> {
         self.hdf5
-            .get_or_load(key.cache_key(), || async {
+            .get_or_load(key.id(), || async {
                 let path = key
                     .attachment
                     .path
@@ -153,60 +118,25 @@ impl ConnectomeService {
             .await
             .map_err(|e| e.wrap("Could not open connectome file for reading."))
     }
-    async fn array(
-        &self,
-        key: &ConnectomeFileKey,
-        name: &str,
-        token: Option<&str>,
-    ) -> DsResult<Arc<DatasetArray>> {
-        self.arrays
-            .get_or_load((key.cache_key(), name.into()), || async {
-                let group = self
-                    .vaults
-                    .vault_path_for_attachment(&key.attachment)
-                    .await?;
-                Ok(Arc::new(
-                    open_zarr3_array(
-                        ArraySource {
-                            path: &group.join(name),
-                            data_source_id: key.source.clone(),
-                            layer_name: &key.layer,
-                            cache: Arc::clone(&self.chunks),
-                        },
-                        ArrayAxes {
-                            axis_order: None,
-                            channel_index: None,
-                            additional_axes: None,
-                        },
-                        token,
-                    )
-                    .await?,
-                ))
-            })
-            .await
-    }
     async fn attributes(
         &self,
-        key: &ConnectomeFileKey,
+        key: &AttachmentFileKey,
         token: Option<&str>,
     ) -> DsResult<Arc<Attributes>> {
         self.attributes
-            .get_or_load(key.cache_key(), || async {
-                let group = self
-                    .vaults
-                    .vault_path_for_attachment(&key.attachment)
-                    .await?;
-                let bytes = group
-                    .join("zarr.json")
-                    .read_bytes(ByteRange::Complete, token)
-                    .await
-                    .map_err(|e| {
-                        DsError::from(e).wrap("Could not read connectome file zarr group file.")
-                    })?;
+            .get_or_load(key.id(), || async {
                 let error = "Could not parse connectome file attributes from zarr group file.";
-                let json: Value = serde_json::from_slice(&bytes)
-                    .map_err(|e| DsError::from_exception(e).wrap(error))?;
-                let vx = &json["attributes"]["voxelytics"];
+                let vx = self
+                    .zarr
+                    .voxelytics_attributes(
+                        &key.attachment,
+                        token,
+                        |e| {
+                            DsError::from(e).wrap("Could not read connectome file zarr group file.")
+                        },
+                        |e| DsError::from_exception(e).wrap(error),
+                    )
+                    .await?;
                 read_i64(&vx["artifact_schema_version"])
                     .map_err(|e| DsError::from(e).wrap(error))?;
                 let mut f = Fields::new(&vx["artifact_attributes"]);
@@ -222,7 +152,7 @@ impl ConnectomeService {
     }
     pub async fn mapping_name(
         &self,
-        key: &ConnectomeFileKey,
+        key: &AttachmentFileKey,
         token: Option<&str>,
     ) -> DsResult<String> {
         Self::supported(key)?;
@@ -275,7 +205,7 @@ impl ConnectomeService {
     // Zarr eagerly opens the named array even for an empty query; HDF5 opens only the handle.
     async fn prepare(
         &self,
-        key: &ConnectomeFileKey,
+        key: &AttachmentFileKey,
         name: &str,
         token: Option<&str>,
     ) -> DsResult<()> {
@@ -283,13 +213,13 @@ impl ConnectomeService {
         if key.attachment.data_format == LayerAttachmentDataformat::Hdf5 {
             self.hdf5(key).await?;
         } else {
-            self.array(key, name, token).await?;
+            self.zarr.get(key, name, token).await?;
         }
         Ok(())
     }
     async fn read(
         &self,
-        key: &ConnectomeFileKey,
+        key: &AttachmentFileKey,
         name: &str,
         start: i64,
         count: i32,
@@ -311,7 +241,7 @@ impl ConnectomeService {
             })
             .await
         } else {
-            let array = self.array(key, name, token).await?;
+            let array = self.zarr.get(key, name, token).await?;
             let (offset, shape) = if let Some(columns) = columns {
                 (vec![start, 0], vec![count, columns])
             } else {
@@ -328,7 +258,7 @@ impl ConnectomeService {
     }
     async fn scalar(
         &self,
-        key: &ConnectomeFileKey,
+        key: &AttachmentFileKey,
         name: &str,
         index: i64,
         token: Option<&str>,
@@ -341,7 +271,7 @@ impl ConnectomeService {
     }
     async fn pointers(
         &self,
-        key: &ConnectomeFileKey,
+        key: &AttachmentFileKey,
         name: &str,
         index: i64,
         token: Option<&str>,
@@ -360,7 +290,7 @@ impl ConnectomeService {
     }
     pub async fn partners(
         &self,
-        key: &ConnectomeFileKey,
+        key: &AttachmentFileKey,
         ids: &[i64],
         direction: Direction,
         token: Option<&str>,
@@ -374,7 +304,7 @@ impl ConnectomeService {
     }
     pub async fn positions(
         &self,
-        key: &ConnectomeFileKey,
+        key: &AttachmentFileKey,
         ids: &[i64],
         token: Option<&str>,
     ) -> DsResult<Vec<Vec<i64>>> {
@@ -402,7 +332,7 @@ impl ConnectomeService {
     }
     pub async fn types(
         &self,
-        key: &ConnectomeFileKey,
+        key: &AttachmentFileKey,
         ids: &[i64],
         token: Option<&str>,
     ) -> DsResult<SynapseTypes> {
@@ -427,7 +357,7 @@ impl ConnectomeService {
     }
     async fn incoming(
         &self,
-        key: &ConnectomeFileKey,
+        key: &AttachmentFileKey,
         id: i64,
         token: Option<&str>,
     ) -> DsResult<Vec<i64>> {
@@ -462,7 +392,7 @@ impl ConnectomeService {
     }
     async fn outgoing(
         &self,
-        key: &ConnectomeFileKey,
+        key: &AttachmentFileKey,
         id: i64,
         token: Option<&str>,
     ) -> DsResult<Vec<i64>> {
@@ -479,7 +409,7 @@ impl ConnectomeService {
     }
     pub async fn synapses(
         &self,
-        key: &ConnectomeFileKey,
+        key: &AttachmentFileKey,
         ids: &[i64],
         token: Option<&str>,
     ) -> DsResult<Vec<DirectedSynapseList>> {

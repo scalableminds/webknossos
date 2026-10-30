@@ -12,7 +12,8 @@ use crate::{
     },
     services::{
         DatasetCache,
-        connectome::{ConnectomeFileKey, ConnectomeService, Direction},
+        attachment::AttachmentFileKey,
+        connectome::{ConnectomeService, Direction},
     },
 };
 use axum::{
@@ -88,7 +89,7 @@ async fn key(
     id: &str,
     name: &str,
     file: &str,
-) -> AccessResult<ConnectomeFileKey> {
+) -> AccessResult<AttachmentFileKey> {
     let (source, layer) = layers.readable(tc, id, name).await?;
     Ok(ConnectomeService::look_up(&source.id, &layer, file)?)
 }

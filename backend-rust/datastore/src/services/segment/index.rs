@@ -2,29 +2,22 @@
 //!
 //! A segment index file maps segment ids (through a hash table) to the mag-1 top-left corners of
 //! the buckets containing them. Zarr3 and local HDF5 attachments share the Scala hash contract.
-use crate::datareaders::{ArrayAxes, ArraySource};
 use std::{collections::HashSet, sync::Arc};
 use webknossos_common::bytes::u64_le;
 
 use futures::{StreamExt, stream};
-use serde_json::Value;
 
 use crate::{
     access::TokenContext,
     cache::AlfuCache,
     clients::tracingstore::TracingstoreClient,
     clients::wk::WkClient,
-    datareaders::{
-        ChunkContentsCache, DatasetArray, hdf5::Hdf5Reader, nd_array::NdArray,
-        zarr3::open_zarr3_array,
-    },
-    datavault::{ByteRange, DataVaultService},
+    datareaders::{ChunkContentsCache, DatasetArray, hdf5::Hdf5Reader, nd_array::NdArray},
+    datavault::DataVaultService,
     error::{DsError, DsResult, blocking},
-    models::{
-        BUCKET_LENGTH, DataSourceId, LayerAttachment, StaticLayer, UPath, Vec3Int,
-        enums::LayerAttachmentDataformat,
-    },
+    models::{BUCKET_LENGTH, DataSourceId, StaticLayer, Vec3Int, enums::LayerAttachmentDataformat},
     services::agglomerate::AgglomerateService,
+    services::attachment::{AttachmentArrays, AttachmentFileKey, AttachmentId},
 };
 
 /// Apache commons-codec `MurmurHash3.hash128x64(data)` (seed 0), both 64-bit halves.
@@ -100,14 +93,6 @@ pub fn hash_function(name: &str) -> DsResult<fn(i64) -> i64> {
     }
 }
 
-/// Scala `SegmentIndexFileKey`.
-#[derive(Debug, Clone, PartialEq)]
-pub struct SegmentIndexFileKey {
-    pub data_source_id: DataSourceId,
-    pub layer_name: String,
-    pub attachment: LayerAttachment,
-}
-
 /// Scala `SegmentIndexFileAttributes` (voxelytics artifact attributes of the group `zarr.json`).
 #[derive(Debug, Clone, Copy)]
 struct Attributes {
@@ -116,10 +101,6 @@ struct Attributes {
     uint16_entries: bool,
 }
 
-type FileKey = (DataSourceId, String, String, UPath, Option<String>);
-type ArrayKey = (FileKey, String);
-
-type Hdf5Key = (DataSourceId, String, String, UPath);
 struct Hdf5Index {
     reader: Hdf5Reader,
     buckets: u64,
@@ -154,19 +135,16 @@ fn check_range(array: &DatasetArray, start: i64, end: i64, columns: Option<i64>)
 }
 
 pub struct SegmentIndexService {
-    vaults: DataVaultService,
-    chunks: Arc<ChunkContentsCache>,
-    arrays: AlfuCache<ArrayKey, Arc<DatasetArray>>,
-    attributes: AlfuCache<FileKey, Arc<Attributes>>,
-    hdf5: Arc<AlfuCache<Hdf5Key, Arc<Hdf5Index>>>,
+    zarr: AttachmentArrays,
+    attributes: AlfuCache<AttachmentId, Arc<Attributes>>,
+    /// Keyed by `AttachmentFileKey::local_id`.
+    hdf5: Arc<AlfuCache<AttachmentId, Arc<Hdf5Index>>>,
 }
 
 impl SegmentIndexService {
     pub fn new(vaults: DataVaultService, chunks: Arc<ChunkContentsCache>) -> Self {
         Self {
-            vaults,
-            chunks,
-            arrays: AlfuCache::with_defaults(),
+            zarr: AttachmentArrays::new(vaults, chunks),
             attributes: AlfuCache::with_defaults(),
             hdf5: Arc::new(AlfuCache::new(
                 100,
@@ -176,72 +154,47 @@ impl SegmentIndexService {
         }
     }
 
-    /// Scala `lookUpSegmentIndexFileKey` (no attachment: `Empty`).
+    /// Scala `lookUpAttachmentFileKey` (no attachment: `Empty`).
     pub fn look_up(
         data_source_id: &DataSourceId,
         layer: &StaticLayer,
-    ) -> DsResult<SegmentIndexFileKey> {
+    ) -> DsResult<AttachmentFileKey> {
         let attachment = layer
             .attachments
             .as_ref()
             .and_then(|a| a.segment_index.clone())
             .ok_or_else(DsError::empty)?;
-        if !attachment.path.is_absolute() {
-            return Err(DsError::failure(
-                "Path of segment index file is ambiguous, must be absolute.",
-            ));
-        }
-        Ok(SegmentIndexFileKey {
-            data_source_id: data_source_id.clone(),
-            layer_name: layer.name.clone(),
-            attachment,
-        })
+        AttachmentFileKey::new(data_source_id, layer, attachment, "segment index")
     }
 
     pub fn clear_caches(&self, id: &DataSourceId, layer: Option<&str>) -> usize {
-        let matches = |(s, l, _, _, _): &FileKey| s == id && layer.is_none_or(|layer| layer == l);
+        let matches = |key: &AttachmentId| key.belongs_to(id, layer);
         self.attributes.clear_matching(matches)
-            + self.arrays.clear_matching(|(file, _)| matches(file))
-            + self
-                .hdf5
-                .clear_matching(|(s, l, _, _)| s == id && layer.is_none_or(|name| name == l))
-            + self.chunks.clear_for_source(id, layer)
-    }
-
-    fn file_id(key: &SegmentIndexFileKey) -> FileKey {
-        (
-            key.data_source_id.clone(),
-            key.layer_name.clone(),
-            key.attachment.name.clone(),
-            key.attachment.path.clone(),
-            key.attachment.credential_id.clone(),
-        )
+            + self.hdf5.clear_matching(matches)
+            + self.zarr.clear(id, layer)
     }
 
     async fn read_attributes(
         &self,
-        key: &SegmentIndexFileKey,
+        key: &AttachmentFileKey,
         token: Option<&str>,
     ) -> DsResult<Arc<Attributes>> {
-        let cache_key = Self::file_id(key);
         self.attributes
-            .get_or_load(cache_key, || async {
-                let group = self
-                    .vaults
-                    .vault_path_for_attachment(&key.attachment)
-                    .await?;
-                let bytes = group
-                    .join("zarr.json")
-                    .read_bytes(ByteRange::Complete, token)
-                    .await
-                    .map_err(|e| {
-                        DsError::from(e.wrap("Could not read segment index file zarr group file"))
-                    })?;
+            .get_or_load(key.id(), || async {
                 let parse_failed =
                     "Could not parse segment index file attributes from zarr group file.";
-                let json: Value = serde_json::from_slice(&bytes)
-                    .map_err(|e| DsError::failure(e.to_string()).wrap(parse_failed))?;
-                let vx = &json["attributes"]["voxelytics"];
+                let vx = self
+                    .zarr
+                    .voxelytics_attributes(
+                        &key.attachment,
+                        token,
+                        |e| {
+                            e.wrap("Could not read segment index file zarr group file")
+                                .into()
+                        },
+                        |e| DsError::failure(e.to_string()).wrap(parse_failed),
+                    )
+                    .await?;
                 let attrs = &vx["artifact_attributes"];
                 let parsed = (|| {
                     vx["artifact_schema_version"].as_i64()?;
@@ -262,50 +215,11 @@ impl SegmentIndexService {
             .await
     }
 
-    async fn array(
-        &self,
-        key: &SegmentIndexFileKey,
-        name: &str,
-        token: Option<&str>,
-    ) -> DsResult<Arc<DatasetArray>> {
-        let cache_key = (Self::file_id(key), name.to_owned());
-        self.arrays
-            .get_or_load(cache_key, || async {
-                let group = self
-                    .vaults
-                    .vault_path_for_attachment(&key.attachment)
-                    .await?;
-                let array = open_zarr3_array(
-                    ArraySource {
-                        path: &group.join(name),
-                        data_source_id: key.data_source_id.clone(),
-                        layer_name: &key.layer_name,
-                        cache: Arc::clone(&self.chunks),
-                    },
-                    ArrayAxes {
-                        axis_order: None,
-                        channel_index: None,
-                        additional_axes: None,
-                    },
-                    token,
-                )
-                .await?;
-                Ok(Arc::new(array))
-            })
-            .await
-    }
-
-    async fn read_hdf5(&self, key: &SegmentIndexFileKey, segment: i64) -> DsResult<Vec<Vec3Int>> {
+    async fn read_hdf5(&self, key: &AttachmentFileKey, segment: i64) -> DsResult<Vec<Vec3Int>> {
         let path = key.attachment.local_path()?;
-        let cache_key = (
-            key.data_source_id.clone(),
-            key.layer_name.clone(),
-            key.attachment.name.clone(),
-            key.attachment.path.clone(),
-        );
         let file = self
             .hdf5
-            .get_or_load(cache_key, || async move {
+            .get_or_load(key.local_id(), || async move {
                 blocking(move || {
                     let reader = Hdf5Reader::open(&path)?;
                     let buckets = reader.root_u64("n_hash_buckets")?;
@@ -367,7 +281,7 @@ impl SegmentIndexService {
     /// give an empty list.
     pub async fn read_segment_index(
         &self,
-        key: &SegmentIndexFileKey,
+        key: &AttachmentFileKey,
         segment_id: i64,
         token: Option<&str>,
     ) -> DsResult<Vec<Vec3Int>> {
@@ -386,7 +300,7 @@ impl SegmentIndexService {
                 "Segment index n_hash_buckets must be positive.",
             ));
         }
-        let offsets = self.array(key, "hash_bucket_offsets", token).await?;
+        let offsets = self.zarr.get(key, "hash_bucket_offsets", token).await?;
         let bucket_index =
             ((attributes.hash)(segment_id) as u64 % attributes.n_hash_buckets as u64) as i64;
         check_range(
@@ -408,7 +322,7 @@ impl SegmentIndexService {
         if start == end {
             return Ok(Vec::new());
         }
-        let buckets = self.array(key, "hash_buckets", token).await?;
+        let buckets = self.zarr.get(key, "hash_buckets", token).await?;
         check_range(&buckets, start, end, Some(3))?;
         // Scala reads one row past the bucket end.
         let rows = i32::try_from(end - start + 1)
@@ -432,7 +346,7 @@ impl SegmentIndexService {
                 "value for dtype_bucket_entries in segment index file is not supported, only uint16 is supported",
             ));
         }
-        let top_lefts = self.array(key, "top_lefts", token).await?;
+        let top_lefts = self.zarr.get(key, "top_lefts", token).await?;
         check_range(&top_lefts, top_left_start, top_left_end, Some(3))?;
         let count = i32::try_from(top_left_end - top_left_start)
             .map_err(|_| DsError::failure("Segment-index top-left range overflow."))?;
@@ -456,7 +370,7 @@ impl SegmentIndexService {
     /// Scala `combinedOverSegmentIdsWithAutoBatching` + `readSegmentIndex`.
     pub async fn read_segment_indices(
         &self,
-        key: &SegmentIndexFileKey,
+        key: &AttachmentFileKey,
         segment_ids: &[i64],
         token: Option<&str>,
     ) -> DsResult<Vec<Vec3Int>> {

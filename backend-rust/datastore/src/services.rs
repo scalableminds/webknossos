@@ -1,5 +1,6 @@
 //! Datastore data-access services. Controllers apply dataset access checks before calling them.
 pub mod agglomerate;
+pub mod attachment;
 pub mod binary_data;
 pub mod connectome;
 pub mod dataset;

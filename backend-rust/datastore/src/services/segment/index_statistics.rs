@@ -1,8 +1,9 @@
 //! Scala SegmentIndexFileService's volume/bounding-box caches and NativeBucketScanner.
-use crate::services::segment::index::{SegmentIndexFileKey, SegmentIndexService};
+use crate::services::attachment::AttachmentFileKey;
+use crate::services::segment::index::SegmentIndexService;
 use crate::services::{
     BinaryDataService,
-    agglomerate::{AgglomerateFileKey, AgglomerateService, segment_id_at},
+    agglomerate::{AgglomerateService, segment_id_at},
 };
 use crate::{
     cache::{AlfuCache, DEFAULT_TIME_TO_IDLE, DEFAULT_TIME_TO_LIVE},
@@ -44,15 +45,15 @@ impl IndexStatisticsService {
         self.volumes.clear_matching(matches) + self.boxes.clear_matching(matches)
     }
     fn cache_key(
-        index: &SegmentIndexFileKey,
-        mapping: Option<&AgglomerateFileKey>,
+        index: &AttachmentFileKey,
+        mapping: Option<&AttachmentFileKey>,
         id: i64,
         mag: Vec3Int,
     ) -> DsResult<CacheKey> {
         VoxelPosition::new(Vec3Int::zeros(), mag)?;
         Ok((
-            index.data_source_id.clone(),
-            index.layer_name.clone(),
+            index.source.clone(),
+            index.layer.clone(),
             serde_json::to_string(&index.attachment).map_err(DsError::from_exception)?,
             mapping
                 .map(|k| serde_json::to_string(&k.attachment))
@@ -64,8 +65,8 @@ impl IndexStatisticsService {
     }
     async fn positions(
         &self,
-        index: &SegmentIndexFileKey,
-        mapping: Option<&AgglomerateFileKey>,
+        index: &AttachmentFileKey,
+        mapping: Option<&AttachmentFileKey>,
         id: i64,
         mag: Vec3Int,
         token: Option<&str>,
@@ -96,9 +97,9 @@ impl IndexStatisticsService {
     }
     fn requests(
         dataset: &str,
-        index: &SegmentIndexFileKey,
+        index: &AttachmentFileKey,
         layer: &Arc<StaticLayer>,
-        mapping: Option<&AgglomerateFileKey>,
+        mapping: Option<&AttachmentFileKey>,
         mag: Vec3Int,
         positions: &[Vec3Int],
     ) -> DsResult<Vec<DataServiceDataRequest>> {
@@ -107,7 +108,7 @@ impl IndexStatisticsService {
             .map(|point| {
                 Ok(DataServiceDataRequest {
                     dataset_id: Some(dataset.into()),
-                    data_source_id: Some(index.data_source_id.clone()),
+                    data_source_id: Some(index.source.clone()),
                     data_layer: Arc::clone(layer),
                     cuboid: Cuboid::new(
                         VoxelPosition::new((*point * mag).scale(BUCKET_LENGTH), mag)?,
@@ -127,8 +128,8 @@ impl IndexStatisticsService {
         &self,
         dataset: &str,
         layer: &Arc<StaticLayer>,
-        index: &SegmentIndexFileKey,
-        mapping: Option<&AgglomerateFileKey>,
+        index: &AttachmentFileKey,
+        mapping: Option<&AttachmentFileKey>,
         id: i64,
         mag: Vec3Int,
         token: Option<&str>,
@@ -168,8 +169,8 @@ impl IndexStatisticsService {
         &self,
         dataset: &str,
         layer: &Arc<StaticLayer>,
-        index: &SegmentIndexFileKey,
-        mapping: Option<&AgglomerateFileKey>,
+        index: &AttachmentFileKey,
+        mapping: Option<&AttachmentFileKey>,
         id: i64,
         mag: Vec3Int,
         token: Option<&str>,

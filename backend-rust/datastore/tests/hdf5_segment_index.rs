@@ -5,7 +5,7 @@ use webknossos_datastore::{
     config::DatastoreConfig,
     datareaders::hdf5::Hdf5Reader,
     models::{DataSourceId, LayerAttachment, UPath, Vec3Int, enums::LayerAttachmentDataformat},
-    services::segment::index::{SegmentIndexFileKey, SegmentIndexService},
+    services::{attachment::AttachmentFileKey, segment::index::SegmentIndexService},
 };
 
 fn fixture(name: &str) -> PathBuf {
@@ -16,10 +16,10 @@ fn fixture(name: &str) -> PathBuf {
 fn service() -> Arc<SegmentIndexService> {
     AppState::new(DatastoreConfig::defaults(std::path::Path::new("/tmp"))).segment_index
 }
-fn key(path: PathBuf) -> SegmentIndexFileKey {
-    SegmentIndexFileKey {
-        data_source_id: DataSourceId::new("ds", "org"),
-        layer_name: "seg".into(),
+fn key(path: PathBuf) -> AttachmentFileKey {
+    AttachmentFileKey {
+        source: DataSourceId::new("ds", "org"),
+        layer: "seg".into(),
         attachment: LayerAttachment {
             name: "idx".into(),
             path: UPath::parse(path.to_string_lossy().as_ref()).unwrap(),
@@ -123,8 +123,8 @@ async fn malformed_files_return_errors_and_failed_loads_are_retryable() {
     std::fs::copy(fixture("zero_buckets"), &replacement).unwrap();
     std::fs::rename(&replacement, &temp).unwrap();
     assert_eq!(svc.read_segment_index(&k, 2, None).await.unwrap().len(), 2);
-    assert_eq!(svc.clear_caches(&k.data_source_id, Some("other")), 0);
-    assert_eq!(svc.clear_caches(&k.data_source_id, Some("seg")), 1);
+    assert_eq!(svc.clear_caches(&k.source, Some("other")), 0);
+    assert_eq!(svc.clear_caches(&k.source, Some("seg")), 1);
     assert!(svc.read_segment_index(&k, 2, None).await.is_err());
 }
 

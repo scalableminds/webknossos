@@ -1,22 +1,20 @@
 //! Scala SegmentStatisticsFileService: dense Zarr3 metric tables and exact remapping math.
-use crate::datareaders::{ArrayAxes, ArraySource};
+use crate::services::attachment::{AttachmentArrays, AttachmentFileKey, AttachmentId};
 use crate::{
     cache::AlfuCache,
     datareaders::{
-        ChunkContentsCache, DatasetArray,
+        ChunkContentsCache,
         nd_array::{MaDataType, NdArray},
-        zarr3::open_zarr3_array,
     },
-    datavault::{ByteRange, DataVaultService},
+    datavault::DataVaultService,
     error::{DsError, DsResult},
     models::{
-        DataSourceId, LayerAttachment, StaticLayer, UPath, Vec3Int,
+        DataSourceId, StaticLayer, Vec3Int,
         json::{Fields, read_i64, read_string},
     },
 };
 use futures::{StreamExt, stream};
 use serde::Serialize;
-use serde_json::Value;
 use std::sync::Arc;
 
 pub const METRICS: [&str; 7] = [
@@ -28,24 +26,6 @@ pub const METRICS: [&str; 7] = [
     "surfaces",
     "sphericities",
 ];
-type CacheKey = (DataSourceId, String, String, UPath, Option<String>);
-#[derive(Clone)]
-pub struct StatisticsFileKey {
-    pub source: DataSourceId,
-    pub layer: String,
-    pub attachment: LayerAttachment,
-}
-impl StatisticsFileKey {
-    fn cache_key(&self) -> CacheKey {
-        (
-            self.source.clone(),
-            self.layer.clone(),
-            self.attachment.name.clone(),
-            self.attachment.path.clone(),
-            self.attachment.credential_id.clone(),
-        )
-    }
-}
 #[derive(Clone)]
 struct Attributes {
     mag: Option<Vec3Int>,
@@ -60,25 +40,21 @@ pub struct StatisticsFileInfos {
     pub mapping_name: Option<String>,
 }
 pub struct StatisticsFileService {
-    vaults: DataVaultService,
-    chunks: Arc<ChunkContentsCache>,
-    attributes: AlfuCache<CacheKey, Arc<Attributes>>,
-    arrays: AlfuCache<(CacheKey, String), Arc<DatasetArray>>,
-    metrics: AlfuCache<CacheKey, Arc<Vec<String>>>,
-    dense: AlfuCache<CacheKey, bool>,
+    zarr: AttachmentArrays,
+    attributes: AlfuCache<AttachmentId, Arc<Attributes>>,
+    metrics: AlfuCache<AttachmentId, Arc<Vec<String>>>,
+    dense: AlfuCache<AttachmentId, bool>,
 }
 impl StatisticsFileService {
     pub fn new(vaults: DataVaultService, chunks: Arc<ChunkContentsCache>) -> Self {
         Self {
-            vaults,
-            chunks,
+            zarr: AttachmentArrays::new(vaults, chunks),
             attributes: AlfuCache::with_defaults(),
-            arrays: AlfuCache::with_defaults(),
             metrics: AlfuCache::with_defaults(),
             dense: AlfuCache::with_defaults(),
         }
     }
-    pub fn look_up(source: &DataSourceId, layer: &StaticLayer) -> DsResult<StatisticsFileKey> {
+    pub fn look_up(source: &DataSourceId, layer: &StaticLayer) -> DsResult<AttachmentFileKey> {
         let attachment = layer
             .attachments
             .as_ref()
@@ -88,51 +64,36 @@ impl StatisticsFileService {
                 // annotates Failures and passes Empty through, so the answer is the generic 404.
                 DsError::empty()
             })?;
-        if !attachment.path.is_absolute() {
-            return Err(DsError::failure(
-                "Path of segment statistics file is ambiguous, must be absolute.",
-            ));
-        }
-        Ok(StatisticsFileKey {
-            source: source.clone(),
-            layer: layer.name.clone(),
-            attachment,
-        })
+        AttachmentFileKey::new(source, layer, attachment, "segment statistics")
     }
     pub fn clear_caches(&self, source: &DataSourceId, layer: Option<&str>) -> usize {
-        let matches =
-            |(s, l, _, _, _): &CacheKey| s == source && layer.is_none_or(|name| name == l);
+        let matches = |id: &AttachmentId| id.belongs_to(source, layer);
         self.attributes.clear_matching(matches)
-            + self.arrays.clear_matching(|(k, _)| matches(k))
             + self.metrics.clear_matching(matches)
             + self.dense.clear_matching(matches)
-            + self.chunks.clear_for_source(source, layer)
+            + self.zarr.clear(source, layer)
     }
     async fn attributes(
         &self,
-        key: &StatisticsFileKey,
+        key: &AttachmentFileKey,
         token: Option<&str>,
     ) -> DsResult<Arc<Attributes>> {
         self.attributes
-            .get_or_load(key.cache_key(), || async {
-                let group = self
-                    .vaults
-                    .vault_path_for_attachment(&key.attachment)
-                    .await?;
-                let bytes = group
-                    .join("zarr.json")
-                    .read_bytes(ByteRange::Complete, token)
-                    .await
-                    .map_err(|e| {
-                        DsError::from(
-                            e.wrap("Could not read segment statistics file zarr group file."),
-                        )
-                    })?;
+            .get_or_load(key.id(), || async {
                 let parse_error =
                     "Could not parse segment statistics file attributes from zarr group file.";
-                let json: Value = serde_json::from_slice(&bytes)
-                    .map_err(|e| DsError::from_exception(e).wrap(parse_error))?;
-                let vx = &json["attributes"]["voxelytics"];
+                let vx = self
+                    .zarr
+                    .voxelytics_attributes(
+                        &key.attachment,
+                        token,
+                        |e| {
+                            e.wrap("Could not read segment statistics file zarr group file.")
+                                .into()
+                        },
+                        |e| DsError::from_exception(e).wrap(parse_error),
+                    )
+                    .await?;
                 let mut f = Fields::new(&vx["artifact_attributes"]);
                 let mag = f.opt("mag", Vec3Int::from_json);
                 let mapping = f.opt("mapping_name", read_string);
@@ -158,48 +119,16 @@ impl StatisticsFileService {
             })
             .await
     }
-    async fn array(
-        &self,
-        key: &StatisticsFileKey,
-        name: &str,
-        token: Option<&str>,
-    ) -> DsResult<Arc<DatasetArray>> {
-        self.arrays
-            .get_or_load((key.cache_key(), name.into()), || async {
-                let group = self
-                    .vaults
-                    .vault_path_for_attachment(&key.attachment)
-                    .await?;
-                Ok(Arc::new(
-                    open_zarr3_array(
-                        ArraySource {
-                            path: &group.join(name),
-                            data_source_id: key.source.clone(),
-                            layer_name: &key.layer,
-                            cache: Arc::clone(&self.chunks),
-                        },
-                        ArrayAxes {
-                            axis_order: None,
-                            channel_index: None,
-                            additional_axes: None,
-                        },
-                        token,
-                    )
-                    .await?,
-                ))
-            })
-            .await
-    }
     async fn metrics(
         &self,
-        key: &StatisticsFileKey,
+        key: &AttachmentFileKey,
         token: Option<&str>,
     ) -> DsResult<Arc<Vec<String>>> {
         self.metrics
-            .get_or_load(key.cache_key(), || async {
+            .get_or_load(key.id(), || async {
                 let mut metrics = Vec::new();
                 for name in METRICS {
-                    if self.array(key, name, token).await.is_ok() {
+                    if self.zarr.get(key, name, token).await.is_ok() {
                         metrics.push(name.into());
                     }
                 }
@@ -209,7 +138,7 @@ impl StatisticsFileService {
     }
     async fn check_metric(
         &self,
-        key: &StatisticsFileKey,
+        key: &AttachmentFileKey,
         name: &str,
         token: Option<&str>,
     ) -> DsResult<()> {
@@ -220,11 +149,11 @@ impl StatisticsFileService {
         }
         Ok(())
     }
-    async fn check_dense(&self, key: &StatisticsFileKey, token: Option<&str>) -> DsResult<()> {
+    async fn check_dense(&self, key: &AttachmentFileKey, token: Option<&str>) -> DsResult<()> {
         let dense = self
             .dense
-            .get_or_load(key.cache_key(), || async {
-                let array = self.array(key, "ids", token).await?;
+            .get_or_load(key.id(), || async {
+                let array = self.zarr.get(key, "ids", token).await?;
                 let length = array
                     .dataset_shape()
                     .and_then(|s| s.first().copied())
@@ -254,7 +183,7 @@ impl StatisticsFileService {
     }
     pub async fn mag_and_mapping(
         &self,
-        key: &StatisticsFileKey,
+        key: &AttachmentFileKey,
         layer: &StaticLayer,
         token: Option<&str>,
     ) -> DsResult<(Vec3Int, Option<String>)> {
@@ -269,7 +198,7 @@ impl StatisticsFileService {
     /// Returns whether oversegmentation values need to be combined for the requested mapping.
     pub async fn check_compatible(
         &self,
-        key: &StatisticsFileKey,
+        key: &AttachmentFileKey,
         layer: &StaticLayer,
         mag: Vec3Int,
         mapping: Option<&str>,
@@ -305,7 +234,7 @@ impl StatisticsFileService {
     }
     pub async fn infos(
         &self,
-        key: &StatisticsFileKey,
+        key: &AttachmentFileKey,
         layer: &StaticLayer,
         token: Option<&str>,
     ) -> DsResult<StatisticsFileInfos> {
@@ -319,13 +248,13 @@ impl StatisticsFileService {
     }
     async fn read_row(
         &self,
-        key: &StatisticsFileKey,
+        key: &AttachmentFileKey,
         name: &str,
         id: i64,
         tail: &[i32],
         token: Option<&str>,
     ) -> DsResult<NdArray> {
-        let array = self.array(key, name, token).await?;
+        let array = self.zarr.get(key, name, token).await?;
         let shape = array
             .dataset_shape()
             .ok_or_else(|| DsError::failure("Metric shape is missing."))?;
@@ -347,7 +276,7 @@ impl StatisticsFileService {
     }
     pub async fn volumes(
         &self,
-        key: &StatisticsFileKey,
+        key: &AttachmentFileKey,
         ids: &[i64],
         token: Option<&str>,
     ) -> DsResult<Vec<i64>> {
@@ -370,7 +299,7 @@ impl StatisticsFileService {
     }
     pub async fn float_rows(
         &self,
-        key: &StatisticsFileKey,
+        key: &AttachmentFileKey,
         name: &str,
         ids: &[i64],
         token: Option<&str>,

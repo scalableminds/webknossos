@@ -404,14 +404,14 @@ async fn zarr_agglomerate_reload_discards_shared_chunks_and_malformed_ranges_fai
     use webknossos_datastore::{
         config::DatastoreConfig,
         models::{DataSourceId, LayerAttachment},
-        services::agglomerate::AgglomerateFileKey,
+        services::attachment::AttachmentFileKey,
     };
     let root = temp();
     agglomerate_file(&root);
     let state = AppState::new(DatastoreConfig::defaults(&root));
-    let key = AgglomerateFileKey {
-        data_source_id: DataSourceId::new("ds", "org"),
-        layer_name: "seg".into(),
+    let key = AttachmentFileKey {
+        source: DataSourceId::new("ds", "org"),
+        layer: "seg".into(),
         attachment: LayerAttachment::from_json(
             &json!({"name":"agg","path":root,"dataFormat":"zarr3"}),
         )
@@ -439,14 +439,10 @@ async fn zarr_agglomerate_reload_discards_shared_chunks_and_malformed_ranges_fai
         [1]
     );
     assert_eq!(
-        state
-            .agglomerates
-            .clear_caches(&key.data_source_id, Some("other")),
+        state.agglomerates.clear_caches(&key.source, Some("other")),
         0
     );
-    state
-        .agglomerates
-        .clear_caches(&key.data_source_id, Some("seg"));
+    state.agglomerates.clear_caches(&key.source, Some("seg"));
     assert_eq!(
         state
             .agglomerates
@@ -460,7 +456,7 @@ async fn zarr_agglomerate_reload_discards_shared_chunks_and_malformed_ranges_fai
         u64s(&[0, u64::MAX, 3, 5]),
     )
     .unwrap();
-    state.agglomerates.clear_caches(&key.data_source_id, None);
+    state.agglomerates.clear_caches(&key.source, None);
     assert!(
         state
             .agglomerates

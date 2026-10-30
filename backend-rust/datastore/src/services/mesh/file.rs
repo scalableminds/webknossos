@@ -1,7 +1,7 @@
 //! MeshFileService + local HDF5/Zarr3 and sharded precomputed mesh-file readers.
 
 use crate::cache::{DEFAULT_TIME_TO_IDLE, DEFAULT_TIME_TO_LIVE};
-use crate::datareaders::{ArrayAxes, ArraySource};
+use crate::services::attachment::{AttachmentArrays, AttachmentFileKey, AttachmentId};
 use crate::services::mesh::manifest::{Manifest, MeshLod, SegmentInfo, merge};
 use crate::services::segment::index::hash_function;
 use crate::{
@@ -12,38 +12,18 @@ use crate::{
         ChunkContentsCache, DatasetArray,
         nd_array::MaDataType,
         precomputed::sharding::{ShardReader, ShardingSpecification},
-        zarr3::open_zarr3_array,
     },
     datavault::{ByteRange, DataVaultService},
     error::{DsError, DsResult, blocking},
     models::{
-        DataSourceId, LayerAttachment, StaticLayer, UPath,
+        DataSourceId, StaticLayer,
         enums::LayerAttachmentDataformat,
         json::{Fields, read_f64, read_i64, read_list, read_string},
     },
 };
 use futures::{StreamExt, stream};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::sync::Arc;
-type CacheKey = (DataSourceId, String, String, UPath, Option<String>);
-#[derive(Clone)]
-pub struct MeshFileKey {
-    pub source: DataSourceId,
-    pub layer: String,
-    pub attachment: LayerAttachment,
-}
-impl MeshFileKey {
-    fn cache_key(&self) -> CacheKey {
-        (
-            self.source.clone(),
-            self.layer.clone(),
-            self.attachment.name.clone(),
-            self.attachment.path.clone(),
-            self.attachment.credential_id.clone(),
-        )
-    }
-}
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MeshFileInfo {
@@ -80,20 +60,16 @@ pub struct ChunkRequest {
     pub segment_id: Option<u64>,
 }
 pub struct MeshFileService {
-    vaults: DataVaultService,
-    chunks: Arc<ChunkContentsCache>,
-    attributes: AlfuCache<CacheKey, Arc<Attributes>>,
-    arrays: AlfuCache<(CacheKey, String), Arc<DatasetArray>>,
-    hdf5: AlfuCache<CacheKey, Arc<Hdf5Reader>>,
-    remote: AlfuCache<CacheKey, Arc<RemoteMesh>>,
+    zarr: AttachmentArrays,
+    attributes: AlfuCache<AttachmentId, Arc<Attributes>>,
+    hdf5: AlfuCache<AttachmentId, Arc<Hdf5Reader>>,
+    remote: AlfuCache<AttachmentId, Arc<RemoteMesh>>,
 }
 impl MeshFileService {
     pub fn new(vaults: DataVaultService, chunks: Arc<ChunkContentsCache>) -> Self {
         Self {
-            vaults,
-            chunks,
+            zarr: AttachmentArrays::new(vaults, chunks),
             attributes: AlfuCache::with_defaults(),
-            arrays: AlfuCache::with_defaults(),
             hdf5: AlfuCache::new(30, std::time::Duration::MAX, std::time::Duration::MAX),
             remote: AlfuCache::new(100, DEFAULT_TIME_TO_LIVE, DEFAULT_TIME_TO_IDLE),
         }
@@ -102,42 +78,31 @@ impl MeshFileService {
         source: &DataSourceId,
         layer: &StaticLayer,
         name: &str,
-    ) -> DsResult<MeshFileKey> {
+    ) -> DsResult<AttachmentFileKey> {
         let attachment = layer
             .attachments
             .as_ref()
             .and_then(|a| a.meshes.iter().find(|a| a.name == name))
             .cloned()
             .ok_or_else(DsError::empty)?;
-        if !attachment.path.is_absolute() {
-            return Err(DsError::failure(
-                "Path of mesh file is ambiguous, must be absolute.",
-            ));
-        }
-        Ok(MeshFileKey {
-            source: source.clone(),
-            layer: layer.name.clone(),
-            attachment,
-        })
+        AttachmentFileKey::new(source, layer, attachment, "mesh")
     }
     pub fn clear_caches(&self, source: &DataSourceId, layer: Option<&str>) -> usize {
-        let matches =
-            |(s, l, _, _, _): &CacheKey| s == source && layer.is_none_or(|name| name == l);
+        let matches = |id: &AttachmentId| id.belongs_to(source, layer);
         self.attributes.clear_matching(matches)
-            + self.arrays.clear_matching(|(k, _)| matches(k))
             + self.hdf5.clear_matching(matches)
             + self.remote.clear_matching(matches)
-            + self.chunks.clear_for_source(source, layer)
+            + self.zarr.clear(source, layer)
     }
     async fn hdf5<T: Send + 'static>(
         &self,
-        key: &MeshFileKey,
+        key: &AttachmentFileKey,
         operation: impl FnOnce(&Hdf5Reader) -> DsResult<T> + Send + 'static,
     ) -> DsResult<T> {
         let path = key.attachment.local_path()?;
         let file = self
             .hdf5
-            .get_or_load(key.cache_key(), || async move {
+            .get_or_load(key.id(), || async move {
                 blocking(move || Ok(Arc::new(Hdf5Reader::open(&path)?))).await
             })
             .await?;
@@ -145,26 +110,22 @@ impl MeshFileService {
     }
     async fn attributes(
         &self,
-        key: &MeshFileKey,
+        key: &AttachmentFileKey,
         token: Option<&str>,
     ) -> DsResult<Arc<Attributes>> {
+        let error = "Could not parse meshFile attributes from zarr group file.";
         self.attributes
-            .get_or_load(key.cache_key(), || async {
-                let group = self
-                    .vaults
-                    .vault_path_for_attachment(&key.attachment)
+            .get_or_load(key.id(), || async {
+                let vx = self
+                    .zarr
+                    .voxelytics_attributes(
+                        &key.attachment,
+                        token,
+                        |e| e.wrap("Could not read mesh file zarr group file").into(),
+                        |e| DsError::from_exception(e).wrap(error),
+                    )
                     .await?;
-                let bytes = group
-                    .join("zarr.json")
-                    .read_bytes(ByteRange::Complete, token)
-                    .await
-                    .map_err(|e| {
-                        DsError::from(e.wrap("Could not read mesh file zarr group file"))
-                    })?;
                 let parse = || -> DsResult<Attributes> {
-                    let json: Value =
-                        serde_json::from_slice(&bytes).map_err(DsError::from_exception)?;
-                    let vx = &json["attributes"]["voxelytics"];
                     let mut f = Fields::new(&vx["artifact_attributes"]);
                     let format = f.req("mesh_format", read_string);
                     let multiplier = f.req("lod_scale_multiplier", read_f64);
@@ -185,48 +146,19 @@ impl MeshFileService {
                         mapping: mapping?,
                     })
                 };
-                Ok(Arc::new(parse().map_err(|e| {
-                    e.wrap("Could not parse meshFile attributes from zarr group file.")
-                })?))
+                Ok(Arc::new(parse().map_err(|e| e.wrap(error))?))
             })
             .await
     }
-    async fn array(
+    async fn remote(
         &self,
-        key: &MeshFileKey,
-        name: &str,
+        key: &AttachmentFileKey,
         token: Option<&str>,
-    ) -> DsResult<Arc<DatasetArray>> {
-        self.arrays
-            .get_or_load((key.cache_key(), name.into()), || async {
-                let group = self
-                    .vaults
-                    .vault_path_for_attachment(&key.attachment)
-                    .await?;
-                Ok(Arc::new(
-                    open_zarr3_array(
-                        ArraySource {
-                            path: &group.join(name),
-                            data_source_id: key.source.clone(),
-                            layer_name: &key.layer,
-                            cache: Arc::clone(&self.chunks),
-                        },
-                        ArrayAxes {
-                            axis_order: None,
-                            channel_index: None,
-                            additional_axes: None,
-                        },
-                        token,
-                    )
-                    .await?,
-                ))
-            })
-            .await
-    }
-    async fn remote(&self, key: &MeshFileKey, token: Option<&str>) -> DsResult<Arc<RemoteMesh>> {
+    ) -> DsResult<Arc<RemoteMesh>> {
         self.remote
-            .get_or_load(key.cache_key(), || async {
+            .get_or_load(key.id(), || async {
                 let root = self
+                    .zarr
                     .vaults
                     .vault_path_for_attachment(&key.attachment)
                     .await?;
@@ -264,7 +196,7 @@ impl MeshFileService {
     }
     pub async fn mapping_name(
         &self,
-        key: &MeshFileKey,
+        key: &AttachmentFileKey,
         token: Option<&str>,
     ) -> DsResult<Option<String>> {
         match key.attachment.data_format {
@@ -279,7 +211,7 @@ impl MeshFileService {
             _ => Err(unsupported(key)),
         }
     }
-    async fn version(&self, key: &MeshFileKey, token: Option<&str>) -> DsResult<i64> {
+    async fn version(&self, key: &AttachmentFileKey, token: Option<&str>) -> DsResult<i64> {
         match key.attachment.data_format {
             LayerAttachmentDataformat::Hdf5 => Ok(self
                 .hdf5(key, |r| r.root_i64("artifact_schema_version"))
@@ -325,7 +257,7 @@ impl MeshFileService {
     }
     pub async fn vertex_quantization_bits(
         &self,
-        key: &MeshFileKey,
+        key: &AttachmentFileKey,
         token: Option<&str>,
     ) -> DsResult<i32> {
         if key.attachment.data_format == LayerAttachmentDataformat::NeuroglancerPrecomputed {
@@ -336,7 +268,7 @@ impl MeshFileService {
     }
     async fn zarr_manifest(
         &self,
-        key: &MeshFileKey,
+        key: &AttachmentFileKey,
         attrs: &Attributes,
         id: u64,
         token: Option<&str>,
@@ -345,7 +277,7 @@ impl MeshFileService {
             return Err(DsError::failure("Mesh file n_buckets must be positive."));
         }
         let bucket = hash_function(&attrs.hash)?(id as i64) as u64 % attrs.buckets as u64;
-        let offsets = self.array(key, "bucket_offsets", token).await?;
+        let offsets = self.zarr.get(key, "bucket_offsets", token).await?;
         let range = longs(&offsets, &[bucket as i64], &[2], token).await?;
         let [start, end] = range[..] else {
             return Err(DsError::failure("Invalid mesh bucket offsets."));
@@ -360,7 +292,7 @@ impl MeshFileService {
                 .ok_or_else(|| DsError::failure("Mesh bucket overflow."))?,
         )
         .map_err(|_| DsError::failure("Mesh bucket overflow."))?;
-        let buckets = self.array(key, "buckets", token).await?;
+        let buckets = self.zarr.get(key, "buckets", token).await?;
         let values = longs(&buckets, &[start, 0], &[rows, 3], token).await?;
         let entry = values
             .as_chunks::<3>()
@@ -384,7 +316,7 @@ impl MeshFileService {
     }
     async fn zarr_bytes(
         &self,
-        key: &MeshFileKey,
+        key: &AttachmentFileKey,
         start: i64,
         count: i64,
         token: Option<&str>,
@@ -392,7 +324,7 @@ impl MeshFileService {
         if start < 0 || count < 0 {
             return Err(DsError::failure("Invalid mesh byte range."));
         }
-        let array = self.array(key, "neuroglancer", token).await?;
+        let array = self.zarr.get(key, "neuroglancer", token).await?;
         if !matches!(
             array.header().resolved_data_type(),
             crate::datareaders::ArrayDataType::I1 | crate::datareaders::ArrayDataType::U1
@@ -426,7 +358,7 @@ impl MeshFileService {
     }
     async fn hdf_manifest(
         &self,
-        key: &MeshFileKey,
+        key: &AttachmentFileKey,
         id: u64,
         multiplier: f64,
         transform: Vec<Vec<f64>>,
@@ -475,7 +407,7 @@ impl MeshFileService {
     }
     pub async fn list_chunks(
         &self,
-        key: &MeshFileKey,
+        key: &AttachmentFileKey,
         ids: &[i64],
         token: Option<&str>,
     ) -> DsResult<SegmentInfo> {
@@ -530,6 +462,7 @@ impl MeshFileService {
             LayerAttachmentDataformat::NeuroglancerPrecomputed => {
                 let mesh = self.remote(key, token).await?;
                 let root = self
+                    .zarr
                     .vaults
                     .vault_path_for_attachment(&key.attachment)
                     .await?;
@@ -572,7 +505,7 @@ impl MeshFileService {
     }
     pub async fn read_chunks(
         &self,
-        key: &MeshFileKey,
+        key: &AttachmentFileKey,
         requests: &[ChunkRequest],
         token: Option<&str>,
     ) -> DsResult<(Vec<u8>, String)> {
@@ -603,6 +536,7 @@ impl MeshFileService {
             }
             let mesh = self.remote(key, token).await?;
             let root = self
+                .zarr
                 .vaults
                 .vault_path_for_attachment(&key.attachment)
                 .await?;
@@ -675,13 +609,13 @@ impl MeshFileService {
         Ok((bytes, format))
     }
 }
-fn unsupported(key: &MeshFileKey) -> DsError {
+fn unsupported(key: &AttachmentFileKey) -> DsError {
     DsError::failure(format!(
         "Trying to load mesh file with unsupported data format {}",
         key.attachment.data_format
     ))
 }
-fn zero_chunks(key: &MeshFileKey, ids: &[i64]) -> DsError {
+fn zero_chunks(key: &AttachmentFileKey, ids: &[i64]) -> DsError {
     DsError::failure(format!(
         "Zero mesh chunks for segment {} in mesh file “{}”.",
         ids.iter()

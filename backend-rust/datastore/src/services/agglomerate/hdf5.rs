@@ -1,12 +1,13 @@
 //! Hdf5AgglomerateService: cached mapping blocks/cumsum and fresh graph/tree readers.
-use super::{AgglomerateFileKey, apply_segment_id_mapping, collect_segment_ids};
+use super::{apply_segment_id_mapping, collect_segment_ids};
+use crate::services::attachment::{AttachmentFileKey, AttachmentId};
 use crate::services::segment::cumsum::Cumsum;
 use crate::{
     cache::AlfuCache,
     config::AgglomerateFileCacheConfig,
     datareaders::hdf5::Hdf5Reader,
     error::{DsError, DsResult, blocking},
-    models::{DataSourceId, ElementClass, UPath, Vec3Int, data_requests::DataServiceDataRequest},
+    models::{DataSourceId, ElementClass, Vec3Int, data_requests::DataServiceDataRequest},
     proto::{AgglomerateEdge, AgglomerateGraph, datastore::Vec3IntProto},
 };
 use lru::LruCache;
@@ -14,14 +15,14 @@ use std::{
     num::NonZeroUsize,
     sync::{Arc, Mutex, PoisonError},
 };
-type FileKey = (DataSourceId, String, String, UPath);
 struct CachedFile {
     reader: Hdf5Reader,
     ids: Mutex<LruCache<i64, i64>>,
     cumsum: Option<Cumsum>,
 }
 pub struct Hdf5AgglomerateService {
-    files: AlfuCache<FileKey, Arc<CachedFile>>,
+    /// Keyed by `AttachmentFileKey::local_id`.
+    files: AlfuCache<AttachmentId, Arc<CachedFile>>,
     config: AgglomerateFileCacheConfig,
 }
 pub struct TreeData {
@@ -29,14 +30,6 @@ pub struct TreeData {
     pub edges: Vec<(i32, i32)>,
 }
 const ROW_BATCH: u64 = 32768;
-fn key(k: &AgglomerateFileKey) -> FileKey {
-    (
-        k.data_source_id.clone(),
-        k.layer_name.clone(),
-        k.attachment.name.clone(),
-        k.attachment.path.clone(),
-    )
-}
 impl Hdf5AgglomerateService {
     pub fn new(config: AgglomerateFileCacheConfig) -> Self {
         Self {
@@ -49,15 +42,13 @@ impl Hdf5AgglomerateService {
         }
     }
     pub fn clear_caches(&self, id: &DataSourceId, layer: Option<&str>) -> usize {
-        self.files.clear_matching(|(source, name, _, _)| {
-            source == id && layer.is_none_or(|layer| layer == name)
-        })
+        self.files.clear_matching(|key| key.belongs_to(id, layer))
     }
-    async fn cached(&self, k: &AgglomerateFileKey) -> DsResult<Arc<CachedFile>> {
+    async fn cached(&self, k: &AttachmentFileKey) -> DsResult<Arc<CachedFile>> {
         let path = k.attachment.local_path()?;
         let entries = self.config.max_segment_id_entries;
         self.files
-            .get_or_load(key(k), || async move {
+            .get_or_load(k.local_id(), || async move {
                 blocking(move || {
                     let reader = Hdf5Reader::open(&path)?;
                     let cumsum = path
@@ -83,7 +74,7 @@ impl Hdf5AgglomerateService {
             .await
     }
     async fn fresh<T: Send + 'static>(
-        k: &AgglomerateFileKey,
+        k: &AttachmentFileKey,
         f: impl FnOnce(&Hdf5Reader) -> DsResult<T> + Send + 'static,
     ) -> DsResult<T> {
         let path = k.attachment.local_path()?;
@@ -113,7 +104,7 @@ impl Hdf5AgglomerateService {
         }
         Ok(mapped)
     }
-    pub async fn agglomerate_ids(&self, k: &AgglomerateFileKey, ids: &[i64]) -> DsResult<Vec<i64>> {
+    pub async fn agglomerate_ids(&self, k: &AttachmentFileKey, ids: &[i64]) -> DsResult<Vec<i64>> {
         let file = self.cached(k).await?;
         let ids = ids.to_vec();
         let block = self.config.block_size;
@@ -127,7 +118,7 @@ impl Hdf5AgglomerateService {
     }
     pub async fn apply(
         &self,
-        k: &AgglomerateFileKey,
+        k: &AttachmentFileKey,
         class: ElementClass,
         data: Vec<u8>,
         request: Option<&DataServiceDataRequest>,
@@ -213,7 +204,7 @@ impl Hdf5AgglomerateService {
         })
         .await
     }
-    pub async fn largest(k: &AgglomerateFileKey) -> DsResult<i64> {
+    pub async fn largest(k: &AttachmentFileKey) -> DsResult<i64> {
         Self::fresh(k, |reader| {
             let shape = reader.dataset_shape("agglomerate_to_segments_offsets")?;
             if shape.len() != 1 || shape[0] == 0 {
@@ -223,7 +214,7 @@ impl Hdf5AgglomerateService {
         })
         .await
     }
-    pub async fn segments(k: &AgglomerateFileKey, id: i64) -> DsResult<Vec<i64>> {
+    pub async fn segments(k: &AttachmentFileKey, id: i64) -> DsResult<Vec<i64>> {
         Self::fresh(k, move |reader| {
             let (start, count) = range(reader, "agglomerate_to_segments_offsets", id)?;
             Ok(
@@ -235,7 +226,7 @@ impl Hdf5AgglomerateService {
         })
         .await
     }
-    pub async fn tree(k: &AgglomerateFileKey, id: i64, limit: u64) -> DsResult<TreeData> {
+    pub async fn tree(k: &AttachmentFileKey, id: i64, limit: u64) -> DsResult<TreeData> {
         Self::fresh(k, move |reader| {
             let (node_start, nodes) = range(reader, "agglomerate_to_segments_offsets", id)?;
             let (edge_start, edges) = range(reader, "agglomerate_to_edges_offsets", id)?;
@@ -247,7 +238,7 @@ impl Hdf5AgglomerateService {
         })
         .await
     }
-    pub async fn graph(k: &AgglomerateFileKey, id: i64, limit: u64) -> DsResult<AgglomerateGraph> {
+    pub async fn graph(k: &AttachmentFileKey, id: i64, limit: u64) -> DsResult<AgglomerateGraph> {
         Self::fresh(k, move |reader| {
             let (node_start, nodes) = range(reader, "agglomerate_to_segments_offsets", id)?;
             let (edge_start, edges) = range(reader, "agglomerate_to_edges_offsets", id)?;
@@ -290,7 +281,7 @@ impl Hdf5AgglomerateService {
         })
         .await
     }
-    pub async fn position(k: &AgglomerateFileKey, id: i64) -> DsResult<Vec3Int> {
+    pub async fn position(k: &AttachmentFileKey, id: i64) -> DsResult<Vec3Int> {
         Self::fresh(k, move |reader| {
             let mapping = reader.uint64_values("segment_to_agglomerate", id as u64, 1, None)?;
             let agglomerate = *mapping

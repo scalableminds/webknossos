@@ -4,7 +4,10 @@ use webknossos_datastore::{
     AppState,
     config::DatastoreConfig,
     models::{DataSourceId, LayerAttachment, LayerAttachmentDataformat, UPath},
-    services::connectome::{ConnectomeFileKey, ConnectomeService, Direction, scala_set_order},
+    services::{
+        attachment::AttachmentFileKey,
+        connectome::{ConnectomeService, Direction, scala_set_order},
+    },
 };
 fn root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/connectomes")
@@ -13,8 +16,8 @@ fn service() -> ConnectomeService {
     let state = AppState::new(DatastoreConfig::defaults(std::path::Path::new("/srv/wk")));
     ConnectomeService::new(state.data_vaults, Arc::clone(&state.chunk_contents_cache))
 }
-fn key(name: &str) -> ConnectomeFileKey {
-    ConnectomeFileKey {
+fn key(name: &str) -> AttachmentFileKey {
+    AttachmentFileKey {
         source: DataSourceId::new("ds", "org"),
         layer: "seg".into(),
         attachment: LayerAttachment {

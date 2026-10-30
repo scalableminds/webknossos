@@ -8,17 +8,17 @@ use webknossos_datastore::{
     config::DatastoreConfig,
     datareaders::hdf5::Hdf5Reader,
     models::{DataSourceId, ElementClass, LayerAttachment},
-    services::agglomerate::{AgglomerateFileKey, AgglomerateService},
+    services::{agglomerate::AgglomerateService, attachment::AttachmentFileKey},
 };
 fn fixture(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/fixtures/agglomerates")
         .join(format!("{name}.hdf5"))
 }
-fn key(path: PathBuf) -> AgglomerateFileKey {
-    AgglomerateFileKey {
-        data_source_id: DataSourceId::new("ds", "org"),
-        layer_name: "seg".into(),
+fn key(path: PathBuf) -> AttachmentFileKey {
+    AttachmentFileKey {
+        source: DataSourceId::new("ds", "org"),
+        layer: "seg".into(),
         attachment: LayerAttachment::from_json(
             &json!({"name":"agg","path":path,"dataFormat":"hdf5"}),
         )
@@ -357,8 +357,8 @@ async fn handle_and_id_cache_eviction_reload_and_limits_are_enforced() {
             .x,
         120
     );
-    assert_eq!(svc.clear_caches(&k.data_source_id, Some("other")), 0);
-    assert_eq!(svc.clear_caches(&k.data_source_id, Some("seg")), 1);
+    assert_eq!(svc.clear_caches(&k.source, Some("other")), 0);
+    assert_eq!(svc.clear_caches(&k.source, Some("seg")), 1);
     assert_eq!(
         svc.agglomerate_ids_for_segment_ids(&k, &[1], None)
             .await

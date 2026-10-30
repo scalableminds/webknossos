@@ -5,25 +5,23 @@
 pub(crate) mod hdf5;
 pub mod mapping;
 
-use crate::datareaders::{ArrayAxes, ArraySource};
 use std::{collections::HashSet, sync::Arc, time::SystemTime};
 use webknossos_common::bytes::{i16_le, i32_le, i64_le, u16_le, u32_le};
 
 use futures::{StreamExt, stream};
 
 use crate::services::agglomerate::hdf5::Hdf5AgglomerateService;
+use crate::services::attachment::{AttachmentArrays, AttachmentFileKey};
 use crate::{
-    cache::AlfuCache,
     config::AgglomerateFileCacheConfig,
     datareaders::{
         ChunkContentsCache, DatasetArray,
         nd_array::{MaDataType, NdArray, to_long_array},
-        zarr3::open_zarr3_array,
     },
     datavault::{BoxFuture, DataVaultService, VaultError, VaultResult},
     error::{DsError, DsResult},
     models::{
-        DataSourceId, LayerAttachment, StaticLayer, UPath, Vec3Int,
+        DataSourceId, StaticLayer, Vec3Int,
         data_requests::DataServiceDataRequest,
         enums::{ElementClass, LayerAttachmentDataformat},
     },
@@ -38,16 +36,6 @@ const KEY_AGGLOMERATE_TO_EDGES: &str = "agglomerate_to_edges";
 const KEY_AGGLOMERATE_TO_EDGES_OFFSETS: &str = "agglomerate_to_edges_offsets";
 const KEY_AGGLOMERATE_TO_POSITIONS: &str = "agglomerate_to_positions";
 const KEY_AGGLOMERATE_TO_AFFINITIES: &str = "agglomerate_to_affinities";
-
-/// Scala `AgglomerateFileKey`.
-#[derive(Debug, Clone, PartialEq)]
-pub struct AgglomerateFileKey {
-    pub data_source_id: DataSourceId,
-    pub layer_name: String,
-    pub attachment: LayerAttachment,
-}
-
-type ArrayKey = (DataSourceId, String, String, UPath, Option<String>, String);
 
 /// `NativeBucketScanner.segmentIdAtIndex`.
 pub(crate) fn segment_id_at(
@@ -157,7 +145,7 @@ fn now_millis() -> i64 {
         .map_or(0, |d| d.as_millis() as i64)
 }
 
-fn unsupported_format(key: &AgglomerateFileKey) -> DsError {
+fn unsupported_format(key: &AttachmentFileKey) -> DsError {
     DsError::failure(format!(
         "Trying to load agglomerate file with unsupported data format {}",
         key.attachment.data_format
@@ -165,9 +153,7 @@ fn unsupported_format(key: &AgglomerateFileKey) -> DsError {
 }
 
 pub struct AgglomerateService {
-    vaults: DataVaultService,
-    chunks: Arc<ChunkContentsCache>,
-    arrays: AlfuCache<ArrayKey, Arc<DatasetArray>>,
+    zarr: AttachmentArrays,
     hdf5: Hdf5AgglomerateService,
     tree_max_edges: u64,
     graph_max_edges: u64,
@@ -182,9 +168,7 @@ impl AgglomerateService {
         hdf5_config: AgglomerateFileCacheConfig,
     ) -> Self {
         Self {
-            vaults,
-            chunks,
-            arrays: AlfuCache::with_defaults(),
+            zarr: AttachmentArrays::new(vaults, chunks),
             hdf5: Hdf5AgglomerateService::new(hdf5_config),
             tree_max_edges,
             graph_max_edges,
@@ -200,31 +184,23 @@ impl AgglomerateService {
             .unwrap_or_default()
     }
 
-    /// Scala `lookUpAgglomerateFileKey` (missing attachment: `Empty`).
+    /// Scala `lookUpAttachmentFileKey` (missing attachment: `Empty`).
     pub fn look_up(
         data_source_id: &DataSourceId,
         layer: &StaticLayer,
         mapping_name: &str,
-    ) -> DsResult<AgglomerateFileKey> {
+    ) -> DsResult<AttachmentFileKey> {
         let attachment = layer
             .attachments
             .as_ref()
             .and_then(|a| a.agglomerates.iter().find(|a| a.name == mapping_name))
+            .cloned()
             .ok_or_else(DsError::empty)?;
-        if !attachment.path.is_absolute() {
-            return Err(DsError::failure(
-                "Path of agglomerate file is ambiguous, must be absolute.",
-            ));
-        }
-        Ok(AgglomerateFileKey {
-            data_source_id: data_source_id.clone(),
-            layer_name: layer.name.clone(),
-            attachment: attachment.clone(),
-        })
+        AttachmentFileKey::new(data_source_id, layer, attachment, "agglomerate")
     }
 
     /// Supported attachment formats.
-    pub fn supports(key: &AgglomerateFileKey) -> DsResult<()> {
+    pub fn supports(key: &AttachmentFileKey) -> DsResult<()> {
         match key.attachment.data_format {
             LayerAttachmentDataformat::Zarr3 | LayerAttachmentDataformat::Hdf5 => Ok(()),
             _ => Err(unsupported_format(key)),
@@ -232,51 +208,17 @@ impl AgglomerateService {
     }
 
     pub fn clear_caches(&self, id: &DataSourceId, layer: Option<&str>) -> usize {
-        self.arrays
-            .clear_matching(|(s, l, _, _, _, _)| s == id && layer.is_none_or(|layer| layer == l))
-            + self.hdf5.clear_caches(id, layer)
-            + self.chunks.clear_for_source(id, layer)
+        self.zarr.clear(id, layer) + self.hdf5.clear_caches(id, layer)
     }
 
     async fn array(
         &self,
-        key: &AgglomerateFileKey,
+        key: &AttachmentFileKey,
         name: &str,
         token: Option<&str>,
     ) -> DsResult<Arc<DatasetArray>> {
         Self::supports(key)?;
-        let cache_key = (
-            key.data_source_id.clone(),
-            key.layer_name.clone(),
-            key.attachment.name.clone(),
-            key.attachment.path.clone(),
-            key.attachment.credential_id.clone(),
-            name.to_owned(),
-        );
-        self.arrays
-            .get_or_load(cache_key, || async {
-                let group = self
-                    .vaults
-                    .vault_path_for_attachment(&key.attachment)
-                    .await?;
-                let array = open_zarr3_array(
-                    ArraySource {
-                        path: &group.join(name),
-                        data_source_id: key.data_source_id.clone(),
-                        layer_name: &key.layer_name,
-                        cache: Arc::clone(&self.chunks),
-                    },
-                    ArrayAxes {
-                        axis_order: None,
-                        channel_index: None,
-                        additional_axes: None,
-                    },
-                    token,
-                )
-                .await?;
-                Ok(Arc::new(array))
-            })
-            .await
+        self.zarr.get(key, name, token).await
     }
 
     async fn read_longs(
@@ -303,7 +245,7 @@ impl AgglomerateService {
     /// Scala `applyAgglomerate` (Zarr3).
     pub async fn apply_agglomerate(
         &self,
-        key: &AgglomerateFileKey,
+        key: &AttachmentFileKey,
         element_class: ElementClass,
         data: Vec<u8>,
         token: Option<&str>,
@@ -326,7 +268,7 @@ impl AgglomerateService {
     /// (offset, count) of an agglomerate in an offsets array.
     async fn range(
         &self,
-        key: &AgglomerateFileKey,
+        key: &AttachmentFileKey,
         offsets: &str,
         agglomerate_id: i64,
         token: Option<&str>,
@@ -345,7 +287,7 @@ impl AgglomerateService {
 
     async fn positions(
         &self,
-        key: &AgglomerateFileKey,
+        key: &AttachmentFileKey,
         start: i64,
         count: i64,
         token: Option<&str>,
@@ -368,7 +310,7 @@ impl AgglomerateService {
 
     async fn edges(
         &self,
-        key: &AgglomerateFileKey,
+        key: &AttachmentFileKey,
         start: i64,
         count: i64,
         token: Option<&str>,
@@ -403,7 +345,7 @@ impl AgglomerateService {
     /// Scala `generateTree` (Zarr3).
     pub async fn generate_tree(
         &self,
-        key: &AgglomerateFileKey,
+        key: &AttachmentFileKey,
         agglomerate_id: i64,
         token: Option<&str>,
     ) -> DsResult<SkeletonTracing> {
@@ -435,7 +377,7 @@ impl AgglomerateService {
         Ok(Self::build_tree(key, agglomerate_id, positions, edges))
     }
     fn build_tree(
-        key: &AgglomerateFileKey,
+        key: &AttachmentFileKey,
         agglomerate_id: i64,
         positions: Vec<pb::Vec3IntProto>,
         edges: Vec<(i32, i32)>,
@@ -500,7 +442,7 @@ impl AgglomerateService {
     /// Scala `largestAgglomerateId` (Zarr3: first dimension of the offsets array).
     pub async fn largest_agglomerate_id(
         &self,
-        key: &AgglomerateFileKey,
+        key: &AttachmentFileKey,
         token: Option<&str>,
     ) -> DsResult<i64> {
         Self::supports(key)?;
@@ -519,7 +461,7 @@ impl AgglomerateService {
     /// Scala `generateAgglomerateGraph` (Zarr3).
     pub async fn generate_agglomerate_graph(
         &self,
-        key: &AgglomerateFileKey,
+        key: &AttachmentFileKey,
         agglomerate_id: i64,
         token: Option<&str>,
     ) -> DsResult<AgglomerateGraph> {
@@ -583,7 +525,7 @@ impl AgglomerateService {
     /// Scala `segmentIdsForAgglomerateId` (Zarr3).
     pub async fn segment_ids_for_agglomerate_id(
         &self,
-        key: &AgglomerateFileKey,
+        key: &AttachmentFileKey,
         agglomerate_id: i64,
         token: Option<&str>,
     ) -> DsResult<Vec<i64>> {
@@ -611,7 +553,7 @@ impl AgglomerateService {
     /// Scala `agglomerateIdsForSegmentIds` (Zarr3, 30 lookups in parallel, order kept).
     pub async fn agglomerate_ids_for_segment_ids(
         &self,
-        key: &AgglomerateFileKey,
+        key: &AttachmentFileKey,
         segment_ids: &[i64],
         token: Option<&str>,
     ) -> DsResult<Vec<i64>> {
@@ -634,7 +576,7 @@ impl AgglomerateService {
     /// Scala `positionForSegmentId` (Zarr3, unsigned binary search within the agglomerate).
     pub async fn position_for_segment_id(
         &self,
-        key: &AgglomerateFileKey,
+        key: &AttachmentFileKey,
         segment_id: i64,
         token: Option<&str>,
     ) -> DsResult<Vec3Int> {

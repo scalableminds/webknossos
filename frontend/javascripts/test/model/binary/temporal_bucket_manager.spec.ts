@@ -52,8 +52,8 @@ describe("TemporalBucketManager", () => {
     // To simulate some labeling on the bucket's data,
     // we simply use the start and end mutation methods
     // without any action in between.
-    bucket.startDataMutation();
-    bucket.endDataMutation();
+    bucket.startDataMutationForFullBucket();
+    bucket.endDataMutationForFullBucket();
   }
 
   it<TestContext>("should be added when bucket has not been requested", ({ manager, cube }) => {
@@ -101,8 +101,8 @@ describe("TemporalBucketManager", () => {
     const bucket2 = new DataBucket("uint8", [1, 0, 0, 0], manager, { type: "full" }, cube);
 
     for (const bucket of [bucket1, bucket2]) {
-      bucket.startDataMutation();
-      bucket.endDataMutation();
+      bucket.startDataMutationForFullBucket();
+      bucket.endDataMutationForFullBucket();
       bucket.markAsRequested();
     }
 

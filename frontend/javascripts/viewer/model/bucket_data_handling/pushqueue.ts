@@ -62,7 +62,7 @@ class PushQueue {
     }
     if (!this.pendingBuckets.has(bucket)) {
       this.pendingBuckets.add(bucket);
-      bucket.dirtyCount++;
+      bucket.fullBucketSaveState.dirtyCount++;
     }
     this.push();
   }

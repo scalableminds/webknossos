@@ -4,7 +4,6 @@ import { addToNestedMap, addToSetMap } from "libs/utils";
 import { actionChannel, call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import type { LayerNameAsKey } from "types/type_utils";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import { getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
   getAllLoadedMeshes,
@@ -33,7 +32,7 @@ import {
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
-import { applyRun, decodeBucketDiff } from "viewer/model/volumetracing/core/bucket_diff";
+import { applyRun, decodeBucketDiffBase64 } from "viewer/model/volumetracing/core/bucket_diff";
 import type { SegmentBucketData } from "viewer/model/volumetracing/core/volume_annotation_types";
 import { Model } from "viewer/singletons";
 import {
@@ -184,20 +183,19 @@ export function* tryToIncorporateActions(
           );
 
           const bucket = cube.getBucket(bucketAddress);
-          const voxelRunsBase64 =
-            action.name === "updateBucketPartial" ? action.value.voxelRunsBase64 : null;
-          if (
-            voxelRunsBase64 != null &&
-            bucket.type === "data" &&
-            bucket.isLoaded() &&
-            !WkDevFlags.liveCollaboration.refetchBucketsForRemotePartialUpdates
-          ) {
-            // A loaded bucket gets the runs applied directly. Concurrent local edits
-            // of the same voxels are not reconciled yet: locally, the remote values win.
-            const runs = decodeBucketDiff(
-              Uint8Array.from(atob(voxelRunsBase64), (char) => char.charCodeAt(0)),
-            );
-            bucket.applyRemoteChange((data) => {
+          if (action.name === "updateBucketPartial") {
+            // A bucket that isn't in the cube gets others' changes with its data. The user's
+            // own unsaved ones keep their bucket in the cube until they are saved.
+            if (bucket.type !== "data") break;
+            const runs = decodeBucketDiffBase64(action.value.voxelRunsBase64);
+            // Applied to the data, or kept until it arrives (see
+            // DataBucket.applyPartialChange). As runs are absolute writes, applying others'
+            // runs first and then re-applying the user's unsaved ones (see rebasing_sagas.ts)
+            // yields the backend's state after the user's pending save. Where both wrote the
+            // same voxels, the user's values win. Partial updates never evict a bucket: that
+            // wouldn't stop a request in flight, whose response would land in the bucket
+            // created anew.
+            bucket.applyPartialChange((data) => {
               for (const run of runs) applyRun(data as SegmentBucketData, run);
             });
             break;

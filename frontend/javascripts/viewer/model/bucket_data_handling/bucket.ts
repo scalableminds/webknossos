@@ -126,10 +126,10 @@ export class DataBucket {
   // into it (see endDataMutationForPartialUpdates).
   savedViaPartialUpdates: boolean = false;
   pendingOperations: Array<PendingOperation> = [];
-  // Counts the partial updates of this bucket that were saved by the user or
-  // incorporated from others while it was requested (see notePartialUpdate).
-  private partialUpdateCount = 0;
-  private partialUpdateCountAtRequest = 0;
+  // The runs of the partial updates of this bucket that were saved by the user or
+  // incorporated from others since it was requested (see recordPartialUpdate).
+  // todop: is this the sibling to pendingOperations?
+  private partialUpdateRunsSinceRequest: VoxelRun[] = [];
   state: BucketStateEnumType;
   // The bucket-picker tick during which this bucket was last marked as needed.
   lastNeededTick: number = -1;
@@ -545,21 +545,26 @@ export class DataBucket {
   }
 
   /**
-   * To be called when a partial update of this bucket was saved by the user, or
-   * incorporated from another user, while the bucket is requested. The response to
-   * the request may predate the update: the backend's data then lacks it, and the
-   * save queue no longer has it to re-apply. Such a response is discarded, and the
-   * bucket is requested again (see requestAgainIfResponseIsStale).
+   * To be called when a partial update of this bucket is saved by the user, or
+   * incorporated from another user, while the bucket is requested. The request asked
+   * for the annotation version from before, so the backend's data lacks the update,
+   * and once saved, the save queue doesn't have it either. Its runs are applied when
+   * the data arrives (see takeRunsMissingFromResponse).
    */
-  notePartialUpdate(): void {
-    this.partialUpdateCount++;
+  recordPartialUpdate(runs: VoxelRun[]): void {
+    for (const run of runs) this.partialUpdateRunsSinceRequest.push(run);
   }
 
-  private requestAgainIfResponseIsStale(): boolean {
-    if (this.partialUpdateCount === this.partialUpdateCountAtRequest) return false;
-    this.markAsFailed();
-    this.addToPullQueueWithHighestPriority();
-    return true;
+  // The runs that the backend's response lacks, in the order they were written: the
+  // partial updates since the request, then the ones not saved yet (see
+  // unsaved_partial_updates.ts). Re-applying a run that the response already contains
+  // is harmless, as runs are absolute writes.
+  private takeRunsMissingFromResponse(): VoxelRun[] {
+    // todop: doublecheck that all missing partial updates are always in one of the two collections
+    // (e.g., what about a very late bucket arrival so that getUnsavedPartialUpdateRuns is empty)?
+    const runs = this.partialUpdateRunsSinceRequest.concat(this.getUnsavedPartialUpdateRuns());
+    this.partialUpdateRunsSinceRequest = [];
+    return runs;
   }
 
   clearDirtyIfSavedViaPartialUpdates(): void {
@@ -582,7 +587,7 @@ export class DataBucket {
     switch (this.state) {
       case BucketStateEnum.UNREQUESTED: {
         this.state = BucketStateEnum.REQUESTED;
-        this.partialUpdateCountAtRequest = this.partialUpdateCount;
+        this.partialUpdateRunsSinceRequest = [];
         break;
       }
 
@@ -593,16 +598,15 @@ export class DataBucket {
 
   // The bucket is not present on the datastore. It transitions to MISSING and stays there.
   markAsMissing(): void {
-    if (this.isRequested() && this.requestAgainIfResponseIsStale()) return;
-    // Without data on the backend, the bucket's unsaved partial updates still apply,
-    // to empty data.
-    const unsavedRuns = this.isRequested() ? this.getUnsavedPartialUpdateRuns() : [];
-    if (unsavedRuns.length > 0) {
+    // Without data on the backend, the partial updates that the response lacks still
+    // apply, to empty data.
+    const missingRuns = this.isRequested() ? this.takeRunsMissingFromResponse() : [];
+    if (missingRuns.length > 0) {
       const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
       const emptyData = new TypedArrayClass(
         channelCount * this.cube.getEffectiveBucketVoxelCount(),
       );
-      applyRuns(emptyData, unsavedRuns);
+      applyRuns(emptyData, missingRuns);
       if (this.dirty && this.data != null) {
         // Like for fetched data, the changes made while the bucket was requested come last.
         this.merge(emptyData);
@@ -612,7 +616,7 @@ export class DataBucket {
       this.invalidateValueSet();
     }
     this.markAsUnavailable(BucketStateEnum.MISSING, "bucketMissing");
-    if (unsavedRuns.length > 0) this.throttledTriggerLabeled();
+    if (missingRuns.length > 0) this.throttledTriggerLabeled();
   }
 
   // The bucket's request could not be read (e.g. transient error or a failure bucket). It
@@ -677,7 +681,6 @@ export class DataBucket {
       throw error;
     }
 
-    if (this.requestAgainIfResponseIsStale()) return;
     this.rawBucketData = wireData;
 
     const effectiveVoxelCount = this.cube.getEffectiveBucketVoxelCount();
@@ -692,19 +695,20 @@ export class DataBucket {
 
     switch (this.state) {
       case BucketStateEnum.REQUESTED: {
-        // The backend's data lacks the bucket's partial updates that are not saved
-        // yet (see unsaved_partial_updates.ts). The changes made while the bucket was
-        // requested are newer, so merge applies them afterwards.
-        const unsavedRuns = this.getUnsavedPartialUpdateRuns();
+        // The backend's data is from the annotation version that the bucket was
+        // requested at, so it lacks the partial updates since then and the ones not
+        // saved yet. The changes made while the bucket was requested are newer, so
+        // merge applies them afterwards.
+        const missingRuns = this.takeRunsMissingFromResponse();
         if (this.dirty) {
           // Clone the data for the unmergedBucketDataLoaded event,
           // as the following merge operation is done in-place.
           const dataClone = data.slice();
-          this.trigger("unmergedBucketDataLoaded", dataClone);
-          applyRuns(data, unsavedRuns);
+          this.trigger("unmergedBucketDataLoaded", dataClone); // todop: is it correct that missingRuns is not already applied for the trigger??
+          applyRuns(data, missingRuns);
           this.merge(data);
         } else {
-          applyRuns(data, unsavedRuns);
+          applyRuns(data, missingRuns);
           this.data = data;
         }
         this.invalidateValueSet();

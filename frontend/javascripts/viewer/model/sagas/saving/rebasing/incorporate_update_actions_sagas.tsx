@@ -32,7 +32,7 @@ import {
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
-import { applyRun, decodeBucketDiff } from "viewer/model/volumetracing/core/bucket_diff";
+import { applyRun, decodeBucketDiffBase64 } from "viewer/model/volumetracing/core/bucket_diff";
 import type { SegmentBucketData } from "viewer/model/volumetracing/core/volume_annotation_types";
 import { Model } from "viewer/singletons";
 import {
@@ -185,27 +185,21 @@ export function* tryToIncorporateActions(
           const bucket = cube.getBucket(bucketAddress);
           if (action.name === "updateBucketPartial") {
             if (bucket.type !== "data") break;
+            const runs = decodeBucketDiffBase64(action.value.voxelRunsBase64);
             if (bucket.isLoaded() || bucket.isMissing()) {
               // The runs are applied directly, also to a "missing" bucket (which means
               // empty on the backend). As runs are absolute writes, applying others' runs first
               // and then re-applying the user's unsaved ones (see rebasing_sagas.ts)
               // yields the backend's state after the user's pending save. Where both
               // wrote the same voxels, the user's values win.
-              const runs = decodeBucketDiff(
-                Uint8Array.from(atob(action.value.voxelRunsBase64), (char) => char.charCodeAt(0)),
-              );
               bucket.applyChangeFromUpdateAction((data) => {
                 for (const run of runs) applyRun(data as SegmentBucketData, run);
               });
             } else if (bucket.isRequested() && !areUnsavedChangesOfUser) {
-              // The ongoing bucket request was likely sent before the backend knew of the update
-              // action we just got. This case is detected via a counter that is updated by
-              // notePartialUpdate(). The old bucket request is then discarded and re-initiated.
-              // todop: what happens in this scenario?
-              // - client requests bucket X (the backend will respond with v=5)
-              // - in parallel, the client also fetches new update actions so that notePartialUpdate is called
-              // - the request for bucket X arrives (partialUpdateCount won't match now). the client will discard the request. however, the backend's reply was the newest one?
-              bucket.notePartialUpdate();
+              // The ongoing bucket request asked for the annotation version from before this
+              // update action, so its response lacks it. The bucket applies the runs when the
+              // response arrives.
+              bucket.recordPartialUpdate(runs);
             }
             // Otherwise, the bucket's data hasn't been requested yet: it will include
             // others' changes, and get the user's unsaved ones re-applied (see

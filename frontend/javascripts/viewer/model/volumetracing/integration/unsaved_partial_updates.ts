@@ -13,7 +13,7 @@ import memoizeOne from "memoize-one";
 import type { BucketAddress } from "viewer/constants";
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
 import type { SaveQueueEntry } from "viewer/store";
-import { decodeBucketDiff, type VoxelRun } from "../core/bucket_diff";
+import { decodeBucketDiffBase64, type VoxelRun } from "../core/bucket_diff";
 
 function keyOf(
   tracingId: string,
@@ -57,7 +57,5 @@ export function getUnsavedPartialUpdateRuns(
 ): VoxelRun[] {
   const encodedRuns = indexUnsavedPartialUpdates(saveQueue).get(keyOf(tracingId, address));
   if (encodedRuns == null) return [];
-  return encodedRuns.flatMap((runsBase64) =>
-    decodeBucketDiff(Uint8Array.from(atob(runsBase64), (char) => char.charCodeAt(0))),
-  );
+  return encodedRuns.flatMap(decodeBucketDiffBase64);
 }

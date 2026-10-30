@@ -6,6 +6,7 @@ import {
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { OrthoViews, OverwriteModeEnum, type Vector3 } from "viewer/constants";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import {
@@ -65,6 +66,38 @@ function evictBucketOf(voxel: Vector3) {
 const getValueAt = (context: WebknossosTestContext, voxel: Vector3) =>
   context.api.data.getDataValue(VOLUME_TRACING_ID, voxel);
 
+const LAYERS = { [VOLUME_TRACING_ID]: "uint16", color: "uint8" } as const;
+
+// Holds back the response to the first request of the volume layer's bucket that
+// contains `position` until `release` is called. All requests are answered by `respond`.
+function holdBackFirstRequestOfBucket(
+  context: WebknossosTestContext,
+  respond: ReturnType<typeof createBucketResponseFunction>,
+) {
+  let release = () => {}; // todop: use deferreds here?
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let requestCount = 0;
+  vi.mocked(context.mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+    async (url: string, payload: { data: Array<RequestBucketInfo> }) => {
+      const requestsBucket =
+        url.includes(VOLUME_TRACING_ID) &&
+        payload.data.some(
+          ({ position: bucketPosition, mag }) =>
+            bucketPosition.every((coordinate, axis) => coordinate === bucketOrigin[axis]) &&
+            mag[0] === 1,
+        );
+      if (requestsBucket) {
+        requestCount++;
+        if (requestCount === 1) await released;
+      }
+      return respond(url, payload);
+    },
+  );
+  return { release, getRequestCount: () => requestCount };
+}
+
 // A bucket response in which neither the volume layer nor its fallback layer have
 // data for any bucket.
 async function respondWithoutData(_url: string, payload: { data: Array<unknown> }) {
@@ -119,7 +152,7 @@ describe("Unsaved partial bucket updates", () => {
   it<WebknossosTestContext>("are re-applied when an evicted bucket is fetched again", async (context) => {
     await setup(context);
     vi.mocked(context.mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction({ [VOLUME_TRACING_ID]: "uint16", color: "uint8" }, 0, 0),
+      createBucketResponseFunction(LAYERS, 0, 0),
     );
     await context.api.data.reloadAllBuckets();
     brushAt(position);
@@ -194,11 +227,10 @@ describe("Unsaved partial bucket updates", () => {
     expect(await getValueAt(context, othersVoxel)).toBe(9);
   });
 
-  it<WebknossosTestContext>("aren't lost when a bucket's data predates their save", async (context) => {
+  it<WebknossosTestContext>("are applied to a bucket's data that predates their save", async (context) => {
     await setup(context);
-    const layers = { [VOLUME_TRACING_ID]: "uint16", color: "uint8" } as const;
     vi.mocked(context.mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(layers, 0, 0),
+      createBucketResponseFunction(LAYERS, 0, 0),
     );
     await context.api.data.reloadAllBuckets();
     // Loads the bucket, so that the stroke doesn't cause a request of its own.
@@ -206,39 +238,42 @@ describe("Unsaved partial bucket updates", () => {
     brushAt(position);
     evictBucketOf(position);
 
-    // The bucket is requested again while the stroke's save is in flight. The backend
-    // answers that request with its data from before the save, but the response only
-    // arrives after the save went through. Later requests get data with the stroke.
-    let releaseStaleResponse = () => {};
-    const staleResponseReleased = new Promise<void>((resolve) => {
-      releaseStaleResponse = resolve;
-    });
-    let hasHeldBackResponse = false;
-    const respondBeforeSave = createBucketResponseFunction(layers, 0, 0);
-    const respondAfterSave = createBucketResponseFunction(layers, 0, 0, [{ position, value: 5 }]);
-    vi.mocked(context.mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      async (url: string, payload: { data: Array<RequestBucketInfo> }) => {
-        const requestsBucket =
-          url.includes(VOLUME_TRACING_ID) &&
-          payload.data.some(
-            ({ position: bucketPosition, mag }) =>
-              bucketPosition.every((coordinate, axis) => coordinate === bucketOrigin[axis]) &&
-              mag[0] === 1,
-          );
-        if (requestsBucket && !hasHeldBackResponse) {
-          hasHeldBackResponse = true;
-          await staleResponseReleased;
-          return respondBeforeSave(url, payload);
-        }
-        return respondAfterSave(url, payload);
-      },
+    // The bucket is requested again while the stroke's save is in flight. The response,
+    // for the version from before the save, only arrives after the save went through.
+    const heldRequest = holdBackFirstRequestOfBucket(
+      context,
+      createBucketResponseFunction(LAYERS, 0, 0),
     );
     const value = getValueAt(context, position);
     await context.api.tracing.save();
     expect(hasUnsavedPartialUpdates()).toBe(false);
-    releaseStaleResponse();
+    heldRequest.release();
 
     expect(await value).toBe(5);
-    expect(hasHeldBackResponse).toBe(true);
+    // The response was used, not requested again.
+    expect(heldRequest.getRequestCount()).toBe(1);
+  });
+
+  it<WebknossosTestContext>("from others are applied to a bucket's data that predates them", async (context) => {
+    await setup(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    await context.api.data.reloadAllBuckets();
+    expect(await getValueAt(context, position)).toBe(backendMock.fillValue);
+    evictBucketOf(position);
+
+    // While the bucket is requested again, another user's partial update to it is
+    // incorporated. The response, for the version from before, arrives afterwards.
+    const othersVoxel: Vector3 = [60, 60, 43];
+    const heldRequest = holdBackFirstRequestOfBucket(
+      context,
+      createBucketResponseFunction(LAYERS, backendMock.fillValue, 0),
+    );
+    const value = getValueAt(context, othersVoxel);
+    planOthersPartialUpdate(backendMock, [othersVoxel]);
+    await dispatchEnsureHasNewestVersionAsync(Store.dispatch);
+    heldRequest.release();
+
+    expect(await value).toBe(9);
+    expect(heldRequest.getRequestCount()).toBe(1);
   });
 });

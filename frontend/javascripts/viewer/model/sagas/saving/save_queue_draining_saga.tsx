@@ -48,6 +48,7 @@ import {
   PUSH_THROTTLE_TIME,
   SAVE_RETRY_WAITING_TIME,
 } from "viewer/model/sagas/saving/save_saga_constants";
+import { decodeBucketDiffBase64 } from "viewer/model/volumetracing/core/bucket_diff";
 import { Model, Store } from "viewer/singletons";
 import type { SaveQueueEntry, WebknossosState } from "viewer/store";
 import { waitFor } from "../saga_helpers";
@@ -399,15 +400,16 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
           bucket.markAsPushed();
         }
       } else if (updateAction.name === "updateBucketPartial") {
-        // A partial update leaves the save queue now, so a requested bucket can't get
-        // it re-applied when its data arrives. That data may predate the update.
+        // A partial update leaves the save queue now. A requested bucket's data, from the
+        // annotation version it was requested at, lacks it, so the bucket applies the runs
+        // when the data arrives.
         const { actionTracingId, position, mag, additionalCoordinates } = updateAction.value;
         const { cube } = Model.getSegmentationTracingLayer(actionTracingId);
         const bucket = cube.getBucket(
           globalPositionToBucketPositionWithMag(position, mag, additionalCoordinates),
         );
         if (bucket.type === "data" && bucket.isRequested()) {
-          bucket.notePartialUpdate();
+          bucket.recordPartialUpdate(decodeBucketDiffBase64(updateAction.value.voxelRunsBase64));
         }
       }
     }

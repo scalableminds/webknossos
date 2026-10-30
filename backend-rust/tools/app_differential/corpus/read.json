@@ -1,0 +1,836 @@
+{
+ "version": 1,
+ "description": "Read-only GET routes against the seeded sample organization (Play initial data).",
+ "header_divergences": {
+  "cache-control": "Rust sends `Cache-Control: no-store` on every API response (README: cache prevention); Play sends `no-cache` on most and nothing on auth errors. Play sends no validators (ETag/Last-Modified), so both force a refetch; no-store additionally forbids storage. Deliberate."
+ },
+ "drop_play_chain_messages": "Play appends {\"chain\": \"[Server Time \u2026] \u2026\"} to messages of failed Fox chains (debug context with the server time). Rust returns only the error entry; the frontend shows `error` entries.",
+ "unordered_keys": {
+  "annotationLayers": "Play's AnnotationLayerDAO orders layers by tracingId, a random UUID per side.",
+  "tags": "Scala Set semantics (annotation.tags ++ Set(dataset.name)); hash order for more than four tags.",
+  "jobsSupportedByAvailableWorkers": "DataStoreService.publicWrites serializes JobService.jobsSupportedByAvailableWorkers, a Scala Set (hash order); Rust sorts.",
+  "supportedJobCommands": "Worker.supportedJobCommands is a Scala Set (hash order); Rust keeps the stored order."
+ },
+ "side_rewrites": {
+  "rust": {
+   "http://127.0.0.1:19595": "http://127.0.0.1:19590",
+   "http://127.0.0.1:19596": "http://127.0.0.1:19590",
+   "/tmp/wk-diff/rust-data/": "/tmp/wk-diff/play-data/"
+  }
+ },
+ "identities": {
+  "admin": {
+   "token": "secretSampleUserToken"
+  },
+  "bad": {
+   "token": "definitelyNotAValidToken"
+  }
+ },
+ "steps": [
+  {
+   "name": "buildinfo",
+   "as": "admin",
+   "path": "/api/buildinfo",
+   "expected_divergence": {
+    "reason": "localDataStoreEnabled/localTracingStoreEnabled describe the deployment: Play runs embedded stores, the Rust backend never does (stores are separate services).",
+    "paths": [
+     "$.localDataStoreEnabled",
+     "$.localTracingStoreEnabled"
+    ]
+   }
+  },
+  {
+   "name": "features",
+   "as": "admin",
+   "path": "/api/features"
+  },
+  {
+   "name": "health",
+   "as": "admin",
+   "path": "/api/health"
+  },
+  {
+   "name": "check-certificate",
+   "as": "admin",
+   "path": "/api/checkCertificate"
+  },
+  {
+   "name": "maintenances-current",
+   "as": "admin",
+   "path": "/api/maintenances/listCurrentAndUpcoming"
+  },
+  {
+   "name": "maintenances-all",
+   "as": "admin",
+   "path": "/api/maintenances/listAll"
+  },
+  {
+   "name": "maintenance-missing",
+   "as": "admin",
+   "path": "/api/maintenances/0123456789abcdef01234567"
+  },
+  {
+   "name": "auth-token",
+   "as": "admin",
+   "path": "/api/auth/token"
+  },
+  {
+   "name": "auth-accessible-by-switching",
+   "as": "admin",
+   "path": "/api/auth/accessibleBySwitching"
+  },
+  {
+   "name": "webauthn-keys",
+   "as": "admin",
+   "path": "/api/auth/webauthn/keys"
+  },
+  {
+   "name": "user-configuration",
+   "as": "admin",
+   "path": "/api/user/userConfiguration"
+  },
+  {
+   "name": "keyboard-shortcuts",
+   "as": "admin",
+   "path": "/api/user/keyboardShortcutsConfig"
+  },
+  {
+   "name": "dataset-config-default",
+   "as": "admin",
+   "path": "/api/datasetConfigurations/default/68b80290d4000090f8f4aa62"
+  },
+  {
+   "name": "tasks-peek",
+   "as": "admin",
+   "path": "/api/user/tasks/peek"
+  },
+  {
+   "name": "users",
+   "as": "admin",
+   "path": "/api/users",
+   "unordered": [
+    "$"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "users-editable",
+   "as": "admin",
+   "path": "/api/users",
+   "query": {
+    "isEditable": "true"
+   },
+   "unordered": [
+    "$"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "users-admins",
+   "as": "admin",
+   "path": "/api/users",
+   "query": {
+    "isAdmin": "true"
+   },
+   "unordered": [
+    "$"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "users-team-manager",
+   "as": "admin",
+   "path": "/api/users",
+   "query": {
+    "isTeamManagerOrAdmin": "true"
+   },
+   "unordered": [
+    "$"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "user",
+   "as": "admin",
+   "path": "/api/user",
+   "ignore": [
+    {
+     "path": "$.lastActivity",
+     "reason": "Play renders request.identity from its 3-minute user cache (webKnossos.cache.user.timeout), so lastActivity can be stale; Rust reads the row."
+    }
+   ]
+  },
+  {
+   "name": "user-tasks",
+   "as": "admin",
+   "path": "/api/user/tasks"
+  },
+  {
+   "name": "user-annotations",
+   "as": "admin",
+   "path": "/api/user/annotations"
+  },
+  {
+   "name": "user-annotations-count",
+   "as": "admin",
+   "path": "/api/user/annotations",
+   "query": {
+    "isFinished": "false",
+    "limit": "10",
+    "pageNumber": "0",
+    "includeTotalCount": "true"
+   }
+  },
+  {
+   "name": "users-id",
+   "as": "admin",
+   "path": "/api/users/{seedAdminId}"
+  },
+  {
+   "name": "users-id2",
+   "as": "admin",
+   "path": "/api/users/{seedUser2Id}"
+  },
+  {
+   "name": "users-missing",
+   "as": "admin",
+   "path": "/api/users/0123456789abcdef01234567"
+  },
+  {
+   "name": "users-invalid-id",
+   "as": "admin",
+   "path": "/api/users/not-an-id",
+   "expected_divergence": {
+    "reason": "Play's default HttpErrorHandler renders an HTML page for router-level errors (unknown route, unparsable path parameter); Rust returns its JSON error format with the same status.",
+    "paths": [
+     "$",
+     "<header:content-type>"
+    ],
+    "headers": [
+     "content-type"
+    ]
+   }
+  },
+  {
+   "name": "users-id-tasks",
+   "as": "admin",
+   "path": "/api/users/{seedAdminId}/tasks"
+  },
+  {
+   "name": "users-id-annotations",
+   "as": "admin",
+   "path": "/api/users/{seedAdminId}/annotations"
+  },
+  {
+   "name": "users-id-logged-time",
+   "as": "admin",
+   "path": "/api/users/{seedAdminId}/loggedTime"
+  },
+  {
+   "name": "teams",
+   "as": "admin",
+   "path": "/api/teams"
+  },
+  {
+   "name": "teams-editable",
+   "as": "admin",
+   "path": "/api/teams",
+   "query": {
+    "isEditable": "true"
+   }
+  },
+  {
+   "name": "team-available-tasks",
+   "as": "admin",
+   "path": "/api/teams/{seedTeamId}/availableTasksReport"
+  },
+  {
+   "name": "team-project-progress",
+   "as": "admin",
+   "path": "/api/teams/{seedTeamId}/projectProgressReport"
+  },
+  {
+   "name": "datasets",
+   "as": "admin",
+   "path": "/api/datasets",
+   "unordered": [
+    "$"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "datasets-compact",
+   "as": "admin",
+   "path": "/api/datasets",
+   "query": {
+    "compact": "true"
+   },
+   "unordered": [
+    "$"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "datasets-active",
+   "as": "admin",
+   "path": "/api/datasets",
+   "query": {
+    "isActive": "true",
+    "isUnreported": "false"
+   },
+   "unordered": [
+    "$"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "datasets-folder",
+   "as": "admin",
+   "path": "/api/datasets",
+   "query": {
+    "folderId": "{seedRootFolderId}",
+    "includeSubfolders": "true"
+   },
+   "unordered": [
+    "$"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "datasets-search",
+   "as": "admin",
+   "path": "/api/datasets",
+   "query": {
+    "searchQuery": "remote_3",
+    "limit": "2"
+   },
+   "unordered": [
+    "$"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "datasets-annotation-count",
+   "as": "admin",
+   "path": "/api/datasets",
+   "query": {
+    "includeAnnotationCount": "true",
+    "onlyMyOrganization": "true"
+   },
+   "unordered": [
+    "$"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "datasets-v9-compact",
+   "as": "admin",
+   "path": "/api/v9/datasets"
+  },
+  {
+   "name": "datasets-v12",
+   "as": "admin",
+   "path": "/api/v12/datasets",
+   "unordered": [
+    "$"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "datasets-v12-compact",
+   "as": "admin",
+   "path": "/api/v12/datasets",
+   "query": {
+    "compact": "true"
+   },
+   "unordered": [
+    "$"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "dataset-disambiguate-to-new",
+   "as": "admin",
+   "path": "/api/datasets/disambiguate/l4_sample_remote/toNew"
+  },
+  {
+   "name": "dataset-disambiguate-to-id",
+   "as": "admin",
+   "path": "/api/datasets/disambiguate/sample_organization/l4_sample_remote/toId"
+  },
+  {
+   "name": "dataset-find-by-import-url",
+   "as": "admin",
+   "path": "/api/datasets/findByImportURL",
+   "query": {
+    "importURL": "https://static.webknossos.org/data/l4_sample"
+   }
+  },
+  {
+   "name": "dataset-access-list",
+   "as": "admin",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/accessList"
+  },
+  {
+   "name": "dataset-sharing-token",
+   "as": "admin",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/sharingToken",
+   "ignore": [
+    {
+     "path": "$.sharingToken",
+     "reason": "random token generated on first request, independently per side"
+    }
+   ],
+   "capture": {
+    "sharingToken": "$.sharingToken"
+   }
+  },
+  {
+   "name": "dataset-valid-new-name",
+   "as": "admin",
+   "path": "/api/datasets/fresh_name/isValidNewName"
+  },
+  {
+   "name": "dataset-invalid-new-name",
+   "as": "admin",
+   "path": "/api/datasets/l4_sample_remote/isValidNewName"
+  },
+  {
+   "name": "dataset-read",
+   "as": "admin",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62"
+  },
+  {
+   "name": "dataset-read-zarr",
+   "as": "admin",
+   "path": "/api/datasets/05c85a876c4c979ef53752b4"
+  },
+  {
+   "name": "dataset-read-v12",
+   "as": "admin",
+   "path": "/api/v12/datasets/68b80290d4000090f8f4aa62"
+  },
+  {
+   "name": "dataset-read-missing",
+   "as": "admin",
+   "path": "/api/datasets/0123456789abcdef01234567"
+  },
+  {
+   "name": "dataset-source-superuser",
+   "as": "admin",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/dataSourceForSuperUser"
+  },
+  {
+   "name": "dataset-used-storage",
+   "as": "admin",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/usedStorageDetails"
+  },
+  {
+   "name": "folders-root",
+   "as": "admin",
+   "path": "/api/folders/root"
+  },
+  {
+   "name": "folders-tree",
+   "as": "admin",
+   "path": "/api/folders/tree",
+   "unordered": [
+    "$"
+   ],
+   "note": "FolderDAO.findTreeOf has no ORDER BY (descendants UNION ALL root); the frontend builds the tree from parent ids"
+  },
+  {
+   "name": "folders-id",
+   "as": "admin",
+   "path": "/api/folders/{seedRootFolderId}"
+  },
+  {
+   "name": "folders-missing",
+   "as": "admin",
+   "path": "/api/folders/0123456789abcdef01234567"
+  },
+  {
+   "name": "datastores",
+   "as": "admin",
+   "path": "/api/datastores"
+  },
+  {
+   "name": "tracingstore",
+   "as": "admin",
+   "path": "/api/tracingstore"
+  },
+  {
+   "name": "annotations-readable",
+   "as": "admin",
+   "path": "/api/annotations/readable"
+  },
+  {
+   "name": "annotations-readable-paged",
+   "as": "admin",
+   "path": "/api/annotations/readable",
+   "query": {
+    "limit": "5",
+    "pageNumber": "0",
+    "includeTotalCount": "true"
+   }
+  },
+  {
+   "name": "annotation-info-missing",
+   "as": "admin",
+   "path": "/api/annotations/0123456789abcdef01234567/info"
+  },
+  {
+   "name": "zarr-private-links",
+   "as": "admin",
+   "path": "/api/zarrPrivateLinks"
+  },
+  {
+   "name": "experience-domains",
+   "as": "admin",
+   "path": "/api/tasks/experienceDomains"
+  },
+  {
+   "name": "task-missing",
+   "as": "admin",
+   "path": "/api/tasks/0123456789abcdef01234567"
+  },
+  {
+   "name": "task-types",
+   "as": "admin",
+   "path": "/api/taskTypes"
+  },
+  {
+   "name": "task-type",
+   "as": "admin",
+   "path": "/api/taskTypes/63721e2cef0100470266c485"
+  },
+  {
+   "name": "task-type-tasks",
+   "as": "admin",
+   "path": "/api/taskTypes/63721e2cef0100470266c485/tasks"
+  },
+  {
+   "name": "task-type-projects",
+   "as": "admin",
+   "path": "/api/taskTypes/63721e2cef0100470266c485/projects"
+  },
+  {
+   "name": "scripts",
+   "as": "admin",
+   "path": "/api/scripts"
+  },
+  {
+   "name": "projects",
+   "as": "admin",
+   "path": "/api/projects"
+  },
+  {
+   "name": "projects-with-status",
+   "as": "admin",
+   "path": "/api/projects/withStatus"
+  },
+  {
+   "name": "project-by-name",
+   "as": "admin",
+   "path": "/api/projects/byName/sampleProject"
+  },
+  {
+   "name": "project",
+   "as": "admin",
+   "path": "/api/projects/{seedProjectId}"
+  },
+  {
+   "name": "project-tasks",
+   "as": "admin",
+   "path": "/api/projects/{seedProjectId}/tasks"
+  },
+  {
+   "name": "project-tasks-paged",
+   "as": "admin",
+   "path": "/api/projects/{seedProjectId}/tasks",
+   "query": {
+    "limit": "5",
+    "pageNumber": "0",
+    "includeTotalCount": "true"
+   }
+  },
+  {
+   "name": "project-users-with-active-tasks",
+   "as": "admin",
+   "path": "/api/projects/{seedProjectId}/usersWithActiveTasks"
+  },
+  {
+   "name": "organizations",
+   "as": "admin",
+   "path": "/api/organizations"
+  },
+  {
+   "name": "organization-default",
+   "as": "admin",
+   "path": "/api/organizations/default"
+  },
+  {
+   "name": "organizations-is-empty",
+   "as": "admin",
+   "path": "/api/organizationsIsEmpty"
+  },
+  {
+   "name": "organization",
+   "as": "admin",
+   "path": "/api/organizations/sample_organization"
+  },
+  {
+   "name": "organization-missing",
+   "as": "admin",
+   "path": "/api/organizations/nope"
+  },
+  {
+   "name": "operator-data",
+   "as": "admin",
+   "path": "/api/operatorData"
+  },
+  {
+   "name": "pricing-status",
+   "as": "admin",
+   "path": "/api/pricing/status"
+  },
+  {
+   "name": "pricing-plan-updates",
+   "as": "admin",
+   "path": "/api/pricing/planUpdates"
+  },
+  {
+   "name": "terms-of-service",
+   "as": "admin",
+   "path": "/api/termsOfService"
+  },
+  {
+   "name": "terms-acceptance-needed",
+   "as": "admin",
+   "path": "/api/termsOfService/acceptanceNeeded"
+  },
+  {
+   "name": "time-spans",
+   "as": "admin",
+   "path": "/api/time/user/{seedAdminId}/spans",
+   "query": {
+    "start": "1600000000000",
+    "end": "1900000000000",
+    "annotationTypes": "Explorational,Task",
+    "annotationStates": "Active,Finished"
+   }
+  },
+  {
+   "name": "time-summed",
+   "as": "admin",
+   "path": "/api/time/user/{seedAdminId}/summedByAnnotation",
+   "query": {
+    "start": "1600000000000",
+    "end": "1900000000000",
+    "annotationTypes": "Explorational,Task",
+    "annotationStates": "Active,Finished"
+   }
+  },
+  {
+   "name": "time-overview",
+   "as": "admin",
+   "path": "/api/time/overview",
+   "query": {
+    "start": "1600000000000",
+    "end": "1900000000000",
+    "annotationTypes": "Explorational,Task",
+    "annotationStates": "Active,Finished"
+   }
+  },
+  {
+   "name": "time-overview-bad-type",
+   "as": "admin",
+   "path": "/api/time/overview",
+   "query": {
+    "start": "1600000000000",
+    "end": "1900000000000",
+    "annotationTypes": "Bogus",
+    "annotationStates": "Active,Finished"
+   }
+  },
+  {
+   "name": "jobs",
+   "as": "admin",
+   "path": "/api/jobs"
+  },
+  {
+   "name": "jobs-status",
+   "as": "admin",
+   "path": "/api/jobs/status"
+  },
+  {
+   "name": "jobs-credit-cost",
+   "as": "admin",
+   "path": "/api/jobs/getCreditCost",
+   "query": {
+    "command": "infer_neurons",
+    "boundingBoxInMag": "0,0,0,100,100,100"
+   }
+  },
+  {
+   "name": "job-missing",
+   "as": "admin",
+   "path": "/api/jobs/0123456789abcdef01234567"
+  },
+  {
+   "name": "ai-models",
+   "as": "admin",
+   "path": "/api/aiModels"
+  },
+  {
+   "name": "ai-model",
+   "as": "admin",
+   "path": "/api/aiModels/66544a56d20000af0e42ba0f"
+  },
+  {
+   "name": "ai-inferences",
+   "as": "admin",
+   "path": "/api/aiModels/inferences"
+  },
+  {
+   "name": "credit-transactions",
+   "as": "admin",
+   "path": "/api/creditTransactions",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "publications",
+   "as": "admin",
+   "path": "/api/publications",
+   "unordered": [
+    "$[*].datasets"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "publication",
+   "as": "admin",
+   "path": "/api/publications/5c766bec6c01006c018c7459",
+   "unordered": [
+    "$.datasets"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "short-link-missing",
+   "as": "admin",
+   "path": "/api/shortLinks/byKey/doesnotexist"
+  },
+  {
+   "name": "voxelytics-workflows",
+   "as": "admin",
+   "path": "/api/voxelytics/workflows"
+  },
+  {
+   "name": "unknown-route",
+   "as": "admin",
+   "path": "/api/doesNotExist",
+   "expected_divergence": {
+    "reason": "Play's default HttpErrorHandler renders an HTML page for router-level errors (unknown route, unparsable path parameter); Rust returns its JSON error format with the same status.",
+    "paths": [
+     "$",
+     "<header:content-type>"
+    ],
+    "headers": [
+     "content-type"
+    ]
+   }
+  },
+  {
+   "name": "anon-features",
+   "path": "/api/features"
+  },
+  {
+   "name": "anon-buildinfo-user",
+   "path": "/api/user"
+  },
+  {
+   "name": "anon-users",
+   "path": "/api/users"
+  },
+  {
+   "name": "anon-datasets",
+   "path": "/api/datasets",
+   "unordered": [
+    "$"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "anon-dataset",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62"
+  },
+  {
+   "name": "anon-organization-default",
+   "path": "/api/organizations/default"
+  },
+  {
+   "name": "anon-publications",
+   "path": "/api/publications",
+   "unordered": [
+    "$[*].datasets"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "anon-publication",
+   "path": "/api/publications/5c766bec6c01006c018c7459",
+   "unordered": [
+    "$.datasets"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  },
+  {
+   "name": "anon-organizations-is-empty",
+   "path": "/api/organizationsIsEmpty"
+  },
+  {
+   "name": "anon-terms",
+   "path": "/api/termsOfService"
+  },
+  {
+   "name": "anon-maintenances",
+   "path": "/api/maintenances/listCurrentAndUpcoming"
+  },
+  {
+   "name": "anon-teams",
+   "path": "/api/teams"
+  },
+  {
+   "name": "anon-folders-root",
+   "path": "/api/folders/root"
+  },
+  {
+   "name": "anon-auth-token",
+   "path": "/api/auth/token"
+  },
+  {
+   "name": "anon-jobs-request",
+   "path": "/api/jobs/request",
+   "query": {
+    "key": "wrong"
+   }
+  },
+  {
+   "name": "bad-token-user",
+   "as": "bad",
+   "path": "/api/user"
+  },
+  {
+   "name": "bad-token-datasets",
+   "as": "bad",
+   "path": "/api/datasets",
+   "unordered": [
+    "$"
+   ],
+   "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
+  }
+ ]
+}

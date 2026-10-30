@@ -1,0 +1,63 @@
+[package]
+name = "webknossos-datastore"
+description = "Rust implementation of the WEBKNOSSOS datastore service"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+autotests = false
+
+[dependencies]
+webknossos-common.workspace = true
+webknossos-blosc.workspace = true
+async-trait = "0.1"
+futures = "0.3"
+inventory = "0.3"
+jpeg-encoder = { version = "0.7.1", default-features = false, features = ["std"] }
+axum.workspace = true
+base64.workspace = true
+brotli-decompressor = "5"
+bytes = "1"
+flate2 = "1"
+lz4_flex = { version = "0.14", default-features = false, features = ["std", "safe-encode", "safe-decode"] }
+percent-encoding = "2"
+prost.workspace = true
+quick-xml.workspace = true
+reqwest.workspace = true
+ring.workspace = true
+zstd = { version = "0.13.3", default-features = false }
+serde.workspace = true
+serde_json = { workspace = true, features = ["preserve_order"] }
+tokio = { workspace = true, features = ["fs", "io-util"] }
+tower-http = { workspace = true, features = ["cors"] }
+tracing.workspace = true
+tracing-subscriber.workspace = true
+url.workspace = true
+zarrs = { version = "=0.23.14", default-features = false, features = ["async", "sharding", "transpose", "crc32c"] }
+zip = { workspace = true, features = ["deflate-flate2"] }
+zune-jpeg = { version = "=0.5.15", default-features = false, features = ["std"] }
+hdf5-reader = { version = "=0.9.1", default-features = false }
+lru = "=0.16.4"
+moka = { version = "0.12.16", features = ["sync"] }
+draco-core = { version = "=2.3.2", default-features = false, features = ["decoder", "edgebreaker_valence_decode", "legacy_bitstream_decode"] }
+object_store = { version = "0.14", default-features = false, features = ["aws-base", "gcp-base", "ring", "reqwest"] }
+# object_store's HTTP client: TLS through rustls with the ring provider (installed in
+# `datavault::object_store_support`), so no second crypto library (aws-lc) is built.
+reqwest-object-store = { package = "reqwest", version = "0.13", default-features = false, features = ["rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+
+# One integration-test binary instead of one per `tests/*.rs` file; see tests/main.rs.
+[[test]]
+name = "integration"
+path = "tests/main.rs"
+
+[dev-dependencies]
+http-body-util.workspace = true
+tower.workspace = true
+
+[lints]
+workspace = true
+
+[target."cfg(unix)".dependencies]
+rustix = { version = "1.1.5", features = ["fs"] }

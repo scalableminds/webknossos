@@ -1,0 +1,1628 @@
+{
+ "version": 1,
+ "description": "Dataset routes beyond read/admin CRUD/uploads: virtual datasets (addVirtualDataset), compose (+ addLayer/addMag/addAttachment), duplicateToOrga, mag/attachment upload to paths, preliminary uploads finished through paths, mirrors, thumbnails, remote exploration, and the external path deletion service.",
+ "header_divergences": {
+  "cache-control": "Rust sends `Cache-Control: no-store` on every API response (README: cache prevention); Play sends `no-cache` on most and nothing on auth errors. Play sends no validators (ETag/Last-Modified), so both force a refetch; no-store additionally forbids storage. Deliberate."
+ },
+ "drop_play_chain_messages": "Play appends {\"chain\": \"[Server Time \u2026] \u2026\"} to messages of failed Fox chains (debug context with the server time). Rust returns only the error entry; the frontend shows `error` entries.",
+ "unordered_keys": {
+  "annotationLayers": "Play's AnnotationLayerDAO orders layers by tracingId, a random UUID per side.",
+  "tags": "Scala Set semantics (annotation.tags ++ Set(dataset.name)); hash order for more than four tags.",
+  "jobsSupportedByAvailableWorkers": "DataStoreService.publicWrites serializes JobService.jobsSupportedByAvailableWorkers, a Scala Set (hash order); Rust sorts.",
+  "supportedJobCommands": "Worker.supportedJobCommands is a Scala Set (hash order); Rust keeps the stored order."
+ },
+ "side_rewrites": {
+  "rust": {
+   "http://127.0.0.1:19595": "http://127.0.0.1:19590",
+   "http://127.0.0.1:19596": "http://127.0.0.1:19590",
+   "/tmp/wk-diff/rust-data/": "/tmp/wk-diff/play-data/"
+  }
+ },
+ "db_random_columns": {
+  "tokens.value": "random DataStore token values (minted for the datastore RPCs of exploration)"
+ },
+ "db_ignored_columns": {
+  "datasets.inboxsourcehash": "Play stores Scala's case-class DataSource.hashCode, which Rust cannot reproduce; Rust stores its own canonical-JSON hash or NULL (one rewrite on the next datastore report, backend-rust/checkpoints/remote-datastore.md)"
+ },
+ "identities": {
+  "admin": {
+   "token": "secretSampleUserToken"
+  },
+  "user2": {
+   "cookie": "{user2Cookie}"
+  }
+ },
+ "steps": [
+  {
+   "name": "user2-login",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "sample2@scm.io",
+    "password": "secret"
+   },
+   "capture_cookie": {
+    "user2Cookie": "id"
+   }
+  },
+  {
+   "name": "add-virtual",
+   "method": "POST",
+   "path": "/api/datasets/addVirtualDataset/diff-virtual",
+   "as": "admin",
+   "json": {
+    "dataSource": {
+     "id": {
+      "name": "diff-virtual",
+      "team": "sample_organization"
+     },
+     "dataLayers": [
+      {
+       "name": "color",
+       "category": "color",
+       "dataFormat": "zarr3",
+       "boundingBox": {
+        "topLeft": [
+         3072,
+         3072,
+         512
+        ],
+        "width": 1024,
+        "height": 1024,
+        "depth": 1024
+       },
+       "elementClass": "uint8",
+       "mags": [
+        {
+         "mag": [
+          1,
+          1,
+          1
+         ],
+         "path": "https://static.webknossos.org/data/zarr_v3/l4_sample/color/1"
+        },
+        {
+         "mag": [
+          2,
+          2,
+          1
+         ],
+         "path": "https://static.webknossos.org/data/zarr_v3/l4_sample/color/2-2-1"
+        }
+       ]
+      }
+     ],
+     "scale": {
+      "factor": [
+       11.24,
+       11.24,
+       28
+      ],
+      "unit": "nanometer"
+     }
+    },
+    "folderId": "{seedRootFolderId}",
+    "dataStoreName": "localhost",
+    "importUrl": "https://static.webknossos.org/data/zarr_v3/l4_sample"
+   },
+   "capture": {
+    "virtualId": "$.newDatasetId"
+   }
+  },
+  {
+   "name": "virtual-dataset",
+   "method": "GET",
+   "path": "/api/datasets/{virtualId}",
+   "as": "admin"
+  },
+  {
+   "name": "find-by-import-url",
+   "method": "GET",
+   "path": "/api/datasets/findByImportURL",
+   "as": "admin",
+   "query": {
+    "importURL": "https://static.webknossos.org/data/zarr_v3/l4_sample"
+   }
+  },
+  {
+   "name": "add-virtual-unknown-store",
+   "method": "POST",
+   "path": "/api/datasets/addVirtualDataset/diff-v2",
+   "as": "admin",
+   "json": {
+    "dataSource": {
+     "id": {
+      "name": "diff-v2",
+      "team": "sample_organization"
+     },
+     "dataLayers": [
+      {
+       "name": "color",
+       "category": "color",
+       "dataFormat": "zarr3",
+       "boundingBox": {
+        "topLeft": [
+         3072,
+         3072,
+         512
+        ],
+        "width": 1024,
+        "height": 1024,
+        "depth": 1024
+       },
+       "elementClass": "uint8",
+       "mags": [
+        {
+         "mag": [
+          1,
+          1,
+          1
+         ],
+         "path": "https://static.webknossos.org/data/zarr_v3/l4_sample/color/1"
+        },
+        {
+         "mag": [
+          2,
+          2,
+          1
+         ],
+         "path": "https://static.webknossos.org/data/zarr_v3/l4_sample/color/2-2-1"
+        }
+       ]
+      }
+     ],
+     "scale": {
+      "factor": [
+       11.24,
+       11.24,
+       28
+      ],
+      "unit": "nanometer"
+     }
+    },
+    "folderId": null,
+    "dataStoreName": "nope",
+    "importUrl": null
+   }
+  },
+  {
+   "name": "add-virtual-no-layers",
+   "method": "POST",
+   "path": "/api/datasets/addVirtualDataset/diff-v3",
+   "as": "admin",
+   "json": {
+    "dataSource": {
+     "id": {
+      "name": "diff-v3",
+      "team": "sample_organization"
+     },
+     "dataLayers": [],
+     "scale": {
+      "factor": [
+       11.24,
+       11.24,
+       28
+      ],
+      "unit": "nanometer"
+     }
+    },
+    "folderId": null,
+    "dataStoreName": "localhost",
+    "importUrl": null
+   }
+  },
+  {
+   "name": "add-virtual-local-path",
+   "method": "POST",
+   "path": "/api/datasets/addVirtualDataset/diff-v4",
+   "as": "admin",
+   "json": {
+    "dataSource": {
+     "id": {
+      "name": "diff-v4",
+      "team": "sample_organization"
+     },
+     "dataLayers": [
+      {
+       "name": "color",
+       "category": "color",
+       "dataFormat": "zarr3",
+       "boundingBox": {
+        "topLeft": [
+         3072,
+         3072,
+         512
+        ],
+        "width": 1024,
+        "height": 1024,
+        "depth": 1024
+       },
+       "elementClass": "uint8",
+       "mags": [
+        {
+         "mag": [
+          1,
+          1,
+          1
+         ],
+         "path": "/etc/passwd"
+        }
+       ]
+      }
+     ],
+     "scale": {
+      "factor": [
+       11.24,
+       11.24,
+       28
+      ],
+      "unit": "nanometer"
+     }
+    },
+    "folderId": null,
+    "dataStoreName": "localhost",
+    "importUrl": null
+   }
+  },
+  {
+   "name": "add-virtual-user2",
+   "method": "POST",
+   "path": "/api/datasets/addVirtualDataset/diff-v5",
+   "as": "user2",
+   "json": {
+    "dataSource": {
+     "id": {
+      "name": "diff-v5",
+      "team": "sample_organization"
+     },
+     "dataLayers": [
+      {
+       "name": "color",
+       "category": "color",
+       "dataFormat": "zarr3",
+       "boundingBox": {
+        "topLeft": [
+         3072,
+         3072,
+         512
+        ],
+        "width": 1024,
+        "height": 1024,
+        "depth": 1024
+       },
+       "elementClass": "uint8",
+       "mags": [
+        {
+         "mag": [
+          1,
+          1,
+          1
+         ],
+         "path": "https://static.webknossos.org/data/zarr_v3/l4_sample/color/1"
+        },
+        {
+         "mag": [
+          2,
+          2,
+          1
+         ],
+         "path": "https://static.webknossos.org/data/zarr_v3/l4_sample/color/2-2-1"
+        }
+       ]
+      }
+     ],
+     "scale": {
+      "factor": [
+       11.24,
+       11.24,
+       28
+      ],
+      "unit": "nanometer"
+     }
+    },
+    "folderId": null,
+    "dataStoreName": "localhost",
+    "importUrl": null
+   },
+   "expected_divergence": {
+    "reason": "Play bug: a bare `Fox.fromBool(\u2026) ~> FORBIDDEN` without a message answers 403 with an empty error text; Rust answers 403 with Play's generic not-allowed text.",
+    "paths": [
+     "$.messages[0].error"
+    ]
+   }
+  },
+  {
+   "name": "add-virtual-invalid",
+   "method": "POST",
+   "path": "/api/datasets/addVirtualDataset/diff-v6",
+   "as": "admin",
+   "json": {
+    "dataSource": {}
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "compose",
+   "method": "POST",
+   "path": "/api/datasets/compose",
+   "as": "admin",
+   "json": {
+    "newDatasetName": "diff-composed",
+    "targetFolderId": "{seedRootFolderId}",
+    "organizationId": "sample_organization",
+    "voxelSize": {
+     "factor": [
+      11.24,
+      11.24,
+      28
+     ],
+     "unit": "nanometer"
+    },
+    "layers": [
+     {
+      "sourceDatasetId": "68b80290d4000090f8f4aa62",
+      "sourceLayerName": "color",
+      "targetLayerName": "color_a",
+      "transformations": null
+     },
+     {
+      "sourceDatasetId": "6ac000000000000000000002",
+      "sourceLayerName": "color",
+      "targetLayerName": "color_b",
+      "transformations": [
+       {
+        "type": "affine",
+        "matrix": [
+         [
+          1,
+          0,
+          0,
+          10
+         ],
+         [
+          0,
+          1,
+          0,
+          0
+         ],
+         [
+          0,
+          0,
+          1,
+          0
+         ],
+         [
+          0,
+          0,
+          0,
+          1
+         ]
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "capture": {
+    "composedId": "$.newDatasetId"
+   }
+  },
+  {
+   "name": "composed-dataset",
+   "method": "GET",
+   "path": "/api/datasets/{composedId}",
+   "as": "admin"
+  },
+  {
+   "name": "compose-unknown-source",
+   "method": "POST",
+   "path": "/api/datasets/compose",
+   "as": "admin",
+   "json": {
+    "newDatasetName": "diff-composed-2",
+    "targetFolderId": "{seedRootFolderId}",
+    "organizationId": "sample_organization",
+    "voxelSize": {
+     "factor": [
+      11.24,
+      11.24,
+      28
+     ],
+     "unit": "nanometer"
+    },
+    "layers": [
+     {
+      "sourceDatasetId": "0123456789abcdef01234567",
+      "sourceLayerName": "color",
+      "targetLayerName": "color",
+      "transformations": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "compose-unknown-layer",
+   "method": "POST",
+   "path": "/api/datasets/compose",
+   "as": "admin",
+   "json": {
+    "newDatasetName": "diff-composed-3",
+    "targetFolderId": "{seedRootFolderId}",
+    "organizationId": "sample_organization",
+    "voxelSize": {
+     "factor": [
+      11.24,
+      11.24,
+      28
+     ],
+     "unit": "nanometer"
+    },
+    "layers": [
+     {
+      "sourceDatasetId": "68b80290d4000090f8f4aa62",
+      "sourceLayerName": "nope",
+      "targetLayerName": "color",
+      "transformations": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "compose-other-orga",
+   "method": "POST",
+   "path": "/api/datasets/compose",
+   "as": "admin",
+   "json": {
+    "newDatasetName": "diff-composed-4",
+    "targetFolderId": "{seedRootFolderId}",
+    "organizationId": "nope",
+    "voxelSize": {
+     "factor": [
+      11.24,
+      11.24,
+      28
+     ],
+     "unit": "nanometer"
+    },
+    "layers": [
+     {
+      "sourceDatasetId": "68b80290d4000090f8f4aa62",
+      "sourceLayerName": "color",
+      "targetLayerName": "color",
+      "transformations": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "compose-user2",
+   "method": "POST",
+   "path": "/api/datasets/compose",
+   "as": "user2",
+   "json": {
+    "newDatasetName": "diff-composed-5",
+    "targetFolderId": "{seedRootFolderId}",
+    "organizationId": "sample_organization",
+    "voxelSize": {
+     "factor": [
+      11.24,
+      11.24,
+      28
+     ],
+     "unit": "nanometer"
+    },
+    "layers": [
+     {
+      "sourceDatasetId": "68b80290d4000090f8f4aa62",
+      "sourceLayerName": "color",
+      "targetLayerName": "color",
+      "transformations": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "compose-invalid",
+   "method": "POST",
+   "path": "/api/datasets/compose",
+   "as": "admin",
+   "json": {
+    "layers": 1
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "compose-add-layer",
+   "method": "POST",
+   "path": "/api/datasets/{composedId}/compose/addLayer",
+   "as": "admin",
+   "json": {
+    "sourceDatasetId": "6ac000000000000000000006",
+    "sourceLayerName": "segmentation",
+    "targetLayerName": "seg",
+    "transformations": null
+   }
+  },
+  {
+   "name": "compose-add-layer-taken",
+   "method": "POST",
+   "path": "/api/datasets/{composedId}/compose/addLayer",
+   "as": "admin",
+   "json": {
+    "sourceDatasetId": "6ac000000000000000000006",
+    "sourceLayerName": "segmentation",
+    "targetLayerName": "seg",
+    "transformations": null
+   }
+  },
+  {
+   "name": "compose-add-layer-missing-target",
+   "method": "POST",
+   "path": "/api/datasets/0123456789abcdef01234567/compose/addLayer",
+   "as": "admin",
+   "json": {
+    "sourceDatasetId": "6ac000000000000000000006",
+    "sourceLayerName": "segmentation",
+    "targetLayerName": "seg2",
+    "transformations": null
+   }
+  },
+  {
+   "name": "compose-add-mag",
+   "method": "POST",
+   "path": "/api/datasets/{composedId}/compose/addMag",
+   "as": "admin",
+   "json": {
+    "sourceDatasetId": "68b80290d4000090f8f4aa62",
+    "sourceLayerName": "color",
+    "targetLayerName": "color_a",
+    "sourceMag": [
+     16,
+     16,
+     4
+    ],
+    "targetMag": [
+     32,
+     32,
+     8
+    ]
+   }
+  },
+  {
+   "name": "compose-add-mag-existing",
+   "method": "POST",
+   "path": "/api/datasets/{composedId}/compose/addMag",
+   "as": "admin",
+   "json": {
+    "sourceDatasetId": "68b80290d4000090f8f4aa62",
+    "sourceLayerName": "color",
+    "targetLayerName": "color_a",
+    "sourceMag": [
+     2,
+     2,
+     1
+    ],
+    "targetMag": null
+   }
+  },
+  {
+   "name": "compose-add-mag-unknown-source-mag",
+   "method": "POST",
+   "path": "/api/datasets/{composedId}/compose/addMag",
+   "as": "admin",
+   "json": {
+    "sourceDatasetId": "68b80290d4000090f8f4aa62",
+    "sourceLayerName": "color",
+    "targetLayerName": "color_a",
+    "sourceMag": [
+     3,
+     3,
+     3
+    ],
+    "targetMag": [
+     64,
+     64,
+     64
+    ]
+   }
+  },
+  {
+   "name": "compose-add-attachment",
+   "method": "POST",
+   "path": "/api/datasets/{composedId}/compose/addAttachment",
+   "as": "admin",
+   "json": {
+    "sourceDatasetId": "6ac000000000000000000006",
+    "sourceLayerName": "segmentation",
+    "targetLayerName": "seg",
+    "attachmentType": "agglomerate",
+    "sourceAttachmentName": "agglomerate_view_5",
+    "targetAttachmentName": "agg5"
+   }
+  },
+  {
+   "name": "compose-add-attachment-taken",
+   "method": "POST",
+   "path": "/api/datasets/{composedId}/compose/addAttachment",
+   "as": "admin",
+   "json": {
+    "sourceDatasetId": "6ac000000000000000000006",
+    "sourceLayerName": "segmentation",
+    "targetLayerName": "seg",
+    "attachmentType": "agglomerate",
+    "sourceAttachmentName": "agglomerate_view_5",
+    "targetAttachmentName": "agg5"
+   }
+  },
+  {
+   "name": "compose-add-attachment-singleton",
+   "method": "POST",
+   "path": "/api/datasets/{composedId}/compose/addAttachment",
+   "as": "admin",
+   "json": {
+    "sourceDatasetId": "6ac000000000000000000006",
+    "sourceLayerName": "segmentation",
+    "targetLayerName": "seg",
+    "attachmentType": "segmentIndex",
+    "sourceAttachmentName": "nope",
+    "targetAttachmentName": null
+   }
+  },
+  {
+   "name": "compose-add-attachment-user2",
+   "method": "POST",
+   "path": "/api/datasets/{composedId}/compose/addAttachment",
+   "as": "user2",
+   "json": {
+    "sourceDatasetId": "6ac000000000000000000006",
+    "sourceLayerName": "segmentation",
+    "targetLayerName": "seg",
+    "attachmentType": "mesh",
+    "sourceAttachmentName": "meshfile",
+    "targetAttachmentName": null
+   }
+  },
+  {
+   "name": "composed-dataset-after-adds",
+   "method": "GET",
+   "path": "/api/datasets/{composedId}",
+   "as": "admin"
+  },
+  {
+   "name": "duplicate-to-orga-user2",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/duplicateToOrga",
+   "as": "user2",
+   "query": {
+    "targetOrganizationId": "sample_organization"
+   }
+  },
+  {
+   "name": "duplicate-to-orga-unknown-orga",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/duplicateToOrga",
+   "as": "admin",
+   "query": {
+    "targetOrganizationId": "nope"
+   }
+  },
+  {
+   "name": "duplicate-to-orga-missing",
+   "method": "POST",
+   "path": "/api/datasets/0123456789abcdef01234567/duplicateToOrga",
+   "as": "admin",
+   "query": {
+    "targetOrganizationId": "sample_organization"
+   }
+  },
+  {
+   "name": "duplicate-to-orga",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/duplicateToOrga",
+   "as": "admin",
+   "query": {
+    "targetOrganizationId": "sample_organization"
+   },
+   "capture": {
+    "duplicateId": "$"
+   }
+  },
+  {
+   "name": "duplicated-dataset",
+   "method": "GET",
+   "path": "/api/datasets/{duplicateId}",
+   "as": "admin"
+  },
+  {
+   "name": "reserve-mag-to-path",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/reserveMagUploadToPath",
+   "as": "admin",
+   "json": {
+    "layerName": "color",
+    "mag": [
+     4,
+     4,
+     1
+    ],
+    "axisOrder": null,
+    "channelIndex": null,
+    "pathPrefix": null,
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "reserve-mag-to-path-again",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/reserveMagUploadToPath",
+   "as": "admin",
+   "json": {
+    "layerName": "color",
+    "mag": [
+     4,
+     4,
+     1
+    ],
+    "axisOrder": null,
+    "channelIndex": null,
+    "pathPrefix": null,
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "reserve-mag-to-path-existing",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/reserveMagUploadToPath",
+   "as": "admin",
+   "json": {
+    "layerName": "color",
+    "mag": [
+     1,
+     1,
+     1
+    ],
+    "axisOrder": null,
+    "channelIndex": null,
+    "pathPrefix": null,
+    "overwritePending": false
+   },
+   "expected_divergence": {
+    "reason": "Constraint violation: Play answers 400 with the raw \"SQL Failure: ERROR: \u2026 Detail: Key (\u2026)=(\u2026)\" text (table, constraint and row values); Rust answers 400 with a generic text (\"A resource with these values already exists.\" / \"A related resource is missing or still in use.\").",
+    "paths": [
+     "$.messages[0].error"
+    ]
+   }
+  },
+  {
+   "name": "reserve-mag-to-path-bad-prefix",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/reserveMagUploadToPath",
+   "as": "admin",
+   "json": {
+    "layerName": "color",
+    "mag": [
+     8,
+     8,
+     2
+    ],
+    "axisOrder": null,
+    "channelIndex": null,
+    "pathPrefix": "/etc",
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "reserve-mag-to-path-user2",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/reserveMagUploadToPath",
+   "as": "user2",
+   "json": {
+    "layerName": "color",
+    "mag": [
+     8,
+     8,
+     2
+    ],
+    "axisOrder": null,
+    "channelIndex": null,
+    "pathPrefix": null,
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "finish-mag-to-path-not-pending",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/finishMagUploadToPath",
+   "as": "admin",
+   "json": {
+    "layerName": "color",
+    "mag": [
+     8,
+     8,
+     2
+    ],
+    "axisOrder": null,
+    "channelIndex": null,
+    "pathPrefix": null,
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "finish-mag-to-path",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/finishMagUploadToPath",
+   "as": "admin",
+   "json": {
+    "layerName": "color",
+    "mag": [
+     4,
+     4,
+     1
+    ],
+    "axisOrder": null,
+    "channelIndex": null,
+    "pathPrefix": null,
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "reserve-attachment-to-path",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/reserveAttachmentUploadToPath",
+   "as": "admin",
+   "json": {
+    "layerName": "color",
+    "attachmentName": "diff_mesh",
+    "attachmentType": "mesh",
+    "attachmentDataformat": "zarr3",
+    "pathPrefix": null
+   }
+  },
+  {
+   "name": "reserve-attachment-to-path-again",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/reserveAttachmentUploadToPath",
+   "as": "admin",
+   "json": {
+    "layerName": "color",
+    "attachmentName": "diff_mesh",
+    "attachmentType": "mesh",
+    "attachmentDataformat": "zarr3",
+    "pathPrefix": null
+   }
+  },
+  {
+   "name": "reserve-attachment-to-path-overwrite",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/reserveAttachmentUploadToPath",
+   "as": "admin",
+   "json": {
+    "layerName": "color",
+    "attachmentName": "diff_mesh",
+    "attachmentType": "mesh",
+    "attachmentDataformat": "zarr3",
+    "pathPrefix": null,
+    "overwritePending": true
+   }
+  },
+  {
+   "name": "reserve-attachment-to-path-unknown-layer",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/reserveAttachmentUploadToPath",
+   "as": "admin",
+   "json": {
+    "layerName": "nope",
+    "attachmentName": "x",
+    "attachmentType": "mesh",
+    "attachmentDataformat": "zarr3",
+    "pathPrefix": null
+   },
+   "expected_divergence": {
+    "reason": "Constraint violation: Play answers 400 with the raw \"SQL Failure: ERROR: \u2026 Detail: Key (\u2026)=(\u2026)\" text (table, constraint and row values); Rust answers 400 with a generic text (\"A resource with these values already exists.\" / \"A related resource is missing or still in use.\").",
+    "paths": [
+     "$.messages[0].error"
+    ]
+   }
+  },
+  {
+   "name": "finish-attachment-to-path-not-pending",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/finishAttachmentUploadToPath",
+   "as": "admin",
+   "json": {
+    "layerName": "color",
+    "attachmentName": "nope",
+    "attachmentType": "mesh",
+    "attachmentDataformat": "zarr3",
+    "pathPrefix": null
+   }
+  },
+  {
+   "name": "finish-attachment-to-path",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/finishAttachmentUploadToPath",
+   "as": "admin",
+   "json": {
+    "layerName": "color",
+    "attachmentName": "diff_mesh",
+    "attachmentType": "mesh",
+    "attachmentDataformat": "zarr3",
+    "pathPrefix": null
+   }
+  },
+  {
+   "name": "virtual-dataset-after-uploads",
+   "method": "GET",
+   "path": "/api/datasets/{virtualId}",
+   "as": "admin"
+  },
+  {
+   "name": "store-reserve-upload",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveDatasetUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "prelim-1",
+     "totalFileCount": 1,
+     "filePaths": [
+      "a.zip"
+     ],
+     "totalFileSizeInBytes": 10
+    },
+    "datasetName": "diff-preliminary",
+    "organizationId": "sample_organization",
+    "layersToLink": [],
+    "initialTeamIds": [],
+    "folderId": "{seedRootFolderId}"
+   },
+   "capture": {
+    "preliminaryId": "$.newDatasetId"
+   }
+  },
+  {
+   "name": "reserve-preliminary-user2",
+   "method": "POST",
+   "path": "/api/datasets/{preliminaryId}/reserveUploadToPathsForPreliminary",
+   "as": "user2",
+   "json": {
+    "dataSource": {
+     "id": {
+      "name": "diff-preliminary",
+      "team": "sample_organization"
+     },
+     "dataLayers": [
+      {
+       "name": "color",
+       "category": "color",
+       "dataFormat": "zarr3",
+       "boundingBox": {
+        "topLeft": [
+         3072,
+         3072,
+         512
+        ],
+        "width": 1024,
+        "height": 1024,
+        "depth": 1024
+       },
+       "elementClass": "uint8",
+       "mags": [
+        {
+         "mag": [
+          1,
+          1,
+          1
+         ]
+        },
+        {
+         "mag": [
+          2,
+          2,
+          1
+         ]
+        }
+       ]
+      }
+     ],
+     "scale": {
+      "factor": [
+       11.24,
+       11.24,
+       28
+      ],
+      "unit": "nanometer"
+     }
+    },
+    "pathPrefix": null
+   }
+  },
+  {
+   "name": "reserve-preliminary",
+   "method": "POST",
+   "path": "/api/datasets/{preliminaryId}/reserveUploadToPathsForPreliminary",
+   "as": "admin",
+   "json": {
+    "dataSource": {
+     "id": {
+      "name": "diff-preliminary",
+      "team": "sample_organization"
+     },
+     "dataLayers": [
+      {
+       "name": "color",
+       "category": "color",
+       "dataFormat": "zarr3",
+       "boundingBox": {
+        "topLeft": [
+         3072,
+         3072,
+         512
+        ],
+        "width": 1024,
+        "height": 1024,
+        "depth": 1024
+       },
+       "elementClass": "uint8",
+       "mags": [
+        {
+         "mag": [
+          1,
+          1,
+          1
+         ]
+        },
+        {
+         "mag": [
+          2,
+          2,
+          1
+         ]
+        }
+       ]
+      }
+     ],
+     "scale": {
+      "factor": [
+       11.24,
+       11.24,
+       28
+      ],
+      "unit": "nanometer"
+     }
+    },
+    "pathPrefix": null
+   }
+  },
+  {
+   "name": "reserve-preliminary-usable",
+   "method": "POST",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/reserveUploadToPathsForPreliminary",
+   "as": "admin",
+   "json": {
+    "dataSource": {
+     "id": {
+      "name": "x",
+      "team": "sample_organization"
+     },
+     "dataLayers": [
+      {
+       "name": "color",
+       "category": "color",
+       "dataFormat": "zarr3",
+       "boundingBox": {
+        "topLeft": [
+         3072,
+         3072,
+         512
+        ],
+        "width": 1024,
+        "height": 1024,
+        "depth": 1024
+       },
+       "elementClass": "uint8",
+       "mags": [
+        {
+         "mag": [
+          1,
+          1,
+          1
+         ]
+        },
+        {
+         "mag": [
+          2,
+          2,
+          1
+         ]
+        }
+       ]
+      }
+     ],
+     "scale": {
+      "factor": [
+       11.24,
+       11.24,
+       28
+      ],
+      "unit": "nanometer"
+     }
+    },
+    "pathPrefix": null
+   }
+  },
+  {
+   "name": "reserve-preliminary-missing",
+   "method": "POST",
+   "path": "/api/datasets/0123456789abcdef01234567/reserveUploadToPathsForPreliminary",
+   "as": "admin",
+   "json": {
+    "dataSource": {
+     "id": {
+      "name": "x",
+      "team": "sample_organization"
+     },
+     "dataLayers": [
+      {
+       "name": "color",
+       "category": "color",
+       "dataFormat": "zarr3",
+       "boundingBox": {
+        "topLeft": [
+         3072,
+         3072,
+         512
+        ],
+        "width": 1024,
+        "height": 1024,
+        "depth": 1024
+       },
+       "elementClass": "uint8",
+       "mags": [
+        {
+         "mag": [
+          1,
+          1,
+          1
+         ]
+        },
+        {
+         "mag": [
+          2,
+          2,
+          1
+         ]
+        }
+       ]
+      }
+     ],
+     "scale": {
+      "factor": [
+       11.24,
+       11.24,
+       28
+      ],
+      "unit": "nanometer"
+     }
+    },
+    "pathPrefix": null
+   }
+  },
+  {
+   "name": "finish-to-paths-user2",
+   "method": "POST",
+   "path": "/api/datasets/{preliminaryId}/finishUploadToPaths",
+   "as": "user2"
+  },
+  {
+   "name": "finish-to-paths",
+   "method": "POST",
+   "path": "/api/datasets/{preliminaryId}/finishUploadToPaths",
+   "as": "admin"
+  },
+  {
+   "name": "finish-to-paths-again",
+   "method": "POST",
+   "path": "/api/datasets/{preliminaryId}/finishUploadToPaths",
+   "as": "admin"
+  },
+  {
+   "name": "finish-to-paths-missing",
+   "method": "POST",
+   "path": "/api/datasets/0123456789abcdef01234567/finishUploadToPaths",
+   "as": "admin"
+  },
+  {
+   "name": "preliminary-dataset",
+   "method": "GET",
+   "path": "/api/datasets/{preliminaryId}",
+   "as": "admin"
+  },
+  {
+   "name": "write-mirror",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/writeMirror",
+   "as": "admin"
+  },
+  {
+   "name": "write-mirror-user2",
+   "method": "POST",
+   "path": "/api/datasets/{virtualId}/writeMirror",
+   "as": "user2"
+  },
+  {
+   "name": "write-mirror-missing",
+   "method": "POST",
+   "path": "/api/datasets/0123456789abcdef01234567/writeMirror",
+   "as": "admin"
+  },
+  {
+   "name": "write-all-mirrors-user2",
+   "method": "POST",
+   "path": "/api/datasets/writeAllMirrors",
+   "as": "user2"
+  },
+  {
+   "name": "write-all-mirrors",
+   "method": "POST",
+   "path": "/api/datasets/writeAllMirrors",
+   "as": "admin"
+  },
+  {
+   "name": "thumbnail",
+   "method": "GET",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/thumbnail",
+   "as": "admin",
+   "query": {
+    "w": "64",
+    "h": "64"
+   },
+   "ignore": [
+    {
+     "path": "$",
+     "reason": "JPEG bytes: Play's java ImageIO encoder vs Rust's encoder; status and headers are compared"
+    }
+   ]
+  },
+  {
+   "name": "layer-thumbnail",
+   "method": "GET",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/layers/color/thumbnail",
+   "as": "admin",
+   "query": {
+    "w": "64",
+    "h": "64"
+   },
+   "ignore": [
+    {
+     "path": "$",
+     "reason": "JPEG bytes: Play's java ImageIO encoder vs Rust's encoder; status and headers are compared"
+    }
+   ]
+  },
+  {
+   "name": "layer-thumbnail-segmentation",
+   "method": "GET",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/layers/segmentation/thumbnail",
+   "as": "admin",
+   "query": {
+    "w": "32",
+    "h": "32"
+   },
+   "ignore": [
+    {
+     "path": "$",
+     "reason": "JPEG bytes: Play's java ImageIO encoder vs Rust's encoder; status and headers are compared"
+    }
+   ]
+  },
+  {
+   "name": "layer-thumbnail-unknown-layer",
+   "method": "GET",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/layers/nope/thumbnail",
+   "as": "admin"
+  },
+  {
+   "name": "thumbnail-missing",
+   "method": "GET",
+   "path": "/api/datasets/0123456789abcdef01234567/thumbnail",
+   "as": "admin"
+  },
+  {
+   "name": "thumbnail-anonymous",
+   "method": "GET",
+   "path": "/api/datasets/{virtualId}/thumbnail"
+  },
+  {
+   "name": "clear-thumbnail-cache",
+   "method": "PUT",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/clearThumbnailCache",
+   "as": "admin"
+  },
+  {
+   "name": "clear-thumbnail-cache-anonymous",
+   "method": "PUT",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/clearThumbnailCache"
+  },
+  {
+   "name": "sam-missing-dataset",
+   "method": "POST",
+   "path": "/api/datasets/0123456789abcdef01234567/layers/color/segmentAnythingMask",
+   "as": "admin",
+   "json": {
+    "mag": [
+     1,
+     1,
+     1
+    ],
+    "surroundingBoundingBox": {
+     "topLeft": [
+      3584,
+      3584,
+      1024
+     ],
+     "width": 64,
+     "height": 64,
+     "depth": 1
+    },
+    "interactionType": "POINT",
+    "pointX": 10,
+    "pointY": 10,
+    "selectionTopLeftX": null,
+    "selectionTopLeftY": null,
+    "selectionBottomRightX": null,
+    "selectionBottomRightY": null
+   }
+  },
+  {
+   "name": "sam-unknown-layer",
+   "method": "POST",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/layers/nope/segmentAnythingMask",
+   "as": "admin",
+   "json": {
+    "mag": [
+     1,
+     1,
+     1
+    ],
+    "surroundingBoundingBox": {
+     "topLeft": [
+      3584,
+      3584,
+      1024
+     ],
+     "width": 64,
+     "height": 64,
+     "depth": 1
+    },
+    "interactionType": "POINT",
+    "pointX": 10,
+    "pointY": 10,
+    "selectionTopLeftX": null,
+    "selectionTopLeftY": null,
+    "selectionBottomRightX": null,
+    "selectionBottomRightY": null
+   }
+  },
+  {
+   "name": "sam-too-large",
+   "method": "POST",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/layers/color/segmentAnythingMask",
+   "as": "admin",
+   "json": {
+    "mag": [
+     1,
+     1,
+     1
+    ],
+    "surroundingBoundingBox": {
+     "topLeft": [
+      3584,
+      3584,
+      1024
+     ],
+     "width": 4096,
+     "height": 64,
+     "depth": 1
+    },
+    "interactionType": "POINT",
+    "pointX": 10,
+    "pointY": 10,
+    "selectionTopLeftX": null,
+    "selectionTopLeftY": null,
+    "selectionBottomRightX": null,
+    "selectionBottomRightY": null
+   }
+  },
+  {
+   "name": "sam-anonymous",
+   "method": "POST",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/layers/color/segmentAnythingMask",
+   "json": {
+    "mag": [
+     1,
+     1,
+     1
+    ],
+    "surroundingBoundingBox": {
+     "topLeft": [
+      3584,
+      3584,
+      1024
+     ],
+     "width": 64,
+     "height": 64,
+     "depth": 1
+    },
+    "interactionType": "POINT",
+    "pointX": 10,
+    "pointY": 10,
+    "selectionTopLeftX": null,
+    "selectionTopLeftY": null,
+    "selectionBottomRightX": null,
+    "selectionBottomRightY": null
+   }
+  },
+  {
+   "name": "explore-remote",
+   "method": "POST",
+   "path": "/api/datasets/exploreRemote",
+   "as": "admin",
+   "json": [
+    {
+     "remoteUri": "https://static.webknossos.org/data/zarr_v3/l4_sample/color",
+     "credentialIdentifier": null,
+     "credentialSecret": null,
+     "preferredVoxelSize": null,
+     "dataStoreName": "localhost"
+    }
+   ],
+   "ignore": [
+    {
+     "path": "$.report",
+     "reason": "The datastore (Scala on both sides) runs its explorers concurrently; the report lists their failures in completion order and sometimes omits one"
+    }
+   ]
+  },
+  {
+   "name": "explore-remote-unreachable",
+   "method": "POST",
+   "path": "/api/datasets/exploreRemote",
+   "as": "admin",
+   "json": [
+    {
+     "remoteUri": "https://static.webknossos.org/data/does-not-exist",
+     "credentialIdentifier": null,
+     "credentialSecret": null,
+     "preferredVoxelSize": null,
+     "dataStoreName": "localhost"
+    }
+   ],
+   "ignore": [
+    {
+     "path": "$.report",
+     "reason": "The datastore (Scala on both sides) runs its explorers concurrently; the report lists their failures in completion order and sometimes omits one"
+    }
+   ]
+  },
+  {
+   "name": "explore-and-add",
+   "method": "POST",
+   "path": "/api/datasets/exploreAndAddRemote",
+   "as": "admin",
+   "json": {
+    "remoteUri": "https://static.webknossos.org/data/zarr_v3/l4_sample/color",
+    "credentialIdentifier": "diff-identifier",
+    "credentialSecret": "diff-secret",
+    "preferredVoxelSize": null,
+    "datasetName": "diff-explored",
+    "folderPath": null,
+    "dataStoreName": "localhost"
+   },
+   "capture": {
+    "exploredId": "$"
+   }
+  },
+  {
+   "name": "explored-dataset",
+   "method": "GET",
+   "path": "/api/datasets/{exploredId}",
+   "as": "admin"
+  },
+  {
+   "name": "delete-preliminary",
+   "method": "DELETE",
+   "path": "/api/datasets/{preliminaryId}",
+   "as": "admin"
+  },
+  {
+   "name": "delete-virtual",
+   "method": "DELETE",
+   "path": "/api/datasets/{virtualId}",
+   "as": "admin"
+  },
+  {
+   "name": "paths-to-delete-wrong-key",
+   "method": "GET",
+   "path": "/api/datasets/pathsToDelete",
+   "query": {
+    "key": "wrong"
+   }
+  },
+  {
+   "name": "paths-to-delete",
+   "method": "GET",
+   "path": "/api/datasets/pathsToDelete",
+   "query": {
+    "key": "something-secure"
+   },
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "mark-as-deleted-wrong-key",
+   "method": "POST",
+   "path": "/api/datasets/pathsToDelete/markAsDeleted",
+   "query": {
+    "key": "wrong"
+   },
+   "json": []
+  },
+  {
+   "name": "mark-as-deleted",
+   "method": "POST",
+   "path": "/api/datasets/pathsToDelete/markAsDeleted",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": [
+    "/tmp/wk-diff/play-data/binaryData/sample_organization/nope"
+   ]
+  },
+  {
+   "name": "mark-as-deleted-invalid",
+   "method": "POST",
+   "path": "/api/datasets/pathsToDelete/markAsDeleted",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "paths": []
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "paths-to-delete-after",
+   "method": "GET",
+   "path": "/api/datasets/pathsToDelete",
+   "query": {
+    "key": "something-secure"
+   },
+   "unordered": [
+    "$"
+   ]
+  }
+ ]
+}

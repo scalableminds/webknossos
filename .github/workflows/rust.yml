@@ -1,0 +1,65 @@
+name: Rust Backend
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - "backend-rust/**"
+      # Inputs read by the Rust build, tests and route inventories.
+      - "schema/**"
+      - "conf/webknossos.latest.routes"
+      - "conf/webknossos.versioned.routes"
+      # SCALA_VERSION/SBT_VERSION of /buildinfo are checked against these.
+      - "build.sbt"
+      - "project/build.properties"
+      - "webknossos-datastore/conf/datastore.latest.routes"
+      - "webknossos-datastore/proto/**"
+      - "tests/fixtures/**"
+      - ".github/workflows/rust.yml"
+  workflow_dispatch: {}
+
+jobs:
+  rust-backend:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: backend-rust
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 5
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy,rustfmt
+          rustup default stable
+
+      - name: Restore Cargo cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            backend-rust/target
+          key: rust-${{ runner.os }}-${{ hashFiles('backend-rust/Cargo.lock') }}
+          restore-keys: rust-${{ runner.os }}-
+
+      # Formatting, rustfmt-skipped statements, clippy for all packages, route inventories.
+      - name: Check
+        run: make check
+
+      # The Play-vs-Rust differential needs Play and the stores, so it does not run here; this only guards that
+      # its corpora keep covering the routes (tools/app_differential/README.md). Raise the minimum with new coverage.
+      - name: Differential route coverage
+        run: python3 tools/app_differential/coverage.py --min 287 --quiet
+
+      # Per package, so feature unification cannot change what is tested. Database tests are
+      # #[ignore]d without WK_RUST_TEST_DATABASE_URL.
+      - name: Test
+        run: make test

@@ -1,0 +1,45 @@
+# DS1b data vaults checkpoint
+
+Owner: ds1b sub-agent (finished by ds1b-finish-2, 2026-10-11). Files: backend-rust/datastore/src/datavault/** , tests/datavault.rs, this file. Cargo.toml unchanged (reqwest, ring, quick-xml, base64, percent-encoding, flate2 were already present).
+
+## Status
+
+DONE (2026-10-11 15:05). S3, GCS and DataVaultService implemented, registered and re-exported; the coordinator note in mod.rs is gone; `#[allow(dead_code)]` on `build_http_client` removed (the service uses it). Whole package: tests green, clippy `-D warnings` clean, `cargo fmt --check` clean.
+
+## API (crate::datavault)
+
+- Core (unchanged from DS1a/earlier): `DataVault` trait (`read_bytes_encoding_and_range_header`, `list_directory`, `used_storage_bytes`, `kind`), `VaultPath`, `ByteRange`, `Encoding`, `RawRead`, `VaultError::{NotFound, Failure}` (Scala `Empty` vs `Failure`; `annotate` = `?->`, `wrap` = `?~>`), `FileSystemDataVault`, `HttpsDataVault`, `DataVaultCredential`, `RemoteUri`, `UPath` (from models).
+- `sigv4` (pub): `AwsCredentials` (+ `from_env_vars`, Debug redacts the secret), `SigningRequest`, `authorization`, `canonical_query_string`, `uri_encode`, `amz_date`, `EMPTY_PAYLOAD_SHA256`. Header-based SigV4 via ring HMAC/SHA-256.
+- `s3` (pub): `S3DataVault::new(uri, Option<AwsCredentials>, Client, &S3Options)`, `S3Options { env_credentials, aws_endpoint_override }` (+ `from_env`), `build_s3_http_client`, `bucket_region()`, S3UriUtils ports (`host_bucket_from_uri/upath`, `object_key_from_uri/upath`, `is_non_amazon_host`, `is_short_style`, `aws_endpoint_host`, `with_endpoint_host`, `uri_literal_for_object_key`, `parse_signing_region`).
+- `gcs` (pub): `GoogleCloudDataVault::new(uri, Option<&str secret_json>, Client, &GcsOptions)`, `GcsOptions { endpoint, default_service_account_json }` (+ `from_env`: `GOOGLE_APPLICATION_CREDENTIALS` key file), `ServiceAccountTokenSource` (`from_json`, `assertion`, `access_token`).
+- `service` (re-exported): `DataVaultService` (`new(options, Arc<dyn CredentialLookup>)`, `from_config(&DatastoreConfig, WkClient)`, `vault_path_for`, `vault_path_for_local`, `vault_path_for_mag`, `vault_path_for_attachment`, `vault_path_for_credentialized`, `remove_vault_from_cache_for_mag/_attachment`, `resolve_mag_path`, `path_is_allowed_to_add_directly`, `find_global_credential_for`, `path_is_in_managed_s3`, `cached_vault_count`), `DataVaultServiceOptions` (+ `from_config`), `CredentializedUPath`, `CredentialLookup` trait (impl for `WkClient` over `get_credential` JSON; parse errors name fields only), consts `MSG_SETUP_FAILED`, `MSG_MAG_PATH_NOT_ABSOLUTE`, `VAULT_CACHE_CAPACITY` (200, TTL 2 h / idle 1 h via wk_client `AlfuCache`).
+
+## Behaviour notes
+
+- S3: credentials = vault credential (S3 access key or legacy user/password) > `AWS_ACCESS_KEY_ID`/`AWS_ACCESS_KEY` env (incomplete env = failure on use) > anonymous (unsigned). Amazon hosts: virtual-hosted URLs for DNS-compatible buckets, path style otherwise, region us-east-1 with one cross-region retry (301/307, `x-amz-bucket-region`, `AuthorizationHeaderMalformed`, else HeadBucket) and a per-bucket region memo. Custom endpoints (path-style non-Amazon hosts): HTTPS probe then http fallback, signing region via `parseSigningRegion`. 404 with `NoSuchKey`/`NoSuchBucket`/no code = `NotFound` on reads; listings map every error to a failure (Scala `notFoundToFailure`). Failures carry SDK-style messages (`<msg> (Service: S3, Status Code: …, Request ID: …)`) and exception class. `aws-chunked` content encoding = identity.
+- GCS: JSON API `…/storage/v1/b/<bucket>/o/<object>?alt=media` with `Accept-Encoding: gzip` (no transcoding), stored encoding from `x-goog-stored-content-encoding`/`content-encoding`; Range header for start-end/suffix, slices if a server ignores it; short body = Scala EOF message; zero-length range = metadata GET (`fields=size,contentEncoding`). 404 = `NotFound` on reads, failure on listings. Listing = first page with `delimiter=/`; used storage = all pages. Token: RS256 JWT (kid, iss, scope devstorage.full_control, aud = token_uri, 1 h) → `token_uri`, cached until 5 min before expiry, single-flight via async mutex.
+- Service: scheme dispatch gs/s3/http(s)/local, unknown = `Unknown file system scheme Some(x)` wrapped by `MSG_SETUP_FAILED`; failures not cached. Credential lookup failures fall back to no credential (Scala `shiftBox.toOption`). GCS with a non-Google credential = ClassCastException failure. Local whitelist uses an explicit `working_dir` (testable; Scala uses the process cwd).
+
+## Deviations / open points
+
+- No AWS SDK/object_store: own SigV4 + XML parsing. Retries (2026-10-17): S3 requests without payload retry I/O failures, 5xx, 429 and SlowDown/InternalError/RequestTimeout/ServiceUnavailable (3 attempts, 100 ms jittered exponential backoff = SDK standard mode); GCS requests retry I/O failures and 408/429/500/502/503/504 (6 attempts from 1 s = google-cloud-storage defaults); `S3Options`/`GcsOptions::read_retry`. Not replicated: checksum validation, IMDS/profile/web-identity credential providers (only static + env), S3 Express, path-style for non-DNS buckets beyond `.`.
+- GCS: only service-account keys (no metadata-server/user ADC); encoding comes from response headers instead of a second `storage.get` call (one request instead of two).
+- ZIP paths: stored entries/ZIP64, range reads and central-directory cache now implemented and verified against Scala goldens, actual HTTP/token/denial tests and real reader/router/reload tests (2026-10-12). Compressed entries remain unsupported as in Scala; see datastore-ds1-zip.md.
+- `CredentialLookup` for `WkClient` relies on wk_client's own 5 s credential cache; parse failures produce `Could not parse credential <id>: <field reason>`.
+- Not wired into AppState/routes yet (parent: construct `DataVaultService::from_config(&config, wk_client)` when a route needs it).
+
+## Evidence (2026-10-11, target /tmp/webknossos-rust-ds-verify-b)
+
+- `cargo test --locked --offline`: lib 63 passed (datavault: sigv4 3, s3 3, gcs 2, service 1, uri 3, credential 1), tests/datavault.rs 20 passed, access 7, compression 9 (+1 ignored, not ours), health 7, models 9, routing 6, wk_client 12; 0 failed.
+- tests/datavault.rs: SigV4 against aws-sig-v4-test-suite `get-vanilla`, `get-vanilla-query-order-key-case` and the S3 docs examples (GET object with range, `?lifecycle`, `?max-keys=2&prefix=J`), all matched first try; S3 mock: signed range/suffix/complete reads with server-side signature recomputation, anonymous, env session token, explicit-over-env, incomplete env, NoSuchKey/NoSuchBucket→Empty, 403→SDK failure, gzip passthrough + VaultPath decode, aws-chunked, cross-region retry + memo, listing query/decoding/max-keys+5, used storage pagination, listing 404→failure, custom endpoint http fallback; GCS mock: anonymous ranged/suffix/ignored-range/short/gzip/404/403 reads, zero-length metadata read, listing/used storage/listing 404, JWT assertion contents + RS256 verification, token caching (1 fetch for 2 reads), refresh when expiring, token endpoint error, invalid key; service: dispatch + cache identity/count, credentialized keys, unknown scheme, ClassCastException, global managed-S3 credential, whitelist cases, mag credentialId lookup (basic auth reaches the server), failed lookup fallback, legacy credentials, relative/missing mag path, cache removal, zip unsupported, WkClient `CredentialLookup` over the mock WK.
+- `cargo clippy --locked --offline --all-targets -- -D warnings`: clean. `cargo fmt --check`: clean.
+
+## Update 2026-10-29: S3 and GCS through `object_store`
+
+The hand-written SigV4 signer, S3 XML client and GCS JSON-API client were replaced by the `object_store` crate (0.14, features `aws-base`/`gcp-base`/`ring`/`reqwest`; TLS via rustls with the ring provider, no aws-lc). `datavault/cloud.rs` holds the shared adapter (ranged reads, listings, `NotFound` → `Empty`); `s3.rs` keeps the `S3UriUtils` port, credential order, custom-endpoint protocol probe and a signed `HeadBucket` region lookup (cached per process; regional endpoint uris need none); `gcs.rs` sends `Accept-Encoding: gzip` so stored encodings pass through. Behaviour changes:
+- Failure messages are `object_store`'s, not imitations of the Java SDK exceptions (`software.amazon.awssdk…`, `com.google.cloud.storage.StorageException`).
+- The region is looked up before the first request instead of learned from a redirect.
+- GCS uses the XML API and self-signed service-account JWTs (no token exchange; keys need `private_key_id`).
+- Object keys with empty or `.`/`..` segments cannot be addressed; ranged reads require `206` with a matching `Content-Range`.
+- Multipart parts are buffered in memory (8 MiB, larger only above 80 GB files) instead of streamed.
+Mock-server tests in tests/datavault.rs and tests/managed_s3.rs were rewritten for these semantics; the AWS-SDK signing fixtures and their Java generator were removed.

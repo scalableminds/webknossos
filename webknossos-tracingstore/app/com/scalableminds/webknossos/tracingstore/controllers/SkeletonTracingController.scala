@@ -36,6 +36,8 @@ class SkeletonTracingController @Inject() (
 )(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller {
 
+  override def allowRemoteOrigin: Boolean = true
+
   private def packMultiple(tracings: Seq[Option[SkeletonTracing]]): SkeletonTracings =
     SkeletonTracings(tracings.map(t => SkeletonTracingOpt(t)))
 

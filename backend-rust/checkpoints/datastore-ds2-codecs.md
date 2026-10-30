@@ -1,0 +1,38 @@
+# DS2-codecs checkpoint (agent ds2-codecs, target /tmp/webknossos-rust-ds-verify)
+
+Status: DONE (2026-10-11). Decompression + compression for Null, LZ4 (raw block), Zlib, Gzip, Blosc, Zstd, Chained, plus WKW LZ4 block helpers. JPEG / compresso / compressed_segmentation not included (see Open).
+
+## Scala truth (findings)
+- datareaders/Compressor.scala: Null; Lz4 (commons-compress BlockLZ4 = raw LZ4 block, no size header, decoded to EOF); Zlib (level default 1, 0..9); Gzip (level default 1, -1 or 0..9); Blosc (blosc-java 0.3-1.21.6 = JNI c-blosc 1.21.6; cname default lz4, clevel 5, shuffle byte, blocksize 0, typesize 1, numthreads 1); Zstd (commons-compress over zstd-jni; level, checksum); Jpeg (decode only, ImageIO raster bytes); Compresso (JNI); CompressedSegmentation; Chained (compress foldLeft, decompress foldRight).
+- Factories: zarr v2 (`id`; null|zlib|blosc|gzip|zstd, zstd needs Int level, checksum=false), N5 (`type`; raw|null|zlib|gzip(+useZlib)|blosc|zstd; N5 lz4/xz NOT supported in Scala), zarr3 codecs (blosc shuffle strings exact-case noshuffle|shuffle|bitshuffle -> int, typesize None -> 0; gzip(level); zstd(level, checksum)), precomputed (sharding data_encoding raw|gzip(level 1); chunk encoding raw|jpeg|compresso|compressed_segmentation).
+- blosc-java: Compressor enum lz4, lz4hc, blosclz, zstd, zlib (no snappy); Shuffle/Compressor `fromString` are case-insensitive (equalsIgnoreCase).
+- WKW: read path uses Lz4Compressor (raw block to EOF); WKWFile uses lz4-java fastDecompressor(numBytesPerChunk) and requires the whole input consumed ("Decompressed unexpected number of bytes [expected: <compressed len>, actual: <consumed>]"). Writer: lz4-java fast (LZ4) or high (LZ4HC) block compressor.
+- Gzip header written by modern Java: 1f8b 0800 00000000 00 ff.
+
+## Decisions
+- Blosc: c-blosc 1.21.6 (the version blosc-java bundles) statically linked through blosc-src 0.3.8 (features lz4/zlib/zstd, no snappy like blosc-java), wrapped by the `webknossos-blosc` crate (backend-rust/blosc, the only crate allowing unsafe). Its compress/decompress repeat the calls of blosc-java's JNI functions (read from the disassembled libbloscjni): `blosc_cbuffer_validate(src, input length)` then `blosc_decompress_ctx(nbytes, 1 thread)`; `blosc_compress_ctx` into `nbytes + 16`; same error texts (`Buffer does not contain valid blosc-encoded contents`, `Error while (de)compressing buffer`). Scala's header pre-checks stay in src/compression/blosc.rs. 2026-10-29: replaced the earlier own pure-Rust Blosc1/BloscLZ port (pure-Rust alternatives blusc, blosc2-pure-rs, omnizip-blosc were too young or Blosc2-only). Consequence: input with bytes after the header's cbytes is rejected (Scala too; the port accepted it).
+- Deps added to datastore/Cargo.toml: lz4_flex 0.14 (default-features=false, std+safe-encode+safe-decode), ruzstd 0.9 (+twox-hash). cargo fetch done; --locked --offline builds work.
+- 2026-10-17: LZ4 blocks are decoded by lz4_flex into an exactly sized buffer; the own bounded decoder only runs when lz4_flex rejects a block (or an OutputFull block ends early), so error texts and partial-consumption results are unchanged (fuzzed equivalence test in lz4/tests.rs). ruzstd replaced by the `zstd` crate (libzstd 1.5.7, default-features=false): single frames with a known content size decode in one call, everything else through the streaming decoder (window log up to 31); compression honors level and checksum; Blosc-zstd maps clevel like c-blosc 1.21 (`2*clevel-1`, 9 = max level 22). Micro-benchmark: LZ4 decode 0.6-1.0 → 1.5-2.3 GB/s, zstd decode 3.5-7.6x faster.
+- Limits: decompress(input, expected_len) bounds output by expected_len, else DEFAULT_MAX_DECOMPRESSED_BYTES (1 GiB); buffers grow incrementally; Blosc header nbytes checked against the limit before allocation; Chained intermediate steps use the default limit.
+
+## API (webknossos_datastore::compression)
+- CompressionSetting {String, Int(i32), Bool} (+serde, from_json = Play reads order), CompressionSettings = BTreeMap.
+- Compressor {Null, Lz4, Zlib{level}, Gzip{level}, Blosc(BloscConfig), Zstd{level, checksum}, Chained(Vec)}; constructors zlib/gzip/blosc(&settings), zstd(level, checksum), from_zarr_settings/from_zarr_id, from_n5_settings/from_n5_type, from_zarr3_blosc/gzip/zstd, from_precomputed_sharding_encoding; id(), Display = Scala toString; decompress(&[u8], Option<usize>), decompress_with_limit, compress.
+- BloscConfig/BloscCname/BloscShuffle; wkw_decompress_block(compressed, num_bytes_per_chunk), wkw_compress_block(raw).
+- Error messages mirror Scala exceptions (IllegalArgumentException texts, `key not found: id`, `For input string: "x"`, MatchError text for zarr3 shuffle, "Invalid compression level: 0" for boolean levels).
+
+## Deviations
+- Compression output is valid for the Java readers but not byte-identical: zstd (until 2026-10-17: ruzstd "Fastest" for every level with an unconditional checksum; now libzstd at the requested level/checksum); LZ4HC (WKW) uses the normal LZ4 encoder; gzip xfl byte differs. Blosc output comes from the same c-blosc version as blosc-java, but blosc-src links lz4 1.10 / the zstd-sys libzstd instead of c-blosc's bundled copies.
+- zarr3 blosc invalid shuffle fails at construction (Scala: lazily at first encode/decode).
+- Blosc typesize <= 0 is treated as 1 when compressing (zarr3 omitted typesize gives 0 in Scala, where blosc-java throws); c-blosc itself treats > 255 as 1.
+- Decompressed output larger than the bound is an error (Scala unbounded).
+
+## Evidence
+- Oracle programs in /tmp/wk-ds2-java (Gen.java, Gen2.java, Check.java, Check2.java; classpath cp.txt) using the Coursier-cached jars blosc-java 0.3-1.21.6, commons-compress 1.28.0, lz4-java 1.11.2, zstd-jni 1.5.7-15. Test generator /tmp/wk-ds2-gen/make_test.py + template.rs.
+- 36 c-blosc vectors (all 5 codecs x noshuffle/shuffle/bitshuffle, splits, multi-block + leftover, bitshuffle leftovers, memcpyed, empty, typesize 1/2/3/4/8/16) decode byte-exact; plus commons LZ4, lz4-java fast/HC (WKW), zstd-jni with checksum, java gzip/zlib.
+- Reverse oracle: 360 Rust-produced Blosc buffers (5 codecs x 3 shuffles x 6 typesizes x 4 inputs) decode correctly with blosc-java; Rust LZ4/zlib/gzip/zstd outputs decode with commons-compress/java.util.zip (`WK_DS2_ORACLE_DIR=... cargo test --test compression -- --ignored`, then java Check/Check2).
+- cargo test: lib compression units 6/6, tests/compression.rs 9 passed + 1 ignored (manual oracle writer). clippy --all-targets -D warnings clean (whole package at time of run). rustfmt --edition 2024 --check clean on compression files.
+
+## Open / next
+- JPEG (precomputed `jpeg`, DS2d): Java ImageIO returns TYPE_BYTE_GRAY bytes for 1 channel and TYPE_3BYTE_BGR (BGR order!) for 3 channels; needs a pure-Rust decoder (zune-jpeg) and parity check.
+- compressed_segmentation (DS2d), compresso (DS5b).

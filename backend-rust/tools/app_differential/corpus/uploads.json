@@ -1,0 +1,492 @@
+{
+ "version": 1,
+ "description": "Dataset uploads through the datastores (Play's embedded one vs the standalone one calling back Rust): reserve, chunk upload, finish, cancel, and the main-application side effects.",
+ "header_divergences": {
+  "cache-control": "Rust sends `Cache-Control: no-store` on every API response (README: cache prevention); Play sends `no-cache` on most and nothing on auth errors. Play sends no validators (ETag/Last-Modified), so both force a refetch; no-store additionally forbids storage. Deliberate."
+ },
+ "drop_play_chain_messages": "Play appends {\"chain\": \"[Server Time \u2026] \u2026\"} to messages of failed Fox chains (debug context with the server time). Rust returns only the error entry; the frontend shows `error` entries.",
+ "unordered_keys": {
+  "annotationLayers": "Play's AnnotationLayerDAO orders layers by tracingId, a random UUID per side.",
+  "tags": "Scala Set semantics (annotation.tags ++ Set(dataset.name)); hash order for more than four tags.",
+  "jobsSupportedByAvailableWorkers": "DataStoreService.publicWrites serializes JobService.jobsSupportedByAvailableWorkers, a Scala Set (hash order); Rust sorts.",
+  "supportedJobCommands": "Worker.supportedJobCommands is a Scala Set (hash order); Rust keeps the stored order."
+ },
+ "side_rewrites": {
+  "rust": {
+   "http://127.0.0.1:19595": "http://127.0.0.1:19590",
+   "http://127.0.0.1:19596": "http://127.0.0.1:19590",
+   "/tmp/wk-diff/rust-data/": "/tmp/wk-diff/play-data/"
+  }
+ },
+ "identities": {
+  "admin": {
+   "token": "secretSampleUserToken"
+  },
+  "user2": {
+   "cookie": "{user2Cookie}"
+  }
+ },
+ "db_divergences": {
+  "datasets": {
+   "reason": "Play bug: WKRemoteDataStoreController.reserveDatasetUpload creates the pending dataset before validating initialTeamIds, so a reservation with an unknown team fails (400) but leaves the dataset row behind. Rust validates first and creates nothing; both answer 400.",
+   "rows": [
+    {
+     "name": "diff-t"
+    }
+   ]
+  }
+ },
+ "steps": [
+  {
+   "name": "user2-login",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "sample2@scm.io",
+    "password": "secret"
+   },
+   "capture_cookie": {
+    "user2Cookie": "id"
+   }
+  },
+  {
+   "name": "reserve-other-organization",
+   "method": "POST",
+   "path": "/data/datasets/upload/dataset/reserveUpload",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "filePaths": [
+      "test-dataset.zip"
+     ],
+     "totalFileCount": 1,
+     "uploadId": "diff-upload-x"
+    },
+    "folderId": "{seedRootFolderId}",
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "layersToLink": [],
+    "datasetName": "diff-x",
+    "organizationId": "no_such_org"
+   }
+  },
+  {
+   "name": "reserve-invalid-name",
+   "method": "POST",
+   "path": "/data/datasets/upload/dataset/reserveUpload",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "filePaths": [
+      "test-dataset.zip"
+     ],
+     "totalFileCount": 1,
+     "uploadId": "diff-upload-y"
+    },
+    "folderId": "{seedRootFolderId}",
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "layersToLink": [],
+    "datasetName": "bad/name",
+    "organizationId": "sample_organization"
+   }
+  },
+  {
+   "name": "reserve-name-taken-unique",
+   "method": "POST",
+   "path": "/data/datasets/upload/dataset/reserveUpload",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "filePaths": [
+      "test-dataset.zip"
+     ],
+     "totalFileCount": 1,
+     "uploadId": "diff-upload-z"
+    },
+    "folderId": "{seedRootFolderId}",
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "layersToLink": [],
+    "datasetName": "l4_sample_remote",
+    "organizationId": "sample_organization",
+    "requireUniqueName": true
+   }
+  },
+  {
+   "name": "reserve-unknown-folder",
+   "method": "POST",
+   "path": "/data/datasets/upload/dataset/reserveUpload",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "filePaths": [
+      "test-dataset.zip"
+     ],
+     "totalFileCount": 1,
+     "uploadId": "diff-upload-f"
+    },
+    "folderId": "0123456789abcdef01234567",
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "layersToLink": [],
+    "datasetName": "diff-f",
+    "organizationId": "sample_organization"
+   }
+  },
+  {
+   "name": "reserve-anonymous",
+   "method": "POST",
+   "path": "/data/datasets/upload/dataset/reserveUpload",
+   "service": "datastore",
+   "json": {
+    "resumableUploadInfo": {
+     "filePaths": [
+      "test-dataset.zip"
+     ],
+     "totalFileCount": 1,
+     "uploadId": "diff-upload-a"
+    },
+    "folderId": "{seedRootFolderId}",
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "layersToLink": [],
+    "datasetName": "diff-a",
+    "organizationId": "sample_organization"
+   }
+  },
+  {
+   "name": "reserve",
+   "method": "POST",
+   "path": "/data/datasets/upload/dataset/reserveUpload",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "filePaths": [
+      "test-dataset.zip"
+     ],
+     "totalFileCount": 1,
+     "uploadId": "diff-upload-1"
+    },
+    "folderId": "{seedRootFolderId}",
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "layersToLink": [],
+    "datasetName": "diff-upload",
+    "organizationId": "sample_organization"
+   }
+  },
+  {
+   "name": "reserve-again",
+   "method": "POST",
+   "path": "/data/datasets/upload/dataset/reserveUpload",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "filePaths": [
+      "test-dataset.zip"
+     ],
+     "totalFileCount": 1,
+     "uploadId": "diff-upload-1"
+    },
+    "folderId": "{seedRootFolderId}",
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "layersToLink": [],
+    "datasetName": "diff-upload",
+    "organizationId": "sample_organization"
+   }
+  },
+  {
+   "name": "unfinished-uploads",
+   "method": "GET",
+   "path": "/data/datasets/upload/dataset/unfinishedUploads",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken",
+    "organizationName": "sample_organization"
+   },
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "datasets-with-pending-upload",
+   "method": "GET",
+   "path": "/api/datasets",
+   "as": "admin",
+   "query": {
+    "isActive": "false"
+   },
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "test-chunk-before",
+   "method": "GET",
+   "path": "/data/datasets/upload/dataset",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken",
+    "resumableChunkNumber": "1",
+    "resumableIdentifier": "diff-upload-1/test-dataset.zip"
+   }
+  },
+  {
+   "name": "upload-chunk",
+   "method": "POST",
+   "path": "/data/datasets/upload/dataset",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken"
+   },
+   "multipart": {
+    "fields": {
+     "resumableChunkNumber": "1",
+     "resumableChunkSize": "10485760",
+     "resumableCurrentChunkSize": "71988",
+     "resumableTotalSize": "71988",
+     "resumableType": "application/zip",
+     "resumableIdentifier": "diff-upload-1/test-dataset.zip",
+     "resumableFilename": "test-dataset.zip",
+     "resumableRelativePath": "test-dataset.zip",
+     "resumableTotalChunks": "1"
+    },
+    "files": {
+     "file": {
+      "filename": "test-dataset.zip",
+      "content_path": "test/dataset/test-dataset.zip"
+     }
+    }
+   }
+  },
+  {
+   "name": "test-chunk-after",
+   "method": "GET",
+   "path": "/data/datasets/upload/dataset",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken",
+    "resumableChunkNumber": "1",
+    "resumableIdentifier": "diff-upload-1/test-dataset.zip"
+   }
+  },
+  {
+   "name": "finish",
+   "method": "POST",
+   "path": "/data/datasets/upload/dataset/finishUpload",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken",
+    "uploadId": "diff-upload-1"
+   },
+   "capture": {
+    "uploadedId": "$.datasetId"
+   }
+  },
+  {
+   "name": "finish-again",
+   "method": "POST",
+   "path": "/data/datasets/upload/dataset/finishUpload",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken",
+    "uploadId": "diff-upload-1"
+   }
+  },
+  {
+   "name": "uploaded-dataset",
+   "method": "GET",
+   "path": "/api/datasets/{uploadedId}",
+   "as": "admin"
+  },
+  {
+   "name": "uploaded-dataset-health",
+   "method": "GET",
+   "path": "/api/datasets/{uploadedId}/health",
+   "as": "admin"
+  },
+  {
+   "name": "uploaded-dataset-user2",
+   "method": "GET",
+   "path": "/api/datasets/{uploadedId}",
+   "as": "user2"
+  },
+  {
+   "name": "uploaded-in-list",
+   "method": "GET",
+   "path": "/api/datasets",
+   "as": "admin",
+   "query": {
+    "compact": "true",
+    "searchQuery": "diff-upload"
+   },
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "uploaded-access-list",
+   "method": "GET",
+   "path": "/api/datasets/{uploadedId}/accessList",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "uploaded-name-taken",
+   "method": "GET",
+   "path": "/api/datasets/diff-upload/isValidNewName",
+   "as": "admin"
+  },
+  {
+   "name": "reserve-second",
+   "method": "POST",
+   "path": "/data/datasets/upload/dataset/reserveUpload",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "filePaths": [
+      "test-dataset.zip"
+     ],
+     "totalFileCount": 1,
+     "uploadId": "diff-upload-2"
+    },
+    "folderId": "{seedRootFolderId}",
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "layersToLink": [],
+    "datasetName": "diff-upload",
+    "organizationId": "sample_organization"
+   }
+  },
+  {
+   "name": "cancel-second",
+   "method": "POST",
+   "path": "/data/datasets/upload/dataset/cancelUpload",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken",
+    "uploadId": "diff-upload-2"
+   }
+  },
+  {
+   "name": "finish-cancelled",
+   "method": "POST",
+   "path": "/data/datasets/upload/dataset/finishUpload",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken",
+    "uploadId": "diff-upload-2"
+   }
+  },
+  {
+   "name": "unfinished-uploads-after",
+   "method": "GET",
+   "path": "/data/datasets/upload/dataset/unfinishedUploads",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken",
+    "organizationName": "sample_organization"
+   },
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "reserve-upload-to-paths",
+   "method": "POST",
+   "path": "/api/datasets/reserveUploadToPaths",
+   "as": "admin",
+   "json": {
+    "datasetName": "diff-paths",
+    "layersToLink": [],
+    "folderId": "{seedRootFolderId}",
+    "initialTeamIds": [],
+    "dataSource": {
+     "id": {
+      "name": "diff-paths",
+      "team": "sample_organization"
+     },
+     "dataLayers": [],
+     "scale": {
+      "factor": [
+       11.24,
+       11.24,
+       28
+      ],
+      "unit": "nanometer"
+     }
+    }
+   }
+  },
+  {
+   "name": "dataset-delete-uploaded",
+   "method": "DELETE",
+   "path": "/api/datasets/{uploadedId}",
+   "as": "admin"
+  },
+  {
+   "name": "uploaded-after-delete",
+   "method": "GET",
+   "path": "/api/datasets/{uploadedId}",
+   "as": "admin"
+  },
+  {
+   "name": "reserve-unknown-team",
+   "method": "POST",
+   "path": "/data/datasets/upload/dataset/reserveUpload",
+   "service": "datastore",
+   "query": {
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "filePaths": [
+      "test-dataset.zip"
+     ],
+     "totalFileCount": 1,
+     "uploadId": "diff-upload-t"
+    },
+    "folderId": "{seedRootFolderId}",
+    "initialTeamIds": [
+     "0123456789abcdef01234567"
+    ],
+    "layersToLink": [],
+    "datasetName": "diff-t",
+    "organizationId": "sample_organization"
+   }
+  }
+ ]
+}

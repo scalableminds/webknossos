@@ -1,0 +1,15 @@
+{
+  "source": "binaryData/sample_organization/n5-upload-fibsem123/s4",
+  "decoder": "Python stdlib gzip + NumPy big-endian uint16 F reshape",
+  "offset": [
+    1,
+    2,
+    3
+  ],
+  "shape": [
+    8,
+    8,
+    8
+  ],
+  "axisOrder": "xyz"
+}

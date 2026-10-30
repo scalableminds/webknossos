@@ -1,0 +1,762 @@
+//! WKRemoteWorkerController: the routes polled and called by job workers,
+//! authenticated by the worker key (`?key=`), not by a user token.
+//!
+//! - `GET /jobs/request`: heartbeat, reserve pending jobs, hand out jobs to run/cancel.
+//! - `POST /jobs/:id/status`: state transitions plus credit completion/refund.
+//! - `POST /jobs/:id/attachVoxelyticsWorkflow`, `POST /jobs/:id/attachDatasetToInference`.
+use std::time::Duration;
+
+use axum::{
+    Json, Router,
+    extract::State,
+    http::Method,
+    response::Response,
+    routing::{get, post},
+};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
+use sqlx::{PgConnection, PgPool};
+
+use crate::{
+    AppState,
+    auth::AuthUser,
+    error::{ApiError, ApiResult},
+    extract::{Json as JsonBody, Path, Query},
+    job::routes::{JOB_COMMANDS, JOB_STATES, Job},
+    mail::{Mail, MailSender, templates},
+    slack::{self, SlackNotificationService},
+    stores::client::ServiceClients,
+    system::application_info::{MiscState, ok_empty},
+    util::id::{ObjectId, PathObjectId},
+};
+use axum::extract::FromRef;
+
+mod job_workers_dao;
+
+use job_workers_dao::{Owner, Worker};
+
+const WORKER_NOT_FOUND: &str = "Could not find this worker in the database.";
+const UPDATE_STATUS_FAILED: &str = "Could not update job status.";
+const CLEANUP_FAILED: &str = "Could not clean up failed job.";
+const CREDITS_FAILED: &str = "Could not perform credit transaction.";
+const JOBS_PARSING_FAILED: &str = "Parsing failed for a row in webknossos.jobs during list query";
+
+/// JobCommand.highPriorityJobs; every other command is low priority.
+const HIGH_PRIORITY_COMMANDS: [&str; 2] = ["convert_to_wkw", "export_tiff"];
+/// WKRemoteWorkerController.reserveNextJobs(pendingIterationCount = 10).
+const RESERVE_ITERATIONS: usize = 10;
+
+#[derive(Clone)]
+struct WorkerRoutes {
+    job_token_expiry: Duration,
+    token_idle_timeout: Duration,
+}
+
+/// `job_token_expiry` is silhouette's jobExpiry; `token_idle_timeout` its
+/// authenticatorIdleTimeout (shared with Authentication tokens).
+impl FromRef<AppState> for WorkerRoutes {
+    fn from_ref(state: &AppState) -> Self {
+        Self {
+            job_token_expiry: state.jobs.job_token_expiry,
+            token_idle_timeout: state.auth_routes.auth_idle_timeout,
+        }
+    }
+}
+
+pub fn router() -> Router<AppState> {
+    Router::new()
+        .route("/jobs/request", get(request_jobs))
+        .route("/jobs/{id}/status", post(update_status))
+        .route(
+            "/jobs/{id}/attachVoxelyticsWorkflow",
+            post(attach_voxelytics_workflow),
+        )
+        .route(
+            "/jobs/{id}/attachDatasetToInference",
+            post(attach_dataset_to_inference),
+        )
+}
+
+#[derive(Deserialize)]
+struct KeyQuery {
+    key: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RequestQuery {
+    key: String,
+    worker_version: Option<String>,
+}
+
+/// WorkerDAO.findOneByKey (`?~> Msg.Job.workerNotFound`): a missing worker and an
+/// unparsable one (unknown supported job command) are both 400 workerNotFound.
+async fn find_worker(
+    connection: &mut PgConnection,
+    key: &str,
+    for_update: bool,
+) -> ApiResult<Worker> {
+    let worker = job_workers_dao::find_one_by_key(connection, key, for_update).await?;
+    match worker {
+        Some(worker)
+            if worker
+                .commands
+                .iter()
+                .all(|c| crate::job::routes::is_job_command(c)) =>
+        {
+            Ok(worker)
+        }
+        _ => Err(ApiError::bad_request(WORKER_NOT_FOUND)),
+    }
+}
+
+fn high_priority(command: &str) -> bool {
+    HIGH_PRIORITY_COMMANDS.contains(&command)
+}
+
+/// The commands of one priority class, optionally restricted to the worker's.
+fn commands(high: bool, worker: Option<&Worker>) -> Vec<String> {
+    JOB_COMMANDS
+        .iter()
+        .filter(|command| high_priority(command) == high)
+        .filter(|command| worker.is_none_or(|worker| worker.supports(command)))
+        .map(|command| (*command).to_owned())
+        .collect()
+}
+
+/// Worker polling. One transaction holds the worker row lock, so polls of the same
+/// worker are serialized (its parallelism limits hold); pending jobs are claimed with
+/// `FOR UPDATE SKIP LOCKED` plus `_worker IS NULL`, so no job goes to two workers.
+async fn request_jobs(
+    State(state): State<AppState>,
+    State(routes): State<WorkerRoutes>,
+    Query(query): Query<RequestQuery>,
+) -> ApiResult<Json<WorkerJobs>> {
+    let mut transaction = state.pool.begin().await?;
+    let worker = find_worker(&mut transaction, &query.key, true).await?;
+    // WorkerDAO.updateHeartBeat / updateLastReportedVersion (only if it changed).
+    let new_version = query
+        .worker_version
+        .as_ref()
+        .filter(|version| worker.last_reported_version.as_ref() != Some(*version));
+    job_workers_dao::update_heart_beat(
+        &mut transaction,
+        &worker.id,
+        new_version.map(String::as_str),
+    )
+    .await?;
+    reserve_next_jobs(&mut transaction, &worker).await?;
+    let to_run = validated_jobs(
+        job_workers_dao::find_all_unfinished_by_worker(&mut transaction, &worker.id).await?,
+    )?;
+    // Jobs cancelled by a user (manualState) that the worker has not cancelled yet.
+    let to_cancel = validated_jobs(
+        job_workers_dao::find_all_cancelling_by_worker(&mut transaction, &worker.id).await?,
+    )?;
+    transaction.commit().await?;
+    let to_run: Vec<&Job> = to_run
+        .iter()
+        .filter(|job| !to_cancel.iter().any(|cancelled| cancelled.id == job.id))
+        .collect();
+    let mut to_run_parameters = Vec::with_capacity(to_run.len());
+    for job in to_run {
+        to_run_parameters.push(parameter_writes(&state.pool, &routes, job).await?);
+    }
+    let mut to_cancel_parameters = Vec::with_capacity(to_cancel.len());
+    for job in &to_cancel {
+        to_cancel_parameters.push(parameter_writes(&state.pool, &routes, job).await?);
+    }
+    Ok(Json(WorkerJobs {
+        to_run: to_run_parameters,
+        to_cancel: to_cancel_parameters,
+    }))
+}
+
+/// The worker's poll answer (snake_case keys, as the worker expects).
+#[derive(Serialize)]
+struct WorkerJobs {
+    to_run: Vec<JobParameters>,
+    to_cancel: Vec<JobParameters>,
+}
+
+/// JobService.parameterWrites.
+#[derive(Serialize)]
+struct JobParameters {
+    job_id: ObjectId,
+    command: String,
+    /// The stored job arguments plus the owner's Job token.
+    job_kwargs: Map<String, Value>,
+}
+
+/// WKRemoteWorkerController.reserveNextJobs: claim the oldest assignable pending job
+/// of the worker's datastore while the worker has free high/low priority slots.
+async fn reserve_next_jobs(connection: &mut PgConnection, worker: &Worker) -> ApiResult<()> {
+    let all_high = commands(true, None);
+    let all_low = commands(false, None);
+    let supported_high = commands(true, Some(worker));
+    let supported_low = commands(false, Some(worker));
+    for _ in 0..RESERVE_ITERATIONS {
+        let (unfinished_high, unfinished_low) = job_workers_dao::count_unfinished_by_worker(
+            connection, &worker.id, &all_high, &all_low,
+        )
+        .await?;
+        let (pending_high, pending_low) = job_workers_dao::count_unassigned_pending_for_data_store(
+            connection,
+            &worker.data_store,
+            &supported_high,
+            &supported_low,
+        )
+        .await?;
+        let may_assign_high = unfinished_high < i64::from(worker.max_high) && pending_high > 0;
+        let may_assign_low = unfinished_low < i64::from(worker.max_low) && pending_low > 0;
+        if !may_assign_high && !may_assign_low {
+            break;
+        }
+        let mut assignable = Vec::new();
+        if may_assign_low {
+            assignable.extend(supported_low.iter().cloned());
+        }
+        if may_assign_high {
+            assignable.extend(supported_high.iter().cloned());
+        }
+        job_workers_dao::reserve_next_job(connection, &worker.id, &worker.data_store, &assignable)
+            .await?;
+    }
+    Ok(())
+}
+
+/// parseAll of JobDAO.findAllUnfinishedByWorker / findAllCancellingByWorker.
+fn validated_jobs(jobs: Vec<Job>) -> ApiResult<Vec<Job>> {
+    if jobs.iter().any(|job| !job.is_valid()) {
+        return Err(ApiError::bad_request(JOBS_PARSING_FAILED));
+    }
+    Ok(jobs)
+}
+
+/// JobService.parameterWrites: the job as the worker sees it, with a Job
+/// token of the owner (createAndInitJobTokenForUser; reused for up to an hour).
+async fn parameter_writes(
+    pool: &PgPool,
+    routes: &WorkerRoutes,
+    job: &Job,
+) -> ApiResult<JobParameters> {
+    // UserDAO.findOne with global access: an empty Fox when the owner is gone.
+    let owner = job_workers_dao::find_user_id(pool, &job.owner).await?;
+    let owner = owner.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+    let token = insert_job_token(pool, &owner, routes).await?;
+    let mut kwargs = job.args.as_object().cloned().unwrap_or_default();
+    kwargs.insert("user_auth_token".into(), Value::String(token));
+    Ok(JobParameters {
+        job_id: job.id.clone(),
+        command: job.command.clone(),
+        job_kwargs: kwargs,
+    })
+}
+
+async fn insert_job_token(
+    pool: &PgPool,
+    user_id: &ObjectId,
+    routes: &WorkerRoutes,
+) -> ApiResult<String> {
+    let expiry_ms =
+        i64::try_from(routes.job_token_expiry.as_millis()).map_err(|_| ApiError::internal())?;
+    let idle_ms =
+        i64::try_from(routes.token_idle_timeout.as_millis()).map_err(|_| ApiError::internal())?;
+    if expiry_ms <= 0 || idle_ms <= 0 {
+        return Err(ApiError::internal());
+    }
+    // Workers poll every few seconds; reuse a recent token instead of minting one per poll.
+    let recent = job_workers_dao::find_recent_job_token(pool, user_id).await?;
+    if let Some(value) = recent {
+        return Ok(value);
+    }
+    let mut random = [0_u8; 16];
+    getrandom::fill(&mut random).map_err(|_| ApiError::internal())?;
+    let value = URL_SAFE_NO_PAD.encode(random);
+    job_workers_dao::insert_job_token(pool, &ObjectId::new(), &value, user_id, expiry_ms, idle_ms)
+        .await?;
+    Ok(value)
+}
+
+/// JobStatus (JsonAutoFormat; absent and null optional fields are None).
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JobStatus {
+    latest_run_id: Option<String>,
+    state: JobState,
+    return_value: Option<String>,
+    #[serde(default, deserialize_with = "crate::util::instant::optional")]
+    started: Option<DateTime<Utc>>,
+    #[serde(default, deserialize_with = "crate::util::instant::optional")]
+    ended: Option<DateTime<Utc>>,
+    error_details: Option<Map<String, Value>>,
+}
+
+#[derive(Deserialize, Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::upper_case_acronyms)]
+enum JobState {
+    PENDING,
+    STARTED,
+    SUCCESS,
+    FAILURE,
+    CANCELLED,
+}
+
+impl JobState {
+    fn as_str(self) -> &'static str {
+        JOB_STATES[self as usize]
+    }
+}
+
+/// Worker status report. Deviation from Scala (separate auto-commits): the status
+/// update, failed-conversion cleanup and credit completion/refund run in one
+/// transaction holding the job row lock, so a failing step leaves the job unchanged
+/// and concurrent reports for one job cannot complete or refund credits twice.
+/// Notifications and upload cleanup are fire-and-forget after the commit.
+#[allow(clippy::too_many_arguments)]
+async fn update_status(
+    State(state): State<AppState>,
+    State(misc): State<MiscState>,
+    State(mailer): State<MailSender>,
+    State(clients): State<ServiceClients>,
+    State(slack): State<SlackNotificationService>,
+    Path(id): Path<PathObjectId>,
+    Query(query): Query<KeyQuery>,
+    JsonBody(status): JsonBody<JobStatus>,
+) -> ApiResult<Response> {
+    let mut transaction = state.pool.begin().await?;
+    find_worker(&mut transaction, &query.key, false).await?;
+    // JobDAO.findOne with global access.
+    let before = find_job_global(&mut transaction, &id, true)
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+    // JobDAO.updateStatus: absent optional fields are written as NULL.
+    job_workers_dao::update_status(
+        &mut transaction,
+        &before.id,
+        status.latest_run_id.as_deref(),
+        status.error_details.clone().map(Value::Object),
+        status.state.as_str(),
+        status.return_value.as_deref(),
+        status.started,
+        status.ended,
+    )
+    .await
+    .map_err(|error| failure_as(error, UPDATE_STATUS_FAILED))?;
+    let after = find_job_global(&mut transaction, &before.id, false)
+        .await
+        .map_err(|error| replace_failure(error, crate::msg::job::NOT_FOUND))?
+        .ok_or_else(|| ApiError::bad_request(crate::msg::job::NOT_FOUND))?;
+    clean_up_if_failed(&mut transaction, &after).await?;
+    if status.state == JobState::SUCCESS {
+        complete_transaction_of_job(&mut transaction, &after.id)
+            .await
+            .map_err(|error| replace_failure(error, CREDITS_FAILED))?;
+    }
+    if before.state != status.state.as_str()
+        && matches!(status.state, JobState::FAILURE | JobState::CANCELLED)
+    {
+        crate::job::routes::refund_transaction_for_job(
+            &mut transaction,
+            &before.id,
+            status.state == JobState::CANCELLED,
+        )
+        .await
+        .map_err(|error| replace_failure(error, crate::msg::job::credits::REFUND_FAILED))?;
+    }
+    transaction.commit().await?;
+    track_status_change(&state, &misc, &mailer, &slack, &before, &after);
+    clean_up_upload_files_if_needed(&state, &clients, &before, &after);
+    Ok(ok_empty())
+}
+
+async fn find_job_global(
+    connection: &mut PgConnection,
+    job_id: &ObjectId,
+    for_update: bool,
+) -> ApiResult<Option<Job>> {
+    let job = job_workers_dao::find_one_global(connection, job_id, for_update).await?;
+    match job {
+        Some(job) if !job.is_valid() => Err(ApiError::bad_request(format!(
+            "Parsing failed for row in webknossos.jobs queried by {job_id}"
+        ))),
+        job => Ok(job),
+    }
+}
+
+/// `?~> message` replaces failure messages; server errors stay server errors.
+fn replace_failure(error: ApiError, message: &str) -> ApiError {
+    if error.status.is_server_error() {
+        error
+    } else {
+        ApiError::bad_request(message)
+    }
+}
+
+/// Constraint, data and trigger violations are Fox failures (400 with `message`).
+fn failure_as(error: sqlx::Error, message: &str) -> ApiError {
+    if let sqlx::Error::Database(database) = &error
+        && database.code().is_some_and(|code| {
+            code.starts_with("23") || code.starts_with("22") || code.starts_with("P0")
+        })
+    {
+        return ApiError::bad_request(message);
+    }
+    error.into()
+}
+
+/// JobService.cleanUpIfFailed: a failed WKW conversion marks its dataset as conversion
+/// failed (unusable, directory name stays reserved) so the conversion can be retried.
+async fn clean_up_if_failed(connection: &mut PgConnection, job: &Job) -> ApiResult<()> {
+    if job.state != "FAILURE" || job.command != "convert_to_wkw" {
+        return Ok(());
+    }
+    let string_arg = |key: &str| job.args.get(key).and_then(Value::as_str);
+    let (Some(directory_name), Some(organization)) = (
+        string_arg("dataset_directory_name"),
+        string_arg("organization_id"),
+    ) else {
+        return Err(ApiError::bad_request(CLEANUP_FAILED));
+    };
+    tracing::info!(
+        job = %job.id,
+        "WKW conversion job failed. Marking dataset as conversion failed..."
+    );
+    let dataset = job_workers_dao::find_dataset_id_by_directory_name_and_organization(
+        connection,
+        directory_name,
+        organization,
+    )
+    .await?;
+    let dataset = dataset.ok_or_else(|| ApiError::bad_request(CLEANUP_FAILED))?;
+    job_workers_dao::update_dataset_status_unusable(
+        connection,
+        &dataset,
+        crate::dataset::lifecycle::CONVERSION_FAILED,
+    )
+    .await
+    .map_err(|error| failure_as(error, CLEANUP_FAILED))?;
+    Ok(())
+}
+
+/// CreditTransactionService.completeTransactionOfJob (global access): the pending
+/// reservation of the job, if any, becomes spent.
+async fn complete_transaction_of_job(
+    connection: &mut PgConnection,
+    job_id: &ObjectId,
+) -> ApiResult<()> {
+    let pending = crate::job::job_dao::find_pending_transaction_of_job(connection, job_id).await?;
+    let Some(transaction_id) = pending else {
+        // Assume a transaction-less (unpaid) job.
+        return Ok(());
+    };
+    job_workers_dao::update_transaction_spent(connection, &transaction_id)
+        .await
+        .map_err(|error| failure_as(error, CREDITS_FAILED))?;
+    Ok(())
+}
+
+/// JobService.trackStatusChange: fire-and-forget log, Slack, analytics and
+/// mail notifications for newly succeeded/failed jobs. The Mailchimp tag is
+/// not ported.
+fn track_status_change(
+    state: &AppState,
+    misc: &MiscState,
+    mailer: &MailSender,
+    slack: &SlackNotificationService,
+    before: &Job,
+    after: &Job,
+) {
+    if matches!(before.effective_state(), "SUCCESS" | "FAILURE") {
+        return;
+    }
+    let succeeded = after.state == "SUCCESS";
+    if !succeeded && after.state != "FAILURE" {
+        return;
+    }
+    let (state, misc, mailer, slack, after) = (
+        state.clone(),
+        misc.clone(),
+        mailer.clone(),
+        slack.clone(),
+        after.clone(),
+    );
+    tokio::spawn(async move {
+        let owner = job_workers_dao::find_owner(&state.pool, &after.owner)
+            .await
+            .ok()
+            .flatten();
+        let Some(owner) = owner else {
+            return;
+        };
+        let public_uri = misc.config().public_uri.clone();
+        let superuser_label = if owner.is_superuser {
+            " (for superuser)"
+        } else {
+            ""
+        };
+        let duration_label =
+            slack::job_duration_label(after.created, after.started, after.ended, after.last_retry);
+        let workflow_link =
+            slack::workflow_link_slack_formatted(&public_uri, after.workflow_hash.as_deref());
+        if succeeded {
+            let result_link_public = crate::job::routes::result_link(
+                &after.command,
+                after.effective_state(),
+                &after.args,
+                after.return_value.as_deref(),
+                &after.id,
+                &owner.organization,
+            )
+            .map(|link| {
+                if link.starts_with('/') {
+                    format!("{public_uri}{link}")
+                } else {
+                    link
+                }
+            });
+            let msg = format!(
+                "Job `{}` succeeded{duration_label}. Command `{}`, organization: {}.{}{workflow_link}",
+                after.id,
+                after.command,
+                owner.organization_name,
+                slack::result_link_slack_formatted(result_link_public.as_deref()),
+            );
+            tracing::info!("{msg}");
+            slack.success(&format!("Successful job{superuser_label}"), &msg);
+            let link = result_link_public.unwrap_or_else(|| public_uri.clone());
+            if let Some(mail) = success_mail(&owner, &after, &link) {
+                mailer.send(mail);
+            }
+        } else {
+            let msg = format!(
+                "Job `{}` failed{duration_label}. Command `{}`, organization: {}.{workflow_link}",
+                after.id, after.command, owner.organization_name,
+            );
+            tracing::warn!("{msg}");
+            slack.warn(&format!("Failed job{superuser_label}"), &msg);
+            let user = AuthUser {
+                id: owner.id.clone(),
+                organization_id: owner.organization.clone(),
+                is_admin: owner.is_admin,
+                is_dataset_manager: owner.is_dataset_manager,
+                is_superuser: owner.is_superuser,
+            };
+            let mut properties = Map::new();
+            properties.insert("command".into(), Value::String(after.command.clone()));
+            crate::system::analytics::track(&state, &misc, &user, "failed_job".into(), properties);
+            if !after.retried_by_superuser {
+                mailer.send(failure_mail(&owner, &after));
+            }
+        }
+    });
+}
+
+fn dataset_name(job: &Job) -> &str {
+    job.args
+        .get("dataset_name")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+}
+
+/// JobService.sendSuccessEmailNotification: DefaultMails per job command.
+fn success_mail(owner: &Owner, job: &Job, link: &str) -> Option<Mail> {
+    let name = format!("{} {}", owner.first_name, owner.last_name);
+    let email = owner.email.as_str();
+    let dataset = dataset_name(job);
+    let generic = |title: &str, description: &str| {
+        templates::job_successful_generic(&name, email, dataset, link, title, description)
+    };
+    Some(match job.command.as_str() {
+        "convert_to_wkw" => templates::job_successful_upload_convert(&name, email, dataset, link),
+        "export_tiff" => generic(
+            "TIFF / OME-Zarr Export",
+            "Your data export is ready for download.",
+        ),
+        "infer_neurons" => templates::job_successful_neuron_segmentation(&name, email, link),
+        "infer_instances" => generic(
+            "Instance Segmentation",
+            "Your instance segmentation is ready.",
+        ),
+        "infer_mitochondria" => templates::job_successful_mito_segmentation(&name, email, link),
+        "align_sections" => templates::job_successful_alignment(&name, email, dataset, link),
+        "train_neuron_model" | "train_instance_model" => {
+            templates::job_successful_model_training(&name, email, link)
+        }
+        "materialize_volume_annotation" => generic(
+            "Volume Annotation Merged",
+            "Your volume annotation has been successfully merged with the existing segmentation. The result is available as a new dataset in your dashboard.",
+        ),
+        "compute_mesh_file" => generic(
+            "Mesh Generation",
+            "Your 3D meshes for the whole segmentation layer of your dataset are ready. Load pre-computed meshes by right-clicking any segment and choosing the corresponding option for near instant visualizations.",
+        ),
+        "render_animation" => generic(
+            "Dataset Animation",
+            "Your WEBKNOSSOS dataset animation is ready.",
+        ),
+        _ => return None,
+    })
+}
+
+/// DefaultMails.jobFailedUploadConvertMail / jobFailedGenericMail.
+fn failure_mail(owner: &Owner, job: &Job) -> Mail {
+    let name = format!("{} {}", owner.first_name, owner.last_name);
+    let dataset = dataset_name(job);
+    let error = job
+        .error_details
+        .as_ref()
+        .and_then(|details| details.get("message"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|message| !message.is_empty());
+    if job.command == "convert_to_wkw" {
+        templates::job_failed_upload_convert(&name, &owner.email, dataset, error)
+    } else {
+        templates::job_failed_generic(&name, &owner.email, dataset, &job.command, error)
+    }
+}
+
+/// JobService.cleanUpUploadFilesIfNeeded: once a WKW conversion ends, ask its
+/// datastore to remove the upload files (fire-and-forget RPC).
+fn clean_up_upload_files_if_needed(
+    state: &AppState,
+    clients: &ServiceClients,
+    before: &Job,
+    after: &Job,
+) {
+    let just_ended = before.state != after.state
+        && matches!(after.state.as_str(), "SUCCESS" | "FAILURE" | "CANCELLED");
+    if after.command != "convert_to_wkw" || !just_ended {
+        return;
+    }
+    let string_arg = |key: &str| {
+        after
+            .args
+            .get(key)
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+    };
+    let (Some(organization), Some(directory_name)) = (
+        string_arg("organization_id"),
+        string_arg("dataset_directory_name"),
+    ) else {
+        return;
+    };
+    let (pool, clients, data_store, job_id) = (
+        state.pool.clone(),
+        clients.clone(),
+        after.data_store.clone(),
+        after.id.clone(),
+    );
+    tokio::spawn(async move {
+        // DataStoreDAO.findOneByName with global access.
+        let url = crate::job::job_dao::find_data_store_url(&pool, &data_store)
+            .await
+            .ok()
+            .flatten();
+        let Some(url) = url else {
+            return;
+        };
+        let result = clients
+            .request(
+                Method::DELETE,
+                &url,
+                &[
+                    "data",
+                    "datasets",
+                    "upload",
+                    "dataset",
+                    "cleanUpUploadFiles",
+                ],
+                &[
+                    ("organizationId", organization),
+                    ("directoryName", directory_name),
+                    ("jobId", job_id.to_string()),
+                ],
+                None,
+            )
+            .await;
+        if result.is_err() {
+            tracing::warn!(job = %job_id, "Could not clean up upload files of conversion job");
+        }
+    });
+}
+
+/// JobDAO.organizationIdForJobId (base tables, `?~> Msg.Job.notFound`).
+async fn organization_for_job(
+    connection: &mut PgConnection,
+    job_id: &ObjectId,
+) -> ApiResult<String> {
+    let organization = job_workers_dao::find_organization_id_of_job(connection, job_id).await?;
+    organization.ok_or_else(|| ApiError::bad_request(crate::msg::job::NOT_FOUND))
+}
+
+async fn attach_voxelytics_workflow(
+    State(state): State<AppState>,
+    State(misc): State<MiscState>,
+    Path(id): Path<PathObjectId>,
+    Query(query): Query<KeyQuery>,
+    JsonBody(workflow_hash): JsonBody<String>,
+) -> ApiResult<Response> {
+    let mut transaction = state.pool.begin().await?;
+    find_worker(&mut transaction, &query.key, false).await?;
+    let voxelytics_enabled = misc
+        .config()
+        .features
+        .get("voxelyticsEnabled")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    if !voxelytics_enabled {
+        return Err(ApiError::bad_request(crate::msg::voxelytics::NOT_ENABLED));
+    }
+    let organization = organization_for_job(&mut transaction, &id).await?;
+    // findWorkflowByHashAndOrganization, else upsertWorkflow with a placeholder name.
+    // DO NOTHING keeps a concurrently created workflow's real name.
+    job_workers_dao::insert_voxelytics_workflow_if_missing(
+        &mut transaction,
+        &workflow_hash,
+        &organization,
+    )
+    .await?;
+    job_workers_dao::update_voxelytics_workflow_hash(&mut transaction, &id, &workflow_hash).await?;
+    transaction.commit().await?;
+    Ok(ok_empty())
+}
+
+async fn attach_dataset_to_inference(
+    State(state): State<AppState>,
+    Path(id): Path<PathObjectId>,
+    Query(query): Query<KeyQuery>,
+    JsonBody(directory_name): JsonBody<String>,
+) -> ApiResult<Response> {
+    let mut transaction = state.pool.begin().await?;
+    find_worker(&mut transaction, &query.key, false).await?;
+    let organization = organization_for_job(&mut transaction, &id).await?;
+    // DatasetDAO.findOneByDirectoryNameAndOrganization with global access (empty Fox).
+    let dataset = job_workers_dao::find_dataset_id_by_directory_name_and_organization(
+        &mut transaction,
+        &directory_name,
+        &organization,
+    )
+    .await?;
+    let dataset = dataset.ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+    // AiInferenceDAO.findOneByJobId (`?~> Msg.AiInference.notFound`).
+    let inference =
+        crate::ai_models::ai_models_dao::find_inference_id_by_job(&mut transaction, &id).await?;
+    let inference =
+        inference.ok_or_else(|| ApiError::bad_request(crate::msg::ai_inference::NOT_FOUND))?;
+    crate::ai_models::ai_models_dao::update_inference_new_dataset(
+        &mut transaction,
+        &inference,
+        &dataset,
+    )
+    .await?;
+    transaction.commit().await?;
+    Ok(ok_empty())
+}
+
+#[cfg(test)]
+mod job_workers_tests;

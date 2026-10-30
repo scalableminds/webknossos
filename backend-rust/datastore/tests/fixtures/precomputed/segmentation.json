@@ -1,0 +1,137 @@
+[
+  {
+    "name": "seg32",
+    "volume": [
+      5,
+      4,
+      3
+    ],
+    "channels": 1,
+    "block": [
+      2,
+      3,
+      2
+    ],
+    "width": 4
+  },
+  {
+    "name": "bits1",
+    "volume": [
+      5,
+      4,
+      3
+    ],
+    "channels": 1,
+    "block": [
+      2,
+      3,
+      2
+    ],
+    "width": 4
+  },
+  {
+    "name": "bits2",
+    "volume": [
+      5,
+      4,
+      3
+    ],
+    "channels": 1,
+    "block": [
+      2,
+      3,
+      2
+    ],
+    "width": 4
+  },
+  {
+    "name": "bits8",
+    "volume": [
+      5,
+      4,
+      3
+    ],
+    "channels": 1,
+    "block": [
+      4,
+      4,
+      4
+    ],
+    "width": 4
+  },
+  {
+    "name": "bits16",
+    "volume": [
+      8,
+      8,
+      8
+    ],
+    "channels": 1,
+    "block": [
+      8,
+      8,
+      8
+    ],
+    "width": 4
+  },
+  {
+    "name": "seg64",
+    "volume": [
+      5,
+      4,
+      3
+    ],
+    "channels": 1,
+    "block": [
+      2,
+      3,
+      2
+    ],
+    "width": 8
+  },
+  {
+    "name": "constant",
+    "volume": [
+      5,
+      4,
+      3
+    ],
+    "channels": 1,
+    "block": [
+      2,
+      3,
+      2
+    ],
+    "width": 8
+  },
+  {
+    "name": "multichannel",
+    "volume": [
+      5,
+      4,
+      3
+    ],
+    "channels": 2,
+    "block": [
+      2,
+      3,
+      2
+    ],
+    "width": 8
+  },
+  {
+    "name": "bits32",
+    "volume": [
+      2,
+      1,
+      1
+    ],
+    "channels": 1,
+    "block": [
+      2,
+      1,
+      1
+    ],
+    "width": 4
+  }
+]

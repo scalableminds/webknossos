@@ -1,0 +1,24 @@
+[package]
+name = "webknossos-common"
+description = "Code shared by the Rust WEBKNOSSOS backend and datastore (Scala `util` and datastore models)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+prost.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[build-dependencies]
+prost-build = "0.14"
+protox = "0.10"
+
+[dev-dependencies]
+# The datastore renders JSON with key order preserved; the tests assume it.
+serde_json = { workspace = true, features = ["preserve_order"] }
+
+[lints]
+workspace = true

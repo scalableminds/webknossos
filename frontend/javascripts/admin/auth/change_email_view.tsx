@@ -1,12 +1,10 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { unwrapOrThrow } from "admin/api/api_result";
-import { logoutUserEverywhere, updateUser } from "admin/rest_api";
+import { updateUser } from "admin/rest_api";
 import { Alert, Button, Form, Input, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router";
-import { logoutUserAction } from "viewer/model/actions/user_actions";
+import { useLogout } from "./use_logout";
 import { handleResendVerificationEmail } from "./verify_email_view";
 
 const FormItem = Form.Item;
@@ -17,8 +15,7 @@ const PASSWORD_FIELD_KEY = "password";
 
 function ChangeEmailView({ onCancel }: { onCancel: () => void }) {
   const [form] = Form.useForm();
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const logout = useLogout();
 
   const activeUser = useWkSelector((state) => state.activeUser);
 
@@ -38,9 +35,7 @@ function ChangeEmailView({ onCancel }: { onCancel: () => void }) {
       .then(async () => {
         handleResendVerificationEmail();
         Toast.success("Email address changed successfully. You will be logged out.");
-        unwrapOrThrow(await logoutUserEverywhere());
-        dispatch(logoutUserAction());
-        navigate("/auth/login");
+        await logout({ everywhere: true });
       })
       .catch((error) => {
         const errorMsg = "An unexpected error occurred while changing the email address.";

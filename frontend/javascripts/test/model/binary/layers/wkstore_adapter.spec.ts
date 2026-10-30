@@ -64,8 +64,6 @@ vi.mock("viewer/store", () => ({
       temporaryConfiguration: {
         activeMappingByLayer: {},
       },
-      // Read when bucket data arrives (see unsaved_partial_updates.ts).
-      save: { queue: [] },
     }),
     dispatch: vi.fn(),
   },

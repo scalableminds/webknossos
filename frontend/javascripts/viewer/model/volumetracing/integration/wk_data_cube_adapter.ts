@@ -42,8 +42,12 @@ function asSegmentData(data: BucketDataArray): SegmentBucketData {
 }
 
 export class WkDataCubeAdapter implements TransactionCube {
-  // Buckets touched during the current stroke, so mutations can be flushed.
+  // Buckets touched during the current stroke, so mutations can be flushed
+  // ("fullBuckets" only).
   private readonly touched = new Set<DataBucket>();
+  // "partialUpdates" only: one key per bucket for its pending partial change (see
+  // applyWrites).
+  private readonly partialChangeKeys = new Map<DataBucket, object>();
 
   constructor(
     protected readonly cube: DataCube,
@@ -79,12 +83,25 @@ export class WkDataCubeAdapter implements TransactionCube {
     // gets a zero-filled array plus temporal-bucket bookkeeping, which is how
     // the existing code paints over unloaded data too.
     const data = bucket.getOrCreateData();
-    if (!this.touched.has(bucket)) {
-      if (this.saveMode === "fullBuckets") {
-        bucket.startDataMutation();
-      } else {
-        bucket.startDataMutationForPartialUpdates();
+
+    if (this.saveMode === "partialUpdates") {
+      // A stroke's write grows with it and is applied again on every flush. With one
+      // key per bucket and adapter (i.e., per edit), it replaces the bucket's pending
+      // change from the previous flush instead of adding another one (see
+      // DataBucket.applyPartialChange).
+      let key = this.partialChangeKeys.get(bucket);
+      if (key == null) {
+        key = {}; // todop: interesting concept. object id instead of a uniq id, right?
+        this.partialChangeKeys.set(bucket, key);
       }
+      bucket.applyPartialChange(key, (bucketData) =>
+        applyBucketWriteToData(asSegmentData(bucketData), write),
+      );
+      return;
+    }
+
+    if (!this.touched.has(bucket)) {
+      bucket.startDataMutation();
       this.touched.add(bucket);
     }
 
@@ -96,7 +113,6 @@ export class WkDataCubeAdapter implements TransactionCube {
     // erasing the write above. So a pendingOperation additionally replays the
     // write once real data lands.
     if (bucket.needsBackendData()) {
-      // todop: still correct?
       bucket.pendingOperations.push((laterData) =>
         applyBucketWriteToData(asSegmentData(laterData), write),
       );
@@ -104,16 +120,13 @@ export class WkDataCubeAdapter implements TransactionCube {
   }
 
   /**
-   * Ends the mutation on every touched bucket, triggering a GPU refresh, and with
-   * "fullBuckets", pushing the bucket to the push queue.
+   * With "fullBuckets", ends the mutation on every touched bucket, which pushes it
+   * to the push queue and triggers a GPU refresh. With "partialUpdates", each write
+   * already triggers the refresh.
    */
   flush(): void {
     for (const bucket of this.touched) {
-      if (this.saveMode === "fullBuckets") {
-        bucket.endDataMutation();
-      } else {
-        bucket.endDataMutationForPartialUpdates();
-      }
+      bucket.endDataMutation();
     }
     this.touched.clear();
   }

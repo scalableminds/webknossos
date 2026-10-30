@@ -18,9 +18,6 @@ import { bucketPositionToGlobalAddress } from "viewer/model/helpers/position_con
 import Store from "viewer/store";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { getConstructorForElementClass, uint8ToTypedBuffer } from "../helpers/typed_buffer";
-import { applyRun, type VoxelRun } from "../volumetracing/core/bucket_diff";
-import type { SegmentBucketData } from "../volumetracing/core/volume_annotation_types";
-import { getUnsavedPartialUpdateRuns } from "../volumetracing/integration/unsaved_partial_updates";
 import BucketSnapshot, { type PendingOperation } from "./bucket_snapshot";
 
 export enum BucketStateEnum {
@@ -100,10 +97,6 @@ export type Containment =
       type: "no";
     };
 
-function applyRuns(data: BucketDataArray, runs: VoxelRun[]): void {
-  for (const run of runs) applyRun(data as SegmentBucketData, run);
-}
-
 export class DataBucket {
   readonly type = "data" as const;
   readonly elementClass: ElementClass;
@@ -118,18 +111,22 @@ export class DataBucket {
   // - not yet saved (after successful saving the dirtyCount is decremented) or
   // - not yet created by the PushQueue, since the PushQueue creates the snapshots
   //   in a debounced manner
-  // This property is only relevant when savedViaPartialUpdates is true.
   dirtyCount: number = 0;
-  // Whether the bucket's changes are saved as partial bucket updates by the tools
-  // that made them (live collaboration), not as a whole bucket via the push queue.
-  // Such a bucket only has to stay dirty until the backend's data has been merged
-  // into it (see endDataMutationForPartialUpdates).
-  savedViaPartialUpdates: boolean = false;
+  // Local writes made while the bucket was loading, for edits that are saved as whole
+  // buckets. merge() replays them onto the backend's data. Collaborative volume
+  // annotation uses pendingPartialChanges instead.
   pendingOperations: Array<PendingOperation> = [];
-  // The runs of the partial updates of this bucket that were saved by the user or
-  // incorporated from others since it was requested (see recordPartialUpdate).
-  // todop: is this the sibling to pendingOperations?
-  private partialUpdateRunsSinceRequest: VoxelRun[] = [];
+  // For collaborative volume annotation, whose edits are saved as partial bucket
+  // updates: the changes made while the bucket isn't loaded, in the order they were
+  // applied. These are the user's local writes (saved or not), others' partial
+  // updates, and the user's own ones re-applied during rebasing. Once the backend's
+  // data arrives, they are applied to it. As they are absolute writes and all changes
+  // since the bucket was created are kept, it doesn't matter which of them the data
+  // already contains (see applyPartialChange).
+  private pendingPartialChanges: Map<object, (data: BucketDataArray) => void> = new Map();
+  // How many partial updates of this bucket are in the save queue. While there are
+  // any, the bucket isn't garbage collected: fetched again, its data would lack them.
+  unsavedPartialUpdateCount: number = 0;
   state: BucketStateEnumType;
   // The bucket-picker tick during which this bucket was last marked as needed.
   lastNeededTick: number = -1;
@@ -221,7 +218,8 @@ export class DataBucket {
       (!respectNeededFlag || !this.isNeeded()) &&
       !this.dirty &&
       this.state !== BucketStateEnum.REQUESTED &&
-      this.dirtyCount === 0;
+      this.dirtyCount === 0 &&
+      this.unsavedPartialUpdateCount === 0;
     return mayBeCollected;
   }
 
@@ -510,87 +508,41 @@ export class DataBucket {
     /*
      * See Bucket.getDataForMutation() for a safe way of using this method.
      */
-    // Saving the whole bucket covers any earlier changes that were saved as
-    // partial updates, too.
-    this.savedViaPartialUpdates = false;
     this.cube.pushQueue.insert(this);
     this.throttledTriggerLabeled();
   }
 
-  startDataMutationForPartialUpdates(): void {
-    // Unlike startDataMutation, without an undo snapshot: undo is unavailable when
-    // edits are saved as partial updates (live collaboration). The bucket is still
-    // marked dirty, so that backend data arriving later is merged into it instead
-    // of replacing the edit.
-    this.dirty = true;
-  }
-
-  endDataMutationForPartialUpdates(): void {
-    // Unlike endDataMutation, the bucket is not pushed: the tool saves its change
-    // as partial bucket updates.
-    this.savedViaPartialUpdates = true;
-    this.clearDirtyIfSavedViaPartialUpdates();
-    this.throttledTriggerLabeled();
-  }
-
-  applyChangeFromUpdateAction(mutate: (data: BucketDataArray) => void): void {
-    // For a change from an incorporated update action: another user's, which the
-    // backend already has, or the user's own unsaved one, which is re-applied during
-    // rebasing and is saved through the save queue. Unlike a local mutation, the
-    // bucket is neither marked dirty nor pushed, and no undo snapshot is taken.
-    // A missing bucket is empty on the backend, so the change applies to empty data.
-    mutate(this.isMissing() ? this.getOrCreateData() : this.getData());
+  /**
+   * Applies a change of collaborative volume annotation: a local write, another
+   * user's partial update, or the user's own one re-applied during rebasing. A bucket
+   * that isn't loaded keeps it in pendingPartialChanges. `key` identifies the change:
+   * applying a change with the same key again (e.g., a stroke's write, which grows
+   * with the stroke) moves it to the end of the pending changes.
+   */
+  applyPartialChange(key: object, apply: (data: BucketDataArray) => void): void {
+    if (this.isLoaded() || this.isMissing()) {
+      // A missing bucket is empty on the backend, so the change applies to empty data.
+      apply(this.getOrCreateData());
+    } else {
+      this.pendingPartialChanges.delete(key);
+      this.pendingPartialChanges.set(key, apply);
+      // Preliminary data, if there is any, shows the change until the backend's data
+      // arrives.
+      if (this.data != null) apply(this.data);
+    }
     this.invalidateValueSet();
     this.throttledTriggerLabeled();
   }
 
-  /**
-   * To be called when a partial update of this bucket is saved by the user, or
-   * incorporated from another user, while the bucket is requested. The request asked
-   * for the annotation version from before, so the backend's data lacks the update,
-   * and once saved, the save queue doesn't have it either. Its runs are applied when
-   * the data arrives (see takeRunsMissingFromResponse).
-   */
-  recordPartialUpdate(runs: VoxelRun[]): void {
-    for (const run of runs) this.partialUpdateRunsSinceRequest.push(run);
-  }
-
-  // The runs that the backend's response lacks, in the order they were written: the
-  // partial updates since the request, then the ones not saved yet (see
-  // unsaved_partial_updates.ts). Re-applying a run that the response already contains
-  // is harmless, as runs are absolute writes.
-  private takeRunsMissingFromResponse(): VoxelRun[] {
-    // todop: doublecheck that all missing partial updates are always in one of the two collections
-    // (e.g., what about a very late bucket arrival so that getUnsavedPartialUpdateRuns is empty)?
-    const runs = this.partialUpdateRunsSinceRequest.concat(this.getUnsavedPartialUpdateRuns());
-    this.partialUpdateRunsSinceRequest = [];
-    return runs;
-  }
-
-  clearDirtyIfSavedViaPartialUpdates(): void {
-    // Once the backend's data is merged (or there is none), nothing depends on a
-    // bucket that is saved via partial updates being dirty anymore. A bucket that
-    // is still loading is cleared by the TemporalBucketManager once it arrives. A
-    // whole-bucket save that is still pending clears it via markAsPushed.
-    // The bucket may then be evicted before its partial updates are saved: when it is
-    // loaded again, they are re-applied (see unsaved_partial_updates.ts).
-    if (
-      this.savedViaPartialUpdates &&
-      this.dirtyCount === 0 &&
-      (this.state === BucketStateEnum.LOADED || this.state === BucketStateEnum.MISSING)
-    ) {
-      this.dirty = false;
-    }
+  private applyPendingPartialChanges(data: BucketDataArray): void {
+    for (const apply of this.pendingPartialChanges.values()) apply(data);
+    this.pendingPartialChanges.clear();
   }
 
   markAsRequested(): void {
     switch (this.state) {
       case BucketStateEnum.UNREQUESTED: {
         this.state = BucketStateEnum.REQUESTED;
-        // The request asks for the current annotation version, which includes everything
-        // recorded for an earlier request whose data never arrived (e.g., a failed one).
-        // The version is read in the same synchronous pull, so nothing gets lost here.
-        this.partialUpdateRunsSinceRequest = [];
         break;
       }
 
@@ -601,15 +553,14 @@ export class DataBucket {
 
   // The bucket is not present on the datastore. It transitions to MISSING and stays there.
   markAsMissing(): void {
-    // Without data on the backend, the partial updates that the response lacks still
-    // apply, to empty data.
-    const missingRuns = this.isRequested() ? this.takeRunsMissingFromResponse() : [];
-    if (missingRuns.length > 0) {
+    // Without data on the backend, the pending partial changes apply to empty data.
+    const hasPendingPartialChanges = this.isRequested() && this.pendingPartialChanges.size > 0;
+    if (hasPendingPartialChanges) {
       const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
       const emptyData = new TypedArrayClass(
         channelCount * this.cube.getEffectiveBucketVoxelCount(),
       );
-      applyRuns(emptyData, missingRuns);
+      this.applyPendingPartialChanges(emptyData);
       if (this.dirty && this.data != null) {
         // Like for fetched data, the changes made while the bucket was requested come last.
         this.merge(emptyData);
@@ -619,7 +570,7 @@ export class DataBucket {
       this.invalidateValueSet();
     }
     this.markAsUnavailable(BucketStateEnum.MISSING, "bucketMissing");
-    if (missingRuns.length > 0) this.throttledTriggerLabeled();
+    if (hasPendingPartialChanges) this.throttledTriggerLabeled();
   }
 
   // The bucket's request could not be read (e.g. transient error or a failure bucket). It
@@ -698,15 +649,10 @@ export class DataBucket {
 
     switch (this.state) {
       case BucketStateEnum.REQUESTED: {
-        // The backend's data is from the annotation version that the bucket was
-        // requested at, so it lacks the partial updates since then and the ones not
-        // saved yet. The changes made while the bucket was requested are newer, so
-        // merge applies them afterwards.
-        // The unmergedBucketDataLoaded event below gets the missing partial updates, too,
-        // as they aren't the user's local changes. That is only for consistency: the
-        // event is only needed for BucketSnapshots, which collaborative volume annotation
-        // doesn't use.
-        applyRuns(data, this.takeRunsMissingFromResponse());
+        // The pending partial changes are applied before the unmergedBucketDataLoaded
+        // event. That event is only needed for BucketSnapshots, which collaborative
+        // volume annotation, the only source of these changes, doesn't use.
+        this.applyPendingPartialChanges(data);
         if (this.dirty) {
           // Clone the data for the unmergedBucketDataLoaded event,
           // as the following merge operation is done in-place.
@@ -782,15 +728,6 @@ export class DataBucket {
 
   getTracingId(): string {
     return this.cube.layerName;
-  }
-
-  private getUnsavedPartialUpdateRuns(): VoxelRun[] {
-    if (!this.cube.isSegmentation) return [];
-    return getUnsavedPartialUpdateRuns(
-      Store.getState().save.queue,
-      this.getTracingId(),
-      this.zoomedAddress,
-    );
   }
 
   merge(fetchedData: BucketDataArray): void {

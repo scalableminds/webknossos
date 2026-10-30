@@ -184,26 +184,20 @@ export function* tryToIncorporateActions(
 
           const bucket = cube.getBucket(bucketAddress);
           if (action.name === "updateBucketPartial") {
+            // A bucket that isn't in the cube gets others' changes with its data. The user's
+            // own unsaved ones keep their bucket in the cube until they are saved.
             if (bucket.type !== "data") break;
             const runs = decodeBucketDiffBase64(action.value.voxelRunsBase64);
-            if (bucket.isLoaded() || bucket.isMissing()) {
-              // The runs are applied directly, also to a "missing" bucket (which means
-              // empty on the backend). As runs are absolute writes, applying others' runs first
-              // and then re-applying the user's unsaved ones (see rebasing_sagas.ts)
-              // yields the backend's state after the user's pending save. Where both
-              // wrote the same voxels, the user's values win.
-              bucket.applyChangeFromUpdateAction((data) => {
-                for (const run of runs) applyRun(data as SegmentBucketData, run);
-              });
-            } else if (bucket.isRequested() && !areUnsavedChangesOfUser) {
-              // The ongoing bucket request asked for the annotation version from before this
-              // update action, so its response lacks it. The bucket applies the runs when the
-              // response arrives.
-              bucket.recordPartialUpdate(runs);
-            }
-            // Otherwise, the bucket's data hasn't been requested yet: it will include
-            // others' changes, and get the user's unsaved ones re-applied (see
-            // unsaved_partial_updates.ts).
+            // Applied to the data, or kept until it arrives (see
+            // DataBucket.applyPartialChange). As runs are absolute writes, applying others'
+            // runs first and then re-applying the user's unsaved ones (see rebasing_sagas.ts)
+            // yields the backend's state after the user's pending save. Where both wrote the
+            // same voxels, the user's values win. Partial updates never evict a bucket: that
+            // wouldn't stop a request in flight, whose response would land in the bucket
+            // created anew.
+            bucket.applyPartialChange(runs, (data) => {
+              for (const run of runs) applyRun(data as SegmentBucketData, run);
+            });
             break;
           }
           // Otherwise, drop the local cache and force a re-fetch. A bucket that is

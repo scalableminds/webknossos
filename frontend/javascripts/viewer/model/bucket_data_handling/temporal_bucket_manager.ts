@@ -20,11 +20,13 @@ class TemporalBucketManager {
   }
 
   getCount(): number {
-    // Counts the buckets whose saving waits for their backend data. A bucket saved
-    // via partial updates does not: its data is only needed for display.
+    // Counts the buckets whose saving waits for their backend data. That's only the
+    // dirty ones: a bucket edited in collaborative volume annotation isn't, as its
+    // edits are saved as partial updates, and its data is only needed for display.
+    // todop: clarify that dirty is really only ever set when savedViaPartialUpdates is false.
     let count = 0;
     for (const bucket of this.pendingBuckets) {
-      if (!bucket.savedViaPartialUpdates) count++;
+      if (bucket.dirty) count++;
     }
     return count;
   }
@@ -45,14 +47,7 @@ class TemporalBucketManager {
       const onLoadedOrMissingHandler = () => {
         this.pendingBuckets.delete(bucket);
         if (bucket.dirty) {
-          if (bucket.savedViaPartialUpdates) {
-            // The bucket was edited while loading, so ending the mutation couldn't clear
-            // `dirty` yet: it has to stay set until the backend data is merged (see
-            // receiveData). That happened now, and nothing needs to be pushed.
-            bucket.clearDirtyIfSavedViaPartialUpdates();
-          } else {
-            this.pushQueue.insert(bucket);
-          }
+          this.pushQueue.insert(bucket);
         }
 
         this.loadedPromises = without(this.loadedPromises, loadedPromise);

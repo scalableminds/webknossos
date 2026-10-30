@@ -26,8 +26,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockInitialBucketAndAgglomerateData } from "../proofreading/proofreading_test_utils";
 
 // In live collaboration, volume edits are saved as partial bucket updates. Until their
-// save succeeds, buckets whose data arrives (again) get them re-applied, and during
-// rebasing they are re-applied on top of others' updates (see unsaved_partial_updates.ts).
+// save succeeds, their buckets aren't garbage collected. A bucket that is still loading
+// applies them, and others' partial updates, when its data arrives (see
+// DataBucket.applyPartialChange). During rebasing, they are re-applied on top of others'
+// updates.
 
 const VOLUME_TRACING_ID = "volumeTracingId";
 const position: Vector3 = [40, 40, 43];
@@ -55,13 +57,18 @@ function hasUnsavedPartialUpdates() {
   );
 }
 
-// Drops the mag-1 bucket that contains `voxel` from the cube, so that the next read
-// fetches it again.
-function evictBucketOf(voxel: Vector3) {
+// The mag-1 bucket that contains `voxel`.
+function getBucketOf(voxel: Vector3) {
   const { cube } = Model.getSegmentationTracingLayer(VOLUME_TRACING_ID);
   const bucket = cube.getBucket(cube.positionToZoomedAddress(voxel, null, 0));
   if (bucket.type !== "data") throw new Error("Expected the bucket to be in the cube.");
-  cube.removeBucket(bucket);
+  return bucket;
+}
+
+// Drops the mag-1 bucket that contains `voxel` from the cube, so that the next read
+// fetches it again.
+function evictBucketOf(voxel: Vector3) {
+  Model.getSegmentationTracingLayer(VOLUME_TRACING_ID).cube.removeBucket(getBucketOf(voxel));
 }
 
 const getValueAt = (context: WebknossosTestContext, voxel: Vector3) =>
@@ -73,7 +80,7 @@ const LAYERS = { [VOLUME_TRACING_ID]: "uint16", color: "uint8" } as const;
 // contains `position` until `release` is called. All requests are answered by `respond`.
 function holdBackFirstRequestOfBucket(
   context: WebknossosTestContext,
-  respond: ReturnType<typeof createBucketResponseFunction>,
+  respond: ReturnType<typeof createBucketResponseFunction> | typeof respondWithoutData,
 ) {
   const released = new Deferred<void, never>();
   let requestCount = 0;
@@ -147,34 +154,39 @@ describe("Unsaved partial bucket updates", () => {
     context.tearDownPullQueues();
   });
 
-  it<WebknossosTestContext>("are re-applied when an evicted bucket is fetched again", async (context) => {
+  it<WebknossosTestContext>("keep their bucket from being garbage collected until they are saved", async (context) => {
     await setup(context);
     vi.mocked(context.mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
       createBucketResponseFunction(LAYERS, 0, 0),
     );
     await context.api.data.reloadAllBuckets();
+    expect(await getValueAt(context, position)).toBe(0);
     brushAt(position);
     expect(await getValueAt(context, position)).toBe(5);
 
-    // The backend doesn't have the stroke yet, so the fetched data lacks it.
+    // The backend doesn't have the stroke yet, so data fetched again would lack it.
     expect(hasUnsavedPartialUpdates()).toBe(true);
-    evictBucketOf(position);
-    expect(await getValueAt(context, position)).toBe(5);
-    expect(hasUnsavedPartialUpdates()).toBe(true);
+    expect(getBucketOf(position).mayBeGarbageCollected(false)).toBe(false);
+    await context.api.tracing.save();
+    expect(getBucketOf(position).mayBeGarbageCollected(false)).toBe(true);
   });
 
-  it<WebknossosTestContext>("are re-applied when the backend has no data for a bucket", async (context) => {
+  it<WebknossosTestContext>("are applied when the backend has no data for a bucket that was loading", async (context) => {
     await setup(context);
-    await context.api.data.reloadAllBuckets();
-    brushAt(position);
-    expect(await getValueAt(context, position)).toBe(5);
-
     vi.mocked(context.mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
       respondWithoutData,
     );
-    expect(hasUnsavedPartialUpdates()).toBe(true);
-    evictBucketOf(position);
+    await context.api.data.reloadAllBuckets();
+
+    const heldRequest = holdBackFirstRequestOfBucket(context, respondWithoutData);
+    const value = getValueAt(context, position);
+    // The stroke is drawn while the bucket is requested.
+    brushAt(position);
+    heldRequest.release();
+    await value;
+
     expect(await getValueAt(context, position)).toBe(5);
+    expect(heldRequest.getRequestCount()).toBe(1);
   });
 
   it<WebknossosTestContext>("win over others' partial updates of the same voxels when rebasing", async (context) => {
@@ -231,23 +243,21 @@ describe("Unsaved partial bucket updates", () => {
       createBucketResponseFunction(LAYERS, 0, 0),
     );
     await context.api.data.reloadAllBuckets();
-    // Loads the bucket, so that the stroke doesn't cause a request of its own.
-    expect(await getValueAt(context, position)).toBe(0);
-    brushAt(position);
-    evictBucketOf(position);
 
-    // The bucket is requested again while the stroke's save is in flight. The response,
-    // for the version from before the save, only arrives after the save went through.
+    // The stroke is drawn and saved while the bucket is requested. The response, for
+    // the version from before the save, only arrives afterwards.
     const heldRequest = holdBackFirstRequestOfBucket(
       context,
       createBucketResponseFunction(LAYERS, 0, 0),
     );
     const value = getValueAt(context, position);
+    brushAt(position);
     await context.api.tracing.save();
     expect(hasUnsavedPartialUpdates()).toBe(false);
     heldRequest.release();
+    await value;
 
-    expect(await value).toBe(5);
+    expect(await getValueAt(context, position)).toBe(5);
     // The response was used, not requested again.
     expect(heldRequest.getRequestCount()).toBe(1);
   });

@@ -47,7 +47,12 @@ import DAGView from "./dag_view";
 import { formatLog } from "./log_tab";
 import { getTaskInfosWithHierarchy } from "./task_hierarchy";
 import { getTaskPanelId, useTaskFocus, useTaskPanelExpansion } from "./task_hierarchy_hooks";
-import { MetaTaskPanelLabel, TaskPanelLabel } from "./task_panel_labels";
+import {
+  getWebknossosLinkOfArtifacts,
+  MetaTaskPanelLabel,
+  OpenInWebknossosButton,
+  TaskPanelLabel,
+} from "./task_panel_labels";
 import { getTaskExecutions } from "./task_runs_tab";
 import TaskView from "./task_view";
 import { addAfterPadding, addBeforePadding } from "./utils";
@@ -398,11 +403,13 @@ export default function TaskListView({
       taskInfo.state === VoxelyticsRunState.SKIPPED
         ? (Object.values(taskArtifacts)[0]?.foreignWorkflow ?? null)
         : null;
+    const webknossosLink = getWebknossosLinkOfArtifacts(taskArtifacts);
 
     return {
       key: task.taskName,
       id: getTaskPanelId(task.taskName),
       label: <TaskPanelLabel task={task} taskInfo={taskInfo} foreignWorkflow={foreignWorkflow} />,
+      extra: webknossosLink != null ? <OpenInWebknossosButton url={webknossosLink} /> : undefined,
       children: (
         <TaskView
           taskName={task.taskName}

@@ -42,7 +42,7 @@ const ColorWKDarkGrey = "#1f1f1f";
 
 // Colors of the WEBKNOSSOS design system (theme v2.1). The names match the design guidelines.
 const ColorIndigoLight = "#8a90ff"; // DS "Indigo Light": indigo used as text/links on ink
-const ColorViewerInk = "#0c0d18"; // DS "Viewer Ink": dark page background
+export const ColorViewerInk = "#0c0d18"; // DS "Viewer Ink": dark page background
 const ColorPaper = "#f5f5fa"; // DS "Paper": light page background
 const ColorTextOnInkPrimary = "#ffffff";
 const ColorTextOnInkSecondary = "#a7a9c6";
@@ -90,10 +90,6 @@ const globalDesignToken: Partial<AliasToken> = {
 const lightDesignToken: Partial<AliasToken> = {
   colorBgLayout: ColorPaper,
 
-  // Status colors. All three follow the same recipe, so that they look like one family:
-  // - Text is darkened to ~5:1 on Paper; hover/active darken it by 20%/35%, so that they gain
-  //   contrast instead of losing it (antd's derived hover is lighter and drops below 4.5:1).
-  // - Bg / BgHover / Border / BorderHover are the base color at 9% / 16% / 35% / 55% on white.
   colorSuccess: "#1fa05a",
   colorSuccessText: "#137a43",
   colorSuccessTextHover: "#0f6236",
@@ -151,7 +147,6 @@ const darkDesignToken: Partial<AliasToken> & { colorShadow: string } = {
   colorInfoTextHover: ColorIndigoLightHover,
   colorInfoTextActive: ColorIndigoLightPressed,
 
-  // Status colors. These are seeds, which the dark algorithm dims by ~15%.
   colorSuccess: "#43e38e", // shows as #3cc47c
   colorWarning: "#ffb241", // shows as #dc9a3a
   colorError: "#ff6573", // shows as #dc5965
@@ -195,13 +190,12 @@ const darkGlobalToken = theme.getDesignToken({
   algorithm: darkAlgorithm,
 });
 
-// Status colors for places that cannot follow the active theme, e.g. two-tone icons (antd derives
-// their second tone at render time, so a CSS variable would not resolve). The dark theme's colors
-// are legible on both backgrounds.
 export const ThemeIndependentStatusColor = {
   success: darkGlobalToken.colorSuccess,
   warning: darkGlobalToken.colorWarning,
   error: darkGlobalToken.colorError,
+  info: ColorWKBlue,
+  neutral: "#a3a3a3",
 };
 
 // The heading scale WEBKNOSSOS has always used. It used to be enforced by global

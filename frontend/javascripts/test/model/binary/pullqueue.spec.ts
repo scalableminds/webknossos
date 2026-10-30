@@ -217,7 +217,7 @@ describe("PullQueue", () => {
     buckets,
   }) => {
     prepare();
-    buckets[0].dirty = true;
+    buckets[0].fullBucketSaveState.dirty = true;
     buckets[0].data = new Uint8Array(32 * 32 * 32);
     pullQueue.pull();
 

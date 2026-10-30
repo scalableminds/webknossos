@@ -26,7 +26,7 @@ class TemporalBucketManager {
     // updates, and its data is only needed for display.
     let count = 0;
     for (const bucket of this.pendingBuckets) {
-      if (bucket.dirty) count++;
+      if (bucket.fullBucketSaveState.dirty) count++;
     }
     return count;
   }
@@ -46,7 +46,7 @@ class TemporalBucketManager {
     const loadedPromise: Promise<void> = new Promise((resolve, _reject) => {
       const onLoadedOrMissingHandler = () => {
         this.pendingBuckets.delete(bucket);
-        if (bucket.dirty) {
+        if (bucket.fullBucketSaveState.dirty) {
           this.pushQueue.insert(bucket);
         }
 

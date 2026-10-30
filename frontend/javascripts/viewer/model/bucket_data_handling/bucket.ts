@@ -37,7 +37,7 @@ const DEFAULT_ENSURE_LOADED_RETRY_COUNT = 3;
 
 const warnMergeWithoutPendingOperations = throttle(() => {
   ErrorHandling.notify(
-    new Error("Bucket.merge() was called with an empty list of pending operations."),
+    new Error("Bucket.mergeWithFullBucket() was called with an empty list of pending operations."),
   );
 }, WARNING_THROTTLE_THRESHOLD);
 
@@ -126,22 +126,29 @@ export class DataBucket {
   visualizationColor: Color | null | undefined;
 
   // Saving edits as whole buckets (updateBucket), outside of collaborative volume
-  // annotation. Edits go through startDataMutation/endDataMutation, the push queue and
-  // undo snapshots. This will be removed together with updateBucket.
-  //
-  // If dirty, the bucket's data was potentially edited and needs to be
-  // saved to the server.
-  dirty: boolean;
-  // `dirtyCount` reflects how many pending snapshots of the bucket exist.
-  // A pending snapshot is a snapshot which was either
-  // - not yet saved (after successful saving the dirtyCount is decremented) or
-  // - not yet created by the PushQueue, since the PushQueue creates the snapshots
-  //   in a debounced manner
-  dirtyCount: number = 0;
-  // Local writes made while the bucket was loading. merge() replays them onto the
-  // backend's data.
-  pendingOperations: Array<PendingOperation> = [];
-  private maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
+  // annotation. Edits go through startDataMutationForFullBucket and
+  // endDataMutationForFullBucket, the push queue and undo snapshots. This will be removed
+  // together with updateBucket.
+  fullBucketSaveState: {
+    // If dirty, the bucket's data was potentially edited and needs to be
+    // saved to the server.
+    dirty: boolean;
+    // `dirtyCount` reflects how many pending snapshots of the bucket exist.
+    // A pending snapshot is a snapshot which was either
+    // - not yet saved (after successful saving the dirtyCount is decremented) or
+    // - not yet created by the PushQueue, since the PushQueue creates the snapshots
+    //   in a debounced manner
+    dirtyCount: number;
+    // Local writes made while the bucket was loading. mergeWithFullBucket() replays them
+    // onto the backend's data.
+    pendingOperations: Array<PendingOperation>;
+    maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
+  } = {
+    dirty: false,
+    dirtyCount: 0,
+    pendingOperations: [],
+    maybeUnmergedBucketLoadedPromise: null,
+  };
 
   // Saving edits as partial bucket updates (updateBucketPartial), in collaborative
   // volume annotation. Edits go through applyPartialChange and don't use the fields
@@ -166,13 +173,11 @@ export class DataBucket {
     cube: DataCube,
   ) {
     this.emitter = createNanoEvents();
-    this.maybeUnmergedBucketLoadedPromise = null;
     this.elementClass = elementClass;
     this.cube = cube;
     this.zoomedAddress = zoomedAddress;
     this.temporalBucketManager = temporalBucketManager;
     this.state = BucketStateEnum.UNREQUESTED;
-    this.dirty = false;
     this.data = null;
     this.rawBucketData = null;
 
@@ -228,9 +233,9 @@ export class DataBucket {
   mayBeGarbageCollected(respectNeededFlag: boolean): boolean {
     const mayBeCollected =
       (!respectNeededFlag || !this.isNeeded()) &&
-      !this.dirty &&
+      !this.fullBucketSaveState.dirty &&
       this.state !== BucketStateEnum.REQUESTED &&
-      this.dirtyCount === 0 &&
+      this.fullBucketSaveState.dirtyCount === 0 &&
       this.unsavedPartialUpdateCount === 0;
     return mayBeCollected;
   }
@@ -334,9 +339,9 @@ export class DataBucket {
      * very slow. See the docstring for Bucket.getOrCreateData() for alternatives.
      */
     const bucketData = await this.getDataForMutation();
-    this.startDataMutation();
+    this.startDataMutationForFullBucket();
     labelFunc(bucketData);
-    this.endDataMutation();
+    this.endDataMutationForFullBucket();
   }
 
   _markAndAddBucketForUndo() {
@@ -347,7 +352,7 @@ export class DataBucket {
     // saved to the undo stack, the snapshot only has to be created once
     // for each transaction.
     // This is ensured by checking bucketsAlreadyInUndoState.
-    this.dirty = true;
+    this.fullBucketSaveState.dirty = true;
 
     if (bucketsAlreadyInUndoState.has(this)) {
       return;
@@ -392,11 +397,12 @@ export class DataBucket {
 
     const dataClone = this.getCopyOfData();
 
-    if (this.needsBackendData() && this.maybeUnmergedBucketLoadedPromise == null) {
-      this.maybeUnmergedBucketLoadedPromise = new Promise((resolve, _reject) => {
+    const state = this.fullBucketSaveState;
+    if (this.needsBackendData() && state.maybeUnmergedBucketLoadedPromise == null) {
+      state.maybeUnmergedBucketLoadedPromise = new Promise((resolve, _reject) => {
         this.once("unmergedBucketDataLoaded", (data) => {
           // Once the bucket was loaded, maybeUnmergedBucketLoadedPromise can be null'ed
-          this.maybeUnmergedBucketLoadedPromise = null;
+          state.maybeUnmergedBucketLoadedPromise = null;
           resolve(data);
         });
       });
@@ -405,8 +411,8 @@ export class DataBucket {
     return new BucketSnapshot(
       this.zoomedAddress,
       dataClone,
-      this.maybeUnmergedBucketLoadedPromise,
-      this.pendingOperations.slice(),
+      state.maybeUnmergedBucketLoadedPromise,
+      state.pendingOperations.slice(),
       this.getTracingId(),
       this.elementClass,
     );
@@ -443,9 +449,9 @@ export class DataBucket {
   setData(newData: BucketDataArray, newPendingOperations: Array<PendingOperation>) {
     this.data = newData;
     this.invalidateValueSet();
-    this.pendingOperations = newPendingOperations;
-    this.dirty = true;
-    this.endDataMutation();
+    this.fullBucketSaveState.pendingOperations = newPendingOperations;
+    this.fullBucketSaveState.dirty = true;
+    this.endDataMutationForFullBucket();
     if (this.isNeeded()) this.cube.triggerNeededBucketDataChanged();
   }
 
@@ -497,26 +503,26 @@ export class DataBucket {
   async getDataForMutation(): Promise<BucketDataArray> {
     /*
      * You can use the returned data to inspect it. If you decide to mutate the data,
-     * please call startDataMutation() before the mutation and endDataMutation() afterwards.
+     * please call startDataMutationForFullBucket() before the mutation and endDataMutationForFullBucket() afterwards.
      * Example:
      *
      * const data = await bucket.getDataForMutation();
-     * bucket.startDataMutation();
+     * bucket.startDataMutationForFullBucket();
      * data[...] = ...;
-     * bucket.endDataMutation();
+     * bucket.endDataMutationForFullBucket();
      */
     await this.ensureLoaded();
     return this.getOrCreateData();
   }
 
-  startDataMutation(): void {
+  startDataMutationForFullBucket(): void {
     /*
      * See Bucket.getDataForMutation() for a safe way of using this method.
      */
     this._markAndAddBucketForUndo();
   }
 
-  endDataMutation(): void {
+  endDataMutationForFullBucket(): void {
     /*
      * See Bucket.getDataForMutation() for a safe way of using this method.
      */
@@ -573,9 +579,9 @@ export class DataBucket {
         channelCount * this.cube.getEffectiveBucketVoxelCount(),
       );
       this.applyPendingPartialChanges(emptyData);
-      if (this.dirty && this.data != null) {
+      if (this.fullBucketSaveState.dirty && this.data != null) {
         // Like for fetched data, the changes made while the bucket was requested come last.
-        this.merge(emptyData);
+        this.mergeWithFullBucket(emptyData);
       } else {
         this.data = emptyData;
       }
@@ -665,12 +671,12 @@ export class DataBucket {
         // event. That event is only needed for BucketSnapshots, which collaborative
         // volume annotation, the only source of these changes, doesn't use.
         this.applyPendingPartialChanges(data);
-        if (this.dirty) {
+        if (this.fullBucketSaveState.dirty) {
           // Clone the data for the unmergedBucketDataLoaded event,
           // as the following merge operation is done in-place.
           const dataClone = data.slice();
           this.trigger("unmergedBucketDataLoaded", dataClone);
-          this.merge(data);
+          this.mergeWithFullBucket(data);
         } else {
           this.data = data;
         }
@@ -725,7 +731,7 @@ export class DataBucket {
     switch (this.state) {
       case BucketStateEnum.LOADED:
       case BucketStateEnum.MISSING: {
-        this.dirty = false;
+        this.fullBucketSaveState.dirty = false;
         break;
       }
 
@@ -742,9 +748,9 @@ export class DataBucket {
     return this.cube.layerName;
   }
 
-  merge(fetchedData: BucketDataArray): void {
+  mergeWithFullBucket(fetchedData: BucketDataArray): void {
     if (this.data == null) {
-      throw new Error("Bucket.merge() called, but data does not exist.");
+      throw new Error("Bucket.mergeWithFullBucket() called, but data does not exist.");
     }
 
     // The frontend just received the backend's data for this bucket.
@@ -752,13 +758,13 @@ export class DataBucket {
     // and set it to this.data.
     // The old this.data is discarded/overwritten, since it was only
     // a preliminary version of the data.
-    for (const op of this.pendingOperations) {
+    for (const op of this.fullBucketSaveState.pendingOperations) {
       op(fetchedData);
     }
 
     this.data = fetchedData;
 
-    if (this.pendingOperations.length === 0) {
+    if (this.fullBucketSaveState.pendingOperations.length === 0) {
       // This can happen when mutating an unloaded bucket and then
       // undoing it. The bucket is still marked as dirty, even though
       // no pending operations are necessary (since the bucket was restored
@@ -767,7 +773,7 @@ export class DataBucket {
       warnMergeWithoutPendingOperations();
     }
 
-    this.pendingOperations = [];
+    this.fullBucketSaveState.pendingOperations = [];
   }
 
   // The following three methods can be used for debugging purposes.

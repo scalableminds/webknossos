@@ -198,7 +198,7 @@ describe("Volume save mode", () => {
 
     // No bucket is left dirty, so that none is kept from being evicted forever.
     const { cube } = Model.getSegmentationTracingLayer(VOLUME_TRACING_ID);
-    expect(cube.buckets.filter((bucket) => bucket.dirty)).toEqual([]);
+    expect(cube.buckets.filter((bucket) => bucket.fullBucketSaveState.dirty)).toEqual([]);
 
     // Undo is unavailable: the stroke stays.
     await dispatchUndoAsync(Store.dispatch);

@@ -393,9 +393,9 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
           continue;
         }
 
-        bucket.dirtyCount--;
+        bucket.fullBucketSaveState.dirtyCount--;
 
-        if (bucket.dirtyCount === 0) {
+        if (bucket.fullBucketSaveState.dirtyCount === 0) {
           bucket.markAsPushed();
         }
       } else if (updateAction.name === "updateBucketPartial") {

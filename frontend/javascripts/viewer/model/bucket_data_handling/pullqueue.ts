@@ -187,7 +187,7 @@ class PullQueue {
         if (bucket.type === "data" && bucket.isRequested()) {
           bucket.markAsFailed();
 
-          if (bucket.dirty) {
+          if (bucket.fullBucketSaveState.dirty) {
             bucket.addToPullQueueWithHighestPriority();
           }
         }
@@ -299,7 +299,7 @@ class PullQueue {
         if (didMarkAsRequested && sibling.isRequested()) {
           sibling.markAsFailed();
 
-          if (sibling.dirty) {
+          if (sibling.fullBucketSaveState.dirty) {
             sibling.addToPullQueueWithHighestPriority();
           }
         }

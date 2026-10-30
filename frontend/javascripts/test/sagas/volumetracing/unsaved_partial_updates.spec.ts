@@ -1,3 +1,4 @@
+import Deferred from "libs/async/deferred";
 import {
   createBucketResponseFunction,
   setupWebknossosForTestingWithRestrictions,
@@ -74,10 +75,7 @@ function holdBackFirstRequestOfBucket(
   context: WebknossosTestContext,
   respond: ReturnType<typeof createBucketResponseFunction>,
 ) {
-  let release = () => {}; // todop: use deferreds here?
-  const released = new Promise<void>((resolve) => {
-    release = resolve;
-  });
+  const released = new Deferred<void, never>();
   let requestCount = 0;
   vi.mocked(context.mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
     async (url: string, payload: { data: Array<RequestBucketInfo> }) => {
@@ -90,12 +88,12 @@ function holdBackFirstRequestOfBucket(
         );
       if (requestsBucket) {
         requestCount++;
-        if (requestCount === 1) await released;
+        if (requestCount === 1) await released.promise();
       }
       return respond(url, payload);
     },
   );
-  return { release, getRequestCount: () => requestCount };
+  return { release: () => released.resolve(), getRequestCount: () => requestCount };
 }
 
 // A bucket response in which neither the volume layer nor its fallback layer have

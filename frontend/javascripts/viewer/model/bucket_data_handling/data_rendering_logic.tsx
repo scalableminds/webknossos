@@ -147,6 +147,25 @@ export const LAYER_POOLS = [
 // that WebGL2 guarantees. Only the depth differs between pools.
 export const LAYER_POOL_TEXTURE_WIDTH = 2048;
 
+// Upper bound for the size of one pool texture. Some platforms limit single
+// allocations (e.g. Direct3D 11 on Windows: at most 2 GiB, or less with little
+// VRAM). If a pool would be larger, the capacity of all layers is lowered.
+// 1 GiB matches the largest texture that the previous per-layer textures used.
+// Set to Infinity to disable the limit.
+export const MAX_LAYER_POOL_TEXTURE_BYTES = 2 ** 30;
+
+const LAYER_POOL_BYTES_PER_TEXEL: Record<LayerPool, number> = {
+  [LayerPool.F32]: 16,
+  [LayerPool.U8]: 4,
+  [LayerPool.S8]: 4,
+  [LayerPool.U16]: 4,
+  [LayerPool.S16]: 4,
+};
+
+export function getLayerPoolSliceBytes(pool: LayerPool): number {
+  return LAYER_POOL_TEXTURE_WIDTH ** 2 * LAYER_POOL_BYTES_PER_TEXEL[pool];
+}
+
 // Shader uniform name and GLSL sampler type of each pool.
 export const LAYER_POOL_SAMPLERS: Record<LayerPool, { uniformName: string; glslType: string }> = {
   [LayerPool.F32]: { uniformName: "pool_f32_textures", glslType: "sampler2DArray" },
@@ -253,12 +272,13 @@ export function computeLayerPoolAssignments<Layer extends LayerLike & { name: st
 }
 
 // Lowers the per-layer bucket capacity until every pool fits into
-// maxPoolDepth slices (the GPU's MAX_ARRAY_TEXTURE_LAYERS) and every bucket
-// address fits into the lookup table.
+// maxPoolDepth slices (the GPU's MAX_ARRAY_TEXTURE_LAYERS) and maxPoolBytes,
+// and every bucket address fits into the lookup table.
 export function computeLayerPoolPlan<Layer extends LayerLike & { name: string }>(
   layers: Array<Layer>,
   requiredBucketCapacity: number,
   maxPoolDepth: number,
+  maxPoolBytes: number = MAX_LAYER_POOL_TEXTURE_BYTES,
 ): {
   bucketCapacity: number;
   assignmentByLayerName: Map<string, LayerPoolAssignment>;
@@ -268,6 +288,9 @@ export function computeLayerPoolPlan<Layer extends LayerLike & { name: string }>
   let plan = computeLayerPoolAssignments(layers, bucketCapacity);
   const getOverflowRatio = () => {
     const deepestPool = Math.max(...Object.values(plan.poolDepths));
+    const largestPoolBytes = Math.max(
+      ...LAYER_POOLS.map((pool) => plan.poolDepths[pool] * getLayerPoolSliceBytes(pool)),
+    );
     const largestAddressCount = Math.max(
       0,
       ...Array.from(plan.assignmentByLayerName.values()).map(
@@ -275,7 +298,11 @@ export function computeLayerPoolPlan<Layer extends LayerLike & { name: string }>
           (baseSlice + dataTextureCount) * bucketsPerSlice,
       ),
     );
-    return Math.max(deepestPool / maxPoolDepth, largestAddressCount / (MAX_BUCKET_ADDRESS + 1));
+    return Math.max(
+      deepestPool / maxPoolDepth,
+      largestPoolBytes / maxPoolBytes,
+      largestAddressCount / (MAX_BUCKET_ADDRESS + 1),
+    );
   };
   let overflowRatio = getOverflowRatio();
   while (overflowRatio > 1 && bucketCapacity > 1) {

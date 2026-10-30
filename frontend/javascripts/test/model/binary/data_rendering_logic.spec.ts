@@ -8,7 +8,9 @@ import {
   getBucketCountSoftLimitPerLayer,
   getBucketHeightInTexture,
   getGpuBucketVoxelCountForLayer,
+  getLayerPoolSliceBytes,
   getRequiredBucketCapacityPerLayer,
+  LAYER_POOLS,
   LayerPool,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { describe, expect, it } from "vitest";
@@ -184,14 +186,15 @@ describe("computeLayerPoolPlan", () => {
   }));
   const ultraCapacity = getRequiredBucketCapacityPerLayer(16, uint64Layers.length);
 
+  // The depth and address tests disable the byte limit to test their own limit in isolation.
   it("keeps the capacity if all pools fit", () => {
-    const plan = computeLayerPoolPlan(uint64Layers, ultraCapacity, 2048);
+    const plan = computeLayerPoolPlan(uint64Layers, ultraCapacity, 2048, Infinity);
     expect(plan.bucketCapacity).toBe(ultraCapacity);
     expect(Math.max(...Object.values(plan.poolDepths))).toBe(316);
   });
 
   it("lowers the capacity until the deepest pool fits", () => {
-    const plan = computeLayerPoolPlan(uint64Layers, ultraCapacity, 256);
+    const plan = computeLayerPoolPlan(uint64Layers, ultraCapacity, 256, Infinity);
     expect(plan.bucketCapacity).toBeLessThan(ultraCapacity);
     expect(Math.max(...Object.values(plan.poolDepths))).toBeLessThanOrEqual(256);
   });
@@ -209,7 +212,7 @@ describe("computeLayerPoolPlan", () => {
       },
     ];
     const requiredBucketCapacity = 70000;
-    const plan = computeLayerPoolPlan(layers, requiredBucketCapacity, 4096);
+    const plan = computeLayerPoolPlan(layers, requiredBucketCapacity, 4096, Infinity);
     expect(plan.bucketCapacity).toBeLessThan(requiredBucketCapacity);
     for (const {
       baseSlice,
@@ -218,5 +221,20 @@ describe("computeLayerPoolPlan", () => {
     } of plan.assignmentByLayerName.values()) {
       expect((baseSlice + dataTextureCount) * bucketsPerSlice).toBeLessThanOrEqual(2 ** 21 - 1);
     }
+  });
+
+  it("lowers the capacity until the largest pool fits maxPoolBytes, unless disabled", () => {
+    const twoUint64Layers = uint64Layers.slice(0, 2);
+    const capacity = getRequiredBucketCapacityPerLayer(16, twoUint64Layers.length);
+    const largestPoolBytes = (plan: ReturnType<typeof computeLayerPoolPlan>) =>
+      Math.max(...LAYER_POOLS.map((pool) => plan.poolDepths[pool] * getLayerPoolSliceBytes(pool)));
+
+    const limited = computeLayerPoolPlan(twoUint64Layers, capacity, 2048, 2 ** 30);
+    expect(limited.bucketCapacity).toBeLessThan(capacity);
+    expect(largestPoolBytes(limited)).toBeLessThanOrEqual(2 ** 30);
+
+    const unlimited = computeLayerPoolPlan(twoUint64Layers, capacity, 2048, Infinity);
+    expect(unlimited.bucketCapacity).toBe(capacity);
+    expect(largestPoolBytes(unlimited)).toBeGreaterThan(2 ** 30);
   });
 });

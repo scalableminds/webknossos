@@ -1,4 +1,3 @@
-import { unwrapOrThrow } from "admin/api/api_result";
 import LoginView from "admin/auth/login_view";
 import {
   isFeatureAllowedByPricingPlan,
@@ -6,10 +5,10 @@ import {
 } from "admin/organization/pricing_plan_utils";
 import { getUnversionedAnnotationInformation } from "admin/rest_api";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
-import { useWkSelector } from "libs/react_hooks";
+import { useApi, useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrManager } from "libs/utils";
 import type React from "react";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo } from "react";
 import { useLocation, useParams } from "react-router";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 
@@ -31,33 +30,23 @@ function SecuredRoute({
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const activeUser = useWkSelector((state) => state.activeUser);
   const isAuthenticated = activeUser !== null;
-  const [isSecuredResourcePubliclyAvailable, setIsSecuredResourcePubliclyAvailable] =
-    useState(false);
-
-  const getIsResourcePublic = useCallback(async () => {
-    if (id) {
-      try {
-        const annotationInformation = unwrapOrThrow(
-          await getUnversionedAnnotationInformation(id || ""),
-        );
-        return annotationInformation.visibility === "Public";
-      } catch (_ex) {
-        // Annotation could not be found
-      }
-    }
-
-    return false;
-  }, [id]);
-
-  useEffect(() => {
-    async function fetchData() {
-      if (!isAuthenticated && checkIfResourceIsPublic) {
-        const isAdditionallyAuthenticated = await getIsResourcePublic();
-        setIsSecuredResourcePubliclyAvailable(isAdditionallyAuthenticated);
-      }
-    }
-    fetchData();
-  }, [isAuthenticated, getIsResourcePublic, checkIfResourceIsPublic]);
+  // If the annotation cannot be found, the query fails silently and the resource is
+  // treated as not public. Cached data is ignored until a fresh response arrived, since
+  // the visibility might have changed in the meantime.
+  const {
+    data: annotationInformation,
+    isFetchedAfterMount,
+    isSuccess,
+  } = useApi({
+    // Separate key from the merge modal, whose cached data is persisted.
+    queryKey: ["unversionedAnnotation", id, "visibilityCheck"],
+    queryFn: () => getUnversionedAnnotationInformation(id as string),
+    enabled: !isAuthenticated && checkIfResourceIsPublic && !!id,
+    refetchOnWindowFocus: false,
+    meta: { persist: false },
+  });
+  const isSecuredResourcePubliclyAvailable =
+    isFetchedAfterMount && isSuccess && annotationInformation?.visibility === "Public";
 
   const isCompletelyAuthenticated = checkIfResourceIsPublic
     ? isAuthenticated || isSecuredResourcePubliclyAvailable

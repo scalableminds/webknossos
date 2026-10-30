@@ -1,9 +1,10 @@
 /* eslint-disable no-eval */
+import { getScripts } from "admin/rest_api";
 import { App, Input, Modal, Select, Spin } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { fetchGistContent } from "libs/gist";
-import { makeComponentLazy, useGuardedFetch } from "libs/react_helpers";
-import Request from "libs/request";
+import { makeComponentLazy } from "libs/react_helpers";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { alert } from "libs/window";
 import messages from "messages";
 import type React from "react";
@@ -37,10 +38,12 @@ const UserScriptsModalViewInner: React.FC<UserScriptsModalViewProps> = ({ onOK, 
   const [selectedScript, setSelectedScript] = useState<string | null | undefined>(undefined);
   const [isLoadingScriptContent, setIsLoadingScriptContent] = useState(false);
 
-  const [scripts, isLoadingScripts] = useGuardedFetch<Script[]>(
-    () => Request.receiveJSON("/api/scripts", { showErrorToast: false }),
-    [],
-    [],
+  const { data: scripts = [], isLoading: isLoadingScripts } = useQueryWithErrorHandling(
+    {
+      queryKey: ["scripts"],
+      queryFn: getScripts,
+      refetchOnWindowFocus: false,
+    },
     "Could not load user scripts.",
   );
 

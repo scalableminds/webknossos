@@ -1,10 +1,11 @@
 import { ExportOutlined } from "@ant-design/icons";
-import { Tooltip } from "antd";
+import { Button, Tooltip } from "antd";
 import dayjs from "dayjs";
 import { formatDateMedium, formatDuration, formatTimeInterval } from "libs/format_utils";
 import { useUpdateEvery } from "libs/react_hooks";
 import { Link } from "react-router";
 import {
+  type VoxelyticsArtifactConfig,
   VoxelyticsRunState,
   type VoxelyticsTaskConfigWithName,
   type VoxelyticsTaskInfo,
@@ -200,5 +201,48 @@ export function TaskPanelLabel({
         <TaskStateTag taskInfo={taskInfo} />
       </span>
     </div>
+  );
+}
+
+function isWebknossosUrl(url: string) {
+  try {
+    const { hostname, host } = new URL(url);
+    return (
+      hostname === "webknossos.org" ||
+      hostname.endsWith(".webknossos.org") ||
+      host === window.location.host
+    );
+  } catch {
+    return false;
+  }
+}
+
+// Returns the first link of the task's output artifacts which points to WEBKNOSSOS.
+export function getWebknossosLinkOfArtifacts(
+  artifacts: Record<string, VoxelyticsArtifactConfig>,
+): string | null {
+  for (const artifact of Object.values(artifacts)) {
+    const links = Object.values(artifact.metadata?.links ?? {});
+    const webknossosLink = links.find(isWebknossosUrl);
+    if (webknossosLink != null) {
+      return webknossosLink;
+    }
+  }
+  return null;
+}
+
+export function OpenInWebknossosButton({ url }: { url: string }) {
+  return (
+    <Button
+      size="small"
+      icon={<ExportOutlined />}
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      // Prevent the click from toggling the collapse panel.
+      onClick={(event) => event.stopPropagation()}
+    >
+      Open in WEBKNOSSOS
+    </Button>
   );
 }

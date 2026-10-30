@@ -12,6 +12,7 @@ use std::{
 };
 
 use serde_json::Value;
+use webknossos_common::json::string_enum;
 
 use crate::{
     error::{DsError, DsResult, blocking},
@@ -28,35 +29,14 @@ pub const UNPACKED_DIR: &str = ".unpacked";
 pub const FOR_CONVERSION_DIR: &str = ".forConversion";
 pub const CONVERTING_DIR: &str = ".converting";
 
-/// Scala `UploadDomain`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum UploadDomain {
-    Dataset,
-    Mag,
-    Attachment,
-}
-
-impl UploadDomain {
-    pub const ALL: [Self; 3] = [Self::Dataset, Self::Mag, Self::Attachment];
-
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Dataset => "dataset",
-            Self::Mag => "mag",
-            Self::Attachment => "attachment",
-        }
+string_enum!(
+    /// Scala `UploadDomain`.
+    UploadDomain {
+        Dataset => "dataset",
+        Mag => "mag",
+        Attachment => "attachment",
     }
-
-    pub fn from_name(name: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|d| d.as_str() == name)
-    }
-}
-
-impl std::fmt::Display for UploadDomain {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
+);
 
 /// Scala `UploadMetadataStore` and its domain subclasses.
 #[derive(Clone)]
@@ -931,7 +911,7 @@ impl UploadService {
             }
             let mut upload_dirs: Vec<(UploadDomain, PathBuf)> = Vec::new();
             for orga_dir in orga_dirs {
-                for domain in UploadDomain::ALL {
+                for &domain in UploadDomain::ALL {
                     let uploading = orga_dir.join(UPLOADING_DIR).join(domain.as_str());
                     upload_dirs.extend(subdirectories(&uploading).into_iter().map(|d| (domain, d)));
                 }
@@ -947,7 +927,7 @@ impl UploadService {
                 .to_string_lossy()
                 .into_owned();
             let mut known = false;
-            for any in UploadDomain::ALL {
+            for &any in UploadDomain::ALL {
                 known |= self.is_known_upload(&upload_id, any).await?;
             }
             if known {

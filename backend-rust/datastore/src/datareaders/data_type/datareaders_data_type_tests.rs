@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn names_roundtrip_and_sizes() {
-    for t in ArrayDataType::ALL {
+    for &t in ArrayDataType::ALL {
         assert_eq!(ArrayDataType::from_name(t.as_str()), Some(t));
     }
     assert_eq!(ArrayDataType::from_name("uint8"), None);

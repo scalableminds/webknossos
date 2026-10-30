@@ -4,61 +4,28 @@
 use std::fmt;
 
 use serde_json::Value;
+use webknossos_common::json::string_enum;
 
 use crate::models::ElementClass;
 
-/// Scala `ArrayDataType` (enumeration value names are the wire names, e.g. `u2`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ArrayDataType {
-    F8,
-    F4,
-    I8,
-    U8,
-    I4,
-    U4,
-    I2,
-    U2,
-    I1,
-    U1,
-    Bool,
-}
+string_enum!(
+    /// Scala `ArrayDataType` (enumeration value names are the wire names, e.g. `u2`).
+    ArrayDataType {
+        F8 => "f8",
+        F4 => "f4",
+        I8 => "i8",
+        U8 => "u8",
+        I4 => "i4",
+        U4 => "u4",
+        I2 => "i2",
+        U2 => "u2",
+        I1 => "i1",
+        U1 => "u1",
+        Bool => "bool",
+    }
+);
 
 impl ArrayDataType {
-    pub const ALL: [ArrayDataType; 11] = [
-        Self::F8,
-        Self::F4,
-        Self::I8,
-        Self::U8,
-        Self::I4,
-        Self::U4,
-        Self::I2,
-        Self::U2,
-        Self::I1,
-        Self::U1,
-        Self::Bool,
-    ];
-
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::F8 => "f8",
-            Self::F4 => "f4",
-            Self::I8 => "i8",
-            Self::U8 => "u8",
-            Self::I4 => "i4",
-            Self::U4 => "u4",
-            Self::I2 => "i2",
-            Self::U2 => "u2",
-            Self::I1 => "i1",
-            Self::U1 => "u1",
-            Self::Bool => "bool",
-        }
-    }
-
-    /// Scala `ArrayDataType.fromString` (exact value name).
-    pub fn from_name(s: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|t| t.as_str() == s)
-    }
-
     /// Scala `bytesPerElement`.
     pub fn bytes_per_element(self) -> usize {
         match self {
@@ -167,68 +134,22 @@ impl ArrayDataType {
     }
 }
 
-impl fmt::Display for ArrayDataType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
+string_enum!(
+    /// Scala `ArrayOrder` (memory layout of a chunk: row-major `C` or column-major `F`).
+    ArrayOrder {
+        F => "F",
+        C => "C",
     }
-}
+);
 
-/// Scala `ArrayOrder` (memory layout of a chunk: row-major `C` or column-major `F`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ArrayOrder {
-    F,
-    C,
-}
-
-impl ArrayOrder {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::F => "F",
-            Self::C => "C",
-        }
+string_enum!(
+    /// Scala `DimensionSeparator`.
+    DimensionSeparator {
+        Slash => "/",
+        Dot => ".",
+        Underscore => "_",
     }
-
-    pub fn from_name(s: &str) -> Option<Self> {
-        match s {
-            "F" => Some(Self::F),
-            "C" => Some(Self::C),
-            _ => None,
-        }
-    }
-}
-
-/// Scala `DimensionSeparator`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum DimensionSeparator {
-    Slash,
-    Dot,
-    Underscore,
-}
-
-impl DimensionSeparator {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Slash => "/",
-            Self::Dot => ".",
-            Self::Underscore => "_",
-        }
-    }
-
-    pub fn from_name(s: &str) -> Option<Self> {
-        match s {
-            "/" => Some(Self::Slash),
-            "." => Some(Self::Dot),
-            "_" => Some(Self::Underscore),
-            _ => None,
-        }
-    }
-}
-
-impl fmt::Display for DimensionSeparator {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
+);
 
 /// Byte order of multi-byte chunk elements (`java.nio.ByteOrder`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

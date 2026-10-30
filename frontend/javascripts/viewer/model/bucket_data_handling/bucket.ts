@@ -699,16 +699,18 @@ export class DataBucket {
         // requested at, so it lacks the partial updates since then and the ones not
         // saved yet. The changes made while the bucket was requested are newer, so
         // merge applies them afterwards.
-        const missingRuns = this.takeRunsMissingFromResponse();
+        // The unmergedBucketDataLoaded event below gets the missing partial updates, too,
+        // as they aren't the user's local changes. That is only for consistency: the
+        // event is only needed for BucketSnapshots, which collaborative volume annotation
+        // doesn't use.
+        applyRuns(data, this.takeRunsMissingFromResponse());
         if (this.dirty) {
           // Clone the data for the unmergedBucketDataLoaded event,
           // as the following merge operation is done in-place.
           const dataClone = data.slice();
-          this.trigger("unmergedBucketDataLoaded", dataClone); // todop: is it correct that missingRuns is not already applied for the trigger??
-          applyRuns(data, missingRuns);
+          this.trigger("unmergedBucketDataLoaded", dataClone);
           this.merge(data);
         } else {
-          applyRuns(data, missingRuns);
           this.data = data;
         }
         this.invalidateValueSet();

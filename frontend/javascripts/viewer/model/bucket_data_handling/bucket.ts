@@ -587,7 +587,10 @@ export class DataBucket {
     switch (this.state) {
       case BucketStateEnum.UNREQUESTED: {
         this.state = BucketStateEnum.REQUESTED;
-        this.partialUpdateRunsSinceRequest = []; // todop: is this save?
+        // The request asks for the current annotation version, which includes everything
+        // recorded for an earlier request whose data never arrived (e.g., a failed one).
+        // The version is read in the same synchronous pull, so nothing gets lost here.
+        this.partialUpdateRunsSinceRequest = [];
         break;
       }
 

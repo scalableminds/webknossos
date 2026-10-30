@@ -101,8 +101,34 @@ export class DataBucket {
   readonly type = "data" as const;
   readonly elementClass: ElementClass;
   readonly zoomedAddress: BucketAddress;
+  cube: DataCube;
+  temporalBucketManager: TemporalBucketManager;
+  _fallbackBucket: Bucket | null | undefined;
+
+  // Loading and caching
+  state: BucketStateEnumType;
+  data: BucketDataArray | null | undefined;
+  // The full wire-format buffer `data` was extracted from (for most layers this is identical to
+  // `data`; for a t-recycling layer's bucket, this is the *shared* 32-t-slice buffer.
+  rawBucketData: BucketDataArray | null | undefined;
+  // The bucket-picker tick during which this bucket was last marked as needed.
+  lastNeededTick: number = -1;
+  // Especially, for segmentation buckets, it can be interesting to
+  // know whether a certain ID is contained in this bucket. To
+  // speed up such requests a cached set of the contained values
+  // can be stored in cachedValueSet.
+  cachedValueSet: Set<number> | Set<bigint> | null = null;
+
+  // Events and debug visualization
+  emitter: Emitter;
+  throttledTriggerLabeled: () => void;
   visualizedMesh: Record<string, any> | null | undefined;
   visualizationColor: Color | null | undefined;
+
+  // Saving edits as whole buckets (updateBucket), outside of collaborative volume
+  // annotation. Edits go through startDataMutation/endDataMutation, the push queue and
+  // undo snapshots. This will be removed together with updateBucket.
+  //
   // If dirty, the bucket's data was potentially edited and needs to be
   // saved to the server.
   dirty: boolean;
@@ -112,39 +138,25 @@ export class DataBucket {
   // - not yet created by the PushQueue, since the PushQueue creates the snapshots
   //   in a debounced manner
   dirtyCount: number = 0;
-  // Local writes made while the bucket was loading, for edits that are saved as whole
-  // buckets. merge() replays them onto the backend's data. Collaborative volume
-  // annotation uses pendingPartialChanges instead.
+  // Local writes made while the bucket was loading. merge() replays them onto the
+  // backend's data.
   pendingOperations: Array<PendingOperation> = [];
-  // For collaborative volume annotation, whose edits are saved as partial bucket
-  // updates: the changes made while the bucket isn't loaded, in the order they were
-  // applied. These are the user's local writes (saved or not), others' partial
-  // updates, and the user's own ones re-applied during rebasing. Once the backend's
-  // data arrives, they are applied to it. As they are absolute writes and all changes
-  // since the bucket was created are kept, it doesn't matter which of them the data
-  // already contains (see applyPartialChange).
+  private maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
+
+  // Saving edits as partial bucket updates (updateBucketPartial), in collaborative
+  // volume annotation. Edits go through applyPartialChange and don't use the fields
+  // above.
+  //
+  // The changes made while the bucket isn't loaded, in the order they were applied.
+  // These are the user's local writes (saved or not), others' partial updates, and
+  // the user's own ones re-applied during rebasing. Once the backend's data arrives,
+  // they are applied to it. As they are absolute writes and all changes since the
+  // bucket was created are kept, it doesn't matter which of them the data already
+  // contains (see applyPartialChange).
   private pendingPartialChanges: Map<object, (data: BucketDataArray) => void> = new Map();
   // How many partial updates of this bucket are in the save queue. While there are
   // any, the bucket isn't garbage collected: fetched again, its data would lack them.
   unsavedPartialUpdateCount: number = 0;
-  state: BucketStateEnumType;
-  // The bucket-picker tick during which this bucket was last marked as needed.
-  lastNeededTick: number = -1;
-  data: BucketDataArray | null | undefined;
-  // The full wire-format buffer `data` was extracted from (for most layers this is identical to
-  // `data`; for a t-recycling layer's bucket, this is the *shared* 32-t-slice buffer.
-  rawBucketData: BucketDataArray | null | undefined;
-  temporalBucketManager: TemporalBucketManager;
-  cube: DataCube;
-  _fallbackBucket: Bucket | null | undefined;
-  throttledTriggerLabeled: () => void;
-  emitter: Emitter;
-  private maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
-  // Especially, for segmentation buckets, it can be interesting to
-  // know whether a certain ID is contained in this bucket. To
-  // speed up such requests a cached set of the contained values
-  // can be stored in cachedValueSet.
-  cachedValueSet: Set<number> | Set<bigint> | null = null;
 
   constructor(
     elementClass: ElementClass,

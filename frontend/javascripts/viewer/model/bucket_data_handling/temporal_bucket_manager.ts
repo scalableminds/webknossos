@@ -21,9 +21,9 @@ class TemporalBucketManager {
 
   getCount(): number {
     // Counts the buckets whose saving waits for their backend data. That's only the
-    // dirty ones: a bucket edited in collaborative volume annotation isn't, as its
-    // edits are saved as partial updates, and its data is only needed for display.
-    // todop: clarify that dirty is really only ever set when savedViaPartialUpdates is false.
+    // dirty ones, as only edits saved as whole buckets set dirty (see DataBucket). A
+    // bucket edited in collaborative volume annotation saves its edits as partial
+    // updates, and its data is only needed for display.
     let count = 0;
     for (const bucket of this.pendingBuckets) {
       if (bucket.dirty) count++;

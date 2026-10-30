@@ -2,7 +2,7 @@ import { updateDatasetConfiguration, updateUserConfiguration } from "admin/rest_
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
-import { all, call, debounce, delay, put, retry, takeEvery, takeLatest } from "typed-redux-saga";
+import { all, call, debounce, delay, put, takeEvery, takeLatest } from "typed-redux-saga";
 import Constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import {
   type SetViewModeAction,
@@ -10,10 +10,8 @@ import {
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
 import { type Saga, select, take } from "viewer/model/sagas/effect_generators";
-import {
-  SETTINGS_MAX_RETRY_COUNT,
-  SETTINGS_RETRY_DELAY,
-} from "viewer/model/sagas/saving/save_saga_constants";
+import { callWithAbortSignal } from "viewer/model/sagas/saga_helpers";
+import { SETTINGS_RETRY_OPTIONS } from "viewer/model/sagas/saving/save_saga_constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
 import { mayEditAnnotation } from "../accessors/annotation_accessor";
 import { getMappingFromLayerNameToBaseDatasetLayerName } from "../accessors/dataset_accessor";
@@ -24,12 +22,17 @@ function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
   const userConfiguration = yield* select((state) => state.userConfiguration);
-  yield* retry(
-    SETTINGS_MAX_RETRY_COUNT,
-    SETTINGS_RETRY_DELAY,
+  const result = yield* call(
     updateUserConfiguration,
     userConfiguration,
+    {},
+    SETTINGS_RETRY_OPTIONS,
   );
+  if (!result.ok) {
+    // The user was already notified by updateUserConfiguration. The next settings
+    // change will try again.
+    yield* call({ context: ErrorHandling, fn: ErrorHandling.notify }, result.error.cause as Error);
+  }
 }
 
 function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration): Saga<void> {
@@ -47,26 +50,22 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
     layerNamesOfDatasetToFallbackNameMaybe,
   );
 
-  try {
-    yield* retry(
-      SETTINGS_MAX_RETRY_COUNT,
-      SETTINGS_RETRY_DELAY,
-      updateDatasetConfiguration,
+  // Errors in view mode are not that important here and may annoy the user.
+  // Therefore, no error toast is shown in that case.
+  const isViewMode = yield* select((state) => state.annotation.annotationType === "View");
+  // If a newer settings change supersedes this one (takeLatest), the pending request and
+  // its retries are aborted so that they cannot overwrite the newer settings.
+  const result = yield* callWithAbortSignal((signal) =>
+    updateDatasetConfiguration(
       dataset.id,
       maybeMaskedDatasetConfiguration,
-    );
-  } catch (error) {
-    // We catch errors in view mode as they are not that important here and may annoy the user.
-    const annotation = yield* select((state) => state.annotation);
-    const isViewMode = annotation.annotationType === "View";
-
-    if (!isViewMode) {
-      throw error;
-    } else {
-      // Still log the error to airbrake in view mode.
-      // @ts-expect-error
-      yield* call({ context: ErrorHandling, fn: ErrorHandling.notify }, error);
-    }
+      { showErrorToast: !isViewMode, signal },
+      SETTINGS_RETRY_OPTIONS,
+    ),
+  );
+  if (!result.ok) {
+    // Still log the error to airbrake. The next settings change will try again.
+    yield* call({ context: ErrorHandling, fn: ErrorHandling.notify }, result.error.cause as Error);
   }
 }
 

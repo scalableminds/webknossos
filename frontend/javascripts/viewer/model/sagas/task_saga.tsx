@@ -148,8 +148,12 @@ export default function* watchTasksAsync(): Saga<void> {
   if (isDifferentTaskType) {
     yield* call(maybeShowNewTaskTypeModal, task.type);
     yield* call(maybeShowRecommendedConfiguration, task.type);
-    const fullUser = yield* call(updateLastTaskTypeIdOfUser, activeUser.id, task.type.id);
-    yield* put(setActiveUserAction(fullUser));
+    const result = yield* call(updateLastTaskTypeIdOfUser, activeUser.id, task.type.id);
+    // If the request failed, the user was already notified. Not storing the last task type
+    // only means that the task type modal will be shown again next time.
+    if (result.ok) {
+      yield* put(setActiveUserAction(result.value));
+    }
   }
 }
 export function* warnAboutMagRestriction(): Saga<void> {

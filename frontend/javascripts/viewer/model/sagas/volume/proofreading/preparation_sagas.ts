@@ -344,15 +344,22 @@ export function* getPositionForSegmentId(
     // Should not happen in proofreading.
     throw new Error("Could not find fallback layer or editable mapping.");
   }
-  const position = yield* call(
+  const result = yield* call(
     getPositionForSegmentInAgglomerate,
     dataStoreUrl,
     dataset.id,
     volumeTracing.fallbackLayer,
     editableMapping.baseMappingName,
     segmentId,
+    // The SoftError below is shown as a warning instead.
+    { showErrorToast: false },
   );
-  return position;
+  if (!result.ok) {
+    // A SoftError only aborts the current proofreading operation (see runSagaAndCatchSoftError)
+    // instead of crashing the proofreading saga.
+    throw new SoftError(`Could not determine the position of segment ${segmentId}.`);
+  }
+  return result.value;
 }
 
 export function* gatherInfoForOperation(

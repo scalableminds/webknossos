@@ -6,7 +6,7 @@ import { hasUrlParam } from "libs/utils";
 import isEmpty from "lodash-es/isEmpty";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
-import { call, delay, put, retry, take, takeLatest } from "typed-redux-saga";
+import { call, delay, put, take, takeLatest } from "typed-redux-saga";
 import Constants from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
 import { getMappingInfo, is2dDataset } from "viewer/model/accessors/dataset_accessor";
@@ -14,10 +14,8 @@ import type { Action } from "viewer/model/actions/actions";
 import { setVersionRestoreVisibilityAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
-import {
-  SETTINGS_MAX_RETRY_COUNT,
-  SETTINGS_RETRY_DELAY,
-} from "viewer/model/sagas/saving/save_saga_constants";
+import { callWithAbortSignal } from "viewer/model/sagas/saga_helpers";
+import { SETTINGS_RETRY_OPTIONS } from "viewer/model/sagas/saving/save_saga_constants";
 import { Model } from "viewer/singletons";
 import Store from "viewer/store";
 import { determineLayout } from "viewer/view/layouting/default_layout_configs";
@@ -54,21 +52,23 @@ function* pushAnnotationUpdateAsync(action: Action) {
     return;
   }
 
-  try {
-    yield* retry(
-      SETTINGS_MAX_RETRY_COUNT,
-      SETTINGS_RETRY_DELAY,
-      editAnnotation,
+  // If a newer update supersedes this one (takeLatest), the pending request and its
+  // retries are aborted so that they cannot overwrite the newer properties.
+  const result = yield* callWithAbortSignal((signal) =>
+    editAnnotation(
       annotation.annotationId,
       annotation.annotationType,
       editObject,
-    );
-  } catch (error) {
+      { showErrorToast: false, signal },
+      SETTINGS_RETRY_OPTIONS,
+    ),
+  );
+  if (!result.ok) {
     // If the annotation cannot be saved repeatedly (retries will continue for 5 minutes),
     // we will only notify the user if the name, visibility or description could not be changed.
     // Otherwise, we won't notify the user and won't let the sagas crash as the actual skeleton/volume
     // tracings are handled separately.
-    ErrorHandling.notify(error as Error);
+    ErrorHandling.notify(result.error.cause as Error);
     if (
       ["SET_ANNOTATION_NAME", "SET_ANNOTATION_VISIBILITY", "SET_ANNOTATION_DESCRIPTION"].includes(
         action.type,
@@ -76,7 +76,7 @@ function* pushAnnotationUpdateAsync(action: Action) {
     ) {
       Toast.error("Could not update annotation property. Please try again.");
     }
-    console.error(error);
+    console.error(result.error.cause);
   }
 }
 

@@ -18,16 +18,23 @@ describe("callWithAbortSignal", () => {
     expect(receivedSignal!.aborted).toBe(true);
   });
 
-  it("should not abort the signal when the call finishes normally", async () => {
-    let receivedSignal: AbortSignal | null = null;
+  it("should not continue the cancelled saga", async () => {
+    let continuedAfterCancel = false;
     const task = runSaga({}, function* () {
-      return yield* callWithAbortSignal(async (signal) => {
-        receivedSignal = signal;
-        return "value";
-      });
+      yield* callWithAbortSignal(() => new Promise<void>(() => {}));
+      continuedAfterCancel = true;
+    });
+
+    task.cancel();
+    await task.toPromise();
+    expect(continuedAfterCancel).toBe(false);
+  });
+
+  it("should return the value of fn", async () => {
+    const task = runSaga({}, function* () {
+      return yield* callWithAbortSignal(async () => "value");
     });
 
     expect(await task.toPromise()).toBe("value");
-    expect(receivedSignal!.aborted).toBe(false);
   });
 });

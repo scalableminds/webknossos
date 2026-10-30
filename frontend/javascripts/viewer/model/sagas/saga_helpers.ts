@@ -3,7 +3,7 @@ import { Modal } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import { ModalWidth } from "theme";
-import { call, cancelled, delay, fork, put, race, spawn, take, takeEvery } from "typed-redux-saga";
+import { call, delay, fork, put, race, spawn, take, takeEvery } from "typed-redux-saga";
 import { MappingStatusEnum } from "viewer/constants";
 import { type Action, escalateErrorAction } from "viewer/model/actions/actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
@@ -277,8 +277,10 @@ export function* callWithAbortSignal<T>(fn: (signal: AbortSignal) => Promise<T>)
   try {
     return yield* call(fn, abortController.signal);
   } finally {
-    if (yield* cancelled()) {
-      abortController.abort();
-    }
+    // Don't yield an effect here (e.g., cancelled()): Callers delegate to this generator
+    // via yield*, so a cancelled caller would resume normally afterwards (see runWithCleanup
+    // in operation_context_saga.ts). Aborting unconditionally is fine, because the signal
+    // doesn't have any effect anymore once fn has finished.
+    abortController.abort();
   }
 }

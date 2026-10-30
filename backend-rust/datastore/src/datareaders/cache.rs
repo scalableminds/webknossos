@@ -6,7 +6,8 @@
 //! failures are not cached. See [`crate::cache`] for the moka-backed implementation and its
 //! eviction deviation.
 
-use std::{future::Future, sync::Arc, time::Duration};
+use crate::cache::{DEFAULT_TIME_TO_IDLE, DEFAULT_TIME_TO_LIVE};
+use std::{future::Future, sync::Arc};
 
 use super::chunk::ChunkContents;
 use crate::{
@@ -16,8 +17,6 @@ use crate::{
 
 /// Scala default `datastore.cache.imageArrayChunks.maxSizeBytes`.
 pub const DEFAULT_MAX_SIZE_BYTES: u64 = 2_000_000_000;
-const TIME_TO_LIVE: Duration = Duration::from_secs(2 * 60 * 60);
-const TIME_TO_IDLE: Duration = Duration::from_secs(60 * 60);
 
 /// A loaded chunk with its weight in kilobytes (the weight depends on the array header, which
 /// only the loader knows).
@@ -65,8 +64,8 @@ impl ChunkContentsCache {
         Self {
             cache: AlfuCache::weighted(
                 max_size_bytes / 1000,
-                TIME_TO_LIVE,
-                TIME_TO_IDLE,
+                DEFAULT_TIME_TO_LIVE,
+                DEFAULT_TIME_TO_IDLE,
                 |chunk: &WeighedChunk| chunk.weight_kb,
             ),
         }

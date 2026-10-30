@@ -1,7 +1,8 @@
 //! Scala connectome readers: CSR/CSC agglomerate pairs and ordered synapse attributes.
+use crate::cache::{DEFAULT_TIME_TO_IDLE, DEFAULT_TIME_TO_LIVE};
 use crate::datareaders::{ArrayAxes, ArraySource};
 use crate::{
-    clients::wk::AlfuCache,
+    cache::AlfuCache,
     datareaders::{
         ChunkContentsCache, DatasetArray,
         hdf5::Hdf5Reader,
@@ -20,7 +21,6 @@ use serde_json::Value;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
-    time::Duration,
 };
 type CacheKey = (DataSourceId, String, String, UPath, Option<String>);
 #[derive(Clone)]
@@ -92,7 +92,7 @@ impl ConnectomeService {
         Self {
             vaults,
             chunks,
-            hdf5: AlfuCache::new(30, Duration::from_secs(7200), Duration::from_secs(3600)),
+            hdf5: AlfuCache::new(30, DEFAULT_TIME_TO_LIVE, DEFAULT_TIME_TO_IDLE),
             attributes: AlfuCache::with_defaults(),
             arrays: AlfuCache::with_defaults(),
         }

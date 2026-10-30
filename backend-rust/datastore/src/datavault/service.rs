@@ -4,10 +4,10 @@
 //! Vaults are cached per [`CredentializedUPath`] (Scala `AlfuCache(maxCapacity = 200)`, default
 //! time-to-live / time-to-idle); zip paths are keyed by their zip root (`outer|zip`).
 
+use crate::cache::{DEFAULT_TIME_TO_IDLE, DEFAULT_TIME_TO_LIVE};
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
-    time::Duration,
 };
 
 use reqwest::Client;
@@ -20,7 +20,8 @@ use super::{
     s3::{AwsCredentials, S3DataVault, S3Options, UPLOAD_RETRY, build_s3_http_client},
 };
 use crate::{
-    clients::wk::{AlfuCache, WkClient},
+    cache::AlfuCache,
+    clients::wk::WkClient,
     config::DatastoreConfig,
     error::{DsError, DsResult},
     models::datasource::{LayerAttachment, MagLocator},
@@ -249,8 +250,8 @@ impl DataVaultService {
                 // Scala `AlfuCache(maxCapacity = 200)`: default 2 h time to live, 1 h to idle.
                 cache: AlfuCache::new(
                     VAULT_CACHE_CAPACITY,
-                    Duration::from_secs(2 * 60 * 60),
-                    Duration::from_secs(60 * 60),
+                    DEFAULT_TIME_TO_LIVE,
+                    DEFAULT_TIME_TO_IDLE,
                 ),
                 http_client: build_http_client(),
                 s3_client: build_s3_http_client(),

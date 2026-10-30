@@ -2,7 +2,7 @@
 use super::{AgglomerateFileKey, apply_segment_id_mapping, collect_segment_ids};
 use crate::services::segment::cumsum::Cumsum;
 use crate::{
-    clients::wk::AlfuCache,
+    cache::AlfuCache,
     config::AgglomerateFileCacheConfig,
     datareaders::hdf5::Hdf5Reader,
     error::{DsError, DsResult, blocking},

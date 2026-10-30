@@ -1,9 +1,10 @@
 //! Bounded single-flight cache for immutable shard/minishard indexes (Scala AlfuCache defaults).
+use crate::cache::{DEFAULT_TIME_TO_IDLE, DEFAULT_TIME_TO_LIVE};
 use crate::{
     cache::AlfuCache,
     datavault::{VaultError, VaultResult},
 };
-use std::{future::Future, sync::Arc, time::Duration};
+use std::{future::Future, sync::Arc};
 
 pub(crate) struct IndexCache<T> {
     cache: AlfuCache<String, Arc<T>, VaultError>,
@@ -24,11 +25,7 @@ impl<T> std::fmt::Debug for IndexCache<T> {
 impl<T: Send + Sync + 'static> IndexCache<T> {
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            cache: AlfuCache::new(
-                capacity,
-                Duration::from_secs(2 * 60 * 60),
-                Duration::from_secs(60 * 60),
-            ),
+            cache: AlfuCache::new(capacity, DEFAULT_TIME_TO_LIVE, DEFAULT_TIME_TO_IDLE),
         }
     }
 

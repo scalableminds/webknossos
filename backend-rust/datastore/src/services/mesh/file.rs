@@ -1,10 +1,11 @@
 //! MeshFileService + local HDF5/Zarr3 and sharded precomputed mesh-file readers.
 
+use crate::cache::{DEFAULT_TIME_TO_IDLE, DEFAULT_TIME_TO_LIVE};
 use crate::datareaders::{ArrayAxes, ArraySource};
 use crate::services::mesh::manifest::{Manifest, MeshLod, SegmentInfo, merge};
 use crate::services::segment::index::hash_function;
 use crate::{
-    clients::wk::AlfuCache,
+    cache::AlfuCache,
     compression::Compressor,
     datareaders::hdf5::Hdf5Reader,
     datareaders::{
@@ -94,11 +95,7 @@ impl MeshFileService {
             attributes: AlfuCache::with_defaults(),
             arrays: AlfuCache::with_defaults(),
             hdf5: AlfuCache::new(30, std::time::Duration::MAX, std::time::Duration::MAX),
-            remote: AlfuCache::new(
-                100,
-                std::time::Duration::from_secs(7200),
-                std::time::Duration::from_secs(3600),
-            ),
+            remote: AlfuCache::new(100, DEFAULT_TIME_TO_LIVE, DEFAULT_TIME_TO_IDLE),
         }
     }
     pub fn look_up(

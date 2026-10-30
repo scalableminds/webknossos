@@ -26,7 +26,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    clients::wk::{AlfuCache, WkClient},
+    cache::AlfuCache,
+    clients::wk::WkClient,
     error::{DsError, DsResult},
 };
 

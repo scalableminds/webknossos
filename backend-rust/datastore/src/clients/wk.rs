@@ -39,7 +39,7 @@ pub const PING_INITIAL_DELAY: Duration = Duration::from_secs(10);
 /// Scala `IntervalScheduler.innerTickerInterval`: shorter intervals are rejected at startup.
 pub const PING_MIN_INTERVAL: Duration = Duration::from_millis(100);
 
-pub use crate::cache::AlfuCache;
+use crate::cache::AlfuCache;
 
 // ---------------------------------------------------------------------------------------------
 // Generic RPC machinery (Scala `RPC` / `RPCRequest`)

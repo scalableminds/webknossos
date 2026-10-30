@@ -13,7 +13,7 @@ use futures::{StreamExt, stream};
 
 use crate::services::agglomerate::hdf5::Hdf5AgglomerateService;
 use crate::{
-    clients::wk::AlfuCache,
+    cache::AlfuCache,
     config::AgglomerateFileCacheConfig,
     datareaders::{
         ChunkContentsCache, DatasetArray,

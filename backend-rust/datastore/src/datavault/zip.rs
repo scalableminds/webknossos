@@ -2,8 +2,9 @@
 use super::{
     BoxFuture, ByteRange, DataVault, Encoding, RawRead, UPath, VaultError, VaultPath, VaultResult,
 };
-use crate::{clients::wk::AlfuCache, error::DsError};
-use std::{collections::HashMap, fmt, sync::Arc, time::Duration};
+use crate::cache::{DEFAULT_TIME_TO_IDLE, DEFAULT_TIME_TO_LIVE};
+use crate::{cache::AlfuCache, error::DsError};
+use std::{collections::HashMap, fmt, sync::Arc};
 use webknossos_common::bytes::{u16_le, u32_le, u64_le};
 
 const EOCD: u32 = 0x06054b50;
@@ -86,11 +87,7 @@ impl ZipDataVault {
     pub fn new(outer: VaultPath) -> Self {
         Self {
             outer,
-            directory: AlfuCache::new(
-                1,
-                Duration::from_secs(2 * 60 * 60),
-                Duration::from_secs(60 * 60),
-            ),
+            directory: AlfuCache::new(1, DEFAULT_TIME_TO_LIVE, DEFAULT_TIME_TO_IDLE),
         }
     }
     async fn central(&self, token: Option<&str>) -> VaultResult<Arc<Directory>> {

@@ -11,8 +11,9 @@ use serde_json::Value;
 
 use crate::{
     access::TokenContext,
+    cache::AlfuCache,
     clients::tracingstore::TracingstoreClient,
-    clients::wk::{AlfuCache, WkClient},
+    clients::wk::WkClient,
     datareaders::{
         ChunkContentsCache, DatasetArray, hdf5::Hdf5Reader, nd_array::NdArray,
         zarr3::open_zarr3_array,

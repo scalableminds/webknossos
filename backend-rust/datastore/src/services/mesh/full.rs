@@ -1,10 +1,9 @@
 //! FullMeshService: Draco fragments, indexed 32-cell meshing and iterative 128-cell BFS.
+use crate::cache::{DEFAULT_TIME_TO_IDLE, DEFAULT_TIME_TO_LIVE};
 use crate::{
     access::TokenContext,
-    clients::{
-        tracingstore::TracingstoreClient,
-        wk::{AlfuCache, WkClient},
-    },
+    cache::AlfuCache,
+    clients::{tracingstore::TracingstoreClient, wk::WkClient},
     datareaders::RequestedAdditionalCoordinate,
     error::{DsError, DsResult, blocking},
     models::{
@@ -27,7 +26,7 @@ use crate::{
 use futures::{StreamExt, TryStreamExt, stream};
 use serde::Serialize;
 use serde_json::Value;
-use std::{collections::HashSet, sync::Arc, time::Duration};
+use std::{collections::HashSet, sync::Arc};
 /// Scala `FullMeshHelper.maxAdHocFullMeshChunks`: upper bound for ad-hoc meshing requests per
 /// full mesh, so that huge segments cannot occupy the meshing workers indefinitely.
 pub const MAX_AD_HOC_FULL_MESH_CHUNKS: usize = 25000;
@@ -111,7 +110,7 @@ impl FullMeshService {
         ad_hoc_concurrency: usize,
     ) -> Self {
         Self {
-            areas: AlfuCache::new(10000, Duration::from_secs(7200), Duration::from_secs(3600)),
+            areas: AlfuCache::new(10000, DEFAULT_TIME_TO_LIVE, DEFAULT_TIME_TO_IDLE),
             mesh_files,
             segment_index,
             agglomerates,

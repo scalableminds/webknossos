@@ -1,5 +1,6 @@
 //! Scala `MappingService` (JSON mapping files): `<orgaDir>/<dataset>/<layer>/mappings/<name>.json`.
 //! Typed JSON mapping application for ad-hoc meshing, with configured caching.
+use crate::cache::{DEFAULT_TIME_TO_IDLE, DEFAULT_TIME_TO_LIVE};
 use std::path::{Path, PathBuf};
 
 use crate::{
@@ -68,8 +69,8 @@ pub fn explore_mappings(layer_dir: &Path) -> Vec<String> {
 #[cfg(test)]
 mod services_mapping_tests;
 
-use crate::{clients::wk::AlfuCache, models::ElementClass};
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use crate::{cache::AlfuCache, models::ElementClass};
+use std::{collections::HashMap, sync::Arc};
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct MappingKey {
     source: DataSourceId,
@@ -85,11 +86,7 @@ impl MappingService {
     pub fn new(base_dirs: BaseDirService, max_entries: usize) -> Self {
         Self {
             base_dirs,
-            cache: AlfuCache::new(
-                max_entries,
-                Duration::from_secs(7200),
-                Duration::from_secs(3600),
-            ),
+            cache: AlfuCache::new(max_entries, DEFAULT_TIME_TO_LIVE, DEFAULT_TIME_TO_IDLE),
         }
     }
     pub fn clear_caches(&self, source: &DataSourceId, layer: Option<&str>) -> usize {
@@ -123,10 +120,14 @@ impl MappingService {
 }
 pub fn integer_width(class: ElementClass) -> DsResult<usize> {
     match class {
-        ElementClass::Uint8 | ElementClass::Int8 => Ok(1),
-        ElementClass::Uint16 | ElementClass::Int16 => Ok(2),
-        ElementClass::Uint32 | ElementClass::Int32 => Ok(4),
-        ElementClass::Uint64 | ElementClass::Int64 => Ok(8),
+        ElementClass::Uint8
+        | ElementClass::Int8
+        | ElementClass::Uint16
+        | ElementClass::Int16
+        | ElementClass::Uint32
+        | ElementClass::Int32
+        | ElementClass::Uint64
+        | ElementClass::Int64 => Ok(class.bytes_per_element()),
         _ => Err(DsError::failure(
             "Unsupported element class for ad-hoc meshing.",
         )),

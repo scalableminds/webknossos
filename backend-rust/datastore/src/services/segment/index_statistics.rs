@@ -5,7 +5,7 @@ use crate::services::{
     agglomerate::{AgglomerateFileKey, AgglomerateService, segment_id_at},
 };
 use crate::{
-    clients::wk::AlfuCache,
+    cache::{AlfuCache, DEFAULT_TIME_TO_IDLE, DEFAULT_TIME_TO_LIVE},
     datareaders::RequestedAdditionalCoordinate,
     datavault::VaultError,
     error::{DsError, DsResult},
@@ -31,14 +31,12 @@ impl IndexStatisticsService {
         agglomerates: Arc<AgglomerateService>,
         binary: Arc<BinaryDataService>,
     ) -> Self {
-        let ttl = std::time::Duration::from_secs(2 * 3600);
-        let idle = std::time::Duration::from_secs(3600);
         Self {
             index,
             agglomerates,
             binary,
-            volumes: AlfuCache::new(10000, ttl, idle),
-            boxes: AlfuCache::new(10000, ttl, idle),
+            volumes: AlfuCache::new(10000, DEFAULT_TIME_TO_LIVE, DEFAULT_TIME_TO_IDLE),
+            boxes: AlfuCache::new(10000, DEFAULT_TIME_TO_LIVE, DEFAULT_TIME_TO_IDLE),
         }
     }
     pub fn clear_caches(&self, id: &DataSourceId, layer: Option<&str>) -> usize {

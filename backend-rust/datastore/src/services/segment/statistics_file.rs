@@ -1,7 +1,7 @@
 //! Scala SegmentStatisticsFileService: dense Zarr3 metric tables and exact remapping math.
 use crate::datareaders::{ArrayAxes, ArraySource};
 use crate::{
-    clients::wk::AlfuCache,
+    cache::AlfuCache,
     datareaders::{
         ChunkContentsCache, DatasetArray,
         nd_array::{MaDataType, NdArray},

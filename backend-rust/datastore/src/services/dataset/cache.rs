@@ -2,7 +2,8 @@
 use std::{sync::Arc, time::Duration};
 
 use crate::{
-    clients::wk::{AlfuCache, WkClient},
+    cache::AlfuCache,
+    clients::wk::WkClient,
     error::{DsError, DsResult},
     models::{DataSource, StaticLayer, UsableDataSource},
 };

@@ -26,6 +26,11 @@ use tokio::sync::OnceCell;
 
 use crate::error::DsError;
 
+/// Scala `AlfuCache.apply` default time to live (2 h).
+pub const DEFAULT_TIME_TO_LIVE: Duration = Duration::from_secs(2 * 60 * 60);
+/// Scala `AlfuCache.apply` default time to idle (1 h).
+pub const DEFAULT_TIME_TO_IDLE: Duration = Duration::from_secs(60 * 60);
+
 type Cell<V, E> = Arc<OnceCell<Result<V, E>>>;
 type Builder<K, V, E> = moka::sync::CacheBuilder<K, Cell<V, E>, Cache<K, Cell<V, E>>>;
 
@@ -98,11 +103,7 @@ where
 {
     /// Scala `AlfuCache.apply` defaults: capacity 1000, time to live 2 h, time to idle 1 h.
     pub fn with_defaults() -> Self {
-        Self::new(
-            1000,
-            Duration::from_secs(2 * 60 * 60),
-            Duration::from_secs(60 * 60),
-        )
+        Self::new(1000, DEFAULT_TIME_TO_LIVE, DEFAULT_TIME_TO_IDLE)
     }
 
     /// At most `max_capacity` entries.

@@ -97,6 +97,12 @@ export type Containment =
       type: "no";
     };
 
+// Keys of partial changes, unique across all buckets (see DataBucket.applyPartialChange).
+let nextPartialChangeKey = 0;
+export function createPartialChangeKey(): number {
+  return nextPartialChangeKey++;
+}
+
 export class DataBucket {
   readonly type = "data" as const;
   readonly elementClass: ElementClass;
@@ -160,7 +166,7 @@ export class DataBucket {
     // they are applied to it. As they are absolute writes and all changes since the
     // bucket was created are kept, it doesn't matter which of them the data already
     // contains (see applyPartialChange).
-    pendingChanges: Map<object, (data: BucketDataArray) => void>;
+    pendingChanges: Map<number, (data: BucketDataArray) => void>;
     // How many partial updates of this bucket are in the save queue. While there are
     // any, the bucket isn't garbage collected: fetched again, its data would lack them.
     unsavedCount: number;
@@ -537,11 +543,15 @@ export class DataBucket {
   /**
    * Applies a change of collaborative volume annotation: a local write, another
    * user's partial update, or the user's own one re-applied during rebasing. A bucket
-   * that isn't loaded keeps it in partialUpdateState.pendingChanges. `key` identifies the change:
-   * applying a change with the same key again (e.g., a stroke's write, which grows
-   * with the stroke) moves it to the end of the pending changes.
+   * that isn't loaded keeps it in partialUpdateState.pendingChanges. `key` identifies
+   * the change: applying a change with the same key again (e.g., a stroke's write,
+   * which grows with the stroke) replaces it and moves it to the end of the pending
+   * changes. Without a key, the change is a new one.
    */
-  applyPartialChange(key: object, apply: (data: BucketDataArray) => void): void {
+  applyPartialChange(
+    apply: (data: BucketDataArray) => void,
+    key: number = createPartialChangeKey(),
+  ): void {
     if (this.isLoaded() || this.isMissing()) {
       // A missing bucket is empty on the backend, so the change applies to empty data.
       apply(this.getOrCreateData());

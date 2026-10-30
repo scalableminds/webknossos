@@ -195,7 +195,7 @@ export function* tryToIncorporateActions(
             // same voxels, the user's values win. Partial updates never evict a bucket: that
             // wouldn't stop a request in flight, whose response would land in the bucket
             // created anew.
-            bucket.applyPartialChange(runs, (data) => {
+            bucket.applyPartialChange((data) => {
               for (const run of runs) applyRun(data as SegmentBucketData, run);
             });
             break;

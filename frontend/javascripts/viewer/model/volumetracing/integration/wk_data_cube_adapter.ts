@@ -17,7 +17,7 @@
  */
 
 import type { BucketDataArray } from "types/api_types";
-import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
+import { createPartialChangeKey, type DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { applyBucketWriteToData, type BucketWrite } from "../core/bucket_write_map";
 import {
@@ -47,7 +47,7 @@ export class WkDataCubeAdapter implements TransactionCube {
   private readonly touchedFullBuckets = new Set<DataBucket>();
   // "partialUpdates" only: one key per bucket for its pending partial change (see
   // applyWrites).
-  private readonly partialChangeKeyByBucket = new Map<DataBucket, object>();
+  private readonly partialChangeKeyByBucket = new Map<DataBucket, number>();
 
   constructor(
     protected readonly cube: DataCube,
@@ -91,11 +91,12 @@ export class WkDataCubeAdapter implements TransactionCube {
       // DataBucket.applyPartialChange).
       let key = this.partialChangeKeyByBucket.get(bucket);
       if (key == null) {
-        key = {}; // todop: interesting concept. object id instead of a uniq id, right?
+        key = createPartialChangeKey();
         this.partialChangeKeyByBucket.set(bucket, key);
       }
-      bucket.applyPartialChange(key, (bucketData) =>
-        applyBucketWriteToData(asSegmentData(bucketData), write),
+      bucket.applyPartialChange(
+        (bucketData) => applyBucketWriteToData(asSegmentData(bucketData), write),
+        key,
       );
       return;
     }

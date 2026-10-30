@@ -237,4 +237,20 @@ describe("computeLayerPoolPlan", () => {
     expect(unlimited.bucketCapacity).toBe(capacity);
     expect(largestPoolBytes(unlimited)).toBeGreaterThan(2 ** 30);
   });
+
+  it("exceeds maxPoolBytes instead of lowering the capacity to 1 if the layers alone don't fit", () => {
+    // 17 float layers need at least 17 slices of 64 MiB, more than 1 GiB.
+    const floatLayers = range(17).map((i) => ({
+      name: `float_${i}`,
+      elementClass: "float" as ElementClass,
+      category: "color" as const,
+      boundingBox: { depth: 1000 },
+      additionalAxes: null,
+    }));
+    const capacity = getRequiredBucketCapacityPerLayer(16, floatLayers.length);
+    const plan = computeLayerPoolPlan(floatLayers, capacity, 2048, 2 ** 30);
+    expect(plan.poolDepths[LayerPool.F32]).toBe(17);
+    // At 512 buckets per slice, each layer still gets a full slice.
+    expect(plan.bucketCapacity).toBe(512);
+  });
 });

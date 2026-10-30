@@ -286,10 +286,18 @@ export function computeLayerPoolPlan<Layer extends LayerLike & { name: string }>
 } {
   let bucketCapacity = requiredBucketCapacity;
   let plan = computeLayerPoolAssignments(layers, bucketCapacity);
+  // Every layer needs at least one slice, so a pool with many layers can't
+  // get below that size. There, maxPoolBytes is exceeded instead of lowering
+  // the capacity to 1.
+  const minimalPoolDepths = computeLayerPoolAssignments(layers, 1).poolDepths;
   const getOverflowRatio = () => {
     const deepestPool = Math.max(...Object.values(plan.poolDepths));
-    const largestPoolBytes = Math.max(
-      ...LAYER_POOLS.map((pool) => plan.poolDepths[pool] * getLayerPoolSliceBytes(pool)),
+    const poolBytesRatio = Math.max(
+      ...LAYER_POOLS.map(
+        (pool) =>
+          (plan.poolDepths[pool] * getLayerPoolSliceBytes(pool)) /
+          Math.max(maxPoolBytes, minimalPoolDepths[pool] * getLayerPoolSliceBytes(pool)),
+      ),
     );
     const largestAddressCount = Math.max(
       0,
@@ -300,7 +308,7 @@ export function computeLayerPoolPlan<Layer extends LayerLike & { name: string }>
     );
     return Math.max(
       deepestPool / maxPoolDepth,
-      largestPoolBytes / maxPoolBytes,
+      poolBytesRatio,
       largestAddressCount / (MAX_BUCKET_ADDRESS + 1),
     );
   };
@@ -313,6 +321,14 @@ export function computeLayerPoolPlan<Layer extends LayerLike & { name: string }>
     plan = computeLayerPoolAssignments(layers, bucketCapacity);
     overflowRatio = getOverflowRatio();
   }
+  // The estimate can undershoot. Use what the reserved slices actually hold;
+  // that doesn't change any layer's slice count.
+  bucketCapacity = Math.min(
+    requiredBucketCapacity,
+    ...Array.from(plan.assignmentByLayerName.values()).map(
+      ({ dataTextureCount, bucketsPerSlice }) => dataTextureCount * bucketsPerSlice,
+    ),
+  );
   return { bucketCapacity, ...plan };
 }
 

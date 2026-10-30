@@ -15,7 +15,7 @@ import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.job.JobCommand.JobCommand
-import models.organization.{CreditTransactionService, OrganizationDAO, OrganizationService}
+import models.organization.{CreditTransactionService, Organization, OrganizationDAO, OrganizationService, PricingPlan}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -265,25 +265,50 @@ class JobService @Inject() (
 
   def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
     for {
+      _ <- assertJobCanBeSubmitted(command, owner, dataStoreName)
+      job <- insertJob(command, commandArgs, owner, dataStoreName)
+    } yield job
+
+  private def assertJobCanBeSubmitted(command: JobCommand, owner: User, dataStoreName: String): Fox[Unit] =
+    for {
       _ <- Fox.fromBool(wkConf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
+      organization <- organizationOf(owner)
+      _ <- assertJobsAllowedByPricingPlan(organization)
       _ <- Fox.assertTrue(
         jobIsSupportedByAvailableWorkers(command, dataStoreName)
       ) ?~> Msg.Job.noWorkerForDatastoreAndJob
-      _ <- assertStorageNotExceededFor(command, owner)
-      job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
+      _ <- assertStorageNotExceededFor(command, organization)
+    } yield ()
+
+  // Callers have to check assertJobCanBeSubmitted first.
+  private def insertJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] = {
+    val job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
+    for {
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
+  }
 
-  private def assertStorageNotExceededFor(command: JobCommand, owner: User): Fox[Unit] =
+  private def organizationOf(owner: User): Fox[Organization] =
+    organizationDAO.findOne(owner._organization)(using GlobalAccessContext) ?~> Msg.Organization.notFound(
+      owner._organization
+    )
+
+  private def assertJobsAllowedByPricingPlan(organization: Organization): Fox[Unit] =
+    Fox.fromBool(PricingPlan.allowsJobs(organization.pricingPlan)) ?~> Msg.Job.notAvailableInPlan ~> FORBIDDEN
+
+  // Retries bypass submitJob
+  def assertJobCanBeRetriedByPricingPlan(job: Job): Fox[Unit] =
+    for {
+      owner <- userDAO.findOne(job._owner)(using GlobalAccessContext) ?~> Msg.User.notFound(job._owner)
+      organization <- organizationOf(owner)
+      _ <- assertJobsAllowedByPricingPlan(organization)
+    } yield ()
+
+  private def assertStorageNotExceededFor(command: JobCommand, organization: Organization): Fox[Unit] =
     for {
       _ <- Fox.runIf(JobCommand.jobsWritingToStorage.contains(command)) {
-        for {
-          organization <- organizationDAO.findOne(owner._organization)(using
-            GlobalAccessContext
-          ) ?~> Msg.Organization.notFound(owner._organization)
-          _ <- organizationService.assertUsedStorageNotExceeded(organization) ?~> Msg.Job.storageExceeded ~> FORBIDDEN
-        } yield ()
+        organizationService.assertUsedStorageNotExceeded(organization) ?~> Msg.Job.storageExceeded ~> FORBIDDEN
       }
     } yield ()
 
@@ -325,7 +350,8 @@ class JobService @Inject() (
     for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> Msg.Job.paidNoAdminOrManager
-      _ <- assertStorageNotExceededFor(command, user)
+      // Checked before reserving the credits, so that failures are reported with their specific error
+      _ <- assertJobCanBeSubmitted(command, user, datastoreName)
       costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
       _ <- Fox.assertTrue(
         creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)
@@ -335,7 +361,7 @@ class JobService @Inject() (
         costInMilliCredits,
         creditTransactionComment
       )
-      job <- submitJob(command, commandArgs, user, datastoreName).shiftBox.flatMap {
+      job <- insertJob(command, commandArgs, user, datastoreName).shiftBox.flatMap {
         case Full(job) => Fox.successful(job)
         case _         =>
           creditTransactionService

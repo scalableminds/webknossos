@@ -1,9 +1,12 @@
 import { LockOutlined } from "@ant-design/icons";
 import {
   getFeatureNotAvailableInPlanMessage,
+  hasSomePaidPlan,
   isFeatureAllowedByPricingPlan,
   isUserAllowedToRequestUpgrades,
   type PricingPlanEnum,
+  SALES_MAILTO_URL,
+  shouldContactSalesForUpgrades,
 } from "admin/organization/pricing_plan_utils";
 import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
 import {
@@ -17,6 +20,7 @@ import {
   Row,
 } from "antd";
 import type { TooltipPlacement } from "antd/es/tooltip";
+import features from "features";
 import { rgbToHex } from "libs/colors";
 import { useWkSelector } from "libs/react_hooks";
 import noop from "lodash-es/noop";
@@ -35,19 +39,38 @@ const handleMouseClick = (event: React.MouseEvent) => {
   event.stopPropagation();
 };
 
-type RequiredPricingProps = { requiredPricingPlan: PricingPlanEnum };
+// requiresPaidPlan additionally locks the feature for free plans that unlock requiredPricingPlan, i.e. Open Source.
+type RequiredPricingProps = { requiredPricingPlan: PricingPlanEnum; requiresPaidPlan?: boolean };
+
+function isAllowedByPricingPlan(
+  organization: APIOrganization | null,
+  { requiredPricingPlan, requiresPaidPlan = false }: RequiredPricingProps,
+): boolean {
+  return (
+    isFeatureAllowedByPricingPlan(organization, requiredPricingPlan) &&
+    (!requiresPaidPlan || hasSomePaidPlan(organization))
+  );
+}
 
 function getUpgradeNowButton(
   activeUser: APIUser | null | undefined,
   activeOrganization: APIOrganization | null,
 ) {
-  return activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
+  if (!activeUser || !activeOrganization || !isUserAllowedToRequestUpgrades(activeUser))
+    return null;
+  return (
     <div style={{ marginTop: 8 }}>
-      <Button size="small" onClick={() => UpgradePricingPlanModal.upgradePricingPlan()}>
-        Upgrade Now
-      </Button>
+      {shouldContactSalesForUpgrades(activeOrganization, features().isWkorgInstance) ? (
+        <Button size="small" href={SALES_MAILTO_URL}>
+          Contact Sales
+        </Button>
+      ) : (
+        <Button size="small" onClick={() => UpgradePricingPlanModal.upgradePricingPlan()}>
+          Upgrade Now
+        </Button>
+      )}
     </div>
-  ) : null;
+  );
 }
 
 const useActiveUserAndOrganization = (): [APIUser | null | undefined, APIOrganization | null] => {
@@ -92,9 +115,13 @@ const PricingEnforcedPopover = ({
 export const PricingEnforcedSpan = ({
   children,
   requiredPricingPlan,
+  requiresPaidPlan,
 }: React.PropsWithChildren<RequiredPricingProps>) => {
   const [activeUser, activeOrganization] = useActiveUserAndOrganization();
-  const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
+  const isFeatureAllowed = isAllowedByPricingPlan(activeOrganization, {
+    requiredPricingPlan,
+    requiresPaidPlan,
+  });
 
   if (isFeatureAllowed) return <>{children}</>;
 
@@ -123,10 +150,14 @@ export const PricingEnforcedSpan = ({
 export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps & ButtonProps> = ({
   children,
   requiredPricingPlan,
+  requiresPaidPlan,
   ...buttonProps
 }) => {
   const [activeUser, activeOrganization] = useActiveUserAndOrganization();
-  const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
+  const isFeatureAllowed = isAllowedByPricingPlan(activeOrganization, {
+    requiredPricingPlan,
+    requiresPaidPlan,
+  });
 
   if (isFeatureAllowed) return <Button {...buttonProps}>{children}</Button>;
 
@@ -151,9 +182,12 @@ export const PricingEnforcedSwitchSetting: React.FunctionComponent<
     value: boolean;
     defaultValue: boolean;
   }
-> = ({ requiredPricingPlan, onChange, value, defaultValue, label }) => {
+> = ({ requiredPricingPlan, requiresPaidPlan, onChange, value, defaultValue, label }) => {
   const [activeUser, activeOrganization] = useActiveUserAndOrganization();
-  const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
+  const isFeatureAllowed = isAllowedByPricingPlan(activeOrganization, {
+    requiredPricingPlan,
+    requiresPaidPlan,
+  });
 
   if (isFeatureAllowed) return <SwitchSetting label={label} value={value} onChange={onChange} />;
 
@@ -182,10 +216,14 @@ export const PricingEnforcedSwitchSetting: React.FunctionComponent<
 export const PricingEnforcedBlur = ({
   children,
   requiredPricingPlan,
+  requiresPaidPlan,
   ...restProps
 }: React.PropsWithChildren<RequiredPricingProps>) => {
   const [activeUser, activeOrganization] = useActiveUserAndOrganization();
-  const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
+  const isFeatureAllowed = isAllowedByPricingPlan(activeOrganization, {
+    requiredPricingPlan,
+    requiresPaidPlan,
+  });
 
   if (isFeatureAllowed)
     // Spread additional props to the children (required since antd's form implementation

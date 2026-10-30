@@ -1,16 +1,43 @@
 import dayjs from "dayjs";
 import { formatCountToDataAmountUnit, formatNumber } from "libs/format_utils";
 import messages from "messages";
-import type { APIOrganization, APIUser } from "types/api_types";
+import type { APIDataStore, APIJobCommand, APIOrganization, APIUser } from "types/api_types";
 import Constants from "viewer/constants";
 
+// See https://home.webknossos.org/pricing for the features of each plan.
+// Mirrors app/models/organization/PricingPlan.scala
 export enum PricingPlanEnum {
   Personal = "Personal",
   Team = "Team",
   Power = "Power",
   TeamTrial = "Team_Trial",
   PowerTrial = "Power_Trial",
-  Custom = "Custom",
+  OpenSource = "Open_Source",
+  Enterprise = "Enterprise",
+}
+
+// Mirrors PricingPlan.label in app/models/organization/PricingPlan.scala
+const PRICING_PLAN_LABELS: Partial<Record<PricingPlanEnum, string>> = {
+  [PricingPlanEnum.TeamTrial]: "Team (Trial)",
+  [PricingPlanEnum.PowerTrial]: "Power (Trial)",
+  [PricingPlanEnum.OpenSource]: "Open Source",
+};
+
+// Open Source has no access to WEBKNOSSOS workers, so it can run no jobs (including AI analysis and animations)
+// and use no AI quick select. Mirrors PricingPlan.allowsJobs
+export function areJobsAllowedByPricingPlan(organization: APIOrganization | null): boolean {
+  return organization?.pricingPlan !== PricingPlanEnum.OpenSource;
+}
+
+export function isJobAvailable(
+  dataStore: APIDataStore,
+  jobCommand: APIJobCommand,
+  organization: APIOrganization | null,
+): boolean {
+  return (
+    areJobsAllowedByPricingPlan(organization) &&
+    dataStore.jobsSupportedByAvailableWorkers.includes(jobCommand)
+  );
 }
 
 export enum AiPlanEnum {
@@ -24,6 +51,22 @@ const AI_PLAN_LABELS: Record<AiPlanEnum, string> = {
 };
 
 export const PRICING_PAGE_URL = "https://webknossos.org/pricing";
+export const SALES_MAILTO_URL =
+  "mailto:sales@webknossos.org?subject=Upgrading%20our%20self-hosted%20WEBKNOSSOS";
+
+// Upgrade requests are sent with the mail settings of the instance, which self-hosted instances often lack, and
+// sales can't change the plan of a self-hosted organization anyway. So self-hosted Open Source organizations contact
+// sales directly instead. Enterprise is already the highest plan and isn't offered any plan upgrades.
+export function shouldContactSalesForUpgrades(
+  organization: APIOrganization | null,
+  isWkorgInstance: boolean,
+): boolean {
+  return !isWkorgInstance && organization?.pricingPlan === PricingPlanEnum.OpenSource;
+}
+
+export function contactSales() {
+  window.location.href = SALES_MAILTO_URL;
+}
 
 export const teamPlanIncludedUsers = 5;
 export const teamPlanIncludedStorageTB = 1;
@@ -65,7 +108,7 @@ export const PLAN_EXPIRATION_REMINDER_DAYS = 6 * 7;
 const LOW_CREDIT_BALANCE = 10;
 
 export function formatPricingPlanName(pricingPlan: PricingPlanEnum): string {
-  return pricingPlan.replaceAll("_", " ");
+  return PRICING_PLAN_LABELS[pricingPlan] ?? pricingPlan;
 }
 
 export function getActiveUserCount(users: APIUser[]): number {
@@ -103,13 +146,17 @@ export function isCreditBalanceLow(milliCreditBalance: number | null | undefined
   return milliCreditBalance != null && milliCreditBalance < LOW_CREDIT_BALANCE * 1000;
 }
 
+// Open Source unlocks the collaboration features of Team, Enterprise the features of Power. The features that
+// Open Source lacks are checked separately, see areJobsAllowedByPricingPlan.
+// Mirrors PricingPlan.tierRank in app/models/organization/PricingPlan.scala
 export const PLAN_TO_RANK: Record<PricingPlanEnum, number> = {
   [PricingPlanEnum.Personal]: 0,
   [PricingPlanEnum.Team]: 1,
   [PricingPlanEnum.TeamTrial]: 1,
+  [PricingPlanEnum.OpenSource]: 1,
   [PricingPlanEnum.Power]: 2,
   [PricingPlanEnum.PowerTrial]: 2,
-  [PricingPlanEnum.Custom]: 2,
+  [PricingPlanEnum.Enterprise]: 2,
 };
 
 function isPricingPlanGreaterEqualThan(planA: PricingPlanEnum, planB: PricingPlanEnum): boolean {
@@ -134,8 +181,14 @@ export function isFeatureAllowedByPricingPlan(
   return isPricingPlanGreaterEqualThan(organization.pricingPlan, requiredPricingPlan);
 }
 
+// Open Source unlocks the features of Team, but isn't paid for, so it doesn't get paid perks such as removing the
+// watermark. Mirrors PricingPlan.isPaidPlan
 export function hasSomePaidPlan(organization: APIOrganization | null) {
-  return isFeatureAllowedByPricingPlan(organization, PricingPlanEnum.Team);
+  return (
+    organization != null &&
+    organization.pricingPlan !== PricingPlanEnum.Personal &&
+    organization.pricingPlan !== PricingPlanEnum.OpenSource
+  );
 }
 
 export function hasAiPlan(organization: APIOrganization | null) {
@@ -175,7 +228,7 @@ export function getBasePricingPlan(pricingPlan: PricingPlanEnum): PricingPlanEnu
   return pricingPlan;
 }
 
-// Personal has to upgrade the plan instead, and Custom limits are negotiated individually.
+// Personal has to upgrade the plan instead, and Open Source and Enterprise come with unlimited quotas.
 export function canBuyQuotaUpgrades(pricingPlan: PricingPlanEnum): boolean {
   const basePlan = getBasePricingPlan(pricingPlan);
   return basePlan === PricingPlanEnum.Team || basePlan === PricingPlanEnum.Power;
@@ -215,16 +268,12 @@ export function getAiAddonIncludedCredits(pricingPlan: PricingPlanEnum): number 
 }
 
 export function isAiAddonEligiblePlan(pricingPlan: PricingPlanEnum): boolean {
-  return (
-    pricingPlan === PricingPlanEnum.Team ||
-    pricingPlan === PricingPlanEnum.TeamTrial ||
-    pricingPlan === PricingPlanEnum.Power ||
-    pricingPlan === PricingPlanEnum.PowerTrial ||
-    pricingPlan === PricingPlanEnum.Custom
-  );
+  return pricingPlan !== PricingPlanEnum.Personal && pricingPlan !== PricingPlanEnum.OpenSource;
 }
 
 export function formatAiPlanLabel(organization: APIOrganization): string {
+  if (organization.pricingPlan === PricingPlanEnum.OpenSource)
+    return "AI features are not available in the Open Source plan";
   if (!isAiAddonEligiblePlan(organization.pricingPlan))
     return "Upgrade to Team or Power plan for advanced AI features";
 

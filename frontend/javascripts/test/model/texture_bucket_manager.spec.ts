@@ -66,6 +66,9 @@ const buildBucket = (zoomedAddress: Vector4, firstByte: number) => {
   return bucket;
 };
 
+// The pools in these tests are RGBA8, and the mock stores one byte per channel.
+const BYTES_PER_TEXEL = 4;
+
 // A pool texture backed by the texture mock, so tests can inspect its content.
 type TestPool = { binding: LayerPoolBinding; texture: Uint8Array };
 const createPool = (
@@ -110,7 +113,7 @@ const expectBucket = (
     throw new Error("Bucket address is null");
   }
 
-  const bucketLocation = tbm.getPackedBucketSize() * bucketAddress;
+  const bucketLocation = tbm.getPackedBucketSize() * bucketAddress * BYTES_PER_TEXEL;
   expect(pool.texture[bucketLocation]).toBe(expectedFirstByte);
 };
 
@@ -226,7 +229,7 @@ describe("TextureBucketManager", () => {
         throw new Error("Bucket address is null");
       }
 
-      const bucketLocation = bucketHeightInTexture * textureWidth * bucketAddress;
+      const bucketLocation = bucketHeightInTexture * textureWidth * bucketAddress * BYTES_PER_TEXEL;
       expect(pool.texture[bucketLocation]).toBe(expectedFirstByte);
     }
   });
@@ -286,7 +289,8 @@ describe("TextureBucketManager", () => {
     );
     expect(bucketHeightInTexture).toBe(32);
     const bucketLocation =
-      bucketHeightInTexture * bucketAddress * textureWidth + zSlot * sliceVoxelCount;
+      bucketHeightInTexture * bucketAddress * textureWidth * BYTES_PER_TEXEL +
+      zSlot * sliceVoxelCount;
     expect(pool.texture[bucketLocation]).toBe(77);
   });
 
@@ -358,7 +362,8 @@ describe("TextureBucketManager", () => {
     ] as const) {
       const zSlot = t % 32;
       const bucketLocation =
-        bucketHeightInTexture * bucketAddress * textureWidth + zSlot * sliceVoxelCount;
+        bucketHeightInTexture * bucketAddress * textureWidth * BYTES_PER_TEXEL +
+        zSlot * sliceVoxelCount;
       expect(pool.texture[bucketLocation]).toBe(expectedFirstByte);
     }
   });
@@ -412,7 +417,7 @@ describe("TextureBucketManager", () => {
       tbm.packingDegree,
       tbm.bucketVoxelCount,
     );
-    const regionStart = bucketHeightInTexture * bucketAddress * textureWidth;
+    const regionStart = bucketHeightInTexture * bucketAddress * textureWidth * BYTES_PER_TEXEL;
     // The marker belongs at the start of slot 13, not at the start of the region.
     expect(pool.texture[regionStart + (t % 32) * sliceVoxelCount]).toBe(55);
     expect(pool.texture[regionStart]).toBe(0);
@@ -479,7 +484,8 @@ describe("TextureBucketManager", () => {
       tbm.bucketVoxelCount,
     );
     const newBucketLocation =
-      bucketHeightInTexture * newBucketAddress * textureWidth + (newT % 32) * sliceVoxelCount;
+      bucketHeightInTexture * newBucketAddress * textureWidth * BYTES_PER_TEXEL +
+      (newT % 32) * sliceVoxelCount;
     expect(pool.texture[newBucketLocation]).toBe(33);
   });
 
@@ -500,7 +506,7 @@ describe("TextureBucketManager", () => {
     const bucketsPerSlice = (textureWidth * textureWidth) / tbm.getPackedBucketSize();
     expect(bucketAddress).toBeGreaterThanOrEqual(baseSlice * bucketsPerSlice);
     expect(bucketAddress).toBeLessThan((baseSlice + 1) * bucketsPerSlice);
-    expect(pool.texture[tbm.getPackedBucketSize() * bucketAddress]).toBe(100);
+    expect(pool.texture[tbm.getPackedBucketSize() * bucketAddress * BYTES_PER_TEXEL]).toBe(100);
   });
 
   it("pooled: caps the capacity at bucketCapacity", () => {

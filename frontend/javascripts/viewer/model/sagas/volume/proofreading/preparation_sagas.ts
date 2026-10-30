@@ -351,6 +351,8 @@ export function* getPositionForSegmentId(
     volumeTracing.fallbackLayer,
     editableMapping.baseMappingName,
     segmentId,
+    // The SoftError below is shown as a warning instead.
+    { showErrorToast: false },
   );
   if (!result.ok) {
     // A SoftError only aborts the current proofreading operation (see runSagaAndCatchSoftError)

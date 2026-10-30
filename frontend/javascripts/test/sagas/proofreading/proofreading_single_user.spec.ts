@@ -5,6 +5,7 @@ import {
   getFlattenedUpdateActions,
 } from "test/helpers/apiHelpers";
 import { call, put, take } from "redux-saga/effects";
+import Toast from "libs/toast";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   cutAgglomerateFromNeighborsAction,
@@ -226,6 +227,7 @@ describe("Proofreading (Single User)", () => {
 
       // Without a position (e.g., when triggered via the 3D viewport), the position of the
       // segment needs to be fetched from the datastore.
+      vi.mocked(Toast.warning).mockClear();
       yield put(cutAgglomerateFromNeighborsAction(null, null, 2n, 1n));
       yield take(operationFinished("PROOFREADING"));
 
@@ -236,6 +238,9 @@ describe("Proofreading (Single User)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping).toEqual(initialMapping);
+      expect(Toast.warning).toHaveBeenCalledWith(
+        expect.stringContaining("Could not determine the position of segment"),
+      );
     });
 
     await task.toPromise();

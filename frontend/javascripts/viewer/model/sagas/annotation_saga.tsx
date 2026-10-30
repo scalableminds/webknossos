@@ -14,6 +14,7 @@ import type { Action } from "viewer/model/actions/actions";
 import { setVersionRestoreVisibilityAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
+import { callWithAbortSignal } from "viewer/model/sagas/saga_helpers";
 import { SETTINGS_RETRY_OPTIONS } from "viewer/model/sagas/saving/save_saga_constants";
 import { Model } from "viewer/singletons";
 import Store from "viewer/store";
@@ -51,13 +52,16 @@ function* pushAnnotationUpdateAsync(action: Action) {
     return;
   }
 
-  const result = yield* call(
-    editAnnotation,
-    annotation.annotationId,
-    annotation.annotationType,
-    editObject,
-    { showErrorToast: false },
-    SETTINGS_RETRY_OPTIONS,
+  // If a newer update supersedes this one (takeLatest), the pending request and its
+  // retries are aborted so that they cannot overwrite the newer properties.
+  const result = yield* callWithAbortSignal((signal) =>
+    editAnnotation(
+      annotation.annotationId,
+      annotation.annotationType,
+      editObject,
+      { showErrorToast: false, signal },
+      SETTINGS_RETRY_OPTIONS,
+    ),
   );
   if (!result.ok) {
     // If the annotation cannot be saved repeatedly (retries will continue for 5 minutes),

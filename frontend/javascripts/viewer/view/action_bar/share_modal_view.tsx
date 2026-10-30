@@ -7,7 +7,6 @@ import {
   ShareAltOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import { unwrapOrThrow } from "admin/api/api_result";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   createShortLink,
@@ -305,23 +304,20 @@ function ShareModalViewInner(props: Props) {
     }
     setIsChangingInProgress(true);
     setVisibility(newVisibility as any as APIAnnotationVisibility);
-    try {
-      unwrapOrThrow(
-        await editAnnotation(annotationId, annotationType, {
-          visibility: newVisibility,
-        }),
-      );
+    const result = await editAnnotation(annotationId, annotationType, {
+      visibility: newVisibility,
+    });
+    if (result.ok) {
       dispatch(setAnnotationVisibilityAction(newVisibility));
       reportSuccessfulChange(newVisibility);
-    } catch (e) {
-      console.error("Failed to update the annotations visibility.", e);
+    } else {
+      console.error("Failed to update the annotations visibility.", result.error.cause);
       // Resetting the visibility to the old value as the request failed
       // so the user still sees the settings currently saved in the backend.
       setVisibility(visibility as any as APIAnnotationVisibility);
       reportFailedChange();
-    } finally {
-      setIsChangingInProgress(false);
     }
+    setIsChangingInProgress(false);
   };
 
   const handleSharedTeamsChange = async (value: APITeam | APITeam[]) => {

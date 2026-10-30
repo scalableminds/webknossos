@@ -3,7 +3,7 @@ import { Modal } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import { ModalWidth } from "theme";
-import { call, delay, fork, put, race, spawn, take, takeEvery } from "typed-redux-saga";
+import { call, cancelled, delay, fork, put, race, spawn, take, takeEvery } from "typed-redux-saga";
 import { MappingStatusEnum } from "viewer/constants";
 import { type Action, escalateErrorAction } from "viewer/model/actions/actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
@@ -265,6 +265,20 @@ export function* waitUntilNoActiveOperations(): Saga<void> {
     yield take("UNREGISTER_OPERATION");
     if (yield* select((state) => state.operationContext.activeOperations.length === 0)) {
       return;
+    }
+  }
+}
+
+// Calls fn with an AbortSignal that is aborted when the calling saga is cancelled
+// (e.g., by takeLatest). Pass the signal to a REST api function so that it stops
+// its request and retries.
+export function* callWithAbortSignal<T>(fn: (signal: AbortSignal) => Promise<T>): Saga<T> {
+  const abortController = new AbortController();
+  try {
+    return yield* call(fn, abortController.signal);
+  } finally {
+    if (yield* cancelled()) {
+      abortController.abort();
     }
   }
 }

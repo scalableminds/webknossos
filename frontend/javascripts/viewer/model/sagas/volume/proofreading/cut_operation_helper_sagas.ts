@@ -52,6 +52,8 @@ export function* performMinCut(
     volumeTracingId,
     version,
     segmentsInfo,
+    // The toast below is shown instead.
+    { showErrorToast: false },
   );
   if (!edgesResult.ok) {
     console.error(edgesResult.error.cause);
@@ -119,6 +121,8 @@ export function* performCutFromNeighbors(
     volumeTracingId,
     annotationVersion,
     segmentsInfo,
+    // The toast below is shown instead.
+    { showErrorToast: false },
   );
   if (!neighborResult.ok) {
     console.error(neighborResult.error.cause);

@@ -10,6 +10,7 @@ import {
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
 import { type Saga, select, take } from "viewer/model/sagas/effect_generators";
+import { callWithAbortSignal } from "viewer/model/sagas/saga_helpers";
 import { SETTINGS_RETRY_OPTIONS } from "viewer/model/sagas/saving/save_saga_constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
 import { mayEditAnnotation } from "../accessors/annotation_accessor";
@@ -52,12 +53,15 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
   // Errors in view mode are not that important here and may annoy the user.
   // Therefore, no error toast is shown in that case.
   const isViewMode = yield* select((state) => state.annotation.annotationType === "View");
-  const result = yield* call(
-    updateDatasetConfiguration,
-    dataset.id,
-    maybeMaskedDatasetConfiguration,
-    { showErrorToast: !isViewMode },
-    SETTINGS_RETRY_OPTIONS,
+  // If a newer settings change supersedes this one (takeLatest), the pending request and
+  // its retries are aborted so that they cannot overwrite the newer settings.
+  const result = yield* callWithAbortSignal((signal) =>
+    updateDatasetConfiguration(
+      dataset.id,
+      maybeMaskedDatasetConfiguration,
+      { showErrorToast: !isViewMode, signal },
+      SETTINGS_RETRY_OPTIONS,
+    ),
   );
   if (!result.ok) {
     // Still log the error to airbrake. The next settings change will try again.

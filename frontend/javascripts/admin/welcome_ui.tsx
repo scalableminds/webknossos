@@ -4,7 +4,7 @@ import IconImportOwnData from "@images/backgrounds/import-own-data.svg?react";
 import IconInviteColleagues from "@images/backgrounds/invite-colleagues.svg?react";
 import IconOpenDemo from "@images/backgrounds/open-demo.svg?react";
 import { InviteUsersModal } from "admin/onboarding";
-import { Button, Card, Col, Flex, Row, Tooltip, Typography, theme } from "antd";
+import { Button, Card, Col, Flex, Grid, Row, Tooltip, Typography, theme } from "antd";
 import { getDemoDatasetUrl } from "features";
 import renderIndependently from "libs/render_independently";
 import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
@@ -13,6 +13,7 @@ import { Link } from "react-router";
 import type { APIUser } from "types/api_types";
 
 const ACTION_ICON_SIZE = 96;
+const COMPACT_ACTION_ICON_SIZE = 40;
 const ACTIONS_MAX_WIDTH = 880;
 
 type WhatsNextActionProps = {
@@ -52,13 +53,27 @@ const ActionLink = ({
   );
 };
 
-const WhatsNextAction = ({ title, description, icon, ...linkProps }: WhatsNextActionProps) => (
+// On narrow screens, `compact` drops the description and shrinks the icon so all actions fit on
+// roughly half a screen; the titles alone say what each action does.
+const WhatsNextAction = ({
+  title,
+  description,
+  icon,
+  compact,
+  ...linkProps
+}: WhatsNextActionProps & { compact: boolean }) => (
   <ActionLink {...linkProps}>
     <Card hoverable size="small" style={{ height: "100%" }}>
       <Card.Meta
-        avatar={<Icon component={icon} style={{ fontSize: ACTION_ICON_SIZE }} aria-hidden />}
+        avatar={
+          <Icon
+            component={icon}
+            style={{ fontSize: compact ? COMPACT_ACTION_ICON_SIZE : ACTION_ICON_SIZE }}
+            aria-hidden
+          />
+        }
         title={title}
-        description={description}
+        description={compact ? null : description}
         styles={{ root: { alignItems: "center" }, title: { whiteSpace: "normal" } }}
       />
     </Card>
@@ -131,7 +146,11 @@ type WhatsNextHeaderProps = {
 export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps) => {
   const { token } = theme.useToken();
   const actions = getWhatsNextActions(activeUser);
+  // Below md the actions stack in a single column, so switch to the compact variant there.
+  // Treat "breakpoints not measured yet" as wide, so the first render never flashes the compact layout.
+  const isNarrow = Grid.useBreakpoint().md === false;
   const onBlueTextStyle = { color: token.colorTextLightSolid, textAlign: "center" as const };
+  const gutter = isNarrow ? token.marginSM : token.marginLG;
 
   return (
     <Flex
@@ -141,23 +160,25 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
     >
       <DismissButton onDismiss={onDismiss} />
       <Flex vertical align="center" style={{ paddingInline: token.padding }}>
-        <Typography.Title level={1} style={{ ...onBlueTextStyle, marginTop: 0 }}>
+        <Typography.Title level={isNarrow ? 3 : 1} style={{ ...onBlueTextStyle, marginTop: 0 }}>
           Welcome to WEBKNOSSOS
         </Typography.Title>
-        <Typography.Paragraph
-          style={{ ...onBlueTextStyle, fontSize: token.fontSizeLG, maxWidth: 700 }}
-        >
-          Congratulations on your new WEBKNOSSOS account! To hit the ground running, we recommend
-          the following steps to you:
-        </Typography.Paragraph>
+        {isNarrow ? null : (
+          <Typography.Paragraph
+            style={{ ...onBlueTextStyle, fontSize: token.fontSizeLG, maxWidth: 700 }}
+          >
+            Congratulations on your new WEBKNOSSOS account! To hit the ground running, we recommend
+            the following steps to you:
+          </Typography.Paragraph>
+        )}
         <Row
-          gutter={[token.marginLG, token.marginLG]}
+          gutter={[gutter, gutter]}
           justify="center"
           style={{ width: "100%", maxWidth: ACTIONS_MAX_WIDTH }}
         >
           {actions.map((action) => (
             <Col key={action.title} xs={24} md={12}>
-              <WhatsNextAction {...action} />
+              <WhatsNextAction {...action} compact={isNarrow} />
             </Col>
           ))}
         </Row>

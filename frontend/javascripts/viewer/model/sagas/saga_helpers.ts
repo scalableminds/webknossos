@@ -268,3 +268,19 @@ export function* waitUntilNoActiveOperations(): Saga<void> {
     }
   }
 }
+
+// Calls fn with an AbortSignal that is aborted when the calling saga is cancelled
+// (e.g., by takeLatest). Pass the signal to a REST api function so that it stops
+// its request and retries.
+export function* callWithAbortSignal<T>(fn: (signal: AbortSignal) => Promise<T>): Saga<T> {
+  const abortController = new AbortController();
+  try {
+    return yield* call(fn, abortController.signal);
+  } finally {
+    // Don't yield an effect here (e.g., cancelled()): Callers delegate to this generator
+    // via yield*, so a cancelled caller would resume normally afterwards (see runWithCleanup
+    // in operation_context_saga.ts). Aborting unconditionally is fine, because the signal
+    // doesn't have any effect anymore once fn has finished.
+    abortController.abort();
+  }
+}

@@ -304,21 +304,20 @@ function ShareModalViewInner(props: Props) {
     }
     setIsChangingInProgress(true);
     setVisibility(newVisibility as any as APIAnnotationVisibility);
-    try {
-      await editAnnotation(annotationId, annotationType, {
-        visibility: newVisibility,
-      });
+    const result = await editAnnotation(annotationId, annotationType, {
+      visibility: newVisibility,
+    });
+    if (result.ok) {
       dispatch(setAnnotationVisibilityAction(newVisibility));
       reportSuccessfulChange(newVisibility);
-    } catch (e) {
-      console.error("Failed to update the annotations visibility.", e);
+    } else {
+      console.error("Failed to update the annotations visibility.", result.error.cause);
       // Resetting the visibility to the old value as the request failed
       // so the user still sees the settings currently saved in the backend.
       setVisibility(visibility as any as APIAnnotationVisibility);
       reportFailedChange();
-    } finally {
-      setIsChangingInProgress(false);
     }
+    setIsChangingInProgress(false);
   };
 
   const handleSharedTeamsChange = async (value: APITeam | APITeam[]) => {
@@ -661,8 +660,8 @@ function ShareModalViewInner(props: Props) {
               and is currently limited to{" "}
               {allowsVolumeAnnotation ? (
                 <>
-                  the proofreading tool, the brush, the eraser and the fill tool (
-                  <b>skeleton and other volume tools will be disabled</b>).
+                  the proofreading tool and the volume tools (
+                  <b>the skeleton tool will be disabled</b>).
                 </>
               ) : (
                 <>

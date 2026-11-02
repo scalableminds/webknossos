@@ -74,6 +74,10 @@ const viteConfig = {
     enabled: false,
   },
   optimizeDeps: {
+    // The dependency scanner does not follow the `?worker` glob in comlink_wrapper.ts, so deps
+    // used only by workers (e.g., lz4-wasm) were discovered at runtime. That re-optimization
+    // invalidates already served dep URLs and fails with "Failed to fetch dynamically imported module".
+    entries: ["index.html", "frontend/javascripts/**/*.worker.{ts,js}"],
     exclude: ["three-mesh-bvh"],
   },
   build: {

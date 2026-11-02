@@ -187,6 +187,7 @@ type RunNeuronInferenceParameters = {
   evalMaxEdgeLength?: number;
   evalSparseTubeThresholdNm?: number;
   evalMinMergerPathLengthNm?: number;
+  absoluteAffinityThreshold?: number | null;
   customConfiguration?: Record<string, JsonValue>;
 };
 

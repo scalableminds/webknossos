@@ -39,14 +39,19 @@ export function useFetch<T>(
 ): T {
   const [value, setValue] = useState(defaultValue);
 
-  const fetchValue = async () => {
-    const fetchedValue = await fetchFn();
-    setValue(fetchedValue);
-  };
-
   useEffect(() => {
-    fetchValue();
-    // biome-ignore lint/correctness/useExhaustiveDependencies: fetchValue is recomputed every time. Therefore, it is not included in the dependencies.
+    // Ignore the result if the dependencies changed (or the component unmounted) in the
+    // meantime. Otherwise, a slow, outdated request could overwrite a newer value.
+    let isCurrent = true;
+    fetchFn().then((fetchedValue) => {
+      if (isCurrent) {
+        setValue(fetchedValue);
+      }
+    });
+    return () => {
+      isCurrent = false;
+    };
+    // biome-ignore lint/correctness/useExhaustiveDependencies: fetchFn is recomputed every time. Therefore, it is not included in the dependencies.
   }, dependencies);
   return value;
 }

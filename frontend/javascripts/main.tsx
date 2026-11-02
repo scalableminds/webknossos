@@ -1,5 +1,5 @@
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { defaultShouldDehydrateQuery, QueryClient } from "@tanstack/react-query";
+import { defaultShouldDehydrateQuery } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import "admin/datastore_health_check";
 import { getActiveUser } from "admin/rest_api";
@@ -10,6 +10,7 @@ import { RootForFastTooltips } from "components/fast_tooltip";
 import features, { load as loadFeatureToggles } from "features";
 import checkBrowserFeatures from "libs/browser_feature_check";
 import ErrorHandling from "libs/error_handling";
+import { reactQueryClient } from "libs/react_query_client";
 import UserLocalStorage from "libs/user_local_storage";
 import window, { document, location } from "libs/window";
 import { compress, decompress } from "lz-string";
@@ -43,20 +44,16 @@ setStore(UnthrottledStore);
 startSaga(warnIfEmailIsUnverified);
 listenToSystemColorThemeChanges((systemTheme) => Store.dispatch(setSystemThemeAction(systemTheme)));
 
-const reactQueryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      gcTime: Number.POSITIVE_INFINITY,
-    },
-  },
-});
-
 const localStoragePersister = createAsyncStoragePersister({
   storage: UserLocalStorage,
   serialize: (data) => compress(JSON.stringify(data)),
   deserialize: (data) => JSON.parse(decompress(data) || "{}"),
-  key: "query-cache-v3",
+  // Bump the version whenever the shape of cached data changes, so that stale entries
+  // are not restored.
+  key: "query-cache-v4",
 });
+// Queries whose data must never be written to localStorage, identified by the first key segment.
+const NEVER_PERSISTED_QUERY_KEYS = ["authToken"];
 
 async function tryToLoadActiveUser() {
   // Try to retrieve the currently active user if logged in
@@ -152,9 +149,13 @@ async function initApp() {
               persister: localStoragePersister,
               dehydrateOptions: {
                 // Queries can opt out of being persisted to localStorage by setting
-                // meta.persist to false, e.g. for large viewer data.
+                // meta.persist to false, e.g. for large viewer data. Secrets are excluded
+                // by key, because the meta of a query is overwritten by whichever observer
+                // fetched it last.
                 shouldDehydrateQuery: (query) =>
-                  defaultShouldDehydrateQuery(query) && query.meta?.persist !== false,
+                  defaultShouldDehydrateQuery(query) &&
+                  query.meta?.persist !== false &&
+                  !NEVER_PERSISTED_QUERY_KEYS.includes(query.queryKey[0] as string),
               },
             }}
           >

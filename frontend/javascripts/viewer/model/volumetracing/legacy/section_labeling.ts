@@ -190,7 +190,17 @@ class SectionLabeler {
   }
 
   getFillingVoxelBuffer2D(mode: AnnotationTool): VoxelBuffer2D {
-    if (this.isEmpty() || this.minCoord == null) {
+    if (this.isEmpty()) {
+      return VoxelBuffer2D.empty();
+    }
+    // The outline is drawn from the contour list, which can contain points that were
+    // never passed to updateArea, such as a stroke's start point (see
+    // editVolumeLayerAsync). Outside of the area, the outline would be cut off, and
+    // the filling would leak through the gap.
+    for (const point of this.getContourList(true)) {
+      this.updateArea(point);
+    }
+    if (this.minCoord == null) {
       return VoxelBuffer2D.empty();
     }
 

@@ -425,6 +425,7 @@ class DatasetRenderer {
         >
           {this.data.name}
         </Link>
+        {this.datasetTable.renderInlineActions(this.renderActionsColumn())}
         {this.renderTags()}
         {this.renderMetaLine()}
         {this.datasetTable.props.context.globalSearchQuery != null ? (
@@ -434,6 +435,10 @@ class DatasetRenderer {
     );
   }
   renderTags(): React.ReactNode {
+    if (this.data.isActive && this.data.tags.length === 0) {
+      // Even an empty tag list would take up a line below the (block-level) compact actions.
+      return null;
+    }
     return this.data.isActive ? (
       // Tags are edited in the details sidebar, so they are only clickable for filtering here.
       <DatasetTags dataset={this.data} onClickTag={this.datasetTable.props.addTagToSearch} />
@@ -470,7 +475,7 @@ class DatasetRenderer {
     return <FormattedDate timestamp={this.data.created} />;
   }
   renderActionsColumn(): React.ReactNode {
-    return <DatasetActionView dataset={this.data} />;
+    return <DatasetActionView dataset={this.data} isCompact={this.datasetTable.props.isCompact} />;
   }
 }
 
@@ -505,6 +510,7 @@ class FolderRenderer {
     return (
       <div className="dataset-table-name-container">
         <span className="incognito-link dataset-table-name">{this.data.name}</span>
+        {this.datasetTable.renderInlineActions(this.renderActionsColumn())}
         <RowMetaLine
           items={["Folder", <span key="created">created {this.renderCreationDateColumn()}</span>]}
         />
@@ -657,6 +663,14 @@ class DatasetTable extends PureComponent<Props, State> {
     return this.props.isCompact ? COMPACT_THUMBNAIL_SIZE : THUMBNAIL_SIZE;
   }
 
+  // On compact screens, the actions are shown below the name instead of in their own column,
+  // so that the name can use the full width of the list.
+  renderInlineActions(actions: React.ReactNode): React.ReactNode {
+    return this.props.isCompact ? (
+      <div className="dataset-table-inline-actions">{actions}</div>
+    ) : null;
+  }
+
   getFolderSettingsActions(folder: FolderItemWithName): React.ReactNode {
     const { context } = this.props;
     const folderTreeContextMenuItems = generateSettingsForFolder(folder, context, true);
@@ -749,12 +763,14 @@ class DatasetTable extends PureComponent<Props, State> {
         className: "dashboard-list-table-borderless-cell",
         render: (_name: string, rowRenderer: RowRenderer, _index) => rowRenderer.renderNameColumn(),
       },
-      {
+    ];
+    if (!this.props.isCompact) {
+      columns.push({
         width: 200,
         key: "actions",
         render: (__, rowRenderer: RowRenderer) => rowRenderer.renderActionsColumn(),
-      },
-    ];
+      });
+    }
 
     const availableSortOptions = DATASET_SORT_OPTIONS.filter(
       (option) => option.key !== "storage" || this.shouldShowStorage(),

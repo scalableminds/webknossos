@@ -114,6 +114,18 @@ pre.dataset-import-folder-structure-hint {
   vertical-align: middle;
 }
 
+// Compact screens: the actions sit in a (wrapping) row below the dataset name.
+.dataset-table-inline-actions .dataset-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 12px;
+  white-space: normal;
+
+  & > a {
+    display: inline-block;
+  }
+}
+
 
 /** Wrapper for the dataset metadata table in the dashboard, ensuring bold headers. */
 .dashboard-metadata-table-wrapper {

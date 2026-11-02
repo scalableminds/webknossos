@@ -23,7 +23,6 @@ import {
   Button,
   ConfigProvider,
   Flex,
-  Grid,
   Input,
   type InputRef,
   Layout,
@@ -40,7 +39,7 @@ import classnames from "classnames";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
-import { useWkSelector } from "libs/react_hooks";
+import { useMinScreenWidth, useWkSelector } from "libs/react_hooks";
 import { TAB_SESSION_ID as SESSION_ID } from "libs/tab_session_id";
 import Toast from "libs/toast";
 import {
@@ -900,11 +899,9 @@ function Navbar() {
   const isAuthenticated = activeUser != null;
   const isAdminOrTeamManager = isUserAdminOrTeamManager(activeUser);
   const isAdminOrManager = isUserAdminOrManager(activeUser);
-  // Compare against false, because useBreakpoint() returns an empty object until it has measured
-  // the screen. Phones get the icon-only navbar, too.
-  const screens = Grid.useBreakpoint();
-  const isPhone = screens.md === false;
-  const isBelowXL = screens.xl === false;
+  // Phones get the icon-only navbar, too.
+  const isPhone = !useMinScreenWidth("md");
+  const isBelowXL = !useMinScreenWidth("xl");
   const collapseAllNavItems = isInAnnotationView || isPhone;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
   const menuItems: ItemType[] = [

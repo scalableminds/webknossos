@@ -261,9 +261,13 @@ body {
   margin-right: 0;
 }
 
-/** Hides elements below antd's xl breakpoint, i.e. when Grid.useBreakpoint().xl is false. */
+/** Hides elements below antd's xl breakpoint, i.e. when useMinScreenWidth("xl") is false. */
 .hide-on-small-screen {
-  @media (max-width: @screen-lg-max) {
+  // A range query instead of max-width: @screen-lg-max, so that fractional viewport widths (e.g.
+  // 1199.5px when zoomed) behave like antd's (min-width: 1200px) check, too.
+  // Less cannot parse range queries, hence the escaped string.
+  @below-xl: ~"(width < @{screen-xl-min})";
+  @media @below-xl {
     display: none !important;
   }
 }

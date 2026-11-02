@@ -3,26 +3,24 @@ import { Select, Switch } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { localeCompareBy } from "libs/utils";
-import messages from "messages";
 import { useCallback, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
-import { getAgglomerateDiffOverlay } from "viewer/model/accessors/agglomerate_diff_accessor";
 import {
-  isAnnotationOwner,
-  isConcurrentCollaborationMode,
-  mayEditAnnotation,
-} from "viewer/model/accessors/annotation_accessor";
+  getAgglomerateDiffOverlay,
+  getAgglomerateDiffReferenceMappingName,
+} from "viewer/model/accessors/agglomerate_diff_accessor";
 import { getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
 import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { setAgglomerateDiffsVisibilityAction } from "viewer/model/actions/agglomerate_diff_actions";
 import { dispatchEnsureLayerMappingsAreLoadedAsync } from "viewer/model/actions/dataset_actions";
-import { setAgglomerateDiffReferenceAction } from "viewer/model/actions/skeletontracing_actions";
+import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
 
 const explanation =
   "When a reference agglomerate view is selected, loading an agglomerate skeleton of this layer also loads " +
   "the edges that were added (green) and removed (orange) compared to the reference agglomerate that contains the clicked segment. " +
   "Added edges include all parts that were merged onto it. Removed edges that lead out of the agglomerate (splits) end at the first segment outside of it. " +
-  "The differences are not saved in the annotation and are not shown for agglomerate skeletons of a proofread (editable) mapping.";
+  "The selected reference view is remembered for this annotation. The differences themselves are not saved in the annotation " +
+  "and are not shown for agglomerate skeletons of a proofread (editable) mapping.";
 
 function useDiffSummary(layerName: string): string | null {
   const diffs = useWkSelector((state) => getAgglomerateDiffOverlay(state).diffs);
@@ -51,16 +49,9 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
     getSegmentationLayerByName(state.dataset, layerName),
   );
   const hasSkeleton = useWkSelector((state) => getSkeletonTracing(state.annotation) != null);
-  const referenceMappingName = useWkSelector(
-    (state) =>
-      getSkeletonTracing(state.annotation)?.agglomerateDiffReferences.find(
-        (ref) => ref.layerName === layerName,
-      )?.referenceMappingName ?? null,
+  const referenceMappingName = useWkSelector((state) =>
+    getAgglomerateDiffReferenceMappingName(state, layerName),
   );
-  const allowUpdate = useWkSelector(mayEditAnnotation);
-  const isCollabMode = useWkSelector(isConcurrentCollaborationMode);
-  const isAnnotationLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);
-  const isOwner = useWkSelector(isAnnotationOwner);
   const areDiffsVisible = useWkSelector((state) => getAgglomerateDiffOverlay(state).isVisible);
   const diffSummary = useDiffSummary(layerName);
 
@@ -76,7 +67,14 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
 
   const handleChange = useCallback(
     (newReferenceMappingName: string | undefined) => {
-      dispatch(setAgglomerateDiffReferenceAction(layerName, newReferenceMappingName ?? null));
+      // null instead of undefined, so that clearing the selection is saved, too
+      dispatch(
+        updateLayerSettingAction(
+          layerName,
+          "agglomerateDiffReference",
+          newReferenceMappingName ?? null,
+        ),
+      );
     },
     [dispatch, layerName],
   );
@@ -92,12 +90,6 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
 
   if (!hasSkeleton) return null;
 
-  const disabledReason = !allowUpdate
-    ? messages["tracing.read_only_mode_notification"](isAnnotationLockedByOwner, isOwner)
-    : isCollabMode
-      ? "The reference agglomerate view cannot be changed in live collaboration mode."
-      : null;
-
   return (
     <div style={{ marginBottom: 14 }}>
       <label className="setting-label">
@@ -106,21 +98,18 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
           <InfoCircleOutlined />
         </FastTooltip>
       </label>
-      <FastTooltip title={disabledReason}>
-        <Select
-          placeholder="No agglomerate diff"
-          style={{ width: "100%", marginTop: 6 }}
-          value={referenceMappingName ?? undefined}
-          onChange={handleChange}
-          onOpenChange={ensureAgglomeratesAreLoaded}
-          loading={isLoadingAgglomerates}
-          allowClear
-          disabled={disabledReason != null}
-          notFoundContent="No agglomerate views found."
-          popupMatchSelectWidth={false}
-          options={options}
-        />
-      </FastTooltip>
+      <Select
+        placeholder="No agglomerate diff"
+        style={{ width: "100%", marginTop: 6 }}
+        value={referenceMappingName ?? undefined}
+        onChange={handleChange}
+        onOpenChange={ensureAgglomeratesAreLoaded}
+        loading={isLoadingAgglomerates}
+        allowClear
+        notFoundContent="No agglomerate views found."
+        popupMatchSelectWidth={false}
+        options={options}
+      />
       {referenceMappingName != null && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
           <Switch

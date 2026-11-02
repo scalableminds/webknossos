@@ -409,6 +409,7 @@ vi.mock("viewer/model/helpers/proto_helpers", async (importOriginal) => {
     parseProtoAnnotation: vi.fn(),
     serializeProtoListOfLong: vi.fn(),
     parseProtoListOfLong: vi.fn(),
+    parseProtoAgglomerateGraphDiff: originalProtoHelperModule.parseProtoAgglomerateGraphDiff,
   };
 });
 

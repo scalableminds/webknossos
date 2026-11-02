@@ -1,51 +1,56 @@
 package backend
 
-import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.Tree
+import com.scalableminds.webknossos.datastore.AgglomerateGraph.{
+  AgglomerateEdge,
+  AgglomerateGraph,
+  AgglomerateGraphDiffProto
+}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateGraphDiff
 import org.scalatest.wordspec.AnyWordSpec
 
 class AgglomerateGraphDiffTestSuite extends AnyWordSpec {
 
+  // The positions encode the segment ids, so that the endpoints of the edges can be identified
+  private def position(segmentId: Long) = Vec3IntProto(segmentId.toInt, 2 * segmentId.toInt, 3 * segmentId.toInt)
+
   private def graph(segments: Seq[Long], edges: Seq[(Long, Long)]): AgglomerateGraph =
     AgglomerateGraph(
       segments = segments,
       edges = edges.map { case (source, target) => AgglomerateEdge(source, target) },
-      positions = segments.map(segmentId => Vec3IntProto(segmentId.toInt, 0, 0)),
+      positions = segments.map(position),
       affinities = edges.map(_ => 1.0f)
     )
 
-  // Returns the edges of a tree as sets of the x coordinates of their nodes (which equal the segment ids here)
-  private def edgesAsSegmentIds(tree: Tree): Set[Set[Long]] = {
-    val segmentIdByNodeId = tree.nodes.map(node => node.id -> node.position.x.toLong).toMap
-    tree.edges.map(edge => Set(segmentIdByNodeId(edge.source), segmentIdByNodeId(edge.target))).toSet
+  private def diff(graph: AgglomerateGraph, referenceGraph: AgglomerateGraph): AgglomerateGraphDiffProto = {
+    val result = AgglomerateGraphDiff.diff(graph, referenceGraph, referenceAgglomerateId = 7)
+    assert(result.referenceAgglomerateId == 7)
+    assert(result.positions.length % 3 == 0)
+    assert(endpointSegmentIds(result).distinct == endpointSegmentIds(result))
+    endpointSegmentIds(result).zip(result.positions.grouped(3)).foreach { case (segmentId, p) =>
+      assert(p.map(_.toLong) == Seq(segmentId, 2 * segmentId, 3 * segmentId))
+    }
+    result
   }
 
-  private def diffTrees(graph: AgglomerateGraph, referenceGraph: AgglomerateGraph) = {
-    val trees = AgglomerateGraphDiff.diffAsSkeleton(graph, referenceGraph, referenceAgglomerateId = 7).trees
-    assert(trees.flatMap(_.nodes.map(_.id)).distinct.length == trees.map(_.nodes.length).sum)
-    assert(trees.map(_.treeId).distinct.length == trees.length)
-    // webknossos expects every tree to be connected
-    trees.foreach(tree => assert(tree.edges.length >= tree.nodes.length - 1))
-    trees
-  }
+  private def endpointSegmentIds(result: AgglomerateGraphDiffProto): Seq[Long] =
+    result.positions.grouped(3).map(_.head.toLong).toSeq
+
+  // Converts the flat index pairs back to undirected edges between segment ids
+  private def edgesAsSegmentIds(result: AgglomerateGraphDiffProto, indices: Seq[Int]): Set[Set[Long]] =
+    indices.grouped(2).map(pair => pair.map(endpointSegmentIds(result)).toSet).toSet
 
   private def addedAndRemoved(graph: AgglomerateGraph, referenceGraph: AgglomerateGraph) = {
-    val trees = diffTrees(graph, referenceGraph)
-    def edgesOfTreesNamed(name: String) = trees.filter(_.name == name).flatMap(edgesAsSegmentIds).toSet
-    (
-      edgesOfTreesNamed(AgglomerateGraphDiff.addedEdgesTreeName),
-      edgesOfTreesNamed(AgglomerateGraphDiff.removedEdgesTreeName)
-    )
+    val result = diff(graph, referenceGraph)
+    (edgesAsSegmentIds(result, result.addedEdges), edgesAsSegmentIds(result, result.removedEdges))
   }
 
   "AgglomerateGraphDiff" should {
     "report no differences for identical graphs, regardless of edge direction" in {
-      val (added, removed) =
-        addedAndRemoved(graph(Seq(1, 2, 3), Seq((1, 2), (2, 3))), graph(Seq(1, 2, 3), Seq((2, 1), (3, 2))))
-      assert(added.isEmpty)
-      assert(removed.isEmpty)
+      val result = diff(graph(Seq(1, 2, 3), Seq((1, 2), (2, 3))), graph(Seq(1, 2, 3), Seq((2, 1), (3, 2))))
+      assert(result.addedEdges.isEmpty)
+      assert(result.removedEdges.isEmpty)
+      assert(result.positions.isEmpty)
     }
 
     "report the merging edge and the merged-in part as added when two reference agglomerates were merged" in {
@@ -56,48 +61,35 @@ class AgglomerateGraphDiffTestSuite extends AnyWordSpec {
       assert(removed.isEmpty)
     }
 
-    "report merges within the merged-in part as added" in {
-      val trees = diffTrees(
-        graph(Seq(1, 2, 3, 4, 5), Seq((1, 2), (2, 3), (3, 4), (4, 5))),
-        graph(Seq(1, 2), Seq((1, 2)))
-      )
-      // 2-3 merges into the reference agglomerate, 4-5 merges further out; all form one tree
-      assert(trees.length == 1)
-      assert(edgesAsSegmentIds(trees.head) == Set(Set(2L, 3L), Set(3L, 4L), Set(4L, 5L)))
-    }
-
     "report the splitting edge as removed (dangling) when a reference agglomerate was split" in {
-      val (added, removed) =
-        addedAndRemoved(graph(Seq(1, 2), Seq((1, 2))), graph(Seq(1, 2, 3, 4), Seq((1, 2), (2, 3), (3, 4))))
-      assert(added.isEmpty)
+      val result = diff(graph(Seq(1, 2), Seq((1, 2))), graph(Seq(1, 2, 3, 4), Seq((1, 2), (2, 3), (3, 4))))
+      assert(result.addedEdges.isEmpty)
       // Edge 3-4 belongs to the other part of the split and is not reported
-      assert(removed == Set(Set(2L, 3L)))
+      assert(edgesAsSegmentIds(result, result.removedEdges) == Set(Set(2L, 3L)))
+      // The position of the dangling end is taken from the reference graph
+      assert(endpointSegmentIds(result).toSet == Set(2L, 3L))
     }
 
     "report both merging and splitting edges" in {
-      val (added, removed) =
-        addedAndRemoved(graph(Seq(1, 2, 5), Seq((1, 2), (2, 5))), graph(Seq(1, 2, 3), Seq((1, 2), (2, 3))))
-      assert(added == Set(Set(2L, 5L)))
-      assert(removed == Set(Set(2L, 3L)))
+      val result = diff(graph(Seq(1, 2, 5), Seq((1, 2), (2, 5))), graph(Seq(1, 2, 3), Seq((1, 2), (2, 3))))
+      assert(edgesAsSegmentIds(result, result.addedEdges) == Set(Set(2L, 5L)))
+      assert(edgesAsSegmentIds(result, result.removedEdges) == Set(Set(2L, 3L)))
+      // Segment 2 is an endpoint of both edges, but is only listed once
+      assert(endpointSegmentIds(result).sorted == Seq(2L, 3L, 5L))
     }
 
-    "create one tree per connected component of added edges" in {
-      val trees = diffTrees(
+    "report disconnected added edges" in {
+      val (added, removed) = addedAndRemoved(
         graph(Seq(1, 2, 3, 4, 5, 6), Seq((1, 2), (2, 3), (3, 4), (4, 5), (5, 6))),
         graph(Seq(1, 2, 3, 4, 5, 6), Seq((1, 2), (3, 4), (5, 6)))
       )
-      assert(trees.map(_.name) == Seq.fill(2)(AgglomerateGraphDiff.addedEdgesTreeName))
-      assert(trees.map(edgesAsSegmentIds).toSet == Set(Set(Set(2L, 3L)), Set(Set(4L, 5L))))
+      assert(added == Set(Set(2L, 3L), Set(4L, 5L)))
+      assert(removed.isEmpty)
     }
 
-    "keep adjacent added edges in the same tree" in {
-      val trees = diffTrees(graph(Seq(1, 2, 3), Seq((1, 2), (2, 3))), graph(Seq(1, 2, 3), Seq.empty))
-      assert(trees.length == 1)
-      assert(edgesAsSegmentIds(trees.head) == Set(Set(1L, 2L), Set(2L, 3L)))
-    }
-
-    "return no trees for identical graphs" in {
-      assert(diffTrees(graph(Seq(1, 2), Seq((1, 2))), graph(Seq(1, 2), Seq((1, 2)))).isEmpty)
+    "report duplicate edges only once" in {
+      val result = diff(graph(Seq(1, 2), Seq((1, 2), (2, 1))), graph(Seq(1, 2), Seq.empty))
+      assert(result.addedEdges.length == 2)
     }
 
     "report rewired edges within the same agglomerate" in {
@@ -105,14 +97,6 @@ class AgglomerateGraphDiffTestSuite extends AnyWordSpec {
         addedAndRemoved(graph(Seq(1, 2, 3), Seq((1, 2), (1, 3))), graph(Seq(1, 2, 3), Seq((1, 2), (2, 3))))
       assert(added == Set(Set(1L, 3L)))
       assert(removed == Set(Set(2L, 3L)))
-    }
-
-    "store the id of the reference agglomerate in the metadata of the trees" in {
-      val trees = diffTrees(graph(Seq(1, 2), Seq((1, 2))), graph(Seq(1, 2), Seq.empty))
-      assert(
-        trees.head.metadata.find(_.key == AgglomerateGraphDiff.referenceAgglomerateIdMetadataKey).flatMap(_.stringValue)
-          .contains("7")
-      )
     }
   }
 }

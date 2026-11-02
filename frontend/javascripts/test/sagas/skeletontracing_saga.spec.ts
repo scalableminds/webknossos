@@ -86,7 +86,6 @@ const skeletonTracing: SkeletonTracing = {
   treeGroups: [],
   activeNodeId: null,
   cachedMaxNodeId: 0,
-  agglomerateDiffReferences: [],
   boundingBox: null,
   userBoundingBoxes: [],
   additionalAxes: [],

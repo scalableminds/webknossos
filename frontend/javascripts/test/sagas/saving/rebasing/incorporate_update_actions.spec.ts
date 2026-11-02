@@ -57,7 +57,6 @@ import {
   revertToVersion,
   type ServerUpdateAction,
   splitAgglomerate,
-  updateAgglomerateDiffReference,
   updateAnnotationLayerName,
   updateLargestSegmentId,
   updateMappingName,
@@ -90,7 +89,6 @@ const actionNamesHelper: Record<ServerUpdateAction["name"], true> = {
   updateTreeGroupVisibility: true,
   updateUserBoundingBoxVisibilityInSkeletonTracing: true,
   updateTreeGroupsExpandedState: true,
-  updateAgglomerateDiffReference: true,
   updateActiveSegmentId: true,
   updateSegmentVisibility: true,
   updateSegmentGroupVisibility: true,
@@ -372,14 +370,6 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           (bbox) => bbox.id === REPLAYED_BOUNDING_BOX_ID,
         ),
       ).toBe(false);
-
-      await incorporateActions(
-        [updateAgglomerateDiffReference("segmentation", "reference_mapping", tracingId)],
-        7,
-      );
-      expect(enforceSkeletonTracing(Store.getState().annotation).agglomerateDiffReferences).toEqual(
-        [{ layerName: "segmentation", referenceMappingName: "reference_mapping" }],
-      );
     });
   });
 

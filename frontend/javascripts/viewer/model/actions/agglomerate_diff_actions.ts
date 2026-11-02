@@ -1,11 +1,9 @@
-import type { ServerSkeletonTracingTree } from "types/api_types";
+import type { ServerAgglomerateGraphDiff } from "viewer/model/helpers/proto_helpers";
 import type { AgglomerateDiffDescriptor } from "viewer/store";
 
-export type LoadedAgglomerateDiff = {
+export type LoadedAgglomerateDiff = ServerAgglomerateGraphDiff & {
   // The segment of the agglomerate whose reference agglomerate was compared
   segmentId: bigint;
-  referenceAgglomerateId: bigint | null;
-  trees: Array<ServerSkeletonTracingTree>;
 };
 
 type StartLoadingAgglomerateDiffAction = ReturnType<typeof startLoadingAgglomerateDiffAction>;

@@ -31,7 +31,10 @@ import {
 import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
 import { NumberToOrthoView, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
-import { getAgglomerateDiffKey } from "viewer/model/accessors/agglomerate_diff_accessor";
+import {
+  getAgglomerateDiffKey,
+  getAgglomerateDiffReferenceMappingName,
+} from "viewer/model/accessors/agglomerate_diff_accessor";
 import {
   isConcurrentCollaborationMode,
   mayEditAnnotation,
@@ -91,7 +94,6 @@ import {
   deleteNode,
   deleteTree,
   updateActiveNode,
-  updateAgglomerateDiffReference,
   updateNode,
   updateTree,
   updateTreeEdgesVisibility,
@@ -109,7 +111,7 @@ import {
   reducerInternalMatrixToEulerAngle,
 } from "../helpers/rotation_helpers";
 import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
-import { fetchAgglomerateDiff, getReferenceMappingName } from "./agglomerate_diff_saga";
+import { fetchAgglomerateDiff } from "./agglomerate_diff_saga";
 import { diffBoundingBoxes } from "./diffing/bounding_box_diffing";
 import { diffGroups } from "./diffing/group_diffing";
 import { ensureWkInitialized } from "./ready_sagas";
@@ -478,7 +480,7 @@ function* loadAgglomerateTreeWithAtPosition(
     // Otherwise, the agglomerate_diff_saga would only request them once the agglomerate skeleton
     // was added and would compare the segment at its first node.
     const referenceMappingName = yield* select((state) =>
-      getReferenceMappingName(state, layerName),
+      getAgglomerateDiffReferenceMappingName(state, layerName),
     );
     const isAgglomerateFile = yield* select((state) => {
       const layer = getLayerByName(state.dataset, layerName);
@@ -852,31 +854,6 @@ export function* diffSkeletonTracing(
     skeletonTracing.tracingId,
     AnnotationLayerEnum.Skeleton,
   );
-
-  if (prevSkeletonTracing.agglomerateDiffReferences !== skeletonTracing.agglomerateDiffReferences) {
-    yield* diffAgglomerateDiffReferences(
-      prevSkeletonTracing.agglomerateDiffReferences,
-      skeletonTracing.agglomerateDiffReferences,
-      skeletonTracing.tracingId,
-    );
-  }
-}
-
-function* diffAgglomerateDiffReferences(
-  prevReferences: SkeletonTracing["agglomerateDiffReferences"],
-  references: SkeletonTracing["agglomerateDiffReferences"],
-  tracingId: string,
-): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
-  const layerNames = new Set([...prevReferences, ...references].map((ref) => ref.layerName));
-  for (const layerName of layerNames) {
-    const prevMappingName =
-      prevReferences.find((ref) => ref.layerName === layerName)?.referenceMappingName ?? null;
-    const mappingName =
-      references.find((ref) => ref.layerName === layerName)?.referenceMappingName ?? null;
-    if (prevMappingName !== mappingName) {
-      yield updateAgglomerateDiffReference(layerName, mappingName, tracingId);
-    }
-  }
 }
 export default [
   watchSkeletonTracingAsync,

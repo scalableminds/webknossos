@@ -66,9 +66,7 @@ object UpdateAction {
             deserialize[UpdateUserBoundingBoxSkeletonAction](jsonValue)
           case "updateUserBoundingBoxVisibilityInSkeletonTracing" =>
             deserialize[UpdateUserBoundingBoxVisibilitySkeletonAction](jsonValue)
-          case "updateActiveNode"               => deserialize[UpdateActiveNodeSkeletonAction](jsonValue)
-          case "updateAgglomerateDiffReference" =>
-            deserialize[UpdateAgglomerateDiffReferenceSkeletonAction](jsonValue)
+          case "updateActiveNode" => deserialize[UpdateActiveNodeSkeletonAction](jsonValue)
 
           // Volume
           case "updateBucket"                     => deserialize[UpdateBucketVolumeAction](jsonValue)
@@ -217,11 +215,6 @@ object UpdateAction {
       case s: UpdateUserBoundingBoxVisibilitySkeletonAction =>
         Json.obj(
           "name" -> "updateUserBoundingBoxVisibilityInSkeletonTracing",
-          "value" -> Json.toJson(s)
-        )
-      case s: UpdateAgglomerateDiffReferenceSkeletonAction =>
-        Json.obj(
-          "name" -> "updateAgglomerateDiffReference",
           "value" -> Json.toJson(s)
         )
 

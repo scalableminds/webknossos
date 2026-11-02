@@ -19,7 +19,6 @@ import type { Reducer, WebknossosState } from "viewer/store";
 import { updateUserBoundingBox } from "../annotation_reducer";
 import {
   getMaximumNodeId,
-  setAgglomerateDiffReference,
   setExpandedTreeGroups,
   toggleAllTreesReducer,
   toggleTreeGroupReducer,
@@ -363,23 +362,6 @@ function applySingleAction(
         enforceSkeletonTracing(state.annotation),
         withoutActionTimestamp(ua),
       );
-    }
-
-    case "updateAgglomerateDiffReference": {
-      const skeletonTracing = enforceSkeletonTracing(state.annotation);
-      return update(state, {
-        annotation: {
-          skeleton: {
-            agglomerateDiffReferences: {
-              $set: setAgglomerateDiffReference(
-                skeletonTracing.agglomerateDiffReferences,
-                ua.value.layerName,
-                ua.value.referenceMappingName,
-              ),
-            },
-          },
-        },
-      });
     }
 
     // These update actions below are user specific and only need to be applied

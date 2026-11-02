@@ -185,13 +185,13 @@ class DataSourceController @Inject() (
           dataLayer,
           referenceMappingName
         )
-        skeleton <- agglomerateService.generateDiffToReferenceAsSkeleton(
+        diff <- agglomerateService.generateDiffToReference(
           agglomerateFileKey,
           referenceAgglomerateFileKey,
           agglomerateId,
           segmentId
         ) ?~> Msg.AgglomerateDiff.failed
-      } yield Ok(skeleton.toByteArray).as(protobufMimeType)
+      } yield Ok(diff.toByteArray).as(protobufMimeType)
     }
   }
 

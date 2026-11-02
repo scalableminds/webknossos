@@ -24,6 +24,14 @@ export function getAgglomerateDiffKey(descriptor: AgglomerateDiffDescriptor): st
   ]);
 }
 
+// The agglomerate view that agglomerate skeletons of the layer are compared against, if any
+export function getAgglomerateDiffReferenceMappingName(
+  state: WebknossosState,
+  layerName: string,
+): string | null {
+  return state.datasetConfiguration.layers[layerName]?.agglomerateDiffReference ?? null;
+}
+
 export function getAgglomerateDiffOverlay(state: WebknossosState): AgglomerateDiffOverlay {
   return state.localSkeletonState.agglomerateDiffOverlay;
 }
@@ -47,7 +55,6 @@ export function createEmptyAgglomerateDiffOverlay(): AgglomerateDiffOverlay {
       type: "skeleton",
       activeNodeId: null,
       cachedMaxNodeId: Constants.MIN_NODE_ID - 1,
-      agglomerateDiffReferences: [],
       trees: new TreeMap(),
       treeGroups: [],
       tracingId: "agglomerate-diff-overlay",

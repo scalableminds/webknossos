@@ -1,7 +1,4 @@
-import {
-  getAgglomerateDiffToReferenceAsSkeletonTracing,
-  getUnmappedSegmentIdAtPosition,
-} from "admin/rest_api";
+import { getAgglomerateDiffToReference, getUnmappedSegmentIdAtPosition } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast, { type Message } from "libs/toast";
 import { buffers, type Channel, channel } from "redux-saga";
@@ -10,6 +7,7 @@ import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import {
   getAgglomerateDiffKey,
   getAgglomerateDiffOverlay,
+  getAgglomerateDiffReferenceMappingName,
   getAgglomerateKey,
 } from "viewer/model/accessors/agglomerate_diff_accessor";
 import { getIsRebasingOrForwarding } from "viewer/model/accessors/annotation_accessor";
@@ -23,7 +21,7 @@ import {
   startLoadingAgglomerateDiffAction,
 } from "viewer/model/actions/agglomerate_diff_actions";
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
-import { parseProtoTracing } from "viewer/model/helpers/proto_helpers";
+import { parseProtoAgglomerateGraphDiff } from "viewer/model/helpers/proto_helpers";
 import { call, type Saga, select } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import type { AgglomerateDiffDescriptor, WebknossosState } from "viewer/store";
@@ -40,20 +38,10 @@ import type { AgglomerateDiffDescriptor, WebknossosState } from "viewer/store";
 
 // Number of diffs that are requested in parallel
 const MAX_PARALLEL_DIFF_REQUESTS = 4;
-// Set by the server on the trees it returns
-const REFERENCE_AGGLOMERATE_ID_METADATA_KEY = "referenceAgglomerateId";
 
 // The segment of the agglomerate whose reference agglomerate is compared, given as its id or position
 export type AgglomerateSegment = { id: bigint } | { positionInLayer: Vector3 };
 type DiffRequest = { descriptor: AgglomerateDiffDescriptor; segment: AgglomerateSegment };
-
-export function getReferenceMappingName(state: WebknossosState, layerName: string): string | null {
-  return (
-    getSkeletonTracing(state.annotation)?.agglomerateDiffReferences.find(
-      (ref) => ref.layerName === layerName,
-    )?.referenceMappingName ?? null
-  );
-}
 
 // Returns the diffs that should be shown for the current annotation, keyed by getAgglomerateDiffKey,
 // and the layers whose agglomerate files are not known, yet.
@@ -67,9 +55,11 @@ function getDesiredDiffs(state: WebknossosState): {
   if (skeletonTracing == null) return { desiredDiffs, layersWithUnknownAgglomerateFiles };
   const { segmentIdByAgglomerate } = getAgglomerateDiffOverlay(state);
 
-  for (const { layerName, referenceMappingName } of skeletonTracing.agglomerateDiffReferences) {
-    const layer = getDataLayers(state.dataset).find((l) => l.name === layerName);
-    if (layer == null || layer.category !== "segmentation") continue;
+  for (const layer of getDataLayers(state.dataset)) {
+    if (layer.category !== "segmentation") continue;
+    const layerName = layer.name;
+    const referenceMappingName = getAgglomerateDiffReferenceMappingName(state, layerName);
+    if (referenceMappingName == null) continue;
     if (layer.agglomerates == null) {
       layersWithUnknownAgglomerateFiles.push(layerName);
       continue;
@@ -121,8 +111,8 @@ function handleDiffLoadingError(e: { messages: Array<Message> } | Error) {
 }
 
 /*
- * Requests the trees that show the added and removed edges of the given agglomerate compared to
- * the reference agglomerate that contains the given segment of the agglomerate. The agglomerate
+ * Requests the added and removed edges of the given agglomerate compared to the reference
+ * agglomerate that contains the given segment of the agglomerate. The agglomerate
  * skeleton doesn't need to be loaded, so that both can be requested in parallel.
  * Errors are shown to the user and null is returned instead, so that this saga can be forked.
  */
@@ -153,7 +143,7 @@ export function* fetchAgglomerateDiff(
             getMagInfo(layerInfo.mags).getFinestMag(),
           );
     const protoBuffer = yield* call(
-      getAgglomerateDiffToReferenceAsSkeletonTracing,
+      getAgglomerateDiffToReference,
       dataset.dataStore.url,
       dataset,
       effectiveLayerName,
@@ -162,21 +152,7 @@ export function* fetchAgglomerateDiff(
       referenceMappingName,
       segmentId,
     );
-    const parsedTracing = parseProtoTracing(protoBuffer, "skeleton");
-    if (!("trees" in parsedTracing)) {
-      throw new Error("Skeleton tracing doesn't contain trees");
-    }
-    // The server returns one tree per connected component of added or removed edges
-    const trees = parsedTracing.trees.filter((tree) => tree.nodes.length > 0);
-    const referenceAgglomerateId =
-      trees[0]?.metadata.find((entry) => entry.key === REFERENCE_AGGLOMERATE_ID_METADATA_KEY)
-        ?.stringValue ?? null;
-    return {
-      segmentId,
-      referenceAgglomerateId:
-        referenceAgglomerateId != null ? BigInt(referenceAgglomerateId) : null,
-      trees,
-    };
+    return { ...parseProtoAgglomerateGraphDiff(protoBuffer), segmentId };
   } catch (e) {
     // @ts-expect-error
     handleDiffLoadingError(e);
@@ -225,7 +201,7 @@ function getReconcileInputs(state: WebknossosState) {
   const overlay = getAgglomerateDiffOverlay(state);
   return [
     skeletonTracing?.trees,
-    skeletonTracing?.agglomerateDiffReferences,
+    state.datasetConfiguration.layers,
     state.dataset.dataSource.dataLayers,
     overlay.diffs,
     overlay.segmentIdByAgglomerate,

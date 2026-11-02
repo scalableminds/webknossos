@@ -1,14 +1,17 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'AgglomerateGraph.proto' or its co... Remove this comment to see the full error message
+import AgglomerateGraphProto from "AgglomerateGraph.proto";
+import { Root } from "protobufjs/light";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import type { ServerSkeletonTracingTree } from "types/api_types";
 import { TreeTypeEnum } from "viewer/constants";
 import { getAgglomerateDiffOverlay } from "viewer/model/accessors/agglomerate_diff_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
 import {
   addTreesAndGroupsAction,
   deleteTreeAction,
   loadAgglomerateTreeAtPositionAction,
-  setAgglomerateDiffReferenceAction,
   setTreesAgglomerateInfoTracingIdAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
@@ -63,6 +66,34 @@ function makeServerTree(
   } as ServerSkeletonTracingTree;
 }
 
+// Encodes a diff like the datastore does (see AgglomerateGraphDiff.scala)
+function encodeDiff(diff: {
+  referenceAgglomerateId: number;
+  positions: number[];
+  addedEdges: number[];
+  removedEdges: number[];
+}): ArrayBuffer {
+  const messageType = Root.fromJSON(AgglomerateGraphProto).lookupType(
+    "com.scalableminds.webknossos.datastore.AgglomerateGraphDiffProto",
+  );
+  const bytes = messageType.encode(messageType.create(diff)).finish();
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
+// One added edge between (1, 0, 0) and (2, 0, 0)
+const diffWithOneAddedEdge = () =>
+  encodeDiff({
+    referenceAgglomerateId: 9,
+    positions: [1, 0, 0, 2, 0, 0],
+    addedEdges: [0, 1],
+    removedEdges: [],
+  });
+
+const setReferenceMappingName = (referenceMappingName: string | null) =>
+  Store.dispatch(
+    updateLayerSettingAction(layerName, "agglomerateDiffReference", referenceMappingName),
+  );
+
 const getSkeleton = () => enforceSkeletonTracing(Store.getState().annotation);
 const getOverlay = () => getAgglomerateDiffOverlay(Store.getState());
 const getDiffs = () => Object.values(getOverlay().diffs);
@@ -91,20 +122,21 @@ function getAgglomerateTreeId(id: bigint): number {
     .find((tree) => tree.agglomerateInfo?.agglomerateId === id)!.treeId;
 }
 
-// Answers the unmapped voxel reads with segmentIdAtFirstNode and the diff requests with one tree of
-// added edges. If pendingDiffs is passed, the diff requests are only answered once the functions
-// pushed to it are called. Returns a function that returns the requested urls.
+// Answers the unmapped voxel reads with segmentIdAtFirstNode and the diff requests with the given
+// diff (one added edge by default). If pendingDiffs is passed, the diff requests are only answered
+// once the functions pushed to it are called. Returns a function that returns the requested urls.
 function mockDiffRequests(
   { mocks }: WebknossosTestContext,
   pendingDiffs?: Array<() => void>,
+  getDiffResponse: () => Promise<ArrayBuffer> = () => Promise.resolve(diffWithOneAddedEdge()),
 ): () => URL[] {
   const defaultReceiveArraybuffer = vi
     .mocked(mocks.Request.receiveArraybuffer)
     .getMockImplementation()!;
   vi.mocked(mocks.Request.receiveArraybuffer).mockImplementation((url: string, ...rest) => {
     if (url.includes("/diffToReference/")) {
-      if (pendingDiffs == null) return Promise.resolve(new ArrayBuffer(0));
-      return new Promise((resolve) => pendingDiffs.push(() => resolve(new ArrayBuffer(0))));
+      if (pendingDiffs == null) return getDiffResponse();
+      return new Promise((resolve) => pendingDiffs.push(() => resolve(getDiffResponse())));
     }
     if (new URL(url, "http://localhost").searchParams.get("width") === "1") {
       // The segmentation layer of the fixture has the element class uint32
@@ -112,17 +144,6 @@ function mockDiffRequests(
     }
     return defaultReceiveArraybuffer(url, ...rest);
   });
-  vi.mocked(mocks.parseProtoTracing).mockImplementation(
-    () =>
-      ({
-        trees: [
-          makeServerTree(1, 1, {
-            name: "added edges",
-            metadata: [{ key: "referenceAgglomerateId", stringValue: "9" }],
-          }),
-        ],
-      }) as any,
-  );
   return () =>
     (vi.mocked(mocks.Request.receiveArraybuffer).mock.calls as Array<[string]>).map(
       ([url]) => new URL(url, "http://localhost"),
@@ -132,7 +153,7 @@ function mockDiffRequests(
 describe("Agglomerate diff saga", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "skeleton");
-    Store.dispatch(setAgglomerateDiffReferenceAction(layerName, referenceMappingName));
+    setReferenceMappingName(referenceMappingName);
   });
 
   it<WebknossosTestContext>("shows the diff of an agglomerate skeleton without adding trees to the annotation", async (context) => {
@@ -162,6 +183,60 @@ describe("Agglomerate diff saga", () => {
     expect(getSkeleton().trees.size()).toBe(treeCountBefore + 1);
   });
 
+  it<WebknossosTestContext>("shows the added and removed edges of a diff as one tree each", async (context) => {
+    // Segment 0 is an endpoint of both an added and a removed edge. The added edges are not connected.
+    mockDiffRequests(context, undefined, () =>
+      Promise.resolve(
+        encodeDiff({
+          referenceAgglomerateId: 9,
+          positions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+          addedEdges: [0, 1, 2, 3],
+          removedEdges: [0, 4],
+        }),
+      ),
+    );
+
+    addAgglomerateTrees([agglomerateId]);
+    await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
+
+    expect(getDiffs()[0]).toMatchObject({ addedEdgeCount: 2, removedEdgeCount: 1 });
+    const trees = getOverlay().skeleton.trees.values().toArray();
+    expect(trees.map((tree) => [tree.name, tree.nodes.size(), tree.edges.size()])).toEqual([
+      ["Added edges", 4, 2],
+      ["Removed edges", 2, 1],
+    ]);
+    const nodeIds = trees.flatMap((tree) => tree.nodes.keys().toArray());
+    expect(new Set(nodeIds).size).toBe(nodeIds.length);
+    const [addedTree, removedTree] = trees;
+    expect(
+      addedTree.edges
+        .all()
+        .map((edge) => [
+          addedTree.nodes.getOrThrow(edge.source).untransformedPosition,
+          addedTree.nodes.getOrThrow(edge.target).untransformedPosition,
+        ])
+        .toArray(),
+    ).toEqual([
+      [
+        [1, 2, 3],
+        [4, 5, 6],
+      ],
+      [
+        [7, 8, 9],
+        [10, 11, 12],
+      ],
+    ]);
+    expect(
+      removedTree.nodes
+        .values()
+        .map((node) => node.untransformedPosition)
+        .toArray(),
+    ).toEqual([
+      [1, 2, 3],
+      [13, 14, 15],
+    ]);
+  });
+
   it<WebknossosTestContext>("removes the diff when the agglomerate skeleton is deleted", async (context) => {
     mockDiffRequests(context);
     addAgglomerateTrees([agglomerateId]);
@@ -178,7 +253,7 @@ describe("Agglomerate diff saga", () => {
     addAgglomerateTrees([agglomerateId]);
     await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
 
-    Store.dispatch(setAgglomerateDiffReferenceAction(layerName, null));
+    setReferenceMappingName(null);
 
     await vi.waitFor(() => expect(getDiffs().length).toBe(0));
     expect(getOverlay().skeleton.trees.size()).toBe(0);
@@ -201,7 +276,7 @@ describe("Agglomerate diff saga", () => {
     await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
     const rawDataReadCount = getUrls().filter(isRawDataUrl).length;
 
-    Store.dispatch(setAgglomerateDiffReferenceAction(layerName, "agglomerate_view_2"));
+    setReferenceMappingName("agglomerate_view_2");
 
     await vi.waitFor(() =>
       expect(getDiffs()[0]).toMatchObject({
@@ -218,10 +293,9 @@ describe("Agglomerate diff saga", () => {
   });
 
   it<WebknossosTestContext>("doesn't request a failed diff again", async (context) => {
-    const getUrls = mockDiffRequests(context);
-    vi.mocked(context.mocks.parseProtoTracing).mockImplementation(() => {
-      throw new Error("Invalid response");
-    });
+    const getUrls = mockDiffRequests(context, undefined, () =>
+      Promise.reject(new Error("Invalid response")),
+    );
     addAgglomerateTrees([agglomerateId]);
     await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("failed"));
 
@@ -269,17 +343,16 @@ describe("Agglomerate diff saga", () => {
       }
       return answerDiffRequest(url, ...rest);
     });
-    vi.mocked(mocks.parseProtoTracing).mockImplementation((buffer) =>
-      buffer === skeletonBuffer
-        ? ({
-            trees: [
-              makeServerTree(1, 1, {
-                type: TreeTypeEnum.AGGLOMERATE,
-                agglomerateInfo: { agglomerateId: clickedAgglomerateId, mappingName },
-              }),
-            ],
-          } as any)
-        : ({ trees: [makeServerTree(1, 1, { name: "added edges" })] } as any),
+    vi.mocked(mocks.parseProtoTracing).mockImplementation(
+      () =>
+        ({
+          trees: [
+            makeServerTree(1, 1, {
+              type: TreeTypeEnum.AGGLOMERATE,
+              agglomerateInfo: { agglomerateId: clickedAgglomerateId, mappingName },
+            }),
+          ],
+        }) as any,
     );
 
     Store.dispatch(loadAgglomerateTreeAtPositionAction(layerName, mappingName, [5, 6, 7]));

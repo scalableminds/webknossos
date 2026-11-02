@@ -2378,7 +2378,7 @@ export function getAgglomerateTreeAsSkeletonTracing(
   );
 }
 
-export function getAgglomerateDiffToReferenceAsSkeletonTracing(
+export function getAgglomerateDiffToReference(
   dataStoreUrl: string,
   dataset: APIDataset,
   layerName: string,

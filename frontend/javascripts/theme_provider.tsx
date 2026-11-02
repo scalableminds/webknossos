@@ -17,8 +17,10 @@ export default function GlobalThemeProvider({
   const isDarkMode = userTheme === "dark";
 
   useEffect(() => {
-    // body is outside of the ReactDOM, so we have to manually update it
-    document.body.style.backgroundColor = getLayoutBackgroundColor(userTheme);
+    // html is outside of the ReactDOM, so we have to manually update it. Setting it on html (not
+    // body) colors the whole canvas, including content that overflows the viewport, and overrides
+    // the black pre-load background injected by the backend.
+    document.documentElement.style.backgroundColor = getLayoutBackgroundColor(userTheme);
   }, [userTheme]);
 
   return (

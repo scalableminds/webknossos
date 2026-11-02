@@ -180,12 +180,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
         </Typography.Title>
         {isNarrow ? null : (
           <Typography.Paragraph
-            style={{
-              ...onBlueTextStyle,
-              fontSize: token.fontSizeLG,
-              fontWeight: 300,
-              maxWidth: 700,
-            }}
+            style={{ ...onBlueTextStyle, fontSize: token.fontSizeLG, maxWidth: 700 }}
           >
             Congratulations on your new WEBKNOSSOS account! To hit the ground running, we recommend
             the following steps to you:

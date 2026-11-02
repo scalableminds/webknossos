@@ -38,6 +38,7 @@ import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import type { WebknossosState } from "viewer/store";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
+import { DashboardEmptyTasksPlaceholder } from "./dashboard_empty_tasks_placeholder";
 
 const pageLength: number = 1000;
 
@@ -367,47 +368,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
 
   renderPlaceholder() {
     return this.state.isLoading ? null : (
-      <Row gutter={32} justify="center">
-        <Col span="7">
-          <Card
-            variant="borderless"
-            cover={<i className="drawing drawing-empty-list-tasks" style={{ translate: "15%" }} />}
-            style={{ maxWidth: 460 }}
-          >
-            <Card.Meta
-              title="Request a New Task"
-              description={
-                <>
-                  <p style={{ marginTop: 20 }}>
-                    You have no tasks assigned to you. Request a new task by clicking on the{" "}
-                    <strong>Get a New Task</strong> button above.
-                  </p>
-                  {this.props.activeUser.isAdmin && (
-                    <>
-                      <p style={{ marginBottom: 30 }}>
-                        Tasks are a powerful way to distribute annotation jobs among groups of users
-                        as part of the WEBKNOSSOS project management.{" "}
-                      </p>
-                      <Space size="middle">
-                        <Button
-                          href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
-                          rel="noopener noreferrer"
-                          target="_blank"
-                        >
-                          Learn more
-                        </Button>
-                        <Link to="/tasks">
-                          <Button type="primary">Create new Tasks</Button>
-                        </Link>
-                      </Space>
-                    </>
-                  )}
-                </>
-              }
-            />
-          </Card>
-        </Col>
-      </Row>
+      <DashboardEmptyTasksPlaceholder isAdmin={this.props.activeUser.isAdmin} />
     );
   }
 
@@ -488,10 +449,14 @@ class DashboardTaskListView extends PureComponent<Props, State> {
     return (
       <List
         dataSource={tasks}
-        pagination={{
-          defaultPageSize: 50,
-          onChange: scrollToTop,
-        }}
+        pagination={
+          tasks.length > 0
+            ? {
+                defaultPageSize: 50,
+                onChange: scrollToTop,
+              }
+            : false
+        }
         loading={this.state.isLoading}
         renderItem={TaskCard}
         locale={{

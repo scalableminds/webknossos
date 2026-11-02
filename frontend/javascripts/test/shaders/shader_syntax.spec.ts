@@ -1,6 +1,7 @@
 import { parser } from "@shaderfrog/glsl-parser";
 import mags from "test/fixtures/mags";
 import getMainFragmentShader, {
+  computeUniformColorLayerCap,
   computeVertexBucketAlignmentLayerCap,
   getMainVertexShader,
   type Params,
@@ -340,5 +341,43 @@ describe("computeVertexBucketAlignmentLayerCap", () => {
     // WebGL2 minimum.
     expect(computeVertexBucketAlignmentLayerCap(15, 0)).toBe(6);
     expect(computeVertexBucketAlignmentLayerCap(15, 10)).toBe(1);
+  });
+});
+
+describe("computeUniformColorLayerCap", () => {
+  // Measured in Chrome (ANGLE): a shader with n rendered color layers, g layers
+  // in total, m magnifications and a rendered segmentation layer uses
+  // 16 + m + 5g + 15n + 52 uniform vectors.
+  const measuredUniformVectors = (n: number, g: number, m: number, hasSegmentation: boolean) =>
+    16 + m + 5 * g + 15 * n + (hasSegmentation ? 52 : 0);
+
+  it("keeps the shader within the uniform limit", () => {
+    for (const maxUniformVectors of [224, 256, 1024, 4096]) {
+      for (const [g, m, hasSegmentation] of [
+        [3, 30, true],
+        [20, 200, true],
+        [40, 400, false],
+      ] as const) {
+        const cap = computeUniformColorLayerCap(maxUniformVectors, g, m, hasSegmentation);
+        const n = Math.min(cap, g - (hasSegmentation ? 1 : 0));
+        if (cap > 1) {
+          expect(measuredUniformVectors(n, g, m, hasSegmentation)).toBeLessThanOrEqual(
+            maxUniformVectors,
+          );
+        }
+      }
+    }
+  });
+
+  it("allows all layers of typical datasets on desktop GPUs", () => {
+    // 2 color layers and a segmentation layer, 10 magnifications each.
+    expect(computeUniformColorLayerCap(1024, 3, 30, true)).toBeGreaterThanOrEqual(2);
+    // 30 color layers and a segmentation layer, 8 magnifications each.
+    expect(computeUniformColorLayerCap(1024, 31, 248, true)).toBeGreaterThanOrEqual(30);
+  });
+
+  it("lowers the count at the WebGL2 minimum", () => {
+    // 224 - 24 - 30 - 15 - 52 = 103 vectors for color layers.
+    expect(computeUniformColorLayerCap(224, 3, 30, true)).toBe(6);
   });
 });

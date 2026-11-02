@@ -96,6 +96,36 @@ export function computeVertexBucketAlignmentLayerCap(
   return Math.max(1, maxVaryingVectors - BASELINE_VARYING_ROWS - tpsLayerCount);
 }
 
+// Uniform vectors the shaders use, measured with Chrome's (ANGLE's) packing:
+// 16 fixed, one per magnification (allMagnifications), five per layer of the
+// dataset (the per-layer arrays), 15 per rendered color layer and 52 for the
+// rendered segmentation layer. Plus some headroom. WebGL2 only guarantees 224
+// fragment uniform vectors, and exceeding the limit fails to link the shader.
+const BASELINE_UNIFORM_VECTORS = 16 + 8;
+const UNIFORM_VECTORS_PER_MAGNIFICATION = 1;
+const UNIFORM_VECTORS_PER_LAYER = 5;
+const UNIFORM_VECTORS_PER_RENDERED_COLOR_LAYER = 15;
+const UNIFORM_VECTORS_FOR_SEGMENTATION = 52;
+
+// How many color layers fit into the shader's uniforms.
+export function computeUniformColorLayerCap(
+  maxUniformVectors: number,
+  globalLayerCount: number,
+  magnificationCount: number,
+  hasSegmentation: boolean,
+): number {
+  const availableUniformVectors =
+    maxUniformVectors -
+    BASELINE_UNIFORM_VECTORS -
+    magnificationCount * UNIFORM_VECTORS_PER_MAGNIFICATION -
+    globalLayerCount * UNIFORM_VECTORS_PER_LAYER -
+    (hasSegmentation ? UNIFORM_VECTORS_FOR_SEGMENTATION : 0);
+  return Math.max(
+    1,
+    Math.floor(availableUniformVectors / UNIFORM_VECTORS_PER_RENDERED_COLOR_LAYER),
+  );
+}
+
 const SHARED_UNIFORM_DECLARATIONS = `
 uniform vec2 viewportExtent;
 

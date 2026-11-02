@@ -19,6 +19,8 @@ export type GpuSpecs = {
   maxTextureCount: number;
   // Maximum number of slices per texture array, i.e. per pool.
   maxArrayTextureLayers: number;
+  // The smaller of MAX_FRAGMENT_UNIFORM_VECTORS and MAX_VERTEX_UNIFORM_VECTORS.
+  maxUniformVectors: number;
 };
 
 // A data texture is a flat 2D atlas in which each bucket occupies a whole number of texture

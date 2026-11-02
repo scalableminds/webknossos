@@ -54,6 +54,7 @@ import {
   determineAllowedModes,
   getColorLayers,
   getDataLayers,
+  getMagInfoByLayer,
   getSegmentationLayers,
   getUnifiedAdditionalCoordinates,
   hasSegmentation,
@@ -95,6 +96,7 @@ import {
   validateMinimumRequirements,
 } from "viewer/model/bucket_data_handling/gpu_capability_check";
 import DataLayer from "viewer/model/data_layer";
+import { computeUniformColorLayerCap } from "viewer/shaders/main_data_shaders.glsl";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
@@ -579,10 +581,21 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     ),
     specs.maxArrayTextureLayers,
   );
-  // The pools don't need texture units per layer. Only one segmentation layer
-  // can be visible at a time (see settings_reducer).
+  // The pools don't need texture units per layer, but every rendered layer
+  // needs uniforms. Only one segmentation layer can be visible at a time (see
+  // settings_reducer).
+  const magnificationCount = Object.values(getMagInfoByLayer(dataset)).flatMap((magInfo) =>
+    magInfo.getDenseMags(),
+  ).length;
+  const uniformColorLayerCap = computeUniformColorLayerCap(
+    specs.maxUniformVectors,
+    layers.length,
+    magnificationCount,
+    hasSegmentation(dataset),
+  );
   const maximumLayerCountToRender =
-    getColorLayers(dataset).length + (hasSegmentation(dataset) ? 1 : 0);
+    Math.min(getColorLayers(dataset).length, uniformColorLayerCap) +
+    (hasSegmentation(dataset) ? 1 : 0);
 
   if (import.meta.env.MODE !== "test") {
     console.log("Supporting", smallestCommonBucketCapacity, "buckets");

@@ -21,7 +21,7 @@
 /** Container for the description of a task type, allowing for long text wrapping and optional height capping. */
 .task-type-description {
   max-width: 700px;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 
   &.short {
     max-height: 150px;
@@ -104,7 +104,7 @@ pre.dataset-import-folder-structure-hint {
   font-size: 17px;
   font-weight: 500;
   min-height: 30px;
-  word-break: break-word;
+  overflow-wrap: anywhere;
   margin-inline-end: 15px;
 }
 
@@ -287,4 +287,18 @@ pre.dataset-import-folder-structure-hint {
     minmax(min(60%, var(--dashboard-list-max-width)), var(--dashboard-list-max-width))
     auto;
   justify-content: center;
+
+  // Below antd's md breakpoint, the sidebar moves into a drawer (see responsive_sidebar.tsx).
+  @media (max-width: 767px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+// In a drawer, the details sidebar fills the drawer body instead of floating next to a list.
+.dashboard-sidebar-drawer .dashboard-details-sidebar {
+  width: auto;
+  padding: 0;
+  position: static;
+  max-height: none;
+  overflow-y: visible;
 }

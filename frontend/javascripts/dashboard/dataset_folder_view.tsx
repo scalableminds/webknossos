@@ -1,7 +1,8 @@
+import { FolderOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { Button, Card, Flex } from "antd";
 import features, { getDemoDatasetUrl } from "features";
 import { filterNullValues, isUserAdminOrDatasetManager } from "libs/utils";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import type { APIDatasetCompact, APIUser, FolderItem } from "types/api_types";
 import DatasetCollectionContextProvider, {
@@ -12,6 +13,7 @@ import DatasetView from "./dataset_view";
 import { DetailsSidebar } from "./folders/details_sidebar";
 import { FolderModal } from "./folders/folder_modal";
 import { FolderTreeSidebar } from "./folders/folder_tree";
+import { ResponsiveSidebar, useIsCompactDashboard } from "./responsive_sidebar";
 
 type Props = {
   user: APIUser;
@@ -29,10 +31,27 @@ function DatasetFolderViewInner(props: Props) {
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets, folderModalState, setFolderModalState } = context;
   const { data: hierarchy } = useFolderHierarchyQuery();
+  const isCompact = useIsCompactDashboard();
+  const [isFolderDrawerOpen, setIsFolderDrawerOpen] = useState(false);
+  const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
+
+  // On compact screens, close the folder drawer once another folder was opened in it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only react to folder changes.
+  useEffect(() => {
+    setIsFolderDrawerOpen(false);
+  }, [context.activeFolderId]);
 
   const setSelectedDataset = (ds: APIDatasetCompact | null, multiSelect?: boolean) => {
     if (!ds) {
       setSelectedDatasets([]);
+      return;
+    }
+    if (isCompact) {
+      // On compact screens, the details aren't visible next to the list. Tapping a dataset
+      // shows them in a drawer and always selects it (instead of toggling the selection).
+      setSelectedDatasets([ds]);
+      context.setSelectedFolder(null);
+      setIsDetailsDrawerOpen(true);
       return;
     }
     // Clear folder selection if a dataset is selected.
@@ -180,6 +199,68 @@ function DatasetFolderViewInner(props: Props) {
     !context.isLoading &&
     context.globalSearchQuery == null;
 
+  const folderModal = folderModalState != null && (
+    <FolderModal {...folderModalState} onClose={() => setFolderModalState(null)} />
+  );
+  const folderTree = (
+    <ResponsiveSidebar
+      isCompact={isCompact}
+      isOpen={isFolderDrawerOpen}
+      onClose={() => setIsFolderDrawerOpen(false)}
+      title="Folders"
+      placement="left"
+    >
+      <FolderTreeSidebar />
+    </ResponsiveSidebar>
+  );
+  const datasetView = (
+    <DatasetView
+      user={props.user}
+      onSelectDataset={setSelectedDataset}
+      onSelectFolder={setSelectedFolder}
+      selectedDatasets={selectedDatasets}
+      context={context}
+      emptyStateContent={isBrandNewEmptyOrg ? renderNoDatasetsPlaceHolder() : undefined}
+    />
+  );
+  const detailsSidebar = (
+    <ResponsiveSidebar
+      isCompact={isCompact}
+      isOpen={isDetailsDrawerOpen}
+      onClose={() => setIsDetailsDrawerOpen(false)}
+      title="Details"
+      placement="right"
+    >
+      <DetailsSidebar
+        selectedDatasets={selectedDatasets}
+        setSelectedDataset={setSelectedDataset}
+        folderId={folderIdForDetailsSidebar}
+        datasetCount={datasetCountForDetailsSidebar}
+        searchQuery={context.globalSearchQuery}
+        displayedFolderEqualsActiveFolder={context.selectedFolder == null}
+      />
+    </ResponsiveSidebar>
+  );
+
+  if (isCompact) {
+    return (
+      <div style={{ flexGrow: 1, minWidth: 0 }}>
+        {folderModal}
+        <Flex gap="small" style={{ marginBottom: 12 }}>
+          <Button icon={<FolderOutlined />} onClick={() => setIsFolderDrawerOpen(true)}>
+            Folders
+          </Button>
+          <Button icon={<InfoCircleOutlined />} onClick={() => setIsDetailsDrawerOpen(true)}>
+            Details
+          </Button>
+        </Flex>
+        {folderTree}
+        <main>{datasetView}</main>
+        {detailsSidebar}
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -191,9 +272,7 @@ function DatasetFolderViewInner(props: Props) {
         minHeight: 0,
       }}
     >
-      {folderModalState != null && (
-        <FolderModal {...folderModalState} onClose={() => setFolderModalState(null)} />
-      )}
+      {folderModal}
       <div
         style={{
           gridColumn: "1 / 2",
@@ -201,7 +280,7 @@ function DatasetFolderViewInner(props: Props) {
           marginRight: 16,
         }}
       >
-        <FolderTreeSidebar />
+        {folderTree}
       </div>
       <main
         style={{
@@ -209,14 +288,7 @@ function DatasetFolderViewInner(props: Props) {
           paddingRight: 4,
         }}
       >
-        <DatasetView
-          user={props.user}
-          onSelectDataset={setSelectedDataset}
-          onSelectFolder={setSelectedFolder}
-          selectedDatasets={selectedDatasets}
-          context={context}
-          emptyStateContent={isBrandNewEmptyOrg ? renderNoDatasetsPlaceHolder() : undefined}
-        />
+        {datasetView}
       </main>
       <div
         style={{
@@ -224,14 +296,7 @@ function DatasetFolderViewInner(props: Props) {
           marginLeft: 4,
         }}
       >
-        <DetailsSidebar
-          selectedDatasets={selectedDatasets}
-          setSelectedDataset={setSelectedDataset}
-          folderId={folderIdForDetailsSidebar}
-          datasetCount={datasetCountForDetailsSidebar}
-          searchQuery={context.globalSearchQuery}
-          displayedFolderEqualsActiveFolder={context.selectedFolder == null}
-        />
+        {detailsSidebar}
       </div>
     </div>
   );

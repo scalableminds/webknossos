@@ -72,6 +72,7 @@ import { AnnotationStatusLabels } from "./annotation_status_labels";
 import { AnnotationTags } from "./annotation_tags";
 import { DashboardEmptyAnnotationsPlaceholder } from "./dashboard_empty_annotations_placeholder";
 import { DashboardTopBar } from "./dashboard_top_bar";
+import { ResponsiveSidebar, useIsCompactDashboard } from "./responsive_sidebar";
 
 const pageLength: number = 1000;
 
@@ -87,6 +88,8 @@ type Props = {
   datasetNameFilter?: string | null;
   // Called when the user removes the datasetNameFilter tag, so the caller can clear it from the URL.
   onDatasetNameFilterCleared?: () => void;
+  // On compact screens, the details sidebar is shown in a drawer.
+  isCompact: boolean;
 } & WithModalProps;
 type AnnotationSortOption = "modifiedDesc" | "newest" | "oldest" | "owner" | "name";
 const ANNOTATION_SORT_OPTIONS: Array<{ key: AnnotationSortOption; label: string }> = [
@@ -121,6 +124,7 @@ type State = {
   selectedTeamId: string | null;
   sortOption: AnnotationSortOption;
   selectedAnnotationId: string | null;
+  isDetailsDrawerOpen: boolean;
 };
 type PartialState = Pick<State, "searchQuery" | "shouldShowArchivedAnnotations">;
 const persistence = new Persistence<PartialState>(
@@ -155,6 +159,7 @@ class AnnotationsView extends PureComponent<Props, State> {
     selectedTeamId: null,
     sortOption: "modifiedDesc",
     selectedAnnotationId: null,
+    isDetailsDrawerOpen: false,
   };
 
   // This attribute is not part of the state, since it is only set in the
@@ -898,6 +903,12 @@ class AnnotationsView extends PureComponent<Props, State> {
               const { tagName } = event.target as HTMLElement;
               // Don't (de)select when another element within the row was clicked (e.g., a link).
               if (tagName !== "TD" && tagName !== "DIV") return;
+              if (this.props.isCompact) {
+                // The details aren't visible next to the list. Show them in a drawer instead
+                // of toggling the selection.
+                this.setState({ selectedAnnotationId: annotation.id, isDetailsDrawerOpen: true });
+                return;
+              }
               this.setState((prevState) => ({
                 selectedAnnotationId:
                   prevState.selectedAnnotationId === annotation.id ? null : annotation.id,
@@ -971,35 +982,51 @@ class AnnotationsView extends PureComponent<Props, State> {
             ) : null}
           </div>
         </div>
-        <AnnotationDetailsSidebar
-          annotation={selectedAnnotation}
-          activeUser={this.props.activeUser}
-          isReadOnly={selectedAnnotation != null && !this.isAnnotationEditable(selectedAnnotation)}
-          tags={
-            selectedAnnotation != null &&
-            (selectedAnnotation.tags.length > 0 || !this.state.shouldShowArchivedAnnotations)
-              ? this.renderTags(selectedAnnotation, true)
-              : null
-          }
-          onRename={
-            selectedAnnotation != null && this.isAnnotationEditable(selectedAnnotation)
-              ? (newName) => this.renameAnnotation(selectedAnnotation, newName)
-              : undefined
-          }
-          onArchive={
-            selectedAnnotation != null && this.mayArchiveAnnotation(selectedAnnotation)
-              ? () => this.finishOrReopenAnnotation("finish", selectedAnnotation)
-              : undefined
-          }
-          onToggleLock={
-            selectedAnnotation != null && this.mayLockAnnotation(selectedAnnotation)
-              ? () => this.setLockedState(selectedAnnotation, !selectedAnnotation.isLockedByOwner)
-              : undefined
-          }
-        />
+        <ResponsiveSidebar
+          isCompact={this.props.isCompact}
+          // E.g., archiving removes the annotation from the list. Don't keep an empty drawer open then.
+          isOpen={this.state.isDetailsDrawerOpen && selectedAnnotation != null}
+          onClose={() => this.setState({ isDetailsDrawerOpen: false })}
+          title="Details"
+          placement="right"
+        >
+          <AnnotationDetailsSidebar
+            annotation={selectedAnnotation}
+            activeUser={this.props.activeUser}
+            isReadOnly={
+              selectedAnnotation != null && !this.isAnnotationEditable(selectedAnnotation)
+            }
+            tags={
+              selectedAnnotation != null &&
+              (selectedAnnotation.tags.length > 0 || !this.state.shouldShowArchivedAnnotations)
+                ? this.renderTags(selectedAnnotation, true)
+                : null
+            }
+            onRename={
+              selectedAnnotation != null && this.isAnnotationEditable(selectedAnnotation)
+                ? (newName) => this.renameAnnotation(selectedAnnotation, newName)
+                : undefined
+            }
+            onArchive={
+              selectedAnnotation != null && this.mayArchiveAnnotation(selectedAnnotation)
+                ? () => this.finishOrReopenAnnotation("finish", selectedAnnotation)
+                : undefined
+            }
+            onToggleLock={
+              selectedAnnotation != null && this.mayLockAnnotation(selectedAnnotation)
+                ? () => this.setLockedState(selectedAnnotation, !selectedAnnotation.isLockedByOwner)
+                : undefined
+            }
+          />
+        </ResponsiveSidebar>
       </div>
     );
   }
 }
 
-export default withModal(AnnotationsView);
+function AnnotationsViewWithLayout(props: Omit<Props, "isCompact">) {
+  const isCompact = useIsCompactDashboard();
+  return <AnnotationsView {...props} isCompact={isCompact} />;
+}
+
+export default withModal(AnnotationsViewWithLayout);

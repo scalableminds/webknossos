@@ -86,6 +86,8 @@ const DATASET_SORT_OPTIONS: Array<{ key: DatasetSortOption; label: string }> = [
 ];
 
 const THUMBNAIL_SIZE = 80;
+// On phones, a smaller thumbnail leaves more room for the dataset name.
+const COMPACT_THUMBNAIL_SIZE = 48;
 
 type Props = {
   datasets: Array<APIDatasetCompact>;
@@ -107,6 +109,8 @@ type Props = {
   // Custom content shown as the table's empty state instead of the regular hint text.
   // Used for cards for a brand-new organizations.
   emptyStateContent?: React.ReactNode;
+  // Shows smaller thumbnails (e.g., on phones).
+  isCompact?: boolean;
 };
 
 type State = {
@@ -402,7 +406,10 @@ class DatasetRenderer {
         <img
           src={imgSrc}
           className={`dataset-table-thumbnail ${iconClassName}`}
-          style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
+          style={{
+            width: this.datasetTable.getThumbnailSize(),
+            height: this.datasetTable.getThumbnailSize(),
+          }}
           alt=""
         />
       </Link>
@@ -486,7 +493,10 @@ class FolderRenderer {
       <img
         src={folderThumbnailIcon}
         className="dataset-table-thumbnail icon-thumbnail"
-        style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
+        style={{
+          width: this.datasetTable.getThumbnailSize(),
+          height: this.datasetTable.getThumbnailSize(),
+        }}
         alt=""
       />
     );
@@ -643,6 +653,10 @@ class DatasetTable extends PureComponent<Props, State> {
     );
   };
 
+  getThumbnailSize(): number {
+    return this.props.isCompact ? COMPACT_THUMBNAIL_SIZE : THUMBNAIL_SIZE;
+  }
+
   getFolderSettingsActions(folder: FolderItemWithName): React.ReactNode {
     const { context } = this.props;
     const folderTreeContextMenuItems = generateSettingsForFolder(folder, context, true);
@@ -724,7 +738,7 @@ class DatasetTable extends PureComponent<Props, State> {
       {
         // Explicit width so this column doesn't grow beyond the thumbnail's own size
         // when the other columns don't have enough content to fill the table's width.
-        width: THUMBNAIL_SIZE + 16, // 16 = the cell's remaining (left-side only) padding
+        width: this.getThumbnailSize() + 16, // 16 = the cell's remaining (left-side only) padding
         key: "thumbnail",
         className: "dashboard-list-table-borderless-cell dashboard-list-table-thumbnail-cell",
         render: (__, rowRenderer: RowRenderer) => rowRenderer.renderThumbnailColumn(),

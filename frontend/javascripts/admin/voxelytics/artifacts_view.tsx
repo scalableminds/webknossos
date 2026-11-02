@@ -16,7 +16,7 @@ export function renderArtifactPath(artifact: VoxelyticsArtifactConfig) {
         border: "1px solid var(--ant-color-border)",
         padding: 10,
         position: "relative",
-        wordBreak: "break-word",
+        overflowWrap: "anywhere",
       }}
     >
       {artifact.path}

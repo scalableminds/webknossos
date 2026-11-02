@@ -55,6 +55,7 @@ import {
   SEARCH_RESULTS_LIMIT,
   useFolderQuery,
 } from "./dataset/queries";
+import { useIsCompactDashboard } from "./responsive_sidebar";
 
 type Props = {
   user: APIUser;
@@ -109,6 +110,7 @@ function DatasetView({
   emptyStateContent,
 }: Props) {
   const searchQuery = context.globalSearchQuery;
+  const isCompact = useIsCompactDashboard();
   const setSearchQuery = context.setGlobalSearchQuery;
   const [searchTags, setSearchTags] = useState<string[]>([]);
   const [datasetFilteringMode, setDatasetFilteringMode] =
@@ -201,6 +203,7 @@ function DatasetView({
         onClearSearchAndFilters={clearSearchAndFilters}
         isLoading={isLoading}
         emptyStateContent={emptyStateContent}
+        isCompact={isCompact}
       />
     );
   }

@@ -156,6 +156,30 @@ const _getEdgeInfoFromId = (boxId: number, indices: DimensionMap, edgeId: number
   };
 };
 
+// Returns how close (in the same units as computeDistanceArray) the mouse has to be to a
+// neighbouring edge of the primary edge so that both are grabbed together, i.e. a corner is resized.
+// For a box that is short on screen, the full tolerance would cover the whole primary edge, so that
+// every grab would resize a corner. Therefore, only the outer quarters of the primary edge count as
+// corner regions. Beyond the ends of the primary edge, the full tolerance applies.
+export function getMaxDistanceToSecondaryEdge(
+  boundingBox: BoundingBoxMinMaxType,
+  primaryEdgeId: number,
+  position: Vector3,
+  indices: DimensionMap,
+  planeRatio: Vector3,
+  maxDistanceToSelection: number,
+): number {
+  // Horizontal edges (ids 0 and 1) extend along the first dimension of the viewport,
+  // vertical edges (ids 2 and 3) along the second one.
+  const extentDim = primaryEdgeId < 2 ? indices[0] : indices[1];
+  const { min, max } = boundingBox;
+  if (position[extentDim] < min[extentDim] || position[extentDim] > max[extentDim]) {
+    return maxDistanceToSelection;
+  }
+  const edgeLength = (max[extentDim] - min[extentDim]) / planeRatio[extentDim];
+  return Math.min(maxDistanceToSelection, edgeLength / 4);
+}
+
 // Return the edge or edges of the bounding box closest to the mouse position if their distance is below a certain threshold.
 // If no edge is close to the mouse null is returned instead. Otherwise the first entry is always the closest edge.
 // If the mouse is near a corner, there is always an additional edge that is close to the mouse.
@@ -217,15 +241,23 @@ export function getClosestHoveredBoundingBox(
   const [firstNeighbourId, secondNeighbourId] = getNeighbourEdgeIndexByEdgeIndex[nearestEdgeIndex];
   const firstNeighbourEdgeDistance = currentNearestDistanceArray[firstNeighbourId];
   const secondNeighbourEdgeDistance = currentNearestDistanceArray[secondNeighbourId];
+  const maxDistanceToSecondaryEdge = getMaxDistanceToSecondaryEdge(
+    nearestBoundingBox.boundingBox,
+    nearestEdgeIndex,
+    roundedPosition,
+    indices,
+    planeRatio,
+    zoomedMaxDistanceToSelection,
+  );
 
   if (
     firstNeighbourEdgeDistance < secondNeighbourEdgeDistance &&
-    firstNeighbourEdgeDistance < zoomedMaxDistanceToSelection
+    firstNeighbourEdgeDistance < maxDistanceToSecondaryEdge
   ) {
     secondaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, firstNeighbourId);
   } else if (
     secondNeighbourEdgeDistance < firstNeighbourEdgeDistance &&
-    secondNeighbourEdgeDistance < zoomedMaxDistanceToSelection
+    secondNeighbourEdgeDistance < maxDistanceToSecondaryEdge
   ) {
     secondaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, secondNeighbourId);
   }

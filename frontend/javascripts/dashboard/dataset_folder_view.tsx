@@ -182,7 +182,8 @@ function DatasetFolderViewInner(props: Props) {
         align="center"
         gap={32}
         style={{
-          padding: "20px 50px 70px",
+          // No side padding, so that the cards keep their full width on phones.
+          padding: "20px 0 70px",
         }}
       >
         {features().isWkorgInstance ? openPublicDatasetCard : null}

@@ -1,10 +1,10 @@
-import { Drawer, Grid } from "antd";
+import { Drawer } from "antd";
+import { useMinScreenWidth } from "libs/react_hooks";
 import type React from "react";
 
 // Below the md breakpoint (e.g., on phones), the dashboard sidebars don't fit next to the list.
 export function useIsCompactDashboard(): boolean {
-  // Before the breakpoints are known, `md` is undefined. Default to the wide layout then.
-  return Grid.useBreakpoint().md === false;
+  return !useMinScreenWidth("md");
 }
 
 // Renders a dashboard sidebar inline on wide screens and inside a drawer on compact ones.

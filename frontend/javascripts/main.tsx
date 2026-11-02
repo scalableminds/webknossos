@@ -7,7 +7,7 @@ import { message } from "antd";
 import ErrorBoundary from "components/error_boundary";
 import { FailedToLoadView } from "components/failed_to_load_view";
 import { RootForFastTooltips } from "components/fast_tooltip";
-import features, { load as loadFeatureToggles } from "features";
+import { load as loadFeatureToggles } from "features";
 import checkBrowserFeatures from "libs/browser_feature_check";
 import ErrorHandling from "libs/error_handling";
 import { reactQueryClient } from "libs/react_query_client";
@@ -94,7 +94,7 @@ function willShowDatasetsTab(pathname: string): boolean {
   }
   // Without an explicit tab, DashboardView restores the last used tab or falls back to its default.
   const lastUsedTabKey = UserLocalStorage.getItem("lastUsedDashboardTab");
-  return lastUsedTabKey != null ? lastUsedTabKey === "datasets" : !features().isWkorgInstance;
+  return lastUsedTabKey == null || lastUsedTabKey === "datasets";
 }
 
 if (document.readyState === "loading") {

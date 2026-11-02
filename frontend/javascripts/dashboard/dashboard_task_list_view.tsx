@@ -605,7 +605,7 @@ function TopBar({
   const renderingTab = useContext(RenderingTabContext);
 
   const content = (
-    <Space>
+    <Space wrap>
       <AsyncButton
         type="primary"
         icon={<UserAddOutlined />}

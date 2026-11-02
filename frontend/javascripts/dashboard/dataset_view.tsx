@@ -33,7 +33,7 @@ import dayjs from "dayjs";
 import features from "features";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
-import { isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
+import { hasFinePointer, isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import type React from "react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { Link } from "react-router";
@@ -209,7 +209,8 @@ function DatasetView({
     <Input
       prefix={<SearchOutlined />}
       allowClear
-      autoFocus
+      // Autofocusing on touch devices would pop up the on-screen keyboard.
+      autoFocus={hasFinePointer()}
       style={{
         width: 200,
       }}
@@ -224,7 +225,7 @@ function DatasetView({
     isUserAnAdminOrDatasetManager || isUserTeamManager(user);
 
   const adminHeader = isUserAdminOrDatasetManagerOrTeamManager ? (
-    <Space>
+    <Space wrap>
       <DatasetRefreshButton context={context} />
       <DatasetAddButton context={context} />
       {context.activeFolderId != null && (

@@ -95,11 +95,12 @@ p {
 }
 
 .large-table {
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
+// Don't break column titles mid-word, unlike the cells of .large-table.
 .ant-table-column-title {
-  word-break: normal;
+  overflow-wrap: normal;
 }
 
 label.ant-checkbox-wrapper {

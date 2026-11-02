@@ -12,36 +12,37 @@ import { Space, type SpaceProps, Tooltip } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import LinkButton from "components/link_button";
 import messages from "messages";
+import { createContext, useContext } from "react";
 import { Link } from "react-router";
 import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_types";
 import { getVolumeDescriptors } from "viewer/model/accessors/annotation_accessor";
 
-export function TaskActions({
-  task,
-  orientation,
-  activeUser,
-  isAdminView,
-  onTransfer,
-  onReset,
-  onCancel,
-  onFinish,
-}: {
-  task: APITaskWithAnnotation;
-  orientation: SpaceProps["orientation"];
+export type TaskActionsContextValue = {
   activeUser: APIUser;
+  // Names of the teams the active user manages, computed once for all task cards.
+  managedTeamNames: Set<string>;
   isAdminView: boolean;
   onTransfer: (annotationId: string) => void;
   onReset: (annotation: APIAnnotation) => void;
   onCancel: (annotation: APIAnnotation) => void;
   onFinish: (task: APITaskWithAnnotation) => void;
+};
+
+export const TaskActionsContext = createContext<TaskActionsContextValue | null>(null);
+
+export function TaskActions({
+  task,
+  orientation,
+}: {
+  task: APITaskWithAnnotation;
+  orientation: SpaceProps["orientation"];
 }) {
+  const context = useContext(TaskActionsContext);
+  if (context == null) throw new Error("TaskActions must be rendered inside TaskActionsContext.");
+  const { activeUser, managedTeamNames, isAdminView, onTransfer, onReset, onCancel, onFinish } =
+    context;
   const { annotation } = task;
-  const isAdmin =
-    activeUser.isAdmin ||
-    activeUser.teams
-      .filter((team) => team.isTeamManager)
-      .map((team) => team.name)
-      .includes(task.team);
+  const isAdmin = activeUser.isAdmin || managedTeamNames.has(task.team);
   const label = isAdminView ? (
     <LinkButton icon={<EyeOutlined />}>View</LinkButton>
   ) : (

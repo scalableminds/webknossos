@@ -1,29 +1,16 @@
 import { PropTypes } from "@scalableminds/prop-types";
+import { type InfiniteData, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { requestTask } from "admin/api/tasks";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import Request from "libs/request";
-import { useCallback, useState } from "react";
-import type { APIAnnotation, APITaskWithAnnotation } from "types/api_types";
+import { useEffect, useMemo, useState } from "react";
+import type { APIAnnotation, APITaskType, APITaskWithAnnotation } from "types/api_types";
 
 const pageLength: number = 1000;
 
-export type TaskModeState = {
-  tasks: Array<APITaskWithAnnotation>;
-  loadedAllTasks: boolean;
-  lastLoadedPage: number;
-};
-export type TaskModeStates = {
-  finished: TaskModeState;
-  unfinished: TaskModeState;
-};
-export type TaskMode = keyof TaskModeStates;
-
-const INITIAL_TASK_MODE_STATE: TaskModeState = {
-  tasks: [],
-  loadedAllTasks: false,
-  lastLoadedPage: -1,
-};
+export type TaskMode = "finished" | "unfinished";
+type TaskPages = InfiniteData<APITaskWithAnnotation[], number>;
 
 export const persistence = new Persistence<{ showFinishedTasks: boolean }>(
   {
@@ -34,6 +21,12 @@ export const persistence = new Persistence<{ showFinishedTasks: boolean }>(
 
 export const getTaskMode = (showFinishedTasks: boolean): TaskMode =>
   showFinishedTasks ? "finished" : "unfinished";
+
+// Prefix of the query keys of both modes, so that an update can target both at once.
+const getUserTasksQueryKey = (userId: string | null | undefined) =>
+  ["dashboardTasks", userId ?? null] as const;
+const getTasksQueryKey = (userId: string | null | undefined, mode: TaskMode) =>
+  [...getUserTasksQueryKey(userId), mode] as const;
 
 export const convertAnnotationToTaskWithAnnotationType = (
   annotation: APIAnnotation,
@@ -47,115 +40,117 @@ export const convertAnnotationToTaskWithAnnotationType = (
     );
   }
 
-  if (!task.type) {
-    // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'type' because it is a read-only ... Remove this comment to see the full error message
-    task.type = {
+  // Only the fields that the dashboard renders are filled for the type of a deleted task type.
+  const type =
+    task.type ??
+    ({
       summary: `[deleted] ${annotation.typ}`,
       description: "",
-      settings: {
-        allowedModes: "",
-      },
-    };
-  }
+      settings: { allowedModes: [] },
+    } as unknown as APITaskType);
 
-  const newTask: APITaskWithAnnotation = Object.assign({}, task, {
-    annotation,
-  });
-  return newTask;
+  return { ...task, type, annotation };
 };
 
+// This refers not to the pagination of antd but to the pagination of querying data from SQL.
+async function fetchTaskPage(
+  userId: string | null | undefined,
+  mode: TaskMode,
+  pageNumber: number,
+): Promise<APITaskWithAnnotation[]> {
+  const isFinished = (mode === "finished").toString();
+  const url = userId
+    ? `/api/users/${userId}/tasks?isFinished=${isFinished}&pageNumber=${pageNumber}`
+    : `/api/user/tasks?isFinished=${isFinished}&pageNumber=${pageNumber}`;
+  const annotationsWithTasks: APIAnnotation[] = await Request.receiveJSON(url);
+  return annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
+}
+
+function mapTaskPages(
+  data: TaskPages | undefined,
+  update: (tasks: APITaskWithAnnotation[], pageIndex: number) => APITaskWithAnnotation[],
+): TaskPages | undefined {
+  // Lists that were never loaded stay unloaded, so that they are fetched completely later.
+  return data == null ? data : { ...data, pages: data.pages.map(update) };
+}
+
 /**
- * Holds the paginated task lists for finished and unfinished tasks and the
- * operations that load or modify them.
+ * Loads the paginated task list of the given mode and provides the operations that modify the
+ * task lists. The lists are cached per user and mode.
  */
-export function useDashboardTasks(userId: string | null | undefined) {
-  const [taskModeStates, setTaskModeStates] = useState<TaskModeStates>({
-    finished: INITIAL_TASK_MODE_STATE,
-    unfinished: INITIAL_TASK_MODE_STATE,
+export function useDashboardTasks(userId: string | null | undefined, mode: TaskMode) {
+  const queryClient = useQueryClient();
+  const [isRequestingTask, setIsRequestingTask] = useState(false);
+
+  const query = useInfiniteQuery({
+    queryKey: getTasksQueryKey(userId, mode),
+    queryFn: ({ pageParam }) => fetchTaskPage(userId, mode, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, _allPages, lastPageParam) =>
+      lastPage.length < pageLength ? undefined : lastPageParam + 1,
+    // Request already shows an error toast, so retrying would repeat it.
+    retry: false,
+    refetchOnWindowFocus: false,
+    // Task lists can be large, so don't persist them to localStorage.
+    meta: { persist: false },
   });
-  const [isLoading, setIsLoading] = useState(false);
 
-  const updateTaskModeState = useCallback(
-    (mode: TaskMode, update: (modeState: TaskModeState) => Partial<TaskModeState>) => {
-      setTaskModeStates((prevStates) => ({
-        ...prevStates,
-        [mode]: { ...prevStates[mode], ...update(prevStates[mode]) },
-      }));
-    },
-    [],
-  );
+  useEffect(() => {
+    if (query.error != null) handleGenericError(query.error);
+  }, [query.error]);
 
-  // This refers not to the pagination of antd but to the pagination of querying data from SQL.
-  const fetchPage = useCallback(
-    async (mode: TaskMode, pageNumber: number) => {
-      const isFinished = (mode === "finished").toString();
-      const url = userId
-        ? `/api/users/${userId}/tasks?isFinished=${isFinished}&pageNumber=${pageNumber}`
-        : `/api/user/tasks?isFinished=${isFinished}&pageNumber=${pageNumber}`;
+  const tasks = useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
 
-      try {
-        setIsLoading(true);
-        const annotationsWithTasks: APIAnnotation[] = await Request.receiveJSON(url);
-        const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
-        updateTaskModeState(mode, (modeState) => ({
-          loadedAllTasks:
-            annotationsWithTasks.length !== pageLength || annotationsWithTasks.length === 0,
-          tasks: modeState.tasks.concat(tasks),
-          lastLoadedPage: pageNumber,
-        }));
-      } catch (error) {
-        handleGenericError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [userId, updateTaskModeState],
-  );
+  const updateTasks = async (
+    queryKey: readonly unknown[],
+    update: (tasks: APITaskWithAnnotation[], pageIndex: number) => APITaskWithAnnotation[],
+  ) => {
+    // Cancel a running fetch so that its stale response cannot overwrite this update.
+    await queryClient.cancelQueries({ queryKey });
+    queryClient.setQueriesData<TaskPages>({ queryKey }, (data) => mapTaskPages(data, update));
+  };
 
-  const removeTaskByAnnotationId = useCallback(
-    (mode: TaskMode, annotationId: string | null | undefined) => {
-      updateTaskModeState(mode, (modeState) => ({
-        tasks: modeState.tasks.filter((t) => t.annotation.id !== annotationId),
-      }));
-    },
-    [updateTaskModeState],
-  );
+  const removeTaskByAnnotationId = (annotationId: string) =>
+    updateTasks(getUserTasksQueryKey(userId), (pageTasks) =>
+      pageTasks.filter((task) => task.annotation.id !== annotationId),
+    );
 
-  const moveTaskToFinished = useCallback((taskId: string, finishedTask: APITaskWithAnnotation) => {
-    setTaskModeStates((prevStates) => ({
-      unfinished: {
-        ...prevStates.unfinished,
-        tasks: prevStates.unfinished.tasks.filter((t) => t.id !== taskId),
-      },
-      finished: {
-        ...prevStates.finished,
-        tasks: [finishedTask].concat(prevStates.finished.tasks),
-      },
-    }));
-  }, []);
+  const moveTaskToFinished = async (taskId: string) => {
+    await updateTasks(getTasksQueryKey(userId, "unfinished"), (pageTasks) =>
+      pageTasks.filter((task) => task.id !== taskId),
+    );
+    // Prepending the task to the finished list would shift its pages, so reload it instead.
+    await queryClient.invalidateQueries({ queryKey: getTasksQueryKey(userId, "finished") });
+  };
 
-  const requestNewTask = useCallback(async () => {
-    setIsLoading(true);
+  const hasUnfinishedTasks = () =>
+    (queryClient.getQueryData<TaskPages>(getTasksQueryKey(userId, "unfinished"))?.pages ?? []).some(
+      (pageTasks) => pageTasks.length > 0,
+    );
+
+  const requestNewTask = async () => {
+    setIsRequestingTask(true);
     try {
-      const newTaskAnnotation = await requestTask();
-      updateTaskModeState("unfinished", (modeState) => ({
-        tasks: modeState.tasks.concat([
-          convertAnnotationToTaskWithAnnotationType(newTaskAnnotation),
-        ]),
-      }));
-    } catch (_ex) {
-      // catch exception so that promise does not fail and the modal will close
+      const newTask = convertAnnotationToTaskWithAnnotationType(await requestTask());
+      await updateTasks(getTasksQueryKey(userId, "unfinished"), (pageTasks, pageIndex) =>
+        pageIndex === 0 ? [...pageTasks, newTask] : pageTasks,
+      );
+    } catch (error) {
+      // Don't rethrow, so that the confirmation modal closes.
+      handleGenericError(error as Error);
     } finally {
-      setIsLoading(false);
+      setIsRequestingTask(false);
     }
-  }, [updateTaskModeState]);
+  };
 
   return {
-    taskModeStates,
-    isLoading,
-    fetchPage,
+    tasks,
+    isLoading: query.isFetching || isRequestingTask,
+    hasMoreTasks: query.hasNextPage,
+    loadMoreTasks: () => query.fetchNextPage(),
     removeTaskByAnnotationId,
     moveTaskToFinished,
+    hasUnfinishedTasks,
     requestNewTask,
   };
 }

@@ -3,22 +3,17 @@ import { deleteAnnotation, resetAnnotation } from "admin/rest_api";
 import { App, Button, Flex, Typography } from "antd";
 import { DashboardEmptyTasksPlaceholder } from "dashboard/dashboard_empty_tasks_placeholder";
 import TransferTaskModal from "dashboard/transfer_task_modal";
-import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { compareBy } from "libs/utils";
 import messages from "messages";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { APIAnnotation, APITaskWithAnnotation } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
-import { TaskActions } from "./task_actions";
+import { TaskActionsContext, type TaskActionsContextValue } from "./task_actions";
 import { TaskCardList } from "./task_card_list";
 import { TaskListTopBar } from "./task_list_top_bar";
-import {
-  convertAnnotationToTaskWithAnnotationType,
-  getTaskMode,
-  persistence,
-  useDashboardTasks,
-} from "./use_dashboard_tasks";
+import { getTaskMode, persistence, useDashboardTasks } from "./use_dashboard_tasks";
 
 type Props = {
   userId: string | null | undefined;
@@ -34,49 +29,47 @@ function DashboardTaskListView({ userId, isAdminView }: Props) {
   const [transferredAnnotationId, setTransferredAnnotationId] = useState<string | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const {
-    taskModeStates,
+    tasks,
     isLoading,
-    fetchPage,
+    hasMoreTasks,
+    loadMoreTasks,
     removeTaskByAnnotationId,
     moveTaskToFinished,
+    hasUnfinishedTasks,
     requestNewTask,
-  } = useDashboardTasks(userId);
+  } = useDashboardTasks(userId, getTaskMode(showFinishedTasks));
 
-  const currentMode = getTaskMode(showFinishedTasks);
-  const { tasks: currentTasks, loadedAllTasks, lastLoadedPage } = taskModeStates[currentMode];
-
-  useEffectOnlyOnce(() => {
-    fetchPage(currentMode, 0);
+  // Persist after every render, not only on toggle: switching dashboard tabs pushes a new
+  // history entry while this component stays mounted, and that entry needs the setting, too.
+  // persist() is a no-op if the entry already holds the value.
+  useEffect(() => {
+    persistence.persist({ showFinishedTasks });
   });
+
+  const managedTeamNames = useMemo(
+    () => new Set(activeUser.teams.filter((team) => team.isTeamManager).map((team) => team.name)),
+    [activeUser.teams],
+  );
 
   const sortedTasks = useMemo(
     () =>
-      [...currentTasks].sort(
+      [...tasks].sort(
         compareBy<APITaskWithAnnotation>(
           (task) => (showFinishedTasks ? task.annotation.modified : task.created),
           false,
         ),
       ),
-    [currentTasks, showFinishedTasks],
+    [tasks, showFinishedTasks],
   );
 
-  const toggleShowFinished = () => {
-    const newShowFinishedTasks = !showFinishedTasks;
-    setShowFinishedTasks(newShowFinishedTasks);
-    persistence.persist({ showFinishedTasks: newShowFinishedTasks });
-    const newMode = getTaskMode(newShowFinishedTasks);
-    if (taskModeStates[newMode].lastLoadedPage === -1) fetchPage(newMode, 0);
-  };
+  const toggleShowFinished = () => setShowFinishedTasks(!showFinishedTasks);
 
   const confirmFinish = (task: APITaskWithAnnotation) => {
     modal.confirm({
       title: messages["annotation.finish"],
       onOk: async () => {
-        const changedAnnotationWithTask = await finishTask(task.annotation.id);
-        moveTaskToFinished(
-          task.id,
-          convertAnnotationToTaskWithAnnotationType(changedAnnotationWithTask),
-        );
+        await finishTask(task.annotation.id);
+        await moveTaskToFinished(task.id);
       },
     });
   };
@@ -100,13 +93,13 @@ function DashboardTaskListView({ userId, isAdminView }: Props) {
       okText: messages.yes,
       onOk: async () => {
         await deleteAnnotation(annotation.id, annotation.typ);
-        removeTaskByAnnotationId(currentMode, annotation.id);
+        await removeTaskByAnnotationId(annotation.id);
       },
     });
   };
 
   const confirmGetNewTask = async (): Promise<void> => {
-    if (taskModeStates.unfinished.tasks.length === 0) {
+    if (!hasUnfinishedTasks()) {
       await requestNewTask();
       return;
     }
@@ -128,11 +121,21 @@ function DashboardTaskListView({ userId, isAdminView }: Props) {
 
   const handleTransferredTask = () => {
     setIsTransferModalOpen(false);
-    removeTaskByAnnotationId(currentMode, transferredAnnotationId);
+    if (transferredAnnotationId != null) removeTaskByAnnotationId(transferredAnnotationId);
+  };
+
+  const taskActionsContext: TaskActionsContextValue = {
+    activeUser,
+    managedTeamNames,
+    isAdminView,
+    onTransfer: openTransferModal,
+    onReset: confirmReset,
+    onCancel: confirmCancel,
+    onFinish: confirmFinish,
   };
 
   return (
-    <div>
+    <TaskActionsContext.Provider value={taskActionsContext}>
       <TaskListTopBar
         confirmGetNewTask={confirmGetNewTask}
         isAdminView={isAdminView}
@@ -151,23 +154,11 @@ function DashboardTaskListView({ userId, isAdminView }: Props) {
         placeholder={
           isLoading ? null : <DashboardEmptyTasksPlaceholder isAdmin={activeUser.isAdmin} />
         }
-        renderActions={(task, orientation) => (
-          <TaskActions
-            task={task}
-            orientation={orientation}
-            activeUser={activeUser}
-            isAdminView={isAdminView}
-            onTransfer={openTransferModal}
-            onReset={confirmReset}
-            onCancel={confirmCancel}
-            onFinish={confirmFinish}
-          />
-        )}
       />
       {/* Not passed as the List's `loadMore`, since antd would then hide the pagination. */}
-      {sortedTasks.length > 0 && !loadedAllTasks ? (
+      {sortedTasks.length > 0 && hasMoreTasks ? (
         <Flex justify="center" style={{ marginTop: 16 }}>
-          <Button onClick={() => fetchPage(currentMode, lastLoadedPage + 1)} loading={isLoading}>
+          <Button onClick={loadMoreTasks} loading={isLoading}>
             Load more Tasks
           </Button>
         </Flex>
@@ -178,7 +169,7 @@ function DashboardTaskListView({ userId, isAdminView }: Props) {
         onCancel={() => setIsTransferModalOpen(false)}
         onChange={handleTransferredTask}
       />
-    </div>
+    </TaskActionsContext.Provider>
   );
 }
 

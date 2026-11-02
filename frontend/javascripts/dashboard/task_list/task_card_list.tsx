@@ -1,15 +1,4 @@
-import {
-  Card,
-  Col,
-  Descriptions,
-  type DescriptionsProps,
-  Flex,
-  Grid,
-  List,
-  Row,
-  type SpaceProps,
-  Tag,
-} from "antd";
+import { Card, Col, Descriptions, type DescriptionsProps, Flex, Grid, List, Row, Tag } from "antd";
 import classNames from "classnames";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
@@ -21,6 +10,7 @@ import {
   getSkeletonDescriptor,
   getVolumeDescriptors,
 } from "viewer/model/accessors/annotation_accessor";
+import { TaskActions } from "./task_actions";
 
 // List items are bare cards without a <List.Item>, so the list adds no spacing between them.
 const TASK_CARD_STYLE = { marginBottom: 16 };
@@ -58,14 +48,12 @@ export function TaskCardList({
   isAdminView,
   isLoading,
   placeholder,
-  renderActions,
 }: {
   tasks: APITaskWithAnnotation[];
   showFinishedTasks: boolean;
   isAdminView: boolean;
   isLoading: boolean;
   placeholder: ReactNode;
-  renderActions: (task: APITaskWithAnnotation, orientation: SpaceProps["orientation"]) => ReactNode;
 }) {
   // Read once for the whole list instead of subscribing to breakpoint changes in every card.
   const isMultiColumn = Grid.useBreakpoint().md ?? false;
@@ -107,7 +95,7 @@ export function TaskCardList({
             { key: "id", label: "Task ID", children: <FormattedId id={task.id} /> },
             { key: "type", label: "Task Type", children: task.type.summary },
           ]}
-          renderActions={(orientation) => renderActions(task, orientation)}
+          task={task}
         />
       </Card>
     );
@@ -137,12 +125,12 @@ function OpenTaskCardBody({
   isMultiColumn,
   description,
   details,
-  renderActions,
+  task,
 }: {
   isMultiColumn: boolean;
   description: ReactNode;
   details: DescriptionsProps["items"];
-  renderActions: (orientation: SpaceProps["orientation"]) => ReactNode;
+  task: APITaskWithAnnotation;
 }) {
   return (
     <Row gutter={[24, 16]}>
@@ -159,7 +147,7 @@ function OpenTaskCardBody({
         />
       </Col>
       <Col xs={24} md={6} xl={5}>
-        {renderActions(isMultiColumn ? "vertical" : "horizontal")}
+        <TaskActions task={task} orientation={isMultiColumn ? "vertical" : "horizontal"} />
       </Col>
     </Row>
   );

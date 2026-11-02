@@ -108,13 +108,8 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     const validTabKeys = this.getValidTabKeys();
     const { initialTabKey } = this.props;
     const lastUsedTabKey = UserLocalStorage.getItem("lastUsedDashboardTab");
-    let defaultTabKey = "datasets";
-
-    if (this.props.isAdminView) {
-      defaultTabKey = "annotations";
-    } else if (features().isWkorgInstance) {
-      defaultTabKey = "publications";
-    }
+    // The admin view of another user's dashboard has no datasets tab.
+    const defaultTabKey = this.props.isAdminView ? "annotations" : "datasets";
 
     const activeTabKey =
       (initialTabKey && validTabKeys[initialTabKey] ? initialTabKey : null) ||

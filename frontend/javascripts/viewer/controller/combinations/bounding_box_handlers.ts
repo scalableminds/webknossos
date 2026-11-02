@@ -39,6 +39,10 @@ const getNeighbourEdgeIndexByEdgeIndex: { [key: number]: Vector2 } = {
 };
 // This value is in "mouse tolerance to trigger a selection". It is in "unzoomed worldcoordinates".
 const MAX_DISTANCE_TO_SELECTION = 15;
+// If the min and max edge of a dimension are at most this many screen pixels apart, they look like
+// a single line (e.g., the depth of a box that was drawn in a single slice). The user cannot tell
+// which of the two they grabbed, so the drag direction decides (see resolveEdgeByDragDirection).
+const MAX_SCREEN_GAP_OF_OVERLAPPING_EDGES = 5;
 
 function getDistanceToBoundingBoxEdge(
   pos: Vector3,
@@ -115,6 +119,9 @@ export type SelectedEdge = {
   isMaxEdge: boolean;
   edgeId: number;
   resizableDimension: 0 | 1 | 2;
+  // True if this edge and its opposite edge overlap on screen, so isMaxEdge is not known yet.
+  // It is decided by the drag direction on the first mouse move that leaves the box's extent.
+  isAmbiguous?: boolean;
 };
 type DistanceArray = [number, number, number, number];
 
@@ -210,9 +217,23 @@ export function getClosestHoveredBoundingBox(
   }
 
   const nearestBoundingBox = currentNearestBoundingBox;
+  const getEdgeInfo = (edgeId: number): SelectedEdge => {
+    const edge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, edgeId);
+    if (
+      areMinAndMaxEdgeOverlappingOnScreen(
+        nearestBoundingBox.boundingBox,
+        edge.resizableDimension,
+        planeRatio,
+        state.flycam.zoomStep,
+      )
+    ) {
+      edge.isAmbiguous = true;
+    }
+    return edge;
+  };
 
   const nearestEdgeIndex = currentNearestDistanceArray.indexOf(currentNearestDistance);
-  const primaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, nearestEdgeIndex);
+  const primaryEdge = getEdgeInfo(nearestEdgeIndex);
   let secondaryEdge = null;
   const [firstNeighbourId, secondNeighbourId] = getNeighbourEdgeIndexByEdgeIndex[nearestEdgeIndex];
   const firstNeighbourEdgeDistance = currentNearestDistanceArray[firstNeighbourId];
@@ -222,12 +243,12 @@ export function getClosestHoveredBoundingBox(
     firstNeighbourEdgeDistance < secondNeighbourEdgeDistance &&
     firstNeighbourEdgeDistance < zoomedMaxDistanceToSelection
   ) {
-    secondaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, firstNeighbourId);
+    secondaryEdge = getEdgeInfo(firstNeighbourId);
   } else if (
     secondNeighbourEdgeDistance < firstNeighbourEdgeDistance &&
     secondNeighbourEdgeDistance < zoomedMaxDistanceToSelection
   ) {
-    secondaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, secondNeighbourId);
+    secondaryEdge = getEdgeInfo(secondNeighbourId);
   }
 
   return [primaryEdge, secondaryEdge];
@@ -319,6 +340,38 @@ export const highlightAndSetCursorOnHoveredBoundingBox = throttle(
   BOUNDING_BOX_HOVERING_THROTTLE_TIME,
 );
 
+export function areMinAndMaxEdgeOverlappingOnScreen(
+  boundingBox: BoundingBoxMinMaxType,
+  dimension: DimensionIndices,
+  planeRatio: Vector3,
+  zoomStep: number,
+): boolean {
+  const extentInScreenPixels =
+    (boundingBox.max[dimension] - boundingBox.min[dimension]) / planeRatio[dimension] / zoomStep;
+  return extentInScreenPixels <= MAX_SCREEN_GAP_OF_OVERLAPPING_EDGES;
+}
+
+// Decides whether an ambiguous edge (see SelectedEdge.isAmbiguous) is the min or the max edge
+// based on where the mouse was dragged to. Dragging beyond the max moves the max edge and dragging
+// below the min moves the min edge, so the box always keeps the slices it already contained.
+// Returns false (and leaves the edge ambiguous) while the mouse is still within the box's extent.
+export function resolveEdgeByDragDirection(
+  edge: SelectedEdge,
+  boundingBox: BoundingBoxMinMaxType,
+  newPositionValue: number,
+): boolean {
+  const { resizableDimension } = edge;
+  if (newPositionValue > boundingBox.max[resizableDimension]) {
+    edge.isMaxEdge = true;
+  } else if (newPositionValue < boundingBox.min[resizableDimension]) {
+    edge.isMaxEdge = false;
+  } else {
+    return false;
+  }
+  edge.isAmbiguous = false;
+  return true;
+}
+
 function getBoundingBoxOfPrimaryEdge(
   primaryEdge: SelectedEdge,
   state: WebknossosState,
@@ -341,6 +394,7 @@ export function handleResizingBoundingBox(
     return;
   }
 
+  const currentBounds = bboxToResize.boundingBox;
   const updatedBounds = {
     min: [...bboxToResize.boundingBox.min] as Vector3,
     max: [...bboxToResize.boundingBox.max] as Vector3,
@@ -353,6 +407,10 @@ export function handleResizingBoundingBox(
     const { resizableDimension } = edge;
     // For a horizontal edge only consider delta.y, for vertical only delta.x
     const newPositionValue = Math.round(globalPositionRounded[resizableDimension]);
+    if (edge.isAmbiguous && !resolveEdgeByDragDirection(edge, currentBounds, newPositionValue)) {
+      // The mouse has not left the (thin) extent of the box yet, so there is nothing to resize.
+      return false;
+    }
     const minOrMax = edge.isMaxEdge ? "max" : "min";
     const oppositeOfMinOrMax = edge.isMaxEdge ? "min" : "max";
     // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.

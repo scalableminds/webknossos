@@ -23,6 +23,7 @@ import {
   Button,
   ConfigProvider,
   Flex,
+  Grid,
   Input,
   type InputRef,
   Layout,
@@ -240,7 +241,6 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
 
   return {
     key: "adminMenu",
-    className: collapse ? "hide-on-small-screen" : "",
     label: getCollapsibleMenuTitle(
       "Administration",
       <TeamOutlined className="icon-margin-right" />,
@@ -277,7 +277,6 @@ export function getAnalysisSubMenu(collapse: boolean) {
 
   return {
     key: "analysisMenu",
-    className: collapse ? "hide-on-small-screen" : "",
     label: getCollapsibleMenuTitle(
       "Analysis",
       <ExperimentOutlined className="icon-margin-right" />,
@@ -290,7 +289,6 @@ export function getAnalysisSubMenu(collapse: boolean) {
 function getTaskManagementSubMenu(collapse: boolean): SubMenuType {
   return {
     key: "taskManagementMenu",
-    className: collapse ? "hide-on-small-screen" : "",
     label: getCollapsibleMenuTitle(
       "Task Management",
       <ScheduleOutlined className="icon-margin-right" />,
@@ -490,7 +488,6 @@ function getHelpSubMenu(
 function getDashboardSubMenu(collapse: boolean): SubMenuType {
   return {
     key: "dashboardMenu",
-    className: collapse ? "hide-on-small-screen" : "",
     label: getCollapsibleMenuTitle(
       "Dashboard",
       <HomeOutlined className="icon-margin-right" />,
@@ -903,7 +900,12 @@ function Navbar() {
   const isAuthenticated = activeUser != null;
   const isAdminOrTeamManager = isUserAdminOrTeamManager(activeUser);
   const isAdminOrManager = isUserAdminOrManager(activeUser);
-  const collapseAllNavItems = isInAnnotationView;
+  // Compare against false, because useBreakpoint() returns an empty object until it has measured
+  // the screen. Phones get the icon-only navbar, too.
+  const screens = Grid.useBreakpoint();
+  const isPhone = screens.md === false;
+  const isBelowXL = screens.xl === false;
+  const collapseAllNavItems = isInAnnotationView || isPhone;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
   const menuItems: ItemType[] = [
     {
@@ -934,17 +936,28 @@ function Navbar() {
   ];
   const trailingNavItems = [];
 
+  // In the annotation view, the navbar also hosts the viewer's action bar, so the submenus give up
+  // their space on smaller screens. On phones (outside the annotation view) they stay as icons.
+  const hideInAnnotationViewOnSmallScreens = <T extends SubMenuType | null>(item: T): T =>
+    item != null && isInAnnotationView ? { ...item, className: "hide-on-small-screen" } : item;
+
   if (isAuthenticated) {
     const loggedInUser: APIUser = activeUser;
-    menuItems.push(getDashboardSubMenu(collapseAllNavItems));
-    menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
+    menuItems.push(hideInAnnotationViewOnSmallScreens(getDashboardSubMenu(collapseAllNavItems)));
+    menuItems.push(hideInAnnotationViewOnSmallScreens(getAnalysisSubMenu(collapseAllNavItems)));
 
     if (isUserAdminOrTeamManager(activeUser)) {
-      menuItems.push(getTaskManagementSubMenu(collapseAllNavItems));
+      menuItems.push(
+        hideInAnnotationViewOnSmallScreens(getTaskManagementSubMenu(collapseAllNavItems)),
+      );
     }
 
     if (isAdminOrTeamManager && activeUser != null) {
-      menuItems.push(getAdministrationSubMenu(collapseAllNavItems, activeUser));
+      menuItems.push(
+        hideInAnnotationViewOnSmallScreens(
+          getAdministrationSubMenu(collapseAllNavItems, activeUser),
+        ),
+      );
     } else {
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
@@ -957,11 +970,13 @@ function Navbar() {
         shape="round"
         color="default"
         variant="filled"
+        // Without a label, antd renders a compact icon-only button.
+        size={isPhone ? "small" : "middle"}
         icon={<MessageOutlined />}
         onClick={() => setIsHelpModalOpen((isOpen) => !isOpen)}
         title="Ask a Question"
       >
-        <span className="hide-on-small-screen">Ask</span>
+        {isBelowXL ? null : "Ask"}
       </Button>,
     );
 
@@ -1032,7 +1047,13 @@ function Navbar() {
         }}
       />
       <ConfigProvider theme={getAntdTheme("dark")}>
-        <Flex align="center" justify="flex-end" gap="small" style={{ paddingTop: bannerOffset }}>
+        <Flex
+          align="center"
+          justify="flex-end"
+          gap="small"
+          // Keeps a gap to the menu or the viewer's action bar when the navbar gets crowded.
+          style={{ paddingTop: bannerOffset, marginInlineStart: 8 }}
+        >
           {trailingNavItems}
         </Flex>
       </ConfigProvider>

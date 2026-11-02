@@ -261,9 +261,9 @@ body {
   margin-right: 0;
 }
 
-/** Hides elements on screens smaller than 1200px width. */
+/** Hides elements below antd's xl breakpoint, i.e. when Grid.useBreakpoint().xl is false. */
 .hide-on-small-screen {
-  @media (max-width: 1200px) {
+  @media (max-width: @screen-lg-max) {
     display: none !important;
   }
 }

@@ -4,6 +4,21 @@
   "Helvetica Neue", Arial, sans-serif;
 @font-family-code: "IBM Plex Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
 
+// antd's breakpoints (the screen* design tokens, e.g. screenLGMax), so that LESS media queries agree
+// with Grid.useBreakpoint() and responsive Col props. They can't be read from antd's CSS variables,
+// because var() isn't allowed in @media conditions. Derived from antd 6.6.7's default theme tokens
+// (we don't override them). Checked against antd by test/misc/antd_breakpoints.spec.ts.
+@screen-xs-max: 575px;
+@screen-sm-min: 576px;
+@screen-sm-max: 767px;
+@screen-md-min: 768px;
+@screen-md-max: 991px;
+@screen-lg-min: 992px;
+@screen-lg-max: 1199px;
+@screen-xl-min: 1200px;
+@screen-xl-max: 1599px;
+@screen-xxl-min: 1600px;
+
 :root {
   // The brand colors below mirror the constants in frontend/javascripts/theme.ts, which is the
   // source of truth – keep both in sync. They cannot be aliased to the corresponding `--ant-*`

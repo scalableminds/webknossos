@@ -3,7 +3,7 @@ import { cachedGetPricingPlanStatus } from "admin/api/organization";
 import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
 import { getUser, updateNovelUserExperienceInfos } from "admin/rest_api";
 import { WhatsNextHeader } from "admin/welcome_ui";
-import { Spin, Tabs, Typography } from "antd";
+import { Grid, Spin, Tabs, type TabsProps, Typography } from "antd";
 import AnnotationsView from "dashboard/annotations_view";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import { PublicationViewWithHeader } from "dashboard/publication_view";
@@ -65,6 +65,30 @@ function TabBarExtraContent() {
         flex: 1,
         display: "flex",
       }}
+    />
+  );
+}
+
+// The tabs render their toolbar (Refresh, Add Dataset, search, ...) into a portal. On wide screens,
+// it sits next to the tabs. On narrow screens, it gets its own row below them: antd subtracts the
+// extra content's width when deciding which tabs fit, so sharing the row would hide the tabs
+// behind the "..." overflow menu, and the toolbar itself would overflow the page.
+function DashboardTabs(props: Omit<TabsProps, "tabBarExtraContent" | "renderTabBar">) {
+  const screens = Grid.useBreakpoint();
+  if (screens.lg) {
+    return <Tabs {...props} tabBarExtraContent={<TabBarExtraContent />} />;
+  }
+  return (
+    <Tabs
+      {...props}
+      renderTabBar={(tabBarProps, DefaultTabBar) => (
+        <>
+          <DefaultTabBar {...tabBarProps} />
+          <div style={{ marginBottom: 16 }}>
+            <TabBarExtraContent />
+          </div>
+        </>
+      )}
     />
   );
 }
@@ -299,11 +323,10 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
           {userHeader}
 
           <ActiveTabContext.Provider value={this.state.activeTabKey}>
-            <Tabs
+            <DashboardTabs
               activeKey={this.state.activeTabKey}
               onChange={onTabChange}
               items={this.getTabs(user)}
-              tabBarExtraContent={<TabBarExtraContent />}
             />
           </ActiveTabContext.Provider>
         </div>

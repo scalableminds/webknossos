@@ -11,7 +11,22 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { finishTask, peekNextTasks, requestTask } from "admin/api/tasks";
 import { deleteAnnotation, downloadAnnotation, resetAnnotation } from "admin/rest_api";
-import { Button, Card, Col, List, Row, Space, Tag, Tooltip, Typography } from "antd";
+import {
+  Button,
+  Card,
+  Col,
+  Descriptions,
+  type DescriptionsProps,
+  Flex,
+  Grid,
+  List,
+  Row,
+  Space,
+  type SpaceProps,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
 import classNames from "classnames";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
@@ -26,6 +41,7 @@ import Toast from "libs/toast";
 import { compareBy, scrollToTop } from "libs/utils";
 import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import messages from "messages";
+import type React from "react";
 import { PureComponent, useContext } from "react";
 import { connect } from "react-redux";
 import { Link } from "react-router";
@@ -41,6 +57,8 @@ import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DashboardEmptyTasksPlaceholder } from "./dashboard_empty_tasks_placeholder";
 
 const pageLength: number = 1000;
+// List items are bare cards without a <List.Item>, so the list adds no spacing between them.
+const TASK_CARD_STYLE = { marginBottom: 16 };
 
 type TaskModeState = {
   tasks: Array<APITaskWithAnnotation>;
@@ -221,7 +239,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
     });
   }
 
-  renderActions = (task: APITaskWithAnnotation) => {
+  renderActions = (task: APITaskWithAnnotation, orientation: SpaceProps["orientation"]) => {
     const { annotation } = task;
     const isAdmin =
       this.props.activeUser.isAdmin ||
@@ -234,13 +252,8 @@ class DashboardTaskListView extends PureComponent<Props, State> {
     ) : (
       <LinkButton icon={<PlayCircleOutlined />}>Open</LinkButton>
     );
-    return task.annotation.state === "Finished" ? (
-      <div>
-        <CheckCircleOutlined className="icon-margin-right" />
-        Finished
-      </div>
-    ) : (
-      <Space orientation="vertical" size={1}>
+    return (
+      <Space orientation={orientation} size={orientation === "vertical" ? 1 : "middle"} wrap>
         <Link to={`/annotations/${annotation.id}`}>{label}</Link>
         {isAdmin || this.props.isAdminView ? (
           <LinkButton onClick={() => this.openTransferModal(annotation.id)} icon={<TeamOutlined />}>
@@ -384,65 +397,67 @@ class DashboardTaskListView extends PureComponent<Props, State> {
     });
 
     const TaskCardTitle = ({ task }: { task: APITaskWithAnnotation }) => (
-      <Space>
-        <span>
+      <Flex vertical gap={4} style={{ paddingBlock: 12 }}>
+        <span style={{ overflowWrap: "anywhere" }}>
           {task.projectName} (<FormattedDate timestamp={task.created} />)
         </span>
-        {getSkeletonDescriptor(task.annotation) == null ? null : (
-          <Tag color="success" variant="outlined">
-            skeleton
-          </Tag>
-        )}
-        {getVolumeDescriptors(task.annotation).length === 0 ? null : (
-          <Tag color="warning" variant="outlined">
-            volume
-          </Tag>
-        )}
-        {task.type.settings.allowedModes.map((mode) => (
-          <Tag key={mode} variant="outlined">
-            {mode}
-          </Tag>
-        ))}
-      </Space>
+        <Flex wrap gap={4}>
+          {getSkeletonDescriptor(task.annotation) == null ? null : (
+            <Tag color="success" variant="outlined">
+              skeleton
+            </Tag>
+          )}
+          {getVolumeDescriptors(task.annotation).length === 0 ? null : (
+            <Tag color="warning" variant="outlined">
+              volume
+            </Tag>
+          )}
+          {task.type.settings.allowedModes.map((mode) => (
+            <Tag key={mode} variant="outlined">
+              {mode}
+            </Tag>
+          ))}
+        </Flex>
+      </Flex>
     );
 
     const TaskCard = (task: APITaskWithAnnotation) =>
       this.state.showFinishedTasks ? (
-        <Card key={task.id}>
-          <Row gutter={16}>
-            <Col span={7}>
-              <b>Task ID:</b> <FormattedId id={task.id} />
-            </Col>
-            <Col span={7}>
-              <b>Project:</b> {task.projectName}
-            </Col>
-            <Col span={7}>
-              <b>Finished:</b> <FormattedDate timestamp={task.annotation.modified} />
-            </Col>
-            <Col span={3}>{this.renderActions(task)}</Col>
-          </Row>
+        <Card key={task.id} style={TASK_CARD_STYLE}>
+          <Descriptions
+            size="small"
+            column={{ xs: 1, sm: 2, lg: 3 }}
+            styles={{ content: { overflowWrap: "anywhere" } }}
+            items={[
+              { key: "id", label: "Task ID", children: <FormattedId id={task.id} /> },
+              { key: "project", label: "Project", children: task.projectName },
+              {
+                key: "finished",
+                label: "Finished",
+                children: <FormattedDate timestamp={task.annotation.modified} />,
+              },
+            ]}
+          />
         </Card>
       ) : (
-        <Card key={task.id} title={<TaskCardTitle task={task} />}>
-          <Row gutter={16}>
-            <Col span={16}>
+        <Card
+          key={task.id}
+          style={TASK_CARD_STYLE}
+          title={<TaskCardTitle task={task} />}
+          styles={{ title: { whiteSpace: "normal" } }}
+        >
+          <OpenTaskCardBody
+            description={
               <div className={descriptionClassName}>
                 <Markdown>{task.type.description}</Markdown>
               </div>
-            </Col>
-            <Col span={8}>
-              <p
-                style={{
-                  marginBottom: 14,
-                }}
-              >
-                <b>Task ID:</b> <FormattedId id={task.id} />
-                <br />
-                <b>Task Type:</b> {task.type.summary}
-              </p>
-              {this.renderActions(task)}
-            </Col>
-          </Row>
+            }
+            details={[
+              { key: "id", label: "Task ID", children: <FormattedId id={task.id} /> },
+              { key: "type", label: "Task Type", children: task.type.summary },
+            ]}
+            renderActions={(orientation) => this.renderActions(task, orientation)}
+          />
         </Card>
       );
 
@@ -462,6 +477,18 @@ class DashboardTaskListView extends PureComponent<Props, State> {
         locale={{
           emptyText: this.renderPlaceholder(),
         }}
+        loadMore={
+          tasks.length > 0 && !this.getCurrentModeState().loadedAllTasks ? (
+            <Flex justify="center" style={{ marginTop: 16 }}>
+              <Button
+                onClick={() => this.fetchNextPage(this.getCurrentModeState().lastLoadedPage + 1)}
+                loading={this.state.isLoading}
+              >
+                Load more Tasks
+              </Button>
+            </Flex>
+          ) : null
+        }
       />
     );
   }
@@ -476,24 +503,10 @@ class DashboardTaskListView extends PureComponent<Props, State> {
           toggleShowFinished={this.toggleShowFinished}
           getFinishVerb={this.getFinishVerb}
         />
-        {this.state.showFinishedTasks ? (
-          <Typography.Title level={3}>My Finished Tasks</Typography.Title>
-        ) : null}
+        <Typography.Title level={3}>
+          {this.state.showFinishedTasks ? "My Finished Tasks" : "My Open Tasks"}
+        </Typography.Title>
         {this.renderTaskList()}
-        <div
-          style={{
-            textAlign: "right",
-          }}
-        >
-          {!this.getCurrentModeState().loadedAllTasks ? (
-            <Link
-              to="#"
-              onClick={() => this.fetchNextPage(this.getCurrentModeState().lastLoadedPage + 1)}
-            >
-              Load more Tasks
-            </Link>
-          ) : null}
-        </div>
         <TransferTaskModal
           isOpen={this.state.isTransferModalOpen}
           annotationId={this.state.currentAnnotationId}
@@ -507,6 +520,40 @@ class DashboardTaskListView extends PureComponent<Props, State> {
       </div>
     );
   }
+}
+
+// Three columns (description, details, actions) from `md` on. The details column is narrow
+// there, so labels go above their values. Below `md`, the columns stack, labels sit next to
+// their values and the actions become a wrapping row instead of a tall vertical list.
+function OpenTaskCardBody({
+  description,
+  details,
+  renderActions,
+}: {
+  description: React.ReactNode;
+  details: DescriptionsProps["items"];
+  renderActions: (orientation: SpaceProps["orientation"]) => React.ReactNode;
+}) {
+  const isMultiColumn = Grid.useBreakpoint().md ?? false;
+  return (
+    <Row gutter={[24, 16]}>
+      <Col xs={24} md={12} xl={14}>
+        {description}
+      </Col>
+      <Col xs={24} md={6} xl={5}>
+        <Descriptions
+          size="small"
+          column={1}
+          layout={isMultiColumn ? "vertical" : "horizontal"}
+          styles={{ content: { overflowWrap: "anywhere" } }}
+          items={details}
+        />
+      </Col>
+      <Col xs={24} md={6} xl={5}>
+        {renderActions(isMultiColumn ? "vertical" : "horizontal")}
+      </Col>
+    </Row>
+  );
 }
 
 function TopBar({

@@ -571,8 +571,12 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   const layers = dataset.dataSource.dataLayers;
   const specs = getSupportedTextureSpecs();
   validateSpecsForLayers(dataset, specs);
-  // Stored as gpuSetup.smallestCommonBucketCapacity. getLayerPoolPlan sizes
-  // the pools with it, and the max-zoom computation relies on it.
+  // The bucket capacity per layer of the user's GPU setting, lowered until all
+  // pools fit the GPU's limits. It's stored as
+  // gpuSetup.smallestCommonBucketCapacity and stays fixed until the page is
+  // reloaded, because the pools are allocated with it and can't grow. If the
+  // GPU setting changes in the meantime, the max-zoom computation uses the
+  // smaller of both capacities.
   const { bucketCapacity: smallestCommonBucketCapacity } = computeLayerPoolPlan(
     layers,
     getRequiredBucketCapacityPerLayer(

@@ -9,7 +9,7 @@ import {
 
 // Owns the shared texture array of one pool (see LayerPool). The depth
 // can't change after construction, so the caller must pass the sum of all
-// layers' slice counts.
+// layers' slice counts. Only created for pools that at least one layer uses.
 export default class PoolTextureManager {
   pool: LayerPool;
   depth: number;
@@ -17,16 +17,11 @@ export default class PoolTextureManager {
 
   constructor(pool: LayerPool, depth: number) {
     this.pool = pool;
-    // The shader declares every pool's sampler, so even a pool that no layer
-    // uses needs a valid texture. Since it is never read, 1x1x1 is enough
-    // and saves the memory of a full-size slice.
-    const isUnused = depth === 0;
-    this.depth = Math.max(1, depth);
-    const width = isUnused ? 1 : LAYER_POOL_TEXTURE_WIDTH;
+    this.depth = depth;
     const { textureType, pixelFormat, internalFormat } = getLayerPoolGpuConfig(pool);
     this.textureArray = createUpdatableTextureArray(
-      width,
-      width,
+      LAYER_POOL_TEXTURE_WIDTH,
+      LAYER_POOL_TEXTURE_WIDTH,
       this.depth,
       textureType,
       getRenderer(),

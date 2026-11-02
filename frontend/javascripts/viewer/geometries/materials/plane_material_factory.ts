@@ -72,7 +72,6 @@ import {
 import {
   getDtypeConfigForElementClass,
   LAYER_POOL_SAMPLERS,
-  LAYER_POOL_TEXTURE_WIDTH,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import {
   getGlobalLayerIndexForLayerName,
@@ -375,22 +374,18 @@ class PlaneMaterialFactory {
     let sharedLookUpCuckooTable;
     // Same ordering as activeMagIndices (both iterate Model.getAllLayers()), matching
     // globalLayerIndex. Built here, not in setupUniforms, because textureBucketManager only
-    // exists once getDataTextures() below has triggered its lazy setup.
+    // exists once getLookUpTexture() below has triggered its lazy setup.
     const usesTRecyclingPerLayer: number[] = [];
     // Voxels per bucket in each layer's data texture. Read off the TextureBucketManager, not
     // the DataCube: the two disagree for t-recycling layers, and the shader derives its row and
     // texture indices from this, so it must match the upload side exactly.
     const bucketVoxelCountPerLayer: number[] = [];
-    // Add data and look up textures for each layer
+    // Add the look up texture and the per-layer values
     for (const dataLayer of Model.getAllLayers()) {
-      const { name } = dataLayer;
       // Also sets up the layer's TextureBucketManager if needed.
-      const [lookUpTexture] = dataLayer.layerRenderingManager.getDataTextures();
+      const lookUpTexture = dataLayer.layerRenderingManager.getLookUpTexture();
       sharedLookUpTexture = lookUpTexture;
       sharedLookUpCuckooTable = dataLayer.layerRenderingManager.getSharedLookUpCuckooTable();
-      this.uniforms[`${sanitizeName(name)}_data_texture_width`] = {
-        value: LAYER_POOL_TEXTURE_WIDTH,
-      };
       const { textureBucketManager } = dataLayer.layerRenderingManager;
       usesTRecyclingPerLayer.push(textureBucketManager.usesTRecycling ? 1 : 0);
       bucketVoxelCountPerLayer.push(textureBucketManager.bucketVoxelCount);

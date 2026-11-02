@@ -392,9 +392,10 @@ export default class TextureBucketManager {
     }
   }
 
-  getTextures(): Array<DataTexture | UpdatableTexture> {
-    // Pool textures are attached once by PlaneMaterialFactory, not per layer.
-    return [this.lookUpCuckooTable._texture];
+  getLookUpTexture(): DataTexture | UpdatableTexture {
+    // Only return the look up texture here, because the pool textures are
+    // shared by all layers and attached once by PlaneMaterialFactory.
+    return this.lookUpCuckooTable._texture;
   }
 
   setupDataTextures(lookUpCuckooTable: CuckooTableVec5, layerIndex: number): void {
@@ -453,9 +454,7 @@ export default class TextureBucketManager {
   }
 
   destroy() {
-    for (const texture of this.getTextures()) {
-      texture.dispose();
-    }
+    this.getLookUpTexture().dispose();
     // @ts-expect-error
     this.lookUpCuckooTable = null;
     this.isDestroyed = true;

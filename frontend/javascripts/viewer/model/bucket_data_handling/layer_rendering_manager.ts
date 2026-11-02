@@ -75,8 +75,13 @@ function createLayerPoolPlan() {
     dataset.dataSource.dataLayers,
     bucketCapacity,
   );
+  // Pools without layers get no texture; the shader only declares the pools
+  // of the rendered layers.
   const poolTextureManagers = new Map<LayerPool, PoolTextureManager>(
-    LAYER_POOLS.map((pool) => [pool, new PoolTextureManager(pool, poolDepths[pool])]),
+    LAYER_POOLS.filter((pool) => poolDepths[pool] > 0).map((pool) => [
+      pool,
+      new PoolTextureManager(pool, poolDepths[pool]),
+    ]),
   );
   return { assignmentByLayerName, poolTextureManagers, bucketCapacity };
 }
@@ -249,13 +254,13 @@ export default class LayerRenderingManager {
     }
   }
 
-  getDataTextures(): Array<DataTexture | UpdatableTexture> {
+  getLookUpTexture(): DataTexture | UpdatableTexture {
     if (!this.textureBucketManager) {
       // Initialize lazily since SceneController.renderer is not available earlier
       this.setupDataTextures();
     }
 
-    return this.textureBucketManager.getTextures();
+    return this.textureBucketManager.getLookUpTexture();
   }
 
   getSharedLookUpCuckooTable() {

@@ -1,8 +1,12 @@
 import { parser } from "@shaderfrog/glsl-parser";
+import range from "lodash-es/range";
 import mags from "test/fixtures/mags";
+import type { ElementClass } from "types/api_types";
+import { getDtypeConfigForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import getMainFragmentShader, {
   computeUniformColorLayerCap,
   computeVertexBucketAlignmentLayerCap,
+  estimateUniformVectors,
   getMainVertexShader,
   type Params,
 } from "viewer/shaders/main_data_shaders.glsl";
@@ -344,26 +348,119 @@ describe("computeVertexBucketAlignmentLayerCap", () => {
   });
 });
 
-describe("computeUniformColorLayerCap", () => {
-  // Measured in Chrome (ANGLE): a shader with n rendered color layers, g layers
-  // in total, m magnifications and a rendered segmentation layer uses
-  // 16 + m + 5g + 15n + 52 uniform vectors.
-  const measuredUniformVectors = (n: number, g: number, m: number, hasSegmentation: boolean) =>
-    16 + m + 5 * g + 15 * n + (hasSegmentation ? 52 : 0);
+// Counts the uniform vectors that the code declares and uses: one per scalar
+// or vector, one per row of a matrix, times the length of an array. Matches
+// Chrome's (ANGLE's) count within one vector.
+const UNIFORM_DECLARATION =
+  /^\s*uniform\s+(?:(?:highp|mediump|lowp)\s+)?(\w+)\s+(\w+)\s*(?:\[(\d+)\])?\s*;/gm;
+function countUsedUniformVectors(code: string): number {
+  const codeWithoutDeclarations = code.replace(UNIFORM_DECLARATION, "");
+  let count = 0;
+  for (const [, type, name, arrayLength] of code.matchAll(UNIFORM_DECLARATION)) {
+    const isUsed = new RegExp(`\\b${name}\\b`).test(codeWithoutDeclarations);
+    if (type.includes("sampler") || !isUsed) {
+      continue;
+    }
+    const vectorsPerElement = type.startsWith("mat") ? Number(type[3]) : 1;
+    count += vectorsPerElement * (arrayLength != null ? Number(arrayLength) : 1);
+  }
+  return count;
+}
 
-  it("keeps the shader within the uniform limit", () => {
+function getUniformTestParams(
+  elementClass: ElementClass,
+  renderedColorLayerCount: number,
+  hasSegmentation: boolean,
+  globalLayerCount: number,
+  magnificationCount: number,
+): Params {
+  const getTextureLayerInfo = (name: string, elementClass: ElementClass, isColor: boolean) => {
+    const { packingDegree, glslPrefix, isSigned } = getDtypeConfigForElementClass(elementClass);
+    return { isColor, packingDegree, glslPrefix, isSigned, unsanitizedName: name, elementClass };
+  };
+  const colorLayerNames = range(renderedColorLayerCount).map((i) => `color_layer_${i}`);
+  const segmentationLayerNames = hasSegmentation ? ["segmentation_layer"] : [];
+  return {
+    globalLayerCount,
+    colorLayerNames,
+    textureLayerInfos: Object.fromEntries([
+      ...colorLayerNames.map((name) => [name, getTextureLayerInfo(name, elementClass, true)]),
+      ...segmentationLayerNames.map((name) => [name, getTextureLayerInfo(name, "uint64", false)]),
+    ]),
+    orderedColorLayerNames: colorLayerNames,
+    segmentationLayerNames,
+    magnificationsCount: magnificationCount,
+    voxelSizeFactor: [1, 1, 1],
+    isOrthogonal: true,
+    voxelSizeFactorInverted: [1, 1, 1],
+    useInterpolation: false,
+    tpsTransformPerLayer: {},
+    isWindows: false,
+    vertexBucketAlignmentLayerCap: 8,
+  };
+}
+
+describe("estimateUniformVectors", () => {
+  it("matches the uniforms of the generated shaders", () => {
+    for (const elementClass of ["uint8", "uint16", "uint32", "float"] as const) {
+      for (const [
+        renderedColorLayerCount,
+        hasSegmentation,
+        hiddenLayerCount,
+        magnificationCount,
+      ] of [
+        [1, false, 0, 5],
+        [5, true, 0, 30],
+        [20, true, 40, 300],
+      ] as const) {
+        const globalLayerCount =
+          renderedColorLayerCount + (hasSegmentation ? 1 : 0) + hiddenLayerCount;
+        const params = getUniformTestParams(
+          elementClass,
+          renderedColorLayerCount,
+          hasSegmentation,
+          globalLayerCount,
+          magnificationCount,
+        );
+        const estimate = estimateUniformVectors(
+          globalLayerCount,
+          magnificationCount,
+          renderedColorLayerCount,
+          hasSegmentation,
+        );
+        // If this fails, the shader's uniforms changed: update the constants
+        // in main_data_shaders.glsl.ts.
+        expect(countUsedUniformVectors(getMainFragmentShader(params))).toBe(estimate);
+        expect(countUsedUniformVectors(getMainVertexShader(params))).toBeLessThanOrEqual(estimate);
+      }
+    }
+  });
+});
+
+describe("computeUniformColorLayerCap", () => {
+  it("keeps the shaders within the uniform limit", () => {
     for (const maxUniformVectors of [224, 256, 1024, 4096]) {
-      for (const [g, m, hasSegmentation] of [
+      for (const [globalLayerCount, magnificationCount, hasSegmentation] of [
         [3, 30, true],
         [20, 200, true],
         [40, 400, false],
       ] as const) {
-        const cap = computeUniformColorLayerCap(maxUniformVectors, g, m, hasSegmentation);
-        const n = Math.min(cap, g - (hasSegmentation ? 1 : 0));
+        const cap = computeUniformColorLayerCap(
+          maxUniformVectors,
+          globalLayerCount,
+          magnificationCount,
+          hasSegmentation,
+        );
+        const renderedColorLayerCount = Math.min(cap, globalLayerCount - (hasSegmentation ? 1 : 0));
         if (cap > 1) {
-          expect(measuredUniformVectors(n, g, m, hasSegmentation)).toBeLessThanOrEqual(
-            maxUniformVectors,
-          );
+          expect(
+            estimateUniformVectors(
+              globalLayerCount,
+              magnificationCount,
+              renderedColorLayerCount,
+              hasSegmentation,
+            ),
+          ).toBeLessThanOrEqual(maxUniformVectors);
         }
       }
     }
@@ -377,7 +474,7 @@ describe("computeUniformColorLayerCap", () => {
   });
 
   it("lowers the count at the WebGL2 minimum", () => {
-    // 224 - 24 - 30 - 15 - 52 = 103 vectors for color layers.
-    expect(computeUniformColorLayerCap(224, 3, 30, true)).toBe(6);
+    // 224 - 8 (headroom) - 17 - 30 - 15 - 51 = 103 vectors for color layers.
+    expect(computeUniformColorLayerCap(224, 3, 30, true)).toBe(7);
   });
 });

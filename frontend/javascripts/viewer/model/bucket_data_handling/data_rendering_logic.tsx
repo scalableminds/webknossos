@@ -17,7 +17,8 @@ import type { TypedArrayConstructor } from "../helpers/typed_buffer";
 export type GpuSpecs = {
   supportedTextureSize: number;
   maxTextureCount: number;
-  // Maximum number of slices per texture array, i.e. per pool.
+  // gl.MAX_ARRAY_TEXTURE_LAYERS: the maximum number of slices per texture
+  // array, i.e. per pool. Not related to WEBKNOSSOS's data layers.
   maxArrayTextureLayers: number;
   // The smaller of MAX_FRAGMENT_UNIFORM_VECTORS and MAX_VERTEX_UNIFORM_VECTORS.
   maxUniformVectors: number;

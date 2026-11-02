@@ -14,6 +14,8 @@ import constants, {
 import {
   getLayerPoolForElementClass,
   LAYER_POOL_SAMPLERS,
+  LAYER_POOL_TEXTURE_WIDTH,
+  LAYER_POOLS,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { MAPPING_TEXTURE_WIDTH } from "viewer/model/bucket_data_handling/mappings";
@@ -96,18 +98,42 @@ export function computeVertexBucketAlignmentLayerCap(
   return Math.max(1, maxVaryingVectors - BASELINE_VARYING_ROWS - tpsLayerCount);
 }
 
-// Uniform vectors the shaders use, measured with Chrome's (ANGLE's) packing:
-// 16 fixed, one per magnification (allMagnifications), five per layer of the
-// dataset (the per-layer arrays), 15 per rendered color layer and 52 for the
-// rendered segmentation layer. Plus some headroom. WebGL2 only guarantees 224
-// fragment uniform vectors, and exceeding the limit fails to link the shader.
-const BASELINE_UNIFORM_VECTORS = 16 + 8;
+// Uniform vectors the fragment shader uses. Each uniform takes at least one
+// vector (as measured with Chrome's/ANGLE's packing), arrays one per element:
+// - fixed: 17, e.g. the lookup table's parameters and the flycam state
+// - per magnification: 1 (allMagnifications)
+// - per layer of the dataset: 5 (the per-layer arrays, e.g. activeMagIndices)
+// - per rendered color layer: 14, e.g. the transform (4), bbox, color, min/max
+// - rendered segmentation layer: 51, mostly the mapping and custom color
+//   tables, segment highlighting, brush and proofreading
+// The vertex shader uses fewer. shader_syntax.spec.ts checks these numbers
+// against the generated shaders.
+const UNIFORM_VECTORS_FIXED = 17;
 const UNIFORM_VECTORS_PER_MAGNIFICATION = 1;
 const UNIFORM_VECTORS_PER_LAYER = 5;
-const UNIFORM_VECTORS_PER_RENDERED_COLOR_LAYER = 15;
-const UNIFORM_VECTORS_FOR_SEGMENTATION = 52;
+const UNIFORM_VECTORS_PER_RENDERED_COLOR_LAYER = 14;
+const UNIFORM_VECTORS_FOR_SEGMENTATION = 51;
+// E.g. for three.js's built-in uniforms, which the vertex shader uses.
+const UNIFORM_VECTORS_HEADROOM = 8;
 
-// How many color layers fit into the shader's uniforms.
+export function estimateUniformVectors(
+  globalLayerCount: number,
+  magnificationCount: number,
+  renderedColorLayerCount: number,
+  hasSegmentation: boolean,
+): number {
+  return (
+    UNIFORM_VECTORS_FIXED +
+    magnificationCount * UNIFORM_VECTORS_PER_MAGNIFICATION +
+    globalLayerCount * UNIFORM_VECTORS_PER_LAYER +
+    renderedColorLayerCount * UNIFORM_VECTORS_PER_RENDERED_COLOR_LAYER +
+    (hasSegmentation ? UNIFORM_VECTORS_FOR_SEGMENTATION : 0)
+  );
+}
+
+// How many color layers fit into the shader's uniforms. WebGL2 only
+// guarantees 224 fragment uniform vectors, and exceeding the limit fails to
+// link the shader.
 export function computeUniformColorLayerCap(
   maxUniformVectors: number,
   globalLayerCount: number,
@@ -116,14 +142,23 @@ export function computeUniformColorLayerCap(
 ): number {
   const availableUniformVectors =
     maxUniformVectors -
-    BASELINE_UNIFORM_VECTORS -
-    magnificationCount * UNIFORM_VECTORS_PER_MAGNIFICATION -
-    globalLayerCount * UNIFORM_VECTORS_PER_LAYER -
-    (hasSegmentation ? UNIFORM_VECTORS_FOR_SEGMENTATION : 0);
+    UNIFORM_VECTORS_HEADROOM -
+    estimateUniformVectors(globalLayerCount, magnificationCount, 0, hasSegmentation);
   return Math.max(
     1,
     Math.floor(availableUniformVectors / UNIFORM_VECTORS_PER_RENDERED_COLOR_LAYER),
   );
+}
+
+// Only the pools of the rendered layers are declared. Pools without layers
+// don't have a texture (see createLayerPoolPlan).
+function getRenderedLayerPoolSamplers(params: Params) {
+  const pools = new Set(
+    params.colorLayerNames
+      .concat(params.segmentationLayerNames)
+      .map((name) => getLayerPoolForElementClass(params.textureLayerInfos[name].elementClass)),
+  );
+  return LAYER_POOLS.filter((pool) => pools.has(pool)).map((pool) => LAYER_POOL_SAMPLERS[pool]);
 }
 
 const SHARED_UNIFORM_DECLARATIONS = `
@@ -156,9 +191,10 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 <% each(layerPoolSamplers, function(sampler) { %>
   uniform highp <%= sampler.glslType %> <%= sampler.uniformName %>;
 <% }) %>
+// Width and height of every pool slice (see LAYER_POOL_TEXTURE_WIDTH).
+const float POOL_TEXTURE_WIDTH = <%= poolTextureWidth %>;
 
 <% each(layerNamesWithSegmentation, function(name) { %>
-  uniform float <%= name %>_data_texture_width;
   uniform float <%= name %>_alpha;
   uniform float <%= name %>_gammaCorrectionValue;
   uniform float <%= name %>_unrenderable;
@@ -355,7 +391,7 @@ void main() {
         MaybeFilteredColor maybe_filtered_color =
           getMaybeFilteredColorOrFallback(
             <%= formatNumberAsGLSLFloat(color_layer_index) %>,
-            <%= name %>_data_texture_width,
+            POOL_TEXTURE_WIDTH,
             <%= formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree) %>,
             layerCoordUVW,
             fallbackGray,
@@ -485,7 +521,8 @@ void main() {
   `)({
     ...params,
     layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
-    layerPoolSamplers: Object.values(LAYER_POOL_SAMPLERS),
+    layerPoolSamplers: getRenderedLayerPoolSamplers(params),
+    poolTextureWidth: formatNumberAsGLSLFloat(LAYER_POOL_TEXTURE_WIDTH),
     getPoolSamplerName: (elementClass: ElementClass) =>
       LAYER_POOL_SAMPLERS[getLayerPoolForElementClass(elementClass)].uniformName,
     vertexAlignmentLayerCap: Math.max(
@@ -712,7 +749,8 @@ void main() {
   `)({
     ...params,
     layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
-    layerPoolSamplers: Object.values(LAYER_POOL_SAMPLERS),
+    layerPoolSamplers: getRenderedLayerPoolSamplers(params),
+    poolTextureWidth: formatNumberAsGLSLFloat(LAYER_POOL_TEXTURE_WIDTH),
     getPoolSamplerName: (elementClass: ElementClass) =>
       LAYER_POOL_SAMPLERS[getLayerPoolForElementClass(elementClass)].uniformName,
     vertexAlignmentLayerCap: Math.max(

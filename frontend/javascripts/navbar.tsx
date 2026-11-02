@@ -1006,7 +1006,8 @@ function Navbar() {
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.
   const selectedKeys = collapseAllNavItems ? [] : [historyLocation.pathname];
-  const separator = <div className="navbar-separator" />;
+  // Hidden together with the submenus it separates from the viewer's action bar.
+  const separator = <div className="navbar-separator hide-on-small-screen" />;
 
   return (
     <Header

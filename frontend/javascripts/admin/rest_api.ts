@@ -1736,10 +1736,9 @@ export async function exploreRemoteDataset(
 
       return extendedUri;
     }),
+    // The caller shows failures inline.
+    showErrorToast: false,
   });
-  if (report.indexOf("403 Forbidden") !== -1 || report.indexOf("401 Unauthorized") !== -1) {
-    Toast.error("The data could not be accessed. Please verify the credentials!");
-  }
   return { dataSource, report };
 }
 

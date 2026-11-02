@@ -439,31 +439,36 @@ describe("estimateUniformVectors", () => {
 
 describe("computeUniformColorLayerCap", () => {
   it("keeps the shaders within the uniform limit", () => {
-    for (const maxUniformVectors of [224, 256, 1024, 4096]) {
-      for (const [globalLayerCount, magnificationCount, hasSegmentation] of [
-        [3, 30, true],
-        [20, 200, true],
-        [40, 400, false],
-      ] as const) {
-        const cap = computeUniformColorLayerCap(
-          maxUniformVectors,
+    for (const [maxUniformVectors, globalLayerCount, magnificationCount, hasSegmentation] of [
+      [224, 3, 30, true],
+      [256, 10, 60, false],
+      [1024, 20, 200, true],
+      [1024, 40, 400, false],
+      [4096, 100, 1000, true],
+    ] as const) {
+      const cap = computeUniformColorLayerCap(
+        maxUniformVectors,
+        globalLayerCount,
+        magnificationCount,
+        hasSegmentation,
+      );
+      const renderedColorLayerCount = Math.min(cap, globalLayerCount - (hasSegmentation ? 1 : 0));
+      expect(
+        estimateUniformVectors(
           globalLayerCount,
           magnificationCount,
+          renderedColorLayerCount,
           hasSegmentation,
-        );
-        const renderedColorLayerCount = Math.min(cap, globalLayerCount - (hasSegmentation ? 1 : 0));
-        if (cap > 1) {
-          expect(
-            estimateUniformVectors(
-              globalLayerCount,
-              magnificationCount,
-              renderedColorLayerCount,
-              hasSegmentation,
-            ),
-          ).toBeLessThanOrEqual(maxUniformVectors);
-        }
-      }
+        ),
+      ).toBeLessThanOrEqual(maxUniformVectors);
     }
+  });
+
+  it("returns 1 if not even one color layer fits", () => {
+    // The magnifications and per-layer arrays alone exceed the limit. Such
+    // datasets fail to render on master, too.
+    expect(computeUniformColorLayerCap(224, 20, 200, true)).toBe(1);
+    expect(computeUniformColorLayerCap(256, 40, 400, false)).toBe(1);
   });
 
   it("allows all layers of typical datasets on desktop GPUs", () => {

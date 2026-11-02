@@ -577,7 +577,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   // reloaded, because the pools are allocated with it and can't grow. If the
   // GPU setting changes in the meantime, the max-zoom computation uses the
   // smaller of both capacities.
-  const { bucketCapacity: smallestCommonBucketCapacity } = computeLayerPoolPlan(
+  const { bucketCapacity: smallestCommonBucketCapacity, poolDepths } = computeLayerPoolPlan(
     layers,
     getRequiredBucketCapacityPerLayer(
       gpuFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR,
@@ -585,6 +585,17 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     ),
     specs.maxArrayTextureLayers,
   );
+  // Every layer needs at least one slice, so a pool with more layers than
+  // MAX_ARRAY_TEXTURE_LAYERS (at least 256) can't be allocated.
+  if (Math.max(...Object.values(poolDepths)) > specs.maxArrayTextureLayers) {
+    Toast.error(
+      messages["webgl.too_many_layers_per_pool"]({
+        maxArrayTextureLayers: specs.maxArrayTextureLayers,
+      }),
+      { sticky: true },
+    );
+    throw HANDLED_ERROR;
+  }
   // The pools don't need texture units per layer, but every rendered layer
   // needs uniforms. Only one segmentation layer can be visible at a time (see
   // settings_reducer).

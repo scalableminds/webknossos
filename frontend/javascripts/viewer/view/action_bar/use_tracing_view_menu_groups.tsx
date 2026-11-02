@@ -41,7 +41,7 @@ import {
   keyboardShortcutsConfigMenuItem,
   renderAnimationMenuItem,
   screenshotMenuItem,
-} from "viewer/view/action_bar/view_dataset_actions_view";
+} from "viewer/view/action_bar/menu_items";
 
 // These actions require authentication. Instead of opening a dialog that fails for logged-out
 // users, disable the menu item and explain why.

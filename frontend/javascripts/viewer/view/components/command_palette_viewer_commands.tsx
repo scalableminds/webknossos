@@ -13,11 +13,11 @@ import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import type { UserConfiguration } from "viewer/store";
 import { flattenMenuGroups } from "../action_bar/menu_groups";
+import { getViewDatasetMenuGroups } from "../action_bar/menu_items";
 import {
   type TracingViewMenuProps,
   useTracingViewMenuGroups,
-} from "../action_bar/use_tracing_view_menu_items";
-import { getViewDatasetMenuGroups } from "../action_bar/view_dataset_actions_view";
+} from "../action_bar/use_tracing_view_menu_groups";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { type CommandWithoutId, setViewerCommands } from "./command_palette";
 

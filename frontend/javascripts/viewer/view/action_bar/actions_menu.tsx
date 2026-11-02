@@ -6,7 +6,7 @@ import { memo, useMemo } from "react";
 import constants from "viewer/constants";
 import ButtonComponent from "viewer/view/components/button_component";
 import { toGroupedMenuItems } from "./menu_groups";
-import { useTracingViewMenuGroups } from "./use_tracing_view_menu_items";
+import { useTracingViewMenuGroups } from "./use_tracing_view_menu_groups";
 
 type Props = {
   layoutMenu: SubMenuType | null;

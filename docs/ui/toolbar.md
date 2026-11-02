@@ -52,17 +52,17 @@ The keyboard rotation speed can be adjusted with the `Keyboard Rotation` setting
 The `Menu` in the toolbar groups its entries into three sections. Which entries are shown depends on whether you are viewing a dataset or an annotation and on your permissions for that annotation.
 
 ### Annotation
-These entries are only shown when an annotation is open:
+These entries are only shown when an annotation is open. Some of them additionally depend on your permissions, as noted below:
 
-- **Duplicate**: Create a copy of the annotation that you own and can edit.
+- **Duplicate**: Create a copy of the annotation that you own and can edit. Requires being logged in.
 
-- **Merge Annotation**: Combine multiple annotations into one either by project or by annotation ID.
+- **Merge Annotation**: Combine multiple annotations into one either by project or by annotation ID. Only available in skeleton mode for annotations you can edit.
 
-- **Version History**: Browse the complete version history of your annotation, preview older versions, and restore them. See [Version History](#version-history) below.
+- **Version History**: Browse the complete version history of your annotation, preview older versions, and restore them. See [Version History](#version-history) below. Not available in sandbox mode.
 
-- **Lock Annotation**: Lock your current annotation in a read-only mode to protect it from any accidental changes. The annotation remains read-only until you unlock it (from the [Annotation dashboard](../dashboard/annotations.md)). This can be useful when publishing your work or sharing with larger communities.
+- **Lock Annotation**: Lock your current annotation in a read-only mode to protect it from any accidental changes. The annotation remains read-only until you unlock it (from the [Annotation dashboard](../dashboard/annotations.md)). This can be useful when publishing your work or sharing with larger communities. Only the owner of the annotation sees this entry.
 
-- **Disable Saving**: Temporarily disable automatic saving in WEBKNOSSOS. Any changes you make will not be saved. This can reduce bandwidth and resource usage when working with large annotations that don't need to be persisted.
+- **Disable Saving**: Temporarily disable automatic saving in WEBKNOSSOS. Any changes you make will not be saved. This can reduce bandwidth and resource usage when working with large annotations that don't need to be persisted. Only available for annotations you can edit that are not part of a task.
 
 - **Archive**: When you need to declutter your dashboard, you can archive annotations you're not actively working on. Archived items remain accessible through the "Show Archived Annotations" filter on your dashboard. For tasks, this entry reads `Finish and go to Dashboard`.
 

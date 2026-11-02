@@ -3,10 +3,15 @@ import { getOrganization } from "admin/api/organization";
 import { getActiveUser } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import { useWkSelector } from "libs/react_hooks";
+import throttle from "lodash-es/throttle";
 import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
+
+// Tabs regain focus often (e.g., when coming back from another application), so the session is
+// checked at most this often. A focus event within the interval schedules a check at its end.
+const SYNC_INTERVAL_MS = 30 * 1000;
 
 // The session cookie is shared between all tabs. Switching the organization (or logging in as
 // someone else) in another tab therefore changes the user of all requests sent from this tab,
@@ -24,7 +29,7 @@ export function SyncActiveOrganization() {
       return;
     }
 
-    const syncSessionUser = async () => {
+    const throttledSync = throttle(async () => {
       if (document.visibilityState !== "visible" || isSyncingRef.current) {
         return;
       }
@@ -47,6 +52,12 @@ export function SyncActiveOrganization() {
       } finally {
         isSyncingRef.current = false;
       }
+    }, SYNC_INTERVAL_MS);
+    // Hiding a tab also triggers visibilitychange, which must not use up the throttle interval.
+    const syncSessionUser = () => {
+      if (document.visibilityState === "visible") {
+        throttledSync();
+      }
     };
 
     // visibilitychange covers switching browser tabs, focus covers switching between windows.
@@ -55,6 +66,7 @@ export function SyncActiveOrganization() {
     return () => {
       document.removeEventListener("visibilitychange", syncSessionUser);
       window.removeEventListener("focus", syncSessionUser);
+      throttledSync.cancel();
     };
   }, [activeUser, dispatch, queryClient]);
 

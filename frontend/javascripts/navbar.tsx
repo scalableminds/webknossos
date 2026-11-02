@@ -11,16 +11,11 @@ import Icon, {
   UserOutlined,
 } from "@ant-design/icons";
 import WkLogoIcon from "@images/wk-logo.svg?react";
-import { unwrapOrThrow } from "admin/api/api_result";
 import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
+import { useLogout } from "admin/auth/use_logout";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import {
-  getBuildInfo,
-  logoutUser,
-  sendAnalyticsEvent,
-  updateNovelUserExperienceInfos,
-} from "admin/rest_api";
+import { getBuildInfo, sendAnalyticsEvent, updateNovelUserExperienceInfos } from "admin/rest_api";
 import type { MenuProps } from "antd";
 import {
   Avatar,
@@ -44,7 +39,7 @@ import classnames from "classnames";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
-import { useWkSelector } from "libs/react_hooks";
+import { useMinScreenWidth, useWkSelector } from "libs/react_hooks";
 import { TAB_SESSION_ID as SESSION_ID } from "libs/tab_session_id";
 import Toast from "libs/toast";
 import {
@@ -59,7 +54,7 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Link, useLocation } from "react-router";
-import { getAntdTheme } from "theme";
+import { getAntdTheme, ThemeIndependentStatusColor } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
 import {
@@ -70,7 +65,7 @@ import {
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { retryMutexAcquisitionNowAction } from "viewer/model/actions/save_actions";
-import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
 import { HelpModal } from "viewer/view/help/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
@@ -100,9 +95,7 @@ const OLVY_CONFIG = {
     showHeader: true,
     // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
     showUnreadIndicator: false,
-    // Kept as a literal: this is configuration handed to the third-party Olvy widget, which
-    // renders in its own iframe and cannot resolve our CSS variables.
-    unreadIndicatorColor: "#cc1919",
+    unreadIndicatorColor: ThemeIndependentStatusColor.error,
     unreadIndicatorPosition: "top-right",
   },
 };
@@ -247,7 +240,6 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
 
   return {
     key: "adminMenu",
-    className: collapse ? "hide-on-small-screen" : "",
     label: getCollapsibleMenuTitle(
       "Administration",
       <TeamOutlined className="icon-margin-right" />,
@@ -284,7 +276,6 @@ export function getAnalysisSubMenu(collapse: boolean) {
 
   return {
     key: "analysisMenu",
-    className: collapse ? "hide-on-small-screen" : "",
     label: getCollapsibleMenuTitle(
       "Analysis",
       <ExperimentOutlined className="icon-margin-right" />,
@@ -297,7 +288,6 @@ export function getAnalysisSubMenu(collapse: boolean) {
 function getTaskManagementSubMenu(collapse: boolean): SubMenuType {
   return {
     key: "taskManagementMenu",
-    className: collapse ? "hide-on-small-screen" : "",
     label: getCollapsibleMenuTitle(
       "Task Management",
       <ScheduleOutlined className="icon-margin-right" />,
@@ -497,7 +487,6 @@ function getHelpSubMenu(
 function getDashboardSubMenu(collapse: boolean): SubMenuType {
   return {
     key: "dashboardMenu",
-    className: collapse ? "hide-on-small-screen" : "",
     label: getCollapsibleMenuTitle(
       "Dashboard",
       <HomeOutlined className="icon-margin-right" />,
@@ -877,7 +866,6 @@ function AnnotationLockedTag(): React.ReactElement | null {
 }
 
 function Navbar() {
-  const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
@@ -887,12 +875,10 @@ function Navbar() {
   const bannerOffset = navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0;
   const historyLocation = useLocation();
 
+  const logout = useLogout();
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
-    const redirectUrl = unwrapOrThrow(await logoutUser());
-    dispatch(logoutUserAction());
-    // Hard navigation
-    location.href = redirectUrl;
+    await logout({ everywhere: false });
   };
 
   const version = useFetch(getVersion, null, []);
@@ -913,7 +899,10 @@ function Navbar() {
   const isAuthenticated = activeUser != null;
   const isAdminOrTeamManager = isUserAdminOrTeamManager(activeUser);
   const isAdminOrManager = isUserAdminOrManager(activeUser);
-  const collapseAllNavItems = isInAnnotationView;
+  // Phones get the icon-only navbar, too.
+  const isPhone = !useMinScreenWidth("md");
+  const isBelowXL = !useMinScreenWidth("xl");
+  const collapseAllNavItems = isInAnnotationView || isPhone;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
   const menuItems: ItemType[] = [
     {
@@ -944,17 +933,28 @@ function Navbar() {
   ];
   const trailingNavItems = [];
 
+  // In the annotation view, the navbar also hosts the viewer's action bar, so the submenus give up
+  // their space on smaller screens. On phones (outside the annotation view) they stay as icons.
+  const hideInAnnotationViewOnSmallScreens = <T extends SubMenuType | null>(item: T): T =>
+    item != null && isInAnnotationView ? { ...item, className: "hide-on-small-screen" } : item;
+
   if (isAuthenticated) {
     const loggedInUser: APIUser = activeUser;
-    menuItems.push(getDashboardSubMenu(collapseAllNavItems));
-    menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
+    menuItems.push(hideInAnnotationViewOnSmallScreens(getDashboardSubMenu(collapseAllNavItems)));
+    menuItems.push(hideInAnnotationViewOnSmallScreens(getAnalysisSubMenu(collapseAllNavItems)));
 
     if (isUserAdminOrTeamManager(activeUser)) {
-      menuItems.push(getTaskManagementSubMenu(collapseAllNavItems));
+      menuItems.push(
+        hideInAnnotationViewOnSmallScreens(getTaskManagementSubMenu(collapseAllNavItems)),
+      );
     }
 
     if (isAdminOrTeamManager && activeUser != null) {
-      menuItems.push(getAdministrationSubMenu(collapseAllNavItems, activeUser));
+      menuItems.push(
+        hideInAnnotationViewOnSmallScreens(
+          getAdministrationSubMenu(collapseAllNavItems, activeUser),
+        ),
+      );
     } else {
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
@@ -967,10 +967,13 @@ function Navbar() {
         shape="round"
         color="default"
         variant="filled"
+        // Without a label, antd renders a compact icon-only button.
+        size={isPhone ? "small" : "middle"}
         icon={<MessageOutlined />}
         onClick={() => setIsHelpModalOpen((isOpen) => !isOpen)}
+        title="Ask a Question"
       >
-        Ask
+        {isBelowXL ? null : "Ask"}
       </Button>,
     );
 
@@ -1000,7 +1003,8 @@ function Navbar() {
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.
   const selectedKeys = collapseAllNavItems ? [] : [historyLocation.pathname];
-  const separator = <div className="navbar-separator" />;
+  // Hidden together with the submenus it separates from the viewer's action bar.
+  const separator = <div className="navbar-separator hide-on-small-screen" />;
 
   return (
     <Header
@@ -1041,7 +1045,13 @@ function Navbar() {
         }}
       />
       <ConfigProvider theme={getAntdTheme("dark")}>
-        <Flex align="center" justify="flex-end" gap="small" style={{ paddingTop: bannerOffset }}>
+        <Flex
+          align="center"
+          justify="flex-end"
+          gap="small"
+          // Keeps a gap to the menu or the viewer's action bar when the navbar gets crowded.
+          style={{ paddingTop: bannerOffset, marginInlineStart: 8 }}
+        >
           {trailingNavItems}
         </Flex>
       </ConfigProvider>

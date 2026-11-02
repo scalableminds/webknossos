@@ -86,9 +86,9 @@ These entries are only shown when an annotation is open:
 
 - **Layout**: Modify the layout of the WEBKNOSSOS user interface and resize, reorder and adjust viewports and panels to your preferences. Customize the number of columns, show or hide specific tabs, and adjust the size of the sidebar. Save and restore your preferred configurations.
 
-- **Configure Shortcuts…**: Change the keyboard shortcuts to your liking. See [Customizing Shortcuts](./keyboard_shortcuts.md#customizing-shortcuts).
+- **Configure Shortcuts**: Change the keyboard shortcuts to your liking. See [Customizing Shortcuts](./keyboard_shortcuts.md#customizing-shortcuts).
 
-- **User Scripts…**: Run custom JavaScript snippets that use the [frontend API](https://webknossos.org/assets/docs/frontend-api/index.html) to automate tasks in the annotation view.
+- **User Scripts**: Run custom JavaScript snippets that use the [frontend API](https://webknossos.org/assets/docs/frontend-api/index.html) to automate tasks in the annotation view.
 
 ### Version History
 WEBKNOSSOS keeps a version history of every annotation. Each saved change creates a new version. Unlike undo/redo, which only covers your current session, the version history lets you go back to any earlier state of the annotation. It is also the way to revert changes where undo isn't available, e.g., proofreading actions or edits during [simultaneous editing](../sharing/annotation_sharing.md#simultaneous-editing-experimental).

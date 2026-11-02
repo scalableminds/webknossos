@@ -261,7 +261,7 @@ export const useTracingViewMenuGroups = (
       key: "user-scripts-button",
       onClick: handleUserScriptsOpen,
       icon: <CodeOutlined />,
-      label: "User Scripts…",
+      label: "User Scripts",
     });
 
     const menuGroups: MenuGroup[] = [

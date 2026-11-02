@@ -35,7 +35,7 @@ export const screenshotMenuItem: MenuItemType = {
   key: "screenshot-button",
   onClick: downloadScreenshot,
   icon: <CameraOutlined />,
-  label: "Screenshot (Q)",
+  label: "Screenshot",
 };
 
 export const renderAnimationMenuItem: MenuItemType = {
@@ -58,7 +58,7 @@ export const keyboardShortcutsConfigMenuItem: MenuItemType = {
   key: "keyboard-shortcuts-button",
   onClick: () => Store.dispatch(setKeyboardShortcutConfigModalVisibilityAction(true)),
   icon: <LaptopOutlined />,
-  label: "Configure Shortcuts…",
+  label: "Configure Shortcuts",
 };
 
 const pythonClientMenuItem: MenuItemType = {

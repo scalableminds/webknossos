@@ -63,6 +63,7 @@ export function TaskCardList({
     showFinishedTasks ? (
       <Card key={task.id} style={TASK_CARD_STYLE}>
         <Descriptions
+          className="finished-task-descriptions"
           size="small"
           column={{ xs: 1, sm: 2, lg: 3 }}
           styles={{ content: { overflowWrap: "anywhere" } }}

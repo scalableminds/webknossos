@@ -12,6 +12,7 @@ import { PropTypes } from "@scalableminds/prop-types";
 import { finishTask, peekNextTasks, requestTask } from "admin/api/tasks";
 import { deleteAnnotation, downloadAnnotation, resetAnnotation } from "admin/rest_api";
 import {
+  App,
   Button,
   Card,
   Col,
@@ -36,13 +37,12 @@ import TransferTaskModal from "dashboard/transfer_task_modal";
 import { handleGenericError } from "libs/error_handling";
 import Markdown from "libs/markdown_adapter";
 import Persistence from "libs/persistence";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import { compareBy, scrollToTop } from "libs/utils";
-import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import messages from "messages";
-import { PureComponent, type ReactNode, useContext } from "react";
-import { connect } from "react-redux";
+import { type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { Link } from "react-router";
 import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_types";
 import {
@@ -50,7 +50,6 @@ import {
   getVolumeDescriptors,
 } from "viewer/model/accessors/annotation_accessor";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
-import type { WebknossosState } from "viewer/store";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DashboardEmptyTasksPlaceholder } from "./dashboard_empty_tasks_placeholder";
@@ -64,29 +63,31 @@ type TaskModeState = {
   loadedAllTasks: boolean;
   lastLoadedPage: number;
 };
-type OwnProps = {
+type TaskModeStates = {
+  finished: TaskModeState;
+  unfinished: TaskModeState;
+};
+type TaskMode = keyof TaskModeStates;
+type Props = {
   userId: string | null | undefined;
   isAdminView: boolean;
 };
-type StateProps = {
-  activeUser: APIUser;
-};
-type Props = OwnProps & StateProps & WithModalProps;
 
-type State = {
-  showFinishedTasks: boolean;
-  isLoading: boolean;
-  isTransferModalOpen: boolean;
-  currentAnnotationId: string | null | undefined;
-  finishedModeState: TaskModeState;
-  unfinishedModeState: TaskModeState;
+const INITIAL_TASK_MODE_STATE: TaskModeState = {
+  tasks: [],
+  loadedAllTasks: false,
+  lastLoadedPage: -1,
 };
-const persistence = new Persistence<Pick<State, "showFinishedTasks">>(
+
+const persistence = new Persistence<{ showFinishedTasks: boolean }>(
   {
     showFinishedTasks: PropTypes.bool,
   },
   "dashboardTaskList",
 );
+
+const getTaskMode = (showFinishedTasks: boolean): TaskMode =>
+  showFinishedTasks ? "finished" : "unfinished";
 
 const convertAnnotationToTaskWithAnnotationType = (
   annotation: APIAnnotation,
@@ -117,182 +118,160 @@ const convertAnnotationToTaskWithAnnotationType = (
   return newTask;
 };
 
-class DashboardTaskListView extends PureComponent<Props, State> {
-  state: State = {
-    showFinishedTasks: false,
-    isLoading: false,
-    isTransferModalOpen: false,
-    currentAnnotationId: null,
-    finishedModeState: {
-      tasks: [],
-      loadedAllTasks: false,
-      lastLoadedPage: -1,
+/**
+ * Holds the paginated task lists for finished and unfinished tasks and the
+ * operations that load or modify them.
+ */
+function useDashboardTasks(userId: string | null | undefined) {
+  const [taskModeStates, setTaskModeStates] = useState<TaskModeStates>({
+    finished: INITIAL_TASK_MODE_STATE,
+    unfinished: INITIAL_TASK_MODE_STATE,
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  const updateTaskModeState = useCallback(
+    (mode: TaskMode, update: (modeState: TaskModeState) => Partial<TaskModeState>) => {
+      setTaskModeStates((prevStates) => ({
+        ...prevStates,
+        [mode]: { ...prevStates[mode], ...update(prevStates[mode]) },
+      }));
     },
-    unfinishedModeState: {
-      tasks: [],
-      loadedAllTasks: false,
-      lastLoadedPage: -1,
+    [],
+  );
+
+  // This refers not to the pagination of antd but to the pagination of querying data from SQL.
+  const fetchPage = useCallback(
+    async (mode: TaskMode, pageNumber: number) => {
+      const isFinished = (mode === "finished").toString();
+      const url = userId
+        ? `/api/users/${userId}/tasks?isFinished=${isFinished}&pageNumber=${pageNumber}`
+        : `/api/user/tasks?isFinished=${isFinished}&pageNumber=${pageNumber}`;
+
+      try {
+        setIsLoading(true);
+        const annotationsWithTasks: APIAnnotation[] = await Request.receiveJSON(url);
+        const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
+        updateTaskModeState(mode, (modeState) => ({
+          loadedAllTasks:
+            annotationsWithTasks.length !== pageLength || annotationsWithTasks.length === 0,
+          tasks: modeState.tasks.concat(tasks),
+          lastLoadedPage: pageNumber,
+        }));
+      } catch (error) {
+        handleGenericError(error as Error);
+      } finally {
+        setIsLoading(false);
+      }
     },
+    [userId, updateTaskModeState],
+  );
+
+  const removeTaskByAnnotationId = useCallback(
+    (mode: TaskMode, annotationId: string | null | undefined) => {
+      updateTaskModeState(mode, (modeState) => ({
+        tasks: modeState.tasks.filter((t) => t.annotation.id !== annotationId),
+      }));
+    },
+    [updateTaskModeState],
+  );
+
+  const moveTaskToFinished = useCallback((taskId: string, finishedTask: APITaskWithAnnotation) => {
+    setTaskModeStates((prevStates) => ({
+      unfinished: {
+        ...prevStates.unfinished,
+        tasks: prevStates.unfinished.tasks.filter((t) => t.id !== taskId),
+      },
+      finished: {
+        ...prevStates.finished,
+        tasks: [finishedTask].concat(prevStates.finished.tasks),
+      },
+    }));
+  }, []);
+
+  const requestNewTask = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const newTaskAnnotation = await requestTask();
+      updateTaskModeState("unfinished", (modeState) => ({
+        tasks: modeState.tasks.concat([
+          convertAnnotationToTaskWithAnnotationType(newTaskAnnotation),
+        ]),
+      }));
+    } catch (_ex) {
+      // catch exception so that promise does not fail and the modal will close
+    } finally {
+      setIsLoading(false);
+    }
+  }, [updateTaskModeState]);
+
+  return {
+    taskModeStates,
+    isLoading,
+    fetchPage,
+    removeTaskByAnnotationId,
+    moveTaskToFinished,
+    requestNewTask,
+  };
+}
+
+function DashboardTaskListView({ userId, isAdminView }: Props) {
+  const { modal } = App.useApp();
+  const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
+  const [showFinishedTasks, setShowFinishedTasks] = useState(
+    () => persistence.load().showFinishedTasks ?? false,
+  );
+  const [transferredAnnotationId, setTransferredAnnotationId] = useState<string | null>(null);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const {
+    taskModeStates,
+    isLoading,
+    fetchPage,
+    removeTaskByAnnotationId,
+    moveTaskToFinished,
+    requestNewTask,
+  } = useDashboardTasks(userId);
+
+  const currentMode = getTaskMode(showFinishedTasks);
+  const { tasks: currentTasks, loadedAllTasks, lastLoadedPage } = taskModeStates[currentMode];
+
+  useEffectOnlyOnce(() => {
+    fetchPage(currentMode, 0);
+  });
+
+  const sortedTasks = useMemo(
+    () =>
+      [...currentTasks].sort(
+        compareBy<APITaskWithAnnotation>(
+          (task) => (showFinishedTasks ? task.annotation.modified : task.created),
+          false,
+        ),
+      ),
+    [currentTasks, showFinishedTasks],
+  );
+
+  const toggleShowFinished = () => {
+    const newShowFinishedTasks = !showFinishedTasks;
+    setShowFinishedTasks(newShowFinishedTasks);
+    persistence.persist({ showFinishedTasks: newShowFinishedTasks });
+    const newMode = getTaskMode(newShowFinishedTasks);
+    if (taskModeStates[newMode].lastLoadedPage === -1) fetchPage(newMode, 0);
   };
 
-  componentDidMount() {
-    // @ts-expect-error
-    this.setState(persistence.load());
-    this.fetchNextPage(0);
-  }
-
-  componentDidUpdate() {
-    persistence.persist(this.state);
-  }
-
-  getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished");
-  getCurrentModeState = () =>
-    this.state.showFinishedTasks ? this.state.finishedModeState : this.state.unfinishedModeState;
-
-  setCurrentModeState = (modeShape: Partial<TaskModeState>) => {
-    const { showFinishedTasks } = this.state;
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(prevState: Readonly<State>) => ... Remove this comment to see the full error message
-    this.setState((prevState) => {
-      const newSubState = {
-        ...prevState[showFinishedTasks ? "finishedModeState" : "unfinishedModeState"],
-        ...modeShape,
-      };
-      return {
-        [showFinishedTasks ? "finishedModeState" : "unfinishedModeState"]: newSubState,
-      };
-    });
-  };
-
-  confirmFinish(task: APITaskWithAnnotation) {
-    this.props.modal.confirm({
+  const confirmFinish = (task: APITaskWithAnnotation) => {
+    modal.confirm({
       title: messages["annotation.finish"],
       onOk: async () => {
-        const { annotation } = task;
-        const changedAnnotationWithTask = await finishTask(annotation.id);
-        const changedTask = convertAnnotationToTaskWithAnnotationType(changedAnnotationWithTask);
-        this.setState((prevState) => {
-          const newUnfinishedTasks = prevState.unfinishedModeState.tasks.filter(
-            (t) => t.id !== task.id,
-          );
-          const newFinishedTasks = [changedTask].concat(prevState.finishedModeState.tasks);
-          const newUnfinishedModeState = {
-            ...prevState.unfinishedModeState,
-            tasks: newUnfinishedTasks,
-          };
-          const newFinishedModeState = { ...prevState.finishedModeState, tasks: newFinishedTasks };
-          return {
-            unfinishedModeState: newUnfinishedModeState,
-            finishedModeState: newFinishedModeState,
-          };
-        });
+        const changedAnnotationWithTask = await finishTask(task.annotation.id);
+        moveTaskToFinished(
+          task.id,
+          convertAnnotationToTaskWithAnnotationType(changedAnnotationWithTask),
+        );
       },
     });
-  }
-
-  fetchNextPage = async (pageNumber: number) => {
-    // this refers not to the pagination of antd but to the pagination of querying data from SQL
-    const isFinished = this.state.showFinishedTasks;
-    const previousTasks = this.getCurrentModeState().tasks;
-    const url = this.props.userId
-      ? `/api/users/${
-          this.props.userId
-        }/tasks?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`
-      : `/api/user/tasks?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`;
-
-    try {
-      this.setState({
-        isLoading: true,
-      });
-      const annotationsWithTasks = await Request.receiveJSON(url);
-      const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
-      this.setCurrentModeState({
-        loadedAllTasks:
-          annotationsWithTasks.length !== pageLength || annotationsWithTasks.length === 0,
-        tasks: previousTasks.concat(tasks),
-        lastLoadedPage: pageNumber,
-      });
-    } catch (error) {
-      handleGenericError(error as Error);
-    } finally {
-      this.setState({
-        isLoading: false,
-      });
-    }
   };
 
-  toggleShowFinished = () => {
-    this.setState(
-      (prevState) => ({
-        showFinishedTasks: !prevState.showFinishedTasks,
-      }),
-      () => {
-        if (this.getCurrentModeState().lastLoadedPage === -1) this.fetchNextPage(0);
-      },
-    );
-  };
-
-  openTransferModal(annotationId: string) {
-    this.setState({
-      isTransferModalOpen: true,
-      currentAnnotationId: annotationId,
-    });
-  }
-
-  renderActions = (task: APITaskWithAnnotation, orientation: SpaceProps["orientation"]) => {
-    const { annotation } = task;
-    const isAdmin =
-      this.props.activeUser.isAdmin ||
-      this.props.activeUser.teams
-        .filter((team) => team.isTeamManager)
-        .map((team) => team.name)
-        .includes(task.team);
-    const label = this.props.isAdminView ? (
-      <LinkButton icon={<EyeOutlined />}>View</LinkButton>
-    ) : (
-      <LinkButton icon={<PlayCircleOutlined />}>Open</LinkButton>
-    );
-    return (
-      <Space orientation={orientation} size={orientation === "vertical" ? 1 : "middle"} wrap>
-        <Link to={`/annotations/${annotation.id}`}>{label}</Link>
-        {isAdmin || this.props.isAdminView ? (
-          <LinkButton onClick={() => this.openTransferModal(annotation.id)} icon={<TeamOutlined />}>
-            Transfer
-          </LinkButton>
-        ) : null}
-        {isAdmin ? (
-          <>
-            <AsyncLink
-              onClick={() => {
-                const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
-                return downloadAnnotation(annotation.id, "Task", isVolumeIncluded);
-              }}
-              icon={<DownloadOutlined className="icon-margin-right" />}
-            >
-              Download
-            </AsyncLink>
-            <LinkButton onClick={() => this.resetTask(annotation)} icon={<RollbackOutlined />}>
-              <Tooltip title={messages["task.tooltip_explain_reset"]} placement="left">
-                Reset
-              </Tooltip>
-            </LinkButton>
-            <LinkButton onClick={() => this.cancelAnnotation(annotation)} icon={<DeleteOutlined />}>
-              <Tooltip title={messages["task.tooltip_explain_reset_cancel"]} placement="left">
-                Reset and Cancel
-              </Tooltip>
-            </LinkButton>
-          </>
-        ) : null}
-        {this.props.isAdminView ? null : (
-          <LinkButton onClick={() => this.confirmFinish(task)} icon={<CheckCircleOutlined />}>
-            Finish
-          </LinkButton>
-        )}
-      </Space>
-    );
-  };
-
-  resetTask(annotation: APIAnnotation) {
-    this.props.modal.confirm({
+  const confirmReset = (annotation: APIAnnotation) => {
+    modal.confirm({
       title: messages["task.confirm_reset"],
       cancelText: messages.no,
       okText: messages.yes,
@@ -301,151 +280,166 @@ class DashboardTaskListView extends PureComponent<Props, State> {
         Toast.success(messages["annotation.reset_success"]);
       },
     });
-  }
+  };
 
-  cancelAnnotation(annotation: APIAnnotation) {
-    const annotationId = annotation.id;
-    this.props.modal.confirm({
+  const confirmCancel = (annotation: APIAnnotation) => {
+    modal.confirm({
       title: messages["annotation.delete"],
       cancelText: messages.no,
       okText: messages.yes,
       onOk: async () => {
-        await deleteAnnotation(annotationId, annotation.typ);
-        this.setCurrentModeState({
-          tasks: this.getCurrentModeState().tasks.filter((t) => t.annotation.id !== annotationId),
-        });
+        await deleteAnnotation(annotation.id, annotation.typ);
+        removeTaskByAnnotationId(currentMode, annotation.id);
       },
     });
-  }
+  };
 
-  async confirmGetNewTask(): Promise<void> {
-    if (this.state.unfinishedModeState.tasks.length === 0) {
-      this.getNewTask();
-    } else {
-      const likelyNextTask = await peekNextTasks();
-
-      this.props.modal.confirm({
-        title: messages["task.request_new"],
-        content:
-          likelyNextTask != null
-            ? messages["task.peek_next"]({ projectName: likelyNextTask.projectName })
-            : undefined,
-        onOk: () => this.getNewTask(),
-      });
+  const confirmGetNewTask = async (): Promise<void> => {
+    if (taskModeStates.unfinished.tasks.length === 0) {
+      await requestNewTask();
+      return;
     }
-  }
-
-  async getNewTask() {
-    this.setState({
-      isLoading: true,
+    const likelyNextTask = await peekNextTasks();
+    modal.confirm({
+      title: messages["task.request_new"],
+      content:
+        likelyNextTask != null
+          ? messages["task.peek_next"]({ projectName: likelyNextTask.projectName })
+          : undefined,
+      onOk: requestNewTask,
     });
+  };
 
-    try {
-      const newTaskAnnotation = await requestTask();
-      this.setState((prevState) => ({
-        unfinishedModeState: {
-          ...prevState.unfinishedModeState,
-          tasks: prevState.unfinishedModeState.tasks.concat([
-            convertAnnotationToTaskWithAnnotationType(newTaskAnnotation),
-          ]),
-        },
-      }));
-    } catch (_ex) {
-      // catch exception so that promise does not fail and the modal will close
-    } finally {
-      this.setState({
-        isLoading: false,
-      });
-    }
-  }
+  const openTransferModal = (annotationId: string) => {
+    setTransferredAnnotationId(annotationId);
+    setIsTransferModalOpen(true);
+  };
 
-  handleTransferredTask() {
-    this.setState({
-      isTransferModalOpen: false,
-    });
+  const handleTransferredTask = () => {
+    setIsTransferModalOpen(false);
+    removeTaskByAnnotationId(currentMode, transferredAnnotationId);
+  };
 
-    const removeTransferredTask = (
-      tasks: APITaskWithAnnotation[],
-      currentAnnotationId: string | null | undefined,
-    ) => tasks.filter((t) => t.annotation.id !== currentAnnotationId);
+  return (
+    <div>
+      <TopBar
+        confirmGetNewTask={confirmGetNewTask}
+        isAdminView={isAdminView}
+        userId={userId}
+        toggleShowFinished={toggleShowFinished}
+        showFinishedTasks={showFinishedTasks}
+      />
+      <Typography.Title level={3}>
+        {showFinishedTasks ? "My Finished Tasks" : "My Open Tasks"}
+      </Typography.Title>
+      <TaskCardList
+        tasks={sortedTasks}
+        showFinishedTasks={showFinishedTasks}
+        isAdminView={isAdminView}
+        isLoading={isLoading}
+        placeholder={
+          isLoading ? null : <DashboardEmptyTasksPlaceholder isAdmin={activeUser.isAdmin} />
+        }
+        renderActions={(task, orientation) => (
+          <TaskActions
+            task={task}
+            orientation={orientation}
+            activeUser={activeUser}
+            isAdminView={isAdminView}
+            onTransfer={openTransferModal}
+            onReset={confirmReset}
+            onCancel={confirmCancel}
+            onFinish={confirmFinish}
+          />
+        )}
+      />
+      {/* Not passed as the List's `loadMore`, since antd would then hide the pagination. */}
+      {sortedTasks.length > 0 && !loadedAllTasks ? (
+        <Flex justify="center" style={{ marginTop: 16 }}>
+          <Button onClick={() => fetchPage(currentMode, lastLoadedPage + 1)} loading={isLoading}>
+            Load more Tasks
+          </Button>
+        </Flex>
+      ) : null}
+      <TransferTaskModal
+        isOpen={isTransferModalOpen}
+        annotationId={transferredAnnotationId}
+        onCancel={() => setIsTransferModalOpen(false)}
+        onChange={handleTransferredTask}
+      />
+    </div>
+  );
+}
 
-    this.setCurrentModeState({
-      tasks: removeTransferredTask(this.getCurrentTasks(), this.state.currentAnnotationId),
-    });
-  }
-
-  getCurrentTasks() {
-    return this.getCurrentModeState().tasks;
-  }
-
-  renderPlaceholder() {
-    return this.state.isLoading ? null : (
-      <DashboardEmptyTasksPlaceholder isAdmin={this.props.activeUser.isAdmin} />
-    );
-  }
-
-  renderTaskList() {
-    const { showFinishedTasks } = this.state;
-    const tasks = this.getCurrentTasks().sort(
-      compareBy<APITaskWithAnnotation>(
-        (task) => (showFinishedTasks ? task.annotation.modified : task.created),
-        false,
-      ),
-    );
-    const { loadedAllTasks, lastLoadedPage } = this.getCurrentModeState();
-
-    return (
-      <>
-        <TaskCardList
-          tasks={tasks}
-          showFinishedTasks={showFinishedTasks}
-          isAdminView={this.props.isAdminView}
-          isLoading={this.state.isLoading}
-          placeholder={this.renderPlaceholder()}
-          renderActions={(task, orientation) => this.renderActions(task, orientation)}
-        />
-        {/* Not passed as the List's `loadMore`, since antd would then hide the pagination. */}
-        {tasks.length > 0 && !loadedAllTasks ? (
-          <Flex justify="center" style={{ marginTop: 16 }}>
-            <Button
-              onClick={() => this.fetchNextPage(lastLoadedPage + 1)}
-              loading={this.state.isLoading}
-            >
-              Load more Tasks
-            </Button>
-          </Flex>
-        ) : null}
-      </>
-    );
-  }
-
-  render() {
-    return (
-      <div>
-        <TopBar
-          confirmGetNewTask={() => this.confirmGetNewTask()}
-          isAdminView={this.props.isAdminView}
-          userId={this.props.userId}
-          toggleShowFinished={this.toggleShowFinished}
-          getFinishVerb={this.getFinishVerb}
-        />
-        <Typography.Title level={3}>
-          {this.state.showFinishedTasks ? "My Finished Tasks" : "My Open Tasks"}
-        </Typography.Title>
-        {this.renderTaskList()}
-        <TransferTaskModal
-          isOpen={this.state.isTransferModalOpen}
-          annotationId={this.state.currentAnnotationId}
-          onCancel={() =>
-            this.setState({
-              isTransferModalOpen: false,
-            })
-          }
-          onChange={() => this.handleTransferredTask()}
-        />
-      </div>
-    );
-  }
+function TaskActions({
+  task,
+  orientation,
+  activeUser,
+  isAdminView,
+  onTransfer,
+  onReset,
+  onCancel,
+  onFinish,
+}: {
+  task: APITaskWithAnnotation;
+  orientation: SpaceProps["orientation"];
+  activeUser: APIUser;
+  isAdminView: boolean;
+  onTransfer: (annotationId: string) => void;
+  onReset: (annotation: APIAnnotation) => void;
+  onCancel: (annotation: APIAnnotation) => void;
+  onFinish: (task: APITaskWithAnnotation) => void;
+}) {
+  const { annotation } = task;
+  const isAdmin =
+    activeUser.isAdmin ||
+    activeUser.teams
+      .filter((team) => team.isTeamManager)
+      .map((team) => team.name)
+      .includes(task.team);
+  const label = isAdminView ? (
+    <LinkButton icon={<EyeOutlined />}>View</LinkButton>
+  ) : (
+    <LinkButton icon={<PlayCircleOutlined />}>Open</LinkButton>
+  );
+  return (
+    <Space orientation={orientation} size={orientation === "vertical" ? 1 : "middle"} wrap>
+      <Link to={`/annotations/${annotation.id}`}>{label}</Link>
+      {isAdmin || isAdminView ? (
+        <LinkButton onClick={() => onTransfer(annotation.id)} icon={<TeamOutlined />}>
+          Transfer
+        </LinkButton>
+      ) : null}
+      {isAdmin ? (
+        <>
+          <AsyncLink
+            onClick={() => {
+              const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
+              return downloadAnnotation(annotation.id, "Task", isVolumeIncluded);
+            }}
+            icon={<DownloadOutlined className="icon-margin-right" />}
+          >
+            Download
+          </AsyncLink>
+          <LinkButton onClick={() => onReset(annotation)} icon={<RollbackOutlined />}>
+            <Tooltip title={messages["task.tooltip_explain_reset"]} placement="left">
+              Reset
+            </Tooltip>
+          </LinkButton>
+          <LinkButton onClick={() => onCancel(annotation)} icon={<DeleteOutlined />}>
+            <Tooltip title={messages["task.tooltip_explain_reset_cancel"]} placement="left">
+              Reset and Cancel
+            </Tooltip>
+          </LinkButton>
+        </>
+      ) : null}
+      {isAdminView ? null : (
+        <LinkButton onClick={() => onFinish(task)} icon={<CheckCircleOutlined />}>
+          Finish
+        </LinkButton>
+      )}
+    </Space>
+  );
 }
 
 function TaskCardTitle({ task }: { task: APITaskWithAnnotation }) {
@@ -593,13 +587,13 @@ function TopBar({
   isAdminView,
   userId,
   toggleShowFinished,
-  getFinishVerb,
+  showFinishedTasks,
 }: {
   confirmGetNewTask: () => Promise<void>;
   isAdminView: boolean;
   userId: string | null | undefined;
   toggleShowFinished: () => void;
-  getFinishVerb: () => string;
+  showFinishedTasks: boolean;
 }) {
   const activeTab = useContext(ActiveTabContext);
   const renderingTab = useContext(RenderingTabContext);
@@ -614,7 +608,9 @@ function TopBar({
       >
         Get a New Task
       </AsyncButton>
-      <Button onClick={toggleShowFinished}>Show {getFinishVerb()} Tasks Only</Button>
+      <Button onClick={toggleShowFinished}>
+        Show {showFinishedTasks ? "Unfinished" : "Finished"} Tasks Only
+      </Button>
     </Space>
   );
 
@@ -625,9 +621,4 @@ function TopBar({
   );
 }
 
-const mapStateToProps = (state: WebknossosState): StateProps => ({
-  activeUser: enforceActiveUser(state.activeUser),
-});
-
-const connector = connect(mapStateToProps);
-export default connector(withModal(DashboardTaskListView));
+export default DashboardTaskListView;

@@ -1,12 +1,10 @@
 import app from "app";
 import type { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
-import type UpdatableTexture from "libs/UpdatableTexture";
 import { waitForCondition } from "libs/utils";
 import window from "libs/window";
 import noop from "lodash-es/noop";
 import range from "lodash-es/range";
 import uniqBy from "lodash-es/uniqBy";
-import type { DataTexture } from "three";
 import type { BucketDataArray, ElementClass } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import constants, { type TypedArray } from "viewer/constants";
@@ -392,12 +390,6 @@ export default class TextureBucketManager {
     }
   }
 
-  getLookUpTexture(): DataTexture | UpdatableTexture {
-    // Only return the look up texture here, because the pool textures are
-    // shared by all layers and attached once by PlaneMaterialFactory.
-    return this.lookUpCuckooTable._texture;
-  }
-
   setupDataTextures(lookUpCuckooTable: CuckooTableVec5, layerIndex: number): void {
     this.lookUpCuckooTable = lookUpCuckooTable;
     this.layerIndex = layerIndex;
@@ -454,7 +446,8 @@ export default class TextureBucketManager {
   }
 
   destroy() {
-    this.getLookUpTexture().dispose();
+    // The look up table is shared by all layers and disposed by
+    // LayerRenderingManager.
     // @ts-expect-error
     this.lookUpCuckooTable = null;
     this.isDestroyed = true;

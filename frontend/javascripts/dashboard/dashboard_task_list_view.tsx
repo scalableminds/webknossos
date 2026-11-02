@@ -41,8 +41,7 @@ import Toast from "libs/toast";
 import { compareBy, scrollToTop } from "libs/utils";
 import { type WithModalProps, withModal } from "libs/with_modal_hoc";
 import messages from "messages";
-import type React from "react";
-import { PureComponent, useContext } from "react";
+import { PureComponent, type ReactNode, useContext } from "react";
 import { connect } from "react-redux";
 import { Link } from "react-router";
 import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_types";
@@ -386,110 +385,37 @@ class DashboardTaskListView extends PureComponent<Props, State> {
   }
 
   renderTaskList() {
+    const { showFinishedTasks } = this.state;
     const tasks = this.getCurrentTasks().sort(
       compareBy<APITaskWithAnnotation>(
-        (task) => (this.state.showFinishedTasks ? task.annotation.modified : task.created),
+        (task) => (showFinishedTasks ? task.annotation.modified : task.created),
         false,
       ),
     );
-    const descriptionClassName = classNames("task-type-description", {
-      short: this.state.showFinishedTasks || this.props.isAdminView,
-    });
-
-    const TaskCardTitle = ({ task }: { task: APITaskWithAnnotation }) => (
-      <Flex vertical gap={4} style={{ paddingBlock: 12 }}>
-        <span style={{ overflowWrap: "anywhere" }}>
-          {task.projectName} (<FormattedDate timestamp={task.created} />)
-        </span>
-        <Flex wrap gap={4}>
-          {getSkeletonDescriptor(task.annotation) == null ? null : (
-            <Tag color="success" variant="outlined">
-              skeleton
-            </Tag>
-          )}
-          {getVolumeDescriptors(task.annotation).length === 0 ? null : (
-            <Tag color="warning" variant="outlined">
-              volume
-            </Tag>
-          )}
-          {task.type.settings.allowedModes.map((mode) => (
-            <Tag key={mode} variant="outlined">
-              {mode}
-            </Tag>
-          ))}
-        </Flex>
-      </Flex>
-    );
-
-    const TaskCard = (task: APITaskWithAnnotation) =>
-      this.state.showFinishedTasks ? (
-        <Card key={task.id} style={TASK_CARD_STYLE}>
-          <Descriptions
-            size="small"
-            column={{ xs: 1, sm: 2, lg: 3 }}
-            styles={{ content: { overflowWrap: "anywhere" } }}
-            items={[
-              { key: "id", label: "Task ID", children: <FormattedId id={task.id} /> },
-              { key: "project", label: "Project", children: task.projectName },
-              {
-                key: "finished",
-                label: "Finished",
-                children: <FormattedDate timestamp={task.annotation.modified} />,
-              },
-            ]}
-          />
-        </Card>
-      ) : (
-        <Card
-          key={task.id}
-          style={TASK_CARD_STYLE}
-          title={<TaskCardTitle task={task} />}
-          styles={{ title: { whiteSpace: "normal" } }}
-        >
-          <OpenTaskCardBody
-            description={
-              <div className={descriptionClassName}>
-                <Markdown>{task.type.description}</Markdown>
-              </div>
-            }
-            details={[
-              { key: "id", label: "Task ID", children: <FormattedId id={task.id} /> },
-              { key: "type", label: "Task Type", children: task.type.summary },
-            ]}
-            renderActions={(orientation) => this.renderActions(task, orientation)}
-          />
-        </Card>
-      );
+    const { loadedAllTasks, lastLoadedPage } = this.getCurrentModeState();
 
     return (
-      <List
-        dataSource={tasks}
-        pagination={
-          tasks.length > 0
-            ? {
-                defaultPageSize: 50,
-                onChange: scrollToTop,
-              }
-            : false
-        }
-        loading={this.state.isLoading}
-        renderItem={TaskCard}
-        locale={{
-          emptyText: this.renderPlaceholder(),
-        }}
-        loadMore={
-          tasks.length > 0 && !this.getCurrentModeState().loadedAllTasks ? (
-            <Flex justify="center" style={{ marginTop: 16 }}>
-              <Button
-                onClick={() => this.fetchNextPage(this.getCurrentModeState().lastLoadedPage + 1)}
-                loading={this.state.isLoading}
-              >
-                Load more Tasks
-              </Button>
-            </Flex>
-          ) : null
-        }
-      />
+      <>
+        <TaskCardList
+          tasks={tasks}
+          showFinishedTasks={showFinishedTasks}
+          isAdminView={this.props.isAdminView}
+          isLoading={this.state.isLoading}
+          placeholder={this.renderPlaceholder()}
+          renderActions={(task, orientation) => this.renderActions(task, orientation)}
+        />
+        {/* Not passed as the List's `loadMore`, since antd would then hide the pagination. */}
+        {tasks.length > 0 && !loadedAllTasks ? (
+          <Flex justify="center" style={{ marginTop: 16 }}>
+            <Button
+              onClick={() => this.fetchNextPage(lastLoadedPage + 1)}
+              loading={this.state.isLoading}
+            >
+              Load more Tasks
+            </Button>
+          </Flex>
+        ) : null}
+      </>
     );
   }
 
@@ -522,19 +448,125 @@ class DashboardTaskListView extends PureComponent<Props, State> {
   }
 }
 
+function TaskCardTitle({ task }: { task: APITaskWithAnnotation }) {
+  return (
+    <Flex vertical gap={4} style={{ paddingBlock: 12 }}>
+      <span style={{ overflowWrap: "anywhere" }}>
+        {task.projectName} (<FormattedDate timestamp={task.created} />)
+      </span>
+      <Flex wrap gap={4}>
+        {getSkeletonDescriptor(task.annotation) == null ? null : (
+          <Tag color="success" variant="outlined">
+            skeleton
+          </Tag>
+        )}
+        {getVolumeDescriptors(task.annotation).length === 0 ? null : (
+          <Tag color="warning" variant="outlined">
+            volume
+          </Tag>
+        )}
+        {task.type.settings.allowedModes.map((mode) => (
+          <Tag key={mode} variant="outlined">
+            {mode}
+          </Tag>
+        ))}
+      </Flex>
+    </Flex>
+  );
+}
+
+function TaskCardList({
+  tasks,
+  showFinishedTasks,
+  isAdminView,
+  isLoading,
+  placeholder,
+  renderActions,
+}: {
+  tasks: APITaskWithAnnotation[];
+  showFinishedTasks: boolean;
+  isAdminView: boolean;
+  isLoading: boolean;
+  placeholder: ReactNode;
+  renderActions: (task: APITaskWithAnnotation, orientation: SpaceProps["orientation"]) => ReactNode;
+}) {
+  // Read once for the whole list instead of subscribing to breakpoint changes in every card.
+  const isMultiColumn = Grid.useBreakpoint().md ?? false;
+  const descriptionClassName = classNames("task-type-description", { short: isAdminView });
+
+  const renderTaskCard = (task: APITaskWithAnnotation) =>
+    showFinishedTasks ? (
+      <Card key={task.id} style={TASK_CARD_STYLE}>
+        <Descriptions
+          size="small"
+          column={{ xs: 1, sm: 2, lg: 3 }}
+          styles={{ content: { overflowWrap: "anywhere" } }}
+          items={[
+            { key: "id", label: "Task ID", children: <FormattedId id={task.id} /> },
+            { key: "project", label: "Project", children: task.projectName },
+            {
+              key: "finished",
+              label: "Finished",
+              children: <FormattedDate timestamp={task.annotation.modified} />,
+            },
+          ]}
+        />
+      </Card>
+    ) : (
+      <Card
+        key={task.id}
+        style={TASK_CARD_STYLE}
+        title={<TaskCardTitle task={task} />}
+        styles={{ title: { whiteSpace: "normal" } }}
+      >
+        <OpenTaskCardBody
+          isMultiColumn={isMultiColumn}
+          description={
+            <div className={descriptionClassName}>
+              <Markdown>{task.type.description}</Markdown>
+            </div>
+          }
+          details={[
+            { key: "id", label: "Task ID", children: <FormattedId id={task.id} /> },
+            { key: "type", label: "Task Type", children: task.type.summary },
+          ]}
+          renderActions={(orientation) => renderActions(task, orientation)}
+        />
+      </Card>
+    );
+
+  return (
+    <List
+      dataSource={tasks}
+      pagination={
+        tasks.length > 0
+          ? {
+              defaultPageSize: 50,
+              onChange: scrollToTop,
+            }
+          : false
+      }
+      loading={isLoading}
+      renderItem={renderTaskCard}
+      locale={{ emptyText: placeholder }}
+    />
+  );
+}
+
 // Three columns (description, details, actions) from `md` on. The details column is narrow
 // there, so labels go above their values. Below `md`, the columns stack, labels sit next to
 // their values and the actions become a wrapping row instead of a tall vertical list.
 function OpenTaskCardBody({
+  isMultiColumn,
   description,
   details,
   renderActions,
 }: {
-  description: React.ReactNode;
+  isMultiColumn: boolean;
+  description: ReactNode;
   details: DescriptionsProps["items"];
-  renderActions: (orientation: SpaceProps["orientation"]) => React.ReactNode;
+  renderActions: (orientation: SpaceProps["orientation"]) => ReactNode;
 }) {
-  const isMultiColumn = Grid.useBreakpoint().md ?? false;
   return (
     <Row gutter={[24, 16]}>
       <Col xs={24} md={12} xl={14}>

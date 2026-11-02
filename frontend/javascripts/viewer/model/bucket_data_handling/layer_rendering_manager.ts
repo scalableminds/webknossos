@@ -231,7 +231,7 @@ export default class LayerRenderingManager {
     app.vent.emit("rerender");
   }
 
-  setupDataTextures(): void {
+  setupTextureBucketManager(): void {
     const { dataset } = Store.getState();
     const elementClass = getElementClass(dataset, this.name);
     const { assignmentByLayerName, poolTextureManagers, bucketCapacity } = getLayerPoolPlan();
@@ -253,7 +253,7 @@ export default class LayerRenderingManager {
 
     const layerIndex = getGlobalLayerIndexForLayerName(this.name);
 
-    this.textureBucketManager.setupDataTextures(getSharedLookUpCuckooTable(), layerIndex);
+    this.textureBucketManager.attachToLookUpTable(getSharedLookUpCuckooTable(), layerIndex);
     shaderEditor.addBucketManagers(this.textureBucketManager);
 
     if (this.cube.isSegmentation) {
@@ -264,7 +264,7 @@ export default class LayerRenderingManager {
   getTextureBucketManager(): TextureBucketManager {
     if (!this.textureBucketManager) {
       // Initialize lazily since SceneController.renderer is not available earlier
-      this.setupDataTextures();
+      this.setupTextureBucketManager();
     }
 
     return this.textureBucketManager;

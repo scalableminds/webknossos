@@ -127,7 +127,7 @@ describe("TextureBucketManager", () => {
   it("basic functionality", () => {
     const pool = createPool(2048, 1);
     const tbm = new TextureBucketManager(2048, 1, "uint8", mockedCube as any, pool.binding);
-    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+    tbm.attachToLookUpTable(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
     const activeBuckets = [
       buildBucket([1, 1, 1, 0], 100),
@@ -144,7 +144,7 @@ describe("TextureBucketManager", () => {
   it("changing active buckets", () => {
     const pool = createPool(2048, 2);
     const tbm = new TextureBucketManager(2048, 2, "uint8", mockedCube as any, pool.binding);
-    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+    tbm.attachToLookUpTable(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
     const activeBuckets = [
       buildBucket([0, 0, 0, 0], 100),
@@ -196,7 +196,7 @@ describe("TextureBucketManager", () => {
       shrunkMockedCube as any,
       pool.binding,
     );
-    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+    tbm.attachToLookUpTable(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
     const activeBuckets = [
       buildShrunkBucket([1, 1, 1, 0], 100),
@@ -272,7 +272,7 @@ describe("TextureBucketManager", () => {
       pool.binding,
     );
     expect(tbm.usesTRecycling).toBe(true);
-    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+    tbm.attachToLookUpTable(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
     setActiveBucketsAndWait(tbm, [bucket]);
 
@@ -342,7 +342,7 @@ describe("TextureBucketManager", () => {
       tRecyclingMockedCube as any,
       pool.binding,
     );
-    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+    tbm.attachToLookUpTable(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
     setActiveBucketsAndWait(tbm, [primaryBucket]);
 
@@ -405,7 +405,7 @@ describe("TextureBucketManager", () => {
       tRecyclingMockedCube as any,
       pool.binding,
     );
-    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+    tbm.attachToLookUpTable(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
     setActiveBucketsAndWait(tbm, [bucket]);
 
     const bucketAddress = tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX]);
@@ -463,7 +463,7 @@ describe("TextureBucketManager", () => {
       tRecyclingMockedCube as any,
       pool.binding,
     );
-    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+    tbm.attachToLookUpTable(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
     setActiveBucketsAndWait(tbm, [buildTRecyclingBucket(oldT, batch1Buffer)]);
     expect(tbm.lookUpCuckooTable.get([1, 1, 1, 0, LAYER_INDEX])).not.toBeNull();
@@ -494,7 +494,7 @@ describe("TextureBucketManager", () => {
     const baseSlice = 2; // simulates another layer owning slices 0-1
     const pool = createPool(textureWidth, 4, { baseSlice });
     const tbm = new TextureBucketManager(textureWidth, 2, "uint8", mockedCube as any, pool.binding);
-    tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+    tbm.attachToLookUpTable(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
 
     const bucket = buildBucket([1, 1, 1, 0], 100);
     setActiveBucketsAndWait(tbm, [bucket]);

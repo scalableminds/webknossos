@@ -390,7 +390,9 @@ export default class TextureBucketManager {
     }
   }
 
-  setupDataTextures(lookUpCuckooTable: CuckooTableVec5, layerIndex: number): void {
+  // Bucket addresses are stored in the shared look up table under this
+  // layer's index. Uploading starts once the textures are ready.
+  attachToLookUpTable(lookUpCuckooTable: CuckooTableVec5, layerIndex: number): void {
     this.lookUpCuckooTable = lookUpCuckooTable;
     this.layerIndex = layerIndex;
     this.startRAFLoop();

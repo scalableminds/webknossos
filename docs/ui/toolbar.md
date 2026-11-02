@@ -49,9 +49,26 @@ The keyboard rotation speed can be adjusted with the `Keyboard Rotation` setting
     The `Only Show Nodes of Current Section` setting is also unavailable while the view is rotated.
 
 ## Menu Functions
+The `Menu` in the toolbar groups its entries into three sections. Which entries are shown depends on whether you are viewing a dataset or an annotation and on your permissions for that annotation.
 
-### File Operations
-The menu provides several ways to manage your annotations:
+### Annotation
+These entries are only shown when an annotation is open:
+
+- **Duplicate**: Create a copy of the annotation that you own and can edit.
+
+- **Merge Annotation**: Combine multiple annotations into one either by project or by annotation ID.
+
+- **Version History**: Browse the complete version history of your annotation, preview older versions, and restore them. See [Version History](#version-history) below.
+
+- **Lock Annotation**: Lock your current annotation in a read-only mode to protect it from any accidental changes. The annotation remains read-only until you unlock it (from the [Annotation dashboard](../dashboard/annotations.md)). This can be useful when publishing your work or sharing with larger communities.
+
+- **Disable Saving**: Temporarily disable automatic saving in WEBKNOSSOS. Any changes you make will not be saved. This can reduce bandwidth and resource usage when working with large annotations that don't need to be persisted.
+
+- **Archive**: When you need to declutter your dashboard, you can archive annotations you're not actively working on. Archived items remain accessible through the "Show Archived Annotations" filter on your dashboard. For tasks, this entry reads `Finish and go to Dashboard`.
+
+### Share & Export
+
+- **Share**: Create customized sharing links that capture your current view, including position, rotation, and zoom level. You can set specific access permissions to control who can view or edit your work. Learn more about [sharing options](../sharing/annotation_sharing.md).
 
 - **Download**: Export your work in standard formats:
 
@@ -59,20 +76,24 @@ The menu provides several ways to manage your annotations:
     - Volume annotations are exported as [WKW files](../data/wkw.md)
     - All associated data and metadata are included in the download
 
-- **Archive**: When you need to declutter your dashboard, you can archive annotations you're not actively working on. Archived items remain accessible through the "Show Archived Annotations" filter on your dashboard. Note that this option isn't available for tasks.
+- **Zarr Links**: Generate streaming links that allow other applications to access your annotation's image data. This is particularly useful when integrating WEBKNOSSOS with external analysis tools.
 
-- **Restore Older Version**: Browse the complete version history of your annotation, preview older versions, and restore them. See [Version History](#version-history) below.
+- **Screenshot**: Capture and download a snapshot of your current viewports as a JPEG image.
 
-- **Merge Annotations**: Combine multiple annotations into one either by project or by annotation ID.
+- **Create Animation**: Produce professional video clips that showcase your dataset. These animations can be valuable for presentations or documentation. Read more about [creating animations](../automation/animations.md).
 
-- **Disable Saving**: Temporarily disable automatic saving in WEBKNOSSOS. Any changes you make will not be saved. This can reduce bandwidth and resource usage when working with large annotations that don't need to be persisted.
+### Customize
 
-- **Lock Annotation**: Lock your current annotation in a read-only mode to protect it from any accidental changes. The annotation remains read-only until you unlock it (from the [Annotation dashboard](../dashboard/annotations.md)). This can be useful when publishing your work or sharing with larger communities.
+- **Layout**: Modify the layout of the WEBKNOSSOS user interface and resize, reorder and adjust viewports and panels to your preferences. Customize the number of columns, show or hide specific tabs, and adjust the size of the sidebar. Save and restore your preferred configurations.
+
+- **Configure Shortcuts…**: Change the keyboard shortcuts to your liking. See [Customizing Shortcuts](./keyboard_shortcuts.md#customizing-shortcuts).
+
+- **User Scripts…**: Run custom JavaScript snippets that use the [frontend API](https://webknossos.org/assets/docs/frontend-api/index.html) to automate tasks in the annotation view.
 
 ### Version History
 WEBKNOSSOS keeps a version history of every annotation. Each saved change creates a new version. Unlike undo/redo, which only covers your current session, the version history lets you go back to any earlier state of the annotation. It is also the way to revert changes where undo isn't available, e.g., proofreading actions or edits during [simultaneous editing](../sharing/annotation_sharing.md#simultaneous-editing-experimental).
 
-To open it, select `Menu` > `Restore Older Version` in the toolbar (not available in sandbox mode). Any pending changes are saved first. The `Version History` panel then opens on the right side of the screen. As long as it is open, the annotation is read-only.
+To open it, select `Menu` > `Version History` in the toolbar (not available in sandbox mode). Any pending changes are saved first. The `Version History` panel then opens on the right side of the screen. As long as it is open, the annotation is read-only.
 
 The history is a single, linear list for the whole annotation and covers all of its layers: skeleton, volume, and proofreading changes, as well as changes to bounding boxes, segment lists, and annotation layers.
 
@@ -87,21 +108,6 @@ Close the panel with the `X` button to return to the newest version and continue
 
 !!! info "Live collaboration"
     If the annotation is edited by several users at the same time, restoring an older version requires confirmation and reloads WEBKNOSSOS for all collaborators. See [Simultaneous Editing](../sharing/annotation_sharing.md#simultaneous-editing-experimental) for details.
-
-### Collaboration Tools
-WEBKNOSSOS offers multiple ways to share your work:
-
-- **Share**: Create customized sharing links that capture your current view, including position, rotation, and zoom level. You can set specific access permissions to control who can view or edit your work. Learn more about [sharing options](../sharing/annotation_sharing.md).
-
-- **Screenshots**: Capture and download a snapshot of your current viewports as a JPEG image. 
-
-### Advanced Features
-
-- **Zarr Links**: Generate streaming links that allow other applications to access your annotation's image data. This is particularly useful when integrating WEBKNOSSOS with external analysis tools.
-
-- **Create Animation**: Produce professional video clips that showcase your dataset. These animations can be valuable for presentations or documentation. Read more about [creating animations](../automation/animations.md).
-
-- **Layout**: Modify the layout of the WEBKNOSSOS user interface and resize, reorder and adjust viewports and panels to your preferences. Customize the number of columns, show or hide specific tabs, and adjust the size of the sidebar. Save and restore your preferred configurations. 
 
 ## Modes and Toolkits
 

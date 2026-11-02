@@ -25,6 +25,7 @@ import { downloadScreenshot } from "viewer/view/rendering_utils";
 import KeyboardShortcutConfigModal from "../keyboard_shortcuts/keyboard_shortcut_config_modal";
 import CreateAnimationModal from "./create_animation_modal";
 import DownloadModalView from "./download_modal/download_modal_view";
+import { type MenuGroup, MenuGroupKeys, toGroupedMenuItems } from "./menu_groups";
 
 type Props = {
   layoutMenu: SubMenuType;
@@ -53,11 +54,11 @@ const shareModalMenuItem: MenuItemType = {
   label: "Share",
 };
 
-const keyboardShortcutsConfigMenuItem: MenuItemType = {
-  key: "Keyboard Shortcuts",
+export const keyboardShortcutsConfigMenuItem: MenuItemType = {
+  key: "keyboard-shortcuts-button",
   onClick: () => Store.dispatch(setKeyboardShortcutConfigModalVisibilityAction(true)),
   icon: <LaptopOutlined />,
-  label: "Keyboard Shortcuts",
+  label: "Configure Shortcuts…",
 };
 
 const pythonClientMenuItem: MenuItemType = {
@@ -67,13 +68,23 @@ const pythonClientMenuItem: MenuItemType = {
   label: "Download",
 };
 
-export const viewDatasetMenu = [
-  shareModalMenuItem,
-  screenshotMenuItem,
-  renderAnimationMenuItem,
-  keyboardShortcutsConfigMenuItem,
-  pythonClientMenuItem,
-];
+export function getViewDatasetMenuGroups(layoutMenu: SubMenuType | null): MenuGroup[] {
+  return [
+    {
+      key: MenuGroupKeys.SHARE_AND_EXPORT,
+      items: [
+        shareModalMenuItem,
+        pythonClientMenuItem,
+        screenshotMenuItem,
+        renderAnimationMenuItem,
+      ],
+    },
+    {
+      key: MenuGroupKeys.CUSTOMIZE,
+      items: [...(layoutMenu != null ? [layoutMenu] : []), keyboardShortcutsConfigMenuItem],
+    },
+  ];
+}
 
 export default function ViewDatasetActionsView(props: Props) {
   const dispatch = useDispatch();
@@ -117,7 +128,9 @@ export default function ViewDatasetActionsView(props: Props) {
     />
   );
 
-  const overlayMenu: MenuProps = { items: [...viewDatasetMenu, props.layoutMenu] };
+  const overlayMenu: MenuProps = {
+    items: toGroupedMenuItems(getViewDatasetMenuGroups(props.layoutMenu)),
+  };
 
   const renderAnimationModal = (
     <CreateAnimationModal

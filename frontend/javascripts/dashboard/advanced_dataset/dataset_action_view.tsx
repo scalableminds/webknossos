@@ -12,6 +12,7 @@ import type { useAppProps } from "antd/es/app/context";
 import { applyViewConfigurationToDatasetsInFolder } from "dashboard/advanced_dataset/apply_view_configuration";
 import CreateAnnotationModal from "dashboard/advanced_dataset/create_annotation_modal";
 import { useDatasetCollectionContext } from "dashboard/dataset/dataset_collection_context";
+import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import window from "libs/window";
 import messages from "messages";
@@ -19,7 +20,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import type { APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
-import { getNoActionsAvailableMenu } from "viewer/view/context_menu/helpers";
+import { getNoActionsAvailableMenu } from "viewer/view/context_menu/generic_context_menu_helpers";
 
 function NewAnnotationLink({
   dataset,
@@ -61,7 +62,16 @@ function NewAnnotationLink({
         <EllipsisOutlined />
       </a>
       {isCreateAnnotationModalVisible ? (
-        <CreateAnnotationModal datasetId={dataset.id} onClose={onCloseCreateAnnotationModal} />
+        // The modal is rendered via a portal, but React still bubbles its events
+        // to the table row. Stop them here so that they don't (de)select the row
+        // or open the row's context menu.
+        <span
+          onClick={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+          onContextMenu={(event) => event.stopPropagation()}
+        >
+          <CreateAnnotationModal datasetId={dataset.id} onClose={onCloseCreateAnnotationModal} />
+        </span>
       ) : null}
     </div>
   );
@@ -120,7 +130,7 @@ function DatasetActionView(props: Props) {
         }
       >
         <WarningOutlined className="icon-margin-right" />
-        Show Error
+        Show Status
       </a>
     </div>
   );
@@ -154,8 +164,12 @@ const onReloadImpl = async (
   datasetId: string,
   clearCacheAndReloadDataset: (arg0: string) => Promise<void>,
 ) => {
-  await clearCacheAndReloadDataset(datasetId);
-  Toast.success(messages["dataset.clear_cache_success"]);
+  try {
+    await clearCacheAndReloadDataset(datasetId);
+    Toast.success(messages["dataset.clear_cache_success"]);
+  } catch (error) {
+    handleGenericError(error as Error, messages["dataset.clear_cache_failed"]);
+  }
 };
 
 export function getDatasetActionContextMenu({

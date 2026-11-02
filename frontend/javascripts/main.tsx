@@ -1,5 +1,5 @@
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { defaultShouldDehydrateQuery, QueryClient } from "@tanstack/react-query";
+import { defaultShouldDehydrateQuery } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import "admin/datastore_health_check";
 import { getActiveUser } from "admin/rest_api";
@@ -10,6 +10,7 @@ import { RootForFastTooltips } from "components/fast_tooltip";
 import features, { load as loadFeatureToggles } from "features";
 import checkBrowserFeatures from "libs/browser_feature_check";
 import ErrorHandling from "libs/error_handling";
+import { reactQueryClient } from "libs/react_query_client";
 import UserLocalStorage from "libs/user_local_storage";
 import window, { document, location } from "libs/window";
 import { compress, decompress } from "lz-string";
@@ -17,13 +18,11 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
-import { setupApi } from "viewer/api/internal_api";
-import Model from "viewer/model";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
-import { setHasOrganizationsAction, setThemeAction } from "viewer/model/actions/ui_actions";
+import { setHasOrganizationsAction, setSystemThemeAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { warnIfEmailIsUnverified } from "viewer/model/sagas/user_saga";
-import { setModel, setStore } from "viewer/singletons";
+import { setStore } from "viewer/singletons";
 import UnthrottledStore, { startSaga } from "viewer/store";
 import Store from "viewer/throttled_store";
 
@@ -35,32 +34,26 @@ import { CheckTermsOfServices } from "components/terms_of_services_check";
 import { folderHierarchyQueryOptions } from "dashboard/dataset/queries";
 import { RouterProvider } from "react-router/dom";
 import router from "router/router";
-import { getThemeFromUser } from "theme";
+import { listenToSystemColorThemeChanges } from "theme";
 import GlobalThemeProvider from "theme_provider";
-import HelpButton from "viewer/view/help/help_button";
 
 // Suppress warning emitted by Olvy because it tries to eagerly initialize
 window.OlvyConfig = null;
 
-setModel(Model);
 setStore(UnthrottledStore);
-setupApi();
 startSaga(warnIfEmailIsUnverified);
-
-const reactQueryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      gcTime: Number.POSITIVE_INFINITY,
-    },
-  },
-});
+listenToSystemColorThemeChanges((systemTheme) => Store.dispatch(setSystemThemeAction(systemTheme)));
 
 const localStoragePersister = createAsyncStoragePersister({
   storage: UserLocalStorage,
   serialize: (data) => compress(JSON.stringify(data)),
   deserialize: (data) => JSON.parse(decompress(data) || "{}"),
-  key: "query-cache-v3",
+  // Bump the version whenever the shape of cached data changes, so that stale entries
+  // are not restored.
+  key: "query-cache-v4",
 });
+// Queries whose data must never be written to localStorage, identified by the first key segment.
+const NEVER_PERSISTED_QUERY_KEYS = ["authToken"];
 
 async function tryToLoadActiveUser() {
   // Try to retrieve the currently active user if logged in
@@ -69,7 +62,6 @@ async function tryToLoadActiveUser() {
       showErrorToast: false,
     });
     Store.dispatch(setActiveUserAction(user));
-    Store.dispatch(setThemeAction(getThemeFromUser(user)));
     ErrorHandling.setCurrentUser(user);
   } catch (_e) {
     // pass
@@ -157,9 +149,13 @@ async function initApp() {
               persister: localStoragePersister,
               dehydrateOptions: {
                 // Queries can opt out of being persisted to localStorage by setting
-                // meta.persist to false, e.g. for large viewer data.
+                // meta.persist to false, e.g. for large viewer data. Secrets are excluded
+                // by key, because the meta of a query is overwritten by whichever observer
+                // fetched it last.
                 shouldDehydrateQuery: (query) =>
-                  defaultShouldDehydrateQuery(query) && query.meta?.persist !== false,
+                  defaultShouldDehydrateQuery(query) &&
+                  query.meta?.persist !== false &&
+                  !NEVER_PERSISTED_QUERY_KEYS.includes(query.queryKey[0] as string),
               },
             }}
           >
@@ -173,7 +169,6 @@ async function initApp() {
                 <DisableGenericDnd />
                 <CheckCertificateModal />
                 <CheckTermsOfServices />
-                <HelpButton />
                 <RouterProvider router={router} />
               </GlobalThemeProvider>
             </DndProvider>

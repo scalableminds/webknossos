@@ -1,5 +1,4 @@
 import AdminPage from "admin/admin_page";
-import { unwrapOrThrow } from "admin/api/api_result";
 import {
   createProject,
   getEditableTeams,
@@ -8,8 +7,8 @@ import {
   updateProject,
 } from "admin/rest_api";
 import { Button, Checkbox, Col, Form, Input, InputNumber, Row, Select, theme } from "antd";
-import { useWkSelector } from "libs/react_hooks";
-import { useEffect, useState } from "react";
+import { useApi, useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
+import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import type { APITeam, APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
@@ -21,29 +20,38 @@ function ProjectCreateView() {
   const { projectId } = useParams();
   const { token } = theme.useToken();
 
-  const [teams, setTeams] = useState<APITeam[]>([]);
-  const [users, setUsers] = useState<APIUser[]>([]);
-  const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
 
+  const { data: users = [], isLoading: isLoadingUsers } = useApi({
+    queryKey: ["users"],
+    queryFn: () => getUsers(),
+    refetchOnWindowFocus: false,
+  });
+  const { data: teams = [], isLoading: isLoadingTeams } = useQueryWithErrorHandling({
+    queryKey: ["editableTeams"],
+    queryFn: getEditableTeams,
+    refetchOnWindowFocus: false,
+  });
+  const isFetchingData = isLoadingUsers || isLoadingTeams;
+
+  const { data: project } = useQueryWithErrorHandling({
+    queryKey: ["projectForEditing", projectId],
+    queryFn: () => getProject(projectId as string),
+    enabled: projectId != null,
+    // Always load the project freshly when opening the form and never refetch it
+    // in the background, so that the user's edits are not overwritten.
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 0,
+    meta: { persist: false },
+  });
+
+  // Populate the form with the defaults (or the project once it is loaded).
   useEffect(() => {
-    fetchData();
-    applyDefaults();
-  }, []);
-
-  async function fetchData() {
-    setIsFetchingData(true);
-    const [fetchedUsersResult, fetchedTeams] = await Promise.all([getUsers(), getEditableTeams()]);
-    const fetchedUsers = unwrapOrThrow(fetchedUsersResult);
-    setUsers(fetchedUsers);
-    setTeams(fetchedTeams);
-    setIsFetchingData(false);
-  }
-
-  async function applyDefaults() {
-    const project = projectId ? await getProject(projectId) : null;
+    if (projectId != null && project == null) {
+      return;
+    }
     const defaultValues = {
       priority: 100,
       expectedTime: 90,
@@ -53,7 +61,7 @@ function ProjectCreateView() {
       owner: project ? project.owner.id : activeUser.id,
     });
     form.setFieldsValue(defaultFormValues);
-  }
+  }, [form, projectId, project, activeUser.id]);
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const handleSubmit = async (formValues) => {
@@ -67,7 +75,7 @@ function ProjectCreateView() {
   };
 
   const isEditMode = projectId != null;
-  const projectName = form.getFieldValue("name");
+  const projectName = Form.useWatch("name", form);
   const title =
     isEditMode && projectId ? `Update Project ${projectName || projectId}` : "Create Project";
   const fullWidth = {

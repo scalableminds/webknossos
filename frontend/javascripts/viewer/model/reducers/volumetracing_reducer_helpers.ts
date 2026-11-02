@@ -17,7 +17,6 @@ import {
   getSegmentationLayerForTracing,
   getSegmentName,
   getSelectedIds,
-  getVisibleSegments,
   getVolumeTracingById,
   isVolumeAnnotationDisallowedForZoom,
 } from "viewer/model/accessors/volumetracing_accessor";
@@ -39,11 +38,7 @@ import {
   MISSING_GROUP_ID,
   mapGroups,
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
-import {
-  getLayerByName,
-  getVisibleSegmentationLayer,
-  isInSupportedValueRangeForLayer,
-} from "../accessors/dataset_accessor";
+import { isInSupportedValueRangeForLayer } from "../accessors/dataset_accessor";
 import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
 import type { SetIdReservationsAction } from "../actions/actions";
 import type {
@@ -637,35 +632,30 @@ export function getUpdatedSourcePropsAfterMerge(
 }
 
 export function expandSegmentParents(state: WebknossosState, action: ClickSegmentAction) {
-  const maybeVolumeLayer =
-    action.layerName != null
-      ? getLayerByName(state.dataset, action.layerName)
-      : getVisibleSegmentationLayer(state);
+  // Read the segments and groups from the same layer that is written to. Reading them
+  // from the visible layer instead would wipe all groups when the layer is hidden.
+  const layer = getRequestedOrVisibleSegmentationLayer(state, action.layerName);
+  if (layer == null) return state;
+  const updateInfo = getSegmentUpdateInfo(state, layer.name);
+  if (updateInfo.type !== "UPDATE_VOLUME_TRACING") return state;
 
-  const layerName = maybeVolumeLayer?.name;
-  if (layerName == null) return state;
-
-  const getNewGroups = () => {
-    const { segments, segmentGroups } = getVisibleSegments(state);
-    if (segments == null) return segmentGroups;
-    const segmentId = action.segmentId;
-    const segmentForId = segments.getNullable(segmentId);
-    if (segmentForId == null) return segmentGroups;
-    // Expand recursive parents of group too, if necessary
-    const pathToRoot = new Set([segmentForId.groupId]);
-    if (segmentForId.groupId != null) {
-      let currentParent = findParentIdForGroupId(segmentGroups, segmentForId.groupId);
-      while (currentParent != null) {
-        pathToRoot.add(currentParent);
-        currentParent = findParentIdForGroupId(segmentGroups, currentParent);
-      }
+  const { segments, segmentGroups } = updateInfo;
+  const segmentForId = segments.getNullable(action.segmentId);
+  if (segmentForId == null) return state;
+  // Expand recursive parents of group too, if necessary
+  const pathToRoot = new Set([segmentForId.groupId]);
+  if (segmentForId.groupId != null) {
+    let currentParent = findParentIdForGroupId(segmentGroups, segmentForId.groupId);
+    while (currentParent != null) {
+      pathToRoot.add(currentParent);
+      currentParent = findParentIdForGroupId(segmentGroups, currentParent);
     }
-    return mapGroups(segmentGroups, (group) => {
-      if (pathToRoot.has(group.groupId) && !group.isExpanded) {
-        return { ...group, isExpanded: true };
-      }
-      return group;
-    });
-  };
-  return setSegmentGroups(state, layerName, getNewGroups());
+  }
+  const newGroups = mapGroups(segmentGroups, (group) => {
+    if (pathToRoot.has(group.groupId) && !group.isExpanded) {
+      return { ...group, isExpanded: true };
+    }
+    return group;
+  });
+  return setSegmentGroups(state, layer.name, newGroups);
 }

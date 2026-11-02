@@ -1,11 +1,14 @@
 import size from "lodash-es/size";
 import messages from "messages";
-import type {
-  APIAnnotationInfo,
-  APIAnnotationUserState,
-  APIUserBase,
-  SkeletonUserState,
-  VolumeUserState,
+import {
+  type AnnotationLayerDescriptor,
+  AnnotationLayerEnum,
+  type APIAnnotation,
+  type APIAnnotationInfo,
+  type APIAnnotationUserState,
+  type APIUserBase,
+  type SkeletonUserState,
+  type VolumeUserState,
 } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import { TreeTypeEnum } from "viewer/constants";
@@ -14,6 +17,26 @@ import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import { sum } from "../helpers/iterator_utils";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import type { DisabledInfo } from "./disabled_tool_accessor";
+
+export function getSkeletonDescriptor(
+  annotation: APIAnnotation,
+): AnnotationLayerDescriptor | null | undefined {
+  const skeletonLayers = annotation.annotationLayers.filter(
+    (descriptor) => descriptor.typ === AnnotationLayerEnum.Skeleton,
+  );
+
+  if (skeletonLayers.length > 0) {
+    return skeletonLayers[0];
+  }
+
+  return null;
+}
+
+export function getVolumeDescriptors(
+  annotation: APIAnnotation | StoreAnnotation | APIAnnotationInfo,
+): Array<AnnotationLayerDescriptor> {
+  return annotation.annotationLayers.filter((layer) => layer.typ === "Volume");
+}
 
 export function mayEditAnnotationProperties(state: WebknossosState) {
   const { owner, restrictions } = state.annotation;

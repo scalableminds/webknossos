@@ -260,7 +260,7 @@ function TaskCreateBulkView() {
             ]}
           >
             <TextArea
-              placeholder="dataset, datasetId, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
+              placeholder="datasetId, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
               autoSize={{
                 minRows: 6,
               }}

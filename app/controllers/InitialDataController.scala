@@ -13,6 +13,7 @@ import models.aimodels.{AiModel, AiModelCategory, AiModelDAO, AiModelService}
 import models.annotation.{TracingStore, TracingStoreDAO}
 import models.dataset.*
 import models.folder.{Folder, FolderDAO, FolderService}
+import models.job.{JobCommand, Worker, WorkerDAO}
 import models.project.{Project, ProjectDAO}
 import models.task.{TaskType, TaskTypeDAO}
 import models.team.*
@@ -72,6 +73,7 @@ class InitialDataService @Inject() (
     tokenDAO: TokenDAO,
     projectDAO: ProjectDAO,
     publicationDAO: PublicationDAO,
+    workerDAO: WorkerDAO,
     organizationDAO: OrganizationDAO,
     storeModules: StoreModules,
     organizationService: OrganizationService,
@@ -179,6 +181,31 @@ Samplecountry
   )
   private val defaultDataStore =
     DataStore(conf.Datastore.name, conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key)
+
+  // Same as the dbtool.js command enable-jobs
+  private val defaultWorker = Worker(
+    _id = ObjectId("6194dc03040200b0027f28a1"),
+    _dataStore = defaultDataStore.name,
+    name = "Dev Worker",
+    key = "secretWorkerKey",
+    maxParallelHighPriorityJobs = 1,
+    maxParallelLowPriorityJobs = 1,
+    supportedJobCommands = Set(
+      JobCommand.compute_mesh_file,
+      JobCommand.compute_segment_index_file,
+      JobCommand.convert_to_wkw,
+      JobCommand.export_tiff,
+      JobCommand.find_largest_segment_id,
+      JobCommand.materialize_volume_annotation,
+      JobCommand.render_animation,
+      JobCommand.align_sections,
+      JobCommand.infer_neurons,
+      JobCommand.infer_instances,
+      JobCommand.infer_mitochondria,
+      JobCommand.train_neuron_model,
+      JobCommand.train_instance_model
+    )
+  )
 
   private val defaultAiModel = AiModel(
     _id = ObjectId("66544a56d20000af0e42ba0f"),
@@ -521,6 +548,7 @@ Samplecountry
       _ <- insertPretrainedAiModels()
       // All insert calls below this assertion are only executed in the dev setup (where initialDataEnabled is true)!
       _ <- assertInitialDataEnabled
+      _ <- upsertDefaultWorkerIfJobsEnabled()
       _ <- organizationService.assertNoOrganizationsPresent
       _ <- insertRootFolder()
       _ <- insertOrganization()
@@ -679,6 +707,11 @@ Samplecountry
         case _       => aiModelDAO.insertOne(model)
       }
     }
+
+  private def upsertDefaultWorkerIfJobsEnabled(): Fox[?] =
+    Fox.runIf(conf.Features.jobsEnabled && storeModules.localDataStoreEnabled)(
+      workerDAO.insertOrUpdateSupportedJobCommands(defaultWorker)
+    )
 
   private def insertCustomAiModel(): Fox[?] = insertAiModelIfAbsent(defaultAiModel)
 

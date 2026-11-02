@@ -39,127 +39,22 @@
   }
 }
 
-/** Wrapper for the 'What's Next' dashboard welcome banner. */
-.welcome-header-wrapper {
+/** Background of the 'What's Next' dashboard welcome banner. Layout lives in admin/welcome_ui.tsx. */
+.welcome-header {
   background: var(--background-blue-neurons);
-
-  button {
-    color: white;
-  }
-}
-
-/** Layout for the inner content of the welcome header, including centered text and action buttons. */
-.welcome-header-content {
-  padding: 40px 0px 40px;
-
-  .text-and-button-container {
-    max-width: 1000px;
-    margin: auto;
-
-    h1 {
-      color: white;
-      font-weight: 200;
-      font-size: 64px;
-      line-height: 150%;
-      margin-bottom: 0;
-      text-align: center;
-    }
-
-    .subtitle {
-      color: white;
-      font-weight: 300;
-      font-size: 18px;
-      line-height: 150%;
-      max-width: 70%;
-      text-align: center;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .whats-next-actions-grid {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      padding-inline-start: 0;
-
-      a {
-        color: var(--color-black);
-        flex: 0 1 400px;
-        /*  No stretching: */
-        margin: 20px;
-        margin-left: 0;
-        margin-right: 40px;
-
-        list-style: none;
-        padding: 8px;
-        cursor: pointer;
-
-        // Align contents:
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        align-items: center;
-
-        .label {
-          margin-left: 12px;
-        }
-
-        h2 {
-          font-size: 16px;
-          line-height: 18px;
-          color: var(--color-black);
-          margin-bottom: 8px;
-        }
-
-        p {
-          font-size: 14px;
-          line-height: 18px;
-          color: var(--color-black);
-          margin: 0;
-        }
-
-        background: white;
-        border-radius: var(--ant-border-radius);
-      }
-
-      a:hover {
-        background: var(--ant-color-info-bg-hover);
-
-        i {
-          filter: brightness(100);
-        }
-
-        h2 {
-          color: var(--ant-color-text);
-        }
-
-        p {
-          color: var(--ant-color-text);
-        }
-      }
-
-      .welcome-header-icon {
-        height: 96px;
-        width: 96px;
-
-        svg {
-          width: 100%;
-          height: 100%;
-        }
-      }
-    }
-  }
 }
 
 /** Styling for the folder structure preview in the dataset import view. */
 pre.dataset-import-folder-structure-hint {
   text-align: left;
-  display: inline-block;
-  line-height: 16px;
+  display: block;
+  overflow-x: auto;
+  line-height: 18px;
   color: var(--ant-color-text-secondary);
   background: var(--ant-color-bg-container);
   border-radius: 2px;
   box-shadow: inset 0em 0em 4px 0px #9e9e9e6b;
-  padding: 4px;
+  padding: 12px;
 }
 
 /** Link style for elements that should look like normal text but remain clickable (e.g. dataset name in the table). */

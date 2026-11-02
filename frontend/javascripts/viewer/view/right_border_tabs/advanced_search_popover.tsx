@@ -123,7 +123,7 @@ export default class AdvancedSearchPopover<S extends Record<string, any>> extend
     const additionalInputStyle =
       hasNoResults && searchQuery !== ""
         ? {
-            color: "red",
+            color: "var(--ant-color-error)",
           }
         : {};
 

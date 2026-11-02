@@ -237,14 +237,17 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
         // Prepare the server's reply for the upcoming split.
         vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-          Promise.resolve([
-            {
-              position1: getPositionForSegmentId(1),
-              position2: getPositionForSegmentId(2),
-              segmentId1: 1n,
-              segmentId2: 2n,
-            },
-          ]),
+          Promise.resolve({
+            ok: true,
+            value: [
+              {
+                position1: getPositionForSegmentId(1),
+                position2: getPositionForSegmentId(2),
+                segmentId1: 1n,
+                segmentId2: 2n,
+              },
+            ],
+          }),
         );
 
         // Execute the actual merge and wait for the finished mapping.
@@ -288,6 +291,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     const task = startSaga(function* task(): Saga<void> {
       const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
       yield call(initializeMappingAndTool, context, tracingId);
+      // Collaborative proofreading requires an editable mapping.
+      yield makeMappingEditableForTest();
       yield put(setCollaborationModeAction("Concurrent"));
       yield loadAgglomerateMeshes([1, 4, 6]);
       const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
@@ -295,7 +300,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // After the meshes are loaded simulate a user making a merge.
       backendMock.planMultipleVersionInjections(
-        4,
+        Store.getState().annotation.version + 1,
         mergeSegment5And6 as unknown as UpdateActionWithoutIsolationRequirement[][],
       );
 
@@ -333,6 +338,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     const task = startSaga(function* task(): Saga<void> {
       const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
       yield call(initializeMappingAndTool, context, tracingId);
+      // Collaborative proofreading requires an editable mapping.
+      yield makeMappingEditableForTest();
       yield put(setCollaborationModeAction("Concurrent"));
       yield loadAgglomerateMeshes([1, 4, 6]);
       const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
@@ -340,7 +347,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // After the meshes are loaded simulate a user making a split.
       backendMock.planMultipleVersionInjections(
-        4,
+        Store.getState().annotation.version + 1,
         splitSegment2And3 as unknown as UpdateActionWithoutIsolationRequirement[][],
       );
 
@@ -531,14 +538,17 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-        Promise.resolve([
-          {
-            position1: getPositionForSegmentId(1),
-            position2: getPositionForSegmentId(2),
-            segmentId1: 1n,
-            segmentId2: 2n,
-          },
-        ]),
+        Promise.resolve({
+          ok: true,
+          value: [
+            {
+              position1: getPositionForSegmentId(1),
+              position2: getPositionForSegmentId(2),
+              segmentId1: 1n,
+              segmentId2: 2n,
+            },
+          ],
+        }),
       );
 
       const meshTracker = yield* trackMeshes(context, tracingId);
@@ -601,14 +611,17 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-        Promise.resolve([
-          {
-            position1: getPositionForSegmentId(1),
-            position2: getPositionForSegmentId(2),
-            segmentId1: 1n,
-            segmentId2: 2n,
-          },
-        ]),
+        Promise.resolve({
+          ok: true,
+          value: [
+            {
+              position1: getPositionForSegmentId(1),
+              position2: getPositionForSegmentId(2),
+              segmentId1: 1n,
+              segmentId2: 2n,
+            },
+          ],
+        }),
       );
 
       const meshTracker = yield* trackMeshes(context, tracingId);

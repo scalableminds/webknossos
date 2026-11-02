@@ -20,6 +20,7 @@ import {
 } from "antd";
 import type { RuleObject } from "antd/es/form";
 import { useFetch } from "libs/react_helpers";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { jsonStringify } from "libs/utils";
 import merge from "lodash-es/merge";
 import { useEffect, useState } from "react";
@@ -102,12 +103,22 @@ function TaskTypeCreateView() {
     [],
   );
 
-  useEffect(() => {
-    applyDefaults();
-  }, []);
+  const { data: taskType } = useQueryWithErrorHandling({
+    queryKey: ["taskTypeForEditing", taskTypeId],
+    queryFn: () => getTaskType(taskTypeId as string),
+    enabled: taskTypeId != null,
+    // Always load the task type freshly when opening the form and never refetch it
+    // in the background, so that the user's edits are not overwritten.
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 0,
+    meta: { persist: false },
+  });
 
-  async function applyDefaults() {
-    const taskType = taskTypeId ? await getTaskType(taskTypeId) : null;
+  // Populate the form with the defaults (or the task type once it is loaded).
+  useEffect(() => {
+    if (taskTypeId != null && taskType == null) {
+      return;
+    }
 
     const defaultValues = {
       isMagRestricted: false,
@@ -139,7 +150,7 @@ function TaskTypeCreateView() {
 
     if (taskType?.settings.magRestrictions.min || taskType?.settings.magRestrictions.max)
       form.setFieldValue(["isMagRestricted"], true);
-  }
+  }, [form, taskTypeId, taskType]);
 
   async function onFinish(formValues: FormValues) {
     const {

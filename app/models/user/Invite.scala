@@ -163,7 +163,9 @@ class InviteDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def deleteAllExpired(): Fox[Unit] =
     for {
-      _ <- run(q"UPDATE $collectionName SET isDeleted = TRUE WHERE expirationDateTime <= ${Instant.now}".asUpdate)
+      _ <- run(
+        q"UPDATE $collectionName SET isDeleted = TRUE WHERE NOT isDeleted AND expirationDateTime <= ${Instant.now}".asUpdate
+      )
     } yield ()
 
 }

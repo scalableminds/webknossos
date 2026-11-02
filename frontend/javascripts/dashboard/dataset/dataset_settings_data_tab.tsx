@@ -29,8 +29,8 @@ import type { BoundingBoxObject } from "types/bounding_box";
 import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
 import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
-import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import type { RotationAndMirroringSettings } from "viewer/model/helpers/dataset_rotation_helpers";
+import { getSegmentIdRangeForElementClass } from "viewer/model/helpers/element_class_ranges";
 import {
   AxisRotationSettingForDataset,
   getDatasetBoundingBoxFromLayers,

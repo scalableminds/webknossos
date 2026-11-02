@@ -79,7 +79,7 @@ case class AdditionalCoordinate(
     // Number of consecutive values starting at `value` to read along this axis, instead of just one.
     // Must be either absent/1 or exactly DataLayer.bucketLength.
     // Only available for datasets with depth (z) <= 1.
-    // Only available for one AdditonalCoordinate per request.
+    // Only available for one AdditionalCoordinate per request.
     length: Option[Int] = None
 ) derives JsonAutoFormat {
   override def toString: String = s"$name=$value"

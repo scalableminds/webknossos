@@ -45,7 +45,7 @@ import {
   VoxelPipetteToolController,
 } from "viewer/controller/combinations/tool_controls";
 import { cycleToolAction, setToolAction } from "viewer/model/actions/ui_actions";
-import UiReducer from "viewer/model/reducers/ui_reducer";
+import ToolReducer from "viewer/model/reducers/tool_reducer";
 import { watchToolDeselection } from "viewer/model/sagas/annotation_tool_saga";
 
 describe("Annotation Tool Saga", () => {
@@ -79,7 +79,7 @@ describe("Annotation Tool Saga", () => {
 
     const cycleTool = () => {
       const action = cycleToolAction();
-      newState = UiReducer(newState, action);
+      newState = ToolReducer(newState, action);
       saga.next(action);
       saga.next(newState);
     };
@@ -128,7 +128,7 @@ describe("Annotation Tool Saga", () => {
 
     const cycleTool = (nextTool: AnnotationTool) => {
       const action = setToolAction(nextTool);
-      newState = UiReducer(newState, action);
+      newState = ToolReducer(newState, action);
       saga.next(action);
       saga.next(newState);
     };

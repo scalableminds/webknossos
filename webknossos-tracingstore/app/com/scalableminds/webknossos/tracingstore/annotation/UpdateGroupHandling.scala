@@ -3,21 +3,42 @@ package com.scalableminds.webknossos.tracingstore.annotation
 import com.scalableminds.util.Msg
 import com.scalableminds.util.box.{Box, Full}
 import com.scalableminds.util.collections.SequenceUtils
+import com.scalableminds.webknossos.tracingstore.tracings.volume.UpdateBucketPartialVolumeAction
 import com.typesafe.scalalogging.LazyLogging
+
+object UpdateGroupHandling {
+
+  // Actions that need to be the only update in their respective update group. Reused both by the
+  // replay-time regrouping below (which assumes this already holds) and by AnnotationTransactionService,
+  // which asserts it at commit time.
+  def isIsolationSensitiveAction(a: UpdateAction): Boolean = a match {
+    case _: RevertToVersionAnnotationAction => true
+    case _: AddLayerAnnotationAction        => true
+    case _: ResetToBaseAnnotationAction     => true
+    case _                                  => false
+  }
+
+  // Caps the buckets a VolumeBucketBuffer holds while applying one regrouped update group
+  // (up to 1 GiB for uint64 buckets of 256 KiB).
+  val maxUpdateBucketPartialActionsPerRegroupedGroup = 4096
+}
 
 trait UpdateGroupHandling extends LazyLogging {
 
   /*
    * Regroup update action groups, isolating the update actions that need it.
-   * (Currently RevertToVersionAnnotationAction and AddLayerAnnotationAction)
+   * (See UpdateGroupHandling.isIsolationSensitiveAction)
    * Assumes they are already the only update in their respective group.
+   * Also stops concatenating once a group has maxUpdateBucketPartialActions updateBucketPartial actions,
+   * to bound the memory needed to apply it. Saved groups are never split.
    * Expects groups sorted by version in descending order
    * Outputs (potentially fewer!) groups in ascending order
    * Target versions should be unchanged. Each group's target version is the max of its input.
    * Compare unit test for UpdateGroupHandlingUnitTestSuite
    */
   def reorderAndRegroupByIsolationSensitiveActions(
-      updateActionGroupsWithVersions: List[(Long, List[UpdateAction])]
+      updateActionGroupsWithVersions: List[(Long, List[UpdateAction])],
+      maxUpdateBucketPartialActions: Int = UpdateGroupHandling.maxUpdateBucketPartialActionsPerRegroupedGroup
   ): Box[List[(Long, List[UpdateAction])]] =
     for {
       groupVersions <- Full(updateActionGroupsWithVersions.map(_._1))
@@ -26,11 +47,34 @@ trait UpdateGroupHandling extends LazyLogging {
       ) ?~> Msg.Annotation.ApplyUpdate.updateGroupVersionsNotSortedDesc
       splitGroupLists: List[List[(Long, List[UpdateAction])]] = SequenceUtils.splitAndIsolate(
         updateActionGroupsWithVersions.reverse
-      )(actionGroup => actionGroup._2.exists(updateAction => isIsolationSensitiveAction(updateAction)))
-      result = splitGroupLists.flatMap { (groupsToConcatenate: List[(Long, List[UpdateAction])]) =>
-        concatenateUpdateActionGroups(groupsToConcatenate)
-      }
+      )(actionGroup =>
+        actionGroup._2.exists(updateAction => UpdateGroupHandling.isIsolationSensitiveAction(updateAction))
+      )
+      result = splitGroupLists
+        .flatMap(groups => splitByUpdateBucketPartialActionCount(groups, maxUpdateBucketPartialActions))
+        .flatMap { (groupsToConcatenate: List[(Long, List[UpdateAction])]) =>
+          concatenateUpdateActionGroups(groupsToConcatenate)
+        }
     } yield result
+
+  // Splits consecutive groups into runs with at most maxCount updateBucketPartial actions each.
+  // A single group with more than maxCount stays one run.
+  private def splitByUpdateBucketPartialActionCount(
+      groups: List[(Long, List[UpdateAction])],
+      maxCount: Int
+  ): List[List[(Long, List[UpdateAction])]] = {
+    def countIn(group: (Long, List[UpdateAction])): Int =
+      group._2.count(_.isInstanceOf[UpdateBucketPartialVolumeAction])
+    val (runs, currentRun, _) =
+      groups.foldLeft((List.empty[List[(Long, List[UpdateAction])]], List.empty[(Long, List[UpdateAction])], 0)) {
+        case ((runs, currentRun, currentCount), group) =>
+          val groupCount = countIn(group)
+          if (currentRun.nonEmpty && groupCount > 0 && currentCount + groupCount > maxCount)
+            (currentRun.reverse :: runs, List(group), groupCount)
+          else (runs, group :: currentRun, currentCount + groupCount)
+      }
+    (currentRun.reverse :: runs).filter(_.nonEmpty).reverse
+  }
 
   private def concatenateUpdateActionGroups(
       groups: List[(Long, List[UpdateAction])]
@@ -38,12 +82,6 @@ trait UpdateGroupHandling extends LazyLogging {
     val updates = groups.flatMap(_._2)
     val targetVersionOpt: Option[Long] = groups.map(_._1).lastOption
     targetVersionOpt.map(targetVersion => (targetVersion, updates))
-  }
-
-  private def isIsolationSensitiveAction(a: UpdateAction): Boolean = a match {
-    case _: RevertToVersionAnnotationAction => true
-    case _: AddLayerAnnotationAction        => true
-    case _                                  => false
   }
 
   /*

@@ -188,17 +188,27 @@ export const createCellAction = (activeCellId: bigint, largestSegmentId: bigint)
   } as const;
 };
 
-export const startEditingAction = (positionInLayerSpace: Vector3, planeId: OrthoView) =>
+// The floating position is only used by the brush (see getBrushCenterInMag).
+export const startEditingAction = (
+  positionInLayerSpace: Vector3,
+  planeId: OrthoView,
+  floatingPositionInLayerSpace: Vector3 = positionInLayerSpace,
+) =>
   ({
     type: "START_EDITING",
     positionInLayerSpace,
+    floatingPositionInLayerSpace,
     planeId,
   }) as const;
 
-export const addToContourListAction = (positionInLayerSpace: Vector3) =>
+export const addToContourListAction = (
+  positionInLayerSpace: Vector3,
+  floatingPositionInLayerSpace: Vector3 = positionInLayerSpace,
+) =>
   ({
     type: "ADD_TO_CONTOUR_LIST",
     positionInLayerSpace,
+    floatingPositionInLayerSpace,
   }) as const;
 
 export const floodFillAction = (

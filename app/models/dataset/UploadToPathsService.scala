@@ -120,7 +120,7 @@ class UploadToPathsService @Inject() (
   )(using ec: ExecutionContext, ctx: DBAccessContext): Fox[UsableDataSource] =
     for {
       _ <- Fox.fromBool(
-        dataset.status == DataSourceStatus.notYetUploaded
+        dataset.status == DataSourceStatus.notYetUploaded || dataset.status == DataSourceStatus.conversionFailed
       ) ?~> s"Dataset is not in uploading status, got ${dataset.status}."
       _ <- Fox.fromBool(
         dataset._uploader.contains(requestingUser._id)

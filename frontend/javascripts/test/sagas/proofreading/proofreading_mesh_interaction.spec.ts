@@ -4,6 +4,7 @@ import {
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
+import type { ApiResult } from "admin/api/api_result";
 import type { MeshSegmentInfo } from "admin/api/mesh";
 import {
   getAgglomeratesForSegmentsFromTracingstore,
@@ -78,26 +79,29 @@ async function getMultiSupervoxelChunksForSegment(
   _layerName: string,
   _meshFile: APIMeshFileInfo,
   segmentId: bigint,
-): Promise<MeshSegmentInfo> {
+): Promise<ApiResult<MeshSegmentInfo>> {
   const supervoxels = SUPERVOXELS_BY_AGGLOMERATE_ID.get(segmentId) ?? [segmentId];
   return {
-    meshFormat: "draco",
-    lods: [
-      {
-        chunks: supervoxels.map((unmappedSegmentId) => ({
-          position: [0, 0, 0],
-          byteOffset: 0,
-          byteSize: 666,
-          unmappedSegmentId,
-        })),
-        transform: [
-          [1, 0, 0, 0],
-          [0, 1, 0, 0],
-          [0, 0, 1, 0],
-        ],
-      },
-    ],
-    chunkScale: [1, 1, 1],
+    ok: true,
+    value: {
+      meshFormat: "draco",
+      lods: [
+        {
+          chunks: supervoxels.map((unmappedSegmentId) => ({
+            position: [0, 0, 0],
+            byteOffset: 0,
+            byteSize: 666,
+            unmappedSegmentId,
+          })),
+          transform: [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+          ],
+        },
+      ],
+      chunkScale: [1, 1, 1],
+    },
   };
 }
 
@@ -428,20 +432,23 @@ describe("Proofreading (with mesh actions)", () => {
           agglomerateId: NumberLike;
           editableMappingId: string;
         },
-      ): Promise<Array<MinCutTargetEdge>> => {
+      ): Promise<ApiResult<Array<MinCutTargetEdge>>> => {
         if (version !== 6) {
           throw new Error("Unexpected version of min cut request:" + version);
         }
         const { agglomerateId, partition1, partition2 } = segmentsInfo;
         if (agglomerateId === 6n && isEqual(partition1, [1337n]) && isEqual(partition2, [1338n])) {
-          return [
-            {
-              position1: getPositionForSegmentId(1337),
-              position2: getPositionForSegmentId(1338),
-              segmentId1: 1337n,
-              segmentId2: 1338n,
-            },
-          ];
+          return {
+            ok: true,
+            value: [
+              {
+                position1: getPositionForSegmentId(1337),
+                position2: getPositionForSegmentId(1338),
+                segmentId1: 1337n,
+                segmentId2: 1338n,
+              },
+            ],
+          };
         }
         throw new Error("Unexpected min cut request");
       },

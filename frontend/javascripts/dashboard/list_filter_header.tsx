@@ -109,15 +109,16 @@ function FilterChipSearchInput({
   placeholder: string;
   onPressEnter: () => void;
 }) {
+  const { inputRef, query, setQuery } = search;
   return (
     <Input
-      ref={search.inputRef}
+      ref={inputRef}
       size="small"
       allowClear
       placeholder={placeholder}
       prefix={<SearchOutlined />}
-      value={search.query}
-      onChange={(event) => search.setQuery(event.target.value)}
+      value={query}
+      onChange={(event) => setQuery(event.target.value)}
       onPressEnter={onPressEnter}
     />
   );
@@ -148,11 +149,14 @@ export function TagFilterChip({
   onChange: (tags: string[]) => void;
 }) {
   const search = useFilterChipSearch();
-  const knownTagsRef = useRef(new Set<string>());
-  for (const tag of [...availableTags, ...selectedTags]) {
-    knownTagsRef.current.add(tag);
+  const [knownTags, setKnownTags] = useState<string[]>([]);
+  const newTags = [...availableTags, ...selectedTags].filter((tag) => !knownTags.includes(tag));
+  if (newTags.length > 0) {
+    // Set during render instead of in an effect, so that no render shows the old tags.
+    setKnownTags(
+      Array.from(new Set([...knownTags, ...newTags])).sort((a, b) => a.localeCompare(b)),
+    );
   }
-  const knownTags = Array.from(knownTagsRef.current).sort((a, b) => a.localeCompare(b));
   const visibleTags = knownTags.filter(search.matches);
 
   const toggleTag = (tag: string, isChecked: boolean) =>

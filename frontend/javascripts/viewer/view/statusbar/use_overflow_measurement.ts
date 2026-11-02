@@ -58,10 +58,14 @@ export function useOverflowMeasurement({
 }: UseOverflowMeasurementParams): UseOverflowMeasurementResult {
   const itemRefs = useRef<Map<string, HTMLElement>>(new Map());
   const itemKeysRef = useRef(itemKeys);
-  itemKeysRef.current = itemKeys;
   const fixedWidthSamplesRef = useRef<WidthSample[]>([]);
   const decayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visibleCount, setVisibleCount] = useState(itemKeys.length);
+
+  // Declared before the measurement effect so that it sees the current keys.
+  useLayoutEffect(() => {
+    itemKeysRef.current = itemKeys;
+  });
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally mount-only; refs are stable and content changes are picked up by the ResizeObserver (itemKeys is read via itemKeysRef).
   useLayoutEffect(() => {

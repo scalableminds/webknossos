@@ -186,6 +186,10 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "SET_HAS_SAVE_ERROR": {
+      return updateKey(state, "save", { hasSaveError: action.hasSaveError });
+    }
+
     case "SET_IS_MUTEX_ACQUIRED": {
       const { isMutexAcquired } = action;
       return updateKey2(state, "save", "mutexState", {

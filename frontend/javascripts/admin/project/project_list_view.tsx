@@ -28,6 +28,7 @@ import {
 import { App, Button, Input, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
+import FormattedDuration from "components/formatted_duration";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
@@ -36,7 +37,7 @@ import {
   compareBy,
   filterWithSearchQueryAND,
   localeCompareBy,
-  millisecondsToHours,
+  minutesToMilliseconds,
   scrollToTop,
 } from "libs/utils";
 import partial from "lodash-es/partial";
@@ -279,16 +280,12 @@ function ProjectListView() {
             }}
           />
           <Column
-            title={<Tooltip title="Total annotating time spent on this project">Time [h]</Tooltip>}
+            title={<Tooltip title="Total annotating time spent on this project">Time</Tooltip>}
             dataIndex="tracingTime"
             align="right"
             key="tracingTime"
             sorter={compareBy<APIProjectWithStatus>((project) => project.tracingTime)}
-            render={(tracingTimeMs) =>
-              millisecondsToHours(tracingTimeMs).toLocaleString(undefined, {
-                maximumFractionDigits: 1,
-              })
-            }
+            render={(tracingTimeMs) => <FormattedDuration durationMs={tracingTimeMs} />}
             filters={greaterThanZeroFilters}
             onFilter={(value, project: APIProjectWithStatus) => {
               if (value === "0") {
@@ -366,7 +363,9 @@ function ProjectListView() {
             align="right"
             key="expectedTime"
             sorter={compareBy<APIProjectWithStatus>((project) => project.expectedTime)}
-            render={(expectedTime) => `${expectedTime}m`}
+            render={(expectedTime) => (
+              <FormattedDuration durationMs={minutesToMilliseconds(expectedTime)} />
+            )}
           />
           <Column
             title="Action"

@@ -4,12 +4,24 @@ import IconImportOwnData from "@images/backgrounds/import-own-data.svg?react";
 import IconInviteColleagues from "@images/backgrounds/invite-colleagues.svg?react";
 import IconOpenDemo from "@images/backgrounds/open-demo.svg?react";
 import { InviteUsersModal } from "admin/onboarding";
-import { Button, Card, Col, Flex, Grid, Row, Tooltip, Typography, theme } from "antd";
+import {
+  Button,
+  Card,
+  Col,
+  ConfigProvider,
+  Flex,
+  Grid,
+  Row,
+  Tooltip,
+  Typography,
+  theme,
+} from "antd";
 import { getDemoDatasetUrl } from "features";
 import renderIndependently from "libs/render_independently";
 import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
 import type React from "react";
 import { Link } from "react-router";
+import { getAntdTheme } from "theme";
 import type { APIUser } from "types/api_types";
 
 const ACTION_ICON_SIZE = 96;
@@ -160,28 +172,39 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
     >
       <DismissButton onDismiss={onDismiss} />
       <Flex vertical align="center" style={{ paddingInline: token.padding }}>
-        <Typography.Title level={isNarrow ? 3 : 1} style={{ ...onBlueTextStyle, marginTop: 0 }}>
+        <Typography.Title
+          level={isNarrow ? 3 : 1}
+          style={{ ...onBlueTextStyle, marginTop: 0, fontWeight: 200 }}
+        >
           Welcome to WEBKNOSSOS
         </Typography.Title>
         {isNarrow ? null : (
           <Typography.Paragraph
-            style={{ ...onBlueTextStyle, fontSize: token.fontSizeLG, maxWidth: 700 }}
+            style={{
+              ...onBlueTextStyle,
+              fontSize: token.fontSizeLG,
+              fontWeight: 300,
+              maxWidth: 700,
+            }}
           >
             Congratulations on your new WEBKNOSSOS account! To hit the ground running, we recommend
             the following steps to you:
           </Typography.Paragraph>
         )}
-        <Row
-          gutter={[gutter, gutter]}
-          justify="center"
-          style={{ width: "100%", maxWidth: ACTIONS_MAX_WIDTH }}
-        >
-          {actions.map((action) => (
-            <Col key={action.title} xs={24} md={12}>
-              <WhatsNextAction {...action} compact={isNarrow} />
-            </Col>
-          ))}
-        </Row>
+        {/* The cards stay light in dark mode, too, so they read well on the blue background. */}
+        <ConfigProvider theme={getAntdTheme("light")}>
+          <Row
+            gutter={[gutter, gutter]}
+            justify="center"
+            style={{ width: "100%", maxWidth: ACTIONS_MAX_WIDTH }}
+          >
+            {actions.map((action) => (
+              <Col key={action.title} xs={24} md={12}>
+                <WhatsNextAction {...action} compact={isNarrow} />
+              </Col>
+            ))}
+          </Row>
+        </ConfigProvider>
       </Flex>
     </Flex>
   );

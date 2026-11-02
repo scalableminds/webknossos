@@ -263,11 +263,10 @@ body {
 
 /** Hides elements below antd's xl breakpoint, i.e. when useMinScreenWidth("xl") is false. */
 .hide-on-small-screen {
-  // A range query instead of max-width: @screen-lg-max, so that fractional viewport widths (e.g.
-  // 1199.5px when zoomed) behave like antd's (min-width: 1200px) check, too.
-  // Less cannot parse range queries, hence the escaped string.
-  @below-xl: ~"(width < @{screen-xl-min})";
-  @media @below-xl {
+  // 1199.98px instead of @screen-lg-max (1199px), so that fractional viewport widths when zoomed
+  // (e.g. 1199.5px) also count as below xl, like antd's (min-width: 1200px) check. Same trick as
+  // Bootstrap; the range syntax (width < 1200px) would need Safari 16.4+.
+  @media (max-width: (@screen-xl-min - 0.02px)) {
     display: none !important;
   }
 }

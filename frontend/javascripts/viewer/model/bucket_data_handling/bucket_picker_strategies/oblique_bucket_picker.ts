@@ -68,6 +68,9 @@ type PlaneBox = {
   halfExtentV: number;
   // The plane's normal as a row of the inverse matrix (world → local z).
   normal: Vector3;
+  // Hidden viewports have an empty rect. They get no prefetch slab, so that their box is only
+  // the camera position, which the visible planes cover anyway.
+  isHidden: boolean;
 };
 
 export default function determineBucketsForPlane(
@@ -126,6 +129,7 @@ function getPlaneBox(planeId: OrthoViewWithoutTD, matrix: Matrix4x4, rects: Plan
     halfExtentU: Math.ceil(rects[planeId].width / 2),
     halfExtentV: Math.ceil(rects[planeId].height / 2),
     normal: [inverse[2], inverse[6], inverse[10]],
+    isHidden: rects[planeId].width === 0 || rects[planeId].height === 0,
   };
 }
 
@@ -232,10 +236,12 @@ function addBucketsOfLevel(
     }
     planeEdges.push(edges);
     halfThicknesses.push(
-      PREFETCH_BUCKET_FRACTION *
-        (prefetchBucketExtent[0] * Math.abs(box.normal[0]) +
-          prefetchBucketExtent[1] * Math.abs(box.normal[1]) +
-          prefetchBucketExtent[2] * Math.abs(box.normal[2])),
+      box.isHidden
+        ? 0
+        : PREFETCH_BUCKET_FRACTION *
+            (prefetchBucketExtent[0] * Math.abs(box.normal[0]) +
+              prefetchBucketExtent[1] * Math.abs(box.normal[1]) +
+              prefetchBucketExtent[2] * Math.abs(box.normal[2])),
     );
   }
 

@@ -161,11 +161,14 @@ function getOverlappingBuckets(scenario: Scenario, sizeScale: number): Set<strin
       if (planeId === "PLANE_YZ") M4x4.mul(matrix, ROTATIONS.YZ, queryMatrix);
       if (planeId === "PLANE_XZ") M4x4.mul(matrix, ROTATIONS.XZ, queryMatrix);
       const inverse = M4x4.inverse(queryMatrix);
-      const halfThickness =
-        PREFETCH_BUCKET_FRACTION *
-        (prefetchBucketExtent[0] * Math.abs(inverse[2]) +
-          prefetchBucketExtent[1] * Math.abs(inverse[6]) +
-          prefetchBucketExtent[2] * Math.abs(inverse[10]));
+      // Hidden viewports (empty rects) get no prefetch slab.
+      const isHidden = rects[planeId].width === 0 || rects[planeId].height === 0;
+      const halfThickness = isHidden
+        ? 0
+        : PREFETCH_BUCKET_FRACTION *
+          (prefetchBucketExtent[0] * Math.abs(inverse[2]) +
+            prefetchBucketExtent[1] * Math.abs(inverse[6]) +
+            prefetchBucketExtent[2] * Math.abs(inverse[10]));
       const halfExtents: Vector3 = [
         Math.ceil(rects[planeId].width / 2) * sizeScale,
         Math.ceil(rects[planeId].height / 2) * sizeScale,
@@ -284,6 +287,33 @@ describe("Oblique bucket picker", () => {
       }
     });
   }
+
+  const emptyRect = { width: 0, height: 0, top: 0, left: 0 };
+
+  it("doesn't pick buckets for hidden viewports", () => {
+    // The visible XY viewport is tiny and the camera is 4 voxels from the next bucket in x and y.
+    // The hidden planes must not prefetch along their normals (x and y) into that bucket.
+    const position: Vector3 = [32 * 100 + 28, 32 * 200 + 28, 32 * 300 + 16];
+    const rects: PlaneRects = {
+      PLANE_XY: { width: 2, height: 2, top: 0, left: 0 },
+      PLANE_XZ: emptyRect,
+      PLANE_YZ: emptyRect,
+      TDView: emptyRect,
+    };
+    const { priorities } = pick({
+      name: "hidden viewports",
+      mags: ISOTROPIC_MAGS,
+      position,
+      matrix: makeMatrix([1, 1, 1], [0, 0, 0], position, 1),
+      logZoomStep: 0,
+      rects,
+    });
+    const levelZeroXY = [...priorities.keys()]
+      .map((key) => key.split(",").map(Number))
+      .filter((address) => address[3] === 0)
+      .map(([x, y]) => `${x},${y}`);
+    expect([...new Set(levelZeroXY)]).toEqual(["100,200"]);
+  });
 
   it("stops each level after abortLimit buckets", () => {
     const scenario = SCENARIOS[4];

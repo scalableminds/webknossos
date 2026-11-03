@@ -189,6 +189,16 @@ class AnnotationsView extends PureComponent<Props, State> {
   componentDidUpdate(prevProps: Props, prevState: State) {
     persistence.persist(this.state);
 
+    // Once the details sidebar is shown inline again, close its drawer. Otherwise, it would
+    // reappear when the window gets narrow again, without the user having opened it.
+    if (
+      prevProps.isDetailsCompact &&
+      !this.props.isDetailsCompact &&
+      this.state.isDetailsDrawerOpen
+    ) {
+      this.setState({ isDetailsDrawerOpen: false });
+    }
+
     if (this.state.shouldShowArchivedAnnotations !== prevState.shouldShowArchivedAnnotations) {
       this.fetchNextPage(0);
     }

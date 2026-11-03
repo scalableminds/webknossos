@@ -43,6 +43,15 @@ function DatasetFolderViewInner(props: Props) {
     setIsFolderDrawerOpen(false);
   }, [context.activeFolderId]);
 
+  // Once a sidebar is shown inline again, close its drawer. Otherwise, it would reappear when the
+  // window gets narrow again, without the user having opened it.
+  useEffect(() => {
+    if (!isFolderTreeCompact) setIsFolderDrawerOpen(false);
+  }, [isFolderTreeCompact]);
+  useEffect(() => {
+    if (!isDetailsCompact) setIsDetailsDrawerOpen(false);
+  }, [isDetailsCompact]);
+
   const setSelectedDataset = (
     ds: APIDatasetCompact | null,
     multiSelect?: boolean,

@@ -145,31 +145,17 @@ class PullQueue {
           const bucketResult = bucketResults[index];
           const siblingAddresses = getTBatchSiblingAddresses(this.cube, bucketAddress);
 
-          switch (bucketResult.type) {
-            case "data": {
-              this.handleBatchedBucketResult(
-                siblingAddresses,
-                bucketResult.data,
-                renderMissingDataBlack,
-                batchItems[index].priority,
-              );
-              break;
-            }
-            case "empty": { // todop: cant we unify this with the previous case? only the data param is different i think.
-              this.handleBatchedBucketResult(
-                siblingAddresses,
-                null,
-                renderMissingDataBlack,
-                batchItems[index].priority,
-              );
-              break;
-            }
-            case "failure": {
-              // The bucket could not be read. Schedule it for a retry via the
-              // batch-level error handling below.
-              failedBucketAddresses.push(bucketAddress);
-              break;
-            }
+          if (bucketResult.type === "failure") {
+            // The bucket could not be read. Schedule it for a retry via the
+            // batch-level error handling below.
+            failedBucketAddresses.push(bucketAddress);
+          } else {
+            this.handleBatchedBucketResult(
+              siblingAddresses,
+              bucketResult.type === "data" ? bucketResult.data : null,
+              renderMissingDataBlack,
+              batchItems[index].priority,
+            );
           }
         } catch {
           failedBucketAddresses.push(bucketAddress);

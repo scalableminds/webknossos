@@ -47,6 +47,18 @@
   width: 100%;
 }
 
+/**
+ * Keeps a task detail value next to its label while it fits and moves it onto its own line when
+ * it doesn't. antd's flex: 1 (basis 0) would instead squeeze the value into a narrow column.
+ */
+.task-details .ant-descriptions-item-container {
+  flex-wrap: wrap;
+
+  .ant-descriptions-item-content {
+    flex: 1 1 auto;
+  }
+}
+
 /** Background of the 'What's Next' dashboard welcome banner. Layout lives in admin/welcome_ui.tsx. */
 .welcome-header {
   background: var(--background-blue-neurons);

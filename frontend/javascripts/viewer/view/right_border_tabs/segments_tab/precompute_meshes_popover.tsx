@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import {
   getFeatureNotAvailableInPlanMessage,
   hasPricingPlanExceededStorage,
@@ -7,9 +8,9 @@ import {
 import { getJobs, startComputeMeshFileJob } from "admin/rest_api";
 import { Button, Flex, Select, Space, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
-import { usePolling, useWkSelector } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { APIJobCommand } from "types/api_types";
 import { MappingStatusEnum } from "viewer/constants";
@@ -49,24 +50,32 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
     ),
   );
 
-  const pollJobData = useCallback(async () => {
-    if (activeUser == null || activeMeshJobId == null) {
+  // Poll the jobs while a mesh job is running. Errors are swallowed so that a failing
+  // poll doesn't show a toast every few seconds.
+  const { data: jobs } = useQuery({
+    // Separate key from the job list view, which uses different retry and persistence settings.
+    queryKey: ["jobs", "meshJobPolling"],
+    queryFn: () => getJobs(undefined, undefined, { showErrorToast: false }),
+    enabled: activeUser != null && activeMeshJobId != null,
+    refetchInterval: REFRESH_INTERVAL,
+    retry: false,
+    meta: { persist: false },
+  });
+
+  useEffect(() => {
+    if (jobs == null || activeMeshJobId == null) {
       return;
     }
-    const jobs = await getJobs();
-    const meshJobsForDataset = jobs.filter(
-      (job: any) => job.command === "compute_mesh_file" && job.args.datasetName === dataset.name,
+    const activeJob = jobs.find(
+      (job) =>
+        job.id === activeMeshJobId &&
+        job.command === "compute_mesh_file" &&
+        job.args.datasetName === dataset.name,
     );
-    const activeJob = meshJobsForDataset.find((job: any) => job.id === activeMeshJobId);
-
-    if (activeJob != null) {
-      if (activeJob.state === "SUCCESS" || activeJob.state === "FAILURE") {
-        setActiveMeshJobId(null);
-      }
+    if (activeJob != null && (activeJob.state === "SUCCESS" || activeJob.state === "FAILURE")) {
+      setActiveMeshJobId(null);
     }
-  }, [activeUser, activeMeshJobId, dataset.name]);
-
-  usePolling(pollJobData, activeMeshJobId != null ? REFRESH_INTERVAL : null);
+  }, [jobs, activeMeshJobId, dataset.name]);
 
   useEffect(() => {
     if (onActiveJobChange != null) {

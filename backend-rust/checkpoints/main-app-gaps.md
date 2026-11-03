@@ -1,6 +1,8 @@
 # Main-app gap inventory (non-route behavior Scala does that Rust does not)
 
 Status: DONE (read-only research agent, 2026-10-11). No source files edited.
+Update 2026-11-03: G1–G5, G7–G11, G13 and G14 are DONE (see each entry); G6 and G12 are in progress. Section 0
+describes the state of 2026-10-11: `main.rs` now starts every background job listed here.
 Scope: `app/`, `conf/application.conf`, `util/`, `webknossos-tracingstore/.../cleanup/CleanUpService.scala`
 (WkCleanUpService) vs. `backend-rust/src` + checkpoints. Route registration is complete (287/287) and is NOT
 covered here.
@@ -33,7 +35,7 @@ covered here.
 Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG-ONLY = call site present but only
 `tracing` output.
 
-### G1. SMTP mail delivery — LOG-ONLY — priority P0 (blocks real use of reset/invite/verification)
+### G1. SMTP mail delivery — DONE (checkpoints/smtp-mail.md; lettre transport, HTML templates checked against Play's)
 - Scala: `app/mail/Mailer.scala` (actor started in `app/Startup.scala:140-151`), commons-email, HTML templates
   `app/views/mail/*.scala.html` wrapped by `emailBaseTemplate`, From = `mail.defaultSender`, optional Reply-To
   (help mail), `additionalFooter`, `logToStdout`, TLSv1.2, sends only when `mail.smtp.host` non-empty.
@@ -49,7 +51,7 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
   networked fetch), lib.rs wiring, .env.example. Test with a local SMTP sink (or a mock trait) — no real delivery.
   HTML templates are a separate follow-up (D1).
 
-### G2. Background scheduler + housekeeping cleanup jobs — MISSING — P0 (enabler for G3-G10)
+### G2. Background scheduler + housekeeping cleanup jobs — DONE (checkpoints/housekeeping.md)
 - Scala `app/Startup.scala:50-68` via `WkCleanUpService.register` (fixed delay, first run after one interval):
   - expired tokens soft-delete, every `silhouette.tokenAuthenticator.dataStoreExpiry` (1 day):
     `UPDATE webknossos.tokens SET isDeleted=TRUE WHERE expirationDateTime <= now` (`app/security/Token.scala:118`).
@@ -66,7 +68,7 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
   copied verbatim) + DB tests calling each job function directly. Parent wires `main.rs` (spawn + shutdown) and
   config (`WK_BACKGROUND_TASKS_ENABLED` master switch, default false while Play runs).
 
-### G3. Free-credit ticker (revoke expired + monthly hand-out) — PARTIAL — P1 (billing-visible after cutover)
+### G3. Free-credit ticker (revoke expired + monthly hand-out) — DONE (checkpoints/credit-ticker.md)
 - Scala `app/models/organization/FreeCreditTransactionService.scala:27-35`: every 20 min `revokeExpiredCredits()`
   (`CreditTransaction.scala:~355-376`, serializable per organization, Slack warn on failed revocations) then
   `SELECT webknossos.hand_out_monthly_free_credits(jobs.monthlyFreeMilliCredits)`.
@@ -76,7 +78,7 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
 - Agent: fold into `scheduler-housekeeping` follow-up or small `credits-ticker` (~30-45 min): owned
   `src/credit_transactions.rs` (extract `revoke_expired_credits(pool) -> Vec<failed ids>`), register ticker.
 
-### G4. Slack notifications — LOG-ONLY/MISSING — P1 (ops visibility)
+### G4. Slack notifications — DONE (checkpoints/slack.md)
 - Scala client: `webknossos-datastore/.../slacknotification/SlackClient.scala` (POST `{"attachments":[{title:
   "<title> reported from WEBKNOSSOS at <http.uri>", text, color}]}`, rate limit 30 msgs/min, no-op if uri empty,
   `verboseLoggingEnabled` logs). Wrapper `app/telemetry/SlackNotificationService.scala`.
@@ -98,7 +100,7 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
   `WK_SLACK_NOTIFICATIONS_URI`, `WK_SLACK_NOTIFICATIONS_VERBOSE_LOGGING_ENABLED`, AppState/Extension wiring.
   Include job duration labels (`JobService.durationLabel`).
 
-### G5. Worker liveness monitor — MISSING — P2 (depends on G2+G4)
+### G5. Worker liveness monitor — DONE (checkpoints/worker-liveness.md)
 - Scala `app/models/job/Worker.scala:111-160` `WorkerLivenessService`: every 1 min (1 min initial delay) checks all
   workers' `lastHeartBeat` against `jobs.workerLivenessTimeout`; Slack warn "Worker missing" once, re-reported after
   `jobs.workerLivenessReReportInterval` (1 h, in-memory TemporaryStore), Slack success "Worker return".
@@ -120,7 +122,7 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
   legacy_datasets.rs + heartbeat job registered via G2. Match event property shapes in
   `app/models/analytics/AnalyticsEvent.scala:105-240`.
 
-### G7. Organization used-storage scan — PARTIAL — P2 (storage quota / pricing display)
+### G7. Organization used-storage scan — DONE (checkpoints/used-storage-scan.md)
 - Scala `app/models/storage/UsedStorageService.scala:53-115`: tick every `webKnossos.fetchUsedStorage.tickerInterval`
   (10 min, 1 min initial delay); `findNotRecentlyScanned(rescanInterval=24h, scansPerTick=10)`; for each datastore
   with `reportUsedStorageEnabled` POST `{dataStore}/data/datasets/measureUsedStorage/{orga}` in batches of 200 paths,
@@ -180,12 +182,18 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
 - `ThreadPoolHealthLogger` (util) and `SlickPoolHealthLogger` every 10 min (`Startup.scala:72-75`). Rust could log
   `pool.size()/num_idle()` periodically via G2. No metrics/Prometheus in Scala either.
 
-### G13. Config/doc hygiene — P4
+### G13. Config/doc hygiene — DONE 2026-11-03
 - `.env.example` lists ~45 vars; the crate reads ~95 `WK_*` vars (analytics, OIDC, Loki, SAM, sample org, upload
   paths, ToS, build info ...). Missing Scala config with no Rust equivalent: `mail.*`, `mail.mailchimp.*`,
   `slackNotifications.*`, `webKnossos.fetchUsedStorage.*`, `webKnossos.pricingPlanExpiryReminder.*`,
   `jobs.workerLivenessReReportInterval`, `silhouette.tokenAuthenticator` cleanup interval (dataStoreExpiry is present).
   Parent-owned README/.env.example pass after G1-G9 land.
+- 2026-11-03: every Scala section listed above now has Rust settings (mail, Mailchimp, Slack, used storage,
+  plan-expiry reminders, worker liveness re-report, token cleanup via housekeeping). `.env.example` documents
+  every `WK_*` variable the crate reads (per-job housekeeping and local-store variables via `<JOB>`/prefix
+  placeholders); the last four (`WK_OPERATOR_DATA`, `WK_TERMS_OF_SERVICE_URL`,
+  `WK_TERMS_OF_SERVICE_ACCEPTANCE_DEADLINE`, `WK_SAMPLE_USER_EMAIL2`) were added then. Check with
+  `grep -rhoE '"WK_[A-Z0-9_]+' src | sort -u` against `.env.example`.
 
 ### G14. Frontend serving (main view, OpenGraph, static files) — DONE 2026-11-03 except the wkorg sitemap
 - Found after the original inventory: the route coverage only counts `conf/webknossos.latest.routes`, but Play's
@@ -221,9 +229,9 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
 
 ## 3. Documented user-visible deviations that may need a product decision
 
-- D1 Mail bodies are plain text, no HTML templates/branding/footer, no Reply-To on help mail
+- D1 RESOLVED by G1: mails use Play's HTML templates (checked against a Scala oracle in tests/mail.rs). Was: mail bodies are plain text, no HTML templates/branding/footer, no Reply-To on help mail
   (browser-auth.md:16, misc-controllers.md:17, organization-pricing.md:46, jobs-worker.md:58).
-- D2 No mail delivery at all until G1 (README; browser-auth.md "Email gap"): password reset, invites, email
+- D2 RESOLVED by G1 (SMTP via lettre). Was: no mail delivery at all until G1 (README; browser-auth.md "Email gap"): password reset, invites, email
   verification (required-verification accounts past grace period cannot log in) unusable.
 - D3 Sample organization and local datastore/tracingstore modules default OFF (Play dev default ON);
   buildinfo `localDataStoreEnabled:false` (misc-controllers.md:16).

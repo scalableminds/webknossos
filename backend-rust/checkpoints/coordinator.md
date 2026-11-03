@@ -34,8 +34,8 @@ Route registration is complete for both services (main app 287/287, datastore 13
 - G9 Mailchimp: DONE 2026-11-03 (checkpoints/mailchimp.md).
 - G10 virtual-dataset real-path bulk scan: DONE 2026-11-03 (checkpoints/virtual-datasets-real-path-scan.md).
 - G11 startup tasks: DONE 2026-11-03 (`WK_INITIAL_DATA_ON_STARTUP`, default true).
-- G12 pool health logging and G13 `.env.example`/README hygiene: not started.
-- D1 product decision: mail bodies are plain text (no HTML templates, branding, Reply-To).
+- G12 pool health logging: not started. G13 `.env.example`/README hygiene: DONE 2026-11-03.
+- D1 resolved: mails use Play's HTML templates (G1).
 - Known bug: compound merge returns 500 when a dataset layer has no mags (`datasets::data_source_for_rpc`).
 - Cutover work: first pass and round 2 done 2026-10-17 (checkpoints/cutover.md, CUTOVER.md, tools/app_differential/). Open: decision on invalid credentials for user-aware routes; Play change for a shared store RPC token (blocker before stage 3); voxelytics corpus; Rust CI job.
 - DONE and wired in `main.rs`: G1 SMTP, G2 housekeeping, G3 credit ticker, G4 Slack, G5 worker liveness, G7 used-storage scan.

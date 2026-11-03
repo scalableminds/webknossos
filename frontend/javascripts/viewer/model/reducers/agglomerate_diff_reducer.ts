@@ -4,6 +4,7 @@ import Constants, { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import {
   getAgglomerateDiffKey,
   getAgglomerateDiffOverlay,
+  isDiffOfPosition,
 } from "viewer/model/accessors/agglomerate_diff_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import EdgeCollection from "viewer/model/edge_collection";
@@ -104,9 +105,9 @@ function updateOverlay(
   });
 }
 
-// A diff is shown if diffs are shown at all and its agglomerate skeleton is visible
+// A diff is shown if diffs are shown at all and its agglomerate skeleton exists and is visible
 function isDiffVisible(overlay: AgglomerateDiffOverlay, diff: AgglomerateDiff): boolean {
-  return overlay.isVisible && diff.isSourceTreeVisible;
+  return overlay.isVisible && diff.sourceTreeId != null && diff.isSourceTreeVisible;
 }
 
 // Sets the visibility of the trees of the given diffs according to isDiffVisible
@@ -140,6 +141,7 @@ function AgglomerateDiffReducer(state: WebknossosState, action: Action): Webknos
           [key]: {
             ...action.descriptor,
             status: "loading",
+            positionInLayer: action.positionInLayer,
             awaitsAgglomerateSkeleton: action.awaitsAgglomerateSkeleton,
             // Set by the agglomerate_diff_saga once the agglomerate skeleton exists
             sourceTreeId: null,
@@ -158,8 +160,14 @@ function AgglomerateDiffReducer(state: WebknossosState, action: Action): Webknos
       const overlay = getAgglomerateDiffOverlay(state);
       const key = getAgglomerateDiffKey(action.descriptor);
       const diff = overlay.diffs[key];
-      // The diff might have been removed in the meantime
-      if (diff == null || diff.status !== "loading") return state;
+      // The diff might have been removed or requested for another position in the meantime
+      if (
+        diff == null ||
+        diff.status !== "loading" ||
+        !isDiffOfPosition(diff, action.positionInLayer)
+      ) {
+        return state;
+      }
 
       const { skeleton } = overlay;
       const trees = createDiffTrees(action.diff, isDiffVisible(overlay, diff));
@@ -191,7 +199,13 @@ function AgglomerateDiffReducer(state: WebknossosState, action: Action): Webknos
       const overlay = getAgglomerateDiffOverlay(state);
       const key = getAgglomerateDiffKey(action.descriptor);
       const diff = overlay.diffs[key];
-      if (diff == null || diff.status !== "loading") return state;
+      if (
+        diff == null ||
+        diff.status !== "loading" ||
+        !isDiffOfPosition(diff, action.positionInLayer)
+      ) {
+        return state;
+      }
       return updateOverlay(state, {
         diffs: {
           ...overlay.diffs,

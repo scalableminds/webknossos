@@ -23,9 +23,11 @@ export type AgglomerateDiffAction =
 
 // Marks the diff as loading and lets the agglomerate_diff_saga load it. The agglomerate is compared
 // to the reference agglomerate that contains the segment at the given position (in the coordinate
-// system of the layer). awaitsAgglomerateSkeleton has to be set if the diff is requested while its
-// agglomerate skeleton is still loading. Otherwise, the diff would be considered obsolete. In case
-// the agglomerate skeleton cannot be added, the requester has to remove the diff.
+// system of the layer). The position is floored, so that it can be compared to the clicked position
+// stored with the agglomerate skeleton (see createAgglomerateSkeletonMetadata).
+// awaitsAgglomerateSkeleton has to be set if the diff is requested while its agglomerate skeleton is
+// still loading. Otherwise, the diff would be considered obsolete. In case the agglomerate skeleton
+// cannot be added, the requester has to remove the diff.
 export const requestAgglomerateDiffAction = (
   descriptor: AgglomerateDiffDescriptor,
   positionInLayer: Vector3,
@@ -34,28 +36,34 @@ export const requestAgglomerateDiffAction = (
   ({
     type: "REQUEST_AGGLOMERATE_DIFF",
     descriptor,
-    positionInLayer,
+    positionInLayer: positionInLayer.map(Math.floor) as Vector3,
     awaitsAgglomerateSkeleton,
   }) as const;
 
+// The position is the one of the request (see requestAgglomerateDiffAction). The result is ignored
+// if the diff was requested again for a different position in the meantime.
 export const finishLoadingAgglomerateDiffAction = (
   descriptor: AgglomerateDiffDescriptor,
+  positionInLayer: Vector3,
   diff: ServerAgglomerateGraphDiff,
 ) =>
   ({
     type: "FINISH_LOADING_AGGLOMERATE_DIFF",
     descriptor,
+    positionInLayer,
     diff,
   }) as const;
 
 // A failed diff is not requested again until it becomes obsolete.
 export const failLoadingAgglomerateDiffAction = (
   descriptor: AgglomerateDiffDescriptor,
+  positionInLayer: Vector3,
   errorMessage: string,
 ) =>
   ({
     type: "FAIL_LOADING_AGGLOMERATE_DIFF",
     descriptor,
+    positionInLayer,
     errorMessage,
   }) as const;
 

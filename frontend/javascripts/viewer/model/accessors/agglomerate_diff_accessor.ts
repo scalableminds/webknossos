@@ -1,9 +1,11 @@
+import { V3 } from "libs/mjs";
 import memoizeOne from "memoize-one";
 import type { MetadataEntryProto } from "types/api_types";
 import Constants, { MappingStatusEnum, type Vector3 } from "viewer/constants";
-import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
+import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import type {
+  AgglomerateDiff,
   AgglomerateDiffDescriptor,
   AgglomerateDiffOverlay,
   SkeletonTracing,
@@ -53,10 +55,19 @@ export function getLayerNameOfAgglomerateSkeleton(tree: Tree): string | null {
 
 // Returns null if the position is missing or was edited to something invalid
 export function getClickedPositionInLayer(tree: Tree): Vector3 | null {
-  const entry = tree.metadata.find(({ key }) => key === CLICKED_POSITION_METADATA_KEY);
-  const position = entry?.stringListValue?.map(Number);
-  if (position?.length !== 3 || !position.every(Number.isFinite)) return null;
-  return position as Vector3;
+  const entries = tree.metadata.find(
+    ({ key }) => key === CLICKED_POSITION_METADATA_KEY,
+  )?.stringListValue;
+  // Number("") would be 0
+  if (entries?.length !== 3 || entries.some((entry) => entry.trim() === "")) return null;
+  const position = entries.map(Number);
+  if (!position.every(Number.isFinite)) return null;
+  return position.map(Math.floor) as Vector3;
+}
+
+// Whether the diff compares the reference agglomerate at the given position (see AgglomerateDiff)
+export function isDiffOfPosition(diff: AgglomerateDiff, positionInLayer: Vector3): boolean {
+  return V3.isEqual(diff.positionInLayer, positionInLayer.map(Math.floor) as Vector3);
 }
 
 // Agglomerate skeletons can only be loaded while an agglomerate mapping is active, so their diffs
@@ -75,6 +86,73 @@ export function getAgglomerateDiffReferenceMappingName(
   layerName: string,
 ): string | null {
   return state.datasetConfiguration.layers[layerName]?.agglomerateDiffReference ?? null;
+}
+
+// Whether the agglomerate files of the layer need to be loaded to know which agglomerate skeletons
+// are compared to the reference view (see getAgglomerateDiffReferenceForSkeleton)
+export function needsAgglomerateFilesForDiffs(state: WebknossosState, layerName: string): boolean {
+  const layer = getLayerByName(state.dataset, layerName);
+  return (
+    layer.category === "segmentation" &&
+    layer.agglomerates == null &&
+    getAgglomerateDiffReferenceMappingName(state, layerName) != null &&
+    isAgglomerateMappingEnabled(state, layerName)
+  );
+}
+
+/*
+ * Returns the reference view that agglomerate skeletons of the layer are compared to, or null if
+ * they are not compared. That is the case if
+ * - no reference view is selected or no agglomerate mapping is active,
+ * - the agglomerate files of the layer are not known, yet (see needsAgglomerateFilesForDiffs), or
+ * - the reference view is not an agglomerate file of the layer (e.g., if it was removed from the
+ *   dataset since it was selected).
+ * Whether a single agglomerate skeleton is compared is decided by isComparedToAgglomerateDiffReference.
+ */
+export function getUsableAgglomerateDiffReference(
+  state: WebknossosState,
+  layerName: string,
+): string | null {
+  const referenceMappingName = getAgglomerateDiffReferenceMappingName(state, layerName);
+  if (referenceMappingName == null || !isAgglomerateMappingEnabled(state, layerName)) return null;
+  const layer = getLayerByName(state.dataset, layerName);
+  if (layer.category !== "segmentation" || !layer.agglomerates?.includes(referenceMappingName)) {
+    return null;
+  }
+  return referenceMappingName;
+}
+
+// Whether agglomerate skeletons of the given agglomerate view are compared to the usable reference
+// view of their layer (see getUsableAgglomerateDiffReference). This is not the case for the reference
+// view itself and for views that are no agglomerate files (i.e., editable mappings).
+export function isComparedToAgglomerateDiffReference(
+  agglomerateFiles: ReadonlyArray<string>,
+  mappingName: string,
+  referenceMappingName: string,
+): boolean {
+  return mappingName !== referenceMappingName && agglomerateFiles.includes(mappingName);
+}
+
+// Combines getUsableAgglomerateDiffReference and isComparedToAgglomerateDiffReference
+export function getAgglomerateDiffReferenceForSkeleton(
+  state: WebknossosState,
+  layerName: string,
+  mappingName: string,
+): string | null {
+  const referenceMappingName = getUsableAgglomerateDiffReference(state, layerName);
+  const layer = getLayerByName(state.dataset, layerName);
+  if (
+    referenceMappingName == null ||
+    layer.category !== "segmentation" ||
+    !isComparedToAgglomerateDiffReference(
+      layer.agglomerates ?? [],
+      mappingName,
+      referenceMappingName,
+    )
+  ) {
+    return null;
+  }
+  return referenceMappingName;
 }
 
 export function getAgglomerateDiffOverlay(state: WebknossosState): AgglomerateDiffOverlay {

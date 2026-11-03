@@ -8,10 +8,12 @@ import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import {
   getAgglomerateDiffKey,
   getAgglomerateDiffOverlay,
-  getAgglomerateDiffReferenceMappingName,
   getClickedPositionInLayer,
   getLayerNameOfAgglomerateSkeleton,
-  isAgglomerateMappingEnabled,
+  getUsableAgglomerateDiffReference,
+  isComparedToAgglomerateDiffReference,
+  isDiffOfPosition,
+  needsAgglomerateFilesForDiffs,
 } from "viewer/model/accessors/agglomerate_diff_accessor";
 import { getIsRebasingOrForwarding } from "viewer/model/accessors/annotation_accessor";
 import { getDataLayers, getLayerByName, getMagInfo } from "viewer/model/accessors/dataset_accessor";
@@ -33,7 +35,7 @@ import {
 } from "viewer/model/helpers/proto_helpers";
 import { call, type Saga, select } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
-import type { AgglomerateDiffDescriptor, WebknossosState } from "viewer/store";
+import type { AgglomerateDiff, AgglomerateDiffDescriptor, WebknossosState } from "viewer/store";
 
 /*
  * The differences of the agglomerate skeletons to the reference agglomerate views are derived
@@ -72,23 +74,23 @@ function getDesiredDiffs(state: WebknossosState): {
   for (const layer of getDataLayers(state.dataset)) {
     if (layer.category !== "segmentation") continue;
     const layerName = layer.name;
-    const referenceMappingName = getAgglomerateDiffReferenceMappingName(state, layerName);
-    if (referenceMappingName == null || !isAgglomerateMappingEnabled(state, layerName)) continue;
-    if (layer.agglomerates == null) {
+    if (needsAgglomerateFilesForDiffs(state, layerName)) {
       layersWithUnknownAgglomerateFiles.push(layerName);
       continue;
     }
-    const agglomerateFiles = new Set(layer.agglomerates);
-    // E.g., if the reference view was removed from the dataset since it was selected
-    if (!agglomerateFiles.has(referenceMappingName)) continue;
+    const referenceMappingName = getUsableAgglomerateDiffReference(state, layerName);
+    if (referenceMappingName == null || layer.agglomerates == null) continue;
     for (const tree of skeletonTracing.trees.values()) {
       const info = tree.agglomerateInfo;
       if (
         tree.type !== TreeTypeEnum.AGGLOMERATE ||
         info?.mappingName == null ||
         info.tracingId != null ||
-        info.mappingName === referenceMappingName ||
-        !agglomerateFiles.has(info.mappingName)
+        !isComparedToAgglomerateDiffReference(
+          layer.agglomerates,
+          info.mappingName,
+          referenceMappingName,
+        )
       ) {
         continue;
       }
@@ -109,7 +111,7 @@ function getDesiredDiffs(state: WebknossosState): {
       if (positionInLayer == null) continue;
       desiredDiffs.set(getAgglomerateDiffKey(descriptor), {
         descriptor,
-        positionInLayer,
+        positionInLayer: positionInLayer.map(Math.floor) as Vector3,
         sourceTree: { treeId: tree.treeId, isVisible: tree.isVisible },
       });
     }
@@ -163,7 +165,11 @@ function* fetchAgglomerateDiff(
       effectiveLayerName,
       layerInfo.elementClass,
       positionInLayer,
-      getMagInfo(layerInfo.mags).getFinestMag(),
+      // The magnifications of the fallback layer might differ from the ones of the annotation layer
+      getMagInfo(
+        (layerInfo.category === "segmentation" ? layerInfo.fallbackLayerInfo?.mags : null) ??
+          layerInfo.mags,
+      ).getFinestMag(),
     );
     const protoBuffer = yield* call(
       getAgglomerateDiffToReference,
@@ -210,19 +216,25 @@ function* showDiffLoadingErrorToast(layerName: string, errorMessage: string): Sa
 function* loadRequestedDiffs(requests: Channel<RequestAgglomerateDiffAction>): Saga<never> {
   while (true) {
     const { descriptor, positionInLayer } = yield* take(requests);
+    const key = getAgglomerateDiffKey(descriptor);
+    // Whether the diff has the status and was neither removed nor requested again for another position
+    const hasStatus = (status: AgglomerateDiff["status"]) => (state: WebknossosState) => {
+      const diff = getAgglomerateDiffOverlay(state).diffs[key];
+      return diff?.status === status && isDiffOfPosition(diff, positionInLayer);
+    };
     // Skip the request if the diff became obsolete while it was queued
-    const isStillRequested = yield* select(
-      (state) =>
-        getAgglomerateDiffOverlay(state).diffs[getAgglomerateDiffKey(descriptor)]?.status ===
-        "loading",
-    );
-    if (!isStillRequested) continue;
+    if (!(yield* select(hasStatus("loading")))) continue;
     const result = yield* call(fetchAgglomerateDiff, descriptor, positionInLayer);
     if ("diff" in result) {
-      yield* put(finishLoadingAgglomerateDiffAction(descriptor, result.diff));
+      yield* put(finishLoadingAgglomerateDiffAction(descriptor, positionInLayer, result.diff));
     } else {
-      yield* put(failLoadingAgglomerateDiffAction(descriptor, result.error.message));
-      yield* call(showDiffLoadingErrorToast, descriptor.layerName, result.error.message);
+      yield* put(
+        failLoadingAgglomerateDiffAction(descriptor, positionInLayer, result.error.message),
+      );
+      // The failure is ignored if the diff became obsolete during the request
+      if (yield* select(hasStatus("failed"))) {
+        yield* call(showDiffLoadingErrorToast, descriptor.layerName, result.error.message);
+      }
     }
   }
 }
@@ -236,18 +248,25 @@ function* reconcileAgglomerateDiffs(layersWithRequestedAgglomerateFiles: Set<str
   }
 
   const { diffs } = yield* select(getAgglomerateDiffOverlay);
-  // A diff that is requested before its agglomerate skeleton is added (see skeletontracing_saga)
-  // is kept until then.
-  const obsoleteKeys = Object.keys(diffs).filter(
-    (key) => !desiredDiffs.has(key) && !diffs[key].awaitsAgglomerateSkeleton,
+  // A diff is obsolete if it's not desired anymore or if it compares the reference agglomerate at
+  // another position (e.g., if the clicked position of the agglomerate skeleton was edited). A diff
+  // that is requested before its agglomerate skeleton is added (see skeletontracing_saga) is kept
+  // until then.
+  const obsoleteKeys = new Set(
+    Object.keys(diffs).filter((key) => {
+      const desiredDiff = desiredDiffs.get(key);
+      return desiredDiff == null
+        ? !diffs[key].awaitsAgglomerateSkeleton
+        : !isDiffOfPosition(diffs[key], desiredDiff.positionInLayer);
+    }),
   );
-  if (obsoleteKeys.length > 0) {
-    yield* put(removeAgglomerateDiffsAction(obsoleteKeys));
+  if (obsoleteKeys.size > 0) {
+    yield* put(removeAgglomerateDiffsAction([...obsoleteKeys]));
   }
 
   const sourceTreeByKey: Record<string, { treeId: number; isVisible: boolean }> = {};
   for (const [key, { sourceTree }] of desiredDiffs) {
-    const diff = diffs[key];
+    const diff = obsoleteKeys.has(key) ? null : diffs[key];
     if (
       diff != null &&
       (diff.sourceTreeId !== sourceTree.treeId ||
@@ -263,7 +282,7 @@ function* reconcileAgglomerateDiffs(layersWithRequestedAgglomerateFiles: Set<str
 
   // Failed diffs are not requested again until they are obsolete
   for (const [key, { descriptor, positionInLayer }] of desiredDiffs) {
-    if (diffs[key] != null) continue;
+    if (diffs[key] != null && !obsoleteKeys.has(key)) continue;
     yield* put(requestAgglomerateDiffAction(descriptor, positionInLayer, false));
   }
 }

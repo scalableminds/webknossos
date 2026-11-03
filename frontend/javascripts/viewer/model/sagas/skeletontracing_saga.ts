@@ -6,7 +6,7 @@ import { Modal } from "antd";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
-import createProgressCallback, { type HideFn } from "libs/progress_callback";
+import createProgressCallback, { type HideFn, type ProgressCallback } from "libs/progress_callback";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import { map3 } from "libs/utils";
@@ -21,6 +21,7 @@ import {
   fork,
   put,
   race,
+  spawn,
   take,
   takeEvery,
   throttle,
@@ -31,7 +32,7 @@ import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/vol
 import {
   createAgglomerateSkeletonMetadata,
   getAgglomerateDiffKey,
-  getAgglomerateDiffReferenceMappingName,
+  getAgglomerateDiffReferenceForSkeleton,
 } from "viewer/model/accessors/agglomerate_diff_accessor";
 import {
   isConcurrentCollaborationMode,
@@ -500,17 +501,15 @@ function* loadAgglomerateTreeWithAtPosition(
             ),
           )
         : null;
-    // If a reference agglomerate view is configured for the layer, the diff is requested in parallel
-    // to the agglomerate skeleton. Otherwise, the agglomerate_diff_saga would only request it once the
-    // agglomerate skeleton was added.
+    // If the agglomerate skeleton will be compared to a reference agglomerate view, the diff is
+    // requested in parallel to the agglomerate skeleton. Otherwise, the agglomerate_diff_saga would
+    // only request it once the agglomerate skeleton was added. The same condition as in the
+    // agglomerate_diff_saga is used, as the diff would never stop awaiting its agglomerate skeleton
+    // otherwise.
     const referenceMappingName = yield* select((state) =>
-      getAgglomerateDiffReferenceMappingName(state, layerName),
+      getAgglomerateDiffReferenceForSkeleton(state, layerName, mappingName),
     );
-    if (
-      clickedPositionInLayer != null &&
-      referenceMappingName != null &&
-      referenceMappingName !== mappingName
-    ) {
+    if (clickedPositionInLayer != null && referenceMappingName != null) {
       const descriptor = { layerName, mappingName, agglomerateId, referenceMappingName };
       yield* put(requestAgglomerateDiffAction(descriptor, clickedPositionInLayer, true));
       diffKey = getAgglomerateDiffKey(descriptor);
@@ -595,15 +594,25 @@ function* loadAgglomerateTreeWithAtPosition(
 
   if (diffKey != null) {
     yield* call(progressCallback, false, "Loading the agglomerate diff to the reference view...");
-    const isDiffLoaded = yield* call(waitForAgglomerateDiff, diffKey);
-    yield* call(
-      progressCallback,
-      true,
-      isDiffLoaded ? "Tree and agglomerate diff loaded." : "Tree generation done.",
-    );
+    // The diff is waited for in a detached task, so that this operation (which blocks the user
+    // interface) ends once the agglomerate skeleton was added. The task ends at the latest when the
+    // diff is removed, which also happens if the sagas are restarted (see agglomerate_diff_saga).
+    yield* spawn(reportAgglomerateDiffLoading, diffKey, progressCallback);
   } else {
     yield* call(progressCallback, true, "Tree generation done.");
   }
+}
+
+function* reportAgglomerateDiffLoading(
+  diffKey: string,
+  progressCallback: ProgressCallback,
+): Saga<void> {
+  const isDiffLoaded = yield* call(waitForAgglomerateDiff, diffKey);
+  yield* call(
+    progressCallback,
+    true,
+    isDiffLoaded ? "Tree and agglomerate diff loaded." : "Tree generation done.",
+  );
 }
 
 function* loadConnectomeAgglomerateTreeWithId(action: LoadAgglomerateTreeFromIdAction): Saga<void> {

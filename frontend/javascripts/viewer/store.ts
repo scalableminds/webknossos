@@ -159,6 +159,9 @@ export type AgglomerateDiffDescriptor = {
 };
 export type AgglomerateDiff = AgglomerateDiffDescriptor & {
   readonly status: "loading" | "loaded" | "failed";
+  // The agglomerate is compared to the reference agglomerate that contains the segment at this
+  // (floored) position in the coordinate system of the layer.
+  readonly positionInLayer: Vector3;
   // Set if the diff was requested while its agglomerate skeleton was still loading, so that it
   // is not considered obsolete until the agglomerate skeleton was added.
   readonly awaitsAgglomerateSkeleton: boolean;

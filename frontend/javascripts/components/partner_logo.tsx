@@ -6,17 +6,30 @@ export function PartnerLogo({ compact }: { compact: boolean }) {
   const partner = useWkSelector((state) => state.activeOrganization?.partner);
   if (partner == null) return null;
 
-  const logoUrl = compact ? (partner.compactLogoUrl ?? partner.logoUrl) : partner.logoUrl;
+  const compactLogoUrl = compact ? partner.compactLogoUrl : null;
+  const showsCompactLogo = compactLogoUrl != null;
+  // Phones have no room for a full logo. The class goes on the outermost element so that a
+  // surrounding link is hidden, too.
+  const hideOnPhonesClass = { "partner-logo-hidden-on-phones": !showsCompactLogo };
   const logo = (
     <img
-      src={logoUrl}
+      src={compactLogoUrl ?? partner.logoUrl}
       alt={partner.name}
-      className={classnames("partner-logo", { compact: compact && partner.compactLogoUrl != null })}
+      className={classnames("partner-logo", {
+        compact: showsCompactLogo,
+        ...(partner.linkUrl == null ? hideOnPhonesClass : {}),
+      })}
     />
   );
   if (partner.linkUrl == null) return logo;
   return (
-    <a href={partner.linkUrl} target="_blank" rel="noopener noreferrer" title={partner.name}>
+    <a
+      href={partner.linkUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={partner.name}
+      className={classnames(hideOnPhonesClass)}
+    >
       {logo}
     </a>
   );

@@ -1,9 +1,9 @@
-import { getAiModels, updateNovelUserExperienceInfos } from "admin/rest_api";
+import { getAiModels, getDatastores, updateNovelUserExperienceInfos } from "admin/rest_api";
 import { Alert, Avatar } from "antd";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import { useMemo } from "react";
 import { useDispatch } from "react-redux";
-import type { AiModel, APIPartner, APIUser } from "types/api_types";
+import { type AiModel, APIJobCommand, type APIPartner, type APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 
@@ -12,9 +12,11 @@ export function PartnerModelHint() {
   const partner = useWkSelector((state) => state.activeOrganization?.partner ?? null);
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const undismissedModels = useUndismissedPartnerModels(partner, activeUser);
+  const canRunAiInference = useCanRunAiInference(partner != null);
   const dismissHint = useDismissPartnerModelHint(activeUser);
 
-  if (partner == null) return null;
+  // The hint points to the "AI Analysis" button, which only exists if a worker can run inference jobs.
+  if (partner == null || !canRunAiInference) return null;
   return (
     <>
       {undismissedModels.map((model) => (
@@ -50,6 +52,24 @@ function useUndismissedPartnerModels(partner: APIPartner | null, activeUser: API
   return useMemo(
     () => models.filter((model) => !dismissedModelIds?.includes(model.id)),
     [models, dismissedModelIds],
+  );
+}
+
+const AI_INFERENCE_JOB_COMMANDS = [
+  APIJobCommand.INFER_NEURONS,
+  APIJobCommand.INFER_INSTANCES,
+  APIJobCommand.INFER_MITOCHONDRIA,
+];
+
+function useCanRunAiInference(isEnabled: boolean): boolean {
+  const { data: datastores = [] } = useQueryWithErrorHandling(
+    { queryKey: ["datastores"], queryFn: getDatastores, enabled: isEnabled },
+    "Could not load the datastores.",
+  );
+  return datastores.some((datastore) =>
+    AI_INFERENCE_JOB_COMMANDS.some((command) =>
+      datastore.jobsSupportedByAvailableWorkers.includes(command),
+    ),
   );
 }
 

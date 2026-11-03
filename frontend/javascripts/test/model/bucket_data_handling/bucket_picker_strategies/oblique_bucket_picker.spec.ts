@@ -29,6 +29,13 @@ const ISOTROPIC_MAGS: Vector3[] = [
   [8, 8, 8],
   [16, 16, 16],
 ];
+// z is not downsampled, so buckets stay thin along z while zooming out.
+const Z_NOT_DOWNSAMPLED_MAGS: Vector3[] = [
+  [1, 1, 1],
+  [2, 2, 1],
+  [4, 4, 1],
+  [8, 8, 1],
+];
 const PLANE_IDS = ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"] as const;
 // The picker also picks buckets up to one voxel away from a plane region (for interpolation).
 const MARGIN = 1 / constants.BUCKET_WIDTH;
@@ -210,6 +217,8 @@ const SCENARIOS: Scenario[] = [
   ["30°/20°/10°", [30, 20, 10], 1.3, 0, ANISOTROPIC_MAGS],
   ["30°/20°/10°, isotropic, mag index 1", [30, 20, 10], 3, 1, ISOTROPIC_MAGS],
   ["45°/45°/0°, isotropic", [45, 45, 0], 1, 0, ISOTROPIC_MAGS],
+  ["30°/20°/10°, z not downsampled, zoom 4", [30, 20, 10], 4, 3, Z_NOT_DOWNSAMPLED_MAGS],
+  ["30°/20°/10°, z not downsampled, zoom 16", [30, 20, 10], 16, 3, Z_NOT_DOWNSAMPLED_MAGS],
 ].map(([name, angles, zoom, logZoomStep, mags]) => {
   const isIsotropic = mags === ISOTROPIC_MAGS;
   const voxelSize: Vector3 = isIsotropic ? [1, 1, 1] : [11, 11, 24];
@@ -288,7 +297,50 @@ describe("Oblique bucket picker", () => {
     });
   }
 
+  // The planes' orientations are checked against world axes here, since the comparison above
+  // uses the same ROTATIONS as the picker.
+  const BUCKET_CENTER: Vector3 = [32 * 100 + 16, 32 * 200 + 16, 32 * 300 + 16];
   const emptyRect = { width: 0, height: 0, top: 0, left: 0 };
+  const PLANE_AXES = [
+    { planeId: "PLANE_XY", widthAxis: 0, heightAxis: 1, normalAxis: 2 },
+    { planeId: "PLANE_XZ", widthAxis: 0, heightAxis: 2, normalAxis: 1 },
+    { planeId: "PLANE_YZ", widthAxis: 2, heightAxis: 1, normalAxis: 0 },
+  ] as const;
+  for (const { planeId, widthAxis, heightAxis, normalAxis } of PLANE_AXES) {
+    it(`spans the world axes of ${planeId}`, () => {
+      const rects: PlaneRects = {
+        PLANE_XY: emptyRect,
+        PLANE_XZ: emptyRect,
+        PLANE_YZ: emptyRect,
+        TDView: emptyRect,
+        [planeId]: { width: 200, height: 100, top: 0, left: 0 },
+      };
+      const { priorities } = pick({
+        name: planeId,
+        mags: ISOTROPIC_MAGS,
+        position: BUCKET_CENTER,
+        matrix: makeMatrix([1, 1, 1], [0, 0, 0], BUCKET_CENTER, 1),
+        logZoomStep: 0,
+        rects,
+      });
+      const addresses = [...priorities.keys()]
+        .map((key) => key.split(",").map(Number))
+        .filter((address) => address[3] === 0);
+      // The buckets within halfExtent (plus the one-voxel margin) of the camera along an axis.
+      const getExpectedRange = (axis: number, halfExtent: number) => {
+        const first = Math.floor((BUCKET_CENTER[axis] - halfExtent - 1) / 32);
+        const last = Math.floor((BUCKET_CENTER[axis] + halfExtent + 1) / 32);
+        return Array.from({ length: last - first + 1 }, (_, i) => first + i);
+      };
+      const getPickedRange = (axis: number) =>
+        [...new Set(addresses.map((address) => address[axis]))].sort((a, b) => a - b);
+      expect(getPickedRange(widthAxis)).toEqual(getExpectedRange(widthAxis, 100));
+      expect(getPickedRange(heightAxis)).toEqual(getExpectedRange(heightAxis, 50));
+      expect(getPickedRange(normalAxis)).toEqual(
+        getExpectedRange(normalAxis, PREFETCH_BUCKET_FRACTION * 32),
+      );
+    });
+  }
 
   it("doesn't pick buckets for hidden viewports", () => {
     // The visible XY viewport is tiny and the camera is 4 voxels from the next bucket in x and y.

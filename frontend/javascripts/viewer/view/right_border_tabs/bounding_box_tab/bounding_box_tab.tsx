@@ -71,7 +71,8 @@ const BBOX_TABLE_HEIGHT_SLACK = 2;
 const CONTEXT_MENU_CLASS = "bbox-list-context-menu-overlay";
 const LAYER_SECTION_TOGGLE_CLASS = "bbox-layer-section-toggle";
 // Clicks on these controls inside a row edit the bounding box and must not toggle its selection.
-const ROW_CONTROL_SELECTOR = "input, textarea, button, .color-display-wrapper";
+const ROW_CONTROL_SELECTOR =
+  "input, textarea, button, .color-display-wrapper, .ant-input-affix-wrapper";
 // Clicks inside these elements of the tab do not count as clicks on the empty background.
 const NON_BACKGROUND_SELECTOR = `.ant-table-row, button, input, textarea, .${LAYER_SECTION_TOGGLE_CLASS}, .${CONTEXT_MENU_CLASS}`;
 const BOUNDING_BOX_TAB_ID = "bounding-box-tab";

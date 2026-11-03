@@ -358,8 +358,6 @@ export type NovelUserExperienceInfoType = {
   lastViewedWhatsNewTimestamp?: number;
   latestAcknowledgedMaintenanceInfo?: string;
   suppressManyBucketUpdatesWarning?: boolean;
-  // Ids of partner AI models whose dashboard hint the user dismissed.
-  dismissedPartnerModelHints?: string[];
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {

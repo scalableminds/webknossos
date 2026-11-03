@@ -4,6 +4,7 @@ import { loadReleaseNotes, type ReleaseNote } from "libs/release_notes";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { ModalWidth } from "theme";
+import { UserThemeConfigProvider } from "theme_provider";
 
 const YOUTUBE_URL_REGEX = /^https:\/\/(?:www\.)?youtube\.com\/watch\?v=([\w-]+)/;
 
@@ -17,6 +18,7 @@ function ReleaseNoteLink(props: { children: React.ReactNode; href: string }) {
         className="release-note-video"
         src={`https://www.youtube-nocookie.com/embed/${youtubeMatch[1]}?modestbranding=1`}
         title="YouTube video"
+        loading="lazy"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         referrerPolicy="strict-origin-when-cross-origin"
         allowFullScreen
@@ -26,7 +28,12 @@ function ReleaseNoteLink(props: { children: React.ReactNode; href: string }) {
   return <LinkRenderer {...props} />;
 }
 
-const RELEASE_NOTE_MARKDOWN_COMPONENTS = { a: ReleaseNoteLink };
+function ReleaseNoteImage({ src, alt }: { src?: string; alt?: string }) {
+  // Release notes contain large GIFs. Only load them once they are scrolled into view.
+  return <img src={src} alt={alt ?? ""} loading="lazy" />;
+}
+
+const RELEASE_NOTE_MARKDOWN_COMPONENTS = { a: ReleaseNoteLink, img: ReleaseNoteImage };
 
 function ReleaseNoteEntry({ note, isUnread }: { note: ReleaseNote; isUnread: boolean }) {
   return (
@@ -93,15 +100,18 @@ export function WhatsNewModal({
   unreadSinceTimestamp: number;
 }) {
   return (
-    <Modal
-      open={isOpen}
-      onCancel={onClose}
-      title="What's new in WEBKNOSSOS"
-      footer={null}
-      width={ModalWidth.Large}
-      destroyOnHidden
-    >
-      <ReleaseNoteList unreadSinceTimestamp={unreadSinceTimestamp} />
-    </Modal>
+    // The modal is opened from the dark navbar and would otherwise inherit its theme.
+    <UserThemeConfigProvider>
+      <Modal
+        open={isOpen}
+        onCancel={onClose}
+        title="What's new in WEBKNOSSOS"
+        footer={null}
+        width={ModalWidth.Large}
+        destroyOnHidden
+      >
+        <ReleaseNoteList unreadSinceTimestamp={unreadSinceTimestamp} />
+      </Modal>
+    </UserThemeConfigProvider>
   );
 }

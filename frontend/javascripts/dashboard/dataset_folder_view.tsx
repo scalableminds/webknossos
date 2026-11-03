@@ -128,7 +128,9 @@ function DatasetFolderViewInner(props: Props) {
   }, [context.datasets]);
 
   const renderNoDatasetsPlaceHolder = () => {
-    const cardContainerStyle = { width: 340, maxWidth: "100%" };
+    // A shrinkable flex basis instead of a fixed width: the cards sit in a table cell, which would
+    // grow to fit a fixed width (and overflow on phones) instead of applying the max width.
+    const cardContainerStyle = { flex: "0 1 340px", minWidth: 0 };
     const openPublicDatasetCard = (
       <div style={cardContainerStyle}>
         <Card
@@ -182,7 +184,6 @@ function DatasetFolderViewInner(props: Props) {
                     Open Dataset Upload & Import
                   </Button>
                 </Link>
-                ,
               </>
             }
           />
@@ -197,7 +198,8 @@ function DatasetFolderViewInner(props: Props) {
         align="center"
         gap={32}
         style={{
-          padding: "20px 50px 70px",
+          // No side padding, so that the cards keep their full width on phones.
+          padding: "20px 0 70px",
         }}
       >
         {features().isWkorgInstance ? openPublicDatasetCard : null}

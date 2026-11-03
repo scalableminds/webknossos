@@ -77,12 +77,13 @@ const getValueAt = (context: WebknossosTestContext, voxel: Vector3) =>
 const LAYERS = { [VOLUME_TRACING_ID]: "uint16", color: "uint8" } as const;
 
 // Holds back the response to the first request of the volume layer's bucket that
-// contains `position` until `release` is called. All requests are answered by `respond`.
+// contains `position` until `release` is called, or lets it fail with `fail`. All other
+// requests are answered by `respond`.
 function holdBackFirstRequestOfBucket(
   context: WebknossosTestContext,
   respond: ReturnType<typeof createBucketResponseFunction> | typeof respondWithoutData,
 ) {
-  const released = new Deferred<void, never>();
+  const released = new Deferred<void, Error>();
   let requestCount = 0;
   vi.mocked(context.mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
     async (url: string, payload: { data: Array<RequestBucketInfo> }) => {
@@ -100,7 +101,11 @@ function holdBackFirstRequestOfBucket(
       return respond(url, payload);
     },
   );
-  return { release: () => released.resolve(), getRequestCount: () => requestCount };
+  return {
+    release: () => released.resolve(),
+    fail: () => released.reject(new Error("The bucket request failed.")),
+    getRequestCount: () => requestCount,
+  };
 }
 
 // A bucket response in which neither the volume layer nor its fallback layer have
@@ -187,6 +192,36 @@ describe("Unsaved partial bucket updates", () => {
 
     expect(await getValueAt(context, position)).toBe(5);
     expect(heldRequest.getRequestCount()).toBe(1);
+  });
+
+  it<WebknossosTestContext>("are applied when a bucket whose request failed is requested again", async (context) => {
+    await setup(context);
+    vi.mocked(context.mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+      createBucketResponseFunction(LAYERS, 3, 0),
+    );
+    await context.api.data.reloadAllBuckets();
+
+    const heldRequest = holdBackFirstRequestOfBucket(
+      context,
+      createBucketResponseFunction(LAYERS, 3, 0),
+    );
+    const { cube } = Model.getSegmentationTracingLayer(VOLUME_TRACING_ID);
+    const bucket = cube.getOrCreateBucket(cube.positionToZoomedAddress(position, null, 0));
+    if (bucket.type !== "data") throw new Error("Expected a data bucket.");
+    // Without retries, unlike getDataValue, so that only the pull queue requests the
+    // bucket again.
+    const firstLoad = bucket.ensureLoaded(0).catch(() => {});
+    // The stroke is drawn while the bucket is requested, so the bucket has data. The
+    // bucket picker doesn't request a bucket with data again.
+    brushAt(position);
+    heldRequest.fail();
+    await firstLoad;
+
+    await vi.waitFor(() => expect(bucket.isLoaded()).toBe(true));
+    expect(heldRequest.getRequestCount()).toBe(2);
+    expect(await getValueAt(context, position)).toBe(5);
+    // The rest of the bucket holds the backend's data.
+    expect(await getValueAt(context, [60, 60, 43])).toBe(3);
   });
 
   it<WebknossosTestContext>("win over others' partial updates of the same voxels when rebasing", async (context) => {

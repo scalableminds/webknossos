@@ -444,6 +444,13 @@ export class DataBucket {
     return this.data != null;
   }
 
+  // Whether local changes wait for the backend's data. Such a bucket is requested
+  // again right away after a failure: it already has data, so the bucket picker
+  // wouldn't request it again.
+  hasChangesAwaitingBackendData(): boolean {
+    return this.fullBucketSaveState.dirty || this.partialUpdateState.pendingChanges.size > 0;
+  }
+
   getData(): BucketDataArray {
     const { data } = this;
 
@@ -622,8 +629,9 @@ export class DataBucket {
 
         // Notify awaiters (see ensureLoaded). Emitting an event on both outcomes is
         // important because a failure bucket falls back to UNREQUESTED and is only
-        // re-requested when it is dirty. Without it, a caller awaiting a non-dirty failure
-        // bucket (e.g. getDataForBoundingBox) would hang forever.
+        // re-requested when it has changes awaiting the backend's data. Without it, a
+        // caller awaiting any other failure bucket (e.g. getDataForBoundingBox) would hang
+        // forever.
         this.trigger(event);
 
         break;

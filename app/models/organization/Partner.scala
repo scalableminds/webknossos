@@ -51,7 +51,9 @@ class PartnerDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def insertOne(p: Partner): Fox[Unit] =
     for {
-      _ <- run(q"""INSERT INTO webknossos.partners(_id, name, logoUrl, compactLogoUrl, linkUrl, created, isDeleted)
-                   VALUES(${p._id}, ${p.name}, ${p.logoUrl}, ${p.compactLogoUrl}, ${p.linkUrl}, ${p.created}, ${p.isDeleted})""".asUpdate)
+      _ <- run(
+        q"""INSERT INTO webknossos.partners(_id, name, logoUrl, compactLogoUrl, linkUrl, created, isDeleted)
+                   VALUES(${p._id}, ${p.name}, ${p.logoUrl}, ${p.compactLogoUrl}, ${p.linkUrl}, ${p.created}, ${p.isDeleted})""".asUpdate
+      )
     } yield ()
 }

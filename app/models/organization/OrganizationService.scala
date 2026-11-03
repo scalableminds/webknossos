@@ -89,13 +89,15 @@ class OrganizationService @Inject() (
   // Partner branding is not secret, so it is read with GlobalAccessContext to also show it to anonymous users.
   // A partner that cannot be found (e.g. soft-deleted) counts as no partner, so the organization stays readable.
   private def findPartnerOf(organization: Organization): Fox[Option[Partner]] =
-    Fox.runOptional(organization._partner)(partnerId =>
-      partnerDAO.findOne(partnerId)(using GlobalAccessContext).shiftBox
-    ).flatMap {
-      case Some(Full(partner)) => Fox.successful(Some(partner))
-      case Some(f: Failure)    => f.toFox
-      case _                   => Fox.successful(None)
-    }
+    Fox
+      .runOptional(organization._partner)(partnerId =>
+        partnerDAO.findOne(partnerId)(using GlobalAccessContext).shiftBox
+      )
+      .flatMap {
+        case Some(Full(partner)) => Fox.successful(Some(partner))
+        case Some(f: Failure)    => f.toFox
+        case _                   => Fox.successful(None)
+      }
 
   def assertUsedStorageNotExceeded(
       organization: Organization,

@@ -30,10 +30,10 @@ Route registration is complete for both services (main app 287/287, datastore 13
 
 ### Main application
 - G6 analytics: call sites (signup, join_organization, send_invites, open_dataset, change_dataset_settings) and tests are in the code, but the checkpoint still says IN PROGRESS and the final suite/clippy/fmt run is not recorded. `analytics::spawn_heartbeat` exists but is NOT called from `main.rs`, so the 24 h `webknossos_heartbeat` does not run.
-- G8 pricing-plan expiry reminder: not started (no code).
-- G9 Mailchimp: not started (client, hourly ticker and 6 call sites; only comments and a debug log exist).
-- G10 virtual-dataset real-path bulk scan: only the per-dataset call exists (`dataset_lifecycle.rs`); no hourly job in `housekeeping.rs`.
-- G11 startup tasks: no `WK_INITIAL_DATA_ON_STARTUP`; initial data only via `POST /triggers/initialData`.
+- G8 pricing-plan expiry reminder: DONE 2026-11-03 (checkpoints/pricing-plan-expiry-reminder.md).
+- G9 Mailchimp: DONE 2026-11-03 (checkpoints/mailchimp.md).
+- G10 virtual-dataset real-path bulk scan: DONE 2026-11-03 (checkpoints/virtual-datasets-real-path-scan.md).
+- G11 startup tasks: DONE 2026-11-03 (`WK_INITIAL_DATA_ON_STARTUP`, default true).
 - G12 pool health logging and G13 `.env.example`/README hygiene: not started.
 - D1 product decision: mail bodies are plain text (no HTML templates, branding, Reply-To).
 - Known bug: compound merge returns 500 when a dataset layer has no mags (`datasets::data_source_for_rpc`).

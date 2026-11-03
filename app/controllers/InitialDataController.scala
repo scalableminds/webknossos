@@ -108,6 +108,7 @@ Samplecountry
     _id = ObjectId("68f0c0ffee0000000000000a"),
     name = "Test Partner",
     logoUrl = "/images/partners/test-partner-logo.svg",
+    compactLogoUrl = Some("/images/partners/test-partner-logo-compact.svg"),
     linkUrl = Some("https://example.com")
   )
   private val defaultOrganization =

@@ -16,6 +16,7 @@ case class Partner(
     _id: ObjectId,
     name: String,
     logoUrl: String,
+    compactLogoUrl: Option[String], // shown where the navbar is collapsed, falls back to logoUrl
     linkUrl: Option[String],
     created: Instant = Instant.now,
     isDeleted: Boolean = false
@@ -25,6 +26,7 @@ case class Partner(
       "id" -> _id,
       "name" -> name,
       "logoUrl" -> logoUrl,
+      "compactLogoUrl" -> compactLogoUrl,
       "linkUrl" -> linkUrl
     )
 }
@@ -40,6 +42,7 @@ class PartnerDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
         ObjectId(r._id),
         r.name,
         r.logourl,
+        r.compactlogourl,
         r.linkurl,
         Instant.fromSql(r.created),
         r.isdeleted
@@ -48,7 +51,7 @@ class PartnerDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def insertOne(p: Partner): Fox[Unit] =
     for {
-      _ <- run(q"""INSERT INTO webknossos.partners(_id, name, logoUrl, linkUrl, created, isDeleted)
-                   VALUES(${p._id}, ${p.name}, ${p.logoUrl}, ${p.linkUrl}, ${p.created}, ${p.isDeleted})""".asUpdate)
+      _ <- run(q"""INSERT INTO webknossos.partners(_id, name, logoUrl, compactLogoUrl, linkUrl, created, isDeleted)
+                   VALUES(${p._id}, ${p.name}, ${p.logoUrl}, ${p.compactLogoUrl}, ${p.linkUrl}, ${p.created}, ${p.isDeleted})""".asUpdate)
     } yield ()
 }

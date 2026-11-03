@@ -724,6 +724,8 @@ export type APIPartner = {
   readonly id: string;
   readonly name: string;
   readonly logoUrl: string;
+  // Shown where the navbar is collapsed. Falls back to logoUrl.
+  readonly compactLogoUrl: string | null;
   readonly linkUrl: string | null;
 };
 export type APIPricingPlanStatus = {

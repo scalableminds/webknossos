@@ -185,8 +185,18 @@ body {
     object-fit: contain;
     vertical-align: middle;
 
+    // The compact logo is shown where the navbar is collapsed (annotation view, phones).
+    &.compact {
+      height: 26px;
+      max-width: 40px;
+      margin-left: 4px;
+    }
+
+    // Phones have no room for a full partner logo.
     @media @smartphones {
-      display: none;
+      &:not(.compact) {
+        display: none;
+      }
     }
   }
 

@@ -11,6 +11,7 @@ CREATE TABLE webknossos.partners(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   name TEXT NOT NULL,
   logoUrl TEXT NOT NULL,
+  compactLogoUrl TEXT DEFAULT NULL, -- shown where the navbar is collapsed, falls back to logoUrl
   linkUrl TEXT DEFAULT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE

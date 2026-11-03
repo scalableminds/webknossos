@@ -930,7 +930,7 @@ function Navbar() {
               </>
             )}
           </Link>
-          <PartnerLogo />
+          <PartnerLogo compact={collapseAllNavItems} />
         </>
       ),
     },

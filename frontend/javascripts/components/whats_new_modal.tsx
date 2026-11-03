@@ -1,8 +1,8 @@
-import { Alert, Button, Divider, Flex, Modal, Spin, Tag, Typography } from "antd";
+import { Alert, Button, Card, Flex, Modal, Spin, Tag, Typography } from "antd";
 import Markdown, { LinkRenderer } from "libs/markdown_adapter";
 import { loadReleaseNotes, type ReleaseNote } from "libs/release_notes";
 import type React from "react";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ModalWidth } from "theme";
 
 const YOUTUBE_URL_REGEX = /^https:\/\/(?:www\.)?youtube\.com\/watch\?v=([\w-]+)/;
@@ -15,8 +15,10 @@ function ReleaseNoteLink(props: { children: React.ReactNode; href: string }) {
     return (
       <iframe
         className="release-note-video"
-        src={`https://www.youtube-nocookie.com/embed/${youtubeMatch[1]}?modestbranding=1`}
+        src={`https://www.youtube.com/embed/${youtubeMatch[1]}?modestbranding=1`}
         title="YouTube video"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerPolicy="strict-origin-when-cross-origin"
         allowFullScreen
       />
     );
@@ -28,7 +30,10 @@ const RELEASE_NOTE_MARKDOWN_COMPONENTS = { a: ReleaseNoteLink };
 
 function ReleaseNoteEntry({ note, isUnread }: { note: ReleaseNote; isUnread: boolean }) {
   return (
-    <article className="release-note">
+    <Card
+      className="release-note"
+      cover={note.featuredImage != null ? <img src={note.featuredImage} alt="" /> : undefined}
+    >
       <Flex align="baseline" gap="small" wrap>
         <Typography.Title level={2} style={{ marginTop: 0, marginBottom: 0 }}>
           {note.title}
@@ -38,14 +43,13 @@ function ReleaseNoteEntry({ note, isUnread }: { note: ReleaseNote; isUnread: boo
       <Typography.Paragraph type="secondary">
         {new Date(note.date).toLocaleDateString(undefined, { dateStyle: "long", timeZone: "UTC" })}
       </Typography.Paragraph>
-      {note.featuredImage != null ? <img src={note.featuredImage} alt="" /> : null}
       <Markdown components={RELEASE_NOTE_MARKDOWN_COMPONENTS}>{note.body}</Markdown>
       {note.featuredLink != null ? (
         <Button type="primary" href={note.featuredLink} target="_blank" rel="noreferrer noopener">
           {note.featuredLinkText || "Read more"}
         </Button>
       ) : null}
-    </article>
+    </Card>
   );
 }
 
@@ -77,12 +81,13 @@ function ReleaseNoteList({ unreadSinceTimestamp }: { unreadSinceTimestamp: numbe
       </Flex>
     );
   }
-  return releaseNotes.map((note, index) => (
-    <Fragment key={note.id}>
-      {index > 0 ? <Divider /> : null}
-      <ReleaseNoteEntry note={note} isUnread={note.date > unreadSinceTimestamp} />
-    </Fragment>
-  ));
+  return (
+    <Flex vertical gap="middle">
+      {releaseNotes.map((note) => (
+        <ReleaseNoteEntry key={note.id} note={note} isUnread={note.date > unreadSinceTimestamp} />
+      ))}
+    </Flex>
+  );
 }
 
 export function WhatsNewModal({

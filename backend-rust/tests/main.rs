@@ -62,6 +62,7 @@ mod notification_emails;
 mod object_ids;
 mod organization_pricing;
 mod organizations;
+mod pool_health_log;
 mod pricing_plan_expiry_reminder;
 mod process_lifecycle;
 mod projects_task_types;

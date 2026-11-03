@@ -62,6 +62,7 @@ pub struct Config {
         crate::background::pricing_plan_expiry_reminder::PricingPlanExpiryReminderConfig,
     pub virtual_datasets_real_path_scan:
         crate::background::virtual_datasets_real_path_scan::VirtualDatasetsRealPathScanConfig,
+    pub pool_health_log: crate::background::pool_health_log::PoolHealthLogConfig,
     pub main_view: crate::main_view::MainViewConfig,
 }
 
@@ -377,6 +378,7 @@ impl Config {
                 crate::background::pricing_plan_expiry_reminder::config_from_values(&values)?,
             virtual_datasets_real_path_scan:
                 crate::background::virtual_datasets_real_path_scan::config_from_values(&values)?,
+            pool_health_log: crate::background::pool_health_log::config_from_values(&values)?,
             main_view: crate::main_view::config_from_values(&values)?,
         };
         config.misc = crate::system::application_info::config_from_values(&values, &config)?;

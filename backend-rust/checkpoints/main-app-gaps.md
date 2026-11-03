@@ -1,7 +1,7 @@
 # Main-app gap inventory (non-route behavior Scala does that Rust does not)
 
 Status: DONE (read-only research agent, 2026-10-11). No source files edited.
-Update 2026-11-03: G1–G11, G13 and G14 are DONE (see each entry); G12 is in progress. Section 0
+Update 2026-11-03: G1–G14 are DONE (see each entry); only the wkorg sitemap (G14) is still missing. Section 0
 describes the state of 2026-10-11: `main.rs` now starts every background job listed here.
 Scope: `app/`, `conf/application.conf`, `util/`, `webknossos-tracingstore/.../cleanup/CleanUpService.scala`
 (WkCleanUpService) vs. `backend-rust/src` + checkpoints. Route registration is complete (287/287) and is NOT
@@ -174,9 +174,11 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
   server starts). Play does not take the lock, so a simultaneous first boot of Play and Rust can log one
   duplicate-key error (CUTOVER.md §2).
 
-### G12. Diagnostics — MISSING — P4
-- `ThreadPoolHealthLogger` (util) and `SlickPoolHealthLogger` every 10 min (`Startup.scala:72-75`). Rust could log
-  `pool.size()/num_idle()` periodically via G2. No metrics/Prometheus in Scala either.
+### G12. Diagnostics — DONE 2026-11-03
+- `ThreadPoolHealthLogger` (util) and `SlickPoolHealthLogger` every 10 min (`Startup.scala:72-75`). Rust:
+  `src/background/pool_health_log.rs` logs the sqlx pool (size/inUse/idle/max) and Tokio stable runtime metrics
+  every 10 min per instance (`WK_POOL_HEALTH_LOG_*`); WARN when all connections are in use (Scala always INFO).
+  `/metrics` shares the pool snapshot and adds Tokio gauges. See checkpoints/pool-health-log.md.
 
 ### G13. Config/doc hygiene — DONE 2026-11-03
 - `.env.example` lists ~45 vars; the crate reads ~95 `WK_*` vars (analytics, OIDC, Loki, SAM, sample org, upload

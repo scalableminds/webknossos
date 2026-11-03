@@ -140,20 +140,32 @@ impl Metrics {
         }
         drop(series);
         if let Some(pool) = pool {
+            let db = DbPoolSnapshot::of(pool);
             out.push_str("# HELP wk_db_pool_connections Database pool connections by state.\n");
             out.push_str("# TYPE wk_db_pool_connections gauge\n");
-            let idle = pool.num_idle() as u64;
-            let size = u64::from(pool.size());
-            let _ = writeln!(out, "wk_db_pool_connections{{state=\"idle\"}} {idle}");
+            let _ = writeln!(out, "wk_db_pool_connections{{state=\"idle\"}} {}", db.idle);
             let _ = writeln!(
                 out,
                 "wk_db_pool_connections{{state=\"in_use\"}} {}",
-                size.saturating_sub(idle)
+                db.in_use()
+            );
+            let _ = writeln!(out, "wk_db_pool_connections_max {}", db.max);
+        }
+        if let Some(runtime) = RuntimeSnapshot::current() {
+            let _ = writeln!(
+                out,
+                "# TYPE wk_tokio_workers gauge\nwk_tokio_workers {}",
+                runtime.workers
             );
             let _ = writeln!(
                 out,
-                "wk_db_pool_connections_max {}",
-                pool.options().get_max_connections()
+                "# TYPE wk_tokio_alive_tasks gauge\nwk_tokio_alive_tasks {}",
+                runtime.alive_tasks
+            );
+            let _ = writeln!(
+                out,
+                "# TYPE wk_tokio_global_queue_depth gauge\nwk_tokio_global_queue_depth {}",
+                runtime.global_queue_depth
             );
         }
         let (_, wall) = started();
@@ -171,6 +183,54 @@ impl Metrics {
             label(commit)
         );
         out
+    }
+}
+
+/// Connection counts of the sqlx pool, shared by `/metrics` and the pool health log.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DbPoolSnapshot {
+    /// Open connections (idle and in use).
+    pub size: u32,
+    pub idle: u32,
+    /// Configured `max_connections`.
+    pub max: u32,
+}
+
+impl DbPoolSnapshot {
+    pub fn of(pool: &PgPool) -> Self {
+        let size = pool.size();
+        Self {
+            size,
+            // `num_idle` is read after `size`; clamp so a connection closing in between never
+            // reports more idle than open connections.
+            idle: u32::try_from(pool.num_idle()).unwrap_or(u32::MAX).min(size),
+            max: pool.options().get_max_connections(),
+        }
+    }
+
+    pub fn in_use(self) -> u32 {
+        self.size.saturating_sub(self.idle)
+    }
+}
+
+/// Tokio's stable runtime metrics for the current runtime.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RuntimeSnapshot {
+    pub workers: usize,
+    pub alive_tasks: usize,
+    /// Tasks waiting in the runtime's shared injection queue (not yet picked up by a worker).
+    pub global_queue_depth: usize,
+}
+
+impl RuntimeSnapshot {
+    /// `None` outside a Tokio runtime.
+    pub fn current() -> Option<Self> {
+        let metrics = tokio::runtime::Handle::try_current().ok()?.metrics();
+        Some(Self {
+            workers: metrics.num_workers(),
+            alive_tasks: metrics.num_alive_tasks(),
+            global_queue_depth: metrics.global_queue_depth(),
+        })
     }
 }
 

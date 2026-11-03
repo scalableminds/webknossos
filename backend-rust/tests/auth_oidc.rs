@@ -229,6 +229,7 @@ fn app(db: &TestDb, oidc: OidcConfig) -> Router {
         initial_data_on_startup: false,
         pricing_plan_expiry_reminder: Default::default(),
         virtual_datasets_real_path_scan: Default::default(),
+        pool_health_log: Default::default(),
         main_view: Default::default(),
     };
     router_with_config(AppState::from_config(db.pool.clone(), &config), &config)

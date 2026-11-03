@@ -24,3 +24,11 @@ fn renders_counters_and_cumulative_histogram_buckets() {
     assert!(text.contains(&format!("{} 2", bucket("+Inf"))));
     assert!(text.contains("wk_build_info{version=\"dev\",commit=\"abc\\\"def\"} 1"));
 }
+
+#[tokio::test]
+async fn renders_tokio_runtime_gauges_inside_a_runtime() {
+    let text = Metrics::default().render(None, "dev", "abc");
+    assert!(text.contains("wk_tokio_workers 1\n"), "{text}");
+    assert!(text.contains("wk_tokio_alive_tasks "));
+    assert!(text.contains("wk_tokio_global_queue_depth "));
+}

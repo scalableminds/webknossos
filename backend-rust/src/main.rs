@@ -36,6 +36,10 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             webknossos_backend::stores::client::ServiceClients::new(config.service_client.clone())?,
             &config.virtual_datasets_real_path_scan,
         );
+    let pool_health_log = webknossos_backend::background::pool_health_log::spawn(
+        pool.clone(),
+        &config.pool_health_log,
+    );
     let worker_liveness = webknossos_backend::background::worker_liveness::spawn(
         pool.clone(),
         &config.worker_liveness,
@@ -128,6 +132,12 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     .is_err()
     {
         tracing::warn!("Virtual dataset realpath scan did not stop before the shutdown deadline");
+    }
+    if tokio::time::timeout(config.shutdown_timeout, pool_health_log.shutdown())
+        .await
+        .is_err()
+    {
+        tracing::warn!("Pool health log did not stop before the shutdown deadline");
     }
     if tokio::time::timeout(config.shutdown_timeout, worker_liveness.shutdown())
         .await

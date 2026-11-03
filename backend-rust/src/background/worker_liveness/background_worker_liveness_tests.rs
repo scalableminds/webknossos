@@ -32,6 +32,7 @@ fn defaults_match_scala() {
 fn overrides() {
     let config = config_from_values(&values(&[
         ("WK_WORKER_LIVENESS_ENABLED", "false"),
+        // Removed variables: Play hard-codes the timings, so they are ignored.
         ("WK_WORKER_LIVENESS_INTERVAL_SECONDS", "5"),
         ("WK_WORKER_LIVENESS_INITIAL_DELAY_SECONDS", "0"),
         ("WK_WORKER_LIVENESS_RE_REPORT_INTERVAL_SECONDS", "120"),
@@ -42,8 +43,8 @@ fn overrides() {
         WorkerLivenessConfig {
             schedule: JobSchedule {
                 enabled: false,
-                interval: Duration::from_secs(5),
-                initial_delay: Duration::ZERO,
+                interval: DEFAULT_INTERVAL,
+                initial_delay: DEFAULT_INITIAL_DELAY,
             },
             re_report_interval: Duration::from_secs(120),
         }
@@ -54,9 +55,6 @@ fn overrides() {
 fn invalid_values_are_rejected() {
     for (key, value) in [
         ("WK_WORKER_LIVENESS_ENABLED", "yes"),
-        ("WK_WORKER_LIVENESS_INTERVAL_SECONDS", "0"),
-        ("WK_WORKER_LIVENESS_INTERVAL_SECONDS", "-5"),
-        ("WK_WORKER_LIVENESS_INITIAL_DELAY_SECONDS", "x"),
         ("WK_WORKER_LIVENESS_RE_REPORT_INTERVAL_SECONDS", "0"),
         (
             "WK_WORKER_LIVENESS_RE_REPORT_INTERVAL_SECONDS",

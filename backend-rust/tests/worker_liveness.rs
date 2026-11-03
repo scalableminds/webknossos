@@ -39,7 +39,6 @@ async fn mock_slack() -> (SlackNotificationService, Bodies) {
     tokio::spawn(async move { axum::serve(listener, hook).await.unwrap() });
     let service = SlackNotificationService::new(&SlackConfig {
         uri: Some(uri),
-        verbose_logging_enabled: false,
         public_uri: PUBLIC_URI.into(),
     });
     (service, bodies)

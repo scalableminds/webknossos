@@ -78,7 +78,7 @@ impl HousekeepingJob {
         }
     }
 
-    /// Infix of the `WK_HOUSEKEEPING_<JOB>_*` environment variables.
+    /// Infix of the `WK_HOUSEKEEPING_<JOB>_ENABLED` environment variables.
     pub const fn env_name(self) -> &'static str {
         match self {
             Self::ExpiredTokens => "EXPIRED_TOKENS",
@@ -239,12 +239,10 @@ impl HousekeepingConfig {
 ///
 /// - `WK_HOUSEKEEPING_ENABLED` (default `true`): master switch.
 /// - `WK_HOUSEKEEPING_<JOB>_ENABLED` (default `true`).
-/// - `WK_HOUSEKEEPING_<JOB>_INTERVAL_SECONDS` (> 0, Scala default).
-/// - `WK_HOUSEKEEPING_<JOB>_INITIAL_DELAY_SECONDS` (>= 0; default: the job's interval, 10 s for
-///   the mutex job).
 ///
-/// The expired-token interval defaults to `WK_DATASTORE_TOKEN_EXPIRY_SECONDS` (86400) as Scala
-/// registers that job with `dataStoreExpiry`.
+/// Intervals and initial delays are fixed to Scala's ([`HousekeepingJob::default_schedule`]); the
+/// expired-token interval is `WK_DATASTORE_TOKEN_EXPIRY_SECONDS` (86400) as Scala registers that
+/// job with `dataStoreExpiry`.
 pub fn config_from_values(
     values: &HashMap<String, String>,
 ) -> Result<HousekeepingConfig, ConfigError> {
@@ -256,14 +254,9 @@ pub fn config_from_values(
     config.enabled = env.bool_or("WK_HOUSEKEEPING_ENABLED", true)?;
     for job in HousekeepingJob::ALL {
         let prefix = format!("WK_HOUSEKEEPING_{}", job.env_name());
-        let mut default = job.default_schedule(datastore_token_expiry);
-        if job != HousekeepingJob::ExpiredAnnotationMutexes {
-            // The first run waits one (configured) interval.
-            if let Some(interval) = env.seconds(&format!("{prefix}_INTERVAL_SECONDS"), false)? {
-                default.initial_delay = interval;
-            }
-        }
-        *config.schedule_mut(job) = JobSchedule::from_env(env, &prefix, default)?;
+        *config.schedule_mut(job) = job
+            .default_schedule(datastore_token_expiry)
+            .with_enabled_from_env(env, &prefix)?;
     }
     Ok(config)
 }

@@ -31,15 +31,16 @@ deleting Initializing annotations does not delete `annotation_layers` (no FK in 
 |---|---|---|
 | `WK_HOUSEKEEPING_ENABLED` | `true` | master switch; false -> `spawn` returns an empty handle |
 | `WK_HOUSEKEEPING_<JOB>_ENABLED` | `true` | per job |
-| `WK_HOUSEKEEPING_<JOB>_INTERVAL_SECONDS` | 86400; EXPIRED_TOKENS = `WK_DATASTORE_TOKEN_EXPIRY_SECONDS` (86400); EXPIRED_ANNOTATION_MUTEXES = 3600 | > 0, <= i32::MAX |
-| `WK_HOUSEKEEPING_<JOB>_INITIAL_DELAY_SECONDS` | = job interval (Scala fixed delay); EXPIRED_ANNOTATION_MUTEXES = 10 | >= 0, <= i32::MAX |
+
+Intervals and initial delays are fixed, as Play hard-codes them: every job runs every day, first after one day
+(Scala fixed delay). EXPIRED_TOKENS uses `WK_DATASTORE_TOKEN_EXPIRY_SECONDS` (86400) for both.
+EXPIRED_ANNOTATION_MUTEXES runs every hour, first after 10 s.
 
 `<JOB>` in EXPIRED_TOKENS, OLD_TOKENS, EXPIRED_INVITES, INITIALIZING_ANNOTATIONS, EXPIRED_THUMBNAILS,
 EXPIRED_ANNOTATION_MUTEXES. Invalid booleans/numbers are config errors (message starts with the key).
 Default `true` (Scala parity) deviates from the main-app-gaps.md suggestion "default false while Play runs": the
 jobs are idempotent single statements, so running beside Scala is harmless. Parent may flip the default.
-Note: as in Scala, a process restarted more often than the interval never runs the daily jobs; set
-`..._INITIAL_DELAY_SECONDS` lower if that matters.
+Note: as in Scala, a process restarted more often than the interval never runs the daily jobs.
 
 ## Design
 - `scheduler.rs`: `Job::new(name, JobSchedule{enabled, interval, initial_delay}, || async -> Result<JobOutcome,

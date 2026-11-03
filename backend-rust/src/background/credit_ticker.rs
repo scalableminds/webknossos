@@ -58,19 +58,17 @@ impl Default for CreditTickerConfig {
 /// Parses settings from environment values (called by config.rs).
 ///
 /// - `WK_CREDIT_TICKER_ENABLED` (default `true`; Scala has no switch, the ticker always runs).
-/// - `WK_CREDIT_TICKER_INTERVAL_SECONDS` (> 0, default 1200).
-/// - `WK_CREDIT_TICKER_INITIAL_DELAY_SECONDS` (>= 0, default 10).
+///
+/// Interval (20 min) and initial delay (10 s) are fixed, as in `FreeCreditTransactionService`.
 ///
 /// The granted amount is `WK_JOBS_MONTHLY_FREE_MILLI_CREDITS` (`MiscConfig`), passed to [`spawn`].
 pub fn config_from_values(
     values: &HashMap<String, String>,
 ) -> Result<CreditTickerConfig, ConfigError> {
     Ok(CreditTickerConfig {
-        schedule: JobSchedule::from_env(
-            Env::new(values),
-            "WK_CREDIT_TICKER",
-            CreditTickerConfig::default().schedule,
-        )?,
+        schedule: CreditTickerConfig::default()
+            .schedule
+            .with_enabled_from_env(Env::new(values), "WK_CREDIT_TICKER")?,
     })
 }
 

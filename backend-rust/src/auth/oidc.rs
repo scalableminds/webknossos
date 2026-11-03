@@ -59,6 +59,12 @@ pub(crate) mod messages {
         "/auth/login?redirectPage=https://discuss.webknossos.org";
 }
 
+/// Log target of Play's `singleSignOn.openIdConnect.verboseLogging` output, emitted at TRACE.
+/// Play warns this output may contain secrets, so it sits outside the `webknossos_backend`
+/// namespace and below DEBUG: neither `RUST_LOG=debug` nor `webknossos_backend=trace` enables it,
+/// only naming it (`RUST_LOG=info,oidc_verbose=trace`) or a global `RUST_LOG=trace`.
+pub const VERBOSE_LOG_TARGET: &str = "oidc_verbose";
+
 /// `singleSignOn.openIdConnect.*`, `features.openIdConnectEnabled` and
 /// `webKnossos.user.ssoKey`. Defaults mirror conf/application.conf.
 #[derive(Clone)]
@@ -69,7 +75,6 @@ pub struct OidcConfig {
     /// `None` when configured empty (no HTTP basic auth at the token endpoint).
     pub client_secret: Option<String>,
     pub scope: String,
-    pub verbose_logging: bool,
     /// Discourse SSO HMAC key; empty means unconfigured.
     pub sso_key: String,
     pub http_timeout: Duration,
@@ -83,7 +88,6 @@ impl Default for OidcConfig {
             client_id: "myclient".into(),
             client_secret: Some("myClientSecret".into()),
             scope: "openid profile email".into(),
-            verbose_logging: false,
             sso_key: String::new(),
             http_timeout: Duration::from_secs(30),
         }
@@ -102,7 +106,6 @@ impl fmt::Debug for OidcConfig {
                 &self.client_secret.is_some(),
             )
             .field("scope", &self.scope)
-            .field("verbose_logging", &self.verbose_logging)
             .field(
                 "sso_key",
                 &(!self.sso_key.is_empty()).then_some("[redacted]"),
@@ -116,7 +119,8 @@ impl fmt::Debug for OidcConfig {
 ///
 /// WK_OIDC_ENABLED=false, WK_OIDC_PROVIDER_URL, WK_OIDC_CLIENT_ID,
 /// WK_OIDC_CLIENT_SECRET (empty disables basic auth), WK_OIDC_SCOPE,
-/// WK_OIDC_VERBOSE_LOGGING=false, WK_OIDC_HTTP_TIMEOUT_SECONDS=30, WK_SSO_KEY="".
+/// WK_OIDC_HTTP_TIMEOUT_SECONDS=30, WK_SSO_KEY="". Play's `verboseLogging` is the
+/// [`VERBOSE_LOG_TARGET`] log target.
 pub fn config_from_values(values: &HashMap<String, String>) -> Result<OidcConfig, ConfigError> {
     let env = Env::new(values);
     let defaults = OidcConfig::default();
@@ -140,7 +144,6 @@ pub fn config_from_values(values: &HashMap<String, String>) -> Result<OidcConfig
             Some(secret) => Some(secret.clone()),
         },
         scope: text("WK_OIDC_SCOPE").unwrap_or(defaults.scope),
-        verbose_logging: env.bool_or("WK_OIDC_VERBOSE_LOGGING", false)?,
         sso_key: values.get("WK_SSO_KEY").cloned().unwrap_or_default(),
         http_timeout,
     })
@@ -359,9 +362,7 @@ impl Oidc {
     }
 
     fn log(&self, message: &str) {
-        if self.config.verbose_logging {
-            tracing::info!("{message}");
-        }
+        tracing::trace!(target: VERBOSE_LOG_TARGET, "{message}");
     }
 
     async fn get_json<T: serde::de::DeserializeOwned>(&self, url: &str) -> Result<T, ClientError> {

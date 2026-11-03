@@ -5,7 +5,6 @@ use chrono::TimeZone;
 fn config_defaults_disable_sending() {
     let config = config_from_values(&HashMap::new()).unwrap();
     assert!(config.uri.is_none());
-    assert!(!config.verbose_logging_enabled);
     assert_eq!(config.public_uri, "http://localhost:9000");
     assert!(!SlackNotificationService::new(&config).is_enabled());
     let empty = HashMap::from([("WK_SLACK_NOTIFICATIONS_URI".into(), " ".into())]);
@@ -20,17 +19,12 @@ fn config_parses_values_and_redacts_uri() {
             "https://hooks.slack.com/services/T0/B0/hooktoken".to_owned(),
         ),
         (
-            "WK_SLACK_NOTIFICATIONS_VERBOSE_LOGGING_ENABLED".to_owned(),
-            "true".to_owned(),
-        ),
-        (
             "WK_PUBLIC_URL".to_owned(),
             "https://wk.example.org/".to_owned(),
         ),
     ]);
     let config = config_from_values(&values).unwrap();
     assert!(config.uri.is_some());
-    assert!(config.verbose_logging_enabled);
     assert_eq!(config.public_uri, "https://wk.example.org");
     assert!(!format!("{config:?}").contains("hooktoken"));
     let service = SlackNotificationService::new(&config);
@@ -40,7 +34,6 @@ fn config_parses_values_and_redacts_uri() {
     for (key, value) in [
         ("WK_SLACK_NOTIFICATIONS_URI", "not a url"),
         ("WK_SLACK_NOTIFICATIONS_URI", "ftp://example.org/hook"),
-        ("WK_SLACK_NOTIFICATIONS_VERBOSE_LOGGING_ENABLED", "yes"),
     ] {
         let values = HashMap::from([(key.to_owned(), value.to_owned())]);
         assert!(config_from_values(&values).is_err(), "{key}={value}");

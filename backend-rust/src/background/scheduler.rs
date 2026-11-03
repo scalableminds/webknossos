@@ -51,17 +51,16 @@ pub struct JobSchedule {
 }
 
 impl JobSchedule {
-    /// Reads `{prefix}_ENABLED`, `{prefix}_INTERVAL_SECONDS` (> 0) and
-    /// `{prefix}_INITIAL_DELAY_SECONDS` (>= 0), each falling back to `default`.
-    pub(crate) fn from_env(env: Env<'_>, prefix: &str, default: Self) -> Result<Self, ConfigError> {
+    /// This schedule with `enabled` read from `{prefix}_ENABLED` (falling back to `self.enabled`).
+    /// Interval and initial delay stay as given: Play hard-codes them, so they are not configurable.
+    pub(crate) fn with_enabled_from_env(
+        self,
+        env: Env<'_>,
+        prefix: &str,
+    ) -> Result<Self, ConfigError> {
         Ok(Self {
-            enabled: env.bool_or(&format!("{prefix}_ENABLED"), default.enabled)?,
-            interval: env
-                .seconds(&format!("{prefix}_INTERVAL_SECONDS"), false)?
-                .unwrap_or(default.interval),
-            initial_delay: env
-                .seconds(&format!("{prefix}_INITIAL_DELAY_SECONDS"), true)?
-                .unwrap_or(default.initial_delay),
+            enabled: env.bool_or(&format!("{prefix}_ENABLED"), self.enabled)?,
+            ..self
         })
     }
 }

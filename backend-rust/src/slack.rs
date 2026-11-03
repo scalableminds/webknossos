@@ -4,8 +4,9 @@
 //!
 //! Messages are POSTed to the configured incoming-webhook URI as
 //! `{"attachments":[{"title":"<title> reported from WEBKNOSSOS at <http.uri>","text":<msg>,"color":<color>}]}`.
-//! Without a URI the service is disabled (verbose mode logs the message
-//! instead). Sending never blocks or fails the caller: the rate limit (30
+//! Without a URI the service is disabled. Play's
+//! `slackNotifications.verboseLoggingEnabled` output is a DEBUG event on this
+//! module's target (`RUST_LOG=info,webknossos_backend::slack=debug`). Sending never blocks or fails the caller: the rate limit (30
 //! messages per fixed one-minute window, as in Scala) is checked
 //! synchronously, the POST runs on a spawned task and errors are only logged.
 //!
@@ -44,8 +45,6 @@ pub struct SlackConfig {
     /// `slackNotifications.uri`; `None` (empty) disables sending. The webhook
     /// URI is a credential and is never printed.
     pub uri: Option<String>,
-    /// `slackNotifications.verboseLoggingEnabled`.
-    pub verbose_logging_enabled: bool,
     /// `http.uri` without trailing slash (from `WK_PUBLIC_URL`).
     pub public_uri: String,
 }
@@ -54,7 +53,6 @@ impl Default for SlackConfig {
     fn default() -> Self {
         Self {
             uri: None,
-            verbose_logging_enabled: false,
             public_uri: DEFAULT_PUBLIC_URI.into(),
         }
     }
@@ -64,15 +62,13 @@ impl fmt::Debug for SlackConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SlackConfig")
             .field("uri_configured", &self.uri.is_some())
-            .field("verbose_logging_enabled", &self.verbose_logging_enabled)
             .field("public_uri", &self.public_uri)
             .finish()
     }
 }
 
 /// Parses settings from environment values (called by config.rs):
-/// `WK_SLACK_NOTIFICATIONS_URI` (default empty = disabled),
-/// `WK_SLACK_NOTIFICATIONS_VERBOSE_LOGGING_ENABLED` (default false) and
+/// `WK_SLACK_NOTIFICATIONS_URI` (default empty = disabled) and
 /// `WK_PUBLIC_URL` (default `http://localhost:9000`, validated by config.rs).
 pub fn config_from_values(values: &HashMap<String, String>) -> Result<SlackConfig, ConfigError> {
     let env = Env::new(values);
@@ -90,8 +86,6 @@ pub fn config_from_values(values: &HashMap<String, String>) -> Result<SlackConfi
             Some(raw.to_owned())
         }
     };
-    let verbose_logging_enabled =
-        env.bool_or("WK_SLACK_NOTIFICATIONS_VERBOSE_LOGGING_ENABLED", false)?;
     let public_uri = env
         .get("WK_PUBLIC_URL")
         .map(|raw| match url::Url::parse(raw) {
@@ -99,11 +93,7 @@ pub fn config_from_values(values: &HashMap<String, String>) -> Result<SlackConfi
             Err(_) => raw.trim_end_matches('/').to_owned(),
         })
         .unwrap_or_else(|| DEFAULT_PUBLIC_URI.into());
-    Ok(SlackConfig {
-        uri,
-        verbose_logging_enabled,
-        public_uri,
-    })
+    Ok(SlackConfig { uri, public_uri })
 }
 
 /// SlackClient.testAndSetRateLimit: a fixed window that restarts with the
@@ -162,7 +152,6 @@ struct Inner {
     name: String,
     /// `http.uri`, for links in messages.
     public_uri: String,
-    verbose: bool,
     sender: Option<Sender>,
 }
 
@@ -207,7 +196,6 @@ impl SlackNotificationService {
             inner: Arc::new(Inner {
                 name: format!("WEBKNOSSOS at {}", config.public_uri),
                 public_uri: config.public_uri.clone(),
-                verbose: config.verbose_logging_enabled,
                 sender,
             }),
         }
@@ -269,7 +257,8 @@ impl SlackNotificationService {
         dataset_id: &ObjectId,
         add_variant_label: &str,
     ) {
-        if !self.is_enabled() && !self.inner.verbose {
+        // Without a webhook the lookup only feeds the DEBUG "not sending" event.
+        if !self.is_enabled() && !tracing::enabled!(tracing::Level::DEBUG) {
             return;
         }
         let Ok(runtime) = tokio::runtime::Handle::try_current() else {
@@ -359,9 +348,7 @@ impl SlackNotificationService {
     ) -> Option<tokio::task::JoinHandle<()>> {
         let message = attachment(&self.inner.name, title, msg, color);
         let Some(sender) = &self.inner.sender else {
-            if self.inner.verbose {
-                tracing::info!(message = %message, "Not sending slack notification as it was not configured");
-            }
+            tracing::debug!(message = %message, "Not sending slack notification as it was not configured");
             return None;
         };
         let (allowed, sent) = {
@@ -382,9 +369,7 @@ impl SlackNotificationService {
             );
             return None;
         }
-        if self.inner.verbose {
-            tracing::info!(message = %message, sent_since_reset = sent, "Sending slack notification");
-        }
+        tracing::debug!(message = %message, sent_since_reset = sent, "Sending slack notification");
         let Ok(runtime) = tokio::runtime::Handle::try_current() else {
             tracing::warn!(title = %title, "Not sending slack notification outside of a Tokio runtime");
             return None;

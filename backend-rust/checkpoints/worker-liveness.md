@@ -17,9 +17,8 @@ config.rs, main.rs, Cargo.*, scheduler.rs, slack.rs (existing `notice_worker_mis
 | key | default | notes |
 |---|---|---|
 | `WK_WORKER_LIVENESS_ENABLED` | true | Scala has no switch |
-| `WK_WORKER_LIVENESS_INTERVAL_SECONDS` | 60 | > 0 |
-| `WK_WORKER_LIVENESS_INITIAL_DELAY_SECONDS` | 60 | >= 0 |
 | `WK_WORKER_LIVENESS_RE_REPORT_INTERVAL_SECONDS` | 3600 | > 0, `jobs.workerLivenessReReportInterval` |
+Interval and initial delay are fixed at 1 minute, as Play hard-codes them.
 Timeout: existing `WK_WORKER_LIVENESS_TIMEOUT_SECONDS` (`config.jobs.worker_liveness_timeout`), spawn parameter.
 
 ## Implementation (src/worker_liveness.rs)

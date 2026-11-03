@@ -28,8 +28,8 @@ Status: DONE (2026-11-03). Wired in `src/main.rs` (spawn + shutdown) and `Config
 | key | default | rule |
 |---|---|---|
 | WK_VIRTUAL_DATASETS_REAL_PATH_SCAN_ENABLED | true (Scala has no switch) | bool |
-| WK_VIRTUAL_DATASETS_REAL_PATH_SCAN_INTERVAL_SECONDS | 3600 | > 0 |
-| WK_VIRTUAL_DATASETS_REAL_PATH_SCAN_INITIAL_DELAY_SECONDS | 10 | >= 0 |
+
+Interval (1 h) and initial delay (10 s) are fixed, as Play hard-codes them.
 
 ## Deviations
 - A failing datastore (unknown/soft-deleted datastore, unreachable, non-2xx) is logged and the remaining datastores

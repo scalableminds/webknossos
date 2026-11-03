@@ -32,8 +32,7 @@ Status: DONE (2026-10-11), waiting only on the parent's main.rs wiring (below). 
 
 ## Config (.env.example appended)
 - `WK_CREDIT_TICKER_ENABLED`: default true.
-- `WK_CREDIT_TICKER_INTERVAL_SECONDS`: must be > 0; default 1200.
-- `WK_CREDIT_TICKER_INITIAL_DELAY_SECONDS`: must be >= 0; default 10.
+- Interval (20 min) and initial delay (10 s) are fixed, as Play hard-codes them.
 - The granted amount is the existing `WK_JOBS_MONTHLY_FREE_MILLI_CREDITS` (`config.misc.monthly_free_milli_credits`).
 
 ## main.rs wiring (parent-owned, NOT yet applied)

@@ -10,6 +10,34 @@ fn schedule(interval_ms: u64, initial_delay_ms: u64) -> JobSchedule {
     }
 }
 
+#[test]
+fn only_the_enabled_switch_is_read_from_env() {
+    let values = std::collections::HashMap::from([
+        ("TEST_JOB_ENABLED".to_owned(), "false".to_owned()),
+        // Removed variables (Play hard-codes the timings): they must not change the schedule.
+        ("TEST_JOB_INTERVAL_SECONDS".to_owned(), "1".to_owned()),
+        ("TEST_JOB_INITIAL_DELAY_SECONDS".to_owned(), "0".to_owned()),
+    ]);
+    let default = schedule(60_000, 10_000);
+    let parsed = default
+        .with_enabled_from_env(Env::new(&values), "TEST_JOB")
+        .unwrap();
+    assert_eq!(
+        parsed,
+        JobSchedule {
+            enabled: false,
+            ..default
+        }
+    );
+    let invalid =
+        std::collections::HashMap::from([("TEST_JOB_ENABLED".to_owned(), "maybe".to_owned())]);
+    assert!(
+        default
+            .with_enabled_from_env(Env::new(&invalid), "TEST_JOB")
+            .is_err()
+    );
+}
+
 async fn wait_until(mut condition: impl FnMut() -> bool) {
     let deadline = Instant::now() + Duration::from_secs(5);
     while !condition() {

@@ -75,19 +75,17 @@ impl Default for VirtualDatasetsRealPathScanConfig {
 /// Parses settings from environment values (called by config.rs).
 ///
 /// - `WK_VIRTUAL_DATASETS_REAL_PATH_SCAN_ENABLED` (default `true`; Scala has no switch).
-/// - `WK_VIRTUAL_DATASETS_REAL_PATH_SCAN_INTERVAL_SECONDS` (> 0, default 3600).
-/// - `WK_VIRTUAL_DATASETS_REAL_PATH_SCAN_INITIAL_DELAY_SECONDS` (>= 0, default 10).
+///
+/// Interval (1 h) and initial delay (10 s) are fixed, as in `VirtualDatasetsRealPathScanService`.
 pub fn config_from_values(
     values: &HashMap<String, String>,
 ) -> Result<VirtualDatasetsRealPathScanConfig, ConfigError> {
     let env = Env::new(values);
     let defaults = VirtualDatasetsRealPathScanConfig::default();
     Ok(VirtualDatasetsRealPathScanConfig {
-        schedule: JobSchedule::from_env(
-            env,
-            "WK_VIRTUAL_DATASETS_REAL_PATH_SCAN",
-            defaults.schedule,
-        )?,
+        schedule: defaults
+            .schedule
+            .with_enabled_from_env(env, "WK_VIRTUAL_DATASETS_REAL_PATH_SCAN")?,
     })
 }
 

@@ -84,11 +84,10 @@ impl Default for WorkerLivenessConfig {
 /// Parses worker liveness monitor settings from environment values (called by config.rs).
 ///
 /// - `WK_WORKER_LIVENESS_ENABLED` (default `true`; Scala has no switch).
-/// - `WK_WORKER_LIVENESS_INTERVAL_SECONDS` (> 0, default 60).
-/// - `WK_WORKER_LIVENESS_INITIAL_DELAY_SECONDS` (>= 0, default 60).
 /// - `WK_WORKER_LIVENESS_RE_REPORT_INTERVAL_SECONDS` (> 0, default 3600;
 ///   `jobs.workerLivenessReReportInterval`).
 ///
+/// Interval and initial delay are fixed at 1 minute, as in Scala's `WorkerLivenessService`.
 /// The liveness timeout itself is `WK_WORKER_LIVENESS_TIMEOUT_SECONDS` (`JobsConfig`).
 pub fn config_from_values(
     values: &HashMap<String, String>,
@@ -96,7 +95,9 @@ pub fn config_from_values(
     let env = Env::new(values);
     let defaults = WorkerLivenessConfig::default();
     Ok(WorkerLivenessConfig {
-        schedule: JobSchedule::from_env(env, "WK_WORKER_LIVENESS", defaults.schedule)?,
+        schedule: defaults
+            .schedule
+            .with_enabled_from_env(env, "WK_WORKER_LIVENESS")?,
         re_report_interval: env
             .seconds("WK_WORKER_LIVENESS_RE_REPORT_INTERVAL_SECONDS", false)?
             .unwrap_or(defaults.re_report_interval),

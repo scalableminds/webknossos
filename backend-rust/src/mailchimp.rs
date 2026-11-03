@@ -134,8 +134,8 @@ impl fmt::Debug for MailchimpConfig {
 /// Parses settings from environment values (called by config.rs):
 /// `WK_MAILCHIMP_HOST` (default empty = disabled; an absolute HTTP(S) URL otherwise),
 /// `WK_MAILCHIMP_LIST_ID`, `WK_MAILCHIMP_USER`, `WK_MAILCHIMP_PASSWORD` (default empty) and
-/// `WK_MAILCHIMP_TICKER_{ENABLED,INTERVAL_SECONDS,INITIAL_DELAY_SECONDS}` (default true, 3600,
-/// 3600; the ticker only runs with a host).
+/// `WK_MAILCHIMP_TICKER_ENABLED` (default true; the ticker only runs with a host). Interval and
+/// initial delay are fixed at 1 hour, as in Scala's `MailchimpTicker`.
 pub fn config_from_values(
     values: &HashMap<String, String>,
 ) -> Result<MailchimpConfig, ConfigError> {
@@ -160,7 +160,9 @@ pub fn config_from_values(
         list_id: env.text("WK_MAILCHIMP_LIST_ID", "").trim().to_owned(),
         user: env.text("WK_MAILCHIMP_USER", ""),
         password: env.text("WK_MAILCHIMP_PASSWORD", ""),
-        ticker: JobSchedule::from_env(env, "WK_MAILCHIMP_TICKER", default.ticker)?,
+        ticker: default
+            .ticker
+            .with_enabled_from_env(env, "WK_MAILCHIMP_TICKER")?,
     })
 }
 

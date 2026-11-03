@@ -52,14 +52,16 @@ impl Default for PoolHealthLogConfig {
 /// Parses settings from environment values (called by config.rs).
 ///
 /// - `WK_POOL_HEALTH_LOG_ENABLED` (default `true`; Scala has no switch).
-/// - `WK_POOL_HEALTH_LOG_INTERVAL_SECONDS` (> 0, default 600).
-/// - `WK_POOL_HEALTH_LOG_INITIAL_DELAY_SECONDS` (>= 0, default 600).
+///
+/// Interval and initial delay are fixed at 10 minutes, as in Play's health loggers.
 pub fn config_from_values(
     values: &HashMap<String, String>,
 ) -> Result<PoolHealthLogConfig, ConfigError> {
     let defaults = PoolHealthLogConfig::default();
     Ok(PoolHealthLogConfig {
-        schedule: JobSchedule::from_env(Env::new(values), "WK_POOL_HEALTH_LOG", defaults.schedule)?,
+        schedule: defaults
+            .schedule
+            .with_enabled_from_env(Env::new(values), "WK_POOL_HEALTH_LOG")?,
     })
 }
 

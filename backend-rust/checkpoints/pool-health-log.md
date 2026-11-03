@@ -26,8 +26,8 @@ Status: DONE (2026-11-03). Wired in `src/main.rs` (spawn + shutdown) and `Config
 | key | default | rule |
 |---|---|---|
 | WK_POOL_HEALTH_LOG_ENABLED | true (Scala has no switch) | bool |
-| WK_POOL_HEALTH_LOG_INTERVAL_SECONDS | 600 | > 0 |
-| WK_POOL_HEALTH_LOG_INITIAL_DELAY_SECONDS | 600 | >= 0 |
+
+Interval and initial delay are fixed at 10 minutes, as Play hard-codes them.
 
 ## Deviations
 - WARN (instead of INFO) with ` All database connections are in use.` when `in_use >= max`; sqlx exposes no waiter

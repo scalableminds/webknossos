@@ -185,6 +185,7 @@ fn config_defaults_and_overrides() {
         ("WK_MAILCHIMP_USER", "user"),
         ("WK_MAILCHIMP_PASSWORD", "pw"),
         ("WK_MAILCHIMP_TICKER_ENABLED", "false"),
+        // Removed variables: Play hard-codes the timings, so they are ignored.
         ("WK_MAILCHIMP_TICKER_INTERVAL_SECONDS", "60"),
         ("WK_MAILCHIMP_TICKER_INITIAL_DELAY_SECONDS", "0"),
     ]))
@@ -198,8 +199,8 @@ fn config_defaults_and_overrides() {
             password: "pw".into(),
             ticker: JobSchedule {
                 enabled: false,
-                interval: Duration::from_secs(60),
-                initial_delay: Duration::ZERO,
+                interval: DEFAULT_TICKER_INTERVAL,
+                initial_delay: DEFAULT_TICKER_INTERVAL,
             },
         }
     );
@@ -217,7 +218,7 @@ fn invalid_config_is_rejected() {
         ("WK_MAILCHIMP_HOST", "us1.api.mailchimp.com"),
         ("WK_MAILCHIMP_HOST", "ftp://example.org"),
         ("WK_MAILCHIMP_TICKER_ENABLED", "yes"),
-        ("WK_MAILCHIMP_TICKER_INTERVAL_SECONDS", "0"),
+        ("WK_MAILCHIMP_TICKER_ENABLED", "1"),
     ] {
         let error = config_from_values(&values(&[(key, value)])).unwrap_err();
         assert!(error.0.starts_with(key), "{key}={value}: {error}");

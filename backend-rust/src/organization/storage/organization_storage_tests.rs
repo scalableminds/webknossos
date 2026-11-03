@@ -43,9 +43,10 @@ fn config_overrides() {
     let config = config_from_values(&values(&[
         ("WK_USED_STORAGE_ENABLED", "false"),
         ("WK_USED_STORAGE_TICKER_INTERVAL_SECONDS", "30"),
-        ("WK_USED_STORAGE_INITIAL_DELAY_SECONDS", "0"),
         ("WK_USED_STORAGE_RESCAN_INTERVAL_SECONDS", "3600"),
         ("WK_USED_STORAGE_SCANS_PER_TICK", "0"),
+        // Removed variables: Play hard-codes these, so they are ignored.
+        ("WK_USED_STORAGE_INITIAL_DELAY_SECONDS", "0"),
         ("WK_USED_STORAGE_PAUSE_AFTER_ORGANIZATION_SECONDS", "0"),
     ]))
     .unwrap();
@@ -55,11 +56,11 @@ fn config_overrides() {
             schedule: JobSchedule {
                 enabled: false,
                 interval: Duration::from_secs(30),
-                initial_delay: Duration::ZERO,
+                initial_delay: DEFAULT_INITIAL_DELAY,
             },
             rescan_interval: Duration::from_secs(3600),
             scans_per_tick: 0,
-            pause_after_each_organization: Duration::ZERO,
+            pause_after_each_organization: DEFAULT_PAUSE_AFTER_EACH_ORGANIZATION,
         }
     );
 }
@@ -70,11 +71,9 @@ fn config_rejects_invalid_values() {
         ("WK_USED_STORAGE_ENABLED", "yes"),
         ("WK_USED_STORAGE_TICKER_INTERVAL_SECONDS", "0"),
         ("WK_USED_STORAGE_TICKER_INTERVAL_SECONDS", "2147483648"),
-        ("WK_USED_STORAGE_INITIAL_DELAY_SECONDS", "-1"),
         ("WK_USED_STORAGE_RESCAN_INTERVAL_SECONDS", "1d"),
         ("WK_USED_STORAGE_SCANS_PER_TICK", "-5"),
         ("WK_USED_STORAGE_SCANS_PER_TICK", "2147483648"),
-        ("WK_USED_STORAGE_PAUSE_AFTER_ORGANIZATION_SECONDS", "x"),
     ] {
         let error = config_from_values(&values(&[(key, value)])).unwrap_err();
         assert!(error.0.starts_with(key), "{error}");

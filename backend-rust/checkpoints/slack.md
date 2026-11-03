@@ -7,11 +7,12 @@ Status: DONE (agent slack-client, 2026-10-11). Parent TODO: one main.rs block (b
 - Body `{"attachments":[{"title":"<title> reported from WEBKNOSSOS at <http.uri>","text":<msg>,"color":<c>}]}`;
   colors warn `#ff8a00`, info `#333ccc`, success `#049b4a`, error `#e10000`.
 - Rate limit: fixed window, synchronized; a message more than 1 min after the window start opens a new window
-  (count 1), otherwise allowed while count < 30. Empty uri: no-op (verbose: log). `rpc.postJson` is not awaited.
+  (count 1), otherwise allowed while count < 30. Empty uri: no-op (DEBUG log). `rpc.postJson` is not awaited.
 
 ## Config (Config.slack, `slack::config_from_values`)
 - `WK_SLACK_NOTIFICATIONS_URI` (`slackNotifications.uri`, default empty = disabled; must be absolute http(s)).
-- `WK_SLACK_NOTIFICATIONS_VERBOSE_LOGGING_ENABLED` (default false).
+- Verbose logging (`slackNotifications.verboseLoggingEnabled`) is DEBUG on the `webknossos_backend::slack` target
+  (`RUST_LOG=...,webknossos_backend::slack=debug`).
 - `WK_PUBLIC_URL` (`http.uri`) for titles and links. Appended to `.env.example`.
 
 ## Implementation (src/slack.rs)

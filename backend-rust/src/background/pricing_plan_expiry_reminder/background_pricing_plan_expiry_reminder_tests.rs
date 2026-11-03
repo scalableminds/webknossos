@@ -26,6 +26,7 @@ fn overrides() {
     let config = config_from_values(&values(&[
         ("WK_PRICING_PLAN_EXPIRY_REMINDER_ENABLED", "true"),
         ("WK_PRICING_PLAN_EXPIRY_REMINDER_INTERVAL_SECONDS", "60"),
+        // Removed variable: Play hard-codes the initial delay, so it is ignored.
         ("WK_PRICING_PLAN_EXPIRY_REMINDER_INITIAL_DELAY_SECONDS", "0"),
         (
             "WK_PRICING_PLAN_EXPIRY_REMINDER_LEAD_TIMES_DAYS",
@@ -40,7 +41,7 @@ fn overrides() {
             schedule: JobSchedule {
                 enabled: true,
                 interval: Duration::from_secs(60),
-                initial_delay: Duration::ZERO,
+                initial_delay: DEFAULT_INITIAL_DELAY,
             },
             lead_times_days: vec![60, 3, 1],
             trial_lead_times_days: vec![],
@@ -77,7 +78,6 @@ fn invalid_values_are_rejected() {
     for (key, value) in [
         ("WK_PRICING_PLAN_EXPIRY_REMINDER_ENABLED", "yes"),
         ("WK_PRICING_PLAN_EXPIRY_REMINDER_INTERVAL_SECONDS", "0"),
-        ("WK_PRICING_PLAN_EXPIRY_REMINDER_INITIAL_DELAY_SECONDS", "x"),
         ("WK_PRICING_PLAN_EXPIRY_REMINDER_LEAD_TIMES_DAYS", "30;14"),
         ("WK_PRICING_PLAN_EXPIRY_REMINDER_LEAD_TIMES_DAYS", "-1"),
         (

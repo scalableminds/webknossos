@@ -17,9 +17,10 @@ fn defaults_match_scala() {
 }
 
 #[test]
-fn overrides() {
+fn only_the_switch_is_configurable() {
     let config = config_from_values(&values(&[
         ("WK_CREDIT_TICKER_ENABLED", "false"),
+        // Removed variables: Play hard-codes the timings, so they are ignored.
         ("WK_CREDIT_TICKER_INTERVAL_SECONDS", "60"),
         ("WK_CREDIT_TICKER_INITIAL_DELAY_SECONDS", "0"),
     ]))
@@ -28,8 +29,8 @@ fn overrides() {
         config.schedule,
         JobSchedule {
             enabled: false,
-            interval: Duration::from_secs(60),
-            initial_delay: Duration::ZERO,
+            interval: DEFAULT_INTERVAL,
+            initial_delay: DEFAULT_INITIAL_DELAY,
         }
     );
 }
@@ -38,10 +39,7 @@ fn overrides() {
 fn invalid_values_are_rejected() {
     for (key, value) in [
         ("WK_CREDIT_TICKER_ENABLED", "yes"),
-        ("WK_CREDIT_TICKER_INTERVAL_SECONDS", "0"),
-        ("WK_CREDIT_TICKER_INTERVAL_SECONDS", "-5"),
-        ("WK_CREDIT_TICKER_INTERVAL_SECONDS", "2147483648"),
-        ("WK_CREDIT_TICKER_INITIAL_DELAY_SECONDS", "x"),
+        ("WK_CREDIT_TICKER_ENABLED", "1"),
     ] {
         let error = config_from_values(&values(&[(key, value)])).unwrap_err();
         assert!(error.0.starts_with(key), "{key}={value}: {error}");

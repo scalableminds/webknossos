@@ -26,11 +26,12 @@ fn defaults_match_scala() {
 }
 
 #[test]
-fn overrides_and_datastore_expiry_default() {
+fn switches_and_datastore_expiry() {
     let config = config_from_values(&values(&[
         ("WK_DATASTORE_TOKEN_EXPIRY_SECONDS", "600"),
         ("WK_HOUSEKEEPING_ENABLED", "false"),
         ("WK_HOUSEKEEPING_OLD_TOKENS_ENABLED", "false"),
+        // Removed variables: Play hard-codes the timings, so they are ignored.
         ("WK_HOUSEKEEPING_EXPIRED_THUMBNAILS_INTERVAL_SECONDS", "120"),
         ("WK_HOUSEKEEPING_EXPIRED_INVITES_INITIAL_DELAY_SECONDS", "0"),
         (
@@ -47,16 +48,13 @@ fn overrides_and_datastore_expiry_default() {
     );
     assert!(!config.old_tokens.enabled);
     assert!(config.expired_invites.enabled);
-    assert_eq!(config.expired_thumbnails.interval, Duration::from_secs(120));
-    assert_eq!(
-        config.expired_thumbnails.initial_delay,
-        Duration::from_secs(120)
-    );
-    assert_eq!(config.expired_invites.initial_delay, Duration::ZERO);
+    assert_eq!(config.expired_thumbnails.interval, DAY);
+    assert_eq!(config.expired_thumbnails.initial_delay, DAY);
+    assert_eq!(config.expired_invites.initial_delay, DAY);
     assert_eq!(config.expired_invites.interval, DAY);
     assert_eq!(
         config.expired_annotation_mutexes.interval,
-        Duration::from_secs(60)
+        Duration::from_secs(60 * 60)
     );
     assert_eq!(
         config.expired_annotation_mutexes.initial_delay,
@@ -69,13 +67,8 @@ fn invalid_values_are_rejected() {
     for (key, value) in [
         ("WK_HOUSEKEEPING_ENABLED", "yes"),
         ("WK_HOUSEKEEPING_EXPIRED_TOKENS_ENABLED", "1"),
-        ("WK_HOUSEKEEPING_OLD_TOKENS_INTERVAL_SECONDS", "0"),
-        ("WK_HOUSEKEEPING_OLD_TOKENS_INTERVAL_SECONDS", "-5"),
-        (
-            "WK_HOUSEKEEPING_EXPIRED_INVITES_INTERVAL_SECONDS",
-            "2147483648",
-        ),
-        ("WK_HOUSEKEEPING_EXPIRED_INVITES_INITIAL_DELAY_SECONDS", "x"),
+        ("WK_DATASTORE_TOKEN_EXPIRY_SECONDS", "0"),
+        ("WK_DATASTORE_TOKEN_EXPIRY_SECONDS", "-5"),
     ] {
         let error = config_from_values(&values(&[(key, value)])).unwrap_err();
         assert!(error.0.starts_with(key), "{key}={value}: {error}");

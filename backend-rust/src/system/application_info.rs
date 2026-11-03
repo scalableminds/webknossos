@@ -87,7 +87,6 @@ pub struct AnalyticsConfig {
     pub key: String,
     pub session_pause: Duration,
     pub save_to_database_enabled: bool,
-    pub verbose_logging_enabled: bool,
     /// `uri|key` pairs; parsed lazily like Play (a malformed entry fails ingestion).
     pub well_known_uris: Vec<String>,
 }
@@ -214,7 +213,6 @@ impl Default for MiscConfig {
                 key: String::new(),
                 session_pause: Duration::from_secs(30 * 60),
                 save_to_database_enabled: false,
-                verbose_logging_enabled: false,
                 well_known_uris: Vec::new(),
             },
             sample_organization: SampleOrganizationConfig {
@@ -349,7 +347,6 @@ pub(crate) fn config_from_values(
             session_pause,
             save_to_database_enabled: env
                 .bool_or("WK_ANALYTICS_SAVE_TO_DATABASE_ENABLED", false)?,
-            verbose_logging_enabled: env.bool_or("WK_ANALYTICS_VERBOSE_LOGGING_ENABLED", false)?,
             well_known_uris: env
                 .get("WK_ANALYTICS_WELL_KNOWN_URIS")
                 .map(|list| {

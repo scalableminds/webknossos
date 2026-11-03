@@ -112,17 +112,25 @@ impl PricingPlanExpiryReminderConfig {
 ///
 /// - `WK_PRICING_PLAN_EXPIRY_REMINDER_ENABLED` (default `false`, as in Scala).
 /// - `WK_PRICING_PLAN_EXPIRY_REMINDER_INTERVAL_SECONDS` (> 0, default 21600 = 6 h).
-/// - `WK_PRICING_PLAN_EXPIRY_REMINDER_INITIAL_DELAY_SECONDS` (>= 0, default 300).
 /// - `WK_PRICING_PLAN_EXPIRY_REMINDER_LEAD_TIMES_DAYS` (comma-separated non-negative days,
 ///   default `30,14,7`; empty means none).
 /// - `WK_PRICING_PLAN_EXPIRY_REMINDER_TRIAL_LEAD_TIMES_DAYS` (same format, default `7`).
+///
+/// The initial delay is fixed at 5 minutes, as in `PricingPlanExpiryReminderService`.
 pub fn config_from_values(
     values: &HashMap<String, String>,
 ) -> Result<PricingPlanExpiryReminderConfig, ConfigError> {
     let env = Env::new(values);
     let defaults = PricingPlanExpiryReminderConfig::default();
     Ok(PricingPlanExpiryReminderConfig {
-        schedule: JobSchedule::from_env(env, "WK_PRICING_PLAN_EXPIRY_REMINDER", defaults.schedule)?,
+        schedule: JobSchedule {
+            interval: env
+                .seconds("WK_PRICING_PLAN_EXPIRY_REMINDER_INTERVAL_SECONDS", false)?
+                .unwrap_or(defaults.schedule.interval),
+            ..defaults
+                .schedule
+                .with_enabled_from_env(env, "WK_PRICING_PLAN_EXPIRY_REMINDER")?
+        },
         lead_times_days: days_list(
             env,
             "WK_PRICING_PLAN_EXPIRY_REMINDER_LEAD_TIMES_DAYS",

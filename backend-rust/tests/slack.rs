@@ -62,7 +62,6 @@ async fn wait_for(bodies: &Bodies, count: usize) -> Vec<Value> {
 fn slack_config(uri: &str) -> SlackConfig {
     SlackConfig {
         uri: Some(uri.to_owned()),
-        verbose_logging_enabled: false,
         public_uri: PUBLIC_URI.into(),
     }
 }

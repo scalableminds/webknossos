@@ -38,10 +38,10 @@ Not touched: lib.rs, config.rs, main.rs, Cargo.*, scheduler.rs. The scaffold sig
 |---|---|---|
 | WK_USED_STORAGE_ENABLED | true (Scala has no switch) | bool |
 | WK_USED_STORAGE_TICKER_INTERVAL_SECONDS | 600 | > 0, <= i32::MAX |
-| WK_USED_STORAGE_INITIAL_DELAY_SECONDS | 60 | >= 0 |
 | WK_USED_STORAGE_RESCAN_INTERVAL_SECONDS | 86400 | >= 0 |
 | WK_USED_STORAGE_SCANS_PER_TICK | 10 | >= 0, <= i32::MAX |
-| WK_USED_STORAGE_PAUSE_AFTER_ORGANIZATION_SECONDS | 5 (hard-coded in Scala) | >= 0 |
+
+The initial delay (1 min) and the pause after each organization (5 s) are fixed, as Play hard-codes them.
 Invalid values are reported as config errors, and each message starts with the key.
 
 ## Deviations

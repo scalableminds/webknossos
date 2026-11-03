@@ -97,7 +97,7 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
 - Agent `slack-client` (~45-60 min): owned new `src/slack.rs` (client + rate limiter, Secret-wrapped uri, Debug
   redaction) + replacing the log-only lines in job_workers.rs, task_creation.rs, browser_auth_onboarding.rs,
   remote_datastore_dataset_report.rs, credit_transactions.rs (one-line edits; coordinate ownership). Parent: config
-  `WK_SLACK_NOTIFICATIONS_URI`, `WK_SLACK_NOTIFICATIONS_VERBOSE_LOGGING_ENABLED`, AppState/Extension wiring.
+  `WK_SLACK_NOTIFICATIONS_URI`, AppState/Extension wiring (verbose logging: `RUST_LOG` target `webknossos_backend::slack=debug`).
   Include job duration labels (`JobService.durationLabel`).
 
 ### G5. Worker liveness monitor — DONE (checkpoints/worker-liveness.md)
@@ -135,7 +135,7 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
   mailing owner+admins `DefaultMails.pricingPlanExpiryReminderMail` (`app/mail/DefaultMails.scala:119`).
 - Rust: `src/background/pricing_plan_expiry_reminder.rs` (+ `_dao.rs`, `_tests.rs`), spawned in `main.rs` with the
   app's `MailSender`; existing `mail::templates::pricing_plan_expiry_reminder`; env
-  `WK_PRICING_PLAN_EXPIRY_REMINDER_{ENABLED,INTERVAL_SECONDS,INITIAL_DELAY_SECONDS,LEAD_TIMES_DAYS,TRIAL_LEAD_TIMES_DAYS}`
+  `WK_PRICING_PLAN_EXPIRY_REMINDER_{ENABLED,INTERVAL_SECONDS,LEAD_TIMES_DAYS,TRIAL_LEAD_TIMES_DAYS}`
   (disabled by default); per-tick advisory lock. Tests: 9 unit, 2 DB (`tests/pricing_plan_expiry_reminder.rs`).
 - Deviations (see `checkpoints/pricing-plan-expiry-reminder.md`): `paidUntil` read at millisecond precision like
   Play's `Instant`; negative lead times rejected at startup; an unknown plan value fails only that organization.
@@ -192,6 +192,20 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
   placeholders); the last four (`WK_OPERATOR_DATA`, `WK_TERMS_OF_SERVICE_URL`,
   `WK_TERMS_OF_SERVICE_ACCEPTANCE_DEADLINE`, `WK_SAMPLE_USER_EMAIL2`) were added then. Check with
   `grep -rhoE '"WK_[A-Z0-9_]+' src | sort -u` against `.env.example`.
+- Removed variables (2026-11-03). Play hard-codes these timings, so Rust now does too (only `_ENABLED` switches
+  and the timings Play reads from its config stay configurable):
+  `WK_CREDIT_TICKER_{INTERVAL,INITIAL_DELAY}_SECONDS` (20 min / 10 s),
+  `WK_MAILCHIMP_TICKER_{INTERVAL,INITIAL_DELAY}_SECONDS` (1 h / 1 h),
+  `WK_VIRTUAL_DATASETS_REAL_PATH_SCAN_{INTERVAL,INITIAL_DELAY}_SECONDS` (1 h / 10 s),
+  `WK_WORKER_LIVENESS_{INTERVAL,INITIAL_DELAY}_SECONDS` (1 min / 1 min),
+  `WK_POOL_HEALTH_LOG_{INTERVAL,INITIAL_DELAY}_SECONDS` (10 min / 10 min),
+  `WK_PRICING_PLAN_EXPIRY_REMINDER_INITIAL_DELAY_SECONDS` (5 min),
+  `WK_HOUSEKEEPING_<JOB>_{INTERVAL,INITIAL_DELAY}_SECONDS` for all six jobs (1 day / 1 day; expired tokens
+  `WK_DATASTORE_TOKEN_EXPIRY_SECONDS`; annotation mutexes 1 h / 10 s),
+  `WK_USED_STORAGE_INITIAL_DELAY_SECONDS` (1 min) and `WK_USED_STORAGE_PAUSE_AFTER_ORGANIZATION_SECONDS` (5 s).
+  The verbose-logging switches `WK_OIDC_VERBOSE_LOGGING`, `WK_ANALYTICS_VERBOSE_LOGGING_ENABLED` and
+  `WK_SLACK_NOTIFICATIONS_VERBOSE_LOGGING_ENABLED` became `RUST_LOG` targets (`oidc_verbose=trace`,
+  `webknossos_backend::system::analytics=debug`, `webknossos_backend::slack=debug`; see `.env.example`).
 
 ### G14. Frontend serving (main view, OpenGraph, static files) — DONE 2026-11-03 except the wkorg sitemap
 - Found after the original inventory: the route coverage only counts `conf/webknossos.latest.routes`, but Play's

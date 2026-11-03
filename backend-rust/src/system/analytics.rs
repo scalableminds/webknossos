@@ -362,29 +362,23 @@ async fn emit(
     };
     let analytics = &config.analytics;
     if analytics.save_to_database_enabled {
-        if analytics.verbose_logging_enabled {
-            tracing::info!(event_type = %event.event_type, session_id, "Storing analytics event");
-        }
+        tracing::debug!(event_type = %event.event_type, session_id, "Storing analytics event");
         if let Err(error) =
             system_analytics_dao::insert_many(pool, std::slice::from_ref(&event)).await
         {
             tracing::warn!(%error, "Storing analytics event failed");
         }
-    } else if analytics.verbose_logging_enabled {
-        tracing::info!(event_type = %event.event_type, session_id, "Not storing analytics event");
+    } else {
+        tracing::debug!(event_type = %event.event_type, session_id, "Not storing analytics event");
     }
     if analytics.uri.is_empty() {
-        if analytics.verbose_logging_enabled {
-            tracing::info!(
-                event_type = %event.event_type,
-                "Not sending analytics event, since uri is not configured"
-            );
-        }
+        tracing::debug!(
+            event_type = %event.event_type,
+            "Not sending analytics event, since uri is not configured"
+        );
         return Ok(());
     }
-    if analytics.verbose_logging_enabled {
-        tracing::info!(event_type = %event.event_type, session_id, "Sending analytics event");
-    }
+    tracing::debug!(event_type = %event.event_type, session_id, "Sending analytics event");
     // rpc(uri).silent.postJson: failures are not reported.
     let body = json!({"api_key": analytics.key, "events": [event.to_json()]});
     let result = misc

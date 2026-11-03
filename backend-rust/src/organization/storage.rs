@@ -406,10 +406,11 @@ impl Default for UsedStorageConfig {
 /// - `WK_USED_STORAGE_ENABLED` (default `true`; Scala has no switch, the ticker always runs and
 ///   only scans datastores with `reportUsedStorageEnabled`).
 /// - `WK_USED_STORAGE_TICKER_INTERVAL_SECONDS` (> 0, default 600).
-/// - `WK_USED_STORAGE_INITIAL_DELAY_SECONDS` (>= 0, default 60).
 /// - `WK_USED_STORAGE_RESCAN_INTERVAL_SECONDS` (>= 0, default 86400).
 /// - `WK_USED_STORAGE_SCANS_PER_TICK` (>= 0, default 10).
-/// - `WK_USED_STORAGE_PAUSE_AFTER_ORGANIZATION_SECONDS` (>= 0, default 5).
+///
+/// The initial delay (1 min) and the pause after each organization (5 s) are fixed, as in
+/// `UsedStorageService`.
 pub fn config_from_values(
     values: &HashMap<String, String>,
 ) -> Result<UsedStorageConfig, ConfigError> {
@@ -435,11 +436,7 @@ pub fn config_from_values(
                 false,
                 DEFAULT_INTERVAL,
             )?,
-            initial_delay: seconds(
-                "WK_USED_STORAGE_INITIAL_DELAY_SECONDS",
-                true,
-                DEFAULT_INITIAL_DELAY,
-            )?,
+            initial_delay: DEFAULT_INITIAL_DELAY,
         },
         rescan_interval: seconds(
             "WK_USED_STORAGE_RESCAN_INTERVAL_SECONDS",
@@ -447,11 +444,7 @@ pub fn config_from_values(
             DEFAULT_RESCAN_INTERVAL,
         )?,
         scans_per_tick,
-        pause_after_each_organization: seconds(
-            "WK_USED_STORAGE_PAUSE_AFTER_ORGANIZATION_SECONDS",
-            true,
-            DEFAULT_PAUSE_AFTER_EACH_ORGANIZATION,
-        )?,
+        pause_after_each_organization: DEFAULT_PAUSE_AFTER_EACH_ORGANIZATION,
     })
 }
 

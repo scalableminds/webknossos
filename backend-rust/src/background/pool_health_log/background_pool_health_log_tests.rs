@@ -26,6 +26,7 @@ fn defaults_match_scala() {
 fn config_reads_env() {
     let config = config_from_values(&values(&[
         ("WK_POOL_HEALTH_LOG_ENABLED", "false"),
+        // Removed variables: Play hard-codes the timings, so they are ignored.
         ("WK_POOL_HEALTH_LOG_INTERVAL_SECONDS", "60"),
         ("WK_POOL_HEALTH_LOG_INITIAL_DELAY_SECONDS", "0"),
     ]))
@@ -34,14 +35,13 @@ fn config_reads_env() {
         config.schedule,
         JobSchedule {
             enabled: false,
-            interval: Duration::from_secs(60),
-            initial_delay: Duration::ZERO,
+            interval: DEFAULT_INTERVAL,
+            initial_delay: DEFAULT_INITIAL_DELAY,
         }
     );
     for (key, value) in [
         ("WK_POOL_HEALTH_LOG_ENABLED", "maybe"),
-        ("WK_POOL_HEALTH_LOG_INTERVAL_SECONDS", "0"),
-        ("WK_POOL_HEALTH_LOG_INITIAL_DELAY_SECONDS", "x"),
+        ("WK_POOL_HEALTH_LOG_ENABLED", "1"),
     ] {
         let error = config_from_values(&values(&[(key, value)])).unwrap_err();
         assert!(error.0.starts_with(key), "{key}={value}: {error}");

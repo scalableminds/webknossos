@@ -51,6 +51,7 @@ fn defaults_match_scala() {
 fn config_reads_env() {
     let config = config_from_values(&values(&[
         ("WK_VIRTUAL_DATASETS_REAL_PATH_SCAN_ENABLED", "false"),
+        // Removed variables: Play hard-codes the timings, so they are ignored.
         ("WK_VIRTUAL_DATASETS_REAL_PATH_SCAN_INTERVAL_SECONDS", "120"),
         (
             "WK_VIRTUAL_DATASETS_REAL_PATH_SCAN_INITIAL_DELAY_SECONDS",
@@ -62,17 +63,13 @@ fn config_reads_env() {
         config.schedule,
         JobSchedule {
             enabled: false,
-            interval: Duration::from_secs(120),
-            initial_delay: Duration::ZERO,
+            interval: DEFAULT_INTERVAL,
+            initial_delay: DEFAULT_INITIAL_DELAY,
         }
     );
     for (key, value) in [
         ("WK_VIRTUAL_DATASETS_REAL_PATH_SCAN_ENABLED", "maybe"),
-        ("WK_VIRTUAL_DATASETS_REAL_PATH_SCAN_INTERVAL_SECONDS", "0"),
-        (
-            "WK_VIRTUAL_DATASETS_REAL_PATH_SCAN_INITIAL_DELAY_SECONDS",
-            "x",
-        ),
+        ("WK_VIRTUAL_DATASETS_REAL_PATH_SCAN_ENABLED", "1"),
     ] {
         let error = config_from_values(&values(&[(key, value)])).unwrap_err();
         assert!(error.0.starts_with(key), "{key}={value}: {error}");

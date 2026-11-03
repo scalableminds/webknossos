@@ -34,6 +34,8 @@ SHARED_PORT = 19597
 SHARED = f"http://127.0.0.1:{SHARED_PORT}"
 DS = "68b80290d4000090f8f4aa62"
 ADMIN = {"X-Auth-Token": stack.SAMPLE_TOKEN}
+RUST_SHARED_LOG = stack.LOGS / "rust-shared.log"
+CREDIT_TICKER_JOB = "free-credit-ticker"
 results: list[tuple[str, bool, str]] = []
 
 
@@ -94,14 +96,28 @@ def start_shared_rust() -> subprocess.Popen:
         "WK_USED_STORAGE_ENABLED": "false",
         "WK_WORKER_LIVENESS_ENABLED": "false",
         # Kept on deliberately: it must not duplicate Play's monthly grant on the shared database.
+        # Its first run is at the fixed 10 s initial delay (Play's IntervalScheduler default).
         "WK_CREDIT_TICKER_ENABLED": "true",
-        "WK_CREDIT_TICKER_INITIAL_DELAY_SECONDS": "1",
     })
-    log = open(stack.LOGS / "rust-shared.log", "ab")
+    log = open(RUST_SHARED_LOG, "ab")
     process = subprocess.Popen([str(stack.RUST_BINARY)], env=env, stdout=log, stderr=subprocess.STDOUT,
                                cwd=stack.BACKEND_RUST, start_new_session=True)
     stack.wait_http(f"{SHARED}/health/ready", 60, "rust-shared")
     return process
+
+
+def wait_for_credit_ticker(log_offset: int, timeout: float) -> bool:
+    """Waits until the shared instance logged a completed (or lock-skipped) credit ticker run."""
+    markers = (f"Completed cleanup job: {CREDIT_TICKER_JOB}", f"Skipped cleanup job: {CREDIT_TICKER_JOB}")
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        with open(RUST_SHARED_LOG, "rb") as log:
+            log.seek(log_offset)
+            text = log.read().decode(errors="replace")
+        if any(marker in text for marker in markers):
+            return True
+        time.sleep(0.5)
+    return False
 
 
 def main() -> int:
@@ -112,6 +128,7 @@ def main() -> int:
     credits_sql = ("SELECT count(*) FROM webknossos.credit_transactions WHERE comment LIKE 'Complimentary credits%' "
                    "AND NOT is_deleted")
     credits_before = stack.psql("wk_diff_play", credits_sql)
+    log_offset = RUST_SHARED_LOG.stat().st_size if RUST_SHARED_LOG.exists() else 0
     process = start_shared_rust()
     try:
         # Sessions and tokens across backends.
@@ -171,8 +188,9 @@ def main() -> int:
         check("play respects rust's mutex", isinstance(body, dict) and body.get("canEdit") is False,
               f"status {status} {body}")
 
-        # Free credits: the ticker ran 1 s after start on the shared database.
-        time.sleep(4)
+        # Free credits: wait for the ticker's first run (10 s after start) on the shared database.
+        ticker_ran = wait_for_credit_ticker(log_offset, timeout=30)
+        check("rust credit ticker ran", ticker_ran, f"no run logged in {RUST_SHARED_LOG}")
         credits_after = stack.psql("wk_diff_play", credits_sql)
         check("no duplicate monthly credits from rust ticker", credits_after == credits_before,
               f"{credits_before} -> {credits_after}")

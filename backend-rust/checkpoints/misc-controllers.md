@@ -7,7 +7,7 @@
 - Next step: M2 Time + Report (time_tracking.rs, reports.rs exist, unwired). NOTE: by the end of M1 some other agent had already wired `time_tracking::router()`/`reports::router()` in lib.rs and added tests/time_tracking.rs + tests/reports.rs (both passing) — check before redoing.
 
 ### M1 env vars (all optional)
-- `WK_ANALYTICS_URI` (default `https://events-relay.webknossos.org/events` = application.conf; empty disables forwarding), `WK_ANALYTICS_KEY`, `WK_ANALYTICS_SESSION_PAUSE_SECONDS` (1800), `WK_ANALYTICS_SAVE_TO_DATABASE_ENABLED` (false), `WK_ANALYTICS_VERBOSE_LOGGING_ENABLED` (false), `WK_ANALYTICS_WELL_KNOWN_URIS` (comma list of `uri|key`).
+- `WK_ANALYTICS_URI` (default `https://events-relay.webknossos.org/events` = application.conf; empty disables forwarding), `WK_ANALYTICS_KEY`, `WK_ANALYTICS_SESSION_PAUSE_SECONDS` (1800), `WK_ANALYTICS_SAVE_TO_DATABASE_ENABLED` (false), verbose logging via `RUST_LOG=...,webknossos_backend::system::analytics=debug`, `WK_ANALYTICS_WELL_KNOWN_URIS` (comma list of `uri|key`).
 - `WK_FEATURES_JSON` (object merged over application.conf `features`; dedicated flag vars win), `WK_BUILD_COMMIT_HASH`, `WK_BUILD_COMMIT_DATE`, `CI_BUILD_NUM`, `CI_TAG`.
 - `WK_CERTIFICATE_PUBLIC_KEY` (fallback `CERTIFICATE_PUBLIC_KEY`; Play bakes it in at build time), `CERTIFICATE`.
 - `WK_SUPPORT_EMAIL`, `WK_SAMPLE_ORGANIZATION_ENABLED` (false!), `WK_SAMPLE_USER_EMAIL/EMAIL2/PASSWORD/TOKEN/IS_SUPER_USER`, `WK_LOCAL_DATASTORE_ENABLED` / `WK_LOCAL_TRACINGSTORE_ENABLED` (false!) with `WK_{DATASTORE,TRACINGSTORE}_{NAME,KEY,PUBLIC_URI}`.

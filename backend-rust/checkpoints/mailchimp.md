@@ -52,8 +52,8 @@ Status: DONE (2026-11-03), including the main.rs wiring.
 
 ## Config (.env.example)
 `WK_MAILCHIMP_HOST` (empty = disabled; absolute http(s) URL, trailing `/` trimmed), `WK_MAILCHIMP_LIST_ID`,
-`WK_MAILCHIMP_USER`, `WK_MAILCHIMP_PASSWORD`, `WK_MAILCHIMP_TICKER_{ENABLED,INTERVAL_SECONDS,INITIAL_DELAY_SECONDS}`
-(true, 3600, 3600).
+`WK_MAILCHIMP_USER`, `WK_MAILCHIMP_PASSWORD`, `WK_MAILCHIMP_TICKER_ENABLED` (true). The ticker runs every hour,
+first after one hour (fixed, as in Play).
 
 ## Deliberate deviations
 - The subscriber hash is computed over the lowercased address, which is what the Mailchimp API requires. Play

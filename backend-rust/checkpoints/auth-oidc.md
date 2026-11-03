@@ -11,7 +11,7 @@ DONE: GET /auth/sso (Discourse SSO), GET /auth/oidc/login, GET /auth/oidc/callba
 | WK_OIDC_CLIENT_ID | myclient | ...clientId |
 | WK_OIDC_CLIENT_SECRET | myClientSecret (empty string = no basic auth) | ...clientSecret |
 | WK_OIDC_SCOPE | openid profile email | ...scope |
-| WK_OIDC_VERBOSE_LOGGING | false | ...verboseLoggingEnabled (Rust never logs tokens) |
+| (removed) | | ...verboseLogging is the TRACE log target `oidc_verbose` (`RUST_LOG=...,oidc_verbose=trace`); Rust never logs tokens |
 | WK_OIDC_HTTP_TIMEOUT_SECONDS | 30 (1..3600) | (Rust only) |
 | WK_SSO_KEY | "" | webKnossos.user.ssoKey |
 logoutRedirectUrl is already WK_LOGOUT_REDIRECT_URL (auth_routes). Callback URL = BrowserAuthConfig.public_uri + `/api/auth/oidc/callback`. Debug redacts secret and sso key.

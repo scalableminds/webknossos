@@ -43,7 +43,7 @@ Status: DONE (2026-11-03), wired in `src/main.rs`. Owner: pricing-expiry-reminde
 ## Config (`.env.example`)
 - `WK_PRICING_PLAN_EXPIRY_REMINDER_ENABLED` (default false)
 - `WK_PRICING_PLAN_EXPIRY_REMINDER_INTERVAL_SECONDS` (> 0, default 21600)
-- `WK_PRICING_PLAN_EXPIRY_REMINDER_INITIAL_DELAY_SECONDS` (>= 0, default 300)
+- The initial delay is fixed at 5 minutes, as Play hard-codes it.
 - `WK_PRICING_PLAN_EXPIRY_REMINDER_LEAD_TIMES_DAYS` (comma-separated non-negative days, default `30,14,7`; empty =
   none)
 - `WK_PRICING_PLAN_EXPIRY_REMINDER_TRIAL_LEAD_TIMES_DAYS` (default `7`)

@@ -192,6 +192,28 @@ pre.dataset-import-folder-structure-hint {
     .dashboard-list-sort-prefix {
       display: none;
     }
+
+    // Keep the chips in a single row that scrolls horizontally instead of wrapping. The row bleeds
+    // into the bar's padding, so that chips scroll up to its border. A fade at the right edge hints
+    // at the chips that are scrolled out of view.
+    .dashboard-list-filter-chips {
+      flex: 1 1 100%;
+      min-width: 0;
+      flex-wrap: nowrap !important;
+      overflow-x: auto;
+      margin-inline: -12px;
+      padding-inline: 12px 24px;
+      scrollbar-width: none;
+      mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      & > .ant-space-item {
+        flex-shrink: 0;
+      }
+    }
   }
 }
 

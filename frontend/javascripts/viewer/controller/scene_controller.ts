@@ -696,6 +696,7 @@ class SceneController {
         id,
         isHighlighted: this.highlightedBBoxId === id,
         isActive: activeUserBoundingBoxId === id,
+        deferDisposal: (dispose) => this.deferUntilCompileReady(dispose),
       });
       bbCube.setVisibility(isVisible);
       bbCube.getMeshes().forEach((mesh) => {

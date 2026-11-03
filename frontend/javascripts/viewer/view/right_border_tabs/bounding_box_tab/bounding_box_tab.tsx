@@ -35,6 +35,7 @@ import AutoSizer from "react-virtualized-auto-sizer";
 import { APIJobCommand } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import { ControlModeEnum, type Vector3, type Vector6 } from "viewer/constants";
+import { getSceneControllerOrNull } from "viewer/controller/scene_controller_provider";
 import { isAnnotationOwner } from "viewer/model/accessors/annotation_accessor";
 import {
   getDataLayers,
@@ -68,6 +69,10 @@ import UserBoundingBoxInput from "./user_boundingbox_input";
 // the AutoSizer keeps re-rendering the table and toggles an additional scrollbar.
 const BBOX_TABLE_HEIGHT_SLACK = 2;
 const CONTEXT_MENU_CLASS = "bbox-list-context-menu-overlay";
+// Clicks on these controls inside a row edit the bounding box and must not toggle its selection.
+const ROW_CONTROL_SELECTOR = "input, textarea, button, .color-display-wrapper";
+// Clicks inside these elements of the tab do not count as clicks on the empty background.
+const NON_BACKGROUND_SELECTOR = `.ant-table-row, button, input, textarea, .${CONTEXT_MENU_CLASS}`;
 const BOUNDING_BOX_TAB_ID = "bounding-box-tab";
 // If there are at least this many user bounding boxes, the layer bounding box section is collapsed by
 // default (unless the user manually toggled it) to avoid pushing the user bounding boxes out of view.
@@ -179,6 +184,11 @@ export default function BoundingBoxTab() {
     (position: Vector3) => dispatch(setPositionAction(position)),
     [dispatch],
   );
+
+  const clearSelection = useCallback(() => {
+    setSelectedRowKeys([]);
+    dispatch(setActiveUserBoundingBoxId(null));
+  }, [dispatch]);
 
   const hideContextMenu = useCallback(() => {
     setContextMenuPosition(null);
@@ -326,10 +336,19 @@ export default function BoundingBoxTab() {
   );
 
   useEffect(() => {
-    if (bboxTableRef.current != null && activeBoundingBoxId != null) {
-      bboxTableRef.current.scrollTo({ key: activeBoundingBoxId });
+    if (activeBoundingBoxId == null) {
+      return;
     }
+    bboxTableRef.current?.scrollTo({ key: activeBoundingBoxId });
+    // Mirror selections made elsewhere (e.g. clicking a bounding box in a viewport) in the list.
+    // Ctrl/Cmd multi-selections made in the list itself already contain the active box.
+    setSelectedRowKeys((prev) =>
+      prev.includes(activeBoundingBoxId) ? prev : [activeBoundingBoxId],
+    );
   }, [activeBoundingBoxId]);
+
+  // Clear a hover highlight that is still set when the tab unmounts (e.g. the sidebar is closed).
+  useEffect(() => () => getSceneControllerOrNull()?.highlightUserBoundingBox(null), []);
 
   const userBoundingBoxColumns: NonNullable<TableProps<UserBoundingBox>["columns"]> = [
     {
@@ -393,6 +412,9 @@ export default function BoundingBoxTab() {
 
   const getPropsForUserRow = useCallback<NonNullable<TableProps<UserBoundingBox>["onRow"]>>(
     (bb: UserBoundingBox) => ({
+      // Highlight the hovered bounding box in the viewports.
+      onMouseEnter: () => getSceneControllerOrNull()?.highlightUserBoundingBox(bb.id),
+      onMouseLeave: () => getSceneControllerOrNull()?.highlightUserBoundingBox(null),
       onClick: (event) => {
         // Popovers/dropdowns (e.g. the position/extent sliders, the MIP menu) render their
         // content into a portal outside the row's DOM subtree, but React still bubbles their
@@ -407,6 +429,12 @@ export default function BoundingBoxTab() {
           setSelectedRowKeys((prev) =>
             prev.includes(bb.id) ? prev.filter((key) => key !== bb.id) : [...prev, bb.id],
           );
+        } else if (
+          bb.id === activeBoundingBoxId &&
+          !(event.target as Element).closest(ROW_CONTROL_SELECTOR)
+        ) {
+          // Clicking the selected row again unselects it.
+          clearSelection();
         } else {
           handleGoToBoundingBox(bb.id);
           setSelectedRowKeys([bb.id]);
@@ -414,7 +442,7 @@ export default function BoundingBoxTab() {
         }
       },
     }),
-    [hideContextMenu, dispatch, handleGoToBoundingBox],
+    [hideContextMenu, dispatch, handleGoToBoundingBox, activeBoundingBoxId, clearSelection],
   );
 
   const getPropsForLayerRow = useCallback<NonNullable<TableProps<LayerBoundingBox>["onRow"]>>(
@@ -455,6 +483,14 @@ export default function BoundingBoxTab() {
   return (
     <div
       id={BOUNDING_BOX_TAB_ID}
+      onClick={(event) => {
+        // Unselect when clicking the empty background of the tab. Clicks from portaled
+        // popovers/modals bubble here through the React tree, so ignore targets outside the tab.
+        const target = event.target as Element;
+        if (event.currentTarget.contains(target) && !target.closest(NON_BACKGROUND_SELECTOR)) {
+          clearSelection();
+        }
+      }}
       className="padded-tab-content"
       style={{
         minWidth: 300,

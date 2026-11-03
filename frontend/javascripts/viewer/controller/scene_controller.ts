@@ -684,6 +684,7 @@ class SceneController {
       this.deferUntilCompileReady(() => cube.destroy());
     }
     const newUserBoundingBoxGroup = new Group();
+    const { activeUserBoundingBoxId } = Store.getState().uiInformation;
     this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
       const { min, max } = boundingBox;
       const bbColor: Vector3 = [color[0] * 255, color[1] * 255, color[2] * 255];
@@ -694,6 +695,7 @@ class SceneController {
         showCrossSections: true,
         id,
         isHighlighted: this.highlightedBBoxId === id,
+        isActive: activeUserBoundingBoxId === id,
       });
       bbCube.setVisibility(isVisible);
       bbCube.getMeshes().forEach((mesh) => {
@@ -860,6 +862,12 @@ class SceneController {
     this.highlightedBBoxId = bboxId;
   }
 
+  setActiveUserBoundingBox(bboxId: number | null | undefined): void {
+    for (const bbCube of this.userBoundingBoxes) {
+      bbCube.setIsActive(bbCube.id === bboxId);
+    }
+  }
+
   setSkeletonGroupVisibility(isVisible: boolean) {
     Object.values(this.skeletons).forEach((skeleton: Skeleton) => {
       skeleton.getRootGroup().visible = isVisible;
@@ -1009,6 +1017,10 @@ class SceneController {
       listenToStoreProperty(
         (storeState) => getSomeTracing(storeState.annotation).userBoundingBoxes,
         (bboxes) => this.setUserBoundingBoxes(bboxes),
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.uiInformation.activeUserBoundingBoxId,
+        (activeBBoxId) => this.setActiveUserBoundingBox(activeBBoxId),
       ),
       listenToStoreProperty(
         (storeState) => getDataLayers(storeState.dataset),

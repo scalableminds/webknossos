@@ -691,8 +691,9 @@ export class DataBucket {
     switch (this.state) {
       case BucketStateEnum.REQUESTED: {
         // The pending partial changes are applied before the unmergedBucketDataLoaded
-        // event. That event is only needed for BucketSnapshots, which collaborative
-        // volume annotation, the only source of these changes, doesn't use.
+        // event. Swapping the order would work just as well, because the two cases
+        // (A) non-empty partial changes and B) fullBucketSaveState.dirty) are mutually
+        // exclusive.
         this.applyPendingPartialChanges(data);
         if (this.fullBucketSaveState.dirty) {
           // Clone the data for the unmergedBucketDataLoaded event,

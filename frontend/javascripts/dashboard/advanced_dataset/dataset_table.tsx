@@ -62,6 +62,7 @@ import EditableTextIcon from "viewer/view/components/editable_text_icon";
 import { ContextMenuContext } from "viewer/view/context_menu/context_menu";
 import { GenericContextMenuContainer } from "viewer/view/context_menu/generic_context_menu_container";
 import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/generic_context_menu_helpers";
+import { isRowSelectionClick } from "../row_click";
 
 type FolderItemWithName = FolderItem & { name: string };
 type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
@@ -101,7 +102,12 @@ type Props = {
   updateDataset: (datasetId: string, updater: DatasetUpdater) => void;
   addTagToSearch: (tag: string) => void;
   onClearSearchAndFilters: () => void;
-  onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
+  // isDragStart is set when a dataset gets selected because the user started dragging it.
+  onSelectDataset: (
+    dataset: APIDatasetCompact | null,
+    multiSelect?: boolean,
+    isDragStart?: boolean,
+  ) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
   context: DatasetCollectionContextValue;
@@ -836,7 +842,9 @@ class DatasetTable extends PureComponent<Props, State> {
           <FilterChip
             label={
               <>
-                <Icon component={IconSort} /> Sort: {currentSortLabel}
+                <Icon component={IconSort} />{" "}
+                <span className="dashboard-list-sort-prefix">Sort: </span>
+                {currentSortLabel}
               </>
             }
           >
@@ -887,15 +895,11 @@ class DatasetTable extends PureComponent<Props, State> {
               isADataset: isADataset,
               onDragStart: () => {
                 if (isADataset && !selectedDatasets.includes(data)) {
-                  this.props.onSelectDataset(data);
+                  this.props.onSelectDataset(data, false, true);
                 }
               },
               onClick: (event) => {
-                // @ts-expect-error
-                if (event.target?.tagName !== "TD" && event.target?.tagName !== "DIV") {
-                  // Don't (de)select when another element within the row was clicked
-                  // (e.g., a link). Otherwise, clicking such elements would cause two actions
-                  // (e.g., the link action and a (de)selection).
+                if (!isRowSelectionClick(event)) {
                   return;
                 }
                 if (!isADataset) {

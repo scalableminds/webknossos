@@ -1,4 +1,4 @@
-import { FolderOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { DownOutlined, FolderOutlined } from "@ant-design/icons";
 import { Button, Card, Flex } from "antd";
 import features, { getDemoDatasetUrl } from "features";
 import { filterNullValues, isUserAdminOrDatasetManager } from "libs/utils";
@@ -31,7 +31,9 @@ function DatasetFolderViewInner(props: Props) {
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets, folderModalState, setFolderModalState } = context;
   const { data: hierarchy } = useFolderHierarchyQuery();
-  const isCompact = useIsCompactDashboard();
+  // The folder tree moves into a drawer first. The details sidebar follows once space is even tighter.
+  const isFolderTreeCompact = useIsCompactDashboard("xl");
+  const isDetailsCompact = useIsCompactDashboard("md");
   const [isFolderDrawerOpen, setIsFolderDrawerOpen] = useState(false);
   const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
 
@@ -41,17 +43,24 @@ function DatasetFolderViewInner(props: Props) {
     setIsFolderDrawerOpen(false);
   }, [context.activeFolderId]);
 
-  const setSelectedDataset = (ds: APIDatasetCompact | null, multiSelect?: boolean) => {
+  const setSelectedDataset = (
+    ds: APIDatasetCompact | null,
+    multiSelect?: boolean,
+    isDragStart?: boolean,
+  ) => {
     if (!ds) {
       setSelectedDatasets([]);
       return;
     }
-    if (isCompact) {
+    if (isDetailsCompact) {
       // On compact screens, the details aren't visible next to the list. Tapping a dataset
       // shows them in a drawer and always selects it (instead of toggling the selection).
       setSelectedDatasets([ds]);
       context.setSelectedFolder(null);
-      setIsDetailsDrawerOpen(true);
+      // The drawer's mask would cover the folder rows that the dataset could be dropped on.
+      if (!isDragStart) {
+        setIsDetailsDrawerOpen(true);
+      }
       return;
     }
     // Clear folder selection if a dataset is selected.
@@ -81,6 +90,12 @@ function DatasetFolderViewInner(props: Props) {
   const setSelectedFolder = (folder: FolderItem | null) => {
     if (folder) {
       setSelectedDatasets([]);
+    }
+    if (isDetailsCompact && folder) {
+      // Same as for datasets: show the details in a drawer and always select the folder.
+      context.setSelectedFolder(folder);
+      setIsDetailsDrawerOpen(true);
+      return;
     }
     if (folder?.key === context.selectedFolder?.key) {
       context.setSelectedFolder(null);
@@ -191,6 +206,9 @@ function DatasetFolderViewInner(props: Props) {
     );
   };
 
+  const activeFolderTitle =
+    context.activeFolderId != null ? hierarchy?.itemById[context.activeFolderId]?.title : undefined;
+
   const isBrandNewEmptyOrg =
     hierarchy != null &&
     hierarchy.flatItems.length === 1 &&
@@ -204,7 +222,7 @@ function DatasetFolderViewInner(props: Props) {
   );
   const folderTree = (
     <ResponsiveSidebar
-      isCompact={isCompact}
+      isCompact={isFolderTreeCompact}
       isOpen={isFolderDrawerOpen}
       onClose={() => setIsFolderDrawerOpen(false)}
       title="Folders"
@@ -221,11 +239,25 @@ function DatasetFolderViewInner(props: Props) {
       selectedDatasets={selectedDatasets}
       context={context}
       emptyStateContent={isBrandNewEmptyOrg ? renderNoDatasetsPlaceHolder() : undefined}
+      folderPicker={
+        isFolderTreeCompact ? (
+          // Shows the current location, like a picker, so that it's clear that tapping it lets
+          // the user change the folder. The details drawer opens when tapping a list entry.
+          <Button
+            icon={<FolderOutlined />}
+            onClick={() => setIsFolderDrawerOpen(true)}
+            style={{ maxWidth: "100%" }}
+          >
+            <span className="dashboard-folder-picker-label">{activeFolderTitle ?? "Folders"}</span>
+            <DownOutlined />
+          </Button>
+        ) : undefined
+      }
     />
   );
   const detailsSidebar = (
     <ResponsiveSidebar
-      isCompact={isCompact}
+      isCompact={isDetailsCompact}
       isOpen={isDetailsDrawerOpen}
       onClose={() => setIsDetailsDrawerOpen(false)}
       title="Details"
@@ -242,18 +274,10 @@ function DatasetFolderViewInner(props: Props) {
     </ResponsiveSidebar>
   );
 
-  if (isCompact) {
+  if (isDetailsCompact) {
     return (
       <div style={{ flexGrow: 1, minWidth: 0 }}>
         {folderModal}
-        <Flex gap="small" style={{ marginBottom: 12 }}>
-          <Button icon={<FolderOutlined />} onClick={() => setIsFolderDrawerOpen(true)}>
-            Folders
-          </Button>
-          <Button icon={<InfoCircleOutlined />} onClick={() => setIsDetailsDrawerOpen(true)}>
-            Details
-          </Button>
-        </Flex>
         {folderTree}
         <main>{datasetView}</main>
         {detailsSidebar}
@@ -265,34 +289,38 @@ function DatasetFolderViewInner(props: Props) {
     <div
       style={{
         display: "grid",
-        gridTemplate:
-          "auto / auto minmax(min(40%, var(--dashboard-list-max-width)), var(--dashboard-list-max-width)) auto",
+        gridTemplate: isFolderTreeCompact
+          ? "auto / minmax(0, var(--dashboard-list-max-width)) auto"
+          : "auto / auto minmax(min(40%, var(--dashboard-list-max-width)), var(--dashboard-list-max-width)) auto",
         justifyContent: "center",
         flexGrow: 1,
         minHeight: 0,
       }}
     >
       {folderModal}
-      <div
-        style={{
-          gridColumn: "1 / 2",
-          overflow: "auto",
-          marginRight: 16,
-        }}
-      >
-        {folderTree}
-      </div>
+      {isFolderTreeCompact ? (
+        // Renders a drawer, which doesn't take up a grid cell.
+        folderTree
+      ) : (
+        <div
+          style={{
+            overflow: "auto",
+            marginRight: 16,
+          }}
+        >
+          {folderTree}
+        </div>
+      )}
       <main
         style={{
-          gridColumn: "2 / 3",
           paddingRight: 4,
+          minWidth: 0,
         }}
       >
         {datasetView}
       </main>
       <div
         style={{
-          gridColumn: "3 / 4",
           marginLeft: 4,
         }}
       >

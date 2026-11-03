@@ -73,6 +73,7 @@ import { AnnotationTags } from "./annotation_tags";
 import { DashboardEmptyAnnotationsPlaceholder } from "./dashboard_empty_annotations_placeholder";
 import { DashboardTopBar } from "./dashboard_top_bar";
 import { ResponsiveSidebar, useIsCompactDashboard } from "./responsive_sidebar";
+import { isRowSelectionClick } from "./row_click";
 
 const pageLength: number = 1000;
 
@@ -88,8 +89,10 @@ type Props = {
   datasetNameFilter?: string | null;
   // Called when the user removes the datasetNameFilter tag, so the caller can clear it from the URL.
   onDatasetNameFilterCleared?: () => void;
-  // On compact screens, the details sidebar is shown in a drawer.
+  // On compact screens, the list uses its stacked layout (e.g., the actions move below the name).
   isCompact: boolean;
+  // Once space is even tighter, the details sidebar is shown in a drawer, too.
+  isDetailsCompact: boolean;
 } & WithModalProps;
 type AnnotationSortOption = "modifiedDesc" | "newest" | "oldest" | "owner" | "name";
 const ANNOTATION_SORT_OPTIONS: Array<{ key: AnnotationSortOption; label: string }> = [
@@ -673,6 +676,11 @@ class AnnotationsView extends PureComponent<Props, State> {
     return (
       <div>
         {this.renderNameWithDescription(annotation)}
+        {/* On compact screens, the actions are shown below the name instead of in their own
+            column, so that the name can use the full width of the list. */}
+        {this.props.isCompact ? (
+          <div className="annotation-inline-actions">{this.renderActions(annotation)}</div>
+        ) : null}
         <AnnotationStatusLabels
           isReadOnly={!this.isAnnotationEditable(annotation)}
           isLocked={annotation.isLockedByOwner}
@@ -798,13 +806,15 @@ class AnnotationsView extends PureComponent<Props, State> {
         render: (_name: string, annotation: APIAnnotationInfo) =>
           this.renderAnnotationRow(annotation),
       },
-      {
+    ];
+    if (!this.props.isCompact) {
+      columns.push({
         width: 1,
         className: "nowrap",
         key: "action",
         render: (__: any, annotation: APIAnnotationInfo) => this.renderActions(annotation),
-      },
-    ];
+      });
+    }
 
     const currentSortLabel =
       ANNOTATION_SORT_OPTIONS.find((option) => option.key === sortOption)?.label ?? "Last Modified";
@@ -864,7 +874,9 @@ class AnnotationsView extends PureComponent<Props, State> {
           <FilterChip
             label={
               <>
-                <Icon component={IconSort} /> Sort: {currentSortLabel}
+                <Icon component={IconSort} />{" "}
+                <span className="dashboard-list-sort-prefix">Sort: </span>
+                {currentSortLabel}
               </>
             }
           >
@@ -900,10 +912,8 @@ class AnnotationsView extends PureComponent<Props, State> {
           }
           onRow={(annotation: APIAnnotationInfo) => ({
             onClick: (event) => {
-              const { tagName } = event.target as HTMLElement;
-              // Don't (de)select when another element within the row was clicked (e.g., a link).
-              if (tagName !== "TD" && tagName !== "DIV") return;
-              if (this.props.isCompact) {
+              if (!isRowSelectionClick(event)) return;
+              if (this.props.isDetailsCompact) {
                 // The details aren't visible next to the list. Show them in a drawer instead
                 // of toggling the selection.
                 this.setState({ selectedAnnotationId: annotation.id, isDetailsDrawerOpen: true });
@@ -937,7 +947,13 @@ class AnnotationsView extends PureComponent<Props, State> {
         (annotation) => annotation.id === this.state.selectedAnnotationId,
       ) ?? null;
     return (
-      <div className="dashboard-list-with-sidebar">
+      <div
+        className={
+          this.props.isDetailsCompact
+            ? "dashboard-list-with-sidebar compact"
+            : "dashboard-list-with-sidebar"
+        }
+      >
         <div>
           <DashboardTopBar
             isAdminView={this.props.isAdminView}
@@ -983,7 +999,7 @@ class AnnotationsView extends PureComponent<Props, State> {
           </div>
         </div>
         <ResponsiveSidebar
-          isCompact={this.props.isCompact}
+          isCompact={this.props.isDetailsCompact}
           // E.g., archiving removes the annotation from the list. Don't keep an empty drawer open then.
           isOpen={this.state.isDetailsDrawerOpen && selectedAnnotation != null}
           onClose={() => this.setState({ isDetailsDrawerOpen: false })}
@@ -1024,9 +1040,10 @@ class AnnotationsView extends PureComponent<Props, State> {
   }
 }
 
-function AnnotationsViewWithLayout(props: Omit<Props, "isCompact">) {
-  const isCompact = useIsCompactDashboard();
-  return <AnnotationsView {...props} isCompact={isCompact} />;
+function AnnotationsViewWithLayout(props: Omit<Props, "isCompact" | "isDetailsCompact">) {
+  const isCompact = useIsCompactDashboard("lg");
+  const isDetailsCompact = useIsCompactDashboard("md");
+  return <AnnotationsView {...props} isCompact={isCompact} isDetailsCompact={isDetailsCompact} />;
 }
 
 export default withModal(AnnotationsViewWithLayout);

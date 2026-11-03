@@ -60,12 +60,19 @@ import { useIsCompactDashboard } from "./responsive_sidebar";
 type Props = {
   user: APIUser;
   context: DatasetCollectionContextValue;
-  onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
+  onSelectDataset: (
+    dataset: APIDatasetCompact | null,
+    multiSelect?: boolean,
+    isDragStart?: boolean,
+  ) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
   // Custom content shown as the table's empty state instead of the regular hint text.
   // Used for cards for a brand-new organizations.
   emptyStateContent?: React.ReactNode;
+  // The button that opens the folder drawer on compact screens. It is part of the toolbar, so
+  // that it wraps with the same spacing as the other toolbar items.
+  folderPicker?: React.ReactNode;
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
 type PersistenceState = {
@@ -108,9 +115,10 @@ function DatasetView({
   selectedDatasets,
   onSelectFolder,
   emptyStateContent,
+  folderPicker,
 }: Props) {
   const searchQuery = context.globalSearchQuery;
-  const isCompact = useIsCompactDashboard();
+  const isCompact = useIsCompactDashboard("xl");
   const setSearchQuery = context.setGlobalSearchQuery;
   const [searchTags, setSearchTags] = useState<string[]>([]);
   const [datasetFilteringMode, setDatasetFilteringMode] =
@@ -229,6 +237,7 @@ function DatasetView({
 
   const adminHeader = isUserAdminOrDatasetManagerOrTeamManager ? (
     <Space wrap>
+      {folderPicker}
       <DatasetRefreshButton context={context} />
       <DatasetAddButton context={context} />
       {context.activeFolderId != null && (
@@ -250,7 +259,10 @@ function DatasetView({
       {searchBox}
     </Space>
   ) : (
-    searchBox
+    <Space wrap>
+      {folderPicker}
+      {searchBox}
+    </Space>
   );
 
   const datasets = context.datasets;

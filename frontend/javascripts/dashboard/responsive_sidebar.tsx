@@ -2,9 +2,12 @@ import { Drawer } from "antd";
 import { useMinScreenWidth } from "libs/react_hooks";
 import type React from "react";
 
-// Below the md breakpoint (e.g., on phones), the dashboard sidebars don't fit next to the list.
-export function useIsCompactDashboard(): boolean {
-  return !useMinScreenWidth("md");
+// Below the given breakpoint, a part of the dashboard switches to its compact layout:
+// - Datasets: the folder tree moves into a drawer and the list stacks below xl.
+// - Annotations: the list stacks below lg.
+// - Both: the details sidebar moves into a drawer below md.
+export function useIsCompactDashboard(breakpoint: "md" | "lg" | "xl"): boolean {
+  return !useMinScreenWidth(breakpoint);
 }
 
 // Renders a dashboard sidebar inline on wide screens and inside a drawer on compact ones.

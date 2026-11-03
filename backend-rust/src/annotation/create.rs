@@ -432,9 +432,11 @@ async fn create_explorational(
         "create_annotation".into(),
         properties,
     );
-    // mailchimpClient.tagUser(user, HasAnnotated): the crate has no Mailchimp
-    // client; logged only.
-    tracing::debug!(user = %user.id, "Mailchimp tag HasAnnotated skipped (no client)");
+    state.mailchimp.tag_user(
+        &state.pool,
+        &user.id,
+        crate::mailchimp::MailchimpTag::HasAnnotated,
+    );
     Ok(Json(json))
 }
 

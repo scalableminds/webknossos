@@ -57,6 +57,7 @@ fn app(db: &TestDb, only_with_significant_changes: bool) -> Router {
         mail: Default::default(),
         housekeeping: Default::default(),
         slack: Default::default(),
+        mailchimp: Default::default(),
         credit_ticker: Default::default(),
         used_storage: Default::default(),
         worker_liveness: Default::default(),

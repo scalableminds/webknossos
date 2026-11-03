@@ -59,6 +59,7 @@ bcrypt = "0.17"
 chrono = { version = "0.4", features = ["serde"] }
 getrandom = "0.4"
 hmac = "0.12"
+md-5 = "0.10"
 futures-util = "0.3"
 ring.workspace = true
 reqwest.workspace = true

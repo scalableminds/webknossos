@@ -419,7 +419,12 @@ async fn add_virtual_dataset(
     transaction.commit().await?;
     crate::dataset::create::after_create(&state.pool, &clients, &id).await?;
     // datasetService.trackNewDataset(needsConversion = false): Slack notice
-    // only (its analytics event and Mailchimp tag are not ported here).
+    // and Mailchimp tag (its analytics event is not ported here).
+    state.mailchimp.tag_user(
+        &state.pool,
+        &user.id,
+        crate::mailchimp::MailchimpTag::HasUploadedOwnDataset,
+    );
     slack.notice_dataset_added(
         &state.pool,
         &user.organization_id,

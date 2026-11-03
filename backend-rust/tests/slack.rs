@@ -113,6 +113,7 @@ fn app(db: &TestDb, hook: &str) -> Router {
         mail: Default::default(),
         housekeeping: Default::default(),
         slack: slack_config(hook),
+        mailchimp: Default::default(),
         credit_ticker: Default::default(),
         used_storage: Default::default(),
         worker_liveness: Default::default(),

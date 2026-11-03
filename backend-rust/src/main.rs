@@ -44,6 +44,8 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             config.misc.public_uri.clone(),
             config.misc.support_email.clone(),
         );
+    let mailchimp_ticker =
+        webknossos_backend::background::mailchimp_ticker::spawn(pool.clone(), &config.mailchimp);
     let metrics_server = match config.metrics_bind {
         Some(address) => {
             let listener = tokio::net::TcpListener::bind(address).await?;
@@ -118,6 +120,12 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     .is_err()
     {
         tracing::warn!("Pricing plan expiry reminder did not stop before the shutdown deadline");
+    }
+    if tokio::time::timeout(config.shutdown_timeout, mailchimp_ticker.shutdown())
+        .await
+        .is_err()
+    {
+        tracing::warn!("Mailchimp ticker did not stop before the shutdown deadline");
     }
     if let Some(metrics_server) = metrics_server {
         metrics_server.abort();

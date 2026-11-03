@@ -10,6 +10,7 @@ pub mod extract;
 pub mod folders;
 pub mod job;
 pub mod mail;
+pub mod mailchimp;
 pub mod main_view;
 pub mod msg;
 pub mod organization;

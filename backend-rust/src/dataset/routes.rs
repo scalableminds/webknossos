@@ -377,6 +377,13 @@ async fn read(
     let result = full_json(&state.pool, user.as_ref(), &id, jobs_enabled).await?;
     if let Some(user) = user {
         crate::system::analytics::track_open_dataset(&state, &misc, &user, &id);
+        if result.get("isPublic") == Some(&Value::Bool(true)) {
+            state.mailchimp.tag_user(
+                &state.pool,
+                &user.id,
+                crate::mailchimp::MailchimpTag::HasViewedPublishedDataset,
+            );
+        }
         crate::dataset::dataset_dao::touch_user_last_activity(&state.pool, user.id).await?;
     }
     Ok(Json(result))

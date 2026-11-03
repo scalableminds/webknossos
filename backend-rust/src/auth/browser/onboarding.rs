@@ -4,8 +4,8 @@
 //!
 //! Every multi-record mutation runs in one transaction (Play performs these
 //! steps non-transactionally). Mails and analytics events are sent only
-//! after commit. Mailchimp side effects are not ported; suspicious
-//! registration names are reported to Slack.
+//! after commit, as are the Mailchimp registrations and tags (wkorg only);
+//! suspicious registration names are reported to Slack.
 use axum::{
     Router,
     extract::State,
@@ -30,6 +30,7 @@ use crate::{
     error::{ApiError, ApiResult},
     extract::{Json, Path},
     mail::{Mail, MailSender, templates},
+    mailchimp::{MailchimpTag, MemberContact},
     slack::SlackNotificationService,
     stores::client::ServiceClients,
     system::analytics::{properties, track, track_for_user},
@@ -232,6 +233,9 @@ pub(crate) struct NewAccount<'a> {
 pub(crate) struct CreatedAccount {
     pub user_id: ObjectId,
     pub mails: Vec<Mail>,
+    /// Set by [`create_user`] on wkorg instances: register the new account with Mailchimp
+    /// (`RegisteredAsUser`) after commit.
+    pub mailchimp_contact: Option<MemberContact>,
 }
 
 /// userService.insert
@@ -277,7 +281,11 @@ pub(crate) async fn insert_account(
     )
     .await?;
     insert_team_memberships(tx, &user_id, &account.team_memberships).await?;
-    Ok(CreatedAccount { user_id, mails })
+    Ok(CreatedAccount {
+        user_id,
+        mails,
+        mailchimp_contact: None,
+    })
 }
 
 /// userService.joinOrganization: a new identity copying the original's
@@ -416,8 +424,13 @@ async fn create_user(
         deactivate_invite(tx, &invite.id).await?;
     }
     let full_name = format!("{first_name} {last_name}");
-    if !config.is_wkorg_instance {
-        // On wkorg instances Play registers the user with Mailchimp instead.
+    if config.is_wkorg_instance {
+        created.mailchimp_contact = Some(MemberContact {
+            email: email.to_owned(),
+            first_name: first_name.to_owned(),
+            last_name: last_name.to_owned(),
+        });
+    } else {
         created
             .mails
             .push(templates::new_user(&full_name, email, auto_activate));
@@ -428,6 +441,18 @@ async fn create_user(
         created.mails.push(mail);
     }
     Ok(created)
+}
+
+/// `mailchimpClient.registerUser(user, multiUser, RegisteredAsUser)` for an account
+/// [`create_user`] created on a wkorg instance (fire-and-forget).
+fn register_with_mailchimp(state: &AppState, created: &CreatedAccount) {
+    if let Some(contact) = &created.mailchimp_contact {
+        state.mailchimp.register_user(
+            &created.user_id,
+            contact.clone(),
+            MailchimpTag::RegisteredAsUser,
+        );
+    }
 }
 
 /// organizationService.createOrganization: organization, root folder and
@@ -631,6 +656,7 @@ async fn register(
         "signup",
         properties("had_invite", invite.is_some()),
     );
+    register_with_mailchimp(&state, &created);
     for mail in created.mails {
         mailer.send(mail);
     }
@@ -731,6 +757,17 @@ async fn create_organization_with_admin(
     create_organization_directory(&state.pool, Some(&clients), &organization.id).await;
     for mail in created.mails {
         mailer.send(mail);
+    }
+    if config.is_wkorg_instance {
+        state.mailchimp.register_user(
+            &created.user_id,
+            MemberContact {
+                email: email.clone(),
+                first_name,
+                last_name,
+            },
+            MailchimpTag::RegisteredAsAdmin,
+        );
     }
     let host = headers
         .get(header::HOST)
@@ -857,6 +894,7 @@ async fn create_user_in_organization(
         "signup",
         properties("had_invite", false),
     );
+    register_with_mailchimp(&state, &created);
     for mail in created.mails {
         mailer.send(mail);
     }
@@ -1032,6 +1070,9 @@ async fn send_invites(
         "send_invites".into(),
         properties("recipient_count", body.recipients.len()),
     );
+    state
+        .mailchimp
+        .tag_user(&state.pool, &user.id, MailchimpTag::HasInvitedTeam);
     for mail in mails {
         mailer.send(mail);
     }

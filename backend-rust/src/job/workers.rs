@@ -459,8 +459,8 @@ async fn complete_transaction_of_job(
 }
 
 /// JobService.trackStatusChange: fire-and-forget log, Slack, analytics and
-/// mail notifications for newly succeeded/failed jobs. The Mailchimp tag is
-/// not ported.
+/// mail notifications for newly succeeded/failed jobs, and the Mailchimp
+/// `HasUploadedOwnDataset` tag for succeeded `convert_to_wkw` jobs.
 fn track_status_change(
     state: &AppState,
     misc: &MiscState,
@@ -529,6 +529,13 @@ fn track_status_change(
             let link = result_link_public.unwrap_or_else(|| public_uri.clone());
             if let Some(mail) = success_mail(&owner, &after, &link) {
                 mailer.send(mail);
+            }
+            if after.command == "convert_to_wkw" {
+                state.mailchimp.tag_user(
+                    &state.pool,
+                    &owner.id,
+                    crate::mailchimp::MailchimpTag::HasUploadedOwnDataset,
+                );
             }
         } else {
             let msg = format!(

@@ -154,7 +154,7 @@ async fn report(
 
 /// DatasetService.trackNewDataset (fire-and-forget in Scala, never fails the
 /// route): Slack notice (only without conversion) and UploadDatasetEvent
-/// analytics. The Mailchimp `HasUploadedOwnDataset` tag is not ported.
+/// analytics, and the Mailchimp `HasUploadedOwnDataset` tag (only without conversion).
 async fn track_new_dataset(
     state: &AppState,
     misc: &MiscState,
@@ -170,6 +170,11 @@ async fn track_new_dataset(
             user.is_superuser,
             &dataset.id,
             ADD_VARIANT_LABEL,
+        );
+        state.mailchimp.tag_user(
+            &state.pool,
+            &user.id,
+            crate::mailchimp::MailchimpTag::HasUploadedOwnDataset,
         );
     }
     // dataStoreDAO.findOneByName(dataset._dataStore): a missing store skips the event.

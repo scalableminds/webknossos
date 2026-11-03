@@ -142,16 +142,17 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
 - Deviations (see `checkpoints/pricing-plan-expiry-reminder.md`): `paidUntil` read at millisecond precision like
   Play's `Instant`; negative lead times rejected at startup; an unknown plan value fails only that organization.
 
-### G9. Mailchimp — MISSING (one debug log) — P3 (webknossos.org only; empty host = no-op)
-- Scala `app/mail/MailchimpClient.scala` (PUT `{host}/lists/{listId}/members/{md5(email)}`, POST `.../tags`, GET
-  tags, basic auth), `MailchimpTicker.scala:27-70` hourly (1 h initial delay) tags multiusers 21-22 days after
-  registration as WasActive/WasInactiveInWeeksTwoAndThree.
-- Call sites: register (`AuthenticationController.scala:215` RegisteredAsUser, `:839` RegisteredAsAdmin),
-  HasInvitedTeam (`:369`), HasAnnotated (`AnnotationController.scala:255`; Rust debug log annotation_create.rs:512),
-  HasViewedPublishedDataset (`DatasetController.scala:441`), HasUploadedOwnDataset (`DatasetService.scala:787`,
-  `JobService.scala:108`).
-- Config: `mail.mailchimp.{host,listId,user,password}`.
-- Agent `mailchimp` (~60 min): owned new `src/mailchimp.rs` (client + ticker) + 6 one-line call sites.
+### G9. Mailchimp — DONE 2026-11-03 (see checkpoints/mailchimp.md)
+- `src/mailchimp.rs` (`MailchimpClient`, `MailchimpTag`, `WK_MAILCHIMP_*` config; `AppState.mailchimp`) and
+  `src/background/mailchimp_ticker.rs` (hourly, 1 h initial delay, advisory lock `mailchimp-ticker`, spawned in
+  main.rs). Empty host = no-op, as in Play. All route call sites are fire-and-forget (spawned, failures logged):
+  RegisteredAsUser (register, superuser create-user, first OIDC login; wkorg only), RegisteredAsAdmin
+  (createOrganizationWithAdmin; wkorg only), HasInvitedTeam (sendInvites), HasAnnotated (createExplorational),
+  HasViewedPublishedDataset (dataset read, logged-in user, public dataset), HasUploadedOwnDataset (upload report
+  and explore+add without conversion, succeeded `convert_to_wkw` jobs).
+- Deliberate: the subscriber hash lowercases the email first (Mailchimp's rule; Play hashes the stored address, which
+  differs only for mixed-case OIDC emails), keeping Play's uppercase hex. The ticker selects its candidates in one
+  query, awaits its tag requests, and is not scheduled at all without a host (Play ticks and finds nothing to do).
 
 ### G10. Virtual-dataset realpath bulk scan — PARTIAL — P3
 - Scala `app/models/dataset/VirtualDatasetsRealPathScanService.scala:27-56`: hourly, all virtual datasets grouped by

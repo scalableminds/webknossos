@@ -711,6 +711,17 @@ async fn create_user(
         mails.push(mail);
     }
     tx.commit().await?;
+    if browser.is_wkorg_instance {
+        state.mailchimp.register_user(
+            &created.user_id,
+            crate::mailchimp::MemberContact {
+                email: info.email.clone(),
+                first_name: info.given_name.clone(),
+                last_name: info.family_name.clone(),
+            },
+            crate::mailchimp::MailchimpTag::RegisteredAsUser,
+        );
+    }
     for mail in mails {
         mailer.send(mail);
     }

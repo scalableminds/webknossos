@@ -4122,6 +4122,7 @@ dependencies = [
  "hmac",
  "http-body-util",
  "lettre",
+ "md-5 0.10.6",
  "prost",
  "quick-xml 0.42.0",
  "reqwest 0.12.28",

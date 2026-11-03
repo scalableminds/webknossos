@@ -84,6 +84,7 @@ async fn request_timeout_bounds_database_waits_and_preserves_error_headers() {
         mail: Default::default(),
         housekeeping: Default::default(),
         slack: Default::default(),
+        mailchimp: Default::default(),
         credit_ticker: Default::default(),
         used_storage: Default::default(),
         worker_liveness: Default::default(),

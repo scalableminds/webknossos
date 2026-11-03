@@ -10,6 +10,7 @@ use crate::{
     dataset::options::DatasetRouteConfig,
     job::routes::JobsConfig,
     mail::MailSender,
+    mailchimp::{MailchimpClient, MailchimpConfig},
     short_links::PublicUrl,
     slack::{SlackConfig, SlackNotificationService},
     stores::{
@@ -46,6 +47,7 @@ pub struct AppState {
     /// One writer per app: its per-user cache and locks must be shared by all routes.
     pub time_interaction_writer: TimeInteractionWriter,
     pub slack: SlackNotificationService,
+    pub mailchimp: MailchimpClient,
     pub datasets: DatasetRouteConfig,
     pub allow_delete_datasets: AllowDeleteDatasets,
     pub annotation_mutex_expiry: MutexExpiry,
@@ -81,6 +83,7 @@ pub struct AppStateBuilder {
     time_tracking: TimeTrackingConfig,
     time_interaction_writer: Option<TimeInteractionWriter>,
     slack: SlackConfig,
+    mailchimp: MailchimpConfig,
     datasets: DatasetRouteConfig,
     allow_delete_datasets: bool,
     annotation_mutex_expiry: std::time::Duration,
@@ -114,6 +117,7 @@ impl AppState {
             time_tracking: TimeTrackingConfig::default(),
             time_interaction_writer: None,
             slack: SlackConfig::default(),
+            mailchimp: MailchimpConfig::default(),
             datasets: DatasetRouteConfig::default(),
             allow_delete_datasets: true,
             annotation_mutex_expiry: std::time::Duration::from_secs(120),
@@ -136,6 +140,7 @@ impl AppState {
             .public_url(config.public_url.clone())
             .time_tracking(config.time_tracking)
             .slack(config.slack.clone())
+            .mailchimp(config.mailchimp.clone())
             .datasets(config.datasets.clone())
             .allow_delete_datasets(config.allow_delete_datasets)
             .annotation_mutex_expiry(config.annotation_mutex_expiry)
@@ -209,6 +214,11 @@ impl AppStateBuilder {
 
     pub fn slack(mut self, config: SlackConfig) -> Self {
         self.slack = config;
+        self
+    }
+
+    pub fn mailchimp(mut self, config: MailchimpConfig) -> Self {
+        self.mailchimp = config;
         self
     }
 
@@ -293,6 +303,7 @@ impl AppStateBuilder {
             time_tracking: self.time_tracking,
             time_interaction_writer,
             slack: SlackNotificationService::new(&self.slack),
+            mailchimp: MailchimpClient::new(&self.mailchimp),
             datasets: self.datasets,
             allow_delete_datasets: AllowDeleteDatasets(self.allow_delete_datasets),
             annotation_mutex_expiry: MutexExpiry(self.annotation_mutex_expiry),

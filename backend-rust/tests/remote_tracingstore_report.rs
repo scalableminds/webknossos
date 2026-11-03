@@ -61,6 +61,7 @@ fn app(db: &TestDb, only_with_significant_changes: bool) -> Router {
         credit_ticker: Default::default(),
         used_storage: Default::default(),
         worker_liveness: Default::default(),
+        initial_data_on_startup: false,
         pricing_plan_expiry_reminder: Default::default(),
         virtual_datasets_real_path_scan: Default::default(),
         main_view: Default::default(),

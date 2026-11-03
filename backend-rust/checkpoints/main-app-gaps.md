@@ -164,15 +164,17 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
 - Deviations: a failing datastore no longer aborts the tick (Scala `serialCombined` skipped the remaining stores);
   stores visited in name order; per-dataset data source failures logged instead of silently dropped.
 
-### G11. Startup tasks — PARTIAL — P3
-- `Startup.scala:107-114` runs `InitialDataService.insert` at every boot: keeps local datastore/tracingstore rows in
-  sync with config + pretrained AI models (+ sample org if enabled and DB empty). Rust only via
-  `POST /triggers/initialData` (initial_data.rs:52); a Rust-only deployment must trigger it externally.
-- `Startup.scala:99-102` `checkSchemaOnStartup`: `dbtool.js ensure-db` + full `check-db-schema` diff, Slack on
-  mismatch. Rust checks only `releaseInformation.schemaVersion = 188` (db.rs:8) — deliberate, keep.
-- Slack startup notice (G4). Temp-file cleanup stop hook not needed (Rust buffers in memory).
-- Agent: parent-owned main.rs change (~20 min): optional `WK_INITIAL_DATA_ON_STARTUP` calling the existing
-  insert function (sample org stays default OFF).
+### G11. Startup tasks — DONE 2026-11-03
+- `main.rs` calls `system::initial_data::insert_on_startup` (the same `insert` as `POST /triggers/initialData`)
+  after building `AppState`, gated by `WK_INITIAL_DATA_ON_STARTUP` (default **true**, like Play: every effect is
+  behind its own default-off switch, local stores / sample org, and the insert is idempotent). Failures and the
+  "not enabled" / "organizations present" stops are logged at info and never abort startup, like Play.
+- Concurrent Rust boots: `pg_try_advisory_xact_lock(advisory_lock_key("initial-data-startup"))`; the loser skips.
+  Tests: `tests/initial_data.rs` `startup_insert_*` (fresh DB, rerun, switch off, held lock, two concurrent boots).
+- Slack startup notice was already ported (`slack.notice_startup` in main.rs). Schema check stays version-only.
+- Deviations: Rust awaits the insert before binding the listener (Play runs it as a background Future while the
+  server starts). Play does not take the lock, so a simultaneous first boot of Play and Rust can log one
+  duplicate-key error (CUTOVER.md §2).
 
 ### G12. Diagnostics — MISSING — P4
 - `ThreadPoolHealthLogger` (util) and `SlickPoolHealthLogger` every 10 min (`Startup.scala:72-75`). Rust could log

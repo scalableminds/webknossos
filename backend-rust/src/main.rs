@@ -42,6 +42,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         config.jobs.worker_liveness_timeout,
     );
     let state = AppState::from_config(pool.clone(), &config);
+    webknossos_backend::system::initial_data::insert_on_startup(
+        &state,
+        config.initial_data_on_startup,
+    )
+    .await;
     let pricing_plan_expiry_reminder =
         webknossos_backend::background::pricing_plan_expiry_reminder::spawn(
             pool.clone(),

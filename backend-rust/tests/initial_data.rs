@@ -404,3 +404,138 @@ async fn default_worker_is_upserted_only_if_jobs_and_datastore_enabled() {
     assert_eq!(count(&db, workers).await, 0);
     db.cleanup().await;
 }
+
+fn startup_state(db: &TestDb, misc: MiscConfig) -> AppState {
+    AppState::builder(db.pool.clone())
+        .jobs_enabled(misc.jobs_enabled)
+        .misc(misc)
+        .build()
+}
+
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
+async fn startup_insert_is_idempotent_and_switchable() {
+    use webknossos_backend::system::initial_data::{
+        ORGANIZATIONS_PRESENT, StartupOutcome, insert_on_startup,
+    };
+    let db = TestDb::new().await;
+    let mut misc = local_config("http://public.example");
+    misc.sample_organization.enabled = true;
+    let state = startup_state(&db, misc);
+    let tables = [
+        "dataStores",
+        "tracingStores",
+        "aiModels",
+        "organizations",
+        "multiUsers",
+        "datasets",
+    ];
+    let counts = || async {
+        let mut counts = Vec::new();
+        for table in tables {
+            counts.push(count(&db, &format!("SELECT COUNT(*) FROM webknossos.{table}")).await);
+        }
+        counts
+    };
+
+    // Switched off: nothing happens.
+    assert_eq!(
+        insert_on_startup(&state, false).await,
+        StartupOutcome::Disabled
+    );
+    assert_eq!(counts().await, vec![0; tables.len()]);
+
+    // First boot on an empty database: stores, models and the sample organization.
+    assert_eq!(
+        insert_on_startup(&state, true).await,
+        StartupOutcome::Inserted
+    );
+    let after_first = counts().await;
+    // 4 pretrained + the sample organization's custom model.
+    assert_eq!(after_first, vec![1, 1, 5, 1, 2, 7]);
+
+    // Second boot: Play's "No initial data inserted" path, nothing duplicated.
+    assert_eq!(
+        insert_on_startup(&state, true).await,
+        StartupOutcome::NotInserted(ORGANIZATIONS_PRESENT.into())
+    );
+    assert_eq!(counts().await, after_first);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
+async fn startup_insert_without_sample_organization_syncs_stores() {
+    use webknossos_backend::system::initial_data::{
+        INITIAL_DATA_NOT_ENABLED, StartupOutcome, insert_on_startup,
+    };
+    let db = TestDb::new().await;
+    let state = startup_state(&db, local_config("http://public.example"));
+    for _ in 0..2 {
+        assert_eq!(
+            insert_on_startup(&state, true).await,
+            StartupOutcome::NotInserted(INITIAL_DATA_NOT_ENABLED.into())
+        );
+    }
+    assert_eq!(
+        count(&db, "SELECT COUNT(*) FROM webknossos.dataStores").await,
+        1
+    );
+    assert_eq!(
+        count(&db, "SELECT COUNT(*) FROM webknossos.aiModels").await,
+        4
+    );
+    assert_eq!(
+        count(&db, "SELECT COUNT(*) FROM webknossos.organizations").await,
+        0
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
+async fn startup_insert_skips_while_another_instance_holds_the_lock() {
+    use webknossos_backend::{
+        background::scheduler::{advisory_lock_key, try_advisory_xact_lock},
+        system::initial_data::{STARTUP_LOCK_NAME, StartupOutcome, insert_on_startup},
+    };
+    let db = TestDb::new().await;
+    let mut misc = local_config("http://public.example");
+    misc.sample_organization.enabled = true;
+    let state = startup_state(&db, misc);
+
+    let mut other = db.pool.begin().await.unwrap();
+    assert!(
+        try_advisory_xact_lock(&mut other, advisory_lock_key(STARTUP_LOCK_NAME))
+            .await
+            .unwrap()
+    );
+    assert_eq!(
+        insert_on_startup(&state, true).await,
+        StartupOutcome::SkippedLocked
+    );
+    assert_eq!(
+        count(&db, "SELECT COUNT(*) FROM webknossos.dataStores").await,
+        0
+    );
+    other.rollback().await.unwrap();
+
+    // Concurrent boots: exactly one inserts, the other skips or finds the organization.
+    let (first, second) = tokio::join!(
+        insert_on_startup(&state, true),
+        insert_on_startup(&state, true)
+    );
+    assert!(
+        [&first, &second]
+            .iter()
+            .filter(|outcome| ***outcome == StartupOutcome::Inserted)
+            .count()
+            == 1,
+        "{first:?} {second:?}"
+    );
+    assert_eq!(
+        count(&db, "SELECT COUNT(*) FROM webknossos.organizations").await,
+        1
+    );
+    db.cleanup().await;
+}

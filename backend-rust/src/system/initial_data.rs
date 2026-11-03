@@ -1,5 +1,6 @@
 //! Play's `InitialDataController` / `InitialDataService`
-//! (`POST /triggers/initialData`, a UserAwareAction that ignores the user).
+//! (`POST /triggers/initialData`, a UserAwareAction that ignores the user), also run at
+//! startup like Play's `Startup` ([`insert_on_startup`], `WK_INITIAL_DATA_ON_STARTUP`).
 //!
 //! Always: keep the local datastore/tracingstore rows in sync with the
 //! configuration and insert the pretrained AI models (local datastore only).
@@ -22,10 +23,10 @@ use serde_json::{Value, json};
 use crate::{
     AppState,
     auth::browser::onboarding::create_organization_directory,
+    background::scheduler::{advisory_lock_key, try_advisory_xact_lock},
     dataset::source::UsableDataSource,
     error::{ApiError, ApiResult},
-    stores::client::ServiceClients,
-    system::application_info::{LocalStoreConfig, MiscConfig, MiscState, ok_empty},
+    system::application_info::{LocalStoreConfig, MiscConfig, ok_empty},
     util::id::ObjectId,
 };
 
@@ -59,12 +60,16 @@ pub fn router() -> Router<AppState> {
     Router::new().route("/triggers/initialData", post(trigger_insert))
 }
 
-async fn trigger_insert(
-    State(state): State<AppState>,
-    State(misc): State<MiscState>,
-    State(clients): State<ServiceClients>,
-) -> ApiResult<Response> {
-    let config = misc.config();
+async fn trigger_insert(State(state): State<AppState>) -> ApiResult<Response> {
+    insert(&state).await?;
+    Ok(ok_empty())
+}
+
+/// `InitialDataService.insert`, shared by the trigger route and the startup hook. Returns
+/// [`INITIAL_DATA_NOT_ENABLED`] / [`ORGANIZATIONS_PRESENT`] as 400 errors once the always-run
+/// part is done, like Play.
+pub async fn insert(state: &AppState) -> ApiResult<()> {
+    let config = state.misc.config();
     let pool = &state.pool;
     if let Some(store) = &config.local_datastore {
         sync_local_store(pool, "dataStores", store, &config.public_uri).await?;
@@ -86,9 +91,66 @@ async fn trigger_insert(
     {
         system_initial_data_dao::upsert_default_worker(pool, &store.name).await?;
     }
-    insert_sample_organization(&state, config).await?;
-    create_organization_directory(pool, Some(&clients), SAMPLE_ORGANIZATION_ID).await;
-    Ok(ok_empty())
+    insert_sample_organization(state, config).await?;
+    create_organization_directory(pool, Some(&state.clients), SAMPLE_ORGANIZATION_ID).await;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Startup
+
+/// Advisory lock identity of the startup insert (see [`insert_on_startup`]).
+pub const STARTUP_LOCK_NAME: &str = "initial-data-startup";
+
+/// What [`insert_on_startup`] did.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StartupOutcome {
+    /// `WK_INITIAL_DATA_ON_STARTUP=false`.
+    Disabled,
+    /// Another instance was running the startup insert at the same time.
+    SkippedLocked,
+    /// Everything, including the sample organization, was inserted.
+    Inserted,
+    /// The insert stopped early; Play logs this at info level ("No initial data inserted: ..."),
+    /// e.g. the sample organization is disabled or organizations already exist.
+    NotInserted(String),
+}
+
+/// Play's `Startup`: `initialDataService.insert` at every boot, with a failure only logged.
+///
+/// Instances booting at once serialize on `pg_try_advisory_xact_lock`: the loser skips, since the
+/// winner applies the same configuration. The lock transaction stays open for the whole insert,
+/// which runs on other pool connections (the sample organization in its own transaction).
+pub async fn insert_on_startup(state: &AppState, enabled: bool) -> StartupOutcome {
+    if !enabled {
+        return StartupOutcome::Disabled;
+    }
+    let outcome = match locked_insert(state).await {
+        Ok(true) => StartupOutcome::Inserted,
+        Ok(false) => StartupOutcome::SkippedLocked,
+        Err(error) => StartupOutcome::NotInserted(error.message),
+    };
+    match &outcome {
+        StartupOutcome::Inserted => tracing::info!("Initial data inserted"),
+        StartupOutcome::SkippedLocked => {
+            tracing::info!("Initial data insert skipped: another instance is running it")
+        }
+        StartupOutcome::NotInserted(message) => {
+            tracing::info!("No initial data inserted: {message}")
+        }
+        StartupOutcome::Disabled => {}
+    }
+    outcome
+}
+
+/// False if another session holds the lock. Dropping the transaction releases it.
+async fn locked_insert(state: &AppState) -> ApiResult<bool> {
+    let mut lock = state.pool.begin().await?;
+    if !try_advisory_xact_lock(&mut lock, advisory_lock_key(STARTUP_LOCK_NAME)).await? {
+        return Ok(false);
+    }
+    insert(state).await?;
+    Ok(true)
 }
 
 // ---------------------------------------------------------------------------

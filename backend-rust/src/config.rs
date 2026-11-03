@@ -46,6 +46,9 @@ pub struct Config {
     pub shutdown_timeout: Duration,
     pub body_limit: usize,
     pub misc: crate::system::application_info::MiscConfig,
+    /// `WK_INITIAL_DATA_ON_STARTUP` (default true, like Play): run the initial data insert
+    /// (`crate::system::initial_data::insert_on_startup`) at boot.
+    pub initial_data_on_startup: bool,
     pub voxelytics: crate::voxelytics::VoxelyticsConfig,
     pub oidc: crate::auth::oidc::OidcConfig,
     pub mail: crate::mail::MailConfig,
@@ -360,6 +363,7 @@ impl Config {
             body_limit: usize::try_from(env.positive("WK_BODY_LIMIT_BYTES")?.unwrap_or(2097152))
                 .map_err(|_| ConfigError("WK_BODY_LIMIT_BYTES exceeds usize".into()))?,
             misc: Default::default(),
+            initial_data_on_startup: env.bool_or("WK_INITIAL_DATA_ON_STARTUP", true)?,
             voxelytics: voxelytics_config(env)?,
             oidc: crate::auth::oidc::config_from_values(&values)?,
             mail: crate::mail::config_from_values(&values)?,

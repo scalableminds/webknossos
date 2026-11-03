@@ -88,6 +88,7 @@ async fn request_timeout_bounds_database_waits_and_preserves_error_headers() {
         credit_ticker: Default::default(),
         used_storage: Default::default(),
         worker_liveness: Default::default(),
+        initial_data_on_startup: false,
         pricing_plan_expiry_reminder: Default::default(),
         virtual_datasets_real_path_scan: Default::default(),
         main_view: Default::default(),

@@ -25,6 +25,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class OrganizationService @Inject() (
     organizationDAO: OrganizationDAO,
+    partnerDAO: PartnerDAO,
     multiUserDAO: MultiUserDAO,
     userDAO: UserDAO,
     teamDAO: TeamDAO,
@@ -66,6 +67,8 @@ class OrganizationService @Inject() (
         creditTransactionDAO.getMilliCreditBalance(organization._id)
       )
       ownerNameOpt = ownerMultiUserBox.toOption.map(o => o.fullName)
+      // Partner branding is not secret, so it is read with GlobalAccessContext to also show it to anonymous users.
+      partnerOpt <- Fox.runOptional(organization._partner)(partnerDAO.findOne(_)(using GlobalAccessContext))
     } yield Json.obj(
       "id" -> organization._id,
       "name" -> organization._id, // Included for backwards compatibility
@@ -79,7 +82,8 @@ class OrganizationService @Inject() (
       "includedStorageBytes" -> organization.includedStorageBytes,
       "usedStorageBytes" -> usedStorageBytes,
       "ownerName" -> ownerNameOpt,
-      "milliCreditBalance" -> milliCreditBalanceOpt
+      "milliCreditBalance" -> milliCreditBalanceOpt,
+      "partner" -> partnerOpt.map(_.publicWrites)
     ) ++ adminOnlyInfo
   }
 

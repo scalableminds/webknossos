@@ -260,6 +260,10 @@ object Msg {
     val requiresHttps: String = "Passkeys are only supported with HTTPS."
     val unauthorized: String = "Passkey authentication failed."
   }
+  object Partner {
+    val notFound: String = "Partner could not be found."
+  }
+
   object Organization {
     def notFound(id: String): String = s"Organization “$id” could not be found or accessed."
     def notFoundWrongHost(orgaId: String, gotHost: String, thisHost: String): String =

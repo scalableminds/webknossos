@@ -29,6 +29,7 @@ import NmlUploadZoneContainer, {
 } from "viewer/view/nml_upload/nml_upload_zone_container";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetFolderView } from "./dataset_folder_view";
+import { PartnerModelHint } from "./partner_model_hint";
 
 type OwnProps = {
   userId: string | null | undefined;
@@ -318,6 +319,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         <div className="container propagate-flex-height" style={{ minHeight: "66vh" }}>
           {pricingPlanWarnings}
           {pricingPlanErrors}
+          {this.props.isAdminView ? null : <PartnerModelHint />}
           {userHeader}
 
           <ActiveTabContext.Provider value={this.state.activeTabKey}>

@@ -358,6 +358,8 @@ export type NovelUserExperienceInfoType = {
   lastViewedWhatsNewTimestamp?: number;
   latestAcknowledgedMaintenanceInfo?: string;
   suppressManyBucketUpdatesWarning?: boolean;
+  // Ids of partner AI models whose dashboard hint the user dismissed.
+  dismissedPartnerModelHints?: string[];
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {
@@ -715,6 +717,14 @@ export type APIOrganization = APIOrganizationCompact & {
   readonly usedStorageBytes: number;
   readonly ownerName?: string;
   readonly milliCreditBalance: number | null | undefined;
+  readonly partner: APIPartner | null;
+};
+// A partner co-brands WEBKNOSSOS for the organizations assigned to it.
+export type APIPartner = {
+  readonly id: string;
+  readonly name: string;
+  readonly logoUrl: string;
+  readonly linkUrl: string | null;
 };
 export type APIPricingPlanStatus = {
   readonly pricingPlan: PricingPlanEnum;
@@ -893,6 +903,9 @@ export type AiModel = {
   readonly category: APIAiModelCategory;
   readonly isSuperUserOnly: boolean;
   readonly isPretrained: boolean;
+  // Set for pretrained models that are only available to the organizations of a partner.
+  readonly partnerId: string | null;
+  readonly thumbnailUrl: string | null;
 };
 
 // Tracing related datatypes

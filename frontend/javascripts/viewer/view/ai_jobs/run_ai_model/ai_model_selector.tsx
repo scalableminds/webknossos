@@ -7,9 +7,10 @@ import { APIAiModelCategory, getAiModels } from "admin/rest_api";
 import { Avatar, Flex, Input, Space, Spin, Tag, Typography } from "antd";
 import Markdown from "libs/markdown_adapter";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
+import sortBy from "lodash-es/sortBy";
 import type React from "react";
 import { useMemo, useState } from "react";
-import { type AiModel, APIJobCommand } from "types/api_types";
+import { type AiModel, APIJobCommand, type APIPartner } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import { JobSection } from "../components/job_section";
 import {
@@ -54,6 +55,14 @@ const mapCategoryToJobType = (
   }
 };
 
+const getModelThumbnail = (model: AiModel): string | undefined =>
+  model.thumbnailUrl ?? (model.category ? categoryToImage[model.category] : undefined);
+
+const getPartnerLogo = (model: AiModel, partner: APIPartner | null) =>
+  partner != null && model.partnerId === partner.id
+    ? { src: partner.logoUrl, alt: partner.name }
+    : undefined;
+
 const filterModels = (models: AiModel[], searchTerm: string): AiModel[] => {
   if (!searchTerm) return models;
   const lowerCaseSearchTerm = searchTerm.toLowerCase();
@@ -69,6 +78,7 @@ export const AiModelSelector: React.FC = () => {
     useRunAiModelJobContext();
   const [searchTerm, setSearchTerm] = useState("");
   const isSuperUser = useWkSelector((state) => enforceActiveUser(state.activeUser).isSuperUser);
+  const partner = useWkSelector((state) => state.activeOrganization?.partner ?? null);
 
   const { data: allModels = [], isLoading } = useQueryWithErrorHandling(
     {
@@ -81,7 +91,15 @@ export const AiModelSelector: React.FC = () => {
     "Could not load model list.",
   );
 
-  const pretrainedModels = useMemo(() => allModels.filter((m) => m.isPretrained), [allModels]);
+  // Partner models are only listed for the partner's organizations. They come first to feature them.
+  const pretrainedModels = useMemo(
+    () =>
+      sortBy(
+        allModels.filter((m) => m.isPretrained),
+        (m) => (m.partnerId != null ? 0 : 1),
+      ),
+    [allModels],
+  );
   // Models whose training is still running or failed cannot be used for inference yet.
   const customModels = useMemo(
     () =>
@@ -145,7 +163,8 @@ export const AiModelSelector: React.FC = () => {
               {filteredPretrainedModels.map((model) => (
                 <SelectableTile
                   key={model.id}
-                  image={model.category ? categoryToImage[model.category] : undefined}
+                  image={getModelThumbnail(model)}
+                  imageLogo={getPartnerLogo(model, partner)}
                   title={model.name}
                   description={
                     <Markdown components={INLINE_MARKDOWN_COMPONENTS}>{model.comment}</Markdown>

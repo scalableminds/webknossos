@@ -177,6 +177,19 @@ body {
     }
   }
 
+  // Co-branding: the partner logo sits next to the WEBKNOSSOS logo.
+  .partner-logo {
+    height: 24px;
+    max-width: 140px;
+    margin-left: 12px;
+    object-fit: contain;
+    vertical-align: middle;
+
+    @media @smartphones {
+      display: none;
+    }
+  }
+
   // Size and spacing match the wordmark in logo.svg next to the 30px mark.
   .logo-wordmark {
     margin-left: 10px;

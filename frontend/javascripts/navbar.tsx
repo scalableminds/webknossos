@@ -36,6 +36,7 @@ import {
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import classnames from "classnames";
+import { PartnerLogo } from "components/partner_logo";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
@@ -908,26 +909,29 @@ function Navbar() {
     {
       key: "0",
       label: (
-        <Link
-          to="/dashboard"
-          aria-label="WEBKNOSSOS"
-          style={{
-            verticalAlign: "middle",
-          }}
-        >
-          {collapseAllNavItems ? (
-            getCollapsibleMenuTitle(
-              "WEBKNOSSOS",
-              <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
-              true,
-            )
-          ) : (
-            <>
-              <Icon component={WkLogoIcon} className="logo" />
-              <span className="logo-wordmark">WEBKNOSSOS</span>
-            </>
-          )}
-        </Link>
+        <>
+          <Link
+            to="/dashboard"
+            aria-label="WEBKNOSSOS"
+            style={{
+              verticalAlign: "middle",
+            }}
+          >
+            {collapseAllNavItems ? (
+              getCollapsibleMenuTitle(
+                "WEBKNOSSOS",
+                <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+                true,
+              )
+            ) : (
+              <>
+                <Icon component={WkLogoIcon} className="logo" />
+                <span className="logo-wordmark">WEBKNOSSOS</span>
+              </>
+            )}
+          </Link>
+          <PartnerLogo />
+        </>
       ),
     },
   ];

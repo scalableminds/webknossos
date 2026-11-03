@@ -6,6 +6,7 @@ import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.util.objectid.ObjectId
 import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
@@ -16,6 +17,7 @@ import models.organization.{
   OrganizationDAO,
   OrganizationPlanUpdate,
   OrganizationService,
+  PartnerDAO,
   PricingPlan,
   UpgradeRequest
 }
@@ -31,9 +33,13 @@ import scala.concurrent.ExecutionContext
 
 case class OrganizationParameters(name: String, newUserMailingList: String) derives JsonAutoFormat
 
+// partnerId None removes the partner assignment.
+case class OrganizationPartnerParameters(partnerId: Option[ObjectId]) derives JsonAutoFormat
+
 class OrganizationController @Inject() (
     organizationDAO: OrganizationDAO,
     organizationService: OrganizationService,
+    partnerDAO: PartnerDAO,
     inviteDAO: InviteDAO,
     conf: WkConf,
     userDAO: UserDAO,
@@ -163,6 +169,26 @@ class OrganizationController @Inject() (
         ) ~> NOT_FOUND
         _ <- Fox.fromBool(request.identity.isAdminOf(organization._id)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- organizationDAO.updateFields(organization._id, request.body.name, request.body.newUserMailingList)
+        updated <- organizationDAO.findOne(organization._id)
+        organizationJson <- organizationService.publicWrites(updated, Some(request.identity))
+      } yield Ok(organizationJson)
+    }
+
+  // Assigns the organization to a partner, which co-brands WEBKNOSSOS for it. Only super users may do this.
+  def updatePartner(organizationId: String): Action[OrganizationPartnerParameters] =
+    sil.SecuredAction.fox(validateJson[OrganizationPartnerParameters]) { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
+        organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(
+          organizationId
+        ) ~> NOT_FOUND
+        _ <- Fox.runOptional(request.body.partnerId)(
+          partnerDAO.findOne(_)(using GlobalAccessContext)
+        ) ?~> Msg.Partner.notFound ~> NOT_FOUND
+        _ <- organizationDAO.updatePartner(organization._id, request.body.partnerId)
+        _ = logger.info(
+          s"Super user ${request.identity._id} set the partner of organization ${organization._id} to ${request.body.partnerId.getOrElse("none")}"
+        )
         updated <- organizationDAO.findOne(organization._id)
         organizationJson <- organizationService.publicWrites(updated, Some(request.identity))
       } yield Ok(organizationJson)

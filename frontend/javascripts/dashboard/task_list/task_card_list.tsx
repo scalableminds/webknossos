@@ -119,9 +119,9 @@ export function TaskCardList({
   );
 }
 
-// Three columns (description, details, actions) from `md` on. The details column is narrow
-// there, so labels go above their values. Below `md`, the columns stack, labels sit next to
-// their values and the actions become a wrapping row instead of a tall vertical list.
+// Three columns (description, details, actions) from `md` on. Below `md`, the columns stack and
+// the actions become a wrapping row instead of a tall vertical list. Detail values sit next to
+// their labels and only move below them when the column is too narrow (see .task-details).
 function OpenTaskCardBody({
   isMultiColumn,
   description,
@@ -140,9 +140,9 @@ function OpenTaskCardBody({
       </Col>
       <Col xs={24} md={6} xl={5}>
         <Descriptions
+          className="task-details"
           size="small"
           column={1}
-          layout={isMultiColumn ? "vertical" : "horizontal"}
           styles={{ content: { overflowWrap: "anywhere" } }}
           items={details}
         />

@@ -21,7 +21,7 @@
 /** Container for the description of a task type, allowing for long text wrapping and optional height capping. */
 .task-type-description {
   max-width: 700px;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 
   &.short {
     max-height: 150px;
@@ -39,115 +39,17 @@
   }
 }
 
-/** Wrapper for the 'What's Next' dashboard welcome banner. */
-.welcome-header-wrapper {
-  background: var(--background-blue-neurons);
-
-  button {
-    color: white;
-  }
+/**
+ * Gives the columns of all finished-task cards equal widths, so the cards line up. antd sets
+ * table-layout: fixed but no width, and browsers ignore a fixed layout on auto-width tables.
+ */
+.finished-task-descriptions table {
+  width: 100%;
 }
 
-/** Layout for the inner content of the welcome header, including centered text and action buttons. */
-.welcome-header-content {
-  padding: 40px 0px 40px;
-
-  .text-and-button-container {
-    max-width: 1000px;
-    margin: auto;
-
-    h1 {
-      color: white;
-      font-weight: 200;
-      font-size: 64px;
-      line-height: 150%;
-      margin-bottom: 0;
-      text-align: center;
-    }
-
-    .subtitle {
-      color: white;
-      font-weight: 300;
-      font-size: 18px;
-      line-height: 150%;
-      max-width: 70%;
-      text-align: center;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .whats-next-actions-grid {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      padding-inline-start: 0;
-
-      a {
-        color: var(--ant-color-text);
-        flex: 0 1 400px;
-        /*  No stretching: */
-        margin: 20px;
-        margin-left: 0;
-        margin-right: 40px;
-
-        list-style: none;
-        padding: 8px;
-        cursor: pointer;
-
-        // Align contents:
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        align-items: center;
-
-        .label {
-          margin-left: 12px;
-        }
-
-        h2 {
-          font-size: 16px;
-          line-height: 18px;
-          color: var(--ant-color-text);
-          margin-bottom: 8px;
-        }
-
-        p {
-          font-size: 14px;
-          line-height: 18px;
-          color: var(--ant-color-text);
-          margin: 0;
-        }
-
-        background: var(--ant-color-bg-container);
-        border-radius: var(--ant-border-radius);
-      }
-
-      a:hover {
-        background: var(--ant-color-info-bg-hover);
-
-        i {
-          filter: brightness(100);
-        }
-
-        h2 {
-          color: var(--ant-color-text);
-        }
-
-        p {
-          color: var(--ant-color-text);
-        }
-      }
-
-      .welcome-header-icon {
-        height: 96px;
-        width: 96px;
-
-        svg {
-          width: 100%;
-          height: 100%;
-        }
-      }
-    }
-  }
+/** Background of the 'What's Next' dashboard welcome banner. Layout lives in admin/welcome_ui.tsx. */
+.welcome-header {
+  background: var(--background-blue-neurons);
 }
 
 /** Styling for the folder structure preview in the dataset import view. */
@@ -210,7 +112,7 @@ pre.dataset-import-folder-structure-hint {
   font-size: 17px;
   font-weight: 500;
   min-height: 30px;
-  word-break: break-word;
+  overflow-wrap: anywhere;
   margin-inline-end: 15px;
 }
 

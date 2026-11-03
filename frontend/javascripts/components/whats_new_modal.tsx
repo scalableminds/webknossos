@@ -15,7 +15,7 @@ function ReleaseNoteLink(props: { children: React.ReactNode; href: string }) {
     return (
       <iframe
         className="release-note-video"
-        src={`https://www.youtube.com/embed/${youtubeMatch[1]}?modestbranding=1`}
+        src={`https://www.youtube-nocookie.com/embed/${youtubeMatch[1]}?modestbranding=1`}
         title="YouTube video"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         referrerPolicy="strict-origin-when-cross-origin"

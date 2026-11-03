@@ -1,11 +1,7 @@
 import { call } from "redux-saga/effects";
 import constants from "viewer/constants";
 import Model from "viewer/model";
-import {
-  prefetchForFlightMode,
-  prefetchForPlaneMode,
-  triggerDataPrefetching,
-} from "viewer/model/sagas/prefetch_saga";
+import { prefetchForPlaneMode, triggerDataPrefetching } from "viewer/model/sagas/prefetch_saga";
 import { setModel } from "viewer/singletons";
 import { describe, expect, it, vi } from "vitest";
 import DATASET from "../fixtures/dataset_server_object";
@@ -22,25 +18,11 @@ vi.mock("viewer/model/sagas/root_saga", () => {
 });
 
 describe("Prefetch Saga", () => {
-  it("should trigger prefetching for the correct view mode", () => {
-    // These are not the correct layers (those should be data_layer instances)
-    // but they are sufficient to test this saga
-    const allLayers = DATASET.dataSource.dataLayers;
-    const previousProperties = {};
-    const saga = triggerDataPrefetching(previousProperties);
+  it("should not prefetch in flight mode", () => {
+    const saga = triggerDataPrefetching({});
     saga.next(); // select viewMode
 
-    saga.next(constants.MODE_FLIGHT); // Model.getAllLayers
-
-    saga.next(allLayers); // shouldPrefetchForDataLayer
-
-    expectValueDeepEqual(
-      expect,
-      saga.next(true),
-      call(prefetchForFlightMode as any, allLayers[0], previousProperties),
-    );
-    // Saga should not be over as there are multiple layers
-    expect(saga.next().done).toBe(false);
+    expect(saga.next(constants.MODE_FLIGHT).done).toBe(true);
   });
 
   it("should not prefetch segmentation if it is not visible", () => {

@@ -9,7 +9,7 @@ on:
 
 jobs:
   remove-labels:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     if: contains(github.event.pull_request.labels.*.name, 'automerge') || contains(github.event.pull_request.labels.*.name, 'autodeploy')
     permissions:
       pull-requests: write

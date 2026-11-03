@@ -74,8 +74,14 @@ const viteConfig = {
     enabled: false,
   },
   optimizeDeps: {
+    // The dependency scanner does not follow the `?worker` glob in comlink_wrapper.ts, so deps
+    // used only by workers (e.g., lz4-wasm) were discovered at runtime. That re-optimization
+    // invalidates already served dep URLs and fails with "Failed to fetch dynamically imported module".
+    entries: ["index.html", "frontend/javascripts/**/*.worker.{ts,js}"],
     exclude: ["three-mesh-bvh"],
   },
+  // Copied verbatim (unhashed) into outDir, for files that need stable URLs, e.g. the OpenGraph image.
+  publicDir: "frontend/public",
   build: {
     outDir: "public", // note: /public is handled by the backend/Play framework for asset delivery
     emptyOutDir: true,

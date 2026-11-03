@@ -92,6 +92,20 @@ type APIDataLayerBase = {
   readonly additionalAxes: Array<AdditionalAxis> | null;
   readonly coordinateTransformations?: CoordinateTransformation[] | null;
   readonly hasSegmentIndex?: boolean;
+  readonly attachments?: APIDataLayerAttachments;
+};
+type APILayerAttachment = {
+  readonly name: string;
+  readonly path: string;
+  readonly dataFormat: string;
+};
+export type APIDataLayerAttachments = {
+  readonly meshes?: Array<APILayerAttachment>;
+  readonly agglomerates?: Array<APILayerAttachment>;
+  readonly segmentIndex?: APILayerAttachment;
+  readonly connectomes?: Array<APILayerAttachment>;
+  readonly cumsum?: APILayerAttachment;
+  readonly segmentStatistics?: APILayerAttachment;
 };
 export type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";

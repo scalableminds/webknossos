@@ -73,7 +73,25 @@ export type Params = {
   useInterpolation: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
   isWindows: boolean;
+  // See computeVertexBucketAlignmentLayerCap.
+  vertexBucketAlignmentLayerCap: number;
 };
+
+// Varying rows the vertex shader uses besides the per-layer arrays: 8 for the
+// fixed varyings, plus one row of headroom.
+const BASELINE_VARYING_ROWS = 9;
+
+// How many layers can get the outputMagIdx/outputSeed/outputAddress varyings.
+// The three per-layer arrays share one varying row per layer, and every TPS
+// layer needs one more row for its offset. Measured with Chrome's (ANGLE's)
+// packing: with 32 varying vectors, 24 layers link (31: 23). WebGL2 only
+// guarantees 15, and exceeding the limit fails with "Could not pack varying".
+export function computeVertexBucketAlignmentLayerCap(
+  maxVaryingVectors: number,
+  tpsLayerCount: number,
+): number {
+  return Math.max(1, maxVaryingVectors - BASELINE_VARYING_ROWS - tpsLayerCount);
+}
 
 const SHARED_UNIFORM_DECLARATIONS = `
 uniform vec2 viewportExtent;
@@ -180,7 +198,10 @@ const vec3 voxelSizeFactorInverted = <%= formatVector3AsVec3(voxelSizeFactorInve
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
-`;
+<% if (isVertexAlignmentCapped) { %>// Only layers whose global index is below this have entries in the
+// outputMagIdx/outputSeed/outputAddress varyings.
+const uint VERTEX_ALIGNMENT_LAYER_CAP = <%= vertexAlignmentLayerCap %>u;
+<% } %>`;
 
 export default function getMainFragmentShader(params: Params) {
   const hasSegmentation = params.segmentationLayerNames.length > 0;
@@ -190,9 +211,9 @@ precision highp float;
 ${SHARED_UNIFORM_DECLARATIONS}
 
 flat in vec2 index;
-flat in uint outputMagIdx[<%= globalLayerCount %>];
-flat in uint outputSeed[<%= globalLayerCount %>];
-flat in float outputAddress[<%= globalLayerCount %>];
+flat in uint outputMagIdx[<%= vertexAlignmentLayerCap %>];
+flat in uint outputSeed[<%= vertexAlignmentLayerCap %>];
+flat in float outputAddress[<%= vertexAlignmentLayerCap %>];
 flat in float useBucketBorderVertexOptimization;
 in vec4 worldCoord;
 in vec4 modelCoord;
@@ -427,6 +448,13 @@ void main() {
   `)({
     ...params,
     layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
+    vertexAlignmentLayerCap: Math.max(
+      1,
+      Math.min(params.globalLayerCount, params.vertexBucketAlignmentLayerCap),
+    ),
+    // Only emit the cap checks if some layer is actually above the cap, so the
+    // shaders stay identical to the uncapped ones otherwise.
+    isVertexAlignmentCapped: params.vertexBucketAlignmentLayerCap < params.globalLayerCount,
     ViewModeValuesIndices: mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
@@ -460,9 +488,9 @@ out mat4 savedModelMatrix;
 }) %>
 
 flat out vec2 index;
-flat out uint outputMagIdx[<%= globalLayerCount %>];
-flat out uint outputSeed[<%= globalLayerCount %>];
-flat out float outputAddress[<%= globalLayerCount %>];
+flat out uint outputMagIdx[<%= vertexAlignmentLayerCap %>];
+flat out uint outputSeed[<%= vertexAlignmentLayerCap %>];
+flat out float outputAddress[<%= vertexAlignmentLayerCap %>];
 // bool varyings are not supported
 flat out float useBucketBorderVertexOptimization;
 
@@ -612,7 +640,10 @@ void main() {
   float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
 
   <% each(layerNamesWithSegmentation, function(name, layerIndex) { %>
-  if (!<%= name %>_has_transform) {
+  <% if (isVertexAlignmentCapped) { %>// Layers at or above VERTEX_ALIGNMENT_LAYER_CAP do the full lookup per
+  // fragment instead (see getColorForCoords64).
+  if (!<%= name %>_has_transform
+      && availableLayerIndexToGlobalLayerIndex[<%= layerIndex %>u] < VERTEX_ALIGNMENT_LAYER_CAP) {<% } else { %>if (!<%= name %>_has_transform) {<% } %>
     float bucketAddress;
     uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[<%= layerIndex %>u];
     uint activeMagIdx = uint(activeMagIndices[int(globalLayerIndex)]);
@@ -641,6 +672,13 @@ void main() {
   `)({
     ...params,
     layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
+    vertexAlignmentLayerCap: Math.max(
+      1,
+      Math.min(params.globalLayerCount, params.vertexBucketAlignmentLayerCap),
+    ),
+    // Only emit the cap checks if some layer is actually above the cap, so the
+    // shaders stay identical to the uncapped ones otherwise.
+    isVertexAlignmentCapped: params.vertexBucketAlignmentLayerCap < params.globalLayerCount,
     ViewModeValuesIndices: mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),

@@ -32,6 +32,7 @@ import {
   startEditingAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import Dimensions from "viewer/model/dimensions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import Store from "viewer/store";
@@ -111,6 +112,40 @@ describe("Volume Tracing", () => {
     expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(
       Number(newCellId) + 1,
     );
+  });
+
+  it<WebknossosTestContext>("Brushing does not paint outside of the bounding box of the volume layer", async ({
+    api,
+    mocks,
+  }) => {
+    const oldCellId = 11;
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, oldCellId, 5),
+    );
+    await api.data.reloadAllBuckets();
+    const layerName = api.data.getVolumeTracingLayerIds()[0];
+    // Usually set from the tracing's bounding box (e.g., a task bounding box).
+    // Its x border lies within the first bucket, which is thus only partially contained.
+    const cube = api.data.model.getCubeByLayerName(layerName);
+    cube.boundingBox = new BoundingBox({ min: [0, 0, 0], max: [8, 64, 64] });
+
+    const newCellId = 2n;
+    Store.dispatch(updateUserSettingAction("brushSize", 100));
+    Store.dispatch(setToolAction(AnnotationTool.BRUSH));
+    Store.dispatch(setActiveCellAction(newCellId));
+    const brushAt = (position: Vector3) => {
+      Store.dispatch(setPositionAction(position));
+      Store.dispatch(startEditingAction(position, OrthoViews.PLANE_XY));
+      Store.dispatch(addToContourListAction(position));
+      Store.dispatch(finishEditingAction());
+    };
+
+    brushAt([8, 5, 5]);
+    expect(await api.data.getDataValue(layerName, [7, 5, 5])).toBe(Number(newCellId));
+    expect(await api.data.getDataValue(layerName, [8, 5, 5])).toBe(oldCellId);
+
+    brushAt([20, 5, 5]);
+    expect(await api.data.getDataValue(layerName, [20, 5, 5])).toBe(oldCellId);
   });
 
   it<WebknossosTestContext>("Erasing with overwrite-empty removes only the active segment", async ({

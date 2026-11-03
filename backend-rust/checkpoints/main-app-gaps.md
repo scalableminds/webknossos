@@ -1,7 +1,7 @@
 # Main-app gap inventory (non-route behavior Scala does that Rust does not)
 
 Status: DONE (read-only research agent, 2026-10-11). No source files edited.
-Update 2026-11-03: G1–G5, G7–G11, G13 and G14 are DONE (see each entry); G6 and G12 are in progress. Section 0
+Update 2026-11-03: G1–G11, G13 and G14 are DONE (see each entry); G12 is in progress. Section 0
 describes the state of 2026-10-11: `main.rs` now starts every background job listed here.
 Scope: `app/`, `conf/application.conf`, `util/`, `webknossos-tracingstore/.../cleanup/CleanUpService.scala`
 (WkCleanUpService) vs. `backend-rust/src` + checkpoints. Route registration is complete (287/287) and is NOT

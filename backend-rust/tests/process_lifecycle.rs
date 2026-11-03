@@ -68,7 +68,9 @@ async fn executable_serves_checks_schema_and_shuts_down_cleanly() {
     let address = reservation.local_addr().unwrap();
     drop(reservation);
     let mut server = start(&db.connection_url(), address);
-    tokio::time::timeout(Duration::from_secs(5), async {
+    // Startup runs the initial-data insert before serving; under a full parallel test run that can
+    // take several seconds with this test's two-connection pool.
+    tokio::time::timeout(Duration::from_secs(20), async {
         loop {
             assert!(
                 server.0.try_wait().unwrap().is_none(),

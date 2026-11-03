@@ -87,6 +87,7 @@ async fn request_timeout_bounds_database_waits_and_preserves_error_headers() {
         credit_ticker: Default::default(),
         used_storage: Default::default(),
         worker_liveness: Default::default(),
+        main_view: Default::default(),
     };
     let app = router_with_config(AppState::from_config(pool.clone(), &config), &config);
     let response = tokio::time::timeout(

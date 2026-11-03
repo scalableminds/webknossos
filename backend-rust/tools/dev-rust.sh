@@ -19,6 +19,8 @@ fi
 
 export DATABASE_URL="${DATABASE_URL:-postgres://postgres:postgres@localhost:5432/webknossos}"
 export WK_PUBLIC_URL="${WK_PUBLIC_URL:-http://localhost:9000}"
+# The built frontend (`yarn build`) for the main view on :9001; vite on :9000 serves its own index.html.
+export WK_PUBLIC_DIR="${WK_PUBLIC_DIR:-../public}"
 # Play's silhouette signer secret, so Play and Rust sessions are interchangeable.
 PLAY_SIGNER_SECRET='`?IVa2TCaZAZ4TY]B0=tCs9mJdyaA0V<mA4k[sq6gV=2C5y?liAhWF?ZMA0h1EIe'
 DEFAULT_FEATURES='{"voxelyticsEnabled":true}'

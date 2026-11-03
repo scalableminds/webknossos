@@ -178,6 +178,20 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
   `jobs.workerLivenessReReportInterval`, `silhouette.tokenAuthenticator` cleanup interval (dataStoreExpiry is present).
   Parent-owned README/.env.example pass after G1-G9 land.
 
+### G14. Main view (SPA entry page + OpenGraph) — DONE 2026-11-03 except static files and sitemap
+- Found after the original inventory: the route coverage only counts `conf/webknossos.latest.routes`, but Play's
+  `RequestHandler` answers every other path with `AboutPageRedirectController.redirectToAboutPageOrSendMainView`
+  (`index.html` + commit hash, the user's theme, OpenGraph tags from `OpenGraphService`, wkorg metadata, Airbrake
+  config; about-page redirect on wkorg). A plain static server cannot do this (per-user theme, DB lookups).
+- Rust: `src/main_view.rs` (+ `open_graph.rs`, `main_view_dao.rs`), wired into the router fallback; config
+  `WK_PUBLIC_DIR`, `WK_ABOUT_PAGE_REDIRECT_PREFIX/_ROUTES`, `WK_AIRBRAKE_*`. Tests: `main_view_tests.rs` (incl. a
+  guard that the repo's `index.html` keeps every placeholder) and `tests/main_view.rs`.
+- Deliberate: invalid `?token=` credentials answer anonymously (shared links carry private-link tokens there),
+  unlike the fail-closed API routes (open policy decision in checkpoints/cutover.md). Content-Type adds
+  `charset=utf-8`. Play's detectPageType quirk is kept: `/datasets/<name>-<id>` without `/view` gets generic tags.
+- Still MISSING: `/assets`, `/images`, `/wasm` files (static server or Play) and the wkorg `/sitemap.xml`
+  (SitemapController). `/favicon.ico` stays a 404, `/sw.*.js` on wkorg an empty script, as in Play.
+
 ## 2. Suggested agent split (bounded, file-owned)
 
 1. `smtp-mailer` (G1) — mail.rs, mail_smtp.rs; parent: Cargo (networked fetch of lettre), lib.rs, config.

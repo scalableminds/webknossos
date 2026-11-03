@@ -51,6 +51,7 @@ pub struct AppState {
     pub annotation_mutex_expiry: MutexExpiry,
     pub webauthn: WebAuthnStores,
     pub oidc: Arc<Oidc>,
+    pub main_view: crate::main_view::MainView,
 }
 
 /// `features.allowDeleteDatasets`.
@@ -84,6 +85,7 @@ pub struct AppStateBuilder {
     allow_delete_datasets: bool,
     annotation_mutex_expiry: std::time::Duration,
     oidc: OidcConfig,
+    main_view: crate::main_view::MainViewConfig,
 }
 
 impl AppState {
@@ -116,6 +118,7 @@ impl AppState {
             allow_delete_datasets: true,
             annotation_mutex_expiry: std::time::Duration::from_secs(120),
             oidc: OidcConfig::default(),
+            main_view: Default::default(),
         }
     }
 
@@ -137,6 +140,7 @@ impl AppState {
             .allow_delete_datasets(config.allow_delete_datasets)
             .annotation_mutex_expiry(config.annotation_mutex_expiry)
             .oidc(config.oidc.clone())
+            .main_view(config.main_view.clone())
             .build()
     }
 }
@@ -228,6 +232,11 @@ impl AppStateBuilder {
         self
     }
 
+    pub fn main_view(mut self, config: crate::main_view::MainViewConfig) -> Self {
+        self.main_view = config;
+        self
+    }
+
     /// A time-interaction writer other than the one `time_tracking` configures.
     pub fn time_interaction_writer(mut self, writer: TimeInteractionWriter) -> Self {
         self.time_interaction_writer = Some(writer);
@@ -289,6 +298,7 @@ impl AppStateBuilder {
             annotation_mutex_expiry: MutexExpiry(self.annotation_mutex_expiry),
             webauthn: WebAuthnStores::default(),
             oidc: Arc::new(Oidc::new(self.oidc)),
+            main_view: crate::main_view::MainView::new(self.main_view),
         }
     }
 }

@@ -55,6 +55,7 @@ mod job_submission;
 mod job_workers;
 mod jobs;
 mod mail;
+mod main_view;
 mod maintenance_short_links;
 mod notification_emails;
 mod object_ids;

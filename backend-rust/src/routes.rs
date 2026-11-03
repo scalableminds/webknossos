@@ -211,9 +211,20 @@ async fn response_headers(request: Request, next: Next) -> Response {
 #[cfg(test)]
 mod routes_tests;
 
-/// Unknown routes. Requests for an unsupported API version get Play's
-/// `ApiVersioning.invalidApiVersionMessage` (RequestHandler checks the version before routing).
-async fn fallback(uri: axum::http::Uri) -> ApiError {
+/// Unknown routes, routed like Play's RequestHandler: requests for an unsupported API version
+/// get `ApiVersioning.invalidApiVersionMessage` (checked before routing), API and asset paths a
+/// JSON 404, and every other path the frontend's main view.
+async fn fallback(State(state): State<AppState>, request: Request) -> Response {
+    if let Some(error) = invalid_api_version(request.uri()) {
+        return error.into_response();
+    }
+    match crate::main_view::handle(&state, request).await {
+        Some(response) => response,
+        None => ApiError::not_found(crate::msg::request::ROUTE_NOT_IMPLEMENTED).into_response(),
+    }
+}
+
+fn invalid_api_version(uri: &axum::http::Uri) -> Option<ApiError> {
     const OLDEST: u64 = 10;
     const CURRENT: u64 = 16;
     let version = ["/api/v", "/data/v", "/tracings/v"]
@@ -228,9 +239,11 @@ async fn fallback(uri: axum::http::Uri) -> ApiError {
             (!digits.is_empty()).then(|| digits.parse::<u64>().unwrap_or(u64::MAX))
         });
     match version {
-        Some(version) if !(OLDEST..=CURRENT).contains(&version) => ApiError::not_found(format!(
-            "This WEBKNOSSOS instance does not support the requested HTTP API version. Client requested {version} but must be at least {OLDEST} and at most {CURRENT}."
-        )),
-        _ => ApiError::not_found(crate::msg::request::ROUTE_NOT_IMPLEMENTED),
+        Some(version) if !(OLDEST..=CURRENT).contains(&version) => {
+            Some(ApiError::not_found(format!(
+                "This WEBKNOSSOS instance does not support the requested HTTP API version. Client requested {version} but must be at least {OLDEST} and at most {CURRENT}."
+            )))
+        }
+        _ => None,
     }
 }

@@ -14,6 +14,7 @@ describe("Release notes", () => {
     );
     expect(() => parseReleaseNoteDate("changelog.md")).toThrow();
     expect(() => parseReleaseNoteDate("2026-13-45-invalid.md")).toThrow();
+    expect(() => parseReleaseNoteDate("2026-02-30-invalid.md")).toThrow();
   });
 
   it("should parse the title from the leading heading", () => {

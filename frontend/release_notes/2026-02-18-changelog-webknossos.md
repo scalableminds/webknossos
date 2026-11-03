@@ -78,4 +78,4 @@ Also, the UI for starting AI jobs for running and training models and alignment 
 
 ![analysis menu](https://static.webknossos.org/assets/release_notes/f405c2a46c8b92246570c2cf482857e5732ea9e9.gif)
 
-[Read the full changelog](https://github.com/scalableminds/webknossos/releases/tag/23.02.0) : [Releases · scalableminds/webknossos · GitHub](https://github.com/scalableminds/webknossos/releases)
+[Read the full changelog](https://github.com/scalableminds/webknossos/releases/tag/26.01.0)

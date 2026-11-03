@@ -27,4 +27,4 @@ Keyboard shortcuts are configurable now. They are displayed in a new shortcuts d
   ![Screenshot 2026-08-04 at 12-15-31](https://static.webknossos.org/assets/release_notes/97c0401cbd14f8001665014f4b94cbe4ef882844.png)
 - A new blend mode was added (Settings Sidebar > Data Rendering) called "Cover (black as transparent)". The new mode behaves like "Cover", but treats black data as transparent. This behavior is especially helpful for multi-modality datasets. [#9492](https://github.com/scalableminds/webknossos/pull/9492)
 
-  [Read the full changelog](https://github.com/scalableminds/webknossos/releases/tag/23.02.0) : [Releases · scalableminds/webknossos · GitHub](https://github.com/scalableminds/webknossos/releases)
+[Read the full changelog](https://github.com/scalableminds/webknossos/releases/tag/26.08.0)

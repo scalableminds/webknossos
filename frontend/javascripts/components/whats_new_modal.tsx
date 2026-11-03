@@ -6,10 +6,10 @@ import { useEffect, useState } from "react";
 import { ModalWidth } from "theme";
 import { UserThemeConfigProvider } from "theme_provider";
 
-const YOUTUBE_URL_REGEX = /^https:\/\/(?:www\.)?youtube\.com\/watch\?v=([\w-]+)/;
+const YOUTUBE_URL_REGEX = /^https:\/\/(?:(?:www\.)?youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/;
 
-// A bare YouTube link (e.g. `<https://www.youtube.com/watch?v=ID>`) is rendered as an embedded
-// video. Links with a custom text stay regular links.
+// A bare YouTube link (e.g. `<https://www.youtube.com/watch?v=ID>` or `<https://youtu.be/ID>`) is
+// rendered as an embedded video. Links with a custom text stay regular links.
 function ReleaseNoteLink(props: { children: React.ReactNode; href: string }) {
   const youtubeMatch = props.href.match(YOUTUBE_URL_REGEX);
   if (youtubeMatch != null && props.children === props.href) {

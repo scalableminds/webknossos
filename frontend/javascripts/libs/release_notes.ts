@@ -24,7 +24,10 @@ const TITLE_REGEX = /^# (.+)\r?\n/;
 export function parseReleaseNoteDate(fileName: string): number {
   const match = fileName.match(FILE_NAME_REGEX);
   const date = match != null ? Date.parse(`${match[1]}T00:00:00Z`) : Number.NaN;
-  if (Number.isNaN(date)) {
+  // Some engines roll over non-existent days (e.g., 2026-02-30 becomes 2026-03-02).
+  const isValidCalendarDate =
+    match != null && !Number.isNaN(date) && new Date(date).toISOString().startsWith(match[1]);
+  if (!isValidCalendarDate) {
     throw new Error(`Release note ${fileName} must be named YYYY-MM-DD-some-slug.md.`);
   }
   return date;

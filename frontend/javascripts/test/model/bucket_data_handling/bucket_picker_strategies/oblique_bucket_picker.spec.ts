@@ -6,7 +6,6 @@ import determineBucketsForPlane, {
   PREFETCH_BUCKET_FRACTION,
   ROTATIONS,
 } from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
-import { buildOverlapTest } from "viewer/model/bucket_data_handling/convex_polyhedron_buckets";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import {
   getBucketExtent,
@@ -14,6 +13,7 @@ import {
 } from "viewer/model/helpers/position_converter";
 import type { PlaneRects } from "viewer/store";
 import { describe, expect, it } from "vitest";
+import { buildOverlapTest } from "../../../helpers/convex_polyhedron_overlap";
 
 const ANISOTROPIC_MAGS: Vector3[] = [
   [1, 1, 1],

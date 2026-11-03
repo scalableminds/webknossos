@@ -1,7 +1,8 @@
-// Collects all buckets whose box [x, x+1] × [y, y+1] × [z, z+1] (in bucket coordinates)
-// overlaps a convex polyhedron with positive volume (buckets that only touch it are skipped).
-// The polyhedron is given as flat vertex coordinates and pairs of edge indices (offsets into the
-// vertex array), see getSquareFrustum.
+// A generic implementation of the exact test whether a bucket, i.e. the box
+// [x, x+1] × [y, y+1] × [z, z+1] in bucket coordinates, overlaps a convex polyhedron with positive
+// volume (buckets that only touch it don't overlap). The polyhedron is given as flat vertex
+// coordinates and pairs of edge indices (offsets into the vertex array). It's independent of the
+// box-specific implementation in oblique_bucket_picker.ts, so it can serve as a reference in tests.
 //
 // The overlap test is an exact separating-axis test. For two convex polyhedra, it suffices
 // to test the face normals of both and the cross products of their edge directions. The face
@@ -51,124 +52,8 @@ function buildAxisBounds(vertices: ArrayLike<number>, edgeIndices: ArrayLike<num
   };
 }
 
-let rowOutput = new Int32Array(0);
-
-// Returns the buckets overlapping the polyhedron, row by row. For a fixed row (y, z), every
-// condition of the overlap test is linear in x, so the overlapping buckets of a row form one
-// contiguous interval whose ends can be computed per row. To be robust against rounding and to treat ties exactly like the overlap
-// test, the computed ends are only used as a starting point and corrected with the exact test.
-export function collectBucketsInConvexPolyhedron(
-  vertices: ArrayLike<number>,
-  edgeIndices: ArrayLike<number>,
-): Int32Array {
-  const bounds = buildAxisBounds(vertices, edgeIndices);
-  const { axisCount, axisX, axisY, axisZ, lower, upper } = bounds;
-  const overlaps = buildOverlapTestFromBounds(bounds);
-  const vertexCount = vertices.length / 3;
-
-  // Axes perpendicular to x constrain whole rows; the others constrain x within a row.
-  const rowAxes: number[] = [];
-  const xAxes: number[] = [];
-  for (let k = 0; k < axisCount; k++) {
-    if (axisX[k] === 0) rowAxes.push(k);
-    else xAxes.push(k);
-  }
-  const inverseAxisX = new Float64Array(axisCount);
-  for (const k of xAxes) {
-    inverseAxisX[k] = 1 / axisX[k];
-  }
-
-  const min = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
-  const max = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
-  for (let v = 0; v < vertexCount; v++) {
-    for (let d = 0; d < 3; d++) {
-      min[d] = Math.min(min[d], vertices[3 * v + d]);
-      max[d] = Math.max(max[d], vertices[3 * v + d]);
-    }
-  }
-  // Only buckets within these ranges can overlap the polyhedron.
-  const minX = Math.floor(min[0]);
-  const maxX = Math.floor(max[0]);
-  const minY = Math.floor(min[1]);
-  const maxY = Math.floor(max[1]);
-  const minZ = Math.floor(min[2]);
-  const maxZ = Math.floor(max[2]);
-
-  const maxOutputLength = 3 * (maxX - minX + 1) * (maxY - minY + 1) * (maxZ - minZ + 1);
-  if (rowOutput.length < maxOutputLength) {
-    rowOutput = new Int32Array(maxOutputLength);
-  }
-  const output = rowOutput;
-  let outputLength = 0;
-
-  for (let z = minZ; z <= maxZ; z++) {
-    for (let y = minY; y <= maxY; y++) {
-      let isRowEmpty = false;
-      for (let i = 0; i < rowAxes.length; i++) {
-        const k = rowAxes[i];
-        const projection = axisY[k] * y + axisZ[k] * z;
-        if (projection <= lower[k] || projection >= upper[k]) {
-          isRowEmpty = true;
-          break;
-        }
-      }
-      if (isRowEmpty) {
-        continue;
-      }
-
-      // Overlapping buckets satisfy lowerX < x < upperX (up to rounding).
-      let lowerX = Number.NEGATIVE_INFINITY;
-      let upperX = Number.POSITIVE_INFINITY;
-      for (let i = 0; i < xAxes.length; i++) {
-        const k = xAxes[i];
-        const rest = axisY[k] * y + axisZ[k] * z;
-        const a = (lower[k] - rest) * inverseAxisX[k];
-        const b = (upper[k] - rest) * inverseAxisX[k];
-        if (a < b) {
-          lowerX = Math.max(lowerX, a);
-          upperX = Math.min(upperX, b);
-        } else {
-          lowerX = Math.max(lowerX, b);
-          upperX = Math.min(upperX, a);
-        }
-      }
-      const firstCandidate = Math.max(minX, Math.floor(lowerX));
-      const lastCandidate = Math.min(maxX, Math.ceil(upperX));
-      if (firstCandidate > lastCandidate) {
-        continue;
-      }
-
-      // Correct the ends with the exact test. The accepted buckets of a row are contiguous.
-      let first = firstCandidate;
-      while (first <= lastCandidate && !overlaps(first, y, z)) {
-        first++;
-      }
-      if (first > lastCandidate) {
-        continue;
-      }
-      if (first === firstCandidate) {
-        while (first > minX && overlaps(first - 1, y, z)) first--;
-      }
-      let last = lastCandidate;
-      while (!overlaps(last, y, z)) {
-        last--;
-      }
-      if (last === lastCandidate) {
-        while (last < maxX && overlaps(last + 1, y, z)) last++;
-      }
-
-      for (let x = first; x <= last; x++) {
-        output[outputLength++] = x;
-        output[outputLength++] = y;
-        output[outputLength++] = z;
-      }
-    }
-  }
-  return output.slice(0, outputLength);
-}
-
 // Returns whether the bucket with min corner (x, y, z) overlaps the polyhedron with positive
-// volume. Only exported for testing.
+// volume.
 export function buildOverlapTest(
   vertices: ArrayLike<number>,
   edgeIndices: ArrayLike<number>,
@@ -302,34 +187,4 @@ function addDirection(
     }
   }
   directions.push(normalized);
-}
-
-// A frustum around the z axis whose faces at nearZ and farZ are rectangles of the given widths,
-// in the format the functions above expect.
-export function getSquareFrustum(
-  nearWidthX: number,
-  nearWidthY: number,
-  nearZ: number,
-  farWidthX: number,
-  farWidthY: number,
-  farZ: number,
-): { vertices: Array<number>; edgeIndices: Array<number> } {
-  const vertices: Array<number> = [];
-  for (const signX of [-1, 1]) {
-    for (const signY of [-1, 1]) {
-      vertices.push((signX * nearWidthX) / 2, (signY * nearWidthY) / 2, nearZ);
-      vertices.push((signX * farWidthX) / 2, (signY * farWidthY) / 2, farZ);
-    }
-  }
-  // Vertex i has the offset 3 * i. Bit 0 of i selects the far face, bit 1 the y sign and bit 2
-  // the x sign, so two vertices are connected iff their indices differ in exactly one bit.
-  const edgeIndices: Array<number> = [];
-  for (let i = 0; i < 8; i++) {
-    for (const bit of [1, 2, 4]) {
-      if ((i & bit) === 0) {
-        edgeIndices.push(3 * i, 3 * (i | bit));
-      }
-    }
-  }
-  return { vertices, edgeIndices };
 }

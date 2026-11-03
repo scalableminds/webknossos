@@ -71,7 +71,7 @@ serde_urlencoded = "0.7"
 sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio-rustls", "postgres", "chrono", "json", "derive"] }
 subtle = "2"
 tokio.workspace = true
-tower-http.workspace = true
+tower-http = { workspace = true, features = ["fs"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 uuid = { version = "1", features = ["v4"] }

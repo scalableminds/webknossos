@@ -3,8 +3,8 @@
 //! replacements (commit hash, the user's theme, OpenGraph tags, wkorg metadata, Airbrake
 //! config), or redirects to the about page on wkorg instances.
 //!
-//! Static frontend files (`/assets`, `/images`, `/wasm`) and the wkorg sitemap are not served
-//! here; they stay with Play or a static file server.
+//! Static frontend files (`/assets`, `/images`, `/wasm`) come from the same public directory
+//! (`static_files.rs`); the wkorg sitemap is not served yet.
 use std::{path::PathBuf, sync::Arc};
 
 use axum::{
@@ -17,6 +17,7 @@ use webknossos_common::text::escape_html;
 
 mod main_view_dao;
 pub mod open_graph;
+mod static_files;
 
 use crate::{
     AppState,
@@ -28,7 +29,7 @@ use open_graph::OpenGraphTags;
 const DEFAULT_PUBLIC_DIR: &str = "public";
 
 /// Play's `play.filters.csp.directives` (application.conf), joined like CspHeaders does.
-const CONTENT_SECURITY_POLICY: &str = "default-src * data: mediastream: blob: filesystem: about: \
+pub(crate) const CONTENT_SECURITY_POLICY: &str = "default-src * data: mediastream: blob: filesystem: about: \
     ws: wss: 'unsafe-eval' 'wasm-unsafe-eval' 'unsafe-inline'; \
     script-src * data: blob: 'unsafe-inline' 'unsafe-eval'; \
     style-src 'self' 'unsafe-inline' *; \
@@ -143,17 +144,12 @@ pub(crate) async fn handle(state: &AppState, request: Request) -> Option<Respons
     let uri = request.uri().clone();
     let path = uri.path();
     let is_wkorg_instance = state.misc.config().is_wkorg_instance;
-    if [
-        "/api/",
-        "/data/",
-        "/tracings/",
-        "/.well-known/",
-        "/assets/",
-        "/images/",
-        "/wasm/",
-    ]
-    .iter()
-    .any(|prefix| path.starts_with(prefix))
+    if static_files::is_static_path(path) {
+        return static_files::serve(&state.main_view, request).await;
+    }
+    if ["/api/", "/data/", "/tracings/", "/.well-known/"]
+        .iter()
+        .any(|prefix| path.starts_with(prefix))
         || path == "/favicon.ico"
         || (is_wkorg_instance && path == "/sitemap.xml")
     {

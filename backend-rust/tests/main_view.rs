@@ -348,3 +348,132 @@ fn app_without_template(db: &TestDb) -> Router {
         },
     )
 }
+
+async fn get_with(app: &Router, uri: &str, headers: &[(&str, &str)]) -> Page {
+    let mut request = Request::builder().uri(uri);
+    for (name, value) in headers {
+        request = request.header(*name, *value);
+    }
+    let response = app
+        .clone()
+        .oneshot(request.body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    let status = response.status().as_u16();
+    let headers = response.headers().clone();
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    Page {
+        status,
+        headers,
+        body: String::from_utf8_lossy(&bytes).into_owned(),
+    }
+}
+
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
+async fn static_frontend_files() {
+    let db = TestDb::new().await;
+    let dir = public_dir();
+    for (file, content) in [
+        ("assets/main-abc123.js", "console.log(1);"),
+        ("assets/compress.worker.js", "self.onmessage = null;"),
+        ("assets/docs/index.html", "<p>docs</p>"),
+        ("images/og-image.png", "png"),
+        ("wasm/lib.wasm", "wasm"),
+        ("assets/big-abc123.js", "uncompressed"),
+        ("assets/big-abc123.js.gz", "gzipped"),
+    ] {
+        let path = dir.join(file);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, content).unwrap();
+    }
+    let app = app(
+        &db,
+        misc(),
+        MainViewConfig {
+            public_dir: dir.clone(),
+            ..MainViewConfig::default()
+        },
+    );
+
+    let page = get(&app, "/assets/main-abc123.js", None).await;
+    assert_eq!((page.status, page.body.as_str()), (200, "console.log(1);"));
+    assert_eq!(
+        page.headers[header::CACHE_CONTROL],
+        "public, max-age=31536000, immutable"
+    );
+    assert!(
+        page.headers[header::CONTENT_TYPE]
+            .to_str()
+            .unwrap()
+            .contains("javascript")
+    );
+    assert!(!page.headers.contains_key(header::CONTENT_SECURITY_POLICY));
+
+    let page = get(&app, "/assets/compress.worker.js", None).await;
+    assert_eq!(page.status, 200);
+    assert!(page.headers.contains_key(header::CONTENT_SECURITY_POLICY));
+
+    for (path, body) in [
+        ("/assets/docs/index.html", "<p>docs</p>"),
+        ("/images/og-image.png", "png"),
+        ("/wasm/lib.wasm", "wasm"),
+    ] {
+        let page = get(&app, path, None).await;
+        assert_eq!((page.status, page.body.as_str()), (200, body), "{path}");
+        assert_eq!(
+            page.headers[header::CACHE_CONTROL],
+            "public, max-age=3600",
+            "{path}"
+        );
+    }
+    assert_eq!(
+        get(&app, "/images/og-image.png", None).await.headers[header::CONTENT_TYPE],
+        "image/png"
+    );
+
+    // Conditional requests and precompressed variants.
+    let page = get(&app, "/assets/main-abc123.js", None).await;
+    let last_modified = page.headers[header::LAST_MODIFIED]
+        .to_str()
+        .unwrap()
+        .to_owned();
+    let page = get_with(
+        &app,
+        "/assets/main-abc123.js",
+        &[("if-modified-since", &last_modified)],
+    )
+    .await;
+    assert_eq!(page.status, 304);
+    assert_eq!(
+        page.headers[header::CACHE_CONTROL],
+        "public, max-age=31536000, immutable"
+    );
+    let page = get_with(
+        &app,
+        "/assets/big-abc123.js",
+        &[("accept-encoding", "gzip")],
+    )
+    .await;
+    assert_eq!((page.status, page.body.as_str()), (200, "gzipped"));
+    assert_eq!(page.headers[header::CONTENT_ENCODING], "gzip");
+    let page = get(&app, "/assets/big-abc123.js", None).await;
+    assert_eq!(page.body, "uncompressed");
+
+    // Missing files, directories and traversal attempts stay JSON 404s.
+    for path in [
+        "/assets/missing.js",
+        "/assets/docs/",
+        "/assets/../index.html",
+        "/assets/%2e%2e/index.html",
+        "/images/../../etc/passwd",
+    ] {
+        let page = get(&app, path, None).await;
+        assert_eq!(page.status, 404, "{path}");
+        assert!(page.body.starts_with('{'), "{path}: {}", page.body);
+        assert_eq!(page.headers[header::CACHE_CONTROL], "no-store", "{path}");
+    }
+
+    std::fs::remove_dir_all(&dir).unwrap();
+    db.cleanup().await;
+}

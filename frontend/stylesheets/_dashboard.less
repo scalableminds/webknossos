@@ -39,6 +39,14 @@
   }
 }
 
+/**
+ * Gives the columns of all finished-task cards equal widths, so the cards line up. antd sets
+ * table-layout: fixed but no width, and browsers ignore a fixed layout on auto-width tables.
+ */
+.finished-task-descriptions table {
+  width: 100%;
+}
+
 /** Background of the 'What's Next' dashboard welcome banner. Layout lives in admin/welcome_ui.tsx. */
 .welcome-header {
   background: var(--background-blue-neurons);

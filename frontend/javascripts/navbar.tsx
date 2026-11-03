@@ -37,9 +37,11 @@ import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import classnames from "classnames";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
+import { WhatsNewModal } from "components/whats_new_modal";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { useMinScreenWidth, useWkSelector } from "libs/react_hooks";
+import { getUnreadReleaseNotesCount } from "libs/release_notes";
 import { TAB_SESSION_ID as SESSION_ID } from "libs/tab_session_id";
 import Toast from "libs/toast";
 import {
@@ -48,13 +50,13 @@ import {
   isUserAdminOrManager,
   isUserAdminOrTeamManager,
 } from "libs/utils";
-import window, { document, location } from "libs/window";
+import window, { location } from "libs/window";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Link, useLocation } from "react-router";
-import { getAntdTheme, ThemeIndependentStatusColor } from "theme";
+import { getAntdTheme } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
 import {
@@ -82,91 +84,8 @@ const ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT = 10;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
 
-const OLVY_SCRIPT_URL = "https://app.olvy.co/script.js";
-
-const OLVY_CONFIG = {
-  organisation: "webknossos",
-  // This target needs to be an empty string as else olvy will eagerly init the modal and thus fetch all its contents.
-  target: "",
-  type: "modal",
-  view: {
-    showSearch: false,
-    compact: false,
-    showHeader: true,
-    // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
-    showUnreadIndicator: false,
-    unreadIndicatorColor: ThemeIndependentStatusColor.error,
-    unreadIndicatorPosition: "top-right",
-  },
-};
-
-function loadOlvyScript(onLoad: () => void): () => void {
-  const script = document.createElement("script");
-  script.src = OLVY_SCRIPT_URL;
-  script.async = true;
-  script.onload = onLoad;
-  document.head.appendChild(script);
-  return () => {
-    script.onload = null;
-  };
-}
-
-function useOlvy() {
-  const [isInitialized, setIsInitialized] = useState(false);
-  // The third-party script is only needed for the "what's new" badge. Load it once the browser is
-  // idle, so that it does not compete with the app's own startup requests.
-  useEffect(() => {
-    let cancelLoad: (() => void) | undefined;
-    const initOlvy = () => {
-      if (window.Olvy == null) {
-        return;
-      }
-      window.Olvy.init(OLVY_CONFIG);
-      setIsInitialized(true);
-    };
-    const startLoading = () => {
-      if (window.Olvy != null) {
-        initOlvy();
-      } else {
-        cancelLoad = loadOlvyScript(initOlvy);
-      }
-    };
-    if (typeof window.requestIdleCallback === "function") {
-      const handle = window.requestIdleCallback(startLoading, { timeout: 5000 });
-      return () => {
-        window.cancelIdleCallback(handle);
-        cancelLoad?.();
-      };
-    }
-    const timeoutId = setTimeout(startLoading, 2000);
-    return () => {
-      clearTimeout(timeoutId);
-      cancelLoad?.();
-    };
-  }, []);
-  return isInitialized;
-}
-
-function useOlvyUnreadReleasesCount(activeUser: APIUser) {
-  const lastViewedTimestampWithFallback =
-    activeUser.novelUserExperienceInfos.lastViewedWhatsNewTimestamp != null
-      ? activeUser.novelUserExperienceInfos.lastViewedWhatsNewTimestamp
-      : activeUser.created;
-  const isInitialized = useOlvy();
-  const unreadCount = useFetch(
-    async () => {
-      if (!isInitialized || !window.Olvy) {
-        return null;
-      }
-
-      return window.Olvy.getUnreadReleasesCount(
-        new Date(lastViewedTimestampWithFallback).toISOString(),
-      );
-    },
-    null,
-    [isInitialized, lastViewedTimestampWithFallback],
-  );
-  return unreadCount;
+function getLastViewedWhatsNewTimestamp(activeUser: APIUser): number {
+  return activeUser.novelUserExperienceInfos.lastViewedWhatsNewTimestamp ?? activeUser.created;
 }
 
 function UserInitials({
@@ -503,34 +422,20 @@ function getDashboardSubMenu(collapse: boolean): SubMenuType {
   };
 }
 
-function getWhatsNewMenuEntry(activeUser: APIUser, maybeUnreadReleaseCount: number | null) {
-  const handleShowWhatsNewView = () => {
-    const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
-      lastViewedWhatsNewTimestamp: Date.now(),
-    });
-    Store.dispatch(setActiveUserAction(newUserSync));
-    sendAnalyticsEvent("open_whats_new_view");
-
-    if (window.Olvy) {
-      // Setting the target lazily, to finally let olvy load the "what's new" modal, as it should be shown now.
-      window.Olvy.config.target = "#unused-olvy-target";
-      window.Olvy.show();
-    }
-  };
-
+function getWhatsNewMenuEntry(unreadReleaseNotesCount: number, onClick: () => void) {
   return {
     key: "whatsNew",
     label: (
       <Badge
         className="navbar-whats-new-badge"
-        count={maybeUnreadReleaseCount || 0}
+        count={unreadReleaseNotesCount}
         size="small"
         offset={[10, 0]}
       >
         What's new
       </Badge>
     ),
-    onClick: handleShowWhatsNewView,
+    onClick,
   };
 }
 
@@ -604,7 +509,23 @@ function LoggedInAvatar({
     activeOrganization != null ? activeOrganization.name || activeOrganization.id : organizationId;
   const [organizationFilter, onChangeOrganizationFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
-  const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
+  const lastViewedWhatsNewTimestamp = getLastViewedWhatsNewTimestamp(activeUser);
+  const unreadReleaseNotesCount = getUnreadReleaseNotesCount(lastViewedWhatsNewTimestamp);
+  const [isWhatsNewModalOpen, setIsWhatsNewModalOpen] = useState(false);
+  // Remember which release notes were unread when the modal was opened, as opening it marks
+  // all of them as read.
+  const [whatsNewUnreadSinceTimestamp, setWhatsNewUnreadSinceTimestamp] = useState(
+    lastViewedWhatsNewTimestamp,
+  );
+  const showWhatsNewModal = () => {
+    setWhatsNewUnreadSinceTimestamp(lastViewedWhatsNewTimestamp);
+    setIsWhatsNewModalOpen(true);
+    const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
+      lastViewedWhatsNewTimestamp: Date.now(),
+    });
+    Store.dispatch(setActiveUserAction(newUserSync));
+    sendAnalyticsEvent("open_whats_new_view");
+  };
 
   const filteredOrganizations = filterWithSearchQueryAND(
     switchableOrganizations,
@@ -635,74 +556,81 @@ function LoggedInAvatar({
 
   const isMultiMember = switchableOrganizations.length > 0;
   return (
-    <Menu
-      selectedKeys={["prevent highlighting of this menu"]}
-      mode="horizontal"
-      style={{
-        lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
-        marginInlineStart: "10px",
-      }}
-      theme="dark"
-      subMenuCloseDelay={subMenuCloseDelay}
-      triggerSubMenuAction="click"
-      className="right-navbar"
-      onOpenChange={setOpenKeys}
-      openKeys={openKeys}
-      items={[
-        {
-          key: "loggedMenu",
-          label: <UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />,
-          style: { padding: 0 },
-          children: [
-            {
-              key: "userName",
-              label: `${firstName} ${lastName}`,
-              disabled: true,
-            },
-            {
-              key: "organization",
-              label: orgName,
-              disabled: true,
-            },
-            { type: "divider" },
-            getWhatsNewMenuEntry(activeUser, maybeUnreadReleaseCount),
-            {
-              key: "account",
-              label: <Link to="/account">Account Settings</Link>,
-            },
-            activeOrganization && isUserAdmin(activeUser)
-              ? {
-                  key: "manage-organization",
-                  label: <Link to={"/organization/overview"}>Organization Settings</Link>,
-                }
-              : null,
-            isMultiMember
-              ? {
-                  key: "switch-organization",
-                  label: "Switch Organization",
-                  popupClassName: "organization-switch-menu",
-                  children: [
-                    ...maybeOrganizationFilterInput,
-                    ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
-                      key: org.id,
-                      onClick: () => switchTo(org),
-                      label: org.name || org.id,
-                    })),
-                  ],
-                }
-              : null,
-            {
-              key: "logout",
-              label: (
-                <a href="/" onClick={handleLogout}>
-                  Logout
-                </a>
-              ),
-            },
-          ],
-        },
-      ]}
-    />
+    <>
+      <Menu
+        selectedKeys={["prevent highlighting of this menu"]}
+        mode="horizontal"
+        style={{
+          lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
+          marginInlineStart: "10px",
+        }}
+        theme="dark"
+        subMenuCloseDelay={subMenuCloseDelay}
+        triggerSubMenuAction="click"
+        className="right-navbar"
+        onOpenChange={setOpenKeys}
+        openKeys={openKeys}
+        items={[
+          {
+            key: "loggedMenu",
+            label: <UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />,
+            style: { padding: 0 },
+            children: [
+              {
+                key: "userName",
+                label: `${firstName} ${lastName}`,
+                disabled: true,
+              },
+              {
+                key: "organization",
+                label: orgName,
+                disabled: true,
+              },
+              { type: "divider" },
+              getWhatsNewMenuEntry(unreadReleaseNotesCount, showWhatsNewModal),
+              {
+                key: "account",
+                label: <Link to="/account">Account Settings</Link>,
+              },
+              activeOrganization && isUserAdmin(activeUser)
+                ? {
+                    key: "manage-organization",
+                    label: <Link to={"/organization/overview"}>Organization Settings</Link>,
+                  }
+                : null,
+              isMultiMember
+                ? {
+                    key: "switch-organization",
+                    label: "Switch Organization",
+                    popupClassName: "organization-switch-menu",
+                    children: [
+                      ...maybeOrganizationFilterInput,
+                      ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
+                        key: org.id,
+                        onClick: () => switchTo(org),
+                        label: org.name || org.id,
+                      })),
+                    ],
+                  }
+                : null,
+              {
+                key: "logout",
+                label: (
+                  <a href="/" onClick={handleLogout}>
+                    Logout
+                  </a>
+                ),
+              },
+            ],
+          },
+        ]}
+      />
+      <WhatsNewModal
+        isOpen={isWhatsNewModalOpen}
+        onClose={() => setIsWhatsNewModalOpen(false)}
+        unreadSinceTimestamp={whatsNewUnreadSinceTimestamp}
+      />
+    </>
   );
 }
 

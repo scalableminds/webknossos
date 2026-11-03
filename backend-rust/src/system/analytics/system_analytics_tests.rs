@@ -61,7 +61,18 @@ fn heartbeat_lock_key_is_pinned_and_unique() {
         crate::background::credit_ticker::JOB_NAME,
     ));
     others.push(advisory_lock_key(crate::organization::storage::JOB_NAME));
-    others.push(advisory_lock_key("worker-liveness"));
+    others.push(advisory_lock_key(
+        crate::background::worker_liveness::JOB_NAME,
+    ));
+    others.push(advisory_lock_key(
+        crate::background::pricing_plan_expiry_reminder::JOB_NAME,
+    ));
+    others.push(advisory_lock_key(
+        crate::background::virtual_datasets_real_path_scan::JOB_NAME,
+    ));
+    others.push(advisory_lock_key(
+        crate::background::mailchimp_ticker::JOB_NAME,
+    ));
     assert!(!others.contains(&key));
 }
 
@@ -75,6 +86,25 @@ async fn disabled_heartbeat_spawns_no_job() {
     let handle = spawn_heartbeat(pool, MiscState::new(config));
     assert!(handle.job_names().is_empty());
     handle.shutdown().await;
+}
+
+#[tokio::test]
+async fn enabled_heartbeat_spawns_its_job() {
+    // main.rs starts the heartbeat with the router's MiscState; any of the
+    // two analytics outputs enables it.
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://unused@127.0.0.1:1/unused")
+        .unwrap();
+    let forwarding = spawn_heartbeat(pool.clone(), MiscState::new(MiscConfig::default()));
+    assert_eq!(forwarding.job_names(), vec![HEARTBEAT_JOB_NAME]);
+    // Shut down before the 10 s initial delay, so the job never touches the pool.
+    forwarding.shutdown().await;
+    let mut config = MiscConfig::default();
+    config.analytics.uri = String::new();
+    config.analytics.save_to_database_enabled = true;
+    let saving = spawn_heartbeat(pool, MiscState::new(config));
+    assert_eq!(saving.job_names(), vec![HEARTBEAT_JOB_NAME]);
+    saving.shutdown().await;
 }
 
 #[test]

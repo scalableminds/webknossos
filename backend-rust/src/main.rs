@@ -57,6 +57,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         );
     let mailchimp_ticker =
         webknossos_backend::background::mailchimp_ticker::spawn(pool.clone(), &config.mailchimp);
+    // Shares the router's MiscState, so heartbeat and request events use one session map.
+    let analytics_heartbeat =
+        webknossos_backend::system::analytics::spawn_heartbeat(pool.clone(), state.misc.clone());
     let metrics_server = match config.metrics_bind {
         Some(address) => {
             let listener = tokio::net::TcpListener::bind(address).await?;
@@ -146,6 +149,12 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .is_err()
     {
         tracing::warn!("Mailchimp ticker did not stop before the shutdown deadline");
+    }
+    if tokio::time::timeout(config.shutdown_timeout, analytics_heartbeat.shutdown())
+        .await
+        .is_err()
+    {
+        tracing::warn!("Analytics heartbeat did not stop before the shutdown deadline");
     }
     if let Some(metrics_server) = metrics_server {
         metrics_server.abort();

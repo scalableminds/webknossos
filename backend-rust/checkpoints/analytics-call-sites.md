@@ -1,6 +1,6 @@
 # analytics-call-sites (G6) checkpoint
 
-Status: IN PROGRESS 2026-10-11. Agent target dir /tmp/webknossos-rust-verify-b.
+Status: DONE 2026-11-03 (started 2026-10-11).
 Done: Scala research. Call sites (Scala -> Rust):
 - signup: AuthenticationController.createUser (register, OIDC first login, createUserInOrganization) + createOrganizationWithAdmin
   -> browser_auth_onboarding.rs register/create_user_in_organization/create_organization_with_admin, auth_oidc.rs login_or_signup.
@@ -19,5 +19,25 @@ Milestone (impl): analytics.rs helpers + heartbeat, call sites in browser_auth_o
 datasets.rs (read, update_metadata), dataset_update.rs (update_partial); application_info::build_info_json made pub(crate).
 cargo check --all-targets passes. Next: tests/analytics_call_sites.rs.
 Milestone (tests): tests/analytics_call_sites.rs 3/3 pass (onboarding, datasets, heartbeat); tests/analytics 3/3.
-tests/datasets.rs + tests/dataset_update.rs now layer an offline MiscState (handlers extract Extension<MiscState>).
-Next: run route-module suites (browser_auth_onboarding, auth_oidc, datasets, dataset_update, lib unit), clippy, fmt.
+(Superseded: MiscState now lives in AppState and handlers extract `State<MiscState>`; no `Extension` layer is left
+in src/ or tests/.)
+
+Finish 2026-11-03:
+- Re-checked all call sites against `AuthenticationController.scala`, `DatasetController.scala`,
+  `LegacyApiController.scala` and `AnalyticsEvent.scala` (names, properties, actor, logged-in-only open_dataset).
+  No gaps found. Note: `signup` for register/OIDC/createUserInOrganization comes from Play's shared private
+  `createUser`; createOrganizationWithAdmin tracks it separately.
+- `main.rs` now calls `system::analytics::spawn_heartbeat(pool, state.misc.clone())` (shares the router's
+  analytics session map) and shuts it down with the other background jobs. The enable decision is
+  `heartbeat_schedule` (unit-tested); new unit test `enabled_heartbeat_spawns_its_job` covers the start path for
+  both outputs; the lock-key uniqueness test now also covers worker-liveness, pricing-reminder, realpath-scan and
+  mailchimp job names.
+- Deviations from Play: heartbeat job disabled when neither `WK_ANALYTICS_URI` nor database saving is configured
+  (Play ticks but its event is a no-op); per-tick advisory lock (Play has none); events fire after the creating
+  transaction commits, so a failed later step (e.g. ToS acceptance in createOrganizationWithAdmin) sends no
+  `signup` (Play tracked before it and kept the partially created user).
+- Verification (backend-rust/): `make check` fails only on the two known pre-existing overlong lines
+  (src/slack.rs:287, src/background/credit_ticker.rs:28); clippy -D warnings, route_inventory --check,
+  datastore_route_inventory --check, check_sql_placeholders all pass. `cargo test --locked -p webknossos-backend`:
+  lib 301 passed; integration 66 passed, 332 ignored; doc 0 passed, 1 ignored. With
+  `WK_RUST_TEST_DATABASE_URL` and `--include-ignored`: lib 301, integration 398, doc 1 passed, 0 failed.

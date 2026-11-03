@@ -107,20 +107,16 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
 - Rust: liveness is only computed for API output (`WK_WORKER_LIVENESS_TIMEOUT_SECONDS`). No re-report config.
 - Agent: part of `slack-client` follow-up, or `worker-liveness` (~30 min) owning new `src/worker_liveness.rs`.
 
-### G6. Server-side analytics call sites + 24 h heartbeat — PARTIAL — P2
-- Ported: create/open/upload/download/update(_view_only) annotation, run_job, failed_job, upload_dataset, frontend.
-- Missing (`grep` confirms no event names in Rust):
-  - `signup` — `AuthenticationController.scala:208,826` (Rust browser_auth_onboarding.rs register / org create).
-  - `send_invites` — `AuthenticationController.scala:368`.
-  - `join_organization` — `AuthenticationController.scala:337,778` (Rust `join_organization_as`,
-    browser_auth_onboarding.rs:393).
-  - `open_dataset` — `DatasetController.scala:439` (Rust datasets.rs read route).
-  - `change_dataset_settings` — `DatasetController.scala:498,525`, `LegacyApiController.scala:176`.
-  - `webknossos_heartbeat` — `app/models/analytics/AnalyticsService.scala:93-101`, every 24 h (10 s initial delay),
-    oldest active user + buildinfo JSON (analytics.rs:10 documents it as not ported).
-- Agent `analytics-call-sites` (~45 min): owned edits in browser_auth_onboarding.rs, datasets.rs/dataset_update.rs,
-  legacy_datasets.rs + heartbeat job registered via G2. Match event property shapes in
-  `app/models/analytics/AnalyticsEvent.scala:105-240`.
+### G6. Server-side analytics call sites + 24 h heartbeat — DONE 2026-11-03 (see checkpoints/analytics-call-sites.md)
+- Call sites: `signup` (register, createUserInOrganization, createOrganizationWithAdmin in
+  `src/auth/browser/onboarding.rs`; first OIDC login in `src/auth/oidc.rs`), `join_organization` (joinOrganization,
+  createOrganizationWithExistingUser), `send_invites`, `open_dataset` (`src/dataset/routes.rs` read, logged-in only),
+  `change_dataset_settings` (`update` in `src/dataset/routes.rs`; `updatePartial` + legacy v10-v12 in
+  `src/dataset/update.rs`). Event names, properties and actors checked against `AnalyticsEvent.scala`.
+- Heartbeat: `system::analytics::spawn_heartbeat` started and shut down in `main.rs` with the router's `MiscState`;
+  enabled when `WK_ANALYTICS_URI` (default non-empty, like Play) or database saving is set (`heartbeat_schedule`).
+- Deviations: heartbeat skipped when neither output is configured (Play ticks but sends nothing); per-tick advisory
+  lock; events fire only after the creating transaction commits (Play tracked before later steps could fail).
 
 ### G7. Organization used-storage scan — DONE (checkpoints/used-storage-scan.md)
 - Scala `app/models/storage/UsedStorageService.scala:53-115`: tick every `webKnossos.fetchUsedStorage.tickerInterval`

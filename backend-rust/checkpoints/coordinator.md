@@ -29,7 +29,7 @@ Next: provision isolated equivalent Scala/Rust service pair and representative i
 Route registration is complete for both services (main app 287/287, datastore 132/132; both inventory `--check`s clean). Registration is not behavioral parity. Test counts elsewhere in this file were not re-run for this review. Older entries below that list these items as "next", "queued" or "PARENT TODO" are superseded by this section.
 
 ### Main application
-- G6 analytics: call sites (signup, join_organization, send_invites, open_dataset, change_dataset_settings) and tests are in the code, but the checkpoint still says IN PROGRESS and the final suite/clippy/fmt run is not recorded. `analytics::spawn_heartbeat` exists but is NOT called from `main.rs`, so the 24 h `webknossos_heartbeat` does not run.
+- G6 analytics: DONE 2026-11-03 (checkpoints/analytics-call-sites.md).
 - G8 pricing-plan expiry reminder: DONE 2026-11-03 (checkpoints/pricing-plan-expiry-reminder.md).
 - G9 Mailchimp: DONE 2026-11-03 (checkpoints/mailchimp.md).
 - G10 virtual-dataset real-path bulk scan: DONE 2026-11-03 (checkpoints/virtual-datasets-real-path-scan.md).

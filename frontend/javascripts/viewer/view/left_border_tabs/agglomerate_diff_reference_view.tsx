@@ -8,6 +8,7 @@ import { useDispatch } from "react-redux";
 import {
   getAgglomerateDiffOverlay,
   getAgglomerateDiffReferenceMappingName,
+  isAgglomerateMappingEnabled,
 } from "viewer/model/accessors/agglomerate_diff_accessor";
 import { getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
 import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
@@ -18,11 +19,7 @@ import { updateLayerSettingAction } from "viewer/model/actions/settings_actions"
 
 const explanation =
   "When a reference agglomerate view is selected, loading an agglomerate skeleton of this layer also loads " +
-  "the edges that were added (green) and removed (orange) compared to the reference agglomerate that contains the clicked segment. " +
-  "Added edges include all parts that were merged onto it. Removed edges that lead out of the agglomerate (splits) end at the first segment outside of it. " +
-  "The differences are only shown while their agglomerate skeleton is visible, which is dimmed meanwhile. " +
-  "The selected reference view is remembered for this annotation. The differences themselves are not saved in the annotation " +
-  "and are not shown for agglomerate skeletons of a proofread (editable) mapping.";
+  "the edges that were added (green) and removed (orange) compared to the reference agglomerate that contains the clicked segment.";
 
 // Failures of many agglomerates usually have few distinct reasons, so only these are listed
 const MAX_LISTED_FAILURE_REASONS = 5;
@@ -76,6 +73,9 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
   );
   const areDiffsVisible = useWkSelector((state) => getAgglomerateDiffOverlay(state).isVisible);
   const isProofreading = useWkSelector((state) => hasEditableMapping(state, layerName));
+  const isAgglomerateMappingActive = useWkSelector((state) =>
+    isAgglomerateMappingEnabled(state, layerName),
+  );
   const diffSummary = useDiffSummary(layerName);
 
   const ensureAgglomeratesAreLoaded = useCallback(async () => {
@@ -85,8 +85,10 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
     setIsLoadingAgglomerates(false);
   }, [dispatch, segmentationLayer]);
 
+  // Diffs are only computed while an agglomerate mapping is active (see agglomerate_diff_saga)
+  const isShown = hasSkeleton && isAgglomerateMappingActive;
   // The agglomerate files are needed to know whether agglomerates can be compared at all
-  const shouldLoadAgglomerates = hasSkeleton && !isProofreading;
+  const shouldLoadAgglomerates = isShown && !isProofreading;
   useEffect(() => {
     if (shouldLoadAgglomerates) ensureAgglomeratesAreLoaded();
   }, [shouldLoadAgglomerates, ensureAgglomeratesAreLoaded]);
@@ -122,7 +124,7 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
     [segmentationLayer.agglomerates],
   );
 
-  if (!hasSkeleton) return null;
+  if (!isShown) return null;
 
   return (
     <div style={{ marginBottom: 14 }}>

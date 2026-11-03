@@ -15,7 +15,12 @@ import {
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { setAgglomerateDiffsVisibilityAction } from "viewer/model/actions/agglomerate_diff_actions";
 import { setLayerMappingsAction } from "viewer/model/actions/dataset_actions";
-import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
+import {
+  finishMappingInitializationAction,
+  setMappingAction,
+  setMappingEnabledAction,
+  updateLayerSettingAction,
+} from "viewer/model/actions/settings_actions";
 import {
   addTreesAndGroupsAction,
   deleteTreeAction,
@@ -103,6 +108,15 @@ const setReferenceMappingName = (referenceMappingName: string | null) =>
     updateLayerSettingAction(layerName, "agglomerateDiffReference", referenceMappingName),
   );
 
+function setAgglomerateMappingEnabled(isEnabled: boolean) {
+  if (isEnabled) {
+    Store.dispatch(setMappingAction(layerName, mappingName, "AGGLOMERATE", false));
+    Store.dispatch(finishMappingInitializationAction(layerName));
+  } else {
+    Store.dispatch(setMappingEnabledAction(layerName, false));
+  }
+}
+
 const getSkeleton = () => enforceSkeletonTracing(Store.getState().annotation);
 const getOverlay = () => getAgglomerateDiffOverlay(Store.getState());
 const getDiffs = () => Object.values(getOverlay().diffs);
@@ -177,6 +191,8 @@ describe("Agglomerate diff saga", () => {
         [mappingName, referenceMappingName, "agglomerate_view_2"],
       ),
     );
+    // Diffs are only computed while an agglomerate mapping is active
+    setAgglomerateMappingEnabled(true);
     setReferenceMappingName(referenceMappingName);
   });
 
@@ -292,6 +308,20 @@ describe("Agglomerate diff saga", () => {
     await sleep(50);
     expect(getDiffs().length).toBe(0);
     expect(getUrls().some(isDiffUrl)).toBe(false);
+  });
+
+  it<WebknossosTestContext>("removes the diffs while no agglomerate mapping is active", async (context) => {
+    const getUrls = mockDiffRequests(context);
+    addAgglomerateTrees([agglomerateId]);
+    await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
+
+    setAgglomerateMappingEnabled(false);
+    await vi.waitFor(() => expect(getDiffs().length).toBe(0));
+    expect(getOverlay().skeleton.trees.size()).toBe(0);
+
+    setAgglomerateMappingEnabled(true);
+    await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
+    expect(getUrls().filter(isDiffUrl).length).toBe(2);
   });
 
   it<WebknossosTestContext>("removes the diff when the agglomerate skeleton becomes part of an editable mapping", async (context) => {

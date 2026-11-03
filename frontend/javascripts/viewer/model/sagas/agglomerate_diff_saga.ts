@@ -11,6 +11,7 @@ import {
   getAgglomerateDiffReferenceMappingName,
   getClickedPositionInLayer,
   getLayerNameOfAgglomerateSkeleton,
+  isAgglomerateMappingEnabled,
 } from "viewer/model/accessors/agglomerate_diff_accessor";
 import { getIsRebasingOrForwarding } from "viewer/model/accessors/annotation_accessor";
 import { getDataLayers, getLayerByName, getMagInfo } from "viewer/model/accessors/dataset_accessor";
@@ -72,7 +73,7 @@ function getDesiredDiffs(state: WebknossosState): {
     if (layer.category !== "segmentation") continue;
     const layerName = layer.name;
     const referenceMappingName = getAgglomerateDiffReferenceMappingName(state, layerName);
-    if (referenceMappingName == null) continue;
+    if (referenceMappingName == null || !isAgglomerateMappingEnabled(state, layerName)) continue;
     if (layer.agglomerates == null) {
       layersWithUnknownAgglomerateFiles.push(layerName);
       continue;
@@ -285,6 +286,7 @@ function getReconcileInputs(state: WebknossosState) {
   return [
     skeletonTracing?.trees,
     state.datasetConfiguration.layers,
+    state.temporaryConfiguration.activeMappingByLayer,
     state.dataset.dataSource.dataLayers,
     getAgglomerateDiffOverlay(state).diffs,
   ];

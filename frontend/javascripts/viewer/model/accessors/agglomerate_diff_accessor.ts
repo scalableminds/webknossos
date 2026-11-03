@@ -1,6 +1,7 @@
 import memoizeOne from "memoize-one";
 import type { MetadataEntryProto } from "types/api_types";
-import Constants, { type Vector3 } from "viewer/constants";
+import Constants, { MappingStatusEnum, type Vector3 } from "viewer/constants";
+import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import type {
   AgglomerateDiffDescriptor,
@@ -56,6 +57,16 @@ export function getClickedPositionInLayer(tree: Tree): Vector3 | null {
   const position = entry?.stringListValue?.map(Number);
   if (position?.length !== 3 || !position.every(Number.isFinite)) return null;
   return position as Vector3;
+}
+
+// Agglomerate skeletons can only be loaded while an agglomerate mapping is active, so their diffs
+// are only shown in that case, too.
+export function isAgglomerateMappingEnabled(state: WebknossosState, layerName: string): boolean {
+  const { mappingStatus, mappingType } = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    layerName,
+  );
+  return mappingStatus === MappingStatusEnum.ENABLED && mappingType === "AGGLOMERATE";
 }
 
 // The agglomerate view that agglomerate skeletons of the layer are compared against, if any

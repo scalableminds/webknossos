@@ -10,6 +10,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateGraph, AgglomerateGraphDiffProto}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, LayerAttachmentDataformat}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
@@ -21,6 +22,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 class AgglomerateService @Inject() (
+    config: DataStoreConfig,
     zarrAgglomerateService: ZarrAgglomerateService,
     hdf5AgglomerateService: Hdf5AgglomerateService
 ) extends LazyLogging {
@@ -157,15 +159,16 @@ class AgglomerateService @Inject() (
       case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 
-  def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long)(using
-      ec: ExecutionContext,
-      tc: TokenContext
-  ): Fox[AgglomerateGraph] =
+  def generateAgglomerateGraph(
+      agglomerateFileKey: AgglomerateFileKey,
+      agglomerateId: Long,
+      edgeLimit: Int = config.Datastore.AgglomerateGraph.maxEdges
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[AgglomerateGraph] =
     agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
-        zarrAgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId)
+        zarrAgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId, edgeLimit)
       case LayerAttachmentDataformat.hdf5 =>
-        hdf5AgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId).toFox
+        hdf5AgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId, edgeLimit).toFox
       case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 
@@ -177,14 +180,17 @@ class AgglomerateService @Inject() (
       agglomerateId: Long,
       segmentId: Long
   )(using ec: ExecutionContext, tc: TokenContext): Fox[AgglomerateGraphDiffProto] = {
+    // Diffs are requested automatically for every loaded agglomerate skeleton, so the graphs are limited like the
+    // agglomerate skeletons instead of like explicitly requested agglomerate graphs.
+    val edgeLimit = config.Datastore.AgglomerateTree.maxEdges
     // Both graphs can be loaded in parallel, which matters for remote agglomerate files
-    val graphFox = generateAgglomerateGraph(agglomerateFileKey, agglomerateId)
+    val graphFox = generateAgglomerateGraph(agglomerateFileKey, agglomerateId, edgeLimit)
     val referenceGraphFox = for {
       referenceAgglomerateIds <- agglomerateIdsForSegmentIds(referenceAgglomerateFileKey, Seq(segmentId))
       referenceAgglomerateId <- referenceAgglomerateIds.headOption
         .filter(_ != 0L)
         .toFox ?~> Msg.AgglomerateDiff.noReferenceAgglomerate
-      referenceGraph <- generateAgglomerateGraph(referenceAgglomerateFileKey, referenceAgglomerateId)
+      referenceGraph <- generateAgglomerateGraph(referenceAgglomerateFileKey, referenceAgglomerateId, edgeLimit)
     } yield (referenceAgglomerateId, referenceGraph)
     for {
       graph <- graphFox

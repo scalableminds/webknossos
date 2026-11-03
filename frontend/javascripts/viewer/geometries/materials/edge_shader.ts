@@ -3,7 +3,11 @@ import type TPS3D from "libs/thin_plate_spline";
 import range from "lodash-es/range";
 import template from "lodash-es/template";
 import { type DataTexture, GLSL3, RawShaderMaterial } from "three";
-import { COLOR_TEXTURE_WIDTH_FIXED } from "viewer/geometries/materials/node_shader";
+import {
+  COLOR_TEXTURE_WIDTH_FIXED,
+  DIMMED_TREE_ALPHA_OFFSET,
+  DIMMED_TREE_OPACITY,
+} from "viewer/geometries/materials/node_shader";
 import type { Uniforms } from "viewer/geometries/materials/plane_material_factory";
 import { getTransformsForSkeletonLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
@@ -50,10 +54,6 @@ class EdgeShader {
       },
       currentSectionFlycamPosition: {
         value: [0, 0, 0],
-      },
-      // Opacity of all trees, e.g., to dim them while the agglomerate diff overlay is shown
-      opacity: {
-        value: 1,
       },
     };
 
@@ -183,11 +183,14 @@ void main() {
       mod(floor(treeId / ${COLOR_TEXTURE_WIDTH_FIXED}), ${COLOR_TEXTURE_WIDTH_FIXED})
     );
     vec4 rgba = texelFetch(treeColors, treeIdToTextureCoordinate, 0);
-    bool isVisible = rgba.a == 1.0;
+    bool isVisible = mod(rgba.a, ${DIMMED_TREE_ALPHA_OFFSET.toFixed(1)}) == 1.0;
 
     if (!isVisible) {
       gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);
       return;
+    }
+    if (rgba.a >= ${DIMMED_TREE_ALPHA_OFFSET.toFixed(1)}) {
+      alpha *= ${DIMMED_TREE_OPACITY.toFixed(2)};
     }
 
     // As nodes are rendered in the center of a voxel, so are edges.
@@ -220,7 +223,6 @@ precision highp int;
 
 uniform int clippingAxis;
 uniform vec3 currentSectionFlycamPosition;
-uniform float opacity;
 
 out vec4 fragColor;
 in vec3 color;
@@ -241,7 +243,7 @@ void main()
       }
     }
 
-    fragColor = vec4(color, alpha * opacity);
+    fragColor = vec4(color, alpha);
 }`;
   }
 

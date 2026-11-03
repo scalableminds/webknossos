@@ -175,7 +175,7 @@ class ZarrAgglomerateService @Inject() (
       shapeFirstElement <- tryo(shape(0)).toFox
     } yield shapeFirstElement
 
-  def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long)(using
+  def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long, edgeLimit: Int)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[AgglomerateGraph] = {
@@ -196,7 +196,6 @@ class ZarrAgglomerateService @Inject() (
       nodeCount <- tryo(positionsRange.getLong(1) - positionsRange.getLong(0)).toFox
       edgesOffset <- tryo(edgesRange.getLong(0)).toFox
       edgeCount <- tryo(edgesRange.getLong(1) - edgesOffset).toFox
-      edgeLimit = config.Datastore.AgglomerateGraph.maxEdges
       _ <- Fox.fromBool(nodeCount <= edgeLimit) ?~> s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)"
       _ <- Fox.fromBool(edgeCount <= edgeLimit) ?~> s"Agglomerate has too many edges ($edgeCount > $edgeLimit)"
       positionsFox = agglomerateToPositionsFox.flatMap(

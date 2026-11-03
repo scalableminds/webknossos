@@ -159,12 +159,21 @@ export type AgglomerateDiffDescriptor = {
 };
 export type AgglomerateDiff = AgglomerateDiffDescriptor & {
   readonly status: "loading" | "loaded" | "failed";
+  // Set if the diff was requested while its agglomerate skeleton was still loading, so that it
+  // is not considered obsolete until the agglomerate skeleton was added.
+  readonly awaitsAgglomerateSkeleton: boolean;
+  // The agglomerate skeleton (annotation tree) of the diff. Null while it is awaited.
+  readonly sourceTreeId: number | null;
+  // The diff is only shown while its agglomerate skeleton is visible
+  readonly isSourceTreeVisible: boolean;
   // The fields below are only set once the diff is loaded
   readonly referenceAgglomerateId: bigint | null;
   // The trees of the overlay skeleton that show this diff
   readonly treeIds: Array<number>;
   readonly addedEdgeCount: number;
   readonly removedEdgeCount: number;
+  // Only set if the diff failed
+  readonly errorMessage: string | null;
 };
 // The differences of the loaded agglomerate skeletons to the reference agglomerate views are
 // derived from the agglomerate skeletons and the reference views (see agglomerate_diff_saga.ts).
@@ -172,9 +181,6 @@ export type AgglomerateDiff = AgglomerateDiffDescriptor & {
 export type AgglomerateDiffOverlay = {
   // Keyed by getAgglomerateDiffKey
   readonly diffs: Record<string, AgglomerateDiff>;
-  // The segment whose reference agglomerate was compared, keyed by getAgglomerateKey. It is
-  // remembered so that a change of the reference view compares the same part of the agglomerate.
-  readonly segmentIdByAgglomerate: Record<string, bigint>;
   readonly isVisible: boolean;
   // Holds the trees of all diffs (one for the added and one for the removed edges per diff).
   // It is rendered on top of the annotation's skeleton. In contrast to annotation trees, these

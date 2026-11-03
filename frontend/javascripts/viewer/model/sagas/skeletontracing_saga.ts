@@ -18,10 +18,7 @@ import {
   actionChannel,
   all,
   call,
-  cancel,
-  type FixedTask,
   fork,
-  join,
   put,
   race,
   take,
@@ -32,6 +29,7 @@ import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types
 import { NumberToOrthoView, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import {
+  createAgglomerateSkeletonMetadata,
   getAgglomerateDiffKey,
   getAgglomerateDiffReferenceMappingName,
 } from "viewer/model/accessors/agglomerate_diff_accessor";
@@ -54,10 +52,8 @@ import {
 } from "viewer/model/accessors/skeletontracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
-  finishLoadingAgglomerateDiffAction,
-  type LoadedAgglomerateDiff,
   removeAgglomerateDiffsAction,
-  startLoadingAgglomerateDiffAction,
+  requestAgglomerateDiffAction,
 } from "viewer/model/actions/agglomerate_diff_actions";
 import {
   addConnectomeTreesAction,
@@ -103,7 +99,7 @@ import {
 } from "viewer/model/sagas/volume/update_actions";
 import { OrthoBaseRotations } from "viewer/ortho_base_rotations";
 import { api, Model } from "viewer/singletons";
-import type { AgglomerateDiffDescriptor, SkeletonTracing, WebknossosState } from "viewer/store";
+import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { dispatchEnsureHasNewestVersionAsync } from "../actions/save_actions";
 import {
@@ -111,7 +107,7 @@ import {
   reducerInternalMatrixToEulerAngle,
 } from "../helpers/rotation_helpers";
 import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
-import { fetchAgglomerateDiff } from "./agglomerate_diff_saga";
+import { waitForAgglomerateDiff } from "./agglomerate_diff_saga";
 import { diffBoundingBoxes } from "./diffing/bounding_box_diffing";
 import { diffGroups } from "./diffing/group_diffing";
 import { ensureWkInitialized } from "./ready_sagas";
@@ -457,10 +453,8 @@ function* loadAgglomerateTreeWithAtPosition(
     getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
   );
   const maybeTree = findTreeByAgglomerateId(trees, agglomerateId, layerName, mappingName);
-  let diff: {
-    descriptor: AgglomerateDiffDescriptor;
-    task: FixedTask<LoadedAgglomerateDiff | null>;
-  } | null = null;
+  // The diff to the reference agglomerate view that was requested together with the agglomerate skeleton
+  let diffKey: string | null = null;
 
   try {
     if (maybeTree != null) {
@@ -475,38 +469,40 @@ function* loadAgglomerateTreeWithAtPosition(
       return;
     }
 
-    // If a reference agglomerate view is configured for the layer, the differences to the reference
-    // agglomerate of the clicked segment are requested in parallel to the agglomerate skeleton.
-    // Otherwise, the agglomerate_diff_saga would only request them once the agglomerate skeleton
-    // was added and would compare the segment at its first node.
-    const referenceMappingName = yield* select((state) =>
-      getAgglomerateDiffReferenceMappingName(state, layerName),
-    );
+    // Agglomerate skeletons of agglomerate files can be compared to a reference agglomerate view. The
+    // reference agglomerate is the one of the clicked segment, so the clicked position is stored with the
+    // agglomerate skeleton (see createAgglomerateSkeletonMetadata).
     const isAgglomerateFile = yield* select((state) => {
       const layer = getLayerByName(state.dataset, layerName);
       return (
         layer.category === "segmentation" && (layer.agglomerates?.includes(mappingName) ?? false)
       );
     });
+    const clickedPositionInLayer =
+      action.type === "LOAD_AGGLOMERATE_TREE_AT_POSITION" && isAgglomerateFile
+        ? yield* select((state) =>
+            globalToLayerTransformedPosition(
+              action.agglomeratePosition,
+              layerName,
+              "segmentation",
+              state,
+            ),
+          )
+        : null;
+    // If a reference agglomerate view is configured for the layer, the diff is requested in parallel
+    // to the agglomerate skeleton. Otherwise, the agglomerate_diff_saga would only request it once the
+    // agglomerate skeleton was added.
+    const referenceMappingName = yield* select((state) =>
+      getAgglomerateDiffReferenceMappingName(state, layerName),
+    );
     if (
-      action.type === "LOAD_AGGLOMERATE_TREE_AT_POSITION" &&
+      clickedPositionInLayer != null &&
       referenceMappingName != null &&
-      referenceMappingName !== mappingName &&
-      isAgglomerateFile
+      referenceMappingName !== mappingName
     ) {
-      const clickedPositionInLayer = yield* select((state) =>
-        globalToLayerTransformedPosition(
-          action.agglomeratePosition,
-          layerName,
-          "segmentation",
-          state,
-        ),
-      );
       const descriptor = { layerName, mappingName, agglomerateId, referenceMappingName };
-      const task = yield* fork(fetchAgglomerateDiff, descriptor, {
-        positionInLayer: clickedPositionInLayer,
-      });
-      diff = { descriptor, task };
+      yield* put(requestAgglomerateDiffAction(descriptor, clickedPositionInLayer, true));
+      diffKey = getAgglomerateDiffKey(descriptor);
     }
 
     ({ hideFn } = yield* call(
@@ -525,13 +521,20 @@ function* loadAgglomerateTreeWithAtPosition(
       agglomerateId,
     );
 
-    if (diff != null) {
-      // Otherwise, the diff would be requested again as soon as the agglomerate skeleton is added
-      yield* put(startLoadingAgglomerateDiffAction(diff.descriptor));
-    }
+    // Agglomerate skeletons of editable mappings are not compared and their metadata is not
+    // preserved by proofreading operations, so no metadata is stored for them.
+    const agglomerateTrees = isAgglomerateFile
+      ? agglomerateTree.trees.map((tree) => ({
+          ...tree,
+          metadata: [
+            ...tree.metadata,
+            ...createAgglomerateSkeletonMetadata(layerName, clickedPositionInLayer),
+          ],
+        }))
+      : agglomerateTree.trees;
     yield* put(
       addTreesAndGroupsAction(
-        createMutableTreeMapFromTreeArray(agglomerateTree.trees),
+        createMutableTreeMapFromTreeArray(agglomerateTrees),
         agglomerateTree.treeGroups,
         (newTreeIds) => {
           usedTreeIds = newTreeIds;
@@ -557,9 +560,8 @@ function* loadAgglomerateTreeWithAtPosition(
     hideFn?.();
     // @ts-expect-error
     handleAgglomerateLoadingError(e);
-    if (diff != null) {
-      yield* cancel(diff.task);
-      yield* put(removeAgglomerateDiffsAction([getAgglomerateDiffKey(diff.descriptor)]));
+    if (diffKey != null) {
+      yield* put(removeAgglomerateDiffsAction([diffKey]));
     }
     return;
   } finally {
@@ -578,11 +580,16 @@ function* loadAgglomerateTreeWithAtPosition(
     }
   }
 
-  yield* call(progressCallback, true, "Tree generation done.");
-
-  if (diff != null) {
-    const loadedDiff = yield* join(diff.task);
-    yield* put(finishLoadingAgglomerateDiffAction(diff.descriptor, loadedDiff));
+  if (diffKey != null) {
+    yield* call(progressCallback, false, "Loading the agglomerate diff to the reference view...");
+    const isDiffLoaded = yield* call(waitForAgglomerateDiff, diffKey);
+    yield* call(
+      progressCallback,
+      true,
+      isDiffLoaded ? "Tree and agglomerate diff loaded." : "Tree generation done.",
+    );
+  } else {
+    yield* call(progressCallback, true, "Tree generation done.");
   }
 }
 

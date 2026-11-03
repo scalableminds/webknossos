@@ -16,6 +16,7 @@ import type { Vector3, Vector4 } from "viewer/constants";
 import EdgeShader from "viewer/geometries/materials/edge_shader";
 import NodeShader, {
   COLOR_TEXTURE_WIDTH,
+  DIMMED_TREE_ALPHA_OFFSET,
   NodeTypes,
 } from "viewer/geometries/materials/node_shader";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
@@ -102,8 +103,9 @@ export type SkeletonOptions = {
   // Transparent meshes are drawn in the order of their renderOrder and, if equal, of their distance
   // to the camera. A higher renderOrder therefore draws the skeleton on top of other skeletons.
   renderOrder?: number;
-  // The opacity of all trees, e.g., to dim them while another skeleton is shown on top.
-  getOpacity?: (state: WebknossosState) => number;
+  // The ids of the trees that are dimmed, e.g., because another skeleton is shown on top of them.
+  // As the trees are only updated if a different instance is returned, it should be memoized.
+  getDimmedTreeIds?: (state: WebknossosState) => ReadonlySet<number>;
   // Whether the active tree of the annotation is highlighted.
   highlightActiveTree?: boolean;
 };
@@ -137,6 +139,7 @@ class Skeleton {
   // Defaults to immediate execution for callers (e.g. tests) without a SceneController.
   private deferGpuDispose: (dispose: () => void) => void;
   private options: SkeletonOptions;
+  private dimmedTreeIds: ReadonlySet<number> = new Set();
 
   constructor(
     skeletonTracingSelectorFn: (state: WebknossosState) => SkeletonTracing | null,
@@ -262,6 +265,7 @@ class Skeleton {
     const flycamAdditionalCoordinateNames = new Set(
       (Store.getState().flycam.additionalCoordinates ?? []).map(({ name }) => name),
     );
+    this.dimmedTreeIds = this.options.getDimmedTreeIds?.(Store.getState()) ?? new Set();
     // fill buffers with data
     for (const tree of trees.values()) {
       this.createTree(tree, flycamAdditionalCoordinateNames);
@@ -276,14 +280,21 @@ class Skeleton {
       edges.geometry.computeBoundingSphere();
     }
 
-    this.updateOpacity(Store.getState());
     this.prevTracing = skeletonTracing;
   }
 
-  updateOpacity(state: WebknossosState) {
-    const opacity = this.options.getOpacity?.(state) ?? 1;
-    this.nodes.material.uniforms.opacity.value = opacity;
-    this.edges.material.uniforms.opacity.value = opacity;
+  updateDimmedTrees(state: WebknossosState, skeletonTracing: SkeletonTracing) {
+    const dimmedTreeIds = this.options.getDimmedTreeIds?.(state);
+    if (dimmedTreeIds == null || dimmedTreeIds === this.dimmedTreeIds) return;
+    const prevDimmedTreeIds = this.dimmedTreeIds;
+    this.dimmedTreeIds = dimmedTreeIds;
+    for (const treeId of new Set([...prevDimmedTreeIds, ...dimmedTreeIds])) {
+      if (prevDimmedTreeIds.has(treeId) === dimmedTreeIds.has(treeId)) continue;
+      const tree = skeletonTracing.trees.getNullable(treeId);
+      if (tree != null) {
+        this.updateTreeColor(treeId, tree.color, tree.isVisible, tree.edgesAreVisible);
+      }
+    }
   }
 
   initializeBufferCollection(
@@ -570,7 +581,7 @@ class Skeleton {
     const edgeUniforms = this.edges.material.uniforms;
     edgeUniforms.activeTreeId.value = activeTreeId;
     this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
-    this.updateOpacity(state);
+    this.updateDimmedTrees(state, skeletonTracing);
     this.prevTracing = skeletonTracing;
   }
 
@@ -866,14 +877,24 @@ class Skeleton {
     isVisible: boolean = true,
     edgesAreVisible: boolean = true,
   ) {
-    const rgba = this.getTreeRGBA(color, isVisible, edgesAreVisible);
+    const rgba = this.getTreeRGBA(
+      color,
+      isVisible,
+      edgesAreVisible,
+      this.dimmedTreeIds.has(treeId),
+    );
     this.treeColorTexture.image.data.set(rgba, treeId * 4);
     this.treeColorTexture.needsUpdate = true;
   }
 
-  getTreeRGBA(color: Vector3, isVisible: boolean, areEdgesVisible: boolean): Vector4 {
+  getTreeRGBA(
+    color: Vector3,
+    isVisible: boolean,
+    areEdgesVisible: boolean,
+    isDimmed: boolean = false,
+  ): Vector4 {
     const alpha = isVisible ? (areEdgesVisible ? 1 : 0.5) : 0;
-    return [...color, alpha];
+    return [...color, alpha + (isDimmed ? DIMMED_TREE_ALPHA_OFFSET : 0)];
   }
 }
 

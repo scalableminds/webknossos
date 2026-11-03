@@ -1,18 +1,27 @@
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'AgglomerateGraph.proto' or its co... Remove this comment to see the full error message
 import AgglomerateGraphProto from "AgglomerateGraph.proto";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
+import { sleep } from "libs/utils";
 import { Root } from "protobufjs/light";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import type { ServerSkeletonTracingTree } from "types/api_types";
 import { TreeTypeEnum } from "viewer/constants";
-import { getAgglomerateDiffOverlay } from "viewer/model/accessors/agglomerate_diff_accessor";
+import {
+  getAgglomerateDiffOverlay,
+  getAgglomerateTreeIdsWithVisibleDiffs,
+} from "viewer/model/accessors/agglomerate_diff_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import { setAgglomerateDiffsVisibilityAction } from "viewer/model/actions/agglomerate_diff_actions";
+import { setLayerMappingsAction } from "viewer/model/actions/dataset_actions";
 import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
 import {
   addTreesAndGroupsAction,
   deleteTreeAction,
   loadAgglomerateTreeAtPositionAction,
   setTreesAgglomerateInfoTracingIdAction,
+  setTreeVisibilityAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { Store } from "viewer/singletons";
@@ -100,7 +109,10 @@ const getDiffs = () => Object.values(getOverlay().diffs);
 const isDiffUrl = (url: URL) => url.pathname.includes("/diffToReference/");
 const isRawDataUrl = (url: URL) => url.pathname.endsWith(`/layers/${layerName}/data`);
 
-function addAgglomerateTrees(agglomerateIds: bigint[]) {
+function addAgglomerateTrees(
+  agglomerateIds: bigint[],
+  metadata: ServerSkeletonTracingTree["metadata"] = [],
+) {
   Store.dispatch(
     addTreesAndGroupsAction(
       createMutableTreeMapFromTreeArray(
@@ -108,6 +120,7 @@ function addAgglomerateTrees(agglomerateIds: bigint[]) {
           makeServerTree(idx + 1, 2 * idx + 1, {
             type: TreeTypeEnum.AGGLOMERATE,
             agglomerateInfo: { agglomerateId: id, mappingName },
+            metadata,
           }),
         ),
       ),
@@ -116,11 +129,14 @@ function addAgglomerateTrees(agglomerateIds: bigint[]) {
   );
 }
 
-function getAgglomerateTreeId(id: bigint): number {
+function getAgglomerateTree(id: bigint) {
   return getSkeleton()
     .trees.values()
-    .find((tree) => tree.agglomerateInfo?.agglomerateId === id)!.treeId;
+    .find((tree) => tree.agglomerateInfo?.agglomerateId === id)!;
 }
+
+const getRawDataPosition = (url: URL | undefined) =>
+  ["x", "y", "z"].map((dim) => url?.searchParams.get(dim));
 
 // Answers the unmapped voxel reads with segmentIdAtFirstNode and the diff requests with the given
 // diff (one added edge by default). If pendingDiffs is passed, the diff requests are only answered
@@ -153,6 +169,14 @@ function mockDiffRequests(
 describe("Agglomerate diff saga", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "skeleton");
+    // The reference views have to be agglomerate files of the layer
+    Store.dispatch(
+      setLayerMappingsAction(
+        layerName,
+        [],
+        [mappingName, referenceMappingName, "agglomerate_view_2"],
+      ),
+    );
     setReferenceMappingName(referenceMappingName);
   });
 
@@ -242,7 +266,7 @@ describe("Agglomerate diff saga", () => {
     addAgglomerateTrees([agglomerateId]);
     await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
 
-    Store.dispatch(deleteTreeAction(getAgglomerateTreeId(agglomerateId)));
+    Store.dispatch(deleteTreeAction(getAgglomerateTree(agglomerateId).treeId));
 
     await vi.waitFor(() => expect(getDiffs().length).toBe(0));
     expect(getOverlay().skeleton.trees.size()).toBe(0);
@@ -259,6 +283,17 @@ describe("Agglomerate diff saga", () => {
     expect(getOverlay().skeleton.trees.size()).toBe(0);
   });
 
+  it<WebknossosTestContext>("doesn't compare to a reference agglomerate view that the layer doesn't have", async (context) => {
+    const getUrls = mockDiffRequests(context);
+    // E.g., an agglomerate file that was removed from the dataset after it was selected
+    setReferenceMappingName("removed_agglomerate_view");
+    addAgglomerateTrees([agglomerateId]);
+
+    await sleep(50);
+    expect(getDiffs().length).toBe(0);
+    expect(getUrls().some(isDiffUrl)).toBe(false);
+  });
+
   it<WebknossosTestContext>("removes the diff when the agglomerate skeleton becomes part of an editable mapping", async (context) => {
     mockDiffRequests(context);
     addAgglomerateTrees([agglomerateId]);
@@ -270,11 +305,43 @@ describe("Agglomerate diff saga", () => {
     await vi.waitFor(() => expect(getDiffs().length).toBe(0));
   });
 
-  it<WebknossosTestContext>("compares the same segment's reference agglomerate when the reference agglomerate view changes", async (context) => {
+  it<WebknossosTestContext>("compares the segment at the stored clicked position of an agglomerate skeleton", async (context) => {
+    // E.g., an agglomerate skeleton that was loaded by clicking before the annotation was reloaded
+    const getUrls = mockDiffRequests(context);
+    addAgglomerateTrees(
+      [agglomerateId],
+      [{ key: "clickedPosition", stringListValue: ["8", "9", "10"] }],
+    );
+    await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
+
+    expect(getRawDataPosition(getUrls().find(isRawDataUrl))).toEqual(["8", "9", "10"]);
+  });
+
+  it<WebknossosTestContext>("only compares an agglomerate skeleton for the layer it was loaded for", async (context) => {
+    const getUrls = mockDiffRequests(context);
+    // Another layer could have an agglomerate file with the same name
+    addAgglomerateTrees([agglomerateId], [{ key: "layerName", stringValue: "otherLayer" }]);
+    addAgglomerateTrees([43n], [{ key: "layerName", stringValue: layerName }]);
+
+    await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
+    await sleep(50);
+    expect(getDiffs().map((diff) => diff.agglomerateId)).toEqual([43n]);
+    expect(getDiffs()[0].sourceTreeId).toBe(getAgglomerateTree(43n).treeId);
+    expect(getUrls().filter(isDiffUrl).length).toBe(1);
+  });
+
+  it<WebknossosTestContext>("compares the first node if the stored clicked position is invalid", async (context) => {
+    const getUrls = mockDiffRequests(context);
+    addAgglomerateTrees([agglomerateId], [{ key: "clickedPosition", stringListValue: ["8", "9"] }]);
+    await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
+
+    expect(getRawDataPosition(getUrls().find(isRawDataUrl))).toEqual(["1", "0", "0"]);
+  });
+
+  it<WebknossosTestContext>("compares at the same position when the reference agglomerate view changes", async (context) => {
     const getUrls = mockDiffRequests(context);
     addAgglomerateTrees([agglomerateId]);
     await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
-    const rawDataReadCount = getUrls().filter(isRawDataUrl).length;
 
     setReferenceMappingName("agglomerate_view_2");
 
@@ -286,8 +353,7 @@ describe("Agglomerate diff saga", () => {
     );
     expect(getDiffs().length).toBe(1);
     expect(getOverlay().skeleton.trees.size()).toBe(1);
-    // The remembered segment id is used without reading the voxel again
-    expect(getUrls().filter(isRawDataUrl).length).toBe(rawDataReadCount);
+    expect(getRawDataPosition(getUrls().filter(isRawDataUrl).at(-1))).toEqual(["1", "0", "0"]);
     const lastDiffUrl = getUrls().filter(isDiffUrl).at(-1);
     expect(lastDiffUrl?.searchParams.get("segmentId")).toBe(segmentIdAtFirstNode.toString());
   });
@@ -305,6 +371,87 @@ describe("Agglomerate diff saga", () => {
       expect(getDiffs().map((diff) => diff.status)).toEqual(["failed", "failed"]),
     );
     expect(getUrls().filter(isDiffUrl).length).toBe(2);
+  });
+
+  it<WebknossosTestContext>("shows a single toast for failed diffs of a layer and lists the reasons", async (context) => {
+    const toastSpy = vi.spyOn(Toast, "error");
+    const notifySpy = vi.spyOn(ErrorHandling, "notify");
+    // Failed requests are rejected like this by Request (see handleError)
+    mockDiffRequests(context, undefined, () =>
+      Promise.reject({
+        messages: [
+          { error: "Could not compute the diff." },
+          { chain: "[Server Time 2026-11-03T10:00:00Z] Agglomerate has too many edges" },
+        ],
+        status: 400,
+      }),
+    );
+
+    addAgglomerateTrees([1n, 2n]);
+    await vi.waitFor(() =>
+      expect(getDiffs().map((diff) => diff.status)).toEqual(["failed", "failed"]),
+    );
+
+    expect(getDiffs()[0].errorMessage).toBe(
+      "Could not compute the diff. Agglomerate has too many edges",
+    );
+    // Toasts with the same key replace each other
+    const diffToasts = toastSpy.mock.calls.filter(([_message, config]) =>
+      config?.key?.startsWith("agglomerate-diff-error-"),
+    );
+    expect(diffToasts.length).toBe(2);
+    expect(new Set(diffToasts.map(([_message, config]) => config?.key)).size).toBe(1);
+    expect(diffToasts.at(-1)?.[0]).toContain("Could not compare 2 agglomerate skeletons");
+    // Expected errors (4xx) are not reported
+    expect(notifySpy).not.toHaveBeenCalled();
+  });
+
+  it<WebknossosTestContext>("removes loading diffs as soon as they are obsolete", async (context) => {
+    const pendingDiffs: Array<() => void> = [];
+    const getUrls = mockDiffRequests(context, pendingDiffs);
+    addAgglomerateTrees([1n, 2n, 3n, 4n, 5n]);
+    await vi.waitFor(() => expect(pendingDiffs.length).toBe(4));
+
+    setReferenceMappingName(null);
+
+    expect(getDiffs().length).toBe(0);
+    for (const resolve of pendingDiffs) {
+      resolve();
+    }
+    await vi.waitFor(() => expect(getUrls().filter(isDiffUrl).length).toBe(4));
+    // The queued request of the fifth diff is skipped and the answered diffs are ignored
+    await sleep(50);
+    expect(getUrls().filter(isDiffUrl).length).toBe(4);
+    expect(getDiffs().length).toBe(0);
+    expect(getOverlay().skeleton.trees.size()).toBe(0);
+  });
+
+  it<WebknossosTestContext>("only shows the diff of a visible agglomerate skeleton and dims the latter", async (context) => {
+    mockDiffRequests(context);
+    addAgglomerateTrees([agglomerateId]);
+    await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
+    const treeId = getAgglomerateTree(agglomerateId).treeId;
+    const isDiffTreeVisible = () => getOverlay().skeleton.trees.values().toArray()[0].isVisible;
+    const getDimmedTreeIds = () => [...getAgglomerateTreeIdsWithVisibleDiffs(Store.getState())];
+    expect(isDiffTreeVisible()).toBe(true);
+    expect(getDimmedTreeIds()).toEqual([treeId]);
+
+    Store.dispatch(setTreeVisibilityAction(treeId, false));
+    await vi.waitFor(() => expect(isDiffTreeVisible()).toBe(false));
+    expect(getDimmedTreeIds()).toEqual([]);
+
+    // Showing all diffs again doesn't show the diff of the hidden agglomerate skeleton
+    Store.dispatch(setAgglomerateDiffsVisibilityAction(false));
+    Store.dispatch(setAgglomerateDiffsVisibilityAction(true));
+    expect(isDiffTreeVisible()).toBe(false);
+
+    Store.dispatch(setTreeVisibilityAction(treeId, true));
+    await vi.waitFor(() => expect(isDiffTreeVisible()).toBe(true));
+    expect(getDimmedTreeIds()).toEqual([treeId]);
+
+    Store.dispatch(setAgglomerateDiffsVisibilityAction(false));
+    expect(isDiffTreeVisible()).toBe(false);
+    expect(getDimmedTreeIds()).toEqual([]);
   });
 
   it<WebknossosTestContext>("requests the diffs of several agglomerate skeletons in parallel", async (context) => {
@@ -363,12 +510,21 @@ describe("Agglomerate diff saga", () => {
     expect(getUrls().find(isDiffUrl)?.searchParams.get("segmentId")).toBe(
       clickedSegmentId.toString(),
     );
-    expect(getUrls().find(isRawDataUrl)?.searchParams.get("x")).toBe("5");
+    expect(getRawDataPosition(getUrls().find(isRawDataUrl))).toEqual(["5", "6", "7"]);
+
+    // The diff is kept although its agglomerate skeleton is still loading
+    await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
+    expect(getDiffs()[0].awaitsAgglomerateSkeleton).toBe(true);
 
     skeletonRequest.resolve!(skeletonBuffer);
-    await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
+    await vi.waitFor(() => expect(getDiffs()[0]?.awaitsAgglomerateSkeleton).toBe(false));
     expect(getDiffs()[0].agglomerateId).toBe(clickedAgglomerateId);
-    expect(Object.values(getOverlay().segmentIdByAgglomerate)).toEqual([clickedSegmentId]);
+    // The clicked position is stored with the agglomerate skeleton, so that it is compared at the
+    // same position after a reload
+    expect(getAgglomerateTree(clickedAgglomerateId).metadata).toEqual([
+      { key: "layerName", stringValue: layerName },
+      { key: "clickedPosition", stringListValue: ["5", "6", "7"] },
+    ]);
     // The diff was only requested once, although the agglomerate skeleton was added afterwards
     expect(getUrls().filter(isDiffUrl).length).toBe(1);
   });

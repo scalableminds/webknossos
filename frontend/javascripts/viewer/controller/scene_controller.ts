@@ -49,7 +49,7 @@ import Skeleton, { type SkeletonOptions } from "viewer/geometries/skeleton";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import {
   getAgglomerateDiffSkeleton,
-  hasVisibleAgglomerateDiffs,
+  getAgglomerateTreeIdsWithVisibleDiffs,
 } from "viewer/model/accessors/agglomerate_diff_accessor";
 import {
   getDataLayers,
@@ -107,8 +107,6 @@ BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 Mesh.prototype.raycast = acceleratedRaycast;
 
 const CUBE_COLOR = 0x999999;
-// While agglomerate diffs are shown, the trees of the annotation are dimmed to this opacity
-const DIMMED_SKELETON_OPACITY = 0.25;
 
 const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: WebknossosState) =>
   getVisibleSegmentationLayers(storeState).map((l) => l.name),
@@ -332,8 +330,8 @@ class SceneController {
 
     if (state.annotation.skeleton != null) {
       this.addSkeleton((_state) => getSkeletonTracing(_state.annotation), true, {
-        // Dim the annotation's trees so that the agglomerate diffs stand out
-        getOpacity: (_state) => (hasVisibleAgglomerateDiffs(_state) ? DIMMED_SKELETON_OPACITY : 1),
+        // Dim the agglomerate skeletons whose diffs are shown on top of them
+        getDimmedTreeIds: getAgglomerateTreeIdsWithVisibleDiffs,
       });
       // The diffs coincide with the agglomerate skeletons, so they are drawn on top of them
       this.addSkeleton(getAgglomerateDiffSkeleton, false, {

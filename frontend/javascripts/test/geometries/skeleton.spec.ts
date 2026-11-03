@@ -4,7 +4,11 @@ import "test/helpers/apiHelpers";
 import { sleep } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
 import type { Vector3 } from "viewer/constants";
-import { COLOR_TEXTURE_WIDTH, NodeTypes } from "viewer/geometries/materials/node_shader";
+import {
+  COLOR_TEXTURE_WIDTH,
+  DIMMED_TREE_ALPHA_OFFSET,
+  NodeTypes,
+} from "viewer/geometries/materials/node_shader";
 import Skeleton from "viewer/geometries/skeleton";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
@@ -211,26 +215,31 @@ describe("Skeleton", () => {
     }
   });
 
-  it("should apply the render order and opacity options", async () => {
-    let opacity = 0.25;
+  it("should apply the render order and dim the given trees", async () => {
+    const getTreeAlpha = (skeleton: Skeleton, treeId: number) =>
+      skeleton.treeColorTexture.image.data[treeId * 4 + 3];
+    const treeIds = enforceSkeletonTracing(Store.getState().annotation).trees.keys().toArray();
+    const [dimmedTreeId, otherTreeId] = treeIds;
+    let dimmedTreeIds: ReadonlySet<number> = new Set([dimmedTreeId]);
     const skeleton = new Skeleton(
       (state: WebknossosState) => enforceSkeletonTracing(state.annotation),
       true,
       undefined,
-      { renderOrder: 1, getOpacity: () => opacity },
+      { renderOrder: 1, getDimmedTreeIds: () => dimmedTreeIds },
     );
     for (const collection of [skeleton.nodes, skeleton.edges]) {
       expect(collection.buffers.every((buffer) => buffer.mesh.renderOrder === 1)).toBe(true);
-      expect(collection.material.uniforms.opacity.value).toBe(0.25);
     }
+    // The dimming is encoded in the alpha channel of the tree color, in addition to the visibility
+    expect(getTreeAlpha(skeleton, dimmedTreeId)).toBe(1 + DIMMED_TREE_ALPHA_OFFSET);
+    expect(getTreeAlpha(skeleton, otherTreeId)).toBe(1);
 
-    // The opacity is updated on every store change
-    opacity = 1;
+    // The dimmed trees are updated on store changes
+    dimmedTreeIds = new Set([otherTreeId]);
     Store.dispatch(createTreeAction());
     await sleep(50);
-    for (const collection of [skeleton.nodes, skeleton.edges]) {
-      expect(collection.material.uniforms.opacity.value).toBe(1);
-    }
+    expect(getTreeAlpha(skeleton, dimmedTreeId)).toBe(1);
+    expect(getTreeAlpha(skeleton, otherTreeId)).toBe(1 + DIMMED_TREE_ALPHA_OFFSET);
     skeleton.destroy();
   });
 });

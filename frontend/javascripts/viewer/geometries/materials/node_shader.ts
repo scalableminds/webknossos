@@ -24,6 +24,11 @@ export const NodeTypes = {
 };
 export const COLOR_TEXTURE_WIDTH = 1024.0;
 export const COLOR_TEXTURE_WIDTH_FIXED = COLOR_TEXTURE_WIDTH.toFixed(1);
+// The alpha channel of a tree color encodes the visibility of the tree (0: invisible, 0.5: only
+// the nodes are visible, 1: visible). For dimmed trees, DIMMED_TREE_ALPHA_OFFSET is added.
+export const DIMMED_TREE_ALPHA_OFFSET = 2.0;
+// E.g., agglomerate skeletons are dimmed while their agglomerate diff is shown on top of them
+export const DIMMED_TREE_OPACITY = 0.25;
 
 class NodeShader {
   material: RawShaderMaterial;
@@ -98,10 +103,6 @@ class NodeShader {
       },
       currentSectionFlycamPosition: {
         value: [0, 0, 0],
-      },
-      // Opacity of all trees, e.g., to dim them while the agglomerate diff overlay is shown
-      opacity: {
-        value: 1,
       },
     };
 
@@ -244,6 +245,7 @@ out float v_isHighlightedCommented;
 out float v_isActiveNode;
 out float v_innerPointSize;
 out float v_outerPointSize;
+out float v_opacity;
 in float nodeId;
 in float treeId;
 
@@ -290,9 +292,10 @@ void main() {
     vec4 rgba = texelFetch(treeColors, treeIdToTextureCoordinate, 0);
 
     color = rgba.rgb;
-    float alpha = rgba.a;
+    float alpha = mod(rgba.a, ${DIMMED_TREE_ALPHA_OFFSET.toFixed(1)});
     // A alpha value of 0.5 indicates that the edges of the tree are not visible but its nodes are.
     bool isVisible = alpha == 1.0 || alpha == 0.5 ;
+    v_opacity = rgba.a >= ${DIMMED_TREE_ALPHA_OFFSET.toFixed(1)} ? ${DIMMED_TREE_OPACITY.toFixed(2)} : 1.0;
 
     // DELETED OR INVISIBLE NODE
     if (type == ${NodeTypes.INVALID.toFixed(1)} || !isVisible) {
@@ -397,7 +400,6 @@ void main() {
 precision highp float;
 
 uniform float viewMode;
-uniform float opacity;
 // The precision has to match the declaration in the vertex shader (int defaults to mediump in
 // fragment shaders), otherwise the program fails to link.
 uniform highp int isPicking;
@@ -407,6 +409,7 @@ in float v_isHighlightedCommented;
 in float v_isActiveNode;
 in float v_innerPointSize;
 in float v_outerPointSize;
+in float v_opacity;
 
 out vec4 outputColor;
 
@@ -466,7 +469,7 @@ void main()
 
     // During picking, the color encodes the node id, which must not be blended with the background
     if (isPicking == 0) {
-      outputColor.a *= opacity;
+      outputColor.a *= v_opacity;
     }
 }`;
   }

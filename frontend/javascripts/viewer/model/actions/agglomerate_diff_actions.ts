@@ -7,6 +7,9 @@ type FinishLoadingAgglomerateDiffAction = ReturnType<typeof finishLoadingAgglome
 type FailLoadingAgglomerateDiffAction = ReturnType<typeof failLoadingAgglomerateDiffAction>;
 type RemoveAgglomerateDiffsAction = ReturnType<typeof removeAgglomerateDiffsAction>;
 type SetAgglomerateDiffsVisibilityAction = ReturnType<typeof setAgglomerateDiffsVisibilityAction>;
+type StopAwaitingAgglomerateSkeletonAction = ReturnType<
+  typeof stopAwaitingAgglomerateSkeletonAction
+>;
 type SyncAgglomerateDiffsWithSourceTreesAction = ReturnType<
   typeof syncAgglomerateDiffsWithSourceTreesAction
 >;
@@ -17,6 +20,7 @@ export type AgglomerateDiffAction =
   | FailLoadingAgglomerateDiffAction
   | RemoveAgglomerateDiffsAction
   | SetAgglomerateDiffsVisibilityAction
+  | StopAwaitingAgglomerateSkeletonAction
   | SyncAgglomerateDiffsWithSourceTreesAction;
 
 // None of these actions change the annotation. The diffs are only kept locally.
@@ -27,7 +31,8 @@ export type AgglomerateDiffAction =
 // stored with the agglomerate skeleton (see createAgglomerateSkeletonMetadata).
 // awaitsAgglomerateSkeleton has to be set if the diff is requested while its agglomerate skeleton is
 // still loading. Otherwise, the diff would be considered obsolete. In case the agglomerate skeleton
-// cannot be added, the requester has to remove the diff.
+// cannot be added, the requester has to remove the diff. Otherwise, it has to dispatch
+// stopAwaitingAgglomerateSkeletonAction once the agglomerate skeleton was added.
 export const requestAgglomerateDiffAction = (
   descriptor: AgglomerateDiffDescriptor,
   positionInLayer: Vector3,
@@ -77,6 +82,17 @@ export const setAgglomerateDiffsVisibilityAction = (isVisible: boolean) =>
   ({
     type: "SET_AGGLOMERATE_DIFFS_VISIBILITY",
     isVisible,
+  }) as const;
+
+// Has to be dispatched by the requester of a diff that awaits its agglomerate skeleton (see
+// requestAgglomerateDiffAction) once that skeleton was added. Usually, the diff stopped awaiting
+// already (see syncAgglomerateDiffsWithSourceTreesAction). But if the diff is not desired anymore
+// (e.g., because the reference view changed while the skeleton was loading), it would be kept
+// forever otherwise.
+export const stopAwaitingAgglomerateSkeletonAction = (key: string) =>
+  ({
+    type: "STOP_AWAITING_AGGLOMERATE_SKELETON",
+    key,
   }) as const;
 
 // Updates the diffs whose agglomerate skeletons exist (keyed by getAgglomerateDiffKey) with the

@@ -246,6 +246,15 @@ function AgglomerateDiffReducer(state: WebknossosState, action: Action): Webknos
       });
     }
 
+    case "STOP_AWAITING_AGGLOMERATE_SKELETON": {
+      const overlay = getAgglomerateDiffOverlay(state);
+      const diff = overlay.diffs[action.key];
+      if (diff == null || !diff.awaitsAgglomerateSkeleton) return state;
+      return updateOverlay(state, {
+        diffs: { ...overlay.diffs, [action.key]: { ...diff, awaitsAgglomerateSkeleton: false } },
+      });
+    }
+
     case "SYNC_AGGLOMERATE_DIFFS_WITH_SOURCE_TREES": {
       const overlay = getAgglomerateDiffOverlay(state);
       const diffs = { ...overlay.diffs };

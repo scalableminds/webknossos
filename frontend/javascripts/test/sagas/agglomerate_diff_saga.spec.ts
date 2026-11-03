@@ -613,6 +613,28 @@ describe("Agglomerate diff saga", () => {
     await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
   });
 
+  it<WebknossosTestContext>("removes the diff of the clicked segment if the reference view changes while the agglomerate skeleton loads", async (context) => {
+    mockDiffRequests(context);
+    const skeletonRequest = mockClickedAgglomerateSkeletonRequest(context);
+
+    Store.dispatch(loadAgglomerateTreeAtPositionAction(layerName, mappingName, [5, 6, 7]));
+    await vi.waitFor(() => expect(skeletonRequest.resolve).toBeDefined());
+    await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
+    setReferenceMappingName("agglomerate_view_2");
+    // The diff is kept while its agglomerate skeleton is loading
+    expect(getDiffs()[0]?.referenceMappingName).toBe(referenceMappingName);
+
+    skeletonRequest.resolve!(new ArrayBuffer(1));
+
+    // Only the diff to the new reference view remains
+    await vi.waitFor(() =>
+      expect(getDiffs().map((diff) => [diff.referenceMappingName, diff.status])).toEqual([
+        ["agglomerate_view_2", "loaded"],
+      ]),
+    );
+    expect(getOverlay().skeleton.trees.size()).toBe(1);
+  });
+
   it<WebknossosTestContext>("doesn't request the diff of the clicked segment for a reference view that the layer doesn't have", async (context) => {
     const getUrls = mockDiffRequests(context);
     const skeletonRequest = mockClickedAgglomerateSkeletonRequest(context);

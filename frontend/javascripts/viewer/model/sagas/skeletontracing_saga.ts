@@ -55,6 +55,7 @@ import type { Action } from "viewer/model/actions/actions";
 import {
   removeAgglomerateDiffsAction,
   requestAgglomerateDiffAction,
+  stopAwaitingAgglomerateSkeletonAction,
 } from "viewer/model/actions/agglomerate_diff_actions";
 import {
   addConnectomeTreesAction,
@@ -593,6 +594,8 @@ function* loadAgglomerateTreeWithAtPosition(
   }
 
   if (diffKey != null) {
+    // The agglomerate_diff_saga removes the diff now, if it isn't desired anymore
+    yield* put(stopAwaitingAgglomerateSkeletonAction(diffKey));
     yield* call(progressCallback, false, "Loading the agglomerate diff to the reference view...");
     // The diff is waited for in a detached task, so that this operation (which blocks the user
     // interface) ends once the agglomerate skeleton was added. The task ends at the latest when the

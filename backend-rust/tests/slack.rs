@@ -116,6 +116,7 @@ fn app(db: &TestDb, hook: &str) -> Router {
         credit_ticker: Default::default(),
         used_storage: Default::default(),
         worker_liveness: Default::default(),
+        pricing_plan_expiry_reminder: Default::default(),
         main_view: Default::default(),
     };
     router_with_config(AppState::from_config(db.pool.clone(), &config), &config)

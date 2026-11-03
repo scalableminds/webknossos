@@ -35,6 +35,15 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         &config.worker_liveness,
         config.jobs.worker_liveness_timeout,
     );
+    let state = AppState::from_config(pool.clone(), &config);
+    let pricing_plan_expiry_reminder =
+        webknossos_backend::background::pricing_plan_expiry_reminder::spawn(
+            pool.clone(),
+            &config.pricing_plan_expiry_reminder,
+            state.mailer.clone(),
+            config.misc.public_uri.clone(),
+            config.misc.support_email.clone(),
+        );
     let metrics_server = match config.metrics_bind {
         Some(address) => {
             let listener = tokio::net::TcpListener::bind(address).await?;
@@ -58,7 +67,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     // Serving the `Router` directly makes axum deep-clone it and convert every handler again on
     // each new connection (~8 ms with the API nested once per version). Convert once here and
     // hand out cheap clones instead.
-    let app = router_with_config(AppState::from_config(pool.clone(), &config), &config)
+    let app = router_with_config(state, &config)
         .with_state(())
         .into_make_service();
     let server = axum::serve(listener, app).with_graceful_shutdown(async {
@@ -100,6 +109,15 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .is_err()
     {
         tracing::warn!("Worker liveness monitor did not stop before the shutdown deadline");
+    }
+    if tokio::time::timeout(
+        config.shutdown_timeout,
+        pricing_plan_expiry_reminder.shutdown(),
+    )
+    .await
+    .is_err()
+    {
+        tracing::warn!("Pricing plan expiry reminder did not stop before the shutdown deadline");
     }
     if let Some(metrics_server) = metrics_server {
         metrics_server.abort();

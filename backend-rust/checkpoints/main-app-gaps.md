@@ -38,7 +38,7 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
   `app/views/mail/*.scala.html` wrapped by `emailBaseTemplate`, From = `mail.defaultSender`, optional Reply-To
   (help mail), `additionalFooter`, `logToStdout`, TLSv1.2, sends only when `mail.smtp.host` non-empty.
 - Rust: `src/mail.rs` — `LogMailer` default (logs subject + recipient count). `Mail` struct lacks from/replyTo/
-  html body. All 16 Scala send sites have Rust counterparts EXCEPT the pricing-plan expiry reminder (G8).
+  html body. All 16 Scala send sites have Rust counterparts (the pricing-plan expiry reminder since G8).
   Bodies are plain-text renditions (product decision D1).
 - Config: `mail.logToStdout`, `mail.smtp.{host,port=465,tls=true,auth=true,user,pass}`, `mail.defaultSender`,
   `mail.supportEmail` (Rust already has WK_SUPPORT_EMAIL), `mail.additionalFooter`.
@@ -129,15 +129,18 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
 - Config: `webKnossos.fetchUsedStorage.{rescanInterval,tickerInterval,scansPerTick}`.
 - Agent `used-storage-scan` (~60 min): owned `src/dataset_storage.rs` (generalize to per-organization scan) + job.
 
-### G8. Pricing-plan expiry reminder — MISSING — P3 (disabled by default; needs G1)
+### G8. Pricing-plan expiry reminder — DONE 2026-11-03
 - Scala `app/models/organization/PricingPlanExpiryReminderService.scala:41-100`: enabled only if
   `webKnossos.pricingPlanExpiryReminder.enabled` (default false); every `tickerInterval` (6 h, 5 min delay);
   `findAllWithPlanExpiringBefore` (`Organization.scala:427`), lead times `leadTimesDays=[30,14,7]` /
   `trialLeadTimesDays=[7]`, records in `webknossos.organization_planExpiryReminders` (ON CONFLICT DO NOTHING) BEFORE
   mailing owner+admins `DefaultMails.pricingPlanExpiryReminderMail` (`app/mail/DefaultMails.scala:119`).
-- Rust: no template, no job.
-- Agent `pricing-expiry-reminder` (~45 min): owned new `src/pricing_reminder.rs` + template in mail.rs (coordinate
-  with G1 owner) + pure tests for `crossedLeadTimesDays`/`leadTimesDaysFor`.
+- Rust: `src/background/pricing_plan_expiry_reminder.rs` (+ `_dao.rs`, `_tests.rs`), spawned in `main.rs` with the
+  app's `MailSender`; existing `mail::templates::pricing_plan_expiry_reminder`; env
+  `WK_PRICING_PLAN_EXPIRY_REMINDER_{ENABLED,INTERVAL_SECONDS,INITIAL_DELAY_SECONDS,LEAD_TIMES_DAYS,TRIAL_LEAD_TIMES_DAYS}`
+  (disabled by default); per-tick advisory lock. Tests: 9 unit, 2 DB (`tests/pricing_plan_expiry_reminder.rs`).
+- Deviations (see `checkpoints/pricing-plan-expiry-reminder.md`): `paidUntil` read at millisecond precision like
+  Play's `Instant`; negative lead times rejected at startup; an unknown plan value fails only that organization.
 
 ### G9. Mailchimp — MISSING (one debug log) — P3 (webknossos.org only; empty host = no-op)
 - Scala `app/mail/MailchimpClient.scala` (PUT `{host}/lists/{listId}/members/{md5(email)}`, POST `.../tags`, GET

@@ -54,6 +54,8 @@ pub struct Config {
     pub credit_ticker: crate::background::credit_ticker::CreditTickerConfig,
     pub used_storage: crate::organization::storage::UsedStorageConfig,
     pub worker_liveness: crate::background::worker_liveness::WorkerLivenessConfig,
+    pub pricing_plan_expiry_reminder:
+        crate::background::pricing_plan_expiry_reminder::PricingPlanExpiryReminderConfig,
     pub main_view: crate::main_view::MainViewConfig,
 }
 
@@ -363,6 +365,8 @@ impl Config {
             credit_ticker: crate::background::credit_ticker::config_from_values(&values)?,
             used_storage: crate::organization::storage::config_from_values(&values)?,
             worker_liveness: crate::background::worker_liveness::config_from_values(&values)?,
+            pricing_plan_expiry_reminder:
+                crate::background::pricing_plan_expiry_reminder::config_from_values(&values)?,
             main_view: crate::main_view::config_from_values(&values)?,
         };
         config.misc = crate::system::application_info::config_from_values(&values, &config)?;

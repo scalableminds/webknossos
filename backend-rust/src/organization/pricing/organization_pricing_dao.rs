@@ -172,7 +172,7 @@ pub(super) async fn update_plan(
 }
 
 /// Returns `(email, first name, last name)` of the active owner and admins of the organization.
-pub(super) async fn find_owner_and_admin_contacts(
+pub(crate) async fn find_owner_and_admin_contacts(
     pool: &PgPool,
     organization_id: &str,
 ) -> Result<Vec<(String, String, String)>, sqlx::Error> {

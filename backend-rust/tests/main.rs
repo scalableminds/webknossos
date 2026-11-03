@@ -61,6 +61,7 @@ mod notification_emails;
 mod object_ids;
 mod organization_pricing;
 mod organizations;
+mod pricing_plan_expiry_reminder;
 mod process_lifecycle;
 mod projects_task_types;
 mod projects_transfer;

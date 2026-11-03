@@ -1,7 +1,7 @@
 //! OrganizationController pricing routes: upgrade requests, pricing status
 //! and plan updates (`models.organization.{PricingPlan, UpgradeRequest,
 //! OrganizationPlanUpdate, PricingPlanFeatures}`).
-mod organization_pricing_dao;
+pub(crate) mod organization_pricing_dao;
 
 use axum::{
     Router,
@@ -93,11 +93,16 @@ impl PricingPlan {
         }
     }
 
+    /// `PricingPlan.isTrialPlan`.
+    pub(crate) fn is_trial(self) -> bool {
+        matches!(self, Self::Team_Trial | Self::Power_Trial)
+    }
+
     fn is_upgrade(previous: Self, new: Self) -> bool {
         new.tier_rank() > previous.tier_rank()
     }
 
-    fn label(self) -> &'static str {
+    pub(crate) fn label(self) -> &'static str {
         match self {
             Self::Team_Trial => "Team (Trial)",
             Self::Power_Trial => "Power (Trial)",

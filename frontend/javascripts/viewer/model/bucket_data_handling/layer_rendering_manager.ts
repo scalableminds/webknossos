@@ -322,9 +322,11 @@ export default class LayerRenderingManager {
           this.cube.finishBucketPicking();
           const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
           this.textureBucketManager.setActiveBuckets(buckets);
-          // In general, pull buckets which are not available but should be sent to the GPU
+          // In general, pull buckets which are not available but should be sent to the GPU.
+          // That includes a bucket with local changes whose request failed: it has data, but
+          // still needs the backend's.
           const missingBuckets = bucketsWithPriorities
-            .filter(({ bucket }) => !bucket.hasData())
+            .filter(({ bucket }) => bucket.needsRequest())
             .filter(({ bucket }) => magInfo.hasIndex(bucket.zoomedAddress[3]))
             .map(({ bucket, priority }) => ({
               bucket: bucket.zoomedAddress,

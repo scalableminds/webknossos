@@ -97,14 +97,14 @@ class PullQueue {
       this.fetchingBatchCount < PullQueueConstants.BATCH_LIMIT &&
       this.priorityQueue.length > 0
     ) {
-      const batch = [];
+      const batch: Array<PullQueueItem> = [];
 
       while (batch.length < BATCH_SIZE && this.priorityQueue.length > 0) {
-        const address = this.priorityQueue.dequeue().bucket;
-        const bucket = this.cube.getOrCreateBucket(address);
+        const item = this.priorityQueue.dequeue();
+        const bucket = this.cube.getOrCreateBucket(item.bucket);
 
         if (bucket.type === "data" && bucket.needsRequest()) {
-          batch.push(address);
+          batch.push(item);
           bucket.markAsRequested();
         }
       }
@@ -120,7 +120,7 @@ class PullQueue {
     this.abortController = new AbortController();
   }
 
-  private async pullBatch(batch: Array<BucketAddress>): Promise<void> {
+  private async pullBatch(batchItems: Array<PullQueueItem>): Promise<void> {
     // Loading a bunch of buckets
     this.fetchingBatchCount++;
     const { dataset } = Store.getState();
@@ -128,10 +128,11 @@ class PullQueue {
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
     // Always request a whole aligned 32-t batch so that scrubbing within an
     // already - fetched batch needs no further request from any consumer.
+    const batch = batchItems.map((item) => item.bucket);
     const wireBatch = batch.map((address) => snapToTBatchAddress(this.cube, address));
 
     let hasErrored = false;
-    let failedBucketAddresses = [];
+    let failedBucketAddresses: Array<BucketAddress> = [];
     try {
       const bucketResults = await asAbortable(
         requestWithFallback(layerInfo, wireBatch),
@@ -150,11 +151,17 @@ class PullQueue {
                 siblingAddresses,
                 bucketResult.data,
                 renderMissingDataBlack,
+                batchItems[index].priority,
               );
               break;
             }
-            case "empty": {
-              this.handleBatchedBucketResult(siblingAddresses, null, renderMissingDataBlack);
+            case "empty": { // todop: cant we unify this with the previous case? only the data param is different i think.
+              this.handleBatchedBucketResult(
+                siblingAddresses,
+                null,
+                renderMissingDataBlack,
+                batchItems[index].priority,
+              );
               break;
             }
             case "failure": {
@@ -185,11 +192,8 @@ class PullQueue {
         // via an earlier result in the same batch), in which case markAsFailed()
         // would throw. Skipping it lets the loop safely handle the remaining buckets.
         if (bucket.type === "data" && bucket.isRequested()) {
-          bucket.markAsFailed();
-
-          if (bucket.hasChangesAwaitingBackendData()) {
-            bucket.addToPullQueueWithHighestPriority();
-          }
+          const { priority } = batchItems[batch.indexOf(bucketAddress)];
+          this.markAsFailedAndRequeue(bucket, priority);
         }
       }
 
@@ -256,6 +260,8 @@ class PullQueue {
     siblingAddresses: Array<BucketAddress>,
     bucketData: Uint8Array<ArrayBuffer> | null,
     renderMissingDataBlack: boolean,
+    // The priority with which the requested bucket was queued.
+    priority: number,
   ): void {
     const isBatched = siblingAddresses.length > 1;
 
@@ -297,11 +303,7 @@ class PullQueue {
         // address, and a bucket left in REQUESTED is stuck for good. One that was already REQUESTED
         // belongs to a concurrent batch — or is this batch's own primary — so settling it is that owner's job.
         if (didMarkAsRequested && sibling.isRequested()) {
-          sibling.markAsFailed();
-
-          if (sibling.hasChangesAwaitingBackendData()) {
-            sibling.addToPullQueueWithHighestPriority();
-          }
+          this.markAsFailedAndRequeue(sibling, priority);
         }
 
         // Rethrowing aborts the remaining siblings on purpose: the failure is usually a property
@@ -309,6 +311,26 @@ class PullQueue {
         // what puts the originally requested bucket into failedBucketAddresses (see pullBatch).
         throw error;
       }
+    }
+  }
+
+  // A failed bucket is requested again with the next retry (see pullBatch) if it is
+  // dirty or still needed. A dirty bucket stays in the queue even when the view changes,
+  // as saving it needs its backend data. A needed one is the bucket picker's: it is
+  // retried while the view doesn't change (the picker only runs when it does), and it is
+  // dropped by the next picking (see clear), which requests it again if it is still
+  // needed then.
+  private markAsFailedAndRequeue(bucket: DataBucket, priority: number): void {
+    bucket.markAsFailed();
+    if (bucket.fullBucketSaveState.dirty) {
+      bucket.addToPullQueueWithHighestPriority();
+    } else if (bucket.isNeeded()) {
+      // Without the highest priority, which would keep it in the queue (e.g., a bucket
+      // the TemporalBucketManager queued).
+      this.add({
+        bucket: bucket.zoomedAddress,
+        priority: Math.max(priority, PullQueueConstants.PRIORITY_HIGHEST + 1),
+      });
     }
   }
 

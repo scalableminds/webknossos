@@ -198,7 +198,7 @@ describe("PullQueue", () => {
       .mockResolvedValueOnce([{ type: "data", data: new Uint8Array(32 ** 3) }]);
   }
 
-  it<TestContext>("Request Failure: should not request twice if not bucket dirty", async ({
+  it<TestContext>("Request Failure: should not request twice if the bucket is neither dirty nor needed", async ({
     pullQueue,
     buckets,
   }) => {
@@ -226,6 +226,39 @@ describe("PullQueue", () => {
     expect(requestWithFallback).toHaveBeenCalledTimes(2);
     expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
     expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
+  });
+
+  it<TestContext>("Request Failure: should reinsert needed buckets", async ({
+    pullQueue,
+    buckets,
+  }) => {
+    prepare();
+    // As the bucket picker does for the buckets of the current view.
+    buckets[0].markAsNeeded();
+    pullQueue.pull();
+
+    await sleep(50); // sleep a bit so that the event loop can process the fetches
+
+    expect(requestWithFallback).toHaveBeenCalledTimes(2);
+    expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
+    expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
+  });
+
+  it<TestContext>("Request Failure: should drop reinserted needed buckets when the view changes", async ({
+    pullQueue,
+    buckets,
+  }) => {
+    prepare();
+    buckets[0].markAsNeeded();
+    pullQueue.pull();
+
+    await sleep(0); // sleep a bit so that the failure is handled before the retry
+    // As the bucket picker does when the view changes.
+    pullQueue.clear();
+    await sleep(50);
+
+    expect(requestWithFallback).toHaveBeenCalledTimes(1);
+    expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
   });
 
   describe("t-batched requests (see DataCube.usesTRecycling)", () => {

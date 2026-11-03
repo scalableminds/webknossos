@@ -211,8 +211,8 @@ describe("Unsaved partial bucket updates", () => {
     // Without retries, unlike getDataValue, so that only the pull queue requests the
     // bucket again.
     const firstLoad = bucket.ensureLoaded(0).catch(() => {});
-    // The stroke is drawn while the bucket is requested, so the bucket has data. The
-    // bucket picker doesn't request a bucket with data again.
+    // The stroke is drawn while the bucket is requested, which marks the bucket as
+    // needed. So the pull queue requests it again after the failure.
     brushAt(position);
     heldRequest.fail();
     await firstLoad;

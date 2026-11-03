@@ -54,9 +54,10 @@ class TemporalBucketManager {
         return resolve();
       };
 
-      // No "bucketRequestFailed" here: These buckets have local changes (see
-      // DataBucket.hasChangesAwaitingBackendData), so the pull queue retries them until the
-      // real backend data is read and merged (resolving as empty could lose data).
+      // No "bucketRequestFailed" here: These buckets have local changes, so they wait
+      // until the real backend data is read and merged (resolving as empty could lose
+      // data). The pull queue retries dirty ones right away, and others when they are
+      // needed (see PullQueue.markAsFailedAndRequeue).
       bucket.on("bucketLoaded", onLoadedOrMissingHandler);
       bucket.on("bucketMissing", onLoadedOrMissingHandler);
     });

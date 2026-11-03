@@ -7,6 +7,7 @@ import {
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { OrthoViews, OverwriteModeEnum, type Vector3 } from "viewer/constants";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
@@ -222,6 +223,32 @@ describe("Unsaved partial bucket updates", () => {
     expect(await getValueAt(context, position)).toBe(5);
     // The rest of the bucket holds the backend's data.
     expect(await getValueAt(context, [60, 60, 43])).toBe(3);
+  });
+
+  it<WebknossosTestContext>("don't hold back whole-bucket saves after live collaboration ends", async (context) => {
+    await setup(context);
+    vi.mocked(context.mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+      createBucketResponseFunction(LAYERS, 0, 0),
+    );
+    await context.api.data.reloadAllBuckets();
+
+    // A stroke in live collaboration on a bucket whose data doesn't arrive.
+    const heldRequest = holdBackFirstRequestOfBucket(
+      context,
+      createBucketResponseFunction(LAYERS, 0, 0),
+    );
+    const value = getValueAt(context, position);
+    brushAt(position);
+
+    // Saving a whole bucket elsewhere doesn't wait for that bucket's data.
+    Store.dispatch(setCollaborationModeAction("OwnerOnly"));
+    const otherPosition: Vector3 = [10, 10, 43];
+    brushAt(otherPosition);
+    await context.api.tracing.save();
+    expect(await getValueAt(context, otherPosition)).toBe(5);
+
+    heldRequest.release();
+    expect(await value).toBe(5);
   });
 
   it<WebknossosTestContext>("win over others' partial updates of the same voxels when rebasing", async (context) => {

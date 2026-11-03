@@ -392,8 +392,9 @@ export class DataBucket {
   private getSnapshot(purpose: "MUTATION" | "PREPARE_RESTORE_TO_SNAPSHOT"): BucketSnapshot {
     // getSnapshot is called in two use cases:
     // 1) The user mutates data.
-    //    If this.data is null, it will be allocated and the bucket will be added
-    //    to the pullQueue and temporalBucketManager (see getOrCreateData).
+    //    If this.data is null, it will be allocated. If the bucket isn't loaded yet, it
+    //    is added to the pullQueue and temporalBucketManager (see
+    //    startDataMutationForFullBucket).
     // 2) The user uses undo/redo which will restore the bucket to another snapshot.
     //    Before this restoration is done, the current version is snapshotted.
     //    In that case, this.data must not be null, because we assume either
@@ -501,10 +502,6 @@ export class DataBucket {
     if (this.data == null) {
       const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
       this.data = new TypedArrayClass(channelCount * this.cube.getEffectiveBucketVoxelCount());
-
-      if (!this.isMissing()) {
-        this.temporalBucketManager.addBucket(this);
-      }
     }
 
     return this.getData();
@@ -529,6 +526,12 @@ export class DataBucket {
     /*
      * See Bucket.getDataForMutation() for a safe way of using this method.
      */
+    // Saving the bucket whole needs its backend data. The TemporalBucketManager requests
+    // it and holds back saving until it is merged. A bucket edited in collaborative
+    // volume annotation isn't added, as its partial updates are saved without its data.
+    if (this.needsBackendData()) {
+      this.temporalBucketManager.addBucket(this);
+    }
     this._markAndAddBucketForUndo();
   }
 

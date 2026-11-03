@@ -1,5 +1,7 @@
 import {
+  getNewestReleaseNoteId,
   getUnreadReleaseNotesCount,
+  isReleaseNoteUnread,
   loadReleaseNotes,
   parseReleaseNote,
   parseReleaseNoteDate,
@@ -45,8 +47,39 @@ describe("Release notes", () => {
     }
   });
 
-  it("should count release notes published after the given timestamp", () => {
-    expect(getUnreadReleaseNotesCount(0)).toBe(RELEASE_NOTE_FILES.length);
-    expect(getUnreadReleaseNotesCount(RELEASE_NOTE_FILES[0].date)).toBe(0);
+  it("should treat notes sorting after the newest seen note as unread", () => {
+    const readState = {
+      newestSeenReleaseNoteId: "2026-08-06-changelog.md",
+      // Ignored as a note was already seen.
+      lastViewedTimestamp: Date.parse("2026-12-01T00:00:00Z"),
+    };
+    const note = (id: string) => ({ id, date: parseReleaseNoteDate(id) });
+    expect(isReleaseNoteUnread(note("2026-08-06-changelog.md"), readState)).toBe(false);
+    expect(isReleaseNoteUnread(note("2026-08-05-older.md"), readState)).toBe(false);
+    expect(isReleaseNoteUnread(note("2026-08-06-later-slug.md"), readState)).toBe(true);
+    // Counts as new even though it is dated before the user's last visit (e.g., deployed later).
+    expect(isReleaseNoteUnread(note("2026-09-01-newer.md"), readState)).toBe(true);
+  });
+
+  it("should fall back to the last viewed timestamp if no note was seen yet", () => {
+    const readState = {
+      newestSeenReleaseNoteId: null,
+      lastViewedTimestamp: Date.parse("2026-08-06T12:00:00Z"),
+    };
+    const note = (id: string) => ({ id, date: parseReleaseNoteDate(id) });
+    expect(isReleaseNoteUnread(note("2026-08-06-changelog.md"), readState)).toBe(false);
+    expect(isReleaseNoteUnread(note("2026-08-07-newer.md"), readState)).toBe(true);
+  });
+
+  it("should count unread release notes", () => {
+    expect(
+      getUnreadReleaseNotesCount({ newestSeenReleaseNoteId: null, lastViewedTimestamp: 0 }),
+    ).toBe(RELEASE_NOTE_FILES.length);
+    expect(
+      getUnreadReleaseNotesCount({
+        newestSeenReleaseNoteId: getNewestReleaseNoteId(),
+        lastViewedTimestamp: 0,
+      }),
+    ).toBe(0);
   });
 });

@@ -4,6 +4,11 @@
 //
 // Only the file names are part of the main bundle (to compute the unread count). The contents
 // are loaded lazily when the "What's new" modal is opened.
+//
+// Because file names start with the date, sorting them as strings sorts the notes by date. To
+// track which notes are unread, the file name of the newest note a user has seen is stored. All
+// notes sorting after it are unread. This way, a note counts as new once it is deployed, no matter
+// how long after its date that happens.
 
 export type ReleaseNote = {
   id: string;
@@ -51,16 +56,41 @@ const releaseNoteLoaders = import.meta.glob<string>("../../release_notes/*.md", 
   import: "default",
 });
 
+function compareReleaseNoteIds(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 // Sorted from newest to oldest.
 export const RELEASE_NOTE_FILES: ReleaseNoteFile[] = Object.entries(releaseNoteLoaders)
   .map(([path, load]) => {
     const id = path.split("/").pop() ?? path;
     return { id, date: parseReleaseNoteDate(id), load };
   })
-  .sort((a, b) => b.date - a.date || b.id.localeCompare(a.id));
+  .sort((a, b) => compareReleaseNoteIds(b.id, a.id));
 
-export function getUnreadReleaseNotesCount(lastViewedTimestamp: number): number {
-  return RELEASE_NOTE_FILES.filter((file) => file.date > lastViewedTimestamp).length;
+export type ReleaseNotesReadState = {
+  newestSeenReleaseNoteId: string | null;
+  // Only used if no note was seen yet, e.g., for users who last opened the modal before notes
+  // were tracked by file name. Then, notes dated after this timestamp are unread.
+  lastViewedTimestamp: number;
+};
+
+export function isReleaseNoteUnread(
+  note: { id: string; date: number },
+  readState: ReleaseNotesReadState,
+): boolean {
+  if (readState.newestSeenReleaseNoteId != null) {
+    return compareReleaseNoteIds(note.id, readState.newestSeenReleaseNoteId) > 0;
+  }
+  return note.date > readState.lastViewedTimestamp;
+}
+
+export function getUnreadReleaseNotesCount(readState: ReleaseNotesReadState): number {
+  return RELEASE_NOTE_FILES.filter((file) => isReleaseNoteUnread(file, readState)).length;
+}
+
+export function getNewestReleaseNoteId(): string | null {
+  return RELEASE_NOTE_FILES[0]?.id ?? null;
 }
 
 let releaseNotesPromise: Promise<ReleaseNote[]> | null = null;

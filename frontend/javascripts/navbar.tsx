@@ -41,7 +41,11 @@ import { WhatsNewModal } from "components/whats_new_modal";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { useMinScreenWidth, useWkSelector } from "libs/react_hooks";
-import { getUnreadReleaseNotesCount } from "libs/release_notes";
+import {
+  getNewestReleaseNoteId,
+  getUnreadReleaseNotesCount,
+  type ReleaseNotesReadState,
+} from "libs/release_notes";
 import { TAB_SESSION_ID as SESSION_ID } from "libs/tab_session_id";
 import Toast from "libs/toast";
 import {
@@ -84,8 +88,13 @@ const ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT = 10;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
 
-function getLastViewedWhatsNewTimestamp(activeUser: APIUser): number {
-  return activeUser.novelUserExperienceInfos.lastViewedWhatsNewTimestamp ?? activeUser.created;
+function getReleaseNotesReadState(activeUser: APIUser): ReleaseNotesReadState {
+  const { newestSeenReleaseNoteId, lastViewedWhatsNewTimestamp } =
+    activeUser.novelUserExperienceInfos;
+  return {
+    newestSeenReleaseNoteId: newestSeenReleaseNoteId ?? null,
+    lastViewedTimestamp: lastViewedWhatsNewTimestamp ?? activeUser.created,
+  };
 }
 
 function UserInitials({
@@ -509,19 +518,19 @@ function LoggedInAvatar({
     activeOrganization != null ? activeOrganization.name || activeOrganization.id : organizationId;
   const [organizationFilter, onChangeOrganizationFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
-  const lastViewedWhatsNewTimestamp = getLastViewedWhatsNewTimestamp(activeUser);
-  const unreadReleaseNotesCount = getUnreadReleaseNotesCount(lastViewedWhatsNewTimestamp);
+  const releaseNotesReadState = getReleaseNotesReadState(activeUser);
+  const unreadReleaseNotesCount = getUnreadReleaseNotesCount(releaseNotesReadState);
   const [isWhatsNewModalOpen, setIsWhatsNewModalOpen] = useState(false);
   // Remember which release notes were unread when the modal was opened, as opening it marks
   // all of them as read.
-  const [whatsNewUnreadSinceTimestamp, setWhatsNewUnreadSinceTimestamp] = useState(
-    lastViewedWhatsNewTimestamp,
-  );
+  const [whatsNewModalReadState, setWhatsNewModalReadState] = useState(releaseNotesReadState);
   const showWhatsNewModal = () => {
-    setWhatsNewUnreadSinceTimestamp(lastViewedWhatsNewTimestamp);
+    setWhatsNewModalReadState(releaseNotesReadState);
     setIsWhatsNewModalOpen(true);
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
       lastViewedWhatsNewTimestamp: Date.now(),
+      newestSeenReleaseNoteId:
+        getNewestReleaseNoteId() ?? releaseNotesReadState.newestSeenReleaseNoteId ?? undefined,
     });
     Store.dispatch(setActiveUserAction(newUserSync));
     sendAnalyticsEvent("open_whats_new_view");
@@ -628,7 +637,7 @@ function LoggedInAvatar({
       <WhatsNewModal
         isOpen={isWhatsNewModalOpen}
         onClose={() => setIsWhatsNewModalOpen(false)}
-        unreadSinceTimestamp={whatsNewUnreadSinceTimestamp}
+        readState={whatsNewModalReadState}
       />
     </>
   );

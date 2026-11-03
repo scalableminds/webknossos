@@ -1,6 +1,11 @@
 import { Alert, Card, Flex, Modal, Spin, Tag, Typography } from "antd";
 import Markdown, { LinkRenderer } from "libs/markdown_adapter";
-import { loadReleaseNotes, type ReleaseNote } from "libs/release_notes";
+import {
+  isReleaseNoteUnread,
+  loadReleaseNotes,
+  type ReleaseNote,
+  type ReleaseNotesReadState,
+} from "libs/release_notes";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { ModalWidth } from "theme";
@@ -52,7 +57,7 @@ function ReleaseNoteEntry({ note, isUnread }: { note: ReleaseNote; isUnread: boo
   );
 }
 
-function ReleaseNoteList({ unreadSinceTimestamp }: { unreadSinceTimestamp: number }) {
+function ReleaseNoteList({ readState }: { readState: ReleaseNotesReadState }) {
   const [releaseNotes, setReleaseNotes] = useState<ReleaseNote[] | null>(null);
   const [hasError, setHasError] = useState(false);
 
@@ -83,7 +88,11 @@ function ReleaseNoteList({ unreadSinceTimestamp }: { unreadSinceTimestamp: numbe
   return (
     <Flex vertical gap="middle">
       {releaseNotes.map((note) => (
-        <ReleaseNoteEntry key={note.id} note={note} isUnread={note.date > unreadSinceTimestamp} />
+        <ReleaseNoteEntry
+          key={note.id}
+          note={note}
+          isUnread={isReleaseNoteUnread(note, readState)}
+        />
       ))}
     </Flex>
   );
@@ -92,12 +101,12 @@ function ReleaseNoteList({ unreadSinceTimestamp }: { unreadSinceTimestamp: numbe
 export function WhatsNewModal({
   isOpen,
   onClose,
-  unreadSinceTimestamp,
+  readState,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  // Release notes published after this timestamp are marked as new.
-  unreadSinceTimestamp: number;
+  // Determines which release notes are marked as new.
+  readState: ReleaseNotesReadState;
 }) {
   return (
     // The modal is opened from the dark navbar and would otherwise inherit its theme.
@@ -110,7 +119,7 @@ export function WhatsNewModal({
         width={ModalWidth.Large}
         destroyOnHidden
       >
-        <ReleaseNoteList unreadSinceTimestamp={unreadSinceTimestamp} />
+        <ReleaseNoteList readState={readState} />
       </Modal>
     </UserThemeConfigProvider>
   );

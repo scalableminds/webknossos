@@ -21,7 +21,7 @@
 /** Container for the description of a task type, allowing for long text wrapping and optional height capping. */
 .task-type-description {
   max-width: 700px;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 
   &.short {
     max-height: 150px;
@@ -37,6 +37,14 @@
     list-style: decimal;
     padding-left: 2em;
   }
+}
+
+/**
+ * Gives the columns of all finished-task cards equal widths, so the cards line up. antd sets
+ * table-layout: fixed but no width, and browsers ignore a fixed layout on auto-width tables.
+ */
+.finished-task-descriptions table {
+  width: 100%;
 }
 
 /** Background of the 'What's Next' dashboard welcome banner. Layout lives in admin/welcome_ui.tsx. */
@@ -104,7 +112,7 @@ pre.dataset-import-folder-structure-hint {
   font-size: 17px;
   font-weight: 500;
   min-height: 30px;
-  word-break: break-word;
+  overflow-wrap: anywhere;
   margin-inline-end: 15px;
 }
 

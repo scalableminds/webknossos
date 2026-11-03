@@ -80,6 +80,8 @@ const viteConfig = {
     entries: ["index.html", "frontend/javascripts/**/*.worker.{ts,js}"],
     exclude: ["three-mesh-bvh"],
   },
+  // Copied verbatim (unhashed) into outDir, for files that need stable URLs, e.g. the OpenGraph image.
+  publicDir: "frontend/public",
   build: {
     outDir: "public", // note: /public is handled by the backend/Play framework for asset delivery
     emptyOutDir: true,

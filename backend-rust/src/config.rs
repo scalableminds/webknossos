@@ -57,6 +57,8 @@ pub struct Config {
     pub worker_liveness: crate::background::worker_liveness::WorkerLivenessConfig,
     pub pricing_plan_expiry_reminder:
         crate::background::pricing_plan_expiry_reminder::PricingPlanExpiryReminderConfig,
+    pub virtual_datasets_real_path_scan:
+        crate::background::virtual_datasets_real_path_scan::VirtualDatasetsRealPathScanConfig,
     pub main_view: crate::main_view::MainViewConfig,
 }
 
@@ -369,6 +371,8 @@ impl Config {
             worker_liveness: crate::background::worker_liveness::config_from_values(&values)?,
             pricing_plan_expiry_reminder:
                 crate::background::pricing_plan_expiry_reminder::config_from_values(&values)?,
+            virtual_datasets_real_path_scan:
+                crate::background::virtual_datasets_real_path_scan::config_from_values(&values)?,
             main_view: crate::main_view::config_from_values(&values)?,
         };
         config.misc = crate::system::application_info::config_from_values(&values, &config)?;

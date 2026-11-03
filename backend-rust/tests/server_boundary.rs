@@ -89,6 +89,7 @@ async fn request_timeout_bounds_database_waits_and_preserves_error_headers() {
         used_storage: Default::default(),
         worker_liveness: Default::default(),
         pricing_plan_expiry_reminder: Default::default(),
+        virtual_datasets_real_path_scan: Default::default(),
         main_view: Default::default(),
     };
     let app = router_with_config(AppState::from_config(pool.clone(), &config), &config);

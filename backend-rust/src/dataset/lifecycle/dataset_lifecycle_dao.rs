@@ -20,6 +20,24 @@ pub(crate) async fn find_record(
     .await
 }
 
+/// `DatasetDAO.findAll` (`datasets_`, global access) filtered to virtual datasets, ordered by
+/// datastore and id. `store_name` is the dataset's own `_dataStore` (the grouping key), so it is
+/// set even if that datastore was deleted; `store_url` is then `NULL`.
+pub(crate) async fn find_all_virtual_records(
+    executor: impl sqlx::PgExecutor<'_>,
+) -> sqlx::Result<Vec<DatasetRecord>> {
+    sqlx::query_as(
+        r#"SELECT d._id AS id, d._organization AS organization, s.url AS store_url,
+             trim(d._dataStore) AS store_name, d.isVirtual AS is_virtual, d.isUsable AS is_usable,
+             d.status, d.rootPath AS root_path, d.rootRealPath AS root_real_path
+           FROM webknossos.datasets_ d LEFT JOIN webknossos.dataStores_ s ON s.name = trim(d._dataStore)
+           WHERE d.isVirtual
+           ORDER BY trim(d._dataStore), d._id"#,
+    )
+    .fetch_all(executor)
+    .await
+}
+
 pub(crate) async fn update_mirror_path(
     pool: &PgPool,
     dataset_id: &str,

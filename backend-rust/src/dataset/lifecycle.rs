@@ -13,7 +13,7 @@ use webknossos_common::enums::{LayerAttachmentDataformat, LayerAttachmentType};
 
 mod dataset_lifecycle_dao;
 
-pub(crate) use dataset_lifecycle_dao::find_record as load_record;
+pub(crate) use dataset_lifecycle_dao::{find_all_virtual_records, find_record as load_record};
 
 use crate::{
     AppState,
@@ -232,30 +232,72 @@ pub(crate) async fn scan_realpaths_if_virtual(
     clients: &ServiceClients,
     record: &DatasetRecord,
 ) -> ApiResult<()> {
-    if !(record.is_virtual && record.is_usable) {
+    let Some(info) = real_path_scan_info(pool, record).await? else {
         return Ok(());
+    };
+    scan_real_paths_for_virtual(clients, record.store_url()?, &[info]).await?;
+    Ok(())
+}
+
+/// The `DataSourceWithRootPathInfo` of a usable virtual dataset whose data source references at
+/// least one local path (`DatasetService.usableDataSourceFor(useRealPaths = false)` plus the
+/// filter of `WKRemoteDataStoreClient.scanRealPathsForVirtual`); `None` for every other dataset.
+pub(crate) async fn real_path_scan_info(
+    pool: &sqlx::PgPool,
+    record: &DatasetRecord,
+) -> ApiResult<Option<Value>> {
+    if !(record.is_virtual && record.is_usable) {
+        return Ok(None);
     }
     let data_source = crate::dataset::routes::data_source_for_rpc(pool, &record.id, false).await?;
+    Ok(real_path_scan_info_for(
+        data_source,
+        record.root_path.as_deref(),
+        record.root_real_path.as_deref(),
+    ))
+}
+
+/// `DataSourceWithRootPathInfo(dataSource, rootPath, rootRealPath)` as JSON (absent roots are
+/// omitted), or `None` if the data source has no local explicit path.
+pub(crate) fn real_path_scan_info_for(
+    data_source: Value,
+    root_path: Option<&str>,
+    root_real_path: Option<&str>,
+) -> Option<Value> {
     if !explicit_paths(&data_source)
         .iter()
         .any(|p| crate::organization::storage::is_local_path(p))
     {
-        return Ok(());
+        return None;
     }
     let mut info = json!({ "dataSource": data_source });
-    if let Some(root) = &record.root_path {
+    if let Some(root) = root_path {
         info["rootPath"] = json!(root);
     }
-    if let Some(root) = &record.root_real_path {
+    if let Some(root) = root_real_path {
         info["rootRealPath"] = json!(root);
+    }
+    Some(info)
+}
+
+/// `WKRemoteDataStoreClient.scanRealPathsForVirtual`:
+/// `POST {store}/data/triggers/scanRealPathsForVirtual?token=..` with the infos as JSON array.
+/// Nothing is sent for an empty list.
+pub(crate) async fn scan_real_paths_for_virtual(
+    clients: &ServiceClients,
+    store_url: &str,
+    infos: &[Value],
+) -> Result<(), ServiceError> {
+    if infos.is_empty() {
+        return Ok(());
     }
     clients
         .request(
             Method::POST,
-            record.store_url()?,
+            store_url,
             &["data", "triggers", "scanRealPathsForVirtual"],
             &[],
-            Some(&json!([info])),
+            Some(&Value::Array(infos.to_vec())),
         )
         .await?;
     Ok(())

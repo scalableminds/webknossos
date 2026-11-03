@@ -118,6 +118,7 @@ fn app(db: &TestDb, hook: &str) -> Router {
         used_storage: Default::default(),
         worker_liveness: Default::default(),
         pricing_plan_expiry_reminder: Default::default(),
+        virtual_datasets_real_path_scan: Default::default(),
         main_view: Default::default(),
     };
     router_with_config(AppState::from_config(db.pool.clone(), &config), &config)

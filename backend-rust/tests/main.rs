@@ -97,6 +97,7 @@ mod user_access;
 mod user_configuration;
 mod users;
 mod users_update;
+mod virtual_datasets_real_path_scan;
 mod voxelytics;
 mod worker_liveness;
 

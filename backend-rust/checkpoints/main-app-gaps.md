@@ -154,12 +154,15 @@ Legend: MISSING = nothing in Rust; PARTIAL = logic exists but not triggered; LOG
   differs only for mixed-case OIDC emails), keeping Play's uppercase hex. The ticker selects its candidates in one
   query, awaits its tag requests, and is not scheduled at all without a host (Play ticks and finds nothing to do).
 
-### G10. Virtual-dataset realpath bulk scan — PARTIAL — P3
+### G10. Virtual-dataset realpath bulk scan — DONE (2026-11-03, checkpoints/virtual-datasets-real-path-scan.md)
 - Scala `app/models/dataset/VirtualDatasetsRealPathScanService.scala:27-56`: hourly, all virtual datasets grouped by
   datastore, `POST {datastore}/data/triggers/scanRealPathsForVirtual` (WKRemoteDataStoreClient.scala:196); the
   datastore answers via `PUT /datastores/:name/datasources/realpaths` (already ported, remote_datastore.rs:63).
-- Rust: per-dataset `dataset_lifecycle::scan_realpaths_if_virtual` on create/update/report only.
-- Agent: small job (~30 min) owned `src/dataset_lifecycle.rs` helper + job in housekeeping.
+- Rust: `src/background/virtual_datasets_real_path_scan.rs` (hourly, 10 s initial delay,
+  `WK_VIRTUAL_DATASETS_REAL_PATH_SCAN_*`, advisory xact lock held for the run like the used-storage scan), sharing the
+  request building with `dataset::lifecycle::scan_realpaths_if_virtual`; spawned/shut down in main.rs.
+- Deviations: a failing datastore no longer aborts the tick (Scala `serialCombined` skipped the remaining stores);
+  stores visited in name order; per-dataset data source failures logged instead of silently dropped.
 
 ### G11. Startup tasks — PARTIAL — P3
 - `Startup.scala:107-114` runs `InitialDataService.insert` at every boot: keeps local datastore/tracingstore rows in

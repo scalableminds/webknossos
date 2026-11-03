@@ -1,6 +1,4 @@
----
-title: "Changelog WEBKNOSSOS"
----
+# Changelog WEBKNOSSOS
 
 ## Version 26.08
 

@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Flex, Modal, Spin, Tag, Typography } from "antd";
+import { Alert, Card, Flex, Modal, Spin, Tag, Typography } from "antd";
 import Markdown, { LinkRenderer } from "libs/markdown_adapter";
 import { loadReleaseNotes, type ReleaseNote } from "libs/release_notes";
 import type React from "react";
@@ -30,10 +30,7 @@ const RELEASE_NOTE_MARKDOWN_COMPONENTS = { a: ReleaseNoteLink };
 
 function ReleaseNoteEntry({ note, isUnread }: { note: ReleaseNote; isUnread: boolean }) {
   return (
-    <Card
-      className="release-note"
-      cover={note.featuredImage != null ? <img src={note.featuredImage} alt="" /> : undefined}
-    >
+    <Card className="release-note">
       <Flex align="baseline" gap="small" wrap>
         <Typography.Title level={2} style={{ marginTop: 0, marginBottom: 0 }}>
           {note.title}
@@ -44,11 +41,6 @@ function ReleaseNoteEntry({ note, isUnread }: { note: ReleaseNote; isUnread: boo
         {new Date(note.date).toLocaleDateString(undefined, { dateStyle: "long", timeZone: "UTC" })}
       </Typography.Paragraph>
       <Markdown components={RELEASE_NOTE_MARKDOWN_COMPONENTS}>{note.body}</Markdown>
-      {note.featuredLink != null ? (
-        <Button type="primary" href={note.featuredLink} target="_blank" rel="noreferrer noopener">
-          {note.featuredLinkText || "Read more"}
-        </Button>
-      ) : null}
     </Card>
   );
 }

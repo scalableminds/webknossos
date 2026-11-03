@@ -16,36 +16,23 @@ describe("Release notes", () => {
     expect(() => parseReleaseNoteDate("2026-13-45-invalid.md")).toThrow();
   });
 
-  it("should parse frontmatter with quoted and unquoted values", () => {
+  it("should parse the title from the leading heading", () => {
     const note = parseReleaseNote(
       "note.md",
       42,
-      [
-        "---",
-        'title: "Version 26.08: new features"',
-        "featuredLink: https://webknossos.org",
-        "---",
-        "",
-        "## Heading",
-        "",
-        "Body text.",
-        "",
-      ].join("\n"),
+      "# Version 26.08: new features\n\n## Heading\n\nBody text.\n",
     );
     expect(note).toEqual({
       id: "note.md",
       title: "Version 26.08: new features",
       date: 42,
-      featuredImage: null,
-      featuredLink: "https://webknossos.org",
-      featuredLinkText: null,
       body: "## Heading\n\nBody text.",
     });
   });
 
-  it("should reject notes without frontmatter or title", () => {
+  it("should reject notes without a title heading", () => {
     expect(() => parseReleaseNote("a.md", 0, "Just text")).toThrow();
-    expect(() => parseReleaseNote("b.md", 0, "---\nfeaturedLink: x\n---\n")).toThrow();
+    expect(() => parseReleaseNote("b.md", 0, "## Not a title\n\nText")).toThrow();
   });
 
   it("should load all release notes sorted from newest to oldest", async () => {

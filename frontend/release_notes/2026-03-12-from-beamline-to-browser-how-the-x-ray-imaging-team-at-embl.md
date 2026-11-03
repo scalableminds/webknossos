@@ -1,6 +1,4 @@
----
-title: "From beamline to browser: how the X-ray imaging team at EMBL P14 automated synchrotron tomography workflows with WEBKNOSSOS."
----
+# From beamline to browser: how the X-ray imaging team at EMBL P14 automated synchrotron tomography workflows with WEBKNOSSOS.
 
 In this interview, Angelika Svetlove explains how her pipeline automatically converts reconstructed datasets into WEBKNOSSOS within minutes, allowing scientists to inspect terabyte-scale tomography data remotely without downloading everything first.
 

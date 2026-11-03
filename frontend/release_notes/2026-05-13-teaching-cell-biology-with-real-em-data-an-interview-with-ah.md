@@ -1,6 +1,4 @@
----
-title: "Teaching Cell Biology with Real EM Data: An Interview with Ahmed Elewa, Miami University"
----
+# Teaching Cell Biology with Real EM Data: An Interview with Ahmed Elewa, Miami University
 
 We spoke with Ahmed Elewa, assistant professor at Miami University, about how he used WEBKNOSSOS to teach cell biology through a hands-on course project. During a single semester, 48 students annotated cells in a published C. elegans embryo dataset, generated training data for AI models, and even contributed to a biological discovery.
 

@@ -1,6 +1,4 @@
----
-title: "Making a flythrough video of your data with WEBKNOSSOS and your AI coding agent"
----
+# Making a flythrough video of your data with WEBKNOSSOS and your AI coding agent
 
 If you have your data in WEBKNOSSOS and access to a coding agent (e.g. Claude), you have everything to create a beautiful flythrough video of your microscopy data. Let the AI write code to control camera moves, layer opacities and more, and show your audience what you actually see.
 

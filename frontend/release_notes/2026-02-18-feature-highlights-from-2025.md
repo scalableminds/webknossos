@@ -1,6 +1,4 @@
----
-title: "Feature Highlights from 2025"
----
+# Feature Highlights from 2025
 
 2025 brought some exciting updates to WEBKNOSSOS. From faster navigation to smarter proofreading tools, these new features make exploring and annotating your 3D datasets easier and more efficient.
 

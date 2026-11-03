@@ -1,3 +1,4 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 /* eslint no-await-in-loop: 0 */
 
 import type { RequestOptions } from "libs/request";
@@ -126,7 +127,9 @@ async function _screenshotAnnotationHelper(
   const createdExplorational = await getAnnotation();
 
   if (options?.datasetConfigOverride != null) {
-    await updateDatasetConfiguration(datasetId, options.datasetConfigOverride, requestOptions);
+    unwrapOrThrow(
+      await updateDatasetConfiguration(datasetId, options.datasetConfigOverride, requestOptions),
+    );
   }
 
   await openTracingView(

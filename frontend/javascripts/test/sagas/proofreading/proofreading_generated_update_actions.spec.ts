@@ -1,3 +1,4 @@
+import type { ApiResult } from "admin/api/api_result";
 import type { MinCutTargetEdge } from "admin/rest_api";
 import {
   getNestedUpdateActions,
@@ -169,13 +170,13 @@ describe("Proofreading should generate correct update actions", () => {
           _tracingStoreUrl: string,
           _tracingId: string,
           version: number,
-        ): Promise<Array<MinCutTargetEdge>> => {
+        ): Promise<ApiResult<Array<MinCutTargetEdge>>> => {
           if (version !== expectedRequestVersion) {
             throw new Error(
               `Unexpected version of min cut request. Expected ${expectedRequestVersion} got ${version}`,
             );
           }
-          return minCutEdges;
+          return { ok: true, value: minCutEdges };
         },
       );
 

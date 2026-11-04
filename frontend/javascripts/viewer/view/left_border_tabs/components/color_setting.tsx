@@ -16,7 +16,9 @@ export default function ColorSetting(props: ColorSettingPropTypes) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isPickerOpenRef = useRef(false);
   const onPickerOpenChangeRef = useRef(onPickerOpenChange);
-  onPickerOpenChangeRef.current = onPickerOpenChange;
+  useEffect(() => {
+    onPickerOpenChangeRef.current = onPickerOpenChange;
+  }, [onPickerOpenChange]);
 
   const setIsPickerOpen = useCallback((isOpen: boolean) => {
     if (isPickerOpenRef.current === isOpen) return;

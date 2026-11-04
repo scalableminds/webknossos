@@ -3,10 +3,7 @@ use std::sync::Mutex;
 
 use lettre::{
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
-    message::{
-        Mailbox, MultiPart, SinglePart,
-        header::{HeaderName, HeaderValue},
-    },
+    message::{Mailbox, MultiPart, SinglePart},
     transport::smtp::{
         authentication::Credentials,
         client::{Tls, TlsParameters},
@@ -38,7 +35,9 @@ pub struct SmtpMailer {
 impl SmtpMailer {
     pub fn new(config: &SmtpConfig) -> Result<Self, String> {
         let parameters = || {
-            TlsParameters::new(config.host.clone())
+            TlsParameters::builder(config.host.clone())
+                .dangerous_accept_invalid_hostnames(!config.check_server_identity)
+                .build()
                 .map_err(|error| format!("invalid SMTP TLS parameters: {error}"))
         };
         let tls = match config.tls_mode() {
@@ -102,8 +101,9 @@ impl Mailer for SmtpMailer {
     }
 }
 
-/// Builds the MIME message like Mailer.createEmail / setAddress. Invalid
-/// addresses are skipped with a warning (address not logged).
+/// Builds the MIME message like Mailer.sendFrom / parseAddress. Invalid
+/// addresses are skipped with a warning (address not logged); without a valid
+/// sender the build fails and the mail is not sent.
 fn build_message(mail: &Mail) -> Result<Message, String> {
     fn mailboxes<'a>(
         field: &'static str,
@@ -136,11 +136,6 @@ fn build_message(mail: &Mail) -> Result<Message, String> {
         builder = builder.bcc(mailbox);
     }
     builder = builder.subject(mail.subject.clone());
-    for (name, value) in &mail.headers {
-        let name = HeaderName::new_from_ascii(name.clone())
-            .map_err(|_| "invalid custom mail header name".to_owned())?;
-        builder = builder.raw_header(HeaderValue::new(name, value.clone()));
-    }
     let built = if mail.body_html.is_empty() {
         builder.singlepart(SinglePart::plain(mail.body_text.clone()))
     } else if mail.body_text.is_empty() {

@@ -73,6 +73,10 @@ pub struct SmtpConfig {
     pub port: u16,
     /// Secure the connection; see [`SmtpConfig::tls_mode`].
     pub tls: bool,
+    /// javamail `mail.smtp.ssl.checkserveridentity`: verify that the server
+    /// certificate matches the host name. The certificate chain is verified
+    /// either way.
+    pub check_server_identity: bool,
     pub auth: bool,
     pub user: String,
     pub pass: String,
@@ -84,6 +88,7 @@ impl Default for SmtpConfig {
             host: String::new(),
             port: 465,
             tls: true,
+            check_server_identity: false,
             auth: true,
             user: String::new(),
             pass: String::new(),
@@ -120,6 +125,7 @@ impl fmt::Debug for SmtpConfig {
             .field("host", &self.host)
             .field("port", &self.port)
             .field("tls", &self.tls)
+            .field("check_server_identity", &self.check_server_identity)
             .field("auth", &self.auth)
             .field("user_configured", &!self.user.is_empty())
             .field("password_configured", &!self.pass.is_empty())
@@ -151,6 +157,7 @@ impl MailConfig {
 /// | `WK_MAIL_SMTP_HOST` | `mail.smtp.host` | empty (no delivery) |
 /// | `WK_MAIL_SMTP_PORT` | `mail.smtp.port` | `465` |
 /// | `WK_MAIL_SMTP_TLS` | `mail.smtp.tls` | `true` |
+/// | `WK_MAIL_SMTP_CHECK_SERVER_IDENTITY` | `mail.smtp.checkServerIdentity` | `false` |
 /// | `WK_MAIL_SMTP_AUTH` | `mail.smtp.auth` | `true` |
 /// | `WK_MAIL_SMTP_USER` | `mail.smtp.user` | empty |
 /// | `WK_MAIL_SMTP_PASS` | `mail.smtp.pass` | empty |
@@ -181,6 +188,7 @@ pub fn config_from_values(values: &HashMap<String, String>) -> Result<MailConfig
             host,
             port,
             tls: env.bool_or("WK_MAIL_SMTP_TLS", true)?,
+            check_server_identity: env.bool_or("WK_MAIL_SMTP_CHECK_SERVER_IDENTITY", false)?,
             auth: env.bool_or("WK_MAIL_SMTP_AUTH", true)?,
             user: env.text("WK_MAIL_SMTP_USER", ""),
             pass: env.text("WK_MAIL_SMTP_PASS", ""),

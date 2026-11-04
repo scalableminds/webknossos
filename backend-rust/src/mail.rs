@@ -21,7 +21,7 @@ pub use config::{
 pub use recording::RecordingMailer;
 pub use smtp::SmtpMailer;
 
-/// Scala `mail.Mail` (charset is always UTF-8; `contentType` is unused in Play).
+/// Scala `mail.Mail` (charset is always UTF-8).
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct Mail {
     /// Sender mailbox. Empty means the configured `mail.defaultSender`
@@ -37,7 +37,6 @@ pub struct Mail {
     pub cc_recipients: Vec<String>,
     pub bcc_recipients: Vec<String>,
     pub reply_to: Vec<String>,
-    pub headers: Vec<(String, String)>,
 }
 
 impl fmt::Debug for Mail {

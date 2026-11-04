@@ -644,6 +644,7 @@ fn mail_config_defaults_follow_application_conf() {
             host: String::new(),
             port: 465,
             tls: true,
+            check_server_identity: false,
             auth: true,
             user: String::new(),
             pass: String::new(),
@@ -670,6 +671,7 @@ fn mail_config_parses_values_validates_and_redacts_secrets() {
         ("WK_MAIL_SMTP_HOST", " smtp.example.test "),
         ("WK_MAIL_SMTP_PORT", "587"),
         ("WK_MAIL_SMTP_TLS", "false"),
+        ("WK_MAIL_SMTP_CHECK_SERVER_IDENTITY", "true"),
         ("WK_MAIL_SMTP_AUTH", "false"),
         ("WK_MAIL_SMTP_USER", "mailer-user"),
         ("WK_MAIL_SMTP_PASS", "hunter2-secret"),
@@ -689,6 +691,7 @@ fn mail_config_parses_values_validates_and_redacts_secrets() {
     assert_eq!(config.smtp.host, "smtp.example.test");
     assert_eq!(config.smtp.port, 587);
     assert!(!config.smtp.tls && !config.smtp.auth);
+    assert!(config.smtp.check_server_identity);
     assert_eq!(config.smtp.user, "mailer-user");
     assert_eq!(config.smtp.pass, "hunter2-secret");
     assert_eq!(config.settings.default_sender, "Ops <ops@example.test>");
@@ -712,6 +715,7 @@ fn mail_config_parses_values_validates_and_redacts_secrets() {
         ("WK_MAIL_SMTP_PORT", "70000"),
         ("WK_MAIL_SMTP_PORT", "smtp"),
         ("WK_MAIL_SMTP_TLS", "yes"),
+        ("WK_MAIL_SMTP_CHECK_SERVER_IDENTITY", "1"),
         ("WK_MAIL_SMTP_AUTH", "1"),
         ("WK_MAIL_LOG_TO_STDOUT", "on"),
         ("WK_MAIL_NOTIFICATION_EMAILS_ACCESS_CHANGES", "no"),
@@ -976,7 +980,7 @@ async fn smtp_mailer_delivers_html_mail_with_auth_and_play_headers() {
 }
 
 #[tokio::test]
-async fn smtp_mailer_sends_reply_to_cc_bcc_custom_headers_and_text_alternative() {
+async fn smtp_mailer_sends_reply_to_cc_bcc_date_and_text_alternative() {
     let mut server = FakeSmtp::start(false, None).await;
     // TLS enabled but the server offers no STARTTLS: like javamail's
     // `starttls.enable`, delivery falls back to plaintext. Auth is enabled
@@ -1019,7 +1023,6 @@ async fn smtp_mailer_sends_reply_to_cc_bcc_custom_headers_and_text_alternative()
         recipients: vec!["to@example.test".into()],
         cc_recipients: vec!["cc@example.test".into()],
         bcc_recipients: vec!["bcc@example.test".into()],
-        headers: vec![("X-Wk-Test".into(), "yes".into())],
         ..Mail::default()
     });
     let session = server.next_session().await;
@@ -1037,7 +1040,7 @@ async fn smtp_mailer_sends_reply_to_cc_bcc_custom_headers_and_text_alternative()
     let headers = session.data.split("\r\n\r\n").next().unwrap();
     assert!(headers.contains("Cc: cc@example.test"));
     assert!(!headers.contains("bcc@example.test"));
-    assert!(headers.contains("X-Wk-Test: yes"));
+    assert!(headers.contains("\r\nDate: "), "{headers}");
     assert!(headers.contains("multipart/alternative"));
     assert!(session.data.contains("text body") && session.data.contains("<p>html body</p>"));
 }
@@ -1046,6 +1049,14 @@ async fn smtp_mailer_sends_reply_to_cc_bcc_custom_headers_and_text_alternative()
 async fn smtp_failures_are_logged_and_do_not_stop_the_worker() {
     let mut server = FakeSmtp::start(false, Some("rejected@")).await;
     let sender = MailSender::from_config(&server.config(&[("WK_MAIL_SMTP_TLS", "false")]));
+    // Like Play's Mailer, a mail without a valid sender is never sent.
+    sender.send(Mail {
+        from: "not a mailbox".into(),
+        subject: "Invalid sender".into(),
+        body_text: "text".into(),
+        recipients: vec!["ok@example.test".into()],
+        ..Mail::default()
+    });
     sender.send(templates::new_user("Ann", "rejected@example.test", true));
     sender.send(templates::new_user("Ann", "ok@example.test", true));
     let first = server.next_session().await;

@@ -79,8 +79,8 @@ url.workspace = true
 prost.workspace = true
 quick-xml.workspace = true
 zip = { workspace = true, features = ["deflate"] }
-# Verifies WebAuthn ceremonies (links OpenSSL). Storage stays in the webauthn4j format.
-webauthn-rs-core = "=0.5.5"
+# Verifies WebAuthn ceremonies (pure-Rust crypto, no OpenSSL). Storage stays in the webauthn4j format.
+webauthn-rs-core = "=0.6.2"
 lettre = { version = "0.11.23", default-features = false, features = ["smtp-transport", "tokio1", "tokio1-rustls-tls", "builder", "hostname", "ring"] }
 
 # One integration-test binary instead of one per `tests/*.rs` file; see tests/main.rs.

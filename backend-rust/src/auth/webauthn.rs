@@ -409,7 +409,7 @@ fn verify_registration(
         .register_credential(&registration.response, state, None)
         .map_err(|_| "registration")?;
     if verified.attestation_format != AttestationFormat::None
-        || verified.cred_id.as_ref() != registration.credential.credential_id.as_slice()
+        || verified.cred_id.as_slice() != registration.credential.credential_id.as_slice()
     {
         return Err("attested credential");
     }
@@ -478,7 +478,7 @@ async fn register_start(
         &full_name,
     )
     .map_err(|_| ApiError::internal())?;
-    let encoded_challenge = URL_SAFE_NO_PAD.encode(options.public_key.challenge.as_ref());
+    let encoded_challenge = URL_SAFE_NO_PAD.encode(&options.public_key.challenge);
     let session_id = new_session_id();
     stores
         .registration
@@ -642,7 +642,7 @@ impl StoredCredential {
             serde_cbor_2::from_slice(&self.credential.key.to_webauthn4j_cbor())
                 .map_err(|_| "COSE key")?;
         Ok(Credential {
-            cred_id: self.credential.credential_id.clone().into(),
+            cred_id: self.credential.credential_id.clone(),
             cred: COSEKey::try_from(&key).map_err(|_| "COSE key")?,
             counter: verifier_counter(self.sign_count),
             transports: None,
@@ -702,7 +702,7 @@ async fn auth_start(
     let (options, ceremony) = verifier
         .generate_challenge_authenticate(builder)
         .map_err(|_| ApiError::internal())?;
-    let encoded_challenge = URL_SAFE_NO_PAD.encode(options.public_key.challenge.as_ref());
+    let encoded_challenge = URL_SAFE_NO_PAD.encode(&options.public_key.challenge);
     let session_id = new_session_id();
     stores
         .assertion

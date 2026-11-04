@@ -13,7 +13,12 @@ fn rp() -> RelyingParty {
 fn origins_compare_like_webauthn4j() {
     let rp = rp();
     let matches = |origin: &str| {
-        WebauthnCore::origins_match(false, false, &url::Url::parse(origin).unwrap(), &rp.origin)
+        webauthn_rs_core::proto::origin::origins_match(
+            false,
+            false,
+            &url::Url::parse(origin).unwrap(),
+            &rp.origin,
+        )
     };
     for ok in [
         "https://example.com",

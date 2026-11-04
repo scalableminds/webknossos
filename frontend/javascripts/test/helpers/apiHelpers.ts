@@ -270,7 +270,7 @@ vi.mock("admin/rest_api.ts", async () => {
         _tracingStoreUrl: string,
         _tracingId: string,
         _segmentsInfo: unknown,
-      ): Promise<Array<MinCutTargetEdge>> => {
+      ): Promise<ApiResult<Array<MinCutTargetEdge>>> => {
         // This simply serves as a preparation so that specs can mock the function
         // when needed. Without this stub, it's harder to mock this specific function
         // later.

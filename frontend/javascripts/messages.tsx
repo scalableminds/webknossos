@@ -128,16 +128,16 @@ A reload is necessary to return to a valid state.`,
   "save.failed.permanent":
     "Failed to save annotation. Unfortunately, there might be a potential data loss. Please reload the page, check and correct the annotation.",
   "undo.no_undo":
-    "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+    "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Version History' entry in the menu next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
   "undo.no_undo_during_proofread":
-    "Undo/redo is not supported during proofreading yet. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+    "Undo/redo is not supported during proofreading yet. Please use the 'Version History' entry in the menu next to the 'Save' button.",
   "undo.no_undo_in_live_collab":
-    "Undo/redo is not supported when live collaboration ('simultaneous editing') is enabled. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button. Note that this discards pending changes from collaborators of this annotation and forces them to reload the page.",
+    "Undo/redo is not supported when live collaboration ('simultaneous editing') is enabled. Please use the 'Version History' entry in the menu next to the 'Save' button. Note that this discards pending changes from collaborators of this annotation and forces them to reload the page.",
   "undo.collaboration_mode_changed":
-    "Changes made before live collaboration ('simultaneous editing') was turned on or off cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+    "Changes made before live collaboration ('simultaneous editing') was turned on or off cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Version History' entry in the menu next to the 'Save' button.",
   "undo.import_volume_tracing":
-    "Importing a volume annotation cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+    "Importing a volume annotation cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Version History' entry in the menu next to the 'Save' button.",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
   "download.python_do_not_share": template(

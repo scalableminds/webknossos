@@ -297,6 +297,8 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   segmentationLayerNames: Array<string>;
   // Active explorational annotations the user can list. Only present if requested.
   annotationCount?: number;
+  // Most recently modified of those annotations that are owned by the user. Only present if requested.
+  latestAnnotationId?: string;
 };
 
 export function convertDatasetToCompact(dataset: APIMaybeUnimportedDataset): APIDatasetCompact {

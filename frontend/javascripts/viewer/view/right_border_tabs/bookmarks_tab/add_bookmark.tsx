@@ -20,6 +20,7 @@ export const toUnsavedBookmarkThumbnail = (thumbnails: BookmarkThumbnails): Book
   smallThumbnailDataBase64: thumbnails.smallDataBase64,
   largeThumbnailDataBase64: thumbnails.largeDataBase64,
   thumbnailVersion: null,
+  thumbnailViewport: thumbnails.viewport,
 });
 
 export async function captureThumbnailsSafely(): Promise<BookmarkThumbnails | null> {
@@ -53,7 +54,12 @@ export async function addBookmarkForCurrentView(dispatch: Dispatch): Promise<num
     metadata: [],
     ...(thumbnails != null
       ? toUnsavedBookmarkThumbnail(thumbnails)
-      : { smallThumbnailDataBase64: null, largeThumbnailDataBase64: null, thumbnailVersion: null }),
+      : {
+          smallThumbnailDataBase64: null,
+          largeThumbnailDataBase64: null,
+          thumbnailVersion: null,
+          thumbnailViewport: null,
+        }),
   };
   // The bookmark diffing (see bookmark_diffing.ts) adds it to the save queue.
   dispatch(addBookmarkAction(bookmark));

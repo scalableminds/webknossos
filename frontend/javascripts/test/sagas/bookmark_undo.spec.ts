@@ -30,6 +30,7 @@ const bookmark: APIAnnotationBookmark = {
   },
   createdAtVersion: null,
   thumbnailVersion: null,
+  thumbnailViewport: null,
   metadata: [],
   smallThumbnailDataBase64: "small",
   largeThumbnailDataBase64: "large",

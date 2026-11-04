@@ -2,7 +2,7 @@ import { Button } from "antd";
 import Toast from "libs/toast";
 import { addToNestedMap, addToSetMap } from "libs/utils";
 import { actionChannel, call, put } from "typed-redux-saga";
-import type { APIUpdateActionBatch } from "types/api_types";
+import type { APIBookmarkThumbnailViewport, APIUpdateActionBatch } from "types/api_types";
 import type { LayerNameAsKey } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
@@ -122,17 +122,20 @@ export function* tryToIncorporateActions(
       smallThumbnailDataBase64?: string | null;
       largeThumbnailDataBase64?: string | null;
       thumbnailVersion?: number | null;
+      thumbnailViewport?: APIBookmarkThumbnailViewport | null;
     }): BookmarkThumbnail =>
       areUnsavedChangesOfUser
         ? {
             smallThumbnailDataBase64: value.smallThumbnailDataBase64 ?? null,
             largeThumbnailDataBase64: value.largeThumbnailDataBase64 ?? null,
             thumbnailVersion: value.thumbnailVersion ?? null,
+            thumbnailViewport: value.thumbnailViewport ?? null,
           }
         : {
             smallThumbnailDataBase64: null,
             largeThumbnailDataBase64: null,
             thumbnailVersion: value.thumbnailVersion ?? actionBatch.version,
+            thumbnailViewport: value.thumbnailViewport ?? null,
           };
     // Per layer: maps each split segment id (segmentId1/segmentId2 of splitAgglomerate actions)
     // to the agglomerate id it belonged to before the split.

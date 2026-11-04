@@ -10,6 +10,7 @@ import {
   type WebGLRenderer,
   WebGLRenderTarget,
 } from "three";
+import type { APIBookmarkThumbnailViewport } from "types/api_types";
 import constants, {
   FLIGHT_CAM_DISTANCE,
   FlightViewport,
@@ -260,9 +261,21 @@ async function downsampleImage(blob: Blob, maxEdge: number): Promise<Blob | null
 export type BookmarkThumbnails = {
   largeDataBase64: string;
   smallDataBase64: string;
+  viewport: APIBookmarkThumbnailViewport;
 };
 
 export type BookmarkThumbnailViewport = OrthoView | typeof FlightViewport;
+
+const API_BOOKMARK_THUMBNAIL_VIEWPORTS: Record<
+  BookmarkThumbnailViewport,
+  APIBookmarkThumbnailViewport
+> = {
+  PLANE_XY: "XY",
+  PLANE_YZ: "YZ",
+  PLANE_XZ: "XZ",
+  TDView: "TD",
+  [FlightViewport]: "FLIGHT",
+};
 
 // The viewports that are visible in the current layout, by thumbnail priority.
 export function getRenderedBookmarkThumbnailViewports(): BookmarkThumbnailViewport[] {
@@ -298,6 +311,7 @@ export async function captureBookmarkThumbnailsOfViewport(
   return {
     largeDataBase64: await blobToBase64(blob),
     smallDataBase64: await blobToBase64(smallBlob),
+    viewport: API_BOOKMARK_THUMBNAIL_VIEWPORTS[viewport],
   };
 }
 

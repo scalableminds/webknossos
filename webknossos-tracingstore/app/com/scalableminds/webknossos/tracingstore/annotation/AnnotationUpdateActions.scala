@@ -4,6 +4,7 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{JsonAutoFormat, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto.ThumbnailViewportProto
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
@@ -69,6 +70,7 @@ case class AddBookmarkAnnotationAction(
     metadata: Option[Seq[MetadataEntry]] = None,
     createdAtVersion: Option[Long] = None, // set by the backend when the update is saved
     thumbnailVersion: Option[Long] = None, // see BookmarkThumbnailUpdateAction
+    thumbnailViewport: Option[ThumbnailViewportProto] = None, // the viewport the thumbnails show, if known
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
@@ -82,7 +84,8 @@ case class AddBookmarkAnnotationAction(
       state = state.toProto,
       createdAtVersion = createdAtVersion.getOrElse(fallbackVersion),
       metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata)),
-      thumbnailVersion = thumbnailVersion.getOrElse(fallbackVersion)
+      thumbnailVersion = thumbnailVersion.getOrElse(fallbackVersion),
+      thumbnailViewport = thumbnailViewport
     )
 
   def withoutThumbnails: AddBookmarkAnnotationAction =
@@ -137,12 +140,16 @@ case class UpdateBookmarkThumbnailAnnotationAction(
     largeThumbnailDataBase64: Option[String],
     smallThumbnailDataBase64: Option[String],
     thumbnailVersion: Option[Long] = None, // see BookmarkThumbnailUpdateAction
+    thumbnailViewport: Option[ThumbnailViewportProto] = None, // the viewport the thumbnails show, if known
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends BookmarkThumbnailUpdateAction derives JsonAutoFormat {
   def applyOn(fallbackThumbnailVersion: Long)(bookmark: AnnotationBookmarkProto): AnnotationBookmarkProto =
-    bookmark.withThumbnailVersion(thumbnailVersion.getOrElse(fallbackThumbnailVersion))
+    bookmark.copy(
+      thumbnailVersion = thumbnailVersion.getOrElse(fallbackThumbnailVersion),
+      thumbnailViewport = thumbnailViewport
+    )
 
   def withoutThumbnails: UpdateBookmarkThumbnailAnnotationAction =
     this.copy(largeThumbnailDataBase64 = None, smallThumbnailDataBase64 = None)

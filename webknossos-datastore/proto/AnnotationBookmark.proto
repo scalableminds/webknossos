@@ -7,6 +7,15 @@ import "MetadataEntry.proto";
 
 // Bookmarks are stored separately from the AnnotationProto, which only holds their ids.
 message AnnotationBookmarkProto {
+  // Nested so that the enum values don't clash with others in the package.
+  enum ThumbnailViewportProto {
+    XY = 1;
+    YZ = 2;
+    XZ = 3;
+    TD = 4;
+    FLIGHT = 5;
+  }
+
   required int32 id = 1;
   required int64 created = 2;
   optional string name = 3;
@@ -15,6 +24,7 @@ message AnnotationBookmarkProto {
   required int64 createdAtVersion = 6; // annotation version that added the bookmark
   repeated MetadataEntryProto metadata = 7;
   required int64 thumbnailVersion = 8; // annotation version that stored the current thumbnails
+  optional ThumbnailViewportProto thumbnailViewport = 9; // viewport the current thumbnails show, unset if unknown
   // Thumbnails are stored in the annotationBookmarkThumbnails column family.
 }
 

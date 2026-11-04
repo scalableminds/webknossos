@@ -5,7 +5,7 @@ import type { APIAnnotationBookmark, MetadataEntryProto } from "types/api_types"
 import { bookmarkStateToUrlState } from "viewer/controller/bookmark_state";
 import { encodeUrlHash, updateTypeAndId } from "viewer/controller/url_manager";
 import type { WebknossosState } from "viewer/store";
-import { getDefaultBookmarkName } from "./bookmark_names";
+import { getDefaultBookmarkName, getThumbnailViewportName } from "./bookmark_names";
 
 function getMetadataValue(entry: MetadataEntryProto | undefined): string {
   if (entry == null) return "";
@@ -36,6 +36,7 @@ export function exportBookmarksAsCSV(state: WebknossosState) {
     "link",
     "created",
     "createdAtVersion",
+    "thumbnailViewport",
     "description",
     ...metadataKeys,
   ]);
@@ -45,6 +46,9 @@ export function exportBookmarksAsCSV(state: WebknossosState) {
       getBookmarkLink(state, bookmark),
       new Date(bookmark.created).toISOString(),
       bookmark.createdAtVersion ?? "",
+      bookmark.thumbnailViewport != null
+        ? getThumbnailViewportName(bookmark.thumbnailViewport)
+        : "",
       bookmark.description ?? "",
       ...metadataKeys.map((key) =>
         getMetadataValue(bookmark.metadata.find((entry) => entry.key === key)),

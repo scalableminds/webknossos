@@ -1,6 +1,7 @@
 package models.annotation.nml
 
 import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto.ThumbnailViewportProto
 import com.scalableminds.webknossos.tracingstore.annotation.BookmarkThumbnailSize
 
 // A bookmark state refers to layers by name: dataset layers by their name, annotation layers by their tracingId.
@@ -24,7 +25,8 @@ object NmlAnnotationLayerRef {
   }
 
   def decode(layerOrMappingName: String): Option[NmlAnnotationLayerRef] =
-    if (layerOrMappingName.startsWith(volumePrefix)) Some(NmlVolumeLayerRef(layerOrMappingName.drop(volumePrefix.length)))
+    if (layerOrMappingName.startsWith(volumePrefix))
+      Some(NmlVolumeLayerRef(layerOrMappingName.drop(volumePrefix.length)))
     else if (layerOrMappingName == skeletonEncoded) Some(NmlSkeletonLayerRef)
     else None
 }
@@ -56,6 +58,19 @@ object NmlBookmarks {
       state.copy(nativelyRenderedLayerName = state.nativelyRenderedLayerName.flatMap(layerName), layers = layers)
     )
   }
+
+  private val thumbnailViewportNames: Map[ThumbnailViewportProto, String] = Map(
+    ThumbnailViewportProto.XY -> "xy",
+    ThumbnailViewportProto.YZ -> "yz",
+    ThumbnailViewportProto.XZ -> "xz",
+    ThumbnailViewportProto.TD -> "3d",
+    ThumbnailViewportProto.FLIGHT -> "flight"
+  )
+
+  def thumbnailViewportToString(viewport: ThumbnailViewportProto): String = thumbnailViewportNames(viewport)
+
+  def thumbnailViewportFromString(name: String): Option[ThumbnailViewportProto] =
+    thumbnailViewportNames.collectFirst { case (viewport, `name`) => viewport }
 
   def thumbnailLocation(bookmarkId: Int, size: BookmarkThumbnailSize.Value): String =
     s"bookmark_thumbnails/${bookmarkId}_$size.webp"

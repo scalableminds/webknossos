@@ -503,6 +503,9 @@ class NmlWriter @Inject() (implicit ec: ExecutionContext)
             bookmarkToWrite.thumbnails.keys.toSeq.sortBy(_.id).foreach { size =>
               Xml.withinElementSync("thumbnail") {
                 writer.writeAttribute("size", size.toString)
+                bookmark.thumbnailViewport.foreach(viewport =>
+                  writer.writeAttribute("viewport", NmlBookmarks.thumbnailViewportToString(viewport))
+                )
                 writer.writeAttribute("location", NmlBookmarks.thumbnailLocation(bookmark.id, size))
               }
             }

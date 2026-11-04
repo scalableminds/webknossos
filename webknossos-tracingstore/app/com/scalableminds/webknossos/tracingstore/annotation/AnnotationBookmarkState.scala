@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.AnnotationBookmark.{
   BookmarkMeshProto,
   BookmarkTdCameraProto
 }
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto.ThumbnailViewportProto
 import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkStateProto.{
   MappingTypeProto,
   ViewModeProto
@@ -34,6 +35,7 @@ private def protoEnumFormat[E <: GeneratedEnum](companion: GeneratedEnumCompanio
 
 given Format[ViewModeProto] = protoEnumFormat(ViewModeProto)
 given Format[MappingTypeProto] = protoEnumFormat(MappingTypeProto)
+given Format[ThumbnailViewportProto] = protoEnumFormat(ThumbnailViewportProto)
 
 case class BookmarkTdCamera(
     position: Vec3Double,

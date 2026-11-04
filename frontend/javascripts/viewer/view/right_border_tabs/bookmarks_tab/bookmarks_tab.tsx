@@ -11,7 +11,18 @@ import Icon, {
 } from "@ant-design/icons";
 import MeshIcon from "@images/icons/icon-mesh-organic-boundary.svg?react";
 import { getBookmarkThumbnailUrl } from "admin/rest_api";
-import { Divider, Empty, Flex, List, type MenuProps, Popover, Space, Spin, Typography } from "antd";
+import {
+  Divider,
+  Empty,
+  Flex,
+  List,
+  type MenuProps,
+  Popover,
+  Space,
+  Spin,
+  Tag,
+  Typography,
+} from "antd";
 import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";
 import { SimpleRow } from "dashboard/folders/metadata_table";
@@ -59,7 +70,7 @@ import {
   getCurrentBookmarkState,
   toUnsavedBookmarkThumbnail,
 } from "./add_bookmark";
-import { getDefaultBookmarkName } from "./bookmark_names";
+import { getDefaultBookmarkName, getThumbnailViewportName } from "./bookmark_names";
 import { exportBookmarksAsCSV } from "./export_bookmarks_csv";
 import { SwitchThumbnailModal } from "./switch_thumbnail_modal";
 
@@ -120,20 +131,27 @@ function LargeBookmarkThumbnail({
       ? LARGE_THUMBNAIL_PREVIEW_MAX_EDGE / aspectRatio
       : LARGE_THUMBNAIL_PREVIEW_MAX_EDGE;
   return (
-    <Flex align="center" justify="center" style={{ width, height }}>
+    <Flex align="center" justify="center" style={{ width, height, position: "relative" }}>
       {src == null ? (
         <Spin size="small" />
       ) : (
-        <img
-          src={src}
-          alt=""
-          style={{
-            width,
-            height,
-            display: "block",
-            borderRadius: "var(--ant-border-radius-sm)",
-          }}
-        />
+        <>
+          <img
+            src={src}
+            alt=""
+            style={{
+              width,
+              height,
+              display: "block",
+              borderRadius: "var(--ant-border-radius-sm)",
+            }}
+          />
+          {bookmark.thumbnailViewport != null ? (
+            <Tag style={{ position: "absolute", top: 8, left: 8, marginInlineEnd: 0 }}>
+              {getThumbnailViewportName(bookmark.thumbnailViewport)}
+            </Tag>
+          ) : null}
+        </>
       )}
     </Flex>
   );

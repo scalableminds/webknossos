@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.AnnotationBookmark.{
   BookmarkMeshProto,
   BookmarkTdCameraProto
 }
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto.ThumbnailViewportProto
 import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkStateProto.{
   MappingTypeProto,
   ViewModeProto
@@ -349,7 +350,8 @@ class NMLUnitTestSuite extends AsyncWordSpec {
       MetadataEntryProto("key", stringValue = Some("value")),
       MetadataEntryProto("list", stringListValue = Seq("a", "b"))
     ),
-    thumbnailVersion = 0L
+    thumbnailVersion = 0L,
+    thumbnailViewport = Some(ThumbnailViewportProto.TD)
   )
 
   private val minimalBookmark = AnnotationBookmarkProto(
@@ -438,6 +440,32 @@ class NMLUnitTestSuite extends AsyncWordSpec {
         case _ => fail()
       }
     }
+
+    "not write the thumbnail viewport of bookmarks without thumbnails" in
+      writeAndParseBookmarks(
+        Seq(NmlBookmarkToWrite(minimalBookmark.withThumbnailViewport(ThumbnailViewportProto.XY), Map.empty))
+      ).futureBox.map {
+        case Full(parsed) => assert(parsed.bookmarks.map(_.bookmark) == Seq(minimalBookmark))
+        case _            => fail()
+      }
+
+    "fail for thumbnails with different viewports" in
+      writeToXmlBytes(
+        dummyTracing,
+        Seq(
+          NmlBookmarkToWrite(
+            minimalBookmark.withThumbnailViewport(ThumbnailViewportProto.XY),
+            Map(BookmarkThumbnailSize.small -> Array[Byte](1), BookmarkThumbnailSize.large -> Array[Byte](1))
+          )
+        )
+      ).futureBox.flatMap {
+        case Full(xmlBytes) =>
+          val xml = new String(xmlBytes, "UTF-8")
+          val xmlWithDifferentViewports = xml.replaceFirst("viewport=\"xy\"", "viewport=\"yz\"")
+          assert(xmlWithDifferentViewports != xml)
+          assertParsingFailed(parseXmlBytes(xmlWithDifferentViewports.getBytes("UTF-8")))
+        case _ => Future.successful(fail("failed to write bookmark to XML"))
+      }
 
     "fail for duplicate bookmark ids" in
       assertParsingFailed(

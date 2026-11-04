@@ -276,15 +276,17 @@ class AnnotationIOController @Inject() (
               }
           )
           val state = bookmarkWithResolvedLayers.state
+          val smallThumbnail = readThumbnail(parsedBookmark, BookmarkThumbnailSize.small)
+          val largeThumbnail = readThumbnail(parsedBookmark, BookmarkThumbnailSize.large)
           val bookmark = bookmarkWithResolvedLayers
             .withState(state.copy(activeNodeId = state.activeNodeId.filter(nodeIds.contains)))
             .withCreatedAtVersion(version)
             .withThumbnailVersion(version)
-          UploadedAnnotationBookmarkProto(
-            bookmark,
-            readThumbnail(parsedBookmark, BookmarkThumbnailSize.small),
-            readThumbnail(parsedBookmark, BookmarkThumbnailSize.large)
-          )
+            .copy(thumbnailViewport =
+              bookmarkWithResolvedLayers.thumbnailViewport
+                .filter(_ => smallThumbnail.isDefined || largeThumbnail.isDefined)
+            )
+          UploadedAnnotationBookmarkProto(bookmark, smallThumbnail, largeThumbnail)
         }
       case _ =>
         if (parseSuccesses.exists(_.bookmarks.nonEmpty))

@@ -18,6 +18,7 @@ const savedBookmark: APIAnnotationBookmark = {
   },
   createdAtVersion: 3,
   thumbnailVersion: 3,
+  thumbnailViewport: null,
   metadata: [],
   smallThumbnailDataBase64: null,
   largeThumbnailDataBase64: null,
@@ -27,6 +28,7 @@ const unsavedThumbnail = {
   smallThumbnailDataBase64: "small",
   largeThumbnailDataBase64: "large",
   thumbnailVersion: null,
+  thumbnailViewport: null,
 };
 
 const diff = (prev: APIAnnotationBookmark[], next: APIAnnotationBookmark[]) =>
@@ -42,6 +44,7 @@ describe("Bookmark diffing", () => {
       largeThumbnailDataBase64: "large",
       smallThumbnailDataBase64: "small",
       thumbnailVersion: null,
+      thumbnailViewport: null,
     });
   });
 
@@ -52,6 +55,7 @@ describe("Bookmark diffing", () => {
       largeThumbnailDataBase64: null,
       smallThumbnailDataBase64: null,
       thumbnailVersion: 3,
+      thumbnailViewport: null,
     });
   });
 
@@ -85,6 +89,7 @@ describe("Bookmark diffing", () => {
       largeThumbnailDataBase64: null,
       smallThumbnailDataBase64: null,
       thumbnailVersion: 3,
+      thumbnailViewport: null,
     });
   });
 

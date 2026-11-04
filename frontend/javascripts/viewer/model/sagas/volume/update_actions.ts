@@ -1300,11 +1300,13 @@ function getThumbnailUpdate(bookmark: APIAnnotationBookmark) {
         largeThumbnailDataBase64: null,
         smallThumbnailDataBase64: null,
         thumbnailVersion: bookmark.thumbnailVersion,
+        thumbnailViewport: bookmark.thumbnailViewport,
       }
     : {
         largeThumbnailDataBase64: bookmark.largeThumbnailDataBase64,
         smallThumbnailDataBase64: bookmark.smallThumbnailDataBase64,
         thumbnailVersion: null,
+        thumbnailViewport: bookmark.thumbnailViewport,
       };
 }
 

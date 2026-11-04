@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { useIsJobAvailable } from "admin/job/job_hooks";
 import {
+  areJobsAllowedByPricingPlan,
   getFeatureNotAvailableInPlanMessage,
   hasPricingPlanExceededStorage,
   isFeatureAllowedByPricingPlan,
@@ -37,6 +39,10 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const activeUser = useWkSelector((state) => state.activeUser);
   const dataset = useWkSelector((state) => state.dataset);
+  const isMeshFileJobAvailable = useIsJobAvailable(
+    dataset.dataStore,
+    APIJobCommand.COMPUTE_MESH_FILE,
+  );
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
   const hasVolumeTracing = useWkSelector((state) => state.annotation.volumes.length > 0);
   const preferredQualityForMeshPrecomputation = useWkSelector(
@@ -98,6 +104,13 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
       };
     }
 
+    if (!areJobsAllowedByPricingPlan(activeOrganization)) {
+      return {
+        disabled: true,
+        title: "Meshes cannot be precomputed in the Open Source plan. Ad-hoc meshes are available.",
+      };
+    }
+
     if (activeOrganization != null && hasPricingPlanExceededStorage(activeOrganization)) {
       // The backend refuses to start the job in this case, as the mesh file could not be stored.
       return {
@@ -107,9 +120,7 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
       };
     }
 
-    if (
-      !dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.COMPUTE_MESH_FILE)
-    ) {
+    if (!isMeshFileJobAvailable) {
       title = "Mesh computation jobs are not enabled for this WEBKNOSSOS instance.";
     } else if (activeUser == null) {
       title = "Please log in to precompute the meshes of this dataset.";

@@ -289,6 +289,9 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The WebGL context was lost. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, you can also try to lower the data rendering quality in the settings. Restarting your browser might also help.",
   "webgl.context_recovery":
     "The WebGL context has been recovered. If you experience unusual behavior, consider reloading the page.",
+  "webgl.too_many_layers_per_pool": template(
+    "Your hardware cannot load this dataset, because it supports at most <%- maxArrayTextureLayers %> layers with similar element classes (e.g. uint8 and uint32), and this dataset has more.",
+  ),
   "webgl.too_many_active_layers": template(
     "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the left sidebar settings.",
   ),

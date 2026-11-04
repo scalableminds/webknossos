@@ -1,3 +1,4 @@
+import { showSessionExpiredToastIfApplicable } from "libs/handle_request_error_helper";
 import type { RequestOptions } from "libs/request";
 import Toast, { type Message } from "libs/toast";
 import { sleep } from "libs/utils";
@@ -71,6 +72,9 @@ function defaultIsRetryable(error: RestApiError): boolean {
 // Mirrors the Toast.messages/Toast.error branching in handle_request_error_helper.tsx,
 // so the *one* toast we show (see requestResult below) looks the same as today's.
 function showErrorToastFor(error: RestApiError): void {
+  if (error.kind === "http" && showSessionExpiredToastIfApplicable(error.status)) {
+    return;
+  }
   const messages = (error.cause as { messages?: Message[] } | undefined)?.messages;
   if (error.kind === "http" && messages) {
     Toast.messages(messages);

@@ -10,6 +10,7 @@ import { RootForFastTooltips } from "components/fast_tooltip";
 import features, { load as loadFeatureToggles } from "features";
 import checkBrowserFeatures from "libs/browser_feature_check";
 import ErrorHandling from "libs/error_handling";
+import { registerHasActiveUserFn } from "libs/handle_request_error_helper";
 import { reactQueryClient } from "libs/react_query_client";
 import UserLocalStorage from "libs/user_local_storage";
 import window, { document, location } from "libs/window";
@@ -41,6 +42,7 @@ import GlobalThemeProvider from "theme_provider";
 window.OlvyConfig = null;
 
 setStore(UnthrottledStore);
+registerHasActiveUserFn(() => Store.getState().activeUser != null);
 startSaga(warnIfEmailIsUnverified);
 listenToSystemColorThemeChanges((systemTheme) => Store.dispatch(setSystemThemeAction(systemTheme)));
 

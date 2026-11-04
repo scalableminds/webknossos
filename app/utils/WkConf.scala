@@ -200,6 +200,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val host: String = get[String]("mail.smtp.host")
       val port: Int = get[Int]("mail.smtp.port")
       val tls: Boolean = get[Boolean]("mail.smtp.tls")
+      val checkServerIdentity: Boolean = get[Boolean]("mail.smtp.checkServerIdentity")
       val auth: Boolean = get[Boolean]("mail.smtp.auth")
       val user: String = get[String]("mail.smtp.user")
       val pass: String = get[String]("mail.smtp.pass")

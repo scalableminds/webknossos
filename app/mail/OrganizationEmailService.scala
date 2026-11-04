@@ -1,14 +1,11 @@
 package mail
 
-import com.scalableminds.util.box.Failure
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.organization.{Organization, PricingPlan, PricingPlanFeatures}
 import models.user.{MultiUser, MultiUserDAO}
 
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
 
 /* Emails about organizations and their pricing plans, as well as the requests users send to the WEBKNOSSOS team
    (help and upgrade requests). */
@@ -16,8 +13,7 @@ class OrganizationEmailService @Inject() (
     multiUserDAO: MultiUserDAO,
     defaultMails: DefaultMails,
     mailSender: MailSender
-)(implicit ec: ExecutionContext)
-    extends LazyLogging {
+) extends LazyLogging {
 
   // Tells the WEBKNOSSOS team that a new organization was created.
   def sendNewOrganizationEmail(organization: Organization, creatorEmail: String, host: String): Unit =
@@ -35,36 +31,29 @@ class OrganizationEmailService @Inject() (
     mailSender.send(defaultMails.upgradeRequestMail(multiUser, organization.name, requestedChanges, note))
 
   /** Notifies the organization owner and all of its admins that the organization was moved to a higher pricing tier,
-    * highlighting the features they gained. Does nothing if the plan change was not an upgrade. Never fails, as the
-    * plan update it belongs to has already been persisted by then. Failures are logged instead.
+    * highlighting the features they gained. Does nothing if the plan change was not an upgrade. Runs in the background
+    * and never fails, as the plan update it belongs to has already been persisted by then. Failures are logged instead.
     */
   def sendPricingPlanUpgradedEmails(
       organization: Organization,
       previousPlan: PricingPlan.PricingPlan,
       newPlan: PricingPlan.PricingPlan
-  ): Fox[Unit] =
-    for {
-      resultBox <- Fox
-        .runOptional(PricingPlanFeatures.unlockedBy(previousPlan, newPlan))(unlockedFeatures =>
-          for {
-            recipients <- multiUserDAO.findMultiUsersOfOrganizationOwnerAndAdmins(organization._id)
-            _ = recipients.foreach(recipient =>
-              mailSender.send(defaultMails.pricingPlanUpgradedMail(recipient, organization.name, unlockedFeatures))
-            )
-            _ = logger.info(
-              s"Notified ${recipients.length} owner/admins of organization ${organization._id} about the pricing plan upgrade from $previousPlan to $newPlan."
-            )
-          } yield ()
-        )
-        .shiftBox
-      _ = resultBox match {
-        case Failure(msg, _, _) =>
-          logger.warn(
-            s"Could not notify owner/admins of organization ${organization._id} about the pricing plan upgrade from $previousPlan to $newPlan: $msg"
+  ): Unit =
+    PricingPlanFeatures.unlockedBy(previousPlan, newPlan).foreach { unlockedFeatures =>
+      mailSender.inBackground(
+        s"the pricing plan upgrade of organization ${organization._id} from $previousPlan to $newPlan"
+      ) {
+        for {
+          recipients <- multiUserDAO.findMultiUsersOfOrganizationOwnerAndAdmins(organization._id)
+          _ = recipients.foreach(recipient =>
+            mailSender.send(defaultMails.pricingPlanUpgradedMail(recipient, organization.name, unlockedFeatures))
           )
-        case _ => ()
+          _ = logger.info(
+            s"Notified ${recipients.length} owner/admins of organization ${organization._id} about the pricing plan upgrade from $previousPlan to $newPlan."
+          )
+        } yield ()
       }
-    } yield ()
+    }
 
   // Which reminders are due, and that each is sent only once, is decided by the PricingPlanExpiryReminderService.
   def sendPricingPlanExpiryReminderEmails(

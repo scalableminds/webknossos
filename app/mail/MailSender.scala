@@ -1,6 +1,6 @@
 package mail
 
-import com.scalableminds.util.box.Failure
+import com.scalableminds.util.box.{Empty, Failure}
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.pekko.actor.ActorSystem
@@ -20,6 +20,7 @@ private[mail] class MailSender @Inject() (actorSystem: ActorSystem) extends Lazy
   def inBackground(description: String)(sendEmail: => Fox[Unit]): Unit =
     sendEmail.onComplete {
       case f: Failure => logger.warn(s"Could not send email for $description: $f")
+      case Empty      => logger.warn(s"Could not send email for $description: a lookup it needs found nothing.")
       case _          => ()
     }
 }

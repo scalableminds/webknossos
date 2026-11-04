@@ -207,7 +207,7 @@ class AuthenticationController @Inject() (
       _ <- Fox.runIf(inviteBox.isDefined)(
         Fox.runOptional(inviteBox.toOption)(i => inviteService.deactivateUsedInvite(i)(using GlobalAccessContext))
       )
-      _ <- accountEmailService.sendSignupEmails(user, multiUser, organization, autoActivate)
+      _ = accountEmailService.sendSignupEmails(user, multiUser, organization, autoActivate)
     } yield user
 
   private def loginUser(
@@ -324,7 +324,7 @@ class AuthenticationController @Inject() (
       )
       _ = analyticsService.track(JoinOrganizationEvent(request.identity, organization))
       multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-      _ <- accountEmailService.sendUserJoinedEmail(multiUser, organization, invite.autoActivate)
+      _ = accountEmailService.sendUserJoinedEmail(multiUser, organization, invite.autoActivate)
       _ <- inviteService.deactivateUsedInvite(invite)(using GlobalAccessContext)
     } yield Ok
   }
@@ -380,7 +380,7 @@ class AuthenticationController @Inject() (
       resetPasswordToken <- Fox.fromFuture(
         bearerTokenAuthenticatorService.createAndInit(user._id, TokenType.ResetPassword, deleteOld = true)
       )
-      _ = accountEmailService.sendResetPasswordEmail(multiUser, email, resetPasswordToken)
+      _ = accountEmailService.sendResetPasswordEmail(multiUser, resetPasswordToken)
     } yield ()
 
   // User has forgotten their password and clicked the reset link in the email
@@ -815,9 +815,7 @@ class AuthenticationController @Inject() (
                           email,
                           request.headers.get("Host").getOrElse("")
                         )
-                        _ = if (conf.Features.isWkorgInstance) {
-                          mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
-                        }
+                        _ = accountEmailService.sendOrganizationCreatorWelcome(user, multiUser)
                       } yield Ok
                     }
                 } yield result

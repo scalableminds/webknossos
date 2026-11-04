@@ -19,34 +19,37 @@ class AccountEmailService @Inject() (
 )(implicit ec: ExecutionContext) {
 
   /* Welcomes the new user and tells the organization's new-user mailing list about them.
-     On webknossos.org, the user is registered with Mailchimp instead, which sends the welcome emails there. */
-  def sendSignupEmails(user: User, multiUser: MultiUser, organization: Organization, autoActivate: Boolean): Fox[Unit] =
-    for {
-      organizationRecipient <- newUserEmailRecipient(organization)
-    } yield {
-      if (conf.Features.isWkorgInstance) {
-        mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
-      } else {
-        mailSender.send(defaultMails.newUserMail(multiUser.fullName, multiUser.email, autoActivate))
-      }
-      sendNewUserEmail(multiUser, organization, autoActivate, organizationRecipient)
+     On webknossos.org, the user is registered with Mailchimp instead, which sends the welcome emails there.
+     The recipient lookup runs in the background, so that it can't fail the signup, which has already been persisted. */
+  def sendSignupEmails(user: User, multiUser: MultiUser, organization: Organization, autoActivate: Boolean): Unit = {
+    if (conf.Features.isWkorgInstance) {
+      mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
+    } else {
+      mailSender.send(defaultMails.newUserMail(multiUser.fullName, multiUser.email, autoActivate))
+    }
+    sendNewUserEmail(multiUser, organization, autoActivate)
+  }
+
+  /* Welcomes a user who just created a new organization. Only on webknossos.org, where the user is registered with
+     Mailchimp, which sends the welcome emails there. */
+  def sendOrganizationCreatorWelcome(user: User, multiUser: MultiUser): Unit =
+    if (conf.Features.isWkorgInstance) {
+      mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
     }
 
   // Tells the organization's new-user mailing list, or its owner if there is none, that an existing user joined.
-  def sendUserJoinedEmail(multiUser: MultiUser, organization: Organization, autoActivate: Boolean): Fox[Unit] =
-    for {
-      organizationRecipient <- newUserEmailRecipient(organization)
-    } yield sendNewUserEmail(multiUser, organization, autoActivate, organizationRecipient)
+  def sendUserJoinedEmail(multiUser: MultiUser, organization: Organization, autoActivate: Boolean): Unit =
+    sendNewUserEmail(multiUser, organization, autoActivate)
 
-  private def sendNewUserEmail(
-      multiUser: MultiUser,
-      organization: Organization,
-      autoActivate: Boolean,
-      recipient: String
-  ): Unit =
-    mailSender.send(
-      defaultMails.registerAdminNotifierMail(multiUser.fullName, multiUser.email, organization, autoActivate, recipient)
-    )
+  private def sendNewUserEmail(multiUser: MultiUser, organization: Organization, autoActivate: Boolean): Unit =
+    mailSender.inBackground(s"new user ${multiUser._id} in organization ${organization._id}") {
+      for {
+        recipient <- newUserEmailRecipient(organization)
+      } yield mailSender.send(
+        defaultMails
+          .registerAdminNotifierMail(multiUser.fullName, multiUser.email, organization, autoActivate, recipient)
+      )
+    }
 
   def sendInviteEmail(recipient: String, invite: Invite, organization: Organization, sender: MultiUser): Unit =
     mailSender.send(
@@ -59,8 +62,8 @@ class AccountEmailService @Inject() (
   def sendEmailVerificationEmail(multiUser: MultiUser, verificationLink: String): Unit =
     mailSender.send(defaultMails.emailVerificationMail(multiUser, verificationLink))
 
-  def sendResetPasswordEmail(multiUser: MultiUser, email: String, resetPasswordToken: String): Unit =
-    mailSender.send(defaultMails.resetPasswordMail(multiUser.fullName, email, resetPasswordToken))
+  def sendResetPasswordEmail(multiUser: MultiUser, resetPasswordToken: String): Unit =
+    mailSender.send(defaultMails.resetPasswordMail(multiUser.fullName, multiUser.email, resetPasswordToken))
 
   def sendPasswordChangedEmail(multiUser: MultiUser): Unit =
     mailSender.send(defaultMails.changePasswordMail(multiUser.fullName, multiUser.email))

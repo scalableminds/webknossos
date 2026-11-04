@@ -38,13 +38,14 @@ Route registration is complete for both services (main app 287/287, datastore 13
 - G13 `.env.example`/README hygiene: DONE 2026-11-03.
 - D1 resolved: mails use Play's HTML templates (G1).
 - Known bug: compound merge returns 500 when a dataset layer has no mags (`datasets::data_source_for_rpc`).
-- Cutover work: first pass and round 2 done 2026-10-17 (checkpoints/cutover.md, CUTOVER.md, tools/app_differential/). Open: decision on invalid credentials for user-aware routes; Play change for a shared store RPC token (blocker before stage 3); voxelytics corpus; Rust CI job.
+- Cutover work: first pass and round 2 done 2026-10-17 (checkpoints/cutover.md, CUTOVER.md, tools/app_differential/). Open: decision on invalid credentials for user-aware routes; Play change for a shared store RPC token (blocker before stage 3); voxelytics corpus.
+- Missing: wkorg `/sitemap.xml` (last open part of G14).
+- `GET /api/folders/tree` slowdown vs Play fixed 2026-11-03 (one set-based query, CUTOVER.md §5).
 - DONE and wired in `main.rs`: G1 SMTP, G2 housekeeping, G3 credit ticker, G4 Slack, G5 worker liveness, G7 used-storage scan.
 
 ### Datastore
 - ZIP vault bounded verification complete: stored/ZIP64 metadata, ranges, Scala goldens, HTTP/cache/token/denial/retry and ZIP-backed data/reload covered; malformed ZIP64 tag bounds fixed. See datastore-ds1-zip.md.
-- DS6: differential tests against Scala, performance, config, cutover. Known divergences needing differential coverage: JPEG off by up to 1 (gray) / 2 (color) levels, deliberate fixes of Scala quirks (see datastore/README.md), and Scala oddities worth fixing on both sides (unfinishedUploads never enriches, upload clean-up leaves `voxelSize`, attachment upload dirs named `Some(<name>)__<id>`).
-- Uncommitted datastore changes remain in the working tree.
+- DS6 / cutover: see datastore-cutover.md (IN PROGRESS: linked-layer and S3-upload-base differential, Linux/remote-store benchmarks, FindDataService clipping and invalidation fan-out decisions, `check_shared_formats.py` in CI; the datastore suite already runs in the Rust CI job). Known divergences needing differential coverage: JPEG off by up to 1 (gray) / 2 (color) levels, deliberate fixes of Scala quirks (see datastore/README.md), and Scala oddities worth fixing on both sides (upload clean-up leaves `voxelSize`, attachment upload dirs named `Some(<name>)__<id>`).
 - DONE: Compresso, managed-S3 uploads, legacy API versions, regional short-S3 rewrite.
 
 ### Tracingstore engine

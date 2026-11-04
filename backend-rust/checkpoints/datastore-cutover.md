@@ -8,7 +8,7 @@ IN PROGRESS. DC1a–e (dataset, mag and attachment uploads), DC2 (first pass inc
 1. DC1e remaining: linked layers, S3 upload base (mag/attachment domains done, see Done). Legacy API versions dropped from scope (user, 2026-10-17: not important).
 2. DC2: benchmark on Linux/production-like hardware and with remote stores (readData 128³ gap closed, see Done).
 3. User decisions: FindDataService bbox clipping; proxy fan-out of invalidations (DEPLOYMENT.md, stage 2) needs an operator/infra owner.
-4. CI: run `check_shared_formats.py` and the datastore suite on every PR.
+4. CI: run `check_shared_formats.py` on every PR (the datastore suite already runs in `.github/workflows/rust.yml` via `make test`).
 
 ## Plan (each step ends with a checkpoint update here)
 

@@ -30,7 +30,7 @@ interrupted `slack` agent added a `SlackNotificationService` extractor there; th
 | `WK_MAIL_SMTP_HOST` | `mail.smtp.host` | empty = no delivery, LogMailer |
 | `WK_MAIL_SMTP_PORT` | `mail.smtp.port` | `465` (1-65535) |
 | `WK_MAIL_SMTP_TLS` | `mail.smtp.tls` | `true` |
-| `WK_MAIL_SMTP_CHECK_SERVER_IDENTITY` | `mail.smtp.checkServerIdentity` | `false` (cert chain is still verified) |
+| `WK_MAIL_SMTP_CHECK_SERVER_IDENTITY` | `mail.smtp.checkServerIdentity` | `true` (deviation: Play defaults to `false`; cert chain is verified either way) |
 | `WK_MAIL_SMTP_AUTH` | `mail.smtp.auth` | `true` |
 | `WK_MAIL_SMTP_USER` | `mail.smtp.user` | empty (Debug shows only `user_configured`) |
 | `WK_MAIL_SMTP_PASS` | `mail.smtp.pass` | empty (Debug shows only `password_configured`) |

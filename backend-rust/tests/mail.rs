@@ -644,7 +644,7 @@ fn mail_config_defaults_follow_application_conf() {
             host: String::new(),
             port: 465,
             tls: true,
-            check_server_identity: false,
+            check_server_identity: true,
             auth: true,
             user: String::new(),
             pass: String::new(),
@@ -671,7 +671,7 @@ fn mail_config_parses_values_validates_and_redacts_secrets() {
         ("WK_MAIL_SMTP_HOST", " smtp.example.test "),
         ("WK_MAIL_SMTP_PORT", "587"),
         ("WK_MAIL_SMTP_TLS", "false"),
-        ("WK_MAIL_SMTP_CHECK_SERVER_IDENTITY", "true"),
+        ("WK_MAIL_SMTP_CHECK_SERVER_IDENTITY", "false"),
         ("WK_MAIL_SMTP_AUTH", "false"),
         ("WK_MAIL_SMTP_USER", "mailer-user"),
         ("WK_MAIL_SMTP_PASS", "hunter2-secret"),
@@ -691,7 +691,7 @@ fn mail_config_parses_values_validates_and_redacts_secrets() {
     assert_eq!(config.smtp.host, "smtp.example.test");
     assert_eq!(config.smtp.port, 587);
     assert!(!config.smtp.tls && !config.smtp.auth);
-    assert!(config.smtp.check_server_identity);
+    assert!(!config.smtp.check_server_identity);
     assert_eq!(config.smtp.user, "mailer-user");
     assert_eq!(config.smtp.pass, "hunter2-secret");
     assert_eq!(config.settings.default_sender, "Ops <ops@example.test>");

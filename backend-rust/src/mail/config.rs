@@ -88,7 +88,7 @@ impl Default for SmtpConfig {
             host: String::new(),
             port: 465,
             tls: true,
-            check_server_identity: false,
+            check_server_identity: true,
             auth: true,
             user: String::new(),
             pass: String::new(),
@@ -157,7 +157,7 @@ impl MailConfig {
 /// | `WK_MAIL_SMTP_HOST` | `mail.smtp.host` | empty (no delivery) |
 /// | `WK_MAIL_SMTP_PORT` | `mail.smtp.port` | `465` |
 /// | `WK_MAIL_SMTP_TLS` | `mail.smtp.tls` | `true` |
-/// | `WK_MAIL_SMTP_CHECK_SERVER_IDENTITY` | `mail.smtp.checkServerIdentity` | `false` |
+/// | `WK_MAIL_SMTP_CHECK_SERVER_IDENTITY` | `mail.smtp.checkServerIdentity` | `true` (deviation: Play defaults to `false`) |
 /// | `WK_MAIL_SMTP_AUTH` | `mail.smtp.auth` | `true` |
 /// | `WK_MAIL_SMTP_USER` | `mail.smtp.user` | empty |
 /// | `WK_MAIL_SMTP_PASS` | `mail.smtp.pass` | empty |
@@ -188,7 +188,7 @@ pub fn config_from_values(values: &HashMap<String, String>) -> Result<MailConfig
             host,
             port,
             tls: env.bool_or("WK_MAIL_SMTP_TLS", true)?,
-            check_server_identity: env.bool_or("WK_MAIL_SMTP_CHECK_SERVER_IDENTITY", false)?,
+            check_server_identity: env.bool_or("WK_MAIL_SMTP_CHECK_SERVER_IDENTITY", true)?,
             auth: env.bool_or("WK_MAIL_SMTP_AUTH", true)?,
             user: env.text("WK_MAIL_SMTP_USER", ""),
             pass: env.text("WK_MAIL_SMTP_PASS", ""),

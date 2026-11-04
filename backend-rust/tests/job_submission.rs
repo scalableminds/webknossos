@@ -31,16 +31,6 @@ const COMMANDS: [&str; 8] = [
 
 type StoreRequests = Arc<Mutex<Vec<String>>>;
 
-#[derive(sqlx::FromRow)]
-struct RefundPair {
-    refund_delta: i32,
-    reservation_delta: i32,
-    reservation_state: String,
-    reservation_credit_state: String,
-    reservation_job: Option<String>,
-    refund_job: Option<String>,
-}
-
 async fn upstream() -> (String, StoreRequests, tokio::task::JoinHandle<()>) {
     let requests = StoreRequests::default();
     let service = Router::new()
@@ -335,7 +325,7 @@ async fn all_eight_routes_submit_pending_jobs_with_contract_arguments_and_costs(
 
 #[tokio::test]
 #[ignore = "requires isolated PostgreSQL database with CREATEDB"]
-async fn failed_paid_submission_refunds_expected_failures_and_rolls_back_database_errors() {
+async fn failed_paid_submission_checks_before_reserving_and_rolls_back_database_errors() {
     let db = TestDb::new().await;
     let fixture = db.fixture().await;
     let id = seed(&db, &fixture, "http://unused.invalid").await;
@@ -370,57 +360,61 @@ async fn failed_paid_submission_refunds_expected_failures_and_rolls_back_databas
         .execute(&db.pool)
         .await
         .unwrap();
-    for (index, sql) in [
-        "UPDATE webknossos.workers SET isDeleted=true",
-        "UPDATE webknossos.workers SET isDeleted=false, supportedJobCommands=ARRAY['compute_mesh_file']",
-    ].into_iter().enumerate() {
-        sqlx::query(sql).execute(&db.pool).await.unwrap();
+    // Like JobService.submitPaidJob, jobs enabled, pricing plan, worker support and
+    // storage are checked before reserving credits: no reservation, no refund.
+    for (sql, cause) in [
+        (
+            "UPDATE webknossos.workers SET isDeleted=true",
+            "No worker supporting the requested job",
+        ),
+        (
+            "UPDATE webknossos.workers SET isDeleted=false, supportedJobCommands=ARRAY['compute_mesh_file']",
+            "No worker supporting the requested job",
+        ),
+        (
+            "UPDATE webknossos.workers SET supportedJobCommands=ARRAY['infer_mitochondria']; \
+             UPDATE webknossos.organizations SET pricingPlan='Open_Source'",
+            "not available in the pricing plan",
+        ),
+    ] {
+        sqlx::raw_sql(sql).execute(&db.pool).await.unwrap();
         let (status, body) = request(&application, &uri, Some(&fixture.token), None).await;
-        assert_eq!(status, 400, "{body}");
-        assert!(body.to_string().contains("Could not submit job."));
-        assert_eq!(counts(&db).await, (0, 3 + index as i64 * 2, 200));
+        let expected_status = if cause.starts_with("not available") {
+            403
+        } else {
+            400
+        };
+        assert_eq!(status, expected_status, "{body}");
+        assert!(
+            body.to_string()
+                .contains("Could not start the AI inference job."),
+            "{body}"
+        );
+        assert!(body.to_string().contains(cause), "{body}");
+        assert_eq!(counts(&db).await, (0, 1, 200));
     }
-    sqlx::query("UPDATE webknossos.workers SET supportedJobCommands=ARRAY['infer_mitochondria']")
+    sqlx::query("UPDATE webknossos.organizations SET pricingPlan='Enterprise'")
         .execute(&db.pool)
         .await
         .unwrap();
     let (status, body) = request(&app(&db, false), &uri, Some(&fixture.token), None).await;
     assert_eq!(status, 400, "{body}");
-    assert_eq!(counts(&db).await, (0, 7, 200));
-    let refunds: Vec<RefundPair> = sqlx::query_as(
-        "SELECT r.milli_credit_delta AS refund_delta,p.milli_credit_delta AS reservation_delta,p.transaction_state::text AS reservation_state,p.credit_state::text AS reservation_credit_state,p._paid_job AS reservation_job,r._paid_job AS refund_job FROM webknossos.credit_transactions r JOIN webknossos.credit_transactions p ON p._id=r._related_transaction WHERE r.credit_state='Refunding'",
-    ).fetch_all(&db.pool).await.unwrap();
-    assert_eq!(refunds.len(), 3);
-    for refund in refunds {
-        assert_eq!(refund.refund_delta, 125);
-        assert_eq!(refund.reservation_delta, -125);
-        assert_eq!(refund.reservation_state, "Complete");
-        assert_eq!(refund.reservation_credit_state, "Refunded");
-        assert!(refund.reservation_job.is_none());
-        assert!(refund.refund_job.is_none());
-    }
-    let comments_match: bool = sqlx::query_scalar(
-        "SELECT bool_and(comment = 'Refund for transaction ' || _related_transaction || \
-            '.') FROM webknossos.credit_transactions WHERE credit_state='Refunding'",
-    )
-    .fetch_one(&db.pool)
-    .await
-    .unwrap();
-    assert!(comments_match);
+    assert!(body.to_string().contains("not enabled"), "{body}");
+    assert_eq!(counts(&db).await, (0, 1, 200));
     // A job insert constraint error is unexpected; its preceding reservation must roll back.
     sqlx::raw_sql("CREATE FUNCTION webknossos.reject_test_job() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test insertion failure' USING ERRCODE='23514'; END $$; CREATE TRIGGER reject_test_job BEFORE INSERT ON webknossos.jobs FOR EACH ROW EXECUTE FUNCTION webknossos.reject_test_job();")
         .execute(&db.pool).await.unwrap();
     let (status, body) = request(&application, &uri, Some(&fixture.token), None).await;
     assert_eq!(status, 400, "{body}");
     assert!(!body.to_string().contains("test insertion failure"));
-    assert_eq!(counts(&db).await, (0, 7, 200));
+    assert_eq!(counts(&db).await, (0, 1, 200));
     sqlx::query("DROP TRIGGER reject_test_job ON webknossos.jobs")
         .execute(&db.pool)
         .await
         .unwrap();
     let (status, body) = request(&application, &uri, Some(&fixture.token), None).await;
     assert_eq!(status, 200, "{body}");
-    assert_eq!(counts(&db).await, (1, 8, 75));
+    assert_eq!(counts(&db).await, (1, 2, 75));
     db.cleanup().await;
 }
 

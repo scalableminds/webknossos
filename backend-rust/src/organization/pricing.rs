@@ -49,6 +49,7 @@ pub fn router() -> Router<AppState> {
 // ---------------------------------------------------------------------------
 // PricingPlan
 
+/// See https://home.webknossos.org/pricing for the features of each plan.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 #[allow(non_camel_case_types)]
 pub(crate) enum PricingPlan {
@@ -57,7 +58,8 @@ pub(crate) enum PricingPlan {
     Power,
     Team_Trial,
     Power_Trial,
-    Custom,
+    Open_Source,
+    Enterprise,
 }
 
 impl PricingPlan {
@@ -68,7 +70,8 @@ impl PricingPlan {
             "Power" => Self::Power,
             "Team_Trial" => Self::Team_Trial,
             "Power_Trial" => Self::Power_Trial,
-            "Custom" => Self::Custom,
+            "Open_Source" => Self::Open_Source,
+            "Enterprise" => Self::Enterprise,
             _ => return None,
         })
     }
@@ -80,7 +83,36 @@ impl PricingPlan {
             Self::Power => "Power",
             Self::Team_Trial => "Team_Trial",
             Self::Power_Trial => "Power_Trial",
-            Self::Custom => "Custom",
+            Self::Open_Source => "Open_Source",
+            Self::Enterprise => "Enterprise",
+        }
+    }
+
+    /// `PricingPlan.allowsJobs`: Open Source has no access to WEBKNOSSOS
+    /// workers, so it can run no jobs and use no AI quick select.
+    pub(crate) fn allows_jobs(self) -> bool {
+        self != Self::Open_Source
+    }
+
+    /// `PricingPlan.hasUnlimitedQuotas`.
+    fn has_unlimited_quotas(self) -> bool {
+        matches!(self, Self::Open_Source | Self::Enterprise)
+    }
+
+    /// `PricingPlan.includedUsersOf`: the users a plan starts with; None if
+    /// they are negotiated per organization.
+    fn included_users(self) -> Option<i32> {
+        match self {
+            Self::Team | Self::Team_Trial => Some(5),
+            _ => None,
+        }
+    }
+
+    /// `PricingPlan.includedStorageBytesOf`.
+    fn included_storage_bytes(self) -> Option<i64> {
+        match self {
+            Self::Team | Self::Team_Trial => Some(1_000_000_000_000), // 1 TB
+            _ => None,
         }
     }
 
@@ -88,9 +120,14 @@ impl PricingPlan {
     fn tier_rank(self) -> u8 {
         match self {
             Self::Personal => 0,
-            Self::Team | Self::Team_Trial => 1,
-            Self::Power | Self::Power_Trial | Self::Custom => 2,
+            Self::Team | Self::Team_Trial | Self::Open_Source => 1,
+            Self::Power | Self::Power_Trial | Self::Enterprise => 2,
         }
+    }
+
+    /// `PricingPlan.isPaidPlan`: everything but Personal and Open Source.
+    pub(crate) fn is_paid(self) -> bool {
+        !matches!(self, Self::Personal | Self::Open_Source)
     }
 
     /// `PricingPlan.isTrialPlan`.
@@ -106,6 +143,7 @@ impl PricingPlan {
         match self {
             Self::Team_Trial => "Team (Trial)",
             Self::Power_Trial => "Power (Trial)",
+            Self::Open_Source => "Open Source",
             other => other.as_str(),
         }
     }
@@ -113,7 +151,7 @@ impl PricingPlan {
     fn ai_addon_label(self) -> &'static str {
         match self {
             Self::Team | Self::Team_Trial => "Team AI",
-            Self::Power | Self::Power_Trial => "Power AI",
+            Self::Power | Self::Power_Trial | Self::Enterprise => "Power AI",
             _ => "AI Add-on",
         }
     }
@@ -133,14 +171,14 @@ impl PricingPlan {
         ];
         match self {
             Self::Team | Self::Team_Trial => Some(TEAM),
-            Self::Power | Self::Power_Trial => Some(POWER),
+            Self::Power | Self::Power_Trial | Self::Enterprise => Some(POWER),
             _ => None,
         }
     }
 }
 
 /// PricingPlanFeatures.unlockedBy: plan label and the highlights of every
-/// gained tier (deduplicated), or None for non-upgrades and Custom.
+/// gained tier (deduplicated), or None for non-upgrades.
 fn unlocked_features(
     previous: PricingPlan,
     new: PricingPlan,
@@ -293,9 +331,12 @@ async fn upgrade_request(
                 ApiError::not_found(crate::msg::organization::not_found(&user.organization_id))
             })?;
     let current_plan = PricingPlan::parse(&pricing_plan).ok_or_else(ApiError::internal)?;
+    // Only paid, non-trial plans that rank above the current one can be requested.
+    // Open Source may also request Team, which ranks the same but adds jobs and AI features.
     if let Some(plan) = request.plan
         && !(matches!(plan, PricingPlan::Team | PricingPlan::Power)
-            && PricingPlan::is_upgrade(current_plan, plan))
+            && (PricingPlan::is_upgrade(current_plan, plan)
+                || current_plan == PricingPlan::Open_Source))
     {
         return Err(ApiError::bad_request(
             messages::UPGRADE_REQUEST_INVALID_PLAN,
@@ -303,7 +344,9 @@ async fn upgrade_request(
     }
     let effective_plan = request.plan.unwrap_or(current_plan);
     if request.ai_addon == Some(true)
-        && !(ai_plan.is_none() && effective_plan.tier_rank() >= PricingPlan::Team.tier_rank())
+        && !(ai_plan.is_none()
+            && effective_plan.tier_rank() >= PricingPlan::Team.tier_rank()
+            && effective_plan.allows_jobs())
     {
         return Err(ApiError::bad_request(
             messages::UPGRADE_REQUEST_AI_ADDON_NOT_AVAILABLE,
@@ -376,6 +419,22 @@ enum Change<T> {
 }
 
 impl<T> Change<T> {
+    /// `Option.orElse` on the outer option.
+    fn or_set(self, value: Option<T>) -> Self {
+        match (self, value) {
+            (Self::Unchanged, Some(value)) => Self::Set(Some(value)),
+            (change, _) => change,
+        }
+    }
+
+    /// `Option.map(_ => None)` on the outer option.
+    fn reset_if_changed(self) -> Self {
+        match self {
+            Self::Unchanged => Self::Unchanged,
+            Self::Set(_) => Self::Set(None),
+        }
+    }
+
     fn changed(&self) -> bool {
         matches!(self, Self::Set(_))
     }
@@ -472,6 +531,31 @@ fn parse_optional<T>(
     }
 }
 
+impl PlanUpdate {
+    /// `OrganizationPlanUpdate.withQuotasOfPlan`: plans with unlimited quotas
+    /// override requested limits; limits this update leaves unchanged stay
+    /// unchanged. Moving from a plan with unlimited quotas to one with limits
+    /// sets the quotas of the new plan, unless requested otherwise.
+    fn with_quotas_of_plan(mut self, previous_plan: PricingPlan) -> Self {
+        let effective_plan = self.pricing_plan.unwrap_or(previous_plan);
+        if effective_plan.has_unlimited_quotas() {
+            if self.pricing_plan.is_some() {
+                self.included_users = Change::Set(None);
+                self.included_storage = Change::Set(None);
+            } else {
+                self.included_users = self.included_users.reset_if_changed();
+                self.included_storage = self.included_storage.reset_if_changed();
+            }
+        } else if previous_plan.has_unlimited_quotas() && self.pricing_plan.is_some() {
+            self.included_users = self.included_users.or_set(effective_plan.included_users());
+            self.included_storage = self
+                .included_storage
+                .or_set(effective_plan.included_storage_bytes());
+        }
+        self
+    }
+}
+
 fn parse_plan_update(body: &Value) -> ApiResult<PlanUpdate> {
     let body = body.as_object().ok_or_else(invalid_json)?;
     let organization_id = body
@@ -537,6 +621,7 @@ async fn update_plan(
             ApiError::not_found(crate::msg::organization::not_found(&update.organization_id))
         })?;
     let previous_plan = PricingPlan::parse(&previous_plan).ok_or_else(ApiError::internal)?;
+    let update = update.with_quotas_of_plan(previous_plan);
     organization_pricing_dao::insert_plan_update(&mut tx, &update).await?;
     organization_pricing_dao::update_plan(&mut tx, &update).await?;
     tx.commit().await?;

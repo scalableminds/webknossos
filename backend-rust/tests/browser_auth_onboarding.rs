@@ -657,7 +657,7 @@ async fn organization_creation_and_superuser_account_administration() {
             folder_name.as_str(),
             depth
         ),
-        ("Lab Ünï 1", "Custom", 2, "Datasets", 0)
+        ("Lab Ünï 1", "Open_Source", 2, "Datasets", 0)
     );
     let org_team: String =
         sqlx::query_scalar("SELECT _id FROM webknossos.organizationTeams WHERE _organization = $1")

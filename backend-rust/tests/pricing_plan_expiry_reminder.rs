@@ -113,13 +113,14 @@ async fn reminds_owner_and_admins_once_per_lead_time() {
         organization(&db, "Power_Trial", Some(in_3_days), true).await;
     // Neither owner nor admin: nothing is recorded (checked before inserting), no mail.
     let (no_admin, _) = organization(&db, "Power", Some(in_10_days), false).await;
-    // Excluded by the query: Personal plan, expired, too far away, no paidUntil.
+    // Excluded by the query: Personal and Open Source plans, expired, too far away, no paidUntil.
     let (personal, _) = organization(&db, "Personal", Some(in_10_days), true).await;
+    let (open_source, _) = organization(&db, "Open_Source", Some(in_10_days), true).await;
     let (expired, _) = organization(&db, "Team", Some(now - Duration::hours(1)), true).await;
     let (far, _) = organization(&db, "Team", Some(now + Duration::days(31)), true).await;
-    let (unlimited, _) = organization(&db, "Custom", None, true).await;
+    let (unlimited, _) = organization(&db, "Enterprise", None, true).await;
     // Already reminded for 30 days: only the 14 day reminder is new, which still sends mails.
-    let (partial, partial_admin) = organization(&db, "Custom", Some(in_10_days), true).await;
+    let (partial, partial_admin) = organization(&db, "Enterprise", Some(in_10_days), true).await;
     sqlx::query(
         "INSERT INTO webknossos.organization_planExpiryReminders \
          (_organization, paidUntil, leadTimeDays) VALUES ($1, $2, 30)",
@@ -174,7 +175,15 @@ async fn reminds_owner_and_admins_once_per_lead_time() {
         reminder_rows(&db, &partial).await,
         vec![(paid_until, 14), (paid_until, 30)]
     );
-    for organization_id in [&trial, &no_admin, &personal, &expired, &far, &unlimited] {
+    for organization_id in [
+        &trial,
+        &no_admin,
+        &personal,
+        &open_source,
+        &expired,
+        &far,
+        &unlimited,
+    ] {
         assert!(
             reminder_rows(&db, organization_id).await.is_empty(),
             "{organization_id}"
@@ -224,11 +233,11 @@ async fn reminds_owner_and_admins_once_per_lead_time() {
     );
     assert!(trial_mail.body_html.contains("<i>Power (Trial)</i>"));
     assert!(trial_mail.body_html.contains("— that is in 3 days."));
-    let custom_mail = mails
+    let enterprise_mail = mails
         .iter()
         .find(|mail| mail.recipients == vec![partial_admin.clone()])
         .unwrap();
-    assert!(custom_mail.subject.contains("Your Custom plan"));
+    assert!(enterprise_mail.subject.contains("Your Enterprise plan"));
 
     // A second tick sends nothing.
     let outcome = reminder.tick_at(&db.pool, now).await.unwrap();

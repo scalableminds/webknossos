@@ -138,6 +138,21 @@ async fn segment_anything_mask(
     if config.segment_anything.uri.is_empty() {
         return Err(ApiError::bad_request(crate::msg::segment_anything::NO_URI));
     }
+    let pricing_plan = crate::job::submission::job_submission_dao::find_pricing_plan(
+        &state.pool,
+        &user.organization_id,
+    )
+    .await?
+    .as_deref()
+    .and_then(crate::organization::pricing::PricingPlan::parse)
+    .ok_or_else(|| {
+        ApiError::bad_request(crate::msg::organization::not_found(&user.organization_id))
+    })?;
+    if !pricing_plan.allows_jobs() {
+        return Err(ApiError::forbidden(
+            crate::msg::segment_anything::NOT_AVAILABLE_IN_PLAN,
+        ));
+    }
     let record = crate::dataset::lifecycle::require_readable(&state, &user, &id).await?;
     if !record.is_usable {
         return Err(ApiError::bad_request(crate::msg::dataset::not_usable(&id)));

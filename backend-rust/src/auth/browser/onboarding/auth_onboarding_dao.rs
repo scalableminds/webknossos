@@ -83,7 +83,7 @@ pub(crate) async fn count_users_towards_limit(
              SELECT DISTINCT ON (_multiUser) _multiUser, _organization FROM webknossos.users
              WHERE NOT isDeactivated AND _organization IN (
                SELECT _id FROM webknossos.organizations
-               WHERE pricingPlan IN ('Team', 'Power', 'Custom', 'Team_Trial', 'Power_Trial'))
+               WHERE pricingPlan IN ('Team', 'Power', 'Team_Trial', 'Power_Trial', 'Enterprise'))
              ORDER BY _multiUser, created ASC
            ) AS paying ON paying._multiUser = u._multiUser
            WHERE u._organization = $1 AND NOT u.isDeactivated AND NOT u.isUnlisted
@@ -433,7 +433,7 @@ pub(crate) async fn find_paying_organization_of_multi_user(
     sqlx::query_scalar(
         r#"SELECT _organization FROM webknossos.users_ WHERE _multiUser = $1 AND NOT isDeactivated
            AND _organization IN (SELECT _id FROM webknossos.organizations
-             WHERE pricingPlan IN ('Team', 'Power', 'Custom', 'Team_Trial', 'Power_Trial'))
+             WHERE pricingPlan IN ('Team', 'Power', 'Team_Trial', 'Power_Trial', 'Enterprise'))
            ORDER BY created ASC LIMIT 1"#,
     )
     .bind(multi_user_id)

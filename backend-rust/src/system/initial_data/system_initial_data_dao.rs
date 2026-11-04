@@ -212,7 +212,7 @@ pub(super) async fn insert_sample_organization(
              newUserMailingList, enableAutoVerify, pricingPlan, aiPlan, paidUntil, includedUsers,
              includedStorage, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion,
              created, isDeleted)
-           VALUES ($1, $2, '/images/logo.svg', $3, $4, '', FALSE, 'Custom', 'Power_AI', NULL, NULL,
+           VALUES ($1, $2, '/images/logo.svg', $3, $4, '', FALSE, 'Power', 'Power_AI', NULL, NULL,
              NULL, NULL, 0, NOW(), FALSE)"#,
     )
     .bind(id)

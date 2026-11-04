@@ -26,7 +26,7 @@ pub(super) async fn find_all_with_plan_expiring_before(
          WHERE paidUntil IS NOT NULL \
          AND paidUntil > NOW() \
          AND paidUntil <= $1 \
-         AND pricingPlan <> 'Personal' \
+         AND pricingPlan NOT IN ('Personal', 'Open_Source') \
          ORDER BY paidUntil",
     )
     .bind(expiry_threshold)

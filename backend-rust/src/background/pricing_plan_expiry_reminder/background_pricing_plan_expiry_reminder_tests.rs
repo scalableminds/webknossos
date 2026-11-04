@@ -136,7 +136,8 @@ fn lead_times_days_for_trials_uses_trial_lead_times() {
         PricingPlan::Personal,
         PricingPlan::Team,
         PricingPlan::Power,
-        PricingPlan::Custom,
+        PricingPlan::Open_Source,
+        PricingPlan::Enterprise,
     ] {
         assert_eq!(lead_times_days_for(plan, &lead, &trial), &lead);
     }

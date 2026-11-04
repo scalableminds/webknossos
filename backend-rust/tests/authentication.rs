@@ -400,11 +400,11 @@ async fn readiness_requires_exactly_one_supported_schema_version() {
         .await
         .unwrap();
     assert!(db::ready(&database.pool).await.is_err());
-    sqlx::query("UPDATE webknossos.releaseInformation SET schemaVersion = 188")
+    sqlx::query("UPDATE webknossos.releaseInformation SET schemaVersion = 189")
         .execute(&database.pool)
         .await
         .unwrap();
-    sqlx::query("INSERT INTO webknossos.releaseInformation (schemaVersion) VALUES (188)")
+    sqlx::query("INSERT INTO webknossos.releaseInformation (schemaVersion) VALUES (189)")
         .execute(&database.pool)
         .await
         .unwrap();

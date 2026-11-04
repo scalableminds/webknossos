@@ -204,7 +204,7 @@ async fn pricing_status_limits() {
     assert_eq!(reply.status, 200, "{}", reply.body);
     assert_eq!(
         reply.body,
-        json!({"pricingPlan": "Custom", "isExceeded": false, "isAlmostExceeded": false})
+        json!({"pricingPlan": "Enterprise", "isExceeded": false, "isAlmostExceeded": false})
     );
     exec(
         &db,
@@ -328,7 +328,7 @@ async fn upgrade_request_validation_and_mail() {
         ),
         "The note of the upgrade request must not be longer than 10000 characters."
     );
-    for plan in ["Team_Trial", "Custom", "Personal"] {
+    for plan in ["Team_Trial", "Enterprise", "Open_Source", "Personal"] {
         assert_eq!(
             error(
                 send(
@@ -449,6 +449,60 @@ async fn upgrade_request_validation_and_mail() {
             .body_html
             .contains("<li>1 WEBKNOSSOS credit</li>")
     );
+
+    // Open Source may request Team, which ranks the same but adds jobs and AI
+    // features; the AI Add-on needs a plan that allows jobs.
+    exec(
+        &db,
+        "UPDATE webknossos.organizations SET pricingPlan = 'Open_Source', aiPlan = NULL WHERE _id = $1",
+        &f.organization_id,
+    )
+    .await;
+    assert_eq!(
+        error(
+            send(
+                &app,
+                "POST",
+                path,
+                Some(&f.token),
+                Some(json!({"aiAddon": true}))
+            )
+            .await
+        ),
+        "The AI Add-on is already active or requires at least the Team plan."
+    );
+    let reply = send(
+        &app,
+        "POST",
+        path,
+        Some(&f.token),
+        Some(json!({"plan": "Team", "aiAddon": true})),
+    )
+    .await;
+    assert_eq!(reply.status, 200, "{}", reply.body);
+    let body = &mailer.take()[0].body_html;
+    assert!(
+        body.contains("Upgrade from Open Source to Team plan"),
+        "{body}"
+    );
+    assert!(body.contains("AI Add-on (Team AI)"), "{body}");
+    // Enterprise is labelled like Power.
+    exec(
+        &db,
+        "UPDATE webknossos.organizations SET pricingPlan = 'Enterprise' WHERE _id = $1",
+        &f.organization_id,
+    )
+    .await;
+    let reply = send(
+        &app,
+        "POST",
+        path,
+        Some(&f.token),
+        Some(json!({"aiAddon": true})),
+    )
+    .await;
+    assert_eq!(reply.status, 200, "{}", reply.body);
+    assert!(mailer.take()[0].body_html.contains("AI Add-on (Power AI)"));
     db.cleanup().await;
 }
 
@@ -617,6 +671,59 @@ async fn plan_updates_are_recorded_applied_and_listed() {
     .await
     .unwrap();
     assert_eq!((users, storage), (None, Some(50_000_000_000)));
+    // Enterprise and Open Source override requested limits with unlimited quotas;
+    // moving back to Team without requested limits sets Team's quotas.
+    let quotas = || async {
+        sqlx::query_as::<_, (Option<i32>, Option<i64>)>(
+            "SELECT includedUsers, includedStorage FROM webknossos.organizations WHERE _id = $1",
+        )
+        .bind(&f.organization_id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap()
+    };
+    for (body, expected) in [
+        (
+            json!({"organizationId": f.organization_id, "pricingPlan": "Enterprise", "includedUsers": 3, "includedStorageBytes": 1000}),
+            (None, None),
+        ),
+        (
+            json!({"organizationId": f.organization_id, "pricingPlan": "Team"}),
+            (Some(5), Some(1_000_000_000_000)),
+        ),
+    ] {
+        let reply = send(&app, "POST", update, Some(&other.token), Some(body)).await;
+        assert_eq!(reply.status, 200, "{}", reply.body);
+        assert_eq!(quotas().await, expected);
+    }
+    let reply = send(&app, "GET", list, Some(&f.token), None).await;
+    let recorded = |plan: &str| {
+        reply
+            .body
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|update| update["pricingPlan"] == plan)
+            .unwrap()
+            .clone()
+    };
+    let enterprise = recorded("Enterprise");
+    assert_eq!(enterprise["includedUsers"], Value::Null);
+    assert_eq!(enterprise["includedStorageBytes"], Value::Null);
+    // The quotas of Team are recorded with the plan update.
+    assert!(
+        reply
+            .body
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|update| update["pricingPlan"] == "Team"
+                && update["includedUsers"] == 5
+                && update["includedStorageBytes"] == 1_000_000_000_000i64),
+        "{}",
+        reply.body
+    );
+    mailer.take();
     // Superusers list the plan updates of their own organization.
     let reply = send(&app, "GET", list, Some(&other.token), None).await;
     assert_eq!(reply.body[0]["organizationId"], other.organization_id);
@@ -710,7 +817,7 @@ async fn create_and_delete_organization() {
             teams,
             credits
         ),
-        ("Custom", "Jürgen's Lab", true, true, false, 1, 1234)
+        ("Open_Source", "Jürgen's Lab", true, true, false, 1, 0)
     );
     let reply = create(&app, &superuser.token, body).await;
     assert_eq!(

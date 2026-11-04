@@ -211,6 +211,22 @@ async fn segment_anything_mask_validates_loads_data_and_forwards_the_sam_mask() 
         },
     );
 
+    // Open Source has no AI-based quick select (checked before the dataset lookup).
+    let set_plan = |plan: &'static str| {
+        sqlx::query("UPDATE webknossos.organizations SET pricingPlan = $1::webknossos.PRICING_PLANS WHERE _id = $2")
+            .bind(plan)
+            .bind(&fixture.organization_id)
+            .execute(&db.pool)
+    };
+    set_plan("Open_Source").await.unwrap();
+    let (status, _, body) = post(&app, &path, &fixture.token, &valid).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        error(&body),
+        "AI-based quick select is not available in the pricing plan of your organization."
+    );
+    set_plan("Enterprise").await.unwrap();
+
     // Malformed bodies are rejected as invalid JSON.
     let (status, _, _) = post(&app, &path, &fixture.token, &json!({"mag": [1, 1, 1]})).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);

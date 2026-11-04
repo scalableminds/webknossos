@@ -1,4 +1,6 @@
+import type { Tween } from "@tweenjs/tween.js";
 import app from "app";
+import { createTween } from "libs/tween_group";
 import { getActiveTheme } from "theme";
 import {
   BufferGeometry,
@@ -69,7 +71,7 @@ class Cube {
   id: number | null | undefined;
   isHighlighted: boolean;
   isActive: boolean;
-  fillAnimationFrameId: number | null = null;
+  fillFadeTween: Tween<{ opacity: number }> | null = null;
   storePropertyUnsubscribers: Array<() => void> = [];
   deferDisposal: (dispose: () => void) => void;
 
@@ -295,29 +297,24 @@ class Cube {
     // visibility on the next render.
     this.updatePositionForCrossSections(getPosition(Store.getState().flycam));
 
-    const startTime = performance.now();
-    const animate = (now: number) => {
-      const fadeProgress = (now - startTime) / ACTIVE_FILL_FADE_DURATION_MS;
-      if (fadeProgress >= 1) {
-        this.fillAnimationFrameId = null;
+    this.fillFadeTween = createTween({ opacity: ACTIVE_FILL_OPACITY })
+      .to({ opacity: 0 }, ACTIVE_FILL_FADE_DURATION_MS)
+      .onUpdate(({ opacity }) => {
+        for (const fill of Object.values(fills)) {
+          fill.material.opacity = opacity;
+        }
+        app.vent.emit("rerender");
+      })
+      .onComplete(() => {
+        this.fillFadeTween = null;
         this.removeFills();
-        return;
-      }
-      const opacity = ACTIVE_FILL_OPACITY * (1 - fadeProgress);
-      for (const fill of Object.values(fills)) {
-        fill.material.opacity = opacity;
-      }
-      app.vent.emit("rerender");
-      this.fillAnimationFrameId = requestAnimationFrame(animate);
-    };
-    this.fillAnimationFrameId = requestAnimationFrame(animate);
+      })
+      .start();
   }
 
   removeFills() {
-    if (this.fillAnimationFrameId != null) {
-      cancelAnimationFrame(this.fillAnimationFrameId);
-      this.fillAnimationFrameId = null;
-    }
+    this.fillFadeTween?.stop();
+    this.fillFadeTween = null;
     if (this.crossSectionFills == null) {
       return;
     }
@@ -380,10 +377,8 @@ class Cube {
   }
 
   destroy() {
-    if (this.fillAnimationFrameId != null) {
-      cancelAnimationFrame(this.fillAnimationFrameId);
-      this.fillAnimationFrameId = null;
-    }
+    this.fillFadeTween?.stop();
+    this.fillFadeTween = null;
     for (const fn of this.storePropertyUnsubscribers) {
       fn();
     }

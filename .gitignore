@@ -49,7 +49,6 @@ public/bundle
 public/assets
 public/commit.txt
 public/docs
-public/docs/frontend-api
 public/test-bundle
 public/images
 public/wasm

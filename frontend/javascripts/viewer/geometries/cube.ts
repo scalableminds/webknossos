@@ -1,7 +1,22 @@
+import type { Tween } from "@tweenjs/tween.js";
 import app from "app";
+import { createTween } from "libs/tween_group";
 import { getActiveTheme } from "theme";
-import { BufferGeometry, Line, LineBasicMaterial, Vector3 as ThreeVector3 } from "three";
-import type { OrthoView, OrthoViewWithoutTDMap, Vector3 } from "viewer/constants";
+import {
+  BufferGeometry,
+  DoubleSide,
+  Line,
+  LineBasicMaterial,
+  Mesh,
+  MeshBasicMaterial,
+  Vector3 as ThreeVector3,
+} from "three";
+import type {
+  OrthoView,
+  OrthoViewWithoutTD,
+  OrthoViewWithoutTDMap,
+  Vector3,
+} from "viewer/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import dimensions from "viewer/model/dimensions";
@@ -16,7 +31,21 @@ type Properties = {
   showCrossSections?: boolean;
   id?: number;
   isHighlighted: boolean;
+  // A cube that is created as active does not flash its fill (see setIsActive). This avoids
+  // re-flashing whenever the user bounding boxes change and their cubes are rebuilt.
+  isActive: boolean;
+  // Schedules the disposal of GPU resources, e.g. to wait for pending shader compilations.
+  deferDisposal?: (dispose: () => void) => void;
 };
+
+// When a bounding box becomes active (selected), its cross sections are filled in the 2D
+// viewports, so that the user can spot it. A color change of the 1px outline alone is too
+// subtle to notice on top of the data. The fill immediately starts fading out, so that it does
+// not get in the way while annotating inside the box.
+const ACTIVE_FILL_OPACITY = 0.2;
+const ACTIVE_FILL_FADE_DURATION_MS = 1500;
+// The fill's two triangles, indexing the first four cross-section corners.
+const FILL_TRIANGLE_INDICES = [0, 1, 2, 0, 2, 3];
 
 class Cube {
   // The cross sections are lines that are rendered in the XY, YZ and XZ
@@ -25,6 +54,12 @@ class Cube {
   // would only be visible when the current position matches the edge positions
   // of the bounding box.
   crossSections: OrthoViewWithoutTDMap<Line>;
+  // Translucent fills of the cross sections. They only exist while the fill flashes after the
+  // bounding box became active, so that the other boxes don't pay for extra meshes and
+  // per-move geometry updates.
+  crossSectionFills: OrthoViewWithoutTDMap<Mesh<BufferGeometry, MeshBasicMaterial>> | null = null;
+  // The four corners of each cross section (without the third dimension), set in setCorners.
+  crossSectionCorners: OrthoViewWithoutTDMap<ThreeVector3[]> | null = null;
   cube: Line;
   min: Vector3;
   max: Vector3;
@@ -35,7 +70,10 @@ class Cube {
   color: number;
   id: number | null | undefined;
   isHighlighted: boolean;
+  isActive: boolean;
+  fillFadeTween: Tween<{ opacity: number }> | null = null;
   storePropertyUnsubscribers: Array<() => void> = [];
+  deferDisposal: (dispose: () => void) => void;
 
   constructor(properties: Properties) {
     // min/max should denote a half-open interval.
@@ -48,6 +86,8 @@ class Cube {
     this.initialized = false;
     this.visible = true;
     this.isHighlighted = properties.isHighlighted;
+    this.isActive = properties.isActive;
+    this.deferDisposal = properties.deferDisposal ?? ((dispose) => dispose());
     this.cube = new Line(new BufferGeometry(), this.getLineMaterial());
     this.crossSections = {
       PLANE_XY: new Line(new BufferGeometry(), this.getLineMaterial()),
@@ -79,6 +119,27 @@ class Cube {
       color: this.getLineColor(),
       linewidth: this.lineWidth,
     });
+  }
+
+  createCrossSectionFill(planeId: OrthoViewWithoutTD): Mesh<BufferGeometry, MeshBasicMaterial> {
+    const geometry = new BufferGeometry();
+    geometry.setIndex(FILL_TRIANGLE_INDICES);
+    if (this.crossSectionCorners != null) {
+      geometry.setFromPoints(this.crossSectionCorners[planeId]);
+      geometry.computeBoundingSphere();
+    }
+    const fill = new Mesh(
+      geometry,
+      new MeshBasicMaterial({
+        color: this.color,
+        side: DoubleSide,
+        transparent: true,
+        opacity: ACTIVE_FILL_OPACITY,
+        depthWrite: false,
+      }),
+    );
+    fill.visible = this.visible;
+    return fill;
   }
 
   getLineColor(): number {
@@ -118,29 +179,37 @@ class Cube {
       vec(min[0], max[1], min[2]),
     ]);
 
-    this.crossSections[OrthoViews.PLANE_XY].geometry.setFromPoints([
-      vec(min[0], min[1], 0),
-      vec(min[0], max[1], 0),
-      vec(max[0], max[1], 0),
-      vec(max[0], min[1], 0),
-      vec(min[0], min[1], 0),
-    ]);
-    this.crossSections[OrthoViews.PLANE_YZ].geometry.setFromPoints([
-      vec(0, min[1], min[2]),
-      vec(0, min[1], max[2]),
-      vec(0, max[1], max[2]),
-      vec(0, max[1], min[2]),
-      vec(0, min[1], min[2]),
-    ]);
-    this.crossSections[OrthoViews.PLANE_XZ].geometry.setFromPoints([
-      vec(min[0], 0, min[2]),
-      vec(min[0], 0, max[2]),
-      vec(max[0], 0, max[2]),
-      vec(max[0], 0, min[2]),
-      vec(min[0], 0, min[2]),
-    ]);
+    // The four corners of each cross section. The third dimension is set in
+    // updatePositionForCrossSections.
+    const crossSectionCorners: OrthoViewWithoutTDMap<ThreeVector3[]> = {
+      PLANE_XY: [
+        vec(min[0], min[1], 0),
+        vec(min[0], max[1], 0),
+        vec(max[0], max[1], 0),
+        vec(max[0], min[1], 0),
+      ],
+      PLANE_YZ: [
+        vec(0, min[1], min[2]),
+        vec(0, min[1], max[2]),
+        vec(0, max[1], max[2]),
+        vec(0, max[1], min[2]),
+      ],
+      PLANE_XZ: [
+        vec(min[0], 0, min[2]),
+        vec(min[0], 0, max[2]),
+        vec(max[0], 0, max[2]),
+        vec(max[0], 0, min[2]),
+      ],
+    };
+    this.crossSectionCorners = crossSectionCorners;
+    for (const planeId of OrthoViewValuesWithoutTDView) {
+      const corners = crossSectionCorners[planeId];
+      // Close the outline by returning to the first corner.
+      this.crossSections[planeId].geometry.setFromPoints([...corners, corners[0]]);
+      this.crossSectionFills?.[planeId].geometry.setFromPoints(corners);
+    }
 
-    for (const mesh of Object.values(this.crossSections).concat([this.cube])) {
+    for (const mesh of this.getMeshes()) {
       mesh.geometry.computeBoundingSphere();
       mesh.geometry.attributes.position.needsUpdate = true;
     }
@@ -158,26 +227,34 @@ class Cube {
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
-      const { geometry } = this.crossSections[planeId];
-
-      // Update the third dimension for all vectors
-      for (let idx = 0; idx < geometry.attributes.position.count; idx++) {
-        if (thirdDim === 0) {
-          geometry.attributes.position.setX(idx, position[thirdDim]);
-        } else if (thirdDim === 1) {
-          geometry.attributes.position.setY(idx, position[thirdDim]);
-        } else {
-          geometry.attributes.position.setZ(idx, position[thirdDim]);
-        }
+      const meshes: Array<Line | Mesh> = [this.crossSections[planeId]];
+      if (this.crossSectionFills != null) {
+        meshes.push(this.crossSectionFills[planeId]);
       }
+      for (const { geometry } of meshes) {
+        // Update the third dimension for all vectors
+        for (let idx = 0; idx < geometry.attributes.position.count; idx++) {
+          if (thirdDim === 0) {
+            geometry.attributes.position.setX(idx, position[thirdDim]);
+          } else if (thirdDim === 1) {
+            geometry.attributes.position.setY(idx, position[thirdDim]);
+          } else {
+            geometry.attributes.position.setZ(idx, position[thirdDim]);
+          }
+        }
 
-      geometry.computeBoundingSphere();
-      geometry.attributes.position.needsUpdate = true;
+        geometry.computeBoundingSphere();
+        geometry.attributes.position.needsUpdate = true;
+      }
     }
   }
 
-  getMeshes(): Line[] {
-    return [this.cube].concat(Object.values(this.crossSections));
+  getLines(): Line[] {
+    return [this.cube, ...Object.values(this.crossSections)];
+  }
+
+  getMeshes(): Array<Line | Mesh<BufferGeometry, MeshBasicMaterial>> {
+    return [...this.getLines(), ...Object.values(this.crossSectionFills ?? {})];
   }
 
   setIsHighlighted(highlighted: boolean) {
@@ -189,8 +266,74 @@ class Cube {
     this.updateLineColors();
   }
 
+  setIsActive(isActive: boolean) {
+    if (isActive === this.isActive) {
+      return;
+    }
+
+    this.isActive = isActive;
+    if (isActive) {
+      this.flashFill();
+    } else {
+      this.removeFills();
+    }
+  }
+
+  flashFill() {
+    this.removeFills();
+    if (!this.showCrossSections) {
+      return;
+    }
+    const fills = {
+      PLANE_XY: this.createCrossSectionFill(OrthoViews.PLANE_XY),
+      PLANE_XZ: this.createCrossSectionFill(OrthoViews.PLANE_XZ),
+      PLANE_YZ: this.createCrossSectionFill(OrthoViews.PLANE_YZ),
+    };
+    this.crossSectionFills = fills;
+    // Cubes are only flashed after they were added to the scene (cubes created as active
+    // don't flash), so add the fills next to the lines.
+    this.cube.parent?.add(...Object.values(fills));
+    // Set the third dimension of the fills. updateForCam refines their per-viewport
+    // visibility on the next render.
+    this.updatePositionForCrossSections(getPosition(Store.getState().flycam));
+
+    this.fillFadeTween = createTween({ opacity: ACTIVE_FILL_OPACITY })
+      .to({ opacity: 0 }, ACTIVE_FILL_FADE_DURATION_MS)
+      .onUpdate(({ opacity }) => {
+        for (const fill of Object.values(fills)) {
+          fill.material.opacity = opacity;
+        }
+        app.vent.emit("rerender");
+      })
+      .onComplete(() => {
+        this.fillFadeTween = null;
+        this.removeFills();
+      })
+      .start();
+  }
+
+  removeFills() {
+    this.fillFadeTween?.stop();
+    this.fillFadeTween = null;
+    if (this.crossSectionFills == null) {
+      return;
+    }
+    const fills = Object.values(this.crossSectionFills);
+    this.crossSectionFills = null;
+    for (const fill of fills) {
+      fill.removeFromParent();
+    }
+    this.deferDisposal(() => {
+      for (const fill of fills) {
+        fill.geometry.dispose();
+        fill.material.dispose();
+      }
+    });
+    app.vent.emit("rerender");
+  }
+
   updateLineColors() {
-    this.getMeshes().forEach((mesh) => {
+    this.getLines().forEach((mesh) => {
       // @ts-expect-error We don't use material arrays
       const meshMaterial: LineBasicMaterial = mesh.material;
       meshMaterial.color.setHex(this.getLineColor());
@@ -213,6 +356,9 @@ class Cube {
       } else {
         this.crossSections[planeId].visible = false;
       }
+      if (this.crossSectionFills != null) {
+        this.crossSectionFills[planeId].visible = this.crossSections[planeId].visible;
+      }
     }
 
     this.cube.visible = this.visible && id === OrthoViews.TDView;
@@ -224,10 +370,15 @@ class Cube {
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
       this.crossSections[planeId].visible = visible;
+      if (this.crossSectionFills != null) {
+        this.crossSectionFills[planeId].visible = visible;
+      }
     }
   }
 
   destroy() {
+    this.fillFadeTween?.stop();
+    this.fillFadeTween = null;
     for (const fn of this.storePropertyUnsubscribers) {
       fn();
     }
@@ -235,7 +386,7 @@ class Cube {
 
     for (const mesh of this.getMeshes()) {
       mesh.geometry.dispose();
-      (mesh.material as LineBasicMaterial).dispose();
+      (mesh.material as LineBasicMaterial | MeshBasicMaterial).dispose();
     }
   }
 }

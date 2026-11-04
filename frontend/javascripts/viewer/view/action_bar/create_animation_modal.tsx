@@ -1,9 +1,7 @@
 import { InfoCircleOutlined, LockOutlined } from "@ant-design/icons";
 import animationExamplePoster from "@images/animation-example-poster.jpg";
-import {
-  isFeatureAllowedByPricingPlan,
-  PricingPlanEnum,
-} from "admin/organization/pricing_plan_utils";
+import { useIsJobAvailable } from "admin/job/job_hooks";
+import { hasSomePaidPlan, PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { startRenderAnimationJob } from "admin/rest_api";
 import {
   Alert,
@@ -206,10 +204,7 @@ function CreateAnimationModal(props: Props) {
   const hasSkeleton = useWkSelector((state) => state.annotation.skeleton != null);
   const isSuperUser = activeUser?.isSuperUser ?? false;
 
-  const arePaidFeaturesAllowed = isFeatureAllowedByPricingPlan(
-    activeOrganization,
-    PricingPlanEnum.Team,
-  );
+  const arePaidFeaturesAllowed = hasSomePaidPlan(activeOrganization);
 
   const formatTriangles = (totalTriangles: number) => {
     const trianglesInThousands = totalTriangles / 1000;
@@ -377,10 +372,11 @@ function CreateAnimationModal(props: Props) {
     onClose?.(evt);
   };
 
-  const isFeatureDisabled = !(
-    dataset.dataStore.jobsEnabled &&
-    dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.RENDER_ANIMATION)
+  const isRenderAnimationJobAvailable = useIsJobAvailable(
+    dataset.dataStore,
+    APIJobCommand.RENDER_ANIMATION,
   );
+  const isFeatureDisabled = !(dataset.dataStore.jobsEnabled && isRenderAnimationJobAvailable);
 
   const fieldLabel = (label: string) => (
     <Typography.Text strong style={{ display: "block", fontSize: 13, marginBottom: 8 }}>
@@ -525,7 +521,10 @@ function CreateAnimationModal(props: Props) {
                       type="secondary"
                       style={{ display: "block", fontSize: 12, marginTop: 7 }}
                     >
-                      <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+                      <PricingEnforcedSpan
+                        requiredPricingPlan={PricingPlanEnum.Team}
+                        requiresPaidPlan
+                      >
                         HD is available on a paid plan.
                       </PricingEnforcedSpan>
                     </Typography.Text>
@@ -603,7 +602,7 @@ function CreateAnimationModal(props: Props) {
                   </Checkbox>
                 </Col>
                 <Col span={12}>
-                  <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+                  <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team} requiresPaidPlan>
                     <Checkbox
                       disabled={!arePaidFeaturesAllowed}
                       checked={isWatermarkEnabled}

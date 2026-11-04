@@ -147,6 +147,11 @@ class Cube {
           (state) => state.flycam.currentMatrix,
           () => this.updateCrossSections(),
         ),
+        // The cross sections of rotated planes depend on the voxel size.
+        listenToStoreProperty(
+          (state) => state.dataset.dataSource.scale.factor,
+          () => this.updateCrossSections(),
+        ),
       );
     }
   }
@@ -264,6 +269,11 @@ class Cube {
   setCrossSectionCorners(planeId: OrthoViewWithoutTD, corners: Vector3[] | null) {
     this.crossSectionCorners[planeId] = corners;
     if (corners == null) {
+      // Don't keep showing a stale cross section (e.g., in views that don't call updateForCam).
+      this.crossSections[planeId].visible = false;
+      if (this.crossSectionFills != null) {
+        this.crossSectionFills[planeId].visible = false;
+      }
       return;
     }
 
@@ -391,15 +401,16 @@ class Cube {
     this.visible = visible;
     this.cube.visible = visible;
 
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      this.crossSections[planeId].visible = visible;
-      if (this.crossSectionFills != null) {
-        this.crossSectionFills[planeId].visible = visible;
-      }
-    }
-
     if (visible && this.areCrossSectionsOutdated) {
       this.updateCrossSections();
+    }
+
+    for (const planeId of OrthoViewValuesWithoutTDView) {
+      const hasCrossSection = this.crossSectionCorners[planeId] != null;
+      this.crossSections[planeId].visible = visible && hasCrossSection;
+      if (this.crossSectionFills != null) {
+        this.crossSectionFills[planeId].visible = visible && hasCrossSection;
+      }
     }
   }
 

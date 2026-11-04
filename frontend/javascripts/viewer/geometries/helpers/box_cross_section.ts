@@ -205,11 +205,6 @@ export function getBoxCrossSection(
   }
 
   const worldNormal = getRotatedViewportNormal(planeId, rotationInRadian);
-  const alignedAxis = getAlignedAxis(worldNormal);
-  if (alignedAxis != null) {
-    return getAxisAlignedCrossSection(min, max, alignedAxis, position);
-  }
-
   // The box lives in voxel space, whereas the plane is rotated in world space. A plane
   // n · (p_world - q_world) = 0 with p_world = voxelSize ⊙ p_voxel has the normal
   // voxelSize ⊙ n in voxel space.
@@ -218,5 +213,16 @@ export function getBoxCrossSection(
     worldNormal[1] * voxelSize[1],
     worldNormal[2] * voxelSize[2],
   ];
+  // Check the alignment in voxel space, since an anisotropic voxel size can amplify
+  // components of the world-space normal.
+  const normalizedVoxelNormal = _normal.set(...voxelNormal).normalize();
+  const alignedAxis = getAlignedAxis([
+    normalizedVoxelNormal.x,
+    normalizedVoxelNormal.y,
+    normalizedVoxelNormal.z,
+  ]);
+  if (alignedAxis != null) {
+    return getAxisAlignedCrossSection(min, max, alignedAxis, position);
+  }
   return intersectBoxWithPlane(min, max, position, voxelNormal);
 }

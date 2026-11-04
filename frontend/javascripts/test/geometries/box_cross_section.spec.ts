@@ -190,6 +190,22 @@ describe("getBoxCrossSection with rotation", () => {
       getBoxCrossSection(min, max, OrthoViews.PLANE_XY, position, rotation, isotropic),
     );
   });
+  it("checks the axis alignment of the plane in voxel space", () => {
+    // The tilt is negligible in world space, but the anisotropic voxel size amplifies it.
+    const rotation: Vector3 = [1e-10, 0, 0];
+    const voxelSize: Vector3 = [1, 1000, 1];
+    const corners = getBoxCrossSection(
+      min,
+      max,
+      OrthoViews.PLANE_XY,
+      position,
+      rotation,
+      voxelSize,
+    );
+    expect(corners).not.toBeNull();
+    // A tilted cross section, not the axis-aligned rectangle at position[2].
+    expect(new Set(corners!.map((corner) => corner[2])).size).toBeGreaterThan(1);
+  });
 });
 
 describe("intersectBoxWithPlane", () => {

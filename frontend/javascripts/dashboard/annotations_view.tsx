@@ -7,6 +7,7 @@ import Icon, {
 } from "@ant-design/icons";
 import IconSort from "@images/icons/icon-sort.svg?react";
 import { PropTypes } from "@scalableminds/prop-types";
+import { unwrapOrThrow } from "admin/api/api_result";
 import {
   downloadAnnotation,
   editAnnotation,
@@ -419,6 +420,7 @@ class AnnotationsView extends PureComponent<Props, State> {
 
   renameAnnotation(annotation: APIAnnotationInfo, name: string) {
     editAnnotation(annotation.id, annotation.typ, { name })
+      .then(unwrapOrThrow)
       .then(() => {
         Toast.success(messages["annotation.was_edited"]);
         this.updateAnnotationInLocalState(annotation, (t) => update(t, { name: { $set: name } }));

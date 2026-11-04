@@ -17,8 +17,13 @@ export default function GlobalThemeProvider({
   const isDarkMode = userTheme === "dark";
 
   useEffect(() => {
-    // body is outside of the ReactDOM, so we have to manually update it
-    document.body.style.backgroundColor = getLayoutBackgroundColor(userTheme);
+    // html and body are outside of the ReactDOM, so we have to manually update them.
+    const backgroundColor = getLayoutBackgroundColor(userTheme);
+    document.body.style.backgroundColor = backgroundColor;
+    // Before React mounts, the backend paints html black for dark themes to avoid a white flash.
+    // Override that, too: a background on html stops the body background from covering the whole
+    // page, so content taller than the viewport would otherwise end on a black background.
+    document.documentElement.style.backgroundColor = backgroundColor;
   }, [userTheme]);
 
   return (

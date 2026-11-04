@@ -551,7 +551,8 @@ class AuthenticationController @Inject() (
         authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ??~>
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
         credentialId = authData.getCredentialId
-        multiUserId <- ObjectId.fromString(new String(authData.getUserHandle)) ??~>
+        userHandle <- Option(authData.getUserHandle).toFox ??~> Msg.Passkeys.unauthorized ~> UNAUTHORIZED
+        multiUserId <- ObjectId.fromString(new String(userHandle)) ??~>
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
         multiUser <- multiUserDAO.findOneById(multiUserId)(using GlobalAccessContext) ??~>
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
@@ -568,15 +569,9 @@ class AuthenticationController @Inject() (
           false, // User verification is not required put preferred.
           false // User presence is not required.
         )
+        // verify rejects sign count regressions and updates the credential record's counter in place.
         _ <- tryo(webAuthnManager.verify(authData, params)).toFox ??~> Msg.Passkeys.unauthorized ~> UNAUTHORIZED
-        oldSignCount = credential.credentialRecord.getCounter
-        newSignCount = authData.getAuthenticatorData.getSignCount
-        _ = credential.credentialRecord.setCounter(newSignCount)
         _ <- webAuthnCredentialDAO.updateSignCount(credential) ??~> Msg.Passkeys.unauthorized ~> UNAUTHORIZED
-
-        // Sign count is 0 if not used by the authenticator.
-        _ <- Fox.fromBool((oldSignCount == 0 && newSignCount == 0) || (oldSignCount < newSignCount)) ??~>
-          Msg.Passkeys.unauthorized ~> UNAUTHORIZED
         userId <- multiUser._lastLoggedInIdentity.toFox
         resultWithCookie <- loginUser(userId, "passkey/webauthn")
       } yield resultWithCookie

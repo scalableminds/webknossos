@@ -341,6 +341,19 @@ export default function BoundingBoxTab() {
   // Clear a hover highlight that is still set when the tab unmounts (e.g. the sidebar is closed).
   useEffect(() => () => getSceneControllerOrNull()?.highlightUserBoundingBox(null), []);
 
+  // While a box's color picker is open, the box isn't highlighted so that the picked color can be
+  // previewed. Depending on the platform, the row either doesn't receive a mouseleave when the
+  // picker opens, or receives mouseenter events while the cursor is over the picker.
+  const colorPickerBboxIdRef = useRef<number | null>(null);
+  const handleColorPickerOpenChange = useCallback((bboxId: number, isOpen: boolean) => {
+    if (isOpen) {
+      colorPickerBboxIdRef.current = bboxId;
+      getSceneControllerOrNull()?.highlightUserBoundingBox(null);
+    } else if (colorPickerBboxIdRef.current === bboxId) {
+      colorPickerBboxIdRef.current = null;
+    }
+  }, []);
+
   const userBoundingBoxColumns: NonNullable<TableProps<UserBoundingBox>["columns"]> = [
     {
       title: "Bounding Boxes",
@@ -360,6 +373,7 @@ export default function BoundingBoxTab() {
           onVisibilityChange={partial(setBoundingBoxVisibility, bb.id)}
           onNameChange={partial(setBoundingBoxName, bb.id)}
           onColorChange={partial(setBoundingBoxColor, bb.id)}
+          onColorPickerOpenChange={partial(handleColorPickerOpenChange, bb.id)}
           disabled={!allowUpdate}
           isLockedByOwner={isLockedByOwner}
           isOwner={isOwner}
@@ -404,7 +418,11 @@ export default function BoundingBoxTab() {
   const getPropsForUserRow = useCallback<NonNullable<TableProps<UserBoundingBox>["onRow"]>>(
     (bb: UserBoundingBox) => ({
       // Highlight the hovered bounding box in the viewports.
-      onMouseEnter: () => getSceneControllerOrNull()?.highlightUserBoundingBox(bb.id),
+      onMouseEnter: () => {
+        if (colorPickerBboxIdRef.current !== bb.id) {
+          getSceneControllerOrNull()?.highlightUserBoundingBox(bb.id);
+        }
+      },
       onMouseLeave: () => getSceneControllerOrNull()?.highlightUserBoundingBox(null),
       onClick: (event) => {
         // Popovers/dropdowns (e.g. the position/extent sliders, the MIP menu) render their

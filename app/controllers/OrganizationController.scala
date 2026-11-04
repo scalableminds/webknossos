@@ -1,12 +1,11 @@
 package controllers
 
 import com.scalableminds.util.Msg
-import org.apache.pekko.actor.ActorSystem
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
-import mail.{DefaultMails, Send}
+import mail.OrganizationEmailService
 
 import javax.inject.Inject
 import models.organization.{
@@ -40,15 +39,13 @@ class OrganizationController @Inject() (
     multiUserDAO: MultiUserDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     userService: UserService,
-    defaultMails: DefaultMails,
+    organizationEmailService: OrganizationEmailService,
     freeCreditTransactionService: FreeCreditTransactionService,
-    actorSystem: ActorSystem,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller {
 
   private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
-  private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
 
   def organizationsIsEmpty: Action[AnyContent] = Action.fox { _ =>
     for {
@@ -259,7 +256,7 @@ class OrganizationController @Inject() (
               .mkString(", ")}"
         )
         note = upgradeRequest.note.map(_.trim).filter(_.nonEmpty)
-        _ = Mailer ! Send(defaultMails.upgradeRequestMail(multiUser, organization.name, requestedChanges, note))
+        _ = organizationEmailService.sendUpgradeRequestEmail(multiUser, organization, requestedChanges, note)
       } yield Ok
     }
 
@@ -296,7 +293,7 @@ class OrganizationController @Inject() (
         // Note that this logs its failures rather than propagating them, as the plan update above has
         // already been persisted at this point.
         _ <- Fox.runOptional(request.body.pricingPlan)(newPricingPlan =>
-          organizationService.sendPricingPlanUpgradeMails(organization, organization.pricingPlan, newPricingPlan)
+          organizationEmailService.sendPricingPlanUpgradedEmails(organization, organization.pricingPlan, newPricingPlan)
         )
       } yield Ok
     }

@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
-import mail.{MailchimpClient, MailchimpTag}
+import mail.{AccessChangeEmailService, MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.dataset.*
 import models.dataset.explore.{
@@ -35,7 +35,7 @@ import models.folder.FolderService
 import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
 import models.team.{TeamDAO, TeamService}
-import models.user.{NotificationEmailService, User, UserDAO, UserService}
+import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
@@ -160,7 +160,7 @@ class DatasetController @Inject() (
     teamDAO: TeamDAO,
     wKRemoteSegmentAnythingClient: WKRemoteSegmentAnythingClient,
     teamService: TeamService,
-    notificationEmailService: NotificationEmailService,
+    accessChangeEmailService: AccessChangeEmailService,
     datasetDAO: DatasetDAO,
     datasetLayerAttachmentsDAO: DatasetLayerAttachmentDAO,
     datasetUploadToPathsService: UploadToPathsService,
@@ -538,7 +538,7 @@ class DatasetController @Inject() (
         teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
         teamsWithUpdate = request.body.filter(t => userTeams.exists(_._id == t))
         newTeams = (teamsWithUpdate ++ teamsWithoutUpdate).distinct
-        _ <- notificationEmailService.updateDatasetTeamsAndSendEmails(
+        _ <- accessChangeEmailService.updateDatasetTeamsAndSendEmails(
           dataset,
           oldAllowedTeams,
           newTeams,

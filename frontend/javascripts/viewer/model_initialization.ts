@@ -53,8 +53,10 @@ import UrlManager, {
 import {
   determineAllowedModes,
   getDataLayers,
+  getMagInfoByLayer,
   getSegmentationLayers,
   getUnifiedAdditionalCoordinates,
+  hasSegmentation,
   isElementClassSupported,
   isSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
@@ -93,6 +95,7 @@ import {
   validateMinimumRequirements,
 } from "viewer/model/bucket_data_handling/gpu_capability_check";
 import DataLayer from "viewer/model/data_layer";
+import { estimateUniformVectors } from "viewer/shaders/main_data_shaders.glsl";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
@@ -583,6 +586,20 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
       { sticky: true },
     );
     throw HANDLED_ERROR;
+  }
+  // The shader has uniforms for every layer, visible or not. Beyond the GPU's
+  // limit, it can't be linked and no image data is rendered. The rest of
+  // WEBKNOSSOS (e.g. skeletons) still works, so don't abort.
+  const magnificationCount = Object.values(getMagInfoByLayer(dataset)).flatMap((magInfo) =>
+    magInfo.getDenseMags(),
+  ).length;
+  const uniformVectors = estimateUniformVectors(
+    dataset.dataSource.dataLayers.length,
+    magnificationCount,
+    hasSegmentation(dataset),
+  );
+  if (uniformVectors > specs.maxUniformVectors) {
+    Toast.error(messages["webgl.too_many_uniforms"], { sticky: true });
   }
 
   if (import.meta.env.MODE !== "test") {

@@ -2,7 +2,7 @@
 
 Incremental replacement of the Scala datastore. This is a separate Cargo package; the main application still uses its existing datastore RPCs. Reader implementation is not HTTP-route or cutover parity.
 
-Requires **Rust 1.91 or newer** (zarrs 0.23.14). The main application package retains its own Rust requirement.
+Requires **Rust 1.94 or newer** (the workspace `rust-version`). The main application package retains its own Rust requirement.
 
 Implemented readers:
 
@@ -15,7 +15,7 @@ Implemented readers:
 
 BinaryDataService and DatasetArrayBucketProvider now serve all five static formats internally: bounded mag/provider caches, shared chunk cache, cuboid assembly and clipping, batch outcomes, additional axes, uint24/half-byte conversion, current-token forwarding and exact reload invalidation. AppState owns the shared services. DatasetCache consumes resolved datasource RPCs, with usability/layer checks, bounded single-flight caching and manual invalidation. Four authenticated binary-data HTTP entrypoints are implemented (frontend POST data, GET cuboid data, POST readData, Knossos bucket.raw), including version aliases, Play schema errors and missing/failure headers. Disk datasource loading now validates metadata, discovers attachments with explicit metadata precedence, and resolves mag/attachment paths. Metadata PUT uses the backup writer; cache DELETE and reload POST clear actual reader/vault caches and refresh/report local metadata. Selective reload retains other layers, and reload checks datasource organization across RPC fetches. BaseDirService, selected/global datasource scanning and typed metadata/realpath reporting are implemented. Four scan/directory endpoints are authenticated; the filesystem watcher starts from main with configured initial delay, completion-based interval and retry. Zarr3/HDF5 agglomerate mapping, histograms and thumbnails are implemented. Further DS4 route batches are recorded in datastore-ds4-proxy-finddata-zarr.md.
 
-Segment-index routes now read Zarr3 and local HDF5 attachments. The HDF5 subset uses pinned hdf5-reader0.9.1 with positional reads, bounded integer hyperslabs and a 100-file cache; it adds no native HDF5 runtime dependency. Real repository and independently generated contiguous/chunked, endian, gzip/shuffle/checksum fixtures verify the hash/position contract and reload behavior. Details: [segment-index checkpoint](../checkpoints/datastore-ds5-segment-index.md).
+Segment-index routes now read Zarr3 and local HDF5 attachments. The HDF5 subset uses pinned hdf5-reader 0.12.1 with positional reads, bounded integer hyperslabs and a 100-file cache; it adds no native HDF5 runtime dependency. Real repository and independently generated contiguous/chunked, endian, gzip/shuffle/checksum fixtures verify the hash/position contract and reload behavior. Details: [segment-index checkpoint](../checkpoints/datastore-ds5-segment-index.md).
 
 Seven segment-statistics routes read Zarr3 files and use the index plus actual binary buckets for volume/bounding-box fallback. Dense ids, format/mag/mapping compatibility, ordered metrics, agglomerate combination and exact source/layer cache invalidation are implemented. JNI scanner and compiled Scala math/JSON golden fixtures replay without native runtime dependencies. Complete datastore verification: 340 tests passed, fmt/clippy/inventories clean. Details: [statistics checkpoint](../checkpoints/datastore-ds5-segment-statistics.md).
 

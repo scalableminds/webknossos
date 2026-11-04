@@ -57,6 +57,15 @@ pub(crate) async fn serve(main_view: &MainView, request: Request) -> Option<Resp
         .precompressed_gzip();
     let response = match service.try_call(request).await {
         Ok(response) => response,
+        // tower-http 0.7.1 reports a missing file as an error instead of a 404 response.
+        Err(error)
+            if matches!(
+                error.kind(),
+                std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
+            ) =>
+        {
+            return None;
+        }
         Err(error) => {
             tracing::warn!(%error, "Could not read a static frontend file");
             return Some(StatusCode::INTERNAL_SERVER_ERROR.into_response());

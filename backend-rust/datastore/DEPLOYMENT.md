@@ -39,7 +39,7 @@ Keep secrets in dedicated key/credential/webhook fields. Do not embed credential
 
 ## Build and isolated rehearsal
 
-Run from `backend-rust` with Rust 1.91 or newer. Redis and reachable WEBKNOSSOS are required; no PostgreSQL schema bootstrap is part of datastore deployment.
+Run from `backend-rust` with Rust 1.94 or newer. Redis and reachable WEBKNOSSOS are required; no PostgreSQL schema bootstrap is part of datastore deployment.
 
 ```sh
 cargo fmt --manifest-path datastore/Cargo.toml --check

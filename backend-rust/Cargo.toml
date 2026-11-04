@@ -5,7 +5,7 @@ resolver = "3"
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.91"
+rust-version = "1.94"
 publish = false
 license = "AGPL-3.0-only"
 
@@ -16,7 +16,7 @@ license = "AGPL-3.0-only"
 webknossos-common = { path = "common" }
 webknossos-blosc = { path = "blosc" }
 axum = { version = "0.8", features = ["json", "query", "tokio", "http1", "multipart", "macros"] }
-base64 = "0.22"
+base64 = "0.23"
 prost = "0.14"
 quick-xml = "0.42"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
@@ -24,7 +24,7 @@ ring = "0.17"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal", "sync", "time"] }
-tower-http = { version = "0.6", features = ["request-id", "trace", "timeout", "catch-panic"] }
+tower-http = { version = "0.7", features = ["request-id", "trace", "timeout", "catch-panic"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 url = "2"
@@ -55,7 +55,7 @@ autotests = false
 webknossos-common.workspace = true
 axum.workspace = true
 base64.workspace = true
-bcrypt = "0.17"
+bcrypt = "0.19"
 chrono = { version = "0.4", features = ["serde"] }
 getrandom = "0.4"
 hmac = "0.12"

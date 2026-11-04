@@ -59,7 +59,7 @@ The following interactions and modes become available when working with some of 
 **Only Overwrite Empty Areas**: In contrast to the `Overwrite Everything` mode, this mode forces the brush & trace tools to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites. In case of erasing, only the current segment ID is overwritten. Both modes share one toggle button in the toolbar: its icon shows the current mode and the button is highlighted while `Only Overwrite Empty Areas` is active. Holding ++ctrl++ / ++cmd++ temporarily switches to the other mode.
 
 ![Interpolation Button](./images/interpolation-modifier.jpg){align=left width="60"} 
-**Interpolation**: Annotate a segment, skip a few sections in the Z direction, and annotate it again. Now, you can interpolate between the two segments. Read more on the [interpolation](#volume-interpolation) below. 
+**Interpolation**: Annotate a segment, skip a few slices, and annotate the same segment again. Now, you can fill in the slices between the two labeled slices automatically. Read more on the [interpolation](#volume-interpolation) below. 
 
 ![2D Fill Modifier](./images/2d-modifier.jpg){align=left width="60"} 
 ![3D Fill Modifier](./images/3d-modifier.jpg){align=left width="60"} 
@@ -67,6 +67,56 @@ The following interactions and modes become available when working with some of 
 
 ![Restrict Fill](./images/icon_restricted_floodfill.jpg){align=left width="60"} 
 **Restrict Fill by Bounding Box**: When enabled, the fill operation will be restricted by the smallest bounding box that encloses the clicked position. This feature can be useful when correcting segmentation in a small bounding box (e.g., when curating training data).
+
+## Annotating in different magnifications
+
+Like the image data, a volume annotation layer is stored in several [magnifications](../terminology.md) (mags): `1-1-1` is full resolution, `4-4-4` is downsampled by a factor of 4 in each dimension, and so on. When you zoom out, WEBKNOSSOS switches to a coarser mag, and the volume tools label voxels in the mag that is currently shown.
+
+You don't need to keep the magnifications in sync yourself. Every edit is automatically written to all magnifications of the layer:
+
+- **Coarser magnifications** are derived by downsampling. Your labels show up right away when you zoom out.
+- **Finer magnifications** are derived by upsampling. Each coarse voxel is copied into the block of fine voxels it covers. For example, a voxel labeled in `4-4-4` becomes a 4×4×4 cube in `1-1-1`, so a single brush stroke in `4-4-4` labels 4 slices at full resolution.
+
+Labeling while zoomed out is therefore a quick way to annotate large structures, but the result is coarser: at full resolution, its outlines may show blocky steps from the mag you painted in. Zoom in to annotate fine details and precise boundaries.
+
+### Zoom limits of the tools
+
+Because each edit is also written to the finer magnifications, a single stroke while zoomed out can change a very large number of voxels. To keep WEBKNOSSOS responsive, some tools are disabled when you zoom out too far. The limit is relative to the finest magnification of your volume layer:
+
+| Tool | Usable in |
+|---|---|
+| Brush, Eraser (Brush) | the finest mag of the layer and mags up to 8× coarser |
+| Trace, Eraser (Trace), Fill | the finest mag of the layer and mags up to 2× coarser |
+
+For a layer whose finest mag is `1-1-1`, the brush works up to `8-8-8`, while the trace and fill tools only work in `1-1-1` and `2-2-2`. If the layer doesn't contain `2-2-2`, the trace and fill tools only work in `1-1-1`. When a tool is disabled, its toolbar button shows a hint to zoom in. [Interpolation](#volume-interpolation) follows the limit of the active tool.
+
+!!! tip
+    If you want to annotate large structures while zoomed out, create the volume layer with [restricted magnifications](#restricting-magnifications). If the finest mag of the layer is `4-4-4`, all tools work in `4-4-4` and coarser mags within their limits, and annotating is much faster because no full-resolution data needs to be written.
+
+### Restricting magnifications
+
+By default, a volume layer contains every magnification of the dataset, and each edit is written to all of them. When you label large structures, most of this work goes into the finest magnification, which may make the tools slower and brushing less responsive on some machines.
+
+Restricting a volume layer to a range of magnifications means that labels are only stored in those magnifications. This is useful when:
+
+- **You annotate large structures** such as nuclei, cell bodies or organelles, which don't need full-resolution outlines. Excluding `1-1-1` (or the two finest mags) reduces the data that has to be updated and uploaded with each stroke, so the brush stays responsive and the annotation stays small.
+- **You want to annotate while zoomed out.** The volume tools can only be used [up to a certain zoom level](#zoom-limits-of-the-tools), counted from the finest magnification of the layer. If the finest mag of the layer is `4-4-4`, the trace and fill tools as well as interpolation work in `4-4-4` instead of being disabled.
+
+WEBKNOSSOS also suggests restricting magnifications when you annotate a large area in a fine magnification.
+
+Keep in mind:
+
+- Choose the finest magnification to match the level of detail you need. Labels can't be more detailed than the finest mag of the layer. If you zoom in further, you still annotate in that mag and the labels may look blocky.
+- The restriction is set when the volume layer is created and can't be changed afterwards. If you need a different range later, add a new volume annotation layer.
+- If the layer is based on an existing segmentation (a fallback layer), you can only choose among the magnifications of that segmentation.
+
+#### When creating an annotation
+
+On the dataset dashboard, click the three-dot menu next to **New Annotation** for the dataset you want to annotate. Use the **Restrict Volume Magnifications** setting to choose the range of magnifications. For example, skipping `1-1-1` or the two finest magnifications is a common choice for large structures.
+
+#### When adding a new volume annotation layer
+
+In an open annotation, go to the **Layers** tab on the left sidebar and click **Add Volume Annotation Layer** at the bottom of the layer list. The same setting is available there.
 
 ## Quick-select tool
 The Quick Select tool supports two modes: AI-based segmentation and threshold-based segmentation. Draw a selection around your target structure, and WEBKNOSSOS will generate a segment proposal.
@@ -104,9 +154,22 @@ If AI Quick Select is not available in your deployment, Quick Select runs in thr
 
 The Volume Interpolation feature accelerates your annotation workflow by automatically filling in intermediate slices:
 
-1. Label your structure in one slice (e.g., at z=10)
-2. Skip several slices and label the structure again (e.g., at z=14)
-3. Press the "Interpolate" button or use shortcut ++v++ to automatically generate labels for the slices in between
+1. Label your structure in one slice (e.g., at z=10) with the Brush, Trace or Quick Select tool
+2. Skip several slices and label the same segment again (e.g., at z=14)
+3. Press the "Interpolate" button in the toolbar or use shortcut ++v++ to automatically generate labels for the slices in between
+
+WEBKNOSSOS gradually blends the shape from the first labeled slice into the shape of the second one. The interpolated labels get the active segment ID. Interpolation fills in one segment at a time; it does not blend between two different segments.
+
+Things to keep in mind:
+
+- **Same segment:** Both slices need to be labeled with the active segment ID. Interpolation always starts from the last slice on which you labeled that segment.
+- **Distance:** The two labeled slices must be at least 2 and at most 100 slices apart. The slices are counted in the magnification you are annotating in. While zoomed out in `4-4-4`, 100 slices cover 400 slices at full resolution.
+- **Any viewport:** Interpolation works in the XY, YZ and XZ viewports. It fills along the viewport's depth direction.
+- **Visible area:** Only the part of the segment that is visible in the viewport is interpolated.
+- **Zoom:** Interpolation is available at the same zoom levels as the selected tool (see [zoom limits](#zoom-limits-of-the-tools)). When used while zoomed out, the interpolated labels are written to all magnifications like any other edit.
+- **Overwrite mode:** With [Only Overwrite Empty Areas](#tool-modes-and-extras) enabled, interpolation does not overwrite other segments.
+
+Interpolation works best when the shape changes gradually between the two slices. If a structure branches, splits or changes its shape a lot, label more slices with smaller gaps in between.
 
 !!! tip
     When working with [tasks](../tasks_projects/tasks.md), this feature needs to be explicitly enabled by the task creator.

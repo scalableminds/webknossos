@@ -55,6 +55,7 @@ import Constants, { ControlModeEnum, type Vector3 } from "viewer/constants";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
 import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 import UrlManager from "viewer/controller/url_manager";
+import type { ContourGeometry } from "viewer/geometries/helper_geometries";
 import type { ModelType } from "viewer/model";
 import Model from "viewer/model";
 import {
@@ -269,7 +270,7 @@ vi.mock("admin/rest_api.ts", async () => {
         _tracingStoreUrl: string,
         _tracingId: string,
         _segmentsInfo: unknown,
-      ): Promise<Array<MinCutTargetEdge>> => {
+      ): Promise<ApiResult<Array<MinCutTargetEdge>>> => {
         // This simply serves as a preparation so that specs can mock the function
         // when needed. Without this stub, it's harder to mock this specific function
         // later.
@@ -693,6 +694,8 @@ export async function setupWebknossosForTesting(
     // @ts-expect-error
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
     segmentMeshController: testContext.segmentMeshController,
+    // The outline the trace tool draws while tracing.
+    contour: { reset: () => {}, addEdgePoint: () => {} } as unknown as ContourGeometry,
   });
 
   __setFeatures({});

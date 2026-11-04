@@ -12,8 +12,8 @@ import { setViewModeAction } from "viewer/model/actions/settings_actions";
 import NumberSliderSetting from "../left_border_tabs/components/number_slider_setting";
 
 const warningColors: React.CSSProperties = {
-  color: "rgb(255, 155, 85)",
-  borderColor: "rgb(241, 122, 39)",
+  color: "var(--ant-color-warning)",
+  borderColor: "var(--ant-color-warning)",
 };
 
 const PopoverContent: React.FC<EmptyObject> = () => {

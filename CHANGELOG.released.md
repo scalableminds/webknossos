@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.11.1](https://github.com/scalableminds/webknossos/releases/tag/26.11.1) - 2026-10-29
+[Commits](https://github.com/scalableminds/webknossos/compare/26.11.0...26.11.1)
+
+### Changed
+- All segment-id parameters of the frontend API (e.g. `api.data.labelVoxels`, `api.tracing.setActiveCell` or `api.data.setSegmentColor`) accept plain numbers again, in addition to bigint. Ids above `Number.MAX_SAFE_INTEGER` still need to be passed as bigint. [#10304](https://github.com/scalableminds/webknossos/pull/10304)
+
 ## [26.11.0](https://github.com/scalableminds/webknossos/releases/tag/26.11.0) - 2026-10-28
 [Commits](https://github.com/scalableminds/webknossos/compare/26.10.2...26.11.0)
 
@@ -57,6 +63,12 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Removed
 - Removed the `isScratch` flag of datastores. All datastores are now treated equally when the same dataset is reported by multiple datastores. [#10193](https://github.com/scalableminds/webknossos/pull/10193)
+
+## [26.10.3](https://github.com/scalableminds/webknossos/releases/tag/26.10.3) - 2026-10-29
+[Commits](https://github.com/scalableminds/webknossos/compare/26.10.2...26.10.3)
+
+### Fixed
+- All segment-id parameters of the frontend API (e.g. `api.data.labelVoxels`, `api.tracing.setActiveCell` or `api.data.setSegmentColor`) accept plain numbers again, in addition to bigint. Ids above `Number.MAX_SAFE_INTEGER` still need to be passed as bigint. [#10304](https://github.com/scalableminds/webknossos/pull/10304)
 
 ## [26.10.2](https://github.com/scalableminds/webknossos/releases/tag/26.10.2) - 2026-10-21
 [Commits](https://github.com/scalableminds/webknossos/compare/26.10.1...26.10.2)

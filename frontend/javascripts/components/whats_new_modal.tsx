@@ -7,11 +7,12 @@ import {
   type ReleaseNotesReadState,
 } from "libs/release_notes";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { ModalWidth } from "theme";
 import { UserThemeConfigProvider } from "theme_provider";
 
-const YOUTUBE_URL_REGEX = /^https:\/\/(?:(?:www\.)?youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/;
+const YOUTUBE_URL_REGEX =
+  /^https:\/\/(?:(?:www\.)?youtube\.com\/watch\?(?:[^#]*&)?v=|youtu\.be\/)([\w-]+)/;
 
 // A bare YouTube link (e.g. `<https://www.youtube.com/watch?v=ID>` or `<https://youtu.be/ID>`) is
 // rendered as an embedded video. Links with a custom text stay regular links.
@@ -57,14 +58,25 @@ function ReleaseNoteEntry({ note, isUnread }: { note: ReleaseNote; isUnread: boo
   );
 }
 
-function ReleaseNoteList({ readState }: { readState: ReleaseNotesReadState }) {
+function ReleaseNoteList({
+  readState,
+  onLoaded,
+}: {
+  readState: ReleaseNotesReadState;
+  onLoaded: () => void;
+}) {
   const [releaseNotes, setReleaseNotes] = useState<ReleaseNote[] | null>(null);
   const [hasError, setHasError] = useState(false);
+  const onReleaseNotesLoaded = useEffectEvent(onLoaded);
 
   useEffect(() => {
     let isCurrent = true;
     loadReleaseNotes().then(
-      (notes) => isCurrent && setReleaseNotes(notes),
+      (notes) => {
+        if (!isCurrent) return;
+        setReleaseNotes(notes);
+        onReleaseNotesLoaded();
+      },
       (error) => {
         console.error(error);
         if (isCurrent) setHasError(true);
@@ -102,11 +114,14 @@ export function WhatsNewModal({
   isOpen,
   onClose,
   readState,
+  onLoaded,
 }: {
   isOpen: boolean;
   onClose: () => void;
   // Determines which release notes are marked as new.
   readState: ReleaseNotesReadState;
+  // Called once the release notes were loaded and are shown.
+  onLoaded: () => void;
 }) {
   return (
     // The modal is opened from the dark navbar and would otherwise inherit its theme.
@@ -119,7 +134,7 @@ export function WhatsNewModal({
         width={ModalWidth.Large}
         destroyOnHidden
       >
-        <ReleaseNoteList readState={readState} />
+        <ReleaseNoteList readState={readState} onLoaded={onLoaded} />
       </Modal>
     </UserThemeConfigProvider>
   );

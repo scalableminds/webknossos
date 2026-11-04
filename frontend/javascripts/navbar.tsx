@@ -527,13 +527,16 @@ function LoggedInAvatar({
   const showWhatsNewModal = () => {
     setWhatsNewModalReadState(releaseNotesReadState);
     setIsWhatsNewModalOpen(true);
+    sendAnalyticsEvent("open_whats_new_view");
+  };
+  // Only mark the release notes as seen once they could be loaded and are shown.
+  const markReleaseNotesAsSeen = () => {
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
       lastViewedWhatsNewTimestamp: Date.now(),
       newestSeenReleaseNoteId:
         getNewestReleaseNoteId() ?? releaseNotesReadState.newestSeenReleaseNoteId ?? undefined,
     });
     Store.dispatch(setActiveUserAction(newUserSync));
-    sendAnalyticsEvent("open_whats_new_view");
   };
 
   const filteredOrganizations = filterWithSearchQueryAND(
@@ -638,6 +641,7 @@ function LoggedInAvatar({
         isOpen={isWhatsNewModalOpen}
         onClose={() => setIsWhatsNewModalOpen(false)}
         readState={whatsNewModalReadState}
+        onLoaded={markReleaseNotesAsSeen}
       />
     </>
   );

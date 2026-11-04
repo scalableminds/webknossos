@@ -40,12 +40,13 @@ export function parseReleaseNoteDate(fileName: string): number {
 
 export function parseReleaseNote(id: string, date: number, source: string): ReleaseNote {
   const match = source.match(TITLE_REGEX);
-  if (match == null) {
+  const title = match?.[1].trim();
+  if (match == null || !title) {
     throw new Error(`Release note ${id} must start with a "# Title" heading.`);
   }
   return {
     id,
-    title: match[1].trim(),
+    title,
     date,
     body: source.slice(match[0].length).trim(),
   };

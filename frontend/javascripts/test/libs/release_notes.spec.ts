@@ -36,6 +36,7 @@ describe("Release notes", () => {
   it("should reject notes without a title heading", () => {
     expect(() => parseReleaseNote("a.md", 0, "Just text")).toThrow();
     expect(() => parseReleaseNote("b.md", 0, "## Not a title\n\nText")).toThrow();
+    expect(() => parseReleaseNote("c.md", 0, "#    \n\nText")).toThrow();
   });
 
   it("should load all release notes sorted from newest to oldest", async () => {

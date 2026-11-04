@@ -15,7 +15,9 @@ import ReactFlow, {
   MiniMap,
   type ReactFlowInstance,
 } from "reactflow";
+import { getActiveTheme } from "theme";
 import "reactflow/dist/style.css";
+import { ThemeIndependentStatusColor, WK_FONT } from "theme";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfigWithName,
@@ -27,8 +29,6 @@ import type { Theme } from "viewer/store";
 
 export const colorHasher = new ColorHash({ lightness: [0.35, 0.5, 0.65] });
 
-const FONT_FAMILY =
-  '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif';
 const NODE_FONT_SIZE = 12;
 const NODE_PADDING = 10;
 const NODE_HEIGHT = 36;
@@ -49,7 +49,7 @@ const getMeasuringCanvas = memoize((): CanvasRenderingContext2D => {
 const measureTextWidth = memoize(
   (text: string, fontSize: number): number => {
     const ctx = getMeasuringCanvas();
-    ctx.font = `${fontSize}px ${FONT_FAMILY}`;
+    ctx.font = `${fontSize}px ${WK_FONT}`;
     return Math.ceil(ctx.measureText(text).width);
   },
   (text, fontSize) => `${fontSize}#${text}`,
@@ -324,7 +324,7 @@ function computeLayout(key: string): DagLayout {
 }
 
 // Laying out the DAG is expensive, so it is only recomputed when the graph structure changes,
-// not when only run states (e.g., while polling a running workflow) or the selection change.
+// not when only run states (e.g., when refreshing a running workflow) or the selection change.
 function useDagLayout(dag: VoxelyticsWorkflowDag): DagLayout {
   const layoutInputKey = JSON.stringify(getLayoutInput(dag));
   return useMemo(() => computeLayout(layoutInputKey), [layoutInputKey]);
@@ -366,15 +366,13 @@ const isEdgeInChain = (chain: TaskChain, source: string, target: string) =>
   (chain.upstream.has(source) && (target === chain.selected || chain.upstream.has(target))) ||
   (chain.downstream.has(target) && (source === chain.selected || chain.downstream.has(source)));
 
-// The run-state colors are a fixed data-visualization palette that must stay recognizable
-// (and identical) in both themes, so they are deliberately not theme tokens.
 const RUN_STATE_COLORS: Partial<Record<VoxelyticsRunState, string>> = {
-  [VoxelyticsRunState.COMPLETE]: "rgb(9, 210, 150)",
-  [VoxelyticsRunState.RUNNING]: "rgb(22, 119, 255)",
-  [VoxelyticsRunState.FAILED]: "rgb(254, 34, 45)",
-  [VoxelyticsRunState.CANCELLED]: "rgb(254, 34, 45)",
-  [VoxelyticsRunState.STALE]: "rgb(250, 140, 22)",
-  [VoxelyticsRunState.SKIPPED]: "rgb(160, 160, 160)",
+  [VoxelyticsRunState.COMPLETE]: ThemeIndependentStatusColor.success,
+  [VoxelyticsRunState.RUNNING]: ThemeIndependentStatusColor.info,
+  [VoxelyticsRunState.FAILED]: ThemeIndependentStatusColor.error,
+  [VoxelyticsRunState.CANCELLED]: ThemeIndependentStatusColor.error,
+  [VoxelyticsRunState.STALE]: ThemeIndependentStatusColor.warning,
+  [VoxelyticsRunState.SKIPPED]: ThemeIndependentStatusColor.neutral,
 };
 
 const FADED_OPACITY = 0.4;
@@ -473,7 +471,7 @@ function DAGView({
   onClickHandler: (id: string) => void;
 }) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const theme = useWkSelector((state) => state.uiInformation.theme);
+  const theme = useWkSelector(getActiveTheme);
   // Resolved token values, because React Flow passes these into SVG presentation
   // attributes where `var(--ant-…)` references are not resolved.
   const { token } = antdTheme.useToken();
@@ -513,6 +511,7 @@ function DAGView({
       multiSelectionKeyCode={null}
       selectionKeyCode={null}
       zoomActivationKeyCode={null}
+      panActivationKeyCode={null}
       fitViewOptions={FIT_VIEW_OPTIONS}
       minZoom={0.3}
       maxZoom={2}

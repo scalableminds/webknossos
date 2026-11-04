@@ -110,6 +110,7 @@ class UpdatableTexture extends Texture {
     this.gl = this.renderer.getContext() as WebGL2RenderingContext;
     this.utils = new WebGLUtils(this.gl, this.renderer.extensions);
     if (originalTexSubImage2D == null) {
+      // See explanation at declaration of originalTexSubImage2D.
       // Install the override here, not in update(): three.js uploads the
       // empty placeholder when the texture is first bound, which can happen
       // before update() is ever called.

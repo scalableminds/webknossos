@@ -109,11 +109,9 @@ import {
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
-import {
-  doAllLayersHaveTheSameRotation,
-  getTransformedDatasetCenter,
-} from "./model/accessors/dataset_layer_transformation_accessor";
+import { getTransformedDatasetCenter } from "./model/accessors/dataset_layer_transformation_accessor";
 import { setVersionNumberAction } from "./model/actions/save_actions";
+import { doAllLayersHaveTheSameRotation } from "./model/helpers/dataset_rotation_helpers";
 import {
   convertBoundingBoxProtoToObject,
   convertServerAdditionalAxesToFrontEnd,
@@ -561,9 +559,13 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   const { dataset } = Store.getState();
   const specs = getSupportedTextureSpecs();
   validateSpecsForLayers(dataset, specs);
-  // Stored as gpuSetup.smallestCommonBucketCapacity. getLayerPoolPlan sizes
-  // the pools with it, and the max-zoom computation relies on it.
-  const { bucketCapacity: smallestCommonBucketCapacity } = computeLayerPoolPlan(
+  // The bucket capacity per layer of the user's GPU setting, lowered until all
+  // pools fit the GPU's limits. It's stored as
+  // gpuSetup.smallestCommonBucketCapacity and stays fixed until the page is
+  // reloaded, because the pools are allocated with it and can't grow. If the
+  // GPU setting changes in the meantime, the max-zoom computation uses the
+  // smaller of both capacities.
+  const { bucketCapacity: smallestCommonBucketCapacity, poolDepths } = computeLayerPoolPlan(
     dataset.dataSource.dataLayers,
     getRequiredBucketCapacityPerLayer(
       gpuFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR,
@@ -571,6 +573,17 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     ),
     specs.maxArrayTextureLayers,
   );
+  // Every layer needs at least one slice, so a pool with more layers than
+  // MAX_ARRAY_TEXTURE_LAYERS (at least 256) can't be allocated.
+  if (Math.max(...Object.values(poolDepths)) > specs.maxArrayTextureLayers) {
+    Toast.error(
+      messages["webgl.too_many_layers_per_pool"]({
+        maxArrayTextureLayers: specs.maxArrayTextureLayers,
+      }),
+      { sticky: true },
+    );
+    throw HANDLED_ERROR;
+  }
 
   if (import.meta.env.MODE !== "test") {
     console.log("Supporting", smallestCommonBucketCapacity, "buckets");

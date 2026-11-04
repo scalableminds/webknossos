@@ -3,6 +3,7 @@ import { requestResult } from "admin/api/api_result";
 import dayjs from "dayjs";
 import update from "immutability-helper";
 import { toBigInt } from "libs/bigint_helpers";
+import importDynamic from "libs/import_dynamic";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import ResumableUpload from "libs/resumable_upload/resumable_upload";
@@ -95,12 +96,6 @@ import {
   getDataOrTracingStoreUrl,
   type LayerSourceInfo,
 } from "viewer/model/bucket_data_handling/wkstore_helper";
-import {
-  parseProtoAnnotation,
-  parseProtoListOfLong,
-  parseProtoTracing,
-  serializeProtoListOfLong,
-} from "viewer/model/helpers/proto_helpers";
 import type {
   DatasetConfiguration,
   Mapping,
@@ -119,6 +114,23 @@ import { doWithToken, refreshToken } from "./api/token";
 export * from "./api/jobs";
 export * as meshApi from "./api/mesh";
 export * from "./api/token";
+
+// The protobuf helpers (and with them protobufjs) are only needed by the viewer, which also
+// imports them statically. Importing them dynamically here keeps them out of the initially
+// loaded code of all other pages. Within the viewer, the module is already loaded.
+// The promise is shared by all callers, since vitest returns the unmocked module to all but
+// the first of several concurrent dynamic imports of a mocked module. A failed import is not
+// kept, so that a later call can try again.
+let protoHelpersPromise: Promise<typeof import("viewer/model/helpers/proto_helpers")> | null = null;
+function loadProtoHelpers() {
+  protoHelpersPromise ??= importDynamic(() => import("viewer/model/helpers/proto_helpers")).catch(
+    (error) => {
+      protoHelpersPromise = null;
+      throw error;
+    },
+  );
+  return protoHelpersPromise;
+}
 
 type NewTeam = {
   readonly name: string;
@@ -914,6 +926,7 @@ export async function getTracingForAnnotationType(
       },
     );
   });
+  const { parseProtoTracing } = await loadProtoHelpers();
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
 
   if (import.meta.env.MODE !== "test") {
@@ -935,6 +948,12 @@ export async function getTracingForAnnotationType(
   return tracing;
 }
 
+const UPDATE_ACTION_LOG_RETRY_OPTIONS: RetryOptions = {
+  retries: 3,
+  initialDelayMs: 2000,
+  backoffFactor: 2,
+};
+
 export function getUpdateActionLog(
   tracingStoreUrl: string,
   annotationId: string,
@@ -942,27 +961,33 @@ export function getUpdateActionLog(
   newestVersion?: number,
   truncateActionLog: boolean = false,
   sortAscending: boolean = false,
-): Promise<Array<APIUpdateActionBatch>> {
-  return doWithToken(async (token) => {
-    const params = new URLSearchParams([["truncate", truncateActionLog.toString()]]);
-    params.set("token", token);
-    if (oldestVersion != null) {
-      params.set("oldestVersion", oldestVersion.toString());
-    }
-    if (newestVersion != null) {
-      params.set("newestVersion", newestVersion.toString());
-    }
-    const log: APIUpdateActionBatch[] = await retryAsyncFunction(() =>
-      Request.receiveJSON(
-        `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
-      ),
-    );
+  options: RequestOptions = {},
+  retryOptions: RetryOptions = UPDATE_ACTION_LOG_RETRY_OPTIONS,
+): Promise<ApiResult<Array<APIUpdateActionBatch>>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken(async (token) => {
+        const params = new URLSearchParams([["truncate", truncateActionLog.toString()]]);
+        params.set("token", token);
+        if (oldestVersion != null) {
+          params.set("oldestVersion", oldestVersion.toString());
+        }
+        if (newestVersion != null) {
+          params.set("newestVersion", newestVersion.toString());
+        }
+        const log: APIUpdateActionBatch[] = await Request.receiveJSON(
+          `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
+          adaptedOptions,
+        );
 
-    if (sortAscending) {
-      log.reverse();
-    }
-    return log;
-  });
+        if (sortAscending) {
+          log.reverse();
+        }
+        return log;
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function getNewestVersionForAnnotation(
@@ -998,6 +1023,7 @@ export async function getAnnotationProto(
       },
     );
   });
+  const { parseProtoAnnotation } = await loadProtoHelpers();
   const annotationProto = parseProtoAnnotation(annotationArrayBuffer);
   if (import.meta.env.MODE !== "test") {
     // Log to console as the decoded annotationProto is hard to inspect in the devtools otherwise.
@@ -1650,6 +1676,8 @@ type NewDatasetReply = {
 
 type FinishUploadReply = {
   datasetId: string;
+  // Only set if the dataset is converted. Older datastores don't send it.
+  conversionJobId?: string | null;
 };
 
 export function finishDatasetUpload(
@@ -2237,10 +2265,14 @@ type MeshRequest = {
 export function computeAdHocMesh(
   layerSourceInfo: LayerSourceInfo,
   meshRequest: MeshRequest,
-): Promise<{
-  buffer: ArrayBuffer;
-  neighbors: Array<number>;
-}> {
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<
+  ApiResult<{
+    buffer: ArrayBuffer;
+    neighbors: Array<number>;
+  }>
+> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   const {
     positionWithPadding,
@@ -2252,34 +2284,40 @@ export function computeAdHocMesh(
     ...rest
   } = meshRequest;
 
-  return doWithToken(async (token) => {
-    const params = new URLSearchParams();
-    params.set("token", token);
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken(async (token) => {
+        const params = new URLSearchParams();
+        params.set("token", token);
 
-    const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
-      `${requestUrl}/adHocMesh?${params}`,
-      {
-        data: {
-          // The back-end needs a small padding at the border of the
-          // bounding box to calculate the mesh. This padding
-          // is added here to the position and bbox size.
-          position: positionWithPadding, // position is in mag1
-          additionalCoordinates,
-          cubeSize, // cubeSize is in target mag
-          // Name and type of mapping to apply before building mesh (optional)
-          mapping: mappingName,
-          voxelSizeFactorInUnit: scaleFactor,
-          mag,
-          ...rest,
-        },
-      },
-    );
-    const neighbors = (parseMaybe(headers.neighbors) as number[] | null) || [];
-    return {
-      buffer,
-      neighbors,
-    };
-  });
+        const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
+          `${requestUrl}/adHocMesh?${params}`,
+          {
+            ...adaptedOptions,
+            data: {
+              // The back-end needs a small padding at the border of the
+              // bounding box to calculate the mesh. This padding
+              // is added here to the position and bbox size.
+              position: positionWithPadding, // position is in mag1
+              additionalCoordinates,
+              cubeSize, // cubeSize is in target mag
+              // Name and type of mapping to apply before building mesh (optional)
+              mapping: mappingName,
+              voxelSizeFactorInUnit: scaleFactor,
+              mag,
+              ...rest,
+            },
+          },
+        );
+        const neighbors = (parseMaybe(headers.neighbors) as number[] | null) || [];
+        return {
+          buffer,
+          neighbors,
+        };
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function getBucketPositionsForAdHocMesh(
@@ -2290,26 +2328,34 @@ export function getBucketPositionsForAdHocMesh(
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
   annotationVersion: number,
-): Promise<Vector3[]> {
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Vector3[]>> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
-  return doWithToken(async (token) => {
-    const params = new URLSearchParams();
-    params.set("token", token);
-    const positions = await Request.sendJSONReceiveJSON(
-      `${requestUrl}/segmentIndex/${segmentId}?${params}`,
-      {
-        data: {
-          cubeSize,
-          mag,
-          additionalCoordinates,
-          mappingName,
-          annotationVersion,
-        },
-        method: "POST",
-      },
-    );
-    return positions;
-  });
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken(async (token) => {
+        const params = new URLSearchParams();
+        params.set("token", token);
+        const positions: Vector3[] = await Request.sendJSONReceiveJSON(
+          `${requestUrl}/segmentIndex/${segmentId}?${params}`,
+          {
+            ...adaptedOptions,
+            data: {
+              cubeSize,
+              mag,
+              additionalCoordinates,
+              mappingName,
+              annotationVersion,
+            },
+            method: "POST",
+          },
+        );
+        return positions;
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function getAgglomerateTreeAsSkeletonTracing(
@@ -2345,6 +2391,7 @@ async function _getAgglomeratesForSegmentsHelper<T extends number | bigint>(
     return new Map();
   }
   const sortedSegmentIdArray = [...filteredSegmentIds].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const { parseProtoListOfLong, serializeProtoListOfLong } = await loadProtoHelpers();
   const segmentIdBuffer = serializeProtoListOfLong(sortedSegmentIdArray.map(toBigInt));
   const listArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams(extraParams);
@@ -2430,20 +2477,29 @@ export async function getMeshFilesForDatasetLayer(
   dataStoreUrl: string,
   dataset: APIDataset,
   layerName: string,
-): Promise<Array<APIMeshFileInfo>> {
-  const meshFiles: Array<APIMeshFileInfo> = await doWithToken((token) =>
-    Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/meshes?token=${token}`,
-    ),
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Array<APIMeshFileInfo>>> {
+  return requestResult(
+    async (adaptedOptions) => {
+      const meshFiles: Array<APIMeshFileInfo> = await doWithToken((token) =>
+        Request.receiveJSON(
+          `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/meshes?token=${token}`,
+          adaptedOptions,
+        ),
+      );
+
+      for (const file of meshFiles) {
+        if (file.mappingName === "") {
+          file.mappingName = undefined;
+        }
+      }
+
+      return meshFiles;
+    },
+    options,
+    retryOptions,
   );
-
-  for (const file of meshFiles) {
-    if (file.mappingName === "") {
-      file.mappingName = undefined;
-    }
-  }
-
-  return meshFiles;
 }
 
 // ### Connectomes

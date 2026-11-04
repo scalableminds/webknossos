@@ -1,4 +1,4 @@
-import { Button } from "antd";
+import { Button, Typography, theme } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
 import throttle from "lodash-es/throttle";
@@ -10,30 +10,40 @@ import type { NodeListItem } from "viewer/view/right_border_tabs/abstract_tree_r
 import AbstractTreeRenderer from "viewer/view/right_border_tabs/abstract_tree_renderer";
 
 const AbstractTreeTab: React.FC<EmptyObject> = () => {
-  const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
-  const activeTreeId = useWkSelector((state) => state.localSkeletonState.activeTreeId);
+  // Only select the active tree (instead of the whole skeleton) so that changes
+  // to other trees don't trigger an expensive redraw.
+  const activeTree = useWkSelector((state) => {
+    const { activeTreeId } = state.localSkeletonState;
+    return activeTreeId != null ? state.annotation.skeleton?.trees.getNullable(activeTreeId) : null;
+  });
+  const activeNodeId = useWkSelector((state) => state.annotation.skeleton?.activeNodeId);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const nodeListRef = useRef<Array<NodeListItem>>([]);
   const dispatch = useDispatch();
+  // The canvas cannot resolve CSS variables, so the resolved token values are passed instead.
+  // Since they are part of drawTreeImpl's dependencies, a theme switch triggers a redraw.
+  const { token } = theme.useToken();
+  const foregroundColor = token.colorText;
+  const commentColor = token.colorError;
 
   const drawTreeImpl = useCallback(() => {
-    if (!skeletonTracing || !isVisible) {
+    if (!isVisible) {
       return;
     }
 
-    const { activeNodeId, trees } = skeletonTracing;
     const canvas = canvasRef.current;
 
     if (canvas) {
       nodeListRef.current = AbstractTreeRenderer.drawTree(
         canvas,
-        activeTreeId != null ? trees.getNullable(activeTreeId) : null,
+        activeTree,
         activeNodeId,
+        { foreground: foregroundColor, comment: commentColor },
         [canvas.offsetWidth, canvas.offsetHeight],
       );
     }
-  }, [skeletonTracing, isVisible, activeTreeId]);
+  }, [activeTree, activeNodeId, isVisible, foregroundColor, commentColor]);
 
   // The throttled function is created only once and delegates to the latest
   // drawTreeImpl via an effect event. Otherwise, the throttling would not take
@@ -81,14 +91,9 @@ const AbstractTreeTab: React.FC<EmptyObject> = () => {
           <Button type="primary" onClick={onClickShow}>
             Show Abstract Tree
           </Button>
-          <span
-            style={{
-              color: "gray",
-              marginTop: 6,
-            }}
-          >
+          <Typography.Text type="secondary" style={{ marginTop: 6 }}>
             This may be slow for very large tracings.
-          </span>
+          </Typography.Text>
         </React.Fragment>
       )}
     </div>

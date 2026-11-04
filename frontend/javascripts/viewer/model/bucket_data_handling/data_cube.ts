@@ -83,7 +83,7 @@ const makeLocalMax = (max: Vector3, mag: Vector3): Vector3 => {
 };
 
 class DataCube {
-  BUCKET_COUNT_SOFT_LIMIT: number = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER; // Note that the value is adapted once again in the constructor
+  BUCKET_COUNT_SOFT_LIMIT: number;
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
   private cubes: Record<string, CubeEntry>;
@@ -135,17 +135,14 @@ class DataCube {
     elementClass: ElementClass,
     isSegmentation: boolean,
     layerName: string,
+    // Number of layers in the dataset; scales BUCKET_COUNT_SOFT_LIMIT down
+    // (see getBucketCountSoftLimitPerLayer).
+    totalLayerCount: number,
     // Whether this layer is backed by a volume tracing, i.e. can be edited. Only relevant
     // for the t-recycling check below (see usesTRecycling).
     isEditableVolumeLayer: boolean = false,
-    // Number of layers in the dataset; scales BUCKET_COUNT_SOFT_LIMIT down
-    // (see getBucketCountSoftLimitPerLayer). If omitted, the unscaled limit
-    // is used.
-    totalLayerCount?: number,
   ) {
-    if (totalLayerCount != null) {
-      this.BUCKET_COUNT_SOFT_LIMIT = getBucketCountSoftLimitPerLayer(totalLayerCount);
-    }
+    this.BUCKET_COUNT_SOFT_LIMIT = getBucketCountSoftLimitPerLayer(totalLayerCount);
     this.elementClass = elementClass;
     this.channelCount = getConstructorForElementClass(this.elementClass)[1];
     this.isSegmentation = isSegmentation;
@@ -348,6 +345,12 @@ class DataCube {
   // Either returns the existing bucket or creates a new one. Only returns
   // NULL_BUCKET if the bucket cannot possibly exist, e.g. because it is
   // outside the dataset's bounding box.
+  // Whether getOrCreateBucket returns a real bucket for the address, i.e., its mag
+  // exists in the layer and it intersects the layer's bounding box.
+  isBucketWithinLayer(address: BucketAddress): boolean {
+    return this.checkContainment(address).type !== "no";
+  }
+
   getOrCreateBucket(address: BucketAddress): Bucket {
     let bucket = this.getBucket(address);
 
@@ -598,7 +601,7 @@ class DataCube {
     // This function is only provided for testing purposes and should not be used internally,
     // since it only operates on one voxel and therefore is not performance-optimized. It should
     // be refactored away.
-    // Please make use of a LabeledVoxelsMap instead.
+    // Please use the volume tool drivers (viewer/model/volumetracing/integration) instead.
     const voxelInCube = this.boundingBox.containsPoint(voxel);
 
     if (voxelInCube) {

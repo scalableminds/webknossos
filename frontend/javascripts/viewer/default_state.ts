@@ -216,6 +216,7 @@ const defaultState: WebknossosState = {
   save: {
     queue: [],
     isSavingDisabled: false,
+    hasSaveError: false,
     lastSaveTimestamp: 0,
     progressInfo: {
       processedActionCount: 0,
@@ -297,7 +298,7 @@ const defaultState: WebknossosState = {
       right: false,
       left: false,
     },
-    theme: getSystemColorTheme(),
+    systemTheme: getSystemColorTheme(),
     isWkInitialized: false,
     isUiReady: false,
     quickSelectState: "inactive",

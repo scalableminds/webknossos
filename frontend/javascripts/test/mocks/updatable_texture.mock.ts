@@ -39,7 +39,7 @@ class MockUpdatableTexture {
   }
 
   update(src: Float32Array | Uint8Array, x: number, y: number, _width: number, _height: number) {
-    this.texture.set(src, y * this.width + x);
+    this.texture.set(src, (y * this.width + x) * this.channelCount);
   }
 
   setRenderer() {}
@@ -75,7 +75,7 @@ class MockUpdatableTextureArray {
     _height: number,
     zOffset: number,
   ) {
-    this.texture.set(src, (zOffset * this.height + y) * this.width + x);
+    this.texture.set(src, ((zOffset * this.height + y) * this.width + x) * this.channelCount);
   }
 
   setRenderer() {}

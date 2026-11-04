@@ -18,6 +18,8 @@ export function getSupportedTextureSpecs(): GpuSpecs {
           MAX_TEXTURE_SIZE: 0,
           MAX_TEXTURE_IMAGE_UNITS: 1,
           MAX_ARRAY_TEXTURE_LAYERS: 2,
+          MAX_FRAGMENT_UNIFORM_VECTORS: 3,
+          MAX_VERTEX_UNIFORM_VECTORS: 5,
 
           getParameter(param: number) {
             if (ctxName === "webgl2") {
@@ -25,6 +27,8 @@ export function getSupportedTextureSpecs(): GpuSpecs {
                 "0": 4096,
                 "1": 16,
                 "2": 2048,
+                "3": 1024,
+                "5": 1024,
                 "4": "debugInfo.UNMASKED_RENDERER_WEBGL",
                 "7937": "Radeon R9 200 Series",
               };
@@ -76,6 +80,10 @@ export function getSupportedTextureSpecs(): GpuSpecs {
     supportedTextureSize,
     maxTextureCount: guardAgainstMesaLimit(maxTextureImageUnits, gl),
     maxArrayTextureLayers: gl.getParameter(gl.MAX_ARRAY_TEXTURE_LAYERS),
+    maxUniformVectors: Math.min(
+      gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS),
+      gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS),
+    ),
   };
 }
 

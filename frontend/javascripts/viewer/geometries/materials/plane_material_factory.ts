@@ -69,11 +69,12 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
   getDtypeConfigForElementClass,
-  LayerPool,
+  LAYER_POOL_SAMPLERS,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import {
   getGlobalLayerIndexForLayerName,
   getLayerPoolTextureManagers,
+  getSharedLookUpCuckooTable,
 } from "viewer/model/bucket_data_handling/layer_rendering_manager";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import shaderEditor from "viewer/model/helpers/shader_editor";
@@ -117,16 +118,6 @@ const getMaxVaryingVectors = memoizeOne((): number => {
   const gl = getRenderer().getContext() as WebGL2RenderingContext;
   return gl.getParameter(gl.MAX_VARYING_VECTORS);
 });
-
-// Must match the pool_*_textures uniform names declared in
-// SHARED_UNIFORM_DECLARATIONS (main_data_shaders.glsl.ts).
-const LAYER_POOL_UNIFORM_NAME_BY_POOL: Array<[LayerPool, string]> = [
-  [LayerPool.F32, "pool_f32_textures"],
-  [LayerPool.U8, "pool_u8_textures"],
-  [LayerPool.S8, "pool_s8_textures"],
-  [LayerPool.U16, "pool_u16_textures"],
-  [LayerPool.S16, "pool_s16_textures"],
-];
 
 // three.js can only upload mat4[]/vec3[] uniforms whose elements are three.js
 // objects (with toArray()). Plain number tuples crash its uploader.
@@ -423,24 +414,21 @@ class PlaneMaterialFactory {
   }
 
   attachTextures(): void {
-    let sharedLookUpTexture;
-    let sharedLookUpCuckooTable;
-    // The lookup texture and cuckoo table are shared, so any layer returns the
-    // same ones. Calling getDataTextures() also sets up each layer's
-    // TextureBucketManager if needed.
     // Same ordering as activeMagIndices (both iterate Model.getAllLayers()), matching
     // globalLayerIndex. Built here, not in setupUniforms, because textureBucketManager only
-    // exists once getDataTextures() below has triggered its lazy setup.
+    // exists once getTextureBucketManager() below has triggered its lazy setup.
     const usesTRecyclingPerLayer: number[] = [];
     // Voxels per bucket in each layer's data texture. Read off the TextureBucketManager, not
     // the DataCube: the two disagree for t-recycling layers, and the shader derives its row and
     // texture indices from this, so it must match the upload side exactly.
     const bucketVoxelCountPerLayer: number[] = [];
-    for (const dataLayer of Model.getAllLayers()) {
-      const [lookUpTexture] = dataLayer.layerRenderingManager.getDataTextures();
-      sharedLookUpTexture = lookUpTexture;
-      sharedLookUpCuckooTable = dataLayer.layerRenderingManager.getSharedLookUpCuckooTable();
-      const { textureBucketManager } = dataLayer.layerRenderingManager;
+    const allLayers = Model.getAllLayers();
+    if (allLayers.length === 0) {
+      throw new Error("Empty layer list at unexpected point.");
+    }
+    for (const dataLayer of allLayers) {
+      // Also sets up the layer's TextureBucketManager if needed.
+      const textureBucketManager = dataLayer.layerRenderingManager.getTextureBucketManager();
       usesTRecyclingPerLayer.push(textureBucketManager.usesTRecycling ? 1 : 0);
       bucketVoxelCountPerLayer.push(textureBucketManager.bucketVoxelCount);
     }
@@ -451,21 +439,18 @@ class PlaneMaterialFactory {
       value: bucketVoxelCountPerLayer,
     };
 
-    if (!sharedLookUpCuckooTable) {
-      throw new Error("Empty layer list at unexpected point.");
-    }
-
+    // Shared by all layers, like the pool textures below.
+    const sharedLookUpCuckooTable = getSharedLookUpCuckooTable();
     this.uniforms.lookup_texture = {
-      value: sharedLookUpTexture,
+      value: sharedLookUpCuckooTable._texture,
     };
 
-    const poolTextureManagers = getLayerPoolTextureManagers();
-    for (const [pool, poolName] of LAYER_POOL_UNIFORM_NAME_BY_POOL) {
-      const poolTextureManager = poolTextureManagers.get(pool);
-      if (poolTextureManager == null) {
-        throw new Error(`No PoolTextureManager found for pool ${pool}.`);
-      }
-      this.uniforms[poolName] = { value: poolTextureManager.textureArray };
+    // Only pools that a layer uses have a texture, and only those are declared
+    // in the shader.
+    for (const [pool, poolTextureManager] of getLayerPoolTextureManagers()) {
+      this.uniforms[LAYER_POOL_SAMPLERS[pool].uniformName] = {
+        value: poolTextureManager.textureArray,
+      };
     }
 
     this.unsubscribeColorSeedsFn = sharedLookUpCuckooTable.subscribeToSeeds((seeds: number[]) => {

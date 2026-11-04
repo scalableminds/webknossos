@@ -1,3 +1,4 @@
+import { LayerPool } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { getAbsoluteCoords, getMagnificationFactors } from "viewer/shaders/coords.glsl";
 import { hashCombine } from "./hashing.glsl";
@@ -36,23 +37,41 @@ const getRgbaAtXYIndex: ShaderModule = {
       uint poolId = layerPoolId[idx];
       float dtypeNormalizer = layerDtypeNormalizer[idx];
       ivec3 coord = ivec3(int(x), int(y), int(textureIdx));
-      if (poolId == 0u) {
-        // F32 pool: native float values, no rescaling.
-        return texelFetch(pool_f32_textures, coord, 0);
-      } else if (poolId == 2u) {
-        // S8 pool: hardware SNORM-decoded to [-1, 1] already.
-        return dtypeNormalizer * texelFetch(pool_s8_textures, coord, 0);
-      } else if (poolId == 3u) {
-        // U16 pool: integer sampler, raw component values (no normalizer).
-        uvec4 val = texelFetch(pool_u16_textures, coord, 0);
-        return vec4(val.x, 0., val.y, 0.);
-      } else if (poolId == 4u) {
-        // S16 pool: integer sampler, raw component values (no normalizer).
-        ivec4 val = texelFetch(pool_s16_textures, coord, 0);
-        return vec4(val.x, 0., val.y, 0.);
-      }
-      // U8 pool: hardware UNORM-decoded to [0, 1] already.
-      return dtypeNormalizer * texelFetch(pool_u8_textures, coord, 0);
+      // Only the pools that the dataset uses are declared (see
+      // getLayerPoolsInDataset).
+      <% if (layerPoolsInDataset.includes(${LayerPool.F32})) { %>
+        if (poolId == ${LayerPool.F32}u) {
+          // F32 pool: native float values, no rescaling.
+          return texelFetch(pool_f32_textures, coord, 0);
+        }
+      <% } %>
+      <% if (layerPoolsInDataset.includes(${LayerPool.S8})) { %>
+        if (poolId == ${LayerPool.S8}u) {
+          // S8 pool: hardware SNORM-decoded to [-1, 1] already.
+          return dtypeNormalizer * texelFetch(pool_s8_textures, coord, 0);
+        }
+      <% } %>
+      <% if (layerPoolsInDataset.includes(${LayerPool.U16})) { %>
+        if (poolId == ${LayerPool.U16}u) {
+          // U16 pool: integer sampler, raw component values (no normalizer).
+          uvec4 val = texelFetch(pool_u16_textures, coord, 0);
+          return vec4(val.x, 0., val.y, 0.);
+        }
+      <% } %>
+      <% if (layerPoolsInDataset.includes(${LayerPool.S16})) { %>
+        if (poolId == ${LayerPool.S16}u) {
+          // S16 pool: integer sampler, raw component values (no normalizer).
+          ivec4 val = texelFetch(pool_s16_textures, coord, 0);
+          return vec4(val.x, 0., val.y, 0.);
+        }
+      <% } %>
+      <% if (layerPoolsInDataset.includes(${LayerPool.U8})) { %>
+        if (poolId == ${LayerPool.U8}u) {
+          // U8 pool: hardware UNORM-decoded to [0, 1] already.
+          return dtypeNormalizer * texelFetch(pool_u8_textures, coord, 0);
+        }
+      <% } %>
+      return vec4(0.);
     }
   `,
 };

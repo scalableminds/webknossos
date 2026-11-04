@@ -3,6 +3,7 @@ import { unwrapOrThrow } from "admin/api/api_result";
 import { changePassword, logoutUserEverywhere } from "admin/rest_api";
 import { Alert, App, Button, Col, Form, Input, Row, Space } from "antd";
 import features from "features";
+import { reactQueryClient } from "libs/react_query_client";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useState } from "react";
@@ -32,6 +33,8 @@ function AccountSecurityView() {
       await changePassword(formValues);
       Toast.success(messages["auth.reset_pw_confirmation"]);
       unwrapOrThrow(await logoutUserEverywhere());
+      // Don't keep the previous user's data around for the next login in this tab.
+      reactQueryClient.clear();
       dispatch(logoutUserAction());
       navigate("/auth/login");
     } catch (error) {
@@ -164,6 +167,7 @@ function AccountSecurityView() {
     logoutUserEverywhere()
       .then((result) => unwrapOrThrow(result))
       .then(() => {
+        reactQueryClient.clear();
         dispatch(logoutUserAction());
         navigate("/auth/login");
       })

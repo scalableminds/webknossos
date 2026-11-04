@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.box.Full
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceStatus
 import models.dataset.{Dataset, DatasetDAO, DataStoreDAO, WKRemoteDataStoreClient}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
@@ -187,7 +188,7 @@ class JobService @Inject() (
   def cleanUpIfFailed(job: Job): Fox[Unit] =
     if (job.state == JobState.FAILURE && job.command == JobCommand.convert_to_wkw) {
       logger.info(
-        s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the directoryName..."
+        s"WKW conversion job ${job._id} failed. Marking dataset as conversion failed..."
       )
       val commandArgs = job.args.value
       for {
@@ -196,7 +197,11 @@ class JobService @Inject() (
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(using
           GlobalAccessContext
         ) ?~> Msg.Dataset.notFound(datasetDirectoryName)
-        _ <- datasetDAO.deleteDataset(dataset._id) ?~> Msg.Dataset.deleteFromDbFailed
+        _ <- datasetDAO.updateDatasetStatusByDatasetId(
+          dataset._id,
+          DataSourceStatus.conversionFailed,
+          isUsable = false
+        )(using GlobalAccessContext)
       } yield ()
     } else Fox.successful(())
 
@@ -287,7 +292,7 @@ class JobService @Inject() (
       user: User,
       voxelSize: VoxelSize,
       organizationBaseDirectory: UPath
-  ): Fox[Unit] =
+  ): Fox[Job] =
     for {
       organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
         .notFound(dataset._organization)
@@ -301,13 +306,13 @@ class JobService @Inject() (
         "voxel_size_factor" -> voxelSize.factor.toUriLiteral,
         "voxel_size_unit" -> voxelSize.unit
       )
-      _ <- submitJob(
+      job <- submitJob(
         JobCommand.convert_to_wkw,
         commandArgs,
         user,
         dataset._dataStore
       ) ?~> Msg.Job.ConvertToWkw.submitFailed
-    } yield ()
+    } yield job
 
   def submitPaidJob(
       command: JobCommand,
@@ -339,6 +344,13 @@ class JobService @Inject() (
       }
       _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
     } yield job
+
+  // Arbitrary workflow config overrides are reserved for super users.
+  def assertCustomConfigurationAllowed(customConfiguration: Option[JsObject], user: User)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] =
+    if (customConfiguration.exists(_.keys.nonEmpty)) userService.assertIsSuperUser(user) ~> FORBIDDEN
+    else Fox.successful(())
 
   def jobsSupportedByAvailableWorkers(dataStoreName: String): Fox[Set[JobCommand]] =
     for {

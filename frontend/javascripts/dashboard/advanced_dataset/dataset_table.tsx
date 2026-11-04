@@ -52,6 +52,7 @@ import { Fragment, PureComponent, useCallback, useContext, useEffect } from "rea
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Link } from "react-router";
+import { getActiveTheme } from "theme";
 import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import { Unicode } from "viewer/constants";
@@ -60,7 +61,7 @@ import CategorizationLabel from "viewer/view/components/categorization_label";
 import EditableTextIcon from "viewer/view/components/editable_text_icon";
 import { ContextMenuContext } from "viewer/view/context_menu/context_menu";
 import { GenericContextMenuContainer } from "viewer/view/context_menu/generic_context_menu_container";
-import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
+import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/generic_context_menu_helpers";
 
 type FolderItemWithName = FolderItem & { name: string };
 type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
@@ -306,7 +307,7 @@ const DraggableDatasetRow = ({
   rowKey,
   ...restProps
 }: DraggableDatasetRowProps) => {
-  const theme = useWkSelector((state) => state.uiInformation.theme);
+  const theme = useWkSelector(getActiveTheme);
 
   // @ts-expect-error
   const datasetId = restProps["data-row-key"];

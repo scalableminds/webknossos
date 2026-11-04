@@ -42,7 +42,6 @@ export function createUpdatableTexture(
   return newTexture;
 }
 
-// This function has to be in its own file as non-resolvable cycles are created otherwise
 export function createUpdatableTextureArray(
   width: number,
   height: number,

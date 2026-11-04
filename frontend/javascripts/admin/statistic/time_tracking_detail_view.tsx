@@ -1,7 +1,7 @@
 import { getTimeTrackingForUserSummedPerAnnotation } from "admin/rest_api";
 import { Col, Divider, Row } from "antd";
+import FormattedDuration from "components/formatted_duration";
 import dayjs from "dayjs";
-import { formatMilliseconds } from "libs/format_utils";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
 import groupBy from "lodash-es/groupBy";
 import type { ReactElement } from "react";
@@ -43,7 +43,9 @@ const renderRow = (
           <Col span={STATISTICS_SPAN}>
             <AnnotationStats stats={timeEntry.annotationLayerStats} />
           </Col>
-          <Col span={TIMESPAN_SPAN}>{formatMilliseconds(timeEntry.timeMillis)}</Col>
+          <Col span={TIMESPAN_SPAN}>
+            <FormattedDuration durationMs={timeEntry.timeMillis} />
+          </Col>
         </Row>
       ));
       annotationRows = annotationRows.concat(tableRows);
@@ -62,7 +64,9 @@ const renderRow = (
           <Col span={STATISTICS_SPAN}>
             <AnnotationStats stats={timeEntry.annotationLayerStats} />
           </Col>
-          <Col span={TIMESPAN_SPAN}>{formatMilliseconds(timeEntry.timeMillis)}</Col>
+          <Col span={TIMESPAN_SPAN}>
+            <FormattedDuration durationMs={timeEntry.timeMillis} />
+          </Col>
         </Row>
       ));
       taskRows = taskRows.concat(tableRows);

@@ -1,4 +1,5 @@
 import app from "app";
+import { getActiveTheme } from "theme";
 import { BufferGeometry, Line, LineBasicMaterial, Vector3 as ThreeVector3 } from "three";
 import type { OrthoView, OrthoViewWithoutTDMap, Vector3 } from "viewer/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
@@ -58,6 +59,11 @@ class Cube {
       this.setCorners(this.min, this.max);
     }
 
+    // The highlight color depends on the theme.
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(getActiveTheme, () => this.updateLineColors()),
+    );
+
     if (this.showCrossSections) {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
@@ -77,7 +83,7 @@ class Cube {
 
   getLineColor(): number {
     if (this.isHighlighted) {
-      return Store.getState().uiInformation.theme === "light" ? 0xeeeeee : 0xffffff;
+      return getActiveTheme(Store.getState()) === "light" ? 0xeeeeee : 0xffffff;
     }
     return this.color;
   }
@@ -180,6 +186,10 @@ class Cube {
     }
 
     this.isHighlighted = highlighted;
+    this.updateLineColors();
+  }
+
+  updateLineColors() {
     this.getMeshes().forEach((mesh) => {
       // @ts-expect-error We don't use material arrays
       const meshMaterial: LineBasicMaterial = mesh.material;

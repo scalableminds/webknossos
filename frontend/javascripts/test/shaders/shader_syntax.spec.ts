@@ -1,7 +1,11 @@
 import { parser } from "@shaderfrog/glsl-parser";
+import range from "lodash-es/range";
 import mags from "test/fixtures/mags";
+import type { ElementClass } from "types/api_types";
+import { getDtypeConfigForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import getMainFragmentShader, {
   computeVertexBucketAlignmentLayerCap,
+  estimateUniformVectors,
   getMainVertexShader,
   type Params,
 } from "viewer/shaders/main_data_shaders.glsl";
@@ -366,5 +370,85 @@ describe("computeVertexBucketAlignmentLayerCap", () => {
     // WebGL2 minimum.
     expect(computeVertexBucketAlignmentLayerCap(15, 0)).toBe(6);
     expect(computeVertexBucketAlignmentLayerCap(15, 10)).toBe(1);
+  });
+});
+
+// Counts the uniform vectors that the code declares and uses: one per scalar
+// or vector, one per row of a matrix, times the length of an array. Matches
+// Chrome's (ANGLE's) count within one vector.
+const UNIFORM_DECLARATION =
+  /^\s*uniform\s+(?:(?:highp|mediump|lowp)\s+)?(\w+)\s+(\w+)\s*(?:\[(\d+)\])?\s*;/gm;
+function countUsedUniformVectors(code: string): number {
+  const codeWithoutDeclarations = code.replace(UNIFORM_DECLARATION, "");
+  let count = 0;
+  for (const [, type, name, arrayLength] of code.matchAll(UNIFORM_DECLARATION)) {
+    const isUsed = new RegExp(`\\b${name}\\b`).test(codeWithoutDeclarations);
+    if (type.includes("sampler") || !isUsed) {
+      continue;
+    }
+    const vectorsPerElement = type.startsWith("mat") ? Number(type[3]) : 1;
+    count += vectorsPerElement * (arrayLength != null ? Number(arrayLength) : 1);
+  }
+  return count;
+}
+
+function getUniformTestParams(
+  elementClass: ElementClass,
+  colorLayerCount: number,
+  hasSegmentation: boolean,
+  magnificationCount: number,
+): Params {
+  const getTextureLayerInfo = (name: string, elementClass: ElementClass, isColor: boolean) => {
+    const { packingDegree, glslPrefix, isSigned } = getDtypeConfigForElementClass(elementClass);
+    return { isColor, packingDegree, glslPrefix, isSigned, unsanitizedName: name, elementClass };
+  };
+  const colorLayerNames = range(colorLayerCount).map((i) => `color_layer_${i}`);
+  const segmentationLayerNames = hasSegmentation ? ["segmentation_layer"] : [];
+  return {
+    globalLayerCount: colorLayerNames.length + segmentationLayerNames.length,
+    colorLayerNames,
+    textureLayerInfos: Object.fromEntries([
+      ...colorLayerNames.map((name) => [name, getTextureLayerInfo(name, elementClass, true)]),
+      ...segmentationLayerNames.map((name) => [name, getTextureLayerInfo(name, "uint64", false)]),
+    ]),
+    segmentationLayerNames,
+    magnificationsCount: magnificationCount,
+    voxelSizeFactor: [1, 1, 1],
+    isOrthogonal: true,
+    voxelSizeFactorInverted: [1, 1, 1],
+    useInterpolation: false,
+    tpsTransformPerLayer: {},
+    isWindows: false,
+    maxActiveColorLayers: 32,
+    vertexBucketAlignmentLayerCap: 8,
+  };
+}
+
+describe("estimateUniformVectors", () => {
+  it("matches the uniforms of the generated shaders", () => {
+    for (const elementClass of ["uint8", "uint16", "uint32", "float"] as const) {
+      for (const [colorLayerCount, hasSegmentation, magnificationCount] of [
+        [1, false, 5],
+        [5, true, 30],
+        [30, true, 300],
+      ] as const) {
+        const globalLayerCount = colorLayerCount + (hasSegmentation ? 1 : 0);
+        const params = getUniformTestParams(
+          elementClass,
+          colorLayerCount,
+          hasSegmentation,
+          magnificationCount,
+        );
+        const estimate = estimateUniformVectors(
+          globalLayerCount,
+          magnificationCount,
+          hasSegmentation,
+        );
+        // If this fails, the shader's uniforms changed: update the constants
+        // in main_data_shaders.glsl.ts.
+        expect(countUsedUniformVectors(getMainFragmentShader(params))).toBe(estimate);
+        expect(countUsedUniformVectors(getMainVertexShader(params))).toBeLessThanOrEqual(estimate);
+      }
+    }
   });
 });

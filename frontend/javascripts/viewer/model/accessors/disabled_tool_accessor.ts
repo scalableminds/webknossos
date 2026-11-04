@@ -53,7 +53,7 @@ const DISABLED_EXPLANATION = {
   ROTATION_ACTIVE:
     "The tool is disabled because you are currently viewing the dataset rotated. Please reset the rotation to 0,0,0 to be able to use this tool.",
   LIVE_COLLAB_MODE:
-    "is disabled because simultaneous editing is enabled in the sharing settings. Currently, only proofreading, bounding boxes, the brush, the eraser (via brush) and the fill tool can be used in that mode.",
+    "is disabled because simultaneous editing is enabled in the sharing settings. Currently, only proofreading, bounding boxes and the volume tools can be used in that mode.",
   LIVE_COLLAB_MODE_WITHOUT_VOLUME_ANNOTATION:
     "is disabled because simultaneous editing is enabled in the sharing settings. Currently, only proofreading and bounding boxes can be used in that mode.",
   NO_VISIBLE_SEGMENTATION_TRACING:
@@ -244,14 +244,9 @@ const skeletonTransformedRule = new DisableRule(
     areGeometriesTransformed ? DISABLED_EXPLANATION.SKELETON_LAYER_TRANSFORMED : null,
 );
 
-// Volume tools may only be used in live collaboration if they save their edits
-// as partial bucket updates (see getVolumeSaveMode). The others save whole buckets,
-// which would overwrite concurrent edits of the same buckets by others.
-const VolumeToolsAllowedInLiveCollaboration: AnnotationTool[] = [
-  AnnotationTool.BRUSH,
-  AnnotationTool.ERASE_BRUSH,
-  AnnotationTool.FILL_CELL,
-];
+// In live collaboration, the volume tools save their edits as partial bucket updates
+// (see getVolumeSaveMode), which don't overwrite concurrent edits of the same buckets
+// by others. They are only enabled there with the dev flag, though.
 const concurrentCollabModeRule = new DisableRule(
   [AnnotationTool.SKELETON, ...VolumeTools],
   ({ isConcurrentCollabMode }, tool) => {
@@ -259,7 +254,7 @@ const concurrentCollabModeRule = new DisableRule(
     if (!WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation) {
       return `The ${tool.readableName} ${DISABLED_EXPLANATION.LIVE_COLLAB_MODE_WITHOUT_VOLUME_ANNOTATION}`;
     }
-    return VolumeToolsAllowedInLiveCollaboration.includes(tool)
+    return VolumeTools.includes(tool)
       ? null
       : `The ${tool.readableName} ${DISABLED_EXPLANATION.LIVE_COLLAB_MODE}`;
   },

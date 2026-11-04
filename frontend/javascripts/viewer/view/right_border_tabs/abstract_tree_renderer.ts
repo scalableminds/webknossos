@@ -1,3 +1,4 @@
+import window from "libs/window";
 import min from "lodash-es/min";
 import messages from "messages";
 import type { Vector2 } from "viewer/constants";
@@ -44,9 +45,13 @@ class AbstractTreeRenderer {
   activeNodeId: number;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'tree' has no initializer and is not defi... Remove this comment to see the full error message
   tree: Tree;
+  commentedNodeIds: Set<number> = new Set();
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'nodeDistance' has no initializer and is ... Remove this comment to see the full error message
   nodeDistance: number;
   colors: AbstractTreeColors;
+  // Logical canvas size in CSS pixels (the backing store is scaled by devicePixelRatio).
+  width: number;
+  height: number;
 
   static drawTree(
     canvas: HTMLCanvasElement,
@@ -88,6 +93,8 @@ class AbstractTreeRenderer {
   constructor(canvas: HTMLCanvasElement, colors: AbstractTreeColors) {
     this.canvas = canvas;
     this.colors = colors;
+    this.width = canvas.width;
+    this.height = canvas.height;
     const ctx = canvas.getContext("2d");
 
     if (ctx != null) {
@@ -102,32 +109,33 @@ class AbstractTreeRenderer {
     // Assumption: Node with smallest id is root
     const rootId = min(Array.from(this.tree.nodes.keys()));
 
-    const rootNode = {
+    if (rootId == null) {
+      return null;
+    }
+
+    const rootNode: AbstractNode = {
       id: rootId,
       children: [],
     };
     const queue = [rootNode];
-    const visitedNodes = {};
+    const visitedNodes = new Set<number>();
+    // Copy the outgoing edges into a plain Map once, since lookups in the
+    // chunked DiffableMap are O(number of chunks).
+    const outgoingEdgesByNodeId = new Map(this.tree.edges.outMap.entries());
 
-    // Build a tree like structure using Breadth-First-Search
-    while (queue.length) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type '{ id: number... Remove this comment to see the full error message
-      const { id: curNodeId, children: curChildren } = queue.shift();
+    // Build a tree like structure using Breadth-First-Search.
+    // The queue is consumed via an index, because Array.shift() is O(n).
+    for (let queueIndex = 0; queueIndex < queue.length; queueIndex++) {
+      const { id: curNodeId, children: curChildren } = queue[queueIndex];
 
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-      if (visitedNodes[curNodeId]) {
+      if (visitedNodes.has(curNodeId)) {
         throw new Error(CYCLIC_TREE_ERROR);
-      } else {
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-        visitedNodes[curNodeId] = true;
       }
+      visitedNodes.add(curNodeId);
 
-      const edges = this.tree.edges.getOutgoingEdgesForNode(curNodeId);
-      const childrenIds = edges.map((edge) => edge.target);
-
-      for (const childId of childrenIds) {
-        const child = {
-          id: childId,
+      for (const edge of outgoingEdgesByNodeId.get(curNodeId) ?? []) {
+        const child: AbstractNode = {
+          id: edge.target,
           children: [],
         };
         queue.push(child);
@@ -135,7 +143,6 @@ class AbstractTreeRenderer {
       }
     }
 
-    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ id: number | undefined; children: never[];... Remove this comment to see the full error message
     return rootNode;
   }
 
@@ -151,6 +158,7 @@ class AbstractTreeRenderer {
   drawTree(tree: Tree, activeNodeId: number) {
     let root;
     this.tree = tree;
+    this.commentedNodeIds = new Set(tree.comments.map((comment) => comment.nodeId));
     this.activeNodeId = activeNodeId;
     // List of {x : ..., y : ..., id: ...} objects
     this.nodeList = [];
@@ -175,7 +183,7 @@ class AbstractTreeRenderer {
     }
 
     this.nodeDistance = Math.min(
-      this.canvas.height / (this.getMaxTreeDepth(root, mode) + 1),
+      this.height / (this.getMaxTreeDepth(root, mode) + 1),
       MAX_NODE_DISTANCE,
     );
     // The algorithm works as follows:
@@ -193,7 +201,7 @@ class AbstractTreeRenderer {
     this.drawTreeWithWidths(
       root,
       NODE_RADIUS,
-      this.canvas.width - NODE_RADIUS,
+      this.width - NODE_RADIUS,
       this.nodeDistance / 2,
       mode,
     );
@@ -541,7 +549,7 @@ class AbstractTreeRenderer {
    * @return {Boolean}    true if node is commented
    */
   nodeIdHasComment(id: number): boolean {
-    return this.tree.comments.some((c: any) => c.node === id);
+    return this.commentedNodeIds.has(id);
   }
 
   /**
@@ -622,18 +630,31 @@ class AbstractTreeRenderer {
    * Clear the background of the canvas.
    */
   clearBackground(): void {
+    // Reset the transform so that the whole backing store is cleared.
+    this.ctx.save();
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.restore();
   }
 
   /**
-   * Set width and height of the canvas object.
+   * Set width and height (in CSS pixels) of the canvas object.
+   * The backing store is scaled by the device pixel ratio so that
+   * the tree is rendered sharply on HiDPI displays.
    * @param {Number} width
    * @param {Number} height
    */
   setDimensions(width: number, height: number): void {
+    const pixelRatio = window.devicePixelRatio || 1;
+    this.width = width;
+    this.height = height;
     this.canvas.style.height = `${height}px`;
-    this.canvas.width = width;
-    this.canvas.height = height;
+    this.canvas.width = Math.round(width * pixelRatio);
+    this.canvas.height = Math.round(height * pixelRatio);
+    // Resizing the canvas resets the context state, so the scale and
+    // line width have to be (re)applied afterwards.
+    this.ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    this.ctx.lineWidth = 1;
   }
 }
 

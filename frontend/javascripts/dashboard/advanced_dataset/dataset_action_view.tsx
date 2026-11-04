@@ -62,7 +62,16 @@ function NewAnnotationLink({
         <EllipsisOutlined />
       </a>
       {isCreateAnnotationModalVisible ? (
-        <CreateAnnotationModal datasetId={dataset.id} onClose={onCloseCreateAnnotationModal} />
+        // The modal is rendered via a portal, but React still bubbles its events
+        // to the table row. Stop them here so that they don't (de)select the row
+        // or open the row's context menu.
+        <span
+          onClick={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+          onContextMenu={(event) => event.stopPropagation()}
+        >
+          <CreateAnnotationModal datasetId={dataset.id} onClose={onCloseCreateAnnotationModal} />
+        </span>
       ) : null}
     </div>
   );

@@ -17,7 +17,7 @@ import type { Action } from "viewer/model/actions/actions";
 import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/rebase_helpers";
 import type { StoreAnnotation, StoreDataset, UserBoundingBox } from "viewer/store";
 
 // These values should be kept in sync with the documentation:

@@ -5,11 +5,11 @@ import {
   ReadOutlined,
   SwapOutlined,
 } from "@ant-design/icons";
-import { getAuthToken, revokeAuthToken } from "admin/rest_api";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { revokeAuthToken } from "admin/rest_api";
 import { Button, Col, Row, Spin, Typography } from "antd";
-import { useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
-import { useEffect, useState } from "react";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
+import { authTokenQueryOptions } from "./auth_token_query";
 import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
 
@@ -17,35 +17,23 @@ const { Text } = Typography;
 
 function AccountAuthTokenView() {
   const activeUser = useWkSelector((state) => state.activeUser);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [currentToken, setCurrentToken] = useState<string>("");
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { data: currentToken = "", isLoading: isLoadingToken } = useQueryWithErrorHandling(
+    {
+      ...authTokenQueryOptions,
+      refetchOnWindowFocus: false,
+    },
+    "Failed to fetch auth token. Please refresh the page to try again.",
+  );
 
-  async function fetchData(): Promise<void> {
-    try {
-      const token = await getAuthToken();
-      setCurrentToken(token);
-    } catch (error) {
-      Toast.error("Failed to fetch auth token. Please refresh the page to try again.");
-      console.error("Failed to fetch auth token:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  const revokeTokenMutation = useMutation({
+    mutationFn: revokeAuthToken,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: authTokenQueryOptions.queryKey }),
+  });
+  const isLoading = isLoadingToken || revokeTokenMutation.isPending;
 
-  const handleRevokeToken = async (): Promise<void> => {
-    try {
-      setIsLoading(true);
-      await revokeAuthToken();
-      const token = await getAuthToken();
-      setCurrentToken(token);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const handleRevokeToken = () => revokeTokenMutation.mutate();
 
   const APIitems: SettingsCardProps[] = [
     {

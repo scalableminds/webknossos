@@ -49,7 +49,7 @@ export const WkDevFlags = {
     showCurrentVersionInInfoTab: false,
   },
   liveCollaboration: {
-    // Allows the brush, eraser and fill tool in live collaboration, and switching to live
+    // Allows the volume tools in live collaboration, and switching to live
     // collaboration when the mapping is locked (not only with an editable mapping).
     allowCollaborativeVolumeAnnotation: false,
     // Remote updateBucketPartial actions are applied to loaded buckets directly.

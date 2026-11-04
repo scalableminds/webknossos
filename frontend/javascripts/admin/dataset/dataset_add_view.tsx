@@ -7,60 +7,39 @@ import { Flex, Layout, Tabs, type TabsProps } from "antd";
 import { useFetch } from "libs/react_helpers";
 
 import React, { useState } from "react";
-import { useNavigate } from "react-router";
 import type { APIDataStore } from "types/api_types";
-import PostUploadModal from "./components/post_upload_modal";
 import VoxelyticsBanner from "./components/voxelytics_banner";
 import DatasetAddComposeView from "./dataset_add_compose_view";
+import { DatasetAddType } from "./dataset_add_type";
+import { getAddedDatasetStatus, UploadProgressModal } from "./upload/upload_progress_modal";
+import type { UploadStatus } from "./upload/use_resumable_dataset_upload";
 
 const { Content } = Layout;
 
-// Used for the tab keys as well as for
-// distinguishing between the add type after
-// successful import.
-export enum DatasetAddType {
-  UPLOAD = "upload",
-  REMOTE = "remote",
-  COMPOSE = "compose",
-}
-
 function DatasetAddView() {
-  const navigate = useNavigate();
   const datastores = useFetch<APIDataStore[]>(getDatastores, [], []);
-  const [datasetId, setDatasetId] = useState("");
-  const [uploadedDatasetName, setUploadedDatasetName] = useState("");
-  const [datasetNeedsConversion, setDatasetNeedsConversion] = useState(false);
-  const [datasetAddType, setImportType] = useState<DatasetAddType>(DatasetAddType.UPLOAD);
+  // Uploads show their own modal, so this is only used for remote and composed datasets.
+  const [addedDatasetStatus, setAddedDatasetStatus] = useState<UploadStatus>({ kind: "idle" });
+  const [datasetAddType, setDatasetAddType] = useState<DatasetAddType>(DatasetAddType.REMOTE);
+  // Remounting a view resets its form, so that the next dataset can be added from scratch.
+  const [viewKeys, setViewKeys] = useState({
+    [DatasetAddType.REMOTE]: 0,
+    [DatasetAddType.COMPOSE]: 0,
+  });
 
   const handleDatasetAdded = async (
     datasetAddType: DatasetAddType,
     datasetId: string,
     datasetName: string,
-    needsConversion: boolean | null | undefined,
   ): Promise<void> => {
-    setDatasetId(datasetId);
-    setImportType(datasetAddType);
-    setUploadedDatasetName(datasetName);
-    if (needsConversion != null) setDatasetNeedsConversion(needsConversion);
+    setDatasetAddType(datasetAddType);
+    setAddedDatasetStatus(getAddedDatasetStatus(datasetId, datasetName));
   };
 
-  const showAfterUploadContent = datasetId !== "";
-
-  const getAfterUploadModalContent = () => {
-    if (!showAfterUploadContent) {
-      return null;
-    }
-
-    return (
-      <PostUploadModal
-        datasetNeedsConversion={datasetNeedsConversion}
-        datasetAddType={datasetAddType}
-        datasetId={datasetId}
-        uploadedDatasetName={uploadedDatasetName}
-        setDatasetId={setDatasetId}
-        navigate={navigate}
-      />
-    );
+  const handleAddedDatasetModalClose = () => {
+    setAddedDatasetStatus({ kind: "idle" });
+    if (datasetAddType === DatasetAddType.UPLOAD) return;
+    setViewKeys((keys) => ({ ...keys, [datasetAddType]: keys[datasetAddType] + 1 }));
   };
 
   const defaultActiveTabFromHash = location.hash.substring(1);
@@ -75,12 +54,7 @@ function DatasetAddView() {
       label: "Upload Dataset",
       icon: <UploadOutlined />,
       key: DatasetAddType.UPLOAD,
-      children: (
-        <DatasetUploadView
-          datastores={datastores}
-          onUploaded={handleDatasetAdded.bind(null, DatasetAddType.UPLOAD)}
-        />
-      ),
+      children: <DatasetUploadView datastores={datastores} />,
     },
     {
       icon: <DatabaseOutlined />,
@@ -88,6 +62,7 @@ function DatasetAddView() {
       key: DatasetAddType.REMOTE,
       children: (
         <DatasetAddRemoteView
+          key={viewKeys[DatasetAddType.REMOTE]}
           datastores={datastores}
           onAdded={handleDatasetAdded.bind(null, DatasetAddType.REMOTE)}
         />
@@ -99,6 +74,7 @@ function DatasetAddView() {
       key: DatasetAddType.COMPOSE,
       children: (
         <DatasetAddComposeView
+          key={viewKeys[DatasetAddType.COMPOSE]}
           datastores={datastores}
           onAdded={handleDatasetAdded.bind(null, DatasetAddType.COMPOSE)}
         />
@@ -126,7 +102,11 @@ function DatasetAddView() {
           />
         </Content>
       </Layout>
-      {getAfterUploadModalContent()}
+      <UploadProgressModal
+        status={addedDatasetStatus}
+        datasetAddType={datasetAddType}
+        onClose={handleAddedDatasetModalClose}
+      />
     </React.Fragment>
   );
 }

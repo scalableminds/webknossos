@@ -199,6 +199,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               value={this.props.userConfiguration.renderWatermark}
               onChange={this.onChangeUser.renderWatermark}
               requiredPricingPlan={PricingPlanEnum.Team}
+              requiresPaidPlan
               defaultValue={true}
             />
           </React.Fragment>

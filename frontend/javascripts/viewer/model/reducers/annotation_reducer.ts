@@ -227,6 +227,15 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       });
     }
 
+    case "SET_BOOKMARK_DESCRIPTION": {
+      const { bookmarkId, description } = action;
+      return updateAnnotation(state, {
+        bookmarks: state.annotation.bookmarks.map((bookmark) =>
+          bookmark.id === bookmarkId ? { ...bookmark, description } : bookmark,
+        ),
+      });
+    }
+
     case "SET_BOOKMARK_METADATA": {
       const { bookmarkId, metadata } = action;
       return updateAnnotation(state, {

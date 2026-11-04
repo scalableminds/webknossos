@@ -1,5 +1,6 @@
 import Icon, {
   AimOutlined,
+  AlignLeftOutlined,
   DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
@@ -17,6 +18,7 @@ import {
   Flex,
   List,
   type MenuProps,
+  Modal,
   Popover,
   Space,
   Spin,
@@ -26,6 +28,7 @@ import {
 import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";
 import { SimpleRow } from "dashboard/folders/metadata_table";
+import Markdown from "libs/markdown_adapter";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import { map3, roundTo } from "libs/utils";
@@ -42,6 +45,7 @@ import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import {
   deleteBookmarkAction,
+  setBookmarkDescriptionAction,
   setBookmarkMetadataAction,
   setBookmarkNameAction,
   setBookmarkStateAction,
@@ -52,6 +56,7 @@ import { setBookmarkIdToFocusAction } from "viewer/model/actions/ui_actions";
 import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
 import { diffMetadata } from "viewer/model/sagas/diffing/volume_diffing";
 import Store, { type WebknossosState } from "viewer/store";
+import { MarkdownModal } from "viewer/view/components/markdown_modal";
 import { positionToString } from "viewer/view/context_menu/helpers";
 import type { BookmarkThumbnails } from "viewer/view/rendering_utils";
 import ButtonComponent from "../../components/button_component";
@@ -256,7 +261,19 @@ function getViewKey(state: WebknossosState): string {
   ]);
 }
 
-function BookmarkDetailsLine({ bookmark }: { bookmark: APIAnnotationBookmark }) {
+function hasDescription(bookmark: APIAnnotationBookmark): boolean {
+  return bookmark.description != null && bookmark.description.trim() !== "";
+}
+
+function BookmarkDetailsLine({
+  bookmark,
+  readOnly,
+  onOpenDescription,
+}: {
+  bookmark: APIAnnotationBookmark;
+  readOnly: boolean;
+  onOpenDescription: () => void;
+}) {
   const meshCount = bookmark.state.layers.reduce((sum, layer) => sum + layer.meshes.length, 0);
   const icons = [
     meshCount > 0 ? (
@@ -272,6 +289,24 @@ function BookmarkDetailsLine({ bookmark }: { bookmark: APIAnnotationBookmark }) 
         <TagsOutlined />
       </FastTooltip>
     ) : null,
+    hasDescription(bookmark) ? (
+      <FastTooltip
+        key="description"
+        title={
+          readOnly
+            ? "This bookmark has a description. Click to show it."
+            : "This bookmark has a description. Click to edit it."
+        }
+      >
+        <AlignLeftOutlined
+          onClick={(event) => {
+            // Must not also select the row.
+            event.stopPropagation();
+            onOpenDescription();
+          }}
+        />
+      </FastTooltip>
+    ) : null,
   ].filter((icon) => icon != null);
   return (
     <Typography.Text type="secondary" style={{ display: "block", fontSize: 12 }}>
@@ -283,6 +318,48 @@ function BookmarkDetailsLine({ bookmark }: { bookmark: APIAnnotationBookmark }) 
       <FormattedDate timestamp={bookmark.created} /> ·{" "}
       {positionToString(bookmark.state.position, bookmark.state.additionalCoordinates)}
     </Typography.Text>
+  );
+}
+
+function BookmarkDescriptionModal({
+  bookmark,
+  readOnly,
+  onClose,
+}: {
+  bookmark: APIAnnotationBookmark;
+  readOnly: boolean;
+  onClose: () => void;
+}) {
+  const dispatch = useDispatch();
+  const bookmarkName = bookmark.name ?? getDefaultBookmarkName(bookmark);
+  if (readOnly) {
+    return (
+      <Modal
+        open
+        title={`Description of bookmark “${bookmarkName}”`}
+        onCancel={onClose}
+        footer={null}
+        destroyOnHidden
+      >
+        <Markdown>{bookmark.description ?? ""}</Markdown>
+      </Modal>
+    );
+  }
+  return (
+    <MarkdownModal
+      isOpen
+      label={`description of bookmark “${bookmarkName}”`}
+      placeholder="[No description]"
+      source={bookmark.description ?? ""}
+      onOk={onClose}
+      onChange={async (newDescription) => {
+        // An empty description clears it.
+        const description = newDescription.trim() === "" ? null : newDescription;
+        if (description === bookmark.description) return;
+        await waitUntilRebaseFinished();
+        dispatch(setBookmarkDescriptionAction(bookmark.id, description));
+      }}
+    />
   );
 }
 
@@ -349,6 +426,7 @@ export default function BookmarksTab() {
   const [switchingThumbnailOfBookmarkId, setSwitchingThumbnailOfBookmarkId] = useState<
     number | null
   >(null);
+  const [descriptionOfBookmarkId, setDescriptionOfBookmarkId] = useState<number | null>(null);
   const readOnly = !useWkSelector(mayEditAnnotation);
   const addBookmarkShortcut = useWkSelector((state) =>
     getShortcutDisplayString(
@@ -362,6 +440,7 @@ export default function BookmarksTab() {
   const switchingThumbnailBookmark = bookmarks.find(
     (bookmark) => bookmark.id === switchingThumbnailOfBookmarkId,
   );
+  const descriptionBookmark = bookmarks.find((bookmark) => bookmark.id === descriptionOfBookmarkId);
   // The view before jumping to the first of a series of bookmarks.
   const [previousView, setPreviousView] = useState<APIAnnotationBookmarkState | null>(null);
   const { contextMenuPosition, contextMenu, openContextMenu, hideContextMenu } =
@@ -485,6 +564,12 @@ export default function BookmarksTab() {
           icon: <EditOutlined />,
           label: "Rename Bookmark",
           onClick: runAndHide(() => setRenamingBookmarkId(bookmark.id)),
+        },
+        {
+          key: "editBookmarkDescription",
+          icon: <AlignLeftOutlined />,
+          label: hasDescription(bookmark) ? "Edit Description" : "Add Description",
+          onClick: runAndHide(() => setDescriptionOfBookmarkId(bookmark.id)),
         },
         {
           key: "updateBookmarkToCurrentView",
@@ -678,7 +763,11 @@ export default function BookmarksTab() {
                           onCommit={(newName) => renameBookmark(bookmark, newName)}
                           onFinishEditing={() => setRenamingBookmarkId(null)}
                         />
-                        <BookmarkDetailsLine bookmark={bookmark} />
+                        <BookmarkDetailsLine
+                          bookmark={bookmark}
+                          readOnly={readOnly}
+                          onOpenDescription={() => setDescriptionOfBookmarkId(bookmark.id)}
+                        />
                       </div>
                     </Flex>
                   </List.Item>
@@ -700,6 +789,13 @@ export default function BookmarksTab() {
             handleSwitchThumbnail(switchingThumbnailBookmark.id, thumbnails)
           }
           onClose={() => setSwitchingThumbnailOfBookmarkId(null)}
+        />
+      ) : null}
+      {descriptionBookmark != null ? (
+        <BookmarkDescriptionModal
+          bookmark={descriptionBookmark}
+          readOnly={readOnly}
+          onClose={() => setDescriptionOfBookmarkId(null)}
         />
       ) : null}
     </div>

@@ -18,6 +18,7 @@ import {
   deleteBookmarkAction,
   editAnnotationLayerAction,
   setAnnotationDescriptionAction,
+  setBookmarkDescriptionAction,
   setBookmarkNameAction,
   setBookmarkStateAction,
   setBookmarkThumbnailAction,
@@ -450,12 +451,13 @@ export function* tryToIncorporateActions(
         }
         case "addBookmark": {
           // Server-side update actions also carry metadata such as actionTimestamp.
-          const { id, created, name, state, metadata } = action.value;
+          const { id, created, name, description, state, metadata } = action.value;
           yield* put(
             addBookmarkAction({
               id,
               created,
               name,
+              description: description ?? null,
               state,
               // Unsaved bookmarks of the user get their version once they are saved.
               createdAtVersion: areUnsavedChangesOfUser ? null : actionBatch.version,
@@ -466,10 +468,13 @@ export function* tryToIncorporateActions(
           break;
         }
         case "updateBookmark": {
-          // The description of a bookmark is not used in the frontend yet.
-          const { id, name } = action.value;
+          // Properties that are not part of the action were not changed.
+          const { id, name, description } = action.value;
           if (name !== undefined) {
             yield* put(setBookmarkNameAction(id, name));
+          }
+          if (description !== undefined) {
+            yield* put(setBookmarkDescriptionAction(id, description));
           }
           break;
         }

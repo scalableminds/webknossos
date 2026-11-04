@@ -409,6 +409,7 @@ describe("Save Saga", () => {
       id: 1,
       created: TIMESTAMP,
       name: null,
+      description: null,
       state: {
         position: [0, 0, 0],
         mode: "orthogonal",

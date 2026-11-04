@@ -7,6 +7,7 @@ const savedBookmark: APIAnnotationBookmark = {
   id: 1,
   created: 123,
   name: "Bookmark",
+  description: null,
   state: {
     position: [1, 2, 3] as Vector3,
     mode: "orthogonal",
@@ -74,6 +75,18 @@ describe("Bookmark diffing", () => {
       "updateBookmark",
       "updateMetadataOfBookmark",
       "updateBookmarkState",
+    ]);
+  });
+
+  it("only sends the changed ones of name and description", () => {
+    expect(diff([savedBookmark], [{ ...savedBookmark, description: "Text" }])).toEqual([
+      { name: "updateBookmark", value: { id: 1, description: "Text" } },
+    ]);
+    expect(
+      diff([savedBookmark], [{ ...savedBookmark, name: "Other", description: "Text" }]),
+    ).toEqual([{ name: "updateBookmark", value: { id: 1, name: "Other", description: "Text" } }]);
+    expect(diff([savedBookmark], [{ ...savedBookmark, name: null }])).toEqual([
+      { name: "updateBookmark", value: { id: 1, name: null } },
     ]);
   });
 

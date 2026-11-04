@@ -1317,6 +1317,7 @@ export function addBookmark(bookmark: APIAnnotationBookmark) {
       id: bookmark.id,
       created: bookmark.created,
       name: bookmark.name,
+      description: bookmark.description,
       state: bookmark.state,
       // Set to the version of the save request when it is sent, see addVersionNumbers.
       createdAtVersion: null as number | null,
@@ -1326,11 +1327,14 @@ export function addBookmark(bookmark: APIAnnotationBookmark) {
   } as const;
 }
 
-// A null name clears it.
-export function updateBookmark(id: number, name: string | null) {
+// Only the passed properties are changed. null clears them.
+export function updateBookmark(
+  id: number,
+  changes: { name?: string | null; description?: string | null },
+) {
   return {
     name: "updateBookmark",
-    value: { id, name },
+    value: { id, ...changes },
   } as const;
 }
 

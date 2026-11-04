@@ -59,6 +59,7 @@ type SetBookmarkCreatedAtVersionAction = ReturnType<typeof setBookmarkCreatedAtV
 type UpdateBookmarkMetadataAction = ReturnType<typeof updateBookmarkMetadataAction>;
 type SetBookmarkMetadataAction = ReturnType<typeof setBookmarkMetadataAction>;
 type SetBookmarkNameAction = ReturnType<typeof setBookmarkNameAction>;
+type SetBookmarkDescriptionAction = ReturnType<typeof setBookmarkDescriptionAction>;
 type DeleteBookmarkAction = ReturnType<typeof deleteBookmarkAction>;
 type SetBookmarkStateAction = ReturnType<typeof setBookmarkStateAction>;
 type SetBookmarkThumbnailAction = ReturnType<typeof setBookmarkThumbnailAction>;
@@ -107,6 +108,7 @@ export type AnnotationActionTypes =
   | UpdateBookmarkMetadataAction
   | SetBookmarkMetadataAction
   | SetBookmarkNameAction
+  | SetBookmarkDescriptionAction
   | DeleteBookmarkAction
   | SetBookmarkStateAction
   | SetBookmarkThumbnailAction
@@ -160,6 +162,7 @@ export const BookmarkUndoRelevantActions: Action["type"][] = [
   "ADD_BOOKMARK",
   "DELETE_BOOKMARK",
   "SET_BOOKMARK_NAME",
+  "SET_BOOKMARK_DESCRIPTION",
   "SET_BOOKMARK_METADATA",
   "SET_BOOKMARK_STATE",
   "SET_BOOKMARK_THUMBNAIL",
@@ -242,6 +245,14 @@ export const setBookmarkNameAction = (bookmarkId: number, name: string | null) =
   }) as const;
 
 // Replaces the whole list, so that the order of the entries is kept while editing.
+// A null description clears it.
+export const setBookmarkDescriptionAction = (bookmarkId: number, description: string | null) =>
+  ({
+    type: "SET_BOOKMARK_DESCRIPTION",
+    bookmarkId,
+    description,
+  }) as const;
+
 export const setBookmarkMetadataAction = (bookmarkId: number, metadata: MetadataEntryProto[]) =>
   ({
     type: "SET_BOOKMARK_METADATA",

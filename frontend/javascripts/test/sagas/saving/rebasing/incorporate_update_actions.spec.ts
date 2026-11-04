@@ -903,6 +903,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
             id: 1,
             created: 123,
             name: "Replayed Bookmark",
+            description: "A *markdown* description",
             state: bookmarkState,
             createdAtVersion: null,
             thumbnailVersion: null,
@@ -921,6 +922,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           id: 1,
           created: 123,
           name: "Replayed Bookmark",
+          description: "A *markdown* description",
           state: bookmarkState,
           createdAtVersion: 1,
           thumbnailVersion: 1,
@@ -939,6 +941,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
         id: 1,
         created: 123,
         name: null,
+        description: null,
         state: {
           position: [1, 2, 3] as Vector3,
           mode: "orthogonal" as const,
@@ -991,6 +994,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
         id: 1,
         created: 123,
         name: "Old Name",
+        description: null,
         state: {
           position: [1, 2, 3] as Vector3,
           mode: "orthogonal" as const,
@@ -1009,14 +1013,22 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
       };
 
       Store.dispatch(startForwardingUpdateActionsAction());
-      await incorporateActions([addBookmark(bookmark), updateBookmark(1, "New Name")], 1);
+      await incorporateActions([addBookmark(bookmark), updateBookmark(1, { name: "New Name" })], 1);
       Store.dispatch(finishForwardingUpdateActionsAction());
       expect(Store.getState().annotation.bookmarks[0].name).toBe("New Name");
 
       Store.dispatch(startForwardingUpdateActionsAction());
-      await incorporateActions([updateBookmark(1, null)], 2);
+      await incorporateActions([updateBookmark(1, { name: null })], 2);
       Store.dispatch(finishForwardingUpdateActionsAction());
       expect(Store.getState().annotation.bookmarks[0].name).toBeNull();
+      expect(Store.getState().save.queue).toEqual([]);
+
+      Store.dispatch(startForwardingUpdateActionsAction());
+      await incorporateActions([updateBookmark(1, { description: "# Description" })], 2);
+      Store.dispatch(finishForwardingUpdateActionsAction());
+      // The name is not part of the action and therefore unchanged.
+      expect(Store.getState().annotation.bookmarks[0].name).toBeNull();
+      expect(Store.getState().annotation.bookmarks[0].description).toBe("# Description");
       expect(Store.getState().save.queue).toEqual([]);
 
       const newState = { ...bookmark.state, position: [4, 5, 6] as Vector3 };

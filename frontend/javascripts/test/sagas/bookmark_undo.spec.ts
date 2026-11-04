@@ -19,6 +19,7 @@ const bookmark: APIAnnotationBookmark = {
   id: 1,
   created: 123,
   name: null,
+  description: null,
   state: {
     position: [1, 2, 3] as Vector3,
     mode: "orthogonal",

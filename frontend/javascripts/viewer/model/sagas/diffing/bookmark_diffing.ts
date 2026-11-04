@@ -42,8 +42,13 @@ export function* diffBookmarks(
     }
     if (prevBookmark === bookmark) continue;
 
-    if (prevBookmark.name !== bookmark.name) {
-      yield updateBookmark(bookmark.id, bookmark.name);
+    const nameChanged = prevBookmark.name !== bookmark.name;
+    const descriptionChanged = prevBookmark.description !== bookmark.description;
+    if (nameChanged || descriptionChanged) {
+      yield updateBookmark(bookmark.id, {
+        ...(nameChanged ? { name: bookmark.name } : {}),
+        ...(descriptionChanged ? { description: bookmark.description } : {}),
+      });
     }
     if (prevBookmark.metadata !== bookmark.metadata) {
       const { upsertEntriesByKey, removeEntriesByKey } = diffMetadata(

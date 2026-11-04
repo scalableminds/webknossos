@@ -49,6 +49,7 @@ export async function addBookmarkForCurrentView(dispatch: Dispatch): Promise<num
     id,
     created: Date.now(),
     name: null,
+    description: null,
     state,
     createdAtVersion: null,
     metadata: [],

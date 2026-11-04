@@ -68,6 +68,7 @@
     "start-backend": "sbt -Dsbt.color=always \"run 9001\" -jvm-debug 5005 -J-XX:MaxMetaspaceSize=2048m -J-Xmx8g -Dlogger.file=conf/logback-dev.xml",
     "start-fossildb": "fossildb/run.sh > fossildb/logs",
     "start-rust": "backend-rust/tools/dev-rust.sh",
+    "start-rust-datastore": "backend-rust/tools/dev-datastore.sh",
     "start-stores": "backend-rust/tools/dev-stores.sh",
     "dev-gen-tls": "./tools/gen-ssl-dev-certs.sh",
     "@comment build-backend": "Only check for errors in the backend code like done by the CI. This command is not needed to run WEBKNOSSOS",

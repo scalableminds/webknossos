@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Local dev: the Rust application backend on :9001.
-# Run the Scala stores with tools/dev-stores.sh and the frontend with `yarn dev` (vite on :9000).
+# Run the Rust datastore with tools/dev-datastore.sh, the Scala tracingstore with tools/dev-stores.sh
+# and the frontend with `yarn dev` (vite on :9000).
 #
 # Usage (from anywhere):  backend-rust/tools/dev-rust.sh [extra cargo run args]
 #

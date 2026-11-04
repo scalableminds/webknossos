@@ -1,5 +1,5 @@
+import type { ApiResult, RetryOptions } from "admin/api/api_result";
 import { getUpdateActionLog } from "admin/rest_api";
-import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
@@ -18,7 +18,8 @@ import { Store } from "viewer/singletons";
 import type { StoreAnnotation } from "viewer/store";
 import {
   type ApplyingUpdateResults,
-  FailedIncorporateActionsReturnValue,
+  getFailedIncorporateActionsReturnValue,
+  type RebasingFailure,
   SuccessEmptyIncorporateActionsReturnValue,
 } from "./applying_update_artifacts";
 import { tryToIncorporateActions } from "./incorporate_update_actions_sagas";
@@ -38,11 +39,27 @@ import { rewriteSaveQueueEntriesForReapplying } from "./rewrite_for_reapplying_s
 
 const SAVING_CONFLICT_TOAST_KEY = "save_conflicts_warning";
 
-export type RebasingSuccessInfo = { successful: boolean };
+export type RebasingSuccessInfo =
+  | { successful: true }
+  | { successful: false; failure: RebasingFailure };
 
 export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
-  const missingUpdateActions = yield* call(fetchNewestMissingUpdateActions);
+  const missingUpdateActionsResult = yield* call(fetchNewestMissingUpdateActions);
+  if (!missingUpdateActionsResult.ok) {
+    // Only errors that are not retried (e.g., 4xx) end up here. The user was already
+    // notified by the api function.
+    const { error } = missingUpdateActionsResult;
+    return {
+      successful: false,
+      failure: {
+        reason: "Fetching the missing update actions failed",
+        error: error.cause,
+        details: { errorKind: error.kind, status: error.status },
+      },
+    };
+  }
+  const missingUpdateActions = missingUpdateActionsResult.value;
   const hasRemoteUnseenChanges = missingUpdateActions.length > 0;
 
   if (!hasRemoteUnseenChanges) {
@@ -62,11 +79,14 @@ export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   // this function will notice that there are missingUpdateActions and apply them. This should not trigger a full "rewinding" rebase
   // and should be ensured because "not allowed to edit" means the save queue would be empty. Thus no hasLocalUnsavedChanges = false.
   if (hasLocalUnsavedChanges && collaborationMode !== "Concurrent") {
-    ErrorHandling.notify(
-      new Error("Full rebase needed even though collaborationMode is not Concurrent."),
-    );
     Toast.error("Could not save this annotation. Please refresh the page.");
-    return { successful: false };
+    return {
+      successful: false,
+      failure: {
+        reason: "Full rebase needed even though collaborationMode is not Concurrent",
+        details: { collaborationMode },
+      },
+    };
   }
   const annotationBeforeRebase = yield* select((state) => state.annotation);
   if (hasLocalUnsavedChanges) {
@@ -84,7 +104,13 @@ export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   try {
     const applyingResult = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
     if (!applyingResult.success) {
-      return { successful: false };
+      return {
+        successful: false,
+        failure: withPhase(
+          applyingResult.failure ?? { reason: "Applying the missing update actions failed" },
+          "applyMissingUpdateActions",
+        ),
+      };
     }
     yield* call(resolveApplyingUpdateArtifacts, applyingResult.artifactInfos);
     if (hasLocalUnsavedChanges) {
@@ -94,13 +120,23 @@ export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
       // emitter of these updates (e.g., the proofreading saga) is responsible for handling
       // such updates.
       // TODO #9711: Refactor this?
-      const { success, artifactInfos: _artifactInfos } = yield* call(
+      const {
+        success,
+        artifactInfos: _artifactInfos,
+        failure,
+      } = yield* call(
         reapplyUpdateActionsFromSaveQueue, // isRebasingOrForwarding := false (in happy case)
         missingUpdateActions,
         annotationBeforeRebase,
       );
       if (!success) {
-        return { successful: false };
+        return {
+          successful: false,
+          failure: withPhase(
+            failure ?? { reason: "Re-applying the save queue failed" },
+            "reapplySaveQueue",
+          ),
+        };
       }
     }
     return { successful: true };
@@ -109,13 +145,14 @@ export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     // saga.
     console.error("in save saga, got exception, terminating ...");
     console.warn(exception);
-    // @ts-expect-error
-    ErrorHandling.notify(exception);
     Toast.error(
       "An unrecoverable error occurred while synchronizing this annotation. Please refresh the page.",
       { sticky: true },
     );
-    return { successful: false };
+    return {
+      successful: false,
+      failure: { reason: "Exception while rebasing", error: exception },
+    };
   } finally {
     // isRebasingOrForwarding := false
     yield* put(
@@ -124,26 +161,51 @@ export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   }
 }
 
-function* fetchNewestMissingUpdateActions(): Saga<APIUpdateActionBatch[]> {
+// Adds the rebasing phase in which the failure happened to the details.
+function withPhase(failure: RebasingFailure, phase: string): RebasingFailure {
+  return { ...failure, details: { ...failure.details, phase } };
+}
+
+// Without the missing update actions, rebasing (and thus saving) cannot continue. Therefore, the
+// request is retried until the server is reachable again (with an exponential backoff of at most
+// one minute). In tests, the delays are much shorter.
+const FETCH_MISSING_UPDATE_ACTIONS_RETRY_OPTIONS: RetryOptions = {
+  retries: Number.POSITIVE_INFINITY,
+  initialDelayMs: process.env.IS_TESTING ? 1 : 1000,
+  backoffFactor: 2,
+  maxDelayMs: process.env.IS_TESTING ? 10 : 60 * 1000,
+};
+
+function* fetchNewestMissingUpdateActions(): Saga<ApiResult<APIUpdateActionBatch[]>> {
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   const annotationId = yield* select((state) => state.annotation.annotationId);
   const versionOnClient = yield* select((state) => {
     return state.annotation.version;
   });
 
-  // Fetch all update actions that belong to a version that is newer than
-  // versionOnClient. If there are none, the array will be empty.
-  // The order is ascending in the version number ([v_n, v_(n+1), ...]).
-  const newerActions = yield* call(
-    getUpdateActionLog,
-    tracingStoreUrl,
-    annotationId,
-    versionOnClient + 1,
-    undefined,
-    false,
-    true,
-  );
-  return newerActions;
+  // The request is retried without limit. Abort it when this saga is cancelled (e.g., because
+  // the annotation view is left). Otherwise, the retries would continue in the background.
+  // Aborted requests are not retried.
+  const abortController = new AbortController();
+  try {
+    // Fetch all update actions that belong to a version that is newer than
+    // versionOnClient. If there are none, the array will be empty.
+    // The order is ascending in the version number ([v_n, v_(n+1), ...]).
+    const newerActions = yield* call(
+      getUpdateActionLog,
+      tracingStoreUrl,
+      annotationId,
+      versionOnClient + 1,
+      undefined,
+      false,
+      true,
+      { signal: abortController.signal },
+      FETCH_MISSING_UPDATE_ACTIONS_RETRY_OPTIONS,
+    );
+    return newerActions;
+  } finally {
+    abortController.abort();
+  }
 }
 
 function* applyNewestMissingUpdateActions(
@@ -158,7 +220,7 @@ function* applyNewestMissingUpdateActions(
   // performRebasingIfNecessary's outer try/catch, which terminates polling -- the same
   // way a hard error in reapplyUpdateActionsFromSaveQueue is already handled, since that
   // function has no local try/catch either.
-  const { success, artifactInfos } = yield* tryToIncorporateActions(actions, false);
+  const { success, artifactInfos, failure } = yield* tryToIncorporateActions(actions, false);
   // Updates the annotation state used for future rebase operation to the current state with the missingUpdateActions applied.
   yield* put(finishedApplyingMissingUpdatesAction()); // knownServerState := annotation
   if (success) {
@@ -183,7 +245,9 @@ function* applyNewestMissingUpdateActions(
     sticky: true,
     key: SAVING_CONFLICT_TOAST_KEY,
   });
-  return FailedIncorporateActionsReturnValue;
+  return getFailedIncorporateActionsReturnValue(
+    failure ?? { reason: "Applying the missing update actions failed" },
+  );
 }
 
 function* reapplyUpdateActionsFromSaveQueue(
@@ -211,11 +275,19 @@ function* reapplyUpdateActionsFromSaveQueue(
       updatedSaveQueue,
       currentVersion,
     );
-    const { success: successfullyAppliedSaveQueueUpdates, artifactInfos } =
-      yield* tryToIncorporateActions(saveQueueAsServerUpdateActionBatches, true);
+    const {
+      success: successfullyAppliedSaveQueueUpdates,
+      artifactInfos,
+      failure,
+    } = yield* tryToIncorporateActions(saveQueueAsServerUpdateActionBatches, true);
     if (successfullyAppliedSaveQueueUpdates) {
       return { success: true, artifactInfos };
     }
+    return getFailedIncorporateActionsReturnValue(
+      failure ?? { reason: "Re-applying the save queue failed" },
+    );
   }
-  return FailedIncorporateActionsReturnValue;
+  return getFailedIncorporateActionsReturnValue({
+    reason: "Rewriting the save queue for re-applying failed",
+  });
 }

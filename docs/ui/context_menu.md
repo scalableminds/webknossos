@@ -33,6 +33,7 @@ The context menu for a skeleton node
 | Split from all neighboring segments | Proofreading tool only. Cuts the segment under the node from all its neighbors in the agglomerate. |
 | Delete Edge to this Node | Deletes the edge between the active node and the clicked node, splitting the tree. Disabled if the two nodes are not connected directly. |
 | Delete this Node | Deletes the clicked node. |
+| Delete this Node & Reconnect Neighbors | Deletes the clicked node and connects its two neighbors with a new edge, so that the tree is not split. Disabled unless the node has exactly two neighbors. Not shown for agglomerate trees. |
 | Mark as Branchpoint / Unmark as Branchpoint | Toggles whether the node is a [branchpoint](../skeleton_annotation/operations.md). |
 | Extract shortest Path to this Node | Copies the shortest path between the active node and the clicked node into a new tree. Both nodes must be in the same tree. |
 | Path Length to this Node | Shows the length of the shortest path between the active node and the clicked node. Both nodes must be in the same tree. |

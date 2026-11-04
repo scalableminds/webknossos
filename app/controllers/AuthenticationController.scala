@@ -508,7 +508,7 @@ class AuthenticationController @Inject() (
         } else {
           Fox.successful(BadRequest("Invalid signature"))
         }
-      case None => Fox.successful(Redirect("/auth/login?redirectPage=http://discuss.webknossos.org")) // not logged in
+      case None => Fox.successful(Redirect("/auth/login?redirectPage=https://discuss.webknossos.org")) // not logged in
     }
   }
 

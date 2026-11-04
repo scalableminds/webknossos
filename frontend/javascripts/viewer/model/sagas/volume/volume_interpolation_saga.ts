@@ -33,11 +33,12 @@ import {
 import Dimensions from "viewer/model/dimensions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
+import { runAxisForPlane } from "viewer/model/volumetracing/core/bucket_diff";
 import { runMaskEdit } from "viewer/model/volumetracing/integration/mask_driver";
 import { api, Model } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 import { requestBucketModificationInVolumeTracing } from "../saga_helpers";
-import { getBoundingBoxForViewport } from "./helpers";
+import { getBoundingBoxForViewport, getVolumeSaveMode, pushPartialBucketUpdates } from "./helpers";
 
 const MAXIMUM_INTERPOLATION_DEPTH = 100;
 
@@ -444,10 +445,10 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   }
 
   const { cube } = yield* call([Model, Model.getSegmentationTracingLayer], volumeTracing.tracingId);
-  runMaskEdit(
+  const saveMode = yield* call(getVolumeSaveMode);
+  const { bucketDiffs } = runMaskEdit(
     {
       cube,
-      denseMags: cube.magInfo.getDenseMags(),
       magIndex: labeledZoomStep,
       segmentId: activeCellId,
       additionalCoordinates: additionalCoordinates ?? null,
@@ -457,9 +458,19 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
           : "overwrite-all",
       // As for the brush: under overwrite-empty, only background is labeled.
       overwritableValue: 0n,
+      saveMode,
     },
     { kind: "mask", origin: maskOrigin, size: maskSize, selected: maskSelected },
     "volumeInterpolation",
+  );
+  // As for the brush, in the run order in which the viewport's slices are contiguous.
+  yield* call(
+    pushPartialBucketUpdates,
+    saveMode,
+    bucketDiffs,
+    cube,
+    volumeTracing.tracingId,
+    runAxisForPlane(activeViewport),
   );
 
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));

@@ -56,7 +56,18 @@ import {
   setupRenderArea,
 } from "viewer/view/rendering_utils";
 
-const LIGHT_INTENSITY = 10;
+// The lights below are attached to the TD camera, so their positions are in camera
+// space (positive z is on the viewer's side). They point at the origin, so a light's
+// position is also the direction it comes from.
+// The key light gives curved surfaces a clear light-to-dark gradient. Fill and under
+// light are much weaker and only keep the shadowed sides from going black. Stronger
+// values wash out the shading, and where lights overlap, their intensities add up to
+// whitish areas. The rim light only catches silhouette edges, which keeps overlapping
+// branches visually separated.
+const KEY_LIGHT_INTENSITY = 7;
+const FILL_LIGHT_INTENSITY = 1.5;
+const UNDER_LIGHT_INTENSITY = 1;
+const RIM_LIGHT_INTENSITY = 4;
 
 type RaycasterHit = {
   node: MeshSceneNode;
@@ -68,17 +79,11 @@ type RaycasterHit = {
   isHighlightedByHitTest: boolean;
 } | null;
 
-const createDirLight = (
-  position: Vector3,
-  target: Vector3,
-  intensity: number,
-  camera: OrthographicCamera,
-) => {
+const createDirLight = (position: Vector3, intensity: number, camera: OrthographicCamera) => {
   const dirLight = new DirectionalLight(0x888888, intensity);
   dirLight.position.set(...position);
   camera.add(dirLight);
   camera.add(dirLight.target);
-  dirLight.target.position.set(...target);
 
   return dirLight;
 };
@@ -140,8 +145,16 @@ class PlaneView {
 
     this.cameras = { ...this.nonTdCameras, [OrthoViews.TDView]: this.tdCameras.ORTHOGRAPHIC };
 
-    createDirLight([10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, tdOrthographicCamera);
-    createDirLight([-10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, tdOrthographicCamera);
+    // Key light: from the front upper right.
+    createDirLight([14, 12, 8], KEY_LIGHT_INTENSITY, tdOrthographicCamera);
+    // Fill light: from the front left, slightly below.
+    createDirLight([-14, -2, 10], FILL_LIGHT_INTENSITY, tdOrthographicCamera);
+    // Under light: from the front below, so that the undersides of round shapes (e.g. a
+    // soma) are shaded, too.
+    createDirLight([3, -14, 6], UNDER_LIGHT_INTENSITY, tdOrthographicCamera);
+    // Rim light: from behind upper left.
+    createDirLight([-8, 10, -14], RIM_LIGHT_INTENSITY, tdOrthographicCamera);
+
     this.nonTdCameras[OrthoViews.PLANE_XY].position.z = -1;
     this.nonTdCameras[OrthoViews.PLANE_YZ].position.x = 1;
     this.nonTdCameras[OrthoViews.PLANE_XZ].position.y = 1;

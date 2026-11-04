@@ -137,7 +137,8 @@ jobs:
         uses: actions/cache@v6
         with:
           # actions/cache does not expand directories, so exclusions only apply to paths listed by the globs.
-          # Hence the children of each target dir are listed, minus staged apps, web assets and logs.
+          # Hence the children of each target dir are listed, minus staged apps, web assets, logs and the native JNI build
+          # (its CMake cache pins the absolute JDK path, which differs between runner images).
           # YAML anchor, reused by the other compile cache steps below.
           path: &zinc-cache-paths |
             target/*
@@ -146,6 +147,7 @@ jobs:
             !**/target/universal
             !**/target/web
             !**/target/global-logging
+            !**/target/native
           key: zinc-test-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
             zinc-test-${{ github.ref_name }}-

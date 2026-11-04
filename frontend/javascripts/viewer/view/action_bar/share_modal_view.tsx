@@ -7,6 +7,7 @@ import {
   ShareAltOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   createShortLink,
@@ -40,7 +41,7 @@ import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { copyToClipboard } from "libs/clipboard";
 import { makeComponentLazy } from "libs/react_helpers";
-import { useWkSelector } from "libs/react_hooks";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
 import isEqual from "lodash-es/isEqual";
@@ -55,6 +56,7 @@ import type {
   APIDataset,
   APITeam,
 } from "types/api_types";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum } from "viewer/constants";
 import UrlManager from "viewer/controller/url_manager";
 import {
@@ -62,15 +64,33 @@ import {
   mayEditAnnotationProperties,
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
-import { hasEditableMapping } from "viewer/model/accessors/volumetracing_accessor";
+import { hasEditableMapping, isMappingLocked } from "viewer/model/accessors/volumetracing_accessor";
 import {
   setAnnotationVisibilityAction,
   setCollaborationModeAction,
 } from "viewer/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "viewer/model/actions/ui_actions";
-import Store from "viewer/store";
+import Store, { type WebknossosState } from "viewer/store";
 
 const RadioGroup = Radio.Group;
+
+// Live collaboration requires the mapping (or that no mapping is used) to be locked, so that
+// collaborators can't lock different mappings with their first edits. An editable mapping is
+// always locked, but the backend doesn't necessarily set mappingIsLocked for it.
+function isMappingStateFixedForLiveCollaboration(state: WebknossosState): boolean {
+  if (!WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation) {
+    return hasEditableMapping(state);
+  }
+  return hasEditableMapping(state) || isMappingLocked(state);
+}
+
+function getMappingNotLockedExplanation(): string {
+  if (!WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation) {
+    return "The annotation needs to have at least one saved proofreading action. Enable a mapping and use the proofreading tool for that.";
+  }
+  return "Live collaboration requires the mapping of the annotation to be locked. Use the brush or the proofreading tool once to lock the active mapping (or that no mapping is used).";
+}
+
 const sharingActiveNode = true;
 type Props = {
   isOpen: boolean;
@@ -226,7 +246,6 @@ function ShareModalViewInner(props: Props) {
   const annotationVisibility = annotation.visibility;
   const [visibility, setVisibility] = useState(annotationVisibility);
   const [isChangingInProgress, setIsChangingInProgress] = useState(false);
-  const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
 
   const othersMayEdit = isAnnotationEditableByNonOwners(annotation);
@@ -242,21 +261,18 @@ function ShareModalViewInner(props: Props) {
   }, [othersMayEdit, allowConcurrentEditing]);
 
   const hasUpdatePermissions = useWkSelector(mayEditAnnotationProperties);
-  const annotationHasEditableMapping = useWkSelector(hasEditableMapping);
+  const isMappingStateFixed = useWkSelector(isMappingStateFixedForLiveCollaboration);
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
 
-  const fetchAndSetSharedTeams = async () => {
-    if (!activeUser) {
-      return;
-    }
-    const fetchedSharedTeams = await getTeamsForSharedAnnotation(annotationType, annotationId);
-    setSharedTeams(fetchedSharedTeams);
-  };
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Refetch once annotation or user changes.
-  useEffect(() => {
-    fetchAndSetSharedTeams();
-  }, [annotationType, annotationId, activeUser]);
+  const queryClient = useQueryClient();
+  const sharedTeamsQueryKey = ["sharedTeams", annotationType, annotationId, activeUser?.id];
+  const { data: sharedTeams = [] } = useQueryWithErrorHandling({
+    queryKey: sharedTeamsQueryKey,
+    queryFn: () => getTeamsForSharedAnnotation(annotationType, annotationId),
+    enabled: activeUser != null,
+    refetchOnWindowFocus: false,
+  });
+  const setSharedTeams = (teams: APITeam[]) => queryClient.setQueryData(sharedTeamsQueryKey, teams);
 
   const reportSuccessfulChange = (newVisibility: APIAnnotationVisibility) => {
     const randomKeyToAllowDuplicates = Math.random().toString(36).substring(0, 5);
@@ -285,21 +301,20 @@ function ShareModalViewInner(props: Props) {
     }
     setIsChangingInProgress(true);
     setVisibility(newVisibility as any as APIAnnotationVisibility);
-    try {
-      await editAnnotation(annotationId, annotationType, {
-        visibility: newVisibility,
-      });
+    const result = await editAnnotation(annotationId, annotationType, {
+      visibility: newVisibility,
+    });
+    if (result.ok) {
       dispatch(setAnnotationVisibilityAction(newVisibility));
       reportSuccessfulChange(newVisibility);
-    } catch (e) {
-      console.error("Failed to update the annotations visibility.", e);
+    } else {
+      console.error("Failed to update the annotations visibility.", result.error.cause);
       // Resetting the visibility to the old value as the request failed
       // so the user still sees the settings currently saved in the backend.
       setVisibility(visibility as any as APIAnnotationVisibility);
       reportFailedChange();
-    } finally {
-      setIsChangingInProgress(false);
     }
+    setIsChangingInProgress(false);
   };
 
   const handleSharedTeamsChange = async (value: APITeam | APITeam[]) => {
@@ -308,6 +323,8 @@ function ShareModalViewInner(props: Props) {
       return;
     }
     setIsChangingInProgress(true);
+    // Cancel a pending fetch so that it can't overwrite the optimistic update with stale data.
+    await queryClient.cancelQueries({ queryKey: sharedTeamsQueryKey });
     setSharedTeams(newTeams);
     try {
       await updateTeamsForSharedAnnotation(
@@ -359,10 +376,8 @@ function ShareModalViewInner(props: Props) {
 
   const handleConcurrentEditingCheckboxChange = async (event: CheckboxChangeEvent) => {
     const value = event.target.checked;
-    if (value && !hasEditableMapping(Store.getState())) {
-      Toast.warning(
-        "Concurrent editing is currently only supported for proofreading annotations. Please select a mapping and perform one proofreading action. Afterwards, you may select the Concurrent mode.",
-      );
+    if (value && !isMappingStateFixedForLiveCollaboration(Store.getState())) {
+      Toast.warning(getMappingNotLockedExplanation());
       return;
     }
     if (!hasUpdatePermissions) {
@@ -429,6 +444,7 @@ function ShareModalViewInner(props: Props) {
   const includeToken = !dataset.isPublic && visibility === "Public";
   const longUrl = useSharingUrl(isOpen, sharingToken, includeToken);
 
+  const allowsVolumeAnnotation = WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation;
   const concurrentDisabledReason = useMemo(() => {
     if (!hasUpdatePermissions) {
       return "You don't have the permissions to change this setting. Ask the owner to change it instead.";
@@ -439,11 +455,11 @@ function ShareModalViewInner(props: Props) {
     if (isChangingInProgress) {
       return "A change of the settings is currently being saved.";
     }
-    if (!annotationHasEditableMapping) {
-      return "The annotation needs to have at least one saved proofreading action. Enable a mapping and use the proofreading tool for that.";
+    if (!isMappingStateFixed) {
+      return getMappingNotLockedExplanation();
     }
     return null;
-  }, [hasUpdatePermissions, newOthersMayEdit, isChangingInProgress, annotationHasEditableMapping]);
+  }, [hasUpdatePermissions, newOthersMayEdit, isChangingInProgress, isMappingStateFixed]);
 
   return (
     <Modal
@@ -616,7 +632,13 @@ function ShareModalViewInner(props: Props) {
                 disabled={concurrentDisabledReason != null}
               >
                 Yes, allow simultaneous editing
-                <FastTooltip title="Currently not recommended for production use. Requires at least one saved proofreading action.">
+                <FastTooltip
+                  title={
+                    allowsVolumeAnnotation
+                      ? "Currently not recommended for production use. Requires a locked mapping."
+                      : "Currently not recommended for production use. Requires at least one saved proofreading action."
+                  }
+                >
                   <Tag
                     style={{ marginLeft: 4 }}
                     color="warning"
@@ -634,10 +656,19 @@ function ShareModalViewInner(props: Props) {
               }}
             >
               When enabled, users can edit the annotation in parallel. This feature is experimental
-              and is currently limited to the proofreading tool (
-              <b>skeleton and brushing will be disabled</b>). When disabled, only one user can edit
-              at the same time. We recommend to coordinate the collaboration with your peers to
-              avoid being blocked.
+              and is currently limited to{" "}
+              {allowsVolumeAnnotation ? (
+                <>
+                  the proofreading tool and the volume tools (
+                  <b>the skeleton tool will be disabled</b>).
+                </>
+              ) : (
+                <>
+                  the proofreading tool (<b>skeleton and brushing will be disabled</b>).
+                </>
+              )}{" "}
+              When disabled, only one user can edit at the same time. We recommend to coordinate the
+              collaboration with your peers to avoid being blocked.
             </Hint>
           </Col>
         </Row>

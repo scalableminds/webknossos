@@ -51,7 +51,7 @@ window.webknossos.apiReady(3).then((api) => {
 You can access and run scripts directly from within the WEBKNOSSOS annotation viewer.
 
 1. Open the Menu dropdown in the top navigation bar.
-2. Select "Add Script".
+2. Select "User Scripts" in the "Customize" section.
 3. Either select an available script from the list or enter your script code directly in the text box.
 4. Click "Run Script".
 

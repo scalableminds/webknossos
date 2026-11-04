@@ -8,6 +8,7 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { useQuery } from "@tanstack/react-query";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { getJobs } from "admin/rest_api";
@@ -33,7 +34,7 @@ import dayjs from "dayjs";
 import features from "features";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
-import { isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
+import { hasFinePointer, isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import type React from "react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { Link } from "react-router";
@@ -113,7 +114,15 @@ function DatasetView({
   const [searchTags, setSearchTags] = useState<string[]>([]);
   const [datasetFilteringMode, setDatasetFilteringMode] =
     useState<DatasetFilteringMode>("onlyShowReported");
-  const [jobs, setJobs] = useState<APIJob[]>([]);
+  // Errors are swallowed so that a failing poll doesn't show a toast every few seconds.
+  const { data: jobs = [] } = useQuery({
+    queryKey: ["jobs", APIJobCommand.CONVERT_TO_WKW, true],
+    queryFn: () => getJobs(APIJobCommand.CONVERT_TO_WKW, true, { showErrorToast: false }),
+    enabled: features().jobsEnabled,
+    refetchInterval: CONVERSION_JOBS_REFRESH_INTERVAL,
+    retry: false,
+    meta: { persist: false },
+  });
   const { data: folder } = useFolderQuery(context.activeFolderId);
 
   const activeTab = useContext(ActiveTabContext);
@@ -130,27 +139,6 @@ function DatasetView({
       setDatasetFilteringMode(state.datasetFilteringMode);
     }
   }, [setSearchQuery]);
-
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-    let cancelled = false;
-
-    if (features().jobsEnabled) {
-      const poll = () =>
-        getJobs(APIJobCommand.CONVERT_TO_WKW, true).then((newJobs) => {
-          if (!cancelled) {
-            setJobs(newJobs);
-          }
-        });
-      poll();
-      interval = setInterval(poll, CONVERSION_JOBS_REFRESH_INTERVAL);
-    }
-
-    return () => {
-      cancelled = true;
-      return interval != null ? clearInterval(interval) : undefined;
-    };
-  }, []);
 
   useEffect(() => {
     persistence.persist({
@@ -209,7 +197,8 @@ function DatasetView({
     <Input
       prefix={<SearchOutlined />}
       allowClear
-      autoFocus
+      // Autofocusing on touch devices would pop up the on-screen keyboard.
+      autoFocus={hasFinePointer()}
       style={{
         width: 200,
       }}
@@ -224,7 +213,7 @@ function DatasetView({
     isUserAnAdminOrDatasetManager || isUserTeamManager(user);
 
   const adminHeader = isUserAdminOrDatasetManagerOrTeamManager ? (
-    <Space>
+    <Space wrap>
       <DatasetRefreshButton context={context} />
       <DatasetAddButton context={context} />
       {context.activeFolderId != null && (

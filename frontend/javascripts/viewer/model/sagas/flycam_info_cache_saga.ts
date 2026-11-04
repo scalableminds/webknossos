@@ -4,7 +4,6 @@ import type { Matrix4x4 } from "mjs";
 import { buffers } from "redux-saga";
 import { actionChannel, put } from "typed-redux-saga";
 import type { OrthoViewRects, Vector3, ViewMode } from "viewer/constants";
-import constants from "viewer/constants";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { call, select, take } from "viewer/model/sagas/effect_generators";
 import type { LoadingStrategy, WebknossosState } from "viewer/store";
@@ -19,6 +18,7 @@ import { _getDummyFlycamMatrix } from "../accessors/flycam_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import type { Action } from "../actions/actions";
 import { setMaximumZoomForAllMagsForLayerAction } from "../actions/flycam_info_cache_actions";
+import { getRequiredBucketCapacityPerLayer } from "../bucket_data_handling/data_rendering_logic";
 import { ensureWkInitialized } from "./ready_sagas";
 
 const asyncGetMaximumZoomForAllMags = createWorker<typeof AsyncGetMaximumZoomForAllMags>(
@@ -112,7 +112,10 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
         getViewportRects(state),
         Math.min(
           state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
-          constants.GPU_FACTOR_MULTIPLIER * state.userConfiguration.gpuMemoryFactor,
+          getRequiredBucketCapacityPerLayer(
+            state.userConfiguration.gpuMemoryFactor,
+            state.dataset.dataSource.dataLayers.length,
+          ),
         ),
         layerMatrix,
         // Theoretically, the following parameter should be state.flycam.currentMatrix.

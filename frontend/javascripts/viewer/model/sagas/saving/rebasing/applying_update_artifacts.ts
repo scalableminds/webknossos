@@ -17,9 +17,22 @@ export type ApplyingUpdateArtifacts = {
   meshesToLoadPerLayer: ReadonlyMap<string, ReadonlyMap<bigint, PreservedMeshDisplayProps>>;
 };
 
+// Describes why applying update actions (and thus rebasing) failed. It is reported to Airbrake
+// by the version polling saga (see version_poll_saga.ts).
+export type RebasingFailure = {
+  // A stable description without ids so that Airbrake groups the reports.
+  reason: string;
+  // Expected failures (e.g., another user reverted the annotation) are reported as warnings.
+  isExpected?: boolean;
+  error?: unknown;
+  details?: Record<string, unknown>;
+};
+
 export type ApplyingUpdateResults = {
   success: boolean;
   artifactInfos: ApplyingUpdateArtifacts;
+  // Only set if success is false.
+  failure?: RebasingFailure;
 };
 
 export const FailedIncorporateActionsReturnValue: ApplyingUpdateResults = {
@@ -29,6 +42,12 @@ export const FailedIncorporateActionsReturnValue: ApplyingUpdateResults = {
     meshesToLoadPerLayer: new Map(),
   },
 };
+export function getFailedIncorporateActionsReturnValue(
+  failure: RebasingFailure,
+): ApplyingUpdateResults {
+  return { ...FailedIncorporateActionsReturnValue, failure };
+}
+
 export const SuccessEmptyIncorporateActionsReturnValue: ApplyingUpdateResults = {
   success: true,
   artifactInfos: {

@@ -351,6 +351,7 @@ object Msg {
       "This job has already been retried once and failed again. This is likely a persistent failure. Please contact an administrator for help."
     val cleanupFailed: String = "Could not clean up failed job."
     val notEnabled: String = "Long-running jobs are not enabled for this WEBKNOSSOS instance."
+    val notAvailableInPlan: String = "Long-running jobs are not available in the pricing plan of your organization."
     val edgeLengthExceeded: String = "An edge length of the selected bounding box is too large."
     val volumeExceeded: String = "The volume of the selected bounding box is too large."
     val invalidBoundingBoxOrMag: String =
@@ -436,6 +437,7 @@ object Msg {
     val loadingDataFailed: String = "Could not load data for the requested dataset."
     val noLayers: String = "Dataset has no data layers."
     val noMags: String = "Data layer does not contain any mags."
+    val noLayersRenderableAtZoom: String = "No data layer has mags coarse enough to render a thumbnail at this zoom."
     val allowedTeamsNotFound: String = "Could not find allowed teams for dataset."
     val voxelSizeFailedToFetch: String = "Could not fetch voxel size for annotation."
     val additionalCoordinatesDiffer: String = "Additional coordinates differ in merged units."
@@ -848,6 +850,7 @@ object Msg {
   }
   object SegmentAnything {
     val notEnabled: String = "AI-based quick select is not enabled for this WEBKNOSSOS instance."
+    val notAvailableInPlan: String = "AI-based quick select is not available in the pricing plan of your organization."
     val noUri: String = "No URI for SAM server configured."
     val getDataFailed: String = "Could not get image data to send to SAM server."
     val getMaskFailed: String = "Could not get image mask from SAM server."

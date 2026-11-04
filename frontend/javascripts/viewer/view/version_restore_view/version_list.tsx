@@ -1,5 +1,6 @@
 import VirtualList, { type ListRef } from "@rc-component/virtual-list";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { unwrapOrThrow } from "admin/api/api_result";
 import {
   downloadAnnotation,
   getAnnotationProto,
@@ -194,12 +195,14 @@ async function getUpdateActionLogPage(
     earliestAccessibleVersion,
   );
 
-  const updateActionLog = await getUpdateActionLog(
-    tracingStoreUrl,
-    annotationId,
-    oldestVersionInPage,
-    newestVersionInPage,
-    true,
+  const updateActionLog = unwrapOrThrow(
+    await getUpdateActionLog(
+      tracingStoreUrl,
+      annotationId,
+      oldestVersionInPage,
+      newestVersionInPage,
+      true,
+    ),
   );
 
   // The backend won't send the version 0 as that does not exist. The frontend however

@@ -20,6 +20,12 @@ import { useBlocker } from "react-router";
 import type { APITeam } from "types/api_types";
 import type { UnitLong, Vector3 } from "viewer/constants";
 import { getTotalFileSize } from "./detect_dataset_format";
+import {
+  getUploadProgress,
+  groupFilesByLayer,
+  markLayersAsSent,
+  type UploadLayerProgress,
+} from "./upload_layers";
 
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
 
@@ -27,10 +33,29 @@ const logRetryToAnalytics = throttle((datasetName: string) => {
   ErrorHandling.notify(new Error(`Warning: Upload of dataset ${datasetName} was retried.`));
 }, REPORT_THROTTLE_THRESHOLD);
 
+const PROGRESS_THROTTLE_INTERVAL = 200; // ms
+
+// What is known about an upload from the moment it starts.
+export type UploadInfo = {
+  datasetName: string;
+  needsConversion: boolean;
+  // The name of the source format if it needs to be converted, e.g. "TIFF".
+  formatName: string | null;
+  bytesTotal: number;
+  layers: UploadLayerProgress[];
+};
+
 export type UploadStatus =
   | { kind: "idle" }
-  | { kind: "uploading"; datasetName: string; progress: number; isRetrying: boolean }
-  | { kind: "finishing"; datasetName: string };
+  | ({ kind: "uploading"; bytesSent: number; isRetrying: boolean } & UploadInfo)
+  | ({ kind: "finishing" } & UploadInfo)
+  | ({ kind: "finished"; datasetId: string; conversionJobId: string | null } & UploadInfo)
+  | ({
+      kind: "failed";
+      failedStage: "upload" | "finalize";
+      message: string;
+      bytesSent: number;
+    } & UploadInfo);
 
 type DatasetUploadRequest = {
   name: string;
@@ -40,6 +65,7 @@ type DatasetUploadRequest = {
   targetFolderId: string;
   datastoreUrl: string;
   needsConversion: boolean;
+  formatName: string | null;
   voxelSizeFactor?: Vector3;
   voxelSizeUnit?: UnitLong;
   unfinishedUploadToContinue: UnfinishedUpload | null;
@@ -49,6 +75,9 @@ type ActiveUpload = {
   uploadId: string;
   datastoreUrl: string;
   resumableUpload: any;
+  // Set if all files were sent while the cancel dialog was open.
+  isFinishPending: boolean;
+  finishUpload: () => void;
 };
 
 function getRandomString() {
@@ -91,15 +120,23 @@ export function useResumableDatasetUpload({
   const [status, setStatus] = useState<UploadStatus>({ kind: "idle" });
   const activeUploadRef = useRef<ActiveUpload | null>(null);
   // Set to true when the user initiates a cancel (before the confirmation dialog is resolved)
-  // to prevent the `complete` event from triggering finishDatasetUpload in the meantime.
+  // to defer finishDatasetUpload until the user decided to keep the upload.
   const isCancellingRef = useRef(false);
 
-  useBlockNavigationWhile(status.kind !== "idle");
+  useBlockNavigationWhile(status.kind === "uploading" || status.kind === "finishing");
 
   const startUpload = async (request: DatasetUploadRequest) => {
     const { name: datasetName, files, datastoreUrl, needsConversion } = request;
     isCancellingRef.current = false;
-    setStatus({ kind: "uploading", datasetName, progress: 0, isRetrying: false });
+    const layerGroups = groupFilesByLayer(files);
+    const uploadInfo: UploadInfo = {
+      datasetName,
+      needsConversion,
+      formatName: request.formatName,
+      bytesTotal: getTotalFileSize(files),
+      layers: layerGroups.layers,
+    };
+    setStatus({ kind: "uploading", ...uploadInfo, bytesSent: 0, isRetrying: false });
 
     const uploadId =
       request.unfinishedUploadToContinue?.uploadId ??
@@ -109,7 +146,7 @@ export function useResumableDatasetUpload({
         uploadId,
         totalFileCount: files.length,
         filePaths: files.map((file) => file.path || ""),
-        totalFileSizeInBytes: getTotalFileSize(files),
+        totalFileSizeInBytes: uploadInfo.bytesTotal,
       },
       datasetName,
       organizationId: request.organizationId,
@@ -132,41 +169,78 @@ export function useResumableDatasetUpload({
       setStatus({ kind: "idle" });
       return;
     }
-    activeUploadRef.current = { uploadId, datastoreUrl, resumableUpload };
+    const sentUploadInfo = { ...uploadInfo, layers: markLayersAsSent(uploadInfo.layers) };
+    // Progress events fire for every chunk, so computing the progress per layer is throttled.
+    const updateProgress = throttle(() => {
+      const { bytesSent, layers } = getUploadProgress(layerGroups, resumableUpload.files);
+      setStatus((previous) =>
+        previous.kind === "uploading"
+          ? {
+              ...previous,
+              isRetrying: false,
+              // Don't let the progress go back, e.g. when a chunk is retried.
+              bytesSent: Math.max(previous.bytesSent, bytesSent),
+              layers,
+            }
+          : previous,
+      );
+    }, PROGRESS_THROTTLE_INTERVAL);
 
     let finishUploadCalled = false;
-    resumableUpload.addEventListener("complete", (event: ResumableUploadEvent) => {
-      if (
-        event.detail.type !== "complete" ||
-        !event.detail.didUploadCompleteSuccessfully ||
-        isCancellingRef.current ||
-        finishUploadCalled
-      ) {
-        // The upload was not successful, or a cancel was initiated before the complete event
-        // fired (e.g. the last in-flight chunk completed while the cancel dialog was open).
-        // A retry might be initiated by other code that listens to fileError events which is
-        // why we ignore the complete event now. The type is only checked to satisfy TS.
-        return;
-      }
+    const finishUpload = () => {
+      if (finishUploadCalled) return;
       finishUploadCalled = true;
-      resumableUpload.pause();
-      setStatus({ kind: "finishing", datasetName });
+      updateProgress.cancel();
+      setStatus({ kind: "finishing", ...sentUploadInfo });
       finishDatasetUpload(datastoreUrl, uploadId).then(
-        ({ datasetId }) => {
+        ({ datasetId, conversionJobId }) => {
           activeUploadRef.current = null;
-          setStatus({ kind: "idle" });
+          setStatus({
+            kind: "finished",
+            ...sentUploadInfo,
+            datasetId,
+            conversionJobId: conversionJobId ?? null,
+          });
           onUploaded(datasetId, datasetName, needsConversion);
         },
         (error) => {
           sendFailedRequestAnalyticsEvent("finish_dataset_upload", error, {
             dataset_name: datasetName,
           });
-          Toast.error(messages["dataset.upload_failed"]);
           activeUploadRef.current = null;
-          setStatus({ kind: "idle" });
+          setStatus({
+            kind: "failed",
+            ...sentUploadInfo,
+            bytesSent: sentUploadInfo.bytesTotal,
+            failedStage: "finalize",
+            message: messages["dataset.upload_failed"],
+          });
           onUploadAborted();
         },
       );
+    };
+    const activeUpload: ActiveUpload = {
+      uploadId,
+      datastoreUrl,
+      resumableUpload,
+      isFinishPending: false,
+      finishUpload,
+    };
+    activeUploadRef.current = activeUpload;
+
+    resumableUpload.addEventListener("complete", (event: ResumableUploadEvent) => {
+      if (event.detail.type !== "complete" || !event.detail.didUploadCompleteSuccessfully) {
+        // A retry might be initiated by other code that listens to fileError events which is
+        // why we ignore the complete event now. The type is only checked to satisfy TS.
+        return;
+      }
+      resumableUpload.pause();
+      if (isCancellingRef.current) {
+        // Finish once the user decided to keep the upload.
+        activeUpload.isFinishPending = true;
+        return;
+      }
+      finishUpload();
     });
     resumableUpload.addEventListener("filesAdded", () => {
       resumableUpload.upload();
@@ -178,16 +252,20 @@ export function useResumableDatasetUpload({
         // Satisfy TS.
         return;
       }
-      Toast.error(event.detail.message);
-      setStatus({ kind: "idle" });
-    });
-    resumableUpload.addEventListener("progress", () => {
+      updateProgress.cancel();
+      // Stop the upload locally. The files already sent are kept on the server, so that the
+      // upload can still be continued via the list of unfinished uploads. Note that cancel()
+      // would emit a successful "complete" event once all files are removed.
+      resumableUpload.pause();
+      activeUploadRef.current = null;
+      const { message } = event.detail;
       setStatus((previous) =>
         previous.kind === "uploading"
-          ? { ...previous, isRetrying: false, progress: resumableUpload.progress() }
+          ? { ...previous, kind: "failed", failedStage: "upload", message }
           : previous,
       );
     });
+    resumableUpload.addEventListener("progress", updateProgress);
     resumableUpload.addEventListener("fileRetry", () => {
       logRetryToAnalytics(datasetName);
       setStatus((previous) =>
@@ -200,18 +278,20 @@ export function useResumableDatasetUpload({
   const cancelUpload = async () => {
     const activeUpload = activeUploadRef.current;
     if (activeUpload == null) return;
+    // The upload keeps running while the user decides.
     isCancellingRef.current = true;
-    activeUpload.resumableUpload.pause();
-    const shouldCancel = await modal.confirm({
+    const shouldCancel = await modal.warning({
       title:
         "Cancelling the running upload will delete already uploaded files on the server and cannot be undone. Are you sure you want to cancel the upload?",
       okText: "Yes, cancel the upload",
+      okButtonProps: { danger: true },
+      okCancel: true,
       cancelText: "No, keep it running",
     });
 
     if (!shouldCancel) {
       isCancellingRef.current = false;
-      activeUpload.resumableUpload.upload();
+      if (activeUpload.isFinishPending) activeUpload.finishUpload();
       return;
     }
 
@@ -229,5 +309,8 @@ export function useResumableDatasetUpload({
     }
   };
 
-  return { status, startUpload, cancelUpload };
+  // Closes the dialog of a finished or failed upload.
+  const reset = () => setStatus({ kind: "idle" });
+
+  return { status, startUpload, cancelUpload, reset };
 }

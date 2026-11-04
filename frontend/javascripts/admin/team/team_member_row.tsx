@@ -17,7 +17,7 @@ function TeamRolesForUser({ user, highlightedTeam }: { user: APIUser; highlighte
   // used by teams list page
   // does not include dataset managers and team names
   const tags = user.isAdmin
-    ? [["Admin - Access to all Teams", "red"]]
+    ? [["Admin - Access to all Teams", "error"]]
     : user.teams
         .filter((team) => team.id === highlightedTeam.id)
         .map((team) => {

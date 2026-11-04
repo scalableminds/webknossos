@@ -51,11 +51,11 @@ import type {
 import type { ArbitraryObject } from "types/type_utils";
 import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
-import { setupApi } from "viewer/api/internal_api";
 import Constants, { ControlModeEnum, type Vector3 } from "viewer/constants";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
 import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 import UrlManager from "viewer/controller/url_manager";
+import type { ContourGeometry } from "viewer/geometries/helper_geometries";
 import type { ModelType } from "viewer/model";
 import Model from "viewer/model";
 import {
@@ -73,8 +73,9 @@ import type { RequestBucketInfo } from "viewer/model/bucket_data_handling/wkstor
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import rootSaga from "viewer/model/sagas/root_saga";
-import { setModel, setStore } from "viewer/singletons";
+import { setStore } from "viewer/singletons";
 import { type NumberLike, type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
+import { setupViewer } from "viewer/viewer_setup";
 import { setSlowCompression } from "viewer/workers/slow_byte_array_lz4_compression.worker";
 import { afterAll, type TestContext as BaseTestContext, type Mock, vi } from "vitest";
 import DATASET, {
@@ -269,7 +270,7 @@ vi.mock("admin/rest_api.ts", async () => {
         _tracingStoreUrl: string,
         _tracingId: string,
         _segmentsInfo: unknown,
-      ): Promise<Array<MinCutTargetEdge>> => {
+      ): Promise<ApiResult<Array<MinCutTargetEdge>>> => {
         // This simply serves as a preparation so that specs can mock the function
         // when needed. Without this stub, it's harder to mock this specific function
         // later.
@@ -283,7 +284,7 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
-    getUpdateActionLog: vi.fn(() => Promise.resolve([])),
+    getUpdateActionLog: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
     getPositionForSegmentInAgglomerate: vi.fn(
       (
         _datastoreUrl: string,
@@ -570,9 +571,8 @@ const modelData = {
   },
 };
 
-setModel(Model);
 setStore(Store);
-setupApi();
+setupViewer();
 startSaga(rootSaga);
 
 // Stop all background work once the test file is done. Otherwise, work started by the
@@ -694,6 +694,8 @@ export async function setupWebknossosForTesting(
     // @ts-expect-error
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
     segmentMeshController: testContext.segmentMeshController,
+    // The outline the trace tool draws while tracing.
+    contour: { reset: () => {}, addEdgePoint: () => {} } as unknown as ContourGeometry,
   });
 
   __setFeatures({});

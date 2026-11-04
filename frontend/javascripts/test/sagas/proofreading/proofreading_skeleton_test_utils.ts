@@ -1,7 +1,9 @@
+import type { ApiResult } from "admin/api/api_result";
 import type { MinCutTargetEdge } from "admin/rest_api";
 import isEqual from "lodash-es/isEqual";
 import sortBy from "lodash-es/sortBy";
 import { Root } from "protobufjs";
+import type { ActionPattern } from "redux-saga/effects";
 import type { WebknossosTestContext } from "test/helpers/apiHelpers";
 import { call, put, take } from "typed-redux-saga";
 import type {
@@ -13,6 +15,7 @@ import type {
 import { type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { loadAgglomerateTreeAtPosition } from "viewer/controller/combinations/segmentation_handlers";
 import { getTreesWithType } from "viewer/model/accessors/skeletontracing_accessor";
+import type { Action } from "viewer/model/actions/actions";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { minCutAgglomerateAction } from "viewer/model/actions/proofread_actions";
 import { deleteEdgeAction, mergeTreesAction } from "viewer/model/actions/skeletontracing_actions";
@@ -215,19 +218,19 @@ export function* loadAgglomerateTrees(
   context: WebknossosTestContext,
   agglomerateIdsToLoad: bigint[],
   shouldSaveAfterLoadingTrees: boolean,
-  isInLiveCollabMode: boolean,
 ): Saga<TreeMap> {
   // Restore original parsing of tracings to make the mocked agglomerate tree implementation work.
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();
   for (let index = 0; index < agglomerateIdsToLoad.length; ++index) {
     const agglomerateId = agglomerateIdsToLoad[index];
     yield call(loadAgglomerateTreeAtPosition, getPositionForSegmentId(agglomerateId));
-    // Wait until skeleton saga has loaded the agglomerate trees.
-    if (isInLiveCollabMode) {
-      yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
-    } else {
-      yield take("ADD_TREES_AND_GROUPS");
-    }
+    // Wait until the skeleton saga has loaded the agglomerate tree (and in live collab mode,
+    // also saved it). Other operations (e.g., proofreading) are ignored until then.
+    yield take(
+      ((action: Action) =>
+        action.type === "UNREGISTER_OPERATION" &&
+        action.id === "LOAD_AGGLOMERATE_TREE") as ActionPattern,
+    );
   }
   if (shouldSaveAfterLoadingTrees) {
     yield call(() => context.api.tracing.save()); // Also pulls newest version from backend.
@@ -270,7 +273,6 @@ export function* performMergeTreesProofreading(
     context,
     [1n, 4n],
     shouldSaveAfterLoadingTrees,
-    true,
   );
   const sourceNode = agglomerateTrees.getOrThrow(3).nodes.getOrThrow(6);
   const targetNode = agglomerateTrees.getOrThrow(4).nodes.getOrThrow(7);
@@ -302,7 +304,7 @@ export function* performSplitTreesProofreading(
   yield* expectMapping(tracingId, initialMapping);
   yield put(setCollaborationModeAction("Concurrent"));
 
-  const agglomerateTrees = yield loadAgglomerateTrees(context, [1n], true, true);
+  const agglomerateTrees = yield loadAgglomerateTrees(context, [1n], true);
   const sourceNode = agglomerateTrees.getOrThrow(3).nodes.getOrThrow(5);
   const targetNode = agglomerateTrees.getOrThrow(3).nodes.getOrThrow(6);
   yield put(deleteEdgeAction(sourceNode.id, targetNode.id));
@@ -334,7 +336,7 @@ export function* performMinCutWithNodesProofreading(
   yield* expectMapping(tracingId, initialMapping);
   yield put(setCollaborationModeAction("Concurrent"));
   // Load agglomerate tree for agglomerate id 1.
-  yield call(loadAgglomerateTrees, context, [1n], true, true);
+  yield call(loadAgglomerateTrees, context, [1n], true);
   yield call(() => api.tracing.save()); // Also pulls newest version from backend.
   const skeletonWithAgglomerateTrees = yield* select(
     (state: WebknossosState) => state.annotation.skeleton,
@@ -375,7 +377,7 @@ export const mockEdgesForAgglomerateMinCut = (
         agglomerateId: NumberLike;
         editableMappingId: string;
       },
-    ): Promise<Array<MinCutTargetEdge>> => {
+    ): Promise<ApiResult<Array<MinCutTargetEdge>>> => {
       if (version !== expectedRequestedVersion) {
         throw new Error(
           `Unexpected version of min cut request. Expected ${expectedRequestedVersion} got ${version}`,
@@ -387,14 +389,17 @@ export const mockEdgesForAgglomerateMinCut = (
         (isEqual(partition1.concat(partition2), [2n, 3n]) ||
           isEqual(partition1.concat(partition2), [3n, 2n]))
       ) {
-        return [
-          {
-            position1: getPositionForSegmentId(3),
-            position2: getPositionForSegmentId(2),
-            segmentId1: 3n,
-            segmentId2: 2n,
-          } satisfies MinCutTargetEdge,
-        ].concat(additionalEdges);
+        return {
+          ok: true,
+          value: [
+            {
+              position1: getPositionForSegmentId(3),
+              position2: getPositionForSegmentId(2),
+              segmentId1: 3n,
+              segmentId2: 2n,
+            } satisfies MinCutTargetEdge,
+          ].concat(additionalEdges),
+        };
       }
       throw new Error("Unexpected min cut request");
     },

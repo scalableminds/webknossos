@@ -17,6 +17,7 @@ p {
   padding: 0 20px;
 
   @media @smartphones {
+    padding: 0 12px;
 
     & .ant-menu-item,
     & .ant-menu-submenu-title {
@@ -94,11 +95,12 @@ p {
 }
 
 .large-table {
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
+// Don't break column titles mid-word, unlike the cells of .large-table.
 .ant-table-column-title {
-  word-break: normal;
+  overflow-wrap: normal;
 }
 
 label.ant-checkbox-wrapper {
@@ -195,17 +197,6 @@ label.ant-checkbox-wrapper {
 .ant-table-empty .ant-table-tbody>tr.ant-table-placeholder,
 .ant-list-empty-text {
   color: var(--ant-color-text-tertiary);
-}
-
-.action-bar {
-
-  // UI for additional coordinates should always be in dark mode
-  // since it is located in the navbar's action bar.
-  .ant-input-group-addon {
-    background-color: rgb(58, 61, 72);
-    border-color: #585867;
-    color: #f1f1f1 !important;
-  }
 }
 
 .ant-dropdown-menu-item-icon>svg {

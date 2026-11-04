@@ -69,6 +69,9 @@ export interface OperationOptions {
 export interface OperationContext {
   id: OperationId;
   execute<T>(saga: () => Saga<T>): Saga<T>;
+  // False once execute() finished (also if the saga was cancelled, e.g., by a saga restart).
+  // For borrowed contexts, the parent context must be active, too.
+  isActive(): boolean;
 }
 
 // Tracks a running operation alongside its concurrency predicate.
@@ -92,6 +95,24 @@ let activeOperations: ActiveOperation[] = [];
 // invocations from simultaneously spawning an operation without knowing about
 // the other.
 let criticalSectionMutex = new Mutex();
+
+// Runs `saga` and afterwards (also if cancelled or failed) `cleanup`, which may yield effects.
+// This is done in a separate task via `call` on purpose: If a saga is cancelled, redux-saga
+// calls return() on its generator. When a `finally` block within a `yield*` delegation
+// yields an effect, the delegating generator resumes *normally* afterwards instead of
+// continuing to return. Thus, the cancelled caller (e.g., a `while (true)` loop) would keep
+// running as a zombie. With `call`, the generator that the callers delegate to only
+// contains a plain yield and terminates immediately when cancelled, while the cleanup
+// still runs in the cancelled child task.
+function* runWithCleanup<T>(saga: () => Saga<T>, cleanup: () => Saga<void>): Saga<T> {
+  return (yield call(function* () {
+    try {
+      return yield* saga();
+    } finally {
+      yield* cleanup();
+    }
+  })) as T;
+}
 
 // ─── Operation Context ────────────────────────────────────────────────────────
 
@@ -149,6 +170,7 @@ export function* createOperationContext(
     // Closure variable: guards against calling execute() more than once on the
     // same context, which would run a saga without holding the lock.
     let consumed = false;
+    let isFinished = false;
     const context: OperationContext = {
       id: options.id,
       *execute<T>(saga: () => Saga<T>): Saga<T> {
@@ -158,13 +180,13 @@ export function* createOperationContext(
           );
         }
         consumed = true;
-        try {
-          return yield* saga();
-        } finally {
+        return yield* runWithCleanup(saga, function* () {
+          isFinished = true;
           activeOperations = activeOperations.filter((op) => op.id !== options.id);
           yield put(unregisterOperationAction(options.id));
-        }
+        });
       },
+      isActive: () => !isFinished,
     };
     return context;
   }
@@ -199,18 +221,19 @@ export function borrowedContext(
   childId: OperationId,
 ): OperationContext {
   let consumed = false;
+  let isFinished = false;
   return {
     id: existing.id,
     *execute<T>(saga: () => Saga<T>): Saga<T> {
       if (consumed) throw new Error(`[${childId}] borrowed context already consumed`);
       consumed = true;
       yield put(registerChildOperationAction(childId, existing.id));
-      try {
-        return yield* saga();
-      } finally {
+      return yield* runWithCleanup(saga, function* () {
+        isFinished = true;
         yield put(unregisterChildOperationAction(childId, existing.id));
-      }
+      });
     },
+    isActive: () => !isFinished && existing.isActive(),
   };
 }
 
@@ -222,11 +245,23 @@ export function getOrCreateOperationContext(
   options: NonNullableOptions,
   existing?: OperationContext | null,
 ): Generator<any, OperationContext, any>;
+export function getOrCreateOperationContext(
+  options: OperationOptions,
+  existing?: OperationContext | null,
+): Generator<any, OperationContext | null, any>;
 export function* getOrCreateOperationContext(
   options: OperationOptions,
   existing?: OperationContext | null,
 ): Generator<any, OperationContext | null, any> {
   if (existing != null) {
+    if (!existing.isActive()) {
+      // Borrowing from a finished context would register a child operation under a parent
+      // that doesn't exist anymore. This indicates a bug, e.g., a request that carries the
+      // context of an operation that was already cancelled.
+      throw new Error(
+        `Cannot run "${options.id}" within the operation context "${existing.id}", because that operation is already finished.`,
+      );
+    }
     return borrowedContext(existing, options.id);
   }
   // Cast is safe: if options is NonNullableOptions, the result is non-null (handled by overloads).

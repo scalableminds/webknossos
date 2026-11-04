@@ -1101,14 +1101,17 @@ describe("Proofreading (Multi User)", () => {
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-        Promise.resolve([
-          {
-            position1: getPositionForSegmentId(4),
-            position2: getPositionForSegmentId(5),
-            segmentId1: 4n,
-            segmentId2: 5n,
-          },
-        ]),
+        Promise.resolve({
+          ok: true,
+          value: [
+            {
+              position1: getPositionForSegmentId(4),
+              position2: getPositionForSegmentId(5),
+              segmentId1: 4n,
+              segmentId2: 5n,
+            },
+          ],
+        }),
       );
 
       // Execute the actual min cut and wait for the finished mapping.

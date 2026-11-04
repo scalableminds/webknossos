@@ -12,11 +12,12 @@ import { AnnotationTool, Toolkits } from "viewer/model/accessors/tool_accessor";
 import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import type { UserConfiguration } from "viewer/store";
+import { flattenMenuGroups } from "../action_bar/menu_groups";
+import { getViewDatasetMenuGroups } from "../action_bar/menu_items";
 import {
   type TracingViewMenuProps,
-  useTracingViewMenuItems,
-} from "../action_bar/use_tracing_view_menu_items";
-import { viewDatasetMenu } from "../action_bar/view_dataset_actions_view";
+  useTracingViewMenuGroups,
+} from "../action_bar/use_tracing_view_menu_groups";
 import { getShortcutDisplayString } from "../keyboard_shortcuts/keyboard_shortcut_utils";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { addBookmarkForCurrentViewFromAnywhere } from "../right_border_tabs/bookmarks_tab/add_bookmark";
@@ -95,7 +96,7 @@ export function CommandPaletteViewerCommands() {
     isAnnotationLockedByUser,
     annotationOwner,
   };
-  const tracingMenuItems = useTracingViewMenuItems(props, null);
+  const tracingMenuGroups = useTracingViewMenuGroups(props, null);
 
   const commands = useMemo(() => {
     if (!isInAnnotationView) return [];
@@ -161,7 +162,9 @@ export function CommandPaletteViewerCommands() {
             },
           ];
 
-    const menuActions = isViewMode ? viewDatasetMenu : tracingMenuItems;
+    const menuActions = flattenMenuGroups(
+      isViewMode ? getViewDatasetMenuGroups(null) : tracingMenuGroups,
+    );
 
     return [
       ...getToolEntries(),
@@ -175,7 +178,7 @@ export function CommandPaletteViewerCommands() {
     isViewMode,
     allowUpdate,
     userConfig,
-    tracingMenuItems,
+    tracingMenuGroups,
     dispatch,
     addBookmarkShortcut,
   ]);

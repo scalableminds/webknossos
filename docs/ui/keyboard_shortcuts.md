@@ -9,7 +9,7 @@ All shortcuts shown here are the **default bindings**. Keyboard-only shortcuts c
 ## Customizing Shortcuts
 
 All keyboard shortcuts that do not involve mouse buttons can be freely customized per user account.
-Open the shortcut configuration via the **navbar menu → "Keyboard Shortcuts"**.
+Open the shortcut configuration via **`Menu` → "Configure Shortcuts"** in the toolbar of the annotation or dataset view.
 
 From there you can:
 

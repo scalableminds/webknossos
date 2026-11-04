@@ -21,6 +21,7 @@ export enum LayoutEvents {
   showSkeletonTab = "SHOW_SKELETON_TAB",
   showSegmentsTab = "SHOW_SEGMENTS_TAB",
   showBookmarksTab = "SHOW_BOOKMARKS_TAB",
+  showAbstractTreeTab = "SHOW_ABSTRACT_TREE_TAB",
 }
 // For debugging purposes:
 const disableLayoutPersistance = false;

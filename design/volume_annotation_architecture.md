@@ -88,7 +88,7 @@ Two independent questions decide a bucket's state: *is there a `32³` array for 
 The other two states do not line up with `BucketStateEnum`, which tracks how far along the *fetch* is rather than what the array is good for:
 
 - **`pending`** spans `REQUESTED` and also `UNREQUESTED`-after-a-failed-request, which leaves an array and its `pendingOperations` in place.
-- **`absent`** is the one with no real counterpart, and it is the load-bearing state of this design. A bucket can be `absent` *and* have writes recorded against it — the diffs live in the write set and the journal, keyed by address. The current `DataCube` cannot express that: `applyVoxelMap` calls `getOrCreateData()` as its first statement, so writing always materializes.
+- **`absent`** is the one with no real counterpart, and it is the load-bearing state of this design. A bucket can be `absent` *and* have writes recorded against it — the diffs live in the write set and the journal, keyed by address. The current `DataCube` cannot express that: `WkDataCubeAdapter.applyWrites` calls `getOrCreateData()` as its first statement, so writing always materializes.
 
 Orthogonal to all three: **dirty** — the bucket has diffs not yet acknowledged by the backend. This is orthogonal in today's implementation too; a bucket is routinely `LOADED` and dirty. In this design dirty is simply "its log has unsaved entries", which is what §5.5's eviction rule keys off. A fourth case, the out-of-bounds *null bucket*, never reaches the write set at all: the rasterizer's clipping step (§5.3, step 1) discards those addresses.
 
@@ -879,7 +879,7 @@ Three terms, used consistently from here on:
 
 Both walks start at the **source mag** — the mag the user drew in — and move outward through *adjacent* mags. Between neighbours the factor is small (typically 2 per axis), and every mag in the list is visited exactly once: those finer than the source by Step A, those coarser by Step B.
 
-Note these are the same terms, in the same directions, as `upsampleVoxelMap` / `downsampleVoxelMap` in today's `volume_annotation_sampling.ts`. Beware that they run *opposite* to mag index: upsampling moves toward mag 1, downsampling away from it. Sampling direction is stated in terms of resolution throughout this doc, never in terms of "up" or "down" the mag list.
+Note these are the same terms, in the same directions, as `upsampleVoxelMap` / `downsampleVoxelMap` in the former `volume_annotation_sampling.ts`. Beware that they run *opposite* to mag index: upsampling moves toward mag 1, downsampling away from it. Sampling direction is stated in terms of resolution throughout this doc, never in terms of "up" or "down" the mag list.
 
 ```ts
 interface MagPropagationService {
@@ -1013,7 +1013,7 @@ function downsampleOneLevel(
 
 Three things about this rule are worth stating explicitly, because they are choices, not consequences:
 
-- **Background is not a special value.** Erasing is painting with `0n`, and it downsamples like any other value: one erased finest-mag voxel clears its whole coarse voxel. The tempting alternative — "only clear the coarse voxel if *all* its finest-mag siblings are now background" — is more faithful but needs a read of every sibling, which drags bucket loading back into a step that otherwise needs no data at all. Not worth it for a display-only approximation. This is also what webKnossos does today (`downsampleVoxelMap` any-hits a 0/1 *mask*, and `applyVoxelMap` then writes the segment ID — zero included — into every masked voxel at every mag).
+- **Background is not a special value.** Erasing is painting with `0n`, and it downsamples like any other value: one erased finest-mag voxel clears its whole coarse voxel. The tempting alternative — "only clear the coarse voxel if *all* its finest-mag siblings are now background" — is more faithful but needs a read of every sibling, which drags bucket loading back into a step that otherwise needs no data at all. Not worth it for a display-only approximation. This is also what webKnossos did before the volume core (`downsampleVoxelMap` any-hit a 0/1 *mask*, and `applyVoxelMap` then wrote the segment ID — zero included — into every masked voxel at every mag).
 - **The downsampling rule is written-value-wins, and it dilates in both directions.** Paint overstates presence at coarse mags; erase overstates absence. Majority vote — the textbook rule, and what "downsampling" might otherwise be assumed to mean here — would instead make thin structures disappear entirely — a 1-voxel-wide process annotated at mag 1 would be invisible the moment the user zooms out, which is unacceptable for tracing work. The upside of written-value-wins is predictability: whatever you just did is visible at every zoom level.
 - **We propagate the write set, not the bucket.** The natural-sounding alternative — "recompute each affected coarse bucket from its finest-mag children" — is infeasible: a mag-16 bucket covers `512³` finest-mag voxels, i.e. `16·16·16 = 4096` finest-mag buckets. (The child count is the product of the per-axis ratio — a `2-2-1` bucket has 4 children, a `16-16-16` bucket has 4096.) Propagating the write set touches only the voxels the user actually edited and requires no additional loads.
 
@@ -1757,7 +1757,7 @@ Nothing below revises the design. This section records where the code currently 
 
 | Concept | § | Module | Notes |
 |---|---|---|---|
-| `EditIntent` and its shapes | 5.1 | `core/volume_edit_intents.ts` | brush, box, mask and floodFill exist; only brush and floodFill are reachable from the UI |
+| `EditIntent` and its shapes | 5.1 | `core/volume_edit_intents.ts` | brush, box, mask and floodFill exist; all but box are reachable from the UI |
 | Rasterizer | 5.3 | `core/voxel_rasterizer.ts` | capsule / box / mask, run-emitting, synchronous |
 | Resolver | 5.1 | `core/flood_fill_resolver.ts` | flood fill, with the bounding-box limit and the split-tool boundary gate |
 | `BucketVoxelMask`, `BucketWrite`, `BucketWriteMap` | 4 | `core/bucket_voxel_mask.ts`, `core/bucket_write_map.ts` | |
@@ -1767,9 +1767,9 @@ Nothing below revises the design. This section records where the code currently 
 | `WorkingDataCube` | 5.5 | `not_yet_integrated/working_data_cube.ts` | production goes through `WkDataCubeAdapter` over the real `DataCube` instead |
 | `BucketJournal` | 5.7 | `not_yet_integrated/bucket_journal.ts` | nothing in `viewer/` appends to it yet |
 | `VolumeEditingSession` | 5 | `not_yet_integrated/volume_editing_session.ts` | the app opens transactions from the sagas instead |
-| Integration glue | — | `integration/` | `WkDataCubeAdapter`, `WkLoadingCubeAdapter`, `BrushDriver`, `runFloodFill`, `runMaskEdit` |
+| Integration glue | — | `integration/` | `WkDataCubeAdapter`, `WkLoadingCubeAdapter`, `BrushDriver`, `runFloodFill`, `runMaskEdit`, `runVoxelsEdit` |
 
-The running app reaches the new code at three call sites: brushing in `volumetracing_saga.tsx`, flood fill in `floodfill_saga.tsx` and volume interpolation in `volume_interpolation_saga.ts`, which labels all interpolated slices as one `MaskShape` in a single transaction. They are now the only path for those tools — the old `VoxelBuffer2D` brush branch and `DataCube.floodFill` are gone, along with the toggle that used to select between them. The trace tool still uses the section labeler. The brush uses it only to compute its auto-fill, which joins the stroke's transaction as a `MaskShape`, so that stroke and fill are propagated and saved as one. Writes land in real buckets; nothing else about the existing pipeline changes.
+Every volume tool now labels through the new code: brushing in `volumetracing_saga.tsx`, flood fill in `floodfill_saga.tsx`, volume interpolation in `volume_interpolation_saga.ts` (all interpolated slices as one `MaskShape` in a single transaction), the trace tools and quick select via `labelWithVoxelBuffer2D` in `sagas/volume/helpers.ts`, and `api.data.labelVoxels` via `runVoxelsEdit`. The old paths are gone: the `VoxelBuffer2D` brush branch, `DataCube.floodFill`, and the per-mag sampling of `volume_annotation_sampling.ts`. The trace tools and quick select still use the section labeler to compute their 2D region, which becomes a `MaskShape`. The brush uses it only to compute its auto-fill, which joins the stroke's transaction as a `MaskShape`, so that stroke and fill are propagated and saved as one. Writes land in real buckets; nothing else about the existing pipeline changes.
 
 ### 12.2 Skipped, and why
 
@@ -1779,7 +1779,6 @@ The running app reaches the new code at three call sites: brushing in `volumetra
   - **No local checkpoints.** §5.7 folds undo from a local checkpoint and a bucket load from fetched backend data; the implementation has a single `base` field serving both. Checkpoints only bound replay length, so this is not a correctness gap on its own — but they carry the same horizon rule, and the two roles should be separate fields once undo is real.
 - **Save queue and backend sync** (§5.8), and the backend changes in §7. Volume edits still travel as today's update actions.
 - **Visibility-driven materialization** (§1.1, "materialization on write becomes optional"). `WkDataCubeAdapter` still calls `getOrCreateBucket` for every written address, so a coarse-mag stroke instantiates every finer bucket it implies. This is the largest single deviation from the design, and it is exactly the cost §5.4 argues has to be avoided.
-- **Tools other than brush and flood fill**: quick select, interpolation, proofreading and the trace/lasso tools all still run on the old path.
 - **Rasterizing off the main thread** (§10).
 
 ### 12.3 Plan
@@ -1791,7 +1790,7 @@ Ordered so that each step is independently reviewable, and so that the frontend 
 3. **Undo/redo on the journal** (§5.7), replacing the snapshot stack. Reintroduce `beforeCommitted` here; this is the step where it earns its keep.
 4. **Save queue** (§5.8) — emit the two new update actions of §7.1 instead of today's. This is the hard boundary: it needs the backend side designed and built in parallel.
 5. **Visibility-driven materialization** (§1.1), which is what makes coarse-mag editing viable within the memory budget of §5.4.
-6. **Remaining tools onto the intent pipeline**, starting with quick select (it already produces something mask-shaped), then interpolation and the trace tools.
-7. **Delete the remaining old paths** as the tools above move over.
+6. **Remaining tools onto the intent pipeline**, starting with quick select (it already produces something mask-shaped), then interpolation and the trace tools. Done.
+7. **Delete the remaining old paths** as the tools above move over. Done.
 
 Steps 1–3 are frontend-only. Everything from step 4 on is a joint change.

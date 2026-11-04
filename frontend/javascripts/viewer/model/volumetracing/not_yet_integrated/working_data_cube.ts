@@ -8,13 +8,16 @@
 import { applyBucketWriteToData, type BucketWrite } from "../core/bucket_write_map";
 import {
   type AdditionalCoordinate,
+  type BoundingBox,
   BUCKET_VOXEL_COUNT,
   type BucketAddress,
   type BucketKey,
   bucketKey,
+  type MagIndex,
   type SegmentBucketData,
   type SegmentId,
   type StoredSegmentId,
+  UNBOUNDED_BOUNDING_BOX,
   type Vector3,
   voxelIndexOf,
   voxelOffsetInBucket,
@@ -156,6 +159,11 @@ export class WorkingDataCube implements LoadingVoxelCube {
     const data = this.getLoadedDataOrUndefined(address);
     if (data == null) return null;
     return (index: number) => data[index] === overwritableValue;
+  }
+
+  /** Unrestricted. Tests that need a restriction override this. */
+  getEditableBoundingBox(_magIndex: MagIndex): BoundingBox {
+    return UNBOUNDED_BOUNDING_BOX;
   }
 
   /** Overwrite a bucket's content outright (undo rebuild). */

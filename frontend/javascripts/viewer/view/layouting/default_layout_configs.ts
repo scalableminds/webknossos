@@ -75,6 +75,7 @@ function Tab(
   id: string,
   component: string,
   enableRenderOnDemand: boolean = true,
+  enableClose?: boolean,
 ): TabNode {
   return {
     type: "tab",
@@ -82,6 +83,7 @@ function Tab(
     component,
     id,
     enableRenderOnDemand,
+    ...(enableClose != null ? { enableClose } : {}),
   };
 }
 
@@ -105,8 +107,8 @@ function Row(children: Array<RowOrTabsetNode>, weight?: number): RowNode {
 }
 
 export function getTabDescriptorForBorderTab(borderTab: BorderTabType): TabNode {
-  const { name, id, enableRenderOnDemand = true } = borderTab;
-  return Tab(name, id, "border-tab", enableRenderOnDemand);
+  const { name, id, enableRenderOnDemand = true, enableClose } = borderTab;
+  return Tab(name, id, "border-tab", enableRenderOnDemand, enableClose);
 }
 const borderTabs: Record<keyof typeof BorderTabs, TabNode> = {};
 
@@ -225,7 +227,6 @@ const _getDefaultLayouts = () => {
       borderTabs.SegmentsView,
       borderTabs.BoundingBoxTab,
       borderTabs.BookmarksTab,
-      borderTabs.AbstractTreeTab,
       borderTabs.ConnectomeView,
     ],
     rightBorderWidth,

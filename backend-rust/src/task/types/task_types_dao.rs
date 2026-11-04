@@ -20,7 +20,7 @@ pub(crate) const PUBLIC_TASK_TYPE: &str = r#"SELECT jsonb_build_object(
 ) FROM webknossos.tasktypes_ tt JOIN webknossos.teams_ team ON team._id=tt._team "#;
 
 /// TaskTypeDAO.readAccessQ for alias `tt`.
-fn push_read_access<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+fn push_read_access<'a>(q: &mut Sql, requester: Requester<'a>) {
     q.push("(tt._organization=")
         .push_arg(requester.organization)
         .push(" AND (")

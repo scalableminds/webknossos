@@ -21,7 +21,7 @@ pub(crate) fn state_filter(is_finished: Option<bool>) -> &'static str {
     }
 }
 /// State, owner and dataset filters.
-fn push_optional_filters<'a>(q: &mut Sql<'a>, owner: Option<&'a ObjectId>, filters: &'a Filters) {
+fn push_optional_filters<'a>(q: &mut Sql, owner: Option<&'a ObjectId>, filters: &'a Filters) {
     q.push(" AND ").push(state_filter(filters.is_finished));
     if let Some(owner) = owner {
         q.push(" AND a._user=").push_bind(owner);
@@ -37,7 +37,7 @@ const COMPACT_USER: &str = r#"SELECT jsonb_build_object('id',u._id,'email',m.ema
       FROM webknossos.user_team_roles role JOIN webknossos.teams_ team ON team._id=role._team WHERE role._user=u._id AND team._organization=u._organization),'[]'::jsonb))
     FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON m._id=u._multiUser WHERE u._id=$1"#;
 /// Annotation list access (AnnotationDAO.listAccessQ when `shared`).
-pub(crate) fn push_list_grant<'a>(q: &mut Sql<'a>, requester: Requester<'a>, shared: bool) {
+pub(crate) fn push_list_grant<'a>(q: &mut Sql, requester: Requester<'a>, shared: bool) {
     if !shared {
         return crate::annotation::access::push_read_predicate(q, requester);
     }

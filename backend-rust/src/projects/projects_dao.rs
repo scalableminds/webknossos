@@ -15,7 +15,7 @@ use crate::{
 // matching the Scala service's optional compact owner and team name. The
 // owner is only rendered if the requester may read them. Callers append to
 // the `WHERE` clause, which already restricts to the requester's read access.
-fn public_projects(user: &AuthUser) -> Sql<'_> {
+fn public_projects(user: &AuthUser) -> Sql {
     let mut q = Sql::new(
         r#"SELECT jsonb_build_object(
  'id',p._id,'name',p.name,'team',p._team,'teamName',(SELECT name FROM webknossos.teams_ WHERE _id=p._team),
@@ -55,7 +55,7 @@ fn public_projects(user: &AuthUser) -> Sql<'_> {
 
 /// ProjectDAO.readAccessQ for alias `p`: projects of the requester's
 /// organization they own, administer, or are a member of the team of.
-pub(crate) fn push_read_access<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+pub(crate) fn push_read_access<'a>(q: &mut Sql, requester: Requester<'a>) {
     q.push("(p._organization=")
         .push_arg(requester.organization)
         .push(" AND (p._owner=")

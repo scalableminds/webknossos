@@ -300,7 +300,7 @@ pub(crate) async fn find_public_json(
 /// as a JSON array: teams of the requester's organization they are a member
 /// of or administer.
 fn push_visible_teams<'a>(
-    q: &mut Sql<'a>,
+    q: &mut Sql,
     user_id: Option<&'a ObjectId>,
     organization: Option<&'a str>,
     team_ids: &'static str,
@@ -537,7 +537,7 @@ pub(crate) async fn find_all_compact(
 }
 
 /// `(d.status IN (...))`: the dataset is no longer reported by its datastore.
-fn push_is_unreported(q: &mut Sql<'_>) {
+fn push_is_unreported(q: &mut Sql) {
     q.push("(d.status IN (")
         .push_bind(UNREPORTED)
         .push(", ")

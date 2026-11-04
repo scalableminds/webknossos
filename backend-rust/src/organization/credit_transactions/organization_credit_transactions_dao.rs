@@ -21,7 +21,7 @@ pub(crate) struct CreditTransaction {
 }
 
 /// CreditTransactionDAO.listAccessQ for the requesting `user`.
-fn push_list_access<'a>(q: &mut Sql<'a>, user: &'a ObjectId) {
+fn push_list_access(q: &mut Sql, user: &ObjectId) {
     q.push(
         "(_organization IN (SELECT _organization FROM webknossos.users_ \
          WHERE (isAdmin OR isDatasetManager) AND _id = ",

@@ -11,12 +11,18 @@ pub(super) async fn find_all_current_and_upcoming(pool: &PgPool) -> sqlx::Result
     let query = format!(
         "SELECT {COLUMNS} FROM webknossos.maintenances_ WHERE endTime >= NOW() ORDER BY startTime, _id"
     );
-    sqlx::query_as(&query).fetch_all(pool).await
+    // Only compile-time constants are spliced in.
+    sqlx::query_as(sqlx::AssertSqlSafe(query))
+        .fetch_all(pool)
+        .await
 }
 
 pub(super) async fn find_all(pool: &PgPool) -> sqlx::Result<Vec<Maintenance>> {
     let query = format!("SELECT {COLUMNS} FROM webknossos.maintenances_ ORDER BY startTime, _id");
-    sqlx::query_as(&query).fetch_all(pool).await
+    // Only compile-time constants are spliced in.
+    sqlx::query_as(sqlx::AssertSqlSafe(query))
+        .fetch_all(pool)
+        .await
 }
 
 pub(super) async fn find_one(pool: &PgPool, id: &ObjectId) -> sqlx::Result<Option<Maintenance>> {

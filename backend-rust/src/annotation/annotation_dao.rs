@@ -15,7 +15,7 @@ use crate::{
 };
 
 /// The annotation owner (alias `a`) belongs to the requester's organization.
-fn push_owner_in_organization<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+fn push_owner_in_organization<'a>(q: &mut Sql, requester: Requester<'a>) {
     q.push(
         "EXISTS(SELECT 1 FROM webknossos.users_ owner WHERE owner._id=a._user AND owner._organization=",
     )
@@ -24,7 +24,7 @@ fn push_owner_in_organization<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
 }
 
 /// The requester manages the team of the annotation's (alias `a`) task project.
-fn push_manages_task_team<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+fn push_manages_task_team<'a>(q: &mut Sql, requester: Requester<'a>) {
     q.push(
         "EXISTS(SELECT 1 FROM webknossos.tasks_ task JOIN webknossos.projects_ project ON project._id=task._project
       JOIN webknossos.teams_ team ON team._id=project._team AND team._organization=",
@@ -38,7 +38,7 @@ fn push_manages_task_team<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
 }
 
 /// AnnotationDAO.readAccessQ for alias `a`. Dataset access is not part of this grant.
-pub(crate) fn push_read_predicate<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+pub(crate) fn push_read_predicate<'a>(q: &mut Sql, requester: Requester<'a>) {
     q.push("(a.visibility='Public' OR (a.visibility='Internal' AND ");
     push_owner_in_organization(q, requester);
     q.push(") OR (a.visibility='Private' AND (a._user=")
@@ -53,7 +53,7 @@ pub(crate) fn push_read_predicate<'a>(q: &mut Sql<'a>, requester: Requester<'a>)
 /// AnnotationDAO update/delete grants (alias `a`) ignore state, collaboration
 /// mode and owner lock. Runtime editing/finishing restrictions additionally
 /// check these.
-pub(crate) fn push_mutate_predicate<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+pub(crate) fn push_mutate_predicate<'a>(q: &mut Sql, requester: Requester<'a>) {
     q.push("(a._user=")
         .push_arg(requester.id)
         .push(" OR (")
@@ -68,7 +68,7 @@ pub(crate) fn push_mutate_predicate<'a>(q: &mut Sql<'a>, requester: Requester<'a
 /// Annotation list ownership/sharing grant (alias `a`). Shared annotations
 /// also require dataset read access; callers must add that predicate
 /// themselves. Team grants are scoped to live teams of the requester's organization.
-pub(crate) fn push_owned_or_shared_predicate<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+pub(crate) fn push_owned_or_shared_predicate<'a>(q: &mut Sql, requester: Requester<'a>) {
     q.push("(a._user=")
         .push_arg(requester.id)
         .push(
@@ -90,7 +90,7 @@ pub(crate) fn push_owned_or_shared_predicate<'a>(q: &mut Sql<'a>, requester: Req
 
 /// The live annotation `id` as [`AnnotationMetadata`] for `requester`;
 /// callers append further conditions.
-fn select<'a>(requester: Requester<'a>, id: &'a ObjectId) -> Sql<'a> {
+fn select<'a>(requester: Requester<'a>, id: &'a ObjectId) -> Sql {
     let mut q = Sql::new(
         r#"SELECT a._id AS id,a._dataset AS dataset_id,a._task AS task_id,a._user AS owner_id,
     (SELECT _organization FROM webknossos.users_ WHERE _id=a._user) AS owner_organization,
@@ -400,7 +400,7 @@ pub(crate) async fn upsert_view_configuration(
 /// TeamDAO read access (member, or admin of the team's organization),
 /// scoped to live teams of the requester's organization like the rest of
 /// the crate; TeamService.publicWrites also needs the live organization.
-fn push_readable_team<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+fn push_readable_team<'a>(q: &mut Sql, requester: Requester<'a>) {
     q.push("team._organization=")
         .push_arg(requester.organization)
         .push(" AND (")

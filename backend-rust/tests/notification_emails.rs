@@ -73,9 +73,9 @@ async fn member(db: &TestDb, fixture: &Fixture, team: Option<&str>, flags: &str)
     let id = object_id();
     let user = db.seed_user(&id, &fixture.organization_id, false).await;
     if !flags.is_empty() {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "UPDATE webknossos.users SET {flags} WHERE _id = $1"
-        ))
+        )))
         .bind(&id)
         .execute(&db.pool)
         .await

@@ -62,7 +62,7 @@ pub(crate) async fn find_root_folder(
 /// Folders (alias `f`) visible to `user`: below the root of an organization
 /// they administer or manage datasets of, below or above a folder shared with
 /// one of their teams, or above a public dataset or one shared with their teams.
-fn push_visible_folder<'a>(q: &mut Sql<'a>, user: &'a ObjectId) {
+fn push_visible_folder(q: &mut Sql, user: &ObjectId) {
     q.push(
         r#"(
         f._id IN (SELECT fp._descendant FROM webknossos.folder_paths fp WHERE fp._ancestor IN (

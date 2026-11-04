@@ -59,7 +59,8 @@ pub(crate) async fn insert_one(
     } else {
         ""
     };
-    let inserted = sqlx::query(&format!("{statement}{on_conflict}"))
+    // Both parts are string literals.
+    let inserted = sqlx::query(sqlx::AssertSqlSafe(format!("{statement}{on_conflict}")))
         .bind(new.id)
         .bind(new.store_name)
         .bind(&new.source.id.organization_id)

@@ -51,9 +51,9 @@ async fn add_user(db: &TestDb, organization_id: &str, is_admin: bool, extra: &st
     let user_id = object_id();
     let user = db.seed_user(&user_id, organization_id, is_admin).await;
     if !extra.is_empty() {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "UPDATE webknossos.users SET {extra} WHERE _id = $1"
-        ))
+        )))
         .bind(&user_id)
         .execute(&db.pool)
         .await

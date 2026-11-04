@@ -167,9 +167,9 @@ async fn job_tokens_authenticate_http_requests_and_obey_expiry_and_account_revoc
         "isDeleted=true",
     ] {
         let token = database.seed_token(&fixture.user_id, "Job").await;
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "UPDATE webknossos.tokens SET {invalidation} WHERE value=$1"
-        ))
+        )))
         .bind(&token)
         .execute(&database.pool)
         .await
@@ -229,9 +229,9 @@ async fn expiration_idle_timeout_and_revocation_do_not_refresh_tokens() {
         let token = database
             .seed_token(&fixture.user_id, "Authentication")
             .await;
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "UPDATE webknossos.tokens SET {invalidation} WHERE value = $1"
-        ))
+        )))
         .bind(&token)
         .execute(&database.pool)
         .await

@@ -132,9 +132,9 @@ async fn unusable_authentication_tokens_are_replaced_without_renewing_usable_tok
     ] {
         let existing: String = sqlx::query_scalar("SELECT value FROM webknossos.tokens WHERE _user = $1 AND tokenType = 'Authentication' AND NOT isDeleted")
             .bind(&fixture.user_id).fetch_one(&database.pool).await.unwrap();
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "UPDATE webknossos.tokens SET {invalidation} WHERE value = $1"
-        ))
+        )))
         .bind(&existing)
         .execute(&database.pool)
         .await

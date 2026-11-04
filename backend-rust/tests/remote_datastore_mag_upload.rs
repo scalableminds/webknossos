@@ -149,7 +149,9 @@ async fn seed_dataset(
         ("ROW(1,1,1)", "s3://bucket/color/1"),
         ("ROW(2,2,1)", "s3://bucket/color/2-2-1"),
     ] {
-        sqlx::query(&format!("INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag,path) VALUES ($1,'color',{mag}::webknossos.VECTOR3,$2)"))
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "INSERT INTO webknossos.dataset_mags (_dataset,dataLayerName,mag,path) VALUES ($1,'color',{mag}::webknossos.VECTOR3,$2)"
+        )))
             .bind(&id).bind(path).execute(&db.pool).await.unwrap();
     }
     id

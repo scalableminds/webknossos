@@ -197,9 +197,9 @@ async fn project_and_type_creation_recheck_a_team_deleted_while_waiting() {
             .unwrap();
         deleting.commit().await.unwrap();
         assert_eq!(creating.await.unwrap().0, StatusCode::FORBIDDEN);
-        let count: i64 = sqlx::query_scalar(&format!(
+        let count: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
             "SELECT count(*) FROM webknossos.{table} WHERE _team=$1"
-        ))
+        )))
         .bind(&f.team_id)
         .fetch_one(&db.pool)
         .await
@@ -223,7 +223,10 @@ async fn team_deletion_sees_references_committed_while_it_waited() {
         let trigger = format!(
             "CREATE FUNCTION webknossos.pause_{table}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_advisory_xact_lock(714123); RETURN NEW; END $$; CREATE TRIGGER pause_insert BEFORE INSERT ON webknossos.{table} FOR EACH ROW EXECUTE FUNCTION webknossos.pause_{table}();"
         );
-        sqlx::raw_sql(&trigger).execute(&db.pool).await.unwrap();
+        sqlx::raw_sql(sqlx::AssertSqlSafe(trigger.as_str()))
+            .execute(&db.pool)
+            .await
+            .unwrap();
         let mut gate = db.pool.acquire().await.unwrap();
         sqlx::query("SELECT pg_advisory_lock(714123)")
             .execute(&mut *gate)

@@ -13,7 +13,7 @@ use crate::{
 /// TaskDAO access through the task's project (alias `p`), whose team must be a
 /// live team of the requester's organization: admins, plus team members
 /// (readAccessQ) or only team managers (`managers_only`, listAccessQ).
-fn push_task_access<'a>(q: &mut Sql<'a>, requester: Requester<'a>, managers_only: bool) {
+fn push_task_access<'a>(q: &mut Sql, requester: Requester<'a>, managers_only: bool) {
     q.push("p._organization=")
         .push_arg(requester.organization)
         .push(
@@ -29,7 +29,7 @@ fn push_task_access<'a>(q: &mut Sql<'a>, requester: Requester<'a>, managers_only
 }
 
 /// Annotation read access (alias `a`), unless `global`.
-fn push_annotation_read<'a>(q: &mut Sql<'a>, requester: Requester<'a>, global: bool) {
+fn push_annotation_read<'a>(q: &mut Sql, requester: Requester<'a>, global: bool) {
     if global {
         q.push("TRUE");
     } else {

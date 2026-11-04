@@ -381,7 +381,7 @@ fn access_queries_evaluate_the_grants_per_candidate() {
     ] {
         let query = users_notification_emails_dao::access_query(&resource, &user_ids);
         let sql = query.sql();
-        let (head, predicate) = sql.split_once(" AND ").unwrap();
+        let (head, predicate) = sql.as_str().split_once(" AND ").unwrap();
         assert!(head.contains("$1") && head.contains("$2"), "{head}");
         // Only the resource ($1) and candidate ids ($2) are bound.
         assert!(!predicate.contains('$'), "{predicate}");
@@ -395,7 +395,13 @@ fn access_queries_evaluate_the_grants_per_candidate() {
     assert!(
         annotation
             .sql()
+            .as_str()
             .contains("webknossos.datasets_ d WHERE d._id=a._dataset")
     );
-    assert!(annotation.sql().contains("candidate._organization"));
+    assert!(
+        annotation
+            .sql()
+            .as_str()
+            .contains("candidate._organization")
+    );
 }

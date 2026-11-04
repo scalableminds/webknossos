@@ -72,7 +72,11 @@ async fn create(app: &axum::Router, token: &str, body: Value) -> Reply {
 }
 
 async fn exec(db: &TestDb, sql: &str, id: &str) {
-    sqlx::query(sql).bind(id).execute(&db.pool).await.unwrap();
+    sqlx::query(sqlx::AssertSqlSafe(sql))
+        .bind(id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
 }
 
 #[tokio::test]

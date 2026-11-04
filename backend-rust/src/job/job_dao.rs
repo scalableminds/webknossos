@@ -18,7 +18,7 @@ const UNREPORTED_DATASET_STATUSES: [&str; 3] = [
 
 /// JobDAO.readAccessQ for alias `j`: own jobs, jobs of members of teams the
 /// user manages, jobs of the admin's organization, or superuser.
-fn push_job_read_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
+fn push_job_read_access(q: &mut Sql, user_id: &ObjectId) {
     q.push("(j._owner = ")
         .push_bind(user_id)
         .push(
@@ -43,7 +43,7 @@ fn push_job_read_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
 /// JobDAO.listAccessQ for alias `j`: own jobs or jobs of the admin's organization.
 /// Phrased as a set of owner ids (not a per-job owner organization lookup) so the
 /// planner can fetch the matching jobs via the `jobs(_owner)` index.
-fn push_job_list_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
+fn push_job_list_access(q: &mut Sql, user_id: &ObjectId) {
     q.push("j._owner IN (\n  SELECT ")
         .push_bind(user_id)
         .push(
@@ -58,7 +58,7 @@ fn push_job_list_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
 }
 
 /// CreditTransactionDAO.readAccessQ (unaliased credit_transactions_).
-fn push_credit_read_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
+fn push_credit_read_access(q: &mut Sql, user_id: &ObjectId) {
     q.push(
         "(_organization IN (SELECT _organization FROM webknossos.users_ WHERE (isAdmin OR isDatasetManager) AND _id = ",
     )

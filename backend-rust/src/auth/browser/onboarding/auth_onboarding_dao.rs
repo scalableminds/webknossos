@@ -52,9 +52,10 @@ pub(crate) async fn find_one_organization(
 pub(crate) async fn find_first_two_organizations(
     connection: &mut PgConnection,
 ) -> sqlx::Result<Vec<OrganizationRow>> {
-    sqlx::query_as(&format!(
+    // Only compile-time constants are spliced in.
+    sqlx::query_as(sqlx::AssertSqlSafe(format!(
         "SELECT {ORGANIZATION_COLUMNS} FROM webknossos.organizations_ ORDER BY _id LIMIT 2"
-    ))
+    )))
     .fetch_all(connection)
     .await
 }

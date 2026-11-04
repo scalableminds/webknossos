@@ -13,7 +13,7 @@ use crate::{sql::Sql, users, util::id::ObjectId};
 /// AiModelDAO.readAccessQ for alias `m`: models shared with or owned by the
 /// user's organization, or pretrained; superuser-only models only for
 /// superusers. AiModelDAO has no deleteAccessQ, so this is also delete access.
-pub(crate) fn push_model_read_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
+pub(crate) fn push_model_read_access(q: &mut Sql, user_id: &ObjectId) {
     q.push(
         r#"((m._id IN (
       SELECT a._aiModel FROM webknossos.aiModel_organizations AS a
@@ -37,7 +37,7 @@ pub(crate) fn push_model_read_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId)
 }
 
 /// AiInferenceDAO.readAccessQ for alias `i`.
-fn push_inference_read_access<'a>(q: &mut Sql<'a>, user_id: &'a ObjectId) {
+fn push_inference_read_access(q: &mut Sql, user_id: &ObjectId) {
     q.push("i._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = ")
         .push_bind(user_id)
         .push(")");

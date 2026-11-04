@@ -20,12 +20,12 @@ async fn seed(
     expiration: &str,
 ) -> String {
     let id = object_id();
-    sqlx::query(&format!(
+    sqlx::query(sqlx::AssertSqlSafe(format!(
         r#"INSERT INTO webknossos.credit_transactions
           (_id,_organization,milli_credit_delta,comment,transaction_state,credit_state,expiration_date,created_at,updated_at)
           VALUES ($1,$2,$3,'seeded','Complete',$4::webknossos.credit_state,{expiration},
             NOW() - make_interval(days => $5), NOW() - make_interval(days => $5))"#
-    ))
+    )))
     .bind(&id)
     .bind(organization)
     .bind(delta)

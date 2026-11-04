@@ -270,9 +270,9 @@ async fn unavailable_or_corrupt_credentials_never_disclose_stored_secrets_in_err
         "secret = NULL",
         "type = 'HttpBasicAuth', identifier = NULL, secret = 'secret-password'",
     ] {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "UPDATE webknossos.credentials SET {mutation} WHERE _id = $1"
-        ))
+        )))
         .bind(id.as_str())
         .execute(&database.pool)
         .await

@@ -16,7 +16,7 @@ const INVALID_FIRST: &str = "Please check your first name for any special charac
 const INVALID_LAST: &str = "Please check your last name for any special characters.";
 
 async fn count(database: &TestDb, sql: &str, value: &str) -> i64 {
-    sqlx::query_scalar(sql)
+    sqlx::query_scalar(sqlx::AssertSqlSafe(sql))
         .bind(value)
         .fetch_one(&database.pool)
         .await

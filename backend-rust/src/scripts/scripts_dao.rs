@@ -21,7 +21,7 @@ pub(crate) const SELECT_LIVE_SCRIPTS: &str =
     WHERE NOT s.isDeleted";
 
 /// The live scripts of `organization`.
-fn select_scripts(organization: &str) -> Sql<'_> {
+fn select_scripts(organization: &str) -> Sql {
     let mut q = Sql::new(SELECT_LIVE_SCRIPTS);
     q.push(" AND u._organization = ").push_bind(organization);
     q

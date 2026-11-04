@@ -9,11 +9,11 @@ use crate::{sql::Sql, util::id::ObjectId};
 /// requesting identity's organization, and the credit DAO returns zero to
 /// members lacking billing (credit-read) access. Administrator fields only
 /// for administrators of the requesting organization.
-fn select_public<'a>(
-    requesting_organization: Option<&'a str>,
+fn select_public(
+    requesting_organization: Option<&str>,
     is_admin: bool,
     credit_access: bool,
-) -> Sql<'a> {
+) -> Sql {
     let mut q = Sql::new(
         r#"SELECT jsonb_build_object(
  'id',o._id,'name',o.name,'additionalInformation',o.additionalinformation,'enableAutoVerify',o.enableautoverify,

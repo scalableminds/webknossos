@@ -6,7 +6,7 @@ use sqlx::{Postgres, QueryBuilder};
 
 use crate::{auth::AuthUser, util::id::ObjectId};
 
-pub type Sql<'a> = QueryBuilder<'a, Postgres>;
+pub type Sql = QueryBuilder<Postgres>;
 
 /// A text operand of a reusable predicate.
 #[derive(Clone, Copy, Debug)]
@@ -46,7 +46,7 @@ pub trait PushArg<'a> {
     fn push_arg(&mut self, arg: Arg<'a>) -> &mut Self;
 }
 
-impl<'a> PushArg<'a> for Sql<'a> {
+impl<'a> PushArg<'a> for Sql {
     fn push_arg(&mut self, arg: Arg<'a>) -> &mut Self {
         match arg {
             Arg::Bind(value) => self.push_bind(value),

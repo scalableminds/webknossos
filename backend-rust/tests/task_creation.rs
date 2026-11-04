@@ -337,7 +337,10 @@ fn with(mut value: Value, key: &str, field: Value) -> Value {
 }
 
 async fn count(db: &TestDb, sql: &str) -> i64 {
-    sqlx::query_scalar(sql).fetch_one(&db.pool).await.unwrap()
+    sqlx::query_scalar(sqlx::AssertSqlSafe(sql))
+        .fetch_one(&db.pool)
+        .await
+        .unwrap()
 }
 
 /// (tasks, annotations, layers).

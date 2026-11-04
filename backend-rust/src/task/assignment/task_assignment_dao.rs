@@ -346,7 +346,7 @@ pub(crate) async fn is_team_manager(pool: &PgPool, user_id: &ObjectId) -> sqlx::
 /// task (user_experiences PK is (_user, domain)); the LEFT JOIN … IS NULL of
 /// the user's previous Task annotations is written as NOT EXISTS.
 fn push_next_task_from_where<'a>(
-    q: &mut Sql<'a>,
+    q: &mut Sql,
     user_id: &'a ObjectId,
     team_ids: &'a [ObjectId],
     is_team_manager_or_admin: bool,

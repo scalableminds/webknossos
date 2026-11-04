@@ -1459,7 +1459,9 @@ async fn seed_dataset(db: &TestDb, organization: &str) -> String {
         ("color", "color", "ROW(0,0,0,100,200,300)"),
         ("segmentation", "segmentation", "ROW(10,10,10,200,100,50)"),
     ] {
-        sqlx::query(&format!("INSERT INTO webknossos.dataset_layers (_dataset,name,category,elementClass,boundingBox) VALUES ($1,$2,$3::webknossos.DATASET_LAYER_CATEGORY,'uint8',{bbox}::webknossos.BOUNDING_BOX)"))
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "INSERT INTO webknossos.dataset_layers (_dataset,name,category,elementClass,boundingBox) VALUES ($1,$2,$3::webknossos.DATASET_LAYER_CATEGORY,'uint8',{bbox}::webknossos.BOUNDING_BOX)"
+        )))
             .bind(&id).bind(layer).bind(category).execute(&db.pool).await.unwrap();
     }
     id

@@ -38,7 +38,7 @@ fn error(message: &str) -> String {
 }
 
 async fn execute(database: &TestDb, sql: &str, binds: &[&str]) {
-    let mut query = sqlx::query(sql);
+    let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
     for bind in binds {
         query = query.bind(*bind);
     }

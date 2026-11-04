@@ -30,7 +30,7 @@ pub(crate) type TaskBoundingBoxRow = (
 /// the requester has a role in (`managers_only`: manages), or the requester
 /// administers that organization. The project/team subselects include
 /// soft-deleted rows like Scala's.
-fn push_task_project_grant<'a>(q: &mut Sql<'a>, requester: Requester<'a>, managers_only: bool) {
+fn push_task_project_grant<'a>(q: &mut Sql, requester: Requester<'a>, managers_only: bool) {
     q.push(
         "EXISTS(SELECT 1 FROM webknossos.projects access_project
     JOIN webknossos.teams access_team ON access_team._id=access_project._team
@@ -53,18 +53,18 @@ fn push_task_project_grant<'a>(q: &mut Sql<'a>, requester: Requester<'a>, manage
 /// TaskDAO.readAccessQ, alias `t`: the requester has a role in the project's
 /// team, or administers the team's organization. Role grants are scoped to
 /// the requester's organization.
-pub(crate) fn push_task_read<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+pub(crate) fn push_task_read<'a>(q: &mut Sql, requester: Requester<'a>) {
     push_task_project_grant(q, requester, false);
 }
 
 /// TaskDAO.listAccessQ (= deleteAccessQ): team manager of the project's team
 /// or administrator of the team's organization.
-pub(crate) fn push_task_list<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+pub(crate) fn push_task_list<'a>(q: &mut Sql, requester: Requester<'a>) {
     push_task_project_grant(q, requester, true);
 }
 
 /// TaskTypeDAO.readAccessQ, alias `tt`.
-pub(crate) fn push_task_type_read<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+pub(crate) fn push_task_type_read<'a>(q: &mut Sql, requester: Requester<'a>) {
     q.push("(tt._organization=")
         .push_arg(requester.organization)
         .push(" AND (")

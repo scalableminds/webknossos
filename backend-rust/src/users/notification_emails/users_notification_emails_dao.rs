@@ -57,10 +57,7 @@ pub(crate) async fn find_all_user_ids_with_access<'e>(
 /// The requester-based access predicates are evaluated per candidate: the
 /// requester becomes `candidate._id`, the organization scope the
 /// candidate's organization.
-pub(crate) fn access_query<'a>(
-    resource: &'a SharedResource,
-    user_ids: &'a [&'a ObjectId],
-) -> Sql<'a> {
+pub(crate) fn access_query<'a>(resource: &'a SharedResource, user_ids: &'a [&'a ObjectId]) -> Sql {
     let candidate = Requester {
         id: Arg::Sql("candidate._id"),
         organization: Arg::Sql("candidate._organization"),

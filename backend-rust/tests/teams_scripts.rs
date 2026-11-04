@@ -335,9 +335,9 @@ async fn team_delete_checks_live_references_and_atomically_cleans_all_membership
         "dataset_allowedTeams",
         "folder_allowedTeams",
     ] {
-        let count: i64 = sqlx::query_scalar(&format!(
+        let count: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
             "SELECT COUNT(*) FROM webknossos.{table} WHERE _team = $1"
-        ))
+        )))
         .bind(&fixture.team_id)
         .fetch_one(&database.pool)
         .await
@@ -361,9 +361,9 @@ async fn team_delete_checks_live_references_and_atomically_cleans_all_membership
         "dataset_allowedTeams",
         "folder_allowedTeams",
     ] {
-        let count: i64 = sqlx::query_scalar(&format!(
+        let count: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
             "SELECT COUNT(*) FROM webknossos.{table} WHERE _team = $1"
-        ))
+        )))
         .bind(&fixture.team_id)
         .fetch_one(&database.pool)
         .await

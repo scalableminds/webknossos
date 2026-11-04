@@ -8,7 +8,7 @@ use super::PrivateLink;
 use crate::{auth::AuthUser, sql::Sql, util::id::ObjectId};
 
 /// Live private links of the user's live annotations; callers append further conditions.
-fn select(user: &AuthUser) -> Sql<'_> {
+fn select(user: &AuthUser) -> Sql {
     let mut q = Sql::new(
         "SELECT link._id AS id,link._annotation AS annotation,link.accessToken AS access_token,link.expirationDateTime AS expiration FROM webknossos.annotation_privateLinks link JOIN webknossos.annotations a ON a._id=link._annotation WHERE NOT link.isDeleted AND NOT a.isDeleted AND a._user=",
     );

@@ -16,7 +16,7 @@ pub(crate) type Timestamp = Option<DateTime<Utc>>;
 
 /// runsWithStateQ: a RUNNING run whose heartbeat is older than the stale
 /// timeout (`stale_millis`) is reported as STALE, ending at its heartbeat.
-fn push_runs_with_state(q: &mut Sql<'_>, stale_millis: i64) {
+fn push_runs_with_state(q: &mut Sql, stale_millis: i64) {
     q.push(
         r#"SELECT
           r._id,
@@ -43,7 +43,7 @@ fn push_runs_with_state(q: &mut Sql<'_>, stale_millis: i64) {
     );
 }
 
-fn push_tasks_with_state(q: &mut Sql<'_>, stale_millis: i64) {
+fn push_tasks_with_state(q: &mut Sql, stale_millis: i64) {
     q.push(
         r#"SELECT
           t._id,
@@ -63,7 +63,7 @@ fn push_tasks_with_state(q: &mut Sql<'_>, stale_millis: i64) {
 /// Use this as a MATERIALIZED CTE and don't re-join voxelytics_chunks: it
 /// carries every column the callers need.
 fn push_chunks_with_state<'a>(
-    q: &mut Sql<'a>,
+    q: &mut Sql,
     stale_millis: i64,
     run_ids: &'a [ObjectId],
     task_name: Option<&'a str>,
@@ -97,7 +97,7 @@ fn push_chunks_with_state<'a>(
 /// visibleRunsQ: runs of the user's organization; unless `sees_all` (admin,
 /// dataset manager or allowUnlisted) only the user's own. `None` spells the
 /// unrestricted case as a literal `TRUE`.
-fn push_visible_runs<'a>(q: &mut Sql<'a>, sees_all: Option<bool>, user: &'a AuthUser) {
+fn push_visible_runs(q: &mut Sql, sees_all: Option<bool>, user: &AuthUser) {
     q.push(
         r#"SELECT __r.*
         FROM webknossos.voxelytics_runs __r
@@ -123,7 +123,7 @@ fn push_visible_runs<'a>(q: &mut Sql<'a>, sees_all: Option<bool>, user: &'a Auth
 /// even if they are NULL: there is no fallback to the times of a later skipped
 /// or pending row.
 fn push_latest_chunk_states_ctes<'a>(
-    q: &mut Sql<'a>,
+    q: &mut Sql,
     stale_millis: i64,
     run_ids: &'a [ObjectId],
     task_name: Option<&'a str>,
@@ -155,7 +155,7 @@ fn push_latest_chunk_states_ctes<'a>(
 
 /// latestCompleteOrSkippedTaskQ.
 fn push_latest_complete_or_skipped_task<'a>(
-    q: &mut Sql<'a>,
+    q: &mut Sql,
     stale_millis: i64,
     run_ids: &'a [ObjectId],
     task_name: Option<&'a str>,

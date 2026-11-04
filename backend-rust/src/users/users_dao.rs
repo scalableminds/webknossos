@@ -116,7 +116,7 @@ ORDER BY LOWER(multi.lastName), usr._id
 /// UserDAO.readAccessQ (also its update access) for a `users_` row aliased
 /// `usr`: members of teams the requester manages, users of the organization
 /// the requester administers, and the requester themself.
-pub(crate) fn push_read_access<'a>(q: &mut Sql<'a>, requester: Arg<'a>) {
+pub(crate) fn push_read_access<'a>(q: &mut Sql, requester: Arg<'a>) {
     q.push(
         "(usr._id IN (SELECT _user FROM webknossos.user_team_roles WHERE _team IN (
     SELECT _team FROM webknossos.user_team_roles WHERE _user = ",
@@ -156,7 +156,7 @@ pub(crate) struct OldMembership {
 
 /// Whether the requester manages the team (alias `team`): team manager of it,
 /// or admin of its organization (UserService.isTeamManagerOrAdminOf(user, team)).
-fn push_team_manageable<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+fn push_team_manageable<'a>(q: &mut Sql, requester: Requester<'a>) {
     q.push(
         "(EXISTS (SELECT 1 FROM webknossos.user_team_roles AS r WHERE r._team = team._id AND r._user = ",
     )

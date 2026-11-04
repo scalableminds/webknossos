@@ -13,7 +13,7 @@ use crate::{
 /// UserService.isTeamManagerOrAdminOf(requester, target) as SQL over
 /// `users_ u`. Team deletion removes memberships, so joining `teams_` only
 /// adds organization scoping.
-fn push_manageable<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
+fn push_manageable<'a>(q: &mut Sql, requester: Requester<'a>) {
     q.push("((")
         .push_bind(requester.is_admin)
         .push(" AND u._organization = ")
@@ -35,7 +35,7 @@ fn push_manageable<'a>(q: &mut Sql<'a>, requester: Requester<'a>) {
 
 /// Time spans (alias `ts`, annotation `a`, project `p`) within the filters'
 /// period, annotation types and states, and projects (all if empty).
-fn push_span_filter<'a>(q: &mut Sql<'a>, filters: &'a Filters) {
+fn push_span_filter(q: &mut Sql, filters: &Filters) {
     q.push("ts.time > 0 AND ts.created >= ")
         .push_bind(filters.start)
         .push(" AND ts.created < ")

@@ -123,7 +123,7 @@ Token lookup replaces expired/revoked authentication tokens instead of returning
 
 The existing Scala schema evolution system remains authoritative. Its SQL constraints, enum types, views, triggers and soft-delete flags are shared; no alternate Rust-only application schema is introduced. The temporary test fixture schema bootstrap is intentionally isolated from runtime initialization.
 
-See [Axum's routing and middleware documentation](https://docs.rs/axum/0.8.9/axum/) and [SQLx's PostgreSQL pool documentation](https://docs.rs/sqlx/0.8.6/sqlx/postgres/type.PgPoolOptions.html) for the underlying framework APIs. See [MIGRATION_STATUS.md](MIGRATION_STATUS.md) for every implemented and outstanding route and the order of subsequent work.
+See [Axum's routing and middleware documentation](https://docs.rs/axum/0.8.9/axum/) and [SQLx's PostgreSQL pool documentation](https://docs.rs/sqlx/0.9.0/sqlx/postgres/type.PgPoolOptions.html) for the underlying framework APIs. See [MIGRATION_STATUS.md](MIGRATION_STATUS.md) for every implemented and outstanding route and the order of subsequent work.
 
 ## Resuming delegated work
 

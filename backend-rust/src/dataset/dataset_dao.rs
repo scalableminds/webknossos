@@ -15,7 +15,7 @@ use crate::{
 
 /// Datasets (alias `d`) of the requester's organization reachable through a
 /// live team of it, directly or via a folder grant. Uncorrelated: depends only on `user`.
-fn push_team_grant<'a>(q: &mut Sql<'a>, user: Arg<'a>, managers_only: bool) {
+fn push_team_grant<'a>(q: &mut Sql, user: Arg<'a>, managers_only: bool) {
     let manager = if managers_only {
         " AND r.isTeamManager"
     } else {
@@ -50,7 +50,7 @@ fn push_team_grant<'a>(q: &mut Sql<'a>, user: Arg<'a>, managers_only: bool) {
 }
 
 /// Datasets (alias `d`) of an organization the user administers or manages datasets of.
-fn push_manager_grant<'a>(q: &mut Sql<'a>, user: Arg<'a>) {
+fn push_manager_grant<'a>(q: &mut Sql, user: Arg<'a>) {
     q.push("d._organization IN (SELECT u._organization FROM webknossos.users_ u WHERE u._id = ")
         .push_arg(user)
         .push(" AND (u.isAdmin OR u.isDatasetManager))");
@@ -66,7 +66,7 @@ fn push_manager_grant<'a>(q: &mut Sql<'a>, user: Arg<'a>) {
 /// depend only on the user and token), so PostgreSQL evaluates each once per statement as a
 /// hashed subplan instead of once per dataset row; list queries over thousands of datasets
 /// depend on this (DatasetDAO.readAccessQ uses the same shape).
-pub fn push_read_predicate<'a>(q: &mut Sql<'a>, user: Arg<'a>, sharing_token: Option<&'a str>) {
+pub fn push_read_predicate<'a>(q: &mut Sql, user: Arg<'a>, sharing_token: Option<&'a str>) {
     q.push("(d.isPublic OR ");
     push_manager_grant(q, user);
     q.push(" OR ");
@@ -93,7 +93,7 @@ pub fn push_read_predicate<'a>(q: &mut Sql<'a>, user: Arg<'a>, sharing_token: Op
 /// datasets of their own organization (isAdminOf, isDatasetManagerOf); callers
 /// needing read access must check it separately, just like the Scala
 /// controllers. Uncorrelated like [`push_read_predicate`].
-pub fn push_edit_predicate<'a>(q: &mut Sql<'a>, user: Arg<'a>) {
+pub fn push_edit_predicate<'a>(q: &mut Sql, user: Arg<'a>) {
     q.push("(");
     push_manager_grant(q, user);
     q.push(" OR ");

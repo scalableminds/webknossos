@@ -8,7 +8,7 @@ use crate::{sql::Sql, util::id::ObjectId};
 /// The `dataset_layer_attachments` row of `dataset`'s layer `layer` with
 /// type `typ` and name `name` (the primary key).
 pub(crate) fn push_attachment_key<'a>(
-    q: &mut Sql<'a>,
+    q: &mut Sql,
     dataset: &'a ObjectId,
     layer: &'a str,
     typ: &'a str,

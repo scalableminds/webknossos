@@ -55,12 +55,12 @@ impl TestDb {
             .unwrap_or_else(|_| panic!("Cannot connect to the PostgreSQL test administrator"));
         let database_name = format!("wk_rust_test_{}", Uuid::new_v4().simple());
         // The identifier is exclusively a fixed prefix and generated hexadecimal UUID.
-        sqlx::query(&format!("CREATE DATABASE {database_name}"))
-            .execute(&admin)
-            .await
-            .unwrap_or_else(|_| {
-                panic!("Cannot CREATE the isolated test database (CREATEDB required)")
-            });
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "CREATE DATABASE {database_name}"
+        )))
+        .execute(&admin)
+        .await
+        .unwrap_or_else(|_| panic!("Cannot CREATE the isolated test database (CREATEDB required)"));
         let pool = match PgPoolOptions::new()
             .max_connections(5)
             .connect_with(options.database(&database_name))
@@ -68,10 +68,12 @@ impl TestDb {
         {
             Ok(pool) => pool,
             Err(_) => {
-                sqlx::query(&format!("DROP DATABASE {database_name}"))
-                    .execute(&admin)
-                    .await
-                    .expect("Cannot clean up failed test database");
+                sqlx::query(sqlx::AssertSqlSafe(format!(
+                    "DROP DATABASE {database_name}"
+                )))
+                .execute(&admin)
+                .await
+                .expect("Cannot clean up failed test database");
                 panic!("Cannot connect to the isolated test database");
             }
         };
@@ -182,10 +184,10 @@ impl TestDb {
                     .all(|byte| byte.is_ascii_hexdigit())
         );
         self.pool.close().await;
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "DROP DATABASE {} WITH (FORCE)",
             self.database_name
-        ))
+        )))
         .execute(&self.admin)
         .await
         .expect("Cannot DROP the isolated test database");

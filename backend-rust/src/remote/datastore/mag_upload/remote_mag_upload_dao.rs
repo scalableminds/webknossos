@@ -7,7 +7,7 @@ use crate::{sql::Sql, util::id::ObjectId};
 
 /// The `dataset_mags` row of `dataset`'s layer `layer` at `mag`.
 pub(crate) fn push_mag_predicate<'a>(
-    q: &mut Sql<'a>,
+    q: &mut Sql,
     dataset: &'a ObjectId,
     layer: &'a str,
     mag: [f64; 3],

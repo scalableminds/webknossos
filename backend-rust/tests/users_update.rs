@@ -91,7 +91,7 @@ async fn scalar<T>(database: &TestDb, sql: &str, id: &str) -> T
 where
     T: Send + Unpin + for<'r> sqlx::Decode<'r, sqlx::Postgres> + sqlx::Type<sqlx::Postgres>,
 {
-    sqlx::query_scalar(sql)
+    sqlx::query_scalar(sqlx::AssertSqlSafe(sql))
         .bind(id)
         .fetch_one(&database.pool)
         .await

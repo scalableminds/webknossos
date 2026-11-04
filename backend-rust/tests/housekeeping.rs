@@ -53,16 +53,18 @@ async fn seed_annotation(
     age: &str,
 ) -> String {
     let id = object_id();
-    sqlx::query(&format!("INSERT INTO webknossos.annotations (_id,_dataset,_user,typ,state,created) VALUES ($1,$2,$3,'Explorational',$4::webknossos.ANNOTATION_STATE,NOW() - INTERVAL '{age}')"))
+    sqlx::query(sqlx::AssertSqlSafe(format!(
+        "INSERT INTO webknossos.annotations (_id,_dataset,_user,typ,state,created) VALUES ($1,$2,$3,'Explorational',$4::webknossos.ANNOTATION_STATE,NOW() - INTERVAL '{age}')"
+    )))
         .bind(&id).bind(dataset).bind(&f.user_id).bind(state)
         .execute(&db.pool).await.unwrap();
     id
 }
 
 async fn exists(db: &TestDb, table: &str, column: &str, id: &str) -> bool {
-    sqlx::query_scalar(&format!(
+    sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
         "SELECT EXISTS (SELECT 1 FROM webknossos.{table} WHERE {column} = $1)"
-    ))
+    )))
     .bind(id)
     .fetch_one(&db.pool)
     .await
@@ -70,7 +72,9 @@ async fn exists(db: &TestDb, table: &str, column: &str, id: &str) -> bool {
 }
 
 async fn seed_mutex(db: &TestDb, f: &Fixture, annotation: &str, offset: &str) {
-    sqlx::query(&format!("INSERT INTO webknossos.annotation_mutexes (_annotation,_user,sessionId,expiry) VALUES ($1,$2,'session',NOW() + INTERVAL '{offset}')"))
+    sqlx::query(sqlx::AssertSqlSafe(format!(
+        "INSERT INTO webknossos.annotation_mutexes (_annotation,_user,sessionId,expiry) VALUES ($1,$2,'session',NOW() + INTERVAL '{offset}')"
+    )))
         .bind(annotation).bind(&f.user_id).execute(&db.pool).await.unwrap();
 }
 

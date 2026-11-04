@@ -49,7 +49,9 @@ import UrlManager, {
 } from "viewer/controller/url_manager";
 import {
   determineAllowedModes,
+  getColorLayers,
   getDataLayers,
+  getMagInfoByLayer,
   getSegmentationLayers,
   getUnifiedAdditionalCoordinates,
   hasSegmentation,
@@ -83,7 +85,7 @@ import {
   initializeVolumeTracingAction,
 } from "viewer/model/actions/volumetracing_actions";
 import {
-  computeDataTexturesSetup,
+  computeLayerPoolPlan,
   getRequiredBucketCapacityPerLayer,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import {
@@ -91,6 +93,7 @@ import {
   validateMinimumRequirements,
 } from "viewer/model/bucket_data_handling/gpu_capability_check";
 import DataLayer from "viewer/model/data_layer";
+import { computeUniformColorLayerCap } from "viewer/shaders/main_data_shaders.glsl";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
@@ -127,7 +130,6 @@ export async function initialize(
 ): Promise<
   | {
       dataLayers: DataLayerCollection;
-      maximumTextureCountForLayer: number;
     }
   | null
   | undefined
@@ -359,19 +361,12 @@ async function fetchEditableMappings(
   return Promise.all(promises);
 }
 
-function validateSpecsForLayers(dataset: StoreDataset, requiredBucketCapacity: number): any {
-  const layers = dataset.dataSource.dataLayers;
-  const specs = getSupportedTextureSpecs();
+function validateSpecsForLayers(
+  dataset: StoreDataset,
+  specs: ReturnType<typeof getSupportedTextureSpecs>,
+): void {
   validateMinimumRequirements(specs);
-  const setupDetails = computeDataTexturesSetup(
-    specs,
-    layers,
-    hasSegmentation(dataset),
-    requiredBucketCapacity,
-  );
-
-  maybeWarnAboutUnsupportedLayers(layers);
-  return setupDetails;
+  maybeWarnAboutUnsupportedLayers(dataset.dataSource.dataLayers);
 }
 
 function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
@@ -566,42 +561,64 @@ function initializeSettings(
 
 function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   dataLayers: DataLayerCollection;
-  maximumTextureCountForLayer: number;
   smallestCommonBucketCapacity: number;
   maximumLayerCountToRender: number;
 } {
   const { dataset } = Store.getState();
-  const requiredBucketCapacity = getRequiredBucketCapacityPerLayer(
-    gpuFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR,
-    dataset.dataSource.dataLayers.length,
+  const layers = dataset.dataSource.dataLayers;
+  const specs = getSupportedTextureSpecs();
+  validateSpecsForLayers(dataset, specs);
+  // The bucket capacity per layer of the user's GPU setting, lowered until all
+  // pools fit the GPU's limits. It's stored as
+  // gpuSetup.smallestCommonBucketCapacity and stays fixed until the page is
+  // reloaded, because the pools are allocated with it and can't grow. If the
+  // GPU setting changes in the meantime, the max-zoom computation uses the
+  // smaller of both capacities.
+  const { bucketCapacity: smallestCommonBucketCapacity, poolDepths } = computeLayerPoolPlan(
+    layers,
+    getRequiredBucketCapacityPerLayer(
+      gpuFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR,
+      layers.length,
+    ),
+    specs.maxArrayTextureLayers,
   );
-  const {
-    textureInformationPerLayer,
-    smallestCommonBucketCapacity,
-    maximumLayerCountToRender,
-    maximumTextureCountForLayer,
-  } = validateSpecsForLayers(dataset, requiredBucketCapacity);
+  // Every layer needs at least one slice, so a pool with more layers than
+  // MAX_ARRAY_TEXTURE_LAYERS (at least 256) can't be allocated.
+  if (Math.max(...Object.values(poolDepths)) > specs.maxArrayTextureLayers) {
+    Toast.error(
+      messages["webgl.too_many_layers_per_pool"]({
+        maxArrayTextureLayers: specs.maxArrayTextureLayers,
+      }),
+      { sticky: true },
+    );
+    throw HANDLED_ERROR;
+  }
+  // The pools don't need texture units per layer, but every rendered layer
+  // needs uniforms. Only one segmentation layer can be visible at a time (see
+  // settings_reducer).
+  const magnificationCount = Object.values(getMagInfoByLayer(dataset)).flatMap((magInfo) =>
+    magInfo.getDenseMags(),
+  ).length;
+  const uniformColorLayerCap = computeUniformColorLayerCap(
+    specs.maxUniformVectors,
+    layers.length,
+    magnificationCount,
+    hasSegmentation(dataset),
+  );
+  const maximumLayerCountToRender =
+    Math.min(getColorLayers(dataset).length, uniformColorLayerCap) +
+    (hasSegmentation(dataset) ? 1 : 0);
 
   if (import.meta.env.MODE !== "test") {
     console.log("Supporting", smallestCommonBucketCapacity, "buckets");
   }
 
-  const layers = dataset.dataSource.dataLayers;
   const dataLayers: DataLayerCollection = {};
 
   for (const layer of layers) {
-    const textureInformation = textureInformationPerLayer.get(layer);
-
-    if (!textureInformation) {
-      throw new Error("No texture information for layer?");
-    }
-
     dataLayers[layer.name] = new DataLayer(
       layer,
-      textureInformation.textureSize,
-      textureInformation.textureCount,
       layer.name, // In case of a volume tracing layer the layer name will equal its tracingId.
-      requiredBucketCapacity,
       layers.length,
     );
   }
@@ -613,7 +630,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
 
   return {
     dataLayers,
-    maximumTextureCountForLayer,
     smallestCommonBucketCapacity,
     maximumLayerCountToRender,
   };

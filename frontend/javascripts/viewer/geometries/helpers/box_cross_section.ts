@@ -176,12 +176,16 @@ export function intersectBoxWithPlane(
 
 /*
  * Returns the corners of the polygon in which the data plane of the given viewport cuts
- * the half-open box [min, max) (in voxel coordinates), or null if it does not cut it.
+ * the box spanned by min and max (in voxel coordinates), or null if it does not cut it.
  * The corners are ordered around the polygon and the polygon is not closed (i.e., the
  * first corner is not repeated), so that it can also be used as a triangle fan.
  *
- * Without rotation, this is the axis-aligned rectangle at position[thirdDim], which is
- * computed without the general plane intersection.
+ * Without rotation (or with a rotation that keeps the plane axis-aligned), this is the
+ * axis-aligned rectangle at position[thirdDim], which is computed without the general
+ * plane intersection. That path treats the box as the half-open interval [min, max) along
+ * the plane's normal, like the unrotated rendering always did. A rotated plane is
+ * intersected with the closed box [min, max]; the difference only matters for a plane
+ * that exactly touches the max faces.
  */
 export function getBoxCrossSection(
   min: Vector3,
@@ -214,6 +218,5 @@ export function getBoxCrossSection(
     worldNormal[1] * voxelSize[1],
     worldNormal[2] * voxelSize[2],
   ];
-  const inclusiveMax = max.map((value) => value - Number.EPSILON) as Vector3;
-  return intersectBoxWithPlane(min, inclusiveMax, position, voxelNormal);
+  return intersectBoxWithPlane(min, max, position, voxelNormal);
 }

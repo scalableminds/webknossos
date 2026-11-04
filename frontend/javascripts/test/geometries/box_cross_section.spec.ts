@@ -79,12 +79,6 @@ describe("getBoxCrossSection without rotation", () => {
     expect(crossSection(329.5)).not.toBeNull();
     expect(crossSection(330)).toBeNull();
   });
-
-  it("is not affected by the voxel size", () => {
-    expect(
-      getBoxCrossSection(min, max, OrthoViews.PLANE_XY, position, noRotation, [4, 4, 40]),
-    ).toEqual(getBoxCrossSection(min, max, OrthoViews.PLANE_XY, position, noRotation, isotropic));
-  });
 });
 
 describe("getRotatedViewportNormal", () => {
@@ -168,9 +162,9 @@ describe("getBoxCrossSection with rotation", () => {
     );
   });
 
-  it("scales the normal by the voxel size", () => {
-    const voxelSize: Vector3 = [1, 1, 10];
-    const rotation: Vector3 = [0, 0.3, 0];
+  it("intersects the box with the plane in world space for anisotropic voxels", () => {
+    const voxelSize: Vector3 = [4, 4, 40];
+    const rotation: Vector3 = [0.2, 0.3, 0.1];
     const corners = getBoxCrossSection(
       min,
       max,
@@ -179,9 +173,22 @@ describe("getBoxCrossSection with rotation", () => {
       rotation,
       voxelSize,
     );
+    expect(corners).not.toBeNull();
+    // The plane is rotated in world space, so map the corners to world space and test them
+    // against the world-space plane (independently of how the implementation transforms it).
+    const toWorld = (p: Vector3): Vector3 => [
+      p[0] * voxelSize[0],
+      p[1] * voxelSize[1],
+      p[2] * voxelSize[2],
+    ];
     const worldNormal = getRotatedViewportNormal(OrthoViews.PLANE_XY, rotation);
-    const voxelNormal: Vector3 = [worldNormal[0], worldNormal[1], worldNormal[2] * 10];
-    expectConvexPolygonOnPlane(corners!, position, voxelNormal);
+    for (const corner of corners!) {
+      expect(dot(sub(toWorld(corner), toWorld(position)), worldNormal)).toBeCloseTo(0, 6);
+    }
+    // An anisotropic voxel size changes the cross section.
+    expect(corners).not.toEqual(
+      getBoxCrossSection(min, max, OrthoViews.PLANE_XY, position, rotation, isotropic),
+    );
   });
 });
 

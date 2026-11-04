@@ -26,7 +26,7 @@ prost.workspace = true
 quick-xml.workspace = true
 reqwest.workspace = true
 ring.workspace = true
-zstd = { version = "0.13.3", default-features = false }
+zstd = { version = "0.13.4", default-features = false }
 serde.workspace = true
 serde_json = { workspace = true, features = ["preserve_order"] }
 tokio = { workspace = true, features = ["fs", "io-util"] }
@@ -38,7 +38,7 @@ zarrs = { version = "=0.23.14", default-features = false, features = ["async", "
 zip = { workspace = true, features = ["deflate-flate2"] }
 zune-jpeg = { version = "=0.5.15", default-features = false, features = ["std"] }
 hdf5-reader = { version = "=0.9.1", default-features = false }
-lru = "=0.16.4"
+lru = "=0.19.0"
 moka = { version = "0.12.16", features = ["sync"] }
 draco-core = { version = "=2.3.2", default-features = false, features = ["decoder", "edgebreaker_valence_decode", "legacy_bitstream_decode"] }
 object_store = { version = "0.14", default-features = false, features = ["aws-base", "gcp-base", "ring", "reqwest"] }

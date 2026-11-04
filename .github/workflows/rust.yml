@@ -22,6 +22,19 @@ on:
 jobs:
   rust-backend:
     runs-on: ubuntu-22.04
+    services:
+      postgres:
+        image: postgres:17-bookworm
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
     defaults:
       run:
         working-directory: backend-rust
@@ -63,3 +76,9 @@ jobs:
       # #[ignore]d without WK_RUST_TEST_DATABASE_URL.
       - name: Test
         run: make test
+
+      # The #[ignore]d database tests: each creates and drops its own wk_rust_test_<uuid> database.
+      - name: Database tests
+        env:
+          WK_RUST_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+        run: cargo test --locked -p webknossos-backend -- --ignored

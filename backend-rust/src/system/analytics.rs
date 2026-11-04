@@ -508,7 +508,12 @@ async fn ingest(
     let authorized = events.iter().all(|event| {
         well_known
             .get(&event.user_properties.webknossos_uri)
-            .is_none_or(|key| *key == api_key)
+            .is_none_or(|key| {
+                bool::from(subtle::ConstantTimeEq::ct_eq(
+                    key.as_bytes(),
+                    api_key.as_bytes(),
+                ))
+            })
     });
     if !authorized {
         return Err(ApiError::new(

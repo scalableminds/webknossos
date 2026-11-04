@@ -115,18 +115,26 @@ function useUploadableDatastores(
 }
 
 // Without a folder passed via the URL (e.g., from the dashboard), preselect the root folder
-// so that the required folder field isn't empty. Only done once, so that a user can still clear it.
+// so that the required folder field isn't empty. If the user clears the field, it stays empty.
 function usePreselectRootFolder(form: FormInstance<UploadFormFieldTypes>) {
   const { data: hierarchy } = useFolderHierarchyQuery();
-  const hasPreselected = useRef(false);
+  const preselectedFolderId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (hasPreselected.current || hierarchy == null) return;
-    hasPreselected.current = true;
+    if (hierarchy == null) return;
+    const currentFolderId: string | null = form.getFieldValue("targetFolderId");
+    const wasClearedByUser = currentFolderId == null && preselectedFolderId.current != null;
+    // The cached hierarchy may be outdated. Replace a preselected folder that no longer exists.
+    const isOutdatedPreselection =
+      currentFolderId != null &&
+      currentFolderId === preselectedFolderId.current &&
+      hierarchy.itemById[currentFolderId] == null;
+    if (wasClearedByUser || (currentFolderId != null && !isOutdatedPreselection)) return;
+
     const rootFolder = hierarchy.tree[0];
-    if (form.getFieldValue("targetFolderId") == null && rootFolder?.isEditable) {
-      form.setFieldsValue({ targetFolderId: rootFolder.key });
-    }
+    const folderIdToSelect = rootFolder?.isEditable ? rootFolder.key : null;
+    preselectedFolderId.current = folderIdToSelect;
+    form.setFieldsValue({ targetFolderId: folderIdToSelect ?? undefined });
   }, [hierarchy, form]);
 }
 

@@ -150,6 +150,7 @@ export const useTracingViewMenuGroups = (
   // Explicitly use very "precise" selectors to avoid unnecessary re-renders
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
+  const isSavingDisabled = useWkSelector((state) => state.save.isSavingDisabled);
   const { modal } = App.useApp();
 
   const {
@@ -236,7 +237,11 @@ export const useTracingViewMenuGroups = (
       icon: <ShareAltOutlined />,
       ...getLoginRequiredProps(isLoggedOut, "Share", "Log in to share this annotation."),
     });
-    if (restrictions.allowDownload) {
+    // The download is served by the backend. In sandbox mode or when saving was disabled,
+    // the backend doesn't know the local changes, so the download would be misleading.
+    // The skeleton tab's NML download (based on the frontend state) is still available.
+    const hasUnsavableChanges = controlMode === ControlModeEnum.SANDBOX || isSavingDisabled;
+    if (restrictions.allowDownload && !hasUnsavableChanges) {
       shareAndExportItems.push({
         key: "download-button",
         onClick: handleDownloadOpen,
@@ -273,6 +278,7 @@ export const useTracingViewMenuGroups = (
   }, [
     viewMode,
     controlMode,
+    isSavingDisabled,
     restrictions,
     task,
     annotationType,

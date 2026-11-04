@@ -22,6 +22,7 @@ import {
   Tooltip,
   Typography,
 } from "antd";
+import { useFolderHierarchyQuery } from "dashboard/dataset/queries";
 import FolderSelection from "dashboard/folders/folder_selection";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
@@ -111,6 +112,22 @@ function useUploadableDatastores(
   );
 
   return { uploadableDatastores, selectedDatastoreUrl, isDatasetConversionEnabled };
+}
+
+// Without a folder passed via the URL (e.g., from the dashboard), preselect the root folder
+// so that the required folder field isn't empty. Only done once, so that a user can still clear it.
+function usePreselectRootFolder(form: FormInstance<UploadFormFieldTypes>) {
+  const { data: hierarchy } = useFolderHierarchyQuery();
+  const hasPreselected = useRef(false);
+
+  useEffect(() => {
+    if (hasPreselected.current || hierarchy == null) return;
+    hasPreselected.current = true;
+    const rootFolder = hierarchy.tree[0];
+    if (form.getFieldValue("targetFolderId") == null && rootFolder?.isEditable) {
+      form.setFieldsValue({ targetFolderId: rootFolder.key });
+    }
+  }, [hierarchy, form]);
 }
 
 function VoxelSizeFormItems() {
@@ -207,6 +224,7 @@ function DatasetUploadView({ datastores, withoutCard, onUploaded }: Props) {
 
   const { uploadableDatastores, selectedDatastoreUrl, isDatasetConversionEnabled } =
     useUploadableDatastores(datastores, form);
+  usePreselectRootFolder(form);
   const inspection = useFileInspection(files);
   const unfinishedUploads = useUnfinishedUploads(selectedDatastoreUrl, activeUser?.organization);
   const upload = useResumableDatasetUpload({

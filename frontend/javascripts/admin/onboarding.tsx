@@ -495,9 +495,12 @@ function OnboardingView() {
   const [datasetIdToImport, setDatasetIdToImport] = useState<string | null | undefined>(null);
 
   const navigate = useNavigate();
+  // Anonymous users don't get any datastores, so only fetch them once the account was created.
+  // Otherwise, the upload form has no datastore and silently fails to validate.
   const { data: datastores } = useQuery({
-    queryKey: ["datastores"],
+    queryKey: ["datastores", activeUser?.id],
     queryFn: getDatastores,
+    enabled: activeUser != null,
     initialData: [],
   });
 

@@ -29,14 +29,19 @@ type Properties = {
   showCrossSections?: boolean;
   id?: number;
   isHighlighted: boolean;
-  isActive?: boolean;
+  // A cube that is created as active does not flash its fill (see setIsActive). This avoids
+  // re-flashing whenever the user bounding boxes change and their cubes are rebuilt.
+  isActive: boolean;
   // Schedules the disposal of GPU resources, e.g. to wait for pending shader compilations.
   deferDisposal?: (dispose: () => void) => void;
 };
 
-// Opacity of the fill that marks the active (selected) bounding box in the 2D viewports.
-// A color change of the 1px outline alone is too subtle to notice on top of the data.
+// When a bounding box becomes active (selected), its cross sections are filled in the 2D
+// viewports, so that the user can spot it. A color change of the 1px outline alone is too
+// subtle to notice on top of the data. The fill immediately starts fading out, so that it does
+// not get in the way while annotating inside the box.
 const ACTIVE_FILL_OPACITY = 0.2;
+const ACTIVE_FILL_FADE_DURATION_MS = 1500;
 // The fill's two triangles, indexing the first four cross-section corners.
 const FILL_TRIANGLE_INDICES = [0, 1, 2, 0, 2, 3];
 
@@ -47,8 +52,9 @@ class Cube {
   // would only be visible when the current position matches the edge positions
   // of the bounding box.
   crossSections: OrthoViewWithoutTDMap<Line>;
-  // Translucent fills of the cross sections. They only exist while the bounding box is active,
-  // so that the many inactive boxes don't pay for extra meshes and per-move geometry updates.
+  // Translucent fills of the cross sections. They only exist while the fill flashes after the
+  // bounding box became active, so that the other boxes don't pay for extra meshes and
+  // per-move geometry updates.
   crossSectionFills: OrthoViewWithoutTDMap<Mesh<BufferGeometry, MeshBasicMaterial>> | null = null;
   // The four corners of each cross section (without the third dimension), set in setCorners.
   crossSectionCorners: OrthoViewWithoutTDMap<ThreeVector3[]> | null = null;
@@ -63,6 +69,7 @@ class Cube {
   id: number | null | undefined;
   isHighlighted: boolean;
   isActive: boolean;
+  fillAnimationFrameId: number | null = null;
   storePropertyUnsubscribers: Array<() => void> = [];
   deferDisposal: (dispose: () => void) => void;
 
@@ -77,7 +84,7 @@ class Cube {
     this.initialized = false;
     this.visible = true;
     this.isHighlighted = properties.isHighlighted;
-    this.isActive = false;
+    this.isActive = properties.isActive;
     this.deferDisposal = properties.deferDisposal ?? ((dispose) => dispose());
     this.cube = new Line(new BufferGeometry(), this.getLineMaterial());
     this.crossSections = {
@@ -89,8 +96,6 @@ class Cube {
     if (this.min != null && this.max != null) {
       this.setCorners(this.min, this.max);
     }
-    // The fills are added to the scene together with the other meshes via getMeshes.
-    this.setIsActive(properties.isActive ?? false);
 
     // The highlight color depends on the theme.
     this.storePropertyUnsubscribers.push(
@@ -266,31 +271,67 @@ class Cube {
 
     this.isActive = isActive;
     if (isActive) {
-      this.crossSectionFills = {
-        PLANE_XY: this.createCrossSectionFill(OrthoViews.PLANE_XY),
-        PLANE_XZ: this.createCrossSectionFill(OrthoViews.PLANE_XZ),
-        PLANE_YZ: this.createCrossSectionFill(OrthoViews.PLANE_YZ),
-      };
-      const fills = Object.values(this.crossSectionFills);
-      // When the cube is already part of the scene, add the fills next to its lines.
-      // Otherwise, they are added together with the other meshes via getMeshes.
-      this.cube.parent?.add(...fills);
-      // Set the third dimension of the fills. updateForCam refines their per-viewport
-      // visibility on the next render.
-      this.updatePositionForCrossSections(getPosition(Store.getState().flycam));
-    } else if (this.crossSectionFills != null) {
-      const fills = Object.values(this.crossSectionFills);
-      this.crossSectionFills = null;
-      for (const fill of fills) {
-        fill.removeFromParent();
-      }
-      this.deferDisposal(() => {
-        for (const fill of fills) {
-          fill.geometry.dispose();
-          fill.material.dispose();
-        }
-      });
+      this.flashFill();
+    } else {
+      this.removeFills();
     }
+  }
+
+  flashFill() {
+    this.removeFills();
+    if (!this.showCrossSections) {
+      return;
+    }
+    const fills = {
+      PLANE_XY: this.createCrossSectionFill(OrthoViews.PLANE_XY),
+      PLANE_XZ: this.createCrossSectionFill(OrthoViews.PLANE_XZ),
+      PLANE_YZ: this.createCrossSectionFill(OrthoViews.PLANE_YZ),
+    };
+    this.crossSectionFills = fills;
+    // Cubes are only flashed after they were added to the scene (cubes created as active
+    // don't flash), so add the fills next to the lines.
+    this.cube.parent?.add(...Object.values(fills));
+    // Set the third dimension of the fills. updateForCam refines their per-viewport
+    // visibility on the next render.
+    this.updatePositionForCrossSections(getPosition(Store.getState().flycam));
+
+    const startTime = performance.now();
+    const animate = (now: number) => {
+      const fadeProgress = (now - startTime) / ACTIVE_FILL_FADE_DURATION_MS;
+      if (fadeProgress >= 1) {
+        this.fillAnimationFrameId = null;
+        this.removeFills();
+        return;
+      }
+      const opacity = ACTIVE_FILL_OPACITY * (1 - fadeProgress);
+      for (const fill of Object.values(fills)) {
+        fill.material.opacity = opacity;
+      }
+      app.vent.emit("rerender");
+      this.fillAnimationFrameId = requestAnimationFrame(animate);
+    };
+    this.fillAnimationFrameId = requestAnimationFrame(animate);
+  }
+
+  removeFills() {
+    if (this.fillAnimationFrameId != null) {
+      cancelAnimationFrame(this.fillAnimationFrameId);
+      this.fillAnimationFrameId = null;
+    }
+    if (this.crossSectionFills == null) {
+      return;
+    }
+    const fills = Object.values(this.crossSectionFills);
+    this.crossSectionFills = null;
+    for (const fill of fills) {
+      fill.removeFromParent();
+    }
+    this.deferDisposal(() => {
+      for (const fill of fills) {
+        fill.geometry.dispose();
+        fill.material.dispose();
+      }
+    });
     app.vent.emit("rerender");
   }
 
@@ -339,6 +380,10 @@ class Cube {
   }
 
   destroy() {
+    if (this.fillAnimationFrameId != null) {
+      cancelAnimationFrame(this.fillAnimationFrameId);
+      this.fillAnimationFrameId = null;
+    }
     for (const fn of this.storePropertyUnsubscribers) {
       fn();
     }

@@ -283,6 +283,7 @@ class SceneController {
       color: CUBE_COLOR,
       showCrossSections: true,
       isHighlighted: false,
+      isActive: false,
     });
 
     this.contour = new ContourGeometry();
@@ -504,6 +505,7 @@ class SceneController {
         color: 0x00ff00,
         showCrossSections: true,
         isHighlighted: false,
+        isActive: false,
       });
       taskCube.getMeshes().forEach((mesh) => {
         this.rootNode.add(mesh);
@@ -797,6 +799,7 @@ class SceneController {
           // is visible where users usually work and the visibility/color controls have a visible effect.
           showCrossSections: true,
           isHighlighted: false,
+          isActive: false,
         });
         bbCube.setVisibility(layerBoundingBoxVisibilities[layer.name] ?? false);
         bbCube.getMeshes().forEach((mesh) => {
@@ -861,6 +864,11 @@ class SceneController {
     }
 
     this.highlightedBBoxId = bboxId;
+  }
+
+  // Briefly fills the given user bounding box, e.g. to point out a newly created box.
+  flashUserBoundingBox(bboxId: number): void {
+    this.userBoundingBoxes.find((bbCube) => bbCube.id === bboxId)?.flashFill();
   }
 
   setActiveUserBoundingBox(bboxId: number | null | undefined): void {

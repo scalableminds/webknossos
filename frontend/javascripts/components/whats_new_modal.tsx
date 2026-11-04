@@ -134,7 +134,14 @@ export function WhatsNewModal({
         width={ModalWidth.Large}
         destroyOnHidden
       >
-        <ReleaseNoteList readState={readState} onLoaded={onLoaded} />
+        <ReleaseNoteList
+          readState={readState}
+          // The list stays mounted during the closing animation. Don't mark the notes as seen if
+          // they finish loading after the modal was closed.
+          onLoaded={() => {
+            if (isOpen) onLoaded();
+          }}
+        />
       </Modal>
     </UserThemeConfigProvider>
   );

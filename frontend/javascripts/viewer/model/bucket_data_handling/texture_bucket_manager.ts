@@ -1,17 +1,13 @@
 import app from "app";
 import type { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
-import type UpdatableTexture from "libs/UpdatableTexture";
 import { waitForCondition } from "libs/utils";
 import window from "libs/window";
 import noop from "lodash-es/noop";
 import range from "lodash-es/range";
 import uniqBy from "lodash-es/uniqBy";
-import type { DataTexture } from "three";
 import type { BucketDataArray, ElementClass } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import constants, { type TypedArray } from "viewer/constants";
-import { getRenderer } from "viewer/controller/renderer";
-import { createUpdatableTexture } from "viewer/geometries/materials/plane_material_factory_helpers";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import {
@@ -19,6 +15,16 @@ import {
   getBucketHeightInTexture,
   getDtypeConfigForElementClass,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import type PoolTextureManager from "viewer/model/bucket_data_handling/pool_texture_manager";
+
+// Where in a shared pool texture a layer's buckets live.
+export type LayerPoolBinding = {
+  poolTextureManager: PoolTextureManager;
+  baseSlice: number;
+  // Upper bound for maximumCapacity. The slices are rounded up, so they may
+  // have room for more buckets than this.
+  bucketCapacity: number;
+};
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -108,7 +114,6 @@ function padToUploadRegion(
 }
 
 export default class TextureBucketManager {
-  dataTextures: Array<UpdatableTexture>;
   layerIndex: number = -1;
   lookUpCuckooTable!: CuckooTableVec5;
   // Holds the index for each active bucket, to which it should (or already
@@ -137,6 +142,7 @@ export default class TextureBucketManager {
   // instead of the bucket footprint being shrunk to depth 1. See getCuckooKey, DataBucket.getT().
   usesTRecycling: boolean;
   private cube: DataCube;
+  private pool: LayerPoolBinding;
   isDestroyed: boolean = false;
   private areTexturesReady: boolean = false;
   private isWriterQueueProcessingScheduled: boolean = false;
@@ -146,9 +152,7 @@ export default class TextureBucketManager {
     dataTextureCount: number,
     elementClass: ElementClass,
     cube: DataCube,
-    // Upper bound for maximumCapacity. The textures are rounded up, so they
-    // may have room for more buckets than this.
-    bucketCapacity: number = Number.POSITIVE_INFINITY,
+    pool: LayerPoolBinding,
   ) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)
@@ -163,18 +167,19 @@ export default class TextureBucketManager {
       : cube.getEffectiveBucketVoxelCount();
     this.maximumCapacity = Math.min(
       getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree, this.bucketVoxelCount),
-      bucketCapacity,
+      pool.bucketCapacity,
     );
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
     this.freeIndexSet = new Set(range(this.maximumCapacity));
-    this.dataTextures = [];
+    this.pool = pool;
   }
 
   async startRAFLoop() {
     await waitForCondition(
       () =>
-        this.lookUpCuckooTable?._texture.isInitialized() && this.dataTextures[0].isInitialized(),
+        this.lookUpCuckooTable?._texture.isInitialized() &&
+        this.pool.poolTextureManager.isInitialized(),
     );
     this.areTexturesReady = true;
     this.processWriterQueue();
@@ -357,10 +362,22 @@ export default class TextureBucketManager {
           : 0;
       const src = padToUploadRegion(rgbPaddedSrc, requiredElementCount, destElementOffset);
 
-      this.dataTextures[dataTextureIndex].update(src, x, y, width, height);
+      this.pool.poolTextureManager.textureArray.update(
+        src,
+        x,
+        y,
+        width,
+        height,
+        this.pool.baseSlice + dataTextureIndex,
+      );
       this.committedBucketSet.add(bucket);
 
-      this.lookUpCuckooTable.set(this.getCuckooKey(bucket), _index);
+      // Store the address with baseSlice already added, so that the shader's
+      // floor(address / bucketsPerTexture) directly yields the pool slice.
+      this.lookUpCuckooTable.set(
+        this.getCuckooKey(bucket),
+        _index + this.pool.baseSlice * bucketsPerTexture,
+      );
 
       // bucket.setVisualizationColor("#00ff00");
       // bucket.visualize();
@@ -373,28 +390,9 @@ export default class TextureBucketManager {
     }
   }
 
-  getTextures(): Array<DataTexture | UpdatableTexture> {
-    return [this.lookUpCuckooTable._texture].concat(this.dataTextures);
-  }
-
-  setupDataTextures(lookUpCuckooTable: CuckooTableVec5, layerIndex: number): void {
-    for (let i = 0; i < this.dataTextureCount; i++) {
-      const { textureType, pixelFormat, internalFormat } = getDtypeConfigForElementClass(
-        this.elementClass,
-      );
-
-      const dataTexture = createUpdatableTexture(
-        this.textureWidth,
-        this.textureWidth,
-        textureType,
-        getRenderer(),
-        pixelFormat,
-        internalFormat,
-      );
-
-      this.dataTextures.push(dataTexture);
-    }
-
+  // Bucket addresses are stored in the shared look up table under this
+  // layer's index. Uploading starts once the textures are ready.
+  attachToLookUpTable(lookUpCuckooTable: CuckooTableVec5, layerIndex: number): void {
     this.lookUpCuckooTable = lookUpCuckooTable;
     this.layerIndex = layerIndex;
     this.startRAFLoop();
@@ -450,10 +448,8 @@ export default class TextureBucketManager {
   }
 
   destroy() {
-    for (const texture of this.getTextures()) {
-      texture.dispose();
-    }
-    this.dataTextures = [];
+    // The look up table is shared by all layers and disposed by
+    // LayerRenderingManager.
     // @ts-expect-error
     this.lookUpCuckooTable = null;
     this.isDestroyed = true;

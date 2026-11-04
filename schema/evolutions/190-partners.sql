@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 188 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 189 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 DROP VIEW webknossos.userInfos;
 DROP VIEW webknossos.organizations_;
@@ -44,6 +44,6 @@ FROM webknossos.users_ u
 JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 189;
+UPDATE webknossos.releaseInformation SET schemaVersion = 190;
 
 COMMIT TRANSACTION;

@@ -24,6 +24,8 @@ ALTER TABLE webknossos.organizations
 ALTER TABLE webknossos.aiModels
   ADD COLUMN _partner TEXT CONSTRAINT _partner_objectId CHECK (_partner ~ '^[0-9a-f]{24}$') DEFAULT NULL;
 ALTER TABLE webknossos.aiModels ADD COLUMN thumbnailUrl TEXT DEFAULT NULL;
+-- Shown in the model list, but cannot be used for inference yet.
+ALTER TABLE webknossos.aiModels ADD COLUMN isComingSoon BOOLEAN NOT NULL DEFAULT FALSE;
 
 ALTER TABLE webknossos.organizations
   ADD CONSTRAINT partner_ref FOREIGN KEY(_partner) REFERENCES webknossos.partners(_id) DEFERRABLE;

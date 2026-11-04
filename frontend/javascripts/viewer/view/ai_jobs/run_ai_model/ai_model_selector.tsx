@@ -110,7 +110,7 @@ export const AiModelSelector: React.FC = () => {
   );
 
   const onSelectModel = (model: AiModel) => {
-    if (!model.category) return;
+    if (!model.category || model.isComingSoon) return;
     const jobType = mapCategoryToJobType(model.category);
     setSelectedModel(model);
     setSelectedJobType(jobType);
@@ -171,6 +171,7 @@ export const AiModelSelector: React.FC = () => {
                   }
                   clampDescription
                   isSelected={selectedModel?.id === model.id}
+                  isDisabled={model.isComingSoon}
                   onSelect={() => onSelectModel(model)}
                 />
               ))}

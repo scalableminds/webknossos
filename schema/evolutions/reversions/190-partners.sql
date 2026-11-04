@@ -10,6 +10,7 @@ DROP VIEW webknossos.partners_;
 ALTER TABLE webknossos.organizations DROP COLUMN _partner;
 ALTER TABLE webknossos.aiModels DROP COLUMN _partner;
 ALTER TABLE webknossos.aiModels DROP COLUMN thumbnailUrl;
+ALTER TABLE webknossos.aiModels DROP COLUMN isComingSoon;
 
 DROP TABLE webknossos.partners;
 

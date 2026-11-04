@@ -326,7 +326,8 @@ Samplecountry
     isSuperUserOnly = false,
     isPretrained = true,
     _partner = Some(testPartner._id),
-    thumbnailUrl = Some("/images/partners/test-partner-model-thumbnail.svg")
+    thumbnailUrl = Some("/images/partners/test-partner-model-thumbnail.svg"),
+    isComingSoon = true
   )
   private val defaultDataSource = UsableDataSource(
     id = DataSourceId("l4_sample_remote", defaultOrganization._id),

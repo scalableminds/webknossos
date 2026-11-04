@@ -27,6 +27,7 @@ object Msg {
     def nameTaken(name: String): String =
       s"An AI model with the name “$name” already exists. Please choose a different name."
     val notFound: String = "Could not find requested AI model."
+    val comingSoon: String = "This AI model is not available yet."
     val updatingFailed: String = "Could not update AI model’s name and comment."
     val updatingSharedFailed: String = "Could not update the organizations that may access the AI model."
     val notOwned: String = "Only the owner of the AI model can perform this change."

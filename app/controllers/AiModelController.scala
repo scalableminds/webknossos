@@ -281,6 +281,7 @@ class AiModelController @Inject() (
         ) ?~> Msg.Job.Inference.wrongOrga ~> FORBIDDEN
         aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> Msg.AiModel.notFound
         aiModel <- aiModelOpt.toFox ?~> "aiModel.required"
+        _ <- Fox.fromBool(!aiModel.isComingSoon) ?~> Msg.AiModel.comingSoon
         _ <- Fox.fromBool(
           aiModel.isPretrained || aiModel._dataStore == dataset._dataStore
         ) ?~> Msg.AiModel.dataStoreMismatch
@@ -346,6 +347,7 @@ class AiModelController @Inject() (
         ) ?~> Msg.Job.Inference.wrongOrga ~> FORBIDDEN
         aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> Msg.AiModel.notFound
         aiModel <- aiModelOpt.toFox ?~> "aiModel.required"
+        _ <- Fox.fromBool(!aiModel.isComingSoon) ?~> Msg.AiModel.comingSoon
         _ <- Fox.fromBool(
           aiModel.isPretrained || aiModel._dataStore == dataset._dataStore
         ) ?~> Msg.AiModel.dataStoreMismatch

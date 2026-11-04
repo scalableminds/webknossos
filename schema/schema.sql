@@ -736,6 +736,8 @@ CREATE TABLE webknossos.aiModels(
   -- A pretrained model with a _partner is only visible to the organizations assigned to that partner.
   _partner TEXT CONSTRAINT _partner_objectId CHECK (_partner ~ '^[0-9a-f]{24}$') DEFAULT NULL,
   thumbnailUrl TEXT DEFAULT NULL,
+  -- Shown in the model list, but cannot be used for inference yet.
+  isComingSoon BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (_organization, name)
 );
 

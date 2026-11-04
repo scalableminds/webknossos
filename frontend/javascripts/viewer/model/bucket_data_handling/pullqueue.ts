@@ -1,5 +1,6 @@
 import app from "app";
 import PriorityQueue from "js-priority-queue";
+import ErrorHandling from "libs/error_handling";
 import { asAbortable, sleep } from "libs/utils";
 import type { BucketAddress } from "viewer/constants";
 import constants from "viewer/constants";
@@ -66,6 +67,45 @@ const BATCH_SIZE = 6;
 const PULL_ABORTION_ERROR = new DOMException("Pull aborted.", "AbortError");
 const MAX_RETRY_DELAY = 5000;
 
+type BucketFailure =
+  // The datastore could not read the bucket (see "failure-bucket-indices" in wkstore_adapter).
+  | { bucketAddress: BucketAddress; reason: "failure-response" }
+  // The received data could not be applied to the bucket (or one of its t-batch siblings).
+  | { bucketAddress: BucketAddress; reason: "handling-error"; error: unknown };
+
+// Thrown by pullBatch when individual buckets of an otherwise successful request failed.
+// The first handling error is the most specific one, so it determines the message and cause.
+class BucketBatchError extends Error {
+  readonly params: Record<string, unknown>;
+
+  constructor(layerName: string, batchSize: number, failures: Array<BucketFailure>) {
+    const handlingErrors = failures.flatMap((failure) =>
+      failure.reason === "handling-error" ? [failure.error] : [],
+    );
+    const firstHandlingError = handlingErrors[0];
+    super(
+      firstHandlingError != null
+        ? `Some buckets could not be handled: ${String(firstHandlingError)}`
+        : "The datastore reported failures for some buckets.",
+      { cause: firstHandlingError },
+    );
+    this.name = "BucketBatchError";
+    this.params = {
+      layerName,
+      batchSize,
+      failureResponseCount: failures.length - handlingErrors.length,
+      handlingErrorCount: handlingErrors.length,
+      firstHandlingErrorStack:
+        firstHandlingError instanceof Error ? firstHandlingError.stack : undefined,
+      failures: failures.map((failure) => ({
+        bucketAddress: failure.bucketAddress,
+        reason: failure.reason,
+        error: failure.reason === "handling-error" ? String(failure.error) : undefined,
+      })),
+    };
+  }
+}
+
 class PullQueue {
   cube: DataCube;
   layerName: string;
@@ -76,6 +116,9 @@ class PullQueue {
   private consecutiveErrorCount: number;
   private isRetryScheduled: boolean;
   private isDestroyed: boolean = false;
+  // Failed buckets are retried, so the same error tends to recur many times. Only report each
+  // message once to Airbrake to not exhaust its per-session limit (see MAX_NUM_ERRORS).
+  private reportedErrorMessages: Set<string> = new Set();
 
   constructor(cube: DataCube, layerName: string, datastoreInfo: DataStoreInfo) {
     this.cube = cube;
@@ -132,7 +175,7 @@ class PullQueue {
     const wireBatch = batch.map((address) => snapToTBatchAddress(this.cube, address));
 
     let hasErrored = false;
-    let failedBucketAddresses: Array<BucketAddress> = [];
+    const failures: Array<BucketFailure> = [];
     try {
       const bucketResults = await asAbortable(
         requestWithFallback(layerInfo, wireBatch),
@@ -148,7 +191,7 @@ class PullQueue {
           if (bucketResult.type === "failure") {
             // The bucket could not be read. Schedule it for a retry via the
             // batch-level error handling below.
-            failedBucketAddresses.push(bucketAddress);
+            failures.push({ bucketAddress, reason: "failure-response" });
           } else {
             this.handleBatchedBucketResult(
               siblingAddresses,
@@ -157,19 +200,20 @@ class PullQueue {
               batchItems[index].priority,
             );
           }
-        } catch {
-          failedBucketAddresses.push(bucketAddress);
+        } catch (error) {
+          failures.push({ bucketAddress, reason: "handling-error", error });
         }
       }
 
-      if (failedBucketAddresses.length > 0) {
-        throw new Error("Some buckets could not be handled.");
+      if (failures.length > 0) {
+        throw new BucketBatchError(this.layerName, batch.length, failures);
       }
     } catch (error) {
       if (this.isDestroyed) {
         return;
       }
-      failedBucketAddresses = failedBucketAddresses.length === 0 ? batch : failedBucketAddresses;
+      const failedBucketAddresses =
+        failures.length === 0 ? batch : failures.map((failure) => failure.bucketAddress);
       for (const bucketAddress of failedBucketAddresses) {
         const bucket = this.cube.getBucket(bucketAddress);
 
@@ -185,7 +229,12 @@ class PullQueue {
 
       if (!(error instanceof DOMException && error.name === "AbortError")) {
         // AbortErrors are deliberate. Don't show them on the console.
-        console.error(error);
+        if (error instanceof BucketBatchError) {
+          console.error(error, error.params);
+          this.reportBucketBatchError(error);
+        } else {
+          console.error(error);
+        }
         hasErrored = true;
       }
     } finally {
@@ -218,6 +267,14 @@ class PullQueue {
         app.vent.emit("pullqueue:empty", this.layerName);
       }
     }
+  }
+
+  private reportBucketBatchError(error: BucketBatchError) {
+    if (this.reportedErrorMessages.has(error.message)) {
+      return;
+    }
+    this.reportedErrorMessages.add(error.message);
+    ErrorHandling.notify(error, error.params);
   }
 
   private getRetryDelay(): number {

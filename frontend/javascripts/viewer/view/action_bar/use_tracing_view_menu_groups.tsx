@@ -1,13 +1,12 @@
 import {
   CheckCircleOutlined,
+  CodeOutlined,
   CopyOutlined,
   DownloadOutlined,
   FolderOpenOutlined,
   HistoryOutlined,
-  LaptopOutlined,
   LinkOutlined,
   LockOutlined,
-  SettingOutlined,
   ShareAltOutlined,
   StopOutlined,
   UnlockOutlined,
@@ -28,7 +27,6 @@ import { disableSavingAction } from "viewer/model/actions/save_actions";
 import {
   setDownloadModalVisibilityAction,
   setDuplicateAnnotationModalVisibilityAction,
-  setKeyboardShortcutConfigModalVisibilityAction,
   setMergeModalVisibilityAction,
   setShareModalVisibilityAction,
   setUserScriptsModalVisibilityAction,
@@ -38,10 +36,12 @@ import {
 import { Model } from "viewer/singletons";
 import type { RestrictionsAndSettings, Task } from "viewer/store";
 import Store from "viewer/store";
+import { type MenuGroup, MenuGroupKeys } from "viewer/view/action_bar/menu_groups";
 import {
+  keyboardShortcutsConfigMenuItem,
   renderAnimationMenuItem,
   screenshotMenuItem,
-} from "viewer/view/action_bar/view_dataset_actions_view";
+} from "viewer/view/action_bar/menu_items";
 
 // These actions require authentication. Instead of opening a dialog that fails for logged-out
 // users, disable the menu item and explain why.
@@ -94,10 +94,6 @@ const handleZarrLinksOpen = () => {
   Store.dispatch(setZarrLinksModalVisibilityAction(true));
 };
 
-const handleShowKeyboardShortcutConfigModal = () => {
-  Store.dispatch(setKeyboardShortcutConfigModalVisibilityAction(true));
-};
-
 const handleDuplicateOpen = () => {
   Store.dispatch(setDuplicateAnnotationModalVisibilityAction(true));
 };
@@ -147,7 +143,7 @@ export type TracingViewMenuProps = {
   annotationOwner: APIUserBase | null | undefined;
 };
 
-export const useTracingViewMenuItems = (
+export const useTracingViewMenuGroups = (
   props: TracingViewMenuProps,
   layoutMenu: SubMenuType | null,
 ) => {
@@ -171,64 +167,20 @@ export const useTracingViewMenuItems = (
     const isLoggedOut = activeUser == null;
     const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
-    const menuItems: ItemType[] = [];
-
-    if (restrictions.allowFinish) {
-      menuItems.push({
-        key: "finish-button",
-        onClick: () => handleFinish(annotationId, annotationType, modal),
-        icon: <CheckCircleOutlined />,
-        label: archiveButtonText,
-      });
-    }
-
-    if (restrictions.allowDownload) {
-      menuItems.push({
-        key: "download-button",
-        onClick: handleDownloadOpen,
-        icon: <DownloadOutlined />,
-        label: "Download",
-      });
-    }
-
-    menuItems.push({
-      key: "share-button",
-      onClick: handleShareOpen,
-      icon: <ShareAltOutlined />,
-      ...getLoginRequiredProps(isLoggedOut, "Share", "Log in to share this annotation."),
-    });
-    menuItems.push({
-      key: "zarr-links-button",
-      onClick: handleZarrLinksOpen,
-      icon: <LinkOutlined />,
-      ...getLoginRequiredProps(
-        isLoggedOut,
-        "Zarr Links",
-        "Log in to create Zarr links for this annotation.",
-      ),
-    });
+    const annotationItems: ItemType[] = [];
+    const shareAndExportItems: ItemType[] = [];
+    const customizeItems: ItemType[] = [];
 
     if (!isLoggedOut) {
-      menuItems.push({
+      annotationItems.push({
         key: "duplicate-button",
         onClick: handleDuplicateOpen,
         icon: <CopyOutlined />,
         label: "Duplicate",
       });
     }
-
-    menuItems.push(screenshotMenuItem);
-    menuItems.push(renderAnimationMenuItem);
-
-    menuItems.push({
-      key: "user-scripts-button",
-      onClick: handleUserScriptsOpen,
-      icon: <SettingOutlined />,
-      label: "Add Script",
-    });
-
     if (restrictions.allowSave && isSkeletonMode && !isLoggedOut) {
-      menuItems.push({
+      annotationItems.push({
         key: "merge-button",
         onClick: handleMergeOpen,
         icon: <FolderOpenOutlined />,
@@ -236,37 +188,19 @@ export const useTracingViewMenuItems = (
       });
     }
     if (controlMode !== ControlModeEnum.SANDBOX) {
-      menuItems.push({
+      annotationItems.push({
         key: "restore-button",
         onClick: handleRestore,
         icon: <HistoryOutlined />,
         ...getLoginRequiredProps(
           isLoggedOut,
-          "Restore Older Version",
-          "Log in to restore older versions of this annotation.",
+          "Version History",
+          "Log in to view the version history of this annotation.",
         ),
       });
     }
-
-    menuItems.push({
-      key: "Keyboard Shortcuts",
-      onClick: handleShowKeyboardShortcutConfigModal,
-      icon: <LaptopOutlined />,
-      label: "Keyboard Shortcuts",
-    });
-
-    if (layoutMenu != null) menuItems.push(layoutMenu);
-
-    if (restrictions.allowSave && !task) {
-      menuItems.push({
-        key: "disable-saving",
-        onClick: () => handleDisableSaving(modal),
-        icon: <StopOutlined />,
-        label: "Disable saving",
-      });
-    }
     if (isAnnotationOwner) {
-      menuItems.push({
+      annotationItems.push({
         key: "lock-unlock-button",
         onClick: () =>
           handleChangeLockedStateOfAnnotation(
@@ -278,8 +212,64 @@ export const useTracingViewMenuItems = (
         label: `${isAnnotationLockedByUser ? "Unlock" : "Lock"} Annotation`,
       });
     }
+    if (restrictions.allowSave && !task) {
+      annotationItems.push({
+        key: "disable-saving",
+        onClick: () => handleDisableSaving(modal),
+        icon: <StopOutlined />,
+        label: "Disable saving",
+      });
+    }
+    // Archiving/finishing ends the work on the annotation, so it comes last to avoid misclicks.
+    if (restrictions.allowFinish) {
+      annotationItems.push({
+        key: "finish-button",
+        onClick: () => handleFinish(annotationId, annotationType, modal),
+        icon: <CheckCircleOutlined />,
+        label: archiveButtonText,
+      });
+    }
 
-    return menuItems;
+    shareAndExportItems.push({
+      key: "share-button",
+      onClick: handleShareOpen,
+      icon: <ShareAltOutlined />,
+      ...getLoginRequiredProps(isLoggedOut, "Share", "Log in to share this annotation."),
+    });
+    if (restrictions.allowDownload) {
+      shareAndExportItems.push({
+        key: "download-button",
+        onClick: handleDownloadOpen,
+        icon: <DownloadOutlined />,
+        label: "Download",
+      });
+    }
+    shareAndExportItems.push({
+      key: "zarr-links-button",
+      onClick: handleZarrLinksOpen,
+      icon: <LinkOutlined />,
+      ...getLoginRequiredProps(
+        isLoggedOut,
+        "Zarr Links",
+        "Log in to create Zarr links for this annotation.",
+      ),
+    });
+    shareAndExportItems.push(screenshotMenuItem, renderAnimationMenuItem);
+
+    if (layoutMenu != null) customizeItems.push(layoutMenu);
+    customizeItems.push(keyboardShortcutsConfigMenuItem, {
+      key: "user-scripts-button",
+      onClick: handleUserScriptsOpen,
+      icon: <CodeOutlined />,
+      label: "User Scripts",
+    });
+
+    const menuGroups: MenuGroup[] = [
+      { key: MenuGroupKeys.ANNOTATION, items: annotationItems },
+      { key: MenuGroupKeys.SHARE_AND_EXPORT, items: shareAndExportItems },
+      { key: MenuGroupKeys.CUSTOMIZE, items: customizeItems },
+    ];
+    return menuGroups;
   }, [
     viewMode,
     controlMode,

@@ -75,7 +75,7 @@ In addition to the context-menu interactions described above, agglomerate trees 
 Agglomerate trees can be converted to normal skeleton trees via right-click in the Skeleton tab, which removes their link to the agglomerate mapping.
 
 !!! info
-    Undo and redo are not supported for proofreading operations. To revert a mistake, use **Restore Older Version** in the dropdown next to the **Save** button.
+    Undo and redo are not supported for proofreading operations. To revert a mistake, use **Version History** in the menu next to the **Save** button.
 
 ## Proofreading Toolbar Controls
 

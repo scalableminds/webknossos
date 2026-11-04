@@ -342,8 +342,13 @@ describe("PullQueue", () => {
       expect(findBucket(5)?.state).toBe(BucketStateEnum.UNREQUESTED);
 
       // The loop aborts on the first failure rather than repeating the same error (and its
-      // notification) for all 32 siblings.
-      expect(ErrorHandling.notify).toHaveBeenCalledTimes(1);
+      // notification) for all 32 siblings. The first notification stems from receiveData, the
+      // second one is pullBatch's report which adds the context of the failed bucket.
+      expect(ErrorHandling.notify).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(ErrorHandling.notify).mock.calls[1][1]).toMatchObject({
+        handlingErrorCount: 1,
+        failures: [{ bucketAddress: tAddress(5), reason: "handling-error" }],
+      });
       expect(requestWithFallback).toHaveBeenCalledTimes(1);
     });
 

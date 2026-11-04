@@ -5,6 +5,7 @@ import { applyMiddleware, createStore } from "redux";
 import createSagaMiddleware from "redux-saga";
 import { call, put } from "redux-saga/effects";
 import { TIMESTAMP } from "test/global_mocks";
+import type { APIAnnotationBookmark } from "types/api_types";
 import { UnitLong } from "viewer/constants";
 import {
   pushSaveQueueTransaction,
@@ -23,6 +24,7 @@ import {
   synchronizeAnnotationWithBackend,
 } from "viewer/model/sagas/saving/save_queue_draining_saga";
 import {
+  addBookmark,
   createEdge,
   updateActiveNode,
   updateActiveSegmentId,
@@ -400,6 +402,37 @@ describe("Save Saga", () => {
     expect(saveQueueWithVersions[0].version).toBe(LAST_VERSION + 1);
     expect(saveQueueWithVersions[1].version).toBe(LAST_VERSION + 2);
     expect(saveQueueWithVersions[2].version).toBe(LAST_VERSION + 3);
+  });
+
+  it("addVersionNumbers should set the createdAtVersion of added bookmarks", () => {
+    const bookmark: APIAnnotationBookmark = {
+      id: 1,
+      created: TIMESTAMP,
+      name: null,
+      state: {
+        position: [0, 0, 0],
+        mode: "orthogonal",
+        zoomStep: 1,
+        rotation: [0, 0, 0],
+        clippingDistance: 50,
+        clipSkeletonToCurrentSection: false,
+        layers: [],
+      },
+      createdAtVersion: null,
+      thumbnailVersion: null,
+      thumbnailViewport: null,
+      metadata: [],
+      smallThumbnailDataBase64: null,
+      largeThumbnailDataBase64: null,
+    };
+    const saveQueue = createSaveQueueFromUpdateActions(
+      [[createEdge(1, 0, 1, tracingId)], [createEdge(1, 1, 2, tracingId), addBookmark(bookmark)]],
+      TIMESTAMP,
+    );
+    const [saveQueueWithVersions] = addVersionNumbers(saveQueue, LAST_VERSION);
+    const addBookmarkAction = saveQueueWithVersions[1].actions[1];
+    expect(addBookmarkAction.name).toBe("addBookmark");
+    expect(addBookmarkAction.value).toMatchObject({ createdAtVersion: LAST_VERSION + 2 });
   });
 });
 

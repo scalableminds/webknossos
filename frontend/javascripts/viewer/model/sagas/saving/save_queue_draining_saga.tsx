@@ -465,6 +465,8 @@ function sliceAppropriateBatchCount(batches: Array<SaveQueueEntry>): Array<SaveQ
   return slicedBatches;
 }
 
+// Also sets the createdAtVersion of added bookmarks to the version that adds them. As the
+// versions are assigned anew for every save request (e.g. after rebasing), so is createdAtVersion.
 export function addVersionNumbers(
   updateActionsBatches: Array<SaveQueueEntry>,
   lastVersion: number,
@@ -474,7 +476,15 @@ export function addVersionNumbers(
     if (batch.transactionGroupIndex === 0) {
       versionIncrement++;
     }
-    return { ...batch, version: lastVersion + versionIncrement };
+    const version = lastVersion + versionIncrement;
+    const actions = batch.actions.some((action) => action.name === "addBookmark")
+      ? batch.actions.map((action) =>
+          action.name === "addBookmark"
+            ? { ...action, value: { ...action.value, createdAtVersion: version } }
+            : action,
+        )
+      : batch.actions;
+    return { ...batch, actions, version };
   });
   return [batchesWithVersions, versionIncrement];
 }

@@ -382,10 +382,7 @@ class AnnotationTransactionService @Inject() (
     actionsWithInfo.map {
       case a: EagerUpdateBucketVolumeAction => a.withoutBase64Data
       case a: AddBookmarkAnnotationAction   =>
-        a.withoutThumbnails.copy(
-          createdAtVersion = Some(updateActionGroup.version),
-          thumbnailVersion = Some(a.resultingThumbnailVersion(updateActionGroup.version))
-        )
+        a.withoutThumbnails.copy(thumbnailVersion = Some(a.resultingThumbnailVersion(updateActionGroup.version)))
       case a: UpdateBookmarkThumbnailAnnotationAction =>
         a.withoutThumbnails.copy(thumbnailVersion = Some(a.resultingThumbnailVersion(updateActionGroup.version)))
       case a: AddLayerAnnotationAction =>

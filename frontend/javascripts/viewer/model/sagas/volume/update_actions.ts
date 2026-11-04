@@ -1310,7 +1310,6 @@ function getThumbnailUpdate(bookmark: APIAnnotationBookmark) {
       };
 }
 
-// createdAtVersion is set by the server.
 export function addBookmark(bookmark: APIAnnotationBookmark) {
   return {
     name: "addBookmark",
@@ -1319,6 +1318,8 @@ export function addBookmark(bookmark: APIAnnotationBookmark) {
       created: bookmark.created,
       name: bookmark.name,
       state: bookmark.state,
+      // Set to the version of the save request when it is sent, see addVersionNumbers.
+      createdAtVersion: null as number | null,
       metadata: enforceValidMetadata(bookmark.metadata),
       ...getThumbnailUpdate(bookmark),
     },

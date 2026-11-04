@@ -68,7 +68,7 @@ case class AddBookmarkAnnotationAction(
     largeThumbnailDataBase64: Option[String],
     smallThumbnailDataBase64: Option[String],
     metadata: Option[Seq[MetadataEntry]] = None,
-    createdAtVersion: Option[Long] = None, // set by the backend when the update is saved
+    createdAtVersion: Option[Long] = None, // set by the frontend to the version of the update group
     thumbnailVersion: Option[Long] = None, // see BookmarkThumbnailUpdateAction
     thumbnailViewport: Option[ThumbnailViewportProto] = None, // the viewport the thumbnails show, if known
     actionTimestamp: Option[Long] = None,

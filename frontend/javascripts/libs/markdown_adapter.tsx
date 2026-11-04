@@ -7,7 +7,7 @@ type Props = {
   components?: Record<string, any>;
 };
 
-function LinkRenderer(props: { children: React.ReactNode; href: string }) {
+export function LinkRenderer(props: { children: React.ReactNode; href: string }) {
   return (
     <a
       href={props.href}
@@ -47,7 +47,7 @@ const ReactMarkdown = loadable<Props>(() => import("react-markdown") as Promise<
 
 export default function Markdown({ children, components }: Props) {
   return (
-    <ReactMarkdown components={{ ...MARKDOWN_HEADING_COMPONENTS, ...components, a: LinkRenderer }}>
+    <ReactMarkdown components={{ ...MARKDOWN_HEADING_COMPONENTS, a: LinkRenderer, ...components }}>
       {children}
     </ReactMarkdown>
   );

@@ -40,7 +40,7 @@ const COUNT_USERS_FOR_ORGANIZATION: &str = r#"SELECT COUNT(*) FROM webknossos.us
      SELECT DISTINCT ON (_multiUser) _multiUser, _organization FROM webknossos.users
      WHERE NOT isDeactivated AND _organization IN (
        SELECT _id FROM webknossos.organizations
-       WHERE pricingPlan IN ('Team', 'Power', 'Custom', 'Team_Trial', 'Power_Trial'))
+       WHERE pricingPlan IN ('Team', 'Power', 'Team_Trial', 'Power_Trial', 'Enterprise'))
      ORDER BY _multiUser, created ASC
    ) AS paying ON paying._multiUser = u._multiUser
    WHERE u._organization = $1 AND NOT u.isDeactivated AND NOT u.isUnlisted

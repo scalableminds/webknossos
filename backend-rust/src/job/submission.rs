@@ -14,7 +14,7 @@ mod animation;
 mod dataset_files;
 mod export;
 mod failure;
-mod job_submission_dao;
+pub(crate) mod job_submission_dao;
 mod lookups;
 mod params;
 mod processing;

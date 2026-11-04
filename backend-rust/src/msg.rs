@@ -479,6 +479,8 @@ pub mod ai_inference {
 pub mod job {
     pub const NOT_FOUND: &str = "Job could not be found or accessed.";
     pub const NOT_ENABLED: &str = "Long-running jobs are not enabled for this WEBKNOSSOS instance.";
+    pub const NOT_AVAILABLE_IN_PLAN: &str =
+        "Long-running jobs are not available in the pricing plan of your organization.";
 
     pub mod credits {
         pub const REFUND_FAILED: &str = "Could not perform credit transaction refund.";
@@ -552,6 +554,8 @@ pub mod oidc {
 pub mod segment_anything {
     pub const NOT_ENABLED: &str =
         "AI-based quick select is not enabled for this WEBKNOSSOS instance.";
+    pub const NOT_AVAILABLE_IN_PLAN: &str =
+        "AI-based quick select is not available in the pricing plan of your organization.";
     pub const NO_URI: &str = "No URI for SAM server configured.";
     /// Play: `DatasetController` (not in `Msg`).
     pub const BOUNDING_BOX_TOO_DEEP: &str = "Target-mag selected bbox depth must be at most 50";

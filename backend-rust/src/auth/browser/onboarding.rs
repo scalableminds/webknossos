@@ -481,7 +481,7 @@ pub(crate) async fn insert_organization(
         if is_wkorg_instance {
             ("Personal", Some(1), Some(50_000_000_000))
         } else {
-            ("Custom", None, None)
+            ("Open_Source", None, None)
         };
     let root_folder = ObjectId::new();
     auth_onboarding_dao::insert_root_folder(tx, &root_folder).await?;

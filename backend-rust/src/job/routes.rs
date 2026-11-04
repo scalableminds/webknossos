@@ -586,6 +586,20 @@ async fn retry(
     if !(user.is_superuser || job.last_retry.is_none()) {
         return Err(ApiError::forbidden(ALREADY_RETRIED));
     }
+    // JobService.assertJobCanBeRetriedByPricingPlan: retries bypass submitJob.
+    let owner_plan = crate::job::submission::job_submission_dao::find_pricing_plan_of_user(
+        &mut connection,
+        &job.owner,
+    )
+    .await?;
+    if !owner_plan
+        .as_deref()
+        .and_then(crate::organization::pricing::PricingPlan::parse)
+        .ok_or_else(ApiError::internal)?
+        .allows_jobs()
+    {
+        return Err(ApiError::forbidden(crate::msg::job::NOT_AVAILABLE_IN_PLAN));
+    }
     let mut transaction = crate::db::begin_serializable(&state.pool).await?;
     // JobDAO.retryOne.
     let reset = job_dao::retry_one(&mut transaction, &job.id, user.is_superuser).await?;

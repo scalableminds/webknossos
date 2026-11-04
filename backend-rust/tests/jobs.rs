@@ -668,6 +668,29 @@ async fn cancel_and_retry_manage_credits() {
     assert_eq!((status, &body["state"]), (200, &json!("CANCELLED")));
     assert_eq!(transactions_of_organization(&db, org).await.len(), 3);
 
+    // Retries bypass submission, so they check the owner's pricing plan themselves.
+    let set_plan = |plan: &'static str| {
+        sqlx::query("UPDATE webknossos.organizations SET pricingPlan = $1::webknossos.PRICING_PLANS WHERE _id = $2")
+            .bind(plan)
+            .bind(org)
+            .execute(&db.pool)
+    };
+    set_plan("Open_Source").await.unwrap();
+    let (status, body) = request(
+        &app,
+        "PATCH",
+        &format!("/api/jobs/{paid}/retry"),
+        Some(&admin.token),
+    )
+    .await;
+    assert_eq!(status, 403, "{body}");
+    assert_eq!(
+        body["messages"][0]["error"],
+        "Long-running jobs are not available in the pricing plan of your organization."
+    );
+    assert_eq!(transactions_of_organization(&db, org).await.len(), 3);
+    set_plan("Enterprise").await.unwrap();
+
     // Retry: reserves the job's cost again and resets the job.
     let (status, body) = request(
         &app,

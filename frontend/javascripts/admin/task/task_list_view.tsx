@@ -13,7 +13,9 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
+import { getAdminTablePagination } from "admin/admin_table_pagination";
 import AnnotationServicesAd from "admin/ads/annotation_services_alert";
+import { MAX_SERVER_ITEMS_PER_RESPONSE } from "admin/api/api_utils";
 import {
   assignTaskToUser as assignTaskToUserAPI,
   deleteTask as deleteTaskAPI,
@@ -46,7 +48,6 @@ import {
   getUrlParamValue,
   hasUrlParam,
   localeCompareBy,
-  scrollToTop,
 } from "libs/utils";
 import isEmpty from "lodash-es/isEmpty";
 import partial from "lodash-es/partial";
@@ -480,10 +481,9 @@ function TaskListView({ initialFieldValues }: Props) {
           dataSource={getFilteredTasks()}
           rowKey="id"
           columns={columns}
-          pagination={{
-            defaultPageSize: 50,
-            onChange: scrollToTop,
-          }}
+          pagination={getAdminTablePagination({
+            isTruncated: tasks.length >= MAX_SERVER_ITEMS_PER_RESPONSE,
+          })}
           expandable={{
             expandedRowRender: (task) => <TaskAnnotationView task={task} />,
           }}

@@ -30,6 +30,7 @@ interrupted `slack` agent added a `SlackNotificationService` extractor there; th
 | `WK_MAIL_SMTP_HOST` | `mail.smtp.host` | empty = no delivery, LogMailer |
 | `WK_MAIL_SMTP_PORT` | `mail.smtp.port` | `465` (1-65535) |
 | `WK_MAIL_SMTP_TLS` | `mail.smtp.tls` | `true` |
+| `WK_MAIL_SMTP_CHECK_SERVER_IDENTITY` | `mail.smtp.checkServerIdentity` | `true` (deviation: Play defaults to `false`; cert chain is verified either way) |
 | `WK_MAIL_SMTP_AUTH` | `mail.smtp.auth` | `true` |
 | `WK_MAIL_SMTP_USER` | `mail.smtp.user` | empty (Debug shows only `user_configured`) |
 | `WK_MAIL_SMTP_PASS` | `mail.smtp.pass` | empty (Debug shows only `password_configured`) |
@@ -41,7 +42,7 @@ interrupted `slack` agent added a `SlackNotificationService` extractor there; th
 
 ## Design
 
-- `Mail` = Scala fields (from, subject, body_text, body_html, recipients, cc, bcc, reply_to, headers); Debug redacts
+- `Mail` = Scala fields (from, subject, body_text, body_html, recipients, cc, bcc, reply_to); Debug redacts
   bodies. `MailSettings { default_sender, additional_footer }`; `MailSender::send` skips all-blank recipients, fills
   empty `from` with the default sender, replaces the footer slot `<!--wk:additionalFooter-->` (cannot appear in
   escaped interpolations), optional `log_to_stdout` log (addresses + subject only).
@@ -50,7 +51,8 @@ interrupted `slack` agent added a `SlackNotificationService` extractor there; th
 - `SmtpMailer`: lettre `AsyncSmtpTransport<Tokio1Executor>` (rustls). One lazily spawned worker task per runtime,
   bounded queue (`SMTP_QUEUE_CAPACITY` 1024, `try_send`; full -> error log + drop), mails delivered sequentially like
   the actor; failures logged `Sending mail failed` with subject/recipient count/error, never retried, never surfaced.
-  `build_message`: multipart/alternative when text+html, html-only for templates, plain otherwise; custom headers.
+  `build_message`: multipart/alternative when text+html, html-only for templates, plain otherwise; no valid sender = not sent
+  (Play #10306). `WK_MAIL_SMTP_CHECK_SERVER_IDENTITY=false` maps to `dangerous_accept_invalid_hostnames`.
 - Templates: `mail::templates::*`, one function per DefaultMails builder (incl. `pricing_plan_expiry_reminder` for
   G8), Twirl `HtmlFormat.escape` semantics, byte-identical HTML.
 
@@ -76,7 +78,7 @@ interrupted `slack` agent added a `SlackNotificationService` extractor there; th
   the last Scala build (jobFailedGeneric, jobFailedUploadConvert, upgradeRequest), subjects/senders/recipients/
   reply-to for all 21 builders, settings + blank-recipient skipping, config defaults/parsing/validation/redaction,
   TLS mode selection, and an in-process fake SMTP server (EHLO/AUTH/MAIL/RCPT/DATA/QUIT, no TLS) proving delivery
-  with AUTH PLAIN credentials, envelope, From/To/Subject/Content-Type/Reply-To/Cc headers, Bcc hidden, custom header,
+  with AUTH PLAIN credentials, envelope, From/To/Subject/Content-Type/Reply-To/Cc headers, Bcc hidden, Date header,
   multipart alternative, UTF-8 body, failure on rejected RCPT does not stop the worker, unreachable server never
   blocks the caller.
 - .env.example: WK_MAIL_* block appended.

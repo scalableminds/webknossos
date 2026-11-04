@@ -61,7 +61,7 @@ LEFT JOIN LATERAL (
   SELECT identity._organization FROM webknossos.users_ AS identity
   JOIN webknossos.organizations_ AS organization ON organization._id = identity._organization
   WHERE identity._multiUser = usr._multiUser AND NOT identity.isDeactivated
-    AND organization.pricingPlan IN ('Team', 'Power', 'Custom', 'Team_Trial', 'Power_Trial')
+    AND organization.pricingPlan IN ('Team', 'Power', 'Team_Trial', 'Power_Trial', 'Enterprise')
   ORDER BY identity.created ASC LIMIT 1
 ) AS paying ON TRUE
 WHERE usr._id = $4 AND usr._organization = $2
@@ -96,7 +96,7 @@ WITH member AS MATERIALIZED (
   FROM webknossos.users_ AS identity
   JOIN webknossos.organizations_ AS organization ON organization._id = identity._organization
   WHERE NOT identity.isDeactivated
-    AND organization.pricingPlan IN ('Team', 'Power', 'Custom', 'Team_Trial', 'Power_Trial')
+    AND organization.pricingPlan IN ('Team', 'Power', 'Team_Trial', 'Power_Trial', 'Enterprise')
     AND identity._multiUser IN (SELECT _multiUser FROM webknossos.users_ WHERE _organization = $2)
   ORDER BY identity._multiUser, identity.created
 )"#,

@@ -20,8 +20,8 @@ use super::{
 };
 use crate::{
     AppState, dataset::create::validate_layer_name_lax, error::ApiError,
-    job::routes::JobCompactInfo, state::JobsEnabled, stores::client::ServiceClients,
-    system::application_info::MiscState, util::id::ObjectId,
+    job::routes::JobCompactInfo, organization::pricing::PricingPlan, state::JobsEnabled,
+    stores::client::ServiceClients, system::application_info::MiscState, util::id::ObjectId,
 };
 use webknossos_common::geometry::{BoundingBox, Vec3Int};
 
@@ -103,8 +103,9 @@ pub(super) async fn render_animation(
         job_submission_dao::find_pricing_plan(&state.pool, &user.organization_id)
             .await?
             .ok_or_else(|| RunError::Api(ApiError::not_found(crate::msg::NOT_FOUND)))?;
-    // PricingPlan.isPaidPlan: everything but Personal.
-    if pricing_plan == "Personal" {
+    let pricing_plan =
+        PricingPlan::parse(&pricing_plan).ok_or_else(|| RunError::Api(ApiError::internal()))?;
+    if !pricing_plan.is_paid() {
         if !options.include_watermark {
             return Err(Failure::new(MUST_INCLUDE_WATERMARK).into());
         }

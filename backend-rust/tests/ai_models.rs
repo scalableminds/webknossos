@@ -2015,7 +2015,8 @@ async fn training_validation_order_permissions_and_rollback() {
     ));
     assert_eq!(training_counts(&db).await, before);
 
-    // No worker for the command: the reservation/refund audit pair commits, no model.
+    // No worker for the command: checked before reserving credits (JobService.submitPaidJob),
+    // so nothing is reserved and no model is created.
     sqlx::query("UPDATE webknossos.workers SET supportedJobCommands=ARRAY['train_neuron_model']")
         .execute(&db.pool)
         .await
@@ -2030,24 +2031,12 @@ async fn training_validation_order_permissions_and_rollback() {
         response["messages"][1]["chain"]
             .as_str()
             .unwrap()
-            .ends_with("] Could not submit job."),
+            .ends_with(
+                "No worker supporting the requested job is available for the selected data store."
+            ),
         "{response}"
     );
-    assert_eq!(training_counts(&db).await, (0, 2, 2, 0));
-    let states: Vec<(String, String)> = sqlx::query_as(
-        "SELECT transaction_state::text, credit_state::text FROM \
-            webknossos.credit_transactions ORDER BY credit_state",
-    )
-    .fetch_all(&db.pool)
-    .await
-    .unwrap();
-    assert_eq!(
-        states,
-        [
-            ("Complete".into(), "Refunded".into()),
-            ("Complete".into(), "Refunding".into())
-        ]
-    );
+    assert_eq!(training_counts(&db).await, before);
 
     // A failing model insert (duplicate training annotation) rolls back the job
     // and the reservation together with the model.
@@ -2063,7 +2052,7 @@ async fn training_validation_order_permissions_and_rollback() {
     )
     .await;
     assert_eq!(status, 400);
-    assert_eq!(training_counts(&db).await, (0, 2, 2, 0));
+    assert_eq!(training_counts(&db).await, before);
     // The model name is still free, and a valid request succeeds.
     let (status, model) = neuron(
         &owner.token,
@@ -2077,7 +2066,7 @@ async fn training_validation_order_permissions_and_rollback() {
     )
     .await;
     assert_eq!(status, 200, "{model}");
-    assert_eq!(training_counts(&db).await, (1, 3, 3, 2));
+    assert_eq!(training_counts(&db).await, (1, 1, 3, 2));
     server.abort();
     db.cleanup().await;
 }
@@ -2672,7 +2661,7 @@ async fn inference_validation_order_permissions_and_rollback() {
     );
     assert_eq!(inference_counts(&db).await, (0, 1, 0));
 
-    // No worker for the command: the reservation/refund audit pair commits, no inference.
+    // No worker for the command: checked before reserving credits, no inference.
     sqlx::query("UPDATE webknossos.workers SET supportedJobCommands=ARRAY['infer_neurons']")
         .execute(&db.pool)
         .await
@@ -2687,19 +2676,21 @@ async fn inference_validation_order_permissions_and_rollback() {
         response["messages"][1]["chain"]
             .as_str()
             .unwrap()
-            .ends_with("] Could not submit job."),
+            .ends_with(
+                "No worker supporting the requested job is available for the selected data store."
+            ),
         "{response}"
     );
-    assert_eq!(inference_counts(&db).await, (0, 3, 0));
+    assert_eq!(inference_counts(&db).await, (0, 1, 0));
 
     // A failing inference insert (unknown annotation) rolls back the job and
     // the reservation together with the inference.
     let (status, _) = neuron(&owner.token, with("annotationId", json!(object_id()))).await;
     assert_eq!(status, 400);
-    assert_eq!(inference_counts(&db).await, (0, 3, 0));
+    assert_eq!(inference_counts(&db).await, (0, 1, 0));
     let (status, inference) = neuron(&owner.token, with("annotationId", json!(annotation))).await;
     assert_eq!(status, 200, "{inference}");
-    assert_eq!(inference_counts(&db).await, (1, 4, 1));
+    assert_eq!(inference_counts(&db).await, (1, 2, 1));
     server.abort();
     db.cleanup().await;
 }

@@ -10,7 +10,9 @@ use super::{
 use crate::{
     AppState,
     auth::AuthUser,
+    error::ApiError,
     job::routes::{JobCompactInfo, NOT_ENOUGH_CREDITS},
+    organization::pricing::PricingPlan,
     system::application_info::MiscState,
     util::id::ObjectId,
 };
@@ -20,7 +22,6 @@ const NO_WORKER: &str =
     "No worker supporting the requested job is available for the selected data store.";
 const PAID_NO_ADMIN_OR_MANAGER: &str =
     "Starting paid jobs is only allowed for Administrators, Dataset Managers or Team Managers.";
-const SUBMIT_FAILED: &str = "Could not submit job.";
 pub(super) const STORAGE_EXCEEDED: &str = "Cannot start this job because the storage quota of the organization is exceeded, so its results could not be stored. Please free up storage or upgrade your plan.";
 pub(super) const ORGANIZATION_STORAGE_EXCEEDED: &str =
     "The storage quota of the organization is exceeded.";
@@ -85,17 +86,41 @@ async fn assert_storage_not_exceeded(
     Ok(())
 }
 
-/// JobService.submitJob: jobs enabled, a worker of the datastore supports the
-/// command, storage quota, insert the pending job. Returns the new job id.
-pub(crate) async fn submit_job(
+/// JobService.assertJobsAllowedByPricingPlan `~> FORBIDDEN`.
+pub(crate) fn assert_jobs_allowed_by_pricing_plan(pricing_plan: Option<String>) -> RunResult<()> {
+    let pricing_plan = pricing_plan
+        .as_deref()
+        .and_then(PricingPlan::parse)
+        .ok_or_else(|| RunError::Api(ApiError::internal()))?;
+    if !pricing_plan.allows_jobs() {
+        return Err(Failure::with_status(
+            crate::msg::job::NOT_AVAILABLE_IN_PLAN,
+            StatusCode::FORBIDDEN,
+        )
+        .into());
+    }
+    Ok(())
+}
+
+/// JobService.assertJobCanBeSubmitted: jobs enabled, the organization's
+/// pricing plan allows jobs, a worker of the datastore supports the command,
+/// storage quota.
+async fn assert_job_can_be_submitted(
     connection: &mut PgConnection,
     enabled: bool,
     user: &AuthUser,
     submission: &Submission<'_>,
-) -> RunResult<ObjectId> {
+) -> RunResult<()> {
     if !enabled {
         return Err(Failure::new(crate::msg::job::NOT_ENABLED).into());
     }
+    let pricing_plan =
+        job_submission_dao::find_pricing_plan(&mut *connection, &user.organization_id)
+            .await?
+            .ok_or_else(|| {
+                Failure::new(crate::msg::organization::not_found(&user.organization_id))
+            })?;
+    assert_jobs_allowed_by_pricing_plan(Some(pricing_plan))?;
     // WorkerDAO.findAllByDataStore: union of all workers' supported commands;
     // an unparsable worker row fails the lookup.
     let commands: Vec<Vec<String>> = job_submission_dao::find_supported_job_commands_by_data_store(
@@ -115,7 +140,27 @@ pub(crate) async fn submit_job(
     {
         return Err(Failure::new(NO_WORKER).into());
     }
-    assert_storage_not_exceeded(connection, submission.command, &user.organization_id).await?;
+    assert_storage_not_exceeded(connection, submission.command, &user.organization_id).await
+}
+
+/// JobService.submitJob: [`assert_job_can_be_submitted`], then insert the
+/// pending job. Returns the new job id.
+pub(crate) async fn submit_job(
+    connection: &mut PgConnection,
+    enabled: bool,
+    user: &AuthUser,
+    submission: &Submission<'_>,
+) -> RunResult<ObjectId> {
+    assert_job_can_be_submitted(connection, enabled, user, submission).await?;
+    insert_job(connection, user, submission).await
+}
+
+/// JobService.insertJob. Callers have to check [`assert_job_can_be_submitted`] first.
+async fn insert_job(
+    connection: &mut PgConnection,
+    user: &AuthUser,
+    submission: &Submission<'_>,
+) -> RunResult<ObjectId> {
     let job_id = ObjectId::new();
     job_submission_dao::insert_one(
         connection,
@@ -129,15 +174,11 @@ pub(crate) async fn submit_job(
     Ok(job_id)
 }
 
-enum PaidSubmission {
-    Submitted(ObjectId),
-    /// Expected submission failures retain Scala's reservation/refund audit pair.
-    Refunded(Failure),
-}
-
-/// JobService.submitPaidJob: paid-job permission, storage quota, cost, balance and
-/// the pending credit reservation, all in the job's transaction. An expected
-/// submission failure commits a refunded audit pair; database errors roll back.
+/// JobService.submitPaidJob: paid-job permission, [`assert_job_can_be_submitted`]
+/// (checked before reserving the credits, so that failures are reported with
+/// their specific error), cost, balance, the pending credit reservation and the
+/// job, all in the job's transaction. Database errors roll everything back
+/// (Play refunds a failed job insert instead).
 #[allow(clippy::too_many_arguments)]
 async fn submit_paid_job(
     connection: &mut PgConnection,
@@ -148,11 +189,11 @@ async fn submit_paid_job(
     submission: &Submission<'_>,
     bounding_box_in_target_mag: BoundingBox,
     comment: &str,
-) -> RunResult<PaidSubmission> {
+) -> RunResult<ObjectId> {
     if !may_start_paid_jobs {
         return Err(Failure::new(PAID_NO_ADMIN_OR_MANAGER).into());
     }
-    assert_storage_not_exceeded(connection, submission.command, &user.organization_id).await?;
+    assert_job_can_be_submitted(connection, enabled, user, submission).await?;
     let cost = crate::job::routes::job_cost_in_milli_credits(
         &misc.config().features,
         submission.command,
@@ -175,27 +216,10 @@ async fn submit_paid_job(
     )
     .await
     .map_err(crate::organization::credit_transactions::balance_error)?;
-    let job_id = match submit_job(connection, enabled, user, submission).await {
-        Ok(job_id) => job_id,
-        Err(RunError::Failure(_)) => {
-            job_submission_dao::insert_refund_credit_transaction(
-                connection,
-                &ObjectId::new(),
-                &user.organization_id,
-                &transaction_id,
-                cost,
-                &format!("Refund for transaction {transaction_id}."),
-            )
-            .await?;
-            job_submission_dao::update_credit_transaction_refunded(connection, &transaction_id)
-                .await?;
-            return Ok(PaidSubmission::Refunded(Failure::new(SUBMIT_FAILED)));
-        }
-        Err(error) => return Err(error),
-    };
+    let job_id = insert_job(connection, user, submission).await?;
     job_submission_dao::update_credit_transaction_paid_job(connection, &transaction_id, &job_id)
         .await?;
-    Ok(PaidSubmission::Submitted(job_id))
+    Ok(job_id)
 }
 
 /// A paid job (job row plus its pending credit reservation) inserted in a still
@@ -234,10 +258,9 @@ impl PendingPaidJob {
 }
 
 /// JobService.submitPaidJob `?~> submit_failed` for routes outside JobController:
-/// paid-job permission (dataset manager, team manager or admin), storage quota,
-/// cost from `bounding_box_in_target_mag`, balance, worker support and jobs
-/// enabled. Expected failures after the reservation commit Scala's
-/// reservation/refund audit pair before failing; every other failure rolls back.
+/// paid-job permission (dataset manager, team manager or admin), jobs enabled,
+/// pricing plan, worker support, storage quota, cost from
+/// `bounding_box_in_target_mag` and balance. Every failure rolls back.
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn begin_paid_job(
     state: &AppState,
@@ -255,7 +278,7 @@ pub(crate) async fn begin_paid_job(
             .await
             .map_err(RunError::Api)?;
     let mut transaction = crate::db::begin_serializable(&state.pool).await?;
-    let outcome = submit_paid_job(
+    let job_id = submit_paid_job(
         &mut transaction,
         jobs_enabled,
         may_start_paid_jobs,
@@ -267,17 +290,11 @@ pub(crate) async fn begin_paid_job(
     )
     .await
     .map_err(|error| error.wrap(submit_failed))?;
-    match outcome {
-        PaidSubmission::Submitted(job_id) => Ok(PendingPaidJob {
-            transaction,
-            job_id,
-            command: submission.command,
-        }),
-        PaidSubmission::Refunded(failure) => {
-            transaction.commit().await?;
-            Err(failure.wrap(submit_failed).into())
-        }
-    }
+    Ok(PendingPaidJob {
+        transaction,
+        job_id,
+        command: submission.command,
+    })
 }
 
 /// Submit (paid or not) in one transaction, track the RunJobEvent and answer

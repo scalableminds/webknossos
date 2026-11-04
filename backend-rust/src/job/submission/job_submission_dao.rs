@@ -161,13 +161,27 @@ pub(crate) async fn find_used_storage_bytes(
 
 /// The pricing plan of the organization.
 pub(crate) async fn find_pricing_plan(
-    pool: &PgPool,
+    executor: impl sqlx::PgExecutor<'_>,
     organization: &str,
 ) -> sqlx::Result<Option<String>> {
     sqlx::query_scalar("SELECT pricingPlan::text FROM webknossos.organizations_ WHERE _id = $1")
         .bind(organization)
-        .fetch_optional(pool)
+        .fetch_optional(executor)
         .await
+}
+
+/// The pricing plan of the organization of a user (the owner of a job).
+pub(crate) async fn find_pricing_plan_of_user(
+    connection: &mut PgConnection,
+    user: &ObjectId,
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
+        "SELECT o.pricingPlan::text FROM webknossos.users_ u \
+         JOIN webknossos.organizations_ o ON o._id = u._organization WHERE u._id = $1",
+    )
+    .bind(user)
+    .fetch_optional(&mut *connection)
+    .await
 }
 
 /// WorkerDAO.findAllByDataStore: the supported job commands of every worker.
@@ -223,47 +237,6 @@ pub(crate) async fn insert_pending_credit_transaction(
     .bind(organization)
     .bind(milli_credit_delta)
     .bind(comment)
-    .execute(&mut *connection)
-    .await?;
-    Ok(())
-}
-
-/// CreditTransactionDAO.refundTransaction: the refunding half of the audit pair.
-pub(crate) async fn insert_refund_credit_transaction(
-    connection: &mut PgConnection,
-    id: &ObjectId,
-    organization: &str,
-    related_transaction_id: &ObjectId,
-    milli_credit_delta: i32,
-    comment: &str,
-) -> sqlx::Result<()> {
-    sqlx::query(
-        r#"INSERT INTO webknossos.credit_transactions
-                  (_id, _organization, _related_transaction, milli_credit_delta, comment,
-                   transaction_state, credit_state)
-                  VALUES ($1, $2, $3, $4, $5, 'Complete', 'Refunding')"#,
-    )
-    .bind(id)
-    .bind(organization)
-    .bind(related_transaction_id)
-    .bind(milli_credit_delta)
-    .bind(comment)
-    .execute(&mut *connection)
-    .await?;
-    Ok(())
-}
-
-/// CreditTransactionDAO.refundTransaction: marks the reservation as refunded.
-pub(crate) async fn update_credit_transaction_refunded(
-    connection: &mut PgConnection,
-    id: &ObjectId,
-) -> sqlx::Result<()> {
-    sqlx::query(
-        r#"UPDATE webknossos.credit_transactions
-                  SET transaction_state = 'Complete', credit_state = 'Refunded', updated_at = NOW()
-                  WHERE _id = $1"#,
-    )
-    .bind(id)
     .execute(&mut *connection)
     .await?;
     Ok(())

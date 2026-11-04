@@ -179,7 +179,7 @@ async fn sample_organization_is_inserted_once() {
             "sample_organization".into(),
             "Sample Organization".into(),
             "/images/logo.svg".into(),
-            "Custom".into(),
+            "Power".into(),
             Some("Power_AI".into())
         )
     );

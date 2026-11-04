@@ -141,8 +141,8 @@ impl TestDb {
             .await
             .expect("Cannot seed root closure path");
             sqlx::query(
-                "INSERT INTO webknossos.organizations (_id, _rootFolder, name) VALUES \
-                    ($1, $2, 'Test organization')",
+                "INSERT INTO webknossos.organizations (_id, _rootFolder, name, pricingPlan) VALUES \
+                    ($1, $2, 'Test organization', 'Enterprise')",
             )
             .bind(organization_id)
             .bind(root_folder)

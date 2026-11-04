@@ -55,6 +55,10 @@ const mapCategoryToJobType = (
   }
 };
 
+// Pretrained models that are listed, but cannot be used yet.
+const COMING_SOON_MODEL_IDS = new Set(["576500000000000000000005"]);
+const isComingSoon = (model: AiModel) => COMING_SOON_MODEL_IDS.has(model.id);
+
 const getModelThumbnail = (model: AiModel): string | undefined =>
   model.thumbnailUrl ?? (model.category ? categoryToImage[model.category] : undefined);
 
@@ -110,7 +114,7 @@ export const AiModelSelector: React.FC = () => {
   );
 
   const onSelectModel = (model: AiModel) => {
-    if (!model.category || model.isComingSoon) return;
+    if (!model.category || isComingSoon(model)) return;
     const jobType = mapCategoryToJobType(model.category);
     setSelectedModel(model);
     setSelectedJobType(jobType);
@@ -171,7 +175,7 @@ export const AiModelSelector: React.FC = () => {
                   }
                   clampDescription
                   isSelected={selectedModel?.id === model.id}
-                  isDisabled={model.isComingSoon}
+                  isDisabled={isComingSoon(model)}
                   onSelect={() => onSelectModel(model)}
                 />
               ))}

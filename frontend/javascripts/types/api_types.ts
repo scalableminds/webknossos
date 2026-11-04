@@ -907,8 +907,6 @@ export type AiModel = {
   // Set for pretrained models that are only available to the organizations of a partner.
   readonly partnerId: string | null;
   readonly thumbnailUrl: string | null;
-  // Listed, but cannot be used for inference yet.
-  readonly isComingSoon: boolean;
 };
 
 // Tracing related datatypes

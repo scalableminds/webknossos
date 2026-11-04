@@ -48,9 +48,7 @@ case class AiModel(
     isPretrained: Boolean = false,
     // Restricts a pretrained model to the organizations assigned to this partner.
     _partner: Option[ObjectId] = None,
-    thumbnailUrl: Option[String] = None,
-    // Listed, but cannot be used for inference yet.
-    isComingSoon: Boolean = false
+    thumbnailUrl: Option[String] = None
 )
 
 class AiModelService @Inject() (
@@ -119,8 +117,7 @@ class AiModelService @Inject() (
       "isSuperUserOnly" -> aiModel.isSuperUserOnly,
       "isPretrained" -> aiModel.isPretrained,
       "partnerId" -> aiModel._partner,
-      "thumbnailUrl" -> aiModel.thumbnailUrl,
-      "isComingSoon" -> aiModel.isComingSoon
+      "thumbnailUrl" -> aiModel.thumbnailUrl
     )
 
   def inferenceBBoxToTargetMag(
@@ -222,8 +219,7 @@ class AiModelDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.issuperuseronly,
         r.ispretrained,
         r._partner.map(ObjectId(_)),
-        r.thumbnailurl,
-        r.iscomingsoon
+        r.thumbnailurl
       )
       organizations <- findSharedOrganizationsFor(aiModelWithoutSharedOrgas)
     } yield aiModelWithoutSharedOrgas.copy(_sharedOrganizations = organizations)
@@ -295,11 +291,11 @@ class AiModelDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val insertModelQuery =
       q"""INSERT INTO webknossos.aiModels (
                       _id, _organization, _dataStore, _user, _trainingJob, path, uploadToPathIsPending, name,
-                       comment, category, created, modified, isDeleted, isSuperUserOnly, isPretrained, _partner, thumbnailUrl, isComingSoon
+                       comment, category, created, modified, isDeleted, isSuperUserOnly, isPretrained, _partner, thumbnailUrl
                     ) VALUES (
                       ${a._id}, ${a._organization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.path}, ${a.uploadToPathIsPending}, ${a.name},
                       ${a.comment}, ${a.category}, ${a.created}, ${a.modified}, ${a.isDeleted}, ${a.isSuperUserOnly}, ${a.isPretrained},
-                      ${a._partner}, ${a.thumbnailUrl}, ${a.isComingSoon}
+                      ${a._partner}, ${a.thumbnailUrl}
                     )
            """.asUpdate
     val insertTrainingAnnotationQueries = insertTrainingAnnotationIdQueries(a._id, a._trainingAnnotations)

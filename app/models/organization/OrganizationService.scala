@@ -2,7 +2,7 @@ package models.organization
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.box.{Failure, Full}
+import com.scalableminds.util.box.Failure
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, TextUtils}
@@ -25,7 +25,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class OrganizationService @Inject() (
     organizationDAO: OrganizationDAO,
-    partnerDAO: PartnerDAO,
+    partnerService: PartnerService,
     multiUserDAO: MultiUserDAO,
     userDAO: UserDAO,
     teamDAO: TeamDAO,
@@ -67,7 +67,7 @@ class OrganizationService @Inject() (
         creditTransactionDAO.getMilliCreditBalance(organization._id)
       )
       ownerNameOpt = ownerMultiUserBox.toOption.map(o => o.fullName)
-      partnerOpt <- findPartnerOf(organization)
+      partnerOpt <- partnerService.findPartnerOf(organization)
     } yield Json.obj(
       "id" -> organization._id,
       "name" -> organization._id, // Included for backwards compatibility
@@ -82,22 +82,9 @@ class OrganizationService @Inject() (
       "usedStorageBytes" -> usedStorageBytes,
       "ownerName" -> ownerNameOpt,
       "milliCreditBalance" -> milliCreditBalanceOpt,
-      "partner" -> partnerOpt.map(_.publicWrites)
+      "partner" -> partnerOpt.map(partnerService.publicWrites)
     ) ++ adminOnlyInfo
   }
-
-  // Partner branding is not secret, so it is read with GlobalAccessContext to also show it to anonymous users.
-  // A partner that cannot be found (e.g. soft-deleted) counts as no partner, so the organization stays readable.
-  private def findPartnerOf(organization: Organization): Fox[Option[Partner]] =
-    Fox
-      .runOptional(organization._partner)(partnerId =>
-        partnerDAO.findOne(partnerId)(using GlobalAccessContext).shiftBox
-      )
-      .flatMap {
-        case Some(Full(partner)) => Fox.successful(Some(partner))
-        case Some(f: Failure)    => f.toFox
-        case _                   => Fox.successful(None)
-      }
 
   def assertUsedStorageNotExceeded(
       organization: Organization,

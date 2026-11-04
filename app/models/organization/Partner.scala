@@ -1,8 +1,11 @@
 package models.organization
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.box.{Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.schema.Tables.{GetResultPartnersRow, Partners, PartnersRow}
 import play.api.libs.json.{JsObject, Json}
 import utils.sql.{SQLDAO, SqlClient}
@@ -20,15 +23,31 @@ case class Partner(
     linkUrl: Option[String],
     created: Instant = Instant.now,
     isDeleted: Boolean = false
-) {
-  def publicWrites: JsObject =
+)
+
+class PartnerService @Inject() (partnerDAO: PartnerDAO)(implicit ec: ExecutionContext) {
+
+  def publicWrites(partner: Partner): JsObject =
     Json.obj(
-      "id" -> _id,
-      "name" -> name,
-      "logoUrl" -> logoUrl,
-      "compactLogoUrl" -> compactLogoUrl,
-      "linkUrl" -> linkUrl
+      "id" -> partner._id,
+      "name" -> partner.name,
+      "logoUrl" -> partner.logoUrl,
+      "compactLogoUrl" -> partner.compactLogoUrl,
+      "linkUrl" -> partner.linkUrl
     )
+
+  // Partner branding is not secret, so it is read with GlobalAccessContext to also show it to anonymous users.
+  // A partner that cannot be found (e.g. soft-deleted) counts as no partner, so the organization stays readable.
+  def findPartnerOf(organization: Organization): Fox[Option[Partner]] =
+    Fox
+      .runOptional(organization._partner)(partnerId =>
+        partnerDAO.findOne(partnerId)(using GlobalAccessContext).shiftBox
+      )
+      .flatMap {
+        case Some(Full(partner)) => Fox.successful(Some(partner))
+        case Some(f: Failure)    => f.toFox
+        case _                   => Fox.successful(None)
+      }
 }
 
 class PartnerDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -48,12 +67,4 @@ class PartnerDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.isdeleted
       )
     )
-
-  def insertOne(p: Partner): Fox[Unit] =
-    for {
-      _ <- run(
-        q"""INSERT INTO webknossos.partners(_id, name, logoUrl, compactLogoUrl, linkUrl, created, isDeleted)
-                   VALUES(${p._id}, ${p.name}, ${p.logoUrl}, ${p.compactLogoUrl}, ${p.linkUrl}, ${p.created}, ${p.isDeleted})""".asUpdate
-      )
-    } yield ()
 }

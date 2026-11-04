@@ -38,15 +38,7 @@ import play.api.libs.json.{JsArray, Json}
 import utils.{StoreModules, WkConf}
 
 import javax.inject.Inject
-import models.organization.{
-  AiPlan,
-  Organization,
-  OrganizationDAO,
-  OrganizationService,
-  Partner,
-  PartnerDAO,
-  PricingPlan
-}
+import models.organization.{AiPlan, Organization, OrganizationDAO, OrganizationService, PricingPlan}
 import play.api.mvc.{Action, AnyContent}
 import security.{Token, TokenDAO, TokenType, WkEnv}
 
@@ -83,7 +75,6 @@ class InitialDataService @Inject() (
     publicationDAO: PublicationDAO,
     workerDAO: WorkerDAO,
     organizationDAO: OrganizationDAO,
-    partnerDAO: PartnerDAO,
     storeModules: StoreModules,
     organizationService: OrganizationService,
     conf: WkConf
@@ -103,14 +94,6 @@ Sampletown
 Samplecountry
 """
   private val organizationTeamId = ObjectId.generate
-  // Fake partner for testing the co-branding in the dev setup. The sample organization is assigned to it.
-  private val testPartner = Partner(
-    _id = ObjectId("68f0c0ffee0000000000000a"),
-    name = "Test Partner",
-    logoUrl = "/images/partners/test-partner-logo.svg",
-    compactLogoUrl = Some("/images/partners/test-partner-logo-compact.svg"),
-    linkUrl = Some("https://example.com")
-  )
   private val defaultOrganization =
     Organization(
       "sample_organization",
@@ -122,8 +105,7 @@ Samplecountry
       None,
       None,
       None,
-      ObjectId.generate,
-      _partner = Some(testPartner._id)
+      ObjectId.generate
     )
   private val organizationTeam =
     Team(organizationTeamId, defaultOrganization._id, "Default", isOrganizationTeam = true)
@@ -307,26 +289,6 @@ Samplecountry
     category = Some(AiModelCategory.em_somata),
     isSuperUserOnly = true,
     isPretrained = true
-  )
-  private val testPartnerNeuronModel = AiModel(
-    _id = aiModelService.pretrainedPartnerNeuronModelId,
-    _organization = None,
-    _sharedOrganizations = List(),
-    _dataStore = defaultDataStore.name,
-    _user = None,
-    _trainingJob = None,
-    _trainingAnnotations = List.empty,
-    path = None,
-    uploadToPathIsPending = false,
-    name = "Partner Neuron Segmentation",
-    comment = Some(
-      "Placeholder text for the partner neuron model. Only organizations of the test partner can see and use this model. [Learn more](https://example.com)"
-    ),
-    category = Some(AiModelCategory.em_neurons),
-    isSuperUserOnly = false,
-    isPretrained = true,
-    _partner = Some(testPartner._id),
-    thumbnailUrl = Some("/images/partners/test-partner-model-thumbnail.svg")
   )
   private val defaultDataSource = UsableDataSource(
     id = DataSourceId("l4_sample_remote", defaultOrganization._id),
@@ -589,7 +551,6 @@ Samplecountry
       _ <- upsertDefaultWorkerIfJobsEnabled()
       _ <- organizationService.assertNoOrganizationsPresent
       _ <- insertRootFolder()
-      _ <- insertTestPartner()
       _ <- insertOrganization()
       _ <- createOrganizationDirectory()
       _ <- insertTeams()
@@ -604,8 +565,6 @@ Samplecountry
       _ <- insertL4DenseDataset()
       _ <- insertRemoteNDDataset()
       _ <- insertCustomAiModel()
-      _ <- insertAiModelIfAbsent(testPartnerNeuronModel)
-
     } yield ()
 
   private def assertInitialDataEnabled: Fox[Unit] =
@@ -658,12 +617,6 @@ Samplecountry
         tokenDAO.insertOne(newToken)
     }
   }
-
-  private def insertTestPartner(): Fox[Unit] =
-    partnerDAO.findOne(testPartner._id).shiftBox.flatMap {
-      case Full(_) => Fox.successful(())
-      case _       => partnerDAO.insertOne(testPartner)
-    }
 
   private def insertOrganization(): Fox[Unit] =
     organizationDAO.findOne(defaultOrganization._id).shiftBox.flatMap {

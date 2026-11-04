@@ -59,7 +59,7 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Link, useLocation } from "react-router";
-import { getAntdTheme } from "theme";
+import { getAntdTheme, ThemeIndependentStatusColor } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
 import {
@@ -100,9 +100,7 @@ const OLVY_CONFIG = {
     showHeader: true,
     // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
     showUnreadIndicator: false,
-    // Kept as a literal: this is configuration handed to the third-party Olvy widget, which
-    // renders in its own iframe and cannot resolve our CSS variables.
-    unreadIndicatorColor: "#cc1919",
+    unreadIndicatorColor: ThemeIndependentStatusColor.error,
     unreadIndicatorPosition: "top-right",
   },
 };
@@ -882,6 +880,7 @@ function Navbar() {
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
   const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
+  const hasSaveError = useWkSelector((state) => state.save.hasSaveError);
   // Pushes the navbar items below the maintenance/upgrade banner when one is shown.
   const bannerOffset = navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0;
   const historyLocation = useLocation();
@@ -968,8 +967,9 @@ function Navbar() {
         variant="filled"
         icon={<MessageOutlined />}
         onClick={() => setIsHelpModalOpen((isOpen) => !isOpen)}
+        title="Ask a Question"
       >
-        Ask
+        <span className="hide-on-small-screen">Ask</span>
       </Button>,
     );
 
@@ -1005,6 +1005,7 @@ function Navbar() {
     <Header
       className={classnames("navbar-header", {
         "collapsed-nav-header": collapseAllNavItems,
+        "save-error": hasSaveError,
       })}
     >
       <GlobalProgressBar />

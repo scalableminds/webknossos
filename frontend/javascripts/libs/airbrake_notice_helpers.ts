@@ -28,6 +28,8 @@ export function getPrefixedErrorMessage(
 // displays these as the cause chain of the error. Grouping only considers the first
 // entry, which keeps the (truncated) message and thus the grouping unchanged.
 // Entries of `notice.errors` are truncated once to 1024 characters, but never shrunk further.
+// If the message wasn't cut, the first error already contains it completely (after the prefix),
+// so no additional entry is added.
 export function moveOriginalErrorToNoticeErrors(notice: INotice): INotice {
   const originalError = notice.params?.[ORIGINAL_ERROR_PARAM];
   if (typeof originalError !== "string") {
@@ -37,7 +39,8 @@ export function moveOriginalErrorToNoticeErrors(notice: INotice): INotice {
   notice.params = remainingParams;
 
   const firstError = notice.errors?.[0];
-  if (firstError != null && originalError !== firstError.message) {
+  const wasMessageCut = originalError.length > MAX_GROUPING_MESSAGE_LENGTH;
+  if (firstError != null && wasMessageCut) {
     notice.errors = [
       ...(notice.errors ?? []),
       {

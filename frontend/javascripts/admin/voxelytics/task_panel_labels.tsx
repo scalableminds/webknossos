@@ -1,11 +1,7 @@
 import { ExportOutlined } from "@ant-design/icons";
 import { Tooltip } from "antd";
 import dayjs from "dayjs";
-import {
-  formatDateMedium,
-  formatDurationStrict,
-  formatTimeIntervalStrict,
-} from "libs/format_utils";
+import { formatDateMedium, formatDuration, formatTimeInterval } from "libs/format_utils";
 import { useUpdateEvery } from "libs/react_hooks";
 import { Link } from "react-router";
 import {
@@ -42,10 +38,9 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
               <>
                 Begin Time: {formatDateMedium(taskInfo.beginTime)}
                 <br />
-                Current Duration: {formatDurationStrict(dayjs.duration(currentDuration))}
+                Current Duration: {formatDuration(currentDuration)}
                 <br />
-                Estimated Remaining Duration:{" "}
-                {formatDurationStrict(dayjs.duration(estimatedRemainingDuration))}
+                Estimated Remaining Duration: {formatDuration(estimatedRemainingDuration)}
                 <br />
                 Estimated End Time: {formatDateMedium(estimatedEndTime)}
               </>
@@ -63,7 +58,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
               <>
                 Begin Time: {formatDateMedium(taskInfo.beginTime)}
                 <br />
-                Current Duration: {formatDurationStrict(dayjs.duration(currentDuration))}
+                Current Duration: {formatDuration(currentDuration)}
               </>
             }
           >
@@ -85,7 +80,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           }
         >
           <RunStateTag state={VoxelyticsRunState.STALE} /> {dayjs(taskInfo.endTime).fromNow()},
-          after {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+          after {formatTimeInterval(taskInfo.beginTime, taskInfo.endTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.CANCELLED:
@@ -95,12 +90,12 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             <>
               End Time: {formatDateMedium(taskInfo.endTime)}
               <br />
-              Duration: {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+              Duration: {formatTimeInterval(taskInfo.beginTime, taskInfo.endTime)}
             </>
           }
         >
           <RunStateTag state={VoxelyticsRunState.CANCELLED} /> {dayjs(taskInfo.endTime).fromNow()},
-          after {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+          after {formatTimeInterval(taskInfo.beginTime, taskInfo.endTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.FAILED:
@@ -110,12 +105,12 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             <>
               End Time: {formatDateMedium(taskInfo.endTime)}
               <br />
-              Duration: {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+              Duration: {formatTimeInterval(taskInfo.beginTime, taskInfo.endTime)}
             </>
           }
         >
           <RunStateTag state={VoxelyticsRunState.FAILED} /> {dayjs(taskInfo.endTime).fromNow()},
-          after {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+          after {formatTimeInterval(taskInfo.beginTime, taskInfo.endTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.COMPLETE:
@@ -125,12 +120,12 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             <>
               End Time: {formatDateMedium(taskInfo.endTime)}
               <br />
-              Duration: {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+              Duration: {formatTimeInterval(taskInfo.beginTime, taskInfo.endTime)}
             </>
           }
         >
           <RunStateTag state={VoxelyticsRunState.COMPLETE} /> {dayjs(taskInfo.endTime).fromNow()},
-          after {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+          after {formatTimeInterval(taskInfo.beginTime, taskInfo.endTime)}
         </Tooltip>
       );
     default:

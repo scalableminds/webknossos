@@ -58,18 +58,20 @@ import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_cr
 import type { StoreAnnotation, UserBoundingBox } from "viewer/store";
 import DownloadModalView from "../../action_bar/download_modal/download_modal_view";
 import ButtonComponent from "../../components/button_component";
-import { getContextMenuPositionFromEvent } from "../../context_menu/helpers";
+import { getContextMenuPositionFromEvent } from "../../context_menu/generic_context_menu_helpers";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import GenerateBoundingBoxesModal from "../generate_bounding_boxes_modal";
 import { ContextMenuContainer } from "../sidebar_context_menu";
 import UserBoundingBoxInput from "./user_boundingbox_input";
 
-const BBOX_BUTTONS_HEADER_HEIGHT = 40;
+// Keep the table's scroll height slightly below the AutoSizer height. If it is exactly the same,
+// the AutoSizer keeps re-rendering the table and toggles an additional scrollbar.
+const BBOX_TABLE_HEIGHT_SLACK = 2;
 const CONTEXT_MENU_CLASS = "bbox-list-context-menu-overlay";
 const BOUNDING_BOX_TAB_ID = "bounding-box-tab";
 // If there are at least this many user bounding boxes, the layer bounding box section is collapsed by
 // default (unless the user manually toggled it) to avoid pushing the user bounding boxes out of view.
-const COLLAPSE_LAYER_SECTION_BBOX_THRESHOLD = 10;
+const COLLAPSE_LAYER_SECTION_BBOX_THRESHOLD = 5;
 
 type LayerBoundingBox = {
   // The technical layer name, used as a stable key for display state (color/visibility) and rendering.
@@ -589,8 +591,7 @@ export default function BoundingBoxTab() {
                       getCheckboxProps: () => ({ disabled: true }),
                     }}
                     virtual
-                    scroll={{ y: height - BBOX_BUTTONS_HEADER_HEIGHT }} // If the scroll height is exactly
-                    // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
+                    scroll={{ y: height - BBOX_TABLE_HEIGHT_SLACK }}
                     onRow={getPropsForUserRow}
                   />
                 )}

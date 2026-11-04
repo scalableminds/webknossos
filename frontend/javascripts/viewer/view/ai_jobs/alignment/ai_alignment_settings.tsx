@@ -28,6 +28,7 @@ export const AiAlignmentSettings: React.FC = () => {
 
   const [form] = Form.useForm();
   const dataset = useWkSelector((state) => state.dataset);
+  const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser ?? false);
 
   // The dataset name is also filled in programmatically (e.g. when picking a model). Setting it
   // that way keeps a previous validation error, so re-check the name if it had one.
@@ -92,7 +93,9 @@ export const AiAlignmentSettings: React.FC = () => {
           Optional: connected skeleton nodes between adjacent sections are used as alignment guides.
         </Typography.Paragraph>
 
-        <AdvancedSettings hint="Fine Alignment, Custom Configuration">
+        <AdvancedSettings
+          hint={isSuperUser ? "Fine Alignment, Custom Configuration" : "Fine Alignment"}
+        >
           <Form.Item>
             <Space>
               <Form.Item name="fineAlignmentOnly" valuePropName="checked" noStyle>
@@ -105,7 +108,9 @@ export const AiAlignmentSettings: React.FC = () => {
               </FastTooltip>
             </Space>
           </Form.Item>
-          <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
+          {isSuperUser && (
+            <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
+          )}
         </AdvancedSettings>
       </Form>
     </JobSection>

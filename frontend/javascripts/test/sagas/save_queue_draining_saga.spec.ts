@@ -19,8 +19,8 @@ import { MutexFetchingStrategy } from "viewer/model/sagas/saving/save_mutex_saga
 import {
   addVersionNumbers,
   sendSaveRequestToServer,
+  setSaveErrorDisplay,
   synchronizeAnnotationWithBackend,
-  toggleErrorHighlighting,
 } from "viewer/model/sagas/saving/save_queue_draining_saga";
 import {
   createEdge,
@@ -270,7 +270,7 @@ describe("Save Saga", () => {
     saga.next(annotationId);
     expectValueDeepEqual(expect, saga.next(TRACINGSTORE_URL), requestWithTokenCall);
     saga.throw("Timeout");
-    expectValueDeepEqual(expect, saga.next("Explorational"), call(toggleErrorHighlighting, true));
+    expectValueDeepEqual(expect, saga.next("Explorational"), call(setSaveErrorDisplay, true));
     // wait for airbrake
     saga.next();
     // wait for retry

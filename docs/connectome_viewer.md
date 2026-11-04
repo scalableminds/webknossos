@@ -18,7 +18,7 @@ The Synapse and Connectome viewer displays the incoming and outgoing synaptic co
 
 ## Getting started with the Synapse & Connectome Viewer
 
-The viewer is available from the `Connectome` tab in the right-hand side panel. If your dataset is prepared with a matching connectome file (see below), you can look up the synapses for any segment.
+The viewer is available from the `Connectome` tab in the right-hand side panel. The tab is only shown if your dataset is prepared with a matching connectome file (see below). Then, you can look up the synapses for any segment.
 
 Use the input field at the top of the Connectome Viewer to enter one or several segment IDs. Alternatively, right-click on any segment in the XYZ viewports and select 'Import Synapses'.
 

@@ -117,7 +117,7 @@ describe("Proofreading should generate correct update actions", () => {
       yield makeMappingEditableForTest();
 
       if (treesToLoad.length > 0) {
-        yield call(loadAgglomerateTrees, context, treesToLoad, false, false);
+        yield call(loadAgglomerateTrees, context, treesToLoad, false);
       }
 
       for (const voxelPos of voxelPositionsToLoad) {
@@ -159,7 +159,7 @@ describe("Proofreading should generate correct update actions", () => {
       yield makeMappingEditableForTest();
 
       if (treesToLoad.length > 0) {
-        yield call(loadAgglomerateTrees, context, treesToLoad, false, false);
+        yield call(loadAgglomerateTrees, context, treesToLoad, false);
       }
 
       // Prepare the server's reply for the upcoming split.
@@ -217,7 +217,7 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(setActiveCellAction(agglomerateId));
       yield makeMappingEditableForTest();
 
-      yield call(loadAgglomerateTrees, context, [agglomerateId], true, false);
+      yield call(loadAgglomerateTrees, context, [agglomerateId], true);
 
       const activateSegmentAndLoadTreeUpdates = removeBlacklistedActions(
         getNestedUpdateActions(context),

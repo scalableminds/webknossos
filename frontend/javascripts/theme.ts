@@ -42,7 +42,7 @@ const ColorWKDarkGrey = "#1f1f1f";
 
 // Colors of the WEBKNOSSOS design system (theme v2.1). The names match the design guidelines.
 const ColorIndigoLight = "#8a90ff"; // DS "Indigo Light": indigo used as text/links on ink
-const ColorViewerInk = "#0c0d18"; // DS "Viewer Ink": dark page background
+export const ColorViewerInk = "#0c0d18"; // DS "Viewer Ink": dark page background
 const ColorPaper = "#f5f5fa"; // DS "Paper": light page background
 const ColorTextOnInkPrimary = "#ffffff";
 const ColorTextOnInkSecondary = "#a7a9c6";
@@ -89,6 +89,33 @@ const globalDesignToken: Partial<AliasToken> = {
 
 const lightDesignToken: Partial<AliasToken> = {
   colorBgLayout: ColorPaper,
+
+  colorSuccess: "#1fa05a",
+  colorSuccessText: "#137a43",
+  colorSuccessTextHover: "#0f6236",
+  colorSuccessTextActive: "#0c4f2c",
+  colorSuccessBg: "#ebf6f0",
+  colorSuccessBgHover: "#dbf0e5",
+  colorSuccessBorder: "#b1dec5",
+  colorSuccessBorderHover: "#84cba4",
+
+  colorWarning: "#e59a0b",
+  colorWarningText: "#946000",
+  colorWarningTextHover: "#764d00",
+  colorWarningTextActive: "#603e00",
+  colorWarningBg: "#fdf6e9",
+  colorWarningBgHover: "#fbefd8",
+  colorWarningBorder: "#f6dcaa",
+  colorWarningBorderHover: "#f1c779",
+
+  colorError: "#d42f45",
+  colorErrorText: "#c72c41",
+  colorErrorTextHover: "#9f2334",
+  colorErrorTextActive: "#811d2a",
+  colorErrorBg: "#fbecee",
+  colorErrorBgHover: "#f8dee1",
+  colorErrorBorder: "#f0b6be",
+  colorErrorBorderHover: "#e78d99",
 };
 
 // `colorShadow` is consumed by antd at runtime (it derives all box shadows), but is missing from
@@ -116,6 +143,13 @@ const darkDesignToken: Partial<AliasToken> & { colorShadow: string } = {
   // colorLink is a seed token that the dark algorithm would dim, see darkAlgorithm below.
   colorLinkHover: ColorIndigoLightHover,
   colorLinkActive: ColorIndigoLightPressed,
+  colorInfoText: ColorIndigoLight,
+  colorInfoTextHover: ColorIndigoLightHover,
+  colorInfoTextActive: ColorIndigoLightPressed,
+
+  colorSuccess: "#43e38e", // shows as #3cc47c
+  colorWarning: "#ffb241", // shows as #dc9a3a
+  colorError: "#ff6573", // shows as #dc5965
 
   colorShadow: ColorShadowOnInk,
 };
@@ -155,6 +189,14 @@ const darkGlobalToken = theme.getDesignToken({
   token: { ...globalDesignToken, ...darkDesignToken },
   algorithm: darkAlgorithm,
 });
+
+export const ThemeIndependentStatusColor = {
+  success: darkGlobalToken.colorSuccess,
+  warning: darkGlobalToken.colorWarning,
+  error: darkGlobalToken.colorError,
+  info: ColorWKBlue,
+  neutral: "#a3a3a3",
+};
 
 // The heading scale WEBKNOSSOS has always used. It used to be enforced by global
 // `h1`–`h5` rules in antd_overwrites.less and now lives here, so that

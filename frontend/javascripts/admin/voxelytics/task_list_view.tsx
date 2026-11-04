@@ -23,8 +23,9 @@ import {
   Tooltip,
   Typography,
 } from "antd";
+import FormattedDuration from "components/formatted_duration";
 import dayjs from "dayjs";
-import { formatDateMedium, formatDurationStrict } from "libs/format_utils";
+import { formatDateMedium } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { notEmpty } from "libs/utils";
 import MiniSearch from "minisearch";
@@ -420,15 +421,15 @@ export default function TaskListView({
 
   const topLevelCollapseItems = tasksWithHierarchy.map(getTaskGroupOrTaskItem).filter(notEmpty);
 
-  const totalRuntime = report.tasks.reduce((sum, t) => {
+  const totalRuntimeMs = report.tasks.reduce((sum, t) => {
     if (t.state === VoxelyticsRunState.RUNNING) {
-      return sum.add(dayjs.duration(dayjs().diff(dayjs(t.beginTime))));
+      return sum + dayjs().diff(dayjs(t.beginTime));
     } else if (t.beginTime != null && t.endTime != null) {
-      return sum.add(dayjs.duration(dayjs(t.endTime).diff(dayjs(t.beginTime))));
+      return sum + dayjs(t.endTime).diff(dayjs(t.beginTime));
     } else {
       return sum;
     }
-  }, dayjs.duration(0));
+  }, 0);
 
   const {
     workflow: { name: readableWorkflowName },
@@ -465,10 +466,8 @@ export default function TaskListView({
             style={{ color: "var(--ant-color-text-secondary)", marginTop: 0 }}
           >
             {formatDateMedium(new Date(runBeginTimeString))}{" "}
-            <Tooltip title={formatDurationStrict(totalRuntime)}>
-              <FieldTimeOutlined style={{ marginLeft: 20 }} className="icon-margin-right" />
-              {totalRuntime.humanize()}
-            </Tooltip>
+            <FieldTimeOutlined style={{ marginLeft: 20 }} className="icon-margin-right" />
+            <FormattedDuration durationMs={totalRuntimeMs} />
           </Typography.Title>
           {isCompact && (
             <Button

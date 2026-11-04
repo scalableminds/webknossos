@@ -1,22 +1,16 @@
 import { SyncOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
 import { getVoxelyticsChunkStatistics } from "admin/rest_api";
 import { Button, Flex, Tooltip } from "antd";
-import dayjs from "dayjs";
 import {
   formatCountToDataAmountUnit,
   formatCPU,
-  formatDurationStrict,
+  formatDuration,
   formatNumber,
-  formatTimeIntervalStrict,
 } from "libs/format_utils";
-import { usePolling } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
-import { useState } from "react";
 import type { VoxelyticsChunkStatistics } from "types/api_types";
 import { parseStatistics } from "./parse_api_data";
-import type { Result } from "./utils";
-
-type StatisticsResult = Result<Array<VoxelyticsChunkStatistics>>;
 
 export default function StatisticsTab({
   workflowHash,
@@ -26,39 +20,31 @@ export default function StatisticsTab({
   workflowHash: string;
   runId: string | null;
   taskName: string;
-  isRunning: boolean;
 }) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [statisticsResult, setStatisticsResult] = useState<StatisticsResult>({ type: "LOADING" });
-
-  async function loadStatistics() {
-    try {
-      setIsLoading(true);
-      const statistics = (await getVoxelyticsChunkStatistics(workflowHash, runId, taskName)).map(
-        parseStatistics,
-      );
-      setStatisticsResult({
-        type: "SUCCESS",
-        value: statistics,
-      });
-    } catch {
-      setStatisticsResult({ type: "ERROR" });
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  usePolling(loadStatistics, null, [runId, taskName]);
+  // Errors are shown inline instead of as a toast, so plain useQuery is used here.
+  const {
+    data: statistics,
+    status,
+    isFetching,
+    refetch,
+  } = useQuery({
+    queryKey: ["voxelyticsChunkStatistics", workflowHash, runId, taskName],
+    queryFn: async () =>
+      (await getVoxelyticsChunkStatistics(workflowHash, runId, taskName)).map(parseStatistics),
+    retry: false,
+    refetchOnWindowFocus: false,
+    meta: { persist: false },
+  });
 
   function renderContent() {
-    if (statisticsResult.type === "LOADING") {
+    if (status === "pending") {
       return <p>Loading...</p>;
     }
-    if (statisticsResult.type === "ERROR") {
+    if (status === "error") {
       return <p>Could not load statistics.</p>;
     }
 
-    if (statisticsResult.value.length === 0) {
+    if (statistics.length === 0) {
       return <p>No data.</p>;
     }
     return (
@@ -73,7 +59,7 @@ export default function StatisticsTab({
           </tr>
         </thead>
         <tbody>
-          {statisticsResult.value.map((row: VoxelyticsChunkStatistics) => {
+          {statistics.map((row: VoxelyticsChunkStatistics) => {
             const remainingCount =
               row.chunkCounts.total -
               row.chunkCounts.complete -
@@ -173,7 +159,7 @@ export default function StatisticsTab({
                     row.duration?.max != null && (
                       <>
                         <span className="stats-label">Sum</span>{" "}
-                        {formatTimeIntervalStrict(row.duration.max * 1000, 0)}
+                        {formatDuration(row.duration.max * 1000)}
                       </>
                     )
                   ) : (
@@ -181,21 +167,21 @@ export default function StatisticsTab({
                       {row.duration?.max != null && (
                         <>
                           <span className="stats-label">Max</span>{" "}
-                          {formatTimeIntervalStrict(row.duration.max * 1000, 0)}
+                          {formatDuration(row.duration.max * 1000)}
                         </>
                       )}
                       <br />
                       {row.duration?.median != null && (
                         <>
                           <span className="stats-label">Median</span>{" "}
-                          {formatTimeIntervalStrict(row.duration.median * 1000, 0)}
+                          {formatDuration(row.duration.median * 1000)}
                         </>
                       )}
                       <br />{" "}
                       {row.duration?.sum != null && (
                         <>
                           <span className="stats-label">Sum</span>{" "}
-                          {formatTimeIntervalStrict(row.duration.sum * 1000, 0)}
+                          {formatDuration(row.duration.sum * 1000)}
                         </>
                       )}
                     </>
@@ -204,7 +190,7 @@ export default function StatisticsTab({
                   {row.wallTime != null && (
                     <>
                       <span className="stats-label">Wall</span>{" "}
-                      {formatDurationStrict(dayjs.duration(row.wallTime, "seconds"))}
+                      {formatDuration(row.wallTime * 1000)}
                     </>
                   )}
                 </td>
@@ -225,7 +211,7 @@ export default function StatisticsTab({
           marginBottom: 8,
         }}
       >
-        <Button onClick={() => loadStatistics()} icon={<SyncOutlined spin={isLoading} />}>
+        <Button onClick={() => refetch()} icon={<SyncOutlined spin={isFetching} />}>
           Refresh
         </Button>
       </Flex>

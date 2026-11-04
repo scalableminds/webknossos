@@ -102,30 +102,69 @@ pub(crate) async fn find_one(
     .await
 }
 
-/// The folder and all its descendants, parents before children.
-pub(crate) async fn find_subtree(
-    connection: &mut PgConnection,
-    root: &ObjectId,
-) -> sqlx::Result<Vec<Folder>> {
-    sqlx::query_as(
-        "SELECT f._id AS id, f.name, f.metadata, f.created
-        FROM webknossos.folders_ f JOIN webknossos.folder_paths p ON p._descendant = f._id
-        WHERE p._ancestor = $1 ORDER BY p.depth, f._id",
-    )
-    .bind(root)
-    .fetch_all(connection)
-    .await
+/// A folder of the tree with its immediate parent and the requesting user's
+/// edit right.
+#[derive(FromRow)]
+pub(crate) struct FolderTreeRow {
+    #[sqlx(flatten)]
+    pub folder: Folder,
+    pub parent: Option<ObjectId>,
+    pub is_editable: bool,
 }
 
-pub(crate) async fn find_parent(
+/// The readable folders of the subtree below `root` (which must be inside
+/// `user`'s organization), parents before children, in one statement.
+///
+/// Same rules as [`has_access`], evaluated as uncorrelated sets instead of per
+/// folder: read access through a team grant on the folder or an ancestor, or a
+/// team grant / an accessible dataset at or below it (breadcrumbs); edit
+/// access through a grant on the folder or an ancestor to a team the user
+/// manages. Admins and dataset managers read and edit everything.
+pub(crate) async fn find_tree(
     connection: &mut PgConnection,
-    id: &ObjectId,
-) -> sqlx::Result<Option<ObjectId>> {
-    sqlx::query_scalar(
-        "SELECT _ancestor FROM webknossos.folder_paths WHERE _descendant = $1 AND depth = 1",
+    user: &AuthUser,
+    root: &ObjectId,
+) -> sqlx::Result<Vec<FolderTreeRow>> {
+    sqlx::query_as(
+        "WITH user_teams AS (
+           SELECT r._team, r.isTeamManager FROM webknossos.user_team_roles r
+           JOIN webknossos.teams_ t ON t._id = r._team AND t._organization = $2
+           WHERE r._user = $3
+         ), editable AS (
+           SELECT p._descendant AS _id FROM webknossos.folder_paths p
+           JOIN webknossos.folder_allowedTeams a ON a._folder = p._ancestor
+           JOIN user_teams ut ON ut._team = a._team
+           WHERE ut.isTeamManager
+         ), readable AS (
+           SELECT p._descendant AS _id FROM webknossos.folder_paths p
+           JOIN webknossos.folder_allowedTeams a ON a._folder = p._ancestor
+           JOIN user_teams ut ON ut._team = a._team
+           UNION
+           SELECT p._ancestor FROM webknossos.folder_paths p
+           JOIN webknossos.folder_allowedTeams a ON a._folder = p._descendant
+           JOIN user_teams ut ON ut._team = a._team
+           UNION
+           SELECT p._ancestor FROM webknossos.folder_paths p
+           JOIN webknossos.datasets_ d ON d._folder = p._descendant AND d._organization = $2
+           WHERE d.isPublic OR d._id IN (
+             SELECT a._dataset FROM webknossos.dataset_allowedTeams a
+             JOIN user_teams ut ON ut._team = a._team
+           )
+         )
+         SELECT f._id AS id, f.name, f.metadata, f.created, parent._ancestor AS parent,
+           ($4 OR $5 OR f._id IN (SELECT _id FROM editable)) AS is_editable
+         FROM webknossos.folder_paths sub
+         JOIN webknossos.folders_ f ON f._id = sub._descendant
+         LEFT JOIN webknossos.folder_paths parent ON parent._descendant = f._id AND parent.depth = 1
+         WHERE sub._ancestor = $1 AND ($4 OR $5 OR f._id IN (SELECT _id FROM readable))
+         ORDER BY sub.depth, f._id",
     )
-    .bind(id)
-    .fetch_optional(connection)
+    .bind(root)
+    .bind(&user.organization_id)
+    .bind(&user.id)
+    .bind(user.is_admin)
+    .bind(user.is_dataset_manager)
+    .fetch_all(connection)
     .await
 }
 

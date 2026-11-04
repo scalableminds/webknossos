@@ -62,6 +62,51 @@ async fn create(app: &Router, parent: &str, name: &str, token: &str) -> Value {
     folder
 }
 
+/// The tree is one set-based query; the single-folder read keeps the
+/// per-folder access check. Both must agree on every folder of the
+/// organization: listed ⇔ readable, same parent, same `isEditable`.
+async fn assert_tree_matches_folder_reads(
+    database: &TestDb,
+    app: &Router,
+    root: &str,
+    token: &str,
+) -> Value {
+    let (status, tree) = request(app, "GET", "/folders/tree", token, None).await;
+    assert_eq!(status, StatusCode::OK, "{tree}");
+    let entries = tree.as_array().unwrap();
+    let all: Vec<(String, Option<String>)> = sqlx::query_as(
+        "SELECT f._id, parent._ancestor FROM webknossos.folders_ f
+         JOIN webknossos.folder_paths sub ON sub._descendant = f._id AND sub._ancestor = $1
+         LEFT JOIN webknossos.folder_paths parent ON parent._descendant = f._id AND parent.depth = 1",
+    )
+    .bind(root)
+    .fetch_all(&database.pool)
+    .await
+    .unwrap();
+    for (id, parent) in all {
+        let (status, folder) = request(app, "GET", &format!("/folders/{id}"), token, None).await;
+        let entry = entries.iter().find(|entry| entry["id"] == id.as_str());
+        match entry {
+            Some(entry) => {
+                assert_eq!(
+                    status,
+                    StatusCode::OK,
+                    "listed folder {id} must be readable"
+                );
+                assert_eq!(entry["isEditable"], folder["isEditable"], "folder {id}");
+                assert_eq!(entry["name"], folder["name"], "folder {id}");
+                assert_eq!(entry["parent"], json!(parent), "folder {id}");
+            }
+            None => assert_ne!(
+                status,
+                StatusCode::OK,
+                "readable folder {id} missing in tree"
+            ),
+        }
+    }
+    tree
+}
+
 async fn root_id(database: &TestDb, organization: &str) -> String {
     sqlx::query_scalar("SELECT _rootFolder FROM webknossos.organizations WHERE _id = $1")
         .bind(organization)
@@ -239,7 +284,7 @@ async fn folder_hierarchy_moves_roots_nonempty_delete_and_atomic_mutations() {
     .await
     .unwrap();
     assert_eq!(depth, 3);
-    let (_, tree) = request(&router, "GET", "/folders/tree", &user.token, None).await;
+    let tree = assert_tree_matches_folder_reads(&database, &router, &root, &user.token).await;
     assert_eq!(tree.as_array().unwrap().len(), 4);
     assert_eq!(
         tree.as_array()
@@ -453,7 +498,7 @@ async fn inherited_folder_access_and_grant_updates_preserve_unmanaged_teams() {
         .0,
         StatusCode::FORBIDDEN
     );
-    let (_, tree) = request(&router, "GET", "/folders/tree", &token, None).await;
+    let tree = assert_tree_matches_folder_reads(&database, &router, &root, &token).await;
     assert_eq!(tree.as_array().unwrap().len(), 3);
     // Dataset shares and public datasets expose their breadcrumbs, but confer no edit rights.
     sqlx::query("INSERT INTO webknossos.dataStores (name, url, publicUrl, key) VALUES ('test', 'http://store.test', 'http://store.test', 'test')")
@@ -497,8 +542,10 @@ async fn inherited_folder_access_and_grant_updates_preserve_unmanaged_teams() {
             .0,
         StatusCode::OK
     );
+    assert_tree_matches_folder_reads(&database, &router, &root, &token).await;
     sqlx::query("UPDATE webknossos.user_team_roles SET isTeamManager = TRUE WHERE _user = $1 AND _team = $2")
         .bind(&member_id).bind(&admin.team_id).execute(&database.pool).await.unwrap();
+    assert_tree_matches_folder_reads(&database, &router, &root, &token).await;
     assert_eq!(
         request(
             &router,
@@ -601,5 +648,12 @@ async fn inherited_folder_access_and_grant_updates_preserve_unmanaged_teams() {
     .await
     .unwrap();
     assert_eq!(count, 1);
+    let tree = assert_tree_matches_folder_reads(&database, &router, &root, &token).await;
+    assert!(
+        tree.as_array()
+            .unwrap()
+            .iter()
+            .all(|f| f["isEditable"] == true)
+    );
     database.cleanup().await;
 }

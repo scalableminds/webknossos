@@ -150,21 +150,16 @@ async fn tree(
 ) -> ApiResult<Json<Vec<FolderTreeEntry>>> {
     let mut connection = state.pool.acquire().await?;
     let root = organization_root(&mut connection, &user, false).await?;
-    let folders = folders_dao::find_subtree(&mut connection, &root).await?;
-    let mut output = Vec::new();
-    for folder in folders {
-        if folders_dao::has_access(&mut connection, &user, &folder.id, false).await? {
-            let parent = folders_dao::find_parent(&mut connection, &folder.id).await?;
-            let editable =
-                folders_dao::has_access(&mut connection, &user, &folder.id, true).await?;
-            output.push(FolderTreeEntry {
-                folder,
-                parent,
-                is_editable: editable,
-            });
-        }
-    }
-    Ok(Json(output))
+    let rows = folders_dao::find_tree(&mut connection, &user, &root).await?;
+    Ok(Json(
+        rows.into_iter()
+            .map(|row| FolderTreeEntry {
+                folder: row.folder,
+                parent: row.parent,
+                is_editable: row.is_editable,
+            })
+            .collect(),
+    ))
 }
 
 async fn mutation(

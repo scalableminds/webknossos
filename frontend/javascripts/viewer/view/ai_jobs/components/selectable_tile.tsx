@@ -119,7 +119,14 @@ export function SelectableTile({
               <img
                 src={imageLogo.src}
                 alt={imageLogo.alt}
-                style={{ position: "absolute", top: 8, left: 8, height: 20, maxWidth: "50%" }}
+                style={{
+                  position: "absolute",
+                  top: 8,
+                  left: 8,
+                  height: 20,
+                  maxWidth: "50%",
+                  ...(isDisabled ? { opacity: 0.5, filter: "grayscale(1)" } : {}),
+                }}
               />
             )}
             <div style={{ position: "absolute", top: 8, right: 8 }}>

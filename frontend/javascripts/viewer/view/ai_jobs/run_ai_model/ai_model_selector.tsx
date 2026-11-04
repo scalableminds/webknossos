@@ -60,7 +60,7 @@ const getModelThumbnail = (model: AiModel): string | undefined =>
 
 const getPartnerLogo = (model: AiModel, partner: APIPartner | null) =>
   partner != null && model.partnerId === partner.id
-    ? { src: partner.logoUrl, alt: partner.name }
+    ? { src: partner.compactLogoUrl ?? partner.logoUrl, alt: partner.name }
     : undefined;
 
 const filterModels = (models: AiModel[], searchTerm: string): AiModel[] => {

@@ -17,6 +17,8 @@ export function PartnerLogo({ compact }: { compact: boolean }) {
       alt={partner.name}
       className={classnames("partner-logo", {
         compact: showsCompactLogo,
+        // Without a compact variant, the full logo is shrunk to fit the collapsed navbar.
+        "compact-fallback": compact && !showsCompactLogo,
         ...(partner.linkUrl == null ? hideOnPhonesClass : {}),
       })}
     />

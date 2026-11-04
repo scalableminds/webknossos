@@ -249,8 +249,9 @@ class AiModelDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
             AND (
               _partner IS NULL
               OR _partner IN (
-                SELECT o._partner
+                SELECT p._id
                 FROM webknossos.organizations_ AS o
+                JOIN webknossos.partners_ AS p ON p._id = o._partner
                 JOIN webknossos.users_ AS u ON u._organization = o._id
                 WHERE u._id = $requestingUserId
               )

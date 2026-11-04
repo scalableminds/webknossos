@@ -199,7 +199,6 @@ export const getColorForCoords: ShaderModule = {
 
       // Layers at or above VERTEX_ALIGNMENT_LAYER_CAP have no precomputed
       // bucket address.
-      uint renderedMagIdx = activeMagIdx;
       bool beSafe = globalLayerIndex >= VERTEX_ALIGNMENT_LAYER_CAP || useBucketBorderVertexOptimization < 0.5;
       if (!beSafe) {
         renderedMagIdx = outputMagIdx[globalLayerIndex];

@@ -139,7 +139,7 @@ impl ServiceClients {
         }
         // Play WS follows redirects. Restrict them to the original origin and
         // a finite hop count so the service RPC secret cannot cross origins.
-        let client = Client::builder()
+        let client = webknossos_common::http::client_builder()
             .timeout(config.request_timeout)
             .connect_timeout(config.connect_timeout)
             .redirect(Policy::custom(|attempt| {

@@ -406,7 +406,7 @@ impl MiscState {
         Self(Arc::new(MiscRuntime {
             config,
             analytics_sessions: Mutex::new(HashMap::new()),
-            http: reqwest::Client::builder()
+            http: webknossos_common::http::client_builder()
                 .timeout(Duration::from_secs(30))
                 .build()
                 .unwrap_or_default(),

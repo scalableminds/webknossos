@@ -6,6 +6,7 @@ pub mod datasource;
 pub mod enums;
 pub mod explore_layers;
 pub mod geometry;
+pub mod http;
 pub mod java_format;
 pub mod json;
 pub mod math;

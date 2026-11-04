@@ -187,7 +187,11 @@ async fn remote(
     let base = format!("http://{}", listener.local_addr().unwrap());
     tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
     let outer = UPath::parse(&format!("{base}/archive.zip")).unwrap();
-    let http = Arc::new(HttpsDataVault::new(None, reqwest::Client::new(), &base));
+    let http = Arc::new(HttpsDataVault::new(
+        None,
+        webknossos_common::http::client_builder().build().unwrap(),
+        &base,
+    ));
     let vault = Arc::new(ZipDataVault::new(VaultPath::new(outer.clone(), http)));
     (outer, vault, requests)
 }

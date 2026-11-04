@@ -347,7 +347,7 @@ enum Endpoint {
 /// HTTP client for the bucket-region lookup and the custom-endpoint protocol probe (object
 /// requests use `object_store`'s own client).
 pub fn build_s3_http_client() -> Client {
-    Client::builder()
+    webknossos_common::http::client_builder()
         .redirect(reqwest::redirect::Policy::none())
         .connect_timeout(Duration::from_secs(120))
         .build()

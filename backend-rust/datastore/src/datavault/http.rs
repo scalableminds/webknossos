@@ -164,7 +164,7 @@ impl HttpsDataVault {
 /// HTTP client for vault reads: transfer encodings must reach `VaultPath` untouched (Play WS has
 /// compression disabled), redirects are followed like Play WS.
 pub fn build_http_client() -> Client {
-    Client::builder()
+    webknossos_common::http::client_builder()
         .no_gzip()
         .no_brotli()
         .no_deflate()

@@ -157,7 +157,7 @@ pub struct Oidc {
 
 impl Oidc {
     pub fn new(config: OidcConfig) -> Self {
-        let http = reqwest::Client::builder()
+        let http = webknossos_common::http::client_builder()
             .timeout(config.http_timeout)
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());

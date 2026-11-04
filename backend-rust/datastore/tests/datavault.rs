@@ -166,7 +166,7 @@ fn s3_vault(path: &str, credential: Option<AwsCredentials>, options: &S3Options)
     S3DataVault::new(
         upath(path).to_remote_uri().unwrap(),
         credential,
-        reqwest::Client::new(),
+        webknossos_common::http::client_builder().build().unwrap(),
         options,
     )
 }
@@ -314,7 +314,7 @@ async fn http_range_requests_keep_the_credential_headers() {
     ] {
         let vault = HttpsDataVault::new(
             Some(credential),
-            reqwest::Client::new(),
+            webknossos_common::http::client_builder().build().unwrap(),
             "http://datastore.invalid",
         );
         let read = vault

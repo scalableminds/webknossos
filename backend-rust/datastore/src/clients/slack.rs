@@ -47,7 +47,7 @@ impl SlackNotifications {
                 uri: config.slack_notifications.uri.clone(),
                 name: format!("WEBKNOSSOS datastore at {}", redact_uri(&config.http.uri)),
                 verbose: config.slack_notifications.verbose_logging_enabled,
-                client: Client::builder()
+                client: webknossos_common::http::client_builder()
                     .redirect(reqwest::redirect::Policy::none())
                     .timeout(Duration::from_secs(30))
                     .build()

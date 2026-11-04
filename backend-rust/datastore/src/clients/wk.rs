@@ -55,7 +55,7 @@ pub struct Rpc {
 impl Rpc {
     /// HTTP client with the Play WS timeouts of the datastore (2 h request/idle/connect).
     pub fn new() -> Result<Self, reqwest::Error> {
-        let http = reqwest::Client::builder()
+        let http = webknossos_common::http::client_builder()
             .timeout(PLAY_WS_TIMEOUT)
             .read_timeout(PLAY_WS_TIMEOUT)
             .connect_timeout(PLAY_WS_TIMEOUT)

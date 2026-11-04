@@ -26,8 +26,7 @@ impl<T: ObjectStore + PaginatedListStore> CloudObjectStore for T {}
 /// `object_store`'s HTTP client verifies TLS with rustls, whose process-wide crypto provider
 /// must be chosen before the first client is built (the datastore uses ring, not aws-lc).
 pub(super) fn install_crypto_provider() {
-    // Fails only if a provider is already installed, which is just as good.
-    let _ = rustls::crypto::ring::default_provider().install_default();
+    webknossos_common::http::install_crypto_provider();
 }
 
 /// Client settings shared by the S3 and GCS stores. Stored transfer encodings are passed

@@ -251,7 +251,7 @@ impl fmt::Debug for MailchimpClient {
 impl MailchimpClient {
     pub fn new(config: &MailchimpConfig) -> Self {
         let inner = config.host.as_ref().and_then(|host| {
-            match reqwest::Client::builder().timeout(REQUEST_TIMEOUT).build() {
+            match webknossos_common::http::client_builder().timeout(REQUEST_TIMEOUT).build() {
                 Ok(http) => Some(Arc::new(Inner {
                     host: host.clone(),
                     list_id: config.list_id.clone(),

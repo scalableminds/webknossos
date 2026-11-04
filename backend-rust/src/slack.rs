@@ -180,7 +180,7 @@ impl fmt::Debug for SlackNotificationService {
 impl SlackNotificationService {
     pub fn new(config: &SlackConfig) -> Self {
         let sender = config.uri.as_ref().and_then(|uri| {
-            match reqwest::Client::builder().timeout(SEND_TIMEOUT).build() {
+            match webknossos_common::http::client_builder().timeout(SEND_TIMEOUT).build() {
                 Ok(http) => Some(Sender {
                     uri: uri.clone(),
                     http,

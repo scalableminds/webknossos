@@ -89,7 +89,7 @@ fn map_transport(error: reqwest::Error) -> ApiError {
 
 impl LokiClient {
     pub fn new(config: LokiConfig) -> Self {
-        let http = reqwest::Client::builder()
+        let http = webknossos_common::http::client_builder()
             .timeout(Duration::from_secs(30))
             .connect_timeout(Duration::from_secs(5))
             // Never forward basic-auth credentials to another location.

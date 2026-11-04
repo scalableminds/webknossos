@@ -201,8 +201,7 @@ object Msg {
       val volumeNameForMultiple: String = "Cannot download multiple volume layers if volume name is passed."
       val findUserFailed: String = "Could not find or access annotation user."
       val zipNmlFailed: String = "Could not add NML file to zip archive."
-      val skeletonToFileFailed: String = "Could not write skeleton-only annotation to file."
-      val hybridToFileFailed: String = "Could not write annotation with volume layer to file."
+      val fetchBookmarksFailed: String = "Could not fetch the bookmarks of the annotation."
       val notAllowed: String = "You do not have permission to download this annotation."
       val writeToFileFailed: String = "Could not write annotation to temporary file for download."
     }
@@ -694,6 +693,10 @@ object Msg {
     def invalidEdge(src: String, dst: String): String = s"Invalid edge “$src-$dst”."
     def invalidNodeAttribute(name: String, id: Int): String =
       s"Invalid node $name for node id $id."
+    def invalidBookmarkId(id: String): String = s"Invalid bookmark id “$id”."
+    def invalidBookmarkField(name: String, id: Int): String = s"Invalid $name of bookmark $id."
+    val duplicateBookmarkIds: String = "Bookmark ids must be unique."
+    def missingOrInvalid(name: String): String = s"Missing or invalid $name."
   }
   object TaskType {
     def notFound(id: ObjectId): String = s"Task type “$id” could not be found or accessed."

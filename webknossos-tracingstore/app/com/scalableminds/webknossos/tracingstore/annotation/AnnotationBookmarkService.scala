@@ -8,7 +8,8 @@ import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.AnnotationBookmark.{
   AnnotationBookmarkProto,
   BookmarkLayerStateProto,
-  BookmarkMeshProto
+  BookmarkMeshProto,
+  UploadedAnnotationBookmarkProto
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBPutBuffer,
@@ -191,6 +192,25 @@ class AnnotationBookmarkService @Inject() (
             saveThumbnail(newAnnotationId, newBookmarkId, size, version, _, toTemporaryStore)
           )
         } yield ()
+      }
+    } yield ()
+
+  // Uploaded bookmarks are stored at version 0, like the AnnotationProto of an uploaded annotation.
+  // Their thumbnails are stored at their thumbnailVersion, so that findThumbnail finds them.
+  def saveUploadedBookmarks(annotationId: ObjectId, uploadedBookmarks: Seq[UploadedAnnotationBookmarkProto])(implicit
+      ec: ExecutionContext
+  ): Fox[Unit] =
+    for {
+      _ <- saveBookmarks(annotationId, version = 0L, uploadedBookmarks.map(_.bookmark))
+      _ <- Fox.serialCombined(uploadedBookmarks.toList) { uploaded =>
+        val bookmark = uploaded.bookmark
+        val thumbnails = Seq(
+          BookmarkThumbnailSize.small -> uploaded.smallThumbnail,
+          BookmarkThumbnailSize.large -> uploaded.largeThumbnail
+        ).collect { case (size, Some(thumbnail)) => (size, thumbnail) }
+        Fox.serialCombined(thumbnails.toList) { case (size, thumbnail) =>
+          saveThumbnail(annotationId, bookmark.id, size, bookmark.thumbnailVersion, thumbnail.toByteArray)
+        }
       }
     } yield ()
 

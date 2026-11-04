@@ -22,6 +22,17 @@ message AnnotationBookmarksProto {
   repeated AnnotationBookmarkProto bookmarks = 1;
 }
 
+// Bookmarks of an uploaded annotation file (e.g. NML), with the thumbnails it contained.
+message UploadedAnnotationBookmarkProto {
+  required AnnotationBookmarkProto bookmark = 1;
+  optional bytes smallThumbnail = 2; // webp
+  optional bytes largeThumbnail = 3; // webp
+}
+
+message UploadedAnnotationBookmarksProto {
+  repeated UploadedAnnotationBookmarkProto bookmarks = 1;
+}
+
 // Mirrors the view state of a sharing link (UrlManagerState in the frontend).
 message AnnotationBookmarkStateProto {
   // Nested so that the enum values don't clash with others in the package.

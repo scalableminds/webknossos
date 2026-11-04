@@ -15,7 +15,10 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerTypeProto,
   AnnotationProto
 }
-import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarksProto
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.{
+  AnnotationBookmarksProto,
+  UploadedAnnotationBookmarksProto
+}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.controllers.Controller
@@ -144,6 +147,19 @@ class TSAnnotationController @Inject() (
               )
             } yield Ok(AnnotationBookmarksProto(bookmarks).toByteArray).as(protobufMimeType)
           }
+        }
+      }
+    }
+
+  // Used by webknossos when uploading an annotation file. Must be called before the AnnotationProto that lists the
+  // bookmarkIds is saved.
+  def saveUploadedBookmarks(annotationId: ObjectId): Action[UploadedAnnotationBookmarksProto] =
+    Action.fox(validateProto[UploadedAnnotationBookmarksProto]) { implicit request =>
+      log() {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+          for {
+            _ <- annotationBookmarkService.saveUploadedBookmarks(annotationId, request.body.bookmarks)
+          } yield Ok
         }
       }
     }

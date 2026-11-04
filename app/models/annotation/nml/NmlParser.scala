@@ -8,6 +8,18 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.StringNumberConversions.{toBooleanOpt, toDoubleOpt, toFloatOpt, toIntOpt, toLongOpt}
 import com.scalableminds.util.tools.{Fox, MathUtils}
 import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.{
+  AnnotationBookmarkProto,
+  AnnotationBookmarkStateProto,
+  BookmarkLayerStateProto,
+  BookmarkMappingProto,
+  BookmarkMeshProto,
+  BookmarkTdCameraProto
+}
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkStateProto.{
+  MappingTypeProto,
+  ViewModeProto
+}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.*
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
@@ -17,10 +29,13 @@ import com.scalableminds.webknossos.datastore.geometry.{
   AdditionalCoordinateProto,
   ColorProto,
   NamedBoundingBoxProto,
+  Vec2DoubleProto,
   Vec2IntProto,
+  Vec3DoubleProto,
   Vec3IntProto
 }
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryConversions, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.tracingstore.annotation.BookmarkThumbnailSize
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
@@ -32,6 +47,7 @@ import java.io.InputStream
 import javax.inject.Inject
 import scala.collection.{immutable, mutable}
 import scala.concurrent.ExecutionContext
+import scala.util.Try
 import scala.xml.{Attribute, NodeSeq, XML, Node as XMLNode}
 
 class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
@@ -124,12 +140,18 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
         nmlParams.editPositionAdditionalCoordinates,
         additionalAxes = nmlParams.additionalAxisProtos
       )
+      bookmarks = nmlParams.bookmarks.map(parsedBookmark =>
+        parsedBookmark.copy(thumbnailLocations =
+          parsedBookmark.thumbnailLocations.view.mapValues(basePath.getOrElse("") + _).toMap
+        )
+      )
     } yield NmlParseSuccessWithoutFile(
       skeletonTracing,
       volumeLayers,
       dataset._id,
       nmlParams.description,
-      nmlParams.wkUrl
+      nmlParams.wkUrl,
+      bookmarks
     )
 
   private def getParametersFromNML(
@@ -176,6 +198,7 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
           if (sharedParsingParameters.isTaskUpload)
             parseTaskBoundingBox(parameters \ "taskBoundingBox")
           else None
+        bookmarks <- parseBookmarks(nmlData \ "bookmarks" \ "bookmark")
       } yield {
         var userBoundingBoxes = parseBoundingBoxes(parameters \ "userBoundingBox")
         if (!sharedParsingParameters.isTaskUpload) {
@@ -200,7 +223,8 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
           userBoundingBoxes,
           treesSplit,
           activeNodeId,
-          treeGroupsAfterSplit
+          treeGroupsAfterSplit,
+          bookmarks
         )
       }
     } catch {
@@ -387,6 +411,184 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
       case None => Full(Seq())
     }
   }
+
+  private def parseBookmarks(bookmarkNodes: NodeSeq): Box[Seq[NmlParsedBookmark]] =
+    for {
+      bookmarks <- Box.combined(bookmarkNodes)(parseBookmark) ?~> Msg.Nml.invalidElements("bookmark")
+      bookmarkIds = bookmarks.map(_.bookmark.id)
+      _ <- Box.fromBool(bookmarkIds.distinct.length == bookmarkIds.length) ?~> Msg.Nml.duplicateBookmarkIds
+    } yield bookmarks
+
+  // createdAtVersion and thumbnailVersion are set when the annotation is created from the NML.
+  private def parseBookmark(node: XMLNode): Box[NmlParsedBookmark] = {
+    val idText = getSingleAttribute(node, "id")
+    for {
+      id <- Box.fromOption(idText.toIntOpt) ?~> Msg.Nml.invalidBookmarkId(idText)
+      created <- requiredBookmarkField(getSingleAttribute(node, "created").toLongOpt, "created", id)
+      stateNode <- requiredBookmarkField((node \ "state").headOption, "state", id)
+      state <- parseBookmarkState(stateNode) ?~> Msg.Nml.invalidBookmarkField("state", id)
+      // Thumbnails are optional, invalid ones are ignored.
+      thumbnailLocations = (node \ "thumbnail").flatMap { thumbnailNode =>
+        for {
+          size <- getSingleAttributeOpt(thumbnailNode, "size").flatMap(BookmarkThumbnailSize.fromString)
+          location <- getSingleAttributeOpt(thumbnailNode, "location")
+        } yield size -> location
+      }.toMap
+    } yield NmlParsedBookmark(
+      AnnotationBookmarkProto(
+        id = id,
+        created = created,
+        name = getSingleAttributeOpt(node, "name"),
+        description = getSingleAttributeOpt(node, "description"),
+        state = state,
+        createdAtVersion = 0L,
+        metadata = parseMetadata(node \ "metadata" \ "metadataEntry"),
+        thumbnailVersion = 0L
+      ),
+      thumbnailLocations
+    )
+  }
+
+  private def requiredBookmarkField[T](value: Option[T], fieldName: String, bookmarkId: Int): Box[T] =
+    Box.fromOption(value) ?~> Msg.Nml.invalidBookmarkField(fieldName, bookmarkId)
+
+  private def sequenceOption[T](boxOpt: Option[Box[T]]): Box[Option[T]] =
+    boxOpt match {
+      case Some(box) => box.map(Some(_))
+      case None      => Full(None)
+    }
+
+  private def requiredField[T](value: Option[T], fieldName: String): Box[T] =
+    Box.fromOption(value) ?~> Msg.Nml.missingOrInvalid(fieldName)
+
+  private def parseBookmarkState(node: XMLNode): Box[AnnotationBookmarkStateProto] =
+    for {
+      mode <- requiredField(getSingleAttributeOpt(node, "mode").flatMap(ViewModeProto.fromName), "mode")
+      zoomStep <- requiredField(getSingleAttribute(node, "zoomStep").toDoubleOpt, "zoomStep")
+      clippingDistance <- requiredField(getSingleAttribute(node, "clippingDistance").toDoubleOpt, "clippingDistance")
+      clipSkeletonToCurrentSection <- requiredField(
+        getSingleAttribute(node, "clipSkeletonToCurrentSection").toBooleanOpt,
+        "clipSkeletonToCurrentSection"
+      )
+      positionNode <- requiredField((node \ "position").headOption, "position")
+      position <- requiredField(parseVec3Int(positionNode), "position")
+      rotationNode <- requiredField((node \ "rotation").headOption, "rotation")
+      rotation <- requiredField(parseRotationForParams(rotationNode), "rotation")
+      nativelyRenderedLayerName <- sequenceOption(
+        (node \ "nativelyRenderedLayer").headOption.map(parseBookmarkLayerRef)
+      )
+      tdCamera <- sequenceOption((node \ "tdCamera").headOption.map(parseBookmarkTdCamera))
+      layers <- Box.combined(node \ "layer")(parseBookmarkLayer)
+    } yield AnnotationBookmarkStateProto(
+      position = vec3IntToProto(position),
+      mode = mode,
+      zoomStep = zoomStep,
+      rotation = vec3DoubleToProto(rotation),
+      activeNodeId = getSingleAttribute(node, "activeNodeId").toIntOpt,
+      additionalCoordinates = parseAdditionalCoordinateValues(positionNode),
+      nativelyRenderedLayerName = nativelyRenderedLayerName,
+      clippingDistance = clippingDistance,
+      clipSkeletonToCurrentSection = clipSkeletonToCurrentSection,
+      tdCamera = tdCamera,
+      showSkeletons = getSingleAttribute(node, "showSkeletons").toBooleanOpt,
+      layers = layers
+    )
+
+  private def parseBookmarkTdCamera(node: XMLNode): Box[BookmarkTdCameraProto] =
+    for {
+      left <- requiredField(getSingleAttribute(node, "left").toDoubleOpt, "tdCamera left")
+      right <- requiredField(getSingleAttribute(node, "right").toDoubleOpt, "tdCamera right")
+      top <- requiredField(getSingleAttribute(node, "top").toDoubleOpt, "tdCamera top")
+      bottom <- requiredField(getSingleAttribute(node, "bottom").toDoubleOpt, "tdCamera bottom")
+      position <- requiredField((node \ "position").headOption.flatMap(parseVec3Double), "tdCamera position")
+      up <- requiredField((node \ "up").headOption.flatMap(parseVec3Double), "tdCamera up")
+    } yield BookmarkTdCameraProto(vec3DoubleToProto(position), vec3DoubleToProto(up), left, right, top, bottom)
+
+  private def parseBookmarkLayer(node: XMLNode): Box[BookmarkLayerStateProto] =
+    for {
+      layerName <- parseBookmarkLayerRef(node)
+      intensityRange <- sequenceOption((node \ "intensityRange").headOption.map { rangeNode =>
+        requiredField(
+          for {
+            min <- getSingleAttribute(rangeNode, "min").toDoubleOpt
+            max <- getSingleAttribute(rangeNode, "max").toDoubleOpt
+          } yield Vec2DoubleProto(min, max),
+          "intensityRange"
+        )
+      })
+      color <- sequenceOption((node \ "color").headOption.map { colorNode =>
+        requiredField(
+          for {
+            r <- getSingleAttribute(colorNode, "r").toDoubleOpt
+            g <- getSingleAttribute(colorNode, "g").toDoubleOpt
+            b <- getSingleAttribute(colorNode, "b").toDoubleOpt
+          } yield Vec3DoubleProto(r, g, b),
+          "color"
+        )
+      })
+      mapping <- sequenceOption((node \ "mapping").headOption.map { mappingNode =>
+        for {
+          mappingName <- requiredField(parseBookmarkMappingRef(mappingNode), "mapping name")
+          mappingType <- requiredField(parseMappingType(mappingNode), "mappingType")
+        } yield BookmarkMappingProto(mappingName, mappingType)
+      })
+      meshes <- Box.combined(node \ "mesh")(parseBookmarkMesh)
+    } yield BookmarkLayerStateProto(
+      layerName = layerName,
+      isDisabled = getSingleAttribute(node, "isDisabled").toBooleanOpt,
+      intensityRange = intensityRange,
+      color = color,
+      isInverted = getSingleAttribute(node, "isInverted").toBooleanOpt,
+      gammaCorrectionValue = getSingleAttribute(node, "gammaCorrectionValue").toDoubleOpt,
+      mapping = mapping,
+      meshFileName = getSingleAttributeOpt(node, "meshFileName"),
+      meshes = meshes
+    )
+
+  private def parseBookmarkMesh(node: XMLNode): Box[BookmarkMeshProto] =
+    for {
+      segmentId <- requiredField(
+        Try(java.lang.Long.parseUnsignedLong(getSingleAttribute(node, "segmentId"))).toOption,
+        "mesh segmentId"
+      )
+      isPrecomputed <- requiredField(getSingleAttribute(node, "isPrecomputed").toBooleanOpt, "mesh isPrecomputed")
+      seedPosition <- requiredField((node \ "seedPosition").headOption.flatMap(parseVec3Int), "mesh seedPosition")
+    } yield BookmarkMeshProto(
+      segmentId = segmentId,
+      seedPosition = vec3IntToProto(seedPosition),
+      isPrecomputed = isPrecomputed,
+      meshFileName = getSingleAttributeOpt(node, "meshFileName"),
+      mappingName = parseBookmarkMappingRef(node),
+      mappingType = parseMappingType(node)
+    )
+
+  // Encodes references to annotation layers, see NmlAnnotationLayerRef.
+  private def parseBookmarkLayerRef(node: XMLNode): Box[String] =
+    (
+      getSingleAttributeOpt(node, "volumeLayer"),
+      getSingleAttribute(node, "skeletonLayer").toBooleanOpt,
+      getSingleAttributeOpt(node, "datasetLayer")
+    ) match {
+      case (Some(volumeLayerName), _, _)  => Full(NmlAnnotationLayerRef.encode(NmlVolumeLayerRef(volumeLayerName)))
+      case (_, Some(true), _)             => Full(NmlAnnotationLayerRef.encode(NmlSkeletonLayerRef))
+      case (_, _, Some(datasetLayerName)) => Full(datasetLayerName)
+      case _                              => Failure(Msg.Nml.missingOrInvalid("layer reference"))
+    }
+
+  private def parseBookmarkMappingRef(node: XMLNode): Option[String] =
+    getSingleAttributeOpt(node, "editableMappingOfVolumeLayer")
+      .map(volumeLayerName => NmlAnnotationLayerRef.encode(NmlVolumeLayerRef(volumeLayerName)))
+      .orElse(getSingleAttributeOpt(node, "mappingName"))
+
+  private def parseMappingType(node: XMLNode): Option[MappingTypeProto] =
+    getSingleAttributeOpt(node, "mappingType").flatMap(MappingTypeProto.fromName)
+
+  private def parseVec3Double(node: XMLNode): Option[Vec3Double] =
+    for {
+      x <- getSingleAttribute(node, "x").toDoubleOpt
+      y <- getSingleAttribute(node, "y").toDoubleOpt
+      z <- getSingleAttribute(node, "z").toDoubleOpt
+    } yield Vec3Double(x, y, z)
 
   private def parseDatasetName(nodes: NodeSeq): String =
     nodes.headOption.map(node => getSingleAttribute(node, "name")).getOrElse("")

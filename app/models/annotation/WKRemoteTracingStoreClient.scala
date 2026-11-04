@@ -10,6 +10,12 @@ import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.{
+  AnnotationBookmarkProto,
+  AnnotationBookmarksProto,
+  UploadedAnnotationBookmarkProto,
+  UploadedAnnotationBookmarksProto
+}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{
   SkeletonTracing,
   SkeletonTracings,
@@ -25,6 +31,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
 }
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
 import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.scalableminds.webknossos.tracingstore.annotation.BookmarkThumbnailSize
 import com.scalableminds.webknossos.tracingstore.controllers.MergedFromIdsRequest
 import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, TracingSelector}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
@@ -120,6 +127,35 @@ class WKRemoteTracingStoreClient(
       .addQueryParam("version", version)
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .getWithProtoResponse[AnnotationProto](AnnotationProto)
+
+  def getBookmarks(annotationId: ObjectId, version: Option[Long]): Fox[Seq[AnnotationBookmarkProto]] =
+    rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/bookmarks")
+      .addQueryParam("version", version)
+      .addQueryParam("token", RpcTokenHolder.webknossosToken)
+      .getWithProtoResponse[AnnotationBookmarksProto](AnnotationBookmarksProto)
+      .map(_.bookmarks)
+
+  // None if the bookmark has no thumbnail of this size. Thumbnails are optional, so this never fails.
+  def getBookmarkThumbnail(
+      annotationId: ObjectId,
+      bookmark: AnnotationBookmarkProto,
+      size: BookmarkThumbnailSize.Value
+  ): Fox[Option[Array[Byte]]] =
+    rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/bookmarks/${bookmark.id}/thumbnail")
+      .addQueryParam("size", size.toString)
+      .addQueryParam("v", bookmark.thumbnailVersion)
+      .addQueryParam("token", RpcTokenHolder.webknossosToken)
+      .silentEvenOnFailure
+      .getWithBytesResponse
+      .shiftBox
+      .map(_.toOption)
+
+  def saveUploadedBookmarks(annotationId: ObjectId, bookmarks: Seq[UploadedAnnotationBookmarkProto]): Fox[Unit] = {
+    logger.info(s"Called to save ${bookmarks.length} uploaded bookmarks for annotation $annotationId." + baseInfo)
+    rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/bookmarks/saveUploaded")
+      .addQueryParam("token", RpcTokenHolder.webknossosToken)
+      .postProto[UploadedAnnotationBookmarksProto](UploadedAnnotationBookmarksProto(bookmarks))
+  }
 
   // Used in duplicate route. History and version are kept
   def duplicateAnnotation(

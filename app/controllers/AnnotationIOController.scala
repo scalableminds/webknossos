@@ -3,6 +3,7 @@ package controllers
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.box.Empty
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
@@ -10,7 +11,9 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.util.tools.StringNumberConversions.toDoubleOpt
+import com.google.protobuf.ByteString
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.UploadedAnnotationBookmarkProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
@@ -22,7 +25,8 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
 }
 import com.scalableminds.webknossos.datastore.models.datasource.*
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingType}
+import com.scalableminds.webknossos.tracingstore.annotation.BookmarkThumbnailSize
+import com.scalableminds.webknossos.tracingstore.tracings.TracingId
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeDataZipFormat,
@@ -36,8 +40,17 @@ import javax.inject.Inject
 import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnotationEvent}
 import models.annotation.AnnotationState.*
 import models.annotation.*
-import models.annotation.nml.NmlResults.NmlParseResult
-import models.annotation.nml.{NmlResults, NmlWriter}
+import models.annotation.nml.NmlResults.{NmlParseResult, NmlParseSuccess}
+import models.annotation.nml.{
+  NmlAnnotationLayerRef,
+  NmlBookmarkToWrite,
+  NmlBookmarks,
+  NmlParsedBookmark,
+  NmlResults,
+  NmlSkeletonLayerRef,
+  NmlVolumeLayerRef,
+  NmlWriter
+}
 import models.dataset.*
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
@@ -53,7 +66,7 @@ import utils.WkConf
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.net.URLEncoder
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 import java.util.zip.Deflater
 import scala.concurrent.ExecutionContext
 
@@ -62,6 +75,7 @@ class AnnotationIOController @Inject() (
     annotationDAO: AnnotationDAO,
     projectDAO: ProjectDAO,
     datasetDAO: DatasetDAO,
+    datasetLayerDAO: DatasetLayerDAO,
     organizationDAO: OrganizationDAO,
     datasetService: DatasetService,
     userService: UserService,
@@ -171,6 +185,19 @@ class AnnotationIOController @Inject() (
             dataset._id
           )
           mergedSkeletonLayers <- mergeAndSaveSkeletonLayers(skeletonTracings, tracingStoreClient)
+          uploadedBookmarks = bookmarksForUpload(
+            parseSuccesses,
+            volumeLayersGrouped.flatten,
+            mergedVolumeLayers,
+            mergedSkeletonLayers,
+            usableDataSource,
+            parsedFiles.otherFiles,
+            earliestAccessibleVersion
+          )
+          // Saved before the AnnotationProto that lists their ids.
+          _ <- Fox.runIf(uploadedBookmarks.nonEmpty)(
+            tracingStoreClient.saveUploadedBookmarks(newAnnotationId, uploadedBookmarks)
+          )
           annotation = annotationService.createFrom(
             request.identity,
             dataset,
@@ -184,7 +211,8 @@ class AnnotationIOController @Inject() (
             description = annotation.description,
             version = 0L,
             annotationLayers = annotation.annotationLayers.map(_.toProto),
-            earliestAccessibleVersion = earliestAccessibleVersion
+            earliestAccessibleVersion = earliestAccessibleVersion,
+            bookmarkIds = uploadedBookmarks.map(_.bookmark.id)
           )
           _ <- tracingStoreClient.saveAnnotationProto(annotation._id, annotationProto)
           _ <- annotationDAO.insertOne(annotation)
@@ -195,6 +223,74 @@ class AnnotationIOController @Inject() (
         )
       }
   }
+
+  // Bookmarks are only imported if a single NML was uploaded. Merging several NMLs may change node and segment ids,
+  // which the bookmarks would then need to be adapted to. The references to annotation layers are resolved to the
+  // new tracingIds, references to things that do not exist (anymore) are dropped. The bookmarks count as created at
+  // the first accessible version, together with their thumbnails.
+  private def bookmarksForUpload(
+      parseSuccesses: List[NmlParseSuccess],
+      uploadedVolumeLayers: List[UploadedVolumeLayer],
+      savedVolumeLayers: List[AnnotationLayer], // in the same order as uploadedVolumeLayers
+      savedSkeletonLayers: List[AnnotationLayer],
+      dataSource: UsableDataSource,
+      otherFiles: Map[String, File],
+      version: Long
+  ): Seq[UploadedAnnotationBookmarkProto] =
+    parseSuccesses match {
+      case List(parseSuccess) =>
+        val uploadedAndSavedVolumeLayers = uploadedVolumeLayers.zip(savedVolumeLayers)
+        val volumeTracingIdsByName = uploadedAndSavedVolumeLayers.flatMap { case (uploaded, saved) =>
+          uploaded.name.map(_ -> saved.tracingId)
+        }.toMap
+        // Editable mappings are named after the tracingId of their volume layer.
+        val editableMappingNamesByVolumeName = uploadedAndSavedVolumeLayers.flatMap { case (uploaded, saved) =>
+          uploaded.name.filter(_ => uploaded.editedMappingEdgesLocation.isDefined).map(_ -> saved.tracingId)
+        }.toMap
+        val skeletonTracingIdOpt = savedSkeletonLayers.headOption.map(_.tracingId)
+        val datasetLayerNames = dataSource.dataLayers.map(_.name).toSet
+        val nodeIds = parseSuccess.skeletonTracing.trees.flatMap(_.nodes.map(_.id)).toSet
+
+        def readThumbnail(parsedBookmark: NmlParsedBookmark, size: BookmarkThumbnailSize.Value): Option[ByteString] =
+          parsedBookmark.thumbnailLocations
+            .get(size)
+            .flatMap(otherFiles.get)
+            .flatMap(file => tryo(Files.readAllBytes(file.toPath)).toOption)
+            .filter(NmlBookmarks.isWebp)
+            .map(ByteString.copyFrom)
+
+        parseSuccess.bookmarks.map { parsedBookmark =>
+          val bookmarkWithResolvedLayers = NmlBookmarks.rewriteLayerReferences(
+            parsedBookmark.bookmark,
+            layerName = name =>
+              NmlAnnotationLayerRef.decode(name) match {
+                case Some(NmlVolumeLayerRef(volumeLayerName)) => volumeTracingIdsByName.get(volumeLayerName)
+                case Some(NmlSkeletonLayerRef)                => skeletonTracingIdOpt
+                case None                                     => Option.when(datasetLayerNames.contains(name))(name)
+              },
+            mappingName = name =>
+              NmlAnnotationLayerRef.decode(name) match {
+                case Some(NmlVolumeLayerRef(volumeLayerName)) => editableMappingNamesByVolumeName.get(volumeLayerName)
+                case Some(NmlSkeletonLayerRef)                => None
+                case None                                     => Some(name)
+              }
+          )
+          val state = bookmarkWithResolvedLayers.state
+          val bookmark = bookmarkWithResolvedLayers
+            .withState(state.copy(activeNodeId = state.activeNodeId.filter(nodeIds.contains)))
+            .withCreatedAtVersion(version)
+            .withThumbnailVersion(version)
+          UploadedAnnotationBookmarkProto(
+            bookmark,
+            readThumbnail(parsedBookmark, BookmarkThumbnailSize.small),
+            readThumbnail(parsedBookmark, BookmarkThumbnailSize.large)
+          )
+        }
+      case _ =>
+        if (parseSuccesses.exists(_.bookmarks.nonEmpty))
+          logger.info(s"Dropping the bookmarks of ${parseSuccesses.length} merged annotation files on upload.")
+        Seq.empty
+    }
 
   private def layersHaveDuplicateFallbackLayer(annotationLayers: Seq[UploadedVolumeLayer]) = {
     val withFallbackLayer = annotationLayers.filter(_.tracing.fallbackLayer.isDefined)
@@ -508,40 +604,25 @@ class AnnotationIOController @Inject() (
 
     // Note: volumeVersion cannot currently be supplied per layer, see https://github.com/scalableminds/webknossos/issues/5925
 
-    def skeletonToTemporaryFile(dataset: Dataset, annotation: Annotation, organizationId: String): Fox[Path] =
+    // Bookmark thumbnails are optional, missing ones are skipped.
+    def fetchBookmarksWithThumbnails(
+        tracingStoreClient: WKRemoteTracingStoreClient,
+        annotationId: ObjectId
+    ): Fox[Seq[NmlBookmarkToWrite]] =
       for {
-        tracingStoreClient <- tracingStoreService.clientFor(dataset)
-        fetchedAnnotationLayers <- Fox.serialCombined(annotation.skeletonAnnotationLayers)(
-          tracingStoreClient.getSkeletonTracing(annotation._id, _, version)
-        )
-        annotationProto <- tracingStoreClient.getAnnotationProto(annotation._id, version)
-        annotationOwner <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
-        ownerMultiUser <- multiUserDAO.findOne(annotationOwner._multiUser)(using GlobalAccessContext)
-        taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
-        nmlStream = nmlWriter.toNmlStream(
-          "temp",
-          annotationProto,
-          fetchedAnnotationLayers,
-          Some(annotation),
-          dataset.voxelSize,
-          None,
-          organizationId,
-          conf.Http.uri,
-          dataset.name,
-          dataset._id,
-          annotation._user,
-          ownerMultiUser.fullName,
-          taskOpt,
-          skipVolumeData,
-          volumeDataZipFormat,
-          requestingUser
-        )
-        nmlTemporaryFile = tempFileService.create()
-        temporaryFileStream = new BufferedOutputStream(new FileOutputStream(new File(nmlTemporaryFile.toString)))
-        _ <- Fox.withCleanup(nmlStream.writeTo(temporaryFileStream))(temporaryFileStream.close())
-      } yield nmlTemporaryFile
+        bookmarks <- tracingStoreClient.getBookmarks(annotationId, version)
+        bookmarksWithThumbnails <- Fox.serialCombined(bookmarks.toList) { bookmark =>
+          for {
+            thumbnails <- Fox.serialCombined(BookmarkThumbnailSize.values.toList)(size =>
+              tracingStoreClient.getBookmarkThumbnail(annotationId, bookmark, size).map(_.map(size -> _))
+            )
+          } yield NmlBookmarkToWrite(bookmark, thumbnails.flatten.toMap)
+        }
+      } yield bookmarksWithThumbnails
 
-    def volumeOrHybridToTemporaryFile(
+    // All annotations are downloaded as zip, which contains the NML and, if present, the volume data and the
+    // bookmark thumbnails.
+    def annotationToTemporaryFile(
         dataset: Dataset,
         annotation: Annotation,
         name: String,
@@ -572,6 +653,11 @@ class AnnotationIOController @Inject() (
           taskDAO.findOne(_)(using GlobalAccessContext)
         ) ?~> Msg.Task.notFound
         annotationProto <- tracingStoreClient.getAnnotationProto(annotation._id, version)
+        bookmarks <- fetchBookmarksWithThumbnails(
+          tracingStoreClient,
+          annotation._id
+        ) ?~> Msg.Annotation.Download.fetchBookmarksFailed
+        datasetLayers <- datasetLayerDAO.findAllForDataset(dataset._id)
         nmlStream = nmlWriter.toNmlStream(
           name,
           annotationProto,
@@ -588,7 +674,9 @@ class AnnotationIOController @Inject() (
           taskOpt,
           skipVolumeData,
           volumeDataZipFormat,
-          requestingUser
+          requestingUser,
+          bookmarks,
+          Some(datasetLayers.map(_.name).toSet)
         )
         temporaryFile = tempFileService.create()
         zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.toString))))
@@ -606,44 +694,19 @@ class AnnotationIOController @Inject() (
               zipper.addFileFromBytes(editedEdgesZipName, editedEdgesData)
             }
           }
+          _ = bookmarks.foreach { bookmarkToWrite =>
+            bookmarkToWrite.thumbnails.foreach { case (size, thumbnail) =>
+              zipper.addFileFromBytes(NmlBookmarks.thumbnailLocation(bookmarkToWrite.bookmark.id, size), thumbnail)
+            }
+          }
         } yield ())(zipper.close())
       } yield temporaryFile
-
-    def annotationToTemporaryFile(
-        dataset: Dataset,
-        annotation: Annotation,
-        name: String,
-        organizationId: String
-    ): Fox[Path] =
-      if (annotation.tracingType == TracingType.skeleton)
-        skeletonToTemporaryFile(dataset, annotation, organizationId) ?~> Msg.Annotation.Download.skeletonToFileFailed
-      else
-        volumeOrHybridToTemporaryFile(
-          dataset,
-          annotation,
-          name,
-          organizationId
-        ) ?~> Msg.Annotation.Download.hybridToFileFailed
-
-    def exportExtensionForAnnotation(annotation: Annotation): String =
-      if (annotation.tracingType == TracingType.skeleton)
-        ".nml"
-      else
-        ".zip"
-
-    def exportMimeTypeForAnnotation(annotation: Annotation): String =
-      if (annotation.tracingType == TracingType.skeleton)
-        xmlMimeType
-      else
-        zipMimeType
 
     for {
       annotation <- provider.provideAnnotation(typ, annotationId, requestingUser) ~> NOT_FOUND
       restrictions <- provider.restrictionsFor(typ, annotationId) ?~> Msg.Annotation.Restrictions.notFound
       name <- provider.nameFor(annotation) ?~> Msg.Annotation.nameNotAvailable
-      fileExtension = exportExtensionForAnnotation(annotation)
-      fileName = URLEncoder.encode(name + fileExtension, "UTF-8").replace("+", "%20")
-      mimeType = exportMimeTypeForAnnotation(annotation)
+      fileName = URLEncoder.encode(name + ".zip", "UTF-8").replace("+", "%20")
       _ <- Fox.assertTrue(
         restrictions.allowDownload(requestingUser)
       ) ?~> Msg.Annotation.Download.notAllowed ~> FORBIDDEN
@@ -661,7 +724,7 @@ class AnnotationIOController @Inject() (
       ) ?~> Msg.Annotation.Download.writeToFileFailed
     } yield Ok
       .sendPath(temporaryFile, inline = false)
-      .as(mimeType)
+      .as(zipMimeType)
       .withHeaders(CONTENT_DISPOSITION -> s"""attachment; filename="$fileName"""")
   }
 

@@ -7,6 +7,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.{AnnotationBookmarkStateProto, BookmarkLayerStateProto}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.*
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup}
@@ -64,7 +65,9 @@ class NmlWriter @Inject() (implicit ec: ExecutionContext)
       annotationTask: Option[Task],
       skipVolumeData: Boolean = false,
       volumeDataZipFormat: VolumeDataZipFormat,
-      requestingUser: Option[User]
+      requestingUser: Option[User],
+      bookmarks: Seq[NmlBookmarkToWrite] = Seq.empty,
+      datasetLayerNames: Option[Set[String]] = None // if set, bookmark settings for other dataset layers are dropped
   ): NamedFunctionStream =
     NamedFunctionStream(
       name,
@@ -91,7 +94,8 @@ class NmlWriter @Inject() (implicit ec: ExecutionContext)
             annotationOwnerName,
             annotationTask,
             skipVolumeData,
-            volumeDataZipFormat
+            volumeDataZipFormat,
+            bookmarks.map(encodeLayerReferences(_, annotationLayers, datasetLayerNames))
           )
         } yield nml
       }
@@ -109,7 +113,8 @@ class NmlWriter @Inject() (implicit ec: ExecutionContext)
       annotationOwnerName: String,
       annotationTask: Option[Task],
       skipVolumeData: Boolean,
-      volumeDataZipFormat: VolumeDataZipFormat
+      volumeDataZipFormat: VolumeDataZipFormat,
+      bookmarks: Seq[NmlBookmarkToWrite]
   )(implicit writer: XMLStreamWriter): Fox[Unit] =
     for {
       _ <- Xml.withinElement("things") {
@@ -146,6 +151,7 @@ class NmlWriter @Inject() (implicit ec: ExecutionContext)
               volumeDataZipFormat
             )
           }
+          _ = writeBookmarks(bookmarks)
         } yield ()
       }
       _ = writer.writeEndDocument()
@@ -453,6 +459,157 @@ class NmlWriter @Inject() (implicit ec: ExecutionContext)
         writeSegmentGroupsAsXml(t.children)
       }
     }
+
+  // Replaces the tracingIds in the bookmark state with references to the NML layers, see NmlAnnotationLayerRef.
+  // References to layers that no longer exist are dropped.
+  private def encodeLayerReferences(
+      bookmarkToWrite: NmlBookmarkToWrite,
+      annotationLayers: List[FetchedAnnotationLayer],
+      datasetLayerNames: Option[Set[String]]
+  ): NmlBookmarkToWrite = {
+    val refsByTracingId: Map[String, NmlAnnotationLayerRef] = annotationLayers.map { layer =>
+      val ref = if (layer.typ == AnnotationLayerType.Skeleton) NmlSkeletonLayerRef else NmlVolumeLayerRef(layer.name)
+      layer.tracingId -> ref
+    }.toMap
+    val encodedBookmark = NmlBookmarks.rewriteLayerReferences(
+      bookmarkToWrite.bookmark,
+      layerName = name =>
+        refsByTracingId
+          .get(name)
+          .map(NmlAnnotationLayerRef.encode)
+          .orElse(Option.when(datasetLayerNames.forall(_.contains(name)))(name)),
+      // Editable mappings are named after the tracingId of their volume layer.
+      mappingName = name =>
+        Some(
+          refsByTracingId
+            .get(name)
+            .collect { case ref: NmlVolumeLayerRef => NmlAnnotationLayerRef.encode(ref) }
+            .getOrElse(name)
+        )
+    )
+    bookmarkToWrite.copy(bookmark = encodedBookmark)
+  }
+
+  private def writeBookmarks(bookmarks: Seq[NmlBookmarkToWrite])(implicit writer: XMLStreamWriter): Unit =
+    if (bookmarks.nonEmpty) {
+      Xml.withinElementSync("bookmarks") {
+        bookmarks.sortBy(_.bookmark.id).foreach { bookmarkToWrite =>
+          val bookmark = bookmarkToWrite.bookmark
+          Xml.withinElementSync("bookmark") {
+            writer.writeAttribute("id", bookmark.id.toString)
+            bookmark.name.foreach(writer.writeAttribute("name", _))
+            bookmark.description.foreach(writer.writeAttribute("description", _))
+            writer.writeAttribute("created", bookmark.created.toString)
+            bookmarkToWrite.thumbnails.keys.toSeq.sortBy(_.id).foreach { size =>
+              Xml.withinElementSync("thumbnail") {
+                writer.writeAttribute("size", size.toString)
+                writer.writeAttribute("location", NmlBookmarks.thumbnailLocation(bookmark.id, size))
+              }
+            }
+            if (bookmark.metadata.nonEmpty)
+              Xml.withinElementSync("metadata")(bookmark.metadata.foreach(writeMetadataEntry))
+            writeBookmarkState(bookmark.state)
+          }
+        }
+      }
+    }
+
+  private def writeBookmarkState(state: AnnotationBookmarkStateProto)(implicit writer: XMLStreamWriter): Unit =
+    Xml.withinElementSync("state") {
+      writer.writeAttribute("mode", state.mode.name)
+      writer.writeAttribute("zoomStep", state.zoomStep.toString)
+      writer.writeAttribute("clippingDistance", state.clippingDistance.toString)
+      writer.writeAttribute("clipSkeletonToCurrentSection", state.clipSkeletonToCurrentSection.toString)
+      state.activeNodeId.foreach(id => writer.writeAttribute("activeNodeId", id.toString))
+      state.showSkeletons.foreach(show => writer.writeAttribute("showSkeletons", show.toString))
+      Xml.withinElementSync("position") {
+        writeVec3IntAttributes(state.position)
+        state.additionalCoordinates.foreach(writeAdditionalCoordinateValue)
+      }
+      Xml.withinElementSync("rotation") {
+        writer.writeAttribute("xRot", state.rotation.x.toString)
+        writer.writeAttribute("yRot", state.rotation.y.toString)
+        writer.writeAttribute("zRot", state.rotation.z.toString)
+      }
+      state.nativelyRenderedLayerName.foreach { layerName =>
+        Xml.withinElementSync("nativelyRenderedLayer")(writeBookmarkLayerRef(layerName))
+      }
+      state.tdCamera.foreach { camera =>
+        Xml.withinElementSync("tdCamera") {
+          writer.writeAttribute("left", camera.left.toString)
+          writer.writeAttribute("right", camera.right.toString)
+          writer.writeAttribute("top", camera.top.toString)
+          writer.writeAttribute("bottom", camera.bottom.toString)
+          Xml.withinElementSync("position")(writeVec3DoubleAttributes(camera.position))
+          Xml.withinElementSync("up")(writeVec3DoubleAttributes(camera.up))
+        }
+      }
+      state.layers.foreach(writeBookmarkLayer)
+    }
+
+  private def writeBookmarkLayer(layer: BookmarkLayerStateProto)(implicit writer: XMLStreamWriter): Unit =
+    Xml.withinElementSync("layer") {
+      writeBookmarkLayerRef(layer.layerName)
+      layer.isDisabled.foreach(isDisabled => writer.writeAttribute("isDisabled", isDisabled.toString))
+      layer.isInverted.foreach(isInverted => writer.writeAttribute("isInverted", isInverted.toString))
+      layer.gammaCorrectionValue.foreach(gamma => writer.writeAttribute("gammaCorrectionValue", gamma.toString))
+      layer.meshFileName.foreach(writer.writeAttribute("meshFileName", _))
+      layer.intensityRange.foreach { range =>
+        Xml.withinElementSync("intensityRange") {
+          writer.writeAttribute("min", range.x.toString)
+          writer.writeAttribute("max", range.y.toString)
+        }
+      }
+      layer.color.foreach { color =>
+        Xml.withinElementSync("color") {
+          writer.writeAttribute("r", color.x.toString)
+          writer.writeAttribute("g", color.y.toString)
+          writer.writeAttribute("b", color.z.toString)
+        }
+      }
+      layer.mapping.foreach { mapping =>
+        Xml.withinElementSync("mapping") {
+          writeBookmarkMappingRef(mapping.mappingName)
+          writer.writeAttribute("mappingType", mapping.mappingType.name)
+        }
+      }
+      layer.meshes.foreach { mesh =>
+        Xml.withinElementSync("mesh") {
+          writer.writeAttribute("segmentId", java.lang.Long.toUnsignedString(mesh.segmentId))
+          writer.writeAttribute("isPrecomputed", mesh.isPrecomputed.toString)
+          mesh.meshFileName.foreach(writer.writeAttribute("meshFileName", _))
+          mesh.mappingName.foreach(writeBookmarkMappingRef)
+          mesh.mappingType.foreach(mappingType => writer.writeAttribute("mappingType", mappingType.name))
+          Xml.withinElementSync("seedPosition")(writeVec3IntAttributes(mesh.seedPosition))
+        }
+      }
+    }
+
+  private def writeBookmarkLayerRef(encodedLayerName: String)(implicit writer: XMLStreamWriter): Unit =
+    NmlAnnotationLayerRef.decode(encodedLayerName) match {
+      case Some(NmlVolumeLayerRef(volumeLayerName)) => writer.writeAttribute("volumeLayer", volumeLayerName)
+      case Some(NmlSkeletonLayerRef)                => writer.writeAttribute("skeletonLayer", true.toString)
+      case None                                     => writer.writeAttribute("datasetLayer", encodedLayerName)
+    }
+
+  private def writeBookmarkMappingRef(encodedMappingName: String)(implicit writer: XMLStreamWriter): Unit =
+    NmlAnnotationLayerRef.decode(encodedMappingName) match {
+      case Some(NmlVolumeLayerRef(volumeLayerName)) =>
+        writer.writeAttribute("editableMappingOfVolumeLayer", volumeLayerName)
+      case _ => writer.writeAttribute("mappingName", encodedMappingName)
+    }
+
+  private def writeVec3IntAttributes(vec: Vec3IntProto)(implicit writer: XMLStreamWriter): Unit = {
+    writer.writeAttribute("x", vec.x.toString)
+    writer.writeAttribute("y", vec.y.toString)
+    writer.writeAttribute("z", vec.z.toString)
+  }
+
+  private def writeVec3DoubleAttributes(vec: Vec3DoubleProto)(implicit writer: XMLStreamWriter): Unit = {
+    writer.writeAttribute("x", vec.x.toString)
+    writer.writeAttribute("y", vec.y.toString)
+    writer.writeAttribute("z", vec.z.toString)
+  }
 
   private def writeMetaData(annotationOpt: Option[Annotation], annotationOwnerName: String, taskOpt: Option[Task])(
       implicit writer: XMLStreamWriter

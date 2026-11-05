@@ -1,3 +1,4 @@
+import type { ApiResult } from "admin/api/api_result";
 import LoginView from "admin/auth/login_view";
 import {
   isFeatureAllowedByPricingPlan,
@@ -10,6 +11,7 @@ import { isUserAdminOrManager } from "libs/utils";
 import type React from "react";
 import { memo } from "react";
 import { useLocation, useParams } from "react-router";
+import type { APIAnnotationVisibility } from "types/api_types";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 
 type SecuredRouteProps = {
@@ -30,23 +32,32 @@ function SecuredRoute({
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const activeUser = useWkSelector((state) => state.activeUser);
   const isAuthenticated = activeUser !== null;
-  // If the annotation cannot be found, the query fails silently and the resource is
-  // treated as not public. Cached data is ignored until a fresh response arrived, since
-  // the visibility might have changed in the meantime.
+  // If the annotation cannot be found, the query fails without an error toast and the
+  // resource is treated as not public. Cached data is ignored until a fresh response
+  // arrived, since the visibility might have changed in the meantime.
   const {
-    data: annotationInformation,
+    data: visibility,
     isFetchedAfterMount,
     isSuccess,
   } = useApi({
-    // Separate key from the merge modal, whose cached data is persisted.
-    queryKey: ["unversionedAnnotation", id, "visibilityCheck"],
-    queryFn: () => getUnversionedAnnotationInformation(id as string),
+    // Own root key so that invalidations of the merge modal's (persisted)
+    // ["unversionedAnnotation", id] query don't hit this one.
+    queryKey: ["annotationVisibility", id],
+    queryFn: async (): Promise<ApiResult<APIAnnotationVisibility>> => {
+      const result = await getUnversionedAnnotationInformation(id as string, {
+        showErrorToast: false,
+      });
+      // Only keep the visibility in the cache, not the whole annotation.
+      return result.ok ? { ok: true, value: result.value.visibility } : result;
+    },
     enabled: !isAuthenticated && checkIfResourceIsPublic && !!id,
+    // A failed background refetch would flip isSuccess and unmount the open viewer.
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     meta: { persist: false },
   });
   const isSecuredResourcePubliclyAvailable =
-    isFetchedAfterMount && isSuccess && annotationInformation?.visibility === "Public";
+    isFetchedAfterMount && isSuccess && visibility === "Public";
 
   const isCompletelyAuthenticated = checkIfResourceIsPublic
     ? isAuthenticated || isSecuredResourcePubliclyAvailable

@@ -39,6 +39,7 @@ import {
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import classnames from "classnames";
+import { PartnerLogo } from "components/partner_logo";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { WhatsNewModal } from "components/whats_new_modal";
 import features from "features";
@@ -339,7 +340,11 @@ function getHelpSubMenu(
     {
       key: "frontend-api",
       label: (
-        <a target="_blank" href="/assets/docs/frontend-api/index.html" rel="noopener noreferrer">
+        <a
+          target="_blank"
+          href="https://docs.webknossos.org/frontend-api/index.html"
+          rel="noopener noreferrer"
+        >
           Frontend API Documentation
         </a>
       ),
@@ -858,26 +863,29 @@ function Navbar() {
     {
       key: "0",
       label: (
-        <Link
-          to="/dashboard"
-          aria-label="WEBKNOSSOS"
-          style={{
-            verticalAlign: "middle",
-          }}
-        >
-          {collapseAllNavItems ? (
-            getCollapsibleMenuTitle(
-              "WEBKNOSSOS",
-              <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
-              true,
-            )
-          ) : (
-            <>
-              <Icon component={WkLogoIcon} className="logo" />
-              <span className="logo-wordmark">WEBKNOSSOS</span>
-            </>
-          )}
-        </Link>
+        <>
+          <Link
+            to="/dashboard"
+            aria-label="WEBKNOSSOS"
+            style={{
+              verticalAlign: "middle",
+            }}
+          >
+            {collapseAllNavItems ? (
+              getCollapsibleMenuTitle(
+                "WEBKNOSSOS",
+                <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+                true,
+              )
+            ) : (
+              <>
+                <Icon component={WkLogoIcon} className="logo" />
+                <span className="logo-wordmark">WEBKNOSSOS</span>
+              </>
+            )}
+          </Link>
+          <PartnerLogo compact={collapseAllNavItems} />
+        </>
       ),
     },
   ];

@@ -95,7 +95,6 @@ case class VolumeTracingLayer(
     isTemporaryTracing: Boolean = false,
     includeFallbackDataIfAvailable: Boolean = false,
     tracing: VolumeTracing,
-    tokenContext: TokenContext,
     additionalAxes: Option[Seq[AdditionalAxis]],
     attachments: Option[DataLayerAttachments] = None,
     volumeDataStore: FossilDBClient

@@ -423,7 +423,9 @@ class EditableMappingUpdater(
     val newEdgeAffinity = 255.0f
     val newEdge = AgglomerateEdge(segmentId1, segmentId2)
     val newEdgeInverted = AgglomerateEdge(segmentId2, segmentId1)
-    if (agglomerateGraph1 == agglomerateGraph2) {
+    if (segmentId1 == segmentId2) {
+      None
+    } else if (agglomerateGraph1 == agglomerateGraph2) {
       // Agglomerate is merged with itself. Insert new edge anyway, if it does not exist yet
       if (agglomerateGraph1.edges.contains(newEdge) || agglomerateGraph1.edges.contains(newEdgeInverted)) {
         Some(agglomerateGraph1)

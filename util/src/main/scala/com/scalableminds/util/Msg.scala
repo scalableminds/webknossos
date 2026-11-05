@@ -184,6 +184,7 @@ object Msg {
         "An annotation layer with this name already exists in this annotation. Please change it to prevent duplicates."
       val onlyOneSkeletonAllowed: String = "Only one skeleton layer is allowed per annotation."
       val mappingIsLocked: String = "Cannot modify mapping in a locked annotation."
+      val authorIdMismatch: String = "Annotation updates can only be stored with the requesting user as author."
     }
     object Download {
       val failed: String = "Could not download annotation."

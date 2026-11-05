@@ -65,4 +65,19 @@
   .anticon.anticon-close.ant-tag-close-icon {
     color: black;
   }
+
+  // Restore antd's default hover and selected-row colors, which have enough contrast in dark mode.
+  .bounding-box-table.ant-table-wrapper .ant-table-tbody .ant-table-row {
+    > .ant-table-cell.ant-table-cell-row-hover {
+      background: var(--ant-table-row-hover-bg);
+    }
+
+    &.ant-table-row-selected > .ant-table-cell {
+      background: var(--ant-color-primary-bg);
+
+      &.ant-table-cell-row-hover {
+        background: var(--ant-color-primary-bg-hover);
+      }
+    }
+  }
 }

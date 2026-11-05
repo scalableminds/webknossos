@@ -12,7 +12,7 @@
 @import "trace_view/_right_menu.less";
 @import "trace_view/_info_tab.less";
 @import "antd_overwrites.less";
-@import "olvy_overwrites.less";
+@import "release_notes.less";
 @import "flex_layout_overwrites.less";
 @import "_drawings.less";
 @import "_upgrade_request_modal.less";
@@ -177,6 +177,35 @@ body {
     }
   }
 
+  // Co-branding: the partner logo sits next to the WEBKNOSSOS logo.
+  .partner-logo {
+    height: 24px;
+    max-width: 140px;
+    margin-left: 12px;
+    object-fit: contain;
+    vertical-align: middle;
+
+    // The compact logo is shown where the navbar is collapsed (annotation view, phones).
+    &.compact {
+      height: 26px;
+      max-width: 40px;
+      margin-left: 4px;
+    }
+
+    &.compact-fallback {
+      height: 20px;
+      max-width: 80px;
+      margin-left: 4px;
+    }
+  }
+
+  // Phones have no room for a full partner logo.
+  .partner-logo-hidden-on-phones {
+    @media @smartphones {
+      display: none;
+    }
+  }
+
   // Size and spacing match the wordmark in logo.svg next to the 30px mark.
   .logo-wordmark {
     margin-left: 10px;
@@ -261,9 +290,12 @@ body {
   margin-right: 0;
 }
 
-/** Hides elements on screens smaller than 1200px width. */
+/** Hides elements below antd's xl breakpoint, i.e. when useMinScreenWidth("xl") is false. */
 .hide-on-small-screen {
-  @media (max-width: 1200px) {
+  // 1199.98px instead of @screen-lg-max (1199px), so that fractional viewport widths when zoomed
+  // (e.g. 1199.5px) also count as below xl, like antd's (min-width: 1200px) check. Same trick as
+  // Bootstrap; the range syntax (width < 1200px) would need Safari 16.4+.
+  @media (max-width: (@screen-xl-min - 0.02px)) {
     display: none !important;
   }
 }

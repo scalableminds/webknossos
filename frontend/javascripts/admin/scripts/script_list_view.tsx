@@ -2,6 +2,7 @@ import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
+import { getAdminTablePagination } from "admin/admin_table_pagination";
 import { deleteScript as deleteScriptAPI, getScripts } from "admin/rest_api";
 import { App, Button, Input, Space, Spin, Table } from "antd";
 import FormattedId from "components/formatted_id";
@@ -9,7 +10,7 @@ import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
-import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
+import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
@@ -80,9 +81,13 @@ function ScriptListView() {
         }
         <br />
         {"See the "}
-        <Link to="/assets/docs/frontend-api/index.html" target="_blank">
+        <a
+          href="https://docs.webknossos.org/frontend-api/index.html"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           Frontend API Documentation
-        </Link>
+        </a>
         {" for more information."}
       </Fragment>
     );
@@ -110,10 +115,7 @@ function ScriptListView() {
             searchQuery,
           )}
           rowKey="id"
-          pagination={{
-            defaultPageSize: 50,
-            onChange: scrollToTop,
-          }}
+          pagination={getAdminTablePagination()}
           locale={{
             emptyText: renderPlaceholder(),
           }}

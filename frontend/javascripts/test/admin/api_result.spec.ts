@@ -78,4 +78,25 @@ describe("requestResult", () => {
       expect(Toast.messages).toHaveBeenCalledWith(messages);
     });
   });
+
+  it("should stop retrying when the signal is aborted", async () => {
+    const abortController = new AbortController();
+    const requester = vi.fn(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+
+    const resultPromise = requestResult(
+      requester,
+      { showErrorToast: false, signal: abortController.signal },
+      { retries: Number.POSITIVE_INFINITY, initialDelayMs: 60 * 1000 },
+    );
+    // Abort while requestResult waits for the first retry.
+    await vi.waitFor(() => expect(requester).toHaveBeenCalledTimes(1));
+    abortController.abort();
+
+    const result = await resultPromise;
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.error.kind).toBe("abort");
+    expect(requester).toHaveBeenCalledTimes(1);
+  });
 });

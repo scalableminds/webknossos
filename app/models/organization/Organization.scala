@@ -41,7 +41,8 @@ case class Organization(
     lastTermsOfServiceAcceptanceTime: Option[Instant] = None,
     lastTermsOfServiceAcceptanceVersion: Int = 0,
     created: Instant = Instant.now,
-    isDeleted: Boolean = false
+    isDeleted: Boolean = false,
+    _partner: Option[ObjectId] = None
 )
 
 case class DatasetMagStorageReport(
@@ -90,7 +91,8 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
       r.lasttermsofserviceacceptancetime.map(Instant.fromSql),
       r.lasttermsofserviceacceptanceversion,
       Instant.fromSql(r.created),
-      r.isdeleted
+      r.isdeleted,
+      r._partner.map(ObjectId(_))
     )
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
@@ -128,12 +130,12 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
       _ <- run(q"""INSERT INTO webknossos.organizations
                    (_id, additionalInformation, logoUrl, name, _rootFolder,
                    newUserMailingList, enableAutoVerify,
-                   pricingplan, aiPlan, paidUntil, includedusers, includedstorage, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion, created, isDeleted)
+                   pricingplan, aiPlan, paidUntil, includedusers, includedstorage, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion, created, isDeleted, _partner)
                    VALUES
                    (${o._id}, ${o.additionalInformation}, ${o.logoUrl}, ${o.name}, ${o._rootFolder},
                    ${o.newUserMailingList}, ${o.enableAutoVerify},
                    ${o.pricingPlan}, ${o.aiPlan}, ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorageBytes}, ${o.lastTermsOfServiceAcceptanceTime},
-                   ${o.lastTermsOfServiceAcceptanceVersion}, ${o.created}, ${o.isDeleted})
+                   ${o.lastTermsOfServiceAcceptanceVersion}, ${o.created}, ${o.isDeleted}, ${o._partner})
             """.asUpdate)
     } yield ()
 
@@ -178,6 +180,12 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
                      name = $name,
                      newUserMailingList = $newUserMailingList
                    WHERE _id = $organizationId""".asUpdate)
+    } yield ()
+
+  // Only super users may assign partners, so callers must check that before calling this.
+  def updatePartner(organizationId: String, partnerId: Option[ObjectId]): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE webknossos.organizations SET _partner = $partnerId WHERE _id = $organizationId".asUpdate)
     } yield ()
 
   // Note that storage reports are separated into two tables; one for dataset mags and one for attachments.

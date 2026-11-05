@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(189);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(190);
 COMMIT TRANSACTION;
 
 
@@ -380,7 +380,19 @@ CREATE TABLE webknossos.organizations(
   lastStorageScanTime TIMESTAMPTZ NOT NULL DEFAULT '1970-01-01T00:00:00.000Z',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  _partner TEXT CONSTRAINT _partner_objectId CHECK (_partner ~ '^[0-9a-f]{24}$') DEFAULT NULL,
   CONSTRAINT validOrganizationId CHECK (_id ~* '^[A-Za-z0-9\-_. ]+$')
+);
+
+-- Partners co-brand WEBKNOSSOS for the organizations assigned to them.
+CREATE TABLE webknossos.partners(
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  name TEXT NOT NULL,
+  logoUrl TEXT NOT NULL,
+  compactLogoUrl TEXT DEFAULT NULL, -- shown where the navbar is collapsed, falls back to logoUrl
+  linkUrl TEXT DEFAULT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE webknossos.organization_plan_updates(
@@ -721,6 +733,9 @@ CREATE TABLE webknossos.aiModels(
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   isSuperUserOnly BOOLEAN NOT NULL DEFAULT FALSE,
   isPretrained BOOLEAN NOT NULL DEFAULT FALSE,
+  -- A pretrained model with a _partner is only visible to the organizations assigned to that partner.
+  _partner TEXT CONSTRAINT _partner_objectId CHECK (_partner ~ '^[0-9a-f]{24}$') DEFAULT NULL,
+  thumbnailUrl TEXT DEFAULT NULL,
   UNIQUE (_organization, name)
 );
 
@@ -876,6 +891,7 @@ CREATE VIEW webknossos.tasks_ AS SELECT * FROM webknossos.tasks WHERE NOT isDele
 CREATE VIEW webknossos.teams_ AS SELECT * FROM webknossos.teams WHERE NOT isDeleted;
 CREATE VIEW webknossos.timespans_ AS SELECT * FROM webknossos.timespans WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
+CREATE VIEW webknossos.partners_ AS SELECT * FROM webknossos.partners WHERE NOT isDeleted;
 CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
 CREATE VIEW webknossos.multiUsers_ AS SELECT * FROM webknossos.multiUsers WHERE NOT isDeleted;
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
@@ -1091,6 +1107,10 @@ ALTER TABLE webknossos.aiModel_trainingAnnotations
 ALTER TABLE webknossos.aiModel_organizations
   ADD FOREIGN KEY (_aiModel) REFERENCES webknossos.aiModels(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   ADD FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organizations
+  ADD CONSTRAINT partner_ref FOREIGN KEY(_partner) REFERENCES webknossos.partners(_id) DEFERRABLE;
+ALTER TABLE webknossos.aiModels
+  ADD CONSTRAINT partner_ref FOREIGN KEY(_partner) REFERENCES webknossos.partners(_id) DEFERRABLE;
 ALTER TABLE webknossos.webauthnCredentials
   ADD FOREIGN KEY (_multiUser) REFERENCES webknossos.multiUsers(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="200" viewBox="0 0 500 200">
+  <!-- Placeholder thumbnail of the fake dev partner model. Replace with the real model thumbnail. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4c1d95"/>
+      <stop offset="1" stop-color="#0e7490"/>
+    </linearGradient>
+  </defs>
+  <rect width="500" height="200" fill="url(#bg)"/>
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="3">
+    <path d="M20 160 C 90 60, 160 180, 240 90 S 400 40, 480 120"/>
+    <path d="M10 60 C 120 120, 200 20, 300 110 S 420 170, 490 50"/>
+    <path d="M60 190 C 140 130, 260 200, 330 140 S 440 90, 500 170"/>
+  </g>
+  <text x="250" y="108" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#ffffff">Partner model placeholder</text>
+</svg>

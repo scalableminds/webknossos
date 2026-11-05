@@ -3,7 +3,6 @@
 //! A segment index file maps segment ids (through a hash table) to the mag-1 top-left corners of
 //! the buckets containing them. Zarr3 and local HDF5 attachments share the Scala hash contract.
 use std::{collections::HashSet, sync::Arc};
-use webknossos_common::bytes::u64_le;
 
 use futures::{StreamExt, stream};
 
@@ -20,73 +19,17 @@ use crate::{
     services::attachment::{AttachmentArrays, AttachmentFileKey, AttachmentId},
 };
 
-/// Apache commons-codec `MurmurHash3.hash128x64(data)` (seed 0), both 64-bit halves.
-pub fn murmur3_x64_128(data: &[u8]) -> (i64, i64) {
-    const C1: u64 = 0x87c3_7b91_1142_53d5;
-    const C2: u64 = 0x4cf5_ad43_2745_937f;
-    fn fmix(mut k: u64) -> u64 {
-        k ^= k >> 33;
-        k = k.wrapping_mul(0xff51_afd7_ed55_8ccd);
-        k ^= k >> 33;
-        k = k.wrapping_mul(0xc4ce_b9fe_1a85_ec53);
-        k ^ (k >> 33)
-    }
-    let (mut h1, mut h2) = (0u64, 0u64);
-    let blocks = data.len() / 16;
-    for i in 0..blocks {
-        let b = &data[i * 16..i * 16 + 16];
-        let mut k1 = u64_le(b);
-        let mut k2 = u64_le(&b[8..]);
-        k1 = k1.wrapping_mul(C1).rotate_left(31).wrapping_mul(C2);
-        h1 ^= k1;
-        h1 = h1
-            .rotate_left(27)
-            .wrapping_add(h2)
-            .wrapping_mul(5)
-            .wrapping_add(0x52dc_e729);
-        k2 = k2.wrapping_mul(C2).rotate_left(33).wrapping_mul(C1);
-        h2 ^= k2;
-        h2 = h2
-            .rotate_left(31)
-            .wrapping_add(h1)
-            .wrapping_mul(5)
-            .wrapping_add(0x3849_5ab5);
-    }
-    let tail = &data[blocks * 16..];
-    let (mut k1, mut k2) = (0u64, 0u64);
-    for (i, byte) in tail.iter().enumerate() {
-        if i < 8 {
-            k1 ^= u64::from(*byte) << (8 * i);
-        } else {
-            k2 ^= u64::from(*byte) << (8 * (i - 8));
-        }
-    }
-    if tail.len() > 8 {
-        k2 = k2.wrapping_mul(C2).rotate_left(33).wrapping_mul(C1);
-        h2 ^= k2;
-    }
-    if !tail.is_empty() {
-        k1 = k1.wrapping_mul(C1).rotate_left(31).wrapping_mul(C2);
-        h1 ^= k1;
-    }
-    let len = data.len() as u64;
-    h1 ^= len;
-    h2 ^= len;
-    h1 = h1.wrapping_add(h2);
-    h2 = h2.wrapping_add(h1);
-    h1 = fmix(h1);
-    h2 = fmix(h2);
-    h1 = h1.wrapping_add(h2);
-    h2 = h2.wrapping_add(h1);
-    (h1 as i64, h2 as i64)
-}
-
 /// Scala `ArrayArtifactHashing.getHashFunction`.
 pub fn hash_function(name: &str) -> DsResult<fn(i64) -> i64> {
     match name {
         "identity" => Ok(|x| x),
-        // `Math.abs` of the second half of the big-endian encoding's hash.
-        "murmurhash3_x64_128" => Ok(|x| murmur3_x64_128(&x.to_be_bytes()).1.wrapping_abs()),
+        // Apache commons-codec `Math.abs(MurmurHash3.hash128x64(bigEndianBytes(x))[1])` (seed 0):
+        // the second 64-bit half is the high half of the crate's `u128`.
+        "murmurhash3_x64_128" => Ok(|x| {
+            let hash = murmur3::murmur3_x64_128(&mut &x.to_be_bytes()[..], 0)
+                .expect("reading from a slice cannot fail");
+            ((hash >> 64) as u64 as i64).wrapping_abs()
+        }),
         other => Err(DsError::failure(format!(
             "scala.MatchError: {other} (of class java.lang.String)"
         ))),

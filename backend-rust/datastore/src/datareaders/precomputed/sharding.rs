@@ -82,40 +82,11 @@ impl ShardingSpecification {
         )
     }
 }
-/// Scala hashes exactly eight little-endian bytes for a uint64 ID, with seed zero.
+/// Neuroglancer's minishard hash: MurmurHash3 x86_128 (seed 0) over the eight little-endian bytes
+/// of the ID, keeping the low 64 bits (`h1 | h2 << 32`, as Python `mmh3.hash64(x64arch=False)[0]`).
 pub fn murmurhash3_x86_128_low64(input: u64) -> u64 {
-    let mut h1 = (input as u32)
-        .wrapping_mul(0x239b961b)
-        .rotate_left(15)
-        .wrapping_mul(0xab0e9789);
-    let mut h2 = ((input >> 32) as u32)
-        .wrapping_mul(0xab0e9789)
-        .rotate_left(16)
-        .wrapping_mul(0x38b34ae5);
-    let mut h3 = 0u32;
-    let mut h4 = 0u32;
-    h1 ^= 8;
-    h2 ^= 8;
-    h3 ^= 8;
-    h4 ^= 8;
-    h1 = h1.wrapping_add(h2).wrapping_add(h3).wrapping_add(h4);
-    h2 = h2.wrapping_add(h1);
-    h3 = h3.wrapping_add(h1);
-    h4 = h4.wrapping_add(h1);
-    let fmix = |mut h: u32| {
-        h ^= h >> 16;
-        h = h.wrapping_mul(0x85ebca6b);
-        h ^= h >> 13;
-        h = h.wrapping_mul(0xc2b2ae35);
-        h ^ (h >> 16)
-    };
-    h1 = fmix(h1);
-    h2 = fmix(h2);
-    h3 = fmix(h3);
-    h4 = fmix(h4);
-    h1 = h1.wrapping_add(h2).wrapping_add(h3).wrapping_add(h4);
-    h2 = h1.wrapping_add(h2);
-    u64::from(h1) | (u64::from(h2) << 32)
+    murmur3::murmur3_x86_128(&mut &input.to_le_bytes()[..], 0)
+        .expect("reading from a slice cannot fail") as u64
 }
 pub fn compressed_morton_code(position: [u32; 3], grid: [u32; 3]) -> DsResult<u64> {
     if grid.contains(&0) || position.iter().zip(grid).any(|(p, g)| *p >= g) {

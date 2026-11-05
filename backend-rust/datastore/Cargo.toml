@@ -41,6 +41,7 @@ zip = { workspace = true, features = ["deflate-flate2"] }
 zune-jpeg = { version = "=0.5.15", default-features = false, features = ["std"] }
 hdf5-reader = { version = "=0.12.1", default-features = false }
 lru = "=0.19.0"
+murmur3 = "0.5.2"
 moka = { version = "0.12.16", features = ["sync"] }
 draco-core = { version = "=2.3.3", default-features = false, features = ["decoder", "edgebreaker_valence_decode", "legacy_bitstream_decode"] }
 object_store = { version = "0.14", default-features = false, features = ["aws-base", "gcp-base", "ring", "reqwest"] }

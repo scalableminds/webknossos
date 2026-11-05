@@ -6,6 +6,7 @@ import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.geometry.{Vec3DoubleProto, Vec3IntProto}
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.tracingstore.annotation.{
+  AddBookmarkAnnotationAction,
   AnnotationBookmarkState,
   UpdateBookmarkStateAnnotationAction,
   UpdateBookmarkThumbnailAnnotationAction,
@@ -28,7 +29,7 @@ class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
       clipSkeletonToCurrentSection = false
     ),
     createdAtVersion = 1L,
-    thumbnailVersion = 1L,
+    thumbnailVersion = Some(1L),
     metadata = Seq(
       MetadataEntryProto("a", stringValue = Some("1")),
       MetadataEntryProto("b", numberValue = Some(2.0)),
@@ -82,20 +83,58 @@ class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
         smallThumbnailDataBase64 = None,
         thumbnailVersion = Some(5L)
       )
-      assert(action.applyOn(fallbackThumbnailVersion = 9L)(bookmark) == bookmark.withThumbnailVersion(5L))
+      assert(action.applyOn(bookmark) == bookmark.withThumbnailVersion(5L))
+      assert(action.copy(thumbnailVersion = None).applyOn(bookmark) == bookmark.clearThumbnailVersion)
     }
 
-    "point to the save version when carrying thumbnails and to an explicit older version otherwise" in {
+    "require the save version when carrying thumbnails and an older version when referencing them" in {
       val withThumbnails = UpdateBookmarkThumbnailAnnotationAction(
         id = 1,
         largeThumbnailDataBase64 = Some("AA=="),
-        smallThumbnailDataBase64 = Some("AA=="),
-        thumbnailVersion = Some(5L)
+        smallThumbnailDataBase64 = None,
+        thumbnailVersion = Some(9L)
       )
-      assert(withThumbnails.resultingThumbnailVersion(saveVersion = 9L) == 9L)
-      val withoutThumbnails = withThumbnails.copy(largeThumbnailDataBase64 = None, smallThumbnailDataBase64 = None)
-      assert(withoutThumbnails.resultingThumbnailVersion(saveVersion = 9L) == 5L)
-      assert(withoutThumbnails.copy(thumbnailVersion = None).resultingThumbnailVersion(saveVersion = 9L) == 9L)
+      assert(withThumbnails.thumbnailVersionError(saveVersion = 9L).isEmpty)
+      assert(withThumbnails.referencedThumbnailVersion.isEmpty)
+      assert(withThumbnails.copy(thumbnailVersion = Some(5L)).thumbnailVersionError(saveVersion = 9L).isDefined)
+      assert(withThumbnails.copy(thumbnailVersion = None).thumbnailVersionError(saveVersion = 9L).isDefined)
+
+      val referencing = withThumbnails.withoutThumbnails.copy(thumbnailVersion = Some(5L))
+      assert(referencing.thumbnailVersionError(saveVersion = 9L).isEmpty)
+      assert(referencing.referencedThumbnailVersion.contains(5L))
+      assert(referencing.copy(thumbnailVersion = Some(9L)).thumbnailVersionError(saveVersion = 9L).isDefined)
+      assert(referencing.copy(thumbnailVersion = None).thumbnailVersionError(saveVersion = 9L).isEmpty)
+    }
+  }
+
+  "AddBookmarkAnnotationAction" should {
+    "require createdAtVersion to be the save version" in {
+      val action = AddBookmarkAnnotationAction(
+        id = 1,
+        created = 0L,
+        name = None,
+        description = None,
+        state = AnnotationBookmarkState(
+          position = Vec3Int(0, 0, 0),
+          mode = ViewModeProto.orthogonal,
+          zoomStep = 1.0,
+          rotation = Vec3Double(0, 0, 0),
+          activeNodeId = None,
+          additionalCoordinates = None,
+          nativelyRenderedLayerName = None,
+          clippingDistance = 50.0,
+          clipSkeletonToCurrentSection = false,
+          tdCamera = None,
+          showSkeletons = None
+        ),
+        largeThumbnailDataBase64 = None,
+        smallThumbnailDataBase64 = None,
+        createdAtVersion = 9L
+      )
+      assert(action.thumbnailVersionError(saveVersion = 9L).isEmpty)
+      assert(action.copy(createdAtVersion = 8L).thumbnailVersionError(saveVersion = 9L).isDefined)
+      assert(action.toProto.createdAtVersion == 9L)
+      assert(action.toProto.thumbnailVersion.isEmpty)
     }
   }
 }

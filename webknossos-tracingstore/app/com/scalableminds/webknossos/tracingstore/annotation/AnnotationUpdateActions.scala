@@ -38,9 +38,10 @@ trait BookmarkUpdateAction extends AnnotationUpdateAction {
   def id: Int
 }
 
-// The thumbnails are stored in their own column family when the update is saved
-// and are stripped from the stored update action. Without thumbnails, an explicit
-// thumbnailVersion points to thumbnails stored earlier (e.g. when undoing in the frontend).
+// The thumbnails are stored in their own column family when the update is saved and are stripped from the stored
+// update action. thumbnailVersion is set by the frontend: to the version of the update group if the action carries
+// thumbnails, to the version of thumbnails stored earlier to reference them (e.g. when undoing), or to None if the
+// bookmark has no thumbnails. The backend validates it, see thumbnailVersionError and AnnotationTransactionService.
 trait BookmarkThumbnailUpdateAction extends BookmarkUpdateAction {
   def largeThumbnailDataBase64: Option[String]
   def smallThumbnailDataBase64: Option[String]
@@ -48,9 +49,18 @@ trait BookmarkThumbnailUpdateAction extends BookmarkUpdateAction {
 
   def hasThumbnails: Boolean = largeThumbnailDataBase64.isDefined || smallThumbnailDataBase64.isDefined
 
-  // The version whose thumbnails the bookmark shows after this action was saved at saveVersion.
-  def resultingThumbnailVersion(saveVersion: Long): Long =
-    if (hasThumbnails) saveVersion else thumbnailVersion.getOrElse(saveVersion)
+  // The version of earlier stored thumbnails this action references, if any.
+  def referencedThumbnailVersion: Option[Long] = if (hasThumbnails) None else thumbnailVersion
+
+  // Checks that do not need to look up stored thumbnails.
+  def thumbnailVersionError(saveVersion: Long): Option[String] =
+    if (hasThumbnails && !thumbnailVersion.contains(saveVersion))
+      Some(s"Bookmark $id carries thumbnails, so its thumbnailVersion must be $saveVersion, got $thumbnailVersion")
+    else if (referencedThumbnailVersion.exists(_ >= saveVersion))
+      Some(s"Bookmark $id references thumbnails of version $thumbnailVersion, which is not older than $saveVersion")
+    else None
+
+  def withoutThumbnails: BookmarkThumbnailUpdateAction
 
   def thumbnails: Seq[(BookmarkThumbnailSize.Value, Array[Byte])] =
     Seq(
@@ -68,27 +78,32 @@ case class AddBookmarkAnnotationAction(
     largeThumbnailDataBase64: Option[String],
     smallThumbnailDataBase64: Option[String],
     metadata: Option[Seq[MetadataEntry]] = None,
-    createdAtVersion: Option[Long] = None, // set by the frontend to the version of the update group
+    createdAtVersion: Long, // set by the frontend to the version of the update group
     thumbnailVersion: Option[Long] = None, // see BookmarkThumbnailUpdateAction
     thumbnailViewport: Option[ThumbnailViewportProto] = None, // the viewport the thumbnails show, if known
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends BookmarkThumbnailUpdateAction derives JsonAutoFormat {
-  def toProto(fallbackVersion: Long): AnnotationBookmarkProto =
+  def toProto: AnnotationBookmarkProto =
     AnnotationBookmarkProto(
       id = id,
       created = created,
       name = name,
       description = description,
       state = state.toProto,
-      createdAtVersion = createdAtVersion.getOrElse(fallbackVersion),
+      createdAtVersion = createdAtVersion,
       metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata)),
-      thumbnailVersion = thumbnailVersion.getOrElse(fallbackVersion),
+      thumbnailVersion = thumbnailVersion,
       thumbnailViewport = thumbnailViewport
     )
 
-  def withoutThumbnails: AddBookmarkAnnotationAction =
+  override def thumbnailVersionError(saveVersion: Long): Option[String] =
+    if (createdAtVersion != saveVersion)
+      Some(s"Bookmark $id must have createdAtVersion $saveVersion, got $createdAtVersion")
+    else super.thumbnailVersionError(saveVersion)
+
+  override def withoutThumbnails: AddBookmarkAnnotationAction =
     this.copy(largeThumbnailDataBase64 = None, smallThumbnailDataBase64 = None)
 
   override def withTimestamp(timestamp: Long): UpdateAction = this.copy(actionTimestamp = Some(timestamp))
@@ -145,13 +160,10 @@ case class UpdateBookmarkThumbnailAnnotationAction(
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
 ) extends BookmarkThumbnailUpdateAction derives JsonAutoFormat {
-  def applyOn(fallbackThumbnailVersion: Long)(bookmark: AnnotationBookmarkProto): AnnotationBookmarkProto =
-    bookmark.copy(
-      thumbnailVersion = thumbnailVersion.getOrElse(fallbackThumbnailVersion),
-      thumbnailViewport = thumbnailViewport
-    )
+  def applyOn(bookmark: AnnotationBookmarkProto): AnnotationBookmarkProto =
+    bookmark.copy(thumbnailVersion = thumbnailVersion, thumbnailViewport = thumbnailViewport)
 
-  def withoutThumbnails: UpdateBookmarkThumbnailAnnotationAction =
+  override def withoutThumbnails: UpdateBookmarkThumbnailAnnotationAction =
     this.copy(largeThumbnailDataBase64 = None, smallThumbnailDataBase64 = None)
 
   override def withTimestamp(timestamp: Long): UpdateAction = this.copy(actionTimestamp = Some(timestamp))

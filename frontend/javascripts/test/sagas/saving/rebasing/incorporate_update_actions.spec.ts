@@ -925,7 +925,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
           description: "A *markdown* description",
           state: bookmarkState,
           createdAtVersion: 1,
-          thumbnailVersion: 1,
+          thumbnailVersion: null,
           thumbnailViewport: null,
           metadata: [{ key: "k", stringValue: "v" }],
           smallThumbnailDataBase64: null,
@@ -1039,7 +1039,7 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
       expect(Store.getState().save.queue).toEqual([]);
 
       Store.dispatch(startForwardingUpdateActionsAction());
-      // The server sets the thumbnailVersion of stored actions, which may point to older thumbnails.
+      // The thumbnailVersion of stored actions may point to older thumbnails (e.g. after undo).
       await incorporateActions([updateBookmarkThumbnail({ ...bookmark, thumbnailVersion: 2 })], 4);
       Store.dispatch(finishForwardingUpdateActionsAction());
       expect(Store.getState().annotation.bookmarks[0].thumbnailVersion).toBe(2);

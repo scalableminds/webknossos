@@ -23,7 +23,7 @@ message AnnotationBookmarkProto {
   required AnnotationBookmarkStateProto state = 5;
   required int64 createdAtVersion = 6; // annotation version that added the bookmark
   repeated MetadataEntryProto metadata = 7;
-  required int64 thumbnailVersion = 8; // annotation version that stored the current thumbnails
+  optional int64 thumbnailVersion = 8; // annotation version at which the current thumbnails are stored, unset if none
   optional ThumbnailViewportProto thumbnailViewport = 9; // viewport the current thumbnails show, unset if unknown
   // Thumbnails are stored in the annotationBookmarkThumbnails column family.
 }

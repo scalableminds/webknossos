@@ -117,8 +117,9 @@ export function* tryToIncorporateActions(
   }
 
   for (const actionBatch of newerActions) {
-    // Stored update actions don't carry thumbnail data, but the server set their thumbnailVersion.
-    // Unsaved actions of the user still carry the local thumbnails (or reference saved ones).
+    // Stored update actions don't carry thumbnail data, only their thumbnailVersion (unset if the
+    // bookmark has no thumbnails). Unsaved actions of the user still carry the local thumbnails
+    // (or reference saved ones).
     const getIncorporatedBookmarkThumbnail = (value: {
       smallThumbnailDataBase64?: string | null;
       largeThumbnailDataBase64?: string | null;
@@ -135,7 +136,7 @@ export function* tryToIncorporateActions(
         : {
             smallThumbnailDataBase64: null,
             largeThumbnailDataBase64: null,
-            thumbnailVersion: value.thumbnailVersion ?? actionBatch.version,
+            thumbnailVersion: value.thumbnailVersion ?? null,
             thumbnailViewport: value.thumbnailViewport ?? null,
           };
     // Per layer: maps each split segment id (segmentId1/segmentId2 of splitAgglomerate actions)

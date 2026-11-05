@@ -49,6 +49,7 @@ import {
   PUSH_THROTTLE_TIME,
   SAVE_RETRY_WAITING_TIME,
 } from "viewer/model/sagas/saving/save_saga_constants";
+import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
 import { Model, Store } from "viewer/singletons";
 import type { SaveQueueEntry, WebknossosState } from "viewer/store";
 import { waitFor } from "../saga_helpers";
@@ -465,8 +466,21 @@ function sliceAppropriateBatchCount(batches: Array<SaveQueueEntry>): Array<SaveQ
   return slicedBatches;
 }
 
-// Also sets the createdAtVersion of added bookmarks to the version that adds them. As the
-// versions are assigned anew for every save request (e.g. after rebasing), so is createdAtVersion.
+// Sets the createdAtVersion of added bookmarks and the thumbnailVersion of sent thumbnails to the
+// version of the save request. As the versions are assigned anew for every save request (e.g.
+// after rebasing), so are these. The server rejects the request if they don't match.
+function addVersionToBookmarkAction(action: UpdateAction, version: number): UpdateAction {
+  if (action.name !== "addBookmark" && action.name !== "updateBookmarkThumbnail") {
+    return action;
+  }
+  const hasThumbnails =
+    action.value.largeThumbnailDataBase64 != null || action.value.smallThumbnailDataBase64 != null;
+  const thumbnailVersion = hasThumbnails ? version : action.value.thumbnailVersion;
+  return action.name === "addBookmark"
+    ? { ...action, value: { ...action.value, createdAtVersion: version, thumbnailVersion } }
+    : { ...action, value: { ...action.value, thumbnailVersion } };
+}
+
 export function addVersionNumbers(
   updateActionsBatches: Array<SaveQueueEntry>,
   lastVersion: number,
@@ -477,12 +491,10 @@ export function addVersionNumbers(
       versionIncrement++;
     }
     const version = lastVersion + versionIncrement;
-    const actions = batch.actions.some((action) => action.name === "addBookmark")
-      ? batch.actions.map((action) =>
-          action.name === "addBookmark"
-            ? { ...action, value: { ...action.value, createdAtVersion: version } }
-            : action,
-        )
+    const actions = batch.actions.some(
+      (action) => action.name === "addBookmark" || action.name === "updateBookmarkThumbnail",
+    )
+      ? batch.actions.map((action) => addVersionToBookmarkAction(action, version))
       : batch.actions;
     return { ...batch, actions, version };
   });

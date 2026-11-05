@@ -141,14 +141,18 @@ class WKRemoteTracingStoreClient(
       bookmark: AnnotationBookmarkProto,
       size: BookmarkThumbnailSize.Value
   ): Fox[Option[Array[Byte]]] =
-    rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/bookmarks/${bookmark.id}/thumbnail")
-      .addQueryParam("size", size.toString)
-      .addQueryParam("v", bookmark.thumbnailVersion)
-      .addQueryParam("token", RpcTokenHolder.webknossosToken)
-      .silentEvenOnFailure
-      .getWithBytesResponse
-      .shiftBox
-      .map(_.toOption)
+    bookmark.thumbnailVersion match {
+      case None                   => Fox.successful(None)
+      case Some(thumbnailVersion) =>
+        rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/bookmarks/${bookmark.id}/thumbnail")
+          .addQueryParam("size", size.toString)
+          .addQueryParam("v", thumbnailVersion)
+          .addQueryParam("token", RpcTokenHolder.webknossosToken)
+          .silentEvenOnFailure
+          .getWithBytesResponse
+          .shiftBox
+          .map(_.toOption)
+    }
 
   def saveUploadedBookmarks(annotationId: ObjectId, bookmarks: Seq[UploadedAnnotationBookmarkProto]): Fox[Unit] = {
     logger.info(s"Called to save ${bookmarks.length} uploaded bookmarks for annotation $annotationId." + baseInfo)

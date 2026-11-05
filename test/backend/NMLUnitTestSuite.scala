@@ -350,7 +350,6 @@ class NMLUnitTestSuite extends AsyncWordSpec {
       MetadataEntryProto("key", stringValue = Some("value")),
       MetadataEntryProto("list", stringListValue = Seq("a", "b"))
     ),
-    thumbnailVersion = 0L,
     thumbnailViewport = Some(ThumbnailViewportProto.TD)
   )
 
@@ -365,8 +364,7 @@ class NMLUnitTestSuite extends AsyncWordSpec {
       clippingDistance = 50,
       clipSkeletonToCurrentSection = false
     ),
-    createdAtVersion = 0L,
-    thumbnailVersion = 0L
+    createdAtVersion = 0L
   )
 
   // Replaces the encoded references to the NML layers with the tracingIds used in the test.

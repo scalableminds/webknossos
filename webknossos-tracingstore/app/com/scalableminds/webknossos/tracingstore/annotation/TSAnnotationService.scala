@@ -221,7 +221,7 @@ class TSAnnotationService @Inject() (
       case a: ApplyableVolumeUpdateAction =>
         annotationWithTracings.applyVolumeAction(a).toFox ?~> Msg.Annotation.ApplyUpdate.volumeActionFailed
       case a: AddBookmarkAnnotationAction =>
-        Fox.successful(annotationWithTracings.addBookmark(a, targetVersion))
+        Fox.successful(annotationWithTracings.addBookmark(a))
       case a: UpdateBookmarkAnnotationAction =>
         updateBookmark(annotationId, annotationWithTracings, a.id)(
           a.applyOn
@@ -236,7 +236,7 @@ class TSAnnotationService @Inject() (
         ) ?~> Msg.Annotation.ApplyUpdate.updateBookmarkFailed
       case a: UpdateBookmarkThumbnailAnnotationAction =>
         updateBookmark(annotationId, annotationWithTracings, a.id)(
-          a.applyOn(targetVersion)
+          a.applyOn
         ) ?~> Msg.Annotation.ApplyUpdate.updateBookmarkFailed
       case a: DeleteBookmarkAnnotationAction =>
         Fox.successful(annotationWithTracings.deleteBookmark(a))

@@ -450,7 +450,6 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
         state = state,
         createdAtVersion = 0L,
         metadata = parseMetadata(node \ "metadata" \ "metadataEntry"),
-        thumbnailVersion = 0L,
         thumbnailViewport = thumbnailViewports.headOption
       ),
       thumbnailLocations

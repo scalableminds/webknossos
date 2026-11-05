@@ -259,10 +259,10 @@ case class AnnotationWithTracings(
     } yield ()
   }
 
-  def addBookmark(a: AddBookmarkAnnotationAction, targetVersion: Long): AnnotationWithTracings =
+  def addBookmark(a: AddBookmarkAnnotationAction): AnnotationWithTracings =
     this.copy(
       annotation = annotation.copy(bookmarkIds = annotation.bookmarkIds.filterNot(_ == a.id) :+ a.id),
-      updatedBookmarks = updatedBookmarks.updated(a.id, a.toProto(targetVersion))
+      updatedBookmarks = updatedBookmarks.updated(a.id, a.toProto)
     )
 
   def withUpdatedBookmarks(bookmarks: Seq[AnnotationBookmarkProto]): AnnotationWithTracings =

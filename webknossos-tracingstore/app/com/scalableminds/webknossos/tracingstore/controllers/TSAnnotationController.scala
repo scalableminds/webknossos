@@ -165,7 +165,7 @@ class TSAnnotationController @Inject() (
     }
 
   // v is the bookmark's thumbnailVersion. The thumbnails stored at a version never change, so they can be cached.
-  def bookmarkThumbnail(annotationId: ObjectId, bookmarkId: Int, size: String, v: Option[Long]): Action[AnyContent] =
+  def bookmarkThumbnail(annotationId: ObjectId, bookmarkId: Int, size: String, v: Long): Action[AnyContent] =
     Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
         for {

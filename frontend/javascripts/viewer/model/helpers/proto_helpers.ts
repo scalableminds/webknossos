@@ -207,7 +207,8 @@ export function parseProtoAnnotationBookmarks(
     description: bookmark.description ?? null,
     state: bookmarkStateFromProto(bookmark.state),
     createdAtVersion: Number(bookmark.createdAtVersion),
-    thumbnailVersion: Number(bookmark.thumbnailVersion),
+    // Unset if the bookmark has no thumbnails.
+    thumbnailVersion: bookmark.thumbnailVersion != null ? Number(bookmark.thumbnailVersion) : null,
     thumbnailViewport: bookmark.thumbnailViewport ?? null,
     metadata: sanitizeMetadata(bookmark.metadata),
     // Thumbnails are loaded separately, see getBookmarkThumbnailUrl.

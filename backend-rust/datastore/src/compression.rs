@@ -3,9 +3,8 @@
 //! zarr3 `BloscCodec`/`GzipCodec`/`ZstdCodec`, `PrecomputedCompressorFactory` sharding encodings,
 //! plus the WKW LZ4 block helpers of `WKWCompressionHelper`).
 //!
-//! Blosc1 is implemented here (see `compression/blosc.rs`), LZ4 blocks are decoded by `lz4_flex`
-//! with a bounded fallback decoder for exact errors (`compression/lz4.rs`) and encoded with
-//! `lz4_flex`, zlib/gzip use `flate2` (miniz_oxide backend) and zstd uses libzstd through the
+//! Blosc1 goes through c-blosc in the `webknossos-blosc` crate (settings in `compression/blosc.rs`),
+//! LZ4 blocks are decoded and encoded by `lz4_flex` (`compression/lz4.rs`), zlib/gzip use `flate2` (miniz_oxide backend) and zstd uses libzstd through the
 //! `zstd` crate.
 //!
 //! Decompression output is bounded by the caller's expected length or
@@ -390,12 +389,10 @@ impl Compressor {
     pub fn decompress_with_limit(&self, input: &[u8], limit: usize) -> DsResult<Vec<u8>> {
         match self {
             Self::Null => Ok(input.to_vec()),
-            Self::Lz4 => lz4::decode_block(input, limit, lz4::Lz4End::InputExhausted)
-                .map(|(out, _)| out)
-                .map_err(|e| match e {
-                    lz4::Lz4Error::TooLarge => fail(size_limit_message(self.id(), None, limit)),
-                    e => fail(e.to_string()),
-                }),
+            Self::Lz4 => lz4::decompress(input, limit).map_err(|e| match e {
+                lz4::Lz4Error::TooLarge => fail(size_limit_message(self.id(), None, limit)),
+                e => fail(e.to_string()),
+            }),
             Self::Zlib { .. } => {
                 let mut out = Vec::new();
                 zlib_decompress_into(input, limit, &mut out).map_err(fail)?;
@@ -618,16 +615,8 @@ pub(crate) fn zstd_compress(input: &[u8], level: i32, checksum: bool) -> Result<
 /// `fastDecompressor`): exactly `num_bytes_per_chunk` bytes must be produced and the whole input
 /// must be consumed.
 pub fn wkw_decompress_block(compressed: &[u8], num_bytes_per_chunk: usize) -> DsResult<Vec<u8>> {
-    let (out, consumed) =
-        lz4::decode_block(compressed, num_bytes_per_chunk, lz4::Lz4End::OutputFull)
-            .map_err(|e| fail(format!("Error processing WKW file: {e}.")))?;
-    if consumed != compressed.len() {
-        return Err(fail(format!(
-            "Error processing WKW file: Decompressed unexpected number of bytes [expected: {}, actual: {consumed}].",
-            compressed.len()
-        )));
-    }
-    Ok(out)
+    lz4::decompress_exact(compressed, num_bytes_per_chunk)
+        .map_err(|e| fail(format!("Error processing WKW file: {e}.")))
 }
 
 /// Scala `WKWCompressionHelper.compressChunk` for LZ4 and LZ4HC blocks. Both produce a standard

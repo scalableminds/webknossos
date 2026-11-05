@@ -177,11 +177,27 @@ body {
     }
   }
 
-  // Co-branding: the partner logo sits next to the WEBKNOSSOS logo.
+  // Co-branding: the partner logo sits next to the WEBKNOSSOS logo, separated by a thin divider.
+  .partner-logo-divider {
+    display: inline-block;
+    width: 1px;
+    height: 24px;
+    margin: 0 14px 0 16px;
+    background-color: rgba(255, 255, 255, 0.35);
+    vertical-align: middle;
+
+    // The collapsed WEBKNOSSOS logo already brings an 8px right margin (icon-margin-right), so
+    // the divider only adds space on its right to keep both gaps equal.
+    &.compact {
+      height: 20px;
+      margin: 0 8px 0 0;
+    }
+  }
+
   .partner-logo {
     height: 24px;
     max-width: 140px;
-    margin-left: 12px;
+    margin-right: 12px;
     object-fit: contain;
     vertical-align: middle;
 
@@ -189,13 +205,13 @@ body {
     &.compact {
       height: 26px;
       max-width: 40px;
-      margin-left: 4px;
+      margin-right: 4px;
     }
 
     &.compact-fallback {
       height: 20px;
       max-width: 80px;
-      margin-left: 4px;
+      margin-right: 4px;
     }
   }
 

@@ -48,6 +48,20 @@ const initialUploadState: UploadState = {
   progress: 0,
 };
 
+// Returns null if the selection can be uploaded. A single zip is unpacked by the datastore, which then checks for the CSV.
+function getFileSelectionError(
+  files: FileWithPath[],
+  csvFiles: FileWithPath[],
+  isZipUpload: boolean,
+): string | null {
+  if (files.length === 0 || isZipUpload) return null;
+  if (csvFiles.length === 0) return "No tile CSV file found among the selected files.";
+  if (csvFiles.length > 1) {
+    return `Found ${csvFiles.length} CSV files (${csvFiles.map((f) => f.path).join(", ")}). Only one is allowed.`;
+  }
+  return null;
+}
+
 export default function AlignmentProjectUploadView({ datastores }: { datastores: APIDataStore[] }) {
   const [form] = Form.useForm<FormValues>();
   const navigate = useNavigate();
@@ -64,10 +78,13 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
     () => datastores.filter((datastore) => datastore.allowsUpload),
     [datastores],
   );
-  const csvFiles = files.filter((file) => file.name.toLowerCase().endsWith(".csv"));
-  // A single zip is unpacked by the datastore, which then checks for the CSV.
+  // The component re-renders on every upload progress event, so the CSV files are not searched again each time.
+  const csvFiles = useMemo(
+    () => files.filter((file) => file.name.toLowerCase().endsWith(".csv")),
+    [files],
+  );
   const isZipUpload = files.length === 1 && files[0].name.toLowerCase().endsWith(".zip");
-  const totalSizeInBytes = files.reduce((sum, file) => sum + file.size, 0);
+  const fileSelectionError = getFileSelectionError(files, csvFiles, isZipUpload);
 
   // The datastores are loaded asynchronously, so the initial value of the (possibly hidden) field
   // would be empty. Select the first one once they are known.
@@ -83,21 +100,6 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
     window.addEventListener("beforeunload", warnBeforeUnload);
     return () => window.removeEventListener("beforeunload", warnBeforeUnload);
   }, [uploadState.isUploading]);
-
-  const getFileAlert = () => {
-    if (files.length === 0 || isZipUpload) return null;
-    if (csvFiles.length === 0) {
-      return { type: "error" as const, title: "No tile CSV file found among the selected files." };
-    }
-    if (csvFiles.length > 1) {
-      return {
-        type: "error" as const,
-        title: `Found ${csvFiles.length} CSV files (${csvFiles.map((f) => f.path).join(", ")}). Only one is allowed.`,
-      };
-    }
-    return null;
-  };
-  const fileAlert = getFileAlert();
 
   // The reserved project stays in UPLOADING, so that the user can see and delete it in the project list.
   const handleUploadFailure = async (message: string) => {
@@ -160,7 +162,7 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
           uploadId,
           totalFileCount: files.length,
           filePaths: files.map((file) => file.path ?? file.name),
-          totalFileSizeInBytes: totalSizeInBytes,
+          totalFileSizeInBytes: files.reduce((sum, file) => sum + file.size, 0),
         },
         name: values.name,
         organizationId: activeUser.organization,
@@ -296,13 +298,8 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
             <UploadedFileList files={files} onRemove={(file) => setFiles(without(files, file))} />
           </Form.Item>
 
-          {fileAlert != null && (
-            <Alert
-              type={fileAlert.type}
-              showIcon
-              style={{ marginBottom: 24 }}
-              title={fileAlert.title}
-            />
+          {fileSelectionError != null && (
+            <Alert type="error" showIcon style={{ marginBottom: 24 }} title={fileSelectionError} />
           )}
 
           <Button type="primary" htmlType="submit" size="large" block>

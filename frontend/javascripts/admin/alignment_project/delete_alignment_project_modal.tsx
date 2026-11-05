@@ -9,13 +9,11 @@ const { Text } = Typography;
 export function DeleteAlignmentProjectModal({
   project,
   hasActiveJobs,
-  isOpen,
   onClose,
   onDeleted,
 }: {
   project: APIAlignmentProject;
   hasActiveJobs: boolean;
-  isOpen: boolean;
   onClose: () => void;
   onDeleted: () => void;
 }) {
@@ -36,14 +34,13 @@ export function DeleteAlignmentProjectModal({
   return (
     <Modal
       title={`Delete "${project.name}"`}
-      open={isOpen}
+      open
       onCancel={onClose}
       onOk={handleDelete}
       okText="Delete Project"
       okButtonProps={{ danger: true }}
       confirmLoading={isDeleting}
       width={ModalWidth.Medium}
-      destroyOnHidden
     >
       <Flex vertical gap="middle">
         <Text>

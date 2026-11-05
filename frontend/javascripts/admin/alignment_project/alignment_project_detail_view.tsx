@@ -483,7 +483,6 @@ function AlignmentProjectDetailView() {
           hasActiveJobs={(jobs ?? []).some(
             (job) => job.state === "PENDING" || job.state === "STARTED",
           )}
-          isOpen
           onClose={() => setIsDeleteModalOpen(false)}
           onDeleted={handleDeleted}
         />

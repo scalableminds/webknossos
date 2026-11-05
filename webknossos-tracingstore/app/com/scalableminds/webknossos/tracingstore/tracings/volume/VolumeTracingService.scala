@@ -239,7 +239,7 @@ class VolumeTracingService @Inject() (
 
     val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracingBeforeRevert)
     val bucketStreamBeforeRevert =
-      volumeLayer.volumeBucketProvider.bucketStreamWithVersion(version = Some(tracingBeforeRevert.version))
+      bucketStreamWithVersionIncludingReverted(volumeLayer, version = Some(tracingBeforeRevert.version))
 
     for {
       fallbackLayer <- getFallbackLayer(annotationId, tracingBeforeRevert)
@@ -256,39 +256,35 @@ class VolumeTracingService @Inject() (
         temporaryTracingService,
         tc
       )
-      _ <- Fox.serialCombined(bucketStreamBeforeRevert) { case (bucketPosition, dataBeforeRevert, version) =>
+      _ <- Fox.serialCombined(bucketStreamBeforeRevert) { case (bucketPosition, dataBeforeRevertOpt, version) =>
         if (version > sourceVersion) {
           loadBucket(volumeLayer, bucketPosition, Some(sourceVersion)).shiftBox.flatMap {
-            case Full(dataAfterRevert) =>
-              for {
-                _ <- saveBucket(volumeLayer, bucketPosition, dataAfterRevert, newVersion)
-                _ <- Fox.runIfOptionTrue(tracingBeforeRevert.hasSegmentIndex)(
-                  updateSegmentIndex(
-                    volumeLayer,
-                    segmentIndexBuffer,
-                    bucketPosition,
-                    dataAfterRevert,
-                    Full(dataBeforeRevert),
-                    editableMappingTracingId(sourceTracing, tracingId)
-                  )
-                )
-              } yield ()
-            case Empty =>
-              for {
-                dataAfterRevert <- Fox.successful(revertedValue)
-                _ <- saveBucket(volumeLayer, bucketPosition, dataAfterRevert, newVersion)
-                _ <- Fox.runIfOptionTrue(tracingBeforeRevert.hasSegmentIndex)(
-                  updateSegmentIndex(
-                    volumeLayer,
-                    segmentIndexBuffer,
-                    bucketPosition,
-                    dataAfterRevert,
-                    Full(dataBeforeRevert),
-                    editableMappingTracingId(sourceTracing, tracingId)
-                  )
-                )
-              } yield ()
+            case Empty if dataBeforeRevertOpt.isEmpty =>
+              Fox.successful(()) // Already reverted, leave it alone
             case Failure(msg, _, chain) => Fox.failure(msg, Empty, chain)
+            case dataAfterRevertBox     =>
+              for {
+                _ <- saveBucket(volumeLayer, bucketPosition, dataAfterRevertBox.getOrElse(revertedValue), newVersion)
+                _ <- Fox.runIfOptionTrue(tracingBeforeRevert.hasSegmentIndex)(
+                  for {
+                    dataBeforeRevertBox <- withFallbackIfReverted(
+                      volumeLayer,
+                      bucketPosition,
+                      dataBeforeRevertOpt
+                    ).shiftBox
+                    dataAfterRevert <- withFallbackIfReverted(volumeLayer, bucketPosition, dataAfterRevertBox.toOption)
+                      .fillEmpty(revertedValue)
+                    _ <- updateSegmentIndex(
+                      volumeLayer,
+                      segmentIndexBuffer,
+                      bucketPosition,
+                      dataAfterRevert,
+                      dataBeforeRevertBox,
+                      editableMappingTracingId(sourceTracing, tracingId)
+                    )
+                  } yield ()
+                )
+              } yield ()
           }
         } else Fox.successful(())
       }
@@ -299,6 +295,16 @@ class VolumeTracingService @Inject() (
       )
     } yield ()
   }
+
+  // Reverted buckets show fallback data (if it exists); the segment index differ needs it.
+  private def withFallbackIfReverted(
+      volumeLayer: VolumeTracingLayer,
+      bucketPosition: BucketPosition,
+      dataOpt: Option[Array[Byte]]
+  ): Fox[Array[Byte]] =
+    Fox.fillOption(dataOpt)(
+      if (volumeLayer.tracing.fallbackLayer.nonEmpty) loadFallbackBucket(volumeLayer, bucketPosition) else Fox.empty
+    )
 
   def initializeWithDataMultiple(annotationId: ObjectId, tracingId: String, tracing: VolumeTracing, initialData: File)(
       using tc: TokenContext

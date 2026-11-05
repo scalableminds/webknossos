@@ -2,21 +2,22 @@ import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import { createTween } from "libs/tween_group";
+import { clamp } from "libs/utils";
 import forEach from "lodash-es/forEach";
 import get from "lodash-es/get";
 import isEqual from "lodash-es/isEqual";
 import setWith from "lodash-es/setWith";
 import throttle from "lodash-es/throttle";
 import {
-  AmbientLight,
   BufferAttribute,
   BufferGeometry,
   Color,
   DirectionalLight,
   FrontSide,
   Group,
+  HemisphereLight,
   Mesh,
-  MeshLambertMaterial,
+  MeshPhysicalMaterial,
   Vector3 as ThreeVector3,
 } from "three";
 import { acceleratedRaycast } from "three-mesh-bvh";
@@ -44,15 +45,72 @@ const hslToSRGB = (hsl: Vector3) => new Color().setHSL(...hsl).convertSRGBToLine
 
 const WHITE = new Color(1, 1, 1);
 const ACTIVATED_COLOR = hslToSRGB([0.7, 0.9, 0.75]);
-const HOVERED_COLOR = hslToSRGB([0.65, 0.9, 0.75]);
 export const PARTITION_COLORS = {
   partitionA: [0.2, 0.2, 0.2] as Vector3,
   partitionB: [0.7, 0.7, 0.7] as Vector3,
 };
 const ACTIVATED_COLOR_VEC3 = ACTIVATED_COLOR.toArray() as Vector3;
-const HOVERED_COLOR_VEC3 = HOVERED_COLOR.toArray() as Vector3;
+// Only used when part of a merged mesh is hovered (proofreading). The hover glow
+// applies to the whole mesh, so that part is recolored instead.
+const HOVERED_COLOR_VEC3 = hslToSRGB([0.65, 0.9, 0.75]).toArray() as Vector3;
+// A hovered mesh glows via its emissive color, which is tinted with the segment color.
+// A dark or dull tint barely shows on a dark surface, so getHoverGlowColor lightens and
+// saturates the tint, and the intensity is raised, the darker/duller the color is.
+// Light, saturated colors stay close to unchanged.
+const HOVER_GLOW_TARGET_LIGHTNESS = 0.65;
+const HOVER_GLOW_TARGET_SATURATION = 0.8;
+const HOVER_GLOW_MAX_LIGHTNESS_BLEND = 0.7;
+const HOVER_GLOW_MAX_SATURATION_BLEND = 0.4;
+// BASE applies to all colors and mainly sets how noticeable the glow is for light
+// colors. DARK_BONUS is scaled by how dark the color is.
+const HOVER_EMISSIVE_INTENSITY_BASE = 0.15;
+const HOVER_EMISSIVE_INTENSITY_DARK_BONUS = 0.35;
 
-type MeshMaterial = MeshLambertMaterial & { originalColor: Vector3 };
+const getHoverGlowColor = (originalColor: Vector3): { color: Color; darkness: number } => {
+  // originalColor is in linear space. Convert it back to sRGB so that the HSL values
+  // match the segment's hex color.
+  const srgbColor = new Color(...originalColor).convertLinearToSRGB();
+  const hsl = { h: 0, s: 0, l: 0 };
+  srgbColor.getHSL(hsl);
+
+  // 0 if the color is at least as light/saturated as the target, up to 1 for black/gray.
+  const darkness = clamp(0, 1 - hsl.l / HOVER_GLOW_TARGET_LIGHTNESS, 1);
+  const dullness = clamp(0, 1 - hsl.s / HOVER_GLOW_TARGET_SATURATION, 1);
+
+  const boostedLightness =
+    hsl.l + (HOVER_GLOW_TARGET_LIGHTNESS - hsl.l) * darkness * HOVER_GLOW_MAX_LIGHTNESS_BLEND;
+  const boostedSaturation =
+    hsl.s + (HOVER_GLOW_TARGET_SATURATION - hsl.s) * dullness * HOVER_GLOW_MAX_SATURATION_BLEND;
+
+  const color = new Color().setHSL(hsl.h, boostedSaturation, boostedLightness);
+  color.convertSRGBToLinear();
+  return { color, darkness };
+};
+
+const setHoverGlow = (material: MeshMaterial, isGlowing: boolean) => {
+  if (!isGlowing) {
+    material.emissiveIntensity = 0;
+    return;
+  }
+  const { color, darkness } = getHoverGlowColor(material.originalColor);
+  material.emissive.copy(color);
+  material.emissiveIntensity =
+    HOVER_EMISSIVE_INTENSITY_BASE + darkness * HOVER_EMISSIVE_INTENSITY_DARK_BONUS;
+};
+
+// Dark colors reflect so little light that the colorless highlights dominate and they
+// look almost black. So, colors with a lightness (HSL) below MIN_MESH_LIGHTNESS are
+// moved DARK_LIGHTNESS_LIFT of the way towards it, e.g. #800000 (lightness 0.25) is
+// rendered with a lightness of 0.35. Lighter colors are left untouched.
+const MIN_MESH_LIGHTNESS = 0.45;
+const DARK_LIGHTNESS_LIFT = 0.5;
+
+const liftDarkLightness = (lightness: number) =>
+  lightness < MIN_MESH_LIGHTNESS
+    ? lightness + (MIN_MESH_LIGHTNESS - lightness) * DARK_LIGHTNESS_LIFT
+    : lightness;
+
+type MeshMaterial = MeshPhysicalMaterial & { originalColor: Vector3 };
 type HighlightEntry = { range: Vector2; color?: Vector3 };
 type HighlightState = HighlightEntry[] | "full" | null;
 export type MeshSceneNode = Mesh<BufferGeometryWithInfo, MeshMaterial> & {
@@ -177,12 +235,26 @@ export default class SegmentMeshController {
     isMerged: boolean,
   ): MeshSceneNode {
     const color = this.getColorObjectForSegment(segmentId, layerName);
-    const meshMaterial = new MeshLambertMaterial({
+    const meshMaterial = new MeshPhysicalMaterial({
       vertexColors: true,
+      // A soft highlight makes curved surfaces (e.g. dendrites) read as 3D. Lower
+      // roughness looks like plastic, higher roughness makes the highlight barely visible.
+      roughness: 0.4,
+      metalness: 0.05,
+      // Sheen adds a white glint at grazing angles, e.g. along silhouettes. Kept low and
+      // narrow, since more sheen washes out the segment color.
+      sheen: 0.2,
+      sheenRoughness: 0.25,
+      sheenColor: WHITE,
+      // A thin clearcoat adds a second, sharper highlight ("wet tissue" look). It's
+      // almost colorless and concentrated, so it doesn't wash out the segment color.
+      clearcoat: 0.05,
+      clearcoatRoughness: 0.1,
     }) as MeshMaterial;
     meshMaterial.side = FrontSide;
     meshMaterial.transparent = true;
-    const colorArray = color.convertSRGBToLinear().toArray() as Vector3;
+    // getColorObjectForSegment already returns the color in linear space.
+    const colorArray = color.toArray() as Vector3;
     meshMaterial.originalColor = colorArray;
 
     // Theoretically, this is not necessary for meshes that don't need non-uniform
@@ -439,6 +511,10 @@ export default class SegmentMeshController {
     // If in nd-dataset, set the color for all additional coordinates
     this.applyOnMeshGroupChildren(layerName, id, (child: MeshSceneNode) => {
       child.material.originalColor = colorArray;
+      // Re-tint the glow of a hovered mesh with the new color.
+      if (child.material.emissiveIntensity > 0) {
+        setHoverGlow(child.material, true);
+      }
       if (child.material.vertexColors) {
         setRangeToColor(child.geometry, null, colorArray);
         child.geometry.attributes.color.needsUpdate = true;
@@ -459,53 +535,32 @@ export default class SegmentMeshController {
 
   getColorObjectForSegment(segmentId: bigint, layerName: string) {
     const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), segmentId, layerName);
-    const color = new Color().setHSL(hue, saturation, light);
+    const color = new Color().setHSL(hue, saturation, liftDarkLightness(light));
     color.convertSRGBToLinear();
 
     return color;
   }
 
   addLights(): void {
-    const settings = {
-      ambientIntensity: 0.41,
-      dirLight1Intensity: 0.54,
-      dirLight2Intensity: 0.29,
-      dirLight3Intensity: 0.29,
-      dirLight4Intensity: 0.17,
-      dirLight5Intensity: 1.03,
-      dirLight6Intensity: 0.29,
-      dirLight7Intensity: 0.17,
-      dirLight8Intensity: 0.54,
-    };
+    // The main lights are attached to the TD camera (see PlaneView). These world-space
+    // lights only keep meshes from going completely black. They are few and faint on
+    // purpose: many similar lights from all directions cancel out the shading.
+    // Unlike an ambient light, the hemisphere light has a soft top-to-bottom gradient,
+    // so it lifts the shadows without making the meshes look flat. "Up" is -z, which
+    // matches the up vector of the default TD camera.
+    const hemisphereLight = new HemisphereLight("white", 0x808080, 0.25);
+    hemisphereLight.position.set(0, 0, -1);
+    this.lightsGroup.add(hemisphereLight);
 
-    // Note that the PlaneView also attaches a directional light directly to the TD camera,
-    // so that the light moves along the cam.
-    const ambientLight = new AmbientLight("white", settings.ambientIntensity);
-    this.lightsGroup.add(ambientLight);
+    // Faint, cool-toned light from behind so that overlapping branches keep a visible edge.
+    const rimLight = new DirectionalLight(0xcfe0ff, 0.5);
+    rimLight.position.set(-1, 0.5, -1).normalize();
+    this.lightsGroup.add(rimLight);
 
-    const lightPositions: Vector3[] = [
-      [1, 1, 1],
-      [-1, 1, 1],
-      [1, -1, 1],
-      [-1, -1, 1],
-      [1, 1, -1],
-      [-1, 1, -1],
-      [1, -1, -1],
-      [-1, -1, -1],
-    ];
-
-    const directionalLights: DirectionalLight[] = [];
-
-    lightPositions.forEach((pos, index) => {
-      const light = new DirectionalLight(
-        WHITE,
-        // @ts-expect-error
-        settings[`dirLight${index + 1}Intensity`] || 1,
-      );
-      light.position.set(...pos).normalize();
-      directionalLights.push(light);
-      this.lightsGroup.add(light);
-    });
+    // Faint, warm-toned light from below so that undersides never go completely black.
+    const bounceLight = new DirectionalLight(0xffe9cf, 0.2);
+    bounceLight.position.set(0.4, -1, 0.5).normalize();
+    this.lightsGroup.add(bounceLight);
   }
 
   private getMeshGroupsByLOD(
@@ -635,6 +690,18 @@ export default class SegmentMeshController {
       }
     }
 
+    if (isHovered != null) {
+      // The glow applies to the whole material. If only part of a merged mesh is
+      // hovered (proofreading), that part is recolored below instead.
+      const isWholeMeshHovered =
+        mesh.hoveredState != null && (mesh.hoveredState === "full" || !mesh.isMerged);
+      parent.traverse((child) => {
+        if (child instanceof Mesh) {
+          setHoverGlow(child.material, isWholeMeshHovered);
+        }
+      });
+    }
+
     const setMaterialToUniformColor = (material: MeshMaterial, color: Color) => {
       material.vertexColors = false;
       material.color = color;
@@ -648,10 +715,10 @@ export default class SegmentMeshController {
       material.needsUpdate = true;
     };
 
-    const isUniformColor = (mesh.activeState || mesh.hoveredState) === "full" || !mesh.isMerged;
+    const isUniformColor = mesh.activeState === "full" || !mesh.isMerged;
 
     if (isUniformColor) {
-      let newColor = mesh.hoveredState ? HOVERED_COLOR : new Color(...mesh.material.originalColor);
+      const newColor = new Color(...mesh.material.originalColor);
 
       // Update the material for all meshes that belong to the current
       // segment ID. Only for adhoc meshes, these will contain multiple

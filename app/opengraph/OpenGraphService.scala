@@ -199,7 +199,7 @@ class OpenGraphService @Inject() (
     OpenGraphTags(
       Some("WEBKNOSSOS"),
       description,
-      None
+      Some(s"${conf.Http.uri}/images/og-image.png")
     )
   }
 }

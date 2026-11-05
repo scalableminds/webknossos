@@ -271,14 +271,17 @@ describe("Proofreading agglomerate tree syncing", () => {
 
         // Prepare the server's reply for the upcoming split.
         vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-          Promise.resolve([
-            {
-              position1: getPositionForSegmentId(1),
-              position2: getPositionForSegmentId(2),
-              segmentId1: 1n,
-              segmentId2: 2n,
-            },
-          ]),
+          Promise.resolve({
+            ok: true,
+            value: [
+              {
+                position1: getPositionForSegmentId(1),
+                position2: getPositionForSegmentId(2),
+                segmentId1: 1n,
+                segmentId2: 2n,
+              },
+            ],
+          }),
         );
 
         // Execute the split and wait for the finished mapping.
@@ -336,14 +339,17 @@ describe("Proofreading agglomerate tree syncing", () => {
 
         // Prepare the server's reply for the upcoming split.
         vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-          Promise.resolve([
-            {
-              position1: getPositionForSegmentId(1),
-              position2: getPositionForSegmentId(2),
-              segmentId1: 1n,
-              segmentId2: 2n,
-            },
-          ]),
+          Promise.resolve({
+            ok: true,
+            value: [
+              {
+                position1: getPositionForSegmentId(1),
+                position2: getPositionForSegmentId(2),
+                segmentId1: 1n,
+                segmentId2: 2n,
+              },
+            ],
+          }),
         );
 
         // Execute the split and wait for the finished mapping.
@@ -458,14 +464,17 @@ describe("Proofreading agglomerate tree syncing", () => {
 
         // Prepare the server's reply for the upcoming split.
         vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-          Promise.resolve([
-            {
-              position1: getPositionForSegmentId(1),
-              position2: getPositionForSegmentId(2),
-              segmentId1: 1n,
-              segmentId2: 2n,
-            },
-          ]),
+          Promise.resolve({
+            ok: true,
+            value: [
+              {
+                position1: getPositionForSegmentId(1),
+                position2: getPositionForSegmentId(2),
+                segmentId1: 1n,
+                segmentId2: 2n,
+              },
+            ],
+          }),
         );
 
         // Execute the actual split between segments 1 with segment 2.
@@ -518,17 +527,20 @@ describe("Proofreading agglomerate tree syncing", () => {
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getNeighborsForAgglomerateNode).mockReturnValue(
         Promise.resolve({
-          segmentId: 2n,
-          neighbors: [
-            {
-              segmentId: 1n,
-              position: getPositionForSegmentId(1) as Vector3,
-            },
-            {
-              segmentId: 3n,
-              position: getPositionForSegmentId(3) as Vector3,
-            },
-          ],
+          ok: true,
+          value: {
+            segmentId: 2n,
+            neighbors: [
+              {
+                segmentId: 1n,
+                position: getPositionForSegmentId(1) as Vector3,
+              },
+              {
+                segmentId: 3n,
+                position: getPositionForSegmentId(3) as Vector3,
+              },
+            ],
+          },
         }),
       );
 
@@ -739,14 +751,17 @@ describe("Proofreading agglomerate tree syncing", () => {
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-        Promise.resolve([
-          {
-            position1: getPositionForSegmentId(1),
-            position2: getPositionForSegmentId(2),
-            segmentId1: 1n,
-            segmentId2: 2n,
-          },
-        ]),
+        Promise.resolve({
+          ok: true,
+          value: [
+            {
+              position1: getPositionForSegmentId(1),
+              position2: getPositionForSegmentId(2),
+              segmentId1: 1n,
+              segmentId2: 2n,
+            },
+          ],
+        }),
       );
 
       // Execute the split and wait for the finished mapping.
@@ -811,14 +826,17 @@ describe("Proofreading agglomerate tree syncing", () => {
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-        Promise.resolve([
-          {
-            position1: getPositionForSegmentId(2),
-            position2: getPositionForSegmentId(3),
-            segmentId1: 2n,
-            segmentId2: 3n,
-          },
-        ]),
+        Promise.resolve({
+          ok: true,
+          value: [
+            {
+              position1: getPositionForSegmentId(2),
+              position2: getPositionForSegmentId(3),
+              segmentId1: 2n,
+              segmentId2: 3n,
+            },
+          ],
+        }),
       );
 
       // Execute the split and wait for the finished mapping.
@@ -882,17 +900,20 @@ describe("Proofreading agglomerate tree syncing", () => {
     // Prepare the server's reply for the upcoming split from all neighbors request.
     vi.mocked(context.mocks.getNeighborsForAgglomerateNode).mockReturnValue(
       Promise.resolve({
-        segmentId: 2n,
-        neighbors: [
-          {
-            segmentId: 1n,
-            position: getPositionForSegmentId(1) as Vector3,
-          },
-          {
-            segmentId: 3n,
-            position: getPositionForSegmentId(3) as Vector3,
-          },
-        ],
+        ok: true,
+        value: {
+          segmentId: 2n,
+          neighbors: [
+            {
+              segmentId: 1n,
+              position: getPositionForSegmentId(1) as Vector3,
+            },
+            {
+              segmentId: 3n,
+              position: getPositionForSegmentId(3) as Vector3,
+            },
+          ],
+        },
       }),
     );
 
@@ -997,14 +1018,17 @@ describe("Proofreading agglomerate tree syncing", () => {
 
     // Prepare the server's reply for the upcoming split between 1337 & 1338 edge.
     vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-      Promise.resolve([
-        {
-          position1: getPositionForSegmentId(1337),
-          position2: getPositionForSegmentId(1338),
-          segmentId1: 1337n,
-          segmentId2: 1338n,
-        },
-      ]),
+      Promise.resolve({
+        ok: true,
+        value: [
+          {
+            position1: getPositionForSegmentId(1337),
+            position2: getPositionForSegmentId(1338),
+            segmentId1: 1337n,
+            segmentId2: 1338n,
+          },
+        ],
+      }),
     );
 
     const { annotation } = Store.getState();
@@ -1162,14 +1186,17 @@ describe("Proofreading agglomerate tree syncing", () => {
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-        Promise.resolve([
-          {
-            position1: getPositionForSegmentId(1),
-            position2: getPositionForSegmentId(2),
-            segmentId1: 1n,
-            segmentId2: 2n,
-          },
-        ]),
+        Promise.resolve({
+          ok: true,
+          value: [
+            {
+              position1: getPositionForSegmentId(1),
+              position2: getPositionForSegmentId(2),
+              segmentId1: 1n,
+              segmentId2: 2n,
+            },
+          ],
+        }),
       );
 
       // Execute the split and wait for the finished mapping.

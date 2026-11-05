@@ -2,7 +2,9 @@ package backend
 
 import com.scalableminds.util.box.Failure
 import com.scalableminds.webknossos.tracingstore.annotation.{RevertToVersionAnnotationAction, UpdateGroupHandling}
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.MergeTreeSkeletonAction
+import com.scalableminds.webknossos.tracingstore.tracings.volume.UpdateBucketPartialVolumeAction
 import org.scalatest.wordspec.AsyncWordSpec
 
 class UpdateGroupHandlingUnitTestSuite extends AsyncWordSpec with UpdateGroupHandling {
@@ -134,6 +136,33 @@ class UpdateGroupHandlingUnitTestSuite extends AsyncWordSpec with UpdateGroupHan
       )
       val res = reorderAndRegroupByIsolationSensitiveActions(updateGroupsBefore)
       assert(res.isInstanceOf[Failure])
+    }
+
+    "stop concatenating at the updateBucketPartial cap, without splitting saved groups" in {
+      def partialActions(count: Int) = List.fill(count)(
+        UpdateBucketPartialVolumeAction(
+          actionTracingId = Dummies.tracingId,
+          position = Vec3Int(0, 0, 0),
+          mag = Vec3Int.ones,
+          additionalCoordinates = None,
+          voxelRunsBase64 = ""
+        )
+      )
+      val merge = MergeTreeSkeletonAction(sourceId = 1, targetId = 2, actionTracingId = Dummies.tracingId)
+      val updateGroupsBefore = List(
+        (6L, partialActions(1)),
+        (5L, List(merge)),
+        (4L, partialActions(5)), // exceeds the cap on its own
+        (3L, partialActions(2)),
+        (2L, merge :: partialActions(2)),
+        (1L, partialActions(1))
+      )
+      val res =
+        reorderAndRegroupByIsolationSensitiveActions(updateGroupsBefore, maxUpdateBucketPartialActions = 3)
+          .get("test context")
+      // Groups without updateBucketPartial actions never start a new group.
+      assert(res.map(_._1) == List(2L, 3L, 5L, 6L))
+      assert(res.map(_._2.length) == List(4, 2, 6, 1))
     }
   }
 

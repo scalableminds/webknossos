@@ -324,8 +324,8 @@ export class BackendMock {
     _layerName: string,
     _mappingName: string,
     segmentId: bigint,
-  ): Promise<Vector3> => {
-    return getPositionForSegmentId(segmentId);
+  ): Promise<ApiResult<Vector3>> => {
+    return { ok: true, value: getPositionForSegmentId(segmentId) };
   };
 
   planVersionInjection(
@@ -518,7 +518,7 @@ export function prepareGetNeighborsForAgglomerateNode(
         agglomerateId: NumberLike;
         editableMappingId: string;
       },
-    ): Promise<NeighborInfo> => {
+    ): Promise<ApiResult<NeighborInfo>> => {
       if (version !== expectedVersion) {
         throw new Error(
           `Version mismatch. Expected requested version to be ${expectedVersion} but got ${version}`,
@@ -543,13 +543,19 @@ export function prepareGetNeighborsForAgglomerateNode(
               },
             ];
         return {
-          segmentId: 2n,
-          neighbors,
+          ok: true,
+          value: {
+            segmentId: 2n,
+            neighbors,
+          },
         };
       }
       return {
-        segmentId: toBigInt(segmentInfo.segmentId),
-        neighbors: [],
+        ok: true,
+        value: {
+          segmentId: toBigInt(segmentInfo.segmentId),
+          neighbors: [],
+        },
       };
     },
   );
@@ -700,7 +706,7 @@ export const mockEdgesForPartitionedAgglomerateMinCut = (
         agglomerateId: NumberLike;
         editableMappingId: string;
       },
-    ): Promise<Array<MinCutTargetEdge>> => {
+    ): Promise<ApiResult<Array<MinCutTargetEdge>>> => {
       if (version !== expectedRequestedVersion) {
         throw new Error(
           `Unexpected version of min cut request. Expected version ${expectedRequestedVersion} but got ${version}`,
@@ -712,21 +718,24 @@ export const mockEdgesForPartitionedAgglomerateMinCut = (
         isEqual(partition1, [1n, 2n]) &&
         isEqual(partition2, [1337n, 1338n])
       ) {
-        return [
-          {
-            position1: getPositionForSegmentId(1),
-            position2: getPositionForSegmentId(1338),
-            segmentId1: 1n,
-            segmentId2: 1338n,
-          },
-          {
-            position1: getPositionForSegmentId(3),
-            position2: getPositionForSegmentId(1337),
-            segmentId1: 3n,
-            segmentId2: 1337n,
-          },
-          ...additionalEdgesToRemove,
-        ];
+        return {
+          ok: true,
+          value: [
+            {
+              position1: getPositionForSegmentId(1),
+              position2: getPositionForSegmentId(1338),
+              segmentId1: 1n,
+              segmentId2: 1338n,
+            },
+            {
+              position1: getPositionForSegmentId(3),
+              position2: getPositionForSegmentId(1337),
+              segmentId1: 3n,
+              segmentId2: 1337n,
+            },
+            ...additionalEdgesToRemove,
+          ],
+        };
       }
       throw new Error("Unexpected min cut request");
     },

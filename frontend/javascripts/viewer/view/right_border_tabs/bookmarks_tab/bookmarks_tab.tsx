@@ -53,7 +53,7 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import { setViewModeAction } from "viewer/model/actions/settings_actions";
 import { setBookmarkIdToFocusAction } from "viewer/model/actions/ui_actions";
-import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/rebase_helpers";
 import { diffMetadata } from "viewer/model/sagas/diffing/volume_diffing";
 import Store, { type WebknossosState } from "viewer/store";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";

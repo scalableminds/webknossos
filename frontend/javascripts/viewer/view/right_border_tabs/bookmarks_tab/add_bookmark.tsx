@@ -8,7 +8,7 @@ import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { ANNOTATION_SCOPED_TRACING_ID, dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import { addBookmarkAction, type BookmarkThumbnail } from "viewer/model/actions/annotation_actions";
 import { setBookmarkIdToFocusAction } from "viewer/model/actions/ui_actions";
-import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/rebase_helpers";
 import Store from "viewer/store";
 import { LayoutEvents, layoutEmitter } from "viewer/view/layouting/layout_persistence";
 import { type BookmarkThumbnails, captureBookmarkThumbnails } from "viewer/view/rendering_utils";

@@ -173,6 +173,25 @@ trait BucketKeys extends WKWDataFormatHelper with AdditionalCoordinateKey {
 
 }
 
+object VolumeTracingBucketHelper extends ReversionHelper {
+
+  // Maps reverted markers to Empty, so that they are treated like buckets that were never written.
+  def revertedAsEmpty(bucketBoxes: Seq[Box[Array[Byte]]]): Seq[Box[Array[Byte]]] =
+    bucketBoxes.map(_.flatMap(bytes => if (isRevertedElement(bytes)) Empty else Full(bytes)))
+
+  // Replaces the Empty boxes, in order, by the fallback boxes. Expects one fallback box per Empty box.
+  def fillEmptyWithFallback(
+      bucketBoxes: Seq[Box[Array[Byte]]],
+      fallbackBoxes: Seq[Box[Array[Byte]]]
+  ): Seq[Box[Array[Byte]]] = {
+    val fallbackIterator = fallbackBoxes.iterator
+    bucketBoxes.map {
+      case Empty => fallbackIterator.next()
+      case other => other
+    }
+  }
+}
+
 trait VolumeTracingBucketHelper
     extends KeyValueStoreConversions
     with VolumeBucketCompression
@@ -196,13 +215,13 @@ trait VolumeTracingBucketHelper
         } else {
           volumeDataStore.getMultipleKeysByList(bucketKeys, version)(wrapInBox).map(_.map(_.map(_.value)))
         }
-      bucketBoxesWithFallback <- addFallbackBucketData(volumeLayer, bucketPositions, bucketKeyValueBoxesFromFossil)
+      // Reverted markers must become Empty before the fallback lookup, so that they are filled with fallback data
+      // like missing buckets are (compare loadBucket).
+      bucketBoxesWithoutReverted = VolumeTracingBucketHelper.revertedAsEmpty(bucketKeyValueBoxesFromFossil)
+      bucketBoxesWithFallback <- addFallbackBucketData(volumeLayer, bucketPositions, bucketBoxesWithoutReverted)
       bucketBoxesUnpacked = bucketBoxesWithFallback.map { bucketBox =>
         bucketBox.flatMap { (volumeBucket: Array[Byte]) =>
-          if (isRevertedElement(volumeBucket)) Empty
-          else {
-            tryo(decompressIfNeeded(volumeBucket, volumeLayer.expectedUncompressedBucketSize, ""))
-          }
+          tryo(decompressIfNeeded(volumeBucket, volumeLayer.expectedUncompressedBucketSize, ""))
         }
       }
     } yield bucketBoxesUnpacked
@@ -246,13 +265,7 @@ trait VolumeTracingBucketHelper
         _ <- Fox.fromBool(
           bucketBoxesFromDataStore.length == indicesWhereEmpty.length
         ) ?~> Msg.Annotation.Volume.fallbackDataLengthMismatch
-        bucketBoxesFromDataStoreIterator = bucketBoxesFromDataStore.iterator
-        bucketBoxesFilled = bucketBoxesFromFossil.map {
-          case Full(bucketFromFossil) => Full(bucketFromFossil)
-          case Empty                  => bucketBoxesFromDataStoreIterator.next()
-          case f: Failure             => f
-        }
-      } yield bucketBoxesFilled
+      } yield VolumeTracingBucketHelper.fillEmptyWithFallback(bucketBoxesFromFossil, bucketBoxesFromDataStore)
     }
 
   private def splitIntoBuckets(

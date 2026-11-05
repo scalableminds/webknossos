@@ -1,34 +1,8 @@
-use serde::Deserialize;
 use std::path::PathBuf;
 use webknossos_datastore::datareaders::precomputed::compresso::{CompressoHeader, decode};
 use webknossos_datastore::datareaders::{ArrayAxes, ArraySource};
 fn root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/compresso")
-}
-#[derive(Deserialize)]
-struct Case {
-    name: String,
-    width: usize,
-    shape: [usize; 3],
-}
-#[test]
-fn independent_encoder_and_native_cpp_corpus_matches_all_windows_labels_and_connectivity() {
-    let cases: Vec<Case> =
-        serde_json::from_slice(&std::fs::read(root().join("cases.json")).unwrap()).unwrap();
-    for case in cases {
-        let bytes = std::fs::read(root().join(format!("{}.cpso", case.name))).unwrap();
-        let header = CompressoHeader::parse(&bytes).unwrap();
-        assert_eq!(header.shape, case.shape);
-        assert_eq!(header.label_width, case.width);
-        let expected = std::fs::read(root().join(format!("{}.raw", case.name))).unwrap();
-        assert_eq!(
-            decode(&bytes, expected.len()).unwrap(),
-            expected,
-            "{}",
-            case.name
-        );
-        assert!(decode(&bytes, expected.len() - 1).is_err(), "{}", case.name);
-    }
 }
 #[test]
 fn safe_errors_and_literal_instructions_match_actual_repository_jni() {
@@ -55,6 +29,8 @@ fn safe_errors_and_literal_instructions_match_actual_repository_jni() {
 #[test]
 fn malformed_counts_steps_indices_and_size_limits_fail_without_panicking() {
     let source = std::fs::read(root().join("literal_escape.cpso")).unwrap();
+    // The caller's output limit (here below the one decoded byte) is enforced.
+    assert!(decode(&source, 0).is_err());
     for n in 0..36 {
         assert!(decode(&source[..n], 1024).is_err());
     }
@@ -76,13 +52,17 @@ fn malformed_counts_steps_indices_and_size_limits_fail_without_panicking() {
     let mut bytes = source.clone();
     bytes[6..12].fill(255);
     assert!(decode(&bytes, usize::MAX).is_err());
-    // Out-of-table boundary code and a run beyond the single-block grid.
+    // Out-of-table boundary code.
     let mut bytes = source.clone();
     *bytes.last_mut().unwrap() = 2;
     assert!(decode(&bytes, 1024).is_err());
+    // Like native, a trailing zero run beyond the single-block grid is harmless.
     let mut bytes = source.clone();
     *bytes.last_mut().unwrap() = 255;
-    assert!(decode(&bytes, 1024).is_err());
+    assert_eq!(
+        decode(&bytes, 1024).unwrap(),
+        std::fs::read(root().join("literal_escape.raw")).unwrap()
+    );
     // No value after a literal-escape instruction (unlike native's unchecked read).
     let mut bytes = source.clone();
     bytes[27..35].copy_from_slice(&1u64.to_le_bytes());

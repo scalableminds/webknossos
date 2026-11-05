@@ -551,6 +551,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "compresso-rs"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ace0363ae7b460deb1260901da8332f4627f1fc4c658bb86ab4c664c95973950"
+
+[[package]]
 name = "const-oid"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4681,6 +4687,7 @@ dependencies = [
  "base64 0.23.1",
  "brotli-decompressor",
  "bytes",
+ "compresso-rs",
  "draco-core",
  "flate2",
  "futures",

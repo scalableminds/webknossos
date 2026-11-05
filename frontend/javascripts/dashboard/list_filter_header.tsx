@@ -32,7 +32,7 @@ export function ListFilterHeader({
       className="dashboard-list-filter-bar"
     >
       <Typography.Text type="secondary">{summary}</Typography.Text>
-      <Space size="small" wrap>
+      <Space size="small" wrap className="dashboard-list-filter-chips">
         {children}
       </Space>
     </Flex>

@@ -34,7 +34,7 @@ import dayjs from "dayjs";
 import features from "features";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
-import { hasFinePointer, isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
+import { isPrimaryPointerFine, isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import type React from "react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { Link } from "react-router";
@@ -56,16 +56,24 @@ import {
   SEARCH_RESULTS_LIMIT,
   useFolderQuery,
 } from "./dataset/queries";
+import { useIsCompactDashboard } from "./responsive_sidebar";
 
 type Props = {
   user: APIUser;
   context: DatasetCollectionContextValue;
-  onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
+  onSelectDataset: (
+    dataset: APIDatasetCompact | null,
+    multiSelect?: boolean,
+    isDragStart?: boolean,
+  ) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
   // Custom content shown as the table's empty state instead of the regular hint text.
   // Used for cards for a brand-new organizations.
   emptyStateContent?: React.ReactNode;
+  // The button that opens the folder drawer on compact screens. It is part of the toolbar, so
+  // that it wraps with the same spacing as the other toolbar items.
+  folderPicker?: React.ReactNode;
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
 type PersistenceState = {
@@ -108,8 +116,10 @@ function DatasetView({
   selectedDatasets,
   onSelectFolder,
   emptyStateContent,
+  folderPicker,
 }: Props) {
   const searchQuery = context.globalSearchQuery;
+  const isCompact = useIsCompactDashboard("xl");
   const setSearchQuery = context.setGlobalSearchQuery;
   const [searchTags, setSearchTags] = useState<string[]>([]);
   const [datasetFilteringMode, setDatasetFilteringMode] =
@@ -189,6 +199,7 @@ function DatasetView({
         onClearSearchAndFilters={clearSearchAndFilters}
         isLoading={isLoading}
         emptyStateContent={emptyStateContent}
+        isCompact={isCompact}
       />
     );
   }
@@ -198,7 +209,7 @@ function DatasetView({
       prefix={<SearchOutlined />}
       allowClear
       // Autofocusing on touch devices would pop up the on-screen keyboard.
-      autoFocus={hasFinePointer()}
+      autoFocus={isPrimaryPointerFine()}
       style={{
         width: 200,
       }}
@@ -214,6 +225,7 @@ function DatasetView({
 
   const adminHeader = isUserAdminOrDatasetManagerOrTeamManager ? (
     <Space wrap>
+      {folderPicker}
       <DatasetRefreshButton context={context} />
       <DatasetAddButton context={context} />
       {context.activeFolderId != null && (
@@ -235,7 +247,10 @@ function DatasetView({
       {searchBox}
     </Space>
   ) : (
-    searchBox
+    <Space wrap>
+      {folderPicker}
+      {searchBox}
+    </Space>
   );
 
   const datasets = context.datasets;

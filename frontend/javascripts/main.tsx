@@ -30,6 +30,7 @@ import "../stylesheets/main.less";
 import { checkAnyOrganizationExists, getOrganization } from "admin/api/organization";
 import { CheckCertificateModal } from "components/check_certificate_modal";
 import DisableGenericDnd from "components/disable_generic_dnd";
+import { SyncActiveOrganization } from "components/sync_active_organization";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
 import { folderHierarchyQueryOptions } from "dashboard/dataset/queries";
 import { RouterProvider } from "react-router/dom";
@@ -165,6 +166,7 @@ async function initApp() {
                 <RootForFastTooltips />
                 <DisableGenericDnd />
                 <CheckCertificateModal />
+                <SyncActiveOrganization />
                 <CheckTermsOfServices />
                 <RouterProvider router={router} />
               </GlobalThemeProvider>

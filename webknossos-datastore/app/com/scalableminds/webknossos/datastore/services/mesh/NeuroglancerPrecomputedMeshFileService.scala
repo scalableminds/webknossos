@@ -80,12 +80,7 @@ class NeuroglancerPrecomputedMeshFileService @Inject() (dataVaultService: DataVa
       vaultPath <- dataVaultService.vaultPathFor(meshFileKey.attachment)
       mesh <- meshInfoCache.getOrLoad(meshFileKey, loadRemoteMeshInfo)
       chunkScale = Array.fill(3)(1 / math.pow(2, mesh.meshInfo.vertex_quantization_bits))
-      lookups <-
-        if (failOnZeroChunks)
-          Fox.serialCombined(segmentIds)(id =>
-            listMeshChunks(vaultPath, mesh, id).map(lods => SegmentMeshLookup(id, Some(lods)))
-          )
-        else lookUpSegmentsSkippingFailed(vaultPath, mesh, segmentIds)
+      lookups <- lookUpSegmentsSkippingFailed(vaultPath, mesh, segmentIds)
       _ <- Fox.fromBool(lookups.exists(_.hasEntry) || !failOnZeroChunks) ?~>
         Msg.Mesh.File.zeroChunks(segmentIds.mkString(","), meshFileKey.attachment.name)
       segmentInfo <- WebknossosSegmentInfo.fromSegmentLookups(lookups, NeuroglancerMesh.meshEncoding, chunkScale).toFox

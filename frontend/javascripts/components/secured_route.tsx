@@ -5,6 +5,7 @@ import {
   type PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { getUnversionedAnnotationInformation } from "admin/rest_api";
+import BrainSpinner from "components/brain_spinner";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
 import { useApi, useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrManager } from "libs/utils";
@@ -35,6 +36,7 @@ function SecuredRoute({
   // If the annotation cannot be found, the query fails without an error toast and the
   // resource is treated as not public. Cached data is ignored until a fresh response
   // arrived, since the visibility might have changed in the meantime.
+  const shouldCheckVisibility = !isAuthenticated && checkIfResourceIsPublic && !!id;
   const {
     data: visibility,
     isFetchedAfterMount,
@@ -50,7 +52,7 @@ function SecuredRoute({
       // Only keep the visibility in the cache, not the whole annotation.
       return result.ok ? { ok: true, value: result.value.visibility } : result;
     },
-    enabled: !isAuthenticated && checkIfResourceIsPublic && !!id,
+    enabled: shouldCheckVisibility,
     // A failed background refetch would flip isSuccess and unmount the open viewer.
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -65,6 +67,11 @@ function SecuredRoute({
   const isAdminOrManager = activeUser && isUserAdminOrManager(activeUser);
 
   if (!isCompletelyAuthenticated) {
+    // Avoid flashing the login form for annotations that turn out to be public.
+    // The viewer shows the same spinner while loading.
+    if (shouldCheckVisibility && !isFetchedAfterMount) {
+      return <BrainSpinner />;
+    }
     return <LoginView redirect={`${location.pathname}${location.search}`} />;
   }
 

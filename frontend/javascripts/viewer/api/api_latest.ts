@@ -57,7 +57,11 @@ import {
 } from "viewer/controller/combinations/skeleton_handlers";
 import UrlManager from "viewer/controller/url_manager";
 import type { WebKnossosModel } from "viewer/model";
-import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import {
+  getVolumeDescriptors,
+  isConcurrentCollaborationMode,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -66,7 +70,6 @@ import {
   getMappingInfoOrNull,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getAdditionalCoordinatesAsString,
@@ -96,7 +99,6 @@ import {
   getRequestedOrVisibleSegmentationLayerEnforced,
   getSegmentColorAsRGBA,
   getSegmentsForLayer,
-  getVolumeDescriptors,
   getVolumeTracingById,
   getVolumeTracingByNameOrActive,
   getVolumeTracings,
@@ -180,6 +182,7 @@ import {
   zoomedAddressToZoomedPosition,
   zoomedPositionToZoomedAddress,
 } from "viewer/model/helpers/position_converter";
+import { flatToNestedMatrix } from "viewer/model/helpers/transformation_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
@@ -2432,6 +2435,13 @@ class DataApi {
         ? state.flycam.additionalCoordinates
         : optAdditionalCoordinates;
     if (!allowUpdate || globalPositionsMag1.length === 0) return;
+    if (isConcurrentCollaborationMode(state)) {
+      // labelVoxels saves whole buckets, which would overwrite concurrent edits of
+      // the same buckets by others.
+      throw new Error(
+        "labelVoxels is not supported while simultaneous editing is enabled in the sharing settings.",
+      );
+    }
 
     const volumeTracing = enforceActiveVolumeTracing(state);
     const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);

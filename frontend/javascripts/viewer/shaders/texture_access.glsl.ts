@@ -217,11 +217,18 @@ export const getColorForCoords: ShaderModule = {
 
       float bucketAddress;
       vec3 offsetInBucket;
+<% if (isVertexAlignmentCapped) { %>
+      // Layers at or above VERTEX_ALIGNMENT_LAYER_CAP have no precomputed
+      // bucket address.
+      uint renderedMagIdx = activeMagIdx;
+      bool beSafe = globalLayerIndex >= VERTEX_ALIGNMENT_LAYER_CAP || useBucketBorderVertexOptimization < 0.5;
+      if (!beSafe) {
+<% } else { %>
       uint renderedMagIdx;
-
+      bool beSafe = useBucketBorderVertexOptimization < 0.5;
+<% } %>
       // To avoid rare rendering artifacts, don't use the precomputed
       // bucket address when being at the border of buckets.
-      bool beSafe = useBucketBorderVertexOptimization < 0.5;
       renderedMagIdx = outputMagIdx[globalLayerIndex];
       vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
       vec3 absoluteBucketPosition = div(coords, bucketWidth);
@@ -234,7 +241,9 @@ export const getColorForCoords: ShaderModule = {
         ) {
         beSafe = true;
       }
-
+<% if (isVertexAlignmentCapped) { %>
+      }
+<% } %>
 
       if (beSafe || !supportsPrecomputedBucketAddress) {
         for (uint i = 0u; i <= ${MAX_ZOOM_STEP_DIFF}u; i++) {

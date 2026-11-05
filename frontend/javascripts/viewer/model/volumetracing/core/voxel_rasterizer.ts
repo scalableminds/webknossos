@@ -264,6 +264,8 @@ function clipBox(box: BoundingBox, clip: BoundingBox | null): BoundingBox | null
  * anisotropic capsule into a unit-radius one — equivalent to testing a sphere
  * in physical space rather than an ellipsoid in voxel space. The plane axis is
  * dropped entirely for 2D brushes, which paint a single slice.
+ * Points exactly on the border are outside. Otherwise, a brush centered on a voxel
+ * would get single-voxel "poles" at its four extreme points.
  */
 function isInsideCapsule(
   point: Vector3,
@@ -289,7 +291,7 @@ function isInsideCapsule(
     const delta = (point[axis] - closest) / radius[axis];
     distanceSquared += delta * delta;
   }
-  return distanceSquared <= 1;
+  return distanceSquared < 1;
 }
 
 export { isInBoundingBox };

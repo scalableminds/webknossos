@@ -1,11 +1,19 @@
 import type { Action } from "viewer/model/actions/actions";
 import type { WebknossosState } from "viewer/store";
 
+// Used in error messages to understand how an operation could be registered twice.
+function describeOperationContext(state: WebknossosState): string {
+  const { activeOperations, childOperations } = state.operationContext;
+  return `Active operations: ${JSON.stringify(activeOperations)}, child operations: ${JSON.stringify(childOperations)}`;
+}
+
 function OperationContextReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "REGISTER_OPERATION":
       if (state.operationContext.activeOperations.some((op) => op.id === action.id)) {
-        throw new Error(`Operation "${action.id}" is already registered`);
+        throw new Error(
+          `Operation "${action.id}" is already registered. ${describeOperationContext(state)}`,
+        );
       }
       return {
         ...state,
@@ -37,7 +45,7 @@ function OperationContextReducer(state: WebknossosState, action: Action): Webkno
         )
       ) {
         throw new Error(
-          `Child operation "${action.id}" is already registered under parent "${action.parentId}"`,
+          `Child operation "${action.id}" is already registered under parent "${action.parentId}". ${describeOperationContext(state)}`,
         );
       }
       return {

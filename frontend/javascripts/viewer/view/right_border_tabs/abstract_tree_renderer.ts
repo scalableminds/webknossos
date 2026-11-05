@@ -10,8 +10,12 @@ const MODE_NORMAL = 0; // draw every node and the complete tree
 
 const MODE_NOCHAIN = 1; // draw only decision points
 
-const VG_COLOR = "black";
-const COMMENT_COLOR = "red";
+export type AbstractTreeColors = {
+  // Used for nodes, edges and the error message.
+  foreground: string;
+  // Used for nodes with a comment.
+  comment: string;
+};
 type Decision = {
   node: Record<string, any>;
   chainCount: number;
@@ -42,14 +46,16 @@ class AbstractTreeRenderer {
   tree: Tree;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'nodeDistance' has no initializer and is ... Remove this comment to see the full error message
   nodeDistance: number;
+  colors: AbstractTreeColors;
 
   static drawTree(
     canvas: HTMLCanvasElement,
     tree: Tree | null | undefined,
     activeNodeId: number | null | undefined,
+    colors: AbstractTreeColors,
     size: Vector2 = [450, 600],
   ) {
-    const renderer = new AbstractTreeRenderer(canvas);
+    const renderer = new AbstractTreeRenderer(canvas, colors);
 
     if (tree != null && activeNodeId != null) {
       renderer.setDimensions(size[0], size[1]);
@@ -79,8 +85,9 @@ class AbstractTreeRenderer {
     return id;
   }
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, colors: AbstractTreeColors) {
     this.canvas = canvas;
+    this.colors = colors;
     const ctx = canvas.getContext("2d");
 
     if (ctx != null) {
@@ -460,10 +467,10 @@ class AbstractTreeRenderer {
    */
   drawNode(x: number, y: number, id: number): void {
     this.ctx.beginPath();
-    this.ctx.fillStyle = VG_COLOR;
+    this.ctx.fillStyle = this.colors.foreground;
 
     if (this.nodeIdHasComment(id)) {
-      this.ctx.fillStyle = COMMENT_COLOR;
+      this.ctx.fillStyle = this.colors.comment;
     }
 
     let radius = NODE_RADIUS;
@@ -485,7 +492,7 @@ class AbstractTreeRenderer {
    */
   drawEdge(x1: number, y1: number, x2: number, y2: number): void {
     this.ctx.beginPath();
-    this.ctx.strokeStyle = VG_COLOR;
+    this.ctx.strokeStyle = this.colors.foreground;
     this.ctx.moveTo(x1, y1);
     this.ctx.lineTo(x2, y2);
     this.ctx.stroke();
@@ -507,7 +514,7 @@ class AbstractTreeRenderer {
     }
 
     this.ctx.beginPath();
-    this.ctx.strokeStyle = VG_COLOR;
+    this.ctx.strokeStyle = this.colors.foreground;
 
     for (const i of [0, 1, 2]) {
       this.ctx.moveTo(x, top + (2 * i + 1) * dashLength);
@@ -524,6 +531,7 @@ class AbstractTreeRenderer {
    */
   drawErrorMessage(message: string) {
     this.ctx.font = "16px serif";
+    this.ctx.fillStyle = this.colors.foreground;
     this.ctx.fillText(message, 10, 50);
   }
 

@@ -32,6 +32,7 @@ import {
   startEditingAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
+import Dimensions from "viewer/model/dimensions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import Store from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
@@ -196,66 +197,82 @@ describe("Volume Tracing", () => {
     expect(labelActionCount()).toBe(countBefore + 1);
   });
 
-  describe("brush auto-fill", () => {
-    const newCellId = 2n;
-    // A square stroke around `inside`, far enough from its edges that the brush
-    // itself never reaches it. The contour starts at the first pointer move,
-    // not at the press position, hence the tiny first step.
-    const pressPosition: Vector3 = [10, 10, 0];
-    const squarePath: Vector3[] = [
-      [11, 10, 0],
-      [50, 10, 0],
-      [50, 50, 0],
-      [10, 50, 0],
-    ];
-    const inside: Vector3 = [30, 30, 0];
-    const onStroke: Vector3 = [30, 10, 0];
+  describe.each([OrthoViews.PLANE_XY, OrthoViews.PLANE_YZ, OrthoViews.PLANE_XZ] as const)(
+    "brush auto-fill in %s",
+    (plane) => {
+      const newCellId = 2n;
+      // Maps a position within the viewport (u, v) to layer space, on slice 0.
+      const [u, v] = Dimensions.getIndices(plane);
+      const inPlane = (a: number, b: number): Vector3 => {
+        const position: Vector3 = [0, 0, 0];
+        position[u] = a;
+        position[v] = b;
+        return position;
+      };
+      // A square stroke around `inside`, far enough from its edges that the brush
+      // itself never reaches it. The contour starts at the first pointer move,
+      // not at the press position, hence the tiny first step.
+      const pressPosition = inPlane(10, 10);
+      const squarePath: Vector3[] = [
+        inPlane(11, 10),
+        inPlane(50, 10),
+        inPlane(50, 50),
+        inPlane(10, 50),
+      ];
+      const inside = inPlane(30, 30);
+      const onStroke = inPlane(30, 10);
 
-    function brushStroke(path: Vector3[]) {
-      Store.dispatch(startEditingAction(pressPosition, OrthoViews.PLANE_XY));
-      for (const position of path) Store.dispatch(addToContourListAction(position));
-      Store.dispatch(finishEditingAction());
-    }
+      function brushStroke(path: Vector3[]) {
+        Store.dispatch(startEditingAction(pressPosition, plane));
+        for (const position of path) Store.dispatch(addToContourListAction(position));
+        Store.dispatch(finishEditingAction());
+      }
 
-    beforeEach<WebknossosTestContext>(async ({ api, mocks }) => {
-      vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-        createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, 0, 5),
-      );
-      await api.data.reloadAllBuckets();
-      Store.dispatch(updateUserSettingAction("brushSize", 10));
-      Store.dispatch(setPositionAction([0, 0, 0]));
-      Store.dispatch(setToolAction(AnnotationTool.BRUSH));
-      Store.dispatch(setActiveCellAction(newCellId));
-    });
+      beforeEach<WebknossosTestContext>(async ({ api, mocks }) => {
+        vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+          createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, 0, 5),
+        );
+        await api.data.reloadAllBuckets();
+        Store.dispatch(updateUserSettingAction("brushSize", 10));
+        Store.dispatch(setPositionAction([0, 0, 0]));
+        Store.dispatch(setToolAction(AnnotationTool.BRUSH));
+        Store.dispatch(setActiveCellAction(newCellId));
+      });
 
-    it<WebknossosTestContext>("fills a stroke released near its start, in the same undo step", async ({
-      api,
-    }) => {
-      const layerName = api.data.getVolumeTracingLayerIds()[0];
-      // Released 2 voxels from the first contour point, well within the brush size.
-      brushStroke([...squarePath, [10, 12, 0]]);
+      it<WebknossosTestContext>("fills a stroke released near its start, in the same undo step", async ({
+        api,
+      }) => {
+        const layerName = api.data.getVolumeTracingLayerIds()[0];
+        // Released 2 voxels from the first contour point, well within the brush size.
+        brushStroke([...squarePath, inPlane(10, 12)]);
 
-      expect(await api.data.getDataValue(layerName, inside)).toBe(Number(newCellId));
-      expect(await api.data.getDataValue(layerName, onStroke)).toBe(Number(newCellId));
+        expect(await api.data.getDataValue(layerName, inside)).toBe(Number(newCellId));
+        expect(await api.data.getDataValue(layerName, onStroke)).toBe(Number(newCellId));
+        // The fill is propagated to the coarser mags along with the stroke.
+        expect(await api.data.getDataValue(layerName, inside, 1), "fill in mag 2").toBe(
+          Number(newCellId),
+        );
 
-      // One undo removes both: the fill is not an undo step of its own.
-      await dispatchUndoAsync(Store.dispatch);
-      expect(await api.data.getDataValue(layerName, inside), "fill undone").toBe(0);
-      expect(await api.data.getDataValue(layerName, onStroke), "stroke undone").toBe(0);
-    });
+        // One undo removes both: the fill is not an undo step of its own.
+        await dispatchUndoAsync(Store.dispatch);
+        expect(await api.data.getDataValue(layerName, inside), "fill undone").toBe(0);
+        expect(await api.data.getDataValue(layerName, onStroke), "stroke undone").toBe(0);
+        expect(await api.data.getDataValue(layerName, inside, 1), "fill undone in mag 2").toBe(0);
+      });
 
-    it<WebknossosTestContext>("does not fill an open stroke", async ({ api }) => {
-      const layerName = api.data.getVolumeTracingLayerIds()[0];
-      // Released at the bottom-left corner, ~40 voxels from the first contour point.
-      brushStroke(squarePath);
+      it<WebknossosTestContext>("does not fill an open stroke", async ({ api }) => {
+        const layerName = api.data.getVolumeTracingLayerIds()[0];
+        // Released at the last corner, ~40 voxels from the first contour point.
+        brushStroke(squarePath);
 
-      expect(await api.data.getDataValue(layerName, inside)).toBe(0);
-      expect(await api.data.getDataValue(layerName, onStroke)).toBe(Number(newCellId));
+        expect(await api.data.getDataValue(layerName, inside)).toBe(0);
+        expect(await api.data.getDataValue(layerName, onStroke)).toBe(Number(newCellId));
 
-      await dispatchUndoAsync(Store.dispatch);
-      expect(await api.data.getDataValue(layerName, onStroke)).toBe(0);
-    });
-  });
+        await dispatchUndoAsync(Store.dispatch);
+        expect(await api.data.getDataValue(layerName, onStroke)).toBe(0);
+      });
+    },
+  );
 
   // Earlier code versions, re-evaluated the overwrite-empty predicate once real backend
   // data merged in. Thus, an optimistic paint over a not-yet-loaded, actually-occupied

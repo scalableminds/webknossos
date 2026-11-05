@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.box.Full
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceStatus
 import models.dataset.{Dataset, DatasetDAO, DataStoreDAO, WKRemoteDataStoreClient}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
@@ -113,7 +114,7 @@ class JobService @Inject() (
   private def sendSuccessEmailNotification(user: User, job: Job, resultLink: String): Unit =
     for {
       multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
-      datasetName = job.datasetName.getOrElse("")
+      datasetName = job.datasetNameForEmail.getOrElse("")
       genericEmailTemplate = defaultMails.jobSuccessfulGenericMail(multiUser, datasetName, resultLink, _, _)
       emailTemplate <- (job.command match {
         case JobCommand.convert_to_wkw =>
@@ -179,7 +180,7 @@ class JobService @Inject() (
   private def sendFailedEmailNotification(user: User, job: Job): Unit =
     for {
       multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
-      datasetName = job.datasetName.getOrElse("")
+      datasetName = job.datasetNameForEmail.getOrElse("")
       errorMessage = job.latestRunErrorDetails
         .flatMap(details => (details \ "message").asOpt[String])
         .map(_.trim)
@@ -194,7 +195,7 @@ class JobService @Inject() (
   def cleanUpIfFailed(job: Job): Fox[Unit] =
     if (job.state == JobState.FAILURE && job.command == JobCommand.convert_to_wkw) {
       logger.info(
-        s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the directoryName..."
+        s"WKW conversion job ${job._id} failed. Marking dataset as conversion failed..."
       )
       val commandArgs = job.args.value
       for {
@@ -203,7 +204,11 @@ class JobService @Inject() (
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(using
           GlobalAccessContext
         ) ?~> Msg.Dataset.notFound(datasetDirectoryName)
-        _ <- datasetDAO.deleteDataset(dataset._id) ?~> Msg.Dataset.deleteFromDbFailed
+        _ <- datasetDAO.updateDatasetStatusByDatasetId(
+          dataset._id,
+          DataSourceStatus.conversionFailed,
+          isUsable = false
+        )(using GlobalAccessContext)
       } yield ()
     } else Fox.successful(())
 

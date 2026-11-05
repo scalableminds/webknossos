@@ -18,6 +18,20 @@ function AlignmentProjectListView() {
   });
   const [searchQuery, setSearchQuery] = useState("");
 
+  const renderPlaceholder = () => {
+    if (isLoading) return null;
+    if (searchQuery !== "" && (projects ?? []).length > 0) {
+      return "No alignment projects match your search.";
+    }
+    return (
+      <>
+        {"There are no alignment projects yet. "}
+        <Link to="/datasets/upload#alignmentProject">Upload unaligned image data</Link>
+        {" together with a CSV of the tile positions to create one."}
+      </>
+    );
+  };
+
   return (
     <AdminPage
       title="Alignment Projects"
@@ -46,6 +60,7 @@ function AlignmentProjectListView() {
           )}
           rowKey="id"
           pagination={{ defaultPageSize: 50 }}
+          locale={{ emptyText: renderPlaceholder() }}
         >
           <Column
             title="Name"

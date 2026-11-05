@@ -1,5 +1,5 @@
 import { V3 } from "libs/mjs";
-import { call } from "typed-redux-saga";
+import { call, put } from "typed-redux-saga";
 import type { BoundingBoxObject } from "types/bounding_box";
 import Constants, {
   type ContourMode,
@@ -10,21 +10,33 @@ import Constants, {
   OverwriteModeEnum,
   type Vector3,
 } from "viewer/constants";
-import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import {
+  isConcurrentCollaborationMode,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import { getLayerByName, getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   getTransformedDatasetBoundingBox,
   getTransformsForLayer,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { enforceActiveVolumeTracing } from "viewer/model/accessors/volumetracing_accessor";
+import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
+import { createSendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import Dimensions, { type DimensionMap } from "viewer/model/dimensions";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
 import { zoomedPositionToZoomedAddress } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { getHalfViewportExtentsInVx } from "viewer/model/sagas/saga_selectors";
+import { updateBucketPartial } from "viewer/model/sagas/volume/update_actions";
+import {
+  type BucketDiff,
+  encodeBucketDiffBase64,
+} from "viewer/model/volumetracing/core/bucket_diff";
+import type { RunAxis } from "viewer/model/volumetracing/core/bucket_voxel_mask";
+import type { SaveMode } from "viewer/model/volumetracing/integration/tool_driver_types";
 import type SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
 import {
   TransformedSectionLabeler,
@@ -45,6 +57,45 @@ function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
 export type BooleanBox = {
   value: boolean;
 };
+
+/**
+ * In live collaboration, volume edits are saved as partial bucket updates, so that
+ * they don't overwrite concurrent edits of the same buckets by others. Otherwise,
+ * the touched buckets are saved whole, which keeps undo/redo possible.
+ */
+export function* getVolumeSaveMode(): Saga<SaveMode> {
+  const isLiveCollaboration = yield* select(isConcurrentCollaborationMode);
+  return isLiveCollaboration ? "partialUpdates" : "fullBuckets";
+}
+
+/** Sends an edit's committed bucket diffs as partial bucket updates, if it is saved that way. */
+export function* pushPartialBucketUpdates(
+  saveMode: SaveMode,
+  bucketDiffs: BucketDiff[],
+  cube: DataCube,
+  tracingId: string,
+  runAxis: RunAxis,
+): Saga<void> {
+  if (saveMode !== "partialUpdates") return;
+  // Diffs can address buckets the layer doesn't have: outside of its bounding box,
+  // or in a mag that is missing between two existing ones (mag propagation passes
+  // through it). Their writes were skipped, so they are not sent.
+  const diffsToSend = bucketDiffs.filter((diff) => cube.isBucketWithinLayer(diff.address));
+  if (diffsToSend.length === 0) return;
+  // The core's BucketAddress is structurally the viewer's, additional
+  // coordinates included, so it goes into createSendBucketInfo as-is.
+  yield* put(
+    pushSaveQueueTransaction(
+      diffsToSend.map((diff) =>
+        updateBucketPartial(
+          createSendBucketInfo(diff.address, cube.magInfo),
+          encodeBucketDiffBase64(diff, runAxis),
+          tracingId,
+        ),
+      ),
+    ),
+  );
+}
 
 export function* getBoundingBoxForViewport(
   position: Vector3,

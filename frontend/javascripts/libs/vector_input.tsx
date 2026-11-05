@@ -30,14 +30,14 @@ function vectorToText<T extends number[]>(value: T | string): string {
  */
 function useVectorInput<T extends number[]>(
   defaultValue: T,
-  value?: T | string,
+  valueProp?: T | string,
   onChange: (value: T) => void = noop,
   changeOnlyOnBlur = false,
   allowDecimals = false,
   disableAutoSize = false,
   style?: React.CSSProperties,
 ) {
-  if (value === undefined) value = defaultValue;
+  const value = valueProp === undefined ? defaultValue : valueProp;
 
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(() => vectorToText(value));

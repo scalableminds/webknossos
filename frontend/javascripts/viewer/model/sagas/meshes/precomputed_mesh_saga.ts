@@ -1,3 +1,4 @@
+import { unwrapOrThrow } from "admin/api/api_result";
 import type { MeshLodInfo } from "admin/api/mesh";
 import { getMeshFilesForDatasetLayer, meshApi } from "admin/rest_api";
 import Deferred from "libs/async/deferred";
@@ -99,12 +100,24 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   const deferred = new Deferred<Array<APIMeshFileInfo>, unknown>();
   fetchDeferredsPerLayer[layerName] = deferred;
 
-  const availableMeshFiles = yield* call(
+  const availableMeshFilesResult = yield* call(
     getMeshFilesForDatasetLayer,
     dataset.dataStore.url,
     dataset,
     getBaseSegmentationName(segmentationLayer),
   );
+  if (!availableMeshFilesResult.ok) {
+    // The user was already notified by the api function. Don't cache the failed request
+    // so that the next request can try again. Everybody waiting for the deferred gets an
+    // empty list.
+    if (fetchDeferredsPerLayer[layerName] === deferred) {
+      delete fetchDeferredsPerLayer[layerName];
+    }
+    deferred.resolve([]);
+    callback([]);
+    return;
+  }
+  const availableMeshFiles = availableMeshFilesResult.value;
   yield* put(updateMeshFileListAction(layerName, availableMeshFiles));
   deferred.resolve(availableMeshFiles);
 
@@ -317,7 +330,7 @@ function* _getChunkLoadingDescriptors(
     );
   }
 
-  const segmentInfo = yield* call(
+  const segmentInfoResult = yield* call(
     meshApi.getMeshFileChunksForSegment,
     dataset.dataStore.url,
     dataset.id,
@@ -332,6 +345,8 @@ function* _getChunkLoadingDescriptors(
     editableMapping != null && tracing ? tracing.tracingId : null,
     annotationVersion,
   );
+  // The caller catches the error and notifies the user.
+  const segmentInfo = unwrapOrThrow(segmentInfoResult);
   segmentInfo.lods.forEach((meshLodInfo, lodIndex) => {
     availableChunksMap[lodIndex] = meshLodInfo?.chunks;
     loadingOrder.push(lodIndex);
@@ -398,7 +413,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   const tasks = batches.map(
     (chunks) =>
       function* loadChunks(): Saga<void> {
-        const dataForChunks = yield* call(
+        const dataForChunksResult = yield* call(
           meshApi.getMeshFileChunkData,
           dataset.dataStore.url,
           dataset.id,
@@ -413,6 +428,8 @@ function* loadPrecomputedMeshesInChunksForLod(
             })),
           },
         );
+        // processTaskWithPool's caller catches the error and notifies the user.
+        const dataForChunks = unwrapOrThrow(dataForChunksResult);
 
         const errorsWithDetails = [];
 

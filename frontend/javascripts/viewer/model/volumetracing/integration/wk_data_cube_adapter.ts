@@ -4,9 +4,10 @@
  * flood_fill_driver.ts), this file bridges to `viewer/`; everything outside
  * `integration/` stays independent of it.
  *
- * Buckets are mutated in place: nothing is pushed to the save queue, no
- * update actions are emitted, and undo is not wired up. That is the state
- * design doc §12.2 records, not an oversight here.
+ * Buckets are mutated in place, and no update actions are emitted here. How the
+ * mutation is saved depends on the SaveMode: either the buckets are pushed to the
+ * push queue and snapshotted for undo, as the old tools do, or they are not,
+ * because the caller sends the transaction's bucket diffs as partial updates.
  *
  * One thing worth knowing about the boundary itself:
  *   - The core's BucketAddress (core/volume_annotation_types.ts) is structurally identical to
@@ -25,9 +26,9 @@ import {
   MagList,
   type SegmentBucketData,
   type SegmentId,
-  type Vector3,
 } from "../core/volume_annotation_types";
 import type { LoadingVoxelCube, TransactionCube } from "../core/voxel_cube_interfaces";
+import type { SaveMode } from "./tool_driver_types";
 
 /**
  * A segmentation layer never stores float data, so its buckets are always a
@@ -42,7 +43,10 @@ export class WkDataCubeAdapter implements TransactionCube {
   // Buckets touched during the current stroke, so mutations can be flushed.
   private readonly touched = new Set<DataBucket>();
 
-  constructor(protected readonly cube: DataCube) {}
+  constructor(
+    protected readonly cube: DataCube,
+    private readonly saveMode: SaveMode,
+  ) {}
 
   /**
    * A predicate answering "does this voxel currently hold overwritableValue?"
@@ -74,7 +78,11 @@ export class WkDataCubeAdapter implements TransactionCube {
     // the existing code paints over unloaded data too.
     const data = bucket.getOrCreateData();
     if (!this.touched.has(bucket)) {
-      bucket.startDataMutation();
+      if (this.saveMode === "fullBuckets") {
+        bucket.startDataMutation();
+      } else {
+        bucket.startDataMutationForPartialUpdates();
+      }
       this.touched.add(bucket);
     }
 
@@ -93,10 +101,17 @@ export class WkDataCubeAdapter implements TransactionCube {
     }
   }
 
-  /** Ends the mutation on every touched bucket, triggering a GPU refresh. */
+  /**
+   * Ends the mutation on every touched bucket, triggering a GPU refresh, and with
+   * "fullBuckets", pushing the bucket to the push queue.
+   */
   flush(): void {
     for (const bucket of this.touched) {
-      bucket.endDataMutation();
+      if (this.saveMode === "fullBuckets") {
+        bucket.endDataMutation();
+      } else {
+        bucket.endDataMutationForPartialUpdates();
+      }
     }
     this.touched.clear();
   }
@@ -128,7 +143,13 @@ export class WkLoadingCubeAdapter extends WkDataCubeAdapter implements LoadingVo
   }
 }
 
-/** Build the core's MagList from a layer's MagInfo-derived dense mags. */
-export function magListFromDenseMags(denseMags: Vector3[]): MagList {
-  return new MagList(denseMags.map((mag) => [mag[0], mag[1], mag[2]] as Mag));
+/**
+ * Build the core's MagList from the cube's dense mags, propagating no finer than
+ * the layer's finest mag.
+ */
+export function magListForCube(cube: DataCube): MagList {
+  return new MagList(
+    cube.magInfo.getDenseMags().map((mag) => [mag[0], mag[1], mag[2]] as Mag),
+    cube.magInfo.getFinestMagIndex(),
+  );
 }

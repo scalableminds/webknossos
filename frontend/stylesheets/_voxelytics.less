@@ -9,14 +9,29 @@
         flex-direction: column;
     }
 
+    // Matches antd's md breakpoint, below which task_list_view.tsx stacks the DAG and task list.
+    @media (max-width: 767px) {
+        min-width: 0;
+
+        .task-panel {
+            // Let the page scroll instead of nesting a scroll container in the task list.
+            height: auto;
+        }
+
+        // The fixed-size minimap would cover a large part of the narrow graph.
+        .react-flow__minimap {
+            display: none;
+        }
+    }
+
     .task-panel-name {
-        color: #777;
+        color: var(--ant-color-text-description);
         font-size: 0.9em;
         padding-left: 1em;
     }
 
     .task-panel-state {
-        color: #777;
+        color: var(--ant-color-text-description);
         font-size: 0.9em;
         padding-left: 1em;
 
@@ -25,8 +40,8 @@
         }
 
         .ant-tag-default {
-            color: #888;
-            border-color: #ddd;
+            color: var(--ant-color-text-description);
+            border-color: var(--ant-color-border);
         }
     }
 
@@ -43,7 +58,7 @@
         }
 
         .stats-label {
-            color: #aaa;
+            color: var(--ant-color-text-description);
         }
     }
 
@@ -57,7 +72,7 @@
 
         .log-tab-warning {
             font-size: 0.9em;
-            color: #777;
+            color: var(--ant-color-text-description);
             text-align: center;
         }
 
@@ -73,7 +88,7 @@
             position: relative;
             padding-left: 60px;
 
-            @log-font-family: "RobotoMono", Monaco, "Courier New", monospace;
+            @log-font-family: @font-family-code;
             @log-font-size: 12px;
             @log-line-height: 19px;
             @log-line-number-width: 60px;
@@ -87,7 +102,7 @@
                 font-family: @log-font-family;
                 font-size: @log-font-size;
                 line-height: @log-line-height;
-                color: #666;
+                color: var(--ant-color-text-tertiary);
                 text-align: right;
                 user-select: none;
             }
@@ -114,7 +129,7 @@
             width: 100%;
             height: 100%;
             z-index: 1001;
-            background: var(--ant-color-bg-base);
+            background: var(--ant-color-bg-layout);
             padding-top: 8px;
 
             .log-tab-header {
@@ -128,6 +143,14 @@
     .react-flow {
         .react-flow__minimap {
             background-color: var(--ant-color-bg-container);
+        }
+
+        .react-flow__node.dag-node-running {
+            animation: dag-node-running-pulse 1.5s ease-in-out infinite;
+
+            @media (prefers-reduced-motion: reduce) {
+                animation: none;
+            }
         }
 
         .controls {
@@ -149,5 +172,17 @@
                 border-bottom-right-radius: 0;
             }
         }
+    }
+}
+
+// Same blue as the running state's border color in dag_view.tsx
+@keyframes dag-node-running-pulse {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(22, 119, 255, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 0 4px rgba(22, 119, 255, 0.15);
     }
 }

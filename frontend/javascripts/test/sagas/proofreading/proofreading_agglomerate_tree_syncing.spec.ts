@@ -146,7 +146,7 @@ describe("Proofreading agglomerate tree syncing", () => {
           yield put(setCollaborationModeAction("Concurrent"));
         }
 
-        yield loadAgglomerateTrees(context, [1n, 4n, 6n], false, othersMayEdit);
+        yield loadAgglomerateTrees(context, [1n, 4n, 6n], false);
 
         // Execute the actual merge and wait for the finished mapping.
         yield put(proofreadMergeAction(getPositionForSegmentId(4), 4n));
@@ -205,7 +205,7 @@ describe("Proofreading agglomerate tree syncing", () => {
           yield put(setCollaborationModeAction("Concurrent"));
         }
 
-        yield loadAgglomerateTrees(context, [6n], true, othersMayEdit);
+        yield loadAgglomerateTrees(context, [6n], true);
 
         // Execute the actual merge and wait for the finished mapping.
         yield put(proofreadMergeAction(getPositionForSegmentId(4), 4n));
@@ -267,7 +267,7 @@ describe("Proofreading agglomerate tree syncing", () => {
           yield put(setCollaborationModeAction("Concurrent"));
         }
 
-        yield* loadAgglomerateTrees(context, [1n], false, othersMayEdit);
+        yield* loadAgglomerateTrees(context, [1n], false);
 
         // Prepare the server's reply for the upcoming split.
         vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
@@ -332,7 +332,7 @@ describe("Proofreading agglomerate tree syncing", () => {
           yield put(setCollaborationModeAction("Concurrent"));
         }
 
-        yield* loadAgglomerateTrees(context, [4n], false, othersMayEdit);
+        yield* loadAgglomerateTrees(context, [4n], false);
 
         // Prepare the server's reply for the upcoming split.
         vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
@@ -400,7 +400,7 @@ describe("Proofreading agglomerate tree syncing", () => {
           yield put(setCollaborationModeAction("Concurrent"));
         }
 
-        yield* loadAgglomerateTrees(context, [1n, 6n], false, othersMayEdit);
+        yield* loadAgglomerateTrees(context, [1n, 6n], false);
         yield put(
           updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
         );
@@ -450,7 +450,7 @@ describe("Proofreading agglomerate tree syncing", () => {
           yield put(setCollaborationModeAction("Concurrent"));
         }
 
-        yield* loadAgglomerateTrees(context, [1n, 6n], false, othersMayEdit);
+        yield* loadAgglomerateTrees(context, [1n, 6n], false);
         yield put(
           updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
         );
@@ -544,7 +544,7 @@ describe("Proofreading agglomerate tree syncing", () => {
           yield put(setCollaborationModeAction("Concurrent"));
         }
 
-        yield* loadAgglomerateTrees(context, [1n, 6n], false, othersMayEdit);
+        yield* loadAgglomerateTrees(context, [1n, 6n], false);
         yield put(
           updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(2) }, tracingId),
         );
@@ -615,10 +615,9 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield put(updateSegmentAction(4n, { anchorPosition: getPositionForSegmentId(4) }, tracingId));
       yield put(setActiveCellAction(4n));
       yield makeMappingEditableForTest();
-      const othersMayEdit = true;
       yield put(setCollaborationModeAction("Concurrent"));
 
-      yield* loadAgglomerateTrees(context, [1n, 4n, 6n], false, othersMayEdit);
+      yield* loadAgglomerateTrees(context, [1n, 4n, 6n], false);
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction(getPositionForSegmentId(6), 6n));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
@@ -674,10 +673,9 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield put(updateSegmentAction(1n, { anchorPosition: getPositionForSegmentId(4) }, tracingId));
       yield put(setActiveCellAction(1n));
       yield makeMappingEditableForTest();
-      const othersMayEdit = true;
       yield put(setCollaborationModeAction("Concurrent"));
 
-      yield* loadAgglomerateTrees(context, [1n, 6n, 4n], false, othersMayEdit);
+      yield* loadAgglomerateTrees(context, [1n, 6n, 4n], false);
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction(getPositionForSegmentId(1), 1n));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
@@ -737,7 +735,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield makeMappingEditableForTest();
       yield put(setCollaborationModeAction("Concurrent"));
 
-      yield* loadAgglomerateTrees(context, [1n, 4n, 6n], false, true);
+      yield* loadAgglomerateTrees(context, [1n, 4n, 6n], false);
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
@@ -809,7 +807,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield makeMappingEditableForTest();
       yield put(setCollaborationModeAction("Concurrent"));
 
-      yield* loadAgglomerateTrees(context, [1n, 4n, 6n], false, true);
+      yield* loadAgglomerateTrees(context, [1n, 4n, 6n], false);
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
@@ -908,7 +906,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield makeMappingEditableForTest();
       yield put(setCollaborationModeAction("Concurrent"));
 
-      yield* loadAgglomerateTrees(context, [1n, 4n, 6n], false, true);
+      yield* loadAgglomerateTrees(context, [1n, 4n, 6n], false);
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
@@ -1025,7 +1023,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield makeMappingEditableForTest();
       yield put(setCollaborationModeAction("Concurrent"));
 
-      yield* loadAgglomerateTrees(context, [1n, 4n, 6n], false, true);
+      yield* loadAgglomerateTrees(context, [1n, 4n, 6n], false);
 
       //Activate Multi-split tool
       yield put(updateUserSettingAction("isMultiSplitActive", true));

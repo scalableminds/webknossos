@@ -318,6 +318,14 @@ export class WebKnossosModel {
     }
 
     while (true) {
+      if (operationContext != null && !operationContext.isActive()) {
+        // The operation that requested saving is finished or was cancelled. Nobody waits for
+        // this anymore, so stop requesting saves on its behalf. This mainly matters in tests:
+        // there, one process typically contains multiple WK sessions which are torn down and
+        // set up again (restarting the sagas). Otherwise, this loop would keep dispatching
+        // SAVE_NOW with the finished context into the next session.
+        return;
+      }
       // If saving or rebasing is in progress, we always need to keep waiting.
       if (!isSavingOrRebasing(Store.getState())) {
         // Only when neither is in progress, we enforce the diffed state to the

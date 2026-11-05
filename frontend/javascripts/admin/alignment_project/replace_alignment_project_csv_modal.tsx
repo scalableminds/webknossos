@@ -1,5 +1,5 @@
 import { type APIAlignmentProject, replaceAlignmentProjectCsv } from "admin/api/alignment_projects";
-import { FileDropzone } from "admin/dataset/components/upload_components";
+import { DropzonePrompt, FileSelection } from "admin/dataset/upload/dataset_file_selection";
 import { Alert, Flex, Modal, Typography } from "antd";
 import Toast from "libs/toast";
 import { useState } from "react";
@@ -20,8 +20,6 @@ export function ReplaceAlignmentProjectCsvModal({
 }) {
   const [csvFile, setCsvFile] = useState<FileWithPath | null>(null);
   const [isReplacing, setIsReplacing] = useState(false);
-  const csvDirectory =
-    project.csvPath != null ? project.csvPath.split("/").slice(0, -1).join("/") : "";
 
   const handleReplace = async () => {
     if (csvFile == null) return;
@@ -53,29 +51,20 @@ export function ReplaceAlignmentProjectCsvModal({
     >
       <Flex vertical gap="middle">
         <Text>
-          The new CSV is checked before it is used. It is stored next to the current one, in{" "}
-          <Text code>{csvDirectory === "" ? "the project root folder" : `${csvDirectory}/`}</Text>,
-          so its paths must be relative to that folder. Running and past alignments keep using the
-          CSV they were started with.
+          Replace the CSV file to make corrections in initial tile positions or to skip tiles for
+          next alignment runs.
         </Text>
-        <FileDropzone
-          onDropAccepted={(files) => {
-            const csvFiles = files.filter((file) => file.name.toLowerCase().endsWith(".csv"));
-            if (csvFiles.length !== 1) {
-              Toast.error("Please select a single CSV file.");
-              return;
-            }
-            setCsvFile(csvFiles[0]);
-          }}
-        >
-          {csvFile != null ? (
-            <>
-              Selected <Text code>{csvFile.name}</Text>. Drop another file to change it.
-            </>
-          ) : (
-            "Drag the new tile CSV to this area or click to select it."
+        <FileSelection
+          isFolderSelectable={false}
+          isMultiple={false}
+          accept=".csv,text/csv"
+          onDropRejected={() => Toast.error("Please select a single CSV file.")}
+          fileList={csvFile != null ? [csvFile] : []}
+          onChange={(files) => setCsvFile(files.at(0) ?? null)}
+          renderEmptyContent={({ chooseFiles }) => (
+            <DropzonePrompt title="Drop the new tile CSV here" onChooseFiles={chooseFiles} />
           )}
-        </FileDropzone>
+        />
         {project.status === "INVALID" && project.invalidReason != null && (
           <Alert
             type="info"

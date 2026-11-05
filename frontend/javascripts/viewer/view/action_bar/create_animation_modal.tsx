@@ -265,13 +265,22 @@ function CreateAnimationModal(props: Props) {
         "Your selected bounding box is located outside the dataset's volume. Please select a bounding box contained within the dataset's outer bounds.",
       );
 
+    // The rendering bounding box is the intersection with the color layer, so it only equals the selected one if the latter is fully contained.
+    const isBoundingBoxPartiallyOutsideLayer =
+      !isRenderingBoundingBoxEmpty && !renderingBoundingBox.equals(selectedBoundingBox);
+    if (isBoundingBoxPartiallyOutsideLayer)
+      errorMessages.push(
+        `Your selected bounding box extends beyond the bounds of the color layer "${colorLayer.name}". Please select a bounding box that is fully contained within this layer.`,
+      );
+
     const validationStatus =
       hasEnoughMags &&
       isDtypeSupported &&
       isDataset3D &&
       !isTooManyTriangles &&
       !isBoundingBoxEmpty &&
-      !isRenderingBoundingBoxEmpty;
+      !isRenderingBoundingBoxEmpty &&
+      !isBoundingBoxPartiallyOutsideLayer;
 
     setValidationErrors(errorMessages);
     setIsValid(validationStatus);
@@ -290,7 +299,9 @@ function CreateAnimationModal(props: Props) {
     const layerNames = Object.keys(state.localSegmentationStateByLayer);
     const { preferredQualityForMeshAdHocComputation } = state.temporaryConfiguration;
 
-    const meshes: RenderAnimationOptions["meshes"] = layerNames.flatMap((layerName) => {
+    const meshLayerNames = areMeshesEnabled ? layerNames : [];
+
+    const meshes: RenderAnimationOptions["meshes"] = meshLayerNames.flatMap((layerName) => {
       const meshInfos = state.localSegmentationStateByLayer[layerName]?.meshes?.[axis] || {};
 
       const layer = getLayerByName(state.dataset, layerName) as APISegmentationLayer;
@@ -538,7 +549,7 @@ function CreateAnimationModal(props: Props) {
                     type="secondary"
                     style={{ display: "block", fontSize: 12, marginTop: 7 }}
                   >
-                    ≈ 18s · 25s · 33s
+                    ≈ 17s · 24s · 32s
                   </Typography.Text>
                 </Col>
               </Row>

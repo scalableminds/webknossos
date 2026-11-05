@@ -8,7 +8,7 @@ object JobCommand extends ExtendedEnumeration {
   /* NOTE: When adding a new job command here, do
    * - Decide if it should be a highPriority job
    * - Decide if it writes to the organization’s storage (see jobsWritingToStorage)
-   * - Add it to the dbtool.js command enable-jobs so it is available during development
+   * - Add it to the dbtool.js command enable-jobs and to defaultWorker in InitialDataService so it is available during development
    * - Add it to the migration guide (operators need to decide which workers should provide it)
    */
 

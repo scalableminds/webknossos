@@ -3,7 +3,7 @@ import showFpsMeter from "libs/fps_meter";
 import { V3 } from "libs/mjs";
 import { roundTo, sleep } from "libs/utils";
 import mean from "lodash-es/mean";
-import { type OrthographicCamera, type PerspectiveCamera, WebGLRenderTarget } from "three";
+import type { OrthographicCamera, PerspectiveCamera } from "three";
 import { type OrthoView, OrthoViews, type Vector3 } from "viewer/constants";
 import { Model, Store } from "viewer/singletons";
 import type { ApiInterface } from "./api_latest";
@@ -47,6 +47,14 @@ export const WkDevFlags = {
   },
   debugging: {
     showCurrentVersionInInfoTab: false,
+  },
+  liveCollaboration: {
+    // Allows the brush, eraser and fill tool in live collaboration, and switching to live
+    // collaboration when the mapping is locked (not only with an editable mapping).
+    allowCollaborativeVolumeAnnotation: false,
+    // Remote updateBucketPartial actions are applied to loaded buckets directly.
+    // Set to true to evict and re-fetch those buckets instead, as for updateBucket.
+    refetchBucketsForRemotePartialUpdates: true,
   },
   meshing: {
     marchingCubeSizeInTargetMag: [64, 64, 64] as Vector3,
@@ -428,6 +436,7 @@ export default class WkDev {
       "viewer/controller/scene_controller_provider"
     );
     const { getInputCatcherRect } = await import("viewer/model/accessors/view_mode_accessor");
+    const { WebGLRenderTarget } = await loadBenchmarkDeps();
 
     await this.waitForCompletedDataLoading();
     const areUploadsDone = () =>

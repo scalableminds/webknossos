@@ -241,7 +241,7 @@ class TDController extends PureComponent<Props> {
         this.props.planeView.performMeshHitTest([position.x, position.y]);
       },
       out: () => {
-        this.props.planeView?.clearLastMeshHitTest();
+        this.props.planeView?.handleTDViewMouseOut();
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (skeletonControls != null) {

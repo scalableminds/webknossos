@@ -209,7 +209,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
   override def readAccessQ(requestingUserId: ObjectId): SqlToken =
     readAccessQWithPrefix(requestingUserId, q"")
 
-  def readAccessQWithPrefix(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
+  // The user id may also be a column (e.g. q"u._id"), to check the access of many users at once.
+  def readAccessQWithPrefix(requestingUserId: SqlToken, prefix: SqlToken): SqlToken =
     q"""${prefix}isPublic
         OR ( -- user is matching orga admin or dataset manager
           ${prefix}_organization IN (
@@ -240,6 +241,16 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
           )
         )
         """
+
+  // Those of the given users that can see the dataset.
+  def findUserIdsWithReadAccess(datasetId: ObjectId, userIds: List[ObjectId]): Fox[Seq[ObjectId]] =
+    if (userIds.isEmpty) Fox.successful(Seq.empty)
+    else
+      run(q"""SELECT u._id
+              FROM webknossos.users_ u
+              JOIN webknossos.datasets_ d ON d._id = $datasetId
+              WHERE u._id IN ${SqlToken.tupleFromList(userIds)}
+              AND (${readAccessQWithPrefix(q"u._id", q"d.")})""".as[ObjectId])
 
   def findAllWithSearch(
       isActiveOpt: Option[Boolean],
@@ -477,8 +488,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
 
   private def buildIsUnreportedPredicate(isUnreportedOpt: Option[Boolean]): SqlToken =
     isUnreportedOpt match {
-      case Some(true)  => q"status = ${DataSourceStatus.unreported} OR status = ${DataSourceStatus.deletedByUser}"
-      case Some(false) => q"status != ${DataSourceStatus.unreported} AND status != ${DataSourceStatus.deletedByUser}"
+      case Some(true)  => q"status IN ${SqlToken.tupleFromList(DataSourceStatus.unreportedStatusList)}"
+      case Some(false) => q"status NOT IN ${SqlToken.tupleFromList(DataSourceStatus.unreportedStatusList)}"
       case None        => q"TRUE"
     }
 
@@ -758,11 +769,14 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                    WHERE _id = $datasetId""".asUpdate)
     } yield ()
 
-  def insertOne(d: Dataset): Fox[Unit] = {
+  // Returns false if skipOnDirectoryNameConflict is set and a dataset with this directoryName already exists
+  def insertOne(d: Dataset, skipOnDirectoryNameConflict: Boolean = false): Fox[Boolean] = {
     val adminViewConfiguration: Option[JsValue] = d.adminViewConfiguration.map(Json.toJson(_))
     val defaultViewConfiguration: Option[JsValue] = d.defaultViewConfiguration.map(Json.toJson(_))
+    val onConflictClause =
+      if (skipOnDirectoryNameConflict) q"ON CONFLICT (directoryName, _organization) DO NOTHING" else SqlToken.empty
     for {
-      _ <- run(q"""INSERT INTO webknossos.datasets(
+      insertedRowCount <- run(q"""INSERT INTO webknossos.datasets(
                      _id, _dataStore, _organization, _publication,
                      _uploader, _folder,
                      inboxSourceHash, defaultViewConfiguration, adminViewConfiguration,
@@ -779,8 +793,9 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                      ${d.name}, ${d.voxelSize.map(_.factor)}, ${d.voxelSize.map(_.unit)}, ${d.status.take(1024)},
                      ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags}, ${d.creationType},
                      ${d.importURL}, ${d.rootPath}, ${d.rootRealPath}, ${d.mirrorPath}, ${d.created}, ${d.isDeleted}
-                   )""".asUpdate)
-    } yield ()
+                   )
+                   $onConflictClause""".asUpdate)
+    } yield insertedRowCount > 0
   }
 
   def updateDataSource(

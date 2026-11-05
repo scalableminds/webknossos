@@ -22,7 +22,11 @@ class ChunkReader(header: DatasetHeader) {
       tc: TokenContext
   ): Fox[MultiArray] =
     for {
-      chunkBytesAndShapeBox: Box[(Array[Byte], Option[Array[Int]])] <- readChunkBytesAndShape(path, range).shiftBox
+      chunkBytesAndShapeBox: Box[(Array[Byte], Option[Array[Int]])] <- readChunkBytesAndShape(
+        path,
+        range,
+        chunkShapeFromMetadata
+      ).shiftBox
       chunkShape: Array[Int] = chunkBytesAndShapeBox.toOption.flatMap(_._2).getOrElse(chunkShapeFromMetadata)
       typed <- chunkBytesAndShapeBox.map(_._1) match {
         case Full(chunkBytes) if useSkipTypingShortcut =>
@@ -46,12 +50,14 @@ class ChunkReader(header: DatasetHeader) {
 
   // Returns bytes (optional, Fox.empty may later be replaced with fill value)
   // and chunk shape (optional, only for data formats where each chunk reports its own shape, e.g. N5)
-  protected def readChunkBytesAndShape(path: VaultPath, range: ByteRange)(implicit
+  protected def readChunkBytesAndShape(path: VaultPath, range: ByteRange, chunkShapeFromMetadata: Array[Int])(implicit
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[(Array[Byte], Option[Array[Int]])] =
     for {
       bytes <- path.readBytes(range)
-      decompressed <- tryo(header.compressorImpl.decompress(bytes)).toFox ?~> Msg.Dataset.Chunk.decompressFailed
+      decompressed <- tryo(
+        header.compressorImpl.decompress(bytes, chunkShapeFromMetadata)
+      ).toFox ?~> Msg.Dataset.Chunk.decompressFailed
     } yield (decompressed, None)
 }

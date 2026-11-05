@@ -99,8 +99,9 @@ import {
 import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
 import { diffBoundingBoxes } from "./diffing/bounding_box_diffing";
 import { diffGroups } from "./diffing/group_diffing";
+import type { OperationContext } from "./operation_context_saga";
 import { ensureWkInitialized } from "./ready_sagas";
-import { takeWithBatchActionSupport } from "./saga_helpers";
+import { takeEveryInOperationContext, takeWithBatchActionSupport } from "./saga_helpers";
 import { subscribeToAnnotationMutex } from "./saving/save_mutex_saga";
 
 function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>): Vector3 {
@@ -125,7 +126,11 @@ function* centerActiveNode(action: Action): Saga<void> {
   if ("suppressCentering" in action && action.suppressCentering) {
     return;
   }
-  if (["DELETE_NODE", "DELETE_BRANCHPOINT"].includes(action.type)) {
+  if (
+    ["DELETE_NODE", "DELETE_NODE_AND_RECONNECT_NEIGHBORS", "DELETE_BRANCHPOINT"].includes(
+      action.type,
+    )
+  ) {
     const centerNewNode = yield* select(
       (state: WebknossosState) => state.userConfiguration.centerNewNode,
     );
@@ -269,14 +274,23 @@ function* watchTreeNames(): Saga<void> {
 
 function* watchAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
-  const channel = yield* actionChannel([
-    "LOAD_AGGLOMERATE_TREE_FROM_ID",
-    "LOAD_AGGLOMERATE_TREE_AT_POSITION",
-  ]);
+  const channel = yield* actionChannel<
+    LoadAgglomerateTreeFromIdAction | LoadAgglomerateTreeAtPositionAction
+  >(["LOAD_AGGLOMERATE_TREE_FROM_ID", "LOAD_AGGLOMERATE_TREE_AT_POSITION"]);
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* call(ensureWkInitialized);
-  yield* takeEvery(channel, loadAgglomerateTreeWithAtPosition);
+  // Loading an agglomerate tree must not interleave with proofreading actions. Otherwise, a
+  // proofreading action could change the agglomerate while its tree is being fetched. The
+  // agglomerate tree syncing of that action only updates trees that are already loaded, so the
+  // tree would be outdated when it's added.
+  // Waiting (instead of ignoring the request) is safe here, because nothing is held while waiting.
+  yield* takeEveryInOperationContext(channel, loadAgglomerateTreeWithAtPosition, {
+    id: "LOAD_AGGLOMERATE_TREE",
+    description: "Loading agglomerate tree",
+    behaviorWhenDisallowed: "wait",
+  });
 }
+
 function* watchConnectomeAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
   const channel = yield* actionChannel("LOAD_CONNECTOME_AGGLOMERATE_TREE");
@@ -400,6 +414,7 @@ function handleAgglomerateLoadingError(
 
 function* loadAgglomerateTreeWithAtPosition(
   action: LoadAgglomerateTreeFromIdAction | LoadAgglomerateTreeAtPositionAction,
+  ctx: OperationContext,
 ): Saga<void> {
   const allowUpdate = yield* select(mayEditAnnotation);
   if (!allowUpdate) return;
@@ -425,7 +440,7 @@ function* loadAgglomerateTreeWithAtPosition(
     );
 
     // We already sync here to ensure to have the newest annotation version to get an up-to-date agglomerate tree.
-    yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+    yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch, ctx);
   }
 
   const agglomerateId =
@@ -501,7 +516,9 @@ function* loadAgglomerateTreeWithAtPosition(
     if (shouldGuardWithAnnotationMutex) {
       // Enforces to directly store the loaded agglomerate tree to the annotation on the server
       // to enforce that all users also have the agglomerate tree present upon the next sync.
-      yield* call([Model, Model.ensureSavedState]);
+      // The context must be passed. Otherwise, saving would need its own operation, which
+      // can't start while this one is running.
+      yield* call([Model, Model.ensureSavedState], ctx);
       // Then release the mutex if it was acquired.
       if (unsubscribeFromAnnotationMutex) {
         yield* call(unsubscribeFromAnnotationMutex);
@@ -565,6 +582,7 @@ function* watchSkeletonTracingAsync(): Saga<void> {
       "SET_ACTIVE_TREE_BY_NAME",
       "SET_ACTIVE_NODE",
       "DELETE_NODE",
+      "DELETE_NODE_AND_RECONNECT_NEIGHBORS",
       "DELETE_BRANCHPOINT",
       "SELECT_NEXT_TREE",
       "DELETE_TREE",

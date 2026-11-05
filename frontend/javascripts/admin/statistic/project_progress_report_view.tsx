@@ -3,10 +3,11 @@ import AdminPage from "admin/admin_page";
 import { getProjectProgressReport } from "admin/rest_api";
 import { Badge, Button, Space, Spin, Table } from "antd";
 import FormattedDate from "components/formatted_date";
+import FormattedDuration from "components/formatted_duration";
 import StackedBarChart, { colors } from "components/stacked_bar_chart";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
-import { compareBy, localeCompareBy, millisecondsToHours, scrollToTop } from "libs/utils";
+import { compareBy, localeCompareBy, scrollToTop } from "libs/utils";
 import messages from "messages";
 import { useState } from "react";
 import type { APIProjectProgressReport, APITeam } from "types/api_types";
@@ -122,15 +123,11 @@ function ProjectProgressReportView() {
             render={(number) => number.toLocaleString()}
           />
           <Column
-            title="Time [h]"
+            title="Time"
             dataIndex="billedMilliseconds"
             align="right"
             sorter={compareBy<APIProjectProgressReport>((project) => project.billedMilliseconds)}
-            render={(number) =>
-              millisecondsToHours(number).toLocaleString(undefined, {
-                maximumFractionDigits: 1,
-              })
-            }
+            render={(billedMs) => <FormattedDuration durationMs={billedMs} />}
           />
           <ColumnGroup title="Instances">
             <Column

@@ -51,7 +51,9 @@ function askUserToReload() {
 }
 
 const PERFORMANCE_WARNING_ICON = (
-  <ExclamationCircleOutlined style={{ marginLeft: 8, color: "orange", verticalAlign: "middle" }} />
+  <ExclamationCircleOutlined
+    style={{ marginLeft: 8, color: "var(--ant-color-warning)", verticalAlign: "middle" }}
+  />
 );
 
 class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRenderingSettingsTabProps> {

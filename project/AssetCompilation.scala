@@ -110,20 +110,21 @@ object AssetCompilation {
 
       // Records the last schema update (written by dbtool.js)
       val schemaRefreshedStampFile = baseDirectoryValue / "schema" / "refreshStamp" / "stamp"
-      // Records the last successful generation and the schema.sql hash it was generated for.
+      // Records the last successful generation, and the hash of the schema.sql it was generated for.
       val codeGenStampFile = sourceManagedValue / "slick-schema-codegen.stamp"
-      val schemaHash = Hash.toHex(Hash(baseDirectoryValue / "schema" / "schema.sql"))
-      val stampedSchemaHash = if (codeGenStampFile.exists) IO.read(codeGenStampFile).trim else ""
+      val schemaHash = sbt.io.Hash.toHex(sbt.io.Hash(baseDirectoryValue / "schema" / "schema.sql"))
 
       val schemaOutDir = sourceManagedValue / "schema"
       val slickTablesOutPath = schemaOutDir / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
 
       // The generator reads the live DB; We check a stamp file written bei dbtool.js to decide whether to re-generate.
-      // The schema.sql hash covers CI, where the refresh stamp is missing and src_managed is restored from a cache.
       // This only gates whether we connect to the DB at all, the generator itself rewrites only the table files
       // whose content actually changed.
-      val shouldUpdate = !slickTablesOutPath.exists || stampedSchemaHash != schemaHash ||
-        codeGenStampFile.lastModified < schemaRefreshedStampFile.lastModified
+      // The schema.sql hash catches generated files that were restored from a build for another schema, e.g., from
+      // the CI cache of an earlier commit. There, no refresh stamp exists, so its time alone would never trigger.
+      val shouldUpdate = !slickTablesOutPath.exists || !codeGenStampFile.exists ||
+        codeGenStampFile.lastModified < schemaRefreshedStampFile.lastModified ||
+        IO.read(codeGenStampFile).trim != schemaHash
 
       if (shouldUpdate) {
         streamsValue.log.info(

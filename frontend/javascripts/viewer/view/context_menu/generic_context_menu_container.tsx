@@ -1,5 +1,6 @@
 import { ConfigProvider } from "antd";
-import React, { Fragment, useEffect } from "react";
+import type React from "react";
+import { Fragment, useEffect, useState } from "react";
 import { ContextMenuContext } from "./context_menu";
 
 export function GenericContextMenuContainer(props: {
@@ -11,9 +12,9 @@ export function GenericContextMenuContainer(props: {
 }) {
   /*
    * This container for the context menu is *always* rendered.
-   * An input ref is stored for the actual container which is
-   * passed to antd <Dropdown /> so that it renders the actual
-   * menu into that container when desired.
+   * The DOM element of the actual container is stored in state and
+   * passed to antd <Dropdown /> (via ContextMenuContext) so that it
+   * renders the actual menu into that container when desired.
    * When <Dropdown /> is not used to render the menu, antd assumes
    * that the <Menu /> is a navigational menu. Navigational menus
    * behave differently (predominantly, their styling uses way more
@@ -22,13 +23,10 @@ export function GenericContextMenuContainer(props: {
    * latest when sub menus are used, the styling issues become too complicated
    * to deal with.
    */
-  const inputRef: React.MutableRefObject<HTMLElement | null> = React.useRef(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Always focus newest input ref
+  const [containerElement, setContainerElement] = useState<HTMLElement | null>(null);
   useEffect(() => {
-    if (inputRef.current != null) {
-      inputRef.current.focus();
-    }
-  }, [inputRef.current]);
+    containerElement?.focus();
+  }, [containerElement]);
   const { contextMenuPosition, hideContextMenu } = props;
   return (
     <Fragment>
@@ -68,12 +66,11 @@ export function GenericContextMenuContainer(props: {
           }}
           className="node-context-menu"
           tabIndex={-1}
-          // @ts-expect-error
-          ref={inputRef}
+          ref={setContainerElement}
         />
         {/* Disable animations for the context menu (for performance reasons). */}
         <ConfigProvider theme={{ token: { motion: false } }}>
-          <ContextMenuContext.Provider value={inputRef}>
+          <ContextMenuContext.Provider value={containerElement}>
             {props.children}
           </ContextMenuContext.Provider>
         </ConfigProvider>

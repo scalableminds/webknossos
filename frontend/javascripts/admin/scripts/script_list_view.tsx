@@ -35,14 +35,14 @@ function ScriptListView() {
   useEffect(() => {
     const { searchQuery } = persistence.load();
     setSearchQuery(searchQuery || "");
-    fetchData();
+    fetchScripts();
   }, []);
 
   useEffect(() => {
     persistence.persist({ searchQuery });
   }, [searchQuery]);
 
-  async function fetchData(): Promise<void> {
+  async function fetchScripts(): Promise<void> {
     const scripts = await getScripts();
     setIsLoading(false);
     setScripts(scripts);

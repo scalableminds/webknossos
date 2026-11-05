@@ -15,13 +15,13 @@ const DatasetAccessListView = ({ dataset }: Props) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const datasetUsers = useFetch(
-    () => {
+    async () => {
       try {
         setIsLoading(true);
-        return getDatasetAccessList(dataset);
+        return await getDatasetAccessList(dataset);
       } catch (error) {
         handleGenericError(error as Error);
-        return Promise.resolve([]);
+        return [];
       } finally {
         setIsLoading(false);
       }

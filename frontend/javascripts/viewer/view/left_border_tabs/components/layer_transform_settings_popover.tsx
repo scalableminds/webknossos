@@ -89,7 +89,9 @@ function SectionLabel({ children, hint }: { children: ReactNode; hint?: string }
       {children}
       {hint != null && (
         <Tooltip title={hint}>
-          <InfoCircleOutlined style={{ color: "gray", marginLeft: 6, fontSize: 12 }} />
+          <InfoCircleOutlined
+            style={{ color: "var(--ant-color-text-description)", marginLeft: 6, fontSize: 12 }}
+          />
         </Tooltip>
       )}
     </Typography.Title>

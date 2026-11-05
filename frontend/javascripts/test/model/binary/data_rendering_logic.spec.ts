@@ -5,7 +5,9 @@ import {
   calculateTextureSizeAndCountForLayer,
   computeDataTexturesSetup,
   getBucketCapacity,
+  getBucketCountSoftLimitPerLayer,
   getBucketHeightInTexture,
+  getRequiredBucketCapacityPerLayer,
   type LayerLike,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { describe, expect, it } from "vitest";
@@ -307,5 +309,32 @@ describe("2D (degenerate-depth) layer bucket sizing", () => {
     // the number of rows (textureWidth), not by the much larger naive division
     // (textureWidth**2 / packedBucketSize = 16_384).
     expect(capacity).toBe(textureWidth);
+  });
+});
+
+describe("getRequiredBucketCapacityPerLayer", () => {
+  it("is unchanged for up to 4 layers", () => {
+    expect(getRequiredBucketCapacityPerLayer(DEFAULT_GPU_MEMORY_FACTOR, 1)).toBe(
+      DEFAULT_REQUIRED_BUCKET_CAPACITY,
+    );
+    expect(getRequiredBucketCapacityPerLayer(DEFAULT_GPU_MEMORY_FACTOR, 4)).toBe(
+      DEFAULT_REQUIRED_BUCKET_CAPACITY,
+    );
+  });
+
+  it("splits the budget of 4 layers across more layers", () => {
+    expect(getRequiredBucketCapacityPerLayer(DEFAULT_GPU_MEMORY_FACTOR, 20)).toBe(
+      Math.floor((DEFAULT_REQUIRED_BUCKET_CAPACITY * 4) / 20),
+    );
+  });
+
+  it("never exceeds the RAM limit per layer", () => {
+    for (const gpuFactor of [1, 2, 4, 6, 12, 16]) {
+      for (const layerCount of [1, 4, 5, 20, 100]) {
+        expect(getRequiredBucketCapacityPerLayer(gpuFactor, layerCount)).toBeLessThanOrEqual(
+          getBucketCountSoftLimitPerLayer(layerCount),
+        );
+      }
+    }
   });
 });

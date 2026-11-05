@@ -18,6 +18,24 @@
   white-space: nowrap;
 }
 
+// Compact screens: the actions sit in a row below the annotation name.
+.annotation-inline-actions {
+  // Same spacing as above the meta line.
+  margin-bottom: 4px;
+
+  .annotation-row-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    column-gap: 12px;
+    padding-right: 0;
+  }
+
+  // The tags start a new line below the actions, so they don't need the spacing to the name.
+  & ~ .dashboard-annotation-tags {
+    margin-inline-start: 0;
+  }
+}
+
 /** Container for the description of a task type, allowing for long text wrapping and optional height capping. */
 .task-type-description {
   max-width: 700px;
@@ -134,6 +152,18 @@ pre.dataset-import-folder-structure-hint {
   vertical-align: middle;
 }
 
+// Compact screens: the actions sit in a (wrapping) row below the dataset name.
+.dataset-table-inline-actions .dataset-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 12px;
+  white-space: normal;
+
+  & > a {
+    display: inline-block;
+  }
+}
+
 
 /** Wrapper for the dataset metadata table in the dashboard, ensuring bold headers. */
 .dashboard-metadata-table-wrapper {
@@ -149,6 +179,42 @@ pre.dataset-import-folder-structure-hint {
   border-radius: var(--ant-border-radius) var(--ant-border-radius) 0 0;
   padding: 8px 16px;
   background: var(--ant-color-fill-alter);
+
+  // Below antd's md breakpoint, tighten the filter chips so that they fit in a single row on phones.
+  @media @smartphones {
+    padding-inline: 12px;
+
+    .ant-btn {
+      padding-inline: 7px;
+    }
+
+    // The sort icon already identifies the sort chip.
+    .dashboard-list-sort-prefix {
+      display: none;
+    }
+
+    // Keep the chips in a single row that scrolls horizontally instead of wrapping. The row bleeds
+    // into the bar's padding, so that chips scroll up to its border. A fade at the right edge hints
+    // at the chips that are scrolled out of view.
+    .dashboard-list-filter-chips {
+      flex: 1 1 100%;
+      min-width: 0;
+      flex-wrap: nowrap !important;
+      overflow-x: auto;
+      margin-inline: -12px;
+      padding-inline: 12px 24px;
+      scrollbar-width: none;
+      mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      & > .ant-space-item {
+        flex-shrink: 0;
+      }
+    }
+  }
 }
 
 /** Headerless, bordered table used for the dashboard lists.
@@ -176,6 +242,12 @@ pre.dataset-import-folder-structure-hint {
 
 .dashboard-list-table-borderless-cell {
   border-inline-end: none !important;
+
+  // The last cell forms the table's right border (e.g., on phones, where the actions column
+  // is hidden).
+  &:last-child {
+    border-inline-end: 1px solid var(--ant-color-border) !important;
+  }
 }
 
 .dashboard-list-table-thumbnail-cell {
@@ -307,4 +379,23 @@ pre.dataset-import-folder-structure-hint {
     minmax(min(60%, var(--dashboard-list-max-width)), var(--dashboard-list-max-width))
     auto;
   justify-content: center;
+
+  // On compact screens, the sidebar moves into a drawer (see responsive_sidebar.tsx).
+  &.compact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+// In a drawer, the details sidebar fills the drawer body instead of floating next to a list.
+.dashboard-sidebar-drawer .dashboard-details-sidebar {
+  width: auto;
+  padding: 0;
+  position: static;
+  max-height: none;
+  overflow-y: visible;
+}
+
+.dashboard-folder-picker-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

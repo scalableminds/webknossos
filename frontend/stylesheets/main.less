@@ -329,6 +329,15 @@ body {
     margin-left: 20px;
     margin-right: 20px;
   }
+
+  // On phones, every pixel of width counts. Slim down the side spacing.
+  @media @smartphones {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 12px;
+  }
 }
 
 /** Extra-large icon styling, often used for placeholder or hero illustrations. */

@@ -35,15 +35,17 @@ jobs:
       dynamic_env: ${{ steps.check_build.outputs.dynamic_env }}
       env_url: ${{ steps.check_build.outputs.env_url }}
     steps:
-      - name: Check for in-progress CI build on this branch
+      - name: Check for in-progress CI build of the PR head commit
         id: check_build
         run: |
+          # Only wait for runs of the head commit. Runs of older commits won't deploy on completion,
+          # because check-build-smoketest-push-result skips commits that aren't the PR head.
           run_id=$(gh run list \
             --repo "${{ github.repository }}" \
             --branch "$HEAD_REF" \
             --workflow "CI Pipeline" \
-            --json databaseId,status,event \
-            --jq 'first(.[] | select((.status == "in_progress" or .status == "queued") and .event == "push") | .databaseId) // empty')
+            --json databaseId,status,event,headSha \
+            --jq "first(.[] | select((.status == \"in_progress\" or .status == \"queued\") and .event == \"push\" and .headSha == \"$HEAD_SHA\") | .databaseId) // empty")
           if [ -n "$run_id" ]; then
             echo "CI run $run_id is in progress and will trigger deployment on completion — skipping."
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -56,6 +58,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_REF: ${{ github.head_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
   trigger-autodeployment-on-label:
     needs: check-autodeploy-label

@@ -479,6 +479,147 @@ body {
   }
 }
 
+/** Styles for adding a remote dataset: the URL field, the layer list and the add row. */
+.dataset-remote-mono,
+.dataset-remote-mono input {
+  font-family: var(--ant-font-family-code);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.dataset-remote-accent-icon {
+  margin-inline-end: 8px;
+  color: var(--ant-color-primary);
+}
+
+.dataset-remote-required-label::before {
+  margin-inline-end: 4px;
+  color: var(--ant-color-error);
+  content: "*";
+}
+
+.dataset-remote-url-input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+
+  input {
+    font-size: 16px;
+  }
+}
+
+.dataset-remote-url-button {
+  flex: none;
+  min-width: 132px;
+}
+
+.dataset-remote-url-input + .dataset-remote-url-button {
+  height: 44px;
+}
+
+.dataset-remote-format-tag {
+  margin-inline-end: 0;
+  transition: all 0.2s ease-in-out;
+}
+
+.dataset-remote-chevron svg {
+  font-size: 10px;
+  transition: transform 0.12s ease-out;
+}
+
+.dataset-remote-report {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--ant-color-split);
+  border-radius: var(--ant-border-radius);
+  background-color: var(--ant-color-bg-container);
+  font-family: var(--ant-font-family-code);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.dataset-remote-credentials {
+  padding: 16px 24px 20px;
+  border: 1px solid var(--ant-color-split);
+  border-radius: var(--ant-border-radius);
+  background-color: var(--ant-color-bg-container);
+}
+
+.dataset-remote-key-dropzone.ant-upload-wrapper .ant-upload-drag {
+  border-color: var(--ant-color-primary-border);
+  background-color: var(--ant-color-primary-bg);
+
+  .ant-upload-btn {
+    padding: 12px 16px;
+  }
+}
+
+.dataset-remote-key-dropzone-icon {
+  font-size: 20px;
+  color: var(--ant-color-primary);
+}
+
+.dataset-remote-layer-list {
+  overflow: hidden;
+  border: 1px solid var(--ant-color-border);
+  border-radius: var(--ant-border-radius);
+}
+
+.dataset-remote-dataset-row {
+  padding: 16px 24px;
+}
+
+.dataset-remote-dataset-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--ant-border-radius);
+  background-color: var(--ant-color-primary-bg);
+  color: var(--ant-color-primary);
+  font-size: 24px;
+}
+
+@keyframes dataset-remote-new-layer {
+  0%,
+  57% {
+    background-color: var(--ant-color-primary-bg);
+  }
+
+  100% {
+    background-color: transparent;
+  }
+}
+
+.dataset-remote-layer-row {
+  padding: 10px 24px;
+  border-top: 1px solid var(--ant-color-split);
+  // Highlights a newly added layer for about 1.4 s before fading back.
+  animation: dataset-remote-new-layer 1.4s ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+.dataset-remote-layer-name {
+  flex: none;
+  width: 160px;
+  min-width: 0;
+}
+
+.dataset-remote-add-row {
+  padding: 16px 24px 18px;
+  border-top: 1px solid var(--ant-color-primary-border);
+  background-color: var(--ant-color-primary-bg);
+}
+
+.dataset-remote-more-options.ant-collapse-ghost > .ant-collapse-item > .ant-collapse-header {
+  padding-inline: 0;
+}
+
 /** Removes borders from nested input and button elements. */
 .no-borders {
 

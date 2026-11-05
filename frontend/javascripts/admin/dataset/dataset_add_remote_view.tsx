@@ -1,20 +1,13 @@
-import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
-import { isDatasetNameValid, storeRemoteDataset } from "admin/rest_api";
-import { Button, Col, Divider, Flex, Form, type FormInstance, List, Modal, Row } from "antd";
+import { CardContainer } from "admin/dataset/dataset_components";
+import { isDatasetNameValid, storeRemoteDataset, updateDatasetTeams } from "admin/rest_api";
+import { Button, Divider, Flex, Form, type FormInstance, Typography } from "antd";
 import BrainSpinner from "components/brain_spinner";
-import type { DatasetSettingsFormData } from "dashboard/dataset/dataset_settings_context";
-import DatasetSettingsDataTab, {
-  TransformationsMode,
-} from "dashboard/dataset/dataset_settings_data_tab";
-import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
-import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
-import FolderSelection from "dashboard/folders/folder_selection";
-import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
+import { TransformationsMode } from "dashboard/dataset/dataset_settings_data_tab";
+import features from "features";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { computeHash } from "libs/utils";
-import { useState } from "react";
-import { ModalWidth } from "theme";
-import type { APIDataStore } from "types/api_types";
+import { useRef, useState } from "react";
+import type { APIDataStore, APITeam, VoxelSize } from "types/api_types";
 import type {
   DataLayer,
   DataLayerWithTransformations,
@@ -22,36 +15,26 @@ import type {
 } from "types/schemas/datasource.types";
 import type { RotationAndMirroringSettings } from "viewer/model/helpers/dataset_rotation_helpers";
 import { dataPrivacyInfo } from "./dataset_upload_view";
-import { AddRemoteLayer } from "./remote/add_remote_layer";
+import { RemoteDatasetDetails } from "./remote/remote_dataset_details";
+import { type LayerSource, RemoteLayerList } from "./remote/remote_layer_list";
+import { RemoteUrlStep } from "./remote/remote_url_step";
+import {
+  getDatasetNameFromUrl,
+  getUniqueDatasetNameFromUrl,
+  mergeNewLayers,
+} from "./remote/remote_url_utils";
+import { type ExploreOptions, useRemoteUrlField } from "./remote/use_remote_url_field";
 
-const FormItem = Form.Item;
-
-const mergeNewLayers = (
-  existingDatasource: DatasourceConfiguration | null,
-  newDatasource: DatasourceConfiguration,
-): DatasourceConfiguration => {
-  if (existingDatasource?.dataLayers == null) {
-    return newDatasource;
-  }
-
-  // Keep existing layer names; only rename incoming layers if a collision occurs.
-  const taken = new Set(existingDatasource.dataLayers.map((l) => l.name));
-  const uniquify = (base: string) => {
-    if (!taken.has(base)) {
-      taken.add(base);
-      return base;
-    }
-    let i = 2;
-    while (taken.has(`${base}_${i}`)) i += 1;
-    const unique = `${base}_${i}`;
-    taken.add(unique);
-    return unique;
-  };
-  const newUnique = newDatasource.dataLayers.map((l) => ({ ...l, name: uniquify(l.name) }));
-  return {
-    ...existingDatasource,
-    dataLayers: existingDatasource.dataLayers.concat(newUnique),
-  };
+type RemoteFormFieldTypes = {
+  name: string;
+  targetFolderId: string | null;
+  initialTeams: APITeam[];
+  datastoreUrl?: string;
+  dataSource?: DatasourceConfiguration;
+  transformationsMode: TransformationsMode;
+  coordinateTransformations: string;
+  isRotationOnly: boolean;
+  datasetRotation: Record<"x" | "y" | "z", RotationAndMirroringSettings>;
 };
 
 type Props = {
@@ -68,262 +51,258 @@ type Props = {
   defaultDatasetUrl?: string | null | undefined;
 };
 
-function DatasetAddRemoteView(props: Props) {
-  const { onAdded, datastores, defaultDatasetUrl } = props;
-  const activeUser = useWkSelector((state) => state.activeUser);
+const NO_ROTATION: RotationAndMirroringSettings = { rotationInDegrees: 0, isMirrored: false };
 
-  const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
-  const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
-
-  const [showAddLayerModal, setShowAddLayerModal] = useState(false);
-  const [showLoadingOverlay, setShowLoadingOverlay] = useState(defaultDatasetUrl != null);
-  const [form] = Form.useForm<DatasetSettingsFormData & { datastoreUrl?: string }>();
-  const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
-  const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
-  const datasourceConfig = Form.useWatch(["dataSource"], form);
-
-  useEffectOnlyOnce(() => {
-    const params = new URLSearchParams(location.search);
-    const targetFolderId = params.get("to");
-    setTargetFolderId(targetFolderId);
+function resetTransformations(form: FormInstance<RemoteFormFieldTypes>, layers: DataLayer[]) {
+  const dataLayersWithTransformations: DataLayerWithTransformations[] = layers.map((layer) => ({
+    name: layer.name,
+    coordinateTransformations: [],
+  }));
+  form.setFieldsValue({
+    datasetRotation: { x: NO_ROTATION, y: NO_ROTATION, z: NO_ROTATION },
+    isRotationOnly: true,
+    coordinateTransformations: JSON.stringify(dataLayersWithTransformations, null, 2),
+    transformationsMode: TransformationsMode.NONE,
   });
+}
 
-  const getDefaultDatasetName = (url: string) => {
-    if (url === "") return "";
-    let urlPathElements = url.split(/[^a-zA-Z\d_\-.~]/); // split by non url-safe characters
-    const defaultName = urlPathElements.filter((el) => el !== "").at(-1);
-    const urlHash = computeHash(url);
-    return defaultName + "-" + urlHash;
-  };
+function RemoteHelpText() {
+  return (
+    <Typography.Text>
+      Data not loading?{" "}
+      {features().isWkorgInstance ? (
+        <a href="mailto:support@webknossos.org">We&apos;ll help you</a>
+      ) : (
+        <a
+          href="https://docs.webknossos.org/webknossos/data/streaming.html"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Read the documentation
+        </a>
+      )}
+    </Typography.Text>
+  );
+}
 
-  const setEmptyTransformations = (config: DatasourceConfiguration) => {
-    const initialRotationSettingsPerAxis: RotationAndMirroringSettings = {
-      rotationInDegrees: 0,
-      isMirrored: false,
-    };
-    const initialRotationSettings = {
-      x: initialRotationSettingsPerAxis,
-      y: initialRotationSettingsPerAxis,
-      z: initialRotationSettingsPerAxis,
-    };
+function DatasetAddRemoteView({ onAdded, datastores, defaultDatasetUrl }: Props) {
+  const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
 
-    form.setFieldsValue({
-      datasetRotation: initialRotationSettings,
-    });
-    form.setFieldValue("isRotationOnly", true);
+  const [form] = Form.useForm<RemoteFormFieldTypes>();
+  const formRef = useRef<FormInstance | null>(form);
+  const urlField = useRemoteUrlField(defaultDatasetUrl ?? "");
+  const [layerSources, setLayerSources] = useState<Record<string, LayerSource>>({});
+  const [isImporting, setIsImporting] = useState(false);
+  const [showLoadingOverlay, setShowLoadingOverlay] = useState(defaultDatasetUrl != null);
 
-    const dataLayersWithTransformations: DataLayerWithTransformations[] = config.dataLayers.map(
-      (layer: DataLayer) => ({
-        name: layer.name,
-        coordinateTransformations: [],
-      }),
-    );
-    const layersWithCoordTransformationsJSON = JSON.stringify(
-      dataLayersWithTransformations,
-      null,
-      2,
-    );
-    form.setFieldsValue({
-      coordinateTransformations: layersWithCoordTransformationsJSON,
-    });
+  // The data source isn't bound to a form item, so preserve is needed to watch it.
+  const layers: DataLayer[] =
+    Form.useWatch(["dataSource", "dataLayers"], { form, preserve: true }) ?? [];
+  const datasetVoxelSize: VoxelSize | undefined = Form.useWatch(["dataSource", "scale"], {
+    form,
+    preserve: true,
+  });
+  const datasetName: string = Form.useWatch("name", { form, preserve: true }) ?? "";
 
-    form.setFieldValue("transformationsMode", TransformationsMode.NONE);
-  };
-
-  const hasFormAnyErrors = (form: FormInstance) =>
-    form.getFieldsError().filter(({ errors }) => errors.length).length > 0;
-
-  const onSuccessfulExplore = async (url: string, newDataSourceConfig: DatasourceConfiguration) => {
-    const datasourceConfig = form.getFieldValue("dataSource");
-    const mergedConfig = mergeNewLayers(datasourceConfig, newDataSourceConfig);
-    form.setFieldValue("dataSource", mergedConfig);
-
-    setEmptyTransformations(mergedConfig);
-
-    if (defaultDatasetUrl == null) {
-      setShowLoadingOverlay(false);
-      setShowAddLayerModal(false);
-      return;
-    }
-
-    if (!showLoadingOverlay) setShowLoadingOverlay(true); // show overlay again, e.g. after credentials were passed
-
-    const defaultDatasetName = getDefaultDatasetName(url);
-    form.setFieldValue(["dataset", "name"], defaultDatasetName);
-
-    try {
-      await form.validateFields();
-    } catch (_e) {
-      console.warn(_e);
-    }
-    if (!hasFormAnyErrors(form)) {
-      handleStoreDataset();
-    } else {
-      setShowLoadingOverlay(false);
-    }
-    setShowAddLayerModal(false);
-  };
-
-  async function handleStoreDataset() {
-    try {
-      await form.validateFields();
-    } catch (_e) {
-      console.warn(_e);
-    }
-    if (hasFormAnyErrors(form)) {
-      setShowLoadingOverlay(false);
-      return;
-    }
-
-    const datastoreToUse = uploadableDatastores.find(
-      (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
-    );
-    if (!datastoreToUse) {
-      setShowLoadingOverlay(false);
+  const getExploreOptions = (): ExploreOptions | null => {
+    const datastoreUrl = form.getFieldValue("datastoreUrl") ?? uploadableDatastores[0]?.url;
+    const datastore = uploadableDatastores.find(({ url }) => url === datastoreUrl);
+    if (datastore == null) {
       Toast.error("Could not find datastore that allows uploading.");
+      return null;
+    }
+    return {
+      datastoreName: datastore.name,
+      preferredVoxelSize: form.getFieldValue(["dataSource", "scale"]),
+    };
+  };
+
+  const addFoundLayers = (url: string, newDataSource: DatasourceConfiguration) => {
+    const existingDataSource = form.getFieldValue("dataSource");
+    const isFirstUrl = existingDataSource == null || existingDataSource.dataLayers.length === 0;
+    const mergedDataSource = mergeNewLayers(isFirstUrl ? null : existingDataSource, newDataSource);
+    const addedLayers = mergedDataSource.dataLayers.slice(
+      isFirstUrl ? 0 : existingDataSource.dataLayers.length,
+    );
+
+    form.setFieldValue("dataSource", mergedDataSource);
+    resetTransformations(form, mergedDataSource.dataLayers);
+    setLayerSources((sources) => ({
+      ...sources,
+      ...Object.fromEntries(
+        addedLayers.map((layer) => [layer.name, { url, voxelSize: newDataSource.scale }]),
+      ),
+    }));
+    if (isFirstUrl && !form.isFieldTouched("name")) {
+      form.setFieldValue("name", getDatasetNameFromUrl(url));
+    }
+  };
+
+  const startOver = () => {
+    form.resetFields();
+    setLayerSources({});
+  };
+
+  const removeLayer = (layerName: string) => {
+    const remainingLayers = layers.filter((layer) => layer.name !== layerName);
+    if (remainingLayers.length === 0) {
+      startOver();
       return;
     }
+    form.setFieldValue(["dataSource", "dataLayers"], remainingLayers);
+    setLayerSources(({ [layerName]: _removed, ...sources }) => sources);
+  };
 
-    // The dataset name is not synced with the datasource.id.name in the advanced settings: See DatasetSettingsDataTab.
-    const datasetName = form.getFieldValue(["dataset", "name"]);
-    const dataSource = form.getFieldValue("dataSource");
-
-    if (dataSource && activeUser) {
+  const storeDataset = async (
+    datastoreName: string,
+    name: string,
+    teams: APITeam[],
+    targetFolderId: string | null,
+  ) => {
+    const nameValidationResult = await isDatasetNameValid(name);
+    if (nameValidationResult) {
+      form.setFields([{ name: "name", errors: [nameValidationResult] }]);
+      return;
+    }
+    const { newDatasetId } = await storeRemoteDataset(
+      datastoreName,
+      name,
+      form.getFieldValue("dataSource"),
+      defaultDatasetUrl,
+      targetFolderId,
+    );
+    if (teams.length > 0) {
       try {
-        const nameValidationResult = await isDatasetNameValid(datasetName);
-        if (nameValidationResult) {
-          throw new Error(nameValidationResult);
-        }
-        const { newDatasetId } = await storeRemoteDataset(
-          datastoreToUse.name,
-          datasetName,
-          dataSource,
-          defaultDatasetUrl,
-          targetFolderId,
+        await updateDatasetTeams(
+          newDatasetId,
+          teams.map((team) => team.id),
         );
-        onAdded(newDatasetId, datasetName);
-      } catch (e) {
-        setShowLoadingOverlay(false);
-        Toast.error(`The datasource config could not be stored. ${e}`);
-        return;
+      } catch (_error) {
+        Toast.warning(
+          "The dataset was imported, but its teams could not be set. Please set them in the dataset settings.",
+        );
       }
     }
-  }
+    await onAdded(newDatasetId, name);
+  };
 
-  const hideDatasetUI = maybeDataLayers == null || maybeDataLayers.length === 0;
+  const handleImport = async () => {
+    let values: RemoteFormFieldTypes;
+    try {
+      values = await form.validateFields();
+    } catch (_validationError) {
+      return; // The form shows the errors.
+    }
+    const exploreOptions = getExploreOptions();
+    if (exploreOptions == null) return;
+    setIsImporting(true);
+    try {
+      await storeDataset(
+        exploreOptions.datastoreName,
+        values.name,
+        values.initialTeams ?? [],
+        values.targetFolderId,
+      );
+    } catch (error) {
+      Toast.error(`The datasource config could not be stored. ${error}`);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Imports a URL that was passed to the page without waiting for the user.
+  // If anything fails, the regular UI is shown so that the user can fix it.
+  const importWithoutInteraction = async (url: string, dataSource: DatasourceConfiguration) => {
+    const exploreOptions = getExploreOptions();
+    if (exploreOptions == null) return;
+    const name = getUniqueDatasetNameFromUrl(url);
+    form.setFieldValue("name", name);
+    setShowLoadingOverlay(true);
+    try {
+      addFoundLayers(url, dataSource);
+      await storeDataset(
+        exploreOptions.datastoreName,
+        name,
+        [],
+        new URLSearchParams(location.search).get("to"),
+      );
+    } catch (error) {
+      Toast.error(`The datasource config could not be stored. ${error}`);
+    } finally {
+      setShowLoadingOverlay(false);
+    }
+  };
+
+  const exploreFirstUrl = async (url: string) => {
+    const exploreOptions = getExploreOptions();
+    if (exploreOptions == null || urlField.isExploring) return;
+    const dataSource = await urlField.exploreUrl(exploreOptions, url);
+    if (dataSource == null) {
+      setShowLoadingOverlay(false);
+      return;
+    }
+    if (defaultDatasetUrl != null) {
+      await importWithoutInteraction(url.trim(), dataSource);
+    } else {
+      addFoundLayers(url.trim(), dataSource);
+    }
+  };
+
+  useEffectOnlyOnce(() => {
+    if (defaultDatasetUrl != null) exploreFirstUrl(defaultDatasetUrl);
+  });
+
+  const hasLayers = layers.length > 0;
   return (
-    // Using Forms here only to validate fields and for easy layout
     <div>
       {showLoadingOverlay ? <BrainSpinner /> : null}
-      <CardContainer
-        title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset"
-        subtitle={dataPrivacyInfo}
-      >
-        <Form form={form} layout="vertical">
-          <DatastoreFormItem datastores={uploadableDatastores} hidden={hasOnlyOneDatastoreOrNone} />
-          <Modal
-            title="Add Layer"
-            width={ModalWidth.Large}
-            open={showAddLayerModal}
-            footer={null}
-            onCancel={() => setShowAddLayerModal(false)}
-          >
-            <AddRemoteLayer
-              form={form}
-              preferredVoxelSize={datasourceConfig?.scale}
-              uploadableDatastores={uploadableDatastores}
-              onSuccess={onSuccessfulExplore}
-            />
-          </Modal>
-
-          {hideDatasetUI && (
-            <AddRemoteLayer
-              form={form}
-              preferredVoxelSize={datasourceConfig?.scale}
-              uploadableDatastores={uploadableDatastores}
-              defaultUrl={defaultDatasetUrl}
-              onError={() => setShowLoadingOverlay(false)}
-              onSuccess={onSuccessfulExplore}
-            />
-          )}
-          <Hideable hidden={hideDatasetUI}>
-            <List
-              header={
-                <div
-                  style={{
-                    fontWeight: "bold",
-                  }}
-                >
-                  General
-                </div>
-              }
-            >
-              <List.Item>
-                <FormItemWithInfo
-                  name="targetFolder"
-                  label="Target Folder"
-                  info="The folder into which the dataset will be uploaded. The dataset can be moved later after upload, too. When not selecting a folder, the dataset will be placed into the root folder."
-                >
-                  <FolderSelection
-                    width="50%"
-                    folderId={targetFolderId}
-                    onChange={setTargetFolderId}
-                    disableNotEditableFolders
-                  />
-                </FormItemWithInfo>{" "}
-              </List.Item>
-            </List>
-
-            {/* Only the component's visibility is changed, so that the form is always rendered.
-                This is necessary so that the form's structure is always populated. */}
-            <DatasetSettingsProvider form={form} isEditingMode={false} datasetId="new-import">
-              <DatasetSettingsDataTab />
-            </DatasetSettingsProvider>
-          </Hideable>
-          {!hideDatasetUI && (
+      <CardContainer title="Add Remote Dataset" subtitle={dataPrivacyInfo}>
+        <Form
+          form={form}
+          layout="vertical"
+          requiredMark
+          initialValues={{
+            initialTeams: [],
+            targetFolderId: new URLSearchParams(location.search).get("to"),
+          }}
+        >
+          {hasLayers ? (
             <>
-              <Divider />
-              <Flex justify="center" style={{ marginBottom: 24 }}>
-                <Button type="link" onClick={() => setShowAddLayerModal(true)}>
-                  Add Layer
-                </Button>
-              </Flex>
-              <Row gutter={8}>
-                <Col span={12} />
-                <Col span={6}>
-                  <FormItem>
-                    <Button
-                      size="large"
-                      type="default"
-                      style={{ width: "100%" }}
-                      onClick={() => {
-                        form.resetFields();
-                      }}
-                    >
-                      Reset
-                    </Button>
-                  </FormItem>
-                </Col>
-                <Col span={6}>
-                  <Form.Item shouldUpdate>
-                    {() => (
-                      <Button
-                        size="large"
-                        type="primary"
-                        style={{ width: "100%" }}
-                        onClick={handleStoreDataset}
-                        disabled={
-                          !!form.getFieldsError().filter(({ errors }) => errors.length).length
-                        }
-                      >
-                        Import
-                      </Button>
-                    )}
-                  </Form.Item>
-                </Col>
-              </Row>
+              <RemoteLayerList
+                datasetName={datasetName}
+                layers={layers}
+                layerSources={layerSources}
+                datasetVoxelSize={datasetVoxelSize}
+                exploreOptions={getExploreOptions}
+                onRemoveLayer={removeLayer}
+                onLayersFound={addFoundLayers}
+                onStartOver={startOver}
+              />
+              <RemoteDatasetDetails
+                form={form}
+                formRef={formRef}
+                datastores={uploadableDatastores}
+              />
             </>
+          ) : (
+            <RemoteUrlStep field={urlField} onSubmit={() => exploreFirstUrl(urlField.url)} />
           )}
+
+          <Divider />
+          <Flex justify="space-between" align="center" gap="middle" wrap style={{ minHeight: 40 }}>
+            <RemoteHelpText />
+            {hasLayers ? (
+              <Button
+                type="primary"
+                size="large"
+                loading={isImporting}
+                onClick={handleImport}
+                style={{ minWidth: 160 }}
+              >
+                Import {layers.length} {layers.length === 1 ? "layer" : "layers"}
+              </Button>
+            ) : null}
+          </Flex>
         </Form>
       </CardContainer>
     </div>

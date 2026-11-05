@@ -1,3 +1,4 @@
+import { LayerPool } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { getAbsoluteCoords, getMagnificationFactors } from "viewer/shaders/coords.glsl";
 import { hashCombine } from "./hashing.glsl";
@@ -30,51 +31,47 @@ const linearizeVec3ToIndexWithMod: ShaderModule = {
 
 const getRgbaAtXYIndex: ShaderModule = {
   code: `
-    // One function per layer, so that the pool and the dtype handling are
-    // constants for the compiler.
-
-    <% each(layerNamesWithSegmentation, (name) => { %>
-      // textureIdx is the slice within the layer's pool texture.
-      vec4 getRgbaAtXYIndex_<%= name %>(float textureIdx, float x, float y) {
-
-        <%
-          const textureLayerInfo = textureLayerInfos[name];
-          const elementClass = textureLayerInfo.elementClass;
-        %>
-
-        <%= textureLayerInfo.glslPrefix %>vec4 val;
-        float dtype_normalizer = <%=
-          formatNumberAsGLSLFloat((() => {
-            if (textureLayerInfo.isColor && !elementClass.endsWith("int8")) {
-              return 1;
-            } else if (
-              textureLayerInfo.isSigned && !elementClass.endsWith("int32") && !elementClass.endsWith("int64")
-            ) {
-              return 127;
-            } else {
-              return 255;
-            }
-          })())
-        %>;
-
-        val = texelFetch(<%= getPoolSamplerName(elementClass) %>, ivec3(x, y, textureIdx), 0);
-        <% if (elementClass.endsWith("int16")) { %>
-          return vec4(val.x, 0., val.y, 0.);
-        <% } else { %>
-          return dtype_normalizer * vec4(val);
-        <% }%>
-      }
-    <% }); %>
-
+    // textureIdx is the slice within the layer's pool texture.
     vec4 getRgbaAtXYIndex(float localLayerIndex, float textureIdx, float x, float y) {
-      if (localLayerIndex == 0.0) {
-        return getRgbaAtXYIndex_<%= layerNamesWithSegmentation[0] %>(textureIdx, x, y);
-      } <% each(layerNamesWithSegmentation.slice(1), (name, index) => { %>
-        else if (localLayerIndex == <%= formatNumberAsGLSLFloat(index + 1) %>) {
-          return getRgbaAtXYIndex_<%= name %>(textureIdx, x, y);
+      uint idx = uint(localLayerIndex);
+      uint poolId = layerPoolId[idx];
+      float dtypeNormalizer = layerDtypeNormalizer[idx];
+      ivec3 coord = ivec3(int(x), int(y), int(textureIdx));
+      // Only the pools that the dataset uses are declared (see
+      // getLayerPoolsInDataset).
+      <% if (layerPoolsInDataset.includes(${LayerPool.F32})) { %>
+        if (poolId == ${LayerPool.F32}u) {
+          // F32 pool: native float values, no rescaling.
+          return texelFetch(pool_f32_textures, coord, 0);
         }
-      <% }); %>
-      return vec4(0.0);
+      <% } %>
+      <% if (layerPoolsInDataset.includes(${LayerPool.S8})) { %>
+        if (poolId == ${LayerPool.S8}u) {
+          // S8 pool: hardware SNORM-decoded to [-1, 1] already.
+          return dtypeNormalizer * texelFetch(pool_s8_textures, coord, 0);
+        }
+      <% } %>
+      <% if (layerPoolsInDataset.includes(${LayerPool.U16})) { %>
+        if (poolId == ${LayerPool.U16}u) {
+          // U16 pool: integer sampler, raw component values (no normalizer).
+          uvec4 val = texelFetch(pool_u16_textures, coord, 0);
+          return vec4(val.x, 0., val.y, 0.);
+        }
+      <% } %>
+      <% if (layerPoolsInDataset.includes(${LayerPool.S16})) { %>
+        if (poolId == ${LayerPool.S16}u) {
+          // S16 pool: integer sampler, raw component values (no normalizer).
+          ivec4 val = texelFetch(pool_s16_textures, coord, 0);
+          return vec4(val.x, 0., val.y, 0.);
+        }
+      <% } %>
+      <% if (layerPoolsInDataset.includes(${LayerPool.U8})) { %>
+        if (poolId == ${LayerPool.U8}u) {
+          // U8 pool: hardware UNORM-decoded to [0, 1] already.
+          return dtypeNormalizer * texelFetch(pool_u8_textures, coord, 0);
+        }
+      <% } %>
+      return vec4(0.);
     }
   `,
 };
@@ -198,33 +195,26 @@ export const getColorForCoords: ShaderModule = {
 
       float bucketAddress;
       vec3 offsetInBucket;
-<% if (isVertexAlignmentCapped) { %>
+      uint renderedMagIdx = activeMagIdx;
+
       // Layers at or above VERTEX_ALIGNMENT_LAYER_CAP have no precomputed
       // bucket address.
-      uint renderedMagIdx = activeMagIdx;
       bool beSafe = globalLayerIndex >= VERTEX_ALIGNMENT_LAYER_CAP || useBucketBorderVertexOptimization < 0.5;
       if (!beSafe) {
-<% } else { %>
-      uint renderedMagIdx;
-      bool beSafe = useBucketBorderVertexOptimization < 0.5;
-<% } %>
-      // To avoid rare rendering artifacts, don't use the precomputed
-      // bucket address when being at the border of buckets.
-      renderedMagIdx = outputMagIdx[globalLayerIndex];
-      vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
-      vec3 absoluteBucketPosition = div(coords, bucketWidth);
-      offsetInBucket = mod(coords, bucketWidth);
-      vec3 offsetInBucketUVW = transDim(offsetInBucket);
-      if (offsetInBucketUVW.x < 0.01 || offsetInBucketUVW.y < 0.01
-          || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.
-          || isnan(offsetInBucketUVW.x) || isnan(offsetInBucketUVW.y)
-          || isnan(offsetInBucketUVW.z)
-        ) {
-        beSafe = true;
+        renderedMagIdx = outputMagIdx[globalLayerIndex];
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
+        vec3 absoluteBucketPosition = div(coords, bucketWidth);
+        offsetInBucket = mod(coords, bucketWidth);
+        vec3 offsetInBucketUVW = transDim(offsetInBucket);
+        if (offsetInBucketUVW.x < 0.01 || offsetInBucketUVW.y < 0.01
+            || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.
+            || isnan(offsetInBucketUVW.x) || isnan(offsetInBucketUVW.y)
+            || isnan(offsetInBucketUVW.z)
+          ) {
+          beSafe = true;
+        }
       }
-<% if (isVertexAlignmentCapped) { %>
-      }
-<% } %>
+
 
       if (beSafe || !supportsPrecomputedBucketAddress) {
         for (uint i = 0u; i <= ${MAX_ZOOM_STEP_DIFF}u; i++) {

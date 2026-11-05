@@ -49,7 +49,6 @@ import UrlManager, {
 } from "viewer/controller/url_manager";
 import {
   determineAllowedModes,
-  getColorLayers,
   getDataLayers,
   getMagInfoByLayer,
   getSegmentationLayers,
@@ -93,7 +92,7 @@ import {
   validateMinimumRequirements,
 } from "viewer/model/bucket_data_handling/gpu_capability_check";
 import DataLayer from "viewer/model/data_layer";
-import { computeUniformColorLayerCap } from "viewer/shaders/main_data_shaders.glsl";
+import { estimateUniformVectors } from "viewer/shaders/main_data_shaders.glsl";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
@@ -266,14 +265,8 @@ export async function initialize(
     if (userState != null) {
       Store.dispatch(setZoomStepAction(userState.zoomLevel));
     }
-    const { smallestCommonBucketCapacity, maximumLayerCountToRender } = initializationInformation;
-    Store.dispatch(
-      initializeGpuSetupAction(
-        smallestCommonBucketCapacity,
-        gpuMemoryFactor,
-        maximumLayerCountToRender,
-      ),
-    );
+    const { smallestCommonBucketCapacity } = initializationInformation;
+    Store.dispatch(initializeGpuSetupAction(smallestCommonBucketCapacity, gpuMemoryFactor));
   }
 
   // There is no need to initialize the annotation if there is no annotation (View mode).
@@ -562,10 +555,8 @@ function initializeSettings(
 function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   dataLayers: DataLayerCollection;
   smallestCommonBucketCapacity: number;
-  maximumLayerCountToRender: number;
 } {
   const { dataset } = Store.getState();
-  const layers = dataset.dataSource.dataLayers;
   const specs = getSupportedTextureSpecs();
   validateSpecsForLayers(dataset, specs);
   // The bucket capacity per layer of the user's GPU setting, lowered until all
@@ -575,10 +566,10 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   // GPU setting changes in the meantime, the max-zoom computation uses the
   // smaller of both capacities.
   const { bucketCapacity: smallestCommonBucketCapacity, poolDepths } = computeLayerPoolPlan(
-    layers,
+    dataset.dataSource.dataLayers,
     getRequiredBucketCapacityPerLayer(
       gpuFactor ?? constants.DEFAULT_GPU_MEMORY_FACTOR,
-      layers.length,
+      dataset.dataSource.dataLayers.length,
     ),
     specs.maxArrayTextureLayers,
   );
@@ -593,26 +584,26 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     );
     throw HANDLED_ERROR;
   }
-  // The pools don't need texture units per layer, but every rendered layer
-  // needs uniforms. Only one segmentation layer can be visible at a time (see
-  // settings_reducer).
+  // The shader has uniforms for every layer, visible or not. Beyond the GPU's
+  // limit, it can't be linked and no image data is rendered. The rest of
+  // WEBKNOSSOS (e.g. skeletons) still works, so don't abort.
   const magnificationCount = Object.values(getMagInfoByLayer(dataset)).flatMap((magInfo) =>
     magInfo.getDenseMags(),
   ).length;
-  const uniformColorLayerCap = computeUniformColorLayerCap(
-    specs.maxUniformVectors,
-    layers.length,
+  const uniformVectors = estimateUniformVectors(
+    dataset.dataSource.dataLayers.length,
     magnificationCount,
     hasSegmentation(dataset),
   );
-  const maximumLayerCountToRender =
-    Math.min(getColorLayers(dataset).length, uniformColorLayerCap) +
-    (hasSegmentation(dataset) ? 1 : 0);
+  if (uniformVectors > specs.maxUniformVectors) {
+    Toast.error(messages["webgl.too_many_uniforms"], { sticky: true });
+  }
 
   if (import.meta.env.MODE !== "test") {
     console.log("Supporting", smallestCommonBucketCapacity, "buckets");
   }
 
+  const layers = dataset.dataSource.dataLayers;
   const dataLayers: DataLayerCollection = {};
 
   for (const layer of layers) {
@@ -631,7 +622,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   return {
     dataLayers,
     smallestCommonBucketCapacity,
-    maximumLayerCountToRender,
   };
 }
 

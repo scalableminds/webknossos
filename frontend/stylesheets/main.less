@@ -186,9 +186,11 @@ body {
     background-color: rgba(255, 255, 255, 0.35);
     vertical-align: middle;
 
+    // The collapsed WEBKNOSSOS logo already brings an 8px right margin (icon-margin-right), so
+    // the divider only adds space on its right to keep both gaps equal.
     &.compact {
       height: 20px;
-      margin: 0 8px 0 4px;
+      margin: 0 8px 0 0;
     }
   }
 

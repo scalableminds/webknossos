@@ -25,6 +25,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class OrganizationService @Inject() (
     organizationDAO: OrganizationDAO,
+    partnerService: PartnerService,
     multiUserDAO: MultiUserDAO,
     userDAO: UserDAO,
     teamDAO: TeamDAO,
@@ -66,6 +67,7 @@ class OrganizationService @Inject() (
         creditTransactionDAO.getMilliCreditBalance(organization._id)
       )
       ownerNameOpt = ownerMultiUserBox.toOption.map(o => o.fullName)
+      partnerOpt <- partnerService.findPartnerOf(organization)
     } yield Json.obj(
       "id" -> organization._id,
       "name" -> organization._id, // Included for backwards compatibility
@@ -79,7 +81,8 @@ class OrganizationService @Inject() (
       "includedStorageBytes" -> organization.includedStorageBytes,
       "usedStorageBytes" -> usedStorageBytes,
       "ownerName" -> ownerNameOpt,
-      "milliCreditBalance" -> milliCreditBalanceOpt
+      "milliCreditBalance" -> milliCreditBalanceOpt,
+      "partner" -> partnerOpt.map(partnerService.publicWrites)
     ) ++ adminOnlyInfo
   }
 

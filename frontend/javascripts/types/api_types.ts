@@ -716,6 +716,16 @@ export type APIOrganization = APIOrganizationCompact & {
   readonly usedStorageBytes: number;
   readonly ownerName?: string;
   readonly milliCreditBalance: number | null | undefined;
+  readonly partner: APIPartner | null;
+};
+// A partner co-brands WEBKNOSSOS for the organizations assigned to it.
+export type APIPartner = {
+  readonly id: string;
+  readonly name: string;
+  readonly logoUrl: string;
+  // Shown where the navbar is collapsed. Falls back to logoUrl.
+  readonly compactLogoUrl: string | null;
+  readonly linkUrl: string | null;
 };
 export type APIPricingPlanStatus = {
   readonly pricingPlan: PricingPlanEnum;
@@ -894,6 +904,9 @@ export type AiModel = {
   readonly category: APIAiModelCategory;
   readonly isSuperUserOnly: boolean;
   readonly isPretrained: boolean;
+  // Set for pretrained models that are only available to the organizations of a partner.
+  readonly partnerId: string | null;
+  readonly thumbnailUrl: string | null;
 };
 
 // Tracing related datatypes

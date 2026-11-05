@@ -17,14 +17,6 @@ JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
 
 /*
  * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
- * Method:     countSegmentVoxels
- * Signature:  ([BIZJ)J
- */
-JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_countSegmentVoxels
-  (JNIEnv *, jobject, jbyteArray, jint, jboolean, jlong);
-
-/*
- * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
  * Method:     extendSegmentBoundingBox
  * Signature:  ([BIZIJIIIIIIIII)[I
  */

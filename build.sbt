@@ -1,3 +1,4 @@
+import com.github.sbt.jni.build.Cargo
 import sbt._
 
 ThisBuild / version := "wk"
@@ -71,9 +72,18 @@ lazy val webknossosJni = (project in file("webknossos-jni"))
   .settings(nativeCompile / sourceDirectory := sourceDirectory.value)
   .enablePlugins(JniNative)
 
+// Native functions in Rust, replacing webknossos-jni step by step. Built with cargo by sbt-jni.
+lazy val webknossosNative = (project in file("webknossos-native"))
+  .settings(
+    nativeCompile / sourceDirectory := baseDirectory.value,
+    nativeBuildTool := Cargo.make(Seq("--release"))
+  )
+  .enablePlugins(JniNative)
+
 lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .dependsOn(util)
   .dependsOn(webknossosJni)
+  .dependsOn(webknossosNative)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(ProtocPlugin)

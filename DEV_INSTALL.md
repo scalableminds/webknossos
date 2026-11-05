@@ -13,6 +13,7 @@
 * [yarn package manager](https://yarnpkg.com/)
 * [git](https://git-scm.com/downloads)
 * [cmake](https://cmake.org/download/)
+* [Rust](https://www.rust-lang.org/tools/install) 1.87+ (cargo)
 
 * For some development tasks like refreshing snapshots, Docker 19.03.0+ and Docker Compose 2.+ are required
 
@@ -23,8 +24,8 @@
 # Install Homebrew package manager
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# Install git, node.js, postgres, sbt, gfind, gsed, draco
-brew install openjdk@21 draco openssl git node postgresql sbt findutils coreutils gnu-sed redis brotli wget cmake
+# Install git, node.js, postgres, sbt, gfind, gsed, draco, rust
+brew install openjdk@21 draco openssl git node postgresql sbt findutils coreutils gnu-sed redis brotli wget cmake rust
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc
@@ -63,6 +64,10 @@ Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 env
 ```bash
 sudo apt update
 sudo apt install -y curl ca-certificates wget git postgresql postgresql-client unzip zip redis-server build-essential libbrotli1 libdraco-dev cmake
+
+# Install rust (the apt package is too old)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source "$HOME/.cargo/env"
 
 # Install nvm, node 22
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash

@@ -165,35 +165,6 @@ JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
     }
 }
 
-JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_countSegmentVoxels
-    (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jlong segmentId) {
-
-    jsize inputLengthBytes = env->GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytes = env->GetByteArrayElements(bucketBytesJavaArray, nullptr);
-    try {
-
-        const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
-        size_t segmentVoxelCount = 0;
-        for (size_t i = 0; i < elementCount; ++i) {
-            int64_t currentValue = segmentIdAtIndex(bucketBytes, i, bytesPerElement, isSigned);
-            if (currentValue == segmentId) {
-                segmentVoxelCount++;
-            }
-        }
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
-        return segmentVoxelCount;
-
-    } catch (const std::exception &e) {
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
-        throwRuntimeException(env, "Native Exception in BucketScanner countSegmentVoxels: " + std::string(e.what()));
-        return 0;
-    } catch (...) {
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
-        throwRuntimeException(env, "Native Exception in BucketScanner countSegmentVoxels");
-        return 0;
-    }
-}
-
 JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_extendSegmentBoundingBox
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jint bucketLength, jlong segmentId,
       jint bucketTopLeftX, jint bucketTopLeftY, jint bucketTopLeftZ,

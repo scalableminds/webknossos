@@ -1,0 +1,21 @@
+[package]
+name = "webknossos-native"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.87"
+publish = false
+description = "Native (JNI) functions for the WEBKNOSSOS datastore and tracingstore"
+
+[lib]
+# sbt-jni expects the major version appended to the library name, see NativeLibraries.scala
+name = "webknossosNative0"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+jni = "0.22.4"
+
+[profile.release]
+codegen-units = 1
+lto = true
+# Panics must unwind so that jni's with_env can turn them into Java exceptions.
+panic = "unwind"

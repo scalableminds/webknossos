@@ -177,6 +177,35 @@ body {
     }
   }
 
+  // Co-branding: the partner logo sits next to the WEBKNOSSOS logo.
+  .partner-logo {
+    height: 24px;
+    max-width: 140px;
+    margin-left: 12px;
+    object-fit: contain;
+    vertical-align: middle;
+
+    // The compact logo is shown where the navbar is collapsed (annotation view, phones).
+    &.compact {
+      height: 26px;
+      max-width: 40px;
+      margin-left: 4px;
+    }
+
+    &.compact-fallback {
+      height: 20px;
+      max-width: 80px;
+      margin-left: 4px;
+    }
+  }
+
+  // Phones have no room for a full partner logo.
+  .partner-logo-hidden-on-phones {
+    @media @smartphones {
+      display: none;
+    }
+  }
+
   // Size and spacing match the wordmark in logo.svg next to the 30px mark.
   .logo-wordmark {
     margin-left: 10px;
@@ -283,6 +312,15 @@ body {
   @media (min-width: 970px) {
     margin-left: 20px;
     margin-right: 20px;
+  }
+
+  // On phones, every pixel of width counts. Slim down the side spacing.
+  @media @smartphones {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 12px;
   }
 }
 

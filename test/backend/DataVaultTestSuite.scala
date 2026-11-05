@@ -137,6 +137,11 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
               .readBytes(ByteRange.startEndExclusive(-5, -10))(using globalExecutionContext, emptyTokenContext)
               .futureBox
               .map(assertBoxFailure)
+          "requesting an empty range" in
+            (vaultPath / dataKey)
+              .readBytes(ByteRange.startEndExclusive(100, 100))(using globalExecutionContext, emptyTokenContext)
+              .futureBox
+              .map(assertBoxFailure)
           "using invalid credentials" in {
             val vaultPath =
               new VaultPath(
@@ -151,7 +156,7 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
                   .getOrElse(fail("Failed to create GoogleCloudDataVault"))
               )
             (vaultPath / dataKey)
-              .readBytes(ByteRange.startEndExclusive(-10, 10))(using globalExecutionContext, emptyTokenContext)
+              .readBytes(ByteRange.startEndExclusive(0, 10))(using globalExecutionContext, emptyTokenContext)
               .futureBox
               .map(assertBoxFailure)
           }

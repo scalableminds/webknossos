@@ -2,7 +2,7 @@
 name = "webknossos-native"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.87"
+rust-version = "1.88"
 publish = false
 description = "Native (JNI) functions for the WEBKNOSSOS datastore and tracingstore"
 
@@ -13,7 +13,17 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 compresso-rs = "0.1.0"
+# Without point_cloud_decode, so that point cloud streams are rejected like by the C++ DecodeMeshFromBuffer.
+draco-core = { version = "2.3.3", default-features = false, features = [
+    "decoder",
+    "edgebreaker_valence_decode",
+    "legacy_bitstream_decode",
+] }
 jni = "0.22.4"
+
+[dev-dependencies]
+# The encoder builds small meshes for the unit tests.
+draco-core = { version = "2.3.3", default-features = false, features = ["encoder"] }
 
 [profile.release]
 codegen-units = 1

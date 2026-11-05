@@ -5,7 +5,7 @@ It replaces the C++ library in `webknossos-jni` function by function. Until that
 loaded (see `NativeLibraries.scala`), and the JVM binds each `@native` method to whichever library exports it.
 
 sbt builds the crate with cargo (`sbt compile`, via sbt-jni) and packages it as a resource at
-`native/<arch>-<os>/`. Needs Rust 1.87+.
+`native/<arch>-<os>/`. Needs Rust 1.88+.
 
 ## Layout
 

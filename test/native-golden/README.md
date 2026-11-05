@@ -13,5 +13,9 @@ original C++ implementation, so any reimplementation must reproduce it exactly.
 - `compresso/`: label volumes of every data type, compressed with the reference Python `compresso` package
   (`scripts/gen_synthetic.py`).
 
+The Draco results were re-recorded with the Rust port: the C++ library had been built on arm64, where clang fuses
+the multiply-adds of the normal computation, so the last bits of the normals differed. Built with
+`-ffp-contract=off` (like on x86_64), the C++ produced exactly the Rust results.
+
 When a run fails, the suite writes all actual results to `target/native-golden-actual.txt`. To accept an
 intended behavior change, copy that file over `expected.txt`.

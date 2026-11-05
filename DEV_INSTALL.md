@@ -13,7 +13,7 @@
 * [yarn package manager](https://yarnpkg.com/)
 * [git](https://git-scm.com/downloads)
 * [cmake](https://cmake.org/download/)
-* [Rust](https://www.rust-lang.org/tools/install) 1.87+ (cargo)
+* [Rust](https://www.rust-lang.org/tools/install) 1.88+ (cargo)
 
 * For some development tasks like refreshing snapshots, Docker 19.03.0+ and Docker Compose 2.+ are required
 

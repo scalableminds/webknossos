@@ -11,5 +11,6 @@
 
 mod bucket_scanner;
 mod compresso;
+mod draco;
 mod jni_util;
 mod voxel_runs;

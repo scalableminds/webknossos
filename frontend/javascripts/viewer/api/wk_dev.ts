@@ -51,10 +51,7 @@ export const WkDevFlags = {
   liveCollaboration: {
     // Allows the volume tools in live collaboration, and switching to live
     // collaboration when the mapping is locked (not only with an editable mapping).
-    allowCollaborativeVolumeAnnotation: false,
-    // Remote updateBucketPartial actions are applied to loaded buckets directly.
-    // Set to true to evict and re-fetch those buckets instead, as for updateBucket.
-    refetchBucketsForRemotePartialUpdates: true,
+    allowCollaborativeVolumeAnnotation: true, // todop: revert
   },
   meshing: {
     marchingCubeSizeInTargetMag: [64, 64, 64] as Vector3,

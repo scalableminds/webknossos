@@ -51,6 +51,7 @@ type UserBoundingBoxInputProps = {
   onVisibilityChange?: (arg0: boolean) => void;
   onNameChange?: (arg0: string) => void;
   onColorChange?: (arg0: Vector3) => void;
+  onColorPickerOpenChange?: (isOpen: boolean) => void;
   disabled?: boolean;
   isLockedByOwner?: boolean;
   isOwner?: boolean;
@@ -85,6 +86,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     onVisibilityChange,
     onNameChange,
     onColorChange,
+    onColorPickerOpenChange,
     disabled,
     isLockedByOwner = false,
     isOwner = false,
@@ -299,6 +301,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
         <ColorSetting
           value={rgbToHex(upscaledColor)}
           onChange={handleColorChange}
+          onPickerOpenChange={onColorPickerOpenChange}
           // The color of a read-only layer bounding box is a client-side display setting and
           // therefore stays editable even when the annotation cannot be updated.
           disabled={!isReadOnly && disabled}

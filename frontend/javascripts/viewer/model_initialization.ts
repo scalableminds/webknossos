@@ -1,8 +1,5 @@
 import { unwrapOrThrow } from "admin/api/api_result";
-import {
-  isFeatureAllowedByPricingPlan,
-  PricingPlanEnum,
-} from "admin/organization/pricing_plan_utils";
+import { hasSomePaidPlan } from "admin/organization/pricing_plan_utils";
 import {
   getAnnotationBookmarks,
   getAnnotationCompoundInformation,
@@ -874,7 +871,7 @@ function enforcePricingRestrictionsOnUserConfiguration(
   userConfiguration: UserConfiguration,
 ): UserConfiguration {
   const activeOrganization = Store.getState().activeOrganization;
-  if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
+  if (!hasSomePaidPlan(activeOrganization)) {
     return {
       ...userConfiguration,
       renderWatermark: true,

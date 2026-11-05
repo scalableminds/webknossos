@@ -264,6 +264,10 @@ object Msg {
     val requiresHttps: String = "Passkeys are only supported with HTTPS."
     val unauthorized: String = "Passkey authentication failed."
   }
+  object Partner {
+    val notFound: String = "Partner could not be found."
+  }
+
   object Organization {
     def notFound(id: String): String = s"Organization “$id” could not be found or accessed."
     def notFoundWrongHost(orgaId: String, gotHost: String, thisHost: String): String =
@@ -355,6 +359,7 @@ object Msg {
       "This job has already been retried once and failed again. This is likely a persistent failure. Please contact an administrator for help."
     val cleanupFailed: String = "Could not clean up failed job."
     val notEnabled: String = "Long-running jobs are not enabled for this WEBKNOSSOS instance."
+    val notAvailableInPlan: String = "Long-running jobs are not available in the pricing plan of your organization."
     val edgeLengthExceeded: String = "An edge length of the selected bounding box is too large."
     val volumeExceeded: String = "The volume of the selected bounding box is too large."
     val invalidBoundingBoxOrMag: String =
@@ -857,6 +862,7 @@ object Msg {
   }
   object SegmentAnything {
     val notEnabled: String = "AI-based quick select is not enabled for this WEBKNOSSOS instance."
+    val notAvailableInPlan: String = "AI-based quick select is not available in the pricing plan of your organization."
     val noUri: String = "No URI for SAM server configured."
     val getDataFailed: String = "Could not get image data to send to SAM server."
     val getMaskFailed: String = "Could not get image mask from SAM server."

@@ -605,6 +605,7 @@ export type AnnotationViewConfiguration = {
     string,
     {
       isDisabled: boolean;
+      agglomerateDiffReference?: string | null;
     }
   >;
 };

@@ -150,6 +150,46 @@ export type SkeletonTracing = TracingBase & {
   readonly activeNodeId: number | null | undefined;
   readonly cachedMaxNodeId: number;
 };
+export type AgglomerateDiffDescriptor = {
+  readonly layerName: string;
+  // The agglomerate view of the agglomerate skeleton
+  readonly mappingName: string;
+  readonly agglomerateId: bigint;
+  readonly referenceMappingName: string;
+};
+export type AgglomerateDiff = AgglomerateDiffDescriptor & {
+  readonly status: "loading" | "loaded" | "failed";
+  // The agglomerate is compared to the reference agglomerate that contains the segment at this
+  // (floored) position in the coordinate system of the layer.
+  readonly positionInLayer: Vector3;
+  // Set if the diff was requested while its agglomerate skeleton was still loading, so that it
+  // is not considered obsolete until the agglomerate skeleton was added.
+  readonly awaitsAgglomerateSkeleton: boolean;
+  // The agglomerate skeleton (annotation tree) of the diff. Null while it is awaited.
+  readonly sourceTreeId: number | null;
+  // The diff is only shown while its agglomerate skeleton is visible
+  readonly isSourceTreeVisible: boolean;
+  // The fields below are only set once the diff is loaded
+  readonly referenceAgglomerateId: bigint | null;
+  // The trees of the overlay skeleton that show this diff
+  readonly treeIds: Array<number>;
+  readonly addedEdgeCount: number;
+  readonly removedEdgeCount: number;
+  // Only set if the diff failed
+  readonly errorMessage: string | null;
+};
+// The differences of the loaded agglomerate skeletons to the reference agglomerate views are
+// derived from the agglomerate skeletons and the reference views (see agglomerate_diff_saga.ts).
+// They are only kept locally, so they can never become inconsistent with the agglomerate skeletons.
+export type AgglomerateDiffOverlay = {
+  // Keyed by getAgglomerateDiffKey
+  readonly diffs: Record<string, AgglomerateDiff>;
+  readonly isVisible: boolean;
+  // Holds the trees of all diffs (one for the added and one for the removed edges per diff).
+  // It is rendered on top of the annotation's skeleton. In contrast to annotation trees, these
+  // trees are not necessarily connected.
+  readonly skeleton: SkeletonTracing;
+};
 // LocalSkeletonState holds user-local skeleton state that is not persisted
 // on the server. It deliberately lives outside of state.annotation.skeleton
 // so that it is not affected by the snapshot/restore machinery used while
@@ -163,6 +203,7 @@ export type LocalSkeletonState = {
   readonly activeGroupId: number | null | undefined;
   readonly navigationList: NavigationList;
   readonly showSkeletons: boolean;
+  readonly agglomerateDiffOverlay: AgglomerateDiffOverlay;
 };
 export type Segment = {
   readonly id: bigint;
@@ -287,6 +328,10 @@ export type DatasetLayerConfiguration = {
   readonly isInEditMode: boolean;
   readonly gammaCorrectionValue: number;
   readonly mapping?: { name: string; type: MappingType } | null | undefined;
+  // Only used for segmentation layers: the agglomerate view (agglomerate file) that loaded
+  // agglomerate skeletons are compared against (see AgglomerateDiffOverlay). Like isDisabled,
+  // it is only stored in the annotation-specific view configuration (see settings_saga).
+  readonly agglomerateDiffReference?: string | null;
 };
 export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";
 

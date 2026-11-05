@@ -45,8 +45,12 @@ import {
 } from "viewer/geometries/helper_geometries";
 import { MipVolume } from "viewer/geometries/mip_volume";
 import Plane from "viewer/geometries/plane";
-import Skeleton from "viewer/geometries/skeleton";
+import Skeleton, { type SkeletonOptions } from "viewer/geometries/skeleton";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
+import {
+  getAgglomerateDiffSkeleton,
+  getAgglomerateTreeIdsWithVisibleDiffs,
+} from "viewer/model/accessors/agglomerate_diff_accessor";
 import {
   getDataLayers,
   getLayerBoundingBox,
@@ -326,7 +330,15 @@ class SceneController {
     );
 
     if (state.annotation.skeleton != null) {
-      this.addSkeleton((_state) => getSkeletonTracing(_state.annotation), true);
+      this.addSkeleton((_state) => getSkeletonTracing(_state.annotation), true, {
+        // Dim the agglomerate skeletons whose diffs are shown on top of them
+        getDimmedTreeIds: getAgglomerateTreeIdsWithVisibleDiffs,
+      });
+      // The diffs coincide with the agglomerate skeletons, so they are drawn on top of them
+      this.addSkeleton(getAgglomerateDiffSkeleton, false, {
+        renderOrder: 1,
+        highlightActiveTree: false,
+      });
     }
     // Hide all objects at first, they will be made visible later if needed
     this.stopPlaneMode();
@@ -451,9 +463,13 @@ class SceneController {
   addSkeleton(
     skeletonTracingSelector: (arg0: WebknossosState) => SkeletonTracing | null,
     supportsPicking: boolean,
+    options?: SkeletonOptions,
   ): number {
-    const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking, (dispose) =>
-      this.deferUntilCompileReady(dispose),
+    const skeleton = new Skeleton(
+      skeletonTracingSelector,
+      supportsPicking,
+      (dispose) => this.deferUntilCompileReady(dispose),
+      options,
     );
     const skeletonGroup = skeleton.getRootGroup();
     this.skeletons[skeletonGroup.id] = skeleton;

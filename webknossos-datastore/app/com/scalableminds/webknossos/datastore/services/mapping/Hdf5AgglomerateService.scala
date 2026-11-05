@@ -183,7 +183,11 @@ class Hdf5AgglomerateService @Inject() (config: DataStoreConfig) extends DataCon
       }
     }
 
-  def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[AgglomerateGraph] =
+  def generateAgglomerateGraph(
+      agglomerateFileKey: AgglomerateFileKey,
+      agglomerateId: Long,
+      edgeLimit: Int
+  ): Box[AgglomerateGraph] =
     withHdf5Reader(agglomerateFileKey) { reader =>
       tryo {
         val positionsRange: Array[Long] =
@@ -193,7 +197,6 @@ class Hdf5AgglomerateService @Inject() (config: DataStoreConfig) extends DataCon
 
         val nodeCount = positionsRange(1) - positionsRange(0)
         val edgeCount = edgesRange(1) - edgesRange(0)
-        val edgeLimit = config.Datastore.AgglomerateGraph.maxEdges
         if (nodeCount > edgeLimit) {
           throw new Exception(s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)")
         }

@@ -3,12 +3,14 @@ package com.scalableminds.webknossos.datastore.services.mapping
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty}
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
+import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateGraph, AgglomerateGraphDiffProto}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, LayerAttachmentDataformat}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
@@ -20,6 +22,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 class AgglomerateService @Inject() (
+    config: DataStoreConfig,
     zarrAgglomerateService: ZarrAgglomerateService,
     hdf5AgglomerateService: Hdf5AgglomerateService
 ) extends LazyLogging {
@@ -156,17 +159,46 @@ class AgglomerateService @Inject() (
       case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 
-  def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long)(using
-      ec: ExecutionContext,
-      tc: TokenContext
-  ): Fox[AgglomerateGraph] =
+  def generateAgglomerateGraph(
+      agglomerateFileKey: AgglomerateFileKey,
+      agglomerateId: Long,
+      edgeLimit: Int = config.Datastore.AgglomerateGraph.maxEdges
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[AgglomerateGraph] =
     agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
-        zarrAgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId)
+        zarrAgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId, edgeLimit)
       case LayerAttachmentDataformat.hdf5 =>
-        hdf5AgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId).toFox
+        hdf5AgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId, edgeLimit).toFox
       case _ => unsupportedDataFormat(agglomerateFileKey)
     }
+
+  // Compares the agglomerate to the reference agglomerate that contains the given segment of the agglomerate
+  // (e.g., the one that was clicked on). Other reference agglomerates are not loaded, as these might be huge mergers.
+  def generateDiffToReference(
+      agglomerateFileKey: AgglomerateFileKey,
+      referenceAgglomerateFileKey: AgglomerateFileKey,
+      agglomerateId: Long,
+      segmentId: Long
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[AgglomerateGraphDiffProto] = {
+    // Diffs are requested automatically for every loaded agglomerate skeleton, so the graphs are limited like the
+    // agglomerate skeletons instead of like explicitly requested agglomerate graphs.
+    val edgeLimit = config.Datastore.AgglomerateTree.maxEdges
+    // Both graphs can be loaded in parallel, which matters for remote agglomerate files
+    val graphFox = generateAgglomerateGraph(agglomerateFileKey, agglomerateId, edgeLimit)
+    val referenceGraphFox = for {
+      referenceAgglomerateIds <- agglomerateIdsForSegmentIds(referenceAgglomerateFileKey, Seq(segmentId))
+      referenceAgglomerateId <- referenceAgglomerateIds.headOption
+        .filter(_ != 0L)
+        .toFox ?~> Msg.AgglomerateDiff.noReferenceAgglomerate
+      referenceGraph <- generateAgglomerateGraph(referenceAgglomerateFileKey, referenceAgglomerateId, edgeLimit)
+    } yield (referenceAgglomerateId, referenceGraph)
+    for {
+      graph <- graphFox
+      _ <- Fox.fromBool(graph.segments.contains(segmentId)) ?~> Msg.AgglomerateDiff.segmentNotInAgglomerate
+      (referenceAgglomerateId, referenceGraph) <- referenceGraphFox
+      diff <- tryo(AgglomerateGraphDiff.diff(graph, referenceGraph, referenceAgglomerateId)).toFox
+    } yield diff
+  }
 
   private def unsupportedDataFormat(agglomerateFileKey: AgglomerateFileKey)(implicit ec: ExecutionContext) =
     Fox.failure(

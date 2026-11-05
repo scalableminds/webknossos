@@ -5,7 +5,7 @@
 //! `UnsatisfiedLinkError` on first call). The functions only convert between Java and Rust types and leave the
 //! actual work to plain Rust functions, which are unit tested without a JVM.
 //!
-//! The crate is a library (`rlib`) as well, so that `cargo test` can link against it.
+//! The crate is a Rust library (`rlib`) as well, so that `cargo test` can link against it.
 
 #![allow(non_snake_case)] // JNI function names are mandated by the JNI spec
 

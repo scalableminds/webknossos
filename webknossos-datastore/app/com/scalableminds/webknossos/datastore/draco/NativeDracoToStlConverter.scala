@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.datastore.draco
 
-import com.scalableminds.webknossos.datastore.helpers.NativeLibraries
+import com.scalableminds.webknossos.datastore.helpers.NativeLibrary
 
 class NativeDracoToStlConverter {
-  NativeLibraries.ensureLoaded()
+  NativeLibrary.ensureLoaded()
 
   @native def dracoToStl(
       a: Array[Byte],

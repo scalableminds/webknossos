@@ -7,7 +7,7 @@ publish = false
 description = "Native (JNI) functions for the WEBKNOSSOS datastore and tracingstore"
 
 [lib]
-# sbt-jni expects the major version appended to the library name, see NativeLibraries.scala
+# sbt-jni expects the major version appended to the library name, see NativeLibrary.scala
 name = "webknossosNative0"
 crate-type = ["cdylib", "rlib"]
 

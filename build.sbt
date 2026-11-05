@@ -68,11 +68,7 @@ lazy val webknossosSlickCodegen = (project in file("webknossos-slick-codegen")).
   libraryDependencies ++= Dependencies.slickCodegenDependencies
 )
 
-lazy val webknossosJni = (project in file("webknossos-jni"))
-  .settings(nativeCompile / sourceDirectory := sourceDirectory.value)
-  .enablePlugins(JniNative)
-
-// Native functions in Rust, replacing webknossos-jni step by step. Built with cargo by sbt-jni.
+// Native functions (JNI) in Rust, built with cargo by sbt-jni.
 lazy val webknossosNative = (project in file("webknossos-native"))
   .settings(
     nativeCompile / sourceDirectory := baseDirectory.value,
@@ -82,12 +78,10 @@ lazy val webknossosNative = (project in file("webknossos-native"))
 
 lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .dependsOn(util)
-  .dependsOn(webknossosJni)
   .dependsOn(webknossosNative)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(ProtocPlugin)
-  .settings(javah / target := (webknossosJni / nativeCompile / sourceDirectory).value / "include")
   .settings(
     name := "webknossos-datastore",
     commonSettings,

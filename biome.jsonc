@@ -19,7 +19,6 @@
       "!**/__snapshots__",
       "!**/frontend/stylesheets/fontawesome*",
       "!**/frontend/javascripts/test/snapshots",
-      "!webknossos-jni",
       "!webknossos-native",
       "!binaryData"
     ]

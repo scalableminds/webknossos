@@ -1,7 +1,7 @@
 # Golden corpus for the native (JNI) library
 
 `test/backend/NativeGoldenTestSuite.scala` pins the results of every function of the native library
-(`webknossos-jni`) on a fixed input corpus. `expected.txt` holds one line per case. It was recorded with the
+(`webknossos-native`) on a fixed input corpus. `expected.txt` holds one line per case. It was recorded with the
 original C++ implementation, so any reimplementation must reproduce it exactly.
 
 - Bucket scanner and voxel run inputs are generated from fixed seeds inside the suite.

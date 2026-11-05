@@ -8,11 +8,9 @@
 * [PostgreSQL 12+](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
 * [Brotli](https://github.com/google/brotli)
-* [Draco](https://github.com/google/draco)
 * [node.js 22+](https://nodejs.org/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](https://git-scm.com/downloads)
-* [cmake](https://cmake.org/download/)
 * [Rust](https://www.rust-lang.org/tools/install) 1.88+ (cargo)
 
 * For some development tasks like refreshing snapshots, Docker 19.03.0+ and Docker Compose 2.+ are required
@@ -24,8 +22,8 @@
 # Install Homebrew package manager
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# Install git, node.js, postgres, sbt, gfind, gsed, draco, rust
-brew install openjdk@21 draco openssl git node postgresql sbt findutils coreutils gnu-sed redis brotli wget cmake rust
+# Install git, node.js, postgres, sbt, gfind, gsed, rust
+brew install openjdk@21 openssl git node postgresql sbt findutils coreutils gnu-sed redis brotli wget rust
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc
@@ -63,7 +61,7 @@ Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 env
 
 ```bash
 sudo apt update
-sudo apt install -y curl ca-certificates wget git postgresql postgresql-client unzip zip redis-server build-essential libbrotli1 libdraco-dev cmake
+sudo apt install -y curl ca-certificates wget git postgresql postgresql-client unzip zip redis-server build-essential libbrotli1
 
 # Install rust (the apt package is too old)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y

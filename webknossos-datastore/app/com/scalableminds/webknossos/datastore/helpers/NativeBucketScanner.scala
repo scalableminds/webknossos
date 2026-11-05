@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.helpers
 
 class NativeBucketScanner {
-  NativeLibraries.ensureLoaded()
+  NativeLibrary.ensureLoaded()
 
   @native def collectSegmentIds(
       bucketBytes: Array[Byte],

@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.datastore.compresso
 
-import com.scalableminds.webknossos.datastore.helpers.NativeLibraries
+import com.scalableminds.webknossos.datastore.helpers.NativeLibrary
 
 class NativeCompressoCompressor {
-  NativeLibraries.ensureLoaded()
+  NativeLibrary.ensureLoaded()
 
   @native def decompress(bytes: Array[Byte], maxOutputLength: Int): Array[Byte]
 }

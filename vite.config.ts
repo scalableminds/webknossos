@@ -128,7 +128,6 @@ const viteConfig = {
           "webknossos-tracingstore",
           "webknossos-datastore",
           "util",
-          "webknossos-jni",
           "webknossos-native",
           "conf",
           "project",

@@ -136,6 +136,8 @@ trait NeuroglancerPrecomputedShardingUtils {
       index <- getShardIndex(vaultPath)
       parsedIndex = parseShardIndex(index)
       minishardIndexRange = getMinishardIndexRange(minishardNumber, parsedIndex)
+      _ <- Fox.fromBool(minishardIndexRange.end >= minishardIndexRange.start) ?~>
+        s"Invalid minishard index range $minishardIndexRange in shard index of $vaultPath"
       // An empty minishard index has an empty range. It is not read: "bytes=x-(x-1)" is no valid Range header, and
       // servers that ignore it (e.g. S3) answer with the complete shard. The shard index was just read from the same
       // object, so its existence and the credentials are already checked.

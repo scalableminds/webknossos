@@ -85,7 +85,8 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
     } yield result
 
   private def isValidRange(range: ByteRange): Boolean = range match {
-    case StartEndExclusiveByteRange(start, end) => start >= 0 && end > start
+    // The length must fit into an Int (and thus into a byte array)
+    case StartEndExclusiveByteRange(start, end) => start >= 0 && end > start && end - start <= Int.MaxValue
     case SuffixLengthByteRange(length)          => length > 0
     case CompleteByteRange()                    => true
   }

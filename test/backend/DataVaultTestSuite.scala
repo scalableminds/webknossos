@@ -109,15 +109,6 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
               case _ => fail()
             }
 
-        "return no bytes for an empty range (e.g. empty minishard index)" in
-          (vaultPath / dataKey)
-            .readBytes(ByteRange.startEndExclusive(100, 100))(using globalExecutionContext, emptyTokenContext)
-            .futureBox
-            .map {
-              case Full(bytes) => assert(bytes.isEmpty)
-              case _           => fail()
-            }
-
         "return empty box, not failure" when {
           "requesting a non-existent object" in
             (vaultPath / s"non-existent-key${UUID.randomUUID}")
@@ -144,6 +135,11 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
           "requesting invalid range" in
             (vaultPath / dataKey)
               .readBytes(ByteRange.startEndExclusive(-5, -10))(using globalExecutionContext, emptyTokenContext)
+              .futureBox
+              .map(assertBoxFailure)
+          "requesting an empty range" in
+            (vaultPath / dataKey)
+              .readBytes(ByteRange.startEndExclusive(100, 100))(using globalExecutionContext, emptyTokenContext)
               .futureBox
               .map(assertBoxFailure)
           "using invalid credentials" in {

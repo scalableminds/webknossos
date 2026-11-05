@@ -6,6 +6,7 @@ import com.google.cloud.NoCredentials
 import com.google.cloud.storage.{Storage, StorageOptions}
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Failure, Full}
+import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, GoogleServiceAccountCredential}
@@ -62,16 +63,6 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
-    range match {
-      // e.g. empty minishard indices in sharded neuroglancer precomputed data
-      case r: StartEndExclusiveByteRange if r.start >= 0 && r.length == 0 =>
-        Fox.successful((Array.emptyByteArray, Encoding.identity, None))
-      case _ => readFromGcs(path, range)
-    }
-
-  private def readFromGcs(path: VaultPath, range: ByteRange)(using
-      ec: ExecutionContext
-  ): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     for {
       objName <- getObjectName(path).toFox
       _ <- Fox.fromBool(isValidRange(range)) ?~> s"Invalid byte range $range"
@@ -81,8 +72,8 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       result <- response.statusCode match {
         case 200 | 206 =>
           for {
-            encoding <- Encoding.fromRfc7231String(header(response, "Content-Encoding").getOrElse("")).toFox
-            bytesAndRangeHeader <- extractRange(response, range).toFox
+            (body, encoding) <- decodeTransportCompression(response).toFox
+            bytesAndRangeHeader <- extractRange(response, body, range).toFox
           } yield (bytesAndRangeHeader._1, encoding, bytesAndRangeHeader._2)
         case 404 => Fox.empty
         case _   =>
@@ -107,11 +98,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       .newBuilder(URI.create(s"$apiHost/download/storage/v1/b/$bucket/o/$encodedName?alt=media"))
       .timeout(GoogleCloudDataVault.readTimeout)
       .header("Accept-Encoding", "gzip")
-    range match {
-      case r: StartEndExclusiveByteRange => builder.header("Range", r.toRangeHeader)
-      case r: SuffixLengthByteRange      => builder.header("Range", r.toRangeHeader)
-      case CompleteByteRange()           => ()
-    }
+    range.toRangeHeaderOpt.foreach(builder.header("Range", _))
     authHeaders.foreach { case (key, value) => builder.header(key, value) }
     builder.GET().build()
   }
@@ -119,12 +106,31 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
   private def header(response: HttpResponse[?], name: String): Option[String] =
     response.headers.firstValue(name).toScala
 
+  // With Accept-Encoding: gzip, GCS may also gzip objects that are not stored gzipped, for the transfer only. The
+  // x-goog-stored-content-encoding header tells the two cases apart. Transfer compression is undone here, so that the
+  // body holds the stored bytes and the length checks in extractRange hold.
+  private def decodeTransportCompression(response: HttpResponse[Array[Byte]]): Box[(Array[Byte], Encoding.Value)] =
+    for {
+      encoding <- Encoding.fromRfc7231String(header(response, "Content-Encoding").getOrElse(""))
+      storedEncoding <- header(response, "x-goog-stored-content-encoding") match {
+        case Some(stored) => Encoding.fromRfc7231String(stored)
+        case None         => Full(encoding)
+      }
+      decoded <-
+        if (encoding == Encoding.gzip && storedEncoding != Encoding.gzip)
+          tryo(ZipIO.gunzip(response.body)).map(_ -> storedEncoding)
+        else Full(response.body -> encoding)
+    } yield decoded
+
   private lazy val contentRangeTotalRegex = """^bytes \d+-\d+/(\d+)$""".r
 
   // Returns exactly the requested bytes, and the Content-Range header built from the requested range and the object
   // size. Fails if the object ends before the requested range does.
-  private def extractRange(response: HttpResponse[Array[Byte]], range: ByteRange): Box[(Array[Byte], Option[String])] = {
-    val body = response.body
+  private def extractRange(
+      response: HttpResponse[?],
+      body: Array[Byte],
+      range: ByteRange
+  ): Box[(Array[Byte], Option[String])] = {
     val isPartial = response.statusCode == 206
     def objectSize: Box[Long] =
       if (!isPartial) Full(body.length.toLong) // the server ignored the Range header and sent the complete object
@@ -134,24 +140,23 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
           case other                               => Failure(s"Unexpected Content-Range header in GCS response: $other")
         }
     def tooShort = Failure(s"Unexpected end of object while reading from GCS: got ${body.length} bytes for $range")
+    // Offset and length of the requested bytes within the object
+    def requestedSlice(size: Long): (Long, Int) = range match {
+      case r: StartEndExclusiveByteRange => (r.start, r.length)
+      case r: SuffixLengthByteRange      => (size - r.length, r.length)
+      case CompleteByteRange()           => (0L, size.toInt)
+    }
     range match {
-      case CompleteByteRange()           => Full((body, None))
-      case r: StartEndExclusiveByteRange =>
+      case CompleteByteRange() => Full((body, None))
+      case _                   =>
         for {
           size <- objectSize
+          (offset, length) = requestedSlice(size)
           bytes <-
-            if (isPartial) { if (body.length == r.length) Full(body) else tooShort }
-            else if (body.length >= r.end) Full(body.slice(r.start.toInt, r.end.toInt))
+            if (isPartial) { if (body.length == length) Full(body) else tooShort }
+            else if (offset >= 0 && offset + length <= body.length) Full(body.slice(offset.toInt, offset.toInt + length))
             else tooShort
-        } yield (bytes, r.toContentRangeHeaderWithLength(size))
-      case r: SuffixLengthByteRange =>
-        for {
-          size <- objectSize
-          bytes <-
-            if (isPartial) { if (body.length == r.length) Full(body) else tooShort }
-            else if (body.length >= r.length) Full(body.takeRight(r.length))
-            else tooShort
-        } yield (bytes, r.toContentRangeHeaderWithLength(size))
+        } yield (bytes, range.toContentRangeHeaderWithLength(size))
     }
   }
 
@@ -231,7 +236,8 @@ object GoogleCloudDataVault {
   private lazy val httpClient: HttpClient = HttpClient
     .newBuilder()
     .connectTimeout(Duration.ofSeconds(20))
-    .followRedirects(HttpClient.Redirect.NORMAL)
+    // GCS media downloads do not redirect. Following redirects would send the Authorization header to the new host.
+    .followRedirects(HttpClient.Redirect.NEVER)
     .build()
 
   // Retries transient failures with exponential backoff, like the java-storage client does for reads.

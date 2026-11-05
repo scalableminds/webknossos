@@ -61,7 +61,8 @@ type UploadFormFieldTypes = {
 };
 
 type Props = {
-  datastores: Array<APIDataStore>;
+  // null while the datastores are still being fetched.
+  datastores: Array<APIDataStore> | null;
   withoutCard?: boolean;
   // The upload view shows the progress and the result of the upload in a modal itself.
   onUploaded?: (
@@ -86,11 +87,11 @@ export const dataPrivacyInfo = (
 );
 
 function useUploadableDatastores(
-  datastores: APIDataStore[],
+  datastores: APIDataStore[] | null,
   form: FormInstance<UploadFormFieldTypes>,
 ) {
   const uploadableDatastores = useMemo(
-    () => datastores.filter((datastore) => datastore.allowsUpload),
+    () => (datastores ?? []).filter((datastore) => datastore.allowsUpload),
     [datastores],
   );
   const selectedDatastoreUrl: string | undefined = Form.useWatch("datastoreUrl", form);
@@ -111,30 +112,35 @@ function useUploadableDatastores(
     APIJobCommand.CONVERT_TO_WKW,
   );
 
-  return { uploadableDatastores, selectedDatastoreUrl, isDatasetConversionEnabled };
+  // The datastore field is required but usually hidden. Without an uploadable datastore, the
+  // form would fail to validate without showing any error.
+  const hasNoUploadableDatastore = datastores != null && uploadableDatastores.length === 0;
+
+  return {
+    uploadableDatastores,
+    selectedDatastoreUrl,
+    isDatasetConversionEnabled,
+    hasNoUploadableDatastore,
+  };
 }
 
 // Without a folder passed via the URL (e.g., from the dashboard), preselect the root folder
-// so that the required folder field isn't empty. If the user clears the field, it stays empty.
+// so that the required folder field isn't empty. Once the user changed the field, keep their choice.
 function usePreselectRootFolder(form: FormInstance<UploadFormFieldTypes>) {
   const { data: hierarchy } = useFolderHierarchyQuery();
   const preselectedFolderId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (hierarchy == null) return;
+    if (hierarchy == null || form.isFieldTouched("targetFolderId")) return;
+    // Keep a folder that was set otherwise (e.g., via the URL or by continuing an unfinished upload).
+    // Only redo the own preselection, as it may stem from an outdated, cached hierarchy.
     const currentFolderId: string | null = form.getFieldValue("targetFolderId");
-    const wasClearedByUser = currentFolderId == null && preselectedFolderId.current != null;
-    // The cached hierarchy may be outdated. Replace a preselected folder that no longer exists.
-    const isOutdatedPreselection =
-      currentFolderId != null &&
-      currentFolderId === preselectedFolderId.current &&
-      hierarchy.itemById[currentFolderId] == null;
-    if (wasClearedByUser || (currentFolderId != null && !isOutdatedPreselection)) return;
+    if (currentFolderId != null && currentFolderId !== preselectedFolderId.current) return;
 
+    // Each organization has exactly one root folder, which is the only item without a parent.
     const rootFolder = hierarchy.tree[0];
-    const folderIdToSelect = rootFolder?.isEditable ? rootFolder.key : null;
-    preselectedFolderId.current = folderIdToSelect;
-    form.setFieldsValue({ targetFolderId: folderIdToSelect ?? undefined });
+    preselectedFolderId.current = rootFolder?.isEditable ? rootFolder.key : null;
+    form.setFieldsValue({ targetFolderId: preselectedFolderId.current ?? undefined });
   }, [hierarchy, form]);
 }
 
@@ -230,8 +236,12 @@ function DatasetUploadView({ datastores, withoutCard, onUploaded }: Props) {
   const [unfinishedUploadToContinue, setUnfinishedUploadToContinue] =
     useState<UnfinishedUpload | null>(null);
 
-  const { uploadableDatastores, selectedDatastoreUrl, isDatasetConversionEnabled } =
-    useUploadableDatastores(datastores, form);
+  const {
+    uploadableDatastores,
+    selectedDatastoreUrl,
+    isDatasetConversionEnabled,
+    hasNoUploadableDatastore,
+  } = useUploadableDatastores(datastores, form);
   usePreselectRootFolder(form);
   const inspection = useFileInspection(files);
   const unfinishedUploads = useUnfinishedUploads(selectedDatastoreUrl, activeUser?.organization);
@@ -313,6 +323,14 @@ function DatasetUploadView({ datastores, withoutCard, onUploaded }: Props) {
                 <Link to={`/organizations/${organization.id}`}>organization page</Link> for details.
               </>
             }
+            style={{ marginBottom: 24 }}
+          />
+        ) : null}
+
+        {hasNoUploadableDatastore ? (
+          <Alert
+            type="error"
+            title="None of the available datastores accepts uploads. Please contact your administrator or the WEBKNOSSOS team."
             style={{ marginBottom: 24 }}
           />
         ) : null}
@@ -432,6 +450,7 @@ function DatasetUploadView({ datastores, withoutCard, onUploaded }: Props) {
               htmlType="submit"
               disabled={
                 isStorageExceeded ||
+                hasNoUploadableDatastore ||
                 isInspectionBlockingUpload(inspection, isDatasetConversionEnabled)
               }
               style={{ minWidth: 160 }}

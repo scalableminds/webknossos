@@ -501,7 +501,6 @@ function OnboardingView() {
     queryKey: ["datastores", activeUser?.id],
     queryFn: getDatastores,
     enabled: activeUser != null,
-    initialData: [],
   });
 
   useEffect(() => {
@@ -612,7 +611,11 @@ function OnboardingView() {
             mask={{ closable: false }}
             onCancel={hideDatasetUploadModal}
           >
-            <DatasetUploadView datastores={datastores} onUploaded={onDatasetUploaded} withoutCard />
+            <DatasetUploadView
+              datastores={datastores ?? null}
+              onUploaded={onDatasetUploaded}
+              withoutCard
+            />
           </Modal>
         )}
         {datasetIdToImport != null && (

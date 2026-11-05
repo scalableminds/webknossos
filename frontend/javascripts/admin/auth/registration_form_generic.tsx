@@ -4,7 +4,7 @@ import { getTermsOfService } from "admin/api/terms_of_service";
 import { loginUser } from "admin/rest_api";
 import { Button, Checkbox, Col, Form, Input, Row } from "antd";
 import { useFetch } from "libs/react_helpers";
-import { reactQueryClient } from "libs/react_query_client";
+import { resetQueryCacheOnLogin } from "libs/react_query_client";
 import Request from "libs/request";
 import messages from "messages";
 import React from "react";
@@ -60,9 +60,7 @@ function RegistrationFormGeneric(props: Props) {
           password: formValues.password.password1,
         }),
       );
-      // A super user may create an organization while being logged in. Drop the data cached for
-      // that session so that it doesn't leak to the new user (same as on logout).
-      reactQueryClient.clear();
+      resetQueryCacheOnLogin();
       dispatch(setActiveUserAction(user));
       dispatch(setActiveOrganizationAction(organization));
     }

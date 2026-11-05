@@ -1,0 +1,234 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "raw-cuboid",
+      "path": "/data/datasets/{dataset}/layers/{layer}/data",
+      "query": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "width": 8,
+        "height": 8,
+        "depth": 8,
+        "mag": "1-1-1"
+      },
+      "compare": "bytes",
+      "expected_status": 200,
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      }
+    },
+    {
+      "name": "half-byte",
+      "path": "/data/datasets/{dataset}/layers/{layer}/data",
+      "query": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "width": 8,
+        "height": 8,
+        "depth": 8,
+        "mag": "1-1-1",
+        "halfByte": "true"
+      },
+      "compare": "bytes",
+      "expected_status": 200,
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      }
+    },
+    {
+      "name": "batch-with-missing",
+      "path": "/data/datasets/{dataset}/layers/{layer}/data",
+      "method": "POST",
+      "json": [
+        {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "mag": [
+            1,
+            1,
+            1
+          ],
+          "cubeSize": 32
+        },
+        {
+          "position": [
+            -32,
+            -32,
+            -32
+          ],
+          "mag": [
+            1,
+            1,
+            1
+          ],
+          "cubeSize": 32
+        }
+      ],
+      "compare": "bytes",
+      "expected_status": 200,
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      }
+    },
+    {
+      "name": "batch-with-unknown-mag",
+      "path": "/data/datasets/{dataset}/layers/{layer}/data",
+      "method": "POST",
+      "json": [
+        {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "mag": [
+            1,
+            1,
+            1
+          ],
+          "cubeSize": 32
+        },
+        {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "mag": [
+            64,
+            64,
+            64
+          ],
+          "cubeSize": 32
+        }
+      ],
+      "compare": "bytes",
+      "expected_status": 200,
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      }
+    },
+    {
+      "name": "raw-post",
+      "path": "/data/datasets/{dataset}/layers/{layer}/readData",
+      "method": "POST",
+      "json": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "mag": [
+          1,
+          1,
+          1
+        ],
+        "cubeSize": [
+          8,
+          8,
+          8
+        ]
+      },
+      "compare": "bytes",
+      "expected_status": 200,
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      }
+    },
+    {
+      "name": "invalid-json-schema",
+      "path": "/data/datasets/{dataset}/layers/{layer}/readData",
+      "method": "POST",
+      "json": {},
+      "compare": "auto",
+      "expected_status": 400,
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      }
+    },
+    {
+      "name": "invalid-object-id",
+      "path": "/data/datasets/not-an-object-id/layers/{layer}/data",
+      "compare": "auto",
+      "expected_status": 400
+    },
+    {
+      "name": "invalid-query",
+      "path": "/data/datasets/{dataset}/layers/{layer}/data",
+      "query": {
+        "x": "bad",
+        "y": 0,
+        "z": 0,
+        "width": 1,
+        "height": 1,
+        "depth": 1,
+        "mag": "1-1-1"
+      },
+      "compare": "auto",
+      "expected_status": 400,
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      }
+    },
+    {
+      "name": "unauthorized",
+      "path": "/data/datasets/{dataset}/layers/{layer}/data",
+      "query": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "width": 1,
+        "height": 1,
+        "depth": 1,
+        "mag": "1-1-1"
+      },
+      "query_env": {
+        "token": "WK_REPLAY_DENIED_TOKEN"
+      },
+      "compare": "auto",
+      "expected_status": 403
+    },
+    {
+      "name": "metadata",
+      "path": "/data/zarr/{dataset}/datasource-properties.json",
+      "compare": "json",
+      "expected_status": 200,
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      }
+    },
+    {
+      "name": "zarr-array",
+      "path": "/data/zarr/{dataset}/{layer}/1/.zarray",
+      "compare": "json",
+      "expected_status": 200,
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      }
+    },
+    {
+      "name": "missing-layer",
+      "path": "/data/datasets/{dataset}/layers/replay-missing-layer/data",
+      "query": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "width": 1,
+        "height": 1,
+        "depth": 1,
+        "mag": "1-1-1"
+      },
+      "compare": "auto",
+      "expected_status": 404,
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      }
+    }
+  ]
+}

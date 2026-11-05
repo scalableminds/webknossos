@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "health",
+      "path": "/data/health",
+      "compare": "bytes",
+      "expected_status": 200
+    }
+  ]
+}

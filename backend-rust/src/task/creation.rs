@@ -1,0 +1,1236 @@
+//! TaskController.create (`POST /tasks`, JSON body `List[TaskParameters]`)
+//! and the TaskCreationService core shared with `POST /tasks/createFromFiles`.
+//!
+//! Scala order (errors surface in this order; all whole-request failures):
+//! body non-empty (`noTasks`) → one task type (`notOnSameTaskType`) → task
+//! type readable (`TaskType.notFound`, 400) → one dataset
+//! (`notOnSameDataset`) → dataset readable (`Dataset.notFound`, 400) →
+//! usable data source → dataset of the requester's organization
+//! (`datasetOfOtherOrga`) → batch limit → new ids → base annotations
+//! duplicated/created in the tracing store (serially) → fresh skeleton bases
+//! (pure) → fresh volume bases (serially) → [`create_tasks`].
+//!
+//! # Reuse API for `createFromFiles`
+//!
+//! The NML route builds one [`RequestedTaskResult`] per uploaded file
+//! (`Err(TaskFailure)` for a file that failed to parse, matching Scala's
+//! `Box` failures), with [`TaskParameters`] already carrying the new ids
+//! ([`add_new_ids`]) and the parsed tracings as `skeleton` / `volume`
+//! ([`VolumeBase::initial_data`] = the volume data zip, uploaded with
+//! `POST /tracings/volume/:id/initialData`). Missing hybrid halves can be
+//! filled with [`skeleton_tracing_base`] / [`volume_tracing_base`]. Then:
+//!
+//! ```ignore
+//! let task_type = find_task_type(&pool, &user, &task_type_id).await?   // None → TaskType.notFound ~> 404
+//! assert_batch_limit(files.len(), &task_type)?;
+//! let json = create_tasks(&pool, &services, requested, &task_type, &user).await?;
+//! ```
+//!
+//! [`create_tasks`] is `TaskCreationService.createTasks`: it saves the
+//! skeletons (`saveMultiple`) and volumes, inserts every task with its
+//! TracingBase annotation and returns the `TaskCreationResult` JSON
+//! (`{tasks: [{status, success|error}], warnings}`), one item per requested
+//! task in request order; per-task failures are items, not request failures.
+pub(crate) mod task_creation_dao;
+
+use axum::extract::FromRef;
+use axum::{
+    Router,
+    extract::{FromRequestParts, State},
+    http::{StatusCode, request::Parts},
+    routing::post,
+};
+use chrono::Utc;
+use reqwest::Method;
+use serde::Deserialize;
+use serde_json::{Value, json};
+use sqlx::PgPool;
+
+use crate::{
+    AppState,
+    annotation::create::{DatasetFacts, UsableSource},
+    annotation::duplicate::{NewAnnotation, insert_annotation},
+    annotation::provider::{
+        AnnotationLayer, AnnotationLayerType, AnnotationProvider, FoxFailure, ProviderError,
+    },
+    annotation::tracing_initialization::{
+        AnnotationLayerParameters, ExplorationalDataset, MagRestrictions, plan_volume_tracing,
+    },
+    auth::AuthUser,
+    error::{ApiError, ApiResult},
+    extract::Json,
+    proto::{
+        AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto, BoundingBoxProto,
+        ColorProto,
+        datastore::{
+            BranchPoint, Node, SkeletonTracing, SkeletonTracingOpt, SkeletonTracingsWithIds,
+            StringOpt, Tree, VolumeTracing,
+        },
+    },
+    stores::tracing_client::{SaveMultipleResult, TracingStoreClient, VolumeSaveDataSource},
+    util::id::ObjectId,
+    util::instant::now_millis,
+};
+use webknossos_common::{
+    geometry::{BoundingBox, Vec3Int},
+    java_format::java_double,
+};
+
+// ---------------------------------------------------------------------------
+// Messages (Msg.Task.Create and friends)
+// ---------------------------------------------------------------------------
+
+pub(crate) const NO_TASKS: &str = "Zero tasks were requested.";
+pub(crate) const NOT_ON_SAME_TASK_TYPE: &str =
+    "Cannot create tasks with differing task types in one go.";
+pub(crate) const NOT_ON_SAME_DATASET: &str = "Cannot create tasks on multiple datasets in one go.";
+pub(crate) const DATASET_OF_OTHER_ORGA: &str =
+    "Cannot create tasks for datasets of other organizations.";
+pub(crate) const NEEDS_EITHER_SKELETON_OR_VOLUME: &str =
+    "Each task needs to either be skeleton or volume.";
+pub(crate) const SAVE_SKELETON_FAILED: &str = "Could not save skeleton tracing for new task.";
+pub(crate) const SAVE_VOLUME_FAILED: &str = "Could not save volume tracing for new task.";
+pub(crate) const NOT_ONE_ANNOTATION: &str =
+    "The specified base task does not have exactly one (finished) instance.";
+
+pub(crate) fn batch_limit_exceeded(limit: usize) -> String {
+    format!("Cannot create more than {limit} tasks in one request.")
+}
+
+// ---------------------------------------------------------------------------
+// TaskParameters (Play Json.format: Option fields missing/null → None)
+// ---------------------------------------------------------------------------
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub(crate) struct Experience {
+    pub domain: String,
+    pub value: i32,
+}
+
+/// `boundingBox.flatMap(box => if (box.isEmpty) None else Some(box))`.
+fn non_empty(bounding_box: Option<BoundingBox>) -> Option<BoundingBox> {
+    bounding_box.filter(|b| !b.is_empty())
+}
+
+/// `BaseAnnotation(baseId, skeletonId, volumeId)`.
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct BaseAnnotation {
+    pub base_id: String,
+    pub skeleton_id: Option<String>,
+    pub volume_id: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct TaskParameters {
+    pub task_type_id: ObjectId,
+    pub needed_experience: Experience,
+    pub pending_instances: i32,
+    pub project_name: String,
+    pub script_id: Option<ObjectId>,
+    pub bounding_box: Option<BoundingBox>,
+    pub dataset_id: ObjectId,
+    pub edit_position: [i32; 3],
+    pub edit_rotation: [f64; 3],
+    pub creation_info: Option<String>,
+    pub description: Option<String>,
+    pub base_annotation: Option<BaseAnnotation>,
+    pub new_skeleton_tracing_id: Option<String>,
+    pub new_volume_tracing_id: Option<String>,
+    pub new_annotation_id: Option<ObjectId>,
+}
+
+// ---------------------------------------------------------------------------
+// Task type
+// ---------------------------------------------------------------------------
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum TracingType {
+    Skeleton,
+    Volume,
+    Hybrid,
+}
+
+/// The task type columns task creation reads.
+#[derive(Clone, Debug)]
+pub(crate) struct TaskTypeFacts {
+    pub id: ObjectId,
+    pub tracing_type: TracingType,
+    pub mag_restrictions: MagRestrictions,
+}
+
+/// TaskTypeDAO.findOne under the requester's access (team member or admin
+/// of the task type's organization). `None` when missing or not readable.
+pub(crate) async fn find_task_type(
+    pool: &PgPool,
+    user: &AuthUser,
+    id: &ObjectId,
+) -> ApiResult<Option<TaskTypeFacts>> {
+    let row = task_creation_dao::find_task_type_facts(pool, user, id).await?;
+    Ok(row.map(|(typ, min, max)| TaskTypeFacts {
+        id: id.clone(),
+        tracing_type: match typ.as_str() {
+            "volume" => TracingType::Volume,
+            "hybrid" => TracingType::Hybrid,
+            _ => TracingType::Skeleton,
+        },
+        mag_restrictions: MagRestrictions { min, max },
+    }))
+}
+
+/// TaskCreationService.assertBatchLimit: 100 for volume/hybrid, else 1000.
+pub(crate) fn assert_batch_limit(batch_size: usize, task_type: &TaskTypeFacts) -> ApiResult<()> {
+    let limit = match task_type.tracing_type {
+        TracingType::Volume | TracingType::Hybrid => 100,
+        TracingType::Skeleton => 1000,
+    };
+    if batch_size <= limit {
+        Ok(())
+    } else {
+        Err(ApiError::bad_request(batch_limit_exceeded(limit)))
+    }
+}
+
+/// addIdsToSingleTaskParameters: a fresh annotation id and fresh tracing ids
+/// (`TracingId.generate`) for the task type's layer types.
+pub(crate) fn add_new_ids(params: &mut TaskParameters, task_type: &TaskTypeFacts) {
+    let skeleton = matches!(
+        task_type.tracing_type,
+        TracingType::Skeleton | TracingType::Hybrid
+    );
+    let volume = matches!(
+        task_type.tracing_type,
+        TracingType::Volume | TracingType::Hybrid
+    );
+    params.new_skeleton_tracing_id = skeleton.then(|| uuid::Uuid::new_v4().to_string());
+    params.new_volume_tracing_id = volume.then(|| uuid::Uuid::new_v4().to_string());
+    params.new_annotation_id = Some(ObjectId::new());
+}
+
+// ---------------------------------------------------------------------------
+// Fox failures and per-task results
+// ---------------------------------------------------------------------------
+
+/// A failed `Box` of one requested task, rendered by
+/// TaskCreationResult.fromBoxResults as `{status, error}`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct TaskFailure {
+    pub message: String,
+    pub status: StatusCode,
+}
+
+impl TaskFailure {
+    pub(crate) fn new(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+            status: StatusCode::BAD_REQUEST,
+        }
+    }
+
+    /// Box → item: Failure keeps its message (ParamFailure its status), Empty
+    /// is `"Empty"`. Infrastructure (5xx) errors are not task results: they
+    /// fail the whole request (crate convention for database faults).
+    fn from_provider(error: ProviderError) -> ApiResult<Self> {
+        Ok(match error {
+            ProviderError::Empty => Self::new("Empty"),
+            ProviderError::Failure(FoxFailure {
+                message, status, ..
+            }) => Self {
+                message,
+                status: status.unwrap_or(StatusCode::BAD_REQUEST),
+            },
+            ProviderError::Api(error) if error.status.is_server_error() => return Err(error),
+            ProviderError::Api(error) => Self {
+                message: error.message,
+                status: error.status,
+            },
+            other => Self::new(other.to_string()),
+        })
+    }
+
+    fn into_provider(self) -> ProviderError {
+        ProviderError::failure(self.message).with_status(self.status)
+    }
+}
+
+/// One fresh volume base: the tracing and optional initial volume data (the
+/// data zip of an uploaded volume layer, createFromFiles only).
+#[derive(Clone, Debug)]
+pub(crate) struct VolumeBase {
+    pub tracing: VolumeTracing,
+    pub initial_data: Option<Vec<u8>>,
+}
+
+/// `(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])`.
+#[derive(Clone, Debug)]
+pub(crate) struct RequestedTask {
+    pub params: TaskParameters,
+    pub skeleton: Option<SkeletonTracing>,
+    pub volume: Option<VolumeBase>,
+}
+
+pub(crate) type RequestedTaskResult = Result<RequestedTask, TaskFailure>;
+
+/// The router extensions task creation needs.
+#[derive(Clone)]
+pub(crate) struct CreationServices {
+    pub tracing_store: TracingStoreClient,
+    pub provider: AnnotationProvider,
+    pub slack: crate::slack::SlackNotificationService,
+}
+
+impl<S: Send + Sync> FromRequestParts<S> for CreationServices
+where
+    TracingStoreClient: FromRef<S>,
+    AnnotationProvider: FromRef<S>,
+    crate::slack::SlackNotificationService: FromRef<S>,
+{
+    type Rejection = ApiError;
+    async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        Ok(Self {
+            tracing_store: TracingStoreClient::from_ref(state),
+            provider: AnnotationProvider::from_ref(state),
+            slack: crate::slack::SlackNotificationService::from_ref(state),
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tracing bases
+// ---------------------------------------------------------------------------
+
+/// SkeletonTracingDefaults.zoomLevel.
+const SKELETON_ZOOM_LEVEL: f64 = 2.0;
+
+/// AnnotationService.createSkeletonTracingBase: one tree with one node at the
+/// start position (id 1, also a branch point), red, datasetName "unused".
+pub(crate) fn skeleton_tracing_base(
+    bounding_box: Option<BoundingBox>,
+    start_position: [i32; 3],
+    start_rotation: [f64; 3],
+) -> SkeletonTracing {
+    let now = Utc::now().timestamp_millis();
+    let node = Node {
+        id: 1,
+        position: start_position.into(),
+        rotation: start_rotation.into(),
+        radius: 1.0,
+        viewport: 1,
+        mag: 1,
+        bit_depth: 0,
+        interpolation: false,
+        created_timestamp: now,
+        ..Default::default()
+    };
+    let tree = Tree {
+        tree_id: 1,
+        nodes: vec![node],
+        color: Some(ColorProto {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        }),
+        branch_points: vec![BranchPoint {
+            node_id: 1,
+            created_timestamp: now,
+        }],
+        name: String::new(),
+        created_timestamp: now,
+        ..Default::default()
+    };
+    SkeletonTracing {
+        dataset_name: "unused".into(),
+        trees: vec![tree],
+        created_timestamp: now,
+        bounding_box: non_empty(bounding_box).map(BoundingBoxProto::from),
+        active_node_id: Some(1),
+        edit_position: start_position.into(),
+        edit_rotation: start_rotation.into(),
+        zoom_level: SKELETON_ZOOM_LEVEL,
+        version: 0,
+        ..Default::default()
+    }
+}
+
+/// AnnotationService.createVolumeTracingBase with `volumeShowFallbackLayer =
+/// false`: datastore lookup (missing → Fox.empty), mags restricted by the
+/// task type (`magRestrictionsTooTight`), bounding box = the non-empty task
+/// box else the data source box, edit position/rotation = start values. No
+/// datastore RPC (no fallback layer). The caller has resolved the dataset
+/// (readable) and its usable data source.
+pub(crate) async fn volume_tracing_base(
+    pool: &PgPool,
+    dataset: &DatasetFacts,
+    source: &UsableSource,
+    bounding_box: Option<BoundingBox>,
+    start_position: [i32; 3],
+    start_rotation: [f64; 3],
+    mag_restrictions: MagRestrictions,
+) -> Result<VolumeTracing, ProviderError> {
+    let data_store = task_creation_dao::find_data_store_name(pool, &dataset.data_store).await?;
+    if data_store.is_none() {
+        return Err(ProviderError::Empty);
+    }
+    let explorational = ExplorationalDataset {
+        data_source: &source.source,
+        dataset_name: &dataset.name,
+        organization_id: &dataset.organization_id,
+    };
+    let params = AnnotationLayerParameters {
+        typ: AnnotationLayerType::Volume,
+        fallback_layer_name: None,
+        auto_fallback_layer: false,
+        mapping_name: None,
+        mag_restrictions: Some(mag_restrictions),
+        name: None,
+        additional_axes: None,
+    };
+    let plan = plan_volume_tracing(&explorational, &params).map_err(ProviderError::from)?;
+    let mut tracing = plan
+        .build(false, Utc::now().timestamp_millis())
+        .map_err(ProviderError::from)?;
+    if let Some(bounding_box) = non_empty(bounding_box) {
+        tracing.bounding_box = bounding_box.into();
+    }
+    tracing.edit_position = start_position.into();
+    tracing.edit_rotation = start_rotation.into();
+    Ok(tracing)
+}
+
+// ---------------------------------------------------------------------------
+// Tracing store RPCs specific to task creation (all `withLongTimeout` except
+// the plain volume save inside TracingStoreClient)
+// ---------------------------------------------------------------------------
+
+fn vec3_double_literal([x, y, z]: [f64; 3]) -> String {
+    format!("{},{},{}", java_double(x), java_double(y), java_double(z))
+}
+
+/// Tracing-store duplicate of one base layer (duplicateSkeletonTracing /
+/// duplicateVolumeTracing). History is dropped; the new version is zero.
+struct DuplicateTracing<'a> {
+    source_tracing_id: &'a str,
+    new_annotation_id: &'a ObjectId,
+    new_tracing_id: &'a str,
+    owner_id: &'a ObjectId,
+    requesting_user_id: &'a ObjectId,
+    edit_position: [i32; 3],
+    edit_rotation: [f64; 3],
+}
+
+impl DuplicateTracing<'_> {
+    fn query(&self) -> Vec<(&'static str, String)> {
+        vec![
+            ("newAnnotationId", self.new_annotation_id.to_string()),
+            ("newTracingId", self.new_tracing_id.to_owned()),
+            ("ownerId", self.owner_id.to_string()),
+            ("requestingUserId", self.requesting_user_id.to_string()),
+            (
+                "editPosition",
+                Vec3Int::from(self.edit_position).to_uri_literal(),
+            ),
+            ("editRotation", vec3_double_literal(self.edit_rotation)),
+        ]
+    }
+}
+
+/// `POST /tracings/skeleton/:id/duplicate` (empty body, long timeout).
+async fn duplicate_skeleton_tracing(
+    tracing_store: &TracingStoreClient,
+    url: &str,
+    request: &DuplicateTracing<'_>,
+    bounding_box: Option<BoundingBox>,
+) -> Result<(), ProviderError> {
+    let mut query = request.query();
+    query.extend(bounding_box.map(|b| ("boundingBox", b.to_literal())));
+    tracing_store
+        .long_clients()
+        .request(
+            Method::POST,
+            url,
+            &[
+                "tracings",
+                "skeleton",
+                request.source_tracing_id,
+                "duplicate",
+            ],
+            &query,
+            None,
+        )
+        .await
+        .map_err(ProviderError::from)?;
+    Ok(())
+}
+
+/// `annotationDataSourceTemporaryStore.store(newAnnotationId, ..)` then
+/// `POST /tracings/volume/:id/duplicate` (empty body, long timeout).
+async fn duplicate_volume_tracing(
+    services: &CreationServices,
+    url: &str,
+    request: &DuplicateTracing<'_>,
+    mag_restrictions: MagRestrictions,
+    source: &UsableSource,
+    dataset_id: &ObjectId,
+) -> Result<(), ProviderError> {
+    services.provider.data_sources().store(
+        request.new_annotation_id.clone(),
+        source.rendered.clone(),
+        dataset_id.clone(),
+    );
+    let mut query = request.query();
+    query.extend(mag_restrictions.min.map(|m| ("minMag", m.to_string())));
+    query.extend(mag_restrictions.max.map(|m| ("maxMag", m.to_string())));
+    services
+        .tracing_store
+        .long_clients()
+        .request(
+            Method::POST,
+            url,
+            &["tracings", "volume", request.source_tracing_id, "duplicate"],
+            &query,
+            None,
+        )
+        .await
+        .map_err(ProviderError::from)?;
+    Ok(())
+}
+
+/// WKRemoteTracingStoreClient.saveVolumeTracing: temporary data source,
+/// `POST /tracings/volume/save` and, with initial data,
+/// `POST /tracings/volume/:id/initialData?annotationId&minMag&maxMag` (long).
+#[allow(clippy::too_many_arguments)]
+async fn save_volume_tracing(
+    services: &CreationServices,
+    url: &str,
+    annotation_id: &ObjectId,
+    tracing_id: &str,
+    volume: &VolumeBase,
+    mag_restrictions: MagRestrictions,
+    source: &UsableSource,
+    dataset_id: &ObjectId,
+) -> Result<(), ProviderError> {
+    services
+        .tracing_store
+        .save_volume_tracing(
+            url,
+            annotation_id,
+            tracing_id,
+            &volume.tracing,
+            VolumeSaveDataSource {
+                store: services.provider.data_sources(),
+                data_source: &source.rendered,
+                dataset_id,
+            },
+        )
+        .await
+        .map_err(ProviderError::from)?;
+    if let Some(data) = &volume.initial_data {
+        services
+            .tracing_store
+            .upload_volume_initial_data(
+                url,
+                annotation_id,
+                tracing_id,
+                mag_restrictions.min,
+                mag_restrictions.max,
+                data.clone(),
+            )
+            .await
+            .map_err(ProviderError::from)?;
+    }
+    Ok(())
+}
+
+/// A `Box[Boolean]` of the saveMultiple JSON response (JsonHelper.boxFormat).
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum SaveBox {
+    Full,
+    Empty,
+    Failure(TaskFailure),
+}
+
+/// saveSkeletonTracings (`TracingStoreClient::save_skeleton_tracings`) with
+/// SkeletonTracingsWithIds: one entry per requested task, `None` where there
+/// is nothing to save.
+async fn save_skeleton_tracings(
+    tracing_store: &TracingStoreClient,
+    url: &str,
+    requested: &[RequestedTaskResult],
+) -> Result<Vec<SaveBox>, ProviderError> {
+    fn ok(r: &RequestedTaskResult) -> Option<&RequestedTask> {
+        r.as_ref().ok()
+    }
+    let body = SkeletonTracingsWithIds {
+        tracings: requested
+            .iter()
+            .map(|r| SkeletonTracingOpt {
+                tracing: ok(r).and_then(|t| t.skeleton.clone()),
+            })
+            .collect(),
+        annotation_id: requested
+            .iter()
+            .map(|r| StringOpt {
+                string_value: ok(r)
+                    .and_then(|t| t.params.new_annotation_id.as_ref().map(ToString::to_string)),
+            })
+            .collect(),
+        tracing_id: requested
+            .iter()
+            .map(|r| StringOpt {
+                string_value: ok(r).and_then(|t| t.params.new_skeleton_tracing_id.clone()),
+            })
+            .collect(),
+    };
+    Ok(tracing_store
+        .save_skeleton_tracings(url, &body)
+        .await
+        .map_err(ProviderError::from)?
+        .into_iter()
+        .map(|result| match result {
+            SaveMultipleResult::Full => SaveBox::Full,
+            SaveMultipleResult::Empty => SaveBox::Empty,
+            SaveMultipleResult::Failure(message) => SaveBox::Failure(TaskFailure::new(message)),
+        })
+        .collect())
+}
+
+// ---------------------------------------------------------------------------
+// Base annotations (createTracingsFromBaseAnnotations)
+// ---------------------------------------------------------------------------
+
+struct ResolvedBase {
+    owner_id: ObjectId,
+    skeleton_ids: Vec<String>,
+    volume_ids: Vec<String>,
+}
+
+/// Annotation.skeletonTracingId / volumeTracingId: at most one layer of the
+/// type (else the multiLayers… failure), checked only when requested.
+fn single_layer(ids: &[String], message: &str) -> Result<Option<String>, ProviderError> {
+    match ids {
+        [] => Ok(None),
+        [id] => Ok(Some(id.clone())),
+        _ => Err(ProviderError::failure(message)),
+    }
+}
+
+async fn base_from_annotation_row(
+    pool: &PgPool,
+    annotation_id: &ObjectId,
+    owner_id: ObjectId,
+) -> Result<ResolvedBase, ProviderError> {
+    let layers = task_creation_dao::find_annotation_layers(pool, annotation_id).await?;
+    let of_type = |typ: &str| -> Vec<String> {
+        layers
+            .iter()
+            .filter(|(_, t)| t == typ)
+            .map(|(id, _)| id.clone())
+            .collect()
+    };
+    Ok(ResolvedBase {
+        owner_id,
+        skeleton_ids: of_type("Skeleton"),
+        volume_ids: of_type("Volume"),
+    })
+}
+
+/// resolveBaseAnnotationId: an annotation readable by the requester (any
+/// type/state), else resolveBaseTaskId: a readable task with
+/// totalInstances = 1, pendingInstances = 0 whose first non-cancelled
+/// readable Task annotation is Finished (`notOneAnnotation`); a missing task
+/// is Fox.empty.
+async fn resolve_base(
+    pool: &PgPool,
+    user: &AuthUser,
+    id: &ObjectId,
+) -> Result<ResolvedBase, ProviderError> {
+    let annotation = task_creation_dao::find_readable_annotation_owner(pool, user, id).await?;
+    if let Some(owner) = annotation {
+        return base_from_annotation_row(pool, id, owner).await;
+    }
+    let task = task_creation_dao::find_task_instances_with_read_access(pool, user, id).await?;
+    let Some((total, pending)) = task else {
+        return Err(ProviderError::Empty);
+    };
+    let annotations = task_creation_dao::find_task_annotations(pool, user, id).await?;
+    match annotations.first() {
+        Some((annotation_id, owner, state))
+            if total == 1 && pending == 0 && state == "Finished" =>
+        {
+            base_from_annotation_row(pool, annotation_id, owner.clone()).await
+        }
+        _ => Err(ProviderError::failure(NOT_ONE_ANNOTATION)),
+    }
+}
+
+/// createTracingsFromBaseAnnotation for one task: duplicate the base's
+/// skeleton/volume (or create fresh ones where the base has none) under the
+/// task's new tracing ids, then rewrite `baseAnnotation` to
+/// `BaseAnnotation(baseId, newSkeletonTracingId, newVolumeTracingId)`.
+async fn create_tracings_from_base_annotation(
+    pool: &PgPool,
+    services: &CreationServices,
+    user: &AuthUser,
+    params: &mut TaskParameters,
+    task_type: &TaskTypeFacts,
+    dataset: &DatasetFacts,
+    source: &UsableSource,
+) -> Result<(), ProviderError> {
+    let Some(base) = params.base_annotation.clone() else {
+        return Ok(());
+    };
+    let base_id = ObjectId::parse(&base.base_id)
+        .map_err(|_| ProviderError::failure(crate::msg::object_id::invalid(&base.base_id)))?;
+    let resolved = resolve_base(pool, user, &base_id).await?;
+    let url = crate::annotation::create::tracing_store_url(pool).await?;
+    let new_annotation_id = params
+        .new_annotation_id
+        .clone()
+        .ok_or(ProviderError::Empty)?;
+    if let Some(new_skeleton_id) = &params.new_skeleton_tracing_id {
+        match single_layer(
+            &resolved.skeleton_ids,
+            crate::msg::annotation::MULTI_LAYERS_SKELETON_NOT_IMPLEMENTED,
+        )? {
+            Some(source_id) => {
+                let request = DuplicateTracing {
+                    source_tracing_id: &source_id,
+                    new_annotation_id: &new_annotation_id,
+                    new_tracing_id: new_skeleton_id,
+                    owner_id: &resolved.owner_id,
+                    requesting_user_id: &user.id,
+                    edit_position: params.edit_position,
+                    edit_rotation: params.edit_rotation,
+                };
+                duplicate_skeleton_tracing(
+                    &services.tracing_store,
+                    &url,
+                    &request,
+                    params.bounding_box,
+                )
+                .await?;
+            }
+            None => {
+                let skeleton = skeleton_tracing_base(
+                    params.bounding_box,
+                    params.edit_position,
+                    params.edit_rotation,
+                );
+                services
+                    .tracing_store
+                    .save_skeleton_tracing(&url, &skeleton, new_skeleton_id)
+                    .await
+                    .map_err(ProviderError::from)?;
+            }
+        }
+    }
+    if let Some(new_volume_id) = &params.new_volume_tracing_id {
+        match single_layer(
+            &resolved.volume_ids,
+            crate::msg::annotation::MULTI_LAYERS_VOLUME_NOT_IMPLEMENTED,
+        )? {
+            Some(source_id) => {
+                let request = DuplicateTracing {
+                    source_tracing_id: &source_id,
+                    new_annotation_id: &new_annotation_id,
+                    new_tracing_id: new_volume_id,
+                    owner_id: &resolved.owner_id,
+                    requesting_user_id: &user.id,
+                    edit_position: params.edit_position,
+                    edit_rotation: params.edit_rotation,
+                };
+                duplicate_volume_tracing(
+                    services,
+                    &url,
+                    &request,
+                    task_type.mag_restrictions,
+                    source,
+                    &params.dataset_id,
+                )
+                .await?;
+            }
+            None => {
+                let tracing = volume_tracing_base(
+                    pool,
+                    dataset,
+                    source,
+                    params.bounding_box,
+                    params.edit_position,
+                    params.edit_rotation,
+                    task_type.mag_restrictions,
+                )
+                .await?;
+                save_volume_tracing(
+                    services,
+                    &url,
+                    &new_annotation_id,
+                    new_volume_id,
+                    &VolumeBase {
+                        tracing,
+                        initial_data: None,
+                    },
+                    task_type.mag_restrictions,
+                    source,
+                    &params.dataset_id,
+                )
+                .await?;
+            }
+        }
+    }
+    params.base_annotation = Some(BaseAnnotation {
+        base_id: base_id.to_string(),
+        skeleton_id: params.new_skeleton_tracing_id.clone(),
+        volume_id: params.new_volume_tracing_id.clone(),
+    });
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// createTasks
+// ---------------------------------------------------------------------------
+
+/// DatasetDAO.findOne under the requester's access: global row + read
+/// predicate. `None` when missing or unreadable.
+pub(crate) async fn find_readable_dataset(
+    pool: &PgPool,
+    user: &AuthUser,
+    id: &ObjectId,
+) -> ApiResult<Option<DatasetFacts>> {
+    let Some(dataset) = crate::annotation::create::find_dataset(pool, id).await? else {
+        return Ok(None);
+    };
+    if !crate::dataset::access::can_read(pool, Some(user), id, None).await? {
+        return Ok(None);
+    }
+    Ok(Some(dataset))
+}
+
+/// SequenceUtils.findUniqueElement.
+fn unique<T: PartialEq + Clone>(mut items: impl Iterator<Item = T>) -> Option<T> {
+    let first = items.next()?;
+    items.all(|item| item == first).then_some(first)
+}
+
+pub(crate) struct ProjectFacts {
+    pub id: ObjectId,
+    pub team: ObjectId,
+}
+
+/// ProjectDAO.findOneByNameAndOrganization under the requester's access
+/// (project team member, project owner or organization admin).
+pub(crate) async fn find_project(
+    pool: &PgPool,
+    user: &AuthUser,
+    name: &str,
+) -> ApiResult<Option<ProjectFacts>> {
+    let row = task_creation_dao::find_project_by_name(pool, user, name).await?;
+    Ok(row.map(|(id, team)| ProjectFacts { id, team }))
+}
+
+/// One task of createTasks: createTaskWithoutAnnotationBase +
+/// createAndSaveAnnotationBase + publicWrites. `Ok(Err(..))` is a per-task
+/// failure item.
+#[allow(clippy::too_many_arguments)]
+async fn create_one(
+    pool: &PgPool,
+    services: &CreationServices,
+    tracing_store_url: &str,
+    requested: &RequestedTaskResult,
+    skeleton_save: &SaveBox,
+    volume_save: &SaveBox,
+    task_type: &TaskTypeFacts,
+    user: &AuthUser,
+    dataset: &DatasetFacts,
+) -> ApiResult<Result<Value, TaskFailure>> {
+    let attempt = async {
+        let requested = requested.as_ref().map_err(|f| f.clone().into_provider())?;
+        let params = &requested.params;
+        if params.new_skeleton_tracing_id.is_none() && params.new_volume_tracing_id.is_none() {
+            return Err(ProviderError::failure(NEEDS_EITHER_SKELETON_OR_VOLUME));
+        }
+        let base = params.base_annotation.as_ref();
+        let check = |save: &SaveBox, message: &str| match save {
+            SaveBox::Full => Ok(()),
+            SaveBox::Empty => Err(ProviderError::failure(message)),
+            SaveBox::Failure(f) => Err(f.clone().into_provider().wrap(message)),
+        };
+        if params.new_skeleton_tracing_id.is_some()
+            && !base.is_some_and(|b| b.skeleton_id.is_some())
+        {
+            check(skeleton_save, SAVE_SKELETON_FAILED)?;
+        }
+        if params.new_volume_tracing_id.is_some() && !base.is_some_and(|b| b.volume_id.is_some()) {
+            check(volume_save, SAVE_VOLUME_FAILED)?;
+        }
+        let project = find_project(pool, user, &params.project_name)
+            .await?
+            .ok_or_else(|| {
+                ProviderError::failure(crate::msg::project::not_found_by_name(&params.project_name))
+            })?;
+        if let Some(script) = &params.script_id {
+            let readable = task_creation_dao::is_script_readable(pool, user, script).await?;
+            if !readable {
+                return Err(ProviderError::failure(crate::msg::script::not_found(
+                    script,
+                )));
+            }
+        }
+        // Fox.assertTrue(isTeamManagerOrAdminOf(user, project._team)):
+        // missing team → adminNotAllowed; false → Fox.empty.
+        let team = task_creation_dao::find_team_organization_and_manager(pool, user, &project.team)
+            .await?;
+        let (team_organization, is_manager) =
+            team.ok_or_else(|| ProviderError::failure(crate::msg::team::ADMIN_NOT_ALLOWED))?;
+        if !(is_manager || (user.is_admin && team_organization == user.organization_id)) {
+            return Err(ProviderError::Empty);
+        }
+
+        // AnnotationLayer.layersFromIds + the TracingBase AnnotationProto.
+        let mut layers = Vec::new();
+        if let Some(id) = &params.new_skeleton_tracing_id {
+            layers.push(AnnotationLayer {
+                tracing_id: id.clone(),
+                typ: AnnotationLayerType::Skeleton,
+                name: "Skeleton".into(),
+            });
+        }
+        if let Some(id) = &params.new_volume_tracing_id {
+            layers.push(AnnotationLayer {
+                tracing_id: id.clone(),
+                typ: AnnotationLayerType::Volume,
+                name: "Volume".into(),
+            });
+        }
+        let base_annotation_id = ObjectId::new();
+        let proto = AnnotationProto {
+            description: String::new(),
+            version: 0,
+            annotation_layers: layers
+                .iter()
+                .map(|layer| AnnotationLayerProto {
+                    tracing_id: layer.tracing_id.clone(),
+                    name: layer.name.clone(),
+                    typ: AnnotationLayerTypeProto::from(layer.typ) as i32,
+                })
+                .collect(),
+            earliest_accessible_version: 0,
+            ..Default::default()
+        };
+        services
+            .tracing_store
+            .save_annotation_proto(tracing_store_url, &base_annotation_id, &proto)
+            .await
+            .map_err(ProviderError::from)?;
+
+        // taskDAO.insertOne + insertExperienceToListing + annotationDAO.insertOne,
+        // in one transaction (Scala: separate statements).
+        let task_id = ObjectId::new();
+        let created = now_millis();
+        let domain = params.needed_experience.domain.trim();
+        let bbox = non_empty(params.bounding_box);
+        let mut tx = pool.begin().await?;
+        task_creation_dao::insert_one(
+            &mut tx,
+            &task_id,
+            &project.id,
+            &task_type.id,
+            params,
+            domain,
+            bbox,
+            created,
+        )
+        .await?;
+        task_creation_dao::insert_experience_domain(&mut tx, domain, &user.organization_id).await?;
+        insert_annotation(
+            &mut tx,
+            &NewAnnotation {
+                id: &base_annotation_id,
+                dataset_id: &dataset.id,
+                task_id: Some(&task_id),
+                owner_id: &user.id,
+                description: params.description.as_deref().unwrap_or(""),
+                name: "",
+                annotation_type: "TracingBase",
+                visibility: "Internal",
+                collaboration_mode: "OwnerOnly",
+                created,
+            },
+            &layers,
+        )
+        .await?;
+        tx.commit().await?;
+
+        let mut connection = pool.acquire().await?;
+        Ok(crate::task::routes::public_json(&mut connection, user, &task_id, false).await?)
+    };
+    match attempt.await {
+        Ok(json) => Ok(Ok(json)),
+        Err(error) => TaskFailure::from_provider(error).map(Err),
+    }
+}
+
+/// warnIfTeamHasNoAccess: one warning per project team (of the requested
+/// projects, in order) that is neither an allowed team of the dataset (or
+/// its folders, cumulative) nor fully covered by them (non-admin, active
+/// members). A missing project or unreadable team fails the request.
+async fn warnings(
+    pool: &PgPool,
+    user: &AuthUser,
+    dataset: &DatasetFacts,
+    project_names: &[&str],
+) -> Result<Vec<String>, ProviderError> {
+    let mut names: Vec<&str> = Vec::new();
+    for name in project_names {
+        if !names.contains(name) {
+            names.push(name);
+        }
+    }
+    let mut project_teams = Vec::new();
+    for name in names {
+        let project = find_project(pool, user, name)
+            .await?
+            .ok_or_else(|| ProviderError::failure(crate::msg::project::not_found_by_name(name)))?;
+        project_teams.push(project.team);
+    }
+    let dataset_teams = task_creation_dao::find_dataset_allowed_team_ids(pool, &dataset.id).await?;
+    let mut warnings = Vec::new();
+    for team in project_teams {
+        if dataset_teams.contains(&team) {
+            continue;
+        }
+        if !dataset_teams.is_empty() {
+            let uncovered =
+                task_creation_dao::has_members_outside_teams(pool, &team, &dataset_teams).await?;
+            if !uncovered {
+                continue;
+            }
+        }
+        let name = task_creation_dao::find_team_name_with_read_access(pool, user, &team).await?;
+        let name = name.ok_or(ProviderError::Empty)?;
+        warnings.push(format!(
+            "Project team “{name}” has no read permission to dataset “{}”.",
+            dataset.name
+        ));
+    }
+    Ok(warnings)
+}
+
+/// TaskCreationResult JSON: `{status: 200, success: <task>}` or
+/// `{status, error}` per requested task, plus warnings.
+fn result_json(items: Vec<Result<Value, TaskFailure>>, warnings: Vec<String>) -> Value {
+    let tasks: Vec<Value> = items
+        .into_iter()
+        .map(|item| match item {
+            Ok(task) => json!({"status": 200, "success": task}),
+            Err(f) => json!({"status": f.status.as_u16(), "error": f.message}),
+        })
+        .collect();
+    json!({"tasks": tasks, "warnings": warnings})
+}
+
+/// TaskCreationService.createTasks. Whole-request failures (in order): one
+/// dataset among the successful requests (`notOnSameDataset`), readable
+/// (`Dataset.notFound`), usable data source, every task has a base, a
+/// skeleton or a volume (`needsEitherSkeletonOrVolume`), a tracing store,
+/// the saveMultiple RPC, then (after all tasks were created, as in Scala)
+/// the warnings' project/team lookups. Everything else is a per-task item.
+pub(crate) async fn create_tasks(
+    pool: &PgPool,
+    services: &CreationServices,
+    requested: Vec<RequestedTaskResult>,
+    task_type: &TaskTypeFacts,
+    user: &AuthUser,
+) -> ApiResult<Value> {
+    let successful: Vec<&RequestedTask> =
+        requested.iter().filter_map(|r| r.as_ref().ok()).collect();
+    if successful.is_empty() {
+        let items = requested
+            .into_iter()
+            .map(|r| r.map(|_| json!({})))
+            .collect();
+        return Ok(result_json(items, Vec::new()));
+    }
+    let dataset_id = unique(successful.iter().map(|t| t.params.dataset_id.clone()))
+        .ok_or_else(|| ApiError::bad_request(NOT_ON_SAME_DATASET))?;
+    let dataset = find_readable_dataset(pool, user, &dataset_id)
+        .await?
+        .ok_or_else(|| ApiError::bad_request(crate::msg::dataset::not_found(&dataset_id)))?;
+    let source = crate::annotation::create::usable_data_source(pool, &dataset).await?;
+    if !successful
+        .iter()
+        .all(|t| t.params.base_annotation.is_some() || t.skeleton.is_some() || t.volume.is_some())
+    {
+        return Err(ApiError::bad_request(NEEDS_EITHER_SKELETON_OR_VOLUME));
+    }
+    let with_base = successful
+        .iter()
+        .filter(|t| t.params.base_annotation.is_some())
+        .count();
+    if with_base > 0 {
+        services
+            .slack
+            .notice_base_annotation_task_creation(&task_type.id, with_base);
+    }
+    let url = crate::annotation::create::tracing_store_url(pool).await?;
+    let skeleton_saves = save_skeleton_tracings(&services.tracing_store, &url, &requested).await?;
+    // Volume tracings are saved sequentially to reduce server load.
+    let mut volume_saves = Vec::with_capacity(requested.len());
+    for item in &requested {
+        volume_saves.push(match item {
+            Ok(RequestedTask {
+                params,
+                volume: Some(volume),
+                ..
+            }) => {
+                let saved = match (&params.new_annotation_id, &params.new_volume_tracing_id) {
+                    (Some(annotation_id), Some(tracing_id)) => {
+                        save_volume_tracing(
+                            services,
+                            &url,
+                            annotation_id,
+                            tracing_id,
+                            volume,
+                            task_type.mag_restrictions,
+                            &source,
+                            &params.dataset_id,
+                        )
+                        .await
+                    }
+                    _ => Err(ProviderError::Empty),
+                };
+                match saved {
+                    Ok(()) => SaveBox::Full,
+                    Err(ProviderError::Empty) => SaveBox::Empty,
+                    Err(error) => SaveBox::Failure(TaskFailure::from_provider(error)?),
+                }
+            }
+            Err(failure) => SaveBox::Failure(failure.clone()),
+            Ok(_) => SaveBox::Empty,
+        });
+    }
+    let mut items = Vec::with_capacity(requested.len());
+    for (index, item) in requested.iter().enumerate() {
+        let skeleton_save = skeleton_saves.get(index).unwrap_or(&SaveBox::Empty);
+        items.push(
+            create_one(
+                pool,
+                services,
+                &url,
+                item,
+                skeleton_save,
+                &volume_saves[index],
+                task_type,
+                user,
+                &dataset,
+            )
+            .await?,
+        );
+    }
+    let project_names: Vec<&str> = successful
+        .iter()
+        .map(|t| t.params.project_name.as_str())
+        .collect();
+    let warnings = warnings(pool, user, &dataset, &project_names).await?;
+    Ok(result_json(items, warnings))
+}
+
+// ---------------------------------------------------------------------------
+// POST /tasks
+// ---------------------------------------------------------------------------
+
+pub fn router() -> Router<AppState> {
+    Router::new().route("/tasks", post(create))
+}
+
+async fn create(
+    State(state): State<AppState>,
+    user: AuthUser,
+    services: CreationServices,
+    Json(body): Json<Vec<TaskParameters>>,
+) -> ApiResult<axum::Json<Value>> {
+    let pool = &state.pool;
+    if body.is_empty() {
+        return Err(ApiError::bad_request(NO_TASKS));
+    }
+    let task_type_id = unique(body.iter().map(|p| p.task_type_id.clone()))
+        .ok_or_else(|| ApiError::bad_request(NOT_ON_SAME_TASK_TYPE))?;
+    let task_type = find_task_type(pool, &user, &task_type_id)
+        .await?
+        .ok_or_else(|| ApiError::bad_request(crate::msg::task_type::not_found(&task_type_id)))?;
+    let dataset_id = unique(body.iter().map(|p| p.dataset_id.clone()))
+        .ok_or_else(|| ApiError::bad_request(NOT_ON_SAME_DATASET))?;
+    let dataset = find_readable_dataset(pool, &user, &dataset_id)
+        .await?
+        .ok_or_else(|| ApiError::bad_request(crate::msg::dataset::not_found(&dataset_id)))?;
+    let source = crate::annotation::create::usable_data_source(pool, &dataset).await?;
+    if dataset.organization_id != user.organization_id {
+        return Err(ApiError::bad_request(DATASET_OF_OTHER_ORGA));
+    }
+    assert_batch_limit(body.len(), &task_type)?;
+
+    let mut all_params = body;
+    for params in &mut all_params {
+        add_new_ids(params, &task_type);
+    }
+    for params in &mut all_params {
+        create_tracings_from_base_annotation(
+            pool, &services, &user, params, &task_type, &dataset, &source,
+        )
+        .await?;
+    }
+    let skeletons: Vec<Option<SkeletonTracing>> = all_params
+        .iter()
+        .map(|params| {
+            (params.base_annotation.is_none() && params.new_skeleton_tracing_id.is_some()).then(
+                || {
+                    skeleton_tracing_base(
+                        params.bounding_box,
+                        params.edit_position,
+                        params.edit_rotation,
+                    )
+                },
+            )
+        })
+        .collect();
+    let mut volumes = Vec::with_capacity(all_params.len());
+    for params in &all_params {
+        volumes.push(
+            if params.new_volume_tracing_id.is_some() && params.base_annotation.is_none() {
+                Some(VolumeBase {
+                    tracing: volume_tracing_base(
+                        pool,
+                        &dataset,
+                        &source,
+                        params.bounding_box,
+                        params.edit_position,
+                        params.edit_rotation,
+                        task_type.mag_restrictions,
+                    )
+                    .await?,
+                    initial_data: None,
+                })
+            } else {
+                None
+            },
+        );
+    }
+    let requested = all_params
+        .into_iter()
+        .zip(skeletons)
+        .zip(volumes)
+        .map(|((params, skeleton), volume)| {
+            Ok(RequestedTask {
+                params,
+                skeleton,
+                volume,
+            })
+        })
+        .collect();
+    let result = create_tasks(pool, &services, requested, &task_type, &user).await?;
+    Ok(axum::Json(result))
+}
+
+#[cfg(test)]
+mod task_creation_tests;

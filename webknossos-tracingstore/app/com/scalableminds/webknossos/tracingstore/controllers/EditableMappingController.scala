@@ -43,6 +43,8 @@ class EditableMappingController @Inject() (
     extends Controller
     with KeyValueStoreConversions {
 
+  override def allowRemoteOrigin: Boolean = true
+
   def editableMappingInfo(tracingId: String, annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
     Action.fox { implicit request =>
       log() {

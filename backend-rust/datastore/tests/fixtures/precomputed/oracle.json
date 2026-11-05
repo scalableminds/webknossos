@@ -1,0 +1,5 @@
+{
+  "compressed-segmentation": "2.3.3",
+  "mmh3": "5.3.1",
+  "generator": "native compressed_segmentation and x86 mmh3 reference, seed=0, little-endian uint64 keys"
+}

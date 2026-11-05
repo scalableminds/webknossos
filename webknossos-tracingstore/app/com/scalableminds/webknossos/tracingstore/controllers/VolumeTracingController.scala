@@ -66,6 +66,8 @@ class VolumeTracingController @Inject() (
     with MissingBucketHeaders
     with KeyValueStoreConversions {
 
+  override def allowRemoteOrigin: Boolean = true
+
   private def packMultiple(tracings: Seq[Option[VolumeTracing]]): VolumeTracings =
     VolumeTracings(tracings.map(t => VolumeTracingOpt(t)))
 

@@ -50,6 +50,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     with Zarr3OutputHelper {
 
   override def defaultErrorCode: Int = NOT_FOUND
+  override def allowRemoteOrigin: Boolean = true
 
   def volumeTracingDirectoryContent(tracingId: String, zarrVersion: Int): Action[AnyContent] =
     Action.fox { implicit request =>

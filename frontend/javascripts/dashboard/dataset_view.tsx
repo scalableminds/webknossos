@@ -34,7 +34,7 @@ import dayjs from "dayjs";
 import features from "features";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
-import { hasFinePointer, isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
+import { isPrimaryPointerFine, isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import type React from "react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { Link } from "react-router";
@@ -209,7 +209,7 @@ function DatasetView({
       prefix={<SearchOutlined />}
       allowClear
       // Autofocusing on touch devices would pop up the on-screen keyboard.
-      autoFocus={hasFinePointer()}
+      autoFocus={isPrimaryPointerFine()}
       style={{
         width: 200,
       }}

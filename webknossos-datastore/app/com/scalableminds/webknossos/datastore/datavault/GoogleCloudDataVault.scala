@@ -15,12 +15,13 @@ import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.io.{ByteArrayInputStream, IOException}
-import java.net.http.{HttpClient, HttpConnectTimeoutException, HttpRequest, HttpResponse, HttpTimeoutException}
+import java.net.http.{HttpClient, HttpRequest, HttpResponse, HttpTimeoutException}
 import java.net.{URI, URLEncoder}
 import java.nio.charset.StandardCharsets
 import java.time.Duration
 import java.util
-import java.util.concurrent.{CompletableFuture, TimeUnit}
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.{CompletableFuture, ScheduledThreadPoolExecutor, TimeUnit}
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.jdk.CollectionConverters.{IterableHasAsScala, IteratorHasAsScala, MapHasAsScala}
 import scala.jdk.FutureConverters.CompletionStageOps
@@ -96,7 +97,6 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
     val encodedName = URLEncoder.encode(objName, StandardCharsets.UTF_8).replace("+", "%20")
     val builder = HttpRequest
       .newBuilder(URI.create(s"$apiHost/download/storage/v1/b/$bucket/o/$encodedName?alt=media"))
-      .timeout(GoogleCloudDataVault.readTimeout)
       .header("Accept-Encoding", "gzip")
     range.toRangeHeaderOpt.foreach(builder.header("Range", _))
     authHeaders.foreach { case (key, value) => builder.header(key, value) }
@@ -227,7 +227,9 @@ object GoogleCloudDataVault {
       remoteUri <- credentializedUPath.upath.toRemoteUri
     } yield new GoogleCloudDataVault(remoteUri, credential)
 
-  private val readTimeout: Duration = Duration.ofMinutes(10)
+  // Deadline for one attempt, from sending the request until the complete body is received. HttpRequest.timeout would
+  // only cover the wait for the response headers, so a body that stalls midway would never complete.
+  private val attemptTimeout: Duration = Duration.ofMinutes(2)
   private val maxAttempts = 5
   private val retryBaseDelayMs = 250L
   private val retryableStatusCodes = Set(408, 429, 500, 502, 503, 504)
@@ -251,18 +253,46 @@ object GoogleCloudDataVault {
         .asScala
         .flatMap(_ => sendWithRetry(request, attempt + 1))
     }
-    httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray()).asScala.transformWith {
+    sendWithDeadline(request).transformWith {
       case TrySuccess(response) if retryableStatusCodes.contains(response.statusCode) && attempt < maxAttempts =>
         retryLater()
-      case TryFailure(e: IOException) if isRetryable(e) && attempt < maxAttempts => retryLater()
-      case other                                                                  => Future.fromTry(other)
+      case TryFailure(_: IOException) if attempt < maxAttempts => retryLater()
+      case other                                               => Future.fromTry(other)
     }
   }
 
-  // Connection errors are retried, a request that already ran into readTimeout is not.
-  private def isRetryable(e: IOException): Boolean = e match {
-    case _: HttpConnectTimeoutException => true
-    case _: HttpTimeoutException        => false
-    case _                              => true
+  private lazy val deadlineScheduler: ScheduledThreadPoolExecutor = {
+    val scheduler = new ScheduledThreadPoolExecutor(
+      1,
+      (runnable: Runnable) => {
+        val thread = new Thread(runnable, "gcs-read-deadline")
+        thread.setDaemon(true)
+        thread
+      }
+    )
+    scheduler.setRemoveOnCancelPolicy(true) // most reads finish long before their deadline
+    scheduler
+  }
+
+  // Cancelling the future returned by sendAsync aborts the exchange and closes its connection.
+  private def sendWithDeadline(request: HttpRequest)(using ec: ExecutionContext): Future[HttpResponse[Array[Byte]]] = {
+    val responseFuture = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray())
+    val deadlineHit = new AtomicBoolean(false)
+    val deadline = deadlineScheduler.schedule(
+      () => {
+        deadlineHit.set(true)
+        responseFuture.cancel(true)
+      },
+      attemptTimeout.toMillis,
+      TimeUnit.MILLISECONDS
+    )
+    responseFuture.asScala.transform { result =>
+      deadline.cancel(false)
+      result match {
+        case TryFailure(_) if deadlineHit.get =>
+          TryFailure(new HttpTimeoutException(s"No complete response from GCS within $attemptTimeout"))
+        case other => other
+      }
+    }
   }
 }

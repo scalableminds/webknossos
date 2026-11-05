@@ -90,17 +90,14 @@ jobs:
             echo "build-smoketest-push job did not succeed (conclusion: $JOB_CONCLUSION). Skipping autodeploy."
             exit 0
           fi
-          PR_JSON=$(gh pr list --repo "${{ github.repository }}" --head "$HEAD_BRANCH" --json labels,headRefOid --jq '.[0]' 2>/dev/null || echo "")
-          # Skip runs for commits that are no longer the PR head (e.g. a slower or re-run CI of an
-          # older commit). Otherwise, the GitHub deployment gets attached to that older commit and,
-          # via `override`, deactivates the deployment of the head commit, so the PR shows none.
-          PR_HEAD_SHA=$(echo "$PR_JSON" | jq -r '.headRefOid // empty' 2>/dev/null || echo "")
-          if [ -z "$PR_HEAD_SHA" ]; then
-            echo "No open PR found for branch $HEAD_BRANCH. Skipping autodeploy."
-            exit 0
-          fi
-          if [ "$PR_HEAD_SHA" != "$HEAD_SHA" ]; then
-            echo "CI run is for $HEAD_SHA, but the PR head is $PR_HEAD_SHA. Skipping autodeploy."
+          # Only consider the PR whose head is the commit of this CI run. This skips runs for commits
+          # that are no longer the PR head (e.g. a slower or re-run CI of an older commit). Otherwise,
+          # the GitHub deployment gets attached to that older commit and, via `override`, deactivates
+          # the deployment of the head commit, so the PR shows none. Matching by SHA also ignores
+          # fork PRs that happen to use the same branch name.
+          PR_JSON=$(gh pr list --repo "${{ github.repository }}" --head "$HEAD_BRANCH" --json labels,headRefOid --jq "first(.[] | select(.headRefOid == \"$HEAD_SHA\")) // empty" 2>/dev/null || echo "")
+          if [ -z "$PR_JSON" ]; then
+            echo "No open PR for branch $HEAD_BRANCH has $HEAD_SHA as its head. Skipping autodeploy."
             exit 0
           fi
           LABELS=$(echo "$PR_JSON" | jq -r '.labels[].name' 2>/dev/null || echo "")

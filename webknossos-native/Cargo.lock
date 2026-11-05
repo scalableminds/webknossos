@@ -25,6 +25,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "compresso-rs"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ace0363ae7b460deb1260901da8332f4627f1fc4c658bb86ab4c664c95973950"
+
+[[package]]
 name = "jni"
 version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -205,6 +211,7 @@ dependencies = [
 name = "webknossos-native"
 version = "0.1.0"
 dependencies = [
+ "compresso-rs",
  "jni",
 ]
 

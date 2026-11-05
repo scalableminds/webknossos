@@ -10,5 +10,6 @@
 #![allow(non_snake_case)] // JNI function names are mandated by the JNI spec
 
 mod bucket_scanner;
+mod compresso;
 mod jni_util;
 mod voxel_runs;

@@ -303,7 +303,11 @@ class DSFullMeshService @Inject() (
         omitMissing = false
       )
       vertexQuantizationBits <- meshFileService.getVertexQuantizationBits(meshFileKey)
-      chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegmentsMerged(meshFileKey, segmentIds)
+      chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegmentsMerged(
+        meshFileKey,
+        segmentIds,
+        fullMeshRequest.mappingName
+      )
       selectedLod = fullMeshRequest.lod.getOrElse(0)
       allChunkRanges: List[MeshChunk] = chunkInfos.lods(selectedLod).chunks
       // Right now only the scale is used, so we only need to supply these values

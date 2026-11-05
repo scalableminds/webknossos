@@ -69,7 +69,7 @@ class DSMeshController @Inject() (
             mappingNameForMeshFile,
             omitMissing = false
           )
-          chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(meshFileKey, segmentIds)
+          chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(meshFileKey, segmentIds, targetMappingName)
         } yield Ok(Json.toJson(chunkInfos))
       }
     }

@@ -12,7 +12,7 @@ import checkBrowserFeatures from "libs/browser_feature_check";
 import ErrorHandling from "libs/error_handling";
 import { reactQueryClient } from "libs/react_query_client";
 import UserLocalStorage from "libs/user_local_storage";
-import window, { document, location } from "libs/window";
+import { document, location } from "libs/window";
 import { compress, decompress } from "lz-string";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -36,9 +36,6 @@ import { RouterProvider } from "react-router/dom";
 import router from "router/router";
 import { listenToSystemColorThemeChanges } from "theme";
 import GlobalThemeProvider from "theme_provider";
-
-// Suppress warning emitted by Olvy because it tries to eagerly initialize
-window.OlvyConfig = null;
 
 setStore(UnthrottledStore);
 startSaga(warnIfEmailIsUnverified);

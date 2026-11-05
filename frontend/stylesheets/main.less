@@ -12,7 +12,7 @@
 @import "trace_view/_right_menu.less";
 @import "trace_view/_info_tab.less";
 @import "antd_overwrites.less";
-@import "olvy_overwrites.less";
+@import "release_notes.less";
 @import "flex_layout_overwrites.less";
 @import "_drawings.less";
 @import "_upgrade_request_modal.less";
@@ -174,6 +174,35 @@ body {
       color: white;
       width: 100%;
       height: 100%;
+    }
+  }
+
+  // Co-branding: the partner logo sits next to the WEBKNOSSOS logo.
+  .partner-logo {
+    height: 24px;
+    max-width: 140px;
+    margin-left: 12px;
+    object-fit: contain;
+    vertical-align: middle;
+
+    // The compact logo is shown where the navbar is collapsed (annotation view, phones).
+    &.compact {
+      height: 26px;
+      max-width: 40px;
+      margin-left: 4px;
+    }
+
+    &.compact-fallback {
+      height: 20px;
+      max-width: 80px;
+      margin-left: 4px;
+    }
+  }
+
+  // Phones have no room for a full partner logo.
+  .partner-logo-hidden-on-phones {
+    @media @smartphones {
+      display: none;
     }
   }
 

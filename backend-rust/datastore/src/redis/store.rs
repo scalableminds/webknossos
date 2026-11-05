@@ -1,16 +1,17 @@
-//! Scala `RedisTemporaryStore` key/value and set commands over one lazily (re)connected RESP
-//! connection. Commands are serialized on the connection like Lettuce's single connection does.
+//! Scala `RedisTemporaryStore` key/value and set commands over one lazily (re)connected,
+//! multiplexed `redis` connection: concurrent commands are pipelined on it like Lettuce's single
+//! connection does.
 //!
 //! Failure shapes follow Scala: connection problems are `Redis access exception on <authority>:
 //! <message>`; command failures are wrapped with `Redis access failure`. A missing key is
 //! `Ok(None)` (Scala `Fox.empty`).
 use std::{sync::Arc, time::Duration};
 
-use tokio::{
-    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufStream},
-    net::TcpStream,
-    sync::Mutex,
+use redis::{
+    AsyncConnectionConfig, Client, Cmd, ConnectionAddr, ConnectionInfo, FromRedisValue,
+    IntoConnectionInfo, RedisConnectionInfo, RedisError, Value, aio::MultiplexedConnection, cmd,
 };
+use tokio::sync::Mutex;
 
 use crate::{
     config::RedisConfig,
@@ -21,107 +22,55 @@ use crate::{
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(1);
 /// Scala `commandTimeout`.
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(60);
-const MAX_BULK_LENGTH: usize = 512 * 1024 * 1024;
+const COMMAND_TIMEOUT_EXCEPTION: &str =
+    "io.lettuce.core.RedisCommandTimeoutException: Command timed out after 1 minute(s)";
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Reply {
-    Simple(String),
-    Error(String),
-    Integer(i64),
-    Bulk(Option<Vec<u8>>),
-    Array(Option<Vec<Reply>>),
+/// The shared connection; `generation` identifies it so that a failed command only drops the
+/// connection it ran on, not one another command has already re-established.
+#[derive(Default)]
+struct Slot {
+    generation: u64,
+    connection: Option<MultiplexedConnection>,
 }
 
 #[derive(Clone)]
 pub struct RedisStore {
     authority: String,
-    address: String,
-    port: u16,
-    connection: Arc<Mutex<Option<BufStream<TcpStream>>>>,
+    client: Client,
+    slot: Arc<Mutex<Slot>>,
 }
 
-fn encode(args: &[&[u8]]) -> Vec<u8> {
-    let mut out = format!("*{}\r\n", args.len()).into_bytes();
-    for arg in args {
-        out.extend_from_slice(format!("${}\r\n", arg.len()).as_bytes());
-        out.extend_from_slice(arg);
-        out.extend_from_slice(b"\r\n");
-    }
-    out
+fn access_failure(error: DsError) -> DsError {
+    error.wrap("Redis access failure")
 }
 
-async fn read_line(stream: &mut BufStream<TcpStream>) -> std::io::Result<String> {
-    let mut line = Vec::new();
-    stream.read_until(b'\n', &mut line).await?;
-    if !line.ends_with(b"\r\n") {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::UnexpectedEof,
-            "Redis closed the connection or sent an incomplete reply",
-        ));
-    }
-    line.truncate(line.len() - 2);
-    Ok(String::from_utf8_lossy(&line).into_owned())
-}
-
-fn protocol_error(message: impl Into<String>) -> std::io::Error {
-    std::io::Error::new(std::io::ErrorKind::InvalidData, message.into())
-}
-
-fn read_reply(
-    stream: &mut BufStream<TcpStream>,
-) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<Reply>> + Send + '_>> {
-    Box::pin(async move {
-        let line = read_line(stream).await?;
-        let (kind, rest) = line
-            .split_at_checked(1)
-            .ok_or_else(|| protocol_error("empty Redis reply"))?;
-        let number = |s: &str| {
-            s.parse::<i64>()
-                .map_err(|_| protocol_error(format!("invalid Redis length {s}")))
-        };
-        Ok(match kind {
-            "+" => Reply::Simple(rest.to_owned()),
-            "-" => Reply::Error(rest.to_owned()),
-            ":" => Reply::Integer(number(rest)?),
-            "$" => {
-                let length = number(rest)?;
-                if length < 0 {
-                    Reply::Bulk(None)
-                } else {
-                    let length = length as usize;
-                    if length > MAX_BULK_LENGTH {
-                        return Err(protocol_error("Redis bulk reply too large"));
-                    }
-                    let mut data = vec![0u8; length + 2];
-                    stream.read_exact(&mut data).await?;
-                    data.truncate(length);
-                    Reply::Bulk(Some(data))
-                }
-            }
-            "*" => {
-                let count = number(rest)?;
-                if count < 0 {
-                    Reply::Array(None)
-                } else {
-                    let mut items = Vec::with_capacity(count.min(1 << 16) as usize);
-                    for _ in 0..count {
-                        items.push(read_reply(stream).await?);
-                    }
-                    Reply::Array(Some(items))
-                }
-            }
-            other => return Err(protocol_error(format!("unknown Redis reply type {other}"))),
-        })
+/// A failure the connection survives: a Redis error reply or an unexpected reply type.
+fn command_error(error: &RedisError) -> DsError {
+    access_failure(match error.code() {
+        Some(code) => DsError::from_exception(format!(
+            "io.lettuce.core.RedisCommandExecutionException: {code}{}",
+            error.detail().map(|d| format!(" {d}")).unwrap_or_default()
+        )),
+        None => DsError::failure(format!("Unexpected Redis reply: {error}")),
     })
+}
+
+fn lossy(bytes: Vec<u8>) -> String {
+    String::from_utf8(bytes).unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned())
 }
 
 impl RedisStore {
     pub fn new(config: &RedisConfig) -> Self {
+        // RESP2 without `CLIENT SETINFO`: a connection sends nothing before the first command,
+        // like Lettuce with default options.
+        let info: ConnectionInfo = ConnectionAddr::Tcp(config.address.clone(), config.port)
+            .into_connection_info()
+            .expect("a TCP address is always a valid connection info")
+            .set_redis_settings(RedisConnectionInfo::default().set_skip_set_lib_name());
         Self {
             authority: config.authority(),
-            address: config.address.clone(),
-            port: config.port,
-            connection: Arc::default(),
+            client: Client::open(info).expect("a TCP connection info is always valid"),
+            slot: Arc::default(),
         }
     }
 
@@ -129,90 +78,16 @@ impl RedisStore {
         &self.authority
     }
 
-    /// One command; reconnects lazily and drops the connection after IO errors.
-    pub async fn command(&self, args: &[&[u8]]) -> DsResult<Reply> {
-        self.command_with_timeout(
-            args,
-            COMMAND_TIMEOUT,
-            "io.lettuce.core.RedisCommandTimeoutException: Command timed out after 1 minute(s)",
-        )
-        .await
-    }
-
-    /// Scala `checkHealth`: `PING` on the shared connection must answer `PONG` within one second.
-    /// (A connection per check would leave a TIME_WAIT socket per health request.)
-    pub async fn ping(&self) -> DsResult<()> {
-        let reply = self
-            .command_with_timeout(
-                &[b"PING"],
-                CONNECTION_TIMEOUT,
-                "java.util.concurrent.TimeoutException: Redis PING timed out after 1 second",
-            )
-            .await?;
-        let unexpected = match reply {
-            Reply::Simple(pong) if pong == "PONG" => return Ok(()),
-            Reply::Simple(other) => other,
-            other => format!("{other:?}"),
-        };
-        Err(
-            DsError::failure(format!("Unexpected Redis ping reply: {unexpected}"))
-                .wrap("Redis access failure"),
-        )
-    }
-
-    /// The timeout covers the exchange only; it fires inside the lock so a timed-out command
-    /// drops the connection instead of leaving its reply for the next command.
-    async fn command_with_timeout(
-        &self,
-        args: &[&[u8]],
-        timeout: Duration,
-        timeout_exception: &str,
-    ) -> DsResult<Reply> {
-        let mut guard = self.connection.lock().await;
-        let request = encode(args);
-        // A kept connection may have been closed by Redis (restart, idle timeout) since its last
-        // use; like Lettuce's reconnect, an IO error on it is retried once on a fresh connection.
-        let mut attempts_left = if guard.is_some() { 2 } else { 1 };
-        loop {
-            attempts_left -= 1;
-            if guard.is_none() {
-                *guard = Some(BufStream::new(self.connect().await?));
-            }
-            let stream = guard.as_mut().expect("connected above");
-            let exchange = async {
-                stream.write_all(&request).await?;
-                stream.flush().await?;
-                read_reply(stream).await
-            };
-            let result = tokio::time::timeout(timeout, exchange).await;
-            let error = match result {
-                Ok(Ok(Reply::Error(message))) => {
-                    return Err(DsError::from_exception(format!(
-                        "io.lettuce.core.RedisCommandExecutionException: {message}"
-                    ))
-                    .wrap("Redis access failure"));
-                }
-                Ok(Ok(reply)) => return Ok(reply),
-                Ok(Err(e)) => {
-                    *guard = None;
-                    if attempts_left > 0 {
-                        continue;
-                    }
-                    DsError::from_exception(format!("java.io.IOException: {e}"))
-                }
-                Err(_) => {
-                    *guard = None;
-                    DsError::from_exception(timeout_exception)
-                }
-            };
-            return Err(error.wrap("Redis access failure"));
-        }
-    }
-
-    async fn connect(&self) -> DsResult<TcpStream> {
-        let connect = TcpStream::connect((self.address.as_str(), self.port));
+    async fn connect(&self) -> DsResult<MultiplexedConnection> {
+        // Timeouts are applied here and per command, so the redis crate's own are off.
+        let config = AsyncConnectionConfig::new()
+            .set_connection_timeout(None)
+            .set_response_timeout(None);
+        let connect = self
+            .client
+            .get_multiplexed_async_connection_with_config(&config);
         let message = match tokio::time::timeout(CONNECTION_TIMEOUT, connect).await {
-            Ok(Ok(stream)) => return Ok(stream),
+            Ok(Ok(connection)) => return Ok(connection),
             Ok(Err(e)) => format!("Redis access exception on {}: {e}", self.authority),
             Err(_) => format!(
                 "Redis access exception on {}: connection timed out after 1 second",
@@ -223,31 +98,92 @@ impl RedisStore {
         Err(DsError::failure(message))
     }
 
-    fn unexpected(reply: &Reply) -> DsError {
-        DsError::failure(format!("Unexpected Redis reply: {reply:?}")).wrap("Redis access failure")
+    /// The shared connection, connecting first if there is none.
+    async fn connection(&self) -> DsResult<(u64, MultiplexedConnection)> {
+        let mut slot = self.slot.lock().await;
+        if let Some(connection) = &slot.connection {
+            return Ok((slot.generation, connection.clone()));
+        }
+        let connection = self.connect().await?;
+        slot.generation += 1;
+        slot.connection = Some(connection.clone());
+        Ok((slot.generation, connection))
     }
 
-    async fn integer(&self, args: &[&[u8]]) -> DsResult<i64> {
-        match self.command(args).await? {
-            Reply::Integer(v) => Ok(v),
-            other => Err(Self::unexpected(&other)),
+    async fn drop_connection(&self, generation: u64) {
+        let mut slot = self.slot.lock().await;
+        if slot.generation == generation {
+            slot.connection = None;
         }
     }
 
-    async fn ok(&self, args: &[&[u8]]) -> DsResult<()> {
-        match self.command(args).await? {
-            Reply::Simple(_) | Reply::Integer(_) => Ok(()),
-            other => Err(Self::unexpected(&other)),
+    /// One command. The timeout covers the exchange only; a timed-out command drops the
+    /// connection. A kept connection may have been closed by Redis (restart, idle timeout) since
+    /// its last use; like Lettuce's reconnect, a command that finds it dropped is retried once on
+    /// a fresh connection (all commands used here are idempotent).
+    async fn query_with_timeout<T: FromRedisValue>(
+        &self,
+        command: &Cmd,
+        timeout: Duration,
+        timeout_exception: &str,
+    ) -> DsResult<T> {
+        let mut attempts_left = if self.slot.lock().await.connection.is_some() {
+            2
+        } else {
+            1
+        };
+        loop {
+            attempts_left -= 1;
+            let (generation, mut connection) = self.connection().await?;
+            let error =
+                match tokio::time::timeout(timeout, command.query_async(&mut connection)).await {
+                    Ok(Ok(value)) => return Ok(value),
+                    Ok(Err(e)) if e.is_connection_dropped() || e.is_unrecoverable_error() => {
+                        self.drop_connection(generation).await;
+                        if attempts_left > 0 {
+                            continue;
+                        }
+                        DsError::from_exception(format!("java.io.IOException: {e}"))
+                    }
+                    Ok(Err(e)) => return Err(command_error(&e)),
+                    Err(_) => {
+                        self.drop_connection(generation).await;
+                        DsError::from_exception(timeout_exception)
+                    }
+                };
+            return Err(access_failure(error));
         }
+    }
+
+    async fn query<T: FromRedisValue>(&self, command: &Cmd) -> DsResult<T> {
+        self.query_with_timeout(command, COMMAND_TIMEOUT, COMMAND_TIMEOUT_EXCEPTION)
+            .await
+    }
+
+    /// Scala `checkHealth`: `PING` on the shared connection must answer `PONG` within one second.
+    /// (A connection per check would leave a TIME_WAIT socket per health request.)
+    pub async fn ping(&self) -> DsResult<()> {
+        let reply: Value = self
+            .query_with_timeout(
+                &cmd("PING"),
+                CONNECTION_TIMEOUT,
+                "java.util.concurrent.TimeoutException: Redis PING timed out after 1 second",
+            )
+            .await?;
+        let unexpected = match reply {
+            Value::SimpleString(pong) if pong == "PONG" => return Ok(()),
+            Value::SimpleString(other) => other,
+            other => format!("{other:?}"),
+        };
+        Err(access_failure(DsError::failure(format!(
+            "Unexpected Redis ping reply: {unexpected}"
+        ))))
     }
 
     /// Scala `find`.
     pub async fn find(&self, key: &str) -> DsResult<Option<String>> {
-        match self.command(&[b"GET", key.as_bytes()]).await? {
-            Reply::Bulk(None) => Ok(None),
-            Reply::Bulk(Some(bytes)) => Ok(Some(String::from_utf8_lossy(&bytes).into_owned())),
-            other => Err(Self::unexpected(&other)),
-        }
+        let value: Option<Vec<u8>> = self.query(cmd("GET").arg(key)).await?;
+        Ok(value.map(lossy))
     }
 
     /// Scala `findLong` (`toLong` failures become failures).
@@ -268,40 +204,32 @@ impl RedisStore {
     pub async fn insert(&self, key: &str, value: &str, expiry: Option<Duration>) -> DsResult<()> {
         match expiry {
             Some(expiry) => {
-                let seconds = expiry.as_secs().to_string();
-                self.ok(&[
-                    b"SETEX",
-                    key.as_bytes(),
-                    seconds.as_bytes(),
-                    value.as_bytes(),
-                ])
-                .await
+                self.query(cmd("SETEX").arg(key).arg(expiry.as_secs()).arg(value))
+                    .await
             }
-            None => self.ok(&[b"SET", key.as_bytes(), value.as_bytes()]).await,
+            None => self.query(cmd("SET").arg(key).arg(value)).await,
         }
     }
 
     /// Scala `contains`.
     pub async fn contains(&self, key: &str) -> DsResult<bool> {
-        Ok(self.integer(&[b"EXISTS", key.as_bytes()]).await? > 0)
+        self.query(cmd("EXISTS").arg(key)).await
     }
 
     /// Scala `remove`.
     pub async fn remove(&self, key: &str) -> DsResult<()> {
-        self.integer(&[b"DEL", key.as_bytes()]).await.map(|_| ())
+        self.query(cmd("DEL").arg(key)).await
     }
 
     /// Scala `expire`.
     pub async fn expire(&self, key: &str, expiry: Duration) -> DsResult<()> {
-        let seconds = expiry.as_secs().to_string();
-        self.integer(&[b"EXPIRE", key.as_bytes(), seconds.as_bytes()])
+        self.query(cmd("EXPIRE").arg(key).arg(expiry.as_secs()))
             .await
-            .map(|_| ())
     }
 
     /// Scala `ttlSeconds`: -1 without expiry, -2 for missing keys.
     pub async fn ttl_seconds(&self, key: &str) -> DsResult<i64> {
-        self.integer(&[b"TTL", key.as_bytes()]).await
+        self.query(cmd("TTL").arg(key)).await
     }
 
     /// Scala `insertIntoSet`: whether the value was new.
@@ -311,10 +239,7 @@ impl RedisStore {
         value: &str,
         expiry: Option<Duration>,
     ) -> DsResult<bool> {
-        let added = self
-            .integer(&[b"SADD", key.as_bytes(), value.as_bytes()])
-            .await?
-            > 0;
+        let added: bool = self.query(cmd("SADD").arg(key).arg(value)).await?;
         if let Some(expiry) = expiry {
             self.expire(key, expiry).await?;
         }
@@ -323,32 +248,17 @@ impl RedisStore {
 
     /// Scala `isContainedInSet`.
     pub async fn is_contained_in_set(&self, key: &str, value: &str) -> DsResult<bool> {
-        Ok(self
-            .integer(&[b"SISMEMBER", key.as_bytes(), value.as_bytes()])
-            .await?
-            > 0)
+        self.query(cmd("SISMEMBER").arg(key).arg(value)).await
     }
 
     /// Scala `removeFromSet`.
     pub async fn remove_from_set(&self, key: &str, value: &str) -> DsResult<bool> {
-        Ok(self
-            .integer(&[b"SREM", key.as_bytes(), value.as_bytes()])
-            .await?
-            > 0)
+        self.query(cmd("SREM").arg(key).arg(value)).await
     }
 
     /// Scala `findSet` (missing keys are empty sets).
     pub async fn find_set(&self, key: &str) -> DsResult<Vec<String>> {
-        match self.command(&[b"SMEMBERS", key.as_bytes()]).await? {
-            Reply::Array(Some(items)) => items
-                .into_iter()
-                .map(|item| match item {
-                    Reply::Bulk(Some(bytes)) => Ok(String::from_utf8_lossy(&bytes).into_owned()),
-                    other => Err(Self::unexpected(&other)),
-                })
-                .collect(),
-            Reply::Array(None) => Ok(Vec::new()),
-            other => Err(Self::unexpected(&other)),
-        }
+        let members: Vec<Vec<u8>> = self.query(cmd("SMEMBERS").arg(key)).await?;
+        Ok(members.into_iter().map(lossy).collect())
     }
 }

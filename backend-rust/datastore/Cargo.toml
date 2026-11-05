@@ -26,6 +26,7 @@ percent-encoding = "2"
 prost.workspace = true
 quick-xml.workspace = true
 reqwest.workspace = true
+redis = { version = "1.8.1", default-features = false, features = ["tokio-comp"] }
 ring.workspace = true
 zstd = { version = "0.14.3", default-features = false }
 serde.workspace = true

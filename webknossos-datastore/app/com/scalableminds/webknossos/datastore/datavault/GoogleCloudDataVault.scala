@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.io.{ByteArrayInputStream, IOException}
-import java.net.http.{HttpClient, HttpRequest, HttpResponse, HttpTimeoutException}
+import java.net.http.{HttpClient, HttpConnectTimeoutException, HttpRequest, HttpResponse, HttpTimeoutException}
 import java.net.{URI, URLEncoder}
 import java.nio.charset.StandardCharsets
 import java.time.Duration
@@ -258,6 +258,10 @@ object GoogleCloudDataVault {
     sendWithDeadline(request).transformWith {
       case TrySuccess(response) if retryableStatusCodes.contains(response.statusCode) && attempt < maxAttempts =>
         retryLater()
+      case TryFailure(_: HttpConnectTimeoutException) if attempt < maxAttempts => retryLater()
+      // An attempt that ran into attemptTimeout is not retried: a retry would likely stall again, and failed reads
+      // are not cached, so the next request for the same data starts a fresh read anyway.
+      case other @ TryFailure(_: HttpTimeoutException)         => Future.fromTry(other)
       case TryFailure(_: IOException) if attempt < maxAttempts => retryLater()
       case other                                               => Future.fromTry(other)
     }

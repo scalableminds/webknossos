@@ -137,7 +137,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       else
         header(response, "Content-Range") match {
           case Some(contentRangeTotalRegex(total)) => tryo(total.toLong)
-          case other                               => Failure(s"Unexpected Content-Range header in GCS response: $other")
+          case other => Failure(s"Unexpected Content-Range header in GCS response: $other")
         }
     def tooShort = Failure(s"Unexpected end of object while reading from GCS: got ${body.length} bytes for $range")
     // Offset and length of the requested bytes within the object
@@ -154,7 +154,8 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
           (offset, length) = requestedSlice(size)
           bytes <-
             if (isPartial) { if (body.length == length) Full(body) else tooShort }
-            else if (offset >= 0 && offset + length <= body.length) Full(body.slice(offset.toInt, offset.toInt + length))
+            else if (offset >= 0 && offset + length <= body.length)
+              Full(body.slice(offset.toInt, offset.toInt + length))
             else tooShort
         } yield (bytes, range.toContentRangeHeaderWithLength(size))
     }

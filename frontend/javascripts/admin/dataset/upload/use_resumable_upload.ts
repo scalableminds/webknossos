@@ -1,5 +1,6 @@
-import { createResumableUpload, refreshToken } from "admin/rest_api";
+import { createResumableUpload, type ResumableUploadDomain, refreshToken } from "admin/rest_api";
 import { App } from "antd";
+import dayjs from "dayjs";
 import type ResumableUpload from "libs/resumable_upload/resumable_upload";
 import type { ResumableUploadEvent } from "libs/resumable_upload/resumable_upload";
 import messages from "messages";
@@ -17,7 +18,7 @@ export type ResumableUploadRequest<FinishResult> = {
   files: FileWithPath[];
   datastoreUrl: string;
   uploadId: string;
-  uploadDomain: "dataset" | "alignmentProject";
+  uploadDomain: ResumableUploadDomain;
   // Registers the upload with WEBKNOSSOS before any file is sent.
   reserve: () => Promise<void>;
   // Called when the upload could not be started. The request library already notified the user.
@@ -39,9 +40,19 @@ type ActiveUpload = {
   resumableUpload: ResumableUpload;
 };
 
-export function getRandomString() {
+// E.g. "2026-10-27_14-03__dataset__my_dataset__a1b2c3d4e5f6". The upload domain is part of the id,
+// so that the id alone tells which kind of upload it belongs to. The backend does not parse the id.
+export function generateResumableUploadId(
+  uploadDomain: ResumableUploadDomain,
+  label?: string,
+): string {
   const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));
-  return Array.from(randomBytes, (byte) => `0${byte.toString(16)}`.slice(-2)).join("");
+  const randomString = Array.from(randomBytes, (byte) => `0${byte.toString(16)}`.slice(-2)).join(
+    "",
+  );
+  return [dayjs().format("YYYY-MM-DD_HH-mm"), uploadDomain, label, randomString]
+    .filter((part) => part != null)
+    .join("__");
 }
 
 // Counts the running uploads of all useResumableUpload instances, because a router only

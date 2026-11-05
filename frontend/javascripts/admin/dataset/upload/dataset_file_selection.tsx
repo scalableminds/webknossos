@@ -280,7 +280,7 @@ export function FileSelection({
       onChange?.(addedFiles.slice(0, 1));
       return;
     }
-    // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
+    // file.path should be set by react-dropzone (with the toFileWithPath function of the file-selector package).
     onChange?.(uniqBy(fileList.concat(addedFiles), (file) => file.path));
   };
   const removeFile = (file: FileWithPath) => {

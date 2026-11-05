@@ -5,7 +5,6 @@ import {
   sendFailedRequestAnalyticsEvent,
   type UnfinishedUpload,
 } from "admin/rest_api";
-import dayjs from "dayjs";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import throttle from "lodash-es/throttle";
@@ -14,7 +13,7 @@ import type { FileWithPath } from "react-dropzone";
 import type { APITeam } from "types/api_types";
 import type { UnitLong, Vector3 } from "viewer/constants";
 import { getTotalFileSize } from "./detect_dataset_format";
-import { getRandomString, useResumableUpload } from "./use_resumable_upload";
+import { generateResumableUploadId, useResumableUpload } from "./use_resumable_upload";
 
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
 
@@ -49,7 +48,7 @@ export function useResumableDatasetUpload({
     const { name: datasetName, files, datastoreUrl, needsConversion } = request;
     const uploadId =
       request.unfinishedUploadToContinue?.uploadId ??
-      `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${datasetName}__${getRandomString()}`;
+      generateResumableUploadId("dataset", datasetName);
     const datasetUploadInfo = {
       resumableUploadInfo: {
         uploadId,

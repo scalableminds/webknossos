@@ -127,15 +127,9 @@ function DatasetAddView() {
       : []),
   ];
 
-<<<<<<< HEAD
-  const defaultActiveTabFromHash = location.hash.substring(1);
-  const defaultActiveKey = tabs.some((tab) => tab.key === defaultActiveTabFromHash)
-    ? defaultActiveTabFromHash
-=======
   const activeTabFromHash = location.hash.substring(1);
   const activeKey = tabs.some((tab) => tab.key === activeTabFromHash)
     ? activeTabFromHash
->>>>>>> 3866b7e6499e7da16a3bc1ab250e71958e6740ef
     : DatasetAddType.UPLOAD;
 
   return (

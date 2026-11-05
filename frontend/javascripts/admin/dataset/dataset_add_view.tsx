@@ -17,7 +17,7 @@ import type { UploadStatus } from "./upload/use_resumable_dataset_upload";
 const { Content } = Layout;
 
 function DatasetAddView() {
-  const datastores = useFetch<APIDataStore[]>(getDatastores, [], []);
+  const datastores = useFetch<APIDataStore[] | null>(getDatastores, null, []);
   // Uploads show their own modal, so this is only used for remote and composed datasets.
   const [addedDatasetStatus, setAddedDatasetStatus] = useState<UploadStatus>({ kind: "idle" });
   const [datasetAddType, setDatasetAddType] = useState<DatasetAddType>(DatasetAddType.REMOTE);
@@ -63,7 +63,7 @@ function DatasetAddView() {
       children: (
         <DatasetAddRemoteView
           key={viewKeys[DatasetAddType.REMOTE]}
-          datastores={datastores}
+          datastores={datastores ?? []}
           onAdded={handleDatasetAdded.bind(null, DatasetAddType.REMOTE)}
         />
       ),
@@ -75,7 +75,7 @@ function DatasetAddView() {
       children: (
         <DatasetAddComposeView
           key={viewKeys[DatasetAddType.COMPOSE]}
-          datastores={datastores}
+          datastores={datastores ?? []}
           onAdded={handleDatasetAdded.bind(null, DatasetAddType.COMPOSE)}
         />
       ),

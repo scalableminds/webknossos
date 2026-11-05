@@ -495,10 +495,12 @@ function OnboardingView() {
   const [datasetIdToImport, setDatasetIdToImport] = useState<string | null | undefined>(null);
 
   const navigate = useNavigate();
+  // Anonymous users don't get any datastores, so only fetch them once the account was created.
+  // Otherwise, the upload form has no datastore and silently fails to validate.
   const { data: datastores } = useQuery({
-    queryKey: ["datastores"],
+    queryKey: ["datastores", activeUser?.id],
     queryFn: getDatastores,
-    initialData: [],
+    enabled: activeUser != null,
   });
 
   useEffect(() => {
@@ -609,7 +611,11 @@ function OnboardingView() {
             mask={{ closable: false }}
             onCancel={hideDatasetUploadModal}
           >
-            <DatasetUploadView datastores={datastores} onUploaded={onDatasetUploaded} withoutCard />
+            <DatasetUploadView
+              datastores={datastores ?? null}
+              onUploaded={onDatasetUploaded}
+              withoutCard
+            />
           </Modal>
         )}
         {datasetIdToImport != null && (

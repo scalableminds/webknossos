@@ -5,6 +5,7 @@ import { loginUser, requestSingleSignOnLogin } from "admin/rest_api";
 import { Alert, Button, Flex, Form, Input } from "antd";
 import LinkButton from "components/link_button";
 import features from "features";
+import { resetQueryCacheOnLogin } from "libs/react_query_client";
 import { getIsInIframe } from "libs/utils";
 import messages from "messages";
 import { useDispatch } from "react-redux";
@@ -33,6 +34,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const onFinish = async (formValues) => {
     const [user, organization] = unwrapOrThrow(await loginUser(formValues));
+    resetQueryCacheOnLogin();
     dispatch(setActiveUserAction(user));
     dispatch(setActiveOrganizationAction(organization));
 
@@ -45,6 +47,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
   const webauthnLogin = async () => {
     try {
       const [user, organization] = await doWebAuthnLogin();
+      resetQueryCacheOnLogin();
       dispatch(setActiveUserAction(user));
       dispatch(setActiveOrganizationAction(organization));
       if (onLoggedIn) {

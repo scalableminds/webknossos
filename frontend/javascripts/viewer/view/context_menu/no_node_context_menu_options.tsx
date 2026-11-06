@@ -13,8 +13,8 @@ import {
 } from "viewer/controller/combinations/segmentation_handlers";
 import { handleCreateNodeFromGlobalPosition } from "viewer/controller/combinations/skeleton_handlers";
 import {
-  getRenderedSegmentIdForPositionAsync,
   getSegmentIdForPosition,
+  getSegmentIdForPositionAsync,
   getUnmappedSegmentIdForPosition,
   handleFloodFillFromGlobalPosition,
 } from "viewer/controller/combinations/volume_handlers";
@@ -178,7 +178,7 @@ export function useNoNodeContextMenuOptions(
       return;
     // Ensure that the segment ID is loaded, since a mapping might have been activated
     // shortly before
-    const segmentId = await getRenderedSegmentIdForPositionAsync(
+    const segmentId = await getSegmentIdForPositionAsync(
       visibleSegmentationLayer.name,
       globalPosition,
     );

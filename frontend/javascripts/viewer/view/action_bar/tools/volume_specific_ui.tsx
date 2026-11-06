@@ -41,9 +41,8 @@ import {
   interpolateSegmentationLayerAction,
 } from "viewer/model/actions/volumetracing_actions";
 import {
-  getMappedId,
-  getRenderedSegmentId,
   isMappingAppliedLocally,
+  resolveUnmappedSegmentId,
 } from "viewer/model/helpers/mapped_id_lookup";
 import { getInterpolationInfo } from "viewer/model/sagas/volume/volume_interpolation_saga";
 import { rgbaToCSS } from "viewer/shaders/utils.glsl";
@@ -207,12 +206,7 @@ const getMappedActiveCellId = (state: WebknossosState): bigint | null => {
   if (volumeTracingId == null) {
     return unmappedActiveCellId;
   }
-  return getRenderedSegmentId(
-    state,
-    volumeTracingId,
-    unmappedActiveCellId,
-    getMappedId(state, volumeTracingId, unmappedActiveCellId),
-  );
+  return resolveUnmappedSegmentId(state, volumeTracingId, unmappedActiveCellId);
 };
 
 export function CreateSegmentButton() {

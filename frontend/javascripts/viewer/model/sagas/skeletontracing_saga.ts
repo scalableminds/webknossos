@@ -27,7 +27,7 @@ import {
 } from "typed-redux-saga";
 import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
 import { NumberToOrthoView, TreeTypeEnum, type Vector3 } from "viewer/constants";
-import { getRenderedSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
+import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import {
   isConcurrentCollaborationMode,
   mayEditAnnotation,
@@ -451,7 +451,7 @@ function* loadAgglomerateTreeWithAtPosition(
     } else {
       // Ad-hoc lookup of agglomerate id after syncing in live-collab. Should be preferred over using the LoadAgglomerateTreeFromIdAction action.
       const maybeAgglomerateId = yield* call(
-        getRenderedSegmentIdForPositionAsync,
+        getSegmentIdForPositionAsync,
         layerName,
         action.agglomeratePosition,
       );

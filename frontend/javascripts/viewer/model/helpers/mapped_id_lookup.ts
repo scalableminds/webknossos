@@ -93,10 +93,33 @@ export async function getMappedIdAsync(
   return mappedId != null ? { type: "exists", value: mappedId } : { type: "unknown" };
 }
 
-// Returns the id with which the segment is rendered or null if that's not known (yet).
-// For ids that are absent in a JSON mapping, this is the unmapped id (or 0 if unmapped
-// ids are hidden).
-export function getRenderedSegmentId(
+// Returns the id that the segment with the given unmapped id has under the current mapping
+// or null if that's not known (yet). For ids that are absent in a JSON mapping, this is the
+// unmapped id (or 0 if unmapped ids are hidden).
+export function resolveUnmappedSegmentId(
+  state: WebknossosState,
+  layerName: string,
+  unmappedId: bigint,
+): bigint | null {
+  return getSegmentIdFromResult(
+    state,
+    layerName,
+    unmappedId,
+    getMappedId(state, layerName, unmappedId),
+  );
+}
+
+// Like resolveUnmappedSegmentId, but fetches the mapped id from the server if the local
+// HDF5 mapping doesn't know it (see getMappedIdAsync).
+export async function resolveUnmappedSegmentIdAsync(
+  layerName: string,
+  unmappedId: bigint,
+): Promise<bigint | null> {
+  const result = await getMappedIdAsync(layerName, unmappedId);
+  return getSegmentIdFromResult(Store.getState(), layerName, unmappedId, result);
+}
+
+function getSegmentIdFromResult(
   state: WebknossosState,
   layerName: string,
   unmappedId: bigint,

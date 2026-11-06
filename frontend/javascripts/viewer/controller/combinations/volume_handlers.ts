@@ -27,9 +27,9 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import {
   getMappedId,
-  getMappedIdAsync,
-  getRenderedSegmentId,
   type MappedIdResult,
+  resolveUnmappedSegmentId,
+  resolveUnmappedSegmentIdAsync,
 } from "viewer/model/helpers/mapped_id_lookup";
 import {
   invertTransform,
@@ -123,7 +123,7 @@ function getSegmentIdInfoForPositionSync(
   // This function will return the currently loaded segment ID for a given position.
   // If the corresponding bucket is not loaded at the moment, the unmapped id will be 0.
   // `mapped` is null if the local mapping doesn't know the unmapped id (yet).
-  // See getRenderedSegmentIdForPositionAsync if the loading should be awaited.
+  // See getSegmentIdForPositionAsync if the loading should be awaited.
   const layer = Model.getVisibleSegmentationLayer();
   if (!layer) {
     return null;
@@ -144,12 +144,7 @@ function getSegmentIdInfoForPositionSync(
     posInLayerSpace,
     renderedZoomStepForCameraPosition,
   );
-  const mapped = getRenderedSegmentId(
-    state,
-    layer.name,
-    unmapped,
-    getMappedId(state, layer.name, unmapped),
-  );
+  const mapped = resolveUnmappedSegmentId(state, layer.name, unmapped);
   return { mapped, unmapped };
 }
 
@@ -174,13 +169,11 @@ export const getSegmentIdInfoForPosition = (globalPos: Vector3) => {
   return { mapped: info?.mapped ?? 0n, unmapped: info?.unmapped ?? 0n };
 };
 
-export async function getSegmentIdInfoForPositionAsync(
+async function loadUnmappedSegmentIdForPosition(
   layerName: string,
   globalPos: Vector3,
-  fetchIfUnknown: boolean,
-): Promise<{ unmappedId: bigint; mappedId: MappedIdResult }> {
-  // Awaits the loading of the bucket at the given position. If fetchIfUnknown is true and the
-  // local mapping doesn't know the unmapped id, the mapped id is fetched from the server.
+): Promise<bigint> {
+  // Awaits the loading of the bucket at the given position.
   const posInLayerSpace = globalToLayerTransformedPosition(
     globalPos,
     layerName,
@@ -198,31 +191,34 @@ export async function getSegmentIdInfoForPositionAsync(
     renderedZoomStepForCameraPosition,
     Store.getState().flycam.additionalCoordinates,
   );
-  const unmappedId = getUnmappedSegmentIdForPositionInLayer(
+  return getUnmappedSegmentIdForPositionInLayer(
     layerName,
     posInLayerSpace,
     renderedZoomStepForCameraPosition,
   );
-  const mappedId = fetchIfUnknown
-    ? await getMappedIdAsync(layerName, unmappedId)
-    : getMappedId(Store.getState(), layerName, unmappedId);
-  return { unmappedId, mappedId };
 }
 
-export async function getRenderedSegmentIdForPositionAsync(
+export async function getSegmentIdInfoForPositionAsync(
+  layerName: string,
+  globalPos: Vector3,
+): Promise<{ unmappedId: bigint; mappedId: MappedIdResult }> {
+  // Awaits the loading of the bucket at the given position, but only looks up the mapped id
+  // in the local mapping. Use getSegmentIdForPositionAsync to also fetch the mapped id from
+  // the server if the local mapping doesn't know it.
+  const unmappedId = await loadUnmappedSegmentIdForPosition(layerName, globalPos);
+  return { unmappedId, mappedId: getMappedId(Store.getState(), layerName, unmappedId) };
+}
+
+export async function getSegmentIdForPositionAsync(
   layerName: string,
   globalPos: Vector3,
 ): Promise<bigint | null> {
-  // Returns the id with which the segment at the given position is rendered, awaiting the
-  // loading of the bucket and fetching the mapped id from the server if necessary.
-  // Returns null if the id can't be determined.
+  // Returns the segment id at the given position under the current mapping. Awaits the
+  // loading of the bucket and fetches the mapped id from the server if the local mapping
+  // doesn't know it. Returns null if the id can't be determined.
   // See getSegmentIdForPosition if the loading should not be awaited.
-  const { unmappedId, mappedId } = await getSegmentIdInfoForPositionAsync(
-    layerName,
-    globalPos,
-    true,
-  );
-  return getRenderedSegmentId(Store.getState(), layerName, unmappedId, mappedId);
+  const unmappedId = await loadUnmappedSegmentIdForPosition(layerName, globalPos);
+  return resolveUnmappedSegmentIdAsync(layerName, unmappedId);
 }
 
 function handlePickCellFromGlobalPosition(

@@ -679,7 +679,6 @@ function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
       getSegmentIdInfoForPositionAsync,
       layerName,
       proofreadingMarkerPosition,
-      false,
     );
 
     // The marker may have been moved (e.g., by a click) while the lookup was pending.

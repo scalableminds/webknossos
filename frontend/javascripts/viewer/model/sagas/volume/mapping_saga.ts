@@ -9,6 +9,7 @@ import {
 import { message } from "antd";
 import { toBigInt } from "libs/bigint_helpers";
 import ErrorHandling from "libs/error_handling";
+import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
 import { fastDiffSetAndMap, sleep } from "libs/utils";
 import min from "lodash-es/min";
@@ -28,7 +29,7 @@ import {
 } from "typed-redux-saga";
 import type { APIDataLayer, APIDataset, APIMapping } from "types/api_types";
 import { MappingStatusEnum, type MappingType } from "viewer/constants";
-import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
+import { getSegmentIdInfoForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import {
   getLayerByName,
   getMappingInfo,
@@ -711,8 +712,37 @@ function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
     (state) => state.localSegmentationStateByLayer[layerName]?.proofreadingMarkerPosition,
   );
   if (proofreadingMarkerPosition) {
-    const agglomerateId = yield* call(getSegmentIdForPositionAsync, proofreadingMarkerPosition);
-    const activeSegmentId = yield* call(getActiveCellId, volumeTracing);
+    const { mapped: agglomerateId, unmapped: unmappedId } = yield* call(
+      getSegmentIdInfoForPositionAsync,
+      proofreadingMarkerPosition,
+    );
+
+    // The marker may have been moved (e.g., by a click) while the lookup was pending.
+    // In that case, the result is outdated.
+    const currentProofreadingMarkerPosition = yield* select(
+      (state) => state.localSegmentationStateByLayer[layerName]?.proofreadingMarkerPosition,
+    );
+    if (currentProofreadingMarkerPosition !== proofreadingMarkerPosition) {
+      return;
+    }
+
+    // The local mapping only contains entries for the ids in the currently needed buckets.
+    // If the marker is outside of these (e.g., because the user moved away), the lookup
+    // returns the unmapped id. Don't switch to it.
+    const mapping = yield* select(
+      (state) => state.temporaryConfiguration.activeMappingByLayer[layerName]?.mapping,
+    );
+    if (mapping == null || !new NumberLikeMapWrapper(mapping).has(unmappedId)) {
+      return;
+    }
+
+    const currentVolumeTracing = yield* select((state) =>
+      getVolumeTracingByLayerName(state.annotation, layerName),
+    );
+    if (!currentVolumeTracing) {
+      return;
+    }
+    const activeSegmentId = yield* call(getActiveCellId, currentVolumeTracing);
 
     if (activeSegmentId !== agglomerateId) {
       yield put(setActiveCellAction(agglomerateId, proofreadingMarkerPosition));

@@ -196,11 +196,21 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
   // This function will return the segment ID for a given position, awaiting the loading
   // of the corresponding bucket.
   // See getSegmentIdForPosition if the bucket loading should not be awaited.
+  const { mapped } = await getSegmentIdInfoForPositionAsync(globalPos);
+  return mapped;
+}
+
+export async function getSegmentIdInfoForPositionAsync(
+  globalPos: Vector3,
+): Promise<{ mapped: bigint; unmapped: bigint }> {
+  // Like getSegmentIdForPositionAsync, but also returns the unmapped id.
+  // Note that `mapped` equals `unmapped` if a partially loaded HDF5 mapping
+  // has no entry for the unmapped id (yet).
   const layer = Model.getVisibleSegmentationLayer();
   const { additionalCoordinates } = Store.getState().flycam;
 
   if (!layer) {
-    return 0n;
+    return { mapped: 0n, unmapped: 0n };
   }
   const posInLayerSpace = globalToLayerTransformedPosition(
     globalPos,
@@ -222,13 +232,23 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
     renderedZoomStepForCameraPosition,
     additionalCoordinates,
   );
-  return toBigInt(
-    segmentationCube.getMappedDataValue(
-      posInLayerSpace,
-      additionalCoordinates,
-      renderedZoomStepForCameraPosition,
+  return {
+    mapped: toBigInt(
+      segmentationCube.getMappedDataValue(
+        posInLayerSpace,
+        additionalCoordinates,
+        renderedZoomStepForCameraPosition,
+      ),
     ),
-  );
+    unmapped: toBigInt(
+      segmentationCube.getDataValue(
+        posInLayerSpace,
+        additionalCoordinates,
+        null,
+        renderedZoomStepForCameraPosition,
+      ),
+    ),
+  };
 }
 
 function handlePickCellFromGlobalPosition(

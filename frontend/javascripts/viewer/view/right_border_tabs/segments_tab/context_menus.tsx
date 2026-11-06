@@ -28,6 +28,7 @@ import Toast from "libs/toast";
 import { pluralize, take3 } from "libs/utils";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
+import type { Dispatch } from "redux";
 import Constants, { type Vector3 } from "viewer/constants";
 import {
   getMappingInfo,
@@ -39,12 +40,14 @@ import {
   getSegmentColorAsRGBA,
   getSegmentName,
   getVisibleSegments,
+  getVolumeTracingByLayerName,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { updateMeshOpacityAction } from "viewer/model/actions/annotation_actions";
 import {
   deleteSegmentDataAction,
   removeSegmentAction,
   setActiveCellAction,
+  updateProofreadingMarkerPositionAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { Segment } from "viewer/store";
@@ -93,6 +96,25 @@ export type ContextMenuDependencies = {
   // pencil, so the context menu is the discoverable way to rename (besides double-click).
   startRenaming: (nodeKey: string) => void;
 };
+
+// The proofreading marker is cleared here instead of in the REMOVE_SEGMENT reducer, because
+// that reducer also handles removals that don't come from the user, such as remote update
+// actions or the cleanup after a merge. In those cases, the marker should stay.
+function removeSegmentsFromList(dispatch: Dispatch, segmentIds: bigint[], layerName: string) {
+  const activeCellId = getVolumeTracingByLayerName(
+    Store.getState().annotation,
+    layerName,
+  )?.activeCellId;
+  for (const segmentId of segmentIds) {
+    dispatch(removeSegmentAction(segmentId, layerName));
+  }
+  if (activeCellId != null && segmentIds.includes(activeCellId)) {
+    // Otherwise, the proofreading marker would still point to the removed segment and
+    // the mapping saga could re-add it to the list when it adapts the active segment
+    // to the marker.
+    dispatch(updateProofreadingMarkerPositionAction(undefined, layerName));
+  }
+}
 
 function getColorOfFirstSegmentOrGrey(segments: Segment[]): Vector3 {
   return segments[0]?.color ?? [0.5, 0.5, 0.5];
@@ -234,9 +256,11 @@ function useSegmentListMenuItems({
           if (visibleSegmentationLayer == null) {
             return;
           }
-          for (const segment of segments) {
-            dispatch(removeSegmentAction(segment.id, visibleSegmentationLayer.name));
-          }
+          removeSegmentsFromList(
+            dispatch,
+            segments.map((segment) => segment.id),
+            visibleSegmentationLayer.name,
+          );
         }),
       };
 
@@ -352,7 +376,7 @@ export function useSegmentContextMenuBuilder(
                 <a
                   href="#"
                   onClick={() => {
-                    dispatch(removeSegmentAction(segment.id, layerName));
+                    removeSegmentsFromList(dispatch, [segment.id], layerName);
                     Toast.close(ALSO_DELETE_SEGMENT_FROM_LIST_KEY);
                   }}
                 >
@@ -448,7 +472,7 @@ export function useSegmentContextMenuBuilder(
             icon: <CloseOutlined />,
             onClick: runAndHide(() => {
               if (layerName != null) {
-                dispatch(removeSegmentAction(segment.id, layerName));
+                removeSegmentsFromList(dispatch, [segment.id], layerName);
               }
             }),
             label: "Remove Segment From List",

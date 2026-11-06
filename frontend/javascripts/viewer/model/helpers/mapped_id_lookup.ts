@@ -28,8 +28,9 @@ export type MappedIdResult =
   // only the entries for the currently needed buckets are loaded. It also happens while
   // a mapping is still being activated.
   | { type: "unknown" }
-  // The mapping is a fully loaded JSON mapping without an entry for the id.
-  | { type: "missing" };
+  // The mapping is a fully loaded JSON mapping without an entry for the id. This is not an
+  // error: JSON mappings don't need to contain all ids.
+  | { type: "absent" };
 
 export function getMappedId(
   state: WebknossosState,
@@ -52,13 +53,14 @@ export function getMappedId(
   if (mappedId != null) {
     return { type: "exists", value: mappedId };
   }
-  return mappingType === "JSON" ? { type: "missing" } : { type: "unknown" };
+  return mappingType === "JSON" ? { type: "absent" } : { type: "unknown" };
 }
 
 // Like getMappedId, but fetches the mapped id from the server if the local HDF5 mapping
 // doesn't know it. The fetched entry is not added to the local mapping, because the next
 // update of the local mapping would remove it anyway if it's not needed for rendering.
-// "unknown" is only returned for a JSON mapping that is still being activated.
+// "unknown" is only returned for a JSON mapping that is still being activated or if the
+// server didn't return an entry for the id.
 export async function getMappedIdAsync(
   layerName: string,
   unmappedId: bigint,
@@ -83,11 +85,11 @@ export async function getMappedIdAsync(
     new Set([unmappedId]),
   );
   const mappedId = new NumberLikeMapWrapper(fetchedEntries).getAsBigInt(unmappedId);
-  return mappedId != null ? { type: "exists", value: mappedId } : { type: "missing" };
+  return mappedId != null ? { type: "exists", value: mappedId } : { type: "unknown" };
 }
 
 // Returns the id with which the segment is rendered or null if that's not known (yet).
-// For ids that are missing in a JSON mapping, this is the unmapped id (or 0 if unmapped
+// For ids that are absent in a JSON mapping, this is the unmapped id (or 0 if unmapped
 // ids are hidden).
 export function getRenderedSegmentId(
   state: WebknossosState,
@@ -100,7 +102,7 @@ export function getRenderedSegmentId(
       return result.value;
     case "unknown":
       return null;
-    case "missing": {
+    case "absent": {
       const { hideUnmappedIds } = getMappingInfo(
         state.temporaryConfiguration.activeMappingByLayer,
         layerName,

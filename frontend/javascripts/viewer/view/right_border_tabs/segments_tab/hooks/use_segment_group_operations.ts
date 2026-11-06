@@ -5,7 +5,10 @@ import React, { useCallback, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { Vector3 } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
-import { getVisibleSegments } from "viewer/model/accessors/volumetracing_accessor";
+import {
+  getVisibleSegments,
+  getVolumeTracingByLayerName,
+} from "viewer/model/accessors/volumetracing_accessor";
 import {
   batchUpdateGroupsAndSegmentsAction,
   setExpandedSegmentGroupsAction,
@@ -13,6 +16,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { api } from "viewer/singletons";
 import type { Segment } from "viewer/store";
+import Store from "viewer/store";
 import {
   additionallyExpandGroup,
   createGroupToParentMap,
@@ -21,6 +25,7 @@ import {
   MISSING_GROUP_ID,
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { getGroupUiNodeKey, type SegmentsUiNode } from "../hierarchy";
+import { clearProofreadingMarkerIfItsSegmentWasRemoved } from "../proofreading_marker_helpers";
 import { getSegmentsOfGroupRecursively as getSegmentsOfGroupRecursivelyHelper } from "../segments_view_helper";
 
 export type SegmentGroupOperations = {
@@ -64,9 +69,17 @@ export function useSegmentGroupOperations(): SegmentGroupOperations {
       if (visibleSegmentationLayer == null) {
         return;
       }
-      api.tracing.deleteSegmentGroup(groupId, deleteChildren, visibleSegmentationLayer.name);
+      const layerName = visibleSegmentationLayer.name;
+      const getSegmentsOfLayer = () =>
+        getVolumeTracingByLayerName(Store.getState().annotation, layerName)?.segments;
+      const segmentIdsBefore = Array.from(getSegmentsOfLayer()?.keys() ?? []);
+      api.tracing.deleteSegmentGroup(groupId, deleteChildren, layerName);
+      // Depending on deleteChildren, the segments of the group were removed, too.
+      const segmentsAfter = getSegmentsOfLayer();
+      const removedSegmentIds = segmentIdsBefore.filter((id) => !segmentsAfter?.has(id));
+      clearProofreadingMarkerIfItsSegmentWasRemoved(dispatch, removedSegmentIds, layerName);
     },
-    [visibleSegmentationLayer],
+    [visibleSegmentationLayer, dispatch],
   );
 
   const requestGroupDeletion = useCallback(

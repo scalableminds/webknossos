@@ -40,14 +40,12 @@ import {
   getSegmentColorAsRGBA,
   getSegmentName,
   getVisibleSegments,
-  getVolumeTracingByLayerName,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { updateMeshOpacityAction } from "viewer/model/actions/annotation_actions";
 import {
   deleteSegmentDataAction,
   removeSegmentAction,
   setActiveCellAction,
-  updateProofreadingMarkerPositionAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { Segment } from "viewer/store";
@@ -66,6 +64,7 @@ import type { SegmentGroupOperations } from "./hooks/use_segment_group_operation
 import type { SegmentSelection } from "./hooks/use_segment_selection";
 import { useSegmentStatisticsFile } from "./hooks/use_segment_statistics_file";
 import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
+import { clearProofreadingMarkerIfItsSegmentWasRemoved } from "./proofreading_marker_helpers";
 import {
   mayEditVisibleSegmentation,
   withMappingActivationConfirmation,
@@ -97,23 +96,11 @@ export type ContextMenuDependencies = {
   startRenaming: (nodeKey: string) => void;
 };
 
-// The proofreading marker is cleared here instead of in the REMOVE_SEGMENT reducer, because
-// that reducer also handles removals that don't come from the user, such as remote update
-// actions or the cleanup after a merge. In those cases, the marker should stay.
 function removeSegmentsFromList(dispatch: Dispatch, segmentIds: bigint[], layerName: string) {
-  const activeCellId = getVolumeTracingByLayerName(
-    Store.getState().annotation,
-    layerName,
-  )?.activeCellId;
   for (const segmentId of segmentIds) {
     dispatch(removeSegmentAction(segmentId, layerName));
   }
-  if (activeCellId != null && segmentIds.includes(activeCellId)) {
-    // Otherwise, the proofreading marker would still point to the removed segment and
-    // the mapping saga could re-add it to the list when it adapts the active segment
-    // to the marker.
-    dispatch(updateProofreadingMarkerPositionAction(undefined, layerName));
-  }
+  clearProofreadingMarkerIfItsSegmentWasRemoved(dispatch, segmentIds, layerName);
 }
 
 function getColorOfFirstSegmentOrGrey(segments: Segment[]): Vector3 {

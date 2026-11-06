@@ -208,7 +208,7 @@ describe("DataCube", () => {
     cube,
     pullQueue,
   }) => {
-    cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 42, 0, null);
+    cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 42, 0);
 
     await sleep(100);
     expect(pullQueue.processedQueue[0]).toEqual({
@@ -221,7 +221,7 @@ describe("DataCube", () => {
     cube,
     pushQueue,
   }) => {
-    await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 42, 0, null);
+    await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 42, 0);
     const bucket = cube.getBucket([0, 0, 0, 0, []]);
 
     expect(pushQueue.insert).toHaveBeenCalledWith(bucket);
@@ -235,7 +235,7 @@ describe("DataCube", () => {
     assertNonNullBucket(bucket);
     bucket.markAsRequested();
     bucket.receiveData(new Uint8Array(4 * 32 ** 3));
-    await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0, null);
+    await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0);
 
     expect(pushQueue.insert).toHaveBeenCalledWith(bucket);
   });
@@ -259,9 +259,9 @@ describe("DataCube", () => {
     cube,
   }) => {
     // Creates bucket
-    await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0, null);
+    await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0);
     // Uses existing bucket
-    await cube._labelVoxelInResolution_DEPRECATED([1, 0, 0], null, 43, 0, null);
+    await cube._labelVoxelInResolution_DEPRECATED([1, 0, 0], null, 43, 0);
     const data = cube.getBucket([0, 0, 0, 0, []]).getData();
     expect(data[0]).toBe(42);
     expect(data[1]).toBe(43);
@@ -271,15 +271,15 @@ describe("DataCube", () => {
     cube,
   }) => {
     const value = 1 * (1 << 16) + 2 * (1 << 8) + 3;
-    await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, value, 0, null);
+    await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, value, 0);
     expect(cube.getDataValue([0, 0, 0], null, null)).toBe(value);
   });
 
   it<TestContext>("getDataValue() should return the mapping value if available", async ({
     cube,
   }) => {
-    await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0, null);
-    await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 43, 0, null);
+    await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0);
+    await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 43, 0);
     const mapping = new Map();
     mapping.set(42, 1);
     expect(cube.getDataValue([0, 0, 0], null, mapping)).toBe(1);

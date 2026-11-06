@@ -32,13 +32,18 @@ export type MappedIdResult =
   // error: JSON mappings don't need to contain all ids.
   | { type: "absent" };
 
+// If this is false, the bucket data already contains the final ids, because either no
+// mapping is active or the mapping is applied by the server.
+export function isMappingAppliedLocally(state: WebknossosState, layerName: string): boolean {
+  return getBucketRetrievalSourceFn(layerName)(state)[1] === "LOCAL-MAPPING-APPLIED";
+}
+
 export function getMappedId(
   state: WebknossosState,
   layerName: string,
   unmappedId: bigint,
 ): MappedIdResult {
-  const bucketRetrievalSource = getBucketRetrievalSourceFn(layerName)(state);
-  if (bucketRetrievalSource[1] !== "LOCAL-MAPPING-APPLIED") {
+  if (!isMappingAppliedLocally(state, layerName)) {
     return { type: "exists", value: unmappedId };
   }
 

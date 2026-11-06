@@ -28,6 +28,7 @@ import Toast from "libs/toast";
 import { pluralize, take3 } from "libs/utils";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
+import type { Dispatch } from "redux";
 import Constants, { type Vector3 } from "viewer/constants";
 import {
   getMappingInfo,
@@ -63,6 +64,7 @@ import type { SegmentGroupOperations } from "./hooks/use_segment_group_operation
 import type { SegmentSelection } from "./hooks/use_segment_selection";
 import { useSegmentStatisticsFile } from "./hooks/use_segment_statistics_file";
 import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
+import { clearProofreadingMarkerIfItsSegmentWasRemoved } from "./proofreading_marker_helpers";
 import {
   mayEditVisibleSegmentation,
   withMappingActivationConfirmation,
@@ -93,6 +95,13 @@ export type ContextMenuDependencies = {
   // pencil, so the context menu is the discoverable way to rename (besides double-click).
   startRenaming: (nodeKey: string) => void;
 };
+
+function removeSegmentsFromList(dispatch: Dispatch, segmentIds: bigint[], layerName: string) {
+  for (const segmentId of segmentIds) {
+    dispatch(removeSegmentAction(segmentId, layerName));
+  }
+  clearProofreadingMarkerIfItsSegmentWasRemoved(dispatch, segmentIds, layerName);
+}
 
 function getColorOfFirstSegmentOrGrey(segments: Segment[]): Vector3 {
   return segments[0]?.color ?? [0.5, 0.5, 0.5];
@@ -234,9 +243,11 @@ function useSegmentListMenuItems({
           if (visibleSegmentationLayer == null) {
             return;
           }
-          for (const segment of segments) {
-            dispatch(removeSegmentAction(segment.id, visibleSegmentationLayer.name));
-          }
+          removeSegmentsFromList(
+            dispatch,
+            segments.map((segment) => segment.id),
+            visibleSegmentationLayer.name,
+          );
         }),
       };
 
@@ -352,7 +363,7 @@ export function useSegmentContextMenuBuilder(
                 <a
                   href="#"
                   onClick={() => {
-                    dispatch(removeSegmentAction(segment.id, layerName));
+                    removeSegmentsFromList(dispatch, [segment.id], layerName);
                     Toast.close(ALSO_DELETE_SEGMENT_FROM_LIST_KEY);
                   }}
                 >
@@ -448,7 +459,7 @@ export function useSegmentContextMenuBuilder(
             icon: <CloseOutlined />,
             onClick: runAndHide(() => {
               if (layerName != null) {
-                dispatch(removeSegmentAction(segment.id, layerName));
+                removeSegmentsFromList(dispatch, [segment.id], layerName);
               }
             }),
             label: "Remove Segment From List",

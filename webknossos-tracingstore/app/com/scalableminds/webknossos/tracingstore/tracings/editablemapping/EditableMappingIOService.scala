@@ -35,9 +35,10 @@ class EditableMappingIOService @Inject() (
     with KeyValueStoreConversions {
 
   // 10000 edges per chunk (an edge is two Longs in edges and one bool in edgeIsAddition)
-  private val ChunkSize: Int = 10000
+  private val chunkSize: Int = 10000
   private val arrayNameEdges = "edges"
   private val arrayNameEdgeIsAddition = "edgeIsAddition"
+  private val maxEdgeCount: Int = 10000000
 
   def editedMappingEdgesToZippedZarrTempFile(editedEdges: Seq[(Long, Long, Boolean)], tracingId: String)(implicit
       ec: ExecutionContext
@@ -58,7 +59,7 @@ class EditableMappingIOService @Inject() (
           ChunkGridSpecification(
             "regular",
             ChunkGridConfiguration(
-              chunk_shape = Array(ChunkSize, 2)
+              chunk_shape = Array(chunkSize, 2)
             )
           )
         ),
@@ -82,7 +83,7 @@ class EditableMappingIOService @Inject() (
           ChunkGridSpecification(
             "regular",
             ChunkGridConfiguration(
-              chunk_shape = Array(ChunkSize)
+              chunk_shape = Array(chunkSize)
             )
           )
         ),
@@ -119,8 +120,8 @@ class EditableMappingIOService @Inject() (
     } yield tempFilePath
 
   private def edgeIsAdditionToZarrChunks(editedEdges: Seq[(Long, Long, Boolean)]): Iterator[Array[Byte]] =
-    editedEdges.grouped(ChunkSize).map { (edgeTupleChunk: Seq[(Long, Long, Boolean)]) =>
-      val bytes = ByteBuffer.allocate(ChunkSize)
+    editedEdges.grouped(chunkSize).map { (edgeTupleChunk: Seq[(Long, Long, Boolean)]) =>
+      val bytes = ByteBuffer.allocate(chunkSize)
       edgeTupleChunk.foreach { case (_, _, isAddedEdge) =>
         val boolAsByte: Byte = if (isAddedEdge) 1 else 0
         bytes.put(boolAsByte)
@@ -129,8 +130,8 @@ class EditableMappingIOService @Inject() (
     }
 
   private def editedEdgesToZarrChunks(editedEdges: Seq[(Long, Long, Boolean)]): Iterator[Array[Byte]] =
-    editedEdges.grouped(ChunkSize).map { (edgeTupleChunk: Seq[(Long, Long, Boolean)]) =>
-      val bytes = ByteBuffer.allocate(2 * ChunkSize * 8)
+    editedEdges.grouped(chunkSize).map { (edgeTupleChunk: Seq[(Long, Long, Boolean)]) =>
+      val bytes = ByteBuffer.allocate(2 * chunkSize * 8)
       edgeTupleChunk.foreach { case (src, dst, _) =>
         bytes.putLong(src)
         bytes.putLong(dst)
@@ -159,22 +160,21 @@ class EditableMappingIOService @Inject() (
       // or removed (edgeIsAddition==false; corresponds to a splict agglomerate action)
       (editedEdgesArray, edgeIsAdditionArray) <- unzipAndReadZarr(editedEdgesZip)
       timestamp = Instant.now.epochMillis
-      updateActions: Seq[UpdateAction] = (0 until edgeIsAdditionArray.getSize.toInt).map { edgeIndex =>
+      updateActions: Iterator[UpdateAction] = (0 until edgeIsAdditionArray.getSize.toInt).iterator.map { edgeIndex =>
         val edgeSrc = editedEdgesArray.getLong(editedEdgesArray.getIndex.set(Array(edgeIndex, 0)))
         val edgeDst = editedEdgesArray.getLong(editedEdgesArray.getIndex.set(Array(edgeIndex, 1)))
         val edgeIsAddition = edgeIsAdditionArray.getBoolean(edgeIndex)
         buildUpdateActionFromEdge(edgeSrc, edgeDst, edgeIsAddition, tracingId, timestamp)
       }
-      updatesGrouped = updateActions.grouped(100).toSeq
-      _ <- Fox.serialCombined(updatesGrouped.zipWithIndex) { case (updateGroup: Seq[UpdateAction], updateGroupIndex) =>
-        tracingDataStore.annotationUpdates.put(
-          annotationId.toString,
-          startVersion + updateGroupIndex,
-          jsonToBytes(Json.toJson(updateGroup))
-        )
+      savedVersions <- Fox.serialCombined(updateActions.grouped(100).zipWithIndex) {
+        case (updateGroup: Seq[UpdateAction], updateGroupIndex) =>
+          tracingDataStore.annotationUpdates.put(
+            annotationId.toString,
+            startVersion + updateGroupIndex,
+            jsonToBytes(Json.toJson(updateGroup))
+          )
       }
-      numberOfSavedVersions = updatesGrouped.length
-    } yield numberOfSavedVersions
+    } yield savedVersions.length.toLong
 
   private def unzipAndReadZarr(
       editedEdgesZip: File
@@ -201,7 +201,13 @@ class EditableMappingIOService @Inject() (
         chunkCacheService.sharedChunkContentsCache
       )
       numEdges <- editedEdgesZarrArray.datasetShape.flatMap(_.headOption).toFox
-      _ <- Fox.fromBool(numEdges.toInt.toLong == numEdges) ?~> Msg.Annotation.EditableMapping.numEdgesExceedsInt
+      _ <- Fox.fromBool(
+        numEdges <= maxEdgeCount
+      ) ?~> Msg.Annotation.EditableMapping.numEdgesExceedsLimit(numEdges, maxEdgeCount)
+      edgeIsAdditionShape <- edgeIsAdditionZarrArray.datasetShape.toFox
+      _ <- Fox.fromBool(
+        edgeIsAdditionShape.toSeq == Seq(numEdges)
+      ) ?~> Msg.Annotation.EditableMapping.edgeIsAdditionShapeMismatch(numEdges, edgeIsAdditionShape.toSeq)
       editedEdges <- editedEdgesZarrArray.readAsMultiArray(offset = Array(0L, 0L), shape = Array(numEdges.toInt, 2))
       edgeIsAddition <- edgeIsAdditionZarrArray.readAsMultiArray(offset = 0L, shape = numEdges.toInt)
     } yield (editedEdges, edgeIsAddition)

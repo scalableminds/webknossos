@@ -7,12 +7,7 @@ import keyBy from "lodash-es/keyBy";
 import once from "lodash-es/once";
 import { createNanoEvents, type Emitter } from "nanoevents";
 import { type Mesh, Ray, Raycaster, Vector3 as ThreeVector3 } from "three";
-import type {
-  AdditionalAxis,
-  AdditionalCoordinate,
-  BucketDataArray,
-  ElementClass,
-} from "types/api_types";
+import type { AdditionalAxis, AdditionalCoordinate, ElementClass } from "types/api_types";
 import type { BucketAddress, Vector3, Vector4 } from "viewer/constants";
 import Constants from "viewer/constants";
 import constants, { getEffectiveBucketDepth, usesTRecycling } from "viewer/constants";
@@ -546,33 +541,6 @@ class DataCube {
     if (bucketIndex != null && cube != null) {
       bucket.destroy();
       cube.data.delete(bucketIndex);
-    }
-  }
-
-  async _labelVoxelInResolution_DEPRECATED(
-    voxel: Vector3,
-    additionalCoordinates: AdditionalCoordinate[] | null,
-    label: number,
-    zoomStep: number,
-  ): Promise<void> {
-    // This function is only provided for testing purposes and should not be used internally,
-    // since it only operates on one voxel and therefore is not performance-optimized. It should
-    // be refactored away.
-    // Please use the volume tool drivers (viewer/model/volumetracing/integration) instead.
-    const voxelInCube = this.boundingBox.containsPoint(voxel);
-
-    if (voxelInCube) {
-      const address = this.positionToZoomedAddress(voxel, additionalCoordinates, zoomStep);
-      const bucket = this.getOrCreateBucket(address);
-
-      if (bucket instanceof DataBucket) {
-        const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
-        const labelFunc = (data: BucketDataArray): void => {
-          data[voxelIndex] = label;
-        };
-
-        await bucket.label_DEPRECATED(labelFunc);
-      }
     }
   }
 

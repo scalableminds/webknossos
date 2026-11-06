@@ -13,8 +13,8 @@ import {
 } from "viewer/controller/combinations/segmentation_handlers";
 import { handleCreateNodeFromGlobalPosition } from "viewer/controller/combinations/skeleton_handlers";
 import {
+  getRenderedSegmentIdForPositionAsync,
   getSegmentIdForPosition,
-  getSegmentIdForPositionAsync,
   getUnmappedSegmentIdForPosition,
   handleFloodFillFromGlobalPosition,
 } from "viewer/controller/combinations/volume_handlers";
@@ -176,10 +176,17 @@ export function useNoNodeContextMenuOptions(
       positionInLayerSpace == null
     )
       return;
-    const segmentId = await getSegmentIdForPositionAsync(globalPosition);
-
     // Ensure that the segment ID is loaded, since a mapping might have been activated
     // shortly before
+    const segmentId = await getRenderedSegmentIdForPositionAsync(
+      visibleSegmentationLayer.name,
+      globalPosition,
+    );
+
+    if (segmentId == null) {
+      Toast.info("Could not determine the segment id at the clicked position");
+      return;
+    }
     if (segmentId === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;

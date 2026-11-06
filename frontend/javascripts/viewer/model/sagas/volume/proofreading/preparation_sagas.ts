@@ -27,9 +27,9 @@ import {
   initializeEditableMappingAction,
   setHasEditableMappingAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { getMappedIdAsync } from "viewer/model/helpers/mapped_id_lookup";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
-import { getAgglomeratesForSegmentIds } from "viewer/model/sagas/volume/mapping_saga";
 import { api, Store } from "viewer/singletons";
 import type { ActiveMappingInfo, Mapping, VolumeTracing } from "viewer/store";
 import { getCurrentMag } from "../../../accessors/flycam_accessor";
@@ -210,24 +210,13 @@ export function* prepareSplitOrMerge(
 
   const getMappedAndUnmapped = function* (position: Vector3) {
     const unmappedId = yield* call(getUnmappedDataValue, position);
-    let agglomerateId = getMappedIdAsBigInt(mapping, unmappedId);
-
-    if (agglomerateId == null) {
-      const fetchedEntries = yield* call(
-        getAgglomeratesForSegmentIds,
-        volumeTracing.tracingId,
-        volumeTracingLayer,
-        mappingName,
-        new Set([unmappedId]),
+    const result = yield* call(getMappedIdAsync, volumeTracing.tracingId, unmappedId);
+    if (result.type !== "exists") {
+      throw new SoftError(
+        `Could not map id ${unmappedId} at position ${position}. The mapped partner might not be known yet. Please retry.`,
       );
-      agglomerateId = getMappedIdAsBigInt(fetchedEntries, unmappedId);
-      if (agglomerateId == null) {
-        throw new SoftError(
-          `Could not map id ${unmappedId} at position ${position}. The mapped partner might not be known yet. Please retry.`,
-        );
-      }
     }
-    return { agglomerateId, unmappedId };
+    return { agglomerateId: result.value, unmappedId };
   };
 
   const activeMapping = yield* select(

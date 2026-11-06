@@ -1,8 +1,8 @@
 import Toast from "libs/toast";
 import type { Point2, Vector3 } from "viewer/constants";
 import {
+  getRenderedSegmentIdForPositionAsync,
   getSegmentIdForPosition,
-  getSegmentIdForPositionAsync,
 } from "viewer/controller/combinations/volume_handlers";
 import { hasConnectomeFile } from "viewer/model/accessors/connectome_accessor";
 import {
@@ -83,7 +83,11 @@ export async function loadSynapsesOfAgglomerateAtPosition(position: Vector3) {
   const isConnectomeEnabled = hasConnectomeFile(state);
 
   if (mappingName && isConnectomeEnabled.value) {
-    const segmentId = await getSegmentIdForPositionAsync(position);
+    const segmentId = await getRenderedSegmentIdForPositionAsync(segmentation.name, position);
+    if (segmentId == null) {
+      Toast.error("Could not determine the segment id at the clicked position.");
+      return;
+    }
     Store.dispatch(setActiveConnectomeAgglomerateIdsAction(segmentation.name, [segmentId]));
   } else {
     Toast.error(isConnectomeEnabled.reason);

@@ -25,8 +25,9 @@ use crate::{
         try_advisory_xact_lock,
     },
     config::{ConfigError, Env},
-    organization::credit_transactions::organization_credit_transactions_dao::hand_out_monthly_free_credits,
-    organization::credit_transactions::revoke_expired_credits,
+    organization::credit_transactions::{
+        organization_credit_transactions_dao::hand_out_monthly_free_credits, revoke_expired_credits,
+    },
 };
 
 /// Job name: log field and advisory lock identity.

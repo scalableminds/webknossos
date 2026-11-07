@@ -20,6 +20,7 @@ use std::{
 };
 
 use crate::config::{ConfigError, Env};
+use crate::organization::organization_dao;
 use crate::util::id::ObjectId;
 use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
@@ -273,7 +274,7 @@ impl SlackNotificationService {
         let result_link = format!("{}/datasets/{dataset_id}", self.inner.public_uri);
         runtime.spawn(async move {
             let name: Option<String> =
-                match crate::organization::organization_dao::find_name(&pool, &organization_id).await
+                match organization_dao::find_name(&pool, &organization_id).await
             {
                 Ok(name) => name,
                 Err(error) => {

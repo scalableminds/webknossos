@@ -70,12 +70,12 @@ async fn errors_use_json_envelope_and_preserve_request_id() {
         assert_eq!(response.headers()["x-request-id"], "test-request");
         let body = response.into_body().collect().await.unwrap().to_bytes();
         let json: Value = serde_json::from_slice(&body).unwrap();
+        assert!(json["messages"][0]["error"].is_string());
         if status == StatusCode::UNAUTHORIZED {
-            // Silhouette's secured error handler body.
-            assert_eq!(json["success"], false);
-            assert!(json["message"].is_string());
-        } else {
-            assert!(json["messages"][0]["error"].is_string());
+            assert_eq!(
+                json,
+                json!({"messages": [{"error": "You are not authorized to view this resource. Please log in."}]})
+            );
         }
         assert!(!String::from_utf8_lossy(&body).contains("never-echo-this"));
     }

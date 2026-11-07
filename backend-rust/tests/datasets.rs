@@ -1081,6 +1081,14 @@ async fn dataset_lookup_routes_filter_imports_and_test_alternate_identity_access
         .0,
         StatusCode::NOT_FOUND
     );
+    // Anonymous without access: the missing identity is an Empty wrapped by the
+    // outer not-found message (#10263 dropped the inner 401), so 404, not 401.
+    assert_eq!(
+        request(&application, "GET", &private_path, None, None)
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
     assert_eq!(
         request(
             &application,

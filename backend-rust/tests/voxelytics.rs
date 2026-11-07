@@ -198,7 +198,7 @@ async fn workflows_events_reports_and_statistics() {
     assert_eq!(
         (status, error(&body)),
         (
-            401,
+            403,
             "Voxelytics workflow run already exists by another user."
         )
     );

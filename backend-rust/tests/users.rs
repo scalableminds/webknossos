@@ -59,6 +59,20 @@ async fn add_role(database: &TestDb, user: &str, team: &str, manager: bool) {
 
 #[tokio::test]
 #[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB; run cargo test -- --ignored"]
+async fn unauthenticated_requests_get_the_standard_error_format() {
+    // #10263: Play's ErrorHandler replaced silhouette's raw `{"success":false,...}` body.
+    let database = TestDb::new().await;
+    let (status, body) = request(&app(&database, true), "GET", "/user", "invalidToken", None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        body,
+        json!({"messages": [{"error": "You are not authorized to view this resource. Please log in."}]})
+    );
+    database.cleanup().await;
+}
+
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB; run cargo test -- --ignored"]
 async fn current_user_response_matches_public_fields_without_private_account_data() {
     let database = TestDb::new().await;
     let fixture = database.fixture().await;

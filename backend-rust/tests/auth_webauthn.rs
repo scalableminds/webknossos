@@ -460,7 +460,7 @@ async fn finalize_stores_scala_compatible_credential_and_rejects_bad_ceremonies(
         assert_eq!(
             (retry.status, retry.body),
             (
-                StatusCode::UNAUTHORIZED,
+                StatusCode::BAD_REQUEST,
                 error("Timeout during registration. Please try again.")
             )
         );
@@ -496,7 +496,7 @@ async fn finalize_stores_scala_compatible_credential_and_rejects_bad_ceremonies(
         (StatusCode::BAD_REQUEST, invalid.clone())
     );
     let reply = finalize(&app, token, "unknown-session", body.clone()).await;
-    assert_eq!(reply.status, StatusCode::UNAUTHORIZED);
+    assert_eq!(reply.status, StatusCode::BAD_REQUEST);
 
     let reply = finalize(&app, token, &session, body).await;
     assert_eq!(
@@ -891,20 +891,20 @@ async fn auth_finalize_logs_in_and_rejects_bad_assertions() {
         let reply = auth_finalize(&app, &session, body.clone()).await;
         assert_eq!(
             (reply.status, &reply.body, reply.set_cookie.is_some()),
-            (StatusCode::UNAUTHORIZED, &unauthorized, false),
+            (StatusCode::BAD_REQUEST, &unauthorized, false),
             "case {index}"
         );
         // The challenge was consumed.
         let retry = auth_finalize(&app, &session, body).await;
         assert_eq!(
             (retry.status, retry.body),
-            (StatusCode::UNAUTHORIZED, timeout.clone())
+            (StatusCode::BAD_REQUEST, timeout.clone())
         );
     }
     // No rejected ceremony touched the counter.
     assert_eq!(stored_sign_count(&database, &multi_user).await, 3);
 
-    // Missing cookie: Fox Empty 404; unknown session: 401 timeout.
+    // Missing cookie: Fox Empty 404; unknown session: 400 timeout.
     let (options, _) = auth_start(&app).await;
     let body = authenticator.assertion(
         &options,
@@ -925,7 +925,7 @@ async fn auth_finalize_logs_in_and_rejects_bad_assertions() {
     let reply = auth_finalize(&app, "unknown-session", body).await;
     assert_eq!(
         (reply.status, reply.body),
-        (StatusCode::UNAUTHORIZED, timeout.clone())
+        (StatusCode::BAD_REQUEST, timeout.clone())
     );
 
     // A valid assertion (UP only: UV is not required, although the credential was
@@ -1008,7 +1008,7 @@ async fn auth_finalize_logs_in_and_rejects_bad_assertions() {
     let reply = auth_finalize(&app, &session, body).await;
     assert_eq!(
         (reply.status, reply.body),
-        (StatusCode::UNAUTHORIZED, unauthorized.clone())
+        (StatusCode::BAD_REQUEST, unauthorized.clone())
     );
 
     // A soft-deleted credential no longer authenticates.
@@ -1029,7 +1029,7 @@ async fn auth_finalize_logs_in_and_rejects_bad_assertions() {
     let reply = auth_finalize(&app, &session, body).await;
     assert_eq!(
         (reply.status, reply.body),
-        (StatusCode::UNAUTHORIZED, unauthorized)
+        (StatusCode::BAD_REQUEST, unauthorized)
     );
     database.cleanup().await;
 }

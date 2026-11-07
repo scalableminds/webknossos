@@ -7,9 +7,6 @@ use serde_json::json;
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
-/// Play's `Msg.User.notAuthenticated`, rendered by Silhouette's secured error handler.
-const NOT_AUTHENTICATED: &str = "Authentication required";
-
 #[derive(Debug)]
 pub struct ApiError {
     pub status: StatusCode,
@@ -26,8 +23,12 @@ impl ApiError {
     pub fn bad_request(message: impl Into<String>) -> Self {
         Self::new(StatusCode::BAD_REQUEST, message)
     }
+    /// Play's `ErrorHandler.onNotAuthenticated` (also silhouette's secured error handler).
     pub fn unauthorized() -> Self {
-        Self::new(StatusCode::UNAUTHORIZED, NOT_AUTHENTICATED)
+        Self::new(
+            StatusCode::UNAUTHORIZED,
+            crate::msg::user::NOT_AUTHENTICATED,
+        )
     }
     pub fn forbidden(message: impl Into<String>) -> Self {
         Self::new(StatusCode::FORBIDDEN, message)
@@ -55,14 +56,6 @@ impl std::error::Error for ApiError {}
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        if self.status == StatusCode::UNAUTHORIZED && self.message == NOT_AUTHENTICATED {
-            // Silhouette's JSON body for unauthenticated secured actions (Accept: application/json).
-            return (
-                self.status,
-                Json(json!({"success": false, "message": self.message})),
-            )
-                .into_response();
-        }
         (
             self.status,
             Json(json!({"messages": [{"error": self.message}]})),

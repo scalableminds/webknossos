@@ -553,7 +553,7 @@ async fn register_finalize(
     let ceremony = stores
         .registration
         .pop(&session_id)
-        .ok_or_else(|| ApiError::new(StatusCode::UNAUTHORIZED, MSG_REGISTRATION_TIMEOUT))?;
+        .ok_or_else(|| ApiError::bad_request(MSG_REGISTRATION_TIMEOUT))?;
     verify_registration(&registration, &ceremony, &rp)
         .map_err(|_| ApiError::bad_request(MSG_INVALID_REGISTRATION))?;
     let extensions = registration
@@ -743,8 +743,8 @@ async fn auth_finalize(
     let ceremony = stores
         .assertion
         .pop(&session_id)
-        .ok_or_else(|| ApiError::new(StatusCode::UNAUTHORIZED, MSG_AUTHENTICATION_TIMEOUT))?;
-    let unauthorized = || ApiError::new(StatusCode::UNAUTHORIZED, MSG_UNAUTHORIZED);
+        .ok_or_else(|| ApiError::bad_request(MSG_AUTHENTICATION_TIMEOUT))?;
+    let unauthorized = || ApiError::bad_request(MSG_UNAUTHORIZED);
     let assertion = parse_assertion(&body.key).map_err(|_| unauthorized())?;
     // userHandle = the multiUser id as ASCII bytes (register/start user.id).
     let multi_user_id = assertion
@@ -769,7 +769,7 @@ async fn auth_finalize(
     };
     verify_assertion(&assertion, &stored, ceremony, &rp).map_err(|_| unauthorized())?;
     // updateSignCount binds the Long counter: values beyond INTEGER fail in
-    // PostgreSQL, which Scala maps to 401 as well.
+    // PostgreSQL, which Scala maps to 400 as well.
     auth_webauthn_dao::update_signature_count(
         &state.pool,
         &stored.id,

@@ -418,10 +418,7 @@ async fn store_workflow(
         voxelytics_dao::user_id_for_run_name(&mut tx, &description.run.name, &user.organization_id)
             .await?;
     if !(user.is_admin || owner.is_none_or(|owner| owner == user.id)) {
-        return Err(ApiError::new(
-            StatusCode::UNAUTHORIZED,
-            WORKFLOW_USER_MISMATCH,
-        ));
+        return Err(ApiError::forbidden(WORKFLOW_USER_MISMATCH));
     }
     voxelytics_dao::upsert_workflow(
         &mut tx,

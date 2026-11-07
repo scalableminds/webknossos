@@ -83,7 +83,11 @@ export async function loadSynapsesOfAgglomerateAtPosition(position: Vector3) {
   const isConnectomeEnabled = hasConnectomeFile(state);
 
   if (mappingName && isConnectomeEnabled.value) {
-    const segmentId = await getSegmentIdForPositionAsync(position);
+    const segmentId = await getSegmentIdForPositionAsync(segmentation.name, position);
+    if (segmentId == null) {
+      Toast.error("Could not determine the segment id at the clicked position.");
+      return;
+    }
     Store.dispatch(setActiveConnectomeAgglomerateIdsAction(segmentation.name, [segmentId]));
   } else {
     Toast.error(isConnectomeEnabled.reason);

@@ -176,10 +176,17 @@ export function useNoNodeContextMenuOptions(
       positionInLayerSpace == null
     )
       return;
-    const segmentId = await getSegmentIdForPositionAsync(globalPosition);
-
     // Ensure that the segment ID is loaded, since a mapping might have been activated
     // shortly before
+    const segmentId = await getSegmentIdForPositionAsync(
+      visibleSegmentationLayer.name,
+      globalPosition,
+    );
+
+    if (segmentId == null) {
+      Toast.info("Could not determine the segment id at the clicked position");
+      return;
+    }
     if (segmentId === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;

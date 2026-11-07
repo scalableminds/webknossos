@@ -267,7 +267,11 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   yield put(updateProofreadingMarkerPositionAction(position, layerName));
 
-  const segmentId = yield* call(getSegmentIdForPositionAsync, position);
+  const segmentId = yield* call(getSegmentIdForPositionAsync, layerName, position);
+  if (segmentId == null) {
+    Toast.warning("Could not determine the segment id at the clicked position. Please try again.");
+    return;
+  }
 
   /* Load a coarse mesh of the agglomerate at the click position */
   yield* call(

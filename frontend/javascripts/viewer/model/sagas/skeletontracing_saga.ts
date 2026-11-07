@@ -443,18 +443,31 @@ function* loadAgglomerateTreeWithAtPosition(
     yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch, ctx);
   }
 
-  const agglomerateId =
-    action.type === "LOAD_AGGLOMERATE_TREE_FROM_ID"
-      ? action.agglomerateId
-      : // Ad-hoc lookup of agglomerate id after syncing in live-collab. Should be preferred over using the LoadAgglomerateTreeFromIdAction action.
-        yield call(getSegmentIdForPositionAsync, action.agglomeratePosition);
-
-  const trees = yield* select((state) =>
-    getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
-  );
-  const maybeTree = findTreeByAgglomerateId(trees, agglomerateId, layerName, mappingName);
-
   try {
+    // The lookup happens within the try block so that the mutex is released if it fails.
+    let agglomerateId: bigint;
+    if (action.type === "LOAD_AGGLOMERATE_TREE_FROM_ID") {
+      agglomerateId = action.agglomerateId;
+    } else {
+      // Ad-hoc lookup of agglomerate id after syncing in live-collab. Should be preferred over using the LoadAgglomerateTreeFromIdAction action.
+      const maybeAgglomerateId = yield* call(
+        getSegmentIdForPositionAsync,
+        layerName,
+        action.agglomeratePosition,
+      );
+      if (maybeAgglomerateId == null) {
+        throw new Error(
+          `Could not determine the agglomerate id at position ${action.agglomeratePosition}.`,
+        );
+      }
+      agglomerateId = maybeAgglomerateId;
+    }
+
+    const trees = yield* select((state) =>
+      getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
+    );
+    const maybeTree = findTreeByAgglomerateId(trees, agglomerateId, layerName, mappingName);
+
     if (maybeTree != null) {
       console.warn(
         `Tree for agglomerate ${agglomerateId} with mapping ${mappingName} is already loaded. Its tree name is "${maybeTree.name}".`,

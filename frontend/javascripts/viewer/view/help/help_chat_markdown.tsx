@@ -1,6 +1,34 @@
-import { Typography } from "antd";
+import { CopyOutlined } from "@ant-design/icons";
+import { Button, Tooltip, Typography } from "antd";
+import { copyToClipboard } from "libs/clipboard";
 import Markdown from "libs/markdown_adapter";
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
+
+function CodeBlock({ children }: { children: ReactNode }) {
+  const preRef = useRef<HTMLPreElement>(null);
+  const copy = () => {
+    const code = preRef.current?.textContent;
+    if (code) copyToClipboard(code.replace(/\n$/, ""), "code");
+  };
+  return (
+    <div style={{ position: "relative" }}>
+      {/* The right padding keeps the first line clear of the copy button. */}
+      <pre ref={preRef} style={{ paddingRight: 36 }}>
+        {children}
+      </pre>
+      <Tooltip title="Copy code">
+        <Button
+          size="small"
+          type="text"
+          icon={<CopyOutlined />}
+          aria-label="Copy code"
+          onClick={copy}
+          style={{ position: "absolute", top: 4, right: 4 }}
+        />
+      </Tooltip>
+    </div>
+  );
+}
 
 const CHAT_MARKDOWN_COMPONENTS = {
   h1: ({ children }: { children: ReactNode }) => (
@@ -29,6 +57,7 @@ const CHAT_MARKDOWN_COMPONENTS = {
     </Typography.Title>
   ),
   hr: () => <hr style={{ margin: "10px 0" }} />,
+  pre: ({ children }: { children: ReactNode }) => <CodeBlock>{children}</CodeBlock>,
 };
 
 export function HelpChatMarkdown({ text }: { text: string }) {

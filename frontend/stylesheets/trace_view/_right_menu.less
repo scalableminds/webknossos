@@ -307,6 +307,23 @@
     }
   }
 
+  // antd's default hover and selected-row colors are barely visible on the light Paper
+  // background. Selected rows use the same color as selected tree nodes (see theme.ts).
+  // Reset for dark mode in dark.less.
+  &.ant-table-wrapper .ant-table-tbody .ant-table-row {
+    > .ant-table-cell.ant-table-cell-row-hover {
+      background: var(--ant-color-fill-secondary);
+    }
+
+    &.ant-table-row-selected > .ant-table-cell {
+      background: var(--ant-blue-3);
+
+      &.ant-table-cell-row-hover {
+        background: color-mix(in srgb, var(--ant-blue-3), var(--ant-blue-4) 40%);
+      }
+    }
+  }
+
   .ant-table-row .ant-table-cell:first-child {
     // Hiding the extra checkbox column rendered due to using rowSelection in the table wrapping the bounding boxes.
     display: none;

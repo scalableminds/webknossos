@@ -75,6 +75,8 @@ export function TileGroupLabel({ title, count }: { title: string; count: number 
 
 type SelectableTileProps = SelectionState & {
   image?: string;
+  // A small logo shown in the top left corner of the image, e.g. the partner logo of a partner model.
+  imageLogo?: { src: string; alt: string };
   title: string;
   description: React.ReactNode;
   // Limits long descriptions (e.g. user-provided model comments) to two lines.
@@ -84,6 +86,7 @@ type SelectableTileProps = SelectionState & {
 
 export function SelectableTile({
   image,
+  imageLogo,
   title,
   description,
   clampDescription,
@@ -112,6 +115,20 @@ export function SelectableTile({
                 ...(isDisabled ? { opacity: 0.5, filter: "grayscale(1)" } : {}),
               }}
             />
+            {imageLogo && (
+              <img
+                src={imageLogo.src}
+                alt={imageLogo.alt}
+                style={{
+                  position: "absolute",
+                  top: 8,
+                  left: 8,
+                  height: 20,
+                  maxWidth: "50%",
+                  ...(isDisabled ? { opacity: 0.5, filter: "grayscale(1)" } : {}),
+                }}
+              />
+            )}
             <div style={{ position: "absolute", top: 8, right: 8 }}>
               {isSelected && <SelectedIcon size={20} />}
               {isDisabled && <Tag style={{ marginInlineEnd: 0 }}>Coming Soon</Tag>}

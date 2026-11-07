@@ -12,12 +12,13 @@ import { AnnotationTool, Toolkits } from "viewer/model/accessors/tool_accessor";
 import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import type { UserConfiguration } from "viewer/store";
+import { flattenMenuGroups } from "../action_bar/menu_groups";
+import { getViewDatasetMenuGroups } from "../action_bar/menu_items";
 import { openInMenu } from "../action_bar/open_in/open_in_menu";
 import {
   type TracingViewMenuProps,
-  useTracingViewMenuItems,
-} from "../action_bar/use_tracing_view_menu_items";
-import { viewDatasetMenu } from "../action_bar/view_dataset_actions_view";
+  useTracingViewMenuGroups,
+} from "../action_bar/use_tracing_view_menu_groups";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { type CommandWithoutId, setViewerCommands } from "./command_palette";
 
@@ -95,7 +96,7 @@ export function CommandPaletteViewerCommands() {
     isAnnotationLockedByUser,
     annotationOwner,
   };
-  const tracingMenuItems = useTracingViewMenuItems(props, null);
+  const tracingMenuGroups = useTracingViewMenuGroups(props, null);
 
   const commands = useMemo(() => {
     if (!isInAnnotationView) return [];
@@ -149,7 +150,9 @@ export function CommandPaletteViewerCommands() {
       return commands;
     };
 
-    const menuActions = isViewMode ? viewDatasetMenu : tracingMenuItems;
+    const menuActions = flattenMenuGroups(
+      isViewMode ? getViewDatasetMenuGroups(null) : tracingMenuGroups,
+    );
 
     return [
       ...getToolEntries(),
@@ -157,7 +160,7 @@ export function CommandPaletteViewerCommands() {
       ...mapMenuActionsToCommands(menuActions),
       ...getTabsAndSettingsMenuItems(),
     ];
-  }, [isInAnnotationView, isViewMode, allowUpdate, userConfig, tracingMenuItems, dispatch]);
+  }, [isInAnnotationView, isViewMode, allowUpdate, userConfig, tracingMenuGroups, dispatch]);
 
   useEffect(() => {
     setViewerCommands(commands);

@@ -18,6 +18,10 @@ import {
 } from "viewer/model/accessors/annotation_accessor";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
+  setBookmarkCreatedAtVersionAction,
+  setBookmarkThumbnailVersionAction,
+} from "viewer/model/actions/annotation_actions";
+import {
   type OperationId,
   SYNC_RELATED_OPERATION_IDS,
 } from "viewer/model/actions/operation_context_actions";
@@ -45,6 +49,7 @@ import {
   PUSH_THROTTLE_TIME,
   SAVE_RETRY_WAITING_TIME,
 } from "viewer/model/sagas/saving/save_saga_constants";
+import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
 import { Model, Store } from "viewer/singletons";
 import type { SaveQueueEntry, WebknossosState } from "viewer/store";
 import { waitFor } from "../saga_helpers";
@@ -277,6 +282,25 @@ export function* sendSaveRequestToServer(
       }
 
       yield* put(setVersionNumberAction(version + versionIncrement));
+      for (const batch of compactedSaveQueue) {
+        for (const action of batch.actions) {
+          if (action.name === "addBookmark") {
+            yield* put(setBookmarkCreatedAtVersionAction(action.value.id, batch.version));
+          }
+          if (
+            (action.name === "addBookmark" || action.name === "updateBookmarkThumbnail") &&
+            action.value.largeThumbnailDataBase64 != null
+          ) {
+            yield* put(
+              setBookmarkThumbnailVersionAction(
+                action.value.id,
+                batch.version,
+                action.value.largeThumbnailDataBase64,
+              ),
+            );
+          }
+        }
+      }
       yield* put(setLastSaveTimestampAction());
       yield* put(shiftSaveQueueAction(saveQueue.length));
 
@@ -442,6 +466,21 @@ function sliceAppropriateBatchCount(batches: Array<SaveQueueEntry>): Array<SaveQ
   return slicedBatches;
 }
 
+// Sets the createdAtVersion of added bookmarks and the thumbnailVersion of sent thumbnails to the
+// version of the save request. As the versions are assigned anew for every save request (e.g.
+// after rebasing), so are these. The server rejects the request if they don't match.
+function addVersionToBookmarkAction(action: UpdateAction, version: number): UpdateAction {
+  if (action.name !== "addBookmark" && action.name !== "updateBookmarkThumbnail") {
+    return action;
+  }
+  const hasThumbnails =
+    action.value.largeThumbnailDataBase64 != null || action.value.smallThumbnailDataBase64 != null;
+  const thumbnailVersion = hasThumbnails ? version : action.value.thumbnailVersion;
+  return action.name === "addBookmark"
+    ? { ...action, value: { ...action.value, createdAtVersion: version, thumbnailVersion } }
+    : { ...action, value: { ...action.value, thumbnailVersion } };
+}
+
 export function addVersionNumbers(
   updateActionsBatches: Array<SaveQueueEntry>,
   lastVersion: number,
@@ -451,7 +490,13 @@ export function addVersionNumbers(
     if (batch.transactionGroupIndex === 0) {
       versionIncrement++;
     }
-    return { ...batch, version: lastVersion + versionIncrement };
+    const version = lastVersion + versionIncrement;
+    const actions = batch.actions.some(
+      (action) => action.name === "addBookmark" || action.name === "updateBookmarkThumbnail",
+    )
+      ? batch.actions.map((action) => addVersionToBookmarkAction(action, version))
+      : batch.actions;
+    return { ...batch, actions, version };
   });
   return [batchesWithVersions, versionIncrement];
 }

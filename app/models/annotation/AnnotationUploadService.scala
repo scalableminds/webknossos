@@ -71,8 +71,10 @@ class AnnotationUploadService @Inject() (tempFileService: WkTempFileService, nml
         basePath
       )
     parserOutput.futureBox.map {
-      case Full(NmlParseSuccessWithoutFile(skeletonTracing, uploadedVolumeLayers, datasetId, description, wkUrl)) =>
-        NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, datasetId, description, wkUrl)
+      case Full(
+            NmlParseSuccessWithoutFile(skeletonTracing, uploadedVolumeLayers, datasetId, description, wkUrl, bookmarks)
+          ) =>
+        NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, datasetId, description, wkUrl, bookmarks)
       case f: Failure => NmlParseFailure(name, formatFailureChain(f))
       case Empty      => NmlParseEmpty(name)
     }
@@ -123,8 +125,8 @@ class AnnotationUploadService @Inject() (tempFileService: WkTempFileService, nml
 
     if (parseResults.length > 1) {
       parseResults.map {
-        case NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, datasetId, description, wkUrl) =>
-          NmlParseSuccess(name, renameTrees(name, skeletonTracing), uploadedVolumeLayers, datasetId, description, wkUrl)
+        case s: NmlParseSuccess =>
+          s.copy(skeletonTracing = renameTrees(s.fileName, s.skeletonTracing))
         case r => r
       }
     } else {

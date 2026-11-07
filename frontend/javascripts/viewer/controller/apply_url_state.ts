@@ -2,9 +2,12 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
 import type { APIAnnotation, APIDataset } from "types/api_types";
+import { MappingStatusEnum, OrthoViews } from "viewer/constants";
 import type {
   DirectLayerSpecificProps,
+  MeshUrlDescriptor,
   PartialUrlManagerState,
+  TdCameraUrlState,
   UrlStateByLayer,
 } from "viewer/controller/url_manager";
 import {
@@ -12,9 +15,16 @@ import {
   getSegmentationLayerByName,
   isSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
+import {
+  getMeshesForAdditionalCoordinates,
+  hasEditableMapping,
+  isMappingLocked,
+} from "viewer/model/accessors/volumetracing_accessor";
 import {
   dispatchMaybeFetchMeshFilesAsync,
   updateCurrentMeshFileAction,
+  updateMeshVisibilityAction,
 } from "viewer/model/actions/annotation_actions";
 import {
   setActiveConnectomeAgglomerateIdsAction,
@@ -39,11 +49,13 @@ import {
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
 import {
+  deselectActiveTreeAction,
   loadAgglomerateTreeFromIdAction,
   setActiveNodeAction,
   setShowSkeletonsAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { setTDCameraWithoutTimeTrackingAction } from "viewer/model/actions/view_mode_actions";
+import type { MeshInformation } from "viewer/store";
 import Store from "viewer/store";
 
 export function applyState(
@@ -104,6 +116,113 @@ export function applyState(
       updateUserSettingAction("clipSkeletonToCurrentSection", state.clipSkeletonToCurrentSection),
     );
   }
+}
+
+function isSameMesh(loadedMesh: MeshInformation, descriptor: MeshUrlDescriptor): boolean {
+  if (loadedMesh.segmentId !== descriptor.segmentId) return false;
+  if (loadedMesh.isPrecomputed && descriptor.isPrecomputed) {
+    return loadedMesh.meshFileName === descriptor.meshFileName;
+  }
+  if (!loadedMesh.isPrecomputed && !descriptor.isPrecomputed) {
+    return (
+      (loadedMesh.mappingName ?? null) === (descriptor.mappingName ?? null) &&
+      (loadedMesh.mappingType ?? null) === (descriptor.mappingType ?? null)
+    );
+  }
+  return false;
+}
+
+// Widens the frustum horizontally or vertically so that the bookmarked view stays
+// fully visible and undistorted in a 3D viewport with a different aspect ratio.
+function fitTDCameraToAspectRatio(
+  tdCamera: TdCameraUrlState,
+  aspectRatio: number,
+): TdCameraUrlState {
+  const { left, right, top, bottom } = tdCamera;
+  const width = right - left;
+  const height = top - bottom;
+  if (width <= 0 || height <= 0) return tdCamera;
+  const newWidth = Math.max(width, height * aspectRatio);
+  const newHeight = newWidth / aspectRatio;
+  const centerX = (left + right) / 2;
+  const centerY = (top + bottom) / 2;
+  return {
+    ...tdCamera,
+    left: centerX - newWidth / 2,
+    right: centerX + newWidth / 2,
+    top: centerY + newHeight / 2,
+    bottom: centerY - newHeight / 2,
+  };
+}
+
+// applyState only applies what the url state contains, which is enough for an initial page load.
+// When jumping to a bookmark, the current view also has to be reset where getUrlState omits
+// values that are off or default. Meshes and mappings that are already loaded are reused.
+export function applyBookmarkState(urlState: PartialUrlManagerState, dataset: APIDataset) {
+  const state = Store.getState();
+  const stateByLayer: UrlStateByLayer = { ...urlState.stateByLayer };
+
+  if (urlState.activeNode == null && state.annotation.skeleton != null) {
+    Store.dispatch(deselectActiveTreeAction());
+  }
+
+  for (const [layerName, mappingInfo] of Object.entries(
+    state.temporaryConfiguration.activeMappingByLayer,
+  )) {
+    if (mappingInfo.mappingStatus !== MappingStatusEnum.ENABLED) continue;
+    const bookmarkedMapping = stateByLayer[layerName]?.mappingInfo;
+    if (bookmarkedMapping == null) {
+      if (!isMappingLocked(state, layerName) && !hasEditableMapping(state, layerName)) {
+        Store.dispatch(setMappingEnabledAction(layerName, false));
+      }
+    } else if (
+      bookmarkedMapping.mappingName === mappingInfo.mappingName &&
+      bookmarkedMapping.mappingType === mappingInfo.mappingType
+    ) {
+      const { mappingInfo: _alreadyActive, ...rest } = stateByLayer[layerName];
+      stateByLayer[layerName] = rest;
+    }
+  }
+
+  const additionalCoordinates =
+    urlState.additionalCoordinates ?? state.flycam.additionalCoordinates;
+  for (const layerName of Object.keys(state.localSegmentationStateByLayer)) {
+    const loadedMeshes = getMeshesForAdditionalCoordinates(state, additionalCoordinates, layerName);
+    if (loadedMeshes == null) continue;
+    const meshInfo = stateByLayer[layerName]?.meshInfo;
+    const bookmarkedMeshes = meshInfo?.meshes ?? [];
+    const meshesToLoad = bookmarkedMeshes.filter(
+      (descriptor) => !Object.values(loadedMeshes).some((mesh) => isSameMesh(mesh, descriptor)),
+    );
+    for (const mesh of Object.values(loadedMeshes)) {
+      const shouldBeVisible = bookmarkedMeshes.some((descriptor) => isSameMesh(mesh, descriptor));
+      if (mesh.isVisible !== shouldBeVisible) {
+        Store.dispatch(
+          updateMeshVisibilityAction(
+            layerName,
+            mesh.segmentId,
+            shouldBeVisible,
+            additionalCoordinates,
+          ),
+        );
+      }
+    }
+    if (meshInfo != null) {
+      stateByLayer[layerName] = {
+        ...stateByLayer[layerName],
+        meshInfo: { ...meshInfo, meshes: meshesToLoad },
+      };
+    }
+  }
+
+  // If the 3D viewport is hidden, the camera controller adapts the aspect ratio once it is shown.
+  const tdRect = getInputCatcherRect(state, OrthoViews.TDView);
+  const tdCamera =
+    urlState.tdCamera != null && tdRect.width > 0 && tdRect.height > 0
+      ? fitTDCameraToAspectRatio(urlState.tdCamera, tdRect.width / tdRect.height)
+      : urlState.tdCamera;
+
+  applyState({ ...urlState, tdCamera, stateByLayer }, false, dataset);
 }
 
 async function applyLayerState(stateByLayer: UrlStateByLayer) {

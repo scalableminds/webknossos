@@ -361,6 +361,65 @@ Both `<thing>` (tree) and `<segment>` elements may contain a `<metadata>` child 
 - `boolValue`: A boolean (`true` or `false`).
 - `stringListValue-0`, `stringListValue-1`, … : A string array stored as indexed attributes.
 
+#### `<bookmarks>` section
+
+Annotations downloaded from WEBKNOSSOS contain their bookmarks in an optional `<bookmarks>` element at the end of `<things>`.
+When an NML with bookmarks is uploaded as a single file, its bookmarks are restored. When several files are merged during upload, their bookmarks are dropped.
+
+```xml
+<bookmarks>
+  <bookmark id="3" name="Interesting synapse" description="Check again" created="1730000000000">
+    <thumbnail size="small" viewport="xy" location="bookmark_thumbnails/3_small.webp" />
+    <thumbnail size="large" viewport="xy" location="bookmark_thumbnails/3_large.webp" />
+    <metadata>
+      <metadataEntry key="reviewed" boolValue="true" />
+    </metadata>
+    <state mode="orthogonal" zoomStep="1.3" clippingDistance="50.0" clipSkeletonToCurrentSection="false" activeNodeId="2" showSkeletons="true">
+      <position x="1024" y="1024" z="512" additionalCoordinate-t="3" />
+      <rotation xRot="0.0" yRot="0.0" zRot="0.0" />
+      <nativelyRenderedLayer datasetLayer="color" />
+      <tdCamera left="-500.0" right="500.0" top="400.0" bottom="-400.0">
+        <position x="1024.0" y="1024.0" z="2000.0" />
+        <up x="0.0" y="0.0" z="-1.0" />
+      </tdCamera>
+      <layer datasetLayer="color" isDisabled="false" isInverted="false" gammaCorrectionValue="1.0">
+        <intensityRange min="0.0" max="255.0" />
+        <color r="255.0" g="255.0" b="255.0" />
+      </layer>
+      <layer volumeLayer="Volume Layer" meshFileName="meshfile">
+        <mapping editableMappingOfVolumeLayer="Volume Layer" mappingType="AGGLOMERATE" />
+        <mesh segmentId="1" isPrecomputed="true" meshFileName="meshfile">
+          <seedPosition x="1475" y="987" z="512" />
+        </mesh>
+      </layer>
+    </state>
+  </bookmark>
+</bookmarks>
+```
+
+- `<bookmark>`: One bookmark.
+  + `id` *(required)*: Unique integer bookmark ID.
+  + `created` *(required)*: Unix timestamp (ms) of creation.
+  + `name`, `description` *(optional)*: Free text.
+  + `<thumbnail>` *(optional, up to two)*: A `small` or `large` WebP thumbnail. `location` is the path of the image within the annotation ZIP archive. Missing thumbnails are ignored on upload. `viewport` *(optional)* is the viewport the thumbnail shows: `xy`, `yz`, `xz`, `3d` or `flight`. All thumbnails of a bookmark show the same viewport.
+  + `<metadata>` *(optional)*: Contains `<metadataEntry>` child elements.
+  + `<state>` *(required)*: The view that the bookmark restores.
+- `<state>` attributes:
+  + `mode` *(required)*: `orthogonal` or `flight`.
+  + `zoomStep`, `clippingDistance` *(required)*: Floats.
+  + `clipSkeletonToCurrentSection` *(required)*: Boolean.
+  + `activeNodeId` *(optional)*: The active skeleton node.
+  + `showSkeletons` *(optional)*: Boolean.
+  + `<position>` *(required)*: `x`, `y`, `z` in voxels, plus `additionalCoordinate-<name>` attributes for additional axes.
+  + `<rotation>` *(required)*: `xRot`, `yRot`, `zRot`.
+  + `<nativelyRenderedLayer>` *(optional)*: A layer reference (see below). If set, this layer is rendered without transforms.
+  + `<tdCamera>` *(optional)*: The camera of the 3D viewport, with `left`, `right`, `top`, `bottom` and `<position>`, `<up>` vectors.
+  + `<layer>` *(optional, multiple)*: Settings of one layer, identified by a layer reference. Optional attributes `isDisabled`, `isInverted`, `gammaCorrectionValue`, `meshFileName` and optional children `<intensityRange min max>`, `<color r g b>` (0–255), `<mapping>` (the active mapping) and `<mesh>` (visible meshes).
+  + `<mapping>`: A mapping reference (see below) and `mappingType` (`JSON` or `AGGLOMERATE`).
+  + `<mesh>`: `segmentId`, `isPrecomputed`, `<seedPosition x y z>`, and optionally `meshFileName` (precomputed meshes) or a mapping reference with `mappingType` (ad-hoc meshes).
+- Layers are referenced by exactly one of `datasetLayer="<name>"` (a layer of the dataset), `volumeLayer="<name>"` (a `<volume>` of this NML, by its `name`) or `skeletonLayer="true"`.
+- Mappings are referenced by `mappingName="<name>"`, or by `editableMappingOfVolumeLayer="<name>"` for the editable mapping (proofreading) of a `<volume>` of this NML.
+
 
 ## ID Mapping Files
 

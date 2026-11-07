@@ -59,7 +59,7 @@ import {
   type VolumeTracingAction,
 } from "../actions/volumetracing_actions";
 import type { TreeGroup } from "../types/tree_types";
-import { sanitizeMetadata } from "./skeletontracing_reducer";
+import { sanitizeMetadata } from "./reducer_helpers";
 import { forEachGroups } from "./skeletontracing_reducer_helpers";
 
 export type VolumeTracingReducerAction =

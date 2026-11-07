@@ -13,6 +13,7 @@ export type KeyboardShortcutId =
   | "SAVE"
   | "UNDO"
   | "REDO"
+  | "ADD_BOOKMARK"
   | "MAXIMIZE"
   | "TOGGLE_LEFT_BORDER"
   | "TOGGLE_RIGHT_BORDER"
@@ -176,6 +177,11 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
   REDO: new KeyboardShortcutMetaInfo(
     "Redo Latest Annotation Change",
     [[["Meta", "y"]], [["Control", "y"]]],
+    "GENERAL_EDITING",
+  ),
+  ADD_BOOKMARK: new KeyboardShortcutMetaInfo(
+    "Add a Bookmark for the Current View",
+    [[["Meta", "b"]], [["Control", "b"]]],
     "GENERAL_EDITING",
   ),
   MAXIMIZE: new KeyboardShortcutMetaInfo(

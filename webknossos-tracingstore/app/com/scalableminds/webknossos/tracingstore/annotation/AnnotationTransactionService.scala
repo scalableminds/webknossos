@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.tracingstore.{
   TracingStoreRedisStore
 }
 import com.typesafe.scalalogging.LazyLogging
-import play.api.http.Status.CONFLICT
+import play.api.http.Status.{BAD_REQUEST, CONFLICT}
 import play.api.libs.json.Json
 
 import javax.inject.Inject
@@ -29,7 +29,8 @@ class AnnotationTransactionService @Inject() (
     volumeTracingService: VolumeTracingService,
     tracingDataStore: TracingDataStore,
     remoteWebknossosClient: TSRemoteWebknossosClient,
-    annotationService: TSAnnotationService
+    annotationService: TSAnnotationService,
+    annotationBookmarkService: AnnotationBookmarkService
 ) extends KeyValueStoreConversions
     with LazyLogging {
 
@@ -292,7 +293,14 @@ class AnnotationTransactionService @Inject() (
       eagerUpdateBucketActions = findEagerUpdateBucketActions(updateActionGroup)
       _ = stats.count("eagerUpdateBucketActions", eagerUpdateBucketActions.length)
       _ <- assertNoInvalidUpdateGroupCombinations(updateActionGroup, eagerUpdateBucketActions)
+      bookmarkThumbnailActions = updateActionGroup.actions.collect { case a: BookmarkThumbnailUpdateAction => a }
+      _ <- assertValidBookmarkThumbnailVersions(annotationId, bookmarkThumbnailActions, updateActionGroup.version)
       _ <- applyEagerUpdateBucketActions(eagerUpdateBucketActions, annotationId, updateActionGroup.version)
+      _ <- Fox.serialCombined(bookmarkThumbnailActions)(a =>
+        Fox.serialCombined(a.thumbnails) { case (size, thumbnail) =>
+          annotationBookmarkService.saveThumbnail(annotationId, a.id, size, updateActionGroup.version, thumbnail)
+        }
+      )
       updateActionsJson = Json.toJson(updateActionsProcessed)
       _ <- stats.time("annotationUpdates.put")(
         tracingDataStore.annotationUpdates.put(
@@ -301,6 +309,30 @@ class AnnotationTransactionService @Inject() (
           jsonToBytes(updateActionsJson)
         )
       )
+    } yield ()
+
+  // The frontend sets the versions of bookmarks and their thumbnails (see BookmarkThumbnailUpdateAction).
+  // Referenced thumbnails must have been stored at exactly the referenced version.
+  private def assertValidBookmarkThumbnailVersions(
+      annotationId: ObjectId,
+      actions: List[BookmarkThumbnailUpdateAction],
+      version: Long
+  )(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- Fox.serialCombined(actions) { a =>
+        val errorOpt = a.thumbnailVersionError(version)
+        for {
+          _ <- Fox.fromBool(errorOpt.isEmpty) ?~> errorOpt.getOrElse("") ~> BAD_REQUEST
+          _ <- Fox.runOptional(a.referencedThumbnailVersion) { referencedVersion =>
+            for {
+              exist <- annotationBookmarkService.thumbnailsExist(annotationId, a.id, referencedVersion)
+              _ <- Fox.fromBool(exist) ?~>
+                s"Bookmark ${a.id} references thumbnails of version $referencedVersion, which do not exist" ~>
+                BAD_REQUEST
+            } yield ()
+          }
+        } yield ()
+      }
     } yield ()
 
   private def assertNoInvalidUpdateGroupCombinations(
@@ -373,6 +405,7 @@ class AnnotationTransactionService @Inject() (
     }
     actionsWithInfo.map {
       case a: EagerUpdateBucketVolumeAction => a.withoutBase64Data
+      case a: BookmarkThumbnailUpdateAction => a.withoutThumbnails
       case a: AddLayerAnnotationAction      =>
         // Note: this generated tracingId must not be read from this action before it was committed to fossildb,
         // to keep save retries idempotent.

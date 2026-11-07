@@ -2,7 +2,9 @@
 
 use crate::cache::{DEFAULT_TIME_TO_IDLE, DEFAULT_TIME_TO_LIVE};
 use crate::services::attachment::{AttachmentArrays, AttachmentFileKey, AttachmentId};
-use crate::services::mesh::manifest::{Manifest, MeshLod, SegmentInfo, merge};
+use crate::services::mesh::manifest::{
+    Manifest, MeshLod, SegmentInfo, SegmentMeshLookup, from_segment_lookups,
+};
 use crate::services::segment::index::hash_function;
 use crate::{
     cache::AlfuCache,
@@ -13,7 +15,7 @@ use crate::{
         nd_array::MaDataType,
         precomputed::sharding::{ShardReader, ShardingSpecification},
     },
-    datavault::{ByteRange, DataVaultService},
+    datavault::{ByteRange, DataVaultService, VaultError},
     error::{DsError, DsResult, blocking},
     models::{
         DataSourceId, StaticLayer,
@@ -266,13 +268,14 @@ impl MeshFileService {
             Ok(0)
         }
     }
+    /// `Ok(None)` if the mesh file has no entry for the segment (Scala `Empty`).
     async fn zarr_manifest(
         &self,
         key: &AttachmentFileKey,
         attrs: &Attributes,
         id: u64,
         token: Option<&str>,
-    ) -> DsResult<Vec<MeshLod>> {
+    ) -> DsResult<Option<Vec<MeshLod>>> {
         if attrs.buckets == 0 {
             return Err(DsError::failure("Mesh file n_buckets must be positive."));
         }
@@ -282,10 +285,9 @@ impl MeshFileService {
         let [start, end] = range[..] else {
             return Err(DsError::failure("Invalid mesh bucket offsets."));
         };
-        let count = end
-            .checked_sub(start)
-            .filter(|n| *n > 0)
-            .ok_or_else(|| DsError::failure(format!("No entry for segment {}", id as i64)))?;
+        let Some(count) = end.checked_sub(start).filter(|n| *n > 0) else {
+            return Ok(None);
+        };
         let rows = i32::try_from(
             count
                 .checked_add(1)
@@ -294,14 +296,14 @@ impl MeshFileService {
         .map_err(|_| DsError::failure("Mesh bucket overflow."))?;
         let buckets = self.zarr.get(key, "buckets", token).await?;
         let values = longs(&buckets, &[start, 0], &[rows, 3], token).await?;
-        let entry = values
+        let Some(entry) = values
             .as_chunks::<3>()
             .0
             .iter()
             .find(|entry| entry[0] as u64 == id)
-            .ok_or_else(|| {
-                DsError::failure(format!("SegmentId {} not in bucket list", id as i64))
-            })?;
+        else {
+            return Ok(None);
+        };
         let (start, end) = (entry[1], entry[2]);
         let bytes = self
             .zarr_bytes(
@@ -312,7 +314,9 @@ impl MeshFileService {
                 token,
             )
             .await?;
-        Manifest::parse(&bytes)?.enrich(start as u64, id, attrs.multiplier, &attrs.transform, false)
+        Manifest::parse(&bytes)?
+            .enrich(start as u64, id, attrs.multiplier, &attrs.transform, false)
+            .map(Some)
     }
     async fn zarr_bytes(
         &self,
@@ -362,7 +366,7 @@ impl MeshFileService {
         id: u64,
         multiplier: f64,
         transform: Vec<Vec<f64>>,
-    ) -> DsResult<Vec<MeshLod>> {
+    ) -> DsResult<Option<Vec<MeshLod>>> {
         self.hdf5(key, move |reader| {
             let buckets = reader.root_u64("n_buckets")?;
             if buckets == 0 {
@@ -374,10 +378,9 @@ impl MeshFileService {
             let [start, end] = range[..] else {
                 return Err(DsError::failure("Invalid mesh bucket offsets."));
             };
-            let count = end
-                .checked_sub(start)
-                .filter(|n| *n > 0)
-                .ok_or_else(|| DsError::failure(format!("No entry for segment {}", id as i64)))?;
+            let Some(count) = end.checked_sub(start).filter(|n| *n > 0) else {
+                return Ok(None);
+            };
             let values = reader.uint64_values(
                 "buckets",
                 start,
@@ -386,14 +389,14 @@ impl MeshFileService {
                     .ok_or_else(|| DsError::failure("Mesh bucket overflow."))?,
                 Some(3),
             )?;
-            let entry = values
+            let Some(entry) = values
                 .as_chunks::<3>()
                 .0
                 .iter()
                 .find(|entry| entry[0] == id)
-                .ok_or_else(|| {
-                    DsError::failure(format!("SegmentId {} not in bucket list", id as i64))
-                })?;
+            else {
+                return Ok(None);
+            };
             let bytes = hdf_bytes(
                 reader,
                 entry[1],
@@ -401,17 +404,24 @@ impl MeshFileService {
                     .checked_sub(entry[1])
                     .ok_or_else(|| DsError::failure("Mesh manifest range overflow."))?,
             )?;
-            Manifest::parse(&bytes)?.enrich(entry[1], id, multiplier, &transform, false)
+            Manifest::parse(&bytes)?
+                .enrich(entry[1], id, multiplier, &transform, false)
+                .map(Some)
         })
         .await
     }
+    /// Scala `MeshFileService.listMeshChunksForSegmentsMerged`. Segments whose lookup failed (e.g.
+    /// a read error) are left out; segments the mesh file has no chunks for are listed in
+    /// `segment_ids_without_mesh`. With `fail_on_zero_chunks`, the request fails if no segment has
+    /// an entry in the mesh file.
     pub async fn list_chunks(
         &self,
         key: &AttachmentFileKey,
         ids: &[i64],
+        fail_on_zero_chunks: bool,
         token: Option<&str>,
     ) -> DsResult<SegmentInfo> {
-        match key.attachment.data_format {
+        let (lookups, format, scale) = match key.attachment.data_format {
             LayerAttachmentDataformat::Hdf5 => {
                 let (format, multiplier, transform) = self
                     .hdf5(key, |r| {
@@ -422,42 +432,34 @@ impl MeshFileService {
                         ))
                     })
                     .await?;
-                let mut groups = Vec::new();
+                let mut lookups = Vec::new();
                 for id in ids {
-                    if let Ok(group) = self
+                    let result = self
                         .hdf_manifest(key, *id as u64, multiplier, transform.clone())
-                        .await
-                    {
-                        groups.push(group);
-                    }
+                        .await;
+                    lookups.extend(SegmentMeshLookup::from_result(*id as u64, result));
                 }
-                if groups.is_empty() {
-                    return Err(zero_chunks(key, ids));
-                }
-                merge(groups, format, [1.; 3])
+                (lookups, format, [1.; 3])
             }
             LayerAttachmentDataformat::Zarr3 => {
                 let attrs = self.attributes(key, token).await?;
                 let futures = ids
                     .iter()
-                    .map(|id| self.zarr_manifest(key, &attrs, *id as u64, token))
+                    .map(|id| async {
+                        let result = self.zarr_manifest(key, &attrs, *id as u64, token).await;
+                        SegmentMeshLookup::from_result(*id as u64, result)
+                    })
                     .collect::<Vec<_>>();
-                let results = stream::iter(futures)
+                let lookups = stream::iter(futures)
                     .buffered(if key.attachment.path.is_remote() {
                         32
                     } else {
                         1
                     })
+                    .filter_map(std::future::ready)
                     .collect::<Vec<_>>()
                     .await;
-                let groups = results
-                    .into_iter()
-                    .filter_map(Result::ok)
-                    .collect::<Vec<_>>();
-                if groups.is_empty() {
-                    return Err(zero_chunks(key, ids));
-                }
-                merge(groups, attrs.format.clone(), [1.; 3])
+                (lookups, attrs.format.clone(), [1.; 3])
             }
             LayerAttachmentDataformat::NeuroglancerPrecomputed => {
                 let mesh = self.remote(key, token).await?;
@@ -466,42 +468,23 @@ impl MeshFileService {
                     .vaults
                     .vault_path_for_attachment(&key.attachment)
                     .await?;
-                let transform = mesh
-                    .info
-                    .transform
-                    .chunks(4)
-                    .map(<[f64]>::to_vec)
-                    .collect::<Vec<_>>();
-                let mut groups = Vec::new();
-                for id in ids {
-                    let (path, range) = mesh
-                        .shards
-                        .chunk_path_and_range(&root, *id as u64, token)
-                        .await?;
-                    let ByteRange::StartEnd { start, .. } = range else {
-                        unreachable!("shard reader returns byte range")
-                    };
-                    let bytes = path.read_bytes(range, token).await?;
-                    let bytes = Compressor::from_precomputed_sharding_encoding(
-                        &mesh.shards.spec.data_encoding,
-                    )?
-                    .decompress(&bytes, Some(300 * 1024 * 1024))?;
-                    groups.push(Manifest::parse(&bytes)?.enrich(
-                        start,
-                        *id as u64,
-                        mesh.info.lod_scale_multiplier,
-                        &transform,
-                        true,
-                    )?);
-                }
                 let scale = 1. / 2f64.powf(f64::from(mesh.info.vertex_quantization_bits));
                 if !scale.is_finite() {
                     return Err(DsError::failure("Invalid mesh vertex quantization scale."));
                 }
-                merge(groups, "draco".into(), [scale; 3])
+                let mut lookups = Vec::new();
+                for id in ids {
+                    let result = precomputed_manifest(&mesh, &root, *id as u64, token).await;
+                    lookups.extend(SegmentMeshLookup::from_result(*id as u64, result));
+                }
+                (lookups, "draco".to_owned(), [scale; 3])
             }
-            _ => Err(unsupported(key)),
+            _ => return Err(unsupported(key)),
+        };
+        if fail_on_zero_chunks && !lookups.iter().any(SegmentMeshLookup::has_entry) {
+            return Err(zero_chunks(key, ids));
         }
+        from_segment_lookups(lookups, format, scale)
     }
     pub async fn read_chunks(
         &self,
@@ -608,6 +591,39 @@ impl MeshFileService {
         }
         Ok((bytes, format))
     }
+}
+/// Scala `NeuroglancerPrecomputedMeshFileService.listMeshChunks`: `Ok(None)` (Scala `Empty`) if
+/// the shard or its minishard index has no entry for the segment.
+async fn precomputed_manifest(
+    mesh: &RemoteMesh,
+    root: &crate::datavault::VaultPath,
+    id: u64,
+    token: Option<&str>,
+) -> DsResult<Option<Vec<MeshLod>>> {
+    let (path, range) = match mesh.shards.chunk_path_and_range(root, id, token).await {
+        Ok(found) => found,
+        Err(VaultError::NotFound) => return Ok(None),
+        Err(VaultError::Failure(error)) => return Err(error),
+    };
+    let ByteRange::StartEnd { start, .. } = range else {
+        unreachable!("shard reader returns byte range")
+    };
+    let bytes = match path.read_bytes(range, token).await {
+        Ok(bytes) => bytes,
+        Err(VaultError::NotFound) => return Ok(None),
+        Err(VaultError::Failure(error)) => return Err(error),
+    };
+    let bytes = Compressor::from_precomputed_sharding_encoding(&mesh.shards.spec.data_encoding)?
+        .decompress(&bytes, Some(300 * 1024 * 1024))?;
+    let transform = mesh
+        .info
+        .transform
+        .chunks(4)
+        .map(<[f64]>::to_vec)
+        .collect::<Vec<_>>();
+    Manifest::parse(&bytes)?
+        .enrich(start, id, mesh.info.lod_scale_multiplier, &transform, true)
+        .map(Some)
 }
 fn unsupported(key: &AttachmentFileKey) -> DsError {
     DsError::failure(format!(

@@ -192,7 +192,7 @@ impl FullMeshService {
                 .await?;
             let info = self
                 .mesh_files
-                .list_chunks(&key, &ids, tc.user_token.as_deref())
+                .list_chunks(&key, &ids, true, tc.user_token.as_deref())
                 .await?;
             let lod = usize::try_from(request.lod.unwrap_or(0))
                 .ok()

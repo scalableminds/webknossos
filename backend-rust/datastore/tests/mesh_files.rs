@@ -10,7 +10,7 @@ use webknossos_datastore::{
     services::{
         attachment::AttachmentFileKey,
         mesh::file::{ChunkRequest, MeshFileService},
-        mesh::manifest::{Manifest, merge},
+        mesh::manifest::{Manifest, MeshChunk, MeshLod, SegmentMeshLookup, from_segment_lookups},
     },
 };
 fn root() -> PathBuf {
@@ -59,8 +59,11 @@ fn manifests_and_exact_float_transforms_match_actual_compiled_scala() {
             &std::fs::read(root().join(format!("{mode}_oracle.json"))).unwrap(),
         )
         .unwrap();
-        let info = merge(
-            vec![lods],
+        let mut info = from_segment_lookups(
+            vec![SegmentMeshLookup {
+                segment_id: u64::MAX,
+                lods: Some(lods),
+            }],
             "draco".into(),
             if mode == "local" {
                 [1.; 3]
@@ -69,6 +72,8 @@ fn manifests_and_exact_float_transforms_match_actual_compiled_scala() {
             },
         )
         .unwrap();
+        assert_eq!(info.segment_ids_without_mesh, Some(vec![]));
+        info.segment_ids_without_mesh = None;
         assert_eq!(compact(info), expected);
     }
     for size in 0..bytes.len() {
@@ -87,7 +92,9 @@ async fn hdf5_zarr_and_precomputed_raw_gzip_shards_serve_same_payload_and_lods()
     let svc = service();
     for name in ["local", "zarr3", "precomputed", "precomputed_gzip"] {
         let k = key(name);
-        let info = svc.list_chunks(&k, &[-1], None).await.unwrap();
+        let mut info = svc.list_chunks(&k, &[-1], true, None).await.unwrap();
+        assert_eq!(info.segment_ids_without_mesh, Some(vec![]));
+        info.segment_ids_without_mesh = None;
         let mut expected: Value = serde_json::from_slice(
             &std::fs::read(root().join(if name.starts_with("precomputed") {
                 "precomputed_oracle.json"
@@ -131,19 +138,96 @@ async fn hdf5_zarr_and_precomputed_raw_gzip_shards_serve_same_payload_and_lods()
             .unwrap();
         assert_eq!(bytes, b"789123456", "{name}");
         assert_eq!(encoding, "draco");
-        let merged = svc.list_chunks(&k, &[2, 4], None).await.unwrap();
+        let merged = svc.list_chunks(&k, &[2, 4], true, None).await.unwrap();
         assert_eq!(merged.lods[0].chunks.len(), 4);
         assert_eq!(merged.lods[1].chunks.len(), 2);
-        assert!(svc.list_chunks(&k, &[6], None).await.is_err());
-        if !name.starts_with("precomputed") {
-            assert_eq!(
-                svc.list_chunks(&k, &[2, 6], None).await.unwrap().lods[0]
-                    .chunks
-                    .len(),
-                2
-            );
-        }
+        assert_eq!(merged.segment_ids_without_mesh, Some(vec![]));
+        // Segment 6 has no entry: a failure only if no requested segment has one.
+        let error = svc.list_chunks(&k, &[6], true, None).await.unwrap_err();
+        assert_eq!(
+            error.message,
+            format!("Zero mesh chunks for segment 6 in mesh file “{name}”.")
+        );
+        let partial = svc.list_chunks(&k, &[2, 6, 6], true, None).await.unwrap();
+        assert_eq!(partial.lods[0].chunks.len(), 2);
+        assert_eq!(partial.segment_ids_without_mesh, Some(vec![6]));
+        let none = svc.list_chunks(&k, &[6, 7], false, None).await.unwrap();
+        assert!(none.lods.is_empty(), "{name}");
+        assert_eq!(none.segment_ids_without_mesh, Some(vec![6, 7]));
+        assert_eq!(
+            compact(&none),
+            compact(json!({
+                "meshFormat":"draco",
+                "lods":[],
+                "chunkScale":none.chunk_scale,
+                "segmentIdsWithoutMesh":[
+                    {"customJsonEncoding":"bigint","value":"6"},
+                    {"customJsonEncoding":"bigint","value":"7"}
+                ]
+            }))
+        );
     }
+}
+fn lod(segment_ids: &[u64]) -> MeshLod {
+    let chunks = segment_ids
+        .iter()
+        .map(|id| MeshChunk {
+            position: [0.; 3],
+            byte_offset: *id as i64 * 10,
+            byte_size: 10,
+            unmapped_segment_id: *id,
+        })
+        .collect();
+    MeshLod {
+        chunks,
+        transform: vec![
+            vec![1., 0., 0., 0.],
+            vec![0., 1., 0., 0.],
+            vec![0., 0., 1., 0.],
+        ],
+    }
+}
+/// Scala `WebknossosSegmentInfoTestSuite`.
+#[test]
+fn segment_lookups_list_segments_without_entry_or_chunks_as_without_mesh() {
+    let lookup = |segment_id, lods| SegmentMeshLookup { segment_id, lods };
+    let info = from_segment_lookups(
+        vec![
+            lookup(1, Some(vec![lod(&[1])])),
+            lookup(2, None),
+            lookup(3, Some(vec![lod(&[])])),
+            lookup(2, None),
+        ],
+        "draco".into(),
+        [1.; 3],
+    )
+    .unwrap();
+    assert_eq!(info.lods.len(), 1);
+    assert_eq!(
+        info.lods[0]
+            .chunks
+            .iter()
+            .map(|c| c.byte_offset)
+            .collect::<Vec<_>>(),
+        vec![10]
+    );
+    assert_eq!(info.segment_ids_without_mesh, Some(vec![2, 3]));
+    // Lookups without any lod still produce an (empty) info instead of Scala's old `Empty`.
+    let empty = from_segment_lookups(vec![lookup(5, None)], "draco".into(), [1.; 3]).unwrap();
+    assert!(empty.lods.is_empty());
+    assert_eq!(empty.segment_ids_without_mesh, Some(vec![5]));
+    // Scala `transpose` rejects segments with different lod counts.
+    assert!(
+        from_segment_lookups(
+            vec![
+                lookup(1, Some(vec![lod(&[1])])),
+                lookup(4, Some(vec![lod(&[4]), lod(&[4])])),
+            ],
+            "draco".into(),
+            [1.; 3],
+        )
+        .is_err()
+    );
 }
 #[tokio::test]
 async fn real_hdf5_mesh_matches_scala_chunk_oracles_and_original_fragment_bytes() {
@@ -162,7 +246,8 @@ async fn real_hdf5_mesh_matches_scala_chunk_oracles_and_original_fragment_bytes(
             &std::fs::read(root().join(format!("real_oracle_{id}.json"))).unwrap(),
         )
         .unwrap();
-        let info = svc.list_chunks(&k, &[id], None).await.unwrap();
+        let mut info = svc.list_chunks(&k, &[id], true, None).await.unwrap();
+        info.segment_ids_without_mesh = None;
         assert_eq!(compact(&info), expected);
         let chunks = &info.lods[0].chunks;
         for chunk in chunks {

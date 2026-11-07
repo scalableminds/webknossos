@@ -8,7 +8,10 @@ use axum::{
 use common::send;
 use mock_wk::{MockWk, Reply};
 use serde_json::{Value, json};
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+};
 use webknossos_datastore::{AppState, router};
 const ID: &str = "0123456789abcdef01234567";
 fn fixtures() -> PathBuf {
@@ -59,18 +62,37 @@ async fn start() -> (MockWk, Router, PathBuf) {
             "path":path
         })
     };
-    let source = json!({"id":{"name":"ds","team":"org"},"scale":[1,1,1],"dataLayers":[{"name":"seg","category":"segmentation","elementClass":"uint8","dataFormat":"zarr","largestSegmentId":5,"boundingBox":{"topLeft":[0,0,0],"width":32,"height":32,"depth":32},"mags":[{"mag":[1,1,1],"path":root.join("seg")}],"attachments":{"meshes":[mesh("local","hdf5",root.join("local.hdf5")),mesh("zarr3","zarr3",root.join("zarr3")),mesh("precomputed","neuroglancerPrecomputed",root.join("precomputed")),mesh("gzip","hdf5",root.join("gzip.hdf5")),mesh("missing-hdf","hdf5",root.join("absent.hdf5")),mesh("missing-zarr","zarr3",root.join("absent-zarr")),mesh("missing-precomputed","neuroglancerPrecomputed",root.join("absent-pc"))],"agglomerates":[{"name":"agg","dataFormat":"hdf5","path":root.join("agg.hdf5")}]}}]});
+    let source = json!({"id":{"name":"ds","team":"org"},"scale":[1,1,1],"dataLayers":[{"name":"seg","category":"segmentation","elementClass":"uint8","dataFormat":"zarr","largestSegmentId":5,"boundingBox":{"topLeft":[0,0,0],"width":32,"height":32,"depth":32},"mags":[{"mag":[1,1,1],"path":root.join("seg")}],"attachments":{"meshes":[mesh("local","hdf5",root.join("local.hdf5")),mesh("zarr3","zarr3",root.join("zarr3")),mesh("precomputed","neuroglancerPrecomputed",root.join("precomputed")),mesh("gzip","hdf5",root.join("gzip.hdf5")),mesh("missing-hdf","hdf5",root.join("absent.hdf5")),mesh("missing-zarr","zarr3",root.join("absent-zarr")),mesh("missing-precomputed","neuroglancerPrecomputed",root.join("absent-pc")),mesh("real","hdf5",root.join("real.hdf5"))],"agglomerates":[{"name":"agg","dataFormat":"hdf5","path":root.join("agg.hdf5")}]}}]});
+    // The mock WK doubles as the tracingstore.
+    let tracingstore: Arc<Mutex<String>> = Arc::default();
+    let ts = Arc::clone(&tracingstore);
     let wk = MockWk::start(move |call| {
         if call.path.ends_with("/validateUserAccess") {
             Reply::json(
                 StatusCode::OK,
                 json!({"granted":call.query_value("token").as_deref()!=Some("denied")}),
             )
+        } else if call.path == "/api/tracingstore" {
+            Reply::json(
+                StatusCode::OK,
+                json!({"name":"ts","url":ts.lock().unwrap().clone()}),
+            )
+        } else if call.path == "/tracings/mapping/tr/segmentsForAgglomerate" {
+            Reply::json(
+                StatusCode::OK,
+                json!({"segmentIds":[2,6,4],"agglomerateIdIsPresent":true}),
+            )
+        } else if call.path == "/tracings/mapping/tr-real/segmentsForAgglomerate" {
+            Reply::json(
+                StatusCode::OK,
+                json!({"segmentIds":[30,6],"agglomerateIdIsPresent":true}),
+            )
         } else {
             Reply::json(StatusCode::OK, source.clone())
         }
     })
     .await;
+    *tracingstore.lock().unwrap() = wk.uri();
     let app = router(AppState::new(wk.config()));
     (wk, app, root)
 }
@@ -118,7 +140,7 @@ async fn lists_formats_and_preserves_scala_missing_file_differences() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         serde_json::from_slice::<Value>(&bytes).unwrap(),
-        json!([{"name":"local","formatVersion":7},{"name":"zarr3","formatVersion":7},{"name":"precomputed","formatVersion":7},{"name":"gzip","formatVersion":7},{"name":"missing-hdf","formatVersion":0},{"name":"missing-precomputed","formatVersion":7}])
+        json!([{"name":"local","formatVersion":7},{"name":"zarr3","formatVersion":7},{"name":"precomputed","formatVersion":7},{"name":"gzip","formatVersion":7},{"name":"missing-hdf","formatVersion":0},{"name":"missing-precomputed","formatVersion":7},{"name":"real","mappingName":"agglomerate_view_70","formatVersion":7}])
     );
 }
 #[tokio::test]
@@ -256,7 +278,6 @@ async fn actual_http_invalidation_refreshes_zarr_payload_chunks() {
 #[tokio::test]
 async fn current_tokens_reach_remote_manifests_and_fragments_after_cache_hits() {
     use axum::{extract::OriginalUri, http::header, response::IntoResponse};
-    use std::sync::{Arc, Mutex};
     let reads = Arc::new(Mutex::new(Vec::<(String, Option<String>)>::new()));
     let log = Arc::clone(&reads);
     let server =
@@ -355,4 +376,152 @@ async fn current_tokens_reach_remote_manifests_and_fragments_after_cache_hits() 
         "{log:?}"
     );
     task.abort();
+}
+
+fn bigints(ids: &[u64]) -> Value {
+    ids.iter()
+        .map(|id| json!({"customJsonEncoding":"bigint","value":id.to_string()}))
+        .collect()
+}
+async fn for_segments(
+    app: &Router,
+    query: &str,
+    body: Vec<u8>,
+    token: &str,
+) -> (StatusCode, HeaderMap, Vec<u8>) {
+    let request = Request::builder()
+        .method("POST")
+        .uri(format!(
+            "/data/datasets/{ID}/layers/seg/meshes/chunks/forSegments{query}"
+        ))
+        .header("x-auth-token", token)
+        .header("content-type", "application/x-protobuf")
+        .body(Body::from(body))
+        .unwrap();
+    send(app.clone(), request).await
+}
+fn segment_list(ids: &[u64]) -> Vec<u8> {
+    use prost::Message;
+    webknossos_datastore::proto::ListOfLong {
+        items: ids.to_vec(),
+    }
+    .encode_to_vec()
+}
+#[tokio::test]
+async fn chunks_for_segments_lists_segments_without_mesh_instead_of_failing() {
+    let (wk, app, _) = start().await;
+    for name in ["local", "zarr3", "precomputed", "gzip"] {
+        let (status, _, bytes) = for_segments(
+            &app,
+            &format!("?meshFileName={name}"),
+            segment_list(&[2, 6, 4, 6]),
+            "t",
+        )
+        .await;
+        assert_eq!(
+            status,
+            StatusCode::OK,
+            "{name}: {}",
+            String::from_utf8_lossy(&bytes)
+        );
+        let info: Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(info["lods"][0]["chunks"].as_array().unwrap().len(), 4);
+        assert_eq!(info["lods"][1]["chunks"].as_array().unwrap().len(), 2);
+        assert_eq!(info["segmentIdsWithoutMesh"], bigints(&[6]), "{name}");
+        // Without any segment in the mesh file the reply is an empty info, not an error.
+        let (status, _, bytes) = for_segments(
+            &app,
+            &format!("?meshFileName={name}"),
+            segment_list(&[6]),
+            "t",
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{name}");
+        let info: Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(info["lods"], json!([]));
+        assert_eq!(info["segmentIdsWithoutMesh"], bigints(&[6]));
+    }
+    let (status, _, bytes) =
+        for_segments(&app, "?meshFileName=local", segment_list(&[]), "t").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        serde_json::from_slice::<Value>(&bytes).unwrap(),
+        json!({"meshFormat":"draco","lods":[],"chunkScale":[1,1,1],"segmentIdsWithoutMesh":[]})
+    );
+    // Play rejects a missing query parameter and an invalid body before the action runs.
+    let calls = wk.calls().len();
+    let (status, _, bytes) = for_segments(&app, "", segment_list(&[2]), "t").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(String::from_utf8_lossy(&bytes).contains("Missing parameter: meshFileName"));
+    let (status, _, _) = for_segments(&app, "?meshFileName=local", vec![0xff, 0xff], "t").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(wk.calls().len(), calls);
+    let (status, _, _) =
+        for_segments(&app, "?meshFileName=local", segment_list(&[2]), "denied").await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let (status, _, _) = for_segments(&app, "?meshFileName=unknown", segment_list(&[2]), "t").await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+#[tokio::test]
+async fn chunk_list_reports_segments_without_mesh_only_when_proofreading_unmapped_meshes() {
+    let (_wk, app, _) = start().await;
+    // Plain listing: the field is left out.
+    let info = chunks(&app, "local", 2, "").await;
+    assert!(info.get("segmentIdsWithoutMesh").is_none(), "{info}");
+    let info = chunks(&app, "local", 1, "?targetMappingName=agg").await;
+    assert!(info.get("segmentIdsWithoutMesh").is_none(), "{info}");
+    // Editable mapping on an unmapped mesh file: the tracingstore's segments 2, 6 and 4.
+    let info = chunks(
+        &app,
+        "local",
+        1,
+        "?targetMappingName=agg&editableMappingTracingId=tr",
+    )
+    .await;
+    assert_eq!(info["lods"][0]["chunks"].as_array().unwrap().len(), 4);
+    assert_eq!(info["segmentIdsWithoutMesh"], bigints(&[6]));
+    // A mesh file computed for a mapping leaves it out even while proofreading.
+    let info = chunks(
+        &app,
+        "real",
+        1,
+        "?targetMappingName=agg&editableMappingTracingId=tr-real",
+    )
+    .await;
+    assert!(!info["lods"][0]["chunks"].as_array().unwrap().is_empty());
+    assert!(info.get("segmentIdsWithoutMesh").is_none(), "{info}");
+}
+#[tokio::test]
+async fn chunks_for_segments_leaves_out_segments_whose_lookup_failed() {
+    let (_wk, app, root) = start().await;
+    // Corrupt the lod count of segment 4's manifest (payload offset 134 + 24).
+    let path = root.join("zarr3/neuroglancer/c/0");
+    let mut bytes = std::fs::read(&path).unwrap();
+    bytes[158..162].copy_from_slice(&i32::MAX.to_le_bytes());
+    std::fs::write(path, bytes).unwrap();
+    let (status, _, bytes) =
+        for_segments(&app, "?meshFileName=zarr3", segment_list(&[2, 4, 6]), "t").await;
+    assert_eq!(status, StatusCode::OK);
+    let info: Value = serde_json::from_slice(&bytes).unwrap();
+    let ids = info["lods"][0]["chunks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|chunk| chunk["unmappedSegmentId"]["value"].as_str().unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(ids, ["2", "2"]);
+    assert_eq!(info["segmentIdsWithoutMesh"], bigints(&[6]));
+    // The single-segment listing still fails if no requested segment has an entry.
+    let (status, _, bytes) = call(
+        &app,
+        "/chunks",
+        Some(json!({"meshFileName":"zarr3","segmentId":4})),
+        "t",
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(
+        String::from_utf8_lossy(&bytes)
+            .contains("Zero mesh chunks for segment 4 in mesh file “zarr3”.")
+    );
 }

@@ -8,6 +8,15 @@ use webknossos_common::bytes::array;
 fn unsigned<S: Serializer>(id: &u64, s: S) -> Result<S::Ok, S::Error> {
     unsigned_long_envelope(*id).serialize(s)
 }
+fn unsigned_list<S: Serializer>(ids: &Option<Vec<u64>>, s: S) -> Result<S::Ok, S::Error> {
+    ids.as_ref()
+        .map(|ids| {
+            ids.iter()
+                .map(|id| unsigned_long_envelope(*id))
+                .collect::<Vec<_>>()
+        })
+        .serialize(s)
+}
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MeshChunk {
@@ -28,6 +37,34 @@ pub struct SegmentInfo {
     pub mesh_format: String,
     pub lods: Vec<MeshLod>,
     pub chunk_scale: [f64; 3],
+    /// The looked-up segment ids that have no chunk in any lod, e.g. because they are too small
+    /// to show up in the mag the meshes were computed in. Segments whose lookup failed are not
+    /// listed, so that clients ask for them again.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "unsigned_list"
+    )]
+    pub segment_ids_without_mesh: Option<Vec<u64>>,
+}
+/// Scala `SegmentMeshLookup`: the result of a successful lookup of one segment in a mesh file.
+/// `lods` is `None` if the mesh file has no entry for the segment.
+#[derive(Clone, Debug)]
+pub struct SegmentMeshLookup {
+    pub segment_id: u64,
+    pub lods: Option<Vec<MeshLod>>,
+}
+impl SegmentMeshLookup {
+    pub fn has_entry(&self) -> bool {
+        self.lods.is_some()
+    }
+    /// Scala `SegmentMeshLookup.fromBox`: `Ok(None)` (Scala `Empty`) means the mesh file has no
+    /// entry for the segment; a failed lookup is left out (`None`).
+    pub fn from_result<E>(
+        segment_id: u64,
+        result: Result<Option<Vec<MeshLod>>, E>,
+    ) -> Option<Self> {
+        result.ok().map(|lods| Self { segment_id, lods })
+    }
 }
 #[derive(Debug)]
 pub struct Manifest {
@@ -227,9 +264,41 @@ impl Manifest {
         Ok(lods)
     }
 }
-pub fn merge(groups: Vec<Vec<MeshLod>>, format: String, scale: [f64; 3]) -> DsResult<SegmentInfo> {
+/// Scala `WebknossosSegmentInfo.fromSegmentLookups`: merges the lods of all segments with an
+/// entry into one info. `lookups` must only hold the segments whose lookup succeeded.
+pub fn from_segment_lookups(
+    lookups: Vec<SegmentMeshLookup>,
+    format: String,
+    scale: [f64; 3],
+) -> DsResult<SegmentInfo> {
+    let mut segment_ids = Vec::new();
+    for lookup in &lookups {
+        if !segment_ids.contains(&lookup.segment_id) {
+            segment_ids.push(lookup.segment_id);
+        }
+    }
+    let groups = lookups
+        .into_iter()
+        .filter_map(|lookup| lookup.lods)
+        .collect::<Vec<_>>();
+    let lods = transpose_lods(groups)?;
+    let with_chunks = lods
+        .iter()
+        .flat_map(|lod| lod.chunks.iter().map(|chunk| chunk.unmapped_segment_id))
+        .collect::<std::collections::HashSet<_>>();
+    segment_ids.retain(|id| !with_chunks.contains(id));
+    Ok(SegmentInfo {
+        mesh_format: format,
+        lods,
+        chunk_scale: scale,
+        segment_ids_without_mesh: Some(segment_ids),
+    })
+}
+/// Scala `transpose.map(mergeLod)`: concatenates the chunks of each lod across all segments and
+/// keeps the first segment's transform.
+fn transpose_lods(groups: Vec<Vec<MeshLod>>) -> DsResult<Vec<MeshLod>> {
     let Some(first) = groups.first() else {
-        return Err(DsError::empty());
+        return Ok(Vec::new());
     };
     let count = first.len();
     if groups.iter().any(|lods| lods.len() != count) {
@@ -249,9 +318,5 @@ pub fn merge(groups: Vec<Vec<MeshLod>>, format: String, scale: [f64; 3]) -> DsRe
             target.chunks.extend(source.chunks);
         }
     }
-    Ok(SegmentInfo {
-        mesh_format: format,
-        lods,
-        chunk_scale: scale,
-    })
+    Ok(lods)
 }

@@ -1,4 +1,4 @@
-//! DSMeshController's file list, merged chunk list and opaque chunk-data routes.
+//! DSMeshController's file list, merged chunk lists and opaque chunk-data routes.
 use super::helpers::{DatasetLayers, QueryFields, dataset_id, validated_body};
 use crate::{
     AppState,
@@ -10,6 +10,7 @@ use crate::{
         datasource::read_unsigned_long,
         json::{Fields, JsResult, read_i32, read_i64, read_list, read_string},
     },
+    proto::ListOfLong,
     services::{
         agglomerate::AgglomerateService,
         mesh::{
@@ -21,11 +22,13 @@ use crate::{
 };
 use axum::{
     Json, Router,
+    body::Bytes,
     extract::{Path, RawQuery, State, rejection::JsonRejection},
-    http::header,
+    http::{StatusCode, header},
     response::{IntoResponse, Response},
     routing::{get, post},
 };
+use prost::Message;
 use serde_json::Value;
 use std::sync::Arc;
 pub fn router() -> Router<AppState> {
@@ -38,6 +41,10 @@ pub fn router() -> Router<AppState> {
             .route(
                 "/data/datasets/{datasetId}/layers/{dataLayerName}/meshes/chunks",
                 post(list_chunks),
+            )
+            .route(
+                "/data/datasets/{datasetId}/layers/{dataLayerName}/meshes/chunks/forSegments",
+                post(list_chunks_for_segments),
             )
             .route(
                 "/data/datasets/{datasetId}/layers/{dataLayerName}/meshes/chunks/data",
@@ -147,8 +154,45 @@ async fn list_chunks(
         &tc,
     )
     .await?;
+    let mut info = mesh_files
+        .list_chunks(&key, &segments, true, tc.user_token.as_deref())
+        .await?;
+    // Clients only use segmentIdsWithoutMesh to cache the chunk lists of unmapped segments while
+    // proofreading.
+    if editable.is_none() || file_mapping.is_some() {
+        info.segment_ids_without_mesh = None;
+    }
+    Ok(json_response(
+        &serde_json::to_value(info).map_err(DsError::from_exception)?,
+    ))
+}
+/// Scala `listMeshChunksForSegments`: lists the mesh chunks of several unmapped segment ids at
+/// once. Segments without a mesh don't make the request fail; they are listed in
+/// `segmentIdsWithoutMesh`. Segments whose lookup failed are in neither list.
+async fn list_chunks_for_segments(
+    State(layers): State<DatasetLayers>,
+    State(mesh_files): State<Arc<MeshFileService>>,
+    tc: TokenContext,
+    Path((id, name)): Path<(String, String)>,
+    RawQuery(raw): RawQuery,
+    body: Bytes,
+) -> AccessResult<Response> {
+    let mesh_file_name = QueryFields::new(raw).required("meshFileName")?.to_owned();
+    let Ok(request) = ListOfLong::decode(body) else {
+        // Play `validateProto` body parser: rejected before the action, so no Action.fox headers.
+        return Ok(crate::binding_errors::mark_bypass(
+            (StatusCode::BAD_REQUEST, "Invalid protobuf request body").into_response(),
+        ));
+    };
+    let (source, layer) = layers.readable(&tc, &id, &name).await?;
+    let key = MeshFileService::look_up(&source.id, &layer, &mesh_file_name)?;
+    let segments = request
+        .items
+        .iter()
+        .map(|id| *id as i64)
+        .collect::<Vec<_>>();
     let info = mesh_files
-        .list_chunks(&key, &segments, tc.user_token.as_deref())
+        .list_chunks(&key, &segments, false, tc.user_token.as_deref())
         .await?;
     Ok(json_response(
         &serde_json::to_value(info).map_err(DsError::from_exception)?,

@@ -343,6 +343,16 @@ def attachment_routes(c, output):
             # Byte ranges come from the (pair-compared) chunk listing at replay time; see run_live_replay.
             add(f'mesh-{mesh}-data-{segment}', '/meshes/chunks/data', 'POST', {'meshFileName': mesh, 'requests': []},
                 derive_chunk_data=f'att-mesh-{mesh}-chunks-{segment}')
+    # #10058 batched listing of unmapped segments: absent segments go to segmentIdsWithoutMesh.
+    for mesh, segments in (('local', [1, 2, 2**64 - 1, 2]), ('gzip', [2, 6]), ('zarr', [1, 2, 2**64 - 1]),
+                           ('real', [11, 30, 33, 2]), ('local', [6]), ('zarr', [])):
+        add(f'mesh-{mesh}-for-segments-{len(segments)}-{segments[0] if segments else "none"}',
+            '/meshes/chunks/forSegments', 'POST', query={'meshFileName': mesh}, body_hex=list_of_long(segments))
+    add('mesh-for-segments-bad-proto', '/meshes/chunks/forSegments', 'POST', query={'meshFileName': 'local'},
+        body_hex='0aff')
+    add('mesh-for-segments-unknown-file', '/meshes/chunks/forSegments', 'POST', query={'meshFileName': 'absent'},
+        body_hex=list_of_long([2]))
+    add('mesh-for-segments-no-file-name', '/meshes/chunks/forSegments', 'POST', body_hex=list_of_long([2]))
     add('mesh-data-bad-offset', '/meshes/chunks/data', 'POST',
         {'meshFileName': 'local', 'requests': [{'byteOffset': 2**40, 'byteSize': 16}]})
     add('mesh-data-unknown-file', '/meshes/chunks/data', 'POST',

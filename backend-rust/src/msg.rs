@@ -170,6 +170,10 @@ pub mod team {
     pub const DELETE_SUCCESS: &str = "Team was successfully deleted.";
 }
 
+pub mod partner {
+    pub const NOT_FOUND: &str = "Partner could not be found.";
+}
+
 pub mod organization {
     use std::fmt::Display;
 

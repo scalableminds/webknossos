@@ -1,5 +1,6 @@
 pub mod credit_transactions;
 pub(crate) mod organization_dao;
+pub mod partner;
 pub mod pricing;
 pub mod routes;
 pub mod storage;
@@ -11,6 +12,7 @@ use axum::Router;
 pub fn router() -> Router<AppState> {
     Router::new()
         .merge(routes::router())
+        .merge(partner::router())
         .merge(pricing::router())
         .merge(terms_of_service::router())
         .merge(credit_transactions::router())

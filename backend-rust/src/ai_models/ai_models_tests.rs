@@ -3,7 +3,7 @@ use serde_json::{Value, json};
 
 use super::{
     inference::{custom_configuration, find_best_matching_mag},
-    service::AiModel,
+    service::{AiModel, PRETRAINED_VOXEL_SIZES},
 };
 use crate::util::id::ObjectId;
 
@@ -22,6 +22,8 @@ fn model(path: Option<&str>, organization: Option<&str>, shared: &[&str]) -> AiM
         created: Utc::now(),
         is_super_user_only: false,
         is_pretrained: false,
+        partner: None,
+        thumbnail_url: None,
         shared_organizations: shared.iter().map(|s| (*s).to_owned()).collect(),
     }
 }
@@ -72,5 +74,23 @@ fn affinity_threshold_is_a_config_override_that_explicit_overrides_win() {
     assert_eq!(
         custom_configuration(Some(0.5), object(json!({KEY: 0.8, "a": 1}))),
         json!({KEY: 0.8, "a": 1})
+    );
+}
+
+#[test]
+fn partner_neuron_model_has_the_neuron_model_voxel_size() {
+    let voxel_size = |id: &str| {
+        PRETRAINED_VOXEL_SIZES
+            .iter()
+            .find(|(pretrained_id, _)| *pretrained_id == id)
+            .map(|(_, factor)| *factor)
+    };
+    assert_eq!(
+        voxel_size("576500000000000000000005"),
+        voxel_size("576500000000000000000001")
+    );
+    assert_eq!(
+        voxel_size("576500000000000000000005"),
+        Some([7.96, 7.96, 31.2])
     );
 }

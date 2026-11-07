@@ -370,6 +370,157 @@ async fn model_read_scopes_pretrained_datastore_and_serialization() {
     db.cleanup().await;
 }
 
+fn listed_ids(values: &Value) -> Vec<String> {
+    values
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v["id"].as_str().unwrap().to_owned())
+        .collect()
+}
+
+async fn set_partner(db: &TestDb, organization: &str, partner: Option<&str>) {
+    sqlx::query("UPDATE webknossos.organizations SET _partner=$2 WHERE _id=$1")
+        .bind(organization)
+        .bind(partner)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
+async fn partner_pretrained_models_are_only_readable_by_partner_organizations() {
+    let db = TestDb::new().await;
+    let owner = db.fixture().await;
+    let foreign = db.fixture().await;
+    let (_calls, server) = mock_store(&db).await;
+    let partner = object_id();
+    let deleted_partner = object_id();
+    for (id, deleted) in [(&partner, false), (&deleted_partner, true)] {
+        sqlx::query(
+            "INSERT INTO webknossos.partners(_id,name,logoUrl,isDeleted) VALUES \
+                ($1,'Partner','/logo.svg',$2)",
+        )
+        .bind(id)
+        .bind(deleted)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    }
+    let general = "576500000000000000000001";
+    let partner_model = "576500000000000000000005";
+    let deleted_partner_model = object_id();
+    for (id, model_partner, thumbnail) in [
+        (general, None, None),
+        (partner_model, Some(&partner), Some("/thumbnail.svg")),
+        (deleted_partner_model.as_str(), Some(&deleted_partner), None),
+    ] {
+        sqlx::query(
+            "INSERT INTO webknossos.aiModels (_id,_dataStore,name,isPretrained,_partner,\
+                thumbnailUrl) VALUES ($1,'store',$1,TRUE,$2,$3)",
+        )
+        .bind(id)
+        .bind(model_partner)
+        .bind(thumbnail)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    }
+    let app = app(&db);
+    let model_status = |token: &str, id: &str| {
+        let app = app.clone();
+        let (token, id) = (token.to_owned(), id.to_owned());
+        async move {
+            send(&app, "GET", &format!("/aiModels/{id}"), Some(&token), None)
+                .await
+                .0
+        }
+    };
+    // Without a partner, only unrestricted pretrained models are visible.
+    let (_, values) = send(&app, "GET", "/aiModels", Some(&owner.token), None).await;
+    assert_eq!(listed_ids(&values), [general]);
+    assert_eq!(values[0]["partnerId"], Value::Null);
+    assert_eq!(values[0]["thumbnailUrl"], Value::Null);
+    assert_eq!(model_status(&owner.token, partner_model).await, 404);
+
+    set_partner(&db, &owner.organization_id, Some(&partner)).await;
+    let (_, values) = send(&app, "GET", "/aiModels", Some(&owner.token), None).await;
+    assert_eq!(listed_ids(&values), [general, partner_model]);
+    let (status, model) = send(
+        &app,
+        "GET",
+        &format!("/aiModels/{partner_model}"),
+        Some(&owner.token),
+        None,
+    )
+    .await;
+    assert_eq!(status, 200);
+    assert_eq!(model["partnerId"], partner);
+    assert_eq!(model["thumbnailUrl"], "/thumbnail.svg");
+    assert_eq!(model["isPretrained"], true);
+    assert_eq!(
+        send(
+            &app,
+            "GET",
+            &format!("/aiModels/{partner_model}/voxelSize"),
+            Some(&owner.token),
+            None
+        )
+        .await,
+        (
+            200,
+            json!({"factor": [7.96, 7.96, 31.2], "unit": "nanometer"})
+        )
+    );
+    // Other organizations, also of super users, do not see it.
+    sqlx::query("UPDATE webknossos.multiUsers SET isSuperUser=TRUE WHERE _id=$1")
+        .bind(&foreign.multi_user_id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    let (_, values) = send(&app, "GET", "/aiModels", Some(&foreign.token), None).await;
+    assert_eq!(listed_ids(&values), [general]);
+    assert_eq!(model_status(&foreign.token, partner_model).await, 404);
+
+    // Models of a soft-deleted partner are not visible to its organizations.
+    set_partner(&db, &owner.organization_id, Some(&deleted_partner)).await;
+    assert_eq!(
+        model_status(&owner.token, &deleted_partner_model).await,
+        404
+    );
+    let (_, values) = send(&app, "GET", "/aiModels", Some(&owner.token), None).await;
+    assert_eq!(listed_ids(&values), [general]);
+
+    // An inference with a partner model omits the model once it is no longer readable.
+    set_partner(&db, &owner.organization_id, Some(&partner)).await;
+    let job = seed_job(&db, &owner.user_id, "SUCCESS").await;
+    let inference =
+        seed_inference(&db, &owner.organization_id, &job, Some(partner_model), None).await;
+    let path = format!("/aiModels/inferences/{inference}");
+    let (status, value) = send(&app, "GET", &path, Some(&owner.token), None).await;
+    assert_eq!(status, 200);
+    assert_eq!(value["aiModel"]["id"], partner_model);
+    set_partner(&db, &owner.organization_id, None).await;
+    let (status, value) = send(&app, "GET", &path, Some(&owner.token), None).await;
+    assert_eq!(status, 200);
+    assert_eq!(value["aiModel"], Value::Null);
+    assert_eq!(value["inferenceJob"]["id"], job);
+    assert_eq!(
+        send(
+            &app,
+            "GET",
+            "/aiModels/inferences",
+            Some(&owner.token),
+            None
+        )
+        .await,
+        (200, json!([value]))
+    );
+    server.abort();
+    db.cleanup().await;
+}
+
 #[tokio::test]
 #[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
 async fn model_update_preserves_hidden_sharing_and_rolls_back_failed_sharing() {
@@ -958,18 +1109,18 @@ async fn inference_lists_reads_and_requires_readable_dependencies() {
         .execute(&db.pool)
         .await
         .unwrap();
-    assert_eq!(
-        send(
-            &app,
-            "GET",
-            &format!("/aiModels/inferences/{inference}"),
-            Some(&owner.token),
-            None
-        )
-        .await
-        .0,
-        404
-    );
+    // A model that is no longer readable is omitted instead of failing the inference.
+    let (status, value) = send(
+        &app,
+        "GET",
+        &format!("/aiModels/inferences/{inference}"),
+        Some(&owner.token),
+        None,
+    )
+    .await;
+    assert_eq!(status, 200);
+    assert_eq!(value["aiModel"], Value::Null);
+    assert_eq!(value["newDataset"]["id"], dataset);
     assert_eq!(
         send(
             &app,
@@ -978,9 +1129,8 @@ async fn inference_lists_reads_and_requires_readable_dependencies() {
             Some(&owner.token),
             None
         )
-        .await
-        .0,
-        404
+        .await,
+        (200, json!([value]))
     );
     sqlx::query("UPDATE webknossos.aiInferences SET isDeleted=TRUE WHERE _id=$1")
         .bind(&inference)

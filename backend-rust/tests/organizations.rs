@@ -37,7 +37,9 @@ async fn request(
     (status, serde_json::from_slice(&bytes).unwrap())
 }
 fn app(db: &TestDb) -> Router {
-    webknossos_backend::organization::routes::router().with_state(AppState::new(db.pool.clone()))
+    webknossos_backend::organization::routes::router()
+        .merge(webknossos_backend::organization::partner::router())
+        .with_state(AppState::new(db.pool.clone()))
 }
 async fn seed_billing(db: &TestDb, f: &Fixture) {
     sqlx::query("UPDATE webknossos.users SET isorganizationowner=true WHERE _id=$1")
@@ -402,5 +404,187 @@ async fn organization_patch_is_admin_only_and_preserves_billing_and_root() {
         .0,
         StatusCode::BAD_REQUEST
     );
+    db.cleanup().await;
+}
+
+fn error(message: &str) -> Value {
+    json!({"messages": [{"error": message}]})
+}
+
+async fn organization_partner(db: &TestDb, organization: &str) -> Option<String> {
+    sqlx::query_scalar("SELECT _partner FROM webknossos.organizations WHERE _id=$1")
+        .bind(organization)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB; run cargo test -- --ignored"]
+async fn organization_partner_is_public_and_only_assigned_by_super_users() {
+    let db = TestDb::new().await;
+    let f = db.fixture().await;
+    let other = db.fixture().await;
+    let app = app(&db);
+    let partner = object_id();
+    sqlx::query(
+        "INSERT INTO webknossos.partners(_id,name,logoUrl,linkUrl) VALUES \
+            ($1,'Test Partner','/images/partner.svg','https://example.com')",
+    )
+    .bind(&partner)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+    let path = format!("/organizations/{}", f.organization_id);
+    let partner_path = format!("{path}/partner");
+    let (code, public) = request(&app, "GET", &path, None, None).await;
+    assert_eq!(code, StatusCode::OK, "{public}");
+    assert_eq!(public["partner"], Value::Null);
+
+    let body = json!({ "partnerId": partner });
+    // Organization admins are no super users.
+    assert_eq!(
+        request(
+            &app,
+            "PUT",
+            &partner_path,
+            Some(&f.token),
+            Some(body.clone())
+        )
+        .await,
+        (
+            StatusCode::FORBIDDEN,
+            error(webknossos_backend::msg::NOT_ALLOWED)
+        )
+    );
+    assert_eq!(organization_partner(&db, &f.organization_id).await, None);
+    sqlx::query("UPDATE webknossos.multiUsers SET isSuperUser=TRUE WHERE _id=$1")
+        .bind(&other.multi_user_id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        request(
+            &app,
+            "PUT",
+            "/organizations/missing-organization/partner",
+            Some(&other.token),
+            Some(body.clone())
+        )
+        .await,
+        (
+            StatusCode::NOT_FOUND,
+            error(&webknossos_backend::msg::organization::not_found(
+                "missing-organization"
+            ))
+        )
+    );
+    assert_eq!(
+        request(
+            &app,
+            "PUT",
+            &partner_path,
+            Some(&other.token),
+            Some(json!({ "partnerId": object_id() }))
+        )
+        .await,
+        (
+            StatusCode::NOT_FOUND,
+            error(webknossos_backend::msg::partner::NOT_FOUND)
+        )
+    );
+    assert_eq!(
+        request(
+            &app,
+            "PUT",
+            &partner_path,
+            Some(&other.token),
+            Some(json!({ "partnerId": "partner" }))
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(organization_partner(&db, &f.organization_id).await, None);
+
+    // A super user of another organization assigns the partner; the response is
+    // the organization's public JSON without administrator fields.
+    let (code, value) = request(&app, "PUT", &partner_path, Some(&other.token), Some(body)).await;
+    assert_eq!(code, StatusCode::OK, "{value}");
+    let partner_json = json!({
+        "id": partner,
+        "name": "Test Partner",
+        "logoUrl": "/images/partner.svg",
+        "compactLogoUrl": null,
+        "linkUrl": "https://example.com",
+    });
+    assert_eq!(value["id"], f.organization_id);
+    assert_eq!(value["partner"], partner_json);
+    assert!(value.get("newUserMailingList").is_none());
+    assert_eq!(
+        organization_partner(&db, &f.organization_id).await,
+        Some(partner.clone())
+    );
+    // The partner is public, also for anonymous users and in listings.
+    let (_, public) = request(&app, "GET", &path, None, None).await;
+    assert_eq!(public["partner"], partner_json);
+    let (_, listed) = request(&app, "GET", "/organizations", Some(&f.token), None).await;
+    assert_eq!(listed[0]["partner"], partner_json);
+    // Other organizations stay unaffected.
+    let (_, unaffected) = request(
+        &app,
+        "GET",
+        &format!("/organizations/{}", other.organization_id),
+        None,
+        None,
+    )
+    .await;
+    assert_eq!(unaffected["partner"], Value::Null);
+
+    // A soft-deleted partner counts as none and cannot be assigned.
+    sqlx::query("UPDATE webknossos.partners SET isDeleted=TRUE WHERE _id=$1")
+        .bind(&partner)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    let (code, public) = request(&app, "GET", &path, None, None).await;
+    assert_eq!(code, StatusCode::OK, "{public}");
+    assert_eq!(public["partner"], Value::Null);
+    assert_eq!(
+        request(
+            &app,
+            "PUT",
+            &partner_path,
+            Some(&other.token),
+            Some(json!({ "partnerId": partner }))
+        )
+        .await
+        .0,
+        StatusCode::NOT_FOUND
+    );
+
+    // A null partnerId removes the assignment; the super user's own organization
+    // gets administrator fields when they administrate it.
+    let (code, value) = request(
+        &app,
+        "PUT",
+        &partner_path,
+        Some(&other.token),
+        Some(json!({ "partnerId": null })),
+    )
+    .await;
+    assert_eq!(code, StatusCode::OK, "{value}");
+    assert_eq!(value["partner"], Value::Null);
+    assert_eq!(organization_partner(&db, &f.organization_id).await, None);
+    let (code, value) = request(
+        &app,
+        "PUT",
+        &format!("/organizations/{}/partner", other.organization_id),
+        Some(&other.token),
+        Some(json!({})),
+    )
+    .await;
+    assert_eq!(code, StatusCode::OK, "{value}");
+    assert!(value.get("newUserMailingList").is_some());
     db.cleanup().await;
 }

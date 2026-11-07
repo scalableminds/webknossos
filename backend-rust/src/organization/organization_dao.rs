@@ -8,7 +8,9 @@ use crate::{sql::Sql, util::id::ObjectId};
 /// `WHERE` clause. It includes milliCreditBalance for members of the
 /// requesting identity's organization, and the credit DAO returns zero to
 /// members lacking billing (credit-read) access. Administrator fields only
-/// for administrators of the requesting organization.
+/// for administrators of the requesting organization. The partner
+/// (PartnerService.findPartnerOf) is read regardless of access, also for
+/// anonymous users; a missing or soft-deleted partner is `null`.
 fn select_public(
     requesting_organization: Option<&str>,
     is_admin: bool,
@@ -25,6 +27,8 @@ fn select_public(
  ) storage),
  'ownerName',(SELECT m.firstname || ' ' || m.lastname FROM webknossos.users_ u
     JOIN webknossos.multiusers_ m ON m._id=u._multiuser WHERE u._organization=o._id AND u.isorganizationowner AND NOT u.isdeactivated LIMIT 1),
+ 'partner',(SELECT jsonb_build_object('id',p._id,'name',p.name,'logoUrl',p.logourl,
+    'compactLogoUrl',p.compactlogourl,'linkUrl',p.linkurl) FROM webknossos.partners_ p WHERE p._id=o._partner),
  'milliCreditBalance',CASE WHEN o._id="#,
     );
     q.push_bind(requesting_organization)
@@ -172,6 +176,21 @@ pub(crate) async fn update_name_and_new_user_mailing_list(
     .bind(new_user_mailing_list)
     .execute(connection)
     .await?;
+    Ok(updated.rows_affected())
+}
+
+/// OrganizationDAO.updatePartner (`None` removes the assignment). Only super users may
+/// assign partners; callers check that. Returns the number of updated rows.
+pub(crate) async fn update_partner(
+    connection: &mut PgConnection,
+    id: &str,
+    partner_id: Option<&ObjectId>,
+) -> sqlx::Result<u64> {
+    let updated = sqlx::query("UPDATE webknossos.organizations SET _partner = $2 WHERE _id = $1")
+        .bind(id)
+        .bind(partner_id)
+        .execute(connection)
+        .await?;
     Ok(updated.rows_affected())
 }
 

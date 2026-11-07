@@ -38,12 +38,14 @@ pub(super) const CATEGORIES: [&str; 8] = [
     "em_mitochondria",
 ];
 
-/// AiModelService.pretrainedVoxelSizes (all in nanometers).
-pub(super) const PRETRAINED_VOXEL_SIZES: [(&str, [f64; 3]); 4] = [
+/// AiModelService.pretrainedVoxelSizes (all in nanometers). The last one is the
+/// partner-only neuron model (see aiModels._partner).
+pub(super) const PRETRAINED_VOXEL_SIZES: [(&str, [f64; 3]); 5] = [
     ("576500000000000000000001", [7.96, 7.96, 31.2]),
     ("576500000000000000000002", [7.96, 7.96, 31.2]),
     ("576500000000000000000003", [179.84, 179.84, 224.0]),
     ("576500000000000000000004", [179.84, 179.84, 224.0]),
+    ("576500000000000000000005", [7.96, 7.96, 31.2]),
 ];
 
 /// A row of webknossos.aiModels_ as parsed by AiModelDAO (training annotations
@@ -64,6 +66,9 @@ pub(crate) struct AiModel {
     pub created: DateTime<Utc>,
     pub is_super_user_only: bool,
     pub is_pretrained: bool,
+    /// Restricts a pretrained model to the organizations assigned to this partner.
+    pub partner: Option<ObjectId>,
+    pub thumbnail_url: Option<String>,
     /// aiModel_organizations plus the owning organization (appended if missing).
     pub shared_organizations: Vec<String>,
 }
@@ -241,6 +246,8 @@ pub(super) async fn model_public_writes(
         "isUsable": is_usable,
         "isSuperUserOnly": model.is_super_user_only,
         "isPretrained": model.is_pretrained,
+        "partnerId": model.partner,
+        "thumbnailUrl": model.thumbnail_url,
     }))
 }
 
@@ -322,8 +329,10 @@ pub(crate) struct AiInference {
     pub created: DateTime<Utc>,
 }
 
-/// AiInferenceService.publicWrites. Every lookup here is mandatory: an inference
-/// whose job, model, dataset or job owner the user cannot read fails (404).
+/// AiInferenceService.publicWrites. Every lookup but the model is mandatory: an
+/// inference whose job, dataset or job owner the user cannot read fails (404). A model
+/// that is no longer readable (e.g. a partner model after the organization's partner
+/// changed) or unparsable is omitted instead.
 pub(super) async fn inference_public_writes(
     connection: &mut PgConnection,
     clients: &ServiceClients,
@@ -343,10 +352,17 @@ pub(super) async fn inference_public_writes(
         public_datastore_on_connection(connection, &job.data_store, jobs_enabled).await?;
     let model_json = match &inference.ai_model {
         Some(model_id) => {
-            let model = find_model(connection, &user.id, model_id)
-                .await?
-                .ok_or_else(empty)?;
-            Some(model_public_writes(connection, clients, user, jobs_enabled, &model).await?)
+            let model = match find_model(connection, &user.id, model_id).await {
+                Ok(model) => model,
+                Err(error) if error.status == StatusCode::BAD_REQUEST => None,
+                Err(error) => return Err(error),
+            };
+            match model {
+                Some(model) => Some(
+                    model_public_writes(connection, clients, user, jobs_enabled, &model).await?,
+                ),
+                None => None,
+            }
         }
         None => None,
     };

@@ -137,9 +137,9 @@ where
     sqlx::query(
         r#"INSERT INTO webknossos.aiModels(_id, _organization, _dataStore, _user, _trainingJob, path,
              uploadToPathIsPending, name, comment, category, created, modified, isDeleted,
-             isSuperUserOnly, isPretrained)
+             isSuperUserOnly, isPretrained, _partner, thumbnailUrl)
            SELECT $1, $2, $3, $4, NULL, NULL, FALSE, $5, $6, $7::webknossos.AI_MODEL_CATEGORY,
-             NOW(), NOW(), FALSE, $8, $9
+             NOW(), NOW(), FALSE, $8, $9, NULL, NULL
            WHERE NOT EXISTS (SELECT 1 FROM webknossos.aiModels_ WHERE _id = $1)
            ON CONFLICT DO NOTHING"#,
     )

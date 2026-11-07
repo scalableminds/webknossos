@@ -304,6 +304,8 @@ async fn run_model_training(
         created,
         is_super_user_only: false,
         is_pretrained: false,
+        partner: None,
+        thumbnail_url: None,
         shared_organizations: Vec::new(),
     };
     let mut connection = state.pool.acquire().await?;

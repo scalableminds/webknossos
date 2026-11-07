@@ -11,7 +11,8 @@ use super::service::{AiInference, AiModel};
 use crate::{sql::Sql, users, util::id::ObjectId};
 
 /// AiModelDAO.readAccessQ for alias `m`: models shared with or owned by the
-/// user's organization, or pretrained; superuser-only models only for
+/// user's organization, or pretrained (partner-restricted pretrained models only
+/// for organizations of that live partner); superuser-only models only for
 /// superusers. AiModelDAO has no deleteAccessQ, so this is also delete access.
 pub(crate) fn push_model_read_access(q: &mut Sql, user_id: &ObjectId) {
     q.push(
@@ -28,7 +29,15 @@ pub(crate) fn push_model_read_access(q: &mut Sql, user_id: &ObjectId) {
     .push_bind(user_id)
     .push(
         r#")
-    OR m.isPretrained)
+    OR (m.isPretrained AND (m._partner IS NULL OR m._partner IN (
+      SELECT p._id FROM webknossos.organizations_ AS o
+      JOIN webknossos.partners_ AS p ON p._id = o._partner
+      JOIN webknossos.users_ AS u ON u._organization = o._id
+      WHERE u._id = "#,
+    )
+    .push_bind(user_id)
+    .push(
+        r#"))))
   AND (NOT m.isSuperUserOnly OR TRUE IN (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN
     (SELECT _multiUser FROM webknossos.users_ WHERE _id = "#,
     )
@@ -49,6 +58,7 @@ pub(crate) const MODEL_COLUMNS: &str = r#"m._id AS id, m._organization AS organi
   TRIM(m._dataStore) AS data_store, m._user AS user_id, m._trainingJob AS training_job, m.path,
   m.uploadToPathIsPending AS upload_to_path_is_pending, m.name, m.comment, m.category::text AS category,
   m.created, m.isSuperUserOnly AS is_super_user_only, m.isPretrained AS is_pretrained,
+  m._partner AS partner, m.thumbnailUrl AS thumbnail_url,
   ARRAY(SELECT ao._organization FROM webknossos.aiModel_organizations ao WHERE ao._aiModel = m._id
     ORDER BY ao._organization) AS shared_organizations"#;
 
@@ -192,8 +202,10 @@ pub(crate) async fn insert_one_with_path(
 ) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.aiModels (_id, _organization, _dataStore, _user, _trainingJob, path,
-                  uploadToPathIsPending, name, comment, category, created, modified, isDeleted, isSuperUserOnly, isPretrained)
-                  VALUES ($1, $2, $3, $4, NULL, $5, TRUE, $6, $7, $8::webknossos.AI_MODEL_CATEGORY, NOW(), NOW(), FALSE, FALSE, FALSE)"#,
+                  uploadToPathIsPending, name, comment, category, created, modified, isDeleted, isSuperUserOnly, isPretrained,
+                  _partner, thumbnailUrl)
+                  VALUES ($1, $2, $3, $4, NULL, $5, TRUE, $6, $7, $8::webknossos.AI_MODEL_CATEGORY, NOW(), NOW(), FALSE, FALSE, FALSE,
+                  NULL, NULL)"#,
     )
     .bind(id)
     .bind(organization)
@@ -224,8 +236,10 @@ pub(crate) async fn insert_one_for_training(
 ) -> sqlx::Result<()> {
     sqlx::query(
         r#"INSERT INTO webknossos.aiModels (_id, _organization, _dataStore, _user, _trainingJob, path,
-          uploadToPathIsPending, name, comment, category, created, modified, isDeleted, isSuperUserOnly, isPretrained)
-          VALUES ($1, $2, $3, $4, $5, NULL, TRUE, $6, $7, $8::webknossos.AI_MODEL_CATEGORY, $9, $9, FALSE, FALSE, FALSE)"#,
+          uploadToPathIsPending, name, comment, category, created, modified, isDeleted, isSuperUserOnly, isPretrained,
+          _partner, thumbnailUrl)
+          VALUES ($1, $2, $3, $4, $5, NULL, TRUE, $6, $7, $8::webknossos.AI_MODEL_CATEGORY, $9, $9, FALSE, FALSE, FALSE,
+          NULL, NULL)"#,
     )
     .bind(id)
     .bind(organization)

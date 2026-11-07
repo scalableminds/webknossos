@@ -5,6 +5,7 @@ import { getActiveTheme } from "theme";
 import {
   BufferGeometry,
   DoubleSide,
+  Float32BufferAttribute,
   Line,
   LineBasicMaterial,
   Mesh,
@@ -18,8 +19,11 @@ import type {
   Vector3,
 } from "viewer/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
-import { getPosition } from "viewer/model/accessors/flycam_accessor";
-import dimensions from "viewer/model/dimensions";
+import {
+  getBoxCrossSection,
+  MAX_CROSS_SECTION_CORNERS,
+} from "viewer/geometries/helpers/box_cross_section";
+import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/throttled_store";
 
@@ -44,8 +48,33 @@ type Properties = {
 // not get in the way while annotating inside the box.
 const ACTIVE_FILL_OPACITY = 0.2;
 const ACTIVE_FILL_FADE_DURATION_MS = 1500;
-// The fill's two triangles, indexing the first four cross-section corners.
-const FILL_TRIANGLE_INDICES = [0, 1, 2, 0, 2, 3];
+// The fill is a triangle fan over the (up to six) cross-section corners. Unused vertex slots
+// hold the first corner (see writeCrossSectionCorners), so that the surplus triangles have zero
+// area for cross sections with fewer corners.
+const FILL_TRIANGLE_INDICES = [0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 5];
+
+function createPreallocatedGeometry(vertexCount: number): BufferGeometry {
+  const geometry = new BufferGeometry();
+  geometry.setAttribute(
+    "position",
+    new Float32BufferAttribute(new Float32Array(vertexCount * 3), 3),
+  );
+  return geometry;
+}
+
+// Writes the corners into the preallocated geometry. The vertex after the last corner and all
+// unused vertices hold the first corner. This closes the outline of a line and makes the surplus
+// triangles of a fill degenerate. It also keeps the unused vertices from distorting the bounding
+// sphere.
+function writeCrossSectionCorners(geometry: BufferGeometry, corners: Vector3[]) {
+  const positionAttribute = geometry.attributes.position;
+  for (let idx = 0; idx < positionAttribute.count; idx++) {
+    const corner = corners[idx < corners.length ? idx : 0];
+    positionAttribute.setXYZ(idx, corner[0], corner[1], corner[2]);
+  }
+  geometry.computeBoundingSphere();
+  positionAttribute.needsUpdate = true;
+}
 
 class Cube {
   // The cross sections are lines that are rendered in the XY, YZ and XZ
@@ -58,8 +87,15 @@ class Cube {
   // bounding box became active, so that the other boxes don't pay for extra meshes and
   // per-move geometry updates.
   crossSectionFills: OrthoViewWithoutTDMap<Mesh<BufferGeometry, MeshBasicMaterial>> | null = null;
-  // The four corners of each cross section (without the third dimension), set in setCorners.
-  crossSectionCorners: OrthoViewWithoutTDMap<ThreeVector3[]> | null = null;
+  // The corners of the polygon in which the (possibly rotated) data plane of each viewport cuts
+  // the box, or null if it misses the box. Set in updateCrossSections.
+  crossSectionCorners: OrthoViewWithoutTDMap<Vector3[] | null> = {
+    PLANE_XY: null,
+    PLANE_XZ: null,
+    PLANE_YZ: null,
+  };
+  // Hidden cubes skip the cross-section updates. They are recomputed once the cube is shown.
+  areCrossSectionsOutdated: boolean = false;
   cube: Line;
   min: Vector3;
   max: Vector3;
@@ -90,9 +126,9 @@ class Cube {
     this.deferDisposal = properties.deferDisposal ?? ((dispose) => dispose());
     this.cube = new Line(new BufferGeometry(), this.getLineMaterial());
     this.crossSections = {
-      PLANE_XY: new Line(new BufferGeometry(), this.getLineMaterial()),
-      PLANE_XZ: new Line(new BufferGeometry(), this.getLineMaterial()),
-      PLANE_YZ: new Line(new BufferGeometry(), this.getLineMaterial()),
+      PLANE_XY: this.createCrossSectionLine(),
+      PLANE_XZ: this.createCrossSectionLine(),
+      PLANE_YZ: this.createCrossSectionLine(),
     };
 
     if (this.min != null && this.max != null) {
@@ -106,12 +142,27 @@ class Cube {
 
     if (this.showCrossSections) {
       this.storePropertyUnsubscribers.push(
+        // The flycam position and rotation are both derived from the current matrix.
         listenToStoreProperty(
-          (state) => getPosition(state.flycam),
-          (position) => this.updatePositionForCrossSections(position),
+          (state) => state.flycam.currentMatrix,
+          () => this.updateCrossSections(),
+        ),
+        // The cross sections of rotated planes depend on the voxel size.
+        listenToStoreProperty(
+          (state) => state.dataset.dataSource.scale.factor,
+          () => this.updateCrossSections(),
         ),
       );
     }
+  }
+
+  createCrossSectionLine(): Line {
+    // Preallocate enough vertices for the largest possible cross section polygon
+    // (plus the closing vertex). The drawRange selects the vertices actually used.
+    return new Line(
+      createPreallocatedGeometry(MAX_CROSS_SECTION_CORNERS + 1),
+      this.getLineMaterial(),
+    );
   }
 
   getLineMaterial() {
@@ -122,11 +173,11 @@ class Cube {
   }
 
   createCrossSectionFill(planeId: OrthoViewWithoutTD): Mesh<BufferGeometry, MeshBasicMaterial> {
-    const geometry = new BufferGeometry();
+    const geometry = createPreallocatedGeometry(MAX_CROSS_SECTION_CORNERS);
     geometry.setIndex(FILL_TRIANGLE_INDICES);
-    if (this.crossSectionCorners != null) {
-      geometry.setFromPoints(this.crossSectionCorners[planeId]);
-      geometry.computeBoundingSphere();
+    const corners = this.crossSectionCorners[planeId];
+    if (corners != null) {
+      writeCrossSectionCorners(geometry, corners);
     }
     const fill = new Mesh(
       geometry,
@@ -138,7 +189,7 @@ class Cube {
         depthWrite: false,
       }),
     );
-    fill.visible = this.visible;
+    fill.visible = this.visible && corners != null;
     return fill;
   }
 
@@ -179,73 +230,59 @@ class Cube {
       vec(min[0], max[1], min[2]),
     ]);
 
-    // The four corners of each cross section. The third dimension is set in
-    // updatePositionForCrossSections.
-    const crossSectionCorners: OrthoViewWithoutTDMap<ThreeVector3[]> = {
-      PLANE_XY: [
-        vec(min[0], min[1], 0),
-        vec(min[0], max[1], 0),
-        vec(max[0], max[1], 0),
-        vec(max[0], min[1], 0),
-      ],
-      PLANE_YZ: [
-        vec(0, min[1], min[2]),
-        vec(0, min[1], max[2]),
-        vec(0, max[1], max[2]),
-        vec(0, max[1], min[2]),
-      ],
-      PLANE_XZ: [
-        vec(min[0], 0, min[2]),
-        vec(min[0], 0, max[2]),
-        vec(max[0], 0, max[2]),
-        vec(max[0], 0, min[2]),
-      ],
-    };
-    this.crossSectionCorners = crossSectionCorners;
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      const corners = crossSectionCorners[planeId];
-      // Close the outline by returning to the first corner.
-      this.crossSections[planeId].geometry.setFromPoints([...corners, corners[0]]);
-      this.crossSectionFills?.[planeId].geometry.setFromPoints(corners);
-    }
-
-    for (const mesh of this.getMeshes()) {
-      mesh.geometry.computeBoundingSphere();
-      mesh.geometry.attributes.position.needsUpdate = true;
-    }
+    this.cube.geometry.computeBoundingSphere();
+    this.cube.geometry.attributes.position.needsUpdate = true;
 
     this.initialized = true;
-    this.updatePositionForCrossSections(getPosition(Store.getState().flycam));
+    this.updateCrossSections();
 
     app.vent.emit("rerender");
   }
 
-  updatePositionForCrossSections(position: Vector3) {
+  updateCrossSections() {
     if (!this.initialized) {
       return;
     }
+    if (!this.visible) {
+      this.areCrossSectionsOutdated = true;
+      return;
+    }
+    this.areCrossSectionsOutdated = false;
 
+    const state = Store.getState();
+    const position = getPosition(state.flycam);
+    const rotation = getRotationInRadian(state.flycam);
+    const voxelSize = state.dataset.dataSource.scale.factor;
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      const thirdDim = dimensions.thirdDimensionForPlane(planeId);
-      const meshes: Array<Line | Mesh> = [this.crossSections[planeId]];
-      if (this.crossSectionFills != null) {
-        meshes.push(this.crossSectionFills[planeId]);
-      }
-      for (const { geometry } of meshes) {
-        // Update the third dimension for all vectors
-        for (let idx = 0; idx < geometry.attributes.position.count; idx++) {
-          if (thirdDim === 0) {
-            geometry.attributes.position.setX(idx, position[thirdDim]);
-          } else if (thirdDim === 1) {
-            geometry.attributes.position.setY(idx, position[thirdDim]);
-          } else {
-            geometry.attributes.position.setZ(idx, position[thirdDim]);
-          }
-        }
+      const corners = getBoxCrossSection(
+        this.min,
+        this.max,
+        planeId,
+        position,
+        rotation,
+        voxelSize,
+      );
+      this.setCrossSectionCorners(planeId, corners);
+    }
+  }
 
-        geometry.computeBoundingSphere();
-        geometry.attributes.position.needsUpdate = true;
+  setCrossSectionCorners(planeId: OrthoViewWithoutTD, corners: Vector3[] | null) {
+    this.crossSectionCorners[planeId] = corners;
+    if (corners == null) {
+      // Don't keep showing a stale cross section (e.g., in views that don't call updateForCam).
+      this.crossSections[planeId].visible = false;
+      if (this.crossSectionFills != null) {
+        this.crossSectionFills[planeId].visible = false;
       }
+      return;
+    }
+
+    const { geometry } = this.crossSections[planeId];
+    writeCrossSectionCorners(geometry, corners);
+    geometry.setDrawRange(0, corners.length + 1);
+    const fill = this.crossSectionFills?.[planeId];
+    if (fill != null) {
+      writeCrossSectionCorners(fill.geometry, corners);
     }
   }
 
@@ -284,6 +321,8 @@ class Cube {
     if (!this.showCrossSections) {
       return;
     }
+    // The fills are created from the current cross-section corners. updateForCam refines their
+    // per-viewport visibility on the next render.
     const fills = {
       PLANE_XY: this.createCrossSectionFill(OrthoViews.PLANE_XY),
       PLANE_XZ: this.createCrossSectionFill(OrthoViews.PLANE_XZ),
@@ -293,9 +332,6 @@ class Cube {
     // Cubes are only flashed after they were added to the scene (cubes created as active
     // don't flash), so add the fills next to the lines.
     this.cube.parent?.add(...Object.values(fills));
-    // Set the third dimension of the fills. updateForCam refines their per-viewport
-    // visibility on the next render.
-    this.updatePositionForCrossSections(getPosition(Store.getState().flycam));
 
     this.fillFadeTween = createTween({ opacity: ACTIVE_FILL_OPACITY })
       .to({ opacity: 0 }, ACTIVE_FILL_FADE_DURATION_MS)
@@ -347,15 +383,12 @@ class Cube {
       return;
     }
 
-    const position = getPosition(Store.getState().flycam);
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      const thirdDim = dimensions.thirdDimensionForPlane(planeId);
-      if (position[thirdDim] >= this.min[thirdDim] && position[thirdDim] < this.max[thirdDim]) {
-        this.crossSections[planeId].visible =
-          this.visible && planeId === id && this.showCrossSections;
-      } else {
-        this.crossSections[planeId].visible = false;
-      }
+      this.crossSections[planeId].visible =
+        this.crossSectionCorners[planeId] != null &&
+        this.visible &&
+        planeId === id &&
+        this.showCrossSections;
       if (this.crossSectionFills != null) {
         this.crossSectionFills[planeId].visible = this.crossSections[planeId].visible;
       }
@@ -368,10 +401,15 @@ class Cube {
     this.visible = visible;
     this.cube.visible = visible;
 
+    if (visible && this.areCrossSectionsOutdated) {
+      this.updateCrossSections();
+    }
+
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      this.crossSections[planeId].visible = visible;
+      const hasCrossSection = this.crossSectionCorners[planeId] != null;
+      this.crossSections[planeId].visible = visible && hasCrossSection;
       if (this.crossSectionFills != null) {
-        this.crossSectionFills[planeId].visible = visible;
+        this.crossSectionFills[planeId].visible = visible && hasCrossSection;
       }
     }
   }

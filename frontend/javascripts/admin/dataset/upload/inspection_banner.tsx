@@ -6,6 +6,10 @@ import type React from "react";
 import type { DetectedDatasetFormat } from "./detect_dataset_format";
 import type { FileInspection } from "./use_file_inspection";
 
+// Every file is sent with its own requests, so many small files upload much slower than a zip
+// archive of the same data.
+const MANY_FILES_THRESHOLD = 100;
+
 const CONVERSION_NOTE =
   "We'll convert it automatically after the upload — this usually takes a few minutes.";
 
@@ -149,4 +153,16 @@ export function InspectionBanner({
 export function SelectionBanner({ bannerProps }: { bannerProps: AlertProps | null }) {
   if (bannerProps == null) return null;
   return <Alert showIcon className="dataset-upload-inspection-banner" {...bannerProps} />;
+}
+
+export function ManyFilesHint({ fileCount }: { fileCount: number }) {
+  if (fileCount <= MANY_FILES_THRESHOLD) return null;
+  return (
+    <Alert
+      showIcon
+      type="info"
+      className="dataset-upload-inspection-banner"
+      title={`Uploading ${fileCount.toLocaleString()} individual files is slow. Zipping them into a single archive makes the upload much faster.`}
+    />
+  );
 }

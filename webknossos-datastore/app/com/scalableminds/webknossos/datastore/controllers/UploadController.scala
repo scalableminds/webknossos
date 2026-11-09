@@ -283,13 +283,14 @@ class UploadController @Inject() (
                 } yield Ok(Json.obj("alignmentProjectId" -> datasetId))
               case _ =>
                 for {
-                  _ <- (uploadDomainValidated match {
+                  conversionJobIdOpt <- (uploadDomainValidated match {
                     case UploadDomain.dataset    => uploadService.finishDatasetUpload(uploadId, datasetId)
-                    case UploadDomain.mag        => uploadService.finishMagUpload(uploadId, datasetId)
-                    case UploadDomain.attachment => uploadService.finishAttachmentUpload(uploadId, datasetId)
-                    case _                       => Fox.failure(s"Unsupported upload domain $uploadDomainValidated")
+                    case UploadDomain.mag        => uploadService.finishMagUpload(uploadId, datasetId).map(_ => None)
+                    case UploadDomain.attachment =>
+                      uploadService.finishAttachmentUpload(uploadId, datasetId).map(_ => None)
+                    case _ => Fox.failure(s"Unsupported upload domain $uploadDomainValidated")
                   }) ?~> Msg.Dataset.Upload.finishFailed(datasetId, uploadDomain)
-                } yield Ok(Json.obj("datasetId" -> datasetId))
+                } yield Ok(Json.obj("datasetId" -> datasetId, "conversionJobId" -> conversionJobIdOpt))
             }
           }
         } yield response

@@ -1,13 +1,16 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
+import { getAdminTablePagination } from "admin/admin_table_pagination";
 import { deleteScript as deleteScriptAPI, getScripts } from "admin/rest_api";
 import { App, Button, Input, Space, Spin, Table } from "antd";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
-import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
+import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
@@ -28,25 +31,20 @@ const persistence = new Persistence<{ searchQuery: string }>(
 function ScriptListView() {
   const { modal } = App.useApp();
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [scripts, setScripts] = useState<APIScript[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const queryClient = useQueryClient();
+  const [isLoadingMutation, setIsLoadingMutation] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(() => persistence.load().searchQuery || "");
 
-  useEffect(() => {
-    const { searchQuery } = persistence.load();
-    setSearchQuery(searchQuery || "");
-    fetchScripts();
-  }, []);
+  const { data: scripts = [], isLoading: isLoadingScripts } = useQueryWithErrorHandling({
+    queryKey: ["scripts"],
+    queryFn: getScripts,
+    refetchOnWindowFocus: false,
+  });
+  const isLoading = isLoadingScripts || isLoadingMutation;
 
   useEffect(() => {
     persistence.persist({ searchQuery });
   }, [searchQuery]);
-
-  async function fetchScripts(): Promise<void> {
-    const scripts = await getScripts();
-    setIsLoading(false);
-    setScripts(scripts);
-  }
 
   function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
     setSearchQuery(event.target.value);
@@ -57,13 +55,17 @@ function ScriptListView() {
       title: messages["script.delete"],
       onOk: async () => {
         try {
-          setIsLoading(true);
+          setIsLoadingMutation(true);
           await deleteScriptAPI(script.id);
-          setScripts(scripts.filter((s) => s.id !== script.id));
+          // Cancel a running refetch so that its stale response cannot restore the script.
+          await queryClient.cancelQueries({ queryKey: ["scripts"] });
+          queryClient.setQueryData(["scripts"], (currentScripts: APIScript[] = []) =>
+            currentScripts.filter((s) => s.id !== script.id),
+          );
         } catch (error) {
           handleGenericError(error as Error);
         } finally {
-          setIsLoading(false);
+          setIsLoadingMutation(false);
         }
       },
     });
@@ -79,9 +81,13 @@ function ScriptListView() {
         }
         <br />
         {"See the "}
-        <Link to="/assets/docs/frontend-api/index.html" target="_blank">
+        <a
+          href="https://docs.webknossos.org/frontend-api/index.html"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           Frontend API Documentation
-        </Link>
+        </a>
         {" for more information."}
       </Fragment>
     );
@@ -109,10 +115,7 @@ function ScriptListView() {
             searchQuery,
           )}
           rowKey="id"
-          pagination={{
-            defaultPageSize: 50,
-            onChange: scrollToTop,
-          }}
+          pagination={getAdminTablePagination()}
           locale={{
             emptyText: renderPlaceholder(),
           }}

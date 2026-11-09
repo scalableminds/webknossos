@@ -26,8 +26,11 @@ export type ResumableUploadRequest<FinishResult> = {
   finish: () => Promise<FinishResult>;
   onFinished: (result: FinishResult) => void;
   onFinishFailed: (error: Record<string, any>) => void;
-  // A file could not be uploaded, even after refreshing the user token.
+  // A file could not be uploaded, even after refreshing the user token. The upload is stopped,
+  // but the files already sent are kept on the server.
   onFileError: (message: string) => void;
+  // Called for every uploaded chunk.
+  onProgress?: (resumableUpload: ResumableUpload) => void;
   onRetry?: () => void;
   // Removes the already uploaded files on the server after the user confirmed to cancel.
   cancel: () => Promise<void>;
@@ -38,6 +41,9 @@ export type ResumableUploadRequest<FinishResult> = {
 type ActiveUpload = {
   request: ResumableUploadRequest<any>;
   resumableUpload: ResumableUpload;
+  // Set if all files were sent while the cancel dialog was open.
+  isFinishPending: boolean;
+  finishUpload: () => void;
 };
 
 // E.g. "2026-10-27_14-03__dataset__my_dataset__a1b2c3d4e5f6". The upload domain is part of the id,
@@ -101,7 +107,7 @@ export function useResumableUpload() {
   const isUnmountedRef = useRef(false);
   const activeUploadRef = useRef<ActiveUpload | null>(null);
   // Set to true when the user initiates a cancel (before the confirmation dialog is resolved)
-  // to prevent the `complete` event from triggering finish in the meantime.
+  // to defer finish until the user decided to keep the upload.
   const isCancellingRef = useRef(false);
 
   // Updates the running upload count right away, so that navigating right after an upload
@@ -143,24 +149,10 @@ export function useResumableUpload() {
       request.onStartFailed?.();
       return;
     }
-    activeUploadRef.current = { request, resumableUpload };
-
     let finishUploadCalled = false;
-    resumableUpload.addEventListener("complete", (event: ResumableUploadEvent) => {
-      if (
-        event.detail.type !== "complete" ||
-        !event.detail.didUploadCompleteSuccessfully ||
-        isCancellingRef.current ||
-        finishUploadCalled
-      ) {
-        // The upload was not successful, or a cancel was initiated before the complete event
-        // fired (e.g. the last in-flight chunk completed while the cancel dialog was open).
-        // A retry might be initiated by other code that listens to fileError events which is
-        // why we ignore the complete event now. The type is only checked to satisfy TS.
-        return;
-      }
+    const finishUpload = () => {
+      if (finishUploadCalled) return;
       finishUploadCalled = true;
-      resumableUpload.pause();
       setStatus({ kind: "finishing", name });
       request.finish().then(
         (result) => {
@@ -174,6 +166,28 @@ export function useResumableUpload() {
           request.onFinishFailed(error);
         },
       );
+    };
+    const activeUpload: ActiveUpload = {
+      request,
+      resumableUpload,
+      isFinishPending: false,
+      finishUpload,
+    };
+    activeUploadRef.current = activeUpload;
+
+    resumableUpload.addEventListener("complete", (event: ResumableUploadEvent) => {
+      if (event.detail.type !== "complete" || !event.detail.didUploadCompleteSuccessfully) {
+        // A retry might be initiated by other code that listens to fileError events which is
+        // why we ignore the complete event now. The type is only checked to satisfy TS.
+        return;
+      }
+      resumableUpload.pause();
+      if (isCancellingRef.current) {
+        // Finish once the user decided to keep the upload.
+        activeUpload.isFinishPending = true;
+        return;
+      }
+      finishUpload();
     });
     resumableUpload.addEventListener("filesAdded", () => {
       resumableUpload.upload();
@@ -185,8 +199,10 @@ export function useResumableUpload() {
         // Satisfy TS.
         return;
       }
-      // Stop uploading the remaining files.
-      resumableUpload.cancel();
+      // Stop the upload locally. The files already sent are kept on the server, so that the
+      // upload can still be continued or cleaned up later. Note that cancel() would emit a
+      // successful "complete" event once all files are removed.
+      resumableUpload.pause();
       activeUploadRef.current = null;
       setStatus({ kind: "idle" });
       request.onFileError(event.detail.message);
@@ -197,6 +213,7 @@ export function useResumableUpload() {
           ? { ...previous, isRetrying: false, progress: resumableUpload.progress() }
           : previous,
       );
+      request.onProgress?.(resumableUpload);
     });
     resumableUpload.addEventListener("fileRetry", () => {
       request.onRetry?.();
@@ -210,18 +227,20 @@ export function useResumableUpload() {
   const cancelUpload = async () => {
     const activeUpload = activeUploadRef.current;
     if (activeUpload == null) return;
+    // The upload keeps running while the user decides.
     isCancellingRef.current = true;
-    activeUpload.resumableUpload.pause();
-    const shouldCancel = await modal.confirm({
+    const shouldCancel = await modal.warning({
       title:
         "Cancelling the running upload will delete already uploaded files on the server and cannot be undone. Are you sure you want to cancel the upload?",
       okText: "Yes, cancel the upload",
+      okButtonProps: { danger: true },
+      okCancel: true,
       cancelText: "No, keep it running",
     });
 
     if (!shouldCancel) {
       isCancellingRef.current = false;
-      activeUpload.resumableUpload.upload();
+      if (activeUpload.isFinishPending) activeUpload.finishUpload();
       return;
     }
 

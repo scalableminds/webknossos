@@ -61,7 +61,7 @@ export function deleteAlignmentProject(id: string): Promise<void> {
 }
 
 export function getAlignmentProjectJobs(id: string): Promise<APIJob[]> {
-  return getJobs(undefined, undefined, id);
+  return getJobs(undefined, undefined, { alignmentProjectId: id });
 }
 
 export function getAlignmentProjectJobCreditCost(

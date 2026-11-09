@@ -1,0 +1,292 @@
+import {
+  CheckCircleOutlined,
+  CodeOutlined,
+  CopyOutlined,
+  DownloadOutlined,
+  FolderOpenOutlined,
+  HistoryOutlined,
+  LinkOutlined,
+  LockOutlined,
+  ShareAltOutlined,
+  StopOutlined,
+  UnlockOutlined,
+} from "@ant-design/icons";
+import { editLockedState, finishAnnotation } from "admin/rest_api";
+import { App, Tooltip } from "antd";
+import type { useAppProps } from "antd/es/app/context";
+import type { ItemType, SubMenuType } from "antd/es/menu/interface";
+import { useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
+import { sleep } from "libs/utils";
+import { location } from "libs/window";
+import messages from "messages";
+import { useMemo } from "react";
+import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_types";
+import Constants, { ControlModeEnum } from "viewer/constants";
+import { disableSavingAction } from "viewer/model/actions/save_actions";
+import {
+  setDownloadModalVisibilityAction,
+  setDuplicateAnnotationModalVisibilityAction,
+  setMergeModalVisibilityAction,
+  setShareModalVisibilityAction,
+  setUserScriptsModalVisibilityAction,
+  setVersionRestoreVisibilityAction,
+  setZarrLinksModalVisibilityAction,
+} from "viewer/model/actions/ui_actions";
+import { Model } from "viewer/singletons";
+import type { RestrictionsAndSettings, Task } from "viewer/store";
+import Store from "viewer/store";
+import { type MenuGroup, MenuGroupKeys } from "viewer/view/action_bar/menu_groups";
+import {
+  keyboardShortcutsConfigMenuItem,
+  renderAnimationMenuItem,
+  screenshotMenuItem,
+} from "viewer/view/action_bar/menu_items";
+
+// These actions require authentication. Instead of opening a dialog that fails for logged-out
+// users, disable the menu item and explain why.
+function getLoginRequiredProps(isLoggedOut: boolean, label: string, loggedOutReason: string) {
+  if (!isLoggedOut) {
+    return { label };
+  }
+  return {
+    disabled: true,
+    label: (
+      <Tooltip title={loggedOutReason} placement="right">
+        <span>{label}</span>
+      </Tooltip>
+    ),
+  };
+}
+
+const handleRestore = async () => {
+  await Model.ensureSavedState();
+  Store.dispatch(setVersionRestoreVisibilityAction(true));
+};
+
+const handleDisableSaving = (modal: useAppProps["modal"]) => {
+  modal.confirm({
+    title: messages["annotation.disable_saving"],
+    content: messages["annotation.disable_saving.content"],
+    onOk: () => {
+      Store.dispatch(disableSavingAction());
+    },
+  });
+};
+
+const handleShareOpen = () => {
+  Store.dispatch(setShareModalVisibilityAction(true));
+};
+
+const handleDownloadOpen = () => {
+  Store.dispatch(setDownloadModalVisibilityAction(true));
+};
+
+const handleMergeOpen = () => {
+  Store.dispatch(setMergeModalVisibilityAction(true));
+};
+
+const handleUserScriptsOpen = () => {
+  Store.dispatch(setUserScriptsModalVisibilityAction(true));
+};
+
+const handleZarrLinksOpen = () => {
+  Store.dispatch(setZarrLinksModalVisibilityAction(true));
+};
+
+const handleDuplicateOpen = () => {
+  Store.dispatch(setDuplicateAnnotationModalVisibilityAction(true));
+};
+
+const handleChangeLockedStateOfAnnotation = async (
+  isLocked: boolean,
+  annotationId: string,
+  annotationType: APIAnnotationType,
+) => {
+  try {
+    await Model.ensureSavedState();
+    await editLockedState(annotationId, annotationType, isLocked);
+    Toast.success(
+      isLocked ? messages["annotation.lock.success"] : messages["annotation.unlock.success"],
+    );
+    await sleep(250);
+    location.reload();
+  } catch (error: any) {
+    const verb = isLocked ? "lock" : "unlock";
+    Toast.error(`Could not ${verb} the annotation. ` + error?.message);
+    console.error(`Could not ${verb} the annotation. `, error);
+  }
+};
+
+const handleFinish = async (
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  modal: useAppProps["modal"],
+) => {
+  await Model.ensureSavedState();
+  modal.confirm({
+    title: messages["annotation.finish"],
+    onOk: async () => {
+      await finishAnnotation(annotationId, annotationType);
+      location.href = "/dashboard";
+    },
+  });
+};
+
+export type TracingViewMenuProps = {
+  restrictions: RestrictionsAndSettings;
+  task: Task | null | undefined;
+  annotationType: APIAnnotationType;
+  annotationId: string;
+  activeUser: APIUser | null | undefined;
+  isAnnotationLockedByUser: boolean;
+  annotationOwner: APIUserBase | null | undefined;
+};
+
+export const useTracingViewMenuGroups = (
+  props: TracingViewMenuProps,
+  layoutMenu: SubMenuType | null,
+) => {
+  // Explicitly use very "precise" selectors to avoid unnecessary re-renders
+  const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
+  const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
+  const isSavingDisabled = useWkSelector((state) => state.save.isSavingDisabled);
+  const { modal } = App.useApp();
+
+  const {
+    restrictions,
+    task,
+    annotationType,
+    annotationId,
+    activeUser,
+    isAnnotationLockedByUser,
+    annotationOwner,
+  } = props;
+
+  return useMemo(() => {
+    const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
+    const isLoggedOut = activeUser == null;
+    const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
+    const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
+    const annotationItems: ItemType[] = [];
+    const shareAndExportItems: ItemType[] = [];
+    const customizeItems: ItemType[] = [];
+
+    if (!isLoggedOut) {
+      annotationItems.push({
+        key: "duplicate-button",
+        onClick: handleDuplicateOpen,
+        icon: <CopyOutlined />,
+        label: "Duplicate",
+      });
+    }
+    if (restrictions.allowSave && isSkeletonMode && !isLoggedOut) {
+      annotationItems.push({
+        key: "merge-button",
+        onClick: handleMergeOpen,
+        icon: <FolderOpenOutlined />,
+        label: "Merge Annotation",
+      });
+    }
+    if (controlMode !== ControlModeEnum.SANDBOX) {
+      annotationItems.push({
+        key: "restore-button",
+        onClick: handleRestore,
+        icon: <HistoryOutlined />,
+        ...getLoginRequiredProps(
+          isLoggedOut,
+          "Version History",
+          "Log in to view the version history of this annotation.",
+        ),
+      });
+    }
+    if (isAnnotationOwner) {
+      annotationItems.push({
+        key: "lock-unlock-button",
+        onClick: () =>
+          handleChangeLockedStateOfAnnotation(
+            !isAnnotationLockedByUser,
+            annotationId,
+            annotationType,
+          ),
+        icon: isAnnotationLockedByUser ? <UnlockOutlined /> : <LockOutlined />,
+        label: `${isAnnotationLockedByUser ? "Unlock" : "Lock"} Annotation`,
+      });
+    }
+    if (restrictions.allowSave && !task) {
+      annotationItems.push({
+        key: "disable-saving",
+        onClick: () => handleDisableSaving(modal),
+        icon: <StopOutlined />,
+        label: "Disable saving",
+      });
+    }
+    // Archiving/finishing ends the work on the annotation, so it comes last to avoid misclicks.
+    if (restrictions.allowFinish) {
+      annotationItems.push({
+        key: "finish-button",
+        onClick: () => handleFinish(annotationId, annotationType, modal),
+        icon: <CheckCircleOutlined />,
+        label: archiveButtonText,
+      });
+    }
+
+    shareAndExportItems.push({
+      key: "share-button",
+      onClick: handleShareOpen,
+      icon: <ShareAltOutlined />,
+      ...getLoginRequiredProps(isLoggedOut, "Share", "Log in to share this annotation."),
+    });
+    // The download is served by the backend. In sandbox mode or when saving was disabled,
+    // the backend doesn't know the local changes, so the download would be misleading.
+    // The skeleton tab's NML download (based on the frontend state) is still available.
+    const hasUnsavableChanges = controlMode === ControlModeEnum.SANDBOX || isSavingDisabled;
+    if (restrictions.allowDownload && !hasUnsavableChanges) {
+      shareAndExportItems.push({
+        key: "download-button",
+        onClick: handleDownloadOpen,
+        icon: <DownloadOutlined />,
+        label: "Download",
+      });
+    }
+    shareAndExportItems.push({
+      key: "zarr-links-button",
+      onClick: handleZarrLinksOpen,
+      icon: <LinkOutlined />,
+      ...getLoginRequiredProps(
+        isLoggedOut,
+        "Zarr Links",
+        "Log in to create Zarr links for this annotation.",
+      ),
+    });
+    shareAndExportItems.push(screenshotMenuItem, renderAnimationMenuItem);
+
+    if (layoutMenu != null) customizeItems.push(layoutMenu);
+    customizeItems.push(keyboardShortcutsConfigMenuItem, {
+      key: "user-scripts-button",
+      onClick: handleUserScriptsOpen,
+      icon: <CodeOutlined />,
+      label: "User Scripts",
+    });
+
+    const menuGroups: MenuGroup[] = [
+      { key: MenuGroupKeys.ANNOTATION, items: annotationItems },
+      { key: MenuGroupKeys.SHARE_AND_EXPORT, items: shareAndExportItems },
+      { key: MenuGroupKeys.CUSTOMIZE, items: customizeItems },
+    ];
+    return menuGroups;
+  }, [
+    viewMode,
+    controlMode,
+    isSavingDisabled,
+    restrictions,
+    task,
+    annotationType,
+    annotationId,
+    activeUser,
+    isAnnotationLockedByUser,
+    annotationOwner,
+    layoutMenu,
+    modal,
+  ]);
+};

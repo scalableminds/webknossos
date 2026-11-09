@@ -178,6 +178,7 @@ class JobController @Inject() (
           _ <- Fox.fromBool(!project.isInputDataDeleted) ?~> Msg.AlignmentProject.inputDataDeleted
         } yield ()
       }
+      _ <- jobService.assertJobCanBeRetriedByPricingPlan(job)
       _ <- creditTransactionService.reserveCreditsForRetry(job._id)
       _ <- jobDAO.retryOne(id, retriedBySuperUser = multiUser.isSuperUser)
       js <- jobService.publicWrites(job)
@@ -304,6 +305,7 @@ class JobController @Inject() (
           ) ?~> Msg.Job.AlignSections.wrongOrga ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(request.body.layerName)
+          _ <- jobService.assertCustomConfigurationAllowed(request.body.customConfiguration, request.identity)
           (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(
             dataset,
             request.body.layerName

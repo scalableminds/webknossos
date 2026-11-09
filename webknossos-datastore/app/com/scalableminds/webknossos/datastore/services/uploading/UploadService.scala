@@ -106,6 +106,8 @@ case class ReportDatasetUploadParameters(
     voxelSize: Option[VoxelSize]
 ) derives JsonAutoFormat
 
+case class ReportDatasetUploadResult(conversionJobId: Option[ObjectId]) derives JsonAutoFormat
+
 case class ReportMagUploadParameters(
     datasetId: ObjectId,
     layerName: String,
@@ -442,7 +444,8 @@ class UploadService @Inject() (
   ) =
     s"upload $uploadId for $uploadDomain (dataset $datasetId - $dataSourceId)"
 
-  def finishDatasetUpload(uploadId: String, datasetId: ObjectId)(using tc: TokenContext): Fox[Unit] =
+  // Returns the id of the conversion job, if one was started.
+  def finishDatasetUpload(uploadId: String, datasetId: ObjectId)(using tc: TokenContext): Fox[Option[ObjectId]] =
     for {
       dataSourceId <- datasetUploadMetadataStore.findDataSourceId(uploadId)
       needsConversion <- datasetUploadMetadataStore.findNeedsConversion(uploadId)
@@ -490,7 +493,7 @@ class UploadService @Inject() (
         datasetId,
         dataSourceId
       ) ?~> Msg.Dataset.Upload.moveUnpackedToTargetFailed
-      _ <- remoteWebknossosClient.reportDatasetUpload(
+      reportResult <- remoteWebknossosClient.reportDatasetUpload(
         datasetId,
         ReportDatasetUploadParameters(
           needsConversion,
@@ -500,7 +503,7 @@ class UploadService @Inject() (
           voxelSizeBox.toOption
         )
       ) ?~> Msg.Dataset.Upload.reportUploadFailed
-    } yield ()
+    } yield reportResult.conversionJobId
 
   private def measureDirectorySizeBytes(path: Path): Fox[Long] =
     tryo(FileUtils.sizeOfDirectoryAsBigInteger(path.toFile).longValue).toFox

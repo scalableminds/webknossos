@@ -289,8 +289,9 @@ class SynapseTree extends React.Component<Props, State> {
                 height={height}
                 showLine={showLine}
                 onSelect={this.handleSelect} // Although clicking on some nodes triggers an action, the node should not remain selected
-                // as repeated clicks wouldn't retrigger the action, then
-                selectedKeys={undefined}
+                // as repeated clicks wouldn't retrigger the action, then.
+                // Pass an empty array instead of undefined: rc-tree crashes on keyboard focus otherwise.
+                selectedKeys={[]}
                 onCheck={onCheck}
                 onExpand={onExpand}
                 checkedKeys={checkedKeys}

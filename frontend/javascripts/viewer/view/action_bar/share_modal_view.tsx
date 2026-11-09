@@ -7,6 +7,7 @@ import {
   ShareAltOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   createShortLink,
@@ -40,7 +41,7 @@ import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { copyToClipboard } from "libs/clipboard";
 import { makeComponentLazy } from "libs/react_helpers";
-import { useWkSelector } from "libs/react_hooks";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
 import isEqual from "lodash-es/isEqual";
@@ -245,7 +246,6 @@ function ShareModalViewInner(props: Props) {
   const annotationVisibility = annotation.visibility;
   const [visibility, setVisibility] = useState(annotationVisibility);
   const [isChangingInProgress, setIsChangingInProgress] = useState(false);
-  const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
 
   const othersMayEdit = isAnnotationEditableByNonOwners(annotation);
@@ -264,18 +264,15 @@ function ShareModalViewInner(props: Props) {
   const isMappingStateFixed = useWkSelector(isMappingStateFixedForLiveCollaboration);
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
 
-  const fetchAndSetSharedTeams = async () => {
-    if (!activeUser) {
-      return;
-    }
-    const fetchedSharedTeams = await getTeamsForSharedAnnotation(annotationType, annotationId);
-    setSharedTeams(fetchedSharedTeams);
-  };
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Refetch once annotation or user changes.
-  useEffect(() => {
-    fetchAndSetSharedTeams();
-  }, [annotationType, annotationId, activeUser]);
+  const queryClient = useQueryClient();
+  const sharedTeamsQueryKey = ["sharedTeams", annotationType, annotationId, activeUser?.id];
+  const { data: sharedTeams = [] } = useQueryWithErrorHandling({
+    queryKey: sharedTeamsQueryKey,
+    queryFn: () => getTeamsForSharedAnnotation(annotationType, annotationId),
+    enabled: activeUser != null,
+    refetchOnWindowFocus: false,
+  });
+  const setSharedTeams = (teams: APITeam[]) => queryClient.setQueryData(sharedTeamsQueryKey, teams);
 
   const reportSuccessfulChange = (newVisibility: APIAnnotationVisibility) => {
     const randomKeyToAllowDuplicates = Math.random().toString(36).substring(0, 5);
@@ -304,21 +301,20 @@ function ShareModalViewInner(props: Props) {
     }
     setIsChangingInProgress(true);
     setVisibility(newVisibility as any as APIAnnotationVisibility);
-    try {
-      await editAnnotation(annotationId, annotationType, {
-        visibility: newVisibility,
-      });
+    const result = await editAnnotation(annotationId, annotationType, {
+      visibility: newVisibility,
+    });
+    if (result.ok) {
       dispatch(setAnnotationVisibilityAction(newVisibility));
       reportSuccessfulChange(newVisibility);
-    } catch (e) {
-      console.error("Failed to update the annotations visibility.", e);
+    } else {
+      console.error("Failed to update the annotations visibility.", result.error.cause);
       // Resetting the visibility to the old value as the request failed
       // so the user still sees the settings currently saved in the backend.
       setVisibility(visibility as any as APIAnnotationVisibility);
       reportFailedChange();
-    } finally {
-      setIsChangingInProgress(false);
     }
+    setIsChangingInProgress(false);
   };
 
   const handleSharedTeamsChange = async (value: APITeam | APITeam[]) => {
@@ -327,6 +323,8 @@ function ShareModalViewInner(props: Props) {
       return;
     }
     setIsChangingInProgress(true);
+    // Cancel a pending fetch so that it can't overwrite the optimistic update with stale data.
+    await queryClient.cancelQueries({ queryKey: sharedTeamsQueryKey });
     setSharedTeams(newTeams);
     try {
       await updateTeamsForSharedAnnotation(
@@ -661,8 +659,8 @@ function ShareModalViewInner(props: Props) {
               and is currently limited to{" "}
               {allowsVolumeAnnotation ? (
                 <>
-                  the proofreading tool, the brush, the eraser and the fill tool (
-                  <b>skeleton and other volume tools will be disabled</b>).
+                  the proofreading tool and the volume tools (
+                  <b>the skeleton tool will be disabled</b>).
                 </>
               ) : (
                 <>

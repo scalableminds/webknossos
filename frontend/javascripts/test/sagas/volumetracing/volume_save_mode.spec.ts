@@ -1,4 +1,5 @@
 import { sleep } from "libs/utils";
+import isEqual from "lodash-es/isEqual";
 import {
   createBucketResponseFunction,
   setupWebknossosForTesting,
@@ -7,9 +8,15 @@ import {
 } from "test/helpers/apiHelpers";
 import type { AnnotationCollaborationMode } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import { FillModeEnum, OrthoViews, type Vector3 } from "viewer/constants";
+import {
+  ContourModeEnum,
+  FillModeEnum,
+  OrthoViews,
+  OverwriteModeEnum,
+  type Vector3,
+} from "viewer/constants";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { AnnotationTool, VolumeTools } from "viewer/model/accessors/tool_accessor";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { dispatchUndoAsync } from "viewer/model/actions/save_actions";
@@ -21,9 +28,11 @@ import {
   finishEditingAction,
   resetContourAction,
   setActiveCellAction,
+  setContourTracingModeAction,
   startEditingAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { decodeBucketDiff, voxelOffsetOf } from "viewer/model/volumetracing/core";
 import { Model, Store } from "viewer/singletons";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -74,6 +83,27 @@ function brushAt(brushPosition: Vector3) {
   Store.dispatch(resetContourAction());
 }
 
+// Traces a stroke through the given points, as the trace tool's mouse handlers do: the
+// start point is added to the contour, too (see handleDrawStart).
+function traceAlong(points: Vector3[]) {
+  Store.dispatch(startEditingAction(points[0], OrthoViews.PLANE_XY));
+  for (const point of points) Store.dispatch(addToContourListAction(point));
+  Store.dispatch(finishEditingAction());
+  Store.dispatch(resetContourAction());
+}
+
+// Traces the outline of a square around `center`, back to its start.
+function traceSquareAround(center: Vector3, halfWidth: number) {
+  const [x, y, z] = center;
+  traceAlong([
+    [x - halfWidth, y - halfWidth, z],
+    [x + halfWidth, y - halfWidth, z],
+    [x + halfWidth, y + halfWidth, z],
+    [x - halfWidth, y + halfWidth, z],
+    [x - halfWidth, y - halfWidth, z],
+  ]);
+}
+
 // The names of the bucket actions in the save requests from `fromRequest` on.
 function sentBucketActionNames(context: WebknossosTestContext, fromRequest = 0): string[] {
   return context.receivedDataPerSaveRequest
@@ -86,12 +116,36 @@ function sentBucketActionNames(context: WebknossosTestContext, fromRequest = 0):
 // The updateBucketPartial actions in all save requests.
 function sentPartialBucketUpdates(
   context: WebknossosTestContext,
-): Array<{ position: Vector3; mag: Vector3 }> {
+): Array<{ position: Vector3; mag: Vector3; voxelRunsBase64: string }> {
   return context.receivedDataPerSaveRequest
     .flatMap((entries) => entries.flatMap((entry) => entry.actions))
     .filter((action) => action.name === "updateBucketPartial")
-    .map((action) => action.value as { position: Vector3; mag: Vector3 });
+    .map((action) => action.value as { position: Vector3; mag: Vector3; voxelRunsBase64: string });
 }
+
+// Decodes the partial updates sent for the mag-1 bucket that contains `voxel`: the
+// written voxels (bucket-local, as "x,y,z") and the values they were written with.
+function sentVoxelsInBucketOf(
+  context: WebknossosTestContext,
+  voxel: Vector3,
+): { voxels: Set<string>; values: Set<bigint> } {
+  const bucketOrigin = voxel.map((coordinate) => Math.floor(coordinate / 32) * 32);
+  const voxels = new Set<string>();
+  const values = new Set<bigint>();
+  for (const update of sentPartialBucketUpdates(context)) {
+    if (!isEqual(update.mag, [1, 1, 1]) || !isEqual(update.position, bucketOrigin)) continue;
+    const bytes = Uint8Array.from(atob(update.voxelRunsBase64), (char) => char.charCodeAt(0));
+    for (const run of decodeBucketDiff(bytes)) {
+      values.add(run.value);
+      for (let index = run.start; index < run.start + run.length; index++) {
+        voxels.add(voxelOffsetOf(index).join(","));
+      }
+    }
+  }
+  return { voxels, values };
+}
+
+const bucketLocalKey = (voxel: Vector3) => voxel.map((coordinate) => coordinate % 32).join(",");
 
 async function waitUntilNoOperationIsRunning() {
   await sleep(0);
@@ -100,8 +154,12 @@ async function waitUntilNoOperationIsRunning() {
   }
 }
 
-const getValue = (context: WebknossosTestContext) =>
-  context.api.data.getDataValue(VOLUME_TRACING_ID, position);
+const getValueAt = (context: WebknossosTestContext, voxel: Vector3) =>
+  context.api.data.getDataValue(VOLUME_TRACING_ID, voxel);
+const getValue = (context: WebknossosTestContext) => getValueAt(context, position);
+// Off-center within the square that the trace tests trace around `position`, and beyond it.
+const insideTraceSquare: Vector3 = [46, 34, 43];
+const outsideTraceSquare: Vector3 = [52, 40, 43];
 
 describe("Volume save mode", () => {
   const previousAllowFlag = WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation;
@@ -190,34 +248,115 @@ describe("Volume save mode", () => {
     expect(names).not.toContain("updateBucket");
   });
 
-  it<WebknossosTestContext>("only allows volume tools that save partial updates in live collaboration", async (context) => {
+  it<WebknossosTestContext>("allows the volume tools in live collaboration", async (context) => {
     await setup(context, "Concurrent");
     const disabledInfo = getDisabledInfoForTools(Store.getState());
     const isDisabledForLiveCollaboration = (tool: AnnotationTool) =>
       disabledInfo[tool.id].explanation.includes("simultaneous editing");
 
-    for (const tool of [
-      AnnotationTool.BRUSH,
-      AnnotationTool.ERASE_BRUSH,
-      AnnotationTool.FILL_CELL,
-    ]) {
+    for (const tool of VolumeTools) {
       expect(isDisabledForLiveCollaboration(tool), tool.id).toBe(false);
     }
-    for (const tool of [
-      AnnotationTool.TRACE,
-      AnnotationTool.ERASE_TRACE,
-      AnnotationTool.QUICK_SELECT,
-    ]) {
-      expect(isDisabledForLiveCollaboration(tool), tool.id).toBe(true);
-    }
-    // labelVoxels saves whole buckets, too.
-    expect(() => context.api.data.labelVoxels([position], 5n)).toThrow();
+    expect(isDisabledForLiveCollaboration(AnnotationTool.SKELETON)).toBe(true);
 
     WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation = false;
     // getDisabledInfoForTools is memoized on the state.
     Store.dispatch(updateUserSettingAction("brushSize", 11));
     const disabledInfoWithoutFlag = getDisabledInfoForTools(Store.getState());
     expect(disabledInfoWithoutFlag[AnnotationTool.BRUSH.id].isDisabled).toBe(true);
+  });
+
+  it<WebknossosTestContext>("saves traced areas as partial updates in live collaboration", async (context) => {
+    await setup(context, "Concurrent");
+    Store.dispatch(setToolAction(AnnotationTool.TRACE));
+    traceSquareAround(position, 8);
+    await context.api.tracing.save();
+
+    expect(await getValue(context)).toBe(5);
+    expect(await getValueAt(context, insideTraceSquare)).toBe(5);
+    expect(await getValueAt(context, outsideTraceSquare)).toBe(0);
+    const names = sentBucketActionNames(context);
+    expect(names).toContain("updateBucketPartial");
+    expect(names).not.toContain("updateBucket");
+    // The three voxels share a mag-1 bucket.
+    const { voxels, values } = sentVoxelsInBucketOf(context, position);
+    expect(voxels.has(bucketLocalKey(position))).toBe(true);
+    expect(voxels.has(bucketLocalKey(insideTraceSquare))).toBe(true);
+    expect(voxels.has(bucketLocalKey(outsideTraceSquare))).toBe(false);
+    expect([...values]).toEqual([5n]);
+  });
+
+  it<WebknossosTestContext>("fills the area of a trace that doesn't return to its start", async (context) => {
+    await setup(context, "OwnerOnly");
+    Store.dispatch(setToolAction(AnnotationTool.TRACE));
+    // The first move jumps far from the start, and the stroke ends elsewhere, so that
+    // only the closing line passes the start point.
+    const [x, y, z] = position;
+    traceAlong([
+      [x - 20, y, z],
+      [x, y - 15, z],
+      [x + 15, y, z],
+      [x, y + 15, z],
+    ]);
+
+    expect(await getValue(context)).toBe(5);
+    expect(await getValueAt(context, [x - 10, y, z])).toBe(5);
+    expect(await getValueAt(context, [x + 20, y, z])).toBe(0);
+  });
+
+  it<WebknossosTestContext>("saves areas erased with the trace tool as partial updates in live collaboration", async (context) => {
+    await setup(context, "Concurrent");
+    brushAt(position);
+    context.api.data.labelVoxels([insideTraceSquare, outsideTraceSquare], 5n);
+    await context.api.tracing.save();
+    expect(await getValue(context)).toBe(5);
+    const requestsBeforeErasing = context.receivedDataPerSaveRequest.length;
+
+    Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
+    Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
+    Store.dispatch(setToolAction(AnnotationTool.ERASE_TRACE));
+    traceSquareAround(position, 8);
+    await context.api.tracing.save();
+
+    expect(await getValue(context)).toBe(0);
+    expect(await getValueAt(context, insideTraceSquare)).toBe(0);
+    expect(await getValueAt(context, outsideTraceSquare)).toBe(5);
+    const names = sentBucketActionNames(context, requestsBeforeErasing);
+    expect(names).toContain("updateBucketPartial");
+    expect(names).not.toContain("updateBucket");
+  });
+
+  it<WebknossosTestContext>("saves labelVoxels as partial updates in live collaboration", async (context) => {
+    await setup(context, "Concurrent");
+    // The last voxel lies in the next bucket along x.
+    const voxels: Vector3[] = [position, [41, 40, 43], [72, 40, 43]];
+    context.api.data.labelVoxels(voxels, 7n);
+    await context.api.tracing.save();
+
+    for (const voxel of voxels) expect(await getValueAt(context, voxel)).toBe(7);
+    const names = sentBucketActionNames(context);
+    expect(names).toContain("updateBucketPartial");
+    expect(names).not.toContain("updateBucket");
+    // Exactly the labeled voxels were sent.
+    expect(sentVoxelsInBucketOf(context, position)).toEqual({
+      voxels: new Set([bucketLocalKey(position), bucketLocalKey([41, 40, 43])]),
+      values: new Set([7n]),
+    });
+    expect(sentVoxelsInBucketOf(context, [72, 40, 43])).toEqual({
+      voxels: new Set([bucketLocalKey([72, 40, 43])]),
+      values: new Set([7n]),
+    });
+  });
+
+  it<WebknossosTestContext>("saves labelVoxels as whole buckets outside of live collaboration", async (context) => {
+    await setup(context, "OwnerOnly");
+    context.api.data.labelVoxels([position], 7n);
+    await context.api.tracing.save();
+
+    expect(await getValue(context)).toBe(7);
+    const names = sentBucketActionNames(context);
+    expect(names).toContain("updateBucket");
+    expect(names).not.toContain("updateBucketPartial");
   });
 
   it<WebknossosTestContext>("saves pending whole buckets before live collaboration starts and discards the undo history", async (context) => {

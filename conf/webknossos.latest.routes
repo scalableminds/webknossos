@@ -275,6 +275,7 @@ GET           /organizations/:organizationId                                    
 PATCH         /organizations/:organizationId                                                    controllers.OrganizationController.update(organizationId: String)
 DELETE        /organizations/:organizationId                                                    controllers.OrganizationController.delete(organizationId: String)
 POST          /organizations/:organizationId/addUser                                            controllers.OrganizationController.addUser(organizationId: String)
+PUT           /organizations/:organizationId/partner                                            controllers.OrganizationController.updatePartner(organizationId: String)
 GET           /operatorData                                                                     controllers.OrganizationController.getOperatorData()
 POST          /pricing/upgradeRequest                                                           controllers.OrganizationController.sendUpgradeRequestEmail()
 GET           /pricing/status                                                                   controllers.OrganizationController.pricingStatus()

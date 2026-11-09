@@ -21,6 +21,7 @@ import {
   startEditingAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import {
@@ -37,6 +38,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);
 
 const mockActionChannel = { take: () => {}, close: () => {} };
+const mockSegmentationLayer = {
+  cube: { boundingBox: new BoundingBox({ min: [0, 0, 0], max: [100, 100, 100] }) },
+};
 
 const dummyActiveMapping: ActiveMappingInfo = {
   mappingName: "dummy-mapping-name",
@@ -186,6 +190,7 @@ describe("VolumeTracingSaga", () => {
     );
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
+    saga.next(mockSegmentationLayer);
     saga.next(mockActionChannel);
     saga.next(addToContourList([1, 2, 3]));
     saga.next(OrthoViews.PLANE_XY);
@@ -240,6 +245,7 @@ describe("VolumeTracingSaga", () => {
     );
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
+    saga.next(mockSegmentationLayer);
     saga.next(mockActionChannel);
     saga.next(addToContourList([1, 2, 3]));
     saga.next(OrthoViews.PLANE_XY);
@@ -305,6 +311,7 @@ describe("VolumeTracingSaga", () => {
     );
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
+    saga.next(mockSegmentationLayer);
     saga.next(mockActionChannel);
     saga.next(addToContourList([1, 2, 3]));
     saga.next(OrthoViews.PLANE_XY);

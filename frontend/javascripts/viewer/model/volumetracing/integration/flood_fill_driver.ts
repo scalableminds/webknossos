@@ -77,7 +77,6 @@ export async function runFloodFill(options: FloodFillDriverOptions): Promise<Flo
     overwriteMode: "overwrite-all",
     // Irrelevant under overwrite-all; flood fill has no overwrite toggle.
     overwritableValue: 0n,
-    editableBoundingBox: null,
     additionalCoordinates: options.additionalCoordinates,
   };
 

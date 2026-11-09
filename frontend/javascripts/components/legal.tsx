@@ -2,28 +2,21 @@ import { getDefaultOrganization } from "admin/api/organization";
 import { getOperatorData } from "admin/rest_api";
 import { Card, Col, Row, Typography } from "antd";
 import Markdown from "libs/markdown_adapter";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import type React from "react";
-import { useEffect, useState } from "react";
-import type { APIOrganization } from "types/api_types";
 
 const useLegalData = () => {
-  const [operatorData, setOperatorData] = useState("");
-  const [defaultOrganization, setDefaultOrganization] = useState<APIOrganization | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const operatorData = await getOperatorData();
-        const defaultOrg = await getDefaultOrganization();
-        setOperatorData(operatorData);
-        setDefaultOrganization(defaultOrg);
-      } catch (error) {
-        console.error("Failed to fetch legal data:", error);
-      }
-    };
-
-    fetchData();
-  }, []);
+  const { data: operatorData = "" } = useQueryWithErrorHandling({
+    queryKey: ["operatorData"],
+    queryFn: getOperatorData,
+    refetchOnWindowFocus: false,
+  });
+  const { data: defaultOrganization = null } = useQueryWithErrorHandling({
+    queryKey: ["defaultOrganization"],
+    queryFn: getDefaultOrganization,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
 
   return { operatorData, defaultOrganization };
 };

@@ -19,9 +19,10 @@ import {
   theme,
 } from "antd";
 import { formatNumber } from "libs/format_utils";
+import { useApi } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { getAntdTheme, ModalWidth } from "theme";
 import type { APIOrganization } from "types/api_types";
 import { useActiveOrganization, useCanOrderCredits } from "../organization_hooks";
@@ -357,13 +358,12 @@ export default function UpgradeRequestModal({
   });
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeUserCount, setActiveUserCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    getUsers().then((result) => {
-      if (result.ok) setActiveUserCount(getActiveUserCount(result.value));
-    });
-  }, []);
+  const { data: users } = useApi({
+    queryKey: ["users"],
+    queryFn: () => getUsers(),
+    refetchOnWindowFocus: false,
+  });
+  const activeUserCount = users != null ? getActiveUserCount(users) : null;
 
   const effectiveTier = getEffectiveTier(currentTier, selection);
   const isLocked = (item: ItemDef) => !isTierAtLeast(effectiveTier, item.minPlan);

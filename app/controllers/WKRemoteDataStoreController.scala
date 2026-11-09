@@ -31,6 +31,7 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
   ReportAlignmentProjectUploadParameters,
   ReportAttachmentUploadParameters,
   ReportDatasetUploadParameters,
+  ReportDatasetUploadResult,
   ReportMagUploadParameters
 }
 import com.typesafe.scalalogging.LazyLogging
@@ -366,7 +367,7 @@ class WKRemoteDataStoreController @Inject() (
           _ <- Fox.runIf(!request.body.needsConversion)(
             datasetService.writeMirrorForVirtual(updated)(using GlobalAccessContext)
           )
-          _ <- Fox.runIf(request.body.needsConversion) {
+          conversionJobOpt <- Fox.runIf(request.body.needsConversion) {
             for {
               voxelSize <- request.body.voxelSize.toFox ?~> Msg.Dataset.Upload.needsConversionMissingVoxelSize
               dataStoreClient <- datasetService.clientFor(dataset)(using GlobalAccessContext)
@@ -375,10 +376,10 @@ class WKRemoteDataStoreController @Inject() (
                 requireAllowsUpload = true,
                 requireLocal = true
               )
-              _ <- jobService.submitConvertToWkwJob(updated, user, voxelSize, organizationBaseDirectory)
-            } yield ()
+              job <- jobService.submitConvertToWkwJob(updated, user, voxelSize, organizationBaseDirectory)
+            } yield job
           }
-        } yield Ok
+        } yield Ok(Json.toJson(ReportDatasetUploadResult(conversionJobOpt.map(_._id))))
       }
     }
 

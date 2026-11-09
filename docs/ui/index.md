@@ -35,7 +35,7 @@ Additionally available while viewing a dataset or annotation:
 
 - `Switch to …` a tool, e.g., `Switch to Brush Tool`. In view-only mode or if you can't edit the annotation, only the read-only tools are listed.
 - `Switch to orthogonal mode`, `Switch to flight mode`, and `Reset layout`.
-- All entries of the toolbar `Menu`, e.g., `Download`, `Share`, `Duplicate`, or `Restore Older Version`.
+- All entries of the toolbar `Menu`, e.g., `Download`, `Share`, `Duplicate`, or `Version History`.
 - `Toggle …` commands for on/off user settings, e.g., `Toggle Center New Node`.
 
 Read More About [Skeleton Annotation](../skeleton_annotation/index.md)

@@ -82,6 +82,7 @@ export const CommandPalette = () => {
   const dispatch = useDispatch();
 
   const activeUser = useWkSelector((state) => state.activeUser);
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const viewerCommands = useSyncExternalStore(subscribeToViewerCommands, getViewerCommands);
 
   const navigate = useNavigate();
@@ -229,7 +230,7 @@ export const CommandPalette = () => {
             return { name: getLabelForPath(entry.key), path: entry.key };
           });
 
-    const analysisSubMenu = getAnalysisSubMenu(true, activeUser);
+    const analysisSubMenu = getAnalysisSubMenu(true, activeUser, activeOrganization);
     const analysisCommands =
       analysisSubMenu != null
         ? analysisSubMenu.children.map((entry) => {

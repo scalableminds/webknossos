@@ -526,6 +526,46 @@ program
     console.log("✨✨ Done");
   });
 
+// Fake partner for testing the co-branding in the dev setup, see webknossos.partners.
+const TEST_PARTNER_ID = "68f0c0ffee0000000000000a";
+
+program
+  .command("enable-partner")
+  .description(
+    "Assigns the sample organization to a test partner (co-branding) and inserts a partner-only AI model",
+  )
+  .action(() => {
+    console.log("Inserting a test partner and assigning the sample organization to it.");
+    console.log(
+      callPsql(
+        `INSERT INTO webknossos.partners(_id, name, logoUrl, compactLogoUrl, linkUrl) VALUES('${TEST_PARTNER_ID}', 'Test Partner', '/images/partners/test-partner-logo.svg', '/images/partners/test-partner-logo-compact.svg', 'https://example.com') ON CONFLICT (_id) DO UPDATE SET isDeleted = FALSE;`,
+      ),
+    );
+    console.log(
+      callPsql(
+        `UPDATE webknossos.organizations SET _partner = '${TEST_PARTNER_ID}' WHERE _id = 'sample_organization';`,
+      ),
+    );
+    console.log(
+      callPsql(
+        `INSERT INTO webknossos.aiModels(_id, _dataStore, name, comment, category, isPretrained, _partner, thumbnailUrl) VALUES('576500000000000000000005', 'localhost', 'Partner Neuron Segmentation', 'Placeholder text for the partner neuron model. Only organizations of the test partner can see and use this model. [Learn more](https://example.com)', 'em_neurons', TRUE, '${TEST_PARTNER_ID}', '/images/partners/test-partner-model-thumbnail.svg') ON CONFLICT (_id) DO NOTHING;`,
+      ),
+    );
+    console.log("✨✨ Done");
+  });
+
+program
+  .command("disable-partner")
+  .description("Removes the partner assignment of the sample organization")
+  .action(() => {
+    console.log(
+      callPsql(
+        `UPDATE webknossos.organizations SET _partner = NULL WHERE _id = 'sample_organization';`,
+      ),
+    );
+    console.log("✨✨ Done");
+  });
+
 program
   .command("enable-storage-scan")
   .description("Activates dataset storage scan in WEBKNOSSOS for the default datastore.")

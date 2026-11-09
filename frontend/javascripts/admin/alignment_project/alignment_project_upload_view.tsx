@@ -9,7 +9,7 @@ import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_componen
 import { DropzonePrompt, FileSelection } from "admin/dataset/upload/dataset_file_selection";
 import { getTotalFileSize, inferDatasetName } from "admin/dataset/upload/detect_dataset_format";
 import { SelectionBanner } from "admin/dataset/upload/inspection_banner";
-import { UploadProgressModal } from "admin/dataset/upload/upload_progress_modal";
+import { ResumableUploadProgressModal } from "admin/dataset/upload/resumable_upload_progress_modal";
 import {
   generateResumableUploadId,
   useResumableUpload,
@@ -312,7 +312,7 @@ export default function AlignmentProjectUploadView({ datastores }: { datastores:
           </Flex>
         </Form>
       </CardContainer>
-      <UploadProgressModal
+      <ResumableUploadProgressModal
         title="Alignment Project Upload"
         uploadingLabel="Uploading alignment project"
         status={upload.status}

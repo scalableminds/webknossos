@@ -13,6 +13,7 @@ import {
   getActiveSegmentationTracing,
   getActiveSegmentationTracingLayer,
   getActiveUnmappedSegmentId,
+  getVolumeTracingByLayerName,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { removeMeshAction } from "viewer/model/actions/annotation_actions";
 import {
@@ -29,7 +30,9 @@ import type {
 } from "viewer/model/actions/skeletontracing_actions";
 import type { EscapeAction } from "viewer/model/actions/ui_actions";
 import {
+  type BatchUpdateGroupsAndSegmentsAction,
   type CreateCellAction,
+  type RemoveSegmentAction,
   type SetActiveCellAction,
   setActiveCellAction,
   updateProofreadingMarkerPositionAction,
@@ -117,6 +120,49 @@ export default function* proofreadRootSaga(): Saga<void> {
   yield* takeEvery(["ESCAPE"], clearActiveSegmentIfTdViewportIsActive);
   yield* takeEvery("TOGGLE_SEGMENT_IN_PARTITION", showToastIfSegmentOfOtherAgglomerateWasSelected);
   yield* fork(clearProofreadingMarkerWhenActiveSegmentDiverges);
+  yield* takeEvery(
+    ["REMOVE_SEGMENT", "BATCH_UPDATE_GROUPS_AND_SEGMENTS"],
+    clearProofreadingMarkerWhenActiveSegmentIsRemoved,
+  );
+}
+
+function* clearProofreadingMarkerWhenActiveSegmentIsRemoved(
+  action: RemoveSegmentAction | BatchUpdateGroupsAndSegmentsAction,
+): Saga<void> {
+  // The mapping saga re-adds the segment at the proofreading marker to the segment list if it's
+  // missing (see adaptActiveSegmentToProofreadingMarker). The marker always refers to the active
+  // segment (see clearProofreadingMarkerWhenActiveSegmentDiverges), so it is cleared when the
+  // active segment is removed (e.g., via the segment list, by deleting a segment group or via
+  // the API).
+  // Removals by other users and the merging of segment items are applied by reducers directly
+  // and don't reach this saga, so the marker stays in those cases.
+  // After a proofreading operation, outdated agglomerate ids are removed from the segment list
+  // (see refreshAffectedSegmentItems). The marker has to stay then, so that the mapping saga can
+  // switch to the new agglomerate id. Therefore, removals during a proofreading operation are
+  // ignored. The UI is blocked during such operations, so these removals don't come from the user.
+  const isProofreadingOperationActive = yield* select((state) =>
+    state.operationContext.activeOperations.some((operation) => operation.id === "PROOFREADING"),
+  );
+  if (isProofreadingOperationActive) {
+    return;
+  }
+  const removeSegmentActions =
+    action.type === "REMOVE_SEGMENT"
+      ? [action]
+      : action.payload.filter(
+          (subAction): subAction is RemoveSegmentAction => subAction.type === "REMOVE_SEGMENT",
+        );
+  for (const { segmentId, layerName } of removeSegmentActions) {
+    const activeCellId = (yield* select((state) =>
+      getVolumeTracingByLayerName(state.annotation, layerName),
+    ))?.activeCellId;
+    const markerPosition = yield* select(
+      (state) => state.localSegmentationStateByLayer[layerName]?.proofreadingMarkerPosition,
+    );
+    if (markerPosition != null && activeCellId === segmentId) {
+      yield* put(updateProofreadingMarkerPositionAction(undefined, layerName));
+    }
+  }
 }
 
 function* clearProofreadingMarkerWhenActiveSegmentDiverges(): Saga<never> {

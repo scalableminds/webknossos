@@ -1,16 +1,23 @@
 // biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
 import { call, delay, put } from "redux-saga/effects";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
+import {
+  registerOperationAction,
+  unregisterOperationAction,
+} from "viewer/model/actions/operation_context_actions";
 import {
   createCellAction,
   removeSegmentAction,
   setActiveCellAction,
   updateProofreadingMarkerPositionAction,
+  updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
+import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   getPositionForSegmentId,
@@ -117,9 +124,8 @@ describe("Proofreading marker", () => {
     await task.toPromise();
   });
 
-  it("should be kept when the active segment item is removed by something other than the segment list", async (context: WebknossosTestContext) => {
-    // E.g., by another user (via update actions) or by the cleanup after a merge. Only the
-    // segment list clears the marker when the user removes the active segment there.
+  it("should be cleared when the active segment is removed", async (context: WebknossosTestContext) => {
+    // Otherwise, the mapping saga would re-add the segment at the marker to the segment list.
     mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     const { tracingId } = Store.getState().annotation.volumes[0];
 
@@ -127,8 +133,94 @@ describe("Proofreading marker", () => {
       yield call(initializeMappingAndTool, context, tracingId);
       yield call(clickSegmentWithProofreadingTool, tracingId, 1n);
 
+      // E.g., "Remove Segment From List" in the segment list.
       yield put(removeSegmentAction(1n, tracingId));
       yield call(waitForSagas);
+      expect(yield* getMarkerPosition(tracingId)).toBeUndefined();
+    });
+    await task.toPromise();
+  });
+
+  it("should be cleared when a segment group with the active segment is deleted", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield call(clickSegmentWithProofreadingTool, tracingId, 1n);
+
+      // Deleting the root group removes all segments (within a batch action).
+      api.tracing.deleteSegmentGroup(MISSING_GROUP_ID, false, tracingId);
+      yield call(waitForSagas);
+      expect(Store.getState().annotation.volumes[0].segments.has(1n)).toBe(false);
+      expect(yield* getMarkerPosition(tracingId)).toBeUndefined();
+    });
+    await task.toPromise();
+  });
+
+  it("should be kept when another segment is removed", async (context: WebknossosTestContext) => {
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield put(updateSegmentAction(4n, { anchorPosition: getPositionForSegmentId(4) }, tracingId));
+      yield call(clickSegmentWithProofreadingTool, tracingId, 1n);
+
+      yield put(removeSegmentAction(4n, tracingId));
+      yield call(waitForSagas);
+      expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(1));
+    });
+    await task.toPromise();
+  });
+
+  it("should be kept when the active segment is removed during a proofreading operation", async (context: WebknossosTestContext) => {
+    // After a proofreading operation, outdated agglomerate ids are removed from the segment
+    // list. The marker has to stay, so that the active segment can be adapted to the new id.
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield call(clickSegmentWithProofreadingTool, tracingId, 1n);
+
+      yield put(registerOperationAction("PROOFREADING"));
+      yield put(removeSegmentAction(1n, tracingId));
+      yield call(waitForSagas);
+      yield put(unregisterOperationAction("PROOFREADING"));
+      expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(1));
+    });
+    await task.toPromise();
+  });
+
+  it("should be kept when another user removes the active segment", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield put(setCollaborationModeAction("Concurrent"));
+      yield call(clickSegmentWithProofreadingTool, tracingId, 1n);
+      yield call(() => api.tracing.save());
+      expect(Store.getState().annotation.volumes[0].segments.has(1n)).toBe(true);
+
+      backendMock.planVersionInjection(Store.getState().annotation.version + 1, [
+        {
+          name: "deleteSegment",
+          value: {
+            actionTracingId: tracingId,
+            id: 1n,
+          },
+        },
+      ]);
+      // Saving pulls the newest version from the backend if there are local changes.
+      yield put(updateSegmentAction(4n, { anchorPosition: getPositionForSegmentId(4) }, tracingId));
+      yield call(() => api.tracing.save());
+      yield call(waitForSagas);
+
+      expect(Store.getState().annotation.volumes[0].segments.has(1n)).toBe(false);
       expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(1));
     });
     await task.toPromise();

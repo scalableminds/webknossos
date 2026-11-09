@@ -74,13 +74,16 @@ class TSAnnotationController @Inject() (
     Action.fox(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 minute) {
-          accessTokenService.validateAccessFromTokenContext(
+          accessTokenService.validateAccessFromTokenContextWithUserId(
             UserAccessRequest.writeAnnotation(annotationId),
             useCaching = false
-          ) {
+          ) { requestingUserIdOpt =>
             given stats: UpdateTimingStats = new UpdateTimingStats
             val requestStart = Instant.now
             for {
+              _ <- Fox.fromBool(
+                requestingUserIdOpt.forall(userId => request.body.forall(_.authorId.forall(_ == userId)))
+              ) ?~> Msg.Annotation.ApplyUpdate.authorIdMismatch ~> FORBIDDEN
               _ <- annotationTransactionService.handleUpdateGroups(annotationId, request.body)
               _ = logIfSlow(annotationId, requestStart, stats)
             } yield Ok
@@ -105,11 +108,10 @@ class TSAnnotationController @Inject() (
     log() {
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
         for {
-          newestMaterializableVersion <- annotationService.currentMaterializableVersion(annotationId)
           updateLog <- annotationService.updateActionLog(
             annotationId,
-            newestVersion.getOrElse(newestMaterializableVersion),
-            oldestVersion.getOrElse(0),
+            newestVersion,
+            oldestVersion,
             truncate.getOrElse(false)
           )
         } yield Ok(updateLog)
@@ -152,7 +154,7 @@ class TSAnnotationController @Inject() (
     Action.fox { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
               datasetBoundingBoxParsed <- Fox.runOptional(datasetBoundingBox)(b => BoundingBox.fromLiteral(b).toFox)
               annotationProto <- annotationService.duplicate(

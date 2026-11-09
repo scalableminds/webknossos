@@ -166,7 +166,7 @@ function* clearProofreadingMarkerWhenActiveSegmentIsRemoved(
 
 function* clearProofreadingMarkerWhenActiveSegmentDiverges(): Saga<never> {
   // The proofreading marker and the active segment should refer to the same segment.
-  // If the segment at the marker changes (e.g., due to a split), the mapping saga adapts the
+  // If the segment at the marker changes (e.g., due to a split by another user), the mapping saga adapts the
   // active segment to it (see adaptActiveSegmentToProofreadingMarker). If the user changes the
   // active segment in another way (e.g., via the segment list, the 3D viewport or by creating a
   // new segment id), the marker is cleared. Otherwise, the mapping saga would switch back to the

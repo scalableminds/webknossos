@@ -1038,35 +1038,47 @@ async fn reports_per_task_failures_as_items() {
     let db = TestDb::new().await;
     let w = world(&db).await;
     let ok_b = params(&w.skeleton_type, &w.dataset, "Project-B");
-    // The member manages team B but is a plain member of team A.
+    // The member manages team B but is a plain member of team A: the project
+    // check (ProjectService.assertCanAdministrateAll) fails the whole request
+    // before any tracing is created.
     let not_manager = params(&w.skeleton_type, &w.dataset, "Project-A");
+    let (status, body) =
+        post_json(&w.app, &w.member.token, json!([ok_b.clone(), not_manager])).await;
+    assert_eq!(
+        (status, body),
+        (
+            StatusCode::FORBIDDEN,
+            error("You are not authorized to view or edit this resource.")
+        )
+    );
+    assert!(w.mock.calls().is_empty(), "{:?}", w.mock.paths());
+    assert_eq!(totals(&db).await, (0, 0, 0));
     let script = object_id();
     let bad_script = with(ok_b.clone(), "scriptId", json!(script));
     let negative = with(ok_b.clone(), "pendingInstances", json!(-1));
     let store_failure = ok_b.clone();
-    *w.mock.skeleton_failure.lock().unwrap() = Some(4);
+    *w.mock.skeleton_failure.lock().unwrap() = Some(3);
     let (status, body) = post_json(
         &w.app,
         &w.member.token,
-        json!([ok_b, not_manager, bad_script, negative, store_failure]),
+        json!([ok_b, bad_script, negative, store_failure]),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let tasks = body["tasks"].as_array().unwrap();
-    assert_eq!(tasks.len(), 5);
+    assert_eq!(tasks.len(), 4);
     assert_eq!(tasks[0]["status"], 200);
     assert_eq!(tasks[0]["success"]["projectName"], "Project-B");
-    assert_eq!(tasks[1], json!({"status": 400, "error": "Empty"}));
     assert_eq!(
-        tasks[2],
+        tasks[1],
         json!({"status": 400, "error": format!("Script “{script}” could not be found or accessed.")})
     );
     assert_eq!(
-        tasks[3],
+        tasks[2],
         json!({"status": 400, "error": "Invalid resource values."})
     );
     assert_eq!(
-        tasks[4],
+        tasks[3],
         json!({"status": 400, "error": "Could not save skeleton tracing for new task."})
     );
     // The member reads team A and manages team B: team B is not covered.
@@ -1095,8 +1107,7 @@ async fn reports_per_task_failures_as_items() {
     );
     assert_eq!(totals(&db).await, (1, 1, 1));
 
-    // Scala quirk kept: an unknown project fails its item AND the warnings
-    // step, so the request fails although the other tasks were created.
+    // An unknown project fails the whole request up front; nothing is created.
     w.mock.clear();
     let (status, body) = post_json(
         &w.app,
@@ -1107,12 +1118,13 @@ async fn reports_per_task_failures_as_items() {
         ]),
     )
     .await;
-    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(status, StatusCode::NOT_FOUND);
     assert_eq!(
         body,
         error("Project with name “Unknown-project” could not be found or accessed.")
     );
-    assert_eq!(totals(&db).await, (2, 2, 2));
+    assert!(w.mock.calls().is_empty(), "{:?}", w.mock.paths());
+    assert_eq!(totals(&db).await, (1, 1, 1));
     db.cleanup().await;
 }
 

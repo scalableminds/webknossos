@@ -137,8 +137,9 @@ async fn raw_post(
         Ok(r) => r,
         Err(response) => return Ok(*response),
     };
+    // Only for webknossos itself (job/tracingstore callbacks), not for users.
     access
-        .validate_access(UserAccessRequest::read_dataset(&id), &tc)
+        .validate_access(UserAccessRequest::webknossos(), &tc)
         .await?;
     let (source, layer) = datasets
         .get_with_layer(&id, &layer)

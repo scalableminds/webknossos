@@ -278,6 +278,7 @@ fn fallback_layer_errors() {
         segmentation("small", "uint8", json!(256), mags(&[[1, 1, 1]])),
         segmentation("signed", "int16", json!(-1), mags(&[[1, 1, 1]])),
         segmentation("unset", "uint16", Value::Null, mags(&[[1, 1, 1]])),
+        segmentation("float", "float", Value::Null, mags(&[[1, 1, 1]])),
     ]));
     let plan = |name: &str| {
         plan_volume_tracing(
@@ -304,6 +305,11 @@ fn fallback_layer_errors() {
         }
     );
     assert!(plan("unset").is_ok());
+    // Non-segmentation element classes fail regardless of the id.
+    assert_eq!(
+        plan("float").unwrap_err().message().as_deref(),
+        Some("The data type “float” is not a valid segmentation data type.")
+    );
     assert_eq!(
         element_class_to_proto(ElementClass::Float)
             .unwrap_err()

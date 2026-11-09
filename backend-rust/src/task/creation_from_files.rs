@@ -11,9 +11,9 @@
 //! (`Nml.fileNotFound`, 400) → `formJSON` present (`formJsonMissing`, 400) →
 //! parameters parse (`Task.Create.failed`, 400) → task type readable
 //! (`TaskType.notFound ~> 404`) → batch limit over the number of uploaded
-//! files → project by name in the user's organization (`Project.notFound ~>
-//! 404`) → `Fox.assertTrue(isTeamManagerOrAdminOf(user, project._team))`
-//! (missing team → `Team.adminNotAllowed` 400, false → Fox.empty 404) →
+//! files → `ProjectService.assertCanAdministrateAll` (project by name in the
+//! user's organization, `Project.notFound ~> 404`; team manager or admin of
+//! its team, else `notAllowed ~> 403`) →
 //! extraction (`extractFromFiles`, `useZipName=false`, `isTaskUpload=true`)
 //! → `toBoxes` → addVolumeFallbackBoundingBoxes → buildFullParamsFromFiles →
 //! new ids → fillInMissingTracings → combineParamsWithTracings →
@@ -52,8 +52,8 @@ use crate::{
     task::creation::{
         CreationServices, Experience, RequestedTask, RequestedTaskResult, TaskFailure,
         TaskParameters, TaskTypeFacts, TracingType, VolumeBase, add_new_ids, assert_batch_limit,
-        create_tasks, find_project, find_readable_dataset, find_task_type, skeleton_tracing_base,
-        volume_tracing_base,
+        assert_can_administrate_all, create_tasks, find_readable_dataset, find_task_type,
+        skeleton_tracing_base, volume_tracing_base,
     },
     util::id::ObjectId,
 };
@@ -116,12 +116,7 @@ async fn create_from_files(
             ApiError::not_found(crate::msg::task_type::not_found(&params.task_type_id))
         })?;
     assert_batch_limit(input_files.len(), &task_type)?;
-    let project = find_project(pool, &user, &params.project_name)
-        .await?
-        .ok_or_else(|| {
-            ApiError::not_found(crate::msg::project::not_found_by_name(&params.project_name))
-        })?;
-    assert_team_manager_or_admin_of(pool, &user, &project.team).await?;
+    assert_can_administrate_all(pool, &user, &[params.project_name.as_str()]).await?;
 
     let extracted = extract_from_files(
         input_files,
@@ -155,27 +150,6 @@ async fn create_from_files(
     let requested = fill_in_missing_tracings(pool, &user, boxes, full_params, &task_type).await?;
     let result = create_tasks(pool, &services, requested, &task_type, &user).await?;
     Ok(axum::Json(result))
-}
-
-/// `Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, team))`: the team
-/// is read globally (missing → `Team.adminNotAllowed`); the user manages it or
-/// administers its organization, else Fox.empty (404).
-async fn assert_team_manager_or_admin_of(
-    pool: &PgPool,
-    user: &AuthUser,
-    team_id: &ObjectId,
-) -> ApiResult<()> {
-    let team = crate::task::creation::task_creation_dao::find_team_organization_and_manager(
-        pool, user, team_id,
-    )
-    .await?;
-    let (organization, manages) =
-        team.ok_or_else(|| ApiError::bad_request(crate::msg::team::ADMIN_NOT_ALLOWED))?;
-    if manages || (user.is_admin && organization == user.organization_id) {
-        Ok(())
-    } else {
-        Err(ProviderError::Empty.into())
-    }
 }
 
 /// TaskCreationService.addVolumeFallbackBoundingBoxes: every parsed volume

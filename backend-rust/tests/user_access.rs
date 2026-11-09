@@ -185,7 +185,7 @@ async fn callbacks_validate_service_keys_before_rpc_bypass_and_dataset_permissio
         )
         .await
         .1,
-        json!({"granted":true})
+        json!({"granted":true,"userId":f.user_id})
     );
     assert_eq!(
         request(
@@ -199,7 +199,7 @@ async fn callbacks_validate_service_keys_before_rpc_bypass_and_dataset_permissio
         )
         .await
         .1,
-        json!({"granted":false})
+        json!({"granted":false,"userId":member.user_id})
     );
     let disabled = webknossos_backend::remote::user_access::router().with_state(
         AppState::builder(db.pool.clone())
@@ -319,7 +319,7 @@ async fn callbacks_preserve_annotation_mutex_private_link_and_job_export_contrac
         )
         .await
         .1,
-        json!({"granted":true})
+        json!({"granted":true,"userId":member.user_id})
     );
     sqlx::query("UPDATE webknossos.annotations SET isLockedByOwner=true WHERE _id=$1")
         .bind(&annotation)
@@ -383,29 +383,54 @@ async fn callbacks_preserve_annotation_mutex_private_link_and_job_export_contrac
             "{token}"
         );
     }
+    // Sandbox annotations (dummy ids) are never saved, so they are read-only.
     for (resource, id) in [
         ("annotation", "000000000000000000000000"),
         ("tracing", "dummyTracingId"),
     ] {
-        assert_eq!(
-            request(
-                &application,
-                "tracingstores/tracing",
-                "tracing-secret",
-                None,
-                resource,
-                Some(id),
-                "write"
-            )
-            .await
-            .1,
-            json!({"granted":true})
-        );
+        for (mode, expected) in [
+            ("read", json!({"granted":true})),
+            (
+                "write",
+                json!({"granted":false,"msg":"No write access to sandbox annotation"}),
+            ),
+        ] {
+            assert_eq!(
+                request(
+                    &application,
+                    "tracingstores/tracing",
+                    "tracing-secret",
+                    None,
+                    resource,
+                    Some(id),
+                    mode
+                )
+                .await
+                .1,
+                expected,
+                "{resource} {mode}"
+            );
+        }
     }
+    // Answers name the requesting user, so the tracingstore can check update authors.
+    assert_eq!(
+        request(
+            &application,
+            "tracingstores/tracing",
+            "tracing-secret",
+            Some(&member.token),
+            "tracing",
+            Some("dummyTracingId"),
+            "read"
+        )
+        .await
+        .1,
+        json!({"granted":true,"userId":member.user_id})
+    );
     let job = object_id();
     sqlx::query("INSERT INTO webknossos.jobs(_id,_owner,_dataStore,command,commandArgs) VALUES($1,$2,'rpc','export_tiff','{}')")
         .bind(&job).bind(&member.user_id).execute(&db.pool).await.unwrap();
-    for token in [&member.token, &f.token] {
+    for (token, user_id) in [(&member.token, &member.user_id), (&f.token, &f.user_id)] {
         assert_eq!(
             request(
                 &application,
@@ -418,7 +443,7 @@ async fn callbacks_preserve_annotation_mutex_private_link_and_job_export_contrac
             )
             .await
             .1,
-            json!({"granted":true})
+            json!({"granted":true,"userId":user_id})
         );
     }
     assert_eq!(

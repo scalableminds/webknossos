@@ -30,7 +30,6 @@ use webknossos_backend::{
 };
 use zip::write::SimpleFileOptions;
 
-const NOT_FOUND: &str = "Could not find or access the requested resource.";
 const BOUNDARY: &str = "wkTaskBoundary7MA4YWxk";
 
 fn error(message: &str) -> Value {
@@ -851,12 +850,12 @@ async fn invalid_requests_and_permission_failures_create_nothing() {
             StatusCode::NOT_FOUND,
             "Project with name “Nope” could not be found or accessed.".into(),
         ),
-        // Team member without manager rights: Fox.assertTrue → empty.
+        // Team member without manager rights: ProjectService.assertCanAdministrateAll.
         (
             &w.member,
             vec![form_part(&valid), file()],
-            StatusCode::NOT_FOUND,
-            NOT_FOUND.into(),
+            StatusCode::FORBIDDEN,
+            "You are not authorized to view or edit this resource.".into(),
         ),
         // Volume batch limit counts uploaded files.
         (

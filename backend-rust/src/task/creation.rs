@@ -6,7 +6,9 @@
 //! type readable (`TaskType.notFound`, 400) → one dataset
 //! (`notOnSameDataset`) → dataset readable (`Dataset.notFound`, 400) →
 //! usable data source → dataset of the requester's organization
-//! (`datasetOfOtherOrga`) → batch limit → new ids → base annotations
+//! (`datasetOfOtherOrga`) → batch limit → every project administrable
+//! ([`assert_can_administrate_all`]: `Project.notFound` 404, `notAllowed`
+//! 403) → new ids → base annotations
 //! duplicated/created in the tracing store (serially) → fresh skeleton bases
 //! (pure) → fresh volume bases (serially) → [`create_tasks`].
 //!
@@ -23,6 +25,7 @@
 //! ```ignore
 //! let task_type = find_task_type(&pool, &user, &task_type_id).await?   // None → TaskType.notFound ~> 404
 //! assert_batch_limit(files.len(), &task_type)?;
+//! assert_can_administrate_all(&pool, &user, &[project_name]).await?;
 //! let json = create_tasks(&pool, &services, requested, &task_type, &user).await?;
 //! ```
 //!
@@ -829,6 +832,35 @@ pub(crate) async fn find_project(
     Ok(row.map(|(id, team)| ProjectFacts { id, team }))
 }
 
+/// ProjectService.assertCanAdministrateAll: every distinct project exists in
+/// the requester's organization (`Project.notFound ~> 404`) and the requester
+/// manages its team or administers its organization (`notAllowed ~> 403`,
+/// also when the team is missing). Runs before any tracing is created.
+pub(crate) async fn assert_can_administrate_all(
+    pool: &PgPool,
+    user: &AuthUser,
+    project_names: &[&str],
+) -> ApiResult<()> {
+    let mut seen = std::collections::HashSet::new();
+    for &name in project_names {
+        if !seen.insert(name) {
+            continue;
+        }
+        let project = find_project(pool, user, name)
+            .await?
+            .ok_or_else(|| ApiError::not_found(crate::msg::project::not_found_by_name(name)))?;
+        let team = task_creation_dao::find_team_organization_and_manager(pool, user, &project.team)
+            .await?;
+        let allowed = team.is_some_and(|(organization, manages)| {
+            manages || (user.is_admin && organization == user.organization_id)
+        });
+        if !allowed {
+            return Err(ApiError::forbidden(crate::msg::NOT_ALLOWED));
+        }
+    }
+    Ok(())
+}
+
 /// One task of createTasks: createTaskWithoutAnnotationBase +
 /// createAndSaveAnnotationBase + publicWrites. `Ok(Err(..))` is a per-task
 /// failure item.
@@ -876,15 +908,6 @@ async fn create_one(
                     script,
                 )));
             }
-        }
-        // Fox.assertTrue(isTeamManagerOrAdminOf(user, project._team)):
-        // missing team → adminNotAllowed; false → Fox.empty.
-        let team = task_creation_dao::find_team_organization_and_manager(pool, user, &project.team)
-            .await?;
-        let (team_organization, is_manager) =
-            team.ok_or_else(|| ProviderError::failure(crate::msg::team::ADMIN_NOT_ALLOWED))?;
-        if !(is_manager || (user.is_admin && team_organization == user.organization_id)) {
-            return Err(ProviderError::Empty);
         }
 
         // AnnotationLayer.layersFromIds + the TracingBase AnnotationProto.
@@ -1169,6 +1192,8 @@ async fn create(
         return Err(ApiError::bad_request(DATASET_OF_OTHER_ORGA));
     }
     assert_batch_limit(body.len(), &task_type)?;
+    let project_names: Vec<&str> = body.iter().map(|p| p.project_name.as_str()).collect();
+    assert_can_administrate_all(pool, &user, &project_names).await?;
 
     let mut all_params = body;
     for params in &mut all_params {

@@ -84,22 +84,43 @@ struct AccessRequest {
     mode: Mode,
 }
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct Answer {
     granted: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     msg: Option<String>,
+    /// The requesting user, so the tracingstore can check update authors. `None` for
+    /// tokens that do not belong to a user.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    user_id: Option<ObjectId>,
 }
 impl Answer {
     fn granted() -> Self {
         Self {
             granted: true,
             msg: None,
+            user_id: None,
         }
     }
     fn denied(message: impl Into<String>) -> Self {
         Self {
             granted: false,
             msg: Some(message.into()),
+            user_id: None,
+        }
+    }
+    /// Dummy ids belong to sandbox annotations, which are never saved: read-only.
+    fn sandbox(mode: Mode) -> Self {
+        if mode == Mode::Read {
+            Self::granted()
+        } else {
+            Self::denied(format!("No {} access to sandbox annotation", mode.as_str()))
+        }
+    }
+    fn with_user(self, user: Option<&AuthUser>) -> Self {
+        Self {
+            user_id: user.map(|user| user.id.clone()),
+            ..self
         }
     }
     fn condition(allowed: bool, message: &str) -> Self {
@@ -170,15 +191,13 @@ async fn validate(
         None => None,
     };
     let id = body.resource_id.as_deref();
-    match body.resource_type {
+    let answer = match body.resource_type {
         Resource::Dataset => dataset(state, features, user.as_ref(), id, body.mode, token).await,
         Resource::Annotation => {
             annotation(state, user.as_ref(), &required_id(id)?, body.mode, token).await
         }
+        Resource::Tracing if id == Some("dummyTracingId") => Ok(Answer::sandbox(body.mode)),
         Resource::Tracing => {
-            if id == Some("dummyTracingId") {
-                return Ok(Answer::granted());
-            }
             let id =
                 id.ok_or_else(|| ApiError::bad_request(crate::msg::request::TRACING_ID_REQUIRED))?;
             let annotation_id = remote_dao::find_annotation_id_for_tracing(&state.pool, id)
@@ -189,7 +208,8 @@ async fn validate(
         }
         Resource::JobExport => job_export(state, user.as_ref(), id, body.mode).await,
         Resource::Webknossos => Ok(Answer::denied("Invalid access token.")),
-    }
+    }?;
+    Ok(answer.with_user(user.as_ref()))
 }
 async fn dataset(
     state: &AppState,
@@ -235,6 +255,7 @@ async fn dataset(
             Ok(Answer {
                 granted: allowed,
                 msg: None,
+                user_id: None,
             })
         }
         Mode::List => Ok(Answer::denied("invalid access token")),
@@ -248,7 +269,7 @@ async fn annotation(
     token: Option<&str>,
 ) -> ApiResult<Answer> {
     if *id == ObjectId::dummy() {
-        return Ok(Answer::granted());
+        return Ok(Answer::sandbox(mode));
     }
     // Play falls back to the (empty) annotation cache, whose empty Fox answers the generic 404.
     let metadata = crate::annotation::access::find_optional(&state.pool, user, id, true)

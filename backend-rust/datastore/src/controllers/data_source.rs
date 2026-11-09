@@ -120,7 +120,7 @@ async fn create_org_directory(
     let q = QueryFields::new(raw);
     let org = q.required("organizationId")?.to_owned();
     access
-        .validate_access(UserAccessRequest::administrate_datasets_of(&org), &tc)
+        .validate_access(UserAccessRequest::webknossos(), &tc)
         .await?;
     blocking(move || base_dirs.get_one_local_for_org(&org, false, true, true)).await?;
     Ok(StatusCode::OK)

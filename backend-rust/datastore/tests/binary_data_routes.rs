@@ -80,9 +80,15 @@ async fn app(source: Value) -> (MockWk, AppState, Router, Arc<Mutex<Value>>) {
     let wk = MockWk::start(move |call| {
         assert_eq!(call.query_value("key").as_deref(), Some(KEY));
         if call.path.ends_with("/validateUserAccess") {
-            assert_eq!(
-                call.json(),
-                json!({"resourceId":ID,"resourceType":"dataset","mode":"read"})
+            // POST readData is reserved for webknossos itself; the rest reads the dataset.
+            assert!(
+                [
+                    json!({"resourceId":ID,"resourceType":"dataset","mode":"read"}),
+                    json!({"resourceType":"webknossos","mode":"administrate"}),
+                ]
+                .contains(&call.json()),
+                "{}",
+                call.json()
             );
             let granted = call.query_value("token").as_deref() == Some("good");
             Reply::json(
@@ -169,6 +175,10 @@ async fn four_entrypoints_and_versions_replay_actual_binary_bytes() {
     assert_eq!(status, StatusCode::OK);
     success_headers(&headers);
     assert_eq!(actual, expected);
+    assert_eq!(
+        wk.calls().last().unwrap().json(),
+        json!({"resourceType":"webknossos","mode":"administrate"})
+    );
     for prefix in ["/data", "/data/v10", "/data/v16"] {
         let path = format!(
             "{prefix}/datasets/{ID}/layers/color/data?x=2&y=2&z=2&width=2&height=2&depth=2&mag=1-1-1"
@@ -182,9 +192,10 @@ async fn four_entrypoints_and_versions_replay_actual_binary_bytes() {
     assert_eq!(status, StatusCode::OK);
     success_headers(&headers);
     assert_eq!(actual, expected);
+    // Dataset read access (cached), webknossos access for POST readData, datasource.
     assert_eq!(
         wk.calls().len(),
-        2,
+        3,
         "access and datasource are independently cached"
     );
 }

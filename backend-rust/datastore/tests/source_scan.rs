@@ -560,9 +560,11 @@ async fn create_and_lookup_organization_directory_obey_required_boolean_binders(
         StatusCode::OK
     );
     assert!(root.join("org").is_dir());
+    // Both routes are reserved for webknossos itself: one cached access check.
+    assert_eq!(wk.calls().len(), 1);
     assert_eq!(
-        wk.calls()[1].json(),
-        json!({"resourceId":"org","resourceType":"dataset","mode":"administrate"})
+        wk.calls()[0].json(),
+        json!({"resourceType":"webknossos","mode":"administrate"})
     );
     assert_eq!(
         http(
@@ -578,7 +580,7 @@ async fn create_and_lookup_organization_directory_obey_required_boolean_binders(
     );
     assert_eq!(
         wk.calls().len(),
-        2,
+        1,
         "missing binders fail before access RPC"
     );
     let escape = format!("escape-{}", root.file_name().unwrap().to_str().unwrap());

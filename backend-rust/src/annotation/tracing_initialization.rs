@@ -73,7 +73,9 @@ pub(crate) enum TracingInitError {
     /// getFallbackLayer found no segmentation layer with this name. Scala's
     /// Fox is Empty (no own message); callers attach their `?~>` context.
     FallbackLayerNotFound(String),
-    /// Msg.Annotation.Volume.largestSegmentIdExceedsRange (`-1` when unset).
+    /// Msg.Annotation.Volume.invalidSegmentationElementClass.
+    InvalidSegmentationElementClass(String),
+    /// Msg.Annotation.Volume.largestSegmentIdExceedsRange.
     LargestSegmentIdExceedsRange {
         largest_segment_id: i64,
         element_class: String,
@@ -91,6 +93,9 @@ impl TracingInitError {
     pub(crate) fn message(&self) -> Option<String> {
         match self {
             Self::FallbackLayerNotFound(_) => None,
+            Self::InvalidSegmentationElementClass(element_class) => Some(format!(
+                "The data type “{element_class}” is not a valid segmentation data type."
+            )),
             Self::LargestSegmentIdExceedsRange {
                 largest_segment_id,
                 element_class,
@@ -531,7 +536,8 @@ fn auto_fallback_layer_name(data_source: &UsableDataSource) -> Option<&str> {
         .map(|l| l.name.as_str())
 }
 
-/// getFallbackLayer: first segmentation layer with that name, validated range.
+/// getFallbackLayer: first segmentation layer with that name, validated by
+/// ElementClass.assertLargestSegmentIdIsInRange.
 fn fallback_layer<'a>(
     data_source: &'a UsableDataSource,
     name: &str,
@@ -540,13 +546,18 @@ fn fallback_layer<'a>(
         .segmentation_layers()
         .find(|l| l.name == name)
         .ok_or_else(|| TracingInitError::FallbackLayerNotFound(name.to_owned()))?;
-    if !layer
-        .element_class
-        .largest_segment_id_is_in_range(layer.largest_segment_id())
+    let element_class = layer.element_class;
+    if !element_class.is_segmentation_element_class() {
+        return Err(TracingInitError::InvalidSegmentationElementClass(
+            element_class.as_str().to_owned(),
+        ));
+    }
+    if let Some(largest_segment_id) = layer_largest_segment_id(layer)
+        && !element_class.largest_segment_id_is_in_range(layer.largest_segment_id())
     {
         return Err(TracingInitError::LargestSegmentIdExceedsRange {
-            largest_segment_id: layer_largest_segment_id(layer).unwrap_or(-1),
-            element_class: layer.element_class.as_str().to_owned(),
+            largest_segment_id,
+            element_class: element_class.as_str().to_owned(),
         });
     }
     Ok(layer)

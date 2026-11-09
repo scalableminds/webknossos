@@ -684,3 +684,9 @@ body {
     margin-top: 0 !important;
   }
 }
+
+/** The admin page content card clips its children (overflow: hidden) and has no padding.
+    Indent table paginations so that they don't touch the card's right edge. */
+.admin-page-content .ant-table-wrapper .ant-table-pagination.ant-pagination {
+  padding-inline: var(--ant-padding);
+}

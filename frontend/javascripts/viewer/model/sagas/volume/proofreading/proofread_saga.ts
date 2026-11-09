@@ -1,7 +1,7 @@
 import Toast from "libs/toast";
 import { SoftError } from "libs/utils";
 import messages from "messages";
-import { call, put, takeEvery } from "typed-redux-saga";
+import { actionChannel, call, fork, put, take, takeEvery } from "typed-redux-saga";
 import { OrthoViews, TreeTypeEnum } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
@@ -12,6 +12,7 @@ import {
   getActiveSegmentationTracing,
   getActiveSegmentationTracingLayer,
   getActiveUnmappedSegmentId,
+  getVolumeTracingByLayerName,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { removeMeshAction } from "viewer/model/actions/annotation_actions";
 import {
@@ -28,6 +29,10 @@ import type {
 } from "viewer/model/actions/skeletontracing_actions";
 import type { EscapeAction } from "viewer/model/actions/ui_actions";
 import {
+  type BatchUpdateGroupsAndSegmentsAction,
+  type CreateCellAction,
+  type RemoveSegmentAction,
+  type SetActiveCellAction,
   setActiveCellAction,
   updateProofreadingMarkerPositionAction,
 } from "viewer/model/actions/volumetracing_actions";
@@ -113,6 +118,93 @@ export default function* proofreadRootSaga(): Saga<void> {
   yield* takeEvery(["UPDATE_USER_SETTING", "ESCAPE"], clearMinCutPartitionsOnMultiCutDeselect);
   yield* takeEvery(["ESCAPE"], clearActiveSegmentIfTdViewportIsActive);
   yield* takeEvery("TOGGLE_SEGMENT_IN_PARTITION", showToastIfSegmentOfOtherAgglomerateWasSelected);
+  yield* fork(clearProofreadingMarkerWhenActiveSegmentDiverges);
+  yield* takeEvery(
+    ["REMOVE_SEGMENT", "BATCH_UPDATE_GROUPS_AND_SEGMENTS"],
+    clearProofreadingMarkerWhenActiveSegmentIsRemoved,
+  );
+}
+
+function* clearProofreadingMarkerWhenActiveSegmentIsRemoved(
+  action: RemoveSegmentAction | BatchUpdateGroupsAndSegmentsAction,
+): Saga<void> {
+  // The mapping saga re-adds the segment at the proofreading marker to the segment list if it's
+  // missing (see adaptActiveSegmentToProofreadingMarker). The marker always refers to the active
+  // segment (see clearProofreadingMarkerWhenActiveSegmentDiverges), so it is cleared when the
+  // active segment is removed (e.g., via the segment list, by deleting a segment group or via
+  // the API).
+  // Removals by other users and the merging of segment items are applied by reducers directly
+  // and don't reach this saga, so the marker stays in those cases.
+  // After a proofreading operation, outdated agglomerate ids are removed from the segment list
+  // (see refreshAffectedSegmentItems). The marker has to stay then, so that the mapping saga can
+  // switch to the new agglomerate id. Therefore, removals during a proofreading operation are
+  // ignored. The UI is blocked during such operations, so these removals don't come from the user.
+  const isProofreadingOperationActive = yield* select((state) =>
+    state.operationContext.activeOperations.some((operation) => operation.id === "PROOFREADING"),
+  );
+  if (isProofreadingOperationActive) {
+    return;
+  }
+  const removeSegmentActions =
+    action.type === "REMOVE_SEGMENT"
+      ? [action]
+      : action.payload.filter(
+          (subAction): subAction is RemoveSegmentAction => subAction.type === "REMOVE_SEGMENT",
+        );
+  for (const { segmentId, layerName } of removeSegmentActions) {
+    const activeCellId = (yield* select((state) =>
+      getVolumeTracingByLayerName(state.annotation, layerName),
+    ))?.activeCellId;
+    const markerPosition = yield* select(
+      (state) => state.localSegmentationStateByLayer[layerName]?.proofreadingMarkerPosition,
+    );
+    if (markerPosition != null && activeCellId === segmentId) {
+      yield* put(updateProofreadingMarkerPositionAction(undefined, layerName));
+    }
+  }
+}
+
+function* clearProofreadingMarkerWhenActiveSegmentDiverges(): Saga<never> {
+  // The proofreading marker and the active segment should refer to the same segment.
+  // If the segment at the marker changes (e.g., due to a split by another user), the mapping saga adapts the
+  // active segment to it (see adaptActiveSegmentToProofreadingMarker). If the user changes the
+  // active segment in another way (e.g., via the segment list, the 3D viewport or by creating a
+  // new segment id), the marker is cleared. Otherwise, the mapping saga would switch back to the
+  // segment at the marker on the next mapping update (and re-add it to the segment list if it
+  // was removed from there).
+  // Only dispatched actions are handled here. Update actions that are applied while rebasing
+  // don't go through this saga.
+  const channel = yield* actionChannel<SetActiveCellAction | CreateCellAction>([
+    "SET_ACTIVE_CELL",
+    "CREATE_CELL",
+  ]);
+  // The marker is stored per segmentation layer, so the previous active id is tracked per layer.
+  const previousActiveCellIds = new Map(
+    (yield* select((state) => state.annotation.volumes)).map((volume) => [
+      volume.tracingId,
+      volume.activeCellId,
+    ]),
+  );
+  while (true) {
+    const action = yield* take(channel);
+    const volumeTracing = yield* select(getActiveSegmentationTracing);
+    if (volumeTracing == null) {
+      continue;
+    }
+    const { activeCellId, tracingId } = volumeTracing;
+    const markerPosition = yield* select(
+      (state) => state.localSegmentationStateByLayer[tracingId]?.proofreadingMarkerPosition,
+    );
+    const previousActiveCellId = previousActiveCellIds.get(tracingId) ?? activeCellId;
+    const isAdaptedToMarker =
+      action.type === "SET_ACTIVE_CELL" && action.isAdaptedToProofreadingMarker;
+    if (markerPosition != null && activeCellId !== previousActiveCellId && !isAdaptedToMarker) {
+      // A proofreading click also changes the active segment first. In that case, the old
+      // marker is cleared here and the new one is set afterwards by proofreadAtPosition.
+      yield* put(updateProofreadingMarkerPositionAction(undefined, tracingId));
+    }
+    previousActiveCellIds.set(tracingId, activeCellId);
+  }
 }
 
 function* clearMinCutPartitionsOnMultiCutDeselect(

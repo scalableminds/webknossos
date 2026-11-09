@@ -1,13 +1,12 @@
 package models.user
 
-import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{Invites, InvitesRow, GetResultInvitesRow}
 import com.typesafe.scalalogging.LazyLogging
-import mail.{DefaultMails, Send}
+import mail.AccountEmailService
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
@@ -33,15 +32,12 @@ case class Invite(
 
 class InviteService @Inject() (
     conf: WkConf,
-    actorSystem: ActorSystem,
-    defaultMails: DefaultMails,
+    accountEmailService: AccountEmailService,
     organizationDAO: OrganizationDAO,
     inviteDAO: InviteDAO
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
   private val tokenValueGenerator = new RandomIDGenerator
-  private lazy val Mailer =
-    actorSystem.actorSelection("/user/mailActor")
 
   def inviteOneRecipient(
       recipient: String,
@@ -83,10 +79,7 @@ class InviteService @Inject() (
     for {
       organization <- organizationDAO.findOne(invite._organization)
       _ = logger.info("sending invite mail")
-      _ = Mailer ! Send(
-        defaultMails
-          .inviteMail(recipient, invite.tokenValue, invite.autoActivate, organization.name, senderMultiUser.fullName)
-      )
+      _ = accountEmailService.sendInviteEmail(recipient, invite, organization, senderMultiUser)
     } yield ()
 
   def removeExpiredInvites(): Fox[Unit] =

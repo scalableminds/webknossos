@@ -7,7 +7,7 @@ import jakarta.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMu
 
 import java.util.{Date, Properties}
 
-case class Send(mail: Mail)
+private[mail] case class Send(mail: Mail)
 
 case class MailerConfig(
     logToStdout: Boolean,

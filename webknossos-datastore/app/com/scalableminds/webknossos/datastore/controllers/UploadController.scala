@@ -201,12 +201,12 @@ class UploadController @Inject() (
             .noSuchUpload(uploadId, uploadDomain)
           response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
             for {
-              _ <- (uploadDomainValidated match {
+              conversionJobIdOpt <- (uploadDomainValidated match {
                 case UploadDomain.dataset    => uploadService.finishDatasetUpload(uploadId, datasetId)
-                case UploadDomain.mag        => uploadService.finishMagUpload(uploadId, datasetId)
-                case UploadDomain.attachment => uploadService.finishAttachmentUpload(uploadId, datasetId)
+                case UploadDomain.mag        => uploadService.finishMagUpload(uploadId, datasetId).map(_ => None)
+                case UploadDomain.attachment => uploadService.finishAttachmentUpload(uploadId, datasetId).map(_ => None)
               }) ?~> Msg.Dataset.Upload.finishFailed(datasetId, uploadDomain)
-            } yield Ok(Json.obj("datasetId" -> datasetId))
+            } yield Ok(Json.obj("datasetId" -> datasetId, "conversionJobId" -> conversionJobIdOpt))
           }
         } yield response
       }

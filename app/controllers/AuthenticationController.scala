@@ -516,7 +516,7 @@ class AuthenticationController @Inject() (
         } else {
           Fox.successful(BadRequest("Invalid signature"))
         }
-      case None => Fox.successful(Redirect("/auth/login?redirectPage=http://discuss.webknossos.org")) // not logged in
+      case None => Fox.successful(Redirect("/auth/login?redirectPage=https://discuss.webknossos.org")) // not logged in
     }
   }
 
@@ -555,18 +555,18 @@ class AuthenticationController @Inject() (
         sessionId = cookie.value
         challenge <- temporaryAssertionStore
           .pop(sessionId)
-          .toFox ?~> "Timeout during authentication. Please try again." ~> UNAUTHORIZED
+          .toFox ?~> "Timeout during authentication. Please try again." ~> BAD_REQUEST
         authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ??~>
-          Msg.Passkeys.unauthorized ~> UNAUTHORIZED
+          Msg.Passkeys.unauthorized ~> BAD_REQUEST
         credentialId = authData.getCredentialId
         multiUserId <- ObjectId.fromString(new String(authData.getUserHandle)) ??~>
-          Msg.Passkeys.unauthorized ~> UNAUTHORIZED
+          Msg.Passkeys.unauthorized ~> BAD_REQUEST
         multiUser <- multiUserDAO.findOneById(multiUserId)(using GlobalAccessContext) ??~>
-          Msg.Passkeys.unauthorized ~> UNAUTHORIZED
+          Msg.Passkeys.unauthorized ~> BAD_REQUEST
         credential <- webAuthnCredentialDAO.findByCredentialId(multiUser._id, credentialId)(using
           GlobalAccessContext
         ) ??~>
-          Msg.Passkeys.unauthorized ~> UNAUTHORIZED
+          Msg.Passkeys.unauthorized ~> BAD_REQUEST
         serverProperty = ServerProperty.builder().origin(origin).rpId(origin.getHost).challenge(challenge).build()
 
         params = new AuthenticationParameters(
@@ -576,15 +576,15 @@ class AuthenticationController @Inject() (
           false, // User verification is not required put preferred.
           false // User presence is not required.
         )
-        _ <- tryo(webAuthnManager.verify(authData, params)).toFox ??~> Msg.Passkeys.unauthorized ~> UNAUTHORIZED
+        _ <- tryo(webAuthnManager.verify(authData, params)).toFox ??~> Msg.Passkeys.unauthorized ~> BAD_REQUEST
         oldSignCount = credential.credentialRecord.getCounter
         newSignCount = authData.getAuthenticatorData.getSignCount
         _ = credential.credentialRecord.setCounter(newSignCount)
-        _ <- webAuthnCredentialDAO.updateSignCount(credential) ??~> Msg.Passkeys.unauthorized ~> UNAUTHORIZED
+        _ <- webAuthnCredentialDAO.updateSignCount(credential) ??~> Msg.Passkeys.unauthorized ~> BAD_REQUEST
 
         // Sign count is 0 if not used by the authenticator.
         _ <- Fox.fromBool((oldSignCount == 0 && newSignCount == 0) || (oldSignCount < newSignCount)) ??~>
-          Msg.Passkeys.unauthorized ~> UNAUTHORIZED
+          Msg.Passkeys.unauthorized ~> BAD_REQUEST
         userId <- multiUser._lastLoggedInIdentity.toFox
         resultWithCookie <- loginUser(userId, "passkey/webauthn")
       } yield resultWithCookie
@@ -648,7 +648,7 @@ class AuthenticationController @Inject() (
         sessionId = cookie.value
         challenge <- temporaryRegistrationStore
           .pop(sessionId)
-          .toFox ?~> "Timeout during registration. Please try again." ~> UNAUTHORIZED
+          .toFox ?~> "Timeout during registration. Please try again." ~> BAD_REQUEST
         serverProperty = ServerProperty.builder().origin(origin).rpId(origin.getHost).challenge(challenge).build()
         publicKeyParams = webAuthnPubKeyParams.map(k =>
           new PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.create(k.alg))

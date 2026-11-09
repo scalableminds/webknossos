@@ -7,10 +7,8 @@ import {
   updateTemporarySettingAction,
 } from "viewer/model/actions/settings_actions";
 import { setHideUnregisteredSegmentsAction } from "viewer/model/actions/volumetracing_actions";
-import {
-  getDtypeConfigForElementClass,
-  getSupportedValueRangeForElementClass,
-} from "viewer/model/bucket_data_handling/data_rendering_logic";
+import { getDtypeConfigForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import { getSupportedValueRangeForElementClass } from "viewer/model/helpers/element_class_ranges";
 import type { DatasetLayerConfiguration, PartialDatasetConfiguration } from "viewer/store";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, test } from "vitest";
 import {
@@ -216,6 +214,9 @@ describe("DType Dataset Rendering", () => {
       );
       console.timeEnd("Creating annotation...");
       const page = await getNewPage(testContext.browser);
+      // Check all specs before failing, so that one run writes the .new.png files of every
+      // failing spec and not only of the first one.
+      const failedSpecNames: string[] = [];
       for (const spec of specs.filter((spec) => spec.datasetName === datasetName)) {
         console.log(`Starting: ${spec.name}...`);
         const { datasetConfig } = spec;
@@ -319,12 +320,15 @@ describe("DType Dataset Rendering", () => {
           success &&= isPixelEquivalent(changedPixels, width, height);
         }
 
-        expect(
-          success,
-          `Dataset spec with name: "${spec.name}" does not look the same, see ${spec.name}.diff.png for the difference and ${spec.name}.new.png for the new screenshot.`,
-        ).toBe(true);
+        if (!success) {
+          failedSpecNames.push(spec.name);
+        }
       }
       await page.close();
+      expect(
+        failedSpecNames,
+        `Dataset specs ${failedSpecNames.map((name) => `"${name}"`).join(", ")} do not look the same, see <name>.diff.png for the difference and <name>.new.png for the new screenshot.`,
+      ).toEqual([]);
     },
   );
 });

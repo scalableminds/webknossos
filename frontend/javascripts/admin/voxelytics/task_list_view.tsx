@@ -23,8 +23,9 @@ import {
   Tooltip,
   Typography,
 } from "antd";
+import FormattedDuration from "components/formatted_duration";
 import dayjs from "dayjs";
-import { formatDateMedium, formatDurationStrict } from "libs/format_utils";
+import { formatDateMedium } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { notEmpty } from "libs/utils";
 import MiniSearch from "minisearch";
@@ -46,7 +47,12 @@ import DAGView from "./dag_view";
 import { formatLog } from "./log_tab";
 import { getTaskInfosWithHierarchy } from "./task_hierarchy";
 import { getTaskPanelId, useTaskFocus, useTaskPanelExpansion } from "./task_hierarchy_hooks";
-import { MetaTaskPanelLabel, TaskPanelLabel } from "./task_panel_labels";
+import {
+  getWebknossosLinkOfArtifacts,
+  MetaTaskPanelLabel,
+  OpenInWebknossosButton,
+  TaskPanelLabel,
+} from "./task_panel_labels";
 import { getTaskExecutions } from "./task_runs_tab";
 import TaskView from "./task_view";
 import { addAfterPadding, addBeforePadding } from "./utils";
@@ -397,11 +403,13 @@ export default function TaskListView({
       taskInfo.state === VoxelyticsRunState.SKIPPED
         ? (Object.values(taskArtifacts)[0]?.foreignWorkflow ?? null)
         : null;
+    const webknossosLink = getWebknossosLinkOfArtifacts(taskArtifacts);
 
     return {
       key: task.taskName,
       id: getTaskPanelId(task.taskName),
       label: <TaskPanelLabel task={task} taskInfo={taskInfo} foreignWorkflow={foreignWorkflow} />,
+      extra: webknossosLink != null ? <OpenInWebknossosButton url={webknossosLink} /> : undefined,
       children: (
         <TaskView
           taskName={task.taskName}
@@ -420,15 +428,15 @@ export default function TaskListView({
 
   const topLevelCollapseItems = tasksWithHierarchy.map(getTaskGroupOrTaskItem).filter(notEmpty);
 
-  const totalRuntime = report.tasks.reduce((sum, t) => {
+  const totalRuntimeMs = report.tasks.reduce((sum, t) => {
     if (t.state === VoxelyticsRunState.RUNNING) {
-      return sum.add(dayjs.duration(dayjs().diff(dayjs(t.beginTime))));
+      return sum + dayjs().diff(dayjs(t.beginTime));
     } else if (t.beginTime != null && t.endTime != null) {
-      return sum.add(dayjs.duration(dayjs(t.endTime).diff(dayjs(t.beginTime))));
+      return sum + dayjs(t.endTime).diff(dayjs(t.beginTime));
     } else {
       return sum;
     }
-  }, dayjs.duration(0));
+  }, 0);
 
   const {
     workflow: { name: readableWorkflowName },
@@ -465,10 +473,8 @@ export default function TaskListView({
             style={{ color: "var(--ant-color-text-secondary)", marginTop: 0 }}
           >
             {formatDateMedium(new Date(runBeginTimeString))}{" "}
-            <Tooltip title={formatDurationStrict(totalRuntime)}>
-              <FieldTimeOutlined style={{ marginLeft: 20 }} className="icon-margin-right" />
-              {totalRuntime.humanize()}
-            </Tooltip>
+            <FieldTimeOutlined style={{ marginLeft: 20 }} className="icon-margin-right" />
+            <FormattedDuration durationMs={totalRuntimeMs} />
           </Typography.Title>
           {isCompact && (
             <Button

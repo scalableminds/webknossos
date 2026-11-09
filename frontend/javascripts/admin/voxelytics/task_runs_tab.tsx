@@ -1,10 +1,5 @@
 import { Table, type TableProps } from "antd";
-import dayjs from "dayjs";
-import {
-  formatDateMedium,
-  formatDurationStrict,
-  formatTimeIntervalStrict,
-} from "libs/format_utils";
+import { formatDateMedium, formatTimeInterval } from "libs/format_utils";
 import { useUpdateEvery } from "libs/react_hooks";
 import { Link, useLocation } from "react-router";
 import {
@@ -107,8 +102,8 @@ export default function TaskRunsTab({
       key: "duration",
       render: (_, { taskRun }) =>
         taskRun.endTime != null
-          ? formatTimeIntervalStrict(taskRun.endTime, taskRun.beginTime)
-          : formatDurationStrict(dayjs.duration(Date.now() - taskRun.beginTime.getTime())),
+          ? formatTimeInterval(taskRun.beginTime, taskRun.endTime)
+          : formatTimeInterval(taskRun.beginTime, Date.now()),
     },
     { title: "User", key: "user", render: (_, { run }) => run.userName },
     { title: "Host", key: "host", render: (_, { run }) => run.hostName },

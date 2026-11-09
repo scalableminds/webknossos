@@ -1,17 +1,16 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isWorkflowAccessibleBySwitching } from "admin/api/organization";
 import { getVoxelyticsWorkflow } from "admin/rest_api";
 import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
 import { useSearchParams, useWkSelector } from "libs/react_hooks";
 import { useCallback, useMemo } from "react";
 import { useParams } from "react-router";
-import { VoxelyticsRunState, type VoxelyticsWorkflowReport } from "types/api_types";
+import type { VoxelyticsWorkflowReport } from "types/api_types";
 import TabTitle from "viewer/view/components/tab_title_component";
 import { parseReport } from "./parse_api_data";
 import { filterReportToMetaTask, getTasksWithHierarchy } from "./task_hierarchy";
 import { useDagMetaTaskExpansion } from "./task_hierarchy_hooks";
 import TaskListView from "./task_list_view";
-import { VX_POLLING_INTERVAL } from "./utils";
 
 export default function WorkflowView() {
   const { workflowHash = "", runId } = useParams();
@@ -38,17 +37,20 @@ export default function WorkflowView() {
     queryKey: ["voxelyticsWorkflow", workflowHash, runId],
     queryFn: async () => await getVoxelyticsWorkflow(workflowHash, runId ?? null),
     select: selectReport,
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      return data == null || data.runs.some((run) => run.state === VoxelyticsRunState.RUNNING)
-        ? (VX_POLLING_INTERVAL ?? false)
-        : false;
-    },
     staleTime: 0, // disable caching
     gcTime: 0, // disable garbage collection
     retry: false,
     placeholderData: keepPreviousData,
   });
+
+  const queryClient = useQueryClient();
+  // Reloading the report also refreshes the chunk statistics of its tasks, which change
+  // while the workflow is still running. Mounted statistics refetch right away, the
+  // others once they are opened again.
+  const reload = useCallback(() => {
+    refetch();
+    queryClient.invalidateQueries({ queryKey: ["voxelyticsChunkStatistics", workflowHash] });
+  }, [refetch, queryClient, workflowHash]);
 
   const { data: accessibleOrganization } = useQuery({
     queryKey: ["voxelyticsWorkflowAccess", workflowHash],
@@ -90,7 +92,7 @@ export default function WorkflowView() {
         onToggleMetaTaskInDag={toggleMetaTask}
         openMetatask={metatask}
         runId={runId ?? null}
-        onReload={refetch}
+        onReload={reload}
         isLoading={isLoading}
       />
     </div>

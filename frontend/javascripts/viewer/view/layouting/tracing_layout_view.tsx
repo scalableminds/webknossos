@@ -26,11 +26,14 @@ import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam
 import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
 import { cancelSagaAction, resetStoreAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
+import { GlobalMeshChunkProvider } from "viewer/model/sagas/meshes/mesh_chunk_provider";
 import rootSaga from "viewer/model/sagas/root_saga";
+import { closeSaveErrorToasts } from "viewer/model/sagas/saving/save_queue_draining_saga";
 import { Model, Store } from "viewer/singletons";
 import { startSaga, type Theme, type TraceOrViewCommand, type WebknossosState } from "viewer/store";
 import ActionBarView from "viewer/view/action_bar_view";
 import { AiJobsDrawer } from "viewer/view/ai_jobs/ai_jobs_drawer";
+import { CommandPaletteViewerCommands } from "viewer/view/components/command_palette_viewer_commands";
 import WkContextMenu from "viewer/view/context_menu/wk_context_menu";
 import DistanceMeasurementTooltip from "viewer/view/distance_measurement_tooltip";
 import {
@@ -124,8 +127,10 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
     UrlManager.stopUrlUpdater();
     Model.reset();
     destroySceneController();
+    GlobalMeshChunkProvider.clear();
     Store.dispatch(resetStoreAction());
     Store.dispatch(cancelSagaAction());
+    closeSaveErrorToasts();
 
     const { activeUser } = Store.getState();
     if (activeUser?.isSuperUser) {
@@ -357,6 +362,7 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
             setControllerStatus={this.setControllerStatus}
           />
           <CrossOriginApi />
+          <CommandPaletteViewerCommands />
           <Layout className="tracing-layout">
             <RenderToPortal portalId="navbarTracingSlot">
               <ConfigProvider theme={NavAndStatusBarTheme}>

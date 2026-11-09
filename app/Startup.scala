@@ -157,6 +157,7 @@ class Startup @Inject() (
       conf.Mail.Smtp.host,
       conf.Mail.Smtp.port,
       conf.Mail.Smtp.tls,
+      conf.Mail.Smtp.checkServerIdentity,
       conf.Mail.Smtp.auth,
       conf.Mail.Smtp.user,
       conf.Mail.Smtp.pass

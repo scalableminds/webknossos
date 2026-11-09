@@ -2,17 +2,17 @@ import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import type { ApiResult } from "admin/api/api_result";
 import { unwrapOrThrow } from "admin/api/api_result";
+import { theme } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { isPlainObject } from "lodash-es";
 import debounce from "lodash-es/debounce";
 import noop from "lodash-es/noop";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { type EqualityFn, useSelector } from "react-redux";
 import { useLocation } from "react-router";
-import constants from "viewer/constants";
+import constants, { KEYBOARD_BUTTON_LOOP_INTERVAL } from "viewer/constants";
 import type { WebknossosState } from "viewer/store";
 import { bigIntReplacer } from "./bigint_helpers";
-import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
 
 /**
  * Hook that returns the previous value of a state or prop.
@@ -425,4 +425,39 @@ export function useWindowWidth() {
   }, []);
 
   return width;
+}
+
+/** Whether the CSS media query currently matches. Correct from the first render on. */
+export function useMediaQuery(query: string): boolean {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (typeof window.matchMedia !== "function") return noop;
+      const mediaQueryList = window.matchMedia(query);
+      mediaQueryList.addEventListener("change", onChange);
+      return () => mediaQueryList.removeEventListener("change", onChange);
+    },
+    [query],
+  );
+  return useSyncExternalStore(subscribe, () =>
+    typeof window.matchMedia === "function" ? window.matchMedia(query).matches : false,
+  );
+}
+
+const MIN_WIDTH_TOKEN_BY_BREAKPOINT = {
+  sm: "screenSMMin",
+  md: "screenMDMin",
+  lg: "screenLGMin",
+  xl: "screenXLMin",
+  xxl: "screenXXLMin",
+} as const;
+
+/**
+ * Whether the screen is at least as wide as the given antd breakpoint, i.e. the same as
+ * antd's `Grid.useBreakpoint()[breakpoint]`. Unlike that hook, it is correct on the first render:
+ * useBreakpoint() returns `{}` until a layout effect has measured the screen, so components
+ * briefly render (and mount children) in the wrong layout.
+ */
+export function useMinScreenWidth(breakpoint: keyof typeof MIN_WIDTH_TOKEN_BY_BREAKPOINT): boolean {
+  const { token } = theme.useToken();
+  return useMediaQuery(`(min-width: ${token[MIN_WIDTH_TOKEN_BY_BREAKPOINT[breakpoint]]}px)`);
 }

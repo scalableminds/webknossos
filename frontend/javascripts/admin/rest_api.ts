@@ -95,12 +95,6 @@ import {
   getDataOrTracingStoreUrl,
   type LayerSourceInfo,
 } from "viewer/model/bucket_data_handling/wkstore_helper";
-import {
-  parseProtoAnnotation,
-  parseProtoListOfLong,
-  parseProtoTracing,
-  serializeProtoListOfLong,
-} from "viewer/model/helpers/proto_helpers";
 import type {
   DatasetConfiguration,
   Mapping,
@@ -114,6 +108,7 @@ import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboa
 import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
 import { getOrganization } from "./api/organization";
+import { loadProtoHelpers } from "./api/proto_helpers_loader";
 import { doWithToken, refreshToken } from "./api/token";
 
 export * from "./api/jobs";
@@ -322,13 +317,21 @@ export function updateNovelUserExperienceInfos(
 export function updateLastTaskTypeIdOfUser(
   userId: string,
   lastTaskTypeId: string,
-): Promise<APIUser> {
-  return Request.sendJSONReceiveJSON(`/api/users/${userId}/taskTypeId`, {
-    method: "PUT",
-    data: {
-      lastTaskTypeId,
-    },
-  });
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<APIUser>> {
+  return requestResult(
+    (adaptedOptions) =>
+      Request.sendJSONReceiveJSON(`/api/users/${userId}/taskTypeId`, {
+        ...adaptedOptions,
+        method: "PUT",
+        data: {
+          lastTaskTypeId,
+        },
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function updateSelectedThemeOfUser(
@@ -654,11 +657,19 @@ export function editAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
   data: Partial<EditableAnnotation>,
-): Promise<void> {
-  return Request.sendJSONReceiveJSON(`/api/annotations/${annotationType}/${annotationId}/edit`, {
-    data,
-    method: "PATCH",
-  });
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<void>> {
+  return requestResult(
+    (adaptedOptions) =>
+      Request.sendJSONReceiveJSON(`/api/annotations/${annotationType}/${annotationId}/edit`, {
+        ...adaptedOptions,
+        data,
+        method: "PATCH",
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function editLockedState(
@@ -934,6 +945,7 @@ export async function getTracingForAnnotationType(
       },
     );
   });
+  const { parseProtoTracing } = await loadProtoHelpers();
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
 
   if (import.meta.env.MODE !== "test") {
@@ -955,6 +967,12 @@ export async function getTracingForAnnotationType(
   return tracing;
 }
 
+const UPDATE_ACTION_LOG_RETRY_OPTIONS: RetryOptions = {
+  retries: 3,
+  initialDelayMs: 2000,
+  backoffFactor: 2,
+};
+
 export function getUpdateActionLog(
   tracingStoreUrl: string,
   annotationId: string,
@@ -962,27 +980,33 @@ export function getUpdateActionLog(
   newestVersion?: number,
   truncateActionLog: boolean = false,
   sortAscending: boolean = false,
-): Promise<Array<APIUpdateActionBatch>> {
-  return doWithToken(async (token) => {
-    const params = new URLSearchParams([["truncate", truncateActionLog.toString()]]);
-    params.set("token", token);
-    if (oldestVersion != null) {
-      params.set("oldestVersion", oldestVersion.toString());
-    }
-    if (newestVersion != null) {
-      params.set("newestVersion", newestVersion.toString());
-    }
-    const log: APIUpdateActionBatch[] = await retryAsyncFunction(() =>
-      Request.receiveJSON(
-        `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
-      ),
-    );
+  options: RequestOptions = {},
+  retryOptions: RetryOptions = UPDATE_ACTION_LOG_RETRY_OPTIONS,
+): Promise<ApiResult<Array<APIUpdateActionBatch>>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken(async (token) => {
+        const params = new URLSearchParams([["truncate", truncateActionLog.toString()]]);
+        params.set("token", token);
+        if (oldestVersion != null) {
+          params.set("oldestVersion", oldestVersion.toString());
+        }
+        if (newestVersion != null) {
+          params.set("newestVersion", newestVersion.toString());
+        }
+        const log: APIUpdateActionBatch[] = await Request.receiveJSON(
+          `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
+          adaptedOptions,
+        );
 
-    if (sortAscending) {
-      log.reverse();
-    }
-    return log;
-  });
+        if (sortAscending) {
+          log.reverse();
+        }
+        return log;
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function getNewestVersionForAnnotation(
@@ -1018,6 +1042,7 @@ export async function getAnnotationProto(
       },
     );
   });
+  const { parseProtoAnnotation } = await loadProtoHelpers();
   const annotationProto = parseProtoAnnotation(annotationArrayBuffer);
   if (import.meta.env.MODE !== "test") {
     // Log to console as the decoded annotationProto is hard to inspect in the devtools otherwise.
@@ -1314,9 +1339,13 @@ export async function reserveIdsForAnnotation(
   domain: AnnotationIdDomain,
   numberOfIdsToReserve: number,
   idsToRelease: number[] = [],
-): Promise<number[]> {
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<number[]>> {
   /*
    * Will reserve new ids for the specified domain.
+   * Invalid arguments are programming errors and are thrown instead of
+   * being returned as an ApiResult.
    */
   if (numberOfIdsToReserve <= 0) {
     // Otherwise, the backend cannot reliably use the largest id
@@ -1333,19 +1362,21 @@ export async function reserveIdsForAnnotation(
       `Tried to request too many ids. numberOfIdsToReserve (${numberOfIdsToReserve} > ${Constants.IDEAL_ID_BUFFER_SIZE})`,
     );
   }
-  const ids: number[] = await Request.sendJSONReceiveJSON(
-    `/api/annotations/${annotationId}/reserveIds`,
-    {
-      data: {
-        domain,
-        tracingId,
-        numberOfIdsToReserve,
-        idsToRelease,
-      },
-      method: "POST",
-    },
+  return requestResult(
+    (adaptedOptions): Promise<number[]> =>
+      Request.sendJSONReceiveJSON(`/api/annotations/${annotationId}/reserveIds`, {
+        ...adaptedOptions,
+        data: {
+          domain,
+          tracingId,
+          numberOfIdsToReserve,
+          idsToRelease,
+        },
+        method: "POST",
+      }),
+    options,
+    retryOptions,
   );
-  return ids;
 }
 
 // ### Datasets
@@ -1491,12 +1522,18 @@ export function updateDatasetConfiguration(
   datasetId: string,
   datasetConfig: PartialDatasetConfiguration,
   options: RequestOptions = {},
-): Promise<Record<string, any>> {
-  return Request.sendJSONReceiveJSON(`/api/datasetConfigurations/${datasetId}`, {
-    ...options,
-    method: "PUT",
-    data: datasetConfig,
-  });
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Record<string, any>>> {
+  return requestResult(
+    (adaptedOptions) =>
+      Request.sendJSONReceiveJSON(`/api/datasetConfigurations/${datasetId}`, {
+        ...adaptedOptions,
+        method: "PUT",
+        data: datasetConfig,
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function getDatasetDefaultConfiguration(datasetId: string): Promise<DatasetConfiguration> {
@@ -1670,6 +1707,8 @@ type NewDatasetReply = {
 
 type FinishUploadReply = {
   datasetId: string;
+  // Only set if the dataset is converted. Older datastores don't send it.
+  conversionJobId?: string | null;
 };
 
 export function finishDatasetUpload(
@@ -1916,12 +1955,19 @@ export async function getHistogramForLayer(
   datastoreUrl: string,
   datasetId: string,
   layerName: string,
-): Promise<APIHistogramData> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId}/layers/${layerName}/histogram?token=${token}`,
-      { showErrorToast: false },
-    ),
+  options: RequestOptions = { showErrorToast: false },
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<APIHistogramData>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken((token) =>
+        Request.receiveJSON(
+          `${datastoreUrl}/data/datasets/${datasetId}/layers/${layerName}/histogram?token=${token}`,
+          adaptedOptions,
+        ),
+      ),
+    options,
+    retryOptions,
   );
 }
 
@@ -2000,17 +2046,25 @@ export function getPositionForSegmentInAgglomerate(
   layerName: string,
   mappingName: string,
   segmentId: bigint,
-): Promise<Vector3> {
-  return doWithToken(async (token) => {
-    const params = new URLSearchParams({
-      token,
-      segmentId: `${segmentId}`,
-    });
-    const position = await Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId}/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${params.toString()}`,
-    );
-    return position;
-  });
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Vector3>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken(async (token) => {
+        const params = new URLSearchParams({
+          token,
+          segmentId: `${segmentId}`,
+        });
+        const position = await Request.receiveJSON(
+          `${datastoreUrl}/data/datasets/${datasetId}/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${params.toString()}`,
+          adaptedOptions,
+        );
+        return position;
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export async function getAgglomeratesForDatasetLayer(
@@ -2071,11 +2125,19 @@ export function getUserConfiguration(): Promise<UserConfiguration> {
 
 export function updateUserConfiguration(
   userConfiguration: Record<string, any>,
-): Promise<Record<string, any>> {
-  return Request.sendJSONReceiveJSON("/api/user/userConfiguration", {
-    method: "PUT",
-    data: userConfiguration,
-  });
+  options: RequestOptions = {},
+  retryOptions?: RetryOptions,
+): Promise<ApiResult<Record<string, any>>> {
+  return requestResult(
+    (adaptedOptions) =>
+      Request.sendJSONReceiveJSON("/api/user/userConfiguration", {
+        ...adaptedOptions,
+        method: "PUT",
+        data: userConfiguration,
+      }),
+    options,
+    retryOptions,
+  );
 }
 
 export function getKeyboardShortcutsConfig(): Promise<Partial<KeyboardShortcutsMap> | EmptyObject> {
@@ -2383,6 +2445,7 @@ async function _getAgglomeratesForSegmentsHelper<T extends number | bigint>(
     return new Map();
   }
   const sortedSegmentIdArray = [...filteredSegmentIds].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const { parseProtoListOfLong, serializeProtoListOfLong } = await loadProtoHelpers();
   const segmentIdBuffer = serializeProtoListOfLong(sortedSegmentIdArray.map(toBigInt));
   const listArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams(extraParams);
@@ -2442,6 +2505,42 @@ export function getAgglomeratesForSegmentsFromTracingstore<T extends number | bi
     `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments`,
     extraParams,
   );
+}
+
+export type SegmentsOfAgglomerate = {
+  segmentIds: bigint[];
+  // False if the editable mapping has no graph for the agglomerate at the requested version. This
+  // is the case for agglomerates that were not edited in this annotation up to that version (their
+  // segments are only listed in the agglomerate file) and for ids that never existed. segmentIds is
+  // empty then. An agglomerate that was merged into another one is present and has no segments.
+  agglomerateIdIsPresent: boolean;
+};
+export async function getSegmentsForAgglomerateFromTracingStore<T extends number | bigint>(
+  tracingStoreUrl: string,
+  tracingId: string,
+  agglomerateId: T,
+  // Omit to get the newest version.
+  version?: number,
+): Promise<SegmentsOfAgglomerate> {
+  const result: SegmentsOfAgglomerate = await doWithToken((token) => {
+    const params = new URLSearchParams({
+      agglomerateId: agglomerateId.toString(),
+      token: token,
+    });
+    if (version != null) {
+      params.set("version", version.toString());
+    }
+    return retryAsyncFunction(() =>
+      Request.receiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/segmentsForAgglomerate?${params}`,
+        {
+          method: "GET",
+          showErrorToast: false,
+        },
+      ),
+    );
+  });
+  return result;
 }
 
 export function getEditableAgglomerateTreeAsSkeletonTracing(
@@ -2611,6 +2710,15 @@ export type MinCutTargetEdge = {
   segmentId1: bigint;
   segmentId2: bigint;
 };
+// Agglomerate graph requests can be heavy for the tracing store. Therefore, retries
+// should not follow each other too quickly (2s, 4s, 8s).
+const AGGLOMERATE_GRAPH_RETRY_OPTIONS: RetryOptions = {
+  retries: 3,
+  initialDelayMs: 2000,
+  backoffFactor: 2,
+  maxDelayMs: 8000,
+};
+
 export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
@@ -2622,22 +2730,28 @@ export async function getEdgesForAgglomerateMinCut(
     agglomerateId: bigint;
     editableMappingId: string;
   },
-): Promise<Array<MinCutTargetEdge>> {
-  return doWithToken((token) =>
-    retryAsyncFunction(() =>
-      Request.sendJSONReceiveJSON(
-        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
-        {
-          data: {
-            // For a normal min-cut, the id at which the proofreading marker is at
-            // will be put into partition1. The right-clicked segment/mesh will be
-            // in partition2.
-            ...segmentsInfo,
-            version,
+  options: RequestOptions = {},
+  retryOptions: RetryOptions = AGGLOMERATE_GRAPH_RETRY_OPTIONS,
+): Promise<ApiResult<Array<MinCutTargetEdge>>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken((token) =>
+        Request.sendJSONReceiveJSON(
+          `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+          {
+            ...adaptedOptions,
+            data: {
+              // For a normal min-cut, the id at which the proofreading marker is at
+              // will be put into partition1. The right-clicked segment/mesh will be
+              // in partition2.
+              ...segmentsInfo,
+              version,
+            },
           },
-        },
+        ),
       ),
-    ),
+    options,
+    retryOptions,
   );
 }
 
@@ -2656,19 +2770,25 @@ export async function getNeighborsForAgglomerateNode(
     agglomerateId: bigint;
     editableMappingId: string;
   },
-): Promise<NeighborInfo> {
-  return doWithToken((token) =>
-    retryAsyncFunction(() =>
-      Request.sendJSONReceiveJSON(
-        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
-        {
-          data: {
-            version,
-            ...segmentInfo,
+  options: RequestOptions = {},
+  retryOptions: RetryOptions = AGGLOMERATE_GRAPH_RETRY_OPTIONS,
+): Promise<ApiResult<NeighborInfo>> {
+  return requestResult(
+    (adaptedOptions) =>
+      doWithToken((token) =>
+        Request.sendJSONReceiveJSON(
+          `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
+          {
+            ...adaptedOptions,
+            data: {
+              version,
+              ...segmentInfo,
+            },
           },
-        },
+        ),
       ),
-    ),
+    options,
+    retryOptions,
   );
 }
 

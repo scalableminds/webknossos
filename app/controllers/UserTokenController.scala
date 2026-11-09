@@ -127,7 +127,7 @@ class UserTokenController @Inject() (
               case _ =>
                 Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
             }
-      } yield Ok(Json.toJson(answer))
+      } yield Ok(Json.toJson(answer.copy(userId = userBox.toOption.map(_._id))))
     }
 
   // The authenticator has already been validated at this point, so recognizing the token type is enough.
@@ -228,7 +228,7 @@ class UserTokenController @Inject() (
       token: Option[String]
   ): Fox[UserAccessAnswer] =
     if (tracingIdOpt.contains(TracingId.dummy))
-      Fox.successful(UserAccessAnswer(granted = true))
+      Fox.successful(sandboxAccessAnswer(mode))
     else
       for {
         tracingId <- tracingIdOpt.toFox
@@ -237,6 +237,11 @@ class UserTokenController @Inject() (
         ) ?~> Msg.Annotation.notFound
         result <- handleAnnotationAccess(Some(annotation._id.toString), mode, userBox, token)
       } yield result
+
+  // Dummy ids belong to sandbox annotations, which are never saved
+  private def sandboxAccessAnswer(mode: AccessMode): UserAccessAnswer =
+    if (mode == AccessMode.read) UserAccessAnswer(granted = true)
+    else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to sandbox annotation"))
 
   private def handleAnnotationAccess(
       annotationIdOpt: Option[String],
@@ -255,7 +260,7 @@ class UserTokenController @Inject() (
       }
 
     if (annotationIdOpt.contains(ObjectId.dummyId.toString)) {
-      Fox.successful(UserAccessAnswer(granted = true))
+      Fox.successful(sandboxAccessAnswer(mode))
     } else {
       for {
         annotationIdStr <- annotationIdOpt.toFox

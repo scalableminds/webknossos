@@ -2,27 +2,49 @@ package mail
 
 import org.apache.pekko.actor.*
 import com.typesafe.scalalogging.LazyLogging
-import javax.mail.internet.InternetAddress
-import org.apache.commons.mail.*
+import jakarta.mail.{Address, Authenticator, Message, PasswordAuthentication, Session, Transport}
+import jakarta.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMultipart}
+
+import java.util.{Date, Properties}
 
 case class Send(mail: Mail)
 
-/** Wrapper for sending email in Play Framework. based on the Mailer Actor by Justin Long based on the EmailNotifier
-  * trait by Aishwarya Singhal
-  *
-  * make sure to include Apache Commons Mail in dependencies "org.apache.commons" % "commons-mail" % "1.2"
-  */
 case class MailerConfig(
     logToStdout: Boolean,
     smtpHost: String,
     smtpPort: Int,
     smtpTls: Boolean,
+    smtpCheckServerIdentity: Boolean,
     smtpAuth: Boolean,
     smtpUser: String,
     smtpPass: String
 )
 
 class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
+
+  private val smtpTimeoutMillis = 60000
+  private val charset = "utf-8"
+
+  private lazy val session: Session = {
+    val props = new Properties()
+    props.put("mail.transport.protocol", "smtp")
+    props.put("mail.smtp.host", conf.smtpHost)
+    props.put("mail.smtp.port", conf.smtpPort.toString)
+    props.put("mail.smtp.starttls.enable", conf.smtpTls.toString)
+    props.put("mail.smtp.auth", conf.smtpAuth.toString)
+    props.put("mail.smtp.ssl.protocols", "TLSv1.2")
+    props.put("mail.smtp.ssl.checkserveridentity", conf.smtpCheckServerIdentity.toString)
+    props.put("mail.smtp.connectiontimeout", smtpTimeoutMillis.toString)
+    props.put("mail.smtp.timeout", smtpTimeoutMillis.toString)
+    val authenticator: Authenticator =
+      if (conf.smtpAuth)
+        new Authenticator {
+          override def getPasswordAuthentication: PasswordAuthentication =
+            new PasswordAuthentication(conf.smtpUser, conf.smtpPass)
+        }
+      else null
+    Session.getInstance(props, authenticator)
+  }
 
   def receive: Receive = {
     case Send(mail) =>
@@ -36,64 +58,57 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
       if (conf.logToStdout) {
         logger.info(s"Sending mail: $mail")
       }
-
-      val multiPartMail: MultiPartEmail = createEmail(mail)
-
-      setAddress(mail.from)(multiPartMail.setFrom)
-      mail.replyTo.foreach(setAddress(_)(multiPartMail.addReplyTo))
-      mail.recipients.foreach(setAddress(_)(multiPartMail.addTo))
-      mail.ccRecipients.foreach(setAddress(_)(multiPartMail.addCc))
-      mail.bccRecipients.foreach(setAddress(_)(multiPartMail.addBcc))
-
-      multiPartMail.setSubject(mail.subject)
-      mail.headers foreach { case (key, value) => multiPartMail.addHeader(key, value) }
-
-      // do the work to prepare sending on SMTP
-      multiPartMail.setHostName(conf.smtpHost)
-      multiPartMail.setSmtpPort(conf.smtpPort)
-      multiPartMail.setStartTLSEnabled(conf.smtpTls)
-      if (conf.smtpAuth) {
-        multiPartMail.setAuthenticator(new DefaultAuthenticator(conf.smtpUser, conf.smtpPass))
-      }
-      multiPartMail.setDebug(false)
-      multiPartMail.getMailSession.getProperties.put("mail.smtp.ssl.protocols", "TLSv1.2")
-
-      if (conf.smtpHost.nonEmpty) {
-        multiPartMail.send
-        ()
-      } else {
-        logger.info("Mail was not sent as no smtp host is configured.")
+      parseAddress(mail.from) match {
+        case Some(from) => sendFrom(from, mail)
+        case None       => logger.error(s"Mail was not sent due to invalid sender address: ${mail.from}")
       }
     }
 
-  /** Extracts an email address from the given string and passes to the enclosed method.
-    */
-  private def setAddress(emailAddress: String)(setter: (String, String) => ?): Unit =
-    try {
-      val iAddress = new InternetAddress(emailAddress)
-      val address = iAddress.getAddress
-      val name = iAddress.getPersonal
+  private def sendFrom(from: InternetAddress, mail: Mail): Unit = {
+    val message = new MimeMessage(session)
+    message.setFrom(from)
+    message.setReplyTo(parseAddresses(mail.replyTo))
+    message.addRecipients(Message.RecipientType.TO, parseAddresses(mail.recipients))
+    message.addRecipients(Message.RecipientType.CC, parseAddresses(mail.ccRecipients))
+    message.addRecipients(Message.RecipientType.BCC, parseAddresses(mail.bccRecipients))
+    message.setSubject(mail.subject, charset)
+    message.setSentDate(new Date())
+    setBody(message, mail)
 
-      setter(address, name)
-    } catch {
-      case e: Exception => logger.warn(s"Failed to set email address: $e")
-    }
-
-  /** Creates an appropriate email object based on the content type.
-    */
-  private def createEmail(mail: Mail): MultiPartEmail =
-    if (mail.bodyHtml == "") {
-      val email = new MultiPartEmail()
-      email.setCharset(mail.charset)
-      email.setMsg(mail.bodyText)
-      email
+    if (conf.smtpHost.nonEmpty) {
+      Transport.send(message)
     } else {
-      val email = new HtmlEmail()
-      email.setCharset(mail.charset)
-      email.setHtmlMsg(mail.bodyHtml)
-      if (mail.bodyText != "")
-        email.setTextMsg(mail.bodyText)
-      email
+      logger.info("Mail was not sent as no smtp host is configured.")
+    }
+  }
+
+  private def parseAddress(emailAddress: String): Option[InternetAddress] =
+    try {
+      val address = new InternetAddress(emailAddress)
+      address.validate()
+      // Re-encode the display name with UTF-8 instead of the JVM default
+      Option(address.getPersonal).foreach(personal => address.setPersonal(personal, charset))
+      Some(address)
+    } catch {
+      case e: Exception =>
+        logger.warn(s"Failed to parse email address $emailAddress: $e")
+        None
+    }
+
+  private def parseAddresses(emailAddresses: List[String]): Array[Address] =
+    emailAddresses.flatMap(parseAddress).toArray[Address]
+
+  private def setBody(message: MimeMessage, mail: Mail): Unit =
+    if (mail.bodyHtml == "") {
+      message.setText(mail.bodyText, charset)
+    } else if (mail.bodyText == "") {
+      message.setText(mail.bodyHtml, charset, "html")
+    } else {
+      val textPart = new MimeBodyPart()
+      textPart.setText(mail.bodyText, charset)
+      val htmlPart = new MimeBodyPart()
+      htmlPart.setText(mail.bodyHtml, charset, "html")
+      message.setContent(new MimeMultipart("alternative", textPart, htmlPart))
     }
 
 }

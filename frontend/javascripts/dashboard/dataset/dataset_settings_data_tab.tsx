@@ -2,7 +2,7 @@ import { CopyOutlined, DeleteOutlined, ExportOutlined } from "@ant-design/icons"
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
-import { useStartAndPollJob } from "admin/job/job_hooks";
+import { useIsJobAvailable, useStartAndPollJob } from "admin/job/job_hooks";
 import { startFindLargestSegmentIdJob } from "admin/rest_api";
 import {
   Button,
@@ -29,8 +29,8 @@ import type { BoundingBoxObject } from "types/bounding_box";
 import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
 import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
-import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import { getSegmentIdRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import type { RotationAndMirroringSettings } from "viewer/model/helpers/dataset_rotation_helpers";
+import { getSegmentIdRangeForElementClass } from "viewer/model/helpers/element_class_ranges";
 import {
   AxisRotationSettingForDataset,
   getDatasetBoundingBoxFromLayers,
@@ -410,6 +410,10 @@ function SimpleLayerForm({
 }) {
   const dataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"], form);
+  const isFindLargestSegmentIdJobAvailable = useIsJobAvailable(
+    dataset?.dataStore,
+    APIJobCommand.FIND_LARGEST_SEGMENT_ID,
+  );
 
   const layerCategorySavedOnServer =
     dataset != null && "dataLayers" in dataset.dataSource
@@ -706,9 +710,7 @@ function SimpleLayerForm({
                   <DelegatePropsToFirstChild>
                     {/* stringMode keeps full precision for uint64 segment ids (beyond 2**53). */}
                     <InputNumber stringMode precision={0} />
-                    {dataset?.dataStore.jobsSupportedByAvailableWorkers.includes(
-                      APIJobCommand.FIND_LARGEST_SEGMENT_ID,
-                    ) ? (
+                    {isFindLargestSegmentIdJobAvailable ? (
                       <Tooltip
                         title={
                           !isStoredAsSegmentationLayer

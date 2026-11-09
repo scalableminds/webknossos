@@ -23,16 +23,25 @@ export function PartnerLogo({ compact }: { compact: boolean }) {
       })}
     />
   );
-  if (partner.linkUrl == null) return logo;
   return (
-    <a
-      href={partner.linkUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={partner.name}
-      className={classnames(hideOnPhonesClass)}
-    >
-      {logo}
-    </a>
+    <>
+      <span
+        className={classnames("partner-logo-divider", { compact }, hideOnPhonesClass)}
+        aria-hidden
+      />
+      {partner.linkUrl == null ? (
+        logo
+      ) : (
+        <a
+          href={partner.linkUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={partner.name}
+          className={classnames(hideOnPhonesClass)}
+        >
+          {logo}
+        </a>
+      )}
+    </>
   );
 }

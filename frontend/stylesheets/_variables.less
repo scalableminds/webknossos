@@ -19,6 +19,10 @@
 @screen-xl-max: 1599px;
 @screen-xxl-min: 1600px;
 
+// Phones: below antd's md breakpoint. Matches the compact layouts that check
+// useMinScreenWidth("md") / Grid.useBreakpoint().md in JS.
+@smartphones: ~"only screen and (max-width: @{screen-sm-max})";
+
 :root {
   // The brand colors below mirror the constants in frontend/javascripts/theme.ts, which is the
   // source of truth – keep both in sync. They cannot be aliased to the corresponding `--ant-*`

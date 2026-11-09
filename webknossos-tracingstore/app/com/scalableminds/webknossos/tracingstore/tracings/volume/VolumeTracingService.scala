@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
@@ -29,6 +30,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.*
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.commons.io.FileUtils
 
 import java.io.*
 import java.nio.file.Path
@@ -239,7 +241,7 @@ class VolumeTracingService @Inject() (
 
     val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracingBeforeRevert)
     val bucketStreamBeforeRevert =
-      volumeLayer.volumeBucketProvider.bucketStreamWithVersion(version = Some(tracingBeforeRevert.version))
+      bucketStreamWithVersionIncludingReverted(volumeLayer, version = Some(tracingBeforeRevert.version))
 
     for {
       fallbackLayer <- getFallbackLayer(annotationId, tracingBeforeRevert)
@@ -256,39 +258,35 @@ class VolumeTracingService @Inject() (
         temporaryTracingService,
         tc
       )
-      _ <- Fox.serialCombined(bucketStreamBeforeRevert) { case (bucketPosition, dataBeforeRevert, version) =>
+      _ <- Fox.serialCombined(bucketStreamBeforeRevert) { case (bucketPosition, dataBeforeRevertOpt, version) =>
         if (version > sourceVersion) {
           loadBucket(volumeLayer, bucketPosition, Some(sourceVersion)).shiftBox.flatMap {
-            case Full(dataAfterRevert) =>
-              for {
-                _ <- saveBucket(volumeLayer, bucketPosition, dataAfterRevert, newVersion)
-                _ <- Fox.runIfOptionTrue(tracingBeforeRevert.hasSegmentIndex)(
-                  updateSegmentIndex(
-                    volumeLayer,
-                    segmentIndexBuffer,
-                    bucketPosition,
-                    dataAfterRevert,
-                    Full(dataBeforeRevert),
-                    editableMappingTracingId(sourceTracing, tracingId)
-                  )
-                )
-              } yield ()
-            case Empty =>
-              for {
-                dataAfterRevert <- Fox.successful(revertedValue)
-                _ <- saveBucket(volumeLayer, bucketPosition, dataAfterRevert, newVersion)
-                _ <- Fox.runIfOptionTrue(tracingBeforeRevert.hasSegmentIndex)(
-                  updateSegmentIndex(
-                    volumeLayer,
-                    segmentIndexBuffer,
-                    bucketPosition,
-                    dataAfterRevert,
-                    Full(dataBeforeRevert),
-                    editableMappingTracingId(sourceTracing, tracingId)
-                  )
-                )
-              } yield ()
+            case Empty if dataBeforeRevertOpt.isEmpty =>
+              Fox.successful(()) // Already reverted, leave it alone
             case Failure(msg, _, chain) => Fox.failure(msg, Empty, chain)
+            case dataAfterRevertBox     =>
+              for {
+                _ <- saveBucket(volumeLayer, bucketPosition, dataAfterRevertBox.getOrElse(revertedValue), newVersion)
+                _ <- Fox.runIfOptionTrue(tracingBeforeRevert.hasSegmentIndex)(
+                  for {
+                    dataBeforeRevertBox <- withFallbackIfReverted(
+                      volumeLayer,
+                      bucketPosition,
+                      dataBeforeRevertOpt
+                    ).shiftBox
+                    dataAfterRevert <- withFallbackIfReverted(volumeLayer, bucketPosition, dataAfterRevertBox.toOption)
+                      .fillEmpty(revertedValue)
+                    _ <- updateSegmentIndex(
+                      volumeLayer,
+                      segmentIndexBuffer,
+                      bucketPosition,
+                      dataAfterRevert,
+                      dataBeforeRevertBox,
+                      editableMappingTracingId(sourceTracing, tracingId)
+                    )
+                  } yield ()
+                )
+              } yield ()
           }
         } else Fox.successful(())
       }
@@ -300,6 +298,16 @@ class VolumeTracingService @Inject() (
     } yield ()
   }
 
+  // Reverted buckets show fallback data (if it exists); the segment index differ needs it.
+  private def withFallbackIfReverted(
+      volumeLayer: VolumeTracingLayer,
+      bucketPosition: BucketPosition,
+      dataOpt: Option[Array[Byte]]
+  ): Fox[Array[Byte]] =
+    Fox.fillOption(dataOpt)(
+      if (volumeLayer.tracing.fallbackLayer.nonEmpty) loadFallbackBucket(volumeLayer, bucketPosition) else Fox.empty
+    )
+
   def initializeWithDataMultiple(annotationId: ObjectId, tracingId: String, tracing: VolumeTracing, initialData: File)(
       using tc: TokenContext
   ): Fox[MergedVolumeStats] =
@@ -307,13 +315,12 @@ class VolumeTracingService @Inject() (
       Fox.failure("Tracing has already been edited.")
     else {
       val magSets = new mutable.HashSet[Set[Vec3Int]]()
-      for {
-        _ <- withZipsFromMultiZipAsync(initialData) { (_, dataZip) =>
-          for {
-            _ <- Fox.successful(())
-            magSet = magSetFromZipfile(dataZip)
-            _ = if (magSet.nonEmpty) magSets.add(magSet)
-          } yield ()
+      val unzippedDir = tempFileService.createDirectory(s"${tracingId}_initialDataMultiple")
+      Fox.withCleanup(for {
+        dataZips <- unzipMultiZip(initialData, unzippedDir).toFox
+        _ = dataZips.foreach { dataZip =>
+          val magSet = magSetFromZipfile(dataZip)
+          if (magSet.nonEmpty) magSets.add(magSet)
         }
         mappingName <- getMappingNameUnlessEditable(tracing)
         mags <-
@@ -336,10 +343,10 @@ class VolumeTracingService @Inject() (
             else {
               val mergedVolume = new MergedVolume(tracing.elementClass, remapSegmentIds = true)
               for {
-                _ <- withZipsFromMultiZipAsync(initialData)((_, dataZip) => mergedVolume.addIdSetFromDataZip(dataZip))
-                _ <- withZipsFromMultiZipAsync(initialData)((index, dataZip) =>
+                _ <- Fox.serialCombined(dataZips)(mergedVolume.addIdSetFromDataZip)
+                _ <- Fox.serialCombined(dataZips.zipWithIndex) { case (dataZip, index) =>
                   mergedVolume.addFromDataZip(index, dataZip)
-                )
+                }
                 _ <- Fox.fromBool(
                   ElementClass.largestSegmentIdIsInRange(
                     mergedVolume.largestSegmentId,
@@ -380,7 +387,7 @@ class VolumeTracingService @Inject() (
               } yield mergedVolume.stats(tracing.getHasSegmentIndex)
             }
           }
-      } yield mags
+      } yield mags)(tryo(FileUtils.deleteDirectory(unzippedDir.toFile)))
     }
 
   def initializeWithData(

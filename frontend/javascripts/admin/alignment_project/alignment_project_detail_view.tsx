@@ -218,7 +218,8 @@ function AlignmentProjectDetailView() {
   const renderSectionRange = (job: APIJob) => {
     const sectionRange = job.args.sectionRange;
     if (sectionRange != null) {
-      return formatSectionRange({ first: sectionRange[0], last: sectionRange[1] });
+      // The job args contain the range as passed to the worker, i.e., with an exclusive upper bound.
+      return formatSectionRange({ first: sectionRange[0], last: sectionRange[1] - 1 });
     }
     // null means all sections of the project.
     return project.sectionRange != null ? formatSectionRange(project.sectionRange, true) : "All";

@@ -238,6 +238,8 @@ class UserTokenController @Inject() (
   }
 
   // Only writing (uploading files) is requested by the datastore, and only while the upload is unfinished.
+  // Replacing the CSV of an uploaded project is authorized separately, see
+  // WKRemoteDataStoreController.validateAlignmentProjectCsvReplacement.
   private def handleAlignmentProjectAccess(
       idOpt: Option[String],
       mode: AccessMode,
@@ -250,9 +252,12 @@ class UserTokenController @Inject() (
           alignmentProjectId <- ObjectId.fromString(idStr)
           projectBox <- alignmentProjectDAO.findOne(alignmentProjectId)(using DBAccessContext(Some(user))).shiftBox
         } yield projectBox match {
-          case Full(project) if project.status == AlignmentProjectStatus.UPLOADING && !project.isInputDataDeleted =>
-            UserAccessAnswer(granted = true)
-          case _ => UserAccessAnswer(granted = false, Some("No write access to alignment project"))
+          case Full(project) if project.isInputDataDeleted =>
+            UserAccessAnswer(granted = false, Some(Msg.AlignmentProject.inputDataDeleted))
+          case Full(project) if project.status != AlignmentProjectStatus.UPLOADING =>
+            UserAccessAnswer(granted = false, Some(Msg.AlignmentProject.notUploading))
+          case Full(_) => UserAccessAnswer(granted = true)
+          case _       => UserAccessAnswer(granted = false, Some("No write access to alignment project"))
         }
       case _ =>
         Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported access to alignment project: $mode")))

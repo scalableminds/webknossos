@@ -875,7 +875,8 @@ export type ApiJobArgs = {
   readonly boundingBox: string | null | undefined;
   readonly ndBoundingBox: WkLibsNdBoundingBox | null | undefined;
   readonly newDatasetName: string | null | undefined;
-  // Inclusive section numbers of align jobs. null means all sections of the alignment project.
+  // Section range of align jobs as passed to the worker: [first, last + 1], i.e., the upper bound is exclusive.
+  // null means all sections of the alignment project.
   readonly sectionRange: [number, number] | null | undefined;
   readonly renderUnaligned: boolean | null | undefined;
 };

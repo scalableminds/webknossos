@@ -192,7 +192,8 @@ class UploadService @Inject() (
   def isKnownUpload(uploadId: String, uploadDomain: UploadDomain): Fox[Boolean] =
     selectUploadMetadataStore(uploadDomain).isKnownUpload(uploadId)
 
-  def getDatasetIdByUploadId(uploadId: String, uploadDomain: UploadDomain): Fox[ObjectId] =
+  // The id of the dataset the upload belongs to, or of the alignment project for alignment project uploads.
+  def getTargetIdByUploadId(uploadId: String, uploadDomain: UploadDomain): Fox[ObjectId] =
     selectUploadMetadataStore(uploadDomain).findDatasetId(uploadId)
 
   def extractDatasetUploadId(uploadFileId: String): String = uploadFileId.split("/").headOption.getOrElse("")
@@ -729,7 +730,7 @@ class UploadService @Inject() (
 
   private def cleanUpExceedingSize(uploadId: String, uploadDomain: UploadDomain): Fox[Unit] =
     for {
-      datasetId <- getDatasetIdByUploadId(uploadId, uploadDomain)
+      datasetId <- getTargetIdByUploadId(uploadId, uploadDomain)
       _ <- cleanUpUploaded(uploadId, reason = "Exceeded reserved fileSize", uploadDomain)
       // Datasets need to be cleaned up in postgres as well. The other domains don’t (overwritePending mechanism is used there)
       _ <- Fox.runIf(uploadDomain == UploadDomain.dataset)(remoteWebknossosClient.deleteDataset(datasetId))

@@ -165,17 +165,17 @@ class DSRemoteWebknossosClient @Inject() (
       .withTokenFromContext
       .postJsonWithJsonResponse[AlignmentProjectUploadInfo, AlignmentProjectUploadAdditionalInfo](info)
 
-  def reserveAlignmentProjectCsvReplacement(
+  def validateAlignmentProjectCsvReplacement(
       alignmentProjectId: ObjectId
   )(using tc: TokenContext): Fox[AlignmentProjectCsvReplacementInfo] =
-    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveAlignmentProjectCsvReplacement")
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/validateAlignmentProjectCsvReplacement")
       .addQueryParam("key", dataStoreKey)
       .addQueryParam("alignmentProjectId", alignmentProjectId)
       .withTokenFromContext
       .postEmptyWithJsonResponse[AlignmentProjectCsvReplacementInfo]()
 
   def reportAlignmentProjectCsvReplacement(parameters: ReportAlignmentProjectCsvReplacementParameters): Fox[?] =
-    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportAlignmentProjectCsvReplacement")
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/updateAlignmentProjectCsv")
       .addQueryParam("key", dataStoreKey)
       .postJson[ReportAlignmentProjectCsvReplacementParameters](parameters)
 

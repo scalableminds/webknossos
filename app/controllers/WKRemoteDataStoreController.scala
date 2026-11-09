@@ -256,7 +256,7 @@ class WKRemoteDataStoreController @Inject() (
     }
 
   // Checks whether the user may replace the tile CSV. The datastore then validates and stores the new CSV.
-  def reserveAlignmentProjectCsvReplacement(
+  def validateAlignmentProjectCsvReplacement(
       name: String,
       key: String,
       token: String,
@@ -279,7 +279,7 @@ class WKRemoteDataStoreController @Inject() (
       }
     }
 
-  def reportAlignmentProjectCsvReplacement(
+  def updateAlignmentProjectCsv(
       name: String,
       key: String
   ): Action[ReportAlignmentProjectCsvReplacementParameters] =

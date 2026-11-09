@@ -113,7 +113,7 @@ class UploadController @Inject() (
           )
           alignmentProjectId <-
             if (isKnownUpload)
-              uploadService.getDatasetIdByUploadId(
+              uploadService.getTargetIdByUploadId(
                 request.body.resumableUploadInfo.uploadId,
                 UploadDomain.alignmentProject
               )
@@ -134,7 +134,7 @@ class UploadController @Inject() (
     Action.fox(parse.multipartFormData) { implicit request =>
       for {
         csvFile <- request.body.file("file").toFox ?~> Msg.AlignmentProject.Csv.notAttached
-        replacementInfo <- dsRemoteWebknossosClient.reserveAlignmentProjectCsvReplacement(alignmentProjectId)
+        replacementInfo <- dsRemoteWebknossosClient.validateAlignmentProjectCsvReplacement(alignmentProjectId)
         (csvPath, sectionRange) <- uploadService.replaceAlignmentProjectCsv(
           alignmentProjectId,
           replacementInfo,
@@ -216,12 +216,12 @@ class UploadController @Inject() (
               val uploadId = uploadService.extractDatasetUploadId(uploadFileId)
               for {
                 uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
-                datasetId <- uploadService.getDatasetIdByUploadId(
+                targetId <- uploadService.getTargetIdByUploadId(
                   uploadId,
                   uploadDomainValidated
                 ) ?~> Msg.Dataset.Upload.noSuchUpload(uploadId, uploadDomain)
                 result <- accessTokenService.validateAccessFromTokenContext(
-                  writeAccessRequestForUpload(uploadDomainValidated, datasetId)
+                  writeAccessRequestForUpload(uploadDomainValidated, targetId)
                 ) {
                   for {
                     isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId, uploadDomainValidated)
@@ -249,10 +249,10 @@ class UploadController @Inject() (
       val uploadId = uploadService.extractDatasetUploadId(resumableIdentifier)
       for {
         uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
-        datasetId <- uploadService.getDatasetIdByUploadId(uploadId, uploadDomainValidated) ?~> Msg.Dataset.Upload
+        targetId <- uploadService.getTargetIdByUploadId(uploadId, uploadDomainValidated) ?~> Msg.Dataset.Upload
           .noSuchUpload(uploadId, uploadDomain)
         result <- accessTokenService.validateAccessFromTokenContext(
-          writeAccessRequestForUpload(uploadDomainValidated, datasetId)
+          writeAccessRequestForUpload(uploadDomainValidated, targetId)
         ) {
           for {
             isKnownUpload <- uploadService.isKnownUploadByFileId(resumableIdentifier, uploadDomainValidated)
@@ -268,20 +268,22 @@ class UploadController @Inject() (
       logTime(slackNotificationService.noticeSlowRequest) {
         for {
           uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
-          datasetId <- uploadService.getDatasetIdByUploadId(uploadId, uploadDomainValidated) ?~> Msg.Dataset.Upload
+          targetId <- uploadService.getTargetIdByUploadId(uploadId, uploadDomainValidated) ?~> Msg.Dataset.Upload
             .noSuchUpload(uploadId, uploadDomain)
           response <- accessTokenService.validateAccessFromTokenContext(
-            writeAccessRequestForUpload(uploadDomainValidated, datasetId)
+            writeAccessRequestForUpload(uploadDomainValidated, targetId)
           ) {
             uploadDomainValidated match {
               case UploadDomain.alignmentProject =>
+                val alignmentProjectId = targetId
                 for {
                   _ <- uploadService.finishAlignmentProjectUpload(
                     uploadId,
-                    datasetId
+                    alignmentProjectId
                   ) ?~> Msg.AlignmentProject.finishUploadFailed
-                } yield Ok(Json.obj("alignmentProjectId" -> datasetId))
+                } yield Ok(Json.obj("alignmentProjectId" -> alignmentProjectId))
               case _ =>
+                val datasetId = targetId
                 for {
                   conversionJobIdOpt <- (uploadDomainValidated match {
                     case UploadDomain.dataset    => uploadService.finishDatasetUpload(uploadId, datasetId)
@@ -307,7 +309,7 @@ class UploadController @Inject() (
         ) ?~> "Cancel upload is only supported for datasets."
         datasetIdFox = uploadService.isKnownUpload(uploadId, uploadDomainValidated).flatMap {
           case false => Fox.failure(Msg.Dataset.Upload.noSuchUpload(uploadId, uploadDomain))
-          case true  => uploadService.getDatasetIdByUploadId(uploadId, uploadDomainValidated)
+          case true  => uploadService.getTargetIdByUploadId(uploadId, uploadDomainValidated)
         }
         result <- datasetIdFox.flatMap { datasetId =>
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {

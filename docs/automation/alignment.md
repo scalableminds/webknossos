@@ -36,7 +36,7 @@ An alignment project holds the unaligned tile images together with a CSV file th
 The data is uploaded once, after which one or more alignments can be computed from it, e.g. with different settings.
 Each alignment produces a new dataset.
 
-To create an alignment project, select `Analysis > Alignment Projects` in the navbar and click `New Alignment Project`.
+To create an alignment project, select `Analysis > Alignment Projects` in the navbar and click `New Alignment Project`. This is only possible for admins and dataset managers.
 Add a folder or a ZIP archive containing the tile images and exactly one tile CSV, and specify a name and the voxel size of the data.
 After the upload, the project page lists the project details and its alignments. Start a new alignment with `Start Alignment`.
 As with other jobs, the progress can be monitored on the [`Processing Jobs` page](./jobs.md).

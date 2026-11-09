@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
@@ -29,6 +30,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.*
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.commons.io.FileUtils
 
 import java.io.*
 import java.nio.file.Path
@@ -313,13 +315,12 @@ class VolumeTracingService @Inject() (
       Fox.failure("Tracing has already been edited.")
     else {
       val magSets = new mutable.HashSet[Set[Vec3Int]]()
-      for {
-        _ <- withZipsFromMultiZipAsync(initialData) { (_, dataZip) =>
-          for {
-            _ <- Fox.successful(())
-            magSet = magSetFromZipfile(dataZip)
-            _ = if (magSet.nonEmpty) magSets.add(magSet)
-          } yield ()
+      val unzippedDir = tempFileService.createDirectory(s"${tracingId}_initialDataMultiple")
+      Fox.withCleanup(for {
+        dataZips <- unzipMultiZip(initialData, unzippedDir).toFox
+        _ = dataZips.foreach { dataZip =>
+          val magSet = magSetFromZipfile(dataZip)
+          if (magSet.nonEmpty) magSets.add(magSet)
         }
         mappingName <- getMappingNameUnlessEditable(tracing)
         mags <-
@@ -342,10 +343,10 @@ class VolumeTracingService @Inject() (
             else {
               val mergedVolume = new MergedVolume(tracing.elementClass, remapSegmentIds = true)
               for {
-                _ <- withZipsFromMultiZipAsync(initialData)((_, dataZip) => mergedVolume.addIdSetFromDataZip(dataZip))
-                _ <- withZipsFromMultiZipAsync(initialData)((index, dataZip) =>
+                _ <- Fox.serialCombined(dataZips)(mergedVolume.addIdSetFromDataZip)
+                _ <- Fox.serialCombined(dataZips.zipWithIndex) { case (dataZip, index) =>
                   mergedVolume.addFromDataZip(index, dataZip)
-                )
+                }
                 _ <- Fox.fromBool(
                   ElementClass.largestSegmentIdIsInRange(
                     mergedVolume.largestSegmentId,
@@ -386,7 +387,7 @@ class VolumeTracingService @Inject() (
               } yield mergedVolume.stats(tracing.getHasSegmentIndex)
             }
           }
-      } yield mags
+      } yield mags)(tryo(FileUtils.deleteDirectory(unzippedDir.toFile)))
     }
 
   def initializeWithData(

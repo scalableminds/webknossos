@@ -103,11 +103,10 @@ class TSAnnotationController @Inject() (
     log() {
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
         for {
-          newestMaterializableVersion <- annotationService.currentMaterializableVersion(annotationId)
           updateLog <- annotationService.updateActionLog(
             annotationId,
-            newestVersion.getOrElse(newestMaterializableVersion),
-            oldestVersion.getOrElse(0),
+            newestVersion,
+            oldestVersion,
             truncate.getOrElse(false)
           )
         } yield Ok(updateLog)
@@ -150,7 +149,7 @@ class TSAnnotationController @Inject() (
     Action.fox { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
               datasetBoundingBoxParsed <- Fox.runOptional(datasetBoundingBox)(b => BoundingBox.fromLiteral(b).toFox)
               annotationProto <- annotationService.duplicate(

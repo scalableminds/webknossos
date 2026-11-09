@@ -3,7 +3,7 @@ package models.storage
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import mail.OrganizationEmailService
-import models.organization.{Organization, OrganizationDAO, ThresholdEmailType}
+import models.organization.{AlertEmailType, Organization, OrganizationDAO}
 import models.user.MultiUserDAO
 import utils.WkConf
 
@@ -33,9 +33,9 @@ class StorageWarningService @Inject() (
         for {
           usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
           percent = usagePercent(usedStorageBytes, includedStorageBytes)
-          _ <- organizationDAO.deleteSentThresholdEmails(
+          _ <- organizationDAO.deleteSentAlertEmails(
             organization._id,
-            ThresholdEmailType.StorageWarning,
+            AlertEmailType.StorageWarning,
             rearmedThresholdsPercent(percent, thresholdsPercent)
           )
           crossed = crossedThresholdsPercent(percent, thresholdsPercent)
@@ -56,16 +56,21 @@ class StorageWarningService @Inject() (
       _ <- Fox.fromBool(recipients.nonEmpty) ?~> "Organization has neither an owner nor an admin to notify"
       // Recorded before sending, so that mails that cannot be delivered are not retried on every scan.
       // The count tells us how many of the thresholds were not recorded before; if none, the mails were already sent.
-      newlyRecordedCount <- organizationDAO.insertSentThresholdEmails(
+      newlyRecordedCount <- organizationDAO.insertSentAlertEmails(
         organization._id,
-        ThresholdEmailType.StorageWarning,
+        AlertEmailType.StorageWarning,
         crossedThresholdsPercent
       )
       _ = if (newlyRecordedCount > 0) {
         logger.info(
           s"Warning the owner and admins (${recipients.length}) of organization ${organization._id} that it uses $usedStorageBytes of $includedStorageBytes included storage bytes..."
         )
-        organizationEmailService.sendStorageWarningEmails(recipients, organization, usedStorageBytes, includedStorageBytes)
+        organizationEmailService.sendStorageWarningEmails(
+          recipients,
+          organization,
+          usedStorageBytes,
+          includedStorageBytes
+        )
       }
     } yield ()
 }

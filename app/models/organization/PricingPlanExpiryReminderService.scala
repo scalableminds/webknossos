@@ -74,9 +74,9 @@ class PricingPlanExpiryReminderService @Inject() (
       _ <- Fox.fromBool(recipients.nonEmpty) ?~> "Organization has neither an owner nor an admin to notify"
       // Recorded before sending, so that mails that cannot be delivered are not retried on every tick.
       // The count tells us how many of the lead times were not recorded before; if none, the mails were already sent.
-      newlyRecordedCount <- organizationDAO.insertSentThresholdEmails(
+      newlyRecordedCount <- organizationDAO.insertSentAlertEmails(
         organization._id,
-        ThresholdEmailType.PlanExpiry,
+        AlertEmailType.PlanExpiry,
         dueLeadTimesDays
       )
       _ = if (newlyRecordedCount > 0) {

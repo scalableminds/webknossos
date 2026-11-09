@@ -1,4 +1,3 @@
-import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { SoftError } from "libs/utils";
 import messages from "messages";
@@ -179,7 +178,13 @@ function* clearProofreadingMarkerWhenActiveSegmentDiverges(): Saga<never> {
     "SET_ACTIVE_CELL",
     "CREATE_CELL",
   ]);
-  let previousActiveCellId = (yield* select(getActiveSegmentationTracing))?.activeCellId;
+  // The marker is stored per segmentation layer, so the previous active id is tracked per layer.
+  const previousActiveCellIds = new Map(
+    (yield* select((state) => state.annotation.volumes)).map((volume) => [
+      volume.tracingId,
+      volume.activeCellId,
+    ]),
+  );
   while (true) {
     const action = yield* take(channel);
     const volumeTracing = yield* select(getActiveSegmentationTracing);
@@ -190,18 +195,15 @@ function* clearProofreadingMarkerWhenActiveSegmentDiverges(): Saga<never> {
     const markerPosition = yield* select(
       (state) => state.localSegmentationStateByLayer[tracingId]?.proofreadingMarkerPosition,
     );
-    // adaptActiveSegmentToProofreadingMarker passes the marker position as anchor position.
+    const previousActiveCellId = previousActiveCellIds.get(tracingId) ?? activeCellId;
     const isAdaptedToMarker =
-      action.type === "SET_ACTIVE_CELL" &&
-      action.anchorPosition != null &&
-      markerPosition != null &&
-      V3.equals(action.anchorPosition, markerPosition);
+      action.type === "SET_ACTIVE_CELL" && action.isAdaptedToProofreadingMarker;
     if (markerPosition != null && activeCellId !== previousActiveCellId && !isAdaptedToMarker) {
       // A proofreading click also changes the active segment first. In that case, the old
       // marker is cleared here and the new one is set afterwards by proofreadAtPosition.
       yield* put(updateProofreadingMarkerPositionAction(undefined, tracingId));
     }
-    previousActiveCellId = activeCellId;
+    previousActiveCellIds.set(tracingId, activeCellId);
   }
 }
 

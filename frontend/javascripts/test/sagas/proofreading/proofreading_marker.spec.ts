@@ -117,9 +117,27 @@ describe("Proofreading marker", () => {
       // This is what adaptActiveSegmentToProofreadingMarker does when the agglomerate at
       // the marker changed (e.g., due to a split).
       const markerPosition = yield* getMarkerPosition(tracingId);
-      yield put(setActiveCellAction(1337n, markerPosition));
+      yield put(setActiveCellAction(1337n, markerPosition, undefined, undefined, true));
       yield call(waitForSagas);
       expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(1));
+    });
+    await task.toPromise();
+  });
+
+  it("should be cleared when the user activates another segment whose anchor is at the marker", async (context: WebknossosTestContext) => {
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield call(clickSegmentWithProofreadingTool, tracingId, 1n);
+
+      // E.g., "Activate Segment ID" in the segment list for an older segment item that was
+      // created at the same position.
+      const markerPosition = yield* getMarkerPosition(tracingId);
+      yield put(setActiveCellAction(1337n, markerPosition));
+      yield call(waitForSagas);
+      expect(yield* getMarkerPosition(tracingId)).toBeUndefined();
     });
     await task.toPromise();
   });

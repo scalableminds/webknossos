@@ -16,10 +16,9 @@ import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
 import { createTween } from "libs/tween_group";
 import UserLocalStorage from "libs/user_local_storage";
-import { coalesce, map3, mod, sleep } from "libs/utils";
+import { coalesce, map3, sleep } from "libs/utils";
 import window, { location } from "libs/window";
 import cloneDeep from "lodash-es/cloneDeep";
-import groupBy from "lodash-es/groupBy";
 import isNumber from "lodash-es/isNumber";
 import messages from "messages";
 import type { Vector16 } from "mjs";
@@ -31,7 +30,6 @@ import type { Writeable } from "types/type_utils";
 import type {
   BucketAddress,
   ControlMode,
-  LabeledVoxelsMap,
   MappingType,
   OrthoView,
   TypedArray,
@@ -119,7 +117,11 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 import { setPositionAction, setRotationAction } from "viewer/model/actions/flycam_actions";
-import { disableSavingAction, discardSaveQueueAction } from "viewer/model/actions/save_actions";
+import {
+  disableSavingAction,
+  discardSaveQueueAction,
+  pushSaveQueueTransaction,
+} from "viewer/model/actions/save_actions";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
@@ -169,7 +171,6 @@ import {
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { Bucket, DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataLayer from "viewer/model/data_layer";
-import Dimensions from "viewer/model/dimensions";
 import dimensions from "viewer/model/dimensions";
 import { MagInfo } from "viewer/model/helpers/mag_info";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
@@ -179,16 +180,18 @@ import {
   globalPositionToBucketPosition,
   scaleGlobalPositionWithMagnification,
   zoomedAddressToZoomedPosition,
-  zoomedPositionToZoomedAddress,
 } from "viewer/model/helpers/position_converter";
 import { flatToNestedMatrix } from "viewer/model/helpers/transformation_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
-import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
+import {
+  createPartialBucketUpdates,
+  getVolumeSaveModeForState,
+} from "viewer/model/sagas/volume/helpers";
 import { fetchAgglomeratesForSegmentIds } from "viewer/model/sagas/volume/mapping_saga";
 import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
-import { applyVoxelMap } from "viewer/model/volumetracing/legacy/volume_annotation_sampling";
+import { runVoxelsEdit } from "viewer/model/volumetracing/integration/mask_driver";
 import { api, Model } from "viewer/singletons";
 import type {
   DatasetConfiguration,
@@ -254,8 +257,6 @@ function assertVolume(state: WebknossosState): VolumeTracing {
 }
 /**
  * All tracing related API methods. This is the newest version of the API (version 3).
- * @version 3
- * @class
  * @example
  * window.webknossos.apiReady(3).then(api => {
  *   api.tracing.getActiveNodeId();
@@ -268,12 +269,12 @@ class TracingApi {
   model: WebKnossosModel;
 
   /**
-   * @private
+   * @internal
    */
   isFinishing: boolean = false;
 
   /**
-   * @private
+   * @internal
    */
   constructor(model: WebKnossosModel) {
     this.model = model;
@@ -690,6 +691,7 @@ class TracingApi {
 
   /**
    * Adds a segment to the segment list.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * api.tracing.registerSegment(
@@ -700,11 +702,12 @@ class TracingApi {
    * );
    */
   registerSegment(
-    segmentId: bigint,
+    segmentIdLike: NumberLike,
     anchorPosition: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
     layerName?: string,
   ) {
+    const segmentId = toBigInt(segmentIdLike);
     Store.dispatch(clickSegmentAction(segmentId, anchorPosition, additionalCoordinates, layerName));
   }
 
@@ -831,6 +834,7 @@ class TracingApi {
   /**
    * Gets a segment object within the referenced volume layer. Note that this object
    * does not support any modifications made to it.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * const segment = api.tracing.getSegment(
@@ -839,7 +843,8 @@ class TracingApi {
    * );
    * console.log(segment.groupId)
    */
-  getSegment(segmentId: bigint, layerName: string): Segment {
+  getSegment(segmentIdLike: NumberLike, layerName: string): Segment {
+    const segmentId = toBigInt(segmentIdLike);
     const segment = getSegmentsForLayer(Store.getState(), layerName).getOrThrow(segmentId);
     // Return a copy to avoid mutations by third-party code.
     return { ...segment };
@@ -848,6 +853,7 @@ class TracingApi {
   /**
    * Updates a segment. The segment parameter can contain all properties of a Segment
    * (except for the id) or less.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * api.tracing.updateSegment(
@@ -862,12 +868,14 @@ class TracingApi {
    *   "volume-layer-id"
    * );
    */
-  updateSegment(segmentId: bigint, segment: Partial<Segment>, layerName: string) {
+  updateSegment(segmentIdLike: NumberLike, segment: Partial<Segment>, layerName: string) {
+    const segmentId = toBigInt(segmentIdLike);
     Store.dispatch(updateSegmentAction(segmentId, { ...segment, id: segmentId }, layerName));
   }
 
   /**
    * Removes a segment from the segment list. This does *not* mutate the actual voxel data.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * api.tracing.removeSegment(
@@ -875,7 +883,8 @@ class TracingApi {
    *   "volume-layer-id"
    * );
    */
-  removeSegment(segmentId: bigint, layerName: string) {
+  removeSegment(segmentIdLike: NumberLike, layerName: string) {
+    const segmentId = toBigInt(segmentIdLike);
     Store.dispatch(removeSegmentAction(segmentId, layerName));
   }
 
@@ -1096,12 +1105,13 @@ class TracingApi {
    * tree from the backend. By passing any position of the agglomerate instead its id via using
    * api.tracing.loadAgglomerateTreeAtPosition WEBKNOSSOS can ensure to use the up-to-date agglomerate
    * id to request the correct agglomerate tree.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * api.tracing.loadAgglomerateSkeletonForSegmentId(3);
    */
-  loadAgglomerateSkeletonForSegmentId(segmentId: bigint) {
-    loadAgglomerateTreeFromId(segmentId);
+  loadAgglomerateSkeletonForSegmentId(segmentIdLike: NumberLike) {
+    loadAgglomerateTreeFromId(toBigInt(segmentIdLike));
   }
 
   /**
@@ -1571,12 +1581,13 @@ class TracingApi {
   /**
    * Sets the active segment given a segment id.
    * If a segment with the given id doesn't exist, it is created.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    * _Volume tracing only!_
    */
-  setActiveCell(id: bigint) {
+  setActiveCell(idLike: NumberLike) {
     assertVolume(Store.getState());
-    assertExists(id, "Segment id is missing.");
-    Store.dispatch(setActiveCellAction(id));
+    assertExists(idLike, "Segment id is missing.");
+    Store.dispatch(setActiveCellAction(toBigInt(idLike)));
   }
 
   /**
@@ -1679,7 +1690,7 @@ class DataApi {
     );
   }
 
-  /*
+  /**
    * Returns the name of the visible segmentation layer (if it exists). Note that
    * if the visible layer is a volume tracing layer, the name will be an ID
    * (and not the name which the user can specify in the UI).
@@ -1694,7 +1705,7 @@ class DataApi {
     return null;
   }
 
-  /*
+  /**
    * Returns the ids of the existing volume tracing layers.
    */
   getVolumeTracingLayerIds(): Array<string> {
@@ -2091,8 +2102,8 @@ class DataApi {
     return bucket;
   }
 
-  /*
-   * Deprecated! Use getDataForBoundingBox instead whose name describes its interface correctly.
+  /**
+   * @deprecated Use {@link DataApi.getDataForBoundingBox} instead, whose name describes its interface correctly.
    */
   async getDataFor2DBoundingBox(
     layerName: string,
@@ -2102,7 +2113,7 @@ class DataApi {
     return this.getDataForBoundingBox(layerName, bbox, _zoomStep);
   }
 
-  /*
+  /**
    * For the provided layer name and bounding box, an array is constructed with the actual data.
    * By default, the finest existent quality is chosen, but the quality can be adapted via the
    * zoomStep parameter.
@@ -2344,7 +2355,7 @@ class DataApi {
   /**
    * Helper method to build the download URL for a raw data cuboid.
    *
-   * @ignore
+   * @internal
    */
   _getDownloadUrlForRawDataCuboid(
     layerName: string,
@@ -2415,6 +2426,7 @@ class DataApi {
    * had brushed the provided voxels all at once. If the volume data wasn't
    * downloaded completely yet, WEBKNOSSOS will merge the data as soon as it
    * was downloaded.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * _Volume tracing only!_
    *
@@ -2424,9 +2436,10 @@ class DataApi {
    */
   labelVoxels(
     globalPositionsMag1: Vector3[],
-    segmentId: bigint,
+    segmentIdLike: NumberLike,
     optAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
+    const segmentId = toBigInt(segmentIdLike);
     const state = Store.getState();
     const allowUpdate = mayEditAnnotation(state);
     const additionalCoordinates =
@@ -2436,76 +2449,32 @@ class DataApi {
     if (!allowUpdate || globalPositionsMag1.length === 0) return;
 
     const volumeTracing = enforceActiveVolumeTracing(state);
-    const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
-    const { cube } = segmentationLayer;
-    const magInfo = getMagInfo(segmentationLayer.mags);
-    const labeledZoomStep = magInfo.getClosestExistingIndex(0);
-    const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
-    const dimensionIndices = Dimensions.getIndices(OrthoViews.PLANE_XY);
-    const thirdDim = dimensionIndices[2];
-
-    const globalPositions = globalPositionsMag1.map(
+    const { cube } = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
+    const labeledZoomStep = cube.magInfo.getClosestExistingIndex(0);
+    const labeledMag = cube.magInfo.getMagByIndexOrThrow(labeledZoomStep);
+    const voxels = globalPositionsMag1.map(
       (pos): Vector3 => [
         Math.floor(pos[0] / labeledMag[0]),
         Math.floor(pos[1] / labeledMag[1]),
         Math.floor(pos[2] / labeledMag[2]),
       ],
     );
-    const groupedByW = groupBy(globalPositions, (pos) => pos[thirdDim]);
-
-    for (const group of Object.values(groupedByW)) {
-      const w = group[0][thirdDim];
-      const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
-
-      for (const pos of group) {
-        const bucketZoomedAddress = zoomedPositionToZoomedAddress(
-          pos,
-          labeledZoomStep,
-          additionalCoordinates,
-        );
-
-        let labelMap = currentLabeledVoxelMap.get(bucketZoomedAddress);
-        if (!labelMap) {
-          labelMap = new Uint8Array(Constants.BUCKET_SIZE_2D);
-          currentLabeledVoxelMap.set(bucketZoomedAddress, labelMap);
-        }
-
-        const a = pos[dimensionIndices[0]];
-        const b = pos[dimensionIndices[1]];
-        const localA = mod(a, Constants.BUCKET_WIDTH);
-        const localB = mod(b, Constants.BUCKET_WIDTH);
-        labelMap[localA * Constants.BUCKET_WIDTH + localB] = 1;
-      }
-
-      const numberOfSlices = 1;
-      applyVoxelMap(
-        currentLabeledVoxelMap,
+    const saveMode = getVolumeSaveModeForState(state);
+    const { bucketDiffs } = runVoxelsEdit(
+      {
         cube,
+        magIndex: labeledZoomStep,
         segmentId,
-        (x, y, out) => {
-          out[0] = x;
-          out[1] = y;
-          out[2] = w;
-        },
-        numberOfSlices,
-        thirdDim,
-        true,
-        0n,
-      );
-
-      const thirdDimensionOfSlice = w * labeledMag[thirdDim];
-
-      applyLabeledVoxelMapToAllMissingMags(
-        currentLabeledVoxelMap,
-        labeledZoomStep,
-        dimensionIndices,
-        magInfo,
-        cube,
-        segmentId,
-        thirdDimensionOfSlice,
-        true,
-        0n,
-      );
+        additionalCoordinates: additionalCoordinates ?? null,
+        saveMode,
+      },
+      voxels,
+      "labelVoxels",
+    );
+    if (saveMode === "partialUpdates") {
+      // The voxels follow no viewport, so the runs keep the x order.
+      const updates = createPartialBucketUpdates(bucketDiffs, cube, volumeTracing.tracingId, 0);
+      if (updates.length > 0) Store.dispatch(pushSaveQueueTransaction(updates));
     }
 
     Store.dispatch(
@@ -2704,6 +2673,7 @@ class DataApi {
    * If a mesh file is active, loadPrecomputedMesh can be used to load a mesh for a given segment at a given seed position for
    * a specified segmentation layer. If layerName is not passed, the currently visible segmentation layer will be used.
    * If there is no mesh file for the dataset's segmentation layer available, you can use api.data.computeMeshOnDemand instead.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * const currentPosition = api.tracing.getCameraPosition();
@@ -2714,11 +2684,12 @@ class DataApi {
    * api.data.loadPrecomputedMesh(segmentId, currentPosition);
    */
   loadPrecomputedMesh(
-    segmentId: bigint,
+    segmentIdLike: NumberLike,
     seedPosition: Vector3,
     layerName: string | null | undefined,
     seedAdditionalCoordinates?: AdditionalCoordinate[],
   ) {
+    const segmentId = toBigInt(segmentIdLike);
     const state = Store.getState();
     const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(state, layerName);
 
@@ -2772,6 +2743,7 @@ class DataApi {
 
   /**
    * Load a mesh for a given segment id and a seed position by computing it ad-hoc.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * const currentPosition = api.tracing.getCameraPosition();
@@ -2779,21 +2751,25 @@ class DataApi {
    * api.data.computeMeshOnDemand(segmentId, currentPosition);
    */
   computeMeshOnDemand(
-    segmentId: bigint,
+    segmentIdLike: NumberLike,
     seedPosition: Vector3,
     seedAdditionalCoordinates?: AdditionalCoordinate[],
   ) {
-    Store.dispatch(loadAdHocMeshAction(segmentId, seedPosition, seedAdditionalCoordinates));
+    Store.dispatch(
+      loadAdHocMeshAction(toBigInt(segmentIdLike), seedPosition, seedAdditionalCoordinates),
+    );
   }
 
   /**
    * Set the visibility for a loaded mesh by providing the corresponding segment id.
    * If layerName is not passed, the currently visible segmentation layer will be used.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
-   * api.data.setMeshVisibility(segmentId, false);
+   * api.data.setMeshVisibility(3, false);
    */
-  setMeshVisibility(segmentId: bigint, isVisible: boolean, layerName?: string) {
+  setMeshVisibility(segmentIdLike: NumberLike, isVisible: boolean, layerName?: string) {
+    const segmentId = toBigInt(segmentIdLike);
     const state = Store.getState();
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       state,
@@ -2818,11 +2794,13 @@ class DataApi {
   /**
    * Remove the mesh for a given segment and segmentation layer. If layerName is not passed,
    * the currently visible segmentation layer will be used.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
-   * api.data.removeMesh(segmentId, layerName);
+   * api.data.removeMesh(3, layerName);
    */
-  removeMesh(segmentId: bigint, layerName?: string): void {
+  removeMesh(segmentIdLike: NumberLike, layerName?: string): void {
+    const segmentId = toBigInt(segmentIdLike);
     const state = Store.getState();
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       state,
@@ -2961,11 +2939,13 @@ class DataApi {
   /**
    * Get the RGB color of a segment (and its mesh) for a given segmentation layer. If layerName is not passed,
    * the currently visible segmentation layer will be used.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * api.data.getSegmentColor(3);
    */
-  getSegmentColor(segmentId: bigint, layerName?: string): Vector3 {
+  getSegmentColor(segmentIdLike: NumberLike, layerName?: string): Vector3 {
+    const segmentId = toBigInt(segmentIdLike);
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       Store.getState(),
       layerName,
@@ -2978,11 +2958,18 @@ class DataApi {
   /**
    * Set the RGB color of a segment (and its mesh) for a given segmentation layer. If layerName is not passed,
    * the currently visible segmentation layer will be used. If the mesh is loaded, optionally update its opacity.
+   * The segment id can be a number or a bigint. Pass ids above Number.MAX_SAFE_INTEGER as bigint.
    *
    * @example
    * api.data.setSegmentColor(3, [0, 1, 1], "segmentation", 0.5);
    */
-  setSegmentColor(segmentId: bigint, rgbColor: Vector3, layerName?: string, meshOpacity?: number) {
+  setSegmentColor(
+    segmentIdLike: NumberLike,
+    rgbColor: Vector3,
+    layerName?: string,
+    meshOpacity?: number,
+  ) {
+    const segmentId = toBigInt(segmentIdLike);
     const state = Store.getState();
     const additionalCoordinates = state.flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
@@ -3164,12 +3151,12 @@ class UtilsApi {
   /**
    * Show a toast to the user. Returns a function which can be used to remove the toast again.
    *
-   * @param {string} type - Can be one of the following: "info", "warning", "success" or "error"
-   * @param {string} message - The message string you want to show
-   * @param {number} timeout - Time period in milliseconds after which the toast will be hidden. Time is measured as soon as the user moves the mouse. A value of 0 means that the toast will only hide by clicking on it's X button.
+   * @param type - Can be one of the following: "info", "warning", "success" or "error"
+   * @param message - The message string you want to show
+   * @param timeout - Time period in milliseconds after which the toast will be hidden. Time is measured as soon as the user moves the mouse. A value of 0 means that the toast will only hide by clicking on it's X button.
    * @example
    * // Show a toast for 5 seconds
-   * const removeToast = api.utils.showToast("info", "You just got toasted", false, 5000);
+   * const removeToast = api.utils.showToast("info", "You just got toasted", 5000);
    * // ... optionally:
    * // removeToast();
    */
@@ -3187,8 +3174,8 @@ class UtilsApi {
 
   /**
    * Overwrite existing wK actions. wK uses [Redux](http://redux.js.org/) actions to trigger any changes to the application state.
-   * @param {function(store, next, originalAction)} overwriteFunction - Your new implementation for the method in question. Receives the central wK store, a callback to fire the next/original action and the original action.
-   * @param {string} actionName - The name of the action you wish to override:
+   * @param overwriteFunction - Your new implementation for the method in question. Receives the central wK store, a callback to fire the next/original action and the original action.
+   * @param actionName - The name of the action you wish to override:
    *   - CREATE_NODE
    *   - DELETE_NODE
    *   - SET_ACTIVE_NODE
@@ -3206,7 +3193,7 @@ class UtilsApi {
    *   - SHUFFLE_ALL_TREE_COLORS
    *   - CREATE_COMMENT
    *   - DELETE_COMMENT
-   * @returns {function()} - A function used to unregister the overwriteFunction
+   * @returns A function used to unregister the overwriteFunction
    *
    *
    * @example

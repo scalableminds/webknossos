@@ -151,7 +151,7 @@ export default function ToolbarView() {
           <Tag
             icon={<InfoCircleOutlined />}
             style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}
-            color="orange"
+            color="warning"
           >
             Split Workflow
           </Tag>

@@ -1,6 +1,7 @@
 #include "com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner.h"
 
 #include "jniutils.h"
+#include "voxelRuns.h"
 #include <array>
 #include <iostream>
 #include <vector>
@@ -8,6 +9,7 @@
 #include <unordered_set>
 #include <stdint.h>
 #include <map>
+#include <algorithm>
 #include <cstring>
 
 void writeSegmentIdAtIndex(jbyte *bucketBytes, size_t index, int64_t segmentId, const int bytesPerElement, const int isSigned) {
@@ -383,6 +385,49 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
     } catch (...) {
         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner deleteSegmentFromBucket");
+        return nullptr;
+    }
+}
+
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_applyVoxelRuns
+    (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jbyteArray voxelRunsJavaArray) {
+
+    jsize bucketLengthBytes = env->GetArrayLength(bucketBytesJavaArray);
+    jbyte * bucketBytes = env->GetByteArrayElements(bucketBytesJavaArray, nullptr);
+    jsize voxelRunsLengthBytes = env->GetArrayLength(voxelRunsJavaArray);
+    jbyte * voxelRuns = env->GetByteArrayElements(voxelRunsJavaArray, nullptr);
+
+    try {
+        const size_t elementCount = getElementCount(bucketLengthBytes, bytesPerElement);
+
+        if (elementCount != bucketVoxelCount) {
+            throw std::invalid_argument("voxel runs can only be applied to a bucket of 32^3 elements");
+        }
+
+        // Validate everything before allocating/mutating the output array.
+        const size_t voxelRunsLength = static_cast<size_t>(voxelRunsLengthBytes);
+        const VoxelRunsHeader header = validateVoxelRuns(voxelRuns, voxelRunsLength);
+
+        jbyteArray outputJavaArray = env->NewByteArray(bucketLengthBytes);
+        jbyte *outputBytes = env->GetByteArrayElements(outputJavaArray, nullptr);
+        memcpy(outputBytes, bucketBytes, bucketLengthBytes);
+
+        // isSigned is irrelevant here: a value is written as its low bytesPerElement bytes either way.
+        writeVoxelRuns(voxelRuns, voxelRunsLength, header, outputBytes, bytesPerElement);
+
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        env->ReleaseByteArrayElements(voxelRunsJavaArray, voxelRuns, JNI_ABORT);
+        env->ReleaseByteArrayElements(outputJavaArray, outputBytes, 0);
+        return outputJavaArray;
+    } catch (const std::exception &e) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        env->ReleaseByteArrayElements(voxelRunsJavaArray, voxelRuns, JNI_ABORT);
+        throwRuntimeException(env, "Native Exception in BucketScanner applyVoxelRuns: " + std::string(e.what()));
+        return nullptr;
+    } catch (...) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        env->ReleaseByteArrayElements(voxelRunsJavaArray, voxelRuns, JNI_ABORT);
+        throwRuntimeException(env, "Native Exception in BucketScanner applyVoxelRuns");
         return nullptr;
     }
 }

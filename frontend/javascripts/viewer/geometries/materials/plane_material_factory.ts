@@ -69,8 +69,15 @@ import {
   isZoomThresholdExceededForAgglomerateMapping,
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { getDtypeConfigForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
-import { getGlobalLayerIndexForLayerName } from "viewer/model/bucket_data_handling/layer_rendering_manager";
+import {
+  getDtypeConfigForElementClass,
+  LAYER_POOL_SAMPLERS,
+} from "viewer/model/bucket_data_handling/data_rendering_logic";
+import {
+  getGlobalLayerIndexForLayerName,
+  getLayerPoolTextureManagers,
+  getSharedLookUpCuckooTable,
+} from "viewer/model/bucket_data_handling/layer_rendering_manager";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import shaderEditor from "viewer/model/helpers/shader_editor";
 import getMainFragmentShader, {
@@ -141,7 +148,6 @@ function getTextureLayerInfos(): Params["textureLayerInfos"] {
     return {
       packingDegree: dtypeConfig.packingDegree,
       glslPrefix: dtypeConfig.glslPrefix,
-      dataTextureCount: Model.getLayerRenderingManagerByName(layer.name).dataTextureCount,
       isSigned: dtypeConfig.isSigned,
       elementClass,
       isColor: layer.category === "color",
@@ -365,30 +371,21 @@ class PlaneMaterialFactory {
   }
 
   attachTextures(): void {
-    let sharedLookUpTexture;
-    let sharedLookUpCuckooTable;
     // Same ordering as activeMagIndices (both iterate Model.getAllLayers()), matching
     // globalLayerIndex. Built here, not in setupUniforms, because textureBucketManager only
-    // exists once getDataTextures() below has triggered its lazy setup.
+    // exists once getTextureBucketManager() below has triggered its lazy setup.
     const usesTRecyclingPerLayer: number[] = [];
     // Voxels per bucket in each layer's data texture. Read off the TextureBucketManager, not
     // the DataCube: the two disagree for t-recycling layers, and the shader derives its row and
     // texture indices from this, so it must match the upload side exactly.
     const bucketVoxelCountPerLayer: number[] = [];
-    // Add data and look up textures for each layer
-    for (const dataLayer of Model.getAllLayers()) {
-      const { name } = dataLayer;
-      const [lookUpTexture, ...dataTextures] = dataLayer.layerRenderingManager.getDataTextures();
-      sharedLookUpTexture = lookUpTexture;
-      sharedLookUpCuckooTable = dataLayer.layerRenderingManager.getSharedLookUpCuckooTable();
-      const layerName = sanitizeName(name);
-      this.uniforms[`${layerName}_textures`] = {
-        value: dataTextures,
-      };
-      this.uniforms[`${layerName}_data_texture_width`] = {
-        value: dataLayer.layerRenderingManager.textureWidth,
-      };
-      const { textureBucketManager } = dataLayer.layerRenderingManager;
+    const allLayers = Model.getAllLayers();
+    if (allLayers.length === 0) {
+      throw new Error("Empty layer list at unexpected point.");
+    }
+    for (const dataLayer of allLayers) {
+      // Also sets up the layer's TextureBucketManager if needed.
+      const textureBucketManager = dataLayer.layerRenderingManager.getTextureBucketManager();
       usesTRecyclingPerLayer.push(textureBucketManager.usesTRecycling ? 1 : 0);
       bucketVoxelCountPerLayer.push(textureBucketManager.bucketVoxelCount);
     }
@@ -399,13 +396,17 @@ class PlaneMaterialFactory {
       value: bucketVoxelCountPerLayer,
     };
 
-    if (!sharedLookUpCuckooTable) {
-      throw new Error("Empty layer list at unexpected point.");
-    }
-
+    // Shared by all layers, like the pool textures below.
+    const sharedLookUpCuckooTable = getSharedLookUpCuckooTable();
     this.uniforms.lookup_texture = {
-      value: sharedLookUpTexture,
+      value: sharedLookUpCuckooTable._texture,
     };
+
+    for (const [pool, poolTextureManager] of getLayerPoolTextureManagers()) {
+      this.uniforms[LAYER_POOL_SAMPLERS[pool].uniformName] = {
+        value: poolTextureManager.textureArray,
+      };
+    }
 
     this.unsubscribeColorSeedsFn = sharedLookUpCuckooTable.subscribeToSeeds((seeds: number[]) => {
       this.uniforms.lookup_seeds = {

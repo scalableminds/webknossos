@@ -345,6 +345,12 @@ class DataCube {
   // Either returns the existing bucket or creates a new one. Only returns
   // NULL_BUCKET if the bucket cannot possibly exist, e.g. because it is
   // outside the dataset's bounding box.
+  // Whether getOrCreateBucket returns a real bucket for the address, i.e., its mag
+  // exists in the layer and it intersects the layer's bounding box.
+  isBucketWithinLayer(address: BucketAddress): boolean {
+    return this.checkContainment(address).type !== "no";
+  }
+
   getOrCreateBucket(address: BucketAddress): Bucket {
     let bucket = this.getBucket(address);
 
@@ -595,7 +601,7 @@ class DataCube {
     // This function is only provided for testing purposes and should not be used internally,
     // since it only operates on one voxel and therefore is not performance-optimized. It should
     // be refactored away.
-    // Please make use of a LabeledVoxelsMap instead.
+    // Please use the volume tool drivers (viewer/model/volumetracing/integration) instead.
     const voxelInCube = this.boundingBox.containsPoint(voxel);
 
     if (voxelInCube) {

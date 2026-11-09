@@ -44,4 +44,19 @@ describe("Misc APIs (E2E) ", () => {
 
     expect(features).toMatchSnapshot();
   });
+
+  it("returns 401 in the standard error format for unauthenticated requests", async ({
+    expect,
+  }) => {
+    // Ensures that silhouette uses our ErrorHandler (bound in SilhouetteModule) instead of its default one.
+    setUserAuthToken("invalidToken");
+    try {
+      await expect(getActiveUser({ showErrorToast: false })).rejects.toMatchObject({
+        status: 401,
+        messages: [{ error: expect.stringContaining("not authorized") }],
+      });
+    } finally {
+      setUserAuthToken(tokenUserA);
+    }
+  });
 });

@@ -62,7 +62,16 @@ function NewAnnotationLink({
         <EllipsisOutlined />
       </a>
       {isCreateAnnotationModalVisible ? (
-        <CreateAnnotationModal datasetId={dataset.id} onClose={onCloseCreateAnnotationModal} />
+        // The modal is rendered via a portal, but React still bubbles its events
+        // to the table row. Stop them here so that they don't (de)select the row
+        // or open the row's context menu.
+        <span
+          onClick={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+          onContextMenu={(event) => event.stopPropagation()}
+        >
+          <CreateAnnotationModal datasetId={dataset.id} onClose={onCloseCreateAnnotationModal} />
+        </span>
       ) : null}
     </div>
   );
@@ -70,6 +79,9 @@ function NewAnnotationLink({
 
 type Props = {
   dataset: APIDatasetCompact;
+  // Compact layouts show the actions in a single row below the dataset name. They omit the view
+  // link (the name already links to the dataset view) and the settings label.
+  isCompact?: boolean;
 };
 
 export function useReloadDataset() {
@@ -90,14 +102,21 @@ export function useReloadDataset() {
 
 function DatasetActionView(props: Props) {
   const { modal } = App.useApp();
-  const { dataset } = props;
+  const { dataset, isCompact } = props;
 
   const [isCreateAnnotationModalVisible, setIsCreateAnnotationModalVisible] = useState(false);
 
   const datasetSettingsLink = (
     <Link to={`/datasets/${getReadableURLPart(dataset)}/edit`} title="Open Dataset Settings">
-      <SettingOutlined className="icon-margin-right" />
-      Settings
+      {/* The link's title doubles as the tooltip of the icon-only variant. */}
+      {isCompact ? (
+        <SettingOutlined />
+      ) : (
+        <>
+          <SettingOutlined className="icon-margin-right" />
+          Settings
+        </>
+      )}
     </Link>
   );
   const brokenDatasetActions = (
@@ -135,10 +154,12 @@ function DatasetActionView(props: Props) {
         onShowCreateAnnotationModal={() => setIsCreateAnnotationModalVisible(true)}
         onCloseCreateAnnotationModal={() => setIsCreateAnnotationModalVisible(false)}
       />
-      <Link to={getViewDatasetURL(dataset)} title="View Dataset">
-        <EyeOutlined className="icon-margin-right" />
-        View
-      </Link>
+      {isCompact ? null : (
+        <Link to={getViewDatasetURL(dataset)} title="View Dataset">
+          <EyeOutlined className="icon-margin-right" />
+          View
+        </Link>
+      )}
       {dataset.isEditable ? datasetSettingsLink : null}
     </>
   );

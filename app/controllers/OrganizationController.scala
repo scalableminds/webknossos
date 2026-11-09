@@ -6,6 +6,7 @@ import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.util.objectid.ObjectId
 import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
@@ -16,6 +17,7 @@ import models.organization.{
   OrganizationDAO,
   OrganizationPlanUpdate,
   OrganizationService,
+  PartnerDAO,
   PricingPlan,
   UpgradeRequest
 }
@@ -31,9 +33,13 @@ import scala.concurrent.ExecutionContext
 
 case class OrganizationParameters(name: String, newUserMailingList: String) derives JsonAutoFormat
 
+// partnerId None removes the partner assignment.
+case class OrganizationPartnerParameters(partnerId: Option[ObjectId]) derives JsonAutoFormat
+
 class OrganizationController @Inject() (
     organizationDAO: OrganizationDAO,
     organizationService: OrganizationService,
+    partnerDAO: PartnerDAO,
     inviteDAO: InviteDAO,
     conf: WkConf,
     userDAO: UserDAO,
@@ -168,6 +174,26 @@ class OrganizationController @Inject() (
       } yield Ok(organizationJson)
     }
 
+  // Assigns the organization to a partner, which co-brands WEBKNOSSOS for it. Only super users may do this.
+  def updatePartner(organizationId: String): Action[OrganizationPartnerParameters] =
+    sil.SecuredAction.fox(validateJson[OrganizationPartnerParameters]) { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
+        organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(
+          organizationId
+        ) ~> NOT_FOUND
+        _ <- Fox.runOptional(request.body.partnerId)(
+          partnerDAO.findOne(_)(using GlobalAccessContext)
+        ) ?~> Msg.Partner.notFound ~> NOT_FOUND
+        _ <- organizationDAO.updatePartner(organization._id, request.body.partnerId)
+        _ = logger.info(
+          s"Super user ${request.identity._id} set the partner of organization ${organization._id} to ${request.body.partnerId.getOrElse("none")}"
+        )
+        updated <- organizationDAO.findOne(organization._id)
+        organizationJson <- organizationService.publicWrites(updated, Some(request.identity))
+      } yield Ok(organizationJson)
+    }
+
   def delete(organizationId: String): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(organizationId) ~> NOT_FOUND
@@ -203,19 +229,21 @@ class OrganizationController @Inject() (
 
   private def aiAddonLabelForPricingPlan(pricingPlan: PricingPlan.PricingPlan): String =
     pricingPlan match {
-      case PricingPlan.Team | PricingPlan.Team_Trial   => "Team AI"
-      case PricingPlan.Power | PricingPlan.Power_Trial => "Power AI"
-      case _                                           => "AI Add-on"
+      case PricingPlan.Team | PricingPlan.Team_Trial                            => "Team AI"
+      case PricingPlan.Power | PricingPlan.Power_Trial | PricingPlan.Enterprise => "Power AI"
+      case _                                                                    => "AI Add-on"
     }
 
   // Only paid, non-trial plans that rank above the current one can be requested.
+  // Open Source may also request Team, which ranks the same but adds jobs and AI features.
   private def isValidPlanUpgrade(currentPlan: PricingPlan.PricingPlan, requestedPlan: PricingPlan.PricingPlan) =
     (requestedPlan == PricingPlan.Team || requestedPlan == PricingPlan.Power) &&
-      PricingPlan.isUpgrade(currentPlan, requestedPlan)
+      (PricingPlan.isUpgrade(currentPlan, requestedPlan) || currentPlan == PricingPlan.Open_Source)
 
   // The AI Add-on needs at least the Team plan (possibly as part of the same request) and must not be active yet.
   private def canRequestAiAddon(organization: Organization, effectivePlan: PricingPlan.PricingPlan) =
-    organization.aiPlan.isEmpty && PricingPlan.tierRank(effectivePlan) >= PricingPlan.tierRank(PricingPlan.Team)
+    organization.aiPlan.isEmpty && PricingPlan.tierRank(effectivePlan) >= PricingPlan.tierRank(PricingPlan.Team) &&
+      PricingPlan.allowsJobs(effectivePlan)
 
   // Only the items that were actually requested are listed in the email.
   private def describeUpgradeRequest(upgradeRequest: UpgradeRequest, organization: Organization): Seq[String] = {
@@ -291,8 +319,12 @@ class OrganizationController @Inject() (
         organization <- organizationDAO.findOne(request.body.organizationId) ?~> Msg.Organization.notFound(
           request.body.organizationId
         ) ~> NOT_FOUND
-        _ <- organizationDAO.insertPlanUpdate(organization._id, request.body)
-        _ <- organizationDAO.updatePlan(organization._id, request.body)
+        planUpdate = request.body.withQuotasOfPlan(
+          organization.pricingPlan,
+          request.body.pricingPlan.getOrElse(organization.pricingPlan)
+        )
+        _ <- organizationDAO.insertPlanUpdate(organization._id, planUpdate)
+        _ <- organizationDAO.updatePlan(organization._id, planUpdate)
         // Note that this logs its failures rather than propagating them, as the plan update above has
         // already been persisted at this point.
         _ <- Fox.runOptional(request.body.pricingPlan)(newPricingPlan =>

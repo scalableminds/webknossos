@@ -137,7 +137,8 @@ jobs:
         uses: actions/cache@v6
         with:
           # actions/cache does not expand directories, so exclusions only apply to paths listed by the globs.
-          # Hence the children of each target dir are listed, minus staged apps, web assets and logs.
+          # Hence the children of each target dir are listed, minus staged apps, web assets, logs and the native JNI build
+          # (its CMake cache pins the absolute JDK path, which differs between runner images).
           # YAML anchor, reused by the other compile cache steps below.
           path: &zinc-cache-paths |
             target/*
@@ -146,6 +147,7 @@ jobs:
             !**/target/universal
             !**/target/web
             !**/target/global-logging
+            !**/target/native
           key: zinc-test-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
             zinc-test-${{ github.ref_name }}-
@@ -268,9 +270,9 @@ jobs:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
 
       # The frontend build is only needed by `stage`, not by `compile`, so both run concurrently to save time.
-      - name: Build frontend (vite, docs) and compile webknossos, datastore and tracingstore (sbt)
+      - name: Build frontend (vite) and compile webknossos, datastore and tracingstore (sbt)
         run: |
-          (yarn build && yarn run docs --project-version "$WK_VERSION") > "$RUNNER_TEMP/frontend-build.log" 2>&1 &
+          yarn build > "$RUNNER_TEMP/frontend-build.log" 2>&1 &
           frontend_pid=$!
           sbt --client compile
           frontend_status=0
@@ -279,8 +281,6 @@ jobs:
           cat "$RUNNER_TEMP/frontend-build.log"
           echo "::endgroup::"
           exit $frontend_status
-        env:
-          WK_VERSION: ${{ github.run_id }}
 
       - name: Stage webknossos, datastore and tracingstore (sbt)
         run: |

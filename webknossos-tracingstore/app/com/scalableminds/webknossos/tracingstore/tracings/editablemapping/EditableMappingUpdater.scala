@@ -497,7 +497,7 @@ class EditableMappingUpdater(
       }
     } yield ()
 
-  def newWithTargetVersion(currentMaterializedVersion: Long, targetVersion: Long): EditableMappingUpdater =
+  def resetForNextUpdateGroup(currentMaterializedVersion: Long, targetVersion: Long): EditableMappingUpdater =
     new EditableMappingUpdater(
       tracingId,
       baseMappingName,

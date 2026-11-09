@@ -92,21 +92,21 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
     case CompleteByteRange()                    => true
   }
 
-  // Play WS decodes gzip responses and drops their Content-Encoding header, so the returned bytes are identity-encoded,
-  // like in HttpsDataVault. No Accept-Encoding header is sent, so GCS does not compress objects just for the transfer.
+  // Accept-Encoding: gzip stops GCS from decompressing gzip-stored objects on the fly. That transcoding would ignore the
+  // Range header and send the complete object. Play WS decodes gzip responses and drops their Content-Encoding header,
+  // so the returned bytes are identity-encoded, like in HttpsDataVault.
   private def buildRequest(objName: String, range: ByteRange, authHeaders: Seq[(String, String)]): WSRequest = {
     val encodedName = URLEncoder.encode(objName, StandardCharsets.UTF_8).replace("+", "%20")
     ws.url(s"$apiHost/storage/v1/b/$bucket/o/$encodedName")
       .withQueryStringParameters("alt" -> "media")
-      .withHttpHeaders(range.toRangeHeaderOpt.map("Range" -> _).toSeq ++ authHeaders*)
+      .withHttpHeaders(Seq("Accept-Encoding" -> "gzip") ++ range.toRangeHeaderOpt.map("Range" -> _) ++ authHeaders*)
       // GCS media downloads do not redirect. Following redirects would send the Authorization header to the new host.
       .withFollowRedirects(false)
       .withRequestTimeout(GoogleCloudDataVault.attemptTimeout)
   }
 
-  // A gzip-stored object is served as stored (and so honors Range) if it has Cache-Control: no-transform. A slice of
-  // the gzip stream cannot be decoded on its own, so such ranged reads fail, as they did with the java-storage client.
-  // Without no-transform, GCS decompresses on the fly, ignores Range and sends the complete object with status 200.
+  // With Accept-Encoding: gzip, a gzip-stored object is served as stored, so a ranged read returns a slice of the gzip
+  // stream. Such a slice cannot be decoded on its own, so these reads fail, as they did with the java-storage client.
   private def isDecodedGzipSlice(response: WSResponse): Boolean =
     response.status == 206 && response.header("x-goog-stored-content-encoding").contains("gzip")
 

@@ -19,21 +19,18 @@ import com.scalableminds.webknossos.datastore.datavault.{
 }
 import com.scalableminds.webknossos.datastore.storage.{
   CredentializedUPath,
+  DataVaultCredential,
   GoogleServiceAccountCredential,
   S3ClientPool
 }
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.scalatest.{Assertion, ParallelTestExecution}
 import play.api.libs.json.JsString
-import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.stream.Materializer
-import play.api.libs.ws.WSClient
-import play.api.libs.ws.ahc.AhcWSClient
 import play.api.test.WsTestClient
 
 import java.nio.charset.StandardCharsets
 import java.util.UUID
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.global as globalExecutionContext
 
 class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
@@ -41,8 +38,17 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
   val emptyTokenContext: TokenContext = TokenContext(None)
   val dummyDataStoreHost = "example.com"
 
-  // Shared by the GCS tests and never closed. WsTestClient.withClient closes its client before an async test finishes.
-  private lazy val gcsWs: WSClient = AhcWSClient()(using Materializer(ActorSystem("DataVaultTestSuite")))
+  // WsTestClient's clients share one underlying client, which is closed together with its ActorSystem once no client
+  // references it anymore. The reference is held until the test's reads are done, so it is not closed in between.
+  private def withGcsVaultPath(upath: UPath, credential: Option[DataVaultCredential] = None)(
+      test: VaultPath => Future[Assertion]
+  ): Future[Assertion] = {
+    val ws = new WsTestClient.InternalWSClient("http", -1)
+    val vault = GoogleCloudDataVault
+      .create(CredentializedUPath(upath, credential), ws)
+      .getOrElse(fail("Failed to create GoogleCloudDataVault"))
+    test(new VaultPath(upath, vault)).andThen(_ => ws.close())(using globalExecutionContext)
+  }
 
   "Data vault" when {
     "checking environment" should {
@@ -84,148 +90,117 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
 
       "using Google Cloud Storage Vault" should {
         val upath = UPath.fromStringUnsafe("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
-        val vaultPath = new VaultPath(
-          upath,
-          GoogleCloudDataVault
-            .create(CredentializedUPath(upath, None), gcsWs)
-            .getOrElse(fail("Failed to create GoogleCloudDataVault"))
-        )
         "return correct response (start-end range)" in
-          (vaultPath / dataKey)
-            .readBytesEncodingAndRangeHeader(range)(using globalExecutionContext, emptyTokenContext)
-            .futureBox
-            .map {
-              case Full((bytes, encoding, rangeHeader)) =>
-                assert(bytes.length == range.length)
-                assert(encoding == Encoding.identity)
-                assert(rangeHeader.contains("bytes 0-99/127808"))
-                assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
-              case _ => fail()
-            }
+          withGcsVaultPath(upath) { vaultPath =>
+            (vaultPath / dataKey)
+              .readBytesEncodingAndRangeHeader(range)(using globalExecutionContext, emptyTokenContext)
+              .futureBox
+              .map {
+                case Full((bytes, encoding, rangeHeader)) =>
+                  assert(bytes.length == range.length)
+                  assert(encoding == Encoding.identity)
+                  assert(rangeHeader.contains("bytes 0-99/127808"))
+                  assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
+                case _ => fail()
+              }
+          }
 
         "return correct response (suffix-length range)" in
-          (vaultPath / dataKey)
-            .readBytesEncodingAndRangeHeader(suffixRange)(using globalExecutionContext, emptyTokenContext)
-            .futureBox
-            .map {
-              case Full((bytes, encoding, rangeHeader)) =>
-                assert(bytes.length == suffixRange.length)
-                assert(encoding == Encoding.identity)
-                assert(rangeHeader.contains("bytes 127708-127807/127808"))
-                assert(bytes.takeRight(10).sameElements(Array(-61, 45, -114, -64, -109, -64, 25, -81, -1, -39)))
-              case _ => fail()
-            }
+          withGcsVaultPath(upath) { vaultPath =>
+            (vaultPath / dataKey)
+              .readBytesEncodingAndRangeHeader(suffixRange)(using globalExecutionContext, emptyTokenContext)
+              .futureBox
+              .map {
+                case Full((bytes, encoding, rangeHeader)) =>
+                  assert(bytes.length == suffixRange.length)
+                  assert(encoding == Encoding.identity)
+                  assert(rangeHeader.contains("bytes 127708-127807/127808"))
+                  assert(bytes.takeRight(10).sameElements(Array(-61, 45, -114, -64, -109, -64, 25, -81, -1, -39)))
+                case _ => fail()
+              }
+          }
 
         "return empty box, not failure" when {
           "requesting a non-existent object" in
-            (vaultPath / s"non-existent-key${UUID.randomUUID}")
-              .readBytes()(using globalExecutionContext, emptyTokenContext)
-              .futureBox
-              .map(assertBoxEmpty)
+            withGcsVaultPath(upath) { vaultPath =>
+              (vaultPath / s"non-existent-key${UUID.randomUUID}")
+                .readBytes()(using globalExecutionContext, emptyTokenContext)
+                .futureBox
+                .map(assertBoxEmpty)
+            }
 
-          "requesting a byte range from an object that does not exist (404)" in {
-            val upath =
+          "requesting a byte range from an object that does not exist (404)" in
+            withGcsVaultPath(
               UPath.fromStringUnsafe("gs://iarpa_microns/minnie/minnie65/seg_m1300/8.0x8.0x40.0/03b1e.shard")
-            val vaultPath = new VaultPath(
-              upath,
-              GoogleCloudDataVault
-                .create(CredentializedUPath(upath, None), gcsWs)
-                .getOrElse(fail("Failed to create GoogleCloudDataVault"))
-            )
-            vaultPath
-              .readBytes(ByteRange.startEndExclusive(0, 1024))(using globalExecutionContext, emptyTokenContext)
-              .futureBox
-              .map(assertBoxEmpty)
-          }
+            ) { vaultPath =>
+              vaultPath
+                .readBytes(ByteRange.startEndExclusive(0, 1024))(using globalExecutionContext, emptyTokenContext)
+                .futureBox
+                .map(assertBoxEmpty)
+            }
         }
         "return failure" when {
           "requesting invalid range" in
-            (vaultPath / dataKey)
-              .readBytes(ByteRange.startEndExclusive(-5, -10))(using globalExecutionContext, emptyTokenContext)
-              .futureBox
-              .map(assertBoxFailure)
+            withGcsVaultPath(upath) { vaultPath =>
+              (vaultPath / dataKey)
+                .readBytes(ByteRange.startEndExclusive(-5, -10))(using globalExecutionContext, emptyTokenContext)
+                .futureBox
+                .map(assertBoxFailure)
+            }
           "requesting an empty range" in
-            (vaultPath / dataKey)
-              .readBytes(ByteRange.startEndExclusive(100, 100))(using globalExecutionContext, emptyTokenContext)
-              .futureBox
-              .map(assertBoxFailure)
-          "using invalid credentials" in {
-            val vaultPath =
-              new VaultPath(
-                upath,
-                GoogleCloudDataVault
-                  .create(
-                    CredentializedUPath(
-                      upath,
-                      Some(GoogleServiceAccountCredential("name", JsString("secret"), Some("user"), Some("org")))
-                    ),
-                    gcsWs
-                  )
-                  .getOrElse(fail("Failed to create GoogleCloudDataVault"))
-              )
-            (vaultPath / dataKey)
-              .readBytes(ByteRange.startEndExclusive(0, 10))(using globalExecutionContext, emptyTokenContext)
-              .futureBox
-              .map(assertBoxFailure)
-          }
+            withGcsVaultPath(upath) { vaultPath =>
+              (vaultPath / dataKey)
+                .readBytes(ByteRange.startEndExclusive(100, 100))(using globalExecutionContext, emptyTokenContext)
+                .futureBox
+                .map(assertBoxFailure)
+            }
+          "using invalid credentials" in
+            withGcsVaultPath(
+              upath,
+              Some(GoogleServiceAccountCredential("name", JsString("secret"), Some("user"), Some("org")))
+            ) { vaultPath =>
+              (vaultPath / dataKey)
+                .readBytes(ByteRange.startEndExclusive(0, 10))(using globalExecutionContext, emptyTokenContext)
+                .futureBox
+                .map(assertBoxFailure)
+            }
 
           "requesting a byte range that extends past the object's actual end" in {
-            val dataKey = "32_32_40/15360-15424_8384-8448_3520-3584"
             val realObjectSize = 127808
-            val upath = UPath.fromStringUnsafe(s"gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
-            val vaultPath = new VaultPath(
-              upath,
-              GoogleCloudDataVault
-                .create(CredentializedUPath(upath, None), gcsWs)
-                .getOrElse(fail("Failed to create GoogleCloudDataVault"))
-            )
-            val overreachingRange = ByteRange.startEndExclusive(realObjectSize - 100, realObjectSize + 1000)
-            vaultPath
-              .readBytes(overreachingRange)(using globalExecutionContext, emptyTokenContext)
+            withGcsVaultPath(upath / dataKey) { vaultPath =>
+              val overreachingRange = ByteRange.startEndExclusive(realObjectSize - 100, realObjectSize + 1000)
+              vaultPath
+                .readBytes(overreachingRange)(using globalExecutionContext, emptyTokenContext)
+                .futureBox
+                .map(assertBoxFailure)
+            }
+          }
+        }
+        val upathGzip = UPath.fromStringUnsafe("gs://neuroglancer-public-data/kasthuri2011/image_color_corrected/info")
+        "decode gzip correctly" in
+          withGcsVaultPath(upathGzip) { vaultPathGzip =>
+            for {
+              bytesBox <- vaultPathGzip.readBytes()(using globalExecutionContext, emptyTokenContext).futureBox
+              headerBox <- vaultPathGzip
+                .readBytesEncodingAndRangeHeader()(using globalExecutionContext, emptyTokenContext)
+                .futureBox
+            } yield (bytesBox, headerBox) match {
+              case (Full(bytes), Full((_, encoding, _))) =>
+                val decoded = new String(bytes, StandardCharsets.UTF_8)
+                // Stored gzip-encoded, but Play WS already decodes it in transfer
+                assert(encoding == Encoding.identity)
+                assert(decoded.length == 1313)
+                assert(decoded(0) == '{')
+              case _ => fail()
+            }
+          }
+        "fail when attempting range request on gzipped data" in
+          withGcsVaultPath(upathGzip) { vaultPathGzip =>
+            vaultPathGzip
+              .readBytes(ByteRange.startEndExclusive(0, 100))(using globalExecutionContext, emptyTokenContext)
               .futureBox
               .map(assertBoxFailure)
           }
-        }
-        "decode gzip correctly" in {
-          val upathGzip =
-            UPath.fromStringUnsafe("gs://neuroglancer-public-data/kasthuri2011/image_color_corrected/info")
-          val vaultPathGzip =
-            new VaultPath(
-              upathGzip,
-              GoogleCloudDataVault
-                .create(CredentializedUPath(upathGzip, None), gcsWs)
-                .getOrElse(fail("Failed to create GoogleCloudDataVault"))
-            )
-          for {
-            bytesBox <- vaultPathGzip.readBytes()(using globalExecutionContext, emptyTokenContext).futureBox
-            headerBox <- vaultPathGzip
-              .readBytesEncodingAndRangeHeader()(using globalExecutionContext, emptyTokenContext)
-              .futureBox
-          } yield (bytesBox, headerBox) match {
-            case (Full(bytes), Full((_, encoding, _))) =>
-              val decoded = new String(bytes, StandardCharsets.UTF_8)
-              // Stored gzip-encoded, but Play WS already decodes it in transfer
-              assert(encoding == Encoding.identity)
-              assert(decoded.length == 1313)
-              assert(decoded(0) == '{')
-            case _ => fail()
-          }
-        }
-        "fail when attempting range request on gzipped data" in {
-          val upathGzip =
-            UPath.fromStringUnsafe("gs://neuroglancer-public-data/kasthuri2011/image_color_corrected/info")
-          val vaultPathGzip =
-            new VaultPath(
-              upathGzip,
-              GoogleCloudDataVault
-                .create(CredentializedUPath(upathGzip, None), gcsWs)
-                .getOrElse(fail("Failed to create GoogleCloudDataVault"))
-            )
-          vaultPathGzip
-            .readBytes(ByteRange.startEndExclusive(0, 100))(using globalExecutionContext, emptyTokenContext)
-            .futureBox
-            .map(assertBoxFailure)
-        }
 
       }
       "using S3 data vault" should {
@@ -280,23 +255,16 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
       }
 
       "using Google Cloud Storage Vault" should {
-        "return correct response" in {
-          val upath = UPath.fromStringUnsafe("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
-          val vaultPath = new VaultPath(
-            upath,
-            GoogleCloudDataVault
-              .create(CredentializedUPath(upath, None), gcsWs)
-              .getOrElse(fail("Failed to create GoogleCloudDataVault"))
-          )
-          (vaultPath / dataKey).readBytes()(using globalExecutionContext, emptyTokenContext).futureBox.map {
-            case Full(bytes) =>
-              assert(bytes.length == dataLength)
-              assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
-            case _ => fail()
+        "return correct response" in
+          withGcsVaultPath(UPath.fromStringUnsafe("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")) { vaultPath =>
+            (vaultPath / dataKey).readBytes()(using globalExecutionContext, emptyTokenContext).futureBox.map {
+              case Full(bytes) =>
+                assert(bytes.length == dataLength)
+                assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
+              case _ => fail()
+            }
           }
-        }
       }
-
       "using s3 data vault" should {
         "return correctly decoded brotli-compressed data" in {
           val upath = UPath.fromStringUnsafe("s3://open-neurodata/bock11/image/4_4_40")

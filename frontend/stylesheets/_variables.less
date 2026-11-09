@@ -23,6 +23,10 @@
 // useMinScreenWidth("md") / Grid.useBreakpoint().md in JS.
 @smartphones: ~"only screen and (max-width: @{screen-sm-max})";
 
+// Not an antd breakpoint: mirrors constants.NARROW_SCREEN_WIDTH in viewer/constants.ts, below which
+// the annotation view's navbar compacts its items.
+@screen-narrow-min: 1400px;
+
 :root {
   // The brand colors below mirror the constants in frontend/javascripts/theme.ts, which is the
   // source of truth – keep both in sync. They cannot be aliased to the corresponding `--ant-*`

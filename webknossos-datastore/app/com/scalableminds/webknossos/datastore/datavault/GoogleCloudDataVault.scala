@@ -6,34 +6,32 @@ import com.google.cloud.NoCredentials
 import com.google.cloud.storage.{Storage, StorageOptions}
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Failure, Full}
-import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, GoogleServiceAccountCredential}
 import Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
+import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 
 import java.io.{ByteArrayInputStream, IOException}
-import java.net.http.{HttpClient, HttpConnectTimeoutException, HttpRequest, HttpResponse, HttpTimeoutException}
 import java.net.{URI, URLEncoder}
 import java.nio.charset.StandardCharsets
-import java.time.Duration
 import java.util
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{CompletableFuture, ScheduledThreadPoolExecutor, TimeUnit}
+import java.util.concurrent.{CompletableFuture, TimeUnit}
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.jdk.CollectionConverters.{IterableHasAsScala, IteratorHasAsScala, MapHasAsScala}
 import scala.jdk.FutureConverters.CompletionStageOps
-import scala.jdk.OptionConverters.RichOptional
 import scala.util.{Random, Try, Failure as TryFailure, Success as TrySuccess}
 
 /*
- * Reads are a single async ranged GET against the GCS JSON API media endpoint. The java-storage client needed a
- * second request per read (object metadata, for size and encoding) and blocked a thread for both; size and encoding
- * are taken from the media response headers instead. Listing still uses the java-storage client.
+ * Reads are a single async ranged GET against the GCS JSON API media endpoint, sent with Play WS. The java-storage
+ * client needed a second request per read (object metadata, for size and encoding) and blocked a thread for both;
+ * size and encoding are taken from the media response headers instead. Listing still uses the java-storage client.
  */
-class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCredential]) extends DataVault {
+class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCredential], ws: WSClient)
+    extends DataVault {
 
   private lazy val storageOptions: StorageOptions = credential match {
     case Some(credential: GoogleServiceAccountCredential) =>
@@ -69,17 +67,20 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       _ <- Fox.fromBool(isValidRange(range)) ?~> s"Invalid byte range $range"
       authHeaders <- Fox.fromFuture(authorizationHeaders) ?~> "Could not get Google Cloud Storage credentials"
       request <- tryo(buildRequest(objName, range, authHeaders)).toFox
-      response <- Fox.fromFuture(GoogleCloudDataVault.sendWithRetry(request))
-      result <- response.statusCode match {
+      response <- Fox.fromFuture(GoogleCloudDataVault.getWithRetry(request))
+      result <- response.status match {
         case 200 | 206 =>
           for {
-            (body, encoding) <- decodeTransportCompression(response).toFox
-            bytesAndRangeHeader <- extractRange(response, body, range).toFox
+            _ <- Fox.fromBool(
+              !isDecodedGzipSlice(response)
+            ) ?~> s"Range requests on gzip-encoded GCS objects are not supported (gs://$bucket/$objName, $range)"
+            encoding <- Encoding.fromRfc7231String(response.header("Content-Encoding").getOrElse("")).toFox
+            bytesAndRangeHeader <- extractRange(response, response.bodyAsBytes.toArray, range).toFox
           } yield (bytesAndRangeHeader._1, encoding, bytesAndRangeHeader._2)
-        case 404 => Fox.empty
-        case _   =>
+        case 404    => Fox.empty
+        case status =>
           Fox.failure(
-            s"Reading gs://$bucket/$objName ($range) failed with status ${response.statusCode}: ${new String(response.body.take(500), StandardCharsets.UTF_8)}"
+            s"Reading gs://$bucket/$objName ($range) failed with status $status: ${response.bodyAsBytes.utf8String.take(500)}"
           )
       }
     } yield result
@@ -91,52 +92,38 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
     case CompleteByteRange()                    => true
   }
 
-  // Accept-Encoding: gzip makes GCS return gzip-stored objects as stored, without decompressive transcoding (which
-  // would ignore the Range header). The Content-Encoding response header then describes the returned bytes, which
-  // the java.net.http client passes through undecoded.
-  private def buildRequest(objName: String, range: ByteRange, authHeaders: Seq[(String, String)]): HttpRequest = {
+  // Play WS decodes gzip responses and drops their Content-Encoding header, so the returned bytes are identity-encoded,
+  // like in HttpsDataVault. No Accept-Encoding header is sent, so GCS does not compress objects just for the transfer.
+  private def buildRequest(objName: String, range: ByteRange, authHeaders: Seq[(String, String)]): WSRequest = {
     val encodedName = URLEncoder.encode(objName, StandardCharsets.UTF_8).replace("+", "%20")
-    val builder = HttpRequest
-      .newBuilder(URI.create(s"$apiHost/storage/v1/b/$bucket/o/$encodedName?alt=media"))
-      .header("Accept-Encoding", "gzip")
-    range.toRangeHeaderOpt.foreach(builder.header("Range", _))
-    authHeaders.foreach { case (key, value) => builder.header(key, value) }
-    builder.GET().build()
+    ws.url(s"$apiHost/storage/v1/b/$bucket/o/$encodedName")
+      .withQueryStringParameters("alt" -> "media")
+      .withHttpHeaders(range.toRangeHeaderOpt.map("Range" -> _).toSeq ++ authHeaders*)
+      // GCS media downloads do not redirect. Following redirects would send the Authorization header to the new host.
+      .withFollowRedirects(false)
+      .withRequestTimeout(GoogleCloudDataVault.attemptTimeout)
   }
 
-  private def header(response: HttpResponse[?], name: String): Option[String] =
-    response.headers.firstValue(name).toScala
-
-  // With Accept-Encoding: gzip, GCS may also gzip objects that are not stored gzipped, for the transfer only. The
-  // x-goog-stored-content-encoding header tells the two cases apart. Transfer compression is undone here, so that the
-  // body holds the stored bytes and the length checks in extractRange hold.
-  private def decodeTransportCompression(response: HttpResponse[Array[Byte]]): Box[(Array[Byte], Encoding.Value)] =
-    for {
-      encoding <- Encoding.fromRfc7231String(header(response, "Content-Encoding").getOrElse(""))
-      storedEncoding <- header(response, "x-goog-stored-content-encoding") match {
-        case Some(stored) => Encoding.fromRfc7231String(stored)
-        case None         => Full(encoding)
-      }
-      decoded <-
-        if (encoding == Encoding.gzip && storedEncoding != Encoding.gzip)
-          tryo(ZipIO.gunzip(response.body)).map(_ -> storedEncoding)
-        else Full(response.body -> encoding)
-    } yield decoded
+  // A gzip-stored object is served as stored (and so honors Range) if it has Cache-Control: no-transform. A slice of
+  // the gzip stream cannot be decoded on its own, so such ranged reads fail, as they did with the java-storage client.
+  // Without no-transform, GCS decompresses on the fly, ignores Range and sends the complete object with status 200.
+  private def isDecodedGzipSlice(response: WSResponse): Boolean =
+    response.status == 206 && response.header("x-goog-stored-content-encoding").contains("gzip")
 
   private lazy val contentRangeTotalRegex = """^bytes \d+-\d+/(\d+)$""".r
 
   // Returns exactly the requested bytes, and the Content-Range header built from the requested range and the object
   // size. Fails if the object ends before the requested range does.
   private def extractRange(
-      response: HttpResponse[?],
+      response: WSResponse,
       body: Array[Byte],
       range: ByteRange
   ): Box[(Array[Byte], Option[String])] = {
-    val isPartial = response.statusCode == 206
+    val isPartial = response.status == 206
     def objectSize: Box[Long] =
       if (!isPartial) Full(body.length.toLong) // the server ignored the Range header and sent the complete object
       else
-        header(response, "Content-Range") match {
+        response.header("Content-Range") match {
           case Some(contentRangeTotalRegex(total)) => tryo(total.toLong)
           case other => Failure(s"Unexpected Content-Range header in GCS response: $other")
         }
@@ -223,82 +210,34 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
 }
 
 object GoogleCloudDataVault {
-  def create(credentializedUPath: CredentializedUPath): Box[GoogleCloudDataVault] =
+  def create(credentializedUPath: CredentializedUPath, ws: WSClient): Box[GoogleCloudDataVault] =
     for {
       credential <- tryo(credentializedUPath.credential.map(f => f.asInstanceOf[GoogleServiceAccountCredential]))
       remoteUri <- credentializedUPath.upath.toRemoteUri
-    } yield new GoogleCloudDataVault(remoteUri, credential)
+    } yield new GoogleCloudDataVault(remoteUri, credential, ws)
 
-  // Deadline for one attempt, from sending the request until the complete body is received. HttpRequest.timeout would
-  // only cover the wait for the response headers, so a body that stalls midway would never complete.
-  private val attemptTimeout: Duration = Duration.ofMinutes(2)
+  // Deadline for one attempt, from sending the request until the complete body is received.
+  private val attemptTimeout = 2 minutes
   private val maxAttempts = 5
   private val retryBaseDelayMs = 250L
   private val retryableStatusCodes = Set(408, 429, 500, 502, 503, 504)
 
-  // Shared by all GCS vaults. Does not decode Content-Encoding, so gzip-stored objects arrive as stored.
-  private lazy val httpClient: HttpClient = HttpClient
-    .newBuilder()
-    .connectTimeout(Duration.ofSeconds(20))
-    // GCS media downloads do not redirect. Following redirects would send the Authorization header to the new host.
-    .followRedirects(HttpClient.Redirect.NEVER)
-    .build()
-
-  // Retries transient failures with exponential backoff, like the java-storage client does for reads.
-  private def sendWithRetry(request: HttpRequest, attempt: Int = 1)(using
-      ec: ExecutionContext
-  ): Future[HttpResponse[Array[Byte]]] = {
-    def retryLater(): Future[HttpResponse[Array[Byte]]] = {
+  // Retries transient failures with exponential backoff, like the java-storage client does for reads. Connection
+  // errors are IOExceptions. An attempt that ran into attemptTimeout (a TimeoutException) is not retried: a retry would
+  // likely stall again, and failed reads are not cached, so the next request for the same data starts a fresh read.
+  private def getWithRetry(request: WSRequest, attempt: Int = 1)(using ec: ExecutionContext): Future[WSResponse] = {
+    def retryLater(): Future[WSResponse] = {
       val delayMs = retryBaseDelayMs * (1L << (attempt - 1)) + Random.nextLong(retryBaseDelayMs)
       CompletableFuture
         .runAsync(() => (), CompletableFuture.delayedExecutor(delayMs, TimeUnit.MILLISECONDS))
         .asScala
-        .flatMap(_ => sendWithRetry(request, attempt + 1))
+        .flatMap(_ => getWithRetry(request, attempt + 1))
     }
-    sendWithDeadline(request).transformWith {
-      case TrySuccess(response) if retryableStatusCodes.contains(response.statusCode) && attempt < maxAttempts =>
+    request.get().transformWith {
+      case TrySuccess(response) if retryableStatusCodes.contains(response.status) && attempt < maxAttempts =>
         retryLater()
-      case TryFailure(_: HttpConnectTimeoutException) if attempt < maxAttempts => retryLater()
-      // An attempt that ran into attemptTimeout is not retried: a retry would likely stall again, and failed reads
-      // are not cached, so the next request for the same data starts a fresh read anyway.
-      case other @ TryFailure(_: HttpTimeoutException)         => Future.fromTry(other)
       case TryFailure(_: IOException) if attempt < maxAttempts => retryLater()
       case other                                               => Future.fromTry(other)
-    }
-  }
-
-  private lazy val deadlineScheduler: ScheduledThreadPoolExecutor = {
-    val scheduler = new ScheduledThreadPoolExecutor(
-      1,
-      (runnable: Runnable) => {
-        val thread = new Thread(runnable, "gcs-read-deadline")
-        thread.setDaemon(true)
-        thread
-      }
-    )
-    scheduler.setRemoveOnCancelPolicy(true) // most reads finish long before their deadline
-    scheduler
-  }
-
-  // Cancelling the future returned by sendAsync aborts the exchange and closes its connection.
-  private def sendWithDeadline(request: HttpRequest)(using ec: ExecutionContext): Future[HttpResponse[Array[Byte]]] = {
-    val responseFuture = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray())
-    val deadlineHit = new AtomicBoolean(false)
-    val deadline = deadlineScheduler.schedule(
-      () => {
-        deadlineHit.set(true)
-        responseFuture.cancel(true)
-      },
-      attemptTimeout.toMillis,
-      TimeUnit.MILLISECONDS
-    )
-    responseFuture.asScala.transform { result =>
-      deadline.cancel(false)
-      result match {
-        case TryFailure(_) if deadlineHit.get =>
-          TryFailure(new HttpTimeoutException(s"No complete response from GCS within $attemptTimeout"))
-        case other => other
-      }
     }
   }
 }

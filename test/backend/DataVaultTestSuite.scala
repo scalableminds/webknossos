@@ -25,6 +25,10 @@ import com.scalableminds.webknossos.datastore.storage.{
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.scalatest.{Assertion, ParallelTestExecution}
 import play.api.libs.json.JsString
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
+import play.api.libs.ws.WSClient
+import play.api.libs.ws.ahc.AhcWSClient
 import play.api.test.WsTestClient
 
 import java.nio.charset.StandardCharsets
@@ -36,6 +40,9 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
 
   val emptyTokenContext: TokenContext = TokenContext(None)
   val dummyDataStoreHost = "example.com"
+
+  // Shared by the GCS tests and never closed. WsTestClient.withClient closes its client before an async test finishes.
+  private lazy val gcsWs: WSClient = AhcWSClient()(using Materializer(ActorSystem("DataVaultTestSuite")))
 
   "Data vault" when {
     "checking environment" should {
@@ -80,7 +87,7 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
         val vaultPath = new VaultPath(
           upath,
           GoogleCloudDataVault
-            .create(CredentializedUPath(upath, None))
+            .create(CredentializedUPath(upath, None), gcsWs)
             .getOrElse(fail("Failed to create GoogleCloudDataVault"))
         )
         "return correct response (start-end range)" in
@@ -122,7 +129,7 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
             val vaultPath = new VaultPath(
               upath,
               GoogleCloudDataVault
-                .create(CredentializedUPath(upath, None))
+                .create(CredentializedUPath(upath, None), gcsWs)
                 .getOrElse(fail("Failed to create GoogleCloudDataVault"))
             )
             vaultPath
@@ -151,7 +158,8 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
                     CredentializedUPath(
                       upath,
                       Some(GoogleServiceAccountCredential("name", JsString("secret"), Some("user"), Some("org")))
-                    )
+                    ),
+                    gcsWs
                   )
                   .getOrElse(fail("Failed to create GoogleCloudDataVault"))
               )
@@ -168,7 +176,7 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
             val vaultPath = new VaultPath(
               upath,
               GoogleCloudDataVault
-                .create(CredentializedUPath(upath, None))
+                .create(CredentializedUPath(upath, None), gcsWs)
                 .getOrElse(fail("Failed to create GoogleCloudDataVault"))
             )
             val overreachingRange = ByteRange.startEndExclusive(realObjectSize - 100, realObjectSize + 1000)
@@ -185,7 +193,7 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
             new VaultPath(
               upathGzip,
               GoogleCloudDataVault
-                .create(CredentializedUPath(upathGzip, None))
+                .create(CredentializedUPath(upathGzip, None), gcsWs)
                 .getOrElse(fail("Failed to create GoogleCloudDataVault"))
             )
           for {
@@ -196,7 +204,8 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
           } yield (bytesBox, headerBox) match {
             case (Full(bytes), Full((_, encoding, _))) =>
               val decoded = new String(bytes, StandardCharsets.UTF_8)
-              assert(encoding == Encoding.gzip)
+              // Stored gzip-encoded, but Play WS already decodes it in transfer
+              assert(encoding == Encoding.identity)
               assert(decoded.length == 1313)
               assert(decoded(0) == '{')
             case _ => fail()
@@ -209,7 +218,7 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
             new VaultPath(
               upathGzip,
               GoogleCloudDataVault
-                .create(CredentializedUPath(upathGzip, None))
+                .create(CredentializedUPath(upathGzip, None), gcsWs)
                 .getOrElse(fail("Failed to create GoogleCloudDataVault"))
             )
           vaultPathGzip
@@ -276,7 +285,7 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
           val vaultPath = new VaultPath(
             upath,
             GoogleCloudDataVault
-              .create(CredentializedUPath(upath, None))
+              .create(CredentializedUPath(upath, None), gcsWs)
               .getOrElse(fail("Failed to create GoogleCloudDataVault"))
           )
           (vaultPath / dataKey).readBytes()(using globalExecutionContext, emptyTokenContext).futureBox.map {

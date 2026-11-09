@@ -75,30 +75,25 @@ class DatasetArrayMissingChunkTestSuite extends AsyncWordSpec with BeforeAndAfte
 
   for (order <- Seq("F", "C"))
     s"Reading a $order-order zarr array with a missing chunk" should {
-      "return Empty for an exactly matching missing chunk if requested and fill value is 0" in {
+      "return Empty for an exactly matching missing chunk if requested and fill value is 0" in
         read(order, 0, missingChunkOffset, fullChunk, emptyIfChunkMissing = true).map(box => assert(box == Empty))
-      }
-      "return zeros for an exactly matching missing chunk if not requested" in {
+      "return zeros for an exactly matching missing chunk if not requested" in
         read(order, 0, missingChunkOffset, fullChunk, emptyIfChunkMissing = false).map(
           assertFilledWith(_, Seq.fill(chunkVolume)(0.toByte))
         )
-      }
-      "return the fill value for an exactly matching missing chunk if fill value is not 0" in {
+      "return the fill value for an exactly matching missing chunk if fill value is not 0" in
         read(order, 7, missingChunkOffset, fullChunk, emptyIfChunkMissing = true).map(
           assertFilledWith(_, Seq.fill(chunkVolume)(7.toByte))
         )
-      }
-      "return data for an exactly matching present chunk" in {
+      "return data for an exactly matching present chunk" in
         read(order, 0, Vec3Int(0, 0, 0), fullChunk, emptyIfChunkMissing = true).map(
           assertFilledWith(_, Seq.fill(chunkVolume)(presentValue))
         )
-      }
-      "return zeros for a smaller region within a missing chunk" in {
+      "return zeros for a smaller region within a missing chunk" in
         read(order, 0, missingChunkOffset, Vec3Int.full(16), emptyIfChunkMissing = true).map(
           assertFilledWith(_, Seq.fill(16 * 16 * 16)(0.toByte))
         )
-      }
-      "return mixed data for an unaligned region spanning present and missing chunks" in {
+      "return mixed data for an unaligned region spanning present and missing chunks" in
         read(order, 0, Vec3Int(16, 0, 0), fullChunk, emptyIfChunkMissing = true).map { box =>
           // F-order output: x is the fastest axis. x < 32 lies in the present chunk.
           val expected = for {
@@ -108,6 +103,5 @@ class DatasetArrayMissingChunkTestSuite extends AsyncWordSpec with BeforeAndAfte
           } yield if (x < chunkSize) presentValue else 0.toByte
           assertFilledWith(box, expected)
         }
-      }
     }
 }

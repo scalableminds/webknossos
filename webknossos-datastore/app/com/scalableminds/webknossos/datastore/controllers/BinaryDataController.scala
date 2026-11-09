@@ -62,7 +62,13 @@ class BinaryDataController @Inject() (
               datasetId,
               dataLayerName
             ) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
-            (data, emptyIndices, failureIndices) <- requestData(datasetId, dataSource.id, dataLayer, request.body)
+            (data, emptyIndices, failureIndices) <- requestData(
+              datasetId,
+              dataSource.id,
+              dataLayer,
+              request.body,
+              emptyIfChunkMissing = true
+            )
             duration = Instant.since(t)
             _ = if (duration > (10 seconds))
               logger.info(
@@ -380,11 +386,18 @@ class BinaryDataController @Inject() (
       datasetId: ObjectId,
       dataSourceId: DataSourceId,
       dataLayer: DataLayer,
-      dataRequests: List[AbstractDataRequest]
+      dataRequests: List[AbstractDataRequest],
+      emptyIfChunkMissing: Boolean = false
   )(using tc: TokenContext): Fox[(Array[Byte], Seq[Int], Seq[Int])] = {
     val requests =
       dataRequests.map(r =>
-        DataServiceDataRequest(Some(datasetId), Some(dataSourceId), dataLayer, r.cuboid(dataLayer), r.settings)
+        DataServiceDataRequest(
+          Some(datasetId),
+          Some(dataSourceId),
+          dataLayer,
+          r.cuboid(dataLayer),
+          r.settings.copy(emptyIfChunkMissing = emptyIfChunkMissing)
+        )
       )
     binaryDataService.handleDataRequests(requests)
   }

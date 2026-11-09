@@ -47,7 +47,8 @@ class DatasetArrayBucketProvider(
         offset,
         shape,
         bucket.additionalCoordinates,
-        dataLayer.elementClass == ElementClass.uint24
+        dataLayer.elementClass == ElementClass.uint24,
+        emptyIfChunkMissing = readInstruction.emptyIfChunkMissing
       )
     } yield bucketData
 

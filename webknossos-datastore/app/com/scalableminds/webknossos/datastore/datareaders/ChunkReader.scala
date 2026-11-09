@@ -16,6 +16,7 @@ class ChunkReader(header: DatasetHeader) {
   private lazy val chunkTyper = ChunkTyper.createFromHeader(header)
   private lazy val shortcutChunkTyper = new ShortcutChunkTyper(header)
 
+  // Returns Empty if the chunk is not present on disk. Callers may substitute createFromFillValue
   def read(path: VaultPath, chunkShapeFromMetadata: Array[Int], range: ByteRange, useSkipTypingShortcut: Boolean)(
       implicit
       ec: ExecutionContext,
@@ -34,7 +35,8 @@ class ChunkReader(header: DatasetHeader) {
         case Full(chunkBytes) =>
           chunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> Msg.Dataset.Chunk.wrapAndTypeFailed
         case Empty =>
-          createFromFillValue(chunkShape, useSkipTypingShortcut)
+          // Missing chunk. The caller decides whether to substitute the fill value (see createFromFillValue)
+          Fox.empty
         case f: Failure =>
           f.toFox ?~> s"Reading chunk at $path failed"
       }

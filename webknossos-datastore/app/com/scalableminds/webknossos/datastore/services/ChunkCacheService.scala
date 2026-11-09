@@ -18,7 +18,8 @@ trait ChunkCacheService {
       arrayBox match {
         case Full(array) =>
           (array.getSizeBytes / 1000L).toInt
-        case _ => 0
+        // Missing chunks are cached as Empty. Give them a nonzero weight so they still count towards the size limit
+        case _ => 1
       }
 
     AlfuCache(maxSizeKiloBytes, weighFn = Some(cacheWeight))

@@ -65,4 +65,15 @@ class OrganizationEmailService @Inject() (
     recipients.foreach(recipient =>
       mailSender.send(defaultMails.pricingPlanExpiryReminderMail(recipient, organization, paidUntil, daysRemaining))
     )
+
+  // Which warnings are due, and that each is sent only once, is decided by the StorageWarningService.
+  def sendStorageWarningEmails(
+      recipients: List[MultiUser],
+      organization: Organization,
+      usedStorageBytes: Long,
+      includedStorageBytes: Long
+  ): Unit =
+    recipients.foreach(recipient =>
+      mailSender.send(defaultMails.storageWarningMail(recipient, organization, usedStorageBytes, includedStorageBytes))
+    )
 }

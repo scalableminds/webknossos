@@ -18,8 +18,8 @@ import scala.concurrent.duration.*
 
 /* Reminds the owner and the admins of an organization by email that its pricing plan is about to expire.
    One reminder is sent per configured lead time (e.g. 30, 14 and 7 days before expiry). The lead times a reminder
-   was already sent for are recorded in the database, keyed by the expiry date. That way, extending the plan arms
-   the reminders again, and no duplicate mails are sent if the server is restarted. */
+   was already sent for are recorded in the database, so that no duplicate mails are sent if the server is restarted.
+   Changing the expiry date (e.g. extending the plan) arms the reminders again, see OrganizationDAO.updatePlan. */
 class PricingPlanExpiryReminderService @Inject() (
     organizationDAO: OrganizationDAO,
     multiUserDAO: MultiUserDAO,
@@ -74,7 +74,11 @@ class PricingPlanExpiryReminderService @Inject() (
       _ <- Fox.fromBool(recipients.nonEmpty) ?~> "Organization has neither an owner nor an admin to notify"
       // Recorded before sending, so that mails that cannot be delivered are not retried on every tick.
       // The count tells us how many of the lead times were not recorded before; if none, the mails were already sent.
-      newlyRecordedCount <- organizationDAO.insertPlanExpiryReminders(organization._id, paidUntil, dueLeadTimesDays)
+      newlyRecordedCount <- organizationDAO.insertSentThresholdEmails(
+        organization._id,
+        ThresholdEmailType.PlanExpiry,
+        dueLeadTimesDays
+      )
       _ = if (newlyRecordedCount > 0) {
         logger.info(
           s"Reminding the owner and admins (${recipients.length}) of organization ${organization._id} that its ${organization.pricingPlan} plan expires in $daysRemaining days..."

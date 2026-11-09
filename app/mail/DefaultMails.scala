@@ -375,6 +375,36 @@ private[mail] class DefaultMails @Inject() (conf: WkConf) extends Formatter {
 
   private def annotationUrl(annotationId: ObjectId): String = s"$uri/annotations/$annotationId"
 
+  def storageWarningMail(
+      multiUser: MultiUser,
+      organization: Organization,
+      usedStorageBytes: Long,
+      includedStorageBytes: Long
+  ): Mail = {
+    val isExceeded = usedStorageBytes >= includedStorageBytes
+    val usagePercent = if (includedStorageBytes > 0) usedStorageBytes * 100 / includedStorageBytes else 100L
+    Mail(
+      from = defaultSender,
+      subject =
+        if (isExceeded) s"WEBKNOSSOS | Your organization ${organization.name} has used up its storage"
+        else s"WEBKNOSSOS | Your organization ${organization.name} has used $usagePercent% of its storage",
+      bodyHtml = html.mail
+        .storageWarning(
+          multiUser.fullName,
+          organization.name,
+          formatBytes(usedStorageBytes),
+          formatBytes(includedStorageBytes),
+          usagePercent,
+          isExceeded,
+          s"$uri/organization/overview",
+          additionalFooter
+        )
+        .body,
+      recipients = List(multiUser.email),
+      replyTo = List(supportEmail)
+    )
+  }
+
   def emailVerificationMail(multiUser: MultiUser, key: String): Mail = {
     val linkExpiry = conf.WebKnossos.User.EmailVerification.linkExpiry
       .map(duration => s"This link will expire in ${duration.toString()}. ")

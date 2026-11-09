@@ -15,6 +15,7 @@ import PricingPlan.PricingPlan
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType
 import models.organization.AiPlan.AiPlan
+import models.organization.ThresholdEmailType.ThresholdEmailType
 import slick.dbio.DBIO
 import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api.*
@@ -360,6 +361,10 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
           q"""UPDATE webknossos.organizations SET paidUntil = ${planUpdate.paidUntilFlat} WHERE _id = $organizationId""".asUpdate
         )
       )
+      // A new expiry date re-arms all plan expiry reminders.
+      _ <- Fox.runIf(planUpdate.paidUntilChanged)(
+        deleteAllSentThresholdEmails(organizationId, ThresholdEmailType.PlanExpiry)
+      )
       _ <- Fox.runIf(planUpdate.includedUsersChanged)(
         run(
           q"""UPDATE webknossos.organizations SET includedUsers = ${planUpdate.includedUsersFlat} WHERE _id = $organizationId""".asUpdate
@@ -444,19 +449,45 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
       parsed <- parseAll(rows)
     } yield parsed
 
-  /* Records that the organization was reminded about the given paidUntil date for the given lead times.
-     Rows that are already present are skipped, so the returned count is the number of lead times that
-     were not recorded before. Callers use it to decide whether a reminder mail still needs to be sent. */
-  def insertPlanExpiryReminders(organizationId: String, paidUntil: Instant, leadTimesDays: Seq[Int]): Fox[Int] =
-    if (leadTimesDays.isEmpty) Fox.successful(0)
+  /* Records that the threshold emails of the given type were sent for the given thresholds.
+     Rows that are already present are skipped, so the returned count is the number of thresholds that
+     were not recorded before. Callers use it to decide whether the email still needs to be sent. */
+  def insertSentThresholdEmails(
+      organizationId: String,
+      emailType: ThresholdEmailType,
+      thresholds: Seq[Int]
+  ): Fox[Int] =
+    if (thresholds.isEmpty) Fox.successful(0)
     else {
       val values = SqlToken.joinBySeparator(
-        leadTimesDays.map(leadTimeDays => q"($organizationId, $paidUntil, $leadTimeDays)"),
+        thresholds.map(threshold => q"($organizationId, $emailType, $threshold)"),
         ", "
       )
-      run(q"""INSERT INTO webknossos.organization_planExpiryReminders(_organization, paidUntil, leadTimeDays)
+      run(q"""INSERT INTO webknossos.organization_sentThresholdEmails(_organization, emailType, threshold)
               VALUES $values
               ON CONFLICT DO NOTHING""".asUpdate)
     }
+
+  // Re-arms the given thresholds, so that crossing them again sends a new email.
+  def deleteSentThresholdEmails(
+      organizationId: String,
+      emailType: ThresholdEmailType,
+      thresholds: Seq[Int]
+  ): Fox[Unit] =
+    if (thresholds.isEmpty) Fox.successful(())
+    else
+      for {
+        _ <- run(q"""DELETE FROM webknossos.organization_sentThresholdEmails
+                     WHERE _organization = $organizationId
+                     AND emailType = $emailType
+                     AND threshold IN ${SqlToken.tupleFromList(thresholds.toList)}""".asUpdate)
+      } yield ()
+
+  private def deleteAllSentThresholdEmails(organizationId: String, emailType: ThresholdEmailType): Fox[Unit] =
+    for {
+      _ <- run(q"""DELETE FROM webknossos.organization_sentThresholdEmails
+                   WHERE _organization = $organizationId
+                   AND emailType = $emailType""".asUpdate)
+    } yield ()
 
 }

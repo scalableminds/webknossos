@@ -64,7 +64,7 @@ These entries are only shown when an annotation is open. Some of them additional
 
 - **Disable Saving**: Temporarily disable automatic saving in WEBKNOSSOS. Any changes you make will not be saved. This can reduce bandwidth and resource usage when working with large annotations that don't need to be persisted. Only available for annotations you can edit that are not part of a task.
 
-- **Archive**: When you need to declutter your dashboard, you can archive annotations you're not actively working on. Archived items remain accessible through the "Show Archived Annotations" filter on your dashboard. For tasks, this entry reads `Finish and go to Dashboard`.
+- **Archive**: When you need to declutter your dashboard, you can archive annotations you're not actively working on. Archived items remain accessible on your [Annotations dashboard](../dashboard/annotations.md#archived-annotations) by setting the **Status** filter to **Archived**. For tasks, this entry reads `Finish and go to Dashboard`.
 
 ### Share & Export
 

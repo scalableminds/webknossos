@@ -42,7 +42,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
       additionalCodecs = Seq(BloscCodecConfiguration.defaultForWKZarrOutput)
     )
     val bucketFileStream = bucketStream.flatMap { case (bucket, data) =>
-      val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedElement(data)
+      val skipBucket = if (tracingHasFallbackLayer) isRevertedElement(data) else isAllZero(data)
       if (skipBucket) {
         // If the tracing has no fallback segmentation, all-zero buckets can be omitted entirely
         None

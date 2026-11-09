@@ -53,7 +53,6 @@ export class BrushDriver {
       activeSegmentId: options.segmentId,
       overwriteMode: options.overwriteMode,
       overwritableValue: options.overwritableValue,
-      editableBoundingBox: null,
       additionalCoordinates: options.additionalCoordinates,
     };
     this.transaction = new VolumeTransaction(

@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import javax.inject.Inject
 import models.annotation.*
 import models.annotation.nml.NmlResults.TracingBoxContainer
-import models.project.ProjectDAO
+import models.project.{ProjectDAO, ProjectService}
 import models.task.*
 import models.user.*
 import play.api.libs.json.*
@@ -39,6 +39,7 @@ class TaskController @Inject() (
     taskCreationService: TaskCreationService,
     annotationService: AnnotationService,
     projectDAO: ProjectDAO,
+    projectService: ProjectService,
     taskTypeDAO: TaskTypeDAO,
     userService: UserService,
     notificationEmailService: NotificationEmailService,
@@ -76,6 +77,11 @@ class TaskController @Inject() (
           dataset._organization == request.identity._organization
         ) ?~> Msg.Task.Create.datasetOfOtherOrga
         _ <- taskCreationService.assertBatchLimit(request.body.length, taskType)
+        _ <- projectService.assertCanAdministrateAll(
+          request.body.map(_.projectName),
+          request.identity._organization,
+          request.identity
+        )
         taskParametersWithIds = taskCreationService.addNewIdsToTaskParameters(request.body, taskType)
         taskParametersFull <- taskCreationService.createTracingsFromBaseAnnotations(
           taskParametersWithIds,
@@ -122,11 +128,11 @@ class TaskController @Inject() (
       userOrganizationId = request.identity._organization
       taskType <- taskTypeDAO.findOne(params.taskTypeId) ?~> Msg.TaskType.notFound(params.taskTypeId) ~> NOT_FOUND
       _ <- taskCreationService.assertBatchLimit(inputFiles.length, taskType)
-      project <- projectDAO.findOneByNameAndOrganization(
-        params.projectName,
-        request.identity._organization
-      ) ?~> Msg.Project.notFound(params.projectName) ~> NOT_FOUND
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
+      _ <- projectService.assertCanAdministrateAll(
+        Seq(params.projectName),
+        request.identity._organization,
+        request.identity
+      )
       extractedFiles <- nmlService.extractFromFiles(
         inputFiles.map(f => (f.ref.path.toFile, f.filename)),
         SharedParsingParameters(useZipName = false, isTaskUpload = true, userOrganizationId = userOrganizationId)

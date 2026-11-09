@@ -41,7 +41,7 @@ The WEBKNOSSOS user interface consisting of three orthogonal viewports slicing t
 ///
 
 You can use the following shortcuts to navigate the data.
-These are the default bindings — keyboard shortcuts can be customized per user via the **navbar menu → "Keyboard Shortcuts"**.
+These are the default bindings — keyboard shortcuts can be customized per user via **`Menu` → "Configure Shortcuts"** in the toolbar of the annotation or dataset view.
 See the full list of [gestures and keyboard shortcuts](./ui/keyboard_shortcuts.md) for all available shortcuts and customization details.
 
 | Shortcut                      | Operation                    |

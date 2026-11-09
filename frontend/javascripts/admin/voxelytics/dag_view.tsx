@@ -17,7 +17,7 @@ import ReactFlow, {
 } from "reactflow";
 import { getActiveTheme } from "theme";
 import "reactflow/dist/style.css";
-import { WK_FONT } from "theme";
+import { ThemeIndependentStatusColor, WK_FONT } from "theme";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfigWithName,
@@ -366,15 +366,13 @@ const isEdgeInChain = (chain: TaskChain, source: string, target: string) =>
   (chain.upstream.has(source) && (target === chain.selected || chain.upstream.has(target))) ||
   (chain.downstream.has(target) && (source === chain.selected || chain.downstream.has(source)));
 
-// The run-state colors are a fixed data-visualization palette that must stay recognizable
-// (and identical) in both themes, so they are deliberately not theme tokens.
 const RUN_STATE_COLORS: Partial<Record<VoxelyticsRunState, string>> = {
-  [VoxelyticsRunState.COMPLETE]: "rgb(9, 210, 150)",
-  [VoxelyticsRunState.RUNNING]: "rgb(22, 119, 255)",
-  [VoxelyticsRunState.FAILED]: "rgb(254, 34, 45)",
-  [VoxelyticsRunState.CANCELLED]: "rgb(254, 34, 45)",
-  [VoxelyticsRunState.STALE]: "rgb(250, 140, 22)",
-  [VoxelyticsRunState.SKIPPED]: "rgb(160, 160, 160)",
+  [VoxelyticsRunState.COMPLETE]: ThemeIndependentStatusColor.success,
+  [VoxelyticsRunState.RUNNING]: ThemeIndependentStatusColor.info,
+  [VoxelyticsRunState.FAILED]: ThemeIndependentStatusColor.error,
+  [VoxelyticsRunState.CANCELLED]: ThemeIndependentStatusColor.error,
+  [VoxelyticsRunState.STALE]: ThemeIndependentStatusColor.warning,
+  [VoxelyticsRunState.SKIPPED]: ThemeIndependentStatusColor.neutral,
 };
 
 const FADED_OPACITY = 0.4;

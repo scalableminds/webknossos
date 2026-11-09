@@ -15,6 +15,10 @@ Manage and resume your skeleton and volume annotations.
 Annotations can be archived to declutter your dashboard.
 ///
 
+## Archived Annotations
+
+Archived annotations are hidden from the annotation list by default. To find them, open the **Status** filter above the annotation list and select **Archived** (instead of the default **Open**). Archived annotations cannot be edited. Click **Reopen** next to an archived annotation to move it back to your open annotations.
+
 ## Shared Annotations
 
 The annotations tab also shows all annotations that were shared by other collaborators of your organization. Only annotations shared through the "Team Sharing" mechanic will be listed provided your user account is part of the respective team. Read more about sharing your own annotations in the [Sharing guide](../sharing/annotation_sharing.md).

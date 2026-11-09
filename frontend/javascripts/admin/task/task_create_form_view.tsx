@@ -34,6 +34,7 @@ import { AsyncButton } from "components/async_clickables";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import SelectExperienceDomain from "components/select_experience_domain";
 import { saveAs } from "file-saver";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { coalesce, pluralize, tryToAwaitPromise } from "libs/utils";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 import isEqual from "lodash-es/isEqual";
@@ -311,39 +312,62 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const { token } = theme.useToken();
   const [form] = Form.useForm<FormValues>();
 
-  const [datasets, setDatasets] = useState<APIDatasetCompact[]>([]);
-  const [taskTypes, setTaskTypes] = useState<APITaskType[]>([]);
-  const [projects, setProjects] = useState<APIProject[]>([]);
-  const [scripts, setScripts] = useState<APIScript[]>([]);
+  const {
+    data: datasets = [],
+    isFetching: isFetchingDatasets,
+    refetch: refetchDatasets,
+  } = useQueryWithErrorHandling({
+    queryKey: ["activeDatasetsOfMyOrganization"],
+    queryFn: getActiveDatasetsOfMyOrganization,
+    refetchOnWindowFocus: false,
+    meta: { persist: false },
+  });
+  const {
+    data: taskTypes = [],
+    isFetching: isFetchingTaskTypes,
+    refetch: refetchTaskTypes,
+  } = useQueryWithErrorHandling({
+    queryKey: ["taskTypes"],
+    queryFn: getTaskTypes,
+    refetchOnWindowFocus: false,
+  });
+  const {
+    data: projects = [],
+    isFetching: isFetchingProjects,
+    refetch: refetchProjects,
+  } = useQueryWithErrorHandling({
+    queryKey: ["projects"],
+    queryFn: getProjects,
+    refetchOnWindowFocus: false,
+  });
+  const {
+    data: scripts = [],
+    isFetching: isFetchingScripts,
+    refetch: refetchScripts,
+  } = useQueryWithErrorHandling({
+    queryKey: ["scripts"],
+    queryFn: getScripts,
+    refetchOnWindowFocus: false,
+  });
   const [specificationType, setSpecificationType] = useState<Specification>(
     SpecificationEnum.Manual,
   );
   const [isUploading, setIsUploading] = useState(false);
-  const [isFetchingData, setIsFetchingData] = useState(false);
 
+  const { data: task } = useQueryWithErrorHandling({
+    queryKey: ["taskForEditing", taskId],
+    queryFn: () => getTask(taskId as string),
+    enabled: taskId != null,
+    // Always load the task freshly when opening the form and never refetch it
+    // in the background, so that the user's edits are not overwritten.
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 0,
+    meta: { persist: false },
+  });
+
+  // Populate the form once the task is loaded.
   useEffect(() => {
-    fetchData();
-    applyDefaults();
-  }, []);
-
-  async function fetchData() {
-    setIsFetchingData(true);
-    const [datasets, projects, scripts, taskTypes] = await Promise.all([
-      getActiveDatasetsOfMyOrganization(),
-      getProjects(),
-      getScripts(),
-      getTaskTypes(),
-    ]);
-    setDatasets(datasets);
-    setProjects(projects);
-    setScripts(scripts);
-    setTaskTypes(taskTypes);
-    setIsFetchingData(false);
-  }
-
-  async function applyDefaults() {
-    if (taskId) {
-      const task = await getTask(taskId);
+    if (task != null) {
       const defaultValues = Object.assign({}, task, {
         taskTypeId: task.type.id,
         boundingBox: task.boundingBox ? task.boundingBoxVec6 : null,
@@ -357,7 +381,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
       const { type, ...neededFormValues } = validFormValues;
       form.setFieldsValue(neededFormValues);
     }
-  }
+  }, [task, form]);
 
   function transformBoundingBox(boundingBox: Vector6): BoundingBoxObject {
     return {
@@ -550,7 +574,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                 showSearch={{ optionFilterProp: "label" }}
                 style={fullWidth}
                 disabled={isEditingMode || specificationType === SpecificationEnum.BaseAnnotation}
-                loading={isFetchingData}
+                loading={isFetchingDatasets}
                 options={datasets.map((dataset: APIDatasetCompact) => ({
                   label: dataset.name,
                   value: dataset.id,
@@ -560,7 +584,9 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
           </Col>
           <ReloadResourceButton
             tooltip="Reload to show new Datasets"
-            onReload={async () => setDatasets(await getActiveDatasetsOfMyOrganization())}
+            onReload={async () => {
+              await refetchDatasets();
+            }}
           />
           <CreateResourceButton text="Upload Dataset" link="/datasets/upload" />
         </Row>
@@ -631,7 +657,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                   showSearch={{ optionFilterProp: "label" }}
                   style={fullWidth}
                   disabled={isEditingMode}
-                  loading={isFetchingData}
+                  loading={isFetchingTaskTypes}
                   options={taskTypes.map((taskType: APITaskType) => ({
                     value: taskType.id,
                     label: taskType.summary,
@@ -641,7 +667,9 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             </Col>
             <ReloadResourceButton
               tooltip="Reload to show new Task Types"
-              onReload={async () => setTaskTypes(await getTaskTypes())}
+              onReload={async () => {
+                await refetchTaskTypes();
+              }}
             />
             <CreateResourceButton text="Create new Task Type" link="/taskTypes/create" />
           </Row>
@@ -720,7 +748,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                   placeholder="Select a Project"
                   style={fullWidth}
                   disabled={isEditingMode}
-                  loading={isFetchingData}
+                  loading={isFetchingProjects}
                   options={projects.map((project: APIProject) => ({
                     value: project.name,
                     label: project.name,
@@ -730,7 +758,9 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             </Col>
             <ReloadResourceButton
               tooltip="Reload to show new Projects"
-              onReload={async () => setProjects(await getProjects())}
+              onReload={async () => {
+                await refetchProjects();
+              }}
             />
             <CreateResourceButton text="Create new Project" link="/projects/create" />
           </Row>
@@ -743,7 +773,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                   placeholder="Select a Script"
                   style={fullWidth}
                   disabled={isEditingMode}
-                  loading={isFetchingData}
+                  loading={isFetchingScripts}
                   options={scripts.map((script: APIScript) => ({
                     value: script.id,
                     label: script.name,
@@ -753,7 +783,9 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             </Col>
             <ReloadResourceButton
               tooltip="Reload to show new Scripts"
-              onReload={async () => setScripts(await getScripts())}
+              onReload={async () => {
+                await refetchScripts();
+              }}
             />
             <CreateResourceButton text="Create new Script" link="/scripts/create" />
           </Row>

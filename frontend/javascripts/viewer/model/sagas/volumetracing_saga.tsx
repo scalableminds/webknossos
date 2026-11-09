@@ -97,7 +97,7 @@ import {
 } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 
-const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
+const NO_VOXELS_CHANGED_WARNING_KEY = "NO-VOXELS-CHANGED-WARNING";
 
 // Brushing runs through viewer/model/volumetracing, not the VoxelBuffer2D
 // path. Buckets are mutated in place; nothing reaches the save queue or the
@@ -276,6 +276,16 @@ export function* editVolumeLayerAsync(): Saga<never> {
       (thirdDim) => startEditingAction.positionInLayerSpace[thirdDim],
     );
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
+    const segmentationLayer = yield* call(
+      [Model, Model.getSegmentationTracingLayer],
+      volumeTracing.tracingId,
+    );
+    // The cube rejects writes outside of its bounding box (e.g., the task bounding box).
+    // Remember whether the stroke entered it to explain why no voxels might have been changed.
+    const editableBoundingBox = segmentationLayer.cube.boundingBox;
+    let didStrokeEnterBoundingBox = editableBoundingBox.containsPoint(
+      startEditingAction.positionInLayerSpace,
+    );
 
     // Only the brush is driven from viewer/model/volumetracing; the trace
     // tool below still builds up a section labeler.
@@ -285,10 +295,6 @@ export function* editVolumeLayerAsync(): Saga<never> {
     let lastBrushCenter: Vector3 | null = null;
 
     if (isBrushTool(activeTool)) {
-      const segmentationLayer = yield* call(
-        [Model, Model.getSegmentationTracingLayer],
-        volumeTracing.tracingId,
-      );
       const brushSize = yield* select((state) => state.userConfiguration.brushSize);
       const voxelSize = yield* select((state) => state.dataset.dataSource.scale);
       const dimIndices = Dimensions.getIndices(startEditingAction.planeId);
@@ -388,6 +394,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       }
 
       lastPosition = addToContourListAction.positionInLayerSpace;
+      didStrokeEnterBoundingBox ||= editableBoundingBox.containsPoint(lastPosition);
     }
 
     if (brushStroke != null) {
@@ -439,14 +446,20 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
     if (!wroteVoxelsBox.value) {
       const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
-      if (overwriteMode === OverwriteModeEnum.OVERWRITE_EMPTY)
+      if (!didStrokeEnterBoundingBox) {
+        yield* call(
+          [Toast, Toast.warning],
+          "No voxels were changed, because you annotated outside of the bounding box of this volume layer.",
+          { key: NO_VOXELS_CHANGED_WARNING_KEY },
+        );
+      } else if (overwriteMode === OverwriteModeEnum.OVERWRITE_EMPTY)
         yield* call(
           [Toast, Toast.warning],
           "No voxels were changed. You might want to change the overwrite-mode to “Overwrite everything” in the toolbar. Otherwise, only empty voxels will be changed.",
-          { key: OVERWRITE_EMPTY_WARNING_KEY },
+          { key: NO_VOXELS_CHANGED_WARNING_KEY },
         );
     } else {
-      yield* call([Toast, Toast.close], OVERWRITE_EMPTY_WARNING_KEY);
+      yield* call([Toast, Toast.close], NO_VOXELS_CHANGED_WARNING_KEY);
     }
   }
 }

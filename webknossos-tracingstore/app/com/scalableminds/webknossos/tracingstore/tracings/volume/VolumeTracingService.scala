@@ -348,14 +348,9 @@ class VolumeTracingService @Inject() (
                 _ <- Fox.serialCombined(dataZips.zipWithIndex) { case (dataZip, index) =>
                   mergedVolume.addFromDataZip(index, dataZip)
                 }
-                _ <- Fox.fromBool(
-                  ElementClass.largestSegmentIdIsInRange(
-                    mergedVolume.largestSegmentId,
-                    elementClassFromProto(tracing.elementClass)
-                  )
-                ) ?~> Msg.Annotation.Volume.largestSegmentIdExceedsRange(
-                  mergedVolume.largestSegmentId.getOrElse(-1L),
-                  tracing.elementClass.toString
+                _ <- ElementClass.assertLargestSegmentIdIsInRange(
+                  mergedVolume.largestSegmentId,
+                  elementClassFromProto(tracing.elementClass)
                 )
                 destinationVolumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
                 fallbackLayer <- getFallbackLayer(annotationId, tracing)
@@ -906,11 +901,10 @@ class VolumeTracingService @Inject() (
             _ <- Fox.serialCombined(volumeLayers.zipWithIndex) { case (volumeLayer, sourceVolumeIndex) =>
               mergedVolume.addFromBucketStream(sourceVolumeIndex, volumeLayer.bucketStream, Some(magsIntersection))
             }
-            _ <- Fox.fromBool(
-              ElementClass
-                .largestSegmentIdIsInRange(mergedVolume.largestSegmentId, elementClassFromProto(elementClassProto))
-            ) ?~> Msg.Annotation.Volume
-              .largestSegmentIdExceedsRange(mergedVolume.largestSegmentId.getOrElse(-1L), elementClassProto.toString)
+            _ <- ElementClass.assertLargestSegmentIdIsInRange(
+              mergedVolume.largestSegmentId,
+              elementClassFromProto(elementClassProto)
+            )
             mergedAdditionalAxes <- AdditionalAxis
               .mergeAndAssertSameAdditionalAxes(
                 volumeLayers.map(l => AdditionalAxis.fromProtosAsOpt(l.tracing.additionalAxes))
@@ -1005,11 +999,10 @@ class VolumeTracingService @Inject() (
           _ <- mergedVolume.addIdSetFromDataZip(zipFile)
           _ <- mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
           _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile)
-          _ <- Fox.fromBool(
-            ElementClass
-              .largestSegmentIdIsInRange(mergedVolume.largestSegmentId, elementClassFromProto(tracing.elementClass))
-          ) ?~> Msg.Annotation.Volume
-            .largestSegmentIdExceedsRange(mergedVolume.largestSegmentId.getOrElse(-1L), tracing.elementClass.toString)
+          _ <- ElementClass.assertLargestSegmentIdIsInRange(
+            mergedVolume.largestSegmentId,
+            elementClassFromProto(tracing.elementClass)
+          )
           fallbackLayer <- getFallbackLayer(annotationId, tracing)
           mappingName <- getMappingNameUnlessEditable(tracing)
           segmentIndexBuffer <- Fox.successful(

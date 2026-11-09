@@ -205,8 +205,10 @@ object Msg {
       val writeToFileFailed: String = "Could not write annotation to temporary file for download."
     }
     object Volume {
-      def largestSegmentIdExceedsRange(id: Long, ec: String): String =
-        s"The largest segment id $id specified for the annotation layer exceeds the range of its data type “$ec”."
+      def largestSegmentIdExceedsRange(id: Long, elementClass: String): String =
+        s"The largest segment id $id specified for the annotation layer exceeds the range of its data type “$elementClass”."
+      def invalidSegmentationElementClass(elementClass: String): String =
+        s"The data type “$elementClass” is not a valid segmentation data type."
       def wrongMag(tracingId: String, mag: String): String =
         s"Annotation layer “$tracingId” does not have mag “$mag”."
       val fallbackDataSplitFailed: String =

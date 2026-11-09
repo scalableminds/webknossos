@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}

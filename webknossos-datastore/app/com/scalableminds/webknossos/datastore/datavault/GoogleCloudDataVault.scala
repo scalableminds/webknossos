@@ -97,7 +97,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
   private def buildRequest(objName: String, range: ByteRange, authHeaders: Seq[(String, String)]): HttpRequest = {
     val encodedName = URLEncoder.encode(objName, StandardCharsets.UTF_8).replace("+", "%20")
     val builder = HttpRequest
-      .newBuilder(URI.create(s"$apiHost/download/storage/v1/b/$bucket/o/$encodedName?alt=media"))
+      .newBuilder(URI.create(s"$apiHost/storage/v1/b/$bucket/o/$encodedName?alt=media"))
       .header("Accept-Encoding", "gzip")
     range.toRangeHeaderOpt.foreach(builder.header("Range", _))
     authHeaders.foreach { case (key, value) => builder.header(key, value) }

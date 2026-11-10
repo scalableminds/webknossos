@@ -19,67 +19,64 @@ import type {
 } from "viewer/store";
 import Store from "viewer/store";
 
-export type MappedIdResult =
-  // The id is mapped to `value`. If no mapping is applied locally (no mapping active or
-  // the mapping is applied by the server), the bucket data already contains the final id
-  // and it is returned as is.
-  | { type: "exists"; value: bigint }
-  // The local mapping doesn't know the id (yet). For HDF5 mappings, this happens because
-  // only the entries for the currently needed buckets are loaded. It also happens while
-  // a mapping is still being activated.
-  | { type: "unknown" }
-  // The mapping is a fully loaded JSON mapping without an entry for the id. This is not an
-  // error: JSON mappings don't need to contain all ids.
-  | { type: "absent" };
-
 // If this is false, the bucket data already contains the final ids, because either no
 // mapping is active or the mapping is applied by the server.
 export function isMappingAppliedLocally(state: WebknossosState, layerName: string): boolean {
   return getBucketRetrievalSourceFn(layerName)(state)[1] === "LOCAL-MAPPING-APPLIED";
 }
 
+// Returns the id that the given unmapped id has under the current mapping of the layer, or
+// null if the local mapping doesn't know it (yet). For HDF5 mappings, the latter happens
+// because only the entries for the currently needed buckets are loaded. It also happens while
+// a mapping is still being activated.
+// If no mapping is applied locally (no mapping active or the mapping is applied by the
+// server), the bucket data already contains the final id and it is returned as is. The same
+// holds for background (0).
+// A JSON mapping doesn't need to contain all ids. An id without an entry is not an error: it
+// keeps its unmapped id (or becomes 0 if unmapped ids are hidden), as in the rendering.
 export function getMappedId(
   state: WebknossosState,
   layerName: string,
   unmappedId: bigint,
-): MappedIdResult {
-  // Background is never mapped to another id. The local HDF5 mapping doesn't necessarily
-  // contain an entry for it.
+): bigint | null {
   if (unmappedId === 0n || !isMappingAppliedLocally(state, layerName)) {
-    return { type: "exists", value: unmappedId };
+    return unmappedId;
   }
 
-  const { mapping, mappingStatus, mappingType } = getMappingInfo(
+  const { mapping, mappingStatus, mappingType, hideUnmappedIds } = getMappingInfo(
     state.temporaryConfiguration.activeMappingByLayer,
     layerName,
   );
   if (mapping == null || mappingStatus !== MappingStatusEnum.ENABLED) {
-    return { type: "unknown" };
+    return null;
   }
   const mappedId = new NumberLikeMapWrapper(mapping).getAsBigInt(unmappedId);
   if (mappedId != null) {
-    return { type: "exists", value: mappedId };
+    return mappedId;
   }
-  return mappingType === "JSON" ? { type: "absent" } : { type: "unknown" };
+  if (mappingType === "JSON") {
+    return hideUnmappedIds ? 0n : unmappedId;
+  }
+  return null;
 }
 
 // Like getMappedId, but fetches the mapped id from the server if the local HDF5 mapping
 // doesn't know it. The fetched entry is not added to the local mapping, because the next
 // update of the local mapping would remove it anyway if it's not needed for rendering.
-// "unknown" is only returned for a JSON mapping that is still being activated or if the
-// server didn't return an entry for the id.
+// Null is only returned for a JSON mapping that is still being activated, if the server didn't
+// return an entry for the id or if the mapping changed while the request was pending.
 export async function getMappedIdAsync(
   layerName: string,
   unmappedId: bigint,
-): Promise<MappedIdResult> {
+): Promise<bigint | null> {
   const state = Store.getState();
-  const result = getMappedId(state, layerName, unmappedId);
+  const mappedId = getMappedId(state, layerName, unmappedId);
   const { mappingName, mappingType } = getMappingInfo(
     state.temporaryConfiguration.activeMappingByLayer,
     layerName,
   );
-  if (result.type !== "unknown" || mappingType === "JSON" || mappingName == null) {
-    return result;
+  if (mappedId != null || mappingType === "JSON" || mappingName == null) {
+    return mappedId;
   }
 
   const fetchedEntries = await fetchAgglomeratesForSegmentIds(
@@ -100,57 +97,9 @@ export async function getMappedIdAsync(
     currentMappingInfo.mappingName !== mappingName ||
     currentMappingInfo.mappingStatus !== MappingStatusEnum.ENABLED
   ) {
-    return { type: "unknown" };
+    return null;
   }
-  const mappedId = new NumberLikeMapWrapper(fetchedEntries).getAsBigInt(unmappedId);
-  return mappedId != null ? { type: "exists", value: mappedId } : { type: "unknown" };
-}
-
-// Returns the id that the segment with the given unmapped id has under the current mapping
-// or null if that's not known (yet). For ids that are absent in a JSON mapping, this is the
-// unmapped id (or 0 if unmapped ids are hidden).
-export function resolveUnmappedSegmentId(
-  state: WebknossosState,
-  layerName: string,
-  unmappedId: bigint,
-): bigint | null {
-  return getSegmentIdFromResult(
-    state,
-    layerName,
-    unmappedId,
-    getMappedId(state, layerName, unmappedId),
-  );
-}
-
-// Like resolveUnmappedSegmentId, but fetches the mapped id from the server if the local
-// HDF5 mapping doesn't know it (see getMappedIdAsync).
-export async function resolveUnmappedSegmentIdAsync(
-  layerName: string,
-  unmappedId: bigint,
-): Promise<bigint | null> {
-  const result = await getMappedIdAsync(layerName, unmappedId);
-  return getSegmentIdFromResult(Store.getState(), layerName, unmappedId, result);
-}
-
-function getSegmentIdFromResult(
-  state: WebknossosState,
-  layerName: string,
-  unmappedId: bigint,
-  result: MappedIdResult,
-): bigint | null {
-  switch (result.type) {
-    case "exists":
-      return result.value;
-    case "unknown":
-      return null;
-    case "absent": {
-      const { hideUnmappedIds } = getMappingInfo(
-        state.temporaryConfiguration.activeMappingByLayer,
-        layerName,
-      );
-      return hideUnmappedIds ? 0n : unmappedId;
-    }
-  }
+  return new NumberLikeMapWrapper(fetchedEntries).getAsBigInt(unmappedId) ?? null;
 }
 
 export async function fetchAgglomeratesForSegmentIds(

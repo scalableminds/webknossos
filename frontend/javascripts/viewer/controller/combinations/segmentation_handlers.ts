@@ -1,8 +1,8 @@
 import Toast from "libs/toast";
 import type { Point2, Vector3 } from "viewer/constants";
 import {
-  getSegmentIdForPosition,
-  getSegmentIdForPositionAsync,
+  getSegmentIdsAtPosition,
+  getSegmentIdsAtPositionAsync,
 } from "viewer/controller/combinations/volume_handlers";
 import { hasConnectomeFile } from "viewer/model/accessors/connectome_accessor";
 import {
@@ -83,7 +83,9 @@ export async function loadSynapsesOfAgglomerateAtPosition(position: Vector3) {
   const isConnectomeEnabled = hasConnectomeFile(state);
 
   if (mappingName && isConnectomeEnabled.value) {
-    const segmentId = await getSegmentIdForPositionAsync(segmentation.name, position);
+    // The connectome mapping might have been activated right before this function is called
+    // (see withMappingActivationConfirmation), so the displayed segment id can't be used.
+    const { mappedId: segmentId } = await getSegmentIdsAtPositionAsync(segmentation.name, position);
     if (segmentId == null) {
       Toast.error("Could not determine the segment id at the clicked position.");
       return;
@@ -96,7 +98,7 @@ export async function loadSynapsesOfAgglomerateAtPosition(position: Vector3) {
 export function handleClickSegment(clickPosition: Point2) {
   const state = Store.getState();
   const globalPosition = calculateGlobalPos(state, clickPosition);
-  const segmentId = getSegmentIdForPosition(globalPosition.rounded);
+  const { mappedId: segmentId } = getSegmentIdsAtPosition(globalPosition.rounded);
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const positionInSegmentationLayerSpace =
     visibleSegmentationLayer != null

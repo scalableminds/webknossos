@@ -3,7 +3,7 @@ import { SoftError } from "libs/utils";
 import messages from "messages";
 import { actionChannel, call, fork, put, take, takeEvery } from "typed-redux-saga";
 import { OrthoViews, TreeTypeEnum } from "viewer/constants";
-import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
+import { getSegmentIdsAtPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { getTreeAndNode } from "viewer/model/accessors/skeletontracing_accessor";
@@ -315,7 +315,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   yield put(updateProofreadingMarkerPositionAction(position, layerName));
 
-  const segmentId = yield* call(getSegmentIdForPositionAsync, layerName, position);
+  const { mappedId: segmentId } = yield* call(getSegmentIdsAtPositionAsync, layerName, position);
   if (segmentId == null) {
     Toast.warning("Could not determine the segment id at the clicked position. Please try again.");
     return;

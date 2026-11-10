@@ -2030,11 +2030,11 @@ class DataApi {
       throw new Error(`No active mapping for layer ${layerName}`);
     }
 
-    const result = await getMappedIdAsync(layerName, unmappedId);
-    if (result.type !== "exists") {
+    const mappedId = await getMappedIdAsync(layerName, unmappedId);
+    if (mappedId == null) {
       throw new Error(`Could not map id ${unmappedId} at position ${position}`);
     }
-    return result.value;
+    return mappedId;
   }
 
   /**

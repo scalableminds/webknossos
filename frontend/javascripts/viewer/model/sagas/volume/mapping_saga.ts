@@ -26,7 +26,7 @@ import {
 } from "typed-redux-saga";
 import type { APIDataLayer, APIMapping } from "types/api_types";
 import { MappingStatusEnum, type MappingType } from "viewer/constants";
-import { getSegmentIdInfoForPositionAsync } from "viewer/controller/combinations/volume_handlers";
+import { getSegmentIdsAtPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import {
   getLayerByName,
   getMappingInfo,
@@ -675,10 +675,11 @@ function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
     // mapping, so this would cause a request for each update while the marker is out of view.
     // The local mapping only contains entries for the ids in the currently needed buckets.
     // Once the marker is in view again, the lookup will succeed.
-    const { mappedId } = yield* call(
-      getSegmentIdInfoForPositionAsync,
+    const { mappedId: agglomerateId } = yield* call(
+      getSegmentIdsAtPositionAsync,
       layerName,
       proofreadingMarkerPosition,
+      { fetchUnknownIds: false },
     );
 
     // The marker may have been moved (e.g., by a click) while the lookup was pending.
@@ -690,10 +691,9 @@ function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
       return;
     }
 
-    if (mappedId.type !== "exists") {
+    if (agglomerateId == null) {
       return;
     }
-    const agglomerateId = mappedId.value;
 
     const currentVolumeTracing = yield* select((state) =>
       getVolumeTracingByLayerName(state.annotation, layerName),

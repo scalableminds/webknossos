@@ -210,13 +210,13 @@ export function* prepareSplitOrMerge(
 
   const getMappedAndUnmapped = function* (position: Vector3) {
     const unmappedId = yield* call(getUnmappedDataValue, position);
-    const result = yield* call(getMappedIdAsync, volumeTracing.tracingId, unmappedId);
-    if (result.type !== "exists") {
+    const agglomerateId = yield* call(getMappedIdAsync, volumeTracing.tracingId, unmappedId);
+    if (agglomerateId == null) {
       throw new SoftError(
         `Could not map id ${unmappedId} at position ${position}. The mapped partner might not be known yet. Please retry.`,
       );
     }
-    return { agglomerateId: result.value, unmappedId };
+    return { agglomerateId, unmappedId };
   };
 
   const activeMapping = yield* select(

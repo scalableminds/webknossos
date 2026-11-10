@@ -518,7 +518,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
     val orderTokens = sortByOpt.map {
       case DatasetSortBy.createdDesc     => q"d.created DESC"
       case DatasetSortBy.createdAsc      => q"d.created ASC"
-      case DatasetSortBy.name            => q"LOWER(d.name), d.name"
+      case DatasetSortBy.name            => q"d.name COLLATE webknossos.natural_sort, d.name"
       case DatasetSortBy.storage         => q"$usedStorageColumn DESC"
       case DatasetSortBy.annotationCount => q"$annotationCountColumn DESC NULLS LAST"
       case DatasetSortBy.searchRelevance =>

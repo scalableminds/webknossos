@@ -280,6 +280,16 @@ describe("Dataset API (E2E)", () => {
     expect(newest[0].id).toBe(byCreation[byCreation.length - 1].id);
   });
 
+  it("getDatasets sorts names naturally", async () => {
+    const names = (await getDatasets({ sortBy: "name" })).map((d) => d.name);
+    // Digit sequences are compared by their numeric value, e.g. ds2 comes before ds10.
+    const collator = new Intl.Collator("en", { numeric: true });
+    const expectedNames = [...names].sort(
+      (a, b) => collator.compare(a, b) || (a < b ? -1 : a > b ? 1 : 0),
+    );
+    expect(names).toEqual(expectedNames);
+  });
+
   it("getDatasets sorts exact name matches first when sorting by search relevance", async () => {
     const results = await getDatasets({ searchQuery: "l4_sample", sortBy: "searchRelevance" });
     expect(results.length).toBeGreaterThan(0);

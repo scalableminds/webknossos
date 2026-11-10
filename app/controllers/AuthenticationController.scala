@@ -37,6 +37,7 @@ import play.silhouette.api.services.AuthenticatorResult
 import play.silhouette.api.util.{Credentials, PasswordInfo}
 import play.silhouette.api.Silhouette
 import play.silhouette.impl.providers.CredentialsProvider
+import oauth.OAuthService
 import security.*
 import telemetry.SlackNotificationService
 import utils.WkConf
@@ -89,7 +90,7 @@ class AuthenticationController @Inject() (
     userDAO: UserDAO,
     slackNotificationService: SlackNotificationService,
     tokenDAO: TokenDAO,
-    shortLivedTokenService: ShortLivedTokenService,
+    oauthService: OAuthService,
     multiUserDAO: MultiUserDAO,
     defaultMails: DefaultMails,
     conf: WkConf,
@@ -452,18 +453,11 @@ class AuthenticationController @Inject() (
   }
 
   def deleteToken(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
-    for {
-      // Revoking the API token also revokes all short-lived tokens that were derived from the user's account.
-      _ <- shortLivedTokenService.revokeAllForUser(request.identity._id)
-      tokenOpt <- Fox.fromFuture(combinedAuthenticatorService.findTokenForUser(request.identity._id))
-      result <- tokenOpt match {
-        case Some(token) =>
-          Fox.fromFuture(
-            combinedAuthenticatorService.discard(token, Ok(Json.obj("messages" -> Msg.User.Token.deleted)))
-          )
-        case _ => Fox.successful(Ok)
-      }
-    } yield result
+    Fox.fromFuture(combinedAuthenticatorService.findTokenForUser(request.identity._id)).flatMap {
+      case Some(token) =>
+        Fox.fromFuture(combinedAuthenticatorService.discard(token, Ok(Json.obj("messages" -> Msg.User.Token.deleted))))
+      case _ => Fox.successful(Ok)
+    }
   }
 
   def logout: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
@@ -950,7 +944,8 @@ class AuthenticationController @Inject() (
       _ <- userDAO.logOutEverywhereByMultiUserId(request.identity._multiUser)
       userIds <- userDAO.findIdsByMultiUserId(request.identity._multiUser)
       _ = userIds.map(userService.removeUserFromCache)
-      _ <- shortLivedTokenService.revokeAllForUsers(userIds)
+      // Agents connected via OAuth (MCP clients) are disconnected as well, including their short-lived tokens.
+      _ <- oauthService.revokeAllForUsers(userIds)
       _ <- tokenDAO.deleteDataStoreTokensForMultiUser(request.identity._multiUser)
     } yield Ok
   }

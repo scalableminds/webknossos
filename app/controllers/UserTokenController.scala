@@ -70,11 +70,19 @@ class UserTokenController @Inject() (
   def generateTokenForDataStore: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
-        if (isRequestedByAgent(request))
+        agentTokenOf(request) match {
           // An agent token must not be able to trade itself in for a DataStore token, which would not be subject
-          // to the agent permissions. It gets another short-lived token instead, which is.
-          shortLivedTokenService.create(user._id, conf.Silhouette.TokenAuthenticator.shortLivedExpiry).map(_.value)
-        else bearerTokenService.createAndInitDataStoreTokenForUser(user)
+          // to the agent's scopes. It gets another short-lived token under the same grant instead, which is.
+          case Some(agentTokenValue) =>
+            for {
+              agentToken <- shortLivedTokenService.findValid(agentTokenValue) ?~> "Invalid token"
+              newToken <- shortLivedTokenService.createFrom(
+                agentToken,
+                conf.Silhouette.TokenAuthenticator.shortLivedExpiry
+              )
+            } yield newToken.value
+          case None => bearerTokenService.createAndInitDataStoreTokenForUser(user)
+        }
       case None => Fox.successful("")
     }
     for {
@@ -131,10 +139,9 @@ class UserTokenController @Inject() (
     }
 
   // The authenticator has already been validated at this point, so recognizing the token type is enough.
-  private def isRequestedByAgent(request: UserAwareRequest[WkEnv, ?]): Boolean =
-    request.authenticator.map(_.actualAuthenticator).exists {
-      case a: BearerTokenAuthenticator => shortLivedTokenService.isShortLivedTokenValue(a.id)
-      case _                           => false
+  private def agentTokenOf(request: UserAwareRequest[WkEnv, ?]): Option[String] =
+    request.authenticator.map(_.actualAuthenticator).collect {
+      case a: BearerTokenAuthenticator if shortLivedTokenService.isShortLivedTokenValue(a.id) => a.id
     }
 
   /*
@@ -149,14 +156,11 @@ class UserTokenController @Inject() (
       case Some(tokenValue) =>
         // Fails (rather than allowing) if the lookup itself fails.
         shortLivedTokenService.findValid(tokenValue).shiftBox.flatMap {
+          // The scopes are read from the grant per request, so that changing them takes effect at once.
           case Full(agentToken) =>
-            for {
-              // Read per request, so that changing the agent permissions takes effect at once.
-              user <- userService.findOneCached(agentToken.userId)(using GlobalAccessContext)
-              grantedScopes = Scope.Set.parse(user.mcpAgentScopes)
-            } yield Scope.fromAccessResourceType(accessRequest.resourceType).exists { resource =>
-              grantedScopes.allows(Scope(resource, ScopeMode.fromAccessMode(accessRequest.mode)))
-            }
+            Fox.successful(Scope.fromAccessResourceType(accessRequest.resourceType).exists { resource =>
+              agentToken.scopes.allows(Scope(resource, ScopeMode.fromAccessMode(accessRequest.mode)))
+            })
           // Only agent tokens are restricted here. A revoked or expired one does not resolve to a user below either.
           case Empty            => Fox.successful(true)
           case failure: Failure => failure.toFox

@@ -219,6 +219,8 @@ class ScopeTestSuite extends AnyWordSpec {
         "controllers.AuthenticationController",
         "controllers.InitialDataController",
         "controllers.MaintenanceController",
+        "controllers.McpController",
+        "controllers.OAuthController",
         "controllers.WKRemoteDataStoreController",
         "controllers.WKRemoteTracingStoreController",
         "controllers.WKRemoteWorkerController"
@@ -260,6 +262,10 @@ class ScopeTestSuite extends AnyWordSpec {
       assert(RouteScopes.requiredScope("controllers.AuthenticationController", "deleteToken", "DELETE").isEmpty)
       assert(RouteScopes.requiredScope("controllers.MaintenanceController", "create", "POST").isEmpty)
       assert(RouteScopes.requiredScope("controllers.InitialDataController", "triggerInsert", "POST").isEmpty)
+      // An agent must not mint more tokens via the MCP server, nor approve or revoke connections.
+      assert(RouteScopes.requiredScope("controllers.McpController", "handle", "POST").isEmpty)
+      assert(RouteScopes.requiredScope("controllers.OAuthController", "authorize", "POST").isEmpty)
+      assert(RouteScopes.requiredScope("controllers.OAuthController", "revokeGrant", "DELETE").isEmpty)
       assert(RouteScopes.requiredScope("controllers.WKRemoteDataStoreController", "reportDatasets", "POST").isEmpty)
     }
   }

@@ -4,12 +4,12 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
+import oauth.{OAuthGrant, OAuthGrantDAO}
 import org.scalatest.wordspec.AnyWordSpec
-import security.TokenType.TokenType
-import security.{ShortLivedToken, ShortLivedTokenService, Token, TokenDAO, TokenType}
+import security.{Scope, ScopeMode, ScopeResource, ShortLivedToken, ShortLivedTokenService, Token, TokenDAO, TokenType}
 
 import scala.collection.mutable
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext}
 
 /** Keeps the tokens in memory and mimics the soft deletion of the real DAO. The SqlClient is never touched, because all
@@ -30,10 +30,16 @@ class InMemoryTokenDAO(implicit ec: ExecutionContext) extends TokenDAO(null) {
     tokens.get(value).filterNot(_.isDeleted).toFox
   }
 
-  override def deleteAllByUserIdAndType(userId: ObjectId, tokenType: TokenType): Fox[Unit] = {
-    tokens.filterInPlace { case (_, t) => !(t._user == userId && t.tokenType == tokenType) }
+  override def deleteAllByOAuthGrant(grantId: ObjectId): Fox[Unit] = {
+    tokens.filterInPlace { case (_, t) => !t._oauthGrant.contains(grantId) }
     Fox.successful(())
   }
+}
+
+class InMemoryOAuthGrantDAO(implicit ec: ExecutionContext) extends OAuthGrantDAO(null) {
+  val grants: mutable.Map[ObjectId, OAuthGrant] = mutable.Map.empty
+
+  override def findLive(id: ObjectId): Fox[OAuthGrant] = grants.get(id).filterNot(_.isDeleted).toFox
 }
 
 class ShortLivedTokenTestSuite extends AnyWordSpec {
@@ -42,105 +48,138 @@ class ShortLivedTokenTestSuite extends AnyWordSpec {
 
   private def await[T](fox: Fox[T]) = Await.result(fox.futureBox, 5.seconds)
 
-  private def setup(): (InMemoryTokenDAO, ShortLivedTokenService) = {
-    val dao = new InMemoryTokenDAO
-    (dao, new ShortLivedTokenService(dao))
+  private case class Setup(
+      tokenDAO: InMemoryTokenDAO,
+      grantDAO: InMemoryOAuthGrantDAO,
+      service: ShortLivedTokenService
+  ) {
+    def addGrant(scopes: String = "write", userId: ObjectId = ObjectId.generate): OAuthGrant = {
+      val grant = OAuthGrant(ObjectId.generate, userId, "https://client.example.com/metadata.json", "Client", scopes)
+      grantDAO.grants.put(grant._id, grant)
+      grant
+    }
+
+    def create(grant: OAuthGrant, expiry: FiniteDuration = 1.hour): ShortLivedToken =
+      await(service.create(grant, expiry)).get("creating a token must succeed in this test")
+
+    def findValid(value: String): Option[ShortLivedToken] = await(service.findValid(value)).toOption
   }
 
-  private def create(
-      service: ShortLivedTokenService,
-      userId: ObjectId,
-      expiry: scala.concurrent.duration.FiniteDuration
-  ) =
-    await(service.create(userId, expiry)).get("creating a token must succeed in this test")
-
-  private def findValid(service: ShortLivedTokenService, value: String): Option[ShortLivedToken] =
-    await(service.findValid(value)).toOption
+  private def setup(): Setup = {
+    val tokenDAO = new InMemoryTokenDAO
+    val grantDAO = new InMemoryOAuthGrantDAO
+    Setup(tokenDAO, grantDAO, new ShortLivedTokenService(tokenDAO, grantDAO))
+  }
 
   "ShortLivedTokenService" should {
-    "store a created token as a short-lived token without idle timeout" in {
-      val (dao, service) = setup()
-      val userId = ObjectId.generate
-      val token = create(service, userId, 1.hour)
-      val stored = dao.tokens(token.value)
+    "store a created token as a short-lived token of the grant's user, without idle timeout" in {
+      val s = setup()
+      val grant = s.addGrant()
+      val token = s.create(grant)
+      val stored = s.tokenDAO.tokens(token.value)
       assert(stored.tokenType == TokenType.ShortLived)
-      assert(stored._user == userId)
+      assert(stored._user == grant._user)
+      assert(stored._oauthGrant.contains(grant._id))
       assert(stored.idleTimeout.isEmpty)
       assert(stored.expirationDateTime == token.expiresAt)
       assert(token.value.startsWith("wkst_"))
-      assert(service.isShortLivedTokenValue(token.value))
+      assert(s.service.isShortLivedTokenValue(token.value))
     }
 
-    "find a token it created" in {
-      val (_, service) = setup()
-      val userId = ObjectId.generate
-      val token = create(service, userId, 1.hour)
-      assert(findValid(service, token.value).map(_.userId).contains(userId))
+    "find a token it created, with the grant's scopes" in {
+      val s = setup()
+      val grant = s.addGrant(scopes = "read")
+      val token = s.create(grant)
+      val found = s.findValid(token.value)
+      assert(found.map(_.userId).contains(grant._user))
+      assert(found.map(_.grantId).contains(grant._id))
+      assert(found.exists(_.scopes.allows(Scope(ScopeResource.dataset, ScopeMode.read))))
+      assert(!found.exists(_.scopes.allows(Scope(ScopeResource.dataset, ScopeMode.write))))
+    }
+
+    "follow the current scopes of the grant" in {
+      val s = setup()
+      val grant = s.addGrant(scopes = "read")
+      val token = s.create(grant)
+      s.grantDAO.grants.put(grant._id, grant.copy(scopes = "delete"))
+      assert(s.findValid(token.value).exists(_.scopes.allows(Scope(ScopeResource.annotation, ScopeMode.delete))))
+    }
+
+    "create another token under the same grant" in {
+      val s = setup()
+      val grant = s.addGrant()
+      val token = s.create(grant)
+      val derived = await(s.service.createFrom(token, 1.hour)).get("creating a token must succeed in this test")
+      assert(derived.value != token.value)
+      assert(s.findValid(derived.value).map(_.grantId).contains(grant._id))
     }
 
     "create distinct tokens" in {
-      val (_, service) = setup()
-      val userId = ObjectId.generate
-      assert(create(service, userId, 1.hour).value != create(service, userId, 1.hour).value)
+      val s = setup()
+      val grant = s.addGrant()
+      assert(s.create(grant).value != s.create(grant).value)
     }
 
     "not find an unknown token" in {
-      val (_, service) = setup()
-      assert(findValid(service, "wkst_unknown").isEmpty)
+      val s = setup()
+      assert(s.findValid("wkst_unknown").isEmpty)
     }
 
     "not query the database for values without the prefix" in {
-      val (dao, service) = setup()
-      assert(findValid(service, "someRegularApiToken").isEmpty)
-      assert(dao.findCalls == 0)
+      val s = setup()
+      assert(s.findValid("someRegularApiToken").isEmpty)
+      assert(s.tokenDAO.findCalls == 0)
     }
 
     "not accept a token of another type, even with the prefix" in {
-      val (dao, service) = setup()
+      val s = setup()
       val now = Instant.now
       val value = "wkst_notShortLived"
-      dao.tokens.put(
+      s.tokenDAO.tokens.put(
         value,
         Token(ObjectId.generate, value, ObjectId.generate, now, now + 1.hour, None, TokenType.Authentication, now)
       )
-      assert(findValid(service, value).isEmpty)
+      assert(s.findValid(value).isEmpty)
+    }
+
+    "not accept a short-lived token without a grant" in {
+      val s = setup()
+      val now = Instant.now
+      val value = "wkst_withoutGrant"
+      s.tokenDAO.tokens.put(
+        value,
+        Token(ObjectId.generate, value, ObjectId.generate, now, now + 1.hour, None, TokenType.ShortLived, now)
+      )
+      assert(s.findValid(value).isEmpty)
     }
 
     "not find an expired token" in {
-      val (_, service) = setup()
-      val token = create(service, ObjectId.generate, (-1).second)
-      assert(findValid(service, token.value).isEmpty)
+      val s = setup()
+      val token = s.create(s.addGrant(), (-1).second)
+      assert(s.findValid(token.value).isEmpty)
     }
 
-    "revoke all tokens of one user, but not those of others" in {
-      val (_, service) = setup()
-      val userId = ObjectId.generate
-      val otherUserId = ObjectId.generate
-      val tokenA = create(service, userId, 1.hour)
-      val tokenB = create(service, userId, 1.hour)
-      val tokenOfOther = create(service, otherUserId, 1.hour)
-
-      await(service.revokeAllForUser(userId))
-
-      assert(findValid(service, tokenA.value).isEmpty)
-      assert(findValid(service, tokenB.value).isEmpty)
-      assert(findValid(service, tokenOfOther.value).isDefined)
+    "not find a token whose grant has been revoked" in {
+      val s = setup()
+      val grant = s.addGrant()
+      val token = s.create(grant)
+      s.grantDAO.grants.put(grant._id, grant.copy(isDeleted = true))
+      assert(s.findValid(token.value).isEmpty)
     }
 
-    "revoke the tokens of several users at once" in {
-      val (_, service) = setup()
-      val userA = ObjectId.generate
-      val userB = ObjectId.generate
-      val userC = ObjectId.generate
-      val tokenA = create(service, userA, 1.hour)
-      val tokenB = create(service, userB, 1.hour)
-      val tokenC = create(service, userC, 1.hour)
+    "revoke all tokens of one grant, but not those of others" in {
+      val s = setup()
+      val grant = s.addGrant()
+      val otherGrant = s.addGrant(userId = grant._user)
+      val tokenA = s.create(grant)
+      val tokenB = s.create(grant)
+      val tokenOfOther = s.create(otherGrant)
 
-      await(service.revokeAllForUsers(Seq(userA, userB)))
+      await(s.service.revokeAllForGrant(grant._id))
 
-      assert(findValid(service, tokenA.value).isEmpty)
-      assert(findValid(service, tokenB.value).isEmpty)
-      assert(findValid(service, tokenC.value).isDefined)
+      assert(s.findValid(tokenA.value).isEmpty)
+      assert(s.findValid(tokenB.value).isEmpty)
+      assert(s.findValid(tokenOfOther.value).isDefined)
     }
   }
 }

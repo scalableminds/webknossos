@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import files.WkTempFileService
 import mail.{Mailer, MailerConfig}
-import mcp.McpBundleService
+import oauth.OAuthService
 import models.annotation.AnnotationDAO
 import models.dataset.ThumbnailCachingService
 import models.user.InviteService
@@ -37,7 +37,7 @@ class Startup @Inject() (
     thumbnailCachingService: ThumbnailCachingService,
     sqlClient: SqlClient,
     slackNotificationService: SlackNotificationService,
-    mcpBundleService: McpBundleService
+    oauthService: OAuthService
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
 
@@ -47,8 +47,6 @@ class Startup @Inject() (
 
   startActors(actorSystem)
 
-  mcpBundleService.warmUp()
-
   private val tokenAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   cleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
@@ -57,6 +55,10 @@ class Startup @Inject() (
 
   cleanUpService.register("hard-deletion of old soft-deleted tokens", 1 day) {
     tokenAuthenticatorService.hardDeleteOldTokens()
+  }
+
+  cleanUpService.register("deletion of expired OAuth codes and tokens", 1 day) {
+    oauthService.removeExpired()
   }
 
   cleanUpService.register("deletion of expired invites", 1 day) {

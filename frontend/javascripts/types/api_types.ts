@@ -819,6 +819,7 @@ export type APIFeatureToggles = {
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;
   readonly passkeysEnabled: boolean;
+  readonly mcpEnabled?: boolean;
   readonly registerToDefaultOrgaEnabled?: boolean;
   readonly supportAiAgentUrl?: string;
 };

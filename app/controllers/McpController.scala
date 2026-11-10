@@ -1,21 +1,16 @@
 package controllers
 
-import mcp.{JsonRpc, JsonRpcError, McpBundleService, McpService}
-import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.JsonAutoFormat
-import models.user.UserService
+import com.scalableminds.util.box.{Empty, Failure, Full}
+import mcp.{JsonRpc, JsonRpcError, McpService}
+import oauth.{OAuthGrant, OAuthService}
+import models.user.User
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RequestHeader, Result}
-import security.{Scope, ShortLivedTokenService, WkEnv}
-
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Request, RequestHeader, Result}
+import security.TokenHeaders
 import utils.WkConf
 
-import java.net.URI
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-
-case class McpPermissions(scopes: String) derives JsonAutoFormat
 
 /** Model Context Protocol (MCP) server, so that AI agents can work with this WEBKNOSSOS instance.
   *
@@ -23,31 +18,64 @@ case class McpPermissions(scopes: String) derives JsonAutoFormat
   * and is answered with a single JSON response. The server is stateless, so no Mcp-Session-Id is issued and GET (which
   * clients use to open an SSE stream) is answered with 405, as allowed by the spec.
   *
-  * Authentication is the regular WEBKNOSSOS token auth, via the X-Auth-Token or the Authorization: Bearer header. Note
-  * that unauthenticated requests are answered by silhouette's default error handler, which does not send a
-  * WWW-Authenticate challenge header, so clients need to be configured with the token explicitly.
+  * Clients authenticate with an OAuth access token (Authorization: Bearer), see oauth.OAuthService. Nothing else is
+  * accepted here: no session cookie and no API token. A request without a valid token is answered with 401 and a
+  * WWW-Authenticate header pointing to the protected resource metadata, which is how clients discover where to log in.
   */
 class McpController @Inject() (
     mcpService: McpService,
-    mcpBundleService: McpBundleService,
-    shortLivedTokenService: ShortLivedTokenService,
-    userService: UserService,
-    conf: WkConf,
-    sil: Silhouette[WkEnv]
+    oauthService: OAuthService,
+    conf: WkConf
 )(implicit
     ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers
 ) extends Controller {
 
-  def handle(): Action[JsValue] = sil.SecuredAction.async(bodyParsers.tolerantJson) { implicit request =>
-    rejectionFor(request) match {
-      case Some(rejection) => Future.successful(rejection)
-      case None            =>
-        mcpService.handle(request.body, request.identity).map {
-          case Some(response) => Ok(response)
-          case None           => Accepted // JSON-RPC notifications are not answered
+  private val protocolVersionHeader = "MCP-Protocol-Version"
+
+  def handle(): Action[JsValue] = Action.async(bodyParsers.tolerantJson) { implicit request =>
+    if (!conf.Features.mcpEnabled) Future.successful(NotFound)
+    else
+      authenticate(request).flatMap {
+        case Left(rejection)      => Future.successful(rejection)
+        case Right((user, grant)) =>
+          rejectionFor(request) match {
+            case Some(rejection) => Future.successful(rejection)
+            case None            =>
+              mcpService.handle(request.body, user, grant).map {
+                case Some(response) => Ok(response)
+                case None           => Accepted // JSON-RPC notifications are not answered
+              }
+          }
+      }
+  }
+
+  def handleGet(): Action[AnyContent] = Action { _ =>
+    if (conf.Features.mcpEnabled) MethodNotAllowed else NotFound
+  }
+
+  private def authenticate(request: Request[?]): Future[Either[Result, (User, OAuthGrant)]] =
+    TokenHeaders.bearerToken(request) match {
+      case None              => Future.successful(Left(unauthorized(None)))
+      case Some(accessToken) =>
+        oauthService.authenticateAccessToken(accessToken).futureBox.map {
+          case Full(userAndGrant) => Right(userAndGrant)
+          case Empty              => Left(unauthorized(Some("invalid_token")))
+          case failure: Failure   =>
+            logger.warn(s"Checking an MCP access token failed: ${failure.msg}")
+            Left(InternalServerError(Json.obj("error" -> "server_error")))
         }
     }
+
+  // RFC 6750 and RFC 9728: tells the client where to find out how to get a token.
+  private def unauthorized(error: Option[String]): Result = {
+    val parameters = List(
+      Some(s"""resource_metadata="${oauthService.protectedResourceMetadataUrl}""""),
+      Some(s"""scope="${OAuthService.defaultLevel}""""),
+      error.map(e => s"""error="$e"""")
+    ).flatten
+    Unauthorized(Json.obj("error" -> error.getOrElse[String]("unauthorized")))
+      .withHeaders(WWW_AUTHENTICATE -> s"Bearer ${parameters.mkString(", ")}")
   }
 
   private def rejectionFor(request: RequestHeader): Option[Result] =
@@ -59,9 +87,9 @@ class McpController @Inject() (
             .error(None, JsonRpcError.invalidRequest("Unsupported Media Type: Content-Type must be application/json"))
         )
       )
-    else if (request.headers.get(ORIGIN).exists(_ != instanceOrigin))
+    else if (request.headers.get(ORIGIN).exists(_ != oauthService.instanceOrigin))
       // Browsers send an Origin header, MCP clients usually do not. A foreign origin means that a web page tries to
-      // talk to the server on behalf of a user who is logged in via cookie (CSRF, DNS rebinding). Required by the spec.
+      // talk to the server (DNS rebinding). Rejecting it is required by the spec.
       Some(Forbidden(JsonRpc.error(None, JsonRpcError.invalidRequest("Invalid Origin header"))))
     else
       request.headers.get(protocolVersionHeader) match {
@@ -71,47 +99,4 @@ class McpController @Inject() (
           Some(BadRequest(JsonRpc.error(None, JsonRpcError.invalidRequest(s"Unsupported protocol version: $version"))))
         case _ => None
       }
-
-  private val protocolVersionHeader = "MCP-Protocol-Version"
-
-  // Origin as sent by browsers: scheme, host and port, the latter only if it is not the default for the scheme.
-  private lazy val instanceOrigin: String = {
-    val uri = new URI(conf.Http.uri)
-    val isDefaultPort = uri.getPort == -1 || (uri.getScheme, uri.getPort) == ("http", 80) ||
-      (uri.getScheme, uri.getPort) == ("https", 443)
-    s"${uri.getScheme}://${uri.getHost}${if (isDefaultPort) "" else s":${uri.getPort}"}"
-  }
-
-  def handleGet(): Action[AnyContent] = sil.SecuredAction { _ =>
-    MethodNotAllowed
-  }
-
-  /** Revokes all short-lived tokens the current user has been issued. Needed because the scopes of a token are fixed
-    * when it is created: narrowing the permissions of a connection only affects tokens issued afterwards, so an agent
-    * that already holds one keeps its old permissions until it expires.
-    */
-  def revokeTokens(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
-    for {
-      _ <- shortLivedTokenService.revokeAllForUser(request.identity._id)
-    } yield Ok
-  }
-
-  def readPermissions(): Action[AnyContent] = sil.SecuredAction { implicit request =>
-    Ok(Json.obj("scopes" -> request.identity.mcpAgentScopes))
-  }
-
-  def updatePermissions(): Action[McpPermissions] = sil.SecuredAction.fox(validateJson[McpPermissions]) {
-    implicit request =>
-      for {
-        _ <- Fox.fromBool(Scope.Set.isParsable(request.body.scopes)) ?~> "Invalid permissions"
-        _ <- userService.updateMcpAgentScopes(request.identity, request.body.scopes)
-      } yield Ok(Json.obj("scopes" -> request.body.scopes))
-  }
-
-  // The bundle contains no secrets (the user enters their token when installing it), so it needs no authentication.
-  def bundle(): Action[AnyContent] = Action { _ =>
-    Ok(mcpBundleService.bundleBytes())
-      .as("application/octet-stream")
-      .withHeaders(CONTENT_DISPOSITION -> s"""attachment; filename="${mcpBundleService.fileName}"""")
-  }
 }

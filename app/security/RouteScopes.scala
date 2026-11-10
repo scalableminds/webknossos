@@ -30,7 +30,6 @@ object RouteScopes {
     "EmailVerificationController" -> user,
     "FolderController" -> dataset,
     "JobController" -> job,
-    "McpController" -> meta,
     "OrganizationController" -> organization,
     "PathDeletionController" -> dataset,
     "ProjectController" -> project,
@@ -52,6 +51,8 @@ object RouteScopes {
     // - WKRemoteDataStoreController, WKRemoteTracingStoreController, WKRemoteWorkerController: internal
     //   store-to-wk communication, authenticated by a store key rather than by a user token.
     // - InitialDataController, MaintenanceController: instance administration.
+    // - McpController, OAuthController: the MCP server takes OAuth access tokens only, and connecting or revoking
+    //   agents is for the user alone. An agent must not mint more tokens or approve connections.
   )
 
   /** Scopes for individual actions, both resource and mode. Used for controllers that are not tied to a single
@@ -76,8 +77,6 @@ object RouteScopes {
     "ConfigurationController.readDatasetViewConfiguration" -> ScopeMode.read,
     "TaskController.listTasks" -> ScopeMode.read,
     "CreditTransactionController.revokeExpiredCredits" -> ScopeMode.administrate,
-    "McpController.handle" -> ScopeMode.read,
-    "McpController.bundle" -> ScopeMode.read,
     // Exchanges the caller's token for a datastore token. Safe for scoped tokens because the scopes are carried
     // over, see UserTokenController.generateTokenForDataStore.
     "UserTokenController.generateTokenForDataStore" -> ScopeMode.read

@@ -21,7 +21,10 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
   private val testPort = 9000
   private val argumentMap = argumentMapRead +
     ("http.port" -> testPort) +
-    ("features.voxelyticsEnabled" -> true)
+    ("features.voxelyticsEnabled" -> true) +
+    ("features.mcpEnabled" -> true) +
+    // mcp.e2e.ts serves the client metadata document of its test client from a local http server.
+    ("webKnossos.mcp.allowInsecureClientMetadataUrls" -> true)
 
   private val application = new GuiceApplicationBuilder().configure(argumentMap).build()
 

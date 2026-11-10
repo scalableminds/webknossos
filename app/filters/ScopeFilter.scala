@@ -1,9 +1,7 @@
 package filters
 
-import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.typesafe.scalalogging.LazyLogging
-import models.user.UserService
 import org.apache.pekko.stream.Materializer
 import play.api.libs.json.Json
 import play.api.mvc.{Filter, RequestHeader, Result}
@@ -28,7 +26,6 @@ import scala.concurrent.{ExecutionContext, Future}
   */
 class ScopeFilter @Inject() (
     shortLivedTokenService: ShortLivedTokenService,
-    userService: UserService,
     conf: WkConf
 )(implicit
     val mat: Materializer,
@@ -46,31 +43,14 @@ class ScopeFilter @Inject() (
           InternalServerError(Json.obj("messages" -> Json.arr(Json.obj("error" -> "Could not check token scopes."))))
         )
       case Full(token) =>
-        effectiveScopesFor(token).flatMap {
+        // The scopes come from the token's grant, read per request, so that changing them takes effect at once.
+        requiredScopeFor(request) match {
           case None =>
-            deny(request, Scope.Set.empty, "The user of this token could not be resolved", nextFilter)
-          case Some(effectiveScopes) =>
-            requiredScopeFor(request) match {
-              case None =>
-                deny(request, effectiveScopes, "This endpoint cannot be used with a scoped token", nextFilter)
-              case Some(required) if !effectiveScopes.allows(required) =>
-                deny(request, effectiveScopes, s"Missing scope $required", nextFilter)
-              case Some(_) => nextFilter(request)
-            }
+            deny(request, token.scopes, "This endpoint cannot be used with a scoped token", nextFilter)
+          case Some(required) if !token.scopes.allows(required) =>
+            deny(request, token.scopes, s"Missing scope $required", nextFilter)
+          case Some(_) => nextFilter(request)
         }
-    }
-
-  /** What the token may do right now: the permissions the user currently grants to agents. This is read per request
-    * rather than frozen into the token, so saving new permissions takes effect immediately, including for agents that
-    * are already running.
-    *
-    * The user is served from UserService's cache, and updateMcpAgentScopes evicts it, so this costs no extra database
-    * roundtrip. None means the user could not be resolved, in which case the request is denied.
-    */
-  private def effectiveScopesFor(token: ShortLivedToken): Future[Option[Scope.Set]] =
-    userService.findOneCached(token.userId)(using GlobalAccessContext).futureBox.map {
-      case Full(user) => Some(Scope.Set.parse(user.mcpAgentScopes))
-      case _          => None
     }
 
   /** Empty for revoked or expired short-lived tokens as well. Such requests pass through here, but are then rejected by

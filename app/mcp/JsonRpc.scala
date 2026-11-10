@@ -40,10 +40,12 @@ object JsonRpc {
           (),
           JsonRpcError.invalidRequest(s"Missing or invalid field: jsonrpc, must be \"$version\"")
         )
-        method <- (obj \ "method").asOpt[String].toRight(JsonRpcError.invalidRequest("Missing or invalid field: method"))
+        method <- (obj \ "method")
+          .asOpt[String]
+          .toRight(JsonRpcError.invalidRequest("Missing or invalid field: method"))
         id <- parseId(obj)
         params <- (obj \ "params").toOption match {
-          case None                 => Right(Json.obj())
+          case None                   => Right(Json.obj())
           case Some(params: JsObject) => Right(params)
           // JSON-RPC also allows positional (array) params, but MCP only uses named ones.
           case Some(_) => Left(JsonRpcError.invalidParams("Invalid field: params, must be an object"))
@@ -56,7 +58,7 @@ object JsonRpc {
    * discourages it, and MCP forbids it. */
   private def parseId(obj: JsObject): Either[JsonRpcError, Option[JsValue]] =
     (obj \ "id").toOption match {
-      case None                              => Right(None)
+      case None                                   => Right(None)
       case Some(id @ (_: JsString | _: JsNumber)) => Right(Some(id))
       case Some(_) => Left(JsonRpcError.invalidRequest("Invalid field: id, must be a string or a number"))
     }

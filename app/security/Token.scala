@@ -23,7 +23,9 @@ case class Token(
     idleTimeout: Option[FiniteDuration],
     tokenType: TokenType,
     created: Instant = Instant.now,
-    isDeleted: Boolean = false
+    isDeleted: Boolean = false,
+    // Set for short-lived agent tokens, which carry the scopes of the OAuth grant they were issued under.
+    _oauthGrant: Option[ObjectId] = None
 ) {
 
   def toBearerTokenAuthenticator(implicit ec: ExecutionContext): Fox[BearerTokenAuthenticator] =
@@ -73,7 +75,8 @@ class TokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       r.idletimeout.map(FiniteDuration(_, MILLISECONDS)),
       tokenType,
       Instant.fromSql(r.created),
-      r.isdeleted
+      r.isdeleted,
+      r._oauthgrant.map(ObjectId(_))
     )
 
   def findOneByValue(value: String): Fox[Token] =
@@ -96,11 +99,11 @@ class TokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
                          _id, value,
                          _user, lastUsedDateTime,
                          expirationDateTime, idleTimeout,
-                         tokenType, created, isDeleted)
+                         tokenType, created, isDeleted, _oauthGrant)
                    VALUES(${t._id}, ${t.value},
                           ${t._user}, ${t.lastUsedDateTime},
                           ${t.expirationDateTime}, ${t.idleTimeout.map(_.toMillis)},
-                          ${t.tokenType}, ${t.created}, ${t.isDeleted})""".asUpdate)
+                          ${t.tokenType}, ${t.created}, ${t.isDeleted}, ${t._oauthGrant})""".asUpdate)
     } yield ()
 
   def updateLastUsedDateTime(value: String, lastUsedDateTime: Instant): Fox[Unit] =
@@ -120,6 +123,12 @@ class TokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"""UPDATE $collectionName SET isDeleted = TRUE
                    WHERE _user = $userId
                    AND tokenType = $tokenType""".asUpdate)
+    } yield ()
+
+  // Revokes the short-lived agent tokens issued under an OAuth grant.
+  def deleteAllByOAuthGrant(grantId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE $collectionName SET isDeleted = TRUE WHERE _oauthGrant = $grantId".asUpdate)
     } yield ()
 
   def deleteAllExpired(): Fox[Unit] =

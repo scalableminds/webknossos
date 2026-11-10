@@ -5,7 +5,8 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.Fox
 import models.user.User
 import play.api.libs.json.*
-import security.{Scope, ShortLivedTokenService}
+import oauth.OAuthGrant
+import security.ShortLivedTokenService
 import utils.WkConf
 
 import javax.inject.{Inject, Singleton}
@@ -50,15 +51,16 @@ class McpService @Inject() (
     "openWorldHint" -> true
   )
 
-  // Also used to describe the tools in the MCP bundle manifest, see McpBundleService.
   val tools: JsArray = Json.arr(
     Json.obj(
       "name" -> getTokenToolName,
       "title" -> "Get a short-lived WEBKNOSSOS API token",
       "description" ->
         s"""Creates a short-lived API token for the current WEBKNOSSOS user, to be used with the `webknossos` Python
-           |library. The token has the same permissions as the user and expires
-           |after ${formatDuration(conf.Silhouette.TokenAuthenticator.shortLivedExpiry)}. Returns the token together
+           |library. The token acts for the user, limited to the permissions the user granted to this connection, and
+           |expires after ${formatDuration(
+            conf.Silhouette.TokenAuthenticator.shortLivedExpiry
+          )}. Returns the token together
            |with the URL of this WEBKNOSSOS instance and the user's organization id.
            |
            |Call this before writing or running any code that talks to WEBKNOSSOS. Do not call the WEBKNOSSOS HTTP
@@ -169,11 +171,11 @@ class McpService @Inject() (
 
   /** Handles one JSON-RPC message. Returns None for notifications, which must not be answered.
     */
-  def handle(body: JsValue, user: User): Future[Option[JsObject]] =
+  def handle(body: JsValue, user: User, grant: OAuthGrant): Future[Option[JsObject]] =
     JsonRpc.parseRequest(body) match {
       case Left(parseError) => Future.successful(Some(JsonRpc.error(None, parseError)))
       case Right(request)   =>
-        handleRequest(request, user).map { outcome =>
+        handleRequest(request, user, grant).map { outcome =>
           if (request.isNotification) None
           else
             Some(outcome match {
@@ -183,12 +185,16 @@ class McpService @Inject() (
         }
     }
 
-  private def handleRequest(request: JsonRpcRequest, user: User): Future[Either[JsonRpcError, JsValue]] =
+  private def handleRequest(
+      request: JsonRpcRequest,
+      user: User,
+      grant: OAuthGrant
+  ): Future[Either[JsonRpcError, JsValue]] =
     request.method match {
       case "initialize"                     => Future.successful(Right(initializeResult(request.params)))
       case "ping"                           => Future.successful(Right(Json.obj()))
       case "tools/list"                     => Future.successful(Right(Json.obj("tools" -> tools)))
-      case "tools/call"                     => callTool(request.params, user)
+      case "tools/call"                     => callTool(request.params, user, grant)
       case method if isNotification(method) => Future.successful(Right(Json.obj()))
       case method                           => Future.successful(Left(JsonRpcError.methodNotFound(method)))
     }
@@ -206,13 +212,13 @@ class McpService @Inject() (
     )
   }
 
-  private def callTool(params: JsObject, user: User): Future[Either[JsonRpcError, JsValue]] =
+  private def callTool(params: JsObject, user: User, grant: OAuthGrant): Future[Either[JsonRpcError, JsValue]] =
     (params \ "name").asOpt[String] match {
       case None       => Future.successful(Left(JsonRpcError.invalidParams("Missing or invalid field: name")))
       case Some(name) =>
         val arguments = (params \ "arguments").asOpt[JsObject].getOrElse(Json.obj())
         name match {
-          case `getTokenToolName` => asToolResult(shortLivedTokenFor(user))
+          case `getTokenToolName` => asToolResult(shortLivedTokenFor(user, grant))
           case `listDocsToolName` => asToolResult(pythonDocsService.getIndex)
           case `readDocsToolName` =>
             (arguments \ "url").asOpt[String] match {
@@ -233,16 +239,16 @@ class McpService @Inject() (
   private def missingArgument(name: String): Future[Either[JsonRpcError, JsValue]] =
     Future.successful(Right(toolResult(s"Missing or invalid argument: $name", isError = true)))
 
-  private def shortLivedTokenFor(user: User): Fox[String] =
+  private def shortLivedTokenFor(user: User, grant: OAuthGrant): Fox[String] =
     for {
-      token <- shortLivedTokenService.create(user._id, conf.Silhouette.TokenAuthenticator.shortLivedExpiry)
+      token <- shortLivedTokenService.create(grant, conf.Silhouette.TokenAuthenticator.shortLivedExpiry)
     } yield Json.prettyPrint(
       Json.obj(
         "token" -> token.value,
         "expiresAt" -> token.expiresAt.toString,
         "webknossosUrl" -> conf.Http.uri,
         "organizationId" -> user._organization,
-        "scopes" -> Scope.Set.parse(user.mcpAgentScopes).toString,
+        "scopes" -> token.scopes.toString,
         "usage" -> Json.obj(
           "python" ->
             s"""import os, webknossos as wk

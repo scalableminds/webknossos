@@ -122,6 +122,10 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val enforced: Boolean = get[Boolean]("webKnossos.tokenScopes.enforced")
     }
 
+    object Mcp {
+      val allowInsecureClientMetadataUrls: Boolean = get[Boolean]("webKnossos.mcp.allowInsecureClientMetadataUrls")
+    }
+
     object Datasets {
       object UploadToPaths {
         val prefixes: Option[Seq[String]] =
@@ -176,6 +180,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
     val editableMappingsEnabled: Boolean = get[Boolean]("features.editableMappingsEnabled")
     val segmentAnythingEnabled: Boolean = get[Boolean]("features.segmentAnythingEnabled")
     val passkeysEnabled: Boolean = get[Boolean]("features.passkeysEnabled")
+    val mcpEnabled: Boolean = get[Boolean]("features.mcpEnabled")
     val registerToDefaultOrgaEnabled: Boolean = get[Boolean]("features.registerToDefaultOrgaEnabled")
     val supportAiAgentUrl: Option[String] = getOptional[String]("features.supportAiAgentUrl")
   }

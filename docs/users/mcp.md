@@ -2,64 +2,52 @@
 
 WEBKNOSSOS provides an [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server, so that AI agents such
 as Claude Code, Claude Desktop or Cursor can work with your WEBKNOSSOS instance.
-The server is part of every WEBKNOSSOS installation and is reachable at `https://<your-instance>/api/mcp`,
-e.g. [https://webknossos.org/api/mcp](https://webknossos.org/api/mcp).
+When enabled, it is reachable at `https://<your-instance>/api/mcp`, e.g. `https://webknossos.org/api/mcp`.
 
 ## Connecting
 
-The server uses the MCP Streamable HTTP transport and is authenticated with your personal API token. Everything
-needed to connect is on the `MCP Agent Connections` tab of the `Developer` group in `Account Settings`, filled in
-for your instance and your account.
+The MCP server is off by default. The operator of an instance enables it with `features.mcpEnabled = true` in
+`application.conf`.
+
+The server uses the MCP Streamable HTTP transport and OAuth: you add the URL of the server to your AI assistant, and
+when it connects for the first time, WEBKNOSSOS opens in your browser. After logging in, you see which application
+asks for access and choose what it may do (see [Permissions](#permissions)). Approving sends you back to the
+assistant, which is then connected. No token has to be copied anywhere.
+
+A connection belongs to the organization that is active when you approve it. To connect another organization,
+switch to it first and connect again.
+
+The `MCP Agent Connections` tab of the `Developer` group in `Account Settings` shows the URL of your instance's
+server and lists the applications you connected.
 
 ### Claude Code
 
-The `Claude Code` card shows a ready-to-paste command. Copy it, run it in a terminal, and that session has
-WEBKNOSSOS connected:
-
 ```bash
-claude --mcp-config '{"mcpServers":{"webknossos":{"type":"http","url":"https://webknossos.org/api/mcp","headers":{"X-Auth-Token":"<your_api_token>"}}}}'
+claude mcp add --transport http webknossos https://webknossos.org/api/mcp
 ```
 
-This registers the server for that one session only. To register it permanently instead:
+Then run `/mcp` in Claude Code to connect.
 
-```bash
-claude mcp add --transport http webknossos https://webknossos.org/api/mcp \
-  --header "X-Auth-Token: <your_api_token>"
-```
+### Claude Desktop and claude.ai
 
-!!! warning
-    The one-line command contains your API token, so it will be stored in your shell history.
+In the settings, go to `Connectors`, choose `Add custom connector` and enter the URL of the server, e.g.
+`https://webknossos.org/api/mcp`.
 
-### Claude Desktop
+### Other clients
 
-Download the MCP Bundle (`.mcpb`) from the `Claude Desktop` card and double-click it to install. The URL of your
-instance is already filled in, so only the auth token has to be entered.
+Any MCP client that supports [OAuth](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)
+can connect, identified either by a client ID metadata document or via Dynamic Client Registration. Clients cannot
+connect with an API token.
 
-Other clients are usually configured with a JSON snippet like this:
-
-```json
-{
-  "mcpServers": {
-    "webknossos": {
-      "type": "http",
-      "url": "https://webknossos.org/api/mcp",
-      "headers": { "Authorization": "Bearer <your_api_token>" }
-    }
-  }
-}
-```
-
-WEBKNOSSOS also accepts the token in the `X-Auth-Token` header, which is the header used by the rest of the
-WEBKNOSSOS API.
-
-!!! warning
-    Your API token gives full access to your WEBKNOSSOS account. Treat it like a password and do not share it.
+!!! note
+    With Dynamic Client Registration, an application registers itself and chooses its own name, which nothing
+    verifies. The consent page points this out. Check where you will be sent back to before you approve.
 
 ## Tools
 
 | Tool | Description |
 | --- | --- |
-| `get_short_lived_api_token` | Creates a short-lived API token for your account, along with the URL of the instance and your organization ID. |
+| `get_short_lived_api_token` | Creates a short-lived API token for your account, limited to the permissions of the connection, along with the URL of the instance and your organization ID. |
 | `list_python_library_docs` | Returns the index of the WEBKNOSSOS Python library documentation. |
 | `read_python_library_docs_page` | Returns a single page of that documentation. |
 | `list_em_processing_skills` | Returns the catalogue of the EM-Skills collection for volume EM processing. |
@@ -90,13 +78,7 @@ stay up to date. Nothing from that repository is bundled with WEBKNOSSOS.
 
 ## Permissions
 
-Short-lived tokens are limited to a set of scopes, written as `resource:mode`, for example `dataset:read` or
-`annotation:write`. The modes `read`, `write` and `delete` are ordered, so `write` also grants `read`, and `delete`
-also grants `write`. There is a fourth mode, `administrate`, which stands apart: it is the right to manage the
-datasets of an organization, which is what gates uploading one. It is granted from `Create/modify` upwards, and it
-does not imply `delete`.
-
-The `MCP Agent Connections` tab offers three levels as checkboxes:
+When you approve a connection, you choose one of three permission levels:
 
 | Level | What the agent may do |
 | --- | --- |
@@ -104,15 +86,8 @@ The `MCP Agent Connections` tab offers three levels as checkboxes:
 | Create/modify | Additionally upload and edit datasets, and create annotations, tasks, projects and teams. |
 | Delete | Additionally delete datasets, annotations, tasks and teams. |
 
-The selection is stored on your account when you click `Save Permissions`, and applies to every agent connection.
-
-Saving applies immediately, also to agents that are already running: every request is checked against the
-permissions currently stored on your account, not against the ones that were in effect when the agent connected.
-Widening them works the same way, without reconnecting.
-
-`Revoke Agent Tokens` on the same tab additionally invalidates the tokens already handed out, which is what you
-want when an agent misbehaved rather than when you simply narrowed its permissions. It does not touch your own
-API token.
+The level belongs to the connection. To change it, connect the same application again and choose another level;
+this takes effect immediately, also for agents that are already running.
 
 The levels cover everything the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/) can do, so
 an agent granted `Delete` can use the whole library. The organization itself stays read-only at every level.
@@ -121,22 +96,28 @@ an agent granted `Delete` can use the whole library. The organization itself sta
     Because the Python library creates teams and updates users (to assign team memberships), `Create/modify` also
     allows that. If the connecting user is an admin, an agent at that level can therefore change team memberships.
 
-The permissions belong to your account, not to the agent: the agent cannot ask for more than they allow, whatever
-it does. A request outside them is rejected with `403`, both for the WEBKNOSSOS API and for reading and writing
-voxel data.
+Internally, a level is a set of scopes, written as `resource:mode`, for example `dataset:read` or
+`annotation:write`. The modes `read`, `write` and `delete` are ordered, so `write` also grants `read`, and `delete`
+also grants `write`. There is a fourth mode, `administrate`, which stands apart: it is the right to manage the
+datasets of an organization, which is what gates uploading one. It is granted from `Create/modify` upwards, and it
+does not imply `delete`.
 
-!!! warning
-    These permissions restrict the short-lived tokens the MCP server hands out. They do not restrict the API token that the
-    MCP connection itself is authenticated with, which still has your full permissions. An agent that can read its
-    own configuration can therefore read that token. Treat scopes as a guardrail against accidental damage rather
-    than as a security boundary against a hostile agent.
+A request outside the permissions is rejected with `403`, both for the WEBKNOSSOS API and for reading and writing
+voxel data. An agent can never reach your API token, approve connections or change their permissions.
+
+## Disconnecting
+
+The `MCP Agent Connections` tab lists the connected applications with their permission level and when they were
+last used. `Disconnect` revokes a connection immediately, including all short-lived tokens the agent obtained
+through it. [Logging out everywhere](password.md#log-out-everywhere) disconnects all
+applications.
 
 ## Short-lived tokens
 
-Short-lived tokens act for your account, but are limited to the agent permissions above and expire after one day
-(configurable by the instance operator). They are meant to be handed to tools and scripts instead of your permanent
-API token.
+The MCP server itself only offers a few tools. To work with your data, an agent asks it for a short-lived token,
+which it then uses with the WEBKNOSSOS Python library. These tokens act for your account, limited to the
+permissions of the connection, and expire after one day (configurable by the instance operator with
+`silhouette.tokenAuthenticator.shortLivedExpiry`).
 
-- They are stored in the database like other tokens, so they survive a restart of the WEBKNOSSOS backend.
-- They are all revoked when you revoke your API token
-  (see [Token Revocation](password.md#token-revocation)) or log out everywhere.
+The OAuth tokens of the connection itself are only accepted by the MCP server. They expire after one hour and are
+renewed by the client automatically; a connection that is not used for 30 days expires.

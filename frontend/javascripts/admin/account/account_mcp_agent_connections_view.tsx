@@ -1,11 +1,9 @@
-import { DownloadOutlined, ExportOutlined, SaveOutlined, StopOutlined } from "@ant-design/icons";
-import {
-  getAuthToken,
-  getMcpAgentPermissions,
-  revokeAgentTokens,
-  updateMcpAgentPermissions,
-} from "admin/rest_api";
-import { Alert, Button, Checkbox, Col, Row, Space, Spin, Typography } from "antd";
+import { DisconnectOutlined, ExportOutlined } from "@ant-design/icons";
+import { getPermissionLevelLabel } from "admin/auth/oauth_permission_levels";
+import { type APIOAuthGrant, getOAuthGrants, revokeOAuthGrant } from "admin/rest_api";
+import { Alert, Button, Col, Popconfirm, Row, Spin, Table, Typography } from "antd";
+import FormattedDate from "components/formatted_date";
+import features from "features";
 import Toast from "libs/toast";
 import { useEffect, useState } from "react";
 import { SettingsCard } from "./helpers/settings_card";
@@ -13,115 +11,108 @@ import { SettingsTitle } from "./helpers/settings_title";
 
 const { Text, Paragraph } = Typography;
 
-// The permission levels the backend understands, see security.Scope.Set.forLevel. They are ordered: each level
-// also grants everything the ones above it grant.
-const PERMISSION_LEVELS = [
-  {
-    key: "read",
-    label: "Read",
-    description: "Look at datasets, annotations and tasks. The agent cannot change anything.",
-  },
-  {
-    key: "write",
-    label: "Create/modify",
-    description:
-      "Additionally upload and edit datasets, and create annotations, tasks, projects and teams. Cannot change the organization.",
-  },
-  {
-    key: "delete",
-    label: "Delete",
-    description: "Additionally delete datasets, annotations, tasks and teams. Use with care.",
-  },
-] as const;
-
-type PermissionKey = (typeof PERMISSION_LEVELS)[number]["key"];
-
-// Only the strongest selected level has to be stored, since a level includes the weaker ones.
-function permissionsToScopes(selected: PermissionKey[]): string {
-  const strongest = PERMISSION_LEVELS.filter((level) => selected.includes(level.key)).at(-1);
-  return strongest?.key ?? "none";
-}
-
-function scopesToPermissions(scopes: string): PermissionKey[] {
-  const index = PERMISSION_LEVELS.findIndex((level) => level.key === scopes);
-  // Anything else (an explicit scope list set by hand) is shown as the levels it covers, at least none of them.
-  return index < 0 ? [] : PERMISSION_LEVELS.slice(0, index + 1).map((level) => level.key);
-}
-
 function getMcpUrl(): string {
   return `${window.location.origin}/api/mcp`;
 }
 
-// A ready-to-paste command that registers the MCP server for a single Claude Code session, without persisting it.
-function getClaudeCodeCommand(token: string): string {
-  const config = {
-    mcpServers: {
-      webknossos: {
-        type: "http",
-        url: getMcpUrl(),
-        headers: { "X-Auth-Token": token },
-      },
-    },
-  };
-  return `claude --mcp-config '${JSON.stringify(config)}'`;
+// Clients are identified either by the URL of their metadata document or by an id they got when registering.
+function describeClient(clientId: string): string {
+  try {
+    return new URL(clientId).host;
+  } catch {
+    return "Registered application";
+  }
 }
 
-function AccountMcpAgentConnectionsView() {
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [currentToken, setCurrentToken] = useState<string>("");
-  const [permissions, setPermissions] = useState<PermissionKey[]>([]);
-  // What is currently stored on the account, so that unsaved edits can be recognised.
-  const [savedPermissions, setSavedPermissions] = useState<PermissionKey[]>([]);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
+function ConnectedApplications() {
+  const [grants, setGrants] = useState<APIOAuthGrant[] | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  async function fetchData(): Promise<void> {
+  async function fetchGrants(): Promise<void> {
     try {
-      const [token, scopes] = await Promise.all([getAuthToken(), getMcpAgentPermissions()]);
-      setCurrentToken(token);
-      setPermissions(scopesToPermissions(scopes));
-      setSavedPermissions(scopesToPermissions(scopes));
+      setGrants(await getOAuthGrants());
     } catch (error) {
-      Toast.error("Failed to fetch the agent settings. Please refresh the page to try again.");
-      console.error("Failed to fetch the agent settings:", error);
-    } finally {
-      setIsLoading(false);
+      Toast.error(
+        "Failed to load the connected applications. Please refresh the page to try again.",
+      );
+      console.error("Failed to load the connected applications:", error);
+      setGrants([]);
     }
   }
 
-  const handleSavePermissions = async (): Promise<void> => {
+  useEffect(() => {
+    fetchGrants();
+  }, []);
+
+  const disconnect = async (grant: APIOAuthGrant): Promise<void> => {
     try {
-      setIsSaving(true);
-      await updateMcpAgentPermissions(permissionsToScopes(permissions));
-      setSavedPermissions(permissions);
-      Toast.success("Agent permissions saved. They apply immediately, also to running agents.");
+      await revokeOAuthGrant(grant.id);
+      Toast.success(`${grant.clientName} has been disconnected.`);
     } catch (error) {
-      Toast.error("Failed to save the agent permissions. Please try again.");
-      console.error("Failed to save the agent permissions:", error);
-    } finally {
-      setIsSaving(false);
+      Toast.error("Failed to disconnect the application. Please try again.");
+      console.error("Failed to disconnect the application:", error);
     }
+    await fetchGrants();
   };
 
-  const handleRevokeAgentTokens = async (): Promise<void> => {
-    try {
-      setIsLoading(true);
-      await revokeAgentTokens();
-      Toast.success("All tokens previously issued to agents have been revoked.");
-    } catch (error) {
-      Toast.error("Failed to revoke agent tokens. Please try again.");
-      console.error("Failed to revoke agent tokens:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  return (
+    <Spin spinning={grants == null}>
+      <Table<APIOAuthGrant>
+        dataSource={grants ?? []}
+        rowKey="id"
+        pagination={false}
+        size="small"
+        locale={{ emptyText: "No applications are connected." }}
+        columns={[
+          {
+            title: "Application",
+            key: "client",
+            render: (_, grant) => (
+              <>
+                {grant.clientName}
+                <br />
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {describeClient(grant.clientId)}
+                </Text>
+              </>
+            ),
+          },
+          {
+            title: "Permissions",
+            dataIndex: "level",
+            render: (level: string) => getPermissionLevelLabel(level),
+          },
+          {
+            title: "Connected",
+            dataIndex: "created",
+            render: (created: number) => <FormattedDate timestamp={created} />,
+          },
+          {
+            title: "Last used",
+            dataIndex: "lastUsed",
+            render: (lastUsed: number) => <FormattedDate timestamp={lastUsed} />,
+          },
+          {
+            key: "actions",
+            render: (_, grant) => (
+              <Popconfirm
+                title={`Disconnect ${grant.clientName}?`}
+                description="It loses access immediately, including any agent tokens it obtained."
+                onConfirm={() => disconnect(grant)}
+              >
+                <Button icon={<DisconnectOutlined />} danger size="small">
+                  Disconnect
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ]}
+      />
+    </Spin>
+  );
+}
 
-  const claudeCodeCommand = getClaudeCodeCommand(currentToken);
-  const hasUnsavedPermissions =
-    permissionsToScopes(permissions) !== permissionsToScopes(savedPermissions);
+function AccountMcpAgentConnectionsView() {
+  const claudeCodeCommand = `claude mcp add --transport http webknossos ${getMcpUrl()}`;
 
   return (
     <div>
@@ -129,84 +120,35 @@ function AccountMcpAgentConnectionsView() {
         title="MCP Agent Connections"
         description="Let AI agents work with your datasets and annotations via the Model Context Protocol (MCP)"
       />
-      <Spin size="large" spinning={isLoading}>
+      {!features().mcpEnabled ? (
+        <Alert type="info" showIcon message="The MCP server is not enabled on this instance." />
+      ) : (
         <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
           <Col span={24}>
             <SettingsCard
-              title="Agent Permissions"
-              tooltip="Restricts what the agent may do with this connection. The restriction is enforced by WEBKNOSSOS, so it also applies to any code the agent writes."
-              content={
-                <>
-                  <Checkbox.Group
-                    value={permissions}
-                    onChange={(values) => setPermissions(values as PermissionKey[])}
-                  >
-                    <Space direction="vertical" size="small">
-                      {PERMISSION_LEVELS.map((level) => (
-                        <Checkbox key={level.key} value={level.key}>
-                          {level.label}
-                          <Text type="secondary" style={{ fontSize: 13, marginLeft: 8 }}>
-                            {level.description}
-                          </Text>
-                        </Checkbox>
-                      ))}
-                    </Space>
-                  </Checkbox.Group>
-                  {permissions.length === 0 ? (
-                    <Alert
-                      type="warning"
-                      showIcon
-                      style={{ marginTop: 12 }}
-                      message="Without any permission the agent cannot read or change anything in WEBKNOSSOS."
-                    />
-                  ) : null}
-                  <Alert
-                    type="info"
-                    showIcon
-                    style={{ marginTop: 12 }}
-                    message="Saved permissions take effect immediately, including for agents that are already running. A connection may restrict itself further, but never beyond what is allowed here."
-                  />
-                  <div style={{ marginTop: 12 }}>
-                    <Button
-                      icon={<SaveOutlined />}
-                      type="primary"
-                      loading={isSaving}
-                      disabled={!hasUnsavedPermissions}
-                      onClick={handleSavePermissions}
-                    >
-                      Save Permissions
-                    </Button>
-                    {hasUnsavedPermissions ? (
-                      <Text type="warning" style={{ marginLeft: 12 }}>
-                        Unsaved changes
-                      </Text>
-                    ) : null}
-                  </div>
-                </>
-              }
+              title="Connected Applications"
+              tooltip="Applications you allowed to work with WEBKNOSSOS on your behalf. Disconnecting one takes effect immediately."
+              content={<ConnectedApplications />}
             />
           </Col>
           <Col span={24}>
             <SettingsCard
-              title="Revoke Agent Tokens"
-              tooltip="Invalidates the tokens that were already handed out to agents, for example when an agent misbehaved. Narrowing the permissions above does not need this, as it applies immediately. Your own auth token is not affected."
+              title="MCP Server URL"
+              tooltip="Add this URL to your MCP client. When it connects, WEBKNOSSOS asks you to log in and to choose what the agent may do."
               content={
-                <Button icon={<StopOutlined />} danger ghost onClick={handleRevokeAgentTokens}>
-                  Revoke Tokens of Running Agents
-                </Button>
+                <Text code copyable>
+                  {getMcpUrl()}
+                </Text>
               }
             />
           </Col>
           <Col span={24}>
             <SettingsCard
               title="Claude Code"
-              tooltip="Starts a Claude Code session with WEBKNOSSOS connected. The server is only registered for that session. Note that the command contains your auth token, so it will end up in your shell history."
+              tooltip="Registers WEBKNOSSOS with Claude Code. Run /mcp in Claude Code afterwards to connect."
               content={
                 <Paragraph copyable={{ text: claudeCodeCommand }} style={{ marginBottom: 0 }}>
-                  <Text
-                    code
-                    style={{ fontSize: 12, whiteSpace: "pre-wrap", wordBreak: "break-all" }}
-                  >
+                  <Text code style={{ fontSize: 12, wordBreak: "break-all" }}>
                     {claudeCodeCommand}
                   </Text>
                 </Paragraph>
@@ -215,24 +157,9 @@ function AccountMcpAgentConnectionsView() {
           </Col>
           <Col span={12}>
             <SettingsCard
-              title="Claude Desktop"
-              tooltip="Downloads an MCP bundle with the address of this WEBKNOSSOS instance already filled in. Double-click it to install, then enter your auth token."
-              content={
-                <a href="/api/mcp/bundle" download>
-                  Download extension <DownloadOutlined />
-                </a>
-              }
-            />
-          </Col>
-          <Col span={12}>
-            <SettingsCard
-              title="MCP Server URL"
-              tooltip="Use this URL to connect any other MCP client. Authenticate with your auth token, either in an X-Auth-Token header or as Authorization: Bearer."
-              content={
-                <Text code copyable>
-                  {getMcpUrl()}
-                </Text>
-              }
+              title="Claude Desktop and claude.ai"
+              tooltip="Add a custom connector in the connector settings and enter the MCP server URL."
+              content={<Text>Settings → Connectors → Add custom connector</Text>}
             />
           </Col>
           <Col span={12}>
@@ -246,7 +173,7 @@ function AccountMcpAgentConnectionsView() {
             />
           </Col>
         </Row>
-      </Spin>
+      )}
     </div>
   );
 }

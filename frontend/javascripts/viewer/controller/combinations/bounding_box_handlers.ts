@@ -172,74 +172,26 @@ const _getEdgeInfoFromId = (
   };
 };
 
-function getEdgeValue(
+// Returns whether the grab position is close enough to the edge to grab it as part of a corner.
+// For a box that is short on screen, the full tolerance would cover the whole box, so that every
+// grab would resize a corner. Therefore, the tolerance is limited to a quarter of the box size.
+// Outside of the box, there is no such restriction.
+function isGrabbedCloseToCorner(
+  edge: SelectedEdge,
   boundingBox: BoundingBoxMinMaxType,
-  edgeId: number,
-  indices: DimensionMap,
-): number {
-  const [, resizableDim] = getEdgeDimensions(edgeId, indices);
-  return edgeId % 2 === 1 ? boundingBox.max[resizableDim] : boundingBox.min[resizableDim];
-}
-
-// Signed distance (in the same units as computeDistanceArray) from an edge to the position,
-// measured towards the inside of the box. Positions outside of the box have a negative offset.
-function getInwardOffsetFromEdge(
-  boundingBox: BoundingBoxMinMaxType,
-  edgeId: number,
-  position: Vector3,
-  indices: DimensionMap,
-  planeRatio: Vector3,
-): number {
-  const [, resizableDim] = getEdgeDimensions(edgeId, indices);
-  const edgeValue = getEdgeValue(boundingBox, edgeId, indices);
-  const offset =
-    edgeId % 2 === 1 ? edgeValue - position[resizableDim] : position[resizableDim] - edgeValue;
-  return offset / planeRatio[resizableDim];
-}
-
-// For a box that is short on screen, the full tolerance would cover the whole edge, so that
-// every grab would resize a corner. Therefore, only the outer quarters of an edge count as
-// corner regions.
-function getCornerTolerance(
-  boundingBox: BoundingBoxMinMaxType,
-  edgeId: number,
-  indices: DimensionMap,
-  planeRatio: Vector3,
-  maxDistanceToSelection: number,
-): number {
-  const [extentDim] = getEdgeDimensions(edgeId, indices);
-  const edgeLength =
-    (boundingBox.max[extentDim] - boundingBox.min[extentDim]) / planeRatio[extentDim];
-  return Math.min(maxDistanceToSelection, edgeLength / 4);
-}
-
-// Returns whether the position lies in the corner region of the two given perpendicular edges,
-// i.e. whether both edges should be grabbed together. Seen from the corner, the region extends
-// inwards along each edge by that edge's corner tolerance. Outside of the box, there is no
-// such restriction. The check is symmetric in both edges so that it does not matter which of
-// them is closer to the position.
-export function isInCornerRegion(
-  boundingBox: BoundingBoxMinMaxType,
-  edgeIdA: number,
-  edgeIdB: number,
-  position: Vector3,
-  indices: DimensionMap,
   planeRatio: Vector3,
   maxDistanceToSelection: number,
 ): boolean {
-  const getTolerance = (edgeId: number) =>
-    getCornerTolerance(boundingBox, edgeId, indices, planeRatio, maxDistanceToSelection);
-  const getInwardOffset = (edgeId: number) =>
-    getInwardOffsetFromEdge(boundingBox, edgeId, position, indices, planeRatio);
-  return (
-    getInwardOffset(edgeIdB) < getTolerance(edgeIdA) &&
-    getInwardOffset(edgeIdA) < getTolerance(edgeIdB)
-  );
+  const { resizableDimension: dim, isMaxEdge, grabOffset } = edge;
+  // Positive inside of the box, negative outside of it.
+  const inwardOffset = (isMaxEdge ? grabOffset : -grabOffset) / planeRatio[dim];
+  const boxSize = (boundingBox.max[dim] - boundingBox.min[dim]) / planeRatio[dim];
+  return inwardOffset < Math.min(maxDistanceToSelection, boxSize / 4);
 }
 
 // Return the edge or edges of the given bounding boxes closest to the position if their distance is below maxDistanceToSelection.
 // If no edge is close to the position null is returned instead. Otherwise the first entry is always the closest edge.
-// If the position is in the corner region of the closest edge, the neighbouring edge of that corner is the second entry of the array.
+// If the position is close to a corner of the closest edge, the neighbouring edge of that corner is the second entry of the array.
 // Otherwise, the second entry is null.
 export function getClosestEdgesAtPosition(
   userBoundingBoxes: ReadonlyArray<UserBoundingBox>,
@@ -279,43 +231,39 @@ export function getClosestEdgesAtPosition(
   }
 
   const { id: boxId, boundingBox } = currentNearestBoundingBox;
-  const getEdgeInfo = (edgeId: number) =>
-    _getEdgeInfoFromId(
-      boxId,
-      indices,
-      edgeId,
-      getEdgeValue(boundingBox, edgeId, indices) - position[getEdgeDimensions(edgeId, indices)[1]],
-    );
+  const getEdgeInfo = (edgeId: number): SelectedEdge => {
+    const edge = _getEdgeInfoFromId(boxId, indices, edgeId, 0);
+    const bboxKey = edge.isMaxEdge ? "max" : "min";
+    const edgeValue = boundingBox[bboxKey][edge.resizableDimension];
+    return { ...edge, grabOffset: edgeValue - position[edge.resizableDimension] };
+  };
 
   const nearestEdgeIndex = currentNearestDistanceArray.indexOf(currentNearestDistance);
   const primaryEdge = getEdgeInfo(nearestEdgeIndex);
+  let secondaryEdge = null;
   const [firstNeighbourId, secondNeighbourId] = getNeighbourEdgeIndexByEdgeIndex[nearestEdgeIndex];
   const firstNeighbourEdgeDistance = currentNearestDistanceArray[firstNeighbourId];
   const secondNeighbourEdgeDistance = currentNearestDistanceArray[secondNeighbourId];
-  // If both neighbours are equally far away, it is unclear which corner is meant.
-  const nearerNeighbourId =
-    firstNeighbourEdgeDistance < secondNeighbourEdgeDistance
-      ? firstNeighbourId
-      : secondNeighbourEdgeDistance < firstNeighbourEdgeDistance
-        ? secondNeighbourId
-        : null;
+
+  if (
+    firstNeighbourEdgeDistance < secondNeighbourEdgeDistance &&
+    firstNeighbourEdgeDistance < maxDistanceToSelection
+  ) {
+    secondaryEdge = getEdgeInfo(firstNeighbourId);
+  } else if (
+    secondNeighbourEdgeDistance < firstNeighbourEdgeDistance &&
+    secondNeighbourEdgeDistance < maxDistanceToSelection
+  ) {
+    secondaryEdge = getEdgeInfo(secondNeighbourId);
+  }
 
   const isCornerGrabbed =
-    nearerNeighbourId != null &&
-    currentNearestDistanceArray[nearerNeighbourId] < maxDistanceToSelection &&
-    isInCornerRegion(
-      boundingBox,
-      nearestEdgeIndex,
-      nearerNeighbourId,
-      position,
-      indices,
-      planeRatio,
-      maxDistanceToSelection,
+    secondaryEdge != null &&
+    [primaryEdge, secondaryEdge].every((edge) =>
+      isGrabbedCloseToCorner(edge, boundingBox, planeRatio, maxDistanceToSelection),
     );
-  const secondaryEdge =
-    isCornerGrabbed && nearerNeighbourId != null ? getEdgeInfo(nearerNeighbourId) : null;
 
-  return [primaryEdge, secondaryEdge];
+  return [primaryEdge, isCornerGrabbed ? secondaryEdge : null];
 }
 
 // Return the edge or edges of the bounding box closest to the mouse position if their distance is below a certain threshold.

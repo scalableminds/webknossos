@@ -1,3 +1,4 @@
+import type { ApiResult } from "admin/api/api_result";
 import type { MinCutTargetEdge, NeighborInfo } from "admin/rest_api";
 import { toBigInt } from "libs/bigint_helpers";
 import type { RequestOptionsWithData } from "libs/request";
@@ -46,6 +47,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { combinedReducer } from "viewer/model/reducers/root_reducer";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/preparation_sagas";
@@ -57,7 +59,6 @@ import type {
 } from "viewer/model/sagas/volume/update_actions";
 import { Store } from "viewer/singletons";
 import type { NumberLike, SaveQueueEntry, Segment, WebknossosState } from "viewer/store";
-import { combinedReducer } from "viewer/store";
 import { expect, vi } from "vitest";
 import { edgesForInitialMapping, initialMapping } from "./proofreading_fixtures";
 
@@ -304,17 +305,17 @@ export class BackendMock {
     _newestVersion?: number,
     _truncateActionLog: boolean = false,
     sortAscending: boolean = false,
-  ): Promise<Array<APIUpdateActionBatch>> => {
+  ): Promise<ApiResult<Array<APIUpdateActionBatch>>> => {
     const firstUnseenVersionIndex = this.updateActionLog.findIndex(
       (item) => item.version === oldestVersion,
     );
     if (firstUnseenVersionIndex === -1) {
-      return [];
+      return { ok: true, value: [] };
     }
     if (!sortAscending) {
       throw new Error("Unexpected request");
     }
-    return this.updateActionLog.slice(firstUnseenVersionIndex);
+    return { ok: true, value: this.updateActionLog.slice(firstUnseenVersionIndex) };
   };
 
   getPositionForSegmentInAgglomerate = async (
@@ -323,8 +324,8 @@ export class BackendMock {
     _layerName: string,
     _mappingName: string,
     segmentId: bigint,
-  ): Promise<Vector3> => {
-    return getPositionForSegmentId(segmentId);
+  ): Promise<ApiResult<Vector3>> => {
+    return { ok: true, value: getPositionForSegmentId(segmentId) };
   };
 
   planVersionInjection(
@@ -517,7 +518,7 @@ export function prepareGetNeighborsForAgglomerateNode(
         agglomerateId: NumberLike;
         editableMappingId: string;
       },
-    ): Promise<NeighborInfo> => {
+    ): Promise<ApiResult<NeighborInfo>> => {
       if (version !== expectedVersion) {
         throw new Error(
           `Version mismatch. Expected requested version to be ${expectedVersion} but got ${version}`,
@@ -542,13 +543,19 @@ export function prepareGetNeighborsForAgglomerateNode(
               },
             ];
         return {
-          segmentId: 2n,
-          neighbors,
+          ok: true,
+          value: {
+            segmentId: 2n,
+            neighbors,
+          },
         };
       }
       return {
-        segmentId: toBigInt(segmentInfo.segmentId),
-        neighbors: [],
+        ok: true,
+        value: {
+          segmentId: toBigInt(segmentInfo.segmentId),
+          neighbors: [],
+        },
       };
     },
   );
@@ -683,6 +690,9 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
 export const mockEdgesForPartitionedAgglomerateMinCut = (
   mocks: WebknossosTestContext["mocks"],
   expectedRequestedVersion: number,
+  // Removed in addition to the two edges between the partitions. Used to simulate a cut that also
+  // separates the segments of one partition from each other, resulting in more than two agglomerates.
+  additionalEdgesToRemove: MinCutTargetEdge[] = [],
 ) =>
   vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockImplementation(
     async (
@@ -696,7 +706,7 @@ export const mockEdgesForPartitionedAgglomerateMinCut = (
         agglomerateId: NumberLike;
         editableMappingId: string;
       },
-    ): Promise<Array<MinCutTargetEdge>> => {
+    ): Promise<ApiResult<Array<MinCutTargetEdge>>> => {
       if (version !== expectedRequestedVersion) {
         throw new Error(
           `Unexpected version of min cut request. Expected version ${expectedRequestedVersion} but got ${version}`,
@@ -708,20 +718,24 @@ export const mockEdgesForPartitionedAgglomerateMinCut = (
         isEqual(partition1, [1n, 2n]) &&
         isEqual(partition2, [1337n, 1338n])
       ) {
-        return [
-          {
-            position1: getPositionForSegmentId(1),
-            position2: getPositionForSegmentId(1338),
-            segmentId1: 1n,
-            segmentId2: 1338n,
-          },
-          {
-            position1: getPositionForSegmentId(3),
-            position2: getPositionForSegmentId(1337),
-            segmentId1: 3n,
-            segmentId2: 1337n,
-          },
-        ];
+        return {
+          ok: true,
+          value: [
+            {
+              position1: getPositionForSegmentId(1),
+              position2: getPositionForSegmentId(1338),
+              segmentId1: 1n,
+              segmentId2: 1338n,
+            },
+            {
+              position1: getPositionForSegmentId(3),
+              position2: getPositionForSegmentId(1337),
+              segmentId1: 3n,
+              segmentId2: 1337n,
+            },
+            ...additionalEdgesToRemove,
+          ],
+        };
       }
       throw new Error("Unexpected min cut request");
     },

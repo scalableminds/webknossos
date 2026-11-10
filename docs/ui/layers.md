@@ -54,9 +54,11 @@ The live transform editor lets you interactively adjust the spatial alignment of
 
 The editor exposes three groups of controls, each with a slider, a numeric input, and a per-axis reset button:
 
-- **Translation** – shifts the layer along X, Y, or Z. The slider range is bounded by the dataset extent for each axis.
+- **Translation** – shifts the layer along X, Y, or Z. The slider is relative: its handle rests in the center, and dragging it changes the translation by up to about one viewport extent in either direction. On release, the handle snaps back to the center, so you can keep dragging to move further. Type a value into the numeric input to set an exact translation.
 - **Rotation** – rotates the layer around each axis independently (0 – 359.9°). Each rotation row also has a **flip** button that mirrors the layer along that axis. An axis that is currently flipped is highlighted by the flip button being shown in the primary color.
-- **Scaling** – uniform or non-uniform scale per axis. The displayed value is always positive; flip state (sign) is controlled via the rotation-row flip buttons.
+- **Scaling** – scales the layer per axis. The slider is relative as well and reaches from a tenth of the current size up to ten times it. A **lock** button next to each axis makes all locked axes scale together and keep their proportions. All axes are locked by default, so scaling is uniform unless you unlock an axis. The displayed value is always positive; flip state (sign) is controlled via the rotation-row flip buttons.
+
+Rotation and scaling are applied around the center of the layer, so a layer rotates and scales in place.
 
 Every per-axis reset button restores that single value to the **stored default** — the transform that is saved on the server for this layer.
 
@@ -85,18 +87,18 @@ Note, not all control/viewport settings are available in every annotation mode.
 
 ### Viewport Options / Flight Options
 
-- `Zoom`: The zoom factor for viewing the dataset. A low value moves the camera really close to the data, showing many details. A high value, will you show more of the dataset but with fewer details and is great for getting an overview or moving around quickly.
-- `Show Crosshairs`: Shows / Hides the crosshair overlay over the viewports.
-- `Show Scalebars`: Shows / Hides the scale bars overlay over the viewports.
+- `Zoom`: The zoom factor for viewing the dataset. A low value moves the camera really close to the data, showing many details. A high value will show more of the dataset but with fewer details and is great for getting an overview or moving around quickly.
+- `Show Crosshairs`: Shows / Hides the crosshair overlay over the viewports. The crosshair lines mark the current position and where the other orthogonal planes intersect the viewport. Disable this setting to hide them, e.g., for an unobstructed view of the data.
+- `Show Scalebars`: Shows / Hides the scale bar in the lower-right corner of each viewport.
 - `Mouse Rotation`: Increases / Decreases the movement speed when using the mouse to rotate within the datasets. A low value rotates the camera slower for more precise movements. A high value rotates the camera quicker for greater agility.
 - `Keyboard Rotation`: Increases / Decreases the movement speed when using the arrow keys on the keyboard to rotate within the datasets. A low value rotates the camera slower for more precise movements. A high value rotates the camera quicker for greater agility.
 - `Crosshair Size`: Controls the size of the crosshair in flight mode.
 - `Sphere Radius`: In flight mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere. This option influences the radius of said sphere flattening / rounding the projected viewport. A high value will cause less curvature, showing the data with more detail and less distortion. A low value will show more data along the edges of the viewport.
-- `Logo in Screenshots`: Enable or disable the WEBKNOSSOS watermark when [taking screenshots](./toolbar.md).
+- `Logo in Screenshots`: Enable or disable the WEBKNOSSOS logo in the lower-left corner of [screenshots](./toolbar.md). Disabling the logo requires the Team plan or higher.
 
 ### Data Rendering
 
-- `Hardware Utilization`: Adjusts the quality level used for rendering data. Changing this setting influences how much data is downloaded from the server as well as how much pressure is put on the user's graphics card. Tune this value to your network connection and hardware power. After changing the setting, the page has to be refreshed.
+- `Hardware Utilization`: Adjusts the quality level used for rendering data. Changing this setting influences how much data is downloaded from the server as well as how much pressure is put on the user's graphics card. Tune this value to your network connection and hardware power. A higher setting can result in poor performance. You need to be logged in to change this setting, and the page has to be reloaded for it to take effect.
 - `Loading Strategy`: You can choose between two different loading strategies. When using "best quality first" it will take a bit longer until you see data, because the highest quality is loaded. Alternatively, "Progressive quality" can be chosen which will improve the quality progressively while loading. As a result, initial data will be visible faster, but it will take more time until the best quality is shown.
 - `Blend Mode`: You can switch between three modes for blending color layers. The default `Additive` mode simply sums up all color values of all visible color layers. The `Cover` mode renders all color layers on top of each other. Thus the top most color layer covers the color layers below. The `Cover (black as transparent)` mode behaves like `Cover`, but treats black voxels as transparent. The two `Cover` blend modes are especially useful for datasets using multi modality layers. Here is an example for such a dataset published by Bosch et al. [^1]:
 
@@ -105,8 +107,9 @@ Note, not all control/viewport settings are available in every annotation mode.
 |![](../images/blend-mode-example-additive-bosch-et-al.png)|![](../images/blend-mode-example-cover-bosch-et-al.png)|
 
 - `4 Bit`: Toggles data download from the server using only 4 bit instead of 8 bit for each voxel. Use this to reduce the amount of necessary internet bandwidth for WEBKNOSSOS. Useful for showcasing data on the go over cellular networks, e.g 4G.
-- `Interpolation`: When interpolation is enabled, bilinear filtering is applied while rendering pixels between two voxels. As a result, data may look "smoother" (or blurry when being zoomed in very far). Without interpolation, data may look more "crisp" (or pixelated when being zoomed in very far).
-- `Render Missing Data Black`: If a dataset does not contain data at a specific position, WEBKNOSSOS can either render these voxels in "black" or it can try to render data from another magnification.
+- `Interpolation`: When interpolation is enabled, bilinear filtering is applied while rendering pixels between two voxels. As a result, data may look "smoother" (or blurry when being zoomed in very far). Without interpolation, data may look more "crisp" (or pixelated when being zoomed in very far). Interpolation can reduce rendering performance.
+- `Antialiasing`: Smooths jagged edges of rendered lines and surfaces. Disabled by default because it can reduce rendering performance. You need to be logged in to change this setting, and the page has to be reloaded for it to take effect.
+- `Render Missing Data Black`: If a dataset does not contain data at a specific position, WEBKNOSSOS can either render these voxels in "black" or it can try to render data from another magnification. Disabled by default, so WEBKNOSSOS falls back to downsampled magnifications. Enable it to see exactly where data is missing in the currently rendered magnification.
 
 This video explains how to work with blend modes and order layer (especially relevant when working with fluorescence microscopy data):
 ![youtube-video](https://www.youtube.com/embed/_nSw4nywhLU)

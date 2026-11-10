@@ -21,6 +21,8 @@ import type { ContextMenuInfo } from "viewer/store";
 import { useMultiCutToolOptions } from "./min_cut_item";
 import { useContextMenuActions } from "./use_context_menu_actions";
 
+const NO_SEGMENT_ID = 0n;
+
 export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
   const {
     meshId: clickedMeshId,
@@ -51,7 +53,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
   const activeUnmappedSegmentId = useWkSelector((state) =>
     getActiveUnmappedSegmentId(state, volumeTracing),
   );
-  const activeCellId = volumeTracing ? getActiveCellId(volumeTracing) : 0n;
+  const activeCellId = volumeTracing ? getActiveCellId(volumeTracing) : NO_SEGMENT_ID;
 
   const segments = useWkSelector((state) =>
     volumeTracing != null ? getSegmentsForLayer(state, volumeTracing.tracingId) : null,
@@ -67,14 +69,14 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
 
   const segmentIdLabel =
     isProofreadingActive && maybeUnmappedSegmentId != null
-      ? `within Segment ${clickedMeshId ?? 0n}`
-      : (clickedMeshId ?? 0n);
+      ? `within Segment ${clickedMeshId ?? NO_SEGMENT_ID}`
+      : (clickedMeshId ?? NO_SEGMENT_ID);
   const segmentOrSuperVoxel =
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
 
   const proofreadingMultiSplitToolActions = useMultiCutToolOptions(
-    maybeUnmappedSegmentId ?? 0n,
-    clickedMeshId ?? 0n,
+    maybeUnmappedSegmentId ?? NO_SEGMENT_ID,
+    clickedMeshId ?? NO_SEGMENT_ID,
     segmentOrSuperVoxel,
     segmentIdLabel,
   );

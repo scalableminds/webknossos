@@ -2,7 +2,6 @@ import { type BucketWriteMap, BucketWriteMapBuilder } from "./bucket_write_map";
 import {
   type AdditionalCoordinate,
   type EditContext,
-  FINEST_MAG_INDEX,
   floorDiv,
   type Mag,
   type MagIndex,
@@ -34,7 +33,7 @@ export function propagate(
 
   // Step A: upsample toward the finest mag.
   let writes = sourceWrites;
-  for (let index = ctx.sourceMagIndex; index > FINEST_MAG_INDEX; index--) {
+  for (let index = ctx.sourceMagIndex; index > mags.finestIndex; index--) {
     const factor = mags.factorBetween(index - 1, index);
     writes = upsampleOneLevel(
       writes,

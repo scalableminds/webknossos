@@ -1,4 +1,4 @@
-import saveAs from "file-saver";
+import { transformToCSVRow } from "libs/csv";
 import capitalize from "lodash-es/capitalize";
 import { LongUnitToShortUnitMap, type UnitLong } from "viewer/constants";
 import { api } from "viewer/singletons";
@@ -97,20 +97,4 @@ export function getTreeEdgesAsCSV(annotationId: string, tracing: SkeletonTracing
     }),
   );
   return [csvHeader, ...csvLines].join("\n");
-}
-
-export function transformToCSVRow(dataRow: any[]) {
-  return dataRow
-    .map(String) // convert every value to String
-    .map((v) => v.replaceAll('"', '""')) // escape double quotes
-    .map((v) => (/[,"\r\n=+-@]/.test(v) ? `"${v}"` : v)) // quote commas, quotes, and newlines
-    .join(","); // comma-separated
-}
-
-export function saveAsCSV(csvHeader: string[], csvLines: string[], fileName: string) {
-  const csv = [csvHeader.join(","), ...csvLines].join("\n");
-  const blob = new Blob([csv], {
-    type: "text/plain;charset=utf-8",
-  });
-  saveAs(blob, fileName);
 }

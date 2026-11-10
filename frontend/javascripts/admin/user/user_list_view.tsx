@@ -13,6 +13,7 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
+import { getAdminTablePagination } from "admin/admin_table_pagination";
 import { unwrapOrThrow } from "admin/api/api_result";
 import ChangeUsernameView from "admin/auth/change_username_view";
 import { InviteUsersModal } from "admin/onboarding";
@@ -44,7 +45,7 @@ import features from "features";
 import { copyToClipboard } from "libs/clipboard";
 import Persistence from "libs/persistence";
 import { useApi, useWkSelector } from "libs/react_hooks";
-import { filterWithSearchQueryAND, localeCompareBy, scrollToTop } from "libs/utils";
+import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import { location } from "libs/window";
 import keyBy from "lodash-es/keyBy";
 import React, { type Key, useState } from "react";
@@ -226,15 +227,13 @@ function UserListView() {
   function renderUpgradePlanAlert() {
     return (
       <Alert
-        title="You reached the maximum number of users"
-        description={
+        title={
           <>
-            Your organization has reached the maximum number of users allowed in your current plan.
-            Email invites are only permitted for existing users of paid organizations, who will join
-            as non-billed guests. <br />
-            Consider upgrading your WEBKNOSSOS plan to accommodate more new users or deactivate
-            existing user accounts. Your organization currently has {getActiveUserCount(users)}{" "}
-            active users out of {activeOrganization.includedUsers} allowed by your plan.
+            <Typography.Text strong>
+              {getActiveUserCount(users)} of {activeOrganization.includedUsers} users active.
+            </Typography.Text>{" "}
+            Your plan is full. Only users of other paid organizations can still join as guests.{" "}
+            <Link to={`/organizations/${activeUser.organization}`}>Details</Link>
           </>
         }
         type="warning"
@@ -367,10 +366,7 @@ function UserListView() {
           )}
           rowKey="id"
           rowSelection={rowSelection}
-          pagination={{
-            defaultPageSize: 50,
-            onChange: scrollToTop,
-          }}
+          pagination={getAdminTablePagination()}
           onChange={(_pagination, filters) => {
             // @ts-expect-error ts-migrate(2322) FIXME: Type 'FilterValue' is not assignable to type '("tr... Remove this comment to see the full error(message)
             const newFilter: ActivationFilterType =

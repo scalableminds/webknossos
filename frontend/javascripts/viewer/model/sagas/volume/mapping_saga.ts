@@ -715,7 +715,9 @@ function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
     const activeSegmentId = yield* call(getActiveCellId, volumeTracing);
 
     if (activeSegmentId !== agglomerateId) {
-      yield put(setActiveCellAction(agglomerateId, proofreadingMarkerPosition));
+      yield put(
+        setActiveCellAction(agglomerateId, proofreadingMarkerPosition, undefined, undefined, true),
+      );
       // TODO #9456: Look for a solution that this toast notification does not appear frequently in live collab scenario.
       // yield* call(() =>
       //   Toast.info(

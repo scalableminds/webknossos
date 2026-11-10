@@ -18,7 +18,6 @@ case class DataStoreParameters(
     url: String,
     publicUrl: String,
     key: String,
-    isScratch: Option[Boolean],
     allowsUpload: Option[Boolean],
     allowsUploadToPaths: Option[Boolean]
 ) derives JsonAutoFormat
@@ -49,7 +48,6 @@ class DataStoreController @Inject() (
           url = request.body.url,
           publicUrl = request.body.publicUrl,
           key = request.body.key,
-          isScratch = request.body.isScratch.getOrElse(false),
           allowsUpload = request.body.allowsUpload.getOrElse(true),
           allowsUploadToPaths = request.body.allowsUploadToPaths.getOrElse(true)
         )

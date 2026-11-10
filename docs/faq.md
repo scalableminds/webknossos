@@ -18,6 +18,8 @@ There are two options to help you with data annotation:
 
 We are always happy to help you through email or a quick call. In addition, we offer a community support forum for questions, bug reports, product updates, and community engagement. Visit us at [https://forum.image.sc/tag/webknossos](https://forum.image.sc/tag/webknossos).
 
+Within WEBKNOSSOS, select `Help` > `Ask a Question` in the navigation bar (or click the `Help` tab at the right edge of the screen) to get an instant answer from the AI assistant or to send a message to the support team by email. Read more about [asking a question](./index.md#ask-a-question).
+
 ## How can I run machine learning analysis on my datasets with WEBKNOSSOS?
 
 WEBKNOSSOS offers built-in tools for training your own AI models for image segmentation directly on the platform. You can train models for dense EM neuron segmentation or EM instance segmentation (e.g., nuclei, mitochondria) using your own ground truth annotations. 

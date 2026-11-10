@@ -13,6 +13,7 @@ import Icon, {
   WarningOutlined,
 } from "@ant-design/icons";
 import BrushIcon from "@images/icons/icon-brush.svg?react";
+import { useIsJobAvailable } from "admin/job/job_hooks";
 import {
   clearCache,
   findDataPositionForLayer,
@@ -33,6 +34,7 @@ import isEqual from "lodash-es/isEqual";
 import minBy from "lodash-es/minBy";
 import React, { useCallback, useState } from "react";
 import { useDispatch } from "react-redux";
+import type { Dispatch } from "redux";
 import {
   AnnotationLayerEnum,
   type AnnotationLayerType,
@@ -65,10 +67,10 @@ import {
   reloadHistogramAction,
   updateLayerSettingAction,
 } from "viewer/model/actions/settings_actions";
-import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/rebase_helpers";
 import { deleteAnnotationLayer } from "viewer/model/sagas/volume/update_actions";
 import { api, Model } from "viewer/singletons";
-import type { DatasetLayerConfiguration, VolumeTracing } from "viewer/store";
+import type { DatasetLayerConfiguration, StoreDataset, VolumeTracing } from "viewer/store";
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
@@ -100,6 +102,70 @@ function EnableDisableLayerSwitch({
   );
 }
 
+async function findDataAndJumpToIt(
+  dataset: StoreDataset,
+  dispatch: Dispatch,
+  targetLayerName: string,
+  isDataLayer: boolean,
+  volume: VolumeTracing | null | undefined,
+) {
+  const { tracingStore } = Store.getState().annotation;
+  let foundPosition;
+  let foundMag;
+
+  if (volume && !isDataLayer) {
+    const { position, mag } = await findDataPositionForVolumeTracing(
+      tracingStore.url,
+      volume.tracingId,
+    );
+
+    if ((!position || !mag) && volume.fallbackLayer) {
+      await findDataAndJumpToIt(dataset, dispatch, volume.fallbackLayer, true, volume);
+      return;
+    }
+
+    foundPosition = position;
+    foundMag = mag;
+  } else {
+    const { position, mag } = await findDataPositionForLayer(
+      dataset.dataStore.url,
+      dataset,
+      targetLayerName,
+    );
+    foundPosition = position;
+    foundMag = mag;
+  }
+
+  if (foundPosition && foundMag) {
+    const foundLayer = getLayerByName(dataset, targetLayerName, true);
+    const transformMatrix = getTransformsForLayerOrNull(
+      dataset,
+      foundLayer,
+      Store.getState().datasetConfiguration.nativelyRenderedLayerName,
+    )?.affineMatrix;
+    if (transformMatrix) {
+      const matrix = M4x4.transpose(transformMatrix);
+      V3.mul4x4(matrix, foundPosition, foundPosition);
+    }
+  } else {
+    const centerPosition = getLayerBoundingBox(dataset, targetLayerName).getCenter();
+    Toast.warning(
+      `Couldn't find data within layer "${targetLayerName}." Jumping to the center of the layer's bounding box.`,
+    );
+    dispatch(setPositionAction(centerPosition));
+    return;
+  }
+
+  dispatch(setPositionAction(foundPosition));
+  const targetZoomValue = getMaxZoomValueForMag(Store.getState(), targetLayerName, foundMag);
+  dispatch(setZoomStepAction(targetZoomValue));
+  Toast.success(
+    `Jumping to position ${foundPosition
+      .map((el: number) => Math.floor(el))
+      .join(", ")} and zooming to ${targetZoomValue.toFixed(2)}`,
+  );
+}
+
 export default function LayerSettingsHeader({
   layerName,
   layerSettings,
@@ -124,6 +190,10 @@ export default function LayerSettingsHeader({
   const dispatch = useDispatch();
   const { modal } = App.useApp();
   const dataset = useWkSelector((state) => state.dataset);
+  const isSegmentIndexFileJobAvailable = useIsJobAvailable(
+    dataset.dataStore,
+    APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
+  );
   const annotation = useWkSelector((state) => state.annotation);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isAdminOrManager = useWkSelector((state) =>
@@ -181,67 +251,8 @@ export default function LayerSettingsHeader({
   );
 
   const handleFindData = useCallback(
-    async (
-      targetLayerName: string,
-      isDataLayer: boolean,
-      volume: VolumeTracing | null | undefined,
-    ) => {
-      const { tracingStore } = Store.getState().annotation;
-      let foundPosition;
-      let foundMag;
-
-      if (volume && !isDataLayer) {
-        const { position, mag } = await findDataPositionForVolumeTracing(
-          tracingStore.url,
-          volume.tracingId,
-        );
-
-        if ((!position || !mag) && volume.fallbackLayer) {
-          await handleFindData(volume.fallbackLayer, true, volume);
-          return;
-        }
-
-        foundPosition = position;
-        foundMag = mag;
-      } else {
-        const { position, mag } = await findDataPositionForLayer(
-          dataset.dataStore.url,
-          dataset,
-          targetLayerName,
-        );
-        foundPosition = position;
-        foundMag = mag;
-      }
-
-      if (foundPosition && foundMag) {
-        const foundLayer = getLayerByName(dataset, targetLayerName, true);
-        const transformMatrix = getTransformsForLayerOrNull(
-          dataset,
-          foundLayer,
-          Store.getState().datasetConfiguration.nativelyRenderedLayerName,
-        )?.affineMatrix;
-        if (transformMatrix) {
-          const matrix = M4x4.transpose(transformMatrix);
-          V3.mul4x4(matrix, foundPosition, foundPosition);
-        }
-      } else {
-        const centerPosition = getLayerBoundingBox(dataset, targetLayerName).getCenter();
-        Toast.warning(
-          `Couldn't find data within layer "${targetLayerName}." Jumping to the center of the layer's bounding box.`,
-        );
-        dispatch(setPositionAction(centerPosition));
-        return;
-      }
-
-      dispatch(setPositionAction(foundPosition));
-      const targetZoomValue = getMaxZoomValueForMag(Store.getState(), targetLayerName, foundMag);
-      dispatch(setZoomStepAction(targetZoomValue));
-      Toast.success(
-        `Jumping to position ${foundPosition
-          .map((el: number) => Math.floor(el))
-          .join(", ")} and zooming to ${targetZoomValue.toFixed(2)}`,
-      );
-    },
+    (targetLayerName: string, isDataLayer: boolean, volume: VolumeTracing | null | undefined) =>
+      findDataAndJumpToIt(dataset, dispatch, targetLayerName, isDataLayer, volume),
     [dataset, dispatch],
   );
 
@@ -533,10 +544,7 @@ export default function LayerSettingsHeader({
     isHistogramAvailable && !isDisabled ? getEditMinMaxItem() : null,
     hasHistogram && !isDisabled ? getClipItem() : null,
     !isLayerWithoutTransformationConfigSupport(layer) ? getEditLayerTransformsItem() : null,
-    dataset.dataStore.jobsEnabled &&
-    dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-      APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
-    )
+    dataset.dataStore.jobsEnabled && isSegmentIndexFileJobAvailable
       ? getComputeSegmentIndexFileItem()
       : null,
   ];

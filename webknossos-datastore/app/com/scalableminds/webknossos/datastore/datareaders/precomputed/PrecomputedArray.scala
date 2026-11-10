@@ -71,7 +71,7 @@ class PrecomputedArray(
   lazy val voxelOffset: Array[Int] = header.precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
   override protected def getChunkFilename(chunkIndex: Array[Long]): String = {
 
-    val bbox = header.chunkIndexToNDimensionalBoundingBox(chunkIndex)
+    val bbox = header.chunkIndexToNDimensionalBoundingBoxInArray(chunkIndex)
     bbox.map(dim => s"${dim._1}-${dim._2}").mkString(header.dimension_separator.toString)
   }
 

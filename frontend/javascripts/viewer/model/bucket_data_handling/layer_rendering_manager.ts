@@ -5,12 +5,10 @@ import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import DiffableMap from "libs/diffable_map";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import type UpdatableTexture from "libs/UpdatableTexture";
 import identity from "lodash-es/identity";
 import isEqual from "lodash-es/isEqual";
 import throttle from "lodash-es/throttle";
 import memoizeOne from "memoize-one";
-import type { DataTexture } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BucketAddress, Vector3, Vector4, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";
@@ -22,6 +20,13 @@ import {
 } from "viewer/model/accessors/dataset_accessor";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
+import {
+  computeLayerPoolAssignments,
+  LAYER_POOL_TEXTURE_WIDTH,
+  LAYER_POOLS,
+  type LayerPool,
+} from "viewer/model/bucket_data_handling/data_rendering_logic";
+import PoolTextureManager from "viewer/model/bucket_data_handling/pool_texture_manager";
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import TextureBucketManager from "viewer/model/bucket_data_handling/texture_bucket_manager";
 import shaderEditor from "viewer/model/helpers/shader_editor";
@@ -54,10 +59,62 @@ const asyncBucketPick = memoizeOne(asyncBucketPickRaw, (oldArgs, newArgs) =>
 const dummyBuffer = new ArrayBuffer(0);
 export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
 
-// Lazily-initialized singleton.
-const getSharedLookUpCuckooTable = memoizeOne(
-  () => new CuckooTableVec5(LOOKUP_CUCKOO_TEXTURE_WIDTH),
-);
+// Lazily-initialized singleton: the bucket lookup table of all layers.
+let sharedLookUpCuckooTable: CuckooTableVec5 | null = null;
+export function getSharedLookUpCuckooTable(): CuckooTableVec5 {
+  if (sharedLookUpCuckooTable == null) {
+    sharedLookUpCuckooTable = new CuckooTableVec5(LOOKUP_CUCKOO_TEXTURE_WIDTH);
+  }
+  return sharedLookUpCuckooTable;
+}
+
+function destroySharedLookUpCuckooTable() {
+  sharedLookUpCuckooTable?._texture.dispose();
+  sharedLookUpCuckooTable = null;
+}
+
+function createLayerPoolPlan() {
+  const { dataset, temporaryConfiguration } = Store.getState();
+  // Computed at init by computeLayerPoolPlan, so that every pool fits the
+  // GPU's limits.
+  const bucketCapacity = temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity;
+  const { assignmentByLayerName, poolDepths } = computeLayerPoolAssignments(
+    dataset.dataSource.dataLayers,
+    bucketCapacity,
+  );
+  // Pools without layers get no texture; the shader only declares the pools
+  // of the rendered layers.
+  const poolTextureManagers = new Map<LayerPool, PoolTextureManager>(
+    LAYER_POOLS.filter((pool) => poolDepths[pool] > 0).map((pool) => [
+      pool,
+      new PoolTextureManager(pool, poolDepths[pool]),
+    ]),
+  );
+  return { assignmentByLayerName, poolTextureManagers, bucketCapacity };
+}
+
+// Lazily-initialized singleton, created once per dataset: every layer's
+// slice range plus the 5 pool textures.
+let layerPoolPlan: ReturnType<typeof createLayerPoolPlan> | null = null;
+function getLayerPoolPlan() {
+  if (layerPoolPlan == null) {
+    layerPoolPlan = createLayerPoolPlan();
+  }
+  return layerPoolPlan;
+}
+
+function destroyLayerPoolPlan() {
+  for (const poolTextureManager of layerPoolPlan?.poolTextureManagers.values() ?? []) {
+    poolTextureManager.destroy();
+  }
+  layerPoolPlan = null;
+}
+
+// The pool textures are shared by all layers, so PlaneMaterialFactory
+// gets them here instead of from a single layer's LayerRenderingManager.
+export function getLayerPoolTextureManagers(): Map<LayerPool, PoolTextureManager> {
+  return getLayerPoolPlan().poolTextureManagers;
+}
 
 function consumeBucketsFromArrayBuffer(
   buffer: ArrayBuffer,
@@ -151,10 +208,8 @@ export default class LayerRenderingManager {
   lastIsVisible: boolean | undefined;
   lastRects: PlaneRects | undefined;
   textureBucketManager!: TextureBucketManager;
-  textureWidth: number;
   cube: DataCube;
   pullQueue: PullQueue;
-  dataTextureCount: number;
   name: string;
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
@@ -165,18 +220,10 @@ export default class LayerRenderingManager {
   private colorCuckooTable: CuckooTableVec3 | undefined;
   private storePropertyUnsubscribers: Array<() => void> = [];
 
-  constructor(
-    name: string,
-    pullQueue: PullQueue,
-    cube: DataCube,
-    textureWidth: number,
-    dataTextureCount: number,
-  ) {
+  constructor(name: string, pullQueue: PullQueue, cube: DataCube) {
     this.name = name;
     this.pullQueue = pullQueue;
     this.cube = cube;
-    this.textureWidth = textureWidth;
-    this.dataTextureCount = dataTextureCount;
   }
 
   refresh() {
@@ -184,19 +231,29 @@ export default class LayerRenderingManager {
     app.vent.emit("rerender");
   }
 
-  setupDataTextures(): void {
+  setupTextureBucketManager(): void {
     const { dataset } = Store.getState();
     const elementClass = getElementClass(dataset, this.name);
+    const { assignmentByLayerName, poolTextureManagers, bucketCapacity } = getLayerPoolPlan();
+    const assignment = assignmentByLayerName.get(this.name);
+    if (assignment == null) {
+      throw new Error(`No layer pool assignment found for layer ${this.name}.`);
+    }
+    const poolTextureManager = poolTextureManagers.get(assignment.pool);
+    if (poolTextureManager == null) {
+      throw new Error(`No PoolTextureManager found for pool ${assignment.pool}.`);
+    }
     this.textureBucketManager = new TextureBucketManager(
-      this.textureWidth,
-      this.dataTextureCount,
+      LAYER_POOL_TEXTURE_WIDTH,
+      assignment.dataTextureCount,
       elementClass,
       this.cube,
+      { poolTextureManager, baseSlice: assignment.baseSlice, bucketCapacity },
     );
 
     const layerIndex = getGlobalLayerIndexForLayerName(this.name);
 
-    this.textureBucketManager.setupDataTextures(getSharedLookUpCuckooTable(), layerIndex);
+    this.textureBucketManager.attachToLookUpTable(getSharedLookUpCuckooTable(), layerIndex);
     shaderEditor.addBucketManagers(this.textureBucketManager);
 
     if (this.cube.isSegmentation) {
@@ -204,17 +261,13 @@ export default class LayerRenderingManager {
     }
   }
 
-  getDataTextures(): Array<DataTexture | UpdatableTexture> {
+  getTextureBucketManager(): TextureBucketManager {
     if (!this.textureBucketManager) {
       // Initialize lazily since SceneController.renderer is not available earlier
-      this.setupDataTextures();
+      this.setupTextureBucketManager();
     }
 
-    return this.textureBucketManager.getTextures();
-  }
-
-  getSharedLookUpCuckooTable() {
-    return getSharedLookUpCuckooTable();
+    return this.textureBucketManager;
   }
 
   updateDataTextures(position: Vector3, logZoomStep: number): void {
@@ -348,7 +401,8 @@ export default class LayerRenderingManager {
       // though it should never be null in non-tests).
       this.textureBucketManager.destroy();
     }
-    getSharedLookUpCuckooTable.clear();
+    destroySharedLookUpCuckooTable();
+    destroyLayerPoolPlan();
     asyncBucketPick.clear();
     shaderEditor.destroy();
     this.colorCuckooTable = undefined;

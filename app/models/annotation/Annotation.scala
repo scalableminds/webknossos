@@ -239,7 +239,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken =
     q"visibility = ${AnnotationVisibility.Public}"
 
-  private def listAccessQ(requestingUserId: ObjectId, prefix: SqlToken): SqlToken =
+  private def listAccessQ(requestingUserId: SqlToken, prefix: SqlToken): SqlToken =
     AnnotationAccessQueries.ownedOrSharedQ(
       requestingUserId,
       prefix,
@@ -254,7 +254,17 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
     )
 
   private def baseListAccessQ(using ctx: DBAccessContext): Fox[SqlToken] =
-    accessQueryFromAccessQWithPrefix(listAccessQ, q"")(using ctx)
+    accessQueryFromAccessQWithPrefix(listAccessQ(_, _), q"")(using ctx)
+
+  // Those of the given users that see the annotation in their annotation list, i.e. as their own or shared with them.
+  def findUserIdsWithListAccess(annotationId: ObjectId, userIds: List[ObjectId]): Fox[Seq[ObjectId]] =
+    if (userIds.isEmpty) Fox.successful(Seq.empty)
+    else
+      run(q"""SELECT u._id
+              FROM webknossos.users_ u
+              JOIN webknossos.annotations_ a ON a._id = $annotationId
+              WHERE u._id IN ${SqlToken.tupleFromList(userIds)}
+              AND ${listAccessQ(q"u._id", q"a.")}""".as[ObjectId])
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     readAccessQWithPrefix(requestingUserId, q"")
@@ -326,7 +336,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
   }
 
   // Necessary since a tuple can only have 22 elements
-  implicit def GetResultAnnotationCompactInfo: GetResult[AnnotationCompactInfo] =
+  implicit private def GetResultAnnotationCompactInfo: GetResult[AnnotationCompactInfo] =
     prs => {
       import prs.*
 
@@ -411,7 +421,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
   )(using ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
     for {
       accessQuery <-
-        if (filterOwnedOrShared) accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
+        if (filterOwnedOrShared) accessQueryFromAccessQWithPrefix(listAccessQ(_, _), q"a.")
         else accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, q"a.")
       stateQuery = getStateQuery(isFinished)
       userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"TRUE")

@@ -15,6 +15,7 @@ import keyBy from "lodash-es/keyBy";
 import mapValues from "lodash-es/mapValues";
 import partition from "lodash-es/partition";
 import throttle from "lodash-es/throttle";
+import memoizeOne from "memoize-one";
 import { DoubleSide, Euler, Matrix4, ShaderMaterial, Vector3 as ThreeVector3 } from "three";
 import type { ValueOf } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
@@ -28,6 +29,7 @@ import {
   type Vector3,
   ViewModeValues,
 } from "viewer/constants";
+import { getRenderer } from "viewer/controller/renderer";
 import {
   getColorLayers,
   getDataLayers,
@@ -54,22 +56,32 @@ import {
   isRotated,
 } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, isBrushTool } from "viewer/model/accessors/tool_accessor";
-import { calculateGlobalPos, getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
+import { getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
   getActiveUnmappedSegmentId,
+  getBrushCenterPosition,
   getBucketRetrievalSourceFn,
   getHideUnregisteredSegmentsForLayer,
   getProofreadingMarkerPosition,
+  getRenderableMagForActiveSegmentationTracing,
   isZoomThresholdExceededForAgglomerateMapping,
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { getDtypeConfigForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
-import { getGlobalLayerIndexForLayerName } from "viewer/model/bucket_data_handling/layer_rendering_manager";
+import {
+  getDtypeConfigForElementClass,
+  LAYER_POOL_SAMPLERS,
+} from "viewer/model/bucket_data_handling/data_rendering_logic";
+import {
+  getGlobalLayerIndexForLayerName,
+  getLayerPoolTextureManagers,
+  getSharedLookUpCuckooTable,
+} from "viewer/model/bucket_data_handling/layer_rendering_manager";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import shaderEditor from "viewer/model/helpers/shader_editor";
 import getMainFragmentShader, {
+  computeVertexBucketAlignmentLayerCap,
   getMainVertexShader,
   type Params,
 } from "viewer/shaders/main_data_shaders.glsl";
@@ -95,6 +107,15 @@ export type Uniforms = Record<
 >;
 
 const DEFAULT_COLOR = new ThreeVector3(255, 255, 255);
+
+// As a performance optimization, the vertex shader precomputes a bucket
+// address per layer and passes it on via the outputMagIdx/outputSeed/outputAddress
+// varyings. Only layers whose global index is below this cap get these varyings;
+// the others do the full lookup per fragment (see computeVertexBucketAlignmentLayerCap).
+const getMaxVaryingVectors = memoizeOne((): number => {
+  const gl = getRenderer().getContext() as WebGL2RenderingContext;
+  return gl.getParameter(gl.MAX_VARYING_VECTORS);
+});
 
 function sanitizeName(name: string | null | undefined): string {
   if (WkDevFlags.bucketDebugging.disableLayerNameSanitization) {
@@ -127,7 +148,6 @@ function getTextureLayerInfos(): Params["textureLayerInfos"] {
     return {
       packingDegree: dtypeConfig.packingDegree,
       glslPrefix: dtypeConfig.glslPrefix,
-      dataTextureCount: Model.getLayerRenderingManagerByName(layer.name).dataTextureCount,
       isSigned: dtypeConfig.isSigned,
       elementClass,
       isColor: layer.category === "color",
@@ -219,7 +239,7 @@ class PlaneMaterialFactory {
       hideUnmappedIds: {
         value: false,
       },
-      globalMousePosition: {
+      brushCenterPosition: {
         value: new ThreeVector3(0, 0, 0),
       },
       proofreadingMarkerPosition: {
@@ -227,6 +247,9 @@ class PlaneMaterialFactory {
       },
       brushSizeInPixel: {
         value: 0,
+      },
+      brushMag: {
+        value: new ThreeVector3(1, 1, 1),
       },
       segmentationPatternOpacity: {
         value: 40,
@@ -348,30 +371,21 @@ class PlaneMaterialFactory {
   }
 
   attachTextures(): void {
-    let sharedLookUpTexture;
-    let sharedLookUpCuckooTable;
     // Same ordering as activeMagIndices (both iterate Model.getAllLayers()), matching
     // globalLayerIndex. Built here, not in setupUniforms, because textureBucketManager only
-    // exists once getDataTextures() below has triggered its lazy setup.
+    // exists once getTextureBucketManager() below has triggered its lazy setup.
     const usesTRecyclingPerLayer: number[] = [];
     // Voxels per bucket in each layer's data texture. Read off the TextureBucketManager, not
     // the DataCube: the two disagree for t-recycling layers, and the shader derives its row and
     // texture indices from this, so it must match the upload side exactly.
     const bucketVoxelCountPerLayer: number[] = [];
-    // Add data and look up textures for each layer
-    for (const dataLayer of Model.getAllLayers()) {
-      const { name } = dataLayer;
-      const [lookUpTexture, ...dataTextures] = dataLayer.layerRenderingManager.getDataTextures();
-      sharedLookUpTexture = lookUpTexture;
-      sharedLookUpCuckooTable = dataLayer.layerRenderingManager.getSharedLookUpCuckooTable();
-      const layerName = sanitizeName(name);
-      this.uniforms[`${layerName}_textures`] = {
-        value: dataTextures,
-      };
-      this.uniforms[`${layerName}_data_texture_width`] = {
-        value: dataLayer.layerRenderingManager.textureWidth,
-      };
-      const { textureBucketManager } = dataLayer.layerRenderingManager;
+    const allLayers = Model.getAllLayers();
+    if (allLayers.length === 0) {
+      throw new Error("Empty layer list at unexpected point.");
+    }
+    for (const dataLayer of allLayers) {
+      // Also sets up the layer's TextureBucketManager if needed.
+      const textureBucketManager = dataLayer.layerRenderingManager.getTextureBucketManager();
       usesTRecyclingPerLayer.push(textureBucketManager.usesTRecycling ? 1 : 0);
       bucketVoxelCountPerLayer.push(textureBucketManager.bucketVoxelCount);
     }
@@ -382,13 +396,17 @@ class PlaneMaterialFactory {
       value: bucketVoxelCountPerLayer,
     };
 
-    if (!sharedLookUpCuckooTable) {
-      throw new Error("Empty layer list at unexpected point.");
-    }
-
+    // Shared by all layers, like the pool textures below.
+    const sharedLookUpCuckooTable = getSharedLookUpCuckooTable();
     this.uniforms.lookup_texture = {
-      value: sharedLookUpTexture,
+      value: sharedLookUpCuckooTable._texture,
     };
+
+    for (const [pool, poolTextureManager] of getLayerPoolTextureManagers()) {
+      this.uniforms[LAYER_POOL_SAMPLERS[pool].uniformName] = {
+        value: poolTextureManager.textureArray,
+      };
+    }
 
     this.unsubscribeColorSeedsFn = sharedLookUpCuckooTable.subscribeToSeeds((seeds: number[]) => {
       this.uniforms.lookup_seeds = {
@@ -735,8 +753,8 @@ class PlaneMaterialFactory {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.mousePosition,
-          (globalMousePosition) => {
-            if (!globalMousePosition) {
+          (mousePosition) => {
+            if (!mousePosition) {
               this.uniforms.isMouseInCanvas.value = false;
               return;
             }
@@ -747,12 +765,16 @@ class PlaneMaterialFactory {
               return;
             }
 
-            const [x, y, z] = calculateGlobalPos(state, {
-              x: globalMousePosition[0],
-              y: globalMousePosition[1],
-            }).rounded;
-            this.uniforms.globalMousePosition.value.set(x, y, z);
             this.uniforms.isMouseInCanvas.value = true;
+          },
+          true,
+        ),
+        listenToStoreProperty(
+          (storeState) => getBrushCenterPosition(storeState),
+          (brushCenterPosition) => {
+            if (brushCenterPosition != null) {
+              this.uniforms.brushCenterPosition.value.set(...brushCenterPosition);
+            }
           },
           true,
         ),
@@ -772,6 +794,16 @@ class PlaneMaterialFactory {
           (storeState) => storeState.userConfiguration.brushSize,
           (brushSize) => {
             this.uniforms.brushSizeInPixel.value = brushSize;
+          },
+          true,
+        ),
+        listenToStoreProperty(
+          (storeState) => getRenderableMagForActiveSegmentationTracing(storeState)?.mag,
+          (mag) => {
+            // The brush preview should snap to the voxel grid of the mag in which
+            // the brush is actually applied.
+            const [x, y, z] = mag ?? [1, 1, 1];
+            this.uniforms.brushMag.value.set(x, y, z);
           },
           true,
         ),
@@ -1201,6 +1233,10 @@ class PlaneMaterialFactory {
       useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
       isWindows: isWindows(),
+      vertexBucketAlignmentLayerCap: computeVertexBucketAlignmentLayerCap(
+        getMaxVaryingVectors(),
+        Object.keys(this.scaledTpsInvPerLayer).length,
+      ),
     });
     return [
       code,
@@ -1242,6 +1278,10 @@ class PlaneMaterialFactory {
       useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
       isWindows: isWindows(),
+      vertexBucketAlignmentLayerCap: computeVertexBucketAlignmentLayerCap(
+        getMaxVaryingVectors(),
+        Object.keys(this.scaledTpsInvPerLayer).length,
+      ),
     });
   }
 

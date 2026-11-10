@@ -28,7 +28,7 @@ class LayerToLinkService @Inject() (datasetDAO: DatasetDAO, userService: UserSer
       ) ?~> Msg.Dataset.notFound(layerIdentifier.datasetId) ~> NOT_FOUND
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataset._organization)
       _ <- Fox.fromBool(
-        isTeamManagerOrAdmin || requestingUser.isDatasetManager || dataset.isPublic
+        isTeamManagerOrAdmin || requestingUser.isDatasetManagerOf(dataset._organization) || dataset.isPublic
       ) ?~> Msg.Dataset.Upload.linkRestricted
     } yield ()
 

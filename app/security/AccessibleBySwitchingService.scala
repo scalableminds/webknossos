@@ -115,7 +115,7 @@ class AccessibleBySwitchingService @Inject() (
       annotation <- annotationDAO.findOne(annotationId)(using GlobalAccessContext)
       _ <- Fox.fromBool(annotation.state != Cancelled)
       restrictions <- annotationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ, annotationId))(using ctx)
-      _ <- restrictions.allowAccess(user)
+      _ <- Fox.assertTrue(restrictions.allowAccess(user))
     } yield ()
     foundFox.shiftBox.map(_.isDefined)
   }

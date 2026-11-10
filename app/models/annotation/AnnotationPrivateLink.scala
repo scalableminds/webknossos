@@ -22,7 +22,9 @@ case class AnnotationPrivateLink(
     accessToken: String,
     expirationDateTime: Option[Instant],
     isDeleted: Boolean = false
-) derives JsonAutoFormat
+) derives JsonAutoFormat {
+  def isExpired: Boolean = expirationDateTime.exists(_ <= Instant.now)
+}
 
 case class AnnotationPrivateLinkParams(annotation: String, expirationDateTime: Option[Instant]) derives JsonAutoFormat
 
@@ -84,7 +86,7 @@ class AnnotationPrivateLinkDAO @Inject() (sqlClient: SqlClient)(implicit ec: Exe
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        q"""SELECT $columns FROM $existingCollectionName WHERE _annotation = $annotationId AND $accessQuery"""
+        q"""SELECT $columns FROM $existingCollectionName WHERE _annotation = $annotationId AND $accessQuery ORDER BY _id"""
           .as[AnnotationPrivatelinksRow]
       )
       parsed <- parseAll(r)

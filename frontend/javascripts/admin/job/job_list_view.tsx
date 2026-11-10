@@ -14,7 +14,7 @@ import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
 import { cancelJob, getJobs, retryJob } from "admin/rest_api";
-import { App, Input, Space, Spin, Table, Tooltip } from "antd";
+import { App, Input, Space, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
@@ -35,25 +35,38 @@ import capitalize from "lodash-es/capitalize";
 import type * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { ThemeIndependentStatusColor } from "theme";
 import { type APIJob, APIJobCommand } from "types/api_types";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 
-// Kept as literals: antd derives the second tone from the first via a color library at render
-// time, so neither the twoToneColor nor the style prop can resolve a CSS variable here. These
-// values are antd's dark-algorithm status colors, which are legible on both backgrounds.
 export const TOOLTIP_MESSAGES_AND_ICONS = {
   UNKNOWN: {
     tooltip:
       "The status information for this job could not be retrieved. Please try again in a few minutes, or contact us if you need assistance.",
-    icon: <QuestionCircleTwoTone twoToneColor="#a3a3a3" className="icon-margin-right" />,
+    icon: (
+      <QuestionCircleTwoTone
+        twoToneColor={ThemeIndependentStatusColor.neutral}
+        className="icon-margin-right"
+      />
+    ),
   },
   SUCCESS: {
     tooltip: "This job has successfully been executed.",
-    icon: <CheckCircleTwoTone twoToneColor="#49b21b" className="icon-margin-right" />,
+    icon: (
+      <CheckCircleTwoTone
+        twoToneColor={ThemeIndependentStatusColor.success}
+        className="icon-margin-right"
+      />
+    ),
   },
   PENDING: {
     tooltip: "This job will run as soon as a worker becomes available.",
-    icon: <ClockCircleTwoTone twoToneColor="#d89614" className="icon-margin-right" />,
+    icon: (
+      <ClockCircleTwoTone
+        twoToneColor={ThemeIndependentStatusColor.warning}
+        className="icon-margin-right"
+      />
+    ),
   },
   STARTED: {
     tooltip: "This job is currently running.",
@@ -62,11 +75,21 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
   FAILURE: {
     tooltip:
       "Something went wrong when executing this job. Feel free to contact us if you need assistance.",
-    icon: <CloseCircleTwoTone twoToneColor="#a61d24" className="icon-margin-right" />,
+    icon: (
+      <CloseCircleTwoTone
+        twoToneColor={ThemeIndependentStatusColor.error}
+        className="icon-margin-right"
+      />
+    ),
   },
   CANCELLED: {
     tooltip: "This job was cancelled.",
-    icon: <CloseCircleTwoTone twoToneColor="#aaaaaa" className="icon-margin-right" />,
+    icon: (
+      <CloseCircleTwoTone
+        twoToneColor={ThemeIndependentStatusColor.neutral}
+        className="icon-margin-right"
+      />
+    ),
   },
 };
 const refreshInterval = 5000;
@@ -153,7 +176,7 @@ export function JobState({ job }: { job: APIJob }) {
 export function getJobTypeName(command: APIJobCommand): string {
   const jobTypeNames: Record<string, string> = {
     [APIJobCommand.CONVERT_TO_WKW]: "Convert to WKW",
-    [APIJobCommand.EXPORT_TIFF]: "Export TIFF",
+    [APIJobCommand.EXPORT_TIFF]: "TIFF / OME-Zarr Export",
     [APIJobCommand.RENDER_ANIMATION]: "Render Animation",
     [APIJobCommand.COMPUTE_MESH_FILE]: "Compute Mesh",
     [APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE]: "Compute Segment Index",
@@ -228,7 +251,7 @@ function JobListView() {
         );
       return (
         <span>
-          Tiff export of layer {layerName} from {labelToAnnotationOrDataset} (Bounding Box{" "}
+          TIFF/OME-Zarr export of layer {layerName} from {labelToAnnotationOrDataset} (Bounding Box{" "}
           {job.args.ndBoundingBox
             ? formatWkLibsNdBBox(job.args.ndBoundingBox)
             : job.args.boundingBox}
@@ -563,7 +586,8 @@ function JobListView() {
       descriptionURI="https://docs.webknossos.org/webknossos/automation/jobs.html"
       description={
         <>
-          Some actions such as dataset conversions or TIFF exports require background processing.
+          Some actions such as dataset conversions or TIFF and OME-Zarr exports require background
+          processing.
           <br />
           WEBKNOSSOS notifies you by email once background jobs finish.
         </>
@@ -606,7 +630,7 @@ function JobListView() {
             render={(job: APIJob) => (
               <>
                 <div>{`${job.ownerLastName}, ${job.ownerFirstName}`}</div>
-                <div>{`(${job.ownerEmail})`}</div>
+                <Typography.Text type="secondary">{job.ownerEmail}</Typography.Text>
               </>
             )}
           />

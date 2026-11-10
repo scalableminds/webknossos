@@ -1,4 +1,13 @@
-import { CheckOutlined, DownOutlined, EditOutlined } from "@ant-design/icons";
+import {
+  BankOutlined,
+  BgColorsOutlined,
+  CheckOutlined,
+  DownOutlined,
+  EditOutlined,
+  MailOutlined,
+  SafetyCertificateOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import ChangeEmailView from "admin/auth/change_email_view";
 import ChangeUsernameView from "admin/auth/change_username_view";
 import { updateSelectedThemeOfUser } from "admin/rest_api";
@@ -8,10 +17,9 @@ import { useWkSelector } from "libs/react_hooks";
 import { isUserAdmin, isUserTeamManager } from "libs/utils";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
-import { getSystemColorTheme } from "theme";
+import { Link } from "react-router";
 import type { APIUserTheme } from "types/api_types";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
-import { setThemeAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
@@ -36,8 +44,6 @@ function AccountProfileView() {
     if (selectedTheme !== newTheme) {
       const newUser = await updateSelectedThemeOfUser(activeUser.id, newTheme);
       dispatch(setActiveUserAction(newUser));
-
-      dispatch(setThemeAction(newTheme === "auto" ? getSystemColorTheme() : newTheme));
     }
   };
 
@@ -65,15 +71,16 @@ function AccountProfileView() {
   const profileItems: SettingsCardProps[] = [
     {
       title: "Name",
-      content: isChangeNameVisible ? (
+      icon: <UserOutlined />,
+      // While editing, the form replaces the value.
+      content: isChangeNameVisible ? null : formatUserName(activeUser, activeUser),
+      children: isChangeNameVisible ? (
         <ChangeUsernameView
           user={activeUser}
           onClose={() => setChangeNameViewVisible(false)}
           setEditedUser={(updatedUser) => dispatch(setActiveUserAction(updatedUser))}
         />
-      ) : (
-        formatUserName(activeUser, activeUser)
-      ),
+      ) : null,
       action: (
         <Button
           type="default"
@@ -86,11 +93,12 @@ function AccountProfileView() {
     },
     {
       title: "Email",
-      content: isChangeEmailVisible ? (
+      icon: <MailOutlined />,
+      content: isChangeEmailVisible ? null : activeUser.email,
+      hint: "Used for login and notification emails",
+      children: isChangeEmailVisible ? (
         <ChangeEmailView onCancel={() => setChangeEmailVisible(false)} />
-      ) : (
-        activeUser.email
-      ),
+      ) : null,
       action: (
         <Button
           type="default"
@@ -103,10 +111,13 @@ function AccountProfileView() {
     },
     {
       title: "Organization",
+      icon: <BankOutlined />,
       content: activeOrganization?.name || activeUser.organization,
+      hint: isUserAdmin(activeUser) ? <Link to="/organization">Go to organization</Link> : null,
     },
     {
       title: "Role",
+      icon: <SafetyCertificateOutlined />,
       content: role,
       tooltip: (
         <a href="https://docs.webknossos.org/webknossos/users/access_rights.html">Learn More</a>
@@ -114,6 +125,7 @@ function AccountProfileView() {
     },
     {
       title: "Theme",
+      icon: <BgColorsOutlined />,
       content: (
         <Space.Compact>
           <Button>{themeItems.find((item) => item.key === selectedTheme)?.label}</Button>
@@ -134,12 +146,7 @@ function AccountProfileView() {
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         {profileItems.map((item) => (
           <Col span={12} key={item.title}>
-            <SettingsCard
-              title={item.title}
-              content={item.content}
-              tooltip={item.tooltip}
-              action={item.action}
-            />
+            <SettingsCard {...item} />
           </Col>
         ))}
       </Row>

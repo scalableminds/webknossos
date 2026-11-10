@@ -1,4 +1,5 @@
 import template from "lodash-es/template";
+import type { ReactNode } from "react";
 import type { Vector4 } from "viewer/constants";
 import type {
   DatasetConfiguration,
@@ -127,21 +128,23 @@ A reload is necessary to return to a valid state.`,
   "save.failed.permanent":
     "Failed to save annotation. Unfortunately, there might be a potential data loss. Please reload the page, check and correct the annotation.",
   "undo.no_undo":
-    "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+    "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Version History' entry in the menu next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
   "undo.no_undo_during_proofread":
-    "Undo/redo is not supported during proofreading yet. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+    "Undo/redo is not supported during proofreading yet. Please use the 'Version History' entry in the menu next to the 'Save' button.",
   "undo.no_undo_in_live_collab":
-    "Undo/redo is not supported when live collaboration ('simultaneous editing') is enabled. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button. Note that this discards pending changes from collaborators of this annotation and forces them to reload the page.",
+    "Undo/redo is not supported when live collaboration ('simultaneous editing') is enabled. Please use the 'Version History' entry in the menu next to the 'Save' button. Note that this discards pending changes from collaborators of this annotation and forces them to reload the page.",
+  "undo.collaboration_mode_changed":
+    "Changes made before live collaboration ('simultaneous editing') was turned on or off cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Version History' entry in the menu next to the 'Save' button.",
   "undo.import_volume_tracing":
-    "Importing a volume annotation cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+    "Importing a volume annotation cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Version History' entry in the menu next to the 'Save' button.",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
   "download.python_do_not_share": template(
     "These snippets are pre-configured and contain your personal access token and <%- typeName %> meta data. Do not share this information with anyone you do not trust!",
   ),
   "download.export_as_tiff": template(
-    "Export your <%- typeName %> as TIFF images. Large exports may take a few minutes.",
+    "Export your <%- typeName %> as TIFF or OME-Zarr. Large exports may take a few minutes.",
   ),
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
   "data.enabled_render_missing_data_black":
@@ -160,21 +163,30 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.out_of_task_bounds": "The current position is outside of the task's bounding box.",
   "tracing.copy_position": "Copy position to clipboard",
   "tracing.copy_sharing_link": "Copy sharing link to clipboard",
-  "tracing.tree_length_notification": (treeName: string, lengthInNm: string, lengthInVx: string) =>
-    `The tree ${treeName} has a total path length of ${lengthInNm} (${lengthInVx}).`,
+  "tracing.tree_length_notification": (
+    treeName: string,
+    lengthInUnit: ReactNode,
+    lengthInVx: string,
+  ) => (
+    <>
+      The tree {treeName} has a total path length of {lengthInUnit} ({lengthInVx}).
+    </>
+  ),
   "tracing.sharing_modal_basic_information": (sharingActiveNode?: boolean) =>
     `This link includes the ${
       sharingActiveNode ? "active tree node," : ""
     } current position, zoom value and ID mapping. Consider fine-tuning your current view before copying the URL.`,
   "tracing.sharing_modal_zarr_information": (
     <span>
-      This{" "}
+      These{" "}
       <a href="https://zarr.dev" target="_blank" rel="noreferrer">
         Zarr
       </a>{" "}
-      link may be used by other tools to load the dataset&apos;s data in a streaming manner.
+      links may be used by other tools to load the dataset&apos;s data in a streaming manner.
     </span>
   ),
+  "tracing.zarr_link_compatibility_hint":
+    'Layer links work with any Zarr-compatible tool. The "All layers" link only works in WEBKNOSSOS.',
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
   "tracing.segment_id_out_of_bounds": (
     requestedId: bigint,
@@ -277,6 +289,9 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The WebGL context was lost. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, you can also try to lower the data rendering quality in the settings. Restarting your browser might also help.",
   "webgl.context_recovery":
     "The WebGL context has been recovered. If you experience unusual behavior, consider reloading the page.",
+  "webgl.too_many_layers_per_pool": template(
+    "Your hardware cannot load this dataset, because it supports at most <%- maxArrayTextureLayers %> layers with similar element classes (e.g. uint8 and uint32), and this dataset has more.",
+  ),
   "webgl.too_many_active_layers": template(
     "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the left sidebar settings.",
   ),
@@ -328,6 +343,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
   "dataset.clear_cache_success": "The dataset was reloaded successfully.",
+  "dataset.clear_cache_failed": "The dataset could not be reloaded.",
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "task.tooltip_explain_reset":
     "Resets this task instance to its initial state, undoing any annotation work of the assigned user. The task will remain assigned to this user for further annotation work.",
@@ -503,10 +519,6 @@ instead. Only enable this option if you understand its effect. All layers will n
   "ui.moving_center_tab_into_border_error": "You cannot move this tab into a sidebar!",
   "ui.moving_border_tab_into_center_error": "You cannot move this tab out of this sidebar!",
   "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
-  "organization.plan.upgrage_request_sent":
-    "An email with your upgrade request has been sent to the WEBKNOSSOS sales team.",
-  "organization.credit_request_sent":
-    "An email with your credit request has been sent to the WEBKNOSSOS sales team.",
   "organization.plan.feature_not_available": (
     requiredPlan: string,
     organizationOwnerName: string,

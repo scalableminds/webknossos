@@ -174,12 +174,7 @@ class AnnotationService @Inject() (
           }
           .headOption
           .toFox
-        _ <- Fox.fromBool(
-          ElementClass.largestSegmentIdIsInRange(fallbackLayer.largestSegmentId, fallbackLayer.elementClass)
-        ) ?~> Msg.Annotation.Volume.largestSegmentIdExceedsRange(
-          fallbackLayer.largestSegmentId.getOrElse(-1),
-          fallbackLayer.elementClass.toString
-        )
+        _ <- ElementClass.assertLargestSegmentIdIsInRange(fallbackLayer.largestSegmentId, fallbackLayer.elementClass)
       } yield fallbackLayer
 
     for {
@@ -361,9 +356,8 @@ class AnnotationService @Inject() (
     for {
       annotationBaseId <- annotationDAO.findBaseIdForTask(taskId) ?~> "Failed to retrieve annotation base id."
       annotationBase <- annotationDAO.findOne(annotationBaseId) ?~> "Failed to retrieve annotation base."
-      datasetName <- datasetDAO.getNameById(annotationBase._dataset)(using GlobalAccessContext) ?~> Msg.Dataset
+      dataset <- datasetDAO.findOne(annotationBase._dataset) ?~> Msg.Dataset
         .notFoundForAnnotation(annotationBase._dataset, annotationBase._id)
-      dataset <- datasetDAO.findOne(annotationBase._dataset) ?~> Msg.Dataset.notFound(annotationBase._dataset)
       _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.notUsable(dataset._id)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       _ = logger.info(
@@ -487,7 +481,7 @@ class AnnotationService @Inject() (
       skeletonIdOpt <- skeletonTracingIdBox.toFox
       volumeIdOpt <- volumeTracingIdBox.toFox
       _ <- Fox.fromBool(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> Msg.Annotation.needsEitherSkeletonOrVolume
-      project <- projectDAO.findOne(task._project)
+      _ <- projectDAO.findOne(task._project) ?~> Msg.Project.notFound(task._project)
       annotationLayers <- AnnotationLayer.layersFromIds(skeletonIdOpt, volumeIdOpt)
       annotationBase = Annotation(
         ObjectId.generate,

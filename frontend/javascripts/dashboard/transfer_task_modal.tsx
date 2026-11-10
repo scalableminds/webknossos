@@ -1,10 +1,10 @@
 import { transferTask } from "admin/api/tasks";
 import UserSelectionComponent from "admin/user/user_selection_component";
-import { Modal } from "antd";
+import { Alert, Modal } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import type React from "react";
 import { memo, useCallback, useState } from "react";
-import type { APIAnnotation } from "types/api_types";
+import type { APIAnnotation, APIUser } from "types/api_types";
 
 type Props = {
   onChange: (updatedAnnotation: APIAnnotation) => void;
@@ -15,9 +15,11 @@ type Props = {
 
 const TransferTaskModal: React.FC<Props> = ({ isOpen, onCancel, annotationId, onChange }) => {
   const [currentUserIdValue, setCurrentUserIdValue] = useState("");
+  const [selectedUser, setSelectedUser] = useState<APIUser | undefined>(undefined);
 
-  const handleSelectChange = useCallback((userId: string) => {
+  const handleSelectChange = useCallback((userId: string, user: APIUser | undefined) => {
     setCurrentUserIdValue(userId);
+    setSelectedUser(user);
   }, []);
 
   const transfer = useCallback(async () => {
@@ -29,6 +31,7 @@ const TransferTaskModal: React.FC<Props> = ({ isOpen, onCancel, annotationId, on
       const updatedAnnotation = await transferTask(annotationId, currentUserIdValue);
       onChange(updatedAnnotation);
       setCurrentUserIdValue("");
+      setSelectedUser(undefined);
     } catch (error) {
       handleGenericError(error as Error);
     }
@@ -50,8 +53,17 @@ const TransferTaskModal: React.FC<Props> = ({ isOpen, onCancel, annotationId, on
     >
       <div className="control-group">
         <div className="form-group">
-          <UserSelectionComponent handleSelection={handleSelectChange} />
+          <UserSelectionComponent handleSelection={handleSelectChange} includeDeactivatedUsers />
         </div>
+        {selectedUser != null && !selectedUser.isActive ? (
+          <Alert
+            type="warning"
+            showIcon
+            style={{ marginTop: 16 }}
+            title="The selected user is deactivated."
+            description="Deactivated users cannot log in, so they won't be able to work on this task unless their account is activated again."
+          />
+        ) : null}
       </div>
     </Modal>
   );

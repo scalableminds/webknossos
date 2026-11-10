@@ -1,9 +1,11 @@
-import { call, put } from "redux-saga/effects";
+// biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
 import {
   getFlattenedUpdateActions,
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
+import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
+import { call, put } from "redux-saga/effects";
 import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
@@ -15,7 +17,7 @@ import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initialMapping } from "../proofreading/proofreading_fixtures";
 import {
   initializeMappingAndTool,
@@ -109,6 +111,53 @@ describe("Collaborative editing of segment items", () => {
           color: updateSegmentProps.color,
         });
       }
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("doesn't ask the tracingstore for agglomerates when rebasing without an editable mapping", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      // As when only brushing: no mapping is active, and none is editable.
+      expect(Store.getState().annotation.volumes[0].hasEditableMapping).toBeFalsy();
+      expect(
+        Store.getState().temporaryConfiguration.activeMappingByLayer[tracingId]?.mappingName,
+      ).toBeFalsy();
+      yield put(setCollaborationModeAction("Concurrent"));
+      yield call(() => api.tracing.save());
+      const callsBefore = vi.mocked(getAgglomeratesForSegmentsFromTracingstore).mock.calls.length;
+
+      // Another user's change, so that saving the local segment rebases.
+      backendMock.planVersionInjection(Store.getState().annotation.version + 1, [
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: tracingId,
+            id: 2n,
+            anchorPosition: [4, 5, 6],
+            additionalCoordinates: null,
+            name: "Remote",
+            color: null,
+            groupId: null,
+            creationTime: Date.now(),
+            metadata: [],
+          },
+        },
+      ]);
+
+      yield put(updateSegmentAction(1n, { anchorPosition: [1, 2, 3], name: "Local" }, tracingId));
+      yield call(() => api.tracing.save());
+
+      expect(vi.mocked(getAgglomeratesForSegmentsFromTracingstore).mock.calls.length).toBe(
+        callsBefore,
+      );
+      const { segments } = Store.getState().annotation.volumes[0];
+      expect(segments.getNullable(1n)).toMatchObject({ name: "Local" });
+      expect(segments.getNullable(2n)).toMatchObject({ name: "Remote" });
     });
 
     await task.toPromise();

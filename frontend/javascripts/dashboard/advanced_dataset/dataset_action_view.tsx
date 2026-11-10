@@ -10,8 +10,9 @@ import {
 import { App, type MenuProps } from "antd";
 import type { useAppProps } from "antd/es/app/context";
 import { applyViewConfigurationToDatasetsInFolder } from "dashboard/advanced_dataset/apply_view_configuration";
-import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
+import CreateAnnotationModal from "dashboard/advanced_dataset/create_annotation_modal";
 import { useDatasetCollectionContext } from "dashboard/dataset/dataset_collection_context";
+import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import window from "libs/window";
 import messages from "messages";
@@ -19,18 +20,18 @@ import { useState } from "react";
 import { Link } from "react-router";
 import type { APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
-import { getNoActionsAvailableMenu } from "viewer/view/context_menu/helpers";
+import { getNoActionsAvailableMenu } from "viewer/view/context_menu/generic_context_menu_helpers";
 
 function NewAnnotationLink({
   dataset,
-  isCreateExplorativeModalVisible,
-  onShowCreateExplorativeModal,
-  onCloseCreateExplorativeModal,
+  isCreateAnnotationModalVisible,
+  onShowCreateAnnotationModal,
+  onCloseCreateAnnotationModal,
 }: {
   dataset: APIDatasetCompact;
-  isCreateExplorativeModalVisible: boolean;
-  onShowCreateExplorativeModal: () => void;
-  onCloseCreateExplorativeModal: () => void;
+  isCreateAnnotationModalVisible: boolean;
+  onShowCreateAnnotationModal: () => void;
+  onCloseCreateAnnotationModal: () => void;
 }) {
   return (
     <div>
@@ -56,12 +57,21 @@ function NewAnnotationLink({
       <a
         title="New Annotation With Custom Properties"
         className="ant-dropdown-link"
-        onClick={onShowCreateExplorativeModal}
+        onClick={onShowCreateAnnotationModal}
       >
         <EllipsisOutlined />
       </a>
-      {isCreateExplorativeModalVisible ? (
-        <CreateExplorativeModal datasetId={dataset.id} onClose={onCloseCreateExplorativeModal} />
+      {isCreateAnnotationModalVisible ? (
+        // The modal is rendered via a portal, but React still bubbles its events
+        // to the table row. Stop them here so that they don't (de)select the row
+        // or open the row's context menu.
+        <span
+          onClick={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+          onContextMenu={(event) => event.stopPropagation()}
+        >
+          <CreateAnnotationModal datasetId={dataset.id} onClose={onCloseCreateAnnotationModal} />
+        </span>
       ) : null}
     </div>
   );
@@ -69,6 +79,9 @@ function NewAnnotationLink({
 
 type Props = {
   dataset: APIDatasetCompact;
+  // Compact layouts show the actions in a single row below the dataset name. They omit the view
+  // link (the name already links to the dataset view) and the settings label.
+  isCompact?: boolean;
 };
 
 export function useReloadDataset() {
@@ -89,14 +102,21 @@ export function useReloadDataset() {
 
 function DatasetActionView(props: Props) {
   const { modal } = App.useApp();
-  const { dataset } = props;
+  const { dataset, isCompact } = props;
 
-  const [isCreateExplorativeModalVisible, setIsCreateExplorativeModalVisible] = useState(false);
+  const [isCreateAnnotationModalVisible, setIsCreateAnnotationModalVisible] = useState(false);
 
   const datasetSettingsLink = (
     <Link to={`/datasets/${getReadableURLPart(dataset)}/edit`} title="Open Dataset Settings">
-      <SettingOutlined className="icon-margin-right" />
-      Settings
+      {/* The link's title doubles as the tooltip of the icon-only variant. */}
+      {isCompact ? (
+        <SettingOutlined />
+      ) : (
+        <>
+          <SettingOutlined className="icon-margin-right" />
+          Settings
+        </>
+      )}
     </Link>
   );
   const brokenDatasetActions = (
@@ -120,7 +140,7 @@ function DatasetActionView(props: Props) {
         }
       >
         <WarningOutlined className="icon-margin-right" />
-        Show Error
+        Show Status
       </a>
     </div>
   );
@@ -130,14 +150,16 @@ function DatasetActionView(props: Props) {
       {" "}
       <NewAnnotationLink
         dataset={dataset}
-        isCreateExplorativeModalVisible={isCreateExplorativeModalVisible}
-        onShowCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(true)}
-        onCloseCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(false)}
+        isCreateAnnotationModalVisible={isCreateAnnotationModalVisible}
+        onShowCreateAnnotationModal={() => setIsCreateAnnotationModalVisible(true)}
+        onCloseCreateAnnotationModal={() => setIsCreateAnnotationModalVisible(false)}
       />
-      <Link to={getViewDatasetURL(dataset)} title="View Dataset">
-        <EyeOutlined className="icon-margin-right" />
-        View
-      </Link>
+      {isCompact ? null : (
+        <Link to={getViewDatasetURL(dataset)} title="View Dataset">
+          <EyeOutlined className="icon-margin-right" />
+          View
+        </Link>
+      )}
       {dataset.isEditable ? datasetSettingsLink : null}
     </>
   );
@@ -154,8 +176,12 @@ const onReloadImpl = async (
   datasetId: string,
   clearCacheAndReloadDataset: (arg0: string) => Promise<void>,
 ) => {
-  await clearCacheAndReloadDataset(datasetId);
-  Toast.success(messages["dataset.clear_cache_success"]);
+  try {
+    await clearCacheAndReloadDataset(datasetId);
+    Toast.success(messages["dataset.clear_cache_success"]);
+  } catch (error) {
+    handleGenericError(error as Error, messages["dataset.clear_cache_failed"]);
+  }
 };
 
 export function getDatasetActionContextMenu({

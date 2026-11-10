@@ -1,0 +1,14 @@
+@(name: String, sharerName: String, annotationName: String, datasetName: String, teamNames: List[String], annotationUrl: String, additionalFooter: String)
+
+@emailBaseTemplate(additionalFooter) {
+<p>Hi @{name},</p>
+
+<p>
+  @{sharerName} shared the annotation <i>@{annotationName}</i> of the dataset <i>@{datasetName}</i> with
+  @if(teamNames.length == 1) {your team <i>@{teamNames.head}</i>.} else {your teams <i>@{teamNames.mkString(", ")}</i>.}
+</p>
+
+@emailButton("Open Annotation", annotationUrl)
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

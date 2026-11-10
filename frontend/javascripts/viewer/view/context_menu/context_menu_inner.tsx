@@ -9,6 +9,8 @@ import { useNodeContextMenuOptions } from "./node_context_menu_options";
 import { hideContextMenu } from "./use_context_menu_actions";
 import { useContextMenuInfoRows } from "./use_context_menu_info_rows";
 
+const NO_SEGMENT_ID = 0n;
+
 export function ContextMenuInner() {
   const contextInfo = useWkSelector((state) => state.uiInformation.contextInfo);
 
@@ -19,12 +21,15 @@ export function ContextMenuInner() {
     viewport: maybeViewport,
   } = contextInfo;
 
-  const inputRef = useContext(ContextMenuContext);
+  const containerElement = useContext(ContextMenuContext);
 
-  const segmentIdAtPosition =
+  // The segment id depends on live state that is not passed to the function (e.g., loaded
+  // buckets, the mapping). Reading it in a selector keeps it up to date.
+  const segmentIdAtPosition = useWkSelector(() =>
     globalPosition != null && contextMenuPosition != null
       ? getSegmentIdForPosition(globalPosition)
-      : 0n;
+      : NO_SEGMENT_ID,
+  );
 
   const { infoRows } = useContextMenuInfoRows(contextInfo, segmentIdAtPosition);
 
@@ -44,8 +49,7 @@ export function ContextMenuInner() {
     items: menuItems,
   };
 
-  if (inputRef == null || inputRef.current == null) return null;
-  const refContent = inputRef.current;
+  if (containerElement == null) return null;
 
   return (
     <React.Fragment>
@@ -55,7 +59,7 @@ export function ContextMenuInner() {
         menu={menu}
         classNames={{ root: "dropdown-overlay-container-for-context-menu" }}
         open={contextMenuPosition != null}
-        getPopupContainer={() => refContent}
+        getPopupContainer={() => containerElement}
         destroyOnHidden
       >
         <div />

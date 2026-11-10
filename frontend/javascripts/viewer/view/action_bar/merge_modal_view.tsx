@@ -1,6 +1,7 @@
 import { CheckCircleOutlined, InfoCircleOutlined, LoadingOutlined } from "@ant-design/icons";
 import {
   getAnnotationCompoundInformation,
+  getProjects,
   getTracingForAnnotationType,
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
@@ -29,7 +30,7 @@ import messages from "messages";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { type APIAnnotation, APIAnnotationTypeEnum } from "types/api_types";
-import { getSkeletonDescriptor } from "viewer/model/accessors/skeletontracing_accessor";
+import { getSkeletonDescriptor } from "viewer/model/accessors/annotation_accessor";
 import { addTreesAndGroupsAction } from "viewer/model/actions/skeletontracing_actions";
 import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { api } from "viewer/singletons";
@@ -73,18 +74,12 @@ function MergeModalViewInner({ isOpen, onOk }: Props) {
 
   const { data: projects = [], isFetching: isFetchingProjects } = useQueryWithErrorHandling({
     queryKey: ["projects"],
-    queryFn: async () => {
-      const projectsResponse: Array<{ id: string; name: string }> = await Request.receiveJSON(
-        "/api/projects",
-        {
-          showErrorToast: false,
-        },
-      );
-      return projectsResponse.map((project) => ({
+    queryFn: getProjects,
+    select: (fetchedProjects) =>
+      fetchedProjects.map((project) => ({
         id: project.id,
         label: project.name,
-      }));
-    },
+      })),
     enabled: isOpen,
     refetchOnWindowFocus: false,
   });

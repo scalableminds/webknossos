@@ -29,6 +29,7 @@ object Zarr3Array extends LazyLogging {
       headerBytes <- (path / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
       header <- JsonHelper.parseAs[Zarr3ArrayHeader](headerBytes).toFox ?~> "Could not parse array header"
+      _ <- DatasetArray.assertChunkSizeLimit(header.bytesPerChunk)
       array <- tryo(
         new Zarr3Array(
           path,

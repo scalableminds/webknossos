@@ -283,6 +283,7 @@ class SceneController {
       color: CUBE_COLOR,
       showCrossSections: true,
       isHighlighted: false,
+      isActive: false,
     });
 
     this.contour = new ContourGeometry();
@@ -504,6 +505,7 @@ class SceneController {
         color: 0x00ff00,
         showCrossSections: true,
         isHighlighted: false,
+        isActive: false,
       });
       taskCube.getMeshes().forEach((mesh) => {
         this.rootNode.add(mesh);
@@ -684,6 +686,7 @@ class SceneController {
       this.deferUntilCompileReady(() => cube.destroy());
     }
     const newUserBoundingBoxGroup = new Group();
+    const { activeUserBoundingBoxId } = Store.getState().uiInformation;
     this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
       const { min, max } = boundingBox;
       const bbColor: Vector3 = [color[0] * 255, color[1] * 255, color[2] * 255];
@@ -694,6 +697,8 @@ class SceneController {
         showCrossSections: true,
         id,
         isHighlighted: this.highlightedBBoxId === id,
+        isActive: activeUserBoundingBoxId === id,
+        deferDisposal: (dispose) => this.deferUntilCompileReady(dispose),
       });
       bbCube.setVisibility(isVisible);
       bbCube.getMeshes().forEach((mesh) => {
@@ -794,6 +799,7 @@ class SceneController {
           // is visible where users usually work and the visibility/color controls have a visible effect.
           showCrossSections: true,
           isHighlighted: false,
+          isActive: false,
         });
         bbCube.setVisibility(layerBoundingBoxVisibilities[layer.name] ?? false);
         bbCube.getMeshes().forEach((mesh) => {
@@ -858,6 +864,17 @@ class SceneController {
     }
 
     this.highlightedBBoxId = bboxId;
+  }
+
+  // Briefly fills the given user bounding box, e.g. to point out a newly created box.
+  flashUserBoundingBox(bboxId: number): void {
+    this.userBoundingBoxes.find((bbCube) => bbCube.id === bboxId)?.flashFill();
+  }
+
+  setActiveUserBoundingBox(bboxId: number | null | undefined): void {
+    for (const bbCube of this.userBoundingBoxes) {
+      bbCube.setIsActive(bbCube.id === bboxId);
+    }
   }
 
   setSkeletonGroupVisibility(isVisible: boolean) {
@@ -929,6 +946,15 @@ class SceneController {
   }
 
   async destroy(): Promise<void> {
+    // Stop listening to the store synchronously, before the await below. The caller resets the
+    // store right after calling destroy(). Listeners that are still active would then rebuild
+    // the scene objects from the empty default state.
+    for (const fn of this.storePropertyUnsubscribers) {
+      fn();
+    }
+    this.storePropertyUnsubscribers = [];
+    this.debouncedUpdateMipVolumes.cancel();
+
     // See waitForPendingCompiles(); must happen before any disposal below, including
     // skeleton removal.
     await this.waitForPendingCompiles();
@@ -948,12 +974,6 @@ class SceneController {
       this.removeSkeleton(Number.parseInt(skeletonId, 10));
     }
 
-    for (const fn of this.storePropertyUnsubscribers) {
-      fn();
-    }
-    this.storePropertyUnsubscribers = [];
-
-    this.debouncedUpdateMipVolumes.cancel();
     for (const { volume } of this.mipVolumes.values()) {
       this.rootNode.remove(volume.mesh);
       volume.dispose();
@@ -1006,6 +1026,10 @@ class SceneController {
       listenToStoreProperty(
         (storeState) => getSomeTracing(storeState.annotation).userBoundingBoxes,
         (bboxes) => this.setUserBoundingBoxes(bboxes),
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.uiInformation.activeUserBoundingBoxId,
+        (activeBBoxId) => this.setActiveUserBoundingBox(activeBBoxId),
       ),
       listenToStoreProperty(
         (storeState) => getDataLayers(storeState.dataset),

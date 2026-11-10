@@ -92,6 +92,20 @@ type APIDataLayerBase = {
   readonly additionalAxes: Array<AdditionalAxis> | null;
   readonly coordinateTransformations?: CoordinateTransformation[] | null;
   readonly hasSegmentIndex?: boolean;
+  readonly attachments?: APIDataLayerAttachments;
+};
+type APILayerAttachment = {
+  readonly name: string;
+  readonly path: string;
+  readonly dataFormat: string;
+};
+export type APIDataLayerAttachments = {
+  readonly meshes?: Array<APILayerAttachment>;
+  readonly agglomerates?: Array<APILayerAttachment>;
+  readonly segmentIndex?: APILayerAttachment;
+  readonly connectomes?: Array<APILayerAttachment>;
+  readonly cumsum?: APILayerAttachment;
+  readonly segmentStatistics?: APILayerAttachment;
 };
 export type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";
@@ -336,11 +350,13 @@ export type APIUserBase = APIUserCompact & {
   readonly teams: Array<APITeamMembership>;
   readonly isAdmin: boolean;
   readonly isDatasetManager: boolean;
+  readonly isActive: boolean;
 };
 export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
   hasSeenSegmentAnythingWithDepth?: boolean;
   lastViewedWhatsNewTimestamp?: number;
+  newestSeenReleaseNoteId?: string;
   latestAcknowledgedMaintenanceInfo?: string;
   suppressManyBucketUpdatesWarning?: boolean;
 };
@@ -700,6 +716,16 @@ export type APIOrganization = APIOrganizationCompact & {
   readonly usedStorageBytes: number;
   readonly ownerName?: string;
   readonly milliCreditBalance: number | null | undefined;
+  readonly partner: APIPartner | null;
+};
+// A partner co-brands WEBKNOSSOS for the organizations assigned to it.
+export type APIPartner = {
+  readonly id: string;
+  readonly name: string;
+  readonly logoUrl: string;
+  // Shown where the navbar is collapsed. Falls back to logoUrl.
+  readonly compactLogoUrl: string | null;
+  readonly linkUrl: string | null;
 };
 export type APIPricingPlanStatus = {
   readonly pricingPlan: PricingPlanEnum;
@@ -799,6 +825,12 @@ export type APIFeatureToggles = {
 
 export type APIJobState = "PENDING" | "STARTED" | "SUCCESS" | "FAILURE" | "CANCELLED";
 
+export enum APIExportFormat {
+  OME_TIFF = "ome_tiff",
+  TIFF_STACK = "tiff_stack",
+  OZX = "ozx",
+}
+
 export enum APIJobCommand {
   ALIGN_SECTIONS = "align_sections",
   CONVERT_TO_WKW = "convert_to_wkw",
@@ -872,6 +904,9 @@ export type AiModel = {
   readonly category: APIAiModelCategory;
   readonly isSuperUserOnly: boolean;
   readonly isPretrained: boolean;
+  // Set for pretrained models that are only available to the organizations of a partner.
+  readonly partnerId: string | null;
+  readonly thumbnailUrl: string | null;
 };
 
 // Tracing related datatypes

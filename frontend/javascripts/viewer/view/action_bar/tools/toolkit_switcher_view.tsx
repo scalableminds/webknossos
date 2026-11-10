@@ -63,7 +63,6 @@ export default function ToolkitView() {
         dot={activeToolkit !== Toolkit.ALL_TOOLS}
         style={{
           boxShadow: "none",
-          background: "red",
           zIndex: 1000,
         }}
       >

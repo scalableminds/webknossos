@@ -23,8 +23,6 @@ class SkeletonTracingService @Inject() (
     with ColorGenerator
     with AnnotationUserStateUtils {
 
-  implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
-
   def saveSkeleton(
       tracingId: String,
       version: Long,

@@ -4,9 +4,10 @@
  *
  * `editVolumeLayerAsync` (viewer/model/sagas/volumetracing_saga.tsx) owns the
  * event loop (START_EDITING / ADD_TO_CONTOUR_LIST / FINISH_EDITING); this owns
- * everything between. Nothing here touches the save queue, update actions, or
- * undo — buckets are mutated in place only, and saving still goes through the
- * existing push queue (design doc §12.2).
+ * everything between. The driver itself emits no update actions: it mutates
+ * buckets in place and returns the committed bucket diffs. Depending on the
+ * SaveMode, the buckets are saved whole via the push queue, or the saga turns
+ * the diffs into `updateBucketPartial` update actions.
  */
 
 import type {
@@ -15,10 +16,11 @@ import type {
   SegmentId,
   Vector3,
 } from "../core/volume_annotation_types";
+import type { MaskShape } from "../core/volume_edit_intents";
 import { VolumeTransaction } from "../core/volume_transaction";
 import { rasterize } from "../core/voxel_rasterizer";
 import type { DriverOptions, DriverResult } from "./tool_driver_types";
-import { magListFromDenseMags, WkDataCubeAdapter } from "./wk_data_cube_adapter";
+import { magListForCube, WkDataCubeAdapter } from "./wk_data_cube_adapter";
 
 export interface BrushDriverOptions extends DriverOptions {
   overwriteMode: OverwriteMode;
@@ -45,20 +47,19 @@ export class BrushDriver {
     private readonly options: BrushDriverOptions,
     start: Vector3,
   ) {
-    this.adapter = new WkDataCubeAdapter(options.cube);
+    this.adapter = new WkDataCubeAdapter(options.cube, options.saveMode);
     this.ctx = {
       sourceMagIndex: options.magIndex,
       activeSegmentId: options.segmentId,
       overwriteMode: options.overwriteMode,
       overwritableValue: options.overwritableValue,
-      editableBoundingBox: null,
       additionalCoordinates: options.additionalCoordinates,
     };
     this.transaction = new VolumeTransaction(
       `brush-${Date.now()}`,
       this.ctx,
       this.adapter,
-      magListFromDenseMags(options.denseMags),
+      magListForCube(options.cube),
     );
     this.last = start;
     this.paint(start, start);
@@ -87,8 +88,18 @@ export class BrushDriver {
   }
 
   /**
+   * Add the auto-fill of a closed stroke to the stroke's transaction, so that
+   * stroke and fill are propagated, diffed and undone as one. Call it before
+   * `finish`, which writes the fill to the cube along with everything else.
+   */
+  fill(mask: MaskShape): void {
+    rasterize(mask, this.ctx, this.transaction);
+  }
+
+  /**
    * Pointer-up: run mag propagation once over the coalesced write set, apply
-   * it, and report what happened. The returned diff is *not* saved.
+   * it, and report what happened — including the bucket diffs, which the
+   * caller hands to the save queue under the "partialUpdates" SaveMode.
    */
   finish(): DriverResult {
     const diff = this.transaction.commit(0, "brush");
@@ -101,6 +112,7 @@ export class BrushDriver {
     return {
       voxels,
       buckets: diff.bucketDiffs.length,
+      bucketDiffs: diff.bucketDiffs,
       mags: [...new Set(diff.bucketDiffs.map((d) => d.address[3]))].sort((a, b) => a - b),
       durationMs: performance.now() - this.startedAt,
     };

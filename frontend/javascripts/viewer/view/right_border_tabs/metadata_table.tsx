@@ -1,5 +1,5 @@
 import { CloseOutlined, TagsOutlined } from "@ant-design/icons";
-import { Button } from "antd";
+import { Button, Checkbox } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import {
   type APIMetadataWithError,
@@ -11,6 +11,30 @@ import {
 import { memo } from "react";
 import { type APIMetadataEntry, APIMetadataEnum, type MetadataEntryProto } from "types/api_types";
 import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
+
+function isBoolMetadataEntry(prop: MetadataEntryProto): boolean {
+  return (
+    prop.boolValue != null &&
+    prop.stringValue == null &&
+    prop.numberValue == null &&
+    (prop.stringListValue == null || prop.stringListValue.length === 0)
+  );
+}
+
+export function toAPIMetadataEntry(prop: MetadataEntryProto): APIMetadataEntry {
+  if (prop.stringValue != null) {
+    return { key: prop.key, type: APIMetadataEnum.STRING, value: prop.stringValue };
+  }
+  if (prop.numberValue != null) {
+    return { key: prop.key, type: APIMetadataEnum.NUMBER, value: prop.numberValue };
+  }
+  if (isBoolMetadataEntry(prop)) {
+    // There is no boolean type for the shared metadata table. The value is
+    // rendered as a checkbox instead (see getValueInput).
+    return { key: prop.key, type: APIMetadataEnum.STRING, value: String(prop.boolValue) };
+  }
+  return { key: prop.key, type: APIMetadataEnum.STRING_ARRAY, value: prop.stringListValue ?? [] };
+}
 
 const getKeyInputIdForIndex = (index: number) => `metadata-key-input-id-${index}`;
 
@@ -98,18 +122,23 @@ function MetadataTableRowsInner<ItemType extends { metadata: MetadataEntryProto[
     );
   };
 
-  const itemMetadata = item.metadata.map((prop) => ({
-    key: prop.key,
-    type:
-      prop.stringValue != null
-        ? APIMetadataEnum.STRING
-        : prop.numberValue != null
-          ? APIMetadataEnum.NUMBER
-          : APIMetadataEnum.STRING_ARRAY,
-    value: prop.stringValue || prop.numberValue || prop.stringListValue || "",
-  }));
+  const itemMetadata = item.metadata.map(toAPIMetadataEntry);
 
   const getValueInput = (entry: APIMetadataWithError, index: number) => {
+    const prop = item.metadata[index];
+    if (prop != null && isBoolMetadataEntry(prop)) {
+      // Boolean entries only exist in annotations (e.g., imported from NML) and
+      // are not supported by the shared metadata value input.
+      return (
+        <Checkbox
+          checked={prop.boolValue}
+          disabled={readOnly}
+          onChange={(event) =>
+            updateMetadataEntryByIndex(item, index, { boolValue: event.target.checked })
+          }
+        />
+      );
+    }
     return (
       <MetadataValueInput
         entry={entry}

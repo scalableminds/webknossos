@@ -4,6 +4,7 @@ import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.util.tools.JsonAutoFormat
 import com.scalableminds.webknossos.datastore.models
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 
 case class NgffCoordinateTransformation(
     `type`: String = "scale",
@@ -25,6 +26,20 @@ case class NgffAxis(name: String, `type`: String, unit: Option[String] = None) d
         case Some(someUnit)  => Box.fromOption(LengthUnit.fromString(someUnit))
       }
     }
+}
+
+object NgffAxis {
+  // Additional axes sit between the channel and the xyz axes of streamed arrays. They get their real names (matching the
+  // zarr dimension_names) and a custom type, since NGFF allows at most three space axes and requires time axes to come
+  // before the channel axis.
+  private val additionalAxisType = "custom"
+
+  def forAdditionalAxes(additionalAxes: Option[Seq[AdditionalAxis]]): List[NgffAxis] =
+    additionalAxes
+      .getOrElse(Seq.empty)
+      .sortBy(_.index)
+      .map(axis => NgffAxis(name = axis.name, `type` = additionalAxisType))
+      .toList
 }
 
 case class NgffOmeroMetadata(channels: List[NgffChannelAttributes]) derives JsonAutoFormat

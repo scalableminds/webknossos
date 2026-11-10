@@ -1,11 +1,21 @@
+import { isJobAvailable } from "admin/organization/pricing_plan_utils";
 import { getJob, getJobs } from "admin/rest_api";
 import features from "features";
-import { useEffectOnlyOnce, usePolling } from "libs/react_hooks";
+import { useEffectOnlyOnce, usePolling, useWkSelector } from "libs/react_hooks";
 import noop from "lodash-es/noop";
 import { useState } from "react";
-import type { APIJob } from "types/api_types";
+import type { APIDataStore, APIJob, APIJobCommand } from "types/api_types";
 
 type JobInfo = [jobKey: string, jobId: string];
+
+// Whether a worker of the data store supports the job and the pricing plan of the active organization allows it
+export function useIsJobAvailable(
+  dataStore: APIDataStore | null | undefined,
+  jobCommand: APIJobCommand,
+): boolean {
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
+  return dataStore != null && isJobAvailable(dataStore, jobCommand, activeOrganization);
+}
 
 export function useStartAndPollJob({
   onSuccess = noop,

@@ -6,6 +6,7 @@ import type {
   AdditionalCoordinate,
   AiModel,
   APIAnnotationType,
+  APIExportFormat,
   APIJob,
   RenderAnimationOptions,
   VoxelSize,
@@ -26,6 +27,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
 export async function getJobs(
   command?: string,
   skipForDeletedDatasets?: boolean,
+  options: { showErrorToast?: boolean } = {},
 ): Promise<APIJob[]> {
   const params = new URLSearchParams();
   if (command) {
@@ -35,7 +37,9 @@ export async function getJobs(
     params.set("skipForDeletedDatasets", skipForDeletedDatasets ? "true" : "false");
   }
 
-  const jobs = await Request.receiveJSON(`/api/jobs?${params}`);
+  const jobs = await Request.receiveJSON(`/api/jobs?${params}`, {
+    showErrorToast: options.showErrorToast,
+  });
   assertResponseLimit(jobs);
   return jobs.map(transformBackendJobToAPIJob);
 }
@@ -114,9 +118,9 @@ export async function startExportTiffJob(
   mag: string | null | undefined,
   annotationId: string | null | undefined,
   annotationLayerName: string | null | undefined,
-  asOmeTiff: boolean,
+  exportFormat: APIExportFormat,
 ): Promise<APIJob> {
-  const params = new URLSearchParams({ bbox: bbox.join(","), asOmeTiff: asOmeTiff.toString() });
+  const params = new URLSearchParams({ bbox: bbox.join(","), exportFormat });
   if (layerName != null) {
     params.append("layerName", layerName);
   }
@@ -186,6 +190,7 @@ type RunNeuronInferenceParameters = {
   evalMaxEdgeLength?: number;
   evalSparseTubeThresholdNm?: number;
   evalMinMergerPathLengthNm?: number;
+  absoluteAffinityThreshold?: number | null;
   customConfiguration?: Record<string, JsonValue>;
 };
 

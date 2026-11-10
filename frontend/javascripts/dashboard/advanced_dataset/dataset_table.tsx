@@ -51,6 +51,7 @@ import { Fragment, PureComponent, useCallback, useContext, useEffect } from "rea
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Link } from "react-router";
+import { getActiveTheme } from "theme";
 import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
 import { Unicode } from "viewer/constants";
 import { getDatasetThumbnailURL, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
@@ -58,7 +59,8 @@ import CategorizationLabel from "viewer/view/components/categorization_label";
 import EditableTextIcon from "viewer/view/components/editable_text_icon";
 import { ContextMenuContext } from "viewer/view/context_menu/context_menu";
 import { GenericContextMenuContainer } from "viewer/view/context_menu/generic_context_menu_container";
-import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
+import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/generic_context_menu_helpers";
+import { isRowSelectionClick } from "../row_click";
 
 type FolderItemWithName = FolderItem & { name: string };
 type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
@@ -76,6 +78,8 @@ const DATASET_SORT_OPTIONS: Array<{ key: DatasetSortBy; label: string }> = [
 ];
 
 const THUMBNAIL_SIZE = 80;
+// On phones, a smaller thumbnail leaves more room for the dataset name.
+const COMPACT_THUMBNAIL_SIZE = 48;
 
 type Props = {
   datasets: Array<APIDatasetCompact>;
@@ -89,7 +93,12 @@ type Props = {
   updateDataset: (datasetId: string, updater: DatasetUpdater) => void;
   addTagToSearch: (tag: string) => void;
   onClearSearchAndFilters: () => void;
-  onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
+  // isDragStart is set when a dataset gets selected because the user started dragging it.
+  onSelectDataset: (
+    dataset: APIDatasetCompact | null,
+    multiSelect?: boolean,
+    isDragStart?: boolean,
+  ) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
   context: DatasetCollectionContextValue;
@@ -97,6 +106,8 @@ type Props = {
   // Custom content shown as the table's empty state instead of the regular hint text.
   // Used for cards for a brand-new organizations.
   emptyStateContent?: React.ReactNode;
+  // Shows smaller thumbnails (e.g., on phones).
+  isCompact?: boolean;
 };
 
 type State = {
@@ -114,7 +125,7 @@ type ContextMenuProps = {
 };
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
-  const inputRef = useContext(ContextMenuContext);
+  const containerElement = useContext(ContextMenuContext);
   const { modal } = App.useApp();
   const { datasets, contextMenuPosition, hideContextMenu, folder, datasetCollectionContext } =
     propsWithInputRef;
@@ -129,13 +140,13 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
       const target = event.target as Element;
       // Submenus may be rendered as separate popups outside of the menu container.
       const isInsideMenu =
-        inputRef?.current?.contains(target) ||
+        containerElement?.contains(target) ||
         target.closest?.(".ant-dropdown, .ant-dropdown-menu-submenu-popup") != null;
       if (!isInsideMenu) hideContextMenu();
     };
     document.addEventListener("mousedown", onMouseDown);
     return () => document.removeEventListener("mousedown", onMouseDown);
-  }, [isOpen, inputRef, hideContextMenu]);
+  }, [isOpen, containerElement, hideContextMenu]);
 
   let menu: MenuProps = { items: [] };
 
@@ -154,8 +165,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
     }
   }
 
-  if (inputRef == null || inputRef.current == null) return null;
-  const refContent = inputRef.current;
+  if (containerElement == null) return null;
 
   return (
     <Fragment>
@@ -164,7 +174,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
         menu={menu}
         classNames={{ root: "dropdown-overlay-container-for-context-menu" }}
         open={contextMenuPosition != null}
-        getPopupContainer={() => refContent}
+        getPopupContainer={() => containerElement}
         destroyOnHidden
       >
         <div />
@@ -273,7 +283,7 @@ const DraggableDatasetRow = ({
   rowKey,
   ...restProps
 }: DraggableDatasetRowProps) => {
-  const theme = useWkSelector((state) => state.uiInformation.theme);
+  const theme = useWkSelector(getActiveTheme);
 
   // @ts-expect-error
   const datasetId = restProps["data-row-key"];
@@ -368,7 +378,10 @@ class DatasetRenderer {
         <img
           src={imgSrc}
           className={`dataset-table-thumbnail ${iconClassName}`}
-          style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
+          style={{
+            width: this.datasetTable.getThumbnailSize(),
+            height: this.datasetTable.getThumbnailSize(),
+          }}
           alt=""
         />
       </Link>
@@ -384,6 +397,7 @@ class DatasetRenderer {
         >
           {this.data.name}
         </Link>
+        {this.datasetTable.renderInlineActions(this.renderActionsColumn())}
         {this.renderTags()}
         {this.renderMetaLine()}
         {this.datasetTable.props.context.globalSearchQuery != null ? (
@@ -393,6 +407,10 @@ class DatasetRenderer {
     );
   }
   renderTags(): React.ReactNode {
+    if (this.data.isActive && this.data.tags.length === 0) {
+      // Even an empty tag list would take up a line below the (block-level) compact actions.
+      return null;
+    }
     return this.data.isActive ? (
       // Tags are edited in the details sidebar, so they are only clickable for filtering here.
       <DatasetTags dataset={this.data} onClickTag={this.datasetTable.props.addTagToSearch} />
@@ -429,7 +447,7 @@ class DatasetRenderer {
     return <FormattedDate timestamp={this.data.created} />;
   }
   renderActionsColumn(): React.ReactNode {
-    return <DatasetActionView dataset={this.data} />;
+    return <DatasetActionView dataset={this.data} isCompact={this.datasetTable.props.isCompact} />;
   }
 }
 
@@ -452,7 +470,10 @@ class FolderRenderer {
       <img
         src={folderThumbnailIcon}
         className="dataset-table-thumbnail icon-thumbnail"
-        style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
+        style={{
+          width: this.datasetTable.getThumbnailSize(),
+          height: this.datasetTable.getThumbnailSize(),
+        }}
         alt=""
       />
     );
@@ -461,6 +482,7 @@ class FolderRenderer {
     return (
       <div className="dataset-table-name-container">
         <span className="incognito-link dataset-table-name">{this.data.name}</span>
+        {this.datasetTable.renderInlineActions(this.renderActionsColumn())}
         <RowMetaLine
           items={["Folder", <span key="created">created {this.renderCreationDateColumn()}</span>]}
         />
@@ -565,6 +587,18 @@ class DatasetTable extends PureComponent<Props, State> {
     );
   };
 
+  getThumbnailSize(): number {
+    return this.props.isCompact ? COMPACT_THUMBNAIL_SIZE : THUMBNAIL_SIZE;
+  }
+
+  // On compact screens, the actions are shown below the name instead of in their own column,
+  // so that the name can use the full width of the list.
+  renderInlineActions(actions: React.ReactNode): React.ReactNode {
+    return this.props.isCompact ? (
+      <div className="dataset-table-inline-actions">{actions}</div>
+    ) : null;
+  }
+
   getFolderSettingsActions(folder: FolderItemWithName): React.ReactNode {
     const { context } = this.props;
     const folderTreeContextMenuItems = generateSettingsForFolder(folder, context, true);
@@ -616,7 +650,7 @@ class DatasetTable extends PureComponent<Props, State> {
       {
         // Explicit width so this column doesn't grow beyond the thumbnail's own size
         // when the other columns don't have enough content to fill the table's width.
-        width: THUMBNAIL_SIZE + 16, // 16 = the cell's remaining (left-side only) padding
+        width: this.getThumbnailSize() + 16, // 16 = the cell's remaining (left-side only) padding
         key: "thumbnail",
         className: "dashboard-list-table-borderless-cell dashboard-list-table-thumbnail-cell",
         render: (__, rowRenderer: RowRenderer) => rowRenderer.renderThumbnailColumn(),
@@ -627,12 +661,14 @@ class DatasetTable extends PureComponent<Props, State> {
         className: "dashboard-list-table-borderless-cell",
         render: (_name: string, rowRenderer: RowRenderer, _index) => rowRenderer.renderNameColumn(),
       },
-      {
+    ];
+    if (!this.props.isCompact) {
+      columns.push({
         width: 200,
         key: "actions",
         render: (__, rowRenderer: RowRenderer) => rowRenderer.renderActionsColumn(),
-      },
-    ];
+      });
+    }
 
     const { sortBy } = context;
     const availableSortOptions = DATASET_SORT_OPTIONS.filter(
@@ -700,7 +736,9 @@ class DatasetTable extends PureComponent<Props, State> {
           <FilterChip
             label={
               <>
-                <Icon component={IconSort} /> Sort: {currentSortLabel}
+                <Icon component={IconSort} />{" "}
+                <span className="dashboard-list-sort-prefix">Sort: </span>
+                {currentSortLabel}
               </>
             }
           >
@@ -751,15 +789,11 @@ class DatasetTable extends PureComponent<Props, State> {
               isADataset: isADataset,
               onDragStart: () => {
                 if (isADataset && !selectedDatasets.includes(data)) {
-                  this.props.onSelectDataset(data);
+                  this.props.onSelectDataset(data, false, true);
                 }
               },
               onClick: (event) => {
-                // @ts-expect-error
-                if (event.target?.tagName !== "TD" && event.target?.tagName !== "DIV") {
-                  // Don't (de)select when another element within the row was clicked
-                  // (e.g., a link). Otherwise, clicking such elements would cause two actions
-                  // (e.g., the link action and a (de)selection).
+                if (!isRowSelectionClick(event)) {
                   return;
                 }
                 if (!isADataset) {

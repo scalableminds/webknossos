@@ -18,10 +18,28 @@
   white-space: nowrap;
 }
 
+// Compact screens: the actions sit in a row below the annotation name.
+.annotation-inline-actions {
+  // Same spacing as above the meta line.
+  margin-bottom: 4px;
+
+  .annotation-row-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    column-gap: 12px;
+    padding-right: 0;
+  }
+
+  // The tags start a new line below the actions, so they don't need the spacing to the name.
+  & ~ .dashboard-annotation-tags {
+    margin-inline-start: 0;
+  }
+}
+
 /** Container for the description of a task type, allowing for long text wrapping and optional height capping. */
 .task-type-description {
   max-width: 700px;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 
   &.short {
     max-height: 150px;
@@ -39,127 +57,42 @@
   }
 }
 
-/** Wrapper for the 'What's Next' dashboard welcome banner. */
-.welcome-header-wrapper {
-  background: var(--background-blue-neurons);
+/**
+ * Gives the columns of all finished-task cards equal widths, so the cards line up. antd sets
+ * table-layout: fixed but no width, and browsers ignore a fixed layout on auto-width tables.
+ */
+.finished-task-descriptions table {
+  width: 100%;
+}
 
-  button {
-    color: white;
+/**
+ * Keeps a task detail value next to its label while it fits and moves it onto its own line when
+ * it doesn't. antd's flex: 1 (basis 0) would instead squeeze the value into a narrow column.
+ */
+.task-details .ant-descriptions-item-container {
+  flex-wrap: wrap;
+
+  .ant-descriptions-item-content {
+    flex: 1 1 auto;
   }
 }
 
-/** Layout for the inner content of the welcome header, including centered text and action buttons. */
-.welcome-header-content {
-  padding: 40px 0px 40px;
-
-  .text-and-button-container {
-    max-width: 1000px;
-    margin: auto;
-
-    h1 {
-      color: white;
-      font-weight: 200;
-      font-size: 64px;
-      line-height: 150%;
-      margin-bottom: 0;
-      text-align: center;
-    }
-
-    .subtitle {
-      color: white;
-      font-weight: 300;
-      font-size: 18px;
-      line-height: 150%;
-      max-width: 70%;
-      text-align: center;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .whats-next-actions-grid {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      padding-inline-start: 0;
-
-      a {
-        color: var(--color-black);
-        flex: 0 1 400px;
-        /*  No stretching: */
-        margin: 20px;
-        margin-left: 0;
-        margin-right: 40px;
-
-        list-style: none;
-        padding: 8px;
-        cursor: pointer;
-
-        // Align contents:
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        align-items: center;
-
-        .label {
-          margin-left: 12px;
-        }
-
-        h2 {
-          font-size: 16px;
-          line-height: 18px;
-          color: var(--color-black);
-          margin-bottom: 8px;
-        }
-
-        p {
-          font-size: 14px;
-          line-height: 18px;
-          color: var(--color-black);
-          margin: 0;
-        }
-
-        background: white;
-        border-radius: var(--ant-border-radius);
-      }
-
-      a:hover {
-        background: var(--ant-color-info-bg-hover);
-
-        i {
-          filter: brightness(100);
-        }
-
-        h2 {
-          color: var(--ant-color-text);
-        }
-
-        p {
-          color: var(--ant-color-text);
-        }
-      }
-
-      .welcome-header-icon {
-        height: 96px;
-        width: 96px;
-
-        svg {
-          width: 100%;
-          height: 100%;
-        }
-      }
-    }
-  }
+/** Background of the 'What's Next' dashboard welcome banner. Layout lives in admin/welcome_ui.tsx. */
+.welcome-header {
+  background: var(--background-blue-neurons);
 }
 
 /** Styling for the folder structure preview in the dataset import view. */
 pre.dataset-import-folder-structure-hint {
   text-align: left;
-  display: inline-block;
-  line-height: 16px;
+  display: block;
+  overflow-x: auto;
+  line-height: 18px;
   color: var(--ant-color-text-secondary);
   background: var(--ant-color-bg-container);
   border-radius: 2px;
   box-shadow: inset 0em 0em 4px 0px #9e9e9e6b;
-  padding: 4px;
+  padding: 12px;
 }
 
 /** Link style for elements that should look like normal text but remain clickable (e.g. dataset name in the table). */
@@ -209,7 +142,7 @@ pre.dataset-import-folder-structure-hint {
   font-size: 17px;
   font-weight: 500;
   min-height: 30px;
-  word-break: break-word;
+  overflow-wrap: anywhere;
   margin-inline-end: 15px;
 }
 
@@ -217,6 +150,18 @@ pre.dataset-import-folder-structure-hint {
 .dataset-table-name-container {
   display: inline-block;
   vertical-align: middle;
+}
+
+// Compact screens: the actions sit in a (wrapping) row below the dataset name.
+.dataset-table-inline-actions .dataset-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 12px;
+  white-space: normal;
+
+  & > a {
+    display: inline-block;
+  }
 }
 
 
@@ -234,6 +179,42 @@ pre.dataset-import-folder-structure-hint {
   border-radius: var(--ant-border-radius) var(--ant-border-radius) 0 0;
   padding: 8px 16px;
   background: var(--ant-color-fill-alter);
+
+  // Below antd's md breakpoint, tighten the filter chips so that they fit in a single row on phones.
+  @media @smartphones {
+    padding-inline: 12px;
+
+    .ant-btn {
+      padding-inline: 7px;
+    }
+
+    // The sort icon already identifies the sort chip.
+    .dashboard-list-sort-prefix {
+      display: none;
+    }
+
+    // Keep the chips in a single row that scrolls horizontally instead of wrapping. The row bleeds
+    // into the bar's padding, so that chips scroll up to its border. A fade at the right edge hints
+    // at the chips that are scrolled out of view.
+    .dashboard-list-filter-chips {
+      flex: 1 1 100%;
+      min-width: 0;
+      flex-wrap: nowrap !important;
+      overflow-x: auto;
+      margin-inline: -12px;
+      padding-inline: 12px 24px;
+      scrollbar-width: none;
+      mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      & > .ant-space-item {
+        flex-shrink: 0;
+      }
+    }
+  }
 }
 
 /** Headerless, bordered table used for the dashboard lists.
@@ -261,6 +242,12 @@ pre.dataset-import-folder-structure-hint {
 
 .dashboard-list-table-borderless-cell {
   border-inline-end: none !important;
+
+  // The last cell forms the table's right border (e.g., on phones, where the actions column
+  // is hidden).
+  &:last-child {
+    border-inline-end: 1px solid var(--ant-color-border) !important;
+  }
 }
 
 .dashboard-list-table-thumbnail-cell {
@@ -392,4 +379,23 @@ pre.dataset-import-folder-structure-hint {
     minmax(min(60%, var(--dashboard-list-max-width)), var(--dashboard-list-max-width))
     auto;
   justify-content: center;
+
+  // On compact screens, the sidebar moves into a drawer (see responsive_sidebar.tsx).
+  &.compact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+// In a drawer, the details sidebar fills the drawer body instead of floating next to a list.
+.dashboard-sidebar-drawer .dashboard-details-sidebar {
+  width: auto;
+  padding: 0;
+  position: static;
+  max-height: none;
+  overflow-y: visible;
+}
+
+.dashboard-folder-picker-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

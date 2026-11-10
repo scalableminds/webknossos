@@ -8,6 +8,7 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { useQuery } from "@tanstack/react-query";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { getJobs } from "admin/rest_api";
@@ -33,7 +34,7 @@ import dayjs from "dayjs";
 import features from "features";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
-import { isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
+import { isPrimaryPointerFine, isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import type React from "react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { Link } from "react-router";
@@ -58,16 +59,24 @@ import {
   SEARCH_RESULTS_LIMIT,
   useFolderQuery,
 } from "./dataset/queries";
+import { useIsCompactDashboard } from "./responsive_sidebar";
 
 type Props = {
   user: APIUser;
   context: DatasetCollectionContextValue;
-  onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
+  onSelectDataset: (
+    dataset: APIDatasetCompact | null,
+    multiSelect?: boolean,
+    isDragStart?: boolean,
+  ) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
   // Custom content shown as the table's empty state instead of the regular hint text.
   // Used for cards for a brand-new organizations.
   emptyStateContent?: React.ReactNode;
+  // The button that opens the folder drawer on compact screens. It is part of the toolbar, so
+  // that it wraps with the same spacing as the other toolbar items.
+  folderPicker?: React.ReactNode;
 };
 type PersistenceState = {
   searchQuery: string;
@@ -103,11 +112,21 @@ function DatasetView({
   selectedDatasets,
   onSelectFolder,
   emptyStateContent,
+  folderPicker,
 }: Props) {
   const searchQuery = context.globalSearchQuery;
+  const isCompact = useIsCompactDashboard("xl");
   const setSearchQuery = context.setGlobalSearchQuery;
   const { searchTags, setSearchTags, datasetFilteringMode, setDatasetFilteringMode } = context;
-  const [jobs, setJobs] = useState<APIJob[]>([]);
+  // Errors are swallowed so that a failing poll doesn't show a toast every few seconds.
+  const { data: jobs = [] } = useQuery({
+    queryKey: ["jobs", APIJobCommand.CONVERT_TO_WKW, true],
+    queryFn: () => getJobs(APIJobCommand.CONVERT_TO_WKW, true, { showErrorToast: false }),
+    enabled: features().jobsEnabled,
+    refetchInterval: CONVERSION_JOBS_REFRESH_INTERVAL,
+    retry: false,
+    meta: { persist: false },
+  });
   const { data: folder } = useFolderQuery(context.activeFolderId);
 
   const activeTab = useContext(ActiveTabContext);
@@ -124,27 +143,6 @@ function DatasetView({
       setDatasetFilteringMode(state.datasetFilteringMode);
     }
   }, [setSearchQuery, setDatasetFilteringMode]);
-
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-    let cancelled = false;
-
-    if (features().jobsEnabled) {
-      const poll = () =>
-        getJobs(APIJobCommand.CONVERT_TO_WKW, true).then((newJobs) => {
-          if (!cancelled) {
-            setJobs(newJobs);
-          }
-        });
-      poll();
-      interval = setInterval(poll, CONVERSION_JOBS_REFRESH_INTERVAL);
-    }
-
-    return () => {
-      cancelled = true;
-      return interval != null ? clearInterval(interval) : undefined;
-    };
-  }, []);
 
   useEffect(() => {
     persistence.persist({
@@ -195,6 +193,7 @@ function DatasetView({
         onClearSearchAndFilters={clearSearchAndFilters}
         isLoading={isLoading}
         emptyStateContent={emptyStateContent}
+        isCompact={isCompact}
       />
     );
   }
@@ -203,7 +202,8 @@ function DatasetView({
     <Input
       prefix={<SearchOutlined />}
       allowClear
-      autoFocus
+      // Autofocusing on touch devices would pop up the on-screen keyboard.
+      autoFocus={isPrimaryPointerFine()}
       style={{
         width: 200,
       }}
@@ -218,7 +218,8 @@ function DatasetView({
     isUserAnAdminOrDatasetManager || isUserTeamManager(user);
 
   const adminHeader = isUserAdminOrDatasetManagerOrTeamManager ? (
-    <Space>
+    <Space wrap>
+      {folderPicker}
       <DatasetRefreshButton context={context} />
       <DatasetAddButton context={context} />
       {context.activeFolderId != null && (
@@ -240,7 +241,10 @@ function DatasetView({
       {searchBox}
     </Space>
   ) : (
-    searchBox
+    <Space wrap>
+      {folderPicker}
+      {searchBox}
+    </Space>
   );
 
   const datasets = context.datasets;

@@ -10,23 +10,23 @@ import type { KeyValuePairs } from "components/key_value_pairs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import compact from "lodash-es/compact";
-import every from "lodash-es/every";
 import type React from "react";
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { type APIAnnotation, type APIDataset, APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
-import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox, VolumeTracing } from "viewer/store";
-import { fetchAnnotationInfo } from "../hooks/fetch_annotation_infos";
 import {
-  getGroundTruthLayerBoundingBox,
-  getIntersectingMagList,
-  getOutOfBoundsBoundingBoxes,
-} from "../utils";
+  type JobRequirement,
+  pendingRequirement,
+  type StepStatus,
+} from "../components/job_requirements";
+import type { StartedJob } from "../components/job_started_card";
+import { fetchAnnotationInfo } from "../hooks/fetch_annotation_infos";
+import { getIntersectingMagList } from "../utils";
 import type { AiTrainingTask } from "./ai_training_model_selector";
+import { getTrainingDataRequirements, getTrainingDataStepStatus } from "./training_data_validation";
 
 export interface AiTrainingAnnotationSelection {
   annotation: APIAnnotation;
@@ -103,6 +103,9 @@ interface AiTrainingJobContextType {
     >,
   ) => void;
   areParametersValid: boolean;
+  requirements: JobRequirement[];
+  stepStatuses: { task: StepStatus; trainingData: StepStatus; settings: StepStatus };
+  startedJob: StartedJob | null;
 }
 
 const AiTrainingJobContext = createContext<AiTrainingJobContextType | undefined>(undefined);
@@ -120,8 +123,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
   const [comments, setComments] = useState("");
   const [instanceDiameterNm, setInstanceDiameterNm] = useState(1000.0);
   const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
-
-  const dispatch = useDispatch();
+  const [startedJob, setStartedJob] = useState<StartedJob | null>(null);
 
   const currentAnnotation = useWkSelector((state) => state.annotation);
   const userBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
@@ -182,28 +184,31 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     [],
   );
 
-  const areSelectionsValid = selectedAnnotations.every(
-    (s) => s.imageDataLayer && s.groundTruthLayer && s.magnification,
+  const isInstanceTask = selectedJobType === APIJobCommand.TRAIN_INSTANCE_MODEL;
+  const isSettingsStepComplete = Boolean(modelName && (!isInstanceTask || instanceDiameterNm));
+
+  const requirements = useMemo(() => {
+    const missing: JobRequirement[] = [];
+    if (!selectedJobType) missing.push(pendingRequirement("Select a training task"));
+    missing.push(...getTrainingDataRequirements(selectedAnnotations));
+    if (!modelName) missing.push(pendingRequirement("Enter a model name"));
+    if (isInstanceTask && !instanceDiameterNm) {
+      missing.push(pendingRequirement("Enter an instance diameter"));
+    }
+    return missing;
+  }, [selectedJobType, selectedAnnotations, modelName, isInstanceTask, instanceDiameterNm]);
+
+  const trainingDataStatus = useMemo(
+    () => getTrainingDataStepStatus(selectedAnnotations),
+    [selectedAnnotations],
   );
-  // All user bounding boxes must lie within the volume (ground truth) layer's bounding box,
-  // otherwise the training would fail because no ground truth data exists for the box.
-  const areBoundingBoxesWithinVolumeLayer = selectedAnnotations.every((s) => {
-    const groundTruthLayerBoundingBox = getGroundTruthLayerBoundingBox(
-      s.annotation,
-      s.groundTruthLayer,
-      s.volumeTracings,
-    );
-    return (
-      getOutOfBoundsBoundingBoxes(s.userBoundingBoxes, groundTruthLayerBoundingBox).length === 0
-    );
-  });
-  const areParametersValid = every([
-    modelName,
-    selectedJobType,
-    areSelectionsValid,
-    areBoundingBoxesWithinVolumeLayer,
-    selectedAnnotations.length > 0,
-  ]);
+
+  const areParametersValid = requirements.length === 0;
+  const stepStatuses = {
+    task: selectedTask ? "done" : "pending",
+    trainingData: trainingDataStatus,
+    settings: isSettingsStepComplete ? "done" : "pending",
+  } as const;
 
   const handleStartAnalysis = useCallback(async () => {
     const trainingAnnotations: AiModelTrainingAnnotationSpecification[] = compact(
@@ -241,8 +246,11 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
           customConfiguration,
         });
       }
-      Toast.success("The training has successfully started.");
-      dispatch(setAIJobDrawerStateAction("invisible"));
+      setStartedJob({
+        title: `Training of "${modelName}" is running.`,
+        description:
+          "You will receive an email when the job finishes. The model is then listed under custom models in the Run Segmentation Model tab.",
+      });
     } catch (error) {
       console.error(error);
       Toast.error("Failed to start training.");
@@ -254,7 +262,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     comments,
     instanceDiameterNm,
     customConfiguration,
-    dispatch,
+    setStartedJob,
   ]);
 
   const value = {
@@ -275,6 +283,9 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     setSelectedAnnotations,
     handleSelectionChange,
     areParametersValid,
+    requirements,
+    stepStatuses,
+    startedJob,
   };
 
   return <AiTrainingJobContext.Provider value={value}>{children}</AiTrainingJobContext.Provider>;

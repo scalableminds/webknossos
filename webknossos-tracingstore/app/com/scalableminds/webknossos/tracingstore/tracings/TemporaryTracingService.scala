@@ -8,7 +8,6 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
-import scalapb.GeneratedMessageCompanion
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -24,10 +23,6 @@ class TemporaryTracingService @Inject() (
     segmentIndexStore: TemporaryTracingStore[Set[Vec3IntProto]],
     temporaryTracingIdStore: TracingStoreRedisStore
 )(implicit ec: ExecutionContext) {
-
-  implicit def skeletonTracingCompanion: GeneratedMessageCompanion[SkeletonTracing] = SkeletonTracing
-  implicit def volumeTracingCompanion: GeneratedMessageCompanion[VolumeTracing] = VolumeTracing
-  implicit def annotationProtoCompanion: GeneratedMessageCompanion[AnnotationProto] = AnnotationProto
 
   // this should be longer than maxCacheTime in webknossos/AnnotationStore
   // so that the references saved there remain valid throughout their life
@@ -64,13 +59,11 @@ class TemporaryTracingService @Inject() (
   def saveSkeleton(tracingId: String, skeletonTracing: SkeletonTracing): Fox[Unit] = {
     skeletonStore.insert(tracingId, skeletonTracing, Some(temporaryStoreTimeout))
     registerTracingId(tracingId)
-    Fox.successful(())
   }
 
   def saveVolume(tracingId: String, volumeTracing: VolumeTracing): Fox[Unit] = {
     volumeStore.insert(tracingId, volumeTracing, Some(temporaryStoreTimeout))
     registerTracingId(tracingId)
-    Fox.successful(())
   }
 
   def saveVolumeBucket(bucketKey: String, bucketData: Array[Byte]): Fox[Unit] = {
@@ -86,7 +79,6 @@ class TemporaryTracingService @Inject() (
   def saveAnnotationProto(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] = {
     annotationStore.insert(annotationId.toString, annotationProto, Some(temporaryStoreTimeout))
     registerAnnotationId(annotationId)
-    Fox.successful(())
   }
 
   def saveVolumeSegmentIndexBuffer(
@@ -95,7 +87,6 @@ class TemporaryTracingService @Inject() (
   ): Fox[Unit] = {
     segmentIndexStore.insertAll(bucketPositionsBySegmentId, Some(temporaryStoreTimeout))
     registerTracingId(tracingId)
-    Fox.successful(())
   }
 
   def isTemporaryAnnotation(annotationId: ObjectId): Fox[Boolean] =

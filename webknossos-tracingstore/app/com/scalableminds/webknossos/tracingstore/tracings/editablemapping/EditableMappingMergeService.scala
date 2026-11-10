@@ -89,7 +89,6 @@ class EditableMappingMergeService @Inject() (
         }
         editableMappingInfo = editableMappingService.create(baseMappingName)
         updater = new EditableMappingUpdater(
-          newAnnotationId,
           newVolumeTracingId,
           editableMappingInfo.baseMappingName,
           0L,

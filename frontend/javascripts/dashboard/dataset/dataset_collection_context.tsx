@@ -298,106 +298,69 @@ export default function DatasetCollectionContextProvider({
         datasetsInFolderQuery.isPlaceholderData ||
         datasetsInFolderQuery.isRefetching) || isMutating;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): omitted to maintain stability as underlying data dependencies are already tracked
-  // biome-ignore lint/correctness/useExhaustiveDependencies(clearCacheAndReloadDataset): omitted to maintain stability as underlying data dependencies are already tracked
-  // biome-ignore lint/correctness/useExhaustiveDependencies(updateCachedDataset): omitted to maintain stability as underlying data dependencies are already tracked
-  const value: DatasetCollectionContextValue = useMemo(
-    () => ({
-      supportsFolders: true as const,
-      datasets,
-      isLoading,
-      fetchDatasets,
-      clearCacheAndReloadDataset,
-      updateCachedDataset,
-      activeFolderId,
-      setActiveFolderId,
-      selectedFolder,
-      setSelectedFolder,
-      mostRecentlyUsedActiveFolderId,
-      isChecking,
-      getBreadcrumbs,
-      getActiveSubfolders,
-      folderModalState,
-      setFolderModalState,
-      checkDatasets: async (organizationId: string | undefined) => {
-        if (isChecking) {
-          console.warn("Ignore second rechecking request, since a recheck is already in progress");
-          return;
-        }
-        setIsChecking(true);
-        const datastores = await getDatastores();
-        await Promise.all(
-          datastores.map(
-            (
-              datastore, // Catch potentially failing triggers, since these should not
-            ) =>
-              // block the subsequent fetch of datasets. Otherwise, one offline
-              // datastore will stop the refresh for all datastores.
-              triggerDatasetCheck(datastore.url, organizationId).catch(() => {}),
-          ),
-        );
-        setIsChecking(false);
+  const value: DatasetCollectionContextValue = {
+    datasets,
+    isLoading,
+    fetchDatasets,
+    clearCacheAndReloadDataset,
+    updateCachedDataset,
+    activeFolderId,
+    setActiveFolderId,
+    selectedFolder,
+    setSelectedFolder,
+    mostRecentlyUsedActiveFolderId,
+    isChecking,
+    getBreadcrumbs,
+    getActiveSubfolders,
+    folderModalState,
+    setFolderModalState,
+    checkDatasets: async (organizationId: string | undefined) => {
+      if (isChecking) {
+        console.warn("Ignore second rechecking request, since a recheck is already in progress");
+        return;
+      }
+      setIsChecking(true);
+      const datastores = await getDatastores();
+      await Promise.all(
+        datastores.map(
+          (
+            datastore, // Catch potentially failing triggers, since these should not
+          ) =>
+            // block the subsequent fetch of datasets. Otherwise, one offline
+            // datastore will stop the refresh for all datastores.
+            triggerDatasetCheck(datastore.url, organizationId).catch(() => {}),
+        ),
+      );
+      setIsChecking(false);
 
-        datasetsInFolderQuery.refetch();
-        datasetSearchQuery.refetch();
-      },
-      selectedDatasets,
-      setSelectedDatasets,
-      globalSearchQuery,
-      setGlobalSearchQuery,
-      searchRecursively,
-      setSearchRecursively,
-      searchTags,
-      setSearchTags,
-      datasetFilteringMode,
-      setDatasetFilteringMode,
-      sortBy,
-      setSortBy,
-      canSortBySearchRelevance,
-      queries: {
-        folderHierarchyQuery,
-        datasetsInFolderQuery,
-        datasetSearchQuery,
-        createFolderMutation,
-        deleteFolderMutation,
-        updateFolderMutation,
-        moveFolderMutation,
-        updateDatasetMutation,
-      },
-      usedStorageInOrga,
-    }),
-    [
-      isChecking,
-      datasets,
-      isLoading,
-      activeFolderId,
-      mostRecentlyUsedActiveFolderId,
+      datasetsInFolderQuery.refetch();
+      datasetSearchQuery.refetch();
+    },
+    selectedDatasets,
+    setSelectedDatasets,
+    globalSearchQuery,
+    setGlobalSearchQuery,
+    searchRecursively,
+    setSearchRecursively,
+    searchTags,
+    setSearchTags,
+    datasetFilteringMode,
+    setDatasetFilteringMode,
+    sortBy,
+    setSortBy,
+    canSortBySearchRelevance,
+    queries: {
       folderHierarchyQuery,
       datasetsInFolderQuery,
       datasetSearchQuery,
-      searchRecursively,
       createFolderMutation,
       deleteFolderMutation,
       updateFolderMutation,
       moveFolderMutation,
       updateDatasetMutation,
-      selectedDatasets,
-      globalSearchQuery,
-      // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
-      getActiveSubfolders,
-      // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
-      getBreadcrumbs,
-      selectedFolder,
-      setGlobalSearchQuery,
-      usedStorageInOrga,
-      folderModalState,
-      searchTags,
-      datasetFilteringMode,
-      sortBy,
-      setSortBy,
-      canSortBySearchRelevance,
-    ],
-  );
+    },
+    usedStorageInOrga,
+  };
 
   return (
     <DatasetCollectionContext.Provider value={value}>{children}</DatasetCollectionContext.Provider>

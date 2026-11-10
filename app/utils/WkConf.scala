@@ -40,8 +40,6 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
   }
 
   object WebKnossos {
-    val tabTitle: String = get[String]("webKnossos.tabTitle")
-
     object User {
       val timeTrackingPause: FiniteDuration = get[FiniteDuration]("webKnossos.user.timeTrackingPause")
       val timeTrackingOnlyWithSignificantChanges: Boolean =
@@ -202,6 +200,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val host: String = get[String]("mail.smtp.host")
       val port: Int = get[Int]("mail.smtp.port")
       val tls: Boolean = get[Boolean]("mail.smtp.tls")
+      val checkServerIdentity: Boolean = get[Boolean]("mail.smtp.checkServerIdentity")
       val auth: Boolean = get[Boolean]("mail.smtp.auth")
       val user: String = get[String]("mail.smtp.user")
       val pass: String = get[String]("mail.smtp.pass")
@@ -218,7 +217,12 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
       val password: String = get[String]("mail.mailchimp.password")
     }
 
-    val children: List[Object] = List(Smtp, Mailchimp)
+    object NotificationEmails {
+      val accessChanges: Boolean = get[Boolean]("mail.notificationEmails.accessChanges")
+      val manualTaskAssignments: Boolean = get[Boolean]("mail.notificationEmails.manualTaskAssignments")
+    }
+
+    val children: List[Object] = List(Smtp, Mailchimp, NotificationEmails)
   }
 
   object Silhouette {

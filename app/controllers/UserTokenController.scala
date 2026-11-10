@@ -107,7 +107,7 @@ class UserTokenController @Inject() (
           case _ =>
             Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
         }
-      } yield Ok(Json.toJson(answer))
+      } yield Ok(Json.toJson(answer.copy(userId = userBox.toOption.map(_._id))))
     }
 
   private def handleDataSetAccess(idOpt: Option[String], mode: AccessMode.Value, userBox: Box[User])(using
@@ -152,9 +152,10 @@ class UserTokenController @Inject() (
     def tryAdministrate: Fox[UserAccessAnswer] =
       userBox match {
         case Full(user) =>
+          val organizationId = idOpt.getOrElse(user._organization)
           for {
-            isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, idOpt.getOrElse(user._organization))
-          } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManager)
+            isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, organizationId)
+          } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManagerOf(organizationId))
         case _ => Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token")))
       }
 
@@ -174,7 +175,7 @@ class UserTokenController @Inject() (
       token: Option[String]
   ): Fox[UserAccessAnswer] =
     if (tracingIdOpt.contains(TracingId.dummy))
-      Fox.successful(UserAccessAnswer(granted = true))
+      Fox.successful(sandboxAccessAnswer(mode))
     else
       for {
         tracingId <- tracingIdOpt.toFox
@@ -183,6 +184,11 @@ class UserTokenController @Inject() (
         ) ?~> Msg.Annotation.notFound
         result <- handleAnnotationAccess(Some(annotation._id.toString), mode, userBox, token)
       } yield result
+
+  // Dummy ids belong to sandbox annotations, which are never saved
+  private def sandboxAccessAnswer(mode: AccessMode): UserAccessAnswer =
+    if (mode == AccessMode.read) UserAccessAnswer(granted = true)
+    else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to sandbox annotation"))
 
   private def handleAnnotationAccess(
       annotationIdOpt: Option[String],
@@ -201,7 +207,7 @@ class UserTokenController @Inject() (
       }
 
     if (annotationIdOpt.contains(ObjectId.dummyId.toString)) {
-      Fox.successful(UserAccessAnswer(granted = true))
+      Fox.successful(sandboxAccessAnswer(mode))
     } else {
       for {
         annotationIdStr <- annotationIdOpt.toFox
@@ -217,7 +223,10 @@ class UserTokenController @Inject() (
           .map(annotationPrivateLinkDAO.findOneByAccessToken)
           .getOrElse(Fox.empty)
           .shiftBox
-        allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
+        // Private links only grant read access, and only until they expire
+        allowedByToken = mode == AccessMode.read && annotationAccessByToken.exists(link =>
+          annotation._id == link._annotation && !link.isExpired
+        )
         restrictions <- annotationInformationProvider.restrictionsFor(
           AnnotationIdentifier(annotation.typ, annotation._id)
         )(using GlobalAccessContext) ?~> Msg.Annotation.Restrictions.notFound

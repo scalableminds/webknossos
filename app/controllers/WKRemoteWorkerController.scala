@@ -54,14 +54,14 @@ class WKRemoteWorkerController @Inject() (
 
   private def reserveNextJobs(worker: Worker, pendingIterationCount: Int): Fox[Unit] =
     for {
-      unfinishedHighPriorityCount <- jobDAO.countUnfinishedByWorker(worker._id, JobCommand.highPriorityJobs)
-      unfinishedLowPriorityCount <- jobDAO.countUnfinishedByWorker(worker._id, JobCommand.lowPriorityJobs)
-      pendingHighPriorityCount <- jobDAO.countUnassignedPendingForDataStore(
-        worker._dataStore,
-        JobCommand.highPriorityJobs.intersect(worker.supportedJobCommands)
+      (unfinishedHighPriorityCount, unfinishedLowPriorityCount) <- jobDAO.countUnfinishedByWorker(
+        worker._id,
+        JobCommand.highPriorityJobs,
+        JobCommand.lowPriorityJobs
       )
-      pendingLowPriorityCount <- jobDAO.countUnassignedPendingForDataStore(
+      (pendingHighPriorityCount, pendingLowPriorityCount) <- jobDAO.countUnassignedPendingForDataStore(
         worker._dataStore,
+        JobCommand.highPriorityJobs.intersect(worker.supportedJobCommands),
         JobCommand.lowPriorityJobs.intersect(worker.supportedJobCommands)
       )
       mayAssignHighPriorityJob =

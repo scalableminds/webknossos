@@ -2,11 +2,14 @@
 The easiest way to get started with working on your datasets is through the WEBKNOSSOS web interface. You can directly upload your dataset through the browser.
 
 1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
-2. Provide some metadata information:  
-    - a *name* 
-    - give access permissions for one or more teams (use the `default` team if all members of your organization should be able to see it)
-    - *scale* of each voxel (in nanometers)
-3. Drag and drop your data into the upload section
+2. Drag and drop your data (a folder, a zip archive or image files) into the upload section, or use *Choose folder* / *Choose files*.
+   WEBKNOSSOS recognizes the format of your data from its file names and tells you whether it is ready to view or will be converted after the upload.
+   Click *How should my folder look?* to see the expected folder structure for each format.
+3. Check the dataset details, which are filled in automatically:
+    - the *name* (proposed from the folder, archive or file names)
+    - the target *folder*
+    - additional *teams* that should have access to the dataset
+    - the *voxel size* and its *unit* (e.g., nanometers), only if your data needs to be converted
 4. Click the *Upload* button
 
 ![youtube-video](https://www.youtube.com/embed/ZvUJrv86w8w?start=17)

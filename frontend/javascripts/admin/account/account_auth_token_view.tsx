@@ -1,9 +1,15 @@
-import { ExportOutlined, SwapOutlined } from "@ant-design/icons";
-import { getAuthToken, revokeAuthToken } from "admin/rest_api";
+import {
+  ExportOutlined,
+  IdcardOutlined,
+  KeyOutlined,
+  ReadOutlined,
+  SwapOutlined,
+} from "@ant-design/icons";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { revokeAuthToken } from "admin/rest_api";
 import { Button, Col, Row, Spin, Typography } from "antd";
-import { useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
-import { useEffect, useState } from "react";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
+import { authTokenQueryOptions } from "./auth_token_query";
 import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
 
@@ -11,39 +17,28 @@ const { Text } = Typography;
 
 function AccountAuthTokenView() {
   const activeUser = useWkSelector((state) => state.activeUser);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [currentToken, setCurrentToken] = useState<string>("");
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { data: currentToken = "", isLoading: isLoadingToken } = useQueryWithErrorHandling(
+    {
+      ...authTokenQueryOptions,
+      refetchOnWindowFocus: false,
+    },
+    "Failed to fetch auth token. Please refresh the page to try again.",
+  );
 
-  async function fetchData(): Promise<void> {
-    try {
-      const token = await getAuthToken();
-      setCurrentToken(token);
-    } catch (error) {
-      Toast.error("Failed to fetch auth token. Please refresh the page to try again.");
-      console.error("Failed to fetch auth token:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  const revokeTokenMutation = useMutation({
+    mutationFn: revokeAuthToken,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: authTokenQueryOptions.queryKey }),
+  });
+  const isLoading = isLoadingToken || revokeTokenMutation.isPending;
 
-  const handleRevokeToken = async (): Promise<void> => {
-    try {
-      setIsLoading(true);
-      await revokeAuthToken();
-      const token = await getAuthToken();
-      setCurrentToken(token);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const handleRevokeToken = () => revokeTokenMutation.mutate();
 
   const APIitems: SettingsCardProps[] = [
     {
       title: "Auth Token",
+      icon: <KeyOutlined />,
       content: (
         <Text code copyable>
           {currentToken}
@@ -52,8 +47,9 @@ function AccountAuthTokenView() {
     },
     {
       title: "Token Revocation",
-      tooltip:
-        "Revoke your token if it has been compromised or if you suspect someone else has gained access to it. This will invalidate all active sessions.",
+      icon: <SwapOutlined />,
+      hint: "Use if the token may have been exposed. All active sessions end.",
+      hintType: "warning",
       content: (
         <Button icon={<SwapOutlined />} type="primary" ghost onClick={handleRevokeToken}>
           Revoke and Generate New Token
@@ -64,6 +60,7 @@ function AccountAuthTokenView() {
       ? [
           {
             title: "Organization ID",
+            icon: <IdcardOutlined />,
             content: (
               <Text code copyable>
                 {activeUser.organization}
@@ -74,6 +71,7 @@ function AccountAuthTokenView() {
       : []),
     {
       title: "API Documentation",
+      icon: <ReadOutlined />,
       content: (
         <a href="https://docs.webknossos.org/webknossos-py/index.html">
           Read the docs <ExportOutlined />
@@ -92,7 +90,7 @@ function AccountAuthTokenView() {
         <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
           {APIitems.map((item) => (
             <Col span={12} key={item.title}>
-              <SettingsCard title={item.title} content={item.content} tooltip={item.tooltip} />
+              <SettingsCard {...item} />
             </Col>
           ))}
         </Row>

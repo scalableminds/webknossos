@@ -695,13 +695,7 @@ function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
       return;
     }
 
-    const currentVolumeTracing = yield* select((state) =>
-      getVolumeTracingByLayerName(state.annotation, layerName),
-    );
-    if (!currentVolumeTracing) {
-      return;
-    }
-    const activeSegmentId = yield* call(getActiveCellId, currentVolumeTracing);
+    const activeSegmentId = yield* call(getActiveCellId, volumeTracing);
 
     if (activeSegmentId !== agglomerateId) {
       yield put(

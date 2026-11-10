@@ -36,7 +36,6 @@ import {
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   type BucketRetrievalSource,
-  getActiveCellId,
   getActiveSegmentationTracingLayer,
   getBucketRetrievalSourceFn,
   getEditableMappingForVolumeTracingId,
@@ -695,7 +694,10 @@ function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
       return;
     }
 
-    const activeSegmentId = yield* call(getActiveCellId, volumeTracing);
+    // Select the active segment id again, because it may have changed while the lookup was pending.
+    const activeSegmentId = yield* select(
+      (state) => getVolumeTracingByLayerName(state.annotation, layerName)?.activeCellId,
+    );
 
     if (activeSegmentId !== agglomerateId) {
       yield put(

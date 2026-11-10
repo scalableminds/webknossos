@@ -33,11 +33,11 @@ case class OAuthClientMetadata(
   * (OAuth Client ID Metadata Document, as preferred by MCP since revision 2025-11-25), which is fetched when the client
   * starts an authorization. Whoever controls that URL controls the client, in particular its redirect URIs.
   *
-  * Fetching a URL that the request names is a server-side request forgery risk, so only https URLs on public
-  * addresses are fetched, without following redirects, with a timeout and a size limit. A remaining gap is DNS
-  * rebinding between the address check and the connection, which the JDK HttpClient offers no hook to close; the
-  * request carries no credentials and its response is only accepted if it is a valid metadata document, which limits
-  * what it could be used for.
+  * Fetching a URL that the request names is a server-side request forgery risk, so only https URLs on public addresses
+  * are fetched, without following redirects, with a timeout and a size limit. A remaining gap is DNS rebinding between
+  * the address check and the connection, which the JDK HttpClient offers no hook to close; the request carries no
+  * credentials and its response is only accepted if it is a valid metadata document, which limits what it could be used
+  * for.
   */
 @Singleton
 class OAuthClientMetadataService @Inject() (conf: WkConf)(implicit ec: ExecutionContext) extends LazyLogging {
@@ -50,11 +50,7 @@ class OAuthClientMetadataService @Inject() (conf: WkConf)(implicit ec: Execution
     AlfuCache(maxCapacity = 1000, timeToLive = 10 minutes, timeToIdle = 10 minutes)
 
   private lazy val httpClient: HttpClient =
-    HttpClient
-      .newBuilder()
-      .followRedirects(HttpClient.Redirect.NEVER)
-      .connectTimeout(Duration.ofSeconds(5))
-      .build()
+    HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).connectTimeout(Duration.ofSeconds(5)).build()
 
   def fetch(clientId: String): Fox[OAuthClientMetadata] =
     cache.getOrLoad(clientId, load)
@@ -86,12 +82,8 @@ class OAuthClientMetadataService @Inject() (conf: WkConf)(implicit ec: Execution
       }
 
   private def download(uri: URI): Future[Either[String, Array[Byte]]] = {
-    val request = HttpRequest
-      .newBuilder(uri)
-      .timeout(Duration.ofSeconds(5))
-      .header("Accept", "application/json")
-      .GET()
-      .build()
+    val request =
+      HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(5)).header("Accept", "application/json").GET().build()
     httpClient
       .sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
       .asScala
@@ -124,7 +116,8 @@ object OAuthClientMetadataService {
 
   // Schemes a redirect URI must never use. Everything else is either https, loopback http (validated separately) or a
   // private-use scheme of a native app, see RFC 8252.
-  private val forbiddenRedirectSchemes = Set("javascript", "data", "file", "vbscript", "blob", "about", "ftp", "ws", "wss")
+  private val forbiddenRedirectSchemes =
+    Set("javascript", "data", "file", "vbscript", "blob", "about", "ftp", "ws", "wss")
 
   def validateClientIdUrl(clientId: String, allowInsecure: Boolean): Either[String, URI] =
     for {
@@ -171,8 +164,11 @@ object OAuthClientMetadataService {
     case _ => false
   }
 
-  def parseDocument(clientId: String, json: play.api.libs.json.JsValue, allowInsecure: Boolean)
-      : Either[String, OAuthClientMetadata] =
+  def parseDocument(
+      clientId: String,
+      json: play.api.libs.json.JsValue,
+      allowInsecure: Boolean
+  ): Either[String, OAuthClientMetadata] =
     json match {
       case document: JsObject =>
         for {
@@ -211,10 +207,10 @@ object OAuthClientMetadataService {
     Try(new URI(redirectUri)).toOption.exists { uri =>
       val scheme = Option(uri.getScheme).map(_.toLowerCase)
       uri.getRawFragment == null && (scheme match {
-        case None                 => false
-        case Some("https")        => uri.getHost != null
-        case Some("http")         => isLoopback(uri) || (allowInsecure && uri.getHost != null)
-        case Some(privateUse)     => !forbiddenRedirectSchemes.contains(privateUse)
+        case None             => false
+        case Some("https")    => uri.getHost != null
+        case Some("http")     => isLoopback(uri) || (allowInsecure && uri.getHost != null)
+        case Some(privateUse) => !forbiddenRedirectSchemes.contains(privateUse)
       })
     }
 

@@ -43,10 +43,10 @@ case class OAuthEndpointError(error: String, description: String) {
 /** WEBKNOSSOS as an OAuth 2.1 authorization server for its MCP server, as the MCP authorization spec asks for.
   *
   *   - Clients are identified either by a client metadata document (see OAuthClientMetadataService), or register
-  *     themselves via Dynamic Client Registration (RFC 7591), which anyone may do. The consent page tells the user
-  *     that the name of a registered client is unverified.
-  *   - Only the authorization code flow with PKCE (S256) is supported, plus refresh tokens. Clients are public, they
-  *     do not authenticate at the token endpoint.
+  *     themselves via Dynamic Client Registration (RFC 7591), which anyone may do. The consent page tells the user that
+  *     the name of a registered client is unverified.
+  *   - Only the authorization code flow with PKCE (S256) is supported, plus refresh tokens. Clients are public, they do
+  *     not authenticate at the token endpoint.
   *   - The user approves a permission level on the consent page (frontend route /oauth/authorize). Approving creates or
   *     updates an OAuthGrant, which everything issued afterwards hangs off and is revoked with.
   *   - Access tokens are only accepted by the MCP endpoint (McpController). Agents get separate short-lived tokens for
@@ -94,7 +94,9 @@ class OAuthService @Inject() (
 
   /* ---------- Authorization endpoint (consent page) ---------- */
 
-  def validateAuthorizationRequest(params: Map[String, String]): Future[Either[AuthorizationError, ValidatedAuthorizationRequest]] =
+  def validateAuthorizationRequest(
+      params: Map[String, String]
+  ): Future[Either[AuthorizationError, ValidatedAuthorizationRequest]] =
     params.get("client_id") match {
       case None           => Future.successful(Left(AuthorizationError("The request names no client_id", None)))
       case Some(clientId) =>
@@ -110,7 +112,10 @@ class OAuthService @Inject() (
                 def fail(error: String, description: String) =
                   Left(AuthorizationError(description, Some(errorRedirect(redirectUri, state, error, description))))
                 if (!params.get("response_type").contains("code"))
-                  fail("unsupported_response_type", "Only the authorization code flow (response_type=code) is supported")
+                  fail(
+                    "unsupported_response_type",
+                    "Only the authorization code flow (response_type=code) is supported"
+                  )
                 else if (!params.get("code_challenge_method").contains("S256"))
                   fail("invalid_request", "PKCE with code_challenge_method S256 is required")
                 else if (!params.get("code_challenge").exists(isValidCodeChallenge))
@@ -142,7 +147,7 @@ class OAuthService @Inject() (
 
   def registerClient(request: JsValue): Fox[Either[OAuthEndpointError, JsObject]] =
     parseRegistrationRequest(request, conf.WebKnossos.Mcp.allowInsecureClientMetadataUrls) match {
-      case Left(error)                        => Fox.successful(Left(error))
+      case Left(error)                       => Fox.successful(Left(error))
       case Right((clientName, redirectUris)) =>
         val client = OAuthClientMetadata(
           registeredClientPrefix + RandomIDGenerator.generateBlocking(sizeInBytes = 16),
@@ -234,7 +239,8 @@ class OAuthService @Inject() (
           case Full(redeemed) =>
             withLiveGrant(redeemed.grantId) { grant =>
               if (grant.clientId != clientId) Fox.successful(invalidGrant("The code was issued to another client"))
-              else if (redeemed.redirectUri != redirectUri) Fox.successful(invalidGrant("The redirect_uri does not match"))
+              else if (redeemed.redirectUri != redirectUri)
+                Fox.successful(invalidGrant("The redirect_uri does not match"))
               else if (!pkceMatches(codeVerifier, redeemed.codeChallenge))
                 Fox.successful(invalidGrant("The code_verifier does not match the code_challenge"))
               else issueTokens(grant).map(Right(_))
@@ -384,11 +390,7 @@ object OAuthService {
 
   // Codes and tokens are random enough that an unsalted hash is fine.
   def hash(secret: String): String =
-    MessageDigest
-      .getInstance("SHA-256")
-      .digest(secret.getBytes(StandardCharsets.UTF_8))
-      .map("%02x".format(_))
-      .mkString
+    MessageDigest.getInstance("SHA-256").digest(secret.getBytes(StandardCharsets.UTF_8)).map("%02x".format(_)).mkString
 
   // RFC 7636: 43 to 128 characters of the unreserved set. A S256 challenge is 43 base64url characters.
   private val codeVerifierPattern = "^[A-Za-z0-9\\-._~]{43,128}$".r
@@ -400,7 +402,10 @@ object OAuthService {
     codeVerifierPattern.matches(codeVerifier) && {
       val digest = MessageDigest.getInstance("SHA-256").digest(codeVerifier.getBytes(StandardCharsets.US_ASCII))
       val computed = Base64.getUrlEncoder.withoutPadding.encodeToString(digest)
-      MessageDigest.isEqual(computed.getBytes(StandardCharsets.US_ASCII), codeChallenge.getBytes(StandardCharsets.US_ASCII))
+      MessageDigest.isEqual(
+        computed.getBytes(StandardCharsets.US_ASCII),
+        codeChallenge.getBytes(StandardCharsets.US_ASCII)
+      )
     }
 
   def redirectUriMatches(registered: String, requested: String): Boolean =
@@ -409,8 +414,8 @@ object OAuthService {
   private val maxRedirectUris = 10
   private val maxClientNameLength = 100
 
-  /** Validates a client registration request (RFC 7591 section 2). Returns the client name and redirect URIs. Only
-    * the authorization code flow is offered, and every client is public, so token_endpoint_auth_method is ignored and
+  /** Validates a client registration request (RFC 7591 section 2). Returns the client name and redirect URIs. Only the
+    * authorization code flow is offered, and every client is public, so token_endpoint_auth_method is ignored and
     * overridden with "none" in the response, as the RFC allows.
     */
   def parseRegistrationRequest(

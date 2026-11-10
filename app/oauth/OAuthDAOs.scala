@@ -11,9 +11,9 @@ import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-/** An MCP client that a user allowed to access WEBKNOSSOS on their behalf, limited to the given scopes. There is at most
-  * one live grant per user and client: approving the same client again updates it. Revoking a grant revokes everything
-  * issued under it (see OAuthService.revokeGrant).
+/** An MCP client that a user allowed to access WEBKNOSSOS on their behalf, limited to the given scopes. There is at
+  * most one live grant per user and client: approving the same client again updates it. Revoking a grant revokes
+  * everything issued under it (see OAuthService.revokeGrant).
   *
   * @param clientId
   *   the URL of the client's metadata document, see OAuthClientMetadataService
@@ -73,9 +73,11 @@ class OAuthGrantDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def insertOne(g: OAuthGrant): Fox[Unit] =
     for {
-      _ <- run(q"""INSERT INTO webknossos.oauthGrants(_id, _user, clientId, clientName, scopes, created, lastUsed, isDeleted)
+      _ <- run(
+        q"""INSERT INTO webknossos.oauthGrants(_id, _user, clientId, clientName, scopes, created, lastUsed, isDeleted)
                    VALUES(${g._id}, ${g._user}, ${g.clientId}, ${g.clientName}, ${g.scopes},
-                          ${g.created}, ${g.lastUsed}, ${g.isDeleted})""".asUpdate)
+                          ${g.created}, ${g.lastUsed}, ${g.isDeleted})""".asUpdate
+      )
     } yield ()
 
   def updateScopesAndClientName(id: ObjectId, scopes: String, clientName: String): Fox[Unit] =
@@ -100,7 +102,9 @@ class OAuthGrantDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
     if (userIds.isEmpty) Fox.successful(List.empty)
     else
       for {
-        r <- run(q"SELECT _id FROM $existingCollectionName WHERE _user IN ${SqlToken.tupleFromList(userIds.toList)}".as[String])
+        r <- run(
+          q"SELECT _id FROM $existingCollectionName WHERE _user IN ${SqlToken.tupleFromList(userIds.toList)}".as[String]
+        )
       } yield r.toList.map(ObjectId(_))
 }
 

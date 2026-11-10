@@ -78,8 +78,10 @@ class OAuthTestSuite extends AnyWordSpec {
     }
 
     "reject other flows" in {
-      assert(parse(valid ++ Json.obj("grant_types" -> Json.arr("client_credentials"))).left.map(_.error) ==
-        Left("invalid_client_metadata"))
+      assert(
+        parse(valid ++ Json.obj("grant_types" -> Json.arr("client_credentials"))).left.map(_.error) ==
+          Left("invalid_client_metadata")
+      )
       assert(parse(valid ++ Json.obj("response_types" -> Json.arr("token"))).isLeft)
     }
 
@@ -136,7 +138,7 @@ class OAuthTestSuite extends AnyWordSpec {
       assert(isPublicAddress(InetAddress.getByName("2001:4860:4860::8888")))
     }
 
-    "reject internal addresses" in {
+    "reject internal addresses" in
       List(
         "127.0.0.1",
         "10.1.2.3",
@@ -150,7 +152,6 @@ class OAuthTestSuite extends AnyWordSpec {
         "fe80::1",
         "::ffff:10.0.0.1"
       ).foreach(address => assert(!isPublicAddress(InetAddress.getByName(address)), address))
-    }
   }
 
   "OAuthClientMetadataService.parseDocument" should {
@@ -168,11 +169,15 @@ class OAuthTestSuite extends AnyWordSpec {
     }
 
     "fall back to the host as the client name" in
-      assert(parseDocument(clientId, valid - "client_name", allowInsecure = false).map(_.clientName) ==
-        Right("client.example.com"))
+      assert(
+        parseDocument(clientId, valid - "client_name", allowInsecure = false).map(_.clientName) ==
+          Right("client.example.com")
+      )
 
     "require the client_id to match the URL it was fetched from" in
-      assert(parseDocument(clientId, valid ++ Json.obj("client_id" -> "https://other.example.com/m.json"), false).isLeft)
+      assert(
+        parseDocument(clientId, valid ++ Json.obj("client_id" -> "https://other.example.com/m.json"), false).isLeft
+      )
 
     "require redirect URIs" in {
       assert(parseDocument(clientId, valid - "redirect_uris", allowInsecure = false).isLeft)
@@ -180,20 +185,29 @@ class OAuthTestSuite extends AnyWordSpec {
     }
 
     "reject confidential clients" in {
-      assert(parseDocument(clientId, valid ++ Json.obj("token_endpoint_auth_method" -> "private_key_jwt"), false).isLeft)
+      assert(
+        parseDocument(clientId, valid ++ Json.obj("token_endpoint_auth_method" -> "private_key_jwt"), false).isLeft
+      )
       assert(parseDocument(clientId, valid ++ Json.obj("client_secret" -> "s3cret"), allowInsecure = false).isLeft)
     }
 
-    "reject dangerous or non-loopback http redirect URIs" in {
-      List("javascript:alert(1)", "http://client.example.com/callback", "data:text/html,x", "https://a.com/cb#f")
-        .foreach { uri =>
-          assert(parseDocument(clientId, valid ++ Json.obj("redirect_uris" -> Json.arr(uri)), false).isLeft, uri)
-        }
-    }
+    "reject dangerous or non-loopback http redirect URIs" in
+      List(
+        "javascript:alert(1)",
+        "http://client.example.com/callback",
+        "data:text/html,x",
+        "https://a.com/cb#f"
+      ).foreach { uri =>
+        assert(parseDocument(clientId, valid ++ Json.obj("redirect_uris" -> Json.arr(uri)), false).isLeft, uri)
+      }
 
     "accept private-use schemes of native apps" in
       assert(
-        parseDocument(clientId, valid ++ Json.obj("redirect_uris" -> Json.arr("cursor://oauth/callback")), false).isRight
+        parseDocument(
+          clientId,
+          valid ++ Json.obj("redirect_uris" -> Json.arr("cursor://oauth/callback")),
+          false
+        ).isRight
       )
   }
 }

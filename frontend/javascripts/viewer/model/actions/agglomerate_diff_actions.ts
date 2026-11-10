@@ -79,7 +79,7 @@ export const removeAgglomerateDiffsAction = (keys: Array<string>) =>
 // Has to be dispatched by the requester of a diff that awaits its agglomerate skeleton (see
 // requestAgglomerateDiffAction) once that skeleton was added. Usually, the diff stopped awaiting
 // already (see syncAgglomerateDiffsWithSourceTreesAction). But if the diff is not desired anymore
-// (e.g., because the reference view changed while the skeleton was loading), it would be kept
+// (e.g., because the reference mapping changed while the skeleton was loading), it would be kept
 // forever otherwise.
 export const stopAwaitingAgglomerateSkeletonAction = (key: string) =>
   ({

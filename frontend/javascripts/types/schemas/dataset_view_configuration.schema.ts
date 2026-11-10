@@ -76,7 +76,7 @@ export const layerViewConfiguration = {
     required: ["name", "type"],
     additionalProperties: false,
   },
-  agglomerateDiffReference: {
+  agglomerateDiffReferenceMappingName: {
     type: ["string", "null"],
   },
   isAgglomerateDiffEnabled: {

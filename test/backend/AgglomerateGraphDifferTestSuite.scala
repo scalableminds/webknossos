@@ -3,13 +3,13 @@ package backend
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{
   AgglomerateEdge,
   AgglomerateGraph,
-  AgglomerateGraphDiffProto
+  AgglomerateGraphDiff
 }
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
-import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateGraphDiff
+import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateGraphDiffer
 import org.scalatest.wordspec.AnyWordSpec
 
-class AgglomerateGraphDiffTestSuite extends AnyWordSpec {
+class AgglomerateGraphDifferTestSuite extends AnyWordSpec {
 
   // The positions encode the segment ids, so that the endpoints of the edges can be identified
   private def position(segmentId: Long) = Vec3IntProto(segmentId.toInt, 2 * segmentId.toInt, 3 * segmentId.toInt)
@@ -22,8 +22,8 @@ class AgglomerateGraphDiffTestSuite extends AnyWordSpec {
       affinities = edges.map(_ => 1.0f)
     )
 
-  private def diff(graph: AgglomerateGraph, referenceGraph: AgglomerateGraph): AgglomerateGraphDiffProto = {
-    val result = AgglomerateGraphDiff.diff(graph, referenceGraph, referenceAgglomerateId = 7)
+  private def diff(graph: AgglomerateGraph, referenceGraph: AgglomerateGraph): AgglomerateGraphDiff = {
+    val result = AgglomerateGraphDiffer.diff(graph, referenceGraph, referenceAgglomerateId = 7)
     assert(result.referenceAgglomerateId == 7)
     assert(result.positions.length % 3 == 0)
     assert(endpointSegmentIds(result).distinct == endpointSegmentIds(result))
@@ -33,11 +33,11 @@ class AgglomerateGraphDiffTestSuite extends AnyWordSpec {
     result
   }
 
-  private def endpointSegmentIds(result: AgglomerateGraphDiffProto): Seq[Long] =
+  private def endpointSegmentIds(result: AgglomerateGraphDiff): Seq[Long] =
     result.positions.grouped(3).map(_.head.toLong).toSeq
 
   // Converts the flat index pairs back to undirected edges between segment ids
-  private def edgesAsSegmentIds(result: AgglomerateGraphDiffProto, indices: Seq[Int]): Set[Set[Long]] =
+  private def edgesAsSegmentIds(result: AgglomerateGraphDiff, indices: Seq[Int]): Set[Set[Long]] =
     indices.grouped(2).map(pair => pair.map(endpointSegmentIds(result)).toSet).toSet
 
   private def addedAndRemoved(graph: AgglomerateGraph, referenceGraph: AgglomerateGraph) = {
@@ -45,7 +45,7 @@ class AgglomerateGraphDiffTestSuite extends AnyWordSpec {
     (edgesAsSegmentIds(result, result.addedEdges), edgesAsSegmentIds(result, result.removedEdges))
   }
 
-  "AgglomerateGraphDiff" should {
+  "AgglomerateGraphDiffer" should {
     "report no differences for identical graphs, regardless of edge direction" in {
       val result = diff(graph(Seq(1, 2, 3), Seq((1, 2), (2, 3))), graph(Seq(1, 2, 3), Seq((2, 1), (3, 2))))
       assert(result.addedEdges.isEmpty)

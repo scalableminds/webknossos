@@ -466,7 +466,7 @@ function* loadAgglomerateTreeWithAtPosition(
     getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
   );
   const maybeTree = findTreeByAgglomerateId(trees, agglomerateId, layerName, mappingName);
-  // The diff to the reference agglomerate view that was requested together with the agglomerate skeleton
+  // The diff to the reference mapping that was requested together with the agglomerate skeleton
   let diffKey: string | null = null;
 
   try {
@@ -482,7 +482,7 @@ function* loadAgglomerateTreeWithAtPosition(
       return;
     }
 
-    // Agglomerate skeletons of agglomerate files can be compared to a reference agglomerate view. The
+    // Agglomerate skeletons of agglomerate files can be compared to a reference mapping. The
     // reference agglomerate is the one of the clicked segment, so the clicked position is stored with the
     // agglomerate skeleton (see createAgglomerateSkeletonMetadata).
     const isAgglomerateFile = yield* select((state) => {
@@ -502,7 +502,7 @@ function* loadAgglomerateTreeWithAtPosition(
             ),
           )
         : null;
-    // If the agglomerate skeleton will be compared to a reference agglomerate view, the diff is
+    // If the agglomerate skeleton will be compared to a reference mapping, the diff is
     // requested in parallel to the agglomerate skeleton. Otherwise, the agglomerate_diff_saga would
     // only request it once the agglomerate skeleton was added. The same condition as in the
     // agglomerate_diff_saga is used, as the diff would never stop awaiting its agglomerate skeleton
@@ -596,7 +596,11 @@ function* loadAgglomerateTreeWithAtPosition(
   if (diffKey != null) {
     // The agglomerate_diff_saga removes the diff now, if it isn't desired anymore
     yield* put(stopAwaitingAgglomerateSkeletonAction(diffKey));
-    yield* call(progressCallback, false, "Loading the agglomerate diff to the reference view...");
+    yield* call(
+      progressCallback,
+      false,
+      "Loading the agglomerate diff to the reference mapping...",
+    );
     // The diff is waited for in a detached task, so that this operation (which blocks the user
     // interface) ends once the agglomerate skeleton was added. The task ends at the latest when the
     // diff is removed, which also happens if the sagas are restarted (see agglomerate_diff_saga).

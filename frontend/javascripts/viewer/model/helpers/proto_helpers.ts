@@ -140,7 +140,7 @@ export function parseProtoAgglomerateGraphDiff(
   diffArrayBuffer: ArrayBuffer,
 ): ServerAgglomerateGraphDiff {
   const protoRoot = Root.fromJSON(AgglomerateGraphProto);
-  const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.AgglomerateGraphDiffProto`);
+  const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.AgglomerateGraphDiff`);
   const message = messageType.decode(new Uint8Array(diffArrayBuffer));
 
   const diff = messageType.toObject(message, {

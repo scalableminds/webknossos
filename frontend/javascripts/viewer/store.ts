@@ -152,7 +152,7 @@ export type SkeletonTracing = TracingBase & {
 };
 export type AgglomerateDiffDescriptor = {
   readonly layerName: string;
-  // The agglomerate view of the agglomerate skeleton
+  // The agglomerate mapping of the agglomerate skeleton
   readonly mappingName: string;
   readonly agglomerateId: bigint;
   readonly referenceMappingName: string;
@@ -176,8 +176,8 @@ export type AgglomerateDiff = AgglomerateDiffDescriptor & {
   // Only set if the diff failed
   readonly errorMessage: string | null;
 };
-// The differences of the loaded agglomerate skeletons to the reference agglomerate views are
-// derived from the agglomerate skeletons and the reference views (see agglomerate_diff_saga.ts).
+// The differences of the loaded agglomerate skeletons to the reference mappings are
+// derived from the agglomerate skeletons and the reference mappings (see agglomerate_diff_saga.ts).
 // They are only kept locally, so they can never become inconsistent with the agglomerate skeletons.
 export type AgglomerateDiffOverlay = {
   // Keyed by getAgglomerateDiffKey
@@ -325,12 +325,12 @@ export type DatasetLayerConfiguration = {
   readonly isInEditMode: boolean;
   readonly gammaCorrectionValue: number;
   readonly mapping?: { name: string; type: MappingType } | null | undefined;
-  // Only used for segmentation layers: the agglomerate view (agglomerate file) that loaded
+  // Only used for segmentation layers: the agglomerate mapping (agglomerate file) that loaded
   // agglomerate skeletons are compared against (see AgglomerateDiffOverlay). Like isDisabled,
   // it is only stored in the annotation-specific view configuration (see settings_saga).
-  readonly agglomerateDiffReference?: string | null;
+  readonly agglomerateDiffReferenceMappingName?: string | null;
   // Only used for segmentation layers: whether loaded agglomerate skeletons are compared to the
-  // reference above. Stored like agglomerateDiffReference.
+  // reference above. Stored like agglomerateDiffReferenceMappingName.
   readonly isAgglomerateDiffEnabled?: boolean;
 };
 export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";

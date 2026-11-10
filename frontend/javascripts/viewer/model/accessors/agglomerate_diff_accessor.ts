@@ -84,22 +84,22 @@ export function isAgglomerateMappingEnabled(state: WebknossosState, layerName: s
   return mappingStatus !== MappingStatusEnum.DISABLED && mappingType === "AGGLOMERATE";
 }
 
-// Whether the agglomerate skeletons of the layer are compared to a reference view. The selected
-// reference view is kept while the comparison is turned off.
+// Whether the agglomerate skeletons of the layer are compared to a reference mapping. The selected
+// reference mapping is kept while the comparison is turned off.
 export function isAgglomerateDiffEnabled(state: WebknossosState, layerName: string): boolean {
   return state.datasetConfiguration.layers[layerName]?.isAgglomerateDiffEnabled ?? false;
 }
 
-// The agglomerate view that is selected as the reference for the agglomerate skeletons of the
+// The agglomerate mapping that is selected as the reference for the agglomerate skeletons of the
 // layer, if any. It is only used while the comparison is enabled (see isAgglomerateDiffEnabled).
 export function getAgglomerateDiffReferenceMappingName(
   state: WebknossosState,
   layerName: string,
 ): string | null {
-  return state.datasetConfiguration.layers[layerName]?.agglomerateDiffReference ?? null;
+  return state.datasetConfiguration.layers[layerName]?.agglomerateDiffReferenceMappingName ?? null;
 }
 
-// Whether the comparison is enabled and a reference view is selected for an agglomerate mapping
+// Whether the comparison is enabled and a reference mapping is selected for an agglomerate mapping
 function isAgglomerateDiffRequested(state: WebknossosState, layerName: string): boolean {
   return (
     isAgglomerateDiffEnabled(state, layerName) &&
@@ -109,7 +109,7 @@ function isAgglomerateDiffRequested(state: WebknossosState, layerName: string): 
 }
 
 // Whether the agglomerate files of the layer need to be loaded to know which agglomerate skeletons
-// are compared to the reference view (see getAgglomerateDiffReferenceForSkeleton)
+// are compared to the reference mapping (see getAgglomerateDiffReferenceForSkeleton)
 export function needsAgglomerateFilesForDiffs(state: WebknossosState, layerName: string): boolean {
   const layer = getLayerByName(state.dataset, layerName);
   return (
@@ -120,11 +120,11 @@ export function needsAgglomerateFilesForDiffs(state: WebknossosState, layerName:
 }
 
 /*
- * Returns the reference view that agglomerate skeletons of the layer are compared to, or null if
+ * Returns the reference mapping that agglomerate skeletons of the layer are compared to, or null if
  * they are not compared. That is the case if
- * - the comparison is disabled, no reference view is selected or no agglomerate mapping is active,
+ * - the comparison is disabled, no reference mapping is selected or no agglomerate mapping is active,
  * - the agglomerate files of the layer are not known, yet (see needsAgglomerateFilesForDiffs), or
- * - the reference view is not an agglomerate file of the layer (e.g., if it was removed from the
+ * - the reference mapping is not an agglomerate file of the layer (e.g., if it was removed from the
  *   dataset since it was selected).
  * Whether a single agglomerate skeleton is compared is decided by isComparedToAgglomerateDiffReference.
  */
@@ -141,7 +141,7 @@ export function getUsableAgglomerateDiffReference(
   return referenceMappingName;
 }
 
-// Whether agglomerate skeletons of the given agglomerate view are compared to the usable reference
+// Whether agglomerate skeletons of the given agglomerate mapping are compared to the usable reference
 // view of their layer (see getUsableAgglomerateDiffReference). This is not the case for the reference
 // view itself and for views that are no agglomerate files (i.e., editable mappings).
 export function isComparedToAgglomerateDiffReference(

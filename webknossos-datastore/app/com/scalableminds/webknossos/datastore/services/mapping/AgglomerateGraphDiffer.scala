@@ -3,11 +3,11 @@ package com.scalableminds.webknossos.datastore.services.mapping
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{
   AgglomerateEdge,
   AgglomerateGraph,
-  AgglomerateGraphDiffProto
+  AgglomerateGraphDiff
 }
 
 /*
- * Compares the graph of one agglomerate with the graph of one agglomerate of a reference agglomerate view
+ * Compares the graph of one agglomerate with the graph of one agglomerate of a reference mapping
  * (the reference agglomerate):
  * - Added edges are all edges of the agglomerate that are not part of the reference graph. For a merge, this
  *   includes the merged-in parts (everything outside of the reference agglomerate).
@@ -18,7 +18,7 @@ import com.scalableminds.webknossos.datastore.AgglomerateGraph.{
  * The edges are returned as plain lists. They are only shown in a local overlay, so in contrast to annotation trees,
  * they don't need to be split into connected components.
  */
-object AgglomerateGraphDiff {
+object AgglomerateGraphDiffer {
 
   // Edges are undirected, so (a, b) and (b, a) map to the same key
   private def edgeKey(edge: AgglomerateEdge): (Long, Long) =
@@ -28,7 +28,7 @@ object AgglomerateGraphDiff {
       graph: AgglomerateGraph,
       referenceGraph: AgglomerateGraph,
       referenceAgglomerateId: Long
-  ): AgglomerateGraphDiffProto = {
+  ): AgglomerateGraphDiff = {
     // The reference agglomerate might be a huge merger, so only lookup structures for the (smaller) part that
     // touches the agglomerate are built. The reference graph itself is only iterated over.
     val segmentIds = graph.segments.toSet
@@ -61,7 +61,7 @@ object AgglomerateGraphDiff {
     def asIndices(edges: Seq[AgglomerateEdge]): Seq[Int] =
       edges.flatMap(edge => Seq(indexBySegmentId(edge.source), indexBySegmentId(edge.target)))
 
-    AgglomerateGraphDiffProto(
+    AgglomerateGraphDiff(
       referenceAgglomerateId = referenceAgglomerateId,
       // Every endpoint is a segment of one of the graphs, so its position is known
       positions = endpointSegmentIds.flatMap { segmentId =>

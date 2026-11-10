@@ -23,7 +23,7 @@ import SwitchSetting from "./components/switch_setting";
 
 const explanation =
   "When enabled, loading an agglomerate skeleton of this layer also loads the edges that were added (green) " +
-  "and removed (orange) compared to the agglomerate of the reference view that contains the clicked segment.";
+  "and removed (orange) compared to the agglomerate of the reference mapping that contains the clicked segment.";
 
 // Failures of many agglomerates usually have few distinct reasons, so only these are listed
 const MAX_LISTED_FAILURE_REASONS = 5;
@@ -105,9 +105,9 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
   // The diffs of the layer's agglomerate skeletons are not computed in these cases (see
   // agglomerate_diff_saga), so the setting is ignored.
   const disabledReason = isProofreading
-    ? "Agglomerate skeletons of a proofread (editable) mapping cannot be compared to a reference agglomerate view, yet."
+    ? "Agglomerate skeletons of a proofread (editable) mapping cannot be compared to a reference mapping, yet."
     : segmentationLayer.agglomerates != null && segmentationLayer.agglomerates.length < 2
-      ? "Comparing agglomerate skeletons requires at least two agglomerate views (agglomerate files) for this layer."
+      ? "Comparing agglomerate skeletons requires at least two agglomerate mappings (agglomerate files) for this layer."
       : null;
 
   const handleToggle = useCallback(
@@ -123,7 +123,7 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
       dispatch(
         updateLayerSettingAction(
           layerName,
-          "agglomerateDiffReference",
+          "agglomerateDiffReferenceMappingName",
           newReferenceMappingName ?? null,
         ),
       );
@@ -131,7 +131,7 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
     [dispatch, layerName],
   );
 
-  // Comparing the active agglomerate view to itself would show nothing
+  // Comparing the active mapping to itself would show nothing
   const options = useMemo(
     () =>
       (segmentationLayer.agglomerates ?? [])
@@ -146,7 +146,7 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
   const isActive = isEnabled && disabledReason == null;
   const statusText =
     referenceMappingName != null && referenceMappingName === activeMappingName ? (
-      "The reference is the active agglomerate view, so its agglomerate skeletons are not compared."
+      "The reference is the active mapping, so its agglomerate skeletons are not compared."
     ) : diffSummary != null ? (
       <>
         {diffSummary.summary}
@@ -175,7 +175,7 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
       <SwitchSetting
         label={
           <>
-            Compare to Reference{" "}
+            Compare to Reference Mapping{" "}
             <FastTooltip title={explanation}>
               <InfoCircleOutlined />
             </FastTooltip>
@@ -190,13 +190,13 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
       {isActive && (
         <>
           <Select
-            placeholder="Select a reference agglomerate view"
+            placeholder="Select a reference mapping"
             style={{ width: "100%" }}
             value={referenceMappingName ?? undefined}
             onChange={handleChange}
             loading={isLoadingAgglomerates}
             allowClear
-            notFoundContent="No other agglomerate views found."
+            notFoundContent="No other agglomerate mappings found."
             popupMatchSelectWidth={false}
             options={options}
           />

@@ -79,7 +79,7 @@ function* prepareDatasetSettingsForSaving(
    * the data layers within the dataset configuration. Instead, the visibilities
    * are stored separately within the annotation (see annotation_saga.ts).
    * Therefore, we restore the layer visibilities to their original value before
-   * sending them to the back-end. The same applies to the reference agglomerate view
+   * sending them to the back-end. The same applies to the reference mapping
    * of the agglomerate diff, which is configured per annotation.
    * This is not very elegant, but currently the workaround to achieve that creating
    * a new annotation with a fresh volume layer does not hide the original segmentation
@@ -102,8 +102,8 @@ function* prepareDatasetSettingsForSaving(
       newLayersWithNamingAdjusted[layerNameOfDataset] = {
         ...datasetConfiguration.layers[layerName],
         isDisabled: originalDatasetSettings.layers[layerName].isDisabled,
-        agglomerateDiffReference:
-          originalDatasetSettings.layers[layerName].agglomerateDiffReference,
+        agglomerateDiffReferenceMappingName:
+          originalDatasetSettings.layers[layerName].agglomerateDiffReferenceMappingName,
         isAgglomerateDiffEnabled:
           originalDatasetSettings.layers[layerName].isAgglomerateDiffEnabled,
       };

@@ -17,8 +17,8 @@ message AgglomerateGraph {
 }
 
 // Difference of an agglomerate to the reference agglomerate that contains one of its segments
-// (see AgglomerateGraphDiff.scala).
-message AgglomerateGraphDiffProto {
+// (see AgglomerateGraphDiffer.scala).
+message AgglomerateGraphDiff {
   required uint64 referenceAgglomerateId = 1;
   // Three entries (x, y, z) per segment that is an endpoint of an added or removed edge
   repeated int32 positions = 2 [packed = true];

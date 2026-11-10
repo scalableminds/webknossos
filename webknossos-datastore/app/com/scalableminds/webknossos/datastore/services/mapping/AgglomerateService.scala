@@ -9,7 +9,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
-import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateGraph, AgglomerateGraphDiffProto}
+import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateGraph, AgglomerateGraphDiff}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, LayerAttachmentDataformat}
@@ -183,7 +183,7 @@ class AgglomerateService @Inject() (
       referenceAgglomerateFileKey: AgglomerateFileKey,
       agglomerateId: Long,
       segmentId: Long
-  )(using ec: ExecutionContext, tc: TokenContext): Fox[AgglomerateGraphDiffProto] = {
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[AgglomerateGraphDiff] = {
     // Diffs are requested automatically for every loaded agglomerate skeleton, so the graphs are limited like the
     // agglomerate skeletons instead of like explicitly requested agglomerate graphs.
     val edgeLimit = config.Datastore.AgglomerateTree.maxEdges
@@ -206,7 +206,7 @@ class AgglomerateService @Inject() (
       graph <- graphFox
       _ <- Fox.fromBool(graph.segments.contains(segmentId)) ?~> Msg.AgglomerateDiff.segmentNotInAgglomerate
       (referenceAgglomerateId, referenceGraph) <- referenceGraphFox
-      diff <- tryo(AgglomerateGraphDiff.diff(graph, referenceGraph, referenceAgglomerateId)).toFox
+      diff <- tryo(AgglomerateGraphDiffer.diff(graph, referenceGraph, referenceAgglomerateId)).toFox
     } yield diff
   }
 

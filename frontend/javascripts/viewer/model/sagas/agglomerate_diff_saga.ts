@@ -38,8 +38,8 @@ import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import type { AgglomerateDiff, AgglomerateDiffDescriptor, WebknossosState } from "viewer/store";
 
 /*
- * The differences of the agglomerate skeletons to the reference agglomerate views are derived
- * state: Whenever the agglomerate skeletons or the reference views change (no matter whether
+ * The differences of the agglomerate skeletons to the reference mappings are derived
+ * state: Whenever the agglomerate skeletons or the reference mappings change (no matter whether
  * by the user, undo, a collaborator, proofreading or loading the annotation), the diffs are
  * reconciled with them. They are only kept locally (see AgglomerateDiffOverlay) and never saved.
  *
@@ -210,7 +210,7 @@ function* showDiffLoadingErrorToast(layerName: string, errorMessage: string): Sa
   const agglomerateSkeletons =
     failedCount === 1 ? "1 agglomerate skeleton" : `${failedCount} agglomerate skeletons`;
   Toast.error(
-    `Could not compare ${agglomerateSkeletons} of layer ${readableLayerName} to the reference agglomerate view. The reasons are listed in the layer settings.`,
+    `Could not compare ${agglomerateSkeletons} of layer ${readableLayerName} to the reference mapping. The reasons are listed in the layer settings.`,
     { key: `agglomerate-diff-error-${layerName}` },
     errorMessage,
   );

@@ -595,8 +595,8 @@ describe("Agglomerate diff saga", () => {
     expect(diffToasts.length).toBe(2);
     expect(new Set(diffToasts.map(([_message, config]) => config?.key)).size).toBe(1);
     expect(diffToasts.at(-1)?.[0]).toContain("Could not compare 2 agglomerate skeletons");
-    // Expected errors (4xx) are not reported
-    expect(notifySpy).not.toHaveBeenCalled();
+    // Like failures of loading agglomerate skeletons, each failure is reported
+    expect(notifySpy).toHaveBeenCalledTimes(2);
   });
 
   it<WebknossosTestContext>("removes loading diffs as soon as they are obsolete", async (context) => {

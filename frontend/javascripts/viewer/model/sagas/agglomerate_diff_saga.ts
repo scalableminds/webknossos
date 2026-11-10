@@ -122,25 +122,16 @@ function getDesiredDiffs(state: WebknossosState): {
   return { desiredDiffs, layersWithUnknownAgglomerateFiles };
 }
 
-type DiffLoadingError = { message: string; isExpected: boolean };
-
-function getDiffLoadingError(e: unknown): DiffLoadingError {
-  if (e instanceof Error) return { message: e.message, isExpected: false };
-  // Failed requests are rejected with the messages and status of the response (see handleError)
-  const { messages, status } = (e ?? {}) as {
-    messages?: Array<{ error?: string; chain?: string }>;
-    status?: number;
-  };
+function getDiffLoadingErrorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  // Failed requests are rejected with the messages of the response (see handleError)
+  const { messages } = (e ?? {}) as { messages?: Array<{ error?: string; chain?: string }> };
   const error = messages?.find((message) => message.error != null)?.error;
   // The chain contains the cause, e.g., that the agglomerate is too large
   const chain = messages
     ?.find((message) => message.chain != null)
     ?.chain?.replace(/^\[Server Time [^\]]*\] /, "");
-  return {
-    message: [error, chain].filter((part) => part != null).join(" ") || "Unknown error",
-    // E.g., a missing agglomerate file or a too large agglomerate
-    isExpected: status != null && status >= 400 && status < 500,
-  };
+  return [error, chain].filter((part) => part != null).join(" ") || "Unknown error";
 }
 
 /*
@@ -150,7 +141,7 @@ function getDiffLoadingError(e: unknown): DiffLoadingError {
 function* fetchAgglomerateDiff(
   descriptor: AgglomerateDiffDescriptor,
   positionInLayer: Vector3,
-): Saga<{ diff: ServerAgglomerateGraphDiff } | { error: DiffLoadingError }> {
+): Saga<{ diff: ServerAgglomerateGraphDiff } | { errorMessage: string }> {
   const { layerName, mappingName, agglomerateId, referenceMappingName } = descriptor;
   const dataset = yield* select((state) => state.dataset);
   const layerInfo = getLayerByName(dataset, layerName);
@@ -187,11 +178,10 @@ function* fetchAgglomerateDiff(
     return { diff: parseProtoAgglomerateGraphDiff(protoBuffer) };
   } catch (e) {
     console.error(e);
-    const error = getDiffLoadingError(e);
-    if (!error.isExpected) {
-      ErrorHandling.notify(e instanceof Error ? e : new Error(error.message));
-    }
-    return { error };
+    const errorMessage = getDiffLoadingErrorMessage(e);
+    // Like failures of loading agglomerate skeletons, all failures are reported
+    ErrorHandling.notify(e instanceof Error ? e : new Error(errorMessage));
+    return { errorMessage };
   }
 }
 
@@ -232,11 +222,11 @@ function* loadRequestedDiffs(requests: Channel<RequestAgglomerateDiffAction>): S
       yield* put(finishLoadingAgglomerateDiffAction(descriptor, positionInLayer, result.diff));
     } else {
       yield* put(
-        failLoadingAgglomerateDiffAction(descriptor, positionInLayer, result.error.message),
+        failLoadingAgglomerateDiffAction(descriptor, positionInLayer, result.errorMessage),
       );
       // The failure is ignored if the diff became obsolete during the request
       if (yield* select(hasStatus("failed"))) {
-        yield* call(showDiffLoadingErrorToast, descriptor.layerName, result.error.message);
+        yield* call(showDiffLoadingErrorToast, descriptor.layerName, result.errorMessage);
       }
     }
   }

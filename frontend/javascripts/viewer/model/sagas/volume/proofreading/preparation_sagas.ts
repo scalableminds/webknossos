@@ -1,7 +1,4 @@
-import {
-  getAgglomeratesForSegmentsFromTracingstore,
-  getPositionForSegmentInAgglomerate,
-} from "admin/rest_api";
+import { getPositionForSegmentInAgglomerate } from "admin/rest_api";
 import { toBigInt } from "libs/bigint_helpers";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -27,7 +24,7 @@ import {
   initializeEditableMappingAction,
   setHasEditableMappingAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { getMappedIdAsync } from "viewer/model/helpers/mapped_id_lookup";
+import { getMappedId, getMappedIdAsync } from "viewer/model/helpers/mapped_id_lookup";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { api, Store } from "viewer/singletons";
@@ -246,57 +243,36 @@ export function* reloadMappingAndAggloIds(
   tracingId: string,
   unmappedSourceId: bigint,
   unmappedTargetId: bigint,
-) {
+): Saga<{
+  sourceAgglomerateId: bigint;
+  targetAgglomerateId: bigint;
+  activeMapping: ActiveMappingInfo;
+} | null> {
   const activeMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
   );
 
-  if (activeMapping.mapping != null) {
-    const maybeSourceAgglomerateId = getMappedIdAsBigInt(activeMapping.mapping, unmappedSourceId);
-    const maybeTargetAgglomerateId = getMappedIdAsBigInt(activeMapping.mapping, unmappedTargetId);
-
-    if (maybeSourceAgglomerateId != null && maybeTargetAgglomerateId != null) {
-      return {
-        sourceAgglomerateId: maybeSourceAgglomerateId,
-        targetAgglomerateId: maybeTargetAgglomerateId,
-        activeMapping,
-      };
-    }
-
-    // As an additional safety net we look up the IDs again. Actually,
-    // this should not happen in production.
-    const segmentsToRequest = new Set([unmappedSourceId, unmappedTargetId]);
-    const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
-    const annotationVersion = yield* select((state) => state.annotation.version);
-    const annotationId = yield* select((state) => state.annotation.annotationId);
-
-    const missingMappingInfo = yield* call(
-      getAgglomeratesForSegmentsFromTracingstore,
-      tracingStoreUrl,
-      tracingId,
-      segmentsToRequest,
-      annotationId,
-      annotationVersion,
-    );
-    const maybeSourceAgglomerateIdFromServer = getMappedIdAsBigInt(
-      missingMappingInfo,
-      unmappedSourceId,
-    );
-    const maybeTargetAgglomerateIdFromServer = getMappedIdAsBigInt(
-      missingMappingInfo,
-      unmappedTargetId,
-    );
-    if (maybeSourceAgglomerateIdFromServer == null || maybeTargetAgglomerateIdFromServer == null) {
-      throw new SoftError(
-        `Could not look up agglomerate id for unmapped segment id ${unmappedSourceId} or ${unmappedTargetId}.`,
-      );
-    }
-    return {
-      sourceAgglomerateId: maybeSourceAgglomerateIdFromServer,
-      targetAgglomerateId: maybeTargetAgglomerateIdFromServer,
-      activeMapping,
-    };
+  if (activeMapping.mapping == null) {
+    return null;
   }
+  // Usually, both ids are known to the local mapping. Otherwise, they are fetched from the server.
+  // The local lookup is done synchronously to avoid delaying the proofreading operation.
+  const getAgglomerateId = function* (unmappedId: bigint) {
+    return (
+      (yield* select((state) => getMappedId(state, tracingId, unmappedId))) ??
+      (yield* call(getMappedIdAsync, tracingId, unmappedId))
+    );
+  };
+  const [sourceAgglomerateId, targetAgglomerateId] = yield* all([
+    call(getAgglomerateId, unmappedSourceId),
+    call(getAgglomerateId, unmappedTargetId),
+  ]);
+  if (sourceAgglomerateId == null || targetAgglomerateId == null) {
+    throw new SoftError(
+      `Could not look up agglomerate id for unmapped segment id ${unmappedSourceId} or ${unmappedTargetId}.`,
+    );
+  }
+  return { sourceAgglomerateId, targetAgglomerateId, activeMapping };
 }
 
 export function* getAgglomerateInfos(

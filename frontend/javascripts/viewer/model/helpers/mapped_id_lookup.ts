@@ -43,11 +43,14 @@ export function getMappedId(
     return unmappedId;
   }
 
-  const { mapping, mappingStatus, mappingType, hideUnmappedIds } = getMappingInfo(
+  const { mapping, mappingType, hideUnmappedIds } = getMappingInfo(
     state.temporaryConfiguration.activeMappingByLayer,
     layerName,
   );
-  if (mapping == null || mappingStatus !== MappingStatusEnum.ENABLED) {
+  // The mapping status is not checked: each update of the mapping data (e.g., when HDF5 entries
+  // are loaded or after a split) sets it to ACTIVATING until the textures are updated, but the
+  // data in the store is already valid. While a mapping is being activated, the data is null.
+  if (mapping == null) {
     return null;
   }
   const mappedId = new NumberLikeMapWrapper(mapping).getAsBigInt(unmappedId);
@@ -88,14 +91,14 @@ export async function getMappedIdAsync(
     mappingName,
     new Set([unmappedId]),
   );
-  // Discard the result if another mapping was activated while the request was pending.
+  // Discard the result if the mapping was switched or disabled while the request was pending.
   const currentMappingInfo = getMappingInfo(
     Store.getState().temporaryConfiguration.activeMappingByLayer,
     layerName,
   );
   if (
     currentMappingInfo.mappingName !== mappingName ||
-    currentMappingInfo.mappingStatus !== MappingStatusEnum.ENABLED
+    currentMappingInfo.mappingStatus === MappingStatusEnum.DISABLED
   ) {
     return null;
   }

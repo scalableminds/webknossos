@@ -43,7 +43,9 @@ export function getMappedId(
   layerName: string,
   unmappedId: bigint,
 ): MappedIdResult {
-  if (!isMappingAppliedLocally(state, layerName)) {
+  // Background is never mapped to another id. The local HDF5 mapping doesn't necessarily
+  // contain an entry for it.
+  if (unmappedId === 0n || !isMappingAppliedLocally(state, layerName)) {
     return { type: "exists", value: unmappedId };
   }
 
@@ -89,6 +91,17 @@ export async function getMappedIdAsync(
     mappingName,
     new Set([unmappedId]),
   );
+  // Discard the result if another mapping was activated while the request was pending.
+  const currentMappingInfo = getMappingInfo(
+    Store.getState().temporaryConfiguration.activeMappingByLayer,
+    layerName,
+  );
+  if (
+    currentMappingInfo.mappingName !== mappingName ||
+    currentMappingInfo.mappingStatus !== MappingStatusEnum.ENABLED
+  ) {
+    return { type: "unknown" };
+  }
   const mappedId = new NumberLikeMapWrapper(fetchedEntries).getAsBigInt(unmappedId);
   return mappedId != null ? { type: "exists", value: mappedId } : { type: "unknown" };
 }

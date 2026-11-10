@@ -184,17 +184,15 @@ async function loadUnmappedSegmentIdForPosition(
     layerName,
     posInLayerSpace,
   );
-  // Make sure the corresponding bucket is loaded
-  await api.data.getDataValue(
-    layerName,
-    posInLayerSpace,
-    renderedZoomStepForCameraPosition,
-    Store.getState().flycam.additionalCoordinates,
-  );
-  return getUnmappedSegmentIdForPositionInLayer(
-    layerName,
-    posInLayerSpace,
-    renderedZoomStepForCameraPosition,
+  // Use the returned value instead of reading the cube again, because the additional
+  // coordinates might change while the bucket is loading.
+  return toBigInt(
+    await api.data.getDataValue(
+      layerName,
+      posInLayerSpace,
+      renderedZoomStepForCameraPosition,
+      Store.getState().flycam.additionalCoordinates,
+    ),
   );
 }
 

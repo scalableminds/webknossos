@@ -122,7 +122,5 @@ class McpBundleService @Inject() (mcpService: McpService, conf: WkConf) extends 
 
   // The manifest lists the tools for display in the host app, so the short title is the better description here.
   private def manifestTools: JsArray =
-    JsArray(mcpService.tools.value.map { tool =>
-      Json.obj("name" -> (tool \ "name").as[String], "description" -> (tool \ "title").as[String])
-    })
+    JsArray(mcpService.tools.map(tool => Json.obj("name" -> tool.name, "description" -> tool.title)))
 }

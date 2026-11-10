@@ -5,7 +5,7 @@ import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonAutoFormat
 import models.user.UserService
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{Scope, ShortLivedTokenService, WkEnv}
 
@@ -14,7 +14,8 @@ import scala.concurrent.ExecutionContext
 
 case class McpPermissions(scopes: String) derives JsonAutoFormat
 
-/** Model Context Protocol (MCP) server, so that AI agents can work with this WEBKNOSSOS instance.
+/** Model Context Protocol (MCP) server, so that AI agents can work with this WEBKNOSSOS instance. The protocol is
+  * implemented by the MCP Java SDK, see McpService and PlayMcpTransport.
   *
   * The transport is Streamable HTTP without server-to-client streaming: every POST carries a single JSON-RPC message
   * and is answered with a single JSON response. The server is stateless, so no Mcp-Session-Id is issued and GET (which
@@ -35,11 +36,9 @@ class McpController @Inject() (
     val bodyParsers: PlayBodyParsers
 ) extends Controller {
 
-  def handle(): Action[JsValue] = sil.SecuredAction.async(bodyParsers.tolerantJson) { implicit request =>
-    mcpService.handle(request.body, request.identity).map {
-      case Some(response) => Ok(response)
-      case None           => Accepted // JSON-RPC notifications are not answered
-    }
+  // The body is passed on as text, the MCP SDK parses and validates it (see PlayMcpTransport).
+  def handle(): Action[String] = sil.SecuredAction.async(bodyParsers.tolerantText) { implicit request =>
+    mcpService.handlePost(request.body, request.contentType, request.headers, request.identity)
   }
 
   def handleGet(): Action[AnyContent] = sil.SecuredAction { _ =>

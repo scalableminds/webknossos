@@ -34,7 +34,7 @@ export function isMappingAppliedLocally(state: WebknossosState, layerName: strin
 // holds for background (0).
 // A JSON mapping doesn't need to contain all ids. An id without an entry is not an error: it
 // keeps its unmapped id (or becomes 0 if unmapped ids are hidden), as in the rendering.
-export function getMappedId(
+export function mapId(
   state: WebknossosState,
   layerName: string,
   unmappedId: bigint,
@@ -63,17 +63,14 @@ export function getMappedId(
   return null;
 }
 
-// Like getMappedId, but fetches the mapped id from the server if the local HDF5 mapping
+// Like mapId, but fetches the mapped id from the server if the local HDF5 mapping
 // doesn't know it. The fetched entry is not added to the local mapping, because the next
 // update of the local mapping would remove it anyway if it's not needed for rendering.
 // Null is only returned for a JSON mapping that is still being activated, if the server didn't
 // return an entry for the id or if the mapping changed while the request was pending.
-export async function getMappedIdAsync(
-  layerName: string,
-  unmappedId: bigint,
-): Promise<bigint | null> {
+export async function mapIdAsync(layerName: string, unmappedId: bigint): Promise<bigint | null> {
   const state = Store.getState();
-  const mappedId = getMappedId(state, layerName, unmappedId);
+  const mappedId = mapId(state, layerName, unmappedId);
   const { mappingName, mappingType } = getMappingInfo(
     state.temporaryConfiguration.activeMappingByLayer,
     layerName,

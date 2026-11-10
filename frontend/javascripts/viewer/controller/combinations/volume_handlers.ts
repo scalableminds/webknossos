@@ -25,7 +25,7 @@ import {
   startEditingAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { getMappedId, getMappedIdAsync } from "viewer/model/helpers/mapped_id_lookup";
+import { mapId, mapIdAsync } from "viewer/model/helpers/mapped_id_lookup";
 import {
   invertTransform,
   transformPointUnscaled,
@@ -129,7 +129,7 @@ export function getSegmentIdsAtPosition(globalPos: Vector3): {
       renderedZoomStep,
     ),
   );
-  return { unmappedId, mappedId: getMappedId(state, layer.name, unmappedId) ?? 0n };
+  return { unmappedId, mappedId: mapId(state, layer.name, unmappedId) ?? 0n };
 }
 
 // Returns the segment ids at the given position in the given layer. Awaits the loading of the
@@ -162,8 +162,8 @@ export async function getSegmentIdsAtPositionAsync(
     ),
   );
   const mappedId = fetchUnknownIds
-    ? await getMappedIdAsync(layerName, unmappedId)
-    : getMappedId(Store.getState(), layerName, unmappedId);
+    ? await mapIdAsync(layerName, unmappedId)
+    : mapId(Store.getState(), layerName, unmappedId);
   return { unmappedId, mappedId };
 }
 

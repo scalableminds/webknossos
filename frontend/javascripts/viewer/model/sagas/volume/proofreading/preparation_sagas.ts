@@ -24,7 +24,7 @@ import {
   initializeEditableMappingAction,
   setHasEditableMappingAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { getMappedId, getMappedIdAsync } from "viewer/model/helpers/mapped_id_lookup";
+import { mapId, mapIdAsync } from "viewer/model/helpers/mapped_id_lookup";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { api, Store } from "viewer/singletons";
@@ -207,7 +207,7 @@ export function* prepareSplitOrMerge(
 
   const getMappedAndUnmapped = function* (position: Vector3) {
     const unmappedId = yield* call(getUnmappedDataValue, position);
-    const agglomerateId = yield* call(getMappedIdAsync, volumeTracing.tracingId, unmappedId);
+    const agglomerateId = yield* call(mapIdAsync, volumeTracing.tracingId, unmappedId);
     if (agglomerateId == null) {
       throw new SoftError(
         `Could not map id ${unmappedId} at position ${position}. The mapped partner might not be known yet. Please retry.`,
@@ -259,8 +259,8 @@ export function* reloadMappingAndAggloIds(
   // The local lookup is done synchronously to avoid delaying the proofreading operation.
   const getAgglomerateId = function* (unmappedId: bigint) {
     return (
-      (yield* select((state) => getMappedId(state, tracingId, unmappedId))) ??
-      (yield* call(getMappedIdAsync, tracingId, unmappedId))
+      (yield* select((state) => mapId(state, tracingId, unmappedId))) ??
+      (yield* call(mapIdAsync, tracingId, unmappedId))
     );
   };
   const [sourceAgglomerateId, targetAgglomerateId] = yield* all([

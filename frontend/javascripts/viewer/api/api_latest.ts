@@ -171,7 +171,7 @@ import type { Bucket, DataBucket } from "viewer/model/bucket_data_handling/bucke
 import type DataLayer from "viewer/model/data_layer";
 import dimensions from "viewer/model/dimensions";
 import { MagInfo } from "viewer/model/helpers/mag_info";
-import { getMappedIdAsync } from "viewer/model/helpers/mapped_id_lookup";
+import { mapIdAsync } from "viewer/model/helpers/mapped_id_lookup";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import { overwriteAction } from "viewer/model/helpers/overwrite_action_middleware";
 import {
@@ -2030,7 +2030,7 @@ class DataApi {
       throw new Error(`No active mapping for layer ${layerName}`);
     }
 
-    const mappedId = await getMappedIdAsync(layerName, unmappedId);
+    const mappedId = await mapIdAsync(layerName, unmappedId);
     if (mappedId == null) {
       throw new Error(`Could not map id ${unmappedId} at position ${position}`);
     }

@@ -1,10 +1,6 @@
 package backend
 
-import com.scalableminds.webknossos.datastore.AgglomerateGraph.{
-  AgglomerateEdge,
-  AgglomerateGraph,
-  AgglomerateGraphDiff
-}
+import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph, AgglomerateGraphDiff}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateGraphDiffer
 import org.scalatest.wordspec.AnyWordSpec

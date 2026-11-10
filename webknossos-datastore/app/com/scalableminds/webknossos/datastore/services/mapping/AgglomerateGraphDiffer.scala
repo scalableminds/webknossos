@@ -1,10 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.mapping
 
-import com.scalableminds.webknossos.datastore.AgglomerateGraph.{
-  AgglomerateEdge,
-  AgglomerateGraph,
-  AgglomerateGraphDiff
-}
+import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph, AgglomerateGraphDiff}
 
 /*
  * Compares the graph of one agglomerate with the graph of one agglomerate of a reference mapping

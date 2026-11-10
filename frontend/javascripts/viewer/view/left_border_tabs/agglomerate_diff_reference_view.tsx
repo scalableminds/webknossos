@@ -1,5 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { Select, Switch } from "antd";
+import { Select } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { localeCompareBy } from "libs/utils";
@@ -8,21 +8,28 @@ import { useDispatch } from "react-redux";
 import {
   getAgglomerateDiffOverlay,
   getAgglomerateDiffReferenceMappingName,
+  isAgglomerateDiffEnabled,
   isAgglomerateMappingEnabled,
 } from "viewer/model/accessors/agglomerate_diff_accessor";
-import { getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
+import {
+  getMappingInfo,
+  getSegmentationLayerByName,
+} from "viewer/model/accessors/dataset_accessor";
 import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { hasEditableMapping } from "viewer/model/accessors/volumetracing_accessor";
-import { setAgglomerateDiffsVisibilityAction } from "viewer/model/actions/agglomerate_diff_actions";
 import { dispatchEnsureLayerMappingsAreLoadedAsync } from "viewer/model/actions/dataset_actions";
 import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
+import SwitchSetting from "./components/switch_setting";
 
 const explanation =
-  "When a reference agglomerate view is selected, loading an agglomerate skeleton of this layer also loads " +
-  "the edges that were added (green) and removed (orange) compared to the reference agglomerate that contains the clicked segment.";
+  "When enabled, loading an agglomerate skeleton of this layer also loads the edges that were added (green) " +
+  "and removed (orange) compared to the agglomerate of the reference view that contains the clicked segment.";
 
 // Failures of many agglomerates usually have few distinct reasons, so only these are listed
 const MAX_LISTED_FAILURE_REASONS = 5;
+
+const pluralizeAgglomerates = (count: number) =>
+  count === 1 ? "1 agglomerate" : `${count} agglomerates`;
 
 function useDiffSummary(
   layerName: string,
@@ -31,13 +38,11 @@ function useDiffSummary(
   return useMemo(() => {
     const diffsOfLayer = Object.values(diffs).filter((diff) => diff.layerName === layerName);
     if (diffsOfLayer.length === 0) return null;
-    const loadedDiffs = diffsOfLayer.filter((diff) => diff.status === "loaded");
+    const loadedCount = diffsOfLayer.filter((diff) => diff.status === "loaded").length;
     const loadingCount = diffsOfLayer.filter((diff) => diff.status === "loading").length;
     const failedDiffs = diffsOfLayer.filter((diff) => diff.status === "failed");
-    const addedEdgeCount = loadedDiffs.reduce((acc, diff) => acc + diff.addedEdgeCount, 0);
-    const removedEdgeCount = loadedDiffs.reduce((acc, diff) => acc + diff.removedEdgeCount, 0);
     const summary = [
-      `${loadedDiffs.length} agglomerate${loadedDiffs.length === 1 ? "" : "s"} compared: +${addedEdgeCount} / −${removedEdgeCount} edges`,
+      `${pluralizeAgglomerates(loadedCount)} compared`,
       loadingCount > 0 ? `${loadingCount} loading` : null,
     ]
       .filter((part) => part != null)
@@ -68,10 +73,14 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
     getSegmentationLayerByName(state.dataset, layerName),
   );
   const hasSkeleton = useWkSelector((state) => getSkeletonTracing(state.annotation) != null);
+  const isEnabled = useWkSelector((state) => isAgglomerateDiffEnabled(state, layerName));
   const referenceMappingName = useWkSelector((state) =>
     getAgglomerateDiffReferenceMappingName(state, layerName),
   );
-  const areDiffsVisible = useWkSelector((state) => getAgglomerateDiffOverlay(state).isVisible);
+  const activeMappingName = useWkSelector(
+    (state) =>
+      getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName).mappingName,
+  );
   const isProofreading = useWkSelector((state) => hasEditableMapping(state, layerName));
   const isAgglomerateMappingActive = useWkSelector((state) =>
     isAgglomerateMappingEnabled(state, layerName),
@@ -94,12 +103,19 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
   }, [shouldLoadAgglomerates, ensureAgglomeratesAreLoaded]);
 
   // The diffs of the layer's agglomerate skeletons are not computed in these cases (see
-  // agglomerate_diff_saga), so a selected reference view is ignored.
+  // agglomerate_diff_saga), so the setting is ignored.
   const disabledReason = isProofreading
     ? "Agglomerate skeletons of a proofread (editable) mapping cannot be compared to a reference agglomerate view, yet."
     : segmentationLayer.agglomerates != null && segmentationLayer.agglomerates.length < 2
       ? "Comparing agglomerate skeletons requires at least two agglomerate views (agglomerate files) for this layer."
       : null;
+
+  const handleToggle = useCallback(
+    (newIsEnabled: boolean) => {
+      dispatch(updateLayerSettingAction(layerName, "isAgglomerateDiffEnabled", newIsEnabled));
+    },
+    [dispatch, layerName],
+  );
 
   const handleChange = useCallback(
     (newReferenceMappingName: string | undefined) => {
@@ -115,68 +131,77 @@ export default function AgglomerateDiffReferenceView({ layerName }: { layerName:
     [dispatch, layerName],
   );
 
+  // Comparing the active agglomerate view to itself would show nothing
   const options = useMemo(
     () =>
       (segmentationLayer.agglomerates ?? [])
-        .slice()
+        .filter((agglomerate) => agglomerate !== activeMappingName)
         .sort(localeCompareBy((s) => s))
         .map((agglomerate) => ({ value: agglomerate, label: agglomerate })),
-    [segmentationLayer.agglomerates],
+    [segmentationLayer.agglomerates, activeMappingName],
   );
 
   if (!isShown) return null;
 
+  const isActive = isEnabled && disabledReason == null;
+  const statusText =
+    referenceMappingName != null && referenceMappingName === activeMappingName ? (
+      "The reference is the active agglomerate view, so its agglomerate skeletons are not compared."
+    ) : diffSummary != null ? (
+      <>
+        {diffSummary.summary}
+        {diffSummary.failedCount > 0 && (
+          <>
+            ,{" "}
+            <FastTooltip
+              dynamicRenderer={() => (
+                <ul style={{ margin: 0, paddingLeft: 16 }}>
+                  {diffSummary.failureReasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              )}
+            >
+              <span style={{ textDecoration: "underline dotted" }}>
+                {diffSummary.failedCount} failed
+              </span>
+            </FastTooltip>
+          </>
+        )}
+      </>
+    ) : null;
   return (
     <div style={{ marginBottom: 14 }}>
-      <label className="setting-label">
-        Reference Agglomerate View{" "}
-        <FastTooltip title={explanation}>
-          <InfoCircleOutlined />
-        </FastTooltip>
-      </label>
-      <FastTooltip title={disabledReason}>
-        <Select
-          placeholder={disabledReason != null ? "Not available" : "No agglomerate diff"}
-          style={{ width: "100%", marginTop: 6 }}
-          value={disabledReason != null ? undefined : (referenceMappingName ?? undefined)}
-          onChange={handleChange}
-          loading={isLoadingAgglomerates}
-          disabled={disabledReason != null}
-          allowClear
-          notFoundContent="No agglomerate views found."
-          popupMatchSelectWidth={false}
-          options={options}
-        />
-      </FastTooltip>
-      {referenceMappingName != null && disabledReason == null && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-          <Switch
-            size="small"
-            checked={areDiffsVisible}
-            onChange={(isVisible) => dispatch(setAgglomerateDiffsVisibilityAction(isVisible))}
+      <SwitchSetting
+        label={
+          <>
+            Compare to Reference{" "}
+            <FastTooltip title={explanation}>
+              <InfoCircleOutlined />
+            </FastTooltip>
+          </>
+        }
+        value={isActive}
+        onChange={handleToggle}
+        disabled={disabledReason != null}
+        disabledReason={disabledReason}
+        loading={isLoadingAgglomerates}
+      />
+      {isActive && (
+        <>
+          <Select
+            placeholder="Select a reference agglomerate view"
+            style={{ width: "100%" }}
+            value={referenceMappingName ?? undefined}
+            onChange={handleChange}
+            loading={isLoadingAgglomerates}
+            allowClear
+            notFoundContent="No other agglomerate views found."
+            popupMatchSelectWidth={false}
+            options={options}
           />
-          <span>
-            {diffSummary?.summary ?? "Load an agglomerate skeleton to compare it."}
-            {diffSummary != null && diffSummary.failedCount > 0 && (
-              <>
-                ,{" "}
-                <FastTooltip
-                  dynamicRenderer={() => (
-                    <ul style={{ margin: 0, paddingLeft: 16 }}>
-                      {diffSummary.failureReasons.map((reason) => (
-                        <li key={reason}>{reason}</li>
-                      ))}
-                    </ul>
-                  )}
-                >
-                  <span style={{ textDecoration: "underline dotted" }}>
-                    {diffSummary.failedCount} failed
-                  </span>
-                </FastTooltip>
-              </>
-            )}
-          </span>
-        </div>
+          {statusText != null && <div style={{ marginTop: 6 }}>{statusText}</div>}
+        </>
       )}
     </div>
   );

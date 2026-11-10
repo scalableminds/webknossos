@@ -173,8 +173,6 @@ export type AgglomerateDiff = AgglomerateDiffDescriptor & {
   readonly referenceAgglomerateId: bigint | null;
   // The trees of the overlay skeleton that show this diff
   readonly treeIds: Array<number>;
-  readonly addedEdgeCount: number;
-  readonly removedEdgeCount: number;
   // Only set if the diff failed
   readonly errorMessage: string | null;
 };
@@ -184,7 +182,6 @@ export type AgglomerateDiff = AgglomerateDiffDescriptor & {
 export type AgglomerateDiffOverlay = {
   // Keyed by getAgglomerateDiffKey
   readonly diffs: Record<string, AgglomerateDiff>;
-  readonly isVisible: boolean;
   // Holds the trees of all diffs (one for the added and one for the removed edges per diff).
   // It is rendered on top of the annotation's skeleton. In contrast to annotation trees, these
   // trees are not necessarily connected.
@@ -332,6 +329,9 @@ export type DatasetLayerConfiguration = {
   // agglomerate skeletons are compared against (see AgglomerateDiffOverlay). Like isDisabled,
   // it is only stored in the annotation-specific view configuration (see settings_saga).
   readonly agglomerateDiffReference?: string | null;
+  // Only used for segmentation layers: whether loaded agglomerate skeletons are compared to the
+  // reference above. Stored like agglomerateDiffReference.
+  readonly isAgglomerateDiffEnabled?: boolean;
 };
 export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";
 

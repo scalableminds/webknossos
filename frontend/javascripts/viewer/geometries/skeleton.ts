@@ -21,7 +21,7 @@ import NodeShader, {
 } from "viewer/geometries/materials/node_shader";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { sum } from "viewer/model/helpers/iterator_utils";
-import { cachedDiffTrees } from "viewer/model/sagas/skeletontracing_saga";
+import { cachedDiffTrees, diffTrees } from "viewer/model/sagas/skeletontracing_saga";
 import type { CreateActionNode, UpdateActionNode } from "viewer/model/sagas/volume/update_actions";
 import type { Edge, Node, Tree } from "viewer/model/types/tree_types";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
@@ -108,6 +108,10 @@ export type SkeletonOptions = {
   getDimmedTreeIds?: (state: WebknossosState) => ReadonlySet<number>;
   // Whether the active tree of the annotation is highlighted.
   highlightActiveTree?: boolean;
+  // Whether the tree diff is shared with the save queue (see cachedDiffTrees). Only the skeleton of
+  // the annotation should set this. As the cache only holds one entry, other skeletons would
+  // otherwise evict the entry that the save queue needs, so that large diffs are computed twice.
+  shareTreeDiffWithSaveQueue?: boolean;
 };
 
 /**
@@ -417,12 +421,15 @@ class Skeleton {
    */
   refresh(skeletonTracing: SkeletonTracing) {
     const state = Store.getState();
-    const diff = cachedDiffTrees(
-      skeletonTracing.tracingId,
-      this.prevTracing.trees,
-      skeletonTracing.trees,
-      false,
-    );
+    const { trees } = skeletonTracing;
+    const prevTrees = this.prevTracing.trees;
+    // Most store updates don't change the trees
+    const diff =
+      prevTrees === trees
+        ? []
+        : this.options.shareTreeDiffWithSaveQueue
+          ? cachedDiffTrees(skeletonTracing.tracingId, prevTrees, trees, false)
+          : Array.from(diffTrees(skeletonTracing.tracingId, prevTrees, trees, false));
 
     const flycamAdditionalCoordinateNames = new Set(
       (state.flycam.additionalCoordinates ?? []).map(({ name }) => name),

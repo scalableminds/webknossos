@@ -162,13 +162,17 @@ class AgglomerateService @Inject() (
   def generateAgglomerateGraph(
       agglomerateFileKey: AgglomerateFileKey,
       agglomerateId: Long,
-      edgeLimit: Int = config.Datastore.AgglomerateGraph.maxEdges
+      edgeLimit: Int = config.Datastore.AgglomerateGraph.maxEdges,
+      // Reading the affinities can be skipped if they are not needed (one read less per graph)
+      includeAffinities: Boolean = true
   )(using ec: ExecutionContext, tc: TokenContext): Fox[AgglomerateGraph] =
     agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
-        zarrAgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId, edgeLimit)
+        zarrAgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId, edgeLimit, includeAffinities)
       case LayerAttachmentDataformat.hdf5 =>
-        hdf5AgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId, edgeLimit).toFox
+        hdf5AgglomerateService
+          .generateAgglomerateGraph(agglomerateFileKey, agglomerateId, edgeLimit, includeAffinities)
+          .toFox
       case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 
@@ -184,13 +188,19 @@ class AgglomerateService @Inject() (
     // agglomerate skeletons instead of like explicitly requested agglomerate graphs.
     val edgeLimit = config.Datastore.AgglomerateTree.maxEdges
     // Both graphs can be loaded in parallel, which matters for remote agglomerate files
-    val graphFox = generateAgglomerateGraph(agglomerateFileKey, agglomerateId, edgeLimit)
+    // The diff doesn't use the affinities
+    val graphFox = generateAgglomerateGraph(agglomerateFileKey, agglomerateId, edgeLimit, includeAffinities = false)
     val referenceGraphFox = for {
       referenceAgglomerateIds <- agglomerateIdsForSegmentIds(referenceAgglomerateFileKey, Seq(segmentId))
       referenceAgglomerateId <- referenceAgglomerateIds.headOption
         .filter(_ != 0L)
         .toFox ?~> Msg.AgglomerateDiff.noReferenceAgglomerate
-      referenceGraph <- generateAgglomerateGraph(referenceAgglomerateFileKey, referenceAgglomerateId, edgeLimit)
+      referenceGraph <- generateAgglomerateGraph(
+        referenceAgglomerateFileKey,
+        referenceAgglomerateId,
+        edgeLimit,
+        includeAffinities = false
+      )
     } yield (referenceAgglomerateId, referenceGraph)
     for {
       graph <- graphFox

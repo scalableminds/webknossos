@@ -332,6 +332,7 @@ class SceneController {
       this.addSkeleton((_state) => getSkeletonTracing(_state.annotation), true, {
         // Dim the agglomerate skeletons whose diffs are shown on top of them
         getDimmedTreeIds: getAgglomerateTreeIdsWithVisibleDiffs,
+        shareTreeDiffWithSaveQueue: true,
       });
       // The diffs coincide with the agglomerate skeletons, so they are drawn on top of them
       this.addSkeleton(getAgglomerateDiffSkeleton, false, {

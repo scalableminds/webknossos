@@ -175,7 +175,12 @@ class ZarrAgglomerateService @Inject() (
       shapeFirstElement <- tryo(shape(0)).toFox
     } yield shapeFirstElement
 
-  def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long, edgeLimit: Int)(using
+  def generateAgglomerateGraph(
+      agglomerateFileKey: AgglomerateFileKey,
+      agglomerateId: Long,
+      edgeLimit: Int,
+      includeAffinities: Boolean
+  )(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[AgglomerateGraph] = {
@@ -185,7 +190,8 @@ class ZarrAgglomerateService @Inject() (
     val agglomerateToPositionsFox = openZarrArrayCached(agglomerateFileKey, keyAgglomerateToPositions)
     val agglomerateToSegmentsFox = openZarrArrayCached(agglomerateFileKey, keyAgglomerateToSegments)
     val agglomerateToEdgesFox = openZarrArrayCached(agglomerateFileKey, keyAgglomerateToEdges)
-    val agglomerateToAffinitiesFox = openZarrArrayCached(agglomerateFileKey, keyAgglomerateToAffinities)
+    val agglomerateToAffinitiesFox =
+      if (includeAffinities) Some(openZarrArrayCached(agglomerateFileKey, keyAgglomerateToAffinities)) else None
     for {
       agglomerateToSegmentsOffsets <- agglomerateToSegmentsOffsetsFox
       agglomerateToEdgesOffsets <- agglomerateToEdgesOffsetsFox
@@ -207,14 +213,18 @@ class ZarrAgglomerateService @Inject() (
       edgesFox = agglomerateToEdgesFox.flatMap(
         _.readAsMultiArray(offset = Array(edgesOffset, 0), shape = Array(edgeCount.toInt, 2))
       )
-      affinitiesFox = agglomerateToAffinitiesFox.flatMap(
-        _.readAsMultiArray(offset = edgesOffset, shape = edgeCount.toInt)
-      )
+      affinitiesFox = agglomerateToAffinitiesFox match {
+        case Some(arrayFox) =>
+          arrayFox
+            .flatMap(_.readAsMultiArray(offset = edgesOffset, shape = edgeCount.toInt))
+            .map(affinities => ArraySeq.unsafeWrapArray(affinities.getStorage.asInstanceOf[Array[Float]]))
+        case None => Fox.successful(ArraySeq.empty[Float])
+      }
       positions: MultiArray <- positionsFox
       segmentIdsMA: MultiArray <- segmentIdsFox
       segmentIds: Array[Long] <- MultiArrayUtils.toLongArray(segmentIdsMA).toFox
       edges: MultiArray <- edgesFox
-      affinities: MultiArray <- affinitiesFox
+      affinities: ArraySeq[Float] <- affinitiesFox
       computedEdges <- tryo {
         (0 until edges.getShape()(0)).map { (edgeIdx: Int) =>
           AgglomerateEdge(
@@ -244,7 +254,7 @@ class ZarrAgglomerateService @Inject() (
           segments = ArraySeq.unsafeWrapArray(segmentIds),
           edges = computedEdges,
           positions = computedPositions,
-          affinities = ArraySeq.unsafeWrapArray(affinities.getStorage.asInstanceOf[Array[Float]])
+          affinities = affinities
         )
       }.toFox
     } yield agglomerateGraph

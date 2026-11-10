@@ -104,6 +104,8 @@ function* prepareDatasetSettingsForSaving(
         isDisabled: originalDatasetSettings.layers[layerName].isDisabled,
         agglomerateDiffReference:
           originalDatasetSettings.layers[layerName].agglomerateDiffReference,
+        isAgglomerateDiffEnabled:
+          originalDatasetSettings.layers[layerName].isAgglomerateDiffEnabled,
       };
     }
   }

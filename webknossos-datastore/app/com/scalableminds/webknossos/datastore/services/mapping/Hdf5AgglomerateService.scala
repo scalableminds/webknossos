@@ -186,7 +186,8 @@ class Hdf5AgglomerateService @Inject() (config: DataStoreConfig) extends DataCon
   def generateAgglomerateGraph(
       agglomerateFileKey: AgglomerateFileKey,
       agglomerateId: Long,
-      edgeLimit: Int
+      edgeLimit: Int,
+      includeAffinities: Boolean
   ): Box[AgglomerateGraph] =
     withHdf5Reader(agglomerateFileKey) { reader =>
       tryo {
@@ -218,7 +219,7 @@ class Hdf5AgglomerateService @Inject() (config: DataStoreConfig) extends DataCon
           else
             reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToEdges, edgeCount.toInt, 2, edgesRange(0), 0)
         val affinities: Array[Float] =
-          if (edgeCount == 0L) Array[Float]()
+          if (edgeCount == 0L || !includeAffinities) Array[Float]()
           else
             reader.float32().readArrayBlockWithOffset(keyAgglomerateToAffinities, edgeCount.toInt, edgesRange(0))
 

@@ -6,7 +6,6 @@ export type RequestAgglomerateDiffAction = ReturnType<typeof requestAgglomerateD
 type FinishLoadingAgglomerateDiffAction = ReturnType<typeof finishLoadingAgglomerateDiffAction>;
 type FailLoadingAgglomerateDiffAction = ReturnType<typeof failLoadingAgglomerateDiffAction>;
 type RemoveAgglomerateDiffsAction = ReturnType<typeof removeAgglomerateDiffsAction>;
-type SetAgglomerateDiffsVisibilityAction = ReturnType<typeof setAgglomerateDiffsVisibilityAction>;
 type StopAwaitingAgglomerateSkeletonAction = ReturnType<
   typeof stopAwaitingAgglomerateSkeletonAction
 >;
@@ -19,7 +18,6 @@ export type AgglomerateDiffAction =
   | FinishLoadingAgglomerateDiffAction
   | FailLoadingAgglomerateDiffAction
   | RemoveAgglomerateDiffsAction
-  | SetAgglomerateDiffsVisibilityAction
   | StopAwaitingAgglomerateSkeletonAction
   | SyncAgglomerateDiffsWithSourceTreesAction;
 
@@ -76,12 +74,6 @@ export const removeAgglomerateDiffsAction = (keys: Array<string>) =>
   ({
     type: "REMOVE_AGGLOMERATE_DIFFS",
     keys,
-  }) as const;
-
-export const setAgglomerateDiffsVisibilityAction = (isVisible: boolean) =>
-  ({
-    type: "SET_AGGLOMERATE_DIFFS_VISIBILITY",
-    isVisible,
   }) as const;
 
 // Has to be dispatched by the requester of a diff that awaits its agglomerate skeleton (see

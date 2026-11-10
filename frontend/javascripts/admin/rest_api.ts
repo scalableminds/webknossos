@@ -2483,9 +2483,10 @@ export async function getUnmappedSegmentIdAtPosition(
       depth: "1",
       mag: mag.join("-"),
     });
+    // Callers show their own error messages
     return Request.receiveArraybuffer(
       `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/data?${params}`,
-      { useWebworkerForArrayBuffer: false },
+      { useWebworkerForArrayBuffer: false, showErrorToast: false },
     );
   });
   const [TypedArrayClass] = getConstructorForElementClass(elementClass);

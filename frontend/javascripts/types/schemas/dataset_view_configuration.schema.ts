@@ -79,6 +79,9 @@ export const layerViewConfiguration = {
   agglomerateDiffReference: {
     type: ["string", "null"],
   },
+  isAgglomerateDiffEnabled: {
+    type: "boolean",
+  },
 };
 export const defaultDatasetViewConfiguration: DatasetConfiguration = {
   fourBit: false,

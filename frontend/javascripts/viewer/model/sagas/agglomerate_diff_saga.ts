@@ -109,6 +109,9 @@ function getDesiredDiffs(state: WebknossosState): {
       const positionInLayer =
         getClickedPositionInLayer(tree) ?? tree.nodes.values().next().value?.untransformedPosition;
       if (positionInLayer == null) continue;
+      // The key doesn't contain the tree id. If several agglomerate skeletons of the same agglomerate
+      // exist (e.g., from an imported NML), only the last one is compared and dimmed. Loading an
+      // agglomerate skeleton that already exists is refused, so this is rare.
       desiredDiffs.set(getAgglomerateDiffKey(descriptor), {
         descriptor,
         positionInLayer: positionInLayer.map(Math.floor) as Vector3,
@@ -296,6 +299,8 @@ export function* waitForAgglomerateDiff(key: string): Saga<boolean> {
       "FINISH_LOADING_AGGLOMERATE_DIFF",
       "FAIL_LOADING_AGGLOMERATE_DIFF",
       "REMOVE_AGGLOMERATE_DIFFS",
+      // Resets the overlay (see skeletontracing_reducer)
+      "INITIALIZE_SKELETONTRACING",
     ]);
   }
 }

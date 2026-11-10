@@ -14,12 +14,14 @@ Mapping files are stored as HDF5 files or in a zarr3-based format. [Read the sec
 When several agglomerate files exist for a segmentation layer, you can compare the agglomerates of one file to those of another. This shows how two agglomeration strategies differ for a specific cell.
 
 1. Activate an agglomerate file mapping for the segmentation layer in a skeleton or hybrid annotation.
-2. In the settings of the segmentation layer in the [Layers tab](../ui/layers.md), select a **Reference Agglomerate View**, i.e., the other agglomerate file to compare against.
+2. In the settings of the segmentation layer in the [Layers tab](../ui/layers.md), enable **Compare to Reference** and select the reference agglomerate view, i.e., the other agglomerate file to compare against.
 3. Load an agglomerate skeleton with ++shift++ + middle-click on a segment or via **Import Agglomerate Tree** in the context menu.
 
 WEBKNOSSOS compares the loaded agglomerate to the agglomerate of the reference view that contains the clicked segment. Edges that only exist in the loaded agglomerate are shown in green, edges that only exist in the reference agglomerate are shown in orange. The agglomerate skeleton itself is dimmed, so that the differences stand out.
 
-The comparison is only displayed and not saved with the annotation. It is computed again when the annotation is opened, the reference view is changed or the mapping is activated again. A switch below the reference view hides or shows all comparisons, and the comparison of an agglomerate skeleton is hidden together with that skeleton. The settings also summarize the added and removed edges and list the reasons if some comparisons failed, e.g., because an agglomerate is too large.
+The comparison is only displayed and not saved with the annotation. It is computed again when the annotation is opened, the comparison is enabled again, the reference view is changed or the mapping is activated again. The comparison of an agglomerate skeleton is hidden together with that skeleton. The layer settings show how many agglomerates were compared and list the reasons if some comparisons failed, e.g., because an agglomerate is too large.
+
+The reference agglomerate is determined by the segment of the original segmentation at the clicked position. If you brushed at that position in a volume annotation, that segment might not belong to the loaded agglomerate, and the comparison fails.
 
 The comparison is not available during [supervoxel proofreading](./proofreading_tool.md) (editable mappings).
 

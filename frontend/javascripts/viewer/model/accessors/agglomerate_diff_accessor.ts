@@ -23,14 +23,15 @@ export function getAgglomerateDiffKey(descriptor: AgglomerateDiffDescriptor): st
 
 /*
  * Agglomerate skeletons store the following information as tree metadata, so that their diffs are
- * the same after reloading the annotation:
+ * the same after reloading the annotation. The keys are prefixed, so that they don't collide with
+ * metadata that users add themselves.
  * - The layer they were loaded for. Otherwise, agglomerate skeletons of layers whose agglomerate
  *   files have the same names couldn't be told apart.
  * - The clicked position (in the coordinate system of the layer), if they were loaded by clicking on
  *   a segment. The diff compares the reference agglomerate of the clicked segment.
  */
-const LAYER_NAME_METADATA_KEY = "layerName";
-const CLICKED_POSITION_METADATA_KEY = "clickedPosition";
+export const LAYER_NAME_METADATA_KEY = "webknossos.agglomerateLayerName";
+export const CLICKED_POSITION_METADATA_KEY = "webknossos.clickedPosition";
 
 export function createAgglomerateSkeletonMetadata(
   layerName: string,
@@ -71,21 +72,40 @@ export function isDiffOfPosition(diff: AgglomerateDiff, positionInLayer: Vector3
 }
 
 // Agglomerate skeletons can only be loaded while an agglomerate mapping is active, so their diffs
-// are only shown in that case, too.
+// are only shown in that case, too. A mapping that is (re-)activating counts as enabled, as the
+// diffs are computed by the datastore and don't need the mapping to be loaded. Otherwise, each
+// dispatch of SET_MAPPING (which always passes ACTIVATING, even for the active mapping) would
+// remove all diffs and request them again.
 export function isAgglomerateMappingEnabled(state: WebknossosState, layerName: string): boolean {
   const { mappingStatus, mappingType } = getMappingInfo(
     state.temporaryConfiguration.activeMappingByLayer,
     layerName,
   );
-  return mappingStatus === MappingStatusEnum.ENABLED && mappingType === "AGGLOMERATE";
+  return mappingStatus !== MappingStatusEnum.DISABLED && mappingType === "AGGLOMERATE";
 }
 
-// The agglomerate view that agglomerate skeletons of the layer are compared against, if any
+// Whether the agglomerate skeletons of the layer are compared to a reference view. The selected
+// reference view is kept while the comparison is turned off.
+export function isAgglomerateDiffEnabled(state: WebknossosState, layerName: string): boolean {
+  return state.datasetConfiguration.layers[layerName]?.isAgglomerateDiffEnabled ?? false;
+}
+
+// The agglomerate view that is selected as the reference for the agglomerate skeletons of the
+// layer, if any. It is only used while the comparison is enabled (see isAgglomerateDiffEnabled).
 export function getAgglomerateDiffReferenceMappingName(
   state: WebknossosState,
   layerName: string,
 ): string | null {
   return state.datasetConfiguration.layers[layerName]?.agglomerateDiffReference ?? null;
+}
+
+// Whether the comparison is enabled and a reference view is selected for an agglomerate mapping
+function isAgglomerateDiffRequested(state: WebknossosState, layerName: string): boolean {
+  return (
+    isAgglomerateDiffEnabled(state, layerName) &&
+    getAgglomerateDiffReferenceMappingName(state, layerName) != null &&
+    isAgglomerateMappingEnabled(state, layerName)
+  );
 }
 
 // Whether the agglomerate files of the layer need to be loaded to know which agglomerate skeletons
@@ -95,15 +115,14 @@ export function needsAgglomerateFilesForDiffs(state: WebknossosState, layerName:
   return (
     layer.category === "segmentation" &&
     layer.agglomerates == null &&
-    getAgglomerateDiffReferenceMappingName(state, layerName) != null &&
-    isAgglomerateMappingEnabled(state, layerName)
+    isAgglomerateDiffRequested(state, layerName)
   );
 }
 
 /*
  * Returns the reference view that agglomerate skeletons of the layer are compared to, or null if
  * they are not compared. That is the case if
- * - no reference view is selected or no agglomerate mapping is active,
+ * - the comparison is disabled, no reference view is selected or no agglomerate mapping is active,
  * - the agglomerate files of the layer are not known, yet (see needsAgglomerateFilesForDiffs), or
  * - the reference view is not an agglomerate file of the layer (e.g., if it was removed from the
  *   dataset since it was selected).
@@ -114,7 +133,7 @@ export function getUsableAgglomerateDiffReference(
   layerName: string,
 ): string | null {
   const referenceMappingName = getAgglomerateDiffReferenceMappingName(state, layerName);
-  if (referenceMappingName == null || !isAgglomerateMappingEnabled(state, layerName)) return null;
+  if (referenceMappingName == null || !isAgglomerateDiffRequested(state, layerName)) return null;
   const layer = getLayerByName(state.dataset, layerName);
   if (layer.category !== "segmentation" || !layer.agglomerates?.includes(referenceMappingName)) {
     return null;
@@ -166,8 +185,7 @@ export function getAgglomerateDiffSkeleton(state: WebknossosState): SkeletonTrac
 const NO_TREE_IDS: ReadonlySet<number> = new Set();
 
 const getAgglomerateTreeIdsWithVisibleDiffsMemoized = memoizeOne(
-  (diffs: AgglomerateDiffOverlay["diffs"], areDiffsVisible: boolean): ReadonlySet<number> => {
-    if (!areDiffsVisible) return NO_TREE_IDS;
+  (diffs: AgglomerateDiffOverlay["diffs"]): ReadonlySet<number> => {
     const treeIds = new Set<number>();
     for (const diff of Object.values(diffs)) {
       if (diff.sourceTreeId != null && diff.isSourceTreeVisible && diff.treeIds.length > 0) {
@@ -180,14 +198,12 @@ const getAgglomerateTreeIdsWithVisibleDiffsMemoized = memoizeOne(
 
 // The agglomerate skeletons whose diffs are shown. They are dimmed, so that the diffs stand out.
 export function getAgglomerateTreeIdsWithVisibleDiffs(state: WebknossosState): ReadonlySet<number> {
-  const overlay = getAgglomerateDiffOverlay(state);
-  return getAgglomerateTreeIdsWithVisibleDiffsMemoized(overlay.diffs, overlay.isVisible);
+  return getAgglomerateTreeIdsWithVisibleDiffsMemoized(getAgglomerateDiffOverlay(state).diffs);
 }
 
 export function createEmptyAgglomerateDiffOverlay(): AgglomerateDiffOverlay {
   return {
     diffs: {},
-    isVisible: true,
     skeleton: {
       createdTimestamp: Date.now(),
       type: "skeleton",

@@ -105,20 +105,16 @@ function updateOverlay(
   });
 }
 
-// A diff is shown if diffs are shown at all and its agglomerate skeleton exists and is visible
-function isDiffVisible(overlay: AgglomerateDiffOverlay, diff: AgglomerateDiff): boolean {
-  return overlay.isVisible && diff.sourceTreeId != null && diff.isSourceTreeVisible;
+// A diff is shown if its agglomerate skeleton exists and is visible
+function isDiffVisible(diff: AgglomerateDiff): boolean {
+  return diff.sourceTreeId != null && diff.isSourceTreeVisible;
 }
 
 // Sets the visibility of the trees of the given diffs according to isDiffVisible
-function updateTreeVisibility(
-  trees: TreeMap,
-  overlay: AgglomerateDiffOverlay,
-  diffs: Iterable<AgglomerateDiff>,
-): TreeMap {
+function updateTreeVisibility(trees: TreeMap, diffs: Iterable<AgglomerateDiff>): TreeMap {
   let mutableTrees: DiffableMap<number, Tree> | null = null;
   for (const diff of diffs) {
-    const isVisible = isDiffVisible(overlay, diff);
+    const isVisible = isDiffVisible(diff);
     for (const treeId of diff.treeIds) {
       const tree = trees.getNullable(treeId);
       if (tree == null || tree.isVisible === isVisible) continue;
@@ -148,8 +144,6 @@ function AgglomerateDiffReducer(state: WebknossosState, action: Action): Webknos
             isSourceTreeVisible: true,
             referenceAgglomerateId: null,
             treeIds: [],
-            addedEdgeCount: 0,
-            removedEdgeCount: 0,
             errorMessage: null,
           },
         },
@@ -170,7 +164,7 @@ function AgglomerateDiffReducer(state: WebknossosState, action: Action): Webknos
       }
 
       const { skeleton } = overlay;
-      const trees = createDiffTrees(action.diff, isDiffVisible(overlay, diff));
+      const trees = createDiffTrees(action.diff, isDiffVisible(diff));
       const treesAndGroups = addTreesAndGroups(skeleton, trees, []);
       if (treesAndGroups == null) return state;
       const [newTrees, _treeGroups, newMaxNodeId] = treesAndGroups;
@@ -183,8 +177,6 @@ function AgglomerateDiffReducer(state: WebknossosState, action: Action): Webknos
             status: "loaded",
             referenceAgglomerateId: action.diff.referenceAgglomerateId,
             treeIds: newTrees.keys().toArray(),
-            addedEdgeCount: action.diff.addedEdges.length / 2,
-            removedEdgeCount: action.diff.removedEdges.length / 2,
           },
         },
         skeleton: {
@@ -232,20 +224,6 @@ function AgglomerateDiffReducer(state: WebknossosState, action: Action): Webknos
       });
     }
 
-    case "SET_AGGLOMERATE_DIFFS_VISIBILITY": {
-      const overlay = getAgglomerateDiffOverlay(state);
-      const newOverlay = { ...overlay, isVisible: action.isVisible };
-      const trees = updateTreeVisibility(
-        overlay.skeleton.trees,
-        newOverlay,
-        Object.values(overlay.diffs),
-      );
-      return updateOverlay(state, {
-        isVisible: action.isVisible,
-        skeleton: { ...overlay.skeleton, trees },
-      });
-    }
-
     case "STOP_AWAITING_AGGLOMERATE_SKELETON": {
       const overlay = getAgglomerateDiffOverlay(state);
       const diff = overlay.diffs[action.key];
@@ -271,7 +249,7 @@ function AgglomerateDiffReducer(state: WebknossosState, action: Action): Webknos
         changedDiffs.push(diffs[key]);
       }
       if (changedDiffs.length === 0) return state;
-      const trees = updateTreeVisibility(overlay.skeleton.trees, overlay, changedDiffs);
+      const trees = updateTreeVisibility(overlay.skeleton.trees, changedDiffs);
       return updateOverlay(state, { diffs, skeleton: { ...overlay.skeleton, trees } });
     }
 

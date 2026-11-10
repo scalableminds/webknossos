@@ -128,6 +128,8 @@ object Msg {
       val editableMappingDataFailed: String = "Could not revert editable mapping data."
       val getSourceFailed: String = "Could not get source version for annotation revert."
       val revertDistributedElementsFailed: String = "Could not revert distributed annotation elements."
+      def sourceVersionNotEarlier(sourceVersion: Long, newVersion: Long): String =
+        s"Trying to revert to v$sourceVersion in v$newVersion, but can only revert to earlier versions."
       val volumeDataFailed: String = "Could not revert volume data."
     }
     object Reopen {
@@ -190,6 +192,7 @@ object Msg {
         "An annotation layer with this name already exists in this annotation. Please change it to prevent duplicates."
       val onlyOneSkeletonAllowed: String = "Only one skeleton layer is allowed per annotation."
       val mappingIsLocked: String = "Cannot modify mapping in a locked annotation."
+      val authorIdMismatch: String = "Annotation updates can only be stored with the requesting user as author."
     }
     object Download {
       val failed: String = "Could not download annotation."
@@ -208,8 +211,10 @@ object Msg {
       val writeToFileFailed: String = "Could not write annotation to temporary file for download."
     }
     object Volume {
-      def largestSegmentIdExceedsRange(id: Long, ec: String): String =
-        s"The largest segment id $id specified for the annotation layer exceeds the range of its data type “$ec”."
+      def largestSegmentIdExceedsRange(id: Long, elementClass: String): String =
+        s"The largest segment id $id specified for the annotation layer exceeds the range of its data type “$elementClass”."
+      def invalidSegmentationElementClass(elementClass: String): String =
+        s"The data type “$elementClass” is not a valid segmentation data type."
       def wrongMag(tracingId: String, mag: String): String =
         s"Annotation layer “$tracingId” does not have mag “$mag”."
       val fallbackDataSplitFailed: String =
@@ -243,7 +248,10 @@ object Msg {
       }
     }
     object EditableMapping {
-      val numEdgesExceedsInt: String = "Edge count for editable mapping exceeds int32 range."
+      def numEdgesExceedsLimit(numEdges: Long, limit: Int): String =
+        s"Edge count $numEdges for editable mapping exceeds the limit of $limit."
+      def edgeIsAdditionShapeMismatch(numEdges: Long, edgeIsAdditionShape: Seq[Long]): String =
+        s"Shape of edgeIsAddition (${edgeIsAdditionShape.mkString(", ")}) does not match edge count $numEdges."
       val getAgglomerateGraphFailed: String =
         "Could not look up an agglomerate graph for requested agglomerate."
       val getAgglomerateIdsForSegmentsFailed: String =
@@ -266,6 +274,10 @@ object Msg {
     val requiresHttps: String = "Passkeys are only supported with HTTPS."
     val unauthorized: String = "Passkey authentication failed."
   }
+  object Partner {
+    val notFound: String = "Partner could not be found."
+  }
+
   object Organization {
     def notFound(id: String): String = s"Organization “$id” could not be found or accessed."
     def notFoundWrongHost(orgaId: String, gotHost: String, thisHost: String): String =
@@ -357,6 +369,7 @@ object Msg {
       "This job has already been retried once and failed again. This is likely a persistent failure. Please contact an administrator for help."
     val cleanupFailed: String = "Could not clean up failed job."
     val notEnabled: String = "Long-running jobs are not enabled for this WEBKNOSSOS instance."
+    val notAvailableInPlan: String = "Long-running jobs are not available in the pricing plan of your organization."
     val edgeLengthExceeded: String = "An edge length of the selected bounding box is too large."
     val volumeExceeded: String = "The volume of the selected bounding box is too large."
     val invalidBoundingBoxOrMag: String =
@@ -855,6 +868,7 @@ object Msg {
   }
   object SegmentAnything {
     val notEnabled: String = "AI-based quick select is not enabled for this WEBKNOSSOS instance."
+    val notAvailableInPlan: String = "AI-based quick select is not available in the pricing plan of your organization."
     val noUri: String = "No URI for SAM server configured."
     val getDataFailed: String = "Could not get image data to send to SAM server."
     val getMaskFailed: String = "Could not get image mask from SAM server."

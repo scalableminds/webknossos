@@ -287,6 +287,7 @@ class SceneController {
       color: CUBE_COLOR,
       showCrossSections: true,
       isHighlighted: false,
+      isActive: false,
     });
 
     this.contour = new ContourGeometry();
@@ -521,6 +522,7 @@ class SceneController {
         color: 0x00ff00,
         showCrossSections: true,
         isHighlighted: false,
+        isActive: false,
       });
       taskCube.getMeshes().forEach((mesh) => {
         this.rootNode.add(mesh);
@@ -701,6 +703,7 @@ class SceneController {
       this.deferUntilCompileReady(() => cube.destroy());
     }
     const newUserBoundingBoxGroup = new Group();
+    const { activeUserBoundingBoxId } = Store.getState().uiInformation;
     this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
       const { min, max } = boundingBox;
       const bbColor: Vector3 = [color[0] * 255, color[1] * 255, color[2] * 255];
@@ -711,6 +714,8 @@ class SceneController {
         showCrossSections: true,
         id,
         isHighlighted: this.highlightedBBoxId === id,
+        isActive: activeUserBoundingBoxId === id,
+        deferDisposal: (dispose) => this.deferUntilCompileReady(dispose),
       });
       bbCube.setVisibility(isVisible);
       bbCube.getMeshes().forEach((mesh) => {
@@ -811,6 +816,7 @@ class SceneController {
           // is visible where users usually work and the visibility/color controls have a visible effect.
           showCrossSections: true,
           isHighlighted: false,
+          isActive: false,
         });
         bbCube.setVisibility(layerBoundingBoxVisibilities[layer.name] ?? false);
         bbCube.getMeshes().forEach((mesh) => {
@@ -875,6 +881,17 @@ class SceneController {
     }
 
     this.highlightedBBoxId = bboxId;
+  }
+
+  // Briefly fills the given user bounding box, e.g. to point out a newly created box.
+  flashUserBoundingBox(bboxId: number): void {
+    this.userBoundingBoxes.find((bbCube) => bbCube.id === bboxId)?.flashFill();
+  }
+
+  setActiveUserBoundingBox(bboxId: number | null | undefined): void {
+    for (const bbCube of this.userBoundingBoxes) {
+      bbCube.setIsActive(bbCube.id === bboxId);
+    }
   }
 
   setSkeletonGroupVisibility(isVisible: boolean) {
@@ -1026,6 +1043,10 @@ class SceneController {
       listenToStoreProperty(
         (storeState) => getSomeTracing(storeState.annotation).userBoundingBoxes,
         (bboxes) => this.setUserBoundingBoxes(bboxes),
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.uiInformation.activeUserBoundingBoxId,
+        (activeBBoxId) => this.setActiveUserBoundingBox(activeBBoxId),
       ),
       listenToStoreProperty(
         (storeState) => getDataLayers(storeState.dataset),

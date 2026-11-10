@@ -1,13 +1,12 @@
 package models.user
 
 import com.scalableminds.util.Msg
-import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import mail.{DefaultMails, Send}
+import mail.AccountEmailService
 import security.RandomIDGenerator
 import utils.WkConf
 
@@ -18,12 +17,8 @@ class EmailVerificationService @Inject() (
     conf: WkConf,
     emailVerificationKeyDAO: EmailVerificationKeyDAO,
     multiUserDAO: MultiUserDAO,
-    defaultMails: DefaultMails,
-    actorSystem: ActorSystem
+    accountEmailService: AccountEmailService
 ) extends LazyLogging {
-
-  private lazy val Mailer =
-    actorSystem.actorSelection("/user/mailActor")
 
   def sendEmailVerification(user: User)(using ctx: DBAccessContext): Fox[Unit] =
     for {
@@ -41,7 +36,7 @@ class EmailVerificationService @Inject() (
       _ <- emailVerificationKeyDAO.insertOne(evk)
       fullVerificationLink = s"${conf.Http.uri}/verifyEmail/$key"
       _ = logger.info(s"Sending email verification mail for user with email ${multiUser.email}")
-      _ = Mailer ! Send(defaultMails.emailVerificationMail(multiUser, fullVerificationLink))
+      _ = accountEmailService.sendEmailVerificationEmail(multiUser, fullVerificationLink)
     } yield ()
 
   def verify(key: String)(using ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =

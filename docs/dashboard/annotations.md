@@ -6,6 +6,9 @@ Annotations can be resumed, archived (like delete, but reversible), and download
 You can also add custom tags to annotations to organize and group them. Click on one or multiple of your tags if you want to filter a particular group of annotations.
 Each annotation can be renamed to reflect its content.
 
+Each row in the list offers the **Open** and **Download** actions.
+Click on a row to show its **Details** sidebar. There, you can rename the annotation, edit its tags, and find further actions such as **Archive** and **Lock**/**Unlock**.
+
 ![Manage and resume your skeleton and volume annotations.](../images/dashboard_annotations.png)
 /// caption
 Manage and resume your skeleton and volume annotations.
@@ -14,6 +17,12 @@ Manage and resume your skeleton and volume annotations.
 /// caption
 Annotations can be archived to declutter your dashboard.
 ///
+
+## Archived Annotations
+
+To archive an annotation, click **Archive** in its **Details** sidebar. This is only possible for annotations you can edit. Locked annotations need to be unlocked first.
+
+Archived annotations are hidden from the annotation list by default. To find them, open the **Status** filter above the annotation list and select **Archived** (instead of the default **Open**). Archived annotations cannot be edited. Click **Reopen** next to an archived annotation to move it back to your open annotations.
 
 ## Shared Annotations
 

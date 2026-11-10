@@ -164,7 +164,8 @@ impl PendingInteraction {
     }
 
     /// Publish the cache value, then send over-limit mails (best effort:
-    /// lookup failures are logged and swallowed like Scala's `.shiftBox`).
+    /// lookup failures are logged and swallowed like Scala's `.shiftBox` and
+    /// `MailSender.inBackground`).
     pub async fn publish_after_commit(
         self,
         guard: UserActivityGuard,
@@ -176,45 +177,56 @@ impl PendingInteraction {
             match over_limit_mail_for(pool, &candidate, &notifier.public_uri).await {
                 Ok(Some(mail)) => notifier.mailer.send(mail),
                 Ok(None) => {}
-                Err(_) => tracing::warn!(
+                Err(error) => tracing::warn!(
                     annotation = %candidate.annotation_id,
-                    "Time limit notification lookup failed"
+                    "{error}"
                 ),
             }
         }
     }
 }
 
+/// Scala `signalOverTime` + `TaskEmailService.sendTimeLimitReachedEmail`: the
+/// annotator and project owner are looked up only once the limit is crossed.
 async fn over_limit_mail_for(
     pool: &PgPool,
     candidate: &OverLimitCandidate,
     public_uri: &str,
-) -> Result<Option<Mail>, sqlx::Error> {
-    let row = time_interaction_writer_dao::find_over_limit_row(
-        pool,
-        &candidate.owner_id,
-        &candidate.task_id,
-    )
-    .await?;
-    let Some(row) = row else { return Ok(None) };
-    let Some(limit) = row.expected_time else {
+) -> Result<Option<Mail>, String> {
+    let project = time_interaction_writer_dao::find_project_limit(pool, &candidate.task_id)
+        .await
+        .map_err(|error| format!("Time limit notification lookup failed: {error}"))?;
+    let Some(project) = project else {
+        return Ok(None);
+    };
+    let Some(limit) = project.expected_time else {
         return Ok(None);
     };
     let time = candidate.tracing_time_after;
     // Scala Long arithmetic: `annotationTime - time.toMillis` wraps.
-    if time >= limit && time.wrapping_sub(candidate.delta_millis) < limit {
-        Ok(Some(over_limit_mail(
-            &row.owner_first_name,
-            &row.owner_last_name,
-            &row.project_name,
-            &candidate.task_id,
-            &candidate.annotation_id,
-            &row.project_owner_email,
-            public_uri,
-        )))
-    } else {
-        Ok(None)
+    if !(time >= limit && time.wrapping_sub(candidate.delta_millis) < limit) {
+        return Ok(None);
     }
+    let description = format!("time limit of task {} reached", candidate.task_id);
+    let recipient = time_interaction_writer_dao::find_over_limit_recipient(
+        pool,
+        &candidate.owner_id,
+        &project.project_id,
+    )
+    .await
+    .map_err(|error| format!("Could not send email for {description}: {error}"))?
+    .ok_or_else(|| {
+        format!("Could not send email for {description}: a lookup it needs found nothing.")
+    })?;
+    Ok(Some(over_limit_mail(
+        &recipient.annotator_first_name,
+        &recipient.annotator_last_name,
+        &project.project_name,
+        &candidate.task_id,
+        &candidate.annotation_id,
+        &recipient.project_owner_email,
+        public_uri,
+    )))
 }
 
 fn timestamp(millis: i64) -> ApiResult<DateTime<Utc>> {

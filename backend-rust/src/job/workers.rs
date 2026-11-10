@@ -484,12 +484,25 @@ fn track_status_change(
         after.clone(),
     );
     tokio::spawn(async move {
-        let owner = job_workers_dao::find_owner(&state.pool, &after.owner)
-            .await
-            .ok()
-            .flatten();
-        let Some(owner) = owner else {
-            return;
+        // Scala JobEmailService (via MailSender.inBackground) logs failed email lookups
+        // instead of dropping them silently.
+        let outcome = if succeeded { "succeeded" } else { "failed" };
+        let owner = match job_workers_dao::find_owner(&state.pool, &after.owner).await {
+            Ok(Some(owner)) => owner,
+            Ok(None) => {
+                tracing::warn!(
+                    "Could not send email for job {} {outcome}: a lookup it needs found nothing.",
+                    after.id
+                );
+                return;
+            }
+            Err(error) => {
+                tracing::warn!(
+                    "Could not send email for job {} {outcome}: {error}",
+                    after.id
+                );
+                return;
+            }
         };
         let public_uri = misc.config().public_uri.clone();
         let superuser_label = if owner.is_superuser {

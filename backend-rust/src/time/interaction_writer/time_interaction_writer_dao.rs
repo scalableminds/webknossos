@@ -6,34 +6,52 @@ use sqlx::{FromRow, PgConnection, PgPool};
 use crate::util::id::ObjectId;
 
 #[derive(FromRow)]
-pub(super) struct OverLimitRow {
+pub(super) struct ProjectLimitRow {
+    pub(super) project_id: ObjectId,
     pub(super) project_name: String,
     pub(super) expected_time: Option<i64>,
-    pub(super) owner_first_name: String,
-    pub(super) owner_last_name: String,
+}
+
+/// Scala `signalOverTime` lookups before the limit check: task and project.
+pub(super) async fn find_project_limit(
+    pool: &PgPool,
+    task_id: &ObjectId,
+) -> Result<Option<ProjectLimitRow>, sqlx::Error> {
+    sqlx::query_as(
+        r#"SELECT p._id AS project_id,p.name AS project_name,p.expectedTime AS expected_time
+           FROM webknossos.tasks_ t JOIN webknossos.projects_ p ON p._id=t._project
+           WHERE t._id=$1"#,
+    )
+    .bind(task_id)
+    .fetch_optional(pool)
+    .await
+}
+
+#[derive(FromRow)]
+pub(super) struct OverLimitRecipientRow {
+    pub(super) annotator_first_name: String,
+    pub(super) annotator_last_name: String,
     pub(super) project_owner_email: String,
 }
 
-/// Scala `signalOverTime` lookups: annotation owner + MultiUser, task,
-/// project, expectedTime, project owner + MultiUser, all live.
-pub(super) async fn find_over_limit_row(
+/// Scala `TaskEmailService.sendTimeLimitReachedEmail` lookups, done only once the
+/// limit is crossed: annotator + MultiUser, project owner + MultiUser, all live.
+pub(super) async fn find_over_limit_recipient(
     pool: &PgPool,
-    owner_id: &ObjectId,
-    task_id: &ObjectId,
-) -> Result<Option<OverLimitRow>, sqlx::Error> {
+    annotator_id: &ObjectId,
+    project_id: &ObjectId,
+) -> Result<Option<OverLimitRecipientRow>, sqlx::Error> {
     sqlx::query_as(
-        r#"SELECT p.name AS project_name,p.expectedTime AS expected_time,
-             m.firstName AS owner_first_name,m.lastName AS owner_last_name,
+        r#"SELECT m.firstName AS annotator_first_name,m.lastName AS annotator_last_name,
              pm.email AS project_owner_email
            FROM webknossos.users_ u JOIN webknossos.multiUsers_ m ON m._id=u._multiUser
-           JOIN webknossos.tasks_ t ON t._id=$2
-           JOIN webknossos.projects_ p ON p._id=t._project
+           JOIN webknossos.projects_ p ON p._id=$2
            JOIN webknossos.users_ po ON po._id=p._owner
            JOIN webknossos.multiUsers_ pm ON pm._id=po._multiUser
            WHERE u._id=$1"#,
     )
-    .bind(owner_id)
-    .bind(task_id)
+    .bind(annotator_id)
+    .bind(project_id)
     .fetch_optional(pool)
     .await
 }

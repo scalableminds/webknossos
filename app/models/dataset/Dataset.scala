@@ -374,8 +374,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               $lastUsedTimeColumn,
               d.status,
               d.tags,
-              cl.names AS colorLayerNames,
-              sl.names AS segmentationLayerNames,
+              layers.colorNames AS colorLayerNames,
+              layers.segmentationNames AS segmentationLayerNames,
               $usedStorageColumn AS usedStorageBytes,
               d.thumbnailCacheVersion,
               $annotationCountColumn AS annotationCount
@@ -387,14 +387,25 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
               ON u._id = $requestingUserIdOpt
             LEFT JOIN webknossos.dataset_lastUsedTimes lastUsedTimes
               ON lastUsedTimes._dataset = d._id AND lastUsedTimes._user = u._id
-            LEFT JOIN (SELECT _dataset, ARRAY_AGG(name ORDER BY name) AS names FROM webknossos.dataset_layers WHERE category = 'color' GROUP BY _dataset) cl
-              ON d._id = cl._dataset
-            LEFT JOIN (SELECT _dataset, ARRAY_AGG(name ORDER BY name) AS names FROM webknossos.dataset_layers WHERE category = 'segmentation' GROUP BY _dataset) sl
-              ON d._id = sl._dataset
-            LEFT JOIN (SELECT _dataset, COALESCE(SUM(usedStorageBytes), 0) AS storage FROM webknossos.organization_usedStorage_mags GROUP BY _dataset) magStorage
-              ON d._id = magStorage._dataset
-            LEFT JOIN (SELECT _dataset, COALESCE(SUM(usedStorageBytes), 0) AS storage FROM webknossos.organization_usedStorage_attachments GROUP BY _dataset) attachmentStorage
-              ON d._id = attachmentStorage._dataset
+            -- The aggregates are joined laterally, so that they are computed only for the listed datasets
+            -- (via the primary key indexes starting with _dataset), rather than for the whole tables.
+            LEFT JOIN LATERAL (
+              SELECT
+                ARRAY_AGG(name ORDER BY name) FILTER (WHERE category = 'color') AS colorNames,
+                ARRAY_AGG(name ORDER BY name) FILTER (WHERE category = 'segmentation') AS segmentationNames
+              FROM webknossos.dataset_layers
+              WHERE _dataset = d._id
+            ) layers ON TRUE
+            LEFT JOIN LATERAL (
+              SELECT SUM(usedStorageBytes) AS storage
+              FROM webknossos.organization_usedStorage_mags
+              WHERE _dataset = d._id
+            ) magStorage ON TRUE
+            LEFT JOIN LATERAL (
+              SELECT SUM(usedStorageBytes) AS storage
+              FROM webknossos.organization_usedStorage_attachments
+              WHERE _dataset = d._id
+            ) attachmentStorage ON TRUE
             $annotationCountJoin
             $orderByQuery
             $limitQuery

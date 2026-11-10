@@ -1,32 +1,18 @@
 package mcp
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.Fox
-import io.modelcontextprotocol.common.McpTransportContext
-import io.modelcontextprotocol.json.McpJsonMapper
-import io.modelcontextprotocol.json.jackson2.JacksonMcpJsonMapper
-import io.modelcontextprotocol.json.schema.jackson2.DefaultJsonSchemaValidator
-import io.modelcontextprotocol.server.transport.DefaultServerTransportSecurityValidator
-import io.modelcontextprotocol.server.{McpServer, McpStatelessServerFeatures}
-import io.modelcontextprotocol.spec.McpSchema
-import io.modelcontextprotocol.spec.McpSchema.{CallToolRequest, CallToolResult, Tool, ToolAnnotations}
 import models.user.User
-import play.api.libs.json.Json
-import play.api.mvc.{Headers, Result}
-import reactor.core.publisher.Mono
+import play.api.libs.json.*
 import security.{Scope, ShortLivedTokenService}
 import utils.WkConf
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.CollectionConverters.*
-import scala.jdk.FutureConverters.*
 
-/** The WEBKNOSSOS MCP server, built on the MCP Java SDK. The SDK implements the protocol (initialization and version
-  * negotiation, tools/list, tools/call, tool input validation), this class only contributes the tools. The HTTP
-  * transport is PlayMcpTransport, the endpoint is McpController.
+/** Implements the parts of the Model Context Protocol (MCP) that a stateless, tools-only server needs. The transport
+  * (Streamable HTTP without server-to-client streaming) lives in McpController.
   */
 @Singleton
 class McpService @Inject() (
@@ -37,16 +23,8 @@ class McpService @Inject() (
 )(implicit ec: ExecutionContext)
     extends Formatter {
 
-  // Created explicitly rather than looked up via the SDK's ServiceLoader, which is unreliable with Play's classloaders.
-  private val objectMapper = new ObjectMapper()
-  private val jsonMapper: McpJsonMapper = new JacksonMcpJsonMapper(objectMapper)
-
-  private val transport = new PlayMcpTransport(
-    jsonMapper,
-    // Browsers send an Origin header, MCP clients usually do not. A foreign origin means a web page is trying to talk
-    // to the server in the name of a user who is logged in via cookie (DNS rebinding, CSRF), so it is rejected.
-    DefaultServerTransportSecurityValidator.builder().allowedOrigin(conf.Http.uri.stripSuffix("/")).build()
-  )
+  private val latestProtocolVersion = "2025-11-25"
+  val supportedProtocolVersions: Set[String] = Set("2024-11-05", "2025-03-26", "2025-06-18", latestProtocolVersion)
 
   private val getTokenToolName = "get_short_lived_api_token"
   private val listDocsToolName = "list_python_library_docs"
@@ -54,38 +32,30 @@ class McpService @Inject() (
   private val listSkillsToolName = "list_em_processing_skills"
   private val readSkillToolName = "read_em_processing_skill"
 
-  // Key under which PlayMcpTransport hands the authenticated user to the tool handlers.
-  private val userContextKey = "webknossos.user"
+  private val emptySchema = Json.obj("type" -> "object", "properties" -> Json.obj())
 
-  private val emptySchema = """{"type": "object", "properties": {}}"""
-
-  private def stringArgumentSchema(name: String, description: String): String =
-    Json.stringify(
-      Json.obj(
-        "type" -> "object",
-        "properties" -> Json.obj(name -> Json.obj("type" -> "string", "description" -> description)),
-        "required" -> Json.arr(name)
-      )
-    )
-
+  // Tool annotations, hints for the client e.g. on whether to ask the user before calling a tool.
+  // Issuing a token touches no data, but creates a new token on every call.
+  private val issuesTokenAnnotations = Json.obj(
+    "readOnlyHint" -> false,
+    "destructiveHint" -> false,
+    "idempotentHint" -> false,
+    "openWorldHint" -> false
+  )
   // Reading docs and skills changes nothing, but they are fetched from outside of this instance.
-  private val readsExternalContent =
-    ToolAnnotations.builder().readOnlyHint(true).destructiveHint(false).idempotentHint(true).openWorldHint(true).build()
+  private val readsExternalContentAnnotations = Json.obj(
+    "readOnlyHint" -> true,
+    "destructiveHint" -> false,
+    "idempotentHint" -> true,
+    "openWorldHint" -> true
+  )
 
-  private def tool(
-      name: String,
-      title: String,
-      description: String,
-      inputSchema: String,
-      annotations: ToolAnnotations
-  ) =
-    Tool.builder(name, jsonMapper, inputSchema).title(title).description(description).annotations(annotations).build()
-
-  private val toolSpecifications: Seq[McpStatelessServerFeatures.AsyncToolSpecification] = Seq(
-    toolSpecification(
-      tool(
-        getTokenToolName,
-        "Get a short-lived WEBKNOSSOS API token",
+  // Also used to describe the tools in the MCP bundle manifest, see McpBundleService.
+  val tools: JsArray = Json.arr(
+    Json.obj(
+      "name" -> getTokenToolName,
+      "title" -> "Get a short-lived WEBKNOSSOS API token",
+      "description" ->
         s"""Creates a short-lived API token for the current WEBKNOSSOS user, to be used with the `webknossos` Python
            |library. The token has the same permissions as the user and expires
            |after ${formatDuration(conf.Silhouette.TokenAuthenticator.shortLivedExpiry)}. Returns the token together
@@ -112,44 +82,43 @@ class McpService @Inject() (
            |The result lists the scopes the token is limited to, in the form `resource:mode`. Anything outside them
            |is rejected with 403, so check them before planning destructive work.
            |""".stripMargin,
-        emptySchema,
-        // Issues a new token on every call, but touches no data.
-        ToolAnnotations
-          .builder()
-          .readOnlyHint(false)
-          .destructiveHint(false)
-          .idempotentHint(false)
-          .openWorldHint(false)
-          .build()
-      )
-    )((user, _) => shortLivedTokenFor(user)),
-    toolSpecification(
-      tool(
-        listDocsToolName,
-        "List the WEBKNOSSOS Python library documentation",
+      "inputSchema" -> emptySchema,
+      "annotations" -> issuesTokenAnnotations
+    ),
+    Json.obj(
+      "name" -> listDocsToolName,
+      "title" -> "List the WEBKNOSSOS Python library documentation",
+      "description" ->
         """Returns the index of the `webknossos` Python library documentation (llms.txt), a list of links to the
           |documentation pages of the individual modules. Consult this before writing `webknossos` Python code, and
           |then read the relevant pages with the read_python_library_docs_page tool. Run the resulting code with
           |`uv run --with webknossos <script>.py`.""".stripMargin,
-        emptySchema,
-        readsExternalContent
-      )
-    )((_, _) => pythonDocsService.getIndex),
-    toolSpecification(
-      tool(
-        readDocsToolName,
-        "Read a page of the WEBKNOSSOS Python library documentation",
+      "inputSchema" -> emptySchema,
+      "annotations" -> readsExternalContentAnnotations
+    ),
+    Json.obj(
+      "name" -> readDocsToolName,
+      "title" -> "Read a page of the WEBKNOSSOS Python library documentation",
+      "description" ->
         """Returns the markdown content of one documentation page of the `webknossos` Python library. Pass a URL as
           |listed by the list_python_library_docs tool, for example
           |https://docs.webknossos.org/api/webknossos/dataset/dataset.md""".stripMargin,
-        stringArgumentSchema("url", "URL of the documentation page, must be on https://docs.webknossos.org/"),
-        readsExternalContent
-      )
-    )((_, arguments) => withStringArgument(arguments, "url")(pythonDocsService.getPage)),
-    toolSpecification(
-      tool(
-        listSkillsToolName,
-        "List the volume EM processing skills",
+      "inputSchema" -> Json.obj(
+        "type" -> "object",
+        "properties" -> Json.obj(
+          "url" -> Json.obj(
+            "type" -> "string",
+            "description" -> "URL of the documentation page, must be on https://docs.webknossos.org/"
+          )
+        ),
+        "required" -> Json.arr("url")
+      ),
+      "annotations" -> readsExternalContentAnnotations
+    ),
+    Json.obj(
+      "name" -> listSkillsToolName,
+      "title" -> "List the volume EM processing skills",
+      "description" ->
         s"""Returns the catalogue of the EM-Skills collection (${EmSkillsService.repositoryUrl}): agent skills for
            |processing and analysing volume electron microscopy data, covering neuron and mitochondria segmentation,
            |annotation planning, segmentation review and visualisation.
@@ -157,25 +126,29 @@ class McpService @Inject() (
            |Consult this before writing your own image processing or analysis code for EM data. The skills work on
            |local files, so combine them with the `webknossos` Python library, which downloads the data from
            |WEBKNOSSOS and uploads the results back.""".stripMargin,
-        emptySchema,
-        readsExternalContent
-      )
-    )((_, _) => emSkillsService.getCatalogue),
-    toolSpecification(
-      tool(
-        readSkillToolName,
-        "Read one volume EM processing skill",
+      "inputSchema" -> emptySchema,
+      "annotations" -> readsExternalContentAnnotations
+    ),
+    Json.obj(
+      "name" -> readSkillToolName,
+      "title" -> "Read one volume EM processing skill",
+      "description" ->
         """Returns the SKILL.md of one skill from the EM-Skills collection, which describes when to use it and how
           |to run it. Pass the skill name as listed by the list_em_processing_skills tool, for example
           |segneuron-inference.""".stripMargin,
-        stringArgumentSchema("name", "Name of the skill, e.g. segneuron-inference or mitonet-inference"),
-        readsExternalContent
-      )
-    )((_, arguments) => withStringArgument(arguments, "name")(emSkillsService.getSkill))
+      "inputSchema" -> Json.obj(
+        "type" -> "object",
+        "properties" -> Json.obj(
+          "name" -> Json.obj(
+            "type" -> "string",
+            "description" -> "Name of the skill, e.g. segneuron-inference or mitonet-inference"
+          )
+        ),
+        "required" -> Json.arr("name")
+      ),
+      "annotations" -> readsExternalContentAnnotations
+    )
   )
-
-  // Also used to describe the tools in the MCP bundle manifest, see McpBundleService.
-  val tools: Seq[Tool] = toolSpecifications.map(_.tool)
 
   private val instructions =
     """This server gives access to a WEBKNOSSOS instance. Work with its datasets and annotations through the
@@ -194,43 +167,71 @@ class McpService @Inject() (
       |read_em_processing_skill first, instead of writing such pipelines from scratch. Those skills operate on
       |local files, so use the `webknossos` library to fetch the data and to upload results back.""".stripMargin
 
-  // Registers itself with the transport via setMcpHandler, which then keeps it alive.
-  McpServer
-    .async(transport)
-    .jsonMapper(jsonMapper)
-    .jsonSchemaValidator(new DefaultJsonSchemaValidator(objectMapper))
-    .serverInfo("webknossos", webknossos.BuildInfo.version)
-    .instructions(instructions)
-    .capabilities(McpSchema.ServerCapabilities.builder().tools(false).build())
-    .tools(toolSpecifications.asJava)
-    .build()
-
-  /** Handles one POSTed MCP message on behalf of the given (already authenticated) user. */
-  def handlePost(body: String, contentType: Option[String], headers: Headers, user: User): Future[Result] =
-    transport.handlePost(body, contentType, headers, McpTransportContext.create(Map(userContextKey -> user).asJava))
-
-  private def toolSpecification(tool: Tool)(
-      run: (User, Map[String, Any]) => Fox[String]
-  ): McpStatelessServerFeatures.AsyncToolSpecification =
-    new McpStatelessServerFeatures.AsyncToolSpecification(
-      tool,
-      (context: McpTransportContext, request: CallToolRequest) =>
-        context.get(userContextKey) match {
-          case user: User =>
-            val arguments = Option(request.arguments()).map(_.asScala.toMap).getOrElse(Map.empty[String, Any])
-            Mono.fromFuture(asToolResult(run(user, arguments)).asJava.toCompletableFuture)
-          case _ =>
-            // Cannot happen for requests that came through McpController, which only lets authenticated users in.
-            Mono.just(toolResult("Not authenticated", isError = true))
+  /** Handles one JSON-RPC message. Returns None for notifications, which must not be answered.
+    */
+  def handle(body: JsValue, user: User): Future[Option[JsObject]] =
+    JsonRpc.parseRequest(body) match {
+      case Left(parseError) => Future.successful(Some(JsonRpc.error(None, parseError)))
+      case Right(request)   =>
+        handleRequest(request, user).map { outcome =>
+          if (request.isNotification) None
+          else
+            Some(outcome match {
+              case Left(error)  => JsonRpc.error(request.id, error)
+              case Right(value) => JsonRpc.result(request.id, value)
+            })
         }
-    )
-
-  // The SDK validates the arguments against the input schema before calling the tool, this only extracts them.
-  private def withStringArgument(arguments: Map[String, Any], name: String)(run: String => Fox[String]): Fox[String] =
-    arguments.get(name) match {
-      case Some(value: String) => run(value)
-      case _                   => Fox.failure(s"Missing or invalid argument: $name")
     }
+
+  private def handleRequest(request: JsonRpcRequest, user: User): Future[Either[JsonRpcError, JsValue]] =
+    request.method match {
+      case "initialize"                     => Future.successful(Right(initializeResult(request.params)))
+      case "ping"                           => Future.successful(Right(Json.obj()))
+      case "tools/list"                     => Future.successful(Right(Json.obj("tools" -> tools)))
+      case "tools/call"                     => callTool(request.params, user)
+      case method if isNotification(method) => Future.successful(Right(Json.obj()))
+      case method                           => Future.successful(Left(JsonRpcError.methodNotFound(method)))
+    }
+
+  private def isNotification(method: String): Boolean = method.startsWith("notifications/")
+
+  private def initializeResult(params: JsObject): JsObject = {
+    val requestedVersion = (params \ "protocolVersion").asOpt[String]
+    val protocolVersion = requestedVersion.filter(supportedProtocolVersions.contains).getOrElse(latestProtocolVersion)
+    Json.obj(
+      "protocolVersion" -> protocolVersion,
+      "capabilities" -> Json.obj("tools" -> Json.obj()),
+      "serverInfo" -> Json.obj("name" -> "webknossos", "version" -> webknossos.BuildInfo.version),
+      "instructions" -> instructions
+    )
+  }
+
+  private def callTool(params: JsObject, user: User): Future[Either[JsonRpcError, JsValue]] =
+    (params \ "name").asOpt[String] match {
+      case None       => Future.successful(Left(JsonRpcError.invalidParams("Missing or invalid field: name")))
+      case Some(name) =>
+        val arguments = (params \ "arguments").asOpt[JsObject].getOrElse(Json.obj())
+        name match {
+          case `getTokenToolName` => asToolResult(shortLivedTokenFor(user))
+          case `listDocsToolName` => asToolResult(pythonDocsService.getIndex)
+          case `readDocsToolName` =>
+            (arguments \ "url").asOpt[String] match {
+              case None      => missingArgument("url")
+              case Some(url) => asToolResult(pythonDocsService.getPage(url))
+            }
+          case `listSkillsToolName` => asToolResult(emSkillsService.getCatalogue)
+          case `readSkillToolName`  =>
+            (arguments \ "name").asOpt[String] match {
+              case None       => missingArgument("name")
+              case Some(name) => asToolResult(emSkillsService.getSkill(name))
+            }
+          case _ => Future.successful(Left(JsonRpcError.invalidParams(s"Unknown tool: $name")))
+        }
+    }
+
+  // Reported as a tool error rather than a protocol error, so that the model can correct its call (MCP 2025-11-25).
+  private def missingArgument(name: String): Future[Either[JsonRpcError, JsValue]] =
+    Future.successful(Right(toolResult(s"Missing or invalid argument: $name", isError = true)))
 
   private def shortLivedTokenFor(user: User): Fox[String] =
     for {
@@ -255,13 +256,13 @@ class McpService @Inject() (
     )
 
   // Failures of a tool are reported inside the result, not as a JSON-RPC error, so that the model can react to them.
-  private def asToolResult(textFox: Fox[String]): Future[CallToolResult] =
+  private def asToolResult(textFox: Fox[String]): Future[Either[JsonRpcError, JsValue]] =
     textFox.futureBox.map {
-      case Full(text)       => toolResult(text, isError = false)
-      case failure: Failure => toolResult(formatFailureChain(failure), isError = true)
-      case Empty            => toolResult("No result", isError = true)
+      case Full(text)       => Right(toolResult(text, isError = false))
+      case failure: Failure => Right(toolResult(formatFailureChain(failure), isError = true))
+      case Empty            => Right(toolResult("No result", isError = true))
     }
 
-  private def toolResult(text: String, isError: Boolean): CallToolResult =
-    CallToolResult.builder().addTextContent(text).isError(isError).build()
+  private def toolResult(text: String, isError: Boolean): JsObject =
+    Json.obj("content" -> Json.arr(Json.obj("type" -> "text", "text" -> text)), "isError" -> isError)
 }

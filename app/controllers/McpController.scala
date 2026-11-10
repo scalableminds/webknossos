@@ -1,21 +1,23 @@
 package controllers
 
-import mcp.{McpBundleService, McpService}
+import mcp.{JsonRpc, JsonRpcError, McpBundleService, McpService}
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonAutoFormat
 import models.user.UserService
-import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.libs.json.{JsValue, Json}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RequestHeader, Result}
 import security.{Scope, ShortLivedTokenService, WkEnv}
 
+import utils.WkConf
+
+import java.net.URI
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 case class McpPermissions(scopes: String) derives JsonAutoFormat
 
-/** Model Context Protocol (MCP) server, so that AI agents can work with this WEBKNOSSOS instance. The protocol is
-  * implemented by the MCP Java SDK, see McpService and PlayMcpTransport.
+/** Model Context Protocol (MCP) server, so that AI agents can work with this WEBKNOSSOS instance.
   *
   * The transport is Streamable HTTP without server-to-client streaming: every POST carries a single JSON-RPC message
   * and is answered with a single JSON response. The server is stateless, so no Mcp-Session-Id is issued and GET (which
@@ -30,15 +32,54 @@ class McpController @Inject() (
     mcpBundleService: McpBundleService,
     shortLivedTokenService: ShortLivedTokenService,
     userService: UserService,
+    conf: WkConf,
     sil: Silhouette[WkEnv]
 )(implicit
     ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers
 ) extends Controller {
 
-  // The body is passed on as text, the MCP SDK parses and validates it (see PlayMcpTransport).
-  def handle(): Action[String] = sil.SecuredAction.async(bodyParsers.tolerantText) { implicit request =>
-    mcpService.handlePost(request.body, request.contentType, request.headers, request.identity)
+  def handle(): Action[JsValue] = sil.SecuredAction.async(bodyParsers.tolerantJson) { implicit request =>
+    rejectionFor(request) match {
+      case Some(rejection) => Future.successful(rejection)
+      case None            =>
+        mcpService.handle(request.body, request.identity).map {
+          case Some(response) => Ok(response)
+          case None           => Accepted // JSON-RPC notifications are not answered
+        }
+    }
+  }
+
+  private def rejectionFor(request: RequestHeader): Option[Result] =
+    if (!request.contentType.contains(JSON))
+      // Checked here rather than by the json body parser, which would answer with an HTML error page.
+      Some(
+        UnsupportedMediaType(
+          JsonRpc
+            .error(None, JsonRpcError.invalidRequest("Unsupported Media Type: Content-Type must be application/json"))
+        )
+      )
+    else if (request.headers.get(ORIGIN).exists(_ != instanceOrigin))
+      // Browsers send an Origin header, MCP clients usually do not. A foreign origin means that a web page tries to
+      // talk to the server on behalf of a user who is logged in via cookie (CSRF, DNS rebinding). Required by the spec.
+      Some(Forbidden(JsonRpc.error(None, JsonRpcError.invalidRequest("Invalid Origin header"))))
+    else
+      request.headers.get(protocolVersionHeader) match {
+        // Clients send the negotiated version on every request after initialization. The spec requires a 400 for
+        // unsupported ones. Without the header, the server is to assume 2025-03-26, which needs no special handling.
+        case Some(version) if !mcpService.supportedProtocolVersions.contains(version) =>
+          Some(BadRequest(JsonRpc.error(None, JsonRpcError.invalidRequest(s"Unsupported protocol version: $version"))))
+        case _ => None
+      }
+
+  private val protocolVersionHeader = "MCP-Protocol-Version"
+
+  // Origin as sent by browsers: scheme, host and port, the latter only if it is not the default for the scheme.
+  private lazy val instanceOrigin: String = {
+    val uri = new URI(conf.Http.uri)
+    val isDefaultPort = uri.getPort == -1 || (uri.getScheme, uri.getPort) == ("http", 80) ||
+      (uri.getScheme, uri.getPort) == ("https", 443)
+    s"${uri.getScheme}://${uri.getHost}${if (isDefaultPort) "" else s":${uri.getPort}"}"
   }
 
   def handleGet(): Action[AnyContent] = sil.SecuredAction { _ =>

@@ -128,11 +128,7 @@ object Dependencies {
     // SQL Queries postgres specifics. not imported.
     "org.postgresql" % "postgresql" % postgresVersion,
     /// WebAuthn for passkey authentication. import com.webauthn4j
-    "com.webauthn4j" % "webauthn4j-core" % "0.31.11.RELEASE" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
-    // Model Context Protocol server. import io.modelcontextprotocol
-    "io.modelcontextprotocol.sdk" % "mcp-core" % "2.1.0",
-    // JSON (de)serialization and tool input schema validation for the MCP SDK, via jackson 2. Not imported.
-    "io.modelcontextprotocol.sdk" % "mcp-json-jackson2" % "2.1.0"
+    "com.webauthn4j" % "webauthn4j-core" % "0.31.11.RELEASE" exclude ("com.fasterxml.jackson.core", "jackson-databind")
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(

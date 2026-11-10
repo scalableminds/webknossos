@@ -105,9 +105,9 @@ function updateOverlay(
   });
 }
 
-// A diff is shown if its agglomerate skeleton exists and is visible
+// A diff is shown if its agglomerate skeleton exists (see AgglomerateDiff.isShown)
 function isDiffVisible(diff: AgglomerateDiff): boolean {
-  return diff.sourceTreeId != null && diff.isSourceTreeVisible;
+  return diff.sourceTreeId != null && diff.isShown;
 }
 
 // Sets the visibility of the trees of the given diffs according to isDiffVisible
@@ -141,7 +141,7 @@ function AgglomerateDiffReducer(state: WebknossosState, action: Action): Webknos
             awaitsAgglomerateSkeleton: action.awaitsAgglomerateSkeleton,
             // Set by the agglomerate_diff_saga once the agglomerate skeleton exists
             sourceTreeId: null,
-            isSourceTreeVisible: true,
+            isShown: true,
             referenceAgglomerateId: null,
             treeIds: [],
             errorMessage: null,
@@ -243,7 +243,7 @@ function AgglomerateDiffReducer(state: WebknossosState, action: Action): Webknos
         diffs[key] = {
           ...diff,
           sourceTreeId: sourceTree.treeId,
-          isSourceTreeVisible: sourceTree.isVisible,
+          isShown: sourceTree.isShown,
           awaitsAgglomerateSkeleton: false,
         };
         changedDiffs.push(diffs[key]);

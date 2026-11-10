@@ -88,10 +88,11 @@ export const stopAwaitingAgglomerateSkeletonAction = (key: string) =>
   }) as const;
 
 // Updates the diffs whose agglomerate skeletons exist (keyed by getAgglomerateDiffKey) with the
-// id and visibility of these agglomerate skeletons, as diffs are only shown while their agglomerate
-// skeleton is visible. Also, these diffs don't await their agglomerate skeleton anymore.
+// id of these agglomerate skeletons and whether the diffs are shown (only while their agglomerate
+// skeleton is visible and their layer is enabled). Also, these diffs don't await their agglomerate
+// skeleton anymore.
 export const syncAgglomerateDiffsWithSourceTreesAction = (
-  sourceTreeByKey: Record<string, { treeId: number; isVisible: boolean }>,
+  sourceTreeByKey: Record<string, { treeId: number; isShown: boolean }>,
 ) =>
   ({
     type: "SYNC_AGGLOMERATE_DIFFS_WITH_SOURCE_TREES",

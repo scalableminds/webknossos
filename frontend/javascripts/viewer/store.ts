@@ -167,8 +167,8 @@ export type AgglomerateDiff = AgglomerateDiffDescriptor & {
   readonly awaitsAgglomerateSkeleton: boolean;
   // The agglomerate skeleton (annotation tree) of the diff. Null while it is awaited.
   readonly sourceTreeId: number | null;
-  // The diff is only shown while its agglomerate skeleton is visible
-  readonly isSourceTreeVisible: boolean;
+  // The diff is only shown while its agglomerate skeleton is visible and its layer is enabled
+  readonly isShown: boolean;
   // The fields below are only set once the diff is loaded
   readonly referenceAgglomerateId: bigint | null;
   // The trees of the overlay skeleton that show this diff

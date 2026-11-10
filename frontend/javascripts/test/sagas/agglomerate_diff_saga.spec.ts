@@ -436,6 +436,39 @@ describe("Agglomerate diff saga", () => {
     expect(getUrls().filter(isDiffUrl).length).toBe(2);
   });
 
+  it<WebknossosTestContext>("hides the diffs while the layer is disabled without loading them again", async (context) => {
+    const getUrls = mockDiffRequests(context);
+    addAgglomerateTrees([agglomerateId]);
+    await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
+    const treeId = getAgglomerateTree(agglomerateId).treeId;
+    const isDiffTreeVisible = () => getOverlay().skeleton.trees.values().toArray()[0].isVisible;
+    const getDimmedTreeIds = () => [...getAgglomerateTreeIdsWithVisibleDiffs(Store.getState())];
+
+    Store.dispatch(updateLayerSettingAction(layerName, "isDisabled", true));
+    await vi.waitFor(() => expect(isDiffTreeVisible()).toBe(false));
+    expect(getDimmedTreeIds()).toEqual([]);
+    expect(getDiffs()[0].status).toBe("loaded");
+
+    Store.dispatch(updateLayerSettingAction(layerName, "isDisabled", false));
+    await vi.waitFor(() => expect(isDiffTreeVisible()).toBe(true));
+    expect(getDimmedTreeIds()).toEqual([treeId]);
+    expect(getUrls().filter(isDiffUrl).length).toBe(1);
+  });
+
+  it<WebknossosTestContext>("only requests missing diffs once the layer is enabled again", async (context) => {
+    const getUrls = mockDiffRequests(context);
+    Store.dispatch(updateLayerSettingAction(layerName, "isDisabled", true));
+    addAgglomerateTrees([agglomerateId]);
+
+    await sleep(50);
+    expect(getDiffs().length).toBe(0);
+    expect(getUrls().some(isDiffUrl)).toBe(false);
+
+    Store.dispatch(updateLayerSettingAction(layerName, "isDisabled", false));
+    await vi.waitFor(() => expect(getDiffs()[0]?.status).toBe("loaded"));
+    expect(getOverlay().skeleton.trees.values().toArray()[0].isVisible).toBe(true);
+  });
+
   it<WebknossosTestContext>("keeps the diffs when the active agglomerate mapping is set again", async (context) => {
     const getUrls = mockDiffRequests(context);
     addAgglomerateTrees([agglomerateId]);

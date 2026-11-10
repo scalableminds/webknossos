@@ -188,7 +188,7 @@ const getAgglomerateTreeIdsWithVisibleDiffsMemoized = memoizeOne(
   (diffs: AgglomerateDiffOverlay["diffs"]): ReadonlySet<number> => {
     const treeIds = new Set<number>();
     for (const diff of Object.values(diffs)) {
-      if (diff.sourceTreeId != null && diff.isSourceTreeVisible && diff.treeIds.length > 0) {
+      if (diff.sourceTreeId != null && diff.isShown && diff.treeIds.length > 0) {
         treeIds.add(diff.sourceTreeId);
       }
     }

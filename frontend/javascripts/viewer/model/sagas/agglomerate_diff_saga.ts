@@ -57,11 +57,16 @@ type DesiredDiff = {
   descriptor: AgglomerateDiffDescriptor;
   // The agglomerate is compared to the reference agglomerate that contains the segment at this position
   positionInLayer: Vector3;
-  sourceTree: { treeId: number; isVisible: boolean };
+  // isShown is false while the agglomerate skeleton is hidden or the layer is disabled
+  sourceTree: { treeId: number; isShown: boolean };
+  // While the layer is disabled, its loaded diffs are kept (but hidden), because layers are often
+  // toggled quickly. Missing diffs are only requested once the layer is enabled again.
+  isLayerDisabled: boolean;
 };
 
-// Returns the diffs that should be shown for the current annotation, keyed by getAgglomerateDiffKey,
-// and the layers whose agglomerate files are not known, yet.
+// Returns the diffs that should exist for the current annotation (including the hidden ones of
+// disabled layers), keyed by getAgglomerateDiffKey, and the enabled layers whose agglomerate files
+// are not known, yet.
 function getDesiredDiffs(state: WebknossosState): {
   desiredDiffs: Map<string, DesiredDiff>;
   layersWithUnknownAgglomerateFiles: string[];
@@ -74,8 +79,9 @@ function getDesiredDiffs(state: WebknossosState): {
   for (const layer of getDataLayers(state.dataset)) {
     if (layer.category !== "segmentation") continue;
     const layerName = layer.name;
+    const isLayerDisabled = state.datasetConfiguration.layers[layerName]?.isDisabled ?? false;
     if (needsAgglomerateFilesForDiffs(state, layerName)) {
-      layersWithUnknownAgglomerateFiles.push(layerName);
+      if (!isLayerDisabled) layersWithUnknownAgglomerateFiles.push(layerName);
       continue;
     }
     const referenceMappingName = getUsableAgglomerateDiffReference(state, layerName);
@@ -115,7 +121,8 @@ function getDesiredDiffs(state: WebknossosState): {
       desiredDiffs.set(getAgglomerateDiffKey(descriptor), {
         descriptor,
         positionInLayer: positionInLayer.map(Math.floor) as Vector3,
-        sourceTree: { treeId: tree.treeId, isVisible: tree.isVisible },
+        sourceTree: { treeId: tree.treeId, isShown: tree.isVisible && !isLayerDisabled },
+        isLayerDisabled,
       });
     }
   }
@@ -257,13 +264,13 @@ function* reconcileAgglomerateDiffs(layersWithRequestedAgglomerateFiles: Set<str
     yield* put(removeAgglomerateDiffsAction([...obsoleteKeys]));
   }
 
-  const sourceTreeByKey: Record<string, { treeId: number; isVisible: boolean }> = {};
+  const sourceTreeByKey: Record<string, { treeId: number; isShown: boolean }> = {};
   for (const [key, { sourceTree }] of desiredDiffs) {
     const diff = obsoleteKeys.has(key) ? null : diffs[key];
     if (
       diff != null &&
       (diff.sourceTreeId !== sourceTree.treeId ||
-        diff.isSourceTreeVisible !== sourceTree.isVisible ||
+        diff.isShown !== sourceTree.isShown ||
         diff.awaitsAgglomerateSkeleton)
     ) {
       sourceTreeByKey[key] = sourceTree;
@@ -274,8 +281,8 @@ function* reconcileAgglomerateDiffs(layersWithRequestedAgglomerateFiles: Set<str
   }
 
   // Failed diffs are not requested again until they are obsolete
-  for (const [key, { descriptor, positionInLayer }] of desiredDiffs) {
-    if (diffs[key] != null && !obsoleteKeys.has(key)) continue;
+  for (const [key, { descriptor, positionInLayer, isLayerDisabled }] of desiredDiffs) {
+    if (isLayerDisabled || (diffs[key] != null && !obsoleteKeys.has(key))) continue;
     yield* put(requestAgglomerateDiffAction(descriptor, positionInLayer, false));
   }
 }

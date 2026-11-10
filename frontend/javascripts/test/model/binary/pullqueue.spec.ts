@@ -191,7 +191,8 @@ describe("PullQueue", () => {
     expect(buckets[1].getData()).toEqual(new Uint8Array(bucketData2));
   });
 
-  function prepare() {
+  // The first request fails, the second one returns data for a single bucket.
+  function mockFailingThenSucceedingRequests() {
     vi.mocked(requestWithFallback)
       .mockReset()
       .mockRejectedValueOnce(new Error("Expected promise rejection in tests. Can be ignored."))
@@ -202,7 +203,7 @@ describe("PullQueue", () => {
     pullQueue,
     buckets,
   }) => {
-    prepare();
+    mockFailingThenSucceedingRequests();
     pullQueue.pull();
 
     await sleep(0); // sleep a bit so that the event loop can process the fetches
@@ -216,7 +217,7 @@ describe("PullQueue", () => {
     pullQueue,
     buckets,
   }) => {
-    prepare();
+    mockFailingThenSucceedingRequests();
     buckets[0].fullBucketSaveState.dirty = true;
     buckets[0].data = new Uint8Array(32 * 32 * 32);
     pullQueue.pull();
@@ -232,7 +233,7 @@ describe("PullQueue", () => {
     pullQueue,
     buckets,
   }) => {
-    prepare();
+    mockFailingThenSucceedingRequests();
     // As the bucket picker does for the buckets of the current view.
     buckets[0].markAsNeeded();
     pullQueue.pull();
@@ -248,7 +249,7 @@ describe("PullQueue", () => {
     pullQueue,
     buckets,
   }) => {
-    prepare();
+    mockFailingThenSucceedingRequests();
     buckets[0].markAsNeeded();
     pullQueue.pull();
 

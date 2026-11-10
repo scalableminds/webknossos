@@ -188,17 +188,25 @@ class PullQueue {
           const bucketResult = bucketResults[index];
           const siblingAddresses = getTBatchSiblingAddresses(this.cube, bucketAddress);
 
-          if (bucketResult.type === "failure") {
-            // The bucket could not be read. Schedule it for a retry via the
-            // batch-level error handling below.
-            failures.push({ bucketAddress, reason: "failure-response" });
-          } else {
-            this.handleBatchedBucketResult(
-              siblingAddresses,
-              bucketResult.type === "data" ? bucketResult.data : null,
-              renderMissingDataBlack,
-              batchItems[index].priority,
-            );
+          switch (bucketResult.type) {
+            case "data":
+            case "empty": {
+              this.handleBatchedBucketResult(
+                siblingAddresses,
+                bucketResult.type === "data" ? bucketResult.data : null,
+                renderMissingDataBlack,
+                batchItems[index].priority,
+              );
+              break;
+            }
+            case "failure": {
+              // The bucket could not be read. Schedule it for a retry via the
+              // batch-level error handling below.
+              failures.push({ bucketAddress, reason: "failure-response" });
+              break;
+            }
+            default:
+              bucketResult satisfies never;
           }
         } catch (error) {
           failures.push({ bucketAddress, reason: "handling-error", error });

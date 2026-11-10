@@ -103,6 +103,42 @@ export function createPartialChangeKey(): number {
   return nextPartialChangeKey++;
 }
 
+// Saving edits as whole buckets (updateBucket), outside of collaborative volume
+// annotation. Edits go through startDataMutationForFullBucket and
+// endDataMutationForFullBucket, the push queue and undo snapshots. This will be removed
+// together with updateBucket.
+type FullBucketSaveState = {
+  // If dirty, the bucket's data was potentially edited and needs to be
+  // saved to the server.
+  dirty: boolean;
+  // `dirtyCount` reflects how many pending snapshots of the bucket exist.
+  // A pending snapshot is a snapshot which was either
+  // - not yet saved (after successful saving the dirtyCount is decremented) or
+  // - not yet created by the PushQueue, since the PushQueue creates the snapshots
+  //   in a debounced manner
+  dirtyCount: number;
+  // Local writes made while the bucket was loading. mergeWithFullBucket() replays them
+  // onto the backend's data.
+  pendingOperations: Array<PendingOperation>;
+  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
+};
+
+// Saving edits as partial bucket updates (updateBucketPartial), in collaborative
+// volume annotation. Edits go through applyPartialChange and don't use
+// FullBucketSaveState.
+type PartialUpdateState = {
+  // The changes made while the bucket isn't loaded, in the order they were applied.
+  // These are the user's local writes (saved or not), others' partial updates, and
+  // the user's own ones re-applied during rebasing. Once the backend's data arrives,
+  // they are applied to it. As they are absolute writes and all changes since the
+  // bucket was created are kept, it doesn't matter which of them the data already
+  // contains (see applyPartialChange).
+  pendingChanges: Map<number, (data: BucketDataArray) => void>;
+  // How many partial updates of this bucket are in the save queue. While there are
+  // any, the bucket isn't garbage collected: fetched again, its data would lack them.
+  unsavedCount: number;
+};
+
 export class DataBucket {
   readonly type = "data" as const;
   readonly elementClass: ElementClass;
@@ -131,46 +167,16 @@ export class DataBucket {
   visualizedMesh: Record<string, any> | null | undefined;
   visualizationColor: Color | null | undefined;
 
-  // Saving edits as whole buckets (updateBucket), outside of collaborative volume
-  // annotation. Edits go through startDataMutationForFullBucket and
-  // endDataMutationForFullBucket, the push queue and undo snapshots. This will be removed
-  // together with updateBucket.
-  fullBucketSaveState: {
-    // If dirty, the bucket's data was potentially edited and needs to be
-    // saved to the server.
-    dirty: boolean;
-    // `dirtyCount` reflects how many pending snapshots of the bucket exist.
-    // A pending snapshot is a snapshot which was either
-    // - not yet saved (after successful saving the dirtyCount is decremented) or
-    // - not yet created by the PushQueue, since the PushQueue creates the snapshots
-    //   in a debounced manner
-    dirtyCount: number;
-    // Local writes made while the bucket was loading. mergeWithFullBucket() replays them
-    // onto the backend's data.
-    pendingOperations: Array<PendingOperation>;
-    maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
-  } = {
+  // Saving edits as whole buckets (see FullBucketSaveState).
+  fullBucketSaveState: FullBucketSaveState = {
     dirty: false,
     dirtyCount: 0,
     pendingOperations: [],
     maybeUnmergedBucketLoadedPromise: null,
   };
 
-  // Saving edits as partial bucket updates (updateBucketPartial), in collaborative
-  // volume annotation. Edits go through applyPartialChange and don't use
-  // fullBucketSaveState.
-  partialUpdateState: {
-    // The changes made while the bucket isn't loaded, in the order they were applied.
-    // These are the user's local writes (saved or not), others' partial updates, and
-    // the user's own ones re-applied during rebasing. Once the backend's data arrives,
-    // they are applied to it. As they are absolute writes and all changes since the
-    // bucket was created are kept, it doesn't matter which of them the data already
-    // contains (see applyPartialChange).
-    pendingChanges: Map<number, (data: BucketDataArray) => void>;
-    // How many partial updates of this bucket are in the save queue. While there are
-    // any, the bucket isn't garbage collected: fetched again, its data would lack them.
-    unsavedCount: number;
-  } = {
+  // Saving edits as partial bucket updates (see PartialUpdateState).
+  partialUpdateState: PartialUpdateState = {
     pendingChanges: new Map(),
     unsavedCount: 0,
   };

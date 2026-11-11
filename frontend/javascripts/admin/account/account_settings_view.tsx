@@ -1,12 +1,14 @@
-import { SafetyOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
+import { ApiOutlined, SafetyOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
+import features from "features";
 import { Outlet, useLocation, useNavigate } from "react-router";
 
 const { Sider, Content } = Layout;
 
 const BREADCRUMB_LABELS = {
   token: "Auth Token",
+  mcp: "MCP Agent Connections",
   security: "Security",
   profile: "Profile",
 };
@@ -37,9 +39,23 @@ const MENU_ITEMS: MenuItemGroupType[] = [
         icon: <SettingOutlined />,
         label: "Auth Token",
       },
+      {
+        key: "mcp",
+        icon: <ApiOutlined />,
+        label: "MCP Agent Connections",
+      },
     ],
   },
 ];
+
+// The MCP tab is only offered if the instance runs the MCP server.
+function getMenuItems(): MenuItemGroupType[] {
+  if (features().mcpEnabled) return MENU_ITEMS;
+  return MENU_ITEMS.map((group) => ({
+    ...group,
+    children: group.children?.filter((item) => item?.key !== "mcp"),
+  }));
+}
 
 function AccountSettingsView() {
   const location = useLocation();
@@ -68,7 +84,7 @@ function AccountSettingsView() {
           mode="inline"
           selectedKeys={[selectedKey]}
           style={{ height: "100%", padding: 24 }}
-          items={MENU_ITEMS}
+          items={getMenuItems()}
           onClick={({ key }) => navigate(`/account/${key}`)}
         />
       </Sider>

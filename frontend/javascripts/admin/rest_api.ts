@@ -355,6 +355,62 @@ export async function revokeAuthToken(): Promise<void> {
   });
 }
 
+// MCP clients connected via OAuth, see the consent page at /oauth/authorize.
+export type OAuthPermissionLevel = "read" | "write" | "delete";
+
+export type OAuthAuthorizationRequestInfo =
+  | {
+      isValid: true;
+      clientId: string;
+      clientName: string;
+      // Registered clients chose their name themselves, nothing verifies it.
+      isRegisteredClient: boolean;
+      redirectUri: string;
+      requestedLevel: OAuthPermissionLevel;
+    }
+  // redirectUrl is set if the client could be verified, so that it can be told about the error.
+  | { isValid: false; error: string; redirectUrl: string | null };
+
+export type OAuthAuthorizationResponse =
+  | { isValid: true; redirectUrl: string }
+  | { isValid: false; error: string; redirectUrl: string | null };
+
+export type APIOAuthGrant = {
+  id: string;
+  clientId: string;
+  clientName: string;
+  level: string;
+  created: number;
+  lastUsed: number;
+};
+
+export async function getOAuthAuthorizationRequest(
+  queryString: string,
+): Promise<OAuthAuthorizationRequestInfo> {
+  return Request.receiveJSON(`/api/oauth/authorizationRequest${queryString}`);
+}
+
+export async function submitOAuthAuthorization(
+  params: Record<string, string>,
+  level: OAuthPermissionLevel,
+  approved: boolean,
+): Promise<OAuthAuthorizationResponse> {
+  return Request.sendJSONReceiveJSON("/api/oauth/authorize", {
+    method: "POST",
+    data: { params, level, approved },
+  });
+}
+
+export async function getOAuthGrants(): Promise<APIOAuthGrant[]> {
+  return Request.receiveJSON("/api/oauth/grants");
+}
+
+export async function revokeOAuthGrant(grantId: string): Promise<void> {
+  await Request.receiveJSON(`/api/oauth/grants/${grantId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function changePassword(data: Record<string, string>): Promise<void> {
   await Request.sendJSONReceiveJSON("/api/auth/changePassword", {
     data: data,

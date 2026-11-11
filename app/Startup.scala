@@ -7,6 +7,7 @@ import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import files.WkTempFileService
 import mail.{Mailer, MailerConfig}
+import oauth.OAuthService
 import models.annotation.AnnotationDAO
 import models.dataset.ThumbnailCachingService
 import models.user.InviteService
@@ -35,7 +36,8 @@ class Startup @Inject() (
     inviteService: InviteService,
     thumbnailCachingService: ThumbnailCachingService,
     sqlClient: SqlClient,
-    slackNotificationService: SlackNotificationService
+    slackNotificationService: SlackNotificationService,
+    oauthService: OAuthService
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
 
@@ -53,6 +55,10 @@ class Startup @Inject() (
 
   cleanUpService.register("hard-deletion of old soft-deleted tokens", 1 day) {
     tokenAuthenticatorService.hardDeleteOldTokens()
+  }
+
+  cleanUpService.register("deletion of expired OAuth codes and tokens", 1 day) {
+    oauthService.removeExpired()
   }
 
   cleanUpService.register("deletion of expired invites", 1 day) {

@@ -66,6 +66,8 @@ If you suspect unauthorized access or have lost a device, you can log out of all
 2. Click on the `Log out on all devices` button under `Log out everywhere`.
 3. Confirm the prompt to log out. You will be redirected to the login page.
 
+This also disconnects all AI assistants you connected through the [MCP server](mcp.md).
+
 ### Passkeys
 
 Passkeys are a new, more secure way to log in to websites and apps without using a password. Instead of typing a password, you use a fingerprint, face scan, or a device PIN to authenticate.
@@ -98,3 +100,8 @@ If your token has been compromised or you suspect someone else has gained access
 #### Organization ID
 
 Certain API integrations need the organization ID which can be found here, in the developer settings.
+
+### MCP Agent Connections
+
+The `MCP Agent Connections` tab shows how to connect an AI agent to WEBKNOSSOS through the [MCP server](mcp.md),
+and lists the applications you connected, so that you can disconnect them.

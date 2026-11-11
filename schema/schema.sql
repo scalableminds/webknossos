@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(190);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(191);
 COMMIT TRANSACTION;
 
 
@@ -582,7 +582,7 @@ CREATE TABLE webknossos.webauthnCredentials(
 );
 
 
-CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword', 'Job');
+CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword', 'Job', 'ShortLived');
 CREATE TABLE webknossos.tokens(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   value TEXT NOT NULL,
@@ -592,7 +592,50 @@ CREATE TABLE webknossos.tokens(
   idleTimeout BIGINT,
   tokenType webknossos.TOKEN_TYPES NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  _oauthGrant TEXT CONSTRAINT _oauthGrant_objectId CHECK (_oauthGrant ~ '^[0-9a-f]{24}$') DEFAULT NULL -- see oauthGrants
+);
+
+-- MCP clients that registered themselves via OAuth Dynamic Client Registration (RFC 7591). Clients identified by a
+-- client metadata document instead are not stored. Registrations that never led to a grant are cleaned up.
+CREATE TABLE webknossos.oauthClients(
+  clientId TEXT PRIMARY KEY,
+  clientName TEXT NOT NULL, -- chosen by the client itself, unverified
+  redirectUris TEXT[] NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- OAuth grants: an MCP client that a user allowed to access WEBKNOSSOS (see oauth.OAuthService). The client is
+-- either the URL of its client metadata document, or the id of a registered client (oauthClients).
+CREATE TABLE webknossos.oauthGrants(
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  clientId TEXT NOT NULL,
+  clientName TEXT NOT NULL,
+  scopes TEXT NOT NULL, -- as understood by security.Scope.Set.parse, e.g. a permission level such as "write"
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  lastUsed TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+-- Only hashes of codes and tokens are stored, so that a database leak does not hand out credentials.
+CREATE TABLE webknossos.oauthAuthorizationCodes(
+  codeHash TEXT PRIMARY KEY,
+  _grant TEXT CONSTRAINT _grant_objectId CHECK (_grant ~ '^[0-9a-f]{24}$') NOT NULL,
+  redirectUri TEXT NOT NULL,
+  codeChallenge TEXT NOT NULL, -- PKCE, S256
+  expirationDateTime TIMESTAMPTZ NOT NULL,
+  isUsed BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TYPE webknossos.OAUTH_TOKEN_TYPES AS ENUM ('Access', 'Refresh');
+CREATE TABLE webknossos.oauthTokens(
+  tokenHash TEXT PRIMARY KEY,
+  _grant TEXT CONSTRAINT _grant_objectId CHECK (_grant ~ '^[0-9a-f]{24}$') NOT NULL,
+  tokenType webknossos.OAUTH_TOKEN_TYPES NOT NULL,
+  expirationDateTime TIMESTAMPTZ NOT NULL,
+  isUsed BOOLEAN NOT NULL DEFAULT FALSE, -- refresh tokens are rotated, each one can be used once
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE webknossos.maintenances(
@@ -895,6 +938,7 @@ CREATE VIEW webknossos.partners_ AS SELECT * FROM webknossos.partners WHERE NOT 
 CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
 CREATE VIEW webknossos.multiUsers_ AS SELECT * FROM webknossos.multiUsers WHERE NOT isDeleted;
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
+CREATE VIEW webknossos.oauthGrants_ AS SELECT * FROM webknossos.oauthGrants WHERE NOT isDeleted;
 CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
 CREATE VIEW webknossos.workers_ AS SELECT * FROM webknossos.workers WHERE NOT isDeleted;
 CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT isDeleted;
@@ -954,6 +998,12 @@ CREATE INDEX ON webknossos.dataset_mags(COALESCE(realPath, path));
 CREATE INDEX ON webknossos.tokens(value);
 CREATE INDEX ON webknossos.tokens(_user, tokenType);
 CREATE INDEX ON webknossos.tokens(expirationDateTime);
+CREATE INDEX ON webknossos.tokens(_oauthGrant);
+CREATE INDEX ON webknossos.oauthGrants(_user);
+CREATE INDEX ON webknossos.oauthAuthorizationCodes(_grant);
+CREATE INDEX ON webknossos.oauthTokens(_grant);
+CREATE INDEX ON webknossos.oauthTokens(expirationDateTime);
+CREATE INDEX ON webknossos.oauthClients(created);
 CREATE INDEX ON webknossos.dataset_layer_attachments(path);
 CREATE INDEX ON webknossos.dataset_layer_coordinateTransformations(_dataset, layerName);
 CREATE INDEX ON webknossos.dataset_layer_additionalAxes(_dataset, layerName);
@@ -1111,6 +1161,14 @@ ALTER TABLE webknossos.organizations
   ADD CONSTRAINT partner_ref FOREIGN KEY(_partner) REFERENCES webknossos.partners(_id) DEFERRABLE;
 ALTER TABLE webknossos.aiModels
   ADD CONSTRAINT partner_ref FOREIGN KEY(_partner) REFERENCES webknossos.partners(_id) DEFERRABLE;
+ALTER TABLE webknossos.oauthGrants
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.oauthAuthorizationCodes
+  ADD CONSTRAINT grant_ref FOREIGN KEY(_grant) REFERENCES webknossos.oauthGrants(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.oauthTokens
+  ADD CONSTRAINT grant_ref FOREIGN KEY(_grant) REFERENCES webknossos.oauthGrants(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.tokens
+  ADD CONSTRAINT oauthGrant_ref FOREIGN KEY(_oauthGrant) REFERENCES webknossos.oauthGrants(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.webauthnCredentials
   ADD FOREIGN KEY (_multiUser) REFERENCES webknossos.multiUsers(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 

@@ -40,8 +40,10 @@ import { CommandPalette } from "viewer/view/components/command_palette";
 const { Content } = Layout;
 
 import AccountAuthTokenView from "admin/account/account_auth_token_view";
+import AccountMcpAgentConnectionsView from "admin/account/account_mcp_agent_connections_view";
 import AccountProfileView from "admin/account/account_profile_view";
 import AccountSecurityView from "admin/account/account_security_view";
+import OAuthAuthorizeView from "admin/auth/oauth_authorize_view";
 import { OrganizationCreditActivityView } from "admin/organization/organization_credit_activity_view";
 import { OrganizationDangerZoneView } from "admin/organization/organization_danger_zone_view";
 import { OrganizationNotificationsView } from "admin/organization/organization_notifications_view";
@@ -385,6 +387,15 @@ const routes: RouteObject[] = [
       // Backwards compatibility for register URLs
       { path: "/auth/register", element: <Navigate to="/auth/signup" replace /> },
       { path: "/auth/login", element: <LoginView /> },
+      // Consent page of the OAuth authorization server for MCP clients (see OAuthController)
+      {
+        path: "/oauth/authorize",
+        element: (
+          <SecuredRoute>
+            <OAuthAuthorizeView />
+          </SecuredRoute>
+        ),
+      },
       { path: "/auth/signup", element: <RegistrationView /> },
 
       { path: "/auth/resetPassword", element: <StartResetPasswordView /> },
@@ -483,6 +494,7 @@ const routes: RouteObject[] = [
           { path: "profile", element: <AccountProfileView /> },
           { path: "security", element: <AccountSecurityView /> },
           { path: "token", element: <AccountAuthTokenView /> },
+          { path: "mcp", element: <AccountMcpAgentConnectionsView /> },
         ],
       },
       { path: "*", element: <PageNotFoundView /> },

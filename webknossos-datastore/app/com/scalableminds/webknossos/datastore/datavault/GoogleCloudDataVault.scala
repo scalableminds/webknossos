@@ -217,7 +217,7 @@ object GoogleCloudDataVault {
     } yield new GoogleCloudDataVault(remoteUri, credential, ws)
 
   // Deadline for one attempt, from sending the request until the complete body is received.
-  private val attemptTimeout = 2 minutes
+  private val attemptTimeout = 10 minutes // like HttpsDataVault
   private val maxAttempts = 5
   private val retryBaseDelayMs = 250L
   private val retryableStatusCodes = Set(408, 429, 500, 502, 503, 504)

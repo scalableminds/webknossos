@@ -114,14 +114,19 @@ impl QueryFields {
         })
     }
     pub(crate) fn bool_or_false(&self, key: &str) -> DsResult<bool> {
+        Ok(self.optional_bool(key)?.unwrap_or(false))
+    }
+
+    /// Play's `Option[Boolean]` query binder.
+    pub(crate) fn optional_bool(&self, key: &str) -> DsResult<Option<bool>> {
         match self.0.get(key).map(String::as_str) {
-            None => Ok(false),
+            None => Ok(None),
             Some(v) => {
                 let trimmed = v.trim();
                 match trimmed {
-                    "true" => Ok(true),
-                    "false" => Ok(false),
-                    _ => trimmed.parse::<i32>().map(|v| v != 0).map_err(|_| {
+                    "true" => Ok(Some(true)),
+                    "false" => Ok(Some(false)),
+                    _ => trimmed.parse::<i32>().map(|v| Some(v != 0)).map_err(|_| {
                         DsError::binding(format!(
                             "Cannot parse parameter {key} as Boolean: should be true, false, 0 or 1"
                         ))

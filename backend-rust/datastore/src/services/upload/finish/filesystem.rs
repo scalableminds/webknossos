@@ -173,12 +173,13 @@ fn normalize_relative(path: &Path) -> Option<PathBuf> {
     Some(out.iter().collect())
 }
 
-/// Scala `ZipIO.unzipToDirectory(…, includeHiddenFiles = false, whitelist, truncateCommonPrefix =
-/// true, boundaryDirNames)`, rejecting absolute and escaping entries (zip slip).
+/// Scala `ZipIO.unzipToDirectory(…, includeHiddenFiles = false, whitelist, truncateCommonPrefix,
+/// boundaryDirNames)`, rejecting absolute and escaping entries (zip slip).
 pub(super) fn unzip_to_directory(
     zip_path: &Path,
     target: &Path,
     hidden_whitelist: &[&str],
+    truncate_common_prefix: bool,
     boundary_dir_names: &[String],
 ) -> DsResult<Vec<PathBuf>> {
     let file = std::fs::File::open(zip_path).map_err(io_failure)?;
@@ -200,7 +201,11 @@ pub(super) fn unzip_to_directory(
         entries.push((i, name));
     }
     let paths: Vec<PathBuf> = entries.iter().map(|(_, n)| PathBuf::from(n)).collect();
-    let root = find_common_root_directory(&paths, boundary_dir_names);
+    let root = if truncate_common_prefix {
+        find_common_root_directory(&paths, boundary_dir_names)
+    } else {
+        PathBuf::new()
+    };
     let mut written = Vec::new();
     for (index, name) in entries {
         let raw = Path::new(&name);

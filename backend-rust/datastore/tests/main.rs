@@ -5,6 +5,7 @@
 
 mod access;
 mod agglomerate_routes;
+mod alignment_project_upload_routes;
 mod binary_data;
 mod binary_data_routes;
 mod binding_errors;

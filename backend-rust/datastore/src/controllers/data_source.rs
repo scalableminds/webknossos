@@ -312,11 +312,17 @@ async fn get_one_base_dir_absolute(
     tc: TokenContext,
     RawQuery(raw): RawQuery,
 ) -> AccessResult<Json<crate::models::UPath>> {
-    let org = QueryFields::new(raw).required("organizationId")?.to_owned();
+    let query = QueryFields::new(raw);
+    let org = query.required("organizationId")?.to_owned();
+    // `requireAllowsUpload: Option[Boolean]`, `getOrElse(false)`.
+    let require_allows_upload = query.optional_bool("requireAllowsUpload")?.unwrap_or(false);
     access
         .validate_access(UserAccessRequest::webknossos(), &tc)
         .await?;
-    let dir = blocking(move || base_dirs.get_one_local_for_org(&org, false, false, false)).await?;
+    let dir = blocking(move || {
+        base_dirs.get_one_local_for_org(&org, require_allows_upload, false, false)
+    })
+    .await?;
     Ok(Json(crate::models::UPath::from_local_path(&dir)))
 }
 

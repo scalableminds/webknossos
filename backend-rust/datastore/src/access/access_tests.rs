@@ -36,6 +36,10 @@ fn access_request_json_matches_play_format() {
         serde_json::to_value(UserAccessRequest::download_job_export("j")).unwrap(),
         json!({"resourceId": "j", "resourceType": "jobExport", "mode": "read"})
     );
+    assert_eq!(
+        serde_json::to_value(UserAccessRequest::write_alignment_project("p")).unwrap(),
+        json!({"resourceId": "p", "resourceType": "alignmentProject", "mode": "write"})
+    );
     let answer: UserAccessAnswer =
         serde_json::from_value(json!({"granted": false, "msg": null})).unwrap();
     assert_eq!(

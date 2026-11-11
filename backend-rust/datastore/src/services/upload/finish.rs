@@ -20,6 +20,7 @@ use crate::{
     },
 };
 
+mod alignment_project;
 mod data_format;
 mod filesystem;
 mod naming;
@@ -37,7 +38,7 @@ pub use naming::normalize_text;
 use naming::{generate_object_id, normalize_strong_rendered};
 
 const ZIP_EXTENSIONS: [&str; 2] = [".zip", ".ozx"];
-const NO_FILES: &str = "Tried to finish upload with no files. Note that files starting with dot are not read. This may be a retry of a failed finish request, see previous errors.";
+pub(crate) const NO_FILES: &str = "Tried to finish upload with no files. Note that files starting with dot are not read. This may be a retry of a failed finish request, see previous errors.";
 const ROOT_DETECTION_FAILED: &str = "Could not determine the dataset root directory in the uploaded files. Please check the folder structure of your upload and try again.";
 
 /// Scala `unpackOrMoveUploaded`.
@@ -78,7 +79,13 @@ pub fn unpack_or_move_uploaded(
             "finishUpload for {dataset_id}: Unzipping {domain} to {}...",
             unpack_to.display()
         );
-        unzip_to_directory(&shallow[0], unpack_to, &[".zarray", ".zattrs"], &boundaries)?;
+        unzip_to_directory(
+            &shallow[0],
+            unpack_to,
+            &[".zarray", ".zattrs"],
+            true,
+            &boundaries,
+        )?;
         if !unpack_to.exists() {
             return Err(DsError::failure(NO_FILES));
         }

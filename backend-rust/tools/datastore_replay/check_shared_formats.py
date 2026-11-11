@@ -3,8 +3,9 @@
 
 Both services read and write the same Redis upload metadata. A key the other side does not know
 silently breaks resumable uploads after a switch or a rollback. This compares the key layout
-(prefix, per-upload and per-file suffixes, reverse lookup) and idle expiry, and the special
-directory names under the base directories (upload staging, unpack, conversion, trash, mirror).
+(prefix, per-upload and per-file suffixes, reverse lookups) and idle expiry, and the special
+directory names under the base directories (upload staging, unpack, conversion, trash, mirror,
+alignment projects).
 Exit 0: identical; 1: drift (printed); 2: a source file or pattern is missing.
 
   python3 tools/datastore_replay/check_shared_formats.py
@@ -18,7 +19,7 @@ SCALA = ROOT / 'webknossos-datastore/app/com/scalableminds/webknossos/datastore/
 RUST = ROOT / 'backend-rust/datastore/src/services/upload.rs'
 SCALA_APP = ROOT / 'webknossos-datastore/app'
 RUST_SRC = ROOT / 'backend-rust/datastore/src'
-SPECIAL_DIR = re.compile(r'"(\.(?:uploading|unpacked|forConversion|converting|trash|mirror))"')
+SPECIAL_DIR = re.compile(r'"(\.(?:uploading|unpacked|forConversion|converting|trash|mirror|alignmentProjects))"')
 
 
 def special_dirs(root, suffix):
@@ -35,7 +36,8 @@ def scala_layout(text):
     upload = set(re.findall(r'\$\{?keyPrefix\}?\$\{uploadId\}___([A-Za-z]+)"', text))
     file = set(re.findall(r'\$\{uploadId\}___file___\$\{fileName\}___([A-Za-z]+)"', text))
     upload -= {'file'}
-    reverse = set(re.findall(r'\$\{keyPrefix\}___\$\{Json\.stringify\(Json\.toJson\(\w+\)\)\}___([A-Za-z]+)"', text))
+    # Reverse lookups (value: the upload id) by DataSourceId JSON or by alignment project id.
+    reverse = set(re.findall(r'\$\{keyPrefix\}___\$\{(?:Json\.stringify\(Json\.toJson\(\w+\)\)|\w+)\}___([A-Za-z]+)"', text))
     return prefix and prefix.group(1).replace('${domain}', '{domain}'), upload, file, reverse
 
 

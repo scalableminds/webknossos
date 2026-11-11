@@ -3,7 +3,9 @@
 //! so both can share one Redis during a staged cutover.
 //!
 //! Finishing uploads (unpacking, exploration, moving to the target) is in `upload_finish.rs`.
+pub mod alignment_project;
 pub mod finish;
+pub mod tile_csv;
 
 use std::{
     io::{Seek, SeekFrom, Write},
@@ -28,6 +30,8 @@ pub const UPLOADING_DIR: &str = ".uploading";
 pub const UNPACKED_DIR: &str = ".unpacked";
 pub const FOR_CONVERSION_DIR: &str = ".forConversion";
 pub const CONVERTING_DIR: &str = ".converting";
+/// Scala `DirectoryConstants.alignmentProjectsDir`: below the organization directory.
+pub const ALIGNMENT_PROJECTS_DIR: &str = ".alignmentProjects";
 
 string_enum!(
     /// Scala `UploadDomain`.
@@ -35,6 +39,7 @@ string_enum!(
         Dataset => "dataset",
         Mag => "mag",
         Attachment => "attachment",
+        AlignmentProject => "alignmentProject",
     }
 );
 
@@ -69,6 +74,16 @@ impl UploadMetadataStore {
             "{}___{}___datasourceId",
             self.prefix(),
             serde_json::to_string(id).expect("DataSourceId serializes")
+        )
+    }
+
+    /// Alignment project domain: `<prefix>___<alignment project id>___alignmentProjectId` (value:
+    /// the upload id).
+    fn upload_id_by_alignment_project_key(&self, alignment_project_id: &str) -> String {
+        format!(
+            "{}___{}___alignmentProjectId",
+            self.prefix(),
+            alignment_project_id
         )
     }
 
@@ -342,13 +357,48 @@ impl UploadMetadataStore {
             .await
     }
 
+    /// Alignment project domain: Scala `insertUploadIdByAlignmentProjectId` (plain `insert`; used
+    /// to cancel the upload when WEBKNOSSOS deletes the project).
+    pub async fn insert_upload_id_by_alignment_project_id(
+        &self,
+        alignment_project_id: &str,
+        upload_id: &str,
+    ) -> DsResult<()> {
+        self.store
+            .insert(
+                &self.upload_id_by_alignment_project_key(alignment_project_id),
+                upload_id,
+                Some(UPLOAD_IDLE_EXPIRY),
+            )
+            .await
+    }
+
+    /// Alignment project domain: Scala `findUploadIdByAlignmentProjectId`.
+    pub async fn find_upload_id_by_alignment_project_id(
+        &self,
+        alignment_project_id: &str,
+    ) -> DsResult<Option<String>> {
+        self.store
+            .find(&self.upload_id_by_alignment_project_key(alignment_project_id))
+            .await
+    }
+
     /// Single-value keys of the domain subclass (removed/expired with the upload).
     fn extra_suffixes(&self) -> &'static [&'static str] {
         match self.domain {
             UploadDomain::Dataset => &["linkedLayerIdentifier", "needsConversion", "voxelSize"],
             UploadDomain::Mag => &["mag", "layerName"],
             UploadDomain::Attachment => &["attachmentType", "attachment", "layerName"],
+            UploadDomain::AlignmentProject => &[],
         }
+    }
+
+    /// The alignment project id of an alignment project upload (stored as its "dataset id");
+    /// Scala `findDatasetId` in the subclass overrides, failing when it is missing.
+    async fn required_alignment_project_id(&self, upload_id: &str) -> DsResult<String> {
+        self.find_dataset_id(upload_id)
+            .await?
+            .ok_or_else(DsError::empty)
     }
 
     /// Scala `cleanUp` (domain override first, then the base keys).
@@ -366,6 +416,11 @@ impl UploadMetadataStore {
                 .await?;
             self.store
                 .remove(&self.upload_id_by_data_source_key(&id))
+                .await?;
+        } else if self.domain == UploadDomain::AlignmentProject {
+            let id = self.required_alignment_project_id(upload_id).await?;
+            self.store
+                .remove(&self.upload_id_by_alignment_project_key(&id))
                 .await?;
         } else {
             for suffix in self.extra_suffixes() {
@@ -407,6 +462,14 @@ impl UploadMetadataStore {
             }
             self.store
                 .expire(&self.upload_id_by_data_source_key(&id), UPLOAD_IDLE_EXPIRY)
+                .await?;
+        } else if self.domain == UploadDomain::AlignmentProject {
+            let id = self.required_alignment_project_id(upload_id).await?;
+            self.store
+                .expire(
+                    &self.upload_id_by_alignment_project_key(&id),
+                    UPLOAD_IDLE_EXPIRY,
+                )
                 .await?;
         } else {
             for suffix in self.extra_suffixes() {
@@ -518,7 +581,7 @@ fn java_split_slash(value: &str) -> Vec<&str> {
 
 /// Whether `relative` resolved in a directory stays inside it (lexically). Scala checks
 /// `uploadDir.relativize(uploadDir.resolve(filePath)).startsWith("../")`.
-fn stays_inside(relative: &str) -> bool {
+pub(crate) fn stays_inside(relative: &str) -> bool {
     let mut depth = 0i64;
     for component in Path::new(relative).components() {
         match component {
@@ -543,6 +606,7 @@ pub struct UploadService {
     dataset: UploadMetadataStore,
     mag: UploadMetadataStore,
     attachment: UploadMetadataStore,
+    alignment_project: UploadMetadataStore,
     delete_temporary_files_after_upload: bool,
 }
 
@@ -556,7 +620,8 @@ impl UploadService {
             base_dirs,
             dataset: UploadMetadataStore::new(UploadDomain::Dataset, store.clone()),
             mag: UploadMetadataStore::new(UploadDomain::Mag, store.clone()),
-            attachment: UploadMetadataStore::new(UploadDomain::Attachment, store),
+            attachment: UploadMetadataStore::new(UploadDomain::Attachment, store.clone()),
+            alignment_project: UploadMetadataStore::new(UploadDomain::AlignmentProject, store),
             delete_temporary_files_after_upload,
         }
     }
@@ -574,6 +639,7 @@ impl UploadService {
             UploadDomain::Dataset => &self.dataset,
             UploadDomain::Mag => &self.mag,
             UploadDomain::Attachment => &self.attachment,
+            UploadDomain::AlignmentProject => &self.alignment_project,
         }
     }
 
@@ -590,6 +656,8 @@ impl UploadService {
             .await
     }
 
+    /// Scala `getTargetIdByUploadId`: the id of the dataset the upload belongs to, or of the
+    /// alignment project for alignment project uploads.
     pub async fn dataset_id_by_upload_id(
         &self,
         upload_id: &str,

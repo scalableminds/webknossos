@@ -30,6 +30,8 @@ use crate::{
 
 use super::helpers::{QueryFields, read_object_id, validated_body};
 
+mod alignment_project;
+
 const VALIDATION_FAILED: &str = "Could not validate dataset information for upload.";
 
 pub fn router(state: AppState) -> Router<AppState> {
@@ -55,6 +57,18 @@ pub fn router(state: AppState) -> Router<AppState> {
                 .route(
                     "/data/datasets/upload/attachment/reserveUpload",
                     post(reserve_attachment_upload),
+                )
+                .route(
+                    "/data/datasets/upload/alignmentProject/reserveUpload",
+                    post(alignment_project::reserve_upload),
+                )
+                .route(
+                    "/data/datasets/upload/alignmentProject/replaceCsv",
+                    post(alignment_project::replace_csv),
+                )
+                .route(
+                    "/data/datasets/upload/alignmentProject/cancelUploadForProject",
+                    delete(alignment_project::cancel_upload_for_project),
                 )
                 .route(
                     "/data/datasets/upload/{uploadDomain}/unfinishedUploads",
@@ -96,6 +110,15 @@ pub(super) async fn observe_upload(
 
 fn no_such_upload(upload_id: &str, domain: &str) -> String {
     format!("Could not find running {domain} upload with upload id “{upload_id}”.")
+}
+
+/// Scala `writeAccessRequestForUpload`: for alignment projects, the id stored with the upload is
+/// the alignment project id.
+fn write_access_for_upload(domain: UploadDomain, id: &str) -> UserAccessRequest {
+    match domain {
+        UploadDomain::AlignmentProject => UserAccessRequest::write_alignment_project(id),
+        _ => UserAccessRequest::write_dataset(id),
+    }
 }
 
 /// Scala `UploadDomain.fromString(..).toFox` (no message: `Empty`).
@@ -551,7 +574,7 @@ pub(super) async fn upload_chunk(
         .await?
         .ok_or_else(|| DsError::failure(no_such_upload(&upload_id, &upload_domain)))?;
     access
-        .validate_access(UserAccessRequest::write_dataset(&dataset_id), &tc)
+        .validate_access(write_access_for_upload(domain, &dataset_id), &tc)
         .await?;
     if !uploads.is_known_upload_by_file_id(&file_id, domain).await? {
         return Err(DsError::failure("dataset.upload.validation.failed").into());
@@ -590,7 +613,7 @@ pub(super) async fn test_chunk(
         .await?
         .ok_or_else(missing)?;
     access
-        .validate_access(UserAccessRequest::write_dataset(&dataset_id), &tc)
+        .validate_access(write_access_for_upload(domain, &dataset_id), &tc)
         .await?;
     if !uploads
         .is_known_upload_by_file_id(&identifier, domain)
@@ -683,7 +706,7 @@ pub(super) async fn finish_upload(
         .await?
         .ok_or_else(|| DsError::failure(no_such_upload(&upload_id, &upload_domain)))?;
     access
-        .validate_access(UserAccessRequest::write_dataset(&dataset_id), &tc)
+        .validate_access(write_access_for_upload(domain, &dataset_id), &tc)
         .await?;
     let started = std::time::Instant::now();
     let context = crate::services::upload::finish::FinishContext {
@@ -692,6 +715,17 @@ pub(super) async fn finish_upload(
         wk_client: &wk_client,
         tc: &tc,
     };
+    if domain == UploadDomain::AlignmentProject {
+        let alignment_project_id = dataset_id;
+        context
+            .finish_alignment_project_upload(&upload_id, &alignment_project_id)
+            .await
+            .map_err(|e| {
+                tracing::warn!("Failed upload request: {e}");
+                e.wrap(crate::services::upload::alignment_project::msg::FINISH_UPLOAD_FAILED)
+            })?;
+        return Ok(Json(json!({ "alignmentProjectId": alignment_project_id })));
+    }
     let result = match domain {
         UploadDomain::Dataset => context.finish_dataset_upload(&upload_id, &dataset_id).await,
         other => context

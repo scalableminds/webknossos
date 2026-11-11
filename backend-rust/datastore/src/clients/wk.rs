@@ -28,6 +28,10 @@ use crate::{
     access::{TokenContext, UserAccessAnswer, UserAccessRequest},
     config::{DatastoreConfig, Secret},
     error::{DsError, DsResult},
+    services::upload::alignment_project::{
+        AlignmentProjectCsvReplacementInfo, AlignmentProjectUploadAdditionalInfo,
+        ReportAlignmentProjectCsvReplacementParameters, ReportAlignmentProjectUploadParameters,
+    },
 };
 
 /// Play WS `timeout.request` / `timeout.idle` / `timeout.connection` from the datastore config.
@@ -176,6 +180,14 @@ impl RpcRequest {
     pub async fn patch_json<B: Serialize + ?Sized>(self, body: &B) -> DsResult<Vec<u8>> {
         let body = self.json_body(&Method::PATCH, body)?;
         self.perform(Method::PATCH, Some(body)).await
+    }
+
+    /// Scala `postEmptyWithJsonResponse`: a `POST` without body.
+    pub async fn post_empty_with_json_response<T: DeserializeOwned>(self) -> DsResult<T> {
+        let rpc_info = self.debug_info(&Method::POST);
+        let verbose = self.verbose;
+        let response = self.perform(Method::POST, None).await?;
+        parse_json(&rpc_info, verbose, &response)
     }
 
     pub async fn delete(self) -> DsResult<Vec<u8>> {
@@ -571,6 +583,55 @@ impl WkClient {
             .with_token(tc)
             .post_json_with_json_response(info)
             .await
+    }
+
+    /// Scala `reserveAlignmentProjectUpload`: `AlignmentProjectUploadInfo` →
+    /// `AlignmentProjectUploadAdditionalInfo`.
+    pub async fn reserve_alignment_project_upload<B: Serialize + ?Sized>(
+        &self,
+        info: &B,
+        tc: &TokenContext,
+    ) -> DsResult<AlignmentProjectUploadAdditionalInfo> {
+        self.datastore_rpc("reserveAlignmentProjectUpload")
+            .with_token(tc)
+            .post_json_with_json_response(info)
+            .await
+    }
+
+    /// Scala `validateAlignmentProjectCsvReplacement`: `POST
+    /// …/validateAlignmentProjectCsvReplacement?key=&alignmentProjectId=&token=` without body.
+    pub async fn validate_alignment_project_csv_replacement(
+        &self,
+        alignment_project_id: &str,
+        tc: &TokenContext,
+    ) -> DsResult<AlignmentProjectCsvReplacementInfo> {
+        self.datastore_rpc("validateAlignmentProjectCsvReplacement")
+            .query("alignmentProjectId", alignment_project_id)
+            .with_token(tc)
+            .post_empty_with_json_response()
+            .await
+    }
+
+    /// Scala `reportAlignmentProjectCsvReplacement`: `POST …/updateAlignmentProjectCsv`.
+    pub async fn report_alignment_project_csv_replacement(
+        &self,
+        parameters: &ReportAlignmentProjectCsvReplacementParameters,
+    ) -> DsResult<()> {
+        self.datastore_rpc("updateAlignmentProjectCsv")
+            .post_json(parameters)
+            .await?;
+        Ok(())
+    }
+
+    /// Scala `reportAlignmentProjectUpload`.
+    pub async fn report_alignment_project_upload(
+        &self,
+        parameters: &ReportAlignmentProjectUploadParameters,
+    ) -> DsResult<()> {
+        self.datastore_rpc("reportAlignmentProjectUpload")
+            .post_json(parameters)
+            .await?;
+        Ok(())
     }
 
     /// Scala `updateDataSource`: `PUT …/datasources/:datasetId`. TODO(DS1a): `&DataSource`.

@@ -51,6 +51,7 @@ pub enum AccessResourceType {
     Annotation,
     Webknossos,
     JobExport,
+    AlignmentProject,
 }
 
 /// Scala `UserAccessRequest` (`resourceId` is omitted when `None`, like Play's `writeNullable`).
@@ -140,6 +141,14 @@ impl UserAccessRequest {
         Self::new(
             Some(annotation_id.to_string()),
             AccessResourceType::Annotation,
+            AccessMode::Write,
+        )
+    }
+
+    pub fn write_alignment_project(alignment_project_id: impl fmt::Display) -> Self {
+        Self::new(
+            Some(alignment_project_id.to_string()),
+            AccessResourceType::AlignmentProject,
             AccessMode::Write,
         )
     }

@@ -289,10 +289,13 @@ describe("Proofreading marker", () => {
     await task.toPromise();
   });
 
-  it("should be kept when the user activates another segment during a rebase", async (context: WebknossosTestContext) => {
+  it("should be kept when an activation during a rebase is dropped", async (context: WebknossosTestContext) => {
     // While rebasing, the store temporarily contains the server's state (including its active
-    // segment id) and the reducer drops SET_ACTIVE_CELL actions. Afterwards, the unsaved local
-    // changes (including the active segment id) are re-applied.
+    // segment id) and the reducer drops SET_ACTIVE_CELL actions (see rebase_edit_guard.ts).
+    // Afterwards, the unsaved local changes (including the active segment id) are re-applied.
+    // The active segment doesn't change, so the marker is kept. This documents a consequence of
+    // the dropped activation, not a goal. For a proofreading click during a rebase, the active
+    // segment is adapted to the new marker afterwards (see the next test).
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     const { tracingId } = Store.getState().annotation.volumes[0];

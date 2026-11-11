@@ -3,8 +3,11 @@ import { map4 } from "libs/utils";
 import { FIXED_POSITIONS, MOVING_POSITIONS } from "test/fixtures/layer_registration_fixtures";
 import type { APIDataset, CoordinateTransformation } from "types/api_types";
 import { Identity4x4 } from "viewer/constants";
-import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import { createAffineTransform, type Transform } from "viewer/model/helpers/transformation_helpers";
+import {
+  createAffineTransform,
+  flatToNestedMatrix,
+  type Transform,
+} from "viewer/model/helpers/transformation_helpers";
 import {
   applyTransformsToDataset,
   getAppliedState,

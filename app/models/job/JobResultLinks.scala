@@ -32,7 +32,7 @@ trait JobResultLinks {
           Some(s"/api/jobs/${this.id}/export")
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation |
             JobCommand.infer_with_model | JobCommand.infer_mitochondria | JobCommand.align_sections |
-            JobCommand.infer_instances =>
+            JobCommand.infer_instances | JobCommand.align =>
           returnValue.map(linkFromDatasetOrAnnotationReturnValue(_, organizationId))
         case _ => None
       }

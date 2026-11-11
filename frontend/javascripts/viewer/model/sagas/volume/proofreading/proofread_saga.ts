@@ -3,8 +3,9 @@ import { SoftError } from "libs/utils";
 import messages from "messages";
 import { actionChannel, call, fork, put, take, takeEvery } from "typed-redux-saga";
 import { OrthoViews, TreeTypeEnum } from "viewer/constants";
-import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
+import { getSegmentIdsAtPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { getIsRebasingOrForwarding } from "viewer/model/accessors/annotation_accessor";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { getTreeAndNode } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -187,6 +188,11 @@ function* clearProofreadingMarkerWhenActiveSegmentDiverges(): Saga<never> {
   );
   while (true) {
     const action = yield* take(channel);
+    // While rebasing or forwarding, these actions are dropped by the reducer (see
+    // rebase_edit_guard.ts). Also, the store may temporarily contain the server's active id.
+    if (yield* select(getIsRebasingOrForwarding)) {
+      continue;
+    }
     const volumeTracing = yield* select(getActiveSegmentationTracing);
     if (volumeTracing == null) {
       continue;
@@ -315,7 +321,11 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   yield put(updateProofreadingMarkerPositionAction(position, layerName));
 
-  const segmentId = yield* call(getSegmentIdForPositionAsync, position);
+  const { mappedId: segmentId } = yield* call(getSegmentIdsAtPositionAsync, layerName, position);
+  if (segmentId == null) {
+    Toast.warning("Could not determine the segment id at the clicked position. Please try again.");
+    return;
+  }
 
   /* Load a coarse mesh of the agglomerate at the click position */
   yield* call(

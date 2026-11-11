@@ -523,9 +523,6 @@ class DatasetTable extends PureComponent<Props, State> {
       // The table's loading spinner covers this; avoid flashing the empty-state hint.
       return null;
     }
-    if (this.props.emptyStateContent != null) {
-      return this.props.emptyStateContent;
-    }
     const { searchQuery, searchTags, datasetFilteringMode } = this.props;
     const isSearchOrFilterActive =
       searchQuery.length > 0 ||
@@ -558,6 +555,19 @@ class DatasetTable extends PureComponent<Props, State> {
         </>
       );
     }
+    if (activeFilterLabels.length > 0) {
+      // The filters are applied by the backend, so an empty list doesn't mean that the folder is empty.
+      return (
+        <>
+          <p>No datasets match your filters.</p>
+          {maybeWarning}
+          {maybeClearButton}
+        </>
+      );
+    }
+    if (this.props.emptyStateContent != null) {
+      return this.props.emptyStateContent;
+    }
     if (!("queries" in this.props.context)) {
       return <p>No Datasets found.</p>;
     }
@@ -567,7 +577,6 @@ class DatasetTable extends PureComponent<Props, State> {
     return (
       <>
         <p>{emptyListHintText}</p>
-        {maybeWarning}
         {maybeClearButton}
       </>
     );

@@ -530,8 +530,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       case DatasetSortBy.createdDesc     => q"d.created DESC"
       case DatasetSortBy.createdAsc      => q"d.created ASC"
       case DatasetSortBy.name            => q"d.name COLLATE webknossos.natural_sort, d.name"
-      case DatasetSortBy.storage         => q"$usedStorageColumn DESC"
-      case DatasetSortBy.annotationCount => q"$annotationCountColumn DESC NULLS LAST"
+      case DatasetSortBy.storage         => q"$usedStorageColumn DESC, $lastUsedOrder"
+      case DatasetSortBy.annotationCount => q"$annotationCountColumn DESC NULLS LAST, $lastUsedOrder"
       case DatasetSortBy.searchRelevance =>
         searchQueryOpt.map(_.toLowerCase.trim.replaceAll(" +", " ")).filter(_.nonEmpty) match {
           case Some(searchQuery) =>

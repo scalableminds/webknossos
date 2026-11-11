@@ -168,7 +168,8 @@ class JobService @Inject() (
         lastRetry = job.lastRetry,
         costInMilliCredits = creditTransactionBox.toOption.map(t =>
           t.milliCreditDelta * -1
-        ) // delta is negative, so cost should be positive.
+        ), // delta is negative, so cost should be positive.
+        alignmentProjectId = job._alignmentProject
       )
     )
 
@@ -184,10 +185,16 @@ class JobService @Inject() (
       "job_kwargs" -> (job.args ++ Json.obj("user_auth_token" -> userAuthToken))
     )
 
-  def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
+  def submitJob(
+      command: JobCommand,
+      commandArgs: JsObject,
+      owner: User,
+      dataStoreName: String,
+      alignmentProjectId: Option[ObjectId] = None
+  ): Fox[Job] =
     for {
       _ <- assertJobCanBeSubmitted(command, owner, dataStoreName)
-      job <- insertJob(command, commandArgs, owner, dataStoreName)
+      job <- insertJob(command, commandArgs, owner, dataStoreName, alignmentProjectId)
     } yield job
 
   private def assertJobCanBeSubmitted(command: JobCommand, owner: User, dataStoreName: String): Fox[Unit] =
@@ -202,13 +209,37 @@ class JobService @Inject() (
     } yield ()
 
   // Callers have to check assertJobCanBeSubmitted first.
-  private def insertJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] = {
-    val job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
+  private def insertJob(
+      command: JobCommand,
+      commandArgs: JsObject,
+      owner: User,
+      dataStoreName: String,
+      alignmentProjectId: Option[ObjectId]
+  ): Fox[Job] = {
+    val job = Job(
+      ObjectId.generate,
+      owner._id,
+      dataStoreName,
+      command,
+      commandArgs,
+      _alignmentProject = alignmentProjectId
+    )
     for {
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
   }
+
+  // Sets the manual state immediately, the worker cancels the run later. Credits of unfinished jobs are refunded.
+  def cancelJob(job: Job)(using ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- jobDAO.updateManualState(job._id, JobState.CANCELLED)
+      _ <- Fox.runIf(job.state == JobState.PENDING || job.state == JobState.STARTED) {
+        creditTransactionService.refundTransactionForJob(job._id, isCancelled = true)(using
+          GlobalAccessContext
+        ) ?~> Msg.Job.Credits.refundFailed
+      }
+    } yield ()
 
   private def organizationOf(owner: User): Fox[Organization] =
     organizationDAO.findOne(owner._organization)(using GlobalAccessContext) ?~> Msg.Organization.notFound(
@@ -269,11 +300,31 @@ class JobService @Inject() (
       datastoreName: String
   )(using ctx: DBAccessContext): Fox[Job] =
     for {
+      costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
+      job <- submitPaidJobWithCost(
+        command,
+        commandArgs,
+        costInMilliCredits,
+        creditTransactionComment,
+        user,
+        datastoreName
+      )
+    } yield job
+
+  def submitPaidJobWithCost(
+      command: JobCommand,
+      commandArgs: JsObject,
+      costInMilliCredits: Int,
+      creditTransactionComment: String,
+      user: User,
+      datastoreName: String,
+      alignmentProjectId: Option[ObjectId] = None
+  )(using ctx: DBAccessContext): Fox[Job] =
+    for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> Msg.Job.paidNoAdminOrManager
       // Checked before reserving the credits, so that failures are reported with their specific error
       _ <- assertJobCanBeSubmitted(command, user, datastoreName)
-      costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
       _ <- Fox.assertTrue(
         creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)
       ) ?~> Msg.Job.Credits.notEnoughCredits
@@ -282,7 +333,7 @@ class JobService @Inject() (
         costInMilliCredits,
         creditTransactionComment
       )
-      job <- insertJob(command, commandArgs, user, datastoreName).shiftBox.flatMap {
+      job <- insertJob(command, commandArgs, user, datastoreName, alignmentProjectId).shiftBox.flatMap {
         case Full(job) => Fox.successful(job)
         case _         =>
           creditTransactionService

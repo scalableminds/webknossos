@@ -55,6 +55,7 @@ import Toast from "libs/toast";
 import {
   filterWithSearchQueryAND,
   isUserAdmin,
+  isUserAdminOrDatasetManager,
   isUserAdminOrManager,
   isUserAdminOrTeamManager,
 } from "libs/utils";
@@ -186,7 +187,11 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
   };
 }
 
-export function getAnalysisSubMenu(collapse: boolean, activeOrganization: APIOrganization | null) {
+export function getAnalysisSubMenu(
+  collapse: boolean,
+  activeUser: APIUser | null | undefined,
+  activeOrganization: APIOrganization | null,
+) {
   const analysisSubMenuItems = [];
 
   if (features().jobsEnabled && areJobsAllowedByPricingPlan(activeOrganization)) {
@@ -198,6 +203,12 @@ export function getAnalysisSubMenu(collapse: boolean, activeOrganization: APIOrg
       key: "/aiModels",
       label: <Link to={"/aiModels"}>AI Models</Link>,
     });
+    if (isUserAdminOrDatasetManager(activeUser)) {
+      analysisSubMenuItems.push({
+        key: "/alignmentProjects",
+        label: <Link to="/alignmentProjects">Alignment Projects</Link>,
+      });
+    }
   }
 
   if (features().voxelyticsEnabled) {
@@ -905,7 +916,7 @@ function Navbar() {
     menuItems.push(hideInAnnotationViewOnNarrowScreens(getDashboardSubMenu(collapseAllNavItems)));
     menuItems.push(
       hideInAnnotationViewOnNarrowScreens(
-        getAnalysisSubMenu(collapseAllNavItems, activeOrganization),
+        getAnalysisSubMenu(collapseAllNavItems, activeUser, activeOrganization),
       ),
     );
 

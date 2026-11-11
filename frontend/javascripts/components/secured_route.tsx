@@ -8,7 +8,7 @@ import { getUnversionedAnnotationInformation } from "admin/rest_api";
 import BrainSpinner from "components/brain_spinner";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
 import { useApi, useWkSelector } from "libs/react_hooks";
-import { isUserAdminOrManager } from "libs/utils";
+import { isUserAdminOrDatasetManager, isUserAdminOrManager } from "libs/utils";
 import type React from "react";
 import { memo } from "react";
 import { useLocation, useParams } from "react-router";
@@ -19,6 +19,7 @@ type SecuredRouteProps = {
   children: React.ReactNode;
   requiredPricingPlan?: PricingPlanEnum;
   requiresAdminOrManagerRole?: boolean;
+  requiresAdminOrDatasetManagerRole?: boolean;
   checkIfResourceIsPublic?: boolean;
 };
 
@@ -26,6 +27,7 @@ function SecuredRoute({
   children,
   requiredPricingPlan,
   requiresAdminOrManagerRole,
+  requiresAdminOrDatasetManagerRole,
   checkIfResourceIsPublic = false,
 }: SecuredRouteProps) {
   const location = useLocation();
@@ -82,6 +84,9 @@ function SecuredRoute({
     return <PageUnavailableForYourPlanView requiredPricingPlan={requiredPricingPlan} />;
   }
   if (requiresAdminOrManagerRole && !isAdminOrManager) {
+    return <PageNotAvailableToNormalUser />;
+  }
+  if (requiresAdminOrDatasetManagerRole && !isUserAdminOrDatasetManager(activeUser)) {
     return <PageNotAvailableToNormalUser />;
   }
 

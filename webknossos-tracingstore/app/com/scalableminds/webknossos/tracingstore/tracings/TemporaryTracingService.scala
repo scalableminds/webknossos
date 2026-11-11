@@ -67,13 +67,11 @@ class TemporaryTracingService @Inject() (
   def saveSkeleton(tracingId: String, skeletonTracing: SkeletonTracing): Fox[Unit] = {
     skeletonStore.insert(tracingId, skeletonTracing, Some(temporaryStoreTimeout))
     registerTracingId(tracingId)
-    Fox.successful(())
   }
 
   def saveVolume(tracingId: String, volumeTracing: VolumeTracing): Fox[Unit] = {
     volumeStore.insert(tracingId, volumeTracing, Some(temporaryStoreTimeout))
     registerTracingId(tracingId)
-    Fox.successful(())
   }
 
   def saveVolumeBucket(bucketKey: String, bucketData: Array[Byte]): Fox[Unit] = {
@@ -89,7 +87,6 @@ class TemporaryTracingService @Inject() (
   def saveAnnotationProto(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] = {
     annotationStore.insert(annotationId.toString, annotationProto, Some(temporaryStoreTimeout))
     registerAnnotationId(annotationId)
-    Fox.successful(())
   }
 
   def saveBookmarks(bookmarksByKey: Seq[(String, AnnotationBookmarkProto)]): Fox[Unit] = {
@@ -108,7 +105,6 @@ class TemporaryTracingService @Inject() (
   ): Fox[Unit] = {
     segmentIndexStore.insertAll(bucketPositionsBySegmentId, Some(temporaryStoreTimeout))
     registerTracingId(tracingId)
-    Fox.successful(())
   }
 
   def isTemporaryAnnotation(annotationId: ObjectId): Fox[Boolean] =

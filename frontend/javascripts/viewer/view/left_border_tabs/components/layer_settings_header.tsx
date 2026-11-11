@@ -67,7 +67,7 @@ import {
   reloadHistogramAction,
   updateLayerSettingAction,
 } from "viewer/model/actions/settings_actions";
-import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/rebase_helpers";
 import { deleteAnnotationLayer } from "viewer/model/sagas/volume/update_actions";
 import { api, Model } from "viewer/singletons";
 import type { DatasetLayerConfiguration, StoreDataset, VolumeTracing } from "viewer/store";

@@ -124,7 +124,9 @@
 }
 
 .tracing-settings-menu {
-  width: @left-menu-width;
+  // Fill the (fixed-width) left sidebar instead of using a fixed width, so that a classic,
+  // space-taking vertical scrollbar shrinks the content instead of causing horizontal overflow.
+  width: 100%;
   font-size: 14px;
   font-variant: tabular-nums;
   line-height: 1.5715;

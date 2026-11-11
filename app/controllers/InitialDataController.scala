@@ -565,7 +565,6 @@ Samplecountry
       _ <- insertL4DenseDataset()
       _ <- insertRemoteNDDataset()
       _ <- insertCustomAiModel()
-
     } yield ()
 
   private def assertInitialDataEnabled: Fox[Unit] =

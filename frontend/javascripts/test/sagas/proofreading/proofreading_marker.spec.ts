@@ -1,12 +1,9 @@
 // biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
-import { call, delay, put } from "redux-saga/effects";
+import { call, delay, fork, put, take } from "redux-saga/effects";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
-import {
-  dispatchEnsureHasNewestVersionAsync,
-  finishedRebaseAction,
-  rewindForRebaseAction,
-} from "viewer/model/actions/save_actions";
+import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
+import { updateMetadataOfAnnotation } from "viewer/model/sagas/volume/update_actions";
 import {
   registerOperationAction,
   unregisterOperationAction,
@@ -293,21 +290,37 @@ describe("Proofreading marker", () => {
   });
 
   it("should be kept when the user activates another segment during a rebase", async (context: WebknossosTestContext) => {
-    // While rebasing, the store contains the server's state (including its active segment id)
-    // and the reducer drops SET_ACTIVE_CELL actions.
-    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    // While rebasing, the store temporarily contains the server's state (including its active
+    // segment id) and the reducer drops SET_ACTIVE_CELL actions. Afterwards, the unsaved local
+    // changes (including the active segment id) are re-applied.
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     const { tracingId } = Store.getState().annotation.volumes[0];
 
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
-      yield call(clickSegmentWithProofreadingTool, tracingId, 1n);
+      yield put(setCollaborationModeAction("Concurrent"));
+      yield call(() => api.tracing.save());
 
-      yield put(rewindForRebaseAction());
-      expect(yield* getActiveCellId(tracingId)).not.toBe(1n);
-      yield put(setActiveCellAction(4n, getPositionForSegmentId(4)));
+      // The click is not saved yet, so saving triggers a rebase onto the injected version.
+      yield call(clickSegmentWithProofreadingTool, tracingId, 1n);
+      backendMock.planVersionInjection(Store.getState().annotation.version + 1, [
+        updateMetadataOfAnnotation("Changed by another user"),
+      ]);
+      let wasSegmentActivatedDuringRebase = false;
+      yield fork(function* () {
+        yield take("REWIND_FOR_REBASE");
+        expect(yield* getActiveCellId(tracingId)).not.toBe(1n);
+        yield put(setActiveCellAction(4n, getPositionForSegmentId(4)));
+        wasSegmentActivatedDuringRebase = true;
+      });
+      yield call(() => api.tracing.save());
       yield call(waitForSagas);
+
+      expect(wasSegmentActivatedDuringRebase).toBe(true);
+      expect(Store.getState().annotation.description).toBe("Changed by another user");
+      expect(yield* getActiveCellId(tracingId)).toBe(1n);
       expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(1));
-      yield put(finishedRebaseAction());
     });
     await task.toPromise();
   });

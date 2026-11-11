@@ -1,6 +1,6 @@
+import importDynamic from "libs/import_dynamic";
 import isEqual from "lodash-es/isEqual";
 import type { Vector3 } from "viewer/constants";
-import { parseNml } from "viewer/model/helpers/nml_helpers";
 import {
   getLandmarkGroupPath,
   getLandmarkPairInfo,
@@ -33,6 +33,9 @@ export async function readLandmarksOfIframe(
   groupId?: number,
 ): Promise<IframeLandmarks> {
   const nmlString = await sendMessage(role, "exportTreesAsNmlString", { groupId });
+  // Imported dynamically, because the NML helpers depend on three.js, which is not part of the
+  // initially loaded code (see viewer/viewer_entry.ts).
+  const { parseNml } = await importDynamic(() => import("viewer/model/helpers/nml_helpers"));
   return { nmlString, landmarks: getLandmarksFromTrees((await parseNml(nmlString)).trees) };
 }
 

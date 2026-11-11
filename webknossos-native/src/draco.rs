@@ -8,7 +8,9 @@
 //!
 //! The input is untrusted: malformed streams fail with an error.
 
-use draco_core::{DecoderBuffer, GeometryAttributeType, Mesh, MeshDecoder, PointAttribute};
+use draco_core::{
+    DecodeLimits, DecoderBuffer, GeometryAttributeType, Mesh, MeshDecoder, PointAttribute,
+};
 use jni::EnvUnowned;
 use jni::objects::{JByteArray, JObject};
 use jni::sys::{jdouble, jfloat, jint};
@@ -18,12 +20,23 @@ use crate::jni_util::{self, NativeError, NativeResult, invalid_argument};
 /// Bytes per STL face: normal and three vertices (3 × f32 each), then a u16 attribute byte count.
 const STL_FACE_SIZE: usize = 50;
 
+/// The most faces whose STL output still fits into a Java `byte[]` (at most `i32::MAX` elements).
+const MAX_FACES: usize = i32::MAX as usize / STL_FACE_SIZE;
+
 /// Decodes a Draco mesh. Point cloud streams are rejected, as by the C++ `Decoder::DecodeMeshFromBuffer`: the
 /// crate is built without its `point_cloud_decode` feature, so `MeshDecoder` fails on them.
+///
+/// Meshes with more than [MAX_FACES] faces are rejected while decoding, before the decoder allocates them, as
+/// their STL output could not be returned anyway. The default limits of draco-core admit 512M faces, i.e. let a
+/// tiny stream request gigabytes, and a failed allocation aborts the process.
 fn decode_mesh(input: &[u8]) -> NativeResult<Mesh> {
+    let limits = DecodeLimits::default().with_max_faces(MAX_FACES as u64);
     let mut mesh = Mesh::new();
     MeshDecoder::new()
-        .decode(&mut DecoderBuffer::new(input), &mut mesh)
+        .decode(
+            &mut DecoderBuffer::new(input).with_limits(limits),
+            &mut mesh,
+        )
         .map_err(|error| {
             NativeError::InvalidArgument(format!(
                 "Invalid DRACO Encoding in Mesh Byte Array: {error}"
@@ -33,8 +46,10 @@ fn decode_mesh(input: &[u8]) -> NativeResult<Mesh> {
 }
 
 /// The value of `attribute` for point `point` as three f32. Like the C++ `PointAttribute::GetMappedValue`, this
-/// copies the value's raw bytes without converting its data type (positions decode as float32 for all our inputs).
-/// Unlike it, a stride other than 12 bytes neither leaves components uninitialized nor overflows the output:
+/// copies the value's raw bytes at `byte_stride * value_index` without converting its data type (positions decode
+/// as float32 for all our inputs). The C++ adds the attribute's byte offset, which is always 0 for decoded
+/// attributes; draco-core neither exposes it on `PointAttribute` nor sets it to anything else.
+/// Unlike the C++, a stride other than 12 bytes neither leaves components uninitialized nor overflows the output:
 /// missing components are 0 and further bytes are ignored.
 fn mapped_value(
     attribute: &PointAttribute,
@@ -104,10 +119,23 @@ pub fn draco_to_stl(
 ) -> NativeResult<Vec<u8>> {
     let mesh = decode_mesh(input)?;
     let num_faces = mesh.num_faces();
-    let mut output = Vec::with_capacity(num_faces.saturating_mul(STL_FACE_SIZE));
     if num_faces == 0 {
-        return Ok(output);
+        return Ok(Vec::new());
     }
+    if num_faces > MAX_FACES {
+        // decode_mesh already rejects these, this guards the size computation below.
+        return invalid_argument(format!(
+            "Draco mesh has {num_faces} faces, at most {MAX_FACES} fit into the output"
+        ));
+    }
+    let mut output = Vec::new();
+    output
+        .try_reserve_exact(num_faces * STL_FACE_SIZE)
+        .map_err(|error| {
+            NativeError::InvalidArgument(format!(
+                "Cannot allocate the STL output for {num_faces} faces: {error}"
+            ))
+        })?;
     let Some(positions) = mesh.named_attribute(GeometryAttributeType::Position) else {
         return invalid_argument("Draco mesh has faces but no position attribute");
     };
@@ -373,7 +401,8 @@ mod tests {
         }
     }
 
-    /// Runs one corrupted input. It must return (Ok or Err) without panicking, in bounded time.
+    /// Runs one corrupted input. It must return (Ok or Err) without panicking. The time it takes is only reported,
+    /// not asserted, as it depends on the machine and on debug vs. release builds.
     fn check_corruption(description: &str, input: &[u8], slowest: &mut (Duration, String)) {
         let start = Instant::now();
         let result = std::panic::catch_unwind(|| {
@@ -385,10 +414,6 @@ mod tests {
             Ok(Err(_)) => {}
             Err(_) => panic!("draco_to_stl panicked on {description}"),
         }
-        assert!(
-            elapsed < Duration::from_secs(2),
-            "draco_to_stl took {elapsed:?} on {description}"
-        );
         if elapsed > slowest.0 {
             *slowest = (elapsed, description.to_string());
         }

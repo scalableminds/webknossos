@@ -9,7 +9,7 @@ description = "Native (JNI) functions for the WEBKNOSSOS datastore and tracingst
 [lib]
 # sbt-jni expects the major version appended to the library name, see NativeLibrary.scala
 name = "webknossosNative0"
-crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib"]
 
 [dependencies]
 compresso-rs = "0.1.0"
@@ -20,6 +20,7 @@ draco-core = { version = "2.3.3", default-features = false, features = [
     "legacy_bitstream_decode",
 ] }
 jni = "0.22.4"
+rustc-hash = "2.1.1"
 
 [dev-dependencies]
 # The encoder builds small meshes for the unit tests.

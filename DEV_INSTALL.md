@@ -55,7 +55,7 @@ corepack enable
 git clone git@github.com:scalableminds/webknossos.git
 ```
 
-Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 environment (Rosetta 2). In case you accidentally started WEBKNOSSOS in an arm64 environment, it is advisable to delete several caches `~/.m2`, `~/ivy2`, `~/.sbt`, `~/.yarn-cache` and run `./clean`. Since Postgres and Redis are isolated processes, they can be run either from arm64 or x86_64 environments.
+Note: On arm64-based Macs (e.g. M1), run WEBKNOSSOS natively (arm64), not under Rosetta 2. sbt builds the native library with cargo for the architecture of cargo itself, which has to match the architecture of the JVM (`java -XshowSettings:properties -version 2>&1 | grep os.arch`). If you previously ran WEBKNOSSOS in an x86_64 environment, delete the caches `~/.m2`, `~/ivy2`, `~/.sbt`, `~/.yarn-cache` and run `./clean`.
 
 ## Ubuntu 22.04 LTS
 

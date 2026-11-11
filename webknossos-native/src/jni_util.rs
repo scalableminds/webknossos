@@ -1,6 +1,8 @@
 //! Conversions between Java and Rust values and the error handling shared by all native functions.
 
+use std::any::Any;
 use std::fmt;
+use std::panic::{self, AssertUnwindSafe};
 
 use jni::errors::ThrowRuntimeExAndDefault;
 use jni::objects::{JByteArray, JIntArray, JLongArray};
@@ -11,6 +13,7 @@ use jni::{Env, EnvUnowned};
 pub enum NativeError {
     InvalidArgument(String),
     Jni(jni::errors::Error),
+    Panic(String),
 }
 
 pub type NativeResult<T> = Result<T, NativeError>;
@@ -24,6 +27,7 @@ impl fmt::Display for NativeError {
         match self {
             NativeError::InvalidArgument(message) => f.write_str(message),
             NativeError::Jni(error) => write!(f, "JNI error: {error}"),
+            NativeError::Panic(message) => write!(f, "Rust panic: {message}"),
         }
     }
 }
@@ -60,15 +64,35 @@ impl From<jni::errors::Error> for ContextError {
     }
 }
 
+/// The message of a panic payload. `panic!` with a literal yields a `&'static str`, with format arguments a
+/// `String`.
+fn panic_message(payload: &(dyn Any + Send)) -> String {
+    if let Some(message) = payload.downcast_ref::<&'static str>() {
+        (*message).to_string()
+    } else if let Some(message) = payload.downcast_ref::<String>() {
+        message.clone()
+    } else {
+        "non-string panic payload".to_string()
+    }
+}
+
 /// Runs the body of a native function. An error or a panic is thrown to Java as a `RuntimeException` whose
 /// message names `context`, and the function then returns `T::default()`, which Java ignores.
+///
+/// Panics are caught here rather than left to jni's `with_env`, whose handler only keeps `&'static str` payloads
+/// and drops `context`.
 pub fn run<'local, T: Default>(
     mut env: EnvUnowned<'local>,
     context: &'static str,
     body: impl FnOnce(&mut Env<'local>) -> NativeResult<T>,
 ) -> T {
-    env.with_env(|env| body(env).map_err(|error| ContextError { context, error }))
-        .resolve::<ThrowRuntimeExAndDefault>()
+    env.with_env(|env| {
+        // The body's state is discarded after a panic, so observing it half-updated is not a concern.
+        panic::catch_unwind(AssertUnwindSafe(|| body(env)))
+            .unwrap_or_else(|payload| Err(NativeError::Panic(panic_message(&*payload))))
+            .map_err(|error| ContextError { context, error })
+    })
+    .resolve::<ThrowRuntimeExAndDefault>()
 }
 
 /// Copies a Java `byte[]` into a Vec.
@@ -116,4 +140,20 @@ pub fn new_int_array<'local>(
     let array = env.new_int_array(values.len())?;
     array.set_region(env, 0, values)?;
     Ok(array)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn keeps_the_message_of_formatted_and_literal_panics() {
+        let index = 7;
+        let formatted = panic::catch_unwind(|| panic!("index {index} out of bounds")).unwrap_err();
+        assert_eq!(panic_message(&*formatted), "index 7 out of bounds");
+        let literal = panic::catch_unwind(|| panic!("literal")).unwrap_err();
+        assert_eq!(panic_message(&*literal), "literal");
+        let other = panic::catch_unwind(|| std::panic::panic_any(42)).unwrap_err();
+        assert_eq!(panic_message(&*other), "non-string panic payload");
+    }
 }

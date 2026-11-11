@@ -72,7 +72,7 @@ lazy val webknossosSlickCodegen = (project in file("webknossos-slick-codegen")).
 lazy val webknossosNative = (project in file("webknossos-native"))
   .settings(
     nativeCompile / sourceDirectory := baseDirectory.value,
-    nativeBuildTool := Cargo.make(Seq("--release"))
+    nativeBuildTool := Cargo.make(Seq("--release", "--locked"))
   )
   .enablePlugins(JniNative)
 

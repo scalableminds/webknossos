@@ -2,13 +2,14 @@
 //!
 //! A bucket is a byte array of little-endian elements with 1, 2, 4 or 8 bytes each, signed or unsigned. Each
 //! element is read as an i64 (sign- or zero-extended), which is how segment ids are compared and passed around.
-
-use std::collections::{HashMap, HashSet};
-use std::hash::{BuildHasherDefault, Hasher};
+//!
+//! Segment ids are hashed with rustc-hash's FxHash: the default SipHash is DoS resistant, which is not needed
+//! here, and several times slower.
 
 use jni::EnvUnowned;
 use jni::objects::{JByteArray, JIntArray, JLongArray, JObject};
 use jni::sys::{jboolean, jint, jlong};
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::jni_util::{self, NativeResult, invalid_argument};
 use crate::voxel_runs::{self, write as write_voxel_runs};
@@ -113,39 +114,9 @@ pub extern "system" fn Java_com_scalableminds_webknossos_datastore_helpers_Nativ
     })
 }
 
-/// A fast hasher for segment ids (the multiply-rotate of rustc-hash). The default SipHash is DoS resistant,
-/// which is not needed here, and several times slower.
-#[derive(Default, Clone, Copy)]
-pub struct IdHasher(u64);
-
-impl Hasher for IdHasher {
-    #[inline(always)]
-    fn write(&mut self, bytes: &[u8]) {
-        for &byte in bytes {
-            self.write_u64(byte as u64);
-        }
-    }
-    #[inline(always)]
-    fn write_u64(&mut self, value: u64) {
-        self.0 = (self.0.wrapping_add(value)).wrapping_mul(0xf135_7aea_2e62_a9c5);
-    }
-    #[inline(always)]
-    fn write_i64(&mut self, value: i64) {
-        self.write_u64(value as u64);
-    }
-    #[inline(always)]
-    fn finish(&self) -> u64 {
-        self.0.rotate_left(26)
-    }
-}
-
-type IdBuildHasher = BuildHasherDefault<IdHasher>;
-pub type IdSet = HashSet<i64, IdBuildHasher>;
-pub type IdMap = HashMap<i64, i64, IdBuildHasher>;
-
 /// Builds a segment id mapping from parallel source and destination arrays. For duplicate source ids the later
 /// entry wins.
-pub fn id_mapping(src: &[i64], dst: &[i64]) -> NativeResult<IdMap> {
+pub fn id_mapping(src: &[i64], dst: &[i64]) -> NativeResult<FxHashMap<i64, i64>> {
     if src.len() != dst.len() {
         return invalid_argument("idMappingSrc and idMappingDst must have same length.");
     }
@@ -155,12 +126,12 @@ pub fn id_mapping(src: &[i64], dst: &[i64]) -> NativeResult<IdMap> {
 /// Looks up ids in a mapping, missing ids map to 0. Buckets mostly consist of long runs of the same id, so the
 /// last lookup is cached.
 struct CachedLookup<'a> {
-    mapping: &'a IdMap,
+    mapping: &'a FxHashMap<i64, i64>,
     last: Option<(i64, i64)>,
 }
 
 impl<'a> CachedLookup<'a> {
-    fn new(mapping: &'a IdMap) -> Self {
+    fn new(mapping: &'a FxHashMap<i64, i64>) -> Self {
         CachedLookup {
             mapping,
             last: None,
@@ -181,7 +152,7 @@ impl<'a> CachedLookup<'a> {
 }
 
 fn collect_segment_ids_typed<T: Element>(bucket: &[u8], skip_zeroes: bool) -> Vec<i64> {
-    let mut ids = IdSet::default();
+    let mut ids = FxHashSet::<i64>::default();
     let mut last = None;
     for element in bucket.chunks_exact(T::SIZE) {
         let id = T::read(element);
@@ -276,7 +247,10 @@ pub fn extend_segment_bounding_box(
     )
 }
 
-fn apply_segment_id_mapping_typed<T: Element>(bucket: &[u8], mapping: &IdMap) -> Vec<u8> {
+fn apply_segment_id_mapping_typed<T: Element>(
+    bucket: &[u8],
+    mapping: &FxHashMap<i64, i64>,
+) -> Vec<u8> {
     let mut lookup = CachedLookup::new(mapping);
     let mut output = vec![0u8; bucket.len()];
     for (input, output) in bucket
@@ -310,7 +284,7 @@ pub fn apply_segment_id_mapping(
 fn merge_volume_bucket_in_place_typed<T: Element>(
     bucket: &mut [u8],
     incoming_bucket: &[u8],
-    mapping: Option<&IdMap>,
+    mapping: Option<&FxHashMap<i64, i64>>,
 ) {
     let mut lookup = mapping.map(CachedLookup::new);
     for (target, incoming) in bucket

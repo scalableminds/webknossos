@@ -23,3 +23,6 @@ sbt builds the crate with cargo (`sbt compile`, via sbt-jni) and packages it as 
 3. Run `cargo test`, `cargo clippy --all-targets` and `cargo fmt` here, then
    `sbt "testOnly backend.NativeGoldenTestSuite backend.BucketScannerTestSuite backend.CompressorTestSuite"`.
    `NativeGoldenTestSuite` pins the results of all native functions, see `test/native-golden/README.md`.
+
+The GitHub workflow `.github/workflows/webknossos_native.yml` runs the cargo checks and unit tests, but only for
+pushes that change this crate or `test/native-golden/`.

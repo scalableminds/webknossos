@@ -316,6 +316,13 @@ body {
   }
 }
 
+/** Hides elements below constants.NARROW_SCREEN_WIDTH (1400px). See .hide-on-small-screen for the -0.02px. */
+.hide-on-narrow-screen {
+  @media (max-width: (@screen-narrow-min - 0.02px)) {
+    display: none !important;
+  }
+}
+
 /** Main responsive container with side margins and padding. */
 .container {
   padding-top: 20px;
@@ -683,4 +690,10 @@ body {
   .ant-notification-notice-btn {
     margin-top: 0 !important;
   }
+}
+
+/** The admin page content card clips its children (overflow: hidden) and has no padding.
+    Indent table paginations so that they don't touch the card's right edge. */
+.admin-page-content .ant-table-wrapper .ant-table-pagination.ant-pagination {
+  padding-inline: var(--ant-padding);
 }

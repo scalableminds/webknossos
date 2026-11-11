@@ -16,6 +16,7 @@ import BuildingIcon from "@images/icons/icon-building.svg?react";
 import { useQuery } from "@tanstack/react-query";
 import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
+import { useBlockNavigationDuringUploads } from "admin/dataset/upload/use_resumable_upload";
 import { maxIncludedUsersInPersonalPlan } from "admin/organization/pricing_plan_utils";
 import { getDatastores, getEditableTeams } from "admin/rest_api";
 import {
@@ -489,6 +490,7 @@ const OrganizationForm = ({ onComplete }: { onComplete: (orgId: string) => void 
 function OnboardingView() {
   const activeUser = useWkSelector((state) => state.activeUser);
   const [currentStep, setCurrentStep] = useState(0);
+  useBlockNavigationDuringUploads();
   const [organizationId, setOrganizationId] = useState("");
   const [isDatasetUploadModalVisible, setIsDatasetUploadModalVisible] = useState(false);
   const [isInviteModalVisible, setIsInviteModalVisible] = useState(false);

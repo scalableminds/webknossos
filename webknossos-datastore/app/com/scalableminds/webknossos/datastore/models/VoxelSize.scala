@@ -6,6 +6,9 @@ import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
 // Defines the real-world size in a length unit for a mag1-voxel.
 case class VoxelSize(factor: Vec3Double, unit: LengthUnit) {
+  // All components must be positive and finite (NaN fails the comparison).
+  def isValid: Boolean = factor.toList.forall(component => component > 0 && !component.isInfinite)
+
   def toNanometer: Vec3Double =
     factor * LengthUnit.toNanometer(unit)
 

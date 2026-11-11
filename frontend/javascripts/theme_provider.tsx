@@ -3,7 +3,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { ToastContextMountRoot } from "libs/toast";
 import type React from "react";
 import { useEffect } from "react";
-import { getActiveTheme, getAntdTheme, getLayoutBackgroundColor } from "theme";
+import { getActiveTheme, getAntdTheme, getLayoutBackgroundColor, getScrollbarColors } from "theme";
 
 export default function GlobalThemeProvider({
   children,
@@ -24,6 +24,10 @@ export default function GlobalThemeProvider({
     // Override that, too: a background on html stops the body background from covering the whole
     // page, so content taller than the viewport would otherwise end on a black background.
     document.documentElement.style.backgroundColor = backgroundColor;
+    // Lets the browser render native UI (most notably scrollbars) in the matching scheme.
+    document.documentElement.style.colorScheme = userTheme;
+    const { thumb, track } = getScrollbarColors(userTheme);
+    document.documentElement.style.scrollbarColor = `${thumb} ${track}`;
   }, [userTheme]);
 
   return (

@@ -349,17 +349,6 @@ export class DataBucket {
     return bucketData.slice();
   }
 
-  async label_DEPRECATED(labelFunc: PendingOperation): Promise<void> {
-    /*
-     * It's not recommended to use this method (repeatedly), as it can be
-     * very slow. See the docstring for Bucket.getOrCreateData() for alternatives.
-     */
-    const bucketData = await this.getDataForMutation();
-    this.startDataMutationForFullBucket();
-    labelFunc(bucketData);
-    this.endDataMutationForFullBucket();
-  }
-
   _markAndAddBucketForUndo() {
     // This method adds a snapshot of the current bucket to the undo stack.
     // Note that the method may be called multiple times during a volume

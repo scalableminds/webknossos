@@ -2,8 +2,6 @@ import type { ApiResult } from "admin/api/api_result";
 import {
   fetchMapping,
   getAgglomeratesForDatasetLayer,
-  getAgglomeratesForSegmentsFromDatastore,
-  getAgglomeratesForSegmentsFromTracingstore,
   getMappingsForDatasetLayer,
 } from "admin/rest_api";
 import { message } from "antd";
@@ -26,9 +24,9 @@ import {
   takeEvery,
   takeLatest,
 } from "typed-redux-saga";
-import type { APIDataLayer, APIDataset, APIMapping } from "types/api_types";
+import type { APIDataLayer, APIMapping } from "types/api_types";
 import { MappingStatusEnum, type MappingType } from "viewer/constants";
-import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
+import { getSegmentIdsAtPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import {
   getLayerByName,
   getMappingInfo,
@@ -38,7 +36,6 @@ import {
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   type BucketRetrievalSource,
-  getActiveCellId,
   getActiveSegmentationTracingLayer,
   getBucketRetrievalSourceFn,
   getEditableMappingForVolumeTracingId,
@@ -71,17 +68,14 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { jsHsv2rgb } from "viewer/shaders/utils.glsl";
 import { api, Model } from "viewer/singletons";
-import type {
-  ActiveMappingInfo,
-  EditableMapping,
-  Mapping,
-  NumberLike,
-  NumberLikeMap,
-  StoreAnnotation,
-} from "viewer/store";
+import type { ActiveMappingInfo, Mapping, NumberLike, NumberLikeMap } from "viewer/store";
 import { setActiveCellAction, updateSegmentAction } from "../../actions/volumetracing_actions";
 import type DataCube from "../../bucket_data_handling/data_cube";
 import { listenToStoreProperty } from "../../helpers/listener_helpers";
+import {
+  fetchAgglomeratesForSegmentIds,
+  isMappingAppliedLocally,
+} from "../../helpers/mapped_id_lookup";
 import { ensureWkInitialized } from "../ready_sagas";
 import { waitUntilNoActiveOperations } from "../saga_helpers";
 
@@ -193,6 +187,21 @@ export default function* watchActivatedMappings(): Saga<void> {
   }
   // Keep RebaseRelevantAnnotationState updated.
   yield* takeEvery(["SET_MAPPING", "SET_MAPPING_DATA"], keepMappingInfoInUpdated);
+  // Merges and splits of other users update the local mapping directly (without an update of the
+  // local HDF5 mapping), so the active segment is adapted to the proofreading marker afterwards.
+  yield* takeEvery(
+    ["FINISHED_REBASING", "FINISH_FORWARDING_UPDATE_ACTIONS"],
+    adaptActiveSegmentsToProofreadingMarkers,
+  );
+}
+
+function* adaptActiveSegmentsToProofreadingMarkers(): Saga<void> {
+  const volumes = yield* select((state) => state.annotation.volumes);
+  for (const { tracingId } of volumes) {
+    if (yield* select((state) => isMappingAppliedLocally(state, tracingId))) {
+      yield* call(adaptActiveSegmentToProofreadingMarker, tracingId);
+    }
+  }
 }
 
 function* clearActiveMapping(volumeTracingId: string) {
@@ -637,39 +646,7 @@ function* updateLocalHdf5Mapping(
   yield* call(adaptActiveSegmentToProofreadingMarker, layerName);
 }
 
-export async function fetchAgglomeratesForSegmentIds(
-  dataset: APIDataset,
-  annotation: StoreAnnotation,
-  editableMapping: EditableMapping | null | undefined,
-  layerName: string,
-  layerInfo: APIDataLayer,
-  mappingName: string,
-  newSegmentIds: Set<NumberLike>,
-): Promise<Mapping> {
-  // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
-  const mappingLayerName =
-    "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
-      ? layerInfo.fallbackLayer
-      : layerName;
-
-  return editableMapping != null
-    ? getAgglomeratesForSegmentsFromTracingstore(
-        annotation.tracingStore.url,
-        editableMapping.tracingId,
-        newSegmentIds,
-        annotation.annotationId,
-        annotation.version,
-      )
-    : getAgglomeratesForSegmentsFromDatastore(
-        dataset.dataStore.url,
-        dataset,
-        mappingLayerName,
-        mappingName,
-        newSegmentIds,
-      );
-}
-
-export function* getAgglomeratesForSegmentIds(
+function* getAgglomeratesForSegmentIds(
   layerName: string,
   layerInfo: APIDataLayer,
   mappingName: string,
@@ -710,24 +687,51 @@ function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
   const proofreadingMarkerPosition = yield* select(
     (state) => state.localSegmentationStateByLayer[layerName]?.proofreadingMarkerPosition,
   );
-  if (proofreadingMarkerPosition) {
-    const agglomerateId = yield* call(getSegmentIdForPositionAsync, proofreadingMarkerPosition);
-    const activeSegmentId = yield* call(getActiveCellId, volumeTracing);
+  if (!proofreadingMarkerPosition) {
+    return;
+  }
+  // Don't fetch unknown ids from the server: this saga runs on every update of the local
+  // mapping, so this would cause a request for each update while the marker is out of view.
+  // The local mapping only contains entries for the ids in the currently needed buckets.
+  // Once the marker is in view again, the lookup will succeed.
+  const { mappedId: agglomerateId } = yield* call(
+    getSegmentIdsAtPositionAsync,
+    layerName,
+    proofreadingMarkerPosition,
+    { fetchUnknownIds: false },
+  );
 
-    if (activeSegmentId !== agglomerateId) {
-      yield put(
-        setActiveCellAction(agglomerateId, proofreadingMarkerPosition, undefined, undefined, true),
-      );
-      // TODO #9456: Look for a solution that this toast notification does not appear frequently in live collab scenario.
-      // yield* call(() =>
-      //   Toast.info(
-      //     `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
-      //   ),
-      // );
-      console.log(
-        `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
-      );
-    }
+  // The marker may have been moved (e.g., by a click) while the lookup was pending.
+  // In that case, the result is outdated.
+  const currentProofreadingMarkerPosition = yield* select(
+    (state) => state.localSegmentationStateByLayer[layerName]?.proofreadingMarkerPosition,
+  );
+  if (currentProofreadingMarkerPosition !== proofreadingMarkerPosition) {
+    return;
+  }
+
+  if (agglomerateId == null) {
+    return;
+  }
+
+  // Select the active segment id again, because it may have changed while the lookup was pending.
+  const activeSegmentId = yield* select(
+    (state) => getVolumeTracingByLayerName(state.annotation, layerName)?.activeCellId,
+  );
+
+  if (activeSegmentId !== agglomerateId) {
+    yield put(
+      setActiveCellAction(agglomerateId, proofreadingMarkerPosition, undefined, undefined, true),
+    );
+    // TODO #9456: Look for a solution that this toast notification does not appear frequently in live collab scenario.
+    // yield* call(() =>
+    //   Toast.info(
+    //     `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
+    //   ),
+    // );
+    console.log(
+      `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
+    );
   }
 }
 

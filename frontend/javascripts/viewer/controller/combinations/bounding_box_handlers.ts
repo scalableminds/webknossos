@@ -39,6 +39,10 @@ const getNeighbourEdgeIndexByEdgeIndex: { [key: number]: Vector2 } = {
 };
 // This value is in "mouse tolerance to trigger a selection". It is in "unzoomed worldcoordinates".
 const MAX_DISTANCE_TO_SELECTION = 15;
+// If the min and max edge of a box's thinnest dimension are at most this many screen pixels apart,
+// they look like a single line (e.g., the depth of a box that was drawn in a single slice). The user
+// cannot tell which of the two they grabbed, so such an edge is anchored (see SelectedEdge.anchoredExtent).
+const MAX_SCREEN_GAP_OF_OVERLAPPING_EDGES = 5;
 
 function getDistanceToBoundingBoxEdge(
   pos: Vector3,
@@ -119,6 +123,12 @@ export type SelectedEdge = {
   // the edge was grabbed. While resizing, the edge keeps this offset to the mouse instead of
   // jumping onto the mouse position.
   grabOffset: number;
+  // Set if this edge and its opposite edge overlap on screen, so the user cannot tell which of the
+  // two they grabbed. It holds the [min, max] of resizableDimension when the edge was grabbed.
+  // While dragging, the box then spans this extent plus the mouse position, so it always keeps
+  // the slices it contained, no matter where the drag started or in which direction it goes.
+  // In that case, grabOffset is the offset to the nearest value within this extent.
+  anchoredExtent?: Vector2;
 };
 type DistanceArray = [number, number, number, number];
 
@@ -231,11 +241,22 @@ export function getClosestEdgesAtPosition(
   }
 
   const { id: boxId, boundingBox } = currentNearestBoundingBox;
+  // maxDistanceToSelection is scaled by the zoom step, see getClosestHoveredBoundingBox.
+  const zoomStep = maxDistanceToSelection / MAX_DISTANCE_TO_SELECTION;
   const getEdgeInfo = (edgeId: number): SelectedEdge => {
     const edge = _getEdgeInfoFromId(boxId, indices, edgeId, 0);
-    const bboxKey = edge.isMaxEdge ? "max" : "min";
-    const edgeValue = boundingBox[bboxKey][edge.resizableDimension];
-    return { ...edge, grabOffset: edgeValue - position[edge.resizableDimension] };
+    const dim = edge.resizableDimension;
+    const { min, max } = boundingBox;
+    if (isThinDimensionOverlappingOnScreen(boundingBox, dim, planeRatio, zoomStep)) {
+      const nearestValueInExtent = Math.min(Math.max(position[dim], min[dim]), max[dim]);
+      return {
+        ...edge,
+        grabOffset: nearestValueInExtent - position[dim],
+        anchoredExtent: [min[dim], max[dim]],
+      };
+    }
+    const edgeValue = boundingBox[edge.isMaxEdge ? "max" : "min"][dim];
+    return { ...edge, grabOffset: edgeValue - position[dim] };
   };
 
   const nearestEdgeIndex = currentNearestDistanceArray.indexOf(currentNearestDistance);
@@ -351,8 +372,13 @@ export const highlightAndSetCursorOnHoveredBoundingBox = throttle(
       getSceneController().highlightUserBoundingBox(primaryHoveredEdge.boxId);
       if (event.ctrlKey || event.metaKey) {
         inputCatcher.style.cursor = "move";
-      } else if (secondaryHoveredEdge != null) {
-        // If a corner is selected.
+      } else if (
+        secondaryHoveredEdge != null &&
+        primaryHoveredEdge.anchoredExtent == null &&
+        secondaryHoveredEdge.anchoredExtent == null
+      ) {
+        // If a corner is selected. For an anchored edge, it is unknown in which direction it will
+        // grow, so the diagonal is unknown, too. The fallback below shows a two-sided cursor.
         inputCatcher.style.cursor =
           (primaryHoveredEdge.isMaxEdge && secondaryHoveredEdge.isMaxEdge) ||
           (!primaryHoveredEdge.isMaxEdge && !secondaryHoveredEdge.isMaxEdge)
@@ -373,6 +399,67 @@ export const highlightAndSetCursorOnHoveredBoundingBox = throttle(
   },
   BOUNDING_BOX_HOVERING_THROTTLE_TIME,
 );
+
+// Returns whether the min and max edge of the given dimension are so close on screen that they
+// look like a single line. Only the box's thinnest dimension is considered (e.g., the depth of a box
+// that was drawn in a single slice), so that resizing ordinary boxes while zoomed out is unaffected.
+export function isThinDimensionOverlappingOnScreen(
+  boundingBox: BoundingBoxMinMaxType,
+  dimension: DimensionIndices,
+  planeRatio: Vector3,
+  zoomStep: number,
+): boolean {
+  const extents = V3.sub(boundingBox.max, boundingBox.min);
+  if (extents.some((extent) => extent < extents[dimension])) {
+    return false;
+  }
+  const extentInScreenPixels = extents[dimension] / planeRatio[dimension] / zoomStep;
+  return extentInScreenPixels <= MAX_SCREEN_GAP_OF_OVERLAPPING_EDGES;
+}
+
+// Returns the bounds after moving the given edge to newPositionValue (along its resizableDimension).
+// If the edge is moved over its opposite edge, min and max are switched and edge.isMaxEdge is
+// flipped, so that the edge keeps following the mouse.
+export function getBoundsResizedAlongEdge(
+  bounds: BoundingBoxMinMaxType,
+  edge: SelectedEdge,
+  newPositionValue: number,
+): BoundingBoxMinMaxType {
+  const { resizableDimension } = edge;
+  const min = [...bounds.min] as Vector3;
+  const max = [...bounds.max] as Vector3;
+
+  if (edge.anchoredExtent != null) {
+    const [anchoredMin, anchoredMax] = edge.anchoredExtent;
+    min[resizableDimension] = Math.min(anchoredMin, newPositionValue);
+    max[resizableDimension] = Math.max(anchoredMax, newPositionValue);
+    return { min, max };
+  }
+
+  const minOrMax = edge.isMaxEdge ? "max" : "min";
+  const oppositeOfMinOrMax = edge.isMaxEdge ? "min" : "max";
+  const otherEdgeValue = bounds[oppositeOfMinOrMax][resizableDimension];
+
+  if (otherEdgeValue === newPositionValue) {
+    // Do not allow the same value for min and max for one dimension.
+    return bounds;
+  }
+
+  const updatedBounds = { min, max };
+  const areMinAndMaxEdgeCrossing = // If the min / max edge is moved over the other one.
+    (edge.isMaxEdge && newPositionValue < otherEdgeValue) ||
+    (!edge.isMaxEdge && newPositionValue > otherEdgeValue);
+
+  if (areMinAndMaxEdgeCrossing) {
+    // As the edge moved over the other one, the values for min and max must be switched.
+    updatedBounds[minOrMax][resizableDimension] = otherEdgeValue;
+    updatedBounds[oppositeOfMinOrMax][resizableDimension] = newPositionValue;
+    edge.isMaxEdge = !edge.isMaxEdge;
+  } else {
+    updatedBounds[minOrMax][resizableDimension] = newPositionValue;
+  }
+  return updatedBounds;
+}
 
 function getBoundingBoxOfPrimaryEdge(
   primaryEdge: SelectedEdge,
@@ -396,61 +483,29 @@ export function handleResizingBoundingBox(
     return;
   }
 
-  const updatedBounds = {
-    min: [...bboxToResize.boundingBox.min] as Vector3,
-    max: [...bboxToResize.boundingBox.max] as Vector3,
-  };
-
-  function updateBoundsAccordingToEdge(
-    edge: SelectedEdge,
-    globalPositionRounded: Vector3,
-  ): boolean {
-    const { resizableDimension, grabOffset } = edge;
-    // For a horizontal edge only consider delta.y, for vertical only delta.x
-    const newPositionValue = Math.round(globalPositionRounded[resizableDimension] + grabOffset);
-    const minOrMax = edge.isMaxEdge ? "max" : "min";
-    const oppositeOfMinOrMax = edge.isMaxEdge ? "min" : "max";
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-    const otherEdgeValue = bboxToResize.boundingBox[oppositeOfMinOrMax][resizableDimension];
-
-    if (otherEdgeValue === newPositionValue) {
-      // Do not allow the same value for min and max for one dimension.
-      return false;
-    }
-
-    const areMinAndMaxEdgeCrossing = // If the min / max edge is moved over the other one.
-      (edge.isMaxEdge && newPositionValue < otherEdgeValue) ||
-      (!edge.isMaxEdge && newPositionValue > otherEdgeValue);
-
-    if (areMinAndMaxEdgeCrossing) {
-      // As the edge moved over the other one, the values for min and max must be switched.
-      updatedBounds[minOrMax][resizableDimension] = otherEdgeValue;
-      updatedBounds[oppositeOfMinOrMax][resizableDimension] = newPositionValue;
-      return true;
-    } else {
-      updatedBounds[minOrMax][resizableDimension] = newPositionValue;
-      return false;
-    }
-  }
-
-  let didMinAndMaxEdgeSwitch = updateBoundsAccordingToEdge(
+  const globalPositionRounded = globalMousePosition.rounded;
+  const currentBounds = bboxToResize.boundingBox;
+  // For a horizontal edge only consider delta.y, for vertical only delta.x
+  const getNewPositionValue = (edge: SelectedEdge) =>
+    Math.round(globalPositionRounded[edge.resizableDimension] + edge.grabOffset);
+  let updatedBounds = getBoundsResizedAlongEdge(
+    currentBounds,
     primaryEdge,
-    globalMousePosition.rounded,
+    getNewPositionValue(primaryEdge),
   );
-
-  if (didMinAndMaxEdgeSwitch) {
-    primaryEdge.isMaxEdge = !primaryEdge.isMaxEdge;
+  if (secondaryEdge) {
+    updatedBounds = getBoundsResizedAlongEdge(
+      updatedBounds,
+      secondaryEdge,
+      getNewPositionValue(secondaryEdge),
+    );
   }
 
-  if (secondaryEdge) {
-    didMinAndMaxEdgeSwitch = updateBoundsAccordingToEdge(
-      secondaryEdge,
-      globalMousePosition.rounded,
-    );
-
-    if (didMinAndMaxEdgeSwitch) {
-      secondaryEdge.isMaxEdge = !secondaryEdge.isMaxEdge;
-    }
+  if (
+    V3.equals(updatedBounds.min, currentBounds.min) &&
+    V3.equals(updatedBounds.max, currentBounds.max)
+  ) {
+    return;
   }
 
   Store.dispatch(

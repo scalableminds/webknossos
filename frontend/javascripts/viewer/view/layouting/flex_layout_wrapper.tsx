@@ -45,6 +45,7 @@ import SegmentsView from "viewer/view/right_border_tabs/segments_tab/segments_ta
 import SkeletonTabView from "viewer/view/right_border_tabs/skeleton_tab/skeleton_tab_view";
 import Statusbar from "viewer/view/statusbar/statusbar";
 import TDViewControls from "viewer/view/td_view_controls";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 import BorderToggleButton from "../components/border_toggle_button";
 import type {
   KeyboardShortcutHandlerMap,
@@ -564,10 +565,9 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     return action;
   };
 
-  // The right border of the layer registration workers contains tabs (e.g. the dataset info
-  // with its links) that break the layer registration view, so it stays closed.
+  // A border that can't be shown stays closed.
   isBorderLocked(side: BorderOpenStatusKeys) {
-    return side === "right" && isLayerRegistrationWorker();
+    return side === "right" && !getViewerCapabilities().showRightBorder;
   }
 
   toggleBorder(side: BorderOpenStatusKeys, toggleInternalState: boolean = true) {

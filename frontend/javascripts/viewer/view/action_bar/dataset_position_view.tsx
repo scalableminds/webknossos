@@ -18,7 +18,7 @@ import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
 import { ShareButton } from "viewer/view/action_bar/share_modal_view";
 import ButtonComponent from "viewer/view/components/button_component";
-import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 import DatasetRotationPopoverButtonView from "./dataset_rotation_popover_view";
 
 const warningColors: React.CSSProperties = {
@@ -150,11 +150,9 @@ function DatasetPositionView() {
           />
         </FastTooltip>
         <DatasetRotationPopoverButtonView style={iconColoringStyle} />
-        {/* A link to a layer registration worker would open the worker without the
-        layer registration page around it. */}
-        {isLayerRegistrationWorker() ? null : (
+        {getViewerCapabilities().showShareAndCopyActions ? (
           <ShareButton dataset={dataset} style={iconColoringStyle} />
-        )}
+        ) : null}
       </Space.Compact>
     </FastTooltip>
   );

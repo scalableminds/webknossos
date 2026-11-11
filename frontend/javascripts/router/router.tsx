@@ -38,7 +38,7 @@ import Navbar from "navbar";
 import { createBrowserRouter, Navigate, Outlet, type RouteObject, redirect } from "react-router";
 import type { EmptyObject } from "types/type_utils";
 import { CommandPalette } from "viewer/view/components/command_palette";
-import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 
 const { Content } = Layout;
 
@@ -82,9 +82,7 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
 function RootLayout() {
   return (
     <Layout>
-      {/* The command palette can leave the view or undo the forced settings of the
-      layer registration workers. Thus, don't allow them there. */}
-      {isLayerRegistrationWorker() ? null : <CommandPalette />}
+      {getViewerCapabilities().showCommandPalette ? <CommandPalette /> : null}
       <Navbar />
       <Content>
         <ErrorBoundary>

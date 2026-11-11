@@ -135,32 +135,39 @@ export function getSegmentIdsAtPosition(globalPos: Vector3): {
 // Returns the segment ids at the given position in the given layer. Awaits the loading of the
 // bucket and fetches the mapped id from the server if the local mapping doesn't know it.
 // The mapped id is null if it can't be determined. With fetchUnknownIds: false, the mapped id
-// is only looked up locally (null if unknown).
+// is only looked up locally (null if unknown). Both ids are null if the bucket can't be loaded.
 export async function getSegmentIdsAtPositionAsync(
   layerName: string,
   globalPos: Vector3,
   { fetchUnknownIds = true }: { fetchUnknownIds?: boolean } = {},
-): Promise<{ unmappedId: bigint; mappedId: bigint | null }> {
+): Promise<{ unmappedId: bigint | null; mappedId: bigint | null }> {
   const posInLayerSpace = globalToLayerTransformedPosition(
     globalPos,
     layerName,
     "segmentation",
     Store.getState(),
   );
-  const zoomStep = await api.data.getUltimatelyRenderedZoomStepAtPosition(
-    layerName,
-    posInLayerSpace,
-  );
-  // Use the returned value instead of reading the cube again, because the additional
-  // coordinates might change while the bucket is loading.
-  const unmappedId = toBigInt(
-    await api.data.getDataValue(
+  let unmappedId: bigint;
+  try {
+    const zoomStep = await api.data.getUltimatelyRenderedZoomStepAtPosition(
       layerName,
       posInLayerSpace,
-      zoomStep,
-      Store.getState().flycam.additionalCoordinates,
-    ),
-  );
+    );
+    // Use the returned value instead of reading the cube again, because the additional
+    // coordinates might change while the bucket is loading.
+    unmappedId = toBigInt(
+      await api.data.getDataValue(
+        layerName,
+        posInLayerSpace,
+        zoomStep,
+        Store.getState().flycam.additionalCoordinates,
+      ),
+    );
+  } catch (exception) {
+    // The callers handle null (e.g., with a toast), so a failed bucket load doesn't crash the sagas.
+    console.error(`Could not load the segment id at position ${globalPos}:`, exception);
+    return { unmappedId: null, mappedId: null };
+  }
   const mappedId = fetchUnknownIds
     ? await mapIdAsync(layerName, unmappedId)
     : mapId(Store.getState(), layerName, unmappedId);

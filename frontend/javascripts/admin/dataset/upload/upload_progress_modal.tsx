@@ -8,18 +8,19 @@ import {
 import { getDataset } from "admin/rest_api";
 import { Alert, Avatar, Button, Divider, Flex, Modal, Typography, theme } from "antd";
 import { formatBytes } from "libs/format_utils";
-import { useQueryWithErrorHandling } from "libs/react_hooks";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { ModalWidth } from "theme";
-import type { APIMaybeUnimportedDataset } from "types/api_types";
+import type { APIDataset, APIMaybeUnimportedDataset } from "types/api_types";
 import {
   getDatasetThumbnailURL,
   getReadableURLPart,
   getViewDatasetURL,
 } from "viewer/model/accessors/dataset_accessor";
-import type { DatasetAddType } from "../dataset_add_type";
+import { canRunAIJob, getViewDatasetUrlWithAIJob } from "viewer/view/ai_jobs/ai_job_url_param";
+import { DatasetAddType } from "../dataset_add_type";
 import { getDatasetLayerRows, type LayerRow } from "./upload_layers";
 import {
   LayerList,
@@ -35,6 +36,10 @@ import type { UploadStatus } from "./use_resumable_dataset_upload";
 import { useTransferRate } from "./use_transfer_rate";
 
 type ActiveUploadStatus = Exclude<UploadStatus, { kind: "idle" }>;
+
+// How often and how long the modal waits for the added dataset to become active.
+const DATASET_RELOAD_INTERVAL_MS = 2000;
+const MAX_DATASET_LOAD_COUNT = 30;
 
 const addAnotherLabel: Record<DatasetAddType, string> = {
   upload: "Upload another",
@@ -100,6 +105,58 @@ function FooterHint({ icon, children }: { icon?: React.ReactNode; children: Reac
   );
 }
 
+// Points to the AI jobs that the user can start on the dataset. A composed dataset combines
+// existing datasets, so they are not suggested for it.
+function NextStepHints({
+  dataset,
+  datasetAddType,
+}: {
+  dataset: APIDataset;
+  datasetAddType: DatasetAddType;
+}) {
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
+  if (datasetAddType === DatasetAddType.COMPOSE) {
+    return null;
+  }
+  const canRunAlignment = canRunAIJob("open_ai_alignment", dataset, activeUser, activeOrganization);
+  const canRunInference = canRunAIJob("open_ai_inference", dataset, activeUser, activeOrganization);
+  if (!canRunAlignment && !canRunInference) {
+    return null;
+  }
+  return (
+    <Typography.Paragraph style={{ margin: 0 }}>
+      Next steps with AI:
+      <ul>
+        {canRunAlignment ? (
+          <li>
+            The sections of a layer are shifted against each other?{" "}
+            <Link
+              to={getViewDatasetUrlWithAIJob(dataset, "open_ai_alignment")}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Align them with AI
+            </Link>
+          </li>
+        ) : null}
+        {canRunInference ? (
+          <li>
+            Want to segment neurons, mitochondria or nuclei automatically?{" "}
+            <Link
+              to={getViewDatasetUrlWithAIJob(dataset, "open_ai_inference")}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Run an AI segmentation
+            </Link>
+          </li>
+        ) : null}
+      </ul>
+    </Typography.Paragraph>
+  );
+}
+
 function ReadyHeader() {
   const { token } = theme.useToken();
   return (
@@ -139,6 +196,12 @@ function UploadProgressContent({
     queryKey: ["uploadedDataset", datasetId],
     queryFn: () => getDataset(datasetId as string),
     enabled: isReady && datasetId != null,
+    // A dataset can become active a moment after it is ready, when the datastore reports its
+    // data source. Until then, its layers and the next step hints are not known.
+    refetchInterval: (query) =>
+      query.state.data?.isActive || query.state.dataUpdateCount >= MAX_DATASET_LOAD_COUNT
+        ? false
+        : DATASET_RELOAD_INTERVAL_MS,
   });
   const transferRate = useTransferRate(
     getBytesSent(status),
@@ -272,6 +335,10 @@ function UploadProgressContent({
             layers={layerRows}
             isUploadStarting={status.kind === "uploading" && status.bytesSent === 0}
           />
+        ) : null}
+
+        {isReady && dataset?.isActive ? (
+          <NextStepHints dataset={dataset} datasetAddType={datasetAddType} />
         ) : null}
 
         {status.kind === "uploading" ? (

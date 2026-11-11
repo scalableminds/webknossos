@@ -25,12 +25,10 @@ import constants, {
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   doesSupportVolumeWithFallback,
-  getColorLayers,
   getMappingInfoForSupportedLayer,
   getSegmentationLayers,
   getUnifiedAdditionalCoordinates,
   getVisibleSegmentationLayers,
-  is2dDataset,
 } from "viewer/model/accessors/dataset_accessor";
 import { setAdditionalCoordinatesAction } from "viewer/model/actions/flycam_actions";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
@@ -44,6 +42,7 @@ import TracingActionsView, {
   type LayoutProps,
 } from "viewer/view/action_bar/tracing_actions_view";
 import ViewDatasetActionsView from "viewer/view/action_bar/view_dataset_actions_view";
+import { getAIJobsUnsupportedReason } from "viewer/view/ai_jobs/ai_job_url_param";
 import {
   addNewLayout,
   deleteLayout,
@@ -74,7 +73,6 @@ type StateProps = {
   activeOrganization: APIOrganization | null;
   controlMode: ControlMode;
   showVersionRestore: boolean;
-  is2d: boolean;
   viewMode: ViewMode;
 };
 type OwnProps = {
@@ -391,7 +389,7 @@ class ActionBarView extends PureComponent<Props, State> {
   }
 
   render() {
-    const { dataset, is2d, showVersionRestore, controlMode, layoutProps, viewMode, activeUser } =
+    const { dataset, showVersionRestore, controlMode, layoutProps, viewMode, activeUser } =
       this.props;
     const isAdminOrManager = isUserAdminOrManager(activeUser);
     const isViewMode = controlMode === ControlModeEnum.VIEW;
@@ -417,19 +415,10 @@ class ActionBarView extends PureComponent<Props, State> {
       onDeleteLayout: this.handleLayoutDeleted,
     });
 
-    const colorLayers = getColorLayers(dataset);
-    const datasetHasNoColorLayer = colorLayers.length === 0;
-    const isNd = (colorLayers[0]?.additionalAxes ?? []).length > 0;
-    const is2DOrNDDataset = isNd || is2d;
-    const isAIAnalysisDisabled = !getIsAIAnalysisEnabled();
-    const shouldDisableAIJobButton =
-      isAIAnalysisDisabled || datasetHasNoColorLayer || is2DOrNDDataset;
-    let tooltip = "AI analysis is not enabled for this dataset.";
-    if (datasetHasNoColorLayer) {
-      tooltip = "The dataset needs to have a color layer to start AI processing jobs.";
-    } else if (is2DOrNDDataset) {
-      tooltip = `AI Analysis is not supported for ${is2d ? "2D" : "ND"} datasets.`;
-    }
+    const aiJobsUnsupportedReason = getAIJobsUnsupportedReason(dataset);
+    const shouldDisableAIJobButton = !getIsAIAnalysisEnabled() || aiJobsUnsupportedReason != null;
+    const disabledTooltip =
+      aiJobsUnsupportedReason ?? "AI analysis is not enabled for this dataset.";
 
     return (
       <Fragment>
@@ -443,7 +432,7 @@ class ActionBarView extends PureComponent<Props, State> {
           <DatasetPositionAndRotationView />
           <AdditionalCoordinatesInputView />
           {getIsAIAnalysisEnabled() && isAdminOrManager
-            ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
+            ? this.renderStartAIJobButton(shouldDisableAIJobButton, disabledTooltip)
             : null}
           {isViewMode ? this.renderStartTracingButton() : null}
           <ModesView />
@@ -471,7 +460,6 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeOrganization: state.activeOrganization,
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
-  is2d: is2dDataset(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
 });
 

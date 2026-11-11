@@ -63,6 +63,8 @@ describe("getClosestEdgesAtPosition", () => {
     // Outside of a corner, both edges are equally far away, so the first one (top) is the primary edge.
     expect(getEdgeIds(yz(90, 95))).toEqual([TOP, LEFT]);
     expect(getEdgeIds(yz(305, 95))).toEqual([TOP, RIGHT]);
+    // Further outside than a quarter of the short edge: still a corner, as there is no limit outside of the box.
+    expect(getEdgeIds(yz(90, 90))).toEqual([TOP, LEFT]);
   });
 
   it("should not jump from a corner to an edge when crossing the end of a short edge", () => {

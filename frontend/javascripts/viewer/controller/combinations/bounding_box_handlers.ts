@@ -273,7 +273,9 @@ export function getClosestHoveredBoundingBox(
   plane: OrthoView,
 ): [SelectedEdge, SelectedEdge | null | undefined] | null {
   const state = Store.getState();
-  const globalPosition = calculateMaybeGlobalPos(state, pos, plane);
+  // Round like handleResizingBoundingBox does, so that the grab offset does not make the edge jump
+  // by one voxel on the first resize.
+  const globalPosition = calculateMaybeGlobalPos(state, pos, plane, true);
   if (globalPosition == null || globalPosition.rounded == null) return null;
 
   const { userBoundingBoxes } = getSomeTracing(state.annotation);

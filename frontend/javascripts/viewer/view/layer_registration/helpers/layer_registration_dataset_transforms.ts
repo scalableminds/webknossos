@@ -1,8 +1,7 @@
 import { getDataset, updateDatasetPartial } from "admin/rest_api";
 import isEqualWith from "lodash-es/isEqualWith";
 import type { APIDataset, CoordinateTransformation } from "types/api_types";
-import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import type { Transform } from "viewer/model/helpers/transformation_helpers";
+import { flatToNestedMatrix, type Transform } from "viewer/model/helpers/transformation_helpers";
 import type { TransformEstimation } from "./layer_registration_transform_estimation";
 
 // See isTransformAppliedToDataset.

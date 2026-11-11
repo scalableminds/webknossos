@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 190 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 191 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 CREATE TYPE webknossos.EMAIL_THRESHOLD_TYPE AS ENUM ('PlanExpiry', 'StorageWarning');
 
@@ -25,6 +25,6 @@ WHERE r.paidUntil = o.paidUntil;
 
 DROP TABLE webknossos.organization_planExpiryReminders;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 191;
+UPDATE webknossos.releaseInformation SET schemaVersion = 192;
 
 COMMIT TRANSACTION;

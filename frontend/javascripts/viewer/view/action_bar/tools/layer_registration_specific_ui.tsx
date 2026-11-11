@@ -1,4 +1,4 @@
-import Icon, { EyeInvisibleOutlined, EyeOutlined, TableOutlined } from "@ant-design/icons";
+import Icon, { EyeInvisibleOutlined, EyeOutlined } from "@ant-design/icons";
 import AffineTransformationIcon from "@images/icons/icon-affine-transformation.svg?react";
 import NoTransformationIcon from "@images/icons/icon-no-transformation.svg?react";
 import { Space } from "antd";
@@ -7,7 +7,7 @@ import { MIN_LANDMARK_PAIR_COUNT } from "viewer/view/layer_registration/helpers/
 import {
   sendCommandToLayerRegistrationPage,
   useLayerRegistrationViewState,
-} from "viewer/view/layer_registration/layer_registration_worker";
+} from "viewer/view/layer_registration/layer_registration_view_state";
 import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE } from "./tool_helpers";
 
 // Shows or hides the layer of the other worker in this worker.
@@ -55,20 +55,5 @@ export function LayerRegistrationButtons() {
       <OtherLayerToggleButton />
       <TransformToggleButton />
     </Space.Compact>
-  );
-}
-
-// Opens and closes the landmark panel, which is right of the secondary (right) worker. Shown
-// at the right end of that worker's navbar, like the button that opens the right sidebar in
-// the normal viewer.
-export function LandmarkPanelToggleButton() {
-  const { isLandmarkPanelOpen } = useLayerRegistrationViewState();
-  return (
-    <ToggleButton
-      active={isLandmarkPanelOpen}
-      onClick={() => sendCommandToLayerRegistrationPage("toggleLandmarkPanel")}
-      title={`${isLandmarkPanelOpen ? "Hide" : "Show"} the landmark table and the layer registration tools`}
-      icon={<TableOutlined style={{ fontSize: 18 }} />}
-    />
   );
 }

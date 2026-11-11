@@ -83,8 +83,8 @@ import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { retryMutexAcquisitionNowAction } from "viewer/model/actions/save_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
-import { LandmarkPanelToggleButton } from "viewer/view/action_bar/tools/layer_registration_specific_ui";
 import { HelpModal } from "viewer/view/help/help_modal";
+import { LandmarkPanelToggleButton } from "viewer/view/layer_registration/landmark_panel_toggle_button";
 import {
   isLayerRegistrationPrimaryWorker,
   isLayerRegistrationWorker,

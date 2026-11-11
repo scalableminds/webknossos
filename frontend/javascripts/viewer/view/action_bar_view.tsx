@@ -417,7 +417,8 @@ class ActionBarView extends PureComponent<Props, State> {
 
     const aiJobsUnsupportedReason = getAIJobsUnsupportedReason(dataset);
     const shouldDisableAIJobButton = !getIsAIAnalysisEnabled() || aiJobsUnsupportedReason != null;
-    const tooltip = aiJobsUnsupportedReason ?? "AI analysis is not enabled for this dataset.";
+    const disabledTooltip =
+      aiJobsUnsupportedReason ?? "AI analysis is not enabled for this dataset.";
 
     return (
       <Fragment>
@@ -431,7 +432,7 @@ class ActionBarView extends PureComponent<Props, State> {
           <DatasetPositionAndRotationView />
           <AdditionalCoordinatesInputView />
           {getIsAIAnalysisEnabled() && isAdminOrManager
-            ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
+            ? this.renderStartAIJobButton(shouldDisableAIJobButton, disabledTooltip)
             : null}
           {isViewMode ? this.renderStartTracingButton() : null}
           <ModesView />

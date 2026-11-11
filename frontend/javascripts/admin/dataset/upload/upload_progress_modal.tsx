@@ -19,10 +19,7 @@ import {
   getReadableURLPart,
   getViewDatasetURL,
 } from "viewer/model/accessors/dataset_accessor";
-import {
-  canRunAIAlignment,
-  getViewDatasetUrlWithAIAlignment,
-} from "viewer/view/ai_jobs/ai_job_url_param";
+import { canRunAIJob, getViewDatasetUrlWithAIJob } from "viewer/view/ai_jobs/ai_job_url_param";
 import { DatasetAddType } from "../dataset_add_type";
 import { getDatasetLayerRows, type LayerRow } from "./upload_layers";
 import {
@@ -108,8 +105,8 @@ function FooterHint({ icon, children }: { icon?: React.ReactNode; children: Reac
   );
 }
 
-// Points to the AI alignment if the sections of a layer may not line up. A composed dataset
-// combines existing datasets, so this is not suggested for it.
+// Points to the AI jobs that the user can start on the dataset. A composed dataset combines
+// existing datasets, so they are not suggested for it.
 function NextStepHints({
   dataset,
   datasetAddType,
@@ -118,17 +115,43 @@ function NextStepHints({
   datasetAddType: DatasetAddType;
 }) {
   const activeUser = useWkSelector((state) => state.activeUser);
-  if (datasetAddType === DatasetAddType.COMPOSE || !canRunAIAlignment(dataset, activeUser)) {
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
+  if (datasetAddType === DatasetAddType.COMPOSE) {
+    return null;
+  }
+  const canRunAlignment = canRunAIJob("open_ai_alignment", dataset, activeUser, activeOrganization);
+  const canRunInference = canRunAIJob("open_ai_inference", dataset, activeUser, activeOrganization);
+  if (!canRunAlignment && !canRunInference) {
     return null;
   }
   return (
     <Typography.Paragraph style={{ margin: 0 }}>
-      If something doesn&apos;t look right:
+      Next steps with AI:
       <ul>
-        <li>
-          The sections of a layer are shifted against each other?{" "}
-          <Link to={getViewDatasetUrlWithAIAlignment(dataset)}>Align them with AI</Link>
-        </li>
+        {canRunAlignment ? (
+          <li>
+            The sections of a layer are shifted against each other?{" "}
+            <Link
+              to={getViewDatasetUrlWithAIJob(dataset, "open_ai_alignment")}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Align them with AI
+            </Link>
+          </li>
+        ) : null}
+        {canRunInference ? (
+          <li>
+            Want to segment neurons, mitochondria or nuclei automatically?{" "}
+            <Link
+              to={getViewDatasetUrlWithAIJob(dataset, "open_ai_inference")}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Run an AI segmentation
+            </Link>
+          </li>
+        ) : null}
       </ul>
     </Typography.Paragraph>
   );
@@ -305,9 +328,6 @@ function UploadProgressContent({
             {bodyText}
           </Typography.Paragraph>
         ) : null}
-        {isReady && dataset?.isActive ? (
-          <NextStepHints dataset={dataset} datasetAddType={datasetAddType} />
-        ) : null}
         {phase.kind === "failed" ? <Alert type="error" showIcon title={phase.message} /> : null}
 
         {layerRows.length > 0 ? (
@@ -315,6 +335,10 @@ function UploadProgressContent({
             layers={layerRows}
             isUploadStarting={status.kind === "uploading" && status.bytesSent === 0}
           />
+        ) : null}
+
+        {isReady && dataset?.isActive ? (
+          <NextStepHints dataset={dataset} datasetAddType={datasetAddType} />
         ) : null}
 
         {status.kind === "uploading" ? (

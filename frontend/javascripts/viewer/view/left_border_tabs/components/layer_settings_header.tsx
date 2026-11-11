@@ -403,12 +403,9 @@ export default function LayerSettingsHeader({
   const getMergeWithFallbackLayerItem = (): ItemType => ({
     key: "mergeWithFallbackLayerButton",
     icon: <MergeCellsOutlined />,
-    disabled: mayNotEditLayerSet,
-    label: (
-      <FastTooltip title={reasonForCantEditLayerSet}>
-        <span>Merge this volume annotation with its fallback layer</span>
-      </FastTooltip>
-    ),
+    // The materialization job only reads the annotation and writes a new dataset,
+    // so it is neither restricted by the collaboration mode nor by edit permissions.
+    label: "Merge this volume annotation with its fallback layer",
     onClick: () => onSetLayerToMergeWithFallback(layer),
   });
 

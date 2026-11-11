@@ -263,12 +263,7 @@ function DatasetView({
         {activeTab === renderingTab ? adminHeader : null}
       </RenderToPortal>
       {searchQuery && (
-        <GlobalSearchHeader
-          searchQuery={searchQuery}
-          isEmpty={isEmpty}
-          filteredDatasets={datasets}
-          context={context}
-        />
+        <GlobalSearchHeader searchQuery={searchQuery} isEmpty={isEmpty} context={context} />
       )}
 
       <CategorizationSearch
@@ -336,12 +331,10 @@ const SEARCH_OPTIONS = [
 
 function GlobalSearchHeader({
   searchQuery,
-  filteredDatasets,
   isEmpty,
   context,
 }: {
   searchQuery: string;
-  filteredDatasets: APIDatasetCompact[];
   isEmpty: boolean;
   context: DatasetCollectionContextValue;
 }) {
@@ -377,9 +370,19 @@ function GlobalSearchHeader({
             <span>Search Results for “{searchQuery}”</span>
           </Space>
         </Typography.Title>
-        {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
+        {context.areSearchResultsLimited ? (
           <Typography.Text type="secondary">
-            (only showing the first {SEARCH_RESULTS_LIMIT} results)
+            (only showing the first {SEARCH_RESULTS_LIMIT} results.{" "}
+            <Button
+              type="link"
+              size="small"
+              style={{ padding: 0 }}
+              loading={context.queries.datasetSearchQuery.isFetching}
+              onClick={context.loadAllSearchResults}
+            >
+              Load all
+            </Button>
+            )
           </Typography.Text>
         ) : null}
       </Space>

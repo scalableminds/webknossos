@@ -22,6 +22,7 @@ import type {
 import {
   type DatasetListParams,
   MINIMUM_SEARCH_QUERY_LENGTH,
+  SEARCH_RESULTS_LIMIT,
   useCreateFolderMutation,
   useDatasetSearchQuery,
   useDatasetsInFolderQuery,
@@ -74,6 +75,9 @@ export type DatasetCollectionContextValue = {
   sortBy: DatasetSortBy;
   setSortBy: (sortBy: DatasetSortBy) => void;
   canSortBySearchRelevance: boolean;
+  // True if the search results were capped, so that more matches may exist than are shown.
+  areSearchResultsLimited: boolean;
+  loadAllSearchResults: () => void;
   getBreadcrumbs: (dataset: APIDatasetCompactWithoutStatusAndLayerNames) => string[] | null;
   getActiveSubfolders: () => FolderItem[];
   folderModalState: FolderModalState | null;
@@ -233,11 +237,30 @@ export default function DatasetCollectionContextProvider({
     globalSearchQuery == null ? activeFolderId : null,
     listParams,
   );
+  // Search results are capped unless the user asks to load all of them. That request only
+  // holds for the search and filters it was made for, so that changing them caps the results again.
+  const searchScopeKey = JSON.stringify([
+    globalSearchQuery,
+    activeFolderId,
+    searchRecursively,
+    searchTags,
+    datasetFilteringMode,
+  ]);
+  const [loadAllSearchScopeKey, setLoadAllSearchScopeKey] = useState<string | null>(null);
+  const shouldLoadAllSearchResults = loadAllSearchScopeKey === searchScopeKey;
+  useEffect(() => {
+    setLoadAllSearchScopeKey((prevKey) => (prevKey === searchScopeKey ? prevKey : null));
+  }, [searchScopeKey]);
+  const loadAllSearchResults = useCallback(
+    () => setLoadAllSearchScopeKey(searchScopeKey),
+    [searchScopeKey],
+  );
   const datasetSearchQuery = useDatasetSearchQuery(
     globalSearchQuery,
     activeFolderId,
     searchRecursively,
     listParams,
+    shouldLoadAllSearchResults,
   );
   const createFolderMutation = useCreateFolderMutation();
   const deleteFolderMutation = useDeleteFolderMutation();
@@ -247,6 +270,12 @@ export default function DatasetCollectionContextProvider({
     globalSearchQuery == null ? activeFolderId : null,
   );
   const datasets = (globalSearchQuery ? datasetSearchQuery.data : datasetsInFolderQuery.data) || [];
+
+  // While all results are being loaded, the capped results are still shown as placeholder.
+  const areSearchResultsLimited =
+    globalSearchQuery != null &&
+    datasets.length >= SEARCH_RESULTS_LIMIT &&
+    (!shouldLoadAllSearchResults || datasetSearchQuery.isPlaceholderData);
 
   function fetchDatasets(): void {
     datasetsInFolderQuery.refetch();
@@ -349,6 +378,8 @@ export default function DatasetCollectionContextProvider({
     sortBy,
     setSortBy,
     canSortBySearchRelevance,
+    areSearchResultsLimited,
+    loadAllSearchResults,
     queries: {
       folderHierarchyQuery,
       datasetsInFolderQuery,

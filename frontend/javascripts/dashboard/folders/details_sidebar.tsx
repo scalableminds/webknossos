@@ -277,11 +277,12 @@ function DatasetsDetails({
 
 function SearchDetails({ datasetCount }: { datasetCount: number }) {
   const maybeSelectMsg = getMaybeSelectMessage(datasetCount);
+  const { areSearchResultsLimited } = useDatasetCollectionContext();
   return (
     <Result
       icon={<SearchOutlined style={{ fontSize: 50 }} />}
       subTitle={
-        datasetCount !== SEARCH_RESULTS_LIMIT ? (
+        !areSearchResultsLimited ? (
           <>
             {datasetCount} {pluralize("dataset", datasetCount)} were found. {maybeSelectMsg}
           </>

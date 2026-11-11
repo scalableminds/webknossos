@@ -86,7 +86,9 @@ export function useDatasetSearchQuery(
   folderId: string | null,
   searchRecursively: boolean,
   listParams: DatasetListParams,
+  loadAll: boolean,
 ) {
+  const limit = loadAll ? undefined : SEARCH_RESULTS_LIMIT;
   const queryKey = [
     "dataset",
     "search",
@@ -96,6 +98,8 @@ export function useDatasetSearchQuery(
     "recursive?",
     searchRecursively,
     listParams,
+    "limit",
+    limit ?? null,
   ];
   return useQuery({
     queryKey,
@@ -108,7 +112,7 @@ export function useDatasetSearchQuery(
         folderId,
         searchQuery: query,
         includeSubfolders: searchRecursively,
-        limit: SEARCH_RESULTS_LIMIT,
+        limit,
         includeAnnotationCount: true,
       });
     },

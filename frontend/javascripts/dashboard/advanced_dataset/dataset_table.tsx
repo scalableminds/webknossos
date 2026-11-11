@@ -23,7 +23,7 @@ import type {
   DatasetCollectionContextValue,
   DatasetFilteringMode,
 } from "dashboard/dataset/dataset_collection_context";
-import { MINIMUM_SEARCH_QUERY_LENGTH, SEARCH_RESULTS_LIMIT } from "dashboard/dataset/queries";
+import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
 import {
   type DnDDropItemProps,
   generateSettingsForFolder,
@@ -636,8 +636,7 @@ class DatasetTable extends PureComponent<Props, State> {
     // Filtering and sorting is done by the backend. Search results are capped, so reaching
     // the cap means more matches may exist than are shown.
     const { datasets } = this.props;
-    const mayHaveMoreSearchResults =
-      context.globalSearchQuery != null && datasets.length >= SEARCH_RESULTS_LIMIT;
+    const mayHaveMoreSearchResults = context.areSearchResultsLimited;
     const isSearchQueryLongEnough = this.props.searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH;
     const sortedDataSource: DatasetOrFolder[] = isSearchQueryLongEnough
       ? datasets

@@ -1,18 +1,18 @@
 import { isUserAdminOrManager } from "libs/utils";
 import { type APIDataset, APIJobCommand, type APIUser } from "types/api_types";
-import UrlManager from "viewer/controller/url_manager";
 import {
   getColorLayers,
   getViewDatasetURL,
   is2dDataset,
 } from "viewer/model/accessors/dataset_accessor";
-import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
-import Store from "viewer/store";
+
+// Pages outside the viewer (e.g. the modal shown after an upload) import this module, so it must
+// not import the viewer itself (e.g. the url manager or the store). See viewer/viewer_entry.ts.
 
 // The URL param of the dataset view that opens the drawer of the AI alignment job once the
 // dataset is loaded, e.g. when the dataset is opened from the modal shown after an upload.
-const AI_JOB_URL_PARAM = "aiJob";
-const AI_ALIGNMENT_URL_PARAM_VALUE = "alignment";
+export const AI_JOB_URL_PARAM = "aiJob";
+export const AI_ALIGNMENT_URL_PARAM_VALUE = "alignment";
 
 export function getViewDatasetUrlWithAIAlignment(dataset: { name: string; id: string }): string {
   return `${getViewDatasetURL(dataset)}?${AI_JOB_URL_PARAM}=${AI_ALIGNMENT_URL_PARAM_VALUE}`;
@@ -42,18 +42,4 @@ export function canRunAIAlignment(dataset: APIDataset, activeUser: APIUser | nul
     dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.ALIGN_SECTIONS) &&
     getAIJobsUnsupportedReason(dataset) == null
   );
-}
-
-export function openAIJobDrawerFromUrl() {
-  const params = new URLSearchParams(location.search);
-  if (params.get(AI_JOB_URL_PARAM) !== AI_ALIGNMENT_URL_PARAM_VALUE) {
-    return;
-  }
-  // Reloading the page should not open the drawer again.
-  params.delete(AI_JOB_URL_PARAM);
-  UrlManager.changeBaseUrl(location.pathname + (params.size > 0 ? `?${params}` : ""));
-  const { dataset, activeUser } = Store.getState();
-  if (canRunAIAlignment(dataset, activeUser)) {
-    Store.dispatch(setAIJobDrawerStateAction("open_ai_alignment"));
-  }
 }

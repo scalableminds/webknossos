@@ -36,7 +36,7 @@ import { HANDLED_ERROR } from "viewer/model_initialization";
 import { Model } from "viewer/singletons";
 import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import { openAIJobDrawerFromUrl } from "viewer/view/ai_jobs/ai_job_url_param";
+import { openAIJobDrawerFromUrl } from "viewer/view/ai_jobs/open_ai_job_drawer_from_url";
 import { AnnotationTool } from "./model/accessors/tool_accessor";
 import {
   toggleAllTreesAction,

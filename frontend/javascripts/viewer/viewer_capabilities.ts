@@ -9,9 +9,12 @@ import {
 export type ViewerCapabilities = {
   // Whether changed user settings, dataset settings and layouts are stored.
   shouldPersistSettings: boolean;
-  // The share button and "Copy to my account" of sandboxes.
+  // The share button, the menu entries "Share", "Zarr Links" and "Duplicate", and "Copy to my
+  // account" of sandboxes.
   showShareAndCopyActions: boolean;
   showToolkitSwitch: boolean;
+  // Without flight mode, only the orthogonal mode is available, whatever the annotation allows.
+  hasFlightMode: boolean;
   showRightBorder: boolean;
   showCommandPalette: boolean;
   // The menus, the help button and the user avatar of the navbar.
@@ -24,6 +27,7 @@ const DEFAULT_CAPABILITIES: ViewerCapabilities = {
   shouldPersistSettings: true,
   showShareAndCopyActions: true,
   showToolkitSwitch: true,
+  hasFlightMode: true,
   showRightBorder: true,
   showCommandPalette: true,
   showNavbarMenus: true,
@@ -37,11 +41,14 @@ const LAYER_REGISTRATION_PRIMARY_WORKER_CAPABILITIES: ViewerCapabilities = {
   // The workers force some settings, which must not end up in the user's account or in the
   // layouts of the normal viewer.
   shouldPersistSettings: false,
-  // A shared link would open the worker without the page. The page saves the landmarks, so
-  // copying the worker's sandbox makes no sense.
+  // Links (Share, Zarr Links) would point to the worker's sandbox, which only exists inside the
+  // page. The page saves the landmarks, so copying the sandbox makes no sense either.
   showShareAndCopyActions: false,
   // The workers only offer the tools for placing landmarks.
   showToolkitSwitch: false,
+  // Landmarks are placed in orthogonal mode only. Flight mode switches to all tools and creates
+  // nodes without landmark names.
+  hasFlightMode: false,
   // The tabs of the right border (e.g. the dataset info with its links) break the page.
   showRightBorder: false,
   // The command palette can leave the page or undo the forced settings.

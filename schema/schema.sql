@@ -411,10 +411,10 @@ CREATE TABLE webknossos.organization_plan_updates(
   CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
-CREATE TYPE webknossos.ALERT_EMAIL_TYPE AS ENUM ('PlanExpiry', 'StorageWarning');
-CREATE TABLE webknossos.organization_alertEmails(
+CREATE TYPE webknossos.EMAIL_THRESHOLD_TYPE AS ENUM ('PlanExpiry', 'StorageWarning');
+CREATE TABLE webknossos.organization_notifiedEmailThresholds(
   _organization TEXT NOT NULL,
-  emailType webknossos.ALERT_EMAIL_TYPE NOT NULL,
+  emailType webknossos.EMAIL_THRESHOLD_TYPE NOT NULL,
   threshold INT NOT NULL, -- PlanExpiry: lead time in days, StorageWarning: used storage in percent. Deleted again to re-arm the email.
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (_organization, emailType, threshold),
@@ -1098,7 +1098,7 @@ ALTER TABLE webknossos.organization_usedStorage_attachments
   ADD CONSTRAINT attachments_ref FOREIGN KEY (_dataset, layerName, name, type) REFERENCES webknossos.dataset_layer_attachments(_dataset, layerName, name, type) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.organization_plan_updates
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.organization_alertEmails
+ALTER TABLE webknossos.organization_notifiedEmailThresholds
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_coordinateTransformations
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;

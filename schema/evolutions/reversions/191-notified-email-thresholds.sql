@@ -16,12 +16,12 @@ ALTER TABLE webknossos.organization_planExpiryReminders
 
 INSERT INTO webknossos.organization_planExpiryReminders(_organization, paidUntil, leadTimeDays, created)
 SELECT s._organization, o.paidUntil, s.threshold, s.created
-FROM webknossos.organization_alertEmails s
+FROM webknossos.organization_notifiedEmailThresholds s
 JOIN webknossos.organizations o ON o._id = s._organization
 WHERE s.emailType = 'PlanExpiry' AND o.paidUntil IS NOT NULL;
 
-DROP TABLE webknossos.organization_alertEmails;
-DROP TYPE webknossos.ALERT_EMAIL_TYPE;
+DROP TABLE webknossos.organization_notifiedEmailThresholds;
+DROP TYPE webknossos.EMAIL_THRESHOLD_TYPE;
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 190;
 

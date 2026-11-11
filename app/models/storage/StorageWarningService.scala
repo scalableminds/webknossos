@@ -3,7 +3,7 @@ package models.storage
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import mail.OrganizationEmailService
-import models.organization.{AlertEmailType, Organization, OrganizationDAO}
+import models.organization.{EmailThresholdType, Organization, OrganizationDAO}
 import models.user.MultiUserDAO
 import utils.WkConf
 
@@ -33,9 +33,9 @@ class StorageWarningService @Inject() (
         for {
           usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
           percent = usagePercent(usedStorageBytes, includedStorageBytes)
-          _ <- organizationDAO.deleteSentAlertEmails(
+          _ <- organizationDAO.deleteNotifiedEmailThresholds(
             organization._id,
-            AlertEmailType.StorageWarning,
+            EmailThresholdType.StorageWarning,
             rearmedThresholdsPercent(percent, thresholdsPercent)
           )
           crossed = crossedThresholdsPercent(percent, thresholdsPercent)
@@ -56,9 +56,9 @@ class StorageWarningService @Inject() (
       _ <- Fox.fromBool(recipients.nonEmpty) ?~> "Organization has neither an owner nor an admin to notify"
       // Recorded before sending, so that mails that cannot be delivered are not retried on every scan.
       // The count tells us how many of the thresholds were not recorded before; if none, the mails were already sent.
-      newlyRecordedCount <- organizationDAO.insertSentAlertEmails(
+      newlyRecordedCount <- organizationDAO.insertNotifiedEmailThresholds(
         organization._id,
-        AlertEmailType.StorageWarning,
+        EmailThresholdType.StorageWarning,
         crossedThresholdsPercent
       )
       _ = if (newlyRecordedCount > 0) {

@@ -12,15 +12,15 @@ import java.security.MessageDigest
 import scala.jdk.CollectionConverters.*
 import scala.util.Random
 
-/** Pins the exact results of every native (JNI) function on a fixed input corpus, so that a reimplementation of
-  * the native library can be checked for identical behavior.
+/** Pins the exact results of every native (JNI) function on a fixed input corpus, so that a reimplementation of the
+  * native library can be checked for identical behavior.
   *
-  * Each case is reduced to one line (`name<TAB>result`): output arrays as length + the first 64 bits of their SHA-256, scalars verbatim, and
-  * thrown exceptions as `throws <class>` (messages are not pinned). The inputs are either generated from fixed
-  * seeds below or read from test/native-golden (see the scripts there).
+  * Each case is reduced to one line (`name<TAB>result`): output arrays as length + the first 64 bits of their SHA-256,
+  * scalars verbatim, and thrown exceptions as `throws <class>` (messages are not pinned). The inputs are either
+  * generated from fixed seeds below or read from test/native-golden (see the scripts there).
   *
-  * To regenerate after an intended behavior change: run this suite, then copy
-  * target/native-golden-actual.txt over test/native-golden/expected.txt.
+  * To regenerate after an intended behavior change: run this suite, then copy target/native-golden-actual.txt over
+  * test/native-golden/expected.txt.
   */
 class NativeGoldenTestSuite extends AnyWordSpec {
 
@@ -246,17 +246,27 @@ class NativeGoldenTestSuite extends AnyWordSpec {
     val uint16Bucket = bucket(2, 7)
     val oddLength = uint16Bucket.take(uint16Bucket.length - 1)
     val threeBytes = new Array[Byte](bucketVoxelCount * 3)
-    add("bucketScanner/invalid/collectSegmentIds/bpe0")(longsResult(bucketScanner.collectSegmentIds(uint16Bucket, 0, false, false)))
-    add("bucketScanner/invalid/collectSegmentIds/bpe3")(longsResult(bucketScanner.collectSegmentIds(threeBytes, 3, false, false)))
+    add("bucketScanner/invalid/collectSegmentIds/bpe0")(
+      longsResult(bucketScanner.collectSegmentIds(uint16Bucket, 0, false, false))
+    )
+    add("bucketScanner/invalid/collectSegmentIds/bpe3")(
+      longsResult(bucketScanner.collectSegmentIds(threeBytes, 3, false, false))
+    )
     add("bucketScanner/invalid/collectSegmentIds/indivisibleLength") {
       longsResult(bucketScanner.collectSegmentIds(oddLength, 2, false, false))
     }
-    add("bucketScanner/invalid/countSegmentVoxels/bpe0")(bucketScanner.countSegmentVoxels(uint16Bucket, 0, false, 1).toString)
-    add("bucketScanner/invalid/countSegmentVoxels/bpe3")(bucketScanner.countSegmentVoxels(threeBytes, 3, false, 1).toString)
+    add("bucketScanner/invalid/countSegmentVoxels/bpe0")(
+      bucketScanner.countSegmentVoxels(uint16Bucket, 0, false, 1).toString
+    )
+    add("bucketScanner/invalid/countSegmentVoxels/bpe3")(
+      bucketScanner.countSegmentVoxels(threeBytes, 3, false, 1).toString
+    )
     add("bucketScanner/invalid/countSegmentVoxels/indivisibleLength") {
       bucketScanner.countSegmentVoxels(oddLength, 2, false, 1).toString
     }
-    add("bucketScanner/invalid/countSegmentVoxels/emptyBucket")(bucketScanner.countSegmentVoxels(Array.empty, 2, false, 0).toString)
+    add("bucketScanner/invalid/countSegmentVoxels/emptyBucket")(
+      bucketScanner.countSegmentVoxels(Array.empty, 2, false, 0).toString
+    )
     add("bucketScanner/invalid/extendSegmentBoundingBox/wrongBucketLength") {
       bucketScanner.extendSegmentBoundingBox(uint16Bucket, 2, false, 16, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0).mkString(",")
     }
@@ -308,13 +318,21 @@ class NativeGoldenTestSuite extends AnyWordSpec {
     add("bucketScanner/invalid/applyVoxelRuns/bucketNot32Cubed") {
       bytesResult(bucketScanner.applyVoxelRuns(uint16Bucket.take(1024), 2, false, validRuns))
     }
-    add("bucketScanner/invalid/applyVoxelRuns/bpe3")(bytesResult(bucketScanner.applyVoxelRuns(threeBytes, 3, false, validRuns)))
+    add("bucketScanner/invalid/applyVoxelRuns/bpe3")(
+      bytesResult(bucketScanner.applyVoxelRuns(threeBytes, 3, false, validRuns))
+    )
 
     cases.result()
   }
 
   private def corpus(subdirectory: String, extension: String): Seq[Path] =
-    Files.list(goldenDir.resolve(subdirectory)).iterator().asScala.filter(_.toString.endsWith(extension)).toSeq.sortBy(_.getFileName.toString)
+    Files
+      .list(goldenDir.resolve(subdirectory))
+      .iterator()
+      .asScala
+      .filter(_.toString.endsWith(extension))
+      .toSeq
+      .sortBy(_.getFileName.toString)
 
   private def compressoCases: Seq[(String, () => String)] =
     corpus("compresso", ".cpso").flatMap { path =>
@@ -327,12 +345,17 @@ class NativeGoldenTestSuite extends AnyWordSpec {
         s"$name/maxOutputLengthTooSmall" -> (() => capture(bytesResult(compresso.decompress(input, 100)))),
         s"$name/negativeMaxOutputLength" -> (() => capture(bytesResult(compresso.decompress(input, -1)))),
         s"$name/headerOnly" -> (() => capture(bytesResult(compresso.decompress(input.take(36), maxDecompressedBytes)))),
-        s"$name/truncatedHeader" -> (() => capture(bytesResult(compresso.decompress(input.take(20), maxDecompressedBytes)))),
+        s"$name/truncatedHeader" -> (() =>
+          capture(bytesResult(compresso.decompress(input.take(20), maxDecompressedBytes)))
+        ),
         s"$name/truncatedHalf" -> (() =>
-          survives(compresso.decompress(input.take(input.length / 2), maxDecompressedBytes))),
+          survives(compresso.decompress(input.take(input.length / 2), maxDecompressedBytes))
+        ),
         s"$name/flippedBytes" -> (() => survives(compresso.decompress(flipped, maxDecompressedBytes)))
       )
-    } :+ ("compresso/invalid/empty" -> (() => capture(bytesResult(compresso.decompress(Array.empty, maxDecompressedBytes)))))
+    } :+ ("compresso/invalid/empty" -> (() =>
+      capture(bytesResult(compresso.decompress(Array.empty, maxDecompressedBytes)))
+    ))
 
   private def dracoCases: Seq[(String, () => String)] = {
     // (offset, scale) pairs as used by DSFullMeshService: identity, and a typical voxel size with a chunk offset
@@ -352,7 +375,8 @@ class NativeGoldenTestSuite extends AnyWordSpec {
         (transformName, transform) <- transforms
         quantizationBits <- Seq(0, 10, 16)
       } yield s"draco/${path.getFileName}/$transformName/quantizationBits=$quantizationBits" -> (() =>
-        capture(convert(input, transform, quantizationBits)))
+        capture(convert(input, transform, quantizationBits))
+      )
     }
     val someMesh = Files.readAllBytes(corpus("draco", ".drc").head)
     val invalidInputs = Seq(

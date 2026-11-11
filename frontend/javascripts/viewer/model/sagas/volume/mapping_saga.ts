@@ -687,50 +687,51 @@ function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
   const proofreadingMarkerPosition = yield* select(
     (state) => state.localSegmentationStateByLayer[layerName]?.proofreadingMarkerPosition,
   );
-  if (proofreadingMarkerPosition) {
-    // Don't fetch unknown ids from the server: this saga runs on every update of the local
-    // mapping, so this would cause a request for each update while the marker is out of view.
-    // The local mapping only contains entries for the ids in the currently needed buckets.
-    // Once the marker is in view again, the lookup will succeed.
-    const { mappedId: agglomerateId } = yield* call(
-      getSegmentIdsAtPositionAsync,
-      layerName,
-      proofreadingMarkerPosition,
-      { fetchUnknownIds: false },
+  if (!proofreadingMarkerPosition) {
+    return;
+  }
+  // Don't fetch unknown ids from the server: this saga runs on every update of the local
+  // mapping, so this would cause a request for each update while the marker is out of view.
+  // The local mapping only contains entries for the ids in the currently needed buckets.
+  // Once the marker is in view again, the lookup will succeed.
+  const { mappedId: agglomerateId } = yield* call(
+    getSegmentIdsAtPositionAsync,
+    layerName,
+    proofreadingMarkerPosition,
+    { fetchUnknownIds: false },
+  );
+
+  // The marker may have been moved (e.g., by a click) while the lookup was pending.
+  // In that case, the result is outdated.
+  const currentProofreadingMarkerPosition = yield* select(
+    (state) => state.localSegmentationStateByLayer[layerName]?.proofreadingMarkerPosition,
+  );
+  if (currentProofreadingMarkerPosition !== proofreadingMarkerPosition) {
+    return;
+  }
+
+  if (agglomerateId == null) {
+    return;
+  }
+
+  // Select the active segment id again, because it may have changed while the lookup was pending.
+  const activeSegmentId = yield* select(
+    (state) => getVolumeTracingByLayerName(state.annotation, layerName)?.activeCellId,
+  );
+
+  if (activeSegmentId !== agglomerateId) {
+    yield put(
+      setActiveCellAction(agglomerateId, proofreadingMarkerPosition, undefined, undefined, true),
     );
-
-    // The marker may have been moved (e.g., by a click) while the lookup was pending.
-    // In that case, the result is outdated.
-    const currentProofreadingMarkerPosition = yield* select(
-      (state) => state.localSegmentationStateByLayer[layerName]?.proofreadingMarkerPosition,
+    // TODO #9456: Look for a solution that this toast notification does not appear frequently in live collab scenario.
+    // yield* call(() =>
+    //   Toast.info(
+    //     `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
+    //   ),
+    // );
+    console.log(
+      `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
     );
-    if (currentProofreadingMarkerPosition !== proofreadingMarkerPosition) {
-      return;
-    }
-
-    if (agglomerateId == null) {
-      return;
-    }
-
-    // Select the active segment id again, because it may have changed while the lookup was pending.
-    const activeSegmentId = yield* select(
-      (state) => getVolumeTracingByLayerName(state.annotation, layerName)?.activeCellId,
-    );
-
-    if (activeSegmentId !== agglomerateId) {
-      yield put(
-        setActiveCellAction(agglomerateId, proofreadingMarkerPosition, undefined, undefined, true),
-      );
-      // TODO #9456: Look for a solution that this toast notification does not appear frequently in live collab scenario.
-      // yield* call(() =>
-      //   Toast.info(
-      //     `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
-      //   ),
-      // );
-      console.log(
-        `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
-      );
-    }
   }
 }
 

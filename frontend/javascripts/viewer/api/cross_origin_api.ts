@@ -8,11 +8,11 @@ import {
   type IframeCommand,
   isLayerRegistrationWorker,
 } from "viewer/view/layer_registration/layer_registration_protocol";
+import { setLayerRegistrationViewState } from "viewer/view/layer_registration/layer_registration_view_state";
 import {
   exportLandmarkPairsAsNml,
   importLandmarks,
   setLandmarkPairInfo,
-  setLayerRegistrationViewState,
   setOverlayLayerColors,
   useLayerRegistrationShortcutRelay,
 } from "viewer/view/layer_registration/layer_registration_worker";

@@ -1,7 +1,7 @@
 import { findDataPositionForLayer, getBuildInfo } from "admin/rest_api";
 import Toast from "libs/toast";
 import { isNoEditableElementFocused } from "libs/utils";
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect } from "react";
 import type { BlockerFunction } from "react-router";
 import type { Vector3 } from "viewer/constants";
 import { isSaving } from "viewer/model/accessors/annotation_accessor";
@@ -33,23 +33,15 @@ import {
 import {
   getLayerRegistrationWorkerLayerName,
   isLayerRegistrationWorker,
-  LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE,
   LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE,
   type LayerRegistrationCommand,
-  type LayerRegistrationViewState,
   type SaveState,
   type StoreSaveStateMessage,
-  type WorkerCommandMessage,
 } from "./layer_registration_protocol";
+import { sendCommandToLayerRegistrationPage } from "./layer_registration_view_state";
 
 // Code that runs inside the iframes of the layer registration view. The iframe side of the
 // commands of the page is in cross_origin_api.ts.
-
-// Sends a command of this worker to the layer registration page (see IframeBridge).
-export function sendCommandToLayerRegistrationPage(command: LayerRegistrationCommand) {
-  const message: WorkerCommandMessage = { type: LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE, command };
-  window.parent.postMessage(message, window.location.origin);
-}
 
 // These letters are not bound in WEBKNOSSOS' plane mode. The listener below does not stop
 // propagation, so a bound key would trigger both actions.
@@ -182,38 +174,6 @@ export async function exportLandmarkPairsAsNml(
   ]);
   const exportedTracing = { ...skeletonTracing, trees: new TreeMap(exportedTrees), treeGroups: [] };
   return serializeToNml(state, state.annotation, exportedTracing, await getBuildInfo(), false);
-}
-
-// Set by the layer registration page whenever it changes. Unlike the pair info, the toolbar renders
-// it, so components subscribe to it with useLayerRegistrationViewState.
-let layerRegistrationViewState: LayerRegistrationViewState = {
-  otherLayerName: "",
-  isOtherLayerVisible: false,
-  isTransformShown: true,
-  isTransformAvailable: false,
-  isLandmarkPanelOpen: true,
-};
-const layerRegistrationViewStateListeners = new Set<() => void>();
-
-export function setLayerRegistrationViewState(viewState: LayerRegistrationViewState) {
-  layerRegistrationViewState = viewState;
-  for (const listener of layerRegistrationViewStateListeners) {
-    listener();
-  }
-}
-
-function subscribeToLayerRegistrationViewState(onChange: () => void) {
-  layerRegistrationViewStateListeners.add(onChange);
-  return () => {
-    layerRegistrationViewStateListeners.delete(onChange);
-  };
-}
-
-export function useLayerRegistrationViewState(): LayerRegistrationViewState {
-  return useSyncExternalStore(
-    subscribeToLayerRegistrationViewState,
-    () => layerRegistrationViewState,
-  );
 }
 
 // The layer colors from before setOverlayLayerColors changed them.

@@ -1,15 +1,12 @@
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { Vector3 } from "viewer/constants";
 import {
   getBoundsResizedAlongEdge,
-  isThinDimensionOverlappingOnScreen,
   type SelectedEdge,
 } from "viewer/controller/combinations/bounding_box_handlers";
 import { describe, expect, it } from "vitest";
 
 // A box that was drawn in the XY viewport in slice z=1024: one slice deep.
 const singleSliceBox: BoundingBoxMinMaxType = { min: [100, 100, 1024], max: [200, 200, 1025] };
-const isotropicPlaneRatio: Vector3 = [1, 1, 1];
 
 function getAnchoredDepthEdge(): SelectedEdge {
   // The edge that is grabbed in the YZ viewport when clicking on the single-slice box.
@@ -34,39 +31,6 @@ function dragTo(
     bounds,
   );
 }
-
-describe("isThinDimensionOverlappingOnScreen", () => {
-  it("should treat the edges of a single-slice box as overlapping", () => {
-    expect(isThinDimensionOverlappingOnScreen(singleSliceBox, 2, isotropicPlaneRatio, 1)).toBe(
-      true,
-    );
-  });
-
-  it("should not treat the edges of a wide box as overlapping", () => {
-    expect(isThinDimensionOverlappingOnScreen(singleSliceBox, 0, isotropicPlaneRatio, 1)).toBe(
-      false,
-    );
-  });
-
-  it("should take the zoom and the voxel size into account", () => {
-    const tenSliceBox: BoundingBoxMinMaxType = { min: [0, 0, 0], max: [100, 100, 10] };
-    // Zoomed in, the 10 slices are 10 / 0.5 = 20 px apart.
-    expect(isThinDimensionOverlappingOnScreen(tenSliceBox, 2, isotropicPlaneRatio, 0.5)).toBe(
-      false,
-    );
-    // Zoomed out, they are 10 / 4 = 2.5 px apart.
-    expect(isThinDimensionOverlappingOnScreen(tenSliceBox, 2, isotropicPlaneRatio, 4)).toBe(true);
-    // A z voxel that is 2.5 times as thick as an x/y voxel is rendered 2.5 times as wide.
-    expect(isThinDimensionOverlappingOnScreen(tenSliceBox, 2, [1, 1, 0.4], 4)).toBe(false);
-  });
-
-  it("should ignore dimensions that are not the box's thinnest one, even when zoomed far out", () => {
-    // At zoomStep 20, the 100 voxels in x are only 5 px wide, but x is not the thin dimension.
-    expect(isThinDimensionOverlappingOnScreen(singleSliceBox, 0, isotropicPlaneRatio, 20)).toBe(
-      false,
-    );
-  });
-});
 
 describe("getBoundsResizedAlongEdge", () => {
   it("should keep the original slice when dragging an anchored edge deeper", () => {

@@ -10,6 +10,9 @@
 //! from Play are listed in checkpoints/remote-datastore-dataset-upload.md.
 mod remote_dataset_upload_dao;
 
+/// DatasetDAO.doesDatasetNameExistInOrganization (DatasetService.checkNameAvailable).
+pub(crate) use remote_dataset_upload_dao::dataset_name_is_taken;
+
 use axum::{
     Json as ResponseJson, Router,
     extract::State,

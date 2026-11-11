@@ -352,6 +352,7 @@ async fn submit_convert_to_wkw_job(
         command: "convert_to_wkw",
         args,
         data_store: &dataset.data_store,
+        alignment_project: None,
     };
     let mut transaction = state.pool.begin().await?;
     let job_id = crate::job::submission::submit_job(

@@ -170,7 +170,11 @@ pub(super) async fn path_with_fallback(
         .get_json(
             &url,
             &["data", "datasets", "getOneBaseDirForOrgaAbsolute"],
-            &[("organizationId", organization.to_owned())],
+            // WKRemoteDataStoreClient.getOneBaseDirForOrgaAbsolute (requireAllowsUpload = false).
+            &[
+                ("organizationId", organization.to_owned()),
+                ("requireAllowsUpload", "false".to_owned()),
+            ],
         )
         .await?;
     let base = UPath::parse(&base).map_err(|_| ApiError::from(ServiceError::InvalidJson))?;

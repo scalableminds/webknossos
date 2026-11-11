@@ -117,7 +117,15 @@ async fn buildinfo_and_features_are_public_and_shaped_like_play() {
             reply.body["supportAiAgentUrl"],
             "https://docs.webknossos.org/webhooks/webknossos/ask"
         );
-        assert_eq!(reply.body.as_object().unwrap().len(), 26);
+        assert_eq!(
+            reply.body["alignmentProjectAlignCostInMilliCreditsPerGB"],
+            json!(0)
+        );
+        assert_eq!(
+            reply.body["alignmentProjectRenderUnalignedCostInMilliCreditsPerGB"],
+            json!(0)
+        );
+        assert_eq!(reply.body.as_object().unwrap().len(), 28);
     }
     // A missing schema version renders as null, as Play's Option does.
     sqlx::query("DELETE FROM webknossos.releaseInformation")

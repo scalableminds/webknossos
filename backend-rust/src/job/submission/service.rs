@@ -27,7 +27,8 @@ pub(super) const ORGANIZATION_STORAGE_EXCEEDED: &str =
     "The storage quota of the organization is exceeded.";
 
 /// JobCommand.jobsWritingToStorage: refused while the storage quota is exceeded.
-const JOBS_WRITING_TO_STORAGE: [&str; 7] = [
+const JOBS_WRITING_TO_STORAGE: [&str; 8] = [
+    "align",
     "align_sections",
     "compute_mesh_file",
     "compute_segment_index_file",
@@ -58,6 +59,8 @@ pub(crate) struct Submission<'a> {
     pub(crate) command: &'static str,
     pub(crate) args: Value,
     pub(crate) data_store: &'a str,
+    /// The alignment project the job belongs to (`align` jobs).
+    pub(crate) alignment_project: Option<&'a ObjectId>,
 }
 
 /// OrganizationService.assertUsedStorageNotExceeded for storage-writing commands,
@@ -169,37 +172,29 @@ async fn insert_job(
         submission.data_store,
         submission.command,
         &submission.args,
+        submission.alignment_project,
     )
     .await?;
     Ok(job_id)
 }
 
-/// JobService.submitPaidJob: paid-job permission, [`assert_job_can_be_submitted`]
-/// (checked before reserving the credits, so that failures are reported with
-/// their specific error), cost, balance, the pending credit reservation and the
-/// job, all in the job's transaction. Database errors roll everything back
-/// (Play refunds a failed job insert instead).
-#[allow(clippy::too_many_arguments)]
+/// JobService.submitPaidJobWithCost: paid-job permission, [`assert_job_can_be_submitted`]
+/// (checked before reserving the credits, so that failures are reported with their specific
+/// error), balance, the pending credit reservation and the job, all in the job's transaction.
+/// Database errors roll everything back (Play refunds a failed job insert instead).
 async fn submit_paid_job(
     connection: &mut PgConnection,
     enabled: bool,
     may_start_paid_jobs: bool,
-    misc: &MiscState,
     user: &AuthUser,
     submission: &Submission<'_>,
-    bounding_box_in_target_mag: BoundingBox,
+    cost: i32,
     comment: &str,
 ) -> RunResult<ObjectId> {
     if !may_start_paid_jobs {
         return Err(Failure::new(PAID_NO_ADMIN_OR_MANAGER).into());
     }
     assert_job_can_be_submitted(connection, enabled, user, submission).await?;
-    let cost = crate::job::routes::job_cost_in_milli_credits(
-        &misc.config().features,
-        submission.command,
-        &bounding_box_in_target_mag,
-    )
-    .map_err(Failure::new)?;
     let balance =
         crate::job::job_dao::get_milli_credit_balance(connection, &user.id, &user.organization_id)
             .await?;
@@ -258,9 +253,8 @@ impl PendingPaidJob {
 }
 
 /// JobService.submitPaidJob `?~> submit_failed` for routes outside JobController:
-/// paid-job permission (dataset manager, team manager or admin), jobs enabled,
-/// pricing plan, worker support, storage quota, cost from
-/// `bounding_box_in_target_mag` and balance. Every failure rolls back.
+/// cost from `bounding_box_in_target_mag` (JobService.calculateJobCostInMilliCredits), then
+/// [`begin_paid_job_with_cost`]. Every failure rolls back.
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn begin_paid_job(
     state: &AppState,
@@ -272,6 +266,28 @@ pub(crate) async fn begin_paid_job(
     comment: &str,
     submit_failed: &str,
 ) -> RunResult<PendingPaidJob> {
+    let cost = crate::job::routes::job_cost_in_milli_credits(
+        &misc.config().features,
+        submission.command,
+        &bounding_box_in_target_mag,
+    )
+    .map_err(|message| RunError::from(Failure::new(message)).wrap(submit_failed))?;
+    begin_paid_job_with_cost(state, jobs_enabled, user, submission, cost, comment)
+        .await
+        .map_err(|error| error.wrap(submit_failed))
+}
+
+/// JobService.submitPaidJobWithCost: paid-job permission (dataset manager, team manager or
+/// admin), jobs enabled, pricing plan, worker support, storage quota and balance for a known
+/// cost. Every failure rolls back.
+pub(crate) async fn begin_paid_job_with_cost(
+    state: &AppState,
+    jobs_enabled: bool,
+    user: &AuthUser,
+    submission: &Submission<'_>,
+    cost: i32,
+    comment: &str,
+) -> RunResult<PendingPaidJob> {
     let may_start_paid_jobs = user.is_dataset_manager
         || user
             .is_team_manager_or_admin(&state.pool)
@@ -282,14 +298,12 @@ pub(crate) async fn begin_paid_job(
         &mut transaction,
         jobs_enabled,
         may_start_paid_jobs,
-        misc,
         user,
         submission,
-        bounding_box_in_target_mag,
+        cost,
         comment,
     )
-    .await
-    .map_err(|error| error.wrap(submit_failed))?;
+    .await?;
     Ok(PendingPaidJob {
         transaction,
         job_id,

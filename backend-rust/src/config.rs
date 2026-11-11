@@ -64,6 +64,7 @@ pub struct Config {
         crate::background::virtual_datasets_real_path_scan::VirtualDatasetsRealPathScanConfig,
     pub pool_health_log: crate::background::pool_health_log::PoolHealthLogConfig,
     pub main_view: crate::main_view::MainViewConfig,
+    pub alignment_projects: crate::alignment_project::AlignmentProjectsConfig,
 }
 
 /// `webKnossos.user.timeTrackingPause` and `timeTrackingOnlyWithSignificantChanges`.
@@ -380,6 +381,7 @@ impl Config {
                 crate::background::virtual_datasets_real_path_scan::config_from_values(&values)?,
             pool_health_log: crate::background::pool_health_log::config_from_values(&values)?,
             main_view: crate::main_view::config_from_values(&values)?,
+            alignment_projects: crate::alignment_project::config_from_values(&values)?,
         };
         config.misc = crate::system::application_info::config_from_values(&values, &config)?;
         Ok(config)

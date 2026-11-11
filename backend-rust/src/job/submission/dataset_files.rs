@@ -53,6 +53,7 @@ pub(super) async fn compute_mesh_file(
         command: "compute_mesh_file",
         args,
         data_store: &dataset.data_store,
+        alignment_project: None,
     };
     run_submission(
         &state,
@@ -90,6 +91,7 @@ pub(super) async fn compute_segment_index_file(
         command: "compute_segment_index_file",
         args,
         data_store: &dataset.data_store,
+        alignment_project: None,
     };
     run_submission(
         &state,
@@ -128,6 +130,7 @@ pub(super) async fn find_largest_segment_id(
         command: "find_largest_segment_id",
         args,
         data_store: &dataset.data_store,
+        alignment_project: None,
     };
     run_submission(
         &state,

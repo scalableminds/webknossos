@@ -30,7 +30,8 @@ pub(crate) use lookups::{
 pub(crate) use processing::{INFERENCE_SUBMIT_FAILED, INFERENCE_WRONG_ORGA};
 use processing::{align_sections, infer_mitochondria};
 pub(crate) use service::{
-    Submission, assert_custom_configuration_allowed, begin_paid_job, submit_job,
+    Submission, assert_custom_configuration_allowed, begin_paid_job, begin_paid_job_with_cost,
+    submit_job,
 };
 
 pub fn router() -> Router<AppState> {

@@ -4,6 +4,7 @@
 //! new test file must be declared here; `every_test_file_is_declared` fails if one is missing.
 
 mod ai_models;
+mod alignment_projects;
 mod analytics;
 mod analytics_call_sites;
 mod annotation_create;
@@ -69,6 +70,7 @@ mod projects_task_types;
 mod projects_transfer;
 mod publications;
 mod remote_datastore;
+mod remote_datastore_alignment_project_upload;
 mod remote_datastore_attachment_upload;
 mod remote_datastore_dataset_report;
 mod remote_datastore_dataset_upload;

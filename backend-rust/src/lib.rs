@@ -1,4 +1,5 @@
 pub mod ai_models;
+pub mod alignment_project;
 pub mod annotation;
 pub mod auth;
 pub mod background;

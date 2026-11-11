@@ -1,4 +1,5 @@
 use crate::{
+    alignment_project::AlignmentProjectsConfig,
     annotation::{mutex::MutexExpiry, provider::AnnotationProvider},
     auth::{
         browser::BrowserAuthConfig,
@@ -54,6 +55,7 @@ pub struct AppState {
     pub webauthn: WebAuthnStores,
     pub oidc: Arc<Oidc>,
     pub main_view: crate::main_view::MainView,
+    pub alignment_projects: AlignmentProjectsConfig,
 }
 
 /// `features.allowDeleteDatasets`.
@@ -89,6 +91,7 @@ pub struct AppStateBuilder {
     annotation_mutex_expiry: std::time::Duration,
     oidc: OidcConfig,
     main_view: crate::main_view::MainViewConfig,
+    alignment_projects: AlignmentProjectsConfig,
 }
 
 impl AppState {
@@ -123,6 +126,7 @@ impl AppState {
             annotation_mutex_expiry: std::time::Duration::from_secs(120),
             oidc: OidcConfig::default(),
             main_view: Default::default(),
+            alignment_projects: AlignmentProjectsConfig::default(),
         }
     }
 
@@ -146,6 +150,7 @@ impl AppState {
             .annotation_mutex_expiry(config.annotation_mutex_expiry)
             .oidc(config.oidc.clone())
             .main_view(config.main_view.clone())
+            .alignment_projects(config.alignment_projects.clone())
             .build()
     }
 }
@@ -247,6 +252,11 @@ impl AppStateBuilder {
         self
     }
 
+    pub fn alignment_projects(mut self, config: AlignmentProjectsConfig) -> Self {
+        self.alignment_projects = config;
+        self
+    }
+
     /// A time-interaction writer other than the one `time_tracking` configures.
     pub fn time_interaction_writer(mut self, writer: TimeInteractionWriter) -> Self {
         self.time_interaction_writer = Some(writer);
@@ -310,6 +320,7 @@ impl AppStateBuilder {
             webauthn: WebAuthnStores::default(),
             oidc: Arc::new(Oidc::new(self.oidc)),
             main_view: crate::main_view::MainView::new(self.main_view),
+            alignment_projects: self.alignment_projects,
         }
     }
 }

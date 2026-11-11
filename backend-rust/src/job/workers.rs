@@ -574,11 +574,15 @@ fn track_status_change(
     });
 }
 
+/// Job.datasetNameForEmail: alignment project jobs have no input dataset, so they are named
+/// after the dataset they create.
 fn dataset_name(job: &Job) -> &str {
-    job.args
-        .get("dataset_name")
-        .and_then(Value::as_str)
-        .unwrap_or("")
+    let key = if job.command == "align" {
+        "new_dataset_name"
+    } else {
+        "dataset_name"
+    };
+    job.args.get(key).and_then(Value::as_str).unwrap_or("")
 }
 
 /// JobService.sendSuccessEmailNotification: DefaultMails per job command.
@@ -602,6 +606,10 @@ fn success_mail(owner: &Owner, job: &Job, link: &str) -> Option<Mail> {
         ),
         "infer_mitochondria" => templates::job_successful_mito_segmentation(&name, email, link),
         "align_sections" => templates::job_successful_alignment(&name, email, dataset, link),
+        "align" => generic(
+            "Alignment",
+            "Your alignment project job has finished. The result is available as a new dataset in your dashboard.",
+        ),
         "train_neuron_model" | "train_instance_model" => {
             templates::job_successful_model_training(&name, email, link)
         }

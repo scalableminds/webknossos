@@ -88,7 +88,7 @@ pub(super) const DEFAULT_WORKER_ID: &str = "6194dc03040200b0027f28a1";
 const DEFAULT_WORKER_NAME: &str = "Dev Worker";
 const DEFAULT_WORKER_KEY: &str = "secretWorkerKey";
 /// Same as the dbtool.js command enable-jobs.
-pub(super) const DEFAULT_WORKER_COMMANDS: [&str; 13] = [
+pub(super) const DEFAULT_WORKER_COMMANDS: [&str; 14] = [
     "compute_mesh_file",
     "compute_segment_index_file",
     "convert_to_wkw",
@@ -97,6 +97,7 @@ pub(super) const DEFAULT_WORKER_COMMANDS: [&str; 13] = [
     "materialize_volume_annotation",
     "render_animation",
     "align_sections",
+    "align",
     "infer_neurons",
     "infer_instances",
     "infer_mitochondria",

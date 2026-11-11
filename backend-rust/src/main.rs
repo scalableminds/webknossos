@@ -36,6 +36,12 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             webknossos_backend::stores::client::ServiceClients::new(config.service_client.clone())?,
             &config.virtual_datasets_real_path_scan,
         );
+    let alignment_project_cleanup =
+        webknossos_backend::background::alignment_project_cleanup::spawn(
+            pool.clone(),
+            webknossos_backend::stores::client::ServiceClients::new(config.service_client.clone())?,
+            &config.alignment_projects,
+        );
     let pool_health_log = webknossos_backend::background::pool_health_log::spawn(
         pool.clone(),
         &config.pool_health_log,
@@ -153,6 +159,15 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     .is_err()
     {
         tracing::warn!("Pricing plan expiry reminder did not stop before the shutdown deadline");
+    }
+    if tokio::time::timeout(
+        config.shutdown_timeout,
+        alignment_project_cleanup.shutdown(),
+    )
+    .await
+    .is_err()
+    {
+        tracing::warn!("Alignment project cleanup did not stop before the shutdown deadline");
     }
     if tokio::time::timeout(config.shutdown_timeout, mailchimp_ticker.shutdown())
         .await

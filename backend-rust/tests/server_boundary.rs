@@ -93,6 +93,7 @@ async fn request_timeout_bounds_database_waits_and_preserves_error_headers() {
         virtual_datasets_real_path_scan: Default::default(),
         pool_health_log: Default::default(),
         main_view: Default::default(),
+        alignment_projects: Default::default(),
     };
     let app = router_with_config(AppState::from_config(pool.clone(), &config), &config);
     let response = tokio::time::timeout(

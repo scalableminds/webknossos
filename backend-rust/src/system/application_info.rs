@@ -170,6 +170,8 @@ pub fn default_features() -> Map<String, Value> {
         "nucleiInferralCostInMilliCreditsPerGVx": 1000,
         "instancesInferralCostInMilliCreditsPerGVx": 1000,
         "alignmentCostInMilliCreditsPerGVx": 500,
+        "alignmentProjectAlignCostInMilliCreditsPerGB": 0,
+        "alignmentProjectRenderUnalignedCostInMilliCreditsPerGB": 0,
         "publicDemoDatasetUrl": "https://webknossos.org/datasets/scalable_minds/l4dense_motta_et_al_demo",
         "exportTiffMaxVolumeMVx": 1024,
         "exportTiffMaxEdgeLengthVx": 8192,

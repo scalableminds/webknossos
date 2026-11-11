@@ -1,3 +1,4 @@
+pub mod alignment_project_cleanup;
 pub mod credit_ticker;
 pub mod housekeeping;
 pub mod mailchimp_ticker;

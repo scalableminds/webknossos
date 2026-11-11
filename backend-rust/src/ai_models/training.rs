@@ -245,6 +245,7 @@ async fn run_model_training(
         command: kind.command(),
         args: Value::Object(args),
         data_store: &data_store,
+        alignment_project: None,
     };
     let comment = format!("AI training for {} model {model_id}", kind.label());
     let mut pending = crate::job::submission::begin_paid_job(

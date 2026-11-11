@@ -485,6 +485,7 @@ pub(crate) async fn public_datastore_on_connection(
                 | "infer_mitochondria"
                 | "train_neuron_model"
                 | "train_instance_model"
+                | "align"
                 | "globalize_floodfills"
                 | "train_model"
                 | "infer_with_model"

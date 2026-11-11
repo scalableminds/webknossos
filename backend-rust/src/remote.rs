@@ -15,6 +15,7 @@ pub fn router() -> Router<AppState> {
         .merge(datastore::dataset_upload::router())
         .merge(datastore::dataset_report::router())
         .merge(datastore::attachment_upload::router())
+        .merge(datastore::alignment_project_upload::router())
         .merge(tracingstore::reads::router())
         .merge(tracingstore::update::router())
         .merge(tracingstore::report::router())

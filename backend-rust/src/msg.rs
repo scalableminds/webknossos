@@ -480,6 +480,40 @@ pub mod ai_inference {
     pub const NOT_FOUND: &str = "Could not find requested AI inference.";
 }
 
+/// `Msg.AlignmentProject` (the entries the application uses; the upload and CSV messages are
+/// the datastore's).
+pub mod alignment_project {
+    use std::fmt::Display;
+
+    pub const NOT_FOUND: &str = "Could not find the requested alignment project.";
+    pub const NO_ADMIN_OR_DATASET_MANAGER: &str =
+        "Alignment projects are only available to administrators and dataset managers.";
+    pub fn name_taken(name: impl Display) -> String {
+        format!(
+            "An alignment project with the name “{name}” already exists. Please choose a different name."
+        )
+    }
+    pub const EMPTY_NAME: &str = "The name of an alignment project must not be empty.";
+    pub const NOT_UPLOADING: &str =
+        "The upload of this alignment project has already been finished.";
+    pub const UPLOAD_UNFINISHED: &str =
+        "The upload of this alignment project has not finished yet.";
+    pub const NOT_READY: &str =
+        "Alignments can only be started for alignment projects with a valid, fully uploaded CSV.";
+    pub const INPUT_DATA_DELETED: &str =
+        "The input data of this alignment project has been deleted.";
+    pub const INVALID_SECTION_RANGE: &str =
+        "The selected section range is not within the sections of the alignment project.";
+    pub const INVALID_VOXEL_SIZE: &str = "Each component of the voxel size must be larger than 0.";
+    pub const DELETE_FAILED: &str = "Could not delete the alignment project.";
+    /// Play: `UserTokenController` (not in `Msg`).
+    pub const NO_WRITE_ACCESS: &str = "No write access to alignment project";
+    /// Play: `UserTokenController` (not in `Msg`).
+    pub fn unsupported_access(mode: impl Display) -> String {
+        format!("Unsupported access to alignment project: {mode}")
+    }
+}
+
 pub mod job {
     pub const NOT_FOUND: &str = "Job could not be found or accessed.";
     pub const NOT_ENABLED: &str = "Long-running jobs are not enabled for this WEBKNOSSOS instance.";

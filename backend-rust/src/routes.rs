@@ -56,6 +56,7 @@ fn build_router(state: AppState, options: RouteOptions) -> Router {
         .merge(crate::annotation::router())
         .merge(crate::task::router())
         .merge(crate::job::router())
+        .merge(crate::alignment_project::router())
         .merge(crate::ai_models::router())
         .merge(crate::ai_models::upload_router())
         .merge(crate::voxelytics::router())

@@ -598,7 +598,7 @@ async fn cancel_and_retry_manage_credits() {
             Some(&admin.token)
         )
         .await,
-        (404, error(NOT_FOUND))
+        (400, error(JOB_NOT_FOUND))
     );
     assert_eq!(
         request(
@@ -608,7 +608,7 @@ async fn cancel_and_retry_manage_credits() {
             Some(&member.token)
         )
         .await,
-        (404, error(NOT_FOUND))
+        (400, error(JOB_NOT_FOUND))
     );
     // Cancel: manual state set, pending reservation refunded; the response shows the old state.
     let (status, body) = request(

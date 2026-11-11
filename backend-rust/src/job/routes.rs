@@ -26,6 +26,7 @@ use crate::{
     error::{ApiError, ApiResult},
     extract::{Path, Query},
     job::job_dao,
+    job::submission::{Failure, RunError, RunResult},
     system::application_info::MiscState,
     util::id::{ObjectId, PathObjectId},
 };
@@ -37,7 +38,7 @@ pub(crate) const NOT_ENOUGH_CREDITS: &str =
     "Your organization does not have enough WEBKNOSSOS credits to run this job.";
 
 /// JobCommand values in declaration order (the last four are legacy, display only).
-pub(crate) const JOB_COMMANDS: [&str; 17] = [
+pub(crate) const JOB_COMMANDS: [&str; 18] = [
     "compute_mesh_file",
     "compute_segment_index_file",
     "convert_to_wkw",
@@ -51,6 +52,7 @@ pub(crate) const JOB_COMMANDS: [&str; 17] = [
     "infer_mitochondria",
     "train_neuron_model",
     "train_instance_model",
+    "align",
     "globalize_floodfills",
     "train_model",
     "infer_with_model",
@@ -143,6 +145,7 @@ pub(crate) struct Job {
     pub ended: Option<DateTime<Utc>>,
     pub last_retry: Option<DateTime<Utc>>,
     pub created: DateTime<Utc>,
+    pub alignment_project: Option<ObjectId>,
 }
 
 impl Job {
@@ -170,6 +173,19 @@ pub(crate) async fn find_job(
     job_id: &ObjectId,
 ) -> ApiResult<Option<Job>> {
     let job = job_dao::find_one(connection, user_id, job_id).await?;
+    validated(job, job_id)
+}
+
+/// JobDAO.findOne with global access, see [`find_job`].
+pub(crate) async fn find_job_global(
+    connection: &mut PgConnection,
+    job_id: &ObjectId,
+) -> ApiResult<Option<Job>> {
+    let job = job_dao::find_one_global(connection, job_id).await?;
+    validated(job, job_id)
+}
+
+fn validated(job: Option<Job>, job_id: &ObjectId) -> ApiResult<Option<Job>> {
     match job {
         Some(job) if !job.is_valid() => Err(ApiError::bad_request(format!(
             "Parsing failed for row in webknossos.jobs queried by {job_id}"
@@ -219,6 +235,8 @@ pub(crate) struct JobCompactInfo {
     pub last_retry: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cost_in_milli_credits: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alignment_project_id: Option<ObjectId>,
 }
 
 impl JobCompactInfo {
@@ -246,7 +264,16 @@ pub(crate) async fn public_writes(
     user_id: &ObjectId,
     job: &Job,
 ) -> ApiResult<JobCompactInfo> {
-    let owner = job_dao::find_owner_organization_and_multi_user(connection, user_id, &job.owner)
+    public_writes_with_access(connection, Some(user_id), job).await
+}
+
+/// JobService.publicWrites with the user's access context or (`None`) GlobalAccessContext.
+pub(crate) async fn public_writes_with_access(
+    connection: &mut PgConnection,
+    access: Option<&ObjectId>,
+    job: &Job,
+) -> ApiResult<JobCompactInfo> {
+    let owner = job_dao::find_owner_organization_and_multi_user(connection, access, &job.owner)
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::msg::user::NOT_FOUND_NO_ID))?;
     let (owner_organization, owner_multi_user) = owner;
@@ -255,13 +282,13 @@ pub(crate) async fn public_writes(
             .await?
             .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
     let organization =
-        job_dao::find_readable_organization_id(connection, user_id, &owner_organization)
+        job_dao::find_readable_organization_id(connection, access, &owner_organization)
             .await?
             .ok_or_else(|| {
                 ApiError::bad_request(crate::msg::organization::not_found(&owner_organization))
             })?;
     // CreditTransactionService.findTransactionOfJob; any failure means "no cost".
-    let delta = job_dao::find_credit_delta_of_job(connection, user_id, &job.id).await?;
+    let delta = job_dao::find_credit_delta_of_job(connection, access, &job.id).await?;
     Ok(JobCompactInfo {
         id: job.id.clone(),
         command: job.command.clone(),
@@ -281,6 +308,7 @@ pub(crate) async fn public_writes(
         last_retry: job.last_retry,
         // The delta is negative, the cost positive.
         cost_in_milli_credits: delta.map(|delta| -delta),
+        alignment_project_id: job.alignment_project.clone(),
     }
     .enrich())
 }
@@ -316,7 +344,8 @@ pub(crate) fn result_link(
         | "infer_with_model"
         | "infer_mitochondria"
         | "align_sections"
-        | "infer_instances" => return_value.map(|return_value| {
+        | "infer_instances"
+        | "align" => return_value.map(|return_value| {
             link_from_dataset_or_annotation_return_value(return_value, organization)
         }),
         _ => None,
@@ -345,6 +374,7 @@ fn link_from_dataset_or_annotation_return_value(return_value: &str, organization
 struct ListQuery {
     command: Option<String>,
     skip_for_deleted_datasets: Option<bool>,
+    alignment_project_id: Option<ObjectId>,
 }
 
 // Query extraction precedes authentication: Play binds route parameters first.
@@ -361,13 +391,34 @@ async fn list(
         return Err(ApiError::not_found(crate::msg::NOT_FOUND));
     }
     let skip_for_deleted_datasets = query.skip_for_deleted_datasets.unwrap_or(false);
-    let rows = job_dao::find_all_compact(
-        &state.pool,
-        &user.id,
-        query.command.as_deref(),
-        skip_for_deleted_datasets,
-    )
-    .await?;
+    let rows = match &query.alignment_project_id {
+        // Everyone who may access the alignment project sees all of its jobs, regardless of
+        // their owner.
+        Some(project_id) => {
+            crate::alignment_project::service::assert_may_access(routes.enabled, &user)?;
+            let mut connection = state.pool.acquire().await?;
+            crate::alignment_project::service::find_readable(&mut connection, &user, project_id)
+                .await?;
+            job_dao::find_all_compact(
+                &state.pool,
+                None,
+                query.command.as_deref(),
+                skip_for_deleted_datasets,
+                Some(project_id),
+            )
+            .await?
+        }
+        None => {
+            job_dao::find_all_compact(
+                &state.pool,
+                Some(&user.id),
+                query.command.as_deref(),
+                skip_for_deleted_datasets,
+                None,
+            )
+            .await?
+        }
+    };
     let mut result = Vec::with_capacity(rows.len());
     for row in rows {
         // JobCommand/JobState/JsObject parsing without message: an empty Fox.
@@ -396,6 +447,7 @@ async fn list(
                 ended: row.ended,
                 last_retry: row.last_retry,
                 cost_in_milli_credits: row.milli_credit_delta.map(|delta| -delta),
+                alignment_project_id: row.alignment_project,
             }
             .enrich(),
         );
@@ -500,16 +552,65 @@ async fn cancel(
     State(routes): State<JobRoutes>,
     Path(id): Path<PathObjectId>,
     user: AuthUser,
-) -> ApiResult<Json<JobCompactInfo>> {
+) -> RunResult<Json<JobCompactInfo>> {
     require_enabled(&routes)?;
     let mut transaction = crate::db::begin_serializable(&state.pool).await?;
-    let job = find_job(&mut transaction, &user.id, &id)
+    let job = find_job_global(&mut transaction, &id)
+        .await
+        .map_err(job_not_found)?
+        .ok_or_else(|| ApiError::bad_request(crate::msg::job::NOT_FOUND))?;
+    assert_may_cancel(&mut transaction, routes.enabled, &job, &user).await?;
+    // The job was authorized above, either directly or via its alignment project.
+    cancel_job(&mut transaction, &job).await?;
+    transaction.commit().await?;
+    let mut connection = state.pool.acquire().await?;
+    // Like Scala, the response shows the job as read before cancelling.
+    Ok(Json(
+        public_writes_with_access(&mut connection, None, &job).await?,
+    ))
+}
+
+/// Users may cancel the jobs they have update access to (the read access), e.g. their own,
+/// even if the job's alignment project was deleted in the meantime. Everyone who may access an
+/// alignment project may additionally cancel all of its jobs, regardless of their owner.
+/// Failures are `?~> Msg.Job.notFound` (a 403 of the alignment project check keeps its status).
+async fn assert_may_cancel(
+    connection: &mut PgConnection,
+    jobs_enabled: bool,
+    job: &Job,
+    user: &AuthUser,
+) -> RunResult<()> {
+    let not_found = || RunError::from(Failure::new(crate::msg::job::NOT_FOUND));
+    if job_dao::find_one(connection, &user.id, &job.id)
         .await?
-        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
-    // JobDAO.updateManualState: update access equals read access, checked by find_job.
-    job_dao::update_manual_state_cancelled(&mut transaction, &job.id).await?;
+        .is_some()
+    {
+        return Ok(());
+    }
+    let Some(project_id) = &job.alignment_project else {
+        return Err(not_found());
+    };
+    if let Err(error) = crate::alignment_project::service::assert_may_access(jobs_enabled, user) {
+        return Err(RunError::from(error).wrap(crate::msg::job::NOT_FOUND));
+    }
+    let readable = crate::alignment_project::alignment_project_dao::find_one(
+        connection,
+        Some(&user.id),
+        project_id,
+    )
+    .await?;
+    if readable.is_none() {
+        return Err(not_found());
+    }
+    Ok(())
+}
+
+/// JobService.cancelJob (global access): sets the manual state immediately, the worker cancels
+/// the run later. Credits of unfinished jobs are refunded. Run inside a SERIALIZABLE transaction.
+pub(crate) async fn cancel_job(connection: &mut PgConnection, job: &Job) -> ApiResult<()> {
+    job_dao::update_manual_state_cancelled(connection, &job.id).await?;
     if job.state == "PENDING" || job.state == "STARTED" {
-        refund_transaction_for_job(&mut transaction, &job.id, true)
+        refund_transaction_for_job(connection, &job.id, true)
             .await
             .map_err(|error| {
                 if error.status.is_server_error() {
@@ -519,10 +620,7 @@ async fn cancel(
                 }
             })?;
     }
-    transaction.commit().await?;
-    let mut connection = state.pool.acquire().await?;
-    // Like Scala, the response shows the job as read before cancelling.
-    Ok(Json(public_writes(&mut connection, &user.id, &job).await?))
+    Ok(())
 }
 
 /// CreditTransactionService.refundTransactionForJob (global access): refund the
@@ -585,6 +683,21 @@ async fn retry(
         .ok_or_else(|| ApiError::bad_request(crate::msg::job::NOT_FOUND))?;
     if !(user.is_superuser || job.last_retry.is_none()) {
         return Err(ApiError::forbidden(ALREADY_RETRIED));
+    }
+    if let Some(project_id) = &job.alignment_project {
+        // AlignmentProjectDAO.findOne with global access: an empty Fox (404) if deleted.
+        let project = crate::alignment_project::alignment_project_dao::find_one(
+            &mut connection,
+            None,
+            project_id,
+        )
+        .await?
+        .ok_or_else(|| ApiError::not_found(crate::msg::NOT_FOUND))?;
+        if project.is_input_data_deleted {
+            return Err(ApiError::bad_request(
+                crate::msg::alignment_project::INPUT_DATA_DELETED,
+            ));
+        }
     }
     // JobService.assertJobCanBeRetriedByPricingPlan: retries bypass submitJob.
     let owner_plan = crate::job::submission::job_submission_dao::find_pricing_plan_of_user(

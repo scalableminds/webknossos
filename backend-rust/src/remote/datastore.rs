@@ -19,6 +19,7 @@
 //! - `inboxSourceHash` is a deterministic SHA-1 based hash of the canonical
 //!   data source JSON instead of Scala's case-class `hashCode`.
 
+pub mod alignment_project_upload;
 pub mod attachment_upload;
 pub mod credentials;
 pub mod dataset_report;

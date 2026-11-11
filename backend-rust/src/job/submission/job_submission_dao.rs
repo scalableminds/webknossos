@@ -195,7 +195,7 @@ pub(crate) async fn find_supported_job_commands_by_data_store(
         .await
 }
 
-/// JobDAO.insertOne: a pending job.
+/// JobDAO.insertOne: a pending job, optionally of an alignment project.
 pub(crate) async fn insert_one(
     connection: &mut PgConnection,
     id: &ObjectId,
@@ -203,16 +203,19 @@ pub(crate) async fn insert_one(
     data_store: &str,
     command: &str,
     args: &Value,
+    alignment_project: Option<&ObjectId>,
 ) -> sqlx::Result<()> {
     sqlx::query(
-        r#"INSERT INTO webknossos.jobs (_id, _owner, _dataStore, command, commandArgs, state, created, isDeleted)
-          VALUES ($1, $2, $3, $4, $5, 'PENDING', NOW(), FALSE)"#,
+        r#"INSERT INTO webknossos.jobs
+          (_id, _owner, _dataStore, command, commandArgs, state, created, isDeleted, _alignmentProject)
+          VALUES ($1, $2, $3, $4, $5, 'PENDING', NOW(), FALSE, $6)"#,
     )
     .bind(id)
     .bind(owner_id)
     .bind(data_store)
     .bind(command)
     .bind(args)
+    .bind(alignment_project)
     .execute(&mut *connection)
     .await?;
     Ok(())

@@ -75,6 +75,7 @@ enum Resource {
     Annotation,
     Webknossos,
     JobExport,
+    AlignmentProject,
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -207,6 +208,7 @@ async fn validate(
             annotation(state, user.as_ref(), &annotation_id, body.mode, token).await
         }
         Resource::JobExport => job_export(state, user.as_ref(), id, body.mode).await,
+        Resource::AlignmentProject => alignment_project(state, user.as_ref(), id, body.mode).await,
         Resource::Webknossos => Ok(Answer::denied("Invalid access token.")),
     }?;
     Ok(answer.with_user(user.as_ref()))
@@ -305,4 +307,38 @@ async fn job_export(
     let id = required_id(id)?;
     let allowed = remote_dao::can_read_job_export(&state.pool, &id, user).await?;
     Ok(Answer::condition(allowed, "No read access to job export"))
+}
+
+/// Only writing (uploading files) is requested by the datastore, and only while the upload is
+/// unfinished. Replacing the CSV of an uploaded project is authorized separately, see
+/// `remote::datastore::alignment_project_upload` (validateAlignmentProjectCsvReplacement).
+async fn alignment_project(
+    state: &AppState,
+    user: Option<&AuthUser>,
+    id: Option<&str>,
+    mode: Mode,
+) -> ApiResult<Answer> {
+    let (Mode::Write, Some(user)) = (mode, user) else {
+        return Ok(Answer::denied(
+            crate::msg::alignment_project::unsupported_access(mode.as_str()),
+        ));
+    };
+    let id = required_id(id)?;
+    let mut connection = state.pool.acquire().await?;
+    let project = crate::alignment_project::alignment_project_dao::find_one(
+        &mut connection,
+        Some(&user.id),
+        &id,
+    )
+    .await?;
+    Ok(match project {
+        Some(project) if project.is_input_data_deleted => {
+            Answer::denied(crate::msg::alignment_project::INPUT_DATA_DELETED)
+        }
+        Some(project) if project.status != crate::alignment_project::service::UPLOADING => {
+            Answer::denied(crate::msg::alignment_project::NOT_UPLOADING)
+        }
+        Some(_) => Answer::granted(),
+        None => Answer::denied(crate::msg::alignment_project::NO_WRITE_ACCESS),
+    })
 }

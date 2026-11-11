@@ -157,6 +157,7 @@ pub(super) async fn export_tiff(
         command: "export_tiff",
         args,
         data_store: &dataset.data_store,
+        alignment_project: None,
     };
     run_submission(
         &state,
@@ -221,6 +222,7 @@ pub(super) async fn materialize_volume_annotation(
         command: "materialize_volume_annotation",
         args,
         data_store: &dataset.data_store,
+        alignment_project: None,
     };
     run_submission(
         &state,

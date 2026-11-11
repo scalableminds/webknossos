@@ -75,7 +75,7 @@ WORKER_KEY = "secretWorkerKey"
 WORKER_COMMANDS = ("compute_mesh_file", "convert_to_wkw", "export_tiff", "find_largest_segment_id",
                    "globalize_floodfills", "infer_nuclei", "infer_neurons", "materialize_volume_annotation",
                    "render_animation", "compute_segment_index_file", "infer_mitochondria", "train_neuron_model",
-                   "train_instance_model", "infer_instances", "align_sections")
+                   "train_instance_model", "infer_instances", "align_sections", "align")
 
 # Fixtures added to wk_diff_seed after Play's initial data (cmd_seed): the voxelytics rows of the test database,
 # moved into the sample organization and owned by the sample admin, and one credential for findCredential.

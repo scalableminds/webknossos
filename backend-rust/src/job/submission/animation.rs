@@ -155,6 +155,7 @@ pub(super) async fn render_animation(
         command: "render_animation",
         args,
         data_store: &dataset.data_store,
+        alignment_project: None,
     };
     run_submission(
         &state,

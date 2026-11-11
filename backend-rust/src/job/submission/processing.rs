@@ -74,6 +74,7 @@ pub(super) async fn infer_mitochondria(
         command: "infer_mitochondria",
         args,
         data_store: &dataset.data_store,
+        alignment_project: None,
     };
     run_submission(
         &state,
@@ -136,6 +137,7 @@ pub(super) async fn align_sections(
         command: "align_sections",
         args,
         data_store: &dataset.data_store,
+        alignment_project: None,
     };
     run_submission(
         &state,

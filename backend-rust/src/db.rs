@@ -5,7 +5,7 @@ use crate::config::DatabaseConfig;
 use crate::error::{ApiError, ApiResult};
 
 /// The checked-in Scala schema. This service never creates or migrates production tables.
-pub const SCHEMA_VERSION: i64 = 190;
+pub const SCHEMA_VERSION: i64 = 191;
 
 pub async fn connect(config: &DatabaseConfig) -> ApiResult<PgPool> {
     let options = config

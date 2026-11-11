@@ -79,7 +79,8 @@ pub(crate) const JOB_COLUMNS: &str = r#"j._id AS id, j._owner AS owner, TRIM(j._
   j.command, j.commandArgs AS args, j.state::text AS state, j.manualState::text AS manual_state,
   j._worker AS worker, j._voxelytics_workflowHash AS workflow_hash, j.latestRunId AS latest_run_id,
   j.latestRunErrorDetails AS error_details, j.returnValue AS return_value,
-  j.retriedBySuperUser AS retried_by_superuser, j.started, j.ended, j.lastRetry AS last_retry, j.created"#;
+  j.retriedBySuperUser AS retried_by_superuser, j.started, j.ended, j.lastRetry AS last_retry, j.created,
+  j._alignmentProject AS alignment_project"#;
 
 /// A row of JobDAO.findAllCompact.
 #[derive(sqlx::FromRow)]
@@ -100,6 +101,7 @@ pub(crate) struct CompactRow {
     pub ended: Option<DateTime<Utc>>,
     pub last_retry: Option<DateTime<Utc>>,
     pub milli_credit_delta: Option<i32>,
+    pub alignment_project: Option<ObjectId>,
 }
 
 /// A row of WorkerDAO.findAll.
@@ -131,22 +133,34 @@ pub(crate) async fn find_one(
     q.build_query_as().fetch_optional(&mut *connection).await
 }
 
-/// UserDAO.findOne (read access: managed team member, own organization as admin, self);
-/// the owner's organization and multi user.
+/// JobDAO.findOne with global access. The row is not validated; see [`Job::is_valid`].
+pub(crate) async fn find_one_global(
+    connection: &mut PgConnection,
+    job_id: &ObjectId,
+) -> sqlx::Result<Option<Job>> {
+    let mut q = Sql::new("SELECT ");
+    q.push(JOB_COLUMNS)
+        .push(" FROM webknossos.jobs_ j WHERE j._id = ")
+        .push_bind(job_id);
+    q.build_query_as().fetch_optional(&mut *connection).await
+}
+
+/// UserDAO.findOne (read access: managed team member, own organization as admin, self; `None`
+/// is global access); the owner's organization and multi user.
 pub(crate) async fn find_owner_organization_and_multi_user(
     connection: &mut PgConnection,
-    user_id: &ObjectId,
+    access: Option<&ObjectId>,
     owner_id: &ObjectId,
 ) -> sqlx::Result<Option<(String, ObjectId)>> {
     sqlx::query_as(
         r#"SELECT u._organization, u._multiUser FROM webknossos.users_ u
-          WHERE u._id = $2 AND (
+          WHERE u._id = $2 AND ($1::text IS NULL OR
             u._id IN (SELECT _user FROM webknossos.user_team_roles WHERE _team IN
               (SELECT _team FROM webknossos.user_team_roles WHERE _user = $1 AND isTeamManager))
             OR u._organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $1 AND isAdmin)
             OR u._id = $1)"#,
     )
-    .bind(user_id)
+    .bind(access)
     .bind(owner_id)
     .fetch_optional(&mut *connection)
     .await
@@ -163,57 +177,64 @@ pub(crate) async fn find_multi_user_name_and_email(
         .await
 }
 
-/// OrganizationDAO.findOne (read access: an organization of the user's account, or superuser).
+/// OrganizationDAO.findOne (read access: an organization of the user's account, or superuser;
+/// `None` is global access).
 pub(crate) async fn find_readable_organization_id(
     connection: &mut PgConnection,
-    user_id: &ObjectId,
+    access: Option<&ObjectId>,
     organization: &str,
 ) -> sqlx::Result<Option<String>> {
     sqlx::query_scalar(
-        r#"SELECT _id FROM webknossos.organizations_ WHERE _id = $2 AND (
+        r#"SELECT _id FROM webknossos.organizations_ WHERE _id = $2 AND ($1::text IS NULL OR
             _id IN (SELECT _organization FROM webknossos.users_ WHERE _multiUser =
               (SELECT _multiUser FROM webknossos.users_ WHERE _id = $1))
             OR TRUE IN (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN
               (SELECT _multiUser FROM webknossos.users_ WHERE _id = $1)))"#,
     )
-    .bind(user_id)
+    .bind(access)
     .bind(organization)
     .fetch_optional(&mut *connection)
     .await
 }
 
 /// CreditTransactionService.findTransactionOfJob: the milli credit delta of the job's
-/// first transaction visible to the user.
+/// first transaction visible to the user (`None`: global access).
 pub(crate) async fn find_credit_delta_of_job(
     connection: &mut PgConnection,
-    user_id: &ObjectId,
+    access: Option<&ObjectId>,
     job_id: &ObjectId,
 ) -> sqlx::Result<Option<i32>> {
     let mut q = Sql::new(
         "SELECT milli_credit_delta FROM webknossos.credit_transactions_ WHERE _paid_job = ",
     );
-    q.push_bind(job_id).push(" AND ");
-    push_credit_read_access(&mut q, user_id);
+    q.push_bind(job_id);
+    if let Some(user_id) = access {
+        q.push(" AND ");
+        push_credit_read_access(&mut q, user_id);
+    }
     q.push(" ORDER BY created_at, _id LIMIT 1");
     q.build_query_scalar()
         .fetch_optional(&mut *connection)
         .await
 }
 
-/// JobDAO.findAllCompact. The credit lateral join has no access check (as in Scala);
-/// retries can attach several transactions with the same delta, so one suffices.
+/// JobDAO.findAllCompact with the user's list access (`None`: global access), optionally only
+/// the jobs of one alignment project. The credit lateral join has no access check (as in
+/// Scala); retries can attach several transactions with the same delta, so one suffices.
 pub(crate) async fn find_all_compact(
     pool: &PgPool,
-    user_id: &ObjectId,
+    access: Option<&ObjectId>,
     command: Option<&str>,
     skip_for_deleted_datasets: bool,
+    alignment_project: Option<&ObjectId>,
 ) -> sqlx::Result<Vec<CompactRow>> {
     let mut q = Sql::new(
         r#"SELECT j._id AS id, j.command, u._organization AS organization, mu.firstName AS first_name,
             mu.lastName AS last_name, mu.email, j.commandArgs AS args,
             COALESCE(j.manualState, j.state)::text AS state, j.returnValue AS return_value,
             j.latestRunErrorDetails AS error_details, j._voxelytics_workflowHash AS workflow_hash,
-            j.created, j.started, j.ended, j.lastRetry AS last_retry, ct.milli_credit_delta
+            j.created, j.started, j.ended, j.lastRetry AS last_retry, ct.milli_credit_delta,
+            j._alignmentProject AS alignment_project
           FROM webknossos.jobs_ j
           JOIN webknossos.users_ u ON j._owner = u._id
           JOIN webknossos.multiUsers_ mu ON u._multiUser = mu._id
@@ -224,8 +245,15 @@ pub(crate) async fn find_all_compact(
     q.push_bind(command)
         .push("::text IS NULL OR j.command = ")
         .push_bind(command)
-        .push(") AND ");
-    push_job_list_access(&mut q, user_id);
+        .push(")");
+    if let Some(user_id) = access {
+        q.push(" AND ");
+        push_job_list_access(&mut q, user_id);
+    }
+    if let Some(alignment_project) = alignment_project {
+        q.push(" AND j._alignmentProject = ")
+            .push_bind(alignment_project);
+    }
     q.push(" AND (NOT ")
         .push_bind(skip_for_deleted_datasets)
         .push(

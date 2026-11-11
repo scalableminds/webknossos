@@ -377,8 +377,9 @@ async fn default_worker_is_upserted_only_if_jobs_and_datastore_enabled() {
         )
     );
     assert_eq!((worker.4, worker.5), (1, 1));
-    assert_eq!(worker.6.len(), 13);
+    assert_eq!(worker.6.len(), 14);
     assert!(worker.6.contains(&"align_sections".to_string()));
+    assert!(worker.6.contains(&"align".to_string()));
 
     // A rerun only resets the supported commands.
     sqlx::query(
@@ -393,7 +394,7 @@ async fn default_worker_is_upserted_only_if_jobs_and_datastore_enabled() {
             .fetch_one(&db.pool)
             .await
             .unwrap();
-    assert_eq!((name.as_str(), commands.len()), ("Renamed", 13));
+    assert_eq!((name.as_str(), commands.len()), ("Renamed", 14));
     assert_eq!(count(&db, workers).await, 1);
     db.cleanup().await;
 

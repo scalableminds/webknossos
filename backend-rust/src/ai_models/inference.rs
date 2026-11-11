@@ -291,6 +291,7 @@ async fn run_model_inference(
         command,
         args: Value::Object(args),
         data_store: &data_store,
+        alignment_project: None,
     };
     let mut pending = crate::job::submission::begin_paid_job(
         state,

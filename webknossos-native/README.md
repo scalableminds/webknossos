@@ -13,6 +13,8 @@ sbt builds the crate with cargo (`sbt compile`, via sbt-jni) and packages it as 
   `RuntimeException`) plus copying arrays between Java and Rust.
 - One module per Scala class, e.g. `src/bucket_scanner.rs` for `NativeBucketScanner`. The logic lives in plain
   Rust functions with unit tests. The `Java_…` functions only convert their arguments and the result.
+- The unit tests of a module live in `src/<module>/tests.rs` (declared by `#[cfg(test)] mod tests;` at the end of
+  the module), so they can test private functions as well.
 
 ## Adding or changing a native function
 

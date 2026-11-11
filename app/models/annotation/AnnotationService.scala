@@ -310,7 +310,7 @@ class AnnotationService @Inject() (
   }
 
   // Creates a skeleton annotation whose landmarks map the other layers of the dataset onto the fixed layer.
-  def createLayerRegistrationFor(user: User, dataset: Dataset, layerRegistration: AnnotationLayerRegistration)(using
+  def createLayerRegistrationAnnotationFor(user: User, dataset: Dataset, layerRegistration: AnnotationLayerRegistration)(using
       ctx: DBAccessContext
   ): Fox[Annotation] =
     for {

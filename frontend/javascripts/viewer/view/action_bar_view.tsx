@@ -43,7 +43,6 @@ import TracingActionsView, {
 } from "viewer/view/action_bar/tracing_actions_view";
 import ViewDatasetActionsView from "viewer/view/action_bar/view_dataset_actions_view";
 import { getAIJobsUnsupportedReason } from "viewer/view/ai_jobs/ai_job_url_param";
-import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
 import {
   addNewLayout,
   deleteLayout,
@@ -51,6 +50,7 @@ import {
   LayoutEvents,
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 import { ACTIONBAR_MARGIN_LEFT } from "./action_bar/tools/tool_helpers";
 import ToolkitView from "./action_bar/tools/toolkit_switcher_view";
 import NumberSliderSetting from "./left_border_tabs/components/number_slider_setting";
@@ -276,11 +276,10 @@ function ModesView() {
   const isOrthoMode = useWkSelector(
     (state) => state.temporaryConfiguration.viewMode === "orthogonal",
   );
-  // The layer registration workers use a fixed toolkit (see layer_registration_worker.ts).
-  const isToolkitFixed = isLayerRegistrationWorker();
+  const { showToolkitSwitch } = getViewerCapabilities();
 
   // The outer div is necessary for proper spacing.
-  return isViewMode || isReadOnly || !isOrthoMode || isToolkitFixed ? null : (
+  return isViewMode || isReadOnly || !isOrthoMode || !showToolkitSwitch ? null : (
     <div>
       <Space.Compact>
         <ToolkitView />

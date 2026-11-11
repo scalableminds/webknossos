@@ -90,6 +90,7 @@ import {
   isLayerRegistrationWorker,
 } from "viewer/view/layer_registration/layer_registration_protocol";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 
 const { Header } = Layout;
 
@@ -875,12 +876,9 @@ function Navbar() {
   const isBelowXL = !useMinScreenWidth("xl");
   const collapseAllNavItems = isInAnnotationView || isPhone;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
-  // The layer registration workers keep the navbar because it contains the toolbar, but
-  // must not offer navigation away from the layer registration page. Only the primary worker shows
-  // the logo, which links to the dashboard in the top-level window.
+  const { showDashboardLink, showNavbarMenus } = getViewerCapabilities();
   const isInLayerRegistrationWorker = isLayerRegistrationWorker();
-  const showLogo = !isInLayerRegistrationWorker || isLayerRegistrationPrimaryWorker();
-  const menuItems: ItemType[] = showLogo
+  const menuItems: ItemType[] = showDashboardLink
     ? [
         {
           key: "0",
@@ -888,6 +886,8 @@ function Navbar() {
             <>
               <Link
                 to="/dashboard"
+                // A worker is an iframe of the layer registration page, so the dashboard
+                // replaces the whole page.
                 target={isInLayerRegistrationWorker ? "_top" : undefined}
                 aria-label="WEBKNOSSOS"
                 style={{
@@ -924,7 +924,7 @@ function Navbar() {
       ? { ...item, className: classnames(item.className, "hide-on-narrow-screen") }
       : item;
 
-  if (isAuthenticated && !isInLayerRegistrationWorker) {
+  if (isAuthenticated && showNavbarMenus) {
     const loggedInUser: APIUser = activeUser;
     menuItems.push(hideInAnnotationViewOnNarrowScreens(getDashboardSubMenu(collapseAllNavItems)));
     menuItems.push(
@@ -976,7 +976,7 @@ function Navbar() {
     );
   }
 
-  if (!(isAuthenticated || hideNavbarLogin) && !isInLayerRegistrationWorker) {
+  if (!(isAuthenticated || hideNavbarLogin) && showNavbarMenus) {
     trailingNavItems.push(<AnonymousAvatar key="anonymous-avatar" />);
   }
 
@@ -985,7 +985,7 @@ function Navbar() {
     trailingNavItems.push(<LandmarkPanelToggleButton key="landmark-panel-toggle" />);
   }
 
-  if (!isInLayerRegistrationWorker) {
+  if (showNavbarMenus) {
     menuItems.push(
       hideInAnnotationViewOnNarrowScreens(
         getHelpSubMenu(

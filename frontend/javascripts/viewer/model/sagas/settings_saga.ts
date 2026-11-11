@@ -13,7 +13,7 @@ import { type Saga, select, take } from "viewer/model/sagas/effect_generators";
 import { callWithAbortSignal } from "viewer/model/sagas/saga_helpers";
 import { SETTINGS_RETRY_OPTIONS } from "viewer/model/sagas/saving/save_saga_constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
-import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 import { mayEditAnnotation } from "../accessors/annotation_accessor";
 import { getMappingFromLayerNameToBaseDatasetLayerName } from "../accessors/dataset_accessor";
 import { Toolkit } from "../accessors/tool_accessor";
@@ -22,9 +22,7 @@ import { ensureWkInitialized } from "./ready_sagas";
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
-  // The layer registration workers force some settings (see layer_registration_worker.ts) which
-  // must not end up in the user's account.
-  if (isLayerRegistrationWorker()) return;
+  if (!getViewerCapabilities().shouldPersistSettings) return;
   const userConfiguration = yield* select((state) => state.userConfiguration);
   const result = yield* call(
     updateUserConfiguration,
@@ -43,7 +41,7 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
   yield* delay(Constants.SETTING_SAVE_DEBOUNCE_MS);
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
-  if (isLayerRegistrationWorker()) return;
+  if (!getViewerCapabilities().shouldPersistSettings) return;
   const dataset = yield* select((state) => state.dataset);
   const layerNamesOfDatasetToFallbackNameMaybe =
     getMappingFromLayerNameToBaseDatasetLayerName(dataset);

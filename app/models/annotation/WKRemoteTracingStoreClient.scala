@@ -244,10 +244,12 @@ class WKRemoteTracingStoreClient(
         .postProto[VolumeTracings](thinOutVolumeTracings(tracings))
       packedVolumeDataZips = packVolumeDataZips(initialData.flatten)
       _ = annotationDataSourceTemporaryStore.store(newAnnotationId, dataSource, datasetId)
-      _ <- rpc(s"${tracingStore.url}/tracings/volume/$newTracingId/initialDataMultiple").withLongTimeout
-        .addQueryParam("token", RpcTokenHolder.webknossosToken)
-        .addQueryParam("annotationId", newAnnotationId.toString)
-        .postFile(packedVolumeDataZips)
+      _ <- Fox.withCleanup(
+        rpc(s"${tracingStore.url}/tracings/volume/$newTracingId/initialDataMultiple").withLongTimeout
+          .addQueryParam("token", RpcTokenHolder.webknossosToken)
+          .addQueryParam("annotationId", newAnnotationId.toString)
+          .postFile(packedVolumeDataZips)
+      )(packedVolumeDataZips.delete())
       _ <- rpc(s"${tracingStore.url}/tracings/volume/mergedFromContents")
         .addQueryParam("newTracingId", newTracingId)
         .addQueryParam("token", RpcTokenHolder.webknossosToken)

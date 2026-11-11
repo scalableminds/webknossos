@@ -384,7 +384,7 @@ export const getSegmentId: ShaderModule = {
       segment_id =
         getSegmentIdOrFallback(
           <%= formatNumberAsGLSLFloat(colorLayerNames.length + layerIndex) %>,
-          <%= segmentationName %>_data_texture_width,
+          POOL_TEXTURE_WIDTH,
           <%= formatNumberAsGLSLFloat(textureLayerInfos[segmentationName].packingDegree) %>,
           layerCoordUVW,
           vec4(0.0, 0.0, 0.0, 0.0),

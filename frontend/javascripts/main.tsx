@@ -7,12 +7,13 @@ import { message } from "antd";
 import ErrorBoundary from "components/error_boundary";
 import { FailedToLoadView } from "components/failed_to_load_view";
 import { RootForFastTooltips } from "components/fast_tooltip";
-import features, { load as loadFeatureToggles } from "features";
+import { load as loadFeatureToggles } from "features";
 import checkBrowserFeatures from "libs/browser_feature_check";
 import ErrorHandling from "libs/error_handling";
+import { registerHasActiveUserFn } from "libs/handle_request_error_helper";
 import { reactQueryClient } from "libs/react_query_client";
 import UserLocalStorage from "libs/user_local_storage";
-import window, { document, location } from "libs/window";
+import { document, location } from "libs/window";
 import { compress, decompress } from "lz-string";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -37,10 +38,8 @@ import router from "router/router";
 import { listenToSystemColorThemeChanges } from "theme";
 import GlobalThemeProvider from "theme_provider";
 
-// Suppress warning emitted by Olvy because it tries to eagerly initialize
-window.OlvyConfig = null;
-
 setStore(UnthrottledStore);
+registerHasActiveUserFn(() => Store.getState().activeUser != null);
 startSaga(warnIfEmailIsUnverified);
 listenToSystemColorThemeChanges((systemTheme) => Store.dispatch(setSystemThemeAction(systemTheme)));
 
@@ -53,7 +52,7 @@ const localStoragePersister = createAsyncStoragePersister({
   key: "query-cache-v4",
 });
 // Queries whose data must never be written to localStorage, identified by the first key segment.
-const NEVER_PERSISTED_QUERY_KEYS = ["authToken"];
+const NEVER_PERSISTED_QUERY_KEYS = ["authToken", "datasetSharingToken"];
 
 async function tryToLoadActiveUser() {
   // Try to retrieve the currently active user if logged in
@@ -94,7 +93,7 @@ function willShowDatasetsTab(pathname: string): boolean {
   }
   // Without an explicit tab, DashboardView restores the last used tab or falls back to its default.
   const lastUsedTabKey = UserLocalStorage.getItem("lastUsedDashboardTab");
-  return lastUsedTabKey != null ? lastUsedTabKey === "datasets" : !features().isWkorgInstance;
+  return lastUsedTabKey == null || lastUsedTabKey === "datasets";
 }
 
 if (document.readyState === "loading") {

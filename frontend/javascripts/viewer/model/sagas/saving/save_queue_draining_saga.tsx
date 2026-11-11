@@ -31,7 +31,10 @@ import {
   snapshotAnnotationStateForNextRebaseAction,
 } from "viewer/model/actions/save_actions";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
-import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
+import {
+  globalPositionToBucketPosition,
+  globalPositionToBucketPositionWithMag,
+} from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import {
@@ -390,10 +393,21 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
           continue;
         }
 
-        bucket.dirtyCount--;
+        bucket.fullBucketSaveState.dirtyCount--;
 
-        if (bucket.dirtyCount === 0) {
+        if (bucket.fullBucketSaveState.dirtyCount === 0) {
           bucket.markAsPushed();
+        }
+      } else if (updateAction.name === "updateBucketPartial") {
+        // The backend has the partial update now, so the bucket may be garbage collected
+        // again once it has no other unsaved ones (see DataBucket.partialUpdateState).
+        const { actionTracingId, position, mag, additionalCoordinates } = updateAction.value;
+        const { cube } = Model.getSegmentationTracingLayer(actionTracingId);
+        const bucket = cube.getBucket(
+          globalPositionToBucketPositionWithMag(position, mag, additionalCoordinates),
+        );
+        if (bucket.type === "data" && bucket.partialUpdateState.unsavedCount > 0) {
+          bucket.partialUpdateState.unsavedCount--;
         }
       }
     }

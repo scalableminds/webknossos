@@ -23,7 +23,7 @@ const triggerStyle: CSSProperties = {
 };
 
 const descriptionStyle: CSSProperties = {
-  wordBreak: "break-word",
+  overflowWrap: "anywhere",
   fontSize: 12,
   lineHeight: 1.2,
   marginTop: 8,

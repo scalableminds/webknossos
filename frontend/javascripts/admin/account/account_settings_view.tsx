@@ -1,4 +1,4 @@
-import { SafetyOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
+import { ApiOutlined, SafetyOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
 import { Outlet, useLocation, useNavigate } from "react-router";
@@ -7,6 +7,7 @@ const { Sider, Content } = Layout;
 
 const BREADCRUMB_LABELS = {
   token: "Auth Token",
+  mcp: "MCP Agent Connections",
   security: "Security",
   profile: "Profile",
 };
@@ -36,6 +37,11 @@ const MENU_ITEMS: MenuItemGroupType[] = [
         key: "token",
         icon: <SettingOutlined />,
         label: "Auth Token",
+      },
+      {
+        key: "mcp",
+        icon: <ApiOutlined />,
+        label: "MCP Agent Connections",
       },
     ],
   },

@@ -1554,9 +1554,12 @@ export function createDatasetComposition(
   );
 }
 
+export type ResumableUploadDomain = "dataset" | "alignmentProject";
+
 export function createResumableUpload(
   datastoreUrl: string,
   uploadId: string,
+  uploadDomain: ResumableUploadDomain = "dataset",
 ): Promise<ResumableUpload> {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
   const generateUniqueIdentifier = (file) => {
@@ -1579,7 +1582,7 @@ export function createResumableUpload(
 
     const resumable = new ResumableUpload({
       testChunks: true,
-      target: `${datastoreUrl}/data/datasets/upload/dataset`,
+      target: `${datastoreUrl}/data/datasets/upload/${uploadDomain}`,
       query: function () {
         return {
           token: activeToken,

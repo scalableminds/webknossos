@@ -1,4 +1,3 @@
-import { toBigInt } from "libs/bigint_helpers";
 import ErrorHandling from "libs/error_handling";
 import { V3, V4 } from "libs/mjs";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
@@ -8,19 +7,10 @@ import keyBy from "lodash-es/keyBy";
 import once from "lodash-es/once";
 import { createNanoEvents, type Emitter } from "nanoevents";
 import { type Mesh, Ray, Raycaster, Vector3 as ThreeVector3 } from "three";
-import type {
-  AdditionalAxis,
-  AdditionalCoordinate,
-  BucketDataArray,
-  ElementClass,
-} from "types/api_types";
+import type { AdditionalAxis, AdditionalCoordinate, ElementClass } from "types/api_types";
 import type { BucketAddress, Vector3, Vector4 } from "viewer/constants";
 import Constants from "viewer/constants";
-import constants, {
-  getEffectiveBucketDepth,
-  MappingStatusEnum,
-  usesTRecycling,
-} from "viewer/constants";
+import constants, { getEffectiveBucketDepth, usesTRecycling } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
@@ -40,7 +30,6 @@ import type { Mapping, NumberLike } from "viewer/store";
 import Store from "viewer/store";
 import type { MagInfo } from "../helpers/mag_info";
 import { getConstructorForElementClass } from "../helpers/typed_buffer";
-import { getMappedIdAsBigInt } from "../sagas/volume/proofreading/preparation_sagas";
 
 const warnAboutTooManyAllocations = once(() => {
   const msg =
@@ -202,48 +191,12 @@ class DataCube {
     return constants.BUCKET_WIDTH * constants.BUCKET_WIDTH * this.effectiveBucketDepth;
   }
 
-  isMappingEnabled(): boolean {
-    const activeMapping = getMappingInfo(
-      Store.getState().temporaryConfiguration.activeMappingByLayer,
-      this.layerName,
-    );
-    return this.isSegmentation ? activeMapping.mappingStatus === MappingStatusEnum.ENABLED : false;
-  }
-
   getMapping(): Mapping | null | undefined {
     const activeMapping = getMappingInfo(
       Store.getState().temporaryConfiguration.activeMappingByLayer,
       this.layerName,
     );
     return this.isSegmentation ? activeMapping.mapping : null;
-  }
-
-  shouldHideUnmappedIds(): boolean {
-    const activeMapping = getMappingInfo(
-      Store.getState().temporaryConfiguration.activeMappingByLayer,
-      this.layerName,
-    );
-    return this.isSegmentation && activeMapping.mappingStatus === MappingStatusEnum.ENABLED
-      ? activeMapping.hideUnmappedIds
-      : false;
-  }
-
-  mapId(unmappedId: bigint): bigint {
-    // Note that the return value can be an unmapped id even when
-    // a mapping is active, if it is a HDF5 mapping that is partially loaded
-    // and no entry exists yet for the input id.
-    let mappedId: bigint | number | null | undefined = null;
-    const mapping = this.getMapping();
-
-    if (mapping != null && this.isMappingEnabled()) {
-      mappedId = getMappedIdAsBigInt(mapping, unmappedId);
-    }
-    if (mappedId == null || (typeof mappedId === "number" && Number.isNaN(mappedId))) {
-      // The id couldn't be mapped.
-      return this.shouldHideUnmappedIds() ? 0n : unmappedId;
-    }
-
-    return toBigInt(mappedId);
   }
 
   private getCubeKey(zoomStep: number, allCoords: AdditionalCoordinate[] | undefined | null) {
@@ -591,43 +544,6 @@ class DataCube {
     }
   }
 
-  async _labelVoxelInResolution_DEPRECATED(
-    voxel: Vector3,
-    additionalCoordinates: AdditionalCoordinate[] | null,
-    label: number,
-    zoomStep: number,
-    activeSegmentId: bigint | null | undefined,
-  ): Promise<void> {
-    // This function is only provided for testing purposes and should not be used internally,
-    // since it only operates on one voxel and therefore is not performance-optimized. It should
-    // be refactored away.
-    // Please use the volume tool drivers (viewer/model/volumetracing/integration) instead.
-    const voxelInCube = this.boundingBox.containsPoint(voxel);
-
-    if (voxelInCube) {
-      const address = this.positionToZoomedAddress(voxel, additionalCoordinates, zoomStep);
-      const bucket = this.getOrCreateBucket(address);
-
-      if (bucket instanceof DataBucket) {
-        const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
-        let shouldUpdateVoxel = true;
-
-        if (activeSegmentId != null) {
-          const voxelValue = this.getMappedDataValue(voxel, additionalCoordinates, zoomStep);
-          shouldUpdateVoxel = activeSegmentId === voxelValue;
-        }
-
-        if (shouldUpdateVoxel) {
-          const labelFunc = (data: BucketDataArray): void => {
-            data[voxelIndex] = label;
-          };
-
-          await bucket.label_DEPRECATED(labelFunc);
-        }
-      }
-    }
-  }
-
   triggerPushQueue() {
     this.pushQueue.push();
   }
@@ -758,19 +674,6 @@ class DataCube {
     }
 
     return 0;
-  }
-
-  getMappedDataValue(
-    voxel: Vector3,
-    additionalCoordinates: AdditionalCoordinate[] | null,
-    zoomStep: number = 0,
-  ): NumberLike {
-    return this.getDataValue(
-      voxel,
-      additionalCoordinates,
-      this.isMappingEnabled() ? this.getMapping() : null,
-      zoomStep,
-    );
   }
 
   getVoxelIndexByVoxelOffset([x, y, z]: Vector3 | Float32Array): number {

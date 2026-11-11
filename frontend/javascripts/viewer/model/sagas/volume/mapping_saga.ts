@@ -72,7 +72,10 @@ import type { ActiveMappingInfo, Mapping, NumberLike, NumberLikeMap } from "view
 import { setActiveCellAction, updateSegmentAction } from "../../actions/volumetracing_actions";
 import type DataCube from "../../bucket_data_handling/data_cube";
 import { listenToStoreProperty } from "../../helpers/listener_helpers";
-import { fetchAgglomeratesForSegmentIds } from "../../helpers/mapped_id_lookup";
+import {
+  fetchAgglomeratesForSegmentIds,
+  isMappingAppliedLocally,
+} from "../../helpers/mapped_id_lookup";
 import { ensureWkInitialized } from "../ready_sagas";
 import { waitUntilNoActiveOperations } from "../saga_helpers";
 
@@ -184,6 +187,21 @@ export default function* watchActivatedMappings(): Saga<void> {
   }
   // Keep RebaseRelevantAnnotationState updated.
   yield* takeEvery(["SET_MAPPING", "SET_MAPPING_DATA"], keepMappingInfoInUpdated);
+  // Merges and splits of other users update the local mapping directly (without an update of the
+  // local HDF5 mapping), so the active segment is adapted to the proofreading marker afterwards.
+  yield* takeEvery(
+    ["FINISHED_REBASING", "FINISH_FORWARDING_UPDATE_ACTIONS"],
+    adaptActiveSegmentsToProofreadingMarkers,
+  );
+}
+
+function* adaptActiveSegmentsToProofreadingMarkers(): Saga<void> {
+  const volumes = yield* select((state) => state.annotation.volumes);
+  for (const { tracingId } of volumes) {
+    if (yield* select((state) => isMappingAppliedLocally(state, tracingId))) {
+      yield* call(adaptActiveSegmentToProofreadingMarker, tracingId);
+    }
+  }
 }
 
 function* clearActiveMapping(volumeTracingId: string) {

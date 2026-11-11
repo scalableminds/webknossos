@@ -2,6 +2,7 @@
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
 import { call, delay, put } from "redux-saga/effects";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
+import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
 import {
   registerOperationAction,
   unregisterOperationAction,
@@ -37,6 +38,13 @@ function* waitForSagas() {
   // Actions that are put by a saga are handled by other sagas after the put finished.
   // Wait for that before checking the marker.
   yield delay(0);
+}
+
+function* getActiveCellId(tracingId: string) {
+  return yield* select(
+    (state) =>
+      state.annotation.volumes.find((volume) => volume.tracingId === tracingId)?.activeCellId,
+  );
 }
 
 function* getMarkerPosition(tracingId: string) {
@@ -240,6 +248,42 @@ describe("Proofreading marker", () => {
 
       expect(Store.getState().annotation.volumes[0].segments.has(1n)).toBe(false);
       expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(1));
+    });
+    await task.toPromise();
+  });
+
+  it("should adapt the active segment when another user merges the segment at the marker", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield put(setCollaborationModeAction("Concurrent"));
+      yield call(clickSegmentWithProofreadingTool, tracingId, 4n);
+      yield call(() => api.tracing.save());
+      expect(yield* getActiveCellId(tracingId)).toBe(4n);
+
+      backendMock.injectVersion(
+        [
+          {
+            name: "mergeAgglomerate",
+            value: {
+              actionTracingId: tracingId,
+              segmentId1: 1n,
+              segmentId2: 4n,
+              agglomerateId1: 1n,
+              agglomerateId2: 4n,
+            },
+          },
+        ],
+        Store.getState().annotation.version + 1,
+      );
+      yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+      yield call(waitForSagas);
+
+      expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(4));
+      expect(yield* getActiveCellId(tracingId)).toBe(1n);
     });
     await task.toPromise();
   });

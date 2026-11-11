@@ -115,8 +115,22 @@ export type SelectedEdge = {
   isMaxEdge: boolean;
   edgeId: number;
   resizableDimension: 0 | 1 | 2;
+  // Offset (in voxels, along resizableDimension) from the mouse position to the edge at the time
+  // the edge was grabbed. While resizing, the edge keeps this offset to the mouse instead of
+  // jumping onto the mouse position.
+  grabOffset: number;
 };
 type DistanceArray = [number, number, number, number];
+
+// Returns the dimension an edge extends along and the dimension it can be resized in.
+// Horizontal edges (ids 0 and 1) extend along the first dimension of the viewport,
+// vertical edges (ids 2 and 3) along the second one.
+function getEdgeDimensions(
+  edgeId: number,
+  indices: DimensionMap,
+): [extentDim: DimensionIndices, resizableDim: DimensionIndices] {
+  return edgeId < 2 ? [indices[0], indices[1]] : [indices[1], indices[0]];
+}
 
 function computeDistanceArray(
   boundingBoxBounds: BoundingBoxMinMaxType,
@@ -126,63 +140,75 @@ function computeDistanceArray(
 ): DistanceArray {
   const { min, max } = boundingBoxBounds;
   const distanceArray = [0, 1, 2, 3].map((edgeId) => {
-    const direction = edgeId < 2 ? "horizontal" : "vertical";
     const isMaxEdge = edgeId % 2 === 1;
-    const primaryAndSecondaryDim =
-      direction === "horizontal" ? [indices[0], indices[1]] : [indices[1], indices[0]];
     return getDistanceToBoundingBoxEdge(
       globalPosition,
       min,
       max,
       !isMaxEdge,
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'DimensionIndices[]' is not assig... Remove this comment to see the full error message
-      primaryAndSecondaryDim,
+      getEdgeDimensions(edgeId, indices),
       planeRatio,
     );
   });
   return distanceArray as any as DistanceArray;
 }
 
-const _getEdgeInfoFromId = (boxId: number, indices: DimensionMap, edgeId: number): SelectedEdge => {
+const _getEdgeInfoFromId = (
+  boxId: number,
+  indices: DimensionMap,
+  edgeId: number,
+  grabOffset: number,
+): SelectedEdge => {
   const direction: SelectedEdge["direction"] = edgeId < 2 ? "horizontal" : "vertical";
   const isMaxEdge = edgeId % 2 === 1;
-  const resizableDimension = direction === "horizontal" ? indices[1] : indices[0];
+  const [, resizableDimension] = getEdgeDimensions(edgeId, indices);
   return {
     boxId,
     direction,
     isMaxEdge,
     edgeId,
     resizableDimension,
+    grabOffset,
   };
 };
 
-// Return the edge or edges of the bounding box closest to the mouse position if their distance is below a certain threshold.
-// If no edge is close to the mouse null is returned instead. Otherwise the first entry is always the closest edge.
-// If the mouse is near a corner, there is always an additional edge that is close to the mouse.
-// If such an edge exists then this edge is the second entry of the array.
-// If the mouse isn't close to a corner of a crossection, the second entry is null.
-export function getClosestHoveredBoundingBox(
-  pos: Point2,
-  plane: OrthoView,
-): [SelectedEdge, SelectedEdge | null | undefined] | null {
-  const state = Store.getState();
-  const globalPosition = calculateMaybeGlobalPos(state, pos, plane);
-  if (globalPosition == null || globalPosition.rounded == null) return null;
-  const roundedPosition = globalPosition.rounded;
+// Returns whether the grab position is close enough to the edge to grab it as part of a corner.
+// For a box that is short on screen, the full tolerance would cover the whole box, so that every
+// grab would resize a corner. Therefore, the tolerance is limited to a quarter of the box size.
+// Outside of the box, there is no such restriction.
+function isGrabbedCloseToCorner(
+  edge: SelectedEdge,
+  boundingBox: BoundingBoxMinMaxType,
+  planeRatio: Vector3,
+  maxDistanceToSelection: number,
+): boolean {
+  const { resizableDimension: dim, isMaxEdge, grabOffset } = edge;
+  // Positive inside of the box, negative outside of it.
+  const inwardOffset = (isMaxEdge ? grabOffset : -grabOffset) / planeRatio[dim];
+  const boxSize = (boundingBox.max[dim] - boundingBox.min[dim]) / planeRatio[dim];
+  return inwardOffset < Math.min(maxDistanceToSelection, boxSize / 4);
+}
 
-  const { userBoundingBoxes } = getSomeTracing(state.annotation);
-  const indices = Dimension.getIndices(plane);
-  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+// Return the edge or edges of the given bounding boxes closest to the position if their distance is below maxDistanceToSelection.
+// If no edge is close to the position null is returned instead. Otherwise the first entry is always the closest edge.
+// If the position is close to a corner of the closest edge, the neighbouring edge of that corner is the second entry of the array.
+// Otherwise, the second entry is null.
+export function getClosestEdgesAtPosition(
+  userBoundingBoxes: ReadonlyArray<UserBoundingBox>,
+  position: Vector3,
+  indices: DimensionMap,
+  planeRatio: Vector3,
+  maxDistanceToSelection: number,
+): [SelectedEdge, SelectedEdge | null] | null {
   const thirdDim = indices[2];
-  const zoomedMaxDistanceToSelection = MAX_DISTANCE_TO_SELECTION * state.flycam.zoomStep;
-  let currentNearestDistance = zoomedMaxDistanceToSelection;
+  let currentNearestDistance = maxDistanceToSelection;
   let currentNearestBoundingBox = null;
   let currentNearestDistanceArray = null;
 
   for (const bbox of userBoundingBoxes) {
     const { min, max } = bbox.boundingBox;
     const isCrossSectionOfViewportVisible =
-      roundedPosition[thirdDim] >= min[thirdDim] && roundedPosition[thirdDim] < max[thirdDim];
+      position[thirdDim] >= min[thirdDim] && position[thirdDim] < max[thirdDim];
 
     if (!isCrossSectionOfViewportVisible || !bbox.isVisible) {
       continue;
@@ -190,12 +216,7 @@ export function getClosestHoveredBoundingBox(
 
     // In getNeighbourEdgeIndexByEdgeIndex is a visualization
     // of how the indices of the array map to the visible bbox edges.
-    const distanceArray = computeDistanceArray(
-      bbox.boundingBox,
-      globalPosition.rounded,
-      indices,
-      planeRatio,
-    );
+    const distanceArray = computeDistanceArray(bbox.boundingBox, position, indices, planeRatio);
     const minimumDistance = Math.min(...distanceArray);
 
     if (minimumDistance < currentNearestDistance) {
@@ -209,10 +230,16 @@ export function getClosestHoveredBoundingBox(
     return null;
   }
 
-  const nearestBoundingBox = currentNearestBoundingBox;
+  const { id: boxId, boundingBox } = currentNearestBoundingBox;
+  const getEdgeInfo = (edgeId: number): SelectedEdge => {
+    const edge = _getEdgeInfoFromId(boxId, indices, edgeId, 0);
+    const bboxKey = edge.isMaxEdge ? "max" : "min";
+    const edgeValue = boundingBox[bboxKey][edge.resizableDimension];
+    return { ...edge, grabOffset: edgeValue - position[edge.resizableDimension] };
+  };
 
   const nearestEdgeIndex = currentNearestDistanceArray.indexOf(currentNearestDistance);
-  const primaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, nearestEdgeIndex);
+  const primaryEdge = getEdgeInfo(nearestEdgeIndex);
   let secondaryEdge = null;
   const [firstNeighbourId, secondNeighbourId] = getNeighbourEdgeIndexByEdgeIndex[nearestEdgeIndex];
   const firstNeighbourEdgeDistance = currentNearestDistanceArray[firstNeighbourId];
@@ -220,17 +247,45 @@ export function getClosestHoveredBoundingBox(
 
   if (
     firstNeighbourEdgeDistance < secondNeighbourEdgeDistance &&
-    firstNeighbourEdgeDistance < zoomedMaxDistanceToSelection
+    firstNeighbourEdgeDistance < maxDistanceToSelection
   ) {
-    secondaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, firstNeighbourId);
+    secondaryEdge = getEdgeInfo(firstNeighbourId);
   } else if (
     secondNeighbourEdgeDistance < firstNeighbourEdgeDistance &&
-    secondNeighbourEdgeDistance < zoomedMaxDistanceToSelection
+    secondNeighbourEdgeDistance < maxDistanceToSelection
   ) {
-    secondaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, secondNeighbourId);
+    secondaryEdge = getEdgeInfo(secondNeighbourId);
   }
 
-  return [primaryEdge, secondaryEdge];
+  const isCornerGrabbed =
+    secondaryEdge != null &&
+    [primaryEdge, secondaryEdge].every((edge) =>
+      isGrabbedCloseToCorner(edge, boundingBox, planeRatio, maxDistanceToSelection),
+    );
+
+  return [primaryEdge, isCornerGrabbed ? secondaryEdge : null];
+}
+
+// Return the edge or edges of the bounding box closest to the mouse position if their distance is below a certain threshold.
+// See getClosestEdgesAtPosition for details.
+export function getClosestHoveredBoundingBox(
+  pos: Point2,
+  plane: OrthoView,
+): [SelectedEdge, SelectedEdge | null | undefined] | null {
+  const state = Store.getState();
+  // Round like handleResizingBoundingBox does, so that the grab offset does not make the edge jump
+  // by one voxel on the first resize.
+  const globalPosition = calculateMaybeGlobalPos(state, pos, plane, true);
+  if (globalPosition == null || globalPosition.rounded == null) return null;
+
+  const { userBoundingBoxes } = getSomeTracing(state.annotation);
+  return getClosestEdgesAtPosition(
+    userBoundingBoxes,
+    globalPosition.rounded,
+    Dimension.getIndices(plane),
+    getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
+    MAX_DISTANCE_TO_SELECTION * state.flycam.zoomStep,
+  );
 }
 
 export async function createBoundingBoxAndGetEdges(
@@ -279,8 +334,8 @@ export async function createBoundingBoxAndGetEdges(
 
   const nearestBoundingBox = newestBoundingBox;
 
-  const primaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, 1);
-  const secondaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, 3);
+  const primaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, 1, 0);
+  const secondaryEdge = _getEdgeInfoFromId(nearestBoundingBox.id, indices, 3, 0);
 
   return [primaryEdge, secondaryEdge];
 }
@@ -350,9 +405,9 @@ export function handleResizingBoundingBox(
     edge: SelectedEdge,
     globalPositionRounded: Vector3,
   ): boolean {
-    const { resizableDimension } = edge;
+    const { resizableDimension, grabOffset } = edge;
     // For a horizontal edge only consider delta.y, for vertical only delta.x
-    const newPositionValue = Math.round(globalPositionRounded[resizableDimension]);
+    const newPositionValue = Math.round(globalPositionRounded[resizableDimension] + grabOffset);
     const minOrMax = edge.isMaxEdge ? "max" : "min";
     const oppositeOfMinOrMax = edge.isMaxEdge ? "min" : "max";
     // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.

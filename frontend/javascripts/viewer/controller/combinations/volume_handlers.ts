@@ -27,8 +27,8 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { mapId, mapIdAsync } from "viewer/model/helpers/mapped_id_lookup";
 import {
+  getTransformPointUnscaledFn,
   invertTransform,
-  transformPointUnscaled,
 } from "viewer/model/helpers/transformation_helpers";
 import { api, Model, Store } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
@@ -66,7 +66,7 @@ function getUntransformedSegmentationPosition(state: WebknossosState, globalPos:
     layer,
     nativelyRenderedLayerName,
   );
-  const layerPos = transformPointUnscaled(invertTransform(segmentationTransforms))(globalPos);
+  const layerPos = getTransformPointUnscaledFn(invertTransform(segmentationTransforms))(globalPos);
   return layerPos;
 }
 

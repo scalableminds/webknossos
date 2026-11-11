@@ -52,7 +52,7 @@ exports[`Misc APIs (E2E)  > datastores() 1`] = `
     "jobsEnabled": false,
     "jobsSupportedByAvailableWorkers": [],
     "name": "localhost",
-    "url": "http://localhost:9000",
+    "url": "http://localhost:9010",
   },
 ]
 `;
@@ -73,7 +73,8 @@ exports[`Misc APIs (E2E)  > getFeatureToggles() 1`] = `
   "hideNavbarLogin": false,
   "instancesInferralCostInMilliCreditsPerGVx": 1000,
   "isWkorgInstance": false,
-  "jobsEnabled": false,
+  "jobsEnabled": true,
+  "mcpEnabled": true,
   "mitochondriaInferralCostInMilliCreditsPerGVx": 1000,
   "neuronInferralCostInMilliCreditsPerGVx": 1000,
   "nucleiInferralCostInMilliCreditsPerGVx": 1000,

@@ -18,9 +18,20 @@ import scala.sys.process.*
 class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeApplicationFactory with LazyLogging {
 
   private val argumentMapRead = parseCustomJavaArgs(arguments)
-  private val testPort = 9000
+  // Ports differ from the dev defaults (9000/9001 for vite/backend, 7155 for fossildb)
+  // so that the e2e tests can run while a local dev instance is running.
+  private val testPort = 9010
+  private val testUri = s"http://localhost:$testPort"
+  private val testFossilDbPort = 7156 // see .github/docker-compose.yml
   private val argumentMap = argumentMapRead +
     ("http.port" -> testPort) +
+    // The datastore/tracingstore uris are substituted from http.uri when the config file is loaded, so they need explicit overrides
+    ("http.uri" -> testUri) +
+    ("datastore.publicUri" -> testUri) +
+    ("datastore.webKnossos.uri" -> testUri) +
+    ("tracingstore.publicUri" -> testUri) +
+    ("tracingstore.webKnossos.uri" -> testUri) +
+    ("tracingstore.fossildb.port" -> testFossilDbPort) +
     ("features.voxelyticsEnabled" -> true)
 
   private val application = new GuiceApplicationBuilder().configure(argumentMap).build()

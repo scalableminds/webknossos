@@ -6,10 +6,12 @@ import {
 } from "test/helpers/apiHelpers";
 import { call, put, take } from "redux-saga/effects";
 import Toast from "libs/toast";
+import { getAgglomeratesForSegmentsFromDatastore } from "admin/rest_api";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   cutAgglomerateFromNeighborsAction,
   minCutAgglomerateWithPositionAction,
+  proofreadAtPosition,
   proofreadMergeAction,
 } from "viewer/model/actions/proofread_actions";
 import {
@@ -243,6 +245,33 @@ describe("Proofreading (Single User)", () => {
       );
     });
 
+    await task.toPromise();
+  });
+
+  it("should show a warning instead of crashing if the agglomerate id of a proofreading click can't be fetched", async (context: WebknossosTestContext) => {
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+    const fetchAgglomerates = vi.mocked(getAgglomeratesForSegmentsFromDatastore);
+    const originalImplementation = fetchAgglomerates.getMockImplementation();
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      vi.mocked(Toast.warning).mockClear();
+      fetchAgglomerates.mockRejectedValue(new Error("Network error"));
+      try {
+        // Segment 1337 is not known to the local mapping, so its agglomerate id is fetched.
+        yield put(proofreadAtPosition(getPositionForSegmentId(1337)));
+        yield call(() =>
+          vi.waitFor(() =>
+            expect(Toast.warning).toHaveBeenCalledWith(
+              "Could not determine the segment id at the clicked position. Please try again.",
+            ),
+          ),
+        );
+      } finally {
+        fetchAgglomerates.mockImplementation(originalImplementation!);
+      }
+    });
     await task.toPromise();
   });
 });

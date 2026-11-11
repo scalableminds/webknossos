@@ -66,8 +66,9 @@ export function mapId(
 // Like mapId, but fetches the mapped id from the server if the local HDF5 mapping
 // doesn't know it. The fetched entry is not added to the local mapping, because the next
 // update of the local mapping would remove it anyway if it's not needed for rendering.
-// Null is only returned for a JSON mapping that is still being activated, if the server didn't
-// return an entry for the id or if the mapping changed while the request was pending.
+// Null is only returned for a JSON mapping that is still being activated, if the request failed,
+// if the server didn't return an entry for the id or if the mapping changed while the request
+// was pending.
 export async function mapIdAsync(layerName: string, unmappedId: bigint): Promise<bigint | null> {
   const state = Store.getState();
   const mappedId = mapId(state, layerName, unmappedId);
@@ -79,15 +80,22 @@ export async function mapIdAsync(layerName: string, unmappedId: bigint): Promise
     return mappedId;
   }
 
-  const fetchedEntries = await fetchAgglomeratesForSegmentIds(
-    state.dataset,
-    state.annotation,
-    getEditableMappingForVolumeTracingId(state, layerName),
-    layerName,
-    getLayerByName(state.dataset, layerName),
-    mappingName,
-    new Set([unmappedId]),
-  );
+  let fetchedEntries: Mapping;
+  try {
+    fetchedEntries = await fetchAgglomeratesForSegmentIds(
+      state.dataset,
+      state.annotation,
+      getEditableMappingForVolumeTracingId(state, layerName),
+      layerName,
+      getLayerByName(state.dataset, layerName),
+      mappingName,
+      new Set([unmappedId]),
+    );
+  } catch (exception) {
+    // The callers handle null (e.g., with a toast), so a failed request doesn't crash the sagas.
+    console.error(`Could not fetch the mapped id for ${unmappedId}:`, exception);
+    return null;
+  }
   // Discard the result if the mapping was switched or disabled while the request was pending.
   const currentMappingInfo = getMappingInfo(
     Store.getState().temporaryConfiguration.activeMappingByLayer,

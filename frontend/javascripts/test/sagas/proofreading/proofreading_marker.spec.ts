@@ -2,7 +2,11 @@
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
 import { call, delay, put } from "redux-saga/effects";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
-import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
+import {
+  dispatchEnsureHasNewestVersionAsync,
+  finishedRebaseAction,
+  rewindForRebaseAction,
+} from "viewer/model/actions/save_actions";
 import {
   registerOperationAction,
   unregisterOperationAction,
@@ -284,6 +288,26 @@ describe("Proofreading marker", () => {
 
       expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(4));
       expect(yield* getActiveCellId(tracingId)).toBe(1n);
+    });
+    await task.toPromise();
+  });
+
+  it("should be kept when the user activates another segment during a rebase", async (context: WebknossosTestContext) => {
+    // While rebasing, the store contains the server's state (including its active segment id)
+    // and the reducer drops SET_ACTIVE_CELL actions.
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield call(clickSegmentWithProofreadingTool, tracingId, 1n);
+
+      yield put(rewindForRebaseAction());
+      expect(yield* getActiveCellId(tracingId)).not.toBe(1n);
+      yield put(setActiveCellAction(4n, getPositionForSegmentId(4)));
+      yield call(waitForSagas);
+      expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(1));
+      yield put(finishedRebaseAction());
     });
     await task.toPromise();
   });

@@ -37,9 +37,9 @@ async function labelVoxel(cube: DataCube, voxel: Vector3, label: number): Promis
   const bucket = cube.getOrCreateBucket(cube.positionToZoomedAddress(voxel, null, 0));
   assertNonNullBucket(bucket);
   const data = await bucket.getDataForMutation();
-  bucket.startDataMutation();
+  bucket.startDataMutationForFullBucket();
   data[cube.getVoxelIndex(voxel, 0)] = label;
-  bucket.endDataMutation();
+  bucket.endDataMutationForFullBucket();
 }
 
 describe("DataCube", () => {

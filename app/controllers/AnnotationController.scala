@@ -265,7 +265,7 @@ class AnnotationController @Inject() (
     sil.SecuredAction.fox(validateJson[AnnotationLayerRegistration]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
-        annotation <- annotationService.createLayerRegistrationFor(
+        annotation <- annotationService.createLayerRegistrationAnnotationFor(
           request.identity,
           dataset,
           request.body

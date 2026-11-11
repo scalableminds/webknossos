@@ -40,14 +40,23 @@ class DataVaultTestSuite extends AsyncWordSpec with ParallelTestExecution {
 
   // WsTestClient's clients share one underlying client, which is closed together with its ActorSystem once no client
   // references it anymore. The reference is held until the test's reads are done, so it is not closed in between.
+  // It is also released if vault creation or the test itself throws before returning a future.
   private def withGcsVaultPath(upath: UPath, credential: Option[DataVaultCredential] = None)(
       test: VaultPath => Future[Assertion]
   ): Future[Assertion] = {
     val ws = new WsTestClient.InternalWSClient("http", -1)
-    val vault = GoogleCloudDataVault
-      .create(CredentializedUPath(upath, credential), ws)
-      .getOrElse(fail("Failed to create GoogleCloudDataVault"))
-    test(new VaultPath(upath, vault)).andThen(_ => ws.close())(using globalExecutionContext)
+    val testFuture =
+      try {
+        val vault = GoogleCloudDataVault
+          .create(CredentializedUPath(upath, credential), ws)
+          .getOrElse(fail("Failed to create GoogleCloudDataVault"))
+        test(new VaultPath(upath, vault))
+      } catch {
+        case t: Throwable =>
+          ws.close()
+          throw t
+      }
+    testFuture.andThen(_ => ws.close())(using globalExecutionContext)
   }
 
   "Data vault" when {

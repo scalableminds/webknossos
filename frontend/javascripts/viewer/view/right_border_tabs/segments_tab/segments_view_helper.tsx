@@ -89,6 +89,16 @@ export async function hasSegmentIndex(
   );
 }
 
+export async function activateMappingAndWait(layerName: string, mappingName: string) {
+  Store.dispatch(setMappingAction(layerName, mappingName, "AGGLOMERATE", false));
+  await waitForCondition(
+    () =>
+      getMappingInfo(Store.getState().temporaryConfiguration.activeMappingByLayer, layerName)
+        .mappingStatus === MappingStatusEnum.ENABLED,
+    100,
+  );
+}
+
 export function withMappingActivationConfirmation(
   originalOnClick: MenuProps["onClick"],
   mappingName: string | null | undefined,
@@ -115,7 +125,7 @@ export function withMappingActivationConfirmation(
   const recommendationStr =
     editableMapping == null
       ? ""
-      : "This is because the current mapping was locked while editing it with the proofreading tool. Consider changing the active mesh file instead.";
+      : `This is because the current mapping was locked while editing it with the proofreading tool. Consider changing the active ${descriptor} instead.`;
 
   const confirmMappingActivation: MenuProps["onClick"] = (menuClickEvent) => {
     confirm({
@@ -125,15 +135,7 @@ export function withMappingActivationConfirmation(
           return;
         }
         if (mappingName != null) {
-          Store.dispatch(setMappingAction(layerName, mappingName, "AGGLOMERATE", false));
-          await waitForCondition(
-            () =>
-              getMappingInfo(
-                Store.getState().temporaryConfiguration.activeMappingByLayer,
-                layerName,
-              ).mappingStatus === MappingStatusEnum.ENABLED,
-            100,
-          );
+          await activateMappingAndWait(layerName, mappingName);
         } else {
           Store.dispatch(setMappingEnabledAction(layerName, false));
           await waitForCondition(

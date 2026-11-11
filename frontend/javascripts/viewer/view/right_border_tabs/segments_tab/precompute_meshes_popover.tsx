@@ -15,18 +15,17 @@ import Toast from "libs/toast";
 import { Fragment, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { APIJobCommand } from "types/api_types";
-import { MappingStatusEnum } from "viewer/constants";
 import {
   getMagInfoOfVisibleSegmentationLayer,
-  getMappingInfo,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { hasEditableMapping } from "viewer/model/accessors/volumetracing_accessor";
+import { dispatchEnsureLayerMappingsAreLoadedAsync } from "viewer/model/actions/dataset_actions";
 import { updateTemporarySettingAction } from "viewer/model/actions/settings_actions";
-import Store from "viewer/store";
 import { formatMagWithLabel, getBaseSegmentationName } from "./segments_view_helper";
 
 const REFRESH_INTERVAL = 5000;
+// Select value for computing the mesh file without a mapping. Select treats null as "nothing selected".
+const NO_MAPPING = "";
 
 type PrecomputeMeshesPopoverProps = {
   onActiveJobChange?: (isRunning: boolean) => void;
@@ -49,12 +48,22 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
     (state) => state.temporaryConfiguration.preferredQualityForMeshPrecomputation,
   );
   const magInfo = useWkSelector(getMagInfoOfVisibleSegmentationLayer);
-  const mappingInfo = useWkSelector((state) =>
-    getMappingInfo(
-      state.temporaryConfiguration.activeMappingByLayer,
-      visibleSegmentationLayer?.name,
-    ),
-  );
+  // Without a mapping by default: such a mesh file works with every mapping and for proofreading.
+  const [agglomerateView, setAgglomerateView] = useState<string>(NO_MAPPING);
+  const [areMappingsLoading, setAreMappingsLoading] = useState(false);
+  const visibleSegmentationLayerName = visibleSegmentationLayer?.name;
+
+  useEffect(() => {
+    // The agglomerate mappings of a layer are only fetched on demand. With a volume annotation,
+    // meshes can't be precomputed anyway.
+    if (visibleSegmentationLayerName == null || hasVolumeTracing) {
+      return;
+    }
+    setAreMappingsLoading(true);
+    dispatchEnsureLayerMappingsAreLoadedAsync(dispatch, visibleSegmentationLayerName).finally(() =>
+      setAreMappingsLoading(false),
+    );
+  }, [dispatch, visibleSegmentationLayerName, hasVolumeTracing]);
 
   // Poll the jobs while a mesh job is running. Errors are swallowed so that a failing
   // poll doesn't show a toast every few seconds.
@@ -158,21 +167,11 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
     const meshFileMag = magInfo.getMagByIndexWithFallback(meshFileMagIndex, null);
 
     if (visibleSegmentationLayer != null) {
-      const isEditableMapping = hasEditableMapping(Store.getState(), visibleSegmentationLayer.name);
-
-      const maybeMappingName =
-        !isEditableMapping &&
-        mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
-        mappingInfo.mappingType !== "JSON" &&
-        mappingInfo.mappingName != null
-          ? mappingInfo.mappingName
-          : undefined;
-
       const job = await startComputeMeshFileJob(
         dataset.id,
         getBaseSegmentationName(visibleSegmentationLayer),
         meshFileMag,
-        maybeMappingName,
+        agglomerateView === NO_MAPPING ? undefined : agglomerateView,
       );
       setActiveMeshJobId(job.id);
       Toast.info(
@@ -197,6 +196,11 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
     value: logToIndex,
     label: formatMagWithLabel(mag, index),
   }));
+
+  const mappingOptions = [
+    { value: NO_MAPPING, label: "None (recommended)" },
+    ...(visibleSegmentationLayer?.agglomerates ?? []).map((name) => ({ value: name, label: name })),
+  ];
 
   return (
     <div
@@ -232,6 +236,27 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
             options={qualityOptions}
           />
         </Space>
+      </Typography.Paragraph>
+
+      <Typography.Paragraph>
+        <Space>
+          Mapping:
+          <Select
+            size="small"
+            style={{ width: 220 }}
+            value={agglomerateView}
+            onChange={setAgglomerateView}
+            loading={areMappingsLoading}
+            options={mappingOptions}
+          />
+        </Space>
+      </Typography.Paragraph>
+
+      <Typography.Paragraph type="secondary">
+        A mesh file computed without a mapping contains a mesh per segment of the unmapped data. It
+        works with every mapping and is required for proofreading. A mesh file computed for a
+        mapping loads the meshes of its agglomerates faster, but it can only be used while that
+        mapping is active and not for proofreading.
       </Typography.Paragraph>
 
       <Flex justify="center">

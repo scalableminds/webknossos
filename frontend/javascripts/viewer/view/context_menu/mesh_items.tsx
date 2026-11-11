@@ -106,7 +106,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
       : maybeUnmappedSegmentId == null
         ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
         : meshFileMappingName != null
-          ? "This mesh was created for a mapping. Please use a mesh file that is based on unmapped oversegmentation data."
+          ? 'This mesh was loaded from a mesh file that was computed for a mapping. Proofreading requires a mesh file that was computed without a mapping. Select one in the mesh settings of the Segments tab or precompute one with the mapping "None".'
           : actionNeedsActiveSegment && activeSegmentMissing
             ? "Select a segment first."
             : null;

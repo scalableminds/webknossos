@@ -57,11 +57,6 @@ function notifyAboutMissingPositions(segments: Segment[]) {
 export function useMeshOperations(): MeshOperations {
   const dispatch = useDispatch();
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
-  const currentMeshFile = useWkSelector((state) =>
-    visibleSegmentationLayer != null
-      ? state.localSegmentationStateByLayer[visibleSegmentationLayer.name].currentMeshFile
-      : null,
-  );
   const meshes =
     useWkSelector((state) =>
       visibleSegmentationLayer != null
@@ -71,6 +66,13 @@ export function useMeshOperations(): MeshOperations {
 
   const loadPrecomputedMeshes = useCallback(
     (segments: Segment[]) => {
+      if (visibleSegmentationLayer == null) {
+        return;
+      }
+      // Read the mesh file now: it might have been switched right before this function is
+      // called (see withMeshFileCompatibilityCheck).
+      const { currentMeshFile } =
+        Store.getState().localSegmentationStateByLayer[visibleSegmentationLayer.name];
       if (currentMeshFile == null) {
         return;
       }
@@ -91,7 +93,7 @@ export function useMeshOperations(): MeshOperations {
       }
       notifyAboutMissingPositions(segments);
     },
-    [dispatch, currentMeshFile],
+    [dispatch, visibleSegmentationLayer],
   );
 
   const loadAdHocMeshes = useCallback(

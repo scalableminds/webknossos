@@ -30,7 +30,6 @@ import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import Constants, { type Vector3 } from "viewer/constants";
 import {
-  getMappingInfo,
   getMaybeSegmentIndexAvailability,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
@@ -63,10 +62,8 @@ import type { SegmentGroupOperations } from "./hooks/use_segment_group_operation
 import type { SegmentSelection } from "./hooks/use_segment_selection";
 import { useSegmentStatisticsFile } from "./hooks/use_segment_statistics_file";
 import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
-import {
-  mayEditVisibleSegmentation,
-  withMappingActivationConfirmation,
-} from "./segments_view_helper";
+import { withMeshFileCompatibilityCheck } from "./mesh_file_compatibility_modal";
+import { mayEditVisibleSegmentation } from "./segments_view_helper";
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
@@ -276,12 +273,6 @@ export function useSegmentContextMenuBuilder(
   const allowUpdate = useWkSelector(mayEditVisibleSegmentation);
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
   const activeVolumeTracing = useWkSelector(getActiveSegmentationTracing);
-  const mappingInfo = useWkSelector((state) =>
-    getMappingInfo(
-      state.temporaryConfiguration.activeMappingByLayer,
-      visibleSegmentationLayer?.name,
-    ),
-  );
   const getSegmentListMenuItems = useSegmentListMenuItems(dependencies);
 
   const buildMultiSelectMenu = useCallback((): MenuProps => {
@@ -473,12 +464,9 @@ export function useSegmentContextMenuBuilder(
             key: "loadPrecomputedMesh",
             disabled: currentMeshFile == null,
             icon: <Icon component={MeshIcon} />,
-            onClick: withMappingActivationConfirmation(
+            onClick: withMeshFileCompatibilityCheck(
               withKnownPosition(() => meshOperations.loadPrecomputedMeshes([segment])),
-              currentMeshFile?.mappingName,
-              "mesh file",
               layerName,
-              mappingInfo,
             ),
             label: (
               <LoadMeshMenuItemLabel
@@ -509,7 +497,6 @@ export function useSegmentContextMenuBuilder(
       allowUpdate,
       visibleSegmentationLayer,
       activeVolumeTracing,
-      mappingInfo,
       meshOperations,
       meshFiles,
       hideContextMenu,

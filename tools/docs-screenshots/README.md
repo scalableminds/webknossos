@@ -37,7 +37,7 @@ Failures are meant to be fixed, not accepted: recipes that need local records or
 
 ### Capture environment
 
-1600×1000 viewport at device scale 1, UTC, no animations, light theme (applied to the capture's browser context only, the account is not changed). The default viewer scene (`viewer` in `fixtures.default.json`) loads the `agglomerate_view_65` mapping and the meshes of agglomerates 415 and 128501. Recipes create temporary annotations and delete them afterwards; admin recipes open forms but never submit them. Use a dedicated local account, since the frontend API may change its viewer settings.
+1600×1000 viewport at device scale 1, JPEG quality 90, UTC, no animations, light theme (applied to the capture's browser context only, the account is not changed). The default viewer scene (`viewer` in `fixtures.default.json`) loads the `agglomerate_view_65` mapping and the meshes of agglomerates 415 and 128501. Recipes create temporary annotations and delete them afterwards; admin recipes open forms but never submit them. Use a dedicated local account, since the frontend API may change its viewer settings.
 
 ### Fixtures
 

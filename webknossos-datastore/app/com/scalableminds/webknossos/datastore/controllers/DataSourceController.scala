@@ -72,13 +72,14 @@ class DataSourceController @Inject() (
 
   override def allowRemoteOrigin: Boolean = true
 
-  def getOneBaseDirForOrgaAbsolute(organizationId: String): Action[AnyContent] = Action.fox { implicit request =>
-    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-      for {
-        orgaBaseDir <- baseDirService.getOneLocalForOrga(organizationId).toFox
-      } yield Ok(Json.toJson(UPath.fromLocalPath(orgaBaseDir)))
+  def getOneBaseDirForOrgaAbsolute(organizationId: String, requireAllowsUpload: Option[Boolean]): Action[AnyContent] =
+    Action.fox { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+        for {
+          orgaBaseDir <- baseDirService.getOneLocalForOrga(organizationId, requireAllowsUpload.getOrElse(false)).toFox
+        } yield Ok(Json.toJson(UPath.fromLocalPath(orgaBaseDir)))
+      }
     }
-  }
 
   def scanBaseDirectories(organizationId: Option[String]): Action[AnyContent] = Action.fox { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
@@ -226,9 +227,7 @@ class DataSourceController @Inject() (
     }
 
   def createOrganizationDirectory(organizationId: String): Action[AnyContent] = Action.fox { implicit request =>
-    accessTokenService.validateAccessFromTokenContext(
-      UserAccessRequest.administrateDatasets(organizationId)
-    ) {
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
       for {
         _ <- baseDirService.getOneLocalForOrga(organizationId, createIfMissing = true, checkWritable = true).toFox
       } yield Ok

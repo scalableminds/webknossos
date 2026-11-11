@@ -1,11 +1,14 @@
 import app from "app";
-// only relative imports are followed by documentationjs
 import type { WebKnossosModel } from "viewer/model";
 import createApiLatest, { type ApiInterface } from "./api_latest";
 import WkDev from "./wk_dev";
 
 const latestVersion = 3;
 
+/**
+ * Entry point of the WEBKNOSSOS frontend API, available as `window.webknossos`.
+ * Use {@link ApiLoader.apiReady} to obtain the API object.
+ */
 class ApiLoader {
   readyPromise: Promise<void>;
   apiInterface!: ApiInterface;
@@ -22,11 +25,8 @@ class ApiLoader {
   }
 
   /**
-   * API initializer. Will be called as soon as the webKnossos API is ready.
-   * @name apiReady
-   * @memberof Api
-   * @instance
-   * @param {number} version
+   * Waits for the WEBKNOSSOS API to become ready and returns the API object.
+   * @param version - The requested API version. Only the latest version (3) is supported.
    *
    * @example
    * window.webknossos.apiReady(3).then((api) => {

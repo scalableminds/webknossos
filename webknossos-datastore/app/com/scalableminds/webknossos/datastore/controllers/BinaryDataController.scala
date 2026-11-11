@@ -113,7 +113,7 @@ class BinaryDataController @Inject() (
 
   def requestRawCuboidPost(datasetId: ObjectId, dataLayerName: String): Action[RawCuboidRequest] =
     Action.fox(validateJson[RawCuboidRequest]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           (data, emptyIndices, failureIndices) <- requestData(datasetId, dataSource.id, dataLayer, List(request.body))

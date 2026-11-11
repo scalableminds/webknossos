@@ -266,8 +266,10 @@ export function useDatasetsInFolderQuery(folderId: string | null, listParams: Da
 
     if (queryData.data == null || queryData.data.length === 0 || queryData.isPlaceholderData) {
       // No data exists in the cache. Allow the query to fetch and start polling afterwards.
-      queryData.refetch().then(() => {
-        if (!effectWasCancelled) {
+      // Polling is pointless without a folder (e.g., while searching) and for an empty list,
+      // since polls only update datasets that are already listed.
+      queryData.refetch().then((result) => {
+        if (!effectWasCancelled && folderId != null && (result.data?.length ?? 0) > 0) {
           scheduleNextPoll();
         }
       });

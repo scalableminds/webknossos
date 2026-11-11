@@ -318,9 +318,6 @@ export default function DatasetCollectionContextProvider({
   ]);
   const [loadAllSearchScopeKey, setLoadAllSearchScopeKey] = useState<string | null>(null);
   const shouldLoadAllSearchResults = loadAllSearchScopeKey === searchScopeKey;
-  useEffect(() => {
-    setLoadAllSearchScopeKey((prevKey) => (prevKey === searchScopeKey ? prevKey : null));
-  }, [searchScopeKey]);
   const loadAllSearchResults = useCallback(
     () => setLoadAllSearchScopeKey(searchScopeKey),
     [searchScopeKey],

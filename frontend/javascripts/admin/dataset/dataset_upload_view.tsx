@@ -112,14 +112,16 @@ function useUploadableDatastores(
     APIJobCommand.CONVERT_TO_WKW,
   );
 
-  // The datastore field is required but usually hidden. Without an uploadable datastore, the
-  // form would fail to validate without showing any error.
-  const hasNoUploadableDatastore = datastores != null && uploadableDatastores.length === 0;
+  // The datastore field is required but usually hidden. While the datastores are loading or if none
+  // accepts uploads, the form would fail to validate without showing any error.
+  const isLoadingDatastores = datastores == null;
+  const hasNoUploadableDatastore = !isLoadingDatastores && uploadableDatastores.length === 0;
 
   return {
     uploadableDatastores,
     selectedDatastoreUrl,
     isDatasetConversionEnabled,
+    isLoadingDatastores,
     hasNoUploadableDatastore,
   };
 }
@@ -140,7 +142,11 @@ function usePreselectRootFolder(form: FormInstance<UploadFormFieldTypes>) {
     // Each organization has exactly one root folder, which is the only item without a parent.
     const rootFolder = hierarchy.tree[0];
     preselectedFolderId.current = rootFolder?.isEditable ? rootFolder.key : null;
-    form.setFieldsValue({ targetFolderId: preselectedFolderId.current ?? undefined });
+    // Unlike setFieldsValue, setFields can keep the field untouched. Otherwise, the next run of this
+    // effect would treat the own preselection as a choice of the user and never update it.
+    form.setFields([
+      { name: "targetFolderId", value: preselectedFolderId.current ?? undefined, touched: false },
+    ]);
   }, [hierarchy, form]);
 }
 
@@ -240,6 +246,7 @@ function DatasetUploadView({ datastores, withoutCard, onUploaded }: Props) {
     uploadableDatastores,
     selectedDatastoreUrl,
     isDatasetConversionEnabled,
+    isLoadingDatastores,
     hasNoUploadableDatastore,
   } = useUploadableDatastores(datastores, form);
   usePreselectRootFolder(form);
@@ -450,6 +457,7 @@ function DatasetUploadView({ datastores, withoutCard, onUploaded }: Props) {
               htmlType="submit"
               disabled={
                 isStorageExceeded ||
+                isLoadingDatastores ||
                 hasNoUploadableDatastore ||
                 isInspectionBlockingUpload(inspection, isDatasetConversionEnabled)
               }

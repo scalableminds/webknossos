@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.Msg
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxIterator, SyncFoxIterator}
@@ -205,7 +206,7 @@ trait VolumeTracingBucketHelper
       volumeLayer: VolumeTracingLayer,
       bucketPositions: Seq[BucketPosition],
       version: Option[Long]
-  )(using ec: ExecutionContext): Fox[Seq[Box[Array[Byte]]]] = {
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] = {
     val bucketKeys = bucketPositions.map(buildBucketKey(volumeLayer.name, _, volumeLayer.additionalAxes))
 
     for {
@@ -231,7 +232,7 @@ trait VolumeTracingBucketHelper
       volumeLayer: VolumeTracingLayer,
       bucketPositions: Seq[BucketPosition],
       bucketBoxesFromFossil: Seq[Box[Array[Byte]]]
-  )(using ec: ExecutionContext): Fox[Seq[Box[Array[Byte]]]] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] =
     if (!volumeLayer.includeFallbackDataIfAvailable || volumeLayer.tracing.fallbackLayer.isEmpty) {
       Fox.successful(bucketBoxesFromFossil)
     } else {
@@ -254,7 +255,7 @@ trait VolumeTracingBucketHelper
           )
         }
         (fallbackDataFlat, fallbackEmptyBucketIndices, fallbackFailureBucketIndices) <- volumeLayer.volumeTracingService
-          .getFallbackBucketsFromDataStore(remoteFallbackLayer, dataRequests)(using volumeLayer.tokenContext)
+          .getFallbackBucketsFromDataStore(remoteFallbackLayer, dataRequests)
         _ <- Fox.fromBool(fallbackFailureBucketIndices.isEmpty) ?~> Msg.Annotation.Volume.fallbackDataLoadingFailed
         bucketBoxesFromDataStore <- splitIntoBuckets(
           dataRequests.length,
@@ -295,7 +296,7 @@ trait VolumeTracingBucketHelper
       volumeLayer: VolumeTracingLayer,
       bucket: BucketPosition,
       version: Option[Long] = None
-  )(using ec: ExecutionContext): Fox[Array[Byte]] = {
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] = {
     val bucketKey = buildBucketKey(volumeLayer.name, bucket, volumeLayer.additionalAxes)
 
     val dataFox =
@@ -327,7 +328,8 @@ trait VolumeTracingBucketHelper
   }
 
   protected def loadFallbackBucket(layer: VolumeTracingLayer, bucket: BucketPosition)(using
-      ec: ExecutionContext
+      ec: ExecutionContext,
+      tc: TokenContext
   ): Fox[Array[Byte]] = {
     val dataRequest: WebknossosDataRequest = WebknossosDataRequest(
       position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
@@ -341,10 +343,7 @@ trait VolumeTracingBucketHelper
     for {
       remoteFallbackLayer <- layer.volumeTracingService
         .remoteFallbackLayerForVolumeTracing(layer.tracing, layer.annotationId)
-      bucketData <- layer.volumeTracingService.getFallbackBucketFromDataStore(remoteFallbackLayer, dataRequest)(using
-        ec,
-        layer.tokenContext
-      )
+      bucketData <- layer.volumeTracingService.getFallbackBucketFromDataStore(remoteFallbackLayer, dataRequest)
     } yield bucketData
 
   }

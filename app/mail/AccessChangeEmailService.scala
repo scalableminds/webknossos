@@ -1,46 +1,40 @@
-package models.user
+package mail
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.box.{Failure, Full}
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import mail.{DefaultMails, Mail, Send}
 import models.annotation.{Annotation, AnnotationDAO}
 import models.dataset.{Dataset, DatasetDAO}
 import models.organization.OrganizationDAO
-import models.project.Project
-import models.task.{Task, TaskTypeDAO}
 import models.team.{Team, TeamDAO, TeamMembership}
-import org.apache.pekko.actor.ActorSystem
+import models.user.{MultiUser, MultiUserDAO, User, UserDAO}
 import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.*
 
-/* Informs users by email when someone else changes what they have access to or what they should work on:
-   annotations and datasets shared with their teams, annotations transferred to them, changes of their team
-   memberships and roles, and tasks manually assigned to them. Changes a user makes themselves are never announced.
+/* Informs users by email when someone else changes what they have access to: annotations and datasets shared with
+   their teams, annotations transferred to them, and changes of their team memberships and roles. Changes a user makes
+   themselves are never announced. Enabled by the config flag mail.notificationEmails.accessChanges.
    The emails are assembled and sent in the background, so that failing to send them never fails the actual change. */
-class NotificationEmailService @Inject() (
+class AccessChangeEmailService @Inject() (
     userDAO: UserDAO,
     multiUserDAO: MultiUserDAO,
     teamDAO: TeamDAO,
     annotationDAO: AnnotationDAO,
     datasetDAO: DatasetDAO,
     organizationDAO: OrganizationDAO,
-    taskTypeDAO: TaskTypeDAO,
     defaultMails: DefaultMails,
-    conf: WkConf,
-    actorSystem: ActorSystem
+    mailSender: MailSender,
+    conf: WkConf
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  import NotificationEmailService.accessChanges
-
-  private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
+  import AccessChangeEmailService.accessChanges
 
   implicit private val ctx: DBAccessContext = GlobalAccessContext
 
@@ -50,7 +44,6 @@ class NotificationEmailService @Inject() (
   private val recentlyActivatedUsers: AlfuCache[ObjectId, Unit] = AlfuCache(timeToLive = 1 hour)
 
   private def accessChangesEnabled: Boolean = conf.Mail.NotificationEmails.accessChanges
-  private def taskAssignmentsEnabled: Boolean = conf.Mail.NotificationEmails.manualTaskAssignments
 
   // Runs the update of the teams the annotation is shared with, then notifies users who now see it in their list.
   def updateAnnotationTeamsAndSendEmails[T](
@@ -84,7 +77,7 @@ class NotificationEmailService @Inject() (
   // Expects the annotation as it is after the transfer, i.e. owned by the new owner.
   def sendAnnotationTransferredEmail(annotation: Annotation, issuer: User): Unit =
     if (accessChangesEnabled && annotation._user != issuer._id)
-      inBackground(s"annotation ${annotation._id} transferred to user ${annotation._user}") {
+      mailSender.inBackground(s"annotation ${annotation._id} transferred to user ${annotation._user}") {
         for {
           newOwner <- userDAO.findOne(annotation._user)
           // Deactivated users cannot log in, so there is nothing for them to act on.
@@ -93,7 +86,7 @@ class NotificationEmailService @Inject() (
               recipient <- multiUserDAO.findOne(newOwner._multiUser)
               issuerMultiUser <- multiUserDAO.findOne(issuer._multiUser)
               dataset <- datasetDAO.findOne(annotation._dataset)
-            } yield Mailer ! Send(
+            } yield mailSender.send(
               defaultMails.annotationTransferredMail(
                 recipient,
                 issuerMultiUser.fullName,
@@ -149,7 +142,7 @@ class NotificationEmailService @Inject() (
     val staysActive = !userBefore.isDeactivated && !userAfter.isDeactivated
     val wasRecentlyActivated = recentlyActivatedUsers.keys.contains(userAfter._id)
     if (accessChangesEnabled && userBefore._id != issuer._id && staysActive && !wasRecentlyActivated)
-      inBackground(s"access of user ${userBefore._id} changed") {
+      mailSender.inBackground(s"access of user ${userBefore._id} changed") {
         for {
           teams <- teamDAO.findAllByIds((oldTeamMemberships ++ newTeamMemberships).map(_.teamId).distinct)
           changes = accessChanges(
@@ -164,26 +157,13 @@ class NotificationEmailService @Inject() (
               recipient <- multiUserDAO.findOne(userAfter._multiUser)
               issuerMultiUser <- multiUserDAO.findOne(issuer._multiUser)
               organization <- organizationDAO.findOne(userAfter._organization)
-            } yield Mailer ! Send(
+            } yield mailSender.send(
               defaultMails.accessChangedMail(recipient, issuerMultiUser.fullName, organization.name, changes)
             )
           )
         } yield ()
       }
   }
-
-  def sendTaskAssignedEmail(task: Task, project: Project, annotationId: ObjectId, assignee: User, issuer: User): Unit =
-    if (taskAssignmentsEnabled && assignee._id != issuer._id && !assignee.isDeactivated)
-      inBackground(s"task ${task._id} assigned to user ${assignee._id}") {
-        for {
-          recipient <- multiUserDAO.findOne(assignee._multiUser)
-          issuerMultiUser <- multiUserDAO.findOne(issuer._multiUser)
-          taskType <- taskTypeDAO.findOne(task._taskType)
-        } yield Mailer ! Send(
-          defaultMails
-            .taskAssignedMail(recipient, issuerMultiUser.fullName, project.name, taskType.summary, annotationId)
-        )
-      }
 
   /* Determines who has access before and after the update via the same access queries that decide what users see, so
      that only members of the added teams who actually gain access are notified. Failing to determine the access before
@@ -204,7 +184,7 @@ class NotificationEmailService @Inject() (
         result <- update
         _ = candidatesBeforeBox match {
           case Full((candidates, userIdsWithAccessBefore)) =>
-            inBackground(description) {
+            mailSender.inBackground(description) {
               for {
                 userIdsWithAccessAfter <- findUserIdsWithAccess(candidates.map(_._1._id))
                 recipients = candidates.filter { case (user, _) =>
@@ -235,20 +215,14 @@ class NotificationEmailService @Inject() (
   ): Fox[Unit] =
     for {
       _ <- Fox.serialCombined(recipients) { case (user, teamIds) =>
-        multiUserDAO.findOne(user._multiUser).map(multiUser => Mailer ! Send(mail(multiUser, teamIds)))
+        multiUserDAO.findOne(user._multiUser).map(multiUser => mailSender.send(mail(multiUser, teamIds)))
       }
     } yield ()
 
   private def annotationName(annotation: Annotation): String = annotation.nameOpt.getOrElse("Unnamed annotation")
-
-  private def inBackground(description: String)(notification: => Fox[Unit]): Unit =
-    notification.onComplete {
-      case f: Failure => logger.warn(s"Could not send notification email for $description: $f")
-      case _          => ()
-    }
 }
 
-object NotificationEmailService {
+object AccessChangeEmailService {
 
   // Human-readable descriptions of how the team memberships and roles of a user changed.
   def accessChanges(

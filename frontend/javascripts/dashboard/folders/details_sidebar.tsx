@@ -44,6 +44,7 @@ export function DetailsSidebar({
   selectedDatasets,
   setSelectedDataset,
   datasetCount,
+  doesFolderContainDatasets,
   searchQuery,
   // The folder ID to display details for. This can be the active folder selected in the tree view
   // or a selected subfolder in the dataset table.
@@ -53,7 +54,10 @@ export function DetailsSidebar({
   selectedDatasets: APIDatasetCompact[];
   setSelectedDataset: (ds: APIDatasetCompact | null) => void;
   folderId: string | null;
+  // The number of listed datasets (i.e., in the active folder or search results).
   datasetCount: number;
+  // Whether the displayed folder contains datasets matching the current filters.
+  doesFolderContainDatasets: boolean;
   searchQuery: string | null;
   displayedFolderEqualsActiveFolder: boolean;
 }) {
@@ -90,7 +94,7 @@ export function DetailsSidebar({
         <FolderDetails
           folderId={folderId}
           folder={folder}
-          datasetCount={datasetCount}
+          doesFolderContainDatasets={doesFolderContainDatasets}
           error={error}
           displayedFolderEqualsActiveFolder={displayedFolderEqualsActiveFolder}
         />
@@ -299,13 +303,13 @@ function SearchDetails({ datasetCount }: { datasetCount: number }) {
 function FolderDetails({
   folderId,
   folder,
-  datasetCount,
+  doesFolderContainDatasets,
   error,
   displayedFolderEqualsActiveFolder,
 }: {
   folderId: string | null;
   folder: Folder | undefined;
-  datasetCount: number;
+  doesFolderContainDatasets: boolean;
   error: unknown;
   displayedFolderEqualsActiveFolder: boolean;
 }) {
@@ -313,15 +317,9 @@ function FolderDetails({
   const hierarchy = context.queries.folderHierarchyQuery.data;
   // The organization's root folder can't be deleted. Unknown folders count as root to be safe.
   const isRootFolder = folderId == null || hierarchy?.itemById[folderId]?.parent == null;
-  let message = datasetCount > 0 ? "Select a dataset to see details." : "";
+  let message = doesFolderContainDatasets ? "Select a dataset to see details." : "";
   if (!displayedFolderEqualsActiveFolder) {
-    message =
-      datasetCount > 0
-        ? `Double-click the folder to list ${pluralize("this", datasetCount, "these")} ${pluralize(
-            "dataset",
-            datasetCount,
-          )}.`
-        : "";
+    message = doesFolderContainDatasets ? "Double-click the folder to list its datasets." : "";
   }
   return (
     <>

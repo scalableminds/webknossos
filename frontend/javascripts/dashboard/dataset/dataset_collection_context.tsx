@@ -1,3 +1,4 @@
+import { PropTypes } from "@scalableminds/prop-types";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import {
   clearCache,
@@ -7,7 +8,8 @@ import {
   triggerDatasetCheck,
 } from "admin/rest_api";
 import features from "features";
-import { useEffectOnlyOnce, usePrevious, useWkSelector } from "libs/react_hooks";
+import Persistence from "libs/persistence";
+import { usePrevious, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import { isUserAdminOrDatasetManager } from "libs/utils";
 import last from "lodash-es/last";
@@ -21,6 +23,7 @@ import type {
 } from "types/api_types";
 import {
   type DatasetListParams,
+  DEFAULT_DATASET_SORT_BY,
   MINIMUM_SEARCH_QUERY_LENGTH,
   SEARCH_RESULTS_LIMIT,
   useCreateFolderMutation,
@@ -72,6 +75,8 @@ export type DatasetCollectionContextValue = {
   setSearchTags: (tags: string[]) => void;
   datasetFilteringMode: DatasetFilteringMode;
   setDatasetFilteringMode: (mode: DatasetFilteringMode) => void;
+  // The backend filters and sorting that are applied to the listed datasets.
+  datasetListParams: DatasetListParams;
   sortBy: DatasetSortBy;
   setSortBy: (sortBy: DatasetSortBy) => void;
   canSortBySearchRelevance: boolean;
@@ -109,15 +114,72 @@ export const useDatasetCollectionContext = () => {
 };
 
 const ACTIVE_FOLDER_ID_STORAGE_KEY = "activeFolderId";
+export const LOCAL_STORAGE_FILTER_TAGS_KEY = "lastDatasetSearchTags";
+
+type PersistenceState = {
+  searchQuery: string;
+  datasetFilteringMode: DatasetFilteringMode;
+};
+const persistence = new Persistence<PersistenceState>(
+  {
+    searchQuery: PropTypes.string,
+    datasetFilteringMode: PropTypes.oneOf([
+      "showAllDatasets",
+      "onlyShowReported",
+      "onlyShowUnreported",
+    ]),
+  },
+  "datasetList",
+);
+
+type InitialState = {
+  activeFolderId: string | null;
+  globalSearchQuery: string | null;
+  searchRecursively: boolean;
+  searchTags: string[];
+  datasetFilteringMode: DatasetFilteringMode;
+};
+
+// Restores the state from the URL, the history state and the local storage, before the first
+// dataset request is sent. Otherwise, each restored filter would trigger another request.
+function getInitialState(): InitialState {
+  const persistedState = persistence.load();
+  const params = new URLSearchParams(location.search);
+
+  let activeFolderId = UserLocalStorage.getItem(ACTIVE_FOLDER_ID_STORAGE_KEY) || null;
+  activeFolderId = params.get("folderId") || activeFolderId;
+  const folderSpecifier = last(location.pathname.split("/"));
+  if (folderSpecifier?.includes("-")) {
+    activeFolderId = last(folderSpecifier.split("-")) || activeFolderId;
+  }
+
+  let searchTags: string[] = [];
+  try {
+    const parsedTags = JSON.parse(UserLocalStorage.getItem(LOCAL_STORAGE_FILTER_TAGS_KEY) || "[]");
+    if (Array.isArray(parsedTags)) {
+      searchTags = parsedTags.filter((tag) => typeof tag === "string");
+    }
+  } catch (_error) {
+    // Ignore invalid persisted tags.
+  }
+
+  const recursive = params.get("recursive");
+  return {
+    activeFolderId,
+    globalSearchQuery: params.get("query") || persistedState.searchQuery || null,
+    searchRecursively: recursive != null ? recursive === "true" : true,
+    searchTags,
+    datasetFilteringMode: persistedState.datasetFilteringMode ?? "onlyShowReported",
+  };
+}
 
 export default function DatasetCollectionContextProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [activeFolderId, setActiveFolderId] = useState<string | null>(
-    UserLocalStorage.getItem(ACTIVE_FOLDER_ID_STORAGE_KEY) || null,
-  );
+  const [initialState] = useState(getInitialState);
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(initialState.activeFolderId);
   const [mostRecentlyUsedActiveFolderId, clearMostRecentlyUsedActiveFolderId] = usePrevious(
     activeFolderId,
     true,
@@ -130,17 +192,22 @@ export default function DatasetCollectionContextProvider({
   const [selectedDatasets, setSelectedDatasets] = useState<APIDatasetCompact[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<FolderItem | null>(null);
   const [folderModalState, setFolderModalState] = useState<FolderModalState | null>(null);
-  const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(null);
+  const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(
+    initialState.globalSearchQuery,
+  );
   const setGlobalSearchQuery = useCallback((value: string | null) => {
     // Empty string should be handled as null
     setGlobalSearchQueryInner(value ? value : null);
   }, []);
-  const [searchRecursively, setSearchRecursively] = useState<boolean>(true);
-  const [searchTags, setSearchTags] = useState<string[]>([]);
-  const [datasetFilteringMode, setDatasetFilteringMode] =
-    useState<DatasetFilteringMode>("onlyShowReported");
+  const [searchRecursively, setSearchRecursively] = useState<boolean>(
+    initialState.searchRecursively,
+  );
+  const [searchTags, setSearchTags] = useState<string[]>(initialState.searchTags);
+  const [datasetFilteringMode, setDatasetFilteringMode] = useState<DatasetFilteringMode>(
+    initialState.datasetFilteringMode,
+  );
   // Sort order used when not sorting by search relevance.
-  const [sortOption, setSortOption] = useState<DatasetSortOption>("lastUsed");
+  const [sortOption, setSortOption] = useState<DatasetSortOption>(DEFAULT_DATASET_SORT_BY);
   const [hasUserSetSort, setHasUserSetSort] = useState(false);
   const setSortBy = useCallback((sortBy: DatasetSortBy) => {
     if (sortBy === "searchRelevance") {
@@ -155,13 +222,16 @@ export default function DatasetCollectionContextProvider({
   const isAdminOrDatasetManager = activeUser != null && isUserAdminOrDatasetManager(activeUser);
 
   // Fall back to relevance-sorting exactly when the search box is initially filled,
-  // unless the user explicitly picks a sort option afterwards.
+  // unless the user explicitly picks a sort option afterwards. This is adjusted during
+  // rendering (instead of in an effect) so that no request with the previous sorting is sent.
   const isSearchActive = globalSearchQuery != null;
-  useEffect(() => {
+  const [wasSearchActive, setWasSearchActive] = useState(isSearchActive);
+  if (isSearchActive !== wasSearchActive) {
+    setWasSearchActive(isSearchActive);
     if (isSearchActive) {
       setHasUserSetSort(false);
     }
-  }, [isSearchActive]);
+  }
   const canSortBySearchRelevance =
     globalSearchQuery != null && globalSearchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH;
   const sortBy: DatasetSortBy =
@@ -185,14 +255,14 @@ export default function DatasetCollectionContextProvider({
   );
 
   // Keep url GET parameters in sync with search and active folder
-  useManagedUrlParams(
-    setGlobalSearchQuery,
-    setActiveFolderId,
-    globalSearchQuery,
-    activeFolderId,
-    searchRecursively,
-    setSearchRecursively,
-  );
+  useManagedUrlParams(globalSearchQuery, activeFolderId, searchRecursively);
+
+  useEffect(() => {
+    persistence.persist({
+      searchQuery: globalSearchQuery || "",
+      datasetFilteringMode,
+    });
+  }, [globalSearchQuery, datasetFilteringMode]);
 
   useEffect(() => {
     // Persist last active folder to localStorage. We
@@ -375,6 +445,7 @@ export default function DatasetCollectionContextProvider({
     setSearchTags,
     datasetFilteringMode,
     setDatasetFilteringMode,
+    datasetListParams: listParams,
     sortBy,
     setSortBy,
     canSortBySearchRelevance,
@@ -398,42 +469,13 @@ export default function DatasetCollectionContextProvider({
   );
 }
 
+// The URL params are read once when the provider is created (see getInitialState).
 function useManagedUrlParams(
-  setGlobalSearchQuery: (value: string | null) => void,
-  setActiveFolderId: React.Dispatch<React.SetStateAction<string | null>>,
   globalSearchQuery: string | null,
   activeFolderId: string | null,
   searchRecursively: boolean,
-  setSearchRecursively: (val: boolean) => void,
 ) {
   const { data: folder } = useFolderQuery(activeFolderId);
-
-  // Read params upon component mount.
-  useEffectOnlyOnce(() => {
-    const params = new URLSearchParams(location.search);
-    const query = params.get("query");
-    if (query) {
-      setGlobalSearchQuery(query);
-    }
-    const folderId = params.get("folderId");
-    if (folderId) {
-      setActiveFolderId(folderId);
-    }
-    const recursive = params.get("recursive");
-    if (recursive != null) setSearchRecursively(recursive === "true");
-
-    const folderSpecifier = last(location.pathname.split("/"));
-
-    if (folderSpecifier?.includes("-")) {
-      const nameChunksAndFolderId = folderSpecifier.split("-");
-      const folderId = last(nameChunksAndFolderId);
-      if (folderId) {
-        setActiveFolderId(folderId);
-      }
-    }
-  });
-
-  // Update query and searchRecursively
 
   // Update folderId
   useEffect(() => {

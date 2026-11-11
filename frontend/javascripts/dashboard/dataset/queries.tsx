@@ -15,6 +15,7 @@ import {
 } from "admin/api/folders";
 import {
   type DatasetListOptions,
+  type DatasetSortBy,
   type DatasetUpdater,
   getDataset,
   getDatasets,
@@ -42,7 +43,23 @@ export type DatasetListParams = Pick<
   DatasetListOptions,
   "tags" | "isUnreported" | "isActive" | "onlyMyOrganization" | "sortBy"
 >;
+export const DEFAULT_DATASET_SORT_BY = "lastUsed" satisfies DatasetSortBy;
 export const MINIMUM_SEARCH_QUERY_LENGTH = 3;
+// Cached dataset lists that are large or rarely reused (e.g., for a non-default filter/sorting)
+// are neither persisted to localStorage nor kept forever, so that they don't exceed its quota.
+const SHORT_LIVED_QUERY_GC_TIME = 5 * 60 * 1000;
+const SHORT_LIVED_QUERY_OPTIONS = {
+  gcTime: SHORT_LIVED_QUERY_GC_TIME,
+  meta: { persist: false },
+};
+
+function isDefaultListVariant(listParams: DatasetListParams) {
+  return (
+    (listParams.tags == null || listParams.tags.length === 0) &&
+    listParams.isUnreported === false &&
+    (listParams.sortBy == null || listParams.sortBy === DEFAULT_DATASET_SORT_BY)
+  );
+}
 const FOLDER_TREE_REFETCH_INTERVAL = 30000;
 // Keeps a folder tree that was prefetched during app startup (see main.tsx) from being fetched
 // again right away when the dashboard mounts.
@@ -119,6 +136,7 @@ export function useDatasetSearchQuery(
     refetchOnWindowFocus: false,
     enabled: query != null,
     placeholderData: keepPreviousData,
+    ...(loadAll ? SHORT_LIVED_QUERY_OPTIONS : {}),
   });
 }
 
@@ -198,18 +216,64 @@ export function useDatasetsInFolderQuery(folderId: string | null, listParams: Da
     // Keep showing the old datasets while a changed filter/sorting is loading, but not when switching folders.
     placeholderData: (previousData, previousQuery) =>
       previousQuery?.queryKey[1] === folderId ? previousData : undefined,
+    ...(isDefaultListVariant(listParams) ? {} : SHORT_LIVED_QUERY_OPTIONS),
   });
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether further dependencies are necessary.
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    if (queryData.data == null || queryData.data.length === 0 || queryData.isPlaceholderData) {
-      // No data exists in the cache. Allow the query to fetch.
-      queryData.refetch();
-      return undefined;
+    let effectWasCancelled = false;
+
+    // Poll for dataset updates to keep the dataset objects up to date. This is
+    // especially helpful to avoid that long running sessions show outdated data
+    // which can then be mutated by the user while discarding other updates.
+    // Problematic scenario example:
+    // - user A opens folder F
+    // - user B opens folder F
+    // - user B adds a tag to a dataset D in F
+    // - user A also adds a tag to D. however, this update won't reflect
+    //   the tag added by B.
+    // The problem can be mitigated by polling, since the scenario would
+    // only occur, if the conflict happens in the same time window (defined
+    // by the polling interval).
+    function scheduleNextPoll() {
+      timeoutId = setTimeout(async () => {
+        if (timeoutId == null) {
+          return;
+        }
+        const newDatasets = await fetchDatasets();
+        if (effectWasCancelled) {
+          return;
+        }
+        const oldDatasets = (queryClient.getQueryData(queryKey) || []) as APIDatasetCompact[];
+        queryClient.setQueryData(
+          queryKey,
+          getUnobtrusivelyUpdatedDatasets(newDatasets, oldDatasets),
+        );
+        scheduleNextPoll();
+      }, DATASET_POLLING_INTERVAL);
     }
 
-    let effectWasCancelled = false;
+    const cleanUp = () => {
+      fetchedDatasetsRef.current = null;
+      effectWasCancelled = true;
+      if (timeoutId != null) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      Toast.close(`new-datasets-are-available-${folderId || null}`);
+    };
+
+    if (queryData.data == null || queryData.data.length === 0 || queryData.isPlaceholderData) {
+      // No data exists in the cache. Allow the query to fetch and start polling afterwards.
+      queryData.refetch().then(() => {
+        if (!effectWasCancelled) {
+          scheduleNextPoll();
+        }
+      });
+      return cleanUp;
+    }
+
     const startTime = performance.now();
     fetchDatasets()
       .then((newDatasets) => {
@@ -260,54 +324,38 @@ export function useDatasetsInFolderQuery(folderId: string | null, listParams: Da
         // The initial refresh of the dataset list is done and the
         // potential update toast will also be gone once the following
         // poll action is triggered (due to the timeout of the toast).
-        //
-        // Let's poll for dataset updates here to keep the dataset
-        // objects up to date. This is especially helpful to avoid that
-        // long running sessions show outdated data which can then be
-        // mutated by the user while discarding other updates.
-        // Problematic scenario example:
-        // - user A opens folder F
-        // - user B opens folder F
-        // - user B adds a tag to a dataset D in F
-        // - user A also adds a tag to D. however, this update won't reflect
-        //   the tag added by B.
-        // The problem can be mitigated by polling, since the scenario would
-        // only occur, if the conflict happens in the same time window (defined
-        // by the polling interval).
-
-        function scheduleNextPoll() {
-          timeoutId = setTimeout(async () => {
-            if (timeoutId == null) {
-              return;
-            }
-            const newDatasets = await fetchDatasets();
-            const oldDatasets = (queryClient.getQueryData(queryKey) || []) as APIDatasetCompact[];
-            queryClient.setQueryData(
-              queryKey,
-              getUnobtrusivelyUpdatedDatasets(newDatasets, oldDatasets),
-            );
-
-            if (!effectWasCancelled) {
-              scheduleNextPoll();
-            }
-          }, DATASET_POLLING_INTERVAL);
+        if (!effectWasCancelled) {
+          scheduleNextPoll();
         }
-
-        scheduleNextPoll();
       });
 
-    return () => {
-      fetchedDatasetsRef.current = null;
-      effectWasCancelled = true;
-      if (timeoutId != null) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-      Toast.close(`new-datasets-are-available-${folderId || null}`);
-    };
+    return cleanUp;
   }, [folderId, JSON.stringify(listParams)]);
 
   return queryData;
+}
+
+// Checks cheaply whether a folder contains at least one dataset matching the given filters,
+// without loading the whole list.
+export function useDoesFolderContainDatasetsQuery(
+  folderId: string | null,
+  listParams: DatasetListParams,
+  enabled: boolean = true,
+) {
+  // The sorting doesn't matter for the existence.
+  const { sortBy: _sortBy, ...filterParams } = listParams;
+  return useQuery({
+    queryKey: ["datasetsExistInFolder", folderId, filterParams],
+    queryFn: async () => {
+      if (folderId == null) {
+        return false;
+      }
+      const datasets = await getDatasets({ ...filterParams, folderId, limit: 1 });
+      return datasets.length > 0;
+    },
+    refetchOnWindowFocus: false,
+    enabled: enabled && folderId != null,
+  });
 }
 
 export function useCreateFolderMutation() {
@@ -509,6 +557,9 @@ export function useUpdateDatasetMutation(folderId: string | null) {
       // Simply invalidating the search should be a clean solution for now.
       queryClient.invalidateQueries({
         queryKey: ["dataset", "search"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["datasetsExistInFolder"],
       });
     },
     onError: (err: any) => {

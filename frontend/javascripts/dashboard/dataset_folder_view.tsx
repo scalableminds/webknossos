@@ -8,7 +8,7 @@ import type { APIDatasetCompact, APIUser, FolderItem } from "types/api_types";
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
 } from "./dataset/dataset_collection_context";
-import { useDatasetsInFolderQuery, useFolderHierarchyQuery } from "./dataset/queries";
+import { useDoesFolderContainDatasetsQuery, useFolderHierarchyQuery } from "./dataset/queries";
 import DatasetView from "./dataset_view";
 import { DetailsSidebar } from "./folders/details_sidebar";
 import { FolderModal } from "./folders/folder_modal";
@@ -112,14 +112,15 @@ function DatasetFolderViewInner(props: Props) {
     }
     context.setSelectedFolder(folder);
   };
-  // Only used for the unfiltered dataset count of the selected subfolder.
-  const { data: selectedFolderDatasets } = useDatasetsInFolderQuery(
+  const { data: doesSelectedFolderContainDatasets = false } = useDoesFolderContainDatasetsQuery(
     context.selectedFolder?.key || null,
-    {},
+    context.datasetListParams,
   );
   const folderIdForDetailsSidebar = context.selectedFolder?.key ?? context.activeFolderId;
-  const datasetCountForDetailsSidebar =
-    context.selectedFolder != null ? selectedFolderDatasets?.length || 0 : context.datasets.length;
+  const doesFolderContainDatasetsForDetailsSidebar =
+    context.selectedFolder != null
+      ? doesSelectedFolderContainDatasets
+      : context.datasets.length > 0;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Only update the selected datasets when the context datasets change.
   useEffect(() => {
@@ -222,13 +223,21 @@ function DatasetFolderViewInner(props: Props) {
   const activeFolderTitle =
     context.activeFolderId != null ? hierarchy?.itemById[context.activeFolderId]?.title : undefined;
 
-  const isBrandNewEmptyOrg =
+  const mightBeBrandNewEmptyOrg =
     hierarchy != null &&
     hierarchy.flatItems.length === 1 &&
     context.datasets.length === 0 &&
     context.activeFolderId != null &&
     !context.isLoading &&
     context.globalSearchQuery == null;
+  // The listed datasets are filtered (e.g., unreported ones are hidden by default), so check
+  // whether the folder contains any dataset at all.
+  const { data: doesRootFolderContainAnyDatasets } = useDoesFolderContainDatasetsQuery(
+    context.activeFolderId,
+    {},
+    mightBeBrandNewEmptyOrg,
+  );
+  const isBrandNewEmptyOrg = mightBeBrandNewEmptyOrg && doesRootFolderContainAnyDatasets === false;
 
   const folderModal = folderModalState != null && (
     <FolderModal {...folderModalState} onClose={() => setFolderModalState(null)} />
@@ -280,7 +289,8 @@ function DatasetFolderViewInner(props: Props) {
         selectedDatasets={selectedDatasets}
         setSelectedDataset={setSelectedDataset}
         folderId={folderIdForDetailsSidebar}
-        datasetCount={datasetCountForDetailsSidebar}
+        datasetCount={context.datasets.length}
+        doesFolderContainDatasets={doesFolderContainDatasetsForDetailsSidebar}
         searchQuery={context.globalSearchQuery}
         displayedFolderEqualsActiveFolder={context.selectedFolder == null}
       />

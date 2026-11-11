@@ -538,7 +538,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
             val position = q"POSITION($searchQuery IN LOWER(d.name))"
             // Exact name match first, then prefix, then substring, then matches of only the individual query tokens.
             q"""CASE WHEN LOWER(d.name) = $searchQuery THEN 0 WHEN $position = 1 THEN 1 WHEN $position > 0 THEN 2 ELSE 3 END,
-                 $lastUsedOrder, $position, LENGTH(d.name)"""
+                 $position, LENGTH(d.name), $lastUsedOrder"""
           case None => lastUsedOrder
         }
       case _ => lastUsedOrder

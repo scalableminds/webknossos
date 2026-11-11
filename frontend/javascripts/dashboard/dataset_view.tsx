@@ -7,7 +7,6 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery } from "@tanstack/react-query";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
@@ -32,7 +31,6 @@ import { PricingEnforcedButton } from "components/pricing_enforcers";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import dayjs from "dayjs";
 import features from "features";
-import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
 import { isPrimaryPointerFine, isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import type React from "react";
@@ -50,9 +48,9 @@ import { CategorizationSearch } from "viewer/view/components/categorization_labe
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import { FolderBreadcrumb } from "./advanced_dataset/folder_breadcrumb";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
-import type {
-  DatasetCollectionContextValue,
-  DatasetFilteringMode,
+import {
+  type DatasetCollectionContextValue,
+  LOCAL_STORAGE_FILTER_TAGS_KEY,
 } from "./dataset/dataset_collection_context";
 import {
   MINIMUM_SEARCH_QUERY_LENGTH,
@@ -78,25 +76,9 @@ type Props = {
   // that it wraps with the same spacing as the other toolbar items.
   folderPicker?: React.ReactNode;
 };
-type PersistenceState = {
-  searchQuery: string;
-  datasetFilteringMode: DatasetFilteringMode;
-};
 const CONVERSION_JOBS_REFRESH_INTERVAL = 60 * 1000;
 const MAX_JOBS_TO_DISPLAY = 5;
 const RECENT_DATASET_DAY_THRESHOLD = 3;
-const LOCAL_STORAGE_FILTER_TAGS_KEY = "lastDatasetSearchTags";
-const persistence = new Persistence<PersistenceState>(
-  {
-    searchQuery: PropTypes.string,
-    datasetFilteringMode: PropTypes.oneOf([
-      "showAllDatasets",
-      "onlyShowReported",
-      "onlyShowUnreported",
-    ]),
-  },
-  "datasetList",
-);
 
 const refreshMenuItems: ItemType[] = [
   {
@@ -131,25 +113,6 @@ function DatasetView({
 
   const activeTab = useContext(ActiveTabContext);
   const renderingTab = useContext(RenderingTabContext);
-
-  useEffect(() => {
-    const state = persistence.load() as PersistenceState;
-
-    if (state.searchQuery != null) {
-      setSearchQuery(state.searchQuery);
-    }
-
-    if (state.datasetFilteringMode != null) {
-      setDatasetFilteringMode(state.datasetFilteringMode);
-    }
-  }, [setSearchQuery, setDatasetFilteringMode]);
-
-  useEffect(() => {
-    persistence.persist({
-      searchQuery: searchQuery || "",
-      datasetFilteringMode,
-    });
-  }, [searchQuery, datasetFilteringMode]);
 
   function addTagToSearch(tag: string) {
     if (!searchTags.includes(tag)) {
@@ -271,6 +234,8 @@ function DatasetView({
         searchTags={searchTags}
         setTags={setSearchTags}
         localStorageSavingKey={LOCAL_STORAGE_FILTER_TAGS_KEY}
+        // The context provider already restored the tags when it was created.
+        skipRestoreFromStorage
       />
       {!searchQuery && <FolderBreadcrumb context={context} />}
       <NewJobsAlert jobs={jobs} />

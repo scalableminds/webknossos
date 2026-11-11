@@ -324,4 +324,37 @@ describe("Proofreading marker", () => {
     });
     await task.toPromise();
   });
+
+  it("should adapt the active segment after a proofreading click during a rebase", async (context: WebknossosTestContext) => {
+    // The click's SET_ACTIVE_CELL is dropped during the rebase, but the marker is moved. After
+    // the rebase, the active segment is adapted to the segment at the marker.
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield put(setCollaborationModeAction("Concurrent"));
+      yield call(() => api.tracing.save());
+
+      // The click is not saved yet, so saving triggers a rebase onto the injected version.
+      yield call(clickSegmentWithProofreadingTool, tracingId, 1n);
+      backendMock.planVersionInjection(Store.getState().annotation.version + 1, [
+        updateMetadataOfAnnotation("Changed by another user"),
+      ]);
+      let wasClickedDuringRebase = false;
+      yield fork(function* () {
+        yield take("REWIND_FOR_REBASE");
+        yield call(clickSegmentWithProofreadingTool, tracingId, 4n);
+        wasClickedDuringRebase = true;
+      });
+      yield call(() => api.tracing.save());
+      yield call(waitForSagas);
+
+      expect(wasClickedDuringRebase).toBe(true);
+      expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(4));
+      expect(yield* getActiveCellId(tracingId)).toBe(4n);
+    });
+    await task.toPromise();
+  });
 });

@@ -15,9 +15,31 @@ import {
 } from "../layer_registration_protocol";
 
 const IFRAME_ROLES: IframeRole[] = ["fixed", "moving", "store"];
-// A command that throws sends an "err" reply, but a reply can still get lost, e.g. if the
-// iframe reloads. Generous, because "save" waits for the server.
-const REPLY_TIMEOUT_MS = 30_000;
+// How long a command waits for the "init" of its iframe, and then for its reply.
+// - An iframe that can't load the dataset or the annotation (e.g. no access, or a redirect to
+//   the login page) never sends "init".
+// - A command that throws sends an "err" reply, but a reply can still get lost, e.g. if the
+//   iframe reloads.
+// Generous, because loading the iframe and "save" wait for the server.
+const TIMEOUT_MS = 30_000;
+
+// Settles like the promise, but rejects with the error message if the promise doesn't settle
+// in time.
+async function rejectOnTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  errorMessage: string,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 // The messages that the iframes send to this page (see layer_registration_protocol.ts). They come
 // from other windows without a type check, so every field may be missing.
@@ -51,10 +73,11 @@ export type IncomingMessageHandlers = {
  * layer_registration_protocol.ts).
  * This lives in the layer registration page. The workers use layer_registration_worker.
  * - sendMessage calls a command of the cross-origin API of an iframe and resolves with its
- *   return value. It waits until the API of that iframe sent "init", and rejects if the
- *   command fails or no reply arrives in time.
+ *   return value. It waits until the API of that iframe sent "init". It rejects if "init" or
+ *   the reply don't arrive in time, or if the command fails.
  * - handleMessage must get every message that the page receives. It resolves the replies and
- *   passes worker commands and save states of the store iframe on.
+ *   passes worker commands and save states of the store iframe on. It ignores messages that
+ *   don't come from one of the iframes or not from the origin of the iframes.
  */
 export class IframeBridge {
   // Resolved once the API of the respective iframe is ready.
@@ -71,7 +94,7 @@ export class IframeBridge {
     private readonly getIframeWindow: (role: IframeRole) => IframeWindow | null | undefined,
     // The origin of the iframes, which is the origin of the page.
     private readonly targetOrigin: string,
-    private readonly replyTimeoutMs: number = REPLY_TIMEOUT_MS,
+    private readonly timeoutMs: number = TIMEOUT_MS,
   ) {}
 
   private getRoleOfSender(source: unknown): IframeRole | undefined {
@@ -94,9 +117,14 @@ export class IframeBridge {
   }
 
   handleMessage(
-    { source, data }: { source: unknown; data: IncomingMessage },
+    { source, origin, data }: { source: unknown; origin: string; data: IncomingMessage },
     { onWorkerCommand, onStoreSaveState }: IncomingMessageHandlers,
   ) {
+    // An iframe keeps its window when it navigates to a page of another origin, e.g. a login
+    // page. That page must not be able to send replies or commands in the name of the iframe.
+    if (origin !== this.targetOrigin) {
+      return;
+    }
     const role = this.getRoleOfSender(source);
     if (role == null || !isObject(data)) {
       return;
@@ -122,7 +150,11 @@ export class IframeBridge {
 
   sendMessage: SendMessage = async (role, command, ...args) => {
     // An iframe drops messages that arrive before its API is ready.
-    await this.readyDeferreds[role].promise();
+    await rejectOnTimeout(
+      this.readyDeferreds[role].promise(),
+      this.timeoutMs,
+      `The "${role}" iframe did not finish loading in time.`,
+    );
     const iframeWindow = this.getIframeWindow(role);
     if (iframeWindow == null) {
       throw new Error(`The "${role}" iframe is not mounted.`);
@@ -130,19 +162,20 @@ export class IframeBridge {
     const messageId = String(++this.messageCounter);
     const deferred = new Deferred<unknown, Error>();
     this.pendingReplies.set(messageId, deferred);
-    const timeoutId = setTimeout(() => {
-      if (this.pendingReplies.delete(messageId)) {
-        deferred.reject(new Error(`The "${role}" iframe did not reply to "${command}" in time.`));
-      }
-    }, this.replyTimeoutMs);
     const message: IframeCommandMessage<typeof command> = { type: command, args, messageId };
     iframeWindow.postMessage(message, this.targetOrigin);
     try {
+      const returnValue = await rejectOnTimeout(
+        deferred.promise(),
+        this.timeoutMs,
+        `The "${role}" iframe did not reply to "${command}" in time.`,
+      );
       // The reply comes from another window, so its type can't be checked. The iframe runs
       // the same code as this page, so it returns what IframeCommands declares.
-      return (await deferred.promise()) as IframeCommands[typeof command]["returns"];
+      return returnValue as IframeCommands[typeof command]["returns"];
     } finally {
-      clearTimeout(timeoutId);
+      // After a timeout, a late reply is ignored.
+      this.pendingReplies.delete(messageId);
     }
   };
 }

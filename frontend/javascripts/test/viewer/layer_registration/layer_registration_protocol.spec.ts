@@ -200,6 +200,22 @@ describe("Layer registration protocol", () => {
     expect(results).toEqual(["first", "second"]);
   });
 
+  it("rejects a command if the iframe doesn't send init in time", async () => {
+    const iframesWithShortTimeout = new FakeLayerRegistrationIframes(50);
+    // E.g. an iframe that can't load the annotation.
+    const pageWindow = iframesWithShortTimeout.mount("store", handleCrossOriginApiMessage);
+    await expect(
+      iframesWithShortTimeout.bridge.sendMessage("store", "exportTreesAsNmlString"),
+    ).rejects.toThrow("did not finish loading");
+    expect(iframesWithShortTimeout.sentMessages.store).toEqual([]);
+
+    // An init that arrives later still lets the next commands through.
+    pageWindow.postMessage({ type: "init" }, "*");
+    await expect(
+      iframesWithShortTimeout.bridge.sendMessage("store", "exportTreesAsNmlString"),
+    ).resolves.toContain("<things");
+  });
+
   it("rejects a command whose reply gets lost", async () => {
     const iframesWithShortTimeout = new FakeLayerRegistrationIframes(20);
     // E.g. an iframe that reloads while the command is running.
@@ -230,14 +246,42 @@ describe("Layer registration protocol", () => {
     const savePromise = iframesWithShortTimeout.bridge.sendMessage("store", "save");
     await sleep(10);
     // E.g. a browser extension or another page that posts messages to this window.
-    const [{ messageId }] = iframesWithShortTimeout.sentMessages.store as Array<{
-      messageId?: string;
-    }>;
+    const [{ messageId }] = iframesWithShortTimeout.sentMessages.store;
     iframesWithShortTimeout.bridge.handleMessage(
-      { source: { postMessage: () => {} }, data: { type: "ack", messageId } },
+      {
+        source: { postMessage: () => {} },
+        origin: location.origin,
+        data: { type: "ack", messageId },
+      },
       { onWorkerCommand: () => {}, onStoreSaveState: () => {} },
     );
 
     await expect(savePromise).rejects.toThrow("did not reply");
+  });
+
+  it("ignores messages of an iframe that shows a page of another origin", async () => {
+    // E.g. the iframe was redirected to a SSO login page. It keeps its window.
+    const otherOrigin = "https://login.test";
+    const iframesWithShortTimeout = new FakeLayerRegistrationIframes(50);
+    const pageWindow = iframesWithShortTimeout.mount("store", () => {});
+    iframesWithShortTimeout.postFromOtherOrigin("store", otherOrigin, { type: "init" });
+    const savePromise = iframesWithShortTimeout.bridge.sendMessage("store", "save");
+    await sleep(10);
+    expect(iframesWithShortTimeout.sentMessages.store).toEqual([]);
+
+    pageWindow.postMessage({ type: "init" }, "*");
+    await sleep(10);
+    const [{ messageId }] = iframesWithShortTimeout.sentMessages.store;
+    iframesWithShortTimeout.postFromOtherOrigin("store", otherOrigin, {
+      type: "ack",
+      messageId,
+    });
+    iframesWithShortTimeout.postFromOtherOrigin("store", otherOrigin, {
+      type: "layerRegistrationStoreSavedState",
+      saveState: "saved",
+    });
+
+    await expect(savePromise).rejects.toThrow("did not reply");
+    expect(iframesWithShortTimeout.storeSaveStates).toEqual([]);
   });
 });

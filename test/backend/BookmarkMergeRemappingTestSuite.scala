@@ -91,6 +91,36 @@ class BookmarkMergeRemappingTestSuite extends AnyWordSpec {
       assert(merged.state.layers.map(_.meshes.map(_.segmentId)) == Seq(Seq(50L, 6L), Seq(5L)))
     }
 
+    "only combine meshes of merged layers that show the same segment in the same way" in {
+      val precomputedMesh = BookmarkMeshProto(7, origin, isPrecomputed = true, meshFileName = Some("meshfile"))
+      val merged = remapping(
+        bookmark(layers =
+          Seq(
+            BookmarkLayerStateProto("volumeA", meshes = Seq(precomputedMesh, adHocMesh(7))),
+            BookmarkLayerStateProto(
+              "volumeB",
+              meshes = Seq(precomputedMesh.withSeedPosition(Vec3IntProto(1, 2, 3)), adHocMesh(7, Some("mapping")))
+            )
+          )
+        ),
+        1
+      )
+      assert(
+        merged.state.layers.head.meshes.map(m => (m.segmentId, m.isPrecomputed, m.mappingName)) ==
+          Seq((7L, true, None), (7L, false, None), (7L, false, Some("mapping")))
+      )
+    }
+
+    "keep the segment ids of precomputed meshes and of meshes of a mapping" in {
+      val precomputedMesh = BookmarkMeshProto(5, origin, isPrecomputed = true, meshFileName = Some("meshfile"))
+      def remappedSegmentIds(mesh: BookmarkMeshProto) =
+        remapping(bookmark(layers = Seq(BookmarkLayerStateProto("volumeA", meshes = Seq(mesh)))), 1).state.layers
+          .flatMap(_.meshes.map(_.segmentId))
+      assert(remappedSegmentIds(precomputedMesh) == Seq(5L))
+      assert(remappedSegmentIds(adHocMesh(5, Some("agglomerate_view_5"))) == Seq(5L))
+      assert(remappedSegmentIds(adHocMesh(5)) == Seq(50L))
+    }
+
     "combine layers that are merged into the same layer, keeping the settings of the first" in {
       val merged = remapping(
         bookmark(layers =

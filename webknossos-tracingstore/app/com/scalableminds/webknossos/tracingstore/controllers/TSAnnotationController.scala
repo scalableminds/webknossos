@@ -168,6 +168,7 @@ class TSAnnotationController @Inject() (
     }
 
   // v is the bookmark's thumbnailVersion. The thumbnails stored at a version never change, so they can be cached.
+  // This does not hold for temporary annotations (see AnnotationBookmarkService.isTemporaryAnnotation).
   def bookmarkThumbnail(annotationId: ObjectId, bookmarkId: Int, size: String, v: Long): Action[AnyContent] =
     Action.fox { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
@@ -176,7 +177,9 @@ class TSAnnotationController @Inject() (
             .fromString(size)
             .toFox ?~> s"Invalid thumbnail size $size" ~> BAD_REQUEST
           thumbnail <- annotationBookmarkService.findThumbnail(annotationId, bookmarkId, sizeValidated, v) ~> NOT_FOUND
-        } yield Ok(thumbnail).as("image/jpeg").withHeaders(CACHE_CONTROL -> "private, max-age=31536000, immutable")
+          isTemporaryAnnotation <- annotationBookmarkService.isTemporaryAnnotation(annotationId)
+          cacheControl = if (isTemporaryAnnotation) "private, no-cache" else "private, max-age=31536000, immutable"
+        } yield Ok(thumbnail).as("image/jpeg").withHeaders(CACHE_CONTROL -> cacheControl)
       }
     }
 

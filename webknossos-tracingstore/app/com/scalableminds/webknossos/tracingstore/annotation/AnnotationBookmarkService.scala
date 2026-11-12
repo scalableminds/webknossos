@@ -49,7 +49,11 @@ case class BookmarkTracingRemapping(
   private def remapLayer(layer: BookmarkLayerStateProto): BookmarkLayerStateProto = {
     val segmentIdMap = segmentIdMapsByTracingId.getOrElse(layer.layerName, Map.empty)
     def remapMesh(mesh: BookmarkMeshProto): Option[BookmarkMeshProto] = {
-      val meshWithNewSegmentId = mesh.withSegmentId(segmentIdMap.getOrElse(mesh.segmentId, mesh.segmentId))
+      // The segment id map only covers the ids in the volume data. Precomputed meshes are looked up in a mesh file,
+      // and meshes of a mapping are identified by their agglomerate id, so their segment ids stay as they are.
+      val refersToVolumeData = !mesh.isPrecomputed && mesh.mappingName.isEmpty
+      val meshWithNewSegmentId =
+        if (refersToVolumeData) mesh.withSegmentId(segmentIdMap.getOrElse(mesh.segmentId, mesh.segmentId)) else mesh
       mesh.mappingName match {
         case Some(mappingName) => remapMappingName(mappingName).map(meshWithNewSegmentId.withMappingName)
         case None              => Some(meshWithNewSegmentId)
@@ -86,7 +90,14 @@ case class BookmarkMergeRemapping(
     // Several volume layers of one source annotation end up in the same merged layer.
     val layers = state.layers.map(_.layerName).distinct.map { layerName =>
       val sameNameLayers = state.layers.filter(_.layerName == layerName)
-      sameNameLayers.head.withMeshes(sameNameLayers.flatMap(_.meshes).distinctBy(_.segmentId))
+      // Meshes are only the same if they show the same segment in the same way. The seed position does not matter.
+      sameNameLayers.head.withMeshes(
+        sameNameLayers
+          .flatMap(_.meshes)
+          .distinctBy(mesh =>
+            (mesh.segmentId, mesh.isPrecomputed, mesh.meshFileName, mesh.mappingName, mesh.mappingType)
+          )
+      )
     }
     bookmark
       .withId(newId)
@@ -108,6 +119,11 @@ class AnnotationBookmarkService @Inject() (
 ) extends KeyValueStoreConversions {
 
   private def bookmarkKey(annotationId: ObjectId, bookmarkId: Int): String = s"$annotationId/$bookmarkId"
+
+  // Temporary annotations (e.g. compound views) have no versions: the same bookmark id and version can refer to
+  // other thumbnails once the annotation is rebuilt.
+  def isTemporaryAnnotation(annotationId: ObjectId): Fox[Boolean] =
+    temporaryTracingService.isTemporaryAnnotation(annotationId)
 
   def findBookmark(annotationId: ObjectId, bookmarkId: Int, version: Long): Fox[AnnotationBookmarkProto] =
     tracingDataStore.annotationBookmarks

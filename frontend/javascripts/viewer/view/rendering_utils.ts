@@ -12,6 +12,7 @@ import {
 } from "three";
 import type { APIBookmarkThumbnailViewport } from "types/api_types";
 import constants, {
+  BOOKMARK_THUMBNAIL_MIME_TYPE,
   FLIGHT_CAM_DISTANCE,
   FlightViewport,
   type OrthoView,
@@ -243,6 +244,8 @@ function blobToBase64(blob: Blob): Promise<string> {
 }
 
 const SMALL_BOOKMARK_THUMBNAIL_MAX_EDGE = 96;
+// Set explicitly, as the default differs between browsers.
+const BOOKMARK_THUMBNAIL_QUALITY = 0.9;
 
 async function downsampleImage(blob: Blob, maxEdge: number): Promise<Blob | null> {
   const bitmap = await createImageBitmap(blob);
@@ -255,7 +258,9 @@ async function downsampleImage(blob: Blob, maxEdge: number): Promise<Blob | null
   context.imageSmoothingQuality = "high";
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
-  return new Promise((resolve) => canvas.toBlob(resolve, "image/webp"));
+  return new Promise((resolve) =>
+    canvas.toBlob(resolve, BOOKMARK_THUMBNAIL_MIME_TYPE, BOOKMARK_THUMBNAIL_QUALITY),
+  );
 }
 
 export type BookmarkThumbnails = {
@@ -290,7 +295,7 @@ export function getRenderedBookmarkThumbnailViewports(): BookmarkThumbnailViewpo
   });
 }
 
-// Renders the first visible viewport (by priority) as base64-encoded WebP images, once in
+// Renders the first visible viewport (by priority) as base64-encoded JPEG images, once in
 // full size and once downsampled. Returns null if no viewport is visible in the current layout.
 export async function captureBookmarkThumbnails(): Promise<BookmarkThumbnails | null> {
   const viewport = getRenderedBookmarkThumbnailViewports()[0];
@@ -304,7 +309,16 @@ export async function captureBookmarkThumbnailsOfViewport(
   const { width, height } = getInputCatcherRect(Store.getState(), viewport);
   // A clear color of 0xffffff is mapped to the theme's background color, matching the on-screen look.
   const buffer = renderToTexture(viewport, undefined, undefined, false, 0xffffff, true);
-  const blob = await convertBufferToImage(buffer, width, height, null, null, true, "image/webp");
+  const blob = await convertBufferToImage(
+    buffer,
+    width,
+    height,
+    null,
+    null,
+    true,
+    BOOKMARK_THUMBNAIL_MIME_TYPE,
+    BOOKMARK_THUMBNAIL_QUALITY,
+  );
   if (blob == null) return null;
   const smallBlob = await downsampleImage(blob, SMALL_BOOKMARK_THUMBNAIL_MAX_EDGE);
   if (smallBlob == null) return null;

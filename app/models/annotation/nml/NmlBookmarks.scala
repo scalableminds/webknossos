@@ -73,13 +73,11 @@ object NmlBookmarks {
     thumbnailViewportNames.collectFirst { case (viewport, `name`) => viewport }
 
   def thumbnailLocation(bookmarkId: Int, size: BookmarkThumbnailSize.Value): String =
-    s"bookmark_thumbnails/${bookmarkId}_$size.webp"
+    s"bookmark_thumbnails/${bookmarkId}_$size.jpg"
 
-  // WebP files start with "RIFF", four bytes of file size, and "WEBP".
-  def isWebp(bytes: Array[Byte]): Boolean =
-    bytes.length >= 12 &&
-      new String(bytes.slice(0, 4), "US-ASCII") == "RIFF" &&
-      new String(bytes.slice(8, 12), "US-ASCII") == "WEBP"
+  // JPEG files start with the SOI marker FF D8, followed by the first marker segment (FF xx).
+  def isJpeg(bytes: Array[Byte]): Boolean =
+    bytes.length >= 3 && bytes(0) == 0xff.toByte && bytes(1) == 0xd8.toByte && bytes(2) == 0xff.toByte
 }
 
 // A bookmark to be written to an NML, with the thumbnails that go next to it in the zip.

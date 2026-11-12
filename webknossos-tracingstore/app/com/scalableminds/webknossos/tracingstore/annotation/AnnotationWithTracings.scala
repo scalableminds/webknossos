@@ -261,9 +261,18 @@ case class AnnotationWithTracings(
 
   def addBookmark(a: AddBookmarkAnnotationAction): AnnotationWithTracings =
     this.copy(
-      annotation = annotation.copy(bookmarkIds = annotation.bookmarkIds.filterNot(_ == a.id) :+ a.id),
+      annotation = annotation.copy(
+        bookmarkIds = annotation.bookmarkIds.filterNot(_ == a.id) :+ a.id,
+        largestBookmarkId = Some(AnnotationWithTracings.largestBookmarkId(annotation).fold(a.id)(math.max(_, a.id)))
+      ),
       updatedBookmarks = updatedBookmarks.updated(a.id, a.toProto)
     )
+
+  // Used when the annotation is replaced by an older version (revert, reset), so that ids of bookmarks that were
+  // added later are still not reused.
+  def withLargestBookmarkIdOf(other: AnnotationProto): AnnotationWithTracings =
+    (AnnotationWithTracings.largestBookmarkId(annotation) ++ AnnotationWithTracings.largestBookmarkId(other)).maxOption
+      .fold(this)(largestId => this.copy(annotation = annotation.withLargestBookmarkId(largestId)))
 
   def withUpdatedBookmarks(bookmarks: Seq[AnnotationBookmarkProto]): AnnotationWithTracings =
     this.copy(updatedBookmarks = updatedBookmarks ++ bookmarks.map(bookmark => bookmark.id -> bookmark))
@@ -304,4 +313,10 @@ case class AnnotationWithTracings(
     this.copy(tracingsById = newTracingsById)
   }
 
+}
+
+object AnnotationWithTracings {
+  // The largest bookmark id the annotation ever had, also counting deleted bookmarks (see AnnotationProto).
+  def largestBookmarkId(annotation: AnnotationProto): Option[Int] =
+    (annotation.largestBookmarkId.toSeq ++ annotation.bookmarkIds).maxOption
 }

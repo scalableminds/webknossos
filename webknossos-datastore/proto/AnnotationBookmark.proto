@@ -35,8 +35,8 @@ message AnnotationBookmarksProto {
 // Bookmarks of an uploaded annotation file (e.g. NML), with the thumbnails it contained.
 message UploadedAnnotationBookmarkProto {
   required AnnotationBookmarkProto bookmark = 1;
-  optional bytes smallThumbnail = 2; // webp
-  optional bytes largeThumbnail = 3; // webp
+  optional bytes smallThumbnail = 2; // jpeg
+  optional bytes largeThumbnail = 3; // jpeg
 }
 
 message UploadedAnnotationBookmarksProto {

@@ -256,7 +256,7 @@ class AnnotationIOController @Inject() (
             .get(size)
             .flatMap(otherFiles.get)
             .flatMap(file => tryo(Files.readAllBytes(file.toPath)).toOption)
-            .filter(NmlBookmarks.isWebp)
+            .filter(NmlBookmarks.isJpeg)
             .map(ByteString.copyFrom)
 
         parseSuccess.bookmarks.map { parsedBookmark =>

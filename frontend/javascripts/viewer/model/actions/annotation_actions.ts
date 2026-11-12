@@ -55,7 +55,9 @@ type SetAnnotationVisibilityAction = ReturnType<typeof setAnnotationVisibilityAc
 export type EditAnnotationLayerAction = ReturnType<typeof editAnnotationLayerAction>;
 export type SetAnnotationDescriptionAction = ReturnType<typeof setAnnotationDescriptionAction>;
 export type AddBookmarkAction = ReturnType<typeof addBookmarkAction>;
-type SetBookmarkCreatedAtVersionAction = ReturnType<typeof setBookmarkCreatedAtVersionAction>;
+export type SetBookmarkCreatedAtVersionAction = ReturnType<
+  typeof setBookmarkCreatedAtVersionAction
+>;
 type UpdateBookmarkMetadataAction = ReturnType<typeof updateBookmarkMetadataAction>;
 type SetBookmarkMetadataAction = ReturnType<typeof setBookmarkMetadataAction>;
 type SetBookmarkNameAction = ReturnType<typeof setBookmarkNameAction>;
@@ -64,7 +66,9 @@ type DeleteBookmarkAction = ReturnType<typeof deleteBookmarkAction>;
 type SetBookmarkStateAction = ReturnType<typeof setBookmarkStateAction>;
 type SetBookmarkThumbnailAction = ReturnType<typeof setBookmarkThumbnailAction>;
 type SetBookmarksAction = ReturnType<typeof setBookmarksAction>;
-type SetBookmarkThumbnailVersionAction = ReturnType<typeof setBookmarkThumbnailVersionAction>;
+export type SetBookmarkThumbnailVersionAction = ReturnType<
+  typeof setBookmarkThumbnailVersionAction
+>;
 type SetAnnotationAllowUpdateAction = ReturnType<
   typeof setIsUpdatingAnnotationCurrentlyAllowedAction
 >;

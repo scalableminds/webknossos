@@ -77,4 +77,35 @@ describe("Bookmark undo", () => {
       "addBookmark",
     ]);
   });
+
+  it<WebknossosTestContext>("keeps the versions assigned when saving after undo", async (context) => {
+    Store.dispatch(addBookmarkAction(bookmark));
+    // The snapshot for this undo state is taken before the bookmark is saved.
+    Store.dispatch(setBookmarkNameAction(1, "Name"));
+    await context.api.tracing.save();
+    const { createdAtVersion, thumbnailVersion } = Store.getState().annotation.bookmarks[0];
+    expect(createdAtVersion).not.toBeNull();
+    expect(thumbnailVersion).toBe(createdAtVersion);
+
+    Store.dispatch(deleteBookmarkAction(1));
+    await dispatchUndoAsync(Store.dispatch);
+    await dispatchUndoAsync(Store.dispatch);
+    expect(Store.getState().annotation.bookmarks).toMatchObject([
+      { name: null, createdAtVersion, thumbnailVersion },
+    ]);
+    await dispatchRedoAsync(Store.dispatch);
+    expect(Store.getState().annotation.bookmarks).toMatchObject([
+      { name: "Name", createdAtVersion, thumbnailVersion },
+    ]);
+
+    await context.api.tracing.save();
+    const restoringAddBookmark = getBookmarkUpdateActions(context).filter(
+      (action) => action.name === "addBookmark",
+    )[1];
+    // The restored bookmark references its saved thumbnail instead of sending it again.
+    expect(restoringAddBookmark?.value).toMatchObject({
+      thumbnailVersion,
+      largeThumbnailDataBase64: null,
+    });
+  });
 });

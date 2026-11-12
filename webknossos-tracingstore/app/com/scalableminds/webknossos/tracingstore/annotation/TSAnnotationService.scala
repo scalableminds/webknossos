@@ -357,7 +357,7 @@ class TSAnnotationService @Inject() (
         before,
         s"Reverting annotation $annotationId from v${annotationWithTracings.version} to v${revertAction.sourceVersion}"
       )
-    } yield withBookmarks.markAllTreeBodiesAsChanged
+    } yield withBookmarks.withLargestBookmarkIdOf(annotationWithTracings.annotation).markAllTreeBodiesAsChanged
 
   private def resetToBase(
       annotationId: ObjectId,
@@ -372,7 +372,7 @@ class TSAnnotationService @Inject() (
       _ <- revertDistributedElements(annotationId, annotationWithTracings, sourceAnnotation, sourceVersion, newVersion)
       withBookmarks <- markAllBookmarksAsChanged(annotationId, sourceAnnotation)
       _ = Instant.logSince(before, s"Resetting annotation $annotationId to base (v$sourceVersion)")
-    } yield withBookmarks.markAllTreeBodiesAsChanged
+    } yield withBookmarks.withLargestBookmarkIdOf(annotationWithTracings.annotation).markAllTreeBodiesAsChanged
   }
 
   def saveAnnotationProto(

@@ -11,6 +11,7 @@ import type {
   AdditionalAxis,
   AdditionalAxisProto,
   APIAnnotation,
+  APIAnnotationBookmark,
   BoundingBoxProto,
   MetadataEntryProto,
   SkeletonUserState,
@@ -21,6 +22,10 @@ import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_bo
 import type { Vector3 } from "viewer/constants";
 import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
+import type {
+  SetBookmarkCreatedAtVersionAction,
+  SetBookmarkThumbnailVersionAction,
+} from "viewer/model/actions/annotation_actions";
 import { updateKey } from "viewer/model/helpers/deep_update";
 import type {
   Annotation,
@@ -318,4 +323,31 @@ export function sanitizeMetadata(metadata: MetadataEntryProto[]) {
     }),
     (entry) => entry.key,
   );
+}
+
+// Applies the versions the server assigned when saving bookmarks. Also used by the undo saga to
+// update its snapshots, so that undo/redo does not restore outdated (e.g., unset) versions.
+export function applyBookmarkVersionAction(
+  bookmarks: APIAnnotationBookmark[],
+  action: SetBookmarkCreatedAtVersionAction | SetBookmarkThumbnailVersionAction,
+): APIAnnotationBookmark[] {
+  let changed = false;
+  const newBookmarks = bookmarks.map((bookmark) => {
+    if (bookmark.id !== action.bookmarkId) return bookmark;
+    if (action.type === "SET_BOOKMARK_CREATED_AT_VERSION") {
+      if (bookmark.createdAtVersion === action.createdAtVersion) return bookmark;
+      changed = true;
+      return { ...bookmark, createdAtVersion: action.createdAtVersion };
+    }
+    // Only the thumbnail that was saved gets the version, not one that was captured in the meantime.
+    if (
+      bookmark.largeThumbnailDataBase64 !== action.savedLargeThumbnailDataBase64 ||
+      bookmark.thumbnailVersion === action.thumbnailVersion
+    ) {
+      return bookmark;
+    }
+    changed = true;
+    return { ...bookmark, thumbnailVersion: action.thumbnailVersion };
+  });
+  return changed ? newBookmarks : bookmarks;
 }

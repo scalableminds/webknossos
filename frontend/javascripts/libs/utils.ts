@@ -1012,6 +1012,7 @@ export function convertBufferToImage(
   drawImageIntoCanvasCallback: ((ctx: CanvasRenderingContext2D) => void) | null | undefined,
   flipHorizontally: boolean = false,
   mimeType?: string,
+  quality?: number,
 ): Promise<Blob | null> {
   return new Promise((resolve) => {
     width = Math.round(width);
@@ -1040,10 +1041,14 @@ export function convertBufferToImage(
     if (drawImageIntoCanvasCallback) {
       drawImageIntoCanvasCallback(ctx);
     }
-    canvas.toBlob((blob: Blob | null) => {
-      canvas.remove();
-      resolve(blob);
-    }, mimeType);
+    canvas.toBlob(
+      (blob: Blob | null) => {
+        canvas.remove();
+        resolve(blob);
+      },
+      mimeType,
+      quality,
+    );
   });
 }
 

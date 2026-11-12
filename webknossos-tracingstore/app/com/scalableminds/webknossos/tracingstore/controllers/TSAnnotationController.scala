@@ -29,6 +29,7 @@ import com.scalableminds.webknossos.tracingstore.annotation.{
   AnnotationBookmarkService,
   BookmarkMergeRemapping,
   AnnotationTransactionService,
+  AnnotationWithTracings,
   BookmarkThumbnailSize,
   ResetToBaseAnnotationAction,
   TSAnnotationService,
@@ -175,7 +176,7 @@ class TSAnnotationController @Inject() (
             .fromString(size)
             .toFox ?~> s"Invalid thumbnail size $size" ~> BAD_REQUEST
           thumbnail <- annotationBookmarkService.findThumbnail(annotationId, bookmarkId, sizeValidated, v) ~> NOT_FOUND
-        } yield Ok(thumbnail).as("image/webp").withHeaders(CACHE_CONTROL -> "private, max-age=31536000, immutable")
+        } yield Ok(thumbnail).as("image/jpeg").withHeaders(CACHE_CONTROL -> "private, max-age=31536000, immutable")
       }
     }
 
@@ -302,7 +303,7 @@ class TSAnnotationController @Inject() (
                   // Bookmarks belong to the annotation, their tracingId is empty.
                   for {
                     annotation <- annotationService.get(annotationId, version = None)
-                  } yield annotation.bookmarkIds.maxOption.map(_.toLong).getOrElse(fallbackId)
+                  } yield AnnotationWithTracings.largestBookmarkId(annotation).map(_.toLong).getOrElse(fallbackId)
               }
             } yield Ok(Json.toJson(largestIdWithFallback))
           }
@@ -510,6 +511,7 @@ class TSAnnotationController @Inject() (
             mergedAnnotation = firstAnnotation
               .withAnnotationLayers(mergedLayers)
               .withBookmarkIds(mergedBookmarkIds)
+              .clearLargestBookmarkId // the merged bookmarks got new ids
               .withEarliestAccessibleVersion(newTargetVersion)
               .withVersion(newTargetVersion)
             _ <- annotationService.saveAnnotationProto(

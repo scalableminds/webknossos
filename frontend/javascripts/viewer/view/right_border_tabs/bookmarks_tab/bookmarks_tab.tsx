@@ -39,6 +39,7 @@ import type {
   APIAnnotationBookmarkState,
   MetadataEntryProto,
 } from "types/api_types";
+import { BOOKMARK_THUMBNAIL_MIME_TYPE } from "viewer/constants";
 import { applyBookmarkState } from "viewer/controller/apply_url_state";
 import { bookmarkStateToUrlState } from "viewer/controller/bookmark_state";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
@@ -118,7 +119,9 @@ function useBookmarkThumbnailSrc(
     };
   }, [tracingStoreUrl, annotationId, id, thumbnailVersion, localDataBase64, size]);
 
-  return localDataBase64 != null ? `data:image/webp;base64,${localDataBase64}` : serverUrl;
+  return localDataBase64 != null
+    ? `data:${BOOKMARK_THUMBNAIL_MIME_TYPE};base64,${localDataBase64}`
+    : serverUrl;
 }
 
 // Only rendered while the popover is open, so that the large thumbnail is loaded on demand.

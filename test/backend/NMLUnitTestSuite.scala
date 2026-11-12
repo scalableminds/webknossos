@@ -465,6 +465,16 @@ class NMLUnitTestSuite extends AsyncWordSpec {
         case _ => Future.successful(fail("failed to write bookmark to XML"))
       }
 
+    "only accept JPEG thumbnails" in {
+      val jpegStart = Array(0xff, 0xd8, 0xff, 0xe0).map(_.toByte)
+      val pngStart = Array(0x89, 0x50, 0x4e, 0x47).map(_.toByte)
+      val webpStart = "RIFF\u0000\u0000\u0000\u0000WEBP".getBytes("US-ASCII")
+      assert(NmlBookmarks.isJpeg(jpegStart))
+      assert(!NmlBookmarks.isJpeg(pngStart))
+      assert(!NmlBookmarks.isJpeg(webpStart))
+      assert(!NmlBookmarks.isJpeg(Array.empty))
+    }
+
     "fail for duplicate bookmark ids" in
       assertParsingFailed(
         writeAndParseBookmarks(

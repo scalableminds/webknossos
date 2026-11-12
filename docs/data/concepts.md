@@ -369,8 +369,8 @@ When an NML with bookmarks is uploaded as a single file, its bookmarks are resto
 ```xml
 <bookmarks>
   <bookmark id="3" name="Interesting synapse" description="Check again" created="1730000000000">
-    <thumbnail size="small" viewport="xy" location="bookmark_thumbnails/3_small.webp" />
-    <thumbnail size="large" viewport="xy" location="bookmark_thumbnails/3_large.webp" />
+    <thumbnail size="small" viewport="xy" location="bookmark_thumbnails/3_small.jpg" />
+    <thumbnail size="large" viewport="xy" location="bookmark_thumbnails/3_large.jpg" />
     <metadata>
       <metadataEntry key="reviewed" boolValue="true" />
     </metadata>
@@ -401,7 +401,7 @@ When an NML with bookmarks is uploaded as a single file, its bookmarks are resto
   + `id` *(required)*: Unique integer bookmark ID.
   + `created` *(required)*: Unix timestamp (ms) of creation.
   + `name`, `description` *(optional)*: Free text.
-  + `<thumbnail>` *(optional, up to two)*: A `small` or `large` WebP thumbnail. `location` is the path of the image within the annotation ZIP archive. Missing thumbnails are ignored on upload. `viewport` *(optional)* is the viewport the thumbnail shows: `xy`, `yz`, `xz`, `3d` or `flight`. All thumbnails of a bookmark show the same viewport.
+  + `<thumbnail>` *(optional, up to two)*: A `small` or `large` JPEG thumbnail. `location` is the path of the image within the annotation ZIP archive. Missing thumbnails are ignored on upload. `viewport` *(optional)* is the viewport the thumbnail shows: `xy`, `yz`, `xz`, `3d` or `flight`. All thumbnails of a bookmark show the same viewport.
   + `<metadata>` *(optional)*: Contains `<metadataEntry>` child elements.
   + `<state>` *(required)*: The view that the bookmark restores.
 - `<state>` attributes:

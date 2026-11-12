@@ -16,7 +16,7 @@ import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
 import type { ChangeUserBoundingBoxAction } from "../actions/annotation_actions";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { sanitizeMetadata } from "./reducer_helpers";
+import { applyBookmarkVersionAction, sanitizeMetadata } from "./reducer_helpers";
 
 const updateAnnotation = (
   state: WebknossosState,
@@ -279,24 +279,10 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       return updateAnnotation(state, { bookmarks: action.bookmarks });
     }
 
-    case "SET_BOOKMARK_THUMBNAIL_VERSION": {
-      const { bookmarkId, thumbnailVersion, savedLargeThumbnailDataBase64 } = action;
-      return updateAnnotation(state, {
-        bookmarks: state.annotation.bookmarks.map((bookmark) =>
-          bookmark.id === bookmarkId &&
-          bookmark.largeThumbnailDataBase64 === savedLargeThumbnailDataBase64
-            ? { ...bookmark, thumbnailVersion }
-            : bookmark,
-        ),
-      });
-    }
-
+    case "SET_BOOKMARK_THUMBNAIL_VERSION":
     case "SET_BOOKMARK_CREATED_AT_VERSION": {
-      const { bookmarkId, createdAtVersion } = action;
       return updateAnnotation(state, {
-        bookmarks: state.annotation.bookmarks.map((bookmark) =>
-          bookmark.id === bookmarkId ? { ...bookmark, createdAtVersion } : bookmark,
-        ),
+        bookmarks: applyBookmarkVersionAction(state.annotation.bookmarks, action),
       });
     }
 

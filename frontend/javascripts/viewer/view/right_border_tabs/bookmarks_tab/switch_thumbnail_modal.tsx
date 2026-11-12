@@ -1,6 +1,11 @@
 import { Card, Empty, Flex, Modal, Spin } from "antd";
 import { useEffect, useState } from "react";
-import { FlightViewport, FlightViewsToName, OrthoViewsToName } from "viewer/constants";
+import {
+  BOOKMARK_THUMBNAIL_MIME_TYPE,
+  FlightViewport,
+  FlightViewsToName,
+  OrthoViewsToName,
+} from "viewer/constants";
 import {
   type BookmarkThumbnails,
   type BookmarkThumbnailViewport,
@@ -89,7 +94,7 @@ export function SwitchThumbnailModal({
                 style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }}
               >
                 <img
-                  src={`data:image/webp;base64,${thumbnails.largeDataBase64}`}
+                  src={`data:${BOOKMARK_THUMBNAIL_MIME_TYPE};base64,${thumbnails.largeDataBase64}`}
                   alt={`${getViewportName(viewport)} viewport`}
                   style={{
                     maxWidth: PREVIEW_SIZE,

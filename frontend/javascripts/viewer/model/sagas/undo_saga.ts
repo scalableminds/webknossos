@@ -14,6 +14,8 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import type {
+  SetBookmarkCreatedAtVersionAction,
+  SetBookmarkThumbnailVersionAction,
   SetCollaborationModeAction,
   UserBoundingBoxAction,
 } from "viewer/model/actions/annotation_actions";
@@ -50,6 +52,7 @@ import { Model } from "viewer/singletons";
 import type { SegmentGroup, SegmentMap, SkeletonTracing, UserBoundingBox } from "viewer/store";
 import { isConcurrentCollaborationMode } from "../accessors/annotation_accessor";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
+import { applyBookmarkVersionAction } from "../reducers/reducer_helpers";
 import { ensureWkInitialized } from "./ready_sagas";
 
 const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
@@ -93,6 +96,7 @@ type RelevantActionsForUndoRedo = {
   finishAnnotationStrokeAction?: FinishAnnotationStrokeAction;
   userBoundingBoxAction?: UserBoundingBoxAction;
   bookmarkAction?: Action;
+  bookmarkVersionAction?: SetBookmarkCreatedAtVersionAction | SetBookmarkThumbnailVersionAction;
   importVolumeTracingAction?: ImportVolumeTracingAction;
   undo?: UndoAction;
   redo?: RedoAction;
@@ -114,6 +118,13 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
   } else if (action.type === "FINISH_ANNOTATION_STROKE") {
     return {
       finishAnnotationStrokeAction: action,
+    };
+  } else if (
+    action.type === "SET_BOOKMARK_CREATED_AT_VERSION" ||
+    action.type === "SET_BOOKMARK_THUMBNAIL_VERSION"
+  ) {
+    return {
+      bookmarkVersionAction: action,
     };
   } else if (action.type === "IMPORT_VOLUMETRACING") {
     return {
@@ -232,6 +243,9 @@ function* manageUndoStates(): Saga<never> {
     ...SkeletonTracingSaveRelevantActions,
     ...UndoRedoRelevantBoundingBoxActions,
     ...BookmarkUndoRelevantActions,
+    // Versions assigned by the server when saving. Not undoable, but the snapshots need them.
+    "SET_BOOKMARK_CREATED_AT_VERSION",
+    "SET_BOOKMARK_THUMBNAIL_VERSION",
     "ADD_BUCKET_TO_UNDO",
     "SET_SEGMENT_GROUPS",
     "FINISH_ANNOTATION_STROKE",
@@ -265,6 +279,7 @@ function* manageUndoStates(): Saga<never> {
       finishAnnotationStrokeAction,
       userBoundingBoxAction,
       bookmarkAction,
+      bookmarkVersionAction,
       importVolumeTracingAction,
       undo,
       redo,
@@ -285,6 +300,14 @@ function* manageUndoStates(): Saga<never> {
           type: "warning",
           reason: messages["undo.collaboration_mode_changed"],
         } as WarnUndoState);
+      }
+    } else if (bookmarkVersionAction) {
+      // The bookmark snapshots were taken before the bookmarks were saved. Without the versions,
+      // undo/redo would unset them again (prevBookmarks is updated below).
+      for (const undoState of [...undoStack, ...redoStack]) {
+        if (undoState.type === "bookmarks") {
+          undoState.data = applyBookmarkVersionAction(undoState.data, bookmarkVersionAction);
+        }
       }
     } else if (importVolumeTracingAction) {
       redoStack.splice(0);

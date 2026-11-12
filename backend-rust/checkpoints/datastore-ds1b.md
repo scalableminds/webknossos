@@ -43,3 +43,10 @@ The hand-written SigV4 signer, S3 XML client and GCS JSON-API client were replac
 - Object keys with empty or `.`/`..` segments cannot be addressed; ranged reads require `206` with a matching `Content-Range`.
 - Multipart parts are buffered in memory (8 MiB, larger only above 80 GB files) instead of streamed.
 Mock-server tests in tests/datavault.rs and tests/managed_s3.rs were rewritten for these semantics; the AWS-SDK signing fixtures and their Java generator were removed.
+
+## Update 2026-11-12: Scala #10365 (GCS reads as one async ranged GET)
+
+Scala's `GoogleCloudDataVault` now reads with a single Play WS GET, which the Rust vault already did. Aligned semantics in `gcs.rs`:
+- Complete reads of gzip-stored objects return the decoded bytes with `identity` encoding (Play WS decodes them); ranged reads of gzip-stored objects fail ("Range requests on gzip-encoded GCS objects are not supported").
+- Empty, inverted and longer-than-`Int.MaxValue` ranges fail before any request (Scala `isValidRange`), instead of the former existence check; empty minishard indices were already skipped by the sharding reader.
+- Read retries: 5 attempts from 250 ms (Scala `getWithRetry`), replacing the google-cloud-storage defaults (6 attempts from 1 s).

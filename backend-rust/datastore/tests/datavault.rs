@@ -749,6 +749,7 @@ async fn gcs_anonymous_reads_with_ranges_and_stored_encoding() {
     let mock = Mock::start(move |req| match decoded(&req.path).as_str() {
         "/bucket/dir/obj a.bin" => ranged(req, b"0123456789"),
         "/bucket/gz" => object(200, stored.clone()).with("content-encoding", "gzip"),
+        "/bucket/gz-ranged" => ranged(req, &stored).with("content-encoding", "gzip"),
         _ => Resp::new(404, "<Error><Code>NoSuchKey</Code></Error>"),
     })
     .await;
@@ -767,16 +768,42 @@ async fn gcs_anonymous_reads_with_ranges_and_stored_encoding() {
         .unwrap();
     assert_eq!(&suffix.bytes[..], b"89");
 
+    // Complete reads of gzip-stored objects arrive decoded, like Scala's Play WS client.
     let gz = vault
         .read_bytes_encoding_and_range_header(&upath("gs://bucket/gz"), ByteRange::Complete, None)
         .await
         .unwrap();
-    assert_eq!(gz.encoding, Encoding::Gzip);
+    assert_eq!(gz.encoding, Encoding::Identity);
+    assert_eq!(&gz.bytes[..], b"hello gcs");
     let decoded = VaultPath::new(upath("gs://bucket/gz"), Arc::clone(&vault))
         .read_bytes(ByteRange::Complete, None)
         .await
         .unwrap();
     assert_eq!(&decoded[..], b"hello gcs");
+    // A ranged read of a gzip-stored object is an undecodable slice of the gzip stream.
+    let gz_slice = vault
+        .read_bytes_encoding_and_range_header(
+            &upath("gs://bucket/gz-ranged"),
+            ByteRange::start_end_exclusive(0, 4),
+            None,
+        )
+        .await
+        .unwrap_err();
+    assert!(
+        failure(gz_slice)
+            .message
+            .contains("gzip-encoded GCS objects")
+    );
+    // Empty ranges fail without a request.
+    let requests_before = mock.requests().len();
+    for empty in [ByteRange::start_end_exclusive(4, 4), ByteRange::suffix(0)] {
+        let error = vault
+            .read_bytes_encoding_and_range_header(&path, empty, None)
+            .await
+            .unwrap_err();
+        assert!(failure(error).message.contains("Invalid byte range"));
+    }
+    assert_eq!(mock.requests().len(), requests_before);
     let missing = vault
         .read_bytes_encoding_and_range_header(
             &upath("gs://bucket/missing"),

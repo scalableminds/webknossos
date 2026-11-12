@@ -4,9 +4,11 @@
 //! else the key file named by `GOOGLE_APPLICATION_CREDENTIALS`, else anonymous requests
 //! (public buckets).
 //!
-//! Reads send `Accept-Encoding: gzip` so GCS never transcodes: the stored bytes are returned
-//! with their stored `Content-Encoding` (Scala `shouldReturnRawInputStream(true)`), and
-//! `VaultPath` decodes them.
+//! Each read is a single async ranged GET (Scala #10365). Reads send `Accept-Encoding: gzip`
+//! so GCS never transcodes (transcoding ignores `Range`). Complete reads of gzip-stored objects
+//! are returned decoded with `identity` encoding, like Scala's Play WS client does; ranged reads
+//! of them are only a slice of the gzip stream and fail. Empty, inverted and oversized ranges
+//! fail before any request.
 
 use std::{sync::Arc, time::Duration};
 
@@ -14,18 +16,18 @@ use object_store::gcp::GoogleCloudStorageBuilder;
 use reqwest::header::{ACCEPT_ENCODING, HeaderMap, HeaderValue};
 
 use super::{
-    BoxFuture, ByteRange, DataVault, RawRead, RemoteUri, RetryPolicy, ToRemoteUri, UPath,
+    BoxFuture, ByteRange, DataVault, Encoding, RawRead, RemoteUri, RetryPolicy, ToRemoteUri, UPath,
     VaultError, VaultResult,
     cloud::{self, CloudObjectStore, StoreResult},
 };
 
 pub const DEFAULT_GCS_ENDPOINT: &str = "https://storage.googleapis.com";
 
-/// google-cloud-storage's default `RetrySettings` (6 attempts, 1 s initial delay, multiplier 2),
-/// which Scala's `StorageOptions` use for every vault request.
+/// Scala `GoogleCloudDataVault.getWithRetry`: 5 attempts, 250 ms initial delay, doubling with
+/// every further retry (I/O failures and 408/429/500/502/503/504).
 pub const DEFAULT_READ_RETRY: RetryPolicy = RetryPolicy {
-    attempts: 6,
-    initial_delay: Duration::from_secs(1),
+    attempts: 5,
+    initial_delay: Duration::from_millis(250),
 };
 
 /// Process-wide GCS settings.
@@ -131,6 +133,15 @@ impl GoogleCloudDataVault {
     }
 }
 
+/// Scala `isValidRange`: the length must be positive and fit into a byte array.
+fn is_valid_range(range: ByteRange) -> bool {
+    match range {
+        ByteRange::StartEnd { start, end } => end > start && end - start <= i32::MAX as u64,
+        ByteRange::Suffix { length } => length > 0,
+        ByteRange::Complete => true,
+    }
+}
+
 impl DataVault for GoogleCloudDataVault {
     fn read_bytes_encoding_and_range_header<'a>(
         &'a self,
@@ -140,7 +151,28 @@ impl DataVault for GoogleCloudDataVault {
     ) -> BoxFuture<'a, VaultResult<RawRead>> {
         Box::pin(async move {
             let name = Self::object_name(path)?;
-            cloud::read(self.store()?, &name, range).await
+            if !is_valid_range(range) {
+                return Err(VaultError::failure(format!("Invalid byte range {range}")));
+            }
+            let raw = cloud::read(self.store()?, &name, range).await?;
+            match (raw.encoding, range) {
+                (Encoding::Gzip, ByteRange::Complete) => {
+                    // Scala's Play WS client decodes gzip responses and drops `Content-Encoding`.
+                    let bytes = Encoding::Gzip.decode(raw.bytes).map_err(|e| {
+                        VaultError::Failure(e).wrap("Failed to decode gzip-encoded response.")
+                    })?;
+                    Ok(RawRead {
+                        bytes,
+                        encoding: Encoding::Identity,
+                        content_range: raw.content_range,
+                    })
+                }
+                (Encoding::Gzip, _) => Err(VaultError::failure(format!(
+                    "Range requests on gzip-encoded GCS objects are not supported (gs://{}/{name}, {range})",
+                    self.bucket
+                ))),
+                _ => Ok(raw),
+            }
         })
     }
 

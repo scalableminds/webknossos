@@ -122,7 +122,6 @@ function AddLayersRow({
       </Flex>
       <Flex gap={8}>
         <Input
-          size="large"
           className="dataset-remote-mono"
           value={url}
           status={error != null ? "error" : undefined}
@@ -140,14 +139,7 @@ function AddLayersRow({
           onChange={(event) => field.setUrl(event.target.value)}
           onPressEnter={addLayers}
         />
-        <Button
-          size="large"
-          color="primary"
-          variant="outlined"
-          className="dataset-remote-url-button"
-          loading={isExploring}
-          onClick={addLayers}
-        >
+        <Button color="primary" variant="outlined" loading={isExploring} onClick={addLayers}>
           {isExploring ? EXPLORING_LABEL : ADD_LAYERS_LABEL}
         </Button>
       </Flex>

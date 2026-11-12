@@ -38,6 +38,11 @@ trait BookmarkUpdateAction extends AnnotationUpdateAction {
   def id: Int
 }
 
+// Changes an existing bookmark. Ignored if the bookmark does not exist (anymore), see TSAnnotationService.updateBookmark.
+trait ApplyableBookmarkUpdateAction extends BookmarkUpdateAction {
+  def applyOn(bookmark: AnnotationBookmarkProto): AnnotationBookmarkProto
+}
+
 // The thumbnails are stored in their own column family when the update is saved and are stripped from the stored
 // update action. thumbnailVersion is set by the frontend: to the version of the update group if the action carries
 // thumbnails, to the version of thumbnails stored earlier to reference them (e.g. when undoing), or to None if the
@@ -120,7 +125,7 @@ case class UpdateBookmarkAnnotationAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends BookmarkUpdateAction {
+) extends ApplyableBookmarkUpdateAction {
   def applyOn(bookmark: AnnotationBookmarkProto): AnnotationBookmarkProto =
     bookmark.copy(name = name.getOrElse(bookmark.name), description = description.getOrElse(bookmark.description))
   override def withTimestamp(timestamp: Long): UpdateAction = this.copy(actionTimestamp = Some(timestamp))
@@ -140,7 +145,7 @@ case class UpdateBookmarkStateAnnotationAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends BookmarkUpdateAction derives JsonAutoFormat {
+) extends ApplyableBookmarkUpdateAction derives JsonAutoFormat {
   def applyOn(bookmark: AnnotationBookmarkProto): AnnotationBookmarkProto =
     bookmark.withState(state.toProto)
 
@@ -159,7 +164,8 @@ case class UpdateBookmarkThumbnailAnnotationAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends BookmarkThumbnailUpdateAction derives JsonAutoFormat {
+) extends BookmarkThumbnailUpdateAction
+    with ApplyableBookmarkUpdateAction derives JsonAutoFormat {
   def applyOn(bookmark: AnnotationBookmarkProto): AnnotationBookmarkProto =
     bookmark.copy(
       thumbnailVersion = thumbnailVersion,
@@ -181,7 +187,7 @@ case class UpdateMetadataOfBookmarkAnnotationAction(
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None
-) extends BookmarkUpdateAction derives JsonAutoFormat {
+) extends ApplyableBookmarkUpdateAction derives JsonAutoFormat {
   def applyOn(bookmark: AnnotationBookmarkProto): AnnotationBookmarkProto =
     bookmark.withMetadata(MetadataEntry.upsertAndRemove(bookmark.metadata, upsertEntriesByKey, removeEntriesByKey))
   override def withTimestamp(timestamp: Long): UpdateAction = this.copy(actionTimestamp = Some(timestamp))

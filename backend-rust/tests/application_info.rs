@@ -115,7 +115,7 @@ async fn buildinfo_and_features_are_public_and_shaped_like_play() {
         assert_eq!(reply.body["optInTabs"], json!(["ConnectomeView"]));
         assert_eq!(
             reply.body["supportAiAgentUrl"],
-            "https://docs.webknossos.org/webhooks/webknossos/ask"
+            "https://docs.webknossos.org/webhooks/webknossos-combined/ask"
         );
         assert_eq!(
             reply.body["alignmentProjectAlignCostInMilliCreditsPerGB"],

@@ -30,7 +30,6 @@ import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types
 import { NumberToOrthoView, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import {
-  createAgglomerateSkeletonMetadata,
   getAgglomerateDiffKey,
   getAgglomerateDiffReferenceForSkeleton,
 } from "viewer/model/accessors/agglomerate_diff_accessor";
@@ -483,8 +482,8 @@ function* loadAgglomerateTreeWithAtPosition(
     }
 
     // Agglomerate skeletons of agglomerate files can be compared to a reference mapping. The
-    // reference agglomerate is the one of the clicked segment, so the clicked position is stored with the
-    // agglomerate skeleton (see createAgglomerateSkeletonMetadata).
+    // reference agglomerate is the one of the clicked segment, so the clicked position is stored in the
+    // agglomerateInfo of the agglomerate skeleton.
     const isAgglomerateFile = yield* select((state) => {
       const layer = getLayerByName(state.dataset, layerName);
       return (
@@ -532,17 +531,20 @@ function* loadAgglomerateTreeWithAtPosition(
       agglomerateId,
     );
 
-    // Agglomerate skeletons of editable mappings are not compared and their metadata is not
-    // preserved by proofreading operations, so no metadata is stored for them.
-    const agglomerateTrees = isAgglomerateFile
-      ? agglomerateTree.trees.map((tree) => ({
-          ...tree,
-          metadata: [
-            ...tree.metadata,
-            ...createAgglomerateSkeletonMetadata(layerName, clickedPositionInLayer),
-          ],
-        }))
-      : agglomerateTree.trees;
+    // Agglomerate skeletons of editable mappings are not compared and their layer is given by
+    // the tracingId, so the layer and clicked position are only stored for agglomerate files.
+    const agglomerateTrees = agglomerateTree.trees.map((tree) =>
+      tree.agglomerateInfo?.mappingName != null && tree.agglomerateInfo.tracingId == null
+        ? {
+            ...tree,
+            agglomerateInfo: {
+              ...tree.agglomerateInfo,
+              layerName,
+              clickedPosition: clickedPositionInLayer?.map(Math.floor) as Vector3 | undefined,
+            },
+          }
+        : tree,
+    );
     yield* put(
       addTreesAndGroupsAction(
         createMutableTreeMapFromTreeArray(agglomerateTrees),
@@ -754,7 +756,9 @@ function updateTreePredicate(prevTree: Tree, tree: Tree, useDeepEqualityCheck: b
     prevTree.type !== tree.type ||
     prevTree.agglomerateInfo?.agglomerateId !== tree.agglomerateInfo?.agglomerateId ||
     prevTree.agglomerateInfo?.tracingId !== tree.agglomerateInfo?.tracingId ||
-    prevTree.agglomerateInfo?.mappingName !== tree.agglomerateInfo?.mappingName;
+    prevTree.agglomerateInfo?.mappingName !== tree.agglomerateInfo?.mappingName ||
+    prevTree.agglomerateInfo?.layerName !== tree.agglomerateInfo?.layerName ||
+    !isEqual(prevTree.agglomerateInfo?.clickedPosition, tree.agglomerateInfo?.clickedPosition);
 
   if (doPrimitivesDiffer) {
     return true;

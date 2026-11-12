@@ -85,7 +85,14 @@ class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {
           )
         ),
         actionTracingId = Dummies.tracingId,
-        agglomerateInfo = Some(TreeAgglomerateInfo(UnsignedLong(1), Some(Dummies.tracingId), None))
+        agglomerateInfo = Some(
+          TreeAgglomerateInfo(
+            UnsignedLong(1),
+            mappingName = Some("agglomerate_view_5"),
+            layerName = Some("segmentation"),
+            clickedPosition = Some(Vec3Int(1, 2, 3))
+          )
+        )
       )
       val result = applyUpdateAction(updateTreeAction)
 

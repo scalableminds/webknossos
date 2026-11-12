@@ -9,6 +9,7 @@ import SkeletonTracingProto from "SkeletonTracing.proto";
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'VolumeTracing.proto' or its co... Remove this comment to see the full error message
 import VolumeTracingProto from "VolumeTracing.proto";
 import { toBigInt } from "libs/bigint_helpers";
+import { point3ToVector3 } from "libs/utils";
 import Long from "long";
 import { configure, Root, util } from "protobufjs/light";
 import type { APITracingStoreAnnotation, ServerTracing } from "types/api_types";
@@ -74,6 +75,11 @@ export function parseProtoTracing(
       tree.createdTimestamp = Number(tree.createdTimestamp);
       if (tree.agglomerateInfo != null) {
         tree.agglomerateInfo.agglomerateId = toBigInt(tree.agglomerateInfo.agglomerateId);
+        if (tree.agglomerateInfo.clickedPosition != null) {
+          tree.agglomerateInfo.clickedPosition = point3ToVector3(
+            tree.agglomerateInfo.clickedPosition,
+          );
+        }
       }
       for (const node of tree.nodes ?? []) {
         node.createdTimestamp = Number(node.createdTimestamp);

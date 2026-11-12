@@ -26,7 +26,7 @@ export type AgglomerateDiffAction =
 // Marks the diff as loading and lets the agglomerate_diff_saga load it. The agglomerate is compared
 // to the reference agglomerate that contains the segment at the given position (in the coordinate
 // system of the layer). The position is floored, so that it can be compared to the clicked position
-// stored with the agglomerate skeleton (see createAgglomerateSkeletonMetadata).
+// stored with the agglomerate skeleton (see TreeAgglomerateInfo.clickedPosition).
 // awaitsAgglomerateSkeleton has to be set if the diff is requested while its agglomerate skeleton is
 // still loading. Otherwise, the diff would be considered obsolete. In case the agglomerate skeleton
 // cannot be added, the requester has to remove the diff. Otherwise, it has to dispatch

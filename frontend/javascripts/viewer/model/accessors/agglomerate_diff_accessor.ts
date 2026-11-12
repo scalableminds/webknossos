@@ -1,6 +1,5 @@
 import { V3 } from "libs/mjs";
 import memoizeOne from "memoize-one";
-import type { MetadataEntryProto } from "types/api_types";
 import Constants, { MappingStatusEnum, type Vector3 } from "viewer/constants";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
@@ -21,49 +20,16 @@ export function getAgglomerateDiffKey(descriptor: AgglomerateDiffDescriptor): st
   ]);
 }
 
-/*
- * Agglomerate skeletons store the following information as tree metadata, so that their diffs are
- * the same after reloading the annotation. The keys are prefixed, so that they don't collide with
- * metadata that users add themselves.
- * - The layer they were loaded for. Otherwise, agglomerate skeletons of layers whose agglomerate
- *   files have the same names couldn't be told apart.
- * - The clicked position (in the coordinate system of the layer), if they were loaded by clicking on
- *   a segment. The diff compares the reference agglomerate of the clicked segment.
- */
-export const LAYER_NAME_METADATA_KEY = "webknossos.agglomerateLayerName";
-export const CLICKED_POSITION_METADATA_KEY = "webknossos.clickedPosition";
-
-export function createAgglomerateSkeletonMetadata(
-  layerName: string,
-  clickedPositionInLayer: Vector3 | null,
-): MetadataEntryProto[] {
-  const metadata: MetadataEntryProto[] = [{ key: LAYER_NAME_METADATA_KEY, stringValue: layerName }];
-  if (clickedPositionInLayer != null) {
-    metadata.push({
-      key: CLICKED_POSITION_METADATA_KEY,
-      stringListValue: clickedPositionInLayer.map((coordinate) =>
-        Math.floor(coordinate).toString(),
-      ),
-    });
-  }
-  return metadata;
-}
-
-// Returns null for agglomerate skeletons that were loaded before the layer was stored
+// Returns null for agglomerate skeletons that were loaded before the layer was stored with them
+// (see TreeAgglomerateInfo.layerName)
 export function getLayerNameOfAgglomerateSkeleton(tree: Tree): string | null {
-  return tree.metadata.find(({ key }) => key === LAYER_NAME_METADATA_KEY)?.stringValue ?? null;
+  return tree.agglomerateInfo?.layerName ?? null;
 }
 
-// Returns null if the position is missing or was edited to something invalid
+// Returns null for agglomerate skeletons that were not loaded by clicking on a segment (see
+// TreeAgglomerateInfo.clickedPosition)
 export function getClickedPositionInLayer(tree: Tree): Vector3 | null {
-  const entries = tree.metadata.find(
-    ({ key }) => key === CLICKED_POSITION_METADATA_KEY,
-  )?.stringListValue;
-  // Number("") would be 0
-  if (entries?.length !== 3 || entries.some((entry) => entry.trim() === "")) return null;
-  const position = entries.map(Number);
-  if (!position.every(Number.isFinite)) return null;
-  return position.map(Math.floor) as Vector3;
+  return (tree.agglomerateInfo?.clickedPosition?.map(Math.floor) as Vector3 | undefined) ?? null;
 }
 
 // Whether the diff compares the reference agglomerate at the given position (see AgglomerateDiff)

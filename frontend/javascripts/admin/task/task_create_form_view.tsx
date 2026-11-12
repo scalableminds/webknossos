@@ -607,31 +607,36 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
           <CreateResourceButton text="Upload Dataset" link="/datasets/upload" />
         </Row>
 
-        <FormItem
-          name="editPosition"
-          label="Starting Position"
-          hasFeedback
-          rules={[
-            {
-              required: true,
-            },
-          ]}
-        >
-          <Vector3Input style={fullWidth} disabled={isEditingMode} />
-        </FormItem>
-
-        <FormItem
-          name="editRotation"
-          label="Starting Rotation"
-          hasFeedback
-          rules={[
-            {
-              required: true,
-            },
-          ]}
-        >
-          <Vector3Input style={fullWidth} disabled={isEditingMode} />
-        </FormItem>
+        <Row gutter={8}>
+          <Col span={12}>
+            <FormItem
+              name="editPosition"
+              label="Starting Position"
+              hasFeedback
+              rules={[
+                {
+                  required: true,
+                },
+              ]}
+            >
+              <Vector3Input style={fullWidth} disabled={isEditingMode} />
+            </FormItem>
+          </Col>
+          <Col span={12}>
+            <FormItem
+              name="editRotation"
+              label="Starting Rotation"
+              hasFeedback
+              rules={[
+                {
+                  required: true,
+                },
+              ]}
+            >
+              <Vector3Input style={fullWidth} disabled={isEditingMode} />
+            </FormItem>
+          </Col>
+        </Row>
       </div>
     );
   }
@@ -690,49 +695,10 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             <CreateResourceButton text="Create new Task Type" link="/taskTypes/create" />
           </Row>
 
-          <Row gutter={8} align="bottom" wrap={false}>
-            <Col span={10}>
-              <FormItem
-                name={["neededExperience", "domain"]}
-                label="Experience Domain"
-                tooltip="Optional. Only users with at least the given experience value in this domain get the task. Leave empty to let any member of the project's team get the task."
-                hasFeedback
-              >
-                <SelectExperienceDomain
-                  disabled={isEditingMode}
-                  placeholder="Any team member"
-                  notFoundContent={messages["task.domain_does_not_exist"]}
-                  width={100}
-                  allowCreation
-                  allowClear
-                />
-              </FormItem>
-            </Col>
-            <Col flex="auto">
-              <FormItem
-                name={["neededExperience", "value"]}
-                label="Experience Value"
-                hasFeedback
-                dependencies={[["neededExperience", "domain"]]}
-                rules={[
-                  ({ getFieldValue }) => ({
-                    required: isNonEmptyDomain(getFieldValue(["neededExperience", "domain"])),
-                    message: "Please enter an experience value for the selected domain.",
-                  }),
-                  {
-                    type: "number",
-                  },
-                ]}
-              >
-                <InputNumber style={fullWidth} disabled={isEditingMode} />
-              </FormItem>
-            </Col>
-            <CreateResourceButton text="Assign Experience" link="/users" />
-          </Row>
-
           <FormItem
             name="pendingInstances"
             label={instancesLabel}
+            tooltip="The number of users who annotate this task independently. Each instance is assigned to a different user."
             hasFeedback
             rules={[
               {
@@ -780,9 +746,81 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             <CreateResourceButton text="Create new Project" link="/projects/create" />
           </Row>
 
+          <FormItem
+            label="Task Specification"
+            tooltip="Defines the dataset and starting point of the task: enter them manually, upload NML files (one task per file), or use an existing annotation as the base for the task."
+            hasFeedback
+          >
+            <RadioGroup
+              value={specificationType}
+              onChange={(evt: RadioChangeEvent) =>
+                setSpecificationType(
+                  coalesce(SpecificationEnum, evt.target.value) || specificationType,
+                )
+              }
+            >
+              <Radio value={SpecificationEnum.Manual} disabled={isEditingMode}>
+                Manual Specification
+              </Radio>
+              <Radio value={SpecificationEnum.Nml} disabled={isEditingMode}>
+                Upload NML File
+              </Radio>
+              <Radio value={SpecificationEnum.BaseAnnotation} disabled={isEditingMode}>
+                Use Annotation ID as Base
+              </Radio>
+            </RadioGroup>
+          </FormItem>
+
+          {renderSpecification()}
+
+          <Row gutter={8} align="bottom" wrap={false}>
+            <Col span={10}>
+              <FormItem
+                name={["neededExperience", "domain"]}
+                label="Experience Domain"
+                tooltip="Optional. Only users with at least the given experience value in this domain get the task. Leave empty to let any member of the project's team get the task."
+                hasFeedback
+              >
+                <SelectExperienceDomain
+                  disabled={isEditingMode}
+                  placeholder="Any team member"
+                  notFoundContent={messages["task.domain_does_not_exist"]}
+                  width={100}
+                  allowCreation
+                  allowClear
+                />
+              </FormItem>
+            </Col>
+            <Col flex="auto">
+              <FormItem
+                name={["neededExperience", "value"]}
+                label="Experience Value"
+                hasFeedback
+                dependencies={[["neededExperience", "domain"]]}
+                rules={[
+                  ({ getFieldValue }) => ({
+                    required: isNonEmptyDomain(getFieldValue(["neededExperience", "domain"])),
+                    message: "Please enter an experience value for the selected domain.",
+                  }),
+                  {
+                    type: "number",
+                  },
+                ]}
+              >
+                <InputNumber style={fullWidth} disabled={isEditingMode} />
+              </FormItem>
+            </Col>
+            <CreateResourceButton text="Assign Experience" link="/users" />
+          </Row>
+
           <Row gutter={8} align="bottom" wrap={false}>
             <Col flex="auto">
-              <FormItem name="scriptId" label="Script" hasFeedback>
+              <FormItem
+                name="scriptId"
+                label="Script"
+                tooltip="Optional. A user script that is loaded in the annotation view of everyone working on this task."
+                hasFeedback
+              >
                 <Select
                   showSearch={{ optionFilterProp: "label" }}
                   placeholder="Select a Script"
@@ -813,29 +851,6 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
           >
             <Vector6Input disabled={isEditingMode} />
           </FormItem>
-
-          <FormItem label="Task Specification" hasFeedback>
-            <RadioGroup
-              value={specificationType}
-              onChange={(evt: RadioChangeEvent) =>
-                setSpecificationType(
-                  coalesce(SpecificationEnum, evt.target.value) || specificationType,
-                )
-              }
-            >
-              <Radio value={SpecificationEnum.Manual} disabled={isEditingMode}>
-                Manual Specification
-              </Radio>
-              <Radio value={SpecificationEnum.Nml} disabled={isEditingMode}>
-                Upload NML File
-              </Radio>
-              <Radio value={SpecificationEnum.BaseAnnotation} disabled={isEditingMode}>
-                Use Annotation ID as Base
-              </Radio>
-            </RadioGroup>
-          </FormItem>
-
-          {renderSpecification()}
 
           <FormItem>
             <Button type="primary" htmlType="submit">

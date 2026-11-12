@@ -29,7 +29,7 @@ function ResumeAnnotationLink({ latestAnnotationId }: { latestAnnotationId: stri
       title="Resume Your Most Recently Modified Annotation of this Dataset"
     >
       <PlayCircleOutlined className="icon-margin-right" />
-      Resume Annotating
+      Resume Last Annotation
     </Link>
   );
 }
@@ -206,7 +206,7 @@ export function getDatasetActionContextMenu({
             ? {
                 key: "resume-annotation",
                 icon: <PlayCircleOutlined className="icon-margin-right" />,
-                label: "Resume Annotating",
+                label: "Resume Last Annotation",
                 onClick: () => {
                   window.location.href = `/annotations/${dataset.latestAnnotationId}`;
                 },

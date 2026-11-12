@@ -536,6 +536,12 @@ export type EditableLayerProperties = {
 export type AnnotationCollaborationMode = "OwnerOnly" | "Exclusive" | "Concurrent";
 export const AnnotationCollaborationModes = ["OwnerOnly", "Exclusive", "Concurrent"] as const;
 
+// Set if the annotation is a layer registration: its landmarks map the other layers of the
+// dataset onto the fixed layer.
+export type APILayerRegistration = {
+  readonly fixedLayerName: string;
+};
+
 export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
   readonly datasetId: string;
@@ -558,6 +564,7 @@ export type APIAnnotationInfo = {
   readonly owner?: APIUserCompact;
   readonly teams: APITeam[];
   readonly collaborationMode: AnnotationCollaborationMode;
+  readonly layerRegistration: APILayerRegistration | null;
 };
 
 export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInfo {
@@ -578,6 +585,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     collaborationMode,
     organization,
     annotationLayers,
+    layerRegistration,
   } = annotation;
 
   return {
@@ -597,6 +605,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     owner,
     teams,
     collaborationMode,
+    layerRegistration,
   };
 }
 

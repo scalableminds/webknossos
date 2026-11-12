@@ -50,7 +50,7 @@ import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { Edge, Node, Tree } from "viewer/model/types/tree_types";
 import { OrthoBaseRotations } from "viewer/ortho_base_rotations";
 import { api } from "viewer/singletons";
-import Store from "viewer/store";
+import Store, { type WebknossosState } from "viewer/store";
 import type FlightModeView from "viewer/view/arbitrary_view";
 import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
 import { getNewLandmarkTreeProperties } from "viewer/view/layer_registration/layer_registration_worker";
@@ -275,15 +275,25 @@ export function finishNodeMovement(nodeId: number) {
   );
 }
 
+// In the workers of the layer registration view, each landmark is a tree with one node, and one
+// click places one landmark. The user settings for these two modes therefore don't apply there.
+function isSingleNodeTreeModeOn(state: WebknossosState): boolean {
+  return isLayerRegistrationWorker() || state.userConfiguration.newNodeNewTree;
+}
+
+export function isContinuousNodeCreationOn(state: WebknossosState): boolean {
+  return !isLayerRegistrationWorker() && state.userConfiguration.continuousNodeCreation;
+}
+
 export function handleCreateNodeFromGlobalPosition(
   nodePosition: PositionWithRounding,
   activeViewport: OrthoView,
   ctrlIsPressed: boolean,
 ): void {
   const state = Store.getState();
-  // Create a new tree automatically if the corresponding setting is true and allowed
+  // Create a new tree automatically if the corresponding mode is on and allowed
   const createNewTree =
-    state.annotation.restrictions.somaClickingAllowed && state.userConfiguration.newNodeNewTree;
+    state.annotation.restrictions.somaClickingAllowed && isSingleNodeTreeModeOn(state);
   if (createNewTree) {
     // In the layer registration view, the tree name tells which landmark pair the node belongs to.
     Store.dispatch(
@@ -334,8 +344,8 @@ export function getOptionsForCreateSkeletonNode(
   // Center node if the corresponding setting is true. Only pressing CTRL can override this.
   const center = state.userConfiguration.centerNewNode && !ctrlIsPressed;
 
-  // Only create a branchpoint if CTRL is pressed. Unless newNodeNewTree is activated (branchpoints make no sense then)
-  const branchpoint = ctrlIsPressed && !state.userConfiguration.newNodeNewTree;
+  // Only create a branchpoint if CTRL is pressed. Unless the single node tree mode is on (branchpoints make no sense then)
+  const branchpoint = ctrlIsPressed && !isSingleNodeTreeModeOn(state);
 
   // Always activate the new node unless CTRL is pressed. If there is no current node,
   // the new one is still activated regardless of CTRL (otherwise, using CTRL+click in an empty tree multiple times would

@@ -9,7 +9,6 @@ import { isSaving } from "viewer/model/accessors/annotation_accessor";
 import { getDataLayers } from "viewer/model/accessors/dataset_accessor";
 import { getMaxZoomValueForMag, getPosition } from "viewer/model/accessors/flycam_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import { Toolkit } from "viewer/model/accessors/tool_accessor";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import {
@@ -44,8 +43,10 @@ import { sendCommandToLayerRegistrationPage } from "./layer_registration_view_st
 // Code that runs inside the iframes of the layer registration view. The iframe side of the
 // commands of the page is in cross_origin_api.ts.
 
-// These letters are not bound in WEBKNOSSOS' plane mode. The listener below does not stop
-// propagation, so a bound key would trigger both actions.
+// These letters have no single-key binding in WEBKNOSSOS' plane mode. There are chords that end with
+// one of them. They switch to tools, but these tools are disabled in the workers (see
+// ViewerCapabilities.fixedToolkit). The listener below does not stop propagation, so a bound key
+// would trigger both actions.
 const SHORTCUT_COMMANDS: Record<string, LayerRegistrationCommand> = {
   t: "toggleTransform",
   x: "toggleOtherLayer",
@@ -60,12 +61,14 @@ export function useLayerRegistrationShortcutRelay() {
       return;
     }
     const onKeyDown = (event: KeyboardEvent) => {
-      const command = SHORTCUT_COMMANDS[event.key.toLowerCase()];
+      // Chrome's autofill fires keydown events without a key.
+      const command = event.key != null ? SHORTCUT_COMMANDS[event.key.toLowerCase()] : null;
       if (
         command == null ||
         event.ctrlKey ||
         event.altKey ||
         event.metaKey ||
+        event.repeat ||
         !isNoEditableElementFocused()
       ) {
         return;
@@ -123,9 +126,10 @@ async function maybeMoveToDataOfLayer(layerName: string) {
 }
 
 // Configures the worker right after the annotation was loaded: show and natively render only the
-// worker's own layer (so landmark positions are in that layer's coordinates), create a new tree per
-// node, don't move the camera to new nodes, restrict the tools to landmark clicking and move to a
-// position that contains data. These settings are not persisted (see settings_saga.ts).
+// worker's own layer (so landmark positions are in that layer's coordinates), don't move the camera
+// to new nodes and move to a position that contains data. These settings are not persisted (see
+// settings_saga.ts). The tools are restricted by ViewerCapabilities.fixedToolkit, and the click
+// handler always creates one tree per landmark (see isSingleNodeTreeModeOn).
 // The transforms that the dataset stores for its layers are removed in the worker. The layer
 // registration page sets the preview transforms of the other layers, and WEBKNOSSOS would chain
 // them with the inverse of the stored transforms of the natively rendered layer.
@@ -136,9 +140,7 @@ export async function applyLayerRegistrationWorkerSettings() {
     Store.dispatch(updateLayerSettingAction(layer.name, "isDisabled", layer.name !== layerName));
   }
   Store.dispatch(updateDatasetSettingAction("nativelyRenderedLayerName", layerName));
-  Store.dispatch(updateUserSettingAction("newNodeNewTree", true));
   Store.dispatch(updateUserSettingAction("centerNewNode", false));
-  Store.dispatch(updateUserSettingAction("activeToolkit", Toolkit.LANDMARKS));
   await maybeMoveToDataOfLayer(layerName);
 }
 

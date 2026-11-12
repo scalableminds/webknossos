@@ -34,7 +34,7 @@ function DatasetAddView() {
   const navigate = useNavigate();
   const location = useLocation();
   useBlockNavigationDuringUploads();
-  const datastores = useFetch<APIDataStore[] | null>(getDatastores, null, []);
+  const datastores = useFetch<APIDataStore[]>(getDatastores, [], []);
   const canUseAlignmentProjects = useWkSelector(
     (state) => features().jobsEnabled && isUserAdminOrDatasetManager(state.activeUser),
   );
@@ -67,7 +67,7 @@ function DatasetAddView() {
       label: "Upload Dataset",
       icon: <UploadOutlined />,
       key: DatasetAddType.UPLOAD,
-      children: <DatasetUploadView datastores={datastores} />,
+      children: <DatasetUploadView />,
     },
     {
       icon: <DatabaseOutlined />,
@@ -76,7 +76,7 @@ function DatasetAddView() {
       children: (
         <DatasetAddRemoteView
           key={viewKeys[DatasetAddType.REMOTE]}
-          datastores={datastores ?? []}
+          datastores={datastores}
           onAdded={handleDatasetAdded.bind(null, DatasetAddType.REMOTE)}
         />
       ),
@@ -88,7 +88,7 @@ function DatasetAddView() {
       children: (
         <DatasetAddComposeView
           key={viewKeys[DatasetAddType.COMPOSE]}
-          datastores={datastores ?? []}
+          datastores={datastores}
           onAdded={handleDatasetAdded.bind(null, DatasetAddType.COMPOSE)}
         />
       ),
@@ -99,7 +99,7 @@ function DatasetAddView() {
             icon: <AppstoreOutlined />,
             label: "Upload Files for Alignment Project",
             key: ALIGNMENT_PROJECT_TAB_KEY,
-            children: <AlignmentProjectUploadView datastores={datastores ?? []} />,
+            children: <AlignmentProjectUploadView datastores={datastores} />,
           },
         ]
       : []),

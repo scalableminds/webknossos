@@ -33,7 +33,7 @@ import messages from "messages";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FileWithPath } from "react-dropzone";
 import { Link } from "react-router";
-import { type APIDataStore, APIJobCommand, type APITeam } from "types/api_types";
+import { APIJobCommand, type APITeam } from "types/api_types";
 import { syncValidator } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "viewer/constants";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
@@ -47,6 +47,7 @@ import { getUploadFileRules } from "./upload/upload_file_rules";
 import { UploadProgressModal } from "./upload/upload_progress_modal";
 import { needsConversion, useFileInspection } from "./upload/use_file_inspection";
 import { useResumableDatasetUpload } from "./upload/use_resumable_dataset_upload";
+import { useDatastoresQuery } from "./use_datastores_query";
 
 const EMPTY_FILES: FileWithPath[] = [];
 
@@ -61,8 +62,6 @@ type UploadFormFieldTypes = {
 };
 
 type Props = {
-  // null while the datastores are still being fetched.
-  datastores: Array<APIDataStore> | null;
   withoutCard?: boolean;
   // The upload view shows the progress and the result of the upload in a modal itself.
   onUploaded?: (
@@ -86,10 +85,8 @@ export const dataPrivacyInfo = (
   </Space>
 );
 
-function useUploadableDatastores(
-  datastores: APIDataStore[] | null,
-  form: FormInstance<UploadFormFieldTypes>,
-) {
+function useUploadableDatastores(form: FormInstance<UploadFormFieldTypes>) {
+  const { data: datastores, isPending: isLoadingDatastores } = useDatastoresQuery();
   const uploadableDatastores = useMemo(
     () => (datastores ?? []).filter((datastore) => datastore.allowsUpload),
     [datastores],
@@ -114,7 +111,6 @@ function useUploadableDatastores(
 
   // The datastore field is required but usually hidden. While the datastores are loading or if none
   // accepts uploads, the form would fail to validate without showing any error.
-  const isLoadingDatastores = datastores == null;
   const hasNoUploadableDatastore = !isLoadingDatastores && uploadableDatastores.length === 0;
 
   return {
@@ -228,7 +224,7 @@ function UploadHelpText() {
   );
 }
 
-function DatasetUploadView({ datastores, withoutCard, onUploaded }: Props) {
+function DatasetUploadView({ withoutCard, onUploaded }: Props) {
   const activeUser = useWkSelector((state) => state.activeUser);
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
@@ -248,7 +244,7 @@ function DatasetUploadView({ datastores, withoutCard, onUploaded }: Props) {
     isDatasetConversionEnabled,
     isLoadingDatastores,
     hasNoUploadableDatastore,
-  } = useUploadableDatastores(datastores, form);
+  } = useUploadableDatastores(form);
   usePreselectRootFolder(form);
   const inspection = useFileInspection(files);
   const unfinishedUploads = useUnfinishedUploads(selectedDatastoreUrl, activeUser?.organization);

@@ -297,6 +297,8 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   segmentationLayerNames: Array<string>;
   // Active explorational annotations the user can list. Only present if requested.
   annotationCount?: number;
+  // Most recently modified of those annotations that are owned by the user. Only present if requested.
+  latestOwnAnnotationId?: string;
 };
 
 export function convertDatasetToCompact(dataset: APIMaybeUnimportedDataset): APIDatasetCompact {
@@ -356,6 +358,7 @@ export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
   hasSeenSegmentAnythingWithDepth?: boolean;
   lastViewedWhatsNewTimestamp?: number;
+  newestSeenReleaseNoteId?: string;
   latestAcknowledgedMaintenanceInfo?: string;
   suppressManyBucketUpdatesWarning?: boolean;
 };
@@ -715,6 +718,16 @@ export type APIOrganization = APIOrganizationCompact & {
   readonly usedStorageBytes: number;
   readonly ownerName?: string;
   readonly milliCreditBalance: number | null | undefined;
+  readonly partner: APIPartner | null;
+};
+// A partner co-brands WEBKNOSSOS for the organizations assigned to it.
+export type APIPartner = {
+  readonly id: string;
+  readonly name: string;
+  readonly logoUrl: string;
+  // Shown where the navbar is collapsed. Falls back to logoUrl.
+  readonly compactLogoUrl: string | null;
+  readonly linkUrl: string | null;
 };
 export type APIPricingPlanStatus = {
   readonly pricingPlan: PricingPlanEnum;
@@ -798,6 +811,8 @@ export type APIFeatureToggles = {
   readonly mitochondriaInferralCostInMilliCreditsPerGVx: number;
   readonly instancesInferralCostInMilliCreditsPerGVx: number;
   readonly alignmentCostInMilliCreditsPerGVx: number;
+  readonly alignmentProjectAlignCostInMilliCreditsPerGB: number;
+  readonly alignmentProjectRenderUnalignedCostInMilliCreditsPerGB: number;
   readonly publicDemoDatasetUrl: string;
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;
@@ -834,6 +849,7 @@ export enum APIJobCommand {
   MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
   TRAIN_NEURON_MODEL = "train_neuron_model",
   TRAIN_INSTANCE_MODEL = "train_instance_model",
+  ALIGN = "align",
   // Only used for backwards compatibility, e.g. to display results.
   DEPRECATED_INFER_NUCLEI = "infer_nuclei",
   DEPRECATED_INFER_WITH_MODEL = "infer_with_model",
@@ -860,6 +876,11 @@ export type ApiJobArgs = {
   readonly modelId: string | null | undefined;
   readonly boundingBox: string | null | undefined;
   readonly ndBoundingBox: WkLibsNdBoundingBox | null | undefined;
+  readonly newDatasetName: string | null | undefined;
+  // Section range of align jobs as passed to the worker: [first, last + 1], i.e., the upper bound is exclusive.
+  // null means all sections of the alignment project.
+  readonly sectionRange: [number, number] | null | undefined;
+  readonly renderUnaligned: boolean | null | undefined;
 };
 
 export type APIJob = {
@@ -878,6 +899,7 @@ export type APIJob = {
   readonly created: number;
   readonly lastRetry: number | null | undefined;
   readonly costInMilliCredits: number | null | undefined;
+  readonly alignmentProjectId: string | null | undefined;
 };
 
 export type AiModel = {
@@ -893,6 +915,9 @@ export type AiModel = {
   readonly category: APIAiModelCategory;
   readonly isSuperUserOnly: boolean;
   readonly isPretrained: boolean;
+  // Set for pretrained models that are only available to the organizations of a partner.
+  readonly partnerId: string | null;
+  readonly thumbnailUrl: string | null;
 };
 
 // Tracing related datatypes

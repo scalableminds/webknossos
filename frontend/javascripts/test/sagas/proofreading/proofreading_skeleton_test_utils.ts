@@ -1,3 +1,4 @@
+import type { ApiResult } from "admin/api/api_result";
 import type { MinCutTargetEdge } from "admin/rest_api";
 import isEqual from "lodash-es/isEqual";
 import sortBy from "lodash-es/sortBy";
@@ -376,7 +377,7 @@ export const mockEdgesForAgglomerateMinCut = (
         agglomerateId: NumberLike;
         editableMappingId: string;
       },
-    ): Promise<Array<MinCutTargetEdge>> => {
+    ): Promise<ApiResult<Array<MinCutTargetEdge>>> => {
       if (version !== expectedRequestedVersion) {
         throw new Error(
           `Unexpected version of min cut request. Expected ${expectedRequestedVersion} got ${version}`,
@@ -388,14 +389,17 @@ export const mockEdgesForAgglomerateMinCut = (
         (isEqual(partition1.concat(partition2), [2n, 3n]) ||
           isEqual(partition1.concat(partition2), [3n, 2n]))
       ) {
-        return [
-          {
-            position1: getPositionForSegmentId(3),
-            position2: getPositionForSegmentId(2),
-            segmentId1: 3n,
-            segmentId2: 2n,
-          } satisfies MinCutTargetEdge,
-        ].concat(additionalEdges);
+        return {
+          ok: true,
+          value: [
+            {
+              position1: getPositionForSegmentId(3),
+              position2: getPositionForSegmentId(2),
+              segmentId1: 3n,
+              segmentId2: 2n,
+            } satisfies MinCutTargetEdge,
+          ].concat(additionalEdges),
+        };
       }
       throw new Error("Unexpected min cut request");
     },

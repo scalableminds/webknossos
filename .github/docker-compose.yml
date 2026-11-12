@@ -75,10 +75,11 @@ services:
       - -c
       - skeletons,skeletonTreeBodies,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates
     ports:
-      - "7155:7155"
+      - "7156:7155" # host port differs from 7155 so that e2e tests can run while a local dev fossildb is running
     volumes:
-      - "../fossildb/data:/fossildb/data"
-      - "../fossildb/backup:/fossildb/backup"
+      # separate from fossildb/data so that this does not conflict with the LOCK file of a local dev fossildb
+      - "../fossildb/e2e/data:/fossildb/data"
+      - "../fossildb/e2e/backup:/fossildb/backup"
 
   postgres:
     image: postgres:17-bookworm

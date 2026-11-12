@@ -12,7 +12,8 @@ import java.net.URI
 import javax.inject.Inject
 import scala.util.Try
 
-class DefaultMails @Inject() (conf: WkConf) extends Formatter {
+// The templates of all emails. Only the email services in this package use them, the rest of the application calls those services.
+private[mail] class DefaultMails @Inject() (conf: WkConf) extends Formatter {
 
   private val uri = conf.Http.uri
   private val defaultSender = conf.Mail.defaultSender

@@ -6,7 +6,7 @@ import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import type { ContourMode, OverwriteMode, Vector3 } from "viewer/constants";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
-import { getSegmentIdInfoForPosition } from "viewer/controller/combinations/volume_handlers";
+import { getSegmentIdsAtPosition } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
 import {
@@ -575,13 +575,10 @@ function* updateHoveredSegmentId(): Saga<void> {
 
   const globalMousePosition = yield* select(getGlobalMousePositionFloating);
 
-  // Note that `id` can be an unmapped id even when
-  // a mapping is active, if it is a HDF5 mapping that is partially loaded
-  // and no entry exists yet for the input id.
-  const { mapped: id, unmapped: unmappedId } =
+  const { mappedId: id, unmappedId } =
     globalMousePosition != null
-      ? getSegmentIdInfoForPosition(globalMousePosition)
-      : { mapped: 0n, unmapped: 0n };
+      ? getSegmentIdsAtPosition(globalMousePosition)
+      : { mappedId: 0n, unmappedId: 0n };
 
   const oldHoveredSegmentId = yield* select(
     (store) => store.temporaryConfiguration.hoveredSegmentId,

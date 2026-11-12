@@ -131,7 +131,7 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
       </Button>
     );
   } else {
-    // Custom limits are negotiated individually.
+    // Open Source and Enterprise have no quotas to buy, their limits are negotiated individually.
     message = (
       <>
         {overLimitMessage} <a href="mailto:support@webknossos.org">Get in touch</a> to adjust your

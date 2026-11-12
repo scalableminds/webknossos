@@ -223,6 +223,11 @@ export function decodeBucketDiff(bytes: Uint8Array): VoxelRun[] {
   return runs;
 }
 
+/** decodeBucketDiff for the base64 of an `updateBucketPartial` update action. */
+export function decodeBucketDiffBase64(runsBase64: string): VoxelRun[] {
+  return decodeBucketDiff(Uint8Array.from(atob(runsBase64), (char) => char.charCodeAt(0)));
+}
+
 /** Maps a linear index of the run order starting at `runAxis` to a flat bucket index. */
 function flatIndexOf(linear: number, runAxis: RunAxis): VoxelIndex {
   // The flat index is x + 32y + 1024z. In the x order, the linear index is the

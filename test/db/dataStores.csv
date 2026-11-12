@@ -1,2 +1,2 @@
 name,url,publicUrl,key,isDeleted,allowsUpload,allowsManualUpload,onlyAllowedOrganization,reportUsedStorageEnabled
-'localhost','http://localhost:9000','http://localhost:9000','something-secure',f,t,t,,t
+'localhost','http://localhost:9010','http://localhost:9010','something-secure',f,t,t,,t

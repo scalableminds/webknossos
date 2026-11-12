@@ -343,30 +343,18 @@ const onMessage = (event: MessageEvent) =>
     origin: event.origin,
   });
 
+// Tells the embedding page that the API is ready for commands.
+async function sendInit() {
+  await window.webknossos.apiReady();
+  window.parent.postMessage({ type: "init" }, "*");
+}
+
 function CrossOriginApi() {
   useEffect(() => {
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, []);
-  useEffect(() => {
-    const sendInit = () => {
-      window.webknossos?.apiReady().then(() => {
-        window.parent.postMessage(
-          {
-            type: "init",
-          },
-          "*",
-        );
-      });
-    };
-    // Assigning window.webknossos doesn't trigger a re-render, so listen for the event
-    // that is emitted right after the assignment. Embedding pages rely on "init".
-    if (window.webknossos) {
-      sendInit();
-      return;
-    }
-    return app.vent.on("webknossos:initialized", sendInit);
-  }, []);
+  useEffect(() => app.vent.on("webknossos:initialized", sendInit), []);
   useLayerRegistrationShortcutRelay();
   return null;
 }

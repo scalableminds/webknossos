@@ -15,13 +15,16 @@ CREATE TYPE webknossos.BOUNDING_BOX AS (
   depth DOUBLE PRECISION
 );
 
+-- Sorts digit sequences by their numeric value (e.g. ds2 before ds10). Case is only a tie-breaker.
+CREATE COLLATION webknossos.natural_sort (provider = icu, locale = 'en-u-kn-true');
+
 
 START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(191);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(192);
 COMMIT TRANSACTION;
 
 

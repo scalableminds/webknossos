@@ -33,6 +33,7 @@ import {
   refreshToken,
   reserveDatasetUpload,
   triggerDatasetCheck,
+  updateDatasetPartial,
   updateDatasetTeams,
 } from "admin/rest_api";
 import type { ResumableUploadEvent } from "libs/resumable_upload/resumable_upload";
@@ -194,7 +195,7 @@ async function findUnfinishedUpload(uploadId: string) {
 
 // Reserving an upload already creates the dataset, so it can be looked up before finishing.
 async function findDatasetIdsByName(datasetName: string): Promise<string[]> {
-  const datasets = await getDatasets(null, null, datasetName);
+  const datasets = await getDatasets({ searchQuery: datasetName });
   return datasets.filter((dataset) => dataset.name === datasetName).map((dataset) => dataset.id);
 }
 
@@ -236,6 +237,63 @@ describe("Dataset API (E2E)", () => {
     datasets = sortBy(datasets, (d) => d.name);
 
     expect(replaceVolatileValues(datasets)).toMatchSnapshot();
+  });
+
+  it("getDatasets filters by tags containing special characters", async () => {
+    const dataset = await getFirstDataset();
+    const tags = ["with space", "a&b=c?d#e", "comma,separated", "100%"];
+    await updateDatasetPartial(dataset.id, { tags });
+    try {
+      const matching = await getDatasets({ tags });
+      expect(matching.map((d) => d.id)).toEqual([dataset.id]);
+      expect(matching[0].tags).toEqual(tags);
+
+      const singleTagMatching = await getDatasets({ tags: ["a&b=c?d#e"] });
+      expect(singleTagMatching.map((d) => d.id)).toEqual([dataset.id]);
+
+      // All tags must be present.
+      const notMatching = await getDatasets({ tags: ["with space", "with"] });
+      expect(notMatching).toEqual([]);
+    } finally {
+      await updateDatasetPartial(dataset.id, { tags: dataset.tags });
+    }
+  });
+
+  it("getDatasets filters by status", async () => {
+    const all = await getDatasets();
+    const unreported = await getDatasets({ isUnreported: true });
+    const reported = await getDatasets({ isUnreported: false });
+    expect(unreported.every((d) => d.isUnreported)).toBe(true);
+    expect(reported.every((d) => !d.isUnreported)).toBe(true);
+    expect(unreported.length + reported.length).toBe(all.length);
+  });
+
+  it("getDatasets sorts before applying the limit", async () => {
+    const byCreation = await getDatasets({ sortBy: "createdAsc" });
+    const createdTimestamps = byCreation.map((d) => d.created);
+    expect(createdTimestamps).toEqual([...createdTimestamps].sort((a, b) => a - b));
+
+    const firstTwo = await getDatasets({ sortBy: "createdAsc", limit: 2 });
+    expect(firstTwo.map((d) => d.id)).toEqual(byCreation.slice(0, 2).map((d) => d.id));
+
+    const newest = await getDatasets({ sortBy: "createdDesc", limit: 1 });
+    expect(newest[0].id).toBe(byCreation[byCreation.length - 1].id);
+  });
+
+  it("getDatasets sorts names naturally", async () => {
+    const names = (await getDatasets({ sortBy: "name" })).map((d) => d.name);
+    // Digit sequences are compared by their numeric value, e.g. ds2 comes before ds10.
+    const collator = new Intl.Collator("en", { numeric: true });
+    const expectedNames = [...names].sort(
+      (a, b) => collator.compare(a, b) || (a < b ? -1 : a > b ? 1 : 0),
+    );
+    expect(names).toEqual(expectedNames);
+  });
+
+  it("getDatasets sorts exact name matches first when sorting by search relevance", async () => {
+    const results = await getDatasets({ searchQuery: "l4_sample", sortBy: "searchRelevance" });
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].name).toBe("l4_sample");
   });
 
   it("getDatasetAccessList", async () => {

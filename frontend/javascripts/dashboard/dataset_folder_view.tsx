@@ -1,5 +1,5 @@
 import { DownOutlined, FolderOutlined } from "@ant-design/icons";
-import { Button, Card, Flex } from "antd";
+import { Button, Card, Flex, Spin } from "antd";
 import features, { getDemoDatasetUrl } from "features";
 import { filterNullValues, isUserAdminOrDatasetManager } from "libs/utils";
 import { useEffect, useState } from "react";
@@ -8,7 +8,7 @@ import type { APIDatasetCompact, APIUser, FolderItem } from "types/api_types";
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
 } from "./dataset/dataset_collection_context";
-import { useDatasetsInFolderQuery, useFolderHierarchyQuery } from "./dataset/queries";
+import { useDoesFolderContainDatasetsQuery, useFolderHierarchyQuery } from "./dataset/queries";
 import DatasetView from "./dataset_view";
 import { DetailsSidebar } from "./folders/details_sidebar";
 import { FolderModal } from "./folders/folder_modal";
@@ -112,12 +112,15 @@ function DatasetFolderViewInner(props: Props) {
     }
     context.setSelectedFolder(folder);
   };
-  const { data: selectedFolderDatasets } = useDatasetsInFolderQuery(
+  const { data: doesSelectedFolderContainDatasets = false } = useDoesFolderContainDatasetsQuery(
     context.selectedFolder?.key || null,
+    context.datasetListParams,
   );
   const folderIdForDetailsSidebar = context.selectedFolder?.key ?? context.activeFolderId;
-  const datasetCountForDetailsSidebar =
-    context.selectedFolder != null ? selectedFolderDatasets?.length || 0 : context.datasets.length;
+  const doesFolderContainDatasetsForDetailsSidebar =
+    context.selectedFolder != null
+      ? doesSelectedFolderContainDatasets
+      : context.datasets.length > 0;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Only update the selected datasets when the context datasets change.
   useEffect(() => {
@@ -220,13 +223,24 @@ function DatasetFolderViewInner(props: Props) {
   const activeFolderTitle =
     context.activeFolderId != null ? hierarchy?.itemById[context.activeFolderId]?.title : undefined;
 
-  const isBrandNewEmptyOrg =
+  const hasOnlyRootFolder =
     hierarchy != null &&
     hierarchy.flatItems.length === 1 &&
-    context.datasets.length === 0 &&
     context.activeFolderId != null &&
-    !context.isLoading &&
     context.globalSearchQuery == null;
+  // The listed datasets are filtered (e.g., unreported ones are hidden by default), so check
+  // whether the folder contains any dataset at all. This runs in parallel to loading the list.
+  const { data: doesRootFolderContainAnyDatasets } = useDoesFolderContainDatasetsQuery(
+    context.activeFolderId,
+    {},
+    hasOnlyRootFolder,
+  );
+  const mightBeBrandNewEmptyOrg =
+    hasOnlyRootFolder && context.datasets.length === 0 && !context.isLoading;
+  const isBrandNewEmptyOrg = mightBeBrandNewEmptyOrg && doesRootFolderContainAnyDatasets === false;
+  // Avoid briefly showing the generic empty-folder hint before the onboarding content.
+  const isCheckingForBrandNewEmptyOrg =
+    mightBeBrandNewEmptyOrg && doesRootFolderContainAnyDatasets == null;
 
   const folderModal = folderModalState != null && (
     <FolderModal {...folderModalState} onClose={() => setFolderModalState(null)} />
@@ -249,7 +263,13 @@ function DatasetFolderViewInner(props: Props) {
       onSelectFolder={setSelectedFolder}
       selectedDatasets={selectedDatasets}
       context={context}
-      emptyStateContent={isBrandNewEmptyOrg ? renderNoDatasetsPlaceHolder() : undefined}
+      emptyStateContent={
+        isBrandNewEmptyOrg ? (
+          renderNoDatasetsPlaceHolder()
+        ) : isCheckingForBrandNewEmptyOrg ? (
+          <Spin style={{ padding: 40 }} />
+        ) : undefined
+      }
       folderPicker={
         isFolderTreeCompact ? (
           // Shows the current location, like a picker, so that it's clear that tapping it lets
@@ -278,7 +298,8 @@ function DatasetFolderViewInner(props: Props) {
         selectedDatasets={selectedDatasets}
         setSelectedDataset={setSelectedDataset}
         folderId={folderIdForDetailsSidebar}
-        datasetCount={datasetCountForDetailsSidebar}
+        datasetCount={context.datasets.length}
+        doesFolderContainDatasets={doesFolderContainDatasetsForDetailsSidebar}
         searchQuery={context.globalSearchQuery}
         displayedFolderEqualsActiveFolder={context.selectedFolder == null}
       />

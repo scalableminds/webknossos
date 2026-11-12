@@ -7,7 +7,6 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery } from "@tanstack/react-query";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
@@ -32,7 +31,6 @@ import { PricingEnforcedButton } from "components/pricing_enforcers";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import dayjs from "dayjs";
 import features from "features";
-import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
 import { isPrimaryPointerFine, isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import type React from "react";
@@ -50,7 +48,10 @@ import { CategorizationSearch } from "viewer/view/components/categorization_labe
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import { FolderBreadcrumb } from "./advanced_dataset/folder_breadcrumb";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
-import type { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
+import {
+  type DatasetCollectionContextValue,
+  LOCAL_STORAGE_FILTER_TAGS_KEY,
+} from "./dataset/dataset_collection_context";
 import {
   MINIMUM_SEARCH_QUERY_LENGTH,
   SEARCH_RESULTS_LIMIT,
@@ -75,32 +76,9 @@ type Props = {
   // that it wraps with the same spacing as the other toolbar items.
   folderPicker?: React.ReactNode;
 };
-export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
-type PersistenceState = {
-  searchQuery: string;
-  datasetFilteringMode: DatasetFilteringMode;
-};
 const CONVERSION_JOBS_REFRESH_INTERVAL = 60 * 1000;
 const MAX_JOBS_TO_DISPLAY = 5;
 const RECENT_DATASET_DAY_THRESHOLD = 3;
-const LOCAL_STORAGE_FILTER_TAGS_KEY = "lastDatasetSearchTags";
-const persistence = new Persistence<PersistenceState>(
-  {
-    searchQuery: PropTypes.string,
-    datasetFilteringMode: PropTypes.oneOf([
-      "showAllDatasets",
-      "onlyShowReported",
-      "onlyShowUnreported",
-    ]),
-  },
-  "datasetList",
-);
-
-function filterDatasetsForUsersOrganization(datasets: APIDatasetCompact[], user: APIUser) {
-  return features().isWkorgInstance
-    ? datasets.filter((d) => d.owningOrganization === user.organization)
-    : datasets;
-}
 
 const refreshMenuItems: ItemType[] = [
   {
@@ -121,9 +99,7 @@ function DatasetView({
   const searchQuery = context.globalSearchQuery;
   const isCompact = useIsCompactDashboard("xl");
   const setSearchQuery = context.setGlobalSearchQuery;
-  const [searchTags, setSearchTags] = useState<string[]>([]);
-  const [datasetFilteringMode, setDatasetFilteringMode] =
-    useState<DatasetFilteringMode>("onlyShowReported");
+  const { searchTags, setSearchTags, datasetFilteringMode, setDatasetFilteringMode } = context;
   // Errors are swallowed so that a failing poll doesn't show a toast every few seconds.
   const { data: jobs = [] } = useQuery({
     queryKey: ["jobs", APIJobCommand.CONVERT_TO_WKW, true],
@@ -137,25 +113,6 @@ function DatasetView({
 
   const activeTab = useContext(ActiveTabContext);
   const renderingTab = useContext(RenderingTabContext);
-
-  useEffect(() => {
-    const state = persistence.load() as PersistenceState;
-
-    if (state.searchQuery != null) {
-      setSearchQuery(state.searchQuery);
-    }
-
-    if (state.datasetFilteringMode != null) {
-      setDatasetFilteringMode(state.datasetFilteringMode);
-    }
-  }, [setSearchQuery]);
-
-  useEffect(() => {
-    persistence.persist({
-      searchQuery: searchQuery || "",
-      datasetFilteringMode,
-    });
-  }, [searchQuery, datasetFilteringMode]);
 
   function addTagToSearch(tag: string) {
     if (!searchTags.includes(tag)) {
@@ -176,14 +133,14 @@ function DatasetView({
   }
 
   function renderTable(
-    filteredDatasets: APIDatasetCompact[],
+    datasets: APIDatasetCompact[],
     subfolders: FolderItem[],
     isLoading: boolean,
   ) {
     return (
       <DatasetTable
         context={context}
-        datasets={filteredDatasets}
+        datasets={datasets}
         subfolders={subfolders}
         onSelectDataset={onSelectDataset}
         selectedDatasets={selectedDatasets}
@@ -256,7 +213,6 @@ function DatasetView({
   const datasets = context.datasets;
   // Don't show subfolders when the search is active
   const subfolders = searchQuery == null ? context.getActiveSubfolders() : [];
-  const filteredDatasets = filterDatasetsForUsersOrganization(datasets, user);
 
   const isEmpty =
     datasets.length === 0 &&
@@ -270,12 +226,7 @@ function DatasetView({
         {activeTab === renderingTab ? adminHeader : null}
       </RenderToPortal>
       {searchQuery && (
-        <GlobalSearchHeader
-          searchQuery={searchQuery}
-          isEmpty={isEmpty}
-          filteredDatasets={filteredDatasets}
-          context={context}
-        />
+        <GlobalSearchHeader searchQuery={searchQuery} isEmpty={isEmpty} context={context} />
       )}
 
       <CategorizationSearch
@@ -283,10 +234,12 @@ function DatasetView({
         searchTags={searchTags}
         setTags={setSearchTags}
         localStorageSavingKey={LOCAL_STORAGE_FILTER_TAGS_KEY}
+        // The context provider already restored the tags when it was created.
+        skipRestoreFromStorage
       />
       {!searchQuery && <FolderBreadcrumb context={context} />}
       <NewJobsAlert jobs={jobs} />
-      {renderTable(filteredDatasets, subfolders, isLoading)}
+      {renderTable(datasets, subfolders, isLoading)}
     </div>
   );
 }
@@ -343,12 +296,10 @@ const SEARCH_OPTIONS = [
 
 function GlobalSearchHeader({
   searchQuery,
-  filteredDatasets,
   isEmpty,
   context,
 }: {
   searchQuery: string;
-  filteredDatasets: APIDatasetCompact[];
   isEmpty: boolean;
   context: DatasetCollectionContextValue;
 }) {
@@ -384,9 +335,19 @@ function GlobalSearchHeader({
             <span>Search Results for “{searchQuery}”</span>
           </Space>
         </Typography.Title>
-        {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
+        {context.areSearchResultsLimited ? (
           <Typography.Text type="secondary">
-            (only showing the first {SEARCH_RESULTS_LIMIT} results)
+            (only showing the first {SEARCH_RESULTS_LIMIT} results.{" "}
+            <Button
+              type="link"
+              size="small"
+              style={{ padding: 0 }}
+              loading={context.queries.datasetSearchQuery.isFetching}
+              onClick={context.loadAllSearchResults}
+            >
+              Load all
+            </Button>
+            )
           </Typography.Text>
         ) : null}
       </Space>

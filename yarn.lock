@@ -4517,17 +4517,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dice-coefficient@npm:^2.1.0":
-  version: 2.1.0
-  resolution: "dice-coefficient@npm:2.1.0"
-  dependencies:
-    n-gram: "npm:^2.0.0"
-  bin:
-    dice-coefficient: cli.js
-  checksum: 10c0/b4680ca5406175601ecc78a5a8c6c2ddfd4a3ddb0750f5d8638e01ee88ab53dbbd53a5f39d4a0fd3da4169ab5dda567e76d0fb0f12559917312e84a10e901377
-  languageName: node
-  linkType: hard
-
 "distance-transform@https://github.com/scalableminds/distance-transform":
   version: 1.0.2
   resolution: "distance-transform@https://github.com/scalableminds/distance-transform.git#commit=3624f3943347debf18202522b7d732ce5eda58f2"
@@ -6873,13 +6862,6 @@ __metadata:
   version: 2.0.0
   resolution: "mute-stream@npm:2.0.0"
   checksum: 10c0/2cf48a2087175c60c8dcdbc619908b49c07f7adcfc37d29236b0c5c612d6204f789104c98cc44d38acab7b3c96f4a3ec2cfdc4934d0738d876dbefa2a12c69f4
-  languageName: node
-  linkType: hard
-
-"n-gram@npm:^2.0.0":
-  version: 2.0.1
-  resolution: "n-gram@npm:2.0.1"
-  checksum: 10c0/532d87c13988ef40e54a0cef4f8b19e2fb3130e30241918d2a39330a346c5978a2685b510deb2104f52a73142cfcf89d426de152d3b88b21a4351185b36eb432
   languageName: node
   linkType: hard
 
@@ -9676,7 +9658,6 @@ __metadata:
     dayjs: "npm:^1.11.13"
     deep-for-each: "npm:^2.0.3"
     deep-freeze: "npm:0.0.1"
-    dice-coefficient: "npm:^2.1.0"
     distance-transform: "https://github.com/scalableminds/distance-transform"
     dompurify: "npm:^3.4.17"
     dpdm: "npm:^3.14.0"

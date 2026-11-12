@@ -23,10 +23,10 @@ import type { APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { getNoActionsAvailableMenu } from "viewer/view/context_menu/generic_context_menu_helpers";
 
-function ResumeAnnotationLink({ latestAnnotationId }: { latestAnnotationId: string }) {
+function ResumeAnnotationLink({ latestOwnAnnotationId }: { latestOwnAnnotationId: string }) {
   return (
     <Link
-      to={`/annotations/${latestAnnotationId}`}
+      to={`/annotations/${latestOwnAnnotationId}`}
       title="Resume Your Most Recently Modified Annotation of this Dataset"
     >
       <PlayCircleOutlined className="icon-margin-right" />
@@ -161,8 +161,8 @@ function DatasetActionView(props: Props) {
   const activeDatasetActions = (
     <>
       {" "}
-      {dataset.latestAnnotationId != null ? (
-        <ResumeAnnotationLink latestAnnotationId={dataset.latestAnnotationId} />
+      {dataset.latestOwnAnnotationId != null ? (
+        <ResumeAnnotationLink latestOwnAnnotationId={dataset.latestOwnAnnotationId} />
       ) : null}
       <NewAnnotationLink
         dataset={dataset}
@@ -228,13 +228,13 @@ export function getDatasetActionContextMenu({
         type: "group",
         label: "This Dataset",
         children: [
-          dataset.isActive && dataset.latestAnnotationId != null
+          dataset.isActive && dataset.latestOwnAnnotationId != null
             ? {
                 key: "resume-annotation",
                 icon: <PlayCircleOutlined className="icon-margin-right" />,
                 label: "Resume Last Annotation",
                 onClick: () => {
-                  window.location.href = `/annotations/${dataset.latestAnnotationId}`;
+                  window.location.href = `/annotations/${dataset.latestOwnAnnotationId}`;
                 },
               }
             : null,

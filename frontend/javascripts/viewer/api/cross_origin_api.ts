@@ -1,4 +1,5 @@
 import app from "app";
+import ErrorHandling from "libs/error_handling";
 import { location } from "libs/window";
 import isObject from "lodash-es/isObject";
 import isString from "lodash-es/isString";
@@ -308,9 +309,9 @@ const handleMessage = async (event) => {
 type MessageSender = { postMessage: (message: unknown, targetOrigin: string) => void };
 
 // Runs the command of a message and replies with "ack" and the return value, or with "err".
-// If a command throws, this logs the error and replies with an error, so that the sender
-// doesn't wait for a reply forever. The error reply goes to any origin, because it only holds
-// the error message.
+// If a command throws, this logs and reports the error and replies with an error, so that the
+// sender doesn't wait for a reply forever. The error reply goes to any origin, because it only
+// holds the error message.
 export async function handleCrossOriginApiMessage(event: {
   data: any;
   source: MessageSender | null;
@@ -331,6 +332,7 @@ export async function handleCrossOriginApiMessage(event: {
       },
       "*",
     );
+    ErrorHandling.notifyWithPrefix(error, `Cross origin API command "${event.data.type}" failed: `);
   }
 }
 

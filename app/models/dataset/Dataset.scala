@@ -294,7 +294,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       createdSinceOpt: Option[Instant] = None,
       limitOpt: Option[Int] = None,
       requestingUserOrga: Option[String] = None,
-      includeAnnotationCount: Boolean = false
+      includeAnnotationInfo: Boolean = false
   )(using ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     for {
       selectionPredicates <- buildSelectionPredicates(
@@ -310,7 +310,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       )
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
       (annotationColumns, annotationJoin) = requestingUserIdOpt match {
-        case Some(requestingUserId) if includeAnnotationCount =>
+        case Some(requestingUserId) if includeAnnotationInfo =>
           // The annotation join (count and latest own annotation) is designed for best index use.
           // The dataset access check is skipped, since only already-checked datasets are joined.
           (

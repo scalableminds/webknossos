@@ -173,30 +173,43 @@ function MoreOptions({ form, datastores }: { form: FormInstance; datastores: API
   );
 }
 
-/** Name, folder and teams of the new dataset, plus the less common options. */
+/**
+ * Name, folder and teams of the new dataset, plus the less common options.
+ * Before any layers were found, the fields are shown disabled as a preview of what comes next.
+ */
 export function RemoteDatasetDetails({
   form,
   formRef,
   datastores,
+  disabled,
 }: {
   form: FormInstance;
   formRef: RefObject<FormInstance | null>;
   datastores: APIDataStore[];
+  disabled: boolean;
 }) {
   const activeUser = useWkSelector((state) => state.activeUser);
   const [selectedTeams, setSelectedTeams] = useState<APITeam | Array<APITeam>>([]);
 
   return (
     <>
-      <Typography.Paragraph style={{ marginTop: 32, marginBottom: 4 }}>
-        <strong>Dataset details</strong>
-      </Typography.Paragraph>
-      <Typography.Paragraph type="secondary" style={{ marginBottom: 16 }}>
-        Filled in from the first URL. Change anything before importing.
-      </Typography.Paragraph>
-      <Row gutter={24}>
+      {disabled ? (
+        <Typography.Paragraph type="secondary" style={{ marginTop: 48, marginBottom: 16 }}>
+          <strong>Dataset details</strong> — filled in automatically once you add layers
+        </Typography.Paragraph>
+      ) : (
+        <>
+          <Typography.Paragraph style={{ marginTop: 32, marginBottom: 4 }}>
+            <strong>Dataset details</strong>
+          </Typography.Paragraph>
+          <Typography.Paragraph type="secondary" style={{ marginBottom: 16 }}>
+            Filled in from the first URL. Change anything before importing.
+          </Typography.Paragraph>
+        </>
+      )}
+      <Row gutter={24} className={disabled ? "dataset-remote-details-preview" : undefined}>
         <Col xs={24} md={8}>
-          <DatasetNameFormItem activeUser={activeUser} label="Name" />
+          <DatasetNameFormItem activeUser={activeUser} label="Name" disabled={disabled} />
         </Col>
         <Col xs={24} md={8}>
           <FormItemWithInfo
@@ -206,7 +219,7 @@ export function RemoteDatasetDetails({
             valuePropName="folderId"
             rules={[{ required: true, message: messages["dataset.import.required.folder"] }]}
           >
-            <FolderSelection disableNotEditableFolders />
+            <FolderSelection disableNotEditableFolders disabled={disabled} />
           </FormItemWithInfo>
         </Col>
         <Col xs={24} md={8}>
@@ -216,10 +229,11 @@ export function RemoteDatasetDetails({
             selectedTeams={selectedTeams}
             setSelectedTeams={setSelectedTeams}
             formRef={formRef}
+            disabled={disabled}
           />
         </Col>
       </Row>
-      <MoreOptions form={form} datastores={datastores} />
+      {disabled ? null : <MoreOptions form={form} datastores={datastores} />}
     </>
   );
 }

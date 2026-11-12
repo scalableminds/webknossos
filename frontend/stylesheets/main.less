@@ -559,6 +559,15 @@ body {
   content: "*";
 }
 
+// Disabled dataset details before any layers were found: a quiet preview, so the URL field stays the focus.
+.dataset-remote-details-preview {
+  opacity: 0.5;
+
+  .ant-form-item-required::before {
+    display: none !important;
+  }
+}
+
 .dataset-remote-url-input {
   flex: 1;
   min-width: 0;

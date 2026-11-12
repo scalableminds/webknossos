@@ -267,26 +267,25 @@ function DatasetAddRemoteView({ onAdded, datastores, defaultDatasetUrl }: Props)
           }}
         >
           {hasLayers ? (
-            <>
-              <RemoteLayerList
-                datasetName={datasetName}
-                layers={layers}
-                layerSources={layerSources}
-                datasetVoxelSize={datasetVoxelSize}
-                exploreOptions={getExploreOptions}
-                onRemoveLayer={removeLayer}
-                onLayersFound={addFoundLayers}
-                onStartOver={startOver}
-              />
-              <RemoteDatasetDetails
-                form={form}
-                formRef={formRef}
-                datastores={uploadableDatastores}
-              />
-            </>
+            <RemoteLayerList
+              datasetName={datasetName}
+              layers={layers}
+              layerSources={layerSources}
+              datasetVoxelSize={datasetVoxelSize}
+              exploreOptions={getExploreOptions}
+              onRemoveLayer={removeLayer}
+              onLayersFound={addFoundLayers}
+              onStartOver={startOver}
+            />
           ) : (
             <RemoteUrlStep field={urlField} onSubmit={() => exploreFirstUrl(urlField.url)} />
           )}
+          <RemoteDatasetDetails
+            form={form}
+            formRef={formRef}
+            datastores={uploadableDatastores}
+            disabled={!hasLayers}
+          />
 
           <Divider />
           <Flex justify="space-between" align="center" gap="middle" wrap style={{ minHeight: 40 }}>

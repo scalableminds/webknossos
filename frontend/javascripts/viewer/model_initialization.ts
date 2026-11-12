@@ -163,19 +163,18 @@ export async function initialize(
         throw unversionedAnnotationResult.error.cause;
       }
       let unversionedAnnotation = unversionedAnnotationResult.value;
-      let bookmarks: APIAnnotationBookmark[];
-      [annotationProto, bookmarks] = await Promise.all([
-        getAnnotationProto(
-          unversionedAnnotation.tracingStore.url,
-          unversionedAnnotation.id,
-          version,
-        ),
-        getAnnotationBookmarks(
-          unversionedAnnotation.tracingStore.url,
-          unversionedAnnotation.id,
-          version,
-        ),
-      ]);
+      annotationProto = await getAnnotationProto(
+        unversionedAnnotation.tracingStore.url,
+        unversionedAnnotation.id,
+        version,
+      );
+      // The bookmarks are fetched at the version of the proto. Otherwise, another user could save
+      // bookmark changes in between, which would then be missing or be applied twice.
+      const bookmarks: APIAnnotationBookmark[] = await getAnnotationBookmarks(
+        unversionedAnnotation.tracingStore.url,
+        unversionedAnnotation.id,
+        annotationProto.version,
+      );
       userState =
         annotationProto != null
           ? getUserStateForTracing(annotationProto, Store.getState().activeUser, annotation?.owner)
@@ -201,6 +200,7 @@ export async function initialize(
         annotationProto: annotationProto.earliestAccessibleVersion,
         annotationLayers: layersWithStats,
         bookmarks,
+        largestBookmarkId: annotationProto.largestBookmarkId,
       };
       annotation = completeAnnotation;
     }

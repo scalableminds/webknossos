@@ -24,13 +24,13 @@ import {
   type SkeletonTracingAction,
   skeletonActionPolicies,
 } from "viewer/model/actions/skeletontracing_actions";
+import { sanitizeMetadata } from "viewer/model/helpers/metadata_helpers";
 import {
   applyUserStateToGroups,
   convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
   getApplyUserStateToTreeFn,
-  sanitizeMetadata,
 } from "viewer/model/reducers/reducer_helpers";
 import {
   addTreesAndGroups,

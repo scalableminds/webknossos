@@ -613,14 +613,24 @@ class AnnotationIOController @Inject() (
     ): Fox[Seq[NmlBookmarkToWrite]] =
       for {
         bookmarks <- tracingStoreClient.getBookmarks(annotationId, version)
-        bookmarksWithThumbnails <- Fox.serialCombined(bookmarks.toList) { bookmark =>
+        thumbnailRequests =
           for {
-            thumbnails <- Fox.serialCombined(BookmarkThumbnailSize.values.toList)(size =>
-              tracingStoreClient.getBookmarkThumbnail(annotationId, bookmark, size).map(_.map(size -> _))
-            )
-          } yield NmlBookmarkToWrite(bookmark, thumbnails.flatten.toMap)
+            bookmark <- bookmarks
+            size <- BookmarkThumbnailSize.values.toSeq
+          } yield (bookmark, size)
+        // One request per thumbnail, so several are made at once.
+        fetchedThumbnails <- Fox.batchCombined(thumbnailRequests, parallelity = 8) { request =>
+          val (bookmark, size) = request
+          tracingStoreClient
+            .getBookmarkThumbnail(annotationId, bookmark, size)
+            .map((thumbnailOpt: Option[Array[Byte]]) => thumbnailOpt.map(thumbnail => (bookmark.id, size, thumbnail)))
         }
-      } yield bookmarksWithThumbnails
+        thumbnailsByBookmarkId: Map[Int, Map[BookmarkThumbnailSize.Value, Array[Byte]]] = fetchedThumbnails.flatten
+          .groupBy(_._1)
+          .map { case (bookmarkId, thumbnails) => bookmarkId -> thumbnails.map(t => t._2 -> t._3).toMap }
+      } yield bookmarks.map(bookmark =>
+        NmlBookmarkToWrite(bookmark, thumbnailsByBookmarkId.getOrElse(bookmark.id, Map.empty))
+      )
 
     // All annotations are downloaded as zip, which contains the NML and, if present, the volume data and the
     // bookmark thumbnails.

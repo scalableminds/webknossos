@@ -1,6 +1,7 @@
 import { sleep } from "libs/utils";
 import { call } from "redux-saga/effects";
 import {
+  setupWebknossosForTesting,
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
@@ -621,6 +622,34 @@ describe("ID reservation saga (exclusive collaboration mode)", () => {
         dispatchGetNewIdAsync(Store.dispatch, ANNOTATION_SCOPED_TRACING_ID, "Bookmark"),
       );
       expect(id5).toBe(5);
+    });
+
+    await task.toPromise();
+  });
+});
+
+describe("ID reservation saga (bookmarks deleted before loading)", () => {
+  beforeEach<WebknossosTestContext>(async (context) => {
+    await setupWebknossosForTesting(context, "skeleton", (fixtures) => ({
+      ...fixtures,
+      // Bookmarks up to id 9 existed, but only bookmark 3 is left.
+      annotationProto: { ...fixtures.annotationProto, bookmarkIds: [3], largestBookmarkId: 9 },
+    }));
+  });
+
+  afterEach<WebknossosTestContext>(async (context) => {
+    context.tearDownPullQueues();
+    expect(hasRootSagaCrashed()).toBe(false);
+  });
+
+  it("should not reuse the ids of deleted bookmarks", async () => {
+    expect(Store.getState().annotation.largestBookmarkIdOnLoad).toBe(9);
+    const task = startSaga(function* task() {
+      Store.dispatch(addBookmarkAction(createBookmark(3)));
+      const id = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, ANNOTATION_SCOPED_TRACING_ID, "Bookmark"),
+      );
+      expect(id).toBe(10);
     });
 
     await task.toPromise();

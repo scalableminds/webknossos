@@ -10,13 +10,14 @@ import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getExtentForNewBoundingBox } from "viewer/model/accessors/view_mode_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { updateKey, updateKey2 } from "viewer/model/helpers/deep_update";
+import { sanitizeMetadata } from "viewer/model/helpers/metadata_helpers";
 import type { MeshInformation, UserBoundingBox, WebknossosState } from "viewer/store";
 import { getTransformedDatasetBoundingBox } from "../accessors/dataset_layer_transformation_accessor";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
 import type { ChangeUserBoundingBoxAction } from "../actions/annotation_actions";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { applyBookmarkVersionAction, sanitizeMetadata } from "./reducer_helpers";
+import { applyBookmarkVersionAction } from "./reducer_helpers";
 
 const updateAnnotation = (
   state: WebknossosState,
@@ -192,8 +193,13 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     }
 
     case "ADD_BOOKMARK": {
+      // Like the backend, a bookmark with the same id is replaced (and moved to the end), so that
+      // an addBookmark that is applied twice (e.g., when incorporating updates) adds no duplicate.
       return updateAnnotation(state, {
-        bookmarks: [...state.annotation.bookmarks, action.bookmark],
+        bookmarks: [
+          ...state.annotation.bookmarks.filter((bookmark) => bookmark.id !== action.bookmark.id),
+          action.bookmark,
+        ],
       });
     }
 

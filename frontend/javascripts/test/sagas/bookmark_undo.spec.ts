@@ -108,4 +108,12 @@ describe("Bookmark undo", () => {
       largeThumbnailDataBase64: null,
     });
   });
+
+  it<WebknossosTestContext>("replaces a bookmark that is added again with the same id", () => {
+    Store.dispatch(addBookmarkAction(bookmark));
+    Store.dispatch(addBookmarkAction({ ...bookmark, name: "Again" }));
+    expect(Store.getState().annotation.bookmarks.map((b) => [b.id, b.name])).toEqual([
+      [1, "Again"],
+    ]);
+  });
 });

@@ -209,6 +209,7 @@ const defaultState: WebknossosState = {
     collaborationMode: "OwnerOnly",
     annotationLayers: [],
     bookmarks: [],
+    largestBookmarkIdOnLoad: 0,
     version: 0,
     earliestAccessibleVersion: 0,
     stats: {},

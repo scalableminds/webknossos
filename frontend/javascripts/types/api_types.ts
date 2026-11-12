@@ -627,6 +627,9 @@ type APIAnnotationBase = APIAnnotationInfo & {
   // Only populated once the tracingstore's AnnotationProto has been fetched
   // (see model_initialization.ts); not part of the plain /info JSON.
   readonly bookmarks?: APIAnnotationBookmark[];
+  // The largest bookmark id the annotation ever had, also counting deleted bookmarks. Like bookmarks,
+  // only populated from the tracingstore's AnnotationProto. Absent for older annotations.
+  readonly largestBookmarkId?: number;
 };
 export type APIAnnotation = APIAnnotationBase & {
   readonly task: APITask | null | undefined;
@@ -731,6 +734,8 @@ export type APITracingStoreAnnotation = {
   readonly annotationLayers: APITracingStoreAnnotationLayer[];
   readonly userStates: APIAnnotationUserState[];
   readonly bookmarkIds: number[];
+  // Never decreases, see Annotation.proto. Absent for older annotations.
+  readonly largestBookmarkId?: number;
 };
 
 export type APITimeTrackingPerUser = {

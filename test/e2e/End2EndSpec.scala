@@ -1,10 +1,12 @@
 package e2e
 
 import com.scalableminds.util.io.{PathUtils, ZipIO}
+import com.typesafe.config.{ConfigFactory, ConfigIncludeContext, ConfigIncluder, ConfigObject, ConfigParseOptions}
 import com.typesafe.scalalogging.LazyLogging
 import org.scalatestplus.play.guice.*
 import org.specs2.main.Arguments
 import org.specs2.mutable.*
+import play.api.Configuration
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.WithServer
@@ -34,7 +36,8 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
     ("tracingstore.fossildb.port" -> testFossilDbPort) +
     ("features.voxelyticsEnabled" -> true)
 
-  private val application = new GuiceApplicationBuilder().configure(argumentMap).build()
+  private val application =
+    new GuiceApplicationBuilder().loadConfig(configWithoutLocalOverrides).configure(argumentMap).build()
 
   private val ws: WSClient = application.injector.instanceOf[WSClient]
 
@@ -52,6 +55,29 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
       }
     }
 
+  }
+
+  // Like Play's default config loading, but ignoring the developer's application.local.conf,
+  // so that local dev settings don't influence the e2e tests.
+  private def configWithoutLocalOverrides: Configuration = {
+    val parseOptions = ConfigParseOptions.defaults().setIncluder(new SkipLocalConfIncluder(None))
+    val applicationConfig = ConfigFactory.parseResources("application.conf", parseOptions)
+    Configuration(
+      ConfigFactory
+        .defaultOverrides()
+        .withFallback(applicationConfig)
+        .withFallback(ConfigFactory.defaultReference())
+        .resolve()
+    )
+  }
+
+  private class SkipLocalConfIncluder(fallback: Option[ConfigIncluder]) extends ConfigIncluder {
+    override def withFallback(newFallback: ConfigIncluder): ConfigIncluder =
+      new SkipLocalConfIncluder(Some(fallback.map(_.withFallback(newFallback)).getOrElse(newFallback)))
+
+    override def include(context: ConfigIncludeContext, what: String): ConfigObject =
+      if (what == "application.local.conf") ConfigFactory.empty().root()
+      else fallback.map(_.include(context, what)).getOrElse(ConfigFactory.empty().root())
   }
 
   private def runWebdriverTests = "yarn test-e2e".run().exitValue()

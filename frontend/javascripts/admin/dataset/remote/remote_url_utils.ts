@@ -3,13 +3,7 @@ import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasourc
 
 export type RemoteStorage = "s3" | "gs" | "https" | "file";
 
-export const SUPPORTED_FORMATS = [
-  "OME-Zarr",
-  "Zarr",
-  "Zarr3",
-  "N5",
-  "Neuroglancer Precomputed",
-] as const;
+export const SUPPORTED_FORMATS = ["OME-Zarr", "Zarr", "N5", "Neuroglancer Precomputed"] as const;
 export type RemoteFormat = (typeof SUPPORTED_FORMATS)[number];
 
 const NEUROGLANCER_SCHEME = /^(zarr3?|n5|precomputed):\/\//i;
@@ -34,14 +28,14 @@ export function detectStorage(url: string): RemoteStorage | null {
 export function detectFormat(url: string): RemoteFormat | null {
   const lowerUrl = url.trim().toLowerCase();
   if (lowerUrl.includes(".ome.zarr")) return "OME-Zarr";
-  if (lowerUrl.startsWith("zarr3://")) return "Zarr3";
-  if (lowerUrl.startsWith("zarr://") || /\.zarr\/?$/.test(lowerUrl)) return "Zarr";
+  // Zarr 3 is covered by the "Zarr" label.
+  if (/^zarr3?:\/\//.test(lowerUrl) || /\.zarr\/?$/.test(lowerUrl)) return "Zarr";
   if (lowerUrl.startsWith("n5://") || /\.n5\/?$/.test(lowerUrl)) return "N5";
   if (lowerUrl.startsWith("precomputed://")) return "Neuroglancer Precomputed";
   return null;
 }
 
-const DATA_FORMAT_LABELS: Record<DataLayer["dataFormat"], RemoteFormat | "WKW"> = {
+const DATA_FORMAT_LABELS: Record<DataLayer["dataFormat"], RemoteFormat | "Zarr3" | "WKW"> = {
   zarr: "Zarr",
   zarr3: "Zarr3",
   n5: "N5",

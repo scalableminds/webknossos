@@ -38,14 +38,11 @@ export function RemoteUrlStep({
   const { url, storage, error, isExploring, isCredentialsOpen } = field;
   return (
     <Flex vertical>
-      <Flex justify="space-between" align="baseline" gap="middle" wrap style={{ paddingBottom: 8 }}>
+      <div style={{ paddingBottom: 8 }}>
         <label htmlFor="remote-dataset-url" className="dataset-remote-required-label">
           Dataset URL
         </label>
-        <Typography.Text type="secondary">
-          A whole dataset or a single layer. More URLs can be added next.
-        </Typography.Text>
-      </Flex>
+      </div>
       <Flex gap={8}>
         <Input
           id="remote-dataset-url"
@@ -54,7 +51,7 @@ export function RemoteUrlStep({
           autoFocus
           value={url}
           status={error != null ? "error" : undefined}
-          placeholder="https://, s3:// or gs:// URL"
+          placeholder="s3://, gs:// or https:// URL of a dataset or a single layer"
           prefix={<LinkOutlined className="dataset-remote-accent-icon" />}
           // Always render a suffix: adding one while typing would remount the input and drop focus.
           suffix={

@@ -34,7 +34,7 @@ describe("detectFormat", () => {
     expect(detectFormat("s3://bucket/cortex_l4.ome.zarr")).toBe("OME-Zarr");
     expect(detectFormat("s3://bucket/cortex_l4.zarr/")).toBe("Zarr");
     expect(detectFormat("zarr://https://example.org/data")).toBe("Zarr");
-    expect(detectFormat("zarr3://https://example.org/data")).toBe("Zarr3");
+    expect(detectFormat("zarr3://https://example.org/data")).toBe("Zarr");
     expect(detectFormat("https://example.org/data.n5")).toBe("N5");
     expect(detectFormat("precomputed://gs://bucket/data")).toBe("Neuroglancer Precomputed");
     expect(detectFormat("https://example.org/data")).toBeNull();

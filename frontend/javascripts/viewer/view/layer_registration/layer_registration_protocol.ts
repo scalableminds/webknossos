@@ -1,4 +1,5 @@
-import { getUrlParamValue, hasUrlParam } from "libs/utils";
+import { hasUrlParam } from "libs/utils";
+import { location } from "libs/window";
 import type { Matrix4x4 } from "mjs";
 import type { APIDataset } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
@@ -37,9 +38,15 @@ export function isLayerRegistrationPrimaryWorker(): boolean {
   return isLayerRegistrationWorker() && hasUrlParam(PRIMARY_WORKER_URL_PARAM);
 }
 
-// The layer whose landmarks are placed in this worker.
+// The layer whose landmarks are placed in this worker. getLayerRegistrationWorkerUrl encodes the
+// param with URLSearchParams, which writes a space as "+", so it is read the same way.
+// getUrlParamValue would keep the "+".
 export function getLayerRegistrationWorkerLayerName(): string {
-  return getUrlParamValue(WORKER_LAYER_URL_PARAM);
+  const layerName = new URLSearchParams(location.search).get(WORKER_LAYER_URL_PARAM);
+  if (layerName == null) {
+    throw new Error("The URL doesn't name the layer of the layer registration worker.");
+  }
+  return layerName;
 }
 
 export function isLayerRegistrationStore(): boolean {

@@ -315,16 +315,16 @@ function markTabsetAsMaximized(node: RowOrTabsetNode, tabId: string): boolean {
   return node.children.some((child) => markTabsetAsMaximized(child, tabId));
 }
 
-// The layer registration workers use the normal layout, but start with the XY viewport
-// maximized and the right border closed. The user can restore the other viewports as usual.
-// The right border can't be opened in workers (see FlexLayoutWrapper.isBorderLocked).
-export const getLayerRegistrationWorkerLayoutConfig = (baseLayout: ModelConfig): ModelConfig => {
-  const layout = cloneDeep(baseLayout);
+// The layer registration workers always start with the default layout, independent of the
+// layouts that the user stored, with the XY viewport maximized and both borders closed. Outside
+// of an iframe, the default layout opens the borders. The user can restore the other viewports
+// and open the left border as usual. The right border can't be opened in workers (see
+// FlexLayoutWrapper.isBorderLocked).
+export const getLayerRegistrationWorkerLayoutConfig = (layoutKey: Layout): ModelConfig => {
+  const layout = cloneDeep(getDefaultLayouts()[layoutKey]);
   markTabsetAsMaximized(layout.layout, OrthoViews.PLANE_XY);
   for (const border of layout.borders) {
-    if (border.location === "right") {
-      border.selected = -1;
-    }
+    border.selected = -1;
   }
   return layout;
 };

@@ -220,10 +220,9 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
   loadCurrentModel() {
     const { layoutName, layoutKey } = this.props;
-    const baseLayout = getLayoutConfig(layoutKey, layoutName);
     const layout = isLayerRegistrationWorker()
-      ? getLayerRegistrationWorkerLayoutConfig(baseLayout)
-      : baseLayout;
+      ? getLayerRegistrationWorkerLayoutConfig(layoutKey)
+      : getLayoutConfig(layoutKey, layoutName);
     const model = Model.fromJson(layout);
     this.removeStatisticsTab(model);
     return model;

@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.typesafe.scalalogging.LazyLogging
-import mail.{DefaultMails, Send}
+import mail.OrganizationEmailService
 import models.user.MultiUserDAO
 import org.apache.pekko.actor.ActorSystem
 import play.api.inject.ApplicationLifecycle
@@ -23,7 +23,7 @@ import scala.concurrent.duration.*
 class PricingPlanExpiryReminderService @Inject() (
     organizationDAO: OrganizationDAO,
     multiUserDAO: MultiUserDAO,
-    defaultMails: DefaultMails,
+    organizationEmailService: OrganizationEmailService,
     conf: WkConf,
     val lifecycle: ApplicationLifecycle,
     val actorSystem: ActorSystem
@@ -32,8 +32,6 @@ class PricingPlanExpiryReminderService @Inject() (
     with LazyLogging {
 
   import PricingPlanExpiryReminderService.{crossedLeadTimesDays, leadTimesDaysFor}
-
-  private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
 
   private def allLeadTimesDays: List[Int] =
     conf.WebKnossos.PricingPlanExpiryReminder.leadTimesDays ++ conf.WebKnossos.PricingPlanExpiryReminder.trialLeadTimesDays
@@ -81,9 +79,7 @@ class PricingPlanExpiryReminderService @Inject() (
         logger.info(
           s"Reminding the owner and admins (${recipients.length}) of organization ${organization._id} that its ${organization.pricingPlan} plan expires in $daysRemaining days..."
         )
-        recipients.foreach(recipient =>
-          Mailer ! Send(defaultMails.pricingPlanExpiryReminderMail(recipient, organization, paidUntil, daysRemaining))
-        )
+        organizationEmailService.sendPricingPlanExpiryReminderEmails(recipients, organization, paidUntil, daysRemaining)
       }
     } yield ()
 

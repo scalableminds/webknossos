@@ -5,7 +5,7 @@ import { sleep } from "libs/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
-import { getSegmentIdForPosition } from "viewer/controller/combinations/volume_handlers";
+import { getSegmentIdsAtPosition } from "viewer/controller/combinations/volume_handlers";
 import {
   getMappingInfo,
   getVisibleSegmentationLayer,
@@ -104,8 +104,8 @@ export function SegmentTreeView(props: Props) {
   // The segment id at the camera center is looked up once for the whole list. The lookup must not
   // be memoized on the position (see volume_handlers.ts), so doing it per row would repeat a
   // transform + mag + cube lookup for every rendered row on every store notification.
-  const centeredSegmentId = useWkSelector((state) =>
-    getSegmentIdForPosition(getPosition(state.flycam)),
+  const centeredSegmentId = useWkSelector(
+    (state) => getSegmentIdsAtPosition(getPosition(state.flycam)).mappedId,
   );
 
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);

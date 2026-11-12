@@ -63,10 +63,10 @@ class EditableMappingController @Inject() (
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- annotationService.findVolume(annotationId, tracingId)
+            tracing <- annotationService.findVolume(annotationId, tracingId, version)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             agglomerateGraphBox: Box[AgglomerateGraph] <- editableMappingService
-              .getAgglomerateGraphForId(tracingId, version.getOrElse(tracing.version), agglomerateId)
+              .getAgglomerateGraphForId(tracingId, tracing.version, agglomerateId)
               .shiftBox
             segmentIds <- agglomerateGraphBox match {
               case Full(agglomerateGraph) => Fox.successful(agglomerateGraph.segments)
@@ -215,10 +215,10 @@ class EditableMappingController @Inject() (
 
   def editedEdgesZip(tracingId: String, version: Option[Long]): Action[AnyContent] =
     Action.fox { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          tracing <- annotationService.findVolume(annotationId, tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId, version)
           _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
           remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
           editedEdges: Seq[(Long, Long, Boolean)] <- editableMappingService.getEditedEdges(

@@ -48,8 +48,7 @@ import {
 } from "viewer/controller/combinations/skeleton_handlers";
 import {
   changeBrushSizeIfBrushIsActiveBy,
-  getSegmentIdForPosition,
-  getUnmappedSegmentIdForPosition,
+  getSegmentIdsAtPosition,
   handleDrawStart,
   handleEndForDrawOrErase,
   handleEraseStart,
@@ -1424,8 +1423,8 @@ export class ProofreadToolController extends ToolController {
     const isMultiSplitActive = state.userConfiguration.isMultiSplitActive;
     const ctrlOrMetaKey = event.ctrlKey || event.metaKey;
     if (isMultiSplitActive && ctrlOrMetaKey) {
-      const unmappedSegmentId = getUnmappedSegmentIdForPosition(globalPosition);
-      const mappedSegmentId = getSegmentIdForPosition(globalPosition);
+      const { unmappedId: unmappedSegmentId, mappedId: mappedSegmentId } =
+        getSegmentIdsAtPosition(globalPosition);
       if (unmappedSegmentId === 0n || mappedSegmentId === 0n) {
         // No valid ids were found, ignore action.
         return;

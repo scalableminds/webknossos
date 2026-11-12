@@ -39,6 +39,7 @@ import {
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import classnames from "classnames";
+import { PartnerLogo } from "components/partner_logo";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { WhatsNewModal } from "components/whats_new_modal";
 import features from "features";
@@ -54,6 +55,7 @@ import Toast from "libs/toast";
 import {
   filterWithSearchQueryAND,
   isUserAdmin,
+  isUserAdminOrDatasetManager,
   isUserAdminOrManager,
   isUserAdminOrTeamManager,
 } from "libs/utils";
@@ -185,7 +187,11 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
   };
 }
 
-export function getAnalysisSubMenu(collapse: boolean, activeOrganization: APIOrganization | null) {
+export function getAnalysisSubMenu(
+  collapse: boolean,
+  activeUser: APIUser | null | undefined,
+  activeOrganization: APIOrganization | null,
+) {
   const analysisSubMenuItems = [];
 
   if (features().jobsEnabled && areJobsAllowedByPricingPlan(activeOrganization)) {
@@ -197,6 +203,12 @@ export function getAnalysisSubMenu(collapse: boolean, activeOrganization: APIOrg
       key: "/aiModels",
       label: <Link to={"/aiModels"}>AI Models</Link>,
     });
+    if (isUserAdminOrDatasetManager(activeUser)) {
+      analysisSubMenuItems.push({
+        key: "/alignmentProjects",
+        label: <Link to="/alignmentProjects">Alignment Projects</Link>,
+      });
+    }
   }
 
   if (features().voxelyticsEnabled) {
@@ -862,59 +874,66 @@ function Navbar() {
     {
       key: "0",
       label: (
-        <Link
-          to="/dashboard"
-          aria-label="WEBKNOSSOS"
-          style={{
-            verticalAlign: "middle",
-          }}
-        >
-          {collapseAllNavItems ? (
-            getCollapsibleMenuTitle(
-              "WEBKNOSSOS",
-              <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
-              true,
-            )
-          ) : (
-            <>
-              <Icon component={WkLogoIcon} className="logo" />
-              <span className="logo-wordmark">WEBKNOSSOS</span>
-            </>
-          )}
-        </Link>
+        <>
+          <Link
+            to="/dashboard"
+            aria-label="WEBKNOSSOS"
+            style={{
+              verticalAlign: "middle",
+            }}
+          >
+            {collapseAllNavItems ? (
+              getCollapsibleMenuTitle(
+                "WEBKNOSSOS",
+                <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+                true,
+              )
+            ) : (
+              <>
+                <Icon component={WkLogoIcon} className="logo" />
+                <span className="logo-wordmark">WEBKNOSSOS</span>
+              </>
+            )}
+          </Link>
+          <PartnerLogo compact={collapseAllNavItems} />
+        </>
       ),
     },
   ];
   const trailingNavItems = [];
 
-  // In the annotation view, the navbar also hosts the viewer's action bar, so the submenus give up
-  // their space on smaller screens. On phones (outside the annotation view) they stay as icons.
-  const hideInAnnotationViewOnSmallScreens = <T extends SubMenuType | null>(item: T): T =>
-    item != null && isInAnnotationView ? { ...item, className: "hide-on-small-screen" } : item;
+  // In the annotation view, the navbar also hosts the viewer's action bar, so the nav items give up
+  // their space on narrower screens. On phones (outside the annotation view) they stay as icons.
+  const hideInAnnotationViewOnNarrowScreens = <T extends SubMenuType | MenuItemType | null>(
+    item: T,
+  ): T =>
+    item != null && isInAnnotationView
+      ? { ...item, className: classnames(item.className, "hide-on-narrow-screen") }
+      : item;
 
   if (isAuthenticated) {
     const loggedInUser: APIUser = activeUser;
-    menuItems.push(hideInAnnotationViewOnSmallScreens(getDashboardSubMenu(collapseAllNavItems)));
+    menuItems.push(hideInAnnotationViewOnNarrowScreens(getDashboardSubMenu(collapseAllNavItems)));
     menuItems.push(
-      hideInAnnotationViewOnSmallScreens(
-        getAnalysisSubMenu(collapseAllNavItems, activeOrganization),
+      hideInAnnotationViewOnNarrowScreens(
+        getAnalysisSubMenu(collapseAllNavItems, activeUser, activeOrganization),
       ),
     );
 
     if (isUserAdminOrTeamManager(activeUser)) {
       menuItems.push(
-        hideInAnnotationViewOnSmallScreens(getTaskManagementSubMenu(collapseAllNavItems)),
+        hideInAnnotationViewOnNarrowScreens(getTaskManagementSubMenu(collapseAllNavItems)),
       );
     }
 
     if (isAdminOrTeamManager && activeUser != null) {
       menuItems.push(
-        hideInAnnotationViewOnSmallScreens(
+        hideInAnnotationViewOnNarrowScreens(
           getAdministrationSubMenu(collapseAllNavItems, activeUser),
         ),
       );
     } else {
-      menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
+      menuItems.push(hideInAnnotationViewOnNarrowScreens(getTimeTrackingMenu(collapseAllNavItems)));
     }
 
     trailingNavItems.push(<AnnotationLockedTag key="annotation-locked-tag" />);
@@ -949,20 +968,22 @@ function Navbar() {
   }
 
   menuItems.push(
-    getHelpSubMenu(
-      version,
-      polledVersion,
-      isAuthenticated,
-      isAdminOrManager,
-      collapseAllNavItems,
-      () => setIsHelpModalOpen(true),
+    hideInAnnotationViewOnNarrowScreens(
+      getHelpSubMenu(
+        version,
+        polledVersion,
+        isAuthenticated,
+        isAdminOrManager,
+        collapseAllNavItems,
+        () => setIsHelpModalOpen(true),
+      ),
     ),
   );
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.
   const selectedKeys = collapseAllNavItems ? [] : [historyLocation.pathname];
   // Hidden together with the submenus it separates from the viewer's action bar.
-  const separator = <div className="navbar-separator hide-on-small-screen" />;
+  const separator = <div className="navbar-separator hide-on-narrow-screen" />;
 
   return (
     <Header

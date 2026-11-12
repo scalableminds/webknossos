@@ -1,12 +1,12 @@
 package controllers
 
 import com.scalableminds.util.Msg
-import org.apache.pekko.actor.ActorSystem
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
 import com.scalableminds.util.tools.Fox.toFox
-import mail.{DefaultMails, Send}
+import com.scalableminds.util.objectid.ObjectId
+import mail.OrganizationEmailService
 
 import javax.inject.Inject
 import models.organization.{
@@ -16,6 +16,7 @@ import models.organization.{
   OrganizationDAO,
   OrganizationPlanUpdate,
   OrganizationService,
+  PartnerDAO,
   PricingPlan,
   UpgradeRequest
 }
@@ -31,24 +32,26 @@ import scala.concurrent.ExecutionContext
 
 case class OrganizationParameters(name: String, newUserMailingList: String) derives JsonAutoFormat
 
+// partnerId None removes the partner assignment.
+case class OrganizationPartnerParameters(partnerId: Option[ObjectId]) derives JsonAutoFormat
+
 class OrganizationController @Inject() (
     organizationDAO: OrganizationDAO,
     organizationService: OrganizationService,
+    partnerDAO: PartnerDAO,
     inviteDAO: InviteDAO,
     conf: WkConf,
     userDAO: UserDAO,
     multiUserDAO: MultiUserDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     userService: UserService,
-    defaultMails: DefaultMails,
+    organizationEmailService: OrganizationEmailService,
     freeCreditTransactionService: FreeCreditTransactionService,
-    actorSystem: ActorSystem,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller {
 
   private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
-  private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
 
   def organizationsIsEmpty: Action[AnyContent] = Action.fox { _ =>
     for {
@@ -168,6 +171,26 @@ class OrganizationController @Inject() (
       } yield Ok(organizationJson)
     }
 
+  // Assigns the organization to a partner, which co-brands WEBKNOSSOS for it. Only super users may do this.
+  def updatePartner(organizationId: String): Action[OrganizationPartnerParameters] =
+    sil.SecuredAction.fox(validateJson[OrganizationPartnerParameters]) { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
+        organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(
+          organizationId
+        ) ~> NOT_FOUND
+        _ <- Fox.runOptional(request.body.partnerId)(
+          partnerDAO.findOne(_)(using GlobalAccessContext)
+        ) ?~> Msg.Partner.notFound ~> NOT_FOUND
+        _ <- organizationDAO.updatePartner(organization._id, request.body.partnerId)
+        _ = logger.info(
+          s"Super user ${request.identity._id} set the partner of organization ${organization._id} to ${request.body.partnerId.getOrElse("none")}"
+        )
+        updated <- organizationDAO.findOne(organization._id)
+        organizationJson <- organizationService.publicWrites(updated, Some(request.identity))
+      } yield Ok(organizationJson)
+    }
+
   def delete(organizationId: String): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(organizationId) ~> NOT_FOUND
@@ -261,7 +284,7 @@ class OrganizationController @Inject() (
               .mkString(", ")}"
         )
         note = upgradeRequest.note.map(_.trim).filter(_.nonEmpty)
-        _ = Mailer ! Send(defaultMails.upgradeRequestMail(multiUser, organization.name, requestedChanges, note))
+        _ = organizationEmailService.sendUpgradeRequestEmail(multiUser, organization, requestedChanges, note)
       } yield Ok
     }
 
@@ -299,10 +322,8 @@ class OrganizationController @Inject() (
         )
         _ <- organizationDAO.insertPlanUpdate(organization._id, planUpdate)
         _ <- organizationDAO.updatePlan(organization._id, planUpdate)
-        // Note that this logs its failures rather than propagating them, as the plan update above has
-        // already been persisted at this point.
-        _ <- Fox.runOptional(request.body.pricingPlan)(newPricingPlan =>
-          organizationService.sendPricingPlanUpgradeMails(organization, organization.pricingPlan, newPricingPlan)
+        _ = request.body.pricingPlan.foreach(newPricingPlan =>
+          organizationEmailService.sendPricingPlanUpgradedEmails(organization, organization.pricingPlan, newPricingPlan)
         )
       } yield Ok
     }

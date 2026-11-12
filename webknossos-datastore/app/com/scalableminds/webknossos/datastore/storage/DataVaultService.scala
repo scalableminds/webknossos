@@ -167,7 +167,7 @@ class DataVaultService @Inject() (
         } yield new ZipDataVault(outerVaultPath)
       case _ =>
         val vaultBox = credentializedUPath.upath.getScheme match {
-          case Some(PathSchemes.schemeGS) => GoogleCloudDataVault.create(credentializedUPath)
+          case Some(PathSchemes.schemeGS) => GoogleCloudDataVault.create(credentializedUPath, ws)
           case Some(PathSchemes.schemeS3) => S3DataVault.create(credentializedUPath, s3ClientPoolHolder.s3ClientPool)
           case Some(PathSchemes.schemeHttps) | Some(PathSchemes.schemeHttp) =>
             HttpsDataVault.create(credentializedUPath, ws, config.Http.uri)

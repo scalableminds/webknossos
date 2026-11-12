@@ -1,7 +1,9 @@
 // biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
-import { call, delay, put } from "redux-saga/effects";
+import { call, delay, fork, put, take } from "redux-saga/effects";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
+import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
+import { updateMetadataOfAnnotation } from "viewer/model/sagas/volume/update_actions";
 import {
   registerOperationAction,
   unregisterOperationAction,
@@ -15,10 +17,10 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { Store } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getPositionForSegmentId,
   initializeMappingAndTool,
@@ -37,6 +39,13 @@ function* waitForSagas() {
   // Actions that are put by a saga are handled by other sagas after the put finished.
   // Wait for that before checking the marker.
   yield delay(0);
+}
+
+function* getActiveCellId(tracingId: string) {
+  return yield* select(
+    (state) =>
+      state.annotation.volumes.find((volume) => volume.tracingId === tracingId)?.activeCellId,
+  );
 }
 
 function* getMarkerPosition(tracingId: string) {
@@ -240,6 +249,158 @@ describe("Proofreading marker", () => {
 
       expect(Store.getState().annotation.volumes[0].segments.has(1n)).toBe(false);
       expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(1));
+    });
+    await task.toPromise();
+  });
+
+  it("should adapt the active segment when another user merges the segment at the marker", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield put(setCollaborationModeAction("Concurrent"));
+      yield call(clickSegmentWithProofreadingTool, tracingId, 4n);
+      yield call(() => api.tracing.save());
+      expect(yield* getActiveCellId(tracingId)).toBe(4n);
+
+      backendMock.injectVersion(
+        [
+          {
+            name: "mergeAgglomerate",
+            value: {
+              actionTracingId: tracingId,
+              segmentId1: 1n,
+              segmentId2: 4n,
+              agglomerateId1: 1n,
+              agglomerateId2: 4n,
+            },
+          },
+        ],
+        Store.getState().annotation.version + 1,
+      );
+      yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+      yield call(waitForSagas);
+
+      expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(4));
+      expect(yield* getActiveCellId(tracingId)).toBe(1n);
+    });
+    await task.toPromise();
+  });
+
+  it("should be kept when an activation during a rebase is dropped", async (context: WebknossosTestContext) => {
+    // While rebasing, the store temporarily contains the server's state (including its active
+    // segment id) and the reducer drops SET_ACTIVE_CELL actions (see rebase_edit_guard.ts).
+    // Afterwards, the unsaved local changes (including the active segment id) are re-applied.
+    // The active segment doesn't change, so the marker is kept. This documents a consequence of
+    // the dropped activation, not a goal. For a proofreading click during a rebase, the active
+    // segment is adapted to the new marker afterwards (see the next test).
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield put(setCollaborationModeAction("Concurrent"));
+      yield call(() => api.tracing.save());
+
+      // The click is not saved yet, so saving triggers a rebase onto the injected version.
+      yield call(clickSegmentWithProofreadingTool, tracingId, 1n);
+      backendMock.planVersionInjection(Store.getState().annotation.version + 1, [
+        updateMetadataOfAnnotation("Changed by another user"),
+      ]);
+      let wasSegmentActivatedDuringRebase = false;
+      yield fork(function* () {
+        yield take("REWIND_FOR_REBASE");
+        expect(yield* getActiveCellId(tracingId)).not.toBe(1n);
+        yield put(setActiveCellAction(4n, getPositionForSegmentId(4)));
+        wasSegmentActivatedDuringRebase = true;
+      });
+      yield call(() => api.tracing.save());
+      yield call(waitForSagas);
+
+      expect(wasSegmentActivatedDuringRebase).toBe(true);
+      expect(Store.getState().annotation.description).toBe("Changed by another user");
+      expect(yield* getActiveCellId(tracingId)).toBe(1n);
+      expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(1));
+    });
+    await task.toPromise();
+  });
+
+  it("should adapt the active segment after a proofreading click during a rebase", async (context: WebknossosTestContext) => {
+    // The click's SET_ACTIVE_CELL is dropped during the rebase, but the marker is moved. After
+    // the rebase, the active segment is adapted to the segment at the marker.
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield put(setCollaborationModeAction("Concurrent"));
+      yield call(() => api.tracing.save());
+
+      // The click is not saved yet, so saving triggers a rebase onto the injected version.
+      yield call(clickSegmentWithProofreadingTool, tracingId, 1n);
+      backendMock.planVersionInjection(Store.getState().annotation.version + 1, [
+        updateMetadataOfAnnotation("Changed by another user"),
+      ]);
+      let wasClickedDuringRebase = false;
+      yield fork(function* () {
+        yield take("REWIND_FOR_REBASE");
+        yield call(clickSegmentWithProofreadingTool, tracingId, 4n);
+        wasClickedDuringRebase = true;
+      });
+      yield call(() => api.tracing.save());
+      yield call(waitForSagas);
+
+      expect(wasClickedDuringRebase).toBe(true);
+      expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(4));
+      expect(yield* getActiveCellId(tracingId)).toBe(4n);
+    });
+    await task.toPromise();
+  });
+
+  it("should keep the active segment instead of crashing if the bucket at the marker can't be loaded", async (context: WebknossosTestContext) => {
+    const { api: testApi } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield put(setCollaborationModeAction("Concurrent"));
+      yield call(clickSegmentWithProofreadingTool, tracingId, 4n);
+      yield call(() => testApi.tracing.save());
+
+      const getDataValueSpy = vi
+        .spyOn(api.data, "getDataValue")
+        .mockRejectedValue(new Error("Bucket 0,0,0,0, could not be loaded after 3 retries."));
+      try {
+        // The merge changes the agglomerate at the marker, so the active segment would be adapted.
+        backendMock.injectVersion(
+          [
+            {
+              name: "mergeAgglomerate",
+              value: {
+                actionTracingId: tracingId,
+                segmentId1: 1n,
+                segmentId2: 4n,
+                agglomerateId1: 1n,
+                agglomerateId2: 4n,
+              },
+            },
+          ],
+          Store.getState().annotation.version + 1,
+        );
+        yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+        yield call(waitForSagas);
+        expect(getDataValueSpy).toHaveBeenCalled();
+      } finally {
+        getDataValueSpy.mockRestore();
+      }
+
+      expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(4));
+      expect(yield* getActiveCellId(tracingId)).toBe(4n);
     });
     await task.toPromise();
   });

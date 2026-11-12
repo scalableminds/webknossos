@@ -17,7 +17,7 @@ class JobEmailService @Inject() (
     mailSender.inBackground(s"job ${job._id} succeeded") {
       for {
         multiUser <- multiUserDAO.findOne(owner._multiUser)(using GlobalAccessContext)
-        datasetName = job.datasetName.getOrElse("")
+        datasetName = job.datasetNameForEmail.getOrElse("")
         genericEmailTemplate = defaultMails.jobSuccessfulGenericMail(multiUser, datasetName, resultLink, _, _)
         emailTemplate = job.command match {
           case JobCommand.convert_to_wkw =>
@@ -42,6 +42,13 @@ class JobEmailService @Inject() (
             Some(defaultMails.jobSuccessfulMitoSegmentationMail(multiUser, datasetName, resultLink))
           case JobCommand.align_sections =>
             Some(defaultMails.jobSuccessfulAlignmentMail(multiUser, datasetName, resultLink))
+          case JobCommand.align =>
+            Some(
+              genericEmailTemplate(
+                "Alignment",
+                "Your alignment project job has finished. The result is available as a new dataset in your dashboard."
+              )
+            )
           case JobCommand.train_neuron_model =>
             Some(defaultMails.jobSuccessfulModelTrainingMail(multiUser, resultLink))
           case JobCommand.train_instance_model =>
@@ -77,7 +84,7 @@ class JobEmailService @Inject() (
     mailSender.inBackground(s"job ${job._id} failed") {
       for {
         multiUser <- multiUserDAO.findOne(owner._multiUser)(using GlobalAccessContext)
-        datasetName = job.datasetName.getOrElse("")
+        datasetName = job.datasetNameForEmail.getOrElse("")
         errorMessage = job.latestRunErrorDetails
           .flatMap(details => (details \ "message").asOpt[String])
           .map(_.trim)

@@ -61,7 +61,10 @@ vi.mock("libs/progress_callback", () => ({
 // clicked position is mocked.
 vi.mock("viewer/controller/combinations/volume_handlers", async (importOriginal) => ({
   ...(await importOriginal<typeof import("viewer/controller/combinations/volume_handlers")>()),
-  getSegmentIdForPositionAsync: async () => clickedAgglomerateId,
+  getSegmentIdsAtPositionAsync: async () => ({
+    unmappedId: clickedSegmentId,
+    mappedId: clickedAgglomerateId,
+  }),
 }));
 
 function makeServerTree(

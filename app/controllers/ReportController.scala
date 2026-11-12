@@ -55,10 +55,16 @@ class ReportDAO @Inject() (sqlClient: SqlClient, annotationDAO: AnnotationDAO)(i
             SELECT p._id, p.name, p.paused, p.priority
             FROM webknossos.projects_ p
             JOIN webknossos.tasks_ t ON t._project = p._id
-            CROSS JOIN experiences ue
             WHERE p._team = $teamId
-              AND t.neededExperience_domain = ue.domain
-              AND t.neededExperience_value <= ue.value
+              AND (
+                (t.neededExperience_domain IS NULL AND EXISTS (SELECT 1 FROM teamMembers))
+                OR EXISTS (
+                  SELECT 1
+                  FROM experiences ue
+                  WHERE ue.domain = t.neededExperience_domain
+                  AND ue.value >= t.neededExperience_value
+                )
+              )
               AND NOT p.isblacklistedfromreport
             GROUP BY p._id, p.name, p.paused, p.priority
           )
@@ -132,11 +138,6 @@ class ReportDAO @Inject() (sqlClient: SqlClient, annotationDAO: AnnotationDAO)(i
       r <- run(q"""
         SELECT p._id, p.name, t.neededExperience_domain, t.neededExperience_value, COUNT(t._id)
         FROM webknossos.tasks_ t
-        JOIN (
-          SELECT domain, value
-          FROM webknossos.user_experiences
-          WHERE _user = $userId
-        ) AS ue ON t.neededExperience_domain = ue.domain AND t.neededExperience_value <= ue.value
         JOIN webknossos.projects_ p ON t._project = p._id
         LEFT JOIN (
           SELECT _task
@@ -145,12 +146,25 @@ class ReportDAO @Inject() (sqlClient: SqlClient, annotationDAO: AnnotationDAO)(i
           AND typ = ${AnnotationType.Task}
         ) AS userAnnotations ON t._id = userAnnotations._task
         WHERE t.pendingInstances > 0
+        AND (
+          t.neededExperience_domain IS NULL
+          OR EXISTS (
+            SELECT 1
+            FROM webknossos.user_experiences ue
+            WHERE ue._user = $userId
+            AND ue.domain = t.neededExperience_domain
+            AND ue.value >= t.neededExperience_value
+          )
+        )
         AND userAnnotations._task IS NULL
         AND NOT p.paused
         GROUP BY p._id, p.name, t.neededExperience_domain, t.neededExperience_value
-      """.as[(String, String, String, Int, Int)])
+      """.as[(String, String, Option[String], Option[Int], Int)])
     } yield {
-      val formattedList = r.toList.map(row => (row._2 + "/" + row._3 + ": " + row._4, row._5))
+      val formattedList = r.toList.map { row =>
+        val experienceSuffix = row._3.zip(row._4).map((domain, value) => s"/$domain: $value").getOrElse("")
+        (row._2 + experienceSuffix, row._5)
+      }
       formattedList.toMap.filter(_ match { case (_: String, availableTasksCount: Int) => availableTasksCount > 0 })
     }
 

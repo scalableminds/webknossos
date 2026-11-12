@@ -101,7 +101,9 @@ function taskToText(task: APITask) {
     projectName,
     script,
   } = task;
-  const neededExperienceAsString = `${neededExperience.domain},${neededExperience.value}`;
+  // Tasks without a needed experience get empty experience columns, which the bulk import understands.
+  const neededExperienceAsString =
+    neededExperience != null ? `${neededExperience.domain},${neededExperience.value}` : ",";
   const [editPositionAsString, editRotationAsString] = [editPosition, editRotation].map((vector3) =>
     vector3.join(","),
   );
@@ -302,8 +304,18 @@ type FormValues = {
   datasetId: string;
   datasetName: string;
   projectName: string;
-  neededExperience: NewTask["neededExperience"];
+  // The form fields are empty if any member of the project's team may get the task
+  neededExperience: { domain?: string; value?: number } | undefined;
 };
+
+function isNonEmptyDomain(domain: string | null | undefined): domain is string {
+  return domain != null && domain.trim() !== "";
+}
+
+function getNeededExperience(formValues: FormValues): NewTask["neededExperience"] {
+  const { domain, value } = formValues.neededExperience ?? {};
+  return isNonEmptyDomain(domain) && value != null ? { domain, value } : undefined;
+}
 
 function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const { taskId } = useParams();
@@ -396,12 +408,14 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
     const boundingBox = formValues.boundingBox
       ? transformBoundingBox(formValues.boundingBox)
       : null;
+    const neededExperience = getNeededExperience(formValues);
 
     if (taskId != null) {
       // either update an existing task
       const newTask = {
         ...omit(formValues, "nmlFiles", "baseAnnotation"),
         boundingBox,
+        neededExperience,
       };
       const confirmedTask = await updateTask(taskId, newTask);
       navigate(`/tasks/${confirmedTask.id}`);
@@ -425,6 +439,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             const newTask: NewNmlTask = {
               ...omit(formValues, "baseAnnotation"),
               boundingBox,
+              neededExperience,
             };
             const response = await createTaskFromNML(newTask, batchOfNmls);
 
@@ -443,6 +458,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             ...omit(formValues, "nmlFiles", "baseAnnotation"),
             boundingBox,
             baseAnnotation,
+            neededExperience,
           };
           const response = await createTasks([newTask]);
 
@@ -679,19 +695,16 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
               <FormItem
                 name={["neededExperience", "domain"]}
                 label="Experience Domain"
+                tooltip="Optional. Only users with at least the given experience value in this domain get the task. Leave empty to let any member of the project's team get the task."
                 hasFeedback
-                rules={[
-                  {
-                    required: true,
-                  },
-                ]}
               >
                 <SelectExperienceDomain
                   disabled={isEditingMode}
-                  placeholder="Select an Experience Domain"
+                  placeholder="Any team member"
                   notFoundContent={messages["task.domain_does_not_exist"]}
                   width={100}
                   allowCreation
+                  allowClear
                 />
               </FormItem>
             </Col>
@@ -700,10 +713,12 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                 name={["neededExperience", "value"]}
                 label="Experience Value"
                 hasFeedback
+                dependencies={[["neededExperience", "domain"]]}
                 rules={[
-                  {
-                    required: true,
-                  },
+                  ({ getFieldValue }) => ({
+                    required: isNonEmptyDomain(getFieldValue(["neededExperience", "domain"])),
+                    message: "Please enter an experience value for the selected domain.",
+                  }),
                   {
                     type: "number",
                   },

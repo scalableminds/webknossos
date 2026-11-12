@@ -1,5 +1,12 @@
 // biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
-import { replaceVolatileValues, resetDatabase, writeTypeCheckingFile } from "test/e2e_setup";
+import {
+  replaceVolatileValues,
+  resetDatabase,
+  setUserAuthToken,
+  tokenUserA,
+  tokenUserB,
+  writeTypeCheckingFile,
+} from "test/e2e_setup";
 import {
   createTasks,
   deleteTask,
@@ -129,6 +136,30 @@ describe("Task API  (E2E)", () => {
       await deleteTask(createdTask.id);
     } else {
       expect.fail("Task creation failed.");
+    }
+  });
+
+  test("Tasks without needed experience are available to team members without experience", async () => {
+    // User B is a member of the team of Test_Project4 but has no experiences.
+    setUserAuthToken(tokenUserB);
+    await expect(peekNextTasks()).rejects.toBeDefined();
+
+    setUserAuthToken(tokenUserA);
+    const { neededExperience: _neededExperience, ...taskWithoutExperience } = newTask;
+    const createTaskResponse = await createTasks([taskWithoutExperience]);
+    const createdTask = createTaskResponse.tasks[0].success;
+    if (createdTask == null) {
+      expect.fail("Task creation failed.");
+    }
+    expect(createdTask.neededExperience).toBeNull();
+
+    try {
+      setUserAuthToken(tokenUserB);
+      const peekedTask = await peekNextTasks();
+      expect(peekedTask?.id).toBe(createdTask.id);
+    } finally {
+      setUserAuthToken(tokenUserA);
+      await deleteTask(createdTask.id);
     }
   });
 

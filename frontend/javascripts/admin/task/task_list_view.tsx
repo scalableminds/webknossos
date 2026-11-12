@@ -27,7 +27,7 @@ import { downloadTasksAsCSV } from "admin/task/task_create_form_view";
 import type { QueryObject, TaskFormFieldValues } from "admin/task/task_search_form";
 import TaskSearchForm from "admin/task/task_search_form";
 import UserSelectionComponent from "admin/user/user_selection_component";
-import { Alert, App, Button, Input, Modal, Spin, Tag } from "antd";
+import { Alert, App, Button, Input, Modal, Spin, Tag, Typography } from "antd";
 import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FixedExpandableTable from "components/fixed_expandable_table";
@@ -211,7 +211,7 @@ function TaskListView({ initialFieldValues }: Props) {
         "datasetName",
         "created",
         "type",
-        (task) => task.neededExperience.domain,
+        (task) => task.neededExperience?.domain ?? "",
       ],
       searchQuery,
     );
@@ -377,14 +377,16 @@ function TaskListView({ initialFieldValues }: Props) {
       title: "Experience",
       dataIndex: "neededExperience",
       key: "neededExperience",
-      sorter: localeCompareBy<APITask>((task) => task.neededExperience.domain),
+      sorter: localeCompareBy<APITask>((task) => task.neededExperience?.domain ?? ""),
       width: 250,
       render: (neededExperience: APITask["neededExperience"]) =>
-        neededExperience.domain !== "" || neededExperience.value > 0 ? (
+        neededExperience != null ? (
           <Tag>
             {neededExperience.domain} : {neededExperience.value}
           </Tag>
-        ) : null,
+        ) : (
+          <Typography.Text type="secondary">Any team member</Typography.Text>
+        ),
     },
     {
       title: "Creation Date",

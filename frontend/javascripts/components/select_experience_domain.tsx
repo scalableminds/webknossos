@@ -14,6 +14,7 @@ type Props = {
   onSelect?: (arg0: string) => void;
   onChange?: () => void;
   allowCreation?: boolean;
+  allowClear?: boolean;
   alreadyUsedDomains?: ExperienceDomainList;
 };
 
@@ -26,6 +27,7 @@ const SelectExperienceDomain: React.FC<Props> = ({
   onSelect,
   onChange,
   allowCreation = false,
+  allowClear = false,
   alreadyUsedDomains = [],
 }) => {
   const { data: domains = [] } = useQuery({
@@ -68,6 +70,7 @@ const SelectExperienceDomain: React.FC<Props> = ({
         placeholder={placeholder}
         onSelect={onSelect}
         onChange={onChange}
+        allowClear={allowClear}
         options={selectableDomains.map((domain) => ({ value: domain, label: domain }))}
       />
     </Tooltip>

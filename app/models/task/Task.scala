@@ -24,7 +24,7 @@ case class Task(
     _project: ObjectId,
     _script: Option[ObjectId],
     _taskType: ObjectId,
-    neededExperience: Experience,
+    neededExperience: Option[Experience], // None if any member of the project's team may get the task
     totalInstances: Long,
     pendingInstances: Long,
     tracingTime: Option[Long],
@@ -54,7 +54,7 @@ class TaskDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
       ObjectId(r._project),
       r._script.map(ObjectId(_)),
       ObjectId(r._tasktype),
-      Experience(r.neededexperience_domain, r.neededexperience_value),
+      r.neededexperience_domain.zip(r.neededexperience_value).map(Experience(_, _)),
       r.totalinstances,
       r.pendinginstances,
       r.tracingtime,
@@ -114,11 +114,6 @@ class TaskDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     q"""
           SELECT ${columnsWithPrefix("webknossos.tasks_.")}
           FROM webknossos.tasks_
-          JOIN (
-            SELECT domain, value
-            FROM webknossos.user_experiences
-            WHERE _user = $userId
-          ) AS user_experiences ON webknossos.tasks_.neededExperience_domain = user_experiences.domain AND webknossos.tasks_.neededExperience_value <= user_experiences.value
           JOIN webknossos.projects_ ON webknossos.tasks_._project = webknossos.projects_._id
           LEFT JOIN (
             SELECT _task
@@ -131,6 +126,16 @@ class TaskDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
             )
           ) AS userAnnotations ON webknossos.tasks_._id = userAnnotations._task
           WHERE webknossos.tasks_.pendingInstances > 0
+          AND (
+            webknossos.tasks_.neededExperience_domain IS NULL
+            OR EXISTS (
+              SELECT 1
+              FROM webknossos.user_experiences ue
+              WHERE ue._user = $userId
+              AND ue.domain = webknossos.tasks_.neededExperience_domain
+              AND ue.value >= webknossos.tasks_.neededExperience_value
+            )
+          )
           AND webknossos.projects_._team IN ${SqlToken.tupleFromList(teamIds)}
           AND userAnnotations._task IS NULL
           AND NOT webknossos.projects_.paused
@@ -302,7 +307,7 @@ class TaskDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
                                          editPosition, editRotation, creationInfo,
                                          created, isDeleted)
                    VALUES(${t._id}, ${t._project}, ${t._script}, ${t._taskType},
-                          ${t.neededExperience.domain}, ${t.neededExperience.value},
+                          ${t.neededExperience.map(_.domain)}, ${t.neededExperience.map(_.value)},
                           ${t.totalInstances}, ${t.totalInstances}, ${t.tracingTime}, ${t.boundingBox},
                           ${t.editPosition}, ${t.editRotation}, ${t.creationInfo},
                           ${t.created}, ${t.isDeleted})

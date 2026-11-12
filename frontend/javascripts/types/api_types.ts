@@ -338,6 +338,10 @@ export type APITeamMembership = {
 };
 export type ExperienceMap = Readonly<Record<string, number>>;
 export type ExperienceDomainList = Array<string>;
+export type TaskExperience = {
+  readonly domain: string;
+  readonly value: number;
+};
 
 export type APIUserCompact = {
   readonly firstName: string;
@@ -511,10 +515,8 @@ export type APITask = {
   readonly editPosition: Vector3;
   readonly editRotation: Vector3;
   readonly id: string;
-  readonly neededExperience: {
-    readonly domain: string;
-    readonly value: number;
-  };
+  // null if any member of the project's team may get the task
+  readonly neededExperience: TaskExperience | null | undefined;
   readonly projectName: string;
   readonly projectId: string;
   readonly script: APIScript | null | undefined;

@@ -1,12 +1,23 @@
-import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
+import {
+  AppstoreOutlined,
+  CopyOutlined,
+  DatabaseOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
+import AlignmentProjectUploadView from "admin/alignment_project/alignment_project_upload_view";
 
 import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
+import { useBlockNavigationDuringUploads } from "admin/dataset/upload/use_resumable_upload";
 import { getDatastores } from "admin/rest_api";
 import { Flex, Layout, Tabs, type TabsProps } from "antd";
+import features from "features";
 import { useFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
+import { isUserAdminOrDatasetManager } from "libs/utils";
 
 import React, { useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 import type { APIDataStore } from "types/api_types";
 import VoxelyticsBanner from "./components/voxelytics_banner";
 import DatasetAddComposeView from "./dataset_add_compose_view";
@@ -16,8 +27,17 @@ import type { UploadStatus } from "./upload/use_resumable_dataset_upload";
 
 const { Content } = Layout;
 
+// Not part of DatasetAddType, because this tab creates an alignment project, not a dataset.
+const ALIGNMENT_PROJECT_TAB_KEY = "alignmentProject";
+
 function DatasetAddView() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  useBlockNavigationDuringUploads();
   const datastores = useFetch<APIDataStore[]>(getDatastores, [], []);
+  const canUseAlignmentProjects = useWkSelector(
+    (state) => features().jobsEnabled && isUserAdminOrDatasetManager(state.activeUser),
+  );
   // Uploads show their own modal, so this is only used for remote and composed datasets.
   const [addedDatasetStatus, setAddedDatasetStatus] = useState<UploadStatus>({ kind: "idle" });
   const [datasetAddType, setDatasetAddType] = useState<DatasetAddType>(DatasetAddType.REMOTE);
@@ -41,13 +61,6 @@ function DatasetAddView() {
     if (datasetAddType === DatasetAddType.UPLOAD) return;
     setViewKeys((keys) => ({ ...keys, [datasetAddType]: keys[datasetAddType] + 1 }));
   };
-
-  const defaultActiveTabFromHash = location.hash.substring(1);
-  const defaultActiveKey = Object.values(DatasetAddType).includes(
-    defaultActiveTabFromHash as DatasetAddType,
-  )
-    ? (defaultActiveTabFromHash as DatasetAddType)
-    : DatasetAddType.UPLOAD;
 
   const tabs: TabsProps["items"] = [
     {
@@ -80,14 +93,31 @@ function DatasetAddView() {
         />
       ),
     },
+    ...(canUseAlignmentProjects
+      ? [
+          {
+            icon: <AppstoreOutlined />,
+            label: "Upload Files for Alignment Project",
+            key: ALIGNMENT_PROJECT_TAB_KEY,
+            children: <AlignmentProjectUploadView datastores={datastores} />,
+          },
+        ]
+      : []),
   ];
+
+  const activeTabFromHash = location.hash.substring(1);
+  const activeKey = tabs.some((tab) => tab.key === activeTabFromHash)
+    ? activeTabFromHash
+    : DatasetAddType.UPLOAD;
 
   return (
     <React.Fragment>
       <Layout style={{ minHeight: "100vh", backgroundColor: "var(--ant-layout-body-bg)" }}>
         <Content>
           <Tabs
-            defaultActiveKey={defaultActiveKey}
+            activeKey={activeKey}
+            // Keep the search params, e.g. the target folder.
+            onChange={(key) => navigate({ search: location.search, hash: key }, { replace: true })}
             className="container"
             // Show the banner within each tab's content, so that it lines up with the tab's card.
             items={tabs.map((tab) => ({

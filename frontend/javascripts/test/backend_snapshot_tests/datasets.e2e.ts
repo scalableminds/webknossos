@@ -1,5 +1,6 @@
 // biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
 import {
+  E2E_BASE_URL,
   replaceVolatileValues,
   resetDatabase,
   setUserAuthToken,
@@ -42,7 +43,7 @@ import { type APIDataset, APIJobCommand } from "types/api_types";
 import { UnitLong, type Vector3 } from "viewer/constants";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-const DATASTORE_URL = "http://localhost:9000";
+const DATASTORE_URL = E2E_BASE_URL;
 const ORGANIZATION_ID = "Organization_X";
 const ROOT_FOLDER_ID = "570b9f4e4bb848d0885ea917";
 
@@ -219,7 +220,7 @@ describe("Dataset API (E2E)", () => {
     // Reset database and change token
     resetDatabase();
     setUserAuthToken(tokenUserA);
-    await triggerDatasetCheck("http://localhost:9000");
+    await triggerDatasetCheck(E2E_BASE_URL);
   });
 
   it("getDatasets", async () => {

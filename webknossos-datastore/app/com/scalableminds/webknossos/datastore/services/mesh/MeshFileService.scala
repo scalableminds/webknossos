@@ -141,18 +141,28 @@ class MeshFileService @Inject() (
   def listMeshChunksForSegmentsMerged(
       meshFileKey: MeshFileKey,
       segmentIds: Seq[Long],
-      dataOrderMappingName: Option[String]
+      dataOrderMappingName: Option[String],
+      failOnZeroChunks: Boolean = true
   )(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[WebknossosSegmentInfo] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
-        zarrMeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds, dataOrderMappingName)
+        zarrMeshFileService.listMeshChunksForMultipleSegments(
+          meshFileKey,
+          segmentIds,
+          dataOrderMappingName,
+          failOnZeroChunks
+        )
       case LayerAttachmentDataformat.hdf5 =>
-        hdf5MeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
+        hdf5MeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds, failOnZeroChunks)
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>
-        neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
+        neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(
+          meshFileKey,
+          segmentIds,
+          failOnZeroChunks
+        )
       case _ => unsupportedDataFormat(meshFileKey)
     }
 

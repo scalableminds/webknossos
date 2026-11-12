@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
+  <!-- Placeholder compact logo of the fake dev partner. Replace with the real partner logo. -->
+  <rect x="1" y="1" width="28" height="28" rx="6" fill="#7c3aed"/>
+  <circle cx="15" cy="15" r="7" fill="none" stroke="#ffffff" stroke-width="2.5"/>
+  <circle cx="15" cy="15" r="2.5" fill="#ffffff"/>
+</svg>

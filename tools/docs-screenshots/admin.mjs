@@ -221,6 +221,8 @@ async function tasks(ctx) {
   await ctx.page
     .locator(".task-type-description")
     .getByText("Loading...", { exact: true })
+    // Several tasks can be loading at once; the first match detaches only once none remain.
+    .first()
     .waitFor({ state: "detached" });
   return content(ctx);
 }

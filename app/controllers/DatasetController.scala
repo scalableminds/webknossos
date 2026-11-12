@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
-import mail.{MailchimpClient, MailchimpTag}
+import mail.{AccessChangeEmailService, MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.dataset.*
 import models.dataset.explore.{
@@ -32,10 +32,10 @@ import models.dataset.explore.{
   WKExploreRemoteLayerService
 }
 import models.folder.FolderService
-import models.organization.OrganizationDAO
+import models.organization.{OrganizationDAO, PricingPlan}
 import models.storage.UsedStorageService
 import models.team.{TeamDAO, TeamService}
-import models.user.{NotificationEmailService, User, UserDAO, UserService}
+import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.*
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
@@ -160,7 +160,7 @@ class DatasetController @Inject() (
     teamDAO: TeamDAO,
     wKRemoteSegmentAnythingClient: WKRemoteSegmentAnythingClient,
     teamService: TeamService,
-    notificationEmailService: NotificationEmailService,
+    accessChangeEmailService: AccessChangeEmailService,
     datasetDAO: DatasetDAO,
     datasetLayerAttachmentsDAO: DatasetLayerAttachmentDAO,
     datasetUploadToPathsService: UploadToPathsService,
@@ -538,7 +538,7 @@ class DatasetController @Inject() (
         teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
         teamsWithUpdate = request.body.filter(t => userTeams.exists(_._id == t))
         newTeams = (teamsWithUpdate ++ teamsWithoutUpdate).distinct
-        _ <- notificationEmailService.updateDatasetTeamsAndSendEmails(
+        _ <- accessChangeEmailService.updateDatasetTeamsAndSendEmails(
           dataset,
           oldAllowedTeams,
           newTeams,
@@ -608,7 +608,7 @@ class DatasetController @Inject() (
             )
           case Empty =>
             for {
-              user <- request.identity.toFox ~> UNAUTHORIZED
+              user <- request.identity.toFox
               dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(using GlobalAccessContext)
               // Just checking if the user can switch to an organization to access the dataset.
               _ <- authenticationService.getOrganizationToSwitchTo(user, Some(dataset._id), None, None)
@@ -646,6 +646,10 @@ class DatasetController @Inject() (
         for {
           _ <- Fox.fromBool(conf.Features.segmentAnythingEnabled) ?~> Msg.SegmentAnything.notEnabled
           _ <- Fox.fromBool(conf.SegmentAnything.uri.nonEmpty) ?~> Msg.SegmentAnything.noUri
+          userOrganization <- organizationDAO.findOne(request.identity._organization)
+          _ <- Fox.fromBool(
+            PricingPlan.allowsJobs(userOrganization.pricingPlan)
+          ) ?~> Msg.SegmentAnything.notAvailableInPlan ~> FORBIDDEN
           dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
           usableDataSource <- datasetService.usableDataSourceFor(dataset)
           dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName).toFox ?~> Msg.Dataset.noLayers

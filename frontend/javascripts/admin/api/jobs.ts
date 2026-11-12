@@ -27,6 +27,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
 export async function getJobs(
   command?: string,
   skipForDeletedDatasets?: boolean,
+  options: { showErrorToast?: boolean; alignmentProjectId?: string } = {},
 ): Promise<APIJob[]> {
   const params = new URLSearchParams();
   if (command) {
@@ -35,8 +36,13 @@ export async function getJobs(
   if (skipForDeletedDatasets != null) {
     params.set("skipForDeletedDatasets", skipForDeletedDatasets ? "true" : "false");
   }
+  if (options.alignmentProjectId != null) {
+    params.set("alignmentProjectId", options.alignmentProjectId);
+  }
 
-  const jobs = await Request.receiveJSON(`/api/jobs?${params}`);
+  const jobs = await Request.receiveJSON(`/api/jobs?${params}`, {
+    showErrorToast: options.showErrorToast,
+  });
   assertResponseLimit(jobs);
   return jobs.map(transformBackendJobToAPIJob);
 }

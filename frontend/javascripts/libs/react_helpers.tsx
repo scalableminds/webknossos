@@ -5,7 +5,6 @@ import { useStore } from "react-redux";
 import type { ArbitraryFunction } from "types/type_utils";
 import type { WebknossosState } from "viewer/store";
 import { useWkSelector } from "./react_hooks";
-import Toast from "./toast";
 
 // From https://overreacted.io/making-setinterval-declarative-with-react-hooks/
 export function useInterval(
@@ -54,44 +53,6 @@ export function useFetch<T>(
     // biome-ignore lint/correctness/useExhaustiveDependencies: fetchFn is recomputed every time. Therefore, it is not included in the dependencies.
   }, dependencies);
   return value;
-}
-
-export function useGuardedFetch<T>(
-  fetchFn: () => Promise<T>,
-  defaultValue: T,
-  dependencies: Array<any>,
-  toastErrorMessage: string,
-): [T, boolean] {
-  /*
-   * Similar to useFetch, this hook loads something asynchronously and exposes that value.
-   * Additionally, if fetchFn should fail, toastErrorMessage is shown as a toast error.
-   * Also, the function returns a tuple consistent of:
-   * - the value T
-   * - an isLoading boolean
-   */
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [value, setValue] = useState<T>(defaultValue);
-
-  async function loadData() {
-    setIsLoading(true);
-    try {
-      const _value = await fetchFn();
-      setValue(_value);
-    } catch (err) {
-      console.error(err);
-      Toast.error(toastErrorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadData();
-    // biome-ignore lint/correctness/useExhaustiveDependencies: dynamic dependencies can not be inferred by biome
-  }, dependencies);
-
-  return [value, isLoading];
 }
 
 /*

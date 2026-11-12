@@ -186,6 +186,13 @@ async function waitForStableBox(page, locator, timeout = 5000) {
   }
 }
 
+// Playwright encodes JPEGs at quality 80 by default, which smears small UI text.
+const JPEG_QUALITY = 90;
+
+function imageEncoding(output) {
+  return /\.jpe?g$/i.test(output) ? { type: "jpeg", quality: JPEG_QUALITY } : { type: "png" };
+}
+
 export async function captureScreenshot(page, result, recipe) {
   if (await page.locator(".dark-theme").count())
     throw new Error("The page uses the dark theme; screenshots must be taken in light mode.");
@@ -193,7 +200,7 @@ export async function captureScreenshot(page, result, recipe) {
     await page.locator(".floating-buttons-bar").waitFor({ state: "hidden", timeout: 5000 });
   }
   const options = {
-    type: /\.jpe?g$/i.test(recipe.output) ? "jpeg" : "png",
+    ...imageEncoding(recipe.output),
     animations: "disabled",
     caret: "hide",
   };
@@ -441,7 +448,7 @@ export async function captureScreenshot(page, result, recipe) {
 // Render a generic browser frame in a separate page so it cannot affect app layout.
 export async function addBrowserFrame(page, bytes, output, baseUrl) {
   const frame = await page.context().newPage();
-  const type = /\.jpe?g$/i.test(output) ? "jpeg" : "png";
+  const encoding = imageEncoding(output);
   try {
     await frame.setContent(`<!doctype html><style>
       *{box-sizing:border-box}body{margin:0;background:#fff;font:13px Arial,sans-serif}
@@ -463,12 +470,12 @@ export async function addBrowserFrame(page, bytes, output, baseUrl) {
         return { width: Math.max(360, img.naturalWidth), height: img.naturalHeight + 72 };
       },
       {
-        data: `data:image/${type};base64,${Buffer.from(bytes).toString("base64")}`,
+        data: `data:image/${encoding.type};base64,${Buffer.from(bytes).toString("base64")}`,
         address: new URL(baseUrl).origin,
       },
     );
     await frame.setViewportSize(dimensions);
-    return await frame.screenshot({ type, animations: "disabled" });
+    return await frame.screenshot({ ...encoding, animations: "disabled" });
   } finally {
     await frame.close();
   }

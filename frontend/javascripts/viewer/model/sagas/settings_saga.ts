@@ -132,9 +132,15 @@ function* showUserSettingToast(action: UpdateUserSettingAction): Saga<void> {
 
 function* ensureValidToolkit(): Saga<void> {
   /*
-   * Default to the ALL_TOOLS toolkit if the annotation/dataset is read-only.
+   * Use the fixed toolkit of the viewer if it has one (see ViewerCapabilities). Otherwise,
+   * default to the ALL_TOOLS toolkit if the annotation/dataset is read-only.
    */
   yield* call(ensureWkInitialized);
+  const { fixedToolkit } = getViewerCapabilities();
+  if (fixedToolkit != null) {
+    yield* put(updateUserSettingAction("activeToolkit", fixedToolkit));
+    return;
+  }
   const isViewMode = yield* select(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );

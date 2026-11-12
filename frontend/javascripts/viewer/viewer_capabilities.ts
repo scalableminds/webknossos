@@ -1,4 +1,5 @@
 import once from "lodash-es/once";
+import { Toolkit } from "viewer/model/accessors/tool_accessor";
 import {
   isLayerRegistrationPrimaryWorker,
   isLayerRegistrationWorker,
@@ -12,7 +13,9 @@ export type ViewerCapabilities = {
   // The share button, the menu entries "Share", "Zarr Links" and "Duplicate", and "Copy to my
   // account" of sandboxes.
   showShareAndCopyActions: boolean;
-  showToolkitSwitch: boolean;
+  // Null if the user can switch between the toolkits. Otherwise, the viewer always uses this
+  // toolkit, and the tools outside of it are disabled, also for their shortcuts.
+  fixedToolkit: Toolkit | null;
   // Without flight mode, only the orthogonal mode is available, whatever the annotation allows.
   hasFlightMode: boolean;
   showRightBorder: boolean;
@@ -28,7 +31,7 @@ export type ViewerCapabilities = {
 const DEFAULT_CAPABILITIES: ViewerCapabilities = {
   shouldPersistSettings: true,
   showShareAndCopyActions: true,
-  showToolkitSwitch: true,
+  fixedToolkit: null,
   hasFlightMode: true,
   showRightBorder: true,
   showLayoutMenu: true,
@@ -48,7 +51,7 @@ const LAYER_REGISTRATION_PRIMARY_WORKER_CAPABILITIES: ViewerCapabilities = {
   // page. The page saves the landmarks, so copying the sandbox makes no sense either.
   showShareAndCopyActions: false,
   // The workers only offer the tools for placing landmarks.
-  showToolkitSwitch: false,
+  fixedToolkit: Toolkit.LANDMARKS,
   // Landmarks are placed in orthogonal mode only. Flight mode switches to all tools and creates
   // nodes without landmark names.
   hasFlightMode: false,

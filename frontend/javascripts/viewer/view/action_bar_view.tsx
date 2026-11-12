@@ -276,10 +276,10 @@ function ModesView() {
   const isOrthoMode = useWkSelector(
     (state) => state.temporaryConfiguration.viewMode === "orthogonal",
   );
-  const { showToolkitSwitch } = getViewerCapabilities();
+  const { fixedToolkit } = getViewerCapabilities();
 
   // The outer div is necessary for proper spacing.
-  return isViewMode || isReadOnly || !isOrthoMode || !showToolkitSwitch ? null : (
+  return isViewMode || isReadOnly || !isOrthoMode || fixedToolkit != null ? null : (
     <div>
       <Space.Compact>
         <ToolkitView />

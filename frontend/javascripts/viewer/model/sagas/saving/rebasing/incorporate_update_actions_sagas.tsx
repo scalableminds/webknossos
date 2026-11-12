@@ -453,12 +453,13 @@ export function* tryToIncorporateActions(
             addBookmarkAction({
               id,
               created,
-              name,
+              name: name ?? null,
               description: description ?? null,
               state,
               // Unsaved bookmarks of the user get their version once they are saved.
               createdAtVersion: areUnsavedChangesOfUser ? null : actionBatch.version,
-              metadata,
+              // Optional in the backend, e.g. for actions sent by other clients.
+              metadata: metadata ?? [],
               ...getIncorporatedBookmarkThumbnail(action.value),
             }),
           );

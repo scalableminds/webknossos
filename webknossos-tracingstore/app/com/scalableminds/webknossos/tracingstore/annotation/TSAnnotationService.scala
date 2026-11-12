@@ -1081,12 +1081,18 @@ class TSAnnotationService @Inject() (
       }
     }
 
-  private def duplicateBookmarks(annotationId: ObjectId, newAnnotationId: ObjectId, annotation: AnnotationProto)(
-      implicit ec: ExecutionContext
-  ): Fox[Unit] =
+  // Bookmark ids and versions are kept, only their references to the duplicated tracings change.
+  private def duplicateBookmarks(
+      annotationId: ObjectId,
+      newAnnotationId: ObjectId,
+      annotation: AnnotationProto,
+      tracingIdMap: Map[String, String]
+  )(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       bookmarks <- annotationBookmarkService.findBookmarks(annotationId, annotation.bookmarkIds, annotation.version)
-      _ <- annotationBookmarkService.saveBookmarks(newAnnotationId, annotation.version, bookmarks)
+      tracingRemapping = BookmarkTracingRemapping.forDuplicate(tracingIdMap)
+      remappedBookmarks = bookmarks.map(bookmark => bookmark.withState(tracingRemapping(bookmark.state)))
+      _ <- annotationBookmarkService.saveBookmarks(newAnnotationId, annotation.version, remappedBookmarks)
       _ <- annotationBookmarkService.duplicateThumbnails(annotationId, newAnnotationId, bookmarks)
     } yield ()
 
@@ -1130,7 +1136,7 @@ class TSAnnotationService @Inject() (
         earliestAccessibleVersion = v0Annotation.version
       )
 
-      _ <- duplicateBookmarks(annotationId, newAnnotationId, v0Annotation)
+      _ <- duplicateBookmarks(annotationId, newAnnotationId, v0Annotation, tracingIdMap)
       _ <- saveAnnotationProto(newAnnotationId, v0Annotation.version, v0DuplicatedAnnotation)
 
       // Duplicate current
@@ -1154,13 +1160,14 @@ class TSAnnotationService @Inject() (
               annotationLayers = newLayers,
               earliestAccessibleVersion = currentAnnotation.version
             )
-            _ <- duplicateBookmarks(annotationId, newAnnotationId, currentAnnotation)
+            _ <- duplicateBookmarks(annotationId, newAnnotationId, currentAnnotation, tracingIdMap)
             _ <- saveAnnotationProto(newAnnotationId, currentAnnotation.version, currentDuplicatedAnnotation)
           } yield currentDuplicatedAnnotation
         } else Fox.successful(v0DuplicatedAnnotation)
 
     } yield duplicatedAnnotation
 
+  // Only needed to merge editable mappings (replays their updates), so only actionTracingIds are remapped.
   private def duplicateUpdates(
       annotationId: ObjectId,
       newAnnotationId: ObjectId,

@@ -7,6 +7,7 @@ import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.AnnotationBookmark.{
   AnnotationBookmarkProto,
+  AnnotationBookmarkStateProto,
   BookmarkLayerStateProto,
   BookmarkMeshProto,
   UploadedAnnotationBookmarkProto
@@ -26,33 +27,18 @@ object BookmarkThumbnailSize extends ExtendedEnumeration {
   val large, small = Value
 }
 
-// How the ids of one source annotation map into a merged annotation.
-case class BookmarkMergeRemapping(
-    existingNodeIds: Set[Int],
-    nodeIdMap: Int => Int,
+// How the tracing references of bookmarks (annotation layer names, editable mapping names and segment ids) map
+// into another annotation. References to editable mappings that do not exist there are dropped.
+case class BookmarkTracingRemapping(
     tracingIdMap: Map[String, String], // all annotation layers of the source annotation
     segmentIdMapsByTracingId: Map[String, Map[Long, Long]],
-    editableMappingIdMap: Map[String, String] // only editable mappings that exist in the merged annotation
+    editableMappingIdMap: Map[String, String] // only editable mappings that exist in the target annotation
 ) {
-  // References to things that no longer exist in the merged annotation are dropped.
-  def apply(bookmark: AnnotationBookmarkProto, newId: Int): AnnotationBookmarkProto = {
-    val state = bookmark.state
-    val remappedLayers = state.layers.map(remapLayer)
-    // Several volume layers of one source annotation end up in the same merged layer.
-    val layers = remappedLayers.map(_.layerName).distinct.map { layerName =>
-      val sameNameLayers = remappedLayers.filter(_.layerName == layerName)
-      sameNameLayers.head.withMeshes(sameNameLayers.flatMap(_.meshes).distinctBy(_.segmentId))
-    }
-    bookmark
-      .withId(newId)
-      .withState(
-        state.copy(
-          activeNodeId = state.activeNodeId.filter(existingNodeIds.contains).map(nodeIdMap),
-          nativelyRenderedLayerName = state.nativelyRenderedLayerName.map(remapLayerName),
-          layers = layers
-        )
-      )
-  }
+  def apply(state: AnnotationBookmarkStateProto): AnnotationBookmarkStateProto =
+    state.copy(
+      nativelyRenderedLayerName = state.nativelyRenderedLayerName.map(remapLayerName),
+      layers = state.layers.map(remapLayer)
+    )
 
   private def remapLayerName(layerName: String): String = tracingIdMap.getOrElse(layerName, layerName)
 
@@ -74,6 +60,42 @@ case class BookmarkMergeRemapping(
       mapping = layer.mapping.flatMap(mapping => remapMappingName(mapping.mappingName).map(mapping.withMappingName)),
       meshes = layer.meshes.flatMap(remapMesh)
     )
+  }
+}
+
+object BookmarkTracingRemapping {
+  // A duplicated annotation has new tracingIds, and each editable mapping is duplicated with its volume layer.
+  def forDuplicate(tracingIdMap: Map[String, String]): BookmarkTracingRemapping =
+    BookmarkTracingRemapping(tracingIdMap, segmentIdMapsByTracingId = Map.empty, editableMappingIdMap = tracingIdMap)
+}
+
+// How the ids of one source annotation map into a merged annotation.
+case class BookmarkMergeRemapping(
+    existingNodeIds: Set[Int],
+    nodeIdMap: Int => Int,
+    tracingIdMap: Map[String, String], // all annotation layers of the source annotation
+    segmentIdMapsByTracingId: Map[String, Map[Long, Long]],
+    editableMappingIdMap: Map[String, String] // only editable mappings that exist in the merged annotation
+) {
+  private val tracingRemapping =
+    BookmarkTracingRemapping(tracingIdMap, segmentIdMapsByTracingId, editableMappingIdMap)
+
+  // References to things that no longer exist in the merged annotation are dropped.
+  def apply(bookmark: AnnotationBookmarkProto, newId: Int): AnnotationBookmarkProto = {
+    val state = tracingRemapping(bookmark.state)
+    // Several volume layers of one source annotation end up in the same merged layer.
+    val layers = state.layers.map(_.layerName).distinct.map { layerName =>
+      val sameNameLayers = state.layers.filter(_.layerName == layerName)
+      sameNameLayers.head.withMeshes(sameNameLayers.flatMap(_.meshes).distinctBy(_.segmentId))
+    }
+    bookmark
+      .withId(newId)
+      .withState(
+        state.copy(
+          activeNodeId = state.activeNodeId.filter(existingNodeIds.contains).map(nodeIdMap),
+          layers = layers
+        )
+      )
   }
 }
 

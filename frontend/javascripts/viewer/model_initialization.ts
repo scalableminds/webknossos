@@ -145,7 +145,16 @@ export async function initialize(
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
     if (initialMaybeCompoundType != null) {
-      annotation = await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType);
+      const compoundAnnotation = await getAnnotationCompoundInformation(
+        annotationId,
+        initialMaybeCompoundType,
+      );
+      // The tracing store keeps the merged bookmarks of the compound annotation.
+      const bookmarks = await getAnnotationBookmarks(
+        compoundAnnotation.tracingStore.url,
+        compoundAnnotation.id,
+      );
+      annotation = { ...compoundAnnotation, bookmarks };
     } else {
       const unversionedAnnotationResult = await getUnversionedAnnotationInformation(annotationId);
       if (!unversionedAnnotationResult.ok) {

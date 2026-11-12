@@ -101,7 +101,12 @@ function useBookmarkThumbnailSrc(
 
   useEffect(() => {
     // Unsaved thumbnails are not on the server yet.
-    if (localDataBase64 != null || thumbnailVersion == null) return;
+    if (localDataBase64 != null) return;
+    // E.g. after an undo that removed the thumbnail.
+    if (thumbnailVersion == null) {
+      setServerUrl(null);
+      return;
+    }
     let isCancelled = false;
     getBookmarkThumbnailUrl(tracingStoreUrl, annotationId, id, thumbnailVersion, size).then(
       (url) => {

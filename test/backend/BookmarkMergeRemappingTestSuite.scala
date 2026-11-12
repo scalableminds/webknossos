@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.AnnotationBookmark.{
   BookmarkMeshProto
 }
 import com.scalableminds.webknossos.datastore.geometry.{Vec3DoubleProto, Vec3IntProto}
-import com.scalableminds.webknossos.tracingstore.annotation.BookmarkMergeRemapping
+import com.scalableminds.webknossos.tracingstore.annotation.{BookmarkMergeRemapping, BookmarkTracingRemapping}
 import org.scalatest.wordspec.AnyWordSpec
 
 class BookmarkMergeRemappingTestSuite extends AnyWordSpec {
@@ -129,6 +129,36 @@ class BookmarkMergeRemappingTestSuite extends AnyWordSpec {
       val withoutEditableMapping = remapping(bookmark(layers = layers), 1)
       assert(withoutEditableMapping.state.layers.flatMap(_.mapping.map(_.mappingName)) == Seq("agglomerate_view_5"))
       assert(withoutEditableMapping.state.layers.head.meshes.map(_.segmentId) == Seq(6L))
+    }
+  }
+
+  "BookmarkTracingRemapping.forDuplicate" should {
+    "rename annotation layers and their editable mappings and keep everything else" in {
+      val remapping = BookmarkTracingRemapping.forDuplicate(Map("skeletonA" -> "newSkeleton", "volumeA" -> "newVolume"))
+      val original = bookmark(
+        activeNodeId = Some(3),
+        nativelyRenderedLayerName = Some("volumeA"),
+        layers = Seq(
+          BookmarkLayerStateProto(
+            "volumeA",
+            mapping = Some(BookmarkMappingProto("volumeA", MappingTypeProto.AGGLOMERATE)),
+            meshes = Seq(adHocMesh(5, Some("volumeA")), adHocMesh(6))
+          ),
+          BookmarkLayerStateProto(
+            "color",
+            mapping = Some(BookmarkMappingProto("agglomerate_view_5", MappingTypeProto.AGGLOMERATE))
+          )
+        )
+      )
+      val state = remapping(original.state)
+      assert(state.activeNodeId.contains(3))
+      assert(state.nativelyRenderedLayerName.contains("newVolume"))
+      assert(state.layers.map(_.layerName) == Seq("newVolume", "color"))
+      assert(state.layers.flatMap(_.mapping.map(_.mappingName)) == Seq("newVolume", "agglomerate_view_5"))
+      assert(
+        state.layers.head.meshes
+          .map(mesh => (mesh.segmentId, mesh.mappingName)) == Seq((5L, Some("newVolume")), (6L, None))
+      )
     }
   }
 }

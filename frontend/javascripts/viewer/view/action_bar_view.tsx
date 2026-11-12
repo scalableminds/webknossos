@@ -405,17 +405,19 @@ class ActionBarView extends PureComponent<Props, State> {
         isJobAvailable(dataset.dataStore, jobCommand, this.props.activeOrganization),
       );
 
-    const layoutMenu = getLayoutMenu({
-      ...layoutProps,
-      addNewLayout: () => {
-        this.setState({
-          isNewLayoutModalOpen: true,
-        });
-      },
-      onResetLayout: this.handleResetLayout,
-      onSelectLayout: layoutProps.setCurrentLayout,
-      onDeleteLayout: this.handleLayoutDeleted,
-    });
+    const layoutMenu = getViewerCapabilities().showLayoutMenu
+      ? getLayoutMenu({
+          ...layoutProps,
+          addNewLayout: () => {
+            this.setState({
+              isNewLayoutModalOpen: true,
+            });
+          },
+          onResetLayout: this.handleResetLayout,
+          onSelectLayout: layoutProps.setCurrentLayout,
+          onDeleteLayout: this.handleLayoutDeleted,
+        })
+      : null;
 
     const aiJobsUnsupportedReason = getAIJobsUnsupportedReason(dataset);
     const shouldDisableAIJobButton = !getIsAIAnalysisEnabled() || aiJobsUnsupportedReason != null;

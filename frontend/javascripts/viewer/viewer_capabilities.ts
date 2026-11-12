@@ -16,6 +16,8 @@ export type ViewerCapabilities = {
   // Without flight mode, only the orthogonal mode is available, whatever the annotation allows.
   hasFlightMode: boolean;
   showRightBorder: boolean;
+  // The menu entry to switch, add, delete and reset layouts.
+  showLayoutMenu: boolean;
   showCommandPalette: boolean;
   // The menus, the help button and the user avatar of the navbar.
   showNavbarMenus: boolean;
@@ -29,6 +31,7 @@ const DEFAULT_CAPABILITIES: ViewerCapabilities = {
   showToolkitSwitch: true,
   hasFlightMode: true,
   showRightBorder: true,
+  showLayoutMenu: true,
   showCommandPalette: true,
   showNavbarMenus: true,
   showDashboardLink: true,
@@ -51,6 +54,9 @@ const LAYER_REGISTRATION_PRIMARY_WORKER_CAPABILITIES: ViewerCapabilities = {
   hasFlightMode: false,
   // The tabs of the right border (e.g. the dataset info with its links) break the page.
   showRightBorder: false,
+  // The workers always start with the same layout (see getLayerRegistrationWorkerLayoutConfig),
+  // so switching or storing layouts has no effect.
+  showLayoutMenu: false,
   // The command palette can leave the page or undo the forced settings.
   showCommandPalette: false,
   // The workers keep the navbar because it contains the toolbar, but its menus lead away from

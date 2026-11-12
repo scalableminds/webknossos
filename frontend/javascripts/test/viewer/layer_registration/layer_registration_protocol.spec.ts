@@ -12,8 +12,13 @@ import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_a
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import Store from "viewer/store";
 import { getLandmarksFromTrees } from "viewer/view/layer_registration/helpers/layer_registration_helpers";
+import {
+  getLayerRegistrationWorkerLayerName,
+  getLayerRegistrationWorkerUrl,
+  isLayerRegistrationPrimaryWorker,
+} from "viewer/view/layer_registration/layer_registration_protocol";
 import type { IframeWindow } from "viewer/view/layer_registration/workspace/layer_registration_iframe_bridge";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const FIXED_SIDE_PATH = ["color_2", "color_1 landmarks"];
 const MOVING_SIDE_PATH = ["color_2", "color_2 landmarks"];
@@ -34,6 +39,19 @@ describe("Layer registration protocol", () => {
     });
     mockBuildInfoRequest(context);
     iframes = new FakeLayerRegistrationIframes();
+  });
+
+  afterEach(() => {
+    location.search = "";
+  });
+
+  it("passes layer names with special characters to the worker in its URL", () => {
+    const layerName = "color 2 & more+";
+    const url = getLayerRegistrationWorkerUrl(Store.getState().dataset, layerName, true);
+    location.search = new URL(url, location.origin).search;
+
+    expect(getLayerRegistrationWorkerLayerName()).toBe(layerName);
+    expect(isLayerRegistrationPrimaryWorker()).toBe(true);
   });
 
   it("holds back commands until the iframe sent init, because it would drop them", async () => {

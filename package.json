@@ -86,6 +86,7 @@
     "test-backend": "sbt --client \"testOnly backend.*\"",
     "test-backend-coverage": "yarn stash-cmake-cache && ./tools/docker-env.sh sbt --no-server -v 'coverageOn; testOnly backend.*; testOnly e2e.* -- -Ddatastore.watchFileSystem.enabled=false -DwebKnossos.sampleOrganization.enabled=false; coverageReport; util/coverageReport; webknossosDatastore/coverageReport; webknossosTracingstore/coverageReport; coverageOff' && yarn stash-pop-cmake-cache",
     "test-e2e": "vitest --config vitest_e2e.config.ts run --fileParallelism=false",
+    "test-e2e-rust": "python3 backend-rust/tools/e2e/run.py",
     "test-e2e-browser": "vitest --config vitest_collaboration.config.ts run",
     "test-screenshot": "vitest --config vitest_screenshot.config.ts run --testTimeout=300000 --hookTimeout=20000",
     "test-wkorg-screenshot": "vitest --config vitest_wkorg_screenshot.config.ts run --testTimeout=300000 --hookTimeout=20000",

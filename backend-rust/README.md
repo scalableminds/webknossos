@@ -111,7 +111,41 @@ make test-db
 
 Each database test creates a new `wk_rust_test_<uuid>` database, applies the repository's full schema there, seeds isolated fixtures, and drops only that generated database. The URL's database is never initialized or modified. The tests cover authorization, cross-organization access, soft-deleted records, concurrent creation, reference cleanup, inherited folder permissions, and forced failures proving transaction rollback. A test panic can leave its generated database for debugging.
 
-The Rust backend is independent of sbt and Yarn; no Scala/frontend source or build behavior is changed. Cargo.lock is included for reproducible dependency resolution.
+### Frontend e2e snapshot tests
+
+`yarn test-e2e-rust` runs the frontend backend-snapshot tests (`frontend/javascripts/test/backend_snapshot_tests/*.e2e.ts`) against Rust, like `test/e2e/End2EndSpec.scala` does against Play, using the same snapshots. Run it from the repository root. It needs PostgreSQL (admin URL with `CREATEDB`, default `postgres://postgres:postgres@127.0.0.1:5432/postgres`, override with `--postgres-url`), `redis-server`, JDK 21, sbt, Node ≥ 22 and `yarn install`.
+
+```sh
+yarn test-e2e-rust                      # builds Rust (release), stages the Scala stores if missing, runs all files
+yarn test-e2e-rust --no-build -- datasets    # vitest args after --
+yarn test-e2e-rust --datastore rust     # the Rust datastore instead of the Scala standalone one
+python3 backend-rust/tools/e2e/run.py --serve   # bring the stack up on :9010 and wait
+```
+
+`tools/e2e/run.py` creates the database `wk_e2e_rust` (schema + `test/db`, via `tools/postgres/dbtool.js`; the tests' `resetDatabase()` reloads it through `POSTGRES_URL`) and starts Rust (:9011), the Scala standalone datastore (:9012) and tracingstore (:9013), Redis (:9015) and FossilDB (:7156, temporary data). A reverse proxy on :9010 (`E2E_BASE_URL`, the store URL in `test/db`) sends `/data/*` and `/tracings/*` to the stores and the rest to Rust, standing in for Play's embedded stores. None of the ports clash with the dev setup. Snapshots are never written (`CI=true`). Afterwards everything is stopped and the database dropped (`--keep` keeps it). Logs, including the proxy's access log, are in `target/e2e-rust/logs/`.
+
+Current result (2026-11-12): 87 of 114 tests pass. 24 fail because of the open policy decision on invalid credentials on user-aware routes ([CUTOVER.md](CUTOVER.md) §1): a test that reads a public annotation/dataset with `invalidToken` gets 401 instead of an anonymous 200, aborts before restoring the valid token, and every later test in that file fails with 401. With Play's anonymous fallback patched in, 111 pass with either datastore. The remaining 3 (`getVoxelyticsWorkflow()` reports) differ only in the order of the `tasks` array: Play groups with a Scala `groupBy` and returns more than four tasks in hash order, Rust returns them by task name (a declared harness-ignore in checkpoints/cutover.md). Sorting the tasks in the test's `withStableTaskRunOrder` would make the order backend-independent but needs a snapshot refresh from Play.
+
+<details><summary>CI job proposal (not wired in)</summary>
+
+A job next to `rust-backend` in `.github/workflows/rust.yml` with the same `postgres` service, checkout and Cargo cache (the runner starts its own Redis and FossilDB):
+
+```yaml
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: "21", cache: sbt }
+      - uses: sbt/setup-sbt@v1
+      - uses: actions/setup-node@v7
+        with: { node-version: 22, cache: yarn }
+      - run: sudo apt-get install -y redis-server && yarn install --immutable
+      - name: Frontend e2e snapshot tests against Rust
+        working-directory: .
+        run: yarn test-e2e-rust
+```
+
+Until the invalid-credential decision is made the job fails, so it would start as `continue-on-error: true` or with the affected files excluded.
+</details>
+
+The Rust backend itself is independent of sbt and Yarn (only the e2e runner above uses them); no Scala/frontend source or build behavior is changed. Cargo.lock is included for reproducible dependency resolution.
 
 ## Architecture and compatibility boundaries
 

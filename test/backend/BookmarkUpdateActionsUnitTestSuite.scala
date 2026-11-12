@@ -1,6 +1,10 @@
 package backend
 
-import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkStateProto.ViewModeProto
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto.ThumbnailViewportProto
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkStateProto.{
+  MappingTypeProto,
+  ViewModeProto
+}
 import com.scalableminds.webknossos.datastore.AnnotationBookmark.{AnnotationBookmarkProto, AnnotationBookmarkStateProto}
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.geometry.{Vec3DoubleProto, Vec3IntProto}
@@ -8,12 +12,14 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.tracingstore.annotation.{
   AddBookmarkAnnotationAction,
   AnnotationBookmarkState,
+  BookmarkViewMode,
   UpdateBookmarkStateAnnotationAction,
   UpdateBookmarkThumbnailAnnotationAction,
   UpdateMetadataOfBookmarkAnnotationAction
 }
 import com.scalableminds.webknossos.tracingstore.tracings.MetadataEntry
 import org.scalatest.wordspec.AnyWordSpec
+import play.api.libs.json.Json
 
 class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
 
@@ -59,7 +65,7 @@ class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
     "replace the state, keeping everything else" in {
       val newState = AnnotationBookmarkState(
         position = Vec3Int(1, 2, 3),
-        mode = ViewModeProto.flight,
+        mode = BookmarkViewMode.flight,
         zoomStep = 2.0,
         rotation = Vec3Double(0, 0, 90),
         activeNodeId = None,
@@ -116,7 +122,7 @@ class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
         description = None,
         state = AnnotationBookmarkState(
           position = Vec3Int(0, 0, 0),
-          mode = ViewModeProto.orthogonal,
+          mode = BookmarkViewMode.orthogonal,
           zoomStep = 1.0,
           rotation = Vec3Double(0, 0, 0),
           activeNodeId = None,
@@ -135,6 +141,31 @@ class BookmarkUpdateActionsUnitTestSuite extends AnyWordSpec {
       assert(action.copy(createdAtVersion = 8L).thumbnailVersionError(saveVersion = 9L).isDefined)
       assert(action.toProto.createdAtVersion == 9L)
       assert(action.toProto.thumbnailVersion.isEmpty)
+    }
+  }
+
+  "The JSON format of bookmark enums" should {
+    "read the proto value names" in {
+      val state = Json
+        .parse("""{
+          "position": [0, 0, 0], "mode": "flight", "zoomStep": 1, "rotation": [0, 0, 0],
+          "clippingDistance": 50, "clipSkeletonToCurrentSection": false,
+          "layers": [{
+            "layerName": "segmentation",
+            "mapping": {"mappingName": "agglomerate_view_5", "mappingType": "AGGLOMERATE"},
+            "meshes": [{"segmentId": 5, "seedPosition": [0, 0, 0], "isPrecomputed": false, "mappingType": "JSON"}]
+          }]
+        }""")
+        .as[AnnotationBookmarkState]
+        .toProto
+      assert(state.mode == ViewModeProto.flight)
+      assert(state.layers.head.mapping.map(_.mappingType).contains(MappingTypeProto.AGGLOMERATE))
+      assert(state.layers.head.meshes.head.mappingType.contains(MappingTypeProto.JSON))
+
+      val thumbnailAction = Json
+        .parse("""{"id": 1, "thumbnailVersion": 3, "thumbnailViewport": "TD"}""")
+        .as[UpdateBookmarkThumbnailAnnotationAction]
+      assert(thumbnailAction.applyOn(bookmark).thumbnailViewport.contains(ThumbnailViewportProto.TD))
     }
   }
 }

@@ -632,8 +632,6 @@ class AnnotationIOController @Inject() (
         NmlBookmarkToWrite(bookmark, thumbnailsByBookmarkId.getOrElse(bookmark.id, Map.empty))
       )
 
-    // All annotations are downloaded as zip, which contains the NML and, if present, the volume data and the
-    // bookmark thumbnails.
     def annotationToTemporaryFile(
         dataset: Dataset,
         annotation: Annotation,

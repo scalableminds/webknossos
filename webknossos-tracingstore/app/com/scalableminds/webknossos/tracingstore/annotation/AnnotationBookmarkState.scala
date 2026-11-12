@@ -9,33 +9,11 @@ import com.scalableminds.webknossos.datastore.AnnotationBookmark.{
   BookmarkMeshProto,
   BookmarkTdCameraProto
 }
-import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto.ThumbnailViewportProto
-import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkStateProto.{
-  MappingTypeProto,
-  ViewModeProto
-}
 import com.scalableminds.webknossos.datastore.geometry.Vec2DoubleProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryConversions, UnsignedLong}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import play.api.libs.json.{Format, JsError, JsString, JsSuccess, Reads, Writes}
-import scalapb.{GeneratedEnum, GeneratedEnumCompanion}
-
-private def protoEnumFormat[E <: GeneratedEnum](companion: GeneratedEnumCompanion[E]): Format[E] =
-  Format(
-    Reads {
-      case JsString(name) =>
-        companion
-          .fromName(name)
-          .map(JsSuccess(_))
-          .getOrElse(JsError(s"Invalid ${companion.scalaDescriptor.name}: $name"))
-      case _ => JsError(s"Expected string for ${companion.scalaDescriptor.name}")
-    },
-    Writes(value => JsString(value.name))
-  )
-
-given Format[ViewModeProto] = protoEnumFormat(ViewModeProto)
-given Format[MappingTypeProto] = protoEnumFormat(MappingTypeProto)
-given Format[ThumbnailViewportProto] = protoEnumFormat(ThumbnailViewportProto)
+import com.scalableminds.webknossos.tracingstore.annotation.BookmarkMappingType.BookmarkMappingType
+import com.scalableminds.webknossos.tracingstore.annotation.BookmarkViewMode.BookmarkViewMode
 
 case class BookmarkTdCamera(
     position: Vec3Double,
@@ -49,8 +27,8 @@ case class BookmarkTdCamera(
     BookmarkTdCameraProto(vec3DoubleToProto(position), vec3DoubleToProto(up), left, right, top, bottom)
 }
 
-case class BookmarkMapping(mappingName: String, mappingType: MappingTypeProto) derives JsonAutoFormat {
-  def toProto: BookmarkMappingProto = BookmarkMappingProto(mappingName, mappingType)
+case class BookmarkMapping(mappingName: String, mappingType: BookmarkMappingType) derives JsonAutoFormat {
+  def toProto: BookmarkMappingProto = BookmarkMappingProto(mappingName, BookmarkMappingType.toProto(mappingType))
 }
 
 case class BookmarkMesh(
@@ -59,7 +37,7 @@ case class BookmarkMesh(
     isPrecomputed: Boolean,
     meshFileName: Option[String],
     mappingName: Option[String],
-    mappingType: Option[MappingTypeProto]
+    mappingType: Option[BookmarkMappingType]
 ) extends ProtoGeometryConversions derives JsonAutoFormat {
   def toProto: BookmarkMeshProto =
     BookmarkMeshProto(
@@ -68,7 +46,7 @@ case class BookmarkMesh(
       isPrecomputed = isPrecomputed,
       meshFileName = meshFileName,
       mappingName = mappingName,
-      mappingType = mappingType
+      mappingType = mappingType.map(BookmarkMappingType.toProto)
     )
 }
 
@@ -99,7 +77,7 @@ case class BookmarkLayerState(
 
 case class AnnotationBookmarkState(
     position: Vec3Int,
-    mode: ViewModeProto,
+    mode: BookmarkViewMode,
     zoomStep: Double,
     rotation: Vec3Double,
     activeNodeId: Option[Int],
@@ -114,7 +92,7 @@ case class AnnotationBookmarkState(
   def toProto: AnnotationBookmarkStateProto =
     AnnotationBookmarkStateProto(
       position = vec3IntToProto(position),
-      mode = mode,
+      mode = BookmarkViewMode.toProto(mode),
       zoomStep = zoomStep,
       rotation = vec3DoubleToProto(rotation),
       activeNodeId = activeNodeId,

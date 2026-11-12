@@ -3,7 +3,6 @@ use draco_core::{
     DataType, EncoderBuffer, EncoderOptions, FaceIndex, MeshEncoder, PointCloud, PointCloudEncoder,
     PointIndex,
 };
-use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 const IDENTITY: ([f32; 3], [f64; 3]) = ([0.0; 3], [1.0; 3]);
@@ -143,29 +142,90 @@ fn rejects_invalid_input() {
     }
 }
 
-/// The Draco meshes of the golden test corpus (real meshfile chunks and synthetic DracoPy meshes).
+/// A closed UV sphere (`rings` × `segments` quads around two poles) or, if `closed` is false, a height field grid
+/// of `rings` × `segments` quads, both with wavy positions so that the prediction schemes have something to do.
+fn wavy_mesh(rings: usize, segments: usize, closed: bool) -> Mesh {
+    let mut positions = Vec::new();
+    let mut faces = Vec::new();
+    if closed {
+        positions.push([0.0, 0.0, 50.0]);
+        for ring in 1..rings {
+            let theta = std::f32::consts::PI * ring as f32 / rings as f32;
+            for segment in 0..segments {
+                let phi = std::f32::consts::TAU * segment as f32 / segments as f32;
+                let radius = 50.0 + 4.0 * (3.0 * phi).sin() * (2.0 * theta).cos();
+                positions.push([
+                    radius * theta.sin() * phi.cos() + 1000.0,
+                    radius * theta.sin() * phi.sin() - 300.0,
+                    radius * theta.cos(),
+                ]);
+            }
+        }
+        positions.push([0.0, 0.0, -50.0]);
+        let last = positions.len() - 1;
+        let at = |ring: usize, segment: usize| 1 + (ring - 1) * segments + segment % segments;
+        for segment in 0..segments {
+            faces.push([0, at(1, segment), at(1, segment + 1)]);
+            faces.push([last, at(rings - 1, segment + 1), at(rings - 1, segment)]);
+            for ring in 1..rings - 1 {
+                let (a, b) = (at(ring, segment), at(ring, segment + 1));
+                let (c, d) = (at(ring + 1, segment), at(ring + 1, segment + 1));
+                faces.push([a, c, b]);
+                faces.push([b, c, d]);
+            }
+        }
+    } else {
+        let at = |row: usize, column: usize| row * (segments + 1) + column;
+        for row in 0..=rings {
+            for column in 0..=segments {
+                let (x, y) = (row as f32 * 2.5, column as f32 * 2.5);
+                positions.push([x, y, 10.0 * (x / 7.0).sin() * (y / 5.0).cos()]);
+            }
+        }
+        for row in 0..rings {
+            for column in 0..segments {
+                let (a, b) = (at(row, column), at(row, column + 1));
+                let (c, d) = (at(row + 1, column), at(row + 1, column + 1));
+                faces.push([a, c, b]);
+                faces.push([b, c, d]);
+            }
+        }
+    }
+    let mut mesh = Mesh::new();
+    mesh.add_attribute(attribute(GeometryAttributeType::Position, &positions));
+    mesh.set_num_faces(faces.len());
+    for (index, face) in faces.iter().enumerate() {
+        mesh.set_face(
+            FaceIndex(index as u32),
+            face.map(|point| PointIndex(point as u32)),
+        );
+    }
+    mesh
+}
+
+/// Edgebreaker-encoded meshes with quantized positions, at the quantizations and compression levels used for
+/// meshfiles.
 fn corpus() -> Vec<(String, Vec<u8>)> {
-    let directory = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../test/native-golden/draco");
-    let mut files: Vec<_> = std::fs::read_dir(&directory)
-        .unwrap_or_else(|error| panic!("cannot read {}: {error}", directory.display()))
-        .map(|entry| entry.unwrap().path())
-        .filter(|path| path.extension().is_some_and(|extension| extension == "drc"))
-        .collect();
-    files.sort();
-    assert!(
-        !files.is_empty(),
-        "no .drc files in {}",
-        directory.display()
-    );
-    files
-        .into_iter()
-        .map(|path| {
-            (
-                path.file_name().unwrap().to_string_lossy().into_owned(),
-                std::fs::read(&path).unwrap(),
-            )
-        })
-        .collect()
+    let mut corpus = Vec::new();
+    for (shape, rings, segments, closed) in [("sphere", 12, 20, true), ("grid", 9, 14, false)] {
+        for bits in [8, 11, 14, 16] {
+            for level in [0, 1, 7, 10] {
+                let mut options = EncoderOptions::new();
+                options.set_encoding_method(1); // MESH_EDGEBREAKER_ENCODING
+                options.set_attribute_quantization(0, bits);
+                options.set_compression_level(level);
+                let mut encoder = MeshEncoder::new();
+                encoder.set_mesh(wavy_mesh(rings, segments, closed));
+                let mut buffer = EncoderBuffer::new();
+                encoder.encode(&options, &mut buffer).unwrap();
+                corpus.push((
+                    format!("{shape}_q{bits}_level{level}"),
+                    buffer.data().to_vec(),
+                ));
+            }
+        }
+    }
+    corpus
 }
 
 #[test]

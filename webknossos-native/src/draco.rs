@@ -4,7 +4,7 @@
 //! The output reproduces the original C++ implementation (which used the Draco C++ library) bit for bit, see
 //! [draco_to_stl], as built without fused multiply-adds (x86_64). Built with clang on arm64, the C++ fused the
 //! multiply-adds of the cross product and the squared norm, so its normals differed in their last bits (at most
-//! ~1e-5 absolute, below 0.001° in direction, on the golden corpus).
+//! ~1e-5 absolute, below 0.001° in direction, on real meshfile chunks).
 //!
 //! The input is untrusted: malformed streams fail with an error.
 

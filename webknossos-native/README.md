@@ -23,8 +23,7 @@ sbt builds the crate with cargo (`sbt compile`, via sbt-jni) and packages it as 
    `src/bucket_scanner.rs`. The name encodes the fully qualified Scala class and method, so renaming or moving
    either side breaks the binding (an `UnsatisfiedLinkError` on the first call).
 3. Run `cargo test`, `cargo clippy --all-targets` and `cargo fmt` here, then
-   `sbt "testOnly backend.NativeGoldenTestSuite backend.BucketScannerTestSuite backend.CompressorTestSuite"`.
-   `NativeGoldenTestSuite` pins the results of all native functions, see `test/native-golden/README.md`.
+   `sbt "testOnly backend.BucketScannerTestSuite backend.CompressorTestSuite"`.
 
 The GitHub workflow `.github/workflows/webknossos_native.yml` runs the cargo checks and unit tests, but only for
-pushes that change this crate or `test/native-golden/`.
+pushes that change this crate.

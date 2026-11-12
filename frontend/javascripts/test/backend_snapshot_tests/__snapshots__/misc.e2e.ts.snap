@@ -52,7 +52,7 @@ exports[`Misc APIs (E2E)  > datastores() 1`] = `
     "jobsEnabled": false,
     "jobsSupportedByAvailableWorkers": [],
     "name": "localhost",
-    "url": "http://localhost:9000",
+    "url": "http://localhost:9010",
   },
 ]
 `;

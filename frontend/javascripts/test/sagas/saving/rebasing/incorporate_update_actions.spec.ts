@@ -72,6 +72,7 @@ import {
   updateVolumeBucketDataHasChanged,
   upsertSegmentGroupUpdateAction,
 } from "viewer/model/sagas/volume/update_actions";
+import { encodeBucketDiffBase64 } from "viewer/model/volumetracing/core/bucket_diff";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -121,6 +122,7 @@ const actionNamesHelper: Record<ServerUpdateAction["name"], true> = {
   deleteUserBoundingBoxInVolumeTracing: true,
   updateUserBoundingBoxInVolumeTracing: true,
   updateBucket: true,
+  updateBucketPartial: true,
   deleteSegmentData: true,
   mergeAgglomerate: true,
   splitAgglomerate: true,
@@ -565,6 +567,87 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
       await task.toPromise();
 
       expect(await api.data.getDataValue(volumeTracingLayerName, position)).toBe(newCellId);
+    });
+
+    /**
+     * Simulates incorporating an updateBucketPartial for a loaded bucket: it writes
+     * newCellId to the first three voxels of a bucket that is oldCellId locally. Afterwards,
+     * the backend answers bucket requests with newCellId everywhere, so the result shows
+     * whether the bucket got the runs applied (only the first voxels change) or was fetched
+     * again (all voxels change).
+     */
+    async function incorporatePartialUpdate(
+      context: WebknossosTestContext,
+      areUnsavedChangesOfUser: boolean,
+    ) {
+      const { api, mocks } = context;
+      const oldCellId = 11;
+      const newCellId = 2;
+      const position = [0, 0, 0] as Vector3;
+      const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
+
+      vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+        createBucketResponseFunction(layerNameToElementClass, oldCellId, 5),
+      );
+      await api.data.reloadAllBuckets();
+
+      // Another user wrote newCellId to the first three voxels of the bucket's first row.
+      const voxelRunsBase64 = encodeBucketDiffBase64({
+        address: [0, 0, 0, 0, null],
+        runs: [{ start: 0, length: 3, value: BigInt(newCellId) }],
+      });
+      const task = startSaga(function* () {
+        expect(yield call(() => api.data.getDataValue(volumeTracingLayerName, position))).toBe(
+          oldCellId,
+        );
+        // The backend has the change folded in. As a stand-in, it answers every request with
+        // newCellId, so that a re-fetched bucket shows newCellId everywhere.
+        vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+          createBucketResponseFunction(layerNameToElementClass, newCellId, 5),
+        );
+        yield* incorporateActionsEffect(
+          [
+            {
+              name: "updateBucketPartial" as const,
+              value: {
+                actionTracingId: volumeTracingLayerName,
+                position,
+                additionalCoordinates: undefined,
+                mag: [1, 1, 1] as Vector3,
+                voxelRunsBase64,
+              },
+            },
+          ],
+          1,
+          areUnsavedChangesOfUser,
+        );
+      });
+      await task.toPromise();
+      return {
+        changedVoxel: await api.data.getDataValue(volumeTracingLayerName, [2, 0, 0]),
+        unchangedVoxel: await api.data.getDataValue(volumeTracingLayerName, [3, 0, 0]),
+        oldCellId,
+        newCellId,
+      };
+    }
+
+    it<WebknossosTestContext>("applies the runs of another user's updateBucketPartial to a loaded bucket", async (context) => {
+      const { changedVoxel, unchangedVoxel, oldCellId, newCellId } = await incorporatePartialUpdate(
+        context,
+        false,
+      );
+      expect(changedVoxel).toBe(newCellId);
+      // Not re-fetched: the rest of the bucket keeps its local data.
+      expect(unchangedVoxel).toBe(oldCellId);
+    });
+
+    it<WebknossosTestContext>("applies the runs of the user's own unsaved updateBucketPartial to a loaded bucket", async (context) => {
+      const { changedVoxel, unchangedVoxel, oldCellId, newCellId } = await incorporatePartialUpdate(
+        context,
+        true,
+      );
+      expect(changedVoxel).toBe(newCellId);
+      expect(unchangedVoxel).toBe(oldCellId);
     });
 
     it<WebknossosTestContext>("evicts and reloads the affected bucket for deleteSegmentData", async ({

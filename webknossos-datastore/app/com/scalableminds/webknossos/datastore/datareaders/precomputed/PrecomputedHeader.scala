@@ -75,12 +75,24 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(this)
 
   override def chunkShapeAtIndex(chunkIndex: Array[Long]): Array[Int] =
-    chunkIndexToNDimensionalBoundingBox(chunkIndex).map(dim => dim._2 - dim._1)
+    if (isInteriorChunk(chunkIndex)) chunkShape
+    else chunkIndexToNDimensionalBoundingBoxInArray(chunkIndex).map(dim => dim._2 - dim._1)
+
+  // Allocation-free check, since this is called on the hot read path.
+  private def isInteriorChunk(chunkIndex: Array[Long]): Boolean = {
+    var isInterior = true
+    var dim = 0
+    while (isInterior && dim < chunkIndex.length) {
+      isInterior = (chunkIndex(dim) + 1) * chunkShape(dim) <= precomputedScale.size(dim)
+      dim += 1
+    }
+    isInterior
+  }
 
   override def voxelOffset: Array[Int] = precomputedScale.voxel_offset.getOrElse(Array(0, 0, 0))
 
   // Neuroglancer precomputed chunk grids are bounded spatial voxel coordinates, so narrowing back to Int here is safe.
-  def chunkIndexToNDimensionalBoundingBox(chunkIndex: Array[Long]): Array[(Int, Int)] =
+  def chunkIndexToNDimensionalBoundingBoxInArray(chunkIndex: Array[Long]): Array[(Int, Int)] =
     chunkIndex.zipWithIndex.map { chunkIndexWithDim =>
       val (chunkIndexAtDim, dim) = chunkIndexWithDim
       val beginOffset = voxelOffset(dim) + chunkIndexAtDim * precomputedScale.primaryChunkShape(dim)

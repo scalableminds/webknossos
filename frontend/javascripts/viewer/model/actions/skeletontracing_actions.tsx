@@ -18,6 +18,9 @@ import type { ApplicableSkeletonServerUpdateAction } from "../sagas/volume/updat
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;
 export type DeleteNodeAction = ReturnType<typeof deleteNodeAction>;
+export type DeleteNodeAndReconnectNeighborsAction = ReturnType<
+  typeof deleteNodeAndReconnectNeighborsAction
+>;
 export type DeleteEdgeAction = ReturnType<typeof deleteEdgeAction>;
 type SetActiveNodeAction = ReturnType<typeof setActiveNodeAction>;
 type CenterActiveNodeAction = ReturnType<typeof centerActiveNodeAction>;
@@ -94,6 +97,7 @@ export type SkeletonTracingAction =
   | InitializeSkeletonTracingAction
   | CreateNodeAction
   | DeleteNodeAction
+  | DeleteNodeAndReconnectNeighborsAction
   | DeleteEdgeAction
   | SetActiveNodeAction
   | CenterActiveNodeAction
@@ -203,6 +207,7 @@ export const skeletonActionPolicies: Record<SkeletonTracingAction["type"], Skele
   // Mutations that are never allowed in concurrent collaboration mode.
   CREATE_NODE: { needsUpdatePermission: true, collab: "block" },
   DELETE_NODE: { needsUpdatePermission: true, collab: "block" },
+  DELETE_NODE_AND_RECONNECT_NEIGHBORS: { needsUpdatePermission: true, collab: "block" },
   SET_NODE_POSITION: { needsUpdatePermission: true, collab: "block" },
   CREATE_BRANCHPOINT: { needsUpdatePermission: true, collab: "block" },
   DELETE_BRANCHPOINT: { needsUpdatePermission: true, collab: "block" },
@@ -240,6 +245,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_ANNOTATION_WITH_TRACINGS",
   "CREATE_NODE",
   "DELETE_NODE",
+  "DELETE_NODE_AND_RECONNECT_NEIGHBORS",
   "DELETE_EDGE",
   "SET_ACTIVE_NODE",
   "SET_NODE_RADIUS",
@@ -326,6 +332,15 @@ export const deleteNodeAction = (
     nodeId,
     treeId,
     timestamp,
+  }) as const;
+
+// Deletes a node with exactly two neighbors and connects these neighbors with a new edge,
+// so that the tree is not split.
+export const deleteNodeAndReconnectNeighborsAction = (nodeId: number, treeId: number) =>
+  ({
+    type: "DELETE_NODE_AND_RECONNECT_NEIGHBORS",
+    nodeId,
+    treeId,
   }) as const;
 
 export const deleteEdgeAction = (

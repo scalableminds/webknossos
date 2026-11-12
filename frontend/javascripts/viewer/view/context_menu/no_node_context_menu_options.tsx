@@ -13,9 +13,8 @@ import {
 } from "viewer/controller/combinations/segmentation_handlers";
 import { handleCreateNodeFromGlobalPosition } from "viewer/controller/combinations/skeleton_handlers";
 import {
-  getSegmentIdForPosition,
-  getSegmentIdForPositionAsync,
-  getUnmappedSegmentIdForPosition,
+  getSegmentIdsAtPosition,
+  getSegmentIdsAtPositionAsync,
   handleFloodFillFromGlobalPosition,
 } from "viewer/controller/combinations/volume_handlers";
 import {
@@ -66,6 +65,8 @@ import { shortcutBuilder } from "./helpers";
 import { useMeshItems } from "./mesh_items";
 import { useMultiCutToolOptions } from "./min_cut_item";
 
+const NO_SEGMENT_ID = 0n;
+
 export function useNoNodeContextMenuOptions(
   contextInfo: ContextMenuInfo,
   segmentIdAtPosition: bigint,
@@ -109,8 +110,11 @@ export function useNoNodeContextMenuOptions(
   // proofreading (agglomerate) operations remain available.
   const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
 
-  const maybeUnmappedSegmentId =
-    globalPosition != null ? getUnmappedSegmentIdForPosition(globalPosition) : null;
+  // The segment id depends on live state that is not passed to the function (e.g., loaded
+  // buckets, visible layer). Reading it in a selector keeps it up to date.
+  const maybeUnmappedSegmentId = useWkSelector(() =>
+    globalPosition != null ? getSegmentIdsAtPosition(globalPosition).unmappedId : null,
+  );
 
   const boundingBoxActions = useBoundingBoxMenuOptions(contextInfo);
   const meshRelatedItems = useMeshItems(contextInfo);
@@ -121,13 +125,13 @@ export function useNoNodeContextMenuOptions(
 
   const segmentIdLabel =
     isProofreadingActive && maybeUnmappedSegmentId != null
-      ? `within Segment ${maybeUnmappedSegmentId}`
+      ? `within Segment ${segmentIdAtPosition}`
       : segmentIdAtPosition;
   const segmentOrSuperVoxel =
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
 
   const proofreadingMultiSplitToolActions = useMultiCutToolOptions(
-    maybeUnmappedSegmentId ?? 0n,
+    maybeUnmappedSegmentId ?? NO_SEGMENT_ID,
     segmentIdAtPosition,
     segmentOrSuperVoxel,
     segmentIdLabel,
@@ -171,11 +175,18 @@ export function useNoNodeContextMenuOptions(
       positionInLayerSpace == null
     )
       return;
-    const segmentId = await getSegmentIdForPositionAsync(globalPosition);
+    // Don't use the displayed segment id: the mesh file might require another mapping, which
+    // is activated before this function is called (see withMappingActivationConfirmation).
+    const { mappedId: segmentId } = await getSegmentIdsAtPositionAsync(
+      visibleSegmentationLayer.name,
+      globalPosition,
+    );
 
-    // Ensure that the segment ID is loaded, since a mapping might have been activated
-    // shortly before
-    if (segmentId === 0n) {
+    if (segmentId == null) {
+      Toast.info("Could not determine the segment id at the clicked position");
+      return;
+    }
+    if (segmentId === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -188,7 +199,7 @@ export function useNoNodeContextMenuOptions(
         currentMeshFile.name,
         undefined,
         undefined,
-        undefined,
+        visibleSegmentationLayer.name,
       ),
     );
   };
@@ -197,16 +208,15 @@ export function useNoNodeContextMenuOptions(
     if (!visibleSegmentationLayer || globalPosition == null) {
       return;
     }
-    const clickedSegmentId = getSegmentIdForPosition(globalPosition);
     const layerName = visibleSegmentationLayer.name;
-    if (clickedSegmentId === 0n) {
+    if (segmentIdAtPosition === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
     }
     // This action is dispatched because the behaviour is identical to a click on a segment.
     // Note that the updated position is where the segment was clicked to open the context menu.
     dispatch(
-      clickSegmentAction(clickedSegmentId, globalPosition, additionalCoordinates, layerName),
+      clickSegmentAction(segmentIdAtPosition, globalPosition, additionalCoordinates, layerName),
     );
     layoutEmitter.emit(LayoutEvents.showSegmentsTab);
   };
@@ -215,8 +225,7 @@ export function useNoNodeContextMenuOptions(
     if (!visibleSegmentationLayer || globalPosition == null) {
       return;
     }
-    const clickedSegmentId = getSegmentIdForPosition(globalPosition);
-    if (clickedSegmentId === 0n) {
+    if (segmentIdAtPosition === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -225,7 +234,7 @@ export function useNoNodeContextMenuOptions(
     dispatch(toggleAllSegmentsAction(visibleSegmentationLayer.name, false));
     dispatch(
       updateSegmentAction(
-        clickedSegmentId,
+        segmentIdAtPosition,
         {
           isVisible: true,
           anchorPosition: globalPosition,
@@ -251,15 +260,14 @@ export function useNoNodeContextMenuOptions(
     if (!visibleSegmentationLayer || globalPosition == null) {
       return;
     }
-    const clickedSegmentId = getSegmentIdForPosition(globalPosition);
-    if (clickedSegmentId === 0n) {
+    if (segmentIdAtPosition === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
     }
 
     const action = getUpdateSegmentActionToToggleVisibility(
       Store.getState(),
-      clickedSegmentId,
+      segmentIdAtPosition,
       globalPosition,
       additionalCoordinates,
     );
@@ -273,14 +281,12 @@ export function useNoNodeContextMenuOptions(
       return;
     }
 
-    const segmentId = getSegmentIdForPosition(globalPosition);
-
-    if (segmentId === 0n) {
+    if (segmentIdAtPosition === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
     }
 
-    dispatch(loadAdHocMeshAction(segmentId, positionInLayerSpace, additionalCoordinates));
+    dispatch(loadAdHocMeshAction(segmentIdAtPosition, positionInLayerSpace, additionalCoordinates));
   };
 
   const showAutomatedSegmentationServicesModal = (errorMessage: string, entity: string) =>
@@ -522,7 +528,7 @@ export function useNoNodeContextMenuOptions(
       ? [
           // Segment 0 cannot/shouldn't be made active (as this
           // would be an eraser effectively).
-          segmentIdAtPosition !== 0n && !disabledVolumeInfo.VOXEL_PIPETTE.isDisabled
+          segmentIdAtPosition !== NO_SEGMENT_ID && !disabledVolumeInfo.VOXEL_PIPETTE.isDisabled
             ? {
                 key: "select-cell",
                 onClick: () => {
@@ -544,9 +550,9 @@ export function useNoNodeContextMenuOptions(
                 ),
               }
             : null,
-          segmentIdAtPosition !== 0n ? onlyShowThisSegmentItem : null,
-          segmentIdAtPosition !== 0n ? toggleSegmentVisibilityItem : null,
-          segmentIdAtPosition !== 0n ? showAllSegmentsItem : null,
+          segmentIdAtPosition !== NO_SEGMENT_ID ? onlyShowThisSegmentItem : null,
+          segmentIdAtPosition !== NO_SEGMENT_ID ? toggleSegmentVisibilityItem : null,
+          segmentIdAtPosition !== NO_SEGMENT_ID ? showAllSegmentsItem : null,
           focusInSegmentListItem,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,

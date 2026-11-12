@@ -201,7 +201,7 @@ class DatasetUploadMetadataStore @Inject() (protected val store: DataStoreRedisS
 
   // Only here the uploadId is not key but value. This is used to re-connect to unfinished uploads.
   def insertUploadIdByDataSourceId(dataSourceId: DataSourceId, uploadId: String): Fox[Unit] =
-    store.insertSerialized(redisKeyForUploadIdByDataSourceId(dataSourceId), uploadId, Some(uploadIdleExpiry))
+    store.insert(redisKeyForUploadIdByDataSourceId(dataSourceId), uploadId, Some(uploadIdleExpiry))
 
   def insertLinkedLayerIdentifiers(
       uploadId: String,
@@ -323,6 +323,36 @@ class AttachmentUploadMetadataStore @Inject() (protected val store: DataStoreRed
       _ <- store.expire(redisKeyForAttachmentType(uploadId), uploadIdleExpiry)
       _ <- store.expire(redisKeyForAttachment(uploadId), uploadIdleExpiry)
       _ <- store.expire(redisKeyForLayerName(uploadId), uploadIdleExpiry)
+      _ <- super.refreshExpiry(uploadId)
+    } yield ()
+}
+
+// by alignment project id, not dataset id
+class AlignmentProjectUploadMetadataStore @Inject() (protected val store: DataStoreRedisStore)
+    extends UploadMetadataStore {
+  protected val domain: UploadDomain = UploadDomain.alignmentProject
+
+  private def redisKeyForUploadIdByAlignmentProjectId(alignmentProjectId: ObjectId): String =
+    s"${keyPrefix}___${alignmentProjectId}___alignmentProjectId"
+
+  // Here, the uploadId is the value. Used to cancel the upload when WEBKNOSSOS deletes the project.
+  def insertUploadIdByAlignmentProjectId(alignmentProjectId: ObjectId, uploadId: String): Fox[Unit] =
+    store.insert(redisKeyForUploadIdByAlignmentProjectId(alignmentProjectId), uploadId, Some(uploadIdleExpiry))
+
+  def findUploadIdByAlignmentProjectId(alignmentProjectId: ObjectId): Fox[String] =
+    store.find(redisKeyForUploadIdByAlignmentProjectId(alignmentProjectId))
+
+  override def cleanUp(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      alignmentProjectId <- findDatasetId(uploadId)
+      _ <- store.remove(redisKeyForUploadIdByAlignmentProjectId(alignmentProjectId))
+      _ <- super.cleanUp(uploadId)
+    } yield ()
+
+  override def refreshExpiry(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      alignmentProjectId <- findDatasetId(uploadId)
+      _ <- store.expire(redisKeyForUploadIdByAlignmentProjectId(alignmentProjectId), uploadIdleExpiry)
       _ <- super.refreshExpiry(uploadId)
     } yield ()
 }

@@ -12,6 +12,7 @@ import models.annotation.{AnnotationState, AnnotationType}
 import models.task.TaskDAO
 import models.team.TeamDAO
 import models.user.{User, UserService}
+import play.api.http.Status.{FORBIDDEN, NOT_FOUND}
 import play.api.libs.json.*
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
@@ -165,6 +166,21 @@ class ProjectService @Inject() (projectDAO: ProjectDAO, teamDAO: TeamDAO, userSe
       _ <- Fox.fromBool(name.length >= 3) ?~> Msg.Project.nameTooShort
       _ <- Fox.fromBool(name.matches("^[a-zA-Z0-9_-]*$")) ?~> Msg.Project.nameInvalidChars(name)
     } yield ()
+
+  def assertCanAdministrateAll(projectNames: Seq[String], organizationId: String, user: User)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] =
+    Fox
+      .serialCombined(projectNames.distinct)(projectName =>
+        for {
+          project <- projectDAO.findOneByNameAndOrganization(
+            projectName,
+            organizationId
+          ) ?~> Msg.Project.notFound(projectName) ~> NOT_FOUND
+          _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
+        } yield ()
+      )
+      .map(_ => ())
 
   def deleteOne(projectId: ObjectId)(using ctx: DBAccessContext): Fox[Boolean] =
     for {

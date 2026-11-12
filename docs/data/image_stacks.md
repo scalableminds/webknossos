@@ -44,7 +44,6 @@ WEBKNOSSOS understands most modern bio-imaging file formats and uses the [BioFor
 - PNG
 - JPEG
 - czi
-- nifti
 - raw
 - DM3
 - DM4

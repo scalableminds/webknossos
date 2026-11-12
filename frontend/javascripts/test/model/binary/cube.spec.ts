@@ -32,6 +32,16 @@ vi.mock("viewer/model/sagas/root_saga", () => ({
 
 vi.mock("app", () => ({}));
 
+// Labels a single voxel in mag 1. Loads the bucket first if necessary.
+async function labelVoxel(cube: DataCube, voxel: Vector3, label: number): Promise<void> {
+  const bucket = cube.getOrCreateBucket(cube.positionToZoomedAddress(voxel, null, 0));
+  assertNonNullBucket(bucket);
+  const data = await bucket.getDataForMutation();
+  bucket.startDataMutationForFullBucket();
+  data[cube.getVoxelIndex(voxel, 0)] = label;
+  bucket.endDataMutationForFullBucket();
+}
+
 describe("DataCube", () => {
   // Define test context
   interface TestContext {
@@ -67,6 +77,7 @@ describe("DataCube", () => {
       "uint32",
       false,
       "layerName",
+      1,
     );
 
     class PullQueueMock {
@@ -207,7 +218,7 @@ describe("DataCube", () => {
     cube,
     pullQueue,
   }) => {
-    cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 42, 0, null);
+    labelVoxel(cube, [1, 1, 1], 42);
 
     await sleep(100);
     expect(pullQueue.processedQueue[0]).toEqual({
@@ -220,7 +231,7 @@ describe("DataCube", () => {
     cube,
     pushQueue,
   }) => {
-    await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 42, 0, null);
+    await labelVoxel(cube, [1, 1, 1], 42);
     const bucket = cube.getBucket([0, 0, 0, 0, []]);
 
     expect(pushQueue.insert).toHaveBeenCalledWith(bucket);
@@ -234,7 +245,7 @@ describe("DataCube", () => {
     assertNonNullBucket(bucket);
     bucket.markAsRequested();
     bucket.receiveData(new Uint8Array(4 * 32 ** 3));
-    await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0, null);
+    await labelVoxel(cube, [0, 0, 0], 42);
 
     expect(pushQueue.insert).toHaveBeenCalledWith(bucket);
   });
@@ -258,9 +269,9 @@ describe("DataCube", () => {
     cube,
   }) => {
     // Creates bucket
-    await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0, null);
+    await labelVoxel(cube, [0, 0, 0], 42);
     // Uses existing bucket
-    await cube._labelVoxelInResolution_DEPRECATED([1, 0, 0], null, 43, 0, null);
+    await labelVoxel(cube, [1, 0, 0], 43);
     const data = cube.getBucket([0, 0, 0, 0, []]).getData();
     expect(data[0]).toBe(42);
     expect(data[1]).toBe(43);
@@ -270,15 +281,15 @@ describe("DataCube", () => {
     cube,
   }) => {
     const value = 1 * (1 << 16) + 2 * (1 << 8) + 3;
-    await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, value, 0, null);
+    await labelVoxel(cube, [0, 0, 0], value);
     expect(cube.getDataValue([0, 0, 0], null, null)).toBe(value);
   });
 
   it<TestContext>("getDataValue() should return the mapping value if available", async ({
     cube,
   }) => {
-    await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0, null);
-    await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 43, 0, null);
+    await labelVoxel(cube, [0, 0, 0], 42);
+    await labelVoxel(cube, [1, 1, 1], 43);
     const mapping = new Map();
     mapping.set(42, 1);
     expect(cube.getDataValue([0, 0, 0], null, mapping)).toBe(1);
@@ -450,6 +461,7 @@ describe.skip("DataCube Benchmark", () => {
       "uint32",
       false,
       "layerName",
+      1,
     );
 
     console.time("outside");

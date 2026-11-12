@@ -110,8 +110,9 @@ object AssetCompilation {
 
       // Records the last schema update (written by dbtool.js)
       val schemaRefreshedStampFile = baseDirectoryValue / "schema" / "refreshStamp" / "stamp"
-      // Records the last successful generation.
+      // Records the last successful generation, and the hash of the schema.sql it was generated for.
       val codeGenStampFile = sourceManagedValue / "slick-schema-codegen.stamp"
+      val schemaHash = sbt.io.Hash.toHex(sbt.io.Hash(baseDirectoryValue / "schema" / "schema.sql"))
 
       val schemaOutDir = sourceManagedValue / "schema"
       val slickTablesOutPath = schemaOutDir / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
@@ -119,7 +120,11 @@ object AssetCompilation {
       // The generator reads the live DB; We check a stamp file written bei dbtool.js to decide whether to re-generate.
       // This only gates whether we connect to the DB at all, the generator itself rewrites only the table files
       // whose content actually changed.
-      val shouldUpdate = !slickTablesOutPath.exists || !codeGenStampFile.exists || codeGenStampFile.lastModified < schemaRefreshedStampFile.lastModified
+      // The schema.sql hash catches generated files that were restored from a build for another schema, e.g., from
+      // the CI cache of an earlier commit. There, no refresh stamp exists, so its time alone would never trigger.
+      val shouldUpdate = !slickTablesOutPath.exists || !codeGenStampFile.exists ||
+        codeGenStampFile.lastModified < schemaRefreshedStampFile.lastModified ||
+        IO.read(codeGenStampFile).trim != schemaHash
 
       if (shouldUpdate) {
         streamsValue.log.info(
@@ -151,7 +156,7 @@ object AssetCompilation {
         runResult.get
 
         // Mark this schema.sql state as generated so we do not re-run until the schema changes again.
-        IO.touch(codeGenStampFile)
+        IO.write(codeGenStampFile, schemaHash)
 
       } else {
         streamsValue.log.info("Slick SQL schema already up to date.")

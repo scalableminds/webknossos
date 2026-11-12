@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
@@ -14,14 +15,20 @@ import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.{
+  AlignmentProjectCsvReplacementInfo,
+  AlignmentProjectUploadAdditionalInfo,
+  AlignmentProjectUploadInfo,
   AttachmentUploadAdditionalInfo,
   AttachmentUploadInfo,
   DatasetUploadAdditionalInfo,
   DatasetUploadInfo,
   MagUploadAdditionalInfo,
   MagUploadInfo,
+  ReportAlignmentProjectCsvReplacementParameters,
+  ReportAlignmentProjectUploadParameters,
   ReportAttachmentUploadParameters,
   ReportDatasetUploadParameters,
+  ReportDatasetUploadResult,
   ReportMagUploadParameters
 }
 import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
@@ -95,12 +102,14 @@ class DSRemoteWebknossosClient @Inject() (
 
   def reportDatasetUpload(datasetId: ObjectId, parameters: ReportDatasetUploadParameters)(using
       tc: TokenContext
-  ): Fox[?] =
+  ): Fox[ReportDatasetUploadResult] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
       .addQueryParam("key", dataStoreKey)
       .addQueryParam("datasetId", datasetId)
       .withTokenFromContext
       .postJson[ReportDatasetUploadParameters](parameters)
+      // Older WEBKNOSSOS versions reply with an empty body.
+      .map(response => tryo(response.json.as[ReportDatasetUploadResult]).getOrElse(ReportDatasetUploadResult(None)))
 
   def reportMagUpload(parameters: ReportMagUploadParameters): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportMagUpload")
@@ -147,6 +156,33 @@ class DSRemoteWebknossosClient @Inject() (
       .addQueryParam("key", dataStoreKey)
       .withTokenFromContext
       .postJsonWithJsonResponse[AttachmentUploadInfo, AttachmentUploadAdditionalInfo](info)
+
+  def reserveAlignmentProjectUpload(
+      info: AlignmentProjectUploadInfo
+  )(using tc: TokenContext): Fox[AlignmentProjectUploadAdditionalInfo] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveAlignmentProjectUpload")
+      .addQueryParam("key", dataStoreKey)
+      .withTokenFromContext
+      .postJsonWithJsonResponse[AlignmentProjectUploadInfo, AlignmentProjectUploadAdditionalInfo](info)
+
+  def validateAlignmentProjectCsvReplacement(
+      alignmentProjectId: ObjectId
+  )(using tc: TokenContext): Fox[AlignmentProjectCsvReplacementInfo] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/validateAlignmentProjectCsvReplacement")
+      .addQueryParam("key", dataStoreKey)
+      .addQueryParam("alignmentProjectId", alignmentProjectId)
+      .withTokenFromContext
+      .postEmptyWithJsonResponse[AlignmentProjectCsvReplacementInfo]()
+
+  def reportAlignmentProjectCsvReplacement(parameters: ReportAlignmentProjectCsvReplacementParameters): Fox[?] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/updateAlignmentProjectCsv")
+      .addQueryParam("key", dataStoreKey)
+      .postJson[ReportAlignmentProjectCsvReplacementParameters](parameters)
+
+  def reportAlignmentProjectUpload(parameters: ReportAlignmentProjectUploadParameters): Fox[?] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportAlignmentProjectUpload")
+      .addQueryParam("key", dataStoreKey)
+      .postJson[ReportAlignmentProjectUploadParameters](parameters)
 
   def updateDataSource(dataSource: DataSource, datasetId: ObjectId)(using tc: TokenContext): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/${datasetId.toString}")

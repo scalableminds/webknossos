@@ -42,8 +42,7 @@ function Eyebrow({ children }: { children: string }) {
             fontSize: token.fontSizeSM,
             letterSpacing: "0.14em",
             textTransform: "uppercase",
-            // Mixing the cyan accent into the text color keeps it legible in light and dark mode.
-            color: `color-mix(in srgb, ${ColorWKBlueZircon} 40%, ${token.colorText})`,
+            color: token.colorText,
           }}
         >
           {children}

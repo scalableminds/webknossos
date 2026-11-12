@@ -1,3 +1,4 @@
+import { areJobsAllowedByPricingPlan } from "admin/organization/pricing_plan_utils";
 import features from "features";
 import { handleGenericError } from "libs/error_handling";
 import type { ModifierKeys, MouseBindingMap } from "libs/input";
@@ -47,8 +48,7 @@ import {
 } from "viewer/controller/combinations/skeleton_handlers";
 import {
   changeBrushSizeIfBrushIsActiveBy,
-  getSegmentIdForPosition,
-  getUnmappedSegmentIdForPosition,
+  getSegmentIdsAtPosition,
   handleDrawStart,
   handleEndForDrawOrErase,
   handleEraseStart,
@@ -1138,7 +1138,9 @@ export class QuickSelectToolController extends VolumeToolController {
         isDragging = false;
 
         const quickSelectConfig = state.userConfiguration.quickSelect;
-        const isAISelectAvailable = features().segmentAnythingEnabled;
+        const isAISelectAvailable =
+          features().segmentAnythingEnabled &&
+          areJobsAllowedByPricingPlan(state.activeOrganization);
         const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
 
         if (!isQuickSelectHeuristic) {
@@ -1421,8 +1423,8 @@ export class ProofreadToolController extends ToolController {
     const isMultiSplitActive = state.userConfiguration.isMultiSplitActive;
     const ctrlOrMetaKey = event.ctrlKey || event.metaKey;
     if (isMultiSplitActive && ctrlOrMetaKey) {
-      const unmappedSegmentId = getUnmappedSegmentIdForPosition(globalPosition);
-      const mappedSegmentId = getSegmentIdForPosition(globalPosition);
+      const { unmappedId: unmappedSegmentId, mappedId: mappedSegmentId } =
+        getSegmentIdsAtPosition(globalPosition);
       if (unmappedSegmentId === 0n || mappedSegmentId === 0n) {
         // No valid ids were found, ignore action.
         return;

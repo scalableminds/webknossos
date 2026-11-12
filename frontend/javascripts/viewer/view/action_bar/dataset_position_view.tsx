@@ -8,7 +8,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { Vector3Input } from "libs/vector_input";
 import message from "messages";
 import type React from "react";
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getDatasetExtentInVoxel } from "viewer/model/accessors/dataset_accessor";
@@ -21,14 +21,14 @@ import ButtonComponent from "viewer/view/components/button_component";
 import DatasetRotationPopoverButtonView from "./dataset_rotation_popover_view";
 
 const warningColors: React.CSSProperties = {
-  color: "rgb(255, 155, 85)",
-  borderColor: "rgb(241, 122, 39)",
+  color: "var(--ant-color-warning)",
+  borderColor: "var(--ant-color-warning)",
 };
-const iconErrorStyle: React.CSSProperties = { ...warningColors };
+const iconWarningStyle: React.CSSProperties = { ...warningColors };
 const positionInputDefaultStyle: React.CSSProperties = {
   textAlign: "center",
 };
-const positionInputErrorStyle: React.CSSProperties = {
+const positionInputWarningStyle: React.CSSProperties = {
   ...positionInputDefaultStyle,
   ...warningColors,
 };
@@ -38,7 +38,6 @@ function DatasetPositionView() {
   const dataset = useWkSelector((state) => state.dataset);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const task = useWkSelector((state) => state.task);
-  const maybeErrorMessageRef = useRef<string | null>(null);
   const dispatch = useDispatch();
 
   const copyPositionToClipboard = () => {
@@ -84,9 +83,11 @@ function DatasetPositionView() {
 
   const position = V3.floor(getPosition(flycam));
   const { isOutOfDatasetBounds, isOutOfTaskBounds } = isPositionOutOfBounds(position);
-  const iconColoringStyle = isOutOfDatasetBounds || isOutOfTaskBounds ? iconErrorStyle : {};
+  const iconColoringStyle = isOutOfDatasetBounds || isOutOfTaskBounds ? iconWarningStyle : {};
   const positionInputStyle =
-    isOutOfDatasetBounds || isOutOfTaskBounds ? positionInputErrorStyle : positionInputDefaultStyle;
+    isOutOfDatasetBounds || isOutOfTaskBounds
+      ? positionInputWarningStyle
+      : positionInputDefaultStyle;
   let maybeErrorMessage = null;
 
   if (isOutOfDatasetBounds) {
@@ -94,10 +95,9 @@ function DatasetPositionView() {
   } else if (!maybeErrorMessage && isOutOfTaskBounds) {
     maybeErrorMessage = message["tracing.out_of_task_bounds"];
   }
-  maybeErrorMessageRef.current = maybeErrorMessage;
 
-  const getPositionTooltipContent = useCallback(() => {
-    if (maybeErrorMessageRef.current != null) return null;
+  const getPositionTooltipContent = () => {
+    if (maybeErrorMessage != null) return null;
     const currentFlycam = Store.getState().flycam;
     const currentPosition = V3.floor(getPosition(currentFlycam));
     const shortUnit = LongUnitToShortUnitMap[voxelSize.unit];
@@ -123,7 +123,7 @@ function DatasetPositionView() {
         </Row>
       </div>
     );
-  }, [voxelSize]);
+  };
 
   return (
     <FastTooltip title={maybeErrorMessage || null} wrapper="div">

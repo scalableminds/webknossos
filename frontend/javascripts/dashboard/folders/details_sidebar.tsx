@@ -363,13 +363,13 @@ function FolderDetails({
                 >
                   <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
                     <EditOutlined className="icon-margin-right" />
-                    Edit
+                    Edit Folder
                   </PricingEnforcedSpan>
                 </a>
                 {isRootFolder ? null : (
                   <a onClick={() => context.queries.deleteFolderMutation.mutateAsync(folder.id)}>
                     <DeleteOutlined className="icon-margin-right" />
-                    Delete
+                    Delete Folder
                   </a>
                 )}
               </div>

@@ -1,7 +1,6 @@
 import fs from "node:fs";
 // @ts-expect-error
 import deepForEach from "deep-for-each";
-import { JSDOM } from "jsdom";
 import cloneDeep from "lodash-es/cloneDeep";
 import shell from "shelljs";
 import type { ArbitraryObject } from "types/type_utils";
@@ -104,21 +103,6 @@ global.fetch = function fetchWrapper(url, options) {
 
   return promise;
 };
-
-// set pretendToBeVisual to true, so that window.requestAnimationFrame is available from JSDOM
-const jsdom = new JSDOM("<!doctype html><html><body></body></html>", {
-  pretendToBeVisual: true,
-  url: "http://example.org/",
-});
-const { window } = jsdom;
-
-// JSDOM does not support matchMedia yet which is why we mock it.
-// https://github.com/jsdom/jsdom/issues/3522
-window.matchMedia = vi.fn().mockImplementation(() => ({
-  matches: false,
-  addListener: vi.fn(),
-  removeListener: vi.fn(),
-}));
 
 global.localStorage = {
   getItem: vi.fn().mockReturnValue(undefined),

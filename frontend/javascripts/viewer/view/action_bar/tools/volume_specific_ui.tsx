@@ -27,15 +27,9 @@ import { usePrevious, useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
-import {
-  FillModeEnum,
-  MappingStatusEnum,
-  type OverwriteMode,
-  OverwriteModeEnum,
-} from "viewer/constants";
+import { FillModeEnum, type OverwriteMode, OverwriteModeEnum } from "viewer/constants";
 import {
   getActiveSegmentationTracing,
-  getMappingInfoForVolumeTracing,
   getSegmentColorAsRGBA,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { clearProofreadingByProducts } from "viewer/model/actions/proofread_actions";
@@ -46,9 +40,10 @@ import {
   createCellAction,
   interpolateSegmentationLayerAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { isMappingAppliedLocally, mapId } from "viewer/model/helpers/mapped_id_lookup";
 import { getInterpolationInfo } from "viewer/model/sagas/volume/volume_interpolation_saga";
 import { rgbaToCSS } from "viewer/shaders/utils.glsl";
-import { Model } from "viewer/singletons";
+import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
 import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
@@ -197,31 +192,28 @@ export function VolumeInterpolationButton() {
   );
 }
 
-const mapId = (volumeTracingId: string | null | undefined, id: bigint) => {
-  // Note that the return value can be an unmapped id even when
-  // a mapping is active, if it is a HDF5 mapping that is partially loaded
-  // and no entry exists yet for the input id.
-  if (!volumeTracingId) {
-    return null;
-  }
-  const { cube } = Model.getSegmentationTracingLayer(volumeTracingId);
+const getUnmappedActiveCellId = (state: WebknossosState) =>
+  getActiveSegmentationTracing(state)?.activeCellId || 0n;
 
-  return cube.mapId(id);
+// Mapping the id in a selector keeps it up to date when the mapping changes (e.g., when
+// HDF5 entries are loaded). Returns null if the local mapping doesn't know the id (yet).
+const getMappedActiveCellId = (state: WebknossosState): bigint | null => {
+  const volumeTracingId = getActiveSegmentationTracing(state)?.tracingId;
+  const unmappedActiveCellId = getUnmappedActiveCellId(state);
+  if (volumeTracingId == null) {
+    return unmappedActiveCellId;
+  }
+  return mapId(state, volumeTracingId, unmappedActiveCellId);
 };
 
 export function CreateSegmentButton() {
   const volumeTracingId = useWkSelector((state) => getActiveSegmentationTracing(state)?.tracingId);
-  const unmappedActiveCellId = useWkSelector(
-    (state) => getActiveSegmentationTracing(state)?.activeCellId || 0n,
+  // If the mapping is applied by the server, the active segment id is already a mapped id.
+  const isMappingAppliedLocallyForLayer = useWkSelector(
+    (state) => volumeTracingId != null && isMappingAppliedLocally(state, volumeTracingId),
   );
-  const { mappingStatus } = useWkSelector((state) =>
-    getMappingInfoForVolumeTracing(state, volumeTracingId),
-  );
-  const isMappingEnabled = mappingStatus === MappingStatusEnum.ENABLED;
-
-  const activeCellId = isMappingEnabled
-    ? mapId(volumeTracingId, unmappedActiveCellId)
-    : unmappedActiveCellId;
+  const unmappedActiveCellId = useWkSelector(getUnmappedActiveCellId);
+  const activeCellId = useWkSelector(getMappedActiveCellId);
 
   const activeCellColor = useWkSelector((state) => {
     if (!activeCellId) {
@@ -230,7 +222,11 @@ export function CreateSegmentButton() {
     return rgbaToCSS(getSegmentColorAsRGBA(state, activeCellId));
   });
 
-  const mappedIdInfo = isMappingEnabled ? ` (currently mapped to ${activeCellId})` : "";
+  const mappedIdInfo = !isMappingAppliedLocallyForLayer
+    ? ""
+    : activeCellId != null
+      ? ` (currently mapped to ${activeCellId})`
+      : " (mapped id not known yet)";
   return (
     <Badge
       dot
@@ -356,7 +352,7 @@ export function FloodFillSettings() {
 function FillModeSwitch() {
   const fillMode = useWkSelector((state) => state.userConfiguration.fillMode);
   return (
-    <Radio.Group value={fillMode} onChange={handleSetFillMode}>
+    <Radio.Group value={fillMode} onChange={handleSetFillMode} buttonStyle="solid">
       <RadioButtonWithTooltip
         title="Only perform the Fill operation in the current plane."
         style={NARROW_BUTTON_STYLE}

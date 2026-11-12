@@ -7,8 +7,13 @@
  * a cycle. Re-exporting them here means `wk_dev.ts` needs a single dynamic
  * import instead of one per symbol — the cycle is still broken, because the
  * only edge into this module is that dynamic one.
+ *
+ * three.js must not be imported statically by `wk_dev.ts` either, since that
+ * module is also part of the initially loaded code of all pages, whereas
+ * three.js is only loaded with the viewer (see viewer/viewer_entry.ts).
  */
 
+export { WebGLRenderTarget } from "three";
 export { rotate3DViewTo } from "viewer/controller/camera_controller";
 export {
   handleDrawStart,

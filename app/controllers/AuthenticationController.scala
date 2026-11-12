@@ -18,7 +18,7 @@ import com.webauthn4j.data.{
 import com.webauthn4j.server.ServerProperty
 import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.credential.CredentialRecordImpl as WebAuthnCredentialRecord
-import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
+import mail.{AccountEmailService, MailchimpClient, MailchimpTag, OrganizationEmailService}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import models.user.*
@@ -26,7 +26,6 @@ import Box.tryo
 import models.team.TeamMembership
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
-import org.apache.pekko.actor.ActorSystem
 import play.api.data.Form
 import play.api.data.Forms.*
 import play.api.data.validation.Constraints.*
@@ -75,7 +74,6 @@ object InviteParameters {
 }
 
 class AuthenticationController @Inject() (
-    actorSystem: ActorSystem,
     credentialsProvider: CredentialsProvider,
     passwordHasher: PasswordHasher,
     userService: UserService,
@@ -90,7 +88,8 @@ class AuthenticationController @Inject() (
     slackNotificationService: SlackNotificationService,
     tokenDAO: TokenDAO,
     multiUserDAO: MultiUserDAO,
-    defaultMails: DefaultMails,
+    accountEmailService: AccountEmailService,
+    organizationEmailService: OrganizationEmailService,
     conf: WkConf,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     openIdConnectClient: OpenIdConnectClient,
@@ -107,7 +106,6 @@ class AuthenticationController @Inject() (
   private lazy val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
   private lazy val bearerTokenAuthenticatorService = combinedAuthenticatorService.tokenAuthenticatorService
   private lazy val secureRandom = new SecureRandom()
-  private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
   private lazy val ssoKey = conf.WebKnossos.User.ssoKey
 
   private lazy val origin = new Origin(conf.Http.uri)
@@ -209,17 +207,7 @@ class AuthenticationController @Inject() (
       _ <- Fox.runIf(inviteBox.isDefined)(
         Fox.runOptional(inviteBox.toOption)(i => inviteService.deactivateUsedInvite(i)(using GlobalAccessContext))
       )
-      newUserEmailRecipient <- organizationService.newUserMailRecipient(organization)
-      _ =
-        if (conf.Features.isWkorgInstance) {
-          mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
-        } else {
-          Mailer ! Send(defaultMails.newUserMail(multiUser.fullName, email, autoActivate))
-        }
-      _ = Mailer ! Send(
-        defaultMails
-          .registerAdminNotifierMail(multiUser.fullName, email, organization, autoActivate, newUserEmailRecipient)
-      )
+      _ = accountEmailService.sendSignupEmails(user, multiUser, organization, autoActivate)
     } yield user
 
   private def loginUser(
@@ -336,16 +324,7 @@ class AuthenticationController @Inject() (
       )
       _ = analyticsService.track(JoinOrganizationEvent(request.identity, organization))
       multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-      newUserEmailRecipient <- organizationService.newUserMailRecipient(organization)
-      _ = Mailer ! Send(
-        defaultMails.registerAdminNotifierMail(
-          multiUser.fullName,
-          multiUser.email,
-          organization,
-          invite.autoActivate,
-          newUserEmailRecipient
-        )
-      )
+      _ = accountEmailService.sendUserJoinedEmail(multiUser, organization, invite.autoActivate)
       _ <- inviteService.deactivateUsedInvite(invite)(using GlobalAccessContext)
     } yield Ok
   }
@@ -401,7 +380,7 @@ class AuthenticationController @Inject() (
       resetPasswordToken <- Fox.fromFuture(
         bearerTokenAuthenticatorService.createAndInit(user._id, TokenType.ResetPassword, deleteOld = true)
       )
-      _ = Mailer ! Send(defaultMails.resetPasswordMail(multiUser.fullName, email, resetPasswordToken))
+      _ = accountEmailService.sendResetPasswordEmail(multiUser, resetPasswordToken)
     } yield ()
 
   // User has forgotten their password and clicked the reset link in the email
@@ -439,7 +418,7 @@ class AuthenticationController @Inject() (
             _ = logger.info(s"Multiuser ${multiUser._id} changed their password.")
             _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(formValues.password1))
             _ <- Fox.fromFuture(combinedAuthenticatorService.discard(request.authenticator, Ok))
-            _ = Mailer ! Send(defaultMails.changePasswordMail(multiUser.fullName, multiUser.email))
+            _ = accountEmailService.sendPasswordChangedEmail(multiUser)
           } yield Ok
       )
   }
@@ -508,7 +487,7 @@ class AuthenticationController @Inject() (
         } else {
           Fox.successful(BadRequest("Invalid signature"))
         }
-      case None => Fox.successful(Redirect("/auth/login?redirectPage=http://discuss.webknossos.org")) // not logged in
+      case None => Fox.successful(Redirect("/auth/login?redirectPage=https://discuss.webknossos.org")) // not logged in
     }
   }
 
@@ -547,18 +526,18 @@ class AuthenticationController @Inject() (
         sessionId = cookie.value
         challenge <- temporaryAssertionStore
           .pop(sessionId)
-          .toFox ?~> "Timeout during authentication. Please try again." ~> UNAUTHORIZED
+          .toFox ?~> "Timeout during authentication. Please try again." ~> BAD_REQUEST
         authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ??~>
-          Msg.Passkeys.unauthorized ~> UNAUTHORIZED
+          Msg.Passkeys.unauthorized ~> BAD_REQUEST
         credentialId = authData.getCredentialId
         multiUserId <- ObjectId.fromString(new String(authData.getUserHandle)) ??~>
-          Msg.Passkeys.unauthorized ~> UNAUTHORIZED
+          Msg.Passkeys.unauthorized ~> BAD_REQUEST
         multiUser <- multiUserDAO.findOneById(multiUserId)(using GlobalAccessContext) ??~>
-          Msg.Passkeys.unauthorized ~> UNAUTHORIZED
+          Msg.Passkeys.unauthorized ~> BAD_REQUEST
         credential <- webAuthnCredentialDAO.findByCredentialId(multiUser._id, credentialId)(using
           GlobalAccessContext
         ) ??~>
-          Msg.Passkeys.unauthorized ~> UNAUTHORIZED
+          Msg.Passkeys.unauthorized ~> BAD_REQUEST
         serverProperty = ServerProperty.builder().origin(origin).rpId(origin.getHost).challenge(challenge).build()
 
         params = new AuthenticationParameters(
@@ -568,15 +547,15 @@ class AuthenticationController @Inject() (
           false, // User verification is not required put preferred.
           false // User presence is not required.
         )
-        _ <- tryo(webAuthnManager.verify(authData, params)).toFox ??~> Msg.Passkeys.unauthorized ~> UNAUTHORIZED
+        _ <- tryo(webAuthnManager.verify(authData, params)).toFox ??~> Msg.Passkeys.unauthorized ~> BAD_REQUEST
         oldSignCount = credential.credentialRecord.getCounter
         newSignCount = authData.getAuthenticatorData.getSignCount
         _ = credential.credentialRecord.setCounter(newSignCount)
-        _ <- webAuthnCredentialDAO.updateSignCount(credential) ??~> Msg.Passkeys.unauthorized ~> UNAUTHORIZED
+        _ <- webAuthnCredentialDAO.updateSignCount(credential) ??~> Msg.Passkeys.unauthorized ~> BAD_REQUEST
 
         // Sign count is 0 if not used by the authenticator.
         _ <- Fox.fromBool((oldSignCount == 0 && newSignCount == 0) || (oldSignCount < newSignCount)) ??~>
-          Msg.Passkeys.unauthorized ~> UNAUTHORIZED
+          Msg.Passkeys.unauthorized ~> BAD_REQUEST
         userId <- multiUser._lastLoggedInIdentity.toFox
         resultWithCookie <- loginUser(userId, "passkey/webauthn")
       } yield resultWithCookie
@@ -640,7 +619,7 @@ class AuthenticationController @Inject() (
         sessionId = cookie.value
         challenge <- temporaryRegistrationStore
           .pop(sessionId)
-          .toFox ?~> "Timeout during registration. Please try again." ~> UNAUTHORIZED
+          .toFox ?~> "Timeout during registration. Please try again." ~> BAD_REQUEST
         serverProperty = ServerProperty.builder().origin(origin).rpId(origin.getHost).challenge(challenge).build()
         publicKeyParams = webAuthnPubKeyParams.map(k =>
           new PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.create(k.alg))
@@ -831,13 +810,12 @@ class AuthenticationController @Inject() (
                         _ <- Fox.runIf(conf.WebKnossos.TermsOfService.enabled)(
                           acceptTermsOfServiceForUser(user, signUpData.acceptedTermsOfService)
                         )
-                        _ = Mailer ! Send(
-                          defaultMails
-                            .newOrganizationMail(organization.name, email, request.headers.get("Host").getOrElse(""))
+                        _ = organizationEmailService.sendNewOrganizationEmail(
+                          organization,
+                          email,
+                          request.headers.get("Host").getOrElse("")
                         )
-                        _ = if (conf.Features.isWkorgInstance) {
-                          mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
-                        }
+                        _ = accountEmailService.sendOrganizationCreatorWelcome(user, multiUser)
                       } yield Ok
                     }
                 } yield result

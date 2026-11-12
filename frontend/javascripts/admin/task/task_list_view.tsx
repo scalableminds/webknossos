@@ -11,8 +11,11 @@ import {
   UserAddOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
+import { getAdminTablePagination } from "admin/admin_table_pagination";
 import AnnotationServicesAd from "admin/ads/annotation_services_alert";
+import { MAX_SERVER_ITEMS_PER_RESPONSE } from "admin/api/api_utils";
 import {
   assignTaskToUser as assignTaskToUserAPI,
   deleteTask as deleteTaskAPI,
@@ -29,13 +32,15 @@ import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
+import FormattedDuration from "components/formatted_duration";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import features from "features";
 import { copyToClipboard } from "libs/clipboard";
 import { handleGenericError } from "libs/error_handling";
-import { formatSeconds, formatTuple } from "libs/format_utils";
+import { formatTuple } from "libs/format_utils";
 import Persistence from "libs/persistence";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import Toast from "libs/toast";
 import {
   compareBy,
@@ -43,7 +48,6 @@ import {
   getUrlParamValue,
   hasUrlParam,
   localeCompareBy,
-  scrollToTop,
 } from "libs/utils";
 import isEmpty from "lodash-es/isEmpty";
 import partial from "lodash-es/partial";
@@ -66,6 +70,17 @@ const persistence = new Persistence<{ searchQuery: string }>(
   "taskList",
 );
 
+function getTasksQueryOptions(queryObject: QueryObject) {
+  return {
+    queryKey: ["tasks", queryObject],
+    queryFn: () => getTasks(queryObject),
+    // Task lists can be large and the search can be random, so don't persist them and
+    // drop the results of earlier searches after a while.
+    gcTime: 5 * 60 * 1000,
+    meta: { persist: false },
+  };
+}
+
 function TaskListView({ initialFieldValues }: Props) {
   const { modal } = App.useApp();
   const { taskId, projectId, taskTypeId } = useParams();
@@ -77,37 +92,48 @@ function TaskListView({ initialFieldValues }: Props) {
     taskTypeId,
   };
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [tasks, setTasks] = useState<APITask[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const queryClient = useQueryClient();
+  const [queryObject, setQueryObject] = useState<QueryObject>({});
+  const [isLoadingMutation, setIsLoadingMutation] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(() => persistence.load().searchQuery || "");
   const selectedUserIdForAssignment = useRef<string | null>(null);
   const [isAnonymousTaskLinkModalOpen, setIsAnonymousTaskLinkModalOpen] = useState(
     hasUrlParam("showAnonymousLinks"),
   );
 
-  useEffect(() => {
-    const { searchQuery } = persistence.load();
-    setSearchQuery(searchQuery || "");
-  }, []);
+  const tasksQueryOptions = getTasksQueryOptions(queryObject);
+  const { data: tasks = [], isFetching: isFetchingTasks } = useQueryWithErrorHandling({
+    ...tasksQueryOptions,
+    enabled: !isEmpty(queryObject),
+    refetchOnWindowFocus: false,
+  });
+  const isLoading = isFetchingTasks || isLoadingMutation;
+
+  async function setTasks(updater: (currentTasks: APITask[]) => APITask[]) {
+    // Cancel a running refetch so that its stale response cannot overwrite this update.
+    await queryClient.cancelQueries({ queryKey: tasksQueryOptions.queryKey });
+    queryClient.setQueryData(tasksQueryOptions.queryKey, (currentTasks: APITask[] = []) =>
+      updater(currentTasks),
+    );
+  }
 
   useEffect(() => {
     persistence.persist({ searchQuery });
   }, [searchQuery]);
 
-  async function fetchData(queryObject: QueryObject) {
-    if (!isEmpty(queryObject)) {
-      setIsLoading(true);
-
-      try {
-        const tasks = await getTasks(queryObject);
-        setTasks(tasks);
-      } catch (error) {
-        handleGenericError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      setTasks([]);
+  // Returns null if the tasks could not be loaded.
+  async function fetchData(newQueryObject: QueryObject): Promise<APITask[] | null> {
+    setQueryObject(newQueryObject);
+    if (isEmpty(newQueryObject)) {
+      return [];
+    }
+    try {
+      // Always refetch, even if the query didn't change (e.g., for random tasks or to refresh
+      // the list). An in-flight request for the same query is reused.
+      return await queryClient.fetchQuery(getTasksQueryOptions(newQueryObject));
+    } catch (_error) {
+      // The error is shown by useQueryWithErrorHandling.
+      return null;
     }
   }
 
@@ -120,13 +146,13 @@ function TaskListView({ initialFieldValues }: Props) {
       title: messages["task.delete"],
       onOk: async () => {
         try {
-          setIsLoading(true);
+          setIsLoadingMutation(true);
           await deleteTaskAPI(task.id);
-          setTasks(tasks.filter((t) => t.id !== task.id));
+          setTasks((currentTasks) => currentTasks.filter((t) => t.id !== task.id));
         } catch (error) {
           handleGenericError(error as Error);
         } finally {
-          setIsLoading(false);
+          setIsLoadingMutation(false);
         }
       },
     });
@@ -159,7 +185,10 @@ function TaskListView({ initialFieldValues }: Props) {
           try {
             const updatedTask = await assignTaskToUserAPI(task.id, userId);
 
-            setTasks([...tasks.filter((t) => t.id !== task.id), updatedTask]);
+            setTasks((currentTasks) => [
+              ...currentTasks.filter((t) => t.id !== task.id),
+              updatedTask,
+            ]);
 
             Toast.success("A user was successfully assigned to the task.");
           } catch (error) {
@@ -172,9 +201,9 @@ function TaskListView({ initialFieldValues }: Props) {
     });
   }
 
-  function getFilteredTasks() {
+  function getFilteredTasks(tasksToFilter: APITask[] = tasks) {
     return filterWithSearchQueryAND(
-      tasks,
+      tasksToFilter,
       [
         "team",
         "projectName",
@@ -189,8 +218,11 @@ function TaskListView({ initialFieldValues }: Props) {
   }
 
   async function downloadSettingsFromAllTasks(queryObject: QueryObject) {
-    await fetchData(queryObject);
-    const filteredTasks = getFilteredTasks();
+    const fetchedTasks = await fetchData(queryObject);
+    if (fetchedTasks == null) {
+      return;
+    }
+    const filteredTasks = getFilteredTasks(fetchedTasks);
 
     if (filteredTasks.length > 0) {
       downloadTasksAsCSV(filteredTasks);
@@ -309,7 +341,7 @@ function TaskListView({ initialFieldValues }: Props) {
           <br />
           <span title="Annotation Time">
             <ClockCircleOutlined className="icon-margin-right" />
-            {formatSeconds((task.tracingTime || 0) / 1000)}
+            <FormattedDuration durationMs={task.tracingTime || 0} />
           </span>
         </div>
       ),
@@ -435,7 +467,9 @@ function TaskListView({ initialFieldValues }: Props) {
       alerts={features().isWkorgInstance ? <AnnotationServicesAd /> : null}
       filters={
         <TaskSearchForm
-          onChange={(queryObject) => fetchData(queryObject)}
+          onChange={async (queryObject) => {
+            await fetchData(queryObject);
+          }}
           initialFieldValues={initialFieldValues}
           isLoading={isLoading}
           onDownloadAllTasks={downloadSettingsFromAllTasks}
@@ -447,10 +481,9 @@ function TaskListView({ initialFieldValues }: Props) {
           dataSource={getFilteredTasks()}
           rowKey="id"
           columns={columns}
-          pagination={{
-            defaultPageSize: 50,
-            onChange: scrollToTop,
-          }}
+          pagination={getAdminTablePagination({
+            isTruncated: tasks.length >= MAX_SERVER_ITEMS_PER_RESPONSE,
+          })}
           expandable={{
             expandedRowRender: (task) => <TaskAnnotationView task={task} />,
           }}

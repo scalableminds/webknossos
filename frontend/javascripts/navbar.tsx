@@ -3,6 +3,7 @@ import Icon, {
   ExperimentOutlined,
   HomeOutlined,
   LoadingOutlined,
+  MessageOutlined,
   QuestionCircleOutlined,
   ScheduleOutlined,
   SwapOutlined,
@@ -10,20 +11,19 @@ import Icon, {
   UserOutlined,
 } from "@ant-design/icons";
 import WkLogoIcon from "@images/wk-logo.svg?react";
-import { unwrapOrThrow } from "admin/api/api_result";
 import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { useLogout } from "admin/auth/use_logout";
 import {
-  getBuildInfo,
-  logoutUser,
-  sendAnalyticsEvent,
-  updateNovelUserExperienceInfos,
-} from "admin/rest_api";
+  areJobsAllowedByPricingPlan,
+  PricingPlanEnum,
+} from "admin/organization/pricing_plan_utils";
+import { getBuildInfo, sendAnalyticsEvent, updateNovelUserExperienceInfos } from "admin/rest_api";
 import type { MenuProps } from "antd";
 import {
   Avatar,
   Badge,
+  Button,
   ConfigProvider,
   Flex,
   Input,
@@ -39,26 +39,39 @@ import {
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import classnames from "classnames";
+import { PartnerLogo } from "components/partner_logo";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
+import { WhatsNewModal } from "components/whats_new_modal";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
-import { useWkSelector } from "libs/react_hooks";
+import { useMinScreenWidth, useWkSelector } from "libs/react_hooks";
+import {
+  getNewestReleaseNoteId,
+  getUnreadReleaseNotesCount,
+  type ReleaseNotesReadState,
+} from "libs/release_notes";
 import { TAB_SESSION_ID as SESSION_ID } from "libs/tab_session_id";
 import Toast from "libs/toast";
 import {
   filterWithSearchQueryAND,
   isUserAdmin,
+  isUserAdminOrDatasetManager,
   isUserAdminOrManager,
   isUserAdminOrTeamManager,
 } from "libs/utils";
-import window, { document, location } from "libs/window";
+import window, { location } from "libs/window";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Link, useLocation } from "react-router";
 import { getAntdTheme } from "theme";
-import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
+import type {
+  APIOrganization,
+  APIOrganizationCompact,
+  APIUser,
+  APIUserCompact,
+} from "types/api_types";
 import constants from "viewer/constants";
 import {
   isAnnotationEditableByNonOwners,
@@ -68,7 +81,7 @@ import {
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { retryMutexAcquisitionNowAction } from "viewer/model/actions/save_actions";
-import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
 import { HelpModal } from "viewer/view/help/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
@@ -85,93 +98,13 @@ const ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT = 10;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
 
-const OLVY_SCRIPT_URL = "https://app.olvy.co/script.js";
-
-const OLVY_CONFIG = {
-  organisation: "webknossos",
-  // This target needs to be an empty string as else olvy will eagerly init the modal and thus fetch all its contents.
-  target: "",
-  type: "modal",
-  view: {
-    showSearch: false,
-    compact: false,
-    showHeader: true,
-    // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
-    showUnreadIndicator: false,
-    // Kept as a literal: this is configuration handed to the third-party Olvy widget, which
-    // renders in its own iframe and cannot resolve our CSS variables.
-    unreadIndicatorColor: "#cc1919",
-    unreadIndicatorPosition: "top-right",
-  },
-};
-
-function loadOlvyScript(onLoad: () => void): () => void {
-  const script = document.createElement("script");
-  script.src = OLVY_SCRIPT_URL;
-  script.async = true;
-  script.onload = onLoad;
-  document.head.appendChild(script);
-  return () => {
-    script.onload = null;
+function getReleaseNotesReadState(activeUser: APIUser): ReleaseNotesReadState {
+  const { newestSeenReleaseNoteId, lastViewedWhatsNewTimestamp } =
+    activeUser.novelUserExperienceInfos;
+  return {
+    newestSeenReleaseNoteId: newestSeenReleaseNoteId ?? null,
+    lastViewedTimestamp: lastViewedWhatsNewTimestamp ?? activeUser.created,
   };
-}
-
-function useOlvy() {
-  const [isInitialized, setIsInitialized] = useState(false);
-  // The third-party script is only needed for the "what's new" badge. Load it once the browser is
-  // idle, so that it does not compete with the app's own startup requests.
-  useEffect(() => {
-    let cancelLoad: (() => void) | undefined;
-    const initOlvy = () => {
-      if (window.Olvy == null) {
-        return;
-      }
-      window.Olvy.init(OLVY_CONFIG);
-      setIsInitialized(true);
-    };
-    const startLoading = () => {
-      if (window.Olvy != null) {
-        initOlvy();
-      } else {
-        cancelLoad = loadOlvyScript(initOlvy);
-      }
-    };
-    if (typeof window.requestIdleCallback === "function") {
-      const handle = window.requestIdleCallback(startLoading, { timeout: 5000 });
-      return () => {
-        window.cancelIdleCallback(handle);
-        cancelLoad?.();
-      };
-    }
-    const timeoutId = setTimeout(startLoading, 2000);
-    return () => {
-      clearTimeout(timeoutId);
-      cancelLoad?.();
-    };
-  }, []);
-  return isInitialized;
-}
-
-function useOlvyUnreadReleasesCount(activeUser: APIUser) {
-  const lastViewedTimestampWithFallback =
-    activeUser.novelUserExperienceInfos.lastViewedWhatsNewTimestamp != null
-      ? activeUser.novelUserExperienceInfos.lastViewedWhatsNewTimestamp
-      : activeUser.created;
-  const isInitialized = useOlvy();
-  const unreadCount = useFetch(
-    async () => {
-      if (!isInitialized || !window.Olvy) {
-        return null;
-      }
-
-      return window.Olvy.getUnreadReleasesCount(
-        new Date(lastViewedTimestampWithFallback).toISOString(),
-      );
-    },
-    null,
-    [isInitialized, lastViewedTimestampWithFallback],
-  );
-  return unreadCount;
 }
 
 function UserInitials({
@@ -245,7 +178,6 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
 
   return {
     key: "adminMenu",
-    className: collapse ? "hide-on-small-screen" : "",
     label: getCollapsibleMenuTitle(
       "Administration",
       <TeamOutlined className="icon-margin-right" />,
@@ -255,10 +187,14 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
   };
 }
 
-export function getAnalysisSubMenu(collapse: boolean) {
+export function getAnalysisSubMenu(
+  collapse: boolean,
+  activeUser: APIUser | null | undefined,
+  activeOrganization: APIOrganization | null,
+) {
   const analysisSubMenuItems = [];
 
-  if (features().jobsEnabled) {
+  if (features().jobsEnabled && areJobsAllowedByPricingPlan(activeOrganization)) {
     analysisSubMenuItems.push({
       key: "/jobs",
       label: <Link to="/jobs">Processing Jobs</Link>,
@@ -267,6 +203,12 @@ export function getAnalysisSubMenu(collapse: boolean) {
       key: "/aiModels",
       label: <Link to={"/aiModels"}>AI Models</Link>,
     });
+    if (isUserAdminOrDatasetManager(activeUser)) {
+      analysisSubMenuItems.push({
+        key: "/alignmentProjects",
+        label: <Link to="/alignmentProjects">Alignment Projects</Link>,
+      });
+    }
   }
 
   if (features().voxelyticsEnabled) {
@@ -282,7 +224,6 @@ export function getAnalysisSubMenu(collapse: boolean) {
 
   return {
     key: "analysisMenu",
-    className: collapse ? "hide-on-small-screen" : "",
     label: getCollapsibleMenuTitle(
       "Analysis",
       <ExperimentOutlined className="icon-margin-right" />,
@@ -295,7 +236,6 @@ export function getAnalysisSubMenu(collapse: boolean) {
 function getTaskManagementSubMenu(collapse: boolean): SubMenuType {
   return {
     key: "taskManagementMenu",
-    className: collapse ? "hide-on-small-screen" : "",
     label: getCollapsibleMenuTitle(
       "Task Management",
       <ScheduleOutlined className="icon-margin-right" />,
@@ -411,7 +351,11 @@ function getHelpSubMenu(
     {
       key: "frontend-api",
       label: (
-        <a target="_blank" href="/assets/docs/frontend-api/index.html" rel="noopener noreferrer">
+        <a
+          target="_blank"
+          href="https://docs.webknossos.org/frontend-api/index.html"
+          rel="noopener noreferrer"
+        >
           Frontend API Documentation
         </a>
       ),
@@ -495,7 +439,6 @@ function getHelpSubMenu(
 function getDashboardSubMenu(collapse: boolean): SubMenuType {
   return {
     key: "dashboardMenu",
-    className: collapse ? "hide-on-small-screen" : "",
     label: getCollapsibleMenuTitle(
       "Dashboard",
       <HomeOutlined className="icon-margin-right" />,
@@ -512,34 +455,20 @@ function getDashboardSubMenu(collapse: boolean): SubMenuType {
   };
 }
 
-function getWhatsNewMenuEntry(activeUser: APIUser, maybeUnreadReleaseCount: number | null) {
-  const handleShowWhatsNewView = () => {
-    const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
-      lastViewedWhatsNewTimestamp: Date.now(),
-    });
-    Store.dispatch(setActiveUserAction(newUserSync));
-    sendAnalyticsEvent("open_whats_new_view");
-
-    if (window.Olvy) {
-      // Setting the target lazily, to finally let olvy load the "what's new" modal, as it should be shown now.
-      window.Olvy.config.target = "#unused-olvy-target";
-      window.Olvy.show();
-    }
-  };
-
+function getWhatsNewMenuEntry(unreadReleaseNotesCount: number, onClick: () => void) {
   return {
     key: "whatsNew",
     label: (
       <Badge
         className="navbar-whats-new-badge"
-        count={maybeUnreadReleaseCount || 0}
+        count={unreadReleaseNotesCount}
         size="small"
         offset={[10, 0]}
       >
         What's new
       </Badge>
     ),
-    onClick: handleShowWhatsNewView,
+    onClick,
   };
 }
 
@@ -569,15 +498,14 @@ function OrganizationFilterInput({
 }) {
   const ref = useRef<InputRef>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesn't understand that ref.current is accessed?
   useEffect(() => {
-    if (ref?.current && isVisible) {
+    if (ref.current && isVisible) {
       setTimeout(() => {
         // Without the timeout, the focus doesn't work unfortunately.
         ref.current?.input?.focus();
       }, 100);
     }
-  }, [ref.current, isVisible]);
+  }, [isVisible]);
   const onChangeImpl = (evt: React.ChangeEvent<HTMLInputElement>) => {
     onChange(evt.target.value);
   };
@@ -602,11 +530,9 @@ function OrganizationFilterInput({
 function LoggedInAvatar({
   activeUser,
   handleLogout,
-  navbarHeight,
 }: {
   activeUser: APIUser;
   handleLogout: (event: React.SyntheticEvent) => void;
-  navbarHeight: number;
 } & SubMenuProps) {
   const { firstName, lastName, organization: organizationId } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
@@ -616,7 +542,26 @@ function LoggedInAvatar({
     activeOrganization != null ? activeOrganization.name || activeOrganization.id : organizationId;
   const [organizationFilter, onChangeOrganizationFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
-  const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
+  const releaseNotesReadState = getReleaseNotesReadState(activeUser);
+  const unreadReleaseNotesCount = getUnreadReleaseNotesCount(releaseNotesReadState);
+  const [isWhatsNewModalOpen, setIsWhatsNewModalOpen] = useState(false);
+  // Remember which release notes were unread when the modal was opened, as opening it marks
+  // all of them as read.
+  const [whatsNewModalReadState, setWhatsNewModalReadState] = useState(releaseNotesReadState);
+  const showWhatsNewModal = () => {
+    setWhatsNewModalReadState(releaseNotesReadState);
+    setIsWhatsNewModalOpen(true);
+    sendAnalyticsEvent("open_whats_new_view");
+  };
+  // Only mark the release notes as seen once they could be loaded and are shown.
+  const markReleaseNotesAsSeen = () => {
+    const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
+      lastViewedWhatsNewTimestamp: Date.now(),
+      newestSeenReleaseNoteId:
+        getNewestReleaseNoteId() ?? releaseNotesReadState.newestSeenReleaseNoteId ?? undefined,
+    });
+    Store.dispatch(setActiveUserAction(newUserSync));
+  };
 
   const filteredOrganizations = filterWithSearchQueryAND(
     switchableOrganizations,
@@ -647,75 +592,82 @@ function LoggedInAvatar({
 
   const isMultiMember = switchableOrganizations.length > 0;
   return (
-    <Menu
-      selectedKeys={["prevent highlighting of this menu"]}
-      mode="horizontal"
-      style={{
-        paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
-        lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
-        marginInlineStart: "10px",
-      }}
-      theme="dark"
-      subMenuCloseDelay={subMenuCloseDelay}
-      triggerSubMenuAction="click"
-      className="right-navbar"
-      onOpenChange={setOpenKeys}
-      openKeys={openKeys}
-      items={[
-        {
-          key: "loggedMenu",
-          label: <UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />,
-          style: { padding: 0 },
-          children: [
-            {
-              key: "userName",
-              label: `${firstName} ${lastName}`,
-              disabled: true,
-            },
-            {
-              key: "organization",
-              label: orgName,
-              disabled: true,
-            },
-            { type: "divider" },
-            getWhatsNewMenuEntry(activeUser, maybeUnreadReleaseCount),
-            {
-              key: "account",
-              label: <Link to="/account">Account Settings</Link>,
-            },
-            activeOrganization && isUserAdmin(activeUser)
-              ? {
-                  key: "manage-organization",
-                  label: <Link to={"/organization/overview"}>Organization Settings</Link>,
-                }
-              : null,
-            isMultiMember
-              ? {
-                  key: "switch-organization",
-                  label: "Switch Organization",
-                  popupClassName: "organization-switch-menu",
-                  children: [
-                    ...maybeOrganizationFilterInput,
-                    ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
-                      key: org.id,
-                      onClick: () => switchTo(org),
-                      label: org.name || org.id,
-                    })),
-                  ],
-                }
-              : null,
-            {
-              key: "logout",
-              label: (
-                <a href="/" onClick={handleLogout}>
-                  Logout
-                </a>
-              ),
-            },
-          ],
-        },
-      ]}
-    />
+    <>
+      <Menu
+        selectedKeys={["prevent highlighting of this menu"]}
+        mode="horizontal"
+        style={{
+          lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
+          marginInlineStart: "10px",
+        }}
+        theme="dark"
+        subMenuCloseDelay={subMenuCloseDelay}
+        triggerSubMenuAction="click"
+        className="right-navbar"
+        onOpenChange={setOpenKeys}
+        openKeys={openKeys}
+        items={[
+          {
+            key: "loggedMenu",
+            label: <UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />,
+            style: { padding: 0 },
+            children: [
+              {
+                key: "userName",
+                label: `${firstName} ${lastName}`,
+                disabled: true,
+              },
+              {
+                key: "organization",
+                label: orgName,
+                disabled: true,
+              },
+              { type: "divider" },
+              getWhatsNewMenuEntry(unreadReleaseNotesCount, showWhatsNewModal),
+              {
+                key: "account",
+                label: <Link to="/account">Account Settings</Link>,
+              },
+              activeOrganization && isUserAdmin(activeUser)
+                ? {
+                    key: "manage-organization",
+                    label: <Link to={"/organization/overview"}>Organization Settings</Link>,
+                  }
+                : null,
+              isMultiMember
+                ? {
+                    key: "switch-organization",
+                    label: "Switch Organization",
+                    popupClassName: "organization-switch-menu",
+                    children: [
+                      ...maybeOrganizationFilterInput,
+                      ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
+                        key: org.id,
+                        onClick: () => switchTo(org),
+                        label: org.name || org.id,
+                      })),
+                    ],
+                  }
+                : null,
+              {
+                key: "logout",
+                label: (
+                  <a href="/" onClick={handleLogout}>
+                    Logout
+                  </a>
+                ),
+              },
+            ],
+          },
+        ]}
+      />
+      <WhatsNewModal
+        isOpen={isWhatsNewModalOpen}
+        onClose={() => setIsWhatsNewModalOpen(false)}
+        readState={whatsNewModalReadState}
+        onLoaded={markReleaseNotesAsSeen}
+      />
+    </>
   );
 }
 
@@ -879,19 +831,20 @@ function AnnotationLockedTag(): React.ReactElement | null {
 }
 
 function Navbar() {
-  const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
   const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
+  const hasSaveError = useWkSelector((state) => state.save.hasSaveError);
+  // Pushes the navbar items below the maintenance/upgrade banner when one is shown.
+  const bannerOffset = navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0;
   const historyLocation = useLocation();
 
+  const logout = useLogout();
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
-    const redirectUrl = unwrapOrThrow(await logoutUser());
-    dispatch(logoutUserAction());
-    // Hard navigation
-    location.href = redirectUrl;
+    await logout({ everywhere: false });
   };
 
   const version = useFetch(getVersion, null, []);
@@ -912,52 +865,100 @@ function Navbar() {
   const isAuthenticated = activeUser != null;
   const isAdminOrTeamManager = isUserAdminOrTeamManager(activeUser);
   const isAdminOrManager = isUserAdminOrManager(activeUser);
-  const collapseAllNavItems = isInAnnotationView;
+  // Phones get the icon-only navbar, too.
+  const isPhone = !useMinScreenWidth("md");
+  const isBelowXL = !useMinScreenWidth("xl");
+  const collapseAllNavItems = isInAnnotationView || isPhone;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
   const menuItems: ItemType[] = [
     {
       key: "0",
       label: (
-        <Link
-          to="/dashboard"
-          style={{
-            verticalAlign: "middle",
-          }}
-        >
-          {getCollapsibleMenuTitle(
-            "WEBKNOSSOS",
-            <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
-            collapseAllNavItems,
-          )}
-        </Link>
+        <>
+          <Link
+            to="/dashboard"
+            aria-label="WEBKNOSSOS"
+            style={{
+              verticalAlign: "middle",
+            }}
+          >
+            {collapseAllNavItems ? (
+              getCollapsibleMenuTitle(
+                "WEBKNOSSOS",
+                <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+                true,
+              )
+            ) : (
+              <>
+                <Icon component={WkLogoIcon} className="logo" />
+                <span className="logo-wordmark">WEBKNOSSOS</span>
+              </>
+            )}
+          </Link>
+          <PartnerLogo compact={collapseAllNavItems} />
+        </>
       ),
     },
   ];
   const trailingNavItems = [];
 
+  // In the annotation view, the navbar also hosts the viewer's action bar, so the nav items give up
+  // their space on narrower screens. On phones (outside the annotation view) they stay as icons.
+  const hideInAnnotationViewOnNarrowScreens = <T extends SubMenuType | MenuItemType | null>(
+    item: T,
+  ): T =>
+    item != null && isInAnnotationView
+      ? { ...item, className: classnames(item.className, "hide-on-narrow-screen") }
+      : item;
+
   if (isAuthenticated) {
     const loggedInUser: APIUser = activeUser;
-    menuItems.push(getDashboardSubMenu(collapseAllNavItems));
-    menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
+    menuItems.push(hideInAnnotationViewOnNarrowScreens(getDashboardSubMenu(collapseAllNavItems)));
+    menuItems.push(
+      hideInAnnotationViewOnNarrowScreens(
+        getAnalysisSubMenu(collapseAllNavItems, activeUser, activeOrganization),
+      ),
+    );
 
     if (isUserAdminOrTeamManager(activeUser)) {
-      menuItems.push(getTaskManagementSubMenu(collapseAllNavItems));
+      menuItems.push(
+        hideInAnnotationViewOnNarrowScreens(getTaskManagementSubMenu(collapseAllNavItems)),
+      );
     }
 
     if (isAdminOrTeamManager && activeUser != null) {
-      menuItems.push(getAdministrationSubMenu(collapseAllNavItems, activeUser));
+      menuItems.push(
+        hideInAnnotationViewOnNarrowScreens(
+          getAdministrationSubMenu(collapseAllNavItems, activeUser),
+        ),
+      );
     } else {
-      menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
+      menuItems.push(hideInAnnotationViewOnNarrowScreens(getTimeTrackingMenu(collapseAllNavItems)));
     }
 
     trailingNavItems.push(<AnnotationLockedTag key="annotation-locked-tag" />);
+
+    trailingNavItems.push(
+      <Button
+        key="help-chat-button"
+        shape="round"
+        color="default"
+        variant="filled"
+        // Without a label, antd renders a compact icon-only button.
+        size={isPhone ? "small" : "middle"}
+        icon={<MessageOutlined />}
+        onClick={() => setIsHelpModalOpen((isOpen) => !isOpen)}
+        title="Ask a Question"
+      >
+        {isBelowXL ? null : "Ask"}
+      </Button>,
+    );
 
     trailingNavItems.push(
       <LoggedInAvatar
         key="logged-in-avatar"
         activeUser={loggedInUser}
         handleLogout={handleLogout}
-        navbarHeight={navbarHeight}
       />,
     );
   }
@@ -967,24 +968,28 @@ function Navbar() {
   }
 
   menuItems.push(
-    getHelpSubMenu(
-      version,
-      polledVersion,
-      isAuthenticated,
-      isAdminOrManager,
-      collapseAllNavItems,
-      () => setIsHelpModalOpen(true),
+    hideInAnnotationViewOnNarrowScreens(
+      getHelpSubMenu(
+        version,
+        polledVersion,
+        isAuthenticated,
+        isAdminOrManager,
+        collapseAllNavItems,
+        () => setIsHelpModalOpen(true),
+      ),
     ),
   );
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.
   const selectedKeys = collapseAllNavItems ? [] : [historyLocation.pathname];
-  const separator = <div className="navbar-separator" />;
+  // Hidden together with the submenus it separates from the viewer's action bar.
+  const separator = <div className="navbar-separator hide-on-narrow-screen" />;
 
   return (
     <Header
       className={classnames("navbar-header", {
         "collapsed-nav-header": collapseAllNavItems,
+        "save-error": hasSaveError,
       })}
     >
       <GlobalProgressBar />
@@ -997,7 +1002,7 @@ function Navbar() {
         selectedKeys={selectedKeys}
         onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
         style={{
-          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
+          paddingTop: bannerOffset,
           lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
         }}
         theme="dark"
@@ -1009,21 +1014,23 @@ function Navbar() {
         items={menuItems}
       />
       {isInAnnotationView ? separator : null}
-      <HelpModal
-        isModalOpen={isHelpModalOpen}
-        onCancel={() => setIsHelpModalOpen(false)}
-        centeredLayout
-      />
+      <HelpModal isModalOpen={isHelpModalOpen} onCancel={() => setIsHelpModalOpen(false)} />
       <PortalTarget
         portalId="navbarTracingSlot"
         style={{
           flex: 1,
           display: "flex",
-          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
+          paddingTop: bannerOffset,
         }}
       />
       <ConfigProvider theme={getAntdTheme("dark")}>
-        <Flex align="center" justify="flex-end" gap="small">
+        <Flex
+          align="center"
+          justify="flex-end"
+          gap="small"
+          // Keeps a gap to the menu or the viewer's action bar when the navbar gets crowded.
+          style={{ paddingTop: bannerOffset, marginInlineStart: 8 }}
+        >
           {trailingNavItems}
         </Flex>
       </ConfigProvider>

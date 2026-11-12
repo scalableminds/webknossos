@@ -124,7 +124,9 @@
 }
 
 .tracing-settings-menu {
-  width: @left-menu-width;
+  // Fill the (fixed-width) left sidebar instead of using a fixed width, so that a classic,
+  // space-taking vertical scrollbar shrinks the content instead of causing horizontal overflow.
+  width: 100%;
   font-size: 14px;
   font-variant: tabular-nums;
   line-height: 1.5715;
@@ -288,17 +290,7 @@
 
 .navbar-header,
 .statusbar-footer {
-  // Dark mode for UI within navbar and footer
-  // Mirrors ColorDarkBg in frontend/javascripts/theme.ts (NavAndStatusBarTheme) – keep in sync.
-  @dark-bg: #383d48;
-  @dark-fg: #f1f1f1;
-  @dark-border: #585868;
-  // Basically, redefines var(--ant-color-text-secondary) because
-  // that variable turns black-ish in light mode (in spite of
-  // ConfigProvider around the status bar).
-  @color-text-secondary: rgba(255, 255, 255, 0.67);
-
-  color: @color-text-secondary;
+  color: var(--color-text-on-ink-muted);
   z-index: 1000;
 
   &.statusbar-footer {
@@ -315,12 +307,16 @@
 
   &.navbar-header {
     width: 100%;
+    // Divider towards the page content. With border-box sizing this stays within
+    // --navbar-height; the 1px the menu overflows is clipped by overflow-y.
+    border-bottom: 1px solid var(--color-hairline-on-ink);
   }
 
   .navbar-separator {
-    height: 100%;
+    // Shorter than the navbar so that it floats; the header's align-items centers it.
+    height: 24px;
     margin-left: 2px;
-    border-left: 1px #666879 solid;
+    border-left: 1px var(--color-hairline-on-ink) solid;
   }
 
   .ant-select-arrow,
@@ -337,8 +333,6 @@
   .ant-input-number,
   .ant-radio-button-wrapper,
   .ant-select > .ant-select-selector {
-    color: @dark-fg !important;
-
     &.upgrade-banner-button {
       background-color: var(--ant-button-primary-color) !important;
       color: var(--ant-color-primary) !important;
@@ -353,15 +347,6 @@
       // items (non-hovered compact items have a z-index of 2).
       z-index: 4 !important;
     }
-  }
-
-  .ant-btn[disabled],
-  .ant-btn[disabled]:hover {
-    color: mix(gray, @dark-fg, 70%) !important;
-  }
-
-  .ant-select-arrow {
-    color: @dark-fg;
   }
 
   .ant-btn-danger {
@@ -381,10 +366,8 @@
     bottom: 0px;
     height: auto;
     line-height: 10px;
-    // Match the gray of the other statusbar icons. The footer's
-    // `.ant-btn { color: @dark-fg !important }` rule would otherwise force the
-    // icon (which uses fill: currentColor) to near-white, so override it here.
-    color: @color-text-secondary !important;
+    // Match the gray of the other statusbar icons.
+    color: var(--color-text-on-ink-muted) !important;
     background-color: inherit;
   }
 
@@ -429,10 +412,13 @@
 }
 
 .flex-layout-container {
+  // Small gap between the navbar and the viewer panels. The render canvas behind the layout
+  // still starts at the top, but viewport positions are measured relative to it, so this is safe.
+  @navbar-gap: 4px;
   left: 0px;
-  top: 0px;
+  top: @navbar-gap;
   right: 0px;
-  height: calc(100% - var(--footer-height));
+  height: calc(100% - var(--footer-height) - @navbar-gap);
   position: absolute;
   overflow: hidden;
 }
@@ -554,5 +540,5 @@
 
 .read-only-button.ant-btn-dangerous:disabled {
   background-color: var(--ant-color-warning) !important;
-  color: #f5eddf !important;
+  color: var(--ant-color-text-light-solid) !important;
 }

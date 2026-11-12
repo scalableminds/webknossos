@@ -37,6 +37,57 @@ type Props = {
   initialDomainToEdit: string | null | undefined;
 };
 
+function sortEntries(entries: TableEntry[]): TableEntry[] {
+  return entries.sort(localeCompareBy((entry) => entry.domain.toLowerCase()));
+}
+
+function getTableEntries(users: APIUser[]): TableEntry[] {
+  if (users.length <= 1) {
+    return sortEntries(
+      Object.entries(users[0].experiences).map(([domain, value]) => ({
+        domain,
+        value,
+        lowestValue: -1,
+        highestValue: -1,
+        sharedByCount: 1,
+        changed: false,
+      })),
+    );
+  }
+
+  // find all existing experience domains
+  const allDomains: string[] = union(...users.map((user) => Object.keys(user.experiences)));
+
+  // adds the number of users with this domain (sharedByCount) to all domains
+  const allDomainsWithCount = allDomains.map((domain) => ({
+    domain,
+    sharedByCount: users.filter((user) => Object.hasOwn(user.experiences, domain)).length,
+  }));
+  // create a table entry for each domain
+  const tableEntries = allDomainsWithCount.map((entry) => {
+    const usersValues = users.map((user) =>
+      Object.hasOwn(user.experiences, entry.domain) ? user.experiences[entry.domain] : undefined,
+    );
+
+    const minVal = min(usersValues);
+
+    const maxVal = max(usersValues);
+
+    const isShared = entry.sharedByCount === users.length;
+    const value = isShared && maxVal === minVal ? minVal : -1;
+    return {
+      domain: entry.domain,
+      value,
+      lowestValue: minVal,
+      highestValue: maxVal,
+      sharedByCount: entry.sharedByCount,
+      changed: false,
+    };
+  });
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ domain: string; value: number ... Remove this comment to see the full error message
+  return sortEntries(tableEntries);
+}
+
 function ExperienceModalView({
   onChange,
   onCancel,
@@ -47,63 +98,6 @@ function ExperienceModalView({
   const [tableEntries, setTableEntries] = useState<TableEntry[]>(getTableEntries(selectedUsers));
   const [removedDomains, setRemovedDomains] = useState<string[]>([]);
   const [domainToEdit, setDomainToEdit] = useState<string | null | undefined>(initialDomainToEdit);
-
-  function sortEntries(entries: TableEntry[]): TableEntry[] {
-    return entries.sort(localeCompareBy((entry) => entry.domain.toLowerCase()));
-  }
-
-  function getTableEntries(users: APIUser[]): TableEntry[] {
-    if (users.length <= 1) {
-      return sortEntries(
-        Object.entries(users[0].experiences).map(([domain, value]) => ({
-          domain,
-          value,
-          lowestValue: -1,
-          highestValue: -1,
-          sharedByCount: 1,
-          changed: false,
-        })),
-      );
-    }
-
-    // find all existing experience domains
-    const allDomains: string[] = union(...users.map((user) => Object.keys(user.experiences)));
-
-    // adds the number of users with this domain (sharedByCount) to all domains
-    const allDomainsWithCount = allDomains.map((domain) => {
-      let sharedByCount = 0;
-      users.forEach((user) => {
-        if (domain in user.experiences) {
-          sharedByCount++;
-        }
-      });
-      return {
-        domain,
-        sharedByCount,
-      };
-    });
-    // create a table entry for each domain
-    const tableEntries = allDomainsWithCount.map((entry) => {
-      const usersValues = users.map((user) => user.experiences[entry.domain]);
-
-      const minVal = min(usersValues);
-
-      const maxVal = max(usersValues);
-
-      const isShared = entry.sharedByCount === users.length;
-      const value = isShared && maxVal === minVal ? minVal : -1;
-      return {
-        domain: entry.domain,
-        value,
-        lowestValue: minVal,
-        highestValue: maxVal,
-        sharedByCount: entry.sharedByCount,
-        changed: false,
-      };
-    });
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ domain: string; value: number ... Remove this comment to see the full error message
-    return sortEntries(tableEntries);
-  }
 
   async function updateAllUsers() {
     const relevantEntries = tableEntries.filter((entry) => entry.changed);

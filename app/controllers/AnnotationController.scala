@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
 }
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingType}
-import mail.{MailchimpClient, MailchimpTag}
+import mail.{AccessChangeEmailService, MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
 import models.annotation.AnnotationState.Cancelled
 import models.annotation.*
@@ -65,6 +65,7 @@ class AnnotationController @Inject() (
     annotationIdReservationService: AnnotationReservedIdsService,
     userService: UserService,
     teamService: TeamService,
+    accessChangeEmailService: AccessChangeEmailService,
     projectDAO: ProjectDAO,
     teamDAO: TeamDAO,
     timeSpanService: TimeSpanService,
@@ -400,6 +401,7 @@ class AnnotationController @Inject() (
         _ <- Fox.assertTrue(restrictions.allowFinish(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- userService.findOneCached(request.body.userId) ?~> Msg.User.notFound(request.body.userId)
         updated <- annotationService.transferAnnotationToUser(typ, id, request.body.userId, request.identity)
+        _ = accessChangeEmailService.sendAnnotationTransferredEmail(updated, request.identity)
         json <- annotationService.publicWrites(updated, Some(request.identity), Some(restrictions))
       } yield JsonOk(json)
     }
@@ -470,7 +472,13 @@ class AnnotationController @Inject() (
         ) ?~> Msg.notAllowed ~> FORBIDDEN
         teamIdsValidated <- Fox.serialCombined(request.body)(ObjectId.fromString)
         _ <- Fox.serialCombined(teamIdsValidated)(teamDAO.findOne(_)) ?~> Msg.Annotation.Edit.accessingTeamFailed
-        _ <- annotationService.updateTeamsForSharedAnnotation(annotation._id, teamIdsValidated)
+        oldTeams <- teamDAO.findSharedTeamsForAnnotation(annotation._id)
+        _ <- accessChangeEmailService.updateAnnotationTeamsAndSendEmails(
+          annotation,
+          oldTeams.map(_._id),
+          teamIdsValidated,
+          request.identity
+        )(annotationService.updateTeamsForSharedAnnotation(annotation._id, teamIdsValidated))
       } yield Ok(Json.toJson(teamIdsValidated))
     }
 

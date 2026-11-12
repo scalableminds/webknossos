@@ -323,6 +323,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const { modal } = App.useApp();
   const { token } = theme.useToken();
   const [form] = Form.useForm<FormValues>();
+  const hasExperienceDomain = isNonEmptyDomain(Form.useWatch(["neededExperience", "domain"], form));
 
   const {
     data: datasets = [],
@@ -649,6 +650,17 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
       <Spin spinning={isUploading}>
         <Form
           onFinish={onFinish}
+          onValuesChange={(changedValues: Partial<FormValues>) => {
+            // An experience value without a domain would be dropped silently, so clear it with the domain.
+            const changedExperience = changedValues.neededExperience;
+            if (
+              changedExperience != null &&
+              "domain" in changedExperience &&
+              !isNonEmptyDomain(changedExperience.domain)
+            ) {
+              form.setFieldValue(["neededExperience", "value"], undefined);
+            }
+          }}
           layout="vertical"
           form={form}
           initialValues={{
@@ -724,7 +736,11 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                   },
                 ]}
               >
-                <InputNumber style={fullWidth} disabled={isEditingMode} />
+                <InputNumber
+                  style={fullWidth}
+                  disabled={isEditingMode || !hasExperienceDomain}
+                  placeholder={hasExperienceDomain ? undefined : "Select a domain first"}
+                />
               </FormItem>
             </Col>
             <CreateResourceButton text="Assign Experience" link="/users" />

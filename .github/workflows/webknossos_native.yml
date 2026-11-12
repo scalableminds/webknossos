@@ -1,0 +1,35 @@
+name: Native Library (Rust)
+
+# Checks and unit tests of the Rust crate in webknossos-native. They only run when the crate or its test corpus
+# changes. The library itself is built (and covered by NativeGoldenTestSuite) in the CI Pipeline anyway.
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - "webknossos-native/**"
+      - "test/native-golden/**"
+      - ".github/workflows/webknossos_native.yml"
+  workflow_dispatch: {}
+
+jobs:
+  rust-checks:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: webknossos-native
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Show Rust version
+        # The runner image provides Rust (with rustfmt and clippy).
+        run: cargo --version && cargo clippy --version && cargo fmt --version
+      - name: Check formatting
+        run: cargo fmt --check
+      - name: Lint
+        run: cargo clippy --release --all-targets --locked -- -D warnings
+      - name: Unit tests
+        # Release mode, like the library sbt builds. The corrupted input tests are also much faster in it.
+        run: cargo test --release --locked

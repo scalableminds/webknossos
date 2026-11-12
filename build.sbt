@@ -1,3 +1,4 @@
+import com.github.sbt.jni.build.Cargo
 import sbt._
 
 ThisBuild / version := "wk"
@@ -67,17 +68,20 @@ lazy val webknossosSlickCodegen = (project in file("webknossos-slick-codegen")).
   libraryDependencies ++= Dependencies.slickCodegenDependencies
 )
 
-lazy val webknossosJni = (project in file("webknossos-jni"))
-  .settings(nativeCompile / sourceDirectory := sourceDirectory.value)
+// Native functions (JNI) in Rust, built with cargo by sbt-jni.
+lazy val webknossosNative = (project in file("webknossos-native"))
+  .settings(
+    nativeCompile / sourceDirectory := baseDirectory.value,
+    nativeBuildTool := Cargo.make(Seq("--release", "--locked"))
+  )
   .enablePlugins(JniNative)
 
 lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .dependsOn(util)
-  .dependsOn(webknossosJni)
+  .dependsOn(webknossosNative)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(ProtocPlugin)
-  .settings(javah / target := (webknossosJni / nativeCompile / sourceDirectory).value / "include")
   .settings(
     name := "webknossos-datastore",
     commonSettings,

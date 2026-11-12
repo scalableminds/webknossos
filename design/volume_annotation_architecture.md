@@ -1707,7 +1707,7 @@ Note this does not help the CPU side: filling the mask for a YZ stroke is bit-at
 
 ### 11.2 Varint gaps, merged runs and a per-bucket axis order
 
-**Implemented** as format version 1 (`encodeBucketDiff` in `core/bucket_diff.ts`, `applyVoxelRuns` in `webknossos-jni/src/bucketScanner.cpp`), replacing the unversioned format before any payload was stored. On a recorded 12-minute session (brush with auto-fill, interpolation and flood fill in all viewports), it shrinks the run payload to 6% of the unversioned format: varints halve it, merging runs across rows brings it to 30%, and the viewport's run order to 6%. Choosing the best order per bucket instead would give 4%.
+**Implemented** as format version 1 (`encodeBucketDiff` in `core/bucket_diff.ts`, `applyVoxelRuns` in `webknossos-native/src/voxel_runs.rs`), replacing the unversioned format before any payload was stored. On a recorded 12-minute session (brush with auto-fill, interpolation and flood fill in all viewports), it shrinks the run payload to 6% of the unversioned format: varints halve it, merging runs across rows brings it to 30%, and the viewport's run order to 6%. Choosing the best order per bucket instead would give 4%.
 
 A variant of the run format (§5.8) that stays a run list but encodes it more tightly:
 

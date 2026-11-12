@@ -1,7 +1,0 @@
--J-Xms256m
--J-Xmx4g
--J-XX:MaxMetaspaceSize=2048m
--J-XX:G1PeriodicGCInterval=60000
--J-XX:MinHeapFreeRatio=10
--J-XX:MaxHeapFreeRatio=30
--J-XX:+UseStringDeduplication

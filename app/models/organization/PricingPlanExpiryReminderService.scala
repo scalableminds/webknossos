@@ -1,6 +1,5 @@
 package models.organization
 
-import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -47,7 +46,11 @@ class PricingPlanExpiryReminderService @Inject() (
     for {
       now <- Instant.nowFox
       organizations <- organizationDAO.findAllWithPlanExpiringBefore(now + (allLeadTimesDays.max days))
-      _ <- Fox.serialCombined(organizations)(organization => tryAndLog(organization, remindIfDue(organization, now)))
+      _ <- Fox.serialCombined(organizations)(organization =>
+        remindIfDue(organization, now).logFailureAndRecover(failure =>
+          logger.warn(s"Could not send pricing plan expiry reminder for organization ${organization._id}: $failure")
+        )
+      )
     } yield ()
 
   private def remindIfDue(organization: Organization, now: Instant): Fox[Unit] =
@@ -84,18 +87,6 @@ class PricingPlanExpiryReminderService @Inject() (
           s"Reminding the owner and admins (${recipients.length}) of organization ${organization._id} that its ${organization.pricingPlan} plan expires in $daysRemaining days..."
         )
         organizationEmailService.sendPricingPlanExpiryReminderEmails(recipients, organization, paidUntil, daysRemaining)
-      }
-    } yield ()
-
-  private def tryAndLog(organization: Organization, result: Fox[Unit]): Fox[Unit] =
-    for {
-      box <- result.shiftBox
-      _ = box match {
-        case Full(_)    => ()
-        case f: Failure =>
-          logger.warn(s"Could not send pricing plan expiry reminder for organization ${organization._id}: $f")
-        case Empty =>
-          logger.warn(s"Could not send pricing plan expiry reminder for organization ${organization._id}: Empty")
       }
     } yield ()
 }

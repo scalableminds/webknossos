@@ -334,6 +334,17 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
    */
   def shiftBox: Fox[Box[A]] = Fox.fromFuture(futureBox)
 
+  /*
+   * Returns a Fox[Unit] that is always successful. If this Fox fails or is empty, onFailure receives a description
+   * of it, e.g. to log it. Use for side tasks whose failure must not fail the surrounding operation.
+   */
+  def logFailureAndRecover(onFailure: String => Unit): Fox[Unit] =
+    shiftBox.map {
+      case Full(_)    => ()
+      case f: Failure => onFailure(f.toString)
+      case Empty      => onFailure("Empty")
+    }
+
   def toFutureOption: Future[Option[A]] =
     futureBox.map(box => box.toOption)
 

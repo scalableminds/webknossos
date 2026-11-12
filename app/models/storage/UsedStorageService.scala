@@ -3,7 +3,7 @@ package models.storage
 import com.scalableminds.util.Msg
 import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.box.{Failure, Full}
+import com.scalableminds.util.box.Full
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
@@ -70,30 +70,19 @@ class UsedStorageService @Inject() (
       _ = logger.info(s"Scanning used storage for ${organizations.length} organizations (${organizations
           .map(_._id)}) in ${dataStores.length} datastores (${dataStores.map(_.name)})...")
       _ <- Fox.serialCombined(organizations)(organization =>
-        tryAndLog(organization._id, refreshStorageReports(organization, dataStores))
+        refreshStorageReports(organization, dataStores).logFailureAndRecover(failure =>
+          logger.error(s"Error during storage scan for organization with id ${organization._id}: $failure")
+        )
       )
     } yield ()
 
-  private def tryAndLog(organizationId: String, result: Fox[Unit]): Fox[Unit] =
-    for {
-      box <- result.shiftBox
-      _ = box match {
-        case Full(_)    => ()
-        case f: Failure => logger.error(f"Error during storage scan for organization with id $organizationId: $f")
-        case _          => logger.error(f"Error during storage scan for organization with id $organizationId: Empty")
-      }
-    } yield ()
-
-  // A failed storage warning email must not fail the storage scan itself.
-  private def tryAndLogWarning(organizationId: String, result: Fox[Unit]): Fox[Unit] =
-    for {
-      box <- result.shiftBox
-      _ = box match {
-        case f: Failure =>
-          logger.warn(f"Could not send storage warning email for organization with id $organizationId: $f")
-        case _ => ()
-      }
-    } yield ()
+  // A failed storage warning email must not fail the storage scan or upload it belongs to.
+  private def sendStorageWarningEmailIfThresholdCrossed(organization: Organization): Fox[Unit] =
+    storageWarningService
+      .sendWarningEmailIfThresholdCrossed(organization)
+      .logFailureAndRecover(failure =>
+        logger.warn(s"Could not send storage warning email for organization with id ${organization._id}: $failure")
+      )
 
   private def refreshStorageReports(organization: Organization, dataStores: List[DataStore]): Fox[Unit] =
     for {
@@ -110,10 +99,7 @@ class UsedStorageService @Inject() (
         organization._id,
         Instant.now
       ) ?~> "Failed to update last storage scan time in db"
-      _ <- tryAndLogWarning(
-        organization._id,
-        storageWarningService.sendWarningEmailIfThresholdCrossed(organization)
-      )
+      _ <- sendStorageWarningEmailIfThresholdCrossed(organization)
       _ = Thread.sleep(pauseAfterEachOrganization.toMillis)
     } yield ()
 
@@ -263,10 +249,7 @@ class UsedStorageService @Inject() (
             _ <- Fox.runIf(reports._1.nonEmpty || reports._2.nonEmpty)(
               organizationDAO.upsertUsedStorage(reports._1, reports._2)
             ) ?~> "Failed to upsert used storage reports into db"
-            _ <- tryAndLogWarning(
-              organization._id,
-              storageWarningService.sendWarningEmailIfThresholdCrossed(organization)
-            )
+            _ <- sendStorageWarningEmailIfThresholdCrossed(organization)
           } yield ()
         } else Fox.successful(())
     } yield ()

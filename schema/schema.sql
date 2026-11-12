@@ -414,10 +414,10 @@ CREATE TABLE webknossos.organization_plan_updates(
 CREATE TYPE webknossos.EMAIL_THRESHOLD_TYPE AS ENUM ('PlanExpiry', 'StorageWarning');
 CREATE TABLE webknossos.organization_notifiedEmailThresholds(
   _organization TEXT NOT NULL,
-  emailType webknossos.EMAIL_THRESHOLD_TYPE NOT NULL,
+  emailThresholdType webknossos.EMAIL_THRESHOLD_TYPE NOT NULL,
   threshold INT NOT NULL, -- PlanExpiry: lead time in days, StorageWarning: used storage in percent. Deleted again to re-arm the email.
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (_organization, emailType, threshold),
+  PRIMARY KEY (_organization, emailThresholdType, threshold),
   CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
 );
 

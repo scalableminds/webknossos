@@ -18,7 +18,7 @@ INSERT INTO webknossos.organization_planExpiryReminders(_organization, paidUntil
 SELECT s._organization, o.paidUntil, s.threshold, s.created
 FROM webknossos.organization_notifiedEmailThresholds s
 JOIN webknossos.organizations o ON o._id = s._organization
-WHERE s.emailType = 'PlanExpiry' AND o.paidUntil IS NOT NULL;
+WHERE s.emailThresholdType = 'PlanExpiry' AND o.paidUntil IS NOT NULL;
 
 DROP TABLE webknossos.organization_notifiedEmailThresholds;
 DROP TYPE webknossos.EMAIL_THRESHOLD_TYPE;

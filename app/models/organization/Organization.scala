@@ -361,10 +361,6 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
           q"""UPDATE webknossos.organizations SET paidUntil = ${planUpdate.paidUntilFlat} WHERE _id = $organizationId""".asUpdate
         )
       )
-      // A new expiry date re-arms all plan expiry reminders.
-      _ <- Fox.runIf(planUpdate.paidUntilChanged)(
-        deleteAllNotifiedEmailThresholds(organizationId, EmailThresholdType.PlanExpiry)
-      )
       _ <- Fox.runIf(planUpdate.includedUsersChanged)(
         run(
           q"""UPDATE webknossos.organizations SET includedUsers = ${planUpdate.includedUsersFlat} WHERE _id = $organizationId""".asUpdate
@@ -483,14 +479,18 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
                      AND threshold IN ${SqlToken.tupleFromList(thresholds.toList)}""".asUpdate)
       } yield ()
 
-  private def deleteAllNotifiedEmailThresholds(
-      organizationId: String,
-      emailThresholdType: EmailThresholdType
-  ): Fox[Unit] =
+  /* Re-arms the plan expiry reminders of all organizations whose expiry date is further away again than the
+     reminder's lead time, e.g. because the plan was extended or made unlimited. This is the complement of
+     PricingPlanExpiryReminderService.crossedLeadTimesDays: ceil(daysRemaining) > leadTime ⇔ paidUntil > now + leadTime.
+     Checking the current expiry date (instead of hooking into plan updates) also covers unchanged dates being
+     sent again and dates changed by other means. */
+  def deleteNotifiedPlanExpiryThresholdsNotCrossedAnyMore(now: Instant): Fox[Unit] =
     for {
-      _ <- run(q"""DELETE FROM webknossos.organization_notifiedEmailThresholds
-                   WHERE _organization = $organizationId
-                   AND emailThresholdType = $emailThresholdType""".asUpdate)
+      _ <- run(q"""DELETE FROM webknossos.organization_notifiedEmailThresholds t
+                   USING webknossos.organizations o
+                   WHERE t._organization = o._id
+                   AND t.emailThresholdType = ${EmailThresholdType.PlanExpiry}
+                   AND (o.paidUntil IS NULL OR o.paidUntil > $now + t.threshold * INTERVAL '1 day')""".asUpdate)
     } yield ()
 
 }

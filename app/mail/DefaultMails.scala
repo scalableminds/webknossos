@@ -379,22 +379,24 @@ private[mail] class DefaultMails @Inject() (conf: WkConf) extends Formatter {
       multiUser: MultiUser,
       organization: Organization,
       usedStorageBytes: Long,
-      includedStorageBytes: Long
+      includedStorageBytes: Long,
+      usagePercent: Double,
+      isExceeded: Boolean
   ): Mail = {
-    val isExceeded = usedStorageBytes >= includedStorageBytes
-    val usagePercent = if (includedStorageBytes > 0) usedStorageBytes * 100 / includedStorageBytes else 100L
+    // Floored, so that e.g. 89.9% is not announced as 90%. Only shown while not exceeded, so always finite.
+    val usagePercentFloored = usagePercent.toLong
     Mail(
       from = defaultSender,
       subject =
         if (isExceeded) s"WEBKNOSSOS | Your organization ${organization.name} has used up its storage"
-        else s"WEBKNOSSOS | Your organization ${organization.name} has used $usagePercent% of its storage",
+        else s"WEBKNOSSOS | Your organization ${organization.name} has used $usagePercentFloored% of its storage",
       bodyHtml = html.mail
         .storageWarning(
           multiUser.fullName,
           organization.name,
           formatBytes(usedStorageBytes),
           formatBytes(includedStorageBytes),
-          usagePercent,
+          usagePercentFloored,
           isExceeded,
           s"$uri/organization/overview",
           additionalFooter

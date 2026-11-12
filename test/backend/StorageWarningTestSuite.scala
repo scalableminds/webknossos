@@ -1,6 +1,11 @@
 package backend
 
-import models.storage.StorageWarningService.{crossedThresholdsPercent, rearmedThresholdsPercent, usagePercent}
+import models.storage.StorageWarningService.{
+  crossedThresholdsPercent,
+  isExceeded,
+  rearmedThresholdsPercent,
+  usagePercent
+}
 import org.scalatest.wordspec.AsyncWordSpec
 
 class StorageWarningTestSuite extends AsyncWordSpec {
@@ -17,6 +22,14 @@ class StorageWarningTestSuite extends AsyncWordSpec {
     "treat any usage as exceeded if the included storage is zero" in {
       assert(usagePercent(0, 0) == 0.0)
       assert(usagePercent(1, 0).isPosInfinity)
+    }
+  }
+
+  "isExceeded" should {
+    "be true once the included storage is used up" in {
+      assert(!isExceeded(99.9))
+      assert(isExceeded(100))
+      assert(isExceeded(Double.PositiveInfinity))
     }
   }
 

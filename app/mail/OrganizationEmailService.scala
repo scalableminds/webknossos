@@ -71,9 +71,20 @@ class OrganizationEmailService @Inject() (
       recipients: List[MultiUser],
       organization: Organization,
       usedStorageBytes: Long,
-      includedStorageBytes: Long
+      includedStorageBytes: Long,
+      usagePercent: Double,
+      isExceeded: Boolean
   ): Unit =
     recipients.foreach(recipient =>
-      mailSender.send(defaultMails.storageWarningMail(recipient, organization, usedStorageBytes, includedStorageBytes))
+      mailSender.send(
+        defaultMails.storageWarningMail(
+          recipient,
+          organization,
+          usedStorageBytes,
+          includedStorageBytes,
+          usagePercent,
+          isExceeded
+        )
+      )
     )
 }

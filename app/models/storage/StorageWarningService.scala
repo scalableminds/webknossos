@@ -23,7 +23,7 @@ class StorageWarningService @Inject() (
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  import StorageWarningService.{crossedThresholdsPercent, rearmedThresholdsPercent, usagePercent}
+  import StorageWarningService.{crossedThresholdsPercent, isExceeded, rearmedThresholdsPercent, usagePercent}
 
   private def thresholdsPercent: List[Int] = conf.WebKnossos.StorageWarningEmails.thresholdsPercent
 
@@ -39,7 +39,7 @@ class StorageWarningService @Inject() (
             rearmedThresholdsPercent(percent, thresholdsPercent)
           )
           crossed = crossedThresholdsPercent(percent, thresholdsPercent)
-          _ <- Fox.runIf(crossed.nonEmpty)(warn(organization, usedStorageBytes, includedStorageBytes, crossed))
+          _ <- Fox.runIf(crossed.nonEmpty)(warn(organization, usedStorageBytes, includedStorageBytes, percent, crossed))
         } yield ()
       case _ => Fox.successful(()) // unlimited storage, nothing to warn about
     }
@@ -48,6 +48,7 @@ class StorageWarningService @Inject() (
       organization: Organization,
       usedStorageBytes: Long,
       includedStorageBytes: Long,
+      usagePercent: Double,
       crossedThresholdsPercent: Seq[Int]
   ): Fox[Unit] =
     for {
@@ -69,7 +70,9 @@ class StorageWarningService @Inject() (
           recipients,
           organization,
           usedStorageBytes,
-          includedStorageBytes
+          includedStorageBytes,
+          usagePercent,
+          isExceeded(usagePercent)
         )
       }
     } yield ()
@@ -83,6 +86,8 @@ object StorageWarningService {
   def usagePercent(usedStorageBytes: Long, includedStorageBytes: Long): Double =
     if (includedStorageBytes <= 0) { if (usedStorageBytes > 0) Double.PositiveInfinity else 0.0 }
     else usedStorageBytes.toDouble * 100 / includedStorageBytes
+
+  def isExceeded(usagePercent: Double): Boolean = usagePercent >= 100
 
   def crossedThresholdsPercent(usagePercent: Double, thresholdsPercent: Seq[Int]): Seq[Int] =
     thresholdsPercent.filter(usagePercent >= _).sorted

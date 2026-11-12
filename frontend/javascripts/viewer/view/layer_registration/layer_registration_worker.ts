@@ -1,12 +1,13 @@
 import { findDataPositionForLayer, getBuildInfo } from "admin/rest_api";
 import Toast from "libs/toast";
 import { isNoEditableElementFocused } from "libs/utils";
+import isEqual from "lodash-es/isEqual";
 import { useEffect } from "react";
 import type { BlockerFunction } from "react-router";
 import type { Vector3 } from "viewer/constants";
 import { isSaving } from "viewer/model/accessors/annotation_accessor";
 import { getDataLayers } from "viewer/model/accessors/dataset_accessor";
-import { getMaxZoomValueForMag } from "viewer/model/accessors/flycam_accessor";
+import { getMaxZoomValueForMag, getPosition } from "viewer/model/accessors/flycam_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { Toolkit } from "viewer/model/accessors/tool_accessor";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
@@ -96,6 +97,31 @@ export function blockLayerRegistrationWorkerNavigation(
   return true;
 }
 
+// Moves the camera to a position where the layer has data. The search can take a while, so the
+// layer registration page may already have moved the camera, e.g. to a landmark. The camera
+// then stays there.
+async function maybeMoveToDataOfLayer(layerName: string) {
+  const { dataset, flycam } = Store.getState();
+  const positionBeforeSearch = getPosition(flycam);
+  try {
+    const { position, mag } = await findDataPositionForLayer(
+      dataset.dataStore.url,
+      dataset,
+      layerName,
+    );
+    const wasCameraMovedByUser = !isEqual(
+      getPosition(Store.getState().flycam),
+      positionBeforeSearch,
+    );
+    if (position != null && mag != null && !wasCameraMovedByUser) {
+      Store.dispatch(setPositionAction(position));
+      Store.dispatch(setZoomStepAction(getMaxZoomValueForMag(Store.getState(), layerName, mag)));
+    }
+  } catch (error) {
+    console.error("Could not find a data position for layer", layerName, error);
+  }
+}
+
 // Configures the worker right after the annotation was loaded: show and natively render only the
 // worker's own layer (so landmark positions are in that layer's coordinates), create a new tree per
 // node, don't move the camera to new nodes, restrict the tools to landmark clicking and move to a
@@ -113,21 +139,7 @@ export async function applyLayerRegistrationWorkerSettings() {
   Store.dispatch(updateUserSettingAction("newNodeNewTree", true));
   Store.dispatch(updateUserSettingAction("centerNewNode", false));
   Store.dispatch(updateUserSettingAction("activeToolkit", Toolkit.LANDMARKS));
-
-  try {
-    const { dataset } = Store.getState();
-    const { position, mag } = await findDataPositionForLayer(
-      dataset.dataStore.url,
-      dataset,
-      layerName,
-    );
-    if (position != null && mag != null) {
-      Store.dispatch(setPositionAction(position));
-      Store.dispatch(setZoomStepAction(getMaxZoomValueForMag(Store.getState(), layerName, mag)));
-    }
-  } catch (error) {
-    console.error("Could not find a data position for layer", layerName, error);
-  }
+  await maybeMoveToDataOfLayer(layerName);
 }
 
 // Imports the stored landmarks of this worker's side (see prepareLandmarkTreesForImport).

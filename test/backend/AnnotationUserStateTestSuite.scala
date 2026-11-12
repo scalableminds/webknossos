@@ -101,4 +101,30 @@ class AnnotationUserStateTestSuite extends AsyncWordSpec with AnnotationUserStat
       )
     }
   }
+
+  "volume user state segment id remapping" should {
+    "map active segment id and segment visibilities, keeping unmapped ids" in {
+      val userStates = Seq(
+        VolumeTracingDefaults
+          .emptyUserState(userAId)
+          .copy(
+            activeSegmentId = Some(5L),
+            segmentVisibilities = Seq(Id64WithBool(5L, false), Id64WithBool(7L, true)),
+            segmentGroupExpandedStates = Seq(Id32WithBool(5, true))
+          )
+      )
+      val remapped = remapSegmentIdsInVolumeUserStates(userStates, Map(5L -> 1L))
+      assert(
+        remapped == Seq(
+          VolumeTracingDefaults
+            .emptyUserState(userAId)
+            .copy(
+              activeSegmentId = Some(1L),
+              segmentVisibilities = Seq(Id64WithBool(1L, false), Id64WithBool(7L, true)),
+              segmentGroupExpandedStates = Seq(Id32WithBool(5, true))
+            )
+        )
+      )
+    }
+  }
 }

@@ -1,6 +1,7 @@
 import type { FormProps } from "antd";
 import { Col, Form, Input, InputNumber, Row } from "antd";
 import { KeyValuePairsFormItem } from "components/key_value_pairs";
+import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { APIJobCommand } from "types/api_types";
 import { AdvancedSettings } from "../components/job_layout";
@@ -20,6 +21,7 @@ export const AiTrainingSettings: React.FC = () => {
     setCustomConfiguration,
     stepStatuses,
   } = useAiTrainingJobContext();
+  const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser ?? false);
 
   const handleValuesChange: FormProps["onValuesChange"] = (changedValues) => {
     if ("modelName" in changedValues) {
@@ -78,9 +80,11 @@ export const AiTrainingSettings: React.FC = () => {
           </Col>
         </Row>
 
-        <AdvancedSettings hint="Custom Configuration">
-          <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
-        </AdvancedSettings>
+        {isSuperUser && (
+          <AdvancedSettings hint="Custom Configuration">
+            <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
+          </AdvancedSettings>
+        )}
       </Form>
     </JobSection>
   );

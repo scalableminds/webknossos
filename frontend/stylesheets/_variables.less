@@ -1,8 +1,30 @@
-@left-menu-width: 360px;
 // Keep in sync with WK_FONT / WK_MONO in frontend/javascripts/theme.ts.
 @font-family: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
   "Helvetica Neue", Arial, sans-serif;
 @font-family-code: "IBM Plex Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+
+// antd's breakpoints (the screen* design tokens, e.g. screenLGMax), so that LESS media queries agree
+// with Grid.useBreakpoint() and responsive Col props. They can't be read from antd's CSS variables,
+// because var() isn't allowed in @media conditions. Derived from antd 6.6.7's default theme tokens
+// (we don't override them). Checked against antd by test/misc/antd_breakpoints.spec.ts.
+@screen-xs-max: 575px;
+@screen-sm-min: 576px;
+@screen-sm-max: 767px;
+@screen-md-min: 768px;
+@screen-md-max: 991px;
+@screen-lg-min: 992px;
+@screen-lg-max: 1199px;
+@screen-xl-min: 1200px;
+@screen-xl-max: 1599px;
+@screen-xxl-min: 1600px;
+
+// Phones: below antd's md breakpoint. Matches the compact layouts that check
+// useMinScreenWidth("md") / Grid.useBreakpoint().md in JS.
+@smartphones: ~"only screen and (max-width: @{screen-sm-max})";
+
+// Not an antd breakpoint: mirrors constants.NARROW_SCREEN_WIDTH in viewer/constants.ts, below which
+// the annotation view's navbar compacts its items.
+@screen-narrow-min: 1400px;
 
 :root {
   // The brand colors below mirror the constants in frontend/javascripts/theme.ts, which is the
@@ -18,6 +40,8 @@
   --color-light-grey-spotlight: #f0f0f0;
   --color-blue-zircon: #59f8e8; // theme.ts: ColorWKBlueZircon
   --color-xy-viewport: #eb4b98;
+  --color-text-on-ink-muted: #8c8ead; // theme.ts: ColorTextOnInkMuted
+  --color-hairline-on-ink: rgba(255, 255, 255, 0.12); // theme.ts: ColorHairlineOnInk
   --color-yz-viewport: var(--color-wk-blue);
   --color-xz-viewport: var(--color-blue-zircon);
   --navbar-height: 48px;

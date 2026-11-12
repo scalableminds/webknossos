@@ -48,6 +48,11 @@ export const WkDevFlags = {
   debugging: {
     showCurrentVersionInInfoTab: false,
   },
+  liveCollaboration: {
+    // Allows the volume tools in live collaboration, and switching to live
+    // collaboration when the mapping is locked (not only with an editable mapping).
+    allowCollaborativeVolumeAnnotation: false,
+  },
   meshing: {
     marchingCubeSizeInTargetMag: [64, 64, 64] as Vector3,
   },

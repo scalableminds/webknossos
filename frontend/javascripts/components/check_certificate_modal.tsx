@@ -1,28 +1,22 @@
+import { useQuery } from "@tanstack/react-query";
 import { isCertificateValid } from "admin/api/certificate_validation";
 import { Col, Modal, Result, Row } from "antd";
-import { useInterval } from "libs/react_helpers";
 import noop from "lodash-es/noop";
-import { useEffect, useState } from "react";
 import { ModalWidth } from "theme";
 import FormattedDate from "./formatted_date";
 
 export function CheckCertificateModal() {
-  const [isValid, setIsValid] = useState(true);
-  const [expiresAt, setExpiresAt] = useState(Number.POSITIVE_INFINITY);
-  useEffect(() => {
-    isCertificateValid().then(({ isValid, expiresAt }) => {
-      setIsValid(isValid);
-      setExpiresAt(expiresAt);
+  // isCertificateValid never throws, so no error handling is needed.
+  const { data: { isValid, expiresAt } = { isValid: true, expiresAt: Number.POSITIVE_INFINITY } } =
+    useQuery({
+      queryKey: ["certificateValidity"],
+      queryFn: isCertificateValid,
+      refetchInterval: 5 * 60 * 1000, // 5 minutes
+      refetchIntervalInBackground: true,
+      refetchOnWindowFocus: false,
+      // Don't show a stale license state from a previous session.
+      meta: { persist: false },
     });
-  }, []);
-  useInterval(
-    async () => {
-      const { isValid, expiresAt } = await isCertificateValid();
-      setIsValid(isValid);
-      setExpiresAt(expiresAt);
-    },
-    5 * 60 * 1000, // 5 minutes
-  );
   if (isValid) {
     return null;
   }

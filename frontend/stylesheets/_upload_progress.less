@@ -1,0 +1,36 @@
+/** Blocks of the dataset upload progress grid that are currently being worked on. */
+.upload-progress-block-breathing {
+  animation: upload-progress-block-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes upload-progress-block-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/** Label of the stage of the dataset upload that is currently running. */
+.upload-progress-stage-breathing {
+  animation: upload-progress-stage-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes upload-progress-stage-breathe {
+  0%,
+  100% {
+    color: var(--ant-color-primary-text);
+  }
+  50% {
+    color: color-mix(in srgb, var(--ant-color-primary-text) 40%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .upload-progress-block-breathing,
+  .upload-progress-stage-breathing {
+    animation: none;
+  }
+}

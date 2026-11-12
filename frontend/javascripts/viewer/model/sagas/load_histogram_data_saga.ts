@@ -35,16 +35,17 @@ function* loadHistogramForLayer(layerName: string): Saga<void> {
   const dataset = yield* select((state) => state.dataset);
   const currentLayerConfig = yield* select((state) => state.datasetConfiguration.layers[layerName]);
 
-  let histogram;
-  try {
-    histogram = yield* call(getHistogramForLayer, dataset.dataStore.url, dataset.id, layerName);
-
-    if (!Array.isArray(histogram) || histogram.length === 0) {
-      yield* put(setHistogramDataForLayerAction(layerName, null));
-      return;
-    }
-  } catch (e) {
-    console.warn(`Error: Could not fetch the histogram data for layer ${layerName}.`, e);
+  const result = yield* call(getHistogramForLayer, dataset.dataStore.url, dataset.id, layerName);
+  if (!result.ok) {
+    console.warn(
+      `Error: Could not fetch the histogram data for layer ${layerName}.`,
+      result.error.cause,
+    );
+    yield* put(setHistogramDataForLayerAction(layerName, null));
+    return;
+  }
+  const histogram = result.value;
+  if (!Array.isArray(histogram) || histogram.length === 0) {
     yield* put(setHistogramDataForLayerAction(layerName, null));
     return;
   }

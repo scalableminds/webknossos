@@ -4,9 +4,10 @@
  * flood_fill_driver.ts), this file bridges to `viewer/`; everything outside
  * `integration/` stays independent of it.
  *
- * Buckets are mutated in place: nothing is pushed to the save queue, no
- * update actions are emitted, and undo is not wired up. That is the state
- * design doc §12.2 records, not an oversight here.
+ * Buckets are mutated in place, and no update actions are emitted here. How the
+ * mutation is saved depends on the SaveMode: either the buckets are pushed to the
+ * push queue and snapshotted for undo, as the old tools do, or they are not,
+ * because the caller sends the transaction's bucket diffs as partial updates.
  *
  * One thing worth knowing about the boundary itself:
  *   - The core's BucketAddress (core/volume_annotation_types.ts) is structurally identical to
@@ -16,18 +17,20 @@
  */
 
 import type { BucketDataArray } from "types/api_types";
-import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
+import { createPartialChangeKey, type DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { applyBucketWriteToData, type BucketWrite } from "../core/bucket_write_map";
 import {
+  type BoundingBox,
   type BucketAddress,
   type Mag,
+  type MagIndex,
   MagList,
   type SegmentBucketData,
   type SegmentId,
-  type Vector3,
 } from "../core/volume_annotation_types";
 import type { LoadingVoxelCube, TransactionCube } from "../core/voxel_cube_interfaces";
+import type { SaveMode } from "./tool_driver_types";
 
 /**
  * A segmentation layer never stores float data, so its buckets are always a
@@ -39,10 +42,17 @@ function asSegmentData(data: BucketDataArray): SegmentBucketData {
 }
 
 export class WkDataCubeAdapter implements TransactionCube {
-  // Buckets touched during the current stroke, so mutations can be flushed.
-  private readonly touched = new Set<DataBucket>();
+  // Buckets touched during the current stroke, so mutations can be flushed
+  // ("fullBuckets" only).
+  private readonly touchedFullBuckets = new Set<DataBucket>();
+  // "partialUpdates" only: one key per bucket for its pending partial change (see
+  // applyWrites).
+  private readonly partialChangeKeyByBucket = new Map<DataBucket, number>();
 
-  constructor(protected readonly cube: DataCube) {}
+  constructor(
+    protected readonly cube: DataCube,
+    private readonly saveMode: SaveMode,
+  ) {}
 
   /**
    * A predicate answering "does this voxel currently hold overwritableValue?"
@@ -73,9 +83,27 @@ export class WkDataCubeAdapter implements TransactionCube {
     // gets a zero-filled array plus temporal-bucket bookkeeping, which is how
     // the existing code paints over unloaded data too.
     const data = bucket.getOrCreateData();
-    if (!this.touched.has(bucket)) {
-      bucket.startDataMutation();
-      this.touched.add(bucket);
+
+    if (this.saveMode === "partialUpdates") {
+      // A stroke's write grows with it and is applied again on every flush. With one
+      // key per bucket and adapter (i.e., per edit), it replaces the bucket's pending
+      // change from the previous flush instead of adding another one (see
+      // DataBucket.applyPartialChange).
+      let key = this.partialChangeKeyByBucket.get(bucket);
+      if (key == null) {
+        key = createPartialChangeKey();
+        this.partialChangeKeyByBucket.set(bucket, key);
+      }
+      bucket.applyPartialChange(
+        (bucketData) => applyBucketWriteToData(asSegmentData(bucketData), write),
+        key,
+      );
+      return;
+    }
+
+    if (!this.touchedFullBuckets.has(bucket)) {
+      bucket.startDataMutationForFullBucket();
+      this.touchedFullBuckets.add(bucket);
     }
 
     applyBucketWriteToData(asSegmentData(data), write);
@@ -83,22 +111,41 @@ export class WkDataCubeAdapter implements TransactionCube {
     // getOrCreateData's own docstring warns it is unsafe to mutate directly:
     // if the backend's data for this bucket has not arrived yet, that fetch
     // will later overwrite `data` wholesale (see bucket_snapshot.ts), silently
-    // erasing the write above. bucket.needsBackendData() is the same check
-    // Bucket.applyVoxelMap uses to decide whether to additionally register a
-    // pendingOperation that replays the write once real data lands.
+    // erasing the write above. So a pendingOperation additionally replays the
+    // write once real data lands.
     if (bucket.needsBackendData()) {
-      bucket.pendingOperations.push((laterData) =>
+      bucket.fullBucketSaveState.pendingOperations.push((laterData) =>
         applyBucketWriteToData(asSegmentData(laterData), write),
       );
     }
   }
 
-  /** Ends the mutation on every touched bucket, triggering a GPU refresh. */
+  /**
+   * With "fullBuckets", ends the mutation on every touched bucket, which pushes it
+   * to the push queue and triggers a GPU refresh. With "partialUpdates", each write
+   * already triggers the refresh.
+   */
   flush(): void {
-    for (const bucket of this.touched) {
-      bucket.endDataMutation();
+    for (const bucket of this.touchedFullBuckets) {
+      bucket.endDataMutationForFullBucket();
     }
-    this.touched.clear();
+    this.touchedFullBuckets.clear();
+  }
+
+  /**
+   * The DataCube's bounding box (e.g., the task bounding box) in the voxels of
+   * the given mag. The DataCube drops writes to buckets outside of it, but not
+   * to the outside part of a partially contained bucket. Clipping in the core
+   * covers both, and keeps the diff free of discarded writes. Rounded like the
+   * bucket containment in data_cube.ts.
+   */
+  getEditableBoundingBox(magIndex: MagIndex): BoundingBox {
+    // Dense mags, since mag propagation also passes through mags that are
+    // missing between two existing ones.
+    const mag = this.cube.magInfo.getDenseMags()[magIndex];
+    if (mag == null) throw new Error(`No mag at index ${magIndex}`);
+    const { min, max } = this.cube.boundingBox.fromMag1ToMag(mag);
+    return { min, max };
   }
 
   private rawData(address: BucketAddress): BucketDataArray | null {
@@ -128,7 +175,13 @@ export class WkLoadingCubeAdapter extends WkDataCubeAdapter implements LoadingVo
   }
 }
 
-/** Build the core's MagList from a layer's MagInfo-derived dense mags. */
-export function magListFromDenseMags(denseMags: Vector3[]): MagList {
-  return new MagList(denseMags.map((mag) => [mag[0], mag[1], mag[2]] as Mag));
+/**
+ * Build the core's MagList from the cube's dense mags, propagating no finer than
+ * the layer's finest mag.
+ */
+export function magListForCube(cube: DataCube): MagList {
+  return new MagList(
+    cube.magInfo.getDenseMags().map((mag) => [mag[0], mag[1], mag[2]] as Mag),
+    cube.magInfo.getFinestMagIndex(),
+  );
 }

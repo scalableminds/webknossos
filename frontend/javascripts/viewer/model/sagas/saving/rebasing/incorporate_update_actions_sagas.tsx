@@ -32,6 +32,8 @@ import {
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
+import { applyRun, decodeBucketDiffBase64 } from "viewer/model/volumetracing/core/bucket_diff";
+import type { SegmentBucketData } from "viewer/model/volumetracing/core/volume_annotation_types";
 import { Model } from "viewer/singletons";
 import {
   splitAgglomeratesInMapping,
@@ -41,10 +43,8 @@ import {
   reconcileMultiCutSelectionAfterForeignMerge,
   reconcileMultiCutSelectionAfterForeignSplit,
 } from "../../volume/proofreading/multi_split_selection_sagas";
-import {
-  getMeshDisplayPropsByOldAgglomerateId,
-  type PreservedMeshDisplayProps,
-} from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
+import type { PreservedMeshDisplayProps } from "../../volume/proofreading/proofreading_types";
+import { getMeshDisplayPropsByOldAgglomerateId } from "../../volume/proofreading/segment_and_mesh_refresh_sagas";
 import {
   type ApplyingUpdateResults,
   getFailedIncorporateActionsReturnValue,
@@ -168,7 +168,8 @@ export function* tryToIncorporateActions(
         /////////////
         // Volume
         /////////////
-        case "updateBucket": {
+        case "updateBucket":
+        case "updateBucketPartial": {
           const { value } = action;
           const cube = Model.getCubeByLayerName(value.actionTracingId);
 
@@ -180,6 +181,25 @@ export function* tryToIncorporateActions(
           );
 
           const bucket = cube.getBucket(bucketAddress);
+          if (action.name === "updateBucketPartial") {
+            // A bucket that isn't in the cube gets others' changes with its data. The user's
+            // own unsaved ones keep their bucket in the cube until they are saved.
+            if (bucket.type !== "data") break;
+            const runs = decodeBucketDiffBase64(action.value.voxelRunsBase64);
+            // Applied to the data, or kept until it arrives (see
+            // DataBucket.applyPartialChange). As runs are absolute writes, applying others'
+            // runs first and then re-applying the user's unsaved ones (see rebasing_sagas.ts)
+            // yields the backend's state after the user's pending save. Where both wrote the
+            // same voxels, the user's values win. Partial updates never evict a bucket: that
+            // wouldn't stop a request in flight, whose response would land in the bucket
+            // created anew.
+            bucket.applyPartialChange((data) => {
+              for (const run of runs) applyRun(data as SegmentBucketData, run);
+            });
+            break;
+          }
+          // Otherwise, drop the local cache and force a re-fetch. A bucket that is
+          // not loaded yet may still receive backend data from before the change.
           if (bucket != null && bucket.type !== "null") {
             cube.removeBucket(bucket);
             refreshLayerFunctionByTracing[value.actionTracingId] = () => {

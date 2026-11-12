@@ -12,7 +12,7 @@
 @import "trace_view/_right_menu.less";
 @import "trace_view/_info_tab.less";
 @import "antd_overwrites.less";
-@import "olvy_overwrites.less";
+@import "release_notes.less";
 @import "flex_layout_overwrites.less";
 @import "_drawings.less";
 @import "_upgrade_request_modal.less";
@@ -20,6 +20,7 @@
 @import "command_palette.less";
 @import "_voxelytics.less";
 @import "_ai_jobs.less";
+@import "_upload_progress.less";
 @import "_help_panel.less";
 
 // Web fonts (SIL Open Font License, see fonts/*-OFL.txt), taken from the fontsource packages
@@ -176,6 +177,51 @@ body {
     }
   }
 
+  // Co-branding: the partner logo sits next to the WEBKNOSSOS logo, separated by a thin divider.
+  .partner-logo-divider {
+    display: inline-block;
+    width: 1px;
+    height: 24px;
+    margin: 0 14px 0 16px;
+    background-color: rgba(255, 255, 255, 0.35);
+    vertical-align: middle;
+
+    // The collapsed WEBKNOSSOS logo already brings an 8px right margin (icon-margin-right), so
+    // the divider only adds space on its right to keep both gaps equal.
+    &.compact {
+      height: 20px;
+      margin: 0 8px 0 0;
+    }
+  }
+
+  .partner-logo {
+    height: 24px;
+    max-width: 140px;
+    margin-right: 12px;
+    object-fit: contain;
+    vertical-align: middle;
+
+    // The compact logo is shown where the navbar is collapsed (annotation view, phones).
+    &.compact {
+      height: 26px;
+      max-width: 40px;
+      margin-right: 4px;
+    }
+
+    &.compact-fallback {
+      height: 20px;
+      max-width: 80px;
+      margin-right: 4px;
+    }
+  }
+
+  // Phones have no room for a full partner logo.
+  .partner-logo-hidden-on-phones {
+    @media @smartphones {
+      display: none;
+    }
+  }
+
   // Size and spacing match the wordmark in logo.svg next to the 30px mark.
   .logo-wordmark {
     margin-left: 10px;
@@ -260,9 +306,19 @@ body {
   margin-right: 0;
 }
 
-/** Hides elements on screens smaller than 1200px width. */
+/** Hides elements below antd's xl breakpoint, i.e. when useMinScreenWidth("xl") is false. */
 .hide-on-small-screen {
-  @media (max-width: 1200px) {
+  // 1199.98px instead of @screen-lg-max (1199px), so that fractional viewport widths when zoomed
+  // (e.g. 1199.5px) also count as below xl, like antd's (min-width: 1200px) check. Same trick as
+  // Bootstrap; the range syntax (width < 1200px) would need Safari 16.4+.
+  @media (max-width: (@screen-xl-min - 0.02px)) {
+    display: none !important;
+  }
+}
+
+/** Hides elements below constants.NARROW_SCREEN_WIDTH (1400px). See .hide-on-small-screen for the -0.02px. */
+.hide-on-narrow-screen {
+  @media (max-width: (@screen-narrow-min - 0.02px)) {
     display: none !important;
   }
 }
@@ -280,12 +336,21 @@ body {
     margin-left: 20px;
     margin-right: 20px;
   }
+
+  // On phones, every pixel of width counts. Slim down the side spacing.
+  @media @smartphones {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 12px;
+  }
 }
 
 /** Extra-large icon styling, often used for placeholder or hero illustrations. */
 .icon-big {
   font-size: 180px;
-  color: rgb(58, 144, 255);
+  color: var(--ant-color-primary);
 }
 
 /** Animation for highlighting the background (e.g. for newly added items). */
@@ -625,4 +690,10 @@ body {
   .ant-notification-notice-btn {
     margin-top: 0 !important;
   }
+}
+
+/** The admin page content card clips its children (overflow: hidden) and has no padding.
+    Indent table paginations so that they don't touch the card's right edge. */
+.admin-page-content .ant-table-wrapper .ant-table-pagination.ant-pagination {
+  padding-inline: var(--ant-padding);
 }

@@ -3,7 +3,6 @@ import { requestTask } from "admin/api/tasks";
 import {
   doWithToken,
   finishAnnotation,
-  getBuildInfo,
   getMappingsForDatasetLayer,
   sendAnalyticsEvent,
 } from "admin/rest_api";
@@ -23,7 +22,7 @@ import isNumber from "lodash-es/isNumber";
 import messages from "messages";
 import type { Vector16 } from "mjs";
 import { Euler, MathUtils, Quaternion } from "three";
-import type { AdditionalCoordinate, APIBuildInfoWk } from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { Writeable } from "types/type_utils";
@@ -177,7 +176,8 @@ import type DataLayer from "viewer/model/data_layer";
 import dimensions from "viewer/model/dimensions";
 import { MagInfo } from "viewer/model/helpers/mag_info";
 import { mapIdAsync } from "viewer/model/helpers/mapped_id_lookup";
-import { parseNml, serializeToNml } from "viewer/model/helpers/nml_helpers";
+import { serializeTreesToFlatNml } from "viewer/model/helpers/nml_export_helpers";
+import { parseNml } from "viewer/model/helpers/nml_helpers";
 import { overwriteAction } from "viewer/model/helpers/overwrite_action_middleware";
 import {
   bucketPositionToGlobalAddress,
@@ -202,7 +202,7 @@ import type {
   TreeGroup,
   TreeGroupTypeFlat,
 } from "viewer/model/types/tree_types";
-import { MutableTreeMap, TreeMap } from "viewer/model/types/tree_types";
+import { MutableTreeMap } from "viewer/model/types/tree_types";
 import { runVoxelsEdit } from "viewer/model/volumetracing/integration/mask_driver";
 import { api, Model } from "viewer/singletons";
 import type {
@@ -265,19 +265,6 @@ function findExistingTreeGroupPath(groupNames: string[]): TreeGroup[] {
   }
   return path;
 }
-// The build info is only needed for the header of exported NMLs by the layer registration page (via landmarks).
-// The layer registration page exports trees several times per second, so the build info is fetched only once.
-let buildInfoPromise: Promise<APIBuildInfoWk> | null = null;
-function getBuildInfoForNmlExport(): Promise<APIBuildInfoWk> {
-  if (buildInfoPromise == null) {
-    buildInfoPromise = getBuildInfo().catch((error) => {
-      buildInfoPromise = null;
-      throw error;
-    });
-  }
-  return buildInfoPromise;
-}
-
 function assertMayEditAnnotationProperties() {
   if (!mayEditAnnotationProperties(Store.getState())) {
     throw new Error("The name and description of this annotation can't be changed.");
@@ -725,21 +712,13 @@ class TracingApi {
    * @example
    * const nmlString = await api.tracing.exportTreesAsNmlString({ groupId: 3 });
    */
-  async exportTreesAsNmlString(filter: { groupId?: number } = {}): Promise<string> {
-    const buildInfo = await getBuildInfoForNmlExport();
+  exportTreesAsNmlString(filter: { groupId?: number } = {}): Promise<string> {
     const state = Store.getState();
-    const skeletonTracing = assertSkeleton(state.annotation);
-    const exportedTrees = skeletonTracing.trees
-      .values()
+    const trees = assertSkeleton(state.annotation)
+      .trees.values()
       .filter((tree) => filter.groupId == null || tree.groupId === filter.groupId)
-      .map((tree): [number, Tree] => [tree.treeId, { ...tree, isVisible: true, groupId: null }])
       .toArray();
-    const exportedTracing = {
-      ...skeletonTracing,
-      trees: new TreeMap(exportedTrees),
-      treeGroups: [],
-    };
-    return serializeToNml(state, state.annotation, exportedTracing, buildInfo, false);
+    return serializeTreesToFlatNml(state, trees);
   }
 
   /**

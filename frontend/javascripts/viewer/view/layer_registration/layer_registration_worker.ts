@@ -1,4 +1,4 @@
-import { findDataPositionForLayer, getBuildInfo } from "admin/rest_api";
+import { findDataPositionForLayer } from "admin/rest_api";
 import Toast from "libs/toast";
 import { isNoEditableElementFocused } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
@@ -18,8 +18,8 @@ import {
 } from "viewer/model/actions/settings_actions";
 import { addTreesAndGroupsAction } from "viewer/model/actions/skeletontracing_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import { parseNml, serializeToNml } from "viewer/model/helpers/nml_helpers";
-import { type Tree, TreeMap } from "viewer/model/types/tree_types";
+import { serializeTreesToFlatNml } from "viewer/model/helpers/nml_export_helpers";
+import { parseNml } from "viewer/model/helpers/nml_helpers";
 import { Model } from "viewer/singletons";
 import Store from "viewer/store";
 import {
@@ -177,17 +177,16 @@ export function getNewLandmarkTreeProperties(): { name: string; color: Vector3 }
 // Serializes the given landmark trees for the dataset composition wizard. The wizard pairs
 // the trees of its two NML files by their sorted tree ids, so each tree gets its pair id as
 // tree id.
-export async function exportLandmarkPairsAsNml(
+export function exportLandmarkPairsAsNml(
   treeIdsByPairId: Array<[pairId: number, treeId: number]>,
 ): Promise<string> {
   const state = Store.getState();
-  const skeletonTracing = enforceSkeletonTracing(state.annotation);
-  const exportedTrees = treeIdsByPairId.map(([pairId, treeId]): [number, Tree] => [
-    pairId,
-    { ...skeletonTracing.trees.getOrThrow(treeId), treeId: pairId, isVisible: true, groupId: null },
-  ]);
-  const exportedTracing = { ...skeletonTracing, trees: new TreeMap(exportedTrees), treeGroups: [] };
-  return serializeToNml(state, state.annotation, exportedTracing, await getBuildInfo(), false);
+  const { trees } = enforceSkeletonTracing(state.annotation);
+  const exportedTrees = treeIdsByPairId.map(([pairId, treeId]) => ({
+    ...trees.getOrThrow(treeId),
+    treeId: pairId,
+  }));
+  return serializeTreesToFlatNml(state, exportedTrees);
 }
 
 // The layer colors from before setOverlayLayerColors changed them.

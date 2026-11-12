@@ -141,10 +141,13 @@ describe("Task API  (E2E)", () => {
 
   test("Tasks without needed experience are available to team members without experience", async () => {
     // User B is a member of the team of Test_Project4 but has no experiences.
-    setUserAuthToken(tokenUserB);
-    await expect(peekNextTasks()).rejects.toBeDefined();
+    try {
+      setUserAuthToken(tokenUserB);
+      await expect(peekNextTasks()).rejects.toBeDefined();
+    } finally {
+      setUserAuthToken(tokenUserA);
+    }
 
-    setUserAuthToken(tokenUserA);
     const { neededExperience: _neededExperience, ...taskWithoutExperience } = newTask;
     const createTaskResponse = await createTasks([taskWithoutExperience]);
     const createdTask = createTaskResponse.tasks[0].success;

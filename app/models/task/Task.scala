@@ -125,17 +125,12 @@ class TaskDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
               AND state = ${AnnotationState.Cancelled}
             )
           ) AS userAnnotations ON webknossos.tasks_._id = userAnnotations._task
+          LEFT JOIN webknossos.user_experiences ue
+            ON ue._user = $userId
+            AND ue.domain = webknossos.tasks_.neededExperience_domain
+            AND ue.value >= webknossos.tasks_.neededExperience_value
           WHERE webknossos.tasks_.pendingInstances > 0
-          AND (
-            webknossos.tasks_.neededExperience_domain IS NULL
-            OR EXISTS (
-              SELECT 1
-              FROM webknossos.user_experiences ue
-              WHERE ue._user = $userId
-              AND ue.domain = webknossos.tasks_.neededExperience_domain
-              AND ue.value >= webknossos.tasks_.neededExperience_value
-            )
-          )
+          AND (webknossos.tasks_.neededExperience_domain IS NULL OR ue._user IS NOT NULL)
           AND webknossos.projects_._team IN ${SqlToken.tupleFromList(teamIds)}
           AND userAnnotations._task IS NULL
           AND NOT webknossos.projects_.paused

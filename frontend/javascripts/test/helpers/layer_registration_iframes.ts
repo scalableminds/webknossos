@@ -35,7 +35,10 @@ export class FakeLayerRegistrationIframes {
   readonly workerCommands: Array<[IframeRole, LayerRegistrationCommand]> = [];
   readonly storeSaveStates: SaveState[] = [];
   // All messages that the page sent, per iframe.
-  readonly sentMessages: Record<IframeRole, Array<{ type: string; args: unknown[] }>> = {
+  readonly sentMessages: Record<
+    IframeRole,
+    Array<{ type: string; args: unknown[]; messageId: string }>
+  > = {
     fixed: [],
     moving: [],
     store: [],
@@ -46,8 +49,9 @@ export class FakeLayerRegistrationIframes {
     store: null,
   };
 
-  constructor(replyTimeoutMs?: number) {
-    this.bridge = new IframeBridge((role) => this.windows[role], "https://wk.test", replyTimeoutMs);
+  // The iframes have the origin of WEBKNOSSOS.
+  constructor(timeoutMs?: number) {
+    this.bridge = new IframeBridge((role) => this.windows[role], location.origin, timeoutMs);
   }
 
   // Mounts an iframe. Returns its view of the page, through which the iframe sends messages.
@@ -64,19 +68,28 @@ export class FakeLayerRegistrationIframes {
       },
     };
     const pageWindow: IframeWindow = {
-      postMessage: (data) =>
-        deliverLater(() =>
-          this.bridge.handleMessage(
-            { source: iframeWindow, data: data as object },
-            {
-              onWorkerCommand: (side, command) => this.workerCommands.push([side, command]),
-              onStoreSaveState: (saveState) => this.storeSaveStates.push(saveState),
-            },
-          ),
-        ),
+      postMessage: (data) => this.deliverToPage(iframeWindow, location.origin, data),
     };
     this.windows[role] = iframeWindow;
     return pageWindow;
+  }
+
+  // Sends a message to the page from the mounted iframe of the role while the iframe shows a
+  // page of another origin, e.g. after it navigated away from WEBKNOSSOS.
+  postFromOtherOrigin(role: IframeRole, origin: string, data: unknown) {
+    this.deliverToPage(this.windows[role], origin, data);
+  }
+
+  private deliverToPage(source: IframeWindow | null, origin: string, data: unknown) {
+    deliverLater(() =>
+      this.bridge.handleMessage(
+        { source, origin, data: data as object },
+        {
+          onWorkerCommand: (side, command) => this.workerCommands.push([side, command]),
+          onStoreSaveState: (saveState) => this.storeSaveStates.push(saveState),
+        },
+      ),
+    );
   }
 
   // Mounts an iframe whose API is ready right away.

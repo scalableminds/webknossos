@@ -92,20 +92,40 @@ const WhatsNextAction = ({
   </ActionLink>
 );
 
+// The button sits on the blue banner, so it is outlined in white (also on hover) to stand out.
 const DismissButton = ({ onDismiss }: { onDismiss: () => void }) => {
   const { token } = theme.useToken();
+  const white = token.colorTextLightSolid;
   return (
-    <Tooltip title="Don't show this again" placement="left">
-      <Button
-        type="text"
-        onClick={onDismiss}
-        icon={<CloseOutlined />}
-        iconPlacement="end"
-        style={{ color: token.colorTextLightSolid, alignSelf: "flex-end" }}
-      >
-        Close
-      </Button>
-    </Tooltip>
+    <ConfigProvider
+      theme={{
+        components: {
+          Button: {
+            defaultColor: white,
+            defaultBorderColor: white,
+            defaultBg: "transparent",
+            defaultHoverColor: white,
+            defaultHoverBorderColor: white,
+            defaultHoverBg: "rgba(255, 255, 255, 0.2)",
+            defaultActiveColor: white,
+            defaultActiveBorderColor: white,
+            defaultActiveBg: "rgba(255, 255, 255, 0.3)",
+          },
+        },
+      }}
+    >
+      <Tooltip title="Don't show this again" placement="left">
+        <Button
+          size="large"
+          onClick={onDismiss}
+          icon={<CloseOutlined />}
+          iconPlacement="end"
+          style={{ alignSelf: "flex-end", margin: token.marginXS, fontWeight: 500 }}
+        >
+          Close
+        </Button>
+      </Tooltip>
+    </ConfigProvider>
   );
 };
 

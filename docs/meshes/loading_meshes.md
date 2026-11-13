@@ -39,8 +39,10 @@ Instead of computing individual meshes on demand, you can precompute and save me
 
 Start mesh generation by clicking the plus (+) button at the top of the `Segments` tab. A popover lets you choose the mesh quality and kick off the generation job. We recommend the medium quality (default) for a good balance between visual fidelity, compute time, and GPU resource usage. You can run the job multiple times at different quality levels to produce several mesh files to choose from.
 
+The popover also lets you choose a mapping for the mesh file. By default, the meshes are computed without a mapping. Such a mesh file contains a mesh for every segment of the unmapped data and works with every mapping. It is also required for [proofreading](../proofreading/proofreading_tool.md). A mesh file computed for a mapping loads the meshes of that mapping's agglomerates faster, but it can only be used while that mapping is active.
+
 !!! info
     Precomputing meshes is exclusive to webknossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the integrated WEBKNOSSOS worker for meshing or the [Voxelytics software](https://voxelytics.com) for standalone meshing from the command line.
 
-[Check the `Processing Jobs` page](../automation/jobs.md) from the `Analysis` menu at the top of the screen to track progress or cancel the operation. The finished mesh file will be available on page reload.
+[Check the `Processing Jobs` page](../automation/jobs.md) from the `Analysis` menu at the top of the screen to track progress or cancel the operation. You will also get an email when the mesh file is ready. If the page is still open, the finished mesh file becomes available automatically. Otherwise, it is available on page reload.
 

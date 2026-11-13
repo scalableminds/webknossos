@@ -23,7 +23,7 @@ import Store from "viewer/store";
 export type MeshOperations = {
   // Meshes (of the current additional coordinates) by segment id.
   meshes: Record<BigIntAsKey, MeshInformation>;
-  loadPrecomputedMeshes: (segments: Segment[]) => void;
+  loadPrecomputedMeshes: (segments: Segment[], meshFileName: string) => void;
   loadAdHocMeshes: (segments: Segment[]) => void;
   refreshMeshes: (segments: Segment[]) => void;
   removeMeshes: (segments: Segment[]) => void;
@@ -57,11 +57,6 @@ function notifyAboutMissingPositions(segments: Segment[]) {
 export function useMeshOperations(): MeshOperations {
   const dispatch = useDispatch();
   const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
-  const currentMeshFile = useWkSelector((state) =>
-    visibleSegmentationLayer != null
-      ? state.localSegmentationStateByLayer[visibleSegmentationLayer.name].currentMeshFile
-      : null,
-  );
   const meshes =
     useWkSelector((state) =>
       visibleSegmentationLayer != null
@@ -70,10 +65,7 @@ export function useMeshOperations(): MeshOperations {
     ) ?? (EMPTY_OBJECT as Record<BigIntAsKey, MeshInformation>);
 
   const loadPrecomputedMeshes = useCallback(
-    (segments: Segment[]) => {
-      if (currentMeshFile == null) {
-        return;
-      }
+    (segments: Segment[], meshFileName: string) => {
       for (const segment of segments) {
         if (segment.anchorPosition == null) {
           continue;
@@ -83,7 +75,7 @@ export function useMeshOperations(): MeshOperations {
             segment.id,
             segment.anchorPosition,
             segment.additionalCoordinates,
-            currentMeshFile.name,
+            meshFileName,
             undefined,
             undefined,
           ),
@@ -91,7 +83,7 @@ export function useMeshOperations(): MeshOperations {
       }
       notifyAboutMissingPositions(segments);
     },
-    [dispatch, currentMeshFile],
+    [dispatch],
   );
 
   const loadAdHocMeshes = useCallback(

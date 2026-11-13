@@ -176,15 +176,18 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
       setActiveMeshJobId(job.id);
       Toast.info(
         <Fragment>
-          The computation of a mesh file was started. For large datasets, this may take a while.
-          Closing this tab will not stop the computation.
+          The computation of a mesh file was started. For large datasets, this may take a while. You
+          can close this popover and continue working. Closing this tab won't stop the computation
+          either.
           <br />
-          See{" "}
+          Check the progress on the{" "}
           <a target="_blank" href="/jobs" rel="noopener noreferrer">
             Processing Jobs
           </a>{" "}
-          for an overview of running jobs.
+          page. You will also get an email when the mesh file is ready.
         </Fragment>,
+        // The message is longer than usual and should not be missed.
+        { timeout: 15000 },
       );
     }
   };

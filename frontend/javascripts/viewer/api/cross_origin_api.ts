@@ -4,16 +4,19 @@ import { location } from "libs/window";
 import isObject from "lodash-es/isObject";
 import isString from "lodash-es/isString";
 import { useEffect } from "react";
+import {
+  setLandmarkPairInfoAction,
+  setLayerRegistrationViewStateAction,
+} from "viewer/model/actions/layer_registration_worker_actions";
 import { api } from "viewer/singletons";
+import Store from "viewer/store";
 import {
   type IframeCommand,
   isLayerRegistrationWorker,
 } from "viewer/view/layer_registration/layer_registration_protocol";
-import { setLayerRegistrationViewState } from "viewer/view/layer_registration/layer_registration_view_state";
 import {
   exportLandmarkPairsAsNml,
   importLandmarks,
-  setLandmarkPairInfo,
   setOverlayLayerColors,
   useLayerRegistrationShortcutRelay,
 } from "viewer/view/layer_registration/layer_registration_worker";
@@ -141,13 +144,13 @@ const handleMessage = async (event) => {
 
     case "setLandmarkPairInfo": {
       assertLayerRegistrationWorker();
-      setLandmarkPairInfo(args[0]);
+      Store.dispatch(setLandmarkPairInfoAction(args[0]));
       break;
     }
 
     case "setLayerRegistrationViewState": {
       assertLayerRegistrationWorker();
-      setLayerRegistrationViewState(args[0]);
+      Store.dispatch(setLayerRegistrationViewStateAction(args[0]));
       break;
     }
 

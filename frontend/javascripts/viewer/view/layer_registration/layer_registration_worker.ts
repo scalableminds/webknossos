@@ -37,8 +37,8 @@ import {
   type LayerRegistrationCommand,
   type SaveState,
   type StoreSaveStateMessage,
+  sendCommandToLayerRegistrationPage,
 } from "./layer_registration_protocol";
-import { sendCommandToLayerRegistrationPage } from "./layer_registration_view_state";
 
 // Code that runs inside the iframes of the layer registration view. The iframe side of the
 // commands of the page is in cross_origin_api.ts.
@@ -150,27 +150,26 @@ export async function importLandmarks(nmlString: string) {
   Store.dispatch(addTreesAndGroupsAction(prepareLandmarkTreesForImport(trees), treeGroups));
 }
 
-// Set by the layer registration page after each sync. It is a module variable and not Redux
-// state, because only the click handler of the workers reads it and nothing is rendered from it.
-let landmarkPairInfo: LandmarkPairInfo = { openPairIds: [], otherMaxPairId: 0 };
-
-export function setLandmarkPairInfo(pairInfo: LandmarkPairInfo) {
-  landmarkPairInfo = pairInfo;
-}
+// Before the first sync, the worker knows no landmarks of the other side.
+const NO_LANDMARK_PAIR_INFO: LandmarkPairInfo = { openPairIds: [], otherMaxPairId: 0 };
 
 // The name and color of the tree that a click in a worker creates: the name holds the pair id of
 // the new landmark (see getNextLandmarkPairId). They are part of the action that creates the tree.
 // If the layer registration page renamed the tree afterwards, undo would revert the renaming, the
 // page would rename the tree again, and the user could never undo the click itself.
 export function getNewLandmarkTreeProperties(): { name: string; color: Vector3 } {
+  const state = Store.getState();
   const ownPairIds = new Set(
-    enforceSkeletonTracing(Store.getState().annotation)
+    enforceSkeletonTracing(state.annotation)
       .trees.values()
       .filter((tree) => tree.nodes.size() > 0)
       .map((tree) => getLandmarkPairId(tree.name))
       .filter((pairId) => pairId != null),
   );
-  const pairId = getNextLandmarkPairId(ownPairIds, landmarkPairInfo);
+  const pairId = getNextLandmarkPairId(
+    ownPairIds,
+    state.layerRegistrationWorker.landmarkPairInfo ?? NO_LANDMARK_PAIR_INFO,
+  );
   return { name: getLandmarkTreeName(pairId), color: getLandmarkColor(pairId) };
 }
 

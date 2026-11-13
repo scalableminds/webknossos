@@ -10,9 +10,11 @@ import type { LandmarkPairInfo, Side } from "./helpers/layer_registration_helper
 // same dataset as iframes, one per layer. These views are called "workers". A third, hidden iframe
 // loads the layer registration annotation itself, which stores the landmarks ("store").
 // This module defines everything that the layer registration page, the iframes and the rest of
-// the app have to agree on. It only holds definitions; the code that sends and receives the
-// messages is in IframeBridge (page side), cross_origin_api.ts and layer_registration_worker.ts
-// (iframe side):
+// the app have to agree on. Besides the definitions, it only holds small helpers without state
+// that both sides use: reading and building the URLs, and sending a worker command. The rest of
+// the code that sends and receives the messages is in IframeBridge (page side),
+// cross_origin_api.ts and layer_registration_worker.ts (iframe side). The navbar imports this
+// module, so it must not import the viewer (see viewer/viewer_entry.ts):
 // 1. The role of each iframe, encoded in its URL params, and the URLs of the pages.
 // 2. Page → iframe: the commands of the cross-origin API that the page uses (IframeCommands)
 //    and the message envelope.
@@ -157,6 +159,12 @@ export type WorkerCommandMessage = {
   type: typeof LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE;
   command: LayerRegistrationCommand;
 };
+
+// Sends a command of this worker to the layer registration page (see IframeBridge).
+export function sendCommandToLayerRegistrationPage(command: LayerRegistrationCommand) {
+  const message: WorkerCommandMessage = { type: LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE, command };
+  window.parent.postMessage(message, window.location.origin);
+}
 
 // Iframe → page: sent by the store iframe whenever the save state of the layer registration
 // annotation changes.

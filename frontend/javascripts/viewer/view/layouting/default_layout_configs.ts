@@ -5,6 +5,7 @@ import { entries, getIsInIframe, keys } from "libs/utils";
  *  - the different layout types which specify which tabs exist in which layout and what their default arrangement is
  *  - a `determineLayout` function which decides which layout type has to be chosen
  */
+import cloneDeep from "lodash-es/cloneDeep";
 import memoize from "lodash-es/memoize";
 import type { BorderTabType, ControlMode, ViewMode } from "viewer/constants";
 import Constants, {
@@ -301,6 +302,32 @@ const _getDefaultLayouts = () => {
 };
 
 const getDefaultLayouts = memoize(_getDefaultLayouts);
+
+// Marks the tabset that contains the given tab as maximized. Mutates the node in place.
+function markTabsetAsMaximized(node: RowOrTabsetNode, tabId: string): boolean {
+  if (node.type === "tabset") {
+    if (node.children.some((tab) => tab.id === tabId)) {
+      node.maximized = true;
+      return true;
+    }
+    return false;
+  }
+  return node.children.some((child) => markTabsetAsMaximized(child, tabId));
+}
+
+// The layer registration workers always start with the default layout, independent of the
+// layouts that the user stored, with the XY viewport maximized and both borders closed. Outside
+// of an iframe, the default layout opens the borders. The user can restore the other viewports
+// and open the left border as usual. The right border can't be opened in workers (see
+// FlexLayoutWrapper.isBorderLocked).
+export const getLayerRegistrationWorkerLayoutConfig = (layoutKey: Layout): ModelConfig => {
+  const layout = cloneDeep(getDefaultLayouts()[layoutKey]);
+  markTabsetAsMaximized(layout.layout, OrthoViews.PLANE_XY);
+  for (const border of layout.borders) {
+    border.selected = -1;
+  }
+  return layout;
+};
 
 export const resetDefaultLayouts = () => {
   // @ts-expect-error ts-migrate(2722) FIXME: Cannot invoke an object which is possibly 'undefin... Remove this comment to see the full error message

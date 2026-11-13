@@ -57,6 +57,7 @@ import type { WebKnossosModel } from "viewer/model";
 import {
   getVolumeDescriptors,
   mayEditAnnotation,
+  mayEditAnnotationProperties,
 } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerBoundingBox,
@@ -109,6 +110,8 @@ import {
   dispatchMaybeFetchMeshFilesAsync,
   refreshMeshesAction,
   removeMeshAction,
+  setAnnotationDescriptionAction,
+  setAnnotationNameAction,
   updateCurrentMeshFileAction,
   updateMeshOpacityAction,
   updateMeshVisibilityAction,
@@ -140,6 +143,7 @@ import {
   deleteCommentAction,
   deleteNodeAction,
   deleteTreeAction,
+  deleteTreesAction,
   resetSkeletonTracingAction,
   setActiveNodeAction,
   setActiveTreeAction,
@@ -172,6 +176,7 @@ import type DataLayer from "viewer/model/data_layer";
 import dimensions from "viewer/model/dimensions";
 import { MagInfo } from "viewer/model/helpers/mag_info";
 import { mapIdAsync } from "viewer/model/helpers/mapped_id_lookup";
+import { serializeTreesToFlatNml } from "viewer/model/helpers/nml_export_helpers";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import { overwriteAction } from "viewer/model/helpers/overwrite_action_middleware";
 import {
@@ -180,6 +185,7 @@ import {
   scaleGlobalPositionWithMagnification,
   zoomedAddressToZoomedPosition,
 } from "viewer/model/helpers/position_converter";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/rebase_helpers";
 import { flatToNestedMatrix } from "viewer/model/helpers/transformation_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
@@ -188,7 +194,15 @@ import {
   createPartialBucketUpdates,
   getVolumeSaveModeForState,
 } from "viewer/model/sagas/volume/helpers";
-import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
+import type {
+  MutableNode,
+  MutableTreeGroup,
+  Node,
+  Tree,
+  TreeGroup,
+  TreeGroupTypeFlat,
+} from "viewer/model/types/tree_types";
+import { MutableTreeMap } from "viewer/model/types/tree_types";
 import { runVoxelsEdit } from "viewer/model/volumetracing/integration/mask_driver";
 import { api, Model } from "viewer/singletons";
 import type {
@@ -236,6 +250,27 @@ function assertSkeleton(annotation: StoreAnnotation): SkeletonTracing {
 
   return annotation.skeleton;
 }
+// The tree groups along the given path of group names, starting at the root level. Stops at
+// the first group that doesn't exist, so the result can be shorter than the path.
+function findExistingTreeGroupPath(groupNames: string[]): TreeGroup[] {
+  const path: TreeGroup[] = [];
+  let siblings = assertSkeleton(Store.getState().annotation).treeGroups;
+  for (const name of groupNames) {
+    const group = siblings.find((treeGroup) => treeGroup.name === name);
+    if (group == null) {
+      break;
+    }
+    path.push(group);
+    siblings = group.children;
+  }
+  return path;
+}
+function assertMayEditAnnotationProperties() {
+  if (!mayEditAnnotationProperties(Store.getState())) {
+    throw new Error("The name and description of this annotation can't be changed.");
+  }
+}
+
 function assertVolume(state: WebknossosState): VolumeTracing {
   if (state.annotation.volumes.length === 0) {
     throw new Error(
@@ -645,6 +680,119 @@ class TracingApi {
   async importNmlAsString(nmlString: string) {
     const { treeGroups, trees } = await parseNml(nmlString);
     Store.dispatch(addTreesAndGroupsAction(trees, treeGroups));
+  }
+
+  /**
+   * Replaces the trees directly inside the given tree group with the trees of an NML
+   * string. Subgroups and their trees are kept.
+   *
+   * @example
+   * await api.tracing.replaceTreesInGroup(nmlString, groupId);
+   */
+  async replaceTreesInGroup(nmlString: string, groupId: number) {
+    const { treeGroups, trees } = await parseNml(nmlString);
+    // Parse before deleting, so that no save can happen between deleting and adding.
+    const oldTreeIds = assertSkeleton(Store.getState().annotation)
+      .trees.values()
+      .filter((tree) => tree.groupId === groupId)
+      .map((tree) => tree.treeId)
+      .toArray();
+    if (oldTreeIds.length > 0) {
+      Store.dispatch(deleteTreesAction(oldTreeIds, true));
+    }
+    Store.dispatch(addTreesAndGroupsAction(trees, treeGroups, undefined, true, groupId));
+  }
+
+  /**
+   * Serializes trees to an NML string. If groupId is given, only the trees directly inside
+   * that group are exported. Unlike the NML download, hidden trees are included and tree
+   * groups are left out, so importing the result puts all trees at the root level (or
+   * into the target group of replaceTreesInGroup).
+   *
+   * @example
+   * const nmlString = await api.tracing.exportTreesAsNmlString({ groupId: 3 });
+   */
+  exportTreesAsNmlString(filter: { groupId?: number } = {}): Promise<string> {
+    const state = Store.getState();
+    const trees = assertSkeleton(state.annotation)
+      .trees.values()
+      .filter((tree) => filter.groupId == null || tree.groupId === filter.groupId)
+      .toArray();
+    return serializeTreesToFlatNml(state, trees);
+  }
+
+  /**
+   * Renames the annotation.
+   *
+   * @example
+   * api.tracing.setAnnotationName("Cell 7 reconstruction");
+   */
+  setAnnotationName(name: string) {
+    assertMayEditAnnotationProperties();
+    Store.dispatch(setAnnotationNameAction(name));
+  }
+
+  /**
+   * Sets the description of the annotation. Markdown is supported.
+   *
+   * @example
+   * api.tracing.setAnnotationDescription("Traced by **Jane**.");
+   */
+  async setAnnotationDescription(description: string) {
+    assertMayEditAnnotationProperties();
+    // An edit made during an active rebase would otherwise be lost.
+    await waitUntilRebaseFinished();
+    Store.dispatch(setAnnotationDescriptionAction(description));
+  }
+
+  /**
+   * Returns the id of the tree group at the given path of group names, starting at the
+   * root level. Groups along the path that don't exist yet are created.
+   *
+   * @example
+   * const groupId = api.tracing.ensureTreeGroupPath(["Landmarks", "Layer A"]);
+   */
+  ensureTreeGroupPath(groupNames: string[]): number {
+    const existingPath = findExistingTreeGroupPath(groupNames);
+    if (existingPath.length < groupNames.length) {
+      // The group ids are placeholders. addTreesAndGroupsAction assigns new ids.
+      const missingGroups = groupNames
+        .slice(existingPath.length)
+        .reduceRight<MutableTreeGroup[]>(
+          (children, name, index) => [{ groupId: index + 1, name, children }],
+          [],
+        );
+      const parentGroupId = existingPath.at(-1)?.groupId ?? MISSING_GROUP_ID;
+      Store.dispatch(
+        addTreesAndGroupsAction(
+          new MutableTreeMap(),
+          missingGroups,
+          undefined,
+          true,
+          parentGroupId,
+        ),
+      );
+    }
+
+    const path = findExistingTreeGroupPath(groupNames);
+    const targetGroup = path.at(-1);
+    if (targetGroup == null || path.length < groupNames.length) {
+      throw new Error(`Could not create the tree group path ${groupNames.join(" > ")}.`);
+    }
+    return targetGroup.groupId;
+  }
+
+  /**
+   * Returns the id of the tree group at the given path of group names, starting at the
+   * root level, or null if a group along the path doesn't exist. Unlike
+   * ensureTreeGroupPath, no groups are created.
+   *
+   * @example
+   * const groupId = api.tracing.findTreeGroupPath(["Landmarks", "Layer A"]);
+   */
+  findTreeGroupPath(groupNames: string[]): number | null {
+    const path = findExistingTreeGroupPath(groupNames);
+    return path.length === groupNames.length ? (path.at(-1)?.groupId ?? null) : null;
   }
 
   /**
@@ -2985,6 +3133,16 @@ class DataApi {
         );
       }
     }
+  }
+
+  /**
+   * Shows or hides the given layer.
+   *
+   * @example
+   * api.data.setLayerVisibility("color", false);
+   */
+  setLayerVisibility(layerName: string, isVisible: boolean) {
+    Store.dispatch(updateLayerSettingAction(layerName, "isDisabled", !isVisible));
   }
 
   /**

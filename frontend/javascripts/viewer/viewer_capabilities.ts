@@ -1,0 +1,84 @@
+import once from "lodash-es/once";
+import { Toolkit } from "viewer/model/accessors/tool_accessor";
+import {
+  isLayerRegistrationStore,
+  isLayerRegistrationWorker,
+} from "viewer/view/layer_registration/layer_registration_protocol";
+
+// What the viewer offers where it runs. Everything is on in the normal viewer. Embedded viewers,
+// such as the workers of the layer registration page, turn parts of it off.
+export type ViewerCapabilities = {
+  // Without a scene, the viewer only loads, edits and saves the annotation, e.g. through the
+  // cross-origin API as the store iframe of a layer registration annotation view. It shows no
+  // UI and renders nothing, so it creates no WebGL context and loads no data to save resources.
+  hasScene: boolean;
+  // Whether changed user settings, dataset settings and layouts are stored.
+  shouldPersistSettings: boolean;
+  // The share button, the menu entries "Share", "Zarr Links" and "Duplicate", and "Copy to my
+  // account" of sandboxes.
+  showShareAndCopyActions: boolean;
+  // Null if the user can switch between the toolkits. Otherwise, the viewer always uses this
+  // toolkit, and the tools outside of it are disabled, also for their shortcuts.
+  fixedToolkit: Toolkit | null;
+  // Without flight mode, only the orthogonal mode is available, whatever the annotation allows.
+  hasFlightMode: boolean;
+  showRightBorder: boolean;
+  // The menu entry to switch, add, delete and reset layouts.
+  showLayoutMenu: boolean;
+  showCommandPalette: boolean;
+};
+
+const DEFAULT_CAPABILITIES: ViewerCapabilities = {
+  hasScene: true,
+  shouldPersistSettings: true,
+  showShareAndCopyActions: true,
+  fixedToolkit: null,
+  hasFlightMode: true,
+  showRightBorder: true,
+  showLayoutMenu: true,
+  showCommandPalette: true,
+};
+
+// The workers are sandboxes inside the layer registration page (see
+// layer_registration_worker.ts). They offer nothing that leaves the page, opens a worker without
+// the page around it, or changes what the page set up.
+const LAYER_REGISTRATION_WORKER_CAPABILITIES: ViewerCapabilities = {
+  hasScene: true,
+  // The workers force some settings, which must not end up in the user's account or in the
+  // layouts of the normal viewer.
+  shouldPersistSettings: false,
+  // Links (Share, Zarr Links) would point to the worker's sandbox, which only exists inside the
+  // page. "Copy To My Account" would open the copy inside the worker's iframe and reload it,
+  // which breaks the page. The page saves the landmarks anyway.
+  showShareAndCopyActions: false,
+  // The workers only offer the tools for placing landmarks.
+  fixedToolkit: Toolkit.LANDMARKS,
+  // Landmarks are placed in orthogonal mode only. Flight mode switches to all tools and creates
+  // nodes without landmark names.
+  hasFlightMode: false,
+  // The tabs of the right border (e.g. the dataset info with its links) break the page.
+  showRightBorder: false,
+  // The workers always start with the same layout (see getLayerRegistrationWorkerLayoutConfig),
+  // so switching or storing layouts has no effect.
+  showLayoutMenu: false,
+  // The command palette can leave the page or undo the forced settings.
+  showCommandPalette: false,
+};
+
+// The store is a hidden iframe of the layer registration page. The page uses it to read and save
+// the landmarks of the layer registration annotation, so it needs no scene.
+const LAYER_REGISTRATION_STORE_CAPABILITIES: ViewerCapabilities = {
+  ...DEFAULT_CAPABILITIES,
+  hasScene: false,
+};
+
+// Computed once, because the URL params don't change while the viewer runs: navigation within a
+// worker is blocked (see blockLayerRegistrationWorkerNavigation).
+export const getViewerCapabilities = once((): ViewerCapabilities => {
+  if (isLayerRegistrationStore()) {
+    return LAYER_REGISTRATION_STORE_CAPABILITIES;
+  }
+  return isLayerRegistrationWorker()
+    ? LAYER_REGISTRATION_WORKER_CAPABILITIES
+    : DEFAULT_CAPABILITIES;
+});

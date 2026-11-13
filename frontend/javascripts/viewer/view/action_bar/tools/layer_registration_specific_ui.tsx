@@ -1,0 +1,71 @@
+import Icon, { EyeInvisibleOutlined, EyeOutlined } from "@ant-design/icons";
+import AffineTransformationIcon from "@images/icons/icon-affine-transformation.svg?react";
+import NoTransformationIcon from "@images/icons/icon-no-transformation.svg?react";
+import { Space } from "antd";
+import { useWkSelector } from "libs/react_hooks";
+import { ToggleButton } from "viewer/view/components/button_component";
+import { MIN_LANDMARK_PAIR_COUNT } from "viewer/view/layer_registration/helpers/layer_registration_transform_estimation";
+import {
+  type LayerRegistrationViewState,
+  sendCommandToLayerRegistrationPage,
+} from "viewer/view/layer_registration/layer_registration_protocol";
+import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE } from "./tool_helpers";
+
+// Shows or hides the layer of the other worker in this worker.
+function OtherLayerToggleButton({
+  viewState: { otherLayerName, isOtherLayerVisible },
+}: {
+  viewState: LayerRegistrationViewState;
+}) {
+  return (
+    <ToggleButton
+      active={isOtherLayerVisible}
+      onClick={() => sendCommandToLayerRegistrationPage("toggleOtherLayer")}
+      style={NARROW_BUTTON_STYLE}
+      title={`${isOtherLayerVisible ? "Hide" : "Show"} ${otherLayerName} in this view (X)`}
+      icon={isOtherLayerVisible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+    />
+  );
+}
+
+// Switches between showing the other layer transformed onto this worker's layer and
+// untransformed.
+// Uses the icons of the transform button in the layer settings.
+function TransformToggleButton({
+  viewState: { isTransformShown, isTransformAvailable },
+}: {
+  viewState: LayerRegistrationViewState;
+}) {
+  const isTransformed = isTransformAvailable && isTransformShown;
+  const title = !isTransformAvailable
+    ? `Place at least ${MIN_LANDMARK_PAIR_COUNT} landmark pairs to estimate a transform.`
+    : isTransformShown
+      ? "The other layer is shown transformed onto this one. Click to show it untransformed (T)."
+      : "The other layer is shown untransformed. Click to show it transformed onto this one (T).";
+  return (
+    <ToggleButton
+      active={isTransformed}
+      onClick={() => sendCommandToLayerRegistrationPage("toggleTransform")}
+      disabled={!isTransformAvailable}
+      style={NARROW_BUTTON_STYLE}
+      title={title}
+      icon={<Icon component={isTransformed ? AffineTransformationIcon : NoTransformationIcon} />}
+    />
+  );
+}
+
+// Buttons for the layer registration page, shown in the toolbars of its workers. The page has
+// no toolbar of its own and performs the actions itself. Hidden until the page sent its view
+// state.
+export function LayerRegistrationButtons() {
+  const viewState = useWkSelector((state) => state.layerRegistrationWorker.viewState);
+  if (viewState == null) {
+    return null;
+  }
+  return (
+    <Space.Compact style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}>
+      <OtherLayerToggleButton viewState={viewState} />
+      <TransformToggleButton viewState={viewState} />
+    </Space.Compact>
+  );
+}

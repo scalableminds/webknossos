@@ -25,9 +25,11 @@ import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { BorderOpenStatus, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import InputCatcher from "viewer/view/input_catcher";
+import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
 import type { LayoutKeys } from "viewer/view/layouting/default_layout_configs";
 import {
   DEFAULT_LAYOUT_NAME,
+  getLayerRegistrationWorkerLayoutConfig,
   getTabDescriptorForBorderTab,
   resetDefaultLayouts,
 } from "viewer/view/layouting/default_layout_configs";
@@ -43,6 +45,7 @@ import SegmentsView from "viewer/view/right_border_tabs/segments_tab/segments_ta
 import SkeletonTabView from "viewer/view/right_border_tabs/skeleton_tab/skeleton_tab_view";
 import Statusbar from "viewer/view/statusbar/statusbar";
 import TDViewControls from "viewer/view/td_view_controls";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 import BorderToggleButton from "../components/border_toggle_button";
 import type {
   KeyboardShortcutHandlerMap,
@@ -186,7 +189,9 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
   loadCurrentModel() {
     const { layoutName, layoutKey } = this.props;
-    const layout = getLayoutConfig(layoutKey, layoutName);
+    const layout = isLayerRegistrationWorker()
+      ? getLayerRegistrationWorkerLayoutConfig(layoutKey)
+      : getLayoutConfig(layoutKey, layoutName);
     const model = Model.fromJson(layout);
     return model;
   }
@@ -223,6 +228,9 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
   // If the tab is not part of the layout (e.g., because it is not part of the default layout
   // or was closed), it is added next to tabToAddNextTo if given.
   openRightBorderTabById(tabType: BorderTabType, tabToAddNextTo?: BorderTabType) {
+    if (this.isBorderLocked("right")) {
+      return;
+    }
     const rightBorderModel = this.getRightBorderModel(this.state.model);
     if (rightBorderModel == null) return;
     if (rightBorderModel.getNodeById(tabType.id) == null) {
@@ -556,7 +564,15 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     return action;
   };
 
+  // A border that can't be shown stays closed.
+  isBorderLocked(side: BorderOpenStatusKeys) {
+    return side === "right" && !getViewerCapabilities().showRightBorder;
+  }
+
   toggleBorder(side: BorderOpenStatusKeys, toggleInternalState: boolean = true) {
+    if (this.isBorderLocked(side)) {
+      return;
+    }
     // The most recent version of borderOpenStatus is needed as two border toggles might be executed directly after another.
     // If borderOpenStatus was passed via props, the first update  of borderOpenStatus will overwritten by the second update.
     const borderOpenStatusCopy = cloneDeep(Store.getState().uiInformation.borderOpenStatus);
@@ -584,7 +600,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
   ) => {
     const { isTopMost, isRightMost, isLeftMost } = getPositionStatusOf(tabSetNode);
 
-    if (isTopMost && isRightMost) {
+    if (isTopMost && isRightMost && !this.isBorderLocked("right")) {
       renderValues.buttons.push(
         <BorderToggleButton side="right" key="right-border-toggle-button-top" />,
       );

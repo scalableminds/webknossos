@@ -42,6 +42,7 @@ import {
   renderAnimationMenuItem,
   screenshotMenuItem,
 } from "viewer/view/action_bar/menu_items";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 
 // These actions require authentication. Instead of opening a dialog that fails for logged-out
 // users, disable the menu item and explain why.
@@ -168,11 +169,12 @@ export const useTracingViewMenuGroups = (
     const isLoggedOut = activeUser == null;
     const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
+    const { showShareAndCopyActions } = getViewerCapabilities();
     const annotationItems: ItemType[] = [];
     const shareAndExportItems: ItemType[] = [];
     const customizeItems: ItemType[] = [];
 
-    if (!isLoggedOut) {
+    if (!isLoggedOut && showShareAndCopyActions) {
       annotationItems.push({
         key: "duplicate-button",
         onClick: handleDuplicateOpen,
@@ -231,12 +233,14 @@ export const useTracingViewMenuGroups = (
       });
     }
 
-    shareAndExportItems.push({
-      key: "share-button",
-      onClick: handleShareOpen,
-      icon: <ShareAltOutlined />,
-      ...getLoginRequiredProps(isLoggedOut, "Share", "Log in to share this annotation."),
-    });
+    if (showShareAndCopyActions) {
+      shareAndExportItems.push({
+        key: "share-button",
+        onClick: handleShareOpen,
+        icon: <ShareAltOutlined />,
+        ...getLoginRequiredProps(isLoggedOut, "Share", "Log in to share this annotation."),
+      });
+    }
     // The download is served by the backend. In sandbox mode or when saving was disabled,
     // the backend doesn't know the local changes, so the download would be misleading.
     // The skeleton tab's NML download (based on the frontend state) is still available.
@@ -249,16 +253,18 @@ export const useTracingViewMenuGroups = (
         label: "Download",
       });
     }
-    shareAndExportItems.push({
-      key: "zarr-links-button",
-      onClick: handleZarrLinksOpen,
-      icon: <LinkOutlined />,
-      ...getLoginRequiredProps(
-        isLoggedOut,
-        "Zarr Links",
-        "Log in to create Zarr links for this annotation.",
-      ),
-    });
+    if (showShareAndCopyActions) {
+      shareAndExportItems.push({
+        key: "zarr-links-button",
+        onClick: handleZarrLinksOpen,
+        icon: <LinkOutlined />,
+        ...getLoginRequiredProps(
+          isLoggedOut,
+          "Zarr Links",
+          "Log in to create Zarr links for this annotation.",
+        ),
+      });
+    }
     shareAndExportItems.push(screenshotMenuItem, renderAnimationMenuItem);
 
     if (layoutMenu != null) customizeItems.push(layoutMenu);

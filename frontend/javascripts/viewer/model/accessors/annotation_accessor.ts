@@ -11,7 +11,7 @@ import {
   type VolumeUserState,
 } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
-import { TreeTypeEnum } from "viewer/constants";
+import { ControlModeEnum, TreeTypeEnum } from "viewer/constants";
 import type { Tree } from "viewer/model/types/tree_types";
 import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import { sum } from "../helpers/iterator_utils";
@@ -190,8 +190,12 @@ export const isEditingAnnotationLayerSetDisabled = reuseInstanceOnEquality(
 export function mayEditAnnotationViewConfig(state: WebknossosState) {
   // All users that are allowed to update the annotation have their own view
   // config and can thus update it. This is independent of the collaboration
-  // mode and annotation mutexes.
-  return state.annotation.restrictions.allowUpdate;
+  // mode and annotation mutexes. Sandbox annotations allow updates, but they don't
+  // exist on the server, so their view config can't be stored.
+  return (
+    state.annotation.restrictions.allowUpdate &&
+    state.temporaryConfiguration.controlMode !== ControlModeEnum.SANDBOX
+  );
 }
 
 export function isAnnotationOwner(state: WebknossosState) {

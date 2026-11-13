@@ -38,6 +38,7 @@ import Navbar from "navbar";
 import { createBrowserRouter, Navigate, Outlet, type RouteObject, redirect } from "react-router";
 import type { EmptyObject } from "types/type_utils";
 import { CommandPalette } from "viewer/view/components/command_palette";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 
 const { Content } = Layout;
 
@@ -81,7 +82,7 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
 function RootLayout() {
   return (
     <Layout>
-      <CommandPalette />
+      {getViewerCapabilities().showCommandPalette ? <CommandPalette /> : null}
       <Navbar />
       <Content>
         <ErrorBoundary>

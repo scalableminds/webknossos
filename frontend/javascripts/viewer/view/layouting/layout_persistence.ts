@@ -7,6 +7,7 @@ import { createNanoEvents } from "nanoevents";
 import { setStoredLayoutsAction } from "viewer/model/actions/ui_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/store";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 import type { LayoutKeys } from "./default_layout_configs";
 import getDefaultLayouts, {
   currentLayoutVersion,
@@ -87,8 +88,8 @@ listenToStoreProperty(
 );
 
 function persistLayoutConfigs() {
-  if (getIsInIframe()) {
-    // Don't persist layout in iframe
+  // Embedded viewers don't change the layouts of the normal viewer.
+  if (getIsInIframe() || !getViewerCapabilities().shouldPersistSettings) {
     return;
   }
 

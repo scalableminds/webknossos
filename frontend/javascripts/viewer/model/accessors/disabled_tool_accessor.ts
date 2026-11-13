@@ -19,12 +19,14 @@ import {
   type VolumeAnnotationZoomState,
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { WebknossosState } from "viewer/store";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
 import { areGeometriesTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
 import {
   AnnotationTool,
   type AnnotationToolId,
+  type Toolkit,
   Toolkits,
   VolumeTools,
   VolumeToolsWithProofreading,
@@ -74,6 +76,7 @@ const DISABLED_EXPLANATION = {
     "The bounding box tool is disabled because the bounding boxes are currently transformed according to the skeleton layer. To use the tool, ensure that the skeleton layer is rendered natively in the left sidebar.",
   BOUNDING_BOX_TRANSFORMED:
     "The bounding box tool is disabled because the bounding boxes are rendered with transforms.",
+  NOT_IN_FIXED_TOOLKIT: "is not available in this view.",
 };
 
 type Params = {
@@ -98,6 +101,7 @@ type Params = {
   activeOrganization: APIOrganization | null;
   activeUser: APIUser | null | undefined;
   isUpdatingCurrentlyAllowed: boolean;
+  fixedToolkit: Toolkit | null;
 };
 
 class DisableRule {
@@ -284,8 +288,16 @@ const requiresAllowUpdateRule = new DisableRule(WRITE_TOOLS, ({ isUpdatingCurren
   !isUpdatingCurrentlyAllowed ? DISABLED_EXPLANATION.NO_UPDATE_ALLOWED : null,
 );
 
+// Checked for all tools, so that their shortcuts can't switch to them either.
+const fixedToolkitRule = new DisableRule(Toolkits.ALL_TOOLS, ({ fixedToolkit }, tool) =>
+  fixedToolkit != null && !Toolkits[fixedToolkit].includes(tool)
+    ? `The ${tool.readableName} ${DISABLED_EXPLANATION.NOT_IN_FIXED_TOOLKIT}`
+    : null,
+);
+
 const rules = [
   // Sorted roughly by descending user-effort to enable a tool.
+  fixedToolkitRule,
   requiresAllowUpdateRule,
   proofreadRule,
   // Volume tool rules
@@ -393,6 +405,7 @@ const _getDisabledInfoForTools = (
     activeOrganization: state.activeOrganization,
     activeUser: state.activeUser,
     isUpdatingCurrentlyAllowed: annotation.isUpdatingCurrentlyAllowed,
+    fixedToolkit: getViewerCapabilities().fixedToolkit,
   };
 
   const result = {} as Record<AnnotationToolId, DisabledInfo>;

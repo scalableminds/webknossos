@@ -84,6 +84,11 @@ import { retryMutexAcquisitionNowAction } from "viewer/model/actions/save_action
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
 import { HelpModal } from "viewer/view/help/help_modal";
+import { LandmarkPanelToggleButton } from "viewer/view/layer_registration/landmark_panel_toggle_button";
+import {
+  isLayerRegistrationPrimaryWorker,
+  isLayerRegistrationWorker,
+} from "viewer/view/layer_registration/layer_registration_protocol";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
 
 const { Header } = Layout;
@@ -830,15 +835,147 @@ function AnnotationLockedTag(): React.ReactElement | null {
   return null;
 }
 
-function Navbar() {
+// In the annotation view and on phones, the nav items are shown as icons only.
+function useCollapseAllNavItems(): boolean {
+  const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
+  const isPhone = !useMinScreenWidth("md");
+  return isInAnnotationView || isPhone;
+}
+
+// The WEBKNOSSOS logo, which links to the dashboard.
+function getLogoMenuItem(collapse: boolean, linkTarget?: "_top"): MenuItemType {
+  return {
+    key: "0",
+    label: (
+      <>
+        <Link
+          to="/dashboard"
+          target={linkTarget}
+          aria-label="WEBKNOSSOS"
+          style={{
+            verticalAlign: "middle",
+          }}
+        >
+          {collapse ? (
+            getCollapsibleMenuTitle(
+              "WEBKNOSSOS",
+              <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
+              true,
+            )
+          ) : (
+            <>
+              <Icon component={WkLogoIcon} className="logo" />
+              <span className="logo-wordmark">WEBKNOSSOS</span>
+            </>
+          )}
+        </Link>
+        <PartnerLogo compact={collapse} />
+      </>
+    ),
+  };
+}
+
+type NavbarFrameProps = {
+  menuItems: ItemType[];
+  trailingNavItems: React.ReactNode[];
+  menuProps?: Pick<MenuProps, "selectedKeys" | "onOpenChange">;
+  // Rendered next to the menu, e.g. modals that the menu opens.
+  children?: React.ReactNode;
+};
+
+// The parts that all navbars share: the banners, the menu, the slot for the viewer's action bar
+// and the items at the right end.
+function NavbarFrame({ menuItems, trailingNavItems, menuProps, children }: NavbarFrameProps) {
+  const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
+  const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
+  const hasSaveError = useWkSelector((state) => state.save.hasSaveError);
+  const collapseAllNavItems = useCollapseAllNavItems();
+  // Pushes the navbar items below the maintenance/upgrade banner when one is shown.
+  const bannerOffset = navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0;
+  // Hidden together with the submenus it separates from the viewer's action bar.
+  const separator = <div className="navbar-separator hide-on-narrow-screen" />;
+  const showSeparator = isInAnnotationView && menuItems.length > 0;
+
+  return (
+    <Header
+      className={classnames("navbar-header", {
+        "collapsed-nav-header": collapseAllNavItems,
+        "save-error": hasSaveError,
+      })}
+    >
+      <GlobalProgressBar />
+      <MaintenanceBanner />
+      <ConfigProvider theme={getAntdTheme("light")}>
+        <UpgradeVersionBanner />
+      </ConfigProvider>
+      <Menu
+        mode="horizontal"
+        {...menuProps}
+        style={{
+          paddingTop: bannerOffset,
+          lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
+        }}
+        theme="dark"
+        subMenuCloseDelay={subMenuCloseDelay}
+        triggerSubMenuAction="click"
+        // There is a bug where the last menu entry disappears behind the overflow indicator
+        // although there is ample space available, see https://github.com/ant-design/ant-design/issues/32277
+        disabledOverflow
+        items={menuItems}
+      />
+      {showSeparator ? separator : null}
+      {children}
+      <PortalTarget
+        portalId="navbarTracingSlot"
+        style={{
+          flex: 1,
+          display: "flex",
+          paddingTop: bannerOffset,
+        }}
+      />
+      <ConfigProvider theme={getAntdTheme("dark")}>
+        <Flex
+          align="center"
+          justify="flex-end"
+          gap="small"
+          // Keeps a gap to the menu or the viewer's action bar when the navbar gets crowded.
+          style={{ paddingTop: bannerOffset, marginInlineStart: 8 }}
+        >
+          {trailingNavItems}
+        </Flex>
+      </ConfigProvider>
+    </Header>
+  );
+}
+
+// The layer registration page has no navbar, so the navbars of its workers only hold the toolbar
+// of the worker, plus the link to the dashboard (left worker) or the toggle of the landmark panel,
+// which is right of the right worker.
+function LayerRegistrationWorkerNavbar() {
+  const collapseAllNavItems = useCollapseAllNavItems();
+  if (isLayerRegistrationPrimaryWorker()) {
+    // A worker is an iframe of the layer registration page, so the dashboard replaces the whole
+    // page.
+    return (
+      <NavbarFrame
+        menuItems={[getLogoMenuItem(collapseAllNavItems, "_top")]}
+        trailingNavItems={[]}
+      />
+    );
+  }
+  return (
+    <NavbarFrame
+      menuItems={[]}
+      trailingNavItems={[<LandmarkPanelToggleButton key="landmark-panel-toggle" />]}
+    />
+  );
+}
+
+function DefaultNavbar() {
   const activeUser = useWkSelector((state) => state.activeUser);
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
-  const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
-  const hasSaveError = useWkSelector((state) => state.save.hasSaveError);
-  // Pushes the navbar items below the maintenance/upgrade banner when one is shown.
-  const bannerOffset = navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0;
   const historyLocation = useLocation();
 
   const logout = useLogout();
@@ -868,38 +1005,9 @@ function Navbar() {
   // Phones get the icon-only navbar, too.
   const isPhone = !useMinScreenWidth("md");
   const isBelowXL = !useMinScreenWidth("xl");
-  const collapseAllNavItems = isInAnnotationView || isPhone;
+  const collapseAllNavItems = useCollapseAllNavItems();
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
-  const menuItems: ItemType[] = [
-    {
-      key: "0",
-      label: (
-        <>
-          <Link
-            to="/dashboard"
-            aria-label="WEBKNOSSOS"
-            style={{
-              verticalAlign: "middle",
-            }}
-          >
-            {collapseAllNavItems ? (
-              getCollapsibleMenuTitle(
-                "WEBKNOSSOS",
-                <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
-                true,
-              )
-            ) : (
-              <>
-                <Icon component={WkLogoIcon} className="logo" />
-                <span className="logo-wordmark">WEBKNOSSOS</span>
-              </>
-            )}
-          </Link>
-          <PartnerLogo compact={collapseAllNavItems} />
-        </>
-      ),
-    },
-  ];
+  const menuItems: ItemType[] = [getLogoMenuItem(collapseAllNavItems)];
   const trailingNavItems = [];
 
   // In the annotation view, the navbar also hosts the viewer's action bar, so the nav items give up
@@ -982,60 +1090,23 @@ function Navbar() {
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.
   const selectedKeys = collapseAllNavItems ? [] : [historyLocation.pathname];
-  // Hidden together with the submenus it separates from the viewer's action bar.
-  const separator = <div className="navbar-separator hide-on-narrow-screen" />;
 
   return (
-    <Header
-      className={classnames("navbar-header", {
-        "collapsed-nav-header": collapseAllNavItems,
-        "save-error": hasSaveError,
-      })}
+    <NavbarFrame
+      menuItems={menuItems}
+      trailingNavItems={trailingNavItems}
+      menuProps={{
+        selectedKeys,
+        onOpenChange: (openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY)),
+      }}
     >
-      <GlobalProgressBar />
-      <MaintenanceBanner />
-      <ConfigProvider theme={getAntdTheme("light")}>
-        <UpgradeVersionBanner />
-      </ConfigProvider>
-      <Menu
-        mode="horizontal"
-        selectedKeys={selectedKeys}
-        onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
-        style={{
-          paddingTop: bannerOffset,
-          lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
-        }}
-        theme="dark"
-        subMenuCloseDelay={subMenuCloseDelay}
-        triggerSubMenuAction="click"
-        // There is a bug where the last menu entry disappears behind the overflow indicator
-        // although there is ample space available, see https://github.com/ant-design/ant-design/issues/32277
-        disabledOverflow
-        items={menuItems}
-      />
-      {isInAnnotationView ? separator : null}
       <HelpModal isModalOpen={isHelpModalOpen} onCancel={() => setIsHelpModalOpen(false)} />
-      <PortalTarget
-        portalId="navbarTracingSlot"
-        style={{
-          flex: 1,
-          display: "flex",
-          paddingTop: bannerOffset,
-        }}
-      />
-      <ConfigProvider theme={getAntdTheme("dark")}>
-        <Flex
-          align="center"
-          justify="flex-end"
-          gap="small"
-          // Keeps a gap to the menu or the viewer's action bar when the navbar gets crowded.
-          style={{ paddingTop: bannerOffset, marginInlineStart: 8 }}
-        >
-          {trailingNavItems}
-        </Flex>
-      </ConfigProvider>
-    </Header>
+    </NavbarFrame>
   );
+}
+
+function Navbar() {
+  return isLayerRegistrationWorker() ? <LayerRegistrationWorkerNavbar /> : <DefaultNavbar />;
 }
 
 function GlobalProgressBar() {

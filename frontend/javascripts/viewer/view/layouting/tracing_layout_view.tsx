@@ -56,6 +56,7 @@ import WelcomeToast from "viewer/view/novel_user_experiences/welcome_toast";
 import { importTracingFiles } from "viewer/view/right_border_tabs/skeleton_tab/import_tracing_files";
 import TracingView from "viewer/view/tracing_view";
 import VersionView from "viewer/view/version_restore_view/version_view";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 import TabTitle from "../components/tab_title_component";
 import VoxelValueTooltip from "../voxel_pipette_tooltip";
 import { determineLayout } from "./default_layout_configs";
@@ -318,6 +319,20 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
     }
 
     const { status, activeLayoutName } = this.state;
+    if (!getViewerCapabilities().hasScene) {
+      // Loads the annotation and offers the cross-origin API, but shows no UI.
+      return (
+        <Fragment>
+          <WebKnossosController
+            initialMaybeCompoundType={this.props.initialMaybeCompoundType}
+            initialCommandType={this.props.initialCommandType}
+            controllerStatus={status}
+            setControllerStatus={this.setControllerStatus}
+          />
+          <CrossOriginApi />
+        </Fragment>
+      );
+    }
     const layoutType = determineLayout(
       this.props.initialCommandType.type,
       this.props.viewMode,

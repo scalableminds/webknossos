@@ -27,7 +27,7 @@ import { select } from "viewer/model/sagas/effect_generators";
 import { Model } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 import { getTransformsForLayerOrNull } from "../accessors/dataset_layer_transformation_accessor";
-import { ensureWkInitialized } from "./ready_sagas";
+import { ensureSceneControllerInitialized, ensureWkInitialized } from "./ready_sagas";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -35,6 +35,8 @@ const prefetchStrategiesFlight = [new PrefetchStrategyFlight()];
 const prefetchStrategiesPlane = [new PrefetchStrategySkeleton(), new PrefetchStrategyVolume()];
 
 export function* watchDataRelevantChanges(): Saga<void> {
+  // Prefetched data is only used to render the scene.
+  yield* call(ensureSceneControllerInitialized);
   yield* call(ensureWkInitialized);
 
   const previousProperties = {};

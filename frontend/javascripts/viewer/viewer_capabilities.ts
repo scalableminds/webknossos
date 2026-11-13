@@ -72,8 +72,11 @@ const LAYER_REGISTRATION_STORE_CAPABILITIES: ViewerCapabilities = {
   hasScene: false,
 };
 
-// Computed once, because the URL params don't change while the viewer runs: navigation within a
-// worker is blocked (see blockLayerRegistrationWorkerNavigation).
+// Computed once, because the role of a viewer (and with it the URL params) is fixed while its
+// page runs: the workers block navigation (see blockLayerRegistrationWorkerNavigation), the
+// store iframe shows no UI to navigate with, and the outer frame never has these params. Leaving
+// a worker or the store loads a new page, which computes the capabilities again. This is also
+// why the role is not part of the Redux store: it never changes.
 export const getViewerCapabilities = once((): ViewerCapabilities => {
   if (isLayerRegistrationStore()) {
     return LAYER_REGISTRATION_STORE_CAPABILITIES;

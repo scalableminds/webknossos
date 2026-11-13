@@ -93,7 +93,7 @@ export async function hasSegmentIndex(
  * Returns whether the mapping could be activated. If loading the mapping fails, the mapping saga
  * disables it again.
  */
-export async function activateMappingAndWait(
+export async function activateAgglomerateMappingAndWait(
   layerName: string,
   mappingName: string,
 ): Promise<boolean> {
@@ -141,7 +141,7 @@ export function withMappingActivationConfirmation(
           return;
         }
         if (mappingName != null) {
-          const wasActivated = await activateMappingAndWait(layerName, mappingName);
+          const wasActivated = await activateAgglomerateMappingAndWait(layerName, mappingName);
           if (!wasActivated) {
             return;
           }

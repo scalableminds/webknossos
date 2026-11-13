@@ -10,7 +10,7 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { updateCurrentMeshFileAction } from "viewer/model/actions/annotation_actions";
 import Store from "viewer/store";
-import { activateMappingAndWait } from "./segments_view_helper";
+import { activateAgglomerateMappingAndWait } from "./segments_view_helper";
 
 // Mesh files with an older format don't store their mapping and are not supported anymore.
 const MIN_SUPPORTED_MESH_FILE_VERSION = 3;
@@ -126,7 +126,7 @@ function MeshFileCompatibilityModal({
       return;
     }
     setIsActivatingMapping(true);
-    const wasActivated = await activateMappingAndWait(layerName, meshFile.mappingName);
+    const wasActivated = await activateAgglomerateMappingAndWait(layerName, meshFile.mappingName);
     if (wasDismissedRef.current) {
       return;
     }

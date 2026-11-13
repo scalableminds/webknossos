@@ -22,6 +22,7 @@ export type DeleteNodeAndReconnectNeighborsAction = ReturnType<
   typeof deleteNodeAndReconnectNeighborsAction
 >;
 export type DeleteEdgeAction = ReturnType<typeof deleteEdgeAction>;
+export type InsertNodeOnEdgeAction = ReturnType<typeof insertNodeOnEdgeAction>;
 type SetActiveNodeAction = ReturnType<typeof setActiveNodeAction>;
 type CenterActiveNodeAction = ReturnType<typeof centerActiveNodeAction>;
 type SetNodeRadiusAction = ReturnType<typeof setNodeRadiusAction>;
@@ -99,6 +100,7 @@ export type SkeletonTracingAction =
   | DeleteNodeAction
   | DeleteNodeAndReconnectNeighborsAction
   | DeleteEdgeAction
+  | InsertNodeOnEdgeAction
   | SetActiveNodeAction
   | CenterActiveNodeAction
   | SetActiveTreeGroupAction
@@ -208,6 +210,7 @@ export const skeletonActionPolicies: Record<SkeletonTracingAction["type"], Skele
   CREATE_NODE: { needsUpdatePermission: true, collab: "block" },
   DELETE_NODE: { needsUpdatePermission: true, collab: "block" },
   DELETE_NODE_AND_RECONNECT_NEIGHBORS: { needsUpdatePermission: true, collab: "block" },
+  INSERT_NODE_ON_EDGE: { needsUpdatePermission: true, collab: "block" },
   SET_NODE_POSITION: { needsUpdatePermission: true, collab: "block" },
   CREATE_BRANCHPOINT: { needsUpdatePermission: true, collab: "block" },
   DELETE_BRANCHPOINT: { needsUpdatePermission: true, collab: "block" },
@@ -247,6 +250,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "DELETE_NODE",
   "DELETE_NODE_AND_RECONNECT_NEIGHBORS",
   "DELETE_EDGE",
+  "INSERT_NODE_ON_EDGE",
   "SET_ACTIVE_NODE",
   "SET_NODE_RADIUS",
   "SET_NODE_POSITION",
@@ -355,6 +359,20 @@ export const deleteEdgeAction = (
     targetNodeId,
     timestamp,
     initiator,
+  }) as const;
+
+// Inserts a new node at the midpoint of the edge between the two given nodes,
+// so that the tree is not split. The new node becomes active.
+export const insertNodeOnEdgeAction = (
+  sourceNodeId: number,
+  targetNodeId: number,
+  timestamp: number = Date.now(),
+) =>
+  ({
+    type: "INSERT_NODE_ON_EDGE",
+    sourceNodeId,
+    targetNodeId,
+    timestamp,
   }) as const;
 
 export const setActiveNodeAction = (

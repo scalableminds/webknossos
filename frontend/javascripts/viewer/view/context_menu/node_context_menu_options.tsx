@@ -19,6 +19,7 @@ import {
   deleteEdgeAction,
   expandParentGroupsOfTreeAction,
   focusTreeAction,
+  insertNodeOnEdgeAction,
   mergeTreesAction,
   setActiveNodeAction,
   setTreeVisibilityAction,
@@ -170,6 +171,17 @@ export function useNodeContextMenuOptions(
               </>
             ),
           },
+          clickedTree.type === TreeTypeEnum.DEFAULT
+            ? {
+                key: "insert-node-on-edge",
+                disabled: !areNodesConnected,
+                onClick: () =>
+                  activeNodeId != null
+                    ? dispatch(insertNodeOnEdgeAction(activeNodeId, clickedNodeId))
+                    : null,
+                label: "Insert Node on Edge to this Node",
+              }
+            : null,
           {
             key: "delete-node",
             onClick: () => actions.deleteNode(clickedNodeId, clickedTree.treeId),

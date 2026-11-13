@@ -42,6 +42,7 @@ import {
   renderAnimationMenuItem,
   screenshotMenuItem,
 } from "viewer/view/action_bar/menu_items";
+import { openInMenu } from "viewer/view/action_bar/open_in/open_in_menu";
 
 // These actions require authentication. Instead of opening a dialog that fails for logged-out
 // users, disable the menu item and explain why.
@@ -259,7 +260,7 @@ export const useTracingViewMenuGroups = (
         "Log in to create Zarr links for this annotation.",
       ),
     });
-    shareAndExportItems.push(screenshotMenuItem, renderAnimationMenuItem);
+    shareAndExportItems.push(screenshotMenuItem, renderAnimationMenuItem, openInMenu);
 
     if (layoutMenu != null) customizeItems.push(layoutMenu);
     customizeItems.push(keyboardShortcutsConfigMenuItem, {

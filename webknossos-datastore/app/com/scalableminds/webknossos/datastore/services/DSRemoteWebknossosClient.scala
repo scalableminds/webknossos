@@ -195,6 +195,17 @@ class DSRemoteWebknossosClient @Inject() (
       .addQueryParam("key", dataStoreKey)
       .postJson(datasetId)
 
+  def getPathsToDelete: Fox[Seq[String]] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/pathsToDelete")
+      .addQueryParam("key", dataStoreKey)
+      .silent
+      .getWithJsonResponse[Seq[String]]
+
+  def markPathsAsDeleted(paths: Seq[String]): Fox[?] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/pathsToDelete/markAsDeleted")
+      .addQueryParam("key", dataStoreKey)
+      .postJson(paths)
+
   def getJobExportProperties(jobId: ObjectId): Fox[JobExportProperties] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/jobExportProperties")
       .addQueryParam("jobId", jobId)

@@ -17,10 +17,10 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { Store } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getPositionForSegmentId,
   initializeMappingAndTool,
@@ -355,6 +355,50 @@ describe("Proofreading marker", () => {
       yield call(waitForSagas);
 
       expect(wasClickedDuringRebase).toBe(true);
+      expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(4));
+      expect(yield* getActiveCellId(tracingId)).toBe(4n);
+    });
+    await task.toPromise();
+  });
+
+  it("should keep the active segment instead of crashing if the bucket at the marker can't be loaded", async (context: WebknossosTestContext) => {
+    const { api: testApi } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield put(setCollaborationModeAction("Concurrent"));
+      yield call(clickSegmentWithProofreadingTool, tracingId, 4n);
+      yield call(() => testApi.tracing.save());
+
+      const getDataValueSpy = vi
+        .spyOn(api.data, "getDataValue")
+        .mockRejectedValue(new Error("Bucket 0,0,0,0, could not be loaded after 3 retries."));
+      try {
+        // The merge changes the agglomerate at the marker, so the active segment would be adapted.
+        backendMock.injectVersion(
+          [
+            {
+              name: "mergeAgglomerate",
+              value: {
+                actionTracingId: tracingId,
+                segmentId1: 1n,
+                segmentId2: 4n,
+                agglomerateId1: 1n,
+                agglomerateId2: 4n,
+              },
+            },
+          ],
+          Store.getState().annotation.version + 1,
+        );
+        yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+        yield call(waitForSagas);
+        expect(getDataValueSpy).toHaveBeenCalled();
+      } finally {
+        getDataValueSpy.mockRestore();
+      }
+
       expect(yield* getMarkerPosition(tracingId)).toEqual(getPositionForSegmentId(4));
       expect(yield* getActiveCellId(tracingId)).toBe(4n);
     });

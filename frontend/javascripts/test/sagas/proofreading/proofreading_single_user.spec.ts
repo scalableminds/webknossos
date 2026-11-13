@@ -20,7 +20,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { Store } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -270,6 +270,32 @@ describe("Proofreading (Single User)", () => {
         );
       } finally {
         fetchAgglomerates.mockImplementation(originalImplementation!);
+      }
+    });
+    await task.toPromise();
+  });
+
+  it("should show a warning instead of crashing if the bucket of a proofreading click can't be loaded", async (context: WebknossosTestContext) => {
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+      vi.mocked(Toast.warning).mockClear();
+      const getDataValueSpy = vi
+        .spyOn(api.data, "getDataValue")
+        .mockRejectedValue(new Error("Bucket 0,0,0,0, could not be loaded after 3 retries."));
+      try {
+        yield put(proofreadAtPosition(getPositionForSegmentId(1)));
+        yield call(() =>
+          vi.waitFor(() =>
+            expect(Toast.warning).toHaveBeenCalledWith(
+              "Could not determine the segment id at the clicked position. Please try again.",
+            ),
+          ),
+        );
+      } finally {
+        getDataValueSpy.mockRestore();
       }
     });
     await task.toPromise();

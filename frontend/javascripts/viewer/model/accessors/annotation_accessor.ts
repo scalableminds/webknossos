@@ -111,9 +111,8 @@ export function maySendSaveRequest(state: WebknossosState) {
 
 export function isConcurrentCollaborationMode(state: WebknossosState) {
   // "Live collaboration" / "simultaneous editing": multiple users edit the same
-  // annotation at the same time. In this mode, normal skeleton editing is forbidden
-  // because it would interfere with concurrent edits/rebasing. Only proofreading
-  // (which operates on agglomerate trees) is allowed.
+  // annotation at the same time. In this mode, users may only edit their own trees and
+  // agglomerate trees (proofreading), see design/collaborative_skeleton_annotation.md.
   return state.annotation.collaborationMode === "Concurrent";
 }
 
@@ -121,16 +120,40 @@ export function isAgglomerateTree(tree: Tree | null | undefined): boolean {
   return tree?.type === TreeTypeEnum.AGGLOMERATE;
 }
 
+// Whether a user may edit the given tree in concurrent collaboration mode: agglomerate trees
+// (proofreading) may be edited by everyone, other trees only by their owner. Trees without an
+// owner belong to the annotation owner.
+export function isTreeEditableByUserInLiveCollab(
+  tree: Tree | null | undefined,
+  userId: string | null | undefined,
+  annotationOwnerId: string | null | undefined,
+): boolean {
+  if (tree == null) {
+    return false;
+  }
+  if (isAgglomerateTree(tree)) {
+    return true;
+  }
+  return userId != null && (tree.ownerId ?? annotationOwnerId) === userId;
+}
+
+export function isTreeEditableInLiveCollab(
+  state: WebknossosState,
+  tree: Tree | null | undefined,
+): boolean {
+  return isTreeEditableByUserInLiveCollab(tree, state.activeUser?.id, state.annotation.owner?.id);
+}
+
 export function mayEditSkeletonTree(state: WebknossosState, tree: Tree | null | undefined) {
   // Whether the given existing tree may be mutated. In concurrent collaboration
-  // mode, only agglomerate trees (i.e. proofreading) may be edited.
+  // mode, only agglomerate trees (i.e. proofreading) and own trees may be edited.
   if (!mayEditAnnotation(state)) {
     return false;
   }
   if (!isConcurrentCollaborationMode(state)) {
     return true;
   }
-  return isAgglomerateTree(tree);
+  return isTreeEditableInLiveCollab(state, tree);
 }
 
 export function getReasonForCantEditSkeletonTree(
@@ -139,14 +162,13 @@ export function getReasonForCantEditSkeletonTree(
 ): string | undefined {
   // If mayEditSkeletonTree is false, getReasonForCantEditSkeletonTree will provide a human-readable reason for that. Otherwise, undefined will be returned.
   const isConcurrentCollabMode = isConcurrentCollaborationMode(state);
-  const isActiveTreeAgglomerate = isAgglomerateTree(tree);
 
   if (!mayEditAnnotation(state)) {
     const isAnnotationLockedByUser = state.annotation.isLockedByOwner;
     const isOwner = isAnnotationOwner(state);
     return messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner);
   }
-  if (isConcurrentCollabMode && !isActiveTreeAgglomerate) {
+  if (isConcurrentCollabMode && !isTreeEditableInLiveCollab(state, tree)) {
     return messages["tracing.skeleton_editing_disabled_in_live_collab"];
   }
 

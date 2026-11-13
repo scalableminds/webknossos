@@ -217,10 +217,12 @@ instead. Only enable this option if you understand its effect. All layers will n
           isOwner ? "you" : "the owner"
         }.`
       : "This annotation is in read-only mode and cannot be updated.",
+  "tracing.no_id_reservations_available":
+    "Could not create the tree or node, because no ids were reserved for you yet. Please try again in a moment.",
   "tracing.trees_edited_in_other_session":
     "This annotation was edited in another tab or window. Continue there, or reload this page to edit here. Unsaved changes in this tab are lost.",
   "tracing.skeleton_editing_disabled_in_live_collab":
-    "Skeleton editing is disabled because simultaneous editing is enabled in the sharing settings. Currently, only agglomerate trees (created in proofreading mode) may be edited.",
+    "This tree cannot be edited because simultaneous editing is enabled in the sharing settings. In that mode, only the creator of a tree can edit it (agglomerate trees from proofreading can be edited by everyone).",
   "tracing.layer_management_disabled_in_live_collab": (isOwner: boolean) =>
     `Adding, deleting or converting annotation layers is disabled because simultaneous editing is enabled in the sharing settings. Please ${isOwner ? "" : "ask the owner to "}disable simultaneous editing, perform this change, and enable it again afterwards.`,
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",

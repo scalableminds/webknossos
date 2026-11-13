@@ -72,6 +72,10 @@ import PushQueue from "viewer/model/bucket_data_handling/pushqueue";
 import type { RequestBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
+import {
+  getMaximumGroupId,
+  getMaximumTreeId,
+} from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { GlobalMeshChunkProvider } from "viewer/model/sagas/meshes/mesh_chunk_provider";
 import rootSaga from "viewer/model/sagas/root_saga";
 import { setStore } from "viewer/singletons";
@@ -475,9 +479,44 @@ function receiveJSONMockImplementation(
   return Promise.resolve({});
 }
 
-function sendJSONReceiveJSONMockImplementation(url: string, _options?: RequestOptions) {
+// Emulates the back-end's id reservation for the skeleton domains: new ids start after the
+// largest id that was reserved or exists. Reset in setupWebknossosForTesting.
+const largestReservedSkeletonIdByDomain: Map<string, number> = new Map();
+
+// Marks ids as reserved (e.g., by simulated other users), so that they are not handed out again.
+export function markSkeletonIdsAsReservedForTesting(domain: string, ids: number[]) {
+  largestReservedSkeletonIdByDomain.set(
+    domain,
+    Math.max(largestReservedSkeletonIdByDomain.get(domain) ?? 0, ...ids),
+  );
+}
+
+function getLargestExistingSkeletonId(domain: string): number {
+  const skeletonTracing = Store.getState().annotation.skeleton;
+  if (skeletonTracing == null) return 0;
+  if (domain === "Tree") return getMaximumTreeId(skeletonTracing.trees);
+  if (domain === "TreeGroup") return getMaximumGroupId(skeletonTracing.treeGroups);
+  return skeletonTracing.cachedMaxNodeId;
+}
+
+function sendJSONReceiveJSONMockImplementation(url: string, options?: RequestOptions) {
   if (url === `/api/users/${dummyUser.id}/taskTypeId`) {
     return Promise.resolve(dummyUser);
+  }
+  const data = (options as { data?: Record<string, any> } | undefined)?.data;
+  if (url.includes("/reserveIds") && ["Tree", "Node", "TreeGroup"].includes(data?.domain)) {
+    const { domain, numberOfIdsToReserve } = data as {
+      domain: string;
+      numberOfIdsToReserve: number;
+    };
+    const startId =
+      Math.max(
+        largestReservedSkeletonIdByDomain.get(domain) ?? 0,
+        getLargestExistingSkeletonId(domain),
+      ) + 1;
+    const ids = Array.from({ length: numberOfIdsToReserve }, (_, i) => startId + i);
+    largestReservedSkeletonIdByDomain.set(domain, startId + numberOfIdsToReserve - 1);
+    return Promise.resolve(ids);
   }
   return Promise.resolve({});
 }
@@ -633,6 +672,7 @@ export async function setupWebknossosForTesting(
    */
   // Reset to the default so stale implementations from previous tests don't affect saga startup.
   vi.mocked(acquireAnnotationMutex).mockResolvedValue(MUTEX_GRANTED);
+  largestReservedSkeletonIdByDomain.clear();
   Store.dispatch(restartSagaAction());
   Store.dispatch(resetStoreAction());
   GlobalMeshChunkProvider.clear();

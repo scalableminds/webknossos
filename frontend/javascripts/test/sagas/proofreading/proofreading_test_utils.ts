@@ -13,6 +13,7 @@ import { AgglomerateMapping } from "test/helpers/agglomerate_mapping_helper";
 import {
   type BucketOverride,
   createBucketResponseFunction,
+  markSkeletonIdsAsReservedForTesting,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
@@ -356,6 +357,20 @@ export class BackendMock {
       });
     }
     this.injectionsPerVersion[targetVersion] = updateActions;
+  }
+
+  // Marks the ids of trees and nodes that the planned injections create as reserved. In reality,
+  // the simulated other user would have reserved them before this client reserves new ids.
+  reserveIdsOfPlannedInjections() {
+    const injectedActions = Object.values(this.injectionsPerVersion).flat();
+    markSkeletonIdsAsReservedForTesting(
+      "Tree",
+      injectedActions.flatMap((a) => (a.name === "createTree" ? [a.value.id] : [])),
+    );
+    markSkeletonIdsAsReservedForTesting(
+      "Node",
+      injectedActions.flatMap((a) => (a.name === "createNode" ? [a.value.id] : [])),
+    );
   }
 
   planMultipleVersionInjections(

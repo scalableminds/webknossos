@@ -35,6 +35,7 @@ import {
 } from "viewer/model/reducers/reducer_helpers";
 import {
   addTreesAndGroups,
+  countIdsNeededForAddingTrees,
   createBranchPoint,
   createComment,
   createNode,
@@ -57,9 +58,10 @@ import {
   shuffleTreeColor,
   toggleAllTreesReducer,
   toggleTreeGroupReducer,
+  warnAboutMissingIdReservations,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { type Tree, type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
-import type { SkeletonTracing, WebknossosState } from "viewer/store";
+import type { SkeletonIdDomain, SkeletonTracing, WebknossosState } from "viewer/store";
 import {
   additionallyExpandGroup,
   findGroup,
@@ -72,50 +74,83 @@ import {
   getUserStateForTracing,
   isAgglomerateTree,
   isConcurrentCollaborationMode,
+  isTreeEditableInLiveCollab,
 } from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
+import {
+  markExistingReservedIdsAsUsed,
+  markReservedIdsAsUsed,
+  peekReservedIds,
+  usesReservedSkeletonIds,
+} from "./skeleton_id_allocation";
 import { applySkeletonUpdateActionsFromServer } from "./update_action_application/skeleton";
 
 // Resolves the existing tree(s) that the given mutation would affect. Only actions classified as
-// `collab: "onlyAgglomerateTree"` in `skeletonActionPolicies` are handled here; for those, the
-// collab guard allows the mutation only if all affected trees are agglomerate trees.
+// `collab: "onlyEditableTrees"` in `skeletonActionPolicies` are handled here; for those, the
+// collab guard allows the mutation only if all affected trees may be edited by the current user.
+// Returns null if the action creates a new tree of the current user instead.
 function resolveAffectedTrees(
   action: Action,
   // The state is needed in addition to the skeletonTracing, because the active tree
   // (which is the fallback for actions without an explicit treeId) lives in localSkeletonState.
   state: WebknossosState,
   skeletonTracing: SkeletonTracing,
-): Array<Tree | null | undefined> {
+): Array<Tree | null | undefined> | null {
+  const { activeTreeId } = state.localSkeletonState;
+  const getTreeOfNode = (nodeId?: number | null, treeId?: number | null) =>
+    getTreeAndNode(skeletonTracing, activeTreeId, nodeId, treeId)?.[0];
   switch (action.type) {
+    case "CREATE_NODE": {
+      const tree = getTree(state, action.treeId);
+      // Without an existing (active) tree, a new tree of the current user is created.
+      return tree == null && action.treeId == null ? null : [tree];
+    }
+    case "DELETE_NODE":
+    case "SET_NODE_POSITION":
+    case "SET_NODE_RADIUS":
+    case "CREATE_BRANCHPOINT":
+    case "CREATE_COMMENT":
+    case "DELETE_COMMENT":
+      return [getTreeOfNode(action.nodeId, action.treeId)];
+    case "DELETE_NODE_AND_RECONNECT_NEIGHBORS":
+    case "DELETE_BRANCHPOINT_BY_ID":
+      return [getTreeOfNode(action.nodeId, action.treeId)];
+    case "DELETE_BRANCHPOINT": {
+      // Deletes the most recent branchpoint of all trees.
+      const result = deleteBranchPoint(skeletonTracing, state.annotation.restrictions);
+      return result != null ? [skeletonTracing.trees.getNullable(result[1])] : [];
+    }
     case "SET_TREE_NAME":
     case "SET_TREE_METADATA":
     case "SET_TREE_AGGLOMERATE_INFO_ID":
     case "SET_EDGES_ARE_VISIBLE":
     case "SET_TREE_GROUP":
     case "DELETE_TREE":
+    case "SET_TREE_COLOR":
+    case "SET_TREE_COLOR_INDEX":
+    case "SHUFFLE_TREE_COLOR":
       return [getTree(state, action.treeId)];
     case "DELETE_TREES":
       return action.treeIds.map((treeId) => getTree(state, treeId));
+    case "SHUFFLE_ALL_TREE_COLORS":
+      return skeletonTracing.trees.values().toArray();
     case "DELETE_EDGE":
     case "MERGE_TREES":
-      // Proofreading dispatches these with initiator "PROOFREADING" on agglomerate trees. The
-      // user-initiated variants during proofreading return early in the respective case bodies.
       return [
         findTreeByNodeId(skeletonTracing.trees, action.sourceNodeId),
         findTreeByNodeId(skeletonTracing.trees, action.targetNodeId),
       ];
     case "ADD_TREES_AND_GROUPS":
-      // Allowed only when importing agglomerate trees (e.g. the proofreading agglomerate import).
+      // Handled separately in isCollabModeMutationAllowed.
       return Array.from(action.trees.values());
     default:
-      // An action not classified as "onlyAgglomerateTree" should never reach this helper.
+      // An action not classified as "onlyEditableTrees" should never reach this helper.
       return [];
   }
 }
 
-// In concurrent collaboration ("live collaboration") mode, normal skeleton editing must be
-// forbidden because it would interfere with concurrent edits/rebasing. Only proofreading, which
-// operates on agglomerate trees, is allowed. The collab policy comes from `skeletonActionPolicies`.
+// In concurrent collaboration ("live collaboration") mode, users may only edit their own trees
+// and agglomerate trees (proofreading). The collab policy comes from `skeletonActionPolicies`.
 function isCollabModeMutationAllowed(
   collab: SkeletonCollabPolicy,
   action: Action,
@@ -127,9 +162,21 @@ function isCollabModeMutationAllowed(
       return true;
     case "block":
       return false;
-    case "onlyAgglomerateTree": {
+    case "onlyEditableTrees": {
+      if (action.type === "ADD_TREES_AND_GROUPS") {
+        // Importing trees adds tree groups, too, which is not supported in live collaboration,
+        // yet. Only agglomerate trees (proofreading) may be added.
+        const addedTrees = Array.from(action.trees.values());
+        return addedTrees.length > 0 && addedTrees.every(isAgglomerateTree);
+      }
       const affectedTrees = resolveAffectedTrees(action, state, skeletonTracing);
-      return affectedTrees.length > 0 && affectedTrees.every(isAgglomerateTree);
+      if (affectedTrees == null) {
+        return true;
+      }
+      return (
+        affectedTrees.length > 0 &&
+        affectedTrees.every((tree) => isTreeEditableInLiveCollab(state, tree))
+      );
     }
     default: {
       const _exhaustiveCheck: never = collab;
@@ -138,7 +185,7 @@ function isCollabModeMutationAllowed(
   }
 }
 
-function SkeletonTracingReducer(
+function SkeletonTracingReducerWithoutIdBookkeeping(
   state: WebknossosState,
   action: Action,
   ignoreAllowUpdate: boolean = false,
@@ -240,6 +287,7 @@ function SkeletonTracingReducer(
             activeIndex: -1,
           },
           showSkeletons: true,
+          idReservations: state.localSkeletonState.idReservations,
         },
       },
     });
@@ -852,7 +900,7 @@ function SkeletonTracingReducer(
 
       const newTrees = skeletonTracing.trees.set(tree.treeId, newTree);
 
-      return update(state, {
+      return update(markReservedIdsAsUsed(state, "Node", [node.id]), {
         annotation: {
           skeleton: {
             trees: {
@@ -862,7 +910,8 @@ function SkeletonTracingReducer(
               $set: activeNodeId,
             },
             cachedMaxNodeId: {
-              $set: node.id,
+              // Reserved node ids (live collaboration) are not necessarily larger than all others.
+              $set: Math.max(skeletonTracing.cachedMaxNodeId, node.id),
             },
           },
         },
@@ -1207,12 +1256,31 @@ function SkeletonTracingReducer(
     case "ADD_TREES_AND_GROUPS": {
       const { trees, treeGroups, assignNewGroupId, targetGroupId } = action;
       const treesWithNames = ensureTreeNames(trees);
+      for (const tree of treesWithNames.values()) {
+        // The server sets the owner to the author of the createTree action, too.
+        tree.ownerId = state.activeUser?.id;
+      }
+      let reservedIds: Record<SkeletonIdDomain, number[]> | undefined;
+      let stateWithUsedIds = state;
+      if (usesReservedSkeletonIds(state)) {
+        const neededIds = countIdsNeededForAddingTrees(treesWithNames, treeGroups);
+        const treeIds = peekReservedIds(state, "Tree", neededIds.Tree);
+        const nodeIds = peekReservedIds(state, "Node", neededIds.Node);
+        const groupIds = peekReservedIds(state, "TreeGroup", neededIds.TreeGroup);
+        if (treeIds == null || nodeIds == null || groupIds == null) {
+          warnAboutMissingIdReservations();
+          return state;
+        }
+        reservedIds = { Tree: treeIds, Node: nodeIds, TreeGroup: groupIds };
+        stateWithUsedIds = markReservedIdsAsUsed(state, "Node", nodeIds);
+      }
       const treesResult = addTreesAndGroups(
         skeletonTracing,
         treesWithNames,
         treeGroups,
         assignNewGroupId,
         targetGroupId,
+        reservedIds,
       );
       if (treesResult == null) {
         return state;
@@ -1242,7 +1310,7 @@ function SkeletonTracingReducer(
           )
         : skeletonTracing.treeGroups.concat(updatedTreeGroups);
 
-      return update(state, {
+      return update(stateWithUsedIds, {
         annotation: {
           skeleton: {
             treeGroups: {
@@ -1642,6 +1710,33 @@ export function sanitizeMetadata(metadata: MetadataEntryProto[]) {
     }),
     (entry) => entry.key,
   );
+}
+
+// Actions that may create trees or tree groups with reserved ids (live collaboration).
+const ACTIONS_CREATING_TREES = new Set([
+  "CREATE_NODE",
+  "CREATE_TREE",
+  "DELETE_NODE",
+  "DELETE_EDGE",
+  "ADD_TREES_AND_GROUPS",
+]);
+
+function SkeletonTracingReducer(
+  state: WebknossosState,
+  action: Action,
+  ignoreAllowUpdate: boolean = false,
+): WebknossosState {
+  const newState = SkeletonTracingReducerWithoutIdBookkeeping(state, action, ignoreAllowUpdate);
+  if (
+    newState === state ||
+    !ACTIONS_CREATING_TREES.has(action.type) ||
+    !usesReservedSkeletonIds(newState)
+  ) {
+    return newState;
+  }
+  // Tree and tree group reservations that were consumed are marked as used, so that their ids are
+  // not used again if the tree or group is deleted later (e.g., by another user).
+  return markExistingReservedIdsAsUsed(newState);
 }
 
 export default SkeletonTracingReducer;

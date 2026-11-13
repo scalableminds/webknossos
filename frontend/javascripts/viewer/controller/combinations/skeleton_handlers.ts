@@ -46,6 +46,7 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import { showContextMenuAction } from "viewer/model/actions/ui_actions";
 import Dimensions from "viewer/model/dimensions";
+import { getNextNodeId } from "viewer/model/reducers/skeleton_id_allocation";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { Edge, Node, Tree } from "viewer/model/types/tree_types";
 import { OrthoBaseRotations } from "viewer/ortho_base_rotations";
@@ -365,6 +366,8 @@ export function createSkeletonNode(
   const finestMagIdx =
     min(values(activeMagIndicesOfEnabledColorLayers)) || min(values(activeMagIndices)) || 0;
 
+  // The reducer creates the node synchronously with this id (if the creation succeeds).
+  const newNodeId = getNextNodeId(state);
   Store.dispatch(
     createNodeAction(
       untransformNodePosition(position.floating, state),
@@ -384,10 +387,9 @@ export function createSkeletonNode(
   // We need a reference to the new store state, so that the new node exists in it.
   state = Store.getState();
 
-  if (center) {
+  if (center && newNodeId != null) {
     const newSkeleton = enforceSkeletonTracing(state.annotation);
     // Note that the new node isn't necessarily active
-    const newNodeId = newSkeleton.cachedMaxNodeId;
 
     const treeAndNode = getTreeAndNode(
       newSkeleton,

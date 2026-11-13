@@ -17,10 +17,7 @@ import {
   getSegmentIdsAtPositionAsync,
   handleFloodFillFromGlobalPosition,
 } from "viewer/controller/combinations/volume_handlers";
-import {
-  isConcurrentCollaborationMode,
-  mayEditAnnotation,
-} from "viewer/model/accessors/annotation_accessor";
+import { mayEditAnnotation, mayEditSkeletonTree } from "viewer/model/accessors/annotation_accessor";
 import { hasConnectomeFile } from "viewer/model/accessors/connectome_accessor";
 import {
   getMappingInfo,
@@ -28,7 +25,7 @@ import {
 } from "viewer/model/accessors/dataset_accessor";
 import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
-import { areGeometriesTransformed } from "viewer/model/accessors/skeletontracing_accessor";
+import { areGeometriesTransformed, getTree } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool, VolumeTools } from "viewer/model/accessors/tool_accessor";
 import {
   getActiveCellId,
@@ -106,9 +103,12 @@ export function useNoNodeContextMenuOptions(
   );
 
   const allowUpdate = useWkSelector(mayEditAnnotation);
-  // In concurrent collaboration mode, creating new (default) trees/nodes is not allowed; only
-  // proofreading (agglomerate) operations remain available.
-  const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
+  // In concurrent collaboration mode, nodes may only be added to own trees (or agglomerate trees).
+  // Creating a new tree is always allowed.
+  const mayAddNodeToActiveTree = useWkSelector((state) => {
+    const activeTree = getTree(state);
+    return activeTree == null || mayEditSkeletonTree(state, activeTree);
+  });
 
   // The segment id depends on live state that is not passed to the function (e.g., loaded
   // buckets, visible layer). Reading it in a selector keeps it up to date.
@@ -325,7 +325,7 @@ export function useNoNodeContextMenuOptions(
             onClick: () =>
               handleCreateNodeFromGlobalPosition(globalPositionForNode, viewport, false),
             label: "Create Node here",
-            disabled: areSkeletonGeometriesTransformed || isConcurrentCollabMode,
+            disabled: areSkeletonGeometriesTransformed || !mayAddNodeToActiveTree,
           },
           {
             key: "create-node-with-tree",
@@ -341,7 +341,7 @@ export function useNoNodeContextMenuOptions(
                   : null}
               </>
             ),
-            disabled: areSkeletonGeometriesTransformed || isConcurrentCollabMode,
+            disabled: areSkeletonGeometriesTransformed,
           },
           {
             key: "load-agglomerate-tree",

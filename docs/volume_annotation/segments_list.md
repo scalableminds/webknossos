@@ -21,7 +21,7 @@ Watch this short video for an overview of the segments list:
 Each segment is shown as a single row with a visibility checkbox, a dot in the segment's color, and its name.
 Unnamed segments are shown as `Segment <ID>`.
 
-- **Click** the name to select the segment and move the viewports to it. ++ctrl++ + click (++cmd++ + click on macOS) selects multiple segments.
+- **Click** the name to select the segment and move the viewports to it. ++ctrl++ + click (++cmd++ + click on macOS) selects multiple segments. ++shift++ + click selects all segments between the previously clicked segment and the clicked one (both need to be in the same group).
 - **Double-click** the name to rename it. Press ++enter++ to save or ++escape++ to cancel. Clearing the name resets it to the default.
 - **Right-click** the row to open the [segment context menu](#segment-context-menu).
 

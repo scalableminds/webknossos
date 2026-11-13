@@ -1,6 +1,6 @@
 import { Button, Modal, Select, Space, Typography } from "antd";
 import renderIndependently from "libs/render_independently";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { APIDataset, APIMeshFileInfo } from "types/api_types";
 import { MappingStatusEnum } from "viewer/constants";
 import { getMappingInfo, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
@@ -106,6 +106,14 @@ function MeshFileCompatibilityModal({
 }) {
   const [selectedMeshFileName, setSelectedMeshFileName] = useState(compatibleMeshFiles[0]?.name);
   const [isActivatingMapping, setIsActivatingMapping] = useState(false);
+  // The mapping activation can finish after the modal was dismissed. The meshes shouldn't be
+  // loaded then.
+  const wasDismissedRef = useRef(false);
+
+  const dismiss = () => {
+    wasDismissedRef.current = true;
+    destroy();
+  };
 
   const switchMeshFileAndLoad = () => {
     Store.dispatch(updateCurrentMeshFileAction(layerName, selectedMeshFileName));
@@ -118,7 +126,15 @@ function MeshFileCompatibilityModal({
       return;
     }
     setIsActivatingMapping(true);
-    await activateMappingAndWait(layerName, meshFile.mappingName);
+    const wasActivated = await activateMappingAndWait(layerName, meshFile.mappingName);
+    if (wasDismissedRef.current) {
+      return;
+    }
+    if (!wasActivated) {
+      // The mapping saga already shows an error. Keep the modal open so that the user can retry.
+      setIsActivatingMapping(false);
+      return;
+    }
     destroy();
     loadMeshes();
   };
@@ -141,7 +157,7 @@ function MeshFileCompatibilityModal({
   );
 
   const footer = [
-    <Button key="cancel" onClick={destroy}>
+    <Button key="cancel" onClick={dismiss}>
       Cancel
     </Button>,
     canActivateMeshFileMapping ? (
@@ -162,7 +178,7 @@ function MeshFileCompatibilityModal({
   ];
 
   return (
-    <Modal open title="The mesh file doesn't match the mapping" onCancel={destroy} footer={footer}>
+    <Modal open title="The mesh file doesn't match the mapping" onCancel={dismiss} footer={footer}>
       <Typography.Paragraph>
         {`The active mesh file "${meshFile.name}" was computed for the mapping "${meshFile.mappingName}", but ${activeMappingDescription}.`}
       </Typography.Paragraph>

@@ -89,14 +89,20 @@ export async function hasSegmentIndex(
   );
 }
 
-export async function activateMappingAndWait(layerName: string, mappingName: string) {
+/*
+ * Returns whether the mapping could be activated. If loading the mapping fails, the mapping saga
+ * disables it again.
+ */
+export async function activateMappingAndWait(
+  layerName: string,
+  mappingName: string,
+): Promise<boolean> {
+  const getMappingStatus = () =>
+    getMappingInfo(Store.getState().temporaryConfiguration.activeMappingByLayer, layerName)
+      .mappingStatus;
   Store.dispatch(setMappingAction(layerName, mappingName, "AGGLOMERATE", false));
-  await waitForCondition(
-    () =>
-      getMappingInfo(Store.getState().temporaryConfiguration.activeMappingByLayer, layerName)
-        .mappingStatus === MappingStatusEnum.ENABLED,
-    100,
-  );
+  await waitForCondition(() => getMappingStatus() !== MappingStatusEnum.ACTIVATING, 100);
+  return getMappingStatus() === MappingStatusEnum.ENABLED;
 }
 
 export function withMappingActivationConfirmation(
@@ -135,7 +141,10 @@ export function withMappingActivationConfirmation(
           return;
         }
         if (mappingName != null) {
-          await activateMappingAndWait(layerName, mappingName);
+          const wasActivated = await activateMappingAndWait(layerName, mappingName);
+          if (!wasActivated) {
+            return;
+          }
         } else {
           Store.dispatch(setMappingEnabledAction(layerName, false));
           await waitForCondition(

@@ -54,6 +54,8 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
   const visibleSegmentationLayerName = visibleSegmentationLayer?.name;
 
   useEffect(() => {
+    // The mappings differ between layers.
+    setAgglomerateView(NO_MAPPING);
     // The agglomerate mappings of a layer are only fetched on demand. With a volume annotation,
     // meshes can't be precomputed anyway.
     if (visibleSegmentationLayerName == null || hasVolumeTracing) {

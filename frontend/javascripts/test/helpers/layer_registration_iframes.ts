@@ -1,7 +1,8 @@
 import { location } from "libs/window";
 import { buildInfo } from "test/fixtures/build_info";
-import type { WebknossosTestContext } from "test/helpers/apiHelpers";
+import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import type { Vector3 } from "viewer/constants";
+import { setSceneController } from "viewer/controller/scene_controller_provider";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import type { TreeGroup } from "viewer/model/types/tree_types";
@@ -174,6 +175,17 @@ export function readStoredLandmarks(groupPath: string[]): FakeLandmark[] {
     )
     .toArray()
     .toSorted((a, b) => a.pairId - b.pairId);
+}
+
+// Sets WEBKNOSSOS up like the store iframe of the layer registration page, which is a viewer
+// without a scene (see ViewerCapabilities.hasScene). WK_INITIALIZED is not dispatched yet.
+export async function setupStoreWithoutScene(context: WebknossosTestContext) {
+  await setupWebknossosForTesting(context, "skeleton", undefined, {
+    dontDispatchWkInitialized: true,
+  });
+  mockBuildInfoRequest(context);
+  // @ts-expect-error The test setup creates a dummy scene controller, which the store doesn't have.
+  setSceneController(null);
 }
 
 // Exporting trees as NML needs the build info for the NML header. The other requests keep the

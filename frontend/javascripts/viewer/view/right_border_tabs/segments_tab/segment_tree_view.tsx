@@ -36,6 +36,7 @@ import {
   useSegmentContextMenuBuilder,
 } from "./context_menus";
 import {
+  findSegmentToSelectAfterRemoval,
   getGroupUiNodeKey,
   getSegmentUiNodeKey,
   isRootGroupNode,
@@ -44,11 +45,13 @@ import {
   type SegmentUiNode,
 } from "./hierarchy";
 import { useJumpToSegment } from "./hooks/use_jump_to_segment";
+import { useSegmentListKeyboardShortcuts } from "./hooks/use_segment_list_keyboard_shortcuts";
 import { GroupNodeTitle } from "./node_titles";
 import { SegmentDetailsPanel } from "./segment_details_panel";
 import { SegmentNodeTitle, type SegmentRowActions } from "./segment_row";
 import {
   mayEditVisibleSegmentation,
+  removeSegmentsFromList,
   withMappingActivationConfirmation,
 } from "./segments_view_helper";
 
@@ -113,6 +116,25 @@ export function SegmentTreeView(props: Props) {
     useTreeContextMenu(CONTEXT_MENU_CLASS);
 
   useScrollBenchmark(treeRef);
+
+  // antd's tree has a keyboard cursor ("active" node) that is separate from the selection. It is
+  // controlled here so that it can be moved along with the selection after a removal.
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+
+  const treeContainerRef = useRef<HTMLDivElement>(null);
+  useSegmentListKeyboardShortcuts(treeContainerRef, () => {
+    if (visibleSegmentationLayer == null || selection.selectedSegmentIds.length === 0) {
+      return;
+    }
+    // Select the neighboring segment afterwards, so that one can keep removing segments
+    // with the shortcut (like in a file manager).
+    const nextNode = findSegmentToSelectAfterRemoval(hierarchy, selection.selectedSegmentIds);
+    removeSegmentsFromList(dispatch, visibleSegmentationLayer.name, selection.selectedSegmentIds);
+    if (nextNode != null) {
+      selection.setSelection([nextNode.segment.id], null);
+      setActiveKey(nextNode.key);
+    }
+  });
 
   // At most one row is editable at a time. Owning the key here (instead of letting each
   // row keep its own state) lets the "Rename" context menu entry start an edit, and lets
@@ -384,7 +406,7 @@ export function SegmentTreeView(props: Props) {
             defaultHeight={500}
           >
             {({ height, width }) => (
-              <div style={{ height, width, overflow: "hidden" }}>
+              <div ref={treeContainerRef} style={{ height, width, overflow: "hidden" }}>
                 <ScrollableVirtualizedTree<SegmentsUiNode>
                   treeData={hierarchy.roots}
                   height={height}
@@ -411,6 +433,8 @@ export function SegmentTreeView(props: Props) {
                     )
                   }
                   switcherIcon={({ expanded }) => <TreeSwitcherIcon expanded={expanded} />}
+                  activeKey={activeKey}
+                  onActiveChange={(key) => setActiveKey(key == null ? null : String(key))}
                   onSelect={onSelect}
                   onDrop={onDrop}
                   allowDrop={allowDrop}

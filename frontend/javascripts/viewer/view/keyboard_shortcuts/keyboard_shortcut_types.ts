@@ -6,6 +6,7 @@ export type KeyboardShortcutDomain =
   | "GENERAL_EDITING"
   | "GENERAL_LAYOUT"
   | "GENERAL_COMMENT_TAB"
+  | "GENERAL_SEGMENTS_TAB"
   | "FLIGHT_NAVIGATION"
   | "FLIGHT_EDITING"
   | "PLANE_GENERAL"
@@ -26,7 +27,10 @@ export type KeyboardShortcutCollisionDomain =
   | "GENERAL.PLANE.SKELETON"
   | "GENERAL.PLANE.VOLUME"
   | "GENERAL.PLANE.BOUNDING_BOX"
-  | "GENERAL.PLANE.PROOFREADING";
+  | "GENERAL.PLANE.PROOFREADING"
+  // Only active while the segment list has focus. Since it is not a child of "GENERAL",
+  // it may reuse keys such as Delete, which are also bound in the viewport (e.g. skeleton tool).
+  | "SEGMENTS_TAB";
 
 const allCollisionDomains: KeyboardShortcutCollisionDomain[] = [
   "GENERAL",
@@ -36,6 +40,7 @@ const allCollisionDomains: KeyboardShortcutCollisionDomain[] = [
   "GENERAL.PLANE.VOLUME",
   "GENERAL.PLANE.BOUNDING_BOX",
   "GENERAL.PLANE.PROOFREADING",
+  "SEGMENTS_TAB",
 ];
 export const LeafCollisionDomains: KeyboardShortcutCollisionDomain[] = [
   "GENERAL.FLIGHT",
@@ -43,6 +48,7 @@ export const LeafCollisionDomains: KeyboardShortcutCollisionDomain[] = [
   "GENERAL.PLANE.VOLUME",
   "GENERAL.PLANE.BOUNDING_BOX",
   "GENERAL.PLANE.PROOFREADING",
+  "SEGMENTS_TAB",
 ];
 
 export type KeyCombination = string[];
@@ -90,6 +96,8 @@ export class KeyboardShortcutMetaInfo {
       case "GENERAL_LAYOUT":
       case "GENERAL_COMMENT_TAB":
         return "GENERAL";
+      case "GENERAL_SEGMENTS_TAB":
+        return "SEGMENTS_TAB";
       case "FLIGHT_NAVIGATION":
       case "FLIGHT_EDITING":
         return "GENERAL.FLIGHT";
@@ -122,6 +130,7 @@ export const DOMAIN_DISPLAY_NAMES: Record<KeyboardShortcutDomain, string> = {
   GENERAL_EDITING: "General Editing",
   GENERAL_LAYOUT: "General Layout",
   GENERAL_COMMENT_TAB: "Comments Tab",
+  GENERAL_SEGMENTS_TAB: "Segments Tab",
   FLIGHT_NAVIGATION: "Flight Mode Navigation",
   FLIGHT_EDITING: "Flight Mode Editing",
   PLANE_GENERAL: "General Shortcuts",

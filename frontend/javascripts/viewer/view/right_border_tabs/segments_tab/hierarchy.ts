@@ -74,6 +74,41 @@ export type SegmentsHierarchy = {
   nodesByKey: Map<string, SegmentsUiNode>;
 };
 
+/*
+ * Returns the segment that should be selected after the given segments were removed from the
+ * list: the first remaining segment below the removed ones, or otherwise the last remaining one
+ * above them. Only segments that are currently rendered (i.e., not in a collapsed group) are
+ * considered. Returns null if there is no such segment.
+ */
+export function findSegmentToSelectAfterRemoval(
+  hierarchy: SegmentsHierarchy,
+  removedSegmentIds: bigint[],
+): SegmentUiNode | null {
+  const removedIds = new Set(removedSegmentIds);
+  const expandedKeys = new Set(hierarchy.expandedKeys);
+  const renderedSegments: SegmentUiNode[] = [];
+  const collectRenderedSegments = (node: SegmentsUiNode) => {
+    if (node.type === "segment") {
+      renderedSegments.push(node);
+    } else if (expandedKeys.has(node.key)) {
+      node.children.forEach(collectRenderedSegments);
+    }
+  };
+  hierarchy.roots.forEach(collectRenderedSegments);
+
+  const isRemoved = (node: SegmentUiNode) => removedIds.has(node.segment.id);
+  const firstRemovedIndex = renderedSegments.findIndex(isRemoved);
+  if (firstRemovedIndex === -1) {
+    return null;
+  }
+  const lastRemovedIndex = renderedSegments.findLastIndex(isRemoved);
+  return (
+    renderedSegments.slice(lastRemovedIndex + 1).find((node) => !isRemoved(node)) ??
+    renderedSegments.slice(0, firstRemovedIndex).findLast((node) => !isRemoved(node)) ??
+    null
+  );
+}
+
 export function buildSegmentHierarchy(
   segments: SegmentMap | null | undefined,
   segmentGroups: SegmentGroup[],

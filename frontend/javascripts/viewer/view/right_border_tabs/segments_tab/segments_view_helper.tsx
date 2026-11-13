@@ -91,18 +91,25 @@ export async function hasSegmentIndex(
 
 /*
  * Returns whether the mapping could be activated. If loading the mapping fails, the mapping saga
- * disables it again.
+ * disables it again. If another mapping was requested in the meantime, false is returned, too.
  */
 export async function activateAgglomerateMappingAndWait(
   layerName: string,
   mappingName: string,
 ): Promise<boolean> {
-  const getMappingStatus = () =>
-    getMappingInfo(Store.getState().temporaryConfiguration.activeMappingByLayer, layerName)
-      .mappingStatus;
+  const getActiveMapping = () =>
+    getMappingInfo(Store.getState().temporaryConfiguration.activeMappingByLayer, layerName);
   Store.dispatch(setMappingAction(layerName, mappingName, "AGGLOMERATE", false));
-  await waitForCondition(() => getMappingStatus() !== MappingStatusEnum.ACTIVATING, 100);
-  return getMappingStatus() === MappingStatusEnum.ENABLED;
+  await waitForCondition(
+    () => getActiveMapping().mappingStatus !== MappingStatusEnum.ACTIVATING,
+    100,
+  );
+  const activeMapping = getActiveMapping();
+  return (
+    activeMapping.mappingStatus === MappingStatusEnum.ENABLED &&
+    activeMapping.mappingName === mappingName &&
+    activeMapping.mappingType === "AGGLOMERATE"
+  );
 }
 
 export function withMappingActivationConfirmation(

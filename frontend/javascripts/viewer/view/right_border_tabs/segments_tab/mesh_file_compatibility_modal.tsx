@@ -15,7 +15,11 @@ import { activateAgglomerateMappingAndWait } from "./segments_view_helper";
 // Mesh files with an older format don't store their mapping and are not supported anymore.
 const MIN_SUPPORTED_MESH_FILE_VERSION = 3;
 
-function isMeshFileCompatible(meshFile: APIMeshFileInfo, activeMappingName: string | null) {
+function isMeshFileVersionSupported(meshFile: APIMeshFileInfo) {
+  return meshFile.formatVersion >= MIN_SUPPORTED_MESH_FILE_VERSION;
+}
+
+function doesMeshFileMatchMapping(meshFile: APIMeshFileInfo, activeMappingName: string | null) {
   // A mesh file computed without a mapping can be used with every mapping, including an editable one.
   return meshFile.mappingName == null || meshFile.mappingName === activeMappingName;
 }
@@ -45,7 +49,8 @@ export function withMeshFileCompatibilityCheck(
         ? (mappingInfo.mappingName ?? null)
         : null;
 
-    if (currentMeshFile == null || isMeshFileCompatible(currentMeshFile, activeMappingName)) {
+    // The version isn't checked here, so that mesh files of an older format are still loaded as before.
+    if (currentMeshFile == null || doesMeshFileMatchMapping(currentMeshFile, activeMappingName)) {
       loadMeshes();
       return;
     }
@@ -54,8 +59,8 @@ export function withMeshFileCompatibilityCheck(
     const compatibleMeshFiles = (availableMeshFiles ?? [])
       .filter(
         (meshFile) =>
-          meshFile.formatVersion >= MIN_SUPPORTED_MESH_FILE_VERSION &&
-          isMeshFileCompatible(meshFile, activeMappingName),
+          isMeshFileVersionSupported(meshFile) &&
+          doesMeshFileMatchMapping(meshFile, activeMappingName),
       )
       // Prefer mesh files computed for the active mapping, since they load agglomerates faster.
       .sort((a, b) => Number(b.mappingName != null) - Number(a.mappingName != null));

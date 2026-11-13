@@ -95,6 +95,9 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
       setActiveMeshJobId(null);
       if (activeJob.state === "SUCCESS") {
         dispatch(maybeFetchMeshFilesAction(activeMeshJobLayerRef.current, dataset, true));
+        Toast.success(
+          "The mesh file was computed successfully. You can select it in the mesh settings of the Segments tab.",
+        );
       }
     }
   }, [jobs, activeMeshJobId, dataset, dispatch]);

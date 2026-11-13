@@ -76,6 +76,8 @@ export function useIframeBridge(
     }
     loadCountsRef.current[role] += 1;
     if (loadCountsRef.current[role] > 1) {
+      // Before the restart, so that the commands that the reloaded iframe dropped fail right away.
+      bridge.handleIframeReload(role);
       onIframeReloaded(role);
     }
   };

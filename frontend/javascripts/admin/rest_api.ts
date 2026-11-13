@@ -1337,9 +1337,9 @@ export async function reserveIdsForAnnotation(
     // Then, the known maximum is 2 (instead of 4).
     throw new Error("Must reserve at least 1 id");
   }
-  if (numberOfIdsToReserve > Constants.IDEAL_ID_BUFFER_SIZE) {
+  if (numberOfIdsToReserve > Constants.MAX_IDS_PER_RESERVATION) {
     throw new Error(
-      `Tried to request too many ids. numberOfIdsToReserve (${numberOfIdsToReserve} > ${Constants.IDEAL_ID_BUFFER_SIZE})`,
+      `Tried to request too many ids. numberOfIdsToReserve (${numberOfIdsToReserve} > ${Constants.MAX_IDS_PER_RESERVATION})`,
     );
   }
   return requestResult(

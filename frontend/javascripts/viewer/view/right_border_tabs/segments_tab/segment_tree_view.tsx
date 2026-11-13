@@ -44,11 +44,13 @@ import {
   type SegmentUiNode,
 } from "./hierarchy";
 import { useJumpToSegment } from "./hooks/use_jump_to_segment";
+import { useSegmentListKeyboardShortcuts } from "./hooks/use_segment_list_keyboard_shortcuts";
 import { GroupNodeTitle } from "./node_titles";
 import { SegmentDetailsPanel } from "./segment_details_panel";
 import { SegmentNodeTitle, type SegmentRowActions } from "./segment_row";
 import {
   mayEditVisibleSegmentation,
+  removeSegmentsFromList,
   withMappingActivationConfirmation,
 } from "./segments_view_helper";
 
@@ -113,6 +115,14 @@ export function SegmentTreeView(props: Props) {
     useTreeContextMenu(CONTEXT_MENU_CLASS);
 
   useScrollBenchmark(treeRef);
+
+  const treeContainerRef = useRef<HTMLDivElement>(null);
+  useSegmentListKeyboardShortcuts(treeContainerRef, () => {
+    if (visibleSegmentationLayer == null) {
+      return;
+    }
+    removeSegmentsFromList(dispatch, visibleSegmentationLayer.name, selection.selectedSegmentIds);
+  });
 
   // At most one row is editable at a time. Owning the key here (instead of letting each
   // row keep its own state) lets the "Rename" context menu entry start an edit, and lets
@@ -384,7 +394,7 @@ export function SegmentTreeView(props: Props) {
             defaultHeight={500}
           >
             {({ height, width }) => (
-              <div style={{ height, width, overflow: "hidden" }}>
+              <div ref={treeContainerRef} style={{ height, width, overflow: "hidden" }}>
                 <ScrollableVirtualizedTree<SegmentsUiNode>
                   treeData={hierarchy.roots}
                   height={height}

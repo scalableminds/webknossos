@@ -18,6 +18,7 @@ export type KeyboardShortcutId =
   | "TOGGLE_RIGHT_BORDER"
   | "NEXT_COMMENT"
   | "PREVIOUS_COMMENT"
+  | "REMOVE_SELECTED_SEGMENTS"
   // Flight mode
   | "MOVE_FORWARD_WITH_RECORDING"
   | "MOVE_BACKWARD_WITH_RECORDING"
@@ -202,6 +203,11 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     "Select Previous Comment",
     [[["p"]]],
     "GENERAL_COMMENT_TAB",
+  ),
+  REMOVE_SELECTED_SEGMENTS: new KeyboardShortcutMetaInfo(
+    "Remove Selected Segments From List (While the Segment List Is Focused)",
+    [[["Delete"]], [["Backspace"]]],
+    "GENERAL_SEGMENTS_TAB",
   ),
 
   // ===================== GENERAL.FLIGHT =====================

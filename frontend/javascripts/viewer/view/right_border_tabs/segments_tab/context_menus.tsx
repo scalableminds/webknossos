@@ -65,6 +65,7 @@ import { useSegmentStatisticsFile } from "./hooks/use_segment_statistics_file";
 import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
 import {
   mayEditVisibleSegmentation,
+  removeSegmentsFromList,
   withMappingActivationConfirmation,
 } from "./segments_view_helper";
 
@@ -234,9 +235,11 @@ function useSegmentListMenuItems({
           if (visibleSegmentationLayer == null) {
             return;
           }
-          for (const segment of segments) {
-            dispatch(removeSegmentAction(segment.id, visibleSegmentationLayer.name));
-          }
+          removeSegmentsFromList(
+            dispatch,
+            visibleSegmentationLayer.name,
+            segments.map((segment) => segment.id),
+          );
         }),
       };
 

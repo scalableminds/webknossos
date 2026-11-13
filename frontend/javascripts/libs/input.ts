@@ -14,11 +14,40 @@ import type { ValueOf } from "types/type_utils";
 import type { OrthoView, Point2 } from "viewer/constants";
 import constants, { KEYBOARD_BUTTON_LOOP_INTERVAL } from "viewer/constants";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import { addEventListenerWithDelegation, isNoEditableElementFocused } from "./utils";
+import {
+  addEventListenerWithDelegation,
+  isEditableEventTarget,
+  isNoEditableElementFocused,
+} from "./utils";
 
 // Must run before anything binds a key combo: the global Keystrokes instance is
 // created lazily on the first bind and picks up the options set at that point.
 initializeKeystrokes();
+
+// Key combos claimed by keyboards that were created with a `focusScope`. While the focus is inside
+// the scope of such a keyboard, all other keyboards ignore the claimed combos. This prevents that
+// e.g. Delete removes a segment and also deletes the active skeleton node.
+type FocusScopeClaim = { getScope: () => Element | null; combos: Set<string> };
+const focusScopeClaims = new Set<FocusScopeClaim>();
+
+function isFocusInsideScope(getScope: () => Element | null): boolean {
+  const activeElement = document.activeElement;
+  return (
+    activeElement != null &&
+    getScope()?.contains(activeElement) === true &&
+    // Editable elements inside of the scope (e.g. rename inputs) keep their native key handling.
+    !isEditableEventTarget(activeElement)
+  );
+}
+
+function isClaimedByFocusScope(normalizedCombo: string): boolean {
+  for (const claim of focusScopeClaims) {
+    if (claim.combos.has(normalizedCombo) && isFocusInsideScope(claim.getScope)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
@@ -167,15 +196,28 @@ export class InputKeyboard {
   unsubscribeDelay: (() => void) | null = null;
   supportInputElements: boolean = false;
   isPreventBrowserSearchbarShortcutActive: boolean = false;
+  focusScope: (() => Element | null) | null = null;
+  focusScopeClaim: FocusScopeClaim | null = null;
 
   constructor(
     initialBindings: Record<KeystrokesKeyComboStr, KeyboardHandler>,
     options?: {
       supportInputElements?: boolean;
+      // If provided, the bindings only fire while the focus is inside the returned element, and
+      // all other keyboards ignore the same key combos while the focus is inside of it.
+      focusScope?: () => Element | null;
     },
   ) {
     if (options) {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
+      this.focusScope = options.focusScope ?? null;
+    }
+    if (this.focusScope != null) {
+      this.focusScopeClaim = {
+        getScope: this.focusScope,
+        combos: new Set(Object.keys(initialBindings).map((combo) => combo.toLowerCase())),
+      };
+      focusScopeClaims.add(this.focusScopeClaim);
     }
 
     const hasDelayedHandler = Object.values(initialBindings).some(
@@ -219,6 +261,14 @@ export class InputKeyboard {
     }
   };
 
+  // Scoped keyboards fire only inside of their scope. Other keyboards yield to scoped ones.
+  private isBlockedByFocusScope(combo: KeystrokesKeyComboStr): boolean {
+    if (this.focusScope != null) {
+      return !isFocusInsideScope(this.focusScope);
+    }
+    return isClaimedByFocusScope(combo.toLowerCase());
+  }
+
   private _attach(
     keyCombo: KeystrokesKeyComboStr,
     handler: KeyboardNoLoopHandler | KeyboardLoopHandler,
@@ -235,7 +285,11 @@ export class InputKeyboard {
     { onPressed, onReleased: onRelease }: KeyboardNoLoopHandler,
   ) {
     const onPressedGuarded = ({ keyEvents, finalKeyEvent }: KeystrokesHandlerArgs) => {
-      if (!this.isStarted || (!this.supportInputElements && !isNoEditableElementFocused())) {
+      if (
+        !this.isStarted ||
+        (!this.supportInputElements && !isNoEditableElementFocused()) ||
+        this.isBlockedByFocusScope(combo)
+      ) {
         return;
       }
       const event = findEventInKeystrokeComboEvent(keyEvents, finalKeyEvent);
@@ -286,6 +340,7 @@ export class InputKeyboard {
         !this.isStarted ||
         this.keyCallbackMap[keyCombo] != null ||
         (!this.supportInputElements && !isNoEditableElementFocused()) ||
+        this.isBlockedByFocusScope(keyCombo) ||
         shouldIgnore(event, keyCombo)
       ) {
         return;
@@ -375,6 +430,9 @@ export class InputKeyboard {
       unbindKeyCombo(keyCombo, binding);
     }
     this.unsubscribeDelay?.();
+    if (this.focusScopeClaim != null) {
+      focusScopeClaims.delete(this.focusScopeClaim);
+    }
     if (this.isPreventBrowserSearchbarShortcutActive) {
       document.removeEventListener("keydown", this.preventBrowserSearchbarShortcut);
     }

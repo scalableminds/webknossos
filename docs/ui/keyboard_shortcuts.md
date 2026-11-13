@@ -51,6 +51,7 @@ Shortcut changes are saved to your user account and persist across devices and b
 | ++shift++ + ++1++                                  | Switch to Plane (Orthogonal) View Mode |
 | ++shift++ + ++2++                                  | Switch to Flight View Mode            |
 | ++k++ , ++l++                                      | Toggle left/right Sidebars            |
+| ++delete++ / ++backspace++                         | Remove the selected segments from the list (only while the segment list in the `Segments` tab has focus) |
 | ++ctrl++ / ++cmd++ + ++p++                         | Open the [command palette](./index.md#command-palette) |
 
 !!! info "n-dimensional datasets"

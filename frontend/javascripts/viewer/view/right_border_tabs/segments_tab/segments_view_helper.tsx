@@ -13,6 +13,10 @@ import {
   getVolumeTracingById,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { setMappingAction, setMappingEnabledAction } from "viewer/model/actions/settings_actions";
+import {
+  type RemoveSegmentAction,
+  removeSegmentAction,
+} from "viewer/model/actions/volumetracing_actions";
 import type {
   ActiveMappingInfo,
   Segment,
@@ -178,3 +182,13 @@ export const getSegmentsOfGroupRecursively = (
     .filter((x) => x != null);
   return segmentIdsNested.flat() as Segment[];
 };
+
+export function removeSegmentsFromList(
+  dispatch: (action: RemoveSegmentAction) => void,
+  layerName: string,
+  segmentIds: bigint[],
+) {
+  for (const segmentId of segmentIds) {
+    dispatch(removeSegmentAction(segmentId, layerName));
+  }
+}

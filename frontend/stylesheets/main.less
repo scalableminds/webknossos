@@ -606,6 +606,11 @@ body {
   font-family: var(--ant-font-family-code);
   font-size: 12px;
   white-space: pre-wrap;
+  // Long URLs in the report have no spaces, so allow breaking anywhere instead of overflowing the alert.
+  overflow-wrap: anywhere;
+  align-self: stretch;
+  max-height: 320px;
+  overflow: auto;
 }
 
 .dataset-remote-credentials {

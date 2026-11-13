@@ -36,7 +36,7 @@ function getErrorCopy(
       return {
         title: "No supported data found at this URL",
         description:
-          "Make sure the URL points to the root of an OME-Zarr, Zarr, Zarr3, N5 or Neuroglancer Precomputed dataset or layer.",
+          "Make sure the URL points to the root of an OME-Zarr, Zarr, N5 or Neuroglancer Precomputed dataset or layer.",
       };
   }
 }

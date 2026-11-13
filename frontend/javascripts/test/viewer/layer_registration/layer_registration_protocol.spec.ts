@@ -225,6 +225,25 @@ describe("Layer registration protocol", () => {
     );
   });
 
+  it("rejects the running commands of an iframe that reloads and waits for its next init", async () => {
+    // E.g. the user reloads the store iframe while it saves, so "save" gets no reply.
+    const pageWindow = iframes.mount("store", (event) =>
+      event.data.type === "save" ? null : handleCrossOriginApiMessage(event),
+    );
+    pageWindow.postMessage({ type: "init" }, "*");
+    const savePromise = iframes.bridge.sendMessage("store", "save");
+    await sleep(10);
+
+    iframes.bridge.handleIframeReload("store");
+    await expect(savePromise).rejects.toThrow('reloaded before it replied to "save"');
+
+    const exportPromise = iframes.bridge.sendMessage("store", "exportTreesAsNmlString");
+    await sleep(10);
+    expect(iframes.sentCommandTypes("store")).toEqual(["save"]);
+    pageWindow.postMessage({ type: "init" }, "*");
+    await expect(exportPromise).resolves.toContain("<things");
+  });
+
   it("only accepts worker commands from the workers and save states from the store", async () => {
     const storeAsSeenByIframe = iframes.mount("store", () => {});
     const workerAsSeenByIframe = iframes.mount("moving", () => {});

@@ -48,7 +48,8 @@ const LAYER_REGISTRATION_WORKER_CAPABILITIES: ViewerCapabilities = {
   // layouts of the normal viewer.
   shouldPersistSettings: false,
   // Links (Share, Zarr Links) would point to the worker's sandbox, which only exists inside the
-  // page. The page saves the landmarks, so copying the sandbox makes no sense either.
+  // page. "Copy To My Account" would open the copy inside the worker's iframe and reload it,
+  // which breaks the page. The page saves the landmarks anyway.
   showShareAndCopyActions: false,
   // The workers only offer the tools for placing landmarks.
   fixedToolkit: Toolkit.LANDMARKS,

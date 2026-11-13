@@ -15,10 +15,17 @@ import { updateCurrentMeshFileAction } from "viewer/model/actions/annotation_act
 import Store from "viewer/store";
 
 /*
- * Wraps a callback that loads meshes from the given mesh file. The callback is called with the
- * current mesh file. If no mesh file is active or if it was computed for another mapping than the
- * active one, a modal offers to switch to a compatible mesh file instead (with which the callback
- * is called then) or explains how to precompute one.
+ * Use this for actions that load precomputed meshes of a layer. Such meshes can only be loaded
+ * from a mesh file that is compatible with the active mapping, i.e., one that was computed without
+ * a mapping or for exactly that mapping. Without this check, users wouldn't know what to do if the
+ * active mesh file isn't compatible or if no mesh file is active.
+ *
+ * The returned function checks the active mesh file of the layer when it is called:
+ * - If it is compatible, loadMeshes is called with its name right away.
+ * - Otherwise, a modal is shown. If compatible mesh files exist, the user can select one of them.
+ *   It becomes the active mesh file and loadMeshes is called with its name. If none exists, the
+ *   modal explains how to precompute one.
+ * loadMeshes is not called if the user closes the modal.
  */
 export function withMeshFileCompatibilityCheck(
   loadMeshes: (meshFileName: string) => void,

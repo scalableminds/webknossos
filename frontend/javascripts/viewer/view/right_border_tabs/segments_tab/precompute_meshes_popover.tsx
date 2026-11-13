@@ -98,6 +98,17 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
         Toast.success(
           "The mesh file was computed successfully. You can select it in the mesh settings of the Segments tab.",
         );
+      } else {
+        Toast.error(
+          <Fragment>
+            The computation of the mesh file failed. See the{" "}
+            <a target="_blank" href="/jobs" rel="noopener noreferrer">
+              Processing Jobs
+            </a>{" "}
+            page for details.
+          </Fragment>,
+          { sticky: true },
+        );
       }
     }
   }, [jobs, activeMeshJobId, dataset, dispatch]);

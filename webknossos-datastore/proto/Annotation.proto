@@ -16,6 +16,8 @@ message AnnotationProto {
   optional bool skeletonMayHavePendingUpdates = 5; // relevant only for annotations migrated by https://github.com/scalableminds/webknossos/pull/7917
   optional bool editableMappingsMayHavePendingUpdates = 6; // relevant only for annotations migrated by https://github.com/scalableminds/webknossos/pull/7917
   repeated AnnotationUserStateProto userStates = 7;
+  repeated int32 bookmarkIds = 8; // bookmarks are stored in the annotationBookmarks column family
+  optional int32 largestBookmarkId = 9; // never decreases, so that ids of deleted bookmarks are not handed out again. If absent, the largest of bookmarkIds applies.
 }
 
 message AnnotationLayerProto {

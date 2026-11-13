@@ -105,6 +105,8 @@ object Msg {
     val notActive: String = "The annotation is not active and cannot be finished."
     val finishNotAllowed: String = "Could not access annotation to finish it."
     def reserveTooManyIds(limit: Int): String = s"Cannot reserve more than $limit ids in one request."
+    def reservedIdsTracingIdMismatch(domain: String): String =
+      s"The tracingId must be empty for annotation-scoped id domains and set for all others (domain $domain)."
     val countListableFailed: String = "Could not count listable annotations."
     val duplicateFailed: String = "Could not duplicate annotation."
     val nameNotAvailable: String = "Could not determine name for annotation."
@@ -128,6 +130,7 @@ object Msg {
     val findTracingsFailed: String = "Could not find tracings for annotation."
     val findVolumeRawFailed: String = "Could not find raw volume tracing."
     val flushAnnotationInfoFailed: String = "Could not flush annotation info."
+    val flushBookmarksFailed: String = "Could not flush annotation bookmarks."
     val flushEditableMappingUpdaterBuffersFailed: String =
       "Could not flush editable mapping updater buffers."
     val initEditableMappingUpdaterFailed: String =
@@ -153,6 +156,7 @@ object Msg {
       val noAccessOnMerged: String = "Could not access merged annotation."
       val failedCompound: String = "Could not merge annotations for compound view."
       val mergeVolumeFailed: String = "Could not merge volume tracings."
+      val mergeBookmarksFailed: String = "Could not merge annotation bookmarks."
       val mergeVolumeDataFailed: String = "Could not merge volume data."
     }
     object Reset {
@@ -222,6 +226,7 @@ object Msg {
         "Could not apply editable mapping action during annotation update."
       val resetToBaseFailed: String = "Could not reset to base during annotation update."
       val revertToVersionFailed: String = "Could not revert to version during annotation update."
+      val updateBookmarkFailed: String = "Could not update bookmark during annotation update."
       val skeletonActionFailed: String = "Could not apply skeleton action during annotation update."
       val volumeActionFailed: String = "Could not apply volume action during annotation update."
       val layerNameTaken: String =
@@ -241,8 +246,7 @@ object Msg {
       val volumeNameForMultiple: String = "Cannot download multiple volume layers if volume name is passed."
       val findUserFailed: String = "Could not find or access annotation user."
       val zipNmlFailed: String = "Could not add NML file to zip archive."
-      val skeletonToFileFailed: String = "Could not write skeleton-only annotation to file."
-      val hybridToFileFailed: String = "Could not write annotation with volume layer to file."
+      val fetchBookmarksFailed: String = "Could not fetch the bookmarks of the annotation."
       val notAllowed: String = "You do not have permission to download this annotation."
       val writeToFileFailed: String = "Could not write annotation to temporary file for download."
     }
@@ -744,6 +748,10 @@ object Msg {
     def invalidEdge(src: String, dst: String): String = s"Invalid edge “$src-$dst”."
     def invalidNodeAttribute(name: String, id: Int): String =
       s"Invalid node $name for node id $id."
+    def invalidBookmarkId(id: String): String = s"Invalid bookmark id “$id”."
+    def invalidBookmarkField(name: String, id: Int): String = s"Invalid $name of bookmark $id."
+    val duplicateBookmarkIds: String = "Bookmark ids must be unique."
+    def missingOrInvalid(name: String): String = s"Missing or invalid $name."
   }
   object TaskType {
     def notFound(id: ObjectId): String = s"Task type “$id” could not be found or accessed."

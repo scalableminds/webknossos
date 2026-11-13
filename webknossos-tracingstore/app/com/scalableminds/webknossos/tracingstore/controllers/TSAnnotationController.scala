@@ -15,6 +15,10 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerTypeProto,
   AnnotationProto
 }
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.{
+  AnnotationBookmarksProto,
+  UploadedAnnotationBookmarksProto
+}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.controllers.Controller
@@ -22,7 +26,11 @@ import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationIdDom
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
 import com.scalableminds.webknossos.tracingstore.annotation.{
+  AnnotationBookmarkService,
+  BookmarkMergeRemapping,
   AnnotationTransactionService,
+  AnnotationWithTracings,
+  BookmarkThumbnailSize,
   ResetToBaseAnnotationAction,
   TSAnnotationService,
   UpdateActionGroup,
@@ -49,6 +57,7 @@ class TSAnnotationController @Inject() (
     accessTokenService: TracingStoreAccessTokenService,
     slackNotificationService: TSSlackNotificationService,
     annotationService: TSAnnotationService,
+    annotationBookmarkService: AnnotationBookmarkService,
     editableMappingMergeService: EditableMappingMergeService,
     annotationTransactionService: AnnotationTransactionService,
     skeletonTracingService: SkeletonTracingService,
@@ -126,6 +135,53 @@ class TSAnnotationController @Inject() (
       }
     }
   }
+
+  def bookmarks(annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
+    Action.fox { implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
+            for {
+              annotation <- annotationService.get(annotationId, version)
+              bookmarks <- annotationBookmarkService.findBookmarks(
+                annotationId,
+                annotation.bookmarkIds,
+                annotation.version
+              )
+            } yield Ok(AnnotationBookmarksProto(bookmarks).toByteArray).as(protobufMimeType)
+          }
+        }
+      }
+    }
+
+  // Used by webknossos when uploading an annotation file. Must be called before the AnnotationProto that lists the
+  // bookmarkIds is saved.
+  def saveUploadedBookmarks(annotationId: ObjectId): Action[UploadedAnnotationBookmarksProto] =
+    Action.fox(validateProto[UploadedAnnotationBookmarksProto]) { implicit request =>
+      log() {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+          for {
+            _ <- annotationBookmarkService.saveUploadedBookmarks(annotationId, request.body.bookmarks)
+          } yield Ok
+        }
+      }
+    }
+
+  // v is the bookmark's thumbnailVersion. The thumbnails stored at a version never change, so they can be cached.
+  // This does not hold for temporary annotations (see AnnotationBookmarkService.isTemporaryAnnotation).
+  def bookmarkThumbnail(annotationId: ObjectId, bookmarkId: Int, size: String, v: Long): Action[AnyContent] =
+    Action.fox { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
+        for {
+          sizeValidated <- BookmarkThumbnailSize
+            .fromString(size)
+            .toFox ?~> s"Invalid thumbnail size $size" ~> BAD_REQUEST
+          thumbnail <- annotationBookmarkService.findThumbnail(annotationId, bookmarkId, sizeValidated, v) ~> NOT_FOUND
+          isTemporaryAnnotation <- annotationBookmarkService.isTemporaryAnnotation(annotationId)
+          cacheControl = if (isTemporaryAnnotation) "private, no-cache" else "private, max-age=31536000, immutable"
+        } yield Ok(thumbnail).as("image/jpeg").withHeaders(CACHE_CONTROL -> cacheControl)
+      }
+    }
 
   def get(annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
     Action.fox { implicit request =>
@@ -246,6 +302,11 @@ class TSAnnotationController @Inject() (
                       case f: Failure => f.toFox
                     }
                   } yield maxBboxId
+                case AnnotationIdDomain.Bookmark =>
+                  // Bookmarks belong to the annotation, their tracingId is empty.
+                  for {
+                    annotation <- annotationService.get(annotationId, version = None)
+                  } yield AnnotationWithTracings.largestBookmarkId(annotation).map(_.toLong).getOrElse(fallbackId)
               }
             } yield Ok(Json.toJson(largestIdWithFallback))
           }
@@ -291,6 +352,36 @@ class TSAnnotationController @Inject() (
         )
       )
     } yield skeletonTracingsAdapted
+  }
+
+  private def buildBookmarkMergeRemappings(
+      annotations: Seq[AnnotationProto],
+      skeletonTracingsNested: Seq[Seq[SkeletonTracing]],
+      nodeMappings: Seq[Int => Int], // one per skeleton tracing
+      segmentIdMapsByTracingId: Map[String, Map[Long, Long]],
+      mergedSkeletonIdOpt: Option[String],
+      mergedVolumeIdOpt: Option[String],
+      mergedEditableMappingIdOpt: Option[String]
+  ): Seq[BookmarkMergeRemapping] = {
+    val firstSkeletonIndices = skeletonTracingsNested.map(_.length).scanLeft(0)(_ + _)
+    annotations.lazyZip(skeletonTracingsNested).lazyZip(firstSkeletonIndices).toSeq.map {
+      case (annotation, skeletonTracings, firstSkeletonIndex) =>
+        val mergedTracingIdsBySourceTracingId = annotation.annotationLayers.flatMap { layer =>
+          val mergedTracingIdOpt =
+            if (layer.typ == AnnotationLayerTypeProto.Skeleton) mergedSkeletonIdOpt else mergedVolumeIdOpt
+          mergedTracingIdOpt.map(layer.tracingId -> _)
+        }.toMap
+        val volumeTracingIds =
+          annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume).map(_.tracingId)
+        BookmarkMergeRemapping(
+          existingNodeIds = skeletonTracings.flatMap(_.trees.flatMap(_.nodes.map(_.id))).toSet,
+          nodeIdMap = nodeMappings.lift(firstSkeletonIndex).filter(_ => skeletonTracings.nonEmpty).getOrElse(identity),
+          tracingIdMap = mergedTracingIdsBySourceTracingId,
+          segmentIdMapsByTracingId = segmentIdMapsByTracingId,
+          editableMappingIdMap =
+            mergedEditableMappingIdOpt.map(mappingId => volumeTracingIds.map(_ -> mappingId).toMap).getOrElse(Map.empty)
+        )
+    }
   }
 
   def mergedFromIds(
@@ -375,7 +466,7 @@ class TSAnnotationController @Inject() (
               findAndAdaptSkeletonsForAnnotation(annotation, requestingUserId, ownerId)
             }
             skeletonTracings = skeletonTracingsAdaptedNested.flatten
-            mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
+            mergedSkeletonWithNodeMappingsOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
               skeletonTracingService
                 .merge(
                   skeletonTracings,
@@ -384,6 +475,7 @@ class TSAnnotationController @Inject() (
                 )
                 .toFox
             )
+            mergedSkeletonOpt = mergedSkeletonWithNodeMappingsOpt.map(_._1)
             _ <- Fox.runOptional(mergedSkeletonOpt)(
               skeletonTracingService
                 .saveSkeleton(newSkeletonId, version = newTargetVersion, _, toTemporaryStore = toTemporaryStore)
@@ -403,9 +495,26 @@ class TSAnnotationController @Inject() (
               )
             )
             mergedLayers = Seq(mergedSkeletonLayerOpt, mergedVolumeLayerOpt).flatten
+            bookmarkMergeRemappings = buildBookmarkMergeRemappings(
+              annotations,
+              skeletonTracingsAdaptedNested,
+              mergedSkeletonWithNodeMappingsOpt.map(_._2).getOrElse(Seq.empty),
+              volumeLayers.map(_.tracingId).zip(mergedVolumeStats.idMaps).toMap,
+              mergedSkeletonLayerOpt.map(_.tracingId),
+              mergedVolumeLayerOpt.map(_.tracingId),
+              newMappingName
+            )
+            mergedBookmarkIds <- annotationBookmarkService.mergeBookmarks(
+              request.body.annotationIds.lazyZip(annotations).lazyZip(bookmarkMergeRemappings).toSeq,
+              newAnnotationId,
+              newTargetVersion,
+              toTemporaryStore
+            ) ?~> Msg.Annotation.Merge.mergeBookmarksFailed
             firstAnnotation <- annotations.headOption.toFox
             mergedAnnotation = firstAnnotation
               .withAnnotationLayers(mergedLayers)
+              .withBookmarkIds(mergedBookmarkIds)
+              .clearLargestBookmarkId // the merged bookmarks got new ids
               .withEarliestAccessibleVersion(newTargetVersion)
               .withVersion(newTargetVersion)
             _ <- annotationService.saveAnnotationProto(

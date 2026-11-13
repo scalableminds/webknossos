@@ -1,6 +1,7 @@
 import { unwrapOrThrow } from "admin/api/api_result";
 import { hasSomePaidPlan } from "admin/organization/pricing_plan_utils";
 import {
+  getAnnotationBookmarks,
   getAnnotationCompoundInformation,
   getAnnotationProto,
   getDataset,
@@ -26,6 +27,7 @@ import merge from "lodash-es/merge";
 import messages from "messages";
 import type {
   APIAnnotation,
+  APIAnnotationBookmark,
   APIAnnotationUserState,
   APICompoundType,
   APIDataLayer,
@@ -143,7 +145,16 @@ export async function initialize(
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
     if (initialMaybeCompoundType != null) {
-      annotation = await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType);
+      const compoundAnnotation = await getAnnotationCompoundInformation(
+        annotationId,
+        initialMaybeCompoundType,
+      );
+      // The tracing store keeps the merged bookmarks of the compound annotation.
+      const bookmarks = await getAnnotationBookmarks(
+        compoundAnnotation.tracingStore.url,
+        compoundAnnotation.id,
+      );
+      annotation = { ...compoundAnnotation, bookmarks };
     } else {
       const unversionedAnnotationResult = await getUnversionedAnnotationInformation(annotationId);
       if (!unversionedAnnotationResult.ok) {
@@ -156,6 +167,13 @@ export async function initialize(
         unversionedAnnotation.tracingStore.url,
         unversionedAnnotation.id,
         version,
+      );
+      // The bookmarks are fetched at the version of the proto. Otherwise, another user could save
+      // bookmark changes in between, which would then be missing or be applied twice.
+      const bookmarks: APIAnnotationBookmark[] = await getAnnotationBookmarks(
+        unversionedAnnotation.tracingStore.url,
+        unversionedAnnotation.id,
+        annotationProto.version,
       );
       userState =
         annotationProto != null
@@ -181,6 +199,8 @@ export async function initialize(
         description: annotationProto.description,
         annotationProto: annotationProto.earliestAccessibleVersion,
         annotationLayers: layersWithStats,
+        bookmarks,
+        largestBookmarkId: annotationProto.largestBookmarkId,
       };
       annotation = completeAnnotation;
     }

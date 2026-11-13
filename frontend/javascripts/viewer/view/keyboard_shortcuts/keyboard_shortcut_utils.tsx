@@ -117,6 +117,38 @@ export function comparableKeySequenceToKeystrokesComboStr(
   return keySeq.map((keyCombination) => formatKeyCombination([...keyCombination])).join(", ");
 }
 
+// Plain-text form of a configured shortcut, e.g. "Ctrl + B" or "⌘ + B", for tooltips and hints.
+// Of several alternative bindings, the one for this platform (with or without Meta) is used.
+export function getShortcutDisplayString(
+  shortcutsConfig: KeyboardShortcutsMap,
+  shortcutId: KeyboardShortcutId,
+  unmodifiedLayoutMap: UnmodifiedLayoutMap,
+): string | null {
+  const alternatives = shortcutsConfig[shortcutId] ?? [];
+  const usesMeta = (keySequence: KeySequence) =>
+    keySequence.some((keyCombination) => keyCombination.includes("Meta"));
+  const keySequence =
+    alternatives.find((alternative) => usesMeta(alternative) === isMac) ?? alternatives[0];
+  if (keySequence == null) return null;
+  const keyToText = (key: string) => {
+    switch (key) {
+      case "Control":
+        return "Ctrl";
+      case "Meta":
+        return isMac ? "⌘" : "Win";
+      case "Alt":
+        return isMac ? "⌥" : "Alt";
+      default: {
+        const displayName = displayKeyName(key, unmodifiedLayoutMap);
+        return displayName.length === 1 ? displayName.toUpperCase() : displayName;
+      }
+    }
+  };
+  return keySequence
+    .map((keyCombination) => sortKeyCombination(keyCombination).map(keyToText).join(" + "))
+    .join(", ");
+}
+
 export function keySequenceToUiElements(
   keySequence: KeySequence,
   // Renders the combo chain as keycaps with muted separators. Currently only used in the info tab.

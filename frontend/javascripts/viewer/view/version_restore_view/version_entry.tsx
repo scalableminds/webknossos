@@ -27,6 +27,7 @@ import { isConcurrentCollaborationMode } from "viewer/model/accessors/annotation
 import { formatUserName, getContributorById } from "viewer/model/accessors/user_accessor";
 import { getReadableNameByVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
 import type {
+  AddBookmarkUpdateAction,
   AddLayerToAnnotationUpdateAction,
   AddSegmentIndexUpdateAction,
   AddUserBoundingBoxInSkeletonTracingAction,
@@ -36,6 +37,7 @@ import type {
   CreateNodeUpdateAction,
   CreateSegmentUpdateAction,
   DeleteAnnotationLayerUpdateAction,
+  DeleteBookmarkUpdateAction,
   DeleteEdgeUpdateAction,
   DeleteNodeUpdateAction,
   DeleteSegmentDataUpdateAction,
@@ -58,12 +60,16 @@ import type {
   UpdateActiveNodeUpdateAction,
   UpdateActiveSegmentIdUpdateAction,
   UpdateAnnotationLayerNameUpdateAction,
+  UpdateBookmarkStateUpdateAction,
+  UpdateBookmarkThumbnailUpdateAction,
+  UpdateBookmarkUpdateAction,
   UpdateBucketPartialUpdateAction,
   UpdateBucketUpdateAction,
   UpdateCameraAnnotationAction,
   UpdateLargestSegmentIdVolumeAction,
   UpdateMappingNameUpdateAction,
   UpdateMetadataOfAnnotationUpdateAction,
+  UpdateMetadataOfBookmarkUpdateAction,
   UpdateMetadataOfSegmentUpdateAction,
   UpdateNodeUpdateAction,
   UpdateSegmentGroupsExpandedStateUpdateAction,
@@ -517,6 +523,37 @@ const descriptionFns: Record<
       icon: <EditOutlined />,
     };
   },
+  addBookmark: (action: AsServerAction<AddBookmarkUpdateAction>): Description => ({
+    description: `Added the bookmark ${action.value.name ?? action.value.id}.`,
+    icon: <PlusOutlined />,
+  }),
+  updateBookmark: (action: AsServerAction<UpdateBookmarkUpdateAction>): Description => ({
+    description:
+      action.value.name != null
+        ? `Renamed the bookmark with id ${action.value.id} to ${action.value.name}.`
+        : `Updated the bookmark with id ${action.value.id}.`,
+    icon: <EditOutlined />,
+  }),
+  updateMetadataOfBookmark: (
+    action: AsServerAction<UpdateMetadataOfBookmarkUpdateAction>,
+  ): Description => ({
+    description: `Updated metadata of the bookmark with id ${action.value.id}.`,
+    icon: <EditOutlined />,
+  }),
+  updateBookmarkState: (action: AsServerAction<UpdateBookmarkStateUpdateAction>): Description => ({
+    description: `Updated the view of the bookmark with id ${action.value.id}.`,
+    icon: <EditOutlined />,
+  }),
+  updateBookmarkThumbnail: (
+    action: AsServerAction<UpdateBookmarkThumbnailUpdateAction>,
+  ): Description => ({
+    description: `Switched the thumbnail of the bookmark with id ${action.value.id}.`,
+    icon: <EditOutlined />,
+  }),
+  deleteBookmark: (action: AsServerAction<DeleteBookmarkUpdateAction>): Description => ({
+    description: `Deleted the bookmark with id ${action.value.id}.`,
+    icon: <DeleteOutlined />,
+  }),
   updateActiveNode: (action: AsServerAction<UpdateActiveNodeUpdateAction>): Description => {
     return {
       description: `Updated the active node id to ${action.value.activeNode}`,

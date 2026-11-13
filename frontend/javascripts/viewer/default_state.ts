@@ -208,6 +208,8 @@ const defaultState: WebknossosState = {
     contributors: [],
     collaborationMode: "OwnerOnly",
     annotationLayers: [],
+    bookmarks: [],
+    largestBookmarkIdOnLoad: 0,
     version: 0,
     earliestAccessibleVersion: 0,
     stats: {},
@@ -278,6 +280,7 @@ const defaultState: WebknossosState = {
     globalProgress: 0,
     activeTool: AnnotationTool.MOVE,
     activeUserBoundingBoxId: null,
+    bookmarkIdToFocus: null,
     showDropzoneModal: false,
     showVersionRestore: false,
     isRestoringVersion: false,
@@ -336,6 +339,7 @@ const defaultState: WebknossosState = {
   },
   localAnnotationState: {
     idReservationsForBoundingBoxes: [],
+    idReservationsForBookmarks: [],
   },
   operationContext: {
     activeOperations: [],

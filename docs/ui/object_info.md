@@ -91,6 +91,17 @@ Use the MIP icon button in the toolbar of the bounding box tab to open the **Max
 - **Ray marching steps:** Controls the number of samples taken along each ray. Higher values produce a smoother, more accurate projection at the cost of GPU performance.
 - **Depth-correct rendering:** When enabled, MIP volumes interact correctly with mesh depth — meshes can occlude or be occluded by the MIP content. Disable this for better performance if depth sorting with meshes is not needed.
 
+## Bookmarks Tab
+
+The `Bookmarks` tab lets you save views of an annotation and return to them later. A bookmark stores the position, view mode, zoom, and rotation, as well as the active node, the layer settings (e.g., visibility, color, intensity range, and mapping), and the loaded meshes. Each bookmark shows a thumbnail of the view.
+
+- **Adding:** Click the `+` button or press ++ctrl++ / ++cmd++ + ++b++ to add a bookmark for the current view. You can also use the `Add bookmark for current view` entry of the [command palette](./index.md#command-palette).
+- **Jumping:** Click a bookmark to restore its view. To return to where you were before, use the `Back` button.
+- **Editing:** Right-click a bookmark to rename it, add a description, update it to the current view, or switch its thumbnail to a different viewport.
+- **Searching and Exporting:** Search bookmarks by name with ++ctrl++ + ++shift++ + ++f++, or export all bookmarks as a CSV file.
+
+Bookmarks are saved with the annotation and are included in the [NML file](../data/concepts.md#bookmarks-section) when you download it. In read-only annotations, you can jump to bookmarks but not change them.
+
 ## Abstract Tree Tab
 
 The `AbsTree` tab displays a 2D representation of a skeleton annotation. This can be useful for visualizing the structure of large and complex skeletons. Be aware that generating the abstract tree can be resource-intensive for very large skeletons.

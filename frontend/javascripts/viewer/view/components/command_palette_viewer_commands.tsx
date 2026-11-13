@@ -18,7 +18,9 @@ import {
   type TracingViewMenuProps,
   useTracingViewMenuGroups,
 } from "../action_bar/use_tracing_view_menu_groups";
+import { getShortcutDisplayString } from "../keyboard_shortcuts/keyboard_shortcut_utils";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
+import { addBookmarkForCurrentViewFromAnywhere } from "../right_border_tabs/bookmarks_tab/add_bookmark";
 import { type CommandWithoutId, setViewerCommands } from "./command_palette";
 
 const getLabelForAction = (action: NonNullable<ItemType>) => {
@@ -68,6 +70,13 @@ export function CommandPaletteViewerCommands() {
   const userConfig = useWkSelector((state) => state.userConfiguration);
   const isViewMode = useWkSelector((state) => state.temporaryConfiguration.controlMode === "VIEW");
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
+  const addBookmarkShortcut = useWkSelector((state) =>
+    getShortcutDisplayString(
+      state.keyboardConfiguration.shortcutsConfig,
+      "ADD_BOOKMARK",
+      state.keyboardConfiguration.unmodifiedLayoutMap,
+    ),
+  );
 
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
   const allowUpdate = useWkSelector(mayEditAnnotation);
@@ -141,6 +150,18 @@ export function CommandPaletteViewerCommands() {
       return commands;
     };
 
+    const getBookmarkEntries = (): CommandWithoutId[] =>
+      isViewMode || !allowUpdate
+        ? []
+        : [
+            {
+              name: "Add bookmark for current view",
+              command: () => addBookmarkForCurrentViewFromAnywhere(dispatch),
+              shortcut: addBookmarkShortcut ?? "",
+              color: ColorWKBlue,
+            },
+          ];
+
     const menuActions = flattenMenuGroups(
       isViewMode ? getViewDatasetMenuGroups(null) : tracingMenuGroups,
     );
@@ -148,10 +169,19 @@ export function CommandPaletteViewerCommands() {
     return [
       ...getToolEntries(),
       ...getViewModeEntries(),
+      ...getBookmarkEntries(),
       ...mapMenuActionsToCommands(menuActions),
       ...getTabsAndSettingsMenuItems(),
     ];
-  }, [isInAnnotationView, isViewMode, allowUpdate, userConfig, tracingMenuGroups, dispatch]);
+  }, [
+    isInAnnotationView,
+    isViewMode,
+    allowUpdate,
+    userConfig,
+    tracingMenuGroups,
+    dispatch,
+    addBookmarkShortcut,
+  ]);
 
   useEffect(() => {
     setViewerCommands(commands);

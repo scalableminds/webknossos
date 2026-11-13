@@ -6,6 +6,7 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationProto,
   AnnotationUserStateProto
 }
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
@@ -33,7 +34,9 @@ case class AnnotationWithTracings(
     annotation: AnnotationProto,
     tracingsById: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]],
     editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)],
-    volumeBucketBuffersByTracingId: Map[String, VolumeBucketBuffer]
+    volumeBucketBuffersByTracingId: Map[String, VolumeBucketBuffer],
+    // Bookmarks that changed since the last flush. Their ids are stored in the annotation proto.
+    updatedBookmarks: Map[Int, AnnotationBookmarkProto] = Map.empty
 ) extends LazyLogging
     with ProtoGeometryConversions {
 
@@ -256,6 +259,32 @@ case class AnnotationWithTracings(
     } yield ()
   }
 
+  def addBookmark(a: AddBookmarkAnnotationAction): AnnotationWithTracings =
+    this.copy(
+      annotation = annotation.copy(
+        bookmarkIds = annotation.bookmarkIds.filterNot(_ == a.id) :+ a.id,
+        largestBookmarkId = Some(AnnotationWithTracings.largestBookmarkId(annotation).fold(a.id)(math.max(_, a.id)))
+      ),
+      updatedBookmarks = updatedBookmarks.updated(a.id, a.toProto)
+    )
+
+  // Used when the annotation is replaced by an older version (revert, reset), so that ids of bookmarks that were
+  // added later are still not reused.
+  def withLargestBookmarkIdOf(other: AnnotationProto): AnnotationWithTracings =
+    (AnnotationWithTracings.largestBookmarkId(annotation) ++ AnnotationWithTracings.largestBookmarkId(other)).maxOption
+      .fold(this)(largestId => this.copy(annotation = annotation.withLargestBookmarkId(largestId)))
+
+  def withUpdatedBookmarks(bookmarks: Seq[AnnotationBookmarkProto]): AnnotationWithTracings =
+    this.copy(updatedBookmarks = updatedBookmarks ++ bookmarks.map(bookmark => bookmark.id -> bookmark))
+
+  def deleteBookmark(a: DeleteBookmarkAnnotationAction): AnnotationWithTracings =
+    this.copy(
+      annotation = annotation.copy(bookmarkIds = annotation.bookmarkIds.filterNot(_ == a.id)),
+      updatedBookmarks = updatedBookmarks.removed(a.id)
+    )
+
+  def withoutUpdatedBookmarks: AnnotationWithTracings = this.copy(updatedBookmarks = Map.empty)
+
   // Batch-loads the buckets that the update group's updateBucketPartial actions will mutate.
   def prefillVolumeBucketBuffers(updates: List[UpdateAction])(implicit ec: ExecutionContext): Fox[Unit] = {
     val bucketPositionsByTracingId =
@@ -284,4 +313,10 @@ case class AnnotationWithTracings(
     this.copy(tracingsById = newTracingsById)
   }
 
+}
+
+object AnnotationWithTracings {
+  // The largest bookmark id the annotation ever had, also counting deleted bookmarks (see AnnotationProto).
+  def largestBookmarkId(annotation: AnnotationProto): Option[Int] =
+    (annotation.largestBookmarkId.toSeq ++ annotation.bookmarkIds).maxOption
 }

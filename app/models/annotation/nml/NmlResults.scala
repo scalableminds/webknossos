@@ -31,7 +31,8 @@ case class NmlParsedParameters(
     userBoundingBoxes: Seq[NamedBoundingBoxProto],
     treesSplit: Seq[Tree],
     activeNodeId: Option[Int],
-    treeGroupsAfterSplit: Seq[TreeGroup]
+    treeGroupsAfterSplit: Seq[TreeGroup],
+    bookmarks: Seq[NmlParsedBookmark]
 )
 
 case class NmlParseSuccessWithoutFile(
@@ -39,7 +40,8 @@ case class NmlParseSuccessWithoutFile(
     volumeLayers: List[UploadedVolumeLayer],
     datasetId: ObjectId,
     description: String,
-    wkUrl: Option[String]
+    wkUrl: Option[String],
+    bookmarks: Seq[NmlParsedBookmark]
 )
 
 object NmlResults extends LazyLogging {
@@ -70,7 +72,8 @@ object NmlResults extends LazyLogging {
       volumeLayers: List[UploadedVolumeLayer],
       datasetId: ObjectId,
       _description: String,
-      _wkUrl: Option[String]
+      _wkUrl: Option[String],
+      bookmarks: Seq[NmlParsedBookmark]
   ) extends NmlParseResult {
     def succeeded = true
 

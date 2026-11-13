@@ -4,6 +4,8 @@ import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
+import com.scalableminds.util.Msg
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationIdDomain
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationIdDomain.AnnotationIdDomain
 import com.typesafe.scalalogging.LazyLogging
 import slick.dbio.{DBIO, Effect, NoStream}
@@ -35,6 +37,13 @@ class AnnotationReservedIdsService @Inject() (
     }
     Fox.fromFutureBox(previous.flatMap(_ => block.futureBox).andThen { case _ => releaseQueue() })
   }
+
+  // Bookmarks belong to the annotation rather than a tracing, so their ids are stored with an empty tracingId.
+  def assertTracingIdFitsDomain(tracingId: String, domain: AnnotationIdDomain)(implicit
+      ec: ExecutionContext
+  ): Fox[Unit] =
+    Fox.fromBool(tracingId.isEmpty == (domain == AnnotationIdDomain.Bookmark)) ?~> Msg.Annotation
+      .reservedIdsTracingIdMismatch(domain.toString)
 
   def reservedIds(annotationId: ObjectId, tracingId: String, domain: AnnotationIdDomain, userId: ObjectId)(implicit
       ec: ExecutionContext

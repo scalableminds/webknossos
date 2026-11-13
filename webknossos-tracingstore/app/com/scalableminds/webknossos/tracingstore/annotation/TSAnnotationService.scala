@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerTypeProto,
   AnnotationProto
 }
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, Tree, TreeBody}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -49,6 +50,7 @@ class TSAnnotationService @Inject() (
     skeletonTracingMigrationService: SkeletonTracingMigrationService,
     volumeTracingMigrationService: VolumeTracingMigrationService,
     temporaryTracingService: TemporaryTracingService,
+    annotationBookmarkService: AnnotationBookmarkService,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
     tracingDataStore: TracingDataStore
 ) extends KeyValueStoreConversions
@@ -218,6 +220,13 @@ class TSAnnotationService @Inject() (
           "Failed to delete segment data."
       case a: ApplyableVolumeUpdateAction =>
         annotationWithTracings.applyVolumeAction(a).toFox ?~> Msg.Annotation.ApplyUpdate.volumeActionFailed
+      case a: AddBookmarkAnnotationAction =>
+        Fox.successful(annotationWithTracings.addBookmark(a))
+      case a: ApplyableBookmarkUpdateAction =>
+        updateBookmark(annotationId, annotationWithTracings, a.id)(a.applyOn) ?~>
+          Msg.Annotation.ApplyUpdate.updateBookmarkFailed
+      case a: DeleteBookmarkAnnotationAction =>
+        Fox.successful(annotationWithTracings.deleteBookmark(a))
       case a: EditableMappingUpdateAction =>
         annotationWithTracings.applyEditableMappingAction(a) ?~> Msg.Annotation.ApplyUpdate.editableMappingActionFailed
       case a: RevertToVersionAnnotationAction =>
@@ -275,6 +284,35 @@ class TSAnnotationService @Inject() (
       }
     } yield withNewLayerAndBuffer
 
+  private def updateBookmark(
+      annotationId: ObjectId,
+      annotationWithTracings: AnnotationWithTracings,
+      bookmarkId: Int
+  )(transform: AnnotationBookmarkProto => AnnotationBookmarkProto)(implicit
+      ec: ExecutionContext
+  ): Fox[AnnotationWithTracings] =
+    if (!annotationWithTracings.annotation.bookmarkIds.contains(bookmarkId)) Fox.successful(annotationWithTracings)
+    else
+      for {
+        bookmark <- annotationWithTracings.updatedBookmarks.get(bookmarkId) match {
+          case Some(updatedBookmark) => Fox.successful(updatedBookmark)
+          case None                  =>
+            annotationBookmarkService.findBookmark(annotationId, bookmarkId, annotationWithTracings.version)
+        }
+      } yield annotationWithTracings.withUpdatedBookmarks(Seq(transform(bookmark)))
+
+  // After a revert, the bookmarks of the source version have to be written again at the new version.
+  private def markAllBookmarksAsChanged(annotationId: ObjectId, sourceAnnotation: AnnotationWithTracings)(implicit
+      ec: ExecutionContext
+  ): Fox[AnnotationWithTracings] =
+    for {
+      bookmarks <- annotationBookmarkService.findBookmarks(
+        annotationId,
+        sourceAnnotation.annotation.bookmarkIds,
+        sourceAnnotation.version
+      )
+    } yield sourceAnnotation.withUpdatedBookmarks(bookmarks)
+
   private def revertToVersion(
       annotationId: ObjectId,
       annotationWithTracings: AnnotationWithTracings,
@@ -301,11 +339,12 @@ class TSAnnotationService @Inject() (
         revertAction.sourceVersion,
         newVersion
       ) ?~> Msg.Annotation.Revert.revertDistributedElementsFailed
+      withBookmarks <- markAllBookmarksAsChanged(annotationId, sourceAnnotation)
       _ = Instant.logSince(
         before,
         s"Reverting annotation $annotationId from v${annotationWithTracings.version} to v${revertAction.sourceVersion}"
       )
-    } yield sourceAnnotation.markAllTreeBodiesAsChanged
+    } yield withBookmarks.withLargestBookmarkIdOf(annotationWithTracings.annotation).markAllTreeBodiesAsChanged
 
   private def resetToBase(
       annotationId: ObjectId,
@@ -318,8 +357,9 @@ class TSAnnotationService @Inject() (
     for {
       sourceAnnotation: AnnotationWithTracings <- getWithTracings(annotationId, Some(sourceVersion))
       _ <- revertDistributedElements(annotationId, annotationWithTracings, sourceAnnotation, sourceVersion, newVersion)
+      withBookmarks <- markAllBookmarksAsChanged(annotationId, sourceAnnotation)
       _ = Instant.logSince(before, s"Resetting annotation $annotationId to base (v$sourceVersion)")
-    } yield sourceAnnotation.markAllTreeBodiesAsChanged
+    } yield withBookmarks.withLargestBookmarkIdOf(annotationWithTracings.annotation).markAllTreeBodiesAsChanged
   }
 
   def saveAnnotationProto(
@@ -768,11 +808,17 @@ class TSAnnotationService @Inject() (
         _ <- updatedWithNewVersion.flushVolumeBucketBuffers()
         _ <- updateSegmentIndicesFromBucketBuffers(updatedWithNewVersion, annotationId) ?~>
           "Failed to update segment index from volume bucket buffers."
+        // Bookmarks are flushed before the annotation proto that references them.
+        _ <- annotationBookmarkService.saveBookmarks(
+          annotationId,
+          targetVersion,
+          updatedWithNewVersion.updatedBookmarks.values
+        ) ?~> Msg.Annotation.flushBookmarksFailed
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVersion) ?~> Msg.Annotation.flushAnnotationInfoFailed
         _ <- Fox.runIf(reportChangesToWk && annotationWithTracings.annotation != updated.annotation)(
           remoteWebknossosClient.updateAnnotation(annotationId, updatedWithNewVersion.annotation)
         ) ?~> Msg.Annotation.updateRemoteFailed
-      } yield updatedWithNewVersion
+      } yield updatedWithNewVersion.withoutUpdatedBookmarks
     }
   }
 
@@ -1022,6 +1068,21 @@ class TSAnnotationService @Inject() (
       }
     }
 
+  // Bookmark ids and versions are kept, only their references to the duplicated tracings change.
+  private def duplicateBookmarks(
+      annotationId: ObjectId,
+      newAnnotationId: ObjectId,
+      annotation: AnnotationProto,
+      tracingIdMap: Map[String, String]
+  )(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      bookmarks <- annotationBookmarkService.findBookmarks(annotationId, annotation.bookmarkIds, annotation.version)
+      tracingRemapping = BookmarkTracingRemapping.forDuplicate(tracingIdMap)
+      remappedBookmarks = bookmarks.map(bookmark => bookmark.withState(tracingRemapping(bookmark.state)))
+      _ <- annotationBookmarkService.saveBookmarks(newAnnotationId, annotation.version, remappedBookmarks)
+      _ <- annotationBookmarkService.duplicateThumbnails(annotationId, newAnnotationId, bookmarks)
+    } yield ()
+
   def duplicate(
       annotationId: ObjectId,
       newAnnotationId: ObjectId,
@@ -1062,6 +1123,7 @@ class TSAnnotationService @Inject() (
         earliestAccessibleVersion = v0Annotation.version
       )
 
+      _ <- duplicateBookmarks(annotationId, newAnnotationId, v0Annotation, tracingIdMap)
       _ <- saveAnnotationProto(newAnnotationId, v0Annotation.version, v0DuplicatedAnnotation)
 
       // Duplicate current
@@ -1085,12 +1147,14 @@ class TSAnnotationService @Inject() (
               annotationLayers = newLayers,
               earliestAccessibleVersion = currentAnnotation.version
             )
+            _ <- duplicateBookmarks(annotationId, newAnnotationId, currentAnnotation, tracingIdMap)
             _ <- saveAnnotationProto(newAnnotationId, currentAnnotation.version, currentDuplicatedAnnotation)
           } yield currentDuplicatedAnnotation
         } else Fox.successful(v0DuplicatedAnnotation)
 
     } yield duplicatedAnnotation
 
+  // Only needed to merge editable mappings (replays their updates), so only actionTracingIds are remapped.
   private def duplicateUpdates(
       annotationId: ObjectId,
       newAnnotationId: ObjectId,

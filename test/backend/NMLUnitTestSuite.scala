@@ -6,11 +6,42 @@ import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 
 import java.io.ByteArrayInputStream
 import com.scalableminds.webknossos.datastore.SkeletonTracing.*
-import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.{
+  AnnotationBookmarkProto,
+  AnnotationBookmarkStateProto,
+  BookmarkLayerStateProto,
+  BookmarkMappingProto,
+  BookmarkMeshProto,
+  BookmarkTdCameraProto
+}
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkProto.ThumbnailViewportProto
+import com.scalableminds.webknossos.datastore.AnnotationBookmark.AnnotationBookmarkStateProto.{
+  MappingTypeProto,
+  ViewModeProto
+}
+import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
+import com.scalableminds.webknossos.datastore.geometry.{
+  AdditionalAxisProto,
+  AdditionalCoordinateProto,
+  Vec2DoubleProto,
+  Vec2IntProto,
+  Vec3DoubleProto,
+  Vec3IntProto
+}
+import com.scalableminds.webknossos.tracingstore.annotation.BookmarkThumbnailSize
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, FetchedAnnotationLayer}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat
 import models.annotation.SharedParsingParameters
-import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlWriter}
+import models.annotation.nml.{
+  NmlAnnotationLayerRef,
+  NmlBookmarkToWrite,
+  NmlBookmarks,
+  NmlParseSuccessWithoutFile,
+  NmlParser,
+  NmlSkeletonLayerRef,
+  NmlVolumeLayerRef,
+  NmlWriter
+}
 import models.dataset.{Dataset, DatasetDAOLike}
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.box.{Empty, Failure, Full}
@@ -56,15 +87,24 @@ class NMLUnitTestSuite extends AsyncWordSpec {
 
   private val nmlParser = new NmlParser(mockDatasetDAO)
 
-  private def writeToXmlBytes(skeletonTracing: SkeletonTracing): Fox[Array[Byte]] = {
-    val annotationLayers = List(
-      FetchedAnnotationLayer(
-        "dummySkeletonTracingId",
-        AnnotationLayer.defaultSkeletonLayerName,
-        Left(skeletonTracing),
-        None
-      )
+  private val skeletonTracingId = "dummySkeletonTracingId"
+  private val volumeTracingId = "dummyVolumeTracingId"
+  private val volumeLayerName = "My Volume"
+
+  private def writeToXmlBytes(
+      skeletonTracing: SkeletonTracing,
+      bookmarks: Seq[NmlBookmarkToWrite] = Seq.empty,
+      datasetLayerNames: Option[Set[String]] = None
+  ): Fox[Array[Byte]] = {
+    val skeletonLayer = FetchedAnnotationLayer(
+      skeletonTracingId,
+      AnnotationLayer.defaultSkeletonLayerName,
+      Left(skeletonTracing),
+      None
     )
+    val volumeLayer = FetchedAnnotationLayer(volumeTracingId, volumeLayerName, Right(Dummies.volumeTracing), None)
+    // The volume layer is only needed for bookmarks, keep the other tests skeleton-only.
+    val annotationLayers = if (bookmarks.isEmpty) List(skeletonLayer) else List(skeletonLayer, volumeLayer)
     val nmlFunctionStream =
       new NmlWriter().toNmlStream(
         "",
@@ -81,7 +121,9 @@ class NMLUnitTestSuite extends AsyncWordSpec {
         "Sample User",
         None,
         volumeDataZipFormat = VolumeDataZipFormat.wkw,
-        requestingUser = None
+        requestingUser = None,
+        bookmarks = bookmarks,
+        datasetLayerNames = datasetLayerNames
       )
     val os = new ByteArrayOutputStream()
     for {
@@ -121,7 +163,7 @@ class NMLUnitTestSuite extends AsyncWordSpec {
       writeAndParseTracing(dummyTracing).futureBox.map {
         case Full(tuple) =>
           tuple match {
-            case NmlParseSuccessWithoutFile(tracing, _, _, _, _) =>
+            case NmlParseSuccessWithoutFile(tracing, _, _, _, _, _) =>
               assert(tracing == dummyTracing)
           }
         case _ => fail()
@@ -143,7 +185,7 @@ class NMLUnitTestSuite extends AsyncWordSpec {
       writeAndParseTracing(dummyTracingWithOmittedIsExpandedTreeGroupProp).futureBox.map {
         case Full(tuple) =>
           tuple match {
-            case NmlParseSuccessWithoutFile(tracing, _, _, _, _) =>
+            case NmlParseSuccessWithoutFile(tracing, _, _, _, _, _) =>
               assert(tracing == dummyTracing)
           }
         case _ => fail()
@@ -161,7 +203,7 @@ class NMLUnitTestSuite extends AsyncWordSpec {
       writeAndParseTracing(newTracing).futureBox.map {
         case Full(tuple) =>
           tuple match {
-            case NmlParseSuccessWithoutFile(tracing, _, _, _, _) =>
+            case NmlParseSuccessWithoutFile(tracing, _, _, _, _, _) =>
               assert(tracing == dummyTracing)
           }
         case _ => fail()
@@ -250,5 +292,204 @@ class NMLUnitTestSuite extends AsyncWordSpec {
 
       assertParsingFailed(writeAndParseTracing(newTracing))
     }
+  }
+
+  private val fullBookmark = AnnotationBookmarkProto(
+    id = 3,
+    created = 1730000000000L,
+    name = Some("A <special> \"bookmark\""),
+    description = Some("multi\nline"),
+    state = AnnotationBookmarkStateProto(
+      position = Vec3IntProto(1, 2, 3),
+      mode = ViewModeProto.flight,
+      zoomStep = 1.25,
+      rotation = Vec3DoubleProto(10.5, 20, 30),
+      activeNodeId = Some(1),
+      additionalCoordinates = Seq(AdditionalCoordinateProto("t", 4)),
+      nativelyRenderedLayerName = Some(volumeTracingId),
+      clippingDistance = 55.5,
+      clipSkeletonToCurrentSection = true,
+      tdCamera = Some(
+        BookmarkTdCameraProto(Vec3DoubleProto(1.5, 2.5, 3.5), Vec3DoubleProto(0, 0, -1), -100, 100, 80, -80)
+      ),
+      showSkeletons = Some(false),
+      layers = Seq(
+        BookmarkLayerStateProto(
+          layerName = "color",
+          isDisabled = Some(false),
+          intensityRange = Some(Vec2DoubleProto(0, 255)),
+          color = Some(Vec3DoubleProto(255, 128, 0)),
+          isInverted = Some(true),
+          gammaCorrectionValue = Some(1.5)
+        ),
+        BookmarkLayerStateProto(
+          layerName = volumeTracingId,
+          mapping = Some(BookmarkMappingProto(volumeTracingId, MappingTypeProto.AGGLOMERATE)),
+          meshFileName = Some("meshfile_1"),
+          meshes = Seq(
+            BookmarkMeshProto(
+              segmentId = -2L, // the largest uint64 values are negative as Long
+              seedPosition = Vec3IntProto(4, 5, 6),
+              isPrecomputed = true,
+              meshFileName = Some("meshfile_1")
+            ),
+            BookmarkMeshProto(
+              segmentId = 7L,
+              seedPosition = Vec3IntProto(7, 8, 9),
+              isPrecomputed = false,
+              mappingName = Some("agglomerate_view_5"),
+              mappingType = Some(MappingTypeProto.JSON)
+            )
+          )
+        ),
+        BookmarkLayerStateProto(layerName = skeletonTracingId, isDisabled = Some(true))
+      )
+    ),
+    createdAtVersion = 0L,
+    metadata = Seq(
+      MetadataEntryProto("key", stringValue = Some("value")),
+      MetadataEntryProto("list", stringListValue = Seq("a", "b"))
+    ),
+    thumbnailViewport = Some(ThumbnailViewportProto.TD)
+  )
+
+  private val minimalBookmark = AnnotationBookmarkProto(
+    id = 5,
+    created = 1L,
+    state = AnnotationBookmarkStateProto(
+      position = Vec3IntProto(0, 0, 0),
+      mode = ViewModeProto.orthogonal,
+      zoomStep = 1,
+      rotation = Vec3DoubleProto(0, 0, 0),
+      clippingDistance = 50,
+      clipSkeletonToCurrentSection = false
+    ),
+    createdAtVersion = 0L
+  )
+
+  // Replaces the encoded references to the NML layers with the tracingIds used in the test.
+  private def decodeLayerReferences(bookmark: AnnotationBookmarkProto): AnnotationBookmarkProto = {
+    def decode(name: String): Option[String] = NmlAnnotationLayerRef.decode(name) match {
+      case Some(NmlVolumeLayerRef(`volumeLayerName`)) => Some(volumeTracingId)
+      case Some(NmlSkeletonLayerRef)                  => Some(skeletonTracingId)
+      case Some(_)                                    => None
+      case None                                       => Some(name)
+    }
+    NmlBookmarks.rewriteLayerReferences(bookmark, decode, decode)
+  }
+
+  private def writeAndParseBookmarks(
+      bookmarks: Seq[NmlBookmarkToWrite],
+      datasetLayerNames: Option[Set[String]] = None
+  ): Fox[NmlParseSuccessWithoutFile] =
+    for {
+      xmlBytes <- writeToXmlBytes(dummyTracing, bookmarks, datasetLayerNames)
+      parsed <- parseXmlBytes(xmlBytes)
+    } yield parsed
+
+  "NML writing and parsing of bookmarks" should {
+    "yield the same bookmarks, with references to the NML layers instead of tracingIds" in
+      writeAndParseBookmarks(
+        Seq(
+          NmlBookmarkToWrite(fullBookmark, Map(BookmarkThumbnailSize.small -> Array[Byte](1))),
+          NmlBookmarkToWrite(minimalBookmark, Map.empty)
+        )
+      ).futureBox.map {
+        case Full(parsed) =>
+          assert(parsed.bookmarks.map(b => decodeLayerReferences(b.bookmark)) == Seq(fullBookmark, minimalBookmark))
+          assert(
+            NmlAnnotationLayerRef
+              .decode(parsed.bookmarks.head.bookmark.state.layers(1).layerName)
+              .contains(NmlVolumeLayerRef(volumeLayerName))
+          )
+          assert(
+            parsed.bookmarks.map(_.thumbnailLocations) == Seq(
+              Map(BookmarkThumbnailSize.small -> NmlBookmarks.thumbnailLocation(3, BookmarkThumbnailSize.small)),
+              Map.empty
+            )
+          )
+        case _ => fail()
+      }
+
+    "not write the versions of bookmarks" in
+      writeAndParseBookmarks(
+        Seq(NmlBookmarkToWrite(minimalBookmark.withCreatedAtVersion(12).withThumbnailVersion(13), Map.empty))
+      ).futureBox.map {
+        case Full(parsed) => assert(parsed.bookmarks.map(_.bookmark) == Seq(minimalBookmark))
+        case _            => fail()
+      }
+
+    "drop references to layers that do not exist" in {
+      val bookmark = minimalBookmark.withState(
+        minimalBookmark.state.copy(
+          nativelyRenderedLayerName = Some("deletedVolumeTracingId"),
+          layers = Seq(
+            BookmarkLayerStateProto(layerName = "color"),
+            BookmarkLayerStateProto(layerName = "deletedVolumeTracingId"),
+            BookmarkLayerStateProto(layerName = volumeTracingId)
+          )
+        )
+      )
+      writeAndParseBookmarks(Seq(NmlBookmarkToWrite(bookmark, Map.empty)), Some(Set("color"))).futureBox.map {
+        case Full(parsed) =>
+          val parsedState = decodeLayerReferences(parsed.bookmarks.head.bookmark).state
+          assert(parsedState.nativelyRenderedLayerName.isEmpty)
+          assert(parsedState.layers.map(_.layerName) == Seq("color", volumeTracingId))
+        case _ => fail()
+      }
+    }
+
+    "not write the thumbnail viewport of bookmarks without thumbnails" in
+      writeAndParseBookmarks(
+        Seq(NmlBookmarkToWrite(minimalBookmark.withThumbnailViewport(ThumbnailViewportProto.XY), Map.empty))
+      ).futureBox.map {
+        case Full(parsed) => assert(parsed.bookmarks.map(_.bookmark) == Seq(minimalBookmark))
+        case _            => fail()
+      }
+
+    "fail for thumbnails with different viewports" in
+      writeToXmlBytes(
+        dummyTracing,
+        Seq(
+          NmlBookmarkToWrite(
+            minimalBookmark.withThumbnailViewport(ThumbnailViewportProto.XY),
+            Map(BookmarkThumbnailSize.small -> Array[Byte](1), BookmarkThumbnailSize.large -> Array[Byte](1))
+          )
+        )
+      ).futureBox.flatMap {
+        case Full(xmlBytes) =>
+          val xml = new String(xmlBytes, "UTF-8")
+          val xmlWithDifferentViewports = xml.replaceFirst("viewport=\"xy\"", "viewport=\"yz\"")
+          assert(xmlWithDifferentViewports != xml)
+          assertParsingFailed(parseXmlBytes(xmlWithDifferentViewports.getBytes("UTF-8")))
+        case _ => Future.successful(fail("failed to write bookmark to XML"))
+      }
+
+    "only accept JPEG thumbnails" in {
+      val jpegStart = Array(0xff, 0xd8, 0xff, 0xe0).map(_.toByte)
+      val pngStart = Array(0x89, 0x50, 0x4e, 0x47).map(_.toByte)
+      val webpStart = "RIFF\u0000\u0000\u0000\u0000WEBP".getBytes("US-ASCII")
+      assert(NmlBookmarks.isJpeg(jpegStart))
+      assert(!NmlBookmarks.isJpeg(pngStart))
+      assert(!NmlBookmarks.isJpeg(webpStart))
+      assert(!NmlBookmarks.isJpeg(Array.empty))
+    }
+
+    "fail for duplicate bookmark ids" in
+      assertParsingFailed(
+        writeAndParseBookmarks(
+          Seq(NmlBookmarkToWrite(minimalBookmark, Map.empty), NmlBookmarkToWrite(minimalBookmark, Map.empty))
+        )
+      )
+
+    "fail for a bookmark without position" in
+      writeToXmlBytes(dummyTracing, Seq(NmlBookmarkToWrite(minimalBookmark, Map.empty))).futureBox.flatMap {
+        case Full(xmlBytes) =>
+          val xml = new String(xmlBytes, "UTF-8")
+          val xmlWithoutPosition = xml.replaceFirst("""<position [^>]*/>""", "")
+          assert(xmlWithoutPosition != xml)
+          assertParsingFailed(parseXmlBytes(xmlWithoutPosition.getBytes("UTF-8")))
+        case _ => Future.successful(fail("failed to write bookmark to XML"))
+      }
   }
 }

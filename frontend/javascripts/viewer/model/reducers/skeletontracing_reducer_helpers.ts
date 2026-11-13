@@ -263,6 +263,56 @@ export function deleteNodeAndReconnectNeighbors(
   return [newTrees, edgeToCreate.source, newMaxNodeId];
 }
 
+// Inserts a new node at the midpoint of the edge between the two given nodes. The edge is
+// replaced by two edges which keep its direction (A -> B becomes A -> N -> B), so that the
+// tree is not split. Returns null if the two nodes are not connected by an edge.
+export function insertNodeOnEdge(
+  state: WebknossosState,
+  tree: Tree,
+  nodeA: Node,
+  nodeB: Node,
+  timestamp: number,
+): [TreeMap, Node] | null {
+  const skeletonTracing = getSkeletonTracing(state.annotation);
+  if (skeletonTracing == null) {
+    return null;
+  }
+  const edgeToSplit = tree.edges
+    .getEdgesForNode(nodeA.id)
+    .find((edge) => edge.source === nodeB.id || edge.target === nodeB.id);
+  if (edgeToSplit == null) {
+    return null;
+  }
+
+  const sourceNode = edgeToSplit.source === nodeA.id ? nodeA : nodeB;
+  const sourcePosition = sourceNode.untransformedPosition;
+  const targetPosition = (sourceNode === nodeA ? nodeB : nodeA).untransformedPosition;
+  const newNode: Node = {
+    ...sourceNode,
+    id: skeletonTracing.cachedMaxNodeId + 1,
+    untransformedPosition: V3.trunc([
+      (sourcePosition[0] + targetPosition[0]) / 2,
+      (sourcePosition[1] + targetPosition[1]) / 2,
+      (sourcePosition[2] + targetPosition[2]) / 2,
+    ]),
+    timestamp,
+    bitDepth: state.datasetConfiguration.fourBit ? 4 : 8,
+    interpolation: state.datasetConfiguration.interpolation,
+  };
+
+  const edges = tree.edges
+    .removeEdge(edgeToSplit)
+    .addEdge({ source: edgeToSplit.source, target: newNode.id })
+    .addEdge({ source: newNode.id, target: edgeToSplit.target });
+
+  const newTree: Tree = {
+    ...tree,
+    nodes: tree.nodes.set(newNode.id, newNode),
+    edges,
+  };
+  return [skeletonTracing.trees.set(tree.treeId, newTree), newNode];
+}
+
 export function deleteEdge(
   state: WebknossosState,
   sourceTree: Tree,

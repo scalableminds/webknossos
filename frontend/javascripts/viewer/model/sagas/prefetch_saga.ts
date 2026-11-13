@@ -14,7 +14,6 @@ import {
   isRotated,
 } from "viewer/model/accessors/flycam_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
-import { PrefetchStrategyFlight } from "viewer/model/bucket_data_handling/prefetch_strategy_arbitrary";
 import {
   ContentTypes as PrefetchContentTypes,
   PrefetchStrategySkeleton,
@@ -31,7 +30,6 @@ import { ensureWkInitialized } from "./ready_sagas";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
-const prefetchStrategiesFlight = [new PrefetchStrategyFlight()];
 const prefetchStrategiesPlane = [new PrefetchStrategySkeleton(), new PrefetchStrategyVolume()];
 
 export function* watchDataRelevantChanges(): Saga<void> {
@@ -73,16 +71,15 @@ function* shouldPrefetchForDataLayer(dataLayer: DataLayer): Saga<boolean> {
 
 export function* triggerDataPrefetching(previousProperties: Record<string, any>): Saga<void> {
   const viewMode = yield* select((state) => state.temporaryConfiguration.viewMode);
-  const isPlaneMode = constants.MODES_PLANE.includes(viewMode);
+  if (!constants.MODES_PLANE.includes(viewMode)) {
+    // There is no prefetching in flight mode.
+    return;
+  }
   const dataLayers = yield* call([Model, Model.getAllLayers]);
 
   for (const dataLayer of dataLayers) {
     if (yield* call(shouldPrefetchForDataLayer, dataLayer)) {
-      if (isPlaneMode) {
-        yield* call(prefetchForPlaneMode, dataLayer, previousProperties);
-      } else {
-        yield* call(prefetchForFlightMode, dataLayer, previousProperties);
-      }
+      yield* call(prefetchForPlaneMode, dataLayer, previousProperties);
     }
   }
 }
@@ -181,63 +178,4 @@ export function* prefetchForPlaneMode(
     previousProperties.lastDirection = direction;
     previousProperties.lastBucketPickerTick = currentBucketPickerTick;
   }
-}
-export function* prefetchForFlightMode(
-  layer: DataLayer,
-  previousProperties: Record<string, any>,
-): Saga<void> {
-  const position = yield* select((state) => getPosition(state.flycam));
-  const matrix = yield* select((state) => state.flycam.currentMatrix);
-  const zoomStep = yield* select((state) => getActiveMagIndexForLayer(state, layer.name));
-  const tracingTypes = yield* select(getTracingTypes);
-  const magInfo = getMagInfo(layer.mags);
-  const mags = magInfo.getDenseMags();
-  const layerRenderingManager = yield* call(
-    [Model, Model.getLayerRenderingManagerByName],
-    layer.name,
-  );
-  const { currentBucketPickerTick } = layerRenderingManager;
-  const { lastMatrix, lastZoomStep, lastBucketPickerTick } = previousProperties;
-  const { pullQueue, cube } = Model.dataLayers[layer.name];
-  const lastConnectionStats = getGlobalDataConnectionInfo().lastStats;
-  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-
-  if (
-    currentBucketPickerTick !== lastBucketPickerTick &&
-    (matrix !== lastMatrix || zoomStep !== lastZoomStep)
-  ) {
-    for (const strategy of prefetchStrategiesFlight) {
-      if (
-        strategy.forContentType(tracingTypes) &&
-        strategy.inVelocityRange(lastConnectionStats.avgDownloadSpeedInBytesPerS) &&
-        strategy.inRoundTripTimeRange(lastConnectionStats.avgRoundTripTime)
-      ) {
-        const buckets = strategy.prefetch(
-          matrix,
-          zoomStep,
-          position,
-          mags,
-          magInfo,
-          additionalCoordinates,
-        );
-
-        if (WkDevFlags.bucketDebugging.visualizePrefetchedBuckets) {
-          for (const item of buckets) {
-            const bucket = cube.getOrCreateBucket(item.bucket);
-
-            if (bucket.type !== "null") {
-              bucket.visualize();
-            }
-          }
-        }
-        pullQueue.addAll(buckets);
-        break;
-      }
-    }
-  }
-
-  pullQueue.pull();
-  previousProperties.lastMatrix = matrix;
-  previousProperties.lastZoomStep = zoomStep;
-  previousProperties.lastBucketPickerTick = currentBucketPickerTick;
 }

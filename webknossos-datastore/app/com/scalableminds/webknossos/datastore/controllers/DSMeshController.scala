@@ -70,7 +70,7 @@ class DSMeshController @Inject() (
             mappingNameForMeshFile,
             omitMissing = false
           )
-          chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(meshFileKey, segmentIds)
+          chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(meshFileKey, segmentIds, targetMappingName)
           // Clients only use segmentIdsWithoutMesh to cache the chunk lists of unmapped segments while proofreading.
           isProofreadingWithUnmappedMeshFile = editableMappingTracingId.isDefined && mappingNameForMeshFile.isEmpty
         } yield Ok(
@@ -99,6 +99,7 @@ class DSMeshController @Inject() (
           chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(
             meshFileKey,
             segmentIds,
+            dataOrderMappingName = None,
             failOnZeroChunks = false
           )
         } yield Ok(Json.toJson(chunkInfos))

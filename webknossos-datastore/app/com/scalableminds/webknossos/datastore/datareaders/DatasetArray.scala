@@ -342,6 +342,13 @@ class DatasetArray(
     builder.toString
   }
 
+  // Reads whole chunks, typed and in the order of chunkIndices, with at most maxParallelReads reads at a time.
+  def readChunks(chunkIndices: Seq[Array[Long]], maxParallelReads: Int)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[MultiArray]] =
+    Fox.batchCombined(chunkIndices, maxParallelReads)(getSourceChunkDataWithCache(_))
+
   private def getSourceChunkDataWithCache(chunkIndex: Array[Long], useSkipTypingShortcut: Boolean = false)(using
       ec: ExecutionContext,
       tc: TokenContext

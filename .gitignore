@@ -129,6 +129,7 @@ tsconfig.tsbuildinfo
 diffy-report.html
 
 local.sbt
+.zed/debug.json
 
 # Generated documentation screenshot review
 .docs-screenshots/

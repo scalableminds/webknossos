@@ -1,0 +1,260 @@
+//! Read callbacks from WKRemoteTracingStoreController. A tracing-store key
+//! grants global access; the caller's path name is informational.
+use super::remote_tracingstore_dao;
+use axum::{
+    Json, Router,
+    extract::{FromRequestParts, State},
+    http::{StatusCode, request::Parts},
+    response::{IntoResponse, Response},
+    routing::get,
+};
+use serde::Deserialize;
+use serde_json::Value;
+
+use crate::{
+    AppState,
+    annotation::provider::{AccessContext, AnnotationProvider, AnnotationType},
+    error::{ApiError, ApiResult},
+    extract::{Path, Query},
+    util::id::{ObjectId, PathObjectId},
+};
+
+pub fn router() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/tracingstores/{name}/dataSource",
+            get(data_source_for_annotation),
+        )
+        .route(
+            "/tracingstores/{name}/datasetId",
+            get(dataset_id_for_annotation),
+        )
+        .route(
+            "/tracingstores/{name}/annotationId",
+            get(annotation_id_for_tracing),
+        )
+        .route(
+            "/tracingstores/{name}/dataStoreUri/{datasetId}",
+            get(data_store_uri_for_dataset),
+        )
+        .route(
+            "/tracingstores/{name}/datasources/{datasetId}",
+            get(get_data_source),
+        )
+}
+
+/// Shared service authentication for tracing-store callbacks. Put this after
+/// route-specific binding and before reading any request body.
+pub(crate) struct ValidatedTracingStore;
+
+#[derive(Deserialize)]
+struct KeyQuery {
+    key: String,
+}
+
+impl FromRequestParts<AppState> for ValidatedTracingStore {
+    type Rejection = Response;
+
+    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Response> {
+        let Query(query) = Query::<KeyQuery>::from_request_parts(parts, state)
+            .await
+            .map_err(IntoResponse::into_response)?;
+        validate_key(&state.pool, &query.key)
+            .await
+            .map_err(IntoResponse::into_response)?;
+        Ok(Self)
+    }
+}
+
+/// Also usable after protobuf body parsing to preserve Play's parser ordering.
+pub(crate) enum CallbackError {
+    Api(ApiError),
+    Plain(StatusCode, &'static str),
+}
+
+impl From<ApiError> for CallbackError {
+    fn from(error: ApiError) -> Self {
+        Self::Api(error)
+    }
+}
+
+impl From<sqlx::Error> for CallbackError {
+    fn from(error: sqlx::Error) -> Self {
+        Self::Api(error.into())
+    }
+}
+
+impl IntoResponse for CallbackError {
+    fn into_response(self) -> Response {
+        match self {
+            Self::Api(error) => error.into_response(),
+            Self::Plain(status, message) => (status, message).into_response(),
+        }
+    }
+}
+
+pub(crate) async fn validate_key(pool: &sqlx::PgPool, key: &str) -> Result<(), CallbackError> {
+    let valid = remote_tracingstore_dao::key_is_valid(pool, key).await?;
+    if valid {
+        Ok(())
+    } else {
+        Err(CallbackError::Plain(
+            StatusCode::FORBIDDEN,
+            crate::msg::tracing_store::NOT_FOUND,
+        ))
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AnnotationQuery {
+    annotation_id: ObjectId,
+}
+
+async fn annotation_dataset(
+    state: &AppState,
+    provider: &AnnotationProvider,
+    annotation_id: &ObjectId,
+) -> ApiResult<ObjectId> {
+    let annotation = provider
+        .provide_saved(AccessContext::global(None), annotation_id)
+        .await
+        .map_err(|error| error.into_api_error(StatusCode::BAD_REQUEST))?;
+    let exists =
+        remote_tracingstore_dao::dataset_exists(&state.pool, &annotation.dataset_id).await?;
+    if !exists {
+        return Err(ApiError::bad_request(
+            crate::msg::dataset::not_found_for_annotation(&annotation.dataset_id, annotation_id),
+        ));
+    }
+    Ok(annotation.dataset_id)
+}
+
+async fn data_source_for_annotation(
+    State(state): State<AppState>,
+    Query(query): Query<AnnotationQuery>,
+    _store: ValidatedTracingStore,
+    State(provider): State<AnnotationProvider>,
+) -> ApiResult<Json<Value>> {
+    if let Some(temporary) = provider.data_sources().find(&query.annotation_id) {
+        return Ok(Json(temporary.data_source));
+    }
+    let dataset_id = annotation_dataset(&state, &provider, &query.annotation_id).await?;
+    Ok(Json(data_source(&state, &dataset_id).await?))
+}
+
+async fn dataset_id_for_annotation(
+    State(state): State<AppState>,
+    Query(query): Query<AnnotationQuery>,
+    _store: ValidatedTracingStore,
+    State(provider): State<AnnotationProvider>,
+) -> ApiResult<Json<ObjectId>> {
+    if let Some(temporary) = provider.data_sources().find(&query.annotation_id) {
+        return Ok(Json(temporary.dataset_id));
+    }
+    Ok(Json(
+        annotation_dataset(&state, &provider, &query.annotation_id).await?,
+    ))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TracingQuery {
+    tracing_id: String,
+}
+
+async fn annotation_id_for_tracing(
+    State(state): State<AppState>,
+    Query(query): Query<TracingQuery>,
+    _store: ValidatedTracingStore,
+    State(provider): State<AnnotationProvider>,
+) -> ApiResult<Json<ObjectId>> {
+    if query.tracing_id == "dummyTracingId" {
+        return Ok(Json(ObjectId::dummy()));
+    }
+    // AnnotationInformationProvider shifts the saved lookup's Box and falls
+    // back to the existing compound cache on Empty or Failure. Never merge.
+    let saved_id =
+        remote_tracingstore_dao::find_annotation_id_for_tracing(&state.pool, &query.tracing_id)
+            .await
+            .ok()
+            .flatten();
+    if let Some(id) = saved_id
+        && let Ok(Some(annotation)) =
+            crate::annotation::access::find_optional(&state.pool, None, &id, true).await
+        && annotation.annotation_type.parse::<AnnotationType>().is_ok()
+        && matches!(
+            annotation.state.as_str(),
+            "Active" | "Finished" | "Cancelled" | "Initializing"
+        )
+        && matches!(
+            annotation.visibility.as_str(),
+            "Private" | "Internal" | "Public"
+        )
+        && matches!(
+            annotation.collaboration_mode.as_str(),
+            "OwnerOnly" | "Exclusive" | "Concurrent"
+        )
+        && let Ok(false) =
+            remote_tracingstore_dao::has_unreadable_layer(&state.pool, &annotation.id).await
+    {
+        return Ok(Json(annotation.id));
+    }
+    if let Some(compound) = provider.find_cached_by_tracing_id(&query.tracing_id) {
+        return Ok(Json(compound.id));
+    }
+    Err(ApiError::bad_request(format!(
+        "No annotation for tracing {}",
+        query.tracing_id
+    )))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DatasetPath {
+    dataset_id: PathObjectId,
+}
+
+async fn require_dataset(state: &AppState, dataset_id: &ObjectId) -> ApiResult<()> {
+    let exists = remote_tracingstore_dao::dataset_exists(&state.pool, dataset_id).await?;
+    if !exists {
+        return Err(ApiError::not_found(crate::msg::dataset::not_found(
+            dataset_id,
+        )));
+    }
+    Ok(())
+}
+
+async fn data_source(state: &AppState, dataset_id: &ObjectId) -> ApiResult<Value> {
+    let missing_voxel =
+        remote_tracingstore_dao::is_usable_without_voxel_size(&state.pool, dataset_id).await?;
+    if missing_voxel {
+        return Err(ApiError::bad_request(
+            crate::msg::dataset::data_source::USABLE_BUT_NO_VOXEL_SIZE,
+        ));
+    }
+    crate::dataset::routes::data_source_for_rpc(&state.pool, dataset_id, true).await
+}
+
+async fn data_store_uri_for_dataset(
+    State(state): State<AppState>,
+    Path(path): Path<DatasetPath>,
+    _store: ValidatedTracingStore,
+) -> ApiResult<Json<String>> {
+    require_dataset(&state, &path.dataset_id).await?;
+    let url =
+        remote_tracingstore_dao::find_data_store_url_for_dataset(&state.pool, &path.dataset_id)
+            .await?;
+    Ok(Json(url.ok_or_else(|| {
+        ApiError::bad_request(crate::msg::data_store::NOT_FOUND)
+    })?))
+}
+
+async fn get_data_source(
+    State(state): State<AppState>,
+    Path(path): Path<DatasetPath>,
+    _store: ValidatedTracingStore,
+) -> ApiResult<Json<Value>> {
+    require_dataset(&state, &path.dataset_id).await?;
+    Ok(Json(data_source(&state, &path.dataset_id).await?))
+}

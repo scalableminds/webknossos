@@ -1,0 +1,85 @@
+{
+  "id" : {
+    "name" : "full",
+    "team" : "sample_organization"
+  },
+  "dataLayers" : [ {
+    "category" : "segmentation",
+    "name" : "segmentation",
+    "dataFormat" : "zarr3",
+    "boundingBox" : {
+      "topLeft" : [ 10, 20, 30 ],
+      "width" : 100,
+      "height" : 200,
+      "depth" : 300
+    },
+    "elementClass" : "uint64",
+    "mags" : [ {
+      "mag" : [ 1, 1, 1 ],
+      "path" : "s3://bucket/ds/segmentation/1",
+      "axisOrder" : {
+        "x" : 1,
+        "y" : 2,
+        "z" : 3,
+        "c" : 0
+      },
+      "credentialId" : "6a0000000000000000000001"
+    }, {
+      "mag" : [ 2, 2, 2 ],
+      "path" : "./segmentation/2",
+      "channelIndex" : 0
+    }, {
+      "mag" : [ 4, 4, 2 ],
+      "path" : "./segmentation.zip|zip:4-4-2"
+    } ],
+    "defaultViewConfiguration" : {
+      "alpha" : 50,
+      "nested" : {
+        "x" : 1.5
+      }
+    },
+    "adminViewConfiguration" : {
+      "largestSegmentId" : 7
+    },
+    "coordinateTransformations" : [ {
+      "type" : "affine",
+      "matrix" : [ [ 1, 0, 0, 10 ], [ 0, 1, 0, 0 ], [ 0, 0, 1, 0 ], [ 0, 0, 0, 1 ] ]
+    } ],
+    "additionalAxes" : [ {
+      "name" : "t",
+      "bounds" : [ 0, 10 ],
+      "index" : 0
+    } ],
+    "attachments" : {
+      "meshes" : [ {
+        "name" : "meshfile",
+        "path" : "./meshes/meshfile.hdf5",
+        "dataFormat" : "hdf5"
+      } ],
+      "agglomerates" : [ ],
+      "segmentIndex" : {
+        "name" : "segmentIndex",
+        "path" : "gs://bucket/idx/",
+        "dataFormat" : "zarr3",
+        "credentialId" : "c1"
+      },
+      "connectomes" : [ ],
+      "cumsum" : {
+        "name" : "cumsum",
+        "path" : "./agglomerates/cumsum.json",
+        "dataFormat" : "json"
+      }
+    },
+    "mappings" : [ "m" ],
+    "largestSegmentId" : {
+      "customJsonEncoding" : "bigint",
+      "value" : "18446744073709551615"
+    },
+    "numChannels" : 1
+  } ],
+  "scale" : {
+    "factor" : [ 4, 4.5, 35 ],
+    "unit" : "micrometer"
+  },
+  "statusOpt" : "ok"
+}

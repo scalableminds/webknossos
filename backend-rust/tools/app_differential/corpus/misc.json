@@ -1,0 +1,636 @@
+{
+ "version": 1,
+ "description": "Credit transactions (add, refund, revoke, list), analytics ingestion and tracking, help email, email verification (via the seeded key), ad-hoc maintenance, the initial-data trigger, and the materialize/mitochondria job submissions.",
+ "header_divergences": {
+  "cache-control": "Rust sends `Cache-Control: no-store` on every API response (README: cache prevention); Play sends `no-cache` on most and nothing on auth errors. Play sends no validators (ETag/Last-Modified), so both force a refetch; no-store additionally forbids storage. Deliberate."
+ },
+ "drop_play_chain_messages": "Play appends {\"chain\": \"[Server Time \u2026] \u2026\"} to messages of failed Fox chains (debug context with the server time). Rust returns only the error entry; the frontend shows `error` entries.",
+ "unordered_keys": {
+  "annotationLayers": "Play's AnnotationLayerDAO orders layers by tracingId, a random UUID per side.",
+  "tags": "Scala Set semantics (annotation.tags ++ Set(dataset.name)); hash order for more than four tags.",
+  "jobsSupportedByAvailableWorkers": "DataStoreService.publicWrites serializes JobService.jobsSupportedByAvailableWorkers, a Scala Set (hash order); Rust sorts.",
+  "supportedJobCommands": "Worker.supportedJobCommands is a Scala Set (hash order); Rust keeps the stored order."
+ },
+ "side_rewrites": {
+  "rust": {
+   "http://127.0.0.1:19595": "http://127.0.0.1:19590",
+   "http://127.0.0.1:19596": "http://127.0.0.1:19590",
+   "/tmp/wk-diff/rust-data/": "/tmp/wk-diff/play-data/"
+  }
+ },
+ "db_random_columns": {
+  "tokens.value": "random token values",
+  "emailverificationkeys.key": "random verification key (requestVerificationMail)"
+ },
+ "identities": {
+  "admin": {
+   "token": "secretSampleUserToken"
+  },
+  "user2": {
+   "cookie": "{user2Cookie}"
+  }
+ },
+ "steps": [
+  {
+   "name": "user2-login",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "sample2@scm.io",
+    "password": "secret"
+   },
+   "capture_cookie": {
+    "user2Cookie": "id"
+   }
+  },
+  {
+   "name": "credits-list-before",
+   "method": "GET",
+   "path": "/api/creditTransactions",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "credits-list-user2",
+   "method": "GET",
+   "path": "/api/creditTransactions",
+   "as": "user2"
+  },
+  {
+   "name": "add-credits-user2",
+   "method": "POST",
+   "path": "/api/creditTransactions/addCredits",
+   "as": "user2",
+   "query": {
+    "organizationId": "sample_organization",
+    "creditAmount": "10",
+    "moneySpent": "5",
+    "currency": "EUR"
+   }
+  },
+  {
+   "name": "add-credits-negative-money",
+   "method": "POST",
+   "path": "/api/creditTransactions/addCredits",
+   "as": "admin",
+   "query": {
+    "organizationId": "sample_organization",
+    "creditAmount": "10",
+    "moneySpent": "-5",
+    "currency": "EUR"
+   }
+  },
+  {
+   "name": "add-credits-zero",
+   "method": "POST",
+   "path": "/api/creditTransactions/addCredits",
+   "as": "admin",
+   "query": {
+    "organizationId": "sample_organization",
+    "creditAmount": "0",
+    "moneySpent": "5",
+    "currency": "EUR"
+   }
+  },
+  {
+   "name": "add-credits-money-not-a-number",
+   "method": "POST",
+   "path": "/api/creditTransactions/addCredits",
+   "as": "admin",
+   "query": {
+    "organizationId": "sample_organization",
+    "creditAmount": "10",
+    "moneySpent": "lots",
+    "currency": "EUR"
+   }
+  },
+  {
+   "name": "add-credits-expired",
+   "method": "POST",
+   "path": "/api/creditTransactions/addCredits",
+   "as": "admin",
+   "query": {
+    "organizationId": "sample_organization",
+    "creditAmount": "10",
+    "moneySpent": "5",
+    "currency": "EUR",
+    "expiresAt": "2020-01-01T00:00:00Z"
+   }
+  },
+  {
+   "name": "add-credits-bad-expiry",
+   "method": "POST",
+   "path": "/api/creditTransactions/addCredits",
+   "as": "admin",
+   "query": {
+    "organizationId": "sample_organization",
+    "creditAmount": "10",
+    "moneySpent": "5",
+    "currency": "EUR",
+    "expiresAt": "soon"
+   }
+  },
+  {
+   "name": "add-credits-unknown-orga",
+   "method": "POST",
+   "path": "/api/creditTransactions/addCredits",
+   "as": "admin",
+   "query": {
+    "organizationId": "nope",
+    "creditAmount": "10",
+    "moneySpent": "5",
+    "currency": "EUR"
+   }
+  },
+  {
+   "name": "add-credits-missing-param",
+   "method": "POST",
+   "path": "/api/creditTransactions/addCredits",
+   "as": "admin",
+   "query": {
+    "organizationId": "sample_organization",
+    "creditAmount": "10"
+   },
+   "expected_divergence": {
+    "reason": "Router-level parameter binding error (missing query parameter): Play answers its HTML error page, Rust JSON {\"messages\":[\u2026]}; same status (declared category, CUTOVER.md \u00a71).",
+    "paths": [
+     "$"
+    ],
+    "headers": [
+     "content-type"
+    ]
+   }
+  },
+  {
+   "name": "add-credits",
+   "method": "POST",
+   "path": "/api/creditTransactions/addCredits",
+   "as": "admin",
+   "query": {
+    "organizationId": "sample_organization",
+    "creditAmount": "25",
+    "moneySpent": "12.50",
+    "currency": "EUR",
+    "comment": "diff purchase",
+    "expiresAt": "2099-01-01T00:00:00Z"
+   }
+  },
+  {
+   "name": "add-credits-no-expiry",
+   "method": "POST",
+   "path": "/api/creditTransactions/addCredits",
+   "as": "admin",
+   "query": {
+    "organizationId": "sample_organization",
+    "creditAmount": "3",
+    "moneySpent": "0",
+    "currency": "USD"
+   }
+  },
+  {
+   "name": "credits-list",
+   "method": "GET",
+   "path": "/api/creditTransactions",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ],
+   "capture": {
+    "purchaseId": "$[?comment=diff purchase].id"
+   }
+  },
+  {
+   "name": "organization-balance",
+   "method": "GET",
+   "path": "/api/organizations/sample_organization",
+   "as": "admin"
+  },
+  {
+   "name": "refund-user2",
+   "method": "PATCH",
+   "path": "/api/creditTransactions/0123456789abcdef01234567",
+   "as": "user2",
+   "query": {
+    "organizationId": "sample_organization"
+   }
+  },
+  {
+   "name": "refund-other-orga",
+   "method": "PATCH",
+   "path": "/api/creditTransactions/{purchaseId}",
+   "as": "admin",
+   "query": {
+    "organizationId": "nope"
+   }
+  },
+  {
+   "name": "refund",
+   "method": "PATCH",
+   "path": "/api/creditTransactions/{purchaseId}",
+   "as": "admin",
+   "query": {
+    "organizationId": "sample_organization"
+   }
+  },
+  {
+   "name": "refund-again",
+   "method": "PATCH",
+   "path": "/api/creditTransactions/{purchaseId}",
+   "as": "admin",
+   "query": {
+    "organizationId": "sample_organization"
+   }
+  },
+  {
+   "name": "refund-missing",
+   "method": "PATCH",
+   "path": "/api/creditTransactions/0123456789abcdef01234567",
+   "as": "admin",
+   "query": {
+    "organizationId": "sample_organization"
+   }
+  },
+  {
+   "name": "revoke-expired-user2",
+   "method": "GET",
+   "path": "/api/maintenance/revokeExpiredCredits",
+   "as": "user2"
+  },
+  {
+   "name": "revoke-expired",
+   "method": "GET",
+   "path": "/api/maintenance/revokeExpiredCredits",
+   "as": "admin"
+  },
+  {
+   "name": "credits-list-after-revoke",
+   "method": "GET",
+   "path": "/api/creditTransactions",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "analytics-ingest-disabled",
+   "method": "POST",
+   "path": "/api/analytics/ingest",
+   "json": {
+    "events": [],
+    "apiKey": "x"
+   }
+  },
+  {
+   "name": "analytics-ingest-invalid",
+   "method": "POST",
+   "path": "/api/analytics/ingest",
+   "json": {
+    "events": 1
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "analytics-track",
+   "method": "POST",
+   "path": "/api/analytics/diff_event",
+   "as": "admin",
+   "json": {
+    "some": "property"
+   }
+  },
+  {
+   "name": "analytics-track-anonymous",
+   "method": "POST",
+   "path": "/api/analytics/diff_event",
+   "json": {
+    "some": "property"
+   }
+  },
+  {
+   "name": "analytics-track-invalid",
+   "method": "POST",
+   "path": "/api/analytics/diff_event",
+   "as": "admin",
+   "json": [
+    1
+   ],
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "help-email",
+   "method": "POST",
+   "path": "/api/helpEmail",
+   "as": "admin",
+   "json": {
+    "message": "Diff help",
+    "currentUrl": "http://localhost/dashboard"
+   }
+  },
+  {
+   "name": "help-email-anonymous",
+   "method": "POST",
+   "path": "/api/helpEmail",
+   "json": {
+    "message": "Diff help",
+    "currentUrl": "x"
+   }
+  },
+  {
+   "name": "help-email-invalid",
+   "method": "POST",
+   "path": "/api/helpEmail",
+   "as": "admin",
+   "json": {
+    "msg": "x"
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "verify-email-request",
+   "method": "POST",
+   "path": "/api/verifyEmail",
+   "as": "user2"
+  },
+  {
+   "name": "verify-email-request-anonymous",
+   "method": "POST",
+   "path": "/api/verifyEmail"
+  },
+  {
+   "name": "verify-email-unknown-key",
+   "method": "POST",
+   "path": "/api/verifyEmail/nope"
+  },
+  {
+   "name": "verify-email",
+   "method": "POST",
+   "path": "/api/verifyEmail/diffVerificationKey"
+  },
+  {
+   "name": "verify-email-again",
+   "method": "POST",
+   "path": "/api/verifyEmail/diffVerificationKey"
+  },
+  {
+   "name": "user2-after-verify",
+   "method": "GET",
+   "path": "/api/user",
+   "as": "user2",
+   "ignore": [
+    {
+     "path": "$.lastActivity",
+     "reason": "Play serves lastActivity from its user cache (see read.json)"
+    }
+   ]
+  },
+  {
+   "name": "adhoc-maintenance-user2",
+   "method": "POST",
+   "path": "/api/maintenances/adHoc",
+   "as": "user2"
+  },
+  {
+   "name": "adhoc-maintenance",
+   "method": "POST",
+   "path": "/api/maintenances/adHoc",
+   "as": "admin",
+   "capture": {
+    "adHocId": "$.id"
+   }
+  },
+  {
+   "name": "maintenances-current",
+   "method": "GET",
+   "path": "/api/maintenances/listCurrentAndUpcoming"
+  },
+  {
+   "name": "adhoc-maintenance-delete",
+   "method": "DELETE",
+   "path": "/api/maintenances/{adHocId}",
+   "as": "admin"
+  },
+  {
+   "name": "initial-data-trigger",
+   "method": "POST",
+   "path": "/api/triggers/initialData"
+  },
+  {
+   "name": "organizations-after-trigger",
+   "method": "GET",
+   "path": "/api/organizations/default"
+  },
+  {
+   "name": "create-volume",
+   "method": "POST",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/createExplorational",
+   "as": "admin",
+   "json": [
+    {
+     "typ": "Volume",
+     "name": "Volume",
+     "fallbackLayerName": "segmentation",
+     "autoFallbackLayer": false
+    }
+   ],
+   "capture": {
+    "volumeAnnId": "$.id"
+   }
+  },
+  {
+   "name": "run-materialize",
+   "method": "POST",
+   "path": "/api/jobs/run/materializeVolumeAnnotation/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "query": {
+    "fallbackLayerName": "segmentation",
+    "annotationId": "{volumeAnnId}",
+    "annotationType": "Explorational",
+    "newDatasetName": "diff-materialized",
+    "outputSegmentationLayerName": "seg_out",
+    "mergeSegments": "true",
+    "volumeLayerName": "Volume",
+    "includesEditableMapping": "false"
+   }
+  },
+  {
+   "name": "run-materialize-bbox",
+   "method": "POST",
+   "path": "/api/jobs/run/materializeVolumeAnnotation/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "query": {
+    "fallbackLayerName": "segmentation",
+    "annotationId": "{volumeAnnId}",
+    "annotationType": "Explorational",
+    "newDatasetName": "diff-materialized-2",
+    "outputSegmentationLayerName": "seg_out",
+    "mergeSegments": "false",
+    "includesEditableMapping": "false",
+    "boundingBox": "0,0,0,32,32,32"
+   }
+  },
+  {
+   "name": "run-materialize-bad-bbox",
+   "method": "POST",
+   "path": "/api/jobs/run/materializeVolumeAnnotation/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "query": {
+    "fallbackLayerName": "segmentation",
+    "annotationId": "{volumeAnnId}",
+    "annotationType": "Explorational",
+    "newDatasetName": "diff-materialized-3",
+    "outputSegmentationLayerName": "seg_out",
+    "mergeSegments": "false",
+    "includesEditableMapping": "false",
+    "boundingBox": "0,0"
+   }
+  },
+  {
+   "name": "run-materialize-user2",
+   "method": "POST",
+   "path": "/api/jobs/run/materializeVolumeAnnotation/68b80290d4000090f8f4aa62",
+   "as": "user2",
+   "query": {
+    "fallbackLayerName": "segmentation",
+    "annotationId": "{volumeAnnId}",
+    "annotationType": "Explorational",
+    "newDatasetName": "diff-materialized-4",
+    "outputSegmentationLayerName": "seg_out",
+    "mergeSegments": "false",
+    "includesEditableMapping": "false"
+   }
+  },
+  {
+   "name": "run-materialize-missing-dataset",
+   "method": "POST",
+   "path": "/api/jobs/run/materializeVolumeAnnotation/0123456789abcdef01234567",
+   "as": "admin",
+   "query": {
+    "fallbackLayerName": "segmentation",
+    "annotationId": "{volumeAnnId}",
+    "annotationType": "Explorational",
+    "newDatasetName": "diff-materialized-5",
+    "outputSegmentationLayerName": "seg_out",
+    "mergeSegments": "false",
+    "includesEditableMapping": "false"
+   }
+  },
+  {
+   "name": "run-mitochondria",
+   "method": "POST",
+   "path": "/api/jobs/run/inferMitochondria/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "query": {
+    "layerName": "color",
+    "bbox": "0,0,0,64,64,64",
+    "newDatasetName": "diff-mito"
+   }
+  },
+  {
+   "name": "run-mitochondria-bad-bbox",
+   "method": "POST",
+   "path": "/api/jobs/run/inferMitochondria/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "query": {
+    "layerName": "color",
+    "bbox": "nope",
+    "newDatasetName": "diff-mito-2"
+   }
+  },
+  {
+   "name": "run-mitochondria-bad-name",
+   "method": "POST",
+   "path": "/api/jobs/run/inferMitochondria/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "query": {
+    "layerName": "color",
+    "bbox": "0,0,0,64,64,64",
+    "newDatasetName": "a/b"
+   }
+  },
+  {
+   "name": "run-mitochondria-user2",
+   "method": "POST",
+   "path": "/api/jobs/run/inferMitochondria/68b80290d4000090f8f4aa62",
+   "as": "user2",
+   "query": {
+    "layerName": "color",
+    "bbox": "0,0,0,64,64,64",
+    "newDatasetName": "diff-mito-3"
+   }
+  },
+  {
+   "name": "jobs-list",
+   "method": "GET",
+   "path": "/api/jobs",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "credits-list-after-jobs",
+   "method": "GET",
+   "path": "/api/creditTransactions",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ],
+   "capture": {
+    "jobChargeId": "$[?comment^=Run for AI mitochondria segmentation].id"
+   }
+  },
+  {
+   "name": "refund-job-charge",
+   "method": "PATCH",
+   "path": "/api/creditTransactions/{jobChargeId}",
+   "as": "admin",
+   "query": {
+    "organizationId": "sample_organization"
+   }
+  },
+  {
+   "name": "refund-job-charge-again",
+   "method": "PATCH",
+   "path": "/api/creditTransactions/{jobChargeId}",
+   "as": "admin",
+   "query": {
+    "organizationId": "sample_organization"
+   }
+  },
+  {
+   "name": "credits-list-after-refund",
+   "method": "GET",
+   "path": "/api/creditTransactions",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "organization-balance-after-refund",
+   "method": "GET",
+   "path": "/api/organizations/sample_organization",
+   "as": "admin"
+  }
+ ]
+}

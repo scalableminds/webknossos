@@ -1,0 +1,1 @@
+{"lod_scale_multiplier": 1.0, "transform": [2.5, 0.5, 1.0, 10.0, 0.25, 0.75, 0.5, 20.0, 1.0, 0.5, 4.0, 30.0], "sharding": {"@type": "neuroglancer_uint64_sharded_v1", "preshift_bits": 0, "hash": "identity", "minishard_bits": 0, "shard_bits": 0, "minishard_index_encoding": "raw", "data_encoding": "raw"}, "vertex_quantization_bits": 10}

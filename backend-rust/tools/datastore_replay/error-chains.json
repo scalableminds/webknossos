@@ -1,0 +1,372 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "broken-data-post",
+      "path": "/data/datasets/000000bad000000000000404/layers/color/data",
+      "method": "POST",
+      "json": [
+        {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "mag": [
+            1,
+            1,
+            1
+          ],
+          "cubeSize": 32
+        }
+      ],
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-data-get",
+      "path": "/data/datasets/000000bad000000000000404/layers/color/data",
+      "query": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "width": 8,
+        "height": 8,
+        "depth": 8,
+        "mag": "1-1-1"
+      },
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-read-data",
+      "path": "/data/datasets/000000bad000000000000404/layers/color/readData",
+      "method": "POST",
+      "json": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "mag": [
+          1,
+          1,
+          1
+        ],
+        "cubeSize": [
+          8,
+          8,
+          8
+        ]
+      },
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-knossos-bucket",
+      "path": "/data/datasets/000000bad000000000000404/layers/color/mag1/x0/y0/z0/bucket.raw",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 400
+    },
+    {
+      "name": "broken-find-data",
+      "path": "/data/datasets/000000bad000000000000404/layers/color/findData",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-histogram",
+      "path": "/data/datasets/000000bad000000000000404/layers/color/histogram",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-mapping-json",
+      "path": "/data/datasets/000000bad000000000000404/layers/color/mappings/m",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-mappings",
+      "path": "/data/datasets/000000bad000000000000404/layers/color/mappings",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-agglomerates",
+      "path": "/data/datasets/000000bad000000000000404/layers/color/agglomerates",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-connectomes",
+      "path": "/data/datasets/000000bad000000000000404/layers/color/connectomes",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-meshes",
+      "path": "/data/datasets/000000bad000000000000404/layers/color/meshes",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-has-segment-index",
+      "path": "/data/datasets/000000bad000000000000404/layers/color/hasSegmentIndex",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-segment-statistics-file",
+      "path": "/data/datasets/000000bad000000000000404/layers/color/segmentStatisticsFile",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-proxy-datasource",
+      "path": "/data/datasets/000000bad000000000000404/proxy/datasource-properties.json",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-proxy-mag",
+      "path": "/data/datasets/000000bad000000000000404/proxy/layers/color/mags/1/0.0.0",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-zarr-datasource",
+      "path": "/data/zarr/000000bad000000000000404/datasource-properties.json",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-zarr-directory",
+      "path": "/data/zarr/000000bad000000000000404",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-zarr-zarray",
+      "path": "/data/zarr/000000bad000000000000404/color/1/.zarray",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "broken-zarr-cube",
+      "path": "/data/zarr/000000bad000000000000404/color/1/0.0.0",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 503
+    },
+    {
+      "name": "broken-zarr3-layer-json",
+      "path": "/data/zarr3/000000bad000000000000404/color/zarr.json",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "annotation-unknown-datasource",
+      "path": "/data/annotations/zarr/no-such-link/datasource-properties.json",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "annotation-unknown-directory",
+      "path": "/data/annotations/zarr3/no-such-link",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "annotation-unknown-cube",
+      "path": "/data/annotations/zarr/no-such-link/color/1/0.0.0",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "missing-layer-mappings",
+      "path": "/data/datasets/{dataset}/layers/nope/mappings",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 400
+    },
+    {
+      "name": "missing-layer-meshes",
+      "path": "/data/datasets/{dataset}/layers/nope/meshes",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "missing-layer-has-segment-index",
+      "path": "/data/datasets/{dataset}/layers/nope/hasSegmentIndex",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "missing-layer-zarr-cube",
+      "path": "/data/zarr/{dataset}/nope/1/0.0.0",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 503
+    },
+    {
+      "name": "zarr-cube-invalid-mag",
+      "path": "/data/zarr/{dataset}/{layer}/x/0.0.0",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "zarr-cube-unknown-mag",
+      "path": "/data/zarr/{dataset}/{layer}/16/0.0.0",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "zarr-cube-invalid-coordinates",
+      "path": "/data/zarr/{dataset}/{layer}/1/a.b.c",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "annotation-forbidden-link-directory",
+      "path": "/data/annotations/zarr/forbidden-link",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 403
+    },
+    {
+      "name": "annotation-forbidden-link-datasource",
+      "path": "/data/annotations/zarr/forbidden-link/datasource-properties.json",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "annotation-forbidden-link-cube",
+      "path": "/data/annotations/zarr/forbidden-link/color/1/0.0.0",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "annotation-bad-link-directory",
+      "path": "/data/annotations/zarr/bad-link",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 400
+    },
+    {
+      "name": "annotation-bad-link-datasource",
+      "path": "/data/annotations/zarr/bad-link/datasource-properties.json",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    },
+    {
+      "name": "annotation-bad-link-cube",
+      "path": "/data/annotations/zarr/bad-link/color/1/0.0.0",
+      "compare": "auto",
+      "query_env": {
+        "token": "WK_REPLAY_TOKEN"
+      },
+      "expected_status": 404
+    }
+  ]
+}

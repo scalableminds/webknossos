@@ -1,0 +1,3001 @@
+{
+ "version": 1,
+ "description": "Store callbacks called directly the way the datastore/tracingstore call them (`?key=` store credentials, user tokens as `token`): status, data source reports, upload reservations/reports, deletion, job export, credentials, user access checks, tracingstore annotation callbacks; plus datastore/tracingstore administration.",
+ "header_divergences": {
+  "cache-control": "Rust sends `Cache-Control: no-store` on every API response (README: cache prevention); Play sends `no-cache` on most and nothing on auth errors. Play sends no validators (ETag/Last-Modified), so both force a refetch; no-store additionally forbids storage. Deliberate."
+ },
+ "drop_play_chain_messages": "Play appends {\"chain\": \"[Server Time \u2026] \u2026\"} to messages of failed Fox chains (debug context with the server time). Rust returns only the error entry; the frontend shows `error` entries.",
+ "unordered_keys": {
+  "annotationLayers": "Play's AnnotationLayerDAO orders layers by tracingId, a random UUID per side.",
+  "tags": "Scala Set semantics (annotation.tags ++ Set(dataset.name)); hash order for more than four tags.",
+  "jobsSupportedByAvailableWorkers": "DataStoreService.publicWrites serializes JobService.jobsSupportedByAvailableWorkers, a Scala Set (hash order); Rust sorts.",
+  "supportedJobCommands": "Worker.supportedJobCommands is a Scala Set (hash order); Rust keeps the stored order."
+ },
+ "side_rewrites": {
+  "rust": {
+   "http://127.0.0.1:19595": "http://127.0.0.1:19590",
+   "http://127.0.0.1:19596": "http://127.0.0.1:19590",
+   "/tmp/wk-diff/rust-data/": "/tmp/wk-diff/play-data/"
+  }
+ },
+ "db_random_columns": {
+  "tokens.value": "random token values (Job tokens minted for the export job's worker run)"
+ },
+ "side_variables": {
+  "play": {
+   "ownDataStoreUrl": "http://127.0.0.1:19590",
+   "ownTracingStoreUrl": "http://127.0.0.1:19590"
+  },
+  "rust": {
+   "ownDataStoreUrl": "http://127.0.0.1:19595",
+   "ownTracingStoreUrl": "http://127.0.0.1:19596"
+  }
+ },
+ "identities": {
+  "admin": {
+   "token": "secretSampleUserToken"
+  },
+  "user2": {
+   "cookie": "{user2Cookie}"
+  }
+ },
+ "steps": [
+  {
+   "name": "user2-login",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "sample2@scm.io",
+    "password": "secret"
+   },
+   "capture_cookie": {
+    "user2Cookie": "id"
+   }
+  },
+  {
+   "name": "user2-token",
+   "method": "GET",
+   "path": "/api/auth/token",
+   "as": "user2",
+   "capture": {
+    "user2Token": "$.token"
+   },
+   "ignore": [
+    {
+     "path": "$.token",
+     "reason": "random token per side"
+    }
+   ]
+  },
+  {
+   "name": "ds-status-wrong-key",
+   "method": "PATCH",
+   "path": "/api/datastores/localhost/status",
+   "query": {
+    "key": "wrong"
+   },
+   "json": {
+    "ok": true,
+    "url": "{ownDataStoreUrl}"
+   }
+  },
+  {
+   "name": "ds-status-unknown-store",
+   "method": "PATCH",
+   "path": "/api/datastores/nope/status",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "ok": true,
+    "url": "{ownDataStoreUrl}"
+   }
+  },
+  {
+   "name": "ds-status-invalid-json",
+   "method": "PATCH",
+   "path": "/api/datastores/localhost/status",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "ok": "yes"
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "ds-status",
+   "method": "PATCH",
+   "path": "/api/datastores/localhost/status",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "ok": true,
+    "url": "{ownDataStoreUrl}"
+   }
+  },
+  {
+   "name": "datastores-after-status",
+   "method": "GET",
+   "path": "/api/datastores",
+   "as": "admin"
+  },
+  {
+   "name": "ds-update-one",
+   "method": "PUT",
+   "path": "/api/datastores/localhost/datasource",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "id": {
+     "name": "diff_reported",
+     "team": "sample_organization"
+    },
+    "dataLayers": [
+     {
+      "name": "color",
+      "category": "color",
+      "dataFormat": "wkw",
+      "boundingBox": {
+       "topLeft": [
+        0,
+        0,
+        0
+       ],
+       "width": 64,
+       "height": 64,
+       "depth": 64
+      },
+      "elementClass": "uint8",
+      "mags": [
+       {
+        "mag": [
+         1,
+         1,
+         1
+        ]
+       }
+      ]
+     }
+    ],
+    "scale": {
+     "factor": [
+      11.24,
+      11.24,
+      28
+     ],
+     "unit": "nanometer"
+    }
+   }
+  },
+  {
+   "name": "ds-update-one-invalid",
+   "method": "PUT",
+   "path": "/api/datastores/localhost/datasource",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "id": {
+     "name": "x"
+    }
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "ds-update-one-wrong-key",
+   "method": "PUT",
+   "path": "/api/datastores/localhost/datasource",
+   "query": {
+    "key": "wrong"
+   },
+   "json": {
+    "id": {
+     "name": "diff_reported_x",
+     "team": "sample_organization"
+    },
+    "dataLayers": [
+     {
+      "name": "color",
+      "category": "color",
+      "dataFormat": "wkw",
+      "boundingBox": {
+       "topLeft": [
+        0,
+        0,
+        0
+       ],
+       "width": 64,
+       "height": 64,
+       "depth": 64
+      },
+      "elementClass": "uint8",
+      "mags": [
+       {
+        "mag": [
+         1,
+         1,
+         1
+        ]
+       }
+      ]
+     }
+    ],
+    "scale": {
+     "factor": [
+      11.24,
+      11.24,
+      28
+     ],
+     "unit": "nanometer"
+    }
+   }
+  },
+  {
+   "name": "ds-find-dataset-id",
+   "method": "GET",
+   "path": "/api/datastores/localhost/findDatasetId",
+   "query": {
+    "key": "something-secure",
+    "datasetDirectoryName": "diff_reported",
+    "organizationId": "sample_organization"
+   },
+   "capture": {
+    "reportedId": "$"
+   }
+  },
+  {
+   "name": "ds-find-dataset-id-unknown",
+   "method": "GET",
+   "path": "/api/datastores/localhost/findDatasetId",
+   "query": {
+    "key": "something-secure",
+    "datasetDirectoryName": "nope",
+    "organizationId": "sample_organization"
+   }
+  },
+  {
+   "name": "ds-find-dataset-id-unknown-org",
+   "method": "GET",
+   "path": "/api/datastores/localhost/findDatasetId",
+   "query": {
+    "key": "something-secure",
+    "datasetDirectoryName": "diff_reported",
+    "organizationId": "nope"
+   }
+  },
+  {
+   "name": "ds-get-data-source",
+   "method": "GET",
+   "path": "/api/datastores/localhost/datasources/{reportedId}",
+   "query": {
+    "key": "something-secure"
+   }
+  },
+  {
+   "name": "ds-get-data-source-seed",
+   "method": "GET",
+   "path": "/api/datastores/localhost/datasources/68b80290d4000090f8f4aa62",
+   "query": {
+    "key": "something-secure"
+   }
+  },
+  {
+   "name": "ds-get-data-source-missing",
+   "method": "GET",
+   "path": "/api/datastores/localhost/datasources/0123456789abcdef01234567",
+   "query": {
+    "key": "something-secure"
+   }
+  },
+  {
+   "name": "ds-get-data-source-wrong-key",
+   "method": "GET",
+   "path": "/api/datastores/localhost/datasources/68b80290d4000090f8f4aa62",
+   "query": {
+    "key": "wrong"
+   }
+  },
+  {
+   "name": "reported-dataset",
+   "method": "GET",
+   "path": "/api/datasets/{reportedId}",
+   "as": "admin"
+  },
+  {
+   "name": "ds-update-data-source",
+   "method": "PUT",
+   "path": "/api/datastores/localhost/datasources/{reportedId}",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "id": {
+     "name": "diff_reported",
+     "team": "sample_organization"
+    },
+    "dataLayers": [
+     {
+      "name": "color",
+      "category": "color",
+      "dataFormat": "wkw",
+      "boundingBox": {
+       "topLeft": [
+        0,
+        0,
+        0
+       ],
+       "width": 64,
+       "height": 64,
+       "depth": 64
+      },
+      "elementClass": "uint8",
+      "mags": [
+       {
+        "mag": [
+         1,
+         1,
+         1
+        ]
+       },
+       {
+        "mag": [
+         2,
+         2,
+         2
+        ]
+       }
+      ]
+     }
+    ],
+    "scale": {
+     "factor": [
+      11.24,
+      11.24,
+      28
+     ],
+     "unit": "nanometer"
+    }
+   }
+  },
+  {
+   "name": "ds-get-data-source-updated",
+   "method": "GET",
+   "path": "/api/datastores/localhost/datasources/{reportedId}",
+   "query": {
+    "key": "something-secure"
+   }
+  },
+  {
+   "name": "ds-update-data-source-virtual",
+   "method": "PUT",
+   "path": "/api/datastores/localhost/datasources/68b80290d4000090f8f4aa62",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "id": {
+     "name": "l4_sample_remote",
+     "team": "sample_organization"
+    },
+    "dataLayers": [
+     {
+      "name": "color",
+      "category": "color",
+      "dataFormat": "wkw",
+      "boundingBox": {
+       "topLeft": [
+        0,
+        0,
+        0
+       ],
+       "width": 64,
+       "height": 64,
+       "depth": 64
+      },
+      "elementClass": "uint8",
+      "mags": [
+       {
+        "mag": [
+         1,
+         1,
+         1
+        ]
+       }
+      ]
+     }
+    ],
+    "scale": {
+     "factor": [
+      11.24,
+      11.24,
+      28
+     ],
+     "unit": "nanometer"
+    }
+   }
+  },
+  {
+   "name": "ds-update-data-source-missing",
+   "method": "PUT",
+   "path": "/api/datastores/localhost/datasources/0123456789abcdef01234567",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "id": {
+     "name": "diff_reported",
+     "team": "sample_organization"
+    },
+    "dataLayers": [
+     {
+      "name": "color",
+      "category": "color",
+      "dataFormat": "wkw",
+      "boundingBox": {
+       "topLeft": [
+        0,
+        0,
+        0
+       ],
+       "width": 64,
+       "height": 64,
+       "depth": 64
+      },
+      "elementClass": "uint8",
+      "mags": [
+       {
+        "mag": [
+         1,
+         1,
+         1
+        ]
+       }
+      ]
+     }
+    ],
+    "scale": {
+     "factor": [
+      11.24,
+      11.24,
+      28
+     ],
+     "unit": "nanometer"
+    }
+   }
+  },
+  {
+   "name": "ds-get-data-source-virtual-unchanged",
+   "method": "GET",
+   "path": "/api/datastores/localhost/datasources/68b80290d4000090f8f4aa62",
+   "query": {
+    "key": "something-secure"
+   }
+  },
+  {
+   "name": "ds-update-all",
+   "method": "PUT",
+   "path": "/api/datastores/localhost/datasources",
+   "query": {
+    "key": "something-secure",
+    "organizationId": "sample_organization"
+   },
+   "json": [
+    {
+     "dataSource": {
+      "id": {
+       "name": "diff_reported",
+       "team": "sample_organization"
+      },
+      "dataLayers": [
+       {
+        "name": "color",
+        "category": "color",
+        "dataFormat": "wkw",
+        "boundingBox": {
+         "topLeft": [
+          0,
+          0,
+          0
+         ],
+         "width": 64,
+         "height": 64,
+         "depth": 64
+        },
+        "elementClass": "uint8",
+        "mags": [
+         {
+          "mag": [
+           1,
+           1,
+           1
+          ]
+         }
+        ]
+       }
+      ],
+      "scale": {
+       "factor": [
+        11.24,
+        11.24,
+        28
+       ],
+       "unit": "nanometer"
+      }
+     },
+     "rootPath": "/tmp/wk-diff/play-data/binaryData/sample_organization/diff_reported",
+     "rootRealPath": "/tmp/wk-diff/play-data/binaryData/sample_organization/diff_reported"
+    },
+    {
+     "dataSource": {
+      "id": {
+       "name": "diff_reported_2",
+       "team": "sample_organization"
+      },
+      "status": "Missing datasource-properties.json"
+     },
+     "rootPath": null,
+     "rootRealPath": null
+    }
+   ]
+  },
+  {
+   "name": "ds-find-dataset-id-2",
+   "method": "GET",
+   "path": "/api/datastores/localhost/findDatasetId",
+   "query": {
+    "key": "something-secure",
+    "datasetDirectoryName": "diff_reported_2",
+    "organizationId": "sample_organization"
+   },
+   "capture": {
+    "reportedId2": "$"
+   }
+  },
+  {
+   "name": "reported-dataset-2",
+   "method": "GET",
+   "path": "/api/datasets/{reportedId2}",
+   "as": "admin"
+  },
+  {
+   "name": "ds-update-real-paths",
+   "method": "PUT",
+   "path": "/api/datastores/localhost/datasources/realpaths",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": [
+    {
+     "dataSourceId": {
+      "name": "diff_reported",
+      "team": "sample_organization"
+     },
+     "magPathInfos": [
+      {
+       "path": "./color/1",
+       "realPath": "/tmp/wk-diff/play-data/binaryData/sample_organization/diff_reported/color/1",
+       "hasLocalData": true
+      }
+     ],
+     "attachmentPathInfos": []
+    },
+    {
+     "dataSourceId": {
+      "name": "nope",
+      "team": "sample_organization"
+     },
+     "magPathInfos": [],
+     "attachmentPathInfos": []
+    }
+   ]
+  },
+  {
+   "name": "ds-update-real-paths-invalid",
+   "method": "PUT",
+   "path": "/api/datastores/localhost/datasources/realpaths",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": [
+    {
+     "dataSourceId": {}
+    }
+   ],
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "ds-find-local-root-path",
+   "method": "GET",
+   "path": "/api/datastores/localhost/findDatasetLocalRootPath",
+   "query": {
+    "key": "something-secure",
+    "datasetId": "{reportedId}"
+   }
+  },
+  {
+   "name": "ds-find-local-root-path-remote",
+   "method": "GET",
+   "path": "/api/datastores/localhost/findDatasetLocalRootPath",
+   "query": {
+    "key": "something-secure",
+    "datasetId": "68b80290d4000090f8f4aa62"
+   }
+  },
+  {
+   "name": "ds-find-local-root-path-missing",
+   "method": "GET",
+   "path": "/api/datastores/localhost/findDatasetLocalRootPath",
+   "query": {
+    "key": "something-secure",
+    "datasetId": "0123456789abcdef01234567"
+   }
+  },
+  {
+   "name": "reported-dataset-after-all",
+   "method": "GET",
+   "path": "/api/datasets/{reportedId}",
+   "as": "admin"
+  },
+  {
+   "name": "ds-update-all-other-org",
+   "method": "PUT",
+   "path": "/api/datastores/localhost/datasources",
+   "query": {
+    "key": "something-secure",
+    "organizationId": "nope"
+   },
+   "json": []
+  },
+  {
+   "name": "ds-update-all-empty",
+   "method": "PUT",
+   "path": "/api/datastores/localhost/datasources",
+   "query": {
+    "key": "something-secure",
+    "organizationId": "sample_organization"
+   },
+   "json": []
+  },
+  {
+   "name": "reported-dataset-deactivated",
+   "method": "GET",
+   "path": "/api/datasets/{reportedId}",
+   "as": "admin"
+  },
+  {
+   "name": "ds-reserve-upload-bad-token",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveDatasetUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "nope"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "s1",
+     "totalFileCount": 1,
+     "filePaths": [
+      "a.zip"
+     ],
+     "totalFileSizeInBytes": 1000
+    },
+    "datasetName": "diff-store-upload",
+    "organizationId": "sample_organization",
+    "layersToLink": [],
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "folderId": "{seedRootFolderId}"
+   }
+  },
+  {
+   "name": "ds-reserve-upload-wrong-key",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveDatasetUpload",
+   "query": {
+    "key": "wrong",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "s1",
+     "totalFileCount": 1,
+     "filePaths": [
+      "a.zip"
+     ],
+     "totalFileSizeInBytes": 1000
+    },
+    "datasetName": "diff-store-upload",
+    "organizationId": "sample_organization",
+    "layersToLink": [],
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "folderId": "{seedRootFolderId}"
+   }
+  },
+  {
+   "name": "ds-reserve-upload-unknown-org",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveDatasetUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "s1",
+     "totalFileCount": 1,
+     "filePaths": [
+      "a.zip"
+     ],
+     "totalFileSizeInBytes": 1000
+    },
+    "datasetName": "diff-store-upload",
+    "organizationId": "nope",
+    "layersToLink": [],
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "folderId": "{seedRootFolderId}"
+   }
+  },
+  {
+   "name": "ds-reserve-upload-invalid-name",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveDatasetUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "s1",
+     "totalFileCount": 1,
+     "filePaths": [
+      "a.zip"
+     ],
+     "totalFileSizeInBytes": 1000
+    },
+    "datasetName": "a/b",
+    "organizationId": "sample_organization",
+    "layersToLink": [],
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "folderId": "{seedRootFolderId}"
+   }
+  },
+  {
+   "name": "ds-reserve-upload-invalid-json",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveDatasetUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "datasetName": "x"
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "ds-reserve-upload",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveDatasetUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "s1",
+     "totalFileCount": 1,
+     "filePaths": [
+      "a.zip"
+     ],
+     "totalFileSizeInBytes": 1000
+    },
+    "datasetName": "diff-store-upload",
+    "organizationId": "sample_organization",
+    "layersToLink": [],
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "folderId": "{seedRootFolderId}"
+   },
+   "capture": {
+    "storeUploadId": "$.newDatasetId"
+   }
+  },
+  {
+   "name": "ds-reserve-upload-user2-no-folder-access",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveDatasetUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "{user2Token}"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "s2",
+     "totalFileCount": 1,
+     "filePaths": [
+      "a.zip"
+     ],
+     "totalFileSizeInBytes": 1000
+    },
+    "datasetName": "diff-store-upload-u2",
+    "organizationId": "sample_organization",
+    "layersToLink": [],
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "folderId": "{seedRootFolderId}"
+   }
+  },
+  {
+   "name": "ds-reserve-upload-for-conversion",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveDatasetUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "s4",
+     "totalFileCount": 1,
+     "filePaths": [
+      "a.zip"
+     ],
+     "totalFileSizeInBytes": 1000
+    },
+    "datasetName": "diff-store-conversion",
+    "organizationId": "sample_organization",
+    "layersToLink": [],
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "folderId": "{seedRootFolderId}",
+    "isVirtual": false,
+    "needsConversion": true
+   },
+   "capture": {
+    "storeUploadId2": "$.newDatasetId"
+   }
+  },
+  {
+   "name": "ds-reserve-upload-unique-taken",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveDatasetUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "s3",
+     "totalFileCount": 1,
+     "filePaths": [
+      "a.zip"
+     ],
+     "totalFileSizeInBytes": 1000
+    },
+    "datasetName": "diff-store-upload",
+    "organizationId": "sample_organization",
+    "layersToLink": [],
+    "initialTeamIds": [
+     "{seedTeamId}"
+    ],
+    "folderId": "{seedRootFolderId}",
+    "requireUniqueName": true
+   }
+  },
+  {
+   "name": "ds-unfinished-uploads",
+   "method": "GET",
+   "path": "/api/datastores/localhost/getUnfinishedDatasetUploadsForUser",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken",
+    "organizationName": "sample_organization"
+   },
+   "unordered": [
+    "$",
+    "$[*].allowedTeams"
+   ]
+  },
+  {
+   "name": "ds-unfinished-uploads-user2",
+   "method": "GET",
+   "path": "/api/datastores/localhost/getUnfinishedDatasetUploadsForUser",
+   "query": {
+    "key": "something-secure",
+    "token": "{user2Token}",
+    "organizationName": "sample_organization"
+   }
+  },
+  {
+   "name": "ds-unfinished-uploads-other-org",
+   "method": "GET",
+   "path": "/api/datastores/localhost/getUnfinishedDatasetUploadsForUser",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken",
+    "organizationName": "nope"
+   }
+  },
+  {
+   "name": "ds-unfinished-uploads-bad-token",
+   "method": "GET",
+   "path": "/api/datastores/localhost/getUnfinishedDatasetUploadsForUser",
+   "query": {
+    "key": "something-secure",
+    "token": "nope",
+    "organizationName": "sample_organization"
+   }
+  },
+  {
+   "name": "ds-report-upload-missing",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reportDatasetUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken",
+    "datasetId": "0123456789abcdef01234567"
+   },
+   "json": {
+    "needsConversion": false,
+    "datasetSizeBytes": 1000,
+    "dataSourceOpt": {
+     "id": {
+      "name": "diff-store-upload",
+      "team": "sample_organization"
+     },
+     "dataLayers": [
+      {
+       "name": "color",
+       "category": "color",
+       "dataFormat": "zarr3",
+       "boundingBox": {
+        "topLeft": [
+         3072,
+         3072,
+         512
+        ],
+        "width": 1024,
+        "height": 1024,
+        "depth": 1024
+       },
+       "elementClass": "uint8",
+       "mags": [
+        {
+         "mag": [
+          1,
+          1,
+          1
+         ],
+         "path": "https://static.webknossos.org/data/zarr_v3/l4_sample/color/1"
+        },
+        {
+         "mag": [
+          2,
+          2,
+          1
+         ],
+         "path": "https://static.webknossos.org/data/zarr_v3/l4_sample/color/2-2-1"
+        }
+       ]
+      }
+     ],
+     "scale": {
+      "factor": [
+       11.24,
+       11.24,
+       28
+      ],
+      "unit": "nanometer"
+     }
+    },
+    "layersToLink": []
+   }
+  },
+  {
+   "name": "ds-report-upload-bad-token",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reportDatasetUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "nope",
+    "datasetId": "{storeUploadId}"
+   },
+   "json": {
+    "needsConversion": false,
+    "datasetSizeBytes": 1000,
+    "dataSourceOpt": {
+     "id": {
+      "name": "diff-store-upload",
+      "team": "sample_organization"
+     },
+     "dataLayers": [
+      {
+       "name": "color",
+       "category": "color",
+       "dataFormat": "zarr3",
+       "boundingBox": {
+        "topLeft": [
+         3072,
+         3072,
+         512
+        ],
+        "width": 1024,
+        "height": 1024,
+        "depth": 1024
+       },
+       "elementClass": "uint8",
+       "mags": [
+        {
+         "mag": [
+          1,
+          1,
+          1
+         ],
+         "path": "https://static.webknossos.org/data/zarr_v3/l4_sample/color/1"
+        },
+        {
+         "mag": [
+          2,
+          2,
+          1
+         ],
+         "path": "https://static.webknossos.org/data/zarr_v3/l4_sample/color/2-2-1"
+        }
+       ]
+      }
+     ],
+     "scale": {
+      "factor": [
+       11.24,
+       11.24,
+       28
+      ],
+      "unit": "nanometer"
+     }
+    },
+    "layersToLink": []
+   }
+  },
+  {
+   "name": "ds-report-upload-conversion-without-voxel-size",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reportDatasetUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken",
+    "datasetId": "{storeUploadId2}"
+   },
+   "json": {
+    "needsConversion": true,
+    "datasetSizeBytes": 1000,
+    "layersToLink": []
+   }
+  },
+  {
+   "name": "ds-report-upload",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reportDatasetUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken",
+    "datasetId": "{storeUploadId}"
+   },
+   "json": {
+    "needsConversion": false,
+    "datasetSizeBytes": 1000,
+    "dataSourceOpt": {
+     "id": {
+      "name": "diff-store-upload",
+      "team": "sample_organization"
+     },
+     "dataLayers": [
+      {
+       "name": "color",
+       "category": "color",
+       "dataFormat": "zarr3",
+       "boundingBox": {
+        "topLeft": [
+         3072,
+         3072,
+         512
+        ],
+        "width": 1024,
+        "height": 1024,
+        "depth": 1024
+       },
+       "elementClass": "uint8",
+       "mags": [
+        {
+         "mag": [
+          1,
+          1,
+          1
+         ],
+         "path": "https://static.webknossos.org/data/zarr_v3/l4_sample/color/1"
+        },
+        {
+         "mag": [
+          2,
+          2,
+          1
+         ],
+         "path": "https://static.webknossos.org/data/zarr_v3/l4_sample/color/2-2-1"
+        }
+       ]
+      }
+     ],
+     "scale": {
+      "factor": [
+       11.24,
+       11.24,
+       28
+      ],
+      "unit": "nanometer"
+     }
+    },
+    "layersToLink": []
+   }
+  },
+  {
+   "name": "store-uploaded-dataset",
+   "method": "GET",
+   "path": "/api/datasets/{storeUploadId}",
+   "as": "admin"
+  },
+  {
+   "name": "ds-reserve-mag-conflict",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveMagUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "m0",
+     "totalFileCount": 1,
+     "filePaths": [
+      "m"
+     ],
+     "totalFileSizeInBytes": 10
+    },
+    "datasetId": "{storeUploadId}",
+    "layerName": "color",
+    "mag": {
+     "mag": [
+      1,
+      1,
+      1
+     ]
+    },
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "ds-reserve-mag-unknown-layer",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveMagUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "m0",
+     "totalFileCount": 1,
+     "filePaths": [
+      "m"
+     ],
+     "totalFileSizeInBytes": 10
+    },
+    "datasetId": "{storeUploadId}",
+    "layerName": "nope",
+    "mag": {
+     "mag": [
+      4,
+      4,
+      4
+     ]
+    },
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "ds-reserve-mag-bad-token",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveMagUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "nope"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "m0",
+     "totalFileCount": 1,
+     "filePaths": [
+      "m"
+     ],
+     "totalFileSizeInBytes": 10
+    },
+    "datasetId": "{storeUploadId}",
+    "layerName": "color",
+    "mag": {
+     "mag": [
+      4,
+      4,
+      1
+     ]
+    },
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "ds-reserve-mag-non-virtual",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveMagUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "m0",
+     "totalFileCount": 1,
+     "filePaths": [
+      "m"
+     ],
+     "totalFileSizeInBytes": 10
+    },
+    "datasetId": "{reportedId}",
+    "layerName": "color",
+    "mag": {
+     "mag": [
+      4,
+      4,
+      4
+     ]
+    },
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "ds-reserve-mag",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveMagUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "m1",
+     "totalFileCount": 1,
+     "filePaths": [
+      "m"
+     ],
+     "totalFileSizeInBytes": 10
+    },
+    "datasetId": "{storeUploadId}",
+    "layerName": "color",
+    "mag": {
+     "mag": [
+      4,
+      4,
+      1
+     ]
+    },
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "ds-reserve-mag-pending-again",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveMagUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "m2",
+     "totalFileCount": 1,
+     "filePaths": [
+      "m"
+     ],
+     "totalFileSizeInBytes": 10
+    },
+    "datasetId": "{storeUploadId}",
+    "layerName": "color",
+    "mag": {
+     "mag": [
+      4,
+      4,
+      1
+     ]
+    },
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "ds-reserve-mag-overwrite-pending",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveMagUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "m3",
+     "totalFileCount": 1,
+     "filePaths": [
+      "m"
+     ],
+     "totalFileSizeInBytes": 10
+    },
+    "datasetId": "{storeUploadId}",
+    "layerName": "color",
+    "mag": {
+     "mag": [
+      4,
+      4,
+      1
+     ]
+    },
+    "overwritePending": true
+   }
+  },
+  {
+   "name": "ds-report-mag-without-path",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reportMagUpload",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "datasetId": "{storeUploadId}",
+    "layerName": "color",
+    "mag": {
+     "mag": [
+      4,
+      4,
+      1
+     ]
+    },
+    "magSizeBytes": 10
+   }
+  },
+  {
+   "name": "ds-report-mag-not-pending",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reportMagUpload",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "datasetId": "{storeUploadId}",
+    "layerName": "color",
+    "mag": {
+     "mag": [
+      8,
+      8,
+      2
+     ],
+     "path": "https://static.webknossos.org/data/zarr_v3/l4_sample/color/8-8-2"
+    },
+    "magSizeBytes": 10
+   }
+  },
+  {
+   "name": "ds-report-mag-missing-dataset",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reportMagUpload",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "datasetId": "0123456789abcdef01234567",
+    "layerName": "color",
+    "mag": {
+     "mag": [
+      4,
+      4,
+      1
+     ],
+     "path": "https://static.webknossos.org/data/zarr_v3/l4_sample/color/4-4-1"
+    },
+    "magSizeBytes": 10
+   }
+  },
+  {
+   "name": "ds-report-mag",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reportMagUpload",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "datasetId": "{storeUploadId}",
+    "layerName": "color",
+    "mag": {
+     "mag": [
+      4,
+      4,
+      1
+     ],
+     "path": "https://static.webknossos.org/data/zarr_v3/l4_sample/color/4-4-1"
+    },
+    "magSizeBytes": 10
+   }
+  },
+  {
+   "name": "ds-reserve-attachment",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveAttachmentUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "a1",
+     "totalFileCount": 1,
+     "filePaths": [
+      "a"
+     ],
+     "totalFileSizeInBytes": 10
+    },
+    "datasetId": "{storeUploadId}",
+    "layerName": "color",
+    "attachmentType": "mesh",
+    "attachment": {
+     "name": "diff_mesh",
+     "path": "irrelevant",
+     "dataFormat": "zarr3"
+    },
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "ds-reserve-attachment-pending-again",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveAttachmentUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "a2",
+     "totalFileCount": 1,
+     "filePaths": [
+      "a"
+     ],
+     "totalFileSizeInBytes": 10
+    },
+    "datasetId": "{storeUploadId}",
+    "layerName": "color",
+    "attachmentType": "mesh",
+    "attachment": {
+     "name": "diff_mesh",
+     "path": "irrelevant",
+     "dataFormat": "zarr3"
+    },
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "ds-reserve-attachment-singleton",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveAttachmentUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "a3",
+     "totalFileCount": 1,
+     "filePaths": [
+      "a"
+     ],
+     "totalFileSizeInBytes": 10
+    },
+    "datasetId": "{storeUploadId}",
+    "layerName": "color",
+    "attachmentType": "segmentIndex",
+    "attachment": {
+     "name": "segment_index",
+     "path": "irrelevant",
+     "dataFormat": "hdf5"
+    },
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "ds-reserve-attachment-non-virtual",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reserveAttachmentUpload",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resumableUploadInfo": {
+     "uploadId": "a4",
+     "totalFileCount": 1,
+     "filePaths": [
+      "a"
+     ],
+     "totalFileSizeInBytes": 10
+    },
+    "datasetId": "{reportedId}",
+    "layerName": "color",
+    "attachmentType": "mesh",
+    "attachment": {
+     "name": "diff_mesh",
+     "path": "irrelevant",
+     "dataFormat": "zarr3"
+    },
+    "overwritePending": false
+   }
+  },
+  {
+   "name": "ds-report-attachment-not-pending",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reportAttachmentUpload",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "datasetId": "{storeUploadId}",
+    "layerName": "color",
+    "attachmentType": "agglomerate",
+    "attachment": {
+     "name": "nope",
+     "path": "https://diff.example/agg",
+     "dataFormat": "zarr3"
+    },
+    "attachmentSizeBytes": 10
+   }
+  },
+  {
+   "name": "ds-report-attachment",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reportAttachmentUpload",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "datasetId": "{storeUploadId}",
+    "layerName": "color",
+    "attachmentType": "mesh",
+    "attachment": {
+     "name": "diff_mesh",
+     "path": "https://diff.example/mesh",
+     "dataFormat": "zarr3"
+    },
+    "attachmentSizeBytes": 10
+   }
+  },
+  {
+   "name": "ds-report-attachment-singleton",
+   "method": "POST",
+   "path": "/api/datastores/localhost/reportAttachmentUpload",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "datasetId": "{storeUploadId}",
+    "layerName": "color",
+    "attachmentType": "segmentIndex",
+    "attachment": {
+     "name": "segment_index",
+     "path": "https://diff.example/segment_index",
+     "dataFormat": "hdf5"
+    },
+    "attachmentSizeBytes": 10
+   }
+  },
+  {
+   "name": "ds-get-data-source-uploaded",
+   "method": "GET",
+   "path": "/api/datastores/localhost/datasources/{storeUploadId}",
+   "query": {
+    "key": "something-secure"
+   }
+  },
+  {
+   "name": "store-uploaded-dataset-final",
+   "method": "GET",
+   "path": "/api/datasets/{storeUploadId}",
+   "as": "admin"
+  },
+  {
+   "name": "run-export-tiff",
+   "method": "POST",
+   "path": "/api/jobs/run/exportTiff/68b80290d4000090f8f4aa62",
+   "as": "admin",
+   "query": {
+    "bbox": "0,0,0,64,64,64",
+    "layerName": "color",
+    "mag": "1-1-1",
+    "exportFormat": "ome_tiff"
+   },
+   "capture": {
+    "exportJob": "$.id"
+   }
+  },
+  {
+   "name": "ds-job-export-not-run",
+   "method": "GET",
+   "path": "/api/datastores/localhost/jobExportProperties",
+   "query": {
+    "key": "something-secure",
+    "jobId": "{exportJob}"
+   }
+  },
+  {
+   "name": "worker-request",
+   "method": "GET",
+   "path": "/api/jobs/request",
+   "query": {
+    "key": "secretWorkerKey"
+   },
+   "unordered": [
+    "$.to_run"
+   ],
+   "ignore": [
+    {
+     "path": "$.to_run[*].job_kwargs.user_auth_token",
+     "reason": "random token per side"
+    }
+   ]
+  },
+  {
+   "name": "worker-status-started",
+   "method": "POST",
+   "path": "/api/jobs/{exportJob}/status",
+   "query": {
+    "key": "secretWorkerKey"
+   },
+   "json": {
+    "state": "STARTED",
+    "latestRunId": "diff-run-1",
+    "started": 1790000000000
+   }
+  },
+  {
+   "name": "ds-job-export",
+   "method": "GET",
+   "path": "/api/datastores/localhost/jobExportProperties",
+   "query": {
+    "key": "something-secure",
+    "jobId": "{exportJob}"
+   }
+  },
+  {
+   "name": "ds-job-export-missing",
+   "method": "GET",
+   "path": "/api/datastores/localhost/jobExportProperties",
+   "query": {
+    "key": "something-secure",
+    "jobId": "0123456789abcdef01234567"
+   }
+  },
+  {
+   "name": "ds-job-export-wrong-key",
+   "method": "GET",
+   "path": "/api/datastores/localhost/jobExportProperties",
+   "query": {
+    "key": "wrong",
+    "jobId": "{exportJob}"
+   }
+  },
+  {
+   "name": "worker-status-success",
+   "method": "POST",
+   "path": "/api/jobs/{exportJob}/status",
+   "query": {
+    "key": "secretWorkerKey"
+   },
+   "json": {
+    "state": "SUCCESS",
+    "latestRunId": "diff-run-1",
+    "started": 1790000000000,
+    "ended": 1790000100000
+   }
+  },
+  {
+   "name": "ds-find-credential",
+   "method": "GET",
+   "path": "/api/datastores/localhost/findCredential",
+   "query": {
+    "key": "something-secure",
+    "credentialId": "6a1c0000000000000000c001"
+   }
+  },
+  {
+   "name": "ds-find-credential-missing",
+   "method": "GET",
+   "path": "/api/datastores/localhost/findCredential",
+   "query": {
+    "key": "something-secure",
+    "credentialId": "0123456789abcdef01234567"
+   }
+  },
+  {
+   "name": "ds-find-credential-wrong-key",
+   "method": "GET",
+   "path": "/api/datastores/localhost/findCredential",
+   "query": {
+    "key": "wrong",
+    "credentialId": "6a1c0000000000000000c001"
+   }
+  },
+  {
+   "name": "datastore-access-dataset-read",
+   "method": "POST",
+   "path": "/api/datastores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "68b80290d4000090f8f4aa62",
+    "resourceType": "dataset",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "datastore-access-dataset-read-anonymous",
+   "method": "POST",
+   "path": "/api/datastores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "resourceId": "68b80290d4000090f8f4aa62",
+    "resourceType": "dataset",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "datastore-access-dataset-read-missing",
+   "method": "POST",
+   "path": "/api/datastores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "0123456789abcdef01234567",
+    "resourceType": "dataset",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "datastore-access-dataset-write-user2",
+   "method": "POST",
+   "path": "/api/datastores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "{user2Token}"
+   },
+   "json": {
+    "resourceId": "68b80290d4000090f8f4aa62",
+    "resourceType": "dataset",
+    "mode": "write"
+   }
+  },
+  {
+   "name": "datastore-access-dataset-write",
+   "method": "POST",
+   "path": "/api/datastores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "68b80290d4000090f8f4aa62",
+    "resourceType": "dataset",
+    "mode": "write"
+   }
+  },
+  {
+   "name": "datastore-access-dataset-delete-user2",
+   "method": "POST",
+   "path": "/api/datastores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "{user2Token}"
+   },
+   "json": {
+    "resourceId": "68b80290d4000090f8f4aa62",
+    "resourceType": "dataset",
+    "mode": "delete"
+   }
+  },
+  {
+   "name": "datastore-access-dataset-administrate",
+   "method": "POST",
+   "path": "/api/datastores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "sample_organization",
+    "resourceType": "dataset",
+    "mode": "administrate"
+   }
+  },
+  {
+   "name": "datastore-access-dataset-administrate-user2",
+   "method": "POST",
+   "path": "/api/datastores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "{user2Token}"
+   },
+   "json": {
+    "resourceType": "dataset",
+    "mode": "administrate"
+   }
+  },
+  {
+   "name": "datastore-access-job-export",
+   "method": "POST",
+   "path": "/api/datastores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "{exportJob}",
+    "resourceType": "jobExport",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "datastore-access-job-export-user2",
+   "method": "POST",
+   "path": "/api/datastores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "{user2Token}"
+   },
+   "json": {
+    "resourceId": "{exportJob}",
+    "resourceType": "jobExport",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "datastore-access-bad-token",
+   "method": "POST",
+   "path": "/api/datastores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "nope"
+   },
+   "json": {
+    "resourceId": "68b80290d4000090f8f4aa62",
+    "resourceType": "dataset",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "datastore-access-invalid-type",
+   "method": "POST",
+   "path": "/api/datastores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "68b80290d4000090f8f4aa62",
+    "resourceType": "nope",
+    "mode": "read"
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "tracingstore-access-dataset-read",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "68b80290d4000090f8f4aa62",
+    "resourceType": "dataset",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "tracingstore-access-dataset-read-anonymous",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "resourceId": "68b80290d4000090f8f4aa62",
+    "resourceType": "dataset",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "tracingstore-access-dataset-read-missing",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "0123456789abcdef01234567",
+    "resourceType": "dataset",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "tracingstore-access-dataset-write-user2",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "{user2Token}"
+   },
+   "json": {
+    "resourceId": "68b80290d4000090f8f4aa62",
+    "resourceType": "dataset",
+    "mode": "write"
+   }
+  },
+  {
+   "name": "tracingstore-access-dataset-write",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "68b80290d4000090f8f4aa62",
+    "resourceType": "dataset",
+    "mode": "write"
+   }
+  },
+  {
+   "name": "tracingstore-access-dataset-delete-user2",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "{user2Token}"
+   },
+   "json": {
+    "resourceId": "68b80290d4000090f8f4aa62",
+    "resourceType": "dataset",
+    "mode": "delete"
+   }
+  },
+  {
+   "name": "tracingstore-access-dataset-administrate",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "sample_organization",
+    "resourceType": "dataset",
+    "mode": "administrate"
+   }
+  },
+  {
+   "name": "tracingstore-access-dataset-administrate-user2",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "{user2Token}"
+   },
+   "json": {
+    "resourceType": "dataset",
+    "mode": "administrate"
+   }
+  },
+  {
+   "name": "tracingstore-access-job-export",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "{exportJob}",
+    "resourceType": "jobExport",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "tracingstore-access-job-export-user2",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "{user2Token}"
+   },
+   "json": {
+    "resourceId": "{exportJob}",
+    "resourceType": "jobExport",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "tracingstore-access-bad-token",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "nope"
+   },
+   "json": {
+    "resourceId": "68b80290d4000090f8f4aa62",
+    "resourceType": "dataset",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "tracingstore-access-invalid-type",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "68b80290d4000090f8f4aa62",
+    "resourceType": "nope",
+    "mode": "read"
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "datastore-access-wrong-key",
+   "method": "POST",
+   "path": "/api/datastores/localhost/validateUserAccess",
+   "query": {
+    "key": "wrong",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "68b80290d4000090f8f4aa62",
+    "resourceType": "dataset",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "create-annotation",
+   "method": "POST",
+   "path": "/api/datasets/68b80290d4000090f8f4aa62/createExplorational",
+   "as": "admin",
+   "json": [
+    {
+     "typ": "Skeleton",
+     "name": "Skeleton"
+    }
+   ],
+   "capture": {
+    "annId": "$.id",
+    "skeletonId": "$.annotationLayers[0].tracingId"
+   }
+  },
+  {
+   "name": "tracingstore-access-annotation-read",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "{annId}",
+    "resourceType": "annotation",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "tracingstore-access-annotation-write",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "{annId}",
+    "resourceType": "annotation",
+    "mode": "write"
+   }
+  },
+  {
+   "name": "tracingstore-access-annotation-read-user2",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "{user2Token}"
+   },
+   "json": {
+    "resourceId": "{annId}",
+    "resourceType": "annotation",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "tracingstore-access-annotation-write-anonymous",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "resourceId": "{annId}",
+    "resourceType": "annotation",
+    "mode": "write"
+   }
+  },
+  {
+   "name": "tracingstore-access-annotation-missing",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "0123456789abcdef01234567",
+    "resourceType": "annotation",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "tracingstore-access-tracing-read",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "{skeletonId}",
+    "resourceType": "tracing",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "tracingstore-access-tracing-write-user2",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "{user2Token}"
+   },
+   "json": {
+    "resourceId": "{skeletonId}",
+    "resourceType": "tracing",
+    "mode": "write"
+   }
+  },
+  {
+   "name": "tracingstore-access-tracing-missing",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/validateUserAccess",
+   "query": {
+    "key": "something-secure",
+    "token": "secretSampleUserToken"
+   },
+   "json": {
+    "resourceId": "nope",
+    "resourceType": "tracing",
+    "mode": "read"
+   }
+  },
+  {
+   "name": "ts-annotation-id",
+   "method": "GET",
+   "path": "/api/tracingstores/localhost/annotationId",
+   "query": {
+    "key": "something-secure",
+    "tracingId": "{skeletonId}"
+   }
+  },
+  {
+   "name": "ts-annotation-id-dummy",
+   "method": "GET",
+   "path": "/api/tracingstores/localhost/annotationId",
+   "query": {
+    "key": "something-secure",
+    "tracingId": "dummyTracingId"
+   }
+  },
+  {
+   "name": "ts-annotation-id-unknown",
+   "method": "GET",
+   "path": "/api/tracingstores/localhost/annotationId",
+   "query": {
+    "key": "something-secure",
+    "tracingId": "nope"
+   }
+  },
+  {
+   "name": "ts-annotation-id-wrong-key",
+   "method": "GET",
+   "path": "/api/tracingstores/localhost/annotationId",
+   "query": {
+    "key": "wrong",
+    "tracingId": "{skeletonId}"
+   }
+  },
+  {
+   "name": "ts-dataset-id",
+   "method": "GET",
+   "path": "/api/tracingstores/localhost/datasetId",
+   "query": {
+    "key": "something-secure",
+    "annotationId": "{annId}"
+   }
+  },
+  {
+   "name": "ts-dataset-id-missing",
+   "method": "GET",
+   "path": "/api/tracingstores/localhost/datasetId",
+   "query": {
+    "key": "something-secure",
+    "annotationId": "0123456789abcdef01234567"
+   }
+  },
+  {
+   "name": "ts-data-source",
+   "method": "GET",
+   "path": "/api/tracingstores/localhost/dataSource",
+   "query": {
+    "key": "something-secure",
+    "annotationId": "{annId}"
+   }
+  },
+  {
+   "name": "ts-data-source-missing",
+   "method": "GET",
+   "path": "/api/tracingstores/localhost/dataSource",
+   "query": {
+    "key": "something-secure",
+    "annotationId": "0123456789abcdef01234567"
+   }
+  },
+  {
+   "name": "ts-datastore-uri",
+   "method": "GET",
+   "path": "/api/tracingstores/localhost/dataStoreUri/68b80290d4000090f8f4aa62",
+   "query": {
+    "key": "something-secure"
+   }
+  },
+  {
+   "name": "ts-datastore-uri-missing",
+   "method": "GET",
+   "path": "/api/tracingstores/localhost/dataStoreUri/0123456789abcdef01234567",
+   "query": {
+    "key": "something-secure"
+   }
+  },
+  {
+   "name": "ts-get-data-source",
+   "method": "GET",
+   "path": "/api/tracingstores/localhost/datasources/68b80290d4000090f8f4aa62",
+   "query": {
+    "key": "something-secure"
+   }
+  },
+  {
+   "name": "ts-get-data-source-missing",
+   "method": "GET",
+   "path": "/api/tracingstores/localhost/datasources/0123456789abcdef01234567",
+   "query": {
+    "key": "something-secure"
+   }
+  },
+  {
+   "name": "ts-get-data-source-wrong-key",
+   "method": "GET",
+   "path": "/api/tracingstores/localhost/datasources/68b80290d4000090f8f4aa62",
+   "query": {
+    "key": "wrong"
+   }
+  },
+  {
+   "name": "ts-update-report",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/handleTracingUpdateReport",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "annotationId": "{annId}",
+    "timestamps": [
+     1790000000000,
+     1790000005000,
+     1790000010000
+    ],
+    "statistics": {
+     "treeCount": 1,
+     "nodeCount": 0,
+     "edgeCount": 0,
+     "branchPointCount": 0
+    },
+    "significantChangesCount": 2,
+    "viewChangesCount": 1,
+    "userToken": "secretSampleUserToken"
+   }
+  },
+  {
+   "name": "ts-update-report-contributor",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/handleTracingUpdateReport",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "annotationId": "{annId}",
+    "timestamps": [
+     1790000020000
+    ],
+    "significantChangesCount": 1,
+    "viewChangesCount": 0,
+    "userToken": "{user2Token}"
+   }
+  },
+  {
+   "name": "ts-update-report-view-only",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/handleTracingUpdateReport",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "annotationId": "{annId}",
+    "timestamps": [
+     1790000030000
+    ],
+    "significantChangesCount": 0,
+    "viewChangesCount": 3,
+    "userToken": "secretSampleUserToken"
+   }
+  },
+  {
+   "name": "ts-update-report-anonymous",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/handleTracingUpdateReport",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "annotationId": "{annId}",
+    "timestamps": [
+     1790000040000
+    ],
+    "significantChangesCount": 1,
+    "viewChangesCount": 0
+   }
+  },
+  {
+   "name": "ts-update-report-missing",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/handleTracingUpdateReport",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "annotationId": "0123456789abcdef01234567",
+    "timestamps": [],
+    "significantChangesCount": 0,
+    "viewChangesCount": 0
+   }
+  },
+  {
+   "name": "ts-update-report-invalid",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/handleTracingUpdateReport",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "annotationId": "{annId}"
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "annotation-info-after-reports",
+   "method": "GET",
+   "path": "/api/annotations/{annId}/info",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "time-spans-after-reports",
+   "method": "GET",
+   "path": "/api/time/user/{seedAdminId}/spans",
+   "as": "admin",
+   "query": {
+    "start": "1789999000000",
+    "end": "1790001000000",
+    "annotationTypes": "Explorational",
+    "annotationStates": "Active"
+   }
+  },
+  {
+   "name": "ts-update-annotation-invalid-layer-name",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/updateAnnotation",
+   "query": {
+    "key": "something-secure",
+    "annotationId": "{annId}"
+   },
+   "proto": [
+    [
+     1,
+     "string",
+     "diff description"
+    ],
+    [
+     2,
+     "int",
+     3
+    ],
+    [
+     3,
+     "message",
+     [
+      [
+       1,
+       "string",
+       "{skeletonId}"
+      ],
+      [
+       2,
+       "string",
+       "Renamed skeleton!"
+      ],
+      [
+       3,
+       "enum",
+       1
+      ]
+     ]
+    ],
+    [
+     4,
+     "int",
+     0
+    ]
+   ],
+   "expected_divergence": {
+    "reason": "A layer name violating annotation_layers_name_check: Play answers 400 with the raw \"SQL Failure: ERROR: new row for relation \u2026 violates check constraint \u2026\" text including the failing row; Rust answers 400 \"Invalid resource values.\" (no database internals in responses).",
+    "paths": [
+     "$.messages[0].error"
+    ]
+   }
+  },
+  {
+   "name": "ts-update-annotation",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/updateAnnotation",
+   "query": {
+    "key": "something-secure",
+    "annotationId": "{annId}"
+   },
+   "proto": [
+    [
+     1,
+     "string",
+     "diff description"
+    ],
+    [
+     2,
+     "int",
+     3
+    ],
+    [
+     3,
+     "message",
+     [
+      [
+       1,
+       "string",
+       "{skeletonId}"
+      ],
+      [
+       2,
+       "string",
+       "Renamed_skeleton"
+      ],
+      [
+       3,
+       "enum",
+       1
+      ]
+     ]
+    ],
+    [
+     4,
+     "int",
+     0
+    ]
+   ]
+  },
+  {
+   "name": "ts-update-annotation-add-and-drop-layer",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/updateAnnotation",
+   "query": {
+    "key": "something-secure",
+    "annotationId": "{annId}"
+   },
+   "proto": [
+    [
+     1,
+     "string",
+     ""
+    ],
+    [
+     2,
+     "int",
+     4
+    ],
+    [
+     3,
+     "message",
+     [
+      [
+       1,
+       "string",
+       "{skeletonId}"
+      ],
+      [
+       2,
+       "string",
+       "Renamed_skeleton"
+      ],
+      [
+       3,
+       "enum",
+       1
+      ]
+     ]
+    ],
+    [
+     3,
+     "message",
+     [
+      [
+       1,
+       "string",
+       "6a1c0000-0000-4000-8000-000000000001"
+      ],
+      [
+       2,
+       "string",
+       "Volume_layer"
+      ],
+      [
+       3,
+       "enum",
+       2
+      ]
+     ]
+    ],
+    [
+     4,
+     "int",
+     0
+    ]
+   ]
+  },
+  {
+   "name": "annotation-info-after-layer-add",
+   "method": "GET",
+   "path": "/api/annotations/{annId}/info",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "ts-update-annotation-drop-layer",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/updateAnnotation",
+   "query": {
+    "key": "something-secure",
+    "annotationId": "{annId}"
+   },
+   "proto": [
+    [
+     1,
+     "string",
+     "diff description 2"
+    ],
+    [
+     2,
+     "int",
+     5
+    ],
+    [
+     3,
+     "message",
+     [
+      [
+       1,
+       "string",
+       "{skeletonId}"
+      ],
+      [
+       2,
+       "string",
+       "Renamed_skeleton"
+      ],
+      [
+       3,
+       "enum",
+       1
+      ]
+     ]
+    ],
+    [
+     4,
+     "int",
+     0
+    ]
+   ]
+  },
+  {
+   "name": "ts-update-annotation-invalid",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/updateAnnotation",
+   "query": {
+    "key": "something-secure",
+    "annotationId": "{annId}"
+   },
+   "raw_b64": "//8=",
+   "headers": {
+    "Content-Type": "application/x-protobuf"
+   }
+  },
+  {
+   "name": "annotation-info-after-update",
+   "method": "GET",
+   "path": "/api/annotations/{annId}/info",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "ts-create-tracing-volume",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/createTracing",
+   "query": {
+    "key": "something-secure",
+    "annotationId": "{annId}",
+    "previousVersion": "0"
+   },
+   "json": {
+    "typ": "Volume",
+    "name": "Volume",
+    "fallbackLayerName": null,
+    "autoFallbackLayer": false
+   },
+   "ignore": [
+    {
+     "path": "$",
+     "reason": "protobuf VolumeTracing with the creation time and per-side ids; status and content type are compared"
+    }
+   ]
+  },
+  {
+   "name": "ts-create-tracing-missing",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/createTracing",
+   "query": {
+    "key": "something-secure",
+    "annotationId": "0123456789abcdef01234567",
+    "previousVersion": "0"
+   },
+   "json": {
+    "typ": "Skeleton",
+    "name": "Skeleton"
+   }
+  },
+  {
+   "name": "ts-create-tracing-invalid",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/createTracing",
+   "query": {
+    "key": "something-secure",
+    "annotationId": "{annId}",
+    "previousVersion": "0"
+   },
+   "json": {
+    "typ": "Nope"
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "finish-annotation",
+   "method": "PATCH",
+   "path": "/api/annotations/Explorational/{annId}/finish",
+   "as": "admin",
+   "query": {
+    "timestamp": "1900000000000"
+   }
+  },
+  {
+   "name": "ts-update-report-finished",
+   "method": "POST",
+   "path": "/api/tracingstores/localhost/handleTracingUpdateReport",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "annotationId": "{annId}",
+    "timestamps": [
+     1790000050000
+    ],
+    "significantChangesCount": 1,
+    "viewChangesCount": 0,
+    "userToken": "secretSampleUserToken"
+   }
+  },
+  {
+   "name": "ds-delete-dataset",
+   "method": "POST",
+   "path": "/api/datastores/localhost/deleteDataset",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": "{storeUploadId}"
+  },
+  {
+   "name": "deleted-dataset",
+   "method": "GET",
+   "path": "/api/datasets/{storeUploadId}",
+   "as": "admin"
+  },
+  {
+   "name": "ds-delete-dataset-missing",
+   "method": "POST",
+   "path": "/api/datastores/localhost/deleteDataset",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": "0123456789abcdef01234567"
+  },
+  {
+   "name": "ds-delete-dataset-invalid",
+   "method": "POST",
+   "path": "/api/datastores/localhost/deleteDataset",
+   "query": {
+    "key": "something-secure"
+   },
+   "json": {
+    "id": 1
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "datastore-create-user2",
+   "method": "POST",
+   "path": "/api/datastores",
+   "as": "user2",
+   "json": {
+    "name": "diffstore",
+    "url": "http://127.0.0.1:1",
+    "publicUrl": "http://127.0.0.1:1",
+    "key": "k"
+   }
+  },
+  {
+   "name": "datastore-create",
+   "method": "POST",
+   "path": "/api/datastores",
+   "as": "admin",
+   "json": {
+    "name": "diffstore",
+    "url": "http://127.0.0.1:1",
+    "publicUrl": "http://127.0.0.1:1",
+    "key": "k",
+    "allowsUpload": false
+   }
+  },
+  {
+   "name": "datastore-create-duplicate",
+   "method": "POST",
+   "path": "/api/datastores",
+   "as": "admin",
+   "json": {
+    "name": "diffstore",
+    "url": "http://127.0.0.1:2",
+    "publicUrl": "http://127.0.0.1:2",
+    "key": "k"
+   }
+  },
+  {
+   "name": "datastore-create-invalid",
+   "method": "POST",
+   "path": "/api/datastores",
+   "as": "admin",
+   "json": {
+    "name": "x"
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "datastores-with-new",
+   "method": "GET",
+   "path": "/api/datastores",
+   "as": "admin",
+   "unordered": [
+    "$"
+   ]
+  },
+  {
+   "name": "datastore-delete-user2",
+   "method": "DELETE",
+   "path": "/api/datastores/diffstore",
+   "as": "user2"
+  },
+  {
+   "name": "datastore-delete",
+   "method": "DELETE",
+   "path": "/api/datastores/diffstore",
+   "as": "admin"
+  },
+  {
+   "name": "datastore-delete-again",
+   "method": "DELETE",
+   "path": "/api/datastores/diffstore",
+   "as": "admin"
+  },
+  {
+   "name": "tracingstore-update-user2",
+   "method": "PUT",
+   "path": "/api/tracingstores/localhost",
+   "as": "user2",
+   "json": {
+    "name": "localhost",
+    "url": "{ownTracingStoreUrl}",
+    "publicUrl": "{ownTracingStoreUrl}"
+   }
+  },
+  {
+   "name": "tracingstore-update-name-mismatch",
+   "method": "PUT",
+   "path": "/api/tracingstores/localhost",
+   "as": "admin",
+   "json": {
+    "name": "other",
+    "url": "{ownTracingStoreUrl}",
+    "publicUrl": "{ownTracingStoreUrl}"
+   }
+  },
+  {
+   "name": "tracingstore-update-unknown",
+   "method": "PUT",
+   "path": "/api/tracingstores/nope",
+   "as": "admin",
+   "json": {
+    "name": "nope",
+    "url": "{ownTracingStoreUrl}",
+    "publicUrl": "{ownTracingStoreUrl}"
+   }
+  },
+  {
+   "name": "tracingstore-update",
+   "method": "PUT",
+   "path": "/api/tracingstores/localhost",
+   "as": "admin",
+   "json": {
+    "name": "localhost",
+    "url": "{ownTracingStoreUrl}",
+    "publicUrl": "{ownTracingStoreUrl}"
+   }
+  },
+  {
+   "name": "tracingstore-after-update",
+   "method": "GET",
+   "path": "/api/tracingstore",
+   "as": "admin"
+  }
+ ]
+}

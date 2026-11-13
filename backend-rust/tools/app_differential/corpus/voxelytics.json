@@ -1,0 +1,1258 @@
+{
+ "version": 1,
+ "description": "Voxelytics workflow reports over the test/db fixture runs (loaded into the seed by stack.py) and a new workflow through the client protocol: list, report per run, chunk statistics, artifact checksums, events of every type, logs without Loki, deletion; other users and anonymous requests.",
+ "header_divergences": {
+  "cache-control": "Rust sends `Cache-Control: no-store` on every API response (README: cache prevention); Play sends `no-cache` on most and nothing on auth errors. Play sends no validators (ETag/Last-Modified), so both force a refetch; no-store additionally forbids storage. Deliberate."
+ },
+ "drop_play_chain_messages": "Play appends {\"chain\": \"[Server Time \u2026] \u2026\"} to messages of failed Fox chains (debug context with the server time). Rust returns only the error entry; the frontend shows `error` entries.",
+ "unordered_keys": {
+  "annotationLayers": "Play's AnnotationLayerDAO orders layers by tracingId, a random UUID per side.",
+  "tags": "Scala Set semantics (annotation.tags ++ Set(dataset.name)); hash order for more than four tags.",
+  "jobsSupportedByAvailableWorkers": "DataStoreService.publicWrites serializes JobService.jobsSupportedByAvailableWorkers, a Scala Set (hash order); Rust sorts.",
+  "supportedJobCommands": "Worker.supportedJobCommands is a Scala Set (hash order); Rust keeps the stored order."
+ },
+ "side_rewrites": {
+  "rust": {
+   "http://127.0.0.1:19595": "http://127.0.0.1:19590",
+   "http://127.0.0.1:19596": "http://127.0.0.1:19590",
+   "/tmp/wk-diff/rust-data/": "/tmp/wk-diff/play-data/"
+  }
+ },
+ "identities": {
+  "admin": {
+   "token": "secretSampleUserToken"
+  },
+  "user2": {
+   "cookie": "{user2Cookie}"
+  }
+ },
+ "steps": [
+  {
+   "name": "user2-login",
+   "method": "POST",
+   "path": "/api/auth/login",
+   "form": {
+    "email": "sample2@scm.io",
+    "password": "secret"
+   },
+   "capture_cookie": {
+    "user2Cookie": "id"
+   }
+  },
+  {
+   "name": "list",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows",
+   "as": "admin"
+  },
+  {
+   "name": "list-user2",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows",
+   "as": "user2"
+  },
+  {
+   "name": "list-anonymous",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows"
+  },
+  {
+   "name": "neuron-workflow",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/979252d3f3",
+   "as": "admin",
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ]
+  },
+  {
+   "name": "neuron-workflow-run",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/979252d3f3",
+   "as": "admin",
+   "query": {
+    "runId": "6ad1043ef78084a048e5510f"
+   },
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ]
+  },
+  {
+   "name": "runs-workflow",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthruns01",
+   "as": "admin",
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ]
+  },
+  {
+   "name": "runs-workflow-failed-run",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthruns01",
+   "as": "admin",
+   "query": {
+    "runId": "6ad1d0e6f78084a048e5515e"
+   },
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ]
+  },
+  {
+   "name": "runs-workflow-user2",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthruns01",
+   "as": "user2",
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ]
+  },
+  {
+   "name": "meta-workflow",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthmeta01",
+   "as": "admin",
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ]
+  },
+  {
+   "name": "meta-workflow-fixed-run",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthmeta01",
+   "as": "admin",
+   "query": {
+    "runId": "6ad20000000000005e7a0011"
+   },
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ]
+  },
+  {
+   "name": "workflow-foreign-run",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthmeta01",
+   "as": "admin",
+   "query": {
+    "runId": "6ad1d0e6f78084a048e5515e"
+   },
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ]
+  },
+  {
+   "name": "workflow-unknown-run",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthmeta01",
+   "as": "admin",
+   "query": {
+    "runId": "0123456789abcdef01234567"
+   },
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ]
+  },
+  {
+   "name": "workflow-invalid-run",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthmeta01",
+   "as": "admin",
+   "query": {
+    "runId": "not-an-id"
+   },
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ],
+   "expected_divergence": {
+    "reason": "Router-level parameter binding error (ObjectId query parameter): Play answers its HTML error page, Rust JSON {\"messages\":[\u2026]}; same status (declared category, CUTOVER.md \u00a71).",
+    "paths": [
+     "$"
+    ],
+    "headers": [
+     "content-type"
+    ]
+   }
+  },
+  {
+   "name": "workflow-unknown",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/nope",
+   "as": "admin",
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ]
+  },
+  {
+   "name": "workflow-anonymous",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthmeta01",
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ]
+  },
+  {
+   "name": "neuron-stats-import-model",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/979252d3f3/chunkStatistics",
+   "as": "admin",
+   "query": {
+    "taskName": "import_model"
+   }
+  },
+  {
+   "name": "neuron-stats-import-model-run",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/979252d3f3/chunkStatistics",
+   "as": "admin",
+   "query": {
+    "taskName": "import_model",
+    "runId": "6ad1043ef78084a048e5510f"
+   }
+  },
+  {
+   "name": "runs-stats-export",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthruns01/chunkStatistics",
+   "as": "admin",
+   "query": {
+    "taskName": "export"
+   }
+  },
+  {
+   "name": "runs-stats-export-failed-run",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthruns01/chunkStatistics",
+   "as": "admin",
+   "query": {
+    "taskName": "export",
+    "runId": "6ad1d0e6f78084a048e5515e"
+   }
+  },
+  {
+   "name": "runs-stats-predict",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthruns01/chunkStatistics",
+   "as": "admin",
+   "query": {
+    "taskName": "segment@predict"
+   }
+  },
+  {
+   "name": "meta-stats-export",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthmeta01/chunkStatistics",
+   "as": "admin",
+   "query": {
+    "taskName": "export"
+   }
+  },
+  {
+   "name": "stats-unknown-task",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthruns01/chunkStatistics",
+   "as": "admin",
+   "query": {
+    "taskName": "nope"
+   }
+  },
+  {
+   "name": "stats-unknown-workflow",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/nope/chunkStatistics",
+   "as": "admin",
+   "query": {
+    "taskName": "export"
+   }
+  },
+  {
+   "name": "stats-foreign-run",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/979252d3f3/chunkStatistics",
+   "as": "admin",
+   "query": {
+    "taskName": "import_model",
+    "runId": "6ad1d0e6f78084a048e5515e"
+   }
+  },
+  {
+   "name": "stats-user2",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthruns01/chunkStatistics",
+   "as": "user2",
+   "query": {
+    "taskName": "export"
+   }
+  },
+  {
+   "name": "runs-checksums-download",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthruns01/artifactChecksums",
+   "as": "admin",
+   "query": {
+    "taskName": "download"
+   }
+  },
+  {
+   "name": "runs-checksums-download-dataset",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/synthruns01/artifactChecksums",
+   "as": "admin",
+   "query": {
+    "taskName": "download",
+    "artifactName": "dataset"
+   }
+  },
+  {
+   "name": "checksums-unknown-workflow",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/nope/artifactChecksums",
+   "as": "admin",
+   "query": {
+    "taskName": "download"
+   }
+  },
+  {
+   "name": "store-workflow",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows",
+   "as": "admin",
+   "json": {
+    "config": {
+     "global_parameters": {
+      "p": 1
+     },
+     "paths": [
+      "/data/diff"
+     ],
+     "schema_version": 2,
+     "git_hash": "abc",
+     "tasks": {
+      "taskA": {
+       "config": {
+        "x": 1
+       },
+       "inputs": {},
+       "description": "first",
+       "distribution": {
+        "strategy": "local"
+       },
+       "output_paths": {
+        "out": "/data/diff/out"
+       },
+       "task": "DiffTaskA"
+      },
+      "taskB": {
+       "config": {},
+       "inputs": {
+        "in": "taskA:out"
+       },
+       "description": null,
+       "distribution": {},
+       "output_paths": {},
+       "task": "DiffTaskB"
+      }
+     }
+    },
+    "artifacts": {
+     "taskA": {
+      "out": {
+       "path": "/data/diff/out",
+       "file_size": 100,
+       "inode_count": 2,
+       "version": "1",
+       "attributes": {
+        "note": "diff"
+       },
+       "iframes": {},
+       "links": {}
+      }
+     }
+    },
+    "run": {
+     "name": "diff-run-1",
+     "user": "diff-user",
+     "hostname": "diff-host",
+     "voxelyticsVersion": "1.2.3"
+    },
+    "workflow": {
+     "name": "diff_workflow",
+     "hash": "diffwf01",
+     "yamlContent": "steps: []"
+    }
+   }
+  },
+  {
+   "name": "store-workflow-again",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows",
+   "as": "admin",
+   "json": {
+    "config": {
+     "global_parameters": {
+      "p": 1
+     },
+     "paths": [
+      "/data/diff"
+     ],
+     "schema_version": 2,
+     "git_hash": "abc",
+     "tasks": {
+      "taskA": {
+       "config": {
+        "x": 1
+       },
+       "inputs": {},
+       "description": "first",
+       "distribution": {
+        "strategy": "local"
+       },
+       "output_paths": {
+        "out": "/data/diff/out"
+       },
+       "task": "DiffTaskA"
+      },
+      "taskB": {
+       "config": {},
+       "inputs": {
+        "in": "taskA:out"
+       },
+       "description": null,
+       "distribution": {},
+       "output_paths": {},
+       "task": "DiffTaskB"
+      }
+     }
+    },
+    "artifacts": {
+     "taskA": {
+      "out": {
+       "path": "/data/diff/out",
+       "file_size": 100,
+       "inode_count": 2,
+       "version": "1",
+       "attributes": {
+        "note": "diff"
+       },
+       "iframes": {},
+       "links": {}
+      }
+     }
+    },
+    "run": {
+     "name": "diff-run-1",
+     "user": "diff-user",
+     "hostname": "diff-host",
+     "voxelyticsVersion": "1.2.3"
+    },
+    "workflow": {
+     "name": "diff_workflow",
+     "hash": "diffwf01",
+     "yamlContent": "steps: []"
+    }
+   }
+  },
+  {
+   "name": "store-workflow-user2-foreign-run",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows",
+   "as": "user2",
+   "json": {
+    "config": {
+     "global_parameters": {
+      "p": 1
+     },
+     "paths": [
+      "/data/diff"
+     ],
+     "schema_version": 2,
+     "git_hash": "abc",
+     "tasks": {
+      "taskA": {
+       "config": {
+        "x": 1
+       },
+       "inputs": {},
+       "description": "first",
+       "distribution": {
+        "strategy": "local"
+       },
+       "output_paths": {
+        "out": "/data/diff/out"
+       },
+       "task": "DiffTaskA"
+      },
+      "taskB": {
+       "config": {},
+       "inputs": {
+        "in": "taskA:out"
+       },
+       "description": null,
+       "distribution": {},
+       "output_paths": {},
+       "task": "DiffTaskB"
+      }
+     }
+    },
+    "artifacts": {
+     "taskA": {
+      "out": {
+       "path": "/data/diff/out",
+       "file_size": 100,
+       "inode_count": 2,
+       "version": "1",
+       "attributes": {
+        "note": "diff"
+       },
+       "iframes": {},
+       "links": {}
+      }
+     }
+    },
+    "run": {
+     "name": "diff-run-1",
+     "user": "other",
+     "hostname": "diff-host",
+     "voxelyticsVersion": "1.2.3"
+    },
+    "workflow": {
+     "name": "diff_workflow",
+     "hash": "diffwf01",
+     "yamlContent": "steps: []"
+    }
+   }
+  },
+  {
+   "name": "store-workflow-user2",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows",
+   "as": "user2",
+   "json": {
+    "config": {
+     "global_parameters": {
+      "p": 1
+     },
+     "paths": [
+      "/data/diff"
+     ],
+     "schema_version": 2,
+     "git_hash": "abc",
+     "tasks": {
+      "taskA": {
+       "config": {
+        "x": 1
+       },
+       "inputs": {},
+       "description": "first",
+       "distribution": {
+        "strategy": "local"
+       },
+       "output_paths": {
+        "out": "/data/diff/out"
+       },
+       "task": "DiffTaskA"
+      },
+      "taskB": {
+       "config": {},
+       "inputs": {
+        "in": "taskA:out"
+       },
+       "description": null,
+       "distribution": {},
+       "output_paths": {},
+       "task": "DiffTaskB"
+      }
+     }
+    },
+    "artifacts": {
+     "taskA": {
+      "out": {
+       "path": "/data/diff/out",
+       "file_size": 100,
+       "inode_count": 2,
+       "version": "1",
+       "attributes": {
+        "note": "diff"
+       },
+       "iframes": {},
+       "links": {}
+      }
+     }
+    },
+    "run": {
+     "name": "diff-run-u2",
+     "user": "u2",
+     "hostname": "diff-host",
+     "voxelyticsVersion": "1.2.3"
+    },
+    "workflow": {
+     "name": "diff_workflow",
+     "hash": "diffwf01",
+     "yamlContent": "steps: []"
+    }
+   }
+  },
+  {
+   "name": "store-workflow-second-run",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows",
+   "as": "admin",
+   "json": {
+    "config": {
+     "global_parameters": {
+      "p": 1
+     },
+     "paths": [
+      "/data/diff"
+     ],
+     "schema_version": 2,
+     "git_hash": "abc",
+     "tasks": {
+      "taskA": {
+       "config": {
+        "x": 1
+       },
+       "inputs": {},
+       "description": "first",
+       "distribution": {
+        "strategy": "local"
+       },
+       "output_paths": {
+        "out": "/data/diff/out"
+       },
+       "task": "DiffTaskA"
+      },
+      "taskB": {
+       "config": {},
+       "inputs": {
+        "in": "taskA:out"
+       },
+       "description": null,
+       "distribution": {},
+       "output_paths": {},
+       "task": "DiffTaskB"
+      }
+     }
+    },
+    "artifacts": {
+     "taskA": {
+      "out": {
+       "path": "/data/diff/out",
+       "file_size": 100,
+       "inode_count": 2,
+       "version": "1",
+       "attributes": {
+        "note": "diff"
+       },
+       "iframes": {},
+       "links": {}
+      }
+     }
+    },
+    "run": {
+     "name": "diff-run-2",
+     "user": "diff-user",
+     "hostname": "diff-host",
+     "voxelyticsVersion": "1.2.3"
+    },
+    "workflow": {
+     "name": "diff_workflow",
+     "hash": "diffwf01",
+     "yamlContent": "steps: []"
+    }
+   }
+  },
+  {
+   "name": "store-workflow-invalid",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows",
+   "as": "admin",
+   "json": {
+    "run": {}
+   },
+   "expected_divergence": {
+    "reason": "JSON body validation failures: Play returns its JsError structure, Rust returns {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}; both 400. Only reachable by malformed clients (see admin_crud.json).",
+    "paths": [
+     "$"
+    ]
+   },
+   "expect_status": 400
+  },
+  {
+   "name": "store-workflow-anonymous",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows",
+   "json": {
+    "config": {
+     "global_parameters": {
+      "p": 1
+     },
+     "paths": [
+      "/data/diff"
+     ],
+     "schema_version": 2,
+     "git_hash": "abc",
+     "tasks": {
+      "taskA": {
+       "config": {
+        "x": 1
+       },
+       "inputs": {},
+       "description": "first",
+       "distribution": {
+        "strategy": "local"
+       },
+       "output_paths": {
+        "out": "/data/diff/out"
+       },
+       "task": "DiffTaskA"
+      },
+      "taskB": {
+       "config": {},
+       "inputs": {
+        "in": "taskA:out"
+       },
+       "description": null,
+       "distribution": {},
+       "output_paths": {},
+       "task": "DiffTaskB"
+      }
+     }
+    },
+    "artifacts": {
+     "taskA": {
+      "out": {
+       "path": "/data/diff/out",
+       "file_size": 100,
+       "inode_count": 2,
+       "version": "1",
+       "attributes": {
+        "note": "diff"
+       },
+       "iframes": {},
+       "links": {}
+      }
+     }
+    },
+    "run": {
+     "name": "diff-run-x",
+     "user": "diff-user",
+     "hostname": "diff-host",
+     "voxelyticsVersion": "1.2.3"
+    },
+    "workflow": {
+     "name": "diff_workflow",
+     "hash": "diffwf01",
+     "yamlContent": "steps: []"
+    }
+   }
+  },
+  {
+   "name": "events-unknown-run",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows/diffwf01/events",
+   "as": "admin",
+   "query": {
+    "runName": "nope"
+   },
+   "json": []
+  },
+  {
+   "name": "events-unknown-workflow",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows/nope/events",
+   "as": "admin",
+   "query": {
+    "runName": "diff-run-1"
+   },
+   "json": []
+  },
+  {
+   "name": "events-unknown-type",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows/diffwf01/events",
+   "as": "admin",
+   "query": {
+    "runName": "diff-run-1"
+   },
+   "json": [
+    {
+     "type": "UNKNOWN"
+    }
+   ],
+   "expected_divergence": {
+    "reason": "Play bug: WorkflowEvent's JSON reads throw on an unknown event type instead of returning a JsError, so Play answers 500 with its HTML error page; Rust answers 400 {\"messages\":[{\"error\":\"Invalid JSON request body.\"}]}.",
+    "paths": [
+     "$"
+    ],
+    "status_differs": true,
+    "headers": [
+     "content-type"
+    ]
+   }
+  },
+  {
+   "name": "events-empty",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows/diffwf01/events",
+   "as": "admin",
+   "query": {
+    "runName": "diff-run-1"
+   },
+   "json": []
+  },
+  {
+   "name": "events-1",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows/diffwf01/events",
+   "as": "admin",
+   "query": {
+    "runName": "diff-run-1"
+   },
+   "json": [
+    {
+     "type": "RUN_STATE_CHANGE",
+     "state": "RUNNING",
+     "timestamp": 1790000000000
+    },
+    {
+     "type": "TASK_STATE_CHANGE",
+     "taskName": "taskA",
+     "state": "RUNNING",
+     "timestamp": 1790000000000,
+     "artifacts": {}
+    },
+    {
+     "type": "CHUNK_STATE_CHANGE",
+     "taskName": "taskA",
+     "executionId": "exec1",
+     "chunkName": "c1",
+     "state": "RUNNING",
+     "timestamp": 1790000001000
+    },
+    {
+     "type": "CHUNK_STATE_CHANGE",
+     "taskName": "taskA",
+     "executionId": "exec1",
+     "chunkName": "c2",
+     "state": "RUNNING",
+     "timestamp": "2026-09-21T14:13:21.500Z"
+    },
+    {
+     "type": "RUN_HEARTBEAT",
+     "timestamp": 1790000002000
+    }
+   ]
+  },
+  {
+   "name": "workflow-running",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/diffwf01",
+   "as": "admin",
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ]
+  },
+  {
+   "name": "events-2",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows/diffwf01/events",
+   "as": "admin",
+   "query": {
+    "runName": "diff-run-1"
+   },
+   "json": [
+    {
+     "type": "CHUNK_STATE_CHANGE",
+     "taskName": "taskA",
+     "executionId": "exec1",
+     "chunkName": "c1",
+     "state": "COMPLETE",
+     "timestamp": 1790000003000
+    },
+    {
+     "type": "CHUNK_STATE_CHANGE",
+     "taskName": "taskA",
+     "executionId": "exec1",
+     "chunkName": "c2",
+     "state": "FAILED",
+     "timestamp": 1790000004000
+    },
+    {
+     "type": "CHUNK_PROFILING",
+     "taskName": "taskA",
+     "executionId": "exec1",
+     "chunkName": "c1",
+     "hostname": "h",
+     "pid": 1,
+     "memory": 10.5,
+     "cpuUser": 1.25,
+     "cpuSystem": 0.5,
+     "timestamp": 1790000002000
+    },
+    {
+     "type": "CHUNK_PROFILING",
+     "taskName": "taskA",
+     "executionId": "exec1",
+     "chunkName": "c2",
+     "hostname": "h",
+     "pid": 2,
+     "memory": 30.0,
+     "cpuUser": 3.0,
+     "cpuSystem": 0.75,
+     "timestamp": 1790000002500
+    },
+    {
+     "type": "TASK_STATE_CHANGE",
+     "taskName": "taskA",
+     "state": "COMPLETE",
+     "timestamp": 1790000005000,
+     "artifacts": {
+      "out2": {
+       "path": "/data/diff/out2",
+       "file_size": 50,
+       "inode_count": 2,
+       "version": "2",
+       "attributes": {
+        "note": "diff"
+       },
+       "iframes": {},
+       "links": {}
+      }
+     }
+    },
+    {
+     "type": "ARTIFACT_FILE_CHECKSUM",
+     "taskName": "taskA",
+     "artifactName": "out",
+     "path": "p1",
+     "resolvedPath": "/r/p1",
+     "checksumMethod": "md5",
+     "checksum": "aa",
+     "fileSize": 7,
+     "lastModified": 1790000000100,
+     "timestamp": 1790000006000
+    },
+    {
+     "type": "ARTIFACT_FILE_CHECKSUM",
+     "taskName": "taskA",
+     "artifactName": "out",
+     "path": "p1",
+     "resolvedPath": "/r/p1",
+     "checksumMethod": "md5",
+     "checksum": "bb",
+     "fileSize": 7,
+     "lastModified": 1790000000100,
+     "timestamp": 1790000006500
+    }
+   ]
+  },
+  {
+   "name": "events-2b",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows/diffwf01/events",
+   "as": "admin",
+   "query": {
+    "runName": "diff-run-1"
+   },
+   "json": [
+    {
+     "type": "ARTIFACT_FILE_CHECKSUM",
+     "taskName": "taskA",
+     "artifactName": "out2",
+     "path": "p2",
+     "resolvedPath": "/r/p2",
+     "checksumMethod": "md5",
+     "checksum": "cc",
+     "fileSize": 8,
+     "lastModified": 1790000000100,
+     "timestamp": 1790000006000
+    }
+   ]
+  },
+  {
+   "name": "events-3",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows/diffwf01/events",
+   "as": "admin",
+   "query": {
+    "runName": "diff-run-1"
+   },
+   "json": [
+    {
+     "type": "TASK_STATE_CHANGE",
+     "taskName": "taskB",
+     "state": "SKIPPED",
+     "timestamp": 1790000007000,
+     "artifacts": {}
+    },
+    {
+     "type": "RUN_STATE_CHANGE",
+     "state": "COMPLETE",
+     "timestamp": 1790000007000
+    }
+   ]
+  },
+  {
+   "name": "events-run-2",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows/diffwf01/events",
+   "as": "admin",
+   "query": {
+    "runName": "diff-run-2"
+   },
+   "json": [
+    {
+     "type": "RUN_STATE_CHANGE",
+     "state": "RUNNING",
+     "timestamp": 1790000009000
+    },
+    {
+     "type": "TASK_STATE_CHANGE",
+     "taskName": "taskB",
+     "state": "RUNNING",
+     "timestamp": 1790000009000,
+     "artifacts": {}
+    }
+   ]
+  },
+  {
+   "name": "events-user2-on-admin-run",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows/diffwf01/events",
+   "as": "user2",
+   "query": {
+    "runName": "diff-run-1"
+   },
+   "json": [
+    {
+     "type": "TASK_STATE_CHANGE",
+     "taskName": "taskB",
+     "state": "SKIPPED",
+     "timestamp": 1790000007000,
+     "artifacts": {}
+    },
+    {
+     "type": "RUN_STATE_CHANGE",
+     "state": "COMPLETE",
+     "timestamp": 1790000007000
+    }
+   ]
+  },
+  {
+   "name": "events-user2-own-run",
+   "method": "POST",
+   "path": "/api/voxelytics/workflows/diffwf01/events",
+   "as": "user2",
+   "query": {
+    "runName": "diff-run-u2"
+   },
+   "json": [
+    {
+     "type": "RUN_STATE_CHANGE",
+     "state": "FAILED",
+     "timestamp": 1790000008000
+    }
+   ]
+  },
+  {
+   "name": "list-after-events",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows",
+   "as": "admin"
+  },
+  {
+   "name": "list-after-events-user2",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows",
+   "as": "user2"
+  },
+  {
+   "name": "workflow-complete",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/diffwf01",
+   "as": "admin",
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ],
+   "capture": {
+    "diffRun1": "$.runs[1].id",
+    "diffRun2": "$.runs[0].id"
+   }
+  },
+  {
+   "name": "workflow-complete-run-1",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/diffwf01",
+   "as": "admin",
+   "query": {
+    "runId": "{diffRun1}"
+   },
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ]
+  },
+  {
+   "name": "workflow-complete-user2",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/diffwf01",
+   "as": "user2",
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ]
+  },
+  {
+   "name": "diff-stats",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/diffwf01/chunkStatistics",
+   "as": "admin",
+   "query": {
+    "taskName": "taskA"
+   }
+  },
+  {
+   "name": "diff-stats-run-1",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/diffwf01/chunkStatistics",
+   "as": "admin",
+   "query": {
+    "taskName": "taskA",
+    "runId": "{diffRun1}"
+   }
+  },
+  {
+   "name": "diff-stats-run-2",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/diffwf01/chunkStatistics",
+   "as": "admin",
+   "query": {
+    "taskName": "taskA",
+    "runId": "{diffRun2}"
+   }
+  },
+  {
+   "name": "diff-checksums",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/diffwf01/artifactChecksums",
+   "as": "admin",
+   "query": {
+    "taskName": "taskA"
+   }
+  },
+  {
+   "name": "diff-checksums-out",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/diffwf01/artifactChecksums",
+   "as": "admin",
+   "query": {
+    "taskName": "taskA",
+    "artifactName": "out"
+   }
+  },
+  {
+   "name": "diff-checksums-run-1",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/diffwf01/artifactChecksums",
+   "as": "admin",
+   "query": {
+    "taskName": "taskA",
+    "artifactName": "out2",
+    "runId": "{diffRun1}"
+   }
+  },
+  {
+   "name": "logs-append",
+   "method": "POST",
+   "path": "/api/voxelytics/logs",
+   "as": "admin",
+   "json": [
+    {
+     "message": "hello",
+     "level": "INFO",
+     "timestamp": 1790000000000
+    }
+   ]
+  },
+  {
+   "name": "logs-get",
+   "method": "GET",
+   "path": "/api/voxelytics/logs",
+   "as": "admin",
+   "query": {
+    "runId": "{diffRun1}",
+    "startTimestamp": "1789999000000",
+    "endTimestamp": "1790001000000"
+   }
+  },
+  {
+   "name": "logs-get-unknown-run",
+   "method": "GET",
+   "path": "/api/voxelytics/logs",
+   "as": "admin",
+   "query": {
+    "runId": "0123456789abcdef01234567",
+    "startTimestamp": "0",
+    "endTimestamp": "1"
+   }
+  },
+  {
+   "name": "logs-get-anonymous",
+   "method": "GET",
+   "path": "/api/voxelytics/logs",
+   "query": {
+    "runId": "{diffRun1}",
+    "startTimestamp": "0",
+    "endTimestamp": "1"
+   }
+  },
+  {
+   "name": "delete-user2",
+   "method": "DELETE",
+   "path": "/api/voxelytics/workflows/diffwf01",
+   "as": "user2"
+  },
+  {
+   "name": "delete-unknown",
+   "method": "DELETE",
+   "path": "/api/voxelytics/workflows/nope",
+   "as": "admin"
+  },
+  {
+   "name": "delete",
+   "method": "DELETE",
+   "path": "/api/voxelytics/workflows/diffwf01",
+   "as": "admin"
+  },
+  {
+   "name": "workflow-after-delete",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows/diffwf01",
+   "as": "admin",
+   "unordered": [
+    "$.tasks",
+    "$.tasks[*].runs"
+   ]
+  },
+  {
+   "name": "list-after-delete",
+   "method": "GET",
+   "path": "/api/voxelytics/workflows",
+   "as": "admin"
+  }
+ ]
+}

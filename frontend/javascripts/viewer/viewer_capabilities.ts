@@ -1,7 +1,6 @@
 import once from "lodash-es/once";
 import { Toolkit } from "viewer/model/accessors/tool_accessor";
 import {
-  isLayerRegistrationPrimaryWorker,
   isLayerRegistrationStore,
   isLayerRegistrationWorker,
 } from "viewer/view/layer_registration/layer_registration_protocol";
@@ -27,10 +26,6 @@ export type ViewerCapabilities = {
   // The menu entry to switch, add, delete and reset layouts.
   showLayoutMenu: boolean;
   showCommandPalette: boolean;
-  // The menus, the help button and the user avatar of the navbar.
-  showNavbarMenus: boolean;
-  // The WEBKNOSSOS logo, which links to the dashboard.
-  showDashboardLink: boolean;
 };
 
 const DEFAULT_CAPABILITIES: ViewerCapabilities = {
@@ -42,14 +37,12 @@ const DEFAULT_CAPABILITIES: ViewerCapabilities = {
   showRightBorder: true,
   showLayoutMenu: true,
   showCommandPalette: true,
-  showNavbarMenus: true,
-  showDashboardLink: true,
 };
 
 // The workers are sandboxes inside the layer registration page (see
 // layer_registration_worker.ts). They offer nothing that leaves the page, opens a worker without
 // the page around it, or changes what the page set up.
-const LAYER_REGISTRATION_PRIMARY_WORKER_CAPABILITIES: ViewerCapabilities = {
+const LAYER_REGISTRATION_WORKER_CAPABILITIES: ViewerCapabilities = {
   hasScene: true,
   // The workers force some settings, which must not end up in the user's account or in the
   // layouts of the normal viewer.
@@ -69,16 +62,6 @@ const LAYER_REGISTRATION_PRIMARY_WORKER_CAPABILITIES: ViewerCapabilities = {
   showLayoutMenu: false,
   // The command palette can leave the page or undo the forced settings.
   showCommandPalette: false,
-  // The workers keep the navbar because it contains the toolbar, but its menus lead away from
-  // the page.
-  showNavbarMenus: false,
-  // The layer registration page has no navbar, so the left worker links to the dashboard.
-  showDashboardLink: true,
-};
-
-const LAYER_REGISTRATION_SECONDARY_WORKER_CAPABILITIES: ViewerCapabilities = {
-  ...LAYER_REGISTRATION_PRIMARY_WORKER_CAPABILITIES,
-  showDashboardLink: false,
 };
 
 // The store is a hidden iframe of the layer registration page. The page uses it to read and save
@@ -94,10 +77,7 @@ export const getViewerCapabilities = once((): ViewerCapabilities => {
   if (isLayerRegistrationStore()) {
     return LAYER_REGISTRATION_STORE_CAPABILITIES;
   }
-  if (!isLayerRegistrationWorker()) {
-    return DEFAULT_CAPABILITIES;
-  }
-  return isLayerRegistrationPrimaryWorker()
-    ? LAYER_REGISTRATION_PRIMARY_WORKER_CAPABILITIES
-    : LAYER_REGISTRATION_SECONDARY_WORKER_CAPABILITIES;
+  return isLayerRegistrationWorker()
+    ? LAYER_REGISTRATION_WORKER_CAPABILITIES
+    : DEFAULT_CAPABILITIES;
 });

@@ -87,7 +87,8 @@ class BinaryDataService(
             dataSourceId,
             dataLayer,
             r.cuboid.topLeft.toBucket.copy(additionalCoordinates = r.settings.additionalCoordinates),
-            r.settings.version
+            r.settings.version,
+            r.settings.emptyIfChunkMissing
           )
         )
         bucketProvider <- bucketProviderCache.getOrLoad(
@@ -219,7 +220,13 @@ class BinaryDataService(
   ): Fox[Array[Byte]] =
     if (request.dataLayer.containsMag(bucket.mag)) {
       val readInstruction =
-        DataReadInstruction(request.dataSourceIdOrVolumeDummy, request.dataLayer, bucket, request.settings.version)
+        DataReadInstruction(
+          request.dataSourceIdOrVolumeDummy,
+          request.dataLayer,
+          bucket,
+          request.settings.version,
+          request.settings.emptyIfChunkMissing
+        )
       val dataSourceId = request.dataSourceIdOrVolumeDummy
       for {
         bucketProvider <- bucketProviderCache.getOrLoad(

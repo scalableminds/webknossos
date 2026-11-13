@@ -38,6 +38,10 @@ trait DatasetHeader {
       case Left(s)  => parseFillValueFromString(s)
     }
 
+  // True if missing chunks are filled with all-zero bytes (note that -0.0 is not all-zero)
+  lazy val fillValueIsZero: Boolean =
+    !fillValueBoolean && java.lang.Double.doubleToRawLongBits(fillValueNumber.doubleValue) == 0L
+
   lazy val fillValueBoolean: Boolean =
     fill_value match {
       case Left("true") => true

@@ -328,10 +328,15 @@ class VolumeTracingZarrStreamingController @Inject() (
           remoteFallbackLayer,
           List(request)
         ) ~> SERVICE_UNAVAILABLE // return 503 if the request fails, assuming the datastore is still initializing
-        // We only expect missing buckets if something went wrong with loading the fallback layer, e.g. applying the agglomerate. Otherwise, a fill value is used and returned to us.
         _ <- Fox.fromBool(
-          fallbackEmptyBucketIndices.isEmpty && fallbackFailureBucketIndices.isEmpty
+          fallbackFailureBucketIndices.isEmpty
         ) ?~> Msg.Annotation.Volume.fallbackDataLoadingFailed ~> INTERNAL_SERVER_ERROR
-      } yield fallbackData
+        // The datastore reports buckets as empty if the underlying chunk is missing on disk (fill value zero). Zarr clients expect bytes.
+      } yield
+        if (fallbackEmptyBucketIndices.isEmpty) fallbackData
+        else
+          new Array[Byte](
+            ElementClass.bytesPerElement(ElementClass.fromProto(tracing.elementClass)) * cubeSize * cubeSize * cubeSize
+          )
     } else Fox.successful(data)
 }

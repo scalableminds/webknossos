@@ -72,13 +72,16 @@ class DatasetArray(
       offsetXYZ: Vec3Int,
       shapeXYZ: Vec3Int,
       additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
-      shouldReadUint24: Boolean
+      shouldReadUint24: Boolean,
+      // If true, return Empty instead of fill-value data in case the requested region matches exactly one chunk,
+      // that chunk is missing on disk, and the fill value is zero. Otherwise, missing chunks are filled with the fill value.
+      emptyIfChunkMissing: Boolean = false
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       (offsetArray, shapeArray) <- tryo(
         constructOffsetAndShapeArrays(offsetXYZ, shapeXYZ, additionalCoordinatesOpt, shouldReadUint24)
       ).toFox ?~> "failed to construct shape and offset array for requested coordinates"
-      bytes <- readBytes(offsetArray, shapeArray, additionalCoordinatesOpt)
+      bytes <- readBytes(offsetArray, shapeArray, additionalCoordinatesOpt, emptyIfChunkMissing)
     } yield bytes
 
   private def constructOffsetAndShapeArrays(
@@ -160,13 +163,15 @@ class DatasetArray(
   private def readBytes(
       offset: Array[Int],
       shape: Array[Int],
-      additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]]
+      additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
+      emptyIfChunkMissing: Boolean
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       typedMultiArray <- readAsFortranOrder(
         offset,
         shape,
-        isBatchedRead = batchedAxisOf(additionalCoordinatesOpt).isDefined
+        isBatchedRead = batchedAxisOf(additionalCoordinatesOpt).isDefined,
+        emptyIfChunkMissing
       )
       repackedMultiArray = repackBatchedAxisIntoZSlot(typedMultiArray, additionalCoordinatesOpt)
       asBytes <- BytesConverter.toByteArray(repackedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN).toFox
@@ -199,7 +204,12 @@ class DatasetArray(
   // The local variables like chunkIndices are also in this order unless explicitly named.
   // Loading data adapts to the array's axis order so that …CXYZ data in fortran-order is
   // returned, regardless of the array’s internal storage.
-  private def readAsFortranOrder(offset: Array[Int], shape: Array[Int], isBatchedRead: Boolean)(using
+  private def readAsFortranOrder(
+      offset: Array[Int],
+      shape: Array[Int],
+      isBatchedRead: Boolean,
+      emptyIfChunkMissing: Boolean
+  )(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[MultiArray] = {
@@ -210,18 +220,29 @@ class DatasetArray(
       shape,
       totalOffset.map(_.toLong)
     )
-    if (!isBatchedRead && partialCopyIsNotNeededForWkOrder(shape, totalOffset, chunkIndices)) {
-      for {
-        chunkIndex <- chunkIndices.headOption.toFox
-        sourceChunk: MultiArray <- getSourceChunkDataWithCache(
-          fullAxisOrder.permuteIndicesWkToPhysicalLong(chunkIndex),
-          useSkipTypingShortcut = true
-        )
-        result <-
-          if (hasExpectedByteCount(sourceChunk, shape)) Fox.successful(sourceChunk)
-          else readAsFortranOrderWithPartialCopy(shape, totalOffset, chunkIndices)
-      } yield result
-    } else readAsFortranOrderWithPartialCopy(shape, totalOffset, chunkIndices)
+    val alignedChunkIndexOpt = if (isBatchedRead) None else alignedSingleChunkIndex(shape, totalOffset, chunkIndices)
+    alignedChunkIndexOpt match {
+      case Some(chunkIndex) =>
+        val physicalChunkIndex = fullAxisOrder.permuteIndicesWkToPhysicalLong(chunkIndex)
+        val useShortcut = skipTypingShortcutIsApplicable
+        // Empty can only be passed on if it is equivalent to the fill value, i.e. all-zero
+        val passOnMissingChunk = emptyIfChunkMissing && header.fillValueIsZero
+        if (!useShortcut && !passOnMissingChunk) readAsFortranOrderWithPartialCopy(shape, totalOffset, chunkIndices)
+        else
+          for {
+            sourceChunkBox <- getSourceChunkDataWithCache(physicalChunkIndex, useShortcut).shiftBox
+            result <- sourceChunkBox match {
+              case Empty if passOnMissingChunk => Fox.empty
+              case Empty if useShortcut        =>
+                chunkReader.createFromFillValue(chunkShapeAtIndex(physicalChunkIndex), useSkipTypingShortcut = true)
+              case Full(sourceChunk) if useShortcut && hasExpectedByteCount(sourceChunk, shape) =>
+                Fox.successful(sourceChunk)
+              case f: Failure => f.toFox
+              case _          => readAsFortranOrderWithPartialCopy(shape, totalOffset, chunkIndices)
+            }
+          } yield result
+      case None => readAsFortranOrderWithPartialCopy(shape, totalOffset, chunkIndices)
+    }
   }
 
   private def readAsFortranOrderWithPartialCopy(
@@ -236,7 +257,7 @@ class DatasetArray(
     val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse)
     val copiedFox = Fox.combined(chunkIndices.map { (chunkIndex: Array[Long]) =>
       for {
-        sourceChunk: MultiArray <- getSourceChunkDataWithCache(
+        sourceChunk: MultiArray <- getSourceChunkDataOrFillValue(
           fullAxisOrder.permuteIndicesWkToPhysicalLong(chunkIndex)
         )
         sourceChunkInWkFOrder: MultiArray = MultiArrayUtils
@@ -269,7 +290,7 @@ class DatasetArray(
       if (partialCopyIsNotNeededForMultiArray(shape, totalOffset, chunkIndices)) {
         for {
           chunkIndex <- chunkIndices.headOption.toFox
-          sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex, useSkipTypingShortcut = true)
+          sourceChunk: MultiArray <- getSourceChunkDataOrFillValue(chunkIndex, useSkipTypingShortcut = true)
           result <-
             if (hasExpectedByteCount(sourceChunk, shape)) Fox.successful(sourceChunk)
             else readAsMultiArrayWithPartialCopy(shape, totalOffset, chunkIndices)
@@ -289,7 +310,7 @@ class DatasetArray(
     val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape)
     val copiedFuture = Fox.combined(chunkIndices.map { (chunkIndex: Array[Long]) =>
       for {
-        sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex)
+        sourceChunk: MultiArray <- getSourceChunkDataOrFillValue(chunkIndex)
         offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, totalOffset)
         _ <- tryo(
           MultiArrayUtils.copyRange(offsetInChunk, sourceChunk, targetMultiArray)
@@ -342,7 +363,18 @@ class DatasetArray(
     builder.toString
   }
 
-  private def getSourceChunkDataWithCache(chunkIndex: Array[Long], useSkipTypingShortcut: Boolean = false)(using
+  private def getSourceChunkDataOrFillValue(chunkIndex: Array[Long], useSkipTypingShortcut: Boolean = false)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[MultiArray] =
+    getSourceChunkDataWithCache(chunkIndex, useSkipTypingShortcut).shiftBox.flatMap {
+      case Full(chunk) => Fox.successful(chunk)
+      case Empty       => chunkReader.createFromFillValue(chunkShapeAtIndex(chunkIndex), useSkipTypingShortcut)
+      case f: Failure  => f.toFox
+    }
+
+  // Returns Empty if the chunk is missing on disk. Missing chunks are cached as Empty, too.
+  private def getSourceChunkDataWithCache(chunkIndex: Array[Long], useSkipTypingShortcut: Boolean)(using
       ec: ExecutionContext,
       tc: TokenContext
   ): Fox[MultiArray] =
@@ -363,7 +395,7 @@ class DatasetArray(
         multiArray <- shardPathAndChunkRangeBox match {
           case Full((shardPath, chunkRange)) =>
             chunkReader.read(shardPath, chunkShape, chunkRange, useSkipTypingShortcut)
-          case Empty      => chunkReader.createFromFillValue(chunkShape, useSkipTypingShortcut)
+          case Empty      => Fox.empty
           case f: Failure => f.toFox
         }
       } yield multiArray
@@ -394,22 +426,29 @@ class DatasetArray(
       case _ => false
     }
 
-  private def partialCopyIsNotNeededForWkOrder(
+  // If the requested region (wk order) covers exactly one full chunk, returns that chunk’s index (wk order)
+  private def alignedSingleChunkIndex(
       bufferShape: Array[Int],
       globalOffset: Array[Int],
       chunkIndices: Seq[Array[Long]]
-  ): Boolean =
-    chunkIndices.headOption match {
-      case Some(chunkIndex) =>
-        val offsetInChunk = computeOffsetInChunk(chunkIndex, globalOffset)
-        shortcutPreservesByteOrder &&
-        header.order == ArrayOrder.F &&
-        isZeroOffset(offsetInChunk) &&
-        axisOrder == AxisOrder.asCxyzFromRank(rank) &&
-        // Must come after the axis order check: wk and physical order coincide only for cxyz
-        util.Arrays.equals(bufferShape, chunkShapeAtIndex(chunkIndex))
-      case _ => false
+  ): Option[Array[Long]] =
+    chunkIndices match {
+      case Seq(chunkIndex) =>
+        val chunkShapeWk = fullAxisOrder.permuteIndicesPhysicalToWk(
+          chunkShapeAtIndex(fullAxisOrder.permuteIndicesWkToPhysicalLong(chunkIndex))
+        )
+        Option.when(
+          isZeroOffset(computeOffsetInChunk(chunkIndex, globalOffset)) && util.Arrays.equals(bufferShape, chunkShapeWk)
+        )(chunkIndex)
+      case _ => None
     }
+
+  // For an aligned single-chunk read, the stored bytes can be passed through as-is if they already are
+  // little-endian, F-order and cxyz (in which case wk and physical order coincide)
+  private lazy val skipTypingShortcutIsApplicable: Boolean =
+    shortcutPreservesByteOrder &&
+      header.order == ArrayOrder.F &&
+      axisOrder == AxisOrder.asCxyzFromRank(rank)
 
   private def isZeroOffset(offset: Array[Int]): Boolean =
     offset.forall(_ == 0)

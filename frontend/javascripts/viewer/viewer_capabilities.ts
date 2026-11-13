@@ -2,12 +2,17 @@ import once from "lodash-es/once";
 import { Toolkit } from "viewer/model/accessors/tool_accessor";
 import {
   isLayerRegistrationPrimaryWorker,
+  isLayerRegistrationStore,
   isLayerRegistrationWorker,
 } from "viewer/view/layer_registration/layer_registration_protocol";
 
 // What the viewer offers where it runs. Everything is on in the normal viewer. Embedded viewers,
 // such as the workers of the layer registration page, turn parts of it off.
 export type ViewerCapabilities = {
+  // Without a scene, the viewer only loads, edits and saves the annotation, e.g. through the
+  // cross-origin API as the store iframe of a layer registration annotation view. It shows no
+  // UI and renders nothing, so it creates no WebGL context and loads no data to save resources.
+  hasScene: boolean;
   // Whether changed user settings, dataset settings and layouts are stored.
   shouldPersistSettings: boolean;
   // The share button, the menu entries "Share", "Zarr Links" and "Duplicate", and "Copy to my
@@ -29,6 +34,7 @@ export type ViewerCapabilities = {
 };
 
 const DEFAULT_CAPABILITIES: ViewerCapabilities = {
+  hasScene: true,
   shouldPersistSettings: true,
   showShareAndCopyActions: true,
   fixedToolkit: null,
@@ -44,6 +50,7 @@ const DEFAULT_CAPABILITIES: ViewerCapabilities = {
 // layer_registration_worker.ts). They offer nothing that leaves the page, opens a worker without
 // the page around it, or changes what the page set up.
 const LAYER_REGISTRATION_PRIMARY_WORKER_CAPABILITIES: ViewerCapabilities = {
+  hasScene: true,
   // The workers force some settings, which must not end up in the user's account or in the
   // layouts of the normal viewer.
   shouldPersistSettings: false,
@@ -74,9 +81,19 @@ const LAYER_REGISTRATION_SECONDARY_WORKER_CAPABILITIES: ViewerCapabilities = {
   showDashboardLink: false,
 };
 
+// The store is a hidden iframe of the layer registration page. The page uses it to read and save
+// the landmarks of the layer registration annotation, so it needs no scene.
+const LAYER_REGISTRATION_STORE_CAPABILITIES: ViewerCapabilities = {
+  ...DEFAULT_CAPABILITIES,
+  hasScene: false,
+};
+
 // Computed once, because the URL params don't change while the viewer runs: navigation within a
 // worker is blocked (see blockLayerRegistrationWorkerNavigation).
 export const getViewerCapabilities = once((): ViewerCapabilities => {
+  if (isLayerRegistrationStore()) {
+    return LAYER_REGISTRATION_STORE_CAPABILITIES;
+  }
   if (!isLayerRegistrationWorker()) {
     return DEFAULT_CAPABILITIES;
   }

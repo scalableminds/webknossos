@@ -159,6 +159,8 @@ export function* handleAdditionalCoordinateUpdate(): Saga<never> {
   // We want to prevent iterating through all additional coordinates to adjust the mesh visibility, so we store the
   // previous additional coordinates in this method. Thus we have to catch SET_ADDITIONAL_COORDINATES actions in a
   // while-true loop and register this saga in the root saga instead of calling from the mesh saga.
+  // The meshes are part of the scene.
+  yield* call(ensureSceneControllerInitialized);
   yield* call(ensureWkInitialized);
 
   let previousAdditionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);

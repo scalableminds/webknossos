@@ -7,7 +7,7 @@ import { getActiveTree } from "../accessors/skeletontracing_accessor";
 import { Toolkit } from "../accessors/tool_accessor";
 import type { Action } from "../actions/actions";
 import { setTreeEdgeVisibilityAction } from "../actions/skeletontracing_actions";
-import { ensureWkInitialized } from "./ready_sagas";
+import { ensureSceneControllerInitialized, ensureWkInitialized } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 
 // The clean up function removes the surface from the scene controller.
@@ -87,6 +87,8 @@ function* splitBoundaryMeshSaga(): Saga<void> {
   temporarilyChangedTreeInfo = null;
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* ensureWkInitialized();
+  // The split boundary mesh is shown in the scene.
+  yield* call(ensureSceneControllerInitialized);
 
   // Call once for initial rendering
   yield* call(updateSplitBoundaryMesh);

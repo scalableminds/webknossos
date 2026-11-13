@@ -46,6 +46,7 @@ import {
   blockLayerRegistrationWorkerNavigation,
   reportLayerRegistrationStoreSavedState,
 } from "viewer/view/layer_registration/layer_registration_worker";
+import { getViewerCapabilities } from "viewer/viewer_capabilities";
 import { AnnotationTool } from "./model/accessors/tool_accessor";
 import {
   toggleAllTreesAction,
@@ -237,7 +238,9 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     if (isLayerRegistrationWorker()) {
       applyLayerRegistrationWorkerSettings();
     }
-    await initializeSceneController();
+    if (getViewerCapabilities().hasScene) {
+      await initializeSceneController();
+    }
     this.initKeyboard();
     this.initTaskScript();
     window.webknossos = new ApiLoader(Model);
@@ -471,6 +474,10 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     // In this scenario, this `render` method here is called before `componentWillUnmount` of the TracingLayoutView is called.
     if (!this._isMounted || !isWkInitialized) {
       return cover;
+    }
+    // The view controllers render the scene and handle its input.
+    if (!getViewerCapabilities().hasScene) {
+      return null;
     }
 
     const isFlight = viewMode === constants.MODE_FLIGHT;

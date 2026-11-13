@@ -1367,7 +1367,7 @@ export async function getDatasets(
   searchQuery: string | null = null,
   includeSubfolders: boolean | null = null,
   limit: number | null = null,
-  includeAnnotationCount: boolean = false,
+  includeAnnotationInfo: boolean = false,
 ): Promise<Array<APIDatasetCompact>> {
   const params = new URLSearchParams();
   if (isUnreported != null) {
@@ -1385,8 +1385,8 @@ export async function getDatasets(
   if (includeSubfolders != null) {
     params.set("includeSubfolders", includeSubfolders ? "true" : "false");
   }
-  if (includeAnnotationCount) {
-    params.set("includeAnnotationCount", "true");
+  if (includeAnnotationInfo) {
+    params.set("includeAnnotationInfo", "true");
   }
 
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);

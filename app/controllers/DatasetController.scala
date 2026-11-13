@@ -328,7 +328,7 @@ class DatasetController @Inject() (
       // return only the first n matching datasets.
       limit: Option[Int],
       // include the number of active explorational annotations the requesting user can list per dataset
-      includeAnnotationCount: Option[Boolean]
+      includeAnnotationInfo: Option[Boolean]
   ): Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     for {
       _ <- Fox.successful(())
@@ -348,7 +348,7 @@ class DatasetController @Inject() (
         recursive.getOrElse(false),
         limitOpt = limit,
         requestingUserOrga = request.identity.map(_._organization),
-        includeAnnotationCount = includeAnnotationCount.getOrElse(false)
+        includeAnnotationInfo = includeAnnotationInfo.getOrElse(false)
       )
       _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
     } yield addRemoteOriginHeaders(Ok(Json.toJson(datasetInfos)))

@@ -217,6 +217,8 @@ instead. Only enable this option if you understand its effect. All layers will n
           isOwner ? "you" : "the owner"
         }.`
       : "This annotation is in read-only mode and cannot be updated.",
+  "tracing.trees_edited_in_other_session":
+    "This annotation was edited in another tab or window. Continue there, or reload this page to edit here. Unsaved changes in this tab are lost.",
   "tracing.skeleton_editing_disabled_in_live_collab":
     "Skeleton editing is disabled because simultaneous editing is enabled in the sharing settings. Currently, only agglomerate trees (created in proofreading mode) may be edited.",
   "tracing.layer_management_disabled_in_live_collab": (isOwner: boolean) =>

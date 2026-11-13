@@ -53,7 +53,7 @@ import {
 const ANNOTATION_REVERTED_TOAST_KEY = "annotation_reverted_warning";
 const ANNOTATION_STRUCTURE_CHANGED_TOAST_KEY = "annotation_structure_changed_warning";
 
-function* lockAnnotationAndShowReloadToast(toastKey: string, message: string) {
+export function* lockAnnotationAndShowReloadToast(toastKey: string, message: string) {
   yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
   Toast.error(message, {
     sticky: true,

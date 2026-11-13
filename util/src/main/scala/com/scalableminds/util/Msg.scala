@@ -13,6 +13,12 @@ object Msg {
   val zipFileNotFound: String = "No or invalid zip file specified."
   val notAllowed: String = "You are not authorized to view or edit this resource."
   val notFound: String = "Could not find or access the requested resource."
+  object AgglomerateDiff {
+    val failed: String = "Could not compute the difference of the agglomerate to the reference agglomerate view."
+    val segmentNotInAgglomerate: String = "The given segment is not part of the agglomerate."
+    val noReferenceAgglomerate: String =
+      "The given segment is not part of any agglomerate of the reference agglomerate view."
+  }
   object AgglomerateGraph {
     val failed: String = "Could not look up an agglomerate graph for requested agglomerate."
   }

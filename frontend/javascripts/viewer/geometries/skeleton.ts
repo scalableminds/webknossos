@@ -16,11 +16,12 @@ import type { Vector3, Vector4 } from "viewer/constants";
 import EdgeShader from "viewer/geometries/materials/edge_shader";
 import NodeShader, {
   COLOR_TEXTURE_WIDTH,
+  DIMMED_TREE_ALPHA_OFFSET,
   NodeTypes,
 } from "viewer/geometries/materials/node_shader";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { sum } from "viewer/model/helpers/iterator_utils";
-import { cachedDiffTrees } from "viewer/model/sagas/skeletontracing_saga";
+import { cachedDiffTrees, diffTrees } from "viewer/model/sagas/skeletontracing_saga";
 import type { CreateActionNode, UpdateActionNode } from "viewer/model/sagas/volume/update_actions";
 import type { Edge, Node, Tree } from "viewer/model/types/tree_types";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
@@ -98,6 +99,21 @@ const EdgeBufferHelperType = {
 
   supportsPicking: false,
 };
+export type SkeletonOptions = {
+  // Transparent meshes are drawn in the order of their renderOrder and, if equal, of their distance
+  // to the camera. A higher renderOrder therefore draws the skeleton on top of other skeletons.
+  renderOrder?: number;
+  // The ids of the trees that are dimmed, e.g., because another skeleton is shown on top of them.
+  // As the trees are only updated if a different instance is returned, it should be memoized.
+  getDimmedTreeIds?: (state: WebknossosState) => ReadonlySet<number>;
+  // Whether the active tree of the annotation is highlighted.
+  highlightActiveTree?: boolean;
+  // Whether the tree diff is shared with the save queue (see cachedDiffTrees). Only the skeleton of
+  // the annotation should set this. As the cache only holds one entry, other skeletons would
+  // otherwise evict the entry that the save queue needs, so that large diffs are computed twice.
+  shareTreeDiffWithSaveQueue?: boolean;
+};
+
 /**
  * Creates and manages the WebGL buffers for drawing trees (nodes, edges).
  * Trees are not recreated on every store change in spite of the functional
@@ -126,14 +142,18 @@ class Skeleton {
   // See SceneController.deferUntilCompileReady for why disposal below must go through this.
   // Defaults to immediate execution for callers (e.g. tests) without a SceneController.
   private deferGpuDispose: (dispose: () => void) => void;
+  private options: SkeletonOptions;
+  private dimmedTreeIds: ReadonlySet<number> = new Set();
 
   constructor(
     skeletonTracingSelectorFn: (state: WebknossosState) => SkeletonTracing | null,
     supportsPicking: boolean,
     deferGpuDispose: (dispose: () => void) => void = (dispose) => dispose(),
+    options: SkeletonOptions = {},
   ) {
     this.supportsPicking = supportsPicking;
     this.deferGpuDispose = deferGpuDispose;
+    this.options = options;
     this.rootGroup = new Group();
     this.pickingNode = new Object3D();
     const skeletonTracing = skeletonTracingSelectorFn(Store.getState());
@@ -249,6 +269,7 @@ class Skeleton {
     const flycamAdditionalCoordinateNames = new Set(
       (Store.getState().flycam.additionalCoordinates ?? []).map(({ name }) => name),
     );
+    this.dimmedTreeIds = this.options.getDimmedTreeIds?.(Store.getState()) ?? new Set();
     // fill buffers with data
     for (const tree of trees.values()) {
       this.createTree(tree, flycamAdditionalCoordinateNames);
@@ -264,6 +285,20 @@ class Skeleton {
     }
 
     this.prevTracing = skeletonTracing;
+  }
+
+  updateDimmedTrees(state: WebknossosState, skeletonTracing: SkeletonTracing) {
+    const dimmedTreeIds = this.options.getDimmedTreeIds?.(state);
+    if (dimmedTreeIds == null || dimmedTreeIds === this.dimmedTreeIds) return;
+    const prevDimmedTreeIds = this.dimmedTreeIds;
+    this.dimmedTreeIds = dimmedTreeIds;
+    for (const treeId of new Set([...prevDimmedTreeIds, ...dimmedTreeIds])) {
+      if (prevDimmedTreeIds.has(treeId) === dimmedTreeIds.has(treeId)) continue;
+      const tree = skeletonTracing.trees.getNullable(treeId);
+      if (tree != null) {
+        this.updateTreeColor(treeId, tree.color, tree.isVisible, tree.edgesAreVisible);
+      }
+    }
   }
 
   initializeBufferCollection(
@@ -289,6 +324,7 @@ class Skeleton {
     const geometry = new BufferGeometry() as BufferGeometryWithBufferAttributes;
     helper.initializeAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
+    mesh.renderOrder = this.options.renderOrder ?? 0;
     // Frustum culling is disabled because nodes that are transformed
     // wouldn't be culled correctly.
     // In basic testing, culling didn't provide a noticeable performance
@@ -385,12 +421,15 @@ class Skeleton {
    */
   refresh(skeletonTracing: SkeletonTracing) {
     const state = Store.getState();
-    const diff = cachedDiffTrees(
-      skeletonTracing.tracingId,
-      this.prevTracing.trees,
-      skeletonTracing.trees,
-      false,
-    );
+    const { trees } = skeletonTracing;
+    const prevTrees = this.prevTracing.trees;
+    // Most store updates don't change the trees
+    const diff =
+      prevTrees === trees
+        ? []
+        : this.options.shareTreeDiffWithSaveQueue
+          ? cachedDiffTrees(skeletonTracing.tracingId, prevTrees, trees, false)
+          : Array.from(diffTrees(skeletonTracing.tracingId, prevTrees, trees, false));
 
     const flycamAdditionalCoordinateNames = new Set(
       (state.flycam.additionalCoordinates ?? []).map(({ name }) => name),
@@ -535,7 +574,8 @@ class Skeleton {
     let { activeNodeId } = skeletonTracing;
     activeNodeId = activeNodeId == null ? -1 : activeNodeId;
 
-    let { activeTreeId } = state.localSkeletonState;
+    let activeTreeId =
+      this.options.highlightActiveTree === false ? null : state.localSkeletonState.activeTreeId;
     activeTreeId = activeTreeId == null ? -1 : activeTreeId;
 
     const nodeUniforms = this.nodes.material.uniforms;
@@ -548,6 +588,7 @@ class Skeleton {
     const edgeUniforms = this.edges.material.uniforms;
     edgeUniforms.activeTreeId.value = activeTreeId;
     this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
+    this.updateDimmedTrees(state, skeletonTracing);
     this.prevTracing = skeletonTracing;
   }
 
@@ -843,14 +884,24 @@ class Skeleton {
     isVisible: boolean = true,
     edgesAreVisible: boolean = true,
   ) {
-    const rgba = this.getTreeRGBA(color, isVisible, edgesAreVisible);
+    const rgba = this.getTreeRGBA(
+      color,
+      isVisible,
+      edgesAreVisible,
+      this.dimmedTreeIds.has(treeId),
+    );
     this.treeColorTexture.image.data.set(rgba, treeId * 4);
     this.treeColorTexture.needsUpdate = true;
   }
 
-  getTreeRGBA(color: Vector3, isVisible: boolean, areEdgesVisible: boolean): Vector4 {
+  getTreeRGBA(
+    color: Vector3,
+    isVisible: boolean,
+    areEdgesVisible: boolean,
+    isDimmed: boolean = false,
+  ): Vector4 {
     const alpha = isVisible ? (areEdgesVisible ? 1 : 0.5) : 0;
-    return [...color, alpha];
+    return [...color, alpha + (isDimmed ? DIMMED_TREE_ALPHA_OFFSET : 0)];
   }
 }
 

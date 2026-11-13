@@ -1,3 +1,5 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'AgglomerateGraph.proto' or its co... Remove this comment to see the full error message
+import AgglomerateGraphProto from "AgglomerateGraph.proto";
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'AnnotationProto.proto' or its co... Remove this comment to see the full error message
 import AnnotationProto from "Annotation.proto";
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'ListOfLong.proto' or its co... Remove this comment to see the full error message
@@ -7,6 +9,7 @@ import SkeletonTracingProto from "SkeletonTracing.proto";
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'VolumeTracing.proto' or its co... Remove this comment to see the full error message
 import VolumeTracingProto from "VolumeTracing.proto";
 import { toBigInt } from "libs/bigint_helpers";
+import { point3ToVector3 } from "libs/utils";
 import Long from "long";
 import { configure, Root, util } from "protobufjs/light";
 import type { APITracingStoreAnnotation, ServerTracing } from "types/api_types";
@@ -72,6 +75,11 @@ export function parseProtoTracing(
       tree.createdTimestamp = Number(tree.createdTimestamp);
       if (tree.agglomerateInfo != null) {
         tree.agglomerateInfo.agglomerateId = toBigInt(tree.agglomerateInfo.agglomerateId);
+        if (tree.agglomerateInfo.clickedPosition != null) {
+          tree.agglomerateInfo.clickedPosition = point3ToVector3(
+            tree.agglomerateInfo.clickedPosition,
+          );
+        }
       }
       for (const node of tree.nodes ?? []) {
         node.createdTimestamp = Number(node.createdTimestamp);
@@ -123,6 +131,32 @@ export function parseProtoListOfLong(listArrayBuffer: ArrayBuffer): Array<bigint
   }) as { items: string[] };
 
   return items.map(toBigInt);
+}
+
+export type ServerAgglomerateGraphDiff = {
+  referenceAgglomerateId: bigint;
+  // Three entries (x, y, z) per segment that is an endpoint of an added or removed edge
+  positions: number[];
+  // Two entries per edge, each the index of an endpoint (in the order of positions)
+  addedEdges: number[];
+  removedEdges: number[];
+};
+
+export function parseProtoAgglomerateGraphDiff(
+  diffArrayBuffer: ArrayBuffer,
+): ServerAgglomerateGraphDiff {
+  const protoRoot = Root.fromJSON(AgglomerateGraphProto);
+  const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.AgglomerateGraphDiff`);
+  const message = messageType.decode(new Uint8Array(diffArrayBuffer));
+
+  const diff = messageType.toObject(message, {
+    arrays: true,
+    longs: String,
+  }) as Omit<ServerAgglomerateGraphDiff, "referenceAgglomerateId"> & {
+    referenceAgglomerateId: string;
+  };
+
+  return { ...diff, referenceAgglomerateId: toBigInt(diff.referenceAgglomerateId) };
 }
 
 export function parseProtoAnnotation(annotationArrayBuffer: ArrayBuffer): any {

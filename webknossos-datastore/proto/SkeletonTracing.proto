@@ -48,6 +48,10 @@ message TreeAgglomerateInfoProto {
   required int64 agglomerateId = 1;
   optional string tracingId = 2;
   optional string mappingName = 3;
+  // Only set for agglomerates of a mapping (mappingName), as the layer of an editable mapping is given by tracingId
+  optional string layerName = 4;
+  // The position (in the coordinate system of the layer) that was clicked to load the agglomerate skeleton, if any
+  optional Vec3IntProto clickedPosition = 5;
 }
 
 message Tree {

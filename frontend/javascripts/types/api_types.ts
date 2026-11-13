@@ -607,6 +607,8 @@ export type AnnotationViewConfiguration = {
     string,
     {
       isDisabled: boolean;
+      agglomerateDiffReferenceMappingName?: string | null;
+      isAgglomerateDiffEnabled?: boolean;
     }
   >;
 };
@@ -960,6 +962,13 @@ export type TreeAgglomerateInfo = {
   // Note: The editable mapping's id is always equal to the id of it associated volume tracing.
   tracingId?: string | undefined;
   mappingName?: string | undefined;
+  // Only set for agglomerates of a mapping (mappingName), as the layer of an editable mapping is
+  // given by tracingId. Used to compare agglomerate skeletons to a reference mapping (see
+  // agglomerate_diff_saga).
+  layerName?: string | undefined;
+  // The position (in the coordinate system of the layer) that was clicked to load the agglomerate
+  // skeleton, if any. Agglomerate diffs compare the reference agglomerate at this position.
+  clickedPosition?: Vector3 | undefined;
 };
 export type ServerSkeletonTracingTree = {
   branchPoints: Array<ServerBranchPoint>;

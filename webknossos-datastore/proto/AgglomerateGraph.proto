@@ -15,3 +15,14 @@ message AgglomerateGraph {
   repeated Vec3IntProto positions = 3;
   repeated float affinities = 4;
 }
+
+// Difference of an agglomerate to the reference agglomerate that contains one of its segments
+// (see AgglomerateGraphDiffer.scala).
+message AgglomerateGraphDiff {
+  required uint64 referenceAgglomerateId = 1;
+  // Three entries (x, y, z) per segment that is an endpoint of an added or removed edge
+  repeated int32 positions = 2 [packed = true];
+  // Two entries per edge, each the index of an endpoint (in the order of positions)
+  repeated int32 addedEdges = 3 [packed = true];
+  repeated int32 removedEdges = 4 [packed = true];
+}

@@ -150,7 +150,11 @@ function useSegmentListMenuItems({
         disabled: meshFiles.currentMeshFile == null,
         icon: <Icon component={MeshIcon} />,
         label: "Load Meshes (precomputed)",
-        onClick: runAndHide(() => meshOperations.loadPrecomputedMeshes(segments)),
+        onClick: runAndHide(() => {
+          if (meshFiles.currentMeshFile != null) {
+            meshOperations.loadPrecomputedMeshes(segments, meshFiles.currentMeshFile.name);
+          }
+        }),
       };
 
       const computeAdHocItem: ItemType = {
@@ -303,15 +307,17 @@ export function useSegmentContextMenuBuilder(
         hideContextMenu();
       };
 
-      const withKnownPosition = (action: () => void) => () => {
-        if (segment.anchorPosition == null) {
-          Toast.info("Cannot load a mesh for this segment, because its position is unknown.");
+      const withKnownPosition =
+        <Args extends unknown[]>(action: (...args: Args) => void) =>
+        (...args: Args) => {
+          if (segment.anchorPosition == null) {
+            Toast.info("Cannot load a mesh for this segment, because its position is unknown.");
+            hideContextMenu();
+            return;
+          }
+          action(...args);
           hideContextMenu();
-          return;
-        }
-        action();
-        hideContextMenu();
-      };
+        };
 
       const updateThisSegment = (updates: Partial<Segment>, createsNewUndoState: boolean) => {
         if (layerName != null) {
@@ -465,7 +471,9 @@ export function useSegmentContextMenuBuilder(
             disabled: currentMeshFile == null,
             icon: <Icon component={MeshIcon} />,
             onClick: withMeshFileCompatibilityCheck(
-              withKnownPosition(() => meshOperations.loadPrecomputedMeshes([segment])),
+              withKnownPosition((meshFileName: string) =>
+                meshOperations.loadPrecomputedMeshes([segment], meshFileName),
+              ),
               layerName,
             ),
             label: (

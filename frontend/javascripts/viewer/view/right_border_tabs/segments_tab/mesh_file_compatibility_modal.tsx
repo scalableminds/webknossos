@@ -21,21 +21,23 @@ function doesMeshFileMatchMapping(meshFile: APIMeshFileInfo, activeMappingName: 
 }
 
 /*
- * Wraps a callback that loads meshes from the current mesh file. If that mesh file was computed
- * for another mapping than the active one, a modal offers ways to resolve that instead.
- * The callback has to read the current mesh file when it is called, because the modal can switch it.
+ * Wraps a callback that loads meshes from the given mesh file. The callback is called with the
+ * current mesh file. If that mesh file was computed for another mapping than the active one, a
+ * modal offers to switch to a compatible mesh file instead (with which the callback is called then).
  */
 export function withMeshFileCompatibilityCheck(
-  loadMeshes: () => void,
+  loadMeshes: (meshFileName: string) => void,
   layerName: string | null | undefined,
 ): () => void {
   return () => {
     if (layerName == null) {
-      loadMeshes();
       return;
     }
     const state = Store.getState();
     const { currentMeshFile, availableMeshFiles } = state.localSegmentationStateByLayer[layerName];
+    if (currentMeshFile == null) {
+      return;
+    }
     const mappingInfo = getMappingInfo(
       state.temporaryConfiguration.activeMappingByLayer,
       layerName,
@@ -46,8 +48,8 @@ export function withMeshFileCompatibilityCheck(
         : null;
 
     // The version isn't checked here, so that mesh files of an older format are still loaded as before.
-    if (currentMeshFile == null || doesMeshFileMatchMapping(currentMeshFile, activeMappingName)) {
-      loadMeshes();
+    if (doesMeshFileMatchMapping(currentMeshFile, activeMappingName)) {
+      loadMeshes(currentMeshFile.name);
       return;
     }
 
@@ -95,15 +97,18 @@ function MeshFileCompatibilityModal({
   compatibleMeshFiles: APIMeshFileInfo[];
   dataset: APIDataset;
   hasVolumeTracing: boolean;
-  loadMeshes: () => void;
+  loadMeshes: (meshFileName: string) => void;
   destroy: () => void;
 }) {
   const [selectedMeshFileName, setSelectedMeshFileName] = useState(compatibleMeshFiles[0]?.name);
 
   const switchMeshFileAndLoad = () => {
+    if (selectedMeshFileName == null) {
+      return;
+    }
     Store.dispatch(updateCurrentMeshFileAction(layerName, selectedMeshFileName));
     destroy();
-    loadMeshes();
+    loadMeshes(selectedMeshFileName);
   };
 
   const activeMappingDescription = isEditableMappingActive

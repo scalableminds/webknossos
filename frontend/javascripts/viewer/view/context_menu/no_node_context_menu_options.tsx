@@ -168,15 +168,10 @@ export function useNoNodeContextMenuOptions(
     shallowEqual,
   );
 
-  const loadPrecomputedMesh = async () => {
+  const loadPrecomputedMesh = async (meshFileName: string) => {
     if (!visibleSegmentationLayer || globalPosition == null || positionInLayerSpace == null) return;
-    // Read the mesh file now: it might have been switched right before this function is called
-    // (see withMeshFileCompatibilityCheck).
-    const meshFile =
-      Store.getState().localSegmentationStateByLayer[visibleSegmentationLayer.name].currentMeshFile;
-    if (meshFile == null) return;
-    // Don't use the displayed segment id: the mesh file might require another mapping, which
-    // is activated before this function is called (see withMeshFileCompatibilityCheck).
+    // Look the segment id up again instead of using the displayed one: the mapping might have
+    // changed since the context menu was opened.
     const { mappedId: segmentId } = await getSegmentIdsAtPositionAsync(
       visibleSegmentationLayer.name,
       globalPosition,
@@ -196,7 +191,7 @@ export function useNoNodeContextMenuOptions(
         segmentId,
         positionInLayerSpace,
         additionalCoordinates,
-        meshFile.name,
+        meshFileName,
         undefined,
         undefined,
         visibleSegmentationLayer.name,

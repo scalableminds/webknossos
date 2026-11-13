@@ -23,7 +23,7 @@ import Store from "viewer/store";
 export type MeshOperations = {
   // Meshes (of the current additional coordinates) by segment id.
   meshes: Record<BigIntAsKey, MeshInformation>;
-  loadPrecomputedMeshes: (segments: Segment[]) => void;
+  loadPrecomputedMeshes: (segments: Segment[], meshFileName: string) => void;
   loadAdHocMeshes: (segments: Segment[]) => void;
   refreshMeshes: (segments: Segment[]) => void;
   removeMeshes: (segments: Segment[]) => void;
@@ -65,17 +65,7 @@ export function useMeshOperations(): MeshOperations {
     ) ?? (EMPTY_OBJECT as Record<BigIntAsKey, MeshInformation>);
 
   const loadPrecomputedMeshes = useCallback(
-    (segments: Segment[]) => {
-      if (visibleSegmentationLayer == null) {
-        return;
-      }
-      // Read the mesh file now: it might have been switched right before this function is
-      // called (see withMeshFileCompatibilityCheck).
-      const { currentMeshFile } =
-        Store.getState().localSegmentationStateByLayer[visibleSegmentationLayer.name];
-      if (currentMeshFile == null) {
-        return;
-      }
+    (segments: Segment[], meshFileName: string) => {
       for (const segment of segments) {
         if (segment.anchorPosition == null) {
           continue;
@@ -85,7 +75,7 @@ export function useMeshOperations(): MeshOperations {
             segment.id,
             segment.anchorPosition,
             segment.additionalCoordinates,
-            currentMeshFile.name,
+            meshFileName,
             undefined,
             undefined,
           ),
@@ -93,7 +83,7 @@ export function useMeshOperations(): MeshOperations {
       }
       notifyAboutMissingPositions(segments);
     },
-    [dispatch, visibleSegmentationLayer],
+    [dispatch],
   );
 
   const loadAdHocMeshes = useCallback(

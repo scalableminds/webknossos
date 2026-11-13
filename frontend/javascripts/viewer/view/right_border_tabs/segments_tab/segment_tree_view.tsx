@@ -136,7 +136,7 @@ export function SegmentTreeView(props: Props) {
                 key: "loadPrecomputedMesh",
                 label: "Load Mesh (precomputed)",
                 onClick: withMeshFileCompatibilityCheck(
-                  () => meshOperations.loadPrecomputedMeshes([segment]),
+                  (meshFileName) => meshOperations.loadPrecomputedMeshes([segment], meshFileName),
                   visibleSegmentationLayer?.name,
                 ),
               },

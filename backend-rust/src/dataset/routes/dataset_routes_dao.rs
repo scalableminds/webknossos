@@ -433,6 +433,7 @@ pub(crate) async fn find_all_compact(
         GROUP BY _dataset) ats ON ats._dataset = d._id"#
     };
     let user_id = user.map(|u| &u.id);
+    let include_annotation_info = query.include_annotation_info.unwrap_or(false);
     let uploader = query.uploader_id.as_ref();
     let folder = query.folder_id.as_ref();
     let mut q = Sql::new(
@@ -461,7 +462,7 @@ pub(crate) async fn find_all_compact(
       d.thumbnailCacheVersion AS thumbnail_cache_version,
       CASE WHEN "#,
     )
-    .push_bind(query.include_annotation_count.unwrap_or(false))
+    .push_bind(include_annotation_info)
     .push(" AND ")
     .push_bind(user_id)
     .push(
@@ -483,7 +484,21 @@ pub(crate) async fn find_all_compact(
     .push_bind(user_id)
     .push(
         r#"))))) ELSE NULL END
-        AS annotation_count
+        AS annotation_count,
+      CASE WHEN "#,
+    )
+    .push_bind(include_annotation_info)
+    .push(" AND ")
+    .push_bind(user_id)
+    .push(
+        r#"::text IS NOT NULL THEN (SELECT a._id
+         FROM webknossos.annotations_ a WHERE a._dataset = d._id AND a.typ = 'Explorational' AND a.state = 'Active'
+         AND a._user = "#,
+    )
+    .push_bind(user_id)
+    .push(
+        r#" ORDER BY a.modified DESC, a._id DESC LIMIT 1) ELSE NULL END
+        AS latest_own_annotation_id
       FROM (SELECT d.* FROM webknossos.datasets_ d JOIN webknossos.organizations o ON o._id = d._organization
         WHERE "#,
     );

@@ -35,7 +35,7 @@ async fn list(
     State(JobsEnabled(jobs_enabled)): State<JobsEnabled>,
 ) -> ApiResult<Json<Vec<Value>>> {
     // This parameter is only part of the latest compact API contract.
-    query.include_annotation_count = None;
+    query.include_annotation_info = None;
     let rows = crate::dataset::routes::list_rows(&state.pool, user.as_ref(), &query).await?;
     let mut values = Vec::with_capacity(rows.len());
     for row in rows {

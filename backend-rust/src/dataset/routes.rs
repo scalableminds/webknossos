@@ -750,7 +750,7 @@ pub(crate) struct ListQuery {
     include_subfolders: Option<bool>,
     search_query: Option<String>,
     limit: Option<i64>,
-    pub(crate) include_annotation_count: Option<bool>,
+    pub(crate) include_annotation_info: Option<bool>,
     pub(crate) compact: Option<bool>,
 }
 
@@ -822,6 +822,9 @@ pub(crate) struct CompactDataset {
     thumbnail_cache_version: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
     annotation_count: Option<i64>,
+    // Most recently modified active explorational owned by the requesting user. Only set if requested.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    latest_own_annotation_id: Option<ObjectId>,
 }
 
 async fn require_read(state: &AppState, user: &AuthUser, id: &ObjectId) -> ApiResult<()> {

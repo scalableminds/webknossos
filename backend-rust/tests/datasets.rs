@@ -392,7 +392,7 @@ async fn compact_and_full_dataset_responses_preserve_composites_paths_unsigned_i
     let (status, list) = request(
         &application,
         "GET",
-        "/datasets?includeAnnotationCount=true",
+        "/datasets?includeAnnotationInfo=true",
         None,
         None,
     )
@@ -1406,12 +1406,42 @@ async fn typed_dataset_responses_match_on_current_and_legacy_api_versions() {
     counted[0]["annotationCount"] = json!(0);
     assert_eq!(
         get(
-            "/api/datasets?includeAnnotationCount=true&compact=true".into(),
+            "/api/datasets?includeAnnotationInfo=true&compact=true".into(),
             Some(&fixture.token)
         )
         .await[0]["annotationCount"],
         counted[0]["annotationCount"]
     );
+    // latestOwnAnnotationId is the most recently modified active explorational of the user.
+    let (older, newer) = (object_id(), object_id());
+    for (annotation, modified) in [(&older, 1000), (&newer, 2000)] {
+        sqlx::query(
+            "INSERT INTO webknossos.annotations (_id,_dataset,_user,typ,modified) VALUES \
+                ($1,$2,$3,'Explorational',to_timestamp($4))",
+        )
+        .bind(annotation)
+        .bind(&id)
+        .bind(&fixture.user_id)
+        .bind(modified as f64)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    }
+    let info = get(
+        "/api/datasets?includeAnnotationInfo=true&compact=true".into(),
+        Some(&fixture.token),
+    )
+    .await;
+    assert_eq!(info[0]["annotationCount"], 2);
+    assert_eq!(info[0]["latestOwnAnnotationId"], json!(newer));
+    // The pre-#10155 parameter name is no longer recognized.
+    let renamed = get(
+        "/api/datasets?includeAnnotationCount=true&compact=true".into(),
+        Some(&fixture.token),
+    )
+    .await;
+    assert!(renamed[0].get("annotationCount").is_none());
+    assert!(renamed[0].get("latestOwnAnnotationId").is_none());
 
     // The full dataset embeds the datastore's publicWrites; v10 downgrades the bigint envelope.
     let data_store = json!({

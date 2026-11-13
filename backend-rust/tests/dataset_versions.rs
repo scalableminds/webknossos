@@ -79,7 +79,7 @@ async fn dataset_versions_preserve_list_defaults_and_uint64_boundaries() {
             }
             let (status, compact) = get(
                 &app,
-                &format!("{prefix}/datasets?compact=true&includeAnnotationCount=true"),
+                &format!("{prefix}/datasets?compact=true&includeAnnotationInfo=true"),
             )
             .await;
             assert_eq!(status, StatusCode::OK, "{compact}");

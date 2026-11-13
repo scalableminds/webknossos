@@ -310,11 +310,11 @@
    "unordered_reason": "Play's query has no ORDER BY (DatasetDAO.findAllWithSearch / findAllCompactWithSearch / findAllByPublication, UserDAO.findAll): order is physical row order, not a contract."
   },
   {
-   "name": "datasets-annotation-count",
+   "name": "datasets-annotation-info",
    "as": "admin",
    "path": "/api/datasets",
    "query": {
-    "includeAnnotationCount": "true",
+    "includeAnnotationInfo": "true",
     "onlyMyOrganization": "true"
    },
    "unordered": [

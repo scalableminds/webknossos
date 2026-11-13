@@ -24,8 +24,6 @@ import { updateTemporarySettingAction } from "viewer/model/actions/settings_acti
 import { formatMagWithLabel, getBaseSegmentationName } from "./segments_view_helper";
 
 const REFRESH_INTERVAL = 5000;
-// Select value for computing the mesh file without a mapping. Select treats null as "nothing selected".
-const NO_MAPPING = "";
 
 type PrecomputeMeshesPopoverProps = {
   onActiveJobChange?: (isRunning: boolean) => void;
@@ -49,13 +47,13 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
   );
   const magInfo = useWkSelector(getMagInfoOfVisibleSegmentationLayer);
   // Without a mapping by default: such a mesh file works with every mapping and for proofreading.
-  const [agglomerateView, setAgglomerateView] = useState<string>(NO_MAPPING);
+  const [agglomerateView, setAgglomerateView] = useState<string | null>(null);
   const [areMappingsLoading, setAreMappingsLoading] = useState(false);
   const visibleSegmentationLayerName = visibleSegmentationLayer?.name;
 
   useEffect(() => {
     // The mappings differ between layers.
-    setAgglomerateView(NO_MAPPING);
+    setAgglomerateView(null);
     // The agglomerate mappings of a layer are only fetched on demand. With a volume annotation,
     // meshes can't be precomputed anyway.
     if (visibleSegmentationLayerName == null || hasVolumeTracing) {
@@ -173,7 +171,7 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
         dataset.id,
         getBaseSegmentationName(visibleSegmentationLayer),
         meshFileMag,
-        agglomerateView === NO_MAPPING ? undefined : agglomerateView,
+        agglomerateView ?? undefined,
       );
       setActiveMeshJobId(job.id);
       Toast.info(
@@ -200,7 +198,7 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
   }));
 
   const mappingOptions = [
-    { value: NO_MAPPING, label: "None (recommended)" },
+    { value: null, label: "None (recommended)" },
     ...(visibleSegmentationLayer?.agglomerates ?? []).map((name) => ({ value: name, label: name })),
   ];
 

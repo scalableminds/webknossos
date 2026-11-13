@@ -5,7 +5,7 @@ import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { handleGenericError } from "libs/error_handling";
 import { useKeyPress, useWindowWidth, useWkSelector } from "libs/react_hooks";
-import { useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import Constants, { ControlModeEnum } from "viewer/constants";
 import {
@@ -68,27 +68,10 @@ function CreateNewBoundingBoxButton() {
   );
 }
 
-export default function ToolbarView() {
-  const dispatch = useDispatch();
-  const hasVolume = useWkSelector((state) => state.annotation?.volumes.length > 0);
-  const hasSkeleton = useWkSelector((state) => state.annotation?.skeleton != null);
-  const toolkit = useWkSelector((state) => state.userConfiguration.activeToolkit);
+// The active tool and the tool it is shown as while modifier keys are pressed (see
+// adaptActiveToolToShortcuts).
+function useActiveToolWithShortcuts() {
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
-  const isSplitToolkit = toolkit === Toolkit.SPLIT_SEGMENTS;
-  const windowWidth = useWindowWidth();
-  const isWiderScreen = useMemo(() => windowWidth >= Constants.NARROW_SCREEN_WIDTH, [windowWidth]);
-  const toolTimestamps = useWkSelector((state) => state.userConfiguration.timestampsForTools);
-  const isViewMode = useWkSelector(
-    (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
-  );
-  // The layer registration workers are always narrow, but their toolkit only has two tools.
-  const isInLayerRegistrationWorker = isLayerRegistrationWorker();
-  const showAllTools =
-    isWiderScreen ||
-    toolkit === Toolkit.READ_ONLY_TOOLS ||
-    isViewMode ||
-    isInLayerRegistrationWorker;
-
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
@@ -98,7 +81,22 @@ export default function ToolbarView() {
     isControlOrMetaPressed,
     isAltPressed,
   );
+  return { activeTool, adaptedActiveTool, isShiftPressed, isControlOrMetaPressed };
+}
 
+// One button per tool. children are rendered after the buttons, inside the same group.
+function ToolButtons({
+  tools,
+  activeTool,
+  adaptedActiveTool,
+  children,
+}: {
+  tools: AnnotationTool[];
+  activeTool: AnnotationTool;
+  adaptedActiveTool: AnnotationTool;
+  children?: ReactNode;
+}) {
+  const dispatch = useDispatch();
   const handleSetTool = useCallback(
     (event: RadioChangeEvent) => {
       const value = event.target.value as AnnotationToolId | null; // null if dropdown for more tools is clicked
@@ -106,6 +104,52 @@ export default function ToolbarView() {
     },
     [dispatch],
   );
+
+  return (
+    <UnderlyingActiveToolContext.Provider
+      value={activeTool !== adaptedActiveTool ? activeTool.id : null}
+    >
+      <Radio.Group onChange={handleSetTool} value={adaptedActiveTool.id} buttonStyle="solid">
+        {tools.map((tool) => {
+          const ToolButton = ToolIdToComponent[tool.id];
+          return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;
+        })}
+        {children}
+      </Radio.Group>
+    </UnderlyingActiveToolContext.Provider>
+  );
+}
+
+// The workers are always narrow, but they only offer the two tools for placing landmarks, so all
+// tools are shown.
+function LayerRegistrationToolbar() {
+  const { activeTool, adaptedActiveTool } = useActiveToolWithShortcuts();
+  return (
+    <>
+      <ToolButtons
+        tools={Toolkits[Toolkit.LANDMARKS]}
+        activeTool={activeTool}
+        adaptedActiveTool={adaptedActiveTool}
+      />
+      <LayerRegistrationButtons />
+    </>
+  );
+}
+
+function DefaultToolbar() {
+  const hasVolume = useWkSelector((state) => state.annotation?.volumes.length > 0);
+  const hasSkeleton = useWkSelector((state) => state.annotation?.skeleton != null);
+  const toolkit = useWkSelector((state) => state.userConfiguration.activeToolkit);
+  const isSplitToolkit = toolkit === Toolkit.SPLIT_SEGMENTS;
+  const windowWidth = useWindowWidth();
+  const isWiderScreen = useMemo(() => windowWidth >= Constants.NARROW_SCREEN_WIDTH, [windowWidth]);
+  const toolTimestamps = useWkSelector((state) => state.userConfiguration.timestampsForTools);
+  const isViewMode = useWkSelector(
+    (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  );
+  const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
+  const { activeTool, adaptedActiveTool, isShiftPressed, isControlOrMetaPressed } =
+    useActiveToolWithShortcuts();
 
   const toolsForButtons = useMemo(() => {
     if (showAllTools) return Toolkits[toolkit];
@@ -132,17 +176,13 @@ export default function ToolbarView() {
 
   return (
     <>
-      <UnderlyingActiveToolContext.Provider
-        value={activeTool !== adaptedActiveTool ? activeTool.id : null}
+      <ToolButtons
+        tools={toolsForButtons}
+        activeTool={activeTool}
+        adaptedActiveTool={adaptedActiveTool}
       >
-        <Radio.Group onChange={handleSetTool} value={adaptedActiveTool.id} buttonStyle="solid">
-          {toolsForButtons.map((tool) => {
-            const ToolButton = ToolIdToComponent[tool.id];
-            return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;
-          })}
-          {isInLayerRegistrationWorker ? null : <ToolDropdown />}
-        </Radio.Group>
-      </UnderlyingActiveToolContext.Provider>
+        <ToolDropdown />
+      </ToolButtons>
 
       <ToolSpecificSettings
         hasSkeleton={hasSkeleton}
@@ -169,6 +209,10 @@ export default function ToolbarView() {
   );
 }
 
+export default function ToolbarView() {
+  return isLayerRegistrationWorker() ? <LayerRegistrationToolbar /> : <DefaultToolbar />;
+}
+
 function ToolSpecificSettings({
   hasSkeleton,
   adaptedActiveTool,
@@ -182,10 +226,7 @@ function ToolSpecificSettings({
   isControlOrMetaPressed: boolean;
   isShiftPressed: boolean;
 }) {
-  // The layer registration workers always create one tree per node (see
-  // layer_registration_worker.ts), so the skeleton tool options are hidden there.
-  const showSkeletonButtons =
-    hasSkeleton && adaptedActiveTool === AnnotationTool.SKELETON && !isLayerRegistrationWorker();
+  const showSkeletonButtons = hasSkeleton && adaptedActiveTool === AnnotationTool.SKELETON;
   const showNewBoundingBoxButton = adaptedActiveTool === AnnotationTool.BOUNDING_BOX;
   const showCreateCellButton = hasVolume && VolumeTools.includes(adaptedActiveTool);
   const showChangeBrushSizeButton =
@@ -196,8 +237,6 @@ function ToolSpecificSettings({
 
   return (
     <>
-      {isLayerRegistrationWorker() ? <LayerRegistrationButtons /> : null}
-
       {showSkeletonButtons ? <SkeletonSpecificButtons /> : null}
 
       {showNewBoundingBoxButton ? (

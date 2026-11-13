@@ -1,16 +1,12 @@
 import { Button, Modal, Select, Space, Typography } from "antd";
 import renderIndependently from "libs/render_independently";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { APIDataset, APIMeshFileInfo } from "types/api_types";
 import { MappingStatusEnum } from "viewer/constants";
 import { getMappingInfo, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
-import {
-  hasEditableMapping,
-  isMappingActivationAllowed,
-} from "viewer/model/accessors/volumetracing_accessor";
+import { hasEditableMapping } from "viewer/model/accessors/volumetracing_accessor";
 import { updateCurrentMeshFileAction } from "viewer/model/actions/annotation_actions";
 import Store from "viewer/store";
-import { activateAgglomerateMappingAndWait } from "./segments_view_helper";
 
 // Mesh files with an older format don't store their mapping and are not supported anymore.
 const MIN_SUPPORTED_MESH_FILE_VERSION = 3;
@@ -71,11 +67,6 @@ export function withMeshFileCompatibilityCheck(
         meshFile={currentMeshFile}
         activeMappingName={activeMappingName}
         isEditableMappingActive={isEditableMappingActive}
-        canActivateMeshFileMapping={isMappingActivationAllowed(
-          state,
-          currentMeshFile.mappingName,
-          layerName,
-        )}
         compatibleMeshFiles={compatibleMeshFiles}
         dataset={state.dataset}
         hasVolumeTracing={state.annotation.volumes.length > 0}
@@ -91,7 +82,6 @@ function MeshFileCompatibilityModal({
   meshFile,
   activeMappingName,
   isEditableMappingActive,
-  canActivateMeshFileMapping,
   compatibleMeshFiles,
   dataset,
   hasVolumeTracing,
@@ -102,7 +92,6 @@ function MeshFileCompatibilityModal({
   meshFile: APIMeshFileInfo;
   activeMappingName: string | null;
   isEditableMappingActive: boolean;
-  canActivateMeshFileMapping: boolean;
   compatibleMeshFiles: APIMeshFileInfo[];
   dataset: APIDataset;
   hasVolumeTracing: boolean;
@@ -110,36 +99,9 @@ function MeshFileCompatibilityModal({
   destroy: () => void;
 }) {
   const [selectedMeshFileName, setSelectedMeshFileName] = useState(compatibleMeshFiles[0]?.name);
-  const [isActivatingMapping, setIsActivatingMapping] = useState(false);
-  // The mapping activation can finish after the modal was dismissed. The meshes shouldn't be
-  // loaded then.
-  const wasDismissedRef = useRef(false);
-
-  const dismiss = () => {
-    wasDismissedRef.current = true;
-    destroy();
-  };
 
   const switchMeshFileAndLoad = () => {
     Store.dispatch(updateCurrentMeshFileAction(layerName, selectedMeshFileName));
-    destroy();
-    loadMeshes();
-  };
-
-  const activateMappingAndLoad = async () => {
-    if (meshFile.mappingName == null) {
-      return;
-    }
-    setIsActivatingMapping(true);
-    const wasActivated = await activateAgglomerateMappingAndWait(layerName, meshFile.mappingName);
-    if (wasDismissedRef.current) {
-      return;
-    }
-    if (!wasActivated) {
-      // The mapping saga already shows an error. Keep the modal open so that the user can retry.
-      setIsActivatingMapping(false);
-      return;
-    }
     destroy();
     loadMeshes();
   };
@@ -161,29 +123,26 @@ function MeshFileCompatibilityModal({
     'click the + button ("Add a precomputed mesh file") in the Segments tab'
   );
 
-  const footer = [
-    <Button key="cancel" onClick={dismiss}>
-      Cancel
-    </Button>,
-    canActivateMeshFileMapping ? (
-      <Button
-        key="activateMapping"
-        type={compatibleMeshFiles.length === 0 ? "primary" : "default"}
-        loading={isActivatingMapping}
-        onClick={activateMappingAndLoad}
-      >
-        Activate mapping "{meshFile.mappingName}"
-      </Button>
-    ) : null,
-    compatibleMeshFiles.length > 0 ? (
-      <Button key="switchMeshFile" type="primary" onClick={switchMeshFileAndLoad}>
-        Use this mesh file
-      </Button>
-    ) : null,
-  ];
+  // The mapping isn't offered to be changed: users choose it for what they want to see, and the
+  // mesh file has to follow that choice.
+  const footer =
+    compatibleMeshFiles.length > 0
+      ? [
+          <Button key="cancel" onClick={destroy}>
+            Cancel
+          </Button>,
+          <Button key="switchMeshFile" type="primary" onClick={switchMeshFileAndLoad}>
+            Switch to selected mesh file
+          </Button>,
+        ]
+      : [
+          <Button key="close" type="primary" onClick={destroy}>
+            Close
+          </Button>,
+        ];
 
   return (
-    <Modal open title="The mesh file doesn't match the mapping" onCancel={dismiss} footer={footer}>
+    <Modal open title="The mesh file doesn't match the mapping" onCancel={destroy} footer={footer}>
       <Typography.Paragraph>
         {`The active mesh file "${meshFile.name}" was computed for the mapping "${meshFile.mappingName}", but ${activeMappingDescription}.`}
       </Typography.Paragraph>

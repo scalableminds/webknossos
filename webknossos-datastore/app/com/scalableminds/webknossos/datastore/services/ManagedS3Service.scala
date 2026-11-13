@@ -100,16 +100,25 @@ class ManagedS3Service @Inject() (
   def deleteRecursively(path: UPath): Fox[Unit] =
     for {
       uri <- path.toRemoteUri.toFox
+      // Query and fragment would silently be dropped from the object key, so that a different path would be deleted
+      _ <- Fox.fromBool(uri.getRawQuery == null && uri.getRawFragment == null) ?~>
+        s"Refusing to delete $path, as it contains URI query or fragment delimiters"
       bucket <- S3UriUtils.hostBucketFromUPath(path).toFox
       key <- S3UriUtils.objectKeyFromUPath(path).map(_.stripSuffix("/")).toFox
-      _ <- Fox.fromBool(key.nonEmpty) ?~> s"Refusing to delete entire bucket at $path"
       credential <- findGlobalCredentialFor(path).toFox ?~> s"No global S3 credential found for $path"
-      _ <- Fox.fromBool(path.toString.stripSuffix("/") != credential.name.stripSuffix("/")) ?~>
-        s"Refusing to delete $path, as it is the root of a managed S3 credential"
+      credentialRoot <- UPath.fromString(credential.name).toFox
+      credentialRootBucket <- S3UriUtils.hostBucketFromUPath(credentialRoot).toFox
+      credentialRootKey <- S3UriUtils.objectKeyFromUPath(credentialRoot).map(_.stripSuffix("/")).toFox
+      // Compare the actual object keys, so that only paths strictly below the credential root can be deleted
+      _ <- Fox.fromBool(bucket == credentialRootBucket && isStrictlyBelow(key, credentialRootKey)) ?~>
+        s"Refusing to delete $path, as it is not strictly below the managed S3 credential root ${credential.name}"
       client <- s3ClientPoolHolder.s3ClientPool.getS3Client(Some(credential), uri, isForUpload = true)
       _ <- deleteAllWithPrefix(client, bucket, key + "/", continuationToken = None)
       _ <- Fox.fromFuture(client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build()).asScala)
     } yield ()
+
+  private def isStrictlyBelow(key: String, rootKey: String): Boolean =
+    key.nonEmpty && (rootKey.isEmpty || key.startsWith(rootKey + "/"))
 
   private def deleteAllWithPrefix(
       client: S3AsyncClient,

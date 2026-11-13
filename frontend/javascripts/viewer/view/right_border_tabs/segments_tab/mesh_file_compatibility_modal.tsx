@@ -5,21 +5,14 @@ import { useState } from "react";
 import type { APIDataset, APIMeshFileInfo } from "types/api_types";
 import { MappingStatusEnum } from "viewer/constants";
 import { getMappingInfo, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
+import {
+  doesMeshFileMatchMapping,
+  isMeshFileVersionSupported,
+  sortMeshFilesByPreference,
+} from "viewer/model/accessors/mesh_file_accessor";
 import { hasEditableMapping } from "viewer/model/accessors/volumetracing_accessor";
 import { updateCurrentMeshFileAction } from "viewer/model/actions/annotation_actions";
 import Store from "viewer/store";
-
-// Mesh files with an older format don't store their mapping and are not supported anymore.
-const MIN_SUPPORTED_MESH_FILE_VERSION = 3;
-
-function isMeshFileVersionSupported(meshFile: APIMeshFileInfo) {
-  return meshFile.formatVersion >= MIN_SUPPORTED_MESH_FILE_VERSION;
-}
-
-function doesMeshFileMatchMapping(meshFile: APIMeshFileInfo, activeMappingName: string | null) {
-  // A mesh file computed without a mapping can be used with every mapping, including an editable one.
-  return meshFile.mappingName == null || meshFile.mappingName === activeMappingName;
-}
 
 /*
  * Wraps a callback that loads meshes from the given mesh file. The callback is called with the
@@ -57,14 +50,15 @@ export function withMeshFileCompatibilityCheck(
     }
 
     const isEditableMappingActive = hasEditableMapping(state, layerName);
-    const compatibleMeshFiles = (availableMeshFiles ?? [])
-      .filter(
+    const compatibleMeshFiles = sortMeshFilesByPreference(
+      (availableMeshFiles ?? []).filter(
         (meshFile) =>
           isMeshFileVersionSupported(meshFile) &&
           doesMeshFileMatchMapping(meshFile, activeMappingName),
-      )
-      // Prefer mesh files computed for the active mapping, since they load agglomerates faster.
-      .sort((a, b) => Number(b.mappingName != null) - Number(a.mappingName != null));
+      ),
+      activeMappingName,
+      isEditableMappingActive,
+    );
 
     renderIndependently((destroy) => (
       <MeshFileCompatibilityModal

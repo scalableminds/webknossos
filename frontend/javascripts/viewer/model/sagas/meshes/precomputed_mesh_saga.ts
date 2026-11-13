@@ -19,7 +19,7 @@ import type {
   APISegmentationLayer,
 } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
-import Constants from "viewer/constants";
+import Constants, { MappingStatusEnum } from "viewer/constants";
 import CustomLOD from "viewer/controller/custom_lod";
 import {
   type BufferGeometryWithInfo,
@@ -29,12 +29,15 @@ import {
 } from "viewer/controller/mesh_helpers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import {
+  getMappingInfo,
   getSegmentationLayerByName,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { sortMeshFilesByPreference } from "viewer/model/accessors/mesh_file_accessor";
 import {
   getEditableMappingForVolumeTracingId,
   getTracingForSegmentationLayer,
+  hasEditableMapping,
   isTracingLayerWithoutFallback,
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -84,7 +87,23 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
       (state) => state.localSegmentationStateByLayer[layerName].currentMeshFile,
     );
     if (!currentMeshFile && availableMeshFiles.length > 0 && autoActivate) {
-      yield* put(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].name));
+      const mappingInfo = yield* select((state) =>
+        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+      );
+      // A mapping that is still being activated is already taken into account.
+      const activeMappingName =
+        mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED
+          ? (mappingInfo.mappingName ?? null)
+          : null;
+      const isEditableMappingActive = yield* select((state) =>
+        hasEditableMapping(state, layerName),
+      );
+      const [preferredMeshFile] = sortMeshFilesByPreference(
+        availableMeshFiles,
+        activeMappingName,
+        isEditableMappingActive,
+      );
+      yield* put(updateCurrentMeshFileAction(layerName, preferredMeshFile.name));
     }
   }
 

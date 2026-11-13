@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(191);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(192);
 COMMIT TRANSACTION;
 
 
@@ -318,8 +318,8 @@ CREATE TABLE webknossos.tasks(
   _project TEXT CONSTRAINT _project_objectId CHECK (_project ~ '^[0-9a-f]{24}$') NOT NULL,
   _script TEXT CONSTRAINT _script_objectId CHECK (_script ~ '^[0-9a-f]{24}$'),
   _taskType TEXT CONSTRAINT _taskType_objectId CHECK (_taskType ~ '^[0-9a-f]{24}$') NOT NULL,
-  neededExperience_domain TEXT NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
-  neededExperience_value INT NOT NULL,
+  neededExperience_domain TEXT CHECK (neededExperience_domain ~* '^.{2,}$'), -- NULL if any member of the project's team may get the task
+  neededExperience_value INT,
   totalInstances BIGINT NOT NULL,
   pendingInstances BIGINT NOT NULL,
   tracingTime BIGINT,
@@ -329,7 +329,8 @@ CREATE TABLE webknossos.tasks(
   creationInfo TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
-  CONSTRAINT pendingInstancesLargeEnoughCheck CHECK (pendingInstances >= 0)
+  CONSTRAINT pendingInstancesLargeEnoughCheck CHECK (pendingInstances >= 0),
+  CONSTRAINT neededExperienceIsCompleteCheck CHECK ((neededExperience_domain IS NULL) = (neededExperience_value IS NULL))
 );
 
 CREATE TABLE webknossos.experienceDomains(

@@ -31,13 +31,13 @@ function TaskCreateBulkView() {
     const { boundingBox } = task;
 
     if (
-      !isString(task.neededExperience.domain) ||
       !isString(task.taskTypeId) ||
       !isString(task.projectName) ||
       task.editPosition.some(Number.isNaN) ||
       task.editRotation.some(Number.isNaN) ||
       Number.isNaN(task.pendingInstances) ||
-      Number.isNaN(task.neededExperience.value) || // Bounding Box is optional and can be null
+      (task.neededExperience != null &&
+        (task.neededExperience.domain === "" || Number.isNaN(task.neededExperience.value))) || // Bounding Box is optional and can be null
       (boundingBox != null
         ? boundingBox.topLeft.some(Number.isNaN) ||
           Number.isNaN(boundingBox.width) ||
@@ -75,8 +75,9 @@ function TaskCreateBulkView() {
     const words = splitToWords(line);
     const datasetId = words[0];
     const taskTypeId = words[1];
-    const experienceDomain = words[2];
-    const minExperience = Number.parseInt(words[3], 10);
+    const experienceDomain = words[2] ?? "";
+    const minExperienceWord = words[3] ?? "";
+    const minExperience = Number.parseInt(minExperienceWord, 10);
     const x = Number.parseInt(words[4], 10);
     const y = Number.parseInt(words[5], 10);
     const z = Number.parseInt(words[6], 10);
@@ -118,10 +119,12 @@ function TaskCreateBulkView() {
       pendingInstances,
       boundingBox,
       projectName,
-      neededExperience: {
-        value: minExperience,
-        domain: experienceDomain,
-      },
+      // Leaving both experience columns empty means that any member of the project's team may get the task.
+      // If only one of them is set, the incomplete experience is kept so that isValidTask rejects the line.
+      neededExperience:
+        experienceDomain !== "" || minExperienceWord !== ""
+          ? { value: minExperience, domain: experienceDomain }
+          : undefined,
       editPosition: [x, y, z],
       editRotation: [rotX, rotY, rotZ],
       baseAnnotation,
@@ -219,7 +222,8 @@ function TaskCreateBulkView() {
           To define a subset of optional values, list all optional columns but leave the fields you
           want to skip empty (for example, <Typography.Text code>val1,,val3</Typography.Text>). To
           omit the bounding box, use <Typography.Text code>0, 0, 0, 0, 0, 0</Typography.Text> for
-          its values.
+          its values. To let any member of the project's team get a task, leave experienceDomain and
+          minExperience empty.
         </Typography.Paragraph>
         <Typography.Paragraph>
           <Typography.Text code>

@@ -26,7 +26,7 @@ import models.annotation.*
 import models.dataset.{Dataset, DatasetDAO, DatasetService}
 import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO, TeamService}
-import models.user.{User, UserDAO, UserExperiencesDAO}
+import models.user.{Experience, User, UserDAO, UserExperiencesDAO}
 import play.api.libs.json.{JsObject, Json}
 import telemetry.SlackNotificationService
 import com.scalableminds.util.objectid.ObjectId
@@ -596,12 +596,13 @@ class TaskCreationService @Inject() (
         requestingUser._organization
       ) ?~> Msg.Project.notFound(params.projectName)
       _ <- Fox.runOptional(params.scriptId)(id => scriptDAO.findOne(id) ?~> Msg.Script.notFound(id))
+      neededExperience = Experience.normalize(params.neededExperience)
       task = Task(
         ObjectId.generate,
         project._id,
         params.scriptId,
         taskType._id,
-        params.neededExperience.trim,
+        neededExperience,
         params.pendingInstances, // all instances are open at this time
         params.pendingInstances,
         tracingTime = None,
@@ -613,9 +614,8 @@ class TaskCreationService @Inject() (
         creationInfo = params.creationInfo
       )
       _ <- taskDAO.insertOne(task)
-      _ <- userExperiencesDAO.insertExperienceToListing(
-        params.neededExperience.trim.domain,
-        requestingUser._organization
+      _ <- Fox.runOptional(neededExperience)(experience =>
+        userExperiencesDAO.insertExperienceToListing(experience.domain, requestingUser._organization)
       )
     } yield task
 

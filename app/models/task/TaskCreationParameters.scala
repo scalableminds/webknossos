@@ -7,7 +7,7 @@ import models.user.Experience
 
 case class TaskParameters(
     taskTypeId: ObjectId,
-    neededExperience: Experience,
+    neededExperience: Option[Experience],
     pendingInstances: Int,
     projectName: String,
     scriptId: Option[ObjectId],
@@ -25,7 +25,7 @@ case class TaskParameters(
 
 case class NmlTaskParameters(
     taskTypeId: ObjectId,
-    neededExperience: Experience,
+    neededExperience: Option[Experience],
     pendingInstances: Int,
     projectName: String,
     scriptId: Option[ObjectId],

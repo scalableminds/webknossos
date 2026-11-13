@@ -147,14 +147,13 @@ function useSegmentListMenuItems({
 
       const loadPrecomputedItem: ItemType = {
         key: "loadByFile",
-        disabled: meshFiles.currentMeshFile == null,
         icon: <Icon component={MeshIcon} />,
         label: "Load Meshes (precomputed)",
-        onClick: runAndHide(() => {
-          if (meshFiles.currentMeshFile != null) {
-            meshOperations.loadPrecomputedMeshes(segments, meshFiles.currentMeshFile.name);
-          }
-        }),
+        onClick: withMeshFileCompatibilityCheck(
+          (meshFileName) =>
+            runAndHide(() => meshOperations.loadPrecomputedMeshes(segments, meshFileName))(),
+          visibleSegmentationLayer?.name,
+        ),
       };
 
       const computeAdHocItem: ItemType = {
@@ -468,7 +467,6 @@ export function useSegmentContextMenuBuilder(
           { key: "meshActionDivider", type: "divider" },
           {
             key: "loadPrecomputedMesh",
-            disabled: currentMeshFile == null,
             icon: <Icon component={MeshIcon} />,
             onClick: withMeshFileCompatibilityCheck(
               withKnownPosition((meshFileName: string) =>

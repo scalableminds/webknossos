@@ -500,7 +500,6 @@ export function useNoNodeContextMenuOptions(
   };
   const loadPrecomputedMeshItem: MenuItemType = {
     key: "load-precomputed-mesh",
-    disabled: !currentMeshFile,
     onClick: withMeshFileCompatibilityCheck(loadPrecomputedMesh, segmentationLayerName),
     label: (
       <LoadMeshMenuItemLabel currentMeshFile={currentMeshFile} volumeTracing={volumeTracing} />

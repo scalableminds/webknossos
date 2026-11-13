@@ -1,5 +1,6 @@
 import { Button, Modal, Select, Space, Typography } from "antd";
 import renderIndependently from "libs/render_independently";
+import Toast from "libs/toast";
 import { useState } from "react";
 import type { APIDataset, APIMeshFileInfo } from "types/api_types";
 import { MappingStatusEnum } from "viewer/constants";
@@ -22,8 +23,9 @@ function doesMeshFileMatchMapping(meshFile: APIMeshFileInfo, activeMappingName: 
 
 /*
  * Wraps a callback that loads meshes from the given mesh file. The callback is called with the
- * current mesh file. If that mesh file was computed for another mapping than the active one, a
- * modal offers to switch to a compatible mesh file instead (with which the callback is called then).
+ * current mesh file. If no mesh file is active or if it was computed for another mapping than the
+ * active one, a modal offers to switch to a compatible mesh file instead (with which the callback
+ * is called then) or explains how to precompute one.
  */
 export function withMeshFileCompatibilityCheck(
   loadMeshes: (meshFileName: string) => void,
@@ -35,7 +37,8 @@ export function withMeshFileCompatibilityCheck(
     }
     const state = Store.getState();
     const { currentMeshFile, availableMeshFiles } = state.localSegmentationStateByLayer[layerName];
-    if (currentMeshFile == null) {
+    if (currentMeshFile == null && availableMeshFiles == null) {
+      Toast.info("The mesh files are still being loaded. Please try again in a moment.");
       return;
     }
     const mappingInfo = getMappingInfo(
@@ -48,7 +51,7 @@ export function withMeshFileCompatibilityCheck(
         : null;
 
     // The version isn't checked here, so that mesh files of an older format are still loaded as before.
-    if (doesMeshFileMatchMapping(currentMeshFile, activeMappingName)) {
+    if (currentMeshFile != null && doesMeshFileMatchMapping(currentMeshFile, activeMappingName)) {
       loadMeshes(currentMeshFile.name);
       return;
     }
@@ -66,7 +69,7 @@ export function withMeshFileCompatibilityCheck(
     renderIndependently((destroy) => (
       <MeshFileCompatibilityModal
         layerName={layerName}
-        meshFile={currentMeshFile}
+        meshFile={currentMeshFile ?? null}
         activeMappingName={activeMappingName}
         isEditableMappingActive={isEditableMappingActive}
         compatibleMeshFiles={compatibleMeshFiles}
@@ -91,7 +94,7 @@ function MeshFileCompatibilityModal({
   destroy,
 }: {
   layerName: string;
-  meshFile: APIMeshFileInfo;
+  meshFile: APIMeshFileInfo | null;
   activeMappingName: string | null;
   isEditableMappingActive: boolean;
   compatibleMeshFiles: APIMeshFileInfo[];
@@ -137,7 +140,7 @@ function MeshFileCompatibilityModal({
             Cancel
           </Button>,
           <Button key="switchMeshFile" type="primary" onClick={switchMeshFileAndLoad}>
-            Switch to selected mesh file
+            {meshFile == null ? "Activate selected mesh file" : "Switch to selected mesh file"}
           </Button>,
         ]
       : [
@@ -147,15 +150,26 @@ function MeshFileCompatibilityModal({
         ];
 
   return (
-    <Modal open title="The mesh file doesn't match the mapping" onCancel={destroy} footer={footer}>
-      <Typography.Paragraph>
-        {`The active mesh file "${meshFile.name}" was computed for the mapping "${meshFile.mappingName}", but ${activeMappingDescription}.`}
-      </Typography.Paragraph>
+    <Modal
+      open
+      title={
+        meshFile == null ? "No mesh file is active" : "The mesh file doesn't match the mapping"
+      }
+      onCancel={destroy}
+      footer={footer}
+    >
+      {meshFile != null ? (
+        <Typography.Paragraph>
+          {`The active mesh file "${meshFile.name}" was computed for the mapping "${meshFile.mappingName}", but ${activeMappingDescription}.`}
+        </Typography.Paragraph>
+      ) : null}
 
       {compatibleMeshFiles.length > 0 ? (
         <Typography.Paragraph>
           <Space orientation="vertical" style={{ width: "100%" }}>
-            Switch to a compatible mesh file to load the mesh:
+            {meshFile == null
+              ? "Select a mesh file to load the mesh:"
+              : "Switch to a compatible mesh file to load the mesh:"}
             <Select
               style={{ width: "100%" }}
               value={selectedMeshFileName}

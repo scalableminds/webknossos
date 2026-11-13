@@ -13,12 +13,11 @@ import Icon, {
   UserOutlined,
 } from "@ant-design/icons";
 import BuildingIcon from "@images/icons/icon-building.svg?react";
-import { useQuery } from "@tanstack/react-query";
 import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { useBlockNavigationDuringUploads } from "admin/dataset/upload/use_resumable_upload";
 import { maxIncludedUsersInPersonalPlan } from "admin/organization/pricing_plan_utils";
-import { getDatastores, getEditableTeams } from "admin/rest_api";
+import { getEditableTeams } from "admin/rest_api";
 import {
   Alert,
   AutoComplete,
@@ -497,12 +496,6 @@ function OnboardingView() {
   const [datasetIdToImport, setDatasetIdToImport] = useState<string | null | undefined>(null);
 
   const navigate = useNavigate();
-  const { data: datastores } = useQuery({
-    queryKey: ["datastores"],
-    queryFn: getDatastores,
-    initialData: [],
-  });
-
   useEffect(() => {
     // There is no need to do any onboarding in case the user is already logged in.
     // Also, don't prematurely navigate to the dashboard during the onboarding when setting up an account.
@@ -611,7 +604,7 @@ function OnboardingView() {
             mask={{ closable: false }}
             onCancel={hideDatasetUploadModal}
           >
-            <DatasetUploadView datastores={datastores} onUploaded={onDatasetUploaded} withoutCard />
+            <DatasetUploadView onUploaded={onDatasetUploaded} withoutCard />
           </Modal>
         )}
         {datasetIdToImport != null && (
@@ -658,7 +651,6 @@ function OnboardingView() {
     [
       advanceStep,
       datasetIdToImport,
-      datastores,
       hideDatasetUploadModal,
       isDatasetUploadModalVisible,
       onDatasetUploaded,

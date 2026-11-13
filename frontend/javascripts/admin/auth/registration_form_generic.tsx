@@ -4,6 +4,7 @@ import { getTermsOfService } from "admin/api/terms_of_service";
 import { loginUser } from "admin/rest_api";
 import { Button, Checkbox, Col, Form, Input, Row } from "antd";
 import { useFetch } from "libs/react_helpers";
+import { resetQueryCacheOnLogin } from "libs/react_query_client";
 import Request from "libs/request";
 import messages from "messages";
 import React from "react";
@@ -59,6 +60,7 @@ function RegistrationFormGeneric(props: Props) {
           password: formValues.password.password1,
         }),
       );
+      resetQueryCacheOnLogin();
       dispatch(setActiveUserAction(user));
       dispatch(setActiveOrganizationAction(organization));
     }

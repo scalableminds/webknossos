@@ -9,3 +9,12 @@ export const reactQueryClient = new QueryClient({
     },
   },
 });
+
+/**
+ * Call when a user logs in. The cache (also persisted to localStorage) may still hold data that was
+ * fetched anonymously or for a previous user. Unlike clear(), resetting keeps the queries of
+ * mounted components attached to the cache and refetches them right away.
+ */
+export function resetQueryCacheOnLogin() {
+  void reactQueryClient.resetQueries();
+}

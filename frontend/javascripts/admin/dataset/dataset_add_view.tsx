@@ -67,7 +67,7 @@ function DatasetAddView() {
       label: "Upload Dataset",
       icon: <UploadOutlined />,
       key: DatasetAddType.UPLOAD,
-      children: <DatasetUploadView datastores={datastores} />,
+      children: <DatasetUploadView />,
     },
     {
       icon: <DatabaseOutlined />,

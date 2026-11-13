@@ -36,6 +36,7 @@ import {
   useSegmentContextMenuBuilder,
 } from "./context_menus";
 import {
+  findSegmentToSelectAfterRemoval,
   getGroupUiNodeKey,
   getSegmentUiNodeKey,
   isRootGroupNode,
@@ -116,12 +117,23 @@ export function SegmentTreeView(props: Props) {
 
   useScrollBenchmark(treeRef);
 
+  // antd's tree has a keyboard cursor ("active" node) that is separate from the selection. It is
+  // controlled here so that it can be moved along with the selection after a removal.
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+
   const treeContainerRef = useRef<HTMLDivElement>(null);
   useSegmentListKeyboardShortcuts(treeContainerRef, () => {
-    if (visibleSegmentationLayer == null) {
+    if (visibleSegmentationLayer == null || selection.selectedSegmentIds.length === 0) {
       return;
     }
+    // Select the neighboring segment afterwards, so that one can keep removing segments
+    // with the shortcut (like in a file manager).
+    const nextNode = findSegmentToSelectAfterRemoval(hierarchy, selection.selectedSegmentIds);
     removeSegmentsFromList(dispatch, visibleSegmentationLayer.name, selection.selectedSegmentIds);
+    if (nextNode != null) {
+      selection.setSelection([nextNode.segment.id], null);
+      setActiveKey(nextNode.key);
+    }
   });
 
   // At most one row is editable at a time. Owning the key here (instead of letting each
@@ -421,6 +433,8 @@ export function SegmentTreeView(props: Props) {
                     )
                   }
                   switcherIcon={({ expanded }) => <TreeSwitcherIcon expanded={expanded} />}
+                  activeKey={activeKey}
+                  onActiveChange={(key) => setActiveKey(key == null ? null : String(key))}
                   onSelect={onSelect}
                   onDrop={onDrop}
                   allowDrop={allowDrop}

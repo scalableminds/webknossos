@@ -88,7 +88,8 @@ case class CreateTreeSkeletonAction(
       `type`.map(TreeType.toProto),
       edgesAreVisible,
       metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata)),
-      agglomerateInfo.map(_.toProto)
+      agglomerateInfo = agglomerateInfo.map(_.toProto),
+      ownerId = actionAuthorId.map(_.toString)
     )
     tracing.withTrees(newTree +: tracing.trees)
   }

@@ -253,12 +253,9 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
       </Typography.Paragraph>
 
       <Typography.Paragraph type="secondary">
-        We recommend not selecting a mapping, since this is the most flexible option. Only select
-        one if you need the best loading performance for exactly that mapping. A mesh file computed
-        without a mapping contains a mesh per segment of the unmapped data. It works with every
-        mapping and is required for proofreading. A mesh file computed for a mapping loads the
-        meshes of its agglomerates faster, but it can only be used while that mapping is active and
-        not for proofreading.
+        Not selecting a mapping is recommended, since this is the most flexible option. A mesh file
+        computed without a mapping works with all mappings and is required for proofreading. Only
+        select a mapping if you need the best loading performance for exactly that mapping.
       </Typography.Paragraph>
 
       <Flex justify="center">

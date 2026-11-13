@@ -3,35 +3,36 @@ package controllers
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import jakarta.inject.Inject
-import models.dataset.WKRemoteDataStoreClient
+import models.dataset.{DataStoreService, WKRemoteDataStoreClient}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import utils.WkConf
 import utils.sql.{SimpleSQLDAO, SqlClient, SqlToken}
 
 import scala.concurrent.ExecutionContext
 
-class PathDeletionController @Inject() (conf: WkConf, pathDeletionDAO: PathDeletionDAO)(implicit
+// Paths in managed S3 cannot be deleted synchronously. They are queued in the db
+// and periodically fetched and deleted by the datastores (see ManagedS3PathDeletionService there)
+class PathDeletionController @Inject() (dataStoreService: DataStoreService, pathDeletionDAO: PathDeletionDAO)(implicit
     ec: ExecutionContext,
     bodyParsers: PlayBodyParsers
 ) extends Controller {
 
-  def listPathsToDelete(key: String): Action[AnyContent] = Action.fox { _ =>
-    for {
-      _ <- authenticateExternalPathDeletionService(key)
-      paths <- pathDeletionDAO.findAll
-    } yield Ok(Json.toJson(paths))
+  def listPathsToDelete(name: String, key: String): Action[AnyContent] = Action.fox { _ =>
+    dataStoreService.validateAccess(name, key) { _ =>
+      for {
+        paths <- pathDeletionDAO.findAll
+      } yield Ok(Json.toJson(paths))
+    }
   }
 
-  def markAsDeleted(key: String): Action[Seq[String]] = Action.fox(validateJson[Seq[String]]) { implicit request =>
-    for {
-      _ <- authenticateExternalPathDeletionService(key)
-      _ <- Fox.serialCombined(request.body.grouped(100))(pathDeletionDAO.markAsDeleted)
-    } yield Ok
+  def markAsDeleted(name: String, key: String): Action[Seq[String]] = Action.fox(validateJson[Seq[String]]) {
+    implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          _ <- Fox.serialCombined(request.body.grouped(100))(pathDeletionDAO.markAsDeleted)
+        } yield Ok
+      }
   }
-
-  private def authenticateExternalPathDeletionService(key: String): Fox[Unit] =
-    Fox.fromBool(key == conf.ExternalPathDeletionService.key) ?~> "Wrong key for external path deletion service."
 
 }
 

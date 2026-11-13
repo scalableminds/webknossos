@@ -37,6 +37,7 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[DataStoreAccessTokenService]).asEagerSingleton()
     bind(classOf[DSThreadPoolHealthService]).asEagerSingleton()
     bind(classOf[ManagedS3Service]).asEagerSingleton()
+    bind(classOf[ManagedS3PathDeletionService]).asEagerSingleton()
     bind(classOf[UploadService]).asEagerSingleton()
     bind(classOf[DataSourceService]).asEagerSingleton()
     bind(classOf[DataVaultService]).asEagerSingleton()

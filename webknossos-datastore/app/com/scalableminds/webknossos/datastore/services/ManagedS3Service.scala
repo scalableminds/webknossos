@@ -13,12 +13,22 @@ import com.scalableminds.webknossos.datastore.storage.{
   S3ClientPoolHolder
 }
 import com.typesafe.scalalogging.LazyLogging
+import software.amazon.awssdk.services.s3.S3AsyncClient
+import software.amazon.awssdk.services.s3.model.{
+  Delete,
+  DeleteObjectRequest,
+  DeleteObjectsRequest,
+  ListObjectsV2Request,
+  ObjectIdentifier
+}
 import software.amazon.awssdk.transfer.s3.S3TransferManager
 
 import java.net.URI
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
+import scala.jdk.CollectionConverters.*
+import scala.jdk.FutureConverters.*
 
 class ManagedS3Service @Inject() (
     config: DataStoreConfig,
@@ -40,6 +50,9 @@ class ManagedS3Service @Inject() (
     path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c =>
       UPath.fromString(c.name).map(path.startsWith).getOrElse(false)
     )
+
+  def hasGlobalS3Credentials: Boolean =
+    globalCredentials.exists(_.isInstanceOf[S3AccessKeyCredential])
 
   def findGlobalCredentialFor(pathOpt: Option[UPath]): Option[S3AccessKeyCredential] =
     pathOpt.flatMap(findGlobalCredentialFor)
@@ -82,5 +95,57 @@ class ManagedS3Service @Inject() (
     credential <- findGlobalCredentialFor(targetPath).toFox
     transferManager <- transferManagerForEndpoint(endpoint, credential)
   } yield transferManager
+
+  // Deletes the object at path (if it is a file) and all objects below it (if it is a directory)
+  def deleteRecursively(path: UPath): Fox[Unit] =
+    for {
+      uri <- path.toRemoteUri.toFox
+      bucket <- S3UriUtils.hostBucketFromUPath(path).toFox
+      key <- S3UriUtils.objectKeyFromUPath(path).map(_.stripSuffix("/")).toFox
+      _ <- Fox.fromBool(key.nonEmpty) ?~> s"Refusing to delete entire bucket at $path"
+      credential <- findGlobalCredentialFor(path).toFox ?~> s"No global S3 credential found for $path"
+      _ <- Fox.fromBool(path.toString.stripSuffix("/") != credential.name.stripSuffix("/")) ?~>
+        s"Refusing to delete $path, as it is the root of a managed S3 credential"
+      client <- s3ClientPoolHolder.s3ClientPool.getS3Client(Some(credential), uri, isForUpload = true)
+      _ <- deleteAllWithPrefix(client, bucket, key + "/", continuationToken = None)
+      _ <- Fox.fromFuture(client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build()).asScala)
+    } yield ()
+
+  private def deleteAllWithPrefix(
+      client: S3AsyncClient,
+      bucket: String,
+      prefix: String,
+      continuationToken: Option[String]
+  ): Fox[Unit] = {
+    val requestBuilder = ListObjectsV2Request.builder().bucket(bucket).prefix(prefix).maxKeys(1000)
+    continuationToken.foreach(requestBuilder.continuationToken)
+    for {
+      listing <- Fox.fromFuture(client.listObjectsV2(requestBuilder.build()).asScala)
+      keys = listing.contents().asScala.map(_.key()).toSeq
+      _ <- Fox.runIf(keys.nonEmpty)(deleteObjects(client, bucket, keys))
+      _ <-
+        if (listing.isTruncated)
+          deleteAllWithPrefix(client, bucket, prefix, Option(listing.nextContinuationToken()))
+        else Fox.successful(())
+    } yield ()
+  }
+
+  private def deleteObjects(client: S3AsyncClient, bucket: String, keys: Seq[String]): Fox[Unit] = {
+    val objectIdentifiers = keys.map(key => ObjectIdentifier.builder().key(key).build())
+    val request = DeleteObjectsRequest
+      .builder()
+      .bucket(bucket)
+      .delete(Delete.builder().objects(objectIdentifiers.asJava).quiet(true).build())
+      .build()
+    for {
+      response <- Fox.fromFuture(client.deleteObjects(request).asScala)
+      errors = response.errors().asScala
+      _ <- Fox.fromBool(
+        errors.isEmpty
+      ) ?~> s"Failed to delete ${errors.length} objects in bucket $bucket. First error: ${errors.headOption
+          .map(e => s"${e.key()}: ${e.code()} ${e.message()}")
+          .getOrElse("")}"
+    } yield ()
+  }
 
 }

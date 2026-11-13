@@ -44,5 +44,5 @@ The popover also lets you choose a mapping for the mesh file. By default, the me
 !!! info
     Precomputing meshes is exclusive to webknossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the integrated WEBKNOSSOS worker for meshing or the [Voxelytics software](https://voxelytics.com) for standalone meshing from the command line.
 
-[Check the `Processing Jobs` page](../automation/jobs.md) from the `Analysis` menu at the top of the screen to track progress or cancel the operation. The finished mesh file will be available on page reload.
+[Check the `Processing Jobs` page](../automation/jobs.md) from the `Analysis` menu at the top of the screen to track progress or cancel the operation. You will also get an email when the mesh file is ready. If the page is still open, the finished mesh file becomes available automatically. Otherwise, it is available on page reload.
 

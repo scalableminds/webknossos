@@ -12,13 +12,14 @@ import { Button, Flex, Select, Space, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-import { APIJobCommand } from "types/api_types";
+import { APIJobCommand, type APISegmentationLayer } from "types/api_types";
 import {
   getMagInfoOfVisibleSegmentationLayer,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { maybeFetchMeshFilesAction } from "viewer/model/actions/annotation_actions";
 import { dispatchEnsureLayerMappingsAreLoadedAsync } from "viewer/model/actions/dataset_actions";
 import { updateTemporarySettingAction } from "viewer/model/actions/settings_actions";
 import { formatMagWithLabel, getBaseSegmentationName } from "./segments_view_helper";
@@ -32,6 +33,9 @@ type PrecomputeMeshesPopoverProps = {
 export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesPopoverProps) => {
   const dispatch = useDispatch();
   const [activeMeshJobId, setActiveMeshJobId] = useState<string | null>(null);
+  // The layer for which the active mesh job was started. Its mesh files are reloaded once the job
+  // succeeded, so that the new mesh file can be selected without reloading the page.
+  const activeMeshJobLayerRef = useRef<APISegmentationLayer | null>(null);
 
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const activeUser = useWkSelector((state) => state.activeUser);
@@ -89,8 +93,11 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
     );
     if (activeJob != null && (activeJob.state === "SUCCESS" || activeJob.state === "FAILURE")) {
       setActiveMeshJobId(null);
+      if (activeJob.state === "SUCCESS") {
+        dispatch(maybeFetchMeshFilesAction(activeMeshJobLayerRef.current, dataset, true));
+      }
     }
-  }, [jobs, activeMeshJobId, dataset.name]);
+  }, [jobs, activeMeshJobId, dataset, dispatch]);
 
   useEffect(() => {
     if (onActiveJobChange != null) {
@@ -173,6 +180,7 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
         meshFileMag,
         agglomerateView ?? undefined,
       );
+      activeMeshJobLayerRef.current = visibleSegmentationLayer;
       setActiveMeshJobId(job.id);
       Toast.info(
         <Fragment>

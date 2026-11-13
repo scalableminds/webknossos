@@ -37,9 +37,8 @@ class ManagedS3PathDeletionService @Inject() (
       for {
         pathsToDelete <- remoteWebknossosClient.getPathsToDelete
         // Other datastores may be responsible for paths this one has no credentials for
-        pathsToDeleteHere = pathsToDelete.filter(pathLiteral =>
-          UPath.fromString(pathLiteral).exists(managedS3Service.pathIsInManagedS3)
-        )
+        pathsToDeleteHere = pathsToDelete
+          .filter(pathLiteral => UPath.fromString(pathLiteral).exists(managedS3Service.pathIsInManagedS3))
         deletedPaths <- deletePaths(pathsToDeleteHere)
         _ <- Fox.runIf(deletedPaths.nonEmpty)(remoteWebknossosClient.markPathsAsDeleted(deletedPaths))
       } yield ()

@@ -161,11 +161,10 @@ export type SkeletonTracingAction =
 //   updating is currently allowed. The `collab` field additionally decides whether it may run in
 //   concurrent collaboration ("live collaboration") mode:
 //     - "block": never allowed in concurrent mode.
-//     - "allow": always allowed (only touches agglomerate trees or creates a tree of the
-//       current user).
+//     - "allow": always allowed (only ever touches agglomerate trees anyway).
 //     - "onlyEditableTrees": allowed only if every affected tree is an agglomerate tree
-//       (proofreading) or owned by the current user. The affected trees are resolved at
-//       runtime in the reducer.
+//       (proofreading) or owned by the current user, or if a tree of the current user is
+//       created. The affected trees are resolved at runtime in the reducer.
 export type SkeletonCollabPolicy = "block" | "allow" | "onlyEditableTrees";
 
 export type SkeletonActionPolicy =
@@ -209,11 +208,12 @@ export const skeletonActionPolicies: Record<SkeletonTracingAction["type"], Skele
   SET_TREE_GROUPS: { needsUpdatePermission: true, collab: "block" },
   SET_MERGER_MODE_ENABLED: { needsUpdatePermission: true, collab: "block" },
 
-  // Only ever touches agglomerate trees or creates a tree owned by the current user.
+  // Only ever touches agglomerate trees, so it is safe in concurrent collaboration mode.
   SET_TREES_AGGLOMERATE_INFO_TRACING_ID: { needsUpdatePermission: true, collab: "allow" },
-  CREATE_TREE: { needsUpdatePermission: true, collab: "allow" },
 
   // Mutations allowed in concurrent collaboration mode only for agglomerate trees and own trees.
+  // Creating a tree of the current user is allowed, too.
+  CREATE_TREE: { needsUpdatePermission: true, collab: "onlyEditableTrees" },
   CREATE_NODE: { needsUpdatePermission: true, collab: "onlyEditableTrees" },
   DELETE_NODE: { needsUpdatePermission: true, collab: "onlyEditableTrees" },
   DELETE_NODE_AND_RECONNECT_NEIGHBORS: { needsUpdatePermission: true, collab: "onlyEditableTrees" },

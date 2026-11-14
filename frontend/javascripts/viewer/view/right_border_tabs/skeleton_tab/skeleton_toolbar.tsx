@@ -25,6 +25,7 @@ import {
   isAnnotationOwner,
   isConcurrentCollaborationMode,
   isTreeEditableByUserInLiveCollab,
+  mayCreateSkeletonTrees,
   mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
 import {
@@ -105,7 +106,7 @@ export function SkeletonToolbar({ hierarchy, selection, groupOperations, skeleto
 
   const isEditingDisabled = !allowUpdate || isConcurrentCollabMode;
   // In concurrent collaboration mode, users may create their own trees.
-  const isCreatingTreesDisabled = !allowUpdate;
+  const isCreatingTreesDisabled = !useWkSelector(mayCreateSkeletonTrees);
   const activeUserId = useWkSelector((state) => state.activeUser?.id);
   const annotationOwnerId = useWkSelector((state) => state.annotation.owner?.id);
   const isEditingDisabledMessage = isConcurrentCollabMode

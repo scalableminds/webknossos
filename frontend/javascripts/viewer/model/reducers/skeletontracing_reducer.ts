@@ -75,6 +75,7 @@ import {
   isAgglomerateTree,
   isConcurrentCollaborationMode,
   isTreeEditableInLiveCollab,
+  mayCreateSkeletonTrees,
 } from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
 import {
@@ -100,6 +101,8 @@ function resolveAffectedTrees(
   const getTreeOfNode = (nodeId?: number | null, treeId?: number | null) =>
     getTreeAndNode(skeletonTracing, activeTreeId, nodeId, treeId)?.[0];
   switch (action.type) {
+    case "CREATE_TREE":
+      return null;
     case "CREATE_NODE": {
       const tree = getTree(state, action.treeId);
       // Without an existing (active) tree, a new tree of the current user is created.
@@ -171,7 +174,7 @@ function isCollabModeMutationAllowed(
       }
       const affectedTrees = resolveAffectedTrees(action, state, skeletonTracing);
       if (affectedTrees == null) {
-        return true;
+        return mayCreateSkeletonTrees(state);
       }
       return (
         affectedTrees.length > 0 &&

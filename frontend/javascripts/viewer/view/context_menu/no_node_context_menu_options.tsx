@@ -17,7 +17,11 @@ import {
   getSegmentIdsAtPositionAsync,
   handleFloodFillFromGlobalPosition,
 } from "viewer/controller/combinations/volume_handlers";
-import { mayEditAnnotation, mayEditSkeletonTree } from "viewer/model/accessors/annotation_accessor";
+import {
+  mayCreateSkeletonTrees,
+  mayEditAnnotation,
+  mayEditSkeletonTree,
+} from "viewer/model/accessors/annotation_accessor";
 import { hasConnectomeFile } from "viewer/model/accessors/connectome_accessor";
 import {
   getMappingInfo,
@@ -104,10 +108,12 @@ export function useNoNodeContextMenuOptions(
 
   const allowUpdate = useWkSelector(mayEditAnnotation);
   // In concurrent collaboration mode, nodes may only be added to own trees (or agglomerate trees).
-  // Creating a new tree is always allowed.
+  const mayCreateTrees = useWkSelector(mayCreateSkeletonTrees);
   const mayAddNodeToActiveTree = useWkSelector((state) => {
     const activeTree = getTree(state);
-    return activeTree == null || mayEditSkeletonTree(state, activeTree);
+    return activeTree == null
+      ? mayCreateSkeletonTrees(state)
+      : mayEditSkeletonTree(state, activeTree);
   });
 
   // The segment id depends on live state that is not passed to the function (e.g., loaded
@@ -341,7 +347,7 @@ export function useNoNodeContextMenuOptions(
                   : null}
               </>
             ),
-            disabled: areSkeletonGeometriesTransformed,
+            disabled: areSkeletonGeometriesTransformed || !mayCreateTrees,
           },
           {
             key: "load-agglomerate-tree",

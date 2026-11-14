@@ -6,6 +6,7 @@ import {
   initialTreeOne,
 } from "test/fixtures/hybridtracing_object";
 import { chainReduce } from "test/helpers/chainReducer";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
@@ -48,7 +49,7 @@ import {
 } from "viewer/model/types/tree_types";
 import type { WebknossosState } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const initialState: WebknossosState = update(defaultState, {
   annotation: {
@@ -1662,7 +1663,15 @@ describe("SkeletonTracing", () => {
   });
 });
 
-describe("SkeletonTracing - concurrent collaboration mode", () => {
+describe("SkeletonTracing - concurrent collaboration mode without the skeleton dev flag", () => {
+  const previousAllowFlag = WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation;
+  beforeEach(() => {
+    WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation = false;
+  });
+  afterEach(() => {
+    WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation = previousAllowFlag;
+  });
+
   // Tree 1 is a default tree (and the active tree); tree 2 is an agglomerate tree.
   const concurrentState = update(initialState, {
     annotation: { collaborationMode: { $set: "Concurrent" } },
@@ -1711,6 +1720,14 @@ describe("SkeletonTracing - concurrent collaboration mode", () => {
 });
 
 describe("SkeletonTracing - tree ownership in concurrent collaboration mode", () => {
+  const previousAllowFlag = WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation;
+  beforeEach(() => {
+    WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation = true;
+  });
+  afterEach(() => {
+    WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation = previousAllowFlag;
+  });
+
   // Tree 1 is a default tree (and the active tree); tree 2 is an agglomerate tree.
   const ownStateWithoutReservations = update(initialState, {
     annotation: {

@@ -246,11 +246,18 @@ const skeletonTransformedRule = new DisableRule(
 
 // In live collaboration, the volume tools save their edits as partial bucket updates
 // (see getVolumeSaveMode), which don't overwrite concurrent edits of the same buckets
-// by others. They are only enabled there with the dev flag, though.
+// by others. With the skeleton tool, users may only edit their own trees. Both are only
+// enabled there with the dev flags, though.
 const concurrentCollabModeRule = new DisableRule(
   [AnnotationTool.SKELETON, ...VolumeTools],
   ({ isConcurrentCollabMode }, tool) => {
     if (!isConcurrentCollabMode) return null;
+    if (
+      tool === AnnotationTool.SKELETON &&
+      WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation
+    ) {
+      return null;
+    }
     if (!WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation) {
       return `The ${tool.readableName} ${DISABLED_EXPLANATION.LIVE_COLLAB_MODE_WITHOUT_VOLUME_ANNOTATION}`;
     }

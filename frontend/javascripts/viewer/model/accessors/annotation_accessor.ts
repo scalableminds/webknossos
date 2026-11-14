@@ -11,6 +11,7 @@ import {
   type VolumeUserState,
 } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum } from "viewer/constants";
 import type { Tree } from "viewer/model/types/tree_types";
 import type { StoreAnnotation, WebknossosState } from "viewer/store";
@@ -121,8 +122,8 @@ export function isAgglomerateTree(tree: Tree | null | undefined): boolean {
 }
 
 // Whether a user may edit the given tree in concurrent collaboration mode: agglomerate trees
-// (proofreading) may be edited by everyone, other trees only by their owner. Trees without an
-// owner belong to the annotation owner.
+// (proofreading) may be edited by everyone, other trees only by their owner (and only with the
+// dev flag). Trees without an owner belong to the annotation owner.
 export function isTreeEditableByUserInLiveCollab(
   tree: Tree | null | undefined,
   userId: string | null | undefined,
@@ -134,6 +135,9 @@ export function isTreeEditableByUserInLiveCollab(
   if (isAgglomerateTree(tree)) {
     return true;
   }
+  if (!WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation) {
+    return false;
+  }
   return userId != null && (tree.ownerId ?? annotationOwnerId) === userId;
 }
 
@@ -142,6 +146,17 @@ export function isTreeEditableInLiveCollab(
   tree: Tree | null | undefined,
 ): boolean {
   return isTreeEditableByUserInLiveCollab(tree, state.activeUser?.id, state.annotation.owner?.id);
+}
+
+// Whether new (non-agglomerate) trees of the current user may be created.
+export function mayCreateSkeletonTrees(state: WebknossosState): boolean {
+  if (!mayEditAnnotation(state)) {
+    return false;
+  }
+  return (
+    !isConcurrentCollaborationMode(state) ||
+    WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation
+  );
 }
 
 export function mayEditSkeletonTree(state: WebknossosState, tree: Tree | null | undefined) {

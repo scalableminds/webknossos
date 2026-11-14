@@ -211,7 +211,16 @@ export function useTreeContextMenuBuilder(
         ],
       };
     },
-    [dispatch, allowUpdate, isConcurrentCollabMode, selection, hideContextMenu, startRenaming],
+    [
+      dispatch,
+      allowUpdate,
+      isConcurrentCollabMode,
+      activeUserId,
+      annotationOwnerId,
+      selection,
+      hideContextMenu,
+      startRenaming,
+    ],
   );
 }
 

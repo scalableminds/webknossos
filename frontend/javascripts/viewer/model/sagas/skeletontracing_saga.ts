@@ -66,11 +66,13 @@ import {
 import EdgeCollection, { diffEdgeCollections } from "viewer/model/edge_collection";
 import { parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import {
+  countIdsNeededForAddingTrees,
   createMutableTreeMapFromTreeArray,
   generateTreeName,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
+import { ensureSkeletonIdReservations } from "viewer/model/sagas/id_reservation_saga";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import {
   createEdge,
@@ -496,14 +498,16 @@ function* loadAgglomerateTreeWithAtPosition(
       agglomerateId,
     );
 
+    const treesToAdd = createMutableTreeMapFromTreeArray(agglomerateTree.trees);
+    // In live collaboration, the reducer takes the ids for the new tree from the reservations.
+    yield* call(
+      ensureSkeletonIdReservations,
+      countIdsNeededForAddingTrees(treesToAdd, agglomerateTree.treeGroups ?? []),
+    );
     yield* put(
-      addTreesAndGroupsAction(
-        createMutableTreeMapFromTreeArray(agglomerateTree.trees),
-        agglomerateTree.treeGroups,
-        (newTreeIds) => {
-          usedTreeIds = newTreeIds;
-        },
-      ),
+      addTreesAndGroupsAction(treesToAdd, agglomerateTree.treeGroups, (newTreeIds) => {
+        usedTreeIds = newTreeIds;
+      }),
     );
 
     // @ts-expect-error TS infers usedTreeIds to be never, but it should be number[] if its not null

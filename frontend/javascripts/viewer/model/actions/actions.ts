@@ -18,7 +18,7 @@ import type { UiAction } from "viewer/model/actions/ui_actions";
 import type { UserAction } from "viewer/model/actions/user_actions";
 import type { ViewModeAction } from "viewer/model/actions/view_mode_actions";
 import type { VolumeTracingAction } from "viewer/model/actions/volumetracing_actions";
-import type { IdReservation } from "viewer/store";
+import type { IdReservation, SkeletonIdDomain } from "viewer/store";
 
 export type EscalateErrorAction = ReturnType<typeof escalateErrorAction>;
 export type GetNewIdAction = ReturnType<typeof getNewIdAction>;
@@ -116,7 +116,7 @@ export const getNewIdAction = (
 // Domains for which the id reservation mechanism is actually implemented (as opposed to
 // AnnotationIdDomain, which lists all domains the back-end knows about, including ones that
 // aren't wired up on the frontend, yet).
-export type ReservableIdDomain = "SegmentGroup" | "BoundingBox";
+export type ReservableIdDomain = "SegmentGroup" | "BoundingBox" | SkeletonIdDomain;
 
 export const dispatchGetNewIdAsync = async (
   dispatch: Dispatch<any>,

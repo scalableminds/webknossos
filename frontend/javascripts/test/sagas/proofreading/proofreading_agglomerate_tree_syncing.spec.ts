@@ -1113,6 +1113,8 @@ describe("Proofreading agglomerate tree syncing", () => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     backendMock.planMultipleVersionInjections(7, loadAgglomerateTree1);
+    // The other user reserved the ids of the agglomerate tree it loads.
+    backendMock.reserveIdsOfPlannedInjections();
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];

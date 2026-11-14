@@ -58,6 +58,7 @@ export type MutableTree = {
   edgesAreVisible: boolean;
   metadata: MetadataEntryProto[];
   agglomerateInfo?: TreeAgglomerateInfo | undefined;
+  ownerId?: string;
 };
 
 // When changing Tree, remember to also update MutableTree
@@ -76,6 +77,9 @@ export type Tree = {
   readonly edgesAreVisible: boolean;
   readonly metadata: MetadataEntryProto[];
   readonly agglomerateInfo?: TreeAgglomerateInfo;
+  // The user who created the tree. If not set, the tree is owned by the annotation owner
+  // (see getTreeOwnerId). In live collaboration, only the owner may edit the tree.
+  readonly ownerId?: string;
 };
 
 export type TreeGroupTypeFlat = {

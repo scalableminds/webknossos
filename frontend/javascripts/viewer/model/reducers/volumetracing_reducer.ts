@@ -476,9 +476,9 @@ function VolumeTracingReducer(
     }
 
     case "SET_ID_RESERVATIONS": {
-      // BoundingBox reservations are handled in annotation_reducer.ts, as they are not
-      // scoped to a single segmentation layer.
-      if (action.domain === "BoundingBox") return state;
+      // BoundingBox and skeleton reservations are handled in annotation_reducer.ts, as they
+      // are not scoped to a single segmentation layer.
+      if (action.domain !== "SegmentGroup") return state;
 
       const { idReservations } = state.localSegmentationStateByLayer[action.tracingId];
       return updateLocalSegmentationState(state, action.tracingId, {

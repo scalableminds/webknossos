@@ -23,6 +23,7 @@ import { batchActions } from "redux-batched-actions";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import {
   isConcurrentCollaborationMode,
+  isTreeEditableByUserInLiveCollab,
   mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
@@ -74,13 +75,18 @@ export function useTreeContextMenuBuilder(
   const dispatch = useDispatch();
   const allowUpdate = useWkSelector(mayEditAnnotation);
   const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
+  const activeUserId = useWkSelector((state) => state.activeUser?.id);
+  const annotationOwnerId = useWkSelector((state) => state.annotation.owner?.id);
 
   return useCallback(
     (node: TreeUiNode): MenuProps => {
       const { tree } = node;
       const isAgglomerateTree = tree.type === TreeTypeEnum.AGGLOMERATE;
-      // In concurrent collaboration mode, only agglomerate trees (proofreading) may be edited.
-      const isEditingDisabled = !allowUpdate || (isConcurrentCollabMode && !isAgglomerateTree);
+      // In concurrent collaboration mode, only own trees and agglomerate trees may be edited.
+      const isEditingDisabled =
+        !allowUpdate ||
+        (isConcurrentCollabMode &&
+          !isTreeEditableByUserInLiveCollab(tree, activeUserId, annotationOwnerId));
 
       return {
         items: [
@@ -205,7 +211,16 @@ export function useTreeContextMenuBuilder(
         ],
       };
     },
-    [dispatch, allowUpdate, isConcurrentCollabMode, selection, hideContextMenu, startRenaming],
+    [
+      dispatch,
+      allowUpdate,
+      isConcurrentCollabMode,
+      activeUserId,
+      annotationOwnerId,
+      selection,
+      hideContextMenu,
+      startRenaming,
+    ],
   );
 }
 

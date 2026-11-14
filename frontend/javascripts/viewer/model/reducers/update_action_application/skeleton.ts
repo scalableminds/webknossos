@@ -65,6 +65,9 @@ function applySingleAction(
         ...treeRest,
         nodes: new DiffableMap(),
         edges: new EdgeCollection(),
+        // Like the server, use the author as the owner. Pending actions of the current user
+        // that are reapplied during rebasing don't have an author, yet.
+        ownerId: ua.value.actionAuthorId ?? state.activeUser?.id,
       };
       const newTrees = enforceSkeletonTracing(state.annotation).trees.set(id, newTree);
 

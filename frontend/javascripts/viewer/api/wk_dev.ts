@@ -52,6 +52,10 @@ export const WkDevFlags = {
     // Allows the volume tools in live collaboration, and switching to live
     // collaboration when the mapping is locked (not only with an editable mapping).
     allowCollaborativeVolumeAnnotation: false,
+    // Allows the skeleton tool in live collaboration, where users may create trees and edit
+    // their own trees (see design/collaborative_skeleton_annotation.md).
+    // TODO: Set to false before merging, until undo/redo is supported in live collaboration.
+    allowCollaborativeSkeletonAnnotation: true,
   },
   meshing: {
     marchingCubeSizeInTargetMag: [64, 64, 64] as Vector3,

@@ -3,6 +3,7 @@ import ColorGenerator from "libs/color_generator";
 import { colorObjectToRGBArray } from "libs/colors";
 import DiffableMap from "libs/diffable_map";
 import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
 import { point3ToVector3 } from "libs/utils";
 import compact from "lodash-es/compact";
 import first from "lodash-es/first";
@@ -12,6 +13,7 @@ import lodashMax from "lodash-es/max";
 import random from "lodash-es/random";
 import sortedIndex from "lodash-es/sortedIndex";
 import without from "lodash-es/without";
+import messages from "messages";
 import type {
   AdditionalCoordinate,
   MetadataEntryProto,
@@ -39,6 +41,11 @@ import {
 } from "viewer/model/accessors/skeletontracing_accessor";
 import EdgeCollection from "viewer/model/edge_collection";
 import {
+  getNextNodeId,
+  peekReservedIds,
+  usesReservedSkeletonIds,
+} from "viewer/model/reducers/skeleton_id_allocation";
+import {
   type BranchPoint,
   type CommentType,
   type Edge,
@@ -54,13 +61,25 @@ import {
   type TreeGroup,
   TreeMap,
 } from "viewer/model/types/tree_types";
-import type { RestrictionsAndSettings, SkeletonTracing, WebknossosState } from "viewer/store";
+import type {
+  RestrictionsAndSettings,
+  SkeletonIdDomain,
+  SkeletonTracing,
+  WebknossosState,
+} from "viewer/store";
 
 import {
   MISSING_GROUP_ID,
   mapGroups,
 } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
-import { max, maxBy, min } from "../helpers/iterator_utils";
+import { max, maxBy, min, sum } from "../helpers/iterator_utils";
+
+// Shown when an id was needed in live collaboration but none was reserved, yet.
+export function warnAboutMissingIdReservations() {
+  Toast.warning(messages["tracing.no_id_reservations_available"], {
+    key: "no_id_reservations_available",
+  });
+}
 
 export function generateTreeName(treeId: number) {
   return `Tree ${treeId}`;
@@ -136,8 +155,11 @@ export function createNode(
   // Use the same radius as current active node or revert to default value
   const radius = activeNode?.radius ?? Constants.DEFAULT_NODE_RADIUS;
 
-  // Find new node id by increasing the max node id.
-  const nextNewId = skeletonTracing.cachedMaxNodeId + 1;
+  const nextNewId = getNextNodeId(state);
+  if (nextNewId == null) {
+    warnAboutMissingIdReservations();
+    return null;
+  }
   const position = V3.trunc(positionFloat);
   // Create the new node
   const node: Node = {
@@ -199,6 +221,9 @@ export function deleteNode(
     deletedEdges,
     timestamp,
   );
+  if (newTrees == null) {
+    return null;
+  }
   // Decide which node should be active now
   // If the deleted node had the max id, find the new largest id
   let newMaxNodeId = skeletonTracing.cachedMaxNodeId;
@@ -301,6 +326,9 @@ export function deleteEdge(
     [deletedEdge],
     timestamp,
   );
+  if (newTrees == null) {
+    return null;
+  }
   // The treeId of the tree the active node belongs to could have changed
   const activeNodeId = skeletonTracing.activeNodeId;
   const newActiveTreeId = activeNodeId ? findTreeByNodeId(newTrees, activeNodeId)?.treeId : null;
@@ -314,11 +342,20 @@ function splitTreeByNodes(
   newTreeRootIds: number[],
   deletedEdges: Edge[],
   timestamp: number,
-): TreeMap {
+): TreeMap | null {
   // This function splits a given tree by deleting the given edges and making the
   // given node ids the new tree roots.
   // Not every node id is guaranteed to be a new tree root as there may be cyclic trees.
+  // Returns null if not enough tree ids are reserved (live collaboration).
   let newTrees = skeletonTracing.trees;
+
+  if (
+    usesReservedSkeletonIds(state) &&
+    peekReservedIds(state, "Tree", Math.max(0, newTreeRootIds.length - 1)) == null
+  ) {
+    warnAboutMissingIdReservations();
+    return null;
+  }
 
   if (newTreeRootIds.length === 0) {
     // As there are no new tree root ids, we are deleting the last node from a tree.
@@ -408,6 +445,7 @@ function splitTreeByNodes(
             edgesAreVisible: true,
             metadata: activeTree.metadata,
             agglomerateInfo: activeTree.agglomerateInfo,
+            ownerId: activeTree.ownerId,
           };
         } else {
           // Create new tree
@@ -422,6 +460,10 @@ function splitTreeByNodes(
             activeTree.agglomerateInfo,
           );
 
+          if (immutableNewTree == null) {
+            // Cannot happen, since enough tree ids were checked above.
+            throw new Error("Could not create a tree while splitting.");
+          }
           // Cast to mutable tree type since we want to mutably do the split
           // in this reducer for performance reasons.
           newTree = immutableNewTree as any as MutableTree;
@@ -541,7 +583,13 @@ export function createTree(
     return null;
   }
   // Create a new tree id and name
-  const newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
+  const newTreeId = usesReservedSkeletonIds(state)
+    ? peekReservedIds(state, "Tree", 1)?.[0]
+    : getMaximumTreeId(skeletonTracing.trees) + 1;
+  if (newTreeId == null) {
+    warnAboutMissingIdReservations();
+    return null;
+  }
   const newTreeName = name || generateTreeName(newTreeId);
   let groupId = null;
 
@@ -567,6 +615,8 @@ export function createTree(
     edgesAreVisible,
     metadata,
     agglomerateInfo,
+    // The server sets the owner to the author of the createTree action, too.
+    ownerId: state.activeUser?.id,
   };
   return tree;
 }
@@ -610,6 +660,9 @@ export function addTreesAndGroups(
   treeGroups: MutableTreeGroup[],
   assignNewGroupId: boolean = true,
   targetGroupId: number = MISSING_GROUP_ID,
+  // In live collaboration, the new ids are taken from these reservations (one id per added
+  // tree, node and group, see countIdsNeededForAddingTrees).
+  reservedIds?: Record<SkeletonIdDomain, number[]>,
 ): [MutableTreeMap, TreeGroup[], number] | null {
   const hasInvalidTreeIds = trees
     .keys()
@@ -620,7 +673,8 @@ export function addTreesAndGroups(
     skeletonTracing.treeGroups.length > 0 ||
     hasInvalidTreeIds ||
     hasInvalidNodeIds ||
-    targetGroupId !== MISSING_GROUP_ID;
+    targetGroupId !== MISSING_GROUP_ID ||
+    reservedIds != null;
 
   if (!needsReassignedIds) {
     // Without reassigning ids, the code is considerably faster.
@@ -630,22 +684,31 @@ export function addTreesAndGroups(
 
   const groupIdMap: Record<number, number> = {};
   let nextGroupId = getMaximumGroupId(skeletonTracing.treeGroups) + 1;
+  const getNextGroupId = () =>
+    reservedIds != null ? reservedIds.TreeGroup.shift() : nextGroupId++;
   forEachGroups(treeGroups, (group: MutableTreeGroup) => {
     // Assign new group ids for all groups
-    groupIdMap[group.groupId] = nextGroupId;
-    group.groupId = nextGroupId;
-    nextGroupId++;
+    const newGroupId = getNextGroupId();
+    if (newGroupId == null) throw new Error("Not enough reserved tree group ids.");
+    groupIdMap[group.groupId] = newGroupId;
+    group.groupId = newGroupId;
   });
   // Assign new ids for all nodes and trees to avoid duplicates
-  let newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
-  let newNodeId = skeletonTracing.cachedMaxNodeId + 1;
+  let nextTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
+  let nextNodeId = skeletonTracing.cachedMaxNodeId + 1;
+  const getNextTreeId = () => (reservedIds != null ? reservedIds.Tree.shift() : nextTreeId++);
+  const getNextNodeId = () => (reservedIds != null ? reservedIds.Node.shift() : nextNodeId++);
+  let newMaxNodeId = skeletonTracing.cachedMaxNodeId;
 
   // Create a map from old node ids to new node ids
   // This needs to be done in advance to replace nodeId references in comments
   const idMap: Record<number, number> = {};
   for (const tree of trees.values()) {
     for (const node of tree.nodes.values()) {
-      idMap[node.id] = newNodeId++;
+      const newNodeId = getNextNodeId();
+      if (newNodeId == null) throw new Error("Not enough reserved node ids.");
+      idMap[node.id] = newNodeId;
+      newMaxNodeId = Math.max(newMaxNodeId, newNodeId);
     }
   }
 
@@ -690,13 +753,30 @@ export function addTreesAndGroups(
       // target group instead of adding it to the root of the existing tree hierarchy.
       tree.groupId = targetGroupId;
     }
+    const newTreeId = getNextTreeId();
+    if (newTreeId == null) throw new Error("Not enough reserved tree ids.");
     tree.treeId = newTreeId;
 
     newTrees.mutableSet(newTreeId, tree);
-    newTreeId++;
   }
 
-  return [newTrees, treeGroups, newNodeId - 1];
+  return [newTrees, treeGroups, newMaxNodeId];
+}
+
+// Returns how many ids per domain addTreesAndGroups needs when ids have to be reassigned.
+export function countIdsNeededForAddingTrees(
+  trees: MutableTreeMap | TreeMap,
+  treeGroups: TreeGroup[],
+): Record<SkeletonIdDomain, number> {
+  let groupCount = 0;
+  forEachGroups(treeGroups, () => {
+    groupCount++;
+  });
+  return {
+    Tree: trees.size(),
+    Node: sum(trees.values().map((tree) => tree.nodes.size())),
+    TreeGroup: groupCount,
+  };
 }
 
 export function deleteTrees(
@@ -971,6 +1051,7 @@ export function createMutableTreeMapFromTreeArray(
         edgesAreVisible: tree.edgesAreVisible != null ? tree.edgesAreVisible : true,
         metadata: tree.metadata,
         agglomerateInfo: tree.agglomerateInfo,
+        ownerId: tree.ownerId,
       }),
     );
   }

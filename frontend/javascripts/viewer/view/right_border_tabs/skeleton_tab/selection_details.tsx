@@ -8,6 +8,7 @@ import type { MetadataEntryProto } from "types/api_types";
 import {
   isConcurrentCollaborationMode,
   mayEditAnnotation,
+  mayEditSkeletonTree,
 } from "viewer/model/accessors/annotation_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
@@ -26,9 +27,8 @@ import { MetadataEntryTableRows } from "../metadata_table";
 
 function TreeDetails({ tree }: { tree: Tree }) {
   const dispatch = useDispatch();
-  const allowUpdate = useWkSelector(mayEditAnnotation);
-  const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
-  const readOnly = !allowUpdate || isConcurrentCollabMode;
+  // In concurrent collaboration mode, only own trees and agglomerate trees may be edited.
+  const readOnly = !useWkSelector((state) => mayEditSkeletonTree(state, tree));
 
   const setMetadata = useCallback(
     (updatedTree: Tree, newProperties: MetadataEntryProto[]) => {

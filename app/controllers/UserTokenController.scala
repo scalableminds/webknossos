@@ -237,7 +237,12 @@ class UserTokenController @Inject() (
         allowedByUser <- checkRestrictions(restrictions) ?~> Msg.Annotation.Restrictions.failedToCheck
         allowed = allowedByToken || allowedByUser
       } yield
-        if (allowed) UserAccessAnswer(granted = true)
+        if (allowed)
+          UserAccessAnswer(
+            granted = true,
+            annotationCollaborationMode = Some(annotation.collaborationMode.toString),
+            annotationOwnerId = Some(annotation._user)
+          )
         else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
     }
   }

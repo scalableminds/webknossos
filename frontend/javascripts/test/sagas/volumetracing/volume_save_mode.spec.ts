@@ -250,20 +250,30 @@ describe("Volume save mode", () => {
 
   it<WebknossosTestContext>("allows the volume tools in live collaboration", async (context) => {
     await setup(context, "Concurrent");
-    const disabledInfo = getDisabledInfoForTools(Store.getState());
-    const isDisabledForLiveCollaboration = (tool: AnnotationTool) =>
-      disabledInfo[tool.id].explanation.includes("simultaneous editing");
+    const previousSkeletonFlag = WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation;
+    try {
+      WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation = false;
+      const disabledInfo = getDisabledInfoForTools(Store.getState());
+      const isDisabledForLiveCollaboration = (tool: AnnotationTool) =>
+        disabledInfo[tool.id].explanation.includes("simultaneous editing");
 
-    for (const tool of VolumeTools) {
-      expect(isDisabledForLiveCollaboration(tool), tool.id).toBe(false);
+      for (const tool of VolumeTools) {
+        expect(isDisabledForLiveCollaboration(tool), tool.id).toBe(false);
+      }
+      expect(isDisabledForLiveCollaboration(AnnotationTool.SKELETON)).toBe(true);
+
+      WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation = false;
+      WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation = true;
+      // getDisabledInfoForTools is memoized on the state.
+      Store.dispatch(updateUserSettingAction("brushSize", 11));
+      const disabledInfoWithFlags = getDisabledInfoForTools(Store.getState());
+      expect(disabledInfoWithFlags[AnnotationTool.BRUSH.id].isDisabled).toBe(true);
+      expect(disabledInfoWithFlags[AnnotationTool.SKELETON.id].explanation).not.toContain(
+        "simultaneous editing",
+      );
+    } finally {
+      WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation = previousSkeletonFlag;
     }
-    expect(isDisabledForLiveCollaboration(AnnotationTool.SKELETON)).toBe(true);
-
-    WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation = false;
-    // getDisabledInfoForTools is memoized on the state.
-    Store.dispatch(updateUserSettingAction("brushSize", 11));
-    const disabledInfoWithoutFlag = getDisabledInfoForTools(Store.getState());
-    expect(disabledInfoWithoutFlag[AnnotationTool.BRUSH.id].isDisabled).toBe(true);
   });
 
   it<WebknossosTestContext>("saves traced areas as partial updates in live collaboration", async (context) => {

@@ -77,6 +77,13 @@ object RouteScopes {
   private val methodOverrides: Map[String, ScopeMode.Value] = Map(
     "ConfigurationController.readDatasetViewConfiguration" -> ScopeMode.read,
     "TaskController.listTasks" -> ScopeMode.read,
+    // Loads data and returns a mask for it, stores nothing.
+    "DatasetController.segmentAnythingMask" -> ScopeMode.read,
+    // A GET, but it creates the sharing token if there is none yet. The sharing token is an unscoped credential that
+    // does not expire, so handing it out is more than reading.
+    "DatasetController.getSharingToken" -> ScopeMode.write,
+    // Discards the work done in the annotation.
+    "AnnotationController.reset" -> ScopeMode.delete,
     "CreditTransactionController.revokeExpiredCredits" -> ScopeMode.administrate,
     // Exchanges the caller's token for a datastore token. Safe for scoped tokens because the scopes are carried
     // over, see UserTokenController.generateTokenForDataStore.

@@ -124,7 +124,10 @@ class PythonLibraryRoutesTestSuite extends AnyWordSpec {
 
     "have their read-only part permitted at the read level" in {
       val granted = Scope.Set.forLevel(ScopeMode.read)
-      val blocked = libraryRoutes.filter { case (httpMethod, controller, method) =>
+      // GETs that do more than read. The sharing token is created on first request and is an unscoped credential,
+      // so the library can only fetch it from the write level upwards.
+      val notReadOnly = Set(("GET", "controllers.DatasetController", "getSharingToken"))
+      val blocked = libraryRoutes.filterNot(notReadOnly.contains).filter { case (httpMethod, controller, method) =>
         httpMethod == "GET" && !RouteScopes.requiredScope(controller, method, httpMethod).exists(granted.allows)
       }
       assert(blocked.isEmpty, s"Read-only library routes blocked at the read level: ${blocked.mkString(", ")}")

@@ -9,6 +9,16 @@ import security.{RouteScopes, Scope, ScopeMode, ScopeResource}
 
 class ScopeTestSuite extends AnyWordSpec {
 
+  // Every (http method, controller, action) in the route files, e.g. ("GET", "controllers.DatasetController", "read").
+  private lazy val routedActions: Seq[(String, String, String)] = {
+    val routePattern = """^(GET|POST|PUT|PATCH|DELETE|HEAD)\s+\S+\s+(controllers\.[A-Za-z]+)\.([A-Za-z0-9_]+)""".r
+    Seq("conf/webknossos.latest.routes", "conf/webknossos.versioned.routes").flatMap { path =>
+      Using.resource(Source.fromFile(path))(_.getLines().toList).flatMap { line =>
+        routePattern.findFirstMatchIn(line).map(m => (m.group(1), m.group(2), m.group(3)))
+      }
+    }.distinct
+  }
+
   "Scope.covers" should {
     "cover the same scope" in
       assert(Scope(ScopeResource.dataset, ScopeMode.read).covers(Scope(ScopeResource.dataset, ScopeMode.read)))
@@ -203,6 +213,18 @@ class ScopeTestSuite extends AnyWordSpec {
           .requiredScope("controllers.UserTokenController", "generateTokenForDataStore", "POST")
           .contains(Scope(ScopeResource.meta, ScopeMode.read))
       )
+      // Creates the sharing token if there is none, and hands out a credential that is not scoped.
+      assert(
+        RouteScopes
+          .requiredScope("controllers.DatasetController", "getSharingToken", "GET")
+          .contains(Scope(ScopeResource.dataset, ScopeMode.write))
+      )
+      // Discards the work done in the annotation, so the write level must not be enough.
+      assert(
+        RouteScopes
+          .requiredScope("controllers.AnnotationController", "reset", "PUT")
+          .contains(Scope(ScopeResource.annotation, ScopeMode.delete))
+      )
     }
 
     "deny unmapped controllers, so that new routes are not open to scoped tokens by default" in
@@ -212,8 +234,6 @@ class ScopeTestSuite extends AnyWordSpec {
       // Guards against a route being silently unreachable for scoped tokens because its controller was never
       // classified. This is how the legacy api routes (used by clients that pin an api version, such as the
       // WEBKNOSSOS Python library) were missed at first.
-      val routePattern = """^(GET|POST|PUT|PATCH|DELETE|HEAD)\s+\S+\s+(controllers\.[A-Za-z]+)\.([A-Za-z0-9_]+)""".r
-
       // Controllers that scoped tokens must not reach at all, see the comment in RouteScopes.
       val intentionallyDenied = scala.collection.immutable.Set(
         "controllers.AlignmentProjectController",
@@ -227,17 +247,12 @@ class ScopeTestSuite extends AnyWordSpec {
         "controllers.WKRemoteWorkerController"
       )
 
-      val routeFiles = Seq("conf/webknossos.latest.routes", "conf/webknossos.versioned.routes")
-      val unclassified = routeFiles.flatMap { path =>
-        Using.resource(Source.fromFile(path))(_.getLines().toList).flatMap { line =>
-          routePattern.findFirstMatchIn(line).flatMap { m =>
-            val (httpMethod, controller, method) = (m.group(1), m.group(2), m.group(3))
-            if (intentionallyDenied.contains(controller)) None
-            else if (RouteScopes.requiredScope(controller, method, httpMethod).isDefined) None
-            else Some(s"$httpMethod $controller.$method")
-          }
-        }
-      }.distinct
+      val unclassified = routedActions.collect {
+        case (httpMethod, controller, method)
+            if !intentionallyDenied.contains(controller) &&
+              RouteScopes.requiredScope(controller, method, httpMethod).isEmpty =>
+          s"$httpMethod $controller.$method"
+      }
 
       assert(unclassified.isEmpty, s"Unclassified routes: ${unclassified.mkString(", ")}")
     }

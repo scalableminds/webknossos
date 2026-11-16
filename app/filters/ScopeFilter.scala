@@ -7,7 +7,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Filter, RequestHeader, Result}
 import play.api.mvc.Results.{Forbidden, InternalServerError}
 import play.api.routing.Router
-import security.{RouteScopes, Scope, ShortLivedToken, ShortLivedTokenService, TokenHeaders}
+import security.{RouteScopes, Scope, AgentToken, AgentTokenService, TokenHeaders}
 import utils.WkConf
 
 import javax.inject.Inject
@@ -16,8 +16,8 @@ import scala.concurrent.{ExecutionContext, Future}
 /** Enforces the scopes of scoped tokens (see security.Scope) for all /api routes.
   *
   * Requests that are not authenticated by a scoped token pass through untouched, so session cookies and regular API
-  * tokens behave exactly as before. Only short-lived tokens carry scopes today. They are recognized by the prefix of
-  * their value, so only requests that actually use one pay for the extra database lookup.
+  * tokens behave exactly as before. Only agent tokens carry scopes today. They are recognized by the prefix of their
+  * value, so only requests that actually use one pay for the extra database lookup.
   *
   * Note that only the authentication headers are inspected, never the ?token= query parameter: on wk routes that
   * parameter carries a token that is the *subject* of the request (as in validateUserAccess) rather than its
@@ -25,7 +25,7 @@ import scala.concurrent.{ExecutionContext, Future}
   * UserTokenController.validateUserAccess.
   */
 class ScopeFilter @Inject() (
-    shortLivedTokenService: ShortLivedTokenService,
+    agentTokenService: AgentTokenService,
     conf: WkConf
 )(implicit
     val mat: Materializer,
@@ -53,23 +53,23 @@ class ScopeFilter @Inject() (
         }
     }
 
-  /** Empty for revoked or expired short-lived tokens as well. Such requests pass through here, but are then rejected by
-    * the regular authentication, which does not find a valid token either. Failure means the lookup itself failed.
+  /** Empty for revoked or expired agent tokens as well. Such requests pass through here, but are then rejected by the
+    * regular authentication, which does not find a valid token either. Failure means the lookup itself failed.
     *
     * All token headers are checked, not just the one the authentication picks (TokenHeaders.credential). If any of them
-    * holds a valid short-lived token, the request is scoped. Adding a second header can then never lift the
-    * restriction, even if the two ever disagree about which header counts.
+    * holds a valid agent token, the request is scoped. Adding a second header can then never lift the restriction, even
+    * if the two ever disagree about which header counts.
     */
-  private def scopedTokenFor(request: RequestHeader): Future[Box[ShortLivedToken]] =
+  private def scopedTokenFor(request: RequestHeader): Future[Box[AgentToken]] =
     if (!request.path.startsWith("/api/")) Future.successful(Empty)
-    else firstValidShortLivedToken(TokenHeaders.allTokenValues(request))
+    else firstValidAgentToken(TokenHeaders.allTokenValues(request))
 
-  private def firstValidShortLivedToken(tokenValues: List[String]): Future[Box[ShortLivedToken]] =
+  private def firstValidAgentToken(tokenValues: List[String]): Future[Box[AgentToken]] =
     tokenValues match {
       case Nil          => Future.successful(Empty)
       case head :: tail =>
-        shortLivedTokenService.findValid(head).futureBox.flatMap {
-          case Empty => firstValidShortLivedToken(tail)
+        agentTokenService.findValid(head).futureBox.flatMap {
+          case Empty => firstValidAgentToken(tail)
           case other => Future.successful(other)
         }
     }

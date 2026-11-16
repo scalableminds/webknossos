@@ -126,12 +126,11 @@ async function mcpRequest(
 
 async function getAgentToken(accessToken: string): Promise<{ token: string; scopes: string }> {
   const response = await mcpRequest(accessToken, "tools/call", {
-    name: "get_short_lived_api_token",
+    name: "get_api_token",
     arguments: {},
   });
   const { result } = await response.json();
-  if (result.isError)
-    throw new Error(`Creating a short-lived token failed: ${result.content[0].text}`);
+  if (result.isError) throw new Error(`Creating an agent token failed: ${result.content[0].text}`);
   return JSON.parse(result.content[0].text);
 }
 
@@ -284,7 +283,7 @@ describe("MCP server with OAuth (E2E)", () => {
   it("hands out agent tokens that act for the user, limited to the grant", async ({ expect }) => {
     const { accessToken } = await connect("write");
     const { token } = await getAgentToken(accessToken);
-    expect(token.startsWith("wkst_")).toBe(true);
+    expect(token.startsWith("wk_agent_token_")).toBe(true);
 
     const userResponse = await fetch("/api/user", withApiToken(token));
     expect(userResponse.status).toBe(200);
@@ -297,14 +296,14 @@ describe("MCP server with OAuth (E2E)", () => {
     expect(await statusWithApiToken("/api/auth/token", token)).toBe(403);
     expect(await statusWithApiToken("/api/oauth/grants", token)).toBe(403);
 
-    // Asking for a datastore token yields another short-lived token, which is scoped as well.
+    // Asking for a datastore token yields another agent token, which is scoped as well.
     const dataStoreTokenResponse = await fetch(
       "/api/userToken/generate",
       withApiToken(token, { method: "POST" }),
     );
     expect(dataStoreTokenResponse.status).toBe(200);
     const { token: dataStoreToken } = await dataStoreTokenResponse.json();
-    expect(dataStoreToken.startsWith("wkst_")).toBe(true);
+    expect(dataStoreToken.startsWith("wk_agent_token_")).toBe(true);
     expect(dataStoreToken).not.toBe(token);
     expect(await statusWithApiToken("/api/user", dataStoreToken)).toBe(200);
   });

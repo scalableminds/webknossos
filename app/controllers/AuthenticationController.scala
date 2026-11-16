@@ -922,7 +922,7 @@ class AuthenticationController @Inject() (
       _ <- userDAO.logOutEverywhereByMultiUserId(request.identity._multiUser)
       userIds <- userDAO.findIdsByMultiUserId(request.identity._multiUser)
       _ = userIds.map(userService.removeUserFromCache)
-      // Agents connected via OAuth (MCP clients) are disconnected as well, including their short-lived tokens.
+      // Agents connected via OAuth (MCP clients) are disconnected as well, including their agent tokens.
       _ <- oauthService.revokeAllForUsers(userIds)
       _ <- tokenDAO.deleteDataStoreTokensForMultiUser(request.identity._multiUser)
     } yield Ok

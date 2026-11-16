@@ -10,7 +10,7 @@ import com.typesafe.scalalogging.LazyLogging
 import models.user.{User, UserService}
 import org.apache.http.client.utils.URIBuilder
 import play.api.libs.json.{JsArray, JsObject, JsString, JsValue, Json}
-import security.{RandomIDGenerator, ScopeMode, ShortLivedTokenService}
+import security.{RandomIDGenerator, ScopeMode, AgentTokenService}
 import utils.WkConf
 
 import java.net.URI
@@ -49,8 +49,8 @@ case class OAuthEndpointError(error: String, description: String) {
   *     not authenticate at the token endpoint.
   *   - The user approves a permission level on the consent page (frontend route /oauth/authorize). Approving creates or
   *     updates an OAuthGrant, which everything issued afterwards hangs off and is revoked with.
-  *   - Access tokens are only accepted by the MCP endpoint (McpController). Agents get separate short-lived tokens for
-  *     the rest of the API via the MCP server, limited to the grant's scopes.
+  *   - Access tokens are only accepted by the MCP endpoint (McpController). Agents get separate agent tokens for the
+  *     rest of the API via the MCP server, limited to the grant's scopes.
   *   - Refresh tokens are rotated. Presenting a used refresh token or authorization code again revokes the grant, since
   *     it means that the token has leaked.
   */
@@ -62,7 +62,7 @@ class OAuthService @Inject() (
     grantDAO: OAuthGrantDAO,
     codeDAO: OAuthAuthorizationCodeDAO,
     tokenDAO: OAuthTokenDAO,
-    shortLivedTokenService: ShortLivedTokenService,
+    agentTokenService: AgentTokenService,
     userService: UserService
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
@@ -347,7 +347,7 @@ class OAuthService @Inject() (
       _ <- grantDAO.markDeleted(grantId)
       _ <- codeDAO.deleteAllByGrant(grantId)
       _ <- tokenDAO.deleteAllByGrant(grantId)
-      _ <- shortLivedTokenService.revokeAllForGrant(grantId)
+      _ <- agentTokenService.revokeAllForGrant(grantId)
     } yield ()
 
   def revokeAllForUsers(userIds: Seq[ObjectId]): Fox[Unit] =

@@ -47,20 +47,20 @@ connect with an API token.
 
 | Tool | Description |
 | --- | --- |
-| `get_short_lived_api_token` | Creates a short-lived API token for your account, limited to the permissions of the connection, along with the URL of the instance and your organization ID. |
+| `get_api_token` | Creates an API token for your account, limited to the permissions of the connection and valid for one day, along with the URL of the instance and your organization ID. |
 | `list_python_library_docs` | Returns the index of the WEBKNOSSOS Python library documentation. |
 | `read_python_library_docs_page` | Returns a single page of that documentation. |
 | `list_em_processing_skills` | Returns the catalogue of the EM-Skills collection for volume EM processing. |
 | `read_em_processing_skill` | Returns one skill from that collection. |
 
-The intended workflow is that the agent asks for a short-lived token, looks up the API of the
+The intended workflow is that the agent asks for an agent token, looks up the API of the
 [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/) in the documentation, and then writes and runs
 Python code against your instance, e.g.:
 
 ```python
 import webknossos as wk
 
-with wk.webknossos_context(url="https://webknossos.org", token="<short_lived_token>"):
+with wk.webknossos_context(url="https://webknossos.org", token="<agent_token>"):
     dataset = wk.Dataset.open_remote("my-dataset")
 ```
 
@@ -108,16 +108,16 @@ voxel data. An agent can never reach your API token, approve connections or chan
 ## Disconnecting
 
 The `MCP Agent Connections` tab lists the connected applications with their permission level and when they were
-last used. `Disconnect` revokes a connection immediately, including all short-lived tokens the agent obtained
+last used. `Disconnect` revokes a connection immediately, including all agent tokens the agent obtained
 through it. [Logging out everywhere](password.md#log-out-everywhere) disconnects all
 applications.
 
-## Short-lived tokens
+## Agent tokens
 
-The MCP server itself only offers a few tools. To work with your data, an agent asks it for a short-lived token,
+The MCP server itself only offers a few tools. To work with your data, an agent asks it for an agent token,
 which it then uses with the WEBKNOSSOS Python library. These tokens act for your account, limited to the
 permissions of the connection, and expire after one day (configurable by the instance operator with
-`silhouette.tokenAuthenticator.shortLivedExpiry`).
+`silhouette.tokenAuthenticator.agentTokenExpiry`).
 
 The OAuth tokens of the connection itself are only accepted by the MCP server. They expire after one hour and are
 renewed by the client automatically; a connection that is not used for 30 days expires.

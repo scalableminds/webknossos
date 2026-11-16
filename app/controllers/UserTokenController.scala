@@ -24,15 +24,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.UserAwareRequest
 import play.silhouette.impl.authenticators.BearerTokenAuthenticator
-import security.{
-  RandomIDGenerator,
-  Scope,
-  ScopeMode,
-  ShortLivedTokenService,
-  URLSharing,
-  WkEnv,
-  WkSilhouetteEnvironment
-}
+import security.{RandomIDGenerator, Scope, ScopeMode, AgentTokenService, URLSharing, WkEnv, WkSilhouetteEnvironment}
 import utils.WkConf
 
 import javax.inject.Inject
@@ -60,7 +52,7 @@ class UserTokenController @Inject() (
     jobDAO: JobDAO,
     alignmentProjectDAO: AlignmentProjectDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-    shortLivedTokenService: ShortLivedTokenService,
+    agentTokenService: AgentTokenService,
     conf: WkConf,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -74,13 +66,13 @@ class UserTokenController @Inject() (
       case Some(user) =>
         agentTokenOf(request) match {
           // An agent token must not be able to trade itself in for a DataStore token, which would not be subject
-          // to the agent's scopes. It gets another short-lived token under the same grant instead, which is.
+          // to the agent's scopes. It gets another agent token under the same grant instead, which is.
           case Some(agentTokenValue) =>
             for {
-              agentToken <- shortLivedTokenService.findValid(agentTokenValue) ?~> "Invalid token"
-              newToken <- shortLivedTokenService.createFrom(
+              agentToken <- agentTokenService.findValid(agentTokenValue) ?~> "Invalid token"
+              newToken <- agentTokenService.createFrom(
                 agentToken,
-                conf.Silhouette.TokenAuthenticator.shortLivedExpiry
+                conf.Silhouette.TokenAuthenticator.agentTokenExpiry
               )
             } yield newToken.value
           case None => bearerTokenService.createAndInitDataStoreTokenForUser(user)
@@ -145,7 +137,7 @@ class UserTokenController @Inject() (
   // The authenticator has already been validated at this point, so recognizing the token type is enough.
   private def agentTokenOf(request: UserAwareRequest[WkEnv, ?]): Option[String] =
     request.authenticator.map(_.actualAuthenticator).collect {
-      case a: BearerTokenAuthenticator if shortLivedTokenService.isShortLivedTokenValue(a.id) => a.id
+      case a: BearerTokenAuthenticator if agentTokenService.isAgentTokenValue(a.id) => a.id
     }
 
   /*
@@ -159,7 +151,7 @@ class UserTokenController @Inject() (
       case None             => Fox.successful(true)
       case Some(tokenValue) =>
         // Fails (rather than allowing) if the lookup itself fails.
-        shortLivedTokenService.findValid(tokenValue).shiftBox.flatMap {
+        agentTokenService.findValid(tokenValue).shiftBox.flatMap {
           // The scopes are read from the grant per request, so that changing them takes effect at once.
           case Full(agentToken) =>
             Fox.successful(Scope.fromAccessResourceType(accessRequest.resourceType).exists { resource =>

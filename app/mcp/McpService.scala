@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import models.user.User
 import play.api.libs.json.*
 import oauth.OAuthGrant
-import security.ShortLivedTokenService
+import security.AgentTokenService
 import utils.WkConf
 
 import javax.inject.{Inject, Singleton}
@@ -17,7 +17,7 @@ import scala.concurrent.{ExecutionContext, Future}
   */
 @Singleton
 class McpService @Inject() (
-    shortLivedTokenService: ShortLivedTokenService,
+    agentTokenService: AgentTokenService,
     pythonDocsService: PythonDocsService,
     emSkillsService: EmSkillsService,
     conf: WkConf
@@ -27,7 +27,7 @@ class McpService @Inject() (
   private val latestProtocolVersion = "2025-11-25"
   val supportedProtocolVersions: Set[String] = Set("2024-11-05", "2025-03-26", "2025-06-18", latestProtocolVersion)
 
-  private val getTokenToolName = "get_short_lived_api_token"
+  private val getTokenToolName = "get_api_token"
   private val listDocsToolName = "list_python_library_docs"
   private val readDocsToolName = "read_python_library_docs_page"
   private val listSkillsToolName = "list_em_processing_skills"
@@ -54,12 +54,12 @@ class McpService @Inject() (
   val tools: JsArray = Json.arr(
     Json.obj(
       "name" -> getTokenToolName,
-      "title" -> "Get a short-lived WEBKNOSSOS API token",
+      "title" -> "Get a WEBKNOSSOS API token",
       "description" ->
-        s"""Creates a short-lived API token for the current WEBKNOSSOS user, to be used with the `webknossos` Python
+        s"""Creates an API token for the current WEBKNOSSOS user, to be used with the `webknossos` Python
            |library. The token acts for the user, limited to the permissions the user granted to this connection, and
            |expires after ${formatDuration(
-            conf.Silhouette.TokenAuthenticator.shortLivedExpiry
+            conf.Silhouette.TokenAuthenticator.agentTokenExpiry
           )}. Returns the token together
            |with the URL of this WEBKNOSSOS instance and the user's organization id.
            |
@@ -156,7 +156,7 @@ class McpService @Inject() (
     """This server gives access to a WEBKNOSSOS instance. Work with its datasets and annotations through the
       |`webknossos` Python library.
       |
-      |1. Call get_short_lived_api_token to get a token, the instance URL and the organization id.
+      |1. Call get_api_token to get a token, the instance URL and the organization id.
       |2. Look up the library's API with list_python_library_docs and read_python_library_docs_page instead of
       |   guessing it.
       |3. Write the code to a file and run it with uv, which installs the library into a temporary environment:
@@ -218,7 +218,7 @@ class McpService @Inject() (
       case Some(name) =>
         val arguments = (params \ "arguments").asOpt[JsObject].getOrElse(Json.obj())
         name match {
-          case `getTokenToolName` => asToolResult(shortLivedTokenFor(user, grant))
+          case `getTokenToolName` => asToolResult(agentTokenFor(user, grant))
           case `listDocsToolName` => asToolResult(pythonDocsService.getIndex)
           case `readDocsToolName` =>
             (arguments \ "url").asOpt[String] match {
@@ -239,9 +239,9 @@ class McpService @Inject() (
   private def missingArgument(name: String): Future[Either[JsonRpcError, JsValue]] =
     Future.successful(Right(toolResult(s"Missing or invalid argument: $name", isError = true)))
 
-  private def shortLivedTokenFor(user: User, grant: OAuthGrant): Fox[String] =
+  private def agentTokenFor(user: User, grant: OAuthGrant): Fox[String] =
     for {
-      token <- shortLivedTokenService.create(grant, conf.Silhouette.TokenAuthenticator.shortLivedExpiry)
+      token <- agentTokenService.create(grant, conf.Silhouette.TokenAuthenticator.agentTokenExpiry)
     } yield Json.prettyPrint(
       Json.obj(
         "token" -> token.value,

@@ -34,7 +34,7 @@ case class MeshFileAttributes(
     nBuckets: Option[Long], // Only before format version 10
     mappingName: Option[String],
     nInnerNodeLayers: Option[Int], // Only from format version 10
-    dataOrderMappings: Option[Seq[Int]] // Only from format version 10
+    mergeTreeOrderMappings: Option[Seq[Int]] // Only from format version 10
 ) extends ArrayArtifactHashing {
   lazy val applyHashFunction: Option[Long => Long] = hashFunction.map(getHashFunction)
 }
@@ -52,7 +52,7 @@ object MeshFileAttributes extends MeshFileUtils with VoxelyticsZarrArtifactUtils
         nBuckets <- (meshFileAttrs \ attrKeyNBuckets).validateOpt[Long]
         mappingName <- (meshFileAttrs \ attrKeyMappingName).validateOpt[String]
         nInnerNodeLayers <- (meshFileAttrs \ attrKeyNInnerNodeLayers).validateOpt[Int]
-        dataOrderMappings <- (meshFileAttrs \ attrKeyDataOrderMappings).validateOpt[Seq[Int]]
+        mergeTreeOrderMappings <- (meshFileAttrs \ attrKeyMergeTreeOrderMappings).validateOpt[Seq[Int]]
       } yield MeshFileAttributes(
         formatVersion,
         meshFormat,
@@ -62,7 +62,7 @@ object MeshFileAttributes extends MeshFileUtils with VoxelyticsZarrArtifactUtils
         nBuckets,
         mappingName,
         nInnerNodeLayers,
-        dataOrderMappings
+        mergeTreeOrderMappings
       )
     }
   }
@@ -220,13 +220,14 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       lod: Int
   ): Array[Array[Double]] = transform
 
-  /** Lists the mesh chunks of the segments. If they were looked up from an agglomerate of dataOrderMappingName (or of
-    * an editable mapping based on it), mesh files with segment mesh metadata in data order find them as runs.
+  /** Lists the mesh chunks of the segments. If they were looked up from an agglomerate of mergeTreeOrderMappingName
+    * (or of an editable mapping based on it), mesh files with segment mesh metadata in merge-tree order find them as
+    * runs.
     */
   def listMeshChunksForMultipleSegments(
       meshFileKey: MeshFileKey,
       segmentIds: Seq[Long],
-      dataOrderMappingName: Option[String],
+      mergeTreeOrderMappingName: Option[String],
       failOnZeroChunks: Boolean
   )(using
       ec: ExecutionContext,
@@ -238,7 +239,7 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
         meshFileKey,
         segmentIds,
         meshFileAttributes,
-        dataOrderMappingName
+        mergeTreeOrderMappingName
       ) ?~> Msg.Mesh.File.listChunksFailed(segmentIds.mkString(","), meshFileKey.attachment.name)
       _ <- Fox.fromBool(lookups.exists(_.hasEntry) || !failOnZeroChunks) ?~> Msg.Mesh.File
         .zeroChunks(segmentIds.mkString(","), meshFileKey.attachment.name)
@@ -249,11 +250,11 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       meshFileKey: MeshFileKey,
       segmentIds: Seq[Long],
       meshFileAttributes: MeshFileAttributes,
-      dataOrderMappingName: Option[String]
+      mergeTreeOrderMappingName: Option[String]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[List[SegmentMeshLookup]] =
     // From format version 10, segments are looked up in a static B-tree instead of a hash table.
     if (meshFileAttributes.formatVersion >= 10)
-      lookUpSegmentsInBTree(meshFileKey, segmentIds, meshFileAttributes, dataOrderMappingName)
+      lookUpSegmentsInBTree(meshFileKey, segmentIds, meshFileAttributes, mergeTreeOrderMappingName)
     else lookUpSegmentsSkippingFailed(meshFileKey, segmentIds, meshFileAttributes)
 
   // Leaves out the segments whose lookup failed, e.g. because of a read error.
@@ -286,18 +287,18 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
 
   /* Segments that the B-tree has no entry for, or whose segment mesh metadata is empty, have no mesh. Segments whose
    * manifest cannot be read or parsed are left out, like failed lookups. Errors reading the B-tree fail the lookup of
-   * all segments. Segments with a mesh come first, in data order.
+   * all segments. Segments with a mesh come first, in merge-tree order.
    */
   private def lookUpSegmentsInBTree(
       meshFileKey: MeshFileKey,
       segmentIds: Seq[Long],
       meshFileAttributes: MeshFileAttributes,
-      dataOrderMappingName: Option[String]
+      mergeTreeOrderMappingName: Option[String]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[List[SegmentMeshLookup]] = {
     val level = for {
-      mappingName <- dataOrderMappingName
+      mappingName <- mergeTreeOrderMappingName
       percentile <- ZarrMeshFileService.percentileOfMappingName(mappingName)
-      mappings <- meshFileAttributes.dataOrderMappings
+      mappings <- meshFileAttributes.mergeTreeOrderMappings
       level = mappings.indexOf(percentile)
       if level >= 0
     } yield level
@@ -359,10 +360,10 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
     } yield ()
   }
 
-  /* The segments of an agglomerate of a data order mapping form one run. Runs are found from a few seed segments and
-   * only the segment mesh metadata of the requested segments is kept, so that agglomerates of editable mappings, which are
-   * unions of parts of such agglomerates, are found as well. Runs that are much longer than the request, e.g. of a
-   * large agglomerate that a few requested segments were split off from, are not read. Segments that no read run
+  /* The segments of an agglomerate of a merge-tree order mapping form one run. Runs are found from a few seed segments
+   * and only the segment mesh metadata of the requested segments is kept, so that agglomerates of editable mappings,
+   * which are unions of parts of such agglomerates, are found as well. Runs that are much longer than the request, e.g.
+   * of a large agglomerate that a few requested segments were split off from, are not read. Segments that no read run
    * covers are looked up individually.
    */
   private def lookUpSegmentMeshMetadataByAgglomerateRuns(
@@ -445,7 +446,7 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       .toMap
   }
 
-  // Reads the runs of the data order mapping at level that contain the seed indices, except for runs that are too
+  // Reads the runs of the merge-tree order mapping at level that contain the seed indices, except for runs that are too
   // long for the number of requested segments.
   private def readAgglomerateRuns(meshFileKey: MeshFileKey, seedIndices: Seq[Long], level: Int, requestedCount: Int)(using
       ec: ExecutionContext,
@@ -653,7 +654,7 @@ object ZarrMeshFileService {
     )
   }
 
-  /** The chunks [first, last] that contain the run of the data order mapping at level around an index in chunk. A
+  /** The chunks [first, last] that contain the run of the merge-tree order mapping at level around an index in chunk. A
     * run extends over a whole chunk if no segment in it starts a new agglomerate, i.e. if the chunk's maximum segment
     * level is at most level. The run starts in the index's chunk or in the nearest chunk before it that is not passed
     * over whole, and ends in the index's chunk or in the nearest such chunk after it.

@@ -100,7 +100,7 @@ class DSMeshController @Inject() (
           chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(
             meshFileKey,
             segmentIds,
-            dataOrderMappingName = None,
+            mergeTreeOrderMappingName = None,
             failOnZeroChunks = false
           )
         } yield Ok(Json.toJson(chunkInfos))

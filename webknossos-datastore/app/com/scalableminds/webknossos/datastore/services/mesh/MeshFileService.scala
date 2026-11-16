@@ -137,11 +137,12 @@ class MeshFileService @Inject() (
       case _ => Fox.successful(0)
     }
 
-  // dataOrderMappingName: the mapping (or base mapping of an editable mapping) the segment ids belong to an agglomerate of.
+  // mergeTreeOrderMappingName: the mapping (or base mapping of an editable mapping) the segment ids belong to an
+  // agglomerate of.
   def listMeshChunksForSegmentsMerged(
       meshFileKey: MeshFileKey,
       segmentIds: Seq[Long],
-      dataOrderMappingName: Option[String],
+      mergeTreeOrderMappingName: Option[String],
       failOnZeroChunks: Boolean = true
   )(using
       ec: ExecutionContext,
@@ -152,7 +153,7 @@ class MeshFileService @Inject() (
         zarrMeshFileService.listMeshChunksForMultipleSegments(
           meshFileKey,
           segmentIds,
-          dataOrderMappingName,
+          mergeTreeOrderMappingName,
           failOnZeroChunks
         )
       case LayerAttachmentDataformat.hdf5 =>

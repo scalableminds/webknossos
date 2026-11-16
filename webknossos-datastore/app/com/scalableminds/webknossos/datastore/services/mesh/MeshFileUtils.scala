@@ -18,6 +18,6 @@ trait MeshFileUtils {
   protected val attrKeyNBuckets = "n_buckets"
   protected val attrKeyMappingName = "mapping_name"
   protected val attrKeyNInnerNodeLayers = "n_inner_node_layers"
-  protected val attrKeyDataOrderMappings = "data_order_mappings"
+  protected val attrKeyMergeTreeOrderMappings = "merge_tree_order_mappings"
 
 }

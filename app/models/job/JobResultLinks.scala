@@ -34,6 +34,8 @@ trait JobResultLinks {
             JobCommand.infer_with_model | JobCommand.infer_mitochondria | JobCommand.align_sections |
             JobCommand.infer_instances | JobCommand.align =>
           returnValue.map(linkFromDatasetOrAnnotationReturnValue(_, organizationId))
+        case JobCommand.train_neuron_model | JobCommand.train_instance_model | JobCommand.train_model =>
+          Some("/aiModels")
         case _ => None
       }
     }

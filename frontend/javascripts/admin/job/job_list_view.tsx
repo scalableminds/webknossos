@@ -555,6 +555,7 @@ function JobListView() {
       );
     } else if (
       job.command === APIJobCommand.TRAIN_NEURON_MODEL ||
+      job.command === APIJobCommand.TRAIN_INSTANCE_MODEL ||
       job.command === APIJobCommand.DEPRECATED_TRAIN_MODEL
     ) {
       return (

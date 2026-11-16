@@ -30,7 +30,7 @@ import {
   getBrushCenterInMag,
   getBrushDiameterInMag,
   getContourTracingMode,
-  getEraseBrushSize,
+  getEraseBrushDiameterInMag,
   getMaximumBrushSize,
   getRenderableMagForSegmentationTracing,
   getRequestedOrVisibleSegmentationLayer,
@@ -296,19 +296,21 @@ export function* editVolumeLayerAsync(): Saga<never> {
     let lastBrushCenter: Vector3 | null = null;
 
     if (isBrushTool(activeTool)) {
-      const configuredBrushSize = yield* select((state) => state.userConfiguration.brushSize);
-      const brushSize =
-        contourTracingMode === ContourModeEnum.DELETE
-          ? getEraseBrushSize(configuredBrushSize)
-          : configuredBrushSize;
+      const brushSize = yield* select((state) => state.userConfiguration.brushSize);
+      const maximumBrushSize = yield* select((state) => getMaximumBrushSize(state));
       const voxelSize = yield* select((state) => state.dataset.dataSource.scale);
+      const voxelPerPixel = getVoxelPerPixel(voxelSize);
       const dimIndices = Dimensions.getIndices(startEditingAction.planeId);
       const planeAxis = dimIndices[2] as 0 | 1 | 2;
-      const diameterInMag = getBrushDiameterInMag(
-        brushSize,
-        getVoxelPerPixel(voxelSize),
-        labeledMag,
-      );
+      const drawDiameterInMag = getBrushDiameterInMag(brushSize, voxelPerPixel, labeledMag);
+      // The eraser is slightly larger than the draw brush (see getEraseBrushDiameterInMag).
+      const diameterInMag =
+        contourTracingMode === ContourModeEnum.DELETE
+          ? getEraseBrushDiameterInMag(
+              drawDiameterInMag,
+              getBrushDiameterInMag(maximumBrushSize, voxelPerPixel, labeledMag),
+            )
+          : drawDiameterInMag;
       // Not rounded: together with the strict inside test of the rasterizer, a
       // brush of size 1 paints exactly the hovered voxel.
       const radius = V3.scale(diameterInMag, 0.5);

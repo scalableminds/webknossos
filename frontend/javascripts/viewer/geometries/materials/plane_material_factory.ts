@@ -1,6 +1,7 @@
 import app from "app";
 import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
 import { V3 } from "libs/mjs";
+import { subscribeToKeyPress } from "libs/react_hooks";
 import type TPS3D from "libs/thin_plate_spline";
 import {
   computeBoundingBoxFromBoundingBoxObject,
@@ -55,15 +56,19 @@ import {
   getZoomValue,
   isRotated,
 } from "viewer/model/accessors/flycam_accessor";
-import { AnnotationTool, isBrushTool } from "viewer/model/accessors/tool_accessor";
+import {
+  AnnotationTool,
+  adaptActiveToolToShortcuts,
+  isBrushTool,
+} from "viewer/model/accessors/tool_accessor";
 import { getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
   getActiveUnmappedSegmentId,
   getBrushCenterPosition,
+  getBrushPreviewDiameterInMag,
   getBucketRetrievalSourceFn,
-  getEffectiveBrushSize,
   getHideUnregisteredSegmentsForLayer,
   getProofreadingMarkerPosition,
   getRenderableMagForActiveSegmentationTracing,
@@ -165,6 +170,9 @@ class PlaneMaterialFactory {
   attributes: Record<string, any> = {};
   shaderId: number;
   storePropertyUnsubscribers: Array<() => void> = [];
+  // Modifier keys are not part of the store, but they determine whether the brush
+  // preview shows the (larger) eraser size before a stroke starts.
+  pressedModifierKeys = { Shift: false, ControlOrMeta: false, Alt: false };
   leastRecentlyVisibleLayers: Array<{ name: string; isSegmentationLayer: boolean }>;
   oldFragmentShaderCode: string | null | undefined;
   oldVertexShaderCode: string | null | undefined;
@@ -246,8 +254,8 @@ class PlaneMaterialFactory {
       proofreadingMarkerPosition: {
         value: new ThreeVector3(-1, -1, -1),
       },
-      brushSizeInPixel: {
-        value: 0,
+      brushDiameterInMag: {
+        value: new ThreeVector3(0, 0, 0),
       },
       brushMag: {
         value: new ThreeVector3(1, 1, 1),
@@ -771,12 +779,8 @@ class PlaneMaterialFactory {
           true,
         ),
         listenToStoreProperty(
-          (storeState) => getBrushCenterPosition(storeState),
-          (brushCenterPosition) => {
-            if (brushCenterPosition != null) {
-              this.uniforms.brushCenterPosition.value.set(...brushCenterPosition);
-            }
-          },
+          (storeState) => getBrushCenterPosition(storeState, this.isBrushEraseShortcutPressed()),
+          (brushCenterPosition) => this.updateBrushCenterUniform(brushCenterPosition),
           true,
         ),
         listenToStoreProperty(
@@ -792,11 +796,21 @@ class PlaneMaterialFactory {
           },
         ),
         listenToStoreProperty(
-          (storeState) => getEffectiveBrushSize(storeState),
-          (brushSize) => {
-            this.uniforms.brushSizeInPixel.value = brushSize;
+          (storeState) =>
+            getBrushPreviewDiameterInMag(storeState, this.isBrushEraseShortcutPressed()),
+          (diameterInMag) => {
+            this.uniforms.brushDiameterInMag.value.set(...diameterInMag);
           },
           true,
+        ),
+        ...(["Shift", "ControlOrMeta", "Alt"] as const).map((key) =>
+          subscribeToKeyPress(key, (isPressed) => {
+            if (this.pressedModifierKeys[key] === isPressed) {
+              return;
+            }
+            this.pressedModifierKeys[key] = isPressed;
+            this.updateBrushPreviewUniforms();
+          }),
         ),
         listenToStoreProperty(
           (storeState) => getRenderableMagForActiveSegmentationTracing(storeState)?.mag,
@@ -1284,6 +1298,31 @@ class PlaneMaterialFactory {
         Object.keys(this.scaledTpsInvPerLayer).length,
       ),
     });
+  }
+
+  isBrushEraseShortcutPressed(): boolean {
+    const { Shift, ControlOrMeta, Alt } = this.pressedModifierKeys;
+    return (
+      adaptActiveToolToShortcuts(AnnotationTool.BRUSH, Shift, ControlOrMeta, Alt) ===
+      AnnotationTool.ERASE_BRUSH
+    );
+  }
+
+  updateBrushCenterUniform(brushCenterPosition: Vector3 | null) {
+    if (brushCenterPosition != null) {
+      this.uniforms.brushCenterPosition.value.set(...brushCenterPosition);
+    }
+  }
+
+  updateBrushPreviewUniforms() {
+    // Called when the modifier keys change, which store listeners don't notice.
+    const state = Store.getState();
+    const isEraseShortcutPressed = this.isBrushEraseShortcutPressed();
+    this.updateBrushCenterUniform(getBrushCenterPosition(state, isEraseShortcutPressed));
+    this.uniforms.brushDiameterInMag.value.set(
+      ...getBrushPreviewDiameterInMag(state, isEraseShortcutPressed),
+    );
+    app.vent.emit("rerender");
   }
 
   destroy() {

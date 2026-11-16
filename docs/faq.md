@@ -56,6 +56,11 @@ Yes, you can. WEBKNOSSOS allows the download and export of skeleton annotations 
 
 Use our free [Python library](https://docs.webknossos.org/webknossos-py/) to work with the WEBKNOSSOS standard formats.
 
+## How can I export a segmentation to use it in 3D Slicer, Blender, or for 3D printing?
+Load the meshes of the segments you are interested in, then right-click them in the `Segments` tab and select `Download Meshes`. You get one STL file per segment, which you can open in 3D Slicer, Blender, ParaView, MeshLab, or your 3D printing software (e.g., PrusaSlicer or Cura). See [Downloading Meshes](./meshes/working_with_meshes.md#downloading-meshes) for details.
+
+If you need the segmentation as a voxel volume (e.g., a labelmap) instead, export it as a TIFF stack or OME-Zarr from the [`Download` dialog](./data/export_ui.md).
+
 ## Newly registered users don't show up
 
 New user registrations need to be approved by the respective admin of your WEBKNOSSOS instance.

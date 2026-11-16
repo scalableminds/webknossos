@@ -240,6 +240,8 @@ export const setActiveCellAction = (
   anchorPosition?: Vector3 | null, // in layer space
   additionalCoordinates?: AdditionalCoordinate[] | null,
   activeUnmappedSegmentId?: bigint | null,
+  // Set when the mapping saga adapts the active segment to the segment at the proofreading marker.
+  isAdaptedToProofreadingMarker: boolean = false,
 ) =>
   ({
     type: "SET_ACTIVE_CELL",
@@ -247,6 +249,7 @@ export const setActiveCellAction = (
     anchorPosition,
     additionalCoordinates,
     activeUnmappedSegmentId,
+    isAdaptedToProofreadingMarker,
   }) as const;
 
 export const setHideUnregisteredSegmentsAction = (value: boolean, layerName?: string) =>

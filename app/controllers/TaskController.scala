@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 
 import javax.inject.Inject
+import mail.TaskEmailService
 import models.annotation.*
 import models.annotation.nml.NmlResults.TracingBoxContainer
 import models.project.{ProjectDAO, ProjectService}
@@ -42,7 +43,7 @@ class TaskController @Inject() (
     projectService: ProjectService,
     taskTypeDAO: TaskTypeDAO,
     userService: UserService,
-    notificationEmailService: NotificationEmailService,
+    taskEmailService: TaskEmailService,
     taskDAO: TaskDAO,
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
@@ -241,7 +242,7 @@ class TaskController @Inject() (
         insertedAnnotationBox <- annotationService.createAnnotationFor(assignee, id, initializingAnnotationId).shiftBox
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         insertedAnnotation <- insertedAnnotationBox.toFox
-        _ = notificationEmailService.sendTaskAssignedEmail(
+        _ = taskEmailService.sendTaskAssignedEmail(
           task,
           project,
           insertedAnnotation._id,

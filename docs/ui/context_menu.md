@@ -29,9 +29,10 @@ The context menu for a skeleton node
 | Activate & Focus Tree in Skeleton Tab | Makes the node active and selects its tree in the [Skeleton tab](../skeleton_annotation/trees_list.md). |
 | Perform Min-Cut (Experimental) | Only shown if the tree has exactly two nodes and the annotation has a volume layer. Uses the two nodes as seeds to split the segment between them in the volume annotation. A submenu lets you choose the bounding box for the operation: the default one or one of your bounding boxes that contains both nodes. Not available with an editable mapping (after proofreading) or while the view is rotated. |
 | Create Edge & Merge with this Tree | Connects the active node with the clicked node and merges both trees. Disabled if both nodes are in the same tree. |
+| Insert Node on Edge to Active Node | Inserts a new node in the middle of the edge between the active node and the clicked node, without splitting the tree. The new node becomes active. Disabled if the two nodes are not connected directly. Not shown for agglomerate trees. |
 | Perform Min-Cut between these Nodes | Proofreading tool only. Splits the agglomerate between the active node and the clicked node. Both must be in the same tree. See [Proofreading Tool](../proofreading/proofreading_tool.md#working-with-agglomerate-trees). |
 | Split from all neighboring segments | Proofreading tool only. Cuts the segment under the node from all its neighbors in the agglomerate. |
-| Delete Edge to this Node | Deletes the edge between the active node and the clicked node, splitting the tree. Disabled if the two nodes are not connected directly. |
+| Delete Edge to Active Node & Split Tree | Deletes the edge between the active node and the clicked node, splitting the tree. Disabled if the two nodes are not connected directly. |
 | Delete this Node | Deletes the clicked node. |
 | Delete this Node & Reconnect Neighbors | Deletes the clicked node and connects its two neighbors with a new edge, so that the tree is not split. Disabled unless the node has exactly two neighbors. Not shown for agglomerate trees. |
 | Mark as Branchpoint / Unmark as Branchpoint | Toggles whether the node is a [branchpoint](../skeleton_annotation/operations.md). |

@@ -6,7 +6,7 @@ import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import type { ContourMode, OverwriteMode, Vector3 } from "viewer/constants";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
-import { getSegmentIdInfoForPosition } from "viewer/controller/combinations/volume_handlers";
+import { getSegmentIdsAtPosition } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
 import {
@@ -76,7 +76,7 @@ import {
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
 import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { getVoxelPerPixel } from "viewer/model/scaleinfo";
 import { runAxisForPlane } from "viewer/model/volumetracing/core/bucket_diff";
 import type { RunAxis } from "viewer/model/volumetracing/core/bucket_voxel_mask";
 import { BrushDriver } from "viewer/model/volumetracing/integration/brush_driver";
@@ -301,7 +301,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       const planeAxis = dimIndices[2] as 0 | 1 | 2;
       const diameterInMag = getBrushDiameterInMag(
         brushSize,
-        getBaseVoxelFactorsInUnit(voxelSize),
+        getVoxelPerPixel(voxelSize),
         labeledMag,
       );
       // Not rounded: together with the strict inside test of the rasterizer, a
@@ -575,13 +575,10 @@ function* updateHoveredSegmentId(): Saga<void> {
 
   const globalMousePosition = yield* select(getGlobalMousePositionFloating);
 
-  // Note that `id` can be an unmapped id even when
-  // a mapping is active, if it is a HDF5 mapping that is partially loaded
-  // and no entry exists yet for the input id.
-  const { mapped: id, unmapped: unmappedId } =
+  const { mappedId: id, unmappedId } =
     globalMousePosition != null
-      ? getSegmentIdInfoForPosition(globalMousePosition)
-      : { mapped: 0n, unmapped: 0n };
+      ? getSegmentIdsAtPosition(globalMousePosition)
+      : { mappedId: 0n, unmappedId: 0n };
 
   const oldHoveredSegmentId = yield* select(
     (store) => store.temporaryConfiguration.hoveredSegmentId,

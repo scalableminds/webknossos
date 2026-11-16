@@ -51,6 +51,7 @@ object RouteScopes {
     // - WKRemoteDataStoreController, WKRemoteTracingStoreController, WKRemoteWorkerController: internal
     //   store-to-wk communication, authenticated by a store key rather than by a user token.
     // - InitialDataController, MaintenanceController: instance administration.
+    // - AlignmentProjectController: not classified for scoped tokens yet, there is no scope for alignment projects.
     // - McpController, OAuthController: the MCP server takes OAuth access tokens only, and connecting or revoking
     //   agents is for the user alone. An agent must not mint more tokens or approve connections.
   )

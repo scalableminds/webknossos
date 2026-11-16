@@ -216,6 +216,7 @@ class ScopeTestSuite extends AnyWordSpec {
 
       // Controllers that scoped tokens must not reach at all, see the comment in RouteScopes.
       val intentionallyDenied = scala.collection.immutable.Set(
+        "controllers.AlignmentProjectController",
         "controllers.AuthenticationController",
         "controllers.InitialDataController",
         "controllers.MaintenanceController",

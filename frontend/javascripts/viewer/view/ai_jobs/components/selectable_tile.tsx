@@ -1,8 +1,12 @@
-import { CheckCircleFilled } from "@ant-design/icons";
+import { CheckCircleFilled, ExportOutlined } from "@ant-design/icons";
 import { Card, Flex, Tag, Typography, theme } from "antd";
 import type React from "react";
 
 type SelectionState = { isSelected: boolean; isDisabled?: boolean };
+
+function openInNewTab(href: string) {
+  window.open(href, "_blank", "noopener,noreferrer");
+}
 
 function useTileStyle({ isSelected, isDisabled }: SelectionState): React.CSSProperties {
   const { cssVar } = theme.useToken();
@@ -21,11 +25,15 @@ function useTileStyle({ isSelected, isDisabled }: SelectionState): React.CSSProp
   };
 }
 
-function getSelectionHandlers({ isSelected, isDisabled }: SelectionState, onSelect: () => void) {
+function getSelectionHandlers(
+  { isSelected, isDisabled }: SelectionState,
+  onSelect: () => void,
+  href?: string,
+) {
   if (isDisabled) return { role: "radio", "aria-checked": false, "aria-disabled": true };
+  const roleProps = href != null ? { role: "link" } : { role: "radio", "aria-checked": isSelected };
   return {
-    role: "radio",
-    "aria-checked": isSelected,
+    ...roleProps,
     tabIndex: 0,
     onClick: onSelect,
     onKeyDown: (event: React.KeyboardEvent) => {
@@ -81,7 +89,11 @@ type SelectableTileProps = SelectionState & {
   description: React.ReactNode;
   // Limits long descriptions (e.g. user-provided model comments) to two lines.
   clampDescription?: boolean;
-  onSelect: () => void;
+  // Turns the tile into a link that opens this URL in a new tab instead of selecting the tile.
+  href?: string;
+  // The tag shown on disabled tiles.
+  disabledLabel?: string;
+  onSelect?: () => void;
 };
 
 export function SelectableTile({
@@ -90,6 +102,8 @@ export function SelectableTile({
   title,
   description,
   clampDescription,
+  href,
+  disabledLabel = "Coming Soon",
   isSelected,
   isDisabled,
   onSelect,
@@ -131,12 +145,21 @@ export function SelectableTile({
             )}
             <div style={{ position: "absolute", top: 8, right: 8 }}>
               {isSelected && <SelectedIcon size={20} />}
-              {isDisabled && <Tag style={{ marginInlineEnd: 0 }}>Coming Soon</Tag>}
+              {isDisabled && <Tag style={{ marginInlineEnd: 0 }}>{disabledLabel}</Tag>}
+              {href != null && !isDisabled && (
+                <Tag icon={<ExportOutlined />} style={{ marginInlineEnd: 0 }}>
+                  Opens in new tab
+                </Tag>
+              )}
             </div>
           </div>
         )
       }
-      {...getSelectionHandlers(selectionState, onSelect)}
+      {...getSelectionHandlers(
+        selectionState,
+        () => (href != null ? openInNewTab(href) : onSelect?.()),
+        href,
+      )}
     >
       <Typography.Text
         strong

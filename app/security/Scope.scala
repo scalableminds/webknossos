@@ -74,6 +74,8 @@ object Scope {
       case AccessResourceType.tracing    => Some(ScopeResource.annotation) // a tracing is part of an annotation
       case AccessResourceType.jobExport  => Some(ScopeResource.job)
       case AccessResourceType.webknossos => None // internal wk-to-store communication, never scoped
+      // Not classified for scoped tokens yet, so they are denied. See AlignmentProjectController in RouteScopes.
+      case AccessResourceType.alignmentProject => None
     }
 
   /** The set of scopes a token carries. Note the difference between "no restriction" (an unscoped token, e.g. the

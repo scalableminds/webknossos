@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 190 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 192 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 -- Short-lived tokens, handed out to AI agents via the MCP server (see security.ShortLivedTokenService).
 ALTER TYPE webknossos.TOKEN_TYPES ADD VALUE IF NOT EXISTS 'ShortLived';
@@ -71,6 +71,6 @@ ALTER TABLE webknossos.oauthTokens
 ALTER TABLE webknossos.tokens
   ADD CONSTRAINT oauthGrant_ref FOREIGN KEY(_oauthGrant) REFERENCES webknossos.oauthGrants(_id) ON DELETE CASCADE DEFERRABLE;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 191;
+UPDATE webknossos.releaseInformation SET schemaVersion = 193;
 
 COMMIT TRANSACTION;

@@ -5,11 +5,8 @@ import { sleep } from "libs/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
-import { getSegmentIdForPosition } from "viewer/controller/combinations/volume_handlers";
-import {
-  getMappingInfo,
-  getVisibleSegmentationLayer,
-} from "viewer/model/accessors/dataset_accessor";
+import { getSegmentIdsAtPosition } from "viewer/controller/combinations/volume_handlers";
+import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getVisibleSegments } from "viewer/model/accessors/volumetracing_accessor";
@@ -44,13 +41,11 @@ import {
   type SegmentUiNode,
 } from "./hierarchy";
 import { useJumpToSegment } from "./hooks/use_jump_to_segment";
+import { withMeshFileCompatibilityCheck } from "./mesh_file_compatibility_modal";
 import { GroupNodeTitle } from "./node_titles";
 import { SegmentDetailsPanel } from "./segment_details_panel";
 import { SegmentNodeTitle, type SegmentRowActions } from "./segment_row";
-import {
-  mayEditVisibleSegmentation,
-  withMappingActivationConfirmation,
-} from "./segments_view_helper";
+import { mayEditVisibleSegmentation } from "./segments_view_helper";
 
 const CONTEXT_MENU_CLASS = "segment-list-context-menu-overlay";
 const SCROLL_DELAY_MS = 100;
@@ -104,8 +99,8 @@ export function SegmentTreeView(props: Props) {
   // The segment id at the camera center is looked up once for the whole list. The lookup must not
   // be memoized on the position (see volume_handlers.ts), so doing it per row would repeat a
   // transform + mag + cube lookup for every rendered row on every store notification.
-  const centeredSegmentId = useWkSelector((state) =>
-    getSegmentIdForPosition(getPosition(state.flycam)),
+  const centeredSegmentId = useWkSelector(
+    (state) => getSegmentIdsAtPosition(getPosition(state.flycam)).mappedId,
   );
 
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
@@ -122,12 +117,6 @@ export function SegmentTreeView(props: Props) {
   const startRenaming = useCallback((nodeKey: string) => setRenamingNodeKey(nodeKey), []);
   const finishRenaming = useCallback(() => setRenamingNodeKey(null), []);
 
-  const mappingInfo = useWkSelector((state) =>
-    getMappingInfo(
-      state.temporaryConfiguration.activeMappingByLayer,
-      visibleSegmentationLayer?.name,
-    ),
-  );
   const { currentMeshFile } = props.meshFiles;
 
   const jumpToSegment = useJumpToSegment();
@@ -146,12 +135,9 @@ export function SegmentTreeView(props: Props) {
               {
                 key: "loadPrecomputedMesh",
                 label: "Load Mesh (precomputed)",
-                onClick: withMappingActivationConfirmation(
-                  () => meshOperations.loadPrecomputedMeshes([segment]),
-                  currentMeshFile.mappingName,
-                  "mesh file",
+                onClick: withMeshFileCompatibilityCheck(
+                  (meshFileName) => meshOperations.loadPrecomputedMeshes([segment], meshFileName),
                   visibleSegmentationLayer?.name,
-                  mappingInfo,
                 ),
               },
               {
@@ -185,7 +171,6 @@ export function SegmentTreeView(props: Props) {
       visibleSegmentationLayer,
       meshOperations,
       currentMeshFile,
-      mappingInfo,
       jumpToSegment,
       selection.selectSegmentAndJumpToPosition,
       startRenaming,

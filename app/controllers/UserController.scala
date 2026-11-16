@@ -5,6 +5,7 @@ import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.box.{Failure, Full}
 import com.scalableminds.util.tools.{JsonAutoFormat, Fox}
+import mail.AccessChangeEmailService
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.organization.OrganizationService
 import models.team.*
@@ -44,7 +45,7 @@ case class UpdateLastTaskTypeIdParameters(lastTaskTypeId: Option[ObjectId]) deri
 
 class UserController @Inject() (
     userService: UserService,
-    notificationEmailService: NotificationEmailService,
+    accessChangeEmailService: AccessChangeEmailService,
     userDAO: UserDAO,
     multiUserDAO: MultiUserDAO,
     credentialsProvider: CredentialsProvider,
@@ -398,7 +399,7 @@ class UserController @Inject() (
           lastTaskTypeId
         )
         updatedUser <- userDAO.findOne(userId)
-        _ = notificationEmailService.sendAccessChangedEmail(
+        _ = accessChangeEmailService.sendAccessChangedEmail(
           user,
           oldTeamMemberships,
           updatedUser,

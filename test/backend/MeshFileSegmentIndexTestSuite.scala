@@ -1,5 +1,6 @@
 package backend
 
+import com.scalableminds.util.box.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.services.mesh.ZarrMeshFileService
 import org.scalatest.wordspec.AsyncWordSpec
 
@@ -37,6 +38,22 @@ class MeshFileSegmentIndexTestSuite extends AsyncWordSpec {
         Map(0L -> Array[Byte](0, 1, 2, 3), 1L -> Array[Byte](4, 5, 6, 7), 2L -> Array[Byte](8, 9, 0, 0))
       assert(ZarrMeshFileService.copyRange(bytesByChunk, 4, 2, 10).toSeq == Seq[Byte](2, 3, 4, 5, 6, 7, 8, 9))
       assert(ZarrMeshFileService.copyRange(bytesByChunk, 4, 5, 5).isEmpty)
+    }
+  }
+
+  "ZarrMeshFileService.copyRanges" should {
+    "fail only the ranges that cover a chunk that could not be read" in {
+      val chunkBoxes: Map[Long, Box[Array[Byte]]] =
+        Map(0L -> Full(Array[Byte](0, 1, 2, 3)), 1L -> Failure("read error"), 2L -> Full(Array[Byte](8, 9, 0, 0)))
+      val ranges = ZarrMeshFileService.copyRanges(chunkBoxes, 4, Seq((0L, 2L), (2L, 6L), (6L, 9L), (8L, 10L)))
+      assert(
+        ranges.map(_.map(_.toSeq)) == Seq(
+          Full(Seq[Byte](0, 1)),
+          Failure("read error"),
+          Failure("read error"),
+          Full(Seq[Byte](8, 9))
+        )
+      )
     }
   }
 

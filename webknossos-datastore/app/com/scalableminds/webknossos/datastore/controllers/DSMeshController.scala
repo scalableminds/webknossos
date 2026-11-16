@@ -83,7 +83,8 @@ class DSMeshController @Inject() (
 
   /** Lists the mesh chunks of several unmapped segment ids at once. Unlike listMeshChunksForSegment, segments without a
     * mesh don't make the request fail. They are listed in segmentIdsWithoutMesh instead. Segments whose lookup failed,
-    * e.g. because of a read error, are neither listed with chunks nor in segmentIdsWithoutMesh.
+    * e.g. because of a read error, are neither listed with chunks nor in segmentIdsWithoutMesh. In mesh files with a
+    * B-tree, an error reading the B-tree fails the request.
     */
   def listMeshChunksForSegments(
       datasetId: ObjectId,

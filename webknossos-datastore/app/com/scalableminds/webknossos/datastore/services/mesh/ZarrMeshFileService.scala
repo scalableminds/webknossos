@@ -4,6 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Float
+import com.scalableminds.util.box.{Box, EmptyBox, Full}
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.toFox
@@ -284,7 +285,8 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
     } yield (Array.concat(data*), meshFileAttributes.meshFormat)
 
   /* Segments that the B-tree has no entry for, or whose segment mesh metadata is empty, have no mesh. Segments whose
-   * manifest cannot be parsed are left out, like failed lookups. Segments with a mesh come first, in data order.
+   * manifest cannot be read or parsed are left out, like failed lookups. Errors reading the B-tree fail the lookup of
+   * all segments. Segments with a mesh come first, in data order.
    */
   private def lookUpSegmentsInBTree(
       meshFileKey: MeshFileKey,
@@ -309,8 +311,7 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       // Segments without a mesh have empty segment mesh metadata.
       segmentMeshMetadata = allMeshMetadata.filter(_.manifestLength > 0)
       manifestsArray <- openZarrArray(meshFileKey, keyManifests)
-      // The manifests of many segments share a chunk, so a chunk that cannot be read fails the request.
-      manifests <- readByteRanges(
+      manifests <- readByteRangeBoxes(
         manifestsArray,
         segmentMeshMetadata.map(meshMetadata =>
           (meshMetadata.manifestOffset, meshMetadata.manifestOffset + meshMetadata.manifestLength)
@@ -318,7 +319,8 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       ) ?~> "Could not read mesh file manifests"
     } yield {
       val withMesh = segmentMeshMetadata.zip(manifests).toList.flatMap { case (meshMetadata, manifestBytes) =>
-        tryo(NeuroglancerSegmentManifest.fromBytes(manifestBytes))
+        manifestBytes
+          .flatMap(bytes => tryo(NeuroglancerSegmentManifest.fromBytes(bytes)))
           .map(segmentManifest =>
             SegmentMeshLookup(
               meshMetadata.segmentId,
@@ -335,8 +337,8 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
           )
           .toOption
       }
-      val withMeshOrUnparsable = segmentMeshMetadata.map(_.segmentId).toSet
-      withMesh ++ segmentIds.distinct.filterNot(withMeshOrUnparsable.contains).map(SegmentMeshLookup(_, None))
+      val withMeshOrFailed = segmentMeshMetadata.map(_.segmentId).toSet
+      withMesh ++ segmentIds.distinct.filterNot(withMeshOrFailed.contains).map(SegmentMeshLookup(_, None))
     }
   }
 
@@ -487,13 +489,13 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
 
   /* Chunks of a uint64 (T = Long) or uint8 (T = Byte) array of rank 1 or 2 by their number along the first axis, each
    * as its values in C order. Whole chunks are read as typed values, which reading a range that is exactly one chunk
-   * would not give.
+   * would not give. A chunk that cannot be read is a failure and does not fail the others.
    */
-  private def readChunks[T](array: DatasetArray, chunkNumbers: Seq[Long], rank: Int = 1)(using
+  private def readChunkBoxes[T](array: DatasetArray, chunkNumbers: Seq[Long], rank: Int = 1)(using
       ec: ExecutionContext,
       tc: TokenContext,
       elementType: ClassTag[T]
-  ): Fox[Map[Long, Array[T]]] = {
+  ): Fox[Map[Long, Box[Array[T]]]] = {
     val dataType = if (elementType == ClassTag.Byte) ucar.ma2.DataType.BYTE else ucar.ma2.DataType.LONG
     for {
       chunks <- array.readChunks(
@@ -502,9 +504,20 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       )
     } yield chunkNumbers
       .zip(chunks)
-      .map { case (chunkNumber, chunk) => chunkNumber -> chunk.get1DJavaArray(dataType).asInstanceOf[Array[T]] }
+      .map { case (chunkNumber, chunk) => chunkNumber -> chunk.map(_.get1DJavaArray(dataType).asInstanceOf[Array[T]]) }
       .toMap
   }
+
+  // Like readChunkBoxes, but fails if any chunk cannot be read.
+  private def readChunks[T](array: DatasetArray, chunkNumbers: Seq[Long], rank: Int = 1)(using
+      ec: ExecutionContext,
+      tc: TokenContext,
+      elementType: ClassTag[T]
+  ): Fox[Map[Long, Array[T]]] =
+    for {
+      chunkBoxes <- readChunkBoxes[T](array, chunkNumbers, rank)
+      chunks <- Box.combined(chunkBoxes.toSeq.map { case (chunkNumber, chunk) => chunk.map(chunkNumber -> _) }).toFox
+    } yield chunks.toMap
 
   // For each sorted segment id, the chunk of the leaves it falls into, or -1 if it is smaller than all segment ids.
   // inner_nodes_0 is the root. With n inner node layers, inner_nodes_{n-1}[c] is the first segment id of chunk c of
@@ -552,21 +565,31 @@ class ZarrMeshFileService @Inject() (chunkCacheService: DSChunkCacheService, dat
       }
     }
 
-  // Reads byte ranges [start, end) of a 1-d uint8 array from the chunks they cover.
+  /* Reads byte ranges [start, end) of a 1-d uint8 array from the chunks they cover. A range is a failure if a chunk it
+   * covers cannot be read, which does not fail the other ranges.
+   */
+  private def readByteRangeBoxes(array: DatasetArray, ranges: Seq[(Long, Long)])(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[Seq[Box[Array[Byte]]]] = {
+    val chunkSize = array.chunkShape(0).toLong
+    val chunkNumbers = ranges.flatMap { case (start, end) =>
+      ZarrMeshFileService.chunkNumbersOf(chunkSize, start, end)
+    }.distinct.sorted
+    for {
+      chunkBoxes <- readChunkBoxes[Byte](array, chunkNumbers)
+    } yield ZarrMeshFileService.copyRanges(chunkBoxes, chunkSize, ranges)
+  }
+
+  // Like readByteRangeBoxes, but fails if any range cannot be read.
   private def readByteRanges(array: DatasetArray, ranges: Seq[(Long, Long)])(using
       ec: ExecutionContext,
       tc: TokenContext
-  ): Fox[Seq[Array[Byte]]] = {
-    val chunkSize = array.chunkShape(0).toLong
-    def chunkNumbersOf(start: Long, end: Long) = (start / chunkSize) until ((end + chunkSize - 1) / chunkSize)
-    val chunkNumbers = ranges.flatMap(chunkNumbersOf).distinct.sorted
+  ): Fox[Seq[Array[Byte]]] =
     for {
-      bytesByChunk <- readChunks[Byte](array, chunkNumbers)
-      rangeBytes <- tryo(ranges.map { case (start, end) =>
-        ZarrMeshFileService.copyRange(bytesByChunk, chunkSize, start, end)
-      }).toFox
+      rangeBoxes <- readByteRangeBoxes(array, ranges)
+      rangeBytes <- Box.combined(rangeBoxes).toFox
     } yield rangeBytes
-  }
 
   private def arrayLength(array: DatasetArray)(using ec: ExecutionContext): Fox[Long] =
     array.datasetShape.flatMap(_.headOption).toFox ?~> "Could not read array length"
@@ -683,6 +706,25 @@ object ZarrMeshFileService {
   def indexOfLeaf(leaves: Array[Long], leafWidth: Int, validLeaves: Int, segmentId: Long): Int = {
     val index = lastIndexLessOrEqual(leaves, leafWidth, validLeaves, segmentId)
     if (index >= 0 && leaves(index * leafWidth) == segmentId) index else -1
+  }
+
+  // Numbers of the chunks of a 1-d array that the bytes [start, end) lie in.
+  def chunkNumbersOf(chunkSize: Long, start: Long, end: Long): Seq[Long] =
+    (start / chunkSize) until ((end + chunkSize - 1) / chunkSize)
+
+  // The bytes of each range [start, end), or the failure of the first chunk it covers that could not be read.
+  def copyRanges(
+      chunkBoxes: Map[Long, Box[Array[Byte]]],
+      chunkSize: Long,
+      ranges: Seq[(Long, Long)]
+  ): Seq[Box[Array[Byte]]] = {
+    val bytesByChunk = chunkBoxes.collect { case (chunkNumber, Full(bytes)) => chunkNumber -> bytes }
+    ranges.map { case (start, end) =>
+      chunkNumbersOf(chunkSize, start, end).iterator
+        .map(chunkBoxes)
+        .collectFirst { case failed: EmptyBox => failed }
+        .getOrElse[Box[Array[Byte]]](tryo(copyRange(bytesByChunk, chunkSize, start, end)))
+    }
   }
 
   // Assembles the bytes [start, end) from the chunks of a 1-d array.

@@ -50,8 +50,6 @@ connect with an API token.
 | `get_api_token` | Creates an API token for your account, limited to the permissions of the connection and valid for one day, along with the URL of the instance and your organization ID. |
 | `list_python_library_docs` | Returns the index of the WEBKNOSSOS Python library documentation. |
 | `read_python_library_docs_page` | Returns a single page of that documentation. |
-| `list_em_processing_skills` | Returns the catalogue of the EM-Skills collection for volume EM processing. |
-| `read_em_processing_skill` | Returns one skill from that collection. |
 
 The intended workflow is that the agent asks for a scoped API token, looks up the API of the
 [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/) in the documentation, and then writes and runs
@@ -63,18 +61,6 @@ import webknossos as wk
 with wk.webknossos_context(url="https://webknossos.org", token="<api_token>"):
     dataset = wk.Dataset.open_remote("my-dataset")
 ```
-
-## Volume EM processing skills
-
-For processing and analysing the data itself, the server also points agents at
-[EM-Skills](https://github.com/yanchaoz/EM-Skills), a third-party collection of agent skills for volume electron
-microscopy: neuron segmentation (SegNeuron), mitochondria segmentation (MitoNet/Empanada), embedding-guided
-annotation planning, segmentation review and Neuroglancer video rendering.
-
-The skills work on local files, so they combine with the WEBKNOSSOS Python library: fetch the data from
-WEBKNOSSOS, run the skill, upload the result back. `list_em_processing_skills` returns the catalogue and
-`read_em_processing_skill` returns a single skill, both fetched from the repository at request time so that they
-stay up to date. Nothing from that repository is bundled with WEBKNOSSOS.
 
 ## Permissions
 

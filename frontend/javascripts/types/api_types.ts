@@ -472,13 +472,11 @@ export type APIScript = APIScriptTypeBase & {
   readonly id: string;
   readonly owner: APIUserBase;
 };
-export type APIScriptUpdater = APIScriptTypeBase & {
-  readonly id: string;
-  readonly owner: string;
-};
+// Matches ScriptParameters in ScriptController.scala.
 export type APIScriptCreator = APIScriptTypeBase & {
   readonly owner: string;
 };
+export type APIScriptUpdater = APIScriptCreator;
 type APIProjectTypeBase = {
   readonly name: string;
   readonly team: string; // id
@@ -493,14 +491,16 @@ export type APIProject = APIProjectTypeBase & {
   readonly owner: APIUserBase;
   readonly created: number;
 };
-export type APIProjectUpdater = APIProjectTypeBase & {
-  readonly id: string;
+// Matches ProjectParameters in ProjectController.scala.
+export type APIProjectCreator = Pick<
+  APIProjectTypeBase,
+  "name" | "team" | "priority" | "expectedTime" | "isBlacklistedFromReport"
+> & {
   readonly owner: string;
-  readonly created: number;
+  // Defaults to false on creation and is ignored on update.
+  readonly paused?: boolean;
 };
-export type APIProjectCreator = APIProjectTypeBase & {
-  readonly owner: string;
-};
+export type APIProjectUpdater = APIProjectCreator;
 export type APIProjectWithStatus = APIProject & {
   readonly pendingInstances: number;
   readonly tracingTime: number;

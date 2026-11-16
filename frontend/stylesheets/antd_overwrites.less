@@ -211,3 +211,13 @@ label.ant-checkbox-wrapper {
 .no-padding {
   padding: 0 !important;
 }
+// Used by FormItemWithDescription: keep the required mark next to the label text and
+// wrap the description onto its own full-width line below it.
+.form-item-with-description .ant-form-item-label > label {
+  flex-wrap: wrap;
+
+  // antd's hidden colon would otherwise wrap onto an empty third line.
+  &::after {
+    display: none;
+  }
+}

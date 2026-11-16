@@ -1,13 +1,16 @@
 import AdminPage from "admin/admin_page";
 import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } from "admin/rest_api";
 import { Button, Col, Form, Input, Row, Select, theme } from "antd";
+import { FormItemWithDescription } from "dashboard/dataset/helper_components";
 import { useApi, useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
-import type { APIUser } from "types/api_types";
+import type { APIScriptCreator, APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 
 const FormItem = Form.Item;
+
+type FormValues = APIScriptCreator;
 
 function ScriptCreateView() {
   const { scriptId } = useParams();
@@ -15,7 +18,7 @@ function ScriptCreateView() {
 
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<FormValues>();
 
   const { data: users = [], isLoading: isFetchingData } = useApi({
     queryKey: ["teamManagerOrAdminUsers"],
@@ -47,8 +50,7 @@ function ScriptCreateView() {
     form.setFieldsValue(defaultFormValues);
   }, [form, scriptId, script, activeUser.id]);
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
-  const onFinish = async (formValues) => {
+  const onFinish = async (formValues: FormValues) => {
     if (scriptId) {
       await updateScript(scriptId, formValues);
     } else {
@@ -72,11 +74,12 @@ function ScriptCreateView() {
         }}
       >
         <Form onFinish={onFinish} layout="vertical" form={form}>
-          <Row gutter={token.paddingMD}>
+          <Row gutter={token.paddingMD} align="bottom">
             <Col xs={24} md={12}>
-              <FormItem
+              <FormItemWithDescription
                 name="name"
                 label="Script Name"
+                description="Shown when selecting a script for a task."
                 hasFeedback
                 rules={[
                   {
@@ -88,12 +91,13 @@ function ScriptCreateView() {
                 ]}
               >
                 <Input autoFocus />
-              </FormItem>
+              </FormItemWithDescription>
             </Col>
             <Col xs={24} md={12}>
-              <FormItem
+              <FormItemWithDescription
                 name="owner"
                 label="Owner"
+                description="Only the owner can edit or delete this script."
                 hasFeedback
                 rules={[
                   {
@@ -113,13 +117,22 @@ function ScriptCreateView() {
                     label: `${user.lastName}, ${user.firstName} (${user.email})`,
                   }))}
                 />
-              </FormItem>
+              </FormItemWithDescription>
             </Col>
           </Row>
 
-          <FormItem
+          <FormItemWithDescription
             name="gist"
             label="Gist URL"
+            description={
+              <>
+                A public{" "}
+                <a href="https://gist.github.com/" target="_blank" rel="noopener noreferrer">
+                  GitHub Gist
+                </a>
+                . Its first file runs when annotators open a task that uses this script.
+              </>
+            }
             hasFeedback
             rules={[
               {
@@ -130,8 +143,8 @@ function ScriptCreateView() {
               },
             ]}
           >
-            <Input />
-          </FormItem>
+            <Input placeholder="https://gist.github.com/<user>/<id>" />
+          </FormItemWithDescription>
 
           <FormItem>
             <Button type="primary" htmlType="submit">

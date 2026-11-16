@@ -1,25 +1,14 @@
-import { InfoCircleOutlined } from "@ant-design/icons";
 import AdminPage from "admin/admin_page";
 import { createTaskType, getEditableTeams, getTaskType, updateTaskType } from "admin/rest_api";
 import RecommendedConfigurationView, {
   getDefaultRecommendedConfiguration,
 } from "admin/tasktype/recommended_configuration_view";
-import {
-  Button,
-  Checkbox,
-  Col,
-  Form,
-  Input,
-  InputNumber,
-  Radio,
-  Row,
-  Select,
-  Tooltip,
-  Typography,
-  theme,
-} from "antd";
+import { Button, Col, Form, Input, InputNumber, Radio, Row, Select, Typography, theme } from "antd";
 import type { RuleObject } from "antd/es/form";
-import { useFetch } from "libs/react_helpers";
+import {
+  CheckboxWithDescription,
+  FormItemWithDescription,
+} from "dashboard/dataset/helper_components";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { jsonStringify } from "libs/utils";
 import merge from "lodash-es/merge";
@@ -90,18 +79,13 @@ function TaskTypeCreateView() {
 
   const navigate = useNavigate();
   const [useRecommendedConfiguration, setUseRecommendedConfiguration] = useState(false);
-  const [isFetchingData, setIsFetchingData] = useState(true);
   const [form] = Form.useForm<FormValues>();
 
-  const teams = useFetch(
-    async () => {
-      const teams = await getEditableTeams();
-      setIsFetchingData(false);
-      return teams;
-    },
-    [],
-    [],
-  );
+  const { data: teams = [], isLoading: isFetchingTeams } = useQueryWithErrorHandling({
+    queryKey: ["editableTeams"],
+    queryFn: getEditableTeams,
+    refetchOnWindowFocus: false,
+  });
 
   const { data: taskType } = useQueryWithErrorHandling({
     queryKey: ["taskTypeForEditing", taskTypeId],
@@ -222,11 +206,12 @@ function TaskTypeCreateView() {
             Basics
           </Typography.Title>
 
-          <Row gutter={token.paddingMD}>
+          <Row gutter={token.paddingMD} align="bottom">
             <Col xs={24} md={14}>
-              <FormItem
+              <FormItemWithDescription
                 name="summary"
                 label="Summary"
+                description="Short, unique name used to pick this task type when creating tasks. No commas."
                 hasFeedback
                 rules={[
                   {
@@ -237,19 +222,20 @@ function TaskTypeCreateView() {
                   },
                   {
                     validator: syncValidator(
-                      (value) => !value.includes(","),
+                      (value: string | undefined) => value == null || !value.includes(","),
                       "The summary must not contain commas.",
                     ),
                   },
                 ]}
               >
                 <Input />
-              </FormItem>
+              </FormItemWithDescription>
             </Col>
             <Col xs={24} md={10}>
-              <FormItem
+              <FormItemWithDescription
                 name="teamId"
                 label="Team"
+                description="Its members can use this task type. Its managers can edit it."
                 hasFeedback
                 rules={[
                   {
@@ -258,32 +244,33 @@ function TaskTypeCreateView() {
                 ]}
               >
                 <Select
-                  allowClear
                   showSearch={{ optionFilterProp: "label" }}
                   placeholder="Select a Team"
                   style={{
                     width: "100%",
                   }}
-                  loading={isFetchingData}
+                  loading={isFetchingTeams}
                   options={teams.map((team: APITeam) => ({
                     value: team.id,
                     label: `${team.name}`,
                   }))}
                 />
-              </FormItem>
+              </FormItemWithDescription>
             </Col>
           </Row>
 
-          <FormItem
+          <FormItemWithDescription
             name="description"
-            label={
-              <span>
-                Description (
+            label="Description"
+            description={
+              <>
+                Instructions shown to annotators when they start a task and in the viewer&apos;s
+                info tab. Supports{" "}
                 <a href="https://markdown-it.github.io/" target="_blank" rel="noopener noreferrer">
-                  Markdown enabled
+                  Markdown
                 </a>
-                )
-              </span>
+                .
+              </>
             }
             hasFeedback
             rules={[
@@ -293,13 +280,17 @@ function TaskTypeCreateView() {
             ]}
           >
             <TextArea rows={10} />
-          </FormItem>
+          </FormItemWithDescription>
 
           <Typography.Title level={5}>Annotation Behavior</Typography.Title>
 
-          <Row gutter={token.paddingMD}>
+          <Row gutter={token.paddingMD} align="bottom">
             <Col xs={24} md={24}>
-              <FormItem name="tracingType" label="Annotation Type">
+              <FormItemWithDescription
+                name="tracingType"
+                label="Annotation Type"
+                description="Which annotation layers the tasks' annotations have. Can't be changed later."
+              >
                 <RadioGroup>
                   <Radio value="skeleton" disabled={isEditingMode}>
                     Skeleton
@@ -311,12 +302,13 @@ function TaskTypeCreateView() {
                     Skeleton and Volume
                   </Radio>
                 </RadioGroup>
-              </FormItem>
+              </FormItemWithDescription>
             </Col>
             <Col xs={24} md={12}>
-              <FormItem
+              <FormItemWithDescription
                 name={["settings", "allowedModes"]}
                 label="Allowed Modes"
+                description="Orthogonal shows three planes. Flight follows a structure in 3D."
                 hasFeedback
                 rules={[
                   {
@@ -343,11 +335,17 @@ function TaskTypeCreateView() {
                     },
                   ]}
                 />
-              </FormItem>
+              </FormItemWithDescription>
             </Col>
             <Col xs={24} md={12}>
-              <FormItem name={["settings", "preferredMode"]} label="Preferred Mode" hasFeedback>
+              <FormItemWithDescription
+                name={["settings", "preferredMode"]}
+                label="Preferred Mode"
+                description="The view mode tasks open in. With Any, no mode is preset."
+                hasFeedback
+              >
                 <Select
+                  placeholder="Any"
                   allowClear
                   showSearch={{ optionFilterProp: "label" }}
                   style={{
@@ -368,7 +366,7 @@ function TaskTypeCreateView() {
                     },
                   ]}
                 />
-              </FormItem>
+              </FormItemWithDescription>
             </Col>
           </Row>
           <FormItem
@@ -393,17 +391,23 @@ function TaskTypeCreateView() {
                   <Row gutter={token.paddingMD}>
                     <Col xs={24} md={12}>
                       <FormItem name={["settings", "somaClickingAllowed"]} valuePropName="checked">
-                        <Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>
+                        <CheckboxWithDescription description="Each new node starts a new tree, e.g. to mark cell bodies.">
+                          Allow Single-node-tree mode (&quot;Soma clicking&quot;)
+                        </CheckboxWithDescription>
                       </FormItem>
                     </Col>
                     <Col xs={24} md={12}>
                       <FormItem name={["settings", "branchPointsAllowed"]} valuePropName="checked">
-                        <Checkbox>Allow Branchpoints</Checkbox>
+                        <CheckboxWithDescription description="Lets annotators mark nodes as branchpoints.">
+                          Allow Branchpoints
+                        </CheckboxWithDescription>
                       </FormItem>
                     </Col>
                     <Col xs={24} md={12}>
                       <FormItem name={["settings", "mergerMode"]} valuePropName="checked">
-                        <Checkbox>Merger Mode</Checkbox>
+                        <CheckboxWithDescription description="Opens tasks in merger mode, where a skeleton tree merges the segments it connects.">
+                          Merger Mode
+                        </CheckboxWithDescription>
                       </FormItem>
                     </Col>
                   </Row>
@@ -428,15 +432,9 @@ function TaskTypeCreateView() {
                         name={["settings", "volumeInterpolationAllowed"]}
                         valuePropName="checked"
                       >
-                        <Checkbox>
-                          Allow Volume Interpolation{" "}
-                          <Tooltip
-                            title="When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices."
-                            placement="right"
-                          >
-                            <InfoCircleOutlined />
-                          </Tooltip>
-                        </Checkbox>
+                        <CheckboxWithDescription description="Annotators only need to label every second slice. The slices in between are filled by interpolation.">
+                          Allow Volume Interpolation
+                        </CheckboxWithDescription>
                       </FormItem>
                     </Col>
                   </Row>
@@ -454,15 +452,12 @@ function TaskTypeCreateView() {
               marginBottom: 6,
             }}
           >
-            <Checkbox disabled={isEditingMode}>
-              Restrict Magnifications{" "}
-              <Tooltip
-                title="The magnifications should be specified as power-of-two numbers. For example, if users should only be able to annotate in the best and second best mag, the minimum should be 1 and the maximum should be 2. The third and fourth mag can be addressed with 4 and 8."
-                placement="right"
-              >
-                <InfoCircleOutlined />
-              </Tooltip>
-            </Checkbox>
+            <CheckboxWithDescription
+              disabled={isEditingMode}
+              description="Annotators can only annotate within a range of power-of-two magnifications, e.g. 1 to 2 for the two finest ones. Can't be changed later."
+            >
+              Restrict Magnifications
+            </CheckboxWithDescription>
           </FormItem>
 
           <FormItem
@@ -501,7 +496,7 @@ function TaskTypeCreateView() {
                           },
                         ]}
                       >
-                        <InputNumber min={1} size="small" disabled={isEditingMode} />
+                        <InputNumber min={1} disabled={isEditingMode} />
                       </FormItem>
                     </Col>
                     <Col xs={24} sm={12}>
@@ -522,7 +517,7 @@ function TaskTypeCreateView() {
                           },
                         ]}
                       >
-                        <InputNumber min={1} size="small" disabled={isEditingMode} />
+                        <InputNumber min={1} disabled={isEditingMode} />
                       </FormItem>
                     </Col>
                   </Row>

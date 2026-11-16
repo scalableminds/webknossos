@@ -14,6 +14,7 @@ import type {
 } from "types/api_types";
 import Constants, {
   type ContourMode,
+  ContourModeEnum,
   MAX_MAG_FOR_AGGLOMERATE_MAPPING,
   MappingStatusEnum,
   type Vector3,
@@ -625,6 +626,50 @@ export const getRenderableMagForActiveSegmentationTracing = reuseInstanceOnEqual
   _getRenderableMagForActiveSegmentationTracing,
 );
 
+// Erasing a stroke with a brush of exactly the same size is finicky, since the
+// eraser has to retrace the original stroke precisely to remove all voxels.
+// Therefore, the eraser is roughly 5% larger than the draw brush.
+const ERASE_BRUSH_SIZE_INCREASE = 0.05;
+
+/**
+ * Size of the brush when erasing, given the configured brush size. The increase is
+ * rounded to an even number so that the parity of the diameter is kept. Thus, the
+ * eraser is centered exactly like the draw brush (see getBrushCenterInMag) and grows
+ * evenly on all sides.
+ */
+export function getEraseBrushSize(brushSize: number): number {
+  return brushSize + 2 * Math.round((brushSize * ERASE_BRUSH_SIZE_INCREASE) / 2);
+}
+
+function isErasingWithBrush(state: WebknossosState): boolean {
+  const { activeTool } = state.uiInformation;
+  if (activeTool === AnnotationTool.ERASE_BRUSH) {
+    return true;
+  }
+  if (activeTool !== AnnotationTool.BRUSH) {
+    return false;
+  }
+  // The brush tool also erases while dragging with a modifier. The contour tracing mode
+  // keeps its value after the stroke ended, so only consider it during an ongoing stroke.
+  const volumeTracing = getActiveSegmentationTracing(state);
+  if (volumeTracing == null) {
+    return false;
+  }
+  const localState = state.localSegmentationStateByLayer[volumeTracing.tracingId];
+  return (
+    localState?.contourTracingMode === ContourModeEnum.DELETE && localState.contourList.length > 0
+  );
+}
+
+/**
+ * Brush size in base voxels that is currently in effect, i.e., the enlarged size
+ * while erasing and the configured size otherwise.
+ */
+export function getEffectiveBrushSize(state: WebknossosState): number {
+  const { brushSize } = state.userConfiguration;
+  return isErasingWithBrush(state) ? getEraseBrushSize(brushSize) : brushSize;
+}
+
 /**
  * Per-axis brush diameter in voxels of `mag`. brushSize is a diameter in "base voxels"
  * (units of the finest axis of the voxel size), so this folds in both the voxel size
@@ -670,7 +715,7 @@ function _getBrushCenterPosition(state: WebknossosState): Vector3 | null {
   }
   const { mag } = maybeMagWithZoomStep;
   const diameterInMag = getBrushDiameterInMag(
-    state.userConfiguration.brushSize,
+    getEffectiveBrushSize(state),
     getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
     mag,
   );

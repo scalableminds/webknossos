@@ -63,6 +63,7 @@ import {
   getActiveUnmappedSegmentId,
   getBrushCenterPosition,
   getBucketRetrievalSourceFn,
+  getEffectiveBrushSize,
   getHideUnregisteredSegmentsForLayer,
   getProofreadingMarkerPosition,
   getRenderableMagForActiveSegmentationTracing,
@@ -791,7 +792,7 @@ class PlaneMaterialFactory {
           },
         ),
         listenToStoreProperty(
-          (storeState) => storeState.userConfiguration.brushSize,
+          (storeState) => getEffectiveBrushSize(storeState),
           (brushSize) => {
             this.uniforms.brushSizeInPixel.value = brushSize;
           },

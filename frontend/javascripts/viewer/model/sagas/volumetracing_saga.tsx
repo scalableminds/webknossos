@@ -30,6 +30,7 @@ import {
   getBrushCenterInMag,
   getBrushDiameterInMag,
   getContourTracingMode,
+  getEraseBrushSize,
   getMaximumBrushSize,
   getRenderableMagForSegmentationTracing,
   getRequestedOrVisibleSegmentationLayer,
@@ -295,7 +296,11 @@ export function* editVolumeLayerAsync(): Saga<never> {
     let lastBrushCenter: Vector3 | null = null;
 
     if (isBrushTool(activeTool)) {
-      const brushSize = yield* select((state) => state.userConfiguration.brushSize);
+      const configuredBrushSize = yield* select((state) => state.userConfiguration.brushSize);
+      const brushSize =
+        contourTracingMode === ContourModeEnum.DELETE
+          ? getEraseBrushSize(configuredBrushSize)
+          : configuredBrushSize;
       const voxelSize = yield* select((state) => state.dataset.dataSource.scale);
       const dimIndices = Dimensions.getIndices(startEditingAction.planeId);
       const planeAxis = dimIndices[2] as 0 | 1 | 2;

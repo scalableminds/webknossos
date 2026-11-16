@@ -20,7 +20,6 @@ import {
   getInputCatcherRect,
 } from "viewer/model/accessors/view_mode_accessor";
 import { hideMeasurementTooltipAction } from "viewer/model/actions/ui_actions";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import {
   getTooltipPosition,
   isPositionStillInPlane,
@@ -77,9 +76,7 @@ export default function DistanceMeasurementTooltip() {
   const flycamRotation = useWkSelector((state) => getRotationInRadian(state.flycam));
   const zoomStep = useWkSelector((state) => state.flycam.zoomStep);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
-  const planeRatio = useWkSelector((state) =>
-    getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
-  );
+  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const [tooltipRef, tooltipWidth] = useTooltipWidth();
   const dispatch = useDispatch();
   const { areaMeasurementGeometry, lineMeasurementGeometry } = getSceneController();
@@ -105,7 +102,7 @@ export default function DistanceMeasurementTooltip() {
         flycamRotation,
         flycamPosition,
         orthoView,
-        planeRatio,
+        voxelSize,
         zoomStep,
       )
     ) {
@@ -117,7 +114,7 @@ export default function DistanceMeasurementTooltip() {
     flycamRotation,
     flycamPosition,
     orthoView,
-    planeRatio,
+    voxelSize,
     zoomStep,
     activeGeometry.resetAndHide,
   ]);

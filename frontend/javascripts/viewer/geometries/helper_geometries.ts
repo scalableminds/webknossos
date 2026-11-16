@@ -22,7 +22,7 @@ import {
 } from "three";
 import { type OrthoView, OrthoViews, type Vector3 } from "viewer/constants";
 import Dimensions from "viewer/model/dimensions";
-import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
+import { getUnitPerPixel } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
 
 export const CONTOUR_COLOR_NORMAL = new Color(0x0000ff);
@@ -204,8 +204,8 @@ export class QuickSelectGeometry {
     });
     this.rectangle = new Mesh(geometry, material);
 
-    const baseWidth = getBaseVoxelInUnit(Store.getState().dataset.dataSource.scale.factor);
-    const centerGeometry = new PlaneGeometry(baseWidth, baseWidth);
+    const centerWidth = getUnitPerPixel(Store.getState().dataset.dataSource.scale);
+    const centerGeometry = new PlaneGeometry(centerWidth, centerWidth);
     const centerMaterial = new MeshBasicMaterial({
       color: this.centerMarkerColor,
       side: DoubleSide,

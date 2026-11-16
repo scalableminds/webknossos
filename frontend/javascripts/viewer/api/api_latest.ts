@@ -183,7 +183,7 @@ import {
 import { flatToNestedMatrix } from "viewer/model/helpers/transformation_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
-import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
+import { getHalfViewportExtentsInVxFromState } from "viewer/model/sagas/saga_selectors";
 import {
   createPartialBucketUpdates,
   getVolumeSaveModeForState,
@@ -2166,7 +2166,7 @@ class DataApi {
       dimensions.roundCoordinate(getPosition(state.flycam)),
       viewport,
     );
-    const [halfViewportExtentU, halfViewportExtentV] = getHalfViewportExtentsInUnitFromState(
+    const [halfViewportExtentU, halfViewportExtentV] = getHalfViewportExtentsInVxFromState(
       state,
       viewport,
     );

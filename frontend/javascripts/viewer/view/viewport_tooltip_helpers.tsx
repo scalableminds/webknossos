@@ -1,15 +1,17 @@
 import { clamp } from "libs/utils";
 import { useLayoutEffect, useRef, useState } from "react";
+import type { VoxelSize } from "types/api_types";
 import type { OrthoView, Rect, Vector2, Vector3 } from "viewer/constants";
 import { calculateInViewportPos } from "viewer/model/accessors/view_mode_accessor";
 import Dimensions from "viewer/model/dimensions";
+import { getVoxelPerPixel } from "viewer/model/scaleinfo";
 
 export function isPositionStillInPlane(
   positionXYZ: Vector3,
   flycamRotation: Vector3,
   flycamPosition: Vector3,
   planeId: OrthoView,
-  baseVoxelFactors: Vector3,
+  voxelSize: VoxelSize,
   zoomStep: number,
 ) {
   if (planeId === "TDView") {
@@ -19,8 +21,7 @@ export function isPositionStillInPlane(
     positionXYZ,
     flycamPosition,
     flycamRotation,
-    baseVoxelFactors,
-    zoomStep,
+    getVoxelPerPixel(voxelSize, zoomStep),
   ).toArray();
   const thirdDim = Dimensions.thirdDimensionForPlane(planeId);
   return Math.abs(posInViewport[thirdDim]) < 1;

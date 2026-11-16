@@ -26,7 +26,7 @@ import CustomLOD from "viewer/controller/custom_lod";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { getActiveNode, getNodePosition } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { getInputCatcherRect, getViewportScale } from "viewer/model/accessors/view_mode_accessor";
+import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import {
   getActiveSegmentationTracing,
   getActiveUnmappedSegmentId,
@@ -36,9 +36,8 @@ import { updateMeshOpacityAction } from "viewer/model/actions/annotation_actions
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { toggleSegmentInPartitionAction } from "viewer/model/actions/proofread_actions";
 import {
+  moveTDViewByPixelDeltaAction,
   moveTDViewByVectorWithoutTimeTrackingAction,
-  moveTDViewXAction,
-  moveTDViewYAction,
   setTDCameraAction,
   setTDCameraWithoutTimeTrackingAction,
   setViewportAction,
@@ -452,9 +451,7 @@ class TDController extends PureComponent<Props> {
   }
 
   moveTDView(delta: Point2): void {
-    const [scaleX, scaleY] = getViewportScale(Store.getState(), OrthoViews.TDView);
-    Store.dispatch(moveTDViewXAction((delta.x / scaleX) * -1));
-    Store.dispatch(moveTDViewYAction((delta.y / scaleY) * -1));
+    Store.dispatch(moveTDViewByPixelDeltaAction(delta));
   }
 
   onTDCameraChanged = (userTriggered: boolean = true) => {

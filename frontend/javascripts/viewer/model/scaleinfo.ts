@@ -3,8 +3,7 @@ import type { VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, type UnitShort, type Vector3 } from "viewer/constants";
 
 // The zoom step is defined so that, at zoom step 1, one screen pixel covers the smallest
-// voxel extent of the dataset. The brush size and the flycam's local coordinates are
-// measured in such "pixels at zoom step 1", too.
+// voxel extent of the dataset. The brush size is measured in such "pixels at zoom step 1", too.
 export function getUnitPerPixel(voxelSize: VoxelSize, zoomStep: number = 1): number {
   return zoomStep * Math.min(...voxelSize.factor);
 }

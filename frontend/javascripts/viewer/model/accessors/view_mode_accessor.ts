@@ -20,7 +20,7 @@ import constants, {
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import { getUnitPerPixel, getVoxelPerPixel } from "viewer/model/scaleinfo";
-import type { Flycam, WebknossosState } from "viewer/store";
+import type { WebknossosState } from "viewer/store";
 import Dimensions from "../dimensions";
 
 export function getTDViewportSize(state: WebknossosState): [number, number] {
@@ -84,13 +84,6 @@ export function getInputCatcherAspectRatio(state: WebknossosState, viewport: Vie
 //   const scaledHeight = width / (!useWidth ? 1 : aspectRatio);
 //   return [scaledWidth, scaledHeight];
 // }
-// Returns the ratio between VIEWPORT_WIDTH and the actual extent of the viewport for width and height
-export function getViewportScale(state: WebknossosState, viewport: Viewport): [number, number] {
-  const { width, height } = getInputCatcherRect(state, viewport);
-  const xScale = width / constants.VIEWPORT_WIDTH;
-  const yScale = height / constants.VIEWPORT_WIDTH;
-  return [xScale, yScale];
-}
 
 export type PositionWithRounding = { rounded: Vector3; floating: Vector3 };
 
@@ -413,16 +406,6 @@ export function isPlaneMode(state: WebknossosState): boolean {
   return constants.MODES_PLANE.includes(viewMode);
 }
 
-// Returns the factors by which the plane geometry (which is VIEWPORT_WIDTH wide) needs to be
-// scaled so that it covers the viewport extent in the dataset unit.
-export function getPlaneScalingFactor(
-  state: WebknossosState,
-  flycam: Flycam,
-  planeID: OrthoView,
-): [number, number] {
-  const [width, height] = getPlaneExtentInUnitFromStore(state, flycam.zoomStep, planeID);
-  return [width / constants.VIEWPORT_WIDTH, height / constants.VIEWPORT_WIDTH];
-}
 export function getPlaneExtentInUnitFromStore(
   state: WebknossosState,
   zoomStep: number,

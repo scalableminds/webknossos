@@ -1,6 +1,6 @@
 import { CloseOutlined, DeleteOutlined, RollbackOutlined } from "@ant-design/icons";
 import { updateUser } from "admin/rest_api";
-import { Badge, Button, InputNumber, Modal, Space, Table, Tag, Tooltip } from "antd";
+import { Badge, Button, InputNumber, Modal, Space, Table, Tag, Tooltip, Typography } from "antd";
 import HighlightableRow from "components/highlightable_row";
 import SelectExperienceDomain from "components/select_experience_domain";
 import { handleGenericError } from "libs/error_handling";
@@ -238,6 +238,11 @@ function ExperienceModalView({
       okText={"Save"}
       width={ModalWidth.Large}
     >
+      <Typography.Paragraph type="secondary">
+        An experience domain names a skill, e.g. &quot;nuclei&quot; or
+        &quot;flight-annotation&quot;, and its value states how experienced a user is in it. Tasks
+        can require a minimum value in a domain. Only users who meet it get these tasks.
+      </Typography.Paragraph>
       <Table
         size="small"
         dataSource={tableEntries}
@@ -318,7 +323,6 @@ function ExperienceModalView({
             }}
           />
         ) : null}
-        )
         <Column
           title={multipleUsers ? "New Value" : "Value"}
           key="value"

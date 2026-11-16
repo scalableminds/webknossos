@@ -46,6 +46,11 @@ type FormValues = {
   recommendedConfiguration: string | undefined;
 };
 
+const VIEW_MODE_OPTIONS: Array<{ value: APIAllowedMode; label: string }> = [
+  { value: "orthogonal", label: "Orthogonal" },
+  { value: "flight", label: "Flight" },
+];
+
 function isValidMagnification(_rule: RuleObject, value: number | undefined) {
   if (value && (Math.log(value) / Math.log(2)) % 1 === 0) {
     return Promise.resolve();
@@ -80,6 +85,7 @@ function TaskTypeCreateView() {
   const navigate = useNavigate();
   const [useRecommendedConfiguration, setUseRecommendedConfiguration] = useState(false);
   const [form] = Form.useForm<FormValues>();
+  const allowedModes: APIAllowedMode[] = Form.useWatch(["settings", "allowedModes"], form) ?? [];
 
   const { data: teams = [], isLoading: isFetchingTeams } = useQueryWithErrorHandling({
     queryKey: ["editableTeams"],
@@ -197,6 +203,17 @@ function TaskTypeCreateView() {
         <Form
           form={form}
           onFinish={onFinish}
+          onValuesChange={(changedValues: Partial<FormValues>) => {
+            // The preferred mode must be one of the allowed modes, so clear it once it isn't anymore.
+            if (changedValues.settings == null || !("allowedModes" in changedValues.settings)) {
+              return;
+            }
+            const newAllowedModes = changedValues.settings.allowedModes ?? [];
+            const preferredMode = form.getFieldValue(["settings", "preferredMode"]);
+            if (preferredMode != null && !newAllowedModes.includes(preferredMode)) {
+              form.setFieldValue(["settings", "preferredMode"], undefined);
+            }
+          }}
           layout="vertical"
           initialValues={{
             tracingType: TracingTypeEnum.skeleton,
@@ -324,16 +341,7 @@ function TaskTypeCreateView() {
                   style={{
                     width: "100%",
                   }}
-                  options={[
-                    {
-                      value: "orthogonal",
-                      label: "Orthogonal",
-                    },
-                    {
-                      value: "flight",
-                      label: "Flight",
-                    },
-                  ]}
+                  options={VIEW_MODE_OPTIONS}
                 />
               </FormItemWithDescription>
             </Col>
@@ -341,30 +349,33 @@ function TaskTypeCreateView() {
               <FormItemWithDescription
                 name={["settings", "preferredMode"]}
                 label="Preferred Mode"
-                description="The view mode tasks open in. With Any, no mode is preset."
+                description="The view mode tasks open in. Must be one of the allowed modes."
                 hasFeedback
+                dependencies={[["settings", "allowedModes"]]}
+                rules={[
+                  {
+                    // Existing task types may still have a preferred mode that isn't allowed.
+                    validator: syncValidator(
+                      (value: APIAllowedMode | undefined) =>
+                        value == null || allowedModes.includes(value),
+                      "The preferred mode must be one of the allowed modes.",
+                    ),
+                  },
+                ]}
               >
                 <Select
-                  placeholder="Any"
+                  placeholder={
+                    allowedModes.length > 0 ? "First allowed mode" : "Select allowed modes first"
+                  }
+                  disabled={allowedModes.length === 0}
                   allowClear
                   showSearch={{ optionFilterProp: "label" }}
                   style={{
                     width: "100%",
                   }}
-                  options={[
-                    {
-                      value: "",
-                      label: "Any",
-                    },
-                    {
-                      value: "orthogonal",
-                      label: "Orthogonal",
-                    },
-                    {
-                      value: "flight",
-                      label: "Flight",
-                    },
-                  ]}
+                  options={VIEW_MODE_OPTIONS.filter((option) =>
+                    allowedModes.includes(option.value),
+                  )}
                 />
               </FormItemWithDescription>
             </Col>

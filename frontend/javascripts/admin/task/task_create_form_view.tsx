@@ -676,6 +676,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
           initialValues={{
             editPosition: [0, 0, 0],
             editRotation: [0, 0, 0],
+            pendingInstances: 1,
           }}
         >
           <Row gutter={8} align="bottom" wrap={false}>

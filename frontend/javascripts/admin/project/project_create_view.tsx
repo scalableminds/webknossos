@@ -19,13 +19,11 @@ import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 
 const FormItem = Form.Item;
 
-type FormValues = APIProjectCreator;
-
 function ProjectCreateView() {
   const { projectId } = useParams();
   const { token } = theme.useToken();
 
-  const [form] = Form.useForm<FormValues>();
+  const [form] = Form.useForm<APIProjectCreator>();
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
 
@@ -68,7 +66,7 @@ function ProjectCreateView() {
     form.setFieldsValue(defaultFormValues);
   }, [form, projectId, project, activeUser.id]);
 
-  const handleSubmit = async (formValues: FormValues) => {
+  const handleSubmit = async (formValues: APIProjectCreator) => {
     if (projectId) {
       await updateProject(projectId, formValues);
     } else {

@@ -10,15 +10,13 @@ import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 
 const FormItem = Form.Item;
 
-type FormValues = APIScriptCreator;
-
 function ScriptCreateView() {
   const { scriptId } = useParams();
   const { token } = theme.useToken();
 
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
-  const [form] = Form.useForm<FormValues>();
+  const [form] = Form.useForm<APIScriptCreator>();
 
   const { data: users = [], isLoading: isFetchingData } = useApi({
     queryKey: ["teamManagerOrAdminUsers"],
@@ -50,7 +48,7 @@ function ScriptCreateView() {
     form.setFieldsValue(defaultFormValues);
   }, [form, scriptId, script, activeUser.id]);
 
-  const onFinish = async (formValues: FormValues) => {
+  const onFinish = async (formValues: APIScriptCreator) => {
     if (scriptId) {
       await updateScript(scriptId, formValues);
     } else {

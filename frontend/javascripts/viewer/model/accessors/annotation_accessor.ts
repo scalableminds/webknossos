@@ -154,7 +154,7 @@ export function getReasonForCantEditSkeletonTree(
 }
 
 export function mayEditAnnotationLayerSet(state: WebknossosState): boolean {
-  // Adding, deleting, converting (making writable) or merging annotation layers
+  // Adding, deleting or converting (making writable) annotation layers
   // changes the tracing's set of layers, which cannot be represented as an
   // incorporable diff during a concurrent rebase (see #9052). These actions are
   // therefore disallowed while simultaneous editing is enabled.

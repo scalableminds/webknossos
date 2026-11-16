@@ -52,7 +52,7 @@ exports[`Misc APIs (E2E)  > datastores() 1`] = `
     "jobsEnabled": false,
     "jobsSupportedByAvailableWorkers": [],
     "name": "localhost",
-    "url": "http://localhost:9000",
+    "url": "http://localhost:9010",
   },
 ]
 `;
@@ -86,7 +86,7 @@ exports[`Misc APIs (E2E)  > getFeatureToggles() 1`] = `
   "recommendWkorgInstance": true,
   "registerToDefaultOrgaEnabled": true,
   "segmentAnythingEnabled": false,
-  "supportAiAgentUrl": "https://docs.webknossos.org/webhooks/webknossos/ask",
+  "supportAiAgentUrl": "https://docs.webknossos.org/webhooks/webknossos-combined/ask",
   "taskReopenAllowedInSeconds": 30,
   "voxelyticsEnabled": true,
 }

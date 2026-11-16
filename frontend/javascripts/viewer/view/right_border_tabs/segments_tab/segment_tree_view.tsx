@@ -286,20 +286,6 @@ export function SegmentTreeView(props: Props) {
     return { segmentIds, groupId };
   };
 
-  // The segment that was clicked last without SHIFT. It stays fixed across
-  // subsequent SHIFT clicks, so that the range can be adjusted.
-  const rangeSelectionAnchorRef = useRef<bigint | null>(null);
-  const getRangeSelectionAnchor = (): bigint | null => {
-    const { selectedSegmentIds } = selection;
-    const anchor = rangeSelectionAnchorRef.current;
-    if (anchor != null && selectedSegmentIds.includes(anchor)) {
-      return anchor;
-    }
-    // The selection might have been changed elsewhere (e.g., by clicking a
-    // segment in the viewport). Fall back to the most recently selected segment.
-    return selectedSegmentIds.at(-1) ?? null;
-  };
-
   const onSelect: TreeProps<SegmentsUiNode>["onSelect"] = (keys, event) => {
     const { node, nativeEvent } = event;
     if (
@@ -313,19 +299,26 @@ export function SegmentTreeView(props: Props) {
     }
 
     if (node.type === "segment" && nativeEvent?.shiftKey) {
-      // SHIFT click selects a whole range of segments, starting at the anchor
-      // (the segment that was clicked last without SHIFT). Like in the skeleton
-      // tab, this only works for segments within the same group.
-      const anchorSegmentId = getRangeSelectionAnchor();
+      // SHIFT click selects a whole range of segments, starting at the anchor.
+      // The anchor is the last id of the selection: plain and CTRL clicks append
+      // the clicked segment, and range selections keep the anchor at the end, so
+      // that it stays fixed across subsequent SHIFT clicks. Since the selection
+      // lives in the store, the anchor survives remounts and is per layer.
+      // Like in the skeleton tab, this only works for segments within the same group.
+      const anchorSegmentId = selection.selectedSegmentIds.at(-1);
       if (anchorSegmentId != null) {
         const segmentIdsInRange = getSegmentIdsInRange(hierarchy, anchorSegmentId, node.segment.id);
         if (segmentIdsInRange != null) {
-          selection.setSelection(segmentIdsInRange, null);
+          // CTRL+SHIFT adds the range to the existing selection instead of replacing it.
+          const isAdditive = nativeEvent.ctrlKey || nativeEvent.metaKey;
+          const newSegmentIds = new Set(isAdditive ? selection.selectedSegmentIds : []);
+          for (const id of segmentIdsInRange) newSegmentIds.add(id);
+          newSegmentIds.delete(anchorSegmentId);
+          selection.setSelection([...newSegmentIds, anchorSegmentId], null);
         }
         return;
       }
     }
-    rangeSelectionAnchorRef.current = node.type === "segment" ? node.segment.id : null;
 
     // Windows / Mac single pick
     const isMultiSelectPick = nativeEvent?.ctrlKey || nativeEvent?.metaKey;

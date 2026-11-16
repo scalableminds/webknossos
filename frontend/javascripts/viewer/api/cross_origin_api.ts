@@ -11,6 +11,15 @@ import {
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
 import {
+  ensureTreeGroupPath,
+  exportTreesAsNmlString,
+  findTreeGroupPath,
+  replaceTreesInGroup,
+  setAnnotationDescription,
+  setAnnotationName,
+  setLayerVisibility,
+} from "viewer/view/layer_registration/layer_registration_iframe_commands";
+import {
   type IframeCommand,
   isLayerRegistrationWorker,
 } from "viewer/view/layer_registration/layer_registration_protocol";
@@ -182,22 +191,22 @@ const handleMessage = async (event) => {
     }
 
     case "exportTreesAsNmlString": {
-      returnValue = await api.tracing.exportTreesAsNmlString(args[0]);
+      returnValue = await exportTreesAsNmlString(args[0]);
       break;
     }
 
     case "replaceTreesInGroup": {
-      await api.tracing.replaceTreesInGroup(args[0], args[1]);
+      await replaceTreesInGroup(args[0], args[1]);
       break;
     }
 
     case "ensureTreeGroupPath": {
-      returnValue = api.tracing.ensureTreeGroupPath(args[0]);
+      returnValue = ensureTreeGroupPath(args[0]);
       break;
     }
 
     case "findTreeGroupPath": {
-      returnValue = api.tracing.findTreeGroupPath(args[0]);
+      returnValue = findTreeGroupPath(args[0]);
       break;
     }
 
@@ -205,7 +214,7 @@ const handleMessage = async (event) => {
       if (!isString(args[0])) {
         throw new Error("The first argument needs to be the new name as a string.");
       }
-      api.tracing.setAnnotationName(args[0]);
+      setAnnotationName(args[0]);
       break;
     }
 
@@ -213,7 +222,7 @@ const handleMessage = async (event) => {
       if (!isString(args[0])) {
         throw new Error("The first argument needs to be the new description as a string.");
       }
-      await api.tracing.setAnnotationDescription(args[0]);
+      await setAnnotationDescription(args[0]);
       break;
     }
 
@@ -233,7 +242,7 @@ const handleMessage = async (event) => {
     }
 
     case "setLayerVisibility": {
-      api.data.setLayerVisibility(args[0], args[1]);
+      setLayerVisibility(args[0], args[1]);
       break;
     }
 

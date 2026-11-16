@@ -975,6 +975,7 @@ function SkeletonTracingReducer(
       }
       const { timestamp, sourceNodeId, targetNodeId } = action;
       if (sourceNodeId === targetNodeId) {
+        // Guard explicitly: the edge lookup in insertNodeOnEdge would match any edge of the node.
         return state;
       }
       const tree = findTreeByNodeId(skeletonTracing.trees, sourceNodeId);
@@ -987,7 +988,14 @@ function SkeletonTracingReducer(
         return state;
       }
 
-      const insertResult = insertNodeOnEdge(state, tree, sourceNode, targetNode, timestamp);
+      const insertResult = insertNodeOnEdge(
+        state,
+        skeletonTracing,
+        tree,
+        sourceNode,
+        targetNode,
+        timestamp,
+      );
       if (insertResult == null) {
         return state;
       }

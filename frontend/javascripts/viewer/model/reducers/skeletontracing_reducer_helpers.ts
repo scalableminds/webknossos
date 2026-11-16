@@ -268,15 +268,12 @@ export function deleteNodeAndReconnectNeighbors(
 // tree is not split. Returns null if the two nodes are not connected by an edge.
 export function insertNodeOnEdge(
   state: WebknossosState,
+  skeletonTracing: SkeletonTracing,
   tree: Tree,
   nodeA: Node,
   nodeB: Node,
   timestamp: number,
 ): [TreeMap, Node] | null {
-  const skeletonTracing = getSkeletonTracing(state.annotation);
-  if (skeletonTracing == null) {
-    return null;
-  }
   const edgeToSplit = tree.edges
     .getEdgesForNode(nodeA.id)
     .find((edge) => edge.source === nodeB.id || edge.target === nodeB.id);
@@ -290,11 +287,7 @@ export function insertNodeOnEdge(
   const newNode: Node = {
     ...sourceNode,
     id: skeletonTracing.cachedMaxNodeId + 1,
-    untransformedPosition: V3.trunc([
-      (sourcePosition[0] + targetPosition[0]) / 2,
-      (sourcePosition[1] + targetPosition[1]) / 2,
-      (sourcePosition[2] + targetPosition[2]) / 2,
-    ]),
+    untransformedPosition: V3.trunc(V3.scale(V3.add(sourcePosition, targetPosition), 0.5)),
     timestamp,
     bitDepth: state.datasetConfiguration.fourBit ? 4 : 8,
     interpolation: state.datasetConfiguration.interpolation,

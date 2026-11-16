@@ -635,6 +635,9 @@ function SkeletonTracingReducer(
             $set: action.tracing,
           },
         },
+        localSkeletonState: {
+          $merge: action.localSkeletonState ?? {},
+        },
       });
     }
 

@@ -11,7 +11,7 @@ import {
   AllUserBoundingBoxActions,
 } from "viewer/model/actions/annotation_actions";
 import type { MutableTreeMap, Tree, TreeGroup } from "viewer/model/types/tree_types";
-import type { SkeletonTracing } from "viewer/store";
+import type { SkeletonTracing, UndoableLocalSkeletonState } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import type { ApplicableSkeletonServerUpdateAction } from "../sagas/volume/update_actions";
 
@@ -682,10 +682,15 @@ export const deleteCommentAction = (nodeId?: number, treeId?: number) =>
     treeId,
   }) as const;
 
-export const setSkeletonTracingAction = (tracing: SkeletonTracing) =>
+// If localSkeletonState is given, it is set in the same reducer step as the tracing.
+export const setSkeletonTracingAction = (
+  tracing: SkeletonTracing,
+  localSkeletonState?: UndoableLocalSkeletonState,
+) =>
   ({
     type: "SET_SKELETON_TRACING",
     tracing,
+    localSkeletonState,
   }) as const;
 
 export const setTreeGroupsAction = (treeGroups: Array<TreeGroup>) =>

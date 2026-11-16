@@ -229,6 +229,8 @@ object Msg {
       val onlyOneSkeletonAllowed: String = "Only one skeleton layer is allowed per annotation."
       val mappingIsLocked: String = "Cannot modify mapping in a locked annotation."
       val authorIdMismatch: String = "Annotation updates can only be stored with the requesting user as author."
+      def foreignTreeEdit(treeIds: Seq[Int]): String =
+        s"Cannot edit trees owned by other users: ${treeIds.mkString(", ")}. Only the creator of a tree can edit it."
     }
     object Download {
       val failed: String = "Could not download annotation."

@@ -85,7 +85,8 @@ class AnnotationController @Inject() (
 
   private val taskReopenAllowed = conf.Features.taskReopenAllowed + (10 seconds)
 
-  private val numberOfIdsToReservePerRequest = 10
+  // High enough to reserve one id per node of a large agglomerate tree in one request
+  private val numberOfIdsToReservePerRequest = 100000
 
   def info( // Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType
       typ: String,
@@ -605,7 +606,7 @@ class AnnotationController @Inject() (
             AnnotationIdentifier(annotation.typ, id)
           ) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
           _ <- Fox.assertTrue(restrictions.allowUpdate(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
-          // Note: this limit should match what the frontend requests, see IDEAL_ID_BUFFER_SIZE in id_reservation_saga.
+          // Note: this limit must match MAX_IDS_PER_RESERVATION in the frontend (constants.ts).
           _ <- Fox.fromBool(request.body.numberOfIdsToReserve <= numberOfIdsToReservePerRequest) ?~> Msg.Annotation
             .reserveTooManyIds(numberOfIdsToReservePerRequest) ~> FORBIDDEN
           ids: Seq[Long] <- annotationIdReservationService.reserveIds(

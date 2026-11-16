@@ -1,6 +1,7 @@
 import type { ApiResult, RetryOptions } from "admin/api/api_result";
 import { getUpdateActionLog } from "admin/rest_api";
 import Toast from "libs/toast";
+import messages from "messages";
 import { call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
@@ -22,13 +23,17 @@ import {
   type RebasingFailure,
   SuccessEmptyIncorporateActionsReturnValue,
 } from "./applying_update_artifacts";
-import { tryToIncorporateActions } from "./incorporate_update_actions_sagas";
+import {
+  lockAnnotationAndShowReloadToast,
+  tryToIncorporateActions,
+} from "./incorporate_update_actions_sagas";
 import { resolveApplyingUpdateArtifacts } from "./mesh_artifact_resolution_sagas";
 import {
   saveQueueEntriesToServerUpdateActionBatches,
   updatePendingProofreadingOperationInfo,
 } from "./rebasing_helpers_sagas";
 import { rewriteSaveQueueEntriesForReapplying } from "./rewrite_for_reapplying_sagas";
+import { containsOwnTreeEditFromOtherSession } from "./same_user_session_lockout";
 
 /*
  * This module performs one rebase round: it fetches the update actions that are missing locally,
@@ -38,6 +43,7 @@ import { rewriteSaveQueueEntriesForReapplying } from "./rewrite_for_reapplying_s
  */
 
 const SAVING_CONFLICT_TOAST_KEY = "save_conflicts_warning";
+const SAME_USER_OTHER_SESSION_TOAST_KEY = "same_user_other_session_warning";
 
 export type RebasingSuccessInfo =
   | { successful: true }
@@ -65,6 +71,26 @@ export function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   if (!hasRemoteUnseenChanges) {
     // Neither a rebase nor a fast-forward is necessary since there are no remote changes to incorporate.
     return { successful: true };
+  }
+
+  if (collaborationMode === "Concurrent") {
+    const activeUserId = yield* select((state) => state.activeUser?.id);
+    const skeletonTracing = yield* select((state) => state.annotation.skeleton);
+    if (containsOwnTreeEditFromOtherSession(missingUpdateActions, activeUserId, skeletonTracing)) {
+      // The fetched updates are neither applied nor are the local changes saved (they are lost).
+      yield* call(
+        lockAnnotationAndShowReloadToast,
+        SAME_USER_OTHER_SESSION_TOAST_KEY,
+        messages["tracing.trees_edited_in_other_session"],
+      );
+      return {
+        successful: false,
+        failure: {
+          reason: "Trees of the current user were edited in another session",
+          isExpected: true,
+        },
+      };
+    }
   }
 
   // Ensure tracings were diffed so that the save queue can be inspected afterwards.

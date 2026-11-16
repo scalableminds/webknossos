@@ -22,9 +22,10 @@ import type { ModalApi } from "libs/with_modal_hoc";
 import messages from "messages";
 import { useDispatch } from "react-redux";
 import {
-  isAgglomerateTree,
   isAnnotationOwner,
   isConcurrentCollaborationMode,
+  isTreeEditableByUserInLiveCollab,
+  mayCreateSkeletonTrees,
   mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
 import {
@@ -104,21 +105,31 @@ export function SkeletonToolbar({ hierarchy, selection, groupOperations, skeleto
   const isOwner = useWkSelector(isAnnotationOwner);
 
   const isEditingDisabled = !allowUpdate || isConcurrentCollabMode;
+  // In concurrent collaboration mode, users may create their own trees.
+  const isCreatingTreesDisabled = !useWkSelector(mayCreateSkeletonTrees);
+  const activeUserId = useWkSelector((state) => state.activeUser?.id);
+  const annotationOwnerId = useWkSelector((state) => state.annotation.owner?.id);
   const isEditingDisabledMessage = isConcurrentCollabMode
     ? messages["tracing.skeleton_editing_disabled_in_live_collab"]
     : messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner);
 
-  // Used to keep the delete button enabled in concurrent collaboration
-  // mode when the deletion is actually permitted (only agglomerate trees, i.e. proofreading).
-  const isDeleteOnlyAffectingAgglomerateTrees = () => {
+  // Used to keep the delete button enabled in concurrent collaboration mode when the deletion
+  // is actually permitted (only own trees and agglomerate trees).
+  const isDeleteOnlyAffectingEditableTrees = () => {
     const treeIdsToDelete = selection.selectedTreeIds;
     return (
       treeIdsToDelete.length > 0 &&
-      treeIdsToDelete.every((treeId) => isAgglomerateTree(trees.getNullable(treeId)))
+      treeIdsToDelete.every((treeId) =>
+        isTreeEditableByUserInLiveCollab(
+          trees.getNullable(treeId),
+          activeUserId,
+          annotationOwnerId,
+        ),
+      )
     );
   };
   const isDeleteDisabled =
-    !allowUpdate || (isConcurrentCollabMode && !isDeleteOnlyAffectingAgglomerateTrees());
+    !allowUpdate || (isConcurrentCollabMode && !isDeleteOnlyAffectingEditableTrees());
 
   const expandParentGroupsOf = (node: SkeletonUiNode) => {
     if (node.type === "tree") {
@@ -298,8 +309,8 @@ export function SkeletonToolbar({ hierarchy, selection, groupOperations, skeleto
           </AdvancedSearchPopover>
           <ButtonComponent
             onClick={() => dispatch(createTreeAction())}
-            title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
-            disabled={isEditingDisabled}
+            title={isCreatingTreesDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
+            disabled={isCreatingTreesDisabled}
             icon={<PlusOutlined />}
             variant="text"
             color="default"

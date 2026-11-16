@@ -6,6 +6,7 @@ import {
   initialTreeOne,
 } from "test/fixtures/hybridtracing_object";
 import { chainReduce } from "test/helpers/chainReducer";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
@@ -48,7 +49,7 @@ import {
 } from "viewer/model/types/tree_types";
 import type { WebknossosState } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const initialState: WebknossosState = update(defaultState, {
   annotation: {
@@ -1662,7 +1663,15 @@ describe("SkeletonTracing", () => {
   });
 });
 
-describe("SkeletonTracing - concurrent collaboration mode", () => {
+describe("SkeletonTracing - concurrent collaboration mode without the skeleton dev flag", () => {
+  const previousAllowFlag = WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation;
+  beforeEach(() => {
+    WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation = false;
+  });
+  afterEach(() => {
+    WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation = previousAllowFlag;
+  });
+
   // Tree 1 is a default tree (and the active tree); tree 2 is an agglomerate tree.
   const concurrentState = update(initialState, {
     annotation: { collaborationMode: { $set: "Concurrent" } },
@@ -1707,5 +1716,166 @@ describe("SkeletonTracing - concurrent collaboration mode", () => {
     const newState = SkeletonTracingReducer(initialState, setTreeNameAction("new name", 1));
     expect(newState).not.toBe(initialState);
     expect(enforceSkeletonTracing(newState.annotation).trees.getOrThrow(1).name).toBe("new name");
+  });
+});
+
+describe("SkeletonTracing - tree ownership in concurrent collaboration mode", () => {
+  const previousAllowFlag = WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation;
+  beforeEach(() => {
+    WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation = true;
+  });
+  afterEach(() => {
+    WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation = previousAllowFlag;
+  });
+
+  // Tree 1 is a default tree (and the active tree); tree 2 is an agglomerate tree.
+  const ownStateWithoutReservations = update(initialState, {
+    annotation: {
+      collaborationMode: { $set: "Concurrent" },
+      owner: { $set: { id: "annotation-owner" } as WebknossosState["annotation"]["owner"] },
+      skeleton: {
+        trees: {
+          $apply: (trees: TreeMap) =>
+            trees.set(1, { ...trees.getOrThrow(1), ownerId: "current-user" }),
+        },
+      },
+    },
+    activeUser: { $set: { id: "current-user" } as WebknossosState["activeUser"] },
+  });
+  const ownState = update(ownStateWithoutReservations, {
+    localSkeletonState: {
+      idReservations: {
+        $set: {
+          Tree: [
+            { id: 100, used: false },
+            { id: 101, used: false },
+          ],
+          Node: [
+            { id: 1000, used: false },
+            { id: 1001, used: false },
+          ],
+          TreeGroup: [],
+        },
+      },
+    },
+  });
+  const foreignState = update(ownState, {
+    annotation: {
+      skeleton: {
+        trees: {
+          $apply: (trees: TreeMap) =>
+            trees.set(1, { ...trees.getOrThrow(1), ownerId: "other-user" }),
+        },
+      },
+    },
+  });
+
+  it("should allow renaming an own tree", () => {
+    const newState = SkeletonTracingReducer(ownState, setTreeNameAction("new name", 1));
+    expect(enforceSkeletonTracing(newState.annotation).trees.getOrThrow(1).name).toBe("new name");
+  });
+
+  it("should not allow renaming a tree of another user", () => {
+    const newState = SkeletonTracingReducer(foreignState, setTreeNameAction("new name", 1));
+    expect(newState).toBe(foreignState);
+  });
+
+  it("should treat trees without owner as owned by the annotation owner", () => {
+    const unownedState = update(ownState, {
+      annotation: {
+        skeleton: {
+          trees: {
+            $apply: (trees: TreeMap) =>
+              trees.set(1, { ...trees.getOrThrow(1), ownerId: undefined }),
+          },
+        },
+      },
+    });
+    expect(SkeletonTracingReducer(unownedState, setTreeNameAction("new name", 1))).toBe(
+      unownedState,
+    );
+    const asAnnotationOwner = update(unownedState, {
+      activeUser: { $set: { id: "annotation-owner" } as WebknossosState["activeUser"] },
+    });
+    expect(
+      enforceSkeletonTracing(
+        SkeletonTracingReducer(asAnnotationOwner, setTreeNameAction("new name", 1)).annotation,
+      ).trees.getOrThrow(1).name,
+    ).toBe("new name");
+  });
+
+  it("should create a node in an own tree with a reserved id", () => {
+    const newState = SkeletonTracingReducer(
+      ownState,
+      createNodeAction(position, null, rotation, viewport, mag),
+    );
+    const skeleton = enforceSkeletonTracing(newState.annotation);
+    expect(skeleton.trees.getOrThrow(1).nodes.has(1000)).toBe(true);
+    expect(skeleton.activeNodeId).toBe(1000);
+    expect(newState.localSkeletonState.idReservations.Node).toEqual([
+      { id: 1000, used: true },
+      { id: 1001, used: false },
+    ]);
+
+    const stateAfterSecondNode = SkeletonTracingReducer(
+      newState,
+      createNodeAction(position, null, rotation, viewport, mag),
+    );
+    expect(
+      enforceSkeletonTracing(stateAfterSecondNode.annotation).trees.getOrThrow(1).nodes.has(1001),
+    ).toBe(true);
+  });
+
+  it("should not create a node in a tree of another user", () => {
+    const newState = SkeletonTracingReducer(
+      foreignState,
+      createNodeAction(position, null, rotation, viewport, mag),
+    );
+    expect(newState).toBe(foreignState);
+  });
+
+  it("should ignore creating a node if no node id is reserved", () => {
+    const newState = SkeletonTracingReducer(
+      ownStateWithoutReservations,
+      createNodeAction(position, null, rotation, viewport, mag),
+    );
+    expect(newState).toBe(ownStateWithoutReservations);
+  });
+
+  it("should create a tree with a reserved id that is owned by the current user", () => {
+    let createdTreeId: number | null = null;
+    const newState = SkeletonTracingReducer(
+      foreignState,
+      createTreeAction((id) => {
+        createdTreeId = id;
+      }),
+    );
+    expect(createdTreeId).toBe(100);
+    expect(enforceSkeletonTracing(newState.annotation).trees.getOrThrow(100).ownerId).toBe(
+      "current-user",
+    );
+    // The next tree gets the next reservation, because tree 100 exists now.
+    const stateAfterSecondTree = SkeletonTracingReducer(newState, createTreeAction());
+    expect(enforceSkeletonTracing(stateAfterSecondTree.annotation).trees.has(101)).toBe(true);
+  });
+
+  it("should ignore creating a tree if no tree id is reserved", () => {
+    const newState = SkeletonTracingReducer(ownStateWithoutReservations, createTreeAction());
+    expect(newState).toBe(ownStateWithoutReservations);
+  });
+
+  it("should split an own tree into a new tree with a reserved id that keeps the owner", () => {
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const stateWithNodes = applyActions(ownState, [createNode, createNode]);
+    const newState = SkeletonTracingReducer(stateWithNodes, deleteEdgeAction(1000, 1001));
+    const trees = enforceSkeletonTracing(newState.annotation).trees;
+    expect(trees.getOrThrow(1).ownerId).toBe("current-user");
+    expect(trees.getOrThrow(100).ownerId).toBe("current-user");
+    expect(trees.getOrThrow(100).nodes.has(1001)).toBe(true);
+  });
+
+  it("should still allow editing agglomerate trees", () => {
+    const newState = SkeletonTracingReducer(foreignState, setTreeNameAction("new name", 2));
+    expect(enforceSkeletonTracing(newState.annotation).trees.getOrThrow(2).name).toBe("new name");
   });
 });

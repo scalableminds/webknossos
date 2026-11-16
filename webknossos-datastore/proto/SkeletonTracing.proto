@@ -65,6 +65,8 @@ message Tree {
   optional bool edgesAreVisible = 12; // `None` means `true`
   repeated MetadataEntryProto metadata = 13;
   optional TreeAgglomerateInfoProto agglomerateInfo = 14;
+  // User id of the tree's creator. Unset for trees created before this field existed, those count as owned by the annotation owner.
+  optional string ownerId = 15;
 }
 
 message TreeGroup {

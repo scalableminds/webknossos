@@ -333,6 +333,7 @@ const defaultState: WebknossosState = {
       activeIndex: -1,
     },
     showSkeletons: true,
+    idReservations: { Tree: [], Node: [], TreeGroup: [] },
   },
   localAnnotationState: {
     idReservationsForBoundingBoxes: [],

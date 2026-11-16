@@ -1,6 +1,7 @@
 package backend
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.SkeletonTracing.*
 import com.scalableminds.webknossos.datastore.helpers.{TreeAgglomerateInfo, UnsignedLong}
 import com.scalableminds.webknossos.tracingstore.tracings.*
@@ -54,6 +55,29 @@ class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {
       assert(tree.`type` == createTreeAction.`type`.map(TreeType.toProto))
       assert(tree.metadata == MetadataEntry.toProtoMultiple(createTreeAction.metadata))
       assert(tree.agglomerateInfo == createTreeAction.agglomerateInfo.map(_.toProto))
+      assert(tree.ownerId.isEmpty)
+    }
+
+    "set the tree owner to the action author" in {
+      val authorId = ObjectId.generate
+      val createTreeAction = new CreateTreeSkeletonAction(
+        id = 1000,
+        color = None,
+        name = "new tree",
+        branchPoints = List(),
+        timestamp = Dummies.timestamp,
+        comments = List[UpdateActionComment](),
+        groupId = None,
+        isVisible = Some(true),
+        edgesAreVisible = Some(true),
+        agglomerateInfo = None,
+        actionTracingId = Dummies.tracingId,
+        actionAuthorId = Some(authorId)
+      )
+      val result = applyUpdateAction(createTreeAction)
+
+      val tree = result.trees.find(_.treeId == createTreeAction.id).get
+      assert(tree.ownerId.contains(authorId.toString))
     }
   }
 

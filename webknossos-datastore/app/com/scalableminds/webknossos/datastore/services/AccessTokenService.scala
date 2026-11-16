@@ -22,8 +22,14 @@ object AccessResourceType extends ExtendedEnumeration {
   val dataset, tracing, annotation, webknossos, jobExport, alignmentProject = Value
 }
 
-case class UserAccessAnswer(granted: Boolean, msg: Option[String] = None, userId: Option[ObjectId] = None)
-    derives JsonAutoFormat
+// annotationCollaborationMode and annotationOwnerId are only set for annotation access requests
+case class UserAccessAnswer(
+    granted: Boolean,
+    msg: Option[String] = None,
+    userId: Option[ObjectId] = None,
+    annotationCollaborationMode: Option[String] = None,
+    annotationOwnerId: Option[ObjectId] = None
+) derives JsonAutoFormat
 
 case class UserAccessRequest(resourceId: Option[String], resourceType: AccessResourceType.Value, mode: AccessMode.Value)
     derives JsonAutoFormat
@@ -89,12 +95,18 @@ trait AccessTokenService {
   def validateAccessFromTokenContextWithUserId(accessRequest: UserAccessRequest, useCaching: Boolean = true)(
       block: Option[ObjectId] => Fox[Result]
   )(using ec: ExecutionContext, tc: TokenContext): Fox[Result] =
+    validateAccessFromTokenContextWithAnswer(accessRequest, useCaching)(answer => block(answer.userId))
+
+  // Passes the full (granted) access answer to the block, e.g. to read userId or annotation info
+  def validateAccessFromTokenContextWithAnswer(accessRequest: UserAccessRequest, useCaching: Boolean = true)(
+      block: UserAccessAnswer => Fox[Result]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Result] =
     for {
       userAccessAnswer <- hasUserAccess(
         accessRequest,
         useCaching
       ) ?~> "Failed to check data access, token may be expired, consider reloading."
-      result <- executeBlockOnPositiveAnswer(userAccessAnswer, block(userAccessAnswer.userId))
+      result <- executeBlockOnPositiveAnswer(userAccessAnswer, block(userAccessAnswer))
     } yield result
 
   private def hasUserAccess(accessRequest: UserAccessRequest, useCaching: Boolean)(using
@@ -113,9 +125,9 @@ trait AccessTokenService {
       block: => Fox[Result]
   )(implicit ec: ExecutionContext): Fox[Result] =
     userAccessAnswer match {
-      case UserAccessAnswer(true, _, _) =>
+      case UserAccessAnswer(true, _, _, _, _) =>
         block
-      case UserAccessAnswer(false, Some(msg), _) =>
+      case UserAccessAnswer(false, Some(msg), _, _, _) =>
         // Note that this should be kept in sync with DSLegacyApiController.withResolvedDatasetId
         // to make the errors indistinguishable.
         Fox.successful(Forbidden("Token may be expired, consider reloading. Access forbidden: " + msg))

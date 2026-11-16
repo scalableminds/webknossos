@@ -60,6 +60,7 @@
     "entryCount": 1,
     "itemsPerBatch": 1000,
   },
+  "ownerId": "dummy-user-id",
   "timestamp": 1494695001688,
   "treeId": 7,
   "type": "AGGLOMERATE",

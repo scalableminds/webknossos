@@ -345,8 +345,9 @@ const Constants = {
 
   // How many IDs should be held in a buffer for new instances of segment groups, trees etc
   // (see id reservation saga).
-  // Note: this value 10 should match the limit in the backend see AnnotationController.reserveIds
   IDEAL_ID_BUFFER_SIZE: import.meta.env.MODE === "test" ? 5 : 10,
+  // Must match the limit in the backend (see AnnotationController.reserveIds).
+  MAX_IDS_PER_RESERVATION: 100000,
 } as const;
 
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping

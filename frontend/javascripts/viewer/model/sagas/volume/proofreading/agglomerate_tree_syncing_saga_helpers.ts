@@ -9,10 +9,8 @@ import {
 import { getEditableMappingForVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import EdgeCollection from "viewer/model/edge_collection";
-import {
-  createMutableTreeMapFromTreeArray,
-  getMaximumTreeId,
-} from "viewer/model/reducers/skeletontracing_reducer_helpers";
+import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
+import { takeSkeletonIds } from "viewer/model/sagas/id_reservation_saga";
 import type { Node } from "viewer/model/types/tree_types";
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import type { SkeletonTracing } from "viewer/store";
@@ -107,18 +105,25 @@ function* getAllAgglomerateTreesFromServerAndRemap(
   tracingId: string,
   mappingName: string,
 ): Saga<SkeletonTracing> {
-  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
   const loadTreeEffects = agglomerateIds.map((id) =>
     call(getAgglomerateTreeAsSkeletonTracing, tracingId, mappingName, id),
   );
   const aggloTreeTracings = yield* all(loadTreeEffects);
-  const aggloTrees = aggloTreeTracings.reduce((aggloTrees, tracing, index) => {
-    const treesOfTracing = Array.from(createMutableTreeMapFromTreeArray(tracing.trees).values());
-    const remappedTrees = remapNodeIdsWithPositionMap(
-      treesOfTracing,
-      positionToIdMap,
-      skeletonTracing.cachedMaxNodeId,
-    );
+  const treesPerTracing = aggloTreeTracings.map((tracing) =>
+    Array.from(createMutableTreeMapFromTreeArray(tracing.trees).values()),
+  );
+  // Nodes at positions that are not in positionToIdMap need new ids.
+  let newNodeCount = 0;
+  for (const trees of treesPerTracing) {
+    for (const tree of trees) {
+      for (const node of tree.nodes.values()) {
+        if (positionToIdMap[node.untransformedPosition.toString()] == null) newNodeCount++;
+      }
+    }
+  }
+  const newNodeIds = yield* call(takeSkeletonIds, "Node", newNodeCount);
+  const aggloTrees = treesPerTracing.reduce((aggloTrees, treesOfTracing, index) => {
+    const remappedTrees = remapNodeIdsWithPositionMap(treesOfTracing, positionToIdMap, newNodeIds);
     remappedTrees[0] = { ...remappedTrees[0], treeId: treeIds[index] };
     return aggloTrees.concat(remappedTrees);
   }, [] as Tree[]);
@@ -148,10 +153,15 @@ export function createPositionToIdMap(trees: MapIterator<Tree> | Tree[]) {
 export function remapNodeIdsWithPositionMap(
   trees: Tree[],
   positionToIdMap: PositionToIdMap,
-  maxNodeId: number,
+  // Ids for nodes whose position is not in positionToIdMap (consumed in order).
+  newNodeIds: number[],
 ): Tree[] {
-  let newNodeId = maxNodeId + 1;
-  const getNextFreeNodeId = () => newNodeId++;
+  let newNodeIdIndex = 0;
+  const getNextFreeNodeId = () => {
+    const newNodeId = newNodeIds[newNodeIdIndex++];
+    if (newNodeId == null) throw new Error("Not enough new node ids.");
+    return newNodeId;
+  };
   return trees.map((tree) => {
     let updatedNodes = new DiffableMap<number, Node>();
     let updatedEdges = new EdgeCollection();
@@ -213,6 +223,7 @@ function* updateAffectedAgglomerateTrees(
   tracingWithOldAggloTrees: SkeletonTracing,
   tracingWithUpdatedAggloTrees: SkeletonTracing,
 ) {
+  const activeUserId = yield* select((state) => state.activeUser?.id);
   const diffActions = deepDiffTreesInSkeletonTracings(
     tracingWithOldAggloTrees,
     tracingWithUpdatedAggloTrees,
@@ -226,7 +237,8 @@ function* updateAffectedAgglomerateTrees(
           value: {
             ...a.value,
             actionTimestamp: 0, // ignored anyway
-            actionAuthorId: "me",
+            // Used as the owner of newly created trees (see update_action_application/skeleton.ts).
+            actionAuthorId: activeUserId,
           } as const,
         }) as const,
     ) as ApplicableSkeletonServerUpdateAction[];
@@ -271,7 +283,7 @@ export function* syncAgglomerateTreesAfterMergeAction(
   );
   const assignedTreeIds = maybeOutdatedSourceAgglomerateTree
     ? [maybeOutdatedSourceAgglomerateTree.treeId]
-    : [getMaximumTreeId(skeletonTracing.trees) + 1];
+    : yield* call(takeSkeletonIds, "Tree", 1);
 
   const tracingWithUpdatedAggloTrees = yield* call(
     getAllAgglomerateTreesFromServerAndRemap,
@@ -318,13 +330,15 @@ export function* syncAgglomerateTreesAfterSplitAction(
   }
   const positionToIdMap = createPositionToIdMap(tracingWithOldAggloTrees.trees.values());
 
-  let newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
-
-  const assignedTreeIds = newAgglomerateIds
-    .map((id) =>
-      findTreeByAgglomerateId(tracingWithOldAggloTrees.trees, id, tracingId, baseMappingName),
-    )
-    .map((tree) => (tree ? tree.treeId : newTreeId++));
+  const existingTrees = newAgglomerateIds.map((id) =>
+    findTreeByAgglomerateId(tracingWithOldAggloTrees.trees, id, tracingId, baseMappingName),
+  );
+  const newTreeIds = yield* call(
+    takeSkeletonIds,
+    "Tree",
+    existingTrees.filter((tree) => tree == null).length,
+  );
+  const assignedTreeIds = existingTrees.map((tree) => (tree ? tree.treeId : newTreeIds.shift()!));
 
   const tracingWithUpdatedAggloTrees = yield* call(
     getAllAgglomerateTreesFromServerAndRemap,

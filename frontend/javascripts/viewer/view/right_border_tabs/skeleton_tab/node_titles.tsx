@@ -10,6 +10,7 @@ import { TreeTypeEnum } from "viewer/constants";
 import {
   isConcurrentCollaborationMode,
   mayEditAnnotation,
+  mayEditSkeletonTree,
 } from "viewer/model/accessors/annotation_accessor";
 import { setTreeNameAction } from "viewer/model/actions/skeletontracing_actions";
 import { api } from "viewer/singletons";
@@ -69,12 +70,10 @@ export const TreeNodeTitle = memo(
     isExpanded: boolean;
   }) => {
     const dispatch = useDispatch();
-    const allowUpdate = useWkSelector(mayEditAnnotation);
-    const isConcurrentCollabMode = useWkSelector(isConcurrentCollaborationMode);
     const { tree } = node;
     const isAgglomerateTree = tree.type === TreeTypeEnum.AGGLOMERATE;
-    // In concurrent collaboration mode, only agglomerate trees (proofreading) may be edited.
-    const disableEditing = !allowUpdate || (isConcurrentCollabMode && !isAgglomerateTree);
+    // In concurrent collaboration mode, only own trees and agglomerate trees may be edited.
+    const disableEditing = !useWkSelector((state) => mayEditSkeletonTree(state, tree));
     const nodeCount = tree.nodes.size();
     // The type claims metadata is always set, but e.g. proto-imported trees can lack it at runtime.
     const hasMetadata = (tree.metadata ?? []).length > 0;

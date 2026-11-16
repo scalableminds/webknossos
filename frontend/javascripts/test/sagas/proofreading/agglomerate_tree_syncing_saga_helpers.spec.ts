@@ -93,11 +93,10 @@ describe("Agglomerate Tree Syncing Helpers", () => {
     const edges2 = new EdgeCollection().addEdges([{ source: 13, target: 14 }]);
     const tree1 = createTree(10, nodes1, edges1);
     const tree2 = createTree(11, nodes2, edges2);
-    const currentMaxNodeId = 5;
     const [remappedTree1, remappedTree2] = remapNodeIdsWithPositionMap(
       [tree1, tree2],
       positionToIdMap,
-      currentMaxNodeId,
+      [],
     );
     expect([...remappedTree1.nodes.values()]).toStrictEqual([
       createNode(1),
@@ -128,11 +127,8 @@ describe("Agglomerate Tree Syncing Helpers", () => {
       { source: 13, target: 14 },
     ]);
     const tree = createTree(10, nodes, edges);
-    // currentMaxNodeId needs to be at least 3 as this it the max id in positionToIdMap.
-    // Here we take 5 to simulate, that there is another tree present which has 2 nodes but is not considered in this operation.
-    // Thus, the no mappable nodes should start their id with 6 and then increase it.
-    const currentMaxNodeId = 5;
-    const [remappedTree] = remapNodeIdsWithPositionMap([tree], positionToIdMap, currentMaxNodeId);
+    // The nodes that are not in positionToIdMap get the given new ids (in order).
+    const [remappedTree] = remapNodeIdsWithPositionMap([tree], positionToIdMap, [6, 7]);
     expect([...remappedTree.nodes.values()]).toStrictEqual([
       createNode(1),
       createNode(2),
@@ -166,11 +162,10 @@ describe("Agglomerate Tree Syncing Helpers", () => {
     const edges2 = new EdgeCollection().addEdges([{ source: 13, target: 14 }]);
     const tree1 = createTree(10, nodes1, edges1);
     const tree2 = createTree(11, nodes2, edges2);
-    const currentMaxNodeId = 5;
     const [remappedTree1, remappedTree2] = remapNodeIdsWithPositionMap(
       [tree1, tree2],
       positionToIdMap,
-      currentMaxNodeId,
+      [],
     );
     expect([...remappedTree1.nodes.values()]).toStrictEqual([
       createNode(1),

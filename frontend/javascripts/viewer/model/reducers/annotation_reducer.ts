@@ -567,9 +567,18 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       // BoundingBox reservations are annotation-wide (bounding boxes are mirrored across all
       // tracings, see updateUserBoundingBoxes above), unlike SegmentGroup/Segment reservations
       // which are handled per segmentation layer in volumetracing_reducer.ts.
-      if (action.domain !== "BoundingBox") return state;
-      return updateKey(state, "localAnnotationState", {
-        idReservationsForBoundingBoxes: action.reservations,
+      if (action.domain === "SegmentGroup") return state;
+      if (action.domain === "BoundingBox") {
+        return updateKey(state, "localAnnotationState", {
+          idReservationsForBoundingBoxes: action.reservations,
+        });
+      }
+      // Skeleton reservations (there is at most one skeleton tracing per annotation).
+      return updateKey(state, "localSkeletonState", {
+        idReservations: {
+          ...state.localSkeletonState.idReservations,
+          [action.domain]: action.reservations,
+        },
       });
     }
 

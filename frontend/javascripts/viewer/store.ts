@@ -163,6 +163,9 @@ export type LocalSkeletonState = {
   readonly activeGroupId: number | null | undefined;
   readonly navigationList: NavigationList;
   readonly showSkeletons: boolean;
+  // Only filled in live collaboration. In that mode, new trees, nodes and tree groups get their
+  // ids from these reservations (see id_reservation_saga.ts and skeleton_id_allocation.ts).
+  readonly idReservations: Record<SkeletonIdDomain, IdReservation[]>;
 };
 // The part of LocalSkeletonState that undo/redo saves and restores together
 // with the SkeletonTracing, so that the active tree always matches the active node.
@@ -673,6 +676,7 @@ export type LocalMeshesInfo =
 // A single entry of the id reservation mechanism (see id_reservation_saga.ts). `used`
 // marks whether the id has already been assigned to a newly created item.
 export type IdReservation = { id: number; used: boolean };
+export type SkeletonIdDomain = "Tree" | "Node" | "TreeGroup";
 
 // LocalSegmentationState holds per-layer segmentation state that is not
 // persisted on the server (in contrast to the VolumeTracing which must only

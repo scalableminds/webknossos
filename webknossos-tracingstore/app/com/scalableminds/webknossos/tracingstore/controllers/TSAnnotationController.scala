@@ -31,7 +31,7 @@ import com.scalableminds.webknossos.tracingstore.annotation.{
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.*
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingMergeService
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{SkeletonTracingService, TreeOwnershipService}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -52,7 +52,8 @@ class TSAnnotationController @Inject() (
     editableMappingMergeService: EditableMappingMergeService,
     annotationTransactionService: AnnotationTransactionService,
     skeletonTracingService: SkeletonTracingService,
-    volumeTracingService: VolumeTracingService
+    volumeTracingService: VolumeTracingService,
+    treeOwnershipService: TreeOwnershipService
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with KeyValueStoreConversions {
@@ -72,17 +73,30 @@ class TSAnnotationController @Inject() (
     Action.fox(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 minute) {
-          accessTokenService.validateAccessFromTokenContextWithUserId(
+          accessTokenService.validateAccessFromTokenContextWithAnswer(
             UserAccessRequest.writeAnnotation(annotationId),
             useCaching = false
-          ) { requestingUserIdOpt =>
+          ) { accessAnswer =>
             given stats: UpdateTimingStats = new UpdateTimingStats
             val requestStart = Instant.now
+            val requestingUserIdOpt = accessAnswer.userId
             for {
               _ <- Fox.fromBool(
                 requestingUserIdOpt.forall(userId => request.body.forall(_.authorId.forall(_ == userId)))
               ) ?~> Msg.Annotation.ApplyUpdate.authorIdMismatch ~> FORBIDDEN
-              _ <- annotationTransactionService.handleUpdateGroups(annotationId, request.body)
+              // The authenticated user is the author, also for groups that were sent without authorId
+              updateGroups = requestingUserIdOpt match {
+                case Some(userId) => request.body.map(_.copy(authorId = Some(userId)))
+                case None         => request.body
+              }
+              _ <- treeOwnershipService.assertOnlyOwnTreesEdited(
+                annotationId,
+                updateGroups,
+                accessAnswer.annotationCollaborationMode,
+                accessAnswer.annotationOwnerId,
+                requestingUserIdOpt
+              )
+              _ <- annotationTransactionService.handleUpdateGroups(annotationId, updateGroups)
               _ = logIfSlow(annotationId, requestStart, stats)
             } yield Ok
           }

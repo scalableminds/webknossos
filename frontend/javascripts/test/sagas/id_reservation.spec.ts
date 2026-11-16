@@ -14,6 +14,14 @@ import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, type TestContext, vi } from "vitest";
 
+// In live collaboration, the skeleton id reservations are filled in the background, too.
+// These requests are not relevant for the tests below.
+function isNonSkeletonReserveIdsCall([url, options]: [string, any?, ...unknown[]]) {
+  return (
+    url.includes("/reserveIds") && !["Tree", "Node", "TreeGroup"].includes(options?.data?.domain)
+  );
+}
+
 describe("ID reservation saga (concurrent collaboration mode)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
@@ -90,7 +98,7 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
 
       const reserveIdsCalls = vi
         .mocked(mocks.Request.sendJSONReceiveJSON)
-        .mock.calls.filter(([url]) => url.includes("/reserveIds"));
+        .mock.calls.filter(isNonSkeletonReserveIdsCall);
       expect(reserveIdsCalls).toHaveLength(0);
     });
 
@@ -192,12 +200,12 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
 
         const reserveIdsCalls = vi
           .mocked(mocks.Request.sendJSONReceiveJSON)
-          .mock.calls.filter(([url]) => url.includes("/reserveIds"));
+          .mock.calls.filter(isNonSkeletonReserveIdsCall);
         expect(reserveIdsCalls).toHaveLength(1);
 
         const allReleasedIds = vi
           .mocked(mocks.Request.sendJSONReceiveJSON)
-          .mock.calls.filter(([url]) => url.includes("/reserveIds"))
+          .mock.calls.filter(isNonSkeletonReserveIdsCall)
           .flatMap(
             ([, options]) => (options.data as Record<string, unknown>).idsToRelease as number[],
           );
@@ -245,7 +253,7 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
 
       const allReleasedIds = vi
         .mocked(mocks.Request.sendJSONReceiveJSON)
-        .mock.calls.filter(([url]) => url.includes("/reserveIds"))
+        .mock.calls.filter(isNonSkeletonReserveIdsCall)
         .flatMap(
           ([, options]) => (options.data as Record<string, unknown>).idsToRelease as number[],
         );
@@ -363,7 +371,7 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
 
       const reserveIdsCalls = vi
         .mocked(mocks.Request.sendJSONReceiveJSON)
-        .mock.calls.filter(([url]) => url.includes("/reserveIds"));
+        .mock.calls.filter(isNonSkeletonReserveIdsCall);
       expect(reserveIdsCalls).toHaveLength(1);
 
       const [, options] = reserveIdsCalls[0];

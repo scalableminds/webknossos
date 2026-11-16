@@ -78,6 +78,13 @@ const RadioGroup = Radio.Group;
 // collaborators can't lock different mappings with their first edits. An editable mapping is
 // always locked, but the backend doesn't necessarily set mappingIsLocked for it.
 function isMappingStateFixedForLiveCollaboration(state: WebknossosState): boolean {
+  if (
+    WkDevFlags.liveCollaboration.allowCollaborativeSkeletonAnnotation &&
+    state.annotation.volumes.length === 0
+  ) {
+    // Without volume layers, there is no mapping to lock.
+    return true;
+  }
   if (!WkDevFlags.liveCollaboration.allowCollaborativeVolumeAnnotation) {
     return hasEditableMapping(state);
   }

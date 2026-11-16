@@ -56,7 +56,8 @@ object MultiComponentTreeSplitter {
             name,
             tree.createdTimestamp,
             Some(largestGroupId),
-            tree.isVisible
+            tree.isVisible,
+            ownerId = tree.ownerId
           )
         }
       }

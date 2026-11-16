@@ -976,6 +976,7 @@ export type ServerSkeletonTracingTree = {
   edgesAreVisible?: boolean;
   metadata: MetadataEntryProto[];
   agglomerateInfo?: TreeAgglomerateInfo | undefined;
+  ownerId?: string;
 };
 
 // Note that this differs from APIMetadataEntry, because

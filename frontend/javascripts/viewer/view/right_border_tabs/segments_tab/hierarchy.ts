@@ -150,3 +150,41 @@ export function buildSegmentHierarchy(
     nodesByKey,
   };
 }
+
+/*
+ * Returns the ids of all segments between (and including) the two given segments,
+ * in rendered order. Like the range selection in the skeleton tab, this only works
+ * for segments within the same group. Otherwise, null is returned.
+ */
+export function getSegmentIdsInRange(
+  hierarchy: SegmentsHierarchy,
+  anchorSegmentId: bigint,
+  targetSegmentId: bigint,
+): bigint[] | null {
+  const anchorNode = hierarchy.nodesByKey.get(getSegmentUiNodeKey(anchorSegmentId));
+  const targetNode = hierarchy.nodesByKey.get(getSegmentUiNodeKey(targetSegmentId));
+  if (anchorNode?.type !== "segment" || targetNode?.type !== "segment") {
+    return null;
+  }
+  // Mirrors the grouping in createGroupToSegmentsMap.
+  const groupId = anchorNode.segment.groupId || MISSING_GROUP_ID;
+  if ((targetNode.segment.groupId || MISSING_GROUP_ID) !== groupId) {
+    return null;
+  }
+  const parentNode = hierarchy.nodesByKey.get(getGroupUiNodeKey(groupId));
+  if (parentNode?.type !== "group") {
+    return null;
+  }
+
+  const siblings = parentNode.children;
+  const anchorIndex = siblings.indexOf(anchorNode);
+  const targetIndex = siblings.indexOf(targetNode);
+  if (anchorIndex < 0 || targetIndex < 0) {
+    return null;
+  }
+  const [start, end] =
+    anchorIndex < targetIndex ? [anchorIndex, targetIndex] : [targetIndex, anchorIndex];
+  return siblings
+    .slice(start, end + 1)
+    .flatMap((sibling) => (sibling.type === "segment" ? [sibling.segment.id] : []));
+}

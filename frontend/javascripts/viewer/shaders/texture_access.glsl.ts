@@ -2,7 +2,7 @@ import { LayerPool } from "viewer/model/bucket_data_handling/data_rendering_logi
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { getAbsoluteCoords, getMagnificationFactors } from "viewer/shaders/coords.glsl";
 import { hashCombine } from "./hashing.glsl";
-import type { ShaderModule } from "./shader_module_system";
+import { forEachLayerKind, type ShaderModule } from "./shader_module_system";
 import { transDim } from "./utils.glsl";
 
 const linearizeVec3ToIndex: ShaderModule = {
@@ -30,61 +30,37 @@ const linearizeVec3ToIndexWithMod: ShaderModule = {
 };
 
 const getRgbaAtXYIndex: ShaderModule = {
-  code: `
+  code: forEachLayerKind(
+    "layerKinds",
+    `
     // textureIdx is the slice within the layer's pool texture.
-    vec4 getRgbaAtXYIndex(float localLayerIndex, float textureIdx, float x, float y) {
-      uint idx = uint(localLayerIndex);
-      uint poolId = layerPoolId[idx];
-      float dtypeNormalizer = layerDtypeNormalizer[idx];
+    vec4 getRgbaAtXYIndex_KIND(float textureIdx, float x, float y) {
       ivec3 coord = ivec3(int(x), int(y), int(textureIdx));
-      // Only the pools that the dataset uses are declared (see
-      // getLayerPoolsInDataset).
-      <% if (layerPoolsInDataset.includes(${LayerPool.F32})) { %>
-        if (poolId == ${LayerPool.F32}u) {
-          // F32 pool: native float values, no rescaling.
-          return texelFetch(pool_f32_textures, coord, 0);
-        }
+      <% if (kind.pool === ${LayerPool.F32}) { %>
+        // F32 pool: native float values, no rescaling.
+        return texelFetch(pool_f32_textures, coord, 0);
+      <% } else if (kind.pool === ${LayerPool.S8}) { %>
+        // S8 pool: hardware SNORM-decoded to [-1, 1] already.
+        return <%= kind.dtypeNormalizer %> * texelFetch(pool_s8_textures, coord, 0);
+      <% } else if (kind.pool === ${LayerPool.U16}) { %>
+        // U16 pool: integer sampler, raw component values (no normalizer).
+        uvec4 val = texelFetch(pool_u16_textures, coord, 0);
+        return vec4(val.x, 0., val.y, 0.);
+      <% } else if (kind.pool === ${LayerPool.S16}) { %>
+        // S16 pool: integer sampler, raw component values (no normalizer).
+        ivec4 val = texelFetch(pool_s16_textures, coord, 0);
+        return vec4(val.x, 0., val.y, 0.);
+      <% } else { %>
+        // U8 pool: hardware UNORM-decoded to [0, 1] already.
+        return <%= kind.dtypeNormalizer %> * texelFetch(pool_u8_textures, coord, 0);
       <% } %>
-      <% if (layerPoolsInDataset.includes(${LayerPool.S8})) { %>
-        if (poolId == ${LayerPool.S8}u) {
-          // S8 pool: hardware SNORM-decoded to [-1, 1] already.
-          return dtypeNormalizer * texelFetch(pool_s8_textures, coord, 0);
-        }
-      <% } %>
-      <% if (layerPoolsInDataset.includes(${LayerPool.U16})) { %>
-        if (poolId == ${LayerPool.U16}u) {
-          // U16 pool: integer sampler, raw component values (no normalizer).
-          uvec4 val = texelFetch(pool_u16_textures, coord, 0);
-          return vec4(val.x, 0., val.y, 0.);
-        }
-      <% } %>
-      <% if (layerPoolsInDataset.includes(${LayerPool.S16})) { %>
-        if (poolId == ${LayerPool.S16}u) {
-          // S16 pool: integer sampler, raw component values (no normalizer).
-          ivec4 val = texelFetch(pool_s16_textures, coord, 0);
-          return vec4(val.x, 0., val.y, 0.);
-        }
-      <% } %>
-      <% if (layerPoolsInDataset.includes(${LayerPool.U8})) { %>
-        if (poolId == ${LayerPool.U8}u) {
-          // U8 pool: hardware UNORM-decoded to [0, 1] already.
-          return dtypeNormalizer * texelFetch(pool_u8_textures, coord, 0);
-        }
-      <% } %>
-      return vec4(0.);
     }
   `,
+  ),
 };
-export const getColorForCoords: ShaderModule = {
-  requirements: [
-    linearizeVec3ToIndex,
-    linearizeVec3ToIndexWithMod,
-    getRgbaAtXYIndex,
-    getAbsoluteCoords,
-    getMagnificationFactors,
-    hashCombine,
-    transDim,
-  ],
+
+export const lookUpBucket: ShaderModule = {
+  requirements: [hashCombine],
   code: `
     float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
 
@@ -166,14 +142,32 @@ export const getColorForCoords: ShaderModule = {
       }
       return realOffsetZ;
     }
+  `,
+};
 
-    vec4[2] getColorForCoords64(
+// The functions below are emitted once per layer kind (see getLayerKinds),
+// with the kind's pool and packing degree baked in, so that the compiler can
+// drop the code for other pools and packing degrees.
+export const getColorForCoords64: ShaderModule = {
+  requirements: [
+    lookUpBucket,
+    linearizeVec3ToIndex,
+    linearizeVec3ToIndexWithMod,
+    getRgbaAtXYIndex,
+    getAbsoluteCoords,
+    getMagnificationFactors,
+    transDim,
+  ],
+  code: forEachLayerKind(
+    "layerKinds",
+    `
+    vec4[2] getColorForCoords64_KIND(
       float localLayerIndex,
       float d_texture_width,
-      float packingDegree,
       vec3 worldPositionUVW,
       bool supportsPrecomputedBucketAddress
     ) {
+      const float packingDegree = <%= kind.packingDegree %>;
       // This method looks up the color data at the given position.
       // The data will be clamped to be non-negative, since negative data
       // is reserved for missing buckets.
@@ -322,16 +316,14 @@ export const getColorForCoords: ShaderModule = {
         bucketHeightInTexture * bucketAddress;
 
       // The lower 32-bit of the value.
-      vec4 bucketColor = getRgbaAtXYIndex(
-        localLayerIndex,
+      vec4 bucketColor = getRgbaAtXYIndex_KIND(
         textureIndex,
         x,
         y
       );
 
       if (packingDegree == 0.5) {
-        vec4 bucketColorHigh = getRgbaAtXYIndex(
-          localLayerIndex,
+        vec4 bucketColorHigh = getRgbaAtXYIndex_KIND(
           textureIndex,
           // x + 1.0 will never exceed the texture width because
           // - the texture width is even
@@ -399,19 +391,27 @@ export const getColorForCoords: ShaderModule = {
       returnValue[1] = vec4(0.0);
       return returnValue;
     }
+  `,
+  ),
+};
 
-    vec4 getColorForCoords(
+export const getColorForCoords: ShaderModule = {
+  requirements: [getColorForCoords64],
+  code: forEachLayerKind(
+    "colorLayerKinds",
+    `
+    vec4 getColorForCoords_KIND(
       float localLayerIndex,
       float d_texture_width,
-      float packingDegree,
       vec3 worldPositionUVW,
       bool supportsPrecomputedBucketAddress
     ) {
       // The potential overhead of delegating to the 64-bit variant (instead of using a specialized
       // 32-bit variant) was measured by rendering 600 times consecutively (without throttling).
       // No clear negative impact could be measured which is why this delegation should be ok.
-      vec4[2] retVal = getColorForCoords64(localLayerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
+      vec4[2] retVal = getColorForCoords64_KIND(localLayerIndex, d_texture_width, worldPositionUVW, supportsPrecomputedBucketAddress);
       return retVal[1];
     }
   `,
+  ),
 };

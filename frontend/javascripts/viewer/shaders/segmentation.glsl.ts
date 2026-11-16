@@ -13,7 +13,7 @@ import { getUnrotatedWorldCoordUVW } from "./coords.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 import { hashCombine } from "./hashing.glsl";
 import { attemptMappingLookUp } from "./mappings.glsl";
-import type { ShaderModule } from "./shader_module_system";
+import { forEachLayerKind, type ShaderModule } from "./shader_module_system";
 
 function buildPermutation(sequenceLength: number, primitiveRoot: number) {
   return {
@@ -380,8 +380,10 @@ export const getSegmentId: ShaderModule = {
       }
     }
 
-    // layerIdx is the segmentation layer's compiled index.
-    void getSegmentId(int layerIdx, vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
+  ${forEachLayerKind(
+    "segmentationLayerKinds",
+    `
+    void getSegmentId_KIND(int layerIdx, vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
       vec3 layerCoordUVW = transDim((layerTransform[layerIdx] * vec4(transDim(worldPositionUVW), 1.0)).xyz);
       if (isOutsideOfBoundingBox(layerCoordUVW, layerBboxMin[layerIdx], layerBboxMax[layerIdx])) {
         // Some GPUs don't null-initialize the variables.
@@ -392,12 +394,11 @@ export const getSegmentId: ShaderModule = {
         return;
       }
 
-      float packingDegree = layerPackingDegree[layerIdx];
+      const float packingDegree = <%= kind.packingDegree %>;
       segment_id =
-        getSegmentIdOrFallback(
+        getSegmentIdOrFallback_KIND(
           float(layerIdx),
           POOL_TEXTURE_WIDTH,
-          packingDegree,
           layerCoordUVW,
           vec4(0.0, 0.0, 0.0, 0.0),
           layerHasTransformInt[layerIdx] == 0
@@ -443,6 +444,23 @@ export const getSegmentId: ShaderModule = {
           mapped_id[1] = vec4(0.0);
         }
       }
+    }
+  `,
+  )}
+
+    // layerIdx is the segmentation layer's compiled index. Calls the
+    // getSegmentId variant of the layer's kind.
+    void getSegmentId(int layerIdx, vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
+      <% each(segmentationLayerKinds, function(kind, kindIdx) {
+        if (kindIdx < segmentationLayerKinds.length - 1) { %>
+          if (layerKindId[layerIdx] == <%= kind.id %>u) {
+            getSegmentId_<%= kind.id %>(layerIdx, worldPositionUVW, segment_id, mapped_id);
+            return;
+          }
+      <% } else { %>
+          getSegmentId_<%= kind.id %>(layerIdx, worldPositionUVW, segment_id, mapped_id);
+      <% }
+      }) %>
     }
   `,
 };

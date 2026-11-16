@@ -45,8 +45,8 @@ import {
   getSegmentationAlphaIncrement,
   getSegmentId,
 } from "./segmentation.glsl";
-import compileShader from "./shader_module_system";
-import { getColorForCoords } from "./texture_access.glsl";
+import compileShader, { forEachLayerKind, type ShaderModule } from "./shader_module_system";
+import { lookUpBucket } from "./texture_access.glsl";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
@@ -112,7 +112,8 @@ export function computeVertexBucketAlignmentLayerCap(
 // - per magnification: 1 (allMagnifications)
 // - per layer of the dataset: 21 (the per-layer arrays, e.g. layerTransform
 //   (4), layerBboxMin/Max, layerColor, layerMin/Max), whether the layer is
-//   visible or not
+//   visible or not. Only datasets with both 32-bit integer and other color
+//   layers use all of them (see getColorLayerColor).
 // - if the dataset has a segmentation layer: 42, mostly the mapping and
 //   custom color tables, segment highlighting, brush and proofreading
 // The vertex shader uses fewer. shader_syntax.spec.ts checks these numbers
@@ -151,6 +152,157 @@ function getLayerPoolsInDataset(params: Params): LayerPool[] {
 function getLayerPoolSamplers(params: Params) {
   return getLayerPoolsInDataset(params).map((pool) => LAYER_POOL_SAMPLERS[pool]);
 }
+
+// Layers of the same kind read and decode their data the same way. The data
+// access code is emitted once per kind with these values baked in (see
+// forEachLayerKind), so the compiler can drop the code for other pools, packing
+// degrees and dtypes. Typical datasets only have one or two kinds, so the
+// shader stays small, also with many layers.
+type LayerKind = {
+  id: number;
+  pool: LayerPool;
+  // GLSL float literals
+  packingDegree: string;
+  dtypeNormalizer: string;
+  // Only used for color layers.
+  dtypeTag: number;
+};
+
+export function getLayerKinds(params: Params) {
+  const kindsByKey = new Map<string, LayerKind>();
+  const getKindId = (name: string, isColor: boolean) => {
+    const { elementClass, packingDegree } = params.textureLayerInfos[name];
+    const kind = {
+      pool: getLayerPoolForElementClass(elementClass),
+      packingDegree: formatNumberAsGLSLFloat(packingDegree),
+      dtypeNormalizer: formatNumberAsGLSLFloat(
+        getDtypeNormalizerForLayer(params.textureLayerInfos[name]),
+      ),
+      dtypeTag: isColor ? getDtypeTagForElementClass(elementClass) : 0,
+    };
+    // Color and segmentation layers use different code, so they never share
+    // a kind.
+    const key = JSON.stringify([isColor, kind]);
+    let existingKind = kindsByKey.get(key);
+    if (existingKind == null) {
+      existingKind = { id: kindsByKey.size, ...kind };
+      kindsByKey.set(key, existingKind);
+    }
+    return existingKind.id;
+  };
+  // Indexed by the compiled index (see the per-layer uniforms).
+  const layerKindIds = [
+    ...params.colorLayerNames.map((name) => getKindId(name, true)),
+    ...params.segmentationLayerNames.map((name) => getKindId(name, false)),
+  ];
+  const kinds = Array.from(kindsByKey.values());
+  const colorLayerKindIds = new Set(layerKindIds.slice(0, params.colorLayerNames.length));
+  return {
+    layerKindIds,
+    layerKinds: kinds,
+    colorLayerKinds: kinds.filter((kind) => colorLayerKindIds.has(kind.id)),
+    segmentationLayerKinds: kinds.filter((kind) => !colorLayerKindIds.has(kind.id)),
+  };
+}
+
+// Returns the color of one color layer before blending. Emitted once per kind
+// of the color layers; getColorLayerColor calls the variant of the layer's kind.
+const getColorLayerColor: ShaderModule = {
+  requirements: [getMaybeFilteredColorOrFallback, scaleToFloat],
+  code: `
+  ${forEachLayerKind(
+    "colorLayerKinds",
+    `
+    vec4 getColorLayerColor_KIND(int layerIdx, vec3 layerCoordUVW, out bool used_fallback) {
+      MaybeFilteredColor maybe_filtered_color =
+        getMaybeFilteredColorOrFallback_KIND(
+          float(layerIdx),
+          POOL_TEXTURE_WIDTH,
+          layerCoordUVW,
+          fallbackGray,
+          layerHasTransformInt[layerIdx] == 0
+        );
+      used_fallback = maybe_filtered_color.used_fallback_color;
+      <% if (kind.dtypeTag === ${DTYPE_TAG_INT32} || kind.dtypeTag === ${DTYPE_TAG_UINT32}) { %>
+        float is_max_and_min_equal = float(layerMaxInt[layerIdx] == layerMinInt[layerIdx]);
+      <% } else { %>
+        float is_max_and_min_equal = float(layerMax[layerIdx] == layerMin[layerIdx]);
+      <% } %>
+
+      // color_value is usually between 0 and 1.
+      vec3 color_value = maybe_filtered_color.color.rgb;
+
+      <% if (kind.dtypeTag === ${DTYPE_TAG_INT32}) { %>
+        // Handle 32-bit signed color layers
+        ivec4 four_bytes = ivec4(255. * maybe_filtered_color.color);
+        // Combine bytes into an Int32 (assuming little-endian order)
+        highp int hpv = four_bytes.r | (four_bytes.g << 8) | (four_bytes.b << 16) | (four_bytes.a << 24);
+
+        int minInt = layerMinInt[layerIdx];
+        int maxInt = layerMaxInt[layerIdx];
+        hpv = clamp(hpv, minInt, maxInt);
+
+        color_value = vec3(
+            scaleIntToFloat(hpv, minInt, maxInt)
+        );
+      <% } else if (kind.dtypeTag === ${DTYPE_TAG_UINT32}) { %>
+        // Handle 32-bit unsigned color layers.
+        // Scale from [0,1] to [0,255] so that we can convert to an uint below.
+        uvec4 four_bytes = uvec4(255. * maybe_filtered_color.color);
+        highp uint hpv =
+          uint(four_bytes.a) * uint(pow(256., 3.))
+          + uint(four_bytes.b) * uint(pow(256., 2.))
+          + uint(four_bytes.g) * 256u
+          + uint(four_bytes.r);
+
+        uint minUint = uint(layerMinInt[layerIdx]);
+        uint maxUint = uint(layerMaxInt[layerIdx]);
+        hpv = clamp(hpv, minUint, maxUint);
+        color_value = vec3(
+          float(hpv - minUint) / (float(maxUint - minUint) + is_max_and_min_equal)
+        );
+      <% } else { %>
+        <% if (kind.dtypeTag === ${DTYPE_TAG_UINT24}) { %>
+          color_value *= 255.;
+        <% } else { %>
+          color_value = vec3(color_value.x);
+        <% } %>
+
+        // Keep the color in bounds of min and max
+        color_value = clamp(color_value, layerMin[layerIdx], layerMax[layerIdx]);
+        // Scale the color value according to the histogram settings.
+        color_value = vec3(
+          scaleFloatToFloat(color_value, layerMin[layerIdx], layerMax[layerIdx])
+        );
+      <% } %>
+
+      color_value = pow(color_value, 1. / vec3(layerGammaCorrectionValue[layerIdx]));
+
+      // Maybe invert the color using the inverting_factor
+      color_value = abs(color_value - layerIsInverted[layerIdx]);
+      // Catch the case where max == min would causes a NaN value and use black as a fallback color.
+      color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
+      color_value = color_value * layerAlpha[layerIdx] * layerColor[layerIdx];
+      // Marking the color as invalid by setting alpha to 0.0 if the fallback color has been used
+      // so the fallback color does not cover other colors.
+      return vec4(color_value, used_fallback ? 0.0 : maybe_filtered_color.color.a * layerAlpha[layerIdx]);
+    }
+  `,
+  )}
+
+    vec4 getColorLayerColor(int layerIdx, vec3 layerCoordUVW, out bool used_fallback) {
+      <% each(colorLayerKinds, function(kind, kindIdx) {
+        if (kindIdx < colorLayerKinds.length - 1) { %>
+          if (layerKindId[layerIdx] == <%= kind.id %>u) {
+            return getColorLayerColor_<%= kind.id %>(layerIdx, layerCoordUVW, used_fallback);
+          }
+      <% } else { %>
+          return getColorLayerColor_<%= kind.id %>(layerIdx, layerCoordUVW, used_fallback);
+      <% }
+      }) %>
+    }
+  `,
+};
 
 const SHARED_UNIFORM_DECLARATIONS = `
 uniform vec2 viewportExtent;
@@ -280,11 +432,9 @@ const float POOL_TEXTURE_WIDTH = ${formatNumberAsGLSLFloat(LAYER_POOL_TEXTURE_WI
 const uint VERTEX_ALIGNMENT_LAYER_CAP = <%= vertexAlignmentLayerCap %>u;
 
 // Per-layer values that are fixed for a dataset, baked in as constants.
-const float layerPackingDegree[<%= globalLayerCount %>] = float[](<%= layerNamesWithSegmentation.map(function(name) { return formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree); }).join(", ") %>);
-const uint layerDtypeTag[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getDtypeTagForElementClass(textureLayerInfos[name].elementClass) + "u"; }).join(", ") %>);
+// See getLayerKinds.
+const uint layerKindId[<%= globalLayerCount %>] = uint[](<%= layerKindIds.map(function(id) { return id + "u"; }).join(", ") %>);
 const bool layerHasTpsTransform[<%= globalLayerCount %>] = bool[](<%= layerNamesWithSegmentation.map(function(name) { return tpsTransformPerLayer[name] != null ? "true" : "false"; }).join(", ") %>);
-const uint layerPoolId[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getLayerPoolForElementClass(textureLayerInfos[name].elementClass) + "u"; }).join(", ") %>);
-const float layerDtypeNormalizer[<%= globalLayerCount %>] = float[](<%= layerNamesWithSegmentation.map(function(name) { return formatNumberAsGLSLFloat(getDtypeNormalizerForLayer(textureLayerInfos[name])); }).join(", ") %>);
 // Only used for segmentation layers.
 const uint layerSegmentIdDecodeTag[<%= globalLayerCount %>] = uint[](<%= layerNamesWithSegmentation.map(function(name) { return getSegmentIdDecodeTagForLayer(textureLayerInfos[name].elementClass, textureLayerInfos[name].isSigned) + "u"; }).join(", ") %>);
 `;
@@ -319,7 +469,7 @@ ${compileShader(
   getAbsoluteCoords,
   getWorldCoordUVW,
   isOutsideOfBoundingBox,
-  getMaybeFilteredColorOrFallback,
+  params.colorLayerNames.length > 0 ? getColorLayerColor : null,
   getBlendLayersAdditive,
   getBlendLayersCover,
   getBlendLayersCoverBlackAsTransparent,
@@ -396,6 +546,7 @@ void main() {
   <% }
   }) %>
 
+  <% if (colorLayerNames.length > 0) { %>
   for (int colorSlot = 0; colorSlot < activeColorLayerCount; colorSlot++) {
     int layerIdx = colorRenderOrder[colorSlot];
     float effective_alpha = layerAlpha[layerIdx] * (1. - layerUnrenderable[layerIdx]);
@@ -408,79 +559,8 @@ void main() {
       }
 
       if (!isOutsideOfBoundingBox(layerCoordUVW, layerBboxMin[layerIdx], layerBboxMax[layerIdx])) {
-        MaybeFilteredColor maybe_filtered_color =
-          getMaybeFilteredColorOrFallback(
-            float(layerIdx),
-            POOL_TEXTURE_WIDTH,
-            layerPackingDegree[layerIdx],
-            layerCoordUVW,
-            fallbackGray,
-            layerHasTransformInt[layerIdx] == 0
-          );
-        bool used_fallback = maybe_filtered_color.used_fallback_color;
-        uint dtypeTag = layerDtypeTag[layerIdx];
-        bool is32BitIntLayer = dtypeTag == ${DTYPE_TAG_INT32}u || dtypeTag == ${DTYPE_TAG_UINT32}u;
-        float is_max_and_min_equal = is32BitIntLayer
-          ? float(layerMaxInt[layerIdx] == layerMinInt[layerIdx])
-          : float(layerMax[layerIdx] == layerMin[layerIdx]);
-
-        // color_value is usually between 0 and 1.
-        color_value = maybe_filtered_color.color.rgb;
-
-        if (dtypeTag == ${DTYPE_TAG_INT32}u) {
-          // Handle 32-bit signed color layers
-          ivec4 four_bytes = ivec4(255. * maybe_filtered_color.color);
-          // Combine bytes into an Int32 (assuming little-endian order)
-          highp int hpv = four_bytes.r | (four_bytes.g << 8) | (four_bytes.b << 16) | (four_bytes.a << 24);
-
-          int minInt = layerMinInt[layerIdx];
-          int maxInt = layerMaxInt[layerIdx];
-          hpv = clamp(hpv, minInt, maxInt);
-
-          color_value = vec3(
-              scaleIntToFloat(hpv, minInt, maxInt)
-          );
-        } else if (dtypeTag == ${DTYPE_TAG_UINT32}u) {
-          // Handle 32-bit unsigned color layers.
-          // Scale from [0,1] to [0,255] so that we can convert to an uint below.
-          uvec4 four_bytes = uvec4(255. * maybe_filtered_color.color);
-          highp uint hpv =
-            uint(four_bytes.a) * uint(pow(256., 3.))
-            + uint(four_bytes.b) * uint(pow(256., 2.))
-            + uint(four_bytes.g) * 256u
-            + uint(four_bytes.r);
-
-          uint minUint = uint(layerMinInt[layerIdx]);
-          uint maxUint = uint(layerMaxInt[layerIdx]);
-          hpv = clamp(hpv, minUint, maxUint);
-          color_value = vec3(
-            float(hpv - minUint) / (float(maxUint - minUint) + is_max_and_min_equal)
-          );
-        } else {
-          if (dtypeTag == ${DTYPE_TAG_UINT24}u) {
-            color_value *= 255.;
-          } else {
-            color_value = vec3(color_value.x);
-          }
-
-          // Keep the color in bounds of min and max
-          color_value = clamp(color_value, layerMin[layerIdx], layerMax[layerIdx]);
-          // Scale the color value according to the histogram settings.
-          color_value = vec3(
-            scaleFloatToFloat(color_value, layerMin[layerIdx], layerMax[layerIdx])
-          );
-        }
-
-        color_value = pow(color_value, 1. / vec3(layerGammaCorrectionValue[layerIdx]));
-
-        // Maybe invert the color using the inverting_factor
-        color_value = abs(color_value - layerIsInverted[layerIdx]);
-        // Catch the case where max == min would causes a NaN value and use black as a fallback color.
-        color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
-        color_value = color_value * layerAlpha[layerIdx] * layerColor[layerIdx];
-        // Marking the color as invalid by setting alpha to 0.0 if the fallback color has been used
-        // so the fallback color does not cover other colors.
-        vec4 layer_color = vec4(color_value, used_fallback ? 0.0 : maybe_filtered_color.color.a * layerAlpha[layerIdx]);
+        bool used_fallback;
+        vec4 layer_color = getColorLayerColor(layerIdx, layerCoordUVW, used_fallback);
         // Calculating the color for the current layer depending on blendMode.
         // blendMode == 1.0: Additive, blendMode == 0.0: Cover, blendMode == 2.0: CoverWithBlackAsTransparent
         vec4 additive_color = blendLayersAdditive(data_color, layer_color);
@@ -491,6 +571,7 @@ void main() {
       }
     }
   }
+  <% } %>
   data_color = clamp(data_color, 0.0, 1.0);
   data_color.a = 1.0;
 
@@ -542,6 +623,7 @@ void main() {
     layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
     layerPoolSamplers: getLayerPoolSamplers(params),
     layerPoolsInDataset: getLayerPoolsInDataset(params),
+    ...getLayerKinds(params),
     vertexAlignmentLayerCap: Math.max(
       1,
       Math.min(params.globalLayerCount, params.vertexBucketAlignmentLayerCap),
@@ -600,10 +682,9 @@ ${compileShader(
   isFlightMode,
   transDim,
   getAbsoluteCoords,
-  getColorForCoords,
+  lookUpBucket,
   getWorldCoordUVW,
   isOutsideOfBoundingBox,
-  hasSegmentation ? getSegmentId : null,
   getMagnification,
   almostEq,
 )}
@@ -769,6 +850,7 @@ void main() {
     layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
     layerPoolSamplers: getLayerPoolSamplers(params),
     layerPoolsInDataset: getLayerPoolsInDataset(params),
+    ...getLayerKinds(params),
     vertexAlignmentLayerCap: Math.max(
       1,
       Math.min(params.globalLayerCount, params.vertexBucketAlignmentLayerCap),

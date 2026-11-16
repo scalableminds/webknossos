@@ -392,8 +392,9 @@ function countUsedUniformVectors(code: string): number {
   return count;
 }
 
+// Color layer i gets elementClasses[i % elementClasses.length].
 function getUniformTestParams(
-  elementClass: ElementClass,
+  elementClasses: ElementClass[],
   colorLayerCount: number,
   hasSegmentation: boolean,
   magnificationCount: number,
@@ -408,7 +409,10 @@ function getUniformTestParams(
     globalLayerCount: colorLayerNames.length + segmentationLayerNames.length,
     colorLayerNames,
     textureLayerInfos: Object.fromEntries([
-      ...colorLayerNames.map((name) => [name, getTextureLayerInfo(name, elementClass, true)]),
+      ...colorLayerNames.map((name, i) => [
+        name,
+        getTextureLayerInfo(name, elementClasses[i % elementClasses.length], true),
+      ]),
       ...segmentationLayerNames.map((name) => [name, getTextureLayerInfo(name, "uint64", false)]),
     ]),
     segmentationLayerNames,
@@ -426,7 +430,14 @@ function getUniformTestParams(
 
 describe("estimateUniformVectors", () => {
   it("matches the uniforms of the generated shaders", () => {
-    for (const elementClass of ["uint8", "uint16", "uint32", "float"] as const) {
+    const elementClassesList: ElementClass[][] = [
+      ["uint8"],
+      ["uint16"],
+      ["uint32"],
+      ["float"],
+      ["uint8", "uint32"],
+    ];
+    for (const elementClasses of elementClassesList) {
       for (const [colorLayerCount, hasSegmentation, magnificationCount] of [
         [1, false, 5],
         [5, true, 30],
@@ -434,7 +445,7 @@ describe("estimateUniformVectors", () => {
       ] as const) {
         const globalLayerCount = colorLayerCount + (hasSegmentation ? 1 : 0);
         const params = getUniformTestParams(
-          elementClass,
+          elementClasses,
           colorLayerCount,
           hasSegmentation,
           magnificationCount,
@@ -445,8 +456,15 @@ describe("estimateUniformVectors", () => {
           hasSegmentation,
         );
         // If this fails, the shader's uniforms changed: update the constants
-        // in main_data_shaders.glsl.ts.
-        expect(countUsedUniformVectors(getMainFragmentShader(params))).toBe(estimate);
+        // in main_data_shaders.glsl.ts. 32-bit integer layers use
+        // layerMinInt/layerMaxInt instead of layerMin/layerMax, so the
+        // estimate is only reached if the dataset has both kinds of layers.
+        const fragmentUniformVectors = countUsedUniformVectors(getMainFragmentShader(params));
+        if (elementClasses.length > 1 && colorLayerCount > 1) {
+          expect(fragmentUniformVectors).toBe(estimate);
+        } else {
+          expect(fragmentUniformVectors).toBeLessThanOrEqual(estimate);
+        }
         expect(countUsedUniformVectors(getMainVertexShader(params))).toBeLessThanOrEqual(estimate);
       }
     }

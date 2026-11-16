@@ -30,17 +30,22 @@ class ScopedApiTokenService @Inject() (tokenDAO: TokenDAO, grantDAO: OAuthGrantD
   private val valuePrefix = "wk_scoped_api_token_"
 
   def create(grant: OAuthGrant, expiry: FiniteDuration): Fox[ScopedApiToken] =
-    insert(grant._user, grant._id, Scope.Set.parse(grant.scopes), expiry)
+    insert(grant._user, grant._id, Scope.Set.parse(grant.scopes), Instant.now + expiry)
 
-  // Another token under the same grant, e.g. when an agent asks for a datastore token.
-  def createFrom(existing: ScopedApiToken, expiry: FiniteDuration): Fox[ScopedApiToken] =
-    insert(existing.userId, existing.grantId, existing.scopes, expiry)
+  /** Another token under the same grant, e.g. when an agent asks for a datastore token. It expires no later than the
+    * existing one. Otherwise a scoped API token could renew itself forever, without the OAuth tokens of its grant.
+    */
+  def createFrom(existing: ScopedApiToken, expiry: FiniteDuration): Fox[ScopedApiToken] = {
+    val requestedExpiresAt = Instant.now + expiry
+    val expiresAt = if (existing.expiresAt < requestedExpiresAt) existing.expiresAt else requestedExpiresAt
+    insert(existing.userId, existing.grantId, existing.scopes, expiresAt)
+  }
 
   private def insert(
       userId: ObjectId,
       grantId: ObjectId,
       scopes: Scope.Set,
-      expiry: FiniteDuration
+      expiresAt: Instant
   ): Fox[ScopedApiToken] = {
     val now = Instant.now
     val token = Token(
@@ -48,7 +53,7 @@ class ScopedApiTokenService @Inject() (tokenDAO: TokenDAO, grantDAO: OAuthGrantD
       value = valuePrefix + RandomIDGenerator.generateBlocking(),
       _user = userId,
       lastUsedDateTime = now,
-      expirationDateTime = now + expiry,
+      expirationDateTime = expiresAt,
       idleTimeout = None,
       tokenType = TokenType.ScopedApi,
       created = now,

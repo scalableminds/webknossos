@@ -432,11 +432,19 @@ class AuthenticationController @Inject() (
   }
 
   def deleteToken(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
-    Fox.fromFuture(combinedAuthenticatorService.findTokenForUser(request.identity._id)).flatMap {
-      case Some(token) =>
-        Fox.fromFuture(combinedAuthenticatorService.discard(token, Ok(Json.obj("messages" -> Msg.User.Token.deleted))))
-      case _ => Fox.successful(Ok)
-    }
+    for {
+      // The scoped API tokens that agents obtained via the MCP server end as well. Their connections stay, so the
+      // agents can ask for new ones.
+      _ <- tokenDAO.deleteAllByUserIdAndType(request.identity._id, TokenType.ScopedApi)
+      tokenOpt <- Fox.fromFuture(combinedAuthenticatorService.findTokenForUser(request.identity._id))
+      result <- tokenOpt match {
+        case Some(token) =>
+          Fox.fromFuture(
+            combinedAuthenticatorService.discard(token, Ok(Json.obj("messages" -> Msg.User.Token.deleted)))
+          )
+        case _ => Fox.successful(Ok)
+      }
+    } yield result
   }
 
   def logout: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>

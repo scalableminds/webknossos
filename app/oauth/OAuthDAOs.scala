@@ -57,13 +57,6 @@ class OAuthGrantDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       parsed <- parseFirst(r, id)
     } yield parsed
 
-  def findLiveByUserAndClient(userId: ObjectId, clientId: String): Fox[OAuthGrant] =
-    for {
-      r <- run(q"""SELECT $columns FROM $existingCollectionName
-                   WHERE _user = $userId AND clientId = $clientId""".as[OauthgrantsRow])
-      parsed <- parseFirst(r, "userAndClient")
-    } yield parsed
-
   def findAllLiveByUser(userId: ObjectId): Fox[List[OAuthGrant]] =
     for {
       r <- run(q"""SELECT $columns FROM $existingCollectionName
@@ -71,20 +64,21 @@ class OAuthGrantDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       parsed <- parseAll(r)
     } yield parsed
 
-  def insertOne(g: OAuthGrant): Fox[Unit] =
+  /** Creates the grant, or, if the user has a live grant for the client already, updates the scopes and client name of
+    * that one. A single statement backed by a unique index, so that concurrent approvals cannot create two live grants.
+    */
+  def upsertLive(g: OAuthGrant): Fox[OAuthGrant] =
     for {
-      _ <- run(
+      r <- run(
         q"""INSERT INTO webknossos.oauthGrants(_id, _user, clientId, clientName, scopes, created, lastUsed, isDeleted)
-                   VALUES(${g._id}, ${g._user}, ${g.clientId}, ${g.clientName}, ${g.scopes},
-                          ${g.created}, ${g.lastUsed}, ${g.isDeleted})""".asUpdate
+            VALUES(${g._id}, ${g._user}, ${g.clientId}, ${g.clientName}, ${g.scopes},
+                   ${g.created}, ${g.lastUsed}, FALSE)
+            ON CONFLICT (_user, clientId) WHERE NOT isDeleted
+            DO UPDATE SET scopes = EXCLUDED.scopes, clientName = EXCLUDED.clientName
+            RETURNING $columns""".as[OauthgrantsRow]
       )
-    } yield ()
-
-  def updateScopesAndClientName(id: ObjectId, scopes: String, clientName: String): Fox[Unit] =
-    for {
-      _ <- run(q"""UPDATE webknossos.oauthGrants SET scopes = $scopes, clientName = $clientName
-                   WHERE _id = $id""".asUpdate)
-    } yield ()
+      parsed <- parseFirst(r, "upsert")
+    } yield parsed
 
   // Only written once a minute at most, so that MCP requests do not each cause a write.
   def touch(id: ObjectId): Fox[Unit] =
@@ -231,11 +225,11 @@ class OAuthClientDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCont
       row <- rows.headOption.toFox
     } yield OAuthClientMetadata(row._1, row._2, parseArrayLiteral(row._3), isRegistered = true)
 
-  // Anyone can register a client, so registrations that did not lead to a connection are not kept.
+  // Anyone can register a client, so registrations without a live connection are not kept. Revoked grants do not count.
   def deleteUnusedCreatedBefore(cutoff: Instant): Fox[Unit] =
     for {
       _ <- run(q"""DELETE FROM webknossos.oauthClients c
                    WHERE c.created < $cutoff
-                   AND NOT EXISTS (SELECT 1 FROM webknossos.oauthGrants g WHERE g.clientId = c.clientId)""".asUpdate)
+                   AND NOT EXISTS (SELECT 1 FROM webknossos.oauthGrants_ g WHERE g.clientId = c.clientId)""".asUpdate)
     } yield ()
 }

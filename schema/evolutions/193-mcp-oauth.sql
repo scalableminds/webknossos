@@ -56,6 +56,8 @@ CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDe
 CREATE VIEW webknossos.oauthGrants_ AS SELECT * FROM webknossos.oauthGrants WHERE NOT isDeleted;
 
 CREATE INDEX ON webknossos.oauthGrants(_user);
+-- At most one live grant per user and client, approving a client again updates it (see OAuthGrantDAO.upsertLive).
+CREATE UNIQUE INDEX ON webknossos.oauthGrants(_user, clientId) WHERE NOT isDeleted;
 CREATE INDEX ON webknossos.oauthAuthorizationCodes(_grant);
 CREATE INDEX ON webknossos.oauthTokens(_grant);
 CREATE INDEX ON webknossos.oauthTokens(expirationDateTime);

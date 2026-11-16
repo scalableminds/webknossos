@@ -114,6 +114,15 @@ class ScopedApiTokenTestSuite extends AnyWordSpec {
       assert(s.findValid(derived.value).map(_.grantId).contains(grant._id))
     }
 
+    "not let a derived token outlive the token it was created from" in {
+      val s = setup()
+      val token = s.create(s.addGrant(), 1.hour)
+      val derived = await(s.service.createFrom(token, 1.day)).get("creating a token must succeed in this test")
+      assert(derived.expiresAt == token.expiresAt)
+      val shorter = await(s.service.createFrom(token, 1.minute)).get("creating a token must succeed in this test")
+      assert(shorter.expiresAt < token.expiresAt)
+    }
+
     "create distinct tokens" in {
       val s = setup()
       val grant = s.addGrant()

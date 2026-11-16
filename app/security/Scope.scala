@@ -91,7 +91,7 @@ object Scope {
     val empty: Set = Set(List.empty)
 
     /** Accepts both individual scopes ("dataset:read,annotation:write") and the coarse level names that the UI offers
-      * ("write"). "none" yields a token that may do nothing. Unparsable entries are ignored.
+      * ("write"). Unparsable entries are ignored, so they grant nothing.
       */
     def parse(commaSeparated: String): Set = {
       val entries = commaSeparated.split(',').toList.map(_.trim).filter(_.nonEmpty)
@@ -101,7 +101,9 @@ object Scope {
 
     /** Resources an agent works on. Covers everything the WEBKNOSSOS Python library talks to, so that the library works
       * fully at the create/modify and delete levels. Note that this includes teams and users, because the library
-      * creates teams and updates users (e.g. to assign team memberships).
+      * creates teams and updates users (e.g. to assign team memberships). The user scope covers all of UserController
+      * (see RouteScopes), so for an admin this includes activating and deactivating users and changing who is admin or
+      * dataset manager. The docs (docs/users/mcp.md) say so.
       *
       * The organization is deliberately left out and stays read-only at every level: an agent has no business changing
       * the organization itself, and nothing in the library does.
@@ -119,22 +121,12 @@ object Scope {
       ScopeResource.user
     )
 
-    // The explicit way to say "no permissions at all", so that it is not mistaken for a typo.
-    val noneLiteral = "none"
-
     // administrate is no level: it is not part of the read/write/delete ladder (see ScopeMode.rank), so forLevel would
     // grant it on teams and users while not even granting read on datasets.
     private val levels: List[ScopeMode.Value] = List(ScopeMode.read, ScopeMode.write, ScopeMode.delete)
 
     private def levelFromString(s: String): Option[ScopeMode.Value] =
       ScopeMode.fromString(s).filter(levels.contains)
-
-    // Rejects values that would silently grant nothing because of a typo, e.g. "raed".
-    def isParsable(commaSeparated: String): Boolean = {
-      val entries = commaSeparated.split(',').toList.map(_.trim).filter(_.nonEmpty)
-      entries.isEmpty || entries == List(noneLiteral) ||
-      entries.forall(entry => fromString(entry).isDefined || levelFromString(entry).isDefined)
-    }
 
     /** The three coarse permission levels offered in the UI. Each grants read on everything, plus the given mode on the
       * resources an agent works on.
@@ -151,23 +143,5 @@ object Scope {
         else List.empty
       Set(perResource ++ datasetAdministrate)
     }
-
-    // Everything an agent is allowed to do by default: look at things and work on annotations, but not delete.
-    val defaultForAgents: Set = Set(
-      List(
-        Scope(ScopeResource.dataset, ScopeMode.read),
-        Scope(ScopeResource.annotation, ScopeMode.write),
-        Scope(ScopeResource.task, ScopeMode.read),
-        Scope(ScopeResource.project, ScopeMode.read),
-        Scope(ScopeResource.team, ScopeMode.read),
-        Scope(ScopeResource.user, ScopeMode.read),
-        Scope(ScopeResource.organization, ScopeMode.read),
-        Scope(ScopeResource.job, ScopeMode.read),
-        Scope(ScopeResource.script, ScopeMode.read),
-        Scope(ScopeResource.voxelytics, ScopeMode.read),
-        Scope(ScopeResource.aiModel, ScopeMode.read),
-        Scope(ScopeResource.meta, ScopeMode.read)
-      )
-    )
   }
 }

@@ -58,15 +58,6 @@ class ScopeTestSuite extends AnyWordSpec {
 
     "allow nothing when empty" in
       assert(!Scope.Set.empty.allows(Scope(ScopeResource.dataset, ScopeMode.read)))
-
-    "let the default agent scopes read datasets and write annotations, but not delete datasets" in {
-      val default = Scope.Set.defaultForAgents
-      assert(default.allows(Scope(ScopeResource.dataset, ScopeMode.read)))
-      assert(default.allows(Scope(ScopeResource.annotation, ScopeMode.write)))
-      assert(!default.allows(Scope(ScopeResource.dataset, ScopeMode.write)))
-      assert(!default.allows(Scope(ScopeResource.dataset, ScopeMode.delete)))
-      assert(!default.allows(Scope(ScopeResource.annotation, ScopeMode.delete)))
-    }
   }
 
   "Scope.Set.forLevel" should {
@@ -137,31 +128,6 @@ class ScopeTestSuite extends AnyWordSpec {
       val parsed = Scope.Set.parse("administrate")
       assert(parsed.scopes.isEmpty)
       assert(!parsed.allows(Scope(ScopeResource.team, ScopeMode.administrate)))
-    }
-  }
-
-  "Scope.Set.isParsable" should {
-    "accept the levels and explicit scopes the UI and the docs use" in {
-      assert(Scope.Set.isParsable("read"))
-      assert(Scope.Set.isParsable("write"))
-      assert(Scope.Set.isParsable("delete"))
-      assert(Scope.Set.isParsable("dataset:read,annotation:write"))
-    }
-
-    "accept the explicit way of granting nothing" in {
-      assert(Scope.Set.isParsable("none"))
-      assert(Scope.Set.parse("none").scopes.isEmpty)
-    }
-
-    "reject typos, so that they are not silently stored as no permissions" in {
-      assert(!Scope.Set.isParsable("raed"))
-      assert(!Scope.Set.isParsable("dataset:raed"))
-      assert(!Scope.Set.isParsable("read,nonsense"))
-    }
-
-    "reject administrate as a level, but accept it as an explicit scope" in {
-      assert(!Scope.Set.isParsable("administrate"))
-      assert(Scope.Set.isParsable("dataset:administrate"))
     }
   }
 

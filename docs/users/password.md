@@ -97,6 +97,8 @@ If your token has been compromised or you suspect someone else has gained access
 2. Click the `Revoke and Generate New Token` button.
 3. This will invalidate the previous token and all sessions using it.
 
+This also ends the scoped API tokens that AI agents obtained through the [MCP server](mcp.md). Their connections stay, so they can request new ones. To cut an agent off, disconnect it in the `MCP Agent Connections` tab.
+
 #### Organization ID
 
 Certain API integrations need the organization ID which can be found here, in the developer settings.

@@ -367,6 +367,8 @@ export type OAuthAuthorizationRequestInfo =
       isRegisteredClient: boolean;
       redirectUri: string;
       requestedLevel: OAuthPermissionLevel;
+      // The parameters of the authorization request as the backend validated them, to be submitted with the decision.
+      params: Record<string, string>;
     }
   // redirectUrl is set if the client could be verified, so that it can be told about the error.
   | { isValid: false; error: string; redirectUrl: string | null };

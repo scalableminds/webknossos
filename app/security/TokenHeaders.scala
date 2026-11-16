@@ -22,10 +22,6 @@ object TokenHeaders {
         header.drop(bearerPrefix.length).trim
     }
 
-  // The Authorization header is only consulted if X-Auth-Token is absent, not if it holds an unknown token.
-  def credential(request: RequestHeader): Option[String] =
-    authToken(request).orElse(bearerToken(request))
-
   // Every token value the request carries, so that the scope check can not be dodged by adding a second header.
   def allTokenValues(request: RequestHeader): List[String] =
     (authToken(request).toList ++ bearerToken(request).toList).distinct

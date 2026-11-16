@@ -89,7 +89,7 @@ class OAuthService @Inject() (
   private val accessTokenExpiry: FiniteDuration = 1.hour
   // Each refresh issues a new refresh token, so this is the time a connection may stay unused.
   private val refreshTokenExpiry: FiniteDuration = 30.days
-  // Registered clients that did not get a grant within this time are deleted.
+  // Registered clients that are older than this and have no live grant are deleted.
   private val unusedClientExpiry: FiniteDuration = 1.day
 
   /* ---------- Authorization endpoint (consent page) ---------- */
@@ -187,16 +187,7 @@ class OAuthService @Inject() (
     errorRedirect(request.redirectUri, request.state, "access_denied", "The user denied the request")
 
   private def upsertGrant(user: User, client: OAuthClientMetadata, level: ScopeMode.Value): Fox[OAuthGrant] =
-    grantDAO.findLiveByUserAndClient(user._id, client.clientId).shiftBox.flatMap {
-      case Full(existing) =>
-        for {
-          _ <- grantDAO.updateScopesAndClientName(existing._id, level.toString, client.clientName)
-        } yield existing.copy(scopes = level.toString, clientName = client.clientName)
-      case Empty =>
-        val grant = OAuthGrant(ObjectId.generate, user._id, client.clientId, client.clientName, level.toString)
-        grantDAO.insertOne(grant).map(_ => grant)
-      case failure: Failure => failure.toFox
-    }
+    grantDAO.upsertLive(OAuthGrant(ObjectId.generate, user._id, client.clientId, client.clientName, level.toString))
 
   private def redirectWith(redirectUri: String, state: Option[String], params: (String, String)*): String = {
     val builder = new URIBuilder(redirectUri)

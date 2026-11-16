@@ -5,7 +5,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.pekko.stream.Materializer
 import play.api.libs.json.Json
 import play.api.mvc.{Filter, RequestHeader, Result}
-import play.api.mvc.Results.{Forbidden, InternalServerError}
+import play.api.mvc.Results.{Forbidden, InternalServerError, Unauthorized}
 import play.api.routing.Router
 import security.{RouteScopes, Scope, ScopedApiToken, ScopedApiTokenService, TokenHeaders}
 import utils.WkConf
@@ -17,7 +17,8 @@ import scala.concurrent.{ExecutionContext, Future}
   *
   * Requests that are not authenticated by a scoped token pass through untouched, so session cookies and regular API
   * tokens behave exactly as before. Scoped tokens are the scoped API tokens of security.ScopedApiTokenService. They are
-  * recognized by the prefix of their value, so only requests that actually use one pay for the extra database lookup.
+  * recognized by the prefix of their value, so only requests that actually use one pay for the extra database lookup. A
+  * value with that prefix that is not a valid scoped API token is rejected, it never counts as unscoped.
   *
   * Note that only the authentication headers are inspected, never the ?token= query parameter: on wk routes that
   * parameter carries a token that is the *subject* of the request (as in validateUserAccess) rather than its
@@ -33,44 +34,56 @@ class ScopeFilter @Inject() (
 ) extends Filter
     with LazyLogging {
 
-  override def apply(nextFilter: RequestHeader => Future[Result])(request: RequestHeader): Future[Result] =
-    scopedTokenFor(request).flatMap {
-      case Empty            => nextFilter(request)
-      case failure: Failure =>
-        // Fail closed: the request may well use a scoped token, we just could not check.
-        logger.warn(s"Could not look up scoped token for ${request.method} ${request.path}: ${failure.msg}")
-        Future.successful(
-          InternalServerError(Json.obj("messages" -> Json.arr(Json.obj("error" -> "Could not check token scopes."))))
-        )
-      case Full(token) =>
-        // The scopes come from the token's grant, read per request, so that changing them takes effect at once.
-        requiredScopeFor(request) match {
-          case None =>
-            deny(request, token.scopes, "This endpoint cannot be used with a scoped token", nextFilter)
-          case Some(required) if !token.scopes.allows(required) =>
-            deny(request, token.scopes, s"Missing scope $required", nextFilter)
-          case Some(_) => nextFilter(request)
-        }
-    }
+  override def apply(nextFilter: RequestHeader => Future[Result])(request: RequestHeader): Future[Result] = {
+    val scopedApiTokenValues = scopedApiTokenValuesOf(request)
+    if (scopedApiTokenValues.isEmpty) nextFilter(request)
+    else
+      findAllValid(scopedApiTokenValues).flatMap {
+        case Empty =>
+          // Fail closed: a value with the scoped prefix that does not resolve to a valid scoped API token (expired,
+          // revoked, or its grant revoked) must never be treated as an unscoped token. The regular authentication
+          // might still accept it, e.g. if revoking the grant did not get to deleting its tokens.
+          logger.info(s"Denying ${request.method} ${request.path}: invalid scoped API token")
+          Future.successful(
+            Unauthorized(Json.obj("messages" -> Json.arr(Json.obj("error" -> "Invalid or expired token."))))
+          )
+        case failure: Failure =>
+          // Fail closed here too: we could not check.
+          logger.warn(s"Could not look up scoped token for ${request.method} ${request.path}: ${failure.msg}")
+          Future.successful(
+            InternalServerError(Json.obj("messages" -> Json.arr(Json.obj("error" -> "Could not check token scopes."))))
+          )
+        case Full(tokens) =>
+          // The scopes come from the tokens' grants, read per request, so that changing them takes effect at once.
+          requiredScopeFor(request) match {
+            case None =>
+              deny(request, tokens.head.scopes, "This endpoint cannot be used with a scoped token", nextFilter)
+            case Some(required) =>
+              tokens.find(!_.scopes.allows(required)) match {
+                case Some(token) => deny(request, token.scopes, s"Missing scope $required", nextFilter)
+                case None        => nextFilter(request)
+              }
+          }
+      }
+  }
 
-  /** Empty for revoked or expired scoped API tokens as well. Such requests pass through here, but are then rejected by
-    * the regular authentication, which does not find a valid token either. Failure means the lookup itself failed.
-    *
-    * All token headers are checked, not just the one the authentication picks (TokenHeaders.credential). If any of them
-    * holds a valid scoped API token, the request is scoped. Adding a second header can then never lift the restriction,
-    * even if the two ever disagree about which header counts.
+  /** All token headers are checked, not just the one the authentication picks (see CombinedAuthenticatorService). If
+    * any of them holds a scoped API token, the request is scoped. Adding a second header can then never lift the
+    * restriction, even if the two ever disagree about which header counts.
     */
-  private def scopedTokenFor(request: RequestHeader): Future[Box[ScopedApiToken]] =
-    if (!request.path.startsWith("/api/")) Future.successful(Empty)
-    else firstValidScopedApiToken(TokenHeaders.allTokenValues(request))
+  private def scopedApiTokenValuesOf(request: RequestHeader): List[String] =
+    if (!request.path.startsWith("/api/")) List.empty
+    else TokenHeaders.allTokenValues(request).filter(scopedApiTokenService.isScopedApiTokenValue)
 
-  private def firstValidScopedApiToken(tokenValues: List[String]): Future[Box[ScopedApiToken]] =
+  // Empty if any of the values is not a valid scoped API token. Failure means the lookup itself failed.
+  private def findAllValid(tokenValues: List[String]): Future[Box[List[ScopedApiToken]]] =
     tokenValues match {
-      case Nil          => Future.successful(Empty)
+      case Nil          => Future.successful(Full(List.empty))
       case head :: tail =>
         scopedApiTokenService.findValid(head).futureBox.flatMap {
-          case Empty => firstValidScopedApiToken(tail)
-          case other => Future.successful(other)
+          case Full(token)      => findAllValid(tail).map(_.map(token :: _))
+          case Empty            => Future.successful(Empty)
+          case failure: Failure => Future.successful(failure)
         }
     }
 

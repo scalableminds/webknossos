@@ -83,9 +83,16 @@ class OAuthController @Inject() (
     */
   def getAuthorizationRequest: Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     val params = request.queryString.collect { case (key, value +: _) => key -> value }
+    // RFC 6749 section 3.1: parameters must not be included more than once. Otherwise the page could show one client
+    // and submit another, depending on which of the values each side picks.
+    val duplicatedParam = request.queryString.collectFirst { case (key, values) if values.length > 1 => key }
     for {
       _ <- assertEnabled
-      validation <- Fox.fromFuture(oauthService.validateAuthorizationRequest(params))
+      validation <- duplicatedParam match {
+        case Some(key) =>
+          Fox.successful(Left(AuthorizationError(s"The parameter $key is given more than once", None)))
+        case None => Fox.fromFuture(oauthService.validateAuthorizationRequest(params))
+      }
     } yield validation match {
       case Left(error)      => Ok(errorJson(error))
       case Right(validated) =>
@@ -96,7 +103,9 @@ class OAuthController @Inject() (
             "clientName" -> validated.client.clientName,
             "isRegisteredClient" -> validated.client.isRegistered,
             "redirectUri" -> validated.redirectUri,
-            "requestedLevel" -> validated.requestedLevel.toString
+            "requestedLevel" -> validated.requestedLevel.toString,
+            // The consent page submits exactly these, so that what the user approves is what was shown.
+            "params" -> params
           )
         )
     }

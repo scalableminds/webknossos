@@ -66,7 +66,8 @@ class UserTokenController @Inject() (
       case Some(user) =>
         scopedApiTokenOf(request) match {
           // a scoped API token must not be able to trade itself in for a DataStore token, which would not be subject
-          // to the agent's scopes. It gets another scoped API token under the same grant instead, which is.
+          // to the agent's scopes. It gets another scoped API token under the same grant instead, which is. That token
+          // expires no later than the one it was created from, so this cannot be used to keep a token alive forever.
           case Some(scopedApiTokenValue) =>
             for {
               scopedApiToken <- scopedApiTokenService.findValid(scopedApiTokenValue) ?~> "Invalid token"
@@ -115,7 +116,12 @@ class UserTokenController @Inject() (
         sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(using DBAccessContext(userBox.toOption))
         answer <-
           if (!scopesAllowed)
-            Fox.successful(UserAccessAnswer(granted = false, Some("Not allowed for this token, missing scope.")))
+            Fox.successful(
+              UserAccessAnswer(
+                granted = false,
+                Some("Not allowed for this token: it is invalid or lacks the required scope.")
+              )
+            )
           else
             accessRequest.resourceType match {
               case AccessResourceType.dataset =>
@@ -157,8 +163,9 @@ class UserTokenController @Inject() (
             Fox.successful(Scope.fromAccessResourceType(accessRequest.resourceType).exists { resource =>
               scopedApiToken.scopes.allows(Scope(resource, ScopeMode.fromAccessMode(accessRequest.mode)))
             })
-          // Only scoped API tokens are restricted here. A revoked or expired one does not resolve to a user below either.
-          case Empty            => Fox.successful(true)
+          // Only scoped API tokens are restricted here. A value that looks like one but is not valid (expired,
+          // revoked, or its grant revoked) is denied rather than treated as unscoped.
+          case Empty            => Fox.successful(!scopedApiTokenService.isScopedApiTokenValue(tokenValue))
           case failure: Failure => failure.toFox
         }
     }

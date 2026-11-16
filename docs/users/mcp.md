@@ -69,7 +69,7 @@ When you approve a connection, you choose one of three permission levels:
 | Level | What the agent may do |
 | --- | --- |
 | Read | Look at datasets, annotations and tasks, but change nothing. |
-| Create/modify | Additionally upload and edit datasets, and create annotations, tasks, projects and teams. |
+| Create/modify | Additionally upload and edit datasets, create annotations, tasks, projects and teams, and edit users (see the warning below). |
 | Delete | Additionally delete datasets, annotations, tasks and teams. |
 
 The level belongs to the connection. To change it, connect the same application again and choose another level;
@@ -78,9 +78,12 @@ this takes effect immediately, also for agents that are already running.
 The levels cover everything the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/) can do, so
 an agent granted `Delete` can use the whole library. The organization itself stays read-only at every level.
 
-!!! note
-    Because the Python library creates teams and updates users (to assign team memberships), `Create/modify` also
-    allows that. If the connecting user is an admin, an agent at that level can therefore change team memberships.
+!!! warning
+    Because the Python library creates teams and updates users, `Create/modify` includes everything you can do in
+    user management yourself. For a team manager, that is changing the team memberships and experiences of the users
+    in their teams. For an admin, it also includes activating and deactivating users and granting or revoking the
+    admin and dataset manager roles. If you are an admin, only grant `Create/modify` or `Delete` to an agent you
+    would trust with that, and choose `Read` otherwise.
 
 Internally, a level is a set of scopes, written as `resource:mode`, for example `dataset:read` or
 `annotation:write`. The modes `read`, `write` and `delete` are ordered, so `write` also grants `read`, and `delete`
@@ -96,14 +99,16 @@ voxel data. An agent can never reach your API token, approve connections or chan
 The `MCP Agent Connections` tab lists the connected applications with their permission level and when they were
 last used. `Disconnect` revokes a connection immediately, including all scoped API tokens the agent obtained
 through it. [Logging out everywhere](password.md#log-out-everywhere) disconnects all
-applications.
+applications. [Revoking your auth token](password.md#token-revocation) ends all scoped API tokens, but keeps the
+connections.
 
 ## Scoped API tokens
 
 The MCP server itself only offers a few tools. To work with your data, an agent asks it for a scoped API token,
 which it then uses with the WEBKNOSSOS Python library. These tokens act for your account, limited to the
 permissions of the connection, and expire after one day (configurable by the instance operator with
-`silhouette.tokenAuthenticator.scopedApiTokenExpiry`).
+`silhouette.tokenAuthenticator.scopedApiTokenExpiry`). A token cannot extend its own lifetime; once it has expired,
+the agent has to ask the MCP server for a new one.
 
 The OAuth tokens of the connection itself are only accepted by the MCP server. They expire after one hour and are
 renewed by the client automatically; a connection that is not used for 30 days expires.

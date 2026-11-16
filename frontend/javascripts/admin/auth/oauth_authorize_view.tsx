@@ -41,21 +41,26 @@ function OAuthAuthorizeView() {
   const [info, setInfo] = useState<OAuthAuthorizationRequestInfo | null>(null);
   const [level, setLevel] = useState<OAuthPermissionLevel>("write");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasLoadingFailed, setHasLoadingFailed] = useState(false);
 
   useEffect(() => {
+    setHasLoadingFailed(false);
     getOAuthAuthorizationRequest(location.search).then(
       (fetchedInfo) => {
         setInfo(fetchedInfo);
         if (fetchedInfo.isValid) setLevel(fetchedInfo.requestedLevel);
       },
-      (error) => console.error("Failed to load the authorization request:", error),
+      (error) => {
+        console.error("Failed to load the authorization request:", error);
+        setHasLoadingFailed(true);
+      },
     );
   }, [location.search]);
 
-  const submit = async (approved: boolean) => {
+  const submit = async (params: Record<string, string>, approved: boolean) => {
     setIsSubmitting(true);
     try {
-      const params = Object.fromEntries(new URLSearchParams(location.search).entries());
+      // The parameters are the ones the backend validated and this page shows, not a second reading of the URL.
       const response = await submitOAuthAuthorization(params, level, approved);
       if (response.redirectUrl != null) {
         // Back to the client, carrying the authorization code or the error.
@@ -73,6 +78,17 @@ function OAuthAuthorizeView() {
 
   if (isFramed()) {
     return <Result status="error" title="This page cannot be shown in a frame." />;
+  }
+
+  if (hasLoadingFailed) {
+    return (
+      <Result
+        status="error"
+        title="The connection request could not be loaded"
+        subTitle="The MCP server may not be enabled on this WEBKNOSSOS instance, or the request failed. Reload the page to try again."
+        extra={<Button onClick={() => window.location.reload()}>Reload</Button>}
+      />
+    );
   }
 
   if (info == null) {
@@ -150,10 +166,10 @@ function OAuthAuthorizeView() {
             change your mind at any time and disconnect the application in your account settings.
           </Paragraph>
           <Space>
-            <Button type="primary" loading={isSubmitting} onClick={() => submit(true)}>
+            <Button type="primary" loading={isSubmitting} onClick={() => submit(info.params, true)}>
               Allow
             </Button>
-            <Button disabled={isSubmitting} onClick={() => submit(false)}>
+            <Button disabled={isSubmitting} onClick={() => submit(info.params, false)}>
               Deny
             </Button>
           </Space>

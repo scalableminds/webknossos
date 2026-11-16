@@ -102,6 +102,34 @@ fn rendered_cases() -> Vec<(&'static str, Mail)> {
             ),
         ),
         (
+            "storage_warning_92",
+            templates::storage_warning(
+                NAME,
+                R,
+                "Org & Co",
+                92_000_000_000,
+                100_000_000_000,
+                92.0,
+                false,
+                URI,
+                "s@x.test",
+            ),
+        ),
+        (
+            "storage_warning_exceeded",
+            templates::storage_warning(
+                NAME,
+                R,
+                "Org & Co",
+                100_500_000_000,
+                100_000_000_000,
+                100.5,
+                true,
+                URI,
+                "s@x.test",
+            ),
+        ),
+        (
             "pricing_plan_upgraded",
             templates::pricing_plan_upgraded(
                 NAME,
@@ -503,6 +531,38 @@ fn subjects_senders_and_recipients_match_default_mails() {
                 "s@x.test",
             ),
             "WEBKNOSSOS | Your Team plan expires on 2026-10-11",
+            vec![R],
+            vec!["s@x.test"],
+        ),
+        (
+            templates::storage_warning(
+                "Ann",
+                R,
+                "Org",
+                89_990,
+                100_000,
+                89.99,
+                false,
+                "http://wk",
+                "s@x.test",
+            ),
+            "WEBKNOSSOS | Your organization Org has used 89% of its storage",
+            vec![R],
+            vec!["s@x.test"],
+        ),
+        (
+            templates::storage_warning(
+                "Ann",
+                R,
+                "Org",
+                1,
+                0,
+                f64::INFINITY,
+                true,
+                "http://wk",
+                "s@x.test",
+            ),
+            "WEBKNOSSOS | Your organization Org has used up its storage",
             vec![R],
             vec!["s@x.test"],
         ),
@@ -1087,4 +1147,24 @@ async fn unreachable_smtp_server_never_blocks_or_panics_the_caller() {
     }
     assert!(started.elapsed() < Duration::from_secs(1));
     tokio::time::sleep(Duration::from_millis(200)).await;
+}
+
+/// Scala `Formatter.formatBytes`.
+#[test]
+fn format_bytes_matches_scala() {
+    for (bytes, expected) in [
+        (0, "0 B"),
+        (999, "999 B"),
+        (1000, "1.0 KB"),
+        (1049, "1.0 KB"),
+        (1050, "1.1 KB"),
+        (1_250_000_000, "1.3 GB"),
+        (92_000_000_000, "92.0 GB"),
+        (999_960, "1000.0 KB"),
+        (1_000_000_000_000, "1.0 TB"),
+        (2_500_000_000_000_000, "2.5 PB"),
+        (i64::MAX, "9223.4 PB"),
+    ] {
+        assert_eq!(templates::format_bytes(bytes), expected, "{bytes}");
+    }
 }

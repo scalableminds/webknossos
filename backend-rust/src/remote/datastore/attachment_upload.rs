@@ -226,7 +226,7 @@ async fn report_attachment_upload(
     if !finished {
         return Err(ApiError::bad_request(ATTACHMENT_NOT_PENDING));
     }
-    after_upload_reported(pool, &clients, id).await?;
+    after_upload_reported(&state, &clients, id).await?;
     Ok(StatusCode::OK)
 }
 

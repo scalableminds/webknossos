@@ -12,6 +12,7 @@ use crate::{
     job::routes::JobsConfig,
     mail::MailSender,
     mailchimp::{MailchimpClient, MailchimpConfig},
+    organization::storage::warning::{StorageWarningEmailsConfig, StorageWarnings},
     short_links::PublicUrl,
     slack::{SlackConfig, SlackNotificationService},
     stores::{
@@ -56,6 +57,7 @@ pub struct AppState {
     pub oidc: Arc<Oidc>,
     pub main_view: crate::main_view::MainView,
     pub alignment_projects: AlignmentProjectsConfig,
+    pub storage_warnings: StorageWarnings,
 }
 
 /// `features.allowDeleteDatasets`.
@@ -92,6 +94,7 @@ pub struct AppStateBuilder {
     oidc: OidcConfig,
     main_view: crate::main_view::MainViewConfig,
     alignment_projects: AlignmentProjectsConfig,
+    storage_warning_emails: StorageWarningEmailsConfig,
 }
 
 impl AppState {
@@ -127,6 +130,7 @@ impl AppState {
             oidc: OidcConfig::default(),
             main_view: Default::default(),
             alignment_projects: AlignmentProjectsConfig::default(),
+            storage_warning_emails: StorageWarningEmailsConfig::default(),
         }
     }
 
@@ -151,6 +155,7 @@ impl AppState {
             .oidc(config.oidc.clone())
             .main_view(config.main_view.clone())
             .alignment_projects(config.alignment_projects.clone())
+            .storage_warning_emails(config.storage_warning_emails.clone())
             .build()
     }
 }
@@ -269,6 +274,11 @@ impl AppStateBuilder {
         self
     }
 
+    pub fn storage_warning_emails(mut self, config: StorageWarningEmailsConfig) -> Self {
+        self.storage_warning_emails = config;
+        self
+    }
+
     /// A notification-email service other than the one sending through `mailer`.
     pub fn notification_emails(mut self, service: NotificationEmailService) -> Self {
         self.notification_emails = Some(service);
@@ -288,6 +298,12 @@ impl AppStateBuilder {
         let notification_emails = self.notification_emails.unwrap_or_else(|| {
             NotificationEmailService::new(self.mailer.clone(), &self.browser_auth.public_uri)
         });
+        let storage_warnings = StorageWarnings::new(
+            self.storage_warning_emails,
+            self.mailer.clone(),
+            self.misc.public_uri.clone(),
+            self.misc.support_email.clone(),
+        );
         let time_interaction_writer = self.time_interaction_writer.unwrap_or_else(|| {
             TimeInteractionWriter::new(
                 Default::default(),
@@ -321,6 +337,7 @@ impl AppStateBuilder {
             oidc: Arc::new(Oidc::new(self.oidc)),
             main_view: crate::main_view::MainView::new(self.main_view),
             alignment_projects: self.alignment_projects,
+            storage_warnings,
         }
     }
 }

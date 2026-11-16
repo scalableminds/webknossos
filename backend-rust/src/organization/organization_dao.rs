@@ -321,3 +321,104 @@ pub(crate) async fn find_name(pool: &PgPool, id: &str) -> Result<Option<String>,
         .fetch_optional(pool)
         .await
 }
+
+/// Scala `EmailThresholdType` (`webknossos.EMAIL_THRESHOLD_TYPE`): emails that are sent once an
+/// organization crosses a threshold. The thresholds the organization was already notified about
+/// are recorded per type in `organization_notifiedEmailThresholds`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum EmailThresholdType {
+    /// Threshold: lead time in days before `paidUntil`.
+    PlanExpiry,
+    /// Threshold: used storage in percent of the included storage.
+    StorageWarning,
+}
+
+impl EmailThresholdType {
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            Self::PlanExpiry => "PlanExpiry",
+            Self::StorageWarning => "StorageWarning",
+        }
+    }
+}
+
+/// `OrganizationDAO.insertNotifiedEmailThresholds`: records that the organization was notified by
+/// email about the given thresholds of the given type. Rows that are already present are
+/// skipped, so the returned count is the number of thresholds that were not recorded before.
+/// Callers use it to decide whether the email still needs to be sent.
+pub(crate) async fn insert_notified_email_thresholds(
+    executor: impl PgExecutor<'_>,
+    organization_id: &str,
+    email_threshold_type: EmailThresholdType,
+    thresholds: &[i32],
+) -> sqlx::Result<u64> {
+    if thresholds.is_empty() {
+        return Ok(0);
+    }
+    sqlx::query(
+        "INSERT INTO webknossos.organization_notifiedEmailThresholds\
+         (_organization, emailThresholdType, threshold) \
+         SELECT $1, $2::webknossos.EMAIL_THRESHOLD_TYPE, UNNEST($3::INT[]) \
+         ON CONFLICT DO NOTHING",
+    )
+    .bind(organization_id)
+    .bind(email_threshold_type.as_str())
+    .bind(thresholds)
+    .execute(executor)
+    .await
+    .map(|result| result.rows_affected())
+}
+
+/// `OrganizationDAO.deleteNotifiedEmailThresholds`: re-arms the given thresholds, so that
+/// crossing them again sends a new email.
+pub(crate) async fn delete_notified_email_thresholds(
+    executor: impl PgExecutor<'_>,
+    organization_id: &str,
+    email_threshold_type: EmailThresholdType,
+    thresholds: &[i32],
+) -> sqlx::Result<()> {
+    if thresholds.is_empty() {
+        return Ok(());
+    }
+    sqlx::query(
+        "DELETE FROM webknossos.organization_notifiedEmailThresholds \
+         WHERE _organization = $1 \
+         AND emailThresholdType = $2::webknossos.EMAIL_THRESHOLD_TYPE \
+         AND threshold = ANY($3::INT[])",
+    )
+    .bind(organization_id)
+    .bind(email_threshold_type.as_str())
+    .bind(thresholds)
+    .execute(executor)
+    .await?;
+    Ok(())
+}
+
+/// The name and the included storage in bytes (`None`: unlimited) of the organization.
+pub(crate) async fn find_name_and_included_storage(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+) -> sqlx::Result<Option<(String, Option<i64>)>> {
+    sqlx::query_as("SELECT name, includedStorage FROM webknossos.organizations_ WHERE _id = $1")
+        .bind(id)
+        .fetch_optional(executor)
+        .await
+}
+
+/// `OrganizationDAO.getUsedStorage`: total bytes used by the organization's mags and attachments.
+pub(crate) async fn find_used_storage_bytes(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+) -> sqlx::Result<i64> {
+    sqlx::query_scalar(
+        "SELECT COALESCE(SUM(usedStorageBytes), 0)::BIGINT FROM ( \
+           SELECT usedStorageBytes FROM webknossos.organization_usedStorage_mags \
+           WHERE _organization = $1 \
+           UNION ALL \
+           SELECT usedStorageBytes FROM webknossos.organization_usedStorage_attachments \
+           WHERE _organization = $1) combined",
+    )
+    .bind(id)
+    .fetch_one(executor)
+    .await
+}

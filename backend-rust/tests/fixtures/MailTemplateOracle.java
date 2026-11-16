@@ -1,7 +1,7 @@
 import java.util.*;
 import views.html.mail.*;
 
-/** Renders Play's compiled Twirl mail templates (../target/scala-3.8.3/classes) for the Rust golden fixture. */
+/** Renders Play's compiled Twirl mail templates (../target/scala-<version>/classes) for the Rust golden fixture. */
 public class MailTemplateOracle {
   static final String NAME = "Jane <O'Brien> & \"Co\"";
   static final String URI = "https://wk.example/?a=1&b=2";
@@ -27,6 +27,8 @@ public class MailTemplateOracle {
     out("help", help$.MODULE$.apply(NAME, "Org & Co", "Help me\n<please>", URI, F));
     out("pricing_plan_expiry_reminder_1", pricingPlanExpiryReminder$.MODULE$.apply(NAME, "Org & Co", "Team", "2026-10-11", 1L, URI + "/organization/overview", F));
     out("pricing_plan_expiry_reminder_14", pricingPlanExpiryReminder$.MODULE$.apply(NAME, "Org & Co", "Team", "2026-10-11", 14L, URI + "/organization/overview", F));
+    out("storage_warning_92", storageWarning$.MODULE$.apply(NAME, "Org & Co", "92.0 GB", "100.0 GB", 92L, false, URI + "/organization/overview", F));
+    out("storage_warning_exceeded", storageWarning$.MODULE$.apply(NAME, "Org & Co", "100.5 GB", "100.0 GB", 100L, true, URI + "/organization/overview", F));
     scala.collection.immutable.List<String> features = scala.jdk.javaapi.CollectionConverters.asScala(List.of("A & B", "C <D>")).toList();
     out("pricing_plan_upgraded", pricingPlanUpgraded$.MODULE$.apply(NAME, "Org & Co", "Power", features, URI, F));
     out("job_successful_generic", jobSuccessfulGeneric$.MODULE$.apply(NAME, DS, LINK, "Mesh Generation", "Your meshes & more are ready.", F));

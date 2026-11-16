@@ -24,3 +24,7 @@ repository webknossos-jni/src/dracoToStlDecoder.cpp + jniutils.cpp against Homeb
 The Java helpers use webknossos-datastore/target/scala-3.8.4/classes and its exported dependency
 classpath; the native helper needs --enable-native-access=ALL-UNNAMED. Replay uses cargo only.
 Mesh containers in ../full_mesh are generated with generate_full_mesh_fixtures.py and h5py/numpy.
+
+The C++ sources under `webknossos-jni/` referenced here were replaced by the Rust crate `webknossos-native` in
+#10382 (same results). To regenerate these fixtures, check them out from before that change:
+`git checkout a5ffcbcfcd~1 -- webknossos-jni`.

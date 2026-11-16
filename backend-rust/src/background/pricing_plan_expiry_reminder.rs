@@ -4,12 +4,16 @@
 //! Reminds the owner and the admins of an organization by email that its pricing plan is about to
 //! expire, once per configured lead time (30, 14 and 7 days before expiry; trials only 7 days).
 //! The lead times a reminder was already sent for are recorded in
-//! `webknossos.organization_planExpiryReminders`, keyed by the expiry date, so extending the plan
-//! re-arms the reminders and restarts do not cause duplicate mails.
+//! `webknossos.organization_notifiedEmailThresholds` (type `PlanExpiry`), so restarts do not cause
+//! duplicate mails. Once the expiry date is further away again than a lead time (e.g. after
+//! extending the plan), that reminder is re-armed.
 //!
 //! Every tick (Scala `webKnossos.pricingPlanExpiryReminder.tickerInterval`, 6 h; first run after
-//! 5 min; disabled by default) loads the organizations whose plan expires within the largest lead
-//! time (`OrganizationDAO.findAllWithPlanExpiringBefore`) and, per organization:
+//! 5 min; disabled by default) first re-arms the reminders of all organizations whose expiry date
+//! is beyond a recorded lead time again
+//! (`OrganizationDAO.deleteNotifiedPlanExpiryThresholdsNotCrossedAnyMore`), then loads the
+//! organizations whose plan expires within the largest lead time
+//! (`OrganizationDAO.findAllWithPlanExpiringBefore`) and, per organization:
 //! - computes the remaining days (`Instant.daysUntil`, rounded up) and the lead times it has
 //!   crossed (`crossedLeadTimesDays`);
 //! - loads the active owner and admins (`findMultiUsersOfOrganizationOwnerAndAdmins`) and fails
@@ -18,14 +22,15 @@
 //!   that cannot be delivered are not retried on every tick; only if at least one row is new, it
 //!   mails `DefaultMails.pricingPlanExpiryReminderMail` to every recipient.
 //!
-//! Failures of one organization are logged (Scala `tryAndLog`) and do not stop the others.
+//! Failures of one organization are logged (Scala `logFailureAndRecover`) and do not stop the
+//! others.
 //!
 //! Cross-instance serialization follows the other background jobs: a tick opens one transaction
 //! holding `pg_try_advisory_xact_lock(advisory_lock_key("pricing-plan-expiry-reminder"))` and is
 //! skipped while another instance holds it. The per-organization statements run in autocommit on
 //! the pool (as in Scala), so a reminder row is committed before its mail is handed to the mailer;
 //! a tick therefore uses two pool connections. Play has no such lock; Play and Rust are both
-//! protected from double mails by the primary key of the reminder table (`ON CONFLICT DO NOTHING`
+//! protected from double mails by the primary key of the threshold table (`ON CONFLICT DO NOTHING`
 //! and the inserted row count), exactly like two Play instances.
 
 mod background_pricing_plan_expiry_reminder_dao;
@@ -42,7 +47,10 @@ use crate::{
     },
     config::{ConfigError, Env},
     mail::{MailSender, templates},
-    organization::pricing::{PricingPlan, organization_pricing_dao},
+    organization::{
+        organization_dao::{self, EmailThresholdType},
+        pricing::{PricingPlan, organization_pricing_dao},
+    },
 };
 
 pub use background_pricing_plan_expiry_reminder_dao::ExpiringOrganization;
@@ -254,6 +262,12 @@ impl PricingPlanExpiryReminder {
             lock.rollback().await?;
             return Ok(JobOutcome::SkippedLocked);
         }
+        // Runs for all organizations, also those whose plan is far from expiring now, so that
+        // their reminders are re-armed before the new expiry date comes into reach.
+        background_pricing_plan_expiry_reminder_dao::rearm_thresholds_not_crossed_any_more(
+            pool, now,
+        )
+        .await?;
         let threshold = now
             .checked_add_signed(chrono::Duration::days(i64::from(max_lead_time_days)))
             .unwrap_or(DateTime::<Utc>::MAX_UTC);
@@ -309,14 +323,13 @@ impl PricingPlanExpiryReminder {
         // Recorded before sending, so that mails that cannot be delivered are not retried on every
         // tick. The count tells how many of the lead times were not recorded before; if none, the
         // mails were already sent.
-        let newly_recorded =
-            background_pricing_plan_expiry_reminder_dao::insert_plan_expiry_reminders(
-                pool,
-                &organization.id,
-                organization.paid_until,
-                &due_lead_times_days,
-            )
-            .await?;
+        let newly_recorded = organization_dao::insert_notified_email_thresholds(
+            pool,
+            &organization.id,
+            EmailThresholdType::PlanExpiry,
+            &due_lead_times_days,
+        )
+        .await?;
         if newly_recorded == 0 {
             return Ok(false);
         }
@@ -346,7 +359,7 @@ impl PricingPlanExpiryReminder {
     }
 }
 
-/// Per-organization failure, logged like Scala's `tryAndLog`.
+/// Per-organization failure, logged like Scala's `logFailureAndRecover`.
 #[derive(Debug)]
 enum ReminderError {
     UnknownPlan,

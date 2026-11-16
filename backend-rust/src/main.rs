@@ -25,11 +25,6 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         &config.credit_ticker,
         config.misc.monthly_free_milli_credits,
     );
-    let used_storage_scan = webknossos_backend::organization::storage::spawn(
-        pool.clone(),
-        webknossos_backend::stores::client::ServiceClients::new(config.service_client.clone())?,
-        &config.used_storage,
-    );
     let virtual_datasets_real_path_scan =
         webknossos_backend::background::virtual_datasets_real_path_scan::spawn(
             pool.clone(),
@@ -52,6 +47,12 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         config.jobs.worker_liveness_timeout,
     );
     let state = AppState::from_config(pool.clone(), &config);
+    let used_storage_scan = webknossos_backend::organization::storage::spawn(
+        pool.clone(),
+        webknossos_backend::stores::client::ServiceClients::new(config.service_client.clone())?,
+        &config.used_storage,
+        state.storage_warnings.clone(),
+    );
     webknossos_backend::system::initial_data::insert_on_startup(
         &state,
         config.initial_data_on_startup,

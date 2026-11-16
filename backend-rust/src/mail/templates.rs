@@ -10,6 +10,7 @@ mod account;
 mod jobs;
 mod pricing;
 mod sharing;
+mod storage;
 
 pub use account::{
     activated, change_password, email_verification, help, invite, new_organization, new_user,
@@ -24,6 +25,7 @@ pub use pricing::{pricing_plan_expiry_reminder, pricing_plan_upgraded, upgrade_r
 pub use sharing::{
     access_changed, annotation_shared, annotation_transferred, dataset_shared, task_assigned,
 };
+pub use storage::{format_bytes, storage_warning};
 
 /// Placeholder for `mail.additionalFooter`. Interpolated values are
 /// HTML-escaped, so they can never contain this marker.

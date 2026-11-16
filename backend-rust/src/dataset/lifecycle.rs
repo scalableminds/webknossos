@@ -497,7 +497,13 @@ async fn finish_upload_to_paths(
         .ok_or_else(|| not_found(&id))?;
     scan_realpaths_if_virtual(&state.pool, &clients, &updated).await?;
     write_mirror_for_virtual(&state.pool, &clients, &updated).await?;
-    crate::organization::storage::refresh_for_dataset(&state.pool, &clients, &id).await?;
+    crate::organization::storage::refresh_for_dataset(
+        &state.pool,
+        &clients,
+        &state.storage_warnings,
+        &id,
+    )
+    .await?;
     tracing::info!(dataset = %id, user = %user.id, "Finished uploadToPaths");
     Ok(())
 }
@@ -545,7 +551,13 @@ async fn after_artifact_finished(
             update_data_source_on_disk(clients, record, &data_source, root).await?;
         }
     }
-    crate::organization::storage::refresh_for_dataset(&state.pool, clients, &record.id).await?;
+    crate::organization::storage::refresh_for_dataset(
+        &state.pool,
+        clients,
+        &state.storage_warnings,
+        &record.id,
+    )
+    .await?;
     scan_realpaths_if_virtual(&state.pool, clients, record).await?;
     invalidate_cache(clients, record).await?;
     write_mirror_for_virtual(&state.pool, clients, record).await

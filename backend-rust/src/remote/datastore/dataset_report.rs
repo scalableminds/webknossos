@@ -145,7 +145,7 @@ async fn report(
             .await
             .map(Some)
     } else {
-        finish_without_conversion(pool, clients, &updated)
+        finish_without_conversion(state, clients, &updated)
             .await
             .map_err(RunError::Api)?;
         Ok(None)
@@ -249,11 +249,18 @@ async fn update_data_source(
 /// UsedStorageService.refreshStorageReportForDataset, then
 /// DatasetService.scanRealpathsIfVirtual and writeMirrorForVirtual.
 async fn finish_without_conversion(
-    pool: &sqlx::PgPool,
+    state: &AppState,
     clients: &ServiceClients,
     updated: &ReportedDataset,
 ) -> ApiResult<()> {
-    crate::organization::storage::refresh_for_dataset(pool, clients, &updated.id).await?;
+    let pool = &state.pool;
+    crate::organization::storage::refresh_for_dataset(
+        pool,
+        clients,
+        &state.storage_warnings,
+        &updated.id,
+    )
+    .await?;
     let record = crate::dataset::lifecycle::load_record(pool, &updated.id)
         .await?
         .ok_or_else(|| crate::dataset::lifecycle::not_found(&updated.id))?;

@@ -1,6 +1,6 @@
 use crate::common;
 
-use chrono::{DateTime, Duration, DurationRound, Utc};
+use chrono::{DateTime, Duration, Utc};
 use common::{TestDb, object_id};
 use webknossos_backend::{
     background::pricing_plan_expiry_reminder::{
@@ -62,10 +62,11 @@ async fn add_user(db: &TestDb, organization_id: &str, is_admin: bool, extra: &st
     email(db, &user.multi_user_id).await
 }
 
-async fn reminder_rows(db: &TestDb, organization_id: &str) -> Vec<(DateTime<Utc>, i32)> {
-    sqlx::query_as(
-        "SELECT paidUntil, leadTimeDays FROM webknossos.organization_planExpiryReminders \
-         WHERE _organization = $1 ORDER BY paidUntil, leadTimeDays",
+/// The recorded (already reminded) lead times of the organization, ascending.
+async fn reminder_rows(db: &TestDb, organization_id: &str) -> Vec<i32> {
+    sqlx::query_scalar(
+        "SELECT threshold FROM webknossos.organization_notifiedEmailThresholds \
+         WHERE _organization = $1 AND emailThresholdType = 'PlanExpiry' ORDER BY threshold",
     )
     .bind(organization_id)
     .fetch_all(&db.pool)
@@ -73,9 +74,26 @@ async fn reminder_rows(db: &TestDb, organization_id: &str) -> Vec<(DateTime<Utc>
     .unwrap()
 }
 
-/// Play's `Instant` precision.
-fn millis(instant: DateTime<Utc>) -> DateTime<Utc> {
-    instant.duration_trunc(Duration::milliseconds(1)).unwrap()
+async fn record_reminders(db: &TestDb, organization_id: &str, lead_times_days: &[i32]) {
+    sqlx::query(
+        "INSERT INTO webknossos.organization_notifiedEmailThresholds \
+         (_organization, emailThresholdType, threshold) \
+         SELECT $1, 'PlanExpiry', UNNEST($2::INT[])",
+    )
+    .bind(organization_id)
+    .bind(lead_times_days)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+}
+
+async fn set_paid_until(db: &TestDb, organization_id: &str, paid_until: DateTime<Utc>) {
+    sqlx::query("UPDATE webknossos.organizations SET paidUntil = $2 WHERE _id = $1")
+        .bind(organization_id)
+        .bind(paid_until)
+        .execute(&db.pool)
+        .await
+        .unwrap();
 }
 
 fn recipients_of(mails: &[Mail]) -> Vec<String> {
@@ -97,8 +115,7 @@ fn sorted(mut values: Vec<String>) -> Vec<String> {
 async fn reminds_owner_and_admins_once_per_lead_time() {
     let db = TestDb::new().await;
     let now = Utc::now();
-    // Sub-millisecond part to check that the reminder rows use Play's millisecond precision.
-    let in_10_days = now + Duration::days(10) - Duration::hours(1) + Duration::microseconds(7);
+    let in_10_days = now + Duration::days(10) - Duration::hours(1);
 
     // Team plan, 10 days left: the 30 and 14 day lead times are crossed.
     let (team, team_admin) = organization(&db, "Team", Some(in_10_days), true).await;
@@ -121,26 +138,16 @@ async fn reminds_owner_and_admins_once_per_lead_time() {
     let (unlimited, _) = organization(&db, "Enterprise", None, true).await;
     // Already reminded for 30 days: only the 14 day reminder is new, which still sends mails.
     let (partial, partial_admin) = organization(&db, "Enterprise", Some(in_10_days), true).await;
-    sqlx::query(
-        "INSERT INTO webknossos.organization_planExpiryReminders \
-         (_organization, paidUntil, leadTimeDays) VALUES ($1, $2, 30)",
-    )
-    .bind(&partial)
-    .bind(millis(in_10_days))
-    .execute(&db.pool)
-    .await
-    .unwrap();
+    record_reminders(&db, &partial, &[30]).await;
     // Already reminded for every crossed lead time: no mail.
     let (done, _) = organization(&db, "Team", Some(in_10_days), true).await;
-    sqlx::query(
-        "INSERT INTO webknossos.organization_planExpiryReminders \
-         (_organization, paidUntil, leadTimeDays) VALUES ($1, $2, 30), ($1, $2, 14)",
-    )
-    .bind(&done)
-    .bind(millis(in_10_days))
-    .execute(&db.pool)
-    .await
-    .unwrap();
+    record_reminders(&db, &done, &[30, 14]).await;
+    // Reminded for 7 days, but the plan was extended since: re-armed, while 14 and 30 stay.
+    let (extended_before, _) = organization(&db, "Team", Some(in_10_days), true).await;
+    record_reminders(&db, &extended_before, &[7, 14, 30]).await;
+    // Reminders of a plan that was made unlimited are re-armed (the organization is not checked).
+    let (unlimited_since, _) = organization(&db, "Enterprise", None, true).await;
+    record_reminders(&db, &unlimited_since, &[7]).await;
 
     let recorder = RecordingMailer::default();
     let config = PricingPlanExpiryReminderConfig {
@@ -160,21 +167,12 @@ async fn reminds_owner_and_admins_once_per_lead_time() {
     let outcome = reminder.tick_at(&db.pool, now).await.unwrap();
     assert_eq!(
         outcome,
-        JobOutcome::Completed("Checked 6 organizations with expiring plans, reminded 3.".into())
+        JobOutcome::Completed("Checked 7 organizations with expiring plans, reminded 3.".into())
     );
-    let paid_until = millis(in_10_days);
-    assert_eq!(
-        reminder_rows(&db, &team).await,
-        vec![(paid_until, 14), (paid_until, 30)]
-    );
-    assert_eq!(
-        reminder_rows(&db, &power_trial).await,
-        vec![(millis(in_3_days), 7)]
-    );
-    assert_eq!(
-        reminder_rows(&db, &partial).await,
-        vec![(paid_until, 14), (paid_until, 30)]
-    );
+    assert_eq!(reminder_rows(&db, &team).await, vec![14, 30]);
+    assert_eq!(reminder_rows(&db, &power_trial).await, vec![7]);
+    assert_eq!(reminder_rows(&db, &partial).await, vec![14, 30]);
+    assert_eq!(reminder_rows(&db, &extended_before).await, vec![14, 30]);
     for organization_id in [
         &trial,
         &no_admin,
@@ -183,6 +181,7 @@ async fn reminds_owner_and_admins_once_per_lead_time() {
         &expired,
         &far,
         &unlimited,
+        &unlimited_since,
     ] {
         assert!(
             reminder_rows(&db, organization_id).await.is_empty(),
@@ -211,7 +210,7 @@ async fn reminds_owner_and_admins_once_per_lead_time() {
         team_mail.subject,
         format!(
             "WEBKNOSSOS | Your Team plan expires on {}",
-            format_date_only(paid_until)
+            format_date_only(in_10_days)
         )
     );
     assert!(team_mail.body_html.contains("Hi Rust Test,"));
@@ -243,17 +242,14 @@ async fn reminds_owner_and_admins_once_per_lead_time() {
     let outcome = reminder.tick_at(&db.pool, now).await.unwrap();
     assert_eq!(
         outcome,
-        JobOutcome::Completed("Checked 6 organizations with expiring plans, reminded 0.".into())
+        JobOutcome::Completed("Checked 7 organizations with expiring plans, reminded 0.".into())
     );
     assert!(recorder.take().is_empty());
 
     // Time passes: one day before expiry the 7 day lead time is crossed as well.
     let later = now + Duration::days(9);
     reminder.tick_at(&db.pool, later).await.unwrap();
-    assert_eq!(
-        reminder_rows(&db, &team).await,
-        vec![(paid_until, 7), (paid_until, 14), (paid_until, 30)]
-    );
+    assert_eq!(reminder_rows(&db, &team).await, vec![7, 14, 30]);
     let mails = recorder.take();
     let team_mails: Vec<&Mail> = mails
         .iter()
@@ -262,34 +258,36 @@ async fn reminds_owner_and_admins_once_per_lead_time() {
     assert_eq!(team_mails.len(), 1);
     assert!(team_mails[0].body_html.contains("— that is tomorrow."));
 
-    // Extending the plan re-arms the reminders for the new expiry date.
-    let extended = now + Duration::days(12);
-    sqlx::query("UPDATE webknossos.organizations SET paidUntil = $2 WHERE _id = $1")
-        .bind(&team)
-        .bind(extended)
-        .execute(&db.pool)
-        .await
-        .unwrap();
+    // Extending the plan to 12 days re-arms only the 7 day reminder; 14 and 30 were sent already.
+    set_paid_until(&db, &team, now + Duration::days(12)).await;
     reminder.tick_at(&db.pool, now).await.unwrap();
+    assert_eq!(reminder_rows(&db, &team).await, vec![14, 30]);
+    assert!(
+        recorder
+            .take()
+            .iter()
+            .all(|mail| !mail.subject.contains("Team plan"))
+    );
+
+    // Extending it beyond every lead time re-arms all reminders; once the new expiry date comes
+    // into reach, they are sent again.
+    set_paid_until(&db, &team, now + Duration::days(40)).await;
+    reminder.tick_at(&db.pool, now).await.unwrap();
+    assert!(reminder_rows(&db, &team).await.is_empty());
+    let later = now + Duration::days(27);
+    reminder.tick_at(&db.pool, later).await.unwrap();
     let mails = recorder.take();
+    let team_name = format!("<i>{team} name</i>");
     assert_eq!(
         recipients_of(
             &mails
                 .into_iter()
-                .filter(|mail| mail.subject.contains("Team plan"))
+                .filter(|mail| mail.body_html.contains(&team_name))
                 .collect::<Vec<_>>()
         ),
         sorted(vec![team_admin, team_owner])
     );
-    assert_eq!(
-        reminder_rows(&db, &team)
-            .await
-            .into_iter()
-            .filter(|(paid_until, _)| *paid_until == millis(extended))
-            .map(|(_, days)| days)
-            .collect::<Vec<_>>(),
-        vec![14, 30]
-    );
+    assert_eq!(reminder_rows(&db, &team).await, vec![14, 30]);
 
     db.cleanup().await;
 }

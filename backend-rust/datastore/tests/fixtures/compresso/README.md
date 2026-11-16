@@ -44,3 +44,7 @@ If a managed macOS Python names an unavailable SDK when building the encoder,
 set `SDKROOT` to `xcrun --show-sdk-path` and point `LDSHARED`/`LDCXXSHARED`
 to `clang++ -bundle -undefined dynamic_lookup -arch arm64 -isysroot` followed
 by that SDK path. These are fixture-generation dependencies only.
+
+The C++ sources under `webknossos-jni/` referenced here were replaced by the Rust crate `webknossos-native` in
+#10382 (same results). To regenerate these fixtures, check them out from before that change:
+`git checkout a5ffcbcfcd~1 -- webknossos-jni`.

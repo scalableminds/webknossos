@@ -188,10 +188,11 @@ pub(crate) fn require_same_datastore(
 /// `UsedStorageService.refreshStorageReportForDataset`. Errors propagate like
 /// Scala's Fox chain; the preceding DB update stays committed.
 pub(crate) async fn after_upload_reported(
-    pool: &sqlx::PgPool,
+    state: &AppState,
     clients: &ServiceClients,
     dataset_id: &ObjectId,
 ) -> ApiResult<()> {
+    let pool = &state.pool;
     let record = crate::dataset::lifecycle::load_record(pool, dataset_id)
         .await?
         .ok_or_else(|| crate::dataset::lifecycle::not_found(dataset_id))?;
@@ -199,7 +200,13 @@ pub(crate) async fn after_upload_reported(
         return Err(ApiError::bad_request(crate::msg::data_store::NOT_FOUND));
     }
     crate::dataset::lifecycle::invalidate_cache(clients, &record).await?;
-    crate::organization::storage::refresh_for_dataset(pool, clients, dataset_id).await
+    crate::organization::storage::refresh_for_dataset(
+        pool,
+        clients,
+        &state.storage_warnings,
+        dataset_id,
+    )
+    .await
 }
 
 /// Reads[MagLocator] (invalid → 400 Invalid JSON request body).
@@ -369,6 +376,6 @@ async fn report_mag_upload(
     if !finished {
         return Err(ApiError::bad_request(MAG_NOT_PENDING));
     }
-    after_upload_reported(pool, &clients, id).await?;
+    after_upload_reported(&state, &clients, id).await?;
     Ok(StatusCode::OK)
 }

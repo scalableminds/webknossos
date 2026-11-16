@@ -102,7 +102,7 @@ async fn disabled_scan_spawns_no_job() {
         ServiceClients::new(crate::stores::client::ServiceClientConfig::default()).unwrap();
     let mut config = UsedStorageConfig::default();
     config.schedule.enabled = false;
-    let handle = spawn(pool, clients, &config);
+    let handle = spawn(pool, clients, &config, warning::StorageWarnings::default());
     assert!(handle.job_names().is_empty());
     handle.shutdown().await;
 }

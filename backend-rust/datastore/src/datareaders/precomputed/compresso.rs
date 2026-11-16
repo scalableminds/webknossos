@@ -1,5 +1,6 @@
 //! Compresso v0/v1 decoding through the pure-Rust `compresso-rs` crate.
-//! This wrapper keeps the Scala/JNI behavior (webknossos-jni/src/include/compresso.hpp): the
+//! This wrapper keeps the behavior of the former Scala/JNI C++ decoder
+//! (webknossos-jni/src/include/compresso.hpp, replaced by webknossos-native in #10382): the
 //! output-length bound, the accepted header variants and the native error messages.
 
 use crate::{

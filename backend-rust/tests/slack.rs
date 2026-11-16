@@ -115,6 +115,7 @@ fn app(db: &TestDb, hook: &str) -> Router {
         mailchimp: Default::default(),
         credit_ticker: Default::default(),
         used_storage: Default::default(),
+        storage_warning_emails: Default::default(),
         worker_liveness: Default::default(),
         initial_data_on_startup: false,
         pricing_plan_expiry_reminder: Default::default(),

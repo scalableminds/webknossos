@@ -7,11 +7,13 @@
 //!   [`UsedStorageConfig`] (`WK_USED_STORAGE_*`).
 //!
 //! Both share the path resolution, the batched `measureUsedStorage` datastore RPC and the
-//! `organization_usedStorage_*` upserts. Cross-instance serialization of the scan follows
+//! `organization_usedStorage_*` upserts. After each refresh, [`warning::StorageWarnings`] warns
+//! the organization by email if its usage crossed a threshold (Scala `StorageWarningService`). Cross-instance serialization of the scan follows
 //! `housekeeping.rs`: every run holds `pg_try_advisory_xact_lock(advisory_lock_key(JOB_NAME))` in
 //! one transaction for its whole duration and is skipped if another instance holds it. The Scala
 //! backend takes no lock; a parallel Scala scan only measures the same organizations again.
 mod organization_storage_dao;
+pub mod warning;
 
 use crate::util::id::ObjectId;
 use std::{collections::HashMap, time::Duration};
@@ -32,6 +34,7 @@ use crate::{
     stores::client::{ServiceClients, ServiceError},
 };
 use organization_storage_dao::{AttachmentRow, MagRow, StoreRow};
+use warning::StorageWarnings;
 use webknossos_common::geometry::Vec3Int;
 
 const MAX_PATHS_PER_REQUEST: usize = 200;
@@ -216,10 +219,12 @@ async fn upsert_used_storage(
 }
 
 /// Re-measure this dataset's storage at its datastore (if reporting is
-/// enabled there) and replace its usedStorage rows in one transaction.
+/// enabled there) and replace its usedStorage rows in one transaction, then
+/// warn the organization if its usage crossed a threshold.
 pub(crate) async fn refresh_for_dataset(
     pool: &PgPool,
     clients: &ServiceClients,
+    warnings: &StorageWarnings,
     dataset_id: &ObjectId,
 ) -> ApiResult<()> {
     let dataset =
@@ -246,15 +251,20 @@ pub(crate) async fn refresh_for_dataset(
     .await?;
     upsert_used_storage(&mut transaction, &organization, &reports).await?;
     transaction.commit().await?;
+    warnings
+        .send_if_threshold_crossed(pool, &organization)
+        .await;
     Ok(())
 }
 
 /// `UsedStorageService.refreshStorageReports`: measure the organization at every reporting
 /// datastore first (any failure aborts before a write), then atomically replace all of its
-/// usedStorage rows and set `lastStorageScanTime` to now.
+/// usedStorage rows and set `lastStorageScanTime` to now. Then warn the organization if its usage
+/// crossed a threshold.
 async fn refresh_for_organization(
     pool: &PgPool,
     clients: &ServiceClients,
+    warnings: &StorageWarnings,
     organization: &str,
     stores: &[StoreRow],
 ) -> ApiResult<()> {
@@ -284,6 +294,7 @@ async fn refresh_for_organization(
     )
     .await?;
     transaction.commit().await?;
+    warnings.send_if_threshold_crossed(pool, organization).await;
     Ok(())
 }
 
@@ -297,6 +308,7 @@ pub async fn run_scan(
     pool: &PgPool,
     clients: &ServiceClients,
     config: &UsedStorageConfig,
+    warnings: &StorageWarnings,
 ) -> Result<JobOutcome, JobError> {
     let mut lock = pool.begin().await?;
     if !try_advisory_xact_lock(&mut lock, advisory_lock_key(JOB_NAME)).await? {
@@ -320,7 +332,7 @@ pub async fn run_scan(
     );
     let mut failed = 0;
     for organization in &organizations {
-        match refresh_for_organization(pool, clients, organization, &stores).await {
+        match refresh_for_organization(pool, clients, warnings, organization, &stores).await {
             Ok(()) => tokio::time::sleep(config.pause_after_each_organization).await,
             Err(error) => {
                 failed += 1;
@@ -341,22 +353,34 @@ pub async fn run_scan(
 }
 
 /// Scheduler with the scan job registered (also when disabled, so that is logged).
-pub fn scheduler(pool: PgPool, clients: ServiceClients, config: &UsedStorageConfig) -> Scheduler {
+pub fn scheduler(
+    pool: PgPool,
+    clients: ServiceClients,
+    config: &UsedStorageConfig,
+    warnings: StorageWarnings,
+) -> Scheduler {
     let mut scheduler = Scheduler::new();
     let job_config = config.clone();
     scheduler.add(Job::new(JOB_NAME, config.schedule, move || {
         let pool = pool.clone();
         let clients = clients.clone();
         let config = job_config.clone();
-        async move { run_scan(&pool, &clients, &config).await }
+        let warnings = warnings.clone();
+        async move { run_scan(&pool, &clients, &config, &warnings).await }
     }));
     scheduler
 }
 
-/// Starts the periodic organization scan on the current runtime. Call
+/// Starts the periodic organization scan on the current runtime. `warnings` should be the
+/// application's [`StorageWarnings`] (`AppState::storage_warnings`). Call
 /// [`SchedulerHandle::shutdown`] before closing the pool.
-pub fn spawn(pool: PgPool, clients: ServiceClients, config: &UsedStorageConfig) -> SchedulerHandle {
-    scheduler(pool, clients, config).spawn()
+pub fn spawn(
+    pool: PgPool,
+    clients: ServiceClients,
+    config: &UsedStorageConfig,
+    warnings: StorageWarnings,
+) -> SchedulerHandle {
+    scheduler(pool, clients, config, warnings).spawn()
 }
 
 /// Job name: log field and advisory lock identity.

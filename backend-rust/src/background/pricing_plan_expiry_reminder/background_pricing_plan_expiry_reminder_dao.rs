@@ -9,7 +9,7 @@ pub struct ExpiringOrganization {
     pub name: String,
     /// `webknossos.PRICING_PLANS` as text.
     pub pricing_plan: String,
-    /// Truncated to milliseconds like Play's `Instant`, so both key reminder rows identically.
+    /// Truncated to milliseconds like Play's `Instant`.
     pub paid_until: DateTime<Utc>,
 }
 
@@ -34,27 +34,25 @@ pub(super) async fn find_all_with_plan_expiring_before(
     .await
 }
 
-/// `OrganizationDAO.insertPlanExpiryReminders`: records that the organization was reminded about
-/// `paid_until` for the given lead times. Rows that are already present are skipped, so the
-/// returned count is the number of lead times that were not recorded before.
-pub(super) async fn insert_plan_expiry_reminders(
+/// `OrganizationDAO.deleteNotifiedPlanExpiryThresholdsNotCrossedAnyMore`: re-arms the plan
+/// expiry reminders of all organizations whose expiry date is further away again than the
+/// reminder's lead time, e.g. because the plan was extended or made unlimited. This is the
+/// complement of [`super::crossed_lead_times_days`]:
+/// `ceil(days_remaining) > lead_time <=> paidUntil > now + lead_time`. Checking the current expiry
+/// date (instead of hooking into plan updates) also covers dates changed by other means, e.g. by
+/// the Play backend.
+pub(super) async fn rearm_thresholds_not_crossed_any_more(
     executor: impl PgExecutor<'_>,
-    organization_id: &str,
-    paid_until: DateTime<Utc>,
-    lead_times_days: &[i32],
+    now: DateTime<Utc>,
 ) -> Result<u64, sqlx::Error> {
-    if lead_times_days.is_empty() {
-        return Ok(0);
-    }
     sqlx::query(
-        "INSERT INTO webknossos.organization_planExpiryReminders\
-         (_organization, paidUntil, leadTimeDays) \
-         SELECT $1, $2, UNNEST($3::INT[]) \
-         ON CONFLICT DO NOTHING",
+        "DELETE FROM webknossos.organization_notifiedEmailThresholds t \
+         USING webknossos.organizations o \
+         WHERE t._organization = o._id \
+         AND t.emailThresholdType = 'PlanExpiry' \
+         AND (o.paidUntil IS NULL OR o.paidUntil > $1 + t.threshold * INTERVAL '1 day')",
     )
-    .bind(organization_id)
-    .bind(paid_until)
-    .bind(lead_times_days)
+    .bind(now)
     .execute(executor)
     .await
     .map(|result| result.rows_affected())

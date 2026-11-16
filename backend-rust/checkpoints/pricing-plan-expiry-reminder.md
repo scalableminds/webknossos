@@ -65,3 +65,16 @@ Status: DONE (2026-11-03), wired in `src/main.rs`. Owner: pricing-expiry-reminde
   trial vs regular lead times, no-recipient org records nothing, Personal/expired/too-far/null excluded,
   partially and fully recorded orgs, second tick silent, later tick adds the 7-day reminder ("tomorrow"),
   extending `paidUntil` re-arms, millisecond keys, mail subject/from/reply-to/link; lock contention skips.
+
+## Update 2026-11-16: #10147 (notified email thresholds)
+- Schema 192 replaces `organization_planExpiryReminders(_organization, paidUntil, leadTimeDays)` with
+  `organization_notifiedEmailThresholds(_organization, emailThresholdType, threshold)`, shared with the storage
+  warning emails (`src/organization/storage/warning.rs`, Scala `StorageWarningService`).
+- Reminder rows are no longer keyed by `paidUntil`. Every tick first runs
+  `rearm_thresholds_not_crossed_any_more(now)` (Scala
+  `OrganizationDAO.deleteNotifiedPlanExpiryThresholdsNotCrossedAnyMore`): a lead time is re-armed once
+  `paidUntil IS NULL OR paidUntil > now + leadTime days`. Extending a plan therefore re-arms only the lead times the
+  new date is beyond; the millisecond-key deviation above no longer applies.
+- Inserts go through `organization_dao::insert_notified_email_thresholds(.., EmailThresholdType::PlanExpiry, ..)`.
+- DB test updated: partial re-arm (extend to 12 days re-arms only 7), full re-arm (extend to 40 days, reminders come
+  back once the date is within reach), unlimited plans re-armed.

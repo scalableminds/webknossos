@@ -20,7 +20,11 @@ use common::{TestDb, object_id};
 use serde_json::{Value, json};
 use webknossos_backend::{
     background::scheduler::{JobOutcome, JobSchedule, advisory_lock_key, try_advisory_xact_lock},
-    organization::storage::{JOB_NAME, UsedStorageConfig},
+    mail::{MailSender, RecordingMailer},
+    organization::storage::{
+        JOB_NAME, UsedStorageConfig,
+        warning::{StorageWarningEmailsConfig, StorageWarnings},
+    },
     stores::client::{ServiceClientConfig, ServiceClients},
 };
 
@@ -387,6 +391,7 @@ async fn scans_due_organizations_oldest_first_and_replaces_rows() {
         &setup.db.pool,
         &setup.clients,
         &config(2),
+        &StorageWarnings::default(),
     )
     .await
     .unwrap();
@@ -488,6 +493,7 @@ async fn scans_due_organizations_oldest_first_and_replaces_rows() {
         &setup.db.pool,
         &setup.clients,
         &config(2),
+        &StorageWarnings::default(),
     )
     .await
     .unwrap();
@@ -508,6 +514,7 @@ async fn scans_due_organizations_oldest_first_and_replaces_rows() {
         &setup.db.pool,
         &setup.clients,
         &config(2),
+        &StorageWarnings::default(),
     )
     .await
     .unwrap();
@@ -563,6 +570,7 @@ async fn datastore_failure_keeps_organization_untouched_and_continues() {
         &setup.db.pool,
         &setup.clients,
         &config(10),
+        &StorageWarnings::default(),
     )
     .await
     .unwrap();
@@ -617,6 +625,7 @@ async fn paths_are_measured_in_batches_of_200() {
         &setup.db.pool,
         &setup.clients,
         &config(10),
+        &StorageWarnings::default(),
     )
     .await
     .unwrap();
@@ -647,6 +656,7 @@ async fn without_reporting_datastores_rows_are_cleared_like_scala() {
         &setup.db.pool,
         &setup.clients,
         &config(10),
+        &StorageWarnings::default(),
     )
     .await
     .unwrap();
@@ -685,9 +695,14 @@ async fn lock_contention_skips_the_run() {
         let pool = setup.db.pool.clone();
         let clients = setup.clients.clone();
         async move {
-            webknossos_backend::organization::storage::run_scan(&pool, &clients, &config(10))
-                .await
-                .unwrap()
+            webknossos_backend::organization::storage::run_scan(
+                &pool,
+                &clients,
+                &config(10),
+                &StorageWarnings::default(),
+            )
+            .await
+            .unwrap()
         }
     });
     for outcome in futures_util::future::join_all(contenders).await {
@@ -702,9 +717,14 @@ async fn lock_contention_skips_the_run() {
         let pool = setup.db.pool.clone();
         let clients = setup.clients.clone();
         async move {
-            webknossos_backend::organization::storage::run_scan(&pool, &clients, &config(10))
-                .await
-                .unwrap()
+            webknossos_backend::organization::storage::run_scan(
+                &pool,
+                &clients,
+                &config(10),
+                &StorageWarnings::default(),
+            )
+            .await
+            .unwrap()
         }
     });
     futures_util::future::join_all(runs).await;
@@ -736,6 +756,7 @@ async fn spawned_scheduler_scans_and_shuts_down() {
         setup.db.pool.clone(),
         setup.clients.clone(),
         &config,
+        StorageWarnings::default(),
     );
     assert_eq!(handle.job_names(), [JOB_NAME]);
     let deadline = Instant::now() + Duration::from_secs(10);
@@ -747,5 +768,174 @@ async fn spawned_scheduler_scans_and_shuts_down() {
         .await
         .unwrap();
     assert_eq!(organizations_of(&setup.mock.take()), ["orgS"]);
+    setup.cleanup().await;
+}
+
+async fn notified_storage_thresholds(db: &TestDb, organization: &str) -> Vec<i32> {
+    sqlx::query_scalar(
+        "SELECT threshold FROM webknossos.organization_notifiedEmailThresholds \
+         WHERE _organization = $1 AND emailThresholdType = 'StorageWarning' ORDER BY threshold",
+    )
+    .bind(organization)
+    .fetch_all(&db.pool)
+    .await
+    .unwrap()
+}
+
+/// Scala `StorageWarningService` after each scan: one mail per newly crossed threshold to the
+/// owner and admins, re-armed once the usage drops 5 points below a threshold.
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL"]
+async fn warns_owner_and_admins_when_the_storage_runs_low() {
+    let setup = Setup::new().await;
+    setup.store("s1", true, false).await;
+    setup.organization("orgW", 30, false).await;
+    // Unlimited storage: never warned, even with an admin and plenty of usage.
+    setup.organization("orgU", 30, false).await;
+    let admin = setup.db.seed_user(&object_id(), "orgW", true).await;
+    setup.db.seed_user(&object_id(), "orgW", false).await; // plain member: not notified
+    setup.db.seed_user(&object_id(), "orgU", true).await;
+    sqlx::query("UPDATE webknossos.organizations SET includedStorage = 12000 WHERE _id = 'orgW'")
+        .execute(&setup.db.pool)
+        .await
+        .unwrap();
+    sqlx::query("UPDATE webknossos.organizations SET includedStorage = NULL WHERE _id = 'orgU'")
+        .execute(&setup.db.pool)
+        .await
+        .unwrap();
+    let admin_email: String =
+        sqlx::query_scalar("SELECT email FROM webknossos.multiUsers WHERE _id = $1")
+            .bind(&admin.multi_user_id)
+            .fetch_one(&setup.db.pool)
+            .await
+            .unwrap();
+    let dataset = setup.dataset("orgW", "s1", "dsW").await;
+    setup
+        .mag(&dataset, "color", 1, Some("dsW/color/1"), None)
+        .await;
+    let unlimited = setup.dataset("orgU", "s1", "dsU").await;
+    setup
+        .mag(&unlimited, "color", 1, Some("dsU/color/1"), None)
+        .await;
+    let set_size = |bytes: i64| {
+        setup
+            .mock
+            .sizes
+            .lock()
+            .unwrap()
+            .insert("dsW/color/1".into(), bytes);
+    };
+    let recorder = RecordingMailer::default();
+    let warnings = StorageWarnings::new(
+        StorageWarningEmailsConfig::default(),
+        MailSender::new(recorder.clone()),
+        "https://wk.example".into(),
+        "support@wk.example".into(),
+    );
+    let config = UsedStorageConfig {
+        rescan_interval: Duration::ZERO,
+        ..config(10)
+    };
+    let scan = || {
+        webknossos_backend::organization::storage::run_scan(
+            &setup.db.pool,
+            &setup.clients,
+            &config,
+            &warnings,
+        )
+    };
+
+    // 11000 of 12000 bytes (91.7%): the 90% threshold is crossed.
+    set_size(11000);
+    scan().await.unwrap();
+    let mails = recorder.take();
+    assert_eq!(mails.len(), 1);
+    assert_eq!(mails[0].recipients, vec![admin_email.clone()]);
+    assert_eq!(mails[0].reply_to, vec!["support@wk.example".to_owned()]);
+    assert_eq!(
+        mails[0].subject,
+        "WEBKNOSSOS | Your organization Org has used 91% of its storage"
+    );
+    assert!(mails[0].body_html.contains("is running out of storage"));
+    assert!(
+        mails[0]
+            .body_html
+            .contains("<b>11.0 KB</b>\n  of <b>12.0 KB</b> (91%)")
+    );
+    assert!(
+        mails[0]
+            .body_html
+            .contains("href=\"https://wk.example/organization/overview\"")
+    );
+    assert_eq!(notified_storage_thresholds(&setup.db, "orgW").await, [90]);
+    assert!(
+        notified_storage_thresholds(&setup.db, "orgU")
+            .await
+            .is_empty()
+    );
+
+    // Still above 85%: no new mail.
+    set_size(10500);
+    scan().await.unwrap();
+    assert!(recorder.take().is_empty());
+
+    // 13000 bytes (108%): the 100% threshold is crossed as well.
+    set_size(13000);
+    scan().await.unwrap();
+    let mails = recorder.take();
+    assert_eq!(mails.len(), 1);
+    assert_eq!(
+        mails[0].subject,
+        "WEBKNOSSOS | Your organization Org has used up its storage"
+    );
+    assert!(
+        mails[0]
+            .body_html
+            .contains("has used up its included storage")
+    );
+    assert_eq!(
+        notified_storage_thresholds(&setup.db, "orgW").await,
+        [90, 100]
+    );
+
+    // 94%: only the 100% threshold is re-armed.
+    set_size(11280);
+    scan().await.unwrap();
+    assert!(recorder.take().is_empty());
+    assert_eq!(notified_storage_thresholds(&setup.db, "orgW").await, [90]);
+
+    // Clearly below both thresholds: re-armed, so crossing 90% again sends a new mail.
+    set_size(1000);
+    scan().await.unwrap();
+    assert!(
+        notified_storage_thresholds(&setup.db, "orgW")
+            .await
+            .is_empty()
+    );
+    set_size(11000);
+    scan().await.unwrap();
+    assert_eq!(recorder.take().len(), 1);
+
+    // Disabled: nothing is checked.
+    let disabled = StorageWarnings::new(
+        StorageWarningEmailsConfig {
+            enabled: false,
+            ..StorageWarningEmailsConfig::default()
+        },
+        MailSender::new(recorder.clone()),
+        "https://wk.example".into(),
+        "support@wk.example".into(),
+    );
+    set_size(1000);
+    webknossos_backend::organization::storage::run_scan(
+        &setup.db.pool,
+        &setup.clients,
+        &config,
+        &disabled,
+    )
+    .await
+    .unwrap();
+    assert_eq!(notified_storage_thresholds(&setup.db, "orgW").await, [90]);
+    assert!(recorder.take().is_empty());
     setup.cleanup().await;
 }

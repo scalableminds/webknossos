@@ -137,8 +137,8 @@ jobs:
         uses: actions/cache@v6
         with:
           # actions/cache does not expand directories, so exclusions only apply to paths listed by the globs.
-          # Hence the children of each target dir are listed, minus staged apps, web assets, logs and the native JNI build
-          # (its CMake cache pins the absolute JDK path, which differs between runner images).
+          # Hence the children of each target dir are listed, minus staged apps, web assets, logs and the native (cargo)
+          # build, which is quick to redo.
           # YAML anchor, reused by the other compile cache steps below.
           path: &zinc-cache-paths |
             target/*
@@ -157,14 +157,10 @@ jobs:
       - name: Start Docker Services Postgres, Redis
         run: docker compose --file .github/docker-compose.yml up -d postgres redis
 
-      - name: Install frontend and system dependencies
+      - name: Install frontend dependencies
         run: |
-          (sudo apt-get update -qq && sudo apt-get install -y -qq libdraco-dev) > "$RUNNER_TEMP/apt.log" 2>&1 &
-          apt_pid=$!
-          yarn_status=0
-          yarn install --immutable || yarn_status=$?
-          wait $apt_pid || { cat "$RUNNER_TEMP/apt.log"; exit 1; }
-          exit $yarn_status
+          cargo --version # the runner image provides Rust for webknossos-native
+          yarn install --immutable
 
       - name: Assert unique evolution numbers
         run: tools/postgres/dbtool.js assert-unique-evolution-numbers
@@ -258,14 +254,10 @@ jobs:
       - name: Prepare Dependency Folders
         run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
 
-      - name: Install frontend and system dependencies
+      - name: Install frontend dependencies
         run: |
-          (sudo apt-get update -qq && sudo apt-get install -y -qq libdraco-dev) > "$RUNNER_TEMP/apt.log" 2>&1 &
-          apt_pid=$!
-          yarn_status=0
-          yarn install --immutable || yarn_status=$?
-          wait $apt_pid || { cat "$RUNNER_TEMP/apt.log"; exit 1; }
-          exit $yarn_status
+          cargo --version # the runner image provides Rust for webknossos-native
+          yarn install --immutable
         env:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
 

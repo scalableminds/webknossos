@@ -8,11 +8,10 @@
 * [PostgreSQL 12+](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
 * [Brotli](https://github.com/google/brotli)
-* [Draco](https://github.com/google/draco)
 * [node.js 22+](https://nodejs.org/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](https://git-scm.com/downloads)
-* [cmake](https://cmake.org/download/)
+* [Rust](https://www.rust-lang.org/tools/install) 1.88+ (cargo)
 
 * For some development tasks like refreshing snapshots, Docker 19.03.0+ and Docker Compose 2.+ are required
 
@@ -23,8 +22,8 @@
 # Install Homebrew package manager
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# Install git, node.js, postgres, sbt, gfind, gsed, draco
-brew install openjdk@21 draco openssl git node postgresql sbt findutils coreutils gnu-sed redis brotli wget cmake
+# Install git, node.js, postgres, sbt, gfind, gsed, rust
+brew install openjdk@21 openssl git node postgresql sbt findutils coreutils gnu-sed redis brotli wget rust
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc
@@ -56,13 +55,17 @@ corepack enable
 git clone git@github.com:scalableminds/webknossos.git
 ```
 
-Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 environment (Rosetta 2). In case you accidentally started WEBKNOSSOS in an arm64 environment, it is advisable to delete several caches `~/.m2`, `~/ivy2`, `~/.sbt`, `~/.yarn-cache` and run `./clean`. Since Postgres and Redis are isolated processes, they can be run either from arm64 or x86_64 environments.
+Note: On arm64-based Macs (e.g. M1), run WEBKNOSSOS natively (arm64), not under Rosetta 2. sbt builds the native library with cargo for the architecture of cargo itself, which has to match the architecture of the JVM (`java -XshowSettings:properties -version 2>&1 | grep os.arch`). If you previously ran WEBKNOSSOS in an x86_64 environment, delete the caches `~/.m2`, `~/ivy2`, `~/.sbt`, `~/.yarn-cache` and run `./clean`.
 
 ## Ubuntu 22.04 LTS
 
 ```bash
 sudo apt update
-sudo apt install -y curl ca-certificates wget git postgresql postgresql-client unzip zip redis-server build-essential libbrotli1 libdraco-dev cmake
+sudo apt install -y curl ca-certificates wget git postgresql postgresql-client unzip zip redis-server build-essential libbrotli1
+
+# Install rust (the apt package is too old)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source "$HOME/.cargo/env"
 
 # Install nvm, node 22
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash

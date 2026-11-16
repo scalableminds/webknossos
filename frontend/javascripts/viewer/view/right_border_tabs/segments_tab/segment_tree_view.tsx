@@ -1,7 +1,7 @@
 import { type Tree as AntdTree, App, type GetRef, type TreeProps } from "antd";
 import app from "app";
 import { useWkSelector } from "libs/react_hooks";
-import { sleep } from "libs/utils";
+import { clamp, isEditableEventTarget, sleep } from "libs/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -38,6 +38,7 @@ import {
 import {
   findSegmentToSelectAfterRemoval,
   getGroupUiNodeKey,
+  getRenderedNodes,
   getSegmentUiNodeKey,
   isRootGroupNode,
   type SegmentGroupUiNode,
@@ -117,10 +118,6 @@ export function SegmentTreeView(props: Props) {
 
   useScrollBenchmark(treeRef);
 
-  // antd's tree has a keyboard cursor ("active" node) that is separate from the selection. It is
-  // controlled here so that it can be moved along with the selection after a removal.
-  const [activeKey, setActiveKey] = useState<string | null>(null);
-
   const treeContainerRef = useRef<HTMLDivElement>(null);
   useSegmentListKeyboardShortcuts(treeContainerRef, () => {
     if (visibleSegmentationLayer == null || selection.selectedSegmentIds.length === 0) {
@@ -132,7 +129,6 @@ export function SegmentTreeView(props: Props) {
     removeSegmentsFromList(dispatch, visibleSegmentationLayer.name, selection.selectedSegmentIds);
     if (nextNode != null) {
       selection.setSelection([nextNode.segment.id], null);
-      setActiveKey(nextNode.key);
     }
   });
 
@@ -346,6 +342,45 @@ export function SegmentTreeView(props: Props) {
     selection.setSelection(newSelection.segmentIds, newSelection.groupId);
   };
 
+  const isPlainArrowKeyInList = (event: React.KeyboardEvent, keys: string[]) =>
+    keys.includes(event.key) &&
+    !(event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) &&
+    // Editable elements (e.g. the rename input) keep their native arrow key handling.
+    !isEditableEventTarget(event.target);
+
+  // Arrow up/down move the selection (instead of antd's own keyboard cursor). In contrast to
+  // clicking a segment row, this does not move the camera to the segment.
+  // The event is consumed, so that the shortcuts of the viewports (e.g. moving the camera)
+  // don't react to it, too.
+  const onKeyDownCapture = (event: React.KeyboardEvent) => {
+    if (!isPlainArrowKeyInList(event, ["ArrowUp", "ArrowDown"])) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+
+    const renderedNodes = getRenderedNodes(hierarchy);
+    const offset = event.key === "ArrowDown" ? 1 : -1;
+    const currentKey = selection.selectedKeys.at(-1);
+    const currentIndex = renderedNodes.findIndex((node) => node.key === currentKey);
+    const newIndex =
+      currentIndex === -1
+        ? offset === 1
+          ? 0
+          : renderedNodes.length - 1
+        : clamp(0, currentIndex + offset, renderedNodes.length - 1);
+    const newSelection = getSelectionForKeys([renderedNodes[newIndex].key]);
+    selection.setSelection(newSelection.segmentIds, newSelection.groupId);
+  };
+
+  // Left/right are handled by antd's tree (collapsing/expanding groups) before this handler is
+  // reached. Only make sure that they don't move the camera, too.
+  const onKeyDown = (event: React.KeyboardEvent) => {
+    if (isPlainArrowKeyInList(event, ["ArrowLeft", "ArrowRight"])) {
+      event.stopPropagation();
+    }
+  };
+
   const onDrop: TreeProps<SegmentsUiNode>["onDrop"] = (info) => {
     const { dragNode: draggedNode, node: dropTargetNode } = info;
 
@@ -406,13 +441,18 @@ export function SegmentTreeView(props: Props) {
             defaultHeight={500}
           >
             {({ height, width }) => (
-              <div ref={treeContainerRef} style={{ height, width, overflow: "hidden" }}>
+              <div
+                ref={treeContainerRef}
+                style={{ height, width, overflow: "hidden" }}
+                onKeyDownCapture={onKeyDownCapture}
+                onKeyDown={onKeyDown}
+              >
                 <ScrollableVirtualizedTree<SegmentsUiNode>
                   treeData={hierarchy.roots}
                   height={height}
                   itemHeight={LIST_ROW_HEIGHT}
                   ref={treeRef}
-                  className="list-tree"
+                  className="list-tree list-tree--active-is-selected"
                   titleRender={(node) =>
                     node.type === "segment" ? (
                       <SegmentNodeTitle
@@ -433,8 +473,9 @@ export function SegmentTreeView(props: Props) {
                     )
                   }
                   switcherIcon={({ expanded }) => <TreeSwitcherIcon expanded={expanded} />}
-                  activeKey={activeKey}
-                  onActiveChange={(key) => setActiveKey(key == null ? null : String(key))}
+                  // antd's keyboard cursor ("active" node) is kept on the selected node so that
+                  // there is only one kind of selection (the one that a click creates).
+                  activeKey={selection.selectedKeys.at(-1) ?? null}
                   onSelect={onSelect}
                   onDrop={onDrop}
                   allowDrop={allowDrop}

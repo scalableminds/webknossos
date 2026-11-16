@@ -83,8 +83,8 @@ describe("Layer registration landmark pairing", () => {
     expect(getCompleteLandmarkPairs(landmarks).map((pair) => pair.pairId)).toEqual([4]);
   });
 
-  // The workers never create such landmarks, but the table must still list them, so that they
-  // can be deleted.
+  // The landmark iframes never create such landmarks, but the table must still list them, so that
+  // they can be deleted.
   it("lists a duplicate pair id and a missing pair id as landmarks without a pair", () => {
     const landmarks = {
       fixed: toLandmarks(FIXED_POSITIONS.slice(0, 2), [1, 1]),

@@ -767,10 +767,10 @@ export type OperationContextState = {
   }>;
 };
 
-// What the layer registration page tells a worker (see layer_registration_worker.ts). The page
-// sends each part with the cross-origin command of the same name. Null until it did, and always
-// null outside of the workers.
-export type LayerRegistrationWorkerState = {
+// What the layer registration page tells a landmark iframe (see
+// layer_registration_landmark_iframe.ts). The page sends each part with the cross-origin command of
+// the same name. Null until it did, and always null outside of the landmark iframes.
+export type LayerRegistrationLandmarkIframeState = {
   readonly viewState: LayerRegistrationViewState | null;
   readonly landmarkPairInfo: LandmarkPairInfo | null;
 };
@@ -798,7 +798,7 @@ export type WebknossosState = {
   readonly localSkeletonState: LocalSkeletonState;
   readonly localAnnotationState: LocalAnnotationState;
   readonly operationContext: OperationContextState;
-  readonly layerRegistrationWorker: LayerRegistrationWorkerState;
+  readonly layerRegistrationLandmarkIframe: LayerRegistrationLandmarkIframeState;
 };
 const sagaMiddleware = createSagaMiddleware();
 export type Reducer = (state: WebknossosState, action: Action) => WebknossosState;

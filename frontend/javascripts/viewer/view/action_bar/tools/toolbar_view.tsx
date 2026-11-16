@@ -21,7 +21,7 @@ import { setToolAction } from "viewer/model/actions/ui_actions";
 import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_creation_helpers";
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
-import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
+import { isLayerRegistrationLandmarkIframe } from "viewer/view/layer_registration/layer_registration_protocol";
 import { ToolDropdown } from "../tool_dropdown";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { LayerRegistrationButtons } from "./layer_registration_specific_ui";
@@ -120,9 +120,9 @@ function ToolButtons({
   );
 }
 
-// The workers are always narrow, but they only offer the two tools for placing landmarks, so all
-// tools are shown.
-function LayerRegistrationToolbar() {
+// The landmark iframes are always narrow, but they only offer the two tools for placing landmarks,
+// so all tools are shown.
+function LayerRegistrationLandmarkIframeToolbar() {
   const { activeTool, adaptedActiveTool } = useActiveToolWithShortcuts();
   return (
     <>
@@ -210,7 +210,11 @@ function DefaultToolbar() {
 }
 
 export default function ToolbarView() {
-  return isLayerRegistrationWorker() ? <LayerRegistrationToolbar /> : <DefaultToolbar />;
+  return isLayerRegistrationLandmarkIframe() ? (
+    <LayerRegistrationLandmarkIframeToolbar />
+  ) : (
+    <DefaultToolbar />
+  );
 }
 
 function ToolSpecificSettings({

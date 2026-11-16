@@ -10,7 +10,7 @@ import type { Vector3 } from "viewer/constants";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
 import { setViewModeAction } from "viewer/model/actions/settings_actions";
-import { isLayerRegistrationWorker } from "../layer_registration/layer_registration_protocol";
+import { isLayerRegistrationLandmarkIframe } from "../layer_registration/layer_registration_protocol";
 import NumberSliderSetting from "../left_border_tabs/components/number_slider_setting";
 
 const warningColors: React.CSSProperties = {
@@ -19,7 +19,7 @@ const warningColors: React.CSSProperties = {
 };
 
 function getFlightModeDisabledReason(isFlightModeAllowed: boolean): string | null {
-  if (isLayerRegistrationWorker()) {
+  if (isLayerRegistrationLandmarkIframe()) {
     return "Flight mode is not available when registering layers.";
   }
   return isFlightModeAllowed ? null : "Flight mode is not allowed for this annotation.";

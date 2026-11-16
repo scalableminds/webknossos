@@ -4,7 +4,7 @@ import type { LayerRegistrationViewState } from "viewer/view/layer_registration/
 type SetLayerRegistrationViewStateAction = ReturnType<typeof setLayerRegistrationViewStateAction>;
 type SetLandmarkPairInfoAction = ReturnType<typeof setLandmarkPairInfoAction>;
 
-export type LayerRegistrationWorkerAction =
+export type LayerRegistrationLandmarkIframeAction =
   | SetLayerRegistrationViewStateAction
   | SetLandmarkPairInfoAction;
 

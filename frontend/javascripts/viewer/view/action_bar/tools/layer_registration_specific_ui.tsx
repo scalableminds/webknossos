@@ -11,7 +11,7 @@ import {
 } from "viewer/view/layer_registration/layer_registration_protocol";
 import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE } from "./tool_helpers";
 
-// Shows or hides the layer of the other worker in this worker.
+// Shows or hides the layer of the other landmark iframe in this landmark iframe.
 function OtherLayerToggleButton({
   viewState: { otherLayerName, isOtherLayerVisible },
 }: {
@@ -28,7 +28,7 @@ function OtherLayerToggleButton({
   );
 }
 
-// Switches between showing the other layer transformed onto this worker's layer and
+// Switches between showing the other layer transformed onto this landmark iframe's layer and
 // untransformed.
 // Uses the icons of the transform button in the layer settings.
 function TransformToggleButton({
@@ -54,11 +54,11 @@ function TransformToggleButton({
   );
 }
 
-// Buttons for the layer registration page, shown in the toolbars of its workers. The page has
-// no toolbar of its own and performs the actions itself. Hidden until the page sent its view
+// Buttons for the layer registration page, shown in the toolbars of its landmark iframes. The page
+// has no toolbar of its own and performs the actions itself. Hidden until the page sent its view
 // state.
 export function LayerRegistrationButtons() {
-  const viewState = useWkSelector((state) => state.layerRegistrationWorker.viewState);
+  const viewState = useWkSelector((state) => state.layerRegistrationLandmarkIframe.viewState);
   if (viewState == null) {
     return null;
   }

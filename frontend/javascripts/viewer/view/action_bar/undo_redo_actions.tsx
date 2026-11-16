@@ -10,7 +10,7 @@ import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { isConcurrentCollaborationMode } from "viewer/model/accessors/annotation_accessor";
 import { dispatchRedoAsync, dispatchUndoAsync } from "viewer/model/actions/save_actions";
-import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
+import { isLayerRegistrationLandmarkIframe } from "viewer/view/layer_registration/layer_registration_protocol";
 import { NARROW_BUTTON_STYLE } from "./tools/tool_helpers";
 
 type Props = {
@@ -22,9 +22,9 @@ function UndoRedoActions({ hasTracing, isBusy }: Props) {
   const dispatch = useDispatch();
   // Undo/redo is not supported in live collaboration (see undo_saga).
   const isLiveCollaboration = useWkSelector(isConcurrentCollaborationMode);
-  // The layer registration workers are always narrow (two of them share the window), but
+  // The layer registration landmark iframes are always narrow (two of them share the window), but
   // their toolbar is small enough to fit the redo button.
-  const hideRedoOnSmallScreen = !isLayerRegistrationWorker();
+  const hideRedoOnSmallScreen = !isLayerRegistrationLandmarkIframe();
 
   const handleUndo = useCallback(() => dispatchUndoAsync(dispatch), [dispatch]);
   const handleRedo = useCallback(() => dispatchRedoAsync(dispatch), [dispatch]);

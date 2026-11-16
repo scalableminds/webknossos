@@ -31,12 +31,12 @@ import {
   prepareLandmarkTreesForImport,
 } from "./helpers/layer_registration_helpers";
 import {
-  getLayerRegistrationWorkerLayerName,
-  isLayerRegistrationWorker,
-  LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE,
+  type AnnotationIframeSaveStateMessage,
+  getLandmarkIframeLayerName,
+  isLayerRegistrationLandmarkIframe,
+  LAYER_REGISTRATION_ANNOTATION_IFRAME_SAVE_STATE_MESSAGE_TYPE,
   type LayerRegistrationCommand,
   type SaveState,
-  type StoreSaveStateMessage,
   sendCommandToLayerRegistrationPage,
 } from "./layer_registration_protocol";
 
@@ -44,7 +44,7 @@ import {
 // commands of the page is in cross_origin_api.ts.
 
 // These letters have no single-key binding in WEBKNOSSOS' plane mode. There are chords that end with
-// one of them. They switch to tools, but these tools are disabled in the workers (see
+// one of them. They switch to tools, but these tools are disabled in the landmark iframes (see
 // ViewerCapabilities.fixedToolkit). The listener below does not stop propagation, so a bound key
 // would trigger both actions.
 const SHORTCUT_COMMANDS: Record<string, LayerRegistrationCommand> = {
@@ -53,11 +53,11 @@ const SHORTCUT_COMMANDS: Record<string, LayerRegistrationCommand> = {
   y: "syncOtherView",
 };
 
-/* Key events don't bubble out of an iframe, so the worker forwards the layer registration
+/* Key events don't bubble out of an iframe, so the landmark iframe forwards the layer registration
  * shortcuts to the layer registration page. */
 export function useLayerRegistrationShortcutRelay() {
   useEffect(() => {
-    if (!isLayerRegistrationWorker()) {
+    if (!isLayerRegistrationLandmarkIframe()) {
       return;
     }
     const onKeyDown = (event: KeyboardEvent) => {
@@ -81,13 +81,13 @@ export function useLayerRegistrationShortcutRelay() {
   }, []);
 }
 
-// Navigating within a worker iframe breaks the layer registration view, so navigation within the
-// app is always blocked. The worker's own annotation is a sandbox and never counts as unsaved, so
-// the regular "unsaved changes" blocker would not fire here.
-// Full page loads (e.g. a reload) can't be blocked without the browser's own "leave page?" dialog,
-// which would also appear whenever the layer registration view itself is left. Instead, the layer
-// registration view restarts when a worker loads a new page (see useIframeBridge).
-export function blockLayerRegistrationWorkerNavigation(
+// Navigating within a landmark iframe breaks the layer registration view, so navigation within the
+// app is always blocked. The landmark iframe's own annotation is a sandbox and never counts as
+// unsaved, so the regular "unsaved changes" blocker would not fire here. Full page loads (e.g. a
+// reload) can't be blocked without the browser's own "leave page?" dialog, which would also appear
+// whenever the layer registration view itself is left. Instead, the layer registration view
+// restarts when a landmark iframe loads a new page (see useIframeBridge).
+export function blockLayerRegistrationLandmarkIframeNavigation(
   args: BeforeUnloadEvent | BlockerFunction,
 ): boolean | undefined {
   if ("preventDefault" in args) {
@@ -125,16 +125,17 @@ async function maybeMoveToDataOfLayer(layerName: string) {
   }
 }
 
-// Configures the worker right after the annotation was loaded: show and natively render only the
-// worker's own layer (so landmark positions are in that layer's coordinates), don't move the camera
-// to new nodes and move to a position that contains data. These settings are not persisted (see
-// settings_saga.ts). The tools are restricted by ViewerCapabilities.fixedToolkit, and the click
-// handler always creates one tree per landmark (see isSingleNodeTreeModeOn).
-// The transforms that the dataset stores for its layers are removed in the worker. The layer
-// registration page sets the preview transforms of the other layers, and WEBKNOSSOS would chain
-// them with the inverse of the stored transforms of the natively rendered layer.
-export async function applyLayerRegistrationWorkerSettings() {
-  const layerName = getLayerRegistrationWorkerLayerName();
+// Configures the landmark iframe right after the annotation was loaded: show and natively render
+// only the landmark iframe's own layer (so landmark positions are in that layer's coordinates),
+// don't move the camera to new nodes and move to a position that contains data. These settings are
+// not persisted (see settings_saga.ts). The tools are restricted by
+// ViewerCapabilities.fixedToolkit, and the click handler always creates one tree per landmark (see
+// isSingleNodeTreeModeOn).
+// The transforms that the dataset stores for its layers are removed in the landmark iframe. The
+// layer registration page sets the preview transforms of the other layers, and WEBKNOSSOS would
+// chain them with the inverse of the stored transforms of the natively rendered layer.
+export async function applyLayerRegistrationLandmarkIframeSettings() {
+  const layerName = getLandmarkIframeLayerName();
   for (const layer of getDataLayers(Store.getState().dataset)) {
     Store.dispatch(setLayerTransformsAction(layer.name, null));
     Store.dispatch(updateLayerSettingAction(layer.name, "isDisabled", layer.name !== layerName));
@@ -144,19 +145,19 @@ export async function applyLayerRegistrationWorkerSettings() {
   await maybeMoveToDataOfLayer(layerName);
 }
 
-// Imports the stored landmarks of this worker's side (see prepareLandmarkTreesForImport).
+// Imports the stored landmarks of this landmark iframe's side (see prepareLandmarkTreesForImport).
 export async function importLandmarks(nmlString: string) {
   const { trees, treeGroups } = await parseNml(nmlString);
   Store.dispatch(addTreesAndGroupsAction(prepareLandmarkTreesForImport(trees), treeGroups));
 }
 
-// Before the first sync, the worker knows no landmarks of the other side.
+// Before the first sync, the landmark iframe knows no landmarks of the other side.
 const NO_LANDMARK_PAIR_INFO: LandmarkPairInfo = { openPairIds: [], otherMaxPairId: 0 };
 
-// The name and color of the tree that a click in a worker creates: the name holds the pair id of
-// the new landmark (see getNextLandmarkPairId). They are part of the action that creates the tree.
-// If the layer registration page renamed the tree afterwards, undo would revert the renaming, the
-// page would rename the tree again, and the user could never undo the click itself.
+// The name and color of the tree that a click in a landmark iframe creates: the name holds the pair
+// id of the new landmark (see getNextLandmarkPairId). They are part of the action that creates the
+// tree. If the layer registration page renamed the tree afterwards, undo would revert the renaming,
+// the page would rename the tree again, and the user could never undo the click itself.
 export function getNewLandmarkTreeProperties(): { name: string; color: Vector3 } {
   const state = Store.getState();
   const ownPairIds = new Set(
@@ -168,7 +169,7 @@ export function getNewLandmarkTreeProperties(): { name: string; color: Vector3 }
   );
   const pairId = getNextLandmarkPairId(
     ownPairIds,
-    state.layerRegistrationWorker.landmarkPairInfo ?? NO_LANDMARK_PAIR_INFO,
+    state.layerRegistrationLandmarkIframe.landmarkPairInfo ?? NO_LANDMARK_PAIR_INFO,
   );
   return { name: getLandmarkTreeName(pairId), color: getLandmarkColor(pairId) };
 }
@@ -192,7 +193,7 @@ export function exportLandmarkPairsAsNml(
 const originalLayerColors = new Map<string, Vector3>();
 
 // Shows the given layers in the given colors, or restores their original colors if colors is
-// null. Like other worker settings, the colors are not persisted (see settings_saga.ts).
+// null. Like other landmark iframe settings, the colors are not persisted (see settings_saga.ts).
 export function setOverlayLayerColors(colors: Record<string, Vector3> | null) {
   if (colors == null) {
     for (const [layerName, color] of originalLayerColors) {
@@ -215,13 +216,13 @@ export function setOverlayLayerColors(colors: Record<string, Vector3> | null) {
 }
 
 // Tells the layer registration view whether the layer registration annotation is saved, being saved
-// or has unsaved changes. Runs in the store iframe.
-export function reportLayerRegistrationStoreSavedState() {
+// or has unsaved changes. Runs in the annotation iframe.
+export function reportLayerRegistrationAnnotationIframeSaveState() {
   listenToStoreProperty(
     (state): SaveState => (isSaving(state) ? "saving" : Model.stateSaved() ? "saved" : "unsaved"),
     (saveState) => {
-      const message: StoreSaveStateMessage = {
-        type: LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE,
+      const message: AnnotationIframeSaveStateMessage = {
+        type: LAYER_REGISTRATION_ANNOTATION_IFRAME_SAVE_STATE_MESSAGE_TYPE,
         saveState,
       };
       window.parent.postMessage(message, window.location.origin);

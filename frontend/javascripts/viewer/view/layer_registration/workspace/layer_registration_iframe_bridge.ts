@@ -2,19 +2,19 @@ import Deferred from "libs/async/deferred";
 import isObject from "lodash-es/isObject";
 import type { Side } from "../helpers/layer_registration_helpers";
 import {
+  type AnnotationIframeSaveStateMessage,
   type IframeCommand,
   type IframeCommandMessage,
   type IframeCommands,
   type IframeRole,
+  LAYER_REGISTRATION_ANNOTATION_IFRAME_SAVE_STATE_MESSAGE_TYPE,
   LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE,
-  LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE,
+  type LandmarkIframeCommandMessage,
   type LayerRegistrationCommand,
   type SaveState,
-  type StoreSaveStateMessage,
-  type WorkerCommandMessage,
 } from "../layer_registration_protocol";
 
-const IFRAME_ROLES: IframeRole[] = ["fixed", "moving", "store"];
+const IFRAME_ROLES: IframeRole[] = ["fixed", "moving", "annotation"];
 // How long a command waits for the "init" of its iframe, and then for its reply.
 // - An iframe that can't load the dataset or the annotation (e.g. no access, or a redirect to
 //   the login page) never sends "init".
@@ -46,8 +46,8 @@ async function rejectOnTimeout<T>(
 // from other windows without a type check, so every field may be missing.
 type IncomingMessage = {
   type?: string;
-  command?: WorkerCommandMessage["command"];
-  saveState?: StoreSaveStateMessage["saveState"];
+  command?: LandmarkIframeCommandMessage["command"];
+  saveState?: AnnotationIframeSaveStateMessage["saveState"];
   // Set for replies to sendMessage.
   messageId?: string;
   returnValue?: unknown;
@@ -66,20 +66,22 @@ export type SendMessage = <C extends IframeCommand>(
 
 // What the page does with the messages that are not replies.
 export type IncomingMessageHandlers = {
-  onWorkerCommand: (side: Side, command: LayerRegistrationCommand) => void;
-  onStoreSaveState: (saveState: SaveState) => void;
+  onLandmarkIframeCommand: (side: Side, command: LayerRegistrationCommand) => void;
+  onAnnotationIframeSaveState: (saveState: SaveState) => void;
 };
 
 /** The page side of the protocol between the layer registration page and its iframes (see
  * layer_registration_protocol.ts).
- * This lives in the layer registration page. The workers use layer_registration_worker.
+ * This lives in the layer registration page. The landmark iframes use
+ * layer_registration_landmark_iframe.
  * - sendMessage calls a command of the cross-origin API of an iframe and resolves with its
  *   return value. It waits until the API of that iframe sent "init". It rejects if "init" or
  *   the reply don't arrive in time, if the iframe reloads before it replied, or if the command
  *   fails.
  * - handleMessage must get every message that the page receives. It resolves the replies and
- *   passes worker commands and save states of the store iframe on. It ignores messages that
- *   don't come from one of the iframes or not from the origin of the iframes.
+ *   passes the commands of the landmark iframes and the save states of the annotation iframe on.
+ *   It ignores messages that don't come from one of the iframes or not from the origin of the
+ *   iframes.
  * - handleIframeReload must be called when an iframe loads a new page, e.g. on a reload. The
  *   iframe can't report that itself: a message that it sends while its page goes away arrives
  *   without a source, so the bridge couldn't tell which iframe sent it.
@@ -89,7 +91,7 @@ export class IframeBridge {
   private readonly readyDeferreds: Record<IframeRole, Deferred<void, unknown>> = {
     fixed: new Deferred(),
     moving: new Deferred(),
-    store: new Deferred(),
+    annotation: new Deferred(),
   };
   // The roles whose ready deferred is resolved.
   private readonly readyRoles = new Set<IframeRole>();
@@ -133,7 +135,7 @@ export class IframeBridge {
 
   handleMessage(
     { source, origin, data }: { source: unknown; origin: string; data: IncomingMessage },
-    { onWorkerCommand, onStoreSaveState }: IncomingMessageHandlers,
+    { onLandmarkIframeCommand, onAnnotationIframeSaveState }: IncomingMessageHandlers,
   ) {
     // An iframe keeps its window when it navigates to a page of another origin, e.g. a login
     // page. That page must not be able to send replies or commands in the name of the iframe.
@@ -150,16 +152,16 @@ export class IframeBridge {
       this.handleReply(data.messageId, data);
     } else if (
       data.type === LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE &&
-      role !== "store" &&
+      role !== "annotation" &&
       data.command != null
     ) {
-      onWorkerCommand(role, data.command);
+      onLandmarkIframeCommand(role, data.command);
     } else if (
-      data.type === LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE &&
-      role === "store" &&
+      data.type === LAYER_REGISTRATION_ANNOTATION_IFRAME_SAVE_STATE_MESSAGE_TYPE &&
+      role === "annotation" &&
       data.saveState != null
     ) {
-      onStoreSaveState(data.saveState);
+      onAnnotationIframeSaveState(data.saveState);
     }
   }
 

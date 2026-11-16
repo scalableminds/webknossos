@@ -53,8 +53,8 @@ import { OrthoBaseRotations } from "viewer/ortho_base_rotations";
 import { api } from "viewer/singletons";
 import Store, { type WebknossosState } from "viewer/store";
 import type FlightModeView from "viewer/view/arbitrary_view";
-import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
-import { getNewLandmarkTreeProperties } from "viewer/view/layer_registration/layer_registration_worker";
+import { getNewLandmarkTreeProperties } from "viewer/view/layer_registration/layer_registration_landmark_iframe";
+import { isLayerRegistrationLandmarkIframe } from "viewer/view/layer_registration/layer_registration_protocol";
 import type PlaneView from "viewer/view/plane_view";
 import { renderToTexture } from "viewer/view/rendering_utils";
 
@@ -275,14 +275,15 @@ export function finishNodeMovement(nodeId: number) {
   );
 }
 
-// In the workers of the layer registration view, each landmark is a tree with one node, and one
-// click places one landmark. The user settings for these two modes therefore don't apply there.
+// In the landmark iframes of the layer registration view, each landmark is a tree with one node,
+// and one click places one landmark. The user settings for these two modes therefore don't apply
+// there.
 function isSingleNodeTreeModeOn(state: WebknossosState): boolean {
-  return isLayerRegistrationWorker() || state.userConfiguration.newNodeNewTree;
+  return isLayerRegistrationLandmarkIframe() || state.userConfiguration.newNodeNewTree;
 }
 
 export function isContinuousNodeCreationOn(state: WebknossosState): boolean {
-  return !isLayerRegistrationWorker() && state.userConfiguration.continuousNodeCreation;
+  return !isLayerRegistrationLandmarkIframe() && state.userConfiguration.continuousNodeCreation;
 }
 
 export function handleCreateNodeFromGlobalPosition(
@@ -300,7 +301,7 @@ export function handleCreateNodeFromGlobalPosition(
       createTreeAction(
         undefined,
         undefined,
-        isLayerRegistrationWorker() ? getNewLandmarkTreeProperties() : undefined,
+        isLayerRegistrationLandmarkIframe() ? getNewLandmarkTreeProperties() : undefined,
       ),
     );
   }

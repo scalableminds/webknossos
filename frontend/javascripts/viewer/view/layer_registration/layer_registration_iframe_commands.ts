@@ -23,8 +23,8 @@ import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hier
 // Commands of the cross-origin API that only the layer registration page uses (see
 // IframeCommands in layer_registration_protocol.ts). They are not part of the public API
 // (api_latest.ts), because their behavior is tailored to the page, e.g. exportTreesAsNmlString
-// leaves out the tree groups. The commands that only the workers use are in
-// layer_registration_worker.ts.
+// leaves out the tree groups. The commands that only the landmark iframes use are in
+// layer_registration_landmark_iframe.ts.
 
 // The tree groups along the given path of group names, starting at the root level. Stops at
 // the first group that doesn't exist, so the result can be shorter than the path.

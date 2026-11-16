@@ -14,7 +14,7 @@ import {
 } from "viewer/model/accessors/flycam_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import Dimensions from "viewer/model/dimensions";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { getVoxelPerPixel } from "viewer/model/scaleinfo";
 import type { WebknossosState } from "viewer/store";
 import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
 import { getTransformedDatasetBoundingBox } from "../accessors/dataset_layer_transformation_accessor";
@@ -100,7 +100,8 @@ function rotateReducer(
 }
 
 function resetMatrix(matrix: Matrix4x4, voxelSize: VoxelSize) {
-  const scale = getBaseVoxelFactorsInUnit(voxelSize);
+  // The flycam's local coordinates are measured in pixels at zoom step 1.
+  const scale = getVoxelPerPixel(voxelSize);
   // Save position
   const position = [matrix[12], matrix[13], matrix[14]];
   // Reset rotation. The default rotation of 180 degree around z is applied.
@@ -261,11 +262,12 @@ function handleMoveFlycamOrtho(
     deltaInWorldV3 = V3.multiply(deltaInWorldV3, state.flycam.spaceDirectionOrtho);
   }
 
-  const zoomFactor = increaseSpeedWithZoom ? flycam.zoomStep : 1;
+  const zoomStep = increaseSpeedWithZoom ? flycam.zoomStep : 1;
+  // With useDatasetScale, the vector is given in screen pixels.
   const scaleFactor: Vector3 = useDatasetScale
-    ? getBaseVoxelFactorsInUnit(dataset.dataSource.scale)
-    : [1, 1, 1];
-  let deltaInWorldZoomed = V3.multiply(V3.scale(deltaInWorldV3, zoomFactor), scaleFactor);
+    ? getVoxelPerPixel(dataset.dataSource.scale, zoomStep)
+    : [zoomStep, zoomStep, zoomStep];
+  let deltaInWorldZoomed = V3.multiply(deltaInWorldV3, scaleFactor);
 
   const newState = moveReducer(state, deltaInWorldZoomed);
   return action.clampToDatasetBounds

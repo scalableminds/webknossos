@@ -9,7 +9,7 @@ import { getTransformsForSkeletonLayer } from "viewer/model/accessors/dataset_la
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import shaderEditor from "viewer/model/helpers/shader_editor";
-import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
+import { getUnitPerPixel } from "viewer/model/scaleinfo";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
@@ -55,8 +55,8 @@ class NodeShader {
         // will and should be square regardless of the plane's aspect ratio.
         value: getZoomValue(state.flycam),
       },
-      voxelSizeMin: {
-        value: getBaseVoxelInUnit(state.dataset.dataSource.scale.factor),
+      unitPerPixelAtZoomStep1: {
+        value: getUnitPerPixel(state.dataset.dataSource.scale),
       },
       overrideParticleSize: {
         value: state.userConfiguration.particleSize,
@@ -198,7 +198,7 @@ out vec3 color;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float planeZoomFactor;
-uniform float voxelSizeMin;
+uniform float unitPerPixelAtZoomStep1;
 uniform float viewportScale;
 uniform float activeNodeId;
 uniform float activeTreeId;
@@ -324,7 +324,7 @@ void main() {
       gl_PointSize = overrideParticleSize;
     } else {
       gl_PointSize = max(
-        radius / planeZoomFactor / voxelSizeMin,
+        radius / planeZoomFactor / unitPerPixelAtZoomStep1,
         overrideParticleSize
       ) * viewportScale;
     }

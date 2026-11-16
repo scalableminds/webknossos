@@ -9,7 +9,7 @@ import Dimension from "viewer/model/dimensions";
 import type { UserBoundingBox } from "viewer/store";
 import { describe, expect, it } from "vitest";
 
-const isotropicPlaneRatio: Vector3 = [1, 1, 1];
+const isotropicVoxelPerPixel: Vector3 = [1, 1, 1];
 const MAX_DISTANCE = 15;
 // In the YZ viewport, the first (horizontal) dimension is z and the second (vertical) one is y.
 // Edge ids: 0 = top (min y), 1 = bottom (max y), 2 = left (min z), 3 = right (max z).
@@ -27,8 +27,14 @@ const flatBox: UserBoundingBox = {
   isVisible: true,
 };
 
-function getEdgeIds(position: Vector3, planeRatio: Vector3 = isotropicPlaneRatio) {
-  const edges = getClosestEdgesAtPosition([flatBox], position, yzIndices, planeRatio, MAX_DISTANCE);
+function getEdgeIds(position: Vector3, voxelPerPixel: Vector3 = isotropicVoxelPerPixel) {
+  const edges = getClosestEdgesAtPosition(
+    [flatBox],
+    position,
+    yzIndices,
+    voxelPerPixel,
+    MAX_DISTANCE,
+  );
   if (edges == null) return null;
   const [primary, secondary] = edges;
   return [primary.edgeId, secondary?.edgeId ?? null];
@@ -93,7 +99,7 @@ describe("getClosestEdgesAtPosition", () => {
       [flatBox],
       yz(103, 102),
       yzIndices,
-      isotropicPlaneRatio,
+      isotropicVoxelPerPixel,
       MAX_DISTANCE,
     );
     // The top edge (min y = 100) is grabbed 2 voxels below it, the left edge (min z = 100) 3 voxels right of it.

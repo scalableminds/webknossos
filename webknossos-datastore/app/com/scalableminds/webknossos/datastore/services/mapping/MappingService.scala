@@ -70,7 +70,12 @@ class MappingService @Inject() (config: DataStoreConfig, baseDirService: BaseDir
 
   def loadMapping(request: DataServiceMappingRequest): Fox[JsonMapping] =
     cache.getOrLoad(
-      JsonMappingCacheKey(request.dataSourceId, request.dataLayer.name, request.mapping, request.dataLayer.elementClass),
+      JsonMappingCacheKey(
+        request.dataSourceId,
+        request.dataLayer.name,
+        request.mapping,
+        request.dataLayer.elementClass
+      ),
       _ =>
         (for {
           rawMapping <- loadMappingBytes(request)

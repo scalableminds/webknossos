@@ -11,6 +11,7 @@ import {
   updateMeshVisibilityAction,
 } from "viewer/model/actions/annotation_actions";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
+import { insertNodeOnEdgeAction } from "viewer/model/actions/skeletontracing_actions";
 import {
   deleteNodeAndReconnectNeighborsAsUserAction,
   deleteNodeAsUserAction,
@@ -30,6 +31,10 @@ export function useContextMenuActions() {
 
       deleteNodeAndReconnectNeighbors: (nodeId: number, treeId: number) => {
         dispatch(deleteNodeAndReconnectNeighborsAsUserAction(Store.getState(), nodeId, treeId));
+      },
+
+      insertNodeOnEdge: (sourceNodeId: number, targetNodeId: number) => {
+        dispatch(insertNodeOnEdgeAction(sourceNodeId, targetNodeId));
       },
 
       setActiveCell: (

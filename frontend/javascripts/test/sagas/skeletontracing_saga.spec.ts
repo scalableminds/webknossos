@@ -16,6 +16,7 @@ import {
   deleteNodeAction,
   deleteNodeAndReconnectNeighborsAction,
   deleteTreeAction,
+  insertNodeOnEdgeAction,
   mergeTreesAction,
   setActiveNodeAction,
   setNodeRadiusAction,
@@ -323,6 +324,30 @@ describe("SkeletonTracingSaga", () => {
         { name: "deleteEdge", value: { actionTracingId, treeId: 1, source: 1, target: 2 } },
         { name: "deleteEdge", value: { actionTracingId, treeId: 1, source: 2, target: 3 } },
         { name: "createEdge", value: { actionTracingId, treeId: 1, source: 1, target: 3 } },
+      ]),
+    );
+  });
+
+  it("should emit createNode, deleteEdge and createEdge update actions when inserting a node on an edge", () => {
+    const testState = applyActions(initialState, [createNode, createNode]);
+    const newState = SkeletonTracingReducer(testState, insertNodeOnEdgeAction(1, 2));
+    const updateActions = testDiffing(testState.annotation, newState.annotation);
+    const treeUpdateActions = updateActions.filter((ua) =>
+      ["deleteNode", "deleteEdge", "createEdge", "createNode", "deleteTree", "createTree"].includes(
+        ua.name,
+      ),
+    );
+
+    expect(treeUpdateActions).toHaveLength(4);
+    expect(treeUpdateActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "createNode",
+          value: expect.objectContaining({ id: 3, treeId: 1 }),
+        }),
+        { name: "deleteEdge", value: { actionTracingId, treeId: 1, source: 1, target: 2 } },
+        { name: "createEdge", value: { actionTracingId, treeId: 1, source: 1, target: 3 } },
+        { name: "createEdge", value: { actionTracingId, treeId: 1, source: 3, target: 2 } },
       ]),
     );
   });

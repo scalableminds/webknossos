@@ -7,7 +7,10 @@ import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_a
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import type { TreeGroup } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
-import { getLandmarkPairId } from "viewer/view/layer_registration/helpers/layer_registration_helpers";
+import {
+  getLandmarkPairId,
+  prepareLandmarkTreesForImport,
+} from "viewer/view/layer_registration/helpers/layer_registration_helpers";
 import type {
   IframeRole,
   LayerRegistrationCommand,
@@ -118,7 +121,8 @@ export function getLandmarkNml(landmarks: FakeLandmark[]): string {
 }
 
 /** A worker iframe that only keeps its landmarks, without a real annotation. The user places
- * and deletes landmarks with setLandmarks.
+ * and deletes landmarks with setLandmarks. It imports and exports landmarks like the real worker
+ * (see the worker spec).
  */
 export class FakeWorker {
   landmarks: FakeLandmark[] = [];
@@ -132,8 +136,9 @@ export class FakeWorker {
         break;
       case "importLandmarks": {
         const { trees } = await parseNml(data.args[0]);
-        for (const tree of trees.values()) {
+        for (const tree of prepareLandmarkTreesForImport(trees).values()) {
           for (const node of tree.nodes.values()) {
+            // prepareLandmarkTreesForImport gives each tree a pair id.
             const pairId = getLandmarkPairId(tree.name) ?? 0;
             this.landmarks.push({ pairId, position: node.untransformedPosition });
           }

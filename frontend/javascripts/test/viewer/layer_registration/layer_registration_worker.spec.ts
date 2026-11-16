@@ -3,6 +3,7 @@ import { location } from "libs/window";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import {
   FakeLayerRegistrationIframes,
+  FakeWorker,
   getLandmarkNml,
   mockBuildInfoRequest,
 } from "test/helpers/layer_registration_iframes";
@@ -23,6 +24,23 @@ import {
 } from "viewer/view/layer_registration/helpers/layer_registration_helpers";
 import { applyLayerRegistrationWorkerSettings } from "viewer/view/layer_registration/layer_registration_worker";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// Stored landmarks with the cases that the import handles: a tree without a pair id in its name
+// (e.g. stored before pair ids existed) and a tree without nodes.
+const STORED_LANDMARKS_NML = `<things>
+  <thing id="1" name="Landmark 3" color.r="1" color.g="0" color.b="0" color.a="1">
+    <nodes><node id="1" x="1" y="1" z="1" /></nodes><edges />
+  </thing>
+  <thing id="2" name="Tree from an old version" color.r="1" color.g="0" color.b="0" color.a="1">
+    <nodes><node id="2" x="2" y="2" z="2" /></nodes><edges />
+  </thing>
+  <thing id="3" name="Landmark 5" color.r="1" color.g="0" color.b="0" color.a="1">
+    <nodes /><edges />
+  </thing>
+  <thing id="4" name="Landmark 1" color.r="1" color.g="0" color.b="0" color.a="1">
+    <nodes><node id="3" x="3" y="3" z="3" /></nodes><edges />
+  </thing>
+</things>`;
 
 // Where the layer of the worker has data, according to the mocked data store.
 const DATA_POSITION: Vector3 = [12, 34, 56];
@@ -178,5 +196,30 @@ describe("Layer registration worker", () => {
       [5, [5, 5, 5]],
       [2, [2, 2, 2]],
     ]);
+  });
+
+  // The tests of the layer registration page use FakeWorker instead of real workers.
+  // The goal is to test the FakeWorker behaving correctly.
+  it("imports and exports landmarks like the FakeWorker of the page tests", async () => {
+    iframes.mountReady("moving", new FakeWorker().handleMessage);
+    const { sendMessage } = iframes.bridge;
+    const [realWorkerLandmarks, fakeWorkerLandmarks] = await Promise.all(
+      (["fixed", "moving"] as const).map(async (side) => {
+        await sendMessage(side, "importLandmarks", STORED_LANDMARKS_NML);
+        const nmlString = await sendMessage(side, "exportTreesAsNmlString");
+        return getLandmarksFromTrees((await parseNml(nmlString)).trees)
+          .filter(({ pairId }) => pairId != null)
+          .map(({ pairId, position }) => ({ pairId, position }))
+          .toSorted((a, b) => (a.pairId ?? 0) - (b.pairId ?? 0));
+      }),
+    );
+
+    // The tree without a pair id gets the next one, and the tree without nodes is left out.
+    expect(realWorkerLandmarks).toEqual([
+      { pairId: 1, position: [3, 3, 3] },
+      { pairId: 3, position: [1, 1, 1] },
+      { pairId: 4, position: [2, 2, 2] },
+    ]);
+    expect(fakeWorkerLandmarks).toEqual(realWorkerLandmarks);
   });
 });

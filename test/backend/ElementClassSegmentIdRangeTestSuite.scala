@@ -1,5 +1,7 @@
 package backend
 
+import com.scalableminds.util.Msg
+import com.scalableminds.util.box.{Failure, Full}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import org.scalatest.wordspec.AsyncWordSpec
 
@@ -52,6 +54,29 @@ class ElementClassSegmentIdRangeTestSuite extends AsyncWordSpec {
     }
     "reject for non-segmentation element classes" in
       assert(!ElementClass.largestSegmentIdIsInRange(None, ElementClass.float))
+  }
+
+  "assertLargestSegmentIdIsInRange" should {
+    "succeed for an in-range id" in
+      ElementClass
+        .assertLargestSegmentIdIsInRange(Some(255L), ElementClass.uint8)
+        .futureBox
+        .map(box => assert(box == Full(())))
+    "succeed if no id is set for a segmentation element class" in
+      ElementClass
+        .assertLargestSegmentIdIsInRange(None, ElementClass.uint8)
+        .futureBox
+        .map(box => assert(box == Full(())))
+    "fail with the range message for an out-of-range id" in
+      ElementClass.assertLargestSegmentIdIsInRange(Some(256L), ElementClass.uint8).futureBox.map {
+        case Failure(msg, _, _) => assert(msg == Msg.Annotation.Volume.largestSegmentIdExceedsRange(256L, "uint8"))
+        case other              => fail(s"Expected failure, got $other")
+      }
+    "fail with the element class message for non-segmentation element classes, regardless of id" in
+      ElementClass.assertLargestSegmentIdIsInRange(None, ElementClass.float).futureBox.map {
+        case Failure(msg, _, _) => assert(msg == Msg.Annotation.Volume.invalidSegmentationElementClass("float"))
+        case other              => fail(s"Expected failure, got $other")
+      }
   }
 
 }

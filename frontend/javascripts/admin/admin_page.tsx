@@ -106,6 +106,7 @@ export default function AdminPage({
         ) : null}
         {filters != null ? filters : null}
         <div
+          className="admin-page-content"
           style={{
             border: `1px solid ${token.colorBorder}`,
             borderRadius: token.borderRadius,

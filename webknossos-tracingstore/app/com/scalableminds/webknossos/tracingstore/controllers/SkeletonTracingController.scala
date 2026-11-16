@@ -125,7 +125,7 @@ class SkeletonTracingController @Inject() (
     Action.fox { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
               annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
               editPositionParsed <- Fox.runOptional(editPosition)(p => Vec3Int.fromUriLiteral(p).toFox)

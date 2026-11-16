@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.box.{Box, Empty, Failure, Full}
 import com.scalableminds.util.box.Box.tryo
 import com.scalableminds.util.tools.Fox
@@ -18,7 +19,7 @@ class VolumeBucketBuffer(
     val volumeDataStore: FossilDBClient,
     val temporaryTracingService: TemporaryTracingService,
     toTemporaryStore: Boolean
-)(using ec: ExecutionContext)
+)(using ec: ExecutionContext, tc: TokenContext)
     extends VolumeTracingBucketHelper
     with ProtoGeometryConversions {
 

@@ -1,4 +1,3 @@
-@left-menu-width: 360px;
 // Keep in sync with WK_FONT / WK_MONO in frontend/javascripts/theme.ts.
 @font-family: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
   "Helvetica Neue", Arial, sans-serif;
@@ -18,6 +17,14 @@
 @screen-xl-min: 1200px;
 @screen-xl-max: 1599px;
 @screen-xxl-min: 1600px;
+
+// Phones: below antd's md breakpoint. Matches the compact layouts that check
+// useMinScreenWidth("md") / Grid.useBreakpoint().md in JS.
+@smartphones: ~"only screen and (max-width: @{screen-sm-max})";
+
+// Not an antd breakpoint: mirrors constants.NARROW_SCREEN_WIDTH in viewer/constants.ts, below which
+// the annotation view's navbar compacts its items.
+@screen-narrow-min: 1400px;
 
 :root {
   // The brand colors below mirror the constants in frontend/javascripts/theme.ts, which is the

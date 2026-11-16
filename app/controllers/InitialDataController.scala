@@ -199,6 +199,7 @@ Samplecountry
       JobCommand.materialize_volume_annotation,
       JobCommand.render_animation,
       JobCommand.align_sections,
+      JobCommand.align,
       JobCommand.infer_neurons,
       JobCommand.infer_instances,
       JobCommand.infer_mitochondria,
@@ -565,7 +566,6 @@ Samplecountry
       _ <- insertL4DenseDataset()
       _ <- insertRemoteNDDataset()
       _ <- insertCustomAiModel()
-
     } yield ()
 
   private def assertInitialDataEnabled: Fox[Unit] =

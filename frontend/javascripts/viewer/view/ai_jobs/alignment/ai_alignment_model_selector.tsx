@@ -1,5 +1,7 @@
 import alignExample from "@images/align-example.png";
 import alignStitchingExample from "@images/align-stitching-example.jpg";
+import { useWkSelector } from "libs/react_hooks";
+import { isUserAdminOrDatasetManager } from "libs/utils";
 import type React from "react";
 import { useCallback } from "react";
 import { APIJobCommand } from "types/api_types";
@@ -13,7 +15,8 @@ export type AlignmentTask = {
   id: string;
   jobType: APIJobCommand | null;
   image: string;
-  disabled?: boolean;
+  // Tasks with an href are not run from this modal, but link to another page instead.
+  href?: string;
 };
 
 const alignmentTasks: AlignmentTask[] = [
@@ -27,25 +30,25 @@ const alignmentTasks: AlignmentTask[] = [
   },
   {
     name: "Align & stitch multiple tiles",
-    comment: (
-      <>
-        For datasets with multiple tiles per section,{" "}
-        <a href="mailto:support@webknossos.org">contact us</a> for a quote.
-      </>
-    ),
+    comment:
+      "For datasets with multiple tiles per section. Upload the tiles together with their positions as an alignment project to align and stitch them.",
     id: "align-tiles",
-    disabled: true,
     jobType: null,
+    href: "/alignmentProjects",
     image: alignStitchingExample,
   },
 ];
 
 export const AiAlignmentModelSelector: React.FC = () => {
   const { selectedTask, setSelectedTask, stepStatuses } = useAlignmentJobContext();
+  // Alignment projects are only accessible to admins and dataset managers.
+  const canUseAlignmentProjects = useWkSelector((state) =>
+    isUserAdminOrDatasetManager(state.activeUser),
+  );
 
   const handleTaskSelection = useCallback(
     (item: AlignmentTask) => {
-      if (!item.disabled && item.jobType) {
+      if (item.jobType) {
         setSelectedTask(item);
       }
     },
@@ -66,8 +69,10 @@ export const AiAlignmentModelSelector: React.FC = () => {
             image={task.image}
             title={task.name}
             description={task.comment}
+            href={task.href}
             isSelected={selectedTask?.id === task.id}
-            isDisabled={task.disabled}
+            isDisabled={task.href != null && !canUseAlignmentProjects}
+            disabledLabel="Admins & dataset managers only"
             onSelect={() => handleTaskSelection(task)}
           />
         ))}

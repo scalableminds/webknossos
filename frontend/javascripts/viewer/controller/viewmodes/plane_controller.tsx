@@ -34,15 +34,12 @@ import {
   SkeletonToolController,
   VoxelPipetteToolController,
 } from "viewer/controller/combinations/tool_controls";
+import { getSegmentIdsAtPosition } from "viewer/controller/combinations/volume_handlers";
 import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
 import TDController from "viewer/controller/td_controller";
-import {
-  getActiveMagIndexForLayer,
-  getMoveOffset,
-  getPosition,
-} from "viewer/model/accessors/flycam_accessor";
+import { getMoveOffset, getPosition } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
 import { getMaximumBrushSize } from "viewer/model/accessors/volumetracing_accessor";
@@ -62,7 +59,7 @@ import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import Dimensions from "viewer/model/dimensions";
 import dimensions, { type DimensionIndices } from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import { api, Model } from "viewer/singletons";
+import { api } from "viewer/singletons";
 import type { BrushPresets, StoreAnnotation, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
@@ -437,32 +434,19 @@ class PlaneController extends PureComponent<Props> {
       },
       // Segment info — globally available regardless of active tool
       COPY_SEGMENT_ID: {
-        onPressed: (event: KeyboardEvent) => {
-          const segmentationLayer = Model.getVisibleSegmentationLayer();
-          const { additionalCoordinates } = Store.getState().flycam;
-
-          if (!segmentationLayer) {
-            return;
-          }
-
+        onPressed: () => {
+          // Copies the segment id that is rendered under the cursor (i.e., the mapped id if a
+          // mapping is active).
           const { mousePosition } = Store.getState().temporaryConfiguration;
-
           if (mousePosition) {
             const [x, y] = mousePosition;
             const globalMousePositionRounded = calculateGlobalPos(Store.getState(), {
               x,
               y,
             }).rounded;
-            const { cube } = segmentationLayer;
-            const mapping = event.altKey ? cube.getMapping() : null;
-            const hoveredId = cube.getDataValue(
-              globalMousePositionRounded,
-              additionalCoordinates,
-              mapping,
-              getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),
-            );
-            if (hoveredId !== 0) {
-              copyToClipboard(String(hoveredId), "segment id", true);
+            const { mappedId } = getSegmentIdsAtPosition(globalMousePositionRounded);
+            if (mappedId !== 0n) {
+              copyToClipboard(String(mappedId), "segment id", true);
               return;
             }
           }

@@ -180,7 +180,7 @@ const deleteEdgeEntry: MouseShortcutEntry = {
       {modifierKeyToUiElement("Meta")} + <MouseLeftClick />
     </React.Fragment>,
   ],
-  action: "Delete Edge to this Node and Split Trees",
+  action: "Delete Edge to Active Node & Split Tree",
 };
 
 export function FlightNavigationMouseShortcutsTable() {

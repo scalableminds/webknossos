@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessRequest
 }
 import com.scalableminds.webknossos.tracingstore.tracings.TracingId
+import models.alignmentproject.{AlignmentProjectDAO, AlignmentProjectStatus}
 import models.annotation.*
 import models.dataset.{DataStoreService, DatasetDAO, DatasetService}
 import models.job.JobDAO
@@ -47,6 +48,7 @@ class UserTokenController @Inject() (
     dataStoreService: DataStoreService,
     tracingStoreService: TracingStoreService,
     jobDAO: JobDAO,
+    alignmentProjectDAO: AlignmentProjectDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     conf: WkConf,
     sil: Silhouette[WkEnv]
@@ -104,10 +106,12 @@ class UserTokenController @Inject() (
             handleAnnotationAccess(accessRequest.resourceId, accessRequest.mode, userBox, token)
           case AccessResourceType.jobExport =>
             handleJobExportAccess(accessRequest.resourceId, accessRequest.mode, userBox)
+          case AccessResourceType.alignmentProject =>
+            handleAlignmentProjectAccess(accessRequest.resourceId, accessRequest.mode, userBox)
           case _ =>
             Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
         }
-      } yield Ok(Json.toJson(answer))
+      } yield Ok(Json.toJson(answer.copy(userId = userBox.toOption.map(_._id))))
     }
 
   private def handleDataSetAccess(idOpt: Option[String], mode: AccessMode.Value, userBox: Box[User])(using
@@ -175,7 +179,7 @@ class UserTokenController @Inject() (
       token: Option[String]
   ): Fox[UserAccessAnswer] =
     if (tracingIdOpt.contains(TracingId.dummy))
-      Fox.successful(UserAccessAnswer(granted = true))
+      Fox.successful(sandboxAccessAnswer(mode))
     else
       for {
         tracingId <- tracingIdOpt.toFox
@@ -184,6 +188,11 @@ class UserTokenController @Inject() (
         ) ?~> Msg.Annotation.notFound
         result <- handleAnnotationAccess(Some(annotation._id.toString), mode, userBox, token)
       } yield result
+
+  // Dummy ids belong to sandbox annotations, which are never saved
+  private def sandboxAccessAnswer(mode: AccessMode): UserAccessAnswer =
+    if (mode == AccessMode.read) UserAccessAnswer(granted = true)
+    else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to sandbox annotation"))
 
   private def handleAnnotationAccess(
       annotationIdOpt: Option[String],
@@ -202,7 +211,7 @@ class UserTokenController @Inject() (
       }
 
     if (annotationIdOpt.contains(ObjectId.dummyId.toString)) {
-      Fox.successful(UserAccessAnswer(granted = true))
+      Fox.successful(sandboxAccessAnswer(mode))
     } else {
       for {
         annotationIdStr <- annotationIdOpt.toFox
@@ -232,6 +241,32 @@ class UserTokenController @Inject() (
         else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
     }
   }
+
+  // Only writing (uploading files) is requested by the datastore, and only while the upload is unfinished.
+  // Replacing the CSV of an uploaded project is authorized separately, see
+  // WKRemoteDataStoreController.validateAlignmentProjectCsvReplacement.
+  private def handleAlignmentProjectAccess(
+      idOpt: Option[String],
+      mode: AccessMode,
+      userBox: Box[User]
+  ): Fox[UserAccessAnswer] =
+    (mode, userBox) match {
+      case (AccessMode.write, Full(user)) =>
+        for {
+          idStr <- idOpt.toFox
+          alignmentProjectId <- ObjectId.fromString(idStr)
+          projectBox <- alignmentProjectDAO.findOne(alignmentProjectId)(using DBAccessContext(Some(user))).shiftBox
+        } yield projectBox match {
+          case Full(project) if project.isInputDataDeleted =>
+            UserAccessAnswer(granted = false, Some(Msg.AlignmentProject.inputDataDeleted))
+          case Full(project) if project.status != AlignmentProjectStatus.UPLOADING =>
+            UserAccessAnswer(granted = false, Some(Msg.AlignmentProject.notUploading))
+          case Full(_) => UserAccessAnswer(granted = true)
+          case _       => UserAccessAnswer(granted = false, Some("No write access to alignment project"))
+        }
+      case _ =>
+        Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported access to alignment project: $mode")))
+    }
 
   private def handleJobExportAccess(
       jobIdOpt: Option[String],

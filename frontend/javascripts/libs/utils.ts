@@ -532,6 +532,12 @@ export function hasFinePointer(): boolean {
   return window.matchMedia?.("(any-pointer: fine)").matches ?? true;
 }
 
+// Whether the primary input device is a precise pointer. Use this to decide on autofocus:
+// some phones (e.g. Samsung Galaxy) report "any-pointer: fine" even though they are touch-only.
+export function isPrimaryPointerFine(): boolean {
+  return window.matchMedia?.("(pointer: fine)").matches ?? true;
+}
+
 // Waits until the user is actually attentive, i.e., they moved the mouse or pressed a key.
 // This is more reliable than the Page Visibility API, which can still report the page as visible
 // even when another OS window fully covers it.

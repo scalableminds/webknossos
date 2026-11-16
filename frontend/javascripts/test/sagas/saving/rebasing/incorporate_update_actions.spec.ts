@@ -25,7 +25,6 @@ import {
   REPLAYED_BOUNDING_BOX_ID,
 } from "test/sagas/saving/rebasing/incorporate_update_actions_fixtures";
 import { call } from "typed-redux-saga";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
@@ -511,13 +510,11 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
   });
 
   describe("Bucket-special-cased actions", () => {
-    const previousRefetchFlag = WkDevFlags.liveCollaboration.refetchBucketsForRemotePartialUpdates;
     beforeEach<WebknossosTestContext>(async (context) => {
       await setupWebknossosForTesting(context, "volume");
     });
 
     afterEach<WebknossosTestContext>(async (context) => {
-      WkDevFlags.liveCollaboration.refetchBucketsForRemotePartialUpdates = previousRefetchFlag;
       expect(hasRootSagaCrashed()).toBe(false);
       await context.api.tracing.save();
       expect(hasRootSagaCrashed()).toBe(false);
@@ -573,15 +570,15 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
     });
 
     /**
-     * Simulates receiving another user's updateBucketPartial for a loaded bucket: it writes
+     * Simulates incorporating an updateBucketPartial for a loaded bucket: it writes
      * newCellId to the first three voxels of a bucket that is oldCellId locally. Afterwards,
      * the backend answers bucket requests with newCellId everywhere, so the result shows
      * whether the bucket got the runs applied (only the first voxels change) or was fetched
-     * again (all voxels change), depending on refetchBucketsForRemotePartialUpdates.
+     * again (all voxels change).
      */
-    async function incorporateRemotePartialUpdate(
+    async function incorporatePartialUpdate(
       context: WebknossosTestContext,
-      refetchBucketsForRemotePartialUpdates: boolean,
+      areUnsavedChangesOfUser: boolean,
     ) {
       const { api, mocks } = context;
       const oldCellId = 11;
@@ -622,11 +619,9 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
             },
           ],
           1,
+          areUnsavedChangesOfUser,
         );
       });
-      // Reset in afterEach.
-      WkDevFlags.liveCollaboration.refetchBucketsForRemotePartialUpdates =
-        refetchBucketsForRemotePartialUpdates;
       await task.toPromise();
       return {
         changedVoxel: await api.data.getDataValue(volumeTracingLayerName, [2, 0, 0]),
@@ -636,21 +631,23 @@ describe("tryToIncorporateActions (rebase/forwarding incorporation)", () => {
       };
     }
 
-    it<WebknossosTestContext>("applies the runs of updateBucketPartial to a loaded bucket", async (context) => {
-      const { changedVoxel, unchangedVoxel, oldCellId, newCellId } =
-        await incorporateRemotePartialUpdate(context, false);
+    it<WebknossosTestContext>("applies the runs of another user's updateBucketPartial to a loaded bucket", async (context) => {
+      const { changedVoxel, unchangedVoxel, oldCellId, newCellId } = await incorporatePartialUpdate(
+        context,
+        false,
+      );
       expect(changedVoxel).toBe(newCellId);
       // Not re-fetched: the rest of the bucket keeps its local data.
       expect(unchangedVoxel).toBe(oldCellId);
     });
 
-    it<WebknossosTestContext>("evicts and reloads the affected bucket for updateBucketPartial if the dev flag is set", async (context) => {
-      const { changedVoxel, unchangedVoxel, newCellId } = await incorporateRemotePartialUpdate(
+    it<WebknossosTestContext>("applies the runs of the user's own unsaved updateBucketPartial to a loaded bucket", async (context) => {
+      const { changedVoxel, unchangedVoxel, oldCellId, newCellId } = await incorporatePartialUpdate(
         context,
         true,
       );
       expect(changedVoxel).toBe(newCellId);
-      expect(unchangedVoxel).toBe(newCellId);
+      expect(unchangedVoxel).toBe(oldCellId);
     });
 
     it<WebknossosTestContext>("evicts and reloads the affected bucket for deleteSegmentData", async ({

@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(189);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(192);
 COMMIT TRANSACTION;
 
 
@@ -380,7 +380,19 @@ CREATE TABLE webknossos.organizations(
   lastStorageScanTime TIMESTAMPTZ NOT NULL DEFAULT '1970-01-01T00:00:00.000Z',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  _partner TEXT CONSTRAINT _partner_objectId CHECK (_partner ~ '^[0-9a-f]{24}$') DEFAULT NULL,
   CONSTRAINT validOrganizationId CHECK (_id ~* '^[A-Za-z0-9\-_. ]+$')
+);
+
+-- Partners co-brand WEBKNOSSOS for the organizations assigned to them.
+CREATE TABLE webknossos.partners(
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  name TEXT NOT NULL,
+  logoUrl TEXT NOT NULL,
+  compactLogoUrl TEXT DEFAULT NULL, -- shown where the navbar is collapsed, falls back to logoUrl
+  linkUrl TEXT DEFAULT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE webknossos.organization_plan_updates(
@@ -399,12 +411,13 @@ CREATE TABLE webknossos.organization_plan_updates(
   CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
-CREATE TABLE webknossos.organization_planExpiryReminders(
+CREATE TYPE webknossos.EMAIL_THRESHOLD_TYPE AS ENUM ('PlanExpiry', 'StorageWarning');
+CREATE TABLE webknossos.organization_notifiedEmailThresholds(
   _organization TEXT NOT NULL,
-  paidUntil TIMESTAMPTZ NOT NULL, -- the expiry date the reminder was sent for, so that extending the plan re-arms the reminders
-  leadTimeDays INT NOT NULL,
+  emailThresholdType webknossos.EMAIL_THRESHOLD_TYPE NOT NULL,
+  threshold INT NOT NULL, -- PlanExpiry: lead time in days, StorageWarning: used storage in percent. Deleted again to re-arm the email.
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (_organization, paidUntil, leadTimeDays),
+  PRIMARY KEY (_organization, emailThresholdType, threshold),
   CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
@@ -629,7 +642,33 @@ CREATE TABLE webknossos.jobs(
   lastRetry TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  _alignmentProject TEXT CONSTRAINT _alignmentProject_objectId CHECK (_alignmentProject ~ '^[0-9a-f]{24}$'),
   CONSTRAINT latestRunErrorDetailsIsJsonObject CHECK(jsonb_typeof(latestRunErrorDetails) = 'object')
+);
+
+CREATE TYPE webknossos.ALIGNMENT_PROJECT_STATUS AS ENUM ('UPLOADING', 'READY', 'INVALID');
+
+CREATE TABLE webknossos.alignmentProjects(
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _organization TEXT NOT NULL,
+  _owner TEXT CONSTRAINT _owner_objectId CHECK (_owner ~ '^[0-9a-f]{24}$') NOT NULL,
+  _dataStore TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  status webknossos.ALIGNMENT_PROJECT_STATUS NOT NULL DEFAULT 'UPLOADING',
+  invalidReason TEXT,
+  voxelSizeFactor webknossos.VECTOR3 NOT NULL,
+  voxelSizeUnit webknossos.LENGTH_UNIT NOT NULL,
+  csvPath TEXT, -- relative to the project directory
+  fileCount BIGINT,
+  totalSizeInBytes BIGINT,
+  firstSection INT, -- section range from the tile CSV, inclusive on both ends
+  lastSection INT,
+  isInputDataDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  csvReplaced TIMESTAMPTZ, -- set when the tile CSV was replaced after the upload
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  CONSTRAINT sectionRangeIsValid CHECK (firstSection IS NULL OR lastSection IS NULL OR firstSection <= lastSection)
 );
 
 
@@ -721,6 +760,9 @@ CREATE TABLE webknossos.aiModels(
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   isSuperUserOnly BOOLEAN NOT NULL DEFAULT FALSE,
   isPretrained BOOLEAN NOT NULL DEFAULT FALSE,
+  -- A pretrained model with a _partner is only visible to the organizations assigned to that partner.
+  _partner TEXT CONSTRAINT _partner_objectId CHECK (_partner ~ '^[0-9a-f]{24}$') DEFAULT NULL,
+  thumbnailUrl TEXT DEFAULT NULL,
   UNIQUE (_organization, name)
 );
 
@@ -876,10 +918,12 @@ CREATE VIEW webknossos.tasks_ AS SELECT * FROM webknossos.tasks WHERE NOT isDele
 CREATE VIEW webknossos.teams_ AS SELECT * FROM webknossos.teams WHERE NOT isDeleted;
 CREATE VIEW webknossos.timespans_ AS SELECT * FROM webknossos.timespans WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
+CREATE VIEW webknossos.partners_ AS SELECT * FROM webknossos.partners WHERE NOT isDeleted;
 CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
 CREATE VIEW webknossos.multiUsers_ AS SELECT * FROM webknossos.multiUsers WHERE NOT isDeleted;
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
 CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
+CREATE VIEW webknossos.alignmentProjects_ AS SELECT * FROM webknossos.alignmentProjects WHERE NOT isDeleted;
 CREATE VIEW webknossos.workers_ AS SELECT * FROM webknossos.workers WHERE NOT isDeleted;
 CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
@@ -951,6 +995,8 @@ CREATE INDEX ON webknossos.folder_paths(_descendant);
 CREATE INDEX ON webknossos.jobs(state, _dataStore, created);
 CREATE INDEX ON webknossos.jobs(_worker, manualState, state);
 CREATE INDEX ON webknossos.jobs(_owner);
+CREATE INDEX ON webknossos.jobs(_alignmentProject);
+CREATE UNIQUE INDEX ON webknossos.alignmentProjects(_organization, name) WHERE NOT isDeleted;
 CREATE INDEX ON webknossos.credit_transactions(_paid_job);
 CREATE INDEX ON webknossos.credit_transactions(_organization);
 
@@ -1030,7 +1076,12 @@ ALTER TABLE webknossos.experienceDomains
 ALTER TABLE webknossos.jobs
   ADD CONSTRAINT owner_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id) DEFERRABLE,
   ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE,
-  ADD CONSTRAINT worker_ref FOREIGN KEY(_worker) REFERENCES webknossos.workers(_id) DEFERRABLE;
+  ADD CONSTRAINT worker_ref FOREIGN KEY(_worker) REFERENCES webknossos.workers(_id) DEFERRABLE,
+  ADD CONSTRAINT alignmentProject_ref FOREIGN KEY(_alignmentProject) REFERENCES webknossos.alignmentProjects(_id) ON DELETE SET NULL DEFERRABLE;
+ALTER TABLE webknossos.alignmentProjects
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE,
+  ADD CONSTRAINT owner_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id) DEFERRABLE,
+  ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE;
 ALTER TABLE webknossos.workers
   ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE;
 ALTER TABLE webknossos.annotation_privateLinks
@@ -1047,7 +1098,7 @@ ALTER TABLE webknossos.organization_usedStorage_attachments
   ADD CONSTRAINT attachments_ref FOREIGN KEY (_dataset, layerName, name, type) REFERENCES webknossos.dataset_layer_attachments(_dataset, layerName, name, type) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.organization_plan_updates
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.organization_planExpiryReminders
+ALTER TABLE webknossos.organization_notifiedEmailThresholds
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_coordinateTransformations
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;
@@ -1091,6 +1142,10 @@ ALTER TABLE webknossos.aiModel_trainingAnnotations
 ALTER TABLE webknossos.aiModel_organizations
   ADD FOREIGN KEY (_aiModel) REFERENCES webknossos.aiModels(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   ADD FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organizations
+  ADD CONSTRAINT partner_ref FOREIGN KEY(_partner) REFERENCES webknossos.partners(_id) DEFERRABLE;
+ALTER TABLE webknossos.aiModels
+  ADD CONSTRAINT partner_ref FOREIGN KEY(_partner) REFERENCES webknossos.partners(_id) DEFERRABLE;
 ALTER TABLE webknossos.webauthnCredentials
   ADD FOREIGN KEY (_multiUser) REFERENCES webknossos.multiUsers(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 

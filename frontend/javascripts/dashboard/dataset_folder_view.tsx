@@ -1,7 +1,8 @@
+import { DownOutlined, FolderOutlined } from "@ant-design/icons";
 import { Button, Card, Flex } from "antd";
 import features, { getDemoDatasetUrl } from "features";
 import { filterNullValues, isUserAdminOrDatasetManager } from "libs/utils";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import type { APIDatasetCompact, APIUser, FolderItem } from "types/api_types";
 import DatasetCollectionContextProvider, {
@@ -12,6 +13,7 @@ import DatasetView from "./dataset_view";
 import { DetailsSidebar } from "./folders/details_sidebar";
 import { FolderModal } from "./folders/folder_modal";
 import { FolderTreeSidebar } from "./folders/folder_tree";
+import { ResponsiveSidebar, useIsCompactDashboard } from "./responsive_sidebar";
 
 type Props = {
   user: APIUser;
@@ -29,10 +31,45 @@ function DatasetFolderViewInner(props: Props) {
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets, folderModalState, setFolderModalState } = context;
   const { data: hierarchy } = useFolderHierarchyQuery();
+  // The folder tree moves into a drawer first. The details sidebar follows once space is even tighter.
+  const isFolderTreeCompact = useIsCompactDashboard("xl");
+  const isDetailsCompact = useIsCompactDashboard("md");
+  const [isFolderDrawerOpen, setIsFolderDrawerOpen] = useState(false);
+  const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
 
-  const setSelectedDataset = (ds: APIDatasetCompact | null, multiSelect?: boolean) => {
+  // On compact screens, close the folder drawer once another folder was opened in it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only react to folder changes.
+  useEffect(() => {
+    setIsFolderDrawerOpen(false);
+  }, [context.activeFolderId]);
+
+  // Once a sidebar is shown inline again, close its drawer. Otherwise, it would reappear when the
+  // window gets narrow again, without the user having opened it.
+  useEffect(() => {
+    if (!isFolderTreeCompact) setIsFolderDrawerOpen(false);
+  }, [isFolderTreeCompact]);
+  useEffect(() => {
+    if (!isDetailsCompact) setIsDetailsDrawerOpen(false);
+  }, [isDetailsCompact]);
+
+  const setSelectedDataset = (
+    ds: APIDatasetCompact | null,
+    multiSelect?: boolean,
+    isDragStart?: boolean,
+  ) => {
     if (!ds) {
       setSelectedDatasets([]);
+      return;
+    }
+    if (isDetailsCompact) {
+      // On compact screens, the details aren't visible next to the list. Tapping a dataset
+      // shows them in a drawer and always selects it (instead of toggling the selection).
+      setSelectedDatasets([ds]);
+      context.setSelectedFolder(null);
+      // The drawer's mask would cover the folder rows that the dataset could be dropped on.
+      if (!isDragStart) {
+        setIsDetailsDrawerOpen(true);
+      }
       return;
     }
     // Clear folder selection if a dataset is selected.
@@ -62,6 +99,12 @@ function DatasetFolderViewInner(props: Props) {
   const setSelectedFolder = (folder: FolderItem | null) => {
     if (folder) {
       setSelectedDatasets([]);
+    }
+    if (isDetailsCompact && folder) {
+      // Same as for datasets: show the details in a drawer and always select the folder.
+      context.setSelectedFolder(folder);
+      setIsDetailsDrawerOpen(true);
+      return;
     }
     if (folder?.key === context.selectedFolder?.key) {
       context.setSelectedFolder(null);
@@ -174,6 +217,9 @@ function DatasetFolderViewInner(props: Props) {
     );
   };
 
+  const activeFolderTitle =
+    context.activeFolderId != null ? hierarchy?.itemById[context.activeFolderId]?.title : undefined;
+
   const isBrandNewEmptyOrg =
     hierarchy != null &&
     hierarchy.flatItems.length === 1 &&
@@ -182,58 +228,114 @@ function DatasetFolderViewInner(props: Props) {
     !context.isLoading &&
     context.globalSearchQuery == null;
 
+  const folderModal = folderModalState != null && (
+    <FolderModal {...folderModalState} onClose={() => setFolderModalState(null)} />
+  );
+  const folderTree = (
+    <ResponsiveSidebar
+      isCompact={isFolderTreeCompact}
+      isOpen={isFolderDrawerOpen}
+      onClose={() => setIsFolderDrawerOpen(false)}
+      title="Folders"
+      placement="left"
+    >
+      <FolderTreeSidebar />
+    </ResponsiveSidebar>
+  );
+  const datasetView = (
+    <DatasetView
+      user={props.user}
+      onSelectDataset={setSelectedDataset}
+      onSelectFolder={setSelectedFolder}
+      selectedDatasets={selectedDatasets}
+      context={context}
+      emptyStateContent={isBrandNewEmptyOrg ? renderNoDatasetsPlaceHolder() : undefined}
+      folderPicker={
+        isFolderTreeCompact ? (
+          // Shows the current location, like a picker, so that it's clear that tapping it lets
+          // the user change the folder. The details drawer opens when tapping a list entry.
+          <Button
+            icon={<FolderOutlined />}
+            onClick={() => setIsFolderDrawerOpen(true)}
+            style={{ maxWidth: "100%" }}
+          >
+            <span className="dashboard-folder-picker-label">{activeFolderTitle ?? "Folders"}</span>
+            <DownOutlined />
+          </Button>
+        ) : undefined
+      }
+    />
+  );
+  const detailsSidebar = (
+    <ResponsiveSidebar
+      isCompact={isDetailsCompact}
+      isOpen={isDetailsDrawerOpen}
+      onClose={() => setIsDetailsDrawerOpen(false)}
+      title="Details"
+      placement="right"
+    >
+      <DetailsSidebar
+        selectedDatasets={selectedDatasets}
+        setSelectedDataset={setSelectedDataset}
+        folderId={folderIdForDetailsSidebar}
+        datasetCount={datasetCountForDetailsSidebar}
+        searchQuery={context.globalSearchQuery}
+        displayedFolderEqualsActiveFolder={context.selectedFolder == null}
+      />
+    </ResponsiveSidebar>
+  );
+
+  if (isDetailsCompact) {
+    return (
+      <div style={{ flexGrow: 1, minWidth: 0 }}>
+        {folderModal}
+        {folderTree}
+        <main>{datasetView}</main>
+        {detailsSidebar}
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
         display: "grid",
-        gridTemplate:
-          "auto / auto minmax(min(40%, var(--dashboard-list-max-width)), var(--dashboard-list-max-width)) auto",
+        gridTemplate: isFolderTreeCompact
+          ? "auto / minmax(0, var(--dashboard-list-max-width)) auto"
+          : "auto / auto minmax(min(40%, var(--dashboard-list-max-width)), var(--dashboard-list-max-width)) auto",
         justifyContent: "center",
         flexGrow: 1,
         minHeight: 0,
       }}
     >
-      {folderModalState != null && (
-        <FolderModal {...folderModalState} onClose={() => setFolderModalState(null)} />
+      {folderModal}
+      {isFolderTreeCompact ? (
+        // Renders a drawer, which doesn't take up a grid cell.
+        folderTree
+      ) : (
+        <div
+          style={{
+            overflow: "auto",
+            marginRight: 16,
+          }}
+        >
+          {folderTree}
+        </div>
       )}
-      <div
-        style={{
-          gridColumn: "1 / 2",
-          overflow: "auto",
-          marginRight: 16,
-        }}
-      >
-        <FolderTreeSidebar />
-      </div>
       <main
         style={{
-          gridColumn: "2 / 3",
           paddingRight: 4,
+          minWidth: 0,
         }}
       >
-        <DatasetView
-          user={props.user}
-          onSelectDataset={setSelectedDataset}
-          onSelectFolder={setSelectedFolder}
-          selectedDatasets={selectedDatasets}
-          context={context}
-          emptyStateContent={isBrandNewEmptyOrg ? renderNoDatasetsPlaceHolder() : undefined}
-        />
+        {datasetView}
       </main>
       <div
         style={{
-          gridColumn: "3 / 4",
           marginLeft: 4,
         }}
       >
-        <DetailsSidebar
-          selectedDatasets={selectedDatasets}
-          setSelectedDataset={setSelectedDataset}
-          folderId={folderIdForDetailsSidebar}
-          datasetCount={datasetCountForDetailsSidebar}
-          searchQuery={context.globalSearchQuery}
-          displayedFolderEqualsActiveFolder={context.selectedFolder == null}
-        />
+        {detailsSidebar}
       </div>
     </div>
   );

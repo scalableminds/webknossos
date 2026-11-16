@@ -45,7 +45,10 @@ case class AiModel(
     modified: Instant = Instant.now,
     isDeleted: Boolean = false,
     isSuperUserOnly: Boolean = false,
-    isPretrained: Boolean = false
+    isPretrained: Boolean = false,
+    // Restricts a pretrained model to the organizations assigned to this partner.
+    _partner: Option[ObjectId] = None,
+    thumbnailUrl: Option[String] = None
 )
 
 class AiModelService @Inject() (
@@ -63,6 +66,8 @@ class AiModelService @Inject() (
   val pretrainedMitochondriaModelId: ObjectId = ObjectId("576500000000000000000002")
   val pretrainedNucleiModelId: ObjectId = ObjectId("576500000000000000000003")
   val pretrainedSomataModelId: ObjectId = ObjectId("576500000000000000000004")
+  // Neuron model that is only available to the organizations of a partner, see aiModels._partner.
+  val pretrainedPartnerNeuronModelId: ObjectId = ObjectId("576500000000000000000005")
 
   def publicWrites(aiModel: AiModel, requestingUser: User)(implicit
       ec: ExecutionContext,
@@ -110,7 +115,9 @@ class AiModelService @Inject() (
       "path" -> path,
       "isUsable" -> isUsable,
       "isSuperUserOnly" -> aiModel.isSuperUserOnly,
-      "isPretrained" -> aiModel.isPretrained
+      "isPretrained" -> aiModel.isPretrained,
+      "partnerId" -> aiModel._partner,
+      "thumbnailUrl" -> aiModel.thumbnailUrl
     )
 
   def inferenceBBoxToTargetMag(
@@ -164,7 +171,8 @@ class AiModelService @Inject() (
     pretrainedNeuronModelId -> VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer),
     pretrainedMitochondriaModelId -> VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer),
     pretrainedNucleiModelId -> VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer),
-    pretrainedSomataModelId -> VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer)
+    pretrainedSomataModelId -> VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer),
+    pretrainedPartnerNeuronModelId -> VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer)
   )
 
   private def findPretrainedVoxelSize(pretrainedModelId: ObjectId): Option[VoxelSize] =
@@ -209,7 +217,9 @@ class AiModelDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
         Instant.fromSql(r.modified),
         r.isdeleted,
         r.issuperuseronly,
-        r.ispretrained
+        r.ispretrained,
+        r._partner.map(ObjectId(_)),
+        r.thumbnailurl
       )
       organizations <- findSharedOrganizationsFor(aiModelWithoutSharedOrgas)
     } yield aiModelWithoutSharedOrgas.copy(_sharedOrganizations = organizations)
@@ -232,8 +242,21 @@ class AiModelDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
             FROM webknossos.users_
             WHERE _id = $requestingUserId
           )
-          -- The pretrained models should be visible by all users of all orgas
-          OR isPretrained
+          -- The pretrained models should be visible by all users of all orgas,
+          -- unless they are restricted to the organizations of a partner.
+          OR (
+            isPretrained
+            AND (
+              _partner IS NULL
+              OR _partner IN (
+                SELECT p._id
+                FROM webknossos.organizations_ AS o
+                JOIN webknossos.partners_ AS p ON p._id = o._partner
+                JOIN webknossos.users_ AS u ON u._organization = o._id
+                WHERE u._id = $requestingUserId
+              )
+            )
+          )
         )
         AND (
           NOT isSuperUserOnly
@@ -268,10 +291,11 @@ class AiModelDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val insertModelQuery =
       q"""INSERT INTO webknossos.aiModels (
                       _id, _organization, _dataStore, _user, _trainingJob, path, uploadToPathIsPending, name,
-                       comment, category, created, modified, isDeleted, isSuperUserOnly, isPretrained
+                       comment, category, created, modified, isDeleted, isSuperUserOnly, isPretrained, _partner, thumbnailUrl
                     ) VALUES (
                       ${a._id}, ${a._organization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.path}, ${a.uploadToPathIsPending}, ${a.name},
-                      ${a.comment}, ${a.category}, ${a.created}, ${a.modified}, ${a.isDeleted}, ${a.isSuperUserOnly}, ${a.isPretrained}
+                      ${a.comment}, ${a.category}, ${a.created}, ${a.modified}, ${a.isDeleted}, ${a.isSuperUserOnly}, ${a.isPretrained},
+                      ${a._partner}, ${a.thumbnailUrl}
                     )
            """.asUpdate
     val insertTrainingAnnotationQueries = insertTrainingAnnotationIdQueries(a._id, a._trainingAnnotations)

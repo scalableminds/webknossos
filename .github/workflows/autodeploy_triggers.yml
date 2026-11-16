@@ -7,7 +7,7 @@ name: Autodeployment
 #       - trigger-autodeployment-on-label depends on it and in case skip is false then calls autodeploy.
 #   - trigger path 2: when CI pipeline completes on push
 #       - check-build-smoketest-push-result is called when the CI after a push completes (that’s its if condition)
-#       - it fetches relevant information and then sets an enabled boolean
+#       - it fetches relevant information and then sets an enabled boolean (only if the CI run is for the current PR head commit)
 #       - trigger-autodeployment-on-ci-success depends on it and in case enabled is true then calls autodeploy.
 #   - trigger path 3: when PR is merged or closed
 #       - cleanup-deployment-on-close is called when a PR with autodeploy label is closed (that’s its if condition)
@@ -35,15 +35,17 @@ jobs:
       dynamic_env: ${{ steps.check_build.outputs.dynamic_env }}
       env_url: ${{ steps.check_build.outputs.env_url }}
     steps:
-      - name: Check for in-progress CI build on this branch
+      - name: Check for in-progress CI build of the PR head commit
         id: check_build
         run: |
+          # Only wait for runs of the head commit. Runs of older commits won't deploy on completion,
+          # because check-build-smoketest-push-result skips commits that aren't the PR head.
           run_id=$(gh run list \
             --repo "${{ github.repository }}" \
             --branch "$HEAD_REF" \
             --workflow "CI Pipeline" \
-            --json databaseId,status,event \
-            --jq 'first(.[] | select((.status == "in_progress" or .status == "queued") and .event == "push") | .databaseId) // empty')
+            --json databaseId,status,event,headSha \
+            --jq "first(.[] | select((.status == \"in_progress\" or .status == \"queued\") and .event == \"push\" and .headSha == \"$HEAD_SHA\") | .databaseId) // empty")
           if [ -n "$run_id" ]; then
             echo "CI run $run_id is in progress and will trigger deployment on completion — skipping."
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -56,6 +58,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_REF: ${{ github.head_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
   trigger-autodeployment-on-label:
     needs: check-autodeploy-label
@@ -90,7 +93,17 @@ jobs:
             echo "build-smoketest-push job did not succeed (conclusion: $JOB_CONCLUSION). Skipping autodeploy."
             exit 0
           fi
-          LABELS=$(gh pr list --repo "${{ github.repository }}" --head "$HEAD_BRANCH" --json labels --jq '.[0].labels[].name' 2>/dev/null || echo "")
+          # Only consider the PR whose head is the commit of this CI run. This skips runs for commits
+          # that are no longer the PR head (e.g. a slower or re-run CI of an older commit). Otherwise,
+          # the GitHub deployment gets attached to that older commit and, via `override`, deactivates
+          # the deployment of the head commit, so the PR shows none. Matching by SHA also ignores
+          # fork PRs that happen to use the same branch name.
+          PR_JSON=$(gh pr list --repo "${{ github.repository }}" --head "$HEAD_BRANCH" --json labels,headRefOid --jq "first(.[] | select(.headRefOid == \"$HEAD_SHA\")) // empty" 2>/dev/null || echo "")
+          if [ -z "$PR_JSON" ]; then
+            echo "No open PR for branch $HEAD_BRANCH has $HEAD_SHA as its head. Skipping autodeploy."
+            exit 0
+          fi
+          LABELS=$(echo "$PR_JSON" | jq -r '.labels[].name' 2>/dev/null || echo "")
           if echo "$LABELS" | grep -qx "autodeploy"; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
             SANITIZED=$(echo "$HEAD_BRANCH" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | sed 's/^[0-9]*//')
@@ -100,6 +113,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
 
   trigger-autodeployment-on-ci-success:
     needs: check-build-smoketest-push-result

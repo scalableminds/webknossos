@@ -2,7 +2,7 @@ import { Dropdown, type MenuProps } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import React, { useContext } from "react";
-import { getSegmentIdForPosition } from "viewer/controller/combinations/volume_handlers";
+import { getSegmentIdsAtPosition } from "viewer/controller/combinations/volume_handlers";
 import { ContextMenuContext } from "./context_menu";
 import { useNoNodeContextMenuOptions } from "./no_node_context_menu_options";
 import { useNodeContextMenuOptions } from "./node_context_menu_options";
@@ -27,7 +27,7 @@ export function ContextMenuInner() {
   // buckets, the mapping). Reading it in a selector keeps it up to date.
   const segmentIdAtPosition = useWkSelector(() =>
     globalPosition != null && contextMenuPosition != null
-      ? getSegmentIdForPosition(globalPosition)
+      ? getSegmentIdsAtPosition(globalPosition).mappedId
       : NO_SEGMENT_ID,
   );
 

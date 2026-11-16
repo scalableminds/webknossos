@@ -318,6 +318,14 @@ export function getLayoutBackgroundColor(userTheme: Theme): string {
   return userTheme === "dark" ? darkGlobalToken.colorBgLayout : lightGlobalToken.colorBgLayout;
 }
 
+// Native scrollbars, applied to <html> so that they also cover portals (modals, dropdowns, …)
+// rendered outside of the themed React subtree. scrollbar-color is inherited.
+export function getScrollbarColors(userTheme: Theme): { thumb: string; track: string } {
+  return userTheme === "dark"
+    ? { thumb: ColorOutlineOnInkPressed, track: "transparent" }
+    : { thumb: ColorOutlineOnPaperHover, track: "transparent" };
+}
+
 // The effective color theme. Derived from the user's selected theme so that it can never get out
 // of sync with it. The OS theme is part of the store so that "auto" re-renders when it changes.
 export function getActiveTheme(state: WebknossosState): Theme {

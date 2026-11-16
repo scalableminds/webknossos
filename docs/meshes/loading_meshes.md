@@ -53,11 +53,14 @@ Instead of computing meshes one by one, you can precompute meshes for all segmen
 
 1. Click the plus (`+`) button at the top of the `Segments` tab.
 2. Choose the mesh quality. We recommend the default medium quality for a good balance between visual fidelity, compute time, and GPU memory usage.
-3. Start the job.
-4. Track progress or cancel the job on the [`Processing Jobs` page](../automation/jobs.md) in the `Analysis` menu.
-5. Once the job has finished, reload the page to use the new mesh file.
+3. Choose a mapping, or keep the default "None" (see below).
+4. Start the job. You can continue working while the mesh file is computed.
+5. Track progress or cancel the job on the [`Processing Jobs` page](../automation/jobs.md) in the `Analysis` menu. You will also get an email when the mesh file is ready.
+6. Once the job has finished, the new mesh file becomes available automatically if the page is still open. Otherwise, it is available on page reload.
 
 You can run the job multiple times with different quality levels to get several mesh files to choose from.
+
+By default, the meshes are computed without a mapping. Such a mesh file contains a mesh for every segment of the unmapped data and works with every mapping. It is also required for [proofreading](../proofreading/proofreading_tool.md). A mesh file computed for a mapping loads the meshes of that mapping's agglomerates faster, but it can only be used while that mapping is active.
 
 !!! info
     Precomputing meshes is exclusive to webknossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the integrated WEBKNOSSOS worker for meshing or the [Voxelytics software](https://voxelytics.com) for standalone meshing from the command line.

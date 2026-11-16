@@ -19,12 +19,12 @@ import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_
 import { isSkeletonSectionClippingActive } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   getInputCatcherAspectRatio,
-  getPlaneExtentInVoxelFromStore,
+  getPlaneExtentInUnitFromStore,
 } from "viewer/model/accessors/view_mode_accessor";
 import { setTDCameraWithoutTimeTrackingAction } from "viewer/model/actions/view_mode_actions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import { getBaseVoxelInUnit, voxelToUnit } from "viewer/model/scaleinfo";
+import { voxelToUnit } from "viewer/model/scaleinfo";
 import { OrthoCamerasBaseRotations } from "viewer/ortho_base_rotations";
 import { api } from "viewer/singletons";
 import type { CameraData } from "viewer/store";
@@ -186,18 +186,13 @@ class CameraController extends PureComponent<Props> {
   updateCamViewport(inputCatcherRects?: OrthoViewRects): void {
     const state = Store.getState();
     const { clippingDistance } = state.userConfiguration;
-    const scaleFactor = getBaseVoxelInUnit(state.dataset.dataSource.scale.factor);
     // While section clipping is active, the skeleton shaders cull precisely to the
     // current section. Make sure the camera's near plane never clips on-section
     // skeleton by using at least one full perpendicular voxel as the near distance.
     const isSectionClippingActive = isSkeletonSectionClippingActive(state);
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      const [width, height] = getPlaneExtentInVoxelFromStore(
-        state,
-        state.flycam.zoomStep,
-        planeId,
-      ).map((x) => x * scaleFactor);
+      const [width, height] = getPlaneExtentInUnitFromStore(state, state.flycam.zoomStep, planeId);
       this.props.cameras[planeId].left = -width / 2;
       this.props.cameras[planeId].right = width / 2;
       this.props.cameras[planeId].bottom = -height / 2;

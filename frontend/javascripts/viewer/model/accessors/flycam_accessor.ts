@@ -36,7 +36,7 @@ import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_
 import determineBucketsForPlane from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import Dimensions from "viewer/model/dimensions";
-import { getBaseVoxelFactorsInUnit, getBaseVoxelInUnit } from "viewer/model/scaleinfo";
+import { getUnitPerPixel, getVoxelPerPixel } from "viewer/model/scaleinfo";
 import type { DataLayerType, Flycam, LoadingStrategy, WebknossosState } from "viewer/store";
 import type { SmallerOrHigherInfo } from "../helpers/mag_info";
 import {
@@ -192,22 +192,22 @@ export function _getMaximumZoomForAllMags(
 
 // Only exported for testing.
 export const _getDummyFlycamMatrix = memoizeOne((voxelSize: VoxelSize) => {
-  const scaleMatrix = getBaseVoxelFactorsInUnit(voxelSize);
+  const scaleMatrix = getVoxelPerPixel(voxelSize);
   return rotateOnAxis(M4x4.scale(scaleMatrix, M4x4.identity(), []), Math.PI, [0, 0, 1]);
 });
 
 export function getMoveOffset(state: WebknossosState, timeFactor: number) {
   return (
     (state.userConfiguration.moveValue * timeFactor) /
-    getBaseVoxelInUnit(state.dataset.dataSource.scale.factor) /
+    getUnitPerPixel(state.dataset.dataSource.scale) /
     constants.FPS
   );
 }
 
 export function getMoveOffset3d(state: WebknossosState, timeFactor: number) {
   const { moveValue3d } = state.userConfiguration;
-  const baseVoxel = getBaseVoxelInUnit(state.dataset.dataSource.scale.factor);
-  return (moveValue3d * timeFactor) / baseVoxel / constants.FPS;
+  const unitPerPixel = getUnitPerPixel(state.dataset.dataSource.scale);
+  return (moveValue3d * timeFactor) / unitPerPixel / constants.FPS;
 }
 
 function getMaximumZoomForAllMagsFromStore(
@@ -588,15 +588,6 @@ export function isMagRestrictionViolated(state: WebknossosState): boolean {
   return false;
 }
 
-function getPlaneExtentInVoxel(
-  rects: OrthoViewRects,
-  zoomStep: number,
-  planeID: OrthoView,
-): [number, number] {
-  const { width, height } = rects[planeID];
-  return [width * zoomStep, height * zoomStep];
-}
-
 export type Area = {
   left: number;
   top: number;
@@ -613,14 +604,10 @@ function getArea(
   planeId: OrthoView,
 ): Area {
   const [u, v] = Dimensions.getIndices(planeId);
-  const [viewportWidthHalf, viewportHeightHalf] = getPlaneExtentInVoxel(
-    rects,
-    zoomStep,
-    planeId,
-  ).map((el) => el / 2);
-  const baseVoxelFactors = getBaseVoxelFactorsInUnit(voxelSize);
-  const uHalf = viewportWidthHalf * baseVoxelFactors[u];
-  const vHalf = viewportHeightHalf * baseVoxelFactors[v];
+  const { width, height } = rects[planeId];
+  const voxelPerPixel = getVoxelPerPixel(voxelSize, zoomStep);
+  const uHalf = (width / 2) * voxelPerPixel[u];
+  const vHalf = (height / 2) * voxelPerPixel[v];
   const isVisible = uHalf > 0 && vHalf > 0;
   const left = Math.floor((position[u] - uHalf) / constants.BUCKET_WIDTH);
   const top = Math.floor((position[v] - vHalf) / constants.BUCKET_WIDTH);

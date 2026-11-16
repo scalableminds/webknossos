@@ -29,9 +29,9 @@ describe("getBrushCenterInMag", () => {
   });
 
   it("uses the parity of the diameter in the brush mag", () => {
-    // 12 base voxels at mag 4 are 3 voxels -> odd -> voxel center
+    // A brush size of 12 at mag 4 is 3 voxels -> odd -> voxel center
     expect(getCenter([9, 15, 0], [4, 4, 1], 12)).toEqual([2.5, 3.5, 0.5]);
-    // 16 base voxels at mag 4 are 4 voxels -> even -> closest corner
+    // A brush size of 16 at mag 4 is 4 voxels -> even -> closest corner
     expect(getCenter([9, 15, 0], [4, 4, 1], 16)).toEqual([2, 4, 0.5]);
   });
 

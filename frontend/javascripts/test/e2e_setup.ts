@@ -85,12 +85,16 @@ export function replaceVolatileValues(obj: ArbitraryObject | null | undefined) {
   return newObj;
 }
 
+// Port of the backend started by End2EndSpec.scala. Differs from 9000 so that the e2e tests
+// can run while a local dev instance (vite on 9000, backend on 9001) is running.
+export const E2E_BASE_URL = "http://localhost:9010";
+
 const originalFetch = fetch;
 global.fetch = function fetchWrapper(url, options) {
   let newUrl = url;
 
   if (typeof url === "string" && url.indexOf("http:") === -1 && url.indexOf("https:") === -1) {
-    newUrl = `http://localhost:9000${url}`;
+    newUrl = `${E2E_BASE_URL}${url}`;
   }
 
   // Add the token to headers if they exist

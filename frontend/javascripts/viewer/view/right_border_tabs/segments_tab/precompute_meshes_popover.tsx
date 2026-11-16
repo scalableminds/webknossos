@@ -12,18 +12,16 @@ import { Button, Flex, Select, Space, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-import { APIJobCommand } from "types/api_types";
-import { MappingStatusEnum } from "viewer/constants";
+import { APIJobCommand, type APISegmentationLayer } from "types/api_types";
 import {
   getMagInfoOfVisibleSegmentationLayer,
-  getMappingInfo,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { hasEditableMapping } from "viewer/model/accessors/volumetracing_accessor";
+import { maybeFetchMeshFilesAction } from "viewer/model/actions/annotation_actions";
+import { dispatchEnsureLayerMappingsAreLoadedAsync } from "viewer/model/actions/dataset_actions";
 import { updateTemporarySettingAction } from "viewer/model/actions/settings_actions";
-import Store from "viewer/store";
 import { formatMagWithLabel, getBaseSegmentationName } from "./segments_view_helper";
 
 const REFRESH_INTERVAL = 5000;
@@ -35,6 +33,9 @@ type PrecomputeMeshesPopoverProps = {
 export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesPopoverProps) => {
   const dispatch = useDispatch();
   const [activeMeshJobId, setActiveMeshJobId] = useState<string | null>(null);
+  // The layer for which the active mesh job was started. Its mesh files are reloaded once the job
+  // succeeded, so that the new mesh file can be selected without reloading the page.
+  const activeMeshJobLayerRef = useRef<APISegmentationLayer | null>(null);
 
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const activeUser = useWkSelector((state) => state.activeUser);
@@ -49,12 +50,24 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
     (state) => state.temporaryConfiguration.preferredQualityForMeshPrecomputation,
   );
   const magInfo = useWkSelector(getMagInfoOfVisibleSegmentationLayer);
-  const mappingInfo = useWkSelector((state) =>
-    getMappingInfo(
-      state.temporaryConfiguration.activeMappingByLayer,
-      visibleSegmentationLayer?.name,
-    ),
-  );
+  // Without a mapping by default: such a mesh file works with every mapping and for proofreading.
+  const [agglomerateView, setAgglomerateView] = useState<string | null>(null);
+  const [areMappingsLoading, setAreMappingsLoading] = useState(false);
+  const visibleSegmentationLayerName = visibleSegmentationLayer?.name;
+
+  useEffect(() => {
+    // The mappings differ between layers.
+    setAgglomerateView(null);
+    // The agglomerate mappings of a layer are only fetched on demand. With a volume annotation,
+    // meshes can't be precomputed anyway.
+    if (visibleSegmentationLayerName == null || hasVolumeTracing) {
+      return;
+    }
+    setAreMappingsLoading(true);
+    dispatchEnsureLayerMappingsAreLoadedAsync(dispatch, visibleSegmentationLayerName).finally(() =>
+      setAreMappingsLoading(false),
+    );
+  }, [dispatch, visibleSegmentationLayerName, hasVolumeTracing]);
 
   // Poll the jobs while a mesh job is running. Errors are swallowed so that a failing
   // poll doesn't show a toast every few seconds.
@@ -80,8 +93,25 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
     );
     if (activeJob != null && (activeJob.state === "SUCCESS" || activeJob.state === "FAILURE")) {
       setActiveMeshJobId(null);
+      if (activeJob.state === "SUCCESS") {
+        dispatch(maybeFetchMeshFilesAction(activeMeshJobLayerRef.current, dataset, true));
+        Toast.success(
+          "The mesh file was computed successfully. You can select it in the mesh settings of the Segments tab.",
+        );
+      } else {
+        Toast.error(
+          <Fragment>
+            The computation of the mesh file failed. See the{" "}
+            <a target="_blank" href="/jobs" rel="noopener noreferrer">
+              Processing Jobs
+            </a>{" "}
+            page for details.
+          </Fragment>,
+          { sticky: true },
+        );
+      }
     }
-  }, [jobs, activeMeshJobId, dataset.name]);
+  }, [jobs, activeMeshJobId, dataset, dispatch]);
 
   useEffect(() => {
     if (onActiveJobChange != null) {
@@ -158,34 +188,28 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
     const meshFileMag = magInfo.getMagByIndexWithFallback(meshFileMagIndex, null);
 
     if (visibleSegmentationLayer != null) {
-      const isEditableMapping = hasEditableMapping(Store.getState(), visibleSegmentationLayer.name);
-
-      const maybeMappingName =
-        !isEditableMapping &&
-        mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
-        mappingInfo.mappingType !== "JSON" &&
-        mappingInfo.mappingName != null
-          ? mappingInfo.mappingName
-          : undefined;
-
       const job = await startComputeMeshFileJob(
         dataset.id,
         getBaseSegmentationName(visibleSegmentationLayer),
         meshFileMag,
-        maybeMappingName,
+        agglomerateView ?? undefined,
       );
+      activeMeshJobLayerRef.current = visibleSegmentationLayer;
       setActiveMeshJobId(job.id);
       Toast.info(
         <Fragment>
-          The computation of a mesh file was started. For large datasets, this may take a while.
-          Closing this tab will not stop the computation.
+          The computation of a mesh file was started. For large datasets, this may take a while. You
+          can close this popover and continue working. Closing this tab won't stop the computation
+          either.
           <br />
-          See{" "}
+          Check the progress on the{" "}
           <a target="_blank" href="/jobs" rel="noopener noreferrer">
             Processing Jobs
           </a>{" "}
-          for an overview of running jobs.
+          page. You will also get an email when the mesh file is ready.
         </Fragment>,
+        // The message is longer than usual and should not be missed.
+        { timeout: 15000 },
       );
     }
   };
@@ -197,6 +221,11 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
     value: logToIndex,
     label: formatMagWithLabel(mag, index),
   }));
+
+  const mappingOptions = [
+    { value: null, label: "None (recommended)" },
+    ...(visibleSegmentationLayer?.agglomerates ?? []).map((name) => ({ value: name, label: name })),
+  ];
 
   return (
     <div
@@ -232,6 +261,26 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
             options={qualityOptions}
           />
         </Space>
+      </Typography.Paragraph>
+
+      <Typography.Paragraph>
+        <Space>
+          Mapping:
+          <Select
+            size="small"
+            style={{ width: 220 }}
+            value={agglomerateView}
+            onChange={setAgglomerateView}
+            loading={areMappingsLoading}
+            options={mappingOptions}
+          />
+        </Space>
+      </Typography.Paragraph>
+
+      <Typography.Paragraph type="secondary">
+        Not selecting a mapping is recommended, since this is the most flexible option. A mesh file
+        computed without a mapping works with all mappings and is required for proofreading. Only
+        select a mapping if you need the best loading performance for exactly that mapping.
       </Typography.Paragraph>
 
       <Flex justify="center">

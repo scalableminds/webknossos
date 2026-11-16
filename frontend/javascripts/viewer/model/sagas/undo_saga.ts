@@ -44,7 +44,14 @@ import { select } from "viewer/model/sagas/effect_generators";
 import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import { UNDO_HISTORY_SIZE } from "viewer/model/sagas/saving/save_saga_constants";
 import { Model } from "viewer/singletons";
-import type { SegmentGroup, SegmentMap, SkeletonTracing, UserBoundingBox } from "viewer/store";
+import type {
+  SegmentGroup,
+  SegmentMap,
+  SkeletonTracing,
+  UndoableLocalSkeletonState,
+  UserBoundingBox,
+  WebknossosState,
+} from "viewer/store";
 import { isConcurrentCollaborationMode } from "../accessors/annotation_accessor";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
 import { ensureWkInitialized } from "./ready_sagas";
@@ -52,9 +59,13 @@ import { ensureWkInitialized } from "./ready_sagas";
 const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
   (action) => action !== "SET_USER_BOUNDING_BOXES",
 );
+type SkeletonUndoData = {
+  tracing: SkeletonTracing;
+  localSkeletonState: UndoableLocalSkeletonState;
+};
 type SkeletonUndoState = {
   type: "skeleton";
-  data: SkeletonTracing;
+  data: SkeletonUndoData;
 };
 type VolumeUndoState = {
   type: "volume";
@@ -144,6 +155,16 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
   throw new Error("Could not unpack redux action from channel");
 }
 
+// Reads the tracing and the local selection state in one step, so that they always match.
+function getSkeletonUndoData(state: WebknossosState): SkeletonUndoData | null {
+  const tracing = state.annotation.skeleton;
+  if (tracing == null) {
+    return null;
+  }
+  const { activeTreeId, activeGroupId } = state.localSkeletonState;
+  return { tracing, localSkeletonState: { activeTreeId, activeGroupId } };
+}
+
 function* manageUndoStates(): Saga<never> {
   // At its core, this saga maintains an undo and redo stack to implement
   // undo/redo functionality.
@@ -152,7 +173,7 @@ function* manageUndoStates(): Saga<never> {
 
   // Declaration of local state necessary to manage the undo/redo mechanism.
   let previousAction: Action | null | undefined = null;
-  let prevSkeletonTracingOrNull: SkeletonTracing | null | undefined = null;
+  let prevSkeletonUndoData: SkeletonUndoData | null = null;
   let prevUserBoundingBoxes: Array<UserBoundingBox> = [];
   const volumeInfoById: Record<
     string, // volume tracing id
@@ -172,7 +193,7 @@ function* manageUndoStates(): Saga<never> {
   yield* call(ensureWkInitialized);
 
   // Initialization of the local state variables from above.
-  prevSkeletonTracingOrNull = yield* select((state) => state.annotation.skeleton);
+  prevSkeletonUndoData = yield* select(getSkeletonUndoData);
   prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
   const volumeTracings = yield* select((state) => getVolumeTracings(state.annotation));
   for (const volumeTracing of volumeTracings) {
@@ -291,7 +312,7 @@ function* manageUndoStates(): Saga<never> {
               applyStateOfStack,
               undoStack,
               redoStack,
-              prevSkeletonTracingOrNull,
+              prevSkeletonUndoData,
               prevUserBoundingBoxes,
               "undo",
             );
@@ -325,7 +346,7 @@ function* manageUndoStates(): Saga<never> {
             applyStateOfStack,
             redoStack,
             undoStack,
-            prevSkeletonTracingOrNull,
+            prevSkeletonUndoData,
             prevUserBoundingBoxes,
             "redo",
           );
@@ -344,11 +365,11 @@ function* manageUndoStates(): Saga<never> {
 
       let shouldClearRedoState = false;
 
-      if (skeletonUserAction && prevSkeletonTracingOrNull != null) {
+      if (skeletonUserAction && prevSkeletonUndoData != null) {
         const skeletonUndoState = yield* call(
           getSkeletonTracingToUndoState,
           skeletonUserAction,
-          prevSkeletonTracingOrNull,
+          prevSkeletonUndoData,
           previousAction,
         );
 
@@ -495,7 +516,7 @@ function* manageUndoStates(): Saga<never> {
     }
 
     // We need the updated tracing here
-    prevSkeletonTracingOrNull = yield* select((state) => state.annotation.skeleton);
+    prevSkeletonUndoData = yield* select(getSkeletonUndoData);
     prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
   }
 }
@@ -518,16 +539,16 @@ function* maybeInterpretUndoAsDiscardUiAction() {
 
 function* getSkeletonTracingToUndoState(
   skeletonUserAction: SkeletonTracingAction,
-  prevTracing: SkeletonTracing,
+  prevSkeletonUndoData: SkeletonUndoData,
   previousAction: Action | null | undefined,
 ): Saga<SkeletonUndoState | null | undefined> {
   const curTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
 
-  if (curTracing !== prevTracing) {
+  if (curTracing !== prevSkeletonUndoData.tracing) {
     if (shouldAddToUndoStack(skeletonUserAction, previousAction)) {
       return {
         type: "skeleton",
-        data: prevTracing,
+        data: prevSkeletonUndoData,
       };
     }
   }
@@ -587,7 +608,7 @@ function shouldAddToUndoStack(
 function* applyStateOfStack(
   sourceStack: Array<UndoState>,
   stackToPushTo: Array<UndoState>,
-  prevSkeletonTracingOrNull: SkeletonTracing | null | undefined,
+  prevSkeletonUndoData: SkeletonUndoData | null,
   prevUserBoundingBoxes: Array<UserBoundingBox> | null | undefined,
   direction: "undo" | "redo",
 ): Saga<void> {
@@ -618,15 +639,15 @@ function* applyStateOfStack(
   }
 
   if (stateToRestore.type === "skeleton") {
-    if (prevSkeletonTracingOrNull != null) {
+    if (prevSkeletonUndoData != null) {
       stackToPushTo.push({
         type: "skeleton",
-        data: prevSkeletonTracingOrNull,
+        data: prevSkeletonUndoData,
       });
     }
 
-    const newTracing = stateToRestore.data;
-    yield* put(setSkeletonTracingAction(newTracing));
+    const { tracing, localSkeletonState } = stateToRestore.data;
+    yield* put(setSkeletonTracingAction(tracing, localSkeletonState));
     yield* put(centerActiveNodeAction());
   } else if (stateToRestore.type === "volume") {
     const isMergerModeEnabled = yield* select(

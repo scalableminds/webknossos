@@ -1,8 +1,8 @@
 package backend
 
 import com.scalableminds.webknossos.datastore.helpers.NativeBucketScanner
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerMapping, ElementClass}
-import com.scalableminds.webknossos.datastore.services.mapping.{MappingParser, MappingService}
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.services.mapping.{JsonMapping, MappingParser, MappingService}
 import org.scalatestplus.play.PlaySpec
 
 import java.nio.{ByteBuffer, ByteOrder}
@@ -58,14 +58,14 @@ class JsonMappingTestSuite extends PlaySpec {
       case 8 => referenceTyped[Long](data, 8, identity, _.getLong, _.putLong(_))
     }
 
-  private def parsed(elementClass: ElementClass.Value): DataLayerMapping[Long] =
+  private def parsed(elementClass: ElementClass.Value): JsonMapping =
     MappingService.parseMapping(mappingJson.getBytes, elementClass).get("test mapping must parse")
 
   "JSON mapping application" should {
     ElementClass.segmentationElementClasses.toSeq.sortBy(_.id).foreach { elementClass =>
       s"match the previous per-voxel implementation for $elementClass" in {
         val random = new Random(elementClass.id)
-        val mapping = parsed(elementClass).mapping
+        val mapping = parsed(elementClass)
         Seq(0, 1, 32 * 32 * 32).foreach { voxelCount =>
           val data = randomData(elementClass, voxelCount, random)
           val mapped = MappingService.applyMappingToBytes(mapping, data, elementClass, bucketScanner)
@@ -78,7 +78,7 @@ class JsonMappingTestSuite extends PlaySpec {
       // As uint32, 4294967296 truncates to 0, so the last class overrides 0 -> 10 with 0 -> -2 (i.e. 2^32 - 2)
       val data = ByteBuffer.allocate(16).order(ByteOrder.LITTLE_ENDIAN).putInt(0).putInt(2).putInt(12).putInt(-1)
       val mapped = MappingService.applyMappingToBytes(
-        parsed(ElementClass.uint32).mapping,
+        parsed(ElementClass.uint32),
         data.array(),
         ElementClass.uint32,
         bucketScanner
@@ -88,11 +88,11 @@ class JsonMappingTestSuite extends PlaySpec {
     }
 
     "map single segment ids like the voxel data" in {
-      val uint8Mapping = parsed(ElementClass.uint8).mapping
+      val uint8Mapping = parsed(ElementClass.uint8)
       // 300 is 44 as uint8, which is mapped to 5 by the later class
       val normalized = MappingService.normalizeSegmentId(300, ElementClass.uint8)
       assert(normalized == 44)
-      assert(uint8Mapping.getOrElse(normalized, normalized) == 5)
+      assert(uint8Mapping(normalized) == 5)
       assert(MappingService.normalizeSegmentId(255, ElementClass.int8) == -1)
       assert(MappingService.normalizeSegmentId(-1, ElementClass.uint16) == 65535)
       assert(MappingService.normalizeSegmentId(-1, ElementClass.uint64) == -1)

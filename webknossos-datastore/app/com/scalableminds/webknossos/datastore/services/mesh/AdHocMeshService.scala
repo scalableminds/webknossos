@@ -5,6 +5,7 @@ import com.scalableminds.util.box.{Box, Failure}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Float, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -16,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.webknossos.datastore.services.mapping.MappingService
+import com.scalableminds.webknossos.datastore.services.mapping.{JsonMapping, MappingService}
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.routing.RoundRobinPool
@@ -121,11 +122,13 @@ class AdHocMeshService(
         case _ => None
       }
 
-    def applyJsonMappingIfNeeded(data: Array[Byte]): Fox[Array[Byte]] =
-      jsonMappingRequestOpt.map(mappingService.applyMapping(_, data)).getOrElse(Fox.successful(data))
+    val elementClass = request.dataLayer.elementClass
 
-    def mapSegmentIdIfNeeded(segmentId: Long): Fox[Long] =
-      jsonMappingRequestOpt.map(mappingService.mapSegmentId(_, segmentId)).getOrElse(Fox.successful(segmentId))
+    def applyJsonMappingIfNeeded(jsonMappingOpt: Option[JsonMapping], data: Array[Byte]): Fox[Array[Byte]] =
+      jsonMappingOpt.map(mappingService.applyMapping(_, data, elementClass).toFox).getOrElse(Fox.successful(data))
+
+    def mapSegmentIdIfNeeded(jsonMappingOpt: Option[JsonMapping], segmentId: Long): Long =
+      jsonMappingOpt.map(mappingService.mapSegmentId(_, segmentId, elementClass)).getOrElse(segmentId)
 
     def applyAgglomerate(data: Array[Byte]): Fox[Array[Byte]] =
       request.mapping match {
@@ -214,12 +217,16 @@ class AdHocMeshService(
 
     val vertexBuffer = mutable.ArrayBuffer[Float]()
 
+    // Started right away, so that loading the mapping runs concurrently with loading the data.
+    val jsonMappingOptFox = Fox.runOptional(jsonMappingRequestOpt)(mappingService.loadMapping)
+
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
       agglomerateMappedData <- applyAgglomerate(data) ?~> "failed to apply agglomerate for ad-hoc meshing"
-      mappedBytes <- applyJsonMappingIfNeeded(agglomerateMappedData) ?~> "failed to apply json mapping"
+      jsonMappingOpt <- jsonMappingOptFox ?~> "failed to load json mapping"
+      mappedBytes <- applyJsonMappingIfNeeded(jsonMappingOpt, agglomerateMappedData) ?~> "failed to apply json mapping"
       mappedData = convertData(mappedBytes)
-      mappedSegmentId <- mapSegmentIdIfNeeded(request.segmentId).map(dataTypeFunctors.fromLong)
+      mappedSegmentId = dataTypeFunctors.fromLong(mapSegmentIdIfNeeded(jsonMappingOpt, request.segmentId))
       neighbors =
         if (request.findNeighbors) { findNeighbors(mappedData, dataDimensions, mappedSegmentId) }
         else {

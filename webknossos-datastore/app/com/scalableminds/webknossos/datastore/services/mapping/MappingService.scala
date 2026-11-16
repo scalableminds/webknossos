@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.NativeBucketScanner
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerMapping, DataSourceId, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceMappingRequest
 import com.scalableminds.webknossos.datastore.services.BaseDirService
 import com.typesafe.scalalogging.LazyLogging
@@ -21,8 +21,26 @@ import scala.concurrent.ExecutionContext
 case class JsonMappingCacheKey(
     dataSourceId: Option[DataSourceId],
     dataLayerName: String,
-    mappingName: String
+    mappingName: String,
+    // The cached mapping is normalized to the element width, so it must not be reused after the element class changed.
+    elementClass: ElementClass.Value
 )
+
+// A JSON mapping stored compactly as sorted primitive arrays. Ids not contained in the mapping map to themselves.
+class JsonMapping(private val keys: Array[Long], private val values: Array[Long]) {
+  def apply(segmentId: Long): Long = {
+    val index = java.util.Arrays.binarySearch(keys, segmentId)
+    if (index >= 0) values(index) else segmentId
+  }
+}
+
+object JsonMapping {
+  def fromMap(mapping: Map[Long, Long]): JsonMapping = {
+    val keys = mapping.keys.toArray
+    java.util.Arrays.sort(keys)
+    new JsonMapping(keys, keys.map(mapping))
+  }
+}
 
 class MappingService @Inject() (config: DataStoreConfig, baseDirService: BaseDirService)(implicit ec: ExecutionContext)
     extends LazyLogging {
@@ -30,7 +48,7 @@ class MappingService @Inject() (config: DataStoreConfig, baseDirService: BaseDir
   private lazy val mappingsDir = "mappings"
   private lazy val mappingFileExtension = "json"
 
-  private lazy val cache: AlfuCache[JsonMappingCacheKey, DataLayerMapping[Long]] =
+  private lazy val cache: AlfuCache[JsonMappingCacheKey, JsonMapping] =
     AlfuCache(maxCapacity = config.Datastore.Cache.Mapping.maxEntries)
 
   private lazy val bucketScanner = new NativeBucketScanner()
@@ -50,9 +68,9 @@ class MappingService @Inject() (config: DataStoreConfig, baseDirService: BaseDir
       result <- FileIO.readFileToByteArray(mappingFilePath.toFile)
     } yield result
 
-  private def loadMapping(request: DataServiceMappingRequest): Fox[DataLayerMapping[Long]] =
+  def loadMapping(request: DataServiceMappingRequest): Fox[JsonMapping] =
     cache.getOrLoad(
-      JsonMappingCacheKey(request.dataSourceId, request.dataLayer.name, request.mapping),
+      JsonMappingCacheKey(request.dataSourceId, request.dataLayer.name, request.mapping, request.dataLayer.elementClass),
       _ =>
         (for {
           rawMapping <- loadMappingBytes(request)
@@ -60,20 +78,12 @@ class MappingService @Inject() (config: DataStoreConfig, baseDirService: BaseDir
         } yield mapping).toFox
     )
 
-  // Maps the little-endian segment ids in data (of the layer's element class), unmapped ids stay unchanged.
-  def applyMapping(request: DataServiceMappingRequest, data: Array[Byte]): Fox[Array[Byte]] =
-    for {
-      mapping <- loadMapping(request)
-      mappedData <- tryo(
-        MappingService.applyMappingToBytes(mapping.mapping, data, request.dataLayer.elementClass, bucketScanner)
-      ).toFox
-    } yield mappedData
+  // Maps the little-endian segment ids in data (of the given element class), unmapped ids stay unchanged.
+  def applyMapping(mapping: JsonMapping, data: Array[Byte], elementClass: ElementClass.Value): Box[Array[Byte]] =
+    tryo(MappingService.applyMappingToBytes(mapping, data, elementClass, bucketScanner))
 
-  def mapSegmentId(request: DataServiceMappingRequest, segmentId: Long): Fox[Long] =
-    for {
-      mapping <- loadMapping(request)
-      normalizedId = MappingService.normalizeSegmentId(segmentId, request.dataLayer.elementClass)
-    } yield mapping.mapping.getOrElse(normalizedId, normalizedId)
+  def mapSegmentId(mapping: JsonMapping, segmentId: Long, elementClass: ElementClass.Value): Long =
+    mapping(MappingService.normalizeSegmentId(segmentId, elementClass))
 
   def exploreMappings(layerDir: Path): Set[String] =
     PathUtils
@@ -97,12 +107,12 @@ object MappingService {
     else segmentId & ((1L << bits) - 1)
   }
 
-  def parseMapping(rawMapping: Array[Byte], elementClass: ElementClass.Value): Box[DataLayerMapping[Long]] =
-    MappingParser.parse[Long](rawMapping, normalizeSegmentId(_, elementClass))
+  def parseMapping(rawMapping: Array[Byte], elementClass: ElementClass.Value): Box[JsonMapping] =
+    MappingParser.parse[Long](rawMapping, normalizeSegmentId(_, elementClass)).map(m => JsonMapping.fromMap(m.mapping))
 
   // Collects the distinct ids natively, looks up only those and lets the native code rewrite the voxels.
   def applyMappingToBytes(
-      mapping: Map[Long, Long],
+      mapping: JsonMapping,
       data: Array[Byte],
       elementClass: ElementClass.Value,
       bucketScanner: NativeBucketScanner
@@ -110,7 +120,7 @@ object MappingService {
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
     val isSigned = ElementClass.isSigned(elementClass)
     val distinctSegmentIds = bucketScanner.collectSegmentIds(data, bytesPerElement, isSigned, skipZeroes = false)
-    val mappedSegmentIds = distinctSegmentIds.map(id => mapping.getOrElse(id, id))
+    val mappedSegmentIds = distinctSegmentIds.map(mapping.apply)
     bucketScanner.applySegmentIdMapping(data, bytesPerElement, isSigned, distinctSegmentIds, mappedSegmentIds)
   }
 }

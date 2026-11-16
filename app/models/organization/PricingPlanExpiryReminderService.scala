@@ -1,6 +1,5 @@
 package models.organization
 
-import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -18,8 +17,9 @@ import scala.concurrent.duration.*
 
 /* Reminds the owner and the admins of an organization by email that its pricing plan is about to expire.
    One reminder is sent per configured lead time (e.g. 30, 14 and 7 days before expiry). The lead times a reminder
-   was already sent for are recorded in the database, keyed by the expiry date. That way, extending the plan arms
-   the reminders again, and no duplicate mails are sent if the server is restarted. */
+   was already sent for are recorded in the database, so that no duplicate mails are sent if the server is restarted.
+   Once the expiry date is further away again than a lead time (e.g. after extending the plan), that reminder is
+   re-armed, see OrganizationDAO.deleteNotifiedPlanExpiryThresholdsNotCrossedAnyMore. */
 class PricingPlanExpiryReminderService @Inject() (
     organizationDAO: OrganizationDAO,
     multiUserDAO: MultiUserDAO,
@@ -46,8 +46,15 @@ class PricingPlanExpiryReminderService @Inject() (
   override protected def tick(): Fox[Unit] =
     for {
       now <- Instant.nowFox
+      // Runs for all organizations, also those whose plan is far from expiring now, so that their reminders are
+      // re-armed before the new expiry date comes into reach.
+      _ <- organizationDAO.deleteNotifiedPlanExpiryThresholdsNotCrossedAnyMore(now)
       organizations <- organizationDAO.findAllWithPlanExpiringBefore(now + (allLeadTimesDays.max days))
-      _ <- Fox.serialCombined(organizations)(organization => tryAndLog(organization, remindIfDue(organization, now)))
+      _ <- Fox.serialCombined(organizations)(organization =>
+        remindIfDue(organization, now).logFailureAndRecover(failure =>
+          logger.warn(s"Could not send pricing plan expiry reminder for organization ${organization._id}: $failure")
+        )
+      )
     } yield ()
 
   private def remindIfDue(organization: Organization, now: Instant): Fox[Unit] =
@@ -74,24 +81,16 @@ class PricingPlanExpiryReminderService @Inject() (
       _ <- Fox.fromBool(recipients.nonEmpty) ?~> "Organization has neither an owner nor an admin to notify"
       // Recorded before sending, so that mails that cannot be delivered are not retried on every tick.
       // The count tells us how many of the lead times were not recorded before; if none, the mails were already sent.
-      newlyRecordedCount <- organizationDAO.insertPlanExpiryReminders(organization._id, paidUntil, dueLeadTimesDays)
+      newlyRecordedCount <- organizationDAO.insertNotifiedEmailThresholds(
+        organization._id,
+        EmailThresholdType.PlanExpiry,
+        dueLeadTimesDays
+      )
       _ = if (newlyRecordedCount > 0) {
         logger.info(
           s"Reminding the owner and admins (${recipients.length}) of organization ${organization._id} that its ${organization.pricingPlan} plan expires in $daysRemaining days..."
         )
         organizationEmailService.sendPricingPlanExpiryReminderEmails(recipients, organization, paidUntil, daysRemaining)
-      }
-    } yield ()
-
-  private def tryAndLog(organization: Organization, result: Fox[Unit]): Fox[Unit] =
-    for {
-      box <- result.shiftBox
-      _ = box match {
-        case Full(_)    => ()
-        case f: Failure =>
-          logger.warn(s"Could not send pricing plan expiry reminder for organization ${organization._id}: $f")
-        case Empty =>
-          logger.warn(s"Could not send pricing plan expiry reminder for organization ${organization._id}: Empty")
       }
     } yield ()
 }

@@ -1,6 +1,4 @@
 import Icon, {
-  CaretDownOutlined,
-  CaretRightOutlined,
   DatabaseOutlined,
   DeleteOutlined,
   DragOutlined,
@@ -26,7 +24,6 @@ import type { ItemType } from "antd/es/menu/interface";
 import type { SwitchChangeEventHandler } from "antd/es/switch";
 import FastTooltip from "components/fast_tooltip";
 import { HoverIconButton } from "components/hover_icon_button";
-import { rgbToHex } from "libs/colors";
 import { M4x4, V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -176,8 +173,6 @@ export default function LayerSettingsHeader({
   isInEditMode,
   isHistogramAvailable,
   hasLessThanTwoColorLayers = true,
-  isCollapsed,
-  onToggleCollapse,
   onShowAddVolumeLayerModal,
   onSetLayerToMergeWithFallback,
 }: {
@@ -188,8 +183,6 @@ export default function LayerSettingsHeader({
   isInEditMode: boolean;
   isHistogramAvailable: boolean;
   hasLessThanTwoColorLayers?: boolean;
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
   onShowAddVolumeLayerModal: (preselectedSegmentationLayerName: string) => void;
   onSetLayerToMergeWithFallback: (layer: APIDataLayer) => void;
 }) {
@@ -557,16 +550,11 @@ export default function LayerSettingsHeader({
 
   // --- Drag handle ---
 
-  const layerColorHex =
-    isColorLayer && layerSettings.color ? rgbToHex(layerSettings.color) : undefined;
   const dragHandle = isColorLayer ? (
     hasLessThanTwoColorLayers ? (
-      <DummyDragHandle
-        tooltipTitle="Order is only changeable with more than one color layer."
-        color={layerColorHex}
-      />
+      <DummyDragHandle tooltipTitle="Order is only changeable with more than one color layer." />
     ) : (
-      <DragHandle id={layerName} color={layerColorHex} />
+      <DragHandle id={layerName} />
     )
   ) : (
     <DummyDragHandle tooltipTitle="Layer not movable: Volume layers are always rendered on top." />
@@ -691,15 +679,6 @@ export default function LayerSettingsHeader({
           </FastTooltip>
         ) : null}
         {isColorLayer ? null : getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
-        <FastTooltip title={isCollapsed ? "Expand layer settings" : "Collapse layer settings"}>
-          <ButtonComponent
-            variant="text"
-            color="default"
-            size="small"
-            onClick={onToggleCollapse}
-            icon={isCollapsed ? <CaretRightOutlined /> : <CaretDownOutlined />}
-          />
-        </FastTooltip>
         <Dropdown menu={{ items }} trigger={["hover"]} placement="bottomRight">
           <ButtonComponent
             variant="text"

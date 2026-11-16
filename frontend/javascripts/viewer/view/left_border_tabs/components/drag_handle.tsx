@@ -2,9 +2,7 @@ import { MenuOutlined } from "@ant-design/icons";
 import { useSortable } from "@dnd-kit/sortable";
 import FastTooltip from "components/fast_tooltip";
 
-// With a color (only color layers have one), shows a dot in that color
-// instead of the grip icon, so the color stays visible when collapsed.
-function DragHandleIcon({ isDisabled = false, color }: { isDisabled?: boolean; color?: string }) {
+function DragHandleIcon({ isDisabled = false }: { isDisabled?: boolean }) {
   return (
     <div
       style={{
@@ -13,44 +11,34 @@ function DragHandleIcon({ isDisabled = false, color }: { isDisabled?: boolean; c
         cursor: isDisabled ? "default" : "grab",
         alignItems: "center",
         opacity: isDisabled ? 0.3 : 0.6,
-        marginRight: 8,
       }}
     >
-      {color != null ? (
-        <div
-          style={{
-            width: 10,
-            height: 10,
-            borderRadius: "50%",
-            backgroundColor: color,
-            border: "1px solid rgba(0, 0, 0, 0.35)",
-          }}
-        />
-      ) : (
-        <MenuOutlined style={{ display: "inline-block" }} />
-      )}
+      <MenuOutlined
+        style={{
+          display: "inline-block",
+          marginRight: 8,
+        }}
+      />
     </div>
   );
 }
 
-export function DragHandle({ id, color }: { id: string; color?: string }) {
+export function DragHandle({ id }: { id: string }) {
   const { attributes, listeners } = useSortable({
     id,
   });
 
   return (
-    <FastTooltip title="Drag to reorder layers">
-      <div {...attributes} {...listeners}>
-        <DragHandleIcon color={color} />
-      </div>
-    </FastTooltip>
+    <div {...attributes} {...listeners}>
+      <DragHandleIcon />
+    </div>
   );
 }
 
-export function DummyDragHandle({ tooltipTitle, color }: { tooltipTitle: string; color?: string }) {
+export function DummyDragHandle({ tooltipTitle }: { tooltipTitle: string }) {
   return (
     <FastTooltip title={tooltipTitle}>
-      <DragHandleIcon isDisabled color={color} />
+      <DragHandleIcon isDisabled />
     </FastTooltip>
   );
 }

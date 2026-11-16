@@ -1,19 +1,17 @@
 package backend
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Float, Vec3Int}
-import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
-import com.scalableminds.webknossos.datastore.services.mesh.DataTypeFunctors
+import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
+import com.scalableminds.webknossos.datastore.services.mesh.NativeAdHocMesher
 import org.scalatest.wordspec.AnyWordSpec
 
 import java.io.ByteArrayInputStream
-import java.nio.*
+import java.nio.{ByteBuffer, ByteOrder}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import java.security.MessageDigest
 import java.util.zip.GZIPInputStream
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
-import scala.reflect.ClassTag
 import scala.util.Random
 
 /** Pins the exact results of ad-hoc meshing (marching cubes over a cuboid of segment ids plus the neighbor faces) on a
@@ -34,8 +32,9 @@ class AdHocMeshGoldenTestSuite extends AnyWordSpec {
 
   // ---------- the implementation under test ----------
 
-  // The post-I/O part of AdHocMeshService.generateAdHocMeshImpl without mappings: bytes -> typed array -> neighbors
-  // -> marching cubes over 32^3 (+1) sub-blocks.
+  private lazy val mesher = new NativeAdHocMesher()
+
+  // The post-I/O part of AdHocMeshService.requestAdHocMesh without mappings.
   def mesh(
       data: Array[Byte],
       bytesPerElement: Int,
@@ -44,118 +43,7 @@ class AdHocMeshGoldenTestSuite extends AnyWordSpec {
       offset: Vec3Float,
       scale: Vec3Float
   ): (Array[Float], List[Int]) =
-    bytesPerElement match {
-      case 1 =>
-        meshTyped[Byte, ByteBuffer](
-          data,
-          dimensions,
-          segmentId,
-          offset,
-          scale,
-          DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte)
-        )
-      case 2 =>
-        meshTyped[Short, ShortBuffer](
-          data,
-          dimensions,
-          segmentId,
-          offset,
-          scale,
-          DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort)
-        )
-      case 4 =>
-        meshTyped[Int, IntBuffer](
-          data,
-          dimensions,
-          segmentId,
-          offset,
-          scale,
-          DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt)
-        )
-      case 8 =>
-        meshTyped[Long, LongBuffer](
-          data,
-          dimensions,
-          segmentId,
-          offset,
-          scale,
-          DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity)
-        )
-    }
-
-  private def meshTyped[T: ClassTag, B <: Buffer](
-      data: Array[Byte],
-      dataDimensions: Vec3Int,
-      segmentId: Long,
-      offset: Vec3Float,
-      scale: Vec3Float,
-      dataTypeFunctors: DataTypeFunctors[T, B]
-  ): (Array[Float], List[Int]) = {
-    val marchingCubesChunkSize = 32
-
-    def convertData(data: Array[Byte]): Array[T] = {
-      val srcBuffer = dataTypeFunctors.getTypedBufferFn(ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN))
-      srcBuffer.rewind()
-      val dstArray = Array.ofDim[T](srcBuffer.remaining())
-      dataTypeFunctors.copyDataFn(srcBuffer, dstArray)
-      dstArray
-    }
-
-    def subVolumeContainsSegmentId[T](
-        data: Array[T],
-        dataDimensions: Vec3Int,
-        boundingBox: BoundingBox,
-        segmentId: T
-    ): Boolean =
-      boundingBox.topLeft.x until boundingBox.bottomRight.x exists { x =>
-        boundingBox.topLeft.y until boundingBox.bottomRight.y exists { y =>
-          boundingBox.topLeft.z until boundingBox.bottomRight.z exists { z =>
-            val voxelOffset = x + y * dataDimensions.x + z * dataDimensions.x * dataDimensions.y
-            data(voxelOffset) == segmentId
-          }
-        }
-      }
-
-    def findNeighbors[T](data: Array[T], dataDimensions: Vec3Int, segmentId: T): List[Int] = {
-      val x = dataDimensions.x - 1
-      val y = dataDimensions.y - 1
-      val z = dataDimensions.z - 1
-      val front_xy = BoundingBox(Vec3Int(0, 0, 0), x, y, 1)
-      val front_xz = BoundingBox(Vec3Int(0, 0, 0), x, 1, z)
-      val front_yz = BoundingBox(Vec3Int(0, 0, 0), 1, y, z)
-      val back_xy = BoundingBox(Vec3Int(0, 0, z), x, y, 1)
-      val back_xz = BoundingBox(Vec3Int(0, y, 0), x, 1, z)
-      val back_yz = BoundingBox(Vec3Int(x, 0, 0), 1, y, z)
-      val surfaceBoundingBoxes = List(front_xy, front_xz, front_yz, back_xy, back_xz, back_yz)
-      surfaceBoundingBoxes.zipWithIndex.filter { case (surfaceBoundingBox, _) =>
-        subVolumeContainsSegmentId(data, dataDimensions, surfaceBoundingBox, segmentId)
-      }.map { case (_, index) =>
-        index
-      }
-    }
-
-    val mappedData = convertData(data)
-    val mappedSegmentId = dataTypeFunctors.fromLong(segmentId)
-    val neighbors = findNeighbors(mappedData, dataDimensions, mappedSegmentId)
-    val vertexBuffer = mutable.ArrayBuffer[Float]()
-    for {
-      x <- 0 until dataDimensions.x by marchingCubesChunkSize
-      y <- 0 until dataDimensions.y by marchingCubesChunkSize
-      z <- 0 until dataDimensions.z by marchingCubesChunkSize
-    } {
-      val boundingBox = BoundingBox(
-        Vec3Int(x, y, z),
-        math.min(dataDimensions.x - x, marchingCubesChunkSize + 1),
-        math.min(dataDimensions.y - y, marchingCubesChunkSize + 1),
-        math.min(dataDimensions.z - z, marchingCubesChunkSize + 1)
-      )
-      if (subVolumeContainsSegmentId(mappedData, dataDimensions, boundingBox, mappedSegmentId)) {
-        MarchingCubes
-          .marchingCubes[T](mappedData, dataDimensions, boundingBox, mappedSegmentId, offset, scale, vertexBuffer)
-      }
-    }
-    (vertexBuffer.toArray, neighbors)
-  }
+    mesher.mesh(data, bytesPerElement, dimensions, segmentId, offset, scale)
 
   // ---------- result encoding ----------
 

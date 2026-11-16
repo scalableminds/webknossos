@@ -1,10 +1,15 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import com.scalableminds.webknossos.datastore.services.mesh.DataTypeFunctors
 
 import java.nio.*
 import scala.reflect.ClassTag
+
+case class DataTypeFunctors[T, B](
+    getTypedBufferFn: ByteBuffer => B,
+    copyDataFn: (B, Array[T]) => Unit,
+    fromLong: Long => T
+)
 
 trait DataConverter {
 

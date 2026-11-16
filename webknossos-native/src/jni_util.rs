@@ -5,7 +5,7 @@ use std::fmt;
 use std::panic::{self, AssertUnwindSafe};
 
 use jni::errors::ThrowRuntimeExAndDefault;
-use jni::objects::{JByteArray, JIntArray, JLongArray};
+use jni::objects::{JByteArray, JFloatArray, JIntArray, JLongArray};
 use jni::{Env, EnvUnowned};
 
 /// An error of a native function. It reaches Java as a `RuntimeException`.
@@ -107,6 +107,20 @@ pub fn read_longs(env: &Env, array: &JLongArray) -> NativeResult<Vec<i64>> {
     Ok(values)
 }
 
+/// Copies a Java `int[]` into a Vec.
+pub fn read_ints(env: &Env, array: &JIntArray) -> NativeResult<Vec<i32>> {
+    let mut values = vec![0i32; array.len(env)?];
+    array.get_region(env, 0, &mut values)?;
+    Ok(values)
+}
+
+/// Copies a Java `float[]` into a Vec.
+pub fn read_floats(env: &Env, array: &JFloatArray) -> NativeResult<Vec<f32>> {
+    let mut values = vec![0f32; array.len(env)?];
+    array.get_region(env, 0, &mut values)?;
+    Ok(values)
+}
+
 /// Creates a new Java `byte[]` with the given contents.
 pub fn new_byte_array<'local>(
     env: &mut Env<'local>,
@@ -138,6 +152,16 @@ pub fn new_int_array<'local>(
     values: &[i32],
 ) -> NativeResult<JIntArray<'local>> {
     let array = env.new_int_array(values.len())?;
+    array.set_region(env, 0, values)?;
+    Ok(array)
+}
+
+/// Creates a new Java `float[]` with the given contents.
+pub fn new_float_array<'local>(
+    env: &mut Env<'local>,
+    values: &[f32],
+) -> NativeResult<JFloatArray<'local>> {
+    let array = env.new_float_array(values.len())?;
     array.set_region(env, 0, values)?;
     Ok(array)
 }

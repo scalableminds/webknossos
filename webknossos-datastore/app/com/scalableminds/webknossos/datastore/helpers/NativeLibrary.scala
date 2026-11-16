@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.helpers
 import java.nio.file.Files
 
 /** Loads the native library webknossosNative0 (Rust, built from webknossos-native), which implements the `@native`
-  * methods of NativeBucketScanner, NativeCompressoCompressor and NativeDracoToStlConverter.
+  * methods of NativeBucketScanner, NativeCompressoCompressor, NativeDracoToStlConverter and NativeAdHocMesher.
   *
   * The library is loaded from this object, i.e. from the application classloader. Loading it via sbt-jni's NativeLoader
   * would happen from the sbt-jni-core classloader (parent), and JNI could then not resolve the native methods declared

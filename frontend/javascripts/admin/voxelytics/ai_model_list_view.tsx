@@ -46,9 +46,13 @@ export default function AiModelListView() {
   const [currentlyEditedModel, setCurrentlyEditedModel] = useState<AiModel | null>(null);
   // The URL hash prefills the search. Links to a specific model (e.g. from the
   // "training succeeded" email) use the model id as the hash.
-  const [initialSearchQuery] = useState(() => decodeURIComponent(location.hash.slice(1)));
+  const [initialSearchQuery] = useState(() => location.hash.slice(1));
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
-  const linkedModelId = OBJECT_ID_REGEX.test(initialSearchQuery) ? initialSearchQuery : null;
+  // Only treat the hash as a link to a model as long as the user did not change the search.
+  const linkedModelId =
+    searchQuery === initialSearchQuery && OBJECT_ID_REGEX.test(initialSearchQuery)
+      ? initialSearchQuery
+      : null;
   const { modal } = App.useApp();
 
   const {

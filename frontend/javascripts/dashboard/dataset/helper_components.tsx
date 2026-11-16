@@ -1,7 +1,6 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import type { FieldError } from "@rc-component/form/es/interface";
-import { Checkbox, Divider, Form, Tooltip, Typography } from "antd";
-import type { CheckboxProps } from "antd/es/checkbox";
+import { Checkbox, Divider, Form, Tooltip } from "antd";
 import type { FormItemProps, Rule } from "antd/es/form";
 import type { NamePath } from "antd/es/form/interface";
 import classnames from "classnames";
@@ -56,15 +55,14 @@ export const FormItemWithInfo = ({
 );
 
 // A form item whose label is followed by an always-visible description.
-// The label must be a string so that antd can still use it in validation messages
-// (antd falls back to the field name when the label is a React node).
+// The description is antd's `extra`, which antd links to the control via aria-describedby
+// and which keeps it outside of the <label> (otherwise it would become part of the
+// accessible name and a click target). CSS moves it between the label and the control.
 export function FormItemWithDescription({
-  label,
   description,
-  messageVariables,
   className,
   ...props
-}: Omit<FormItemProps, "label"> & {
+}: Omit<FormItemProps, "extra"> & {
   label: string;
   description: React.ReactNode;
 }) {
@@ -72,42 +70,34 @@ export function FormItemWithDescription({
     <FormItem
       {...props}
       className={classnames("form-item-with-description", className)}
-      messageVariables={{ label, ...messageVariables }}
-      label={
-        <>
-          {label}
-          <Typography.Text
-            type="secondary"
-            style={{ flexBasis: "100%", fontSize: "var(--ant-font-size-sm)" }}
-          >
-            {description}
-          </Typography.Text>
-        </>
-      }
+      extra={description}
     />
   );
 }
 
-// A checkbox whose label is followed by an always-visible description.
-// Use it as the direct child of a Form.Item with valuePropName="checked".
-export function CheckboxWithDescription({
+// A form item with a checkbox whose label is followed by an always-visible description.
+// The description is rendered outside of the checkbox's <label> (see FormItemWithDescription),
+// so that clicking it doesn't toggle the checkbox.
+export function CheckboxFormItemWithDescription({
   children,
   description,
+  disabled,
+  className,
   ...props
-}: CheckboxProps & {
+}: Omit<FormItemProps, "children" | "extra" | "valuePropName"> & {
+  children: React.ReactNode;
   description: React.ReactNode;
+  disabled?: boolean;
 }) {
   return (
-    // Align the box with the first line instead of centering it next to label and description.
-    <Checkbox {...props} styles={{ icon: { alignSelf: "flex-start", marginTop: 3 } }}>
-      {children}
-      <Typography.Text
-        type="secondary"
-        style={{ display: "block", fontSize: "var(--ant-font-size-sm)" }}
-      >
-        {description}
-      </Typography.Text>
-    </Checkbox>
+    <FormItem
+      {...props}
+      valuePropName="checked"
+      className={classnames("checkbox-form-item-with-description", className)}
+      extra={description}
+    >
+      <Checkbox disabled={disabled}>{children}</Checkbox>
+    </FormItem>
   );
 }
 

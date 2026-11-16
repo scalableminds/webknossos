@@ -6,7 +6,7 @@ import RecommendedConfigurationView, {
 import { Button, Col, Form, Input, InputNumber, Radio, Row, Select, Typography, theme } from "antd";
 import type { RuleObject } from "antd/es/form";
 import {
-  CheckboxWithDescription,
+  CheckboxFormItemWithDescription,
   FormItemWithDescription,
 } from "dashboard/dataset/helper_components";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
@@ -212,6 +212,8 @@ function TaskTypeCreateView() {
             const preferredMode = form.getFieldValue(["settings", "preferredMode"]);
             if (preferredMode != null && !newAllowedModes.includes(preferredMode)) {
               form.setFieldValue(["settings", "preferredMode"], undefined);
+              // setFieldValue doesn't revalidate, so an error from the old value would stay visible.
+              form.validateFields([["settings", "preferredMode"]]).catch(() => {});
             }
           }}
           layout="vertical"
@@ -353,14 +355,19 @@ function TaskTypeCreateView() {
                 hasFeedback
                 dependencies={[["settings", "allowedModes"]]}
                 rules={[
-                  {
-                    // Existing task types may still have a preferred mode that isn't allowed.
+                  // Existing task types may still have a preferred mode that isn't allowed.
+                  // Read the allowed modes from the form store: when `dependencies` triggers this
+                  // validator, the watched `allowedModes` still holds the previous render's value.
+                  ({ getFieldValue }) => ({
                     validator: syncValidator(
                       (value: APIAllowedMode | undefined) =>
-                        value == null || allowedModes.includes(value),
+                        value == null ||
+                        (
+                          (getFieldValue(["settings", "allowedModes"]) ?? []) as APIAllowedMode[]
+                        ).includes(value),
                       "The preferred mode must be one of the allowed modes.",
                     ),
-                  },
+                  }),
                 ]}
               >
                 <Select
@@ -401,25 +408,28 @@ function TaskTypeCreateView() {
                 >
                   <Row gutter={token.paddingMD}>
                     <Col xs={24} md={12}>
-                      <FormItem name={["settings", "somaClickingAllowed"]} valuePropName="checked">
-                        <CheckboxWithDescription description="Each new node starts a new tree, e.g. to mark cell bodies.">
-                          Allow Single-node-tree mode (&quot;Soma clicking&quot;)
-                        </CheckboxWithDescription>
-                      </FormItem>
+                      <CheckboxFormItemWithDescription
+                        name={["settings", "somaClickingAllowed"]}
+                        description="Each new node starts a new tree, e.g. to mark cell bodies."
+                      >
+                        Allow Single-node-tree mode (&quot;Soma clicking&quot;)
+                      </CheckboxFormItemWithDescription>
                     </Col>
                     <Col xs={24} md={12}>
-                      <FormItem name={["settings", "branchPointsAllowed"]} valuePropName="checked">
-                        <CheckboxWithDescription description="Lets annotators mark nodes as branchpoints.">
-                          Allow Branchpoints
-                        </CheckboxWithDescription>
-                      </FormItem>
+                      <CheckboxFormItemWithDescription
+                        name={["settings", "branchPointsAllowed"]}
+                        description="Lets annotators mark nodes as branchpoints."
+                      >
+                        Allow Branchpoints
+                      </CheckboxFormItemWithDescription>
                     </Col>
                     <Col xs={24} md={12}>
-                      <FormItem name={["settings", "mergerMode"]} valuePropName="checked">
-                        <CheckboxWithDescription description="Opens tasks in merger mode, where a skeleton tree merges the segments it connects.">
-                          Merger Mode
-                        </CheckboxWithDescription>
-                      </FormItem>
+                      <CheckboxFormItemWithDescription
+                        name={["settings", "mergerMode"]}
+                        description="Opens tasks in merger mode, where a skeleton tree merges the segments it connects."
+                      >
+                        Merger Mode
+                      </CheckboxFormItemWithDescription>
                     </Col>
                   </Row>
                 </div>
@@ -439,14 +449,12 @@ function TaskTypeCreateView() {
                 >
                   <Row gutter={token.paddingMD}>
                     <Col xs={24} md={12}>
-                      <FormItem
+                      <CheckboxFormItemWithDescription
                         name={["settings", "volumeInterpolationAllowed"]}
-                        valuePropName="checked"
+                        description="Annotators only need to label every second slice. The slices in between are filled by interpolation."
                       >
-                        <CheckboxWithDescription description="Annotators only need to label every second slice. The slices in between are filled by interpolation.">
-                          Allow Volume Interpolation
-                        </CheckboxWithDescription>
-                      </FormItem>
+                        Allow Volume Interpolation
+                      </CheckboxFormItemWithDescription>
                     </Col>
                   </Row>
                 </div>
@@ -456,20 +464,16 @@ function TaskTypeCreateView() {
 
           <Typography.Title level={5}>Magnification</Typography.Title>
 
-          <FormItem
+          <CheckboxFormItemWithDescription
             name={["isMagRestricted"]}
-            valuePropName="checked"
             style={{
               marginBottom: 6,
             }}
+            disabled={isEditingMode}
+            description="Annotators can only annotate within a range of power-of-two magnifications, e.g. 1 to 2 for the two finest ones. Can't be changed later."
           >
-            <CheckboxWithDescription
-              disabled={isEditingMode}
-              description="Annotators can only annotate within a range of power-of-two magnifications, e.g. 1 to 2 for the two finest ones. Can't be changed later."
-            >
-              Restrict Magnifications
-            </CheckboxWithDescription>
-          </FormItem>
+            Restrict Magnifications
+          </CheckboxFormItemWithDescription>
 
           <FormItem
             noStyle

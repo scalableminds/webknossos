@@ -8,7 +8,7 @@ import {
 } from "admin/rest_api";
 import { Button, Col, Form, Input, InputNumber, Row, Select, theme } from "antd";
 import {
-  CheckboxWithDescription,
+  CheckboxFormItemWithDescription,
   FormItemWithDescription,
 } from "dashboard/dataset/helper_components";
 import { useApi, useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
@@ -210,11 +210,12 @@ function ProjectCreateView() {
             </Col>
           </Row>
 
-          <FormItem name="isBlacklistedFromReport" valuePropName="checked">
-            <CheckboxWithDescription description="Hides the project from the Project Progress report, e.g. for test or archived projects.">
-              Hide from Project Progress
-            </CheckboxWithDescription>
-          </FormItem>
+          <CheckboxFormItemWithDescription
+            name="isBlacklistedFromReport"
+            description="Hides the project from the Project Progress report, e.g. for test or archived projects."
+          >
+            Hide from Project Progress
+          </CheckboxFormItemWithDescription>
 
           <FormItem>
             <Button type="primary" htmlType="submit">

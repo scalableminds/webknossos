@@ -211,13 +211,39 @@ label.ant-checkbox-wrapper {
 .no-padding {
   padding: 0 !important;
 }
-// Used by FormItemWithDescription: keep the required mark next to the label text and
-// wrap the description onto its own full-width line below it.
-.form-item-with-description .ant-form-item-label > label {
-  flex-wrap: wrap;
-
-  // antd's hidden colon would otherwise wrap onto an empty third line.
-  &::after {
-    display: none;
+// FormItemWithDescription and CheckboxFormItemWithDescription render their description
+// as antd's `extra`, which is linked to the control via aria-describedby.
+.form-item-with-description,
+.checkbox-form-item-with-description {
+  .ant-form-item-extra {
+    font-size: var(--ant-font-size-sm);
+    min-height: 0;
   }
+}
+
+// Show the description between the label and the control. antd renders `extra` after the
+// control, wrapped together with the error list. Dissolving that wrapper lets `order` move
+// only the description up, while errors stay below the control.
+.form-item-with-description {
+  // antd only makes the control a column flexbox via a CSS variable, which isn't set here.
+  .ant-form-item-control {
+    display: flex;
+  }
+
+  .ant-form-item-additional {
+    display: contents;
+  }
+
+  .ant-form-item-extra {
+    order: -1;
+    // Pull the description up to its label (the label column has an 8px bottom padding).
+    margin-top: -6px;
+    margin-bottom: 6px;
+  }
+}
+
+// Indent the description of a checkbox so that it lines up with the checkbox's label text
+// (16px box + 8px padding).
+.checkbox-form-item-with-description .ant-form-item-extra {
+  padding-inline-start: 24px;
 }

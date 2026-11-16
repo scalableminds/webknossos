@@ -270,7 +270,12 @@ export function handleTaskCreationResponse(
 function CreateResourceButton({ text, link }: { text: string; link: string }) {
   return (
     // The min width keeps the buttons of all rows equally wide; longer labels still fit.
-    <Col flex="none" style={{ minWidth: 178, marginBottom: "var(--ant-form-item-margin-bottom)" }}>
+    // It is relative to the font size so that it keeps fitting the longest label
+    // ("Create new Task Type") when the font size changes.
+    <Col
+      flex="none"
+      style={{ minWidth: "13em", marginBottom: "var(--ant-form-item-margin-bottom)" }}
+    >
       <Button block href={link} target="_blank" rel="noreferrer">
         {text}
       </Button>
@@ -650,6 +655,9 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const isEditingMode = taskId != null;
   const titleLabel = isEditingMode ? `Update Task ${taskId || ""}` : "Create Task";
   const instancesLabel = isEditingMode ? "Remaining Instances" : "Task Instances";
+  const instancesDescription = isEditingMode
+    ? "How many more users can still get this task. Users who already started or finished it are not counted. Each instance is assigned to a different user."
+    : "How many users annotate this task independently. Each instance is assigned to a different user.";
 
   const content = (
     <div
@@ -717,7 +725,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
           <FormItemWithDescription
             name="pendingInstances"
             label={instancesLabel}
-            description="How many users annotate this task independently. Each instance is assigned to a different user."
+            description={instancesDescription}
             hasFeedback
             rules={[
               {
@@ -802,6 +810,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
               <Col span={10}>
                 <FormItem name={["neededExperience", "domain"]} hasFeedback>
                   <SelectExperienceDomain
+                    aria-label="Experience Domain"
                     disabled={isEditingMode}
                     placeholder="Any team member"
                     notFoundContent={messages["task.domain_does_not_exist"]}
@@ -821,12 +830,10 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                       required: isNonEmptyDomain(getFieldValue(["neededExperience", "domain"])),
                       message: "Please enter an experience value for the selected domain.",
                     }),
-                    {
-                      type: "number",
-                    },
                   ]}
                 >
                   <InputNumber
+                    aria-label="Experience Value"
                     style={fullWidth}
                     disabled={isEditingMode || !hasExperienceDomain}
                     placeholder={hasExperienceDomain ? "Minimum value" : "Select a domain first"}

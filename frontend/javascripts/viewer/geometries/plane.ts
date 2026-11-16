@@ -24,7 +24,6 @@ import PlaneMaterialFactory, {
   type PlaneShaderMaterial,
 } from "viewer/geometries/materials/plane_material_factory";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
 
 const DEFAULT_POSITION_OFFSET = [0, 0, 0] as Vector3;
 
@@ -155,10 +154,7 @@ class Plane {
     }
     this.lastScaleFactors[0] = xFactor;
     this.lastScaleFactors[1] = yFactor;
-    // Scale to base voxel space which is the same coordinate space the cameras use
-    const baseVoxelUnit = getBaseVoxelInUnit(this.datasetScaleFactor);
-    const scaleVector: Vector3 = V3.scale([xFactor, yFactor, 1], baseVoxelUnit);
-    this.getMeshes().map((mesh) => mesh.scale.set(...scaleVector));
+    this.getMeshes().map((mesh) => mesh.scale.set(xFactor, yFactor, 1));
   }
 
   setBaseRotation = (rotVec: Euler): void => {

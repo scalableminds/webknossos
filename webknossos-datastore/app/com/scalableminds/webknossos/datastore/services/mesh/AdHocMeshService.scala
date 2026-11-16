@@ -114,21 +114,18 @@ class AdHocMeshService(
       dataTypeFunctors: DataTypeFunctors[T, B]
   )(using tc: TokenContext): Fox[(Array[Float], List[Int])] = {
 
-    def applyJsonMappingIfNeeded(data: Array[T]): Fox[Array[T]] =
-      request.mapping match {
-        case Some(mappingName) =>
-          request.mappingType match {
-            case Some(MappingType.JSON) =>
-              mappingService.applyMapping(
-                DataServiceMappingRequest(request.dataSourceId, request.dataLayer, mappingName),
-                data,
-                dataTypeFunctors.fromLong
-              )
-            case _ => Fox.successful(data)
-          }
-        case _ =>
-          Fox.successful(data)
+    val jsonMappingRequestOpt: Option[DataServiceMappingRequest] =
+      (request.mapping, request.mappingType) match {
+        case (Some(mappingName), Some(MappingType.JSON)) =>
+          Some(DataServiceMappingRequest(request.dataSourceId, request.dataLayer, mappingName))
+        case _ => None
       }
+
+    def applyJsonMappingIfNeeded(data: Array[Byte]): Fox[Array[Byte]] =
+      jsonMappingRequestOpt.map(mappingService.applyMapping(_, data)).getOrElse(Fox.successful(data))
+
+    def mapSegmentIdIfNeeded(segmentId: Long): Fox[Long] =
+      jsonMappingRequestOpt.map(mappingService.mapSegmentId(_, segmentId)).getOrElse(Fox.successful(segmentId))
 
     def applyAgglomerate(data: Array[Byte]): Fox[Array[Byte]] =
       request.mapping match {
@@ -214,16 +211,15 @@ class AdHocMeshService(
       cuboid.topLeft.voxelZInMag.toFloat
     )
     val scale = Vec3Float(cuboid.topLeft.mag) * Vec3Float(request.voxelSizeFactor)
-    val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 
     val vertexBuffer = mutable.ArrayBuffer[Float]()
 
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
       agglomerateMappedData <- applyAgglomerate(data) ?~> "failed to apply agglomerate for ad-hoc meshing"
-      typedData = convertData(agglomerateMappedData)
-      mappedData <- applyJsonMappingIfNeeded(typedData)
-      mappedSegmentId <- applyJsonMappingIfNeeded(Array(typedSegmentId)).map(_.head)
+      mappedBytes <- applyJsonMappingIfNeeded(agglomerateMappedData) ?~> "failed to apply json mapping"
+      mappedData = convertData(mappedBytes)
+      mappedSegmentId <- mapSegmentIdIfNeeded(request.segmentId).map(dataTypeFunctors.fromLong)
       neighbors =
         if (request.findNeighbors) { findNeighbors(mappedData, dataDimensions, mappedSegmentId) }
         else {

@@ -30,9 +30,10 @@ import { LayerRegistrationWorkspace } from "./workspace/layer_registration_works
  * by placing matching landmarks in both, similar to the BigWarp plugin of Fiji. The landmarks are
  * stored in a layer registration annotation, which belongs to the fixed layer and holds the
  * landmarks of all moving layers. The page shows the fixed layer and one moving layer side by side,
- * each in an iframe with a sandbox annotation view ("landmark iframe", see layer_registration_landmark_iframe.ts).
- * The moving layer is chosen with a URL param. The layer registration annotation is loaded in a
- * third, hidden iframe.
+ * each in an iframe with a sandbox annotation view (the "landmark iframes", see
+ * layer_registration_landmark_iframe.ts). The moving layer is chosen with a URL param. The layer
+ * registration annotation is loaded in a third, hidden iframe (the "annotation iframe"). See
+ * layer_registration_protocol.ts for how the page and the iframes communicate.
  */
 function LayerRegistrationView() {
   const { annotationId = "" } = useParams();

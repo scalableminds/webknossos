@@ -115,8 +115,8 @@ function WorkspaceOverlay({
 }
 
 /** The two landmark iframes side by side and the hidden annotation iframe (see
- * use_layer_registration_iframe_bridge.ts). An overlay covers the landmark iframes while they are not
- * ready for new landmarks.
+ * use_layer_registration_iframe_bridge.ts). An overlay covers the landmark iframes while they are
+ * not ready for new landmarks.
  */
 export function LayerRegistrationIframes({
   dataset,

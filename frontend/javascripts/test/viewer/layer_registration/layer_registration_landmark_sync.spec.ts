@@ -30,7 +30,7 @@ const LANDMARK_2 = { pairId: 2, position: [40, 50, 60] } as const;
 
 type AnnotationIframeMessageHandler = typeof handleCrossOriginApiMessage;
 
-// A annotation iframe that replies with an error to the given command as long as isFailing returns
+// An annotation iframe that replies with an error to the given command as long as isFailing returns
 // true, and works normally otherwise.
 function createFailingAnnotationIframe(
   command: string,
@@ -46,9 +46,9 @@ function createFailingAnnotationIframe(
 }
 
 /** One mount of the layer registration workspace before the stored landmarks are imported:
- * the page with two fresh landmark iframes, and the WEBKNOSSOS instance of the test as the store
- * iframe. The store keeps its annotation across sessions, like the layer registration
- * annotation on the server.
+ * the page with two fresh landmark iframes, and the WEBKNOSSOS instance of the test as the
+ * annotation iframe. The annotation iframe keeps its annotation across sessions, like the layer
+ * registration annotation on the server.
  */
 function createSession(
   layerNames: LayerNames,

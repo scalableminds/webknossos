@@ -32,8 +32,8 @@ export type ViewSettings = {
   setIsColorOverlayEnabled: (isEnabled: boolean) => void;
 };
 
-/** Holds the view settings of the two landmark iframes and sends them to the landmark iframes, together with the
- * transforms that the landmark iframes apply to the other layers.
+/** Holds the view settings of the two landmark iframes and sends them to the landmark iframes,
+ * together with the transforms that the landmark iframes apply to the other layers.
  */
 export function useViewSettings({
   dataset,
@@ -49,8 +49,8 @@ export function useViewSettings({
   // The transform estimation of the active moving layer.
   estimation: TransformEstimation;
   inactivePairs: InactivePairs;
-  // Sent to the landmark iframes, too, because the right landmark iframe has the button that
-  // toggles the panel.
+  // Sent to the landmark iframes, too, because the moving iframe has the button that toggles the
+  // panel.
   isLandmarkPanelOpen: boolean;
 }): ViewSettings {
   const [isOtherLayerVisible, setIsOtherLayerVisible] = useState<Record<Side, boolean>>({
@@ -75,9 +75,8 @@ export function useViewSettings({
     "errorMessage" in estimation ? null : estimation.movingToFixedTransform;
   const isTransformAvailable = movingToFixedTransform != null;
 
-  // Shows the moving layer transformed in the left landmark iframe and the fixed layer transformed
-  // (inversely) in the right landmark iframe, in each landmark iframe only if the transform is
-  // shown there.
+  // Shows the moving layer transformed in the fixed iframe and the fixed layer transformed
+  // (inversely) in the moving iframe, in each landmark iframe only if the transform is shown there.
   useEffect(() => {
     const otherLayerNames = { fixed: movingLayerName, moving: fixedLayerName };
     const matrices = {
@@ -90,7 +89,7 @@ export function useViewSettings({
     }
   }, [sendMessage, fixedLayerName, movingLayerName, movingToFixedTransform, isTransformShown]);
 
-  // The left landmark iframe also gets the transforms of the inactive moving layers. They are
+  // The fixed iframe also gets the transforms of the inactive moving layers. They are
   // hidden there, but the user can show them in the layer settings to see all layers transformed.
   useEffect(() => {
     for (const [layerName, pair] of inactivePairs ?? []) {

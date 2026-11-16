@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import {
   setLandmarkPairInfoAction,
   setLayerRegistrationViewStateAction,
-} from "viewer/model/actions/layer_registration_worker_actions";
+} from "viewer/model/actions/layer_registration_landmark_iframe_actions";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
 import {
@@ -20,20 +20,20 @@ import {
   setLayerVisibility,
 } from "viewer/view/layer_registration/layer_registration_iframe_commands";
 import {
-  type IframeCommand,
-  isLayerRegistrationWorker,
-} from "viewer/view/layer_registration/layer_registration_protocol";
-import {
   exportLandmarkPairsAsNml,
   importLandmarks,
   setOverlayLayerColors,
   useLayerRegistrationShortcutRelay,
-} from "viewer/view/layer_registration/layer_registration_worker";
+} from "viewer/view/layer_registration/layer_registration_landmark_iframe";
+import {
+  type IframeCommand,
+  isLayerRegistrationLandmarkIframe,
+} from "viewer/view/layer_registration/layer_registration_protocol";
 
 // Some commands only exist for the iframes of the layer registration view. The error is
 // caught in onMessage, which logs it and replies with an error.
-function assertLayerRegistrationWorker() {
-  if (!isLayerRegistrationWorker()) {
+function assertLayerRegistrationLandmarkIframe() {
+  if (!isLayerRegistrationLandmarkIframe()) {
     throw new Error("This command is only available in the layer registration view.");
   }
 }
@@ -143,7 +143,7 @@ const handleMessage = async (event) => {
     // page. Their arguments and return values are declared in IframeCommands
     // (layer_registration_protocol.ts); keep both in line.
     case "importLandmarks": {
-      assertLayerRegistrationWorker();
+      assertLayerRegistrationLandmarkIframe();
       if (!isString(args[0])) {
         throw new Error("The first argument needs to be the content of the nml as a string.");
       }
@@ -152,25 +152,25 @@ const handleMessage = async (event) => {
     }
 
     case "setLandmarkPairInfo": {
-      assertLayerRegistrationWorker();
+      assertLayerRegistrationLandmarkIframe();
       Store.dispatch(setLandmarkPairInfoAction(args[0]));
       break;
     }
 
     case "setLayerRegistrationViewState": {
-      assertLayerRegistrationWorker();
+      assertLayerRegistrationLandmarkIframe();
       Store.dispatch(setLayerRegistrationViewStateAction(args[0]));
       break;
     }
 
     case "setOverlayLayerColors": {
-      assertLayerRegistrationWorker();
+      assertLayerRegistrationLandmarkIframe();
       setOverlayLayerColors(args[0]);
       break;
     }
 
     case "exportLandmarkPairsAsNml": {
-      assertLayerRegistrationWorker();
+      assertLayerRegistrationLandmarkIframe();
       returnValue = await exportLandmarkPairsAsNml(args[0]);
       break;
     }

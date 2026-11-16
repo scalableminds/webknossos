@@ -1,4 +1,3 @@
-import { hasUrlParam } from "libs/utils";
 import { location } from "libs/window";
 import type { Matrix4x4 } from "mjs";
 import type { APIDataset } from "types/api_types";
@@ -6,53 +5,64 @@ import type { Vector3 } from "viewer/constants";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import type { LandmarkPairInfo, Side } from "./helpers/layer_registration_helpers";
 
-// The layer registration view (layer_registration_view.tsx) embeds two normal sandbox views of the
-// same dataset as iframes, one per layer. These views are called "workers". A third, hidden iframe
-// loads the layer registration annotation itself, which stores the landmarks ("store").
+// The layer registration view (layer_registration_view.tsx) embeds three iframes of the normal
+// viewer:
+// - Two landmark iframes, in which the user places the landmarks: the fixed iframe (left) shows
+//   the fixed layer, the moving iframe (right) the moving layer. Each one opens a sandbox of the
+//   dataset, so its own annotation only exists while the page is open.
+// - The hidden annotation iframe, which opens the layer registration annotation itself. The page
+//   reads the landmarks of both sides from it and saves them through it.
 // This module defines everything that the layer registration page, the iframes and the rest of
 // the app have to agree on. Besides the definitions, it only holds small helpers without state
-// that both sides use: reading and building the URLs, and sending a worker command. The rest of
-// the code that sends and receives the messages is in IframeBridge (page side),
-// cross_origin_api.ts and layer_registration_worker.ts (iframe side). The navbar imports this
-// module, so it must not import the viewer (see viewer/viewer_entry.ts):
+// that both sides use: reading and building the URLs, and sending a landmark iframe command. The
+// rest of the code that sends and receives the messages is in IframeBridge (page side),
+// cross_origin_api.ts and layer_registration_landmark_iframe.ts (iframe side). The navbar imports
+// this module, so it must not import the viewer (see viewer/viewer_entry.ts):
 // 1. The role of each iframe, encoded in its URL params, and the URLs of the pages.
 // 2. Page → iframe: the commands of the cross-origin API that the page uses (IframeCommands)
 //    and the message envelope.
-// 3. Iframe → page: the commands of the workers and the save state of the store.
+// 3. Iframe → page: the commands of the landmark iframes and the save state of the annotation
+//    iframe.
 
-// The role of an iframe. The URL params of each iframe:
-// - left worker (fixed layer): layerRegistrationWorker=<fixed layer name>&layerRegistrationPrimary=true
-// - right worker (moving layer): layerRegistrationWorker=<moving layer name>
-// - store: layerRegistrationStore (without a value)
-const WORKER_LAYER_URL_PARAM = "layerRegistrationWorker";
-const PRIMARY_WORKER_URL_PARAM = "layerRegistrationPrimary";
-const STORE_URL_PARAM = "layerRegistrationStore";
+// The URL params of each iframe:
+// - fixed iframe: layerRegistrationIframe=fixed&layerRegistrationLayer=<fixed layer name>
+// - moving iframe: layerRegistrationIframe=moving&layerRegistrationLayer=<moving layer name>
+// - annotation iframe: layerRegistrationIframe=annotation
+const IFRAME_ROLE_URL_PARAM = "layerRegistrationIframe";
+const LAYER_URL_PARAM = "layerRegistrationLayer";
 
-export type IframeRole = Side | "store";
+export type IframeRole = Side | "annotation";
 
-export function isLayerRegistrationWorker(): boolean {
-  return hasUrlParam(WORKER_LAYER_URL_PARAM);
+// Null outside of the iframes of the layer registration page.
+function getIframeRole(): IframeRole | null {
+  const role = new URLSearchParams(location.search).get(IFRAME_ROLE_URL_PARAM);
+  return role === "fixed" || role === "moving" || role === "annotation" ? role : null;
 }
 
-// The primary (left) worker hosts the layer registration buttons and the link to the dashboard,
-// because the layer registration page itself has no navbar.
-export function isLayerRegistrationPrimaryWorker(): boolean {
-  return isLayerRegistrationWorker() && hasUrlParam(PRIMARY_WORKER_URL_PARAM);
+export function isLayerRegistrationLandmarkIframe(): boolean {
+  const role = getIframeRole();
+  return role === "fixed" || role === "moving";
 }
 
-// The layer whose landmarks are placed in this worker. getLayerRegistrationWorkerUrl encodes the
-// param with URLSearchParams, which writes a space as "+", so it is read the same way.
-// getUrlParamValue would keep the "+".
-export function getLayerRegistrationWorkerLayerName(): string {
-  const layerName = new URLSearchParams(location.search).get(WORKER_LAYER_URL_PARAM);
+// The fixed iframe is the left one. The layer registration page itself has no navbar, so the
+// navbar of the fixed iframe shows the link to the dashboard.
+export function isLayerRegistrationFixedLandmarkIframe(): boolean {
+  return getIframeRole() === "fixed";
+}
+
+export function isLayerRegistrationAnnotationIframe(): boolean {
+  return getIframeRole() === "annotation";
+}
+
+// The layer whose landmarks are placed in this landmark iframe.
+// getLayerRegistrationLandmarkIframeUrl encodes the param with URLSearchParams, which writes a
+// space as "+", so it is read the same way. getUrlParamValue would keep the "+".
+export function getLandmarkIframeLayerName(): string {
+  const layerName = new URLSearchParams(location.search).get(LAYER_URL_PARAM);
   if (layerName == null) {
-    throw new Error("The URL doesn't name the layer of the layer registration worker.");
+    throw new Error("The URL doesn't name the layer of the layer registration landmark iframe.");
   }
   return layerName;
-}
-
-export function isLayerRegistrationStore(): boolean {
-  return hasUrlParam(STORE_URL_PARAM);
 }
 
 // The page that lists the layer registration annotations of a dataset and creates new ones.
@@ -75,28 +85,29 @@ export function getLayerRegistrationViewUrl(
     : url;
 }
 
-// The store iframe must open the layer registration annotation in the normal viewer instead of
-// being redirected to the layer registration view again.
-export function getLayerRegistrationStoreUrl(annotationId: string): string {
-  return `/annotations/${annotationId}?${STORE_URL_PARAM}`;
+// The annotation iframe must open the layer registration annotation in the normal viewer instead
+// of being redirected to the layer registration view again.
+export function getLayerRegistrationAnnotationIframeUrl(annotationId: string): string {
+  const params = new URLSearchParams({ [IFRAME_ROLE_URL_PARAM]: "annotation" });
+  return `/annotations/${annotationId}?${params}`;
 }
 
-export function getLayerRegistrationWorkerUrl(
+export function getLayerRegistrationLandmarkIframeUrl(
   dataset: APIDataset,
+  side: Side,
   layerName: string,
-  isPrimary: boolean,
 ): string {
-  const params = new URLSearchParams({ [WORKER_LAYER_URL_PARAM]: layerName });
-  if (isPrimary) {
-    params.set(PRIMARY_WORKER_URL_PARAM, "true");
-  }
+  const params = new URLSearchParams({
+    [IFRAME_ROLE_URL_PARAM]: side,
+    [LAYER_URL_PARAM]: layerName,
+  });
   return `/datasets/${getReadableURLPart(dataset)}/sandbox/skeleton?${params}`;
 }
 
 // Page → iframe: the commands of the cross-origin API (cross_origin_api.ts) that the layer
 // registration page sends, with their arguments and return values.
 export type IframeCommands = {
-  // Workers only.
+  // Landmark iframes only.
   importLandmarks: { args: [nmlString: string]; returns: void };
   setLandmarkPairInfo: { args: [pairInfo: LandmarkPairInfo]; returns: void };
   setLayerRegistrationViewState: { args: [viewState: LayerRegistrationViewState]; returns: void };
@@ -119,9 +130,9 @@ export type IframeCommands = {
   centerPositionAnimated: { args: [position: Vector3]; returns: void };
   setLayerVisibility: { args: [layerName: string, isVisible: boolean]; returns: void };
   setAffineLayerTransforms: { args: [layerName: string, matrix: Matrix4x4]; returns: void };
-  // Workers and store. Without a group id, all trees are exported.
+  // Landmark iframes and annotation iframe. Without a group id, all trees are exported.
   exportTreesAsNmlString: { args: [filter?: { groupId?: number }]; returns: string };
-  // Store only.
+  // Annotation iframe only.
   ensureTreeGroupPath: { args: [groupNames: string[]]; returns: number };
   // Null if a group along the path doesn't exist.
   findTreeGroupPath: { args: [groupNames: string[]]; returns: number | null };
@@ -145,9 +156,9 @@ export type IframeReplyMessage =
   | { type: "ack"; messageId: string; returnValue: unknown }
   | { type: "err"; messageId: string; message: string };
 
-// Iframe → page: actions that a worker asks the layer registration page to perform, triggered by
-// shortcuts and toolbar buttons. "toggleTransform", "toggleOtherLayer" and "syncOtherView" refer
-// to the worker that sent the command.
+// Iframe → page: actions that a landmark iframe asks the layer registration page to perform,
+// triggered by shortcuts and toolbar buttons. "toggleTransform", "toggleOtherLayer" and
+// "syncOtherView" refer to the landmark iframe that sent the command.
 export type LayerRegistrationCommand =
   | "toggleTransform"
   | "toggleLandmarkPanel"
@@ -155,36 +166,41 @@ export type LayerRegistrationCommand =
   | "syncOtherView";
 
 export const LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE = "layerRegistrationCommand";
-export type WorkerCommandMessage = {
+export type LandmarkIframeCommandMessage = {
   type: typeof LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE;
   command: LayerRegistrationCommand;
 };
 
-// Sends a command of this worker to the layer registration page (see IframeBridge).
+// Sends a command of this landmark iframe to the layer registration page (see IframeBridge).
 export function sendCommandToLayerRegistrationPage(command: LayerRegistrationCommand) {
-  const message: WorkerCommandMessage = { type: LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE, command };
+  const message: LandmarkIframeCommandMessage = {
+    type: LAYER_REGISTRATION_COMMAND_MESSAGE_TYPE,
+    command,
+  };
   window.parent.postMessage(message, window.location.origin);
 }
 
-// Iframe → page: sent by the store iframe whenever the save state of the layer registration
+// Iframe → page: sent by the annotation iframe whenever the save state of the layer registration
 // annotation changes.
-export const LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE = "layerRegistrationStoreSavedState";
+export const LAYER_REGISTRATION_ANNOTATION_IFRAME_SAVE_STATE_MESSAGE_TYPE =
+  "layerRegistrationAnnotationIframeSaveState";
 export type SaveState = "saved" | "saving" | "unsaved";
-export type StoreSaveStateMessage = {
-  type: typeof LAYER_REGISTRATION_STORE_SAVED_STATE_MESSAGE_TYPE;
+export type AnnotationIframeSaveStateMessage = {
+  type: typeof LAYER_REGISTRATION_ANNOTATION_IFRAME_SAVE_STATE_MESSAGE_TYPE;
   saveState: SaveState;
 };
 
-// What the layer registration page tells a worker about its view, for the worker's toolbar
-// (see setLayerRegistrationViewState).
+// What the layer registration page tells a landmark iframe about its view, for the toolbar of the
+// landmark iframe (see setLayerRegistrationViewState).
 export type LayerRegistrationViewState = {
-  // The layer of the other worker, and whether this worker shows it, too.
+  // The layer of the other landmark iframe, and whether this landmark iframe shows it, too.
   otherLayerName: string;
   isOtherLayerVisible: boolean;
-  // Whether the worker shows the other layer transformed onto its own layer or untransformed.
+  // Whether the landmark iframe shows the other layer transformed onto its own layer or
+  // untransformed.
   isTransformShown: boolean;
   // Whether there are enough landmark pairs to estimate a transform.
   isTransformAvailable: boolean;
-  // Only needed for the right worker, which has the button that toggles the panel.
+  // Only needed for the moving iframe, which has the button that toggles the panel.
   isLandmarkPanelOpen: boolean;
 };

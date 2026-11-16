@@ -6,16 +6,16 @@ import {
   getLandmarkNml,
   mockBuildInfoRequest,
   readStoredLandmarks,
-} from "test/helpers/layer_registration_iframes";
+} from "test/helpers/layer_registration_fake_iframes";
 import { handleCrossOriginApiMessage } from "viewer/api/cross_origin_api";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import Store from "viewer/store";
 import { getLandmarksFromTrees } from "viewer/view/layer_registration/helpers/layer_registration_helpers";
 import {
-  getLayerRegistrationWorkerLayerName,
-  getLayerRegistrationWorkerUrl,
-  isLayerRegistrationPrimaryWorker,
+  getLandmarkIframeLayerName,
+  getLayerRegistrationLandmarkIframeUrl,
+  isLayerRegistrationFixedLandmarkIframe,
 } from "viewer/view/layer_registration/layer_registration_protocol";
 import type { IframeWindow } from "viewer/view/layer_registration/workspace/layer_registration_iframe_bridge";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -27,7 +27,7 @@ function getTreeCount() {
   return enforceSkeletonTracing(Store.getState().annotation).trees.size();
 }
 
-// In these tests, the WEBKNOSSOS instance of the test plays the hidden store iframe, which
+// In these tests, the WEBKNOSSOS instance of the test plays the hidden annotation iframe, which
 // holds the layer registration annotation. The page talks to it through the real bridge and
 // the real cross-origin API.
 describe("Layer registration protocol", () => {
@@ -45,46 +45,48 @@ describe("Layer registration protocol", () => {
     location.search = "";
   });
 
-  it("passes layer names with special characters to the worker in its URL", () => {
+  it("passes layer names with special characters to the landmark iframe in its URL", () => {
     const layerName = "color 2 & more+";
-    const url = getLayerRegistrationWorkerUrl(Store.getState().dataset, layerName, true);
+    const url = getLayerRegistrationLandmarkIframeUrl(Store.getState().dataset, "fixed", layerName);
     location.search = new URL(url, location.origin).search;
 
-    expect(getLayerRegistrationWorkerLayerName()).toBe(layerName);
-    expect(isLayerRegistrationPrimaryWorker()).toBe(true);
+    expect(getLandmarkIframeLayerName()).toBe(layerName);
+    expect(isLayerRegistrationFixedLandmarkIframe()).toBe(true);
   });
 
   it("holds back commands until the iframe sent init, because it would drop them", async () => {
-    const pageWindow = iframes.mount("store", handleCrossOriginApiMessage);
+    const pageWindow = iframes.mount("annotation", handleCrossOriginApiMessage);
     const groupIdPromise = iframes.bridge.sendMessage(
-      "store",
+      "annotation",
       "ensureTreeGroupPath",
       FIXED_SIDE_PATH,
     );
     await sleep(10);
-    expect(iframes.sentMessages.store).toEqual([]);
+    expect(iframes.sentMessages.annotation).toEqual([]);
 
     pageWindow.postMessage({ type: "init" }, "*");
     const groupId = await groupIdPromise;
-    expect(await iframes.bridge.sendMessage("store", "findTreeGroupPath", FIXED_SIDE_PATH)).toBe(
-      groupId,
-    );
+    expect(
+      await iframes.bridge.sendMessage("annotation", "findTreeGroupPath", FIXED_SIDE_PATH),
+    ).toBe(groupId);
   });
 
   it("keeps the landmarks of each layer pair and side in their own tree group", async () => {
-    iframes.mountReady("store", handleCrossOriginApiMessage);
+    iframes.mountReady("annotation", handleCrossOriginApiMessage);
     const { sendMessage } = iframes.bridge;
     const treeCountBefore = getTreeCount();
     // Reading must not create groups for layers without landmarks.
-    expect(await sendMessage("store", "findTreeGroupPath", ["color_3", "color_1 landmarks"])).toBe(
-      null,
-    );
-    const fixedGroupId = await sendMessage("store", "ensureTreeGroupPath", FIXED_SIDE_PATH);
+    expect(
+      await sendMessage("annotation", "findTreeGroupPath", ["color_3", "color_1 landmarks"]),
+    ).toBe(null);
+    const fixedGroupId = await sendMessage("annotation", "ensureTreeGroupPath", FIXED_SIDE_PATH);
     // Asking again must not create a second group with the same name.
-    expect(await sendMessage("store", "ensureTreeGroupPath", FIXED_SIDE_PATH)).toBe(fixedGroupId);
+    expect(await sendMessage("annotation", "ensureTreeGroupPath", FIXED_SIDE_PATH)).toBe(
+      fixedGroupId,
+    );
     // Only the parent group of the moving side exists so far.
-    expect(await sendMessage("store", "findTreeGroupPath", MOVING_SIDE_PATH)).toBe(null);
-    const movingGroupId = await sendMessage("store", "ensureTreeGroupPath", MOVING_SIDE_PATH);
+    expect(await sendMessage("annotation", "findTreeGroupPath", MOVING_SIDE_PATH)).toBe(null);
+    const movingGroupId = await sendMessage("annotation", "ensureTreeGroupPath", MOVING_SIDE_PATH);
     expect(fixedGroupId).not.toBe(movingGroupId);
 
     const fixedLandmarks = [
@@ -93,20 +95,20 @@ describe("Layer registration protocol", () => {
     ] as const;
     const movingLandmarks = [{ pairId: 1, position: [7, 8, 9] }] as const;
     await sendMessage(
-      "store",
+      "annotation",
       "replaceTreesInGroup",
       getLandmarkNml([...fixedLandmarks]),
       fixedGroupId,
     );
     await sendMessage(
-      "store",
+      "annotation",
       "replaceTreesInGroup",
       getLandmarkNml([...movingLandmarks]),
       movingGroupId,
     );
     // The next sync replaces the landmarks of one side only.
     await sendMessage(
-      "store",
+      "annotation",
       "replaceTreesInGroup",
       getLandmarkNml([fixedLandmarks[1]]),
       fixedGroupId,
@@ -118,7 +120,7 @@ describe("Layer registration protocol", () => {
     expect(getTreeCount()).toBe(treeCountBefore + 2);
 
     // The page reads the landmarks of one side in the same format.
-    const nmlString = await sendMessage("store", "exportTreesAsNmlString", {
+    const nmlString = await sendMessage("annotation", "exportTreesAsNmlString", {
       groupId: movingGroupId,
     });
     const exportedLandmarks = getLandmarksFromTrees((await parseNml(nmlString)).trees);
@@ -128,24 +130,24 @@ describe("Layer registration protocol", () => {
   });
 
   it("rejects a command that fails in the iframe instead of waiting for a reply", async () => {
-    iframes.mountReady("store", handleCrossOriginApiMessage);
+    iframes.mountReady("annotation", handleCrossOriginApiMessage);
     const { sendMessage } = iframes.bridge;
-    const groupId = await sendMessage("store", "ensureTreeGroupPath", FIXED_SIDE_PATH);
+    const groupId = await sendMessage("annotation", "ensureTreeGroupPath", FIXED_SIDE_PATH);
     await sendMessage(
-      "store",
+      "annotation",
       "replaceTreesInGroup",
       getLandmarkNml([{ pairId: 1, position: [1, 2, 3] }]),
       groupId,
     );
 
     // @ts-expect-error The command doesn't exist, which is what this checks.
-    await expect(sendMessage("store", "unknownCommand")).rejects.toThrow("Unsupported");
-    // Only the worker iframes can import landmarks.
-    await expect(sendMessage("store", "importLandmarks", "<things />")).rejects.toThrow(
+    await expect(sendMessage("annotation", "unknownCommand")).rejects.toThrow("Unsupported");
+    // Only the landmark iframes can import landmarks.
+    await expect(sendMessage("annotation", "importLandmarks", "<things />")).rejects.toThrow(
       "only available in the layer registration view",
     );
     await expect(
-      sendMessage("store", "replaceTreesInGroup", "<things><thing", groupId),
+      sendMessage("annotation", "replaceTreesInGroup", "<things><thing", groupId),
     ).rejects.toThrow('"replaceTreesInGroup" failed');
     // A broken NML must not delete the stored landmarks.
     expect(readStoredLandmarks(FIXED_SIDE_PATH)).toEqual([{ pairId: 1, position: [1, 2, 3] }]);
@@ -153,13 +155,13 @@ describe("Layer registration protocol", () => {
 
   it("only runs its commands for a page of the same origin and replies only to it", async () => {
     const otherIframes = new FakeLayerRegistrationIframes();
-    otherIframes.mountReady("store", handleCrossOriginApiMessage, "https://other.test");
+    otherIframes.mountReady("annotation", handleCrossOriginApiMessage, "https://other.test");
     await expect(
-      otherIframes.bridge.sendMessage("store", "exportTreesAsNmlString"),
+      otherIframes.bridge.sendMessage("annotation", "exportTreesAsNmlString"),
     ).rejects.toThrow("only available to pages of the same origin");
 
     const replyTargetOrigins: string[] = [];
-    iframes.mountReady("store", (event) =>
+    iframes.mountReady("annotation", (event) =>
       handleCrossOriginApiMessage({
         ...event,
         source: {
@@ -170,7 +172,7 @@ describe("Layer registration protocol", () => {
         },
       }),
     );
-    await iframes.bridge.sendMessage("store", "exportTreesAsNmlString");
+    await iframes.bridge.sendMessage("annotation", "exportTreesAsNmlString");
     expect(replyTargetOrigins).toEqual([location.origin]);
   });
 
@@ -203,76 +205,79 @@ describe("Layer registration protocol", () => {
   it("rejects a command if the iframe doesn't send init in time", async () => {
     const iframesWithShortTimeout = new FakeLayerRegistrationIframes(50);
     // E.g. an iframe that can't load the annotation.
-    const pageWindow = iframesWithShortTimeout.mount("store", handleCrossOriginApiMessage);
+    const pageWindow = iframesWithShortTimeout.mount("annotation", handleCrossOriginApiMessage);
     await expect(
-      iframesWithShortTimeout.bridge.sendMessage("store", "exportTreesAsNmlString"),
+      iframesWithShortTimeout.bridge.sendMessage("annotation", "exportTreesAsNmlString"),
     ).rejects.toThrow("did not finish loading");
-    expect(iframesWithShortTimeout.sentMessages.store).toEqual([]);
+    expect(iframesWithShortTimeout.sentMessages.annotation).toEqual([]);
 
     // An init that arrives later still lets the next commands through.
     pageWindow.postMessage({ type: "init" }, "*");
     await expect(
-      iframesWithShortTimeout.bridge.sendMessage("store", "exportTreesAsNmlString"),
+      iframesWithShortTimeout.bridge.sendMessage("annotation", "exportTreesAsNmlString"),
     ).resolves.toContain("<things");
   });
 
   it("rejects a command whose reply gets lost", async () => {
     const iframesWithShortTimeout = new FakeLayerRegistrationIframes(20);
     // E.g. an iframe that reloads while the command is running.
-    iframesWithShortTimeout.mountReady("store", () => {});
-    await expect(iframesWithShortTimeout.bridge.sendMessage("store", "save")).rejects.toThrow(
+    iframesWithShortTimeout.mountReady("annotation", () => {});
+    await expect(iframesWithShortTimeout.bridge.sendMessage("annotation", "save")).rejects.toThrow(
       "did not reply",
     );
   });
 
   it("rejects the running commands of an iframe that reloads and waits for its next init", async () => {
-    // E.g. the user reloads the store iframe while it saves, so "save" gets no reply.
-    const pageWindow = iframes.mount("store", (event) =>
+    // E.g. the user reloads the annotation iframe while it saves, so "save" gets no reply.
+    const pageWindow = iframes.mount("annotation", (event) =>
       event.data.type === "save" ? null : handleCrossOriginApiMessage(event),
     );
     pageWindow.postMessage({ type: "init" }, "*");
-    const savePromise = iframes.bridge.sendMessage("store", "save");
+    const savePromise = iframes.bridge.sendMessage("annotation", "save");
     await sleep(10);
 
-    iframes.bridge.handleIframeReload("store");
+    iframes.bridge.handleIframeReload("annotation");
     await expect(savePromise).rejects.toThrow('reloaded before it replied to "save"');
 
-    const exportPromise = iframes.bridge.sendMessage("store", "exportTreesAsNmlString");
+    const exportPromise = iframes.bridge.sendMessage("annotation", "exportTreesAsNmlString");
     await sleep(10);
-    expect(iframes.sentCommandTypes("store")).toEqual(["save"]);
+    expect(iframes.sentCommandTypes("annotation")).toEqual(["save"]);
     pageWindow.postMessage({ type: "init" }, "*");
     await expect(exportPromise).resolves.toContain("<things");
   });
 
-  it("only accepts worker commands from the workers and save states from the store", async () => {
-    const storeAsSeenByIframe = iframes.mount("store", () => {});
-    const workerAsSeenByIframe = iframes.mount("moving", () => {});
+  it("only accepts commands from the landmark iframes and save states from the annotation iframe", async () => {
+    const pageAsSeenByAnnotationIframe = iframes.mount("annotation", () => {});
+    const pageAsSeenByMovingIframe = iframes.mount("moving", () => {});
     const sendCommandAndSaveState = (pageWindow: IframeWindow, saveState: string) => {
       pageWindow.postMessage({ type: "layerRegistrationCommand", command: "toggleTransform" }, "*");
-      pageWindow.postMessage({ type: "layerRegistrationStoreSavedState", saveState }, "*");
+      pageWindow.postMessage(
+        { type: "layerRegistrationAnnotationIframeSaveState", saveState },
+        "*",
+      );
     };
-    sendCommandAndSaveState(storeAsSeenByIframe, "unsaved");
-    sendCommandAndSaveState(workerAsSeenByIframe, "saving");
+    sendCommandAndSaveState(pageAsSeenByAnnotationIframe, "unsaved");
+    sendCommandAndSaveState(pageAsSeenByMovingIframe, "saving");
     await sleep(10);
 
-    expect(iframes.workerCommands).toEqual([["moving", "toggleTransform"]]);
-    expect(iframes.storeSaveStates).toEqual(["unsaved"]);
+    expect(iframes.landmarkIframeCommands).toEqual([["moving", "toggleTransform"]]);
+    expect(iframes.annotationIframeSaveStates).toEqual(["unsaved"]);
   });
 
   it("ignores messages from windows that are not one of its iframes", async () => {
     const iframesWithShortTimeout = new FakeLayerRegistrationIframes(50);
-    iframesWithShortTimeout.mountReady("store", () => {});
-    const savePromise = iframesWithShortTimeout.bridge.sendMessage("store", "save");
+    iframesWithShortTimeout.mountReady("annotation", () => {});
+    const savePromise = iframesWithShortTimeout.bridge.sendMessage("annotation", "save");
     await sleep(10);
     // E.g. a browser extension or another page that posts messages to this window.
-    const [{ messageId }] = iframesWithShortTimeout.sentMessages.store;
+    const [{ messageId }] = iframesWithShortTimeout.sentMessages.annotation;
     iframesWithShortTimeout.bridge.handleMessage(
       {
         source: { postMessage: () => {} },
         origin: location.origin,
         data: { type: "ack", messageId },
       },
-      { onWorkerCommand: () => {}, onStoreSaveState: () => {} },
+      { onLandmarkIframeCommand: () => {}, onAnnotationIframeSaveState: () => {} },
     );
 
     await expect(savePromise).rejects.toThrow("did not reply");
@@ -282,25 +287,25 @@ describe("Layer registration protocol", () => {
     // E.g. the iframe was redirected to a SSO login page. It keeps its window.
     const otherOrigin = "https://login.test";
     const iframesWithShortTimeout = new FakeLayerRegistrationIframes(50);
-    const pageWindow = iframesWithShortTimeout.mount("store", () => {});
-    iframesWithShortTimeout.postFromOtherOrigin("store", otherOrigin, { type: "init" });
-    const savePromise = iframesWithShortTimeout.bridge.sendMessage("store", "save");
+    const pageWindow = iframesWithShortTimeout.mount("annotation", () => {});
+    iframesWithShortTimeout.postFromOtherOrigin("annotation", otherOrigin, { type: "init" });
+    const savePromise = iframesWithShortTimeout.bridge.sendMessage("annotation", "save");
     await sleep(10);
-    expect(iframesWithShortTimeout.sentMessages.store).toEqual([]);
+    expect(iframesWithShortTimeout.sentMessages.annotation).toEqual([]);
 
     pageWindow.postMessage({ type: "init" }, "*");
     await sleep(10);
-    const [{ messageId }] = iframesWithShortTimeout.sentMessages.store;
-    iframesWithShortTimeout.postFromOtherOrigin("store", otherOrigin, {
+    const [{ messageId }] = iframesWithShortTimeout.sentMessages.annotation;
+    iframesWithShortTimeout.postFromOtherOrigin("annotation", otherOrigin, {
       type: "ack",
       messageId,
     });
-    iframesWithShortTimeout.postFromOtherOrigin("store", otherOrigin, {
-      type: "layerRegistrationStoreSavedState",
+    iframesWithShortTimeout.postFromOtherOrigin("annotation", otherOrigin, {
+      type: "layerRegistrationAnnotationIframeSaveState",
       saveState: "saved",
     });
 
     await expect(savePromise).rejects.toThrow("did not reply");
-    expect(iframesWithShortTimeout.storeSaveStates).toEqual([]);
+    expect(iframesWithShortTimeout.annotationIframeSaveStates).toEqual([]);
   });
 });

@@ -86,8 +86,8 @@ import { Store } from "viewer/singletons";
 import { HelpModal } from "viewer/view/help/help_modal";
 import { LandmarkPanelToggleButton } from "viewer/view/layer_registration/landmark_panel_toggle_button";
 import {
-  isLayerRegistrationPrimaryWorker,
-  isLayerRegistrationWorker,
+  isLayerRegistrationFixedLandmarkIframe,
+  isLayerRegistrationLandmarkIframe,
 } from "viewer/view/layer_registration/layer_registration_protocol";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
 
@@ -948,14 +948,15 @@ function NavbarFrame({ menuItems, trailingNavItems, menuProps, children }: Navba
   );
 }
 
-// The layer registration page has no navbar, so the navbars of its workers only hold the toolbar
-// of the worker, plus the link to the dashboard (left worker) or the toggle of the landmark panel,
-// which is right of the right worker.
-function LayerRegistrationWorkerNavbar() {
+// The layer registration page has no navbar, so the navbars of its landmark iframes only hold the
+// toolbar of the landmark iframe, plus one item of the page: the fixed iframe is the left one, so
+// it shows the link to the dashboard. The moving iframe shows the toggle of the landmark panel,
+// which is right of it.
+function LayerRegistrationLandmarkIframeNavbar() {
   const collapseAllNavItems = useCollapseAllNavItems();
-  if (isLayerRegistrationPrimaryWorker()) {
-    // A worker is an iframe of the layer registration page, so the dashboard replaces the whole
-    // page.
+  if (isLayerRegistrationFixedLandmarkIframe()) {
+    // The link opens the dashboard in place of the whole layer registration page, not only in
+    // this iframe.
     return (
       <NavbarFrame
         menuItems={[getLogoMenuItem(collapseAllNavItems, "_top")]}
@@ -1106,7 +1107,11 @@ function DefaultNavbar() {
 }
 
 function Navbar() {
-  return isLayerRegistrationWorker() ? <LayerRegistrationWorkerNavbar /> : <DefaultNavbar />;
+  return isLayerRegistrationLandmarkIframe() ? (
+    <LayerRegistrationLandmarkIframeNavbar />
+  ) : (
+    <DefaultNavbar />
+  );
 }
 
 function GlobalProgressBar() {

@@ -161,8 +161,8 @@ export const Toolkit = {
   VOLUME_TOOLS: "VOLUME_TOOLS",
   READ_ONLY_TOOLS: "READ_ONLY_TOOLS",
   SPLIT_SEGMENTS: "SPLIT_SEGMENTS",
-  // Only used by the layer registration workers (see layer_registration_worker.ts). It is not
-  // offered in the toolkit switcher.
+  // Only used by the layer registration landmark iframes (see
+  // layer_registration_landmark_iframe.ts). It is not offered in the toolkit switcher.
   LANDMARKS: "LANDMARKS",
 } as const;
 export type Toolkit = (typeof Toolkit)[keyof typeof Toolkit];

@@ -20,7 +20,7 @@ export const OTHER_SIDE: Record<Side, Side> = { fixed: "moving", moving: "fixed"
 export const VIEW_NAMES: Record<Side, string> = { fixed: "left", moving: "right" };
 export type LayerNames = Record<Side, string>;
 
-// Each landmark is a tree with one node. The tree and node ids refer to the worker of the
+// Each landmark is a tree with one node. The tree and node ids refer to the landmark iframe of the
 // landmark's side. The pair id connects the two landmarks of a pair (see getLandmarkPairId).
 // It is null if the tree name doesn't contain one.
 export type Landmark = {
@@ -54,8 +54,9 @@ export type CompleteLandmarkPairRow = IdentifiedLandmarkPair & {
 export type CompleteLandmarkPair = { pairId: number } & Record<Side, Landmark>;
 
 // The two landmarks of a pair are trees with the same name, "Landmark <pair id>", one in each
-// worker. A worker names a tree when a click creates it (see getNewLandmarkTreeProperties in
-// layer_registration_worker.ts). Thus, a pair stays the same when other landmarks are deleted.
+// landmark iframe. A landmark iframe names a tree when a click creates it (see
+// getNewLandmarkTreeProperties in layer_registration_landmark_iframe.ts). Thus, a pair stays the
+// same when other landmarks are deleted.
 const LANDMARK_TREE_NAME_PATTERN = /^Landmark (\d+)$/;
 
 export function getLandmarkTreeName(pairId: number): string {
@@ -89,7 +90,7 @@ export function getLandmarksFromTrees(trees: MutableTreeMap): Landmark[] {
     );
 }
 
-// Prepares the stored landmarks of one side for the import into its worker. Trees without
+// Prepares the stored landmarks of one side for the import into its landmark iframe. Trees without
 // nodes are left out: deleting the only node of a tree keeps the tree. Each tree gets the
 // color of its pair. Trees without a pair id in their name (e.g. stored before pair ids
 // existed) get new pair ids after the highest existing one, in the order of their tree ids.
@@ -115,7 +116,7 @@ export function prepareLandmarkTreesForImport(trees: MutableTreeMap): MutableTre
 // Groups the landmarks of both sides into pairs by their pair id, sorted by pair id. A
 // landmark without a pair id, or a second landmark with the same pair id on the same side,
 // gets a row of its own with pair id null. Neither happens when the landmarks are placed in
-// the workers.
+// the landmark iframes.
 // The landmark positions are in voxels. With the voxel size of the dataset, the residuals are
 // lengths in the unit of the dataset, which also works for anisotropic voxels.
 export function getLandmarkPairs(
@@ -179,9 +180,9 @@ export function getCompleteLandmarkPairs(
     .map(({ pairId, landmarks: { fixed, moving } }) => ({ pairId, fixed, moving }));
 }
 
-// What a worker needs to know about the landmarks of the other worker to choose the pair id of
-// its next landmark (see getNextLandmarkPairId). The layer registration page sends it after
-// each sync.
+// What a landmark iframe needs to know about the landmarks of the other landmark iframe to choose
+// the pair id of its next landmark (see getNextLandmarkPairId). The layer registration page sends
+// it after each sync.
 export type LandmarkPairInfo = {
   // The pair ids that the other side has and this side doesn't, ascending.
   openPairIds: number[];
@@ -273,7 +274,7 @@ export function getLandmarkGroupPath(layerNames: LayerNames, side: Side): string
 const FIXED_LAYER_OVERLAY_COLOR: Vector3 = [0, 255, 0];
 const MOVING_LAYER_OVERLAY_COLOR: Vector3 = [255, 0, 255];
 
-// The colors of the two layers while a worker shows both: the fixed layer in green and the
+// The colors of the two layers while a landmark iframe shows both: the fixed layer in green and the
 // moving layer in magenta, as in BigWarp. Where the layers match, they add up to gray, and
 // structures that don't match show colored edges. Null unless both are color layers, because
 // segmentation layers have no layer color.

@@ -25,11 +25,11 @@ import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { BorderOpenStatus, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import InputCatcher from "viewer/view/input_catcher";
-import { isLayerRegistrationWorker } from "viewer/view/layer_registration/layer_registration_protocol";
+import { isLayerRegistrationLandmarkIframe } from "viewer/view/layer_registration/layer_registration_protocol";
 import type { LayoutKeys } from "viewer/view/layouting/default_layout_configs";
 import {
   DEFAULT_LAYOUT_NAME,
-  getLayerRegistrationWorkerLayoutConfig,
+  getLayerRegistrationLandmarkIframeLayoutConfig,
   getTabDescriptorForBorderTab,
   resetDefaultLayouts,
 } from "viewer/view/layouting/default_layout_configs";
@@ -189,8 +189,8 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
   loadCurrentModel() {
     const { layoutName, layoutKey } = this.props;
-    const layout = isLayerRegistrationWorker()
-      ? getLayerRegistrationWorkerLayoutConfig(layoutKey)
+    const layout = isLayerRegistrationLandmarkIframe()
+      ? getLayerRegistrationLandmarkIframeLayoutConfig(layoutKey)
       : getLayoutConfig(layoutKey, layoutName);
     const model = Model.fromJson(layout);
     return model;

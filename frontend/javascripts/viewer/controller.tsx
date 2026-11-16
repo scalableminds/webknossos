@@ -38,14 +38,14 @@ import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { openAIJobDrawerFromUrl } from "viewer/view/ai_jobs/open_ai_job_drawer_from_url";
 import {
-  isLayerRegistrationStore,
-  isLayerRegistrationWorker,
-} from "viewer/view/layer_registration/layer_registration_protocol";
+  applyLayerRegistrationLandmarkIframeSettings,
+  blockLayerRegistrationLandmarkIframeNavigation,
+  reportLayerRegistrationAnnotationIframeSaveState,
+} from "viewer/view/layer_registration/layer_registration_landmark_iframe";
 import {
-  applyLayerRegistrationWorkerSettings,
-  blockLayerRegistrationWorkerNavigation,
-  reportLayerRegistrationStoreSavedState,
-} from "viewer/view/layer_registration/layer_registration_worker";
+  isLayerRegistrationAnnotationIframe,
+  isLayerRegistrationLandmarkIframe,
+} from "viewer/view/layer_registration/layer_registration_protocol";
 import { getViewerCapabilities } from "viewer/viewer_capabilities";
 import { AnnotationTool } from "./model/accessors/tool_accessor";
 import {
@@ -224,8 +224,8 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       return;
     };
 
-    const blockNavigation = isLayerRegistrationWorker()
-      ? blockLayerRegistrationWorkerNavigation
+    const blockNavigation = isLayerRegistrationLandmarkIframe()
+      ? blockLayerRegistrationLandmarkIframeNavigation
       : beforeUnload;
     window.onbeforeunload = blockNavigation;
     this.props.setBlocking({
@@ -235,8 +235,8 @@ class Controller extends PureComponent<PropsWithRouter, State> {
 
     UrlManager.startUrlUpdater();
     openAIJobDrawerFromUrl();
-    if (isLayerRegistrationWorker()) {
-      applyLayerRegistrationWorkerSettings();
+    if (isLayerRegistrationLandmarkIframe()) {
+      applyLayerRegistrationLandmarkIframeSettings();
     }
     if (getViewerCapabilities().hasScene) {
       await initializeSceneController();
@@ -246,8 +246,8 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     window.webknossos = new ApiLoader(Model);
     app.vent.emit("webknossos:initialized");
     Store.dispatch(wkInitializedAction());
-    if (isLayerRegistrationStore()) {
-      reportLayerRegistrationStoreSavedState();
+    if (isLayerRegistrationAnnotationIframe()) {
+      reportLayerRegistrationAnnotationIframeSaveState();
     }
     this.props.setControllerStatus("loaded");
   }

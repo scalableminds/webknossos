@@ -2,11 +2,11 @@ import { sleep } from "libs/utils";
 import { location } from "libs/window";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import {
+  FakeLandmarkIframe,
   FakeLayerRegistrationIframes,
-  FakeWorker,
   getLandmarkNml,
   mockBuildInfoRequest,
-} from "test/helpers/layer_registration_iframes";
+} from "test/helpers/layer_registration_fake_iframes";
 import { handleCrossOriginApiMessage } from "viewer/api/cross_origin_api";
 import Constants, { type Vector3 } from "viewer/constants";
 import { handleCreateNodeFromGlobalPosition } from "viewer/controller/combinations/skeleton_handlers";
@@ -22,7 +22,7 @@ import {
   getLandmarkPairId,
   getLandmarksFromTrees,
 } from "viewer/view/layer_registration/helpers/layer_registration_helpers";
-import { applyLayerRegistrationWorkerSettings } from "viewer/view/layer_registration/layer_registration_worker";
+import { applyLayerRegistrationLandmarkIframeSettings } from "viewer/view/layer_registration/layer_registration_landmark_iframe";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Stored landmarks with the cases that the import handles: a tree without a pair id in its name
@@ -42,7 +42,7 @@ const STORED_LANDMARKS_NML = `<things>
   </thing>
 </things>`;
 
-// Where the layer of the worker has data, according to the mocked data store.
+// Where the layer of the landmark iframe has data, according to the mocked data store.
 const DATA_POSITION: Vector3 = [12, 34, 56];
 
 function mockFindDataRequest({ mocks }: WebknossosTestContext) {
@@ -55,7 +55,7 @@ function mockFindDataRequest({ mocks }: WebknossosTestContext) {
   );
 }
 
-// The landmark trees of the worker, in the order in which they were created.
+// The landmark trees of the landmark iframe, in the order in which they were created.
 function getLandmarkTrees() {
   return enforceSkeletonTracing(Store.getState().annotation)
     .trees.values()
@@ -69,19 +69,19 @@ function clickAt(position: Vector3) {
   handleCreateNodeFromGlobalPosition({ rounded: position, floating: position }, "PLANE_XY", false);
 }
 
-// In these tests, the WEBKNOSSOS instance of the test plays the worker iframe of the fixed layer.
-describe("Layer registration worker", () => {
+// In these tests, the WEBKNOSSOS instance of the test plays the landmark iframe of the fixed layer.
+describe("Layer registration landmark iframe", () => {
   let iframes: FakeLayerRegistrationIframes;
 
   beforeEach<WebknossosTestContext>(async (context) => {
-    // The URL of a worker iframe. Set before the setup, because the viewer reads its
+    // The URL of a landmark iframe. Set before the setup, because the viewer reads its
     // capabilities from the URL only once.
-    location.search = "?layerRegistrationWorker=color";
+    location.search = "?layerRegistrationIframe=fixed&layerRegistrationLayer=color";
     await setupWebknossosForTesting(context, "skeleton");
     mockBuildInfoRequest(context);
     mockFindDataRequest(context);
     // Like the controller does after the annotation was loaded.
-    await applyLayerRegistrationWorkerSettings();
+    await applyLayerRegistrationLandmarkIframeSettings();
     iframes = new FakeLayerRegistrationIframes();
     iframes.mountReady("fixed", handleCrossOriginApiMessage);
   });
@@ -136,7 +136,7 @@ describe("Layer registration worker", () => {
       { name: "Landmark 4", color: getLandmarkColor(4), nodeCount: 1 },
     ]);
 
-    // The page reads the landmarks of the worker like this.
+    // The page reads the landmarks of the landmark iframe like this.
     const nmlString = await sendMessage("fixed", "exportTreesAsNmlString");
     const pairIds = getLandmarksFromTrees((await parseNml(nmlString)).trees).map(
       ({ pairId }) => pairId,
@@ -198,12 +198,12 @@ describe("Layer registration worker", () => {
     ]);
   });
 
-  // The tests of the layer registration page use FakeWorker instead of real workers.
-  // The goal is to test the FakeWorker behaving correctly.
-  it("imports and exports landmarks like the FakeWorker of the page tests", async () => {
-    iframes.mountReady("moving", new FakeWorker().handleMessage);
+  // The tests of the layer registration page use FakeLandmarkIframe instead of real landmark
+  // iframes. The goal is to test the FakeLandmarkIframe behaving correctly.
+  it("imports and exports landmarks like the FakeLandmarkIframe of the page tests", async () => {
+    iframes.mountReady("moving", new FakeLandmarkIframe().handleMessage);
     const { sendMessage } = iframes.bridge;
-    const [realWorkerLandmarks, fakeWorkerLandmarks] = await Promise.all(
+    const [realIframeLandmarks, fakeIframeLandmarks] = await Promise.all(
       (["fixed", "moving"] as const).map(async (side) => {
         await sendMessage(side, "importLandmarks", STORED_LANDMARKS_NML);
         const nmlString = await sendMessage(side, "exportTreesAsNmlString");
@@ -215,11 +215,11 @@ describe("Layer registration worker", () => {
     );
 
     // The tree without a pair id gets the next one, and the tree without nodes is left out.
-    expect(realWorkerLandmarks).toEqual([
+    expect(realIframeLandmarks).toEqual([
       { pairId: 1, position: [3, 3, 3] },
       { pairId: 3, position: [1, 1, 1] },
       { pairId: 4, position: [2, 2, 2] },
     ]);
-    expect(fakeWorkerLandmarks).toEqual(realWorkerLandmarks);
+    expect(fakeIframeLandmarks).toEqual(realIframeLandmarks);
   });
 });

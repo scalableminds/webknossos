@@ -36,8 +36,8 @@ function deliverLater(deliver: () => unknown) {
  */
 export class FakeLayerRegistrationIframes {
   readonly bridge: IframeBridge;
-  readonly workerCommands: Array<[IframeRole, LayerRegistrationCommand]> = [];
-  readonly storeSaveStates: SaveState[] = [];
+  readonly landmarkIframeCommands: Array<[IframeRole, LayerRegistrationCommand]> = [];
+  readonly annotationIframeSaveStates: SaveState[] = [];
   // All messages that the page sent, per iframe.
   readonly sentMessages: Record<
     IframeRole,
@@ -45,12 +45,12 @@ export class FakeLayerRegistrationIframes {
   > = {
     fixed: [],
     moving: [],
-    store: [],
+    annotation: [],
   };
   private readonly windows: Record<IframeRole, IframeWindow | null> = {
     fixed: null,
     moving: null,
-    store: null,
+    annotation: null,
   };
 
   // The iframes have the origin of WEBKNOSSOS.
@@ -89,8 +89,10 @@ export class FakeLayerRegistrationIframes {
       this.bridge.handleMessage(
         { source, origin, data: data as object },
         {
-          onWorkerCommand: (side, command) => this.workerCommands.push([side, command]),
-          onStoreSaveState: (saveState) => this.storeSaveStates.push(saveState),
+          onLandmarkIframeCommand: (side, command) =>
+            this.landmarkIframeCommands.push([side, command]),
+          onAnnotationIframeSaveState: (saveState) =>
+            this.annotationIframeSaveStates.push(saveState),
         },
       ),
     );
@@ -108,7 +110,7 @@ export class FakeLayerRegistrationIframes {
 
 type FakeLandmark = { pairId: number; position: Readonly<Vector3> };
 
-// A minimal NML with one tree per landmark, as the workers export it.
+// A minimal NML with one tree per landmark, as the landmark iframes export it.
 export function getLandmarkNml(landmarks: FakeLandmark[]): string {
   const things = landmarks.map(
     ({ pairId, position: [x, y, z] }, index) => `
@@ -120,11 +122,11 @@ export function getLandmarkNml(landmarks: FakeLandmark[]): string {
   return `<things>${things.join("")}</things>`;
 }
 
-/** A worker iframe that only keeps its landmarks, without a real annotation. The user places
- * and deletes landmarks with setLandmarks. It imports and exports landmarks like the real worker
- * (see the worker spec).
+/** A landmark iframe that only keeps its landmarks, without a real annotation. The user places
+ * and deletes landmarks with setLandmarks. It imports and exports landmarks like the real
+ * landmark iframe (see the landmark iframe spec).
  */
-export class FakeWorker {
+export class FakeLandmarkIframe {
   landmarks: FakeLandmark[] = [];
   readonly receivedPairInfos: unknown[] = [];
 
@@ -156,7 +158,7 @@ export class FakeWorker {
   };
 }
 
-// The landmarks in the tree group at the given path of the annotation in the store of this
+// The landmarks in the tree group at the given path of the annotation in the Redux store of this
 // test, sorted by pair id. Empty if there is no such group.
 export function readStoredLandmarks(groupPath: string[]): FakeLandmark[] {
   const { treeGroups, trees } = enforceSkeletonTracing(Store.getState().annotation);
@@ -182,14 +184,14 @@ export function readStoredLandmarks(groupPath: string[]): FakeLandmark[] {
     .toSorted((a, b) => a.pairId - b.pairId);
 }
 
-// Sets WEBKNOSSOS up like the store iframe of the layer registration page, which is a viewer
+// Sets WEBKNOSSOS up like the annotation iframe of the layer registration page, which is a viewer
 // without a scene (see ViewerCapabilities.hasScene). WK_INITIALIZED is not dispatched yet.
-export async function setupStoreWithoutScene(context: WebknossosTestContext) {
+export async function setupAnnotationIframeWithoutScene(context: WebknossosTestContext) {
   await setupWebknossosForTesting(context, "skeleton", undefined, {
     dontDispatchWkInitialized: true,
   });
   mockBuildInfoRequest(context);
-  // @ts-expect-error The test setup creates a dummy scene controller, which the store doesn't have.
+  // @ts-expect-error Unlike the test setup, the annotation iframe has no scene controller.
   setSceneController(null);
 }
 

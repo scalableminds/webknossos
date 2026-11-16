@@ -4,7 +4,7 @@ import ConnectomeReducer from "viewer/model/reducers/connectome_reducer";
 import DatasetReducer from "viewer/model/reducers/dataset_reducer";
 import FlycamInfoCacheReducer from "viewer/model/reducers/flycam_info_cache_reducer";
 import FlycamReducer from "viewer/model/reducers/flycam_reducer";
-import LayerRegistrationWorkerReducer from "viewer/model/reducers/layer_registration_worker_reducer";
+import LayerRegistrationLandmarkIframeReducer from "viewer/model/reducers/layer_registration_landmark_iframe_reducer";
 import MipBBoxReducer from "viewer/model/reducers/mip_bbox_reducer";
 import OperationContextReducer from "viewer/model/reducers/operation_context_reducer";
 import OrganizationReducer from "viewer/model/reducers/organization_reducer";
@@ -43,7 +43,7 @@ export const combinedReducer = reduceReducers(
   OrganizationReducer,
   MipBBoxReducer,
   OperationContextReducer,
-  LayerRegistrationWorkerReducer,
+  LayerRegistrationLandmarkIframeReducer,
 ) as Reducer;
 
 export const rootReducer = withRebaseEditGuard(combinedReducer);

@@ -315,12 +315,12 @@ function markTabsetAsMaximized(node: RowOrTabsetNode, tabId: string): boolean {
   return node.children.some((child) => markTabsetAsMaximized(child, tabId));
 }
 
-// The layer registration workers always start with the default layout, independent of the
+// The layer registration landmark iframes always start with the default layout, independent of the
 // layouts that the user stored, with the XY viewport maximized and both borders closed. Outside
 // of an iframe, the default layout opens the borders. The user can restore the other viewports
-// and open the left border as usual. The right border can't be opened in workers (see
+// and open the left border as usual. The right border can't be opened in landmark iframes (see
 // FlexLayoutWrapper.isBorderLocked).
-export const getLayerRegistrationWorkerLayoutConfig = (layoutKey: Layout): ModelConfig => {
+export const getLayerRegistrationLandmarkIframeLayoutConfig = (layoutKey: Layout): ModelConfig => {
   const layout = cloneDeep(getDefaultLayouts()[layoutKey]);
   markTabsetAsMaximized(layout.layout, OrthoViews.PLANE_XY);
   for (const border of layout.borders) {

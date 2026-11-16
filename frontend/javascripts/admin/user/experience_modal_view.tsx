@@ -352,7 +352,9 @@ function ExperienceModalView({
                 {record.changed ? (
                   <Tooltip placement="top" title="Revert Changes">
                     <Button
+                      type="text"
                       icon={<RollbackOutlined />}
+                      aria-label="Revert Changes"
                       style={{
                         marginLeft: 15,
                       }}
@@ -369,7 +371,9 @@ function ExperienceModalView({
           render={(record) => (
             <Tooltip placement="top" title="Remove Entry">
               <Button
+                type="text"
                 icon={<DeleteOutlined />}
+                aria-label="Remove Entry"
                 onClick={() => removeEntryFromTable(record.domain)}
               />
             </Tooltip>

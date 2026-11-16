@@ -48,7 +48,8 @@ function isEmptyDocument(iframe: HTMLIFrameElement): boolean {
  *   layer_registration_protocol.ts).
  * - onIframeReloaded is called when an iframe loads a second page, e.g. because it was
  *   reloaded or navigated away. The iframe then no longer shows the state the page expects.
- * - annotationIframeSaveState tells whether the layer registration annotation in the annotation iframe is saved.
+ * - annotationIframeSaveState tells whether the layer registration annotation in the annotation
+ *   iframe is saved.
  */
 export function useIframeBridge(
   onLandmarkIframeCommand: (side: Side, command: LayerRegistrationCommand) => void,

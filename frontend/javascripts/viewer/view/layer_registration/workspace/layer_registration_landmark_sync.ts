@@ -26,8 +26,8 @@ function getStoredFields(
 // The landmarks of one iframe, as NML and parsed.
 type IframeLandmarks = { nmlString: string; landmarks: Landmark[] };
 
-// Reads the landmarks of an iframe: of a landmark iframe all trees, of the store the trees of one
-// group.
+// Reads the landmarks of an iframe: of a landmark iframe all trees, of the annotation iframe the
+// trees of one group.
 export async function readLandmarksOfIframe(
   sendMessage: SendMessage,
   role: IframeRole,
@@ -60,17 +60,17 @@ export type LandmarkSyncListener = {
   onHasUnsyncedLandmarksChange: (hasUnsyncedLandmarks: boolean) => void;
 };
 
-/** Keeps the landmarks of the two landmark iframes and the persisted layer registration annotation in
- * sync:
- * 1. importStoredLandmarks imports the stored landmarks of each side into the landmark iframe of that
- *    side. The landmark iframe annotations are sandboxes and start empty.
- * 2. Afterwards, each landmark iframe is the source of truth for its side. Each call of sync reads the
- *    landmarks of both landmark iframes. When the landmarks of a landmark iframe changed (added, deleted,
- *    moved, undo, ...), the group of that side in the layer registration annotation is
- *    replaced with the trees of the landmark iframe. Each landmark iframe also gets the pair info that it needs
- *    to name its next landmark (see getLandmarkPairInfo).
- * The sync can be stopped for good (e.g. after a landmark iframe lost its landmarks), or stopped after
- * writing the last changes and resumed (e.g. before and after a failed switch to another
+/** Keeps the landmarks of the two landmark iframes and the persisted layer registration
+ * annotation in sync:
+ * 1. importStoredLandmarks imports the stored landmarks of each side into the landmark iframe of
+ *    that side. The annotations of the landmark iframes are sandboxes and start empty.
+ * 2. Afterwards, each landmark iframe is the source of truth for its side. Each call of sync
+ *    reads the landmarks of both landmark iframes. When the landmarks of a landmark iframe
+ *    changed (added, deleted, moved, undo, ...), the group of that side in the layer registration
+ *    annotation is replaced with the trees of the landmark iframe. Each landmark iframe also gets
+ *    the pair info that it needs to name its next landmark (see getLandmarkPairInfo).
+ * The sync can be stopped for good (e.g. after a landmark iframe lost its landmarks), or stopped
+ * after writing the last changes and resumed (e.g. before and after a failed switch to another
  * moving layer).
  */
 export class LandmarkSync {

@@ -35,7 +35,8 @@ trait JobResultLinks {
             JobCommand.infer_instances | JobCommand.align =>
           returnValue.map(linkFromDatasetOrAnnotationReturnValue(_, organizationId))
         case JobCommand.train_neuron_model | JobCommand.train_instance_model | JobCommand.train_model =>
-          Some("/aiModels")
+          // The hash prefills the search of the AI model list, so that only the trained model is shown.
+          Some(argAsStringOpt("model_id").map(modelId => s"/aiModels#$modelId").getOrElse("/aiModels"))
         case _ => None
       }
     }

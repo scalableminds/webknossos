@@ -1,7 +1,7 @@
 import { FileTextOutlined, SyncOutlined, TeamOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
-import { getUsersOrganizations } from "admin/api/organization";
+import { getUsersOrganizations, isAiModelAccessibleBySwitching } from "admin/api/organization";
 import { getShowTrainingDataLink, JobState } from "admin/job/job_list_view";
 import { getAiModels, updateAiModel } from "admin/rest_api";
 import {
@@ -19,6 +19,7 @@ import {
   type TableProps,
   Typography,
 } from "antd";
+import { BrainSpinnerWithError } from "components/brain_spinner";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
@@ -38,16 +39,23 @@ import { enforceActiveUser, formatUserName } from "viewer/model/accessors/user_a
 
 const { Search } = Input;
 
+const OBJECT_ID_REGEX = /^[0-9a-f]{24}$/;
+
 export default function AiModelListView() {
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const [currentlyEditedModel, setCurrentlyEditedModel] = useState<AiModel | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  // The URL hash prefills the search. Links to a specific model (e.g. from the
+  // "training succeeded" email) use the model id as the hash.
+  const [initialSearchQuery] = useState(() => decodeURIComponent(location.hash.slice(1)));
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
+  const linkedModelId = OBJECT_ID_REGEX.test(initialSearchQuery) ? initialSearchQuery : null;
   const { modal } = App.useApp();
 
   const {
     data: aiModels = [],
     refetch,
     isFetching,
+    isSuccess,
   } = useQuery({
     queryKey: ["aiModels"],
     queryFn: async () => {
@@ -60,6 +68,32 @@ export default function AiModelListView() {
       }
     },
   });
+
+  // If the linked model is not listed, it might belong to another organization of the user.
+  const isLinkedModelMissing =
+    linkedModelId != null && isSuccess && !aiModels.some((model) => model.id === linkedModelId);
+  const { data: organizationToSwitchTo } = useQuery({
+    queryKey: ["aiModelAccess", linkedModelId],
+    queryFn: async () => {
+      try {
+        return await isAiModelAccessibleBySwitching(linkedModelId as string);
+      } catch (_err) {
+        // The model does not exist or is not accessible in any organization of the user.
+        return null;
+      }
+    },
+    enabled: isLinkedModelMissing,
+  });
+
+  if (isLinkedModelMissing && organizationToSwitchTo != null) {
+    return (
+      <BrainSpinnerWithError
+        gotUnhandledError={false}
+        organizationToSwitchTo={organizationToSwitchTo}
+        entity="AI model"
+      />
+    );
+  }
 
   const columns: TableProps<AiModel>["columns"] = [
     {
@@ -151,6 +185,7 @@ export default function AiModelListView() {
             dataSource={filterWithSearchQueryAND(
               aiModels,
               [
+                "id",
                 "name",
                 "comment",
                 (model) => formatUserName(null, model.user),

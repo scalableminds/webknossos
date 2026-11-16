@@ -24,7 +24,7 @@ case class Token(
     tokenType: TokenType,
     created: Instant = Instant.now,
     isDeleted: Boolean = false,
-    // Set for agent tokens, which carry the scopes of the OAuth grant they were issued under.
+    // Set for scoped API tokens, which carry the scopes of the OAuth grant they were issued under.
     _oauthGrant: Option[ObjectId] = None
 ) {
 
@@ -125,7 +125,7 @@ class TokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    AND tokenType = $tokenType""".asUpdate)
     } yield ()
 
-  // Revokes the agent tokens issued under an OAuth grant.
+  // Revokes the scoped API tokens issued under an OAuth grant.
   def deleteAllByOAuthGrant(grantId: ObjectId): Fox[Unit] =
     for {
       _ <- run(q"UPDATE $collectionName SET isDeleted = TRUE WHERE _oauthGrant = $grantId".asUpdate)

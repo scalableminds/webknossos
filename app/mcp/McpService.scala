@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import models.user.User
 import play.api.libs.json.*
 import oauth.OAuthGrant
-import security.AgentTokenService
+import security.ScopedApiTokenService
 import utils.WkConf
 
 import javax.inject.{Inject, Singleton}
@@ -17,7 +17,7 @@ import scala.concurrent.{ExecutionContext, Future}
   */
 @Singleton
 class McpService @Inject() (
-    agentTokenService: AgentTokenService,
+    scopedApiTokenService: ScopedApiTokenService,
     pythonDocsService: PythonDocsService,
     emSkillsService: EmSkillsService,
     conf: WkConf
@@ -59,7 +59,7 @@ class McpService @Inject() (
         s"""Creates an API token for the current WEBKNOSSOS user, to be used with the `webknossos` Python
            |library. The token acts for the user, limited to the permissions the user granted to this connection, and
            |expires after ${formatDuration(
-            conf.Silhouette.TokenAuthenticator.agentTokenExpiry
+            conf.Silhouette.TokenAuthenticator.scopedApiTokenExpiry
           )}. Returns the token together
            |with the URL of this WEBKNOSSOS instance and the user's organization id.
            |
@@ -218,7 +218,7 @@ class McpService @Inject() (
       case Some(name) =>
         val arguments = (params \ "arguments").asOpt[JsObject].getOrElse(Json.obj())
         name match {
-          case `getTokenToolName` => asToolResult(agentTokenFor(user, grant))
+          case `getTokenToolName` => asToolResult(scopedApiTokenFor(user, grant))
           case `listDocsToolName` => asToolResult(pythonDocsService.getIndex)
           case `readDocsToolName` =>
             (arguments \ "url").asOpt[String] match {
@@ -239,9 +239,9 @@ class McpService @Inject() (
   private def missingArgument(name: String): Future[Either[JsonRpcError, JsValue]] =
     Future.successful(Right(toolResult(s"Missing or invalid argument: $name", isError = true)))
 
-  private def agentTokenFor(user: User, grant: OAuthGrant): Fox[String] =
+  private def scopedApiTokenFor(user: User, grant: OAuthGrant): Fox[String] =
     for {
-      token <- agentTokenService.create(grant, conf.Silhouette.TokenAuthenticator.agentTokenExpiry)
+      token <- scopedApiTokenService.create(grant, conf.Silhouette.TokenAuthenticator.scopedApiTokenExpiry)
     } yield Json.prettyPrint(
       Json.obj(
         "token" -> token.value,

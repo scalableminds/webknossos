@@ -13,7 +13,7 @@ DROP TABLE webknossos.oauthGrants;
 DROP TABLE webknossos.oauthClients;
 
 -- Clear any rows using the new enum value before removing it
-DELETE FROM webknossos.tokens WHERE tokenType = 'Agent';
+DELETE FROM webknossos.tokens WHERE tokenType = 'ScopedApi';
 
 -- Recreate the enum type without the new value by temporarily casting to text
 ALTER TABLE webknossos.tokens ALTER COLUMN tokenType TYPE VARCHAR(255);

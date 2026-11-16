@@ -53,14 +53,14 @@ connect with an API token.
 | `list_em_processing_skills` | Returns the catalogue of the EM-Skills collection for volume EM processing. |
 | `read_em_processing_skill` | Returns one skill from that collection. |
 
-The intended workflow is that the agent asks for an agent token, looks up the API of the
+The intended workflow is that the agent asks for a scoped API token, looks up the API of the
 [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/) in the documentation, and then writes and runs
 Python code against your instance, e.g.:
 
 ```python
 import webknossos as wk
 
-with wk.webknossos_context(url="https://webknossos.org", token="<agent_token>"):
+with wk.webknossos_context(url="https://webknossos.org", token="<api_token>"):
     dataset = wk.Dataset.open_remote("my-dataset")
 ```
 
@@ -108,16 +108,16 @@ voxel data. An agent can never reach your API token, approve connections or chan
 ## Disconnecting
 
 The `MCP Agent Connections` tab lists the connected applications with their permission level and when they were
-last used. `Disconnect` revokes a connection immediately, including all agent tokens the agent obtained
+last used. `Disconnect` revokes a connection immediately, including all scoped API tokens the agent obtained
 through it. [Logging out everywhere](password.md#log-out-everywhere) disconnects all
 applications.
 
-## Agent tokens
+## Scoped API tokens
 
-The MCP server itself only offers a few tools. To work with your data, an agent asks it for an agent token,
+The MCP server itself only offers a few tools. To work with your data, an agent asks it for a scoped API token,
 which it then uses with the WEBKNOSSOS Python library. These tokens act for your account, limited to the
 permissions of the connection, and expire after one day (configurable by the instance operator with
-`silhouette.tokenAuthenticator.agentTokenExpiry`).
+`silhouette.tokenAuthenticator.scopedApiTokenExpiry`).
 
 The OAuth tokens of the connection itself are only accepted by the MCP server. They expire after one hour and are
 renewed by the client automatically; a connection that is not used for 30 days expires.

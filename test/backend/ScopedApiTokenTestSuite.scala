@@ -6,15 +6,15 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import oauth.{OAuthGrant, OAuthGrantDAO}
 import org.scalatest.wordspec.AnyWordSpec
-import security.{Scope, ScopeMode, ScopeResource, AgentToken, AgentTokenService, Token, TokenDAO, TokenType}
+import security.{Scope, ScopeMode, ScopeResource, ScopedApiToken, ScopedApiTokenService, Token, TokenDAO, TokenType}
 
 import scala.collection.mutable
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext}
 
 /** Keeps the tokens in memory and mimics the soft deletion of the real DAO. The SqlClient is never touched, because all
-  * methods AgentTokenService uses are overridden. The round trip through the real database is covered by the e2e tests
-  * in mcp.e2e.ts.
+  * methods ScopedApiTokenService uses are overridden. The round trip through the real database is covered by the e2e
+  * tests in mcp.e2e.ts.
   */
 class InMemoryTokenDAO(implicit ec: ExecutionContext) extends TokenDAO(null) {
   val tokens: mutable.Map[String, Token] = mutable.Map.empty
@@ -42,7 +42,7 @@ class InMemoryOAuthGrantDAO(implicit ec: ExecutionContext) extends OAuthGrantDAO
   override def findLive(id: ObjectId): Fox[OAuthGrant] = grants.get(id).filterNot(_.isDeleted).toFox
 }
 
-class AgentTokenTestSuite extends AnyWordSpec {
+class ScopedApiTokenTestSuite extends AnyWordSpec {
 
   private given ExecutionContext = ExecutionContext.global
 
@@ -51,7 +51,7 @@ class AgentTokenTestSuite extends AnyWordSpec {
   private case class Setup(
       tokenDAO: InMemoryTokenDAO,
       grantDAO: InMemoryOAuthGrantDAO,
-      service: AgentTokenService
+      service: ScopedApiTokenService
   ) {
     def addGrant(scopes: String = "write", userId: ObjectId = ObjectId.generate): OAuthGrant = {
       val grant = OAuthGrant(ObjectId.generate, userId, "https://client.example.com/metadata.json", "Client", scopes)
@@ -59,31 +59,31 @@ class AgentTokenTestSuite extends AnyWordSpec {
       grant
     }
 
-    def create(grant: OAuthGrant, expiry: FiniteDuration = 1.hour): AgentToken =
+    def create(grant: OAuthGrant, expiry: FiniteDuration = 1.hour): ScopedApiToken =
       await(service.create(grant, expiry)).get("creating a token must succeed in this test")
 
-    def findValid(value: String): Option[AgentToken] = await(service.findValid(value)).toOption
+    def findValid(value: String): Option[ScopedApiToken] = await(service.findValid(value)).toOption
   }
 
   private def setup(): Setup = {
     val tokenDAO = new InMemoryTokenDAO
     val grantDAO = new InMemoryOAuthGrantDAO
-    Setup(tokenDAO, grantDAO, new AgentTokenService(tokenDAO, grantDAO))
+    Setup(tokenDAO, grantDAO, new ScopedApiTokenService(tokenDAO, grantDAO))
   }
 
-  "AgentTokenService" should {
-    "store a created token as an agent token of the grant's user, without idle timeout" in {
+  "ScopedApiTokenService" should {
+    "store a created token as a scoped API token of the grant's user, without idle timeout" in {
       val s = setup()
       val grant = s.addGrant()
       val token = s.create(grant)
       val stored = s.tokenDAO.tokens(token.value)
-      assert(stored.tokenType == TokenType.Agent)
+      assert(stored.tokenType == TokenType.ScopedApi)
       assert(stored._user == grant._user)
       assert(stored._oauthGrant.contains(grant._id))
       assert(stored.idleTimeout.isEmpty)
       assert(stored.expirationDateTime == token.expiresAt)
-      assert(token.value.startsWith("wk_agent_token_"))
-      assert(s.service.isAgentTokenValue(token.value))
+      assert(token.value.startsWith("wk_scoped_api_token_"))
+      assert(s.service.isScopedApiTokenValue(token.value))
     }
 
     "find a token it created, with the grant's scopes" in {
@@ -122,7 +122,7 @@ class AgentTokenTestSuite extends AnyWordSpec {
 
     "not find an unknown token" in {
       val s = setup()
-      assert(s.findValid("wk_agent_token_unknown").isEmpty)
+      assert(s.findValid("wk_scoped_api_token_unknown").isEmpty)
     }
 
     "not query the database for values without the prefix" in {
@@ -134,7 +134,7 @@ class AgentTokenTestSuite extends AnyWordSpec {
     "not accept a token of another type, even with the prefix" in {
       val s = setup()
       val now = Instant.now
-      val value = "wk_agent_token_notAnAgentToken"
+      val value = "wk_scoped_api_token_notAScopedApiToken"
       s.tokenDAO.tokens.put(
         value,
         Token(ObjectId.generate, value, ObjectId.generate, now, now + 1.hour, None, TokenType.Authentication, now)
@@ -142,13 +142,13 @@ class AgentTokenTestSuite extends AnyWordSpec {
       assert(s.findValid(value).isEmpty)
     }
 
-    "not accept an agent token without a grant" in {
+    "not accept a scoped API token without a grant" in {
       val s = setup()
       val now = Instant.now
-      val value = "wk_agent_token_withoutGrant"
+      val value = "wk_scoped_api_token_withoutGrant"
       s.tokenDAO.tokens.put(
         value,
-        Token(ObjectId.generate, value, ObjectId.generate, now, now + 1.hour, None, TokenType.Agent, now)
+        Token(ObjectId.generate, value, ObjectId.generate, now, now + 1.hour, None, TokenType.ScopedApi, now)
       )
       assert(s.findValid(value).isEmpty)
     }

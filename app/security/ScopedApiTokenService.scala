@@ -10,29 +10,30 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-case class AgentToken(value: String, userId: ObjectId, expiresAt: Instant, grantId: ObjectId, scopes: Scope.Set)
+case class ScopedApiToken(value: String, userId: ObjectId, expiresAt: Instant, grantId: ObjectId, scopes: Scope.Set)
 
-/** Agent tokens are handed out to AI agents via the MCP server, for use with the WEBKNOSSOS Python library. Each one is
-  * issued under an OAuth grant (see oauth.OAuthService): it acts for the grant's user, is limited to the grant's scopes
-  * and is revoked together with the grant. The scopes are read from the grant on every request rather than frozen into
-  * the token, so changing them takes effect immediately, see filters.ScopeFilter.
+/** Scoped API tokens are API tokens for clients that a user connected via OAuth. Today those are AI agents, which get
+  * them from the MCP server for use with the WEBKNOSSOS Python library. Each one is issued under an OAuth grant (see
+  * oauth.OAuthService): it acts for the grant's user, is limited to the grant's scopes and is revoked together with the
+  * grant. The scopes are read from the grant on every request rather than frozen into the token, so changing them takes
+  * effect immediately, see filters.ScopeFilter.
   *
-  * They are stored in webknossos.tokens with TokenType.Agent, so the regular token authentication accepts them like any
-  * other token. They have no idle timeout, so silhouette never writes lastUsedDateTime back for them. Expired ones are
-  * cleaned up together with all other tokens (see TokenDAO.deleteAllExpired).
+  * They are stored in webknossos.tokens with TokenType.ScopedApi, so the regular token authentication accepts them like
+  * any other token. They have no idle timeout, so silhouette never writes lastUsedDateTime back for them. Expired ones
+  * are cleaned up together with all other tokens (see TokenDAO.deleteAllExpired).
   *
   * Their values carry a fixed prefix. This lets findValid skip the database for all other tokens, so checking whether a
   * request uses a scoped token does not cost an extra database roundtrip for regular API tokens.
   */
-class AgentTokenService @Inject() (tokenDAO: TokenDAO, grantDAO: OAuthGrantDAO)(implicit ec: ExecutionContext) {
+class ScopedApiTokenService @Inject() (tokenDAO: TokenDAO, grantDAO: OAuthGrantDAO)(implicit ec: ExecutionContext) {
 
-  private val valuePrefix = "wk_agent_token_"
+  private val valuePrefix = "wk_scoped_api_token_"
 
-  def create(grant: OAuthGrant, expiry: FiniteDuration): Fox[AgentToken] =
+  def create(grant: OAuthGrant, expiry: FiniteDuration): Fox[ScopedApiToken] =
     insert(grant._user, grant._id, Scope.Set.parse(grant.scopes), expiry)
 
   // Another token under the same grant, e.g. when an agent asks for a datastore token.
-  def createFrom(existing: AgentToken, expiry: FiniteDuration): Fox[AgentToken] =
+  def createFrom(existing: ScopedApiToken, expiry: FiniteDuration): Fox[ScopedApiToken] =
     insert(existing.userId, existing.grantId, existing.scopes, expiry)
 
   private def insert(
@@ -40,7 +41,7 @@ class AgentTokenService @Inject() (tokenDAO: TokenDAO, grantDAO: OAuthGrantDAO)(
       grantId: ObjectId,
       scopes: Scope.Set,
       expiry: FiniteDuration
-  ): Fox[AgentToken] = {
+  ): Fox[ScopedApiToken] = {
     val now = Instant.now
     val token = Token(
       _id = ObjectId.generate,
@@ -49,31 +50,31 @@ class AgentTokenService @Inject() (tokenDAO: TokenDAO, grantDAO: OAuthGrantDAO)(
       lastUsedDateTime = now,
       expirationDateTime = now + expiry,
       idleTimeout = None,
-      tokenType = TokenType.Agent,
+      tokenType = TokenType.ScopedApi,
       created = now,
       _oauthGrant = Some(grantId)
     )
     for {
       _ <- tokenDAO.insertOne(token)
-    } yield AgentToken(token.value, userId, token.expirationDateTime, grantId, scopes)
+    } yield ScopedApiToken(token.value, userId, token.expirationDateTime, grantId, scopes)
   }
 
-  def isAgentTokenValue(value: String): Boolean = value.startsWith(valuePrefix)
+  def isScopedApiTokenValue(value: String): Boolean = value.startsWith(valuePrefix)
 
-  /** Empty if the token does not exist, is not an agent token, has been revoked or has expired, or if its grant has
+  /** Empty if the token does not exist, is not a scoped API token, has been revoked or has expired, or if its grant has
     * been revoked. Failure means that the lookup itself failed, callers must then fail closed.
     */
-  def findValid(value: String): Fox[AgentToken] =
-    if (!isAgentTokenValue(value)) Fox.empty
+  def findValid(value: String): Fox[ScopedApiToken] =
+    if (!isScopedApiTokenValue(value)) Fox.empty
     else
       for {
         token <- tokenDAO.findOneByValue(value)
-        _ <- Fox.fromBool(token.tokenType == TokenType.Agent)
+        _ <- Fox.fromBool(token.tokenType == TokenType.ScopedApi)
         _ <- Fox.fromBool(token.expirationDateTime > Instant.now)
         grantId <- token._oauthGrant.toFox
         // Not found (empty) if the grant has been revoked.
         grant <- grantDAO.findLive(grantId)
-      } yield AgentToken(
+      } yield ScopedApiToken(
         token.value,
         token._user,
         token.expirationDateTime,

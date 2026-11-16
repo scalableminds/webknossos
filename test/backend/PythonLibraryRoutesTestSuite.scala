@@ -6,7 +6,7 @@ import security.{RouteScopes, Scope, ScopeMode, ScopeResource}
 /** The routes the WEBKNOSSOS Python library calls, taken from its api_client
   * (https://github.com/scalableminds/webknossos-libs/tree/master/webknossos/webknossos/client/api_client).
   *
-  * An agent drives WEBKNOSSOS through that library, so every one of these has to be reachable with an agent token,
+  * An agent drives WEBKNOSSOS through that library, so every one of these has to be reachable with a scoped API token,
   * otherwise the agent fails halfway through a task with a confusing 403. This pins that down: a new permission
   * carve-out that happens to block the library will fail here rather than in someone's session.
   */

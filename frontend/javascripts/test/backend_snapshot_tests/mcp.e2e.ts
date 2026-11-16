@@ -124,13 +124,14 @@ async function mcpRequest(
   });
 }
 
-async function getAgentToken(accessToken: string): Promise<{ token: string; scopes: string }> {
+async function getScopedApiToken(accessToken: string): Promise<{ token: string; scopes: string }> {
   const response = await mcpRequest(accessToken, "tools/call", {
     name: "get_api_token",
     arguments: {},
   });
   const { result } = await response.json();
-  if (result.isError) throw new Error(`Creating an agent token failed: ${result.content[0].text}`);
+  if (result.isError)
+    throw new Error(`Creating a scoped API token failed: ${result.content[0].text}`);
   return JSON.parse(result.content[0].text);
 }
 
@@ -280,10 +281,12 @@ describe("MCP server with OAuth (E2E)", () => {
     expect((await registration.json()).error).toBe("invalid_redirect_uri");
   });
 
-  it("hands out agent tokens that act for the user, limited to the grant", async ({ expect }) => {
+  it("hands out scoped API tokens that act for the user, limited to the grant", async ({
+    expect,
+  }) => {
     const { accessToken } = await connect("write");
-    const { token } = await getAgentToken(accessToken);
-    expect(token.startsWith("wk_agent_token_")).toBe(true);
+    const { token } = await getScopedApiToken(accessToken);
+    expect(token.startsWith("wk_scoped_api_token_")).toBe(true);
 
     const userResponse = await fetch("/api/user", withApiToken(token));
     expect(userResponse.status).toBe(200);
@@ -296,21 +299,21 @@ describe("MCP server with OAuth (E2E)", () => {
     expect(await statusWithApiToken("/api/auth/token", token)).toBe(403);
     expect(await statusWithApiToken("/api/oauth/grants", token)).toBe(403);
 
-    // Asking for a datastore token yields another agent token, which is scoped as well.
+    // Asking for a datastore token yields another scoped API token instead.
     const dataStoreTokenResponse = await fetch(
       "/api/userToken/generate",
       withApiToken(token, { method: "POST" }),
     );
     expect(dataStoreTokenResponse.status).toBe(200);
     const { token: dataStoreToken } = await dataStoreTokenResponse.json();
-    expect(dataStoreToken.startsWith("wk_agent_token_")).toBe(true);
+    expect(dataStoreToken.startsWith("wk_scoped_api_token_")).toBe(true);
     expect(dataStoreToken).not.toBe(token);
     expect(await statusWithApiToken("/api/user", dataStoreToken)).toBe(200);
   });
 
   it("enforces the approved permission level, and follows a new approval", async ({ expect }) => {
     const { accessToken } = await connect("read");
-    const { token } = await getAgentToken(accessToken);
+    const { token } = await getScopedApiToken(accessToken);
     expect(await statusWithApiToken("/api/user", token)).toBe(200);
     expect(await createTeamStatus(token)).toBe(403);
 
@@ -320,7 +323,7 @@ describe("MCP server with OAuth (E2E)", () => {
   });
 
   it("cannot dodge the scopes by sending a second token header", async ({ expect }) => {
-    const { token } = await getAgentToken((await connect()).accessToken);
+    const { token } = await getScopedApiToken((await connect()).accessToken);
     const requestWithBothHeaders = (path: string, authToken: string) =>
       fetch(path, { headers: { "X-Auth-Token": authToken, Authorization: `Bearer ${token}` } });
 
@@ -391,9 +394,9 @@ describe("MCP server with OAuth (E2E)", () => {
     expect(response.redirectUrl).toBeNull();
   });
 
-  it("disconnects a client, including its agent tokens", async ({ expect }) => {
+  it("disconnects a client, including its scoped API tokens", async ({ expect }) => {
     const { accessToken } = await connect();
-    const { token } = await getAgentToken(accessToken);
+    const { token } = await getScopedApiToken(accessToken);
     const [grant] = await (await fetch("/api/oauth/grants", withApiToken(tokenUserA))).json();
 
     expect(

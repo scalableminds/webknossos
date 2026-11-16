@@ -2,8 +2,8 @@ START TRANSACTION;
 
 do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 192 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
--- Agent tokens, handed out to AI agents via the MCP server (see security.AgentTokenService).
-ALTER TYPE webknossos.TOKEN_TYPES ADD VALUE IF NOT EXISTS 'Agent';
+-- Scoped API tokens, handed out to AI agents via the MCP server (see security.ScopedApiTokenService).
+ALTER TYPE webknossos.TOKEN_TYPES ADD VALUE IF NOT EXISTS 'ScopedApi';
 
 -- MCP clients that registered themselves via OAuth Dynamic Client Registration (RFC 7591). Clients identified by a
 -- client metadata document instead are not stored. Registrations that never led to a grant are cleaned up.
@@ -47,7 +47,7 @@ CREATE TABLE webknossos.oauthTokens(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- The grant an agent token was issued under. It carries the grant's scopes and is revoked with it.
+-- The grant a scoped API token was issued under. It carries the grant's scopes and is revoked with it.
 DROP VIEW webknossos.tokens_;
 ALTER TABLE webknossos.tokens
   ADD COLUMN _oauthGrant TEXT CONSTRAINT _oauthGrant_objectId CHECK (_oauthGrant ~ '^[0-9a-f]{24}$') DEFAULT NULL;

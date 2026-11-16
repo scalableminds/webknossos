@@ -24,7 +24,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.UserAwareRequest
 import play.silhouette.impl.authenticators.BearerTokenAuthenticator
-import security.{RandomIDGenerator, Scope, ScopeMode, AgentTokenService, URLSharing, WkEnv, WkSilhouetteEnvironment}
+import security.{RandomIDGenerator, Scope, ScopeMode, ScopedApiTokenService, URLSharing, WkEnv, WkSilhouetteEnvironment}
 import utils.WkConf
 
 import javax.inject.Inject
@@ -52,7 +52,7 @@ class UserTokenController @Inject() (
     jobDAO: JobDAO,
     alignmentProjectDAO: AlignmentProjectDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-    agentTokenService: AgentTokenService,
+    scopedApiTokenService: ScopedApiTokenService,
     conf: WkConf,
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -64,15 +64,15 @@ class UserTokenController @Inject() (
   def generateTokenForDataStore: Action[AnyContent] = sil.UserAwareAction.fox { implicit request =>
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
-        agentTokenOf(request) match {
-          // An agent token must not be able to trade itself in for a DataStore token, which would not be subject
-          // to the agent's scopes. It gets another agent token under the same grant instead, which is.
-          case Some(agentTokenValue) =>
+        scopedApiTokenOf(request) match {
+          // a scoped API token must not be able to trade itself in for a DataStore token, which would not be subject
+          // to the agent's scopes. It gets another scoped API token under the same grant instead, which is.
+          case Some(scopedApiTokenValue) =>
             for {
-              agentToken <- agentTokenService.findValid(agentTokenValue) ?~> "Invalid token"
-              newToken <- agentTokenService.createFrom(
-                agentToken,
-                conf.Silhouette.TokenAuthenticator.agentTokenExpiry
+              scopedApiToken <- scopedApiTokenService.findValid(scopedApiTokenValue) ?~> "Invalid token"
+              newToken <- scopedApiTokenService.createFrom(
+                scopedApiToken,
+                conf.Silhouette.TokenAuthenticator.scopedApiTokenExpiry
               )
             } yield newToken.value
           case None => bearerTokenService.createAndInitDataStoreTokenForUser(user)
@@ -135,9 +135,9 @@ class UserTokenController @Inject() (
     }
 
   // The authenticator has already been validated at this point, so recognizing the token type is enough.
-  private def agentTokenOf(request: UserAwareRequest[WkEnv, ?]): Option[String] =
+  private def scopedApiTokenOf(request: UserAwareRequest[WkEnv, ?]): Option[String] =
     request.authenticator.map(_.actualAuthenticator).collect {
-      case a: BearerTokenAuthenticator if agentTokenService.isAgentTokenValue(a.id) => a.id
+      case a: BearerTokenAuthenticator if scopedApiTokenService.isScopedApiTokenValue(a.id) => a.id
     }
 
   /*
@@ -151,13 +151,13 @@ class UserTokenController @Inject() (
       case None             => Fox.successful(true)
       case Some(tokenValue) =>
         // Fails (rather than allowing) if the lookup itself fails.
-        agentTokenService.findValid(tokenValue).shiftBox.flatMap {
+        scopedApiTokenService.findValid(tokenValue).shiftBox.flatMap {
           // The scopes are read from the grant per request, so that changing them takes effect at once.
-          case Full(agentToken) =>
+          case Full(scopedApiToken) =>
             Fox.successful(Scope.fromAccessResourceType(accessRequest.resourceType).exists { resource =>
-              agentToken.scopes.allows(Scope(resource, ScopeMode.fromAccessMode(accessRequest.mode)))
+              scopedApiToken.scopes.allows(Scope(resource, ScopeMode.fromAccessMode(accessRequest.mode)))
             })
-          // Only agent tokens are restricted here. A revoked or expired one does not resolve to a user below either.
+          // Only scoped API tokens are restricted here. A revoked or expired one does not resolve to a user below either.
           case Empty            => Fox.successful(true)
           case failure: Failure => failure.toFox
         }

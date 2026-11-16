@@ -96,7 +96,7 @@ function ConnectedApplications() {
             render: (_, grant) => (
               <Popconfirm
                 title={`Disconnect ${grant.clientName}?`}
-                description="It loses access immediately, including any agent tokens it obtained."
+                description="It loses access immediately, including any scoped API tokens it obtained."
                 onConfirm={() => disconnect(grant)}
               >
                 <Button icon={<DisconnectOutlined />} danger size="small">

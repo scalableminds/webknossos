@@ -391,6 +391,36 @@ export function SegmentTreeView(props: Props) {
   const isNodeDraggable = (node: SegmentsUiNode): boolean =>
     allowUpdate && renamingNodeKey == null && !isRootGroupNode(node);
 
+  const clearSelection = () => {
+    if (selection.selectedSegmentIds.length > 0 || selection.selectedGroupId != null) {
+      selection.setSelection([], null);
+    }
+  };
+
+  const onClickTreeContainer = (event: React.MouseEvent<HTMLDivElement>) => {
+    // Clicking the empty space below the rows clears the selection. React events
+    // bubble through portals, so check the DOM to ignore clicks in popovers and
+    // dropdowns that were opened from a row.
+    const { target, currentTarget } = event;
+    if (
+      target instanceof HTMLElement &&
+      currentTarget.contains(target) &&
+      target.closest(".ant-tree-treenode, .ant-tree-list-scrollbar") == null
+    ) {
+      clearSelection();
+    }
+  };
+
+  const onKeyDownTreeContainer = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    // ESC clears the selection, unless it is meant for an input (e.g., to cancel renaming).
+    if (
+      event.key === "Escape" &&
+      !(event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement)
+    ) {
+      clearSelection();
+    }
+  };
+
   return (
     <>
       <ContextMenuContainer
@@ -407,7 +437,12 @@ export function SegmentTreeView(props: Props) {
             defaultHeight={500}
           >
             {({ height, width }) => (
-              <div style={{ height, width, overflow: "hidden" }}>
+              <div
+                style={{ height, width, overflow: "hidden" }}
+                // The tree's list element is focusable, so its key events bubble up to here.
+                onClick={onClickTreeContainer}
+                onKeyDown={onKeyDownTreeContainer}
+              >
                 <ScrollableVirtualizedTree<SegmentsUiNode>
                   treeData={hierarchy.roots}
                   height={height}

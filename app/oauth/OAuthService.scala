@@ -3,6 +3,7 @@ package oauth
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.box.{Empty, Failure, Full}
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
@@ -54,8 +55,8 @@ case class OAuthEndpointError(error: String, description: String) {
   *   - Access tokens are only accepted by the MCP endpoint (McpController). Agents get separate scoped API tokens for
   *     the rest of the API via the MCP server, limited to the grant's scopes.
   *   - Refresh tokens are rotated. Presenting a used refresh token or authorization code again revokes the grant, since
-  *     it means that the token has leaked. A refresh token presented again within a short grace period is answered with
-  *     new tokens instead, so that retries and concurrent refreshes do not cost the user their connection.
+  *     it means that the token has leaked. A refresh token presented again within a short grace period is only
+  *     rejected, so that a retry or a concurrent refresh does not revoke everything issued under the grant.
   */
 @Singleton
 class OAuthService @Inject() (
@@ -81,25 +82,27 @@ class OAuthService @Inject() (
   val protectedResourceMetadataUrl: String = s"$issuer/.well-known/oauth-protected-resource/api/mcp"
 
   // As browsers send it in the Origin header: scheme, host and port, the latter only if it is not the scheme's default.
+  // Lowercase, as browsers send it. Scheme and host are case-insensitive, http.uri may not be written in lowercase.
   val instanceOrigin: String = {
     val uri = new URI(issuer)
-    val isDefaultPort = uri.getPort == -1 || (uri.getScheme, uri.getPort) == ("http", 80) ||
-      (uri.getScheme, uri.getPort) == ("https", 443)
-    s"${uri.getScheme}://${uri.getHost}${if (isDefaultPort) "" else s":${uri.getPort}"}"
+    val scheme = uri.getScheme.toLowerCase
+    val isDefaultPort =
+      uri.getPort == -1 || (scheme, uri.getPort) == ("http", 80) || (scheme, uri.getPort) == ("https", 443)
+    s"$scheme://${uri.getHost.toLowerCase}${if (isDefaultPort) "" else s":${uri.getPort}"}"
   }
 
   /** Whether the request comes from a page of another origin. Browsers send an Origin header, MCP clients and other
     * non-browser clients usually do not, so a missing header is fine.
     */
   def isForeignOrigin(request: RequestHeader): Boolean =
-    request.headers.get(HeaderNames.ORIGIN).exists(_ != instanceOrigin)
+    request.headers.get(HeaderNames.ORIGIN).exists(!_.equalsIgnoreCase(instanceOrigin))
 
   private val authorizationCodeExpiry: FiniteDuration = 2.minutes
   private val accessTokenExpiry: FiniteDuration = 1.hour
   // Each refresh issues a new refresh token, so this is the time a connection may stay unused.
   private val refreshTokenExpiry: FiniteDuration = 30.days
-  // A refresh token presented again within this time after its first use is not treated as leaked, but answered with
-  // new tokens. This covers a client retrying after the response got lost, or refreshing twice concurrently.
+  // A refresh token presented again within this time after its first use is rejected, but does not revoke the grant.
+  // This covers a client retrying after the response got lost, or refreshing twice concurrently.
   private val refreshTokenReuseGracePeriod: FiniteDuration = 1.minute
   // Registered clients without a live grant are deleted after these times, see OAuthClientDAO.deleteUnused.
   private val neverApprovedClientExpiry: FiniteDuration = 7.days
@@ -280,20 +283,21 @@ class OAuthService @Inject() (
     (params.get("refresh_token"), params.get("client_id")) match {
       case (Some(refreshToken), Some(clientId)) =>
         val tokenHash = hash(refreshToken)
-        def issueFor(grantId: ObjectId) =
-          withLiveGrant(grantId) { grant =>
-            if (grant.clientId != clientId) Fox.successful(invalidGrant("The token was issued to another client"))
-            else issueTokens(grant).map(Right(_))
-          }
         tokenDAO.redeemRefreshToken(tokenHash).shiftBox.flatMap {
-          case Full(grantId) => issueFor(grantId)
-          case Empty         =>
+          case Full(grantId) =>
+            withLiveGrant(grantId) { grant =>
+              if (grant.clientId != clientId) Fox.successful(invalidGrant("The token was issued to another client"))
+              else issueTokens(grant).map(Right(_))
+            }
+          case Empty =>
             tokenDAO
               .findGrantOfRefreshTokenUsedAfter(tokenHash, Instant.now - refreshTokenReuseGracePeriod)
               .shiftBox
               .flatMap {
-                // Used moments ago: most likely a retry or a concurrent refresh of the same client, not a leak.
-                case Full(grantId)    => issueFor(grantId)
+                // Used moments ago: most likely a retry or a concurrent refresh of the same client, so the grant is
+                // not revoked. No new tokens are issued either: if the token did leak, that would hand whoever
+                // replayed it a second, independent chain of tokens that reuse detection never catches.
+                case Full(_)          => Fox.successful(invalidGrant("The refresh token was used before"))
                 case failure: Failure => failure.toFox
                 case Empty            =>
                   tokenDAO.findGrantOfUsedRefreshToken(tokenHash).shiftBox.flatMap {
@@ -396,7 +400,8 @@ object OAuthService {
   private val refreshTokenPrefix = "wkor_"
 
   // The levels the consent page offers are those of security.Scope.Set. They are also the OAuth scope values.
-  val defaultLevel: ScopeMode.Value = ScopeMode.write
+  // Preselected on the consent page if the client asks for no level, so that choosing more is a deliberate step.
+  val defaultLevel: ScopeMode.Value = ScopeMode.read
 
   // The strongest level the client asked for, as a suggestion for the consent page.
   def levelFromScope(scope: Option[String]): ScopeMode.Value =
@@ -410,8 +415,7 @@ object OAuthService {
   private def randomSecret(): String = RandomIDGenerator.generateBlocking(sizeInBytes = 32)
 
   // Codes and tokens are random enough that an unsalted hash is fine.
-  def hash(secret: String): String =
-    MessageDigest.getInstance("SHA-256").digest(secret.getBytes(StandardCharsets.UTF_8)).map("%02x".format(_)).mkString
+  def hash(secret: String): String = SCrypt.sha256Hex(secret)
 
   // RFC 7636: 43 to 128 characters of the unreserved set. A S256 challenge is 43 base64url characters.
   private val codeVerifierPattern = "^[A-Za-z0-9\\-._~]{43,128}$".r

@@ -39,7 +39,7 @@ function OAuthAuthorizeView() {
   const activeUser = useWkSelector((state) => state.activeUser);
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const [info, setInfo] = useState<OAuthAuthorizationRequestInfo | null>(null);
-  const [level, setLevel] = useState<OAuthPermissionLevel>("write");
+  const [level, setLevel] = useState<OAuthPermissionLevel>("read");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasLoadingFailed, setHasLoadingFailed] = useState(false);
 

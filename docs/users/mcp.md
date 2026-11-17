@@ -73,7 +73,9 @@ When you approve a connection, you choose one of three permission levels:
 | Delete | Additionally delete datasets, annotations, tasks and teams. |
 
 The level belongs to the connection. To change it, connect the same application again and choose another level;
-this takes effect immediately, also for agents that are already running.
+this takes effect immediately, also for agents that are already running. Only data that the agent read or wrote in
+the last two minutes may stay accessible at the old level for up to two more minutes, because the data servers cache
+access checks.
 
 The levels cover everything the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/) can do, so
 an agent granted `Delete` can use the whole library. The organization itself stays read-only at every level.
@@ -98,7 +100,8 @@ voxel data. An agent can never reach your API token, approve connections or chan
 
 The `MCP Agent Connections` tab lists the connected applications with their permission level and when they were
 last used. `Disconnect` revokes a connection immediately, including all scoped API tokens the agent obtained
-through it. [Logging out everywhere](password.md#log-out-everywhere) disconnects all
+through it. Only data that the agent read or wrote in the last two minutes may stay reachable for up to two more
+minutes, because the data servers cache access checks. [Logging out everywhere](password.md#log-out-everywhere) disconnects all
 applications. [Revoking your auth token](password.md#token-revocation) ends all scoped API tokens, but keeps the
 connections.
 

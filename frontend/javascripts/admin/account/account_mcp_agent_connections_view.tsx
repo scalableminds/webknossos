@@ -96,7 +96,7 @@ function ConnectedApplications() {
             render: (_, grant) => (
               <Popconfirm
                 title={`Disconnect ${grant.clientName}?`}
-                description="It loses access immediately, including any scoped API tokens it obtained."
+                description="It loses access immediately, including any scoped API tokens it obtained. Only data it read or wrote in the last two minutes may stay reachable for up to two more minutes."
                 onConfirm={() => disconnect(grant)}
               >
                 <Button icon={<DisconnectOutlined />} danger size="small">
@@ -127,7 +127,7 @@ function AccountMcpAgentConnectionsView() {
           <Col span={24}>
             <SettingsCard
               title="Connected Applications"
-              tooltip="Applications you allowed to work with WEBKNOSSOS on your behalf. Disconnecting one takes effect immediately."
+              tooltip="Applications you allowed to work with WEBKNOSSOS on your behalf. Disconnecting one takes effect immediately, apart from data it accessed in the last two minutes."
               content={<ConnectedApplications />}
             />
           </Col>

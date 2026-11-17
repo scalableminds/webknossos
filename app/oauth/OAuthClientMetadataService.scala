@@ -88,8 +88,12 @@ class OAuthClientMetadataService @Inject() (conf: WkConf)(implicit ec: Execution
     * headers, the whole exchange has a deadline, so that a server that sends the body slowly cannot hold it open.
     */
   private def download(uri: URI): Future[Either[String, Array[Byte]]] = {
-    val request =
-      HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(5)).header("Accept", "application/json").GET().build()
+    val request = HttpRequest
+      .newBuilder(uri)
+      .timeout(Duration.ofMillis(downloadDeadline.toMillis))
+      .header("Accept", "application/json")
+      .GET()
+      .build()
     val handler: HttpResponse.BodyHandler[Either[String, Array[Byte]]] = responseInfo =>
       if (responseInfo.statusCode() != 200)
         HttpResponse.BodySubscribers.replacing(
@@ -98,7 +102,9 @@ class OAuthClientMetadataService @Inject() (conf: WkConf)(implicit ec: Execution
       else new SizeLimitedBodySubscriber(maxDocumentBytes)
     val exchange = httpClient.sendAsync(request, handler)
     // Cancelling aborts the exchange (and is a no-op if it completed already).
-    CompletableFuture.delayedExecutor(downloadDeadlineSeconds, TimeUnit.SECONDS).execute(() => exchange.cancel(true))
+    CompletableFuture
+      .delayedExecutor(downloadDeadline.toMillis, TimeUnit.MILLISECONDS)
+      .execute(() => exchange.cancel(true))
     exchange.asScala.map(_.body()).recover { case e: Exception =>
       logger.info(s"Fetching the client metadata document $uri failed: ${e.getMessage}")
       Left("Could not fetch the client metadata document")
@@ -142,7 +148,7 @@ object OAuthClientMetadataService {
 
   // The spec recommends that servers limit the size, 5 kilobytes being the suggested limit.
   private val maxDocumentBytes = 5 * 1024
-  private val downloadDeadlineSeconds = 10L
+  private val downloadDeadline = 10.seconds
 
   // Schemes a redirect URI must never use. Everything else is either https, loopback http (validated separately) or a
   // private-use scheme of a native app, see RFC 8252.

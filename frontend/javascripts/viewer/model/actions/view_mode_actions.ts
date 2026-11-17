@@ -1,6 +1,6 @@
 import type { OrthoView, Point2, Rect, Viewport, ViewportRects } from "viewer/constants";
-import constants from "viewer/constants";
-import { getTDViewportSize } from "viewer/model/accessors/view_mode_accessor";
+import { OrthoViews } from "viewer/constants";
+import { getInputCatcherRect, getTDViewportSize } from "viewer/model/accessors/view_mode_accessor";
 import type { PartialCameraData } from "viewer/store";
 import Store from "viewer/store";
 
@@ -75,13 +75,15 @@ export const moveTDViewByVectorWithoutTimeTrackingAction = (x: number, y: number
     y,
   }) as const;
 
-export const moveTDViewXAction = (x: number): MoveTDViewByVectorAction => {
+// Moves the TD view so that the scene follows a mouse movement of delta screen pixels.
+export const moveTDViewByPixelDeltaAction = (delta: Point2): MoveTDViewByVectorAction => {
   const state = Store.getState();
-  return moveTDViewByVectorAction((x * getTDViewportSize(state)[0]) / constants.VIEWPORT_WIDTH, 0);
-};
-export const moveTDViewYAction = (y: number): MoveTDViewByVectorAction => {
-  const state = Store.getState();
-  return moveTDViewByVectorAction(0, (-y * getTDViewportSize(state)[1]) / constants.VIEWPORT_WIDTH);
+  const { width, height } = getInputCatcherRect(state, OrthoViews.TDView);
+  const [cameraWidth, cameraHeight] = getTDViewportSize(state);
+  return moveTDViewByVectorAction(
+    (-delta.x * cameraWidth) / width,
+    (delta.y * cameraHeight) / height,
+  );
 };
 const setInputCatcherRect = (viewport: Viewport, rect: Rect) =>
   ({

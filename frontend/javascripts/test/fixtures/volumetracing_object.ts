@@ -17,8 +17,8 @@ const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, nul
 const notEmptyViewportRect = {
   top: 0,
   left: 0,
-  width: Constants.VIEWPORT_WIDTH,
-  height: Constants.VIEWPORT_WIDTH,
+  width: Constants.DEFAULT_VIEWPORT_SIZE_IN_PX,
+  height: Constants.DEFAULT_VIEWPORT_SIZE_IN_PX,
 };
 
 const stateWithoutDatasetInitialization = update(defaultState, {

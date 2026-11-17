@@ -164,6 +164,12 @@ export type LocalSkeletonState = {
   readonly navigationList: NavigationList;
   readonly showSkeletons: boolean;
 };
+// The part of LocalSkeletonState that undo/redo saves and restores together
+// with the SkeletonTracing, so that the active tree always matches the active node.
+// navigationList and showSkeletons are excluded. navigationList auto recovers when
+// the active nodes does match and showSkeletons is a visual only change not creating
+// a new undo state -> thus should not be included in the snapshot.
+export type UndoableLocalSkeletonState = Pick<LocalSkeletonState, "activeTreeId" | "activeGroupId">;
 export type Segment = {
   readonly id: bigint;
   readonly name: string | null | undefined;

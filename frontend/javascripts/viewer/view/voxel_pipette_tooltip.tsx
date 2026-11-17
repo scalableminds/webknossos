@@ -25,7 +25,6 @@ import {
 } from "viewer/model/accessors/view_mode_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import { setVoxelPipetteTooltipPinnedPositionAction } from "viewer/model/actions/ui_actions";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import { api, Store } from "viewer/singletons";
 import {
   getTooltipPosition,
@@ -69,9 +68,7 @@ export default function VoxelValueTooltip() {
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const zoomStep = useWkSelector((state) => state.flycam.zoomStep);
   const globalMousePosition = useWkSelector((state) => getGlobalMousePositionFloating(state));
-  const datasetScale = useWkSelector((state) =>
-    getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
-  );
+  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const [tooltipRef, tooltipWidth] = useTooltipWidth();
   const dispatch = useDispatch();
   const orthoView = useWkSelector((state) => state.viewModeData.plane.activeViewport);
@@ -93,13 +90,13 @@ export default function VoxelValueTooltip() {
         flycamRotation,
         flycamPosition,
         orthoView,
-        datasetScale,
+        voxelSize,
         zoomStep,
       )
     ) {
       dispatch(setVoxelPipetteTooltipPinnedPositionAction(null));
     }
-  }, [dispatch, pinnedPosition, flycamRotation, flycamPosition, orthoView, datasetScale, zoomStep]);
+  }, [dispatch, pinnedPosition, flycamRotation, flycamPosition, orthoView, voxelSize, zoomStep]);
 
   const colorLayers = useWkSelector((state) =>
     getOrderedColorLayers(state.dataset, state.datasetConfiguration.colorLayerOrder),

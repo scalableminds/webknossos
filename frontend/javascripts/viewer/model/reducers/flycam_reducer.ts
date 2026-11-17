@@ -100,7 +100,7 @@ function rotateReducer(
 }
 
 function resetMatrix(matrix: Matrix4x4, voxelSize: VoxelSize) {
-  // The flycam's local coordinates are measured in pixels at zoom step 1.
+  // The flycam's local coordinates are measured in multiples of the smallest voxel extent.
   const scale = getVoxelPerPixel(voxelSize);
   // Save position
   const position = [matrix[12], matrix[13], matrix[14]];

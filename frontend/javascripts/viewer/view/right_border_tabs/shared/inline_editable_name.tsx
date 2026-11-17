@@ -16,7 +16,7 @@ type Props = {
   style?: React.CSSProperties;
   // Omitted for a name that is not truncated (the expanded row shows it in full).
   title?: string | undefined;
-  onClick?: (() => void) | undefined;
+  onClick?: ((event: React.MouseEvent<HTMLElement>) => void) | undefined;
   onStartEditing: () => void;
   onCommit: (newName: string) => void;
   onFinishEditing: () => void;

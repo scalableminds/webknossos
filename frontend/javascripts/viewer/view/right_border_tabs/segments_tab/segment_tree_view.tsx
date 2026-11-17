@@ -34,6 +34,7 @@ import {
 } from "./context_menus";
 import {
   getGroupUiNodeKey,
+  getSegmentIdsInRange,
   getSegmentUiNodeKey,
   isRootGroupNode,
   type SegmentGroupUiNode,
@@ -282,6 +283,28 @@ export function SegmentTreeView(props: Props) {
       return;
     }
 
+    if (node.type === "segment" && nativeEvent?.shiftKey) {
+      // SHIFT click selects a whole range of segments, starting at the anchor.
+      // The anchor is the last id of the selection: plain and CTRL clicks append
+      // the clicked segment, and range selections keep the anchor at the end, so
+      // that it stays fixed across subsequent SHIFT clicks. Since the selection
+      // lives in the store, the anchor survives remounts and is per layer.
+      // Like in the skeleton tab, this only works for segments within the same group.
+      const anchorSegmentId = selection.selectedSegmentIds.at(-1);
+      if (anchorSegmentId != null) {
+        const segmentIdsInRange = getSegmentIdsInRange(hierarchy, anchorSegmentId, node.segment.id);
+        if (segmentIdsInRange != null) {
+          // CTRL+SHIFT adds the range to the existing selection instead of replacing it.
+          const isAdditive = nativeEvent.ctrlKey || nativeEvent.metaKey;
+          const newSegmentIds = new Set(isAdditive ? selection.selectedSegmentIds : []);
+          for (const id of segmentIdsInRange) newSegmentIds.add(id);
+          newSegmentIds.delete(anchorSegmentId);
+          selection.setSelection([...newSegmentIds, anchorSegmentId], null);
+        }
+        return;
+      }
+    }
+
     // Windows / Mac single pick
     const isMultiSelectPick = nativeEvent?.ctrlKey || nativeEvent?.metaKey;
     const newSelectedKeys = isMultiSelectPick ? (keys as string[]) : [node.key as string];
@@ -353,6 +376,36 @@ export function SegmentTreeView(props: Props) {
   const isNodeDraggable = (node: SegmentsUiNode): boolean =>
     allowUpdate && renamingNodeKey == null && !isRootGroupNode(node);
 
+  const clearSelection = () => {
+    if (selection.selectedSegmentIds.length > 0 || selection.selectedGroupId != null) {
+      selection.setSelection([], null);
+    }
+  };
+
+  const onClickTreeContainer = (event: React.MouseEvent<HTMLDivElement>) => {
+    // Clicking the empty space below the rows clears the selection. React events
+    // bubble through portals, so check the DOM to ignore clicks in popovers and
+    // dropdowns that were opened from a row.
+    const { target, currentTarget } = event;
+    if (
+      target instanceof HTMLElement &&
+      currentTarget.contains(target) &&
+      target.closest(".ant-tree-treenode, .ant-tree-list-scrollbar") == null
+    ) {
+      clearSelection();
+    }
+  };
+
+  const onKeyDownTreeContainer = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    // ESC clears the selection, unless it is meant for an input (e.g., to cancel renaming).
+    if (
+      event.key === "Escape" &&
+      !(event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement)
+    ) {
+      clearSelection();
+    }
+  };
+
   return (
     <>
       <ContextMenuContainer
@@ -369,7 +422,12 @@ export function SegmentTreeView(props: Props) {
             defaultHeight={500}
           >
             {({ height, width }) => (
-              <div style={{ height, width, overflow: "hidden" }}>
+              <div
+                style={{ height, width, overflow: "hidden" }}
+                // The tree's list element is focusable, so its key events bubble up to here.
+                onClick={onClickTreeContainer}
+                onKeyDown={onKeyDownTreeContainer}
+              >
                 <ScrollableVirtualizedTree<SegmentsUiNode>
                   treeData={hierarchy.roots}
                   height={height}

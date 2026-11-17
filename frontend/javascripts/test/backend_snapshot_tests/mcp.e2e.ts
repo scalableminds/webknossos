@@ -333,7 +333,9 @@ describe("MCP server with OAuth (E2E)", () => {
     expect((await requestWithBothHeaders("/api/user", "unknownToken")).status).toBe(401);
   });
 
-  it("rotates refresh tokens and revokes the connection when one is reused", async ({ expect }) => {
+  it("rotates refresh tokens and rejects an immediate reuse without revoking the connection", async ({
+    expect,
+  }) => {
     const { refreshToken } = await connect();
     const refresh = (token: string) =>
       tokenRequest({ grant_type: "refresh_token", refresh_token: token, client_id: clientId });
@@ -343,10 +345,12 @@ describe("MCP server with OAuth (E2E)", () => {
     const { access_token: newAccessToken } = await refreshed.json();
     expect((await mcpRequest(newAccessToken, "ping")).status).toBe(200);
 
+    // Reused within the grace period (see OAuthService.refreshTokenReuseGracePeriod), as a client retrying after a
+    // lost response would: rejected, but the connection stays. Reuse after the grace period revokes it.
     const reused = await refresh(refreshToken);
     expect(reused.status).toBe(400);
     expect((await reused.json()).error).toBe("invalid_grant");
-    expect((await mcpRequest(newAccessToken, "ping")).status).toBe(401);
+    expect((await mcpRequest(newAccessToken, "ping")).status).toBe(200);
   });
 
   it("accepts an authorization code once only, and checks PKCE", async ({ expect }) => {

@@ -110,6 +110,17 @@ pub(crate) struct Experience {
     pub value: i32,
 }
 
+/// `Experience.normalize`: the trimmed experience; an empty domain (e.g. empty
+/// columns in bulk task creation) means no experience requirement.
+pub(crate) fn normalize_experience(experience: Option<&Experience>) -> Option<Experience> {
+    experience
+        .map(|e| Experience {
+            domain: e.domain.trim().to_owned(),
+            value: e.value,
+        })
+        .filter(|e| !e.domain.is_empty())
+}
+
 /// `boundingBox.flatMap(box => if (box.isEmpty) None else Some(box))`.
 fn non_empty(bounding_box: Option<BoundingBox>) -> Option<BoundingBox> {
     bounding_box.filter(|b| !b.is_empty())
@@ -128,7 +139,8 @@ pub(crate) struct BaseAnnotation {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct TaskParameters {
     pub task_type_id: ObjectId,
-    pub needed_experience: Experience,
+    /// `None` if any member of the project's team may get the task.
+    pub needed_experience: Option<Experience>,
     pub pending_instances: i32,
     pub project_name: String,
     pub script_id: Option<ObjectId>,
@@ -951,7 +963,7 @@ async fn create_one(
         // in one transaction (Scala: separate statements).
         let task_id = ObjectId::new();
         let created = now_millis();
-        let domain = params.needed_experience.domain.trim();
+        let needed_experience = normalize_experience(params.needed_experience.as_ref());
         let bbox = non_empty(params.bounding_box);
         let mut tx = pool.begin().await?;
         task_creation_dao::insert_one(
@@ -960,12 +972,19 @@ async fn create_one(
             &project.id,
             &task_type.id,
             params,
-            domain,
+            needed_experience.as_ref(),
             bbox,
             created,
         )
         .await?;
-        task_creation_dao::insert_experience_domain(&mut tx, domain, &user.organization_id).await?;
+        if let Some(experience) = &needed_experience {
+            task_creation_dao::insert_experience_domain(
+                &mut tx,
+                &experience.domain,
+                &user.organization_id,
+            )
+            .await?;
+        }
         insert_annotation(
             &mut tx,
             &NewAnnotation {

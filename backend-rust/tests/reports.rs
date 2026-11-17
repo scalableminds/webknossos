@@ -294,3 +294,58 @@ async fn available_tasks_report_counts_tasks_for_plain_members() {
     );
     w.db.cleanup().await;
 }
+
+/// Tasks without a needed experience (#10390) count for every team member, listed under the
+/// project name only, and make their project part of the progress report.
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
+async fn reports_count_tasks_without_needed_experience_for_all_team_members() {
+    let w = world().await;
+    let task_type: String = sqlx::query_scalar("SELECT _id FROM webknossos.taskTypes LIMIT 1")
+        .fetch_one(&w.db.pool)
+        .await
+        .unwrap();
+    let open = project(&w.db, &w.admin, "Open project", false, false).await;
+    let open_task = task(&w.db, &open, &task_type, "test", 0, 2, None).await;
+    sqlx::query(
+        "UPDATE webknossos.tasks SET neededExperience_domain=NULL, neededExperience_value=NULL \
+         WHERE _id=$1",
+    )
+    .bind(&open_task)
+    .execute(&w.db.pool)
+    .await
+    .unwrap();
+
+    let path = format!("/api/teams/{}/availableTasksReport", w.admin.team_id);
+    let (status, body) = get(&w.app, &w.admin.token, &path).await;
+    assert_eq!(status, StatusCode::OK);
+    let entry = |id: &str| {
+        body.as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["id"] == id)
+            .unwrap()
+            .clone()
+    };
+    assert_eq!(
+        entry(&w.novice.user_id)["availableTasksByProjects"],
+        json!({"Open project": 1})
+    );
+    assert_eq!(entry(&w.member.user_id)["totalAvailableTasks"], 3);
+    assert_eq!(
+        entry(&w.member.user_id)["availableTasksByProjects"]["Open project"],
+        1
+    );
+
+    let path = format!("/api/teams/{}/projectProgressReport", w.admin.team_id);
+    let (status, body) = get(&w.app, &w.admin.token, &path).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        body.as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["projectName"] == "Open project"),
+        "{body}"
+    );
+    w.db.cleanup().await;
+}

@@ -342,8 +342,9 @@ pub(crate) async fn is_team_manager(pool: &PgPool, user_id: &ObjectId) -> sqlx::
 }
 
 /// TaskDAO.findNextTaskQ `FROM … WHERE` for the user, the allowed team ids
-/// and isTeamManagerOrAdmin. The experience join yields at most one row per
-/// task (user_experiences PK is (_user, domain)); the LEFT JOIN … IS NULL of
+/// and isTeamManagerOrAdmin. Tasks without a needed experience are open to the
+/// team; the experience join yields at most one row per task (user_experiences
+/// PK is (_user, domain)); the LEFT JOIN … IS NULL of
 /// the user's previous Task annotations is written as NOT EXISTS.
 fn push_next_task_from_where<'a>(
     q: &mut Sql,
@@ -353,7 +354,7 @@ fn push_next_task_from_where<'a>(
 ) {
     q.push(
         "FROM webknossos.tasks t
-     JOIN webknossos.user_experiences ux
+     LEFT JOIN webknossos.user_experiences ux
        ON ux._user=",
     )
     .push_bind(user_id)
@@ -362,6 +363,7 @@ fn push_next_task_from_where<'a>(
      JOIN webknossos.projects p ON t._project=p._id AND NOT p.isDeleted
      WHERE NOT t.isDeleted
        AND t.pendingInstances > 0
+       AND (t.neededExperience_domain IS NULL OR ux._user IS NOT NULL)
        AND p._team = ANY(",
     )
     .push_bind(team_ids)

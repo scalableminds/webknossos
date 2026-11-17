@@ -284,16 +284,18 @@ struct AccessibleQuery {
     dataset_id: Option<ObjectId>,
     annotation_id: Option<ObjectId>,
     workflow_hash: Option<String>,
+    ai_model_id: Option<ObjectId>,
 }
 
 enum Target {
     Dataset(ObjectId),
     Annotation(ObjectId),
     Workflow(String),
+    AiModel(ObjectId),
 }
 
 const COMBINATION_ERROR: &str =
-    "Can either test access for dataset or annotation or workflow, not a combination";
+    "Can either test access for dataset or annotation or workflow or AI model, not a combination";
 
 async fn identity_can_access(
     pool: &sqlx::PgPool,
@@ -319,6 +321,12 @@ async fn identity_can_access(
             auth_account_dao::workflow_exists_in_organization(pool, &identity.organization_id, hash)
                 .await?
         }
+        Target::AiModel(id) => {
+            let mut connection = pool.acquire().await?;
+            crate::ai_models::ai_models_dao::find_one(&mut connection, &identity.id, id)
+                .await?
+                .is_some()
+        }
     })
 }
 
@@ -327,10 +335,16 @@ async fn accessible_by_switching(
     user: AuthUser,
     Query(query): Query<AccessibleQuery>,
 ) -> ApiResult<axum::Json<Value>> {
-    let target = match (query.dataset_id, query.annotation_id, query.workflow_hash) {
-        (Some(id), None, None) => Target::Dataset(id),
-        (None, Some(id), None) => Target::Annotation(id),
-        (None, None, Some(hash)) => Target::Workflow(hash),
+    let target = match (
+        query.dataset_id,
+        query.annotation_id,
+        query.workflow_hash,
+        query.ai_model_id,
+    ) {
+        (Some(id), None, None, None) => Target::Dataset(id),
+        (None, Some(id), None, None) => Target::Annotation(id),
+        (None, None, Some(hash), None) => Target::Workflow(hash),
+        (None, None, None, Some(id)) => Target::AiModel(id),
         _ => return Err(ApiError::bad_request(COMBINATION_ERROR)),
     };
     // Play's lookups end in empty Foxes (no message): the generic 404.
@@ -345,6 +359,10 @@ async fn accessible_by_switching(
             }
             Target::Workflow(hash) => {
                 auth_account_dao::find_organization_id_of_workflow(&state.pool, hash).await?
+            }
+            // Pretrained models without an organization end in the generic 404, as in Play.
+            Target::AiModel(id) => {
+                auth_account_dao::find_organization_id_of_ai_model(&state.pool, id).await?
             }
         };
         found.ok_or_else(not_found)?

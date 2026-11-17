@@ -242,6 +242,18 @@ pub(crate) async fn find_organization_id_of_workflow(
     .await
 }
 
+pub(crate) async fn find_organization_id_of_ai_model(
+    pool: &PgPool,
+    ai_model_id: &ObjectId,
+) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar(
+        "SELECT o._id FROM webknossos.aiModels_ m JOIN webknossos.organizations_ o ON o._id = m._organization WHERE m._id = $1",
+    )
+    .bind(ai_model_id)
+    .fetch_optional(pool)
+    .await
+}
+
 /// The identities of the user's account, without superuser rights.
 pub(crate) async fn find_all_identities_of_account(
     pool: &PgPool,

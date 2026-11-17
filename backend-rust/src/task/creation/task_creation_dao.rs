@@ -4,7 +4,7 @@
 use sqlx::{PgConnection, PgPool};
 use webknossos_common::geometry::BoundingBox;
 
-use super::TaskParameters;
+use super::{Experience, TaskParameters};
 use crate::{auth::AuthUser, sql::Sql, util::id::ObjectId};
 
 /// TaskTypeDAO.findOne under the requester's access (team member or admin
@@ -156,8 +156,8 @@ pub(crate) async fn find_team_organization_and_manager(
     .await
 }
 
-/// TaskDAO.insertOne. `domain` is the trimmed needed-experience domain and
-/// `bounding_box` the non-empty task box.
+/// TaskDAO.insertOne. `needed_experience` is the normalized needed experience
+/// (`None`: any team member) and `bounding_box` the non-empty task box.
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn insert_one(
     connection: &mut PgConnection,
@@ -165,7 +165,7 @@ pub(crate) async fn insert_one(
     project_id: &ObjectId,
     task_type_id: &ObjectId,
     params: &TaskParameters,
-    domain: &str,
+    needed_experience: Option<&Experience>,
     bounding_box: Option<BoundingBox>,
     created: chrono::DateTime<chrono::Utc>,
 ) -> sqlx::Result<()> {
@@ -181,8 +181,8 @@ pub(crate) async fn insert_one(
     .bind(project_id)
     .bind(&params.script_id)
     .bind(task_type_id)
-    .bind(domain)
-    .bind(params.needed_experience.value)
+    .bind(needed_experience.map(|e| &e.domain))
+    .bind(needed_experience.map(|e| e.value))
     .bind(i64::from(params.pending_instances))
     .bind(bbox.map(|b| f64::from(b.top_left.x)))
     .bind(bbox.map(|b| f64::from(b.top_left.y)))

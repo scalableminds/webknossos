@@ -444,8 +444,31 @@ async fn accessible_by_switching_finds_the_identity_with_access() {
     .await;
     assert_eq!(
         combined.body,
-        error("Can either test access for dataset or annotation or workflow, not a combination")
+        error(
+            "Can either test access for dataset or annotation or workflow or AI model, not a combination"
+        )
     );
+
+    // AI models (#10414): the first identity whose organization can read the model.
+    sqlx::query("INSERT INTO webknossos.dataStores(name,url,publicUrl,key) VALUES('switch-store','http://localhost:9000','http://localhost:9000','k')")
+        .execute(&database.pool).await.unwrap();
+    let model_b = object_id();
+    let model_c = object_id();
+    for (model, organization) in [(&model_b, "org-b"), (&model_c, "org-c")] {
+        sqlx::query("INSERT INTO webknossos.aiModels (_id,_organization,_dataStore,name,category) VALUES ($1,$2,'switch-store',$1,'em_neurons')")
+            .bind(model).bind(organization).execute(&database.pool).await.unwrap();
+    }
+    let response = get(&format!("aiModelId={model_b}"), &fixture.token).await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert_eq!(response.body["id"], "org-b");
+    for model in [&model_c, &object_id()] {
+        assert_eq!(
+            get(&format!("aiModelId={model}"), &fixture.token)
+                .await
+                .status,
+            StatusCode::NOT_FOUND
+        );
+    }
     assert_eq!(
         get("datasetId=invalid", &fixture.token).await.status,
         StatusCode::BAD_REQUEST

@@ -71,7 +71,7 @@ const CREATE_FAILED: &str = "Could not create task.";
 #[serde(rename_all = "camelCase")]
 struct NmlTaskParameters {
     task_type_id: ObjectId,
-    needed_experience: Experience,
+    needed_experience: Option<Experience>,
     pending_instances: i32,
     project_name: String,
     script_id: Option<ObjectId>,

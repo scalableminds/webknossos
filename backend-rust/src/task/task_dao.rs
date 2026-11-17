@@ -54,7 +54,7 @@ pub(crate) async fn find_one_json(
     q.push(crate::task::types::task_types_dao::PUBLIC_TASK_TYPE).push(
         r#" WHERE tt._id=t._tasktype),
       'datasetName',d.name,'datasetId',d._id,
-      'neededExperience',jsonb_build_object('domain',t.neededexperience_domain,'value',t.neededexperience_value),
+      'neededExperience',CASE WHEN t.neededexperience_domain IS NULL THEN NULL ELSE jsonb_build_object('domain',t.neededexperience_domain,'value',t.neededexperience_value) END,
       'created',floor(extract(epoch FROM t.created)*1000)::bigint,
       'status',jsonb_build_object('pending',t.pendinginstances,'active',active.count,'finished',t.totalinstances-t.pendinginstances-active.count),
       'script',(SELECT jsonb_build_object('id',s.id,'name',s.name,'gist',s.gist,'owner',s.owner) FROM ("#,
@@ -298,7 +298,7 @@ pub(crate) async fn find_experience_domains(
         .await
 }
 
-/// The highest-priority task the user could be assigned (matching experience,
+/// The highest-priority task the user could be assigned (matching or no needed experience,
 /// pending instances, unpaused project, no earlier annotation by the user).
 pub(crate) async fn find_next_task_id_for_peek(
     pool: &PgPool,
@@ -307,10 +307,11 @@ pub(crate) async fn find_next_task_id_for_peek(
 ) -> sqlx::Result<Option<ObjectId>> {
     sqlx::query_scalar(
         r#"SELECT t._id FROM webknossos.tasks_ t
-        JOIN webknossos.user_experiences e ON e.domain=t.neededexperience_domain AND e._user=$1 AND e.value>=t.neededexperience_value
+        LEFT JOIN webknossos.user_experiences e ON e.domain=t.neededexperience_domain AND e._user=$1 AND e.value>=t.neededexperience_value
         JOIN webknossos.projects_ p ON p._id=t._project
         JOIN webknossos.teams_ team ON team._id=p._team AND team._organization=$3
-        WHERE p._organization=$3 AND t.pendinginstances>0 AND NOT p.paused AND p._team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$1)
+        WHERE p._organization=$3 AND t.pendinginstances>0 AND NOT p.paused
+        AND (t.neededexperience_domain IS NULL OR e._user IS NOT NULL) AND p._team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user=$1)
         AND NOT EXISTS (SELECT 1 FROM webknossos.annotations_ a WHERE a._task=t._id AND a._user=$1 AND a.typ='Task' AND NOT ($2 AND a.state='Cancelled'))
         ORDER BY p.priority DESC LIMIT 1"#,
     )

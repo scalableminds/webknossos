@@ -52,7 +52,11 @@ async fn available_tasks(
             reports_dao::find_available_task_counts_for_user(&state.pool, &user_id).await?;
         let mut by_project = Map::new();
         for (project, domain, value, count) in counts.into_iter().filter(|row| row.3 > 0) {
-            by_project.insert(format!("{project}/{domain}: {value}"), json!(count));
+            let experience_suffix = domain
+                .zip(value)
+                .map(|(domain, value)| format!("/{domain}: {value}"))
+                .unwrap_or_default();
+            by_project.insert(format!("{project}{experience_suffix}"), json!(count));
         }
         let total: i64 = by_project.values().filter_map(Value::as_i64).sum();
         entries.push(json!({

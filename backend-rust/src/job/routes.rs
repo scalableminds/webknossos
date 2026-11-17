@@ -348,6 +348,12 @@ pub(crate) fn result_link(
         | "align" => return_value.map(|return_value| {
             link_from_dataset_or_annotation_return_value(return_value, organization)
         }),
+        // The hash prefills the search of the AI model list, so that only the trained model is shown.
+        "train_neuron_model" | "train_instance_model" | "train_model" => Some(
+            string_arg("model_id")
+                .map(|model_id| format!("/aiModels#{model_id}"))
+                .unwrap_or_else(|| "/aiModels".to_owned()),
+        ),
         _ => None,
     }
 }

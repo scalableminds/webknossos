@@ -598,3 +598,78 @@ async fn rpc_failure_aborts_cleanly() {
 
     db.cleanup().await;
 }
+
+/// Tasks without a needed experience (#10390) go to any member of the project's team, also one
+/// without experiences; peek, request and the task JSON agree.
+#[tokio::test]
+#[ignore = "requires WK_RUST_TEST_DATABASE_URL with CREATEDB"]
+async fn tasks_without_needed_experience_go_to_any_team_member() {
+    let db = TestDb::new().await;
+    let (url, _mock) = mock_tracing_store().await;
+    let w = world(&db, &url).await;
+    let app = app(&db);
+    let newcomer = db
+        .seed_user(&object_id(), &w.f.organization_id, false)
+        .await;
+    add_role(&db, &newcomer.user_id, &w.f.team_id, false).await;
+    let outsider = db
+        .seed_user(&object_id(), &w.f.organization_id, false)
+        .await;
+    let other_team = team(&db, &w).await;
+    add_role(&db, &outsider.user_id, &other_team, false).await;
+
+    let p = project(&db, &w, &w.f.team_id, 100, false).await;
+    let with_experience = task(&db, &w, &p, "neurons", 0, 1).await;
+    let get = |token: String, uri: String| {
+        let app = app.clone();
+        async move {
+            let request = Request::builder()
+                .uri(uri)
+                .header("x-auth-token", token)
+                .body(Body::empty())
+                .unwrap();
+            let response = app.oneshot(request).await.unwrap();
+            let status = response.status();
+            let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+            (
+                status,
+                serde_json::from_slice::<Value>(&bytes).unwrap_or(Value::Null),
+            )
+        }
+    };
+    let peek = "/api/user/tasks/peek".to_owned();
+    assert_ne!(
+        get(newcomer.token.clone(), peek.clone()).await.0,
+        StatusCode::OK
+    );
+
+    let open = task(&db, &w, &p, "neurons", 0, 1).await;
+    sqlx::query(
+        "UPDATE webknossos.tasks SET neededExperience_domain=NULL, neededExperience_value=NULL \
+         WHERE _id=$1",
+    )
+    .bind(&open)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+
+    let (status, body) = get(newcomer.token.clone(), peek.clone()).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["id"], open.as_str());
+    assert_eq!(body["neededExperience"], Value::Null);
+    let (status, body) = get(w.f.token.clone(), format!("/api/tasks/{with_experience}")).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        body["neededExperience"],
+        json!({"domain": "neurons", "value": 0})
+    );
+
+    assert_eq!(
+        post(&app, Some(&outsider.token)).await,
+        (StatusCode::BAD_REQUEST, error(UNAVAILABLE))
+    );
+    assert_eq!(request_ok(&db, &app, &newcomer).await.0, open);
+    assert_eq!(pending(&db, &with_experience).await, 1);
+
+    db.cleanup().await;
+}

@@ -197,3 +197,39 @@ fn inference_result_links_follow_the_return_value() {
         );
     }
 }
+
+/// JobResultLinksTestSuite: training jobs link to the trained model in the AI model list.
+#[test]
+fn training_result_links_point_to_the_model() {
+    let job = ObjectId::dummy();
+    let model_id = "0123456789abcdef01234567";
+    for command in ["train_neuron_model", "train_instance_model"] {
+        assert_eq!(
+            result_link(
+                command,
+                "SUCCESS",
+                &json!({ "model_id": model_id }),
+                None,
+                &job,
+                "org"
+            )
+            .as_deref(),
+            Some("/aiModels#0123456789abcdef01234567")
+        );
+    }
+    assert_eq!(
+        result_link("train_model", "SUCCESS", &json!({}), None, &job, "org").as_deref(),
+        Some("/aiModels")
+    );
+    assert_eq!(
+        result_link(
+            "train_neuron_model",
+            "STARTED",
+            &json!({ "model_id": "abc" }),
+            None,
+            &job,
+            "org"
+        ),
+        None
+    );
+}

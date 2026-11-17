@@ -37,10 +37,14 @@ pub(crate) async fn find_project_progress_report(
              SELECT p._id, p.name, p.paused, p.priority
              FROM webknossos.projects_ p
              JOIN webknossos.tasks_ t ON t._project = p._id
-             CROSS JOIN experiences ue
              WHERE p._team = $1
-               AND t.neededExperience_domain = ue.domain
-               AND t.neededExperience_value <= ue.value
+               AND (
+                 (t.neededExperience_domain IS NULL AND EXISTS (SELECT 1 FROM teamMembers))
+                 OR EXISTS (
+                   SELECT 1 FROM experiences ue
+                   WHERE ue.domain = t.neededExperience_domain AND ue.value >= t.neededExperience_value
+                 )
+               )
                AND NOT p.isblacklistedfromreport
              GROUP BY p._id, p.name, p.paused, p.priority
            ), projectModifiedTimes AS (
@@ -120,22 +124,27 @@ pub(crate) async fn find_all_by_team_for_available_tasks_report(
 }
 
 /// Per project and required experience: the number of open tasks the user
-/// qualifies for and has no annotation of yet. Returns
-/// `(project name, experience domain, experience value, count)` rows.
+/// qualifies for (tasks without a needed experience: any team member) and has
+/// no annotation of yet. Returns `(project name, experience domain, experience
+/// value, count)` rows; domain and value are `None` for tasks without one.
 pub(crate) async fn find_available_task_counts_for_user(
     pool: &PgPool,
     user_id: &ObjectId,
-) -> sqlx::Result<Vec<(String, String, i32, i64)>> {
+) -> sqlx::Result<Vec<(String, Option<String>, Option<i32>, i64)>> {
     sqlx::query_as(
         r#"SELECT p.name, t.neededExperience_domain, t.neededExperience_value, COUNT(t._id)
                FROM webknossos.tasks_ t
-               JOIN (SELECT domain, value FROM webknossos.user_experiences WHERE _user = $1) AS ue
-                 ON t.neededExperience_domain = ue.domain AND t.neededExperience_value <= ue.value
                JOIN webknossos.projects_ p ON t._project = p._id
                LEFT JOIN (
                  SELECT _task FROM webknossos.annotations_ WHERE _user = $1 AND typ = 'Task'
                ) AS userAnnotations ON t._id = userAnnotations._task
-               WHERE t.pendingInstances > 0 AND userAnnotations._task IS NULL AND NOT p.paused
+               LEFT JOIN webknossos.user_experiences ue
+                 ON ue._user = $1 AND ue.domain = t.neededExperience_domain
+                 AND ue.value >= t.neededExperience_value
+               WHERE t.pendingInstances > 0
+                 AND (t.neededExperience_domain IS NULL OR ue._user IS NOT NULL)
+                 AND p._team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $1)
+                 AND userAnnotations._task IS NULL AND NOT p.paused
                GROUP BY p._id, p.name, t.neededExperience_domain, t.neededExperience_value
                ORDER BY p._id, t.neededExperience_domain, t.neededExperience_value"#,
     )

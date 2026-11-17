@@ -55,7 +55,7 @@ struct TaskParameters {
     #[serde(rename = "taskTypeId")]
     _task_type_id: ObjectId,
     #[serde(rename = "neededExperience")]
-    _needed_experience: Experience,
+    _needed_experience: Option<Experience>,
     #[serde(rename = "projectName")]
     _project_name: String,
     #[serde(rename = "scriptId")]

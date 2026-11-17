@@ -13,7 +13,7 @@ import {
   Vector3 as ThreeVector3,
 } from "three";
 import type { OrthoView, Vector3 } from "viewer/constants";
-import constants, {
+import {
   OrthoViewColors,
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
@@ -24,9 +24,10 @@ import PlaneMaterialFactory, {
   type PlaneShaderMaterial,
 } from "viewer/geometries/materials/plane_material_factory";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
 
 const DEFAULT_POSITION_OFFSET = [0, 0, 0] as Vector3;
+// Half of the gap in the middle of the crosshair, relative to the plane width.
+const CROSSHAIR_HALF_GAP = 25 / 376;
 
 class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
@@ -64,7 +65,8 @@ class Plane {
   }
 
   createMeshes(): void {
-    const pWidth = constants.VIEWPORT_WIDTH;
+    // The plane geometry has a width of 1 and is scaled to the viewport extent (see setScale).
+    const pWidth = 1;
     // create plane
     const planeGeo = new PlaneGeometry(pWidth, pWidth, PLANE_SUBDIVISION, PLANE_SUBDIVISION);
 
@@ -83,8 +85,8 @@ class Plane {
       // biome-ignore format: don't format array
       const crosshairVertices = new Float32Array([
         (-pWidth / 2) * i, (-pWidth / 2) * (1 - i), 0,
-        -25 * i, -25 * (1 - i), 0,
-        25 * i, 25 * (1 - i), 0,
+        -CROSSHAIR_HALF_GAP * i, -CROSSHAIR_HALF_GAP * (1 - i), 0,
+        CROSSHAIR_HALF_GAP * i, CROSSHAIR_HALF_GAP * (1 - i), 0,
         (pWidth / 2) * i, (pWidth / 2) * (1 - i), 0,
       ]);
       crosshairGeometry.setAttribute("position", new BufferAttribute(crosshairVertices, 3));
@@ -155,10 +157,7 @@ class Plane {
     }
     this.lastScaleFactors[0] = xFactor;
     this.lastScaleFactors[1] = yFactor;
-    // Scale to base voxel space which is the same coordinate space the cameras use
-    const baseVoxelUnit = getBaseVoxelInUnit(this.datasetScaleFactor);
-    const scaleVector: Vector3 = V3.scale([xFactor, yFactor, 1], baseVoxelUnit);
-    this.getMeshes().map((mesh) => mesh.scale.set(...scaleVector));
+    this.getMeshes().map((mesh) => mesh.scale.set(xFactor, yFactor, 1));
   }
 
   setBaseRotation = (rotVec: Euler): void => {

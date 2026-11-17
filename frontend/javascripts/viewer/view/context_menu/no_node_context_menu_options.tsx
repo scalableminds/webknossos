@@ -57,6 +57,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { Store } from "viewer/singletons";
 import type { ContextMenuInfo } from "viewer/store";
+import { withMeshFileCompatibilityCheck } from "viewer/view/right_border_tabs/segments_tab/mesh_file_compatibility_modal";
 import { withMappingActivationConfirmation } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { LoadMeshMenuItemLabel } from "../right_border_tabs/segments_tab/load_mesh_menu_item_label";
@@ -167,16 +168,10 @@ export function useNoNodeContextMenuOptions(
     shallowEqual,
   );
 
-  const loadPrecomputedMesh = async () => {
-    if (
-      !currentMeshFile ||
-      !visibleSegmentationLayer ||
-      globalPosition == null ||
-      positionInLayerSpace == null
-    )
-      return;
-    // Don't use the displayed segment id: the mesh file might require another mapping, which
-    // is activated before this function is called (see withMappingActivationConfirmation).
+  const loadPrecomputedMesh = async (meshFileName: string) => {
+    if (!visibleSegmentationLayer || globalPosition == null || positionInLayerSpace == null) return;
+    // Look the segment id up again instead of using the displayed one: the mapping might have
+    // changed since the context menu was opened.
     const { mappedId: segmentId } = await getSegmentIdsAtPositionAsync(
       visibleSegmentationLayer.name,
       globalPosition,
@@ -196,7 +191,7 @@ export function useNoNodeContextMenuOptions(
         segmentId,
         positionInLayerSpace,
         additionalCoordinates,
-        currentMeshFile.name,
+        meshFileName,
         undefined,
         undefined,
         visibleSegmentationLayer.name,
@@ -483,7 +478,6 @@ export function useNoNodeContextMenuOptions(
     skeletonActions.push(loadSynapsesItem);
   }
 
-  const meshFileMappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
   const focusInSegmentListItem: MenuItemType = {
     key: "focus-in-segment-list",
     onClick: maybeFocusSegment,
@@ -506,14 +500,7 @@ export function useNoNodeContextMenuOptions(
   };
   const loadPrecomputedMeshItem: MenuItemType = {
     key: "load-precomputed-mesh",
-    disabled: !currentMeshFile,
-    onClick: withMappingActivationConfirmation(
-      loadPrecomputedMesh,
-      meshFileMappingName,
-      "mesh file",
-      segmentationLayerName,
-      mappingInfo,
-    ),
+    onClick: withMeshFileCompatibilityCheck(loadPrecomputedMesh, segmentationLayerName),
     label: (
       <LoadMeshMenuItemLabel currentMeshFile={currentMeshFile} volumeTracing={volumeTracing} />
     ),

@@ -74,7 +74,7 @@ function SecuredRoute({
     if (shouldCheckVisibility && !isFetchedAfterMount) {
       return <BrainSpinner />;
     }
-    return <LoginView redirect={`${location.pathname}${location.search}`} />;
+    return <LoginView redirect={`${location.pathname}${location.search}${location.hash}`} />;
   }
 
   if (

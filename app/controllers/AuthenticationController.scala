@@ -288,14 +288,16 @@ class AuthenticationController @Inject() (
   def accessibleBySwitching(
       datasetId: Option[ObjectId],
       annotationId: Option[ObjectId],
-      workflowHash: Option[String]
+      workflowHash: Option[String],
+      aiModelId: Option[ObjectId]
   ): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {
       selectedOrganization <- authenticationService.getOrganizationToSwitchTo(
         request.identity,
         datasetId,
         annotationId,
-        workflowHash
+        workflowHash,
+        aiModelId
       )
       selectedOrganizationJs <- organizationService.publicWrites(selectedOrganization)
     } yield Ok(selectedOrganizationJs)

@@ -14,7 +14,7 @@ import {
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
 import Dimensions from "viewer/model/dimensions";
 import FlycamReducer from "viewer/model/reducers/flycam_reducer";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { getVoxelPerPixel } from "viewer/model/scaleinfo";
 import type { WebknossosState } from "viewer/store";
 import { describe, expect, it } from "vitest";
 
@@ -226,7 +226,7 @@ describe("View mode accessors", () => {
         };
         const globalPosition = calculateGlobalPos(rotatedState, clickPositionAtViewportCenter);
         // Applying the rotation of 83° around the x axis to the offset and the apply the dataset scale.
-        const scaleFactor = getBaseVoxelFactorsInUnit(rotatedState.dataset.dataSource.scale);
+        const scaleFactor = getVoxelPerPixel(rotatedState.dataset.dataSource.scale);
         const rotatedAndScaledOffset = new ThreeVector3(offset[0], offset[1], 0)
           .applyEuler(new Euler(...rotationInRadian, "ZYX"))
           .multiply(new ThreeVector3(...scaleFactor))
@@ -271,13 +271,15 @@ describe("View mode accessors", () => {
           };
           const globalPosition = calculateGlobalPos(rotatedState, clickPositionAtViewportCenter);
           // Applying the rotation of 83° around the x axis to the offset and the apply the dataset scale.
-          const scaleFactor = getBaseVoxelFactorsInUnit(rotatedState.dataset.dataSource.scale);
+          const voxelPerPixel = getVoxelPerPixel(
+            rotatedState.dataset.dataSource.scale,
+            rotatedState.flycam.zoomStep,
+          );
           const posInViewportVector = calculateInViewportPos(
             globalPosition.floating,
             initialFlycamPosition,
             rotationInRadian,
-            scaleFactor,
-            rotatedState.flycam.zoomStep,
+            voxelPerPixel,
           );
           const posInViewport = Dimensions.transDim(
             [posInViewportVector.x, posInViewportVector.y, posInViewportVector.z],
@@ -316,13 +318,15 @@ describe("View mode accessors", () => {
           };
           const globalPosition = calculateGlobalPos(rotatedState, clickPositionAtViewportCenter);
           // Applying the rotation of 83° around the x axis to the offset and the apply the dataset scale.
-          const scaleFactor = getBaseVoxelFactorsInUnit(rotatedState.dataset.dataSource.scale);
+          const voxelPerPixel = getVoxelPerPixel(
+            rotatedState.dataset.dataSource.scale,
+            rotatedState.flycam.zoomStep,
+          );
           const posInViewportVector = calculateInViewportPos(
             globalPosition.floating,
             initialFlycamPosition,
             rotationInRadian,
-            scaleFactor,
-            rotatedState.flycam.zoomStep,
+            voxelPerPixel,
           );
           const posInViewport = Dimensions.transDim(
             [posInViewportVector.x, posInViewportVector.y, posInViewportVector.z],

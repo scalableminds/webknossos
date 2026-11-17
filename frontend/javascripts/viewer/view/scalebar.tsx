@@ -6,7 +6,7 @@ import type { OrthoView } from "viewer/constants";
 import constants, { LongUnitToShortUnitMap, OrthoViews, Unicode } from "viewer/constants";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { getTDViewZoom, getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
-import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
+import { getUnitPerPixel } from "viewer/model/scaleinfo";
 import type { WebknossosState } from "viewer/store";
 
 const { ThinSpace, MultiplicationSymbol } = Unicode;
@@ -27,7 +27,7 @@ function convertPixelsToUnit(
   zoomValue: number,
   dataset: APIDataset,
 ): number {
-  return lengthInPixel * zoomValue * getBaseVoxelInUnit(dataset.dataSource.scale.factor);
+  return lengthInPixel * getUnitPerPixel(dataset.dataSource.scale, zoomValue);
 }
 
 const getBestScalebarAnchorInNm = (lengthInNm: number): number => {

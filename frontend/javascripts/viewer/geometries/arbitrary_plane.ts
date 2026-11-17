@@ -7,7 +7,7 @@ import {
   type Scene,
   ShaderMaterial,
 } from "three";
-import constants, { OrthoViews } from "viewer/constants";
+import { FLIGHT_PLANE_WIDTH, OrthoViews } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import PlaneMaterialFactory, {
   type PlaneShaderMaterial,
@@ -121,10 +121,7 @@ class FlightModePlane {
     this.materialFactory = new PlaneMaterialFactory(OrthoViews.PLANE_XY, false, 4);
     const textureMaterial = this.materialFactory.setup().getMaterial();
     this.plane = adaptPlane(
-      new Mesh(
-        new PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),
-        textureMaterial,
-      ),
+      new Mesh(new PlaneGeometry(FLIGHT_PLANE_WIDTH, FLIGHT_PLANE_WIDTH, 1, 1), textureMaterial),
     );
     const debuggerPlane = renderDebuggerPlane ? adaptPlane(this.createDebuggerPlane()) : null;
     return {
@@ -176,7 +173,7 @@ class FlightModePlane {
     debuggerMaterial.transparent = true;
     shaderEditor.addMaterial(99, debuggerMaterial);
     const debuggerPlane = new Mesh(
-      new PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 50, 50),
+      new PlaneGeometry(FLIGHT_PLANE_WIDTH, FLIGHT_PLANE_WIDTH, 50, 50),
       debuggerMaterial,
     );
     return debuggerPlane;

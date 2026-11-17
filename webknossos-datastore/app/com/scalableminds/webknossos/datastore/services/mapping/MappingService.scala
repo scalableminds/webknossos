@@ -113,7 +113,7 @@ object MappingService {
   }
 
   def parseMapping(rawMapping: Array[Byte], elementClass: ElementClass.Value): Box[JsonMapping] =
-    MappingParser.parse[Long](rawMapping, normalizeSegmentId(_, elementClass)).map(m => JsonMapping.fromMap(m.mapping))
+    MappingParser.parse(rawMapping, normalizeSegmentId(_, elementClass)).map(m => JsonMapping.fromMap(m.mapping))
 
   // Collects the distinct ids natively, looks up only those and lets the native code rewrite the voxels.
   def applyMappingToBytes(

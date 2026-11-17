@@ -8,14 +8,13 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataLayerMapping
 import com.typesafe.scalalogging.LazyLogging
 
 import java.io.*
-import java.nio.file.Path
 import scala.collection.mutable
 
 object MappingParser extends LazyLogging {
 
-  def parse[T](r: Reader, fromLongFn: Long => T): Box[DataLayerMapping[T]] =
+  def parse(r: Reader, normalizeId: Long => Long): Box[DataLayerMapping] =
     try
-      Box.fromOption(parseImpl(r, fromLongFn))
+      Box.fromOption(parseImpl(r, normalizeId))
     catch {
       case e: JsonParseException =>
         logger.error(s"Parse exception while parsing mapping: ${e.getMessage}.")
@@ -26,18 +25,15 @@ object MappingParser extends LazyLogging {
     } finally
       r.close()
 
-  def parse[T](p: Path, fromLongFn: Long => T): Box[DataLayerMapping[T]] =
-    parse(new FileReader(new File(p.toString)), fromLongFn)
+  def parse(a: Array[Byte], normalizeId: Long => Long): Box[DataLayerMapping] =
+    parse(new InputStreamReader(new ByteArrayInputStream(a)), normalizeId)
 
-  def parse[T](a: Array[Byte], fromLongFn: Long => T): Box[DataLayerMapping[T]] =
-    parse(new InputStreamReader(new ByteArrayInputStream(a)), fromLongFn)
-
-  private def parseImpl[T](r: Reader, fromLongFn: Long => T): Option[DataLayerMapping[T]] = {
+  private def parseImpl(r: Reader, normalizeId: Long => Long): Option[DataLayerMapping] = {
     val before = Instant.now
 
     val jsonReader = new JsonReader(r)
     var nameOpt: Option[String] = None
-    var classesOpt: Option[Map[T, T]] = None
+    var classesOpt: Option[Map[Long, Long]] = None
 
     jsonReader.beginObject()
     while (jsonReader.hasNext)
@@ -45,7 +41,7 @@ object MappingParser extends LazyLogging {
         case "name" =>
           nameOpt = Some(jsonReader.nextString())
         case "classes" =>
-          classesOpt = Some(parseClasses(jsonReader, fromLongFn))
+          classesOpt = Some(parseClasses(jsonReader, normalizeId))
         case _ =>
           jsonReader.skipValue()
       }
@@ -59,17 +55,17 @@ object MappingParser extends LazyLogging {
     } yield DataLayerMapping(name, classes)
   }
 
-  private def parseClasses[T](jsonReader: JsonReader, fromLongFn: Long => T): Map[T, T] = {
-    val mapping = mutable.HashMap[T, T]()
+  private def parseClasses(jsonReader: JsonReader, normalizeId: Long => Long): Map[Long, Long] = {
+    val mapping = mutable.HashMap[Long, Long]()
 
     jsonReader.beginArray()
 
     while (jsonReader.hasNext) {
       jsonReader.beginArray()
-      var firstIdOpt: Option[T] = None
+      var firstIdOpt: Option[Long] = None
 
       while (jsonReader.hasNext) {
-        val currentId = fromLongFn(jsonReader.nextLong())
+        val currentId = normalizeId(jsonReader.nextLong())
         firstIdOpt match {
           case Some(firstId) =>
             mapping.put(currentId, firstId)

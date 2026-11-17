@@ -2,11 +2,10 @@ package backend
 
 import com.scalableminds.webknossos.datastore.helpers.NativeBucketScanner
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import com.scalableminds.webknossos.datastore.services.mapping.{JsonMapping, MappingParser, MappingService}
+import com.scalableminds.webknossos.datastore.services.mapping.{JsonMapping, MappingService}
 import org.scalatestplus.play.PlaySpec
 
 import java.nio.{ByteBuffer, ByteOrder}
-import scala.reflect.ClassTag
 import scala.util.Random
 
 class JsonMappingTestSuite extends PlaySpec {
@@ -21,78 +20,77 @@ class JsonMappingTestSuite extends PlaySpec {
   private val segmentIdPool: Seq[Long] =
     Seq(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 44, 255, 300, 70000, 4464, -1, -2, 4294967296L, Long.MinValue)
 
-  private def randomData(elementClass: ElementClass.Value, voxelCount: Int, random: Random): Array[Byte] = {
+  private def encode(ids: Seq[Long], elementClass: ElementClass.Value): Array[Byte] = {
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
-    val buffer = ByteBuffer.allocate(voxelCount * bytesPerElement).order(ByteOrder.LITTLE_ENDIAN)
-    (0 until voxelCount).foreach { _ =>
-      val id = if (random.nextInt(4) == 0) random.nextLong() else segmentIdPool(random.nextInt(segmentIdPool.length))
-      val longBytes = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN).putLong(id).array()
-      buffer.put(longBytes, 0, bytesPerElement)
+    val buffer = ByteBuffer.allocate(ids.length * bytesPerElement).order(ByteOrder.LITTLE_ENDIAN)
+    ids.foreach { id =>
+      buffer.put(ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN).putLong(id).array(), 0, bytesPerElement)
     }
     buffer.array()
   }
 
-  // The previous implementation: parse into a typed Map and map every voxel through it, with identity as default.
-  private def referenceTyped[T: ClassTag](
-      data: Array[Byte],
-      bytesPerElement: Int,
-      fromLong: Long => T,
-      read: ByteBuffer => T,
-      write: (ByteBuffer, T) => Unit
-  ): Array[Byte] = {
-    val mapping = MappingParser.parse[T](mappingJson.getBytes, fromLong).get("test mapping must parse")
-    val typedMapping = mapping.mapping.withDefault(identity)
-    val inBuffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN)
-    val typedData = Array.fill(data.length / bytesPerElement)(read(inBuffer))
-    val mappedData = typedData.map(typedMapping.apply)
-    val outBuffer = ByteBuffer.allocate(data.length).order(ByteOrder.LITTLE_ENDIAN)
-    mappedData.foreach(write(outBuffer, _))
-    outBuffer.array()
+  private def decode(data: Array[Byte], elementClass: ElementClass.Value): Seq[Long] = {
+    val bytesPerElement = ElementClass.bytesPerElement(elementClass)
+    data.grouped(bytesPerElement).toSeq.map { bytes =>
+      val raw = bytes.zipWithIndex.foldLeft(0L) { case (acc, (b, i)) => acc | ((b & 0xffL) << (8 * i)) }
+      MappingService.normalizeSegmentId(raw, elementClass)
+    }
   }
 
-  private def reference(data: Array[Byte], elementClass: ElementClass.Value): Array[Byte] =
-    ElementClass.bytesPerElement(elementClass) match {
-      case 1 => referenceTyped[Byte](data, 1, _.toByte, _.get, _.put(_))
-      case 2 => referenceTyped[Short](data, 2, _.toShort, _.getShort, _.putShort(_))
-      case 4 => referenceTyped[Int](data, 4, _.toInt, _.getInt, _.putInt(_))
-      case 8 => referenceTyped[Long](data, 8, identity, _.getLong, _.putLong(_))
-    }
+  private def randomIds(voxelCount: Int, random: Random): Seq[Long] =
+    Seq.fill(voxelCount)(
+      if (random.nextInt(4) == 0) random.nextLong() else segmentIdPool(random.nextInt(segmentIdPool.length))
+    )
 
   private def parsed(elementClass: ElementClass.Value): JsonMapping =
     MappingService.parseMapping(mappingJson.getBytes, elementClass).get("test mapping must parse")
 
+  private def applyNatively(ids: Seq[Long], elementClass: ElementClass.Value): Seq[Long] = {
+    val mapped =
+      MappingService.applyMappingToBytes(parsed(elementClass), encode(ids, elementClass), elementClass, bucketScanner)
+    decode(mapped, elementClass)
+  }
+
+  // Expected results per element class, as (input id -> mapped id) in the normalized representation.
+  private val expectedMappings: Seq[(ElementClass.Value, Seq[(Long, Long)])] = Seq(
+    // 300 and 44 are the same id, the later class [5, 44] wins. -1 is 255, 70000 is 112, 4294967296 is 0 and -2 is 254.
+    ElementClass.uint8 -> Seq(0L -> 254L, 2L -> 1L, 44L -> 5L, 255L -> 7L, 112L -> 7L, 6L -> 254L, 12L -> 12L),
+    ElementClass.int8 -> Seq(0L -> -2L, 2L -> 1L, 44L -> 5L, -1L -> 7L, 112L -> 7L, 6L -> -2L, 12L -> 12L),
+    // For widths up to 32 bits, 4294967296 truncates to 0, so the last class overrides 0 -> 10 with 0 -> -2.
+    ElementClass.uint16 -> Seq(0L -> 65534L, 44L -> 5L, 300L -> 7L, 65535L -> 7L, 4464L -> 7L, 6L -> 65534L),
+    ElementClass.int16 -> Seq(0L -> -2L, 44L -> 5L, 300L -> 7L, -1L -> 7L, 4464L -> 7L, 12L -> 12L),
+    ElementClass.uint32 -> Seq(0L -> 4294967294L, 11L -> 10L, 300L -> 7L, 4294967295L -> 7L, 6L -> 4294967294L),
+    ElementClass.int32 -> Seq(0L -> -2L, 11L -> 10L, 70000L -> 7L, -1L -> 7L, 12L -> 12L),
+    ElementClass.uint64 -> Seq(0L -> 10L, 4294967296L -> -2L, -1L -> 7L, 6L -> -2L, 44L -> 5L, 12L -> 12L),
+    ElementClass.int64 -> Seq(0L -> 10L, 4294967296L -> -2L, -1L -> 7L, Long.MinValue -> Long.MinValue)
+  )
+
   "JSON mapping application" should {
-    ElementClass.segmentationElementClasses.toSeq.sortBy(_.id).foreach { elementClass =>
-      s"match the previous per-voxel implementation for $elementClass" in {
-        val random = new Random(elementClass.id)
+    expectedMappings.foreach { case (elementClass, expected) =>
+      s"map voxels and single segment ids to the expected ids for $elementClass" in {
+        val (inputs, outputs) = expected.unzip
+        assert(applyNatively(inputs, elementClass) == outputs)
         val mapping = parsed(elementClass)
-        Seq(0, 1, 32 * 32 * 32).foreach { voxelCount =>
-          val data = randomData(elementClass, voxelCount, random)
-          val mapped = MappingService.applyMappingToBytes(mapping, data, elementClass, bucketScanner)
-          assert(mapped.sameElements(reference(data, elementClass)))
+        inputs.zip(outputs).foreach { case (input, output) =>
+          assert(mapping(MappingService.normalizeSegmentId(input, elementClass)) == output)
         }
       }
     }
 
-    "map 0 when it is part of the mapping and keep unmapped ids" in {
-      // As uint32, 4294967296 truncates to 0, so the last class overrides 0 -> 10 with 0 -> -2 (i.e. 2^32 - 2)
-      val data = ByteBuffer.allocate(16).order(ByteOrder.LITTLE_ENDIAN).putInt(0).putInt(2).putInt(12).putInt(-1)
-      val mapped = MappingService.applyMappingToBytes(
-        parsed(ElementClass.uint32),
-        data.array(),
-        ElementClass.uint32,
-        bucketScanner
-      )
-      val out = ByteBuffer.wrap(mapped).order(ByteOrder.LITTLE_ENDIAN)
-      assert(Seq.fill(4)(out.getInt) == Seq(-2, 1, 12, 7))
+    ElementClass.segmentationElementClasses.toSeq.sortBy(_.id).foreach { elementClass =>
+      s"map random data like a per-voxel lookup for $elementClass" in {
+        val random = new Random(elementClass.id)
+        val mapping = parsed(elementClass)
+        Seq(0, 1, 32 * 32 * 32).foreach { voxelCount =>
+          val ids = randomIds(voxelCount, random)
+          val perVoxel = ids.map(id => mapping(MappingService.normalizeSegmentId(id, elementClass)))
+          assert(applyNatively(ids, elementClass) == perVoxel)
+        }
+      }
     }
 
-    "map single segment ids like the voxel data" in {
-      val uint8Mapping = parsed(ElementClass.uint8)
-      // 300 is 44 as uint8, which is mapped to 5 by the later class
-      val normalized = MappingService.normalizeSegmentId(300, ElementClass.uint8)
-      assert(normalized == 44)
-      assert(uint8Mapping(normalized) == 5)
+    "normalize segment ids to the element width" in {
+      assert(MappingService.normalizeSegmentId(300, ElementClass.uint8) == 44)
       assert(MappingService.normalizeSegmentId(255, ElementClass.int8) == -1)
       assert(MappingService.normalizeSegmentId(-1, ElementClass.uint16) == 65535)
       assert(MappingService.normalizeSegmentId(-1, ElementClass.uint64) == -1)

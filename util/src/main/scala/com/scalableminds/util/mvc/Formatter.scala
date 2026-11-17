@@ -35,6 +35,15 @@ trait Formatter {
   protected def formatCount(count: Int, singularNoun: String): String =
     s"$count ${TextUtils.pluralize(singularNoun, count)}"
 
+  // Decimal units with one decimal place, matching how storage is shown in the organization overview, e.g. “92.0 GB”
+  protected def formatBytes(numBytes: Long): String = {
+    val units = List("B", "KB", "MB", "GB", "TB", "PB")
+    val exponent =
+      if (numBytes < 1000) 0 else math.min((math.log10(numBytes.toDouble) / 3).toInt, units.length - 1)
+    val value = numBytes / math.pow(1000, exponent)
+    if (exponent == 0) s"$numBytes B" else f"$value%.1f ${units(exponent)}"
+  }
+
   protected def formatDuration(duration: FiniteDuration): String = {
     val minuteRoundingThresholdMillisForRenderingMillis = 59995
     val minuteRoundingThresholdMillisForRenderingSeconds = 59499

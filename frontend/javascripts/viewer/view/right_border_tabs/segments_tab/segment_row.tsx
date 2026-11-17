@@ -312,7 +312,11 @@ function SegmentName({
       }}
       // The truncated rows need the full name on hover; the expanded one shows it anyway.
       title={isExpanded ? undefined : displayedName}
-      onClick={() => actions.selectAndJumpTo(segment)}
+      onClick={(event) => {
+        // Clicks with modifiers (multi/range selection) are handled by the tree's onSelect.
+        if (event.shiftKey || event.ctrlKey || event.metaKey) return;
+        actions.selectAndJumpTo(segment);
+      }}
       onStartEditing={() => actions.startRenaming(node.key)}
       onCommit={(name) => actions.renameSegment(segment, name)}
       onFinishEditing={actions.finishRenaming}

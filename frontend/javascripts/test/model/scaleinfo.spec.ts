@@ -1,6 +1,20 @@
-import { UnitLong, UnitShort } from "viewer/constants";
-import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
+import { UnitLong, UnitShort, type Vector3 } from "viewer/constants";
+import { convertVoxelSizeToUnit, getUnitPerPixel, getVoxelPerPixel } from "viewer/model/scaleinfo";
 import { describe, expect, it } from "vitest";
+
+describe("Pixel conversion", () => {
+  const voxelSize = { factor: [4, 8, 40] as Vector3, unit: UnitLong.nm };
+
+  it("should cover the smallest voxel extent with one pixel at zoom step 1", () => {
+    expect(getUnitPerPixel(voxelSize)).toBe(4);
+    expect(getVoxelPerPixel(voxelSize)).toEqual([1, 0.5, 0.1]);
+  });
+
+  it("should scale linearly with the zoom step", () => {
+    expect(getUnitPerPixel(voxelSize, 2.5)).toBe(10);
+    expect(getVoxelPerPixel(voxelSize, 2)).toEqual([2, 1, 0.2]);
+  });
+});
 
 describe("Format Utils", () => {
   it("Test conversion of VoxelSize in unit to nm", () => {

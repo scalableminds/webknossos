@@ -3,6 +3,7 @@ import {
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
   getAllDefaultKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
+import { checkCollisionsInShortcutMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
 import { describe, expect, it } from "vitest";
 
 describe("Keyboard shortcut handler IDs", () => {
@@ -28,5 +29,10 @@ describe("Keyboard shortcut handler IDs", () => {
     const defaults = getAllDefaultKeyboardShortcuts();
     const missing = ALL_KEYBOARD_SHORTCUT_IDS.filter((id) => defaults[id] == null);
     expect(missing).toHaveLength(0);
+  });
+
+  it("default shortcuts do not collide, also not for the focus-scoped segment list shortcut", () => {
+    const collisions = checkCollisionsInShortcutMap(getAllDefaultKeyboardShortcuts(), new Map());
+    expect(collisions).toEqual([]);
   });
 });

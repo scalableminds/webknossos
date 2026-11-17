@@ -87,7 +87,7 @@ Tasks can also be created in bulk using the advanced CSV text input. Not recomme
 Create a Task
 ///
 
-**Note that you need to specify required _Experiences_ for a _Task_. Your _Task_ can only be assigned if there are users that have the required _Experience_ assigned to them. You can assign an [Experience](../users/new_users.md) to a user on the `Users` page.**
+Optionally, you can specify a required _Experience_ for a _Task_. In that case, the _Task_ is only assigned to users who have at least the required _Experience_ value in that domain. Without a required _Experience_, any member of the project's team can get the _Task_. You can assign an [Experience](../users/new_users.md) to a user on the `Users` page.
 
 ![Assigning Experiences to users](../images/users_experience.jpeg)
 /// caption
@@ -120,7 +120,7 @@ Download all Tasks of a Project
 
 When users request a new task from their dashboard ("Tasks" tab), a set of criteria is matched to assign them to a fitting task:
 
-- Available _Tasks_ are assigned to users that have the required _Experience_ and are members of the specified team
+- Available _Tasks_ are assigned to users that are members of the specified team and, if the _Task_ requires an _Experience_, have at least the required _Experience_ value
 - Multiple _Task_ Instances will be assigned to different users
 - _Tasks_ from _Projects_ with high priority are assigned first
 - _Tasks_ from paused _Projects_ are not assigned at all

@@ -25,8 +25,8 @@ import scala.jdk.CollectionConverters.*
 
 /** The passkey (WebAuthn) protocol logic: building the options sent to the browser and verifying its responses.
   *
-  * Kept free of HTTP, cookies and database access so that it can be exercised with an emulated authenticator in
-  * backend tests (see PasskeyTestSuite).
+  * Kept free of HTTP, cookies and database access so that it can be exercised with an emulated authenticator in backend
+  * tests (see PasskeyTestSuite).
   */
 class WebAuthnVerifier(origin: Origin, timeout: FiniteDuration) {
 

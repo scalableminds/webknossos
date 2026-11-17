@@ -22,9 +22,9 @@ import scala.jdk.CollectionConverters.*
 /** Runs passkey registration and login against an emulated authenticator (from webauthn4j-test).
   *
   * The emulator stands in for the browser and the security key / platform authenticator. It is fed the JSON options
-  * webknossos sends to the browser, and its responses are encoded in the JSON format that @github/webauthn-json produces
-  * in the frontend. In between, credentials take the same serialization round trip as through the database. This
-  * catches regressions when changing the passkey code or upgrading webauthn4j, without needing a browser.
+  * webknossos sends to the browser, and its responses are encoded in the JSON format that @github/webauthn-json
+  * produces in the frontend. In between, credentials take the same serialization round trip as through the database.
+  * This catches regressions when changing the passkey code or upgrading webauthn4j, without needing a browser.
   */
 class PasskeyTestSuite extends PlaySpec {
 
@@ -203,7 +203,10 @@ class PasskeyTestSuite extends PlaySpec {
       .toOption
       .map(_ => storeAndLoad(storedRecord))
 
-  private def login(client: ClientPlatform, storedRecord: WebAuthnCredentialRecord): Option[WebAuthnCredentialRecord] = {
+  private def login(
+      client: ClientPlatform,
+      storedRecord: WebAuthnCredentialRecord
+  ): Option[WebAuthnCredentialRecord] = {
     val (authData, challenge) = prepareLogin(client)
     finishLogin(authData, challenge, storedRecord)
   }
@@ -285,7 +288,8 @@ class PasskeyTestSuite extends PlaySpec {
     }
 
     "reject a registration answering a different challenge" in {
-      val options = verifier.registrationOptions(newChallenge(), multiUserId, "Test User", "test@example.org", Seq.empty)
+      val options =
+        verifier.registrationOptions(newChallenge(), multiUserId, "Test User", "test@example.org", Seq.empty)
       val credential = browserCreate(newClient(), Json.toJson(options))
       val registrationData =
         verifier.parseRegistration(registrationResponseJson(credential)).getOrElse(fail("parsing failed"))

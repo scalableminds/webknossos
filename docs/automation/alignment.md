@@ -48,7 +48,6 @@ Since alignment projects in WEBKNOSSOS are still in beta, please [contact us](ma
 The tile CSV lists one tile per row, with the columns `section,x,y,path`:
 
 ```csv
-section,x,y,path
 1,0,0,./section_001/tile_0_0.tif
 1,2048,0,./section_001/tile_1_0.tif
 2,0,0,./section_002/tile_0_0.tif
@@ -59,7 +58,7 @@ section,x,y,path
 - `x`, `y`: The initial position of the tile within its section, in pixels.
 - `path`: The path of the tile image, relative to the CSV file. Paths must not point outside of the CSV's directory.
 
-A header row is optional, and additional columns after `path` are ignored.
+Additional columns after `path` are ignored. No header row may be included.
 
 The CSV is validated after the upload. If it is invalid, the project page states the reason.
 The CSV can then be replaced on the project page without uploading the image data again, e.g. to correct initial tile positions or to exclude tiles from subsequent alignments.

@@ -24,9 +24,14 @@ class TileCsvParserTestSuite extends AnyWordSpec {
       assert(parse(csv) == Full(SectionRange(5, 7)))
     }
 
-    "skip an optional header row, a BOM, blank lines and quotes" in {
-      val csv = "\uFEFFsection,x,y,path\n\n\"3\",0,0,\"./a.tif\"\n4,0,0,./b.tif\n\n"
+    "skip a BOM, blank lines and quotes" in {
+      val csv = "\uFEFF\n\"3\",0,0,\"./a.tif\"\n4,0,0,./b.tif\n\n"
       assert(parse(csv) == Full(SectionRange(3, 4)))
+    }
+
+    "reject a header row" in {
+      assert(failureMessage("\uFEFFsection,x,y,path\n1,0,0,./a.tif\n").contains("must not contain a header row"))
+      assert(failureMessage("\n\"Section\",x,y,path\n1,0,0,./a.tif\n").contains("must not contain a header row"))
     }
 
     "reject gaps in the section numbers" in
@@ -65,7 +70,7 @@ class TileCsvParserTestSuite extends AnyWordSpec {
 
     "reject empty files" in {
       assert(failureMessage("").contains("no tiles"))
-      assert(failureMessage("section,x,y,path\n").contains("no tiles"))
+      assert(failureMessage("\n\n").contains("no tiles"))
     }
   }
 }

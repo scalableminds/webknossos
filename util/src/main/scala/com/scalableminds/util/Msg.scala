@@ -69,6 +69,8 @@ object Msg {
       val invalidCurrentPath: String = "Invalid path of the current CSV."
       val storeFailed: String = "Could not store the new CSV file."
       val noTiles: String = "The CSV file contains no tiles."
+      val headerRowNotAllowed: String =
+        "The CSV file must not contain a header row. Each row must describe a tile as section,x,y,path."
       def sectionsNotContinuous(missing: Int, first: Int, last: Int): String =
         s"Section numbers are not continuous: section $missing is missing between $first and $last."
       def invalidRow(rowNumber: Int, problem: String): String = s"Row $rowNumber: $problem"

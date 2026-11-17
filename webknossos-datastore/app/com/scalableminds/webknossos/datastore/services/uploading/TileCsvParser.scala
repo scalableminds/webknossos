@@ -18,7 +18,7 @@ case class SectionRange(first: Int, last: Int) derives JsonAutoFormat
  * Validates the tile CSV of an alignment project and extracts its section range.
  * Each row is section,x,y,path, with the path relative to the CSV, e.g. 5,0,240,./005_000_001_000_n_00.tif
  * Additional columns after the path are ignored.
- * An optional header row (starting with "section") is skipped.
+ * Header rows are not supported by the alignment job, so a first row starting with "section" is rejected explicitly.
  * Section numbers must be continuous (every number between the first and last section must occur),
  * but may start at any value. Whether the referenced files exist is not checked.
  */
@@ -36,24 +36,24 @@ object TileCsvParser {
     ).flatMap(identity)
 
   def parseSectionRange(lines: Iterator[String]): Box[SectionRange] = {
-    val rows = lines
-      .map(_.stripPrefix("\uFEFF"))
-      .zipWithIndex
-      .filter { case (line, _) => line.trim.nonEmpty }
-      .map { case (line, index) =>
+    val rows = lines.map(_.stripPrefix("\uFEFF")).zipWithIndex.filter { case (line, _) => line.trim.nonEmpty }.map {
+      case (line, index) =>
         (splitRow(line), index + 1)
-      }
-      .buffered
-    if (rows.headOption.exists(_._1.headOption.exists(_.equalsIgnoreCase(headerFirstCell)))) rows.next()
+    }
 
     val sections = mutable.HashSet[Int]()
     var error: Option[String] = None
+    var isFirstRow = true
     while (error.isEmpty && rows.hasNext) {
       val (cells, rowNumber) = rows.next()
-      parseRow(cells) match {
-        case Right(section) => sections += section
-        case Left(message)  => error = Some(Msg.AlignmentProject.Csv.invalidRow(rowNumber, message))
-      }
+      if (isFirstRow && cells.headOption.exists(_.equalsIgnoreCase(headerFirstCell)))
+        error = Some(Msg.AlignmentProject.Csv.headerRowNotAllowed)
+      else
+        parseRow(cells) match {
+          case Right(section) => sections += section
+          case Left(message)  => error = Some(Msg.AlignmentProject.Csv.invalidRow(rowNumber, message))
+        }
+      isFirstRow = false
     }
     error match {
       case Some(message)            => Failure(message)

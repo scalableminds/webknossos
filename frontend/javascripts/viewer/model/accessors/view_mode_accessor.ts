@@ -31,9 +31,9 @@ export function getTDViewportSize(state: WebknossosState): [number, number] {
 export function getTDViewZoom(state: WebknossosState) {
   const { width } = getInputCatcherRect(state, OrthoViews.TDView);
   const [viewplaneWidth] = getTDViewportSize(state);
-  const { factor } = getGlobalVoxelSizeFromState(state);
-  // We only need to calculate scaleX as scaleY would have the same value.
-  const scaleX = viewplaneWidth / (width * factor[0]);
+  // Like the zoom step of the other viewports, this is relative to the smallest voxel extent
+  // (see getUnitPerPixel). We only need to calculate scaleX as scaleY would have the same value.
+  const scaleX = viewplaneWidth / (width * getUnitPerPixel(getGlobalVoxelSizeFromState(state)));
   return scaleX;
 }
 export function getInputCatcherRect(state: WebknossosState, viewport: Viewport): Rect {

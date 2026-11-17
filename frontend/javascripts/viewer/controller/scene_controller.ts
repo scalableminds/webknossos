@@ -76,7 +76,7 @@ import {
   getTaskBoundingBoxes,
   type MipEnabledBBox,
 } from "viewer/model/accessors/tracing_accessor";
-import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
+import { getPlaneExtentInUnitFromStore } from "viewer/model/accessors/view_mode_accessor";
 import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
 import {
   loadMipAction,
@@ -640,7 +640,12 @@ class SceneController {
 
     if (!optFlightModePlane) {
       for (const currentPlane of Object.values(this.planes)) {
-        const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
+        // The plane geometry has a width of 1, so its scale is the viewport extent.
+        const [scaleX, scaleY] = getPlaneExtentInUnitFromStore(
+          state,
+          flycam.zoomStep,
+          currentPlane.planeID,
+        );
         const isVisible = scaleX > 0 && scaleY > 0;
 
         if (isVisible) {

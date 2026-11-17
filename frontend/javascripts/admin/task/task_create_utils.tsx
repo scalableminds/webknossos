@@ -1,4 +1,4 @@
-import type { APITask } from "types/api_types";
+import type { APITask, TaskExperience } from "types/api_types";
 import type { BoundingBoxObject } from "types/bounding_box";
 import type { Vector3 } from "viewer/constants";
 
@@ -8,10 +8,8 @@ export type NewTask = {
   readonly datasetId: string;
   readonly editPosition: Vector3;
   readonly editRotation: Vector3;
-  readonly neededExperience: {
-    readonly domain: string;
-    readonly value: number;
-  };
+  // undefined if any member of the project's team may get the task
+  readonly neededExperience?: TaskExperience;
   readonly projectName: string;
   readonly scriptId: string | null | undefined;
   readonly pendingInstances: number;

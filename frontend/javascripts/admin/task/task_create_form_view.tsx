@@ -101,7 +101,9 @@ function taskToText(task: APITask) {
     projectName,
     script,
   } = task;
-  const neededExperienceAsString = `${neededExperience.domain},${neededExperience.value}`;
+  // Tasks without a needed experience get empty experience columns, which the bulk import understands.
+  const neededExperienceAsString =
+    neededExperience != null ? `${neededExperience.domain},${neededExperience.value}` : ",";
   const [editPositionAsString, editRotationAsString] = [editPosition, editRotation].map((vector3) =>
     vector3.join(","),
   );
@@ -302,8 +304,18 @@ type FormValues = {
   datasetId: string;
   datasetName: string;
   projectName: string;
-  neededExperience: NewTask["neededExperience"];
+  // The form fields are empty if any member of the project's team may get the task
+  neededExperience: { domain?: string; value?: number } | undefined;
 };
+
+function isNonEmptyDomain(domain: string | null | undefined): domain is string {
+  return domain != null && domain.trim() !== "";
+}
+
+function getNeededExperience(formValues: FormValues): NewTask["neededExperience"] {
+  const { domain, value } = formValues.neededExperience ?? {};
+  return isNonEmptyDomain(domain) && value != null ? { domain, value } : undefined;
+}
 
 function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const { taskId } = useParams();
@@ -311,6 +323,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const { modal } = App.useApp();
   const { token } = theme.useToken();
   const [form] = Form.useForm<FormValues>();
+  const hasExperienceDomain = isNonEmptyDomain(Form.useWatch(["neededExperience", "domain"], form));
 
   const {
     data: datasets = [],
@@ -396,12 +409,14 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
     const boundingBox = formValues.boundingBox
       ? transformBoundingBox(formValues.boundingBox)
       : null;
+    const neededExperience = getNeededExperience(formValues);
 
     if (taskId != null) {
       // either update an existing task
       const newTask = {
         ...omit(formValues, "nmlFiles", "baseAnnotation"),
         boundingBox,
+        neededExperience,
       };
       const confirmedTask = await updateTask(taskId, newTask);
       navigate(`/tasks/${confirmedTask.id}`);
@@ -425,6 +440,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             const newTask: NewNmlTask = {
               ...omit(formValues, "baseAnnotation"),
               boundingBox,
+              neededExperience,
             };
             const response = await createTaskFromNML(newTask, batchOfNmls);
 
@@ -443,6 +459,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             ...omit(formValues, "nmlFiles", "baseAnnotation"),
             boundingBox,
             baseAnnotation,
+            neededExperience,
           };
           const response = await createTasks([newTask]);
 
@@ -591,31 +608,36 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
           <CreateResourceButton text="Upload Dataset" link="/datasets/upload" />
         </Row>
 
-        <FormItem
-          name="editPosition"
-          label="Starting Position"
-          hasFeedback
-          rules={[
-            {
-              required: true,
-            },
-          ]}
-        >
-          <Vector3Input style={fullWidth} disabled={isEditingMode} />
-        </FormItem>
-
-        <FormItem
-          name="editRotation"
-          label="Starting Rotation"
-          hasFeedback
-          rules={[
-            {
-              required: true,
-            },
-          ]}
-        >
-          <Vector3Input style={fullWidth} disabled={isEditingMode} />
-        </FormItem>
+        <Row gutter={8}>
+          <Col span={12}>
+            <FormItem
+              name="editPosition"
+              label="Starting Position"
+              hasFeedback
+              rules={[
+                {
+                  required: true,
+                },
+              ]}
+            >
+              <Vector3Input style={fullWidth} disabled={isEditingMode} />
+            </FormItem>
+          </Col>
+          <Col span={12}>
+            <FormItem
+              name="editRotation"
+              label="Starting Rotation"
+              hasFeedback
+              rules={[
+                {
+                  required: true,
+                },
+              ]}
+            >
+              <Vector3Input style={fullWidth} disabled={isEditingMode} />
+            </FormItem>
+          </Col>
+        </Row>
       </div>
     );
   }
@@ -633,6 +655,17 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
       <Spin spinning={isUploading}>
         <Form
           onFinish={onFinish}
+          onValuesChange={(changedValues: Partial<FormValues>) => {
+            // An experience value without a domain would be dropped silently, so clear it with the domain.
+            const changedExperience = changedValues.neededExperience;
+            if (
+              changedExperience != null &&
+              "domain" in changedExperience &&
+              !isNonEmptyDomain(changedExperience.domain)
+            ) {
+              form.setFieldValue(["neededExperience", "value"], undefined);
+            }
+          }}
           layout="vertical"
           form={form}
           initialValues={{
@@ -674,50 +707,10 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             <CreateResourceButton text="Create new Task Type" link="/taskTypes/create" />
           </Row>
 
-          <Row gutter={8} align="bottom" wrap={false}>
-            <Col span={10}>
-              <FormItem
-                name={["neededExperience", "domain"]}
-                label="Experience Domain"
-                hasFeedback
-                rules={[
-                  {
-                    required: true,
-                  },
-                ]}
-              >
-                <SelectExperienceDomain
-                  disabled={isEditingMode}
-                  placeholder="Select an Experience Domain"
-                  notFoundContent={messages["task.domain_does_not_exist"]}
-                  width={100}
-                  allowCreation
-                />
-              </FormItem>
-            </Col>
-            <Col flex="auto">
-              <FormItem
-                name={["neededExperience", "value"]}
-                label="Experience Value"
-                hasFeedback
-                rules={[
-                  {
-                    required: true,
-                  },
-                  {
-                    type: "number",
-                  },
-                ]}
-              >
-                <InputNumber style={fullWidth} disabled={isEditingMode} />
-              </FormItem>
-            </Col>
-            <CreateResourceButton text="Assign Experience" link="/users" />
-          </Row>
-
           <FormItem
             name="pendingInstances"
             label={instancesLabel}
+            tooltip="The number of users who annotate this task independently. Each instance is assigned to a different user."
             hasFeedback
             rules={[
               {
@@ -765,9 +758,85 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             <CreateResourceButton text="Create new Project" link="/projects/create" />
           </Row>
 
+          <FormItem
+            label="Task Specification"
+            tooltip="Defines the dataset and starting point of the task: enter them manually, upload NML files (one task per file), or use an existing annotation as the base for the task."
+            hasFeedback
+          >
+            <RadioGroup
+              value={specificationType}
+              onChange={(evt: RadioChangeEvent) =>
+                setSpecificationType(
+                  coalesce(SpecificationEnum, evt.target.value) || specificationType,
+                )
+              }
+            >
+              <Radio value={SpecificationEnum.Manual} disabled={isEditingMode}>
+                Manual Specification
+              </Radio>
+              <Radio value={SpecificationEnum.Nml} disabled={isEditingMode}>
+                Upload NML File
+              </Radio>
+              <Radio value={SpecificationEnum.BaseAnnotation} disabled={isEditingMode}>
+                Use Annotation ID as Base
+              </Radio>
+            </RadioGroup>
+          </FormItem>
+
+          {renderSpecification()}
+
+          <Row gutter={8} align="bottom" wrap={false}>
+            <Col span={10}>
+              <FormItem
+                name={["neededExperience", "domain"]}
+                label="Experience Domain"
+                tooltip="Optional. Only users with at least the given experience value in this domain get the task. Leave empty to let any member of the project's team get the task."
+                hasFeedback
+              >
+                <SelectExperienceDomain
+                  disabled={isEditingMode}
+                  placeholder="Any team member"
+                  notFoundContent={messages["task.domain_does_not_exist"]}
+                  width={100}
+                  allowCreation
+                  allowClear
+                />
+              </FormItem>
+            </Col>
+            <Col flex="auto">
+              <FormItem
+                name={["neededExperience", "value"]}
+                label="Experience Value"
+                hasFeedback
+                dependencies={[["neededExperience", "domain"]]}
+                rules={[
+                  ({ getFieldValue }) => ({
+                    required: isNonEmptyDomain(getFieldValue(["neededExperience", "domain"])),
+                    message: "Please enter an experience value for the selected domain.",
+                  }),
+                  {
+                    type: "number",
+                  },
+                ]}
+              >
+                <InputNumber
+                  style={fullWidth}
+                  disabled={isEditingMode || !hasExperienceDomain}
+                  placeholder={hasExperienceDomain ? undefined : "Select a domain first"}
+                />
+              </FormItem>
+            </Col>
+            <CreateResourceButton text="Assign Experience" link="/users" />
+          </Row>
+
           <Row gutter={8} align="bottom" wrap={false}>
             <Col flex="auto">
-              <FormItem name="scriptId" label="Script" hasFeedback>
+              <FormItem
+                name="scriptId"
+                label="Script"
+                tooltip="Optional. A user script that is loaded in the annotation view of everyone working on this task."
+                hasFeedback
+              >
                 <Select
                   showSearch={{ optionFilterProp: "label" }}
                   placeholder="Select a Script"
@@ -798,29 +867,6 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
           >
             <Vector6Input disabled={isEditingMode} />
           </FormItem>
-
-          <FormItem label="Task Specification" hasFeedback>
-            <RadioGroup
-              value={specificationType}
-              onChange={(evt: RadioChangeEvent) =>
-                setSpecificationType(
-                  coalesce(SpecificationEnum, evt.target.value) || specificationType,
-                )
-              }
-            >
-              <Radio value={SpecificationEnum.Manual} disabled={isEditingMode}>
-                Manual Specification
-              </Radio>
-              <Radio value={SpecificationEnum.Nml} disabled={isEditingMode}>
-                Upload NML File
-              </Radio>
-              <Radio value={SpecificationEnum.BaseAnnotation} disabled={isEditingMode}>
-                Use Annotation ID as Base
-              </Radio>
-            </RadioGroup>
-          </FormItem>
-
-          {renderSpecification()}
 
           <FormItem>
             <Button type="primary" htmlType="submit">

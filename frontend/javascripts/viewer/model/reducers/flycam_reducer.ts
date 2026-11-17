@@ -387,7 +387,8 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       ) {
         return state;
       }
-      return setRotationReducer(state, state.flycam.rotation);
+      // Read the rotation from the matrix, because flycam.rotation is rounded to whole degrees.
+      return setRotationReducer(state, getRotationInDegrees(state.flycam.currentMatrix));
     }
 
     case "SET_ROTATION": {

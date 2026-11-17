@@ -226,9 +226,7 @@ class VolumeTracingController @Inject() (
   ): Action[AnyContent] =
     Action.fox { implicit request =>
       log() {
-        accessTokenService.validateAccessFromTokenContext(
-          annotationId.map(UserAccessRequest.readAnnotation).getOrElse(UserAccessRequest.readTracing(tracingId))
-        ) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
             _ <- Fox.fromBool(
               if (version.isDefined) annotationId.isDefined else true
@@ -281,7 +279,10 @@ class VolumeTracingController @Inject() (
   def importVolumeData(tracingId: String): Action[MultipartFormData[TemporaryFile]] =
     Action.fox(parse.multipartFormData) { implicit request =>
       log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeTracing(tracingId)) {
+        accessTokenService.validateAccessFromTokenContext(
+          UserAccessRequest.writeTracing(tracingId),
+          useCaching = false
+        ) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound
@@ -485,7 +486,7 @@ class VolumeTracingController @Inject() (
     Action.fox { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
               annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
               editPositionParsed <- Fox.runOptional(editPosition)(p => Vec3Int.fromUriLiteral(p).toFox)

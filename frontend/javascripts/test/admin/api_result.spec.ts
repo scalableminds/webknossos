@@ -1,5 +1,15 @@
 import { requestResult } from "admin/api/api_result";
-import { describe, expect, it, vi } from "vitest";
+import { registerHasActiveUserFn } from "libs/handle_request_error_helper";
+import Toast, { showToastOnce } from "libs/toast";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("libs/toast", () => ({
+  default: {
+    error: vi.fn(),
+    messages: vi.fn(),
+  },
+  showToastOnce: vi.fn(),
+}));
 
 describe("requestResult", () => {
   it("should retry without limit if retries is infinite", async () => {
@@ -37,6 +47,38 @@ describe("requestResult", () => {
     expect(result.ok).toBe(false);
     expect(requester).toHaveBeenCalledTimes(1);
   });
+
+  describe("error toasts for 401 responses", () => {
+    const messages = [{ error: "You are not authorized to view this resource. Please log in." }];
+    const failWith401 = async () => {
+      throw { status: 401, messages };
+    };
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("should show only the session expired toast if a user was logged in", async () => {
+      registerHasActiveUserFn(() => true);
+
+      const result = await requestResult(failWith401);
+
+      expect(result.ok).toBe(false);
+      expect(showToastOnce).toHaveBeenCalledTimes(1);
+      expect(Toast.messages).not.toHaveBeenCalled();
+      expect(Toast.error).not.toHaveBeenCalled();
+    });
+
+    it("should show the server messages if no user was logged in", async () => {
+      registerHasActiveUserFn(() => false);
+
+      await requestResult(failWith401);
+
+      expect(showToastOnce).not.toHaveBeenCalled();
+      expect(Toast.messages).toHaveBeenCalledWith(messages);
+    });
+  });
+
   it("should stop retrying when the signal is aborted", async () => {
     const abortController = new AbortController();
     const requester = vi.fn(async () => {

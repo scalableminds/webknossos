@@ -13,6 +13,7 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
+import { getAdminTablePagination } from "admin/admin_table_pagination";
 import { getTasks } from "admin/api/tasks";
 import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import {
@@ -38,7 +39,6 @@ import {
   filterWithSearchQueryAND,
   localeCompareBy,
   minutesToMilliseconds,
-  scrollToTop,
 } from "libs/utils";
 import partial from "lodash-es/partial";
 import uniqBy from "lodash-es/uniqBy";
@@ -246,10 +246,7 @@ function ProjectListView() {
         <Table
           dataSource={filteredProjects}
           rowKey="id"
-          pagination={{
-            defaultPageSize: 50,
-            onChange: scrollToTop,
-          }}
+          pagination={getAdminTablePagination()}
           locale={{
             emptyText: renderPlaceholder(),
           }}

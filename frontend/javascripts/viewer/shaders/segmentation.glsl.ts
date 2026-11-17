@@ -202,8 +202,8 @@ export const convertCellIdToRGB: ShaderModule = {
       float zoomAdaption = ceil(zoomValue);
       vec3 worldCoordUVW = coordScaling * getUnrotatedWorldCoordUVW()  / zoomAdaption;
 
-      float baseVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
-      vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / baseVoxelSize;
+      float minVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
+      vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / minVoxelSize;
       worldCoordUVW.x = worldCoordUVW.x * anisotropyFactorUVW.x;
       worldCoordUVW.y = worldCoordUVW.y * anisotropyFactorUVW.y;
 
@@ -307,8 +307,8 @@ export const getBrushOverlay: ShaderModule = {
 
       // Compute the anisotropy of the dataset so that the brush looks the same in
       // each viewport
-      float baseVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
-      vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / baseVoxelSize;
+      float minVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
+      vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / minVoxelSize;
 
       vec2 delta = (voxelCenter - transDim(brushCenterPosition).xy) * anisotropyFactorUVW.xy;
       float radius = brushSizeInPixel / 2.0;
@@ -337,8 +337,8 @@ export const getProofreadingCrossHairOverlay: ShaderModule = {
 
       // Compute the anisotropy of the dataset so that the cross hair looks the same in
       // each viewport
-      float baseVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
-      vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / baseVoxelSize;
+      float minVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
+      vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / minVoxelSize;
 
       // Compute the distance in screen coordinate space to show a zoom-independent cross hair
       vec2 distanceVector = (worldCoordUVW.xy - activeSegmentPosUVW.xy) * anisotropyFactorUVW.xy / zoomValue;

@@ -53,7 +53,10 @@ class AiInferenceService @Inject() (
       inferenceJobJs <- jobService.publicWrites(inferenceJob)
       dataStore <- dataStoreDAO.findOneByName(inferenceJob._dataStore)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
-      aiModelOpt <- Fox.runOptional(aiInference._aiModel)(aiModelDAO.findOne)
+      // The model may no longer be readable (e.g. a partner model after the organization's partner changed).
+      // Omit it rather than failing the whole inference entry.
+      aiModelBoxOpt <- Fox.runOptional(aiInference._aiModel)(aiModelDAO.findOne(_).shiftBox)
+      aiModelOpt = aiModelBoxOpt.flatMap(_.toOption)
       aiModelJsOpt <- Fox.runOptional(aiModelOpt)(aiModelService.publicWrites(_, requestingUser))
       newDatasetOpt <- Fox.runOptional(aiInference._newDataset)(datasetDAO.findOne)
       newDatasetJsOpt <- Fox.runOptional(newDatasetOpt)(newDataset =>

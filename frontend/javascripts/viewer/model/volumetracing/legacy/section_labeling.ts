@@ -14,7 +14,7 @@ import {
   scaleGlobalPositionWithMagnificationFloat,
   zoomedPositionToGlobalPosition,
 } from "viewer/model/helpers/position_converter";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { getVoxelPerPixel } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
 import { invertAndTranspose } from "../../accessors/dataset_layer_transformation_accessor";
 import {
@@ -340,10 +340,10 @@ class SectionLabeler {
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
     const radius = Math.round(brushSize / 2);
-    // Use the baseVoxelFactors to scale the rectangle, otherwise it'll become deformed
+    // Account for the voxel size when scaling the rectangle, otherwise it'll become deformed
     const scale = this.get2DCoordinate(
       scaleGlobalPositionWithMagnificationFloat(
-        getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
+        getVoxelPerPixel(state.dataset.dataSource.scale),
         this.activeMag,
       ),
     );
@@ -419,9 +419,9 @@ class SectionLabeler {
       Math.floor(floatingCoord2d[1] - height / 2),
     ];
     const buffer2D = this.createVoxelBuffer2D(minCoord2d, width, height);
-    // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
+    // Account for the voxel size when scaling the circle, otherwise it'll become an ellipse
     const [scaleX, scaleY] =
-      scale ?? this.get2DCoordinate(getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale));
+      scale ?? this.get2DCoordinate(getVoxelPerPixel(state.dataset.dataSource.scale));
 
     const setMap = (x: number, y: number) => {
       buffer2D.setValue(x, y, 1);
@@ -656,9 +656,7 @@ export class TransformedSectionLabeler {
   }
 
   getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {
-    let scale = this.adaptScaleFn(
-      getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale),
-    );
+    let scale = this.adaptScaleFn(getVoxelPerPixel(Store.getState().dataset.dataSource.scale));
 
     // TODO (#8965): does this need a transformation?
     return this.base.getCircleVoxelBuffer2D(position, scale);

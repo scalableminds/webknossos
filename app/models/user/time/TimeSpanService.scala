@@ -7,14 +7,13 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.toFox
 import com.typesafe.scalalogging.LazyLogging
-import mail.{DefaultMails, Send}
+import mail.TaskEmailService
 
 import javax.inject.Inject
 import models.annotation.*
 import models.project.ProjectDAO
 import models.task.TaskDAO
-import models.user.{MultiUserDAO, User, UserService}
-import org.apache.pekko.actor.{ActorSelection, ActorSystem}
+import models.user.User
 import utils.WkConf
 
 import scala.concurrent.ExecutionContext
@@ -22,20 +21,14 @@ import scala.concurrent.duration.*
 
 class TimeSpanService @Inject() (
     annotationDAO: AnnotationDAO,
-    userService: UserService,
-    multiUserDAO: MultiUserDAO,
     taskDAO: TaskDAO,
     annotationService: AnnotationService,
     projectDAO: ProjectDAO,
     timeSpanDAO: TimeSpanDAO,
-    defaultMails: DefaultMails,
-    conf: WkConf,
-    actorSystem: ActorSystem
+    taskEmailService: TaskEmailService,
+    conf: WkConf
 )(implicit ec: ExecutionContext)
     extends LazyLogging {
-
-  private lazy val Mailer: ActorSelection =
-    actorSystem.actorSelection("/user/mailActor")
 
   def logUserInteractionIfTheyArePotentialContributor(timestamp: Instant, user: User, annotation: Annotation)(using
       ctx: DBAccessContext
@@ -142,20 +135,13 @@ class TimeSpanService @Inject() (
   ): Fox[?] =
     for {
       annotation <- annotationOpt.toFox
-      user <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
-      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
       task <- annotationService.taskFor(annotation)(using GlobalAccessContext)
       project <- projectDAO.findOne(task._project)
       annotationTime <- annotation.tracingTime.toFox ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime.toFox ?~> "no project.expectedTime"
-      projectOwner <- userService.findOneCached(project._owner)(using GlobalAccessContext)
-      projectOwnerMultiUser <- multiUserDAO.findOne(projectOwner._multiUser)(using GlobalAccessContext)
     } yield
       if (annotationTime >= timeLimit && annotationTime - time.toMillis < timeLimit) {
-        Mailer ! Send(
-          defaultMails
-            .overLimitMail(multiUser, project.name, task._id.toString, annotation.id, projectOwnerMultiUser.email)
-        )
+        taskEmailService.sendTimeLimitReachedEmail(annotation, task, project)
       }
 
   private def logTimeToTask(duration: FiniteDuration, annotation: Option[Annotation]) =

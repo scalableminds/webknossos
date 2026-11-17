@@ -286,6 +286,9 @@ class TSAnnotationService @Inject() (
       _ <- Fox.fromBool(
         revertAction.sourceVersion >= annotationWithTracings.annotation.earliestAccessibleVersion
       ) ?~> f"Trying to revert to ${revertAction.sourceVersion}, but earliest accessible is ${annotationWithTracings.annotation.earliestAccessibleVersion}"
+      _ <- Fox.fromBool(
+        revertAction.sourceVersion < newVersion
+      ) ?~> Msg.Annotation.Revert.sourceVersionNotEarlier(revertAction.sourceVersion, newVersion)
       before = Instant.now
       sourceAnnotation: AnnotationWithTracings <- getWithTracings(
         annotationId,
@@ -330,7 +333,12 @@ class TSAnnotationService @Inject() (
     else
       tracingDataStore.annotations.put(annotationId.toString, version, annotationProto.toByteArray)
 
-  def updateActionLog(annotationId: ObjectId, newestVersion: Long, oldestVersion: Long, truncate: Boolean)(implicit
+  def updateActionLog(
+      annotationId: ObjectId,
+      requestedNewestVersion: Option[Long],
+      requestedOldestVersion: Option[Long],
+      truncate: Boolean
+  )(implicit
       ec: ExecutionContext
   ): Fox[JsValue] = {
     val MaxUpdateActionEntriesPerVersion = 1000
@@ -340,8 +348,19 @@ class TSAnnotationService @Inject() (
         "value" -> Json.toJson(tuple._2)
       )
 
-    val batchRanges = SequenceUtils.batchRangeInclusive(oldestVersion, newestVersion, batchSize = 1000).reverse
     for {
+      isTemporaryAnnotation <- temporaryTracingService.isTemporaryAnnotation(annotationId)
+      newestMaterializableVersion <- currentMaterializableVersion(annotationId)
+      earliestAccessibleVersion <-
+        if (isTemporaryAnnotation) Fox.successful(0L)
+        else
+          getNewestMatchingMaterializedAnnotation(annotationId, version = None)
+            .map(_.earliestAccessibleVersion) ?~> Msg.Annotation.getNewestMaterializedFailed
+      newestVersion = requestedNewestVersion.fold(newestMaterializableVersion)(math.min(_, newestMaterializableVersion))
+      oldestVersion = math.max(requestedOldestVersion.getOrElse(0L), earliestAccessibleVersion)
+      batchRanges =
+        if (oldestVersion > newestVersion) Seq.empty
+        else SequenceUtils.batchRangeInclusive(oldestVersion, newestVersion, batchSize = 1000).reverse
       updateActionBatches <- Fox.serialCombined(batchRanges.toList) { batchRange =>
         val batchFrom = batchRange._1
         val batchTo = batchRange._2
@@ -922,14 +941,26 @@ class TSAnnotationService @Inject() (
     tracingDataStore.skeletons
       .get[SkeletonTracing](tracingId, version, mayBeEmpty = Some(true))(fromProtoBytes[SkeletonTracing])
 
+  private def assertTemporaryAnnotationHasLayer(annotationId: ObjectId, tracingId: String)(using
+      ec: ExecutionContext
+  ): Fox[Unit] =
+    for {
+      annotation <- temporaryTracingService.getAnnotation(annotationId)
+      _ <- Fox.fromBool(annotation.annotationLayers.exists(_.tracingId == tracingId)) ?~> Msg.Annotation.notFound
+    } yield ()
+
   def findVolume(annotationId: ObjectId, tracingId: String, version: Option[Long] = None)(using
       tc: TokenContext,
       ec: ExecutionContext
   ): Fox[VolumeTracing] =
     for {
-      isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
+      isTemporaryAnnotation <- temporaryTracingService.isTemporaryAnnotation(annotationId)
       tracing <-
-        if (isTemporaryTracing) temporaryTracingService.getVolume(tracingId)
+        if (isTemporaryAnnotation)
+          for {
+            _ <- assertTemporaryAnnotationHasLayer(annotationId, tracingId)
+            tracing <- temporaryTracingService.getVolume(tracingId)
+          } yield tracing
         else
           for {
             annotation <- getWithTracings(annotationId, version)
@@ -947,9 +978,13 @@ class TSAnnotationService @Inject() (
       Fox.successful(skeletonTracingService.dummyTracing)
     else {
       for {
-        isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
+        isTemporaryAnnotation <- temporaryTracingService.isTemporaryAnnotation(annotationId)
         tracing <-
-          if (isTemporaryTracing) temporaryTracingService.getSkeleton(tracingId)
+          if (isTemporaryAnnotation)
+            for {
+              _ <- assertTemporaryAnnotationHasLayer(annotationId, tracingId)
+              tracing <- temporaryTracingService.getSkeleton(tracingId)
+            } yield tracing
           else
             for {
               annotation <- getWithTracings(annotationId, version)

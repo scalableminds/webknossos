@@ -2,6 +2,7 @@ import {
   CrownOutlined,
   DollarCircleOutlined,
   FieldTimeOutlined,
+  MailOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
 import { Button, Flex, Typography } from "antd";
@@ -16,6 +17,7 @@ import {
   useActiveOrganization,
   useCanOrderCredits,
   useCanRequestUpgrades,
+  useShouldContactSalesForUpgrades,
 } from "./organization_hooks";
 import {
   canExtendPricingPlan,
@@ -28,6 +30,7 @@ import {
   hasPricingPlanExpired,
   isCreditBalanceLow,
   isPlanAboutToExpire,
+  SALES_MAILTO_URL,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
@@ -142,6 +145,7 @@ export function PlanSummaryBar() {
   const organization = useActiveOrganization();
   const daysLeft = getDaysUntilPlanExpires(organization);
   const canRequestUpgrades = useCanRequestUpgrades();
+  const shouldContactSales = useShouldContactSalesForUpgrades();
   const hasExpired = daysLeft != null && hasPricingPlanExpired(organization);
 
   return (
@@ -174,7 +178,11 @@ export function PlanSummaryBar() {
           </>
         ) : null}
       </div>
-      {canRequestUpgrades && canUpgradePricingPlan(organization.pricingPlan) ? (
+      {canRequestUpgrades && shouldContactSales ? (
+        <Button type="primary" icon={<MailOutlined />} href={SALES_MAILTO_URL}>
+          Contact Sales
+        </Button>
+      ) : canRequestUpgrades && canUpgradePricingPlan(organization.pricingPlan) ? (
         <Button onClick={() => UpgradePricingPlanModal.upgradePricingPlan()}>Upgrade</Button>
       ) : null}
       {canRequestUpgrades && canExtendPricingPlan(organization) ? (

@@ -214,6 +214,9 @@ describe("DType Dataset Rendering", () => {
       );
       console.timeEnd("Creating annotation...");
       const page = await getNewPage(testContext.browser);
+      // Check all specs before failing, so that one run writes the .new.png files of every
+      // failing spec and not only of the first one.
+      const failedSpecNames: string[] = [];
       for (const spec of specs.filter((spec) => spec.datasetName === datasetName)) {
         console.log(`Starting: ${spec.name}...`);
         const { datasetConfig } = spec;
@@ -317,12 +320,15 @@ describe("DType Dataset Rendering", () => {
           success &&= isPixelEquivalent(changedPixels, width, height);
         }
 
-        expect(
-          success,
-          `Dataset spec with name: "${spec.name}" does not look the same, see ${spec.name}.diff.png for the difference and ${spec.name}.new.png for the new screenshot.`,
-        ).toBe(true);
+        if (!success) {
+          failedSpecNames.push(spec.name);
+        }
       }
       await page.close();
+      expect(
+        failedSpecNames,
+        `Dataset specs ${failedSpecNames.map((name) => `"${name}"`).join(", ")} do not look the same, see <name>.diff.png for the difference and <name>.new.png for the new screenshot.`,
+      ).toEqual([]);
     },
   );
 });

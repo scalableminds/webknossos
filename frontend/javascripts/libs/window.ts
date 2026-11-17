@@ -1,7 +1,7 @@
 // This module should be used to access the window object, so it can be mocked in the unit tests
 
 import type { ShaderMaterial } from "three";
-import type { ArbitraryFunction, ArbitraryObject } from "types/type_utils";
+import type { ArbitraryFunction } from "types/type_utils";
 import type TextureBucketManager from "viewer/model/bucket_data_handling/texture_bucket_manager";
 
 const removeEventListener = (
@@ -61,19 +61,8 @@ export const location: Location = typeof window === "undefined" ? dummyLocation 
 
 let performanceCounterForMocking = 0;
 
-type Olvy =
-  | {
-      init: (obj: ArbitraryObject) => void;
-      getUnreadReleasesCount: (timestamp: string) => number;
-      show: () => void;
-      config: { target: string };
-    }
-  | undefined;
-
 const _window: Window &
   typeof globalThis & {
-    Olvy?: Olvy;
-    OlvyConfig?: ArbitraryObject | null;
     managers?: Array<TextureBucketManager>;
     materials?: Record<string, ShaderMaterial>;
     measuredTimeToFirstRender?: boolean;
@@ -92,7 +81,6 @@ const _window: Window &
         },
         pageXOffset: 0,
         pageYOffset: 0,
-        Olvy: undefined,
         addEventListener,
         removeEventListener,
         open: (_url: string) => {},

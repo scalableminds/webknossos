@@ -13,6 +13,7 @@ import Icon, {
   WarningOutlined,
 } from "@ant-design/icons";
 import BrushIcon from "@images/icons/icon-brush.svg?react";
+import { useIsJobAvailable } from "admin/job/job_hooks";
 import {
   clearCache,
   findDataPositionForLayer,
@@ -66,7 +67,7 @@ import {
   reloadHistogramAction,
   updateLayerSettingAction,
 } from "viewer/model/actions/settings_actions";
-import { waitUntilRebaseFinished } from "viewer/model/helpers/bounding_box_creation_helpers";
+import { waitUntilRebaseFinished } from "viewer/model/helpers/rebase_helpers";
 import { deleteAnnotationLayer } from "viewer/model/sagas/volume/update_actions";
 import { api, Model } from "viewer/singletons";
 import type { DatasetLayerConfiguration, StoreDataset, VolumeTracing } from "viewer/store";
@@ -189,6 +190,10 @@ export default function LayerSettingsHeader({
   const dispatch = useDispatch();
   const { modal } = App.useApp();
   const dataset = useWkSelector((state) => state.dataset);
+  const isSegmentIndexFileJobAvailable = useIsJobAvailable(
+    dataset.dataStore,
+    APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
+  );
   const annotation = useWkSelector((state) => state.annotation);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isAdminOrManager = useWkSelector((state) =>
@@ -398,12 +403,7 @@ export default function LayerSettingsHeader({
   const getMergeWithFallbackLayerItem = (): ItemType => ({
     key: "mergeWithFallbackLayerButton",
     icon: <MergeCellsOutlined />,
-    disabled: mayNotEditLayerSet,
-    label: (
-      <FastTooltip title={reasonForCantEditLayerSet}>
-        <span>Merge this volume annotation with its fallback layer</span>
-      </FastTooltip>
-    ),
+    label: "Merge this volume annotation with its fallback layer",
     onClick: () => onSetLayerToMergeWithFallback(layer),
   });
 
@@ -539,10 +539,7 @@ export default function LayerSettingsHeader({
     isHistogramAvailable && !isDisabled ? getEditMinMaxItem() : null,
     hasHistogram && !isDisabled ? getClipItem() : null,
     !isLayerWithoutTransformationConfigSupport(layer) ? getEditLayerTransformsItem() : null,
-    dataset.dataStore.jobsEnabled &&
-    dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-      APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
-    )
+    dataset.dataStore.jobsEnabled && isSegmentIndexFileJobAvailable
       ? getComputeSegmentIndexFileItem()
       : null,
   ];

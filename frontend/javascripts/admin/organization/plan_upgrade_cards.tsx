@@ -1,17 +1,24 @@
-import { CrownOutlined, PlusCircleOutlined, RobotOutlined } from "@ant-design/icons";
+import {
+  CrownOutlined,
+  MailOutlined,
+  PlusCircleOutlined,
+  RobotOutlined,
+  RocketOutlined,
+} from "@ant-design/icons";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { Button, Card, Col, Row, Space } from "antd";
 import type React from "react";
 import type { APIOrganization } from "types/api_types";
-import { useCanRequestUpgrades } from "./organization_hooks";
+import { useCanRequestUpgrades, useShouldContactSalesForUpgrades } from "./organization_hooks";
 import {
   aiAddonFeatures,
-  getBasePricingPlan,
+  contactSales,
   isAiAddonEligiblePlan,
   PricingPlanEnum,
   powerPlanFeatures,
   teamPlanFeatures,
 } from "./pricing_plan_utils";
+import { getPlanTier, getUpgradeTargetTiers } from "./upgrade_modal/upgrade_request_items";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
 const UPGRADE_DESCRIPTION =
@@ -23,6 +30,7 @@ function UpgradeOfferCard({
   description,
   features,
   actionLabel,
+  actionIcon = <PlusCircleOutlined />,
   onAction,
 }: {
   icon: React.ReactNode;
@@ -30,6 +38,7 @@ function UpgradeOfferCard({
   description?: string;
   features: string[];
   actionLabel: string;
+  actionIcon?: React.ReactNode;
   onAction: () => void;
 }) {
   return (
@@ -42,12 +51,7 @@ function UpgradeOfferCard({
       }
       styles={{ body: { minHeight: 220 } }}
       actions={[
-        <Button
-          type="primary"
-          onClick={onAction}
-          key="upgrade-action"
-          icon={<PlusCircleOutlined />}
-        >
+        <Button type="primary" onClick={onAction} key="upgrade-action" icon={actionIcon}>
           {actionLabel}
         </Button>,
       ]}
@@ -100,17 +104,52 @@ export function AiAddonUpgradeCard() {
   );
 }
 
+const SELF_HOSTED_UPGRADE_DESCRIPTION =
+  "Get AI analysis, processing jobs and proofreading for your organization.";
+
+const selfHostedUpgradeFeatures = [
+  "AI analysis: neuron, mitochondria and instance segmentation",
+  "Train custom AI models on your data",
+  "AI-based quick-select tool",
+  "Processing jobs: precomputed meshes, TIFF exports, conversions and animations",
+  "Segmentation Proof-Reading Tool",
+  "Hosted on webknossos.org, or on-premise with your HPC and storage servers",
+];
+
+function ContactSalesCard() {
+  return (
+    <UpgradeOfferCard
+      icon={<RocketOutlined />}
+      title="Unlock AI and processing jobs"
+      description="Your self-hosted WEBKNOSSOS runs on the free Open Source plan. Talk to us about a hosted Team or Power plan on webknossos.org, or an Enterprise plan for your own servers."
+      features={selfHostedUpgradeFeatures}
+      actionLabel="Contact Sales"
+      actionIcon={<MailOutlined />}
+      onAction={contactSales}
+    />
+  );
+}
+
 // The plan upgrades and add-ons the organization can still buy, side by side.
 export function UpgradeOfferCards({ organization }: { organization: APIOrganization }) {
   const canRequestUpgrades = useCanRequestUpgrades();
+  const shouldContactSales = useShouldContactSalesForUpgrades();
   if (!canRequestUpgrades) return null;
 
-  const basePlan = getBasePricingPlan(organization.pricingPlan);
+  const targetTiers = shouldContactSales
+    ? []
+    : getUpgradeTargetTiers(getPlanTier(organization.pricingPlan));
   const offers: React.ReactElement[] = [];
-  if (basePlan === PricingPlanEnum.Personal) {
-    offers.push(<TeamPlanUpgradeCard key="team" />, <PowerPlanUpgradeCard key="power" />);
-  } else if (basePlan === PricingPlanEnum.Team) {
-    offers.push(<PowerPlanUpgradeCard key="power" description={UPGRADE_DESCRIPTION} />);
+  if (shouldContactSales) {
+    offers.push(<ContactSalesCard key="contact-sales" />);
+  }
+  if (targetTiers.includes(PricingPlanEnum.Team)) {
+    offers.push(<TeamPlanUpgradeCard key="team" />);
+  }
+  if (targetTiers.includes(PricingPlanEnum.Power)) {
+    // The description is only repeated on the card if it is the only plan offer.
+    const description = targetTiers.length === 1 ? UPGRADE_DESCRIPTION : undefined;
+    offers.push(<PowerPlanUpgradeCard key="power" description={description} />);
   }
   if (organization.aiPlan == null && isAiAddonEligiblePlan(organization.pricingPlan)) {
     offers.push(<AiAddonUpgradeCard key="ai-addon" />);
@@ -119,7 +158,10 @@ export function UpgradeOfferCards({ organization }: { organization: APIOrganizat
 
   return (
     <div>
-      <SettingsTitle title="Unlock more features" description={UPGRADE_DESCRIPTION} />
+      <SettingsTitle
+        title="Unlock more features"
+        description={shouldContactSales ? SELF_HOSTED_UPGRADE_DESCRIPTION : UPGRADE_DESCRIPTION}
+      />
       <Row gutter={24} style={{ marginTop: 24 }}>
         {offers.map((offer) => (
           <Col span={24 / offers.length} key={offer.key}>

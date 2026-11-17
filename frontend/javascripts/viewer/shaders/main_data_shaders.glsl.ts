@@ -5,7 +5,6 @@ import range from "lodash-es/range";
 import template from "lodash-es/template";
 import type { ElementClass } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import Constants from "viewer/constants";
 import constants, {
   OrthoViewIndices,
   PLANE_SUBDIVISION,
@@ -689,7 +688,6 @@ ${compileShader(
   almostEq,
 )}
 
-float PLANE_WIDTH = ${formatNumberAsGLSLFloat(Constants.VIEWPORT_WIDTH)};
 float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 
 <% each(layerNamesWithSegmentation, function(name) {
@@ -727,8 +725,8 @@ void main() {
   float originalZ = gl_Position.z;
 
   // Remember, the top of the viewport has Y=1 whereas the left has X=-1.
-  vec3 worldCoordTopLeft     = transDim((modelMatrix * vec4(-PLANE_WIDTH/2., -PLANE_WIDTH/2., 0., 1.)).xyz);
-  vec3 worldCoordBottomRight = transDim((modelMatrix * vec4( PLANE_WIDTH/2., PLANE_WIDTH/2., 0., 1.)).xyz);
+  vec3 worldCoordTopLeft     = transDim((modelMatrix * vec4(-0.5, -0.5, 0., 1.)).xyz);
+  vec3 worldCoordBottomRight = transDim((modelMatrix * vec4( 0.5,  0.5, 0., 1.)).xyz);
 
   // The following code ensures that the vertices are aligned with the bucket borders
   // of the currently rendered magnification.
@@ -739,15 +737,14 @@ void main() {
 
   // Calculate the index of the vertex (e.g., index.x=0 is the first horizontal vertex).
   // Let's only consider x:
-  // The plane itself is PLANE_WIDTH wide which is why x is in the range [-PLANE_WIDTH/2, +PLANE_WIDTH/2].
+  // The plane geometry itself is 1 wide which is why x is in the range [-0.5, +0.5].
   // This is regardless of the scale of the plane (the scale is reflected in the modelMatrix).
   // The calculation transforms x
-  //   - to the interval [-1, +1] and then
-  //   - to [0, 1] (via (... + 1) / 2) and then
+  //   - to [0, 1] (via ... + 0.5) and then
   //   - to [0, PLANE_SUBDIVISION]
   // Rounding is only done to fight potential numerical inaccuracies. In theory, the result should be
   // integer without the rounding.
-  index = round((position.xy / (PLANE_WIDTH / 2.) + 1.) / 2. * PLANE_SUBDIVISION);
+  index = round((position.xy + 0.5) * PLANE_SUBDIVISION);
   // Invert vertical axis to make calculation more intuitive with top-left coordinates.
   index.y = PLANE_SUBDIVISION - index.y;
 

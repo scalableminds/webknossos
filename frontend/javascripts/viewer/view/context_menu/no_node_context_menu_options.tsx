@@ -13,9 +13,8 @@ import {
 } from "viewer/controller/combinations/segmentation_handlers";
 import { handleCreateNodeFromGlobalPosition } from "viewer/controller/combinations/skeleton_handlers";
 import {
-  getSegmentIdForPosition,
-  getSegmentIdForPositionAsync,
-  getUnmappedSegmentIdForPosition,
+  getSegmentIdsAtPosition,
+  getSegmentIdsAtPositionAsync,
   handleFloodFillFromGlobalPosition,
 } from "viewer/controller/combinations/volume_handlers";
 import {
@@ -58,6 +57,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { Store } from "viewer/singletons";
 import type { ContextMenuInfo } from "viewer/store";
+import { withMeshFileCompatibilityCheck } from "viewer/view/right_border_tabs/segments_tab/mesh_file_compatibility_modal";
 import { withMappingActivationConfirmation } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { LoadMeshMenuItemLabel } from "../right_border_tabs/segments_tab/load_mesh_menu_item_label";
@@ -114,7 +114,7 @@ export function useNoNodeContextMenuOptions(
   // The segment id depends on live state that is not passed to the function (e.g., loaded
   // buckets, visible layer). Reading it in a selector keeps it up to date.
   const maybeUnmappedSegmentId = useWkSelector(() =>
-    globalPosition != null ? getUnmappedSegmentIdForPosition(globalPosition) : null,
+    globalPosition != null ? getSegmentIdsAtPosition(globalPosition).unmappedId : null,
   );
 
   const boundingBoxActions = useBoundingBoxMenuOptions(contextInfo);
@@ -168,18 +168,19 @@ export function useNoNodeContextMenuOptions(
     shallowEqual,
   );
 
-  const loadPrecomputedMesh = async () => {
-    if (
-      !currentMeshFile ||
-      !visibleSegmentationLayer ||
-      globalPosition == null ||
-      positionInLayerSpace == null
-    )
-      return;
-    const segmentId = await getSegmentIdForPositionAsync(globalPosition);
+  const loadPrecomputedMesh = async (meshFileName: string) => {
+    if (!visibleSegmentationLayer || globalPosition == null || positionInLayerSpace == null) return;
+    // Look the segment id up again instead of using the displayed one: the mapping might have
+    // changed since the context menu was opened.
+    const { mappedId: segmentId } = await getSegmentIdsAtPositionAsync(
+      visibleSegmentationLayer.name,
+      globalPosition,
+    );
 
-    // Ensure that the segment ID is loaded, since a mapping might have been activated
-    // shortly before
+    if (segmentId == null) {
+      Toast.info("Could not determine the segment id at the clicked position");
+      return;
+    }
     if (segmentId === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
@@ -190,10 +191,10 @@ export function useNoNodeContextMenuOptions(
         segmentId,
         positionInLayerSpace,
         additionalCoordinates,
-        currentMeshFile.name,
+        meshFileName,
         undefined,
         undefined,
-        undefined,
+        visibleSegmentationLayer.name,
       ),
     );
   };
@@ -202,16 +203,15 @@ export function useNoNodeContextMenuOptions(
     if (!visibleSegmentationLayer || globalPosition == null) {
       return;
     }
-    const clickedSegmentId = getSegmentIdForPosition(globalPosition);
     const layerName = visibleSegmentationLayer.name;
-    if (clickedSegmentId === NO_SEGMENT_ID) {
+    if (segmentIdAtPosition === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
     }
     // This action is dispatched because the behaviour is identical to a click on a segment.
     // Note that the updated position is where the segment was clicked to open the context menu.
     dispatch(
-      clickSegmentAction(clickedSegmentId, globalPosition, additionalCoordinates, layerName),
+      clickSegmentAction(segmentIdAtPosition, globalPosition, additionalCoordinates, layerName),
     );
     layoutEmitter.emit(LayoutEvents.showSegmentsTab);
   };
@@ -220,8 +220,7 @@ export function useNoNodeContextMenuOptions(
     if (!visibleSegmentationLayer || globalPosition == null) {
       return;
     }
-    const clickedSegmentId = getSegmentIdForPosition(globalPosition);
-    if (clickedSegmentId === NO_SEGMENT_ID) {
+    if (segmentIdAtPosition === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
     }
@@ -230,7 +229,7 @@ export function useNoNodeContextMenuOptions(
     dispatch(toggleAllSegmentsAction(visibleSegmentationLayer.name, false));
     dispatch(
       updateSegmentAction(
-        clickedSegmentId,
+        segmentIdAtPosition,
         {
           isVisible: true,
           anchorPosition: globalPosition,
@@ -256,15 +255,14 @@ export function useNoNodeContextMenuOptions(
     if (!visibleSegmentationLayer || globalPosition == null) {
       return;
     }
-    const clickedSegmentId = getSegmentIdForPosition(globalPosition);
-    if (clickedSegmentId === NO_SEGMENT_ID) {
+    if (segmentIdAtPosition === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
     }
 
     const action = getUpdateSegmentActionToToggleVisibility(
       Store.getState(),
-      clickedSegmentId,
+      segmentIdAtPosition,
       globalPosition,
       additionalCoordinates,
     );
@@ -278,14 +276,12 @@ export function useNoNodeContextMenuOptions(
       return;
     }
 
-    const segmentId = getSegmentIdForPosition(globalPosition);
-
-    if (segmentId === NO_SEGMENT_ID) {
+    if (segmentIdAtPosition === NO_SEGMENT_ID) {
       Toast.info("No segment found at the clicked position");
       return;
     }
 
-    dispatch(loadAdHocMeshAction(segmentId, positionInLayerSpace, additionalCoordinates));
+    dispatch(loadAdHocMeshAction(segmentIdAtPosition, positionInLayerSpace, additionalCoordinates));
   };
 
   const showAutomatedSegmentationServicesModal = (errorMessage: string, entity: string) =>
@@ -482,7 +478,6 @@ export function useNoNodeContextMenuOptions(
     skeletonActions.push(loadSynapsesItem);
   }
 
-  const meshFileMappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
   const focusInSegmentListItem: MenuItemType = {
     key: "focus-in-segment-list",
     onClick: maybeFocusSegment,
@@ -505,14 +500,7 @@ export function useNoNodeContextMenuOptions(
   };
   const loadPrecomputedMeshItem: MenuItemType = {
     key: "load-precomputed-mesh",
-    disabled: !currentMeshFile,
-    onClick: withMappingActivationConfirmation(
-      loadPrecomputedMesh,
-      meshFileMappingName,
-      "mesh file",
-      segmentationLayerName,
-      mappingInfo,
-    ),
+    onClick: withMeshFileCompatibilityCheck(loadPrecomputedMesh, segmentationLayerName),
     label: (
       <LoadMeshMenuItemLabel currentMeshFile={currentMeshFile} volumeTracing={volumeTracing} />
     ),

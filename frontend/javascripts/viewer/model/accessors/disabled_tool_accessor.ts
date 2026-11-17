@@ -36,7 +36,7 @@ export type DisabledInfo = {
   explanation: string;
 };
 
-const DISABLED_EXPLANATION = {
+export const DISABLED_EXPLANATION = {
   NO_UPDATE_ALLOWED: "Editing is disabled currently.",
   ZOOM_IN_TO_USE_TOOL:
     "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.",

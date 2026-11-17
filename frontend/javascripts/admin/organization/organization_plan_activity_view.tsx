@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getPricingPlanUpdates } from "admin/api/organization";
+import { formatPricingPlanName } from "admin/organization/pricing_plan_utils";
 import { Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import FormattedDate from "components/formatted_date";
@@ -56,7 +57,7 @@ export function OrganizationPlanActivityView() {
         key: "pricingPlan",
         width: 140,
         render: (value: APIOrganizationPricingPlanUpdate["pricingPlan"]) =>
-          value ?? UNCHANGED_LABEL,
+          value != null ? formatPricingPlanName(value) : UNCHANGED_LABEL,
       },
       {
         title: "Paid Until",

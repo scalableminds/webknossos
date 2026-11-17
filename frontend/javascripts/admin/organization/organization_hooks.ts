@@ -1,5 +1,6 @@
 import { updateOrganization } from "admin/api/organization";
 import { getUsers } from "admin/rest_api";
+import features from "features";
 import { useApi, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { useEffect } from "react";
@@ -8,9 +9,11 @@ import type { APIOrganization } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import {
+  areJobsAllowedByPricingPlan,
   isUserAllowedToManageOrganization,
   isUserAllowedToOrderCredits,
   isUserAllowedToRequestUpgrades,
+  shouldContactSalesForUpgrades,
 } from "./pricing_plan_utils";
 
 export function useActiveOrganization(): APIOrganization {
@@ -23,9 +26,19 @@ export function useCanRequestUpgrades(): boolean {
   );
 }
 
+// Credits are only spent on jobs, which Open Source organizations can't run.
 export function useCanOrderCredits(): boolean {
   return useWkSelector((state) =>
-    state.activeUser ? isUserAllowedToOrderCredits(state.activeUser) : false,
+    state.activeUser
+      ? isUserAllowedToOrderCredits(state.activeUser) &&
+        areJobsAllowedByPricingPlan(state.activeOrganization)
+      : false,
+  );
+}
+
+export function useShouldContactSalesForUpgrades(): boolean {
+  return useWkSelector((state) =>
+    shouldContactSalesForUpgrades(state.activeOrganization, features().isWkorgInstance),
   );
 }
 

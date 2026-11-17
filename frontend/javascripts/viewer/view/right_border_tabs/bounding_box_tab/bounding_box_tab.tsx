@@ -8,6 +8,7 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import MipIcon from "@images/icons/icon-mip.svg?react";
+import { useIsJobAvailable } from "admin/job/job_hooks";
 import {
   Divider,
   Empty,
@@ -35,6 +36,7 @@ import AutoSizer from "react-virtualized-auto-sizer";
 import { APIJobCommand } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import { ControlModeEnum, type Vector3, type Vector6 } from "viewer/constants";
+import { getSceneControllerOrNull } from "viewer/controller/scene_controller_provider";
 import { isAnnotationOwner } from "viewer/model/accessors/annotation_accessor";
 import {
   getDataLayers,
@@ -53,7 +55,6 @@ import {
   setLayerBoundingBoxVisibilityAction,
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
-import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import { reserveIdAndAddBoundingBox } from "viewer/model/helpers/bounding_box_creation_helpers";
 import type { StoreAnnotation, UserBoundingBox } from "viewer/store";
 import DownloadModalView from "../../action_bar/download_modal/download_modal_view";
@@ -62,12 +63,19 @@ import { getContextMenuPositionFromEvent } from "../../context_menu/generic_cont
 import AdvancedSearchPopover from "../advanced_search_popover";
 import GenerateBoundingBoxesModal from "../generate_bounding_boxes_modal";
 import { ContextMenuContainer } from "../sidebar_context_menu";
+import useBoundingBoxSelection from "./use_bounding_box_selection";
 import UserBoundingBoxInput from "./user_boundingbox_input";
 
 // Keep the table's scroll height slightly below the AutoSizer height. If it is exactly the same,
 // the AutoSizer keeps re-rendering the table and toggles an additional scrollbar.
 const BBOX_TABLE_HEIGHT_SLACK = 2;
 const CONTEXT_MENU_CLASS = "bbox-list-context-menu-overlay";
+const LAYER_SECTION_TOGGLE_CLASS = "bbox-layer-section-toggle";
+// Clicks on these controls inside a row edit the bounding box and must not toggle its selection.
+const ROW_CONTROL_SELECTOR =
+  "input, textarea, button, .color-display-wrapper, .ant-input-affix-wrapper";
+// Clicks inside these elements of the tab do not count as clicks on the empty background.
+const NON_BACKGROUND_SELECTOR = `.ant-table-row, button, input, textarea, .${LAYER_SECTION_TOGGLE_CLASS}, .${CONTEXT_MENU_CLASS}`;
 const BOUNDING_BOX_TAB_ID = "bounding-box-tab";
 // If there are at least this many user bounding boxes, the layer bounding box section is collapsed by
 // default (unless the user manually toggled it) to avoid pushing the user bounding boxes out of view.
@@ -98,7 +106,6 @@ export default function BoundingBoxTab() {
   const isLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
   const dataset = useWkSelector((state) => state.dataset);
-  const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
   // Select the bounding boxes (and the id of their tracing) directly instead of the
   // whole annotation so that this tab only re-renders when the boxes actually change.
   const userBoundingBoxes = useWkSelector(
@@ -136,7 +143,6 @@ export default function BoundingBoxTab() {
   const mipRaymarchingSteps = useWkSelector((state) => state.userConfiguration.mipRaymarchingSteps);
   const mipDepthWrite = useWkSelector((state) => state.userConfiguration.mipDepthWrite);
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [menu, setMenu] = useState<MenuProps | null>(null);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [isCreatingBoundingBox, setIsCreatingBoundingBox] = useState(false);
@@ -149,6 +155,13 @@ export default function BoundingBoxTab() {
     boolean | null
   >(null);
   const dispatch = useDispatch();
+  const {
+    activeId: activeBoundingBoxId,
+    selectedIds: selectedRowKeys,
+    setSelection,
+    clearSelection,
+    toggleSelection,
+  } = useBoundingBoxSelection(userBoundingBoxes);
 
   const isLayerSectionCollapsed =
     isLayerSectionCollapsedOverride ??
@@ -188,15 +201,12 @@ export default function BoundingBoxTab() {
   const deleteBoundingBox = (id: number) => {
     dispatch(deleteUserBoundingBoxAction(id));
     hideContextMenu();
-    // In case the deleted bounding box was selected (alone or with others), remove it from the selection.
-    setSelectedRowKeys(() => selectedRowKeys.filter((key) => key !== id));
   };
 
   const deleteSelectedBoundingBoxes = useCallback(() => {
     selectedRowKeys.forEach((bboxId) => {
       dispatch(deleteUserBoundingBoxAction(bboxId));
     });
-    setSelectedRowKeys([]);
     hideContextMenu();
   }, [dispatch, selectedRowKeys, hideContextMenu]);
 
@@ -301,12 +311,10 @@ export default function BoundingBoxTab() {
         return;
       }
       const matchingBoundingBoxIds = matchingBoundingBoxes.map((boundingBox) => boundingBox.id);
-      const firstMatchingBoundingBoxId = matchingBoundingBoxIds[0];
-      setSelectedRowKeys(matchingBoundingBoxIds);
-      handleGoToBoundingBox(firstMatchingBoundingBoxId);
-      dispatch(setActiveUserBoundingBoxId(firstMatchingBoundingBoxId));
+      setSelection(matchingBoundingBoxIds);
+      handleGoToBoundingBox(matchingBoundingBoxIds[0]);
     },
-    [dispatch, handleGoToBoundingBox],
+    [setSelection, handleGoToBoundingBox],
   );
 
   const isViewMode = useWkSelector(
@@ -321,15 +329,29 @@ export default function BoundingBoxTab() {
       "Copy this annotation to your account to adapt the bounding boxes.";
   }
 
-  const isExportEnabled = dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-    APIJobCommand.EXPORT_TIFF,
-  );
+  const isExportEnabled = useIsJobAvailable(dataset.dataStore, APIJobCommand.EXPORT_TIFF);
 
   useEffect(() => {
-    if (bboxTableRef.current != null && activeBoundingBoxId != null) {
-      bboxTableRef.current.scrollTo({ key: activeBoundingBoxId });
+    if (activeBoundingBoxId != null) {
+      bboxTableRef.current?.scrollTo({ key: activeBoundingBoxId });
     }
   }, [activeBoundingBoxId]);
+
+  // Clear a hover highlight that is still set when the tab unmounts (e.g. the sidebar is closed).
+  useEffect(() => () => getSceneControllerOrNull()?.highlightUserBoundingBox(null), []);
+
+  // While a box's color picker is open, the box isn't highlighted so that the picked color can be
+  // previewed. Depending on the platform, the row either doesn't receive a mouseleave when the
+  // picker opens, or receives mouseenter events while the cursor is over the picker.
+  const colorPickerBboxIdRef = useRef<number | null>(null);
+  const handleColorPickerOpenChange = useCallback((bboxId: number, isOpen: boolean) => {
+    if (isOpen) {
+      colorPickerBboxIdRef.current = bboxId;
+      getSceneControllerOrNull()?.highlightUserBoundingBox(null);
+    } else if (colorPickerBboxIdRef.current === bboxId) {
+      colorPickerBboxIdRef.current = null;
+    }
+  }, []);
 
   const userBoundingBoxColumns: NonNullable<TableProps<UserBoundingBox>["columns"]> = [
     {
@@ -350,6 +372,7 @@ export default function BoundingBoxTab() {
           onVisibilityChange={partial(setBoundingBoxVisibility, bb.id)}
           onNameChange={partial(setBoundingBoxName, bb.id)}
           onColorChange={partial(setBoundingBoxColor, bb.id)}
+          onColorPickerOpenChange={partial(handleColorPickerOpenChange, bb.id)}
           disabled={!allowUpdate}
           isLockedByOwner={isLockedByOwner}
           isOwner={isOwner}
@@ -393,6 +416,13 @@ export default function BoundingBoxTab() {
 
   const getPropsForUserRow = useCallback<NonNullable<TableProps<UserBoundingBox>["onRow"]>>(
     (bb: UserBoundingBox) => ({
+      // Highlight the hovered bounding box in the viewports.
+      onMouseEnter: () => {
+        if (colorPickerBboxIdRef.current !== bb.id) {
+          getSceneControllerOrNull()?.highlightUserBoundingBox(bb.id);
+        }
+      },
+      onMouseLeave: () => getSceneControllerOrNull()?.highlightUserBoundingBox(null),
       onClick: (event) => {
         // Popovers/dropdowns (e.g. the position/extent sliders, the MIP menu) render their
         // content into a portal outside the row's DOM subtree, but React still bubbles their
@@ -404,17 +434,27 @@ export default function BoundingBoxTab() {
         }
         hideContextMenu();
         if (event.ctrlKey || event.metaKey) {
-          setSelectedRowKeys((prev) =>
-            prev.includes(bb.id) ? prev.filter((key) => key !== bb.id) : [...prev, bb.id],
-          );
+          toggleSelection(bb.id);
+        } else if (
+          bb.id === activeBoundingBoxId &&
+          !(event.target as Element).closest(ROW_CONTROL_SELECTOR)
+        ) {
+          // Clicking the selected row again unselects it.
+          clearSelection();
         } else {
           handleGoToBoundingBox(bb.id);
-          setSelectedRowKeys([bb.id]);
-          dispatch(setActiveUserBoundingBoxId(bb.id));
+          setSelection([bb.id]);
         }
       },
     }),
-    [hideContextMenu, dispatch, handleGoToBoundingBox],
+    [
+      hideContextMenu,
+      handleGoToBoundingBox,
+      activeBoundingBoxId,
+      clearSelection,
+      setSelection,
+      toggleSelection,
+    ],
   );
 
   const getPropsForLayerRow = useCallback<NonNullable<TableProps<LayerBoundingBox>["onRow"]>>(
@@ -455,6 +495,14 @@ export default function BoundingBoxTab() {
   return (
     <div
       id={BOUNDING_BOX_TAB_ID}
+      onClick={(event) => {
+        // Unselect when clicking the empty background of the tab. Clicks from portaled
+        // popovers/modals bubble here through the React tree, so ignore targets outside the tab.
+        const target = event.target as Element;
+        if (event.currentTarget.contains(target) && !target.closest(NON_BACKGROUND_SELECTOR)) {
+          clearSelection();
+        }
+      }}
       className="padded-tab-content"
       style={{
         minWidth: 300,
@@ -469,8 +517,7 @@ export default function BoundingBoxTab() {
           data={userBoundingBoxes}
           onSelect={(boundingBox: UserBoundingBox) => {
             handleGoToBoundingBox(boundingBox.id);
-            setSelectedRowKeys([boundingBox.id]);
-            dispatch(setActiveUserBoundingBoxId(boundingBox.id));
+            setSelection([boundingBox.id]);
           }}
           onSelectAllMatches={handleSelectAllMatchingBoundingBoxes}
           searchKey="name"
@@ -613,6 +660,7 @@ export default function BoundingBoxTab() {
           <Divider size="small" titlePlacement="left" style={{ margin: "4px 0" }}>
             <FastTooltip title="These are the read-only bounding boxes of the dataset's layers. Click to collapse or expand.">
               <span
+                className={LAYER_SECTION_TOGGLE_CLASS}
                 onClick={() => setIsLayerSectionCollapsedOverride(!isLayerSectionCollapsed)}
                 style={{ cursor: "pointer", userSelect: "none" }}
               >

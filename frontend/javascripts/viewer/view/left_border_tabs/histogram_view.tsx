@@ -349,7 +349,8 @@ class Histogram extends PureComponent<HistogramProps, HistogramState> {
             ref={this.onCanvasRefChange}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
-            style={{ opacity: maybeWarning ? 0.5 : 1 }}
+            // Shrink (keeping the aspect ratio) when a vertical scrollbar takes space from the sidebar.
+            style={{ opacity: maybeWarning ? 0.5 : 1, width: "100%", maxWidth: CANVAS_WIDTH }}
           />
         </div>
         <Slider
@@ -363,7 +364,8 @@ class Histogram extends PureComponent<HistogramProps, HistogramState> {
           step={maybeCeilFn((maxRange - minRange) / 255)}
           tooltip={{ formatter: this.tipFormatter }}
           style={{
-            width: CANVAS_WIDTH,
+            width: "100%",
+            maxWidth: CANVAS_WIDTH,
             margin: 0,
             marginTop: 6,
           }}

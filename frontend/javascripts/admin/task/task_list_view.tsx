@@ -13,7 +13,9 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
+import { getAdminTablePagination } from "admin/admin_table_pagination";
 import AnnotationServicesAd from "admin/ads/annotation_services_alert";
+import { MAX_SERVER_ITEMS_PER_RESPONSE } from "admin/api/api_utils";
 import {
   assignTaskToUser as assignTaskToUserAPI,
   deleteTask as deleteTaskAPI,
@@ -25,7 +27,7 @@ import { downloadTasksAsCSV } from "admin/task/task_create_form_view";
 import type { QueryObject, TaskFormFieldValues } from "admin/task/task_search_form";
 import TaskSearchForm from "admin/task/task_search_form";
 import UserSelectionComponent from "admin/user/user_selection_component";
-import { Alert, App, Button, Input, Modal, Spin, Tag } from "antd";
+import { Alert, App, Button, Input, Modal, Spin, Tag, Typography } from "antd";
 import type { ColumnType } from "antd/es/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FixedExpandableTable from "components/fixed_expandable_table";
@@ -46,7 +48,6 @@ import {
   getUrlParamValue,
   hasUrlParam,
   localeCompareBy,
-  scrollToTop,
 } from "libs/utils";
 import isEmpty from "lodash-es/isEmpty";
 import partial from "lodash-es/partial";
@@ -210,7 +211,7 @@ function TaskListView({ initialFieldValues }: Props) {
         "datasetName",
         "created",
         "type",
-        (task) => task.neededExperience.domain,
+        (task) => task.neededExperience?.domain ?? "",
       ],
       searchQuery,
     );
@@ -376,14 +377,16 @@ function TaskListView({ initialFieldValues }: Props) {
       title: "Experience",
       dataIndex: "neededExperience",
       key: "neededExperience",
-      sorter: localeCompareBy<APITask>((task) => task.neededExperience.domain),
+      sorter: localeCompareBy<APITask>((task) => task.neededExperience?.domain ?? ""),
       width: 250,
       render: (neededExperience: APITask["neededExperience"]) =>
-        neededExperience.domain !== "" || neededExperience.value > 0 ? (
+        neededExperience != null ? (
           <Tag>
             {neededExperience.domain} : {neededExperience.value}
           </Tag>
-        ) : null,
+        ) : (
+          <Typography.Text type="secondary">Any team member</Typography.Text>
+        ),
     },
     {
       title: "Creation Date",
@@ -480,10 +483,9 @@ function TaskListView({ initialFieldValues }: Props) {
           dataSource={getFilteredTasks()}
           rowKey="id"
           columns={columns}
-          pagination={{
-            defaultPageSize: 50,
-            onChange: scrollToTop,
-          }}
+          pagination={getAdminTablePagination({
+            isTruncated: tasks.length >= MAX_SERVER_ITEMS_PER_RESPONSE,
+          })}
           expandable={{
             expandedRowRender: (task) => <TaskAnnotationView task={task} />,
           }}

@@ -40,7 +40,7 @@ class VoxelyticsController @Inject() (
         _ <- voxelyticsService.checkAuthForWorkflowCreation(
           request.body.run.name,
           request.identity
-        ) ?~> Msg.Voxelytics.workflowUserMismatch ~> UNAUTHORIZED
+        ) ?~> Msg.Voxelytics.workflowUserMismatch ~> FORBIDDEN
         _ <- voxelyticsDAO.upsertWorkflow(
           request.body.workflow.hash,
           request.body.workflow.name,

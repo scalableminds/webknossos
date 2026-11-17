@@ -55,6 +55,7 @@ import {
   getVisibleSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  getGlobalVoxelSizeFromState,
   getTransformedDatasetBoundingBox,
   getTransformsForLayer,
   getTransformsForLayerOrNull,
@@ -183,7 +184,7 @@ class SceneController {
     // scene.scale does not have an effect.
     // The dimension(s) with the highest resolution will not be distorted.
     this.rootGroup.scale.copy(
-      new ThreeVector3(...Store.getState().dataset.dataSource.scale.factor),
+      new ThreeVector3(...getGlobalVoxelSizeFromState(Store.getState()).factor),
     );
     this.setupDebuggingMethods();
   }
@@ -308,7 +309,7 @@ class SceneController {
     // to avoid shearing effects on rotated ortho viewport planes. For more info see plane.ts.
     planeGroup.scale.copy(
       new ThreeVector3(1, 1, 1).divide(
-        new ThreeVector3(...Store.getState().dataset.dataSource.scale.factor),
+        new ThreeVector3(...getGlobalVoxelSizeFromState(Store.getState()).factor),
       ),
     );
 
@@ -532,7 +533,7 @@ class SceneController {
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
     const state = Store.getState();
-    const { dataset, userConfiguration, flycam } = state;
+    const { userConfiguration, flycam } = state;
     const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders } = userConfiguration;
 
     // Section clipping renders only the skeleton on the currently visible section.
@@ -592,7 +593,10 @@ class SceneController {
           // perpendicular voxel so that the (precise) shader-side clipping is never
           // overruled by the data plane occluding on-section nodes/edges.
           const effectiveClippingDistanceInUnit = isSectionClippingActive
-            ? Math.max(this.clippingDistanceInUnit, dataset.dataSource.scale.factor[ind[2]])
+            ? Math.max(
+                this.clippingDistanceInUnit,
+                getGlobalVoxelSizeFromState(state).factor[ind[2]],
+              )
             : this.clippingDistanceInUnit;
           const unrotatedPositionOffset = [0, 0, 0] as Vector3;
           unrotatedPositionOffset[ind[2]] =

@@ -23,6 +23,7 @@ import {
   SkeletonToolController,
 } from "viewer/controller/combinations/tool_controls";
 import CustomLOD from "viewer/controller/custom_lod";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { getActiveNode, getNodePosition } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -118,8 +119,8 @@ class TDController extends PureComponent<Props> {
   isStarted: boolean = false;
 
   componentDidMount() {
-    const { dataset, flycam } = Store.getState();
-    this.oldUnitPos = voxelToUnit(dataset.dataSource.scale, getPosition(flycam));
+    const state = Store.getState();
+    this.oldUnitPos = voxelToUnit(getGlobalVoxelSizeFromState(state), getPosition(state.flycam));
     this.isStarted = true;
     this.initMouse();
   }
@@ -479,7 +480,7 @@ class TDController extends PureComponent<Props> {
 
 function mapStateToProps(state: WebknossosState): StateProps {
   return {
-    voxelSize: state.dataset.dataSource.scale,
+    voxelSize: getGlobalVoxelSizeFromState(state),
     activeTool: state.uiInformation.activeTool,
   };
 }

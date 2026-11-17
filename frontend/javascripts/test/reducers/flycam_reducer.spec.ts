@@ -56,6 +56,9 @@ const initialState = {
     currentMatrix: FlycamMatrixWithDefaultRotation,
     spaceDirectionOrtho: [1, 1, 1],
   },
+  datasetConfiguration: {
+    nativelyRenderedLayerName: null,
+  },
   temporaryConfiguration: {
     viewMode: "flight",
   },

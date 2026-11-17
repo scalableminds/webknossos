@@ -10,6 +10,7 @@ import type {
   APIDataset,
   APISkeletonLayer,
   CoordinateTransformation,
+  VoxelSize,
 } from "types/api_types";
 import { Identity4x4, IdentityTransform, type Vector3, Vector3Indices } from "viewer/constants";
 import type { WebknossosState } from "viewer/store";
@@ -218,6 +219,21 @@ export function getTransformsForSkeletonLayer(
       nativelyRenderedLayerName,
     ) || IdentityTransform
   );
+}
+
+// Returns the voxel size of the global space, i.e., the space of the flycam position and of
+// everything that is rendered in the viewports. The scene is scaled by it.
+function _getGlobalVoxelSize(
+  dataset: APIDataset,
+  _nativelyRenderedLayerName: string | null,
+): VoxelSize {
+  return dataset.dataSource.scale;
+}
+
+export const getGlobalVoxelSize = memoizeWithTwoKeys(_getGlobalVoxelSize);
+
+export function getGlobalVoxelSizeFromState(state: WebknossosState): VoxelSize {
+  return getGlobalVoxelSize(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName);
 }
 
 function _getTransformsPerLayer(

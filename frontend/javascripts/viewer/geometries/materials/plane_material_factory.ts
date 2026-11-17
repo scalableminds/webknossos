@@ -43,6 +43,7 @@ import {
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  getGlobalVoxelSizeFromState,
   getTransformsForLayer,
   getTransformsPerLayer,
   invertAndTranspose,
@@ -1216,8 +1217,7 @@ class PlaneMaterialFactory {
     );
 
     const textureLayerInfos = getTextureLayerInfos();
-    const { dataset } = state;
-    const voxelSizeFactor = dataset.dataSource.scale.factor;
+    const voxelSizeFactor = getGlobalVoxelSizeFromState(state).factor;
     const voxelSizeFactorInverted = V3.divide3([1, 1, 1], voxelSizeFactor);
     const { interpolation } = state.datasetConfiguration;
     const code = getMainFragmentShader({
@@ -1260,8 +1260,7 @@ class PlaneMaterialFactory {
       this.getLayersToRender(maximumLayerCountToRender);
 
     const textureLayerInfos = getTextureLayerInfos();
-    const { dataset } = state;
-    const voxelSizeFactor = dataset.dataSource.scale.factor;
+    const voxelSizeFactor = getGlobalVoxelSizeFromState(state).factor;
     const voxelSizeFactorInverted = V3.divide3([1, 1, 1], voxelSizeFactor);
     const { interpolation } = state.datasetConfiguration;
 

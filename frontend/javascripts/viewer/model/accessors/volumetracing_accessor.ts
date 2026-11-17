@@ -30,6 +30,7 @@ import {
   getSegmentationLayers,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getAdditionalCoordinatesAsString,
@@ -671,7 +672,7 @@ function _getBrushCenterPosition(state: WebknossosState): Vector3 | null {
   const { mag } = maybeMagWithZoomStep;
   const diameterInMag = getBrushDiameterInMag(
     state.userConfiguration.brushSize,
-    getVoxelPerPixel(state.dataset.dataSource.scale),
+    getVoxelPerPixel(getGlobalVoxelSizeFromState(state)),
     mag,
   );
   const planeAxis = Dimensions.getIndices(state.viewModeData.plane.activeViewport)[2];

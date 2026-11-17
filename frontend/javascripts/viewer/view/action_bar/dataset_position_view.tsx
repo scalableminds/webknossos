@@ -12,6 +12,7 @@ import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getDatasetExtentInVoxel } from "viewer/model/accessors/dataset_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
@@ -36,7 +37,7 @@ const positionInputWarningStyle: React.CSSProperties = {
 function DatasetPositionView() {
   const flycam = useWkSelector((state) => state.flycam);
   const dataset = useWkSelector((state) => state.dataset);
-  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
+  const voxelSize = useWkSelector(getGlobalVoxelSizeFromState);
   const task = useWkSelector((state) => state.task);
   const dispatch = useDispatch();
 

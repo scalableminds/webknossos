@@ -16,6 +16,7 @@ type Props = {
   allowCreation?: boolean;
   allowClear?: boolean;
   alreadyUsedDomains?: ExperienceDomainList;
+  "aria-label"?: string;
 };
 
 const SelectExperienceDomain: React.FC<Props> = ({
@@ -29,6 +30,7 @@ const SelectExperienceDomain: React.FC<Props> = ({
   allowCreation = false,
   allowClear = false,
   alreadyUsedDomains = [],
+  "aria-label": ariaLabel,
 }) => {
   const { data: domains = [] } = useQuery({
     queryKey: ["experienceDomains"],
@@ -68,6 +70,7 @@ const SelectExperienceDomain: React.FC<Props> = ({
         }}
         disabled={disabled}
         placeholder={placeholder}
+        aria-label={ariaLabel}
         onSelect={onSelect}
         onChange={onChange}
         allowClear={allowClear}

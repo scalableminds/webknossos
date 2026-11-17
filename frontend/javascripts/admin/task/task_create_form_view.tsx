@@ -33,6 +33,7 @@ import type { useAppProps } from "antd/es/app/context";
 import { AsyncButton } from "components/async_clickables";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import SelectExperienceDomain from "components/select_experience_domain";
+import { FormItemWithDescription } from "dashboard/dataset/helper_components";
 import { saveAs } from "file-saver";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { coalesce, pluralize, tryToAwaitPromise } from "libs/utils";
@@ -268,7 +269,13 @@ export function handleTaskCreationResponse(
 
 function CreateResourceButton({ text, link }: { text: string; link: string }) {
   return (
-    <Col span={4} style={{ marginBottom: "var(--ant-form-item-margin-bottom)" }}>
+    // The min width keeps the buttons of all rows equally wide; longer labels still fit.
+    // It is relative to the font size so that it keeps fitting the longest label
+    // ("Create new Task Type") when the font size changes.
+    <Col
+      flex="none"
+      style={{ minWidth: "13em", marginBottom: "var(--ant-form-item-margin-bottom)" }}
+    >
       <Button block href={link} target="_blank" rel="noreferrer">
         {text}
       </Button>
@@ -510,9 +517,10 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
     return (
       <div>
         {specificationType === SpecificationEnum.BaseAnnotation ? (
-          <FormItem
+          <FormItemWithDescription
             name={["baseAnnotation", "baseId"]}
             label="Base ID"
+            description="ID of an annotation, or of a task with exactly one finished instance. Each new task starts with a copy of its content."
             hasFeedback
             rules={[
               {
@@ -567,7 +575,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             ]}
           >
             <Input style={fullWidth} disabled={isEditingMode} />
-          </FormItem>
+          </FormItemWithDescription>
         ) : null}
 
         <Row gutter={8} align="bottom" wrap={false}>
@@ -608,11 +616,12 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
           <CreateResourceButton text="Upload Dataset" link="/datasets/upload" />
         </Row>
 
-        <Row gutter={8}>
+        <Row gutter={8} align="bottom">
           <Col span={12}>
-            <FormItem
+            <FormItemWithDescription
               name="editPosition"
               label="Starting Position"
+              description="Where users start, in voxel coordinates."
               hasFeedback
               rules={[
                 {
@@ -621,12 +630,13 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
               ]}
             >
               <Vector3Input style={fullWidth} disabled={isEditingMode} />
-            </FormItem>
+            </FormItemWithDescription>
           </Col>
           <Col span={12}>
-            <FormItem
+            <FormItemWithDescription
               name="editRotation"
               label="Starting Rotation"
+              description="Camera rotation around x, y, z in degrees."
               hasFeedback
               rules={[
                 {
@@ -635,7 +645,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
               ]}
             >
               <Vector3Input style={fullWidth} disabled={isEditingMode} />
-            </FormItem>
+            </FormItemWithDescription>
           </Col>
         </Row>
       </div>
@@ -645,6 +655,9 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const isEditingMode = taskId != null;
   const titleLabel = isEditingMode ? `Update Task ${taskId || ""}` : "Create Task";
   const instancesLabel = isEditingMode ? "Remaining Instances" : "Task Instances";
+  const instancesDescription = isEditingMode
+    ? "How many more users can still get this task. Users who already started or finished it are not counted. Each instance is assigned to a different user."
+    : "How many users annotate this task independently. Each instance is assigned to a different user.";
 
   const content = (
     <div
@@ -671,13 +684,15 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
           initialValues={{
             editPosition: [0, 0, 0],
             editRotation: [0, 0, 0],
+            pendingInstances: 1,
           }}
         >
           <Row gutter={8} align="bottom" wrap={false}>
             <Col flex="auto">
-              <FormItem
+              <FormItemWithDescription
                 name="taskTypeId"
                 label="Task Type"
+                description="Defines the instructions for users, the annotation type and the allowed tools. Many tasks can share one task type."
                 hasFeedback
                 rules={[
                   {
@@ -696,7 +711,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                     label: taskType.summary,
                   }))}
                 />
-              </FormItem>
+              </FormItemWithDescription>
             </Col>
             <ReloadResourceButton
               tooltip="Reload to show new Task Types"
@@ -707,10 +722,10 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             <CreateResourceButton text="Create new Task Type" link="/taskTypes/create" />
           </Row>
 
-          <FormItem
+          <FormItemWithDescription
             name="pendingInstances"
             label={instancesLabel}
-            tooltip="The number of users who annotate this task independently. Each instance is assigned to a different user."
+            description={instancesDescription}
             hasFeedback
             rules={[
               {
@@ -722,13 +737,14 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             ]}
           >
             <InputNumber style={fullWidth} min={0} />
-          </FormItem>
+          </FormItemWithDescription>
 
           <Row gutter={8} align="bottom" wrap={false}>
             <Col flex="auto">
-              <FormItem
+              <FormItemWithDescription
                 name="projectName"
                 label="Project"
+                description="Groups related tasks. The project's team decides who can get the task, and its priority decides how early the task is assigned."
                 hasFeedback
                 rules={[
                   {
@@ -747,7 +763,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                     label: project.name,
                   }))}
                 />
-              </FormItem>
+              </FormItemWithDescription>
             </Col>
             <ReloadResourceButton
               tooltip="Reload to show new Projects"
@@ -758,9 +774,9 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             <CreateResourceButton text="Create new Project" link="/projects/create" />
           </Row>
 
-          <FormItem
+          <FormItemWithDescription
             label="Task Specification"
-            tooltip="Defines the dataset and starting point of the task: enter them manually, upload NML files (one task per file), or use an existing annotation as the base for the task."
+            description="Defines the dataset and starting point of the task: enter them manually, upload NML files (one task per file) or use an existing annotation as the base."
             hasFeedback
           >
             <RadioGroup
@@ -781,60 +797,59 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                 Use Annotation ID as Base
               </Radio>
             </RadioGroup>
-          </FormItem>
+          </FormItemWithDescription>
 
           {renderSpecification()}
 
-          <Row gutter={8} align="bottom" wrap={false}>
-            <Col span={10}>
-              <FormItem
-                name={["neededExperience", "domain"]}
-                label="Experience Domain"
-                tooltip="Optional. Only users with at least the given experience value in this domain get the task. Leave empty to let any member of the project's team get the task."
-                hasFeedback
-              >
-                <SelectExperienceDomain
-                  disabled={isEditingMode}
-                  placeholder="Any team member"
-                  notFoundContent={messages["task.domain_does_not_exist"]}
-                  width={100}
-                  allowCreation
-                  allowClear
-                />
-              </FormItem>
-            </Col>
-            <Col flex="auto">
-              <FormItem
-                name={["neededExperience", "value"]}
-                label="Experience Value"
-                hasFeedback
-                dependencies={[["neededExperience", "domain"]]}
-                rules={[
-                  ({ getFieldValue }) => ({
-                    required: isNonEmptyDomain(getFieldValue(["neededExperience", "domain"])),
-                    message: "Please enter an experience value for the selected domain.",
-                  }),
-                  {
-                    type: "number",
-                  },
-                ]}
-              >
-                <InputNumber
-                  style={fullWidth}
-                  disabled={isEditingMode || !hasExperienceDomain}
-                  placeholder={hasExperienceDomain ? undefined : "Select a domain first"}
-                />
-              </FormItem>
-            </Col>
-            <CreateResourceButton text="Assign Experience" link="/users" />
-          </Row>
+          <FormItemWithDescription
+            label="Experience Requirement"
+            description="Optional. Only users with at least the given experience value in this domain get the task. Leave empty to let any member of the project's team get the task."
+            style={{ marginBottom: 0 }}
+          >
+            <Row gutter={8} wrap={false}>
+              <Col span={10}>
+                <FormItem name={["neededExperience", "domain"]} hasFeedback>
+                  <SelectExperienceDomain
+                    aria-label="Experience Domain"
+                    disabled={isEditingMode}
+                    placeholder="Any team member"
+                    notFoundContent={messages["task.domain_does_not_exist"]}
+                    width={100}
+                    allowCreation
+                    allowClear
+                  />
+                </FormItem>
+              </Col>
+              <Col flex="auto">
+                <FormItem
+                  name={["neededExperience", "value"]}
+                  hasFeedback
+                  dependencies={[["neededExperience", "domain"]]}
+                  rules={[
+                    ({ getFieldValue }) => ({
+                      required: isNonEmptyDomain(getFieldValue(["neededExperience", "domain"])),
+                      message: "Please enter an experience value for the selected domain.",
+                    }),
+                  ]}
+                >
+                  <InputNumber
+                    aria-label="Experience Value"
+                    style={fullWidth}
+                    disabled={isEditingMode || !hasExperienceDomain}
+                    placeholder={hasExperienceDomain ? "Minimum value" : "Select a domain first"}
+                  />
+                </FormItem>
+              </Col>
+              <CreateResourceButton text="Assign Experience" link="/users" />
+            </Row>
+          </FormItemWithDescription>
 
           <Row gutter={8} align="bottom" wrap={false}>
             <Col flex="auto">
-              <FormItem
+              <FormItemWithDescription
                 name="scriptId"
                 label="Script"
-                tooltip="Optional. A user script that is loaded in the annotation view of everyone working on this task."
+                description="Optional. A user script that is loaded in the annotation view of everyone working on this task."
                 hasFeedback
               >
                 <Select
@@ -848,7 +863,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
                     label: script.name,
                   }))}
                 />
-              </FormItem>
+              </FormItemWithDescription>
             </Col>
             <ReloadResourceButton
               tooltip="Reload to show new Scripts"
@@ -859,14 +874,14 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
             <CreateResourceButton text="Create new Script" link="/scripts/create" />
           </Row>
 
-          <FormItem
+          <FormItemWithDescription
             name="boundingBox"
             label="Bounding Box"
-            extra="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
+            description="Optional. Marks the region to annotate and is shown in the annotation view. Format: top-left x, y, z, then width, height, depth."
             hasFeedback
           >
             <Vector6Input disabled={isEditingMode} />
-          </FormItem>
+          </FormItemWithDescription>
 
           <FormItem>
             <Button type="primary" htmlType="submit">

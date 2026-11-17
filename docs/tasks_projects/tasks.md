@@ -18,7 +18,7 @@ First, a _Task Type_ needs to be created:
 |--------|-------------|
 | `Annotation Type` | `Skeleton`, `Volume`, or `Skeleton and Volume`. Determines which annotation layers the tasks' annotations have. Can't be changed after the task type was created. |
 | `Allowed Modes` | The view modes annotators may use: `Orthogonal` and/or `Flight`. |
-| `Preferred Mode` | The view mode tasks open in. With `Any`, no mode is preset. |
+| `Preferred Mode` | The view mode tasks open in. Must be one of the allowed modes. If empty, tasks open in the first allowed mode. |
 | `Allow Single-node-tree mode ("Soma clicking")` | Lets annotators use the single-node-tree mode, where each new node creates a new tree. Not available for volume-only task types. |
 | `Allow Branchpoints` | Lets annotators mark branchpoints. Not available for volume-only task types. |
 | `Merger Mode` | Activates the [merger mode](../proofreading/merger_mode.md) automatically when annotators open a task. Not available for volume-only task types. |

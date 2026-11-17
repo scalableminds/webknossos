@@ -62,6 +62,26 @@ describe("InputKeyboard focus scope", () => {
     expect(global).not.toHaveBeenCalled();
   });
 
+  it("does not call onReleased of a handler whose press was blocked by the focus scope", () => {
+    document.body.innerHTML = `<div id="scope"><span id="inside" tabindex="0"></span></div><span id="outside" tabindex="0"></span>`;
+    const scope = document.getElementById("scope") as HTMLElement;
+    const onPressed = vi.fn();
+    const onReleased = vi.fn();
+    keyboards.push(
+      new InputKeyboard({ Delete: { onPressed: () => {} } }, { focusScope: () => scope }),
+      new InputKeyboard({ Delete: { onPressed, onReleased } }),
+    );
+    focus("inside");
+    pressDelete();
+    expect(onPressed).not.toHaveBeenCalled();
+    expect(onReleased).not.toHaveBeenCalled();
+
+    focus("outside");
+    pressDelete();
+    expect(onPressed).toHaveBeenCalledTimes(1);
+    expect(onReleased).toHaveBeenCalledTimes(1);
+  });
+
   it("releases the claim when the scoped keyboard is destroyed", () => {
     const { scoped, global } = setup();
     keyboards[0].destroy();

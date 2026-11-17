@@ -92,7 +92,7 @@ export function getRenderedNodes(hierarchy: SegmentsHierarchy): SegmentsUiNode[]
 /*
  * Returns the segment that should be selected after the given segments were removed from the
  * list: the first remaining segment below the removed ones, or otherwise the last remaining one
- * above them. Only segments that are currently rendered (i.e., not in a collapsed group) are
+ * above the last removed one (which may lie between removed ones). Only segments that are currently rendered (i.e., not in a collapsed group) are
  * considered. Returns null if there is no such segment.
  */
 export function findSegmentToSelectAfterRemoval(
@@ -105,14 +105,13 @@ export function findSegmentToSelectAfterRemoval(
   );
 
   const isRemoved = (node: SegmentUiNode) => removedIds.has(node.segment.id);
-  const firstRemovedIndex = renderedSegments.findIndex(isRemoved);
-  if (firstRemovedIndex === -1) {
+  const lastRemovedIndex = renderedSegments.findLastIndex(isRemoved);
+  if (lastRemovedIndex === -1) {
     return null;
   }
-  const lastRemovedIndex = renderedSegments.findLastIndex(isRemoved);
   return (
     renderedSegments.slice(lastRemovedIndex + 1).find((node) => !isRemoved(node)) ??
-    renderedSegments.slice(0, firstRemovedIndex).findLast((node) => !isRemoved(node)) ??
+    renderedSegments.slice(0, lastRemovedIndex).findLast((node) => !isRemoved(node)) ??
     null
   );
 }

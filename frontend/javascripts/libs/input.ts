@@ -284,6 +284,10 @@ export class InputKeyboard {
     combo: KeystrokesKeyComboStr,
     { onPressed, onReleased: onRelease }: KeyboardNoLoopHandler,
   ) {
+    // onRelease is only called for presses that were not blocked by the guards below (e.g. while
+    // a focus scope claimed the combo). Otherwise, handlers that toggle state on press and release
+    // would get out of sync.
+    let wasPressAccepted = false;
     const onPressedGuarded = ({ keyEvents, finalKeyEvent }: KeystrokesHandlerArgs) => {
       if (
         !this.isStarted ||
@@ -298,6 +302,7 @@ export class InputKeyboard {
       }
 
       if (!event.repeat) {
+        wasPressAccepted = true;
         onPressed(event);
       } else {
         event.preventDefault();
@@ -307,9 +312,10 @@ export class InputKeyboard {
     const onReleasedInterfaceAdjusted = onRelease
       ? ({ keyEvents, finalKeyEvent }: KeystrokesHandlerArgs) => {
           const event = findEventInKeystrokeComboEvent(keyEvents, finalKeyEvent);
-          if (!event) {
+          if (!event || !wasPressAccepted) {
             return;
           }
+          wasPressAccepted = false;
           onRelease(event);
         }
       : () => {};

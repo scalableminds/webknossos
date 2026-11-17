@@ -42,6 +42,11 @@ describe("findSegmentToSelectAfterRemoval", () => {
     expect(nextIdAfterRemoving(hierarchy, [4, 5])).toBe(3n);
   });
 
+  it("selects a segment between the removed ones if none remains below them", () => {
+    expect(nextIdAfterRemoving(hierarchy, [1, 5])).toBe(4n);
+    expect(nextIdAfterRemoving(hierarchy, [1, 3, 5])).toBe(4n);
+  });
+
   it("returns null if all segments are removed or none of the removed ones is rendered", () => {
     expect(nextIdAfterRemoving(hierarchy, [1, 2, 3, 4, 5])).toBeNull();
     expect(nextIdAfterRemoving(hierarchy, [42])).toBeNull();

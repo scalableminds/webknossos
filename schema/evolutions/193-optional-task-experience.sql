@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 191 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 192 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 ALTER TABLE webknossos.tasks
   ALTER COLUMN neededExperience_domain DROP NOT NULL,
@@ -24,6 +24,6 @@ DELETE FROM webknossos.experienceDomains ed
     WHERE t.neededExperience_domain = 'any_team_member' AND p._organization = ed._organization
   );
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 192;
+UPDATE webknossos.releaseInformation SET schemaVersion = 193;
 
 COMMIT TRANSACTION;

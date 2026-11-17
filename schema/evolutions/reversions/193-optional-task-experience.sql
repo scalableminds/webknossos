@@ -1,11 +1,11 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 192 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 193 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 -- The old schema requires a needed experience. Tasks without one get the placeholder experience 'any_team_member: 0'.
 -- To keep them assignable, every user of the affected organizations gets that experience as well.
 -- Note that users created after this reversion do not get it automatically.
--- Evolution 192 removes the placeholder again when it is re-applied.
+-- Evolution 193 removes the placeholder again when it is re-applied.
 CREATE TEMPORARY TABLE affectedOrganizations ON COMMIT DROP AS
   SELECT DISTINCT p._organization
   FROM webknossos.tasks t
@@ -29,6 +29,6 @@ ALTER TABLE webknossos.tasks
   ALTER COLUMN neededExperience_domain SET NOT NULL,
   ALTER COLUMN neededExperience_value SET NOT NULL;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 191;
+UPDATE webknossos.releaseInformation SET schemaVersion = 192;
 
 COMMIT TRANSACTION;

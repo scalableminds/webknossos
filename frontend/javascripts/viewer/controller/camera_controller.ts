@@ -283,6 +283,10 @@ class CameraController extends PureComponent<Props> {
         () => this.updateCamViewport(),
       ),
       listenToStoreProperty(
+        (storeState) => getGlobalVoxelSizeFromState(storeState),
+        () => this.updateCamViewport(),
+      ),
+      listenToStoreProperty(
         (storeState) => storeState.viewModeData.plane.inputCatcherRects,
         (inputCatcherRects) => this.updateCamViewport(inputCatcherRects),
       ),

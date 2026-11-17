@@ -377,6 +377,19 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       });
     }
 
+    case "UPDATE_DATASET_SETTING":
+    case "SET_LAYER_TRANSFORMS": {
+      // These can change the voxel size of the global space, which the flycam matrix is scaled by.
+      // This reducer runs after the settings and dataset reducers, so the state is up to date.
+      if (
+        action.type === "UPDATE_DATASET_SETTING" &&
+        action.propertyName !== "nativelyRenderedLayerName"
+      ) {
+        return state;
+      }
+      return setRotationReducer(state, state.flycam.rotation);
+    }
+
     case "SET_ROTATION": {
       return setRotationReducer(state, action.rotation);
     }

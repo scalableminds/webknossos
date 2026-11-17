@@ -118,6 +118,12 @@ class NodeShader {
         },
       ),
       listenToStoreProperty(
+        (storeState) => getGlobalVoxelSizeFromState(storeState),
+        (voxelSize) => {
+          this.uniforms.unitPerPixelAtZoomStep1.value = getUnitPerPixel(voxelSize);
+        },
+      ),
+      listenToStoreProperty(
         (storeState) => storeState.temporaryConfiguration.viewMode,
         (viewMode) => {
           this.uniforms.viewMode.value = ViewModeValues.indexOf(viewMode);

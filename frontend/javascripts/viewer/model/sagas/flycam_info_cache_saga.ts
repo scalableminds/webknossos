@@ -74,6 +74,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
       "UPDATE_DATASET_SETTING",
       "UPDATE_USER_SETTING",
       "SET_DATASET",
+      "SET_LAYER_TRANSFORMS",
       "SET_INPUT_CATCHER_RECT",
       "SET_INPUT_CATCHER_RECTS",
       "INITIALIZE_GPU_SETUP",

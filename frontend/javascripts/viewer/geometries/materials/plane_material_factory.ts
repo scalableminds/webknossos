@@ -978,6 +978,8 @@ class PlaneMaterialFactory {
         },
         true,
       ),
+      // The voxel size is inserted into the shader code as a constant (see main_data_shaders.glsl.ts).
+      listenToStoreProperty(getGlobalVoxelSizeFromState, () => this.recomputeShaders()),
     );
   }
 

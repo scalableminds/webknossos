@@ -130,6 +130,7 @@ class SceneController {
   public renderer!: WebGLRenderer;
   public scene!: Scene;
   public rootGroup!: Group;
+  private planeGroup!: Group;
   public segmentMeshController: SegmentMeshController;
   private storePropertyUnsubscribers: Array<() => void>;
   private splitBoundaryMesh: Mesh | null = null;
@@ -183,10 +184,15 @@ class SceneController {
     // For some reason, all objects have to be put into a group object. Changing
     // scene.scale does not have an effect.
     // The dimension(s) with the highest resolution will not be distorted.
-    this.rootGroup.scale.copy(
-      new ThreeVector3(...getGlobalVoxelSizeFromState(Store.getState()).factor),
-    );
+    this.setGlobalVoxelSize(getGlobalVoxelSizeFromState(Store.getState()).factor);
     this.setupDebuggingMethods();
+  }
+
+  setGlobalVoxelSize(voxelSizeFactor: Vector3): void {
+    this.rootGroup.scale.copy(new ThreeVector3(...voxelSizeFactor));
+    // Apply the inverse voxel size to all planes to remove the scaling of the root group
+    // to avoid shearing effects on rotated ortho viewport planes. For more info see plane.ts.
+    this.planeGroup.scale.copy(new ThreeVector3(1, 1, 1).divide(this.rootGroup.scale));
   }
 
   setupDebuggingMethods() {
@@ -301,17 +307,10 @@ class SceneController {
     this.planes[OrthoViews.PLANE_YZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_YZ]);
     this.planes[OrthoViews.PLANE_XZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XZ]);
 
-    const planeGroup = new Group();
+    this.planeGroup = new Group();
     for (const plane of Object.values(this.planes)) {
-      planeGroup.add(...plane.getMeshes());
+      this.planeGroup.add(...plane.getMeshes());
     }
-    // Apply the inverse dataset scale factor to all planes to remove the scaling of the root group
-    // to avoid shearing effects on rotated ortho viewport planes. For more info see plane.ts.
-    planeGroup.scale.copy(
-      new ThreeVector3(1, 1, 1).divide(
-        new ThreeVector3(...getGlobalVoxelSizeFromState(Store.getState()).factor),
-      ),
-    );
 
     this.rootNode = new Group().add(
       this.userBoundingBoxGroup,
@@ -323,7 +322,7 @@ class SceneController {
         ...this.areaMeasurementGeometry.getMeshes(),
       ),
       ...this.datasetBoundingBox.getMeshes(),
-      planeGroup,
+      this.planeGroup,
     );
 
     if (state.annotation.skeleton != null) {
@@ -1020,6 +1019,13 @@ class SceneController {
 
   bindToEvents(): void {
     this.storePropertyUnsubscribers = [
+      listenToStoreProperty(
+        (storeState) => getGlobalVoxelSizeFromState(storeState).factor,
+        (voxelSizeFactor) => {
+          this.setGlobalVoxelSize(voxelSizeFactor);
+          app.vent.emit("rerender");
+        },
+      ),
       listenToStoreProperty(
         (storeState) => storeState.userConfiguration.clippingDistance,
         (clippingDistance) => this.setClippingDistance(clippingDistance),

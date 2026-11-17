@@ -405,10 +405,12 @@ class TDController extends PureComponent<Props> {
       // has initialized oldUnitPos.
       return;
     }
-    const { flycam } = Store.getState();
+    const state = Store.getState();
     const { controls } = this;
-    position = position || getPosition(flycam);
-    const nmPosition = voxelToUnit(this.props.voxelSize, position);
+    position = position || getPosition(state.flycam);
+    // Read the voxel size from the same state as the position, since this is also called
+    // from store listeners, before the props are updated.
+    const nmPosition = voxelToUnit(getGlobalVoxelSizeFromState(state), position);
 
     if (controls != null) {
       controls.target.set(...nmPosition);

@@ -111,17 +111,12 @@ class UserTokenController @Inject() (
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
       for {
-        scopesAllowed <- scopesAllow(token, accessRequest)
+        scopeCheck <- checkScopes(token, accessRequest)
+        scopeDenial = denialFor(scopeCheck, accessRequest)
         userBox <- bearerTokenService.userForTokenOpt(token).shiftBox
         sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(using DBAccessContext(userBox.toOption))
         answer <-
-          if (!scopesAllowed)
-            Fox.successful(
-              UserAccessAnswer(
-                granted = false,
-                Some("Not allowed for this token: it is invalid or lacks the required scope.")
-              )
-            )
+          if (scopeDenial.isDefined) Fox.successful(UserAccessAnswer(granted = false, scopeDenial))
           else
             accessRequest.resourceType match {
               case AccessResourceType.dataset =>
@@ -146,29 +141,60 @@ class UserTokenController @Inject() (
       case a: BearerTokenAuthenticator if scopedApiTokenService.isScopedApiTokenValue(a.id) => a.id
     }
 
+  private enum ScopeCheck {
+    case Allowed
+    // A value that looks like a scoped API token but is not a valid one (expired, revoked, or its grant revoked).
+    case InvalidToken
+    case MissingScope(scopes: Scope.Set)
+  }
+
   /*
    * The datastore and tracingstore ask here whether a token may access a resource. This is the second place where
    * scopes are enforced, next to filters.ScopeFilter, and it is the one that covers reading and writing voxel data.
    */
-  private def scopesAllow(token: Option[String], accessRequest: UserAccessRequest)(implicit
+  private def checkScopes(token: Option[String], accessRequest: UserAccessRequest)(implicit
       ec: ExecutionContext
-  ): Fox[Boolean] =
+  ): Fox[ScopeCheck] =
     token match {
-      case None             => Fox.successful(true)
+      case None             => Fox.successful(ScopeCheck.Allowed)
       case Some(tokenValue) =>
         // Fails (rather than allowing) if the lookup itself fails.
         scopedApiTokenService.findValid(tokenValue).shiftBox.flatMap {
           // The scopes are read from the grant per request, so that changing them takes effect at once.
           case Full(scopedApiToken) =>
-            Fox.successful(Scope.fromAccessResourceType(accessRequest.resourceType).exists { resource =>
+            val allowed = Scope.fromAccessResourceType(accessRequest.resourceType).exists { resource =>
               scopedApiToken.scopes.allows(Scope(resource, ScopeMode.fromAccessMode(accessRequest.mode)))
-            })
-          // Only scoped API tokens are restricted here. A value that looks like one but is not valid (expired,
-          // revoked, or its grant revoked) is denied rather than treated as unscoped.
-          case Empty            => Fox.successful(!scopedApiTokenService.isScopedApiTokenValue(tokenValue))
+            }
+            Fox.successful(if (allowed) ScopeCheck.Allowed else ScopeCheck.MissingScope(scopedApiToken.scopes))
+          // Only scoped API tokens are restricted here. A value that looks like one but is not valid is denied rather
+          // than treated as unscoped.
+          case Empty =>
+            Fox.successful(
+              if (scopedApiTokenService.isScopedApiTokenValue(tokenValue)) ScopeCheck.InvalidToken
+              else ScopeCheck.Allowed
+            )
           case failure: Failure => failure.toFox
         }
     }
+
+  // Like filters.ScopeFilter: invalid scoped tokens are always denied, missing scopes only if enforcement is on.
+  private def denialFor(scopeCheck: ScopeCheck, accessRequest: UserAccessRequest): Option[String] = {
+    def describe =
+      s"${accessRequest.mode} access to ${accessRequest.resourceType} ${accessRequest.resourceId.getOrElse("")}"
+    scopeCheck match {
+      case ScopeCheck.Allowed      => None
+      case ScopeCheck.InvalidToken => Some("Not allowed for this token: it is invalid or expired.")
+      case ScopeCheck.MissingScope(scopes) if conf.WebKnossos.TokenScopes.enforced =>
+        logger.info(s"Denying $describe for scoped token (scopes $scopes): missing scope")
+        Some("Not allowed for this token, missing scope.")
+      case ScopeCheck.MissingScope(scopes) =>
+        logger.warn(
+          s"Would deny $describe for scoped token (scopes $scopes): missing scope. " +
+            "Allowing it because webKnossos.tokenScopes.enforced is false."
+        )
+        None
+    }
+  }
 
   private def handleDataSetAccess(idOpt: Option[String], mode: AccessMode.Value, userBox: Box[User])(using
       ctx: DBAccessContext

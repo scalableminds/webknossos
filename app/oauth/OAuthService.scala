@@ -10,7 +10,9 @@ import com.typesafe.scalalogging.LazyLogging
 import models.user.{User, UserService}
 import org.apache.http.client.utils.URIBuilder
 import play.api.libs.json.{JsArray, JsObject, JsString, JsValue, Json}
-import security.{RandomIDGenerator, ScopeMode, ScopedApiTokenService}
+import play.api.http.HeaderNames
+import play.api.mvc.RequestHeader
+import security.{RandomIDGenerator, Scope, ScopeMode, ScopedApiTokenService}
 import utils.WkConf
 
 import java.net.URI
@@ -52,7 +54,8 @@ case class OAuthEndpointError(error: String, description: String) {
   *   - Access tokens are only accepted by the MCP endpoint (McpController). Agents get separate scoped API tokens for
   *     the rest of the API via the MCP server, limited to the grant's scopes.
   *   - Refresh tokens are rotated. Presenting a used refresh token or authorization code again revokes the grant, since
-  *     it means that the token has leaked.
+  *     it means that the token has leaked. A refresh token presented again within a short grace period is answered with
+  *     new tokens instead, so that retries and concurrent refreshes do not cost the user their connection.
   */
 @Singleton
 class OAuthService @Inject() (
@@ -85,12 +88,22 @@ class OAuthService @Inject() (
     s"${uri.getScheme}://${uri.getHost}${if (isDefaultPort) "" else s":${uri.getPort}"}"
   }
 
+  /** Whether the request comes from a page of another origin. Browsers send an Origin header, MCP clients and other
+    * non-browser clients usually do not, so a missing header is fine.
+    */
+  def isForeignOrigin(request: RequestHeader): Boolean =
+    request.headers.get(HeaderNames.ORIGIN).exists(_ != instanceOrigin)
+
   private val authorizationCodeExpiry: FiniteDuration = 2.minutes
   private val accessTokenExpiry: FiniteDuration = 1.hour
   // Each refresh issues a new refresh token, so this is the time a connection may stay unused.
   private val refreshTokenExpiry: FiniteDuration = 30.days
-  // Registered clients that are older than this and have no live grant are deleted.
-  private val unusedClientExpiry: FiniteDuration = 1.day
+  // A refresh token presented again within this time after its first use is not treated as leaked, but answered with
+  // new tokens. This covers a client retrying after the response got lost, or refreshing twice concurrently.
+  private val refreshTokenReuseGracePeriod: FiniteDuration = 1.minute
+  // Registered clients without a live grant are deleted after these times, see OAuthClientDAO.deleteUnused.
+  private val neverApprovedClientExpiry: FiniteDuration = 7.days
+  private val revokedClientExpiry: FiniteDuration = 90.days
 
   /* ---------- Authorization endpoint (consent page) ---------- */
 
@@ -226,23 +239,29 @@ class OAuthService @Inject() (
     (params.get("code"), params.get("client_id"), params.get("redirect_uri"), params.get("code_verifier")) match {
       case (Some(code), Some(clientId), Some(redirectUri), Some(codeVerifier)) =>
         val codeHash = hash(code)
-        codeDAO.redeem(codeHash).shiftBox.flatMap {
-          case Full(redeemed) =>
-            withLiveGrant(redeemed.grantId) { grant =>
+        // The code is only redeemed once the request has passed all checks. Otherwise a request with, say, a wrong
+        // code_verifier would use up the code, and the legitimate request after it would look like a replay.
+        codeDAO.findUnused(codeHash).shiftBox.flatMap {
+          case Full(issued) =>
+            withLiveGrant(issued.grantId) { grant =>
               if (grant.clientId != clientId) Fox.successful(invalidGrant("The code was issued to another client"))
-              else if (redeemed.redirectUri != redirectUri)
+              else if (issued.redirectUri != redirectUri)
                 Fox.successful(invalidGrant("The redirect_uri does not match"))
-              else if (!pkceMatches(codeVerifier, redeemed.codeChallenge))
+              else if (!pkceMatches(codeVerifier, issued.codeChallenge))
                 Fox.successful(invalidGrant("The code_verifier does not match the code_challenge"))
-              else issueTokens(grant).map(Right(_))
+              else
+                codeDAO.redeem(codeHash).shiftBox.flatMap {
+                  case Full(_) => issueTokens(grant).map(Right(_))
+                  // Redeemed by a concurrent request that passed the same checks: a replay.
+                  case Empty            => revokeForReusedCode(grant._id)
+                  case failure: Failure => failure.toFox
+                }
             }
           case Empty =>
             // A code that was redeemed before has leaked, so everything issued under its grant is revoked.
             codeDAO.findGrantOfUsedCode(codeHash).shiftBox.flatMap {
-              case Full(grantId) =>
-                logger.warn(s"OAuth authorization code of grant $grantId was used twice, revoking the grant.")
-                revokeGrant(grantId).map(_ => invalidGrant("The code was used before"))
-              case _ => Fox.successful(invalidGrant("The code is invalid or expired"))
+              case Full(grantId) => revokeForReusedCode(grantId)
+              case _             => Fox.successful(invalidGrant("The code is invalid or expired"))
             }
           case failure: Failure => failure.toFox
         }
@@ -252,23 +271,38 @@ class OAuthService @Inject() (
         )
     }
 
+  private def revokeForReusedCode(grantId: ObjectId): Fox[Either[OAuthEndpointError, JsObject]] = {
+    logger.warn(s"OAuth authorization code of grant $grantId was used twice, revoking the grant.")
+    revokeGrant(grantId).map(_ => invalidGrant("The code was used before"))
+  }
+
   private def refresh(params: Map[String, String]): Fox[Either[OAuthEndpointError, JsObject]] =
     (params.get("refresh_token"), params.get("client_id")) match {
       case (Some(refreshToken), Some(clientId)) =>
         val tokenHash = hash(refreshToken)
+        def issueFor(grantId: ObjectId) =
+          withLiveGrant(grantId) { grant =>
+            if (grant.clientId != clientId) Fox.successful(invalidGrant("The token was issued to another client"))
+            else issueTokens(grant).map(Right(_))
+          }
         tokenDAO.redeemRefreshToken(tokenHash).shiftBox.flatMap {
-          case Full(grantId) =>
-            withLiveGrant(grantId) { grant =>
-              if (grant.clientId != clientId) Fox.successful(invalidGrant("The token was issued to another client"))
-              else issueTokens(grant).map(Right(_))
-            }
-          case Empty =>
-            tokenDAO.findGrantOfUsedRefreshToken(tokenHash).shiftBox.flatMap {
-              case Full(grantId) =>
-                logger.warn(s"OAuth refresh token of grant $grantId was used twice, revoking the grant.")
-                revokeGrant(grantId).map(_ => invalidGrant("The refresh token was used before"))
-              case _ => Fox.successful(invalidGrant("The refresh token is invalid or expired"))
-            }
+          case Full(grantId) => issueFor(grantId)
+          case Empty         =>
+            tokenDAO
+              .findGrantOfRefreshTokenUsedAfter(tokenHash, Instant.now - refreshTokenReuseGracePeriod)
+              .shiftBox
+              .flatMap {
+                // Used moments ago: most likely a retry or a concurrent refresh of the same client, not a leak.
+                case Full(grantId)    => issueFor(grantId)
+                case failure: Failure => failure.toFox
+                case Empty            =>
+                  tokenDAO.findGrantOfUsedRefreshToken(tokenHash).shiftBox.flatMap {
+                    case Full(grantId) =>
+                      logger.warn(s"OAuth refresh token of grant $grantId was used twice, revoking the grant.")
+                      revokeGrant(grantId).map(_ => invalidGrant("The refresh token was used before"))
+                    case _ => Fox.successful(invalidGrant("The refresh token is invalid or expired"))
+                  }
+              }
           case failure: Failure => failure.toFox
         }
       case _ =>
@@ -351,7 +385,7 @@ class OAuthService @Inject() (
     for {
       _ <- codeDAO.deleteAllExpired()
       _ <- tokenDAO.deleteAllExpired()
-      _ <- clientDAO.deleteUnusedCreatedBefore(Instant.now - unusedClientExpiry)
+      _ <- clientDAO.deleteUnused(Instant.now - neverApprovedClientExpiry, Instant.now - revokedClientExpiry)
     } yield ()
 }
 
@@ -361,18 +395,14 @@ object OAuthService {
   private val registeredClientPrefix = "wkoc_"
   private val refreshTokenPrefix = "wkor_"
 
-  // The levels the consent page offers, see security.Scope.Set.forLevel. They are also the OAuth scope values.
-  val levels: List[ScopeMode.Value] = List(ScopeMode.read, ScopeMode.write, ScopeMode.delete)
+  // The levels the consent page offers are those of security.Scope.Set. They are also the OAuth scope values.
   val defaultLevel: ScopeMode.Value = ScopeMode.write
-
-  def levelFromString(s: String): Option[ScopeMode.Value] =
-    ScopeMode.fromString(s).filter(levels.contains)
 
   // The strongest level the client asked for, as a suggestion for the consent page.
   def levelFromScope(scope: Option[String]): ScopeMode.Value =
     scope.toList
       .flatMap(_.split(' ').toList)
-      .flatMap(levelFromString)
+      .flatMap(Scope.Set.levelFromString)
       .maxByOption(ScopeMode.rank)
       .getOrElse(defaultLevel)
 

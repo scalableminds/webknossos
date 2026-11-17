@@ -5,9 +5,9 @@ import com.scalableminds.util.tools.{Fox, JsonAutoFormat}
 import com.scalableminds.util.tools.Fox.toFox
 import oauth.{AuthorizationError, OAuthService}
 import play.api.libs.json.{JsObject, JsValue, Json}
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RequestHeader}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
-import security.WkEnv
+import security.{Scope, WkEnv}
 import utils.WkConf
 
 import javax.inject.Inject
@@ -33,7 +33,7 @@ class OAuthController @Inject() (
     val bodyParsers: PlayBodyParsers
 ) extends Controller {
 
-  import OAuthService.levels
+  private val levels = Scope.Set.levels
 
   private def assertEnabled: Fox[Unit] =
     Fox.fromBool(conf.Features.mcpEnabled) ?~> "The MCP server is not enabled on this instance." ~> NOT_FOUND
@@ -118,7 +118,7 @@ class OAuthController @Inject() (
         _ <- assertEnabled
         // The session cookie is SameSite=Lax, so a foreign page could not send it anyway. This is defense in depth
         // against a user being tricked into approving a connection.
-        _ <- Fox.fromBool(!isCrossOrigin(request)) ?~> "Invalid Origin header" ~> FORBIDDEN
+        _ <- Fox.fromBool(!oauthService.isForeignOrigin(request)) ?~> "Invalid Origin header" ~> FORBIDDEN
         validation <- Fox.fromFuture(oauthService.validateAuthorizationRequest(request.body.params))
         result <- validation match {
           case Left(error)                                => Fox.successful(Ok(errorJson(error)))
@@ -126,7 +126,7 @@ class OAuthController @Inject() (
             Fox.successful(Ok(redirectJson(oauthService.denyRedirect(validated))))
           case Right(validated) =>
             for {
-              level <- OAuthService.levelFromString(request.body.level).toFox ?~> "Invalid permission level"
+              level <- Scope.Set.levelFromString(request.body.level).toFox ?~> "Invalid permission level"
               redirectUrl <- oauthService.approve(request.identity, validated, level)
             } yield Ok(redirectJson(redirectUrl))
         }
@@ -138,9 +138,6 @@ class OAuthController @Inject() (
 
   private def redirectJson(redirectUrl: String): JsObject =
     Json.obj("isValid" -> true, "redirectUrl" -> redirectUrl)
-
-  private def isCrossOrigin(request: RequestHeader): Boolean =
-    request.headers.get(ORIGIN).exists(_ != oauthService.instanceOrigin)
 
   // RFC 6749 section 3.2. Clients send form-encoded parameters and do not authenticate (public clients with PKCE).
   def token(): Action[Map[String, Seq[String]]] = Action.fox(bodyParsers.formUrlEncoded) { request =>

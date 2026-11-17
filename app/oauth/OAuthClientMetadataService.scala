@@ -6,14 +6,17 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsArray, JsObject, JsString, Json}
 import utils.WkConf
 
+import java.io.ByteArrayOutputStream
 import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import java.net.{Inet4Address, Inet6Address, InetAddress, URI}
+import java.nio.ByteBuffer
 import java.time.Duration
+import java.util.concurrent.{CompletableFuture, CompletionStage, Flow, TimeUnit}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future, blocking}
 import scala.jdk.FutureConverters.*
-import scala.util.{Try, Using}
+import scala.util.Try
 
 /** What WEBKNOSSOS knows about an MCP client.
   *
@@ -34,7 +37,7 @@ case class OAuthClientMetadata(
   * starts an authorization. Whoever controls that URL controls the client, in particular its redirect URIs.
   *
   * Fetching a URL that the request names is a server-side request forgery risk, so only https URLs on public addresses
-  * are fetched, without following redirects, with a timeout and a size limit. A remaining gap is DNS rebinding between
+  * are fetched, without following redirects, with a deadline and a size limit. A remaining gap is DNS rebinding between
   * the address check and the connection, which the JDK HttpClient offers no hook to close; the request carries no
   * credentials and its response is only accepted if it is a valid metadata document, which limits what it could be used
   * for.
@@ -81,38 +84,65 @@ class OAuthClientMetadataService @Inject() (conf: WkConf)(implicit ec: Execution
         }
       }
 
+  /** Downloads the document without blocking a thread. Besides the timeouts of the connection and of the response
+    * headers, the whole exchange has a deadline, so that a server that sends the body slowly cannot hold it open.
+    */
   private def download(uri: URI): Future[Either[String, Array[Byte]]] = {
     val request =
       HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(5)).header("Accept", "application/json").GET().build()
-    httpClient
-      .sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
-      .asScala
-      .flatMap { response =>
-        Future {
-          blocking {
-            Using.resource(response.body()) { stream =>
-              if (response.statusCode() != 200)
-                Left(s"Fetching the client metadata document failed with status ${response.statusCode()}")
-              else {
-                val bytes = stream.readNBytes(maxDocumentBytes + 1)
-                if (bytes.length > maxDocumentBytes) Left("The client metadata document is too large")
-                else Right(bytes)
-              }
-            }
-          }
-        }
-      }
-      .recover { case e: Exception =>
-        logger.info(s"Fetching the client metadata document $uri failed: ${e.getMessage}")
-        Left("Could not fetch the client metadata document")
-      }
+    val handler: HttpResponse.BodyHandler[Either[String, Array[Byte]]] = responseInfo =>
+      if (responseInfo.statusCode() != 200)
+        HttpResponse.BodySubscribers.replacing(
+          Left(s"Fetching the client metadata document failed with status ${responseInfo.statusCode()}")
+        )
+      else new SizeLimitedBodySubscriber(maxDocumentBytes)
+    val exchange = httpClient.sendAsync(request, handler)
+    // Cancelling aborts the exchange (and is a no-op if it completed already).
+    CompletableFuture.delayedExecutor(downloadDeadlineSeconds, TimeUnit.SECONDS).execute(() => exchange.cancel(true))
+    exchange.asScala.map(_.body()).recover { case e: Exception =>
+      logger.info(s"Fetching the client metadata document $uri failed: ${e.getMessage}")
+      Left("Could not fetch the client metadata document")
+    }
   }
+}
+
+/** Collects a response body of at most maxBytes, and gives up (cancelling the download) as soon as it gets larger. */
+private class SizeLimitedBodySubscriber(maxBytes: Int)
+    extends HttpResponse.BodySubscriber[Either[String, Array[Byte]]] {
+  private val result = new CompletableFuture[Either[String, Array[Byte]]]()
+  private val buffer = new ByteArrayOutputStream()
+  @volatile private var subscription: Option[Flow.Subscription] = None
+
+  override def getBody: CompletionStage[Either[String, Array[Byte]]] = result
+
+  override def onSubscribe(s: Flow.Subscription): Unit = {
+    subscription = Some(s)
+    s.request(Long.MaxValue)
+  }
+
+  override def onNext(items: java.util.List[ByteBuffer]): Unit =
+    if (!result.isDone) {
+      items.forEach { item =>
+        val bytes = new Array[Byte](item.remaining())
+        item.get(bytes)
+        buffer.write(bytes)
+      }
+      if (buffer.size() > maxBytes) {
+        subscription.foreach(_.cancel())
+        result.complete(Left("The client metadata document is too large"))
+      }
+    }
+
+  override def onError(throwable: Throwable): Unit = result.completeExceptionally(throwable)
+
+  override def onComplete(): Unit = result.complete(Right(buffer.toByteArray))
 }
 
 object OAuthClientMetadataService {
 
   // The spec recommends that servers limit the size, 5 kilobytes being the suggested limit.
   private val maxDocumentBytes = 5 * 1024
+  private val downloadDeadlineSeconds = 10L
 
   // Schemes a redirect URI must never use. Everything else is either https, loopback http (validated separately) or a
   // private-use scheme of a native app, see RFC 8252.

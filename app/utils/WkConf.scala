@@ -159,6 +159,7 @@ class WkConf @Inject() (configuration: Configuration, certificateValidationServi
         FetchUsedStorage,
         TermsOfService,
         TokenScopes,
+        Mcp,
         Datasets
       )
   }

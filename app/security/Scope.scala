@@ -123,9 +123,10 @@ object Scope {
 
     // administrate is no level: it is not part of the read/write/delete ladder (see ScopeMode.rank), so forLevel would
     // grant it on teams and users while not even granting read on datasets.
-    private val levels: List[ScopeMode.Value] = List(ScopeMode.read, ScopeMode.write, ScopeMode.delete)
+    // These are also the levels the consent page offers, and the OAuth scope values (see oauth.OAuthService).
+    val levels: List[ScopeMode.Value] = List(ScopeMode.read, ScopeMode.write, ScopeMode.delete)
 
-    private def levelFromString(s: String): Option[ScopeMode.Value] =
+    def levelFromString(s: String): Option[ScopeMode.Value] =
       ScopeMode.fromString(s).filter(levels.contains)
 
     /** The three coarse permission levels offered in the UI. Each grants read on everything, plus the given mode on the

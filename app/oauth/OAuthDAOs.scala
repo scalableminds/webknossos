@@ -116,16 +116,25 @@ class OAuthAuthorizationCodeDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
                    """.asUpdate)
     } yield ()
 
-  /** Marks the code as used and returns what it was issued for, in one statement, so that a code can only ever be
-    * redeemed once, even by concurrent requests. Empty if it is unknown, expired or used already.
+  // What an unused, unexpired code was issued for, without redeeming it. Empty if it is unknown, expired or used.
+  def findUnused(codeHash: String): Fox[OAuthAuthorizationCode] =
+    for {
+      rows <- run(q"""SELECT _grant, redirectUri, codeChallenge FROM webknossos.oauthAuthorizationCodes
+                      WHERE codeHash = $codeHash AND NOT isUsed AND expirationDateTime > NOW()
+                      """.as[(String, String, String)])
+      row <- rows.headOption.toFox
+    } yield OAuthAuthorizationCode(ObjectId(row._1), row._2, row._3)
+
+  /** Marks the code as used, in one statement, so that a code can only ever be redeemed once, even by concurrent
+    * requests. Empty if it is unknown, expired or used already.
     */
-  def redeem(codeHash: String): Fox[OAuthAuthorizationCode] =
+  def redeem(codeHash: String): Fox[Unit] =
     for {
       rows <- run(q"""UPDATE webknossos.oauthAuthorizationCodes SET isUsed = TRUE
                       WHERE codeHash = $codeHash AND NOT isUsed AND expirationDateTime > NOW()
-                      RETURNING _grant, redirectUri, codeChallenge""".as[(String, String, String)])
-      row <- rows.headOption.toFox
-    } yield OAuthAuthorizationCode(ObjectId(row._1), row._2, row._3)
+                      RETURNING _grant""".as[String])
+      _ <- rows.headOption.toFox
+    } yield ()
 
   // The grant of a code that was redeemed before. Presenting such a code again means it leaked.
   def findGrantOfUsedCode(codeHash: String): Fox[ObjectId] =
@@ -161,8 +170,8 @@ class OAuthTokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       expiresAt: Instant
   ): Fox[Unit] =
     for {
-      _ <- run(q"""INSERT INTO webknossos.oauthTokens(tokenHash, _grant, tokenType, expirationDateTime, isUsed)
-                   VALUES($tokenHash, $grantId, $tokenType, $expiresAt, FALSE)""".asUpdate)
+      _ <- run(q"""INSERT INTO webknossos.oauthTokens(tokenHash, _grant, tokenType, expirationDateTime)
+                   VALUES($tokenHash, $grantId, $tokenType, $expiresAt)""".asUpdate)
     } yield ()
 
   // The grant of a valid access token. Revoked grants have their tokens deleted, so they are not found either.
@@ -180,12 +189,23 @@ class OAuthTokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
     */
   def redeemRefreshToken(tokenHash: String): Fox[ObjectId] =
     for {
-      rows <- run(q"""UPDATE webknossos.oauthTokens SET isUsed = TRUE
+      rows <- run(q"""UPDATE webknossos.oauthTokens SET usedTime = NOW()
                       WHERE tokenHash = $tokenHash
                       AND tokenType = ${OAuthTokenType.Refresh}
-                      AND NOT isUsed
+                      AND usedTime IS NULL
                       AND expirationDateTime > NOW()
                       RETURNING _grant""".as[String])
+      grantId <- rows.headOption.toFox
+    } yield ObjectId(grantId)
+
+  // The grant of an unexpired refresh token that was first used after the given time, see OAuthService.refresh.
+  def findGrantOfRefreshTokenUsedAfter(tokenHash: String, usedAfter: Instant): Fox[ObjectId] =
+    for {
+      rows <- run(q"""SELECT _grant FROM webknossos.oauthTokens
+                      WHERE tokenHash = $tokenHash
+                      AND tokenType = ${OAuthTokenType.Refresh}
+                      AND usedTime > $usedAfter
+                      AND expirationDateTime > NOW()""".as[String])
       grantId <- rows.headOption.toFox
     } yield ObjectId(grantId)
 
@@ -193,7 +213,8 @@ class OAuthTokenDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
   def findGrantOfUsedRefreshToken(tokenHash: String): Fox[ObjectId] =
     for {
       rows <- run(q"""SELECT _grant FROM webknossos.oauthTokens
-                      WHERE tokenHash = $tokenHash AND tokenType = ${OAuthTokenType.Refresh} AND isUsed""".as[String])
+                      WHERE tokenHash = $tokenHash AND tokenType = ${OAuthTokenType.Refresh}
+                      AND usedTime IS NOT NULL""".as[String])
       grantId <- rows.headOption.toFox
     } yield ObjectId(grantId)
 
@@ -225,11 +246,19 @@ class OAuthClientDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCont
       row <- rows.headOption.toFox
     } yield OAuthClientMetadata(row._1, row._2, parseArrayLiteral(row._3), isRegistered = true)
 
-  // Anyone can register a client, so registrations without a live connection are not kept. Revoked grants do not count.
-  def deleteUnusedCreatedBefore(cutoff: Instant): Fox[Unit] =
+  /** Anyone can register a client, so registrations are not kept forever. A client is kept as long as it has a live
+    * grant. Otherwise it is deleted once it has not been approved within neverApprovedCutoff of registering, or once
+    * neither it nor any of its revoked grants has been used since revokedCutoff. Clients keep their client_id and reuse
+    * it to reconnect, so this must not be too eager: deleting a client makes its next authorization fail.
+    */
+  def deleteUnused(neverApprovedCutoff: Instant, revokedCutoff: Instant): Fox[Unit] =
     for {
       _ <- run(q"""DELETE FROM webknossos.oauthClients c
-                   WHERE c.created < $cutoff
-                   AND NOT EXISTS (SELECT 1 FROM webknossos.oauthGrants_ g WHERE g.clientId = c.clientId)""".asUpdate)
+                   WHERE NOT EXISTS (SELECT 1 FROM webknossos.oauthGrants_ g WHERE g.clientId = c.clientId)
+                   AND CASE WHEN EXISTS (SELECT 1 FROM webknossos.oauthGrants g WHERE g.clientId = c.clientId)
+                     THEN GREATEST(c.created, (SELECT MAX(g.lastUsed) FROM webknossos.oauthGrants g
+                                               WHERE g.clientId = c.clientId)) < $revokedCutoff
+                     ELSE c.created < $neverApprovedCutoff
+                   END""".asUpdate)
     } yield ()
 }

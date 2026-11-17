@@ -43,7 +43,7 @@ CREATE TABLE webknossos.oauthTokens(
   _grant TEXT CONSTRAINT _grant_objectId CHECK (_grant ~ '^[0-9a-f]{24}$') NOT NULL,
   tokenType webknossos.OAUTH_TOKEN_TYPES NOT NULL,
   expirationDateTime TIMESTAMPTZ NOT NULL,
-  isUsed BOOLEAN NOT NULL DEFAULT FALSE, -- refresh tokens are rotated, each one can be used once
+  usedTime TIMESTAMPTZ DEFAULT NULL, -- refresh tokens are rotated, each one can be used once (see OAuthService)
   created TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

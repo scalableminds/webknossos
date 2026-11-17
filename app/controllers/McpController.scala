@@ -87,7 +87,7 @@ class McpController @Inject() (
             .error(None, JsonRpcError.invalidRequest("Unsupported Media Type: Content-Type must be application/json"))
         )
       )
-    else if (request.headers.get(ORIGIN).exists(_ != oauthService.instanceOrigin))
+    else if (oauthService.isForeignOrigin(request))
       // Browsers send an Origin header, MCP clients usually do not. A foreign origin means that a web page tries to
       // talk to the server (DNS rebinding). Rejecting it is required by the spec.
       Some(Forbidden(JsonRpc.error(None, JsonRpcError.invalidRequest("Invalid Origin header"))))

@@ -11,6 +11,10 @@ import security.ScopeResource.ScopeResource
   *
   * Within a mapped controller the scope mode follows the HTTP method, with `methodOverrides` for the handful of actions
   * where the method does not match the semantics (e.g. `POST /tasks/list` is a read).
+  *
+  * The resulting scope of every route is listed in test/backend/route-scopes.snapshot.txt, which
+  * RouteScopesSnapshotTestSuite keeps in sync. A new or changed route therefore shows up there in review, and so does
+  * its scope, even if it was derived from the HTTP method without anyone deciding it.
   */
 object RouteScopes {
 

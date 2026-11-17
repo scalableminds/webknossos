@@ -131,22 +131,51 @@ class ScopeTestSuite extends AnyWordSpec {
     }
   }
 
+  /* The datastore and tracingstore describe access requests with AccessMode and AccessResourceType. Both are
+   * Enumerations, whose matches the compiler does not check for completeness: a value added there would only fail at
+   * runtime, in UserTokenController.validateUserAccess. These tests list every value, so that adding one fails here
+   * until someone decides how scoped tokens treat it. */
+
   "ScopeMode.fromAccessMode" should {
-    "map the datastore access modes onto scope modes" in {
-      assert(ScopeMode.fromAccessMode(AccessMode.list) == ScopeMode.read)
-      assert(ScopeMode.fromAccessMode(AccessMode.read) == ScopeMode.read)
-      assert(ScopeMode.fromAccessMode(AccessMode.write) == ScopeMode.write)
-      assert(ScopeMode.fromAccessMode(AccessMode.delete) == ScopeMode.delete)
-      assert(ScopeMode.fromAccessMode(AccessMode.administrate) == ScopeMode.administrate)
+    "map every datastore access mode onto a scope mode" in {
+      val expected = Map(
+        AccessMode.list -> ScopeMode.read,
+        AccessMode.read -> ScopeMode.read,
+        AccessMode.write -> ScopeMode.write,
+        AccessMode.delete -> ScopeMode.delete,
+        AccessMode.administrate -> ScopeMode.administrate
+      )
+      assert(
+        AccessMode.values.toSet == expected.keySet,
+        "AccessMode has changed. Decide how ScopeMode.fromAccessMode maps the new value, then update this test."
+      )
+      AccessMode.values.foreach(mode => assert(ScopeMode.fromAccessMode(mode) == expected(mode), s"for $mode"))
     }
   }
 
   "Scope.fromAccessResourceType" should {
-    "treat a tracing as part of an annotation" in
-      assert(Scope.fromAccessResourceType(AccessResourceType.tracing).contains(ScopeResource.annotation))
-
-    "never map the internal webknossos resource type" in
-      assert(Scope.fromAccessResourceType(AccessResourceType.webknossos).isEmpty)
+    "map every datastore resource type, or deny it to scoped tokens explicitly" in {
+      // None means that scoped tokens are denied all access to that resource type.
+      val expected: Map[AccessResourceType.Value, Option[ScopeResource.Value]] = Map(
+        AccessResourceType.dataset -> Some(ScopeResource.dataset),
+        AccessResourceType.annotation -> Some(ScopeResource.annotation),
+        // A tracing is part of an annotation.
+        AccessResourceType.tracing -> Some(ScopeResource.annotation),
+        AccessResourceType.jobExport -> Some(ScopeResource.job),
+        // Internal wk-to-store communication.
+        AccessResourceType.webknossos -> None,
+        // Not classified for scoped tokens yet, there is no scope for alignment projects.
+        AccessResourceType.alignmentProject -> None
+      )
+      assert(
+        AccessResourceType.values.toSet == expected.keySet,
+        "AccessResourceType has changed. Decide how Scope.fromAccessResourceType maps the new value (or deny it to " +
+          "scoped tokens), then update this test."
+      )
+      AccessResourceType.values.foreach { resourceType =>
+        assert(Scope.fromAccessResourceType(resourceType) == expected(resourceType), s"for $resourceType")
+      }
+    }
   }
 
   "RouteScopes.requiredScope" should {

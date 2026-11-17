@@ -95,6 +95,7 @@
     "test-help": "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
     "remove-e2e-snapshots": "bash -c 'rm -rf frontend/javascripts/test/backend_snapshot_tests/__snapshots__/'",
     "remove-all-snapshots": "rm -rf frontend/javascripts/test/snapshots/",
+    "refresh-routescope-snapshots": "bash -c 'rm -f target/route-scopes.actual.txt; sbt --client \"testOnly backend.RouteScopesSnapshotTestSuite\"; if [ -f target/route-scopes.actual.txt ]; then cp target/route-scopes.actual.txt test/backend/route-scopes.snapshot.txt && echo \"Updated test/backend/route-scopes.snapshot.txt, review the changes with git diff.\"; else echo \"Route scopes snapshot is up to date.\"; fi'",
     "refresh-e2e-snapshots": "yarn remove-e2e-snapshots && mkdir -p frontend/javascripts/test/snapshots/type_check && ./tools/docker-env.sh sbt --no-server -v 'testOnly e2e.* -- -Ddatastore.watchFileSystem.enabled=false -DwebKnossos.sampleOrganization.enabled=false'",
     "refresh-all-snapshots": "yarn remove-all-snapshots && yarn test && yarn refresh-e2e-snapshots",
     "check-untyped-saga-selects": "./tools/check-no-untyped-select-imports.js",

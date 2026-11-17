@@ -56,7 +56,8 @@ class RouteScopesSnapshotTestSuite extends AnyWordSpec {
         fail(
           "The scopes of the API routes have changed. Check that each listed route requires the right scope for " +
             "scoped tokens (adjust security.RouteScopes if not), then update the snapshot with " +
-            "yarn refresh-routescope-snapshots (which copies " + s"$actualPath to $snapshotPath)\n" + (removed ++ added).mkString("\n")
+            "yarn refresh-routescope-snapshots (which copies " + s"$actualPath to $snapshotPath)\n" + (removed ++ added)
+              .mkString("\n")
         )
       }
     }

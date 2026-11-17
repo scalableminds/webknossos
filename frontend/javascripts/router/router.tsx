@@ -77,6 +77,7 @@ const AsyncWorkflowView = loadable<EmptyObject>(() => import("admin/voxelytics/w
 const AsyncWorkflowListView = loadable<EmptyObject>(
   () => import("admin/voxelytics/workflow_list_view"),
 );
+const AsyncFetchBenchmarkView = loadable<EmptyObject>(() => import("admin/fetch_benchmark_view"));
 
 function RootLayout() {
   return (
@@ -439,6 +440,14 @@ const routes: RouteObject[] = [
       {
         path: "/publication/:id",
         loader: ({ params }) => redirect(`/publications/${params.id}`),
+      },
+      {
+        path: "/benchmark/fetch",
+        element: (
+          <SecuredRoute>
+            <AsyncFetchBenchmarkView />
+          </SecuredRoute>
+        ),
       },
       {
         path: "/workflows",

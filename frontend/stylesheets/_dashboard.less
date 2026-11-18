@@ -238,6 +238,11 @@ pre.dataset-import-folder-structure-hint {
   .ant-card {
     box-shadow: none;
   }
+
+  // While the list is loading, the empty placeholder row is blank. Give the spinner some room.
+  .ant-spin-spinning .ant-table-placeholder > .ant-table-cell {
+    padding-block: var(--ant-padding-xl);
+  }
 }
 
 .dashboard-list-table-borderless-cell {

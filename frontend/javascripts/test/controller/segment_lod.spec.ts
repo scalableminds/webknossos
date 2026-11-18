@@ -187,11 +187,43 @@ describe("SegmentLOD", () => {
     segmentLOD.update(camera);
     expect(getVisibleLevel(segmentLOD)).toBe(2);
 
+    // The world matrix of the new chunk is not updated yet, as it would be the case
+    // for chunks that stream in between two frames.
     const nearChunk = new Mesh(new BoxGeometry(1, 1, 1));
     nearChunk.position.set(0, 0, -10);
     segmentLOD.levels[0].object.children[0].add(nearChunk);
-    segmentLOD.updateMatrixWorld(true);
-    segmentLOD.invalidateBoundingBox();
+    segmentLOD.expandBoundingBox(nearChunk);
+    segmentLOD.update(camera);
+
+    expect(getVisibleLevel(segmentLOD)).toBe(0);
+  });
+
+  it("shrinks its bounds when chunks are removed", () => {
+    const camera = createPerspectiveCameraLookingDownNegativeZ();
+    const segmentLOD = createSegmentLOD(new ThreeVector3(0, 0, -2000), [0, 1, 2]);
+    const nearGroup = new Group();
+    nearGroup.add(new Mesh(new BoxGeometry(1, 1, 1)));
+    nearGroup.position.set(0, 0, -10);
+    segmentLOD.addLODMesh(nearGroup, 0);
+    segmentLOD.expandBoundingBox(nearGroup);
+    segmentLOD.update(camera);
+    expect(getVisibleLevel(segmentLOD)).toBe(0);
+
+    segmentLOD.removeLODMesh(nearGroup, 0);
+    segmentLOD.update(camera);
+
+    expect(getVisibleLevel(segmentLOD)).toBe(2);
+  });
+
+  it("updates the LOD when the zoom of the camera changes", () => {
+    // A pixel covers one voxel.
+    const camera = new OrthographicCamera(-50, 50, 50, -50, 0, 100000);
+    camera.updateMatrixWorld();
+    const segmentLOD = createSegmentLOD(new ThreeVector3(0, 0, -10), [0, 1, 2]);
+    segmentLOD.update(camera);
+    expect(getVisibleLevel(segmentLOD)).toBe(1);
+
+    camera.zoom = 10;
     segmentLOD.update(camera);
 
     expect(getVisibleLevel(segmentLOD)).toBe(0);

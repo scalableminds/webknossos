@@ -6,6 +6,7 @@ import {
   MathUtils,
   Matrix4,
   type Mesh,
+  type Object3D,
   type OrthographicCamera,
   type PerspectiveCamera,
   Vector3,
@@ -14,7 +15,7 @@ import { OrthoViews } from "viewer/constants";
 import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getInputCatcherRect, getTDViewZoom } from "viewer/model/accessors/view_mode_accessor";
 import { getUnitPerPixel } from "viewer/model/scaleinfo";
-import Store from "viewer/store";
+import Store, { type WebknossosState } from "viewer/store";
 
 // A LOD only switches to a coarser level once the pixel size exceeds the threshold by
 // this fraction (and back to the finer level once it falls below it by the same
@@ -72,12 +73,50 @@ export function getWorldUnitsPerPixel(
   return (top - bottom) / (zoom * viewportHeightPx);
 }
 
-function getVoxelsPerPixelAtDistance(camera: Camera, distance: number): number {
+function isPerspectiveCamera(camera: Camera): camera is PerspectiveCamera {
+  return (camera as PerspectiveCamera).isPerspectiveCamera === true;
+}
+
+// The pixel size only depends on the camera, the viewport and the voxel size, but not on
+// the segment. Since it's needed for every segment in every frame, it's cached until one
+// of these inputs changes (the store state is immutable, so comparing it is enough).
+const pixelSizeCache = {
+  camera: null as Camera | null,
+  state: null as WebknossosState | null,
+  frustumSize: Number.NaN,
+  zoom: Number.NaN,
+  voxelsPerPixelFactor: Number.NaN,
+};
+
+// For the orthographic camera, returns how many voxels one screen pixel covers.
+// For the perspective camera, this grows linearly with the distance, so the value
+// at a distance of 1 is returned.
+function getVoxelsPerPixelFactor(camera: PerspectiveCamera | OrthographicCamera): number {
   const state = Store.getState();
-  const { height } = getInputCatcherRect(state, OrthoViews.TDView);
-  // Like getTDViewZoom, this is relative to the smallest extent of the global voxel size.
-  const unitPerVoxel = getUnitPerPixel(getGlobalVoxelSizeFromState(state));
-  return getWorldUnitsPerPixel(camera, distance, Math.max(height, 1)) / unitPerVoxel;
+  const frustumSize = isPerspectiveCamera(camera) ? camera.fov : camera.top - camera.bottom;
+  const cache = pixelSizeCache;
+  if (
+    cache.camera !== camera ||
+    cache.state !== state ||
+    cache.frustumSize !== frustumSize ||
+    cache.zoom !== camera.zoom
+  ) {
+    const { height } = getInputCatcherRect(state, OrthoViews.TDView);
+    // Like getTDViewZoom, this is relative to the smallest extent of the global voxel size.
+    const unitPerVoxel = getUnitPerPixel(getGlobalVoxelSizeFromState(state));
+    cache.camera = camera;
+    cache.state = state;
+    cache.frustumSize = frustumSize;
+    cache.zoom = camera.zoom;
+    cache.voxelsPerPixelFactor =
+      getWorldUnitsPerPixel(camera, 1, Math.max(height, 1)) / unitPerVoxel;
+  }
+  return cache.voxelsPerPixelFactor;
+}
+
+function getVoxelsPerPixelAtDistance(camera: Camera, distance: number): number {
+  const factor = getVoxelsPerPixelFactor(camera as PerspectiveCamera | OrthographicCamera);
+  return isPerspectiveCamera(camera) ? factor * distance : factor;
 }
 
 // Same estimate as SegmentLOD.update() uses, but at the depth of the 3D viewport's
@@ -117,16 +156,29 @@ export default class SegmentLOD extends LOD {
   // The VisibilityAwareRaycaster traverses into the visible levels itself.
   raycast() {}
 
-  // Must be called whenever meshes are added to or removed from this segment.
+  // Must be called whenever meshes are removed from this segment, since its bounds
+  // might shrink. They are recomputed from all remaining meshes when needed.
   invalidateBoundingBox() {
     this.localBoundingBox = null;
   }
 
-  private computeLocalBoundingBox(): Box3 {
-    const box = new Box3();
-    this.updateWorldMatrix(true, true);
+  // Must be called whenever meshes (e.g., a newly loaded chunk) were added to this
+  // segment. Only the added meshes are traversed, so that streaming in a segment
+  // chunk by chunk doesn't traverse all of its previous chunks again each time.
+  expandBoundingBox(addedObject: Object3D) {
+    if (this.localBoundingBox == null) {
+      // The bounds are computed from all meshes once they are needed.
+      return;
+    }
+    this.unionMeshBoundsInLocalSpace(addedObject, this.localBoundingBox);
+  }
+
+  private unionMeshBoundsInLocalSpace(root: Object3D, box: Box3) {
+    // Updates the world matrices of root's ancestors (including this object) and of
+    // its descendants.
+    root.updateWorldMatrix(true, true);
     _inverseMatrixWorld.copy(this.matrixWorld).invert();
-    this.traverse((obj) => {
+    root.traverse((obj) => {
       const mesh = obj as Mesh;
       if (!mesh.isMesh) return;
       if (mesh.geometry.boundingBox == null) {
@@ -136,6 +188,11 @@ export default class SegmentLOD extends LOD {
       _meshToLocal.multiplyMatrices(_inverseMatrixWorld, mesh.matrixWorld);
       box.union(_meshBox.copy(mesh.geometry.boundingBox).applyMatrix4(_meshToLocal));
     });
+  }
+
+  private computeLocalBoundingBox(): Box3 {
+    const box = new Box3();
+    this.unionMeshBoundsInLocalSpace(this, box);
     return box;
   }
 
@@ -159,7 +216,7 @@ export default class SegmentLOD extends LOD {
     if (maxIndex <= 0) {
       return 0;
     }
-    if (!(camera as PerspectiveCamera).isPerspectiveCamera) {
+    if (!isPerspectiveCamera(camera)) {
       // With the orthographic camera, all segments share the same LOD. Hysteresis is not
       // applied, because it depends on each segment's previous level (which may still
       // stem from the perspective camera) and would therefore yield different LODs.
@@ -199,7 +256,7 @@ export default class SegmentLOD extends LOD {
   }
 
   // The added groups are filled with mesh chunks afterwards. Callers need to
-  // invalidate the bounding box once a chunk was added (see invalidateBoundingBox).
+  // expand the bounding box by each added chunk (see expandBoundingBox).
   addNoLODSupportedMesh(meshGroup: Group) {
     this.noLODGroup.add(meshGroup);
   }

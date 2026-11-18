@@ -346,7 +346,7 @@ export default class SegmentMeshController {
     group.segmentId = segmentId;
     this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentId, lod, group);
     // The new chunk might extend the segment's bounds which determine its LOD.
-    segmentLOD.invalidateBoundingBox();
+    segmentLOD.expandBoundingBox(group);
 
     // Mesh chunks can stream in while their segment is hovered. Highlight them, too.
     const hoveredSegment = this.hoveredSegmentToHighlight;

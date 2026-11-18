@@ -9,6 +9,7 @@ import { OrthoViews, OrthoViewToNumber } from "viewer/constants";
 import { getClosestHoveredBoundingBox } from "viewer/controller/combinations/bounding_box_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getEnabledColorLayers } from "viewer/model/accessors/dataset_accessor";
+import { getGlobalVoxelSizeFromState } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndicesForLayers,
   getFlycamRotationWithAppendedRotation,
@@ -215,7 +216,7 @@ export function moveNode(
   flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
   const vectorRotated = movementVector.set(...vector).applyMatrix4(flycamRotationMatrix);
 
-  const voxelPerPixel = getVoxelPerPixel(state.dataset.dataSource.scale, state.flycam.zoomStep);
+  const voxelPerPixel = getVoxelPerPixel(getGlobalVoxelSizeFromState(state), state.flycam.zoomStep);
 
   const op = (val: number) => {
     if (useFloat || isFlycamRotated) {

@@ -11,6 +11,7 @@ import {
   getUp,
   getZoomedMatrix,
 } from "viewer/model/accessors/flycam_accessor";
+import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 import {
   moveFlycamAbsoluteAction,
   moveFlycamAction,
@@ -55,6 +56,9 @@ const initialState = {
     // This makes the calculated flycam rotation to  [0, 0, 0]. Otherwise it would be  [0, 0, 180].
     currentMatrix: FlycamMatrixWithDefaultRotation,
     spaceDirectionOrtho: [1, 1, 1],
+  },
+  datasetConfiguration: {
+    nativelyRenderedLayerName: null,
   },
   temporaryConfiguration: {
     viewMode: "flight",
@@ -165,6 +169,17 @@ describe("Flycam", () => {
     const rotateAction = rollFlycamAction(0.5 * Math.PI);
     const newState = FlycamReducer(initialState, rotateAction);
     equalWithEpsilon(getRotationInDegrees(newState.flycam), [0, 0, 270]);
+  });
+
+  it("should keep the precise rotation when the layer transforms change", () => {
+    // flycam.rotation is rounded to whole degrees, so a rotation of 0.4° is stored as 0°.
+    const rotatedState = FlycamReducer(initialState, pitchFlycamAction((0.4 * Math.PI) / 180));
+    const newState = FlycamReducer(rotatedState, setLayerTransformsAction("color", null));
+    equalWithEpsilon(
+      getRotationInDegrees(newState.flycam),
+      getRotationInDegrees(rotatedState.flycam),
+    );
+    equalWithEpsilon(getPosition(newState.flycam), getPosition(rotatedState.flycam));
   });
 
   it("should move in ortho mode", () => {

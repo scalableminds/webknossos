@@ -45,12 +45,16 @@ class DatasetLayerOriginDAO @Inject() (sqlClient: SqlClient)(implicit ec: Execut
 
   def insertAll(origins: Seq[DatasetLayerOrigin]): Fox[Unit] =
     for {
-      _ <- run(DBIO.sequence(origins.map { o =>
-        q"""INSERT INTO webknossos.dataset_layer_origins(_dataset, layerName, _sourceDataset, sourceLayerName)
+      _ <- run(
+        DBIO
+          .sequence(origins.map { o =>
+            q"""INSERT INTO webknossos.dataset_layer_origins(_dataset, layerName, _sourceDataset, sourceLayerName)
             VALUES(${o._dataset}, ${o.layerName}, ${o._sourceDataset}, ${o.sourceLayerName})
             ON CONFLICT (_dataset, layerName) DO UPDATE
             SET _sourceDataset = EXCLUDED._sourceDataset, sourceLayerName = EXCLUDED.sourceLayerName""".asUpdate
-      }).transactionally)
+          })
+          .transactionally
+      )
     } yield ()
 
   def deleteOne(datasetId: ObjectId, layerName: String): Fox[Unit] =

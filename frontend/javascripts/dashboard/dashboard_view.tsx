@@ -108,8 +108,13 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     const validTabKeys = this.getValidTabKeys();
     const { initialTabKey } = this.props;
     const lastUsedTabKey = UserLocalStorage.getItem("lastUsedDashboardTab");
-    // The admin view of another user's dashboard has no datasets tab.
-    const defaultTabKey = this.props.isAdminView ? "annotations" : "datasets";
+    // The admin view of another user's dashboard has no datasets tab. In the unified datasets
+    // prototype, there is no annotations tab either.
+    const defaultTabKey = this.props.isAdminView
+      ? validTabKeys.annotations
+        ? "annotations"
+        : "tasks"
+      : "datasets";
 
     const activeTabKey =
       (initialTabKey && validTabKeys[initialTabKey] ? initialTabKey : null) ||
@@ -129,7 +134,12 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
   }
 
   componentDidUpdate(prevProps: PropsWithRouter) {
-    if (this.props.initialTabKey != null && prevProps.initialTabKey !== this.props.initialTabKey) {
+    if (
+      this.props.initialTabKey != null &&
+      prevProps.initialTabKey !== this.props.initialTabKey &&
+      // Hidden tabs (e.g., annotations in the unified datasets prototype) can't be activated.
+      (!features().unifiedDatasets || this.getValidTabKeys()[this.props.initialTabKey])
+    ) {
       this.setState({
         activeTabKey: this.props.initialTabKey,
       });
@@ -178,7 +188,8 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       publications: features().isWkorgInstance,
       datasets: !isAdminView,
       tasks: true,
-      annotations: true,
+      // Unified datasets prototype: users only see datasets.
+      annotations: !features().unifiedDatasets,
     } as { [key: string]: boolean };
   }
 
@@ -197,23 +208,25 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
               ),
             }
           : null,
-        {
-          label: "Annotations",
-          key: "annotations",
-          children: (
-            <RenderingTabContext.Provider value="annotations">
-              <AnnotationsView
-                isAdminView={this.props.isAdminView}
-                userId={this.props.userId}
-                activeUser={this.props.activeUser}
-                datasetNameFilter={
-                  getUrlParamsObjectFromString(this.props.location.search).dataset || null
-                }
-                onDatasetNameFilterCleared={this.clearDatasetNameFilterFromUrl}
-              />
-            </RenderingTabContext.Provider>
-          ),
-        },
+        validTabKeys.annotations
+          ? {
+              label: "Annotations",
+              key: "annotations",
+              children: (
+                <RenderingTabContext.Provider value="annotations">
+                  <AnnotationsView
+                    isAdminView={this.props.isAdminView}
+                    userId={this.props.userId}
+                    activeUser={this.props.activeUser}
+                    datasetNameFilter={
+                      getUrlParamsObjectFromString(this.props.location.search).dataset || null
+                    }
+                    onDatasetNameFilterCleared={this.clearDatasetNameFilterFromUrl}
+                  />
+                </RenderingTabContext.Provider>
+              ),
+            }
+          : null,
         {
           label: "Tasks",
           key: "tasks",

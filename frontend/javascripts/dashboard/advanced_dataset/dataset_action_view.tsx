@@ -13,6 +13,7 @@ import type { useAppProps } from "antd/es/app/context";
 import { applyViewConfigurationToDatasetsInFolder } from "dashboard/advanced_dataset/apply_view_configuration";
 import CreateAnnotationModal from "dashboard/advanced_dataset/create_annotation_modal";
 import { useDatasetCollectionContext } from "dashboard/dataset/dataset_collection_context";
+import { isUnifiedDatasetsMode } from "dashboard/dataset/unified_dataset_list_filters";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import window from "libs/window";
@@ -228,7 +229,8 @@ export function getDatasetActionContextMenu({
         type: "group",
         label: "This Dataset",
         children: [
-          dataset.isActive && dataset.latestOwnAnnotationId != null
+          // Unified datasets prototype: annotations aren't shown as such.
+          dataset.isActive && dataset.latestOwnAnnotationId != null && !isUnifiedDatasetsMode()
             ? {
                 key: "resume-annotation",
                 icon: <PlayCircleOutlined className="icon-margin-right" />,

@@ -18,6 +18,7 @@ import type {
 } from "types/api_types";
 import {
   useCreateFolderMutation,
+  useDatasetCopiesQuery,
   useDatasetSearchQuery,
   useDatasetsInFolderQuery,
   useDeleteFolderMutation,
@@ -27,6 +28,14 @@ import {
   useUpdateDatasetMutation,
   useUpdateFolderMutation,
 } from "./queries";
+import {
+  type DatasetCopiesParam,
+  getCopiesOfDatasetIdFromUrl,
+  getCopiesParam,
+  isUnifiedDatasetsMode,
+  type UnifiedDatasetListFilters,
+  useUnifiedDatasetListFilters,
+} from "./unified_dataset_list_filters";
 
 // Describes which folder modal is currently open (if any). A single one is open at a time,
 // either to create a new folder below a parent or to edit an existing folder. This lives in the
@@ -63,10 +72,19 @@ export type DatasetCollectionContextValue = {
   getActiveSubfolders: () => FolderItem[];
   folderModalState: FolderModalState | null;
   setFolderModalState: (state: FolderModalState | null) => void;
+  // Unified datasets prototype: the list filters (null if the feature is disabled), the
+  // corresponding copies parameter of the list requests and, if set, the dataset whose copies
+  // are listed instead of the active folder or search results.
+  unifiedListFilters: UnifiedDatasetListFilters | null;
+  setUnifiedListFilters: (update: Partial<UnifiedDatasetListFilters>) => void;
+  copiesParam: DatasetCopiesParam | null;
+  copiesOfDatasetId: string | null;
+  setCopiesOfDatasetId: (datasetId: string | null) => void;
   queries: {
     folderHierarchyQuery: ReturnType<typeof useFolderHierarchyQuery>;
     datasetsInFolderQuery: ReturnType<typeof useDatasetsInFolderQuery>;
     datasetSearchQuery: ReturnType<typeof useDatasetSearchQuery>;
+    datasetCopiesQuery: ReturnType<typeof useDatasetCopiesQuery>;
     createFolderMutation: ReturnType<typeof useCreateFolderMutation>;
     updateFolderMutation: ReturnType<typeof useUpdateFolderMutation>;
     moveFolderMutation: ReturnType<typeof useMoveFolderMutation>;
@@ -118,6 +136,12 @@ export default function DatasetCollectionContextProvider({
   }, []);
   const [searchRecursively, setSearchRecursively] = useState<boolean>(true);
   const queryClient = useQueryClient();
+  const isUnified = isUnifiedDatasetsMode();
+  const [unifiedListFilters, setUnifiedListFilters] = useUnifiedDatasetListFilters();
+  const copiesParam = isUnified ? getCopiesParam(unifiedListFilters) : null;
+  const [copiesOfDatasetId, setCopiesOfDatasetId] = useState<string | null>(
+    getCopiesOfDatasetIdFromUrl,
+  );
 
   // Keep url GET parameters in sync with search and active folder
   useManagedUrlParams(
@@ -127,6 +151,7 @@ export default function DatasetCollectionContextProvider({
     activeFolderId,
     searchRecursively,
     setSearchRecursively,
+    copiesOfDatasetId,
   );
 
   useEffect(() => {
@@ -170,24 +195,34 @@ export default function DatasetCollectionContextProvider({
   }, [folderHierarchyQuery.data, selectedFolder]);
   const datasetsInFolderQuery = useDatasetsInFolderQuery(
     globalSearchQuery == null ? activeFolderId : null,
+    copiesParam,
   );
   const datasetSearchQuery = useDatasetSearchQuery(
     globalSearchQuery,
     activeFolderId,
     searchRecursively,
+    copiesParam,
   );
+  const datasetCopiesQuery = useDatasetCopiesQuery(copiesOfDatasetId);
   const createFolderMutation = useCreateFolderMutation();
   const deleteFolderMutation = useDeleteFolderMutation();
   const updateFolderMutation = useUpdateFolderMutation();
   const moveFolderMutation = useMoveFolderMutation();
   const updateDatasetMutation = useUpdateDatasetMutation(
-    globalSearchQuery == null ? activeFolderId : null,
+    globalSearchQuery == null && copiesOfDatasetId == null ? activeFolderId : null,
+    copiesParam,
   );
-  const datasets = (globalSearchQuery ? datasetSearchQuery.data : datasetsInFolderQuery.data) || [];
+  const datasets =
+    (copiesOfDatasetId != null
+      ? datasetCopiesQuery.data
+      : globalSearchQuery
+        ? datasetSearchQuery.data
+        : datasetsInFolderQuery.data) || [];
 
   function fetchDatasets(): void {
     datasetsInFolderQuery.refetch();
     datasetSearchQuery.refetch();
+    if (copiesOfDatasetId != null) datasetCopiesQuery.refetch();
   }
 
   async function clearCacheAndReloadDataset(datasetId: string) {
@@ -228,11 +263,13 @@ export default function DatasetCollectionContextProvider({
   };
 
   const isLoading =
-    (globalSearchQuery
-      ? datasetSearchQuery.isFetching
-      : folderHierarchyQuery.isPending ||
-        datasetsInFolderQuery.isFetching ||
-        datasetsInFolderQuery.isRefetching) || isMutating;
+    (copiesOfDatasetId != null
+      ? datasetCopiesQuery.isFetching
+      : globalSearchQuery
+        ? datasetSearchQuery.isFetching
+        : folderHierarchyQuery.isPending ||
+          datasetsInFolderQuery.isFetching ||
+          datasetsInFolderQuery.isRefetching) || isMutating;
 
   const value: DatasetCollectionContextValue = {
     datasets,
@@ -250,6 +287,11 @@ export default function DatasetCollectionContextProvider({
     getActiveSubfolders,
     folderModalState,
     setFolderModalState,
+    unifiedListFilters: isUnified ? unifiedListFilters : null,
+    setUnifiedListFilters,
+    copiesParam,
+    copiesOfDatasetId,
+    setCopiesOfDatasetId,
     checkDatasets: async (organizationId: string | undefined) => {
       if (isChecking) {
         console.warn("Ignore second rechecking request, since a recheck is already in progress");
@@ -282,6 +324,7 @@ export default function DatasetCollectionContextProvider({
       folderHierarchyQuery,
       datasetsInFolderQuery,
       datasetSearchQuery,
+      datasetCopiesQuery,
       createFolderMutation,
       deleteFolderMutation,
       updateFolderMutation,
@@ -303,6 +346,7 @@ function useManagedUrlParams(
   activeFolderId: string | null,
   searchRecursively: boolean,
   setSearchRecursively: (val: boolean) => void,
+  copiesOfDatasetId: string | null,
 ) {
   const { data: folder } = useFolderQuery(activeFolderId);
 
@@ -335,7 +379,14 @@ function useManagedUrlParams(
 
   // Update folderId
   useEffect(() => {
-    if (!globalSearchQuery && activeFolderId) {
+    if (copiesOfDatasetId != null) {
+      // Unified datasets prototype: the list of a dataset's copies takes precedence.
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `/dashboard/datasets?copiesOf=${encodeURIComponent(copiesOfDatasetId)}`,
+      );
+    } else if (!globalSearchQuery && activeFolderId) {
       let folderName = folder?.name || "";
       // The replacement of / and space is only done to make the URL
       // nicer to read for a human.
@@ -381,5 +432,5 @@ function useManagedUrlParams(
         `/dashboard/datasets${paramStr === "" ? "" : "?"}${paramStr}`,
       );
     }
-  }, [globalSearchQuery, activeFolderId, folder, searchRecursively]);
+  }, [globalSearchQuery, activeFolderId, folder, searchRecursively, copiesOfDatasetId]);
 }

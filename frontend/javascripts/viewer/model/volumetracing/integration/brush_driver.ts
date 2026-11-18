@@ -10,13 +10,14 @@
  * the diffs into `updateBucketPartial` update actions.
  */
 
+import type { Transform } from "viewer/model/helpers/transformation_helpers";
 import type {
   EditContext,
   OverwriteMode,
   SegmentId,
   Vector3,
 } from "../core/volume_annotation_types";
-import type { MaskShape } from "../core/volume_edit_intents";
+import type { AffineMap, MaskShape } from "../core/volume_edit_intents";
 import { VolumeTransaction } from "../core/volume_transaction";
 import { rasterize } from "../core/voxel_rasterizer";
 import type { DriverOptions, DriverResult } from "./tool_driver_types";
@@ -33,6 +34,39 @@ export interface BrushDriverOptions extends DriverOptions {
   radius: Vector3;
   /** Viewport normal: 0 = YZ, 1 = XZ, 2 = XY. */
   planeAxis: 0 | 1 | 2;
+  /**
+   * Set when the layer is rendered with a transform. Then, positions, radius and
+   * planeAxis are given in the rendered space instead (see voxelToRenderedSpaceMap).
+   */
+  voxelToShapeSpace?: AffineMap;
+}
+
+// Matrix entries closer than this to an integer are rounded to it. Chained
+// transforms (e.g., a rotation around a center) leave rounding errors such as
+// cos(90°) = 6e-17 that would otherwise make voxels that touch the plane flicker
+// in and out of the painted slice.
+const MATRIX_ROUNDING_TOLERANCE = 1e-9;
+
+export function roundIfAlmostInteger(value: number): number {
+  const rounded = Math.round(value);
+  return Math.abs(value - rounded) < MATRIX_ROUNDING_TOLERANCE ? rounded : value;
+}
+
+/**
+ * Maps voxels of `mag` of a layer to mag-1 voxels of the rendered space, for a
+ * layer that is rendered with the given affine transform.
+ */
+export function voxelToRenderedSpaceMap(transform: Transform, mag: Vector3): AffineMap {
+  if (transform.type !== "affine") {
+    throw new Error("The brush only supports affine transforms.");
+  }
+  // The matrix is row-major and maps mag-1 voxels of the layer to the rendered space.
+  const matrix = transform.affineMatrix;
+  const linear = [0, 1, 2].flatMap((row) =>
+    [0, 1, 2].map((column) => roundIfAlmostInteger(matrix[row * 4 + column] * mag[column])),
+  ) as unknown as AffineMap["linear"];
+  const offset = [0, 1, 2].map((row) => roundIfAlmostInteger(matrix[row * 4 + 3])) as Vector3;
+  return { linear, offset };
 }
 
 export class BrushDriver {
@@ -78,6 +112,7 @@ export class BrushDriver {
         path: from === to ? [from] : [from, to],
         radius: this.options.radius,
         planeAxis: this.options.planeAxis,
+        voxelToShapeSpace: this.options.voxelToShapeSpace,
       },
       this.ctx,
       this.transaction,

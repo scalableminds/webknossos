@@ -3,18 +3,26 @@
  * The tests are split into two modules to allow for isolated parallelization and thus
  * increased performance.
  */
+import { V3 } from "libs/mjs";
 import max from "lodash-es/max";
 import {
   createBucketResponseFunction,
   setupWebknossosForTesting,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import { ContourModeEnum, OrthoViews, OverwriteModeEnum, type Vector3 } from "viewer/constants";
+import {
+  ContourModeEnum,
+  OrthoViews,
+  OverwriteModeEnum,
+  type Vector3,
+  type Vector4,
+} from "viewer/constants";
 import {
   handleEndForDrawOrErase,
   handleEraseStart,
 } from "viewer/controller/combinations/volume_handlers";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { dispatchRedoAsync, dispatchUndoAsync } from "viewer/model/actions/save_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
@@ -38,6 +46,15 @@ import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import Store from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+function translationMatrix([x, y, z]: Vector3) {
+  return [
+    [1, 0, 0, x],
+    [0, 1, 0, y],
+    [0, 0, 1, z],
+    [0, 0, 0, 1],
+  ] as [Vector4, Vector4, Vector4, Vector4];
+}
 
 describe("Volume Tracing", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -146,6 +163,56 @@ describe("Volume Tracing", () => {
 
     brushAt([20, 5, 5]);
     expect(await api.data.getDataValue(layerName, [20, 5, 5])).toBe(oldCellId);
+  });
+
+  it<WebknossosTestContext>("Brushing a layer that is rotated by 90° paints a slice of the rotated plane", async ({
+    api,
+    mocks,
+  }) => {
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, 0, 5),
+    );
+    await api.data.reloadAllBuckets();
+    const layerName = api.data.getVolumeTracingLayerIds()[0];
+    // Rotates the layer by 90° around the x axis through [16, 16, 16]: the layer's
+    // y axis becomes the rendered z axis. So, the rendered XY plane is a layer XZ plane.
+    const center: Vector3 = [16, 16, 16];
+    Store.dispatch(
+      setLayerTransformsAction(layerName, [
+        { type: "affine", matrix: translationMatrix(V3.scale(center, -1)) },
+        {
+          type: "affine",
+          matrix: [
+            [1, 0, 0, 0],
+            [0, 0, -1, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, 1],
+          ],
+        },
+        { type: "affine", matrix: translationMatrix(center) },
+      ]),
+    );
+
+    const newCellId = 2n;
+    Store.dispatch(updateUserSettingAction("brushSize", 10));
+    Store.dispatch(setPositionAction(center));
+    Store.dispatch(setToolAction(AnnotationTool.BRUSH));
+    Store.dispatch(setActiveCellAction(newCellId));
+    // The rotation maps the center onto itself.
+    Store.dispatch(startEditingAction(center, OrthoViews.PLANE_XY));
+    Store.dispatch(addToContourListAction(center));
+    Store.dispatch(finishEditingAction());
+
+    expect(hasRootSagaCrashed()).toBe(false);
+    const valueAt = (position: Vector3) => api.data.getDataValue(layerName, position);
+    expect(await valueAt([16, 16, 16])).toBe(Number(newCellId));
+    // Within the layer's XZ plane through the center,
+    expect(await valueAt([19, 16, 16])).toBe(Number(newCellId));
+    expect(await valueAt([16, 16, 19])).toBe(Number(newCellId));
+    // but not along the layer's y axis, which is the rendered z axis.
+    expect(await valueAt([16, 17, 16])).toBe(0);
+    expect(await valueAt([16, 15, 16])).toBe(0);
+    expect(await valueAt([16, 19, 16])).toBe(0);
   });
 
   it<WebknossosTestContext>("Erasing with overwrite-empty removes only the active segment", async ({

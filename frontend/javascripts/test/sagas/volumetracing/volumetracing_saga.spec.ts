@@ -8,6 +8,7 @@ import { tracing as serverVolumeTracing } from "test/fixtures/volumetracing_serv
 import { execCall, expectValueDeepEqual } from "test/helpers/saga_test_helpers";
 import {
   ContourModeEnum,
+  IdentityTransform,
   MappingStatusEnum,
   OrthoViews,
   OverwriteModeEnum,
@@ -116,6 +117,7 @@ describe("VolumeTracingSaga", () => {
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
     saga.next(AnnotationTool.BRUSH);
     saga.next(false);
+    saga.next(IdentityTransform); // pass the transform of the segmentation layer
     // pass labeled mag
     saga.next({
       mag: [1, 1, 1],
@@ -159,6 +161,7 @@ describe("VolumeTracingSaga", () => {
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
     saga.next(AnnotationTool.TRACE);
     saga.next(false);
+    saga.next(IdentityTransform); // pass the transform of the segmentation layer
     saga.next({
       mag: [1, 1, 1],
       zoomStep: 0,
@@ -214,6 +217,7 @@ describe("VolumeTracingSaga", () => {
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
     saga.next(AnnotationTool.TRACE);
     saga.next(false);
+    saga.next(IdentityTransform); // pass the transform of the segmentation layer
     saga.next({
       mag: [1, 1, 1],
       zoomStep: 0,
@@ -280,6 +284,7 @@ describe("VolumeTracingSaga", () => {
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
     saga.next(AnnotationTool.TRACE);
     saga.next(false);
+    saga.next(IdentityTransform); // pass the transform of the segmentation layer
     saga.next({
       mag: [1, 1, 1],
       zoomStep: 0,
@@ -361,6 +366,7 @@ describe("VolumeTracingSaga", () => {
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
     saga.next(AnnotationTool.BRUSH);
     saga.next(false);
+    saga.next(IdentityTransform); // pass the transform of the segmentation layer
     // pass labeled mag
     saga.next({
       mag: [1, 1, 1],

@@ -5,7 +5,12 @@ import type { Channel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import type { ContourMode, OverwriteMode, Vector3 } from "viewer/constants";
-import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
+import {
+  ContourModeEnum,
+  IdentityTransform,
+  OrthoViews,
+  OverwriteModeEnum,
+} from "viewer/constants";
 import { getSegmentIdsAtPosition } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
@@ -31,10 +36,12 @@ import {
   getBrushCenterInMag,
   getBrushDiameterInMag,
   getContourTracingMode,
+  getMagInRenderedSpace,
   getMaximumBrushSize,
   getRenderableMagForSegmentationTracing,
   getRequestedOrVisibleSegmentationLayer,
   getSegmentsForLayer,
+  getTransformForSegmentationTracing,
   isVolumeAnnotationDisallowedForZoom,
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -63,6 +70,7 @@ import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/buck
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import Dimensions from "viewer/model/dimensions";
 import { getSegmentIdRangeForElementClass } from "viewer/model/helpers/element_class_ranges";
+import { transformPointUnscaled } from "viewer/model/helpers/transformation_helpers";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import {
@@ -80,7 +88,11 @@ import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_
 import { getVoxelPerPixel } from "viewer/model/scaleinfo";
 import { runAxisForPlane } from "viewer/model/volumetracing/core/bucket_diff";
 import type { RunAxis } from "viewer/model/volumetracing/core/bucket_voxel_mask";
-import { BrushDriver } from "viewer/model/volumetracing/integration/brush_driver";
+import {
+  BrushDriver,
+  roundIfAlmostInteger,
+  voxelToRenderedSpaceMap,
+} from "viewer/model/volumetracing/integration/brush_driver";
 import { maskShapeFromVoxelBuffer2D } from "viewer/model/volumetracing/integration/fill_mask";
 import type { SaveMode } from "viewer/model/volumetracing/integration/tool_driver_types";
 import type SectionLabeler from "viewer/model/volumetracing/legacy/section_labeling";
@@ -228,6 +240,17 @@ export function* editVolumeLayerAsync(): Saga<never> {
       continue;
     }
 
+    // Only the brush supports a transformed segmentation layer. The tool rules
+    // disable the other tools in that case (see disabled_tool_accessor.ts).
+    const layerTransform = yield* select((state) =>
+      getTransformForSegmentationTracing(state, volumeTracing),
+    );
+    const isLayerTransformed = layerTransform !== IdentityTransform;
+    if (isLayerTransformed && (!isBrushTool(activeTool) || layerTransform.type !== "affine")) {
+      console.warn("Ignoring volume action: The tool does not support the layer's transform.");
+      continue;
+    }
+
     const maybeLabeledMagWithZoomStep = yield* select((state) =>
       getRenderableMagForSegmentationTracing(state, volumeTracing),
     );
@@ -269,13 +292,18 @@ export function* editVolumeLayerAsync(): Saga<never> {
     );
     const { zoomStep: labeledZoomStep, mag: labeledMag } = maybeLabeledMagWithZoomStep;
 
-    const currentSectionLabeler = yield* call(
-      createSectionLabeler,
-      volumeTracing,
-      startEditingAction.planeId,
-      labeledMag,
-      (thirdDim) => startEditingAction.positionInLayerSpace[thirdDim],
-    );
+    // The section labeler works in an axis-aligned plane of the layer, which the
+    // viewport plane isn't for a transformed layer. Without it, the brush neither
+    // fills closed strokes nor registers them for volume interpolation.
+    const currentSectionLabeler = isLayerTransformed
+      ? null
+      : yield* call(
+          createSectionLabeler,
+          volumeTracing,
+          startEditingAction.planeId,
+          labeledMag,
+          (thirdDim) => startEditingAction.positionInLayerSpace[thirdDim],
+        );
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
     const segmentationLayer = yield* call(
       [Model, Model.getSegmentationTracingLayer],
@@ -300,16 +328,40 @@ export function* editVolumeLayerAsync(): Saga<never> {
       const voxelSize = yield* select(getGlobalVoxelSizeFromState);
       const dimIndices = Dimensions.getIndices(startEditingAction.planeId);
       const planeAxis = dimIndices[2] as 0 | 1 | 2;
-      const diameterInMag = getBrushDiameterInMag(
-        brushSize,
-        getVoxelPerPixel(voxelSize),
-        labeledMag,
-      );
+      // For a transformed layer, the brush is defined in the rendered space, in mag-1
+      // voxels of that space, and the voxels of the layer are mapped into it. The
+      // brush snaps to the layer's mag, aligned with the rendered axes, just as the
+      // brush preview does.
+      const brushMag = isLayerTransformed
+        ? getMagInRenderedSpace(labeledMag, layerTransform)
+        : labeledMag;
+      const diameterInMag = getBrushDiameterInMag(brushSize, getVoxelPerPixel(voxelSize), brushMag);
       // Not rounded: together with the strict inside test of the rasterizer, a
       // brush of size 1 paints exactly the hovered voxel.
-      const radius = V3.scale(diameterInMag, 0.5);
-      getBrushCenter = (position) =>
-        getBrushCenterInMag(position, labeledMag, diameterInMag, planeAxis);
+      const radiusInMag = V3.scale(diameterInMag, 0.5);
+      let radius = radiusInMag;
+      let voxelToShapeSpace;
+      if (isLayerTransformed) {
+        radius = V3.scale3(radiusInMag, brushMag);
+        voxelToShapeSpace = voxelToRenderedSpaceMap(layerTransform, labeledMag);
+        const layerToRenderedSpace = transformPointUnscaled(layerTransform);
+        getBrushCenter = (position) =>
+          V3.scale3(
+            getBrushCenterInMag(
+              // The position was mapped from the rendered space to the layer before.
+              // Mapping it back can turn 192 into 191.99999999, which would select
+              // the wrong slice.
+              layerToRenderedSpace(position).map(roundIfAlmostInteger) as Vector3,
+              brushMag,
+              diameterInMag,
+              planeAxis,
+            ),
+            brushMag,
+          );
+      } else {
+        getBrushCenter = (position) =>
+          getBrushCenterInMag(position, labeledMag, diameterInMag, planeAxis);
+      }
       lastBrushCenter = getBrushCenter(startEditingAction.floatingPositionInLayerSpace);
       const saveMode = yield* call(getVolumeSaveMode);
       const driver = new BrushDriver(
@@ -327,6 +379,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
           additionalCoordinates: additionalCoordinates ?? null,
           radius,
           planeAxis,
+          voxelToShapeSpace,
           saveMode,
         },
         lastBrushCenter,
@@ -385,7 +438,10 @@ export function* editVolumeLayerAsync(): Saga<never> {
         continue;
       }
 
-      if (isTraceTool(activeTool) || (isBrushTool(activeTool) && isDrawing)) {
+      if (
+        currentSectionLabeler != null &&
+        (isTraceTool(activeTool) || (isBrushTool(activeTool) && isDrawing))
+      ) {
         // Close the polygon. When brushing, this causes an auto-fill which is why
         // it's only performed when drawing (not when erasing): a common way to
         // clean up an overfilled cell is to erase along its membrane, and an
@@ -401,8 +457,8 @@ export function* editVolumeLayerAsync(): Saga<never> {
     if (brushStroke != null) {
       // A stroke released near its start fills the area it encloses. The fill
       // joins the stroke's transaction, so both are propagated and saved as one.
-      const fill = currentSectionLabeler.getFillingVoxelBuffer2D(activeTool);
-      if (!fill.isEmpty()) {
+      const fill = currentSectionLabeler?.getFillingVoxelBuffer2D(activeTool);
+      if (fill != null && !fill.isEmpty()) {
         brushStroke.driver.fill(maskShapeFromVoxelBuffer2D(fill, startEditingAction.planeId));
       }
       // Pointer-up: mag propagation runs once over the coalesced write set.
@@ -466,7 +522,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
 }
 
 export function* finishSectionLabeler(
-  sectionLabeler: SectionLabeler | TransformedSectionLabeler,
+  sectionLabeler: SectionLabeler | TransformedSectionLabeler | null,
   activeTool: AnnotationTool,
   contourTracingMode: ContourMode,
   overwriteMode: OverwriteMode,

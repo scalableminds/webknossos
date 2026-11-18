@@ -54,12 +54,15 @@ type Props = {
 
 function getApplyDisabledReason(
   canApplyTransformToDataset: boolean,
-  hasTransform: boolean,
+  movingLayerRows: MovingLayerRow[],
 ): string | null {
   if (!canApplyTransformToDataset) {
     return "You don't have the permission to edit this dataset.";
   }
-  return hasTransform
+  const hasAnyTransform = movingLayerRows.some(
+    (row) => row.status === "loaded" && row.appliedState !== "transformEstimationFailed",
+  );
+  return hasAnyTransform
     ? null
     : `Place at least ${MIN_LANDMARK_PAIR_COUNT} landmark pairs to get a transform first.`;
 }
@@ -151,10 +154,7 @@ export function LayerRegistrationLandmarkPanel({
         layerNames={layerNames}
         isTransformAvailable={estimatedTransform != null}
         viewSettings={viewSettings}
-        applyDisabledReason={getApplyDisabledReason(
-          canApplyTransformToDataset,
-          estimatedTransform != null,
-        )}
+        applyDisabledReason={getApplyDisabledReason(canApplyTransformToDataset, movingLayerRows)}
         onApplyTransformToDataset={onApplyTransformToDataset}
       />
     </Flex>

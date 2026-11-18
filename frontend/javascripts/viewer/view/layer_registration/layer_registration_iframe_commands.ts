@@ -4,6 +4,7 @@ import {
   setAnnotationDescriptionAction,
   setAnnotationNameAction,
 } from "viewer/model/actions/annotation_actions";
+import { saveNowAction } from "viewer/model/actions/save_actions";
 import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
 import {
   addTreesAndGroupsAction,
@@ -17,6 +18,7 @@ import {
   MutableTreeMap,
   type TreeGroup,
 } from "viewer/model/types/tree_types";
+import { Model } from "viewer/singletons";
 import Store from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/shared/tree_hierarchy_view_helpers";
 
@@ -121,6 +123,14 @@ export function ensureTreeGroupPath(groupNames: string[]): number {
 export function findTreeGroupPath(groupNames: string[]): number | null {
   const path = findExistingTreeGroupPath(groupNames);
   return path.length === groupNames.length ? (path.at(-1)?.groupId ?? null) : null;
+}
+
+// Saves the annotation right away and resolves once everything is saved. After a failed save
+// request, the viewer waits longer and longer before it tries again (up to minutes). SAVE_NOW
+// ends that wait, so that e.g. "Try again" on the page really tries again.
+export async function saveAnnotationNow() {
+  Store.dispatch(saveNowAction());
+  await Model.ensureSavedState();
 }
 
 export function setLayerVisibility(layerName: string, isVisible: boolean) {

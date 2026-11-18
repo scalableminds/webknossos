@@ -1,4 +1,4 @@
-import { Splitter } from "antd";
+import { App, Splitter } from "antd";
 import classnames from "classnames";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
@@ -76,6 +76,7 @@ export function LayerRegistrationWorkspace({
   const [switchTargetLayerName, setSwitchTargetLayerName] = useState<string | null>(null);
   const { fixed: fixedLayerName, moving: movingLayerName } = layerNames;
   const voxelSizeFactor = dataset.dataSource.scale.factor;
+  const { modal } = App.useApp();
 
   // handleLandmarkIframeCommand and restartAfterReload are function declarations further below, so
   // they can be used here.
@@ -273,10 +274,43 @@ export function LayerRegistrationWorkspace({
       "A view was reloaded or left, so the layer registration view is restarted. The stored landmarks are kept.",
     );
     if (reloadedRole !== "annotation") {
-      // Saves the landmarks that were synced before the reload.
-      await sendMessage("annotation", "save").catch((error) => console.error(error));
+      await saveBeforeRestart();
     }
     onRestart();
+  }
+
+  // Saves the landmarks that were synced before the reload. The restart replaces the annotation
+  // iframe, so if saving fails, the user decides whether to try again or to restart anyway and
+  // lose the landmarks that aren't saved yet.
+  async function saveBeforeRestart() {
+    while (true) {
+      try {
+        await sendMessage("annotation", "save");
+        return;
+      } catch (error) {
+        console.error("Could not save the landmarks before restarting:", error);
+        if (!(await askToRetrySave())) {
+          return;
+        }
+      }
+    }
+  }
+
+  // Resolves with true if the user wants to try saving again.
+  function askToRetrySave(): Promise<boolean> {
+    return new Promise((resolve) => {
+      modal.confirm({
+        title: "Could not save the landmarks",
+        content:
+          "A view was reloaded, so the layer registration view has to restart. Landmarks that aren't saved yet would be lost. Check your connection and try again.",
+        okText: "Try again",
+        cancelText: "Restart anyway",
+        // Escape must not restart by accident.
+        keyboard: false,
+        onOk: () => resolve(true),
+        onCancel: () => resolve(false),
+      });
+    });
   }
 
   function handleLandmarkIframeCommand(side: Side, command: LayerRegistrationCommand) {

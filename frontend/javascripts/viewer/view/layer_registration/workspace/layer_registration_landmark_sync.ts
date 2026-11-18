@@ -197,6 +197,9 @@ export class LandmarkSync {
       }
     } catch (error) {
       console.error("Could not sync the landmarks:", error);
+      // E.g. a landmark iframe didn't reply, so it's unknown whether it has landmarks that aren't
+      // stored yet. They count as unsaved until a run succeeds.
+      this.listener.onHasUnsyncedLandmarksChange(true);
     }
   }
 

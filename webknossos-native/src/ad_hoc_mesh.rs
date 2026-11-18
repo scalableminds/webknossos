@@ -3,12 +3,13 @@
 //!
 //! The cuboid is a byte array of little-endian elements with 1, 2, 4 or 8 bytes each, x fastest. A voxel belongs to
 //! the segment if its raw bits equal the low bits of the segment id, so signedness does not matter. The output is
-//! the same as that of the former Scala implementation, float for float:
+//! deterministic down to the order of the vertices:
 //! - The cuboid is split into blocks of [BLOCK_SIZE]³ cubes, iterated with x outermost and z innermost. A block
 //!   spans `BLOCK_SIZE + 1` voxels per axis (fewer at the end of the cuboid), so neighboring blocks share a plane of
 //!   voxels. Blocks without a voxel of the segment are skipped.
-//! - Within a block, cubes are iterated with z outermost and x innermost. Each cube emits the vertices of its
-//!   triangles from [TRIANGLES] as `(x + edgeMidpoint.x + offset.x) * scale.x` (likewise for y and z) in f32.
+//! - Within a block, cubes are iterated with z outermost and x innermost. A cube is the 2×2×2 voxels starting at its
+//!   corner `(x, y, z)`. It emits the vertices of its triangles from [TRIANGLES] as
+//!   `(x + edgeMidpoint.x + offset.x) * scale.x` (likewise for y and z) in f32.
 //! - The neighbors are the faces of the cuboid that contain a voxel of the segment, see [Neighbors].
 
 mod triangle_table;
@@ -27,8 +28,11 @@ const BLOCK_SIZE: usize = 32;
 /// The six faces of the cuboid that may contain the segment, as bits in this order: 0 front xy (z = 0), 1 front xz
 /// (y = 0), 2 front yz (x = 0), 3 back xy (z = max), 4 back xz (y = max), 5 back yz (x = max).
 ///
-/// As in the Scala implementation, a face excludes its last row and column: front xy covers x < width - 1 and
-/// y < height - 1, front xz covers x < width - 1 and z < depth - 1, and so on.
+/// A face covers only the voxels that are the corner of a cube, i.e. it excludes its last row and column: front xy
+/// covers x < width - 1 and y < height - 1, front xz covers x < width - 1 and z < depth - 1, and so on. This is
+/// intended: the frontend pads each requested cuboid by one voxel towards the top left (see ad_hoc_mesh_saga.ts), so
+/// adjacent cuboids overlap by one voxel plane, and the excluded row or column is the first one of the same face of
+/// the adjacent cuboid along that axis, which reports it.
 pub type Neighbors = u8;
 
 /// The mesh of a segment in a cuboid.
@@ -142,21 +146,23 @@ impl SegmentMask {
                     continue;
                 }
 
-                // Faces, see [Neighbors]. Only the first `width - 1` voxels count for the xy and xz faces.
-                let inner = &mask[..width - 1];
-                if y + 1 < height {
-                    if z == 0 && inner.contains(&1) {
+                // Faces, see [Neighbors]. Only the first `width - 1` voxels count for the xy and xz faces, and only
+                // rows on the border of the cuboid can be part of one, so the scan is skipped for all others.
+                let on_xy_or_xz_face = z == 0 || z == depth - 1 || y == 0 || y == height - 1;
+                let inner_any = on_xy_or_xz_face && mask[..width - 1].contains(&1);
+                if inner_any && y + 1 < height {
+                    if z == 0 {
                         neighbors |= 1 << 0;
                     }
-                    if z == depth - 1 && inner.contains(&1) {
+                    if z == depth - 1 {
                         neighbors |= 1 << 3;
                     }
                 }
                 if z + 1 < depth {
-                    if y == 0 && inner.contains(&1) {
+                    if inner_any && y == 0 {
                         neighbors |= 1 << 1;
                     }
-                    if y == height - 1 && inner.contains(&1) {
+                    if inner_any && y == height - 1 {
                         neighbors |= 1 << 4;
                     }
                     if y + 1 < height {
@@ -235,7 +241,8 @@ fn march_block(
     let [width, height, _] = mask.dimensions;
     let row = |y: usize, z: usize| &mask.voxels[(y + height * z) * width..][..width];
     // The four voxels of column x of the current cube row as bits 0..3, see [CUBE_INDEX].
-    let mut columns = vec![0u8; end[0] - start[0]];
+    let mut column_buffer = [0u8; BLOCK_SIZE + 1];
+    let columns = &mut column_buffer[..end[0] - start[0]];
     for z in start[2]..end[2] - 1 {
         for y in start[1]..end[1] - 1 {
             let [r00, r10, r01, r11] = [row(y, z), row(y + 1, z), row(y, z + 1), row(y + 1, z + 1)]
@@ -267,9 +274,8 @@ fn march_block(
     }
 }
 
-/// Meshes the voxels of `segment_id` (its low `bytes_per_element` bytes) in the cuboid.
-pub fn ad_hoc_mesh(cuboid: &Cuboid, segment_id: i64, offset: [f32; 3], scale: [f32; 3]) -> Mesh {
-    let mask = SegmentMask::new(cuboid, segment_id);
+/// Meshes the voxels of a segment mask.
+fn mesh_segment(mask: &SegmentMask, offset: [f32; 3], scale: [f32; 3]) -> Mesh {
     let [count_x, count_y, count_z] = mask.block_counts;
     let mut vertices = Vec::new();
     for block_x in 0..count_x {
@@ -281,7 +287,7 @@ pub fn ad_hoc_mesh(cuboid: &Cuboid, segment_id: i64, offset: [f32; 3], scale: [f
                 let start = [block_x, block_y, block_z].map(|b| b * BLOCK_SIZE);
                 let end =
                     [0, 1, 2].map(|axis| (start[axis] + BLOCK_SIZE + 1).min(mask.dimensions[axis]));
-                march_block(&mask, start, end, offset, scale, &mut vertices);
+                march_block(mask, start, end, offset, scale, &mut vertices);
             }
         }
     }
@@ -292,7 +298,7 @@ pub fn ad_hoc_mesh(cuboid: &Cuboid, segment_id: i64, offset: [f32; 3], scale: [f
 }
 
 fn read_vec3_f32(env: &jni::Env, array: &JFloatArray, name: &str) -> NativeResult<[f32; 3]> {
-    let values = jni_util::read_floats(env, array)?;
+    let values = jni_util::read_array(env, array)?;
     match values[..] {
         [x, y, z] => Ok([x, y, z]),
         _ => invalid_argument(format!("{name} must have three elements")),
@@ -314,15 +320,18 @@ pub extern "system" fn Java_com_scalableminds_webknossos_datastore_services_mesh
     neighbors_out: JIntArray<'local>,
 ) -> JFloatArray<'local> {
     jni_util::run(env, "AdHocMesher adHocMesh", |env| {
-        let dimensions = jni_util::read_ints(env, &dimensions)?;
+        let dimensions = jni_util::read_array(env, &dimensions)?;
         let offset = read_vec3_f32(env, &offset, "offset")?;
         let scale = read_vec3_f32(env, &scale, "scale")?;
         if neighbors_out.len(env)? != 1 {
             return invalid_argument("neighborsOut must have one element");
         }
-        let data = jni_util::read_bytes(env, &data)?;
-        let cuboid = Cuboid::new(&data, bytes_per_element, &dimensions)?;
-        let mesh = ad_hoc_mesh(&cuboid, segment_id, offset, scale);
+        // The cuboid is only needed to build the mask, a single pass, so it is borrowed rather than copied.
+        let mask = jni_util::with_bytes_critical(env, &data, |data| {
+            Cuboid::new(data, bytes_per_element, &dimensions)
+                .map(|cuboid| SegmentMask::new(&cuboid, segment_id))
+        })??;
+        let mesh = mesh_segment(&mask, offset, scale);
         neighbors_out.set_region(env, 0, &[jint::from(mesh.neighbors)])?;
         jni_util::new_float_array(env, &mesh.vertices)
     })

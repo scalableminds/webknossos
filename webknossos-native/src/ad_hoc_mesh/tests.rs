@@ -6,6 +6,11 @@ use crate::jni_util::NativeError;
 const ORIGIN: [f32; 3] = [0.0, 0.0, 0.0];
 const UNIT: [f32; 3] = [1.0, 1.0, 1.0];
 
+/// Meshes the voxels of `segment_id` (its low `bytes_per_element` bytes) in the cuboid, like the native function.
+fn ad_hoc_mesh(cuboid: &Cuboid, segment_id: i64, offset: [f32; 3], scale: [f32; 3]) -> Mesh {
+    mesh_segment(&SegmentMask::new(cuboid, segment_id), offset, scale)
+}
+
 /// A cuboid of `T` elements with the given voxels set to `segment` and all others to `other`.
 fn volume<T: Element>(
     dimensions: [usize; 3],

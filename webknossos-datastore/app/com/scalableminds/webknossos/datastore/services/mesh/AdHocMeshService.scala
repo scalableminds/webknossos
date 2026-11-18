@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceMappingRequest,
   DataServiceRequestSettings
 }
-import com.scalableminds.webknossos.datastore.services.{BinaryDataService, DataConverter}
+import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
@@ -23,9 +23,9 @@ import org.apache.pekko.pattern.ask
 import org.apache.pekko.routing.RoundRobinPool
 import org.apache.pekko.util.Timeout
 
+import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext}
-import scala.reflect.ClassTag
 
 case class AdHocMeshRequest(
     datasetId: Option[ObjectId],
@@ -60,8 +60,7 @@ class AdHocMeshService(
     adHocMeshTimeout: FiniteDuration,
     adHocMeshActorPoolSize: Int
 )(implicit ec: ExecutionContext)
-    extends DataConverter
-    with LazyLogging {
+    extends LazyLogging {
 
   implicit private val timeout: Timeout = Timeout(adHocMeshTimeout)
 
@@ -139,29 +138,43 @@ class AdHocMeshService(
         Fox.successful(data)
     }
 
-  // Maps both the data and the requested segment id. JSON mappings work on typed arrays, so the data is converted
-  // there and back.
+  // Maps both the data and the requested segment id. The data is read and written as little-endian elements, so it
+  // is copied only once, into the mapped byte array. The input is not mapped in place, it may be a cached bucket.
   private def applyJsonMappingIfNeeded(request: AdHocMeshRequest, data: Array[Byte]): Fox[(Array[Byte], Long)] =
     (request.mapping, request.mappingType) match {
       case (Some(mappingName), Some(MappingType.JSON)) =>
         val mappingRequest = DataServiceMappingRequest(request.dataSourceId, request.dataLayer, mappingName)
-        val elementClass = request.dataLayer.elementClass
-        def mapTyped[T: ClassTag](
-            typedData: Array[T],
-            fromLong: Long => T,
-            toLong: T => Long,
-            toBytesFn: Array[T] => Array[Byte]
+        val mappedData = new Array[Byte](data.length)
+        def source = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN)
+        def target = ByteBuffer.wrap(mappedData).order(ByteOrder.LITTLE_ENDIAN)
+        def mapElements[T](fromLong: Long => T, toLong: T => Long)(
+            mapAll: (T => T) => Unit
         ): Fox[(Array[Byte], Long)] =
-          for {
-            mappedData <- mappingService.applyMapping(mappingRequest, typedData, fromLong)
-            mappedSegmentId <- mappingService.applyMapping(mappingRequest, Array(fromLong(request.segmentId)), fromLong)
-          } yield (toBytesFn(mappedData), toLong(mappedSegmentId.head))
-        convertData(data, elementClass) match {
-          case typed: Array[Byte]  => mapTyped[Byte](typed, _.toByte, _.toLong, toBytes(_, elementClass))
-          case typed: Array[Short] => mapTyped[Short](typed, _.toShort, _.toLong, toBytes(_, elementClass))
-          case typed: Array[Int]   => mapTyped[Int](typed, _.toInt, _.toLong, toBytes(_, elementClass))
-          case typed: Array[Long]  => mapTyped[Long](typed, identity, identity, toBytes(_, elementClass))
-          case _                   => Fox.failure(s"JSON mappings are not supported for element class $elementClass")
+          mappingService.mappingFunction[T](mappingRequest, fromLong).map { mapping =>
+            mapAll(mapping)
+            (mappedData, toLong(mapping(fromLong(request.segmentId))))
+          }
+        request.dataLayer.elementClass match {
+          case ElementClass.uint8 | ElementClass.int8 =>
+            mapElements[Byte](_.toByte, _.toLong) { mapping =>
+              data.indices.foreach(i => mappedData(i) = mapping(data(i)))
+            }
+          case ElementClass.uint16 | ElementClass.int16 =>
+            mapElements[Short](_.toShort, _.toLong) { mapping =>
+              val (from, to) = (source.asShortBuffer(), target.asShortBuffer())
+              while (from.hasRemaining) to.put(mapping(from.get()))
+            }
+          case ElementClass.uint32 | ElementClass.int32 =>
+            mapElements[Int](_.toInt, _.toLong) { mapping =>
+              val (from, to) = (source.asIntBuffer(), target.asIntBuffer())
+              while (from.hasRemaining) to.put(mapping(from.get()))
+            }
+          case ElementClass.uint64 | ElementClass.int64 =>
+            mapElements[Long](identity, identity) { mapping =>
+              val (from, to) = (source.asLongBuffer(), target.asLongBuffer())
+              while (from.hasRemaining) to.put(mapping(from.get()))
+            }
+          case elementClass => Fox.failure(s"JSON mappings are not supported for element class $elementClass")
         }
       case _ =>
         Fox.successful((data, request.segmentId))

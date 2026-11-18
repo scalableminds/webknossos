@@ -4,8 +4,9 @@ use std::any::Any;
 use std::fmt;
 use std::panic::{self, AssertUnwindSafe};
 
+use jni::elements::ReleaseMode;
 use jni::errors::ThrowRuntimeExAndDefault;
-use jni::objects::{JByteArray, JFloatArray, JIntArray, JLongArray};
+use jni::objects::{JByteArray, JFloatArray, JIntArray, JLongArray, JPrimitiveArray, TypeArray};
 use jni::{Env, EnvUnowned};
 
 /// An error of a native function. It reaches Java as a `RuntimeException`.
@@ -100,23 +101,29 @@ pub fn read_bytes(env: &Env, array: &JByteArray) -> NativeResult<Vec<u8>> {
     Ok(env.convert_byte_array(array)?)
 }
 
-/// Copies a Java `long[]` into a Vec.
-pub fn read_longs(env: &Env, array: &JLongArray) -> NativeResult<Vec<i64>> {
-    let mut values = vec![0i64; array.len(env)?];
-    array.get_region(env, 0, &mut values)?;
-    Ok(values)
+/// Runs `body` on the contents of a Java `byte[]` without copying them, inside a JNI critical section. The JVM may
+/// hold off garbage collection until `body` returns, so `body` should be short. It gets no `Env`, so it cannot call
+/// into the JVM, which the critical section forbids.
+pub fn with_bytes_critical<R>(
+    env: &Env,
+    array: &JByteArray,
+    body: impl FnOnce(&[u8]) -> R,
+) -> NativeResult<R> {
+    // Safety: `body` makes no JNI calls (see above) and only reads the elements, and no other reference to them
+    // exists while the guard lives.
+    let elements = unsafe { array.get_elements_critical(env, ReleaseMode::NoCopyBack)? };
+    // u8 and i8 (jbyte) have the same size and alignment, so the slice can be reinterpreted.
+    let bytes =
+        unsafe { std::slice::from_raw_parts(elements.as_ptr().cast::<u8>(), elements.len()) };
+    Ok(body(bytes))
 }
 
-/// Copies a Java `int[]` into a Vec.
-pub fn read_ints(env: &Env, array: &JIntArray) -> NativeResult<Vec<i32>> {
-    let mut values = vec![0i32; array.len(env)?];
-    array.get_region(env, 0, &mut values)?;
-    Ok(values)
-}
-
-/// Copies a Java `float[]` into a Vec.
-pub fn read_floats(env: &Env, array: &JFloatArray) -> NativeResult<Vec<f32>> {
-    let mut values = vec![0f32; array.len(env)?];
+/// Copies a Java primitive array, such as `int[]` or `long[]`, into a Vec.
+pub fn read_array<T: TypeArray + Default>(
+    env: &Env,
+    array: &JPrimitiveArray<T>,
+) -> NativeResult<Vec<T>> {
+    let mut values = vec![T::default(); array.len(env)?];
     array.get_region(env, 0, &mut values)?;
     Ok(values)
 }

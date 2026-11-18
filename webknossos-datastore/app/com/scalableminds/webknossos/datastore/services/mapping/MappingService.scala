@@ -20,7 +20,6 @@ import org.apache.commons.io.FilenameUtils
 import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.reflect.ClassTag
 
 case class JsonMappingCacheKey(
     dataSourceId: Option[DataSourceId],
@@ -52,11 +51,11 @@ class MappingService @Inject() (config: DataStoreConfig, baseDirService: BaseDir
       result <- FileIO.readFileToByteArray(mappingFilePath.toFile)
     } yield result
 
-  def applyMapping[T: ClassTag](
+  /** The JSON mapping of the request as a function on element values. Unmapped values map to themselves. */
+  def mappingFunction[T](
       request: DataServiceMappingRequest,
-      data: Array[T],
       fromLongFn: Long => T
-  ): Fox[Array[T]] = {
+  ): Fox[T => T] = {
 
     def loadAndParseMapping(mappingRequest: DataServiceMappingRequest): Box[AbstractDataLayerMapping] =
       for {
@@ -64,16 +63,10 @@ class MappingService @Inject() (config: DataStoreConfig, baseDirService: BaseDir
         mapping <- MappingParser.parse[T](rawMapping, fromLongFn)
       } yield mapping
 
+    val mappingCacheKey = JsonMappingCacheKey(request.dataSourceId, request.dataLayer.name, request.mapping)
     for {
-      mappingCacheKey = JsonMappingCacheKey(
-        request.dataSourceId,
-        request.dataLayer.name,
-        request.mapping
-      )
       parsedMapping <- cache.getOrLoad(mappingCacheKey, _ => loadAndParseMapping(request).toFox)
-      typedMapping = parsedMapping.asInstanceOf[DataLayerMapping[T]].mapping.withDefault(identity)
-      mappedData = data.map(typedMapping.apply)
-    } yield mappedData
+    } yield parsedMapping.asInstanceOf[DataLayerMapping[T]].mapping.withDefault(identity)
   }
 
   def exploreMappings(layerDir: Path): Set[String] =

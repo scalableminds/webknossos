@@ -6,7 +6,7 @@ import oauth.{OAuthGrant, OAuthService}
 import models.user.User
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Request, RequestHeader, Result}
-import security.TokenHeaders
+import com.scalableminds.util.mvc.TokenHeaders
 import utils.WkConf
 
 import javax.inject.Inject

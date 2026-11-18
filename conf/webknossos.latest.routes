@@ -60,6 +60,8 @@ GET           /oauth/authorizationRequest                                       
 POST          /oauth/authorize                                                                  controllers.OAuthController.authorize()
 POST          /oauth/token                                                                      controllers.OAuthController.token()
 POST          /oauth/register                                                                   controllers.OAuthController.register()
+OPTIONS       /oauth/token                                                                      controllers.OAuthController.corsPreflight()
+OPTIONS       /oauth/register                                                                   controllers.OAuthController.corsPreflight()
 GET           /oauth/grants                                                                     controllers.OAuthController.listGrants()
 DELETE        /oauth/grants/:id                                                                 controllers.OAuthController.revokeGrant(id: ObjectId)
 

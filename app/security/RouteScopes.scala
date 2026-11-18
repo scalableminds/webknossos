@@ -77,6 +77,30 @@ object RouteScopes {
     "LegacyApiController.reserveUploadToPathsForPreliminaryV14" -> Scope(dataset, ScopeMode.write)
   )
 
+  /** Actions that scoped tokens must not call, although their controller is mapped. Not private so that ScopeTestSuite
+    * can check that every entry refers to an existing route.
+    *
+    * Starting a job hands the worker an unscoped token of the job owner (see JobService.parameterWrites), so the job
+    * could do more than the agent that started it. Retrying a job does the same. redirectToExport puts the user's
+    * unscoped API token into the redirect URL. The WEBKNOSSOS Python library uses none of these.
+    */
+  val deniedActions: Set[String] = Set(
+    "JobController.runComputeMeshFileJob",
+    "JobController.runComputeSegmentIndexFileJob",
+    "JobController.runExportTiffJob",
+    "JobController.runInferMitochondriaJob",
+    "JobController.runAlignSectionsJob",
+    "JobController.runMaterializeVolumeAnnotationJob",
+    "JobController.runFindLargestSegmentIdJob",
+    "JobController.runRenderAnimationJob",
+    "JobController.retry",
+    "JobController.redirectToExport",
+    "AiModelController.runNeuronTraining",
+    "AiModelController.runInstanceTraining",
+    "AiModelController.runNeuronModelInference",
+    "AiModelController.runInstanceModelInference"
+  )
+
   // Actions whose HTTP method does not describe what they do. Not private so that ScopeTestSuite can check that every
   // entry refers to an existing route.
   val methodOverrides: Map[String, ScopeMode.Value] = Map(
@@ -112,11 +136,13 @@ object RouteScopes {
   def requiredScope(controller: String, method: String, httpMethod: String): Option[Scope] = {
     val simpleController = controller.split('.').last
     val key = s"$simpleController.$method"
-    scopeOverrides.get(key).orElse {
-      for {
-        resource <- resourceByController.get(simpleController)
-        mode <- methodOverrides.get(key).orElse(modeForHttpMethod(httpMethod))
-      } yield Scope(resource, mode)
-    }
+    if (deniedActions.contains(key)) None
+    else
+      scopeOverrides.get(key).orElse {
+        for {
+          resource <- resourceByController.get(simpleController)
+          mode <- methodOverrides.get(key).orElse(modeForHttpMethod(httpMethod))
+        } yield Scope(resource, mode)
+      }
   }
 }

@@ -211,14 +211,9 @@ trait RequestTokenHelper {
     TokenContext(
       request.target
         .getQueryParameter("token")
-        .orElse(request.headers.get("X-Auth-Token"))
-        .orElse(bearerTokenOf(request))
+        .orElse(TokenHeaders.authToken(request))
+        .orElse(TokenHeaders.bearerToken(request))
     )
-
-  private def bearerTokenOf(request: RequestHeader): Option[String] =
-    request.headers.get(HeaderNames.AUTHORIZATION).map(_.trim).collect {
-      case header if header.regionMatches(true, 0, "Bearer ", 0, 7) => header.drop(7).trim
-    }
 }
 
 trait ExtendedController

@@ -7,7 +7,8 @@ import play.api.libs.json.Json
 import play.api.mvc.{Filter, RequestHeader, Result}
 import play.api.mvc.Results.{Forbidden, InternalServerError, Unauthorized}
 import play.api.routing.Router
-import security.{RouteScopes, Scope, ScopeSet, ScopedApiToken, ScopedApiTokenService, TokenHeaders}
+import com.scalableminds.util.mvc.TokenHeaders
+import security.{RouteScopes, Scope, ScopeSet, ScopedApiToken, ScopedApiTokenService}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}

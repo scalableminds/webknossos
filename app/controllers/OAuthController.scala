@@ -165,6 +165,19 @@ class OAuthController @Inject() (
 
   private val maxRegistrationBytes = 16 * 1024
 
+  /* CORS preflight for the registration and token endpoints, so that browser-based clients can call them directly.
+   * Browsers only send the JSON POST of the registration after a successful preflight. No cookies are involved, so the
+   * requested headers can be allowed as they are. */
+  def corsPreflight(): Action[AnyContent] = Action { request =>
+    NoContent.withHeaders(
+      corsHeaders ++ Seq(
+        "Access-Control-Allow-Methods" -> "POST, OPTIONS",
+        "Access-Control-Allow-Headers" -> request.headers.get("Access-Control-Request-Headers").getOrElse(""),
+        "Access-Control-Max-Age" -> "600"
+      )*
+    )
+  }
+
   // The connections of the current user, for the account settings.
   def listGrants(): Action[AnyContent] = sil.SecuredAction.fox { implicit request =>
     for {

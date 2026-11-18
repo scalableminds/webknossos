@@ -1,11 +1,12 @@
-package security
+package com.scalableminds.util.mvc
 
 import play.api.http.HeaderNames
 import play.api.mvc.RequestHeader
 
 /** Where a request carries its API token. Authentication (CombinedAuthenticatorService) and scope enforcement
-  * (filters.ScopeFilter) must agree on this, otherwise a request could be authenticated by a token the filter never
-  * looked at, and so skip its scope check.
+  * (filters.ScopeFilter) in WEBKNOSSOS must agree on this, otherwise a request could be authenticated by a token the
+  * filter never looked at, and so skip its scope check. The datastore and tracingstore read the token from the same
+  * headers (see RequestTokenHelper), so that they validate the token WEBKNOSSOS authenticated.
   */
 object TokenHeaders {
   // Read by silhouette's BearerTokenAuthenticatorService (its default fieldName, headers only).

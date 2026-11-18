@@ -245,6 +245,7 @@ class ScopeTestSuite extends AnyWordSpec {
       val unclassified = routedActions.collect {
         case (httpMethod, controller, method)
             if !intentionallyDenied.contains(controller) &&
+              !RouteScopes.deniedActions.contains(s"${controller.split('.').last}.$method") &&
               RouteScopes.requiredScope(controller, method, httpMethod).isEmpty =>
           s"$httpMethod $controller.$method"
       }
@@ -260,6 +261,27 @@ class ScopeTestSuite extends AnyWordSpec {
       }.toSet
       val stale = RouteScopes.methodOverrides.keySet.diff(routedKeys)
       assert(stale.isEmpty, s"methodOverrides entries without a route: ${stale.mkString(", ")}")
+    }
+
+    "only deny actions that are routed" in {
+      val routedKeys = routedActions.map { case (_, controller, method) =>
+        s"${controller.split('.').last}.$method"
+      }.toSet
+      val stale = RouteScopes.deniedActions.diff(routedKeys)
+      assert(stale.isEmpty, s"deniedActions entries without a route: ${stale.mkString(", ")}")
+    }
+
+    "deny starting jobs and the job export redirect, which hand out unscoped tokens" in {
+      assert(RouteScopes.requiredScope("controllers.JobController", "runExportTiffJob", "POST").isEmpty)
+      assert(RouteScopes.requiredScope("controllers.JobController", "retry", "PATCH").isEmpty)
+      assert(RouteScopes.requiredScope("controllers.JobController", "redirectToExport", "GET").isEmpty)
+      assert(RouteScopes.requiredScope("controllers.AiModelController", "runNeuronTraining", "POST").isEmpty)
+      // Listing and reading jobs stays possible.
+      assert(
+        RouteScopes
+          .requiredScope("controllers.JobController", "list", "GET")
+          .contains(Scope(ScopeResource.job, ScopeMode.read))
+      )
     }
 
     "scope the legacy api routes like their current counterparts" in {

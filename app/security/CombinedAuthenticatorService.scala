@@ -1,5 +1,6 @@
 package security
 
+import com.scalableminds.util.mvc.TokenHeaders
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import play.silhouette.api.*

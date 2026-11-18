@@ -67,6 +67,7 @@ access checks.
 
 The levels cover everything the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/) can do, so
 an agent granted `Delete` can use the whole library. The organization itself stays read-only at every level.
+Agents can list and inspect jobs, but cannot start or retry jobs at any level.
 
 !!! warning
     Because the Python library creates teams and updates users, `Create/modify` includes everything you can do in

@@ -177,8 +177,9 @@ class AnnotationBookmarkService @Inject() (
     s"${bookmarkKey(annotationId, bookmarkId)}/$size"
 
   // Returns the thumbnail stored at exactly the version (the bookmark's thumbnailVersion). Thumbnails stored at other
-  // versions belong to other thumbnails of the bookmark, or to an earlier bookmark with the same id (e.g. before a
-  // revert), or the bookmark has no thumbnail of this size. Temporary annotations have no versions.
+  // versions are earlier or later thumbnails of the bookmark (e.g. before an update to the current view, which an
+  // undo or revert can point back to), or the bookmark has no thumbnail of this size. Temporary annotations have no
+  // versions.
   def findThumbnail(
       annotationId: ObjectId,
       bookmarkId: Int,

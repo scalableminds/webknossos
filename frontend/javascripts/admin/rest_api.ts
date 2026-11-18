@@ -1063,8 +1063,8 @@ export function getBookmarkThumbnailUrl(
   thumbnailVersion: number,
   size: "small" | "large",
 ): Promise<string> {
-  // Thumbnails can be replaced and bookmark ids reused (e.g. after a revert), so thumbnailVersion
-  // keeps the cached thumbnails apart.
+  // The thumbnails of a bookmark can be replaced (and an undo or revert can point back to older ones),
+  // so thumbnailVersion keeps the cached thumbnails apart.
   return doWithToken(
     async (token) =>
       `${tracingStoreUrl}/tracings/annotation/${annotationId}/bookmarks/${bookmarkId}/thumbnail?size=${size}&v=${thumbnailVersion}&token=${token}`,

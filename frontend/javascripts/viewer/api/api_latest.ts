@@ -1955,14 +1955,8 @@ class DataApi {
    * // Get the segmentation id for the first volume tracing layer
    * const segmentId = await api.data.getDataValue(api.data.getVolumeTracingLayerIds()[0], position);
    *
-   * If an agglomerate mapping is applied by the server (e.g., outside of proofreading), the loaded
-   * buckets of a segmentation layer contain the mapped ids. Pass enforceUnmapped to get the unmapped
-   * id in that case, too. Then, the bucket is requested again without the mapping (and not cached).
-   * enforceUnmapped cannot be combined with respectMapping.
-   *
-   * @example
-   * // Get the unmapped segment id even if an agglomerate mapping is active
-   * const segmentId = await api.data.getDataValue("segmentation", position, null, null, false, 0, true);
+   * Note that if an agglomerate mapping is applied by the server (e.g., outside of proofreading),
+   * the returned segment id is the mapped id. Use getUnmappedDataValue to always get the unmapped id.
    */
   async getDataValue(
     layerName: string,
@@ -1971,37 +1965,14 @@ class DataApi {
     additionalCoordinates: AdditionalCoordinate[] | null = null,
     respectMapping: boolean = false,
     channelIndex: number = 0,
-    enforceUnmapped: boolean = false,
   ): Promise<NumberLike> {
-    if (respectMapping && enforceUnmapped) {
-      throw new Error("respectMapping and enforceUnmapped cannot be combined.");
-    }
-    let zoomStep;
     const state = Store.getState();
-
-    if (_zoomStep != null) {
-      zoomStep = _zoomStep;
-    } else {
-      const layer = getLayerByName(state.dataset, layerName);
-      const magInfo = getMagInfo(layer.mags);
-      zoomStep = magInfo.getFinestMagIndex();
-    }
-
-    const cube = this.model.getCubeByLayerName(layerName);
-    additionalCoordinates = additionalCoordinates || state.flycam.additionalCoordinates;
-    const bucketAddress = cube.positionToZoomedAddress(position, additionalCoordinates, zoomStep);
-    if (
-      enforceUnmapped &&
-      getBucketRetrievalSourceFn(layerName)(state)[0] === "REQUESTED-WITH-MAPPING"
-    ) {
-      return this.getUnmappedDataValueFromServer(
-        layerName,
-        position,
-        bucketAddress,
-        zoomStep,
-        channelIndex,
-      );
-    }
+    const {
+      cube,
+      zoomStep,
+      bucketAddress,
+      additionalCoordinates: resolvedAdditionalCoordinates,
+    } = this.getBucketAddressOfPosition(layerName, position, _zoomStep, additionalCoordinates);
     await this.getLoadedBucket(layerName, bucketAddress);
 
     let mapping = null;
@@ -2019,7 +1990,7 @@ class DataApi {
     // Bucket has been loaded by now or was loaded already
     const dataValue = cube.getDataValue(
       position,
-      additionalCoordinates,
+      resolvedAdditionalCoordinates,
       mapping,
       zoomStep,
       channelIndex,
@@ -2027,16 +1998,42 @@ class DataApi {
     return dataValue;
   }
 
-  // Requests the bucket that contains the position without applying the agglomerate mapping on the
-  // server (see getDataValue). The bucket is not added to the cube, as the cube holds the mapped data.
-  private async getUnmappedDataValueFromServer(
+  /**
+   * Returns the unmapped segment id for a given segmentation layer, position and zoom level.
+   * The parameters behave like the ones of getDataValue.
+   *
+   * Unlike getDataValue, the returned id is the unmapped id even if an agglomerate mapping is
+   * applied by the server (e.g., outside of proofreading). In that case, the bucket is requested
+   * again without the mapping (and not cached), because the loaded buckets contain the mapped ids.
+   * Otherwise, the loaded buckets contain the unmapped ids and are used as in getDataValue.
+   *
+   * @example
+   * // Get the unmapped segment id even if an agglomerate mapping is active
+   * const segmentId = await api.data.getUnmappedDataValue("segmentation", position);
+   */
+  async getUnmappedDataValue(
     layerName: string,
-    position: Vector3,
-    bucketAddress: BucketAddress,
-    zoomStep: number,
-    channelIndex: number,
+    position: Vector3, // in layer space
+    _zoomStep: number | null | undefined = null,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
+    channelIndex: number = 0,
   ): Promise<NumberLike> {
-    const cube = this.model.getCubeByLayerName(layerName);
+    if (getBucketRetrievalSourceFn(layerName)(Store.getState())[0] !== "REQUESTED-WITH-MAPPING") {
+      return this.getDataValue(
+        layerName,
+        position,
+        _zoomStep,
+        additionalCoordinates,
+        false,
+        channelIndex,
+      );
+    }
+    const { cube, zoomStep, bucketAddress } = this.getBucketAddressOfPosition(
+      layerName,
+      position,
+      _zoomStep,
+      additionalCoordinates,
+    );
     if (!cube.magInfo.hasIndex(zoomStep)) {
       return 0;
     }
@@ -2052,6 +2049,33 @@ class DataApi {
     }
     const data = uint8ToTypedBuffer(result.data, layerInfo.elementClass);
     return data[cube.getVoxelIndex(position.map(Math.floor) as Vector3, zoomStep, channelIndex)];
+  }
+
+  // Resolves the zoom step (defaulting to the finest mag) and the additional coordinates (defaulting
+  // to the current ones) and returns the address of the bucket that contains the position.
+  private getBucketAddressOfPosition(
+    layerName: string,
+    position: Vector3,
+    zoomStep: number | null | undefined,
+    additionalCoordinates: AdditionalCoordinate[] | null,
+  ) {
+    const state = Store.getState();
+    const resolvedZoomStep =
+      zoomStep ?? getMagInfo(getLayerByName(state.dataset, layerName).mags).getFinestMagIndex();
+    const resolvedAdditionalCoordinates =
+      additionalCoordinates || state.flycam.additionalCoordinates;
+    const cube = this.model.getCubeByLayerName(layerName);
+    const bucketAddress = cube.positionToZoomedAddress(
+      position,
+      resolvedAdditionalCoordinates,
+      resolvedZoomStep,
+    );
+    return {
+      cube,
+      zoomStep: resolvedZoomStep,
+      additionalCoordinates: resolvedAdditionalCoordinates,
+      bucketAddress,
+    };
   }
 
   /**

@@ -168,19 +168,11 @@ function* fetchAgglomerateDiff(
   const effectiveLayerName = layerInfo.fallbackLayer ?? layerName;
 
   try {
-    // The agglomerate mapping is usually applied by the server, so the unmapped id is enforced.
-    // For a volume annotation layer, this is the annotated id (which might be brushed).
+    // The agglomerate mapping is usually applied by the server, so the unmapped id has to be
+    // requested explicitly. For a volume annotation layer, this is the annotated id (which might
+    // be brushed).
     const segmentId = toBigInt(
-      yield* call(
-        [api.data, api.data.getDataValue],
-        layerName,
-        positionInLayer,
-        null,
-        null,
-        false,
-        0,
-        true,
-      ),
+      yield* call([api.data, api.data.getUnmappedDataValue], layerName, positionInLayer),
     );
     const protoBuffer = yield* call(
       getAgglomerateDiffToReference,

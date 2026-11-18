@@ -232,7 +232,7 @@ describe("API Skeleton", () => {
     return promise;
   });
 
-  it<WebknossosTestContext>("Data Api: getDataValue with enforceUnmapped should read the loaded bucket if no mapping is applied by the server", async ({
+  it<WebknossosTestContext>("Data Api: getUnmappedDataValue should read the loaded bucket if no mapping is applied by the server", async ({
     api,
     model,
   }) => {
@@ -242,14 +242,14 @@ describe("API Skeleton", () => {
     vi.spyOn(cube.pullQueue, "pull").mockReturnValue();
     vi.spyOn(cube, "getDataValue").mockReturnValue(1337);
 
-    const promise = api.data.getDataValue("segmentation", position, 0, null, false, 0, true);
+    const promise = api.data.getUnmappedDataValue("segmentation", position, 0);
     if (bucket.type === "data") {
       bucket.trigger("bucketLoaded");
     }
     expect(await promise).toBe(1337);
   });
 
-  it<WebknossosTestContext>("Data Api: getDataValue with enforceUnmapped should request the bucket without the mapping if the mapping is applied by the server", async ({
+  it<WebknossosTestContext>("Data Api: getUnmappedDataValue should request the bucket without the mapping if the mapping is applied by the server", async ({
     api,
     model,
     mocks,
@@ -276,22 +276,12 @@ describe("API Skeleton", () => {
     const cube = model.getCubeByLayerName("segmentation");
     const getDataValueOfCube = vi.spyOn(cube, "getDataValue");
 
-    expect(await api.data.getDataValue("segmentation", position, 0, null, false, 0, true)).toBe(
-      1337,
-    );
+    expect(await api.data.getUnmappedDataValue("segmentation", position, 0)).toBe(1337);
     expect(requestedBuckets).toEqual([expect.objectContaining({ position: [96, 96, 96] })]);
     expect(requestedBuckets[0].applyAgglomerate).toBeUndefined();
     // The unmapped bucket is not added to the cube, which holds the mapped data
     expect(getDataValueOfCube).not.toHaveBeenCalled();
     expect(cube.getBucket(cube.positionToZoomedAddress(position, null, 0)).type).toBe("null");
-  });
-
-  it<WebknossosTestContext>("Data Api: getDataValue should throw an error if respectMapping and enforceUnmapped are combined", async ({
-    api,
-  }) => {
-    await expect(
-      api.data.getDataValue("segmentation", [1, 2, 3], 0, null, true, 0, true),
-    ).rejects.toThrow();
   });
 
   it<WebknossosTestContext>("User Api: setConfiguration should set and get a user configuration value", ({

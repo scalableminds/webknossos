@@ -55,11 +55,10 @@ class FullMeshHelperTestSuite extends AnyWordSpec {
     assert(stlBytes.length == triangles.length * bytesPerFace)
     val faces = decodeFaces(stlBytes)
     val shapeCenter = centroid(triangles.flatMap { case (a, b, c) => Seq(a, b, c) })
-    faces.zip(triangles).foreach {
-      case ((storedNormal, storedTriangle), triangle @ (a, b, c)) =>
-        assert(storedTriangle == triangle)
-        assertClose(storedNormal, normalize(cross(sub(b, a), sub(c, a))))
-        assert(dot(storedNormal, sub(centroid(Seq(a, b, c)), shapeCenter)) > 0, s"normal of $triangle points inward")
+    faces.zip(triangles).foreach { case ((storedNormal, storedTriangle), triangle @ (a, b, c)) =>
+      assert(storedTriangle == triangle)
+      assertClose(storedNormal, normalize(cross(sub(b, a), sub(c, a))))
+      assert(dot(storedNormal, sub(centroid(Seq(a, b, c)), shapeCenter)) > 0, s"normal of $triangle points inward")
     }
   }
 

@@ -1,5 +1,6 @@
 import { PlayCircleOutlined, SearchOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
+import { unwrapOrThrow } from "admin/api/api_result";
 import {
   createLayerRegistration,
   editAnnotation,
@@ -107,7 +108,8 @@ function FixedLayerPicker({
   );
 }
 
-// Runs an action on an annotation of the list, with a toast for the result.
+// Runs an action on an annotation of the list, with a toast for the result. The action must throw
+// if it fails.
 type ChangeAnnotation = (change: () => Promise<unknown>, successMessage: string) => Promise<void>;
 
 // Opens the layer registration, or first removes what keeps the user from working on it.
@@ -177,7 +179,10 @@ function LayerRegistrationDetailsSidebar({
   const { id, typ, tags, isLockedByOwner } = annotation;
   const isEditable = isAnnotationEditable(annotation, activeUser);
   const updateTags = (newTags: string[]) =>
-    changeAnnotation(() => editAnnotation(id, typ, { tags: newTags }), "The tags were updated.");
+    changeAnnotation(
+      () => editAnnotation(id, typ, { tags: newTags }).then(unwrapOrThrow),
+      "The tags were updated.",
+    );
   return (
     <AnnotationDetailsSidebar
       annotation={annotation}
@@ -196,7 +201,7 @@ function LayerRegistrationDetailsSidebar({
         isEditable
           ? (name) =>
               changeAnnotation(
-                () => editAnnotation(id, typ, { name }),
+                () => editAnnotation(id, typ, { name }).then(unwrapOrThrow),
                 "The annotation was renamed.",
               )
           : undefined
@@ -247,6 +252,14 @@ function LayerRegistrationListView() {
       <LayerRegistrationPageError text="This dataset is not active, so its layers cannot be registered." />
     );
   }
+  const layerCount = dataset.dataSource.dataLayers.length;
+  if (layerCount < 2) {
+    return (
+      <LayerRegistrationPageError
+        text={`This dataset has only ${layerCount} ${pluralize("layer", layerCount)}, but registering layers needs at least 2.`}
+      />
+    );
+  }
   return <LayerRegistrationList dataset={dataset} />;
 }
 
@@ -268,6 +281,7 @@ function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
     queryFn: () => getLayerRegistrations(dataset.id),
     meta: { persist: false },
   });
+  const layerRegistrationLoadingError = layerRegistrationsQuery.error;
   const layerRegistrations = layerRegistrationsQuery.data ?? [];
   const refetchLayerRegistrations = () => layerRegistrationsQuery.refetch();
 
@@ -279,7 +293,7 @@ function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
     (annotation) => (annotation.state === "Finished") === showArchived,
   );
   const selectedAnnotation =
-    layerRegistrations.find((annotation) => annotation.id === selectedAnnotationId) ?? null;
+    shownLayerRegistrations.find((annotation) => annotation.id === selectedAnnotationId) ?? null;
 
   const openLayerRegistration = (annotationId: string) =>
     navigate(getLayerRegistrationViewUrl(dataset, annotationId));
@@ -340,41 +354,47 @@ function LayerRegistrationList({ dataset }: { dataset: APIDataset }) {
               style={{ width: 240 }}
             />
           </Flex>
-          <AnnotationList
-            annotations={shownLayerRegistrations}
-            activeUser={activeUser}
-            isAdminView={false}
-            isLoading={layerRegistrationsQuery.isLoading}
-            hasMoreAnnotations={false}
-            searchQuery={searchQuery}
-            tags={tags}
-            onTagsChange={setTags}
-            showArchived={showArchived}
-            onShowArchivedChange={setShowArchived}
-            selectedAnnotationId={selectedAnnotationId}
-            onSelectAnnotation={setSelectedAnnotationId}
-            renderActions={(annotation) => (
-              <RowActions
-                annotation={annotation}
-                dataset={dataset}
-                activeUserId={activeUser.id}
-                onOpen={openLayerRegistration}
-              />
-            )}
-            emptyPlaceholder={
-              <Typography.Text type="secondary">
-                {fixedLayerName != null
-                  ? "There are no layer registrations to the selected layer yet."
-                  : "There are no layer registrations for this dataset yet."}
-              </Typography.Text>
-            }
-            onClearFilters={() => {
-              setSearchQuery("");
-              setTags([]);
-              setShowArchived(false);
-            }}
-            hideLayerRegistrationPrefix
-          />
+          {layerRegistrationLoadingError ? (
+            <Typography.Text type="warning">
+              Failed to load the existing layer registrations of dataset {dataset.name}.
+            </Typography.Text>
+          ) : (
+            <AnnotationList
+              annotations={shownLayerRegistrations}
+              activeUser={activeUser}
+              isAdminView={false}
+              isLoading={layerRegistrationsQuery.isLoading}
+              hasMoreAnnotations={false}
+              searchQuery={searchQuery}
+              tags={tags}
+              onTagsChange={setTags}
+              showArchived={showArchived}
+              onShowArchivedChange={setShowArchived}
+              selectedAnnotationId={selectedAnnotationId}
+              onSelectAnnotation={setSelectedAnnotationId}
+              renderActions={(annotation) => (
+                <RowActions
+                  annotation={annotation}
+                  dataset={dataset}
+                  activeUserId={activeUser.id}
+                  onOpen={openLayerRegistration}
+                />
+              )}
+              emptyPlaceholder={
+                <Typography.Text type="secondary">
+                  {fixedLayerName != null
+                    ? "There are no layer registrations to the selected layer yet."
+                    : "There are no layer registrations for this dataset yet."}
+                </Typography.Text>
+              }
+              onClearFilters={() => {
+                setSearchQuery("");
+                setTags([]);
+                setShowArchived(false);
+              }}
+              hideLayerRegistrationPrefix
+            />
+          )}
         </div>
         <LayerRegistrationDetailsSidebar
           annotation={selectedAnnotation}
